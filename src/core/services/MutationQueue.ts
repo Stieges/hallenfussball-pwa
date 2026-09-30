@@ -1,7 +1,9 @@
 
 import { SupabaseRepository } from '../repositories/SupabaseRepository';
+import { LocalStorageRepository } from '../repositories/LocalStorageRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
+import { GuestStoreReadError } from '../errors';
 import {
     GenericMutationQueue,
     type GenericMutationItem,
@@ -66,8 +68,42 @@ export type FailedMutationItem = Omit<GenericFailedMutationItem<MutationType>, '
     payload: any;
 };
 
+/**
+ * M1 (task-C3b2-review.md): the SAVE_TOURNAMENT guard (G7) has a full `Tournament`
+ * payload to check directly. UPDATE_MATCH/UPDATE_MATCHES/UPDATE_TOURNAMENT_METADATA/
+ * DELETE_TOURNAMENT only carry a `tournamentId` — this loads the LOCAL copy first (the
+ * account's own, not the cloud's) and applies the same guest-engine-entries check to
+ * it. `localRepo.get` returning `null` (tournament not present locally on this device)
+ * is NOT a guard hit — the mutation is not for a guest tournament of this device, so
+ * it is sent normally (Präzisierung v2 in task-C3b2-fix-plan.md).
+ *
+ * Read failures (either loading the local tournament, or the guest-engine store
+ * underneath `hasGuestEngineEntries`) are rethrown as `GuestStoreReadError` — see I1 —
+ * so the queue counts a failed attempt instead of silently uploading or looping
+ * "transient" forever.
+ */
+async function skipUploadForGuestEntries(
+    tournamentId: string,
+    localRepo: LocalStorageRepository,
+): Promise<boolean> {
+    let localTournament: Tournament | null;
+    try {
+        localTournament = await localRepo.get(tournamentId);
+    } catch (error) {
+        throw new GuestStoreReadError('Gast-Speicher nicht lesbar', { cause: error });
+    }
+    if (!localTournament) {
+        return false;
+    }
+    try {
+        return await hasGuestEngineEntries(localTournament);
+    } catch (error) {
+        throw new GuestStoreReadError('Gast-Speicher nicht lesbar', { cause: error });
+    }
+}
+
 export class MutationQueue extends GenericMutationQueue<MutationType> {
-    constructor(supabaseRepo: SupabaseRepository) {
+    constructor(supabaseRepo: SupabaseRepository, localRepo: LocalStorageRepository = new LocalStorageRepository()) {
         super({
             storageKey: 'mutation_queue_v1',
             failedStorageKey: 'mutation_queue_failed_v1',
@@ -121,13 +157,10 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                         try {
                             hasEntries = await hasGuestEngineEntries(tournament);
                         } catch (error) {
-                            // Als eigener, NICHT-transienter Fehler weiterreichen: ein IndexedDB-
-                            // AbortError gaelte sonst als „transient" (kein retryCount) und die
-                            // Mutation liefe endlos ohne Zaehlung.
-                            throw new Error(
-                                `Gast-Engine-Speicher nicht lesbar: ${error instanceof Error ? error.message : 'unbekannt'}`,
-                                { cause: error },
-                            );
+                            // I1: eigene, NICHT-transiente Klasse weiterreichen (fester Text, kein
+                            // Fremdtext) — ein IndexedDB-AbortError gaelte sonst als „transient"
+                            // (kein retryCount) und die Mutation liefe endlos ohne Zaehlung.
+                            throw new GuestStoreReadError('Gast-Speicher nicht lesbar', { cause: error });
                         }
                         if (hasEntries) {
                             break;
@@ -135,21 +168,35 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                         await supabaseRepo.save(tournament);
                         break;
                     }
-                    case 'DELETE_TOURNAMENT':
-                        await supabaseRepo.delete(item.payload as string);
+                    case 'DELETE_TOURNAMENT': {
+                        const tournamentId = item.payload as string;
+                        if (await skipUploadForGuestEntries(tournamentId, localRepo)) {
+                            break;
+                        }
+                        await supabaseRepo.delete(tournamentId);
                         break;
+                    }
                     case 'UPDATE_MATCH': {
                         const { tournamentId, update } = item.payload as { tournamentId: string, update: MatchUpdate };
+                        if (await skipUploadForGuestEntries(tournamentId, localRepo)) {
+                            break;
+                        }
                         await supabaseRepo.updateMatch(tournamentId, update);
                         break;
                     }
                     case 'UPDATE_MATCHES': {
                         const { tournamentId, updates } = item.payload as { tournamentId: string, updates: MatchUpdate[] };
+                        if (await skipUploadForGuestEntries(tournamentId, localRepo)) {
+                            break;
+                        }
                         await supabaseRepo.updateMatches(tournamentId, updates);
                         break;
                     }
                     case 'UPDATE_TOURNAMENT_METADATA': {
                         const { tournamentId, metadata } = item.payload as { tournamentId: string, metadata: Partial<Tournament> };
+                        if (await skipUploadForGuestEntries(tournamentId, localRepo)) {
+                            break;
+                        }
                         await supabaseRepo.updateTournamentMetadata(tournamentId, metadata);
                         break;
                     }

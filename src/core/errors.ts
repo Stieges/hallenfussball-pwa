@@ -77,6 +77,27 @@ export class SyncError extends AppError {
   }
 }
 
+/**
+ * I1 (task-C3b2-review.md, PC29-Fixrunde F1): thrown by the mutation-queue guest guard
+ * (`MutationQueue.ts` SAVE_TOURNAMENT/UPDATE_MATCH/UPDATE_MATCHES/
+ * UPDATE_TOURNAMENT_METADATA/DELETE_TOURNAMENT) when reading the local guest-engine
+ * store or the local tournament fails. MUST be classified as PERMANENT by
+ * `isTransientMutationError` (checked at the very top, before `isAbortError`) —
+ * otherwise a raw IndexedDB `AbortError`/`DOMException` reaching that check would be
+ * "transient" in a real browser (`DOMException instanceof Error` is `true` there,
+ * unlike vitest/jsdom, where it is `false` — see review I1 realm probe). A fixed
+ * message (never the wrapped error's own text) is the second line of defence: even if
+ * someone later reads `.message` instead of checking `instanceof`, it will not contain
+ * an "aborted"/"timeout"/"fetch" substring. `cause` is kept for diagnostics only, never
+ * read for classification.
+ */
+export class GuestStoreReadError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = 'GuestStoreReadError';
+  }
+}
+
 // =============================================================================
 // OptimisticLockError (existing, unchanged)
 // =============================================================================
@@ -199,6 +220,13 @@ const TRANSIENT_NETWORK_MESSAGE_PATTERNS = [
  * caller sets explicitly (e.g. in tests, or a future caller).
  */
 export function isTransientMutationError(error: unknown): boolean {
+  // I1: must be the FIRST check — a GuestStoreReadError wraps an IndexedDB read
+  // failure that, in a real browser, IS `instanceof Error`/`DOMException` and can
+  // carry an "aborted"/"timeout" message; checking the class before any message-based
+  // pattern (`isAbortError`, TRANSIENT_NETWORK_MESSAGE_PATTERNS below) closes that gap.
+  if (error instanceof GuestStoreReadError) {
+    return false;
+  }
   if (error instanceof OptimisticLockError) {
     return false;
   }

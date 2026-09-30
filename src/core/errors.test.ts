@@ -6,6 +6,7 @@ import {
   NetworkError,
   SyncError,
   OptimisticLockError,
+  GuestStoreReadError,
   isAbortError,
   isTransientMutationError,
 } from './errors';
@@ -184,6 +185,18 @@ describe('isTransientMutationError', () => {
 
   it('behandelt OptimisticLockError immer als dauerhaft', () => {
     expect(isTransientMutationError(new OptimisticLockError('match-1', 1, 2))).toBe(false);
+  });
+
+  it('I1: behandelt GuestStoreReadError immer als dauerhaft, auch mit "aborted"/"timeout"-Cause, und behält cause', () => {
+    const abortCause = Object.assign(new Error('The operation was aborted'), { name: 'AbortError' });
+    const abortWrapped = new GuestStoreReadError('Gast-Speicher nicht lesbar', { cause: abortCause });
+    expect(isTransientMutationError(abortWrapped)).toBe(false);
+    expect(abortWrapped.cause).toBe(abortCause);
+
+    const timeoutCause = new Error('Transaction timeout');
+    const timeoutWrapped = new GuestStoreReadError('Gast-Speicher nicht lesbar', { cause: timeoutCause });
+    expect(isTransientMutationError(timeoutWrapped)).toBe(false);
+    expect(timeoutWrapped.cause).toBe(timeoutCause);
   });
 
   it('behandelt sonstige Fehler ohne Netz-/Status-Signal als dauerhaft', () => {

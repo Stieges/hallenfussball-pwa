@@ -114,7 +114,7 @@ export class OfflineRepository implements ITournamentRepository {
         private localRepo: LocalStorageRepository,
         private supabaseRepo: SupabaseRepository
     ) {
-        this._mutationQueue = new MutationQueue(supabaseRepo);
+        this._mutationQueue = new MutationQueue(supabaseRepo, localRepo);
     }
 
     /**
