@@ -38,9 +38,9 @@ function resolveSource(source?: GuestEntrySource): GuestEntrySource {
  * True, wenn mindestens eine Gast-Kopie zu einem Match des Turniers bestaetigte
  * Engine-Eintraege traegt. Liest nur den Store — keine Mutation.
  *
- * Fail-closed: Laesst sich der Store nicht lesen, gilt das Turnier als „mit Eintraegen"
- * (kein Upload). G7 verlangt, dass solche Turniere auf KEINEM Weg ins Konto geladen
- * werden — ein unsicherer Lesefehler darf die Wache nicht oeffnen.
+ * Wirft bei einem Lesefehler des Stores (PC29): Ein Lesefehler ist KEIN „true" — der
+ * Aufrufer entscheidet je Weg (Upload-Wege: nicht hochladen/nicht loeschen, Queue:
+ * Versuch fehlschlagen lassen, Anzeige: Turnier sichtbar lassen).
  */
 export async function hasGuestEngineEntries(
   tournament: GuestEntryCheckTournament,
@@ -52,12 +52,7 @@ export async function hasGuestEngineEntries(
     // die verloren gehen koennten. Der Store muss dann nicht gelesen werden.
     return false;
   }
-  let copies: MatchCopy[];
-  try {
-    copies = await resolveSource(source).forAccount(GUEST_ACCOUNT_ID);
-  } catch {
-    return true;
-  }
+  const copies = await resolveSource(source).forAccount(GUEST_ACCOUNT_ID);
   return copies.some((copy) => matchIds.has(copy.matchId) && copy.confirmed.length > 0);
 }
 
@@ -65,6 +60,8 @@ export async function hasGuestEngineEntries(
  * G7: Entfernt Turniere mit Gast-Einträgen aus einer Anzeige-Liste.
  * Wird nur in den Anzeige-Hooks verwendet — `listForCurrentUser` bleibt unverändert,
  * damit das Turnier-Limit weiter zaehlt und der Gastmodus alles sieht.
+ * Lesefehler des Stores: Turnier bleibt sichtbar (fail-open, PC29) — Ausblenden ist nur
+ * Anzeige, das Verhindern des Uploads sichern die Upload-Wege selbst.
  */
 export async function filterWithoutGuestEngineEntries<T extends GuestEntryCheckTournament>(
   tournaments: T[],
@@ -72,7 +69,13 @@ export async function filterWithoutGuestEngineEntries<T extends GuestEntryCheckT
 ): Promise<T[]> {
   const visible: T[] = [];
   for (const tournament of tournaments) {
-    if (!(await hasGuestEngineEntries(tournament, source))) {
+    let hidden: boolean;
+    try {
+      hidden = await hasGuestEngineEntries(tournament, source);
+    } catch {
+      hidden = false;
+    }
+    if (!hidden) {
       visible.push(tournament);
     }
   }

@@ -89,14 +89,25 @@ describe('hasGuestEngineEntries (C3b-2c, G7)', () => {
     await expect(hasGuestEngineEntries(tournamentWithMatchIds('ge-inj-m1'), injected)).resolves.toBe(true);
   });
 
-  it('fail-closed: bei einem Store-Lesefehler gilt „mit Einträgen" (kein Upload)', async () => {
+  it('wirft bei einem Store-Lesefehler (kein stilles true, PC29)', async () => {
     const broken = {
       forAccount: async (): Promise<MatchCopy[]> => {
         throw new Error('DB weg');
       },
     };
 
-    await expect(hasGuestEngineEntries(tournamentWithMatchIds('ge-err-m1'), broken)).resolves.toBe(true);
+    await expect(hasGuestEngineEntries(tournamentWithMatchIds('ge-err-m1'), broken)).rejects.toThrow('DB weg');
+  });
+
+  it('filterWithoutGuestEngineEntries zeigt bei Store-Lesefehler das Turnier an (fail-open, PC29)', async () => {
+    const broken = {
+      forAccount: async (): Promise<MatchCopy[]> => {
+        throw new Error('DB weg');
+      },
+    };
+    const t = tournamentWithMatchIds('ge-err-filt-m1');
+
+    await expect(filterWithoutGuestEngineEntries([t], broken)).resolves.toEqual([t]);
   });
 
   it('filterWithoutGuestEngineEntries entfernt nur Turniere mit Einträgen', async () => {
