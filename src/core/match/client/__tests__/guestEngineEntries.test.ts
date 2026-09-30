@@ -110,6 +110,26 @@ describe('hasGuestEngineEntries (C3b-2c, G7)', () => {
     await expect(filterWithoutGuestEngineEntries([t], broken)).resolves.toEqual([t]);
   });
 
+  it('M3: erkennt Gast-Einträge auch bei einer Match-ID mit Großbuchstaben (Engine speichert klein, s. engineMatchModel.ts:71)', async () => {
+    // Die Engine legt Kopien immer unter der KLEIN geschriebenen matchId ab; das
+    // Turnier selbst kann (Import/Altbestand) eine Grossbuchstaben-ID fuehren.
+    await store.create('guest', 'ge-case-m1', ctx);
+    await store.addConfirmedLocal('guest', 'ge-case-m1', ev({ id: 'e1', type: 'GOAL', at: 1000, teamId: 'teamA' }));
+
+    await expect(hasGuestEngineEntries(tournamentWithMatchIds('GE-CASE-M1'))).resolves.toBe(true);
+  });
+
+  it('M3: filterWithoutGuestEngineEntries versteckt das Turnier auch bei einer Match-ID mit Großbuchstaben', async () => {
+    await store.create('guest', 'ge-case-filt-m1', ctx);
+    await store.addConfirmedLocal('guest', 'ge-case-filt-m1', ev({ id: 'e1', type: 'GOAL', at: 1000, teamId: 'teamA' }));
+    const guarded = tournamentWithMatchIds('GE-CASE-FILT-M1');
+    const free = tournamentWithMatchIds('ge-case-filt-free');
+
+    const visible = await filterWithoutGuestEngineEntries([guarded, free]);
+
+    expect(visible).toEqual([free]);
+  });
+
   it('filterWithoutGuestEngineEntries entfernt nur Turniere mit Einträgen', async () => {
     const store = new LocalMatchStore();
     await store.create('guest', 'ge-filt-g', ctx);

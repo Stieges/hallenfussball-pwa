@@ -46,14 +46,19 @@ export async function hasGuestEngineEntries(
   tournament: GuestEntryCheckTournament,
   source?: GuestEntrySource,
 ): Promise<boolean> {
-  const matchIds = new Set((tournament.matches ?? []).map((match) => match.id));
+  // M3 (task-C3b2-review.md): die Engine legt Kopien unter `match.id.toLowerCase()` ab
+  // (`engineMatchModel.ts:71`) — bei einer Match-ID mit Grossbuchstaben (Import/
+  // Altbestand) verglich diese Menge bisher die ROHE `match.id` und verfehlte den
+  // Treffer. Beide Seiten `toLowerCase()`, damit der Vergleich unabhaengig von der
+  // Schreibweise der Turnier-Match-ID greift.
+  const matchIds = new Set((tournament.matches ?? []).map((match) => match.id.toLowerCase()));
   if (matchIds.size === 0) {
     // Ohne Matches gibt es keine matchId-Zuordnung — also keine Einträge,
     // die verloren gehen koennten. Der Store muss dann nicht gelesen werden.
     return false;
   }
   const copies = await resolveSource(source).forAccount(GUEST_ACCOUNT_ID);
-  return copies.some((copy) => matchIds.has(copy.matchId) && copy.confirmed.length > 0);
+  return copies.some((copy) => matchIds.has(copy.matchId.toLowerCase()) && copy.confirmed.length > 0);
 }
 
 /**
