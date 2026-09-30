@@ -3,6 +3,7 @@ import { useAuth } from '../features/auth/hooks/useAuth';
 import { LocalStorageRepository } from '../core/repositories/LocalStorageRepository';
 import { SupabaseRepository } from '../core/repositories/SupabaseRepository';
 import { hasGuestEngineEntries } from '../core/match/client/guestEngineEntries';
+import { notifyGuestTournamentHidden } from '../core/services/guestTournamentNotices';
 import { isSupabaseConfigured } from '../lib/supabase';
 
 /**
@@ -62,6 +63,7 @@ export function useInitialSync(): void {
           // G7: Turnier mit Engine-Einträgen im Gastkonto nie hochladen —
           // kein supabaseRepo.save, kein Owner-Update (bliebe ein Gast-Turnier).
           if (await hasGuestEngineEntries(tournament)) {
+            notifyGuestTournamentHidden({ tournamentId: tournament.id, title: tournament.title });
             continue;
           }
 

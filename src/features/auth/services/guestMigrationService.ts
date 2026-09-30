@@ -17,6 +17,7 @@ import { Tournament } from '../../../types/tournament';
 import { LocalStorageRepository } from '../../../core/repositories/LocalStorageRepository';
 import { SupabaseRepository } from '../../../core/repositories/SupabaseRepository';
 import { hasGuestEngineEntries } from '../../../core/match/client/guestEngineEntries';
+import { notifyGuestTournamentHidden } from '../../../core/services/guestTournamentNotices';
 import { isSupabaseConfigured } from '../../../lib/supabase';
 
 // =============================================================================
@@ -177,6 +178,9 @@ export async function migrateGuestTournaments(
     if (await hasGuestEngineEntries(tournament)) {
       result.skippedCount++;
       result.skippedTitles.push(tournament.title);
+      // G7: einmaliger Hinweis „nur im Gastmodus nutzbar – kann ins Konto
+      // übernommen werden" (Kanal dedupliziert je Turnier-ID).
+      notifyGuestTournamentHidden({ tournamentId: tournament.id, title: tournament.title });
     } else {
       tournamentsToMigrate.push(tournament);
     }

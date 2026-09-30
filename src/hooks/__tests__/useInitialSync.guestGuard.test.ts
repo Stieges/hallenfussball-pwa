@@ -55,6 +55,10 @@ vi.mock('../../core/repositories/SupabaseRepository', () => ({
 }));
 
 import { useInitialSync } from '../useInitialSync';
+import {
+  subscribeToGuestTournamentNotices,
+  type GuestTournamentNotice,
+} from '../../core/services/guestTournamentNotices';
 
 function tournament(id: string, ...matchIds: string[]): Tournament {
   return {
@@ -83,12 +87,18 @@ describe('useInitialSync — G7-Wache (C3b-2c)', () => {
     await store.create('guest', 'is-guard-m1', ctx);
     await store.addConfirmedLocal('guest', 'is-guard-m1', ev({ id: 'e1', type: 'GOAL', at: 1000, teamId: 'teamA' }));
     hoisted.localList = [tournament('t-is-guard', 'is-guard-m1')];
+    const received: GuestTournamentNotice[] = [];
+    const unsubscribe = subscribeToGuestTournamentNotices((notice) => received.push(notice));
 
     renderHook(() => useInitialSync());
     await settle();
 
     expect(hoisted.cloudSaved).toEqual([]);
     expect(hoisted.localSaved).toEqual([]);
+    expect(received).toEqual([
+      { tournamentId: 't-is-guard', title: 'Turnier t-is-guard' },
+    ]);
+    unsubscribe();
   });
 
   it('lädt ein Turnier ohne Einträge wie bisher hoch (inkl. Owner-Update)', async () => {

@@ -113,6 +113,9 @@
       "UPDATE_TOURNAMENT_METADATA": "Update tournament data"
     }
   },
+  "guestHidden": {
+    "hint": "{{title}}: only available in guest mode – can be transferred to your account"
+  },
   "progressBar": {
     "stepLabel": "Step {{step}}: {{label}}",
     "errorTooltip": "Error: {{errors}}",

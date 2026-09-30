@@ -16,6 +16,7 @@ import { useInitialSync } from './hooks/useInitialSync';
 import { useAuthTimeoutToast } from './hooks/useAuthTimeoutToast';
 import { useSwAutoReload } from './hooks/useSwAutoReload';
 import { useMatchProtectionNotices } from './hooks/useMatchProtectionNotices';
+import { useGuestTournamentNotices } from './hooks/useGuestTournamentNotices';
 import { useRouteMatch } from './hooks/useRouteMatch';
 import { matchRoute } from './core/routing';
 import { AuthProvider } from './features/auth/context/AuthContext';
@@ -150,6 +151,9 @@ function AppContent() {
   // silently deleting it -- see core/services/matchProtectionNotices.ts for why this can't just
   // be a return value or thrown error.
   useMatchProtectionNotices();
+
+  // C3b-2c (G7): einmaliger Hinweis für im Konto ausgeblendete Gast-Turniere
+  useGuestTournamentNotices();
 
   // Central route match — replaces the individual location.pathname regex
   // matchers below (derivations only; render blocks stay untouched).

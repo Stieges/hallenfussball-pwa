@@ -49,6 +49,10 @@ import {
   migrateGuestTournaments,
   getLocalTournamentsToMigrate,
 } from '../guestMigrationService';
+import {
+  subscribeToGuestTournamentNotices,
+  type GuestTournamentNotice,
+} from '../../../../core/services/guestTournamentNotices';
 
 function tournament(id: string, ...matchIds: string[]): Tournament {
   return {
@@ -118,5 +122,40 @@ describe('guestMigrationService — G7-Wache (C3b-2c)', () => {
     const toMigrate = await getLocalTournamentsToMigrate();
 
     expect(toMigrate.map((t) => t.id)).toEqual(['t-cnt-free']);
+  });
+
+  it('löst beim Überspringen den Hinweis aus, ohne Einträge keinen', async () => {
+    const store = new LocalMatchStore();
+    await store.create('guest', 'mig-note-g', ctx);
+    await store.addConfirmedLocal('guest', 'mig-note-g', ev({ id: 'e1', type: 'GOAL', at: 1000, teamId: 'teamA' }));
+    hoisted.localList = [tournament('t-note-guard', 'mig-note-g'), tournament('t-note-free', 'mig-note-f')];
+    const received: GuestTournamentNotice[] = [];
+    const unsubscribe = subscribeToGuestTournamentNotices((notice) => received.push(notice));
+
+    await migrateGuestTournaments();
+
+    expect(received).toEqual([
+      { tournamentId: 't-note-guard', title: 'Turnier t-note-guard' },
+    ]);
+    unsubscribe();
+  });
+
+  it('Hinweis erscheint auch im fire-and-forget-Pfad des Logins (authActions.ts:327)', async () => {
+    const store = new LocalMatchStore();
+    await store.create('guest', 'mig-ff-m1', ctx);
+    await store.addConfirmedLocal('guest', 'mig-ff-m1', ev({ id: 'e1', type: 'GOAL', at: 1000, teamId: 'teamA' }));
+    hoisted.localList = [tournament('t-ff-guard', 'mig-ff-m1')];
+    const received: GuestTournamentNotice[] = [];
+    const unsubscribe = subscribeToGuestTournamentNotices((notice) => received.push(notice));
+
+    // Exakt das Login-Muster: Migration läuft unabhängig vom Login-Resultat weiter.
+    void migrateGuestTournaments().then(() => undefined);
+
+    await vi.waitFor(() => {
+      expect(received).toEqual([
+        { tournamentId: 't-ff-guard', title: 'Turnier t-ff-guard' },
+      ]);
+    });
+    unsubscribe();
   });
 });

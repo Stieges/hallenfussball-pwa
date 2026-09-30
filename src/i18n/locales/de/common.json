@@ -113,6 +113,9 @@
       "UPDATE_TOURNAMENT_METADATA": "Turnierdaten aktualisieren"
     }
   },
+  "guestHidden": {
+    "hint": "{{title}}: nur im Gastmodus nutzbar – kann ins Konto übernommen werden"
+  },
   "progressBar": {
     "stepLabel": "Schritt {{step}}: {{label}}",
     "errorTooltip": "Fehler: {{errors}}",
