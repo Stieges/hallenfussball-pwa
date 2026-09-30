@@ -12,6 +12,7 @@ import type { TournamentMembership } from '../types/auth.types';
 import { AUTH_STORAGE_KEYS } from '../types/auth.types';
 import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import { useAuth } from './useAuth';
+import { filterWithoutGuestEngineEntries } from '../../../core/match/client/guestEngineEntries';
 import type { TournamentDisplayStatus, TournamentCardData } from '../components/TournamentCard';
 import { useRepository } from '../../../hooks/useRepository';
 
@@ -170,11 +171,14 @@ const sortTournaments = (
 export const useUserTournaments = (
   sortBy: TournamentSortOption = 'recent'
 ): UseUserTournamentsReturn => {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isAuthenticated, isGuest } = useAuth();
   const [tournaments, setTournaments] = useState<UserTournament[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const repository = useRepository();
+
+  // G7: im Konto ausgeblendet, im Gastmodus (nach Abmelden) sichtbar
+  const hideGuestTournaments = isAuthenticated && !isGuest;
 
   /**
    * Lädt Turniere für den aktuellen User
@@ -202,7 +206,11 @@ export const useUserTournaments = (
 
       // Load tournaments via Repository
       // This automatically handles Local vs Cloud vs Offline
-      const allTournaments = await repository.listForCurrentUser();
+      const loadedTournaments = await repository.listForCurrentUser();
+      // G7: Turniere mit Engine-Einträgen im Gastkonto im Konto ausblenden
+      const allTournaments = hideGuestTournaments
+        ? await filterWithoutGuestEngineEntries(loadedTournaments)
+        : loadedTournaments;
 
       // Combine memberships with tournaments
       const userTournaments: UserTournament[] = [];
@@ -242,7 +250,7 @@ export const useUserTournaments = (
     } finally {
       setIsLoading(false);
     }
-  }, [user, repository]);
+  }, [user, repository, hideGuestTournaments]);
 
   // Load on mount and when user changes
   useEffect(() => {

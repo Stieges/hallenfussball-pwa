@@ -11,7 +11,7 @@
  */
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
-import { hasGuestEngineEntries } from '../guestEngineEntries';
+import { hasGuestEngineEntries, filterWithoutGuestEngineEntries } from '../guestEngineEntries';
 import { LocalMatchStore } from '../LocalMatchStore';
 import type { MatchCopy } from '../matchCopy';
 import { ctx, ev, withSeq } from './fixtures';
@@ -97,5 +97,17 @@ describe('hasGuestEngineEntries (C3b-2c, G7)', () => {
     };
 
     await expect(hasGuestEngineEntries(tournamentWithMatchIds('ge-err-m1'), broken)).resolves.toBe(true);
+  });
+
+  it('filterWithoutGuestEngineEntries entfernt nur Turniere mit Einträgen', async () => {
+    const store = new LocalMatchStore();
+    await store.create('guest', 'ge-filt-g', ctx);
+    await store.addConfirmedLocal('guest', 'ge-filt-g', ev({ id: 'e1', type: 'GOAL', at: 1000, teamId: 'teamA' }));
+    const guarded = tournamentWithMatchIds('ge-filt-g');
+    const free = tournamentWithMatchIds('ge-filt-f');
+
+    const visible = await filterWithoutGuestEngineEntries([guarded, free]);
+
+    expect(visible).toEqual([free]);
   });
 });

@@ -60,3 +60,21 @@ export async function hasGuestEngineEntries(
   }
   return copies.some((copy) => matchIds.has(copy.matchId) && copy.confirmed.length > 0);
 }
+
+/**
+ * G7: Entfernt Turniere mit Gast-Einträgen aus einer Anzeige-Liste.
+ * Wird nur in den Anzeige-Hooks verwendet — `listForCurrentUser` bleibt unverändert,
+ * damit das Turnier-Limit weiter zaehlt und der Gastmodus alles sieht.
+ */
+export async function filterWithoutGuestEngineEntries<T extends GuestEntryCheckTournament>(
+  tournaments: T[],
+  source?: GuestEntrySource,
+): Promise<T[]> {
+  const visible: T[] = [];
+  for (const tournament of tournaments) {
+    if (!(await hasGuestEngineEntries(tournament, source))) {
+      visible.push(tournament);
+    }
+  }
+  return visible;
+}

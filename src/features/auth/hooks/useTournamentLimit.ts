@@ -82,7 +82,9 @@ export interface UseTournamentLimitReturn {
  */
 export function useTournamentLimit(): UseTournamentLimitReturn {
   const { user, isAnonymous } = useAuth();
-  const { activeTournaments, loading } = useTournaments();
+  // G7: ausgeblendete Turniere (Gast-Einträge) zählen weiter zum Limit —
+  // allActiveCount aus useTournaments ist der ungefilterte Zähler.
+  const { allActiveCount, loading } = useTournaments();
 
   return useMemo(() => {
     // Only apply limits if TOURNAMENT_LIMIT feature flag is enabled
@@ -91,7 +93,7 @@ export function useTournamentLimit(): UseTournamentLimitReturn {
       return {
         isLimited: false,
         limit: Infinity,
-        used: activeTournaments.length,
+        used: allActiveCount,
         remaining: Infinity,
         canCreate: true,
         isNearLimit: false,
@@ -107,9 +109,8 @@ export function useTournamentLimit(): UseTournamentLimitReturn {
     // Determine limit
     const limit = isLimited ? ANONYMOUS_TOURNAMENT_LIMIT : Infinity;
 
-    // Count active (non-deleted) tournaments
-    // activeTournaments already filters out deletedAt !== undefined
-    const used = activeTournaments.length;
+    // Count active (non-deleted) tournaments, including hidden guest-engine ones
+    const used = allActiveCount;
 
     // Calculate remaining
     const remaining = Math.max(0, limit - used);
@@ -133,7 +134,7 @@ export function useTournamentLimit(): UseTournamentLimitReturn {
       isAtLimit,
       isLoading: loading,
     };
-  }, [user, isAnonymous, activeTournaments, loading]);
+  }, [user, isAnonymous, allActiveCount, loading]);
 }
 
 export default useTournamentLimit;
