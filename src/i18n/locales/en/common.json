@@ -184,6 +184,7 @@
       "dismissFailed": "Dismiss failed — please try again"
     },
     "notice": {
+      "updateAvailable": "New app version available",
       "clientOutdated": "Update the app",
       "reloadNow": "Update now",
       "authRequired": "Please sign in again",

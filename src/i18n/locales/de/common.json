@@ -184,6 +184,7 @@
       "dismissFailed": "Verstanden fehlgeschlagen — bitte erneut versuchen"
     },
     "notice": {
+      "updateAvailable": "Neue App-Version verfügbar",
       "clientOutdated": "App aktualisieren",
       "reloadNow": "Jetzt aktualisieren",
       "authRequired": "Bitte neu anmelden",

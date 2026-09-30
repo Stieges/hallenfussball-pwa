@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ScrollToTop } from './components/ScrollToTop';
+import { SwUpdateNotice } from './components/SwUpdateNotice';
 import { useTournaments } from './hooks/useTournaments';
 import { Tournament, TournamentStatus } from './types/tournament';
 import { generateTournamentId, generateUniqueId } from './utils/idGenerator';
@@ -142,10 +143,11 @@ function AppContent() {
   // QW-002: Show toast if auth initialization timed out
   useAuthTimeoutToast();
 
-  // Sub-Spec 1 C1: register the service worker with explicit "new version
-  // available → toast + hard reload" semantics so users never linger on a
-  // stale precached bundle (root cause of the 2026-05-24 login-bug).
-  useSwAutoReload();
+  // Sub-Spec 1 C1 + C3b-2d (G8): service worker with "new version available →
+  // persistenter Hinweis; automatisch nur im Leerlauf neu laden" semantics so
+  // users never linger on a stale precached bundle (root cause of the
+  // 2026-05-24 login-bug).
+  const { updateNow } = useSwAutoReload();
 
   // A6 (task-A6-review.md, I2/Ruling AN): toast when save() kept a protected match instead of
   // silently deleting it -- see core/services/matchProtectionNotices.ts for why this can't just
@@ -559,6 +561,9 @@ function AppContent() {
     >
       {/* Scroll to top on route changes */}
       <ScrollToTop />
+
+      {/* C3b-2d (G8): persistenter Update-Hinweis, bleibt bis zum Neuladen stehen */}
+      {updateNow && <SwUpdateNotice onUpdateNow={updateNow} />}
 
       {/* Guest Banner - shows registration prompt for guests */}
       {isGuest && isDashboardPath && (

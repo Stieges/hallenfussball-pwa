@@ -1,24 +1,41 @@
 /**
- * Service-Worker registration with auto-reload-on-update behaviour.
+ * Service-Worker registration with idle-gated auto-reload-on-update (C3b-2d, G8).
  *
  * vite-plugin-pwa's built-in `registerType: 'autoUpdate'` installs the new
  * SW in the background but does NOT reload the active page, so users keep
  * seeing the previously cached bundle until they happen to open a new tab.
- * Live HAR-traces from production (2026-05-24) confirm two distinct bundle
- * hashes loading in the same session — the precached one being responsible
- * for the false-offline UX on /login.
  *
- * This module flips to `prompt` semantics so we can control the update flow
- * ourselves: a brief toast informs the user, then we call the injected
- * `updateSW(true)` (vite-plugin-pwa's own updater) to skip waiting — the
- * plugin's controlling-change listener then reloads the page and flushes the
- * precache. A direct `reload()` is kept only as a defensive fallback for the
- * rare case where `updateSW` rejects. The registration callback is injected
- * (no direct import of `virtual:pwa-register`) so the unit tests don't need
- * to mock virtual vite modules.
+ * This module flips to `prompt` semantics so we can control the update flow:
+ * a persistent notice („Neue App-Version verfügbar“ + Knopf „Jetzt
+ * aktualisieren“) is shown as soon as a new bundle waits — it never
+ * auto-hides and the button reloads immediately. Automatically reloading
+ * happens ONLY in the idle state (no modal dialog AND outbox of the current
+ * account empty, see `swIdle.ts`); until then the idle check is repeated on
+ * several occasions (dialog closed, visibilitychange, online, at least every
+ * 60 s). A brief toast („App wird aktualisiert …“) precedes that idle reload
+ * so users see why the page reloads. A direct `reload()` is kept only as a
+ * defensive fallback when `updateSW` rejects.
+ *
+ * Error policy (binding):
+ * 1. `registration.update()` throws/rejects (e.g. offline) -> silently ignored
+ *    (no Sentry, no toast, no rethrow).
+ * 2. Outbox not readable -> treated as NOT idle (never auto-reload in doubt).
+ * 3. No account/engine context -> only the dialog condition is checked (swIdle).
+ * 4. `updateSW(true)` rejects -> Sentry + `reload()` fallback (unchanged).
+ * 5. Showing the notice throws -> Sentry + continue; a failing notice must
+ *    never block the update/auto-reload.
+ *
+ * The registration callback is injected (no direct import of
+ * `virtual:pwa-register`) so the unit tests don't need to mock virtual vite
+ * modules.
  */
 
 import { addBreadcrumb, captureFeatureError } from './sentry';
+import {
+  IDLE_RECHECK_MS,
+  OBSERVER_DEBOUNCE_MS,
+  UPDATE_POLL_MS,
+} from './swIdle';
 
 export interface RegisterSWOptions {
   immediate?: boolean;
@@ -40,31 +57,42 @@ export type RegisterSWFn = (
 export interface SetupOptions {
   /** Injected vite-plugin-pwa registerSW. */
   registerSW: RegisterSWFn;
-  /** Called once with the localized "updating…" message before reload. */
+  /** Called with the localized "updating…" message before the idle reload. */
   showToast: (message: string) => void;
-  /** Localized message for the auto-reload toast. */
+  /** Localized message for the pre-reload toast. */
   updatingMessage: string;
+  /** Idle check (dialog + outbox), see `swIdle.isIdle` — injected for tests. */
+  isIdle: () => Promise<boolean>;
+  /**
+   * Shows the persistent update notice; the callback reloads immediately.
+   * Must be called at most once per waiting update (Regel 5: a throw must not
+   * block the flow).
+   */
+  showUpdateNotice: (updateNow: () => void) => void;
   /** Test seam — defaults to window.location.reload(). */
   reload?: () => void;
   /** Test seam — defaults to global setTimeout. */
   scheduleReload?: (cb: () => void, delayMs: number) => void;
-  /** Delay between toast and reload so users see why the page reloads. */
+  /** Delay between toast and idle reload so users see why the page reloads. */
   delayBeforeReloadMs?: number;
 }
 
-/** Default delay between toast and reload (≈ time to read the message). */
+export interface SwAutoReloadHandle {
+  /** vite-plugin-pwa's `updateSW` (manual update paths, e.g. the notice button). */
+  updateSW: (reloadPage?: boolean) => Promise<void>;
+  /** Removes listeners, intervals and the dialog observer (hook cleanup). */
+  dispose: () => void;
+}
+
+/** Default delay between toast and idle reload (≈ time to read the message). */
 export const DEFAULT_RELOAD_DELAY_MS = 2000;
 
-/**
- * Wires up vite-plugin-pwa so that whenever a new bundle has been installed
- * in the background, the user is notified and the page is hard-reloaded to
- * pick it up.
- *
- * Returns the `updateSW` function from vite-plugin-pwa for callers that
- * want to drive a manual update (unused for now, but cheap to expose).
- */
-export function setupSwAutoReload(options: SetupOptions): (reloadPage?: boolean) => Promise<void> {
+export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
   let hasScheduledReload = false;
+  let hasFiredReload = false;
+  let idleCleanup: (() => void) | undefined;
+  let pollCleanup: (() => void) | undefined;
+
   const reload =
     options.reload ??
     (() => {
@@ -76,42 +104,170 @@ export function setupSwAutoReload(options: SetupOptions): (reloadPage?: boolean)
     options.scheduleReload ?? ((cb, ms) => { setTimeout(cb, ms); });
   const delay = options.delayBeforeReloadMs ?? DEFAULT_RELOAD_DELAY_MS;
 
+  /** Regel 4: `updateSW(true)` lehnt ab -> Sentry + reload()-Fallback. */
+  const fireReload = (): void => {
+    if (hasFiredReload) {
+      return;
+    }
+    hasFiredReload = true;
+    idleCleanup?.();
+    // vite-plugin-pwa (prompt): updateSW() sendet SKIP_WAITING; den Reload
+    // uebernimmt der plugin-interne controlling-Listener. Der Fallback-reload
+    // ist rein defensiv (updateSW rejected in der Praxis nicht).
+    void updateSW(true).catch((err: unknown) => {
+      if (err instanceof Error) {
+        captureFeatureError(err, 'sw', 'updateSW');
+      }
+      reload();
+    });
+  };
+
+  /**
+   * Erneute Leerlauf-Pruefung (wiederholbar). Das Neuladen selbst wird
+   * hoechstens einmal ausgeloest (`hasFiredReload`), die Pruefung beliebig oft.
+   */
+  const onMaybeIdle = async (): Promise<void> => {
+    if (hasScheduledReload || hasFiredReload) {
+      return;
+    }
+    let idle: boolean;
+    try {
+      idle = await options.isIdle();
+    } catch {
+      idle = false;
+    }
+    if (!idle || hasScheduledReload || hasFiredReload) {
+      return;
+    }
+    hasScheduledReload = true;
+    addBreadcrumb('sw', 'New SW detected — idle, toast + scheduled reload', {
+      delayMs: delay,
+    });
+    try {
+      options.showToast(options.updatingMessage);
+    } catch (err) {
+      // Toast surface must never block the reload
+      if (err instanceof Error) {
+        captureFeatureError(err, 'sw', 'showToast');
+      }
+    }
+    scheduleReload(fireReload, delay);
+  };
+
+  /** Ausloeser, solange ein Update wartet (Start onNeedRefresh, Ende Feuerung/dispose). */
+  const startIdleWatchers = (): void => {
+    if (idleCleanup) {
+      return;
+    }
+    const onVisible = (): void => {
+      if (document.visibilityState === 'visible') {
+        void onMaybeIdle();
+      }
+    };
+    const onOnline = (): void => {
+      void onMaybeIdle();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', onOnline);
+    const recheck = setInterval(() => {
+      void onMaybeIdle();
+    }, IDLE_RECHECK_MS);
+
+    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new MutationObserver(() => {
+      if (debounceTimer !== undefined) {
+        return;
+      }
+      debounceTimer = setTimeout(() => {
+        debounceTimer = undefined;
+        void onMaybeIdle();
+      }, OBSERVER_DEBOUNCE_MS);
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['role', 'aria-modal'],
+    });
+
+    idleCleanup = () => {
+      if (debounceTimer !== undefined) {
+        clearTimeout(debounceTimer);
+        debounceTimer = undefined;
+      }
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', onOnline);
+      clearInterval(recheck);
+      idleCleanup = undefined;
+    };
+  };
+
+  /** Regel 1: `registration.update()` wirft/lehnt ab -> still ignorieren. */
+  const safeUpdate = async (registration: ServiceWorkerRegistration): Promise<void> => {
+    try {
+      await registration.update();
+    } catch {
+      // still ignorieren — kein Sentry, kein Toast, kein Wurf.
+    }
+  };
+
+  const installUpdatePolling = (registration: ServiceWorkerRegistration): void => {
+    if (pollCleanup) {
+      return;
+    }
+    const onVisible = (): void => {
+      if (document.visibilityState === 'visible') {
+        void safeUpdate(registration);
+      }
+    };
+    const onOnline = (): void => {
+      void safeUpdate(registration);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', onOnline);
+    const poll = setInterval(() => {
+      void safeUpdate(registration);
+    }, UPDATE_POLL_MS);
+    pollCleanup = () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', onOnline);
+      clearInterval(poll);
+      pollCleanup = undefined;
+    };
+  };
+
   const updateSW = options.registerSW({
     immediate: true,
     onNeedRefresh: () => {
-      if (hasScheduledReload) {
-        return;
-      }
-      hasScheduledReload = true;
-      addBreadcrumb('sw', 'New SW detected — toast + scheduled reload', {
-        delayMs: delay,
-      });
+      // Hinweis bleibt stehen (kein Auto-Ausblenden); sein Knopf feuert sofort.
       try {
-        options.showToast(options.updatingMessage);
+        options.showUpdateNotice(fireReload);
       } catch (err) {
-        // Toast surface must never block the reload
         if (err instanceof Error) {
-          captureFeatureError(err, 'sw', 'showToast');
+          captureFeatureError(err, 'sw', 'showUpdateNotice');
         }
       }
-      scheduleReload(() => {
-        // vite-plugin-pwa (prompt): updateSW() sendet SKIP_WAITING; den Reload
-        // übernimmt der plugin-interne controlling-Listener. Der Fallback-reload
-        // ist rein defensiv (updateSW rejected in der Praxis nicht).
-        updateSW(true).catch((err: unknown) => {
-          if (err instanceof Error) {
-            captureFeatureError(err, 'sw', 'updateSW');
-          }
-          reload();
-        });
-      }, delay);
+      startIdleWatchers();
+      void onMaybeIdle();
     },
     onRegisterError: (error) => {
       if (error instanceof Error) {
         captureFeatureError(error, 'sw', 'register');
       }
     },
+    onRegisteredSW: (_swUrl, registration) => {
+      if (registration) {
+        installUpdatePolling(registration);
+      }
+    },
   });
 
-  return updateSW;
+  return {
+    updateSW,
+    dispose: () => {
+      idleCleanup?.();
+      pollCleanup?.();
+    },
+  };
 }
