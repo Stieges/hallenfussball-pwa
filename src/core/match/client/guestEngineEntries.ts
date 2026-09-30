@@ -1,0 +1,48 @@
+/**
+ * guestEngineEntries.ts — C3b-2c (G7): Prädikat „Turnier hat Engine-Einträge im Gastkonto".
+ *
+ * G7 (task-C3b-plan.md, Zeile G7): Ein Turnier, für das die lokale Engine-Kopie des
+ * Gastkontos ('guest') bestätigte Einträge hat, darf auf KEINEM Upload-Weg in das
+ * Konto geladen werden (Migration, syncUp, Queue-Flush, resolveConflict/syncTournament,
+ * useInitialSync) — sonst gingen die Einträge verloren. Zuordnung: matchId ∈
+ * tournament.matches, „Einträge" = confirmed.length > 0.
+ *
+ * Framework-frei (core/match/client, kein React).
+ */
+import { LocalMatchStore } from './LocalMatchStore';
+import type { MatchCopy } from './matchCopy';
+
+export const GUEST_ACCOUNT_ID = 'guest';
+
+/** Minimale Turnier-Sicht des Prädikats (strukturelle Typung, kein Models-Import noetig). */
+export interface GuestEntryCheckTournament {
+  matches: { id: string }[];
+}
+
+/** Quelle der lokalen Kopien — `LocalMatchStore.forAccount` reicht; Injektion fuer Tests. */
+export interface GuestEntrySource {
+  forAccount(accountId: string): Promise<MatchCopy[]>;
+}
+
+let defaultSource: GuestEntrySource | null = null;
+
+function resolveSource(source?: GuestEntrySource): GuestEntrySource {
+  if (source) {
+    return source;
+  }
+  defaultSource ??= new LocalMatchStore();
+  return defaultSource;
+}
+
+/**
+ * True, wenn mindestens eine Gast-Kopie zu einem Match des Turniers bestaetigte
+ * Engine-Eintraege traegt. Liest nur den Store — keine Mutation.
+ */
+export async function hasGuestEngineEntries(
+  tournament: GuestEntryCheckTournament,
+  source?: GuestEntrySource,
+): Promise<boolean> {
+  const copies = await resolveSource(source).forAccount(GUEST_ACCOUNT_ID);
+  const matchIds = new Set(tournament.matches.map((match) => match.id));
+  return copies.some((copy) => matchIds.has(copy.matchId) && copy.confirmed.length > 0);
+}
