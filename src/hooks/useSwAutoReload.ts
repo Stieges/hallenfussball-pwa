@@ -4,10 +4,11 @@
  * The logic lives in `src/lib/swRegistration.ts` + `src/lib/swIdle.ts` — this
  * hook supplies what is only available inside the React tree: the toast for
  * the short moment before the idle reload (unchanged), the persistent notice
- * (`SwUpdateNotice`) with its immediate-reload button, and the idle inputs
+ * (`SwUpdateNotice`) with its immediate-reload button, the idle inputs
  * (modal dialog in the DOM + waiting outbox entries of the current account
- * from the match-engine context). Without an engine context only the dialog
- * condition is checked (Fehlerregel 3). Context, `t` and `showInfo` are read
+ * from the match-engine context) and the outbox-status trigger
+ * (`sender.subscribe`, see Fehlerpolitik 6 in `swRegistration.ts`). Without
+ * an engine context only the dialog condition is checked (Fehlerregel 3). Context, `t` and `showInfo` are read
  * via refs at call time so identity changes (e.g. a language switch) are
  * picked up without re-running the setup — the setup effect runs once per
  * page load and relies on the module singleton (`swSetupSlots.ts`); its
@@ -23,6 +24,7 @@ import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/Toast';
 import { countWaitingEntries } from '../features/collaboration/outbox/countWaitingEntries';
 import { useMatchEngineContextOptional } from '../features/match-engine/useMatchEngineContext';
+import type { SwAutoReloadHandle } from '../lib/swSetupSlots';
 import { hasOpenModalDialog, isIdle } from '../lib/swIdle';
 import { captureFeatureError } from '../lib/sentry';
 import { setupSwAutoReload } from '../lib/swRegistration';
@@ -47,6 +49,8 @@ export function useSwAutoReload(): SwAutoReloadState {
   tRef.current = t;
   const showInfoRef = useRef(showInfo);
   showInfoRef.current = showInfo;
+  const maybeIdleRef = useRef<SwAutoReloadHandle['onMaybeIdle'] | null>(null);
+  const sender = context?.sender ?? null;
 
   useEffect(() => {
     let cancelled = false;
@@ -59,7 +63,7 @@ export function useSwAutoReload(): SwAutoReloadState {
         if (cancelled) {
           return;
         }
-        setupSwAutoReload({
+        const handle = setupSwAutoReload({
           registerSW: mod.registerSW,
           showToast: (msg) => {
             showInfoRef.current(msg);
@@ -74,10 +78,12 @@ export function useSwAutoReload(): SwAutoReloadState {
               },
               hasAccount: () => contextRef.current !== null,
             }),
+          hasOpenModalDialog: () => hasOpenModalDialog(document),
           showUpdateNotice: (onUpdateNow) => {
             setUpdateNow(() => onUpdateNow);
           },
         });
+        maybeIdleRef.current = handle.onMaybeIdle;
       } catch (err) {
         if (err instanceof Error) {
           captureFeatureError(err, 'sw', 'autoReloadSetup');
@@ -88,6 +94,28 @@ export function useSwAutoReload(): SwAutoReloadState {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (sender === null) {
+      return;
+    }
+    // Fehlerpolitik 6 (swRegistration.ts): Aufbau/Loesen bricht still ab.
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe = sender.subscribe(() => {
+        void maybeIdleRef.current?.();
+      });
+    } catch {
+      return;
+    }
+    return () => {
+      try {
+        unsubscribe?.();
+      } catch {
+        // still — Fehlerpolitik 6
+      }
+    };
+  }, [sender]);
 
   return { updateNow };
 }

@@ -10,6 +10,7 @@
  */
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { OutboxStatus } from '../../core/match/client/outboxTypes';
 import type { MatchEngineContextValue } from '../../features/match-engine/matchEngineContextInstance';
 import { countWaitingEntries } from '../../features/collaboration/outbox/countWaitingEntries';
 import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
@@ -59,6 +60,47 @@ vi.mock('../../features/collaboration/outbox/countWaitingEntries', () => ({
 
 const useContextMock = vi.mocked(useMatchEngineContextOptional);
 const countMock = vi.mocked(countWaitingEntries);
+
+function waitingStatus(pending: number): OutboxStatus {
+  return {
+    pendingByTournament: {},
+    pendingByMatch: pending > 0 ? { m1: pending } : {},
+    rejectedByMatch: {},
+    reviewByMatch: {},
+    pausedMatches: {},
+    authRequired: false,
+    clientOutdated: false,
+    storagePersisted: null,
+    lastError: null,
+  };
+}
+
+function waitingSum(status: OutboxStatus): number {
+  return Object.values(status.pendingByMatch).reduce((sum, n) => sum + n, 0);
+}
+
+interface SenderProbe {
+  sender: { subscribe: (listener: (status: OutboxStatus) => void) => () => void };
+  deliver: (status: OutboxStatus) => void;
+}
+
+function makeSender(): SenderProbe {
+  let listener: ((status: OutboxStatus) => void) | undefined;
+  const sender = {
+    subscribe: vi.fn((next: (status: OutboxStatus) => void) => {
+      listener = next;
+      return () => {
+        listener = undefined;
+      };
+    }),
+  };
+  return {
+    sender,
+    deliver: (status: OutboxStatus) => {
+      listener?.(status);
+    },
+  };
+}
 
 async function mount() {
   const utils = renderHook(() => useSwAutoReload());
@@ -157,5 +199,82 @@ describe('useSwAutoReload', () => {
       await vi.advanceTimersByTimeAsync(DEFAULT_RELOAD_DELAY_MS);
     });
     expect(updateSWMock).toHaveBeenCalledWith(true);
+  });
+
+  it('Ausgang wird leer (Sender meldet Status) → Reload sofort ohne 60 s (Gegenbeispiel: Status mit wartenden Einträgen → kein Reload)', async () => {
+    const { sender, deliver } = makeSender();
+    const store = { forAccount: vi.fn(async () => []) };
+    useContextMock.mockReturnValue({
+      store,
+      accountId: 'acc1',
+      sender,
+    } as unknown as MatchEngineContextValue);
+    let delivered = waitingStatus(3);
+    countMock.mockImplementation(async () => waitingSum(delivered));
+    await mount();
+
+    act(() => {
+      __fireNeedRefresh();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(updateSWMock).not.toHaveBeenCalled();
+
+    delivered = waitingStatus(2);
+    act(() => {
+      deliver(delivered);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEFAULT_RELOAD_DELAY_MS);
+    });
+    expect(updateSWMock).not.toHaveBeenCalled();
+
+    delivered = waitingStatus(0);
+    act(() => {
+      deliver(delivered);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEFAULT_RELOAD_DELAY_MS);
+    });
+    expect(updateSWMock).toHaveBeenCalledWith(true);
+  });
+
+  it('ohne wartendes Update → Sender-Ereignis ruft countWaiting 0× (Gegenbeispiel: mit wartendem Update → 1×)', async () => {
+    const { sender, deliver } = makeSender();
+    const store = { forAccount: vi.fn(async () => []) };
+    useContextMock.mockReturnValue({
+      store,
+      accountId: 'acc1',
+      sender,
+    } as unknown as MatchEngineContextValue);
+    countMock.mockResolvedValue(3);
+    await mount();
+
+    act(() => {
+      deliver(waitingStatus(0));
+    });
+    act(() => {
+      deliver(waitingStatus(0));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(countMock).toHaveBeenCalledTimes(0);
+
+    act(() => {
+      __fireNeedRefresh();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    countMock.mockClear();
+    act(() => {
+      deliver(waitingStatus(0));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(countMock).toHaveBeenCalledTimes(1);
   });
 });

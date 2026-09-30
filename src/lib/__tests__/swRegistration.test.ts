@@ -107,6 +107,7 @@ function setup(h: Harness, overrides: Partial<SetupOptions> = {}): SwAutoReloadH
     showToast: h.showToast,
     updatingMessage: () => 'Updating…',
     isIdle: h.isIdle,
+    hasOpenModalDialog: () => hasOpenModalDialog(document),
     showUpdateNotice: h.showUpdateNotice,
     reload: h.reload,
     scheduleReload: h.scheduleReload,
@@ -117,8 +118,8 @@ function setup(h: Harness, overrides: Partial<SetupOptions> = {}): SwAutoReloadH
 }
 
 /** Fuer Faelle mit echtem `setTimeout` (Fake-Timer steuern die Verzoegerung). */
-function setupWithRealSchedule(h: Harness): SwAutoReloadHandle {
-  return setup(h, { scheduleReload: undefined });
+function setupWithRealSchedule(h: Harness, overrides: Partial<SetupOptions> = {}): SwAutoReloadHandle {
+  return setup(h, { scheduleReload: undefined, ...overrides });
 }
 
 function setVisibility(state: DocumentVisibilityState): void {
@@ -460,6 +461,30 @@ describe('setupSwAutoReload', () => {
     expect(h.updateSW).toHaveBeenCalledTimes(1);
   });
 
+  it('DOM-Burst zählt den Ausgang nicht', async () => {
+    document.body.innerHTML = '';
+    const countWaiting = vi.fn(async () => 3);
+    const hasOpen = vi.fn(() => hasOpenModalDialog(document));
+    const h = makeHarness(() =>
+      isIdleReal({ hasOpenModalDialog: hasOpen, countWaiting, hasAccount: () => true }),
+    );
+    setupWithRealSchedule(h, { hasOpenModalDialog: hasOpen });
+    h.triggerNeedRefresh();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(countWaiting).toHaveBeenCalledTimes(1);
+    countWaiting.mockClear();
+
+    for (let i = 0; i < 5; i += 1) {
+      const rand = document.createElement('div');
+      rand.textContent = `burst-${i}`;
+      document.body.appendChild(rand);
+      await Promise.resolve();
+    }
+    await vi.advanceTimersByTimeAsync(OBSERVER_DEBOUNCE_MS);
+    expect(countWaiting).toHaveBeenCalledTimes(0);
+    expect(hasOpen).toHaveBeenCalled();
+  });
+
   it('Dialog-Element entfernen → Pruefung → Reload; viele DOM-Aenderungen = eine Pruefung', async () => {
     document.body.innerHTML = '<div role="dialog" aria-modal="true"><input /></div>';
     const hasOpen = vi.fn(() => hasOpenModalDialog(document));
@@ -467,11 +492,11 @@ describe('setupSwAutoReload', () => {
     const h = makeHarness(() =>
       isIdleReal({ hasOpenModalDialog: hasOpen, countWaiting, hasAccount: () => true }),
     );
-    setupWithRealSchedule(h);
+    setupWithRealSchedule(h, { hasOpenModalDialog: hasOpen });
     h.triggerNeedRefresh();
     await vi.advanceTimersByTimeAsync(OBSERVER_DEBOUNCE_MS);
     expect(h.updateSW).not.toHaveBeenCalled();
-    expect(hasOpen).toHaveBeenCalledTimes(1);
+    expect(hasOpen).toHaveBeenCalledTimes(2);
 
     for (let i = 0; i < 5; i += 1) {
       const rand = document.createElement('div');
@@ -480,7 +505,7 @@ describe('setupSwAutoReload', () => {
       await Promise.resolve();
     }
     await vi.advanceTimersByTimeAsync(OBSERVER_DEBOUNCE_MS);
-    expect(hasOpen).toHaveBeenCalledTimes(2);
+    expect(hasOpen).toHaveBeenCalledTimes(3);
 
     const dialog = document.querySelector('[role="dialog"]');
     dialog?.remove();

@@ -33,6 +33,8 @@ export interface SetupOptions {
   updatingMessage: () => string;
   /** Idle check (dialog + outbox), see `swIdle.isIdle` — injected for tests. */
   isIdle: () => Promise<boolean>;
+  /** Observer input: true while a modal dialog is open (open→closed transition). */
+  hasOpenModalDialog: () => boolean;
   /**
    * Shows the persistent update notice; the callback reloads immediately.
    * Must be called at most once per waiting update (Regel 5: a throw must not
@@ -50,6 +52,8 @@ export interface SetupOptions {
 export interface SwAutoReloadHandle {
   /** vite-plugin-pwa's `updateSW` (manual update paths, e.g. the notice button). */
   updateSW: (reloadPage?: boolean) => Promise<void>;
+  /** Stable idle check for external triggers (e.g. outbox status events). */
+  onMaybeIdle: () => Promise<void>;
   /** Removes listeners, intervals and the dialog observer (hook cleanup). */
   dispose: () => void;
 }

@@ -28,6 +28,8 @@
  * 4. `updateSW(true)` rejects -> Sentry + `reload()` fallback (unchanged).
  * 5. Showing the notice throws -> Sentry + continue; a failing notice must
  *    never block the update/auto-reload.
+ * 6. Subscribing/unsubscribing `sender.subscribe` breaks off silently (no
+ *    Sentry); the listener never throws (`isIdle` catches).
  *
  * The registration callback is injected (no direct import of
  * `virtual:pwa-register`) so the unit tests don't need to mock virtual vite
@@ -66,6 +68,7 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
   }
   let hasScheduledReload = false;
   let hasFiredReload = false;
+  let updateWaiting = false;
   let idleCleanup: (() => void) | undefined;
   let pollCleanup: (() => void) | undefined;
 
@@ -132,7 +135,7 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
    * hoechstens einmal ausgeloest (`hasFiredReload`), die Pruefung beliebig oft.
    */
   const onMaybeIdle = async (): Promise<void> => {
-    if (hasScheduledReload || hasFiredReload) {
+    if (!updateWaiting || hasScheduledReload || hasFiredReload) {
       return;
     }
     let idle: boolean;
@@ -179,13 +182,19 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
     }, IDLE_RECHECK_MS);
 
     let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+    let dialogWasOpen = options.hasOpenModalDialog();
     const observer = new MutationObserver(() => {
       if (debounceTimer !== undefined) {
         return;
       }
       debounceTimer = setTimeout(() => {
         debounceTimer = undefined;
-        void onMaybeIdle();
+        const open = options.hasOpenModalDialog();
+        const closedNow = dialogWasOpen && !open;
+        dialogWasOpen = open;
+        if (closedNow) {
+          void onMaybeIdle();
+        }
       }, OBSERVER_DEBOUNCE_MS);
     });
     observer.observe(document.body, {
@@ -245,6 +254,7 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
   const updateSW = options.registerSW({
     immediate: true,
     onNeedRefresh: () => {
+      updateWaiting = true;
       // Hinweis bleibt stehen (kein Auto-Ausblenden); sein Knopf feuert sofort.
       try {
         options.showUpdateNotice(fireUpdateNow);
@@ -270,6 +280,7 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
 
   const handle: SwAutoReloadHandle = {
     updateSW,
+    onMaybeIdle,
     dispose: () => {
       idleCleanup?.();
       pollCleanup?.();
