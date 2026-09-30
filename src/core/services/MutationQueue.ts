@@ -1,6 +1,7 @@
 
 import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { Tournament, MatchUpdate } from '../models/types';
+import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
 import {
     GenericMutationQueue,
     type GenericMutationItem,
@@ -106,9 +107,19 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
 
             execute: async (item) => {
                 switch (item.type) {
-                    case 'SAVE_TOURNAMENT':
-                        await supabaseRepo.save(item.payload as Tournament);
+                    case 'SAVE_TOURNAMENT': {
+                        const tournament = item.payload as Tournament;
+                        // G7: Turnier mit Engine-Einträgen im Gastkonto nie hochladen —
+                        // auch nicht aus indirekten Enqueues (z. B. Location-Migration).
+                        // Ohne Erfolgswert würde die Mutation endlos wiederholt oder ins
+                        // Dead-Letter-Queue laufen; sie gilt daher als erledigt (A6-Muster:
+                        // Erfolg ohne Upload, siehe matchProtectionNotices.ts).
+                        if (await hasGuestEngineEntries(tournament)) {
+                            break;
+                        }
+                        await supabaseRepo.save(tournament);
                         break;
+                    }
                     case 'DELETE_TOURNAMENT':
                         await supabaseRepo.delete(item.payload as string);
                         break;

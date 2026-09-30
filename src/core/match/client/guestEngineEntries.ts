@@ -16,7 +16,7 @@ export const GUEST_ACCOUNT_ID = 'guest';
 
 /** Minimale Turnier-Sicht des Prädikats (strukturelle Typung, kein Models-Import noetig). */
 export interface GuestEntryCheckTournament {
-  matches: { id: string }[];
+  matches?: { id: string }[];
 }
 
 /** Quelle der lokalen Kopien — `LocalMatchStore.forAccount` reicht; Injektion fuer Tests. */
@@ -46,12 +46,17 @@ export async function hasGuestEngineEntries(
   tournament: GuestEntryCheckTournament,
   source?: GuestEntrySource,
 ): Promise<boolean> {
+  const matchIds = new Set((tournament.matches ?? []).map((match) => match.id));
+  if (matchIds.size === 0) {
+    // Ohne Matches gibt es keine matchId-Zuordnung — also keine Einträge,
+    // die verloren gehen koennten. Der Store muss dann nicht gelesen werden.
+    return false;
+  }
   let copies: MatchCopy[];
   try {
     copies = await resolveSource(source).forAccount(GUEST_ACCOUNT_ID);
   } catch {
     return true;
   }
-  const matchIds = new Set(tournament.matches.map((match) => match.id));
   return copies.some((copy) => matchIds.has(copy.matchId) && copy.confirmed.length > 0);
 }

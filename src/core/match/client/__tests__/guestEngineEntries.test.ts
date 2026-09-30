@@ -63,6 +63,11 @@ describe('hasGuestEngineEntries (C3b-2c, G7)', () => {
     await expect(hasGuestEngineEntries(tournamentWithMatchIds('ge-none-m1', 'ge-none-m2'))).resolves.toBe(false);
   });
 
+  it('false, wenn das Turnier keine Matches hat (keine Zuordnung möglich)', async () => {
+    await expect(hasGuestEngineEntries({ matches: [] })).resolves.toBe(false);
+    await expect(hasGuestEngineEntries({})).resolves.toBe(false);
+  });
+
   it('akzeptiert einen injizierten Store (Testbarkeit) und liest nur confirmed', async () => {
     const copies: MatchCopy[] = [
       {

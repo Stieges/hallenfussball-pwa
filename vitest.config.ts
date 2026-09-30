@@ -11,6 +11,7 @@ const DOM_ONLY_TS_TESTS = [
   'src/core/services/TournamentCreationService.release.test.ts',
   'src/core/services/TournamentCreationService.test.ts',
   'src/core/services/__tests__/GenericMutationQueue.test.ts',
+  'src/core/services/__tests__/MutationQueue.guestGuard.test.ts',
   'src/core/services/__tests__/MutationQueue.property.test.ts',
   'src/core/services/__tests__/MutationQueue.test.ts',
   'src/core/storage/__tests__/StorageFactory.test.ts',
