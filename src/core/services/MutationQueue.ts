@@ -114,6 +114,9 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                         // Ohne Erfolgswert würde die Mutation endlos wiederholt oder ins
                         // Dead-Letter-Queue laufen; sie gilt daher als erledigt (A6-Muster:
                         // Erfolg ohne Upload, siehe matchProtectionNotices.ts).
+                        // Lesefehler des Speichers (PC29): das Praedikat wirft, der Fehler
+                        // laeuft weiter → Versuch schlaegt fehl, Mutation bleibt erhalten
+                        // (Retry/Backoff); nur ein sicheres `true` gilt als erledigt.
                         if (await hasGuestEngineEntries(tournament)) {
                             break;
                         }

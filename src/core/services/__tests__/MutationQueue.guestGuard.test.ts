@@ -98,4 +98,22 @@ describe('MutationQueue SAVE_TOURNAMENT — G7-Wache (C3b-2c)', () => {
     expect(queue.getPendingCount()).toBe(0);
     expect(queue.getFailedCount()).toBe(0);
   });
+
+  it('Lesefehler des lokalen Speichers verwirft SAVE_TOURNAMENT NICHT (PC29): kein Upload, Mutation bleibt', async () => {
+    const readSpy = vi.spyOn(LocalMatchStore.prototype, 'forAccount').mockRejectedValue(new Error('DB weg'));
+    try {
+      const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository);
+      queue.enqueue('SAVE_TOURNAMENT', tournament('t-readerr', 'mq-readerr-m1'));
+
+      onlineSpy.mockReturnValue(true);
+      await queue.process();
+
+      expect(mockRepo.save).not.toHaveBeenCalled();
+      // Versuch zaehlt als fehlgeschlagen, Mutation bleibt erhalten (Retry/Backoff, kein Dead-Letter beim ersten Versuch).
+      expect(queue.getPendingCount()).toBe(1);
+      expect(queue.getFailedCount()).toBe(0);
+    } finally {
+      readSpy.mockRestore();
+    }
+  });
 });
