@@ -328,13 +328,13 @@ export class MatchExecutionService {
             id: generateEventId(),
             matchId,
             timestampSeconds: elapsed,
+            // Fixrunde Aufgabe 2 / Ruling PC30: Gelb-Rot ist Untertyp von Rot -- Ereignistyp bleibt
+            // RED_CARD, payload.cardType 'YELLOW_RED' unterscheidet (cardKindOf liest genau das).
             type: cardType === 'YELLOW' ? 'YELLOW_CARD' : 'RED_CARD',
             payload: {
                 team,
-                // cardType property is removed from payload as it is now in event type? 
-                // Wait, MatchEvent payload might still have it or not needed.
-                // Previous payload allowed generic. Let's keep minimal payload.
                 playerNumber: options?.playerNumber,
+                ...(cardType === 'YELLOW_RED' ? { cardType: 'YELLOW_RED' as const } : {}),
             },
             scoreAfter: { home: match.homeScore, away: match.awayScore },
         };

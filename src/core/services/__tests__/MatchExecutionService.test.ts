@@ -148,6 +148,31 @@ describe('MatchExecutionService', () => {
         expect(result.events[0].payload.playerNumber).toBe(7);
     });
 
+    // Fixrunde Aufgabe 2 (PC30): Gelb-Rot muss als Ereignistyp RED_CARD UND
+    // payload.cardType 'YELLOW_RED' geschrieben werden -- sonst ist Gelb-Rot von der Engine-Kette
+    // (viewAdapters.ts) her ununterscheidbar von direktem Rot fuer alle Leser, die cardKindOf nutzen.
+    it('schreibt Gelb-Rot als RED_CARD mit payload.cardType YELLOW_RED (PC30)', async () => {
+        const runningMatch = { ...minimalLiveMatch, status: 'RUNNING' as MatchStatus };
+        vi.mocked(mockLiveMatchRepo.get).mockResolvedValue(runningMatch);
+
+        const result = await service.recordCard('tour-1', 'match-1', 'home', 'YELLOW_RED', { playerNumber: 4 });
+
+        expect(result.events.length).toBe(1);
+        expect(result.events[0].type).toBe('RED_CARD');
+        expect(result.events[0].payload.cardType).toBe('YELLOW_RED');
+        expect(result.events[0].payload.playerNumber).toBe(4);
+    });
+
+    it('schreibt direktes Rot ohne cardType (kein Gelb-Rot)', async () => {
+        const runningMatch = { ...minimalLiveMatch, status: 'RUNNING' as MatchStatus };
+        vi.mocked(mockLiveMatchRepo.get).mockResolvedValue(runningMatch);
+
+        const result = await service.recordCard('tour-1', 'match-1', 'home', 'RED', { playerNumber: 9 });
+
+        expect(result.events[0].type).toBe('RED_CARD');
+        expect(result.events[0].payload.cardType).toBeUndefined();
+    });
+
     it('should manually update result', async () => {
         vi.mocked(mockLiveMatchRepo.get).mockResolvedValue(minimalLiveMatch);
 
