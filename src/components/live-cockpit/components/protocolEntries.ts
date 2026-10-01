@@ -37,20 +37,30 @@ export function mergeProtocol(
     .map(({ entry }) => entry);
 }
 
-/** M2: Sidebar-Limit in Anzeige-Reihenfolge (neueste zuerst). Zaehlt nur wirksame Eintraege —
- *  zurueckgenommene verdraengen keine und bleiben vollstaendig sichtbar. */
+/** M2/M10: Sidebar-Limit in Anzeige-Reihenfolge (neueste zuerst). Zaehlt nur wirksame
+ *  Eintraege — zurueckgenommene verdraengen keine. U5: Zurueckgenommene erscheinen nur
+ *  im Zeitfenster der gezeigten wirksamen Eintraege, sichtbar ab dem Zeitstempel des
+ *  aeltesten gezeigten wirksamen Eintrags (>=). Ohne gezeigte wirksame Eintraege
+ *  erscheinen keine Zurueckgenommenen. Reihenfolge bleibt stabil. */
 export function takeRecent(entries: readonly ProtocolEntry[], maxEffective: number): ProtocolEntry[] {
-  const recent: ProtocolEntry[] = [];
-  let effectiveCount = 0;
+  const shownEffective: ProtocolEntry[] = [];
   for (const entry of entries) {
-    if (entry.retracted) {
-      recent.push(entry);
-    } else if (effectiveCount < maxEffective) {
-      recent.push(entry);
-      effectiveCount += 1;
+    if (!entry.retracted && shownEffective.length < maxEffective) {
+      shownEffective.push(entry);
     }
   }
-  return recent;
+  if (shownEffective.length === 0) {
+    return [];
+  }
+  let cutoff = shownEffective[0].event.timestampSeconds;
+  for (const entry of shownEffective) {
+    cutoff = Math.min(cutoff, entry.event.timestampSeconds);
+  }
+  return entries.filter(
+    (entry) =>
+      (!entry.retracted && shownEffective.includes(entry)) ||
+      (entry.retracted && entry.event.timestampSeconds >= cutoff),
+  );
 }
 
 /** Zurückgenommener Eintrag: ausgegraut + durchgestrichen. */

@@ -5,7 +5,7 @@
  */
 import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../design-tokens';
+import { cssVars, touchTargets } from '../../../design-tokens';
 import type { RuntimeMatchEvent } from '../../../types/tournament';
 import { retractedMarkStyle, retractedRowStyle, formatTime, type ProtocolEntry } from './protocolEntries';
 
@@ -104,8 +104,8 @@ export function ProtocolRow({
     alignItems: 'center',
     justifyContent: 'center',
     transition: 'color 0.15s ease',
-    minWidth: 28,
-    minHeight: 28,
+    minWidth: touchTargets.minimum,
+    minHeight: touchTargets.minimum,
   };
 
   const eventInfoStyle: CSSProperties = {

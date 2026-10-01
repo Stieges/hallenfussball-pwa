@@ -1,6 +1,7 @@
 /**
- * Sidebar-Protokoll (M2): das 10er-Limit zaehlt nur wirksame Eintraege — zurueckgenommene
- * verdraengen keine und bleiben sichtbar.
+ * Sidebar-Protokoll (M2/U5): das 10er-Limit zaehlt nur wirksame Eintraege — zurueckgenommene
+ * verdraengen keine. U5: sichtbar sind nur Zurueckgenommene im Zeitfenster der gezeigten
+ * wirksamen Eintraege (Zeitstempel >= dem des aeltesten gezeigten wirksamen Eintrags).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -32,9 +33,10 @@ const event = (id: string, timestampSeconds: number): RuntimeMatchEvent => ({
   scoreAfter: { home: 1, away: 0 },
 });
 
-describe('Sidebar Protokoll-Limit (M2)', () => {
-  it('Limit zaehlt nur wirksame: 10 wirksame bleiben sichtbar, alle 3 Zurueckgenommenen auch', () => {
+describe('Sidebar Protokoll-Limit (M2/U5)', () => {
+  it('Limit zaehlt nur wirksame: 10 wirksame bleiben sichtbar, Zurueckgenommene nur im Zeitfenster', () => {
     const events = Array.from({ length: 12 }, (_, i) => event(`e${i}`, 100 + i));
+    // Fenster: 10 neueste wirksame (102..111) -> aeltester gezeigter = 102.
     const retractedEvents = [event('r-neu', 200), event('r-mitte', 105), event('r-alt', 5)];
     render(
       <Sidebar
@@ -48,7 +50,8 @@ describe('Sidebar Protokoll-Limit (M2)', () => {
         onEventEdit={() => undefined}
       />,
     );
-    expect(screen.getAllByTestId('event-row-retracted')).toHaveLength(3);
+    // r-neu (200) und r-mitte (105) liegen im Fenster, r-alt (5) davor nicht.
+    expect(screen.getAllByTestId('event-row-retracted')).toHaveLength(2);
     expect(screen.getAllByTitle('Bearbeiten')).toHaveLength(10);
   });
 });
