@@ -1,5 +1,6 @@
 import { Match, Tournament, Standing, Team, PlacementCriterion, RuntimeMatchEvent } from '../types/tournament';
 import { DEFAULT_FAIR_PLAY_PROFILE, type FairPlayProfile } from '../core/stats/fairPlayProfiles';
+import { cardKindOf } from './cardKind';
 
 /**
  * Calculate standings for a group or all teams
@@ -564,6 +565,14 @@ function scorePlayerCards(yellow: number, yellowRed: number, red: number, profil
   return points;
 }
 
+/**
+ * Fair-Play-Punkte je Team nach austauschbarem Profil (DFBNET/UEFA/FIFA, Standard DFBNET).
+ * Die Reihenfolge von Gelb und Gelb-Rot im Ereignis-Log ist dabei egal: `playerTally` summiert
+ * zuerst alle Karten eines Spielers im Spiel auf (unabhaengig von der Zeile im Log) und
+ * `scorePlayerCards` kombiniert erst danach -- eine Gelb-Rot ersetzt die Gelbe desselben Spielers
+ * im selben Spiel egal ob die Gelbe vor oder (durch Nacherfassung/Korrektur) nach der Gelb-Rot
+ * im Log steht.
+ */
 export const calculateFairPlay = (
   tournament: Tournament,
   engineEventsById?: EngineEventsById,
@@ -600,17 +609,21 @@ export const calculateFairPlay = (
           entry.points += profile.timePenalty;
           return;
         }
-        if (event.type !== 'YELLOW_CARD' && event.type !== 'RED_CARD') { return; }
+        const kind = cardKindOf(event);
+        if (kind === null) { return; }
 
-        const isYellowRed = event.type === 'RED_CARD' && event.payload.cardType === 'YELLOW_RED';
         const playerNumber = event.payload.playerNumber;
-        const key = playerNumber !== undefined ? `${teamId}#${playerNumber}` : `${teamId}#anon-${anonCounter++}`;
+        // Fixrunde Aufgabe 3: nur eine echte Zahl bildet den gemeinsamen Spieler-Schluessel.
+        // Altspiele koennen `playerNumber: null` persistiert haben (Legacy-Daten) -- `!== undefined`
+        // liess das durch und fuehrte verschiedene Spieler faelschlich unter demselben Schluessel
+        // `${teamId}#null` zusammen (secondYellowReplacesFirst griff dann faelschlich).
+        const key = typeof playerNumber === 'number' ? `${teamId}#${playerNumber}` : `${teamId}#anon-${anonCounter++}`;
         const tally = playerTally.get(key) ?? { teamId, yellow: 0, yellowRed: 0, red: 0 };
 
-        if (event.type === 'YELLOW_CARD') {
+        if (kind === 'YELLOW') {
           entry.yellowCards++;
           tally.yellow++;
-        } else if (isYellowRed) {
+        } else if (kind === 'YELLOW_RED') {
           entry.yellowRedCards++;
           tally.yellowRed++;
         } else {

@@ -8,10 +8,15 @@
  * F3b1 (PO 30.09.): Gelb-Rot kommt weiterhin als Ereignistyp RED_CARD an (payload.cardType
  * 'YELLOW_RED' statt vorher 'RED', seit der Adapter-Fix in viewAdapters.ts). Fuer den Zaehler
  * aendert das nichts -- RED_CARD zaehlt unabhaengig vom Kartentyp 1 Foul, Gelb-Rot also mit.
+ *
+ * Fixrunde (Ruling PC30): die Karten-Erkennung laeuft ueber `cardKindOf` (gemeinsame Hilfsfunktion,
+ * `src/utils/cardKind.ts`) statt einer eigenen `payload.cardType`-Abfrage -- hier nur zur
+ * Klassifizierung "ist das ueberhaupt eine Karte", die Zaehlung selbst bleibt kartentyp-unabhaengig.
  */
 import { useMemo } from 'react';
+import { cardKindOf } from '../utils/cardKind';
 
-const FOUL_TYPES: ReadonlySet<string> = new Set(['FOUL', 'YELLOW_CARD', 'RED_CARD', 'TIME_PENALTY']);
+const NON_CARD_FOUL_TYPES: ReadonlySet<string> = new Set(['FOUL', 'TIME_PENALTY']);
 
 export interface FoulCountEvent {
   type: string;
@@ -42,7 +47,8 @@ export function useFoulCounts(
     let home = 0;
     let away = 0;
     for (const event of events) {
-      if (!FOUL_TYPES.has(event.type)) {
+      const isCard = cardKindOf(event) !== null;
+      if (!isCard && !NON_CARD_FOUL_TYPES.has(event.type)) {
         continue;
       }
       const teamId = event.payload.teamId;

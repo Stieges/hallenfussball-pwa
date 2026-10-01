@@ -176,6 +176,36 @@ describe('calculateFairPlay (Profil, F3b1)', () => {
     expect(entry).toMatchObject({ yellowRedCards: 1, redCards: 0, yellowCards: 0 });
   });
 
+  // Fixrunde Aufgabe 3: Altspiele (match.events statt engineEventsById) koennen `playerNumber:
+  // null` persistiert haben -- `typeof playerNumber === 'number'` darf solche Eintraege NICHT
+  // unter demselben Spieler-Schluessel zusammenfuehren (sonst greift secondYellowReplacesFirst
+  // faelschlich zwischen zwei verschiedenen Spielern ohne erfasste Rueckennummer).
+  it('Altspiel mit playerNumber: null (Legacy, match.events direkt): Gelb + Gelb-Rot = 4, keine Zusammenfuehrung', () => {
+    const legacyMatch: Match = {
+      ...MATCH,
+      events: [
+        {
+          id: 'y1',
+          matchId: 'm',
+          timestampSeconds: 10,
+          type: 'YELLOW_CARD',
+          payload: { teamId: 'teamA', playerNumber: null },
+          scoreAfter: { home: 0, away: 0 },
+        },
+        {
+          id: 'yr1',
+          matchId: 'm',
+          timestampSeconds: 20,
+          type: 'RED_CARD',
+          payload: { teamId: 'teamA', playerNumber: null, cardType: 'YELLOW_RED' },
+          scoreAfter: { home: 0, away: 0 },
+        },
+      ],
+    } as unknown as Match;
+    const fairPlay = calculateFairPlay(tournamentWith([legacyMatch]), undefined, UEFA_PROFILE);
+    expect(fairPlay.find((e) => e.teamName === 'FC Alpha')?.points).toBe(4);
+  });
+
   it('ohne Profil-Parameter nutzt Produktivcode den Standard DFBNET', () => {
     const log = [
       start(),
