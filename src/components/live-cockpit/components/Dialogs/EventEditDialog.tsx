@@ -14,8 +14,10 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import { useFocusTrap } from '../../../../hooks';
+import { cardKindOf } from '../../../../utils/cardKind';
 import type { EditableMatchEvent } from '../../../../types/tournament';
 import type { EventFieldChanges } from '../../../../hooks/engineEventEditingSupport';
 import { EventNumberField } from './EventNumberField';
@@ -61,6 +63,7 @@ export function EventEditDialog({
   deleteBlocked,
   amendLocked,
 }: EventEditDialogProps) {
+  const { t } = useTranslation('cockpit');
   const [playerNumber, setPlayerNumber] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -98,11 +101,12 @@ export function EventEditDialog({
     return 'Team';
   }, [homeTeam, awayTeam]);
 
-  const getEventIcon = (type?: string): string => {
-    switch (type) {
+  // F3b2 (Ruling PC30, Fixrunde Aufgabe 9): Gelb-Rot (RED_CARD + payload.cardType) NUR ueber cardKindOf.
+  const getEventIcon = (e: EditableMatchEvent): string => {
+    switch (e.type) {
       case 'GOAL': return '⚽';
       case 'YELLOW_CARD': return '🟨';
-      case 'RED_CARD': return '🟥';
+      case 'RED_CARD': return cardKindOf(e) === 'YELLOW_RED' ? '🟨🟥' : '🟥';
       case 'TIME_PENALTY': return '⏱️';
       case 'SUBSTITUTION': return '🔄';
       case 'FOUL': return '⚠️';
@@ -110,11 +114,12 @@ export function EventEditDialog({
     }
   };
 
-  const getEventTypeLabel = (type?: string): string => {
-    switch (type) {
+  const getEventTypeLabel = (e: EditableMatchEvent): string => {
+    switch (e.type) {
       case 'GOAL': return 'Tor';
-      case 'YELLOW_CARD': return 'Gelbe Karte';
-      case 'RED_CARD': return 'Rote Karte';
+      case 'YELLOW_CARD': return t('engine.retract.kind.yellowCard');
+      case 'RED_CARD':
+        return cardKindOf(e) === 'YELLOW_RED' ? t('engine.retract.kind.yellowRedCard') : t('engine.retract.kind.redCard');
       case 'TIME_PENALTY': return sportGlossary.terms.timePenalty.de;
       case 'SUBSTITUTION': return 'Auswechslung';
       case 'FOUL': return 'Foul';
@@ -163,10 +168,10 @@ export function EventEditDialog({
       >
         {/* Header */}
         <div style={styles.header}>
-          <span style={styles.eventIcon}>{getEventIcon(event.type)}</span>
+          <span style={styles.eventIcon}>{getEventIcon(event)}</span>
           <div>
             <h2 id="event-edit-dialog-title" style={styles.title}>
-              {getEventTypeLabel(event.type)} bearbeiten
+              {getEventTypeLabel(event)} bearbeiten
             </h2>
             <p style={styles.subtitle}>
               {getTeamName(getEventTeamId(event))} · {formatTime(getEventTimeSeconds(event))}

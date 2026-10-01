@@ -765,6 +765,8 @@ export interface EditableMatchEvent {
     teamId?: string;
     teamName?: string;
     playerNumber?: number;
+    /** F3b2 (Ruling PC30): 'YELLOW_RED' unterscheidet Gelb-Rot (Ereignistyp RED_CARD) von Rot. */
+    cardType?: CardType;
   };
 }
 
