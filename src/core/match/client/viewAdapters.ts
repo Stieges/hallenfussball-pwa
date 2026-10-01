@@ -322,12 +322,3 @@ export function activePenaltiesView(
     remainingMs: penaltyRemainingMs(penalty, elapsedMs),
   }));
 }
-
-/** Fouls fuer das ganze Spiel (nicht je Abschnitt). */
-export function foulCounts(state: MatchState): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const foul of state.fouls) {
-    counts[foul.teamId] = (counts[foul.teamId] ?? 0) + 1;
-  }
-  return counts;
-}

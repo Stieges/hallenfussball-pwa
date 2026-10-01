@@ -40,12 +40,34 @@ function countViaChain(log: EngineEvent[]): { home: number; away: number } {
 }
 
 describe('useFoulCounts (G11)', () => {
-  it('zaehlt nur FOUL-Eintraege und nur die beiden Teams', () => {
+  it('zaehlt Karte, Gelb-Rot und Zeitstrafe als je ein Foul (Foul mit Zusatz)', () => {
+    const count = (events: ReturnType<typeof matchWith>) =>
+      renderHook(() => useFoulCounts(events)).result.current;
+    expect(count(matchWith([{ ...foul('k1', 'teama'), type: 'YELLOW_CARD' }]))).toEqual({ home: 1, away: 0 });
+    expect(count(matchWith([{ ...foul('k2', 'teamb'), type: 'RED_CARD' }]))).toEqual({ home: 0, away: 1 });
+    expect(count(matchWith([{ ...foul('p1', 'teama'), type: 'TIME_PENALTY' }]))).toEqual({ home: 1, away: 0 });
+  });
+
+  it('FOUL + Karte in derselben Minute zaehlen als 2 (U3, bewusst ohne Zusammenfassen)', () => {
+    const { result } = renderHook(() =>
+      useFoulCounts(
+        matchWith([
+          foul('f1', 'teama'),
+          { ...foul('k1', 'teama'), type: 'YELLOW_CARD', timestampSeconds: 10 },
+        ]),
+      ),
+    );
+    expect(result.current).toEqual({ home: 2, away: 0 });
+  });
+
+  it('Tor, Wechsel und fremdes Team zaehlen nicht (Gegenbeispiele)', () => {
     const { result } = renderHook(() =>
       useFoulCounts(
         matchWith([
           foul('f1', 'teama'),
           { ...foul('g1', 'teama'), type: 'GOAL' },
+          { ...foul('s1', 'teama'), type: 'SUBSTITUTION' },
+          { ...foul('k1', 'unbekannt'), type: 'YELLOW_CARD' },
           foul('f2', 'unbekannt'),
         ]),
       ),
@@ -71,13 +93,12 @@ describe('über den Adapter (M9): Engine-Log → toLiveMatchView → useFoulCoun
     ).toEqual({ home: 0, away: 0 });
   });
 
-  it('zurückgenommene Karte zählt nicht (Kette Engine-Log → View → useFoulCounts = 0)', () => {
-    const log = [
-      start(),
-      ev({ id: 'k1', type: 'YELLOW_CARD', at: 2000, teamId: 'teamA', clockMs: 20_000, payload: { playerNumber: 4 } }),
-      ev({ id: 'r1', type: 'RETRACT', at: 3000, targetId: 'k1' }),
-    ];
-    expect(countViaChain(log)).toEqual({ home: 0, away: 0 });
+  it('zurückgenommene Karte zählt nicht, ohne RETRACT zählt sie 1 (Kette)', () => {
+    const karte = ev({ id: 'k1', type: 'YELLOW_CARD', at: 2000, teamId: 'teamA', clockMs: 20_000, payload: { playerNumber: 4 } });
+    expect(countViaChain([start(), karte])).toEqual({ home: 1, away: 0 });
+    expect(
+      countViaChain([start(), karte, ev({ id: 'r1', type: 'RETRACT', at: 3000, targetId: 'k1' })]),
+    ).toEqual({ home: 0, away: 0 });
   });
 
   it('Fouls je Team via toLiveMatchView (Ersatz-Aussage foulCounts)', () => {

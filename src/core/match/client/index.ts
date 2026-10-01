@@ -25,7 +25,6 @@ export {
   toRetractedEvents,
   stableEvents,
   activePenaltiesView,
-  foulCounts,
   type LiveMatchMeta,
   type LiveRuntimeEvent,
   type ViewClock,

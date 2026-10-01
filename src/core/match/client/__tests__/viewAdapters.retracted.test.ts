@@ -3,7 +3,7 @@
  * (`retractedEvents`), `events` bleibt ohne Zurueckgenommenes; "offen" = Nummer fehlt (nicht `incomplete`).
  */
 import { describe, it, expect } from 'vitest';
-import { toRuntimeEvents, toRetractedEvents, toLiveMatchView, foulCounts } from '../viewAdapters';
+import { toRuntimeEvents, toRetractedEvents, toLiveMatchView } from '../viewAdapters';
 import { applyEvent, reduceMatch, type EngineEvent } from '../../';
 import { T, ctx, ev, goal, meta, start } from './fixtures';
 
@@ -37,9 +37,8 @@ describe('toRetractedEvents (G6)', () => {
     expect(match.retractedEvents?.map((e) => e.id)).toEqual(['g2', 'f1']);
   });
 
-  it('Fouls und offene Eintraege zaehlen Zurueckgenommenes nicht (foulCounts, events)', () => {
+  it('offene Eintraege zaehlen Zurueckgenommenes nicht (events; Foul-Zaehlung s. useFoulCounts-Adapter)', () => {
     const { state } = view(log);
-    expect(foulCounts(state)).toEqual({});
     expect(toRuntimeEvents(state, log, ctx).some((e) => e.type === 'FOUL')).toBe(false);
     expect(toRuntimeEvents(state, log, ctx).filter((e) => e.incomplete === true)).toEqual([]);
   });

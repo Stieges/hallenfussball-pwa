@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toRuntimeEvents, stableEvents, activePenaltiesView, foulCounts, toLiveMatchView } from '../viewAdapters';
+import { toRuntimeEvents, stableEvents, activePenaltiesView, toLiveMatchView } from '../viewAdapters';
 import { initialState, reduceMatch, type MatchState } from '../../';
 import { T, ctx, ev, goal, meta, start } from './fixtures';
 
@@ -150,7 +150,7 @@ describe('stableEvents (M-4)', () => {
   });
 });
 
-describe('activePenaltiesView und foulCounts (I4)', () => {
+describe('activePenaltiesView (I4)', () => {
   it('rechnet die Restzeit mit serverNow und filtert abgelaufene sowie zurueckgenommene Strafen', () => {
     const state: MatchState = {
       ...initialState(ctx),
@@ -164,18 +164,6 @@ describe('activePenaltiesView und foulCounts (I4)', () => {
     };
     const result = activePenaltiesView(state, T + 15_000);
     expect(result).toEqual([{ id: 'p1', teamId: 'teamA', remainingMs: 75_000 }]);
-  });
-
-  it('zaehlt Fouls fuer das ganze Spiel', () => {
-    const state: MatchState = {
-      ...initialState(ctx),
-      fouls: [
-        { id: 'f1', teamId: 'teamA', clockMs: 1000, section: 1 },
-        { id: 'f2', teamId: 'teamA', clockMs: 2000, section: 2 },
-        { id: 'f3', teamId: 'teamB', clockMs: 3000, section: 2 },
-      ],
-    };
-    expect(foulCounts(state)).toEqual({ teamA: 2, teamB: 1 });
   });
 
   it('liefert ohne Strafen eine leere Liste und rechnet bei stehender Uhr nur mit elapsedMs', () => {
