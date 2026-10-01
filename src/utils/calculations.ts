@@ -1,4 +1,5 @@
 import { Match, Tournament, Standing, Team, PlacementCriterion, RuntimeMatchEvent } from '../types/tournament';
+import { DEFAULT_FAIR_PLAY_PROFILE, type FairPlayProfile } from '../core/stats/fairPlayProfiles';
 
 /**
  * Calculate standings for a group or all teams
@@ -528,11 +529,46 @@ export interface FairPlayEntry {
   teamName: string;
   points: number;
   yellowCards: number;
+  /** Gelb-Rot (F3b1): eigener Zaehler, nicht in redCards enthalten. */
+  yellowRedCards: number;
   redCards: number;
   timePenalties: number;
 }
 
-export const calculateFairPlay = (tournament: Tournament, engineEventsById?: EngineEventsById): FairPlayEntry[] => {
+/**
+ * Punkte einer einzelnen Spieler-Kombination (Team + Rueckennummer, je Spiel) nach Profil.
+ * `secondYellowReplacesFirst`: eine Gelbe und eine spaetere Gelb-Rot desselben Spielers ersetzen
+ * sich (zaehlt nur einmal als Gelb-Rot). `yellowPlusRed`: Gelb + direktes Rot desselben Spielers
+ * (kein Ersetzen, eigener Kombi-Wert: fest oder Summe).
+ */
+function scorePlayerCards(yellow: number, yellowRed: number, red: number, profile: FairPlayProfile): number {
+  let points = 0;
+  let yellowsLeft = yellow;
+  let yellowRedsLeft = yellowRed;
+  let redsLeft = red;
+
+  if (profile.secondYellowReplacesFirst && yellowsLeft > 0 && yellowRedsLeft > 0) {
+    points += profile.yellowRed;
+    yellowsLeft -= 1;
+    yellowRedsLeft -= 1;
+  }
+  points += yellowRedsLeft * profile.yellowRed;
+
+  if (yellowsLeft > 0 && redsLeft > 0) {
+    points += profile.yellowPlusRed === 'SUM' ? profile.yellow + profile.red : profile.yellowPlusRed;
+    yellowsLeft -= 1;
+    redsLeft -= 1;
+  }
+  points += yellowsLeft * profile.yellow;
+  points += redsLeft * profile.red;
+  return points;
+}
+
+export const calculateFairPlay = (
+  tournament: Tournament,
+  engineEventsById?: EngineEventsById,
+  profile: FairPlayProfile = DEFAULT_FAIR_PLAY_PROFILE,
+): FairPlayEntry[] => {
   const map = new Map<string, FairPlayEntry>();
 
   // Initialize all teams
@@ -541,28 +577,53 @@ export const calculateFairPlay = (tournament: Tournament, engineEventsById?: Eng
       teamName: t.name,
       points: 0,
       yellowCards: 0,
+      yellowRedCards: 0,
       redCards: 0,
       timePenalties: 0
     });
   });
 
   tournament.matches.forEach(match => {
+      // Kombinationen (Gelb + spaetere Gelb-Rot/Rot desselben Spielers) gelten nur je Spiel --
+      // transienter Schluessel Team + Rueckennummer; ohne Rueckennummer keine Zusammenfuehrung.
+      const playerTally = new Map<string, { teamId: string; yellow: number; yellowRed: number; red: number }>();
+      let anonCounter = 0;
+
       eventsForMatch(match, engineEventsById).forEach(event => {
         const teamId = event.payload.teamId;
         if (!teamId) { return; }
         const entry = map.get(teamId);
         if (!entry) { return; }
 
+        if (event.type === 'TIME_PENALTY') {
+          entry.timePenalties++;
+          entry.points += profile.timePenalty;
+          return;
+        }
+        if (event.type !== 'YELLOW_CARD' && event.type !== 'RED_CARD') { return; }
+
+        const isYellowRed = event.type === 'RED_CARD' && event.payload.cardType === 'YELLOW_RED';
+        const playerNumber = event.payload.playerNumber;
+        const key = playerNumber !== undefined ? `${teamId}#${playerNumber}` : `${teamId}#anon-${anonCounter++}`;
+        const tally = playerTally.get(key) ?? { teamId, yellow: 0, yellowRed: 0, red: 0 };
+
         if (event.type === 'YELLOW_CARD') {
           entry.yellowCards++;
-          entry.points += 1;
-        } else if (event.type === 'TIME_PENALTY') {
-          entry.timePenalties++;
-          entry.points += 3; // 3 points for time penalty
-        } else if (event.type === 'RED_CARD') {
+          tally.yellow++;
+        } else if (isYellowRed) {
+          entry.yellowRedCards++;
+          tally.yellowRed++;
+        } else {
           entry.redCards++;
-          entry.points += 5; // 5 points for red card
+          tally.red++;
         }
+        playerTally.set(key, tally);
+      });
+
+      playerTally.forEach(({ teamId, yellow, yellowRed, red }) => {
+        const entry = map.get(teamId);
+        if (!entry) { return; }
+        entry.points += scorePlayerCards(yellow, yellowRed, red, profile);
       });
   });
 

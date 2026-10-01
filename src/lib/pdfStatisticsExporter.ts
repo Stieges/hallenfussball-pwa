@@ -96,12 +96,15 @@ export async function exportStatisticsToPDF(tournament: Tournament, engineEvents
 
     autoTable(doc, {
         startY: yPos,
-        head: [['Pl.', 'Team', 'Punkte', 'Gelb (1)', 'Zeit (3)', 'Rot (5)']],
+        // F3b1 (PO 30.09.): keine festen Punktwerte mehr in der Kopfzeile -- die haengen vom
+        // Fair-Play-Profil ab (calculateFairPlay nutzt ohne Parameter den Standard DFBNET).
+        head: [['Pl.', 'Team', 'Punkte', 'Gelb', 'Gelb-Rot', 'Zeit', 'Rot']],
         body: fairPlay.map((f, i) => [
             (i + 1).toString(),
             f.teamName,
             f.points.toString(),
             f.yellowCards.toString(),
+            f.yellowRedCards.toString(),
             f.timePenalties.toString(),
             f.redCards.toString()
         ]),
