@@ -75,7 +75,8 @@
   "foul": {
     "label": "Fouls:",
     "display": "FOULS",
-    "hint": "Fouls count for the whole game"
+    "hint": "Fouls count for the whole game – cards and time penalties count as a foul",
+    "countsAsFoul": "counts as a foul"
   },
   "cardDialog": {
     "title": "Issue Card",

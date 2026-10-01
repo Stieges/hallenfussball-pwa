@@ -103,8 +103,10 @@ describe('LiveCockpit — Fouls für das ganze Spiel (C3b-2, G11)', () => {
     expect(screen.getByTestId('foul-count-home')).toHaveTextContent('2');
   });
 
-  it('R6-Hinweis „Fouls zählen für das ganze Spiel“ ist sichtbar', () => {
+  it('R6-Hinweis „Fouls zählen für das ganze Spiel – Karten und Zeitstrafen zählen als Foul“ ist sichtbar', () => {
     render(<LiveCockpit {...baseProps(makeMatch())} />);
-    expect(screen.getByTestId('foul-hint')).toHaveTextContent('Fouls zählen für das ganze Spiel');
+    expect(screen.getByTestId('foul-hint')).toHaveTextContent(
+      'Fouls zählen für das ganze Spiel – Karten und Zeitstrafen zählen als Foul',
+    );
   });
 });

@@ -370,6 +370,7 @@ export function CardDialog({
         {step === 1 && renderStep1CardType()}
         {step === 2 && renderStep2Team()}
         {step === 3 && renderStep3Player()}
+        <p style={styles.subtitle} data-testid="card-dialog-foul-hint">{t('foul.countsAsFoul')}</p>
       </div>
     </div>
   );
