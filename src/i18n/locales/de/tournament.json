@@ -430,7 +430,8 @@
       "recentEvents": "Letzte Ereignisse",
       "noEvents": "Noch keine Ereignisse",
       "close": "Schließen",
-      "gotoCockpit": "Zum Cockpit"
+      "gotoCockpit": "Zum Cockpit",
+      "eventYellowRedCard": "Gelb-Rote Karte {{team}}{{player}}"
     },
     "quickScore": {
       "goalScorers": "Torschützen",
@@ -462,6 +463,7 @@
       "goal": "TOR {{team}}{{player}}",
       "assist": "Assist",
       "yellowCard": "Gelbe Karte {{team}}{{player}}",
+      "yellowRedCard": "Gelb-Rote Karte {{team}}{{player}}",
       "redCard": "Rote Karte {{team}}{{player}}",
       "timePenalty": "{{duration}} Min Zeitstrafe {{team}}{{player}}",
       "substitutionDetail": "Wechsel {{team}}: {{out}} → {{in}}",

@@ -9,6 +9,7 @@ import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { RuntimeMatchEvent } from '../../../types/tournament';
+import { cardKindOf } from '../../../utils/cardKind';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,11 +35,12 @@ const formatTime = (seconds: number): string => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
-const getEventIcon = (type: string): string => {
-  switch (type) {
+const getEventIcon = (event: RuntimeMatchEvent): string => {
+  switch (event.type) {
     case 'GOAL': return '\u26BD';
     case 'YELLOW_CARD': return '\uD83D\uDFE8';
-    case 'RED_CARD': return '\uD83D\uDFE5';
+    // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
+    case 'RED_CARD': return cardKindOf(event) === 'YELLOW_RED' ? '\uD83D\uDFE8\uD83D\uDFE5' : '\uD83D\uDFE5';
     case 'TIME_PENALTY': return '\u23F1';
     case 'SUBSTITUTION': return '\uD83D\uDD04';
     case 'FOUL': return '\u26A0';
@@ -87,7 +89,8 @@ export function EventList({
       case 'YELLOW_CARD':
         return t('matchSummary.events.yellowCard', { team: teamName, player: playerInfo });
       case 'RED_CARD':
-        return t('matchSummary.events.redCard', { team: teamName, player: playerInfo });
+        // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
+        return t(cardKindOf(event) === 'YELLOW_RED' ? 'matchSummary.events.yellowRedCard' : 'matchSummary.events.redCard', { team: teamName, player: playerInfo });
       case 'TIME_PENALTY': {
         const duration = event.payload.penaltyDuration
           ? Math.floor(event.payload.penaltyDuration / 60)
@@ -199,7 +202,7 @@ export function EventList({
     <div style={containerStyle}>
       {displayEvents.map((event) => (
         <div key={event.id} style={eventRowStyle}>
-          <span style={iconStyle}>{getEventIcon(event.type)}</span>
+          <span style={iconStyle}>{getEventIcon(event)}</span>
           <span style={timeStyle}>{formatTime(event.timestampSeconds)}</span>
           <span style={descStyle}>
             {getEventDescription(event)}

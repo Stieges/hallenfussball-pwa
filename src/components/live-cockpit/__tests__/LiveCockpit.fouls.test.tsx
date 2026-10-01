@@ -189,3 +189,48 @@ describe('LiveCockpit — M7: Toasts i18n, Foul ohne Zahl, 5er-Warnung (F3a)', (
     expect(await screen.findByText('⚠ ACHTUNG: FC Alpha hat 5 Fouls!')).toBeInTheDocument();
   });
 });
+
+describe('LiveCockpit — Gelb-Rot im Cockpit (C3b-2 F3b2, PO 30.09.)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('eigener Schnellknopf "Gelb-Rot" -> Dialog -> onCard mit "YELLOW_RED" (keine automatische Umwandlung)', async () => {
+    const onCard = vi.fn();
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(makeMatch(), { onCard })} />);
+
+    await user.click(screen.getByRole('button', { name: 'Gelb-Rote Karte für FC Alpha' }));
+    await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
+
+    expect(onCard).toHaveBeenCalledTimes(1);
+    expect(onCard).toHaveBeenCalledWith('match-1', 'team-a', 'YELLOW_RED', { playerNumber: undefined });
+  });
+
+  it('Toast nach Gelb-Rot kommt aus i18n ("Gelb-Rote Karte für ...")', async () => {
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(makeMatch())} />);
+
+    await user.click(screen.getByRole('button', { name: 'Gelb-Rote Karte für FC Alpha' }));
+    await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
+
+    expect(await screen.findByText('Gelb-Rote Karte für FC Alpha')).toBeInTheDocument();
+  });
+
+  it('Ende-zu-Ende Dialog -> Zaehler: ein im Protokoll stehendes Gelb-Rot zaehlt als 1 Foul (Gegenbeispiel: Tor = 0)', () => {
+    const match = makeMatch({
+      events: [
+        {
+          id: 'yr1', matchId: 'match-1', type: 'RED_CARD', timestampSeconds: 10,
+          payload: { teamId: 'team-a', cardType: 'YELLOW_RED' }, scoreAfter: { home: 0, away: 0 },
+        },
+        {
+          id: 'g1', matchId: 'match-1', type: 'GOAL', timestampSeconds: 20,
+          payload: { teamId: 'team-a', direction: 'INC' }, scoreAfter: { home: 1, away: 0 },
+        },
+      ],
+    });
+    render(<LiveCockpit {...baseProps(match)} />);
+
+    // Gelb-Rot (1) -- das Tor zaehlt nicht mit (Gegenbeispiel).
+    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1');
+  });
+});

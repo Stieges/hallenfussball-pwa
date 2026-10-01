@@ -9,6 +9,7 @@ import { type CSSProperties } from 'react';
 import { cssVars } from '../../../../design-tokens'
 import type { Breakpoint } from '../../../../hooks';
 import sportGlossary from '../../../../i18n/glossary.json';
+import { CardButtonRow } from './CardButtonRow';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,6 +29,8 @@ export interface TeamBlockProps {
   onMinus: () => void;
   onPenalty: () => void;
   onYellowCard: () => void;
+  /** C3b-2 F3b2: eigener Knopf, keine automatische Umwandlung -- der Helfer waehlt Gelb-Rot explizit. */
+  onYellowRedCard: () => void;
   onRedCard: () => void;
   onSubstitution: () => void;
   onFoul: () => void;
@@ -56,6 +59,7 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
   onMinus,
   onPenalty,
   onYellowCard,
+  onYellowRedCard,
   onRedCard,
   onSubstitution,
   onFoul,
@@ -171,6 +175,9 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
     color: disabled ? cssVars.colors.textDisabled : cssVars.colors.error,
   };
 
+  // F3b2: Gelb-Rot fuehrt wie Rot zum Platzverweis -- gleiche Farbe (kein neuer Design-Token).
+  const btnYellowRedStyle: CSSProperties = btnRedStyle;
+
   const btnFoulStyle: CSSProperties = {
     ...btnStyle,
     color: disabled ? cssVars.colors.textDisabled : cssVars.colors.textSecondary,
@@ -248,27 +255,18 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
           ⏱ 2 MIN{!isMobile && ' STRAFE'}
         </button>
 
-        {/* Yellow | Red */}
-        <div style={actionRowStyle}>
-          <button
-            style={btnYellowStyle}
-            onClick={onYellowCard}
-            disabled={disabled}
-            type="button"
-            aria-label={`Gelbe Karte für ${teamName}`}
-          >
-            🟨 Gelb
-          </button>
-          <button
-            style={btnRedStyle}
-            onClick={onRedCard}
-            disabled={disabled}
-            type="button"
-            aria-label={`Rote Karte für ${teamName}`}
-          >
-            🟥 Rot
-          </button>
-        </div>
+        {/* Yellow | Gelb-Rot | Red (F3b2: eigener Knopf, keine Vorauswahl -- der Helfer waehlt) */}
+        <CardButtonRow
+          teamName={teamName}
+          teamSide={teamSide}
+          disabled={disabled}
+          yellowStyle={btnYellowStyle}
+          yellowRedStyle={btnYellowRedStyle}
+          redStyle={btnRedStyle}
+          onYellowCard={onYellowCard}
+          onYellowRedCard={onYellowRedCard}
+          onRedCard={onRedCard}
+        />
 
         {/* Substitution | Foul */}
         <div style={actionRowStyle}>

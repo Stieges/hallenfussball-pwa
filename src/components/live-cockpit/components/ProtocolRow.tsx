@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars, touchTargets } from '../../../design-tokens';
 import type { RuntimeMatchEvent } from '../../../types/tournament';
 import { retractedMarkStyle, retractedRowStyle, formatTime, type ProtocolEntry } from './protocolEntries';
+import { cardKindOf } from '../../../utils/cardKind';
 
 export interface ProtocolRowProps {
   entry: ProtocolEntry;
@@ -20,11 +21,12 @@ export interface ProtocolRowProps {
   onEventEdit?: (event: RuntimeMatchEvent) => void;
 }
 
-const getEventIcon = (type: string): string => {
-  switch (type) {
+const getEventIcon = (event: ProtocolEntry['event']): string => {
+  switch (event.type) {
     case 'GOAL': return '⚽';
     case 'YELLOW_CARD': return '🟨';
-    case 'RED_CARD': return '🟥';
+    // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
+    case 'RED_CARD': return cardKindOf(event) === 'YELLOW_RED' ? '🟨🟥' : '🟥';
     case 'TIME_PENALTY': return '⏱';
     case 'SUBSTITUTION': return '🔄';
     case 'FOUL': return '⚠';
@@ -43,7 +45,7 @@ export function ProtocolRow({
 }: ProtocolRowProps) {
   const { t } = useTranslation('cockpit');
   const { event, retracted } = entry;
-  const icon = getEventIcon(event.type);
+  const icon = getEventIcon(event);
   const time = formatTime(event.timestampSeconds);
   const isIncomplete = !retracted && event.incomplete === true;
   const canEdit = !!onEventEdit && !retracted && editable;

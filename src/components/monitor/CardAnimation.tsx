@@ -216,7 +216,9 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
         >
           <div className="card-icon" style={cardIconStyle} />
           <div style={cardTextStyle}>
-            {isRed ? 'ROTE KARTE' : 'GELBE KARTE'}
+            {/* F3b2: Gelb-Rot zeigt "GELB-ROT" statt "ROTE KARTE" (Farben weiter ueber die
+                gemeinsame RED_CARD_COLORS-Konstante, s.o.). */}
+            {currentEvent.cardType === 'YELLOW_RED' ? 'GELB-ROT' : isRed ? 'ROTE KARTE' : 'GELBE KARTE'}
           </div>
           <div style={teamNameStyle}>{currentEvent.teamName}</div>
           {currentEvent.playerNumber && (

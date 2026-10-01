@@ -66,6 +66,11 @@ function getCockpitSettings(settings: MatchCockpitSettings | undefined): MatchCo
   };
 }
 
+// F3b2: Toast-Schluessel je Kartentyp -- Modulebene statt useCallback-Abhaengigkeit (statisch).
+const CARD_TOAST_KEYS: Record<'YELLOW' | 'YELLOW_RED' | 'RED', 'toast.yellowCard' | 'toast.yellowRedCard' | 'toast.redCard'> = {
+  YELLOW: 'toast.yellowCard', YELLOW_RED: 'toast.yellowRedCard', RED: 'toast.redCard',
+};
+
 export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   fieldName,
   tournamentName: _tournamentName,
@@ -135,7 +140,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // BUG-006: Track which team side triggered the penalty dialog
   const [pendingPenaltySide, setPendingPenaltySide] = useState<'home' | 'away' | null>(null);
   // BUG-007: Track which card type and team side triggered the card dialog
-  const [pendingCardType, setPendingCardType] = useState<'YELLOW' | 'RED' | null>(null);
+  const [pendingCardType, setPendingCardType] = useState<'YELLOW' | 'YELLOW_RED' | 'RED' | null>(null);
   const [pendingCardTeamSide, setPendingCardTeamSide] = useState<'home' | 'away' | null>(null);
   // BUG-009: Track which team side triggered the substitution dialog
   const [pendingSubstitutionSide, setPendingSubstitutionSide] = useState<'home' | 'away' | null>(null);
@@ -415,6 +420,15 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   }, [currentMatch, onFoul, showInfo, t]);
 
   // Card/Penalty/Substitution handlers
+  // F3b2: ein Knopf je Kartentyp (Gelb/Gelb-Rot/Rot) ruft denselben Oeffner -- ersetzt zwei fast
+  // identische Closures je Team (TeamBlock) durch eine, spart Zeilen statt den dritten Knopf
+  // welche zu kosten (LiveCockpit.tsx darf nicht wachsen).
+  const openCardDialog = useCallback((type: 'YELLOW' | 'YELLOW_RED' | 'RED', side: 'home' | 'away') => {
+    setPendingCardType(type);
+    setPendingCardTeamSide(side);
+    setShowCardDialog(true);
+  }, []);
+
   const handleCardConfirm = useCallback(
     (cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', teamId: string, playerNumber?: number) => {
       if (!currentMatch) { return; }
@@ -427,7 +441,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       // Call parent handler to create event
       onCard?.(currentMatch.id, teamId, cardType, { playerNumber });
 
-      showInfo(`${t(cardType === 'YELLOW' ? 'toast.yellowCard' : 'toast.redCard', { teamName })}${playerInfo}`);
+      showInfo(`${t(CARD_TOAST_KEYS[cardType], { teamName })}${playerInfo}`);
       setShowCardDialog(false);
       // BUG-007: Reset pending card state
       setPendingCardType(null);
@@ -879,16 +893,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
                   setPendingPenaltySide(sidesSwapped ? 'away' : 'home');
                   setShowTimePenaltyDialog(true);
                 }}
-                onYellowCard={() => {
-                  setPendingCardType('YELLOW');
-                  setPendingCardTeamSide(sidesSwapped ? 'away' : 'home');
-                  setShowCardDialog(true);
-                }}
-                onRedCard={() => {
-                  setPendingCardType('RED');
-                  setPendingCardTeamSide(sidesSwapped ? 'away' : 'home');
-                  setShowCardDialog(true);
-                }}
+                onYellowCard={() => openCardDialog('YELLOW', sidesSwapped ? 'away' : 'home')}
+                onYellowRedCard={() => openCardDialog('YELLOW_RED', sidesSwapped ? 'away' : 'home')}
+                onRedCard={() => openCardDialog('RED', sidesSwapped ? 'away' : 'home')}
                 onSubstitution={() => {
                   setPendingSubstitutionSide(sidesSwapped ? 'away' : 'home');
                   setShowSubstitutionDialog(true);
@@ -915,16 +922,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
                   setPendingPenaltySide(sidesSwapped ? 'home' : 'away');
                   setShowTimePenaltyDialog(true);
                 }}
-                onYellowCard={() => {
-                  setPendingCardType('YELLOW');
-                  setPendingCardTeamSide(sidesSwapped ? 'home' : 'away');
-                  setShowCardDialog(true);
-                }}
-                onRedCard={() => {
-                  setPendingCardType('RED');
-                  setPendingCardTeamSide(sidesSwapped ? 'home' : 'away');
-                  setShowCardDialog(true);
-                }}
+                onYellowCard={() => openCardDialog('YELLOW', sidesSwapped ? 'home' : 'away')}
+                onYellowRedCard={() => openCardDialog('YELLOW_RED', sidesSwapped ? 'home' : 'away')}
+                onRedCard={() => openCardDialog('RED', sidesSwapped ? 'home' : 'away')}
                 onSubstitution={() => {
                   setPendingSubstitutionSide(sidesSwapped ? 'home' : 'away');
                   setShowSubstitutionDialog(true);

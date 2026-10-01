@@ -25,6 +25,7 @@ import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui/Button';
+import { cardKindOf } from '../../../utils/cardKind';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -43,6 +44,8 @@ export interface MatchEvent {
   timestampSeconds: number;
   playerNumber?: number;
   direction?: 'INC' | 'DEC';
+  /** F3b2 (Ruling PC30): 'YELLOW' | 'YELLOW_RED' | 'RED' -- unterschieden nur ueber cardKindOf. */
+  cardType?: string;
 }
 
 export interface LiveInfoExpandProps {
@@ -76,14 +79,16 @@ function formatEventTime(seconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-function getEventIcon(type: MatchEvent['type']): string {
-  switch (type) {
+function getEventIcon(event: MatchEvent): string {
+  switch (event.type) {
     case 'GOAL':
       return '⚽';
     case 'YELLOW_CARD':
       return '🟨';
+    // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden (MatchEvent ist hier flach,
+    // cardKindOf erwartet payload.cardType -- deshalb der kleine Wrapper).
     case 'RED_CARD':
-      return '🟥';
+      return cardKindOf({ type: event.type, payload: { cardType: event.cardType } }) === 'YELLOW_RED' ? '🟨🟥' : '🟥';
     case 'TIME_PENALTY':
       return '⏱️';
     case 'SUBSTITUTION':
@@ -107,7 +112,13 @@ function getEventLabel(event: MatchEvent, homeTeam: Team, awayTeam: Team, t: (ke
     case 'YELLOW_CARD':
       return t('matchExpand.liveInfo.eventYellowCard', { team: teamName, player: playerInfo });
     case 'RED_CARD':
-      return t('matchExpand.liveInfo.eventRedCard', { team: teamName, player: playerInfo });
+      // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
+      return t(
+        cardKindOf({ type: event.type, payload: { cardType: event.cardType } }) === 'YELLOW_RED'
+          ? 'matchExpand.liveInfo.eventYellowRedCard'
+          : 'matchExpand.liveInfo.eventRedCard',
+        { team: teamName, player: playerInfo },
+      );
     case 'TIME_PENALTY':
       return t('matchExpand.liveInfo.eventTimePenalty', { team: teamName, player: playerInfo });
     case 'SUBSTITUTION':
@@ -315,7 +326,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
         {displayableEvents.length > 0 ? (
           displayableEvents.map((event) => (
             <div key={event.id} style={eventItemStyle}>
-              <span style={eventIconStyle}>{getEventIcon(event.type)}</span>
+              <span style={eventIconStyle}>{getEventIcon(event)}</span>
               <span style={eventTextStyle}>
                 {getEventLabel(event, homeTeam, awayTeam, t)}
               </span>

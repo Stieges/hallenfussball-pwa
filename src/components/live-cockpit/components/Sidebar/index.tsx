@@ -13,6 +13,7 @@ import { cssVars } from '../../../../design-tokens'
 import type { ActivePenalty, RuntimeMatchEvent } from '../../../../types/tournament';
 import { mergeProtocol, takeRecent, formatTime } from '../protocolEntries';
 import { ProtocolRow } from '../ProtocolRow';
+import { cardKindOf } from '../../../../utils/cardKind';
 
 export interface SidebarProps {
   activePenalties: ActivePenalty[];
@@ -120,7 +121,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       case 'YELLOW_CARD':
         return t('sidebar.yellowEvent', { teamName }) + playerInfo;
       case 'RED_CARD':
-        return t('sidebar.redEvent', { teamName }) + playerInfo;
+        // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden, keine eigene
+        // payload.cardType-Abfrage.
+        return t(cardKindOf(event) === 'YELLOW_RED' ? 'sidebar.yellowRedEvent' : 'sidebar.redEvent', { teamName }) + playerInfo;
       case 'TIME_PENALTY': {
         const duration = event.payload.penaltyDuration
           ? Math.floor(event.payload.penaltyDuration / 60)

@@ -18,6 +18,7 @@ import type { RuntimeMatchEvent } from '../types/tournament';
 import { useRepositories } from '../core/contexts/RepositoryContext';
 import type { LiveMatch as CoreLiveMatch } from '../core/models/LiveMatch';
 import { toRuntimeMatchEvents } from '../utils/matchEvents';
+import { cardKindOf } from '../utils/cardKind';
 
 // Types - MatchEvent is re-exported from tournament.ts
 export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
@@ -83,6 +84,15 @@ export interface CardEventInfo {
   cardType: 'YELLOW' | 'YELLOW_RED' | 'RED';
   playerNumber?: number;
   timestamp: number;
+}
+
+/**
+ * F3b2 (Ruling PC30, Monitor-Kartenanimation): Kartentyp NUR ueber `cardKindOf` ableiten, nicht
+ * nur aus `event.type` (das bildete Gelb-Rot bisher faelschlich auf 'RED' ab). Exportiert fuer
+ * einen fokussierten Unit-Test ohne die localStorage-Polling-Maschinerie dieses Hooks.
+ */
+export function detectedCardKind(event: RuntimeMatchEvent): 'YELLOW' | 'YELLOW_RED' | 'RED' {
+  return cardKindOf(event) ?? 'YELLOW';
 }
 
 export interface UseLiveMatchesReturn {
@@ -319,7 +329,7 @@ export function useLiveMatches(tournamentId: string, options?: UseLiveMatchesOpt
             // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty teamName should use fallback
             teamName: event.payload.teamName || (isHome ? match.homeTeam.name : match.awayTeam.name),
             side: isHome ? 'home' : 'away',
-            cardType: event.type === 'RED_CARD' ? 'RED' : 'YELLOW',
+            cardType: detectedCardKind(event),
             playerNumber: event.payload.playerNumber,
             timestamp: Date.now(),
           };

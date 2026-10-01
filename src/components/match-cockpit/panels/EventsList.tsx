@@ -10,6 +10,7 @@ import { Button } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { formatTime } from '../utils/matchPanelUtils';
 import sportGlossary from '../../../i18n/glossary.json';
+import { cardKindOf } from '../../../utils/cardKind';
 
 export interface MatchEvent {
   id: string;
@@ -181,7 +182,10 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
     } else if (event.type === 'YELLOW_CARD') {
       return `🟨 Gelbe Karte ${displayName}${playerInfo}`;
     } else if (event.type === 'RED_CARD') {
-      return `🟥 Rote Karte ${displayName}${playerInfo}`;
+      // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
+      return cardKindOf(event) === 'YELLOW_RED'
+        ? `🟨🟥 Gelb-Rote Karte ${displayName}${playerInfo}`
+        : `🟥 Rote Karte ${displayName}${playerInfo}`;
     } else if (event.type === 'TIME_PENALTY') {
       const duration = penaltyDuration ? Math.floor(penaltyDuration / 60) : 2;
       return `⏱ ${duration} Min ${sportGlossary.terms.timePenalty.de} ${displayName}${playerInfo}`;

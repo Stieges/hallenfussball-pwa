@@ -17,6 +17,7 @@ import sportGlossary from '../../../../i18n/glossary.json';
 import type { RuntimeMatchEvent } from '../../../../types/tournament';
 import { mergeProtocol } from '../protocolEntries';
 import { ProtocolRow } from '../ProtocolRow';
+import { cardKindOf } from '../../../../utils/cardKind';
 
 interface EventLogBottomSheetProps {
   isOpen: boolean;
@@ -79,7 +80,10 @@ export function EventLogBottomSheet({
       case 'YELLOW_CARD':
         return `Gelbe Karte ${teamName}${playerInfo}`;
       case 'RED_CARD':
-        return `Rote Karte ${teamName}${playerInfo}`;
+        // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
+        return cardKindOf(event) === 'YELLOW_RED'
+          ? `Gelb-Rote Karte ${teamName}${playerInfo}`
+          : `Rote Karte ${teamName}${playerInfo}`;
       case 'TIME_PENALTY': {
         const duration = event.payload.penaltyDuration
           ? Math.floor(event.payload.penaltyDuration / 60)
