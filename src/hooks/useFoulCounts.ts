@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 
 export interface FoulCountEvent {
   type: string;
-  payload: { teamId?: string | undefined };
+  payload: { teamId?: string | undefined; team?: 'home' | 'away' | undefined };
 }
 
 export interface FoulCountSource {
