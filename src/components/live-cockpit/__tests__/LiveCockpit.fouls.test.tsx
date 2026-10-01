@@ -8,9 +8,12 @@ import userEvent from '@testing-library/user-event';
 import { LiveCockpit } from '../LiveCockpit';
 import type { LiveCockpitProps } from '../types';
 
+const tCalls = vi.hoisted(() => [] as string[]);
+
 vi.mock('react-i18next', async () => {
   const de: unknown = (await import('../../../i18n/locales/de/cockpit.json')).default;
   const translate = (key: string, opts?: Record<string, unknown>): string => {
+    tCalls.push(key);
     const found = key.split('.').reduce<unknown>(
       (node, part) => (typeof node === 'object' && node !== null ? (node as Record<string, unknown>)[part] : undefined),
       de,
@@ -108,5 +111,81 @@ describe('LiveCockpit — Fouls für das ganze Spiel (C3b-2, G11)', () => {
     expect(screen.getByTestId('foul-hint')).toHaveTextContent(
       'Fouls zählen für das ganze Spiel – Karten und Zeitstrafen zählen als Foul',
     );
+  });
+});
+
+describe('LiveCockpit — M7: Toasts i18n, Foul ohne Zahl, 5er-Warnung (F3a)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function events(count: number, extra: Record<string, unknown>[] = []) {
+    return [
+      ...Array.from({ length: count }, (_, i) => ({
+        id: `f${i}`, matchId: 'match-1', type: 'FOUL', timestampSeconds: 5 + i,
+        payload: { teamId: 'team-a' }, scoreAfter: { home: 0, away: 0 },
+      })),
+      ...extra,
+    ];
+  }
+
+  it('Foul-Toast ohne Zahl: „Foul für FC Alpha“, kein (n)', async () => {
+    const onFoul = vi.fn();
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(makeMatch(), { onFoul })} />);
+
+    await user.click(screen.getByRole('button', { name: 'Foul für FC Alpha' }));
+
+    expect(await screen.findByText('Foul für FC Alpha')).toBeInTheDocument();
+    expect(screen.queryByText(/Foul für FC Alpha \(\d+\)/)).toBeNull();
+  });
+
+  it('Karte erzeugt genau EINEN Eintrag: onCard, nicht zusätzlich onFoul (U3)', async () => {
+    const onCard = vi.fn();
+    const onFoul = vi.fn();
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(makeMatch(), { onCard, onFoul })} />);
+
+    await user.click(screen.getByRole('button', { name: 'Gelbe Karte für FC Alpha' }));
+    await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
+
+    expect(onCard).toHaveBeenCalledTimes(1);
+    expect(onCard).toHaveBeenCalledWith('match-1', 'team-a', 'YELLOW', { playerNumber: undefined });
+    expect(onFoul).not.toHaveBeenCalled();
+  });
+
+  it('Halbzeit-, Karten- und Zeitstrafen-Toast kommen aus i18n', async () => {
+    const onCard = vi.fn();
+    const onTimePenalty = vi.fn();
+    const user = userEvent.setup();
+    tCalls.length = 0;
+    render(<LiveCockpit {...baseProps(makeMatch(), { onCard, onTimePenalty })} />);
+
+    await user.click(screen.getByRole('button', { name: 'Halbzeit' }));
+    expect(await screen.findByText('Halbzeit')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Gelbe Karte für FC Alpha' }));
+    await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
+    expect(await screen.findByText('Gelbe Karte für FC Alpha')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Zeitstrafe für FC Alpha' }));
+    await user.click(screen.getByRole('button', { name: /Ohne Nr\./ }));
+    expect(await screen.findByText('2 Min Zeitstrafe für FC Alpha')).toBeInTheDocument();
+    expect(tCalls).toContain('toast.halftime');
+    expect(tCalls).toContain('toast.yellowCard');
+    expect(tCalls).toContain('toast.timePenalty');
+  });
+
+  it('5-Fouls-Warnung bei der 5. Strafe – auch als Karte; 4. Strafe ohne Warnung', async () => {
+    const { rerender } = render(
+      <LiveCockpit {...baseProps(makeMatch({ events: events(4) }))} />,
+    );
+    expect(screen.queryByText('⚠ ACHTUNG: FC Alpha hat 5 Fouls!')).toBeNull();
+
+    const fifthIsCard = {
+      id: 'k1', matchId: 'match-1', type: 'YELLOW_CARD', timestampSeconds: 40,
+      payload: { teamId: 'team-a', playerNumber: 4 }, scoreAfter: { home: 0, away: 0 },
+    };
+    rerender(<LiveCockpit {...baseProps(makeMatch({ events: events(4, [fifthIsCard]) }))} />);
+
+    expect(await screen.findByText('⚠ ACHTUNG: FC Alpha hat 5 Fouls!')).toBeInTheDocument();
   });
 });

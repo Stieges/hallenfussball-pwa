@@ -16,7 +16,13 @@
     "ended": "Spiel beendet",
     "undone": "Letzte Aktion rückgängig gemacht",
     "goalScored": "Tor für {{teamName}}",
-    "goalRemoved": "Tor für {{teamName}} entfernt"
+    "goalRemoved": "Tor für {{teamName}} entfernt",
+    "foul": "Foul für {{teamName}}",
+    "foulWarning": "⚠ ACHTUNG: {{teamName}} hat 5 Fouls!",
+    "halftime": "Halbzeit",
+    "yellowCard": "Gelbe Karte für {{teamName}}",
+    "redCard": "Rote Karte für {{teamName}}",
+    "timePenalty": "{{minutes}} Min Zeitstrafe für {{teamName}}"
   },
   "ariaLive": {
     "running": "Spiel läuft",

@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
 import { useFoulCounts } from '../../hooks/useFoulCounts';
+import { useFoulThresholdWarning } from '../../hooks/useFoulThresholdWarning';
 import { useEngineEventEditing } from '../../hooks/useEngineEventEditing';
 import { SyncStatusIndicator } from '../../features/collaboration';
 import { OutboxNotice } from '../../features/collaboration/outbox/OutboxNotice';
@@ -25,7 +26,6 @@ import { getEffectiveScore } from '../../utils/matchScore';
 import type { LiveCockpitProps } from './types';
 import type { EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
-import sportGlossary from '../../i18n/glossary.json';
 
 // Sub-components
 import {
@@ -159,6 +159,13 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
   // Toast notifications
   const { toasts, showSuccess, showInfo, showError: showToastError, dismissToast } = useToast();
+
+  // M7: 5-Fouls-Warnung als Effekt auf den Zaehler -- einmal je Team beim Erreichen von 5.
+  useFoulThresholdWarning(
+    { home: homeFouls, away: awayFouls },
+    { home: currentMatch?.homeTeam.name ?? '', away: currentMatch?.awayTeam.name ?? '' },
+    (teamName) => { showInfo(t('toast.foulWarning', { teamName })); },
+  );
 
   // C3b-1: Minus/Rückgängig/Löschen/Bearbeiten (Engine-Spiele: RETRACT/AMEND) und Zeitstrafen-Countdown.
   const editing = useEngineEventEditing({
@@ -392,29 +399,20 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
   const handleHalfTime = useCallback(() => {
     // C3b-2b (G11): kein Foul-Reset -- die Zaehler gelten fuer das ganze Spiel.
-    showInfo('Halbzeit');
-  }, [showInfo]);
+    showInfo(t('toast.halftime'));
+  }, [showInfo, t]);
 
   const handleFoulHome = useCallback(() => {
     if (!currentMatch) { return; }
-    // C3b-2b (G11): kein lokales +1 -- der Zaehler folgt den FOUL-Eintraegen in `events`.
     onFoul?.(currentMatch.id, currentMatch.homeTeam.id);
-
-    showInfo(`Foul für ${currentMatch.homeTeam.name} (${homeFouls + 1})`);
-    if (homeFouls + 1 === 5) {
-      showInfo(`⚠ ACHTUNG: ${currentMatch.homeTeam.name} hat 5 Fouls!`);
-    }
-  }, [currentMatch, homeFouls, onFoul, showInfo]);
+    showInfo(t('toast.foul', { teamName: currentMatch.homeTeam.name }));
+  }, [currentMatch, onFoul, showInfo, t]);
 
   const handleFoulAway = useCallback(() => {
     if (!currentMatch) { return; }
     onFoul?.(currentMatch.id, currentMatch.awayTeam.id);
-
-    showInfo(`Foul für ${currentMatch.awayTeam.name} (${awayFouls + 1})`);
-    if (awayFouls + 1 === 5) {
-      showInfo(`⚠ ACHTUNG: ${currentMatch.awayTeam.name} hat 5 Fouls!`);
-    }
-  }, [currentMatch, awayFouls, onFoul, showInfo]);
+    showInfo(t('toast.foul', { teamName: currentMatch.awayTeam.name }));
+  }, [currentMatch, onFoul, showInfo, t]);
 
   // Card/Penalty/Substitution handlers
   const handleCardConfirm = useCallback(
@@ -425,18 +423,17 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         ? currentMatch.homeTeam.name
         : currentMatch.awayTeam.name;
       const playerInfo = playerNumber ? ` (#${playerNumber})` : '';
-      const cardName = cardType === 'YELLOW' ? 'Gelbe' : 'Rote';
 
       // Call parent handler to create event
       onCard?.(currentMatch.id, teamId, cardType, { playerNumber });
 
-      showInfo(`${cardName} Karte für ${teamName}${playerInfo}`);
+      showInfo(`${t(cardType === 'YELLOW' ? 'toast.yellowCard' : 'toast.redCard', { teamName })}${playerInfo}`);
       setShowCardDialog(false);
       // BUG-007: Reset pending card state
       setPendingCardType(null);
       setPendingCardTeamSide(null);
     },
-    [currentMatch, onCard, showInfo]
+    [currentMatch, onCard, showInfo, t]
   );
 
   const handleTimePenaltyConfirm = useCallback(
@@ -454,14 +451,14 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         durationSeconds,
       });
 
-      showInfo(`${mins} Min ${sportGlossary.terms.timePenalty.de} für ${teamName}${playerInfo}`);
+      showInfo(`${t('toast.timePenalty', { minutes: mins, teamName })}${playerInfo}`);
 
       // Add to active penalties (local UI state for countdown)
       penalties.add({ teamId, playerNumber, durationSeconds });
       setShowTimePenaltyDialog(false);
       setPendingPenaltySide(null);
     },
-    [currentMatch, onTimePenalty, showInfo, penalties]
+    [currentMatch, onTimePenalty, showInfo, penalties, t]
   );
 
   // BUG-009: Updated to handle multi-player substitutions

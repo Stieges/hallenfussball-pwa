@@ -16,7 +16,13 @@
     "ended": "Match ended",
     "undone": "Last action undone",
     "goalScored": "Goal for {{teamName}}",
-    "goalRemoved": "Goal removed for {{teamName}}"
+    "goalRemoved": "Goal removed for {{teamName}}",
+    "foul": "Foul for {{teamName}}",
+    "foulWarning": "⚠ WARNING: {{teamName}} has 5 fouls!",
+    "halftime": "Halftime",
+    "yellowCard": "Yellow card for {{teamName}}",
+    "redCard": "Red card for {{teamName}}",
+    "timePenalty": "{{minutes}} min time penalty for {{teamName}}"
   },
   "ariaLive": {
     "running": "Match running",
