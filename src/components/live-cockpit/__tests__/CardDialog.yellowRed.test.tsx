@@ -77,4 +77,28 @@ describe('CardDialog -- Gelb-Rot (F3b2)', () => {
 
     expect(onConfirm).toHaveBeenCalledWith('RED', 'team-a', undefined, true);
   });
+
+  describe('Layout bei drei Karten (Fixrunde Aufgabe 8)', () => {
+    it('Gelb-Rot-Button hat einen anderen Rahmen als Rot (geteilt statt einfarbig); Rot bleibt einfarbig', () => {
+      render(<CardDialog isOpen onClose={vi.fn()} onConfirm={vi.fn()} {...teams} />);
+      const yellowRed = screen.getByRole('button', { name: 'Gelb-Rot' });
+      const red = screen.getByRole('button', { name: 'Rot' });
+
+      expect(yellowRed.style.borderTopColor).not.toBe(yellowRed.style.borderBottomColor);
+      expect(red.style.borderTopColor).toBe(red.style.borderBottomColor);
+      expect(yellowRed.style.borderTopColor).not.toBe(red.style.borderTopColor);
+    });
+
+    it('Buttons sind fuer 3 Spalten kompakt (Token-Padding, kein Ueberlaufen) und mindestens 44 px hoch', () => {
+      render(<CardDialog isOpen onClose={vi.fn()} onConfirm={vi.fn()} {...teams} />);
+      for (const name of ['Gelb', 'Gelb-Rot', 'Rot']) {
+        const button = screen.getByRole('button', { name });
+        expect(button.style.padding).toBe('var(--spacing-sm)');
+        expect(button.style.minWidth).toBe('0px');
+        expect(parseInt(button.style.minHeight, 10)).toBeGreaterThanOrEqual(44);
+        const label = button.querySelector('span');
+        expect(label?.style.overflowWrap).toBe('anywhere');
+      }
+    });
+  });
 });

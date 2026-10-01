@@ -204,7 +204,12 @@ export function CardDialog({
           style={{
             ...styles.cardTypeButton,
             backgroundColor: `${cardColors.YELLOW_RED}15`,
-            borderColor: cardColors.YELLOW_RED,
+            // Fixrunde Aufgabe 8: geteilter Rahmen (Gelb oben/links, Rot unten/rechts) -- optisch
+            // von Rot unterscheidbar, nur mit vorhandenen Farb-Tokens.
+            borderTopColor: cardColors.YELLOW,
+            borderLeftColor: cardColors.YELLOW,
+            borderRightColor: cardColors.YELLOW_RED,
+            borderBottomColor: cardColors.YELLOW_RED,
           }}
           onClick={() => handleCardTypeSelect('YELLOW_RED')}
           data-testid="card-dialog-type-yellow-red"
@@ -491,8 +496,11 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: cssVars.spacing.md,
-    padding: cssVars.spacing.xl,
+    // Fixrunde Aufgabe 8: drei Spalten bei 375 px -- kleineres Padding/Icon, damit Icon und Label
+    // nicht ueberlaufen (Touch-Ziel bleibt durch minHeight >= 44 px).
+    gap: cssVars.spacing.sm,
+    padding: cssVars.spacing.sm,
+    minWidth: 0,
     border: '2px solid',
     borderRadius: cssVars.borderRadius.xl,
     cursor: 'pointer',
@@ -500,14 +508,16 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'transform 0.15s ease',
   },
   cardIcon: {
-    width: 48,
-    height: 64,
-    borderRadius: 6,
+    width: cssVars.spacing.xl,
+    height: cssVars.spacing.xxl,
+    borderRadius: cssVars.borderRadius.sm,
     boxShadow: `0 4px 12px ${cssVars.colors.shadowMedium}`,
   },
   cardTypeLabel: {
-    fontSize: cssVars.fontSizes.lg,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 600,
+    textAlign: 'center',
+    overflowWrap: 'anywhere',
   },
   teamGrid: {
     display: 'flex',
