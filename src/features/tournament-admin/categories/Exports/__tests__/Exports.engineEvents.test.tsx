@@ -61,9 +61,11 @@ describe('ExportsCategory -- M8/U1 Engine-Ereignisse (F3b2)', () => {
   it('Export direkt nach App-Start (Cockpit nie geoeffnet): ein Lauf laedt die Karte, enthaelt das Engine-Tor', async () => {
     const goalEvent = {
       id: 'g1', matchId: 'm1', timestampSeconds: 10, type: 'GOAL',
-      payload: { teamId: 'a', direction: 'INC' }, scoreAfter: { home: 1, away: 0 },
+      payload: { teamId: 'a', direction: 'INC', playerNumber: 7 }, scoreAfter: { home: 1, away: 0 },
     };
     mockLoadEngineEventsForExport.mockResolvedValue(new Map([['m1', [goalEvent]]]));
+    let capturedBlob: Blob | undefined;
+    URL.createObjectURL = vi.fn((blob: Blob) => { capturedBlob = blob; return 'blob:mock'; });
     const user = userEvent.setup();
 
     render(
@@ -79,8 +81,60 @@ describe('ExportsCategory -- M8/U1 Engine-Ereignisse (F3b2)', () => {
     await user.click(screen.getByText('admin:exports.downloadAs'));
 
     await waitFor(() => expect(mockLoadEngineEventsForExport).toHaveBeenCalledTimes(1));
-    expect(URL.createObjectURL).toHaveBeenCalled();
+    await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalled());
     expect(screen.queryByText('admin:exports.eventsExportError')).toBeNull();
+    // Aufgabe 4: der Blob-INHALT enthaelt das Engine-Tor (Torschuetze, Team, Minute, Stand) -- eine
+    // CSV nur mit Kopfzeile wuerde hier rot werden.
+    const text = await capturedBlob!.text();
+    const rows = text.split('\n');
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toBe('"m1";"1";"A";"B";"1\'";"Tor";"A";"#7";"Stand: 1:0"');
+  });
+
+  it('Aufgabe 4 Gegenbeispiel: ein Lauf OHNE Ereignisse liefert eine CSV nur mit Kopfzeile', async () => {
+    mockLoadEngineEventsForExport.mockResolvedValue(new Map());
+    let capturedBlob: Blob | undefined;
+    URL.createObjectURL = vi.fn((blob: Blob) => { capturedBlob = blob; return 'blob:mock'; });
+    const user = userEvent.setup();
+
+    render(
+      <ExportsCategory
+        tournamentId="t1"
+        tournament={tournament}
+        onTournamentUpdate={vi.fn()}
+        onMatchesUpdate={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('admin:exports.eventsTitle'));
+    await user.click(screen.getByText('admin:exports.downloadAs'));
+
+    await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalled());
+    const rows = (await capturedBlob!.text()).split('\n');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toContain('Match ID');
+  });
+
+  it('Fehlender Engine-Kontext: Fehler entsteht INNERHALB des Laufs -> Fehlermeldung + captureFeatureError, kein Export', async () => {
+    mockContext.current = null;
+    const user = userEvent.setup();
+
+    render(
+      <ExportsCategory
+        tournamentId="t1"
+        tournament={tournament}
+        onTournamentUpdate={vi.fn()}
+        onMatchesUpdate={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('admin:exports.eventsTitle'));
+    await user.click(screen.getByText('admin:exports.downloadAs'));
+
+    expect(await screen.findByText('admin:exports.eventsExportError')).toBeInTheDocument();
+    expect(mockCaptureFeatureError).toHaveBeenCalledWith(expect.any(Error), 'tournament', 'loadEngineEventsForExport');
+    expect(mockLoadEngineEventsForExport).not.toHaveBeenCalled();
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
 
   it('Punkt 4 (Ruling PC30): Gelb-Rot im Ereignis-Export -- CSV-Label "Gelb-Rote Karte", JSON cardType, summary.yellowRedCards', async () => {
@@ -243,5 +297,33 @@ describe('ExportsCategory -- M8/U1 Engine-Ereignisse (F3b2)', () => {
     expect(await screen.findByText('admin:exports.statisticsExportError')).toBeInTheDocument();
     expect(mockCaptureFeatureError).toHaveBeenCalledWith(expect.any(Error), 'tournament', 'loadEngineEventsForExport');
     expect(mockExportStatisticsToPDF).not.toHaveBeenCalled();
+  });
+  it('Aufgabe 10: Statistik-PDF-Knopf ist waehrend des Laufs gesperrt (Label "creating", kein zweiter Lauf)', async () => {
+    let finishRun: (value: Map<string, never[]>) => void = () => undefined;
+    mockLoadEngineEventsForExport.mockReturnValue(new Promise<Map<string, never[]>>((resolve) => { finishRun = resolve; }));
+    mockExportStatisticsToPDF.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    render(
+      <ExportsCategory
+        tournamentId="t1"
+        tournament={tournament}
+        onTournamentUpdate={vi.fn()}
+        onMatchesUpdate={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('admin:exports.statisticsTitle'));
+    await user.click(screen.getByText('admin:exports.exportPdf'));
+
+    const creating = await screen.findByText('admin:exports.creating');
+    expect(creating.closest('button')).toBeDisabled();
+    await user.click(creating);
+    expect(mockLoadEngineEventsForExport).toHaveBeenCalledTimes(1);
+
+    finishRun(new Map());
+    await waitFor(() => expect(screen.queryByText('admin:exports.creating')).toBeNull());
+    // Gegenbeispiel: nach dem Lauf ist der Knopf wieder bedienbar.
+    expect(screen.getByText('admin:exports.exportPdf').closest('button')).toBeEnabled();
   });
 });

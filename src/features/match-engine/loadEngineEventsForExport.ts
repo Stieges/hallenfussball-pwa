@@ -7,9 +7,14 @@
  * Review M8). Ein Export-Klick vor dem Laden lieferte dort still ohne Engine-Ereignisse; dieser
  * Lauf wird stattdessen VOM Export-Klick selbst ausgeloest und wartet, bis er fertig ist.
  *
- * Fehlerpolitik (U1, Kickoff): wirft JEDER Schritt (ensureMatch, Sammelabfrage) einen Fehler, gibt
- * diese Funktion ihn ungefangen weiter -- kein stiller Teil-Export ohne Engine-Ereignisse. Der
- * Aufrufer (Exports/index.tsx) faengt ihn ueber den bestehenden `exportError`-Pfad.
+ * Fehlerpolitik (U1, Kickoff; Ruling PC31):
+ * - Gast-Konto (`accountId === 'guest'`, wie `MatchEngine.runCatchUp`): KEINE Sammelabfrage, kein
+ *   catch-up -- ein Gast hat keine Server-Ereignisse, der Export laeuft rein lokal (auch offline).
+ * - Angemeldet: JEDER Fehler im Lauf bricht den Export ab, kein stiller Teil-Export. Das gilt auch
+ *   fuer ein gescheitertes catch-up: `engine.catchUpLoaded()` verschluckt Fehler (setzt nur
+ *   `engine.status(matchId).lastError`), deshalb wird danach `lastError` JEDES Spiels des Turniers
+ *   geprueft und als Fehler geworfen. Der Aufrufer (Exports/index.tsx) faengt ihn ueber den
+ *   bestehenden `exportError`-Pfad.
  */
 import type { Tournament, RuntimeMatchEvent } from '../../types/tournament';
 import type { LiveMatch } from '../../core/models/LiveMatch';
@@ -38,7 +43,8 @@ export async function loadEngineEventsForExport(
   }
 
   let engineMatchIds = new Set<string>();
-  if (isSupabaseConfigured && supabase) {
+  const isGuest = context.accountId === 'guest';
+  if (!isGuest && isSupabaseConfigured && supabase) {
     const client: unknown = supabase;
     engineMatchIds = await fetchEngineMatchIds(
       client as EngineMatchIdsQueryClient,
@@ -46,6 +52,12 @@ export async function loadEngineEventsForExport(
     );
     engine.markEngineMatches(engineMatchIds);
     await engine.catchUpLoaded();
+    for (const entry of validMatches) {
+      const { lastError } = engine.status(entry.matchId);
+      if (lastError !== null) {
+        throw new Error(`Nachladen der Spielereignisse fehlgeschlagen (Spiel ${entry.matchId}): ${lastError}`);
+      }
+    }
   }
 
   const noLocalLiveMatches = new Map<string, LiveMatch>();

@@ -367,10 +367,10 @@ export function ExportsCategory({
   // Lesen, s. loadEngineEventsForExport) statt eines Dauer-Abos. Wirft der Lauf, faengt der
   // Aufrufer das selbst (bestehender exportError-Pfad) -- kein stiller Teil-Export.
   const loadEngineEvents = useCallback(async (): Promise<EngineEventsById> => {
-    if (!matchEngineContext) {
-      throw new Error('Kein Engine-Kontext verfügbar.');
-    }
     try {
+      if (!matchEngineContext) {
+        throw new Error('Kein Engine-Kontext verfügbar.');
+      }
       return await loadEngineEventsForExport(tournament, matchEngineContext);
     } catch (error) {
       const normalizedError = error instanceof Error ? error : new Error(String(error));
@@ -523,211 +523,211 @@ export function ExportsCategory({
           }}
           onClick={() => {
             const runEventsExport = async () => {
-            try {
-              setIsExporting(true);
-              setExportError(null); // Clear previous errors
+              try {
+                setIsExporting(true);
+                setExportError(null); // Clear previous errors
 
-              // F3b2 (M8/U1): EIN frischer Lauf je Klick statt eines Dauer-Abos.
-              const engineEventsById = await loadEngineEvents();
+                // F3b2 (M8/U1): EIN frischer Lauf je Klick statt eines Dauer-Abos.
+                const engineEventsById = await loadEngineEvents();
 
-              const getTeamName = (id?: string) => tournament.teams.find(t => t.id === id)?.name ?? 'Unbekannt';
+                const getTeamName = (id?: string) => tournament.teams.find(t => t.id === id)?.name ?? 'Unbekannt';
 
-              // Filter Matches Logic: Include if AT LEAST ONE selected team is involved
-              // If no teams are selected, effectively exporting nothing (unless we want 'All' logic when empty? Typically explicit selection implies restriction)
-              // Correction: If selectedTeamIds is empty, we export nothing. User must select teams. (Or default to all initially)
+                // Filter Matches Logic: Include if AT LEAST ONE selected team is involved
+                // If no teams are selected, effectively exporting nothing (unless we want 'All' logic when empty? Typically explicit selection implies restriction)
+                // Correction: If selectedTeamIds is empty, we export nothing. User must select teams. (Or default to all initially)
 
-              const matchesToExport = tournament.matches.filter(m => {
-                if (selectedTeamIds.length === 0) {return false;}
-                return selectedTeamIds.includes(m.teamA) || selectedTeamIds.includes(m.teamB);
-              });
-
-              if (matchesToExport.length === 0) {
-                setExportError(t('exports.noMatchesFound'));
-                setIsExporting(false);
-                return;
-              }
-
-              // Collect Data - Improved JSON structure with metadata
-              interface ExportEventItem {
-                matchId: string;
-                round: number;
-                homeTeam: { id: string; name: string };
-                guestTeam: { id: string; name: string };
-                minute: number;
-                type: string;
-                team: { id?: string; name: string };
-                playerNumber?: number;
-                // Structured details instead of string
-                scoreAfter?: { home: number; away: number };
-                assists?: number[];
-                penaltyDuration?: number;
-                playersIn?: number[];
-                playersOut?: number[];
-                /** F3b2 (Ruling PC30): 'YELLOW' | 'YELLOW_RED' | 'RED', nur bei Karten gesetzt. */
-                cardType?: string;
-              }
-              const exportData: ExportEventItem[] = [];
-              const csvRows: string[] = [];
-
-              // Summary counters for JSON export
-              const summary = {
-                totalEvents: 0,
-                goals: 0,
-                yellowCards: 0,
-                yellowRedCards: 0,
-                redCards: 0,
-                timePenalties: 0,
-                substitutions: 0,
-              };
-
-              matchesToExport.forEach(match => {
-                const homeTeamName = getTeamName(match.teamA);
-                const guestTeamName = getTeamName(match.teamB);
-
-                // Filter Events Logic
-                const relevantEvents = eventsForMatch(match, engineEventsById).filter(e => selectedEventTypes.includes(e.type));
-                const sortedEvents = [...relevantEvents].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
-
-                sortedEvents.forEach(event => {
-                  let details = '';
-                  let eventTypeLabel = event.type as string;
-                  let player = event.payload.playerNumber ? `#${event.payload.playerNumber}` : '';
-                  const teamName = getTeamName(event.payload.teamId);
-
-                  // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
-                  const cardKind = cardKindOf(event);
-
-                  // Update summary counters
-                  summary.totalEvents++;
-                  if (event.type === 'GOAL') {summary.goals++;}
-                  else if (event.type === 'YELLOW_CARD') {summary.yellowCards++;}
-                  else if (event.type === 'RED_CARD' && cardKind === 'YELLOW_RED') {summary.yellowRedCards++;}
-                  else if (event.type === 'RED_CARD') {summary.redCards++;}
-                  else if (event.type === 'TIME_PENALTY') {summary.timePenalties++;}
-                  else if (event.type === 'SUBSTITUTION') {summary.substitutions++;}
-
-                  // Formatting details for CSV
-                  if (event.type === 'GOAL') {
-                    eventTypeLabel = 'Tor';
-                    details = `Stand: ${event.scoreAfter.home}:${event.scoreAfter.away}`;
-                    if (event.payload.assists && event.payload.assists.length > 0) {
-                      details += ` (Vorlage: ${event.payload.assists.map(a => '#' + a).join(', ')})`;
-                    }
-                  } else if (event.type === 'YELLOW_CARD') {
-                    eventTypeLabel = 'Gelbe Karte';
-                  } else if (event.type === 'RED_CARD') {
-                    eventTypeLabel = cardKind === 'YELLOW_RED' ? 'Gelb-Rote Karte' : 'Rote Karte';
-                  } else if (event.type === 'TIME_PENALTY') {
-                    eventTypeLabel = tSport('events.timePenalty');
-                    details = `${event.payload.penaltyDuration ?? 120}s`;
-                  } else if (event.type === 'SUBSTITUTION') {
-                    eventTypeLabel = 'Wechsel';
-                    const inPlayers = event.payload.playersIn?.map(p => `#${p}`).join(', ') ?? '';
-                    const outPlayers = event.payload.playersOut?.map(p => `#${p}`).join(', ') ?? '';
-                    details = `Raus: ${outPlayers} -> Rein: ${inPlayers}`;
-                    player = '';
-                  }
-
-                  // JSON Structure - clean, structured data (no rawEvent)
-                  if (exportFormat === 'json') {
-                    const eventItem: ExportEventItem = {
-                      matchId: match.id,
-                      round: match.round,
-                      homeTeam: { id: match.teamA, name: homeTeamName },
-                      guestTeam: { id: match.teamB, name: guestTeamName },
-                      minute: Math.floor(event.timestampSeconds / 60) + 1,
-                      type: event.type,
-                      team: { id: event.payload.teamId, name: teamName },
-                      playerNumber: event.payload.playerNumber,
-                    };
-
-                    // Add type-specific structured data
-                    if (event.type === 'GOAL') {
-                      eventItem.scoreAfter = { home: event.scoreAfter.home, away: event.scoreAfter.away };
-                      if (event.payload.assists && event.payload.assists.length > 0) {
-                        eventItem.assists = event.payload.assists;
-                      }
-                    } else if (event.type === 'TIME_PENALTY') {
-                      eventItem.penaltyDuration = event.payload.penaltyDuration ?? 120;
-                    } else if (event.type === 'SUBSTITUTION') {
-                      eventItem.playersIn = event.payload.playersIn;
-                      eventItem.playersOut = event.payload.playersOut;
-                    } else if (cardKind) {
-                      eventItem.cardType = cardKind;
-                    }
-
-                    exportData.push(eventItem);
-                  } else {
-                    // CSV Row
-                    csvRows.push([
-                      match.id,
-                      match.round,
-                      homeTeamName,
-                      guestTeamName,
-                      Math.floor(event.timestampSeconds / 60) + 1 + "'",
-                      eventTypeLabel,
-                      teamName,
-                      player,
-                      details
-                    ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(';'));
-                  }
+                const matchesToExport = tournament.matches.filter(m => {
+                  if (selectedTeamIds.length === 0) {return false;}
+                  return selectedTeamIds.includes(m.teamA) || selectedTeamIds.includes(m.teamB);
                 });
-              });
 
-              // Generate File
-              const timestamp = new Date().toISOString().split('T')[0];
-              const safeTitle = tournament.title.replace(/[^a-zA-Z0-9]/g, '_');
+                if (matchesToExport.length === 0) {
+                  setExportError(t('exports.noMatchesFound'));
+                  setIsExporting(false);
+                  return;
+                }
 
-              if (exportFormat === 'json') {
-                // Create wrapper with metadata, filters, and summary
-                const exportWrapper = {
-                  version: '1.0',
-                  exportedAt: new Date().toISOString(),
-                  tournament: {
-                    id: tournament.id,
-                    name: tournament.title,
-                  },
-                  filters: {
-                    teams: selectedTeamIds.map(id => ({
-                      id,
-                      name: getTeamName(id),
-                    })),
-                    eventTypes: selectedEventTypes,
-                  },
-                  summary,
-                  events: exportData,
+                // Collect Data - Improved JSON structure with metadata
+                interface ExportEventItem {
+                  matchId: string;
+                  round: number;
+                  homeTeam: { id: string; name: string };
+                  guestTeam: { id: string; name: string };
+                  minute: number;
+                  type: string;
+                  team: { id?: string; name: string };
+                  playerNumber?: number;
+                  // Structured details instead of string
+                  scoreAfter?: { home: number; away: number };
+                  assists?: number[];
+                  penaltyDuration?: number;
+                  playersIn?: number[];
+                  playersOut?: number[];
+                  /** F3b2 (Ruling PC30): 'YELLOW' | 'YELLOW_RED' | 'RED', nur bei Karten gesetzt. */
+                  cardType?: string;
+                }
+                const exportData: ExportEventItem[] = [];
+                const csvRows: string[] = [];
+
+                // Summary counters for JSON export
+                const summary = {
+                  totalEvents: 0,
+                  goals: 0,
+                  yellowCards: 0,
+                  yellowRedCards: 0,
+                  redCards: 0,
+                  timePenalties: 0,
+                  substitutions: 0,
                 };
 
-                const blob = new Blob([JSON.stringify(exportWrapper, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `${safeTitle}_events_${timestamp}.json`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              } else {
-                const headers = ['Match ID', 'Runde', 'Heimmannschaft', 'Gastmannschaft', 'Spielminute', 'Ereignis', 'Team', 'Spieler', 'Details'];
-                const csvContent = [headers.join(';'), ...csvRows].join('\n');
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `${safeTitle}_events_${timestamp}.csv`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                matchesToExport.forEach(match => {
+                  const homeTeamName = getTeamName(match.teamA);
+                  const guestTeamName = getTeamName(match.teamB);
+
+                  // Filter Events Logic
+                  const relevantEvents = eventsForMatch(match, engineEventsById).filter(e => selectedEventTypes.includes(e.type));
+                  const sortedEvents = [...relevantEvents].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
+
+                  sortedEvents.forEach(event => {
+                    let details = '';
+                    let eventTypeLabel = event.type as string;
+                    let player = event.payload.playerNumber ? `#${event.payload.playerNumber}` : '';
+                    const teamName = getTeamName(event.payload.teamId);
+
+                    // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
+                    const cardKind = cardKindOf(event);
+
+                    // Update summary counters
+                    summary.totalEvents++;
+                    if (event.type === 'GOAL') {summary.goals++;}
+                    else if (event.type === 'YELLOW_CARD') {summary.yellowCards++;}
+                    else if (event.type === 'RED_CARD' && cardKind === 'YELLOW_RED') {summary.yellowRedCards++;}
+                    else if (event.type === 'RED_CARD') {summary.redCards++;}
+                    else if (event.type === 'TIME_PENALTY') {summary.timePenalties++;}
+                    else if (event.type === 'SUBSTITUTION') {summary.substitutions++;}
+
+                    // Formatting details for CSV
+                    if (event.type === 'GOAL') {
+                      eventTypeLabel = 'Tor';
+                      details = `Stand: ${event.scoreAfter.home}:${event.scoreAfter.away}`;
+                      if (event.payload.assists && event.payload.assists.length > 0) {
+                        details += ` (Vorlage: ${event.payload.assists.map(a => '#' + a).join(', ')})`;
+                      }
+                    } else if (event.type === 'YELLOW_CARD') {
+                      eventTypeLabel = 'Gelbe Karte';
+                    } else if (event.type === 'RED_CARD') {
+                      eventTypeLabel = cardKind === 'YELLOW_RED' ? 'Gelb-Rote Karte' : 'Rote Karte';
+                    } else if (event.type === 'TIME_PENALTY') {
+                      eventTypeLabel = tSport('events.timePenalty');
+                      details = `${event.payload.penaltyDuration ?? 120}s`;
+                    } else if (event.type === 'SUBSTITUTION') {
+                      eventTypeLabel = 'Wechsel';
+                      const inPlayers = event.payload.playersIn?.map(p => `#${p}`).join(', ') ?? '';
+                      const outPlayers = event.payload.playersOut?.map(p => `#${p}`).join(', ') ?? '';
+                      details = `Raus: ${outPlayers} -> Rein: ${inPlayers}`;
+                      player = '';
+                    }
+
+                    // JSON Structure - clean, structured data (no rawEvent)
+                    if (exportFormat === 'json') {
+                      const eventItem: ExportEventItem = {
+                        matchId: match.id,
+                        round: match.round,
+                        homeTeam: { id: match.teamA, name: homeTeamName },
+                        guestTeam: { id: match.teamB, name: guestTeamName },
+                        minute: Math.floor(event.timestampSeconds / 60) + 1,
+                        type: event.type,
+                        team: { id: event.payload.teamId, name: teamName },
+                        playerNumber: event.payload.playerNumber,
+                      };
+
+                      // Add type-specific structured data
+                      if (event.type === 'GOAL') {
+                        eventItem.scoreAfter = { home: event.scoreAfter.home, away: event.scoreAfter.away };
+                        if (event.payload.assists && event.payload.assists.length > 0) {
+                          eventItem.assists = event.payload.assists;
+                        }
+                      } else if (event.type === 'TIME_PENALTY') {
+                        eventItem.penaltyDuration = event.payload.penaltyDuration ?? 120;
+                      } else if (event.type === 'SUBSTITUTION') {
+                        eventItem.playersIn = event.payload.playersIn;
+                        eventItem.playersOut = event.payload.playersOut;
+                      } else if (cardKind) {
+                        eventItem.cardType = cardKind;
+                      }
+
+                      exportData.push(eventItem);
+                    } else {
+                      // CSV Row
+                      csvRows.push([
+                        match.id,
+                        match.round,
+                        homeTeamName,
+                        guestTeamName,
+                        Math.floor(event.timestampSeconds / 60) + 1 + "'",
+                        eventTypeLabel,
+                        teamName,
+                        player,
+                        details
+                      ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(';'));
+                    }
+                  });
+                });
+
+                // Generate File
+                const timestamp = new Date().toISOString().split('T')[0];
+                const safeTitle = tournament.title.replace(/[^a-zA-Z0-9]/g, '_');
+
+                if (exportFormat === 'json') {
+                  // Create wrapper with metadata, filters, and summary
+                  const exportWrapper = {
+                    version: '1.0',
+                    exportedAt: new Date().toISOString(),
+                    tournament: {
+                      id: tournament.id,
+                      name: tournament.title,
+                    },
+                    filters: {
+                      teams: selectedTeamIds.map(id => ({
+                        id,
+                        name: getTeamName(id),
+                      })),
+                      eventTypes: selectedEventTypes,
+                    },
+                    summary,
+                    events: exportData,
+                  };
+
+                  const blob = new Blob([JSON.stringify(exportWrapper, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `${safeTitle}_events_${timestamp}.json`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                } else {
+                  const headers = ['Match ID', 'Runde', 'Heimmannschaft', 'Gastmannschaft', 'Spielminute', 'Ereignis', 'Team', 'Spieler', 'Details'];
+                  const csvContent = [headers.join(';'), ...csvRows].join('\n');
+                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `${safeTitle}_events_${timestamp}.csv`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }
+
+                setIsExporting(false);
+                setExportSuccess(t('exports.eventsExportSuccess'));
+                setTimeout(() => setExportSuccess(null), 3000);
+
+              } catch (e) {
+                console.error(e);
+                setExportError(t('exports.eventsExportError'));
+                setIsExporting(false);
               }
-
-              setIsExporting(false);
-              setExportSuccess(t('exports.eventsExportSuccess'));
-              setTimeout(() => setExportSuccess(null), 3000);
-
-            } catch (e) {
-              console.error(e);
-              setExportError(t('exports.eventsExportError'));
-              setIsExporting(false);
-            }
             };
             void runEventsExport();
           }}
