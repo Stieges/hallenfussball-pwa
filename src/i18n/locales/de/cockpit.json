@@ -85,6 +85,9 @@
     "hint": "Fouls zählen für das ganze Spiel – Karten und Zeitstrafen zählen als Foul",
     "countsAsFoul": "zählt als Foul"
   },
+  "eventEditDialog": {
+    "title": "{{label}} bearbeiten"
+  },
   "cardDialog": {
     "title": "Karte vergeben",
     "whichCard": "Welche Karte?",

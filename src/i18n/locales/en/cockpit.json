@@ -85,6 +85,9 @@
     "hint": "Fouls count for the whole game – cards and time penalties count as a foul",
     "countsAsFoul": "counts as a foul"
   },
+  "eventEditDialog": {
+    "title": "Edit {{label}}"
+  },
   "cardDialog": {
     "title": "Issue Card",
     "whichCard": "Which card?",

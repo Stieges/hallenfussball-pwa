@@ -297,7 +297,8 @@ describe('LiveCockpit — Fixrunde 2 (H1b/M1): Mobiles Ereignisprotokoll-Sheet',
     // Sheet schließt sich, EventEditDialog öffnet sich (LiveCockpit.tsx onEventEdit-Handler) —
     // einziger offener Dialog an dieser Stelle.
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText(/bearbeiten/i, { selector: 'h2' })).toBeInTheDocument();
+    // i18n ist hier Key-Passthrough: der Titel kommt ueber `eventEditDialog.title` (kein hartkodiertes "bearbeiten" mehr).
+    expect(screen.getByRole('heading', { name: 'cockpit:eventEditDialog.title' })).toBeInTheDocument();
   });
 });
 

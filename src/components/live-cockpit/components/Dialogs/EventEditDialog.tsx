@@ -117,9 +117,9 @@ export function EventEditDialog({
   const getEventTypeLabel = (e: EditableMatchEvent): string => {
     switch (e.type) {
       case 'GOAL': return 'Tor';
-      case 'YELLOW_CARD': return t('engine.retract.kind.yellowCard');
+      case 'YELLOW_CARD': return t('cardDialog.yellowCard');
       case 'RED_CARD':
-        return cardKindOf(e) === 'YELLOW_RED' ? t('engine.retract.kind.yellowRedCard') : t('engine.retract.kind.redCard');
+        return cardKindOf(e) === 'YELLOW_RED' ? t('cardDialog.yellowRedCard') : t('cardDialog.redCard');
       case 'TIME_PENALTY': return sportGlossary.terms.timePenalty.de;
       case 'SUBSTITUTION': return 'Auswechslung';
       case 'FOUL': return 'Foul';
@@ -171,7 +171,7 @@ export function EventEditDialog({
           <span style={styles.eventIcon}>{getEventIcon(event)}</span>
           <div>
             <h2 id="event-edit-dialog-title" style={styles.title}>
-              {getEventTypeLabel(event)} bearbeiten
+              {t('eventEditDialog.title', { label: getEventTypeLabel(event) })}
             </h2>
             <p style={styles.subtitle}>
               {getTeamName(getEventTeamId(event))} · {formatTime(getEventTimeSeconds(event))}

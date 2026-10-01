@@ -3,22 +3,30 @@
  * payload.cardType 'YELLOW_RED') zeigt "Gelb-Rote Karte bearbeiten" mit Doppel-Symbol, eine echte
  * Rote (RED_CARD ohne cardType) bleibt "Rote Karte bearbeiten" mit rotem Symbol. Echte deutsche Texte.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { EditableMatchEvent } from '../../../types/tournament';
 import { EventEditDialog } from '../components/Dialogs/EventEditDialog';
 
+const locale = vi.hoisted((): { current: 'de' | 'en' } => ({ current: 'de' }));
+
+// Echte DE-/EN-Texte inkl. {{platzhalter}}-Interpolation (kein Key-Passthrough).
 vi.mock('react-i18next', async () => {
-  const de: unknown = (await import('../../../i18n/locales/de/cockpit.json')).default;
-  const translate = (key: string): string => {
+  const bundles: Record<'de' | 'en', unknown> = {
+    de: (await import('../../../i18n/locales/de/cockpit.json')).default,
+    en: (await import('../../../i18n/locales/en/cockpit.json')).default,
+  };
+  const translate = (key: string, options?: Record<string, string>): string => {
     const found = key.split('.').reduce<unknown>(
       (node, part) => (typeof node === 'object' && node !== null ? (node as Record<string, unknown>)[part] : undefined),
-      de,
+      bundles[locale.current],
     );
-    return typeof found === 'string' ? found : key;
+    if (typeof found !== 'string') {
+      return key;
+    }
+    return found.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => options?.[name] ?? '');
   };
-  const stable = { t: translate, i18n: { language: 'de' } };
-  return { useTranslation: () => stable };
+  return { useTranslation: () => ({ t: translate, i18n: { language: locale.current } }) };
 });
 
 const teams = {
@@ -42,6 +50,10 @@ function renderDialog(event: EditableMatchEvent) {
 }
 
 describe('EventEditDialog -- Gelb-Rot (F3b2)', () => {
+  beforeEach(() => {
+    locale.current = 'de';
+  });
+
   it('Gelb-Rot: Titel "Gelb-Rote Karte bearbeiten" mit Doppel-Symbol', () => {
     renderDialog(redCardEvent('YELLOW_RED'));
 
@@ -62,5 +74,13 @@ describe('EventEditDialog -- Gelb-Rot (F3b2)', () => {
 
     expect(screen.getByRole('heading', { name: 'Gelbe Karte bearbeiten' })).toBeInTheDocument();
     expect(screen.getByText('🟨')).toBeInTheDocument();
+  });
+
+  it('EN: Titel und Label heissen wie ueberall "Yellow-Red Card" (nicht "Second yellow card"), Titel ueber i18n', () => {
+    locale.current = 'en';
+    renderDialog(redCardEvent('YELLOW_RED'));
+
+    expect(screen.getByRole('heading', { name: 'Edit Yellow-Red Card' })).toBeInTheDocument();
+    expect(screen.queryByText(/Second yellow card/i)).toBeNull();
   });
 });

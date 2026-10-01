@@ -84,8 +84,8 @@ export function EventLogBottomSheet({
       case 'RED_CARD':
         // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
         return cardKindOf(event) === 'YELLOW_RED'
-          ? `${t('engine.retract.kind.yellowRedCard')} ${teamName}${playerInfo}`
-          : `${t('engine.retract.kind.redCard')} ${teamName}${playerInfo}`;
+          ? `${t('cardDialog.yellowRedCard')} ${teamName}${playerInfo}`
+          : `${t('cardDialog.redCard')} ${teamName}${playerInfo}`;
       case 'TIME_PENALTY': {
         const duration = event.payload.penaltyDuration
           ? Math.floor(event.payload.penaltyDuration / 60)
