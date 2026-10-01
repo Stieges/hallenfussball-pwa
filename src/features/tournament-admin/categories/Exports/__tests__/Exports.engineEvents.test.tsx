@@ -15,6 +15,11 @@ vi.mock('../../../../../features/match-engine/loadEngineEventsForExport', () => 
   loadEngineEventsForExport: mockLoadEngineEventsForExport,
 }));
 
+const mockExportStatisticsToPDF = vi.hoisted(() => vi.fn());
+vi.mock('../../../../../lib/pdfStatisticsExporter', () => ({
+  exportStatisticsToPDF: mockExportStatisticsToPDF,
+}));
+
 const mockContext: { current: unknown } = vi.hoisted(() => ({ current: {} }));
 vi.mock('../../../../../features/match-engine/useMatchEngineContext', () => ({
   useMatchEngineContextOptional: () => mockContext.current,
@@ -128,5 +133,115 @@ describe('ExportsCategory -- M8/U1 Engine-Ereignisse (F3b2)', () => {
     expect(await screen.findByText('admin:exports.eventsExportError')).toBeInTheDocument();
     expect(mockCaptureFeatureError).toHaveBeenCalledWith(expect.any(Error), 'tournament', 'loadEngineEventsForExport');
     expect(URL.createObjectURL).not.toHaveBeenCalled();
+  });
+  it('Punkt 4: CSV-Label "Gelb-Rote Karte" fuer Gelb-Rot (Gegenbeispiel: RED_CARD ohne cardType = "Rote Karte")', async () => {
+    const yellowRed = {
+      id: 'yr1', matchId: 'm1', timestampSeconds: 10, type: 'RED_CARD',
+      payload: { teamId: 'a', cardType: 'YELLOW_RED' }, scoreAfter: { home: 0, away: 0 },
+    };
+    const red = {
+      id: 'r1', matchId: 'm1', timestampSeconds: 20, type: 'RED_CARD',
+      payload: { teamId: 'b' }, scoreAfter: { home: 0, away: 0 },
+    };
+    mockLoadEngineEventsForExport.mockResolvedValue(new Map([['m1', [yellowRed, red]]]));
+    let capturedBlob: Blob | undefined;
+    URL.createObjectURL = vi.fn((blob: Blob) => { capturedBlob = blob; return 'blob:mock'; });
+    const user = userEvent.setup();
+
+    render(
+      <ExportsCategory
+        tournamentId="t1"
+        tournament={tournament}
+        onTournamentUpdate={vi.fn()}
+        onMatchesUpdate={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('admin:exports.eventsTitle'));
+    await user.click(screen.getByText('admin:exports.downloadAs'));
+
+    await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalled());
+    const text = await capturedBlob!.text();
+    const rows = text.split('\n');
+    expect(rows.some((row) => row.includes('Gelb-Rote Karte'))).toBe(true);
+    expect(rows.filter((row) => row.includes(';"Rote Karte";'))).toHaveLength(1);
+    expect(rows.filter((row) => row.includes(';"Gelb-Rote Karte";'))).toHaveLength(1);
+  });
+
+  it('Knopf-Sperre: waehrend der Lauf laeuft, ist der Export-Knopf gesperrt (kein Doppelklick-Lauf)', async () => {
+    let finishRun: (value: Map<string, never[]>) => void = () => undefined;
+    mockLoadEngineEventsForExport.mockReturnValue(new Promise<Map<string, never[]>>((resolve) => { finishRun = resolve; }));
+    const user = userEvent.setup();
+
+    render(
+      <ExportsCategory
+        tournamentId="t1"
+        tournament={tournament}
+        onTournamentUpdate={vi.fn()}
+        onMatchesUpdate={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('admin:exports.eventsTitle'));
+    await user.click(screen.getByText('admin:exports.downloadAs'));
+
+    // Jeder Knopf mit isExporting zeigt "exporting"/ist gesperrt -- der Ereignis-Export-Knopf auch.
+    const busyButtons = await screen.findAllByText('admin:exports.exporting');
+    for (const busy of busyButtons) {
+      expect(busy.closest('button')).toBeDisabled();
+    }
+    await user.click(busyButtons[0]);
+    expect(mockLoadEngineEventsForExport).toHaveBeenCalledTimes(1);
+
+    finishRun(new Map());
+    await waitFor(() => expect(screen.queryByText('admin:exports.exporting')).toBeNull());
+  });
+
+  it('Statistik-PDF: Lauf erfolgreich -> exportStatisticsToPDF erhaelt die Karte des Laufs', async () => {
+    const goalEvent = {
+      id: 'g1', matchId: 'm1', timestampSeconds: 10, type: 'GOAL',
+      payload: { teamId: 'a', direction: 'INC' }, scoreAfter: { home: 1, away: 0 },
+    };
+    const run = new Map([['m1', [goalEvent]]]);
+    mockLoadEngineEventsForExport.mockResolvedValue(run);
+    mockExportStatisticsToPDF.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    render(
+      <ExportsCategory
+        tournamentId="t1"
+        tournament={tournament}
+        onTournamentUpdate={vi.fn()}
+        onMatchesUpdate={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('admin:exports.statisticsTitle'));
+    await user.click(screen.getByText('admin:exports.exportPdf'));
+
+    await waitFor(() => expect(mockExportStatisticsToPDF).toHaveBeenCalledTimes(1));
+    expect(mockExportStatisticsToPDF).toHaveBeenCalledWith(tournament, run);
+    expect(mockLoadEngineEventsForExport).toHaveBeenCalledTimes(1);
+  });
+
+  it('Statistik-PDF: Lauf schlaegt fehl -> Fehlermeldung, KEIN PDF ohne Engine-Ereignisse', async () => {
+    mockLoadEngineEventsForExport.mockRejectedValue(new Error('Netz weg'));
+    const user = userEvent.setup();
+
+    render(
+      <ExportsCategory
+        tournamentId="t1"
+        tournament={tournament}
+        onTournamentUpdate={vi.fn()}
+        onMatchesUpdate={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByText('admin:exports.statisticsTitle'));
+    await user.click(screen.getByText('admin:exports.exportPdf'));
+
+    expect(await screen.findByText('admin:exports.statisticsExportError')).toBeInTheDocument();
+    expect(mockCaptureFeatureError).toHaveBeenCalledWith(expect.any(Error), 'tournament', 'loadEngineEventsForExport');
+    expect(mockExportStatisticsToPDF).not.toHaveBeenCalled();
   });
 });
