@@ -25,11 +25,17 @@ vi.mock('../fetchEngineMatchIds', async () => {
 import { loadEngineEventsForExport } from '../loadEngineEventsForExport';
 
 const MATCH_ID = 'match-export-1';
+const IDLE_MATCH_ID = 'match-export-2';
 
-function tournament(): Tournament {
+function tournament(withIdleMatch = false): Tournament {
   return {
     id: 'tour-export',
-    matches: [{ id: MATCH_ID, teamA: 'teama', teamB: 'teamb', round: 1, field: 1, matchNumber: 1 }],
+    matches: [
+      { id: MATCH_ID, teamA: 'teama', teamB: 'teamb', round: 1, field: 1, matchNumber: 1 },
+      ...(withIdleMatch
+        ? [{ id: IDLE_MATCH_ID, teamA: 'teamb', teamB: 'teama', round: 2, field: 1, matchNumber: 2 }]
+        : []),
+    ],
     teams: [{ id: 'teama', name: 'Heim' }, { id: 'teamb', name: 'Gast' }],
     groupPhaseGameDuration: 20,
   } as unknown as Tournament;
@@ -211,5 +217,40 @@ describe('loadEngineEventsForExport (F3b2, M8/U1)', () => {
 
     await expect(loadEngineEventsForExport(tournament(), freshContext)).rejects.toThrow('offline');
     expect(mockFetchEngineMatchIds).toHaveBeenCalledTimes(1);
+  });
+
+  // --- Fixrunde 2, I1: lastError nur fuer in diesem Lauf nachgeladene Spiele ---
+
+  /** Ein zweites Turnierspiel ohne lokale Ereignisse, dessen frueherer catch-up scheiterte -- wie
+   * `useEngineMatchReadiness` (tolerant, ohne `markEngineMatches`). */
+  async function contextWithStaleError(): Promise<MatchEngineContextValue> {
+    const { accountId, store, clock } = await makeStoreWithGoal();
+    const server: FetchConfirmed = (matchId) =>
+      matchId === IDLE_MATCH_ID
+        ? Promise.reject(new Error('Server 503'))
+        : Promise.resolve({ events: [], newWatermark: 0 });
+    const freshContext = await makeFreshContext(store, clock, accountId, server);
+    await freshContext.engine.ensureMatch(IDLE_MATCH_ID, { matchId: IDLE_MATCH_ID, teamAId: 'teamb', teamBId: 'teama' }, 'tour-export');
+    await freshContext.engine.catchUp(IDLE_MATCH_ID);
+    expect(freshContext.engine.status(IDLE_MATCH_ID).lastError).toBe('Server 503');
+    return freshContext;
+  }
+
+  it('I1: alter lastError an einem Spiel, das NICHT nachgeladen wird (nicht gemeldet, lokal leer) -> kein Abbruch', async () => {
+    mockIsSupabaseConfigured.current = true;
+    mockFetchEngineMatchIds.mockResolvedValue(new Set([MATCH_ID]));
+    const freshContext = await contextWithStaleError();
+
+    const result = await loadEngineEventsForExport(tournament(true), freshContext);
+
+    expect(result.get(MATCH_ID)?.some((e) => e.type === 'GOAL')).toBe(true);
+  });
+
+  it('I1 Gegenbeispiel: dasselbe Spiel in engineMatchIds und der Server scheitert weiter -> Abbruch', async () => {
+    mockIsSupabaseConfigured.current = true;
+    mockFetchEngineMatchIds.mockResolvedValue(new Set([MATCH_ID, IDLE_MATCH_ID]));
+    const freshContext = await contextWithStaleError();
+
+    await expect(loadEngineEventsForExport(tournament(true), freshContext)).rejects.toThrow(/Server 503/);
   });
 });

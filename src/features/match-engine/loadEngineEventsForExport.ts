@@ -12,8 +12,8 @@
  *   catch-up -- ein Gast hat keine Server-Ereignisse, der Export laeuft rein lokal (auch offline).
  * - Angemeldet: JEDER Fehler im Lauf bricht den Export ab, kein stiller Teil-Export. Das gilt auch
  *   fuer ein gescheitertes catch-up: `engine.catchUpLoaded()` verschluckt Fehler (setzt nur
- *   `engine.status(matchId).lastError`), deshalb wird danach `lastError` JEDES Spiels des Turniers
- *   geprueft und als Fehler geworfen. Der Aufrufer (Exports/index.tsx) faengt ihn ueber den
+ *   `engine.status(matchId).lastError`), deshalb wird danach `lastError` der in diesem Lauf
+ *   nachgeladenen Spiele geprueft und als Fehler geworfen. Der Aufrufer (Exports/index.tsx) faengt ihn ueber den
  *   bestehenden `exportError`-Pfad.
  */
 import type { Tournament, RuntimeMatchEvent } from '../../types/tournament';
@@ -50,12 +50,20 @@ export async function loadEngineEventsForExport(
       client as EngineMatchIdsQueryClient,
       validMatches.map((entry) => entry.matchId).filter(isUuid),
     );
+    // Genau die Spiele, die `catchUpLoaded` in DIESEM Lauf nachlaedt (`MatchEngine.qualifiesForCatchUp`):
+    // vom Server gemeldet (`engineMatchIds`) ODER lokal schon Ereignisse (`view.log.length > 0` ist
+    // gleichbedeutend mit "pending/acked/confirmed nicht leer"). Die Menge wird VOR dem Nachladen
+    // bestimmt, denn das Nachladen kann lokale Ereignisse erst erzeugen. Ein alter, tolerierter
+    // `lastError` eines nicht nachgeladenen Spiels (z. B. `useEngineMatchReadiness`) bleibt ohne Wirkung.
+    const caughtUpIds = validMatches
+      .map((entry) => entry.matchId)
+      .filter((matchId) => engineMatchIds.has(matchId) || (engine.view(matchId)?.log.length ?? 0) > 0);
     engine.markEngineMatches(engineMatchIds);
     await engine.catchUpLoaded();
-    for (const entry of validMatches) {
-      const { lastError } = engine.status(entry.matchId);
+    for (const matchId of caughtUpIds) {
+      const { lastError } = engine.status(matchId);
       if (lastError !== null) {
-        throw new Error(`Nachladen der Spielereignisse fehlgeschlagen (Spiel ${entry.matchId}): ${lastError}`);
+        throw new Error(`Nachladen der Spielereignisse fehlgeschlagen (Spiel ${matchId}): ${lastError}`);
       }
     }
   }
