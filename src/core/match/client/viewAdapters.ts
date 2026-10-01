@@ -163,7 +163,11 @@ function buildPayload(state: MatchState, event: EngineEvent, ctx: MatchContext):
 
   if (event.type === 'YELLOW_CARD') {
     payload.cardType = 'YELLOW';
-  } else if (event.type === 'RED_CARD' || event.type === 'YELLOW_RED_CARD') {
+  } else if (event.type === 'YELLOW_RED_CARD') {
+    // F3b1 (PO 30.09.): Gelb-Rot nicht mehr auf 'RED' abbilden -- eigener Wert, auch wenn der
+    // Ereignistyp (oben in mapEventType) weiter RED_CARD bleibt (gleiche Behandlung/Icon).
+    payload.cardType = 'YELLOW_RED';
+  } else if (event.type === 'RED_CARD') {
     payload.cardType = 'RED';
   }
   if (event.type === 'TIME_PENALTY') {

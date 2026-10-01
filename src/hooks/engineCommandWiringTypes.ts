@@ -18,7 +18,7 @@ export interface EngineCommandFallbackHandlers {
   handleCard: (
     matchId: string,
     teamId: string,
-    cardType: 'YELLOW' | 'RED',
+    cardType: 'YELLOW' | 'YELLOW_RED' | 'RED',
     options?: { playerNumber?: number },
   ) => Promise<void>;
   handleTimePenalty: (

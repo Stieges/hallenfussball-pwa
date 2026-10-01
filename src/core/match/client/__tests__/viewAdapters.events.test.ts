@@ -21,11 +21,12 @@ describe('toRuntimeEvents (I2)', () => {
     expect(events[0]?.matchId).toBe('m');
   });
 
-  it('bildet OWN_GOAL als Tor des Gegners ab und YELLOW_RED_CARD als rote Karte', () => {
+  it('bildet OWN_GOAL als Tor des Gegners ab und YELLOW_RED_CARD als eigenen Kartentyp (F3b1: nicht mehr als RED)', () => {
     const log = [
       start(),
       ev({ id: 'og1', type: 'OWN_GOAL', at: 2000, teamId: 'teamA', clockMs: 25_000, payload: {} }),
       ev({ id: 'yr1', type: 'YELLOW_RED_CARD', at: 3000, teamId: 'teamB', clockMs: 35_000, payload: { playerNumber: 4 } }),
+      ev({ id: 'rc1', type: 'RED_CARD', at: 3500, teamId: 'teamA', clockMs: 36_000, payload: { playerNumber: 2 } }),
     ];
     const state = reduceMatch(log, ctx).state;
     const events = toRuntimeEvents(state, log, ctx);
@@ -34,9 +35,13 @@ describe('toRuntimeEvents (I2)', () => {
     expect(events[0]?.payload.teamId).toBe('teamB');
     expect(events[0]?.timestampSeconds).toBe(25);
     expect(events[0]?.scoreAfter).toEqual({ home: 0, away: 1 });
+    // F3b1: Gelb-Rot wird im Ereignistyp weiter als RED_CARD gefuehrt (gleiche Behandlung/Icon wie
+    // Rot), aber payload.cardType unterscheidet sie jetzt von einer "echten" roten Karte.
     expect(events[1]?.type).toBe('RED_CARD');
-    expect(events[1]?.payload.cardType).toBe('RED');
+    expect(events[1]?.payload.cardType).toBe('YELLOW_RED');
     expect(events[1]?.payload.playerNumber).toBe(4);
+    expect(events[2]?.type).toBe('RED_CARD');
+    expect(events[2]?.payload.cardType).toBe('RED');
   });
 
   it('fuehrt scoreAfter laufend aus den Toren und setzt timestampSeconds aus der Spieluhr', () => {

@@ -78,7 +78,7 @@ export interface UseMatchExecutionReturn {
         playerNumber?: number;
         assists?: number[];
     }) => Promise<void>;
-    handleCard: (matchId: string, teamId: string, cardType: 'YELLOW' | 'RED', options?: {
+    handleCard: (matchId: string, teamId: string, cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', options?: {
         playerNumber?: number;
     }) => Promise<void>;
     handleTimePenalty: (matchId: string, teamId: string, options?: {
@@ -474,7 +474,7 @@ export function useMatchExecution({
     const handleCard = useCallback(async (
         matchId: string,
         teamId: string,
-        cardType: 'YELLOW' | 'RED',
+        cardType: 'YELLOW' | 'YELLOW_RED' | 'RED',
         options?: { playerNumber?: number }
     ): Promise<void> => {
         const match = liveMatches.get(matchId);

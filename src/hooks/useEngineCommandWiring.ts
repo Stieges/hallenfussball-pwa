@@ -240,7 +240,7 @@ export function useEngineCommandWiring(
   );
 
   const handleCard = useCallback(
-    (matchId: string, teamId: string, cardType: 'YELLOW' | 'RED', options?: { playerNumber?: number }) =>
+    (matchId: string, teamId: string, cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', options?: { playerNumber?: number }) =>
       runSimpleCommand(
         matchId,
         (cmd, ctx) => cmd.card(matchId, ctx, actor, teamId.toLowerCase(), cardType === 'YELLOW' ? 'YELLOW_CARD' : 'RED_CARD', options),

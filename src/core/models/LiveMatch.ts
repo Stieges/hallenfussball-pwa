@@ -5,7 +5,7 @@
  * This is separate from the persisted Match in tournament.matches[].
  */
 
-import { TeamLogo, TeamColors } from '../../types/tournament';
+import { TeamLogo, TeamColors, CardType } from '../../types/tournament';
 
 // ============================================================================
 // STATUS TYPES
@@ -51,7 +51,7 @@ export interface MatchEvent {
         delta?: number;
         playerNumber?: number;
         assists?: number[];
-        cardType?: 'YELLOW' | 'RED';
+        cardType?: CardType;
         toStatus?: MatchStatus;
         durationSeconds?: number;
         playersIn?: number[];

@@ -116,7 +116,7 @@ export function mapMatchEventFromSupabase(row: MatchEventRow): MatchEvent {
       delta: payload?.delta as number | undefined,
       playerNumber: payload?.playerNumber as number | undefined,
       assists: payload?.assists as number[] | undefined,
-      cardType: payload?.cardType as 'YELLOW' | 'RED' | undefined,
+      cardType: payload?.cardType as 'YELLOW' | 'YELLOW_RED' | 'RED' | undefined,
       toStatus: payload?.toStatus as MatchStatus | undefined,
       durationSeconds: payload?.durationSeconds as number | undefined,
       playersIn: payload?.playersIn as number[] | undefined,

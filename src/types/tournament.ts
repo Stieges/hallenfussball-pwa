@@ -638,9 +638,11 @@ export type MatchEventType =
   | 'MATCH_END';
 
 /**
- * Card type for YELLOW_CARD and RED_CARD events
+ * Card type for YELLOW_CARD and RED_CARD events. 'YELLOW_RED' (Gelb-Rot, F3b1 30.09.) is its
+ * own value, nicht mit 'RED' zusammengefasst -- der Ereignistyp bleibt dafuer RED_CARD (gleiche
+ * Behandlung/Icon), nur payload.cardType unterscheidet sie.
  */
-export type CardType = 'YELLOW' | 'RED';
+export type CardType = 'YELLOW' | 'YELLOW_RED' | 'RED';
 
 /**
  * Match Event - represents a single event during a match
@@ -666,7 +668,7 @@ export interface MatchEvent {
   playersIn?: number[];
 
   // Card type (for YELLOW_CARD and RED_CARD events)
-  cardType?: 'YELLOW' | 'RED';
+  cardType?: CardType;
 
   /**
    * Incomplete entry tracking
@@ -711,7 +713,7 @@ export interface RuntimeMatchEvent {
     playersOut?: number[];
     /** Rückennummern der eingewechselten Spieler */
     playersIn?: number[];
-    cardType?: 'YELLOW' | 'RED';
+    cardType?: CardType;
 
     // -------------------------------------------------------------------------
     // Draht-Format (wire shape) — so schreibt der MatchExecutionService in den

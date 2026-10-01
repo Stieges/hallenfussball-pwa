@@ -40,12 +40,27 @@ function countViaChain(log: EngineEvent[]): { home: number; away: number } {
 }
 
 describe('useFoulCounts (G11)', () => {
-  it('zaehlt Karte, Gelb-Rot und Zeitstrafe als je ein Foul (Foul mit Zusatz)', () => {
+  it('zaehlt Karte und Zeitstrafe als je ein Foul (Foul mit Zusatz)', () => {
     const count = (events: ReturnType<typeof matchWith>) =>
       renderHook(() => useFoulCounts(events)).result.current;
     expect(count(matchWith([{ ...foul('k1', 'teama'), type: 'YELLOW_CARD' }]))).toEqual({ home: 1, away: 0 });
     expect(count(matchWith([{ ...foul('k2', 'teamb'), type: 'RED_CARD' }]))).toEqual({ home: 0, away: 1 });
     expect(count(matchWith([{ ...foul('p1', 'teama'), type: 'TIME_PENALTY' }]))).toEqual({ home: 1, away: 0 });
+  });
+
+  // F3b1 (PO 30.09.): Gelb-Rot ist seit dem Adapter-Fix kein RED_CARD-cardType mehr, sondern
+  // payload.cardType 'YELLOW_RED' (der Ereignistyp selbst bleibt RED_CARD). Ersatz-Aussage fuer
+  // die bisherige (ungeprüfte) Behauptung "Gelb-Rot zaehlt" in der Zeile oben.
+  it('zaehlt Gelb-Rot (RED_CARD mit payload.cardType YELLOW_RED) als ein Foul -- Gegenbeispiel Tor = 0', () => {
+    const count = (events: ReturnType<typeof matchWith>) =>
+      renderHook(() => useFoulCounts(events)).result.current;
+    const gelbRot: RuntimeMatchEvent = {
+      ...foul('yr1', 'teama'),
+      type: 'RED_CARD',
+      payload: { teamId: 'teama', cardType: 'YELLOW_RED' },
+    };
+    expect(count(matchWith([gelbRot]))).toEqual({ home: 1, away: 0 });
+    expect(count(matchWith([{ ...foul('g1', 'teama'), type: 'GOAL' }]))).toEqual({ home: 0, away: 0 });
   });
 
   it('FOUL + Karte in derselben Minute zaehlen als 2 (U3, bewusst ohne Zusammenfassen)', () => {

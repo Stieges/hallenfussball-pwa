@@ -80,7 +80,7 @@ export interface CardEventInfo {
   teamId: string;
   teamName: string;
   side: 'home' | 'away';
-  cardType: 'YELLOW' | 'RED';
+  cardType: 'YELLOW' | 'YELLOW_RED' | 'RED';
   playerNumber?: number;
   timestamp: number;
 }

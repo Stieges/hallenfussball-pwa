@@ -316,7 +316,7 @@ export class MatchExecutionService {
         tournamentId: string,
         matchId: string,
         team: 'home' | 'away',
-        cardType: 'YELLOW' | 'RED',
+        cardType: 'YELLOW' | 'YELLOW_RED' | 'RED',
         options?: CardOptions
     ): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);

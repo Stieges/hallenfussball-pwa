@@ -2,9 +2,12 @@
  * useFoulCounts (C3b-2, G11 + F3a Foul-Regel): Foul-Zaehler eines Spiels aus den
  * Foul-typen-Eintraegen in `LiveMatch.events` -- fuer das ganze Spiel, ohne Halbzeit-Reset
  * und ohne lokales +1. Ein Eintrag ist genau ein Foul („Foul mit Zusatz", PO 30.09.):
- * FOUL, YELLOW_CARD, RED_CARD (Gelb-Rot kommt als RED_CARD an) und TIME_PENALTY zahlen
- * je 1, ohne Zusammenfassen nach Minute. `events` enthaelt kein Zurueckgenommenes
- * (G6/RC13); `retractedEvents` wird nicht gelesen.
+ * FOUL, YELLOW_CARD, RED_CARD und TIME_PENALTY zahlen je 1, ohne Zusammenfassen nach Minute.
+ * `events` enthaelt kein Zurueckgenommenes (G6/RC13); `retractedEvents` wird nicht gelesen.
+ *
+ * F3b1 (PO 30.09.): Gelb-Rot kommt weiterhin als Ereignistyp RED_CARD an (payload.cardType
+ * 'YELLOW_RED' statt vorher 'RED', seit der Adapter-Fix in viewAdapters.ts). Fuer den Zaehler
+ * aendert das nichts -- RED_CARD zaehlt unabhaengig vom Kartentyp 1 Foul, Gelb-Rot also mit.
  */
 import { useMemo } from 'react';
 
@@ -12,7 +15,12 @@ const FOUL_TYPES: ReadonlySet<string> = new Set(['FOUL', 'YELLOW_CARD', 'RED_CAR
 
 export interface FoulCountEvent {
   type: string;
-  payload: { teamId?: string | undefined; team?: 'home' | 'away' | undefined };
+  payload: {
+    teamId?: string | undefined;
+    team?: 'home' | 'away' | undefined;
+    /** 'YELLOW' | 'YELLOW_RED' | 'RED' (F3b1) -- hier nur dokumentarisch, nicht Teil der Zaehlung. */
+    cardType?: string | undefined;
+  };
 }
 
 export interface FoulCountSource {

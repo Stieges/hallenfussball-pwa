@@ -416,7 +416,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
   // Card/Penalty/Substitution handlers
   const handleCardConfirm = useCallback(
-    (cardType: 'YELLOW' | 'RED', teamId: string, playerNumber?: number) => {
+    (cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', teamId: string, playerNumber?: number) => {
       if (!currentMatch) { return; }
 
       const teamName = currentMatch.homeTeam.id === teamId

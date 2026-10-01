@@ -92,7 +92,7 @@ export interface LiveCockpitProps {
     playerNumber?: number;
     durationSeconds?: number;
   }): void;
-  onCard?(matchId: string, teamId: string, cardType: 'YELLOW' | 'RED', options?: {
+  onCard?(matchId: string, teamId: string, cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', options?: {
     playerNumber?: number;
   }): void;
   onSubstitution?(matchId: string, teamId: string, options?: {

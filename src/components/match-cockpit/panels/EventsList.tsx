@@ -33,8 +33,8 @@ export interface MatchEvent {
     playersOut?: number[];
     /** Eingewechselte Spieler */
     playersIn?: number[];
-    /** Kartentyp */
-    cardType?: 'YELLOW' | 'RED';
+    /** Kartentyp (F3b1: Gelb-Rot eigener Wert, kein RED mehr) */
+    cardType?: 'YELLOW' | 'YELLOW_RED' | 'RED';
   };
   scoreAfter: { home: number; away: number };
 }
