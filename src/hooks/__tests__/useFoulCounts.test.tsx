@@ -116,6 +116,18 @@ describe('über den Adapter (M9): Engine-Log → toLiveMatchView → useFoulCoun
     ).toEqual({ home: 0, away: 0 });
   });
 
+  // Fixrunde Aufgabe 5: echte Kette (Engine-Log -> reduceMatch -> toLiveMatchView ->
+  // useFoulCounts) mit einem YELLOW_RED_CARD-Engine-Ereignis -- der Adapter (viewAdapters.ts)
+  // bildet das auf RuntimeMatchEvent {type: 'RED_CARD', payload.cardType: 'YELLOW_RED'} ab, das
+  // zaehlt wie jede Karte 1 Foul. Gegenbeispiel Tor = 0.
+  it('zaehlt Gelb-Rot ueber die echte Kette (YELLOW_RED_CARD-Engine-Ereignis) als 1 Foul -- Gegenbeispiel Tor = 0', () => {
+    const gelbRot = ev({ id: 'yr1', type: 'YELLOW_RED_CARD', at: 2000, teamId: 'teamA', clockMs: 20_000, payload: { playerNumber: 4 } });
+    expect(countViaChain([start(), gelbRot])).toEqual({ home: 1, away: 0 });
+
+    const tor = ev({ id: 'g1', type: 'GOAL', at: 2000, teamId: 'teamA', clockMs: 20_000, payload: { playerNumber: 9 } });
+    expect(countViaChain([start(), tor])).toEqual({ home: 0, away: 0 });
+  });
+
   it('Fouls je Team via toLiveMatchView (Ersatz-Aussage foulCounts)', () => {
     const log = [
       start(),
