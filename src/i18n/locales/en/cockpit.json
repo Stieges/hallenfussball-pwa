@@ -21,6 +21,7 @@
     "foulWarning": "⚠ WARNING: {{teamName}} has 5 fouls!",
     "halftime": "Halftime",
     "yellowCard": "Yellow card for {{teamName}}",
+    "yellowRedCard": "Yellow-red card for {{teamName}}",
     "redCard": "Red card for {{teamName}}",
     "timePenalty": "{{minutes}} min time penalty for {{teamName}}"
   },
@@ -89,6 +90,7 @@
     "whichCard": "Which card?",
     "forWhichTeam": "For which team?",
     "yellow": "Yellow",
+    "yellowRed": "Yellow-Red",
     "red": "Red",
     "cancel": "Cancel",
     "withoutDetails": "Without Details",
@@ -96,6 +98,7 @@
     "back": "Back",
     "jerseyNumber": "Jersey number (optional)",
     "yellowCard": "Yellow Card",
+    "yellowRedCard": "Yellow-Red Card",
     "redCard": "Red Card"
   },
   "timeAdjust": {
@@ -158,6 +161,7 @@
     "noEvents": "No events yet",
     "goalEvent": "GOAL {{teamName}}",
     "yellowEvent": "Yellow {{teamName}}",
+    "yellowRedEvent": "Yellow-red {{teamName}}",
     "redEvent": "Red {{teamName}}",
     "penaltyEvent": "{{duration}} Min {{teamName}}",
     "substitutionEvent": "Sub {{teamName}}",

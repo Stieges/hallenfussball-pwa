@@ -46,9 +46,11 @@ interface CardDialogProps {
   autoDismissSeconds?: number;
 }
 
-// Card type colors
+// Card type colors (F3b2: Gelb-Rot fuehrt wie Rot zum Platzverweis -- gleiche Farbe, kein neuer
+// Design-Token noetig).
 const cardColors = {
   YELLOW: cssVars.colors.accent, // #FFD700
+  YELLOW_RED: cssVars.colors.error,
   RED: cssVars.colors.error,
 } as const;
 
@@ -63,7 +65,16 @@ export function CardDialog({
   autoDismissSeconds = 10,
 }: CardDialogProps) {
   const { t } = useTranslation('cockpit');
+  // F3b2: Titel-Schluessel je Kartentyp (Schritt 2+3) -- eine Stelle statt dreier Ternarys.
+  const cardTitleKeys: Record<CardType, 'cardDialog.yellowCard' | 'cardDialog.yellowRedCard' | 'cardDialog.redCard'> = {
+    YELLOW: 'cardDialog.yellowCard',
+    YELLOW_RED: 'cardDialog.yellowRedCard',
+    RED: 'cardDialog.redCard',
+  };
   const [cardType, setCardType] = useState<CardType | null>(initialCardType ?? null);
+  // F3b2: Badge-Farbe + Titel fuer Schritt 2/3 -- eine Stelle statt dreier Ternarys je Kartentyp.
+  const cardBadgeColor = cardType ? cardColors[cardType] : cardColors.YELLOW;
+  const cardTitle = cardType ? t(cardTitleKeys[cardType]) : '';
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [playerNumber, setPlayerNumber] = useState<string>('');
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -192,6 +203,26 @@ export function CardDialog({
         <button
           style={{
             ...styles.cardTypeButton,
+            backgroundColor: `${cardColors.YELLOW_RED}15`,
+            borderColor: cardColors.YELLOW_RED,
+          }}
+          onClick={() => handleCardTypeSelect('YELLOW_RED')}
+          data-testid="card-dialog-type-yellow-red"
+        >
+          <div
+            style={{
+              ...styles.cardIcon,
+              background: `linear-gradient(135deg, ${cardColors.YELLOW} 50%, ${cardColors.YELLOW_RED} 50%)`,
+            }}
+          />
+          <span style={{ ...styles.cardTypeLabel, color: cardColors.YELLOW_RED }}>
+            {t('cardDialog.yellowRed')}
+          </span>
+        </button>
+
+        <button
+          style={{
+            ...styles.cardTypeButton,
             backgroundColor: `${cardColors.RED}15`,
             borderColor: cardColors.RED,
           }}
@@ -225,11 +256,11 @@ export function CardDialog({
           <div
             style={{
               ...styles.cardBadge,
-              backgroundColor: cardType === 'YELLOW' ? cardColors.YELLOW : cardColors.RED,
+              backgroundColor: cardBadgeColor,
             }}
           />
           <h2 style={styles.title}>
-            {cardType === 'YELLOW' ? t('cardDialog.yellowCard') : t('cardDialog.redCard')}
+            {cardTitle}
           </h2>
         </div>
         <div style={{ width: 44 }} /> {/* Spacer for centering */}
@@ -269,12 +300,12 @@ export function CardDialog({
           <div
             style={{
               ...styles.cardBadge,
-              backgroundColor: cardType === 'YELLOW' ? cardColors.YELLOW : cardColors.RED,
+              backgroundColor: cardBadgeColor,
             }}
           />
           <div>
             <h2 style={styles.titleSmall}>
-              {cardType === 'YELLOW' ? t('cardDialog.yellowCard') : t('cardDialog.redCard')}
+              {cardTitle}
             </h2>
             <p style={styles.teamSubtitle}>{selectedTeam?.name}</p>
           </div>
@@ -332,8 +363,7 @@ export function CardDialog({
         <button
           style={{
             ...styles.confirmButton,
-            backgroundColor:
-              cardType === 'YELLOW' ? cardColors.YELLOW : cardColors.RED,
+            backgroundColor: cardBadgeColor,
             color: cardType === 'YELLOW' ? cssVars.colors.onWarning : cssVars.colors.onError,
           }}
           onClick={handleConfirm}
@@ -452,8 +482,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   cardTypeGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: cssVars.spacing.md,
+    // F3b2: drei Karten (Gelb / Gelb-Rot / Rot) statt zwei.
+    gridTemplateColumns: '1fr 1fr 1fr',
+    gap: cssVars.spacing.sm,
   },
   cardTypeButton: {
     display: 'flex',

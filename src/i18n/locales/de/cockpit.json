@@ -21,6 +21,7 @@
     "foulWarning": "⚠ ACHTUNG: {{teamName}} hat 5 Fouls!",
     "halftime": "Halbzeit",
     "yellowCard": "Gelbe Karte für {{teamName}}",
+    "yellowRedCard": "Gelb-Rote Karte für {{teamName}}",
     "redCard": "Rote Karte für {{teamName}}",
     "timePenalty": "{{minutes}} Min Zeitstrafe für {{teamName}}"
   },
@@ -89,6 +90,7 @@
     "whichCard": "Welche Karte?",
     "forWhichTeam": "Für welches Team?",
     "yellow": "Gelb",
+    "yellowRed": "Gelb-Rot",
     "red": "Rot",
     "cancel": "Abbrechen",
     "withoutDetails": "Ohne Details",
@@ -96,6 +98,7 @@
     "back": "Zurück",
     "jerseyNumber": "Rückennummer (optional)",
     "yellowCard": "Gelbe Karte",
+    "yellowRedCard": "Gelb-Rote Karte",
     "redCard": "Rote Karte"
   },
   "timeAdjust": {
@@ -158,6 +161,7 @@
     "noEvents": "Noch keine Ereignisse",
     "goalEvent": "TOR {{teamName}}",
     "yellowEvent": "Gelb {{teamName}}",
+    "yellowRedEvent": "Gelb-Rot {{teamName}}",
     "redEvent": "Rot {{teamName}}",
     "penaltyEvent": "{{duration}} Min {{teamName}}",
     "substitutionEvent": "Wechsel {{teamName}}",
