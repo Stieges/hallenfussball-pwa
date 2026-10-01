@@ -332,6 +332,41 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
     expect(fallback.handleStart).not.toHaveBeenCalled();
   });
 
+  // ---------------------------------------------------------------------------
+  // F3b2 (Gelb-Rot im Cockpit): handleCard mappt den UI-Kartentyp auf den Engine-Befehl ueber
+  // `mapCardTypeToEngine` -- nicht mehr ueber den fruehen ternaeren Ausdruck, der 'YELLOW_RED'
+  // faelschlich auf 'RED_CARD' abbildete.
+  // ---------------------------------------------------------------------------
+
+  it('F3b2: handleCard(..., "YELLOW_RED") schreibt YELLOW_RED_CARD ins Engine-Log (Gegenbeispiel: nicht RED_CARD)', async () => {
+    const fallback = makeFallback();
+    const engineContext = await makeEngineContext();
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback));
+    await result.current.handleStart(ENGINE_MATCH_ID);
+
+    await result.current.handleCard(ENGINE_MATCH_ID, 'teama', 'YELLOW_RED', { playerNumber: 7 });
+
+    expect(fallback.handleCard).not.toHaveBeenCalled();
+    const copy = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
+    const cardEvent = copy!.pending.find((e) => e.type === 'YELLOW_RED_CARD' || e.type === 'RED_CARD');
+    expect(cardEvent?.type).toBe('YELLOW_RED_CARD');
+  });
+
+  it('F3b2: handleCard(..., "YELLOW") schreibt weiterhin YELLOW_CARD, handleCard(..., "RED") weiterhin RED_CARD', async () => {
+    const fallback = makeFallback();
+    const engineContext = await makeEngineContext();
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback));
+    await result.current.handleStart(ENGINE_MATCH_ID);
+
+    await result.current.handleCard(ENGINE_MATCH_ID, 'teama', 'YELLOW');
+    const afterYellow = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
+    expect(afterYellow!.pending.some((e) => e.type === 'YELLOW_CARD')).toBe(true);
+
+    await result.current.handleCard(ENGINE_MATCH_ID, 'teamb', 'RED');
+    const afterRed = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
+    expect(afterRed!.pending.some((e) => e.type === 'RED_CARD')).toBe(true);
+  });
+
   it('P2/P3: liefert ensureEngineMatchReady fuer einen fremd-Kandidaten KEINE Ansicht (bestaetigtes Altspiel), faellt handleStart auf fallback.handleStart zurueck', async () => {
     const fallback = makeFallback();
     const engineContext = await makeEngineContext();

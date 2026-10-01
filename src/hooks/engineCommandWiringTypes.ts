@@ -2,6 +2,10 @@
  * engineCommandWiringTypes (C3a-2a Fixrunde 3, P8/E2/W11): nur die Typen aus
  * `useEngineCommandWiring.ts` ausgelagert -- die "guarded delegates" (Implementierung) sitzen in
  * `./engineCommandWiringHelpers` (E2: keine Typ-Datei fuer Code).
+ *
+ * F3b2 (Ausnahme E2): `mapCardTypeToEngine` ist die einzige Funktion hier -- bewusst trotzdem in
+ * dieser Datei statt einer eigenen, weil `useEngineCommandWiring.ts` (299, Grenzdatei) keine
+ * einzige Zeile mehr wachsen darf; der Kickoff nennt diese Datei explizit als Zielort.
  */
 export interface EngineCommandFallbackHandlers {
   handleStart: (matchId: string) => Promise<boolean>;
@@ -49,6 +53,25 @@ export interface EngineCommandFallbackHandlers {
     updates: { playerNumber?: number; incomplete?: boolean },
   ) => Promise<void>;
   handleDeleteEvent: (matchId: string, eventId: string) => Promise<void>;
+}
+
+/**
+ * F3b2 (Gelb-Rot im Cockpit): UI-Kartentyp -> Engine-Befehl (`MatchCommands.card`,
+ * `MatchCommands.ts:125`). Ersetzt den fruehen ternaeren Ausdruck in `useEngineCommandWiring.ts`
+ * (`cardType === 'YELLOW' ? 'YELLOW_CARD' : 'RED_CARD'`), der 'YELLOW_RED' faelschlich auf
+ * 'RED_CARD' abbildete -- Gelb-Rot waere im Engine-Log als einfaches Rot gelandet.
+ */
+export function mapCardTypeToEngine(
+  cardType: 'YELLOW' | 'YELLOW_RED' | 'RED',
+): 'YELLOW_CARD' | 'YELLOW_RED_CARD' | 'RED_CARD' {
+  switch (cardType) {
+    case 'YELLOW':
+      return 'YELLOW_CARD';
+    case 'YELLOW_RED':
+      return 'YELLOW_RED_CARD';
+    case 'RED':
+      return 'RED_CARD';
+  }
 }
 
 /** Die reinen "guarded delegates" (kein eigener MatchCommands-Aufruf, nur PC14-Toast-Wache vs.

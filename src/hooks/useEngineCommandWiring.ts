@@ -25,7 +25,7 @@ import { useToast } from '../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../lib/sentry';
 import { useActorRole } from './useActorRole';
 import { buildValidMatches } from './useEngineMatches';
-import type { EngineCommandFallbackHandlers } from './engineCommandWiringTypes';
+import { mapCardTypeToEngine, type EngineCommandFallbackHandlers } from './engineCommandWiringTypes';
 import { createGuardedDelegates } from './engineCommandWiringHelpers';
 
 export type { EngineCommandFallbackHandlers } from './engineCommandWiringTypes';
@@ -243,7 +243,7 @@ export function useEngineCommandWiring(
     (matchId: string, teamId: string, cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', options?: { playerNumber?: number }) =>
       runSimpleCommand(
         matchId,
-        (cmd, ctx) => cmd.card(matchId, ctx, actor, teamId.toLowerCase(), cardType === 'YELLOW' ? 'YELLOW_CARD' : 'RED_CARD', options),
+        (cmd, ctx) => cmd.card(matchId, ctx, actor, teamId.toLowerCase(), mapCardTypeToEngine(cardType), options),
         () => fallback.handleCard(matchId, teamId, cardType, options),
       ),
     [runSimpleCommand, actor, fallback],
