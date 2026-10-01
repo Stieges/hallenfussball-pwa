@@ -13,6 +13,7 @@
  */
 
 import { CSSProperties, useEffect, useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 
 export interface CardEventInfo {
@@ -63,6 +64,7 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
   onAnimationComplete,
   animationDuration = 3000,
 }) => {
+  const { t } = useTranslation('monitor');
   const [isVisible, setIsVisible] = useState(false);
   const [currentEvent, setCurrentEvent] = useState<CardEventInfo | null>(null);
   const [animationKey, setAnimationKey] = useState(0);
@@ -218,7 +220,7 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
           <div style={cardTextStyle}>
             {/* F3b2: Gelb-Rot zeigt "GELB-ROT" statt "ROTE KARTE" (Farben weiter ueber die
                 gemeinsame RED_CARD_COLORS-Konstante, s.o.). */}
-            {currentEvent.cardType === 'YELLOW_RED' ? 'GELB-ROT' : isRed ? 'ROTE KARTE' : 'GELBE KARTE'}
+            {currentEvent.cardType === 'YELLOW_RED' ? t('cardAnimation.yellowRedCard') : isRed ? t('cardAnimation.redCard') : t('cardAnimation.yellowCard')}
           </div>
           <div style={teamNameStyle}>{currentEvent.teamName}</div>
           {currentEvent.playerNumber && (

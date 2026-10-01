@@ -8,6 +8,7 @@
  * automatische Umwandlung/Vorschlag (PO 30.09.): der Helfer waehlt Gelb-Rot explizit.
  */
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 
 export interface CardButtonRowProps {
@@ -33,6 +34,7 @@ export function CardButtonRow({
   onYellowRedCard,
   onRedCard,
 }: CardButtonRowProps) {
+  const { t } = useTranslation('cockpit');
   const rowStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr 1fr',
@@ -41,14 +43,14 @@ export function CardButtonRow({
 
   return (
     <div style={rowStyle}>
-      <button style={yellowStyle} onClick={onYellowCard} disabled={disabled} type="button" aria-label={`Gelbe Karte für ${teamName}`} data-testid={`yellow-card-button-${teamSide}`}>
-        🟨 Gelb
+      <button style={yellowStyle} onClick={onYellowCard} disabled={disabled} type="button" aria-label={t('cardButtons.yellowAria', { teamName })} data-testid={`yellow-card-button-${teamSide}`}>
+        🟨 {t('cardDialog.yellow')}
       </button>
-      <button style={yellowRedStyle} onClick={onYellowRedCard} disabled={disabled} type="button" aria-label={`Gelb-Rote Karte für ${teamName}`} data-testid={`yellow-red-card-button-${teamSide}`}>
-        🟨🟥 Gelb-Rot
+      <button style={yellowRedStyle} onClick={onYellowRedCard} disabled={disabled} type="button" aria-label={t('cardButtons.yellowRedAria', { teamName })} data-testid={`yellow-red-card-button-${teamSide}`}>
+        🟨🟥 {t('cardDialog.yellowRed')}
       </button>
-      <button style={redStyle} onClick={onRedCard} disabled={disabled} type="button" aria-label={`Rote Karte für ${teamName}`} data-testid={`red-card-button-${teamSide}`}>
-        🟥 Rot
+      <button style={redStyle} onClick={onRedCard} disabled={disabled} type="button" aria-label={t('cardButtons.redAria', { teamName })} data-testid={`red-card-button-${teamSide}`}>
+        🟥 {t('cardDialog.red')}
       </button>
     </div>
   );

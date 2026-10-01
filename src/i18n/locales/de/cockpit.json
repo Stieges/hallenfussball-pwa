@@ -101,6 +101,11 @@
     "yellowRedCard": "Gelb-Rote Karte",
     "redCard": "Rote Karte"
   },
+  "cardButtons": {
+    "yellowAria": "Gelbe Karte für {{teamName}}",
+    "yellowRedAria": "Gelb-Rote Karte für {{teamName}}",
+    "redAria": "Rote Karte für {{teamName}}"
+  },
   "timeAdjust": {
     "title": "Spielzeit anpassen",
     "currentTime": "Aktuelle Zeit",

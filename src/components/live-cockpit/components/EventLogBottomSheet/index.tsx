@@ -11,6 +11,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import sportGlossary from '../../../../i18n/glossary.json';
@@ -54,6 +55,7 @@ export function EventLogBottomSheet({
   awayTeamId,
   onEventEdit,
 }: EventLogBottomSheetProps) {
+  const { t } = useTranslation('cockpit');
   const getTeamName = (teamId?: string): string => {
     if (teamId === homeTeamId) {return homeTeamName;}
     if (teamId === awayTeamId) {return awayTeamName;}
@@ -82,8 +84,8 @@ export function EventLogBottomSheet({
       case 'RED_CARD':
         // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
         return cardKindOf(event) === 'YELLOW_RED'
-          ? `Gelb-Rote Karte ${teamName}${playerInfo}`
-          : `Rote Karte ${teamName}${playerInfo}`;
+          ? `${t('engine.retract.kind.yellowRedCard')} ${teamName}${playerInfo}`
+          : `${t('engine.retract.kind.redCard')} ${teamName}${playerInfo}`;
       case 'TIME_PENALTY': {
         const duration = event.payload.penaltyDuration
           ? Math.floor(event.payload.penaltyDuration / 60)

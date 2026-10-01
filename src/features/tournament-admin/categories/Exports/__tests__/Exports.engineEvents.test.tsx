@@ -188,7 +188,7 @@ describe('ExportsCategory -- M8/U1 Engine-Ereignisse (F3b2)', () => {
     expect(mockCaptureFeatureError).toHaveBeenCalledWith(expect.any(Error), 'tournament', 'loadEngineEventsForExport');
     expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
-  it('Punkt 4: CSV-Label "Gelb-Rote Karte" fuer Gelb-Rot (Gegenbeispiel: RED_CARD ohne cardType = "Rote Karte")', async () => {
+  it('Punkt 4: CSV-Label (i18n) fuer Gelb-Rot (Gegenbeispiel: RED_CARD ohne cardType = Rot-Label)', async () => {
     const yellowRed = {
       id: 'yr1', matchId: 'm1', timestampSeconds: 10, type: 'RED_CARD',
       payload: { teamId: 'a', cardType: 'YELLOW_RED' }, scoreAfter: { home: 0, away: 0 },
@@ -217,9 +217,10 @@ describe('ExportsCategory -- M8/U1 Engine-Ereignisse (F3b2)', () => {
     await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalled());
     const text = await capturedBlob!.text();
     const rows = text.split('\n');
-    expect(rows.some((row) => row.includes('Gelb-Rote Karte'))).toBe(true);
-    expect(rows.filter((row) => row.includes(';"Rote Karte";'))).toHaveLength(1);
-    expect(rows.filter((row) => row.includes(';"Gelb-Rote Karte";'))).toHaveLength(1);
+    // i18n (Aufgabe 7): das Label kommt aus admin:exports.eventYellowRedCard / eventRedCard (der
+    // Test-Mock gibt den Schluessel zurueck) -- Gelb-Rot und Rot sind unterscheidbar.
+    expect(rows.filter((row) => row.includes(';"admin:exports.eventRedCard";'))).toHaveLength(1);
+    expect(rows.filter((row) => row.includes(';"admin:exports.eventYellowRedCard";'))).toHaveLength(1);
   });
 
   it('Knopf-Sperre: waehrend der Lauf laeuft, ist der Export-Knopf gesperrt (kein Doppelklick-Lauf)', async () => {

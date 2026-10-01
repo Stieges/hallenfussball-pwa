@@ -37,6 +37,7 @@
   },
   "cardAnimation": {
     "redCard": "ROTE KARTE",
-    "yellowCard": "GELBE KARTE"
+    "yellowCard": "GELBE KARTE",
+    "yellowRedCard": "GELB-ROT"
   }
 }

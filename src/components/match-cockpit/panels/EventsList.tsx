@@ -5,6 +5,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
@@ -47,6 +48,7 @@ export interface EventsListProps {
 }
 
 export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManualEdit }) => {
+  const { t } = useTranslation('cockpit');
   const isMobile = useIsMobile();
 
   const containerStyle: CSSProperties = {
@@ -184,8 +186,8 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
     } else if (event.type === 'RED_CARD') {
       // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
       return cardKindOf(event) === 'YELLOW_RED'
-        ? `🟨🟥 Gelb-Rote Karte ${displayName}${playerInfo}`
-        : `🟥 Rote Karte ${displayName}${playerInfo}`;
+        ? `🟨🟥 ${t('engine.retract.kind.yellowRedCard')} ${displayName}${playerInfo}`
+        : `🟥 ${t('engine.retract.kind.redCard')} ${displayName}${playerInfo}`;
     } else if (event.type === 'TIME_PENALTY') {
       const duration = penaltyDuration ? Math.floor(penaltyDuration / 60) : 2;
       return `⏱ ${duration} Min ${sportGlossary.terms.timePenalty.de} ${displayName}${playerInfo}`;

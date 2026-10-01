@@ -194,6 +194,7 @@
     "backupError": "Fehler beim Erstellen des Backups",
     "eventGoal": "Tor",
     "eventYellowCard": "Gelbe Karte",
+    "eventYellowRedCard": "Gelb-Rote Karte",
     "eventRedCard": "Rote Karte",
     "eventTimePenalty": "Zeitstrafe",
     "eventSubstitution": "Wechsel"

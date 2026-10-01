@@ -616,7 +616,7 @@ export function ExportsCategory({
                     } else if (event.type === 'YELLOW_CARD') {
                       eventTypeLabel = 'Gelbe Karte';
                     } else if (event.type === 'RED_CARD') {
-                      eventTypeLabel = cardKind === 'YELLOW_RED' ? 'Gelb-Rote Karte' : 'Rote Karte';
+                      eventTypeLabel = cardKind === 'YELLOW_RED' ? t('exports.eventYellowRedCard') : t('exports.eventRedCard');
                     } else if (event.type === 'TIME_PENALTY') {
                       eventTypeLabel = tSport('events.timePenalty');
                       details = `${event.payload.penaltyDuration ?? 120}s`;

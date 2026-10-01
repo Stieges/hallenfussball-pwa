@@ -6,6 +6,24 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { CardAnimation, type CardEventInfo } from '../CardAnimation';
 
+// Echte deutsche Monitor-Texte (i18n monitor:cardAnimation.*), kein Key-Passthrough.
+vi.mock('react-i18next', async () => {
+  const de: unknown = (await import('../../../i18n/locales/de/monitor.json')).default;
+  const translate = (key: string, opts?: Record<string, unknown>): string => {
+    const found = key.split('.').reduce<unknown>(
+      (node, part) => (typeof node === 'object' && node !== null ? (node as Record<string, unknown>)[part] : undefined),
+      de,
+    );
+    let text = typeof found === 'string' ? found : key;
+    for (const [name, value] of Object.entries(opts ?? {})) {
+      text = text.replace(`{{${name}}}`, String(value));
+    }
+    return text;
+  };
+  const stable = { t: translate, i18n: { language: 'de' } };
+  return { useTranslation: () => stable };
+});
+
 function cardEvent(cardType: CardEventInfo['cardType']): CardEventInfo {
   return {
     matchId: 'm1',

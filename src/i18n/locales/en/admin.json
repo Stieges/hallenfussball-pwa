@@ -194,6 +194,7 @@
     "backupError": "Error creating backup",
     "eventGoal": "Goal",
     "eventYellowCard": "Yellow card",
+    "eventYellowRedCard": "Yellow-red card",
     "eventRedCard": "Red card",
     "eventTimePenalty": "Time penalty",
     "eventSubstitution": "Substitution"
