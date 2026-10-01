@@ -35,6 +35,14 @@ export interface CardAnimationProps {
 }
 
 // Card-specific colors
+const RED_CARD_COLORS = {
+  primary: '#F44336',
+  secondary: '#D32F2F',
+  text: '#FFFFFF',
+  glow: 'rgba(244, 67, 54, 0.6)',
+  shadow: 'rgba(211, 47, 47, 0.5)',
+};
+
 const CARD_COLORS = {
   YELLOW: {
     primary: '#FFEB3B',
@@ -43,22 +51,11 @@ const CARD_COLORS = {
     glow: 'rgba(255, 235, 59, 0.6)',
     shadow: 'rgba(255, 193, 7, 0.5)',
   },
-  RED: {
-    primary: '#F44336',
-    secondary: '#D32F2F',
-    text: '#FFFFFF',
-    glow: 'rgba(244, 67, 54, 0.6)',
-    shadow: 'rgba(211, 47, 47, 0.5)',
-  },
-  // F3b1: Gelb-Rot fuehrt wie Rot zum Platzverweis -- gleiche Farben, bis F3b2 eine eigene
-  // "Gelb-Rot"-Anzeige verdrahtet.
-  YELLOW_RED: {
-    primary: '#F44336',
-    secondary: '#D32F2F',
-    text: '#FFFFFF',
-    glow: 'rgba(244, 67, 54, 0.6)',
-    shadow: 'rgba(211, 47, 47, 0.5)',
-  },
+  RED: RED_CARD_COLORS,
+  // Fixrunde Aufgabe 7 (Hard Rule): kein kopierter Hex-Wert -- Gelb-Rot referenziert dieselbe
+  // RED_CARD_COLORS-Konstante (F3b1: Gelb-Rot fuehrt wie Rot zum Platzverweis, gleiche Farben,
+  // bis F3b2 eine eigene "Gelb-Rot"-Anzeige verdrahtet).
+  YELLOW_RED: RED_CARD_COLORS,
 };
 
 export const CardAnimation: React.FC<CardAnimationProps> = ({
