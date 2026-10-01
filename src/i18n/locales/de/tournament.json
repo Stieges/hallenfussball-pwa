@@ -431,7 +431,13 @@
       "noEvents": "Noch keine Ereignisse",
       "close": "Schließen",
       "gotoCockpit": "Zum Cockpit",
-      "eventYellowRedCard": "Gelb-Rote Karte {{team}}{{player}}"
+      "eventYellowRedCard": "Gelb-Rote Karte {{team}}{{player}}",
+      "eventGoal": "TOR {{team}}{{player}}",
+      "eventYellowCard": "Gelbe Karte {{team}}{{player}}",
+      "eventRedCard": "Rote Karte {{team}}{{player}}",
+      "eventTimePenalty": "Zeitstrafe {{team}}{{player}}",
+      "eventSubstitution": "Wechsel {{team}}",
+      "eventFoul": "Foul {{team}}"
     },
     "quickScore": {
       "goalScorers": "Torschützen",

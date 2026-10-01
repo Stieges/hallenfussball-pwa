@@ -431,7 +431,13 @@
       "noEvents": "No events yet",
       "close": "Close",
       "gotoCockpit": "Go to Cockpit",
-      "eventYellowRedCard": "Yellow-red card {{team}}{{player}}"
+      "eventYellowRedCard": "Yellow-red card {{team}}{{player}}",
+      "eventGoal": "GOAL {{team}}{{player}}",
+      "eventYellowCard": "Yellow card {{team}}{{player}}",
+      "eventRedCard": "Red card {{team}}{{player}}",
+      "eventTimePenalty": "Time penalty {{team}}{{player}}",
+      "eventSubstitution": "Substitution {{team}}",
+      "eventFoul": "Foul {{team}}"
     },
     "quickScore": {
       "goalScorers": "Goal Scorers",
