@@ -2,7 +2,8 @@
  * C3b-2b (Plan §8 Nr. 12): Torschützenliste/Fair-Play/Export lesen Engine-Spiele aus dem
  * Adapter (`toRuntimeEvents`, ohne Zurückgenommenes) statt aus `Match.events` -- dort schreibt
  * die App bei Engine-Spielen nichts (kein Schreiben, kein syncUp). Quelle framework-frei in
- * `src/core`; die Map kommt über `useEngineEventsById` zu den Lesern.
+ * `src/core`; die Map kommt (F3b2: EIN Lauf je Export-Klick) über `loadEngineEventsForExport` zu
+ * den Lesern.
  */
 import { describe, it, expect } from 'vitest';
 import { reduceMatch, type EngineEvent } from '../../core/match';

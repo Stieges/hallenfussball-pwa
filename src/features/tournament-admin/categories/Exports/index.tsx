@@ -13,8 +13,11 @@ import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { PDFExportDialog } from '../../../../components/dialogs/PDFExportDialog';
 import { generateFullSchedule } from '../../../../core/generators';
-import { calculateStandings, eventsForMatch } from '../../../../utils/calculations';
-import { useEngineEventsById } from '../../../../hooks/useEngineEventsById';
+import { calculateStandings, eventsForMatch, type EngineEventsById } from '../../../../utils/calculations';
+import { cardKindOf } from '../../../../utils/cardKind';
+import { useMatchEngineContextOptional } from '../../../../features/match-engine/useMatchEngineContext';
+import { loadEngineEventsForExport } from '../../../../features/match-engine/loadEngineEventsForExport';
+import { captureFeatureError } from '../../../../lib/sentry';
 import type { Match, Tournament } from '../../../../types/tournament';
 import type { MatchUpdate } from '../../../../core/models/types';
 import { diffMatchResultStatusUpdates } from '../../../../core/services';
@@ -173,8 +176,11 @@ export function ExportsCategory({
 }: ExportsCategoryProps) {
   const { t } = useTranslation('admin');
   const { t: tSport } = useTranslation('sport');
-  // C3b-2b (§8 Nr. 12): Engine-Ereignisse für Torschützenliste/Fair-Play/Event-Export.
-  const engineEventsById = useEngineEventsById(tournament);
+  // F3b2 (M8/U1): EIN Lauf beim Klick auf "Exportieren" statt eines Dauer-Abos -- s.
+  // loadEngineEventsForExport. Kein eigener State: jeder Export-Knopf laedt sich seine eigene
+  // frische Karte, damit ein Export direkt nach App-Start (Cockpit nie geoeffnet) nicht still
+  // ohne Engine-Ereignisse liefert.
+  const matchEngineContext = useMatchEngineContextOptional();
   // State
   const [showPDFDialog, setShowPDFDialog] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -357,6 +363,22 @@ export function ExportsCategory({
     fileInputRef.current?.click();
   }, []);
 
+  // F3b2 (M8/U1): EIN Lauf beim Klick auf "Exportieren" (ensureMatch/Sammelabfrage/catchUpLoaded/
+  // Lesen, s. loadEngineEventsForExport) statt eines Dauer-Abos. Wirft der Lauf, faengt der
+  // Aufrufer das selbst (bestehender exportError-Pfad) -- kein stiller Teil-Export.
+  const loadEngineEvents = useCallback(async (): Promise<EngineEventsById> => {
+    if (!matchEngineContext) {
+      throw new Error('Kein Engine-Kontext verfügbar.');
+    }
+    try {
+      return await loadEngineEventsForExport(tournament, matchEngineContext);
+    } catch (error) {
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      captureFeatureError(normalizedError, 'tournament', 'loadEngineEventsForExport');
+      throw normalizedError;
+    }
+  }, [matchEngineContext, tournament]);
+
   return (
     <CategoryPage
       icon="📤"
@@ -500,9 +522,13 @@ export function ExportsCategory({
             ...(isExporting ? styles.buttonDisabled : {})
           }}
           onClick={() => {
+            const runEventsExport = async () => {
             try {
               setIsExporting(true);
               setExportError(null); // Clear previous errors
+
+              // F3b2 (M8/U1): EIN frischer Lauf je Klick statt eines Dauer-Abos.
+              const engineEventsById = await loadEngineEvents();
 
               const getTeamName = (id?: string) => tournament.teams.find(t => t.id === id)?.name ?? 'Unbekannt';
 
@@ -537,6 +563,8 @@ export function ExportsCategory({
                 penaltyDuration?: number;
                 playersIn?: number[];
                 playersOut?: number[];
+                /** F3b2 (Ruling PC30): 'YELLOW' | 'YELLOW_RED' | 'RED', nur bei Karten gesetzt. */
+                cardType?: string;
               }
               const exportData: ExportEventItem[] = [];
               const csvRows: string[] = [];
@@ -546,6 +574,7 @@ export function ExportsCategory({
                 totalEvents: 0,
                 goals: 0,
                 yellowCards: 0,
+                yellowRedCards: 0,
                 redCards: 0,
                 timePenalties: 0,
                 substitutions: 0,
@@ -565,10 +594,14 @@ export function ExportsCategory({
                   let player = event.payload.playerNumber ? `#${event.payload.playerNumber}` : '';
                   const teamName = getTeamName(event.payload.teamId);
 
+                  // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
+                  const cardKind = cardKindOf(event);
+
                   // Update summary counters
                   summary.totalEvents++;
                   if (event.type === 'GOAL') {summary.goals++;}
                   else if (event.type === 'YELLOW_CARD') {summary.yellowCards++;}
+                  else if (event.type === 'RED_CARD' && cardKind === 'YELLOW_RED') {summary.yellowRedCards++;}
                   else if (event.type === 'RED_CARD') {summary.redCards++;}
                   else if (event.type === 'TIME_PENALTY') {summary.timePenalties++;}
                   else if (event.type === 'SUBSTITUTION') {summary.substitutions++;}
@@ -583,7 +616,7 @@ export function ExportsCategory({
                   } else if (event.type === 'YELLOW_CARD') {
                     eventTypeLabel = 'Gelbe Karte';
                   } else if (event.type === 'RED_CARD') {
-                    eventTypeLabel = 'Rote Karte';
+                    eventTypeLabel = cardKind === 'YELLOW_RED' ? 'Gelb-Rote Karte' : 'Rote Karte';
                   } else if (event.type === 'TIME_PENALTY') {
                     eventTypeLabel = tSport('events.timePenalty');
                     details = `${event.payload.penaltyDuration ?? 120}s`;
@@ -619,6 +652,8 @@ export function ExportsCategory({
                     } else if (event.type === 'SUBSTITUTION') {
                       eventItem.playersIn = event.payload.playersIn;
                       eventItem.playersOut = event.payload.playersOut;
+                    } else if (cardKind) {
+                      eventItem.cardType = cardKind;
                     }
 
                     exportData.push(eventItem);
@@ -693,6 +728,8 @@ export function ExportsCategory({
               setExportError(t('exports.eventsExportError'));
               setIsExporting(false);
             }
+            };
+            void runEventsExport();
           }}
           disabled={isExporting}
         >
@@ -852,6 +889,8 @@ export function ExportsCategory({
             const runExport = async () => {
               try {
                 setIsExporting(true);
+                // F3b2 (M8/U1): EIN frischer Lauf je Klick statt eines Dauer-Abos.
+                const engineEventsById = await loadEngineEvents();
                 await exportStatisticsToPDF(tournament, engineEventsById);
                 setIsExporting(false);
                 setExportSuccess(t('exports.statisticsExportSuccess'));
