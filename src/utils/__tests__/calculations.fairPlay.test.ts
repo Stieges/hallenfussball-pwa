@@ -304,17 +304,36 @@ describe('calculateFairPlay (Profil, F3b1)', () => {
   // ueber Spiele). Direkte match.events (wie Aufgabe-3-Test), nicht ueber die Engine-Kette.
   it('zwei Spiele: Gelb in Spiel 1 + Gelb-Rot in Spiel 2 desselben Spielers -- keine Zusammenfuehrung, Summe 1 + 3 = 4', () => {
     const match1: Match = {
-      id: 'm1', round: 1, field: 1, teamA: 'teamA', teamB: 'teamB',
+      ...MATCH, id: 'm1',
       events: [
         { id: 'y1', matchId: 'm1', timestampSeconds: 10, type: 'YELLOW_CARD', payload: { teamId: 'teamA', playerNumber: 4 }, scoreAfter: { home: 0, away: 0 } },
       ],
-    } as unknown as Match;
+    };
     const match2: Match = {
-      id: 'm2', round: 2, field: 1, teamA: 'teamA', teamB: 'teamB',
+      ...MATCH, id: 'm2', round: 2,
       events: [
         { id: 'yr1', matchId: 'm2', timestampSeconds: 10, type: 'RED_CARD', payload: { teamId: 'teamA', playerNumber: 4, cardType: 'YELLOW_RED' }, scoreAfter: { home: 0, away: 0 } },
       ],
-    } as unknown as Match;
+    };
+    const fairPlay = calculateFairPlay(tournamentWith([match1, match2]), undefined, UEFA_PROFILE);
+    expect(fairPlay.find((e) => e.teamName === 'FC Alpha')?.points).toBe(4);
+  });
+
+  // Nachreview F3b1: umgekehrte Reihenfolge ueber zwei Spiele (Gelb-Rot in Spiel 1, Gelb in Spiel 2).
+  // Ein spieluebergreifender Spieler-Schluessel wuerde hier 3 + 3 = 6 statt 3 + 1 = 4 liefern.
+  it('zwei Spiele, umgekehrt: Gelb-Rot in Spiel 1 + Gelb in Spiel 2 desselben Spielers = 3 + 1 = 4', () => {
+    const match1: Match = {
+      ...MATCH, id: 'm1',
+      events: [
+        { id: 'yr1', matchId: 'm1', timestampSeconds: 10, type: 'RED_CARD', payload: { teamId: 'teamA', playerNumber: 4, cardType: 'YELLOW_RED' }, scoreAfter: { home: 0, away: 0 } },
+      ],
+    };
+    const match2: Match = {
+      ...MATCH, id: 'm2', round: 2,
+      events: [
+        { id: 'y1', matchId: 'm2', timestampSeconds: 10, type: 'YELLOW_CARD', payload: { teamId: 'teamA', playerNumber: 4 }, scoreAfter: { home: 0, away: 0 } },
+      ],
+    };
     const fairPlay = calculateFairPlay(tournamentWith([match1, match2]), undefined, UEFA_PROFILE);
     expect(fairPlay.find((e) => e.teamName === 'FC Alpha')?.points).toBe(4);
   });
@@ -323,12 +342,12 @@ describe('calculateFairPlay (Profil, F3b1)', () => {
   // nicht teamuebergreifend kombiniert werden -- der Schluessel enthaelt die teamId.
   it('dieselbe Rueckennummer in beiden Teams im selben Spiel: Team A 1, Team B 3 (keine teamuebergreifende Zusammenfuehrung)', () => {
     const match: Match = {
-      id: 'm', round: 1, field: 1, teamA: 'teamA', teamB: 'teamB',
+      ...MATCH,
       events: [
         { id: 'y1', matchId: 'm', timestampSeconds: 10, type: 'YELLOW_CARD', payload: { teamId: 'teamA', playerNumber: 4 }, scoreAfter: { home: 0, away: 0 } },
         { id: 'yr1', matchId: 'm', timestampSeconds: 20, type: 'RED_CARD', payload: { teamId: 'teamB', playerNumber: 4, cardType: 'YELLOW_RED' }, scoreAfter: { home: 0, away: 0 } },
       ],
-    } as unknown as Match;
+    };
     const fairPlay = calculateFairPlay(tournamentWith([match]), undefined, UEFA_PROFILE);
     expect(fairPlay.find((e) => e.teamName === 'FC Alpha')?.points).toBe(1);
     expect(fairPlay.find((e) => e.teamName === 'SV Beta')?.points).toBe(3);

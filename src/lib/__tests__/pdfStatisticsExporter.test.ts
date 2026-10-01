@@ -97,9 +97,9 @@ function tournamentWithYellowRed(): Tournament {
   } as unknown as Tournament;
 }
 
-/** Findet unter den autoTable-Aufrufen den fuer die Fair-Play-Tabelle (head enthaelt 'Team'). */
+/** Findet unter den autoTable-Aufrufen den fuer die Fair-Play-Tabelle (head enthaelt 'Gelb-Rot' – eindeutig, 'Team' steht auch bei den Torschuetzen). */
 function findFairPlayCall(): AutoTableCallArgs {
-  const call = autoTableMock.mock.calls.find(([, opts]) => opts?.head?.[0]?.includes('Team'));
+  const call = autoTableMock.mock.calls.find(([, opts]) => opts?.head?.[0]?.includes('Gelb-Rot'));
   if (!call) { throw new Error('Fair-Play autoTable-Aufruf nicht gefunden'); }
   return call[1];
 }

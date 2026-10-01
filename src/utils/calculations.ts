@@ -538,8 +538,8 @@ export interface FairPlayEntry {
 
 /**
  * Punkte einer einzelnen Spieler-Kombination (Team + Rueckennummer, je Spiel) nach Profil.
- * `secondYellowReplacesFirst`: eine Gelbe und eine spaetere Gelb-Rot desselben Spielers ersetzen
- * sich (zaehlt nur einmal als Gelb-Rot). `yellowPlusRed`: Gelb + direktes Rot desselben Spielers
+ * `secondYellowReplacesFirst`: eine Gelbe und eine Gelb-Rot desselben Spielers im selben Spiel ersetzen
+ * sich unabhaengig von der Reihenfolge im Log (zaehlt nur einmal als Gelb-Rot). `yellowPlusRed`: Gelb + direktes Rot desselben Spielers
  * (kein Ersetzen, eigener Kombi-Wert: fest oder Summe).
  */
 function scorePlayerCards(yellow: number, yellowRed: number, red: number, profile: FairPlayProfile): number {
@@ -593,7 +593,7 @@ export const calculateFairPlay = (
   });
 
   tournament.matches.forEach(match => {
-      // Kombinationen (Gelb + spaetere Gelb-Rot/Rot desselben Spielers) gelten nur je Spiel --
+      // Kombinationen (Gelb + Gelb-Rot/Rot desselben Spielers, Reihenfolge egal) gelten nur je Spiel --
       // transienter Schluessel Team + Rueckennummer; ohne Rueckennummer keine Zusammenfuehrung.
       const playerTally = new Map<string, { teamId: string; yellow: number; yellowRed: number; red: number }>();
       let anonCounter = 0;
