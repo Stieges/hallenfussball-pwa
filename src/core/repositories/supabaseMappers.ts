@@ -366,8 +366,8 @@ export function mapMatchUpdateToSupabase(
   const update: MatchUpdate = {};
 
   // `null` kann nur aus der Warteschlange kommen (normalizeMatchUpdateForQueue) – nie ein gültiger Slot.
-  const slotA = match.slotA as MatchSlot | null | undefined;
-  const slotB = match.slotB as MatchSlot | null | undefined;
+  const slotA = match.slotA;
+  const slotB = match.slotB;
   if (slotA !== undefined && slotA !== null) {
     const a = slotColumns(slotA);
     update.team_a_id = a.teamId;

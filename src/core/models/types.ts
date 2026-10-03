@@ -34,7 +34,11 @@ export type NullableMatchUpdateFields =
   | 'penaltyScoreB'
   | 'decidedBy'
   | 'skippedReason'
-  | 'skippedAt';
+  | 'skippedAt'
+  // A-02: `null` nur als JSON-Form eines vorhandenen `undefined` aus der Warteschlange
+  // (normalizeMatchUpdateForQueue) – „Seite nicht gesendet“, nie ein Löschen der Seite.
+  | 'slotA'
+  | 'slotB';
 
 export type MatchUpdate =
   Partial<Omit<Match, NullableMatchUpdateFields>> &

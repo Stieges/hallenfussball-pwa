@@ -66,13 +66,6 @@ export interface SyncConflict {
  * Cloud-Round-Trip bei JEDEM Sync eine Änderung und erzwingt dauerhaft den Voll-Save-Pfad.
  * Empirisch am Live-Projekt belegt (2026-09-17).
  */
-/** A-02: lokal besetzte Seite mit anderer Team-ID als in der Cloud? (offen/fehlend → nein) */
-function sideDiffers(local: MatchSlot | undefined, remote: MatchSlot | undefined): boolean {
-    const localId = local === undefined ? undefined : slotTeamId(local);
-    if (localId === undefined) {return false;}
-    return remote === undefined || slotTeamId(remote) !== localId;
-}
-
 function stableKey(value: unknown): string {
     return JSON.stringify(value, (_k, v: unknown) => {
         if (v === null || typeof v !== 'object' || Array.isArray(v)) { return v; }
@@ -82,6 +75,13 @@ function stableKey(value: unknown): string {
             return acc;
         }, {});
     });
+}
+
+/** A-02: lokal besetzte Seite mit anderer Team-ID als in der Cloud? (offen/fehlend → nein) */
+function sideDiffers(local: MatchSlot | undefined, remote: MatchSlot | undefined): boolean {
+    const localId = local === undefined ? undefined : slotTeamId(local);
+    if (localId === undefined) {return false;}
+    return remote === undefined || slotTeamId(remote) !== localId;
 }
 
 /**

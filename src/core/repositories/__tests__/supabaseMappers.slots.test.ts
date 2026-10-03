@@ -143,7 +143,7 @@ describe('A-02 mapMatchUpdateToSupabase – Slots nach Schlüssel-Regel', () => 
   });
 
   it('aus der Warteschlange normalisiertes null (Schlüssel vorhanden) zählt als „nicht gesendet“', () => {
-    const update = mapMatchUpdateToSupabase({ id: 'm1', slotA: null } as unknown as Partial<Match>);
+    const update = mapMatchUpdateToSupabase({ id: 'm1', slotA: null });
 
     expect(update).not.toHaveProperty('team_a_id');
     expect(update).not.toHaveProperty('slot_a_source');
