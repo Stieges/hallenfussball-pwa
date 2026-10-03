@@ -3,7 +3,7 @@
  * gemeldet – nicht still verworfen, kein TypeError. Gueltige Turniere (auch mit Uebergangsfeld teamA)
  * bleiben in der Liste.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { IStorageAdapter } from '../../storage/IStorageAdapter';
 
 const data = new Map<string, unknown>();
@@ -64,6 +64,8 @@ const valid = {
 };
 
 describe('LocalStorageRepository – Altformat (@FU-007)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   beforeEach(() => {
     data.clear();
     vi.clearAllMocks();
@@ -104,5 +106,34 @@ describe('LocalStorageRepository – Altformat (@FU-007)', () => {
     const list = await new LocalStorageRepository().listForCurrentUser();
     expect(list).toHaveLength(1);
     expect(data.has('tournaments_legacy_v1')).toBe(false);
+  });
+
+  it('@FU-007 meldet das Beiseitelegen als Fensterereignis (Name, Anzahl) an die Oberflaeche', async () => {
+    const target = new EventTarget();
+    vi.stubGlobal('window', target);
+    const received: number[] = [];
+    const listener = (e: Event) => { received.push((e as CustomEvent<{ count: number }>).detail.count); };
+    window.addEventListener('legacy-tournaments-quarantined', listener);
+    try {
+      data.set('tournaments', [legacy, valid]);
+      await new LocalStorageRepository().listForCurrentUser();
+      expect(received).toEqual([1]);
+    } finally {
+      window.removeEventListener('legacy-tournaments-quarantined', listener);
+    }
+  });
+
+  it('Gegenbeispiel: gueltige Liste sendet kein Ereignis', async () => {
+    const target = new EventTarget();
+    vi.stubGlobal('window', target);
+    const listener = vi.fn();
+    window.addEventListener('legacy-tournaments-quarantined', listener);
+    try {
+      data.set('tournaments', [valid]);
+      await new LocalStorageRepository().listForCurrentUser();
+      expect(listener).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener('legacy-tournaments-quarantined', listener);
+    }
   });
 });

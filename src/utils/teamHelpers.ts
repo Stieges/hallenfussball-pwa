@@ -87,7 +87,7 @@ export interface TeamDeletionResult {
  * - Matches WITH results: Keep in schedule, mark team as removed
  */
 export function deleteTeamSafely(
-  tournament: Tournament,
+  tournament: Pick<Tournament, 'teams' | 'matches'>,
   teamId: string
 ): TeamDeletionResult {
   const team = tournament.teams.find(t => t.id === teamId);

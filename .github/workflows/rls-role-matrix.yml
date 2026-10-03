@@ -36,6 +36,8 @@ on:
       - 'scripts/match-slots-check.sh'
       - 'scripts/match-slots-fixture.ts'
       - 'src/core/models/**'
+      - 'src/core/services/TournamentCreationService.ts'
+      - 'src/core/generators/**'
       - 'src/core/repositories/supabaseMappers.ts'
 
 permissions:

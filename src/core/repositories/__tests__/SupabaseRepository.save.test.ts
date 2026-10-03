@@ -145,6 +145,7 @@ vi.mock('../../services/matchProtectionNotices', () => ({
 }));
 
 import { SupabaseRepository } from '../SupabaseRepository';
+import { TeamStillReferencedError, isTransientMutationError } from '../../errors';
 
 const {
   getUserMock,
@@ -716,5 +717,58 @@ describe('SupabaseRepository.save() — A-02 Fixrunde 1: gleichnamiges Ersatztea
     const repo = new SupabaseRepository();
     await expect(repo.save(tournamentWithReplacement())).rejects.toThrow(/rename/i);
     expect(teamsUpsertMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('SupabaseRepository.save() — A-05 Fixrunde 1 (@FU-086): Spiel zeigt noch auf ein zu löschendes Team', () => {
+  const DOOMED = testUuid(7);
+
+  /** Inkonsistenter Stand: das Team DOOMED ist lokal entfernt, das Spiel zeigt aber noch darauf. */
+  function inconsistentTournament(): Tournament {
+    return mapTournamentFromSupabase(
+      createTournamentRow({ version: null }),
+      [createTeamRow({ id: TEAM_SURVIVOR, name: 'Survivor' })],
+      [createMatchRow({ id: 'match-doomed', team_a_id: DOOMED, team_b_id: TEAM_SURVIVOR })]
+    );
+  }
+
+  it('@FU-086 bricht mit TeamStillReferencedError ab, bevor irgendetwas geschrieben wird', async () => {
+    teamsSelectEqMock.mockResolvedValue({
+      data: [{ id: TEAM_SURVIVOR, name: 'Survivor' }, { id: DOOMED, name: 'FC Nord' }],
+      error: null,
+    });
+    matchesSelectEqMock.mockResolvedValue({ data: [], error: null });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(inconsistentTournament())).rejects.toBeInstanceOf(TeamStillReferencedError);
+
+    expect(tournamentsUpsertMock).not.toHaveBeenCalled();
+    expect(teamsUpsertMock).not.toHaveBeenCalled();
+    expect(teamsUpdateMock).not.toHaveBeenCalled();
+    expect(teamsDeleteMock).not.toHaveBeenCalled();
+    expect(matchesUpsertMock).not.toHaveBeenCalled();
+    expect(matchesUpdateMock).not.toHaveBeenCalled();
+    expect(matchesDeleteMock).not.toHaveBeenCalled();
+  });
+
+  it('@FU-086 der Fehler ist nicht transient (die Warteschlange zählt ihn und legt ihn im Dead-Letter ab)', () => {
+    expect(isTransientMutationError(new TeamStillReferencedError('m'))).toBe(false);
+  });
+
+  it('@FU-086 Gegenbeispiel: zeigt das Spiel auf ein bleibendes Team und das entfernte Team hat kein Spiel, wird gespeichert', async () => {
+    teamsSelectEqMock.mockResolvedValue({
+      data: [{ id: TEAM_SURVIVOR, name: 'Survivor' }, { id: DOOMED, name: 'FC Nord' }],
+      error: null,
+    });
+    matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
+    teamsDeleteSelectMock.mockResolvedValue({ data: [{ id: DOOMED }], error: null });
+
+    const consistent = mapTournamentFromSupabase(
+      createTournamentRow({ version: null }),
+      [createTeamRow({ id: TEAM_SURVIVOR, name: 'Survivor' })],
+      [survivorMatchRow('match-survivor')]
+    );
+    await expect(new SupabaseRepository().save(consistent)).resolves.toBeUndefined();
+    expect(teamsDeleteMock).toHaveBeenCalledTimes(1);
   });
 });

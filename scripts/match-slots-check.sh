@@ -255,6 +255,34 @@ probe "matchId 'semi1' (keine UUID)" 23514 "'{\"kind\":\"matchResult\",\"matchId
 probe "Zusatzschluessel name" 23514 "'{\"kind\":\"groupRank\",\"group\":\"A\",\"rank\":1,\"name\":\"FC Nord\"}'" "NULL::uuid"
 probe "role draw" 23514 "'{\"kind\":\"matchResult\",\"matchId\":\"$M_GROUP\",\"role\":\"draw\"}'" "NULL::uuid"
 
+# --- A-05 Fixrunde 1 (@FU-086): Team entfernen ---------------------------------------------------
+# Gruppenspiele tragen keine Herkunft (nur Team-IDs). Loescht man ein Team, auf das noch ein Spiel zeigt,
+# setzt ON DELETE SET NULL die Seite leer -> matches_slot_*_present lehnt mit 23514 ab (Beleg, warum die App
+# den Zustand nicht erzeugen darf). Der App-Weg (Wizard: Spiele des Teams fallen weg, SupabaseRepository.save()
+# loescht Spiele vor Teams) geht ohne Fehler.
+T_X="$(uuid_for team:fu086-x)"; T_Y="$(uuid_for team:fu086-y)"; M_FU086="$(uuid_for match:fu086)"
+psql_stdin <<SQL
+INSERT INTO public.teams (id, tournament_id, name) VALUES ('$T_X', '$T_NEW', 'FU086 X'), ('$T_Y', '$T_NEW', 'FU086 Y');
+INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id)
+VALUES ('$M_FU086', '$T_NEW', 98, 1, '$T_X', '$T_Y');
+CREATE FUNCTION public.__fu086_try(p_delete_match boolean) RETURNS text
+LANGUAGE plpgsql AS \$fn\$
+BEGIN
+  BEGIN
+    IF p_delete_match THEN
+      DELETE FROM public.matches WHERE id = '$M_FU086';
+    END IF;
+    DELETE FROM public.teams WHERE id = '$T_X';
+    RAISE EXCEPTION USING ERRCODE = 'P0999', MESSAGE = 'probe-ok';
+  EXCEPTION WHEN OTHERS THEN
+    RETURN CASE WHEN SQLSTATE = 'P0999' THEN 'ok' ELSE SQLSTATE END;
+  END;
+END;
+\$fn\$;
+SQL
+check "FU-086 Gegenbeispiel: Team loeschen, waehrend ein Gruppenspiel noch darauf zeigt -> 23514" "23514" "$(q "SELECT public.__fu086_try(false);")"
+check "FU-086 App-Weg (Spiele des Teams zuerst weg, dann Team loeschen) -> ok, kein 23514" "ok" "$(q "SELECT public.__fu086_try(true);")"
+
 echo
 echo "Ergebnis: $OK OK, $DEV Abweichung(en)."
 [[ "$DEV" -eq 0 ]]

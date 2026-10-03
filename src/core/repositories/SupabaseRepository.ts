@@ -11,7 +11,7 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
-import { OptimisticLockError, RepositoryError, AuthenticationError, isAbortError } from '../errors';
+import { OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, isAbortError } from '../errors';
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
 import type { Database } from '../../types/supabase';
 import {
@@ -274,6 +274,37 @@ export class SupabaseRepository implements ITournamentRepository {
 
     const matchesToDelete = candidateMatchesToDelete.filter((id) => !blockedMatchIds.includes(id));
 
+    const { data: existingTeams, error: existingTeamsError } = await getSupabase()
+      .from('teams')
+      .select('id, name')
+      .eq('tournament_id', tournament.id);
+
+    if (existingTeamsError) {
+      console.error('Failed to read existing teams:', existingTeamsError);
+      throw new RepositoryError('saveTeams', existingTeamsError.message, existingTeamsError);
+    }
+
+    const newTeamIds = new Set(teamRows.map((t) => t.id));
+    const teamsToDelete = (existingTeams ?? [])
+      .map((t) => t.id)
+      .filter((id) => !newTeamIds.has(id) && !protectedTeamIds.has(id));
+
+    // A-05 Fixrunde 1 (@FU-086): Zeigt ein zu speicherndes Spiel noch auf ein Team, das gelöscht würde, setzt
+    // ON DELETE SET NULL die Seite leer, und matches_slot_*_present lehnt mit 23514 ab -- NACH halb
+    // geschriebenem Stand. Der Zustand ist ein Fehler des Aufrufers (Spiele passen nicht zu den Teams):
+    // laut abbrechen, bevor irgendetwas geschrieben wird. TeamStillReferencedError ist nicht transient
+    // (isTransientMutationError), die Warteschlange zählt ihn als Fehlversuch und legt den Eintrag nach
+    // MAX_RETRIES im Dead-Letter ab, statt ihn endlos zu wiederholen.
+    {
+      const doomed = new Set(teamsToDelete);
+      const stillReferenced = matchRows.find(
+        (m) => doomed.has(m.team_a_id ?? '') || doomed.has(m.team_b_id ?? '')
+      );
+      if (stillReferenced) {
+        throw new TeamStillReferencedError(stillReferenced.id ?? '');
+      }
+    }
+
     // Start transaction-like operation
     // Note: Supabase doesn't support true transactions in the client,
     // but we can use RPC for atomic operations if needed
@@ -333,20 +364,6 @@ export class SupabaseRepository implements ITournamentRepository {
     // darf nur auf ein Team zeigen, das es in der Cloud schon gibt (FK team_a_id/team_b_id).
     // Zu löschende Teams (lokal entfernt, nicht von einem geschützten Spiel gebraucht) werden erst in
     // Schritt 4 gelöscht -- hier schon berechnet, weil sie den Upsert blockieren können (s. u.).
-    const { data: existingTeams, error: existingTeamsError } = await getSupabase()
-      .from('teams')
-      .select('id, name')
-      .eq('tournament_id', tournament.id);
-
-    if (existingTeamsError) {
-      console.error('Failed to read existing teams:', existingTeamsError);
-      throw new RepositoryError('saveTeams', existingTeamsError.message, existingTeamsError);
-    }
-
-    const newTeamIds = new Set(teamRows.map((t) => t.id));
-    const teamsToDelete = (existingTeams ?? [])
-      .map((t) => t.id)
-      .filter((id) => !newTeamIds.has(id) && !protectedTeamIds.has(id));
 
     // A-02 Fixrunde 1 (Review I3): Ein lokal entferntes Team, dessen Name ein eingehendes (neues)
     // Team trägt („FC Nord“ raus, neues „FC Nord“ rein), existiert beim Upsert noch -- teams

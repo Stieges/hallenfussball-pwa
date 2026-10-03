@@ -230,6 +230,9 @@ export function isTransientMutationError(error: unknown): boolean {
   if (error instanceof OptimisticLockError) {
     return false;
   }
+  if (error instanceof TeamStillReferencedError) {
+    return false;
+  }
   if (isAbortError(error)) {
     return true;
   }
@@ -301,6 +304,25 @@ export function isAbortError(error: unknown): boolean {
     e.code === '20' ||
     e.code === 20
   );
+}
+
+// =============================================================================
+// TeamStillReferencedError (A-05 Fixrunde 1, @FU-086)
+// =============================================================================
+
+/**
+ * `SupabaseRepository.save()`: Ein zu speicherndes Spiel zeigt noch auf ein Team, das mit demselben
+ * Speichern gelöscht würde. Nicht wiederholbar (nicht transient): der Fehler liegt im Stand, nicht im
+ * Netz. Wird vor dem ersten Schreiben geworfen, es bleibt also nichts halb geschrieben.
+ */
+export class TeamStillReferencedError extends Error {
+  public readonly matchId: string;
+
+  constructor(matchId: string) {
+    super(`Spiel ${matchId} zeigt noch auf ein Team, das gelöscht würde – Speichern abgebrochen, nichts geschrieben`);
+    this.name = 'TeamStillReferencedError';
+    this.matchId = matchId;
+  }
 }
 
 // =============================================================================
