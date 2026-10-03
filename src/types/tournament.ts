@@ -1,4 +1,5 @@
 import { SportId } from '../config/sports/types';
+import type { MatchSlot } from '../core/models/schemas/MatchSlotSchema';
 
 // Core Tournament Types
 export type Sport = 'football' | 'other';
@@ -262,8 +263,22 @@ export interface Match {
   round: number;
   field: number;
   slot?: number; // Time slot index for fair scheduling
+  /**
+   * ÜBERGANG (A-01 → A-04b, MVP-Bauplan Spur A): Team-ID bzw. alter Platzhalter-Text.
+   * Neue Leser nutzen `slotA`; A-04b entfernt `teamA/teamB` und macht `slotA/slotB` zur Pflicht.
+   * (Kein `@deprecated`-Tag: `@typescript-eslint/no-deprecated` + `--max-warnings 0` würde jeden
+   * bestehenden Leser vor A-03/A-04 als Lint-Fehler melden.)
+   */
   teamA: string;
+  /** ÜBERGANG, siehe `teamA`. */
   teamB: string;
+  /**
+   * Heimseite als Slot: Team-ID oder strukturierte Herkunft (@TM-015). Generatoren setzen sie immer;
+   * optional nur während des Übergangs bis A-04b (Leser, die noch nicht umgestellt sind, bauen Spiele ohne Slot).
+   */
+  slotA?: MatchSlot;
+  /** Gastseite als Slot, siehe `slotA`. */
+  slotB?: MatchSlot;
   scoreA?: number;
   scoreB?: number;
   group?: string;

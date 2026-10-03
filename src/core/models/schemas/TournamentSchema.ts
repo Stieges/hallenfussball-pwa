@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TeamTrainerSchema, TournamentGroupSchema, TournamentFieldSchema, RuntimeMatchEventSchema } from './CommonSchemas';
+import { MatchSlotSchema } from './MatchSlotSchema';
 
 const TeamLogoSchema = z.object({
     type: z.enum(['url', 'base64', 'initials']),
@@ -30,8 +31,11 @@ export const MatchSchema = z.object({
     round: z.number(),
     field: z.number(),
     slot: z.number().optional(),
+    // Übergang A-01 → A-04b: teamA/teamB (alt) neben slotA/slotB (neu, @TM-015). A-04b entfernt teamA/teamB.
     teamA: z.string(),
     teamB: z.string(),
+    slotA: MatchSlotSchema.optional(),
+    slotB: MatchSlotSchema.optional(),
     scoreA: z.number().min(0).optional(),
     scoreB: z.number().min(0).optional(),
     group: z.string().optional(),

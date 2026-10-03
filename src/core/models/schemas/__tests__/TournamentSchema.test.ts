@@ -103,6 +103,28 @@ describe('MatchSchema', () => {
     expect(result.events).toBeUndefined();
   });
 
+  // A-01 (@TM-015): Spielseiten als Slot. Übergang bis A-04b: slotA/slotB optional neben teamA/teamB.
+  const T1 = '11111111-1111-4111-8111-111111111111';
+  const HF1 = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+  it('@TM-015 übernimmt slotA/slotB (team und offene Herkunft) unverändert', () => {
+    const slotA = { kind: 'team', teamId: T1 };
+    const slotB = { kind: 'pending', source: { kind: 'matchResult', matchId: HF1, role: 'winner' } };
+    const result = MatchSchema.parse({ id: 'm1', round: 1, field: 1, teamA: T1, teamB: 'x', slotA, slotB });
+    expect(result.slotA).toEqual(slotA);
+    expect(result.slotB).toEqual(slotB);
+  });
+
+  it('@TM-015 Gegenbeispiel: Teamname im Slot wird abgelehnt', () => {
+    const match = { id: 'm1', round: 1, field: 1, teamA: 'FC Nord', teamB: 't2', slotA: { kind: 'team', teamId: 'FC Nord' } };
+    expect(MatchSchema.safeParse(match).success).toBe(false);
+  });
+
+  it('@TM-015 Gegenbeispiel: Platzhalter-Text im Slot wird abgelehnt', () => {
+    const match = { id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2', slotB: 'semi1-winner' };
+    expect(MatchSchema.safeParse(match).success).toBe(false);
+  });
+
   // C-ZOD-DEC: Supabase liefert für nullable Spalten `null` statt `undefined`.
   // decidedBy/finalType kamen bisher als `null` durch (Cast ohne `?? undefined`
   // in supabaseMappers.ts), was die Validierung scheitern ließ und das Turnier
