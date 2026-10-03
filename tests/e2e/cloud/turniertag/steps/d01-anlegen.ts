@@ -9,7 +9,7 @@
  */
 import { expect } from '@playwright/test';
 import { E2E_TURNIERTAG_MONITOR_ID, E2E_TURNIERTAG_SHARE_CODE } from '../../testData';
-import { fetchTurniertagBracket, fetchTurniertagTeams, matchRow, openSpielplanFinalrunde, openTurniertagPath, TURNIERTAG_ID } from './shared';
+import { fetchTurniertagBracket, fetchTurniertagTeams, finalMatchLabel, finalrundeLabels, openSpielplanFinalrunde, openTurniertagPath, TURNIERTAG_ID } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function anlegen({ asRole }: StepContext): Promise<void> {
@@ -27,9 +27,7 @@ async function anlegen({ asRole }: StepContext): Promise<void> {
   await openTurniertagPath(ownerPage, '/schedule');
   // Der Spielplan der Turnierleitung zeigt Halbfinale über Kreuz, Platz 3 und Finale.
   await openSpielplanFinalrunde(ownerPage);
-  for (const match of finals) {
-    await expect(matchRow(ownerPage, match.id)).toBeVisible({ timeout: 15000 });
-  }
+  expect([...(await finalrundeLabels(ownerPage))].sort()).toEqual(finals.map((match) => finalMatchLabel(match, finals)).sort());
 }
 
 /** Ansichten, in denen Halbfinale 1 seine Herkunft zeigt (Beispielzeilen von @TM-015). */
@@ -43,7 +41,8 @@ async function halbfinaleHerkunft(view: (typeof TM015_VIEWS)[number], { asRole, 
   if (view === 'Spielplan der Turnierleitung') {
     const ownerPage = await asRole('owner');
     await openSpielplanFinalrunde(ownerPage);
-    await expect(matchRow(ownerPage, hf1.id)).toHaveAttribute('aria-label', /^Spiel \d+: Erster Gruppe A gegen Zweiter Gruppe B$/, { timeout: 15000 });
+    // Halbfinale 1 steht in der Finalrunde an erster Stelle.
+    expect((await finalrundeLabels(ownerPage))[0]).toBe('Erster Gruppe A gegen Zweiter Gruppe B');
   } else if (view === 'Toms Cockpit') {
     // Toms Gerät ist erst nach D3 (Helfer per QR) Mitglied; bis dahin öffnet die Turnierleitung das Cockpit.
     // Die Spielauswahl trägt für jedes Spiel "#<Nr> - <Heim> vs <Gast>": Halbfinale 1 ist Nr. 13.

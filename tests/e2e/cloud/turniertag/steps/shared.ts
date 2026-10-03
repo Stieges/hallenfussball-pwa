@@ -79,19 +79,43 @@ export async function openTurniertagPath(page: Page, pathSuffix: string): Promis
 }
 
 /**
- * Zeile eines Spiels im Spielplan der Turnierleitung (Grid): `role="row"` mit `aria-label`
- * "Spiel <n>: <Heim> gegen <Gast>"; die Zeile wird über den Kreis des Spiels (`match-circle-<id>`)
- * gefunden, nicht über die Anzeigenummer oder den Text.
- */
-export function matchRow(page: Page, matchId: string) {
-  return page.getByRole('row').filter({ has: page.locator(`[data-testid="match-circle-${matchId}"]`) });
-}
-
-/**
  * Öffnet den Spielplan der Turnierleitung gefiltert auf die Finalrunde. Die Liste rendert nur einen
  * Ausschnitt aller Spiele; mit dem Phasenfilter stehen genau die vier Finalrunden-Spiele im Dokument.
  */
 export async function openSpielplanFinalrunde(page: Page): Promise<void> {
   await openTurniertagPath(page, '/schedule');
   await page.locator('[data-testid="filter-phase"]').selectOption({ label: 'Finalrunde' });
+}
+
+/**
+ * Beschriftungen der Finalrunden-Zeilen im Spielplan der Turnierleitung (`role="row"`,
+ * `aria-label="Spiel <n>: <Heim> gegen <Gast>"`), ohne die Anzeigenummer, in Anzeigereihenfolge
+ * (Halbfinale 1 zuerst). Wartet, bis alle vier Zeilen im Dokument stehen.
+ */
+export async function finalrundeLabels(page: Page): Promise<string[]> {
+  let labels: string[] = [];
+  await expect(async () => {
+    labels = (await page.getByRole('row').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') ?? '')))
+      .filter((label) => label.startsWith('Spiel '))
+      .map((label) => label.replace(/^Spiel \d+: /, ''));
+    expect(labels).toHaveLength(4);
+  }).toPass({ timeout: 15000 });
+  return labels;
+}
+
+/** Anzeigetext einer offenen Spielseite aus ihrer Cloud-Herkunft (`slot_*_source`). */
+export function sourceLabel(source: TurniertagMatch['slot_a_source'], finals: readonly TurniertagMatch[]): string {
+  if (source?.kind === 'groupRank') {
+    return `${source.rank === 1 ? 'Erster' : 'Zweiter'} Gruppe ${source.group}`;
+  }
+  if (source?.kind === 'matchResult') {
+    const semifinal = finals.findIndex((match) => match.id === source.matchId) + 1;
+    return `${source.role === 'winner' ? 'Sieger' : 'Verlierer'} ${semifinal}. Halbfinale`;
+  }
+  return '';
+}
+
+/** "<Heim> gegen <Gast>" eines Finalrunden-Spiels, wie der Spielplan es aus der Herkunft beschriftet. */
+export function finalMatchLabel(match: TurniertagMatch, finals: readonly TurniertagMatch[]): string {
+  return `${sourceLabel(match.slot_a_source, finals)} gegen ${sourceLabel(match.slot_b_source, finals)}`;
 }

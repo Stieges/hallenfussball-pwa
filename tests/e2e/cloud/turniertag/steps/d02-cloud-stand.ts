@@ -5,7 +5,7 @@
  * und ein frisch geöffnetes zweites Gerät des Veranstalters sieht denselben Spielplan.
  */
 import { expect } from '@playwright/test';
-import { fetchTurniertagBracket, fetchTurniertagTeams, matchRow, openSpielplanFinalrunde } from './shared';
+import { fetchTurniertagBracket, fetchTurniertagTeams, finalMatchLabel, finalrundeLabels, openSpielplanFinalrunde } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function cloudStand({ asRole }: StepContext): Promise<void> {
@@ -30,14 +30,11 @@ async function cloudStand({ asRole }: StepContext): Promise<void> {
     }
   }
 
-  // Ein frisch geöffnetes zweites Gerät zeigt die Herkunft der Finalrunde aus der Cloud-Zeile.
-  const label = (source: NonNullable<(typeof finals)[number]['slot_a_source']>): string =>
-    source.kind === 'groupRank' ? `${source.rank === 1 ? 'Erster' : 'Zweiter'} Gruppe ${source.group}` : '';
-  const hf1 = finals[0];
+  // Ein frisch geöffnetes zweites Gerät zeigt die Herkunft der Finalrunde aus der Cloud-Zeile
+  // (Halbfinale 1 zuerst).
   const secondDevice = await asRole('owner');
   await openSpielplanFinalrunde(secondDevice);
-  const expectedLabel = new RegExp(`^Spiel \\d+: ${label(hf1.slot_a_source ?? { kind: 'none' })} gegen ${label(hf1.slot_b_source ?? { kind: 'none' })}$`);
-  await expect(matchRow(secondDevice, hf1.id)).toHaveAttribute('aria-label', expectedLabel, { timeout: 15000 });
+  expect((await finalrundeLabels(secondDevice))[0]).toBe(finalMatchLabel(finals[0], finals));
 }
 
 export const steps: readonly TurniertagStep[] = [
