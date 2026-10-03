@@ -23,6 +23,7 @@ import { LocationForm } from '../../components/LocationForm';
 import { ContactForm } from '../../components/ContactForm';
 import { SponsorManagement } from './SponsorManagement';
 import { FieldManagement } from './FieldManagement';
+import { useTournamentStartState } from '../../hooks/useTournamentStartState';
 
 interface SettingsTabProps {
   tournament: Tournament;
@@ -38,6 +39,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onEditInWizard,
 }) => {
   const { t } = useTranslation('tournament');
+  // @LZ-003 / W3: „Im Wizard bearbeiten" setzt das Turnier auf Entwurf zurück —
+  // nach dem ersten Anpfiff nicht anbieten (gleiche Sperre wie „Turnier löschen",
+  // gemeinsame Funktion statt Kopie).
+  const matchStartState = useTournamentStartState(tournament);
+  const canEditInWizard = matchStartState === 'not-started';
   // Collapse-State für Formular-Bereich
   const [isFormCollapsed, setIsFormCollapsed] = useState(true);
 
@@ -468,8 +474,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           />
         </div>
 
-        {/* Wizard-Bearbeitung Buttons - IMMER SICHTBAR */}
-        {onEditInWizard && (
+        {/* Wizard-Bearbeitung Buttons — nur vor dem ersten Anpfiff (@LZ-003 / W3) */}
+        {onEditInWizard && canEditInWizard && (
           <Card style={{ marginTop: cssVars.spacing.lg, background: cssVars.colors.warningBannerBg, border: `1px solid ${cssVars.colors.warningBannerBorder}` }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.md }}>
               <span style={{ fontSize: cssVars.fontSizes.xxl }}>⚠️</span>

@@ -3,9 +3,9 @@
  *
  * Angepfiffen = laufend, pausiert oder beendet. Ist der Zustand nicht
  * feststellbar (Laden fehlgeschlagen, offline, unvollständige Daten), wird die
- * Aktion ebenfalls nicht angeboten (fail-closed). „Festlegen zurücknehmen"
- * existiert im Code nicht als Angebot (grep 2026-10-03) und wird deshalb nur
- * als Nicht-Angebot geprüft.
+ * Aktion ebenfalls nicht angeboten (fail-closed). Der reale Weg „zurück auf
+ * Entwurf" heißt „Im Wizard bearbeiten" und lebt in SettingsTab — dort geprüft
+ * (SettingsTab.wizardEditGate.test.tsx), hier nicht als Schein-Test.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
@@ -72,13 +72,6 @@ describe('DangerZone — „Turnier löschen" nur vor dem ersten Anpfiff', () =>
     } else {
       expect(screen.queryByRole('button', { name: /Turnier löschen/i })).not.toBeInTheDocument();
     }
-  });
-
-  it('@LZ-003 Nach dem Anpfiff wird auch „Festlegen zurücknehmen" nicht angeboten', () => {
-    renderDangerZone(tournamentWith([{ id: 'm1', matchStatus: 'running' }]));
-
-    expect(screen.queryByRole('button', { name: /Festlegen zurücknehmen/i })).not.toBeInTheDocument();
-    expect(screen.queryByText(/Festlegen zurücknehmen/i)).not.toBeInTheDocument();
   });
 
   it('@LZ-003 Serverfehler beim Löschen wird angezeigt (Gegenbeispiel: verschluckt)', async () => {
