@@ -6,7 +6,16 @@
  * Instanz mit den DE- und EN-Texten aus tournament.json – damit prüft sie auch den gerenderten Wortlaut.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { describeSlot, describeMatchLabel, matchLabelText, slotLabel, teamDisplayName, type SlotKey } from '../slotLabel';
+import {
+  describeSlot,
+  describeMatchLabel,
+  describeAwaiting,
+  awaitingLabel,
+  matchLabelText,
+  slotLabel,
+  teamDisplayName,
+  type SlotKey,
+} from '../slotLabel';
 import { teamSlot, pendingSlot } from '../matchSlot';
 import { testUuid } from '../../../test/testIds';
 import de from '../../../i18n/locales/de/tournament.json';
@@ -176,6 +185,8 @@ describe('slot.* Texte in DE und EN', () => {
     'tournament:slot.playoffQuarterfinal',
     'tournament:slot.playoffRoundOf16',
     'tournament:slot.playoffPlace',
+    'tournament:slot.awaitGroup',
+    'tournament:slot.awaitMatch',
   ];
 
   it.each(keys)('@TM-015 %s existiert in beiden Sprachen mit denselben Platzhaltern', (key) => {
@@ -256,5 +267,39 @@ describe('@TM-015 Playoff-Bezeichnungen als Schlüssel (K1-Rest): EN zeigt keine
   it('@TM-015 Gegenbeispiel: EN-Text der Herkunft enthält kein „Sieger“ und kein „Halbfinale“', () => {
     const text = slotLabel(hf1, { ...ctx, locale: 'en' });
     expect(text).not.toMatch(/Sieger|Halbfinale/);
+  });
+});
+
+describe('@TM-033 Wartegrund einer offenen Seite', () => {
+  const zweiterB = pendingSlot({ kind: 'groupRank', group: 'B', rank: 2 });
+  const siegerHf1 = pendingSlot({ kind: 'matchResult', matchId: SEMI1, role: 'winner' });
+
+  it.each([
+    ['de', 'Abschluss von Gruppe B'],
+    ['en', 'Completion of Group B'],
+  ] as const)('@TM-033 offene Gruppenseite nennt den Abschluss der Gruppe in %s: „%s“', (locale, expected) => {
+    expect(awaitingLabel(zweiterB, { ...ctx, locale })).toBe(expected);
+  });
+
+  it('@TM-033 eigener Gruppenname wird im Wartegrund genannt', () => {
+    expect(awaitingLabel(zweiterB, { ...ctx, groups: [{ id: 'B', customName: 'Löwen' }] })).toBe('Abschluss von Löwen');
+  });
+
+  it.each([
+    ['de', 'Abschluss von 1. Halbfinale'],
+    ['en', 'Completion of Semifinal 1'],
+  ] as const)('@TM-033 offene Seite aus einem Spielergebnis nennt den Abschluss des Spiels in %s', (locale, expected) => {
+    expect(awaitingLabel(siegerHf1, { ...ctx, locale })).toBe(expected);
+  });
+
+  it('@TM-033 Gegenbeispiel: eine besetzte Seite (auch aufgelöst) hat keinen Wartegrund', () => {
+    expect(awaitingLabel(teamSlot(NORD), ctx)).toBeUndefined();
+    expect(describeAwaiting(teamSlot(NORD, { kind: 'groupRank', group: 'A', rank: 1 }), ctx)).toBeUndefined();
+    expect(describeAwaiting(undefined, ctx)).toBeUndefined();
+  });
+
+  it('@TM-033 Gegenbeispiel: unbekanntes Vorgängerspiel nennt „?“ statt einer ID', () => {
+    const slot = pendingSlot({ kind: 'matchResult', matchId: testUuid(500), role: 'winner' });
+    expect(awaitingLabel(slot, ctx)).toBe('?');
   });
 });

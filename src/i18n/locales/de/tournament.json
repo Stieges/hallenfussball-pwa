@@ -373,7 +373,10 @@
     "matchLoading": "Spiel wird geladen...",
     "noMatchesOnField": "Keine Spiele auf diesem Feld vorhanden",
     "enginePreparing": "Spiel wird vorbereitet …",
-    "engineReadyError": "Spiel konnte nicht vorbereitet werden — bitte erneut versuchen"
+    "engineReadyError": "Spiel konnte nicht vorbereitet werden — bitte erneut versuchen",
+    "awaitingTitle": "Anpfiff noch nicht möglich",
+    "awaitingReason": "Wartegrund: {{reason}}",
+    "awaitingOffline": "Dein Gerät hat kein Netz – dein Stand kann veraltet sein. Die Besetzung steht am Server vielleicht schon fest."
   },
   "tables": {
     "noGroups": "Dieses Turnier hat keine Gruppen.",
@@ -714,6 +717,8 @@
     "playoffSemifinal": "{{n}}. Halbfinale",
     "playoffQuarterfinal": "Viertelfinale {{n}}",
     "playoffRoundOf16": "Achtelfinale {{n}}",
-    "playoffPlace": "Spiel um Platz {{n}}"
+    "playoffPlace": "Spiel um Platz {{n}}",
+    "awaitGroup": "Abschluss von {{group}}",
+    "awaitMatch": "Abschluss von {{match}}"
   }
 }

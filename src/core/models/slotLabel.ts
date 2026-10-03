@@ -43,7 +43,9 @@ export type SlotKey =
   | 'tournament:slot.playoffSemifinal'
   | 'tournament:slot.playoffQuarterfinal'
   | 'tournament:slot.playoffRoundOf16'
-  | 'tournament:slot.playoffPlace';
+  | 'tournament:slot.playoffPlace'
+  | 'tournament:slot.awaitGroup'
+  | 'tournament:slot.awaitMatch';
 
 export type SlotDescriptionValue = string | number | SlotDescription;
 
@@ -96,32 +98,64 @@ export function describeSlot(slot: MatchSlot | undefined, ctx: SlotLabelContext)
   }
   const source = slot.source;
   if (source.kind === 'groupRank') {
-    const customName = ctx.groups?.find((candidate) => candidate.id === source.group)?.customName;
-    // Ohne eigenen Namen ein Schlüssel statt hartkodiertem „Gruppe X“ – DE/EN-Parität
-    const group: SlotDescriptionValue = customName !== undefined && customName !== ''
-      ? customName
-      : { key: 'tournament:slot.groupDefault', vars: { id: source.group } };
+    const group = describeGroup(source.group, ctx);
     const rankKey = RANK_WORDS[source.rank];
     return rankKey === undefined
       ? { key: 'tournament:slot.groupRankFallback', vars: { rank: source.rank, group } }
       : { key: 'tournament:slot.groupRank', vars: { rankWord: { key: rankKey, vars: {} }, group } };
   }
-  const previous = ctx.matches.find((candidate) => candidate.id === source.matchId);
-  if (previous === undefined) {
-    return UNKNOWN;
-  }
-  let match: SlotDescriptionValue;
-  if (previous.label !== undefined && previous.label !== '') {
-    match = describeMatchLabel(previous.label);
-  } else if (previous.matchNumber !== undefined) {
-    match = { key: 'tournament:slot.matchNumber', vars: { number: previous.matchNumber } };
-  } else {
+  const match = describePreviousMatch(source.matchId, ctx);
+  if (match === undefined) {
     return UNKNOWN;
   }
   return {
     key: source.role === 'winner' ? 'tournament:slot.winnerOf' : 'tournament:slot.loserOf',
     vars: { match },
   };
+}
+
+/** Gruppenname: eigener Name oder Standardname über Schlüssel – DE/EN-Parität. */
+function describeGroup(groupId: string, ctx: SlotLabelContext): SlotDescriptionValue {
+  const customName = ctx.groups?.find((candidate) => candidate.id === groupId)?.customName;
+  return customName !== undefined && customName !== ''
+    ? customName
+    : { key: 'tournament:slot.groupDefault', vars: { id: groupId } };
+}
+
+/** Bezeichnung des Vorgängerspiels (Bezeichnung, sonst Spielnummer); unbekanntes Spiel → `undefined`. */
+function describePreviousMatch(matchId: string, ctx: SlotLabelContext): SlotDescriptionValue | undefined {
+  const previous = ctx.matches.find((candidate) => candidate.id === matchId);
+  if (previous === undefined) {
+    return undefined;
+  }
+  if (previous.label !== undefined && previous.label !== '') {
+    return describeMatchLabel(previous.label);
+  }
+  if (previous.matchNumber !== undefined) {
+    return { key: 'tournament:slot.matchNumber', vars: { number: previous.matchNumber } };
+  }
+  return undefined;
+}
+
+/**
+ * Wartegrund einer offenen Seite (@TM-033): was abgeschlossen sein muss, bevor die Seite besetzt ist –
+ * „Abschluss von Gruppe B“ bzw. „Abschluss von <Vorgängerspiel>“. Besetzte Seite → `undefined`.
+ */
+export function describeAwaiting(slot: MatchSlot | undefined, ctx: SlotLabelContext): SlotDescription | undefined {
+  if (slot === undefined || slot.kind === 'team') {
+    return undefined;
+  }
+  if (slot.source.kind === 'groupRank') {
+    return { key: 'tournament:slot.awaitGroup', vars: { group: describeGroup(slot.source.group, ctx) } };
+  }
+  const match = describePreviousMatch(slot.source.matchId, ctx);
+  return match === undefined ? UNKNOWN : { key: 'tournament:slot.awaitMatch', vars: { match } };
+}
+
+/** Übersetzter Wartegrund; `undefined`, wenn die Seite besetzt ist. */
+export function awaitingLabel(slot: MatchSlot | undefined, ctx: SlotLabelContext): string | undefined {
+  const description = describeAwaiting(slot, ctx);
+  return description === undefined ? undefined : translate(description, ctx.locale);
 }
 
 function translate(description: SlotDescription, locale: 'de' | 'en' | undefined): string {
