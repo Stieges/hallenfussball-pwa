@@ -265,6 +265,9 @@ export class TournamentCreationService {
                 slot: scheduledMatch.slot,
                 teamA: scheduledMatch.originalTeamA,
                 teamB: scheduledMatch.originalTeamB,
+                // A-02: Slots aus dem Generator durchreichen – der Cloud-Mapper schreibt nur sie.
+                slotA: scheduledMatch.slotA,
+                slotB: scheduledMatch.slotB,
                 scoreA: scheduledMatch.scoreA,
                 scoreB: scheduledMatch.scoreB,
                 group: scheduledMatch.group,

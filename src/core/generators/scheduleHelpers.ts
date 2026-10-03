@@ -337,6 +337,8 @@ export function scheduleMatches(options: ScheduleMatchesOptions): ScheduledMatch
         awayTeam: resolveTeamName(match.teamB, teamMap, locale, groups),
         originalTeamA: match.teamA,
         originalTeamB: match.teamB,
+        slotA: match.slotA,
+        slotB: match.slotB,
         group: match.group,
         phase: match.isFinal ? determineFinalPhase(match) : 'groupStage',
         finalType: match.finalType,

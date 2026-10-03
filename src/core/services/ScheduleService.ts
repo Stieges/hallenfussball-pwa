@@ -49,6 +49,9 @@ export class ScheduleService {
             slot: m.slot, // Important: Generator assigns initial slots
             teamA: m.originalTeamA,
             teamB: m.originalTeamB,
+            // A-02: Slots aus dem Generator durchreichen – der Cloud-Mapper schreibt nur sie.
+            slotA: m.slotA,
+            slotB: m.slotB,
             scheduledTime: m.startTime,
             group: m.group,
             isFinal: m.phase !== 'groupStage',
