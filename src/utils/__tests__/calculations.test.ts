@@ -125,7 +125,7 @@ describe('calculateStandings', () => {
   });
 
   describe('Team Matching (A-03: nur über die Team-ID aus dem Slot)', () => {
-    it('@TM-034 matches teams by the team ID of the slot', () => {
+    it('A-03 matches teams by the team ID of the slot', () => {
       const teams = createTeams(2);
       const matches: Match[] = [
         { id: 'm1', round: 1, field: 1, ...vs(testUuid(1), testUuid(2)), scoreA: 1, scoreB: 0 },
@@ -138,7 +138,7 @@ describe('calculateStandings', () => {
       expect(standings[1].played).toBe(1);
     });
 
-    it('@TM-033 Gegenbeispiel: Name im Übergangsfeld teamA zählt nicht – Team {id:t2, name:t1} bekommt keine Punkte', () => {
+    it('A-03 Gegenbeispiel: Name im Übergangsfeld teamA zählt nicht – Team {id:t2, name:t1} bekommt keine Punkte', () => {
       // Ersatz für „matches teams by name“ / „mixed ID and name references“: der Name ist keine Zuordnung mehr.
       const t1 = testUuid(1);
       const t2 = testUuid(2);
@@ -158,7 +158,7 @@ describe('calculateStandings', () => {
       expect(standings.find((s) => s.team.id === t2)?.played).toBe(1);
     });
 
-    it('@TM-033 Gegenbeispiel: Spiel mit Teamnamen im Übergangsfeld und OHNE Slots zählt in keiner Tabelle', () => {
+    it('A-03 Gegenbeispiel: Spiel mit Teamnamen im Übergangsfeld und OHNE Slots zählt in keiner Tabelle', () => {
       const teams = createTeams(2);
       const matches: Match[] = [
         { id: 'm1', round: 1, field: 1, teamA: 'Team 1', teamB: 'Team 2', scoreA: 1, scoreB: 0 },
@@ -170,7 +170,7 @@ describe('calculateStandings', () => {
       expect(standings.every((s) => s.played === 0)).toBe(true);
     });
 
-    it('@TM-033 Gegenbeispiel: ein Spiel mit offener Seite zählt nicht für das besetzte Team', () => {
+    it('A-03 Gegenbeispiel: ein Spiel mit offener Seite zählt nicht für das besetzte Team', () => {
       const teams = createTeams(2);
       const pending = { kind: 'pending', source: { kind: 'groupRank', group: 'A', rank: 1 } } as const;
       const matches: Match[] = [

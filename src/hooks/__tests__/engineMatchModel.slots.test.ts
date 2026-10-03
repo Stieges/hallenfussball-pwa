@@ -27,6 +27,11 @@ describe('buildValidMatches – nur besetzte Spiele sind anpfeifbar', () => {
     expect(buildValidMatches(t)).toEqual([]);
   });
 
+  it('@TM-033 Gegenbeispiel: offene Seite mit echter Team-ID im Übergangsfeld teamB (frühere Auflösung) ist kein Engine-Spiel', () => {
+    const m = semi({ teamA: NORD, teamB: UFER, slotA: teamSlot(NORD), slotB: groupRank('B', 2) });
+    expect(buildValidMatches(tournamentOf([m]))).toEqual([]);
+  });
+
   it('@TM-033 beide Seiten offen oder Verweis auf ein Vorgängerspiel: kein Engine-Spiel', () => {
     expect(buildValidMatches(tournamentOf([semi(slots(groupRank('A', 1), groupRank('B', 2)))]))).toEqual([]);
     expect(buildValidMatches(tournamentOf([semi(slots(resultOf(testUuid(300), 'winner'), resultOf(testUuid(300), 'loser')))]))).toEqual([]);

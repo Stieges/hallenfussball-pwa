@@ -3,7 +3,7 @@
  * Ersetzt src/utils/__tests__/playoffResolver.test.ts (Platzhalter-Texte `group-a-1st`, `semi1-winner`):
  * dieselben Aussagen, jetzt über Slots mit Herkunft und echten Spiel-IDs (UUID statt „semi1“).
  *
- * @TM-033 / @TM-034: eine Seite ist erst besetzt, wenn ihre Herkunft entschieden ist.
+ * @TM-033 / @TM-034 (Besetzung): eine Seite ist erst besetzt, wenn ihre Herkunft entschieden ist.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -86,16 +86,16 @@ describe('needsPlayoffResolution', () => {
     expect(needsPlayoffResolution(tournamentOf(finishedGroups()))).toBe(false);
   });
 
-  it('@TM-015 returns true when a playoff match has an open side', () => {
+  it('A-03 returns true when a playoff match has an open side', () => {
     expect(needsPlayoffResolution(tournamentOf(semis()))).toBe(true);
   });
 
-  it('@TM-034 returns false when both sides of every playoff match are occupied', () => {
+  it('A-03 returns false when both sides of every playoff match are occupied', () => {
     const occupied: Match = { id: FINAL, round: 2, field: 1, isFinal: true, ...vs(A1, B1) };
     expect(needsPlayoffResolution(tournamentOf([occupied]))).toBe(false);
   });
 
-  it('@TM-033 Gegenbeispiel: ein Spiel ohne Slots gilt nicht als offen (keine Namens- oder Textprüfung)', () => {
+  it('A-03 Gegenbeispiel: ein Spiel ohne Slots gilt nicht als offen (keine Namens- oder Textprüfung)', () => {
     const noSlots: Match = { id: FINAL, round: 2, field: 1, isFinal: true, teamA: 'group-a-1st', teamB: 'TBD' };
     expect(needsPlayoffResolution(tournamentOf([noSlots]))).toBe(false);
   });
@@ -214,6 +214,15 @@ describe('resolveBracketAfterPlayoffMatch', () => {
     const result = resolveBracketAfterPlayoffMatch(t);
     expect(result?.wasResolved).toBe(false);
     expect(byId(t, FINAL)?.slotA?.kind).toBe('pending');
+  });
+
+  it('@TM-034 Halbfinale 1:1, Strafstoßschießen 4:3 besetzt Finale (Sieger) und Spiel um Platz 3 (Verlierer)', () => {
+    const [s1, s2] = playedSemis();
+    const shootout = { ...s1, scoreA: 1, scoreB: 1, decidedBy: 'penalty' as const, penaltyScoreA: 4, penaltyScoreB: 3 };
+    const t = tournamentOf([...finishedGroups(), shootout, s2, ...finals()]);
+    resolveBracketAfterPlayoffMatch(t);
+    expect(idOf(byId(t, FINAL), 'A')).toBe(A1);
+    expect(idOf(byId(t, THIRD), 'A')).toBe(A2);
   });
 
   it('@TM-033 does not resolve the bracket when a semifinal ended in a draw', () => {

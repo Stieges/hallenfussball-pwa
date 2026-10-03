@@ -167,7 +167,7 @@ describe('assignReferees mode=teams', () => {
     expect(result.find(m => m.id === 'm2')!.referee).toBe(1);
   });
 
-  it('@TM-034 Gegenbeispiel: Anzeigenamen (homeTeam) ergeben keinen Schiedsrichter – nur die Team-ID zählt', () => {
+  it('A-03 Gegenbeispiel: Anzeigenamen (homeTeam) ergeben keinen Schiedsrichter – nur die Team-ID zählt', () => {
     const teams = createTeams(4);
     const matches = [
       { ...createMatch({ id: 'm1', slot: 0, field: 1 }), homeTeam: 'Team 1', awayTeam: 'Team 2' },
@@ -178,7 +178,7 @@ describe('assignReferees mode=teams', () => {
     expect(result.find(m => m.id === 'm2')!.referee).toBeUndefined();
   });
 
-  it('@TM-033 Gegenbeispiel: Name des einen Teams ist die ID des anderen – der Schiri folgt der ID', () => {
+  it('A-03 Gegenbeispiel: Name des einen Teams ist die ID des anderen – der Schiri folgt der ID', () => {
     // team[0] heißt wie die ID von team[1] und umgekehrt: ein Namens-Lookup würde die Nummern vertauschen.
     const teams: Team[] = [
       { id: testUuid(1), name: testUuid(2) },
@@ -195,7 +195,7 @@ describe('assignReferees mode=teams', () => {
     expect(result.find(m => m.id === 'm2')!.referee).toBe(2);
   });
 
-  it('@TM-033 Vorgängerspiel mit offener Heimseite ergibt keinen Schiedsrichter', () => {
+  it('A-03 Vorgängerspiel mit offener Heimseite ergibt keinen Schiedsrichter', () => {
     const matches = [
       createMatch({ id: 'm1', slot: 0, field: 1, ...slots(groupRank('A', 1), groupRank('B', 2)) }),
       createMatch({ id: 'm2', slot: 1, field: 1, ...vs(testUuid(1), testUuid(2)) }),
@@ -299,7 +299,7 @@ describe('isValidFinalsReferee', () => {
     expect(isValidFinalsReferee(match, 1, config, teams)).toBe(false);
   });
 
-  it('@TM-034 Gegenbeispiel: ein Team mit dem Namen eines Spielteilnehmers, aber anderer ID, darf pfeifen', () => {
+  it('A-03 Gegenbeispiel: ein Team mit dem Namen eines Spielteilnehmers, aber anderer ID, darf pfeifen', () => {
     const config: RefereeConfig = { mode: 'teams', finalsRefereeMode: 'neutralTeams' };
     const namensvetter: Team[] = [...teams.slice(0, 2), { id: testUuid(9), name: 'Team 1' }];
     // Referee Nr. 3 heißt „Team 1“, ist aber nicht das spielende Team 1 (ID …01)

@@ -102,7 +102,7 @@ describe('MatchExecutionService', () => {
 
         beforeEach(() => {
             vi.mocked(mockLiveMatchRepo.get).mockResolvedValue(null);
-            vi.mocked(mockTournamentRepo.get).mockResolvedValue(tournamentWithTeams as any);
+            vi.mocked(mockTournamentRepo.get).mockResolvedValue(tournamentWithTeams);
         });
 
         it('@TM-033 Pflicht: ein Spiel mit offener Seite lässt sich nicht anpfeifen (kein Live-Spiel, nichts gespeichert)', async () => {

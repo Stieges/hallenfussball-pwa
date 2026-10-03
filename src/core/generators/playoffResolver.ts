@@ -12,7 +12,7 @@
  */
 
 import { Match, Tournament } from '../../types/tournament';
-import { calculateStandings } from '../../utils/calculations';
+import { calculateStandings, getMatchWinner } from '../../utils/calculations';
 import sportGlossary from '../../i18n/glossary.json';
 import { isPendingSlot, resolveSlot } from '../models/matchSlot';
 import type { MatchSlot, SlotSource } from '../models/schemas/MatchSlotSchema';
@@ -98,20 +98,16 @@ const resolveSource = (
   }
 
   const previous = tournament.matches.find((m) => m.id === source.matchId);
-  if (previous?.scoreA === undefined || previous.scoreB === undefined) {
-    return null; // not yet played (or unknown match)
+  if (previous === undefined) {
+    return null; // unknown match
   }
-  const idA = previous.slotA?.kind === 'team' ? previous.slotA.teamId : undefined;
-  const idB = previous.slotB?.kind === 'team' ? previous.slotB.teamId : undefined;
-  if (idA === undefined || idB === undefined) {
-    return null; // Can't determine winner/loser if teams aren't resolved yet
+  // Eine Siegerregel für alles: Spielzeit, Verlängerung, Golden Goal, Strafstoßschießen; offene Seite oder
+  // Unentschieden ohne Entscheidung → noch kein Ergebnis.
+  const result = getMatchWinner(previous);
+  if (result === null) {
+    return null;
   }
-  if (previous.scoreA === previous.scoreB) {
-    return null; // Draw - can't determine winner/loser in knockout
-  }
-  const isSideAWinner = previous.scoreA > previous.scoreB;
-  const wantsWinner = source.role === 'winner';
-  return isSideAWinner === wantsWinner ? idA : idB;
+  return source.role === 'winner' ? result.winner : result.loser;
 };
 
 interface ResolveOptions {

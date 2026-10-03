@@ -14,7 +14,7 @@ const m = (id: string, slot: number, sides: Pick<Match, 'teamA' | 'teamB' | 'slo
 });
 
 describe('analyzeScheduleFairness über Slots', () => {
-  it('@TM-034 zählt Heim- und Auswärtsspiele je Team-ID', () => {
+  it('A-03 zählt Heim- und Auswärtsspiele je Team-ID', () => {
     const analysis = analyzeScheduleFairness([m('1', 0, vs(A, B)), m('2', 1, vs(A, C)), m('3', 2, vs(B, A))]);
 
     const stats = (id: string) => analysis.teamStats.find((s) => s.teamId === id);
@@ -23,14 +23,14 @@ describe('analyzeScheduleFairness über Slots', () => {
     expect(stats(C)).toMatchObject({ homeCount: 0, awayCount: 1 });
   });
 
-  it('@TM-033 Gegenbeispiel: eine offene Seite zählt für kein Team, die besetzte Seite schon', () => {
+  it('A-03 Gegenbeispiel: eine offene Seite zählt für kein Team, die besetzte Seite schon', () => {
     const analysis = analyzeScheduleFairness([m('1', 0, slots(groupRank('A', 1), teamSlot(B)))]);
 
     expect(analysis.teamStats.map((s) => s.teamId)).toEqual([B]);
     expect(analysis.teamStats[0]).toMatchObject({ homeCount: 0, awayCount: 1 });
   });
 
-  it('@TM-033 Gegenbeispiel: ein Name im Übergangsfeld teamA zählt nicht', () => {
+  it('A-03 Gegenbeispiel: ein Name im Übergangsfeld teamA zählt nicht', () => {
     const decoy: Match = { id: '1', round: 1, field: 1, slot: 0, teamA: 'Team A', teamB: 'Team B' };
 
     expect(analyzeScheduleFairness([decoy]).teamStats).toEqual([]);
@@ -48,8 +48,8 @@ describe('generateGroupPhaseSchedule – Gruppenspiele tragen Team-Slots (auch n
   };
 
   it.each([
-    ['@TM-034 Kreisverfahren', undefined],
-    ['@TM-034 DFB-Schlüssel 1T04M', '1T04M'],
+    ['A-03 Kreisverfahren', undefined],
+    ['A-03 DFB-Schlüssel 1T04M', '1T04M'],
   ])('%s: jede Paarung genau einmal, beide Seiten besetzt, Übergangsfeld gleich dem Slot', (_name, dfbPatternCode) => {
     const matches = generateGroupPhaseSchedule({ ...options, dfbPatternCode });
 
@@ -66,7 +66,7 @@ describe('generateGroupPhaseSchedule – Gruppenspiele tragen Team-Slots (auch n
     expect(pairs.size).toBe(6);
   });
 
-  it('@TM-034 unbekannter DFB-Schlüssel fällt laut (Warnung) auf das Kreisverfahren zurück', () => {
+  it('A-03 unbekannter DFB-Schlüssel fällt laut (Warnung) auf das Kreisverfahren zurück', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const matches = generateGroupPhaseSchedule({ ...options, dfbPatternCode: '9T99M' });
 

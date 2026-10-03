@@ -1,6 +1,6 @@
 /**
  * A-03 (MVP-Bauplan, Spur A) – Import: Spielseiten sind Team-IDs aus der Datei, abgebildet auf neue Team-IDs.
- * @TM-033: ein Name oder eine unbekannte ID ergibt keine Seite – der Import scheitert laut.
+ * A-03: ein Name oder eine unbekannte ID ergibt keine Seite – der Import scheitert laut.
  */
 import { describe, it, expect } from 'vitest';
 import { validateAndParseTournamentImport, checkFairnessWarnings } from '../tournamentImporter';
@@ -19,7 +19,7 @@ const fileOf = (matches: unknown[]): string =>
   });
 
 describe('Import: Spielseiten aus Team-IDs', () => {
-  it('@TM-034 Spiele bekommen Slots mit den NEUEN Team-IDs, Übergangsfeld parallel', () => {
+  it('A-03 Spiele bekommen Slots mit den NEUEN Team-IDs, Übergangsfeld parallel', () => {
     const result = validateAndParseTournamentImport(
       fileOf([{ round: 1, field: 1, teamA: 't1', teamB: 't2', group: 'A' }]),
       'json',
@@ -35,7 +35,7 @@ describe('Import: Spielseiten aus Team-IDs', () => {
     expect(alpha.id).not.toBe('t1');
   });
 
-  it('@TM-033 Gegenbeispiel: ein Teamname statt der ID scheitert mit UNKNOWN_TEAM, kein Spiel mit Namens-Seite', () => {
+  it('A-03 Gegenbeispiel: ein Teamname statt der ID scheitert mit UNKNOWN_TEAM, kein Spiel mit Namens-Seite', () => {
     const result = validateAndParseTournamentImport(
       fileOf([{ round: 1, field: 1, teamA: 'Team Alpha', teamB: 't2' }]),
       'json',
@@ -48,7 +48,7 @@ describe('Import: Spielseiten aus Team-IDs', () => {
     ]);
   });
 
-  it('@TM-033 Gegenbeispiel: unbekannte ID auf beiden Seiten nennt beide Seiten', () => {
+  it('A-03 Gegenbeispiel: unbekannte ID auf beiden Seiten nennt beide Seiten', () => {
     const result = validateAndParseTournamentImport(
       fileOf([{ round: 1, field: 1, teamA: 'x', teamB: 'y' }]),
       'json',
@@ -64,7 +64,7 @@ describe('Import: Spielseiten aus Team-IDs', () => {
     expect(result.tournament?.matches).toEqual([]);
   });
 
-  it('@TM-034 meldet aufeinanderfolgende Spiele eines Teams', () => {
+  it('A-03 meldet aufeinanderfolgende Spiele eines Teams', () => {
     const result = validateAndParseTournamentImport(
       fileOf([
         { round: 1, field: 1, teamA: 't1', teamB: 't2' },
@@ -87,19 +87,19 @@ describe('checkFairnessWarnings über Slots', () => {
     id, round: 1, field: 1, ...sides,
   });
 
-  it('@TM-034 erkennt ein Team, das gegen sich selbst spielt', () => {
+  it('A-03 erkennt ein Team, das gegen sich selbst spielt', () => {
     const warnings = checkFairnessWarnings([m('a', vs(T1, T1))], teams);
     expect(warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'SELF_MATCH' })]));
     expect(warnings.find((w) => w.code === 'SELF_MATCH')?.message).toContain('Eins');
   });
 
-  it('@TM-033 Gegenbeispiel: zwei offene Seiten gelten nicht als Selbstspiel', () => {
+  it('A-03 Gegenbeispiel: zwei offene Seiten gelten nicht als Selbstspiel', () => {
     const open = slots(groupRank('A', 1), groupRank('A', 1));
     const warnings = checkFairnessWarnings([m('a', open)], teams);
     expect(warnings.some((w) => w.code === 'SELF_MATCH')).toBe(false);
   });
 
-  it('@TM-034 meldet ungleiche Spielverteilung', () => {
+  it('A-03 meldet ungleiche Spielverteilung', () => {
     const many = [m('1', vs(T1, T2)), m('2', vs(T3, T2)), m('3', vs(T1, T2)), m('4', vs(T3, T2)), m('5', vs(T1, T2))];
     const warnings = checkFairnessWarnings(many, teams);
     expect(warnings.some((w) => w.code === 'UNEVEN_MATCH_DISTRIBUTION')).toBe(true);
