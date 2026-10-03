@@ -74,6 +74,12 @@ import {
   E2E_PUBLIC_CUP_TEAM_NAMES,
   E2E_LIVE_CUP_COLLABORATORS,
   E2E_ENGINE_CUPS,
+  E2E_TURNIERTAG_CUP_ID,
+  E2E_TURNIERTAG_CUP_TITLE,
+  E2E_TURNIERTAG_TEAM_NAMES,
+  E2E_TURNIERTAG_MATCH_COUNT,
+  E2E_TURNIERTAG_SHARE_CODE,
+  E2E_TURNIERTAG_MONITOR_ID,
   E2E_LEGACY_CUPS,
   ENGINE_CUP_SEED_NOW_START_OFFSET_MS,
   engineCupIds,
@@ -500,6 +506,73 @@ async function seedLegacyCups(
   }
 }
 
+
+/** A-23 (Durchstich): 8 Teams, 2 Gruppen, Top 4 -- privat, unberührt, ohne Mitglieder außer dem Owner. */
+async function seedTurniertagCup(
+  ownerRepo: SeedRepository,
+  service: TournamentCreationService,
+  ownerClient: SupabaseClient<Database>
+): Promise<void> {
+  log('Lege Turniertag-Cup an…');
+  const teams: Team[] = E2E_TURNIERTAG_TEAM_NAMES.map((name, index) => ({
+    id: e2eUuid(`team:turniertag-cup:${name}`),
+    name,
+    group: index < 4 ? 'A' : 'B',
+  }));
+  const tournament = buildScheduledTournament(
+    service,
+    {
+      id: E2E_TURNIERTAG_CUP_ID,
+      title: E2E_TURNIERTAG_CUP_TITLE,
+      ageClass: 'U13',
+      date: new Date().toISOString().split('T')[0],
+      timeSlot: '09:00 - 16:00',
+      startTime: '09:00',
+      location: { name: 'Sporthalle Testumgebung' },
+      numberOfFields: 2,
+      numberOfTeams: teams.length,
+      groupSystem: 'groupsAndFinals',
+      numberOfGroups: 2,
+      groupPhaseGameDuration: 60,
+      gamePeriods: 1,
+      finals: { final: true, thirdPlace: true, fifthSixth: false, seventhEighth: false },
+      finalsConfig: { preset: 'top-4' },
+      teams,
+      monitors: [
+        {
+          id: E2E_TURNIERTAG_MONITOR_ID,
+          name: 'Hallenbildschirm',
+          defaultSlideDuration: 15,
+          transition: 'fade',
+          transitionDuration: 500,
+          theme: 'dark',
+          performanceMode: 'auto',
+          slides: [
+            { id: e2eUuid('monitor:turniertag-cup:1:slide:live-field-1'), type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 },
+          ],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    },
+    /* isPublic */ false
+  );
+  tournament.publishedAt = new Date().toISOString(); // Backstop von make_tournament_public()
+  if (tournament.matches.length !== E2E_TURNIERTAG_MATCH_COUNT) {
+    throw new Error(`Turniertag-Cup: erwartet ${E2E_TURNIERTAG_MATCH_COUNT} Spiele, Spielplan hat ${tournament.matches.length}.`);
+  }
+  await ownerRepo.save(tournament);
+  const { error: publicError } = await ownerClient.rpc('make_tournament_public', { tournament_id: tournament.id });
+  if (publicError) {
+    throw new Error(`make_tournament_public(Turniertag-Cup): ${publicError.message}`);
+  }
+  const { error: shareCodeError } = await admin.from('tournaments').update({ share_code: E2E_TURNIERTAG_SHARE_CODE }).eq('id', tournament.id);
+  if (shareCodeError) {
+    throw new Error(`Fester Share-Code Turniertag-Cup: ${shareCodeError.message}`);
+  }
+  log(`Turniertag-Cup: ${tournament.matches.length} Spiele (12 Gruppen, 2 Halbfinals, Platz 3, Finale).`);
+}
+
 // =============================================================================
 // 3. HAUPTABLAUF
 // =============================================================================
@@ -522,6 +595,7 @@ async function main(): Promise<void> {
     E2E_DRAFT_CUP_ID,
     E2E_STRANGER_CUP_ID,
     E2E_RELEASE_CUP_ID,
+    E2E_TURNIERTAG_CUP_ID,
     ...E2E_ENGINE_CUPS.map((cup) => engineCupIds(cup.slug).tournamentId),
     ...E2E_LEGACY_CUPS.map((cup) => legacyCupIds(cup.slug).tournamentId),
   ];
@@ -966,6 +1040,7 @@ async function main(): Promise<void> {
 
   await seedEngineCups(engineDeps, ownerRepo, service, userIds.helper);
   await seedLegacyCups(engineDeps, ownerRepo, service, userIds.helper);
+  await seedTurniertagCup(ownerRepo, service, ownerClient);
 
   log('Fertig.');
 }

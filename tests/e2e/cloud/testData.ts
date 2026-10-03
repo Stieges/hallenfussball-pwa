@@ -162,6 +162,20 @@ export const E2E_LIVE_CUP_TEAM_NAMES = [
 export const E2E_LIVE_CUP_GROUP_A = E2E_LIVE_CUP_TEAM_NAMES.slice(0, 4);
 export const E2E_LIVE_CUP_GROUP_B = E2E_LIVE_CUP_TEAM_NAMES.slice(4, 8);
 
+/**
+ * A-23 (Durchstich, `turniertag.spec.ts`): Turnier mit 8 Teams in 2 Gruppen und Top 4
+ * (Halbfinale über Kreuz, Spiel um Platz 3, Finale). Der Seed legt es privat und unberührt an;
+ * die Schritte D1-D15 spielen den Turniertag darauf durch.
+ */
+export const E2E_TURNIERTAG_CUP_ID = e2eUuid('tournament:turniertag-cup');
+export const E2E_TURNIERTAG_CUP_TITLE = 'Turniertag-Cup';
+export const E2E_TURNIERTAG_TEAM_NAMES = ['Adler', 'Bären', 'Falken', 'Löwen', 'Panther', 'Tiger', 'Wölfe', 'Füchse'] as const;
+/** 2 Gruppen à 4 Teams: 2 x 6 Gruppenspiele + 2 Halbfinals + Platz 3 + Finale. */
+export const E2E_TURNIERTAG_MATCH_COUNT = 16;
+/** Der Turniertag-Cup ist veröffentlicht (Zuschauer-Seite, Bildschirm) mit festem Code und einem Monitor. */
+export const E2E_TURNIERTAG_SHARE_CODE = 'TURNTG';
+export const E2E_TURNIERTAG_MONITOR_ID = e2eUuid('monitor:turniertag-cup:1');
+
 /** Team-Namen des Public-Cup (kleiner, für "einige Ergebnisse"). */
 export const E2E_PUBLIC_CUP_TEAM_NAMES = ['Public Löwen', 'Public Adler', 'Public Falken', 'Public Bären'] as const;
 

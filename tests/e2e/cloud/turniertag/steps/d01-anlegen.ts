@@ -1,0 +1,75 @@
+/**
+ * D1 Turnier anlegen (8 Teams, 2 Gruppen + Top 4). Besitzer: B-04 (Wizard) / A-12 (HF-Nummerierung).
+ *
+ * Heute geht: das Turnier steht (vom Seed über dieselben Generatoren wie der Wizard angelegt) mit
+ * 8 Teams in 2 Gruppen, 12 Gruppenspielen und der Finalrunde Halbfinale über Kreuz / Platz 3 /
+ * Finale; der Veranstalter sieht es im Dashboard und im Spielplan.
+ * Besitzer: A-12 -- "@TM-015 Ein unbesetzter Platz zeigt seine Herkunft": Halbfinale 1 heißt
+ * "Erster Gruppe A gegen Zweiter Gruppe B" (heute: "Zweiter Gruppe A gegen Erster Gruppe B").
+ */
+import { expect } from '@playwright/test';
+import { E2E_TURNIERTAG_MONITOR_ID, E2E_TURNIERTAG_SHARE_CODE } from '../../testData';
+import { fetchTurniertagBracket, fetchTurniertagTeams, matchRow, openSpielplanFinalrunde, openTurniertagPath, TURNIERTAG_ID } from './shared';
+import type { StepContext, TurniertagStep } from './types';
+
+async function anlegen({ asRole }: StepContext): Promise<void> {
+  const teams = await fetchTurniertagTeams();
+  expect(teams).toHaveLength(8);
+  expect(teams.filter((team) => team.group_letter === 'A')).toHaveLength(4);
+  expect(teams.filter((team) => team.group_letter === 'B')).toHaveLength(4);
+  const { groupMatches, finals } = await fetchTurniertagBracket();
+  expect(groupMatches).toHaveLength(12);
+  expect(finals).toHaveLength(4);
+
+  const ownerPage = await asRole('owner');
+  await ownerPage.goto('/#/');
+  await expect(ownerPage.locator(`[data-testid="tournament-card-${TURNIERTAG_ID}"]`)).toBeVisible({ timeout: 15000 });
+  await openTurniertagPath(ownerPage, '/schedule');
+  // Der Spielplan der Turnierleitung zeigt Halbfinale über Kreuz, Platz 3 und Finale.
+  await openSpielplanFinalrunde(ownerPage);
+  for (const match of finals) {
+    await expect(matchRow(ownerPage, match.id)).toBeVisible({ timeout: 15000 });
+  }
+}
+
+/** Ansichten, in denen Halbfinale 1 seine Herkunft zeigt (Beispielzeilen von @TM-015). */
+const TM015_VIEWS = ['Spielplan der Turnierleitung', 'Toms Cockpit', 'Hallen-Monitor', 'Zuschaueransicht'] as const;
+/** Halbfinale 1 in der Spielplan-/Zuschauer-Tabelle: "1. Halbfinale  Erster Gruppe A  …  Zweiter Gruppe B". */
+const HF1_ROW = /1\. Halbfinale\s+Erster Gruppe A[\s\S]{0,20}Zweiter Gruppe B/;
+
+async function halbfinaleHerkunft(view: (typeof TM015_VIEWS)[number], { asRole, anonPage }: StepContext): Promise<void> {
+  const { finals } = await fetchTurniertagBracket();
+  const hf1 = finals[0];
+  if (view === 'Spielplan der Turnierleitung') {
+    const ownerPage = await asRole('owner');
+    await openSpielplanFinalrunde(ownerPage);
+    await expect(matchRow(ownerPage, hf1.id)).toHaveAttribute('aria-label', /^Spiel \d+: Erster Gruppe A gegen Zweiter Gruppe B$/, { timeout: 15000 });
+  } else if (view === 'Toms Cockpit') {
+    // Toms Gerät ist erst nach D3 (Helfer per QR) Mitglied; bis dahin öffnet die Turnierleitung das Cockpit.
+    // Die Spielauswahl trägt für jedes Spiel "#<Nr> - <Heim> vs <Gast>": Halbfinale 1 ist Nr. 13.
+    const cockpitPage = await asRole('owner');
+    await cockpitPage.goto(`/#/tournament/${TURNIERTAG_ID}/live?matchId=${hf1.id}`);
+    await cockpitPage.waitForLoadState('networkidle');
+    await expect(cockpitPage.getByRole('option', { name: /^#13 / })).toHaveText(/Erster Gruppe A vs Zweiter Gruppe B/, { timeout: 5000 });
+  } else if (view === 'Hallen-Monitor') {
+    await anonPage.goto(`/#/display/${TURNIERTAG_ID}/${E2E_TURNIERTAG_MONITOR_ID}`);
+    await anonPage.waitForLoadState('networkidle');
+    await expect(anonPage.locator('body')).toHaveText(/Erster Gruppe A\s+vs\s+Zweiter Gruppe B/i, { timeout: 5000 });
+  } else {
+    await anonPage.goto(`/#/live/${E2E_TURNIERTAG_SHARE_CODE}`);
+    await anonPage.waitForLoadState('networkidle');
+    await expect(anonPage.locator('body')).toHaveText(HF1_ROW, { timeout: 5000 });
+  }
+}
+
+export const steps: readonly TurniertagStep[] = [
+  { id: 'D1', title: 'Turnier steht: 8 Teams, 2 Gruppen, Top 4', scenarios: ['@OB-029'], owner: 'B-04/A-12 (Anlegen im Wizard)', expectedFail: false, run: anlegen },
+  ...TM015_VIEWS.map<TurniertagStep>((view) => ({
+    id: `D1 @TM-015 ${view}`,
+    title: `Halbfinale 1 zeigt "Erster Gruppe A gegen Zweiter Gruppe B" (${view})`,
+    scenarios: ['@TM-015'],
+    owner: view === 'Hallen-Monitor' || view === 'Zuschaueransicht' ? 'A-12 (+ B-35 Adapter)' : 'A-12',
+    expectedFail: true,
+    run: (ctx) => halbfinaleHerkunft(view, ctx),
+  })),
+];
