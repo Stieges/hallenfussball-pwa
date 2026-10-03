@@ -210,6 +210,10 @@ describe('A-02 mapMatchFromSupabase – Slot aus Team-ID und Herkunft, ohne Name
     expect(() => mapMatchFromSupabase(createMatchRow({ team_a_id: NORD, team_b_id: null }))).toThrow(RepositoryError);
   });
 
+  it('Team-ID, die keine UUID ist, scheitert laut (kein Name als Team-ID)', () => {
+    expect(() => mapMatchFromSupabase(createMatchRow({ team_a_id: 'FC Nord', team_b_id: SUED }))).toThrow(/keine UUID/);
+  });
+
   it('ungültige Herkunft scheitert laut, auch wenn eine Team-ID gesetzt ist', () => {
     expect(() =>
       mapMatchFromSupabase(
