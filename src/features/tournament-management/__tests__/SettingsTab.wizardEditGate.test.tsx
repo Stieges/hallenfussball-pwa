@@ -12,6 +12,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { Tournament } from '../../../types/tournament';
 
 vi.mock('../../auth/hooks/useAuth', () => ({
@@ -75,5 +76,24 @@ describe('SettingsTab — „Im Wizard bearbeiten" nur vor dem ersten Anpfiff (@
     expect(
       screen.getByRole('button', { name: /settings\.advancedEditing\.groupsAndFields/ })
     ).toBeInTheDocument();
+  });
+
+  it('Aufruf setzt das Turnier auf Entwurf und öffnet den Wizard-Schritt', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
+    const onEditInWizard = vi.fn();
+    render(
+      <SettingsTab
+        tournament={tournamentWith(['scheduled', 'scheduled'])}
+        onTournamentUpdate={vi.fn()}
+        onEditInWizard={onEditInWizard}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /settings\.advancedEditing\.editTeams/ }));
+
+    expect(onEditInWizard).toHaveBeenCalledTimes(1);
+    expect(onEditInWizard.mock.calls[0][0].status).toBe('draft');
+    expect(onEditInWizard.mock.calls[0][1]).toBe(5);
   });
 });
