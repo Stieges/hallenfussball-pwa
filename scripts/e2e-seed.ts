@@ -73,7 +73,12 @@ import {
   E2E_LIVE_CUP_TEAM_NAMES,
   E2E_PUBLIC_CUP_TEAM_NAMES,
   E2E_LIVE_CUP_COLLABORATORS,
-  E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE,
+  E2E_ENGINE_CUPS,
+  E2E_LEGACY_CUPS,
+  ENGINE_CUP_SEED_NOW_START_OFFSET_MS,
+  engineCupIds,
+  engineEventId,
+  legacyCupIds,
   e2eUuid,
 } from '../tests/e2e/cloud/testData';
 
@@ -85,10 +90,11 @@ import {
   mapMembershipInsertToSupabase,
   type CollaboratorInsert,
 } from '../src/core/repositories/supabaseMappers';
-import { mapMatchEventToSupabase } from '../src/core/repositories/liveMatchMappers';
-import type { MatchEvent } from '../src/core/models/LiveMatch';
+import { callServerTime } from '../src/core/repositories/appendMatchEventsRpc';
+import type { Database } from '../src/types/supabase';
 import { generateFullSchedule } from '../src/core/generators/scheduleGenerator';
 import { matchSideTeamId, transitionalSides } from '../src/core/models/matchSlot';
+import { assertEngineAutoSelect, assertLegacyMatch, insertLegacyGhostEvents, seedEngineMatch, type EngineSeedDeps } from './lib/engineSeedDb';
 
 // =============================================================================
 // 0. PRODUKTIONS-SPERRE + CLIENT
@@ -127,6 +133,14 @@ function signLocalUserJwt(userId: string): string {
 
 function asUserClient(userId: string): SupabaseClient {
   return createClient(url, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: { headers: { Authorization: `Bearer ${signLocalUserJwt(userId)}` } },
+  });
+}
+
+/** Typisierter Owner-Client (S1): `append_match_events` bricht unter Service-Role mit 42501 ab. */
+function asTypedUserClient(userId: string): SupabaseClient<Database> {
+  return createClient<Database>(url, anonKey, {
     auth: { autoRefreshToken: false, persistSession: false },
     global: { headers: { Authorization: `Bearer ${signLocalUserJwt(userId)}` } },
   });
@@ -345,6 +359,147 @@ function deterministicToken(seed: string): string {
   return e2eUuid(`invite-token:${seed}`).replace(/-/g, '');
 }
 
+
+// =============================================================================
+// 2b. ENGINE-SPIELE (A-23, übernimmt C3b-3a: S1-S8)
+// =============================================================================
+
+type SeedMatch = Tournament['matches'][number];
+
+/** S6/S7: das Laufspiel eines Mehrspiel-Cups (MATCH_START -60 s, Tor Heim -30 s -> 1:0). */
+async function seedRunningEngineMatch(
+  deps: EngineSeedDeps,
+  cupName: string,
+  tournamentId: string,
+  match: SeedMatch,
+  idPrefix: string
+): Promise<void> {
+  const homeTeamId = matchSideTeamId(match, 'A');
+  const awayTeamId = matchSideTeamId(match, 'B');
+  if (!homeTeamId || !awayTeamId) {
+    throw new Error(`${cupName}: Laufspiel ${match.id} hat keine Team-IDs.`);
+  }
+  await seedEngineMatch(deps, {
+    slug: cupName,
+    matchId: match.id,
+    homeTeamId,
+    awayTeamId,
+    form: 'running',
+    specs: [
+      { key: 'start', type: 'MATCH_START', atOffsetMs: ENGINE_START_OFFSET_MS },
+      { key: 'goal-home', type: 'GOAL', side: 'home', atOffsetMs: ENGINE_GOAL_OFFSET_MS },
+    ],
+    idFor: (key) => e2eUuid(`event:${idPrefix}:${match.id}:${key}`),
+    startOffsetMs: ENGINE_START_OFFSET_MS,
+    expected: { status: 'running', scoreA: 1, scoreB: 0 },
+  });
+  await assertEngineAutoSelect(deps.admin, cupName, tournamentId, match.id);
+  deps.log(`${cupName}: Auto-Auswahl trifft das Engine-Laufspiel.`);
+}
+
+const ENGINE_START_OFFSET_MS = ENGINE_CUP_SEED_NOW_START_OFFSET_MS;
+const ENGINE_GOAL_OFFSET_MS = -30_000;
+
+/** Zwei Teams, ein Spiel (S5/S8): feste IDs, Spiel-ID nach dem Spielplan überschrieben. */
+function buildSingleMatchCup(
+  service: TournamentCreationService,
+  ids: ReturnType<typeof engineCupIds>,
+  title: string
+): Tournament {
+  const tournament = buildScheduledTournament(
+    service,
+    {
+      id: ids.tournamentId,
+      title,
+      ageClass: 'U13',
+      date: new Date().toISOString().split('T')[0],
+      timeSlot: '09:00 - 16:00',
+      startTime: '09:00',
+      location: { name: 'Sporthalle Testumgebung' },
+      numberOfFields: 1,
+      numberOfTeams: 2,
+      groupSystem: 'roundRobin',
+      numberOfGroups: 1,
+      groupPhaseGameDuration: 60,
+      gamePeriods: 1,
+      teams: [
+        { id: ids.homeTeamId, name: ids.homeTeamName },
+        { id: ids.awayTeamId, name: ids.awayTeamName },
+      ],
+    },
+    /* isPublic */ false
+  );
+  if (tournament.matches.length !== 1) {
+    throw new Error(`${title}: erwartet genau 1 Spiel, Spielplan hat ${tournament.matches.length}.`);
+  }
+  return tournament;
+}
+
+async function addHelper(tournamentId: string, helperId: string): Promise<void> {
+  const { error } = await admin
+    .from('tournament_collaborators')
+    .insert(mapMembershipInsertToSupabase({ tournamentId, userId: helperId, role: 'collaborator', teamIds: [] }));
+  if (error) {
+    throw new Error(`Mitgliedschaft helper (${tournamentId}): ${error.message}`);
+  }
+}
+
+async function seedEngineCups(
+  deps: EngineSeedDeps,
+  ownerRepo: SeedRepository,
+  service: TournamentCreationService,
+  helperId: string
+): Promise<void> {
+  deps.log(`Lege ${E2E_ENGINE_CUPS.length} Engine-Cups an…`);
+  for (const cup of E2E_ENGINE_CUPS) {
+    const ids = engineCupIds(cup.slug);
+    const tournament = buildSingleMatchCup(service, ids, cup.title);
+    tournament.matches[0].id = ids.matchId;
+    await ownerRepo.save(tournament);
+    if (cup.helper) {
+      await addHelper(ids.tournamentId, helperId);
+    }
+    await seedEngineMatch(deps, {
+      slug: cup.slug,
+      matchId: ids.matchId,
+      homeTeamId: ids.homeTeamId,
+      awayTeamId: ids.awayTeamId,
+      form: cup.form,
+      specs: cup.events,
+      idFor: (key) => engineEventId(cup.slug, key),
+      startOffsetMs: ENGINE_START_OFFSET_MS,
+      expected: cup.expected,
+    });
+  }
+}
+
+/** S8: Altspiel-Fixtures nur für C3b-3b (kein Test darauf in diesem Paket). */
+async function seedLegacyCups(
+  deps: EngineSeedDeps,
+  ownerRepo: SeedRepository,
+  service: TournamentCreationService,
+  helperId: string
+): Promise<void> {
+  for (const cup of E2E_LEGACY_CUPS) {
+    const ids = legacyCupIds(cup.slug);
+    const tournament = buildSingleMatchCup(service, ids, cup.title);
+    tournament.matches[0].id = ids.matchId;
+    await ownerRepo.save(tournament);
+    await addHelper(ids.tournamentId, helperId);
+    const nowIso = new Date().toISOString();
+    await ownerRepo.updateMatches(ids.tournamentId, [
+      cup.rawStatus === 'finished'
+        ? { id: ids.matchId, scoreA: cup.scoreA, scoreB: cup.scoreB, matchStatus: 'finished', finishedAt: nowIso }
+        : { id: ids.matchId, scoreA: cup.scoreA, scoreB: cup.scoreB, matchStatus: 'running', timerStartTime: nowIso, timerElapsedSeconds: 300 },
+    ]);
+    if (cup.rawStatus === 'running') {
+      await insertLegacyGhostEvents(deps.admin, ids.matchId, ids.homeTeamId, (key) => e2eUuid(`event:legacy-cup:${cup.slug}:${key}`));
+    }
+    await assertLegacyMatch(deps.admin, cup.slug, ids.matchId, cup.rawStatus);
+    deps.log(`Altspiel-Cup ${cup.slug}: ${cup.rawStatus}, keine Engine-Zeile.`);
+  }
+}
+
 // =============================================================================
 // 3. HAUPTABLAUF
 // =============================================================================
@@ -361,7 +516,15 @@ async function main(): Promise<void> {
   // Collaborator-Zeilen weg, bevor die Nutzer verschwinden.)
   // ---------------------------------------------------------------------------
   log('Lösche bestehende Test-Turniere (falls vorhanden)…');
-  const allTournamentIds = [E2E_LIVE_CUP_ID, E2E_PUBLIC_CUP_ID, E2E_DRAFT_CUP_ID, E2E_STRANGER_CUP_ID, E2E_RELEASE_CUP_ID];
+  const allTournamentIds = [
+    E2E_LIVE_CUP_ID,
+    E2E_PUBLIC_CUP_ID,
+    E2E_DRAFT_CUP_ID,
+    E2E_STRANGER_CUP_ID,
+    E2E_RELEASE_CUP_ID,
+    ...E2E_ENGINE_CUPS.map((cup) => engineCupIds(cup.slug).tournamentId),
+    ...E2E_LEGACY_CUPS.map((cup) => legacyCupIds(cup.slug).tournamentId),
+  ];
   const { error: deleteTournamentsError } = await admin.from('tournaments').delete().in('id', allTournamentIds);
   if (deleteTournamentsError) {
     throw new Error(`Löschen bestehender Turniere: ${deleteTournamentsError.message}`);
@@ -404,6 +567,14 @@ async function main(): Promise<void> {
   const service = new TournamentCreationService(ownerRepo);
   const strangerService = new TournamentCreationService(strangerRepo);
 
+  // S3: Serverzeit EINMAL je Seed-Lauf (nicht Date.now(): Host- und Docker-Uhr können abweichen).
+  const ownerClient = asTypedUserClient(userIds.owner);
+  const seedNow = await callServerTime(ownerClient);
+  log(`seedNow aus server_time: ${new Date(seedNow).toISOString()}.`);
+  const engineDeps: EngineSeedDeps = { admin, ownerClient, seedNow, log };
+  // S4: Spieldauer 60 min, ein Abschnitt -- über das Turnier, nicht über matches.duration_minutes.
+  const engineDuration = { groupPhaseGameDuration: 60, gamePeriods: 1 } as const;
+
   // ---------------------------------------------------------------------------
   // 3.3 Live-Cup: privat, Gruppenphase, 8 Teams (A–H) in 2 Gruppen
   // ---------------------------------------------------------------------------
@@ -428,6 +599,7 @@ async function main(): Promise<void> {
       numberOfTeams: liveCupTeams.length,
       groupSystem: 'groupsAndFinals', // 2 getrennte Gruppen, aber KEINE Finalrunde (s.u.)
       numberOfGroups: 2,
+      ...engineDuration,
       // Keine Playoffs: finals bleiben false, finalsConfig.preset 'none' (Default aus createDraft) —
       // groupsAndFinals wird NUR gebraucht, damit generateGroupStageMatches() die Teams nach
       // team.group in 2 echte Gruppen statt einer einzigen "all"-Gruppe aufteilt
@@ -440,45 +612,13 @@ async function main(): Promise<void> {
 
   const [matchDone1, matchDone2, matchRunning] = liveCup.matches;
   const now = new Date().toISOString();
+  // S6: matchDone1/2 bleiben beendete ALTspiele (3:1, 2:2, ohne Ereignisse), das laufende Spiel
+  // ist ein Engine-Spiel -- seine Spalten setzt nur die RPC (kein updateMatches darauf).
   await ownerRepo.updateMatches(liveCup.id, [
     { id: matchDone1.id, scoreA: 3, scoreB: 1, matchStatus: 'finished', finishedAt: now },
     { id: matchDone2.id, scoreA: 2, scoreB: 2, matchStatus: 'finished', finishedAt: now },
-    { id: matchRunning.id, scoreA: 1, scoreB: 0, matchStatus: 'running', timerStartTime: now, timerElapsedSeconds: 300 },
   ]);
-
-  const runningHomeTeamId = matchSideTeamId(matchRunning, 'A') ?? null;
-  const runningAwayTeamId = matchSideTeamId(matchRunning, 'B') ?? null;
-  const runningEvents: MatchEvent[] = [
-    {
-      id: e2eUuid(`event:live-cup:${matchRunning.id}:1`),
-      matchId: matchRunning.id,
-      timestampSeconds: 180,
-      type: 'GOAL',
-      payload: { team: 'home' },
-      scoreAfter: { home: 1, away: 0 },
-    },
-    {
-      id: e2eUuid(`event:live-cup:${matchRunning.id}:2`),
-      matchId: matchRunning.id,
-      timestampSeconds: 30,
-      type: 'STATUS_CHANGE',
-      payload: { toStatus: 'RUNNING' },
-      scoreAfter: { home: 0, away: 0 },
-    },
-  ];
-  const eventRows = runningEvents.map((event) => {
-    const row = mapMatchEventToSupabase(event, matchRunning.id);
-    if (event.payload.team === 'home') {
-      row.team_id = runningHomeTeamId;
-    } else if (event.payload.team === 'away') {
-      row.team_id = runningAwayTeamId;
-    }
-    return row;
-  });
-  const { error: eventsError } = await admin.from('match_events').insert(eventRows);
-  if (eventsError) {
-    throw new Error(`Live-Cup match_events: ${eventsError.message}`);
-  }
+  await seedRunningEngineMatch(engineDeps, 'Live-Cup', liveCup.id, matchRunning, 'live-cup');
 
   // ---------------------------------------------------------------------------
   // 3.4 Live-Cup Mitarbeiter (Owner, Co-Admin, Helper/Collaborator, Trainer, Viewer,
@@ -586,6 +726,7 @@ async function main(): Promise<void> {
     numberOfTeams: publicCupTeams.length,
     groupSystem: 'roundRobin',
     numberOfGroups: 1,
+    ...engineDuration,
     teams: publicCupTeams,
     monitors: [
       {
@@ -684,64 +825,13 @@ async function main(): Promise<void> {
     }))
   );
 
-  // Abschluss-Review (final-review.md, I2/Ruling AG): EIN weiteres Public-Cup-Spiel (das dritte,
-  // direkt nach den beiden oben abgeschlossenen — dieselbe Reihenfolge "finished, finished,
-  // running" wie beim Live-Cup, Abschnitt 3.3) wird DIREKT per Service-Role auf
-  // `matchStatus: 'running'` gesetzt, NIE über `MatchExecutionService.initializeMatch()` — das
-  // würde bei einem noch nie zuvor geladenen Spiel an C-NSTART scheitern (siehe
-  // `E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE` in testData.ts). `numberOfFields: 1` — jedes
-  // Public-Cup-Spiel liegt bereits auf Feld 1, genau dort, wo der `live`-Slide des Seed-Monitors
-  // (oben, `E2E_PUBLIC_CUP_MONITOR_ID`) hinschaut. Alle Spiele AB Index 3 bleiben unangetastet
-  // (nie initialisiert) — genau der Zustand, den der eigene C-NSTART-Test in
-  // `two-devices.cloud.spec.ts` braucht.
+  // S7: das dritte Public-Cup-Spiel ist ein Engine-Laufspiel auf Feld 1 (dort schaut der
+  // `live`-Slide des Seed-Monitors hin); alle Spiele AB Index 3 bleiben unangetastet.
   const publicCupRunningMatch = publicCup.matches[2];
   if (!publicCupRunningMatch) {
-    throw new Error('Public-Cup: erwartetes drittes Spiel (Index 2) für den running-Bypass fehlt.');
+    throw new Error('Public-Cup: erwartetes drittes Spiel (Index 2) für das Engine-Laufspiel fehlt.');
   }
-  await ownerRepo.updateMatches(publicCup.id, [
-    {
-      id: publicCupRunningMatch.id,
-      scoreA: E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE.home,
-      scoreB: E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE.away,
-      matchStatus: 'running',
-      timerStartTime: nowIso,
-      timerElapsedSeconds: 300,
-    },
-  ]);
-
-  const publicCupRunningHomeTeamId = matchSideTeamId(publicCupRunningMatch, 'A') ?? null;
-  const publicCupRunningAwayTeamId = matchSideTeamId(publicCupRunningMatch, 'B') ?? null;
-  const publicCupRunningEvents: MatchEvent[] = [
-    {
-      id: e2eUuid(`event:public-cup:${publicCupRunningMatch.id}:1`),
-      matchId: publicCupRunningMatch.id,
-      timestampSeconds: 180,
-      type: 'GOAL',
-      payload: { team: 'home' },
-      scoreAfter: { home: E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE.home, away: E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE.away },
-    },
-    {
-      id: e2eUuid(`event:public-cup:${publicCupRunningMatch.id}:2`),
-      matchId: publicCupRunningMatch.id,
-      timestampSeconds: 30,
-      type: 'STATUS_CHANGE',
-      payload: { toStatus: 'RUNNING' },
-      scoreAfter: { home: 0, away: 0 },
-    },
-  ];
-  const publicCupRunningEventRows = publicCupRunningEvents.map((event) => {
-    const row = mapMatchEventToSupabase(event, publicCupRunningMatch.id);
-    if (event.payload.team === 'home') {
-      row.team_id = publicCupRunningHomeTeamId;
-    } else if (event.payload.team === 'away') {
-      row.team_id = publicCupRunningAwayTeamId;
-    }
-    return row;
-  });
-  const { error: publicCupEventsError } = await admin.from('match_events').insert(publicCupRunningEventRows);
-  if (publicCupEventsError) {
-    throw new Error(`Public-Cup match_events: ${publicCupEventsError.message}`);
-  }
+  await seedRunningEngineMatch(engineDeps, 'Public-Cup', publicCup.id, publicCupRunningMatch, 'public-cup');
 
   // ---------------------------------------------------------------------------
   // 3.6 Entwurf-Cup: Entwurf, privat, OHNE publishedAt (Fixrunde 2, N3/Ruling AA -- wieder
@@ -873,6 +963,9 @@ async function main(): Promise<void> {
     ],
   });
   await strangerRepo.save(strangerCup);
+
+  await seedEngineCups(engineDeps, ownerRepo, service, userIds.helper);
+  await seedLegacyCups(engineDeps, ownerRepo, service, userIds.helper);
 
   log('Fertig.');
 }
