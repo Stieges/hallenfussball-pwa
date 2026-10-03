@@ -218,6 +218,8 @@ UNION ALL
 -- C0b (20261001_001_amend_event.sql) fuegt vier IMMUTABLE-Helfer hinzu (detail_value_valid,
 -- detail_fields, details_from_payload, apply_amend) und ersetzt enter_decision(jsonb,text) durch
 -- enter_decision(jsonb,text,numeric): 47 + 4 = 51 (50 IMMUTABLE).
+-- A-02 (20261003_001_match_slots.sql) fuegt den IMMUTABLE-Pruefhelfer slot_source_valid(jsonb) fuer
+-- die CHECKs matches_slot_x_source_valid hinzu: 51 + 1 = 52 (51 IMMUTABLE).
 SELECT 'compute-match-state-security-invoker',
        NOT (SELECT p.prosecdef FROM pg_proc p WHERE p.oid = 'public.compute_match_state(uuid)'::regprocedure)
 UNION ALL
@@ -228,14 +230,14 @@ SELECT 'match-apply-event-immutable',
        (SELECT p.provolatile = 'i' FROM pg_proc p
          WHERE p.oid = 'public.match_apply_event(jsonb,jsonb,jsonb,jsonb)'::regprocedure)
 UNION ALL
-SELECT 'match-engine-function-count-51',
-       (SELECT count(*) = 51 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+SELECT 'match-engine-function-count-52',
+       (SELECT count(*) = 52 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE (n.nspname = 'match_engine'
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))))
 UNION ALL
-SELECT 'match-engine-immutable-count-50',
-       (SELECT count(*) = 50 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+SELECT 'match-engine-immutable-count-51',
+       (SELECT count(*) = 51 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE (n.nspname = 'match_engine'
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.provolatile = 'i')
@@ -246,8 +248,8 @@ SELECT 'match-engine-no-security-definer',
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.prosecdef)
 UNION ALL
-SELECT 'match-engine-search-path-all-51',
-       (SELECT count(*) = 51 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+SELECT 'match-engine-search-path-all-52',
+       (SELECT count(*) = 52 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE (n.nspname = 'match_engine'
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.proconfig = ARRAY['search_path=public, pg_temp'])
