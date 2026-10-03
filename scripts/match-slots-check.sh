@@ -9,7 +9,9 @@
 #   Bestandsdaten (Bauplan E-A5) -- Migration auf einer DB mit Altzeilen:
 #     B1 Gegenbeispiel: Altzeile mit Platzhalter „Team X“ (keine UUID) -> Migration SCHEITERT,
 #        und es bleibt NICHTS zurueck (keine neuen Spalten, kein Backfill der UUID-Altzeile).
-#     B2 nach Entfernen der Zeile: Migration laeuft; Altzeile „Platzhalter = Team-UUID“ traegt jetzt
+#     B1b Gegenbeispiel: Platzhalter = Team-UUID eines FREMDEN Turniers -> Migration SCHEITERT
+#        (Backfill nur fuer Teams desselben Turniers), keine Reste.
+#     B2 nach Entfernen der Zeilen: Migration laeuft; Altzeile „Platzhalter = Team-UUID“ traegt jetzt
 #        team_a_id/team_b_id, Platzhalter NULL.
 #     B3 zweites Einspielen -> ok (idempotent).
 #   Pflicht (@FU-001): ein FRISCH ANGELEGTES Turnier (echter App-Weg, scripts/match-slots-fixture.ts:
@@ -115,6 +117,9 @@ TEAM_NORD="$(uuid_for team:nord)"
 TEAM_SUED="$(uuid_for team:sued)"
 M_OLD_UUID="$(uuid_for match:old-uuid)"
 M_OLD_BAD="$(uuid_for match:old-team-x)"
+T_FREMD="$(uuid_for tournament:fremd)"
+TEAM_FREMD="$(uuid_for team:fremd)"
+M_OLD_FREMD="$(uuid_for match:old-fremd)"
 psql_stdin <<SQL
 INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, confirmed_at,
                         raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -123,6 +128,10 @@ VALUES ('00000000-0000-0000-0000-000000000000', '$U_OWNER', 'authenticated', 'au
 INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration)
 VALUES ('$T_OLD', '$U_OWNER', 'Altbestand', '2026-09-20', 2, 10);
 INSERT INTO public.teams (id, tournament_id, name) VALUES ('$TEAM_NORD', '$T_OLD', 'FC Nord'), ('$TEAM_SUED', '$T_OLD', 'SV Süd');
+-- I1 (Review A-02): ein zweites Turnier, dessen Team-UUID gleich als Platzhalter in T_OLD auftaucht.
+INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration)
+VALUES ('$T_FREMD', '$U_OWNER', 'Fremdes Turnier', '2026-09-21', 2, 10);
+INSERT INTO public.teams (id, tournament_id, name) VALUES ('$TEAM_FREMD', '$T_FREMD', 'TuS Fremd');
 INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, team_a_placeholder, team_b_placeholder)
 VALUES ('$M_OLD_UUID', '$T_OLD', 1, 1, NULL, NULL, '$TEAM_NORD', '$TEAM_SUED'),
        ('$M_OLD_BAD',  '$T_OLD', 2, 1, NULL, '$TEAM_SUED', 'Team X', NULL);
@@ -145,8 +154,21 @@ check "B1 nichts zurueckgeblieben: Funktion match_engine.slot_source_valid exist
 check "B1 nichts zurueckgeblieben: UUID-Altzeile unveraendert (team_a_id NULL, Platzhalter = UUID)" "|$TEAM_NORD" \
   "$(q "SELECT coalesce(team_a_id::text,'') || '|' || coalesce(team_a_placeholder,'') FROM public.matches WHERE id='$M_OLD_UUID';")"
 
-echo "B2: Altzeile „Team X“ entfernen, Migration erneut..." >&2
+echo "B1b: Altzeile „Team X“ entfernen, Altzeile mit Team-UUID eines FREMDEN Turniers einfuegen..." >&2
 q "DELETE FROM public.matches WHERE id='$M_OLD_BAD';" >/dev/null
+q "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, team_a_placeholder) VALUES ('$M_OLD_FREMD', '$T_OLD', 3, 1, NULL, '$TEAM_SUED', '$TEAM_FREMD');" >/dev/null
+set +e
+B1B_OUT="$(psql_stdin < "$TARGET_FILE" 2>&1)"
+B1B_EXIT=$?
+set -e
+echo "    psql-Exit $B1B_EXIT: $(printf '%s' "$B1B_OUT" | grep -m1 ERROR || true)"
+check "B1b Gegenbeispiel: Platzhalter = Team-UUID eines fremden Turniers -> Migration scheitert (kein turnieruebergreifender Backfill)" "fehlgeschlagen" \
+  "$([[ "$B1B_EXIT" -ne 0 ]] && grep -q 'matches_slot_a_present' <<<"$B1B_OUT" && echo fehlgeschlagen || echo durchgelaufen)"
+check "B1b nichts zurueckgeblieben: fremde Zeile team_a_id NULL, Spalte slot_a_source fehlt" "|0" \
+  "$(q "SELECT coalesce(team_a_id::text,'') FROM public.matches WHERE id='$M_OLD_FREMD';")|$(q "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='matches' AND column_name='slot_a_source';")"
+
+echo "B2: fremde Altzeile entfernen, Migration erneut..." >&2
+q "DELETE FROM public.matches WHERE id='$M_OLD_FREMD';" >/dev/null
 psql_stdin < "$TARGET_FILE"
 check "B2 Backfill: UUID-Altzeile traegt team_a_id/team_b_id, Platzhalter NULL" "$TEAM_NORD|$TEAM_SUED||" \
   "$(q "SELECT team_a_id || '|' || team_b_id || '|' || coalesce(team_a_placeholder,'') || '|' || coalesce(team_b_placeholder,'') FROM public.matches WHERE id='$M_OLD_UUID';")"
