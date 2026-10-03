@@ -1,3 +1,4 @@
+import { testTeamSlot } from './matchSlotFixtures'
 import { Tournament, Team, Match, FinalsConfig, PointSystem, PlacementCriterion, LocationDetails, Finals } from '../types/tournament'
 
 /**
@@ -70,10 +71,17 @@ export function createMockTeams(count: number, groupCount = 2): Team[] {
  * Test Factory für Match-Objekte
  */
 export function createMockMatch(overrides?: Partial<Match>): Match {
+  const teamA = overrides?.teamA ?? 'team-1'
+  const teamB = overrides?.teamB ?? 'team-2'
   return {
     id: `match-${Math.random().toString(36).substring(2, 11)}`,
-    teamA: 'team-1',
-    teamB: 'team-2',
+    teamA,
+    teamB,
+    // A-03: Leser lesen die Seiten aus den Slots. Die Fixture leitet sie aus `teamA/teamB` ab (Team-ID);
+    // ein Platzhaltertext ergibt keinen Slot. Die Kurz-IDs der Fixtures (`team-1`) sind keine UUIDs –
+    // deshalb hier ohne `teamSlot` (Testumgebung, nicht Produktivcode).
+    slotA: testTeamSlot(teamA),
+    slotB: testTeamSlot(teamB),
     scoreA: undefined,
     scoreB: undefined,
     group: 'A',

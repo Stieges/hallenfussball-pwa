@@ -8,17 +8,15 @@
  */
 
 import { Match, RefereeConfig, Team } from '../../types/tournament';
+import { matchSideTeamId, matchInvolvesTeam, type MatchSidesLoose } from '../models/matchSlot';
 
 // Generic match interface that works with both Match and ScheduledMatch
-interface MatchLike {
+// Die Seiten kommen aus den Slots (Team-ID), nie aus Namen (A-03).
+interface MatchLike extends MatchSidesLoose {
   id: string;
   field: number;
   slot?: number;
   referee?: number;
-  teamA?: string; // Match.teamA
-  teamB?: string; // Match.teamB
-  homeTeam?: string; // ScheduledMatch.homeTeam
-  awayTeam?: string; // ScheduledMatch.awayTeam
 }
 
 interface MatchWithMetadata extends MatchLike {
@@ -172,25 +170,14 @@ function assignOrganizerReferees<T extends MatchLike>(matches: T[], config: Refe
  *
  * Algorithm:
  * 1. After team plays, they referee the next match on the same field
- * 2. Map team names to team numbers (1, 2, 3...)
+ * 2. Map team IDs to team numbers (1, 2, 3...)
  * 3. Assign team number as referee number
  */
 function assignTeamReferees<T extends MatchLike>(matches: T[], teams: Team[]): T[] {
-  // Helper to get team name from match (handles both Match.teamA and ScheduledMatch.homeTeam)
-  const getTeamName = (match: MatchLike, position: 'home' | 'away'): string | undefined => {
-    if (position === 'home') {
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use fallback property
-      return match.homeTeam || match.teamA;
-    } else {
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use fallback property
-      return match.awayTeam || match.teamB;
-    }
-  };
-
-  // Create team name -> team number mapping
+  // Team-ID (nicht Name) -> Team-Nummer (Position in der Teamliste, 1, 2, 3...)
   const teamToNumber = new Map<string, number>();
   teams.forEach((team, index) => {
-    teamToNumber.set(team.name, index + 1);
+    teamToNumber.set(team.id, index + 1);
   });
 
   // Group matches by field
@@ -222,8 +209,9 @@ function assignTeamReferees<T extends MatchLike>(matches: T[], teams: Team[]): T
         const previousMatch = sortedMatches[i - 1];
 
         // Use home team from previous match as referee
-        const refereeTeamName = getTeamName(previousMatch, 'home');
-        const refereeNumber = refereeTeamName ? teamToNumber.get(refereeTeamName) : undefined;
+        // (offene Seite oder fehlender Slot ergibt keine Team-ID und damit keinen Schiri)
+        const refereeTeamId = matchSideTeamId(previousMatch, 'A');
+        const refereeNumber = refereeTeamId ? teamToNumber.get(refereeTeamId) : undefined;
 
         if (refereeNumber) {
           result.push({ ...match, referee: refereeNumber });
@@ -285,12 +273,12 @@ export function isValidFinalsReferee(
     return false;
   }
 
-  // Get team name for this referee number
+  // Team for this referee number
   const refereeTeam = teams[refereeNumber - 1];
 
   // Check if team is participating in this match
   // Note: TS thinks refereeTeam is always defined (noUncheckedIndexedAccess disabled)
-  if (match.teamA === refereeTeam.name || match.teamB === refereeTeam.name) {
+  if (matchInvolvesTeam(match, refereeTeam.id)) {
     return false; // Can't referee own match
   }
 

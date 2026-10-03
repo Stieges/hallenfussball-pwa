@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { assignReferees, getRefereeDisplayName, isValidFinalsReferee } from '../refereeAssigner';
 import type { Team, Match, RefereeConfig } from '../../../types/tournament';
+import type { MatchSlot } from '../../models/schemas/MatchSlotSchema';
+import { vs, slots, groupRank, testUuid } from '../../../test/matchSlotFixtures';
 
 // =============================================================================
 // Test Helpers
@@ -11,10 +13,8 @@ interface TestMatch {
   field: number;
   slot?: number;
   referee?: number;
-  teamA?: string;
-  teamB?: string;
-  homeTeam?: string;
-  awayTeam?: string;
+  slotA?: MatchSlot;
+  slotB?: MatchSlot;
 }
 
 function createMatch(overrides: Partial<TestMatch> & { id: string }): TestMatch {
@@ -23,7 +23,7 @@ function createMatch(overrides: Partial<TestMatch> & { id: string }): TestMatch 
 
 function createTeams(count: number): Team[] {
   return Array.from({ length: count }, (_, i) => ({
-    id: `team-${i + 1}`,
+    id: testUuid(i + 1),
     name: `Team ${i + 1}`,
   }));
 }
@@ -35,8 +35,8 @@ function createTeams(count: number): Team[] {
 describe('assignReferees mode=none', () => {
   it('returns matches unchanged', () => {
     const matches = [
-      createMatch({ id: 'm1', teamA: 'Team 1', teamB: 'Team 2' }),
-      createMatch({ id: 'm2', teamA: 'Team 3', teamB: 'Team 4' }),
+      createMatch({ id: 'm1', ...vs(testUuid(1), testUuid(2)) }),
+      createMatch({ id: 'm2', ...vs(testUuid(3), testUuid(4)) }),
     ];
     const config: RefereeConfig = { mode: 'none' };
     const result = assignReferees(matches, createTeams(4), config);
@@ -155,8 +155,8 @@ describe('assignReferees mode=teams', () => {
   it('assigns previous home team as referee for next match on same field', () => {
     const teams = createTeams(4);
     const matches = [
-      createMatch({ id: 'm1', slot: 0, field: 1, teamA: 'Team 1', teamB: 'Team 2' }),
-      createMatch({ id: 'm2', slot: 1, field: 1, teamA: 'Team 3', teamB: 'Team 4' }),
+      createMatch({ id: 'm1', slot: 0, field: 1, ...vs(testUuid(1), testUuid(2)) }),
+      createMatch({ id: 'm2', slot: 1, field: 1, ...vs(testUuid(3), testUuid(4)) }),
     ];
     const config: RefereeConfig = { mode: 'teams' };
     const result = assignReferees(matches, teams, config);
@@ -167,25 +167,51 @@ describe('assignReferees mode=teams', () => {
     expect(result.find(m => m.id === 'm2')!.referee).toBe(1);
   });
 
-  it('handles ScheduledMatch format (homeTeam/awayTeam)', () => {
+  it('@TM-034 Gegenbeispiel: Anzeigenamen (homeTeam) ergeben keinen Schiedsrichter – nur die Team-ID zählt', () => {
     const teams = createTeams(4);
     const matches = [
-      createMatch({ id: 'm1', slot: 0, field: 1, homeTeam: 'Team 1', awayTeam: 'Team 2' }),
-      createMatch({ id: 'm2', slot: 1, field: 1, homeTeam: 'Team 3', awayTeam: 'Team 4' }),
+      { ...createMatch({ id: 'm1', slot: 0, field: 1 }), homeTeam: 'Team 1', awayTeam: 'Team 2' },
+      { ...createMatch({ id: 'm2', slot: 1, field: 1 }), homeTeam: 'Team 3', awayTeam: 'Team 4' },
     ];
-    const config: RefereeConfig = { mode: 'teams' };
-    const result = assignReferees(matches, teams, config);
+    const result = assignReferees(matches, teams, { mode: 'teams' });
 
-    expect(result.find(m => m.id === 'm2')!.referee).toBe(1);
+    expect(result.find(m => m.id === 'm2')!.referee).toBeUndefined();
+  });
+
+  it('@TM-033 Gegenbeispiel: Name des einen Teams ist die ID des anderen – der Schiri folgt der ID', () => {
+    // team[0] heißt wie die ID von team[1] und umgekehrt: ein Namens-Lookup würde die Nummern vertauschen.
+    const teams: Team[] = [
+      { id: testUuid(1), name: testUuid(2) },
+      { id: testUuid(2), name: testUuid(1) },
+      { id: testUuid(3), name: 'Team 3' },
+    ];
+    const matches = [
+      createMatch({ id: 'm1', slot: 0, field: 1, ...vs(testUuid(2), testUuid(3)) }),
+      createMatch({ id: 'm2', slot: 1, field: 1, ...vs(testUuid(1), testUuid(3)) }),
+    ];
+    const result = assignReferees(matches, teams, { mode: 'teams' });
+
+    // Heim des Vorgängerspiels ist das Team mit der ID …02 = Nummer 2
+    expect(result.find(m => m.id === 'm2')!.referee).toBe(2);
+  });
+
+  it('@TM-033 Vorgängerspiel mit offener Heimseite ergibt keinen Schiedsrichter', () => {
+    const matches = [
+      createMatch({ id: 'm1', slot: 0, field: 1, ...slots(groupRank('A', 1), groupRank('B', 2)) }),
+      createMatch({ id: 'm2', slot: 1, field: 1, ...vs(testUuid(1), testUuid(2)) }),
+    ];
+    const result = assignReferees(matches, createTeams(4), { mode: 'teams' });
+
+    expect(result.find(m => m.id === 'm2')!.referee).toBeUndefined();
   });
 
   it('assigns separately per field', () => {
     const teams = createTeams(4);
     const matches = [
-      createMatch({ id: 'm1', slot: 0, field: 1, teamA: 'Team 1', teamB: 'Team 2' }),
-      createMatch({ id: 'm2', slot: 0, field: 2, teamA: 'Team 3', teamB: 'Team 4' }),
-      createMatch({ id: 'm3', slot: 1, field: 1, teamA: 'Team 3', teamB: 'Team 4' }),
-      createMatch({ id: 'm4', slot: 1, field: 2, teamA: 'Team 1', teamB: 'Team 2' }),
+      createMatch({ id: 'm1', slot: 0, field: 1, ...vs(testUuid(1), testUuid(2)) }),
+      createMatch({ id: 'm2', slot: 0, field: 2, ...vs(testUuid(3), testUuid(4)) }),
+      createMatch({ id: 'm3', slot: 1, field: 1, ...vs(testUuid(3), testUuid(4)) }),
+      createMatch({ id: 'm4', slot: 1, field: 2, ...vs(testUuid(1), testUuid(2)) }),
     ];
     const config: RefereeConfig = { mode: 'teams' };
     const result = assignReferees(matches, teams, config);
@@ -199,8 +225,8 @@ describe('assignReferees mode=teams', () => {
   it('preserves manual assignments in teams mode', () => {
     const teams = createTeams(4);
     const matches = [
-      createMatch({ id: 'm1', slot: 0, field: 1, teamA: 'Team 1', teamB: 'Team 2' }),
-      createMatch({ id: 'm2', slot: 1, field: 1, teamA: 'Team 3', teamB: 'Team 4' }),
+      createMatch({ id: 'm1', slot: 0, field: 1, ...vs(testUuid(1), testUuid(2)) }),
+      createMatch({ id: 'm2', slot: 1, field: 1, ...vs(testUuid(3), testUuid(4)) }),
     ];
     const config: RefereeConfig = {
       mode: 'teams',
@@ -254,8 +280,7 @@ describe('isValidFinalsReferee', () => {
     id: 'final',
     round: 1,
     field: 1,
-    teamA: 'Team 1',
-    teamB: 'Team 2',
+    ...vs(testUuid(1), testUuid(2)),
   };
 
   it('returns false when finalsRefereeMode is "none"', () => {
@@ -272,6 +297,13 @@ describe('isValidFinalsReferee', () => {
     const config: RefereeConfig = { mode: 'teams', finalsRefereeMode: 'neutralTeams' };
     // Team 1 (index 0, referee number 1) is playing
     expect(isValidFinalsReferee(match, 1, config, teams)).toBe(false);
+  });
+
+  it('@TM-034 Gegenbeispiel: ein Team mit dem Namen eines Spielteilnehmers, aber anderer ID, darf pfeifen', () => {
+    const config: RefereeConfig = { mode: 'teams', finalsRefereeMode: 'neutralTeams' };
+    const namensvetter: Team[] = [...teams.slice(0, 2), { id: testUuid(9), name: 'Team 1' }];
+    // Referee Nr. 3 heißt „Team 1“, ist aber nicht das spielende Team 1 (ID …01)
+    expect(isValidFinalsReferee(match, 3, config, namensvetter)).toBe(true);
   });
 
   it('returns true for neutral team referee', () => {

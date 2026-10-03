@@ -12,7 +12,7 @@ import { Team, Match } from '../../types/tournament';
 import { FairnessCalculator } from '../../utils/FairnessCalculator';
 import { generateGroupStageMatchId } from '../../utils/idGenerator';
 import { parseDFBMatches, getDFBPattern } from '../../constants/dfbMatchPatterns';
-import { teamSlot } from '../models/matchSlot';
+import { teamSlot, requireTeamId, matchSideTeamId } from '../models/matchSlot';
 
 /**
  * Represents a time slot in the schedule
@@ -564,6 +564,15 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
   return matches;
 }
 
+/** Team-ID einer Seite eines vom Generator erzeugten Gruppenspiels (Invariante: beide Seiten besetzt). */
+function groupTeamId(match: Match, side: 'A' | 'B'): string {
+  const slot = side === 'A' ? match.slotA : match.slotB;
+  if (slot === undefined) {
+    throw new Error(`Gruppenspiel ${match.id}: Seite ${side} ohne Slot`);
+  }
+  return requireTeamId(slot);
+}
+
 /**
  * Balance home/away distribution by swapping team positions in matches
  * This is done AFTER time scheduling to not affect pause fairness
@@ -578,16 +587,17 @@ function balanceHomeAway(matches: Match[], teamStates: Map<string, TeamScheduleS
 
   // Initial count
   for (const match of matches) {
-    const balanceA = homeAwayBalance.get(match.teamA);
-    const balanceB = homeAwayBalance.get(match.teamB);
+    // Gruppenspiele tragen immer zwei Team-Slots (Generator-Invariante)
+    const balanceA = homeAwayBalance.get(groupTeamId(match, 'A'));
+    const balanceB = homeAwayBalance.get(groupTeamId(match, 'B'));
     if (balanceA) { balanceA.home++; }
     if (balanceB) { balanceB.away++; }
   }
 
   // Find matches where swapping would improve balance
   for (const match of matches) {
-    const balanceA = homeAwayBalance.get(match.teamA);
-    const balanceB = homeAwayBalance.get(match.teamB);
+    const balanceA = homeAwayBalance.get(groupTeamId(match, 'A'));
+    const balanceB = homeAwayBalance.get(groupTeamId(match, 'B'));
     if (!balanceA || !balanceB) { continue; }
 
     // Calculate current imbalances
@@ -627,50 +637,32 @@ export function analyzeScheduleFairness(matches: Match[]): FairnessAnalysis {
   const teamFieldCounts = new Map<string, Map<number, number>>();
   const teamHomeAway = new Map<string, { home: number; away: number }>();
 
-  // Collect data
+  // Collect data (A-03: Team-ID aus dem Slot; eine offene Seite hat kein Team und zählt nicht)
+  const record = (teamId: string | undefined, slot: number, field: number, isHome: boolean): void => {
+    if (teamId === undefined) { return; }
+    let slots = teamMatchSlots.get(teamId);
+    let fieldCounts = teamFieldCounts.get(teamId);
+    let homeAway = teamHomeAway.get(teamId);
+    if (!slots) {
+      slots = [];
+      teamMatchSlots.set(teamId, slots);
+    }
+    if (!fieldCounts) {
+      fieldCounts = new Map();
+      teamFieldCounts.set(teamId, fieldCounts);
+    }
+    if (!homeAway) {
+      homeAway = { home: 0, away: 0 };
+      teamHomeAway.set(teamId, homeAway);
+    }
+    slots.push(slot);
+    fieldCounts.set(field, (fieldCounts.get(field) ?? 0) + 1);
+    if (isHome) { homeAway.home++; } else { homeAway.away++; }
+  };
   for (const match of matches) {
     const slot = match.slot ?? match.round - 1;
-    const field = match.field;
-
-    // Team A (Home)
-    let slotsA = teamMatchSlots.get(match.teamA);
-    let fieldCountsA = teamFieldCounts.get(match.teamA);
-    let homeAwayA = teamHomeAway.get(match.teamA);
-    if (!slotsA) {
-      slotsA = [];
-      teamMatchSlots.set(match.teamA, slotsA);
-    }
-    if (!fieldCountsA) {
-      fieldCountsA = new Map();
-      teamFieldCounts.set(match.teamA, fieldCountsA);
-    }
-    if (!homeAwayA) {
-      homeAwayA = { home: 0, away: 0 };
-      teamHomeAway.set(match.teamA, homeAwayA);
-    }
-    slotsA.push(slot);
-    fieldCountsA.set(field, (fieldCountsA.get(field) ?? 0) + 1);
-    homeAwayA.home++;
-
-    // Team B (Away)
-    let slotsB = teamMatchSlots.get(match.teamB);
-    let fieldCountsB = teamFieldCounts.get(match.teamB);
-    let homeAwayB = teamHomeAway.get(match.teamB);
-    if (!slotsB) {
-      slotsB = [];
-      teamMatchSlots.set(match.teamB, slotsB);
-    }
-    if (!fieldCountsB) {
-      fieldCountsB = new Map();
-      teamFieldCounts.set(match.teamB, fieldCountsB);
-    }
-    if (!homeAwayB) {
-      homeAwayB = { home: 0, away: 0 };
-      teamHomeAway.set(match.teamB, homeAwayB);
-    }
-    slotsB.push(slot);
-    fieldCountsB.set(field, (fieldCountsB.get(field) ?? 0) + 1);
-    homeAwayB.away++;
+    record(matchSideTeamId(match, 'A'), slot, match.field, true);
+    record(matchSideTeamId(match, 'B'), slot, match.field, false);
   }
 
   // Calculate stats per team

@@ -64,6 +64,9 @@ export function applyAutoResolutionsAfterScoreChange(
           ...(resultUpdate ?? { id }),
           teamA: resolved.teamA,
           teamB: resolved.teamB,
+          // A-03: die Cloud übernimmt Seiten nur aus den Slots (A-02) – ohne sie ginge die Auflösung verloren.
+          slotA: resolved.slotA,
+          slotB: resolved.slotB,
         });
       }
     }
@@ -79,6 +82,9 @@ export function applyAutoResolutionsAfterScoreChange(
           id,
           teamA: resolved.teamA,
           teamB: resolved.teamB,
+          // A-03: die Cloud übernimmt Seiten nur aus den Slots (A-02) – ohne sie ginge die Auflösung verloren.
+          slotA: resolved.slotA,
+          slotB: resolved.slotB,
         });
       }
     }
