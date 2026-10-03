@@ -12,6 +12,7 @@ import { Team, Match } from '../../types/tournament';
 import { FairnessCalculator } from '../../utils/FairnessCalculator';
 import { generateGroupStageMatchId } from '../../utils/idGenerator';
 import { parseDFBMatches, getDFBPattern } from '../../constants/dfbMatchPatterns';
+import { teamSlot } from '../models/matchSlot';
 
 /**
  * Represents a time slot in the schedule
@@ -493,6 +494,9 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
           slot: currentSlotIndex,
           teamA: pairing.teamA.id,
           teamB: pairing.teamB.id,
+          // @TM-015: Gruppenspiele tragen Team-IDs als Slot (wirft, wenn die ID keine UUID ist).
+          slotA: teamSlot(pairing.teamA.id),
+          slotB: teamSlot(pairing.teamB.id),
           group: groupId,
           scheduledTime: currentSlot.startTime,
         };
@@ -598,10 +602,13 @@ function balanceHomeAway(matches: Match[], teamStates: Map<string, TeamScheduleS
 
     // Swap if it improves total balance
     if (newTotalImbalance < totalImbalance) {
-      // Swap teams
+      // Swap teams (Übergang bis A-04b: alte Felder und Slots gemeinsam tauschen)
       const temp = match.teamA;
       match.teamA = match.teamB;
       match.teamB = temp;
+      const tempSlot = match.slotA;
+      match.slotA = match.slotB;
+      match.slotB = tempSlot;
 
       // Update balance counters
       balanceA.home--;
