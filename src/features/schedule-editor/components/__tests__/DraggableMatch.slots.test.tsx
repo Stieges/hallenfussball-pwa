@@ -41,8 +41,8 @@ const card = (match: Match, source: Parameters<typeof DraggableMatch>[0]['tourna
 
 const base = { id: SEMI1, round: 1, field: 1, matchStatus: 'scheduled' as const };
 
-describe('@TM-015 DraggableMatch – Seiten aus den Slots (A-04b)', () => {
-  it('@TM-015 besetzte Seiten zeigen den aktuellen Teamnamen, nicht das Übergangsfeld', () => {
+describe('DraggableMatch – Seiten aus den Slots (A-04b)', () => {
+  it('A-04b besetzte Seiten zeigen den aktuellen Teamnamen, nicht das Übergangsfeld', () => {
     card({ ...base, ...vs(NORD, UFER), teamA: 'ALTER NAME HEIM', teamB: 'ALTER NAME GAST' });
 
     expect(screen.getByText('FC Nord')).toBeTruthy();
@@ -50,7 +50,7 @@ describe('@TM-015 DraggableMatch – Seiten aus den Slots (A-04b)', () => {
     expect(screen.queryByText(/ALTER NAME/)).toBeNull();
   });
 
-  it('@TM-015 Gegenbeispiel: nach dem Umbenennen zeigt die Karte den neuen Namen', () => {
+  it('A-04b Gegenbeispiel: nach dem Umbenennen zeigt die Karte den neuen Namen', () => {
     card({ ...base, ...vs(NORD, UFER) }, { teams: [{ id: NORD, name: 'FC Nordlicht' }, teams[1]] });
 
     expect(screen.getByText('FC Nordlicht')).toBeTruthy();
@@ -69,20 +69,20 @@ describe('@TM-015 DraggableMatch – Seiten aus den Slots (A-04b)', () => {
     expect(screen.getByText(/Verlierer/)).toBeTruthy();
   });
 
-  it.each(['Olli', 'Maria', 'Tom'])(
-    '@TM-027 Alle Geräte zeigen dieselbe Besetzung: %s sieht im Halbfinale 1 auf der Heimseite „FC Nord“',
-    () => {
-      // Gruppe A ist abgeschlossen: die Cloud-Zeile trägt die aufgelöste Seite (Team-ID + Herkunft)
-      const row = createMatchRow({
-        id: SEMI1, team_a_id: NORD, slot_a_source: { kind: 'groupRank', group: 'A', rank: 1 },
-        team_b_id: UFER, slot_b_source: { kind: 'groupRank', group: 'B', rank: 2 },
-      } as Parameters<typeof createMatchRow>[0]);
-      const fromCloud = mapMatchFromSupabase(row);
+  // Nur der Anzeige-Teil von @TM-027: Cloud-Zeile -> Mapper -> Editor zeigt „FC Nord“. Der Mehrgeräte-Teil
+  // („Olli schließt Gruppe A ab, drei Geräte zeigen dieselbe Besetzung“) gehört in den Durchstich (A-23/A-24).
+  it('@TM-027 (Anzeige-Teil) eine aufgelöste Cloud-Zeile zeigt im Halbfinale 1 auf der Heimseite „FC Nord“', () => {
+    // Gruppe A ist abgeschlossen: die Cloud-Zeile trägt die aufgelöste Seite (Team-ID + Herkunft)
+    // Cast nötig: `src/types/supabase.ts` kennt `slot_*_source` erst nach der Regenerierung auf main (Bauplan § 2 Nr. 7).
+    const row = createMatchRow({
+      id: SEMI1, team_a_id: NORD, slot_a_source: { kind: 'groupRank', group: 'A', rank: 1 },
+      team_b_id: UFER, slot_b_source: { kind: 'groupRank', group: 'B', rank: 2 },
+    } as Parameters<typeof createMatchRow>[0]);
+    const fromCloud = mapMatchFromSupabase(row);
 
-      card(fromCloud, { teams });
+    card(fromCloud, { teams });
 
-      expect(screen.getAllByText('FC Nord')).toHaveLength(1);
-      expect(screen.queryByText('TBD')).toBeNull();
-    },
-  );
+    expect(screen.getAllByText('FC Nord')).toHaveLength(1);
+    expect(screen.queryByText('TBD')).toBeNull();
+  });
 });

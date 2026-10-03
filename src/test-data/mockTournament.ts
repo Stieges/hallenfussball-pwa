@@ -6,7 +6,22 @@
  */
 
 import { Tournament, Team, Match, RuntimeMatchEvent } from '../types/tournament';
-import { testUuid, vs, slots, groupRank, resultOf } from '../test/matchSlotFixtures';
+import { teamSlot, pendingSlot, transitionalSides } from '../core/models/matchSlot';
+import type { MatchSlot } from '../core/models/schemas/MatchSlotSchema';
+
+// Keine Importe aus `src/test/*`: dieses Modul gehört über LocalTestScreen zum Produktionsbundle.
+/** Deterministische UUID für Mock-Teams und -Spiele (Team-IDs sind UUIDs, siehe `TeamIdSchema`). */
+function testUuid(n: number): string {
+  return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+}
+
+function slots(slotA: MatchSlot, slotB: MatchSlot): Pick<Match, 'teamA' | 'teamB' | 'slotA' | 'slotB'> {
+  return { ...transitionalSides(slotA, slotB), slotA, slotB };
+}
+const vs = (teamIdA: string, teamIdB: string) => slots(teamSlot(teamIdA), teamSlot(teamIdB));
+const groupRank = (group: string, rank: number): MatchSlot => pendingSlot({ kind: 'groupRank', group, rank });
+const resultOf = (matchId: string, role: 'winner' | 'loser'): MatchSlot =>
+  pendingSlot({ kind: 'matchResult', matchId, role });
 
 // Halbfinal-IDs (UUIDs: Finalseiten verweisen darauf)
 const HF1_ID = testUuid(101);

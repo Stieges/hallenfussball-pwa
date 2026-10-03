@@ -4,7 +4,7 @@
  * Vorher las die Konflikterkennung `Match.teamA/teamB`: Jede offene Seite trug dort den Text „TBD“, zwei
  * Halbfinals zur selben Zeit galten als „Team TBD spielt doppelt“ (A-04a-Review K8). Offene Seiten zählen
  * für kein Team; besetzte (auch aufgelöste) Seiten zählen.
- * Kennung: @TM-015 (offene Seiten haben ihre Herkunft, sind aber kein Team).
+ * Kennung: A-04b (offene Seiten haben ihre Herkunft, sind aber kein Team).
  */
 import { describe, it, expect } from 'vitest';
 import type { Match, Team } from '../../../../types/tournament';
@@ -24,8 +24,8 @@ const match = (id: string, sides: Pick<Match, 'teamA' | 'teamB' | 'slotA' | 'slo
   id, round: 1, field, scheduledTime: at(time), matchStatus: 'scheduled', ...sides,
 });
 
-describe('@TM-015 Schedule-Editor – Konflikte aus Slots (A-04b)', () => {
-  it('@TM-015 zwei Halbfinals mit offenen Seiten zur selben Zeit sind keine Doppelbelegung (K8)', () => {
+describe('Schedule-Editor – Konflikte aus Slots (A-04b)', () => {
+  it('A-04b zwei Halbfinals mit offenen Seiten zur selben Zeit sind keine Doppelbelegung (K8)', () => {
     const semis = [
       match('s1', slots(groupRank('A', 1), groupRank('B', 2)), '10:00', 1),
       match('s2', slots(groupRank('B', 1), groupRank('A', 2)), '10:00', 2),
@@ -36,7 +36,7 @@ describe('@TM-015 Schedule-Editor – Konflikte aus Slots (A-04b)', () => {
       .filter((c) => c.type === 'team_double_booking')).toEqual([]);
   });
 
-  it('@TM-015 Gegenbeispiel: dasselbe besetzte Team in zwei gleichzeitigen Spielen bleibt eine Doppelbelegung', () => {
+  it('A-04b Gegenbeispiel: dasselbe besetzte Team in zwei gleichzeitigen Spielen bleibt eine Doppelbelegung', () => {
     const double = [
       match('g1', vs(NORD, UFER), '10:00', 1),
       match('g2', slots(resolveSlot({ kind: 'groupRank', group: 'A', rank: 1 }, NORD), groupRank('B', 1)), '10:00', 2),
@@ -48,7 +48,7 @@ describe('@TM-015 Schedule-Editor – Konflikte aus Slots (A-04b)', () => {
     expect(conflicts[0].context).toMatchObject({ teamId: NORD, teamName: 'FC Nord' });
   });
 
-  it('@TM-015 offene Seiten zählen auch bei der Pause zwischen Spielen nicht als Team', () => {
+  it('A-04b offene Seiten zählen auch bei der Pause zwischen Spielen nicht als Team', () => {
     const matches = [
       match('s1', slots(groupRank('A', 1), groupRank('B', 2)), '10:00', 1),
       match('s2', slots(groupRank('B', 1), groupRank('A', 2)), '10:12', 1),
@@ -57,7 +57,7 @@ describe('@TM-015 Schedule-Editor – Konflikte aus Slots (A-04b)', () => {
     expect(detectBreakViolations(matches, teams, 10, 5)).toEqual([]);
   });
 
-  it('@TM-015 Gegenbeispiel: dasselbe Team ohne Pause zwischen zwei Spielen wird gemeldet', () => {
+  it('A-04b Gegenbeispiel: dasselbe Team ohne Pause zwischen zwei Spielen wird gemeldet', () => {
     const matches = [
       match('g1', vs(NORD, UFER), '10:00', 1),
       match('g2', vs(NORD, UFER), '10:12', 1),
@@ -66,7 +66,7 @@ describe('@TM-015 Schedule-Editor – Konflikte aus Slots (A-04b)', () => {
     expect(detectBreakViolations(matches, teams, 10, 5).length).toBeGreaterThan(0);
   });
 
-  it('@TM-015 Spiele ohne Anstoßzeit werden bei Doppelbelegung und Pause übersprungen (kein Absturz, keine Meldung)', () => {
+  it('A-04b Spiele ohne Anstoßzeit werden bei Doppelbelegung und Pause übersprungen (kein Absturz, keine Meldung)', () => {
     const unscheduled: Match = { id: 'u1', round: 1, field: 1, matchStatus: 'scheduled', ...vs(NORD, UFER) };
     const timed = match('t1', vs(NORD, UFER), '10:00');
 

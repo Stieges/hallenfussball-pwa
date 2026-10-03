@@ -25,7 +25,7 @@ import {
 import { cssVars, spacingSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import { RefereeConfig, RuntimeMatchEvent } from '../../types/tournament';
-import type { GroupStageSource } from './scheduleSource';
+import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { matchLabelText } from '../../core/models/slotLabel';
 import { buildSideContext, sideDisplay, sideName } from './matchSides';
@@ -36,7 +36,7 @@ import {
 } from './MatchCard';
 import { QuickScoreExpand, LiveInfoExpand, StartMatchExpand, SummaryExpand } from './MatchExpand';
 import { MatchSummary } from './MatchSummary';
-import { useMatchConflictsFromTournament } from '../../features/schedule-editor/hooks/useMatchConflicts';
+import { useMatchConflictsFromTournament, type ConflictSource } from '../../features/schedule-editor/hooks/useMatchConflicts';
 import { useLiveMatches } from '../../hooks/useLiveMatches';
 import { SortableMobileCard } from './SortableMobileCard';
 import { SortableDesktopCard } from './SortableDesktopCard';
@@ -67,7 +67,12 @@ interface GroupStageScheduleProps {
   /** MON-LIVE-INDICATOR-01: IDs of matches that are currently running */
   runningMatchIds?: Set<string>;
   /** Tournament data for group name resolution */
-  tournament?: GroupStageSource;
+  tournament?: ScheduleSource;
+  /**
+   * Turnierdaten für die Konflikterkennung im Bearbeitungsmodus. Ohne Angabe gibt es keine Konflikt-Markierung
+   * (ScheduleDisplay kennt weder Spieldauer noch Pause und gibt sie nicht an).
+   */
+  conflictSource?: ConflictSource;
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
   onMatchSwap?: (matchId1: string, matchId2: string) => void;
   /** Callback to navigate to cockpit with selected match */
@@ -93,6 +98,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   onStartCorrection: _onStartCorrection,
   runningMatchIds,
   tournament,
+  conflictSource,
   onMatchSwap,
   onNavigateToCockpit,
   showTitle = true,
@@ -175,7 +181,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   // Conflict detection for edit mode
   const { getMatchConflicts } = useMatchConflictsFromTournament(
-    tournament ?? null,
+    conflictSource ?? null,
     editingSchedule // Only detect when in edit mode
   );
 

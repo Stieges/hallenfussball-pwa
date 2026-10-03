@@ -36,7 +36,8 @@ export function resultOf(matchId: string, role: 'winner' | 'loser'): MatchSlot {
 /**
  * Besetzte Seite aus einer Fixture-Kurz-ID wie `'team-1'` oder `'teamA'` (keine UUID – dafür `vs`/`teamSlot`).
  * Nur für Tests, die die ID als undurchsichtigen Text nutzen (Engine-/Hook-Tests). Platzhaltertexte
- * (`TBD`, `group-a-1st`, `semi1-winner`) ergeben eine offene Seite („Erster Gruppe A“).
+ * (`TBD`, `group-a-1st`, `semi1-winner`) ergeben eine offene Seite mit Dummy-Herkunft „Erster Gruppe A“ – die
+ * echte Herkunft des Platzhalters wird NICHT abgeleitet; Tests, die die Herkunft prüfen, nutzen `groupRank`/`resultOf`.
  */
 export function testTeamSlot(ref: string): MatchSlot {
   if (ref === 'TBD' || ref.includes('group-') || ref.endsWith('-winner') || ref.endsWith('-loser')) {

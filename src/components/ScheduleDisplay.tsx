@@ -13,7 +13,7 @@ import { CSSProperties, useMemo } from 'react';
 import { cssVars } from '../design-tokens'
 import { GeneratedSchedule } from '../core/generators';
 import { Standing, Match, Team } from '../types/tournament';
-import { toConflictMatch, type GroupStageSource, type ScheduleSource } from './schedule/scheduleSource';
+import type { ScheduleSource } from './schedule/scheduleSource';
 import {
   TournamentHeader,
   ParticipantsAndGroups,
@@ -137,18 +137,9 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   }, [finalMatches, currentMatches]);
 
   // Eingaben der Spielplan-Komponenten: schmale Typen (`ScheduleSource`), kein vorgetäuschtes `Tournament`.
-  // Die Vorrunde bekommt die Spiele zusätzlich als `Match` für die Konflikterkennung im Bearbeitungsmodus.
   const groupsOnly = useMemo<ScheduleSource>(
     () => ({ groups: schedule.tournament.groups }),
     [schedule.tournament.groups],
-  );
-  const groupStageSource = useMemo<GroupStageSource>(
-    () => ({
-      groups: schedule.tournament.groups,
-      teams: tournamentTeams ?? schedule.teams,
-      matches: schedule.allMatches.map(toConflictMatch),
-    }),
-    [schedule.tournament.groups, tournamentTeams, schedule.teams, schedule.allMatches],
   );
 
   // Anzeige-Daten der Spielseiten: aktuelle Teams, Gruppen und alle Spiele (Vorgänger auch bei aktivem Filter)
@@ -215,7 +206,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
           runningMatchIds={runningMatchIds}
-          tournament={groupStageSource}
+          tournament={sideSource}
           onMatchSwap={onMatchSwap}
           onNavigateToCockpit={onNavigateToCockpit}
         />
