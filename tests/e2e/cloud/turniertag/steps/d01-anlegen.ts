@@ -47,10 +47,12 @@ async function halbfinaleHerkunft(view: (typeof TM015_VIEWS)[number], { asRole, 
   } else if (view === 'Toms Cockpit') {
     // Toms Gerät ist erst nach D3 (Helfer per QR) Mitglied; bis dahin öffnet die Turnierleitung das Cockpit.
     // Die Spielauswahl trägt für jedes Spiel "#<Nr> - <Heim> vs <Gast>": Halbfinale 1 ist Nr. 13.
+    // Seitenanker: der Live-Reiter der Turnierleitung (Haupt-testid der Seite). Der Cockpit-Körper
+    // rendert beim unbesetzten HF1 bislang keinen TeamBlock (`team-name-home`), siehe N3.
     const cockpitPage = await asRole('owner');
     await cockpitPage.goto(`/#/tournament/${TURNIERTAG_ID}/live?matchId=${hf1.id}`);
     await cockpitPage.waitForLoadState('networkidle');
-    await expectPageAnchor(cockpitPage.locator('[data-testid="team-name-home"]'), 'Cockpit des Spiels');
+    await expectPageAnchor(cockpitPage.locator('[data-testid="desktop-tab-live"]'), 'Live-Reiter der Turnierleitung');
     await expect(cockpitPage.getByRole('option', { name: /^#13 / })).toHaveText(/Erster Gruppe A vs Zweiter Gruppe B/, { timeout: 5000 });
   } else if (view === 'Hallen-Monitor') {
     await anonPage.goto(`/#/display/${TURNIERTAG_ID}/${E2E_TURNIERTAG_MONITOR_ID}`);
