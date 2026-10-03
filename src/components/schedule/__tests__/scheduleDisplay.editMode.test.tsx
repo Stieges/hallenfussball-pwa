@@ -34,10 +34,22 @@ describe('A-04b ScheduleDisplay im Bearbeitungsmodus (W1)', () => {
     const schedule = generateFullSchedule(shortHallTournament());
     expect(schedule.allMatches.length).toBeGreaterThan(8);
 
-    const { container } = render(<ScheduleDisplay schedule={schedule} editable editingSchedule />);
+    const { container } = render(<ScheduleDisplay
+        schedule={schedule}
+        editable
+        editingSchedule
+        pendingChanges={{ refereeAssignments: {}, fieldAssignments: {} }}
+        onMatchSwap={vi.fn()}
+      />);
 
-    const markers = Array.from(container.querySelectorAll('[title]'))
-      .filter((el) => /überlappende Spiele|gleichzeitig|Pause \(min/.test(el.getAttribute('title') ?? ''));
+    // Konflikt-Abzeichen (ConflictBadge) zeigen je Konflikttyp ein Symbol; Desktop-Karten setzen den Meldungstext als title
+    const badgeSymbols = (container.textContent ?? '').match(/🏟️|👥|⏱️|🎯|🔗|⚠️/g) ?? [];
+    const markers = [
+      ...badgeSymbols,
+      ...Array.from(container.querySelectorAll('[title]'))
+        .map((el) => el.getAttribute('title') ?? '')
+        .filter((title) => /überlappende Spiele|gleichzeitig|Pause \(min/.test(title)),
+    ];
     expect(markers).toEqual([]);
   });
 
