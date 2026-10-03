@@ -13,16 +13,13 @@ import {
 } from '../index';
 import { MatchSlotSchema, type MatchSlot } from '../../models/schemas/MatchSlotSchema';
 import type { FinalsPreset, Match, Team } from '../../../types/tournament';
+import { testUuid } from '../../../test/testIds';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-function uuidFor(n: number): string {
-  return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-}
-
 function createTeams(n: number, group: string, offset: number): Team[] {
   return Array.from({ length: n }, (_, i) => ({
-    id: uuidFor(offset + i),
+    id: testUuid(offset + i),
     name: `FC Nord ${group}${i + 1}`,
     group,
   }));
@@ -115,30 +112,34 @@ describe('Gruppenphase (fairScheduler) – Slots mit Team-ID', () => {
 });
 
 describe('Finalrunde (playoffScheduler) – Herkunft strukturiert, Verweis auf echte Spiel-ID', () => {
-  it('@TM-015 Halbfinale trägt Gruppenrang, Finale zeigt auf die UUID des Halbfinals (2 Gruppen, top-4)', () => {
+  it('@TM-015 Halbfinale über Kreuz mit Gruppenrang, Finale/Platz 3 zeigen auf die UUIDs der Halbfinale (2 Gruppen, top-4)', () => {
     const matches = playoffs(2, 'top-4');
-    const semi1 = matches.find((m) => m.label === '1. Halbfinale');
-    const semi2 = matches.find((m) => m.label === '2. Halbfinale');
+    const isGroupRankPair = (m: Match) => slotsOf(m).every((s) => s.kind === 'pending' && s.source.kind === 'groupRank');
+    const semis = matches.filter((m) => !m.finalType && isGroupRankPair(m));
     const final = matches.find((m) => m.finalType === 'final');
     const third = matches.find((m) => m.finalType === 'thirdPlace');
-    if (!semi1 || !semi2 || !final || !third) {
+    if (semis.length !== 2 || !final || !third) {
       throw new Error('Finalrunde unvollständig');
     }
 
-    // playoffGenerator.ts: semi1 = group-a-2nd vs group-b-1st
-    expect(slotsOf(semi1)).toEqual([
-      { kind: 'pending', source: { kind: 'groupRank', group: 'A', rank: 2 } },
-      { kind: 'pending', source: { kind: 'groupRank', group: 'B', rank: 1 } },
-    ]);
-    expect(semi1.id).toMatch(UUID);
-    expect(slotsOf(final)).toEqual([
-      { kind: 'pending', source: { kind: 'matchResult', matchId: semi1.id, role: 'winner' } },
-      { kind: 'pending', source: { kind: 'matchResult', matchId: semi2.id, role: 'winner' } },
-    ]);
-    expect(slotsOf(third)).toEqual([
-      { kind: 'pending', source: { kind: 'matchResult', matchId: semi1.id, role: 'loser' } },
-      { kind: 'pending', source: { kind: 'matchResult', matchId: semi2.id, role: 'loser' } },
-    ]);
+    // A-01 garantiert nur die Paare (über Kreuz, als Menge) – nicht Nummerierung und Heimseite.
+    // Bestand: playoffGenerator.ts setzt bei 2 Gruppen HF1 = 2A–1B, HF2 = 1A–2B; die Spec verlangt
+    // HF1 = 1A–2B, HF2 = 1B–2A. Befund, Fix in A-12 (@TM-142) – hier bewusst NICHT festgeschrieben.
+    const pairKey = (m: Match) =>
+      slotsOf(m)
+        .map((s) => (s.kind === 'pending' && s.source.kind === 'groupRank' ? `${s.source.rank}${s.source.group}` : '?'))
+        .sort()
+        .join('–');
+    expect(new Set(semis.map(pairKey))).toEqual(new Set(['1A–2B', '1B–2A']));
+    for (const semi of semis) {
+      expect(semi.id).toMatch(UUID);
+    }
+
+    const semiIds = new Set(semis.map((m) => m.id));
+    const refs = (m: Match, role: 'winner' | 'loser') =>
+      slotsOf(m).map((s) => (s.kind === 'pending' && s.source.kind === 'matchResult' && s.source.role === role ? s.source.matchId : '?'));
+    expect(new Set(refs(final, 'winner'))).toEqual(semiIds);
+    expect(new Set(refs(third, 'loser'))).toEqual(semiIds);
   });
 
   it('@TM-015 Gegenbeispiel: kein Spiel heißt "semi1" und keine Herkunft verweist auf "semi1"', () => {
@@ -150,16 +151,12 @@ describe('Finalrunde (playoffScheduler) – Herkunft strukturiert, Verweis auf e
 
   const presets: FinalsPreset[] = ['final-only', 'top-4', 'top-8', 'top-16', 'all-places'];
   const combos = presets.flatMap((preset) => [2, 3, 4, 5, 6, 7, 8].map((groups) => [preset, groups] as const));
-  // Bestand (V-TEAM-Review M7): top-8/top-16 mit 3 Gruppen erzeugen Halbfinale über Viertelfinale, die es nicht
-  // gibt – der Scheduler plant dann nichts. Nicht Gegenstand von A-01, hier nur festgehalten.
-  const emptyByDesign = new Set(['top-8:3', 'top-16:3']);
+  // top-8/top-16 mit 3 Gruppen: siehe Bestandstest C-PLAYOFF-3GROUPS unten (keine Anforderung).
+  const knownEmpty = new Set(['top-8:3', 'top-16:3']);
+  const tm015Combos = combos.filter(([preset, groups]) => !knownEmpty.has(`${preset}:${groups}`));
 
-  it.each(combos)('@TM-015 %s mit %i Gruppen: jeder Finalrunden-Slot offen, gültig und verweist auf ein Spiel im Turnier', (preset, groups) => {
+  it.each(tm015Combos)('@TM-015 %s mit %i Gruppen: jeder Finalrunden-Slot offen, gültig und verweist auf ein Spiel im Turnier', (preset, groups) => {
     const matches = playoffs(groups, preset);
-    if (emptyByDesign.has(`${preset}:${groups}`)) {
-      expect(matches).toHaveLength(0);
-      return;
-    }
     expect(matches.length).toBeGreaterThan(0);
     const matchIds = new Set(matches.map((m) => m.id));
     const groupIds = new Set(Array.from({ length: groups }, (_, i) => String.fromCharCode(65 + i)));
@@ -177,6 +174,12 @@ describe('Finalrunde (playoffScheduler) – Herkunft strukturiert, Verweis auf e
         }
       }
     }
+  });
+
+  // Bestand, keine Anforderung: Halbfinale hängen an Viertelfinalen, die es bei 3 Gruppen nicht gibt → der
+  // Scheduler plant gar keine Finalrunde. Befund C-PLAYOFF-3GROUPS (Eintrag in BEFUNDE durch den Controller).
+  it.each([['top-8'], ['top-16']] as const)('C-PLAYOFF-3GROUPS (Bestand): %s mit 3 Gruppen erzeugt keine Finalrunde', (preset) => {
+    expect(playoffs(3, preset)).toHaveLength(0);
   });
 
   it('wirft bei unbekanntem Herkunftsformat (Freitext statt Platzhalter)', () => {
