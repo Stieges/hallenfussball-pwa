@@ -31,9 +31,16 @@ export type LiveStartSignal =
   | { status: 'loading' }
   | undefined;
 
-function evaluateMatches(matches: Match[] | undefined): MatchStartState {
+function evaluateMatches(matches: Match[] | undefined, isEstablished: boolean): MatchStartState {
   if (!Array.isArray(matches)) {
     return 'unknown';
+  }
+  if (matches.length === 0) {
+    // U0 (F1): Ein festgelegtes Turnier hat immer Spiele (publish() erzeugt sie).
+    // Eine leere Liste heißt dann: Daten nicht geladen / die Liste liefert die
+    // Spiele nicht mit (Cloud-Listen-Ansicht) — nicht feststellbar, fail-closed.
+    // Ohne Festgelegt-Marker (Entwurf ohne Spielplan) gilt weiter „nicht angepfiffen".
+    return isEstablished ? 'unknown' : 'not-started';
   }
   for (const match of matches) {
     const status: string = match.matchStatus ?? 'scheduled';
@@ -49,9 +56,10 @@ function evaluateMatches(matches: Match[] | undefined): MatchStartState {
 
 export function getMatchStartState(
   matches: Match[] | undefined,
-  live?: LiveStartSignal
+  live?: LiveStartSignal,
+  isEstablished = false
 ): MatchStartState {
-  const fromMatches = evaluateMatches(matches);
+  const fromMatches = evaluateMatches(matches, isEstablished);
   if (fromMatches === 'started') {
     return 'started';
   }

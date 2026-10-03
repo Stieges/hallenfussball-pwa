@@ -27,7 +27,7 @@ import {
 } from '../utils/matchStartState';
 
 export function useTournamentStartState(
-  tournament: Pick<Tournament, 'id' | 'matches'>
+  tournament: Pick<Tournament, 'id' | 'matches' | 'status' | 'publishedAt'>
 ): MatchStartState {
   const liveRepository = useOptionalLiveMatchRepository();
   const [live, setLive] = useState<LiveStartSignal>(
@@ -69,5 +69,8 @@ export function useTournamentStartState(
     };
   }, [liveRepository, tournament.id]);
 
-  return getMatchStartState(tournament.matches, live);
+  // U0 (F1): „festgelegt" = veröffentlicht (status ODER der monotone Freigabe-
+  // Marker publishedAt — „Im Wizard bearbeiten" setzt transient auf 'draft' zurück).
+  const isEstablished = tournament.status === 'published' || tournament.publishedAt !== undefined;
+  return getMatchStartState(tournament.matches, live, isEstablished);
 }
