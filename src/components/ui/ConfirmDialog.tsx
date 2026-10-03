@@ -78,26 +78,33 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     }
   }, [onCancel, onClose]);
 
-  // Focus trap for accessibility — @OB-014: Fokus zuerst auf „Abbrechen"
-  // (nie auf den Bestätigen-Knopf), Enter löst nichts aus.
+  // @OB-014: Bei GEFÄHRLICHEN Rückfragen (variant === 'danger') liegt der Fokus
+  // zuerst auf „Abbrechen" (nie auf den Bestätigen-Knopf), Enter löst nichts aus.
+  // Andere Varianten (warning/info) verhalten sich wie auf main: der
+  // Bestätigen-Knopf bekommt den Fokus, Enter löst aus (W5).
+  const isDanger = variant === 'danger';
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const focusTrap = useFocusTrap({
     isActive: isOpen,
     onEscape: effectiveOnCancel,
-    initialFocusRef: cancelButtonRef,
-    suppressEnter: true,
+    initialFocusRef: isDanger ? cancelButtonRef : undefined,
+    suppressEnter: isDanger,
   });
 
-  // Body scroll prevention
+  // Body scroll prevention; bei Nicht-danger Fokus wie auf main auf „Bestätigen".
   useEffect(() => {
     if (isOpen) {
+      if (!isDanger) {
+        setTimeout(() => confirmButtonRef.current?.focus(), 50);
+      }
       document.body.style.overflow = 'hidden';
     }
 
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [isOpen, isDanger]);
 
   if (!isOpen) {return null;}
 
@@ -298,6 +305,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               </button>
             )}
             <button
+              ref={confirmButtonRef}
               style={confirmButtonStyle}
               onClick={onConfirm}
               data-testid="confirm-dialog-confirm"
