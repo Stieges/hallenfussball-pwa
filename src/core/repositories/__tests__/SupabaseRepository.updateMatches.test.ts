@@ -21,6 +21,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MatchUpdate } from '../../models/types';
+import { teamSlot } from '../../models/matchSlot';
+import { testUuid } from '../../../test/testIds';
 
 // ============================================================================
 // MOCKS
@@ -60,6 +62,7 @@ const hoisted = vi.hoisted(() => {
 
   return {
     teamsSelectEqMock,
+    teamsSelectMock,
     matchesUpdateSelectMock,
     matchesUpdateMock,
     matchesUpdateEqIdMock,
@@ -85,8 +88,8 @@ describe('SupabaseRepository.updateMatches — 0-Zeilen-Update (Risiko 4)', () =
 
   // Ersatz-Assertion für den 0-Zeilen-/RLS-Guard: eine reine Ergebnis-Änderung ist seit
   // V4 nur noch { updated_at } und wird gar nicht erst gesendet (F6) — der Guard-Test braucht
-  // deshalb ein Update mit echten Nicht-V4-Spalten (teamA mappt auf team_a_id/team_a_placeholder).
-  const update: MatchUpdate = { id: 'match-1', teamA: 'FC Alpha' };
+  // deshalb ein Update mit echten Nicht-V4-Spalten (A-02: slotA mappt auf team_a_id/slot_a_source).
+  const update: MatchUpdate = { id: 'match-1', slotA: teamSlot(testUuid(1)) };
 
   it('throws when the match update affects 0 rows (RLS filtered it away, no Postgres error)', async () => {
     hoisted.matchesUpdateSelectMock.mockResolvedValue({ data: [], error: null });
@@ -147,7 +150,7 @@ describe('SupabaseRepository.updateMatches — 0-Zeilen-Update (Risiko 4)', () =
   it('gemischtes Batch: nur das Update mit echten Spalten wird gesendet, tournaments-Bump genau einmal', async () => {
     hoisted.matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-2' }], error: null });
     const resultOnly: MatchUpdate = { id: 'match-1', matchStatus: 'running' };
-    const teamChange: MatchUpdate = { id: 'match-2', teamA: 'FC Alpha' };
+    const teamChange: MatchUpdate = { id: 'match-2', slotA: teamSlot(testUuid(1)) };
 
     const repo = new SupabaseRepository();
     await repo.updateMatches('tour-1', [resultOnly, teamChange]);
@@ -157,5 +160,27 @@ describe('SupabaseRepository.updateMatches — 0-Zeilen-Update (Risiko 4)', () =
     expect(hoisted.matchesUpdateEqIdMock).toHaveBeenCalledTimes(1);
     expect(hoisted.matchesUpdateEqIdMock).toHaveBeenCalledWith('id', 'match-2');
     expect(hoisted.tournamentsUpdateMock).toHaveBeenCalledTimes(1);
+  });
+
+  // A-02 (MVP-Bauplan Spur A): Spielseiten kommen aus dem Slot, nie über eine Namens-Suche.
+  it('@FU-053 Teamtausch: getauschte Slots erreichen die Cloud als getauschte Team-IDs, ohne Teams-Abfrage', async () => {
+    hoisted.matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-1' }], error: null });
+    const nord = testUuid(1);
+    const sued = testUuid(2);
+
+    const repo = new SupabaseRepository();
+    await repo.updateMatches('tour-1', [{ id: 'match-1', slotA: teamSlot(sued), slotB: teamSlot(nord) }]);
+
+    expect(hoisted.matchesUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ team_a_id: sued, team_b_id: nord })
+    );
+    expect(hoisted.teamsSelectMock).not.toHaveBeenCalled();
+  });
+
+  it('@FU-053 Gegenbeispiel: ein Teamname im Übergangsfeld teamA erreicht die Cloud nicht', async () => {
+    const repo = new SupabaseRepository();
+    await repo.updateMatches('tour-1', [{ id: 'match-1', teamA: 'FC Alpha' }]);
+
+    expect(hoisted.matchesUpdateMock).not.toHaveBeenCalled();
   });
 });

@@ -21,6 +21,24 @@ import {
   createTournamentRow,
   type Database,
 } from '../../../../tests/factories/supabase';
+import { teamSlot } from '../../models/matchSlot';
+import type { Match } from '../../models/types';
+import { testUuid } from '../../../test/testIds';
+
+// A-02: Team-IDs sind UUIDs, jede Spielseite trägt Team-ID oder Herkunft (Slot-Tests:
+// supabaseMappers.slots.test.ts). Bestandstests nutzen besetzte Seiten.
+const TEAM_1 = testUuid(1);
+const TEAM_2 = testUuid(2);
+
+/** Zeile mit zwei besetzten Seiten. */
+function matchRow(overrides: Parameters<typeof createMatchRow>[0] = {}) {
+  return createMatchRow({ team_a_id: TEAM_1, team_b_id: TEAM_2, ...overrides });
+}
+
+/** Spiel mit zwei besetzten Seiten (Übergangsfeld teamA/teamB wie lokal: Team-ID). */
+function slotMatch(overrides: Partial<Match> = {}): Match {
+  return { id: 'match-1', round: 1, field: 1, teamA: TEAM_1, teamB: TEAM_2, slotA: teamSlot(TEAM_1), slotB: teamSlot(TEAM_2), ...overrides };
+}
 
 // =============================================================================
 // TEAM MAPPER TESTS
@@ -152,50 +170,18 @@ describe('mapTeamToSupabase', () => {
 // =============================================================================
 
 describe('mapMatchFromSupabase', () => {
-  it('resolves team names via teamIdToName map', () => {
-    const teamIdToName = new Map([
-      ['team-a-id', 'Team Alpha'],
-      ['team-b-id', 'Team Beta'],
-    ]);
-    const row = createMatchRow({
-      team_a_id: 'team-a-id',
-      team_b_id: 'team-b-id',
-    });
-    const match = mapMatchFromSupabase(row, teamIdToName);
+  // A-02: Namens-/Platzhalter-Auflösung entfällt – Ersatz in supabaseMappers.slots.test.ts
+  // („@TM-027 gesetzte Team-ID wird zum Team-Slot …“, „Seite ohne Team-ID und ohne Herkunft scheitert laut“).
+  it('Übergangsfeld teamA/teamB trägt die Team-ID (Ersatz für "resolves team names via teamIdToName map")', () => {
+    const match = mapMatchFromSupabase(matchRow());
 
-    expect(match.teamA).toBe('Team Alpha');
-    expect(match.teamB).toBe('Team Beta');
-  });
-
-  it('falls back to placeholder when team ID not in map', () => {
-    const row = createMatchRow({
-      team_a_id: 'unknown-id',
-      team_a_placeholder: '1. Gruppe A',
-      team_b_id: null,
-      team_b_placeholder: '2. Gruppe B',
-    });
-    const match = mapMatchFromSupabase(row, new Map());
-
-    expect(match.teamA).toBe('1. Gruppe A');
-    expect(match.teamB).toBe('2. Gruppe B');
-  });
-
-  it('falls back to TBD when no ID and no placeholder', () => {
-    const row = createMatchRow({
-      team_a_id: null,
-      team_a_placeholder: null,
-      team_b_id: null,
-      team_b_placeholder: null,
-    });
-    const match = mapMatchFromSupabase(row, new Map());
-
-    expect(match.teamA).toBe('TBD');
-    expect(match.teamB).toBe('TBD');
+    expect(match.teamA).toBe(TEAM_1);
+    expect(match.teamB).toBe(TEAM_2);
   });
 
   it('constructs Date from scheduled_start time string', () => {
-    const row = createMatchRow({ scheduled_start: '14:30:00' });
-    const match = mapMatchFromSupabase(row, new Map());
+    const row = matchRow({ scheduled_start: '14:30:00' });
+    const match = mapMatchFromSupabase(row);
 
     expect(match.scheduledTime).toBeInstanceOf(Date);
     expect(match.scheduledTime!.getHours()).toBe(14);
@@ -203,24 +189,24 @@ describe('mapMatchFromSupabase', () => {
   });
 
   it('returns undefined scheduledTime when scheduled_start is null', () => {
-    const row = createMatchRow({ scheduled_start: null });
-    const match = mapMatchFromSupabase(row, new Map());
+    const row = matchRow({ scheduled_start: null });
+    const match = mapMatchFromSupabase(row);
 
     expect(match.scheduledTime).toBeUndefined();
   });
 
   it('maps match status with default', () => {
-    const row = createMatchRow({ match_status: 'live' });
-    const match = mapMatchFromSupabase(row, new Map());
+    const row = matchRow({ match_status: 'live' });
+    const match = mapMatchFromSupabase(row);
     expect(match.matchStatus).toBe('live');
 
-    const rowDefault = createMatchRow({ match_status: null });
-    const matchDefault = mapMatchFromSupabase(rowDefault, new Map());
+    const rowDefault = matchRow({ match_status: null });
+    const matchDefault = mapMatchFromSupabase(rowDefault);
     expect(matchDefault.matchStatus).toBe('scheduled');
   });
 
   it('maps all score/timer fields', () => {
-    const row = createMatchRow({
+    const row = matchRow({
       score_a: 3,
       score_b: 1,
       timer_start_time: '2026-01-15T14:30:00Z',
@@ -232,7 +218,7 @@ describe('mapMatchFromSupabase', () => {
       penalty_score_b: 3,
       decided_by: 'penalty',
     });
-    const match = mapMatchFromSupabase(row, new Map());
+    const match = mapMatchFromSupabase(row);
 
     expect(match.scoreA).toBe(3);
     expect(match.scoreB).toBe(1);
@@ -247,14 +233,14 @@ describe('mapMatchFromSupabase', () => {
   });
 
   it('maps final match fields', () => {
-    const row = createMatchRow({
+    const row = matchRow({
       is_final: true,
       final_type: 'semifinal',
       label: 'Halbfinale 1',
       phase: 'semifinal',
       match_number: 13,
     });
-    const match = mapMatchFromSupabase(row, new Map());
+    const match = mapMatchFromSupabase(row);
 
     expect(match.isFinal).toBe(true);
     expect(match.finalType).toBe('semifinal');
@@ -265,42 +251,13 @@ describe('mapMatchFromSupabase', () => {
 });
 
 describe('mapMatchToSupabase', () => {
-  it('resolves team names to IDs', () => {
-    const teamNameToId = new Map([
-      ['Team Alpha', 'team-a-id'],
-      ['Team Beta', 'team-b-id'],
-    ]);
-    const row = mapMatchToSupabase(
-      { id: 'match-1', round: 1, field: 1, teamA: 'Team Alpha', teamB: 'Team Beta' },
-      'tournament-1',
-      teamNameToId
-    );
-
-    expect(row.team_a_id).toBe('team-a-id');
-    expect(row.team_b_id).toBe('team-b-id');
-    expect(row.team_a_placeholder).toBeNull();
-    expect(row.team_b_placeholder).toBeNull();
-  });
-
-  it('uses placeholder when team name not in map', () => {
-    const row = mapMatchToSupabase(
-      { id: 'match-1', round: 1, field: 1, teamA: '1. Gruppe A', teamB: '2. Gruppe B' },
-      'tournament-1',
-      new Map()
-    );
-
-    expect(row.team_a_id).toBeNull();
-    expect(row.team_b_id).toBeNull();
-    expect(row.team_a_placeholder).toBe('1. Gruppe A');
-    expect(row.team_b_placeholder).toBe('2. Gruppe B');
-  });
-
+  // A-02: Namenssuche entfällt – Ersatz in supabaseMappers.slots.test.ts („@FU-001 Pflicht …“,
+  // „offene Seite schreibt keine Team-ID, nur die Herkunft“).
   it('serializes Date scheduledTime to time string', () => {
     const date = new Date('2026-01-15T14:30:00');
     const row = mapMatchToSupabase(
-      { id: 'match-1', round: 1, field: 1, teamA: 'A', teamB: 'B', scheduledTime: date },
-      'tournament-1',
-      new Map()
+      slotMatch({ scheduledTime: date }),
+      'tournament-1'
     );
 
     expect(row.scheduled_start).toMatch(/14:30:00/);
@@ -308,9 +265,8 @@ describe('mapMatchToSupabase', () => {
 
   it('serializes string scheduledTime', () => {
     const row = mapMatchToSupabase(
-      { id: 'match-1', round: 1, field: 1, teamA: 'A', teamB: 'B', scheduledTime: '15:00:00' as unknown as Date },
-      'tournament-1',
-      new Map()
+      slotMatch({ scheduledTime: '15:00:00' as unknown as Date }),
+      'tournament-1'
     );
 
     expect(row.scheduled_start).toBe('15:00:00');
@@ -318,9 +274,8 @@ describe('mapMatchToSupabase', () => {
 
   it('maps owner_id and is_public for RLS', () => {
     const row = mapMatchToSupabase(
-      { id: 'match-1', round: 1, field: 1, teamA: 'A', teamB: 'B' },
+      slotMatch(),
       'tournament-1',
-      new Map(),
       'user-1',
       true
     );
@@ -331,9 +286,8 @@ describe('mapMatchToSupabase', () => {
 
   it('defaults phase to groupStage', () => {
     const row = mapMatchToSupabase(
-      { id: 'match-1', round: 1, field: 1, teamA: 'A', teamB: 'B' },
-      'tournament-1',
-      new Map()
+      slotMatch(),
+      'tournament-1'
     );
 
     expect(row.phase).toBe('groupStage');
@@ -345,8 +299,10 @@ describe('mapMatchToSupabase', () => {
         id: 'match-1',
         round: 1,
         field: 1,
-        teamA: 'A',
-        teamB: 'B',
+        teamA: TEAM_1,
+        teamB: TEAM_2,
+        slotA: teamSlot(TEAM_1),
+        slotB: teamSlot(TEAM_2),
         scoreA: 3,
         scoreB: 1,
         matchStatus: 'finished',
@@ -362,8 +318,7 @@ describe('mapMatchToSupabase', () => {
         skippedReason: 'Team not present',
         skippedAt: '2026-01-15T14:00:00Z',
       },
-      'tournament-1',
-      new Map()
+      'tournament-1'
     );
 
     expect(row.score_a).toBeNull();
@@ -384,14 +339,12 @@ describe('mapMatchToSupabase', () => {
 
   it('Plomben sind hart gesetzt – match.scoreA erscheint NIE im Payload, kein Phantom-0:0 (F2)', () => {
     const rowMitWerten = mapMatchToSupabase(
-      { id: 'match-1', round: 1, field: 1, teamA: 'A', teamB: 'B', scoreA: 3, scoreB: 1 },
-      'tournament-1',
-      new Map()
+      slotMatch({ scoreA: 3, scoreB: 1 }),
+      'tournament-1'
     );
     const rowOhneWerte = mapMatchToSupabase(
-      { id: 'match-1', round: 1, field: 1, teamA: 'A', teamB: 'B' },
-      'tournament-1',
-      new Map()
+      slotMatch(),
+      'tournament-1'
     );
 
     expect(rowMitWerten.score_a).toBeNull();
@@ -403,18 +356,16 @@ describe('mapMatchToSupabase', () => {
 
 describe('mapMatchToScheduleUpdate (A2: task-A2-brief.md)', () => {
   it('carries over every schedule column from the full insert row', () => {
-    const teamNameToId = new Map([
-      ['Team Alpha', 'team-a-id'],
-      ['Team Beta', 'team-b-id'],
-    ]);
     const row = mapMatchToSupabase(
       {
         id: 'match-1',
         round: 2,
         field: 3,
         slot: 4,
-        teamA: 'Team Alpha',
-        teamB: 'Team Beta',
+        teamA: TEAM_1,
+        teamB: TEAM_2,
+        slotA: teamSlot(TEAM_1),
+        slotB: teamSlot(TEAM_2),
         group: 'A',
         isFinal: true,
         finalType: 'final',
@@ -423,14 +374,15 @@ describe('mapMatchToScheduleUpdate (A2: task-A2-brief.md)', () => {
         phase: 'final',
         referee: 5,
       },
-      'tournament-1',
-      teamNameToId
+      'tournament-1'
     );
 
     const update = mapMatchToScheduleUpdate(row);
 
-    expect(update.team_a_id).toBe('team-a-id');
-    expect(update.team_b_id).toBe('team-b-id');
+    expect(update.team_a_id).toBe(TEAM_1);
+    expect(update.team_b_id).toBe(TEAM_2);
+    expect(update.slot_a_source).toBeNull();
+    expect(update.slot_b_source).toBeNull();
     expect(update.team_a_placeholder).toBeNull();
     expect(update.team_b_placeholder).toBeNull();
     expect(update.round).toBe(2);
@@ -452,8 +404,10 @@ describe('mapMatchToScheduleUpdate (A2: task-A2-brief.md)', () => {
         id: 'match-1',
         round: 1,
         field: 1,
-        teamA: 'A',
-        teamB: 'B',
+        teamA: TEAM_1,
+        teamB: TEAM_2,
+        slotA: teamSlot(TEAM_1),
+        slotB: teamSlot(TEAM_2),
         scoreA: 3,
         scoreB: 1,
         matchStatus: 'finished',
@@ -469,8 +423,7 @@ describe('mapMatchToScheduleUpdate (A2: task-A2-brief.md)', () => {
         skippedReason: 'noShow',
         skippedAt: '2026-01-01T09:05:00Z',
       },
-      'tournament-1',
-      new Map()
+      'tournament-1'
     );
 
     const update = mapMatchToScheduleUpdate(row);
@@ -565,20 +518,9 @@ describe('mapMatchUpdateToSupabase', () => {
     expect(typeof update.updated_at).toBe('string');
   });
 
-  it('maps team changes with teamNameToId', () => {
-    const teamNameToId = new Map([['FC Alpha', 'alpha-id']]);
-    const update = mapMatchUpdateToSupabase(
-      { teamA: 'FC Alpha', teamB: 'Unknown Team' },
-      teamNameToId
-    );
-
-    expect(update.team_a_id).toBe('alpha-id');
-    expect(update.team_a_placeholder).toBeNull();
-    expect(update.team_b_id).toBeNull();
-    expect(update.team_b_placeholder).toBe('Unknown Team');
-  });
-
-  it('does not map team changes without teamNameToId', () => {
+  // A-02: Namens-Map entfällt – Ersatz in supabaseMappers.slots.test.ts („@FU-053 Teamtausch …“,
+  // „@FU-053 Gegenbeispiel: ein Update ohne Slot-Schlüssel lässt beide Team-Spalten unberührt“).
+  it('teamA allein (Übergangsfeld) wird nicht gesendet (Ersatz für "does not map team changes without teamNameToId")', () => {
     const update = mapMatchUpdateToSupabase({ teamA: 'FC Alpha' });
 
     expect(update.team_a_id).toBeUndefined();
@@ -636,14 +578,12 @@ describe('mapTournamentFromSupabase', () => {
   it('maps teams and matches', () => {
     const row = createTournamentRow();
     const teamRows = [
-      createTeamRow({ id: 'team-1', name: 'Alpha' }),
-      createTeamRow({ id: 'team-2', name: 'Beta' }),
+      createTeamRow({ id: TEAM_1, name: 'Alpha' }),
+      createTeamRow({ id: TEAM_2, name: 'Beta' }),
     ];
     const matchRows = [
-      createMatchRow({
+      matchRow({
         id: 'match-1',
-        team_a_id: 'team-1',
-        team_b_id: 'team-2',
         match_number: 1,
       }),
     ];
@@ -652,8 +592,10 @@ describe('mapTournamentFromSupabase', () => {
 
     expect(tournament.teams).toHaveLength(2);
     expect(tournament.matches).toHaveLength(1);
-    expect(tournament.matches[0].teamA).toBe('Alpha');
-    expect(tournament.matches[0].teamB).toBe('Beta');
+    // A-02: Übergangsfeld trägt die Team-ID (Name kommt aus tournament.teams), Slot ist führend.
+    expect(tournament.matches[0].teamA).toBe(TEAM_1);
+    expect(tournament.matches[0].teamB).toBe(TEAM_2);
+    expect(tournament.matches[0].slotA).toEqual({ kind: 'team', teamId: TEAM_1 });
   });
 
   it('uses default point system when null', () => {
@@ -750,8 +692,8 @@ describe('mapTournamentToSupabase', () => {
   it('returns tournament row, team rows, and match rows', () => {
     const tournament = mapTournamentFromSupabase(
       createTournamentRow(),
-      [createTeamRow({ id: 'team-1', name: 'Alpha' })],
-      [createMatchRow({ id: 'match-1', team_a_id: 'team-1' })]
+      [createTeamRow({ id: TEAM_1, name: 'Alpha' })],
+      [matchRow({ id: 'match-1' })]
     );
 
     const result = mapTournamentToSupabase(tournament, 'user-1');
@@ -789,27 +731,23 @@ describe('mapTournamentToSupabase', () => {
     expect(config.organizer).toBe('SV Test');
   });
 
-  it('builds team name to ID map for match conversion', () => {
+  it('übernimmt die Team-IDs der gelesenen Spiele unverändert (Ersatz für "builds team name to ID map")', () => {
     const teamRows = [
-      createTeamRow({ id: 'team-a', name: 'Alpha' }),
-      createTeamRow({ id: 'team-b', name: 'Beta' }),
+      createTeamRow({ id: TEAM_1, name: 'Alpha' }),
+      createTeamRow({ id: TEAM_2, name: 'Beta' }),
     ];
-    const matchRows = [
-      createMatchRow({ id: 'match-1', team_a_id: 'team-a', team_b_id: 'team-b' }),
-    ];
-    const tournament = mapTournamentFromSupabase(createTournamentRow(), teamRows, matchRows);
+    const tournament = mapTournamentFromSupabase(createTournamentRow(), teamRows, [matchRow({ id: 'match-1' })]);
     const result = mapTournamentToSupabase(tournament, 'user-1');
 
-    // Match rows should have team IDs resolved
-    expect(result.matchRows[0].team_a_id).toBe('team-a');
-    expect(result.matchRows[0].team_b_id).toBe('team-b');
+    expect(result.matchRows[0].team_a_id).toBe(TEAM_1);
+    expect(result.matchRows[0].team_b_id).toBe(TEAM_2);
   });
 
   it('K1: denormalisiert is_public=true auf Team- und Match-Zeilen eines öffentlichen Turniers', () => {
     const tournament = mapTournamentFromSupabase(
       createTournamentRow({ is_public: true }),
-      [createTeamRow({ id: 'team-1', name: 'Alpha' })],
-      [createMatchRow({ id: 'match-1', team_a_id: 'team-1' })]
+      [createTeamRow({ id: TEAM_1, name: 'Alpha' })],
+      [matchRow({ id: 'match-1' })]
     );
     const result = mapTournamentToSupabase(tournament, 'user-1');
     expect(result.teamRows[0].is_public).toBe(true);
@@ -819,8 +757,8 @@ describe('mapTournamentToSupabase', () => {
   it('K1: denormalisiert is_public=false bei privatem Turnier', () => {
     const tournament = mapTournamentFromSupabase(
       createTournamentRow({ is_public: false }),
-      [createTeamRow({ id: 'team-1', name: 'Alpha' })],
-      [createMatchRow({ id: 'match-1', team_a_id: 'team-1' })]
+      [createTeamRow({ id: TEAM_1, name: 'Alpha' })],
+      [matchRow({ id: 'match-1' })]
     );
     const result = mapTournamentToSupabase(tournament, 'user-1');
     expect(result.teamRows[0].is_public).toBe(false);

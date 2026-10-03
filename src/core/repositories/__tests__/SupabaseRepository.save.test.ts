@@ -23,6 +23,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Tournament } from '../../models/types';
 import { createTeamRow, createMatchRow, createTournamentRow } from '../../../../tests/factories/supabase';
 import { mapTournamentFromSupabase } from '../supabaseMappers';
+import { testUuid } from '../../../test/testIds';
+
+// A-02: Team-IDs sind UUIDs (TeamIdSchema), jede Spielseite trägt Team-ID oder Herkunft.
+const TEAM_SURVIVOR = testUuid(1);
+
+/** Spiel des überlebenden Teams: Heimseite besetzt, Gastseite offen (Gruppe A, Platz 1). */
+function survivorMatchRow(id: string) {
+  return createMatchRow({
+    id,
+    team_a_id: TEAM_SURVIVOR,
+    slot_b_source: { kind: 'groupRank', group: 'A', rank: 1 },
+  } as Parameters<typeof createMatchRow>[0]);
+}
 
 // ============================================================================
 // MOCKS
@@ -152,8 +165,8 @@ const {
 function makeTournamentWithOneTeamAndMatch(): Tournament {
   const tournament = mapTournamentFromSupabase(
     createTournamentRow({ version: null }),
-    [createTeamRow({ id: 'team-survivor', name: 'Survivor' })],
-    [createMatchRow({ id: 'match-survivor', team_a_id: 'team-survivor' })]
+    [createTeamRow({ id: TEAM_SURVIVOR, name: 'Survivor' })],
+    [survivorMatchRow('match-survivor')]
   );
   return tournament;
 }
@@ -172,12 +185,12 @@ beforeEach(() => {
   // 'match-removed') is no longer in the local tournament passed to save() — exactly the
   // "user removed a team/match" scenario from the R5 review (Sonde S-CA).
   teamsSelectEqMock.mockResolvedValue({
-    data: [{ id: 'team-survivor' }, { id: 'team-removed' }],
+    data: [{ id: TEAM_SURVIVOR }, { id: 'team-removed' }],
     error: null,
   });
   matchesSelectEqMock.mockResolvedValue({
     data: [
-      { id: 'match-survivor', match_status: 'scheduled', match_number: 1, team_a_id: 'team-survivor', team_b_id: null },
+      { id: 'match-survivor', match_status: 'scheduled', match_number: 1, team_a_id: TEAM_SURVIVOR, team_b_id: null },
       { id: 'match-removed', match_status: 'scheduled', match_number: 2, team_a_id: 'team-removed', team_b_id: null },
     ],
     error: null,
@@ -201,8 +214,9 @@ describe('SupabaseRepository.save() — R5-H1: counts deleted rows instead of tr
       /Expected to delete 1 team\(s\), but only 0 were actually deleted/
     );
 
-    // The mismatch must be caught BEFORE the teams upsert silently "completes" the save.
-    expect(teamsUpsertMock).not.toHaveBeenCalled();
+    // A-02 (I6): Teams werden zuerst angelegt/aktualisiert und erst NACH den Spielen gelöscht –
+    // der Upsert lief also schon; entscheidend ist, dass die Abweichung laut scheitert.
+    expect(teamsUpsertMock).toHaveBeenCalledTimes(1);
   });
 
   it('RED-GUARD: fewer matches actually deleted than requested throws instead of silently continuing', async () => {
@@ -215,6 +229,8 @@ describe('SupabaseRepository.save() — R5-H1: counts deleted rows instead of tr
     );
 
     expect(matchesUpsertMock).not.toHaveBeenCalled();
+    // A-02 (I6): Teams werden erst nach den Spielen gelöscht – nach dem Fehler gar nicht mehr.
+    expect(teamsDeleteMock).not.toHaveBeenCalled();
   });
 
   it('all requested rows actually deleted (owner/co-admin path) succeeds and continues to update', async () => {
@@ -233,7 +249,7 @@ describe('SupabaseRepository.save() — R5-H1: counts deleted rows instead of tr
 
   it('no delete attempted (nothing removed locally) never calls delete, only update', async () => {
     // Ground state: nothing removed -- existing ids equal the tournament's own ids.
-    teamsSelectEqMock.mockResolvedValue({ data: [{ id: 'team-survivor' }], error: null });
+    teamsSelectEqMock.mockResolvedValue({ data: [{ id: TEAM_SURVIVOR }], error: null });
     matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
 
     const repo = new SupabaseRepository();
@@ -283,7 +299,7 @@ describe('SupabaseRepository.save() — A6: protects matches with events or a no
   it('RED-GUARD: a match-to-delete that is no longer "scheduled" is also KEPT, save() resolves', async () => {
     matchesSelectEqMock.mockResolvedValue({
       data: [
-        { id: 'match-survivor', match_status: 'scheduled', match_number: 1, team_a_id: 'team-survivor', team_b_id: null },
+        { id: 'match-survivor', match_status: 'scheduled', match_number: 1, team_a_id: TEAM_SURVIVOR, team_b_id: null },
         { id: 'match-removed', match_status: 'finished', match_number: 2, team_a_id: null, team_b_id: null },
       ],
       error: null,
@@ -349,7 +365,7 @@ describe('SupabaseRepository.save() — A6: protects matches with events or a no
   it('a match-to-delete with match_status NULL and no events is still deleted (treated like "scheduled")', async () => {
     matchesSelectEqMock.mockResolvedValue({
       data: [
-        { id: 'match-survivor', match_status: 'scheduled', match_number: 1, team_a_id: 'team-survivor', team_b_id: null },
+        { id: 'match-survivor', match_status: 'scheduled', match_number: 1, team_a_id: TEAM_SURVIVOR, team_b_id: null },
         { id: 'match-removed', match_status: null, match_number: 2, team_a_id: null, team_b_id: null },
       ],
       error: null,
@@ -372,7 +388,7 @@ describe('SupabaseRepository.save() — A6: protects matches with events or a no
 
 describe('SupabaseRepository.save() — A2: existing matches update ONLY schedule columns', () => {
   it('an EXISTING match is inserted via the schedule-only update, not the full-row upsert', async () => {
-    teamsSelectEqMock.mockResolvedValue({ data: [{ id: 'team-survivor' }], error: null });
+    teamsSelectEqMock.mockResolvedValue({ data: [{ id: TEAM_SURVIVOR }], error: null });
     matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
 
     const repo = new SupabaseRepository();
@@ -424,7 +440,7 @@ describe('SupabaseRepository.save() — A2: existing matches update ONLY schedul
   });
 
   it('the schedule-only update scopes to the correct match AND tournament id', async () => {
-    teamsSelectEqMock.mockResolvedValue({ data: [{ id: 'team-survivor' }], error: null });
+    teamsSelectEqMock.mockResolvedValue({ data: [{ id: TEAM_SURVIVOR }], error: null });
     matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
 
     const repo = new SupabaseRepository();
@@ -438,7 +454,7 @@ describe('SupabaseRepository.save() — A2: existing matches update ONLY schedul
   // A2 Fixrunde 1 (M3): a silently RLS-filtered 0-row update must throw, not be treated as
   // success -- same reasoning as the R5-H1 delete-count check for teams/matches above.
   it('throws when the schedule-only update silently affects 0 rows (RLS-filtered, no Postgres error)', async () => {
-    teamsSelectEqMock.mockResolvedValue({ data: [{ id: 'team-survivor' }], error: null });
+    teamsSelectEqMock.mockResolvedValue({ data: [{ id: TEAM_SURVIVOR }], error: null });
     matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
     matchesUpdateSelectMock.mockResolvedValue({ data: [], error: null }); // 0 of 1 expected
 
@@ -449,7 +465,7 @@ describe('SupabaseRepository.save() — A2: existing matches update ONLY schedul
   });
 
   it('multiple existing matches are updated CONCURRENTLY (Promise.all), not one-at-a-time (I3)', async () => {
-    teamsSelectEqMock.mockResolvedValue({ data: [{ id: 'team-survivor' }], error: null });
+    teamsSelectEqMock.mockResolvedValue({ data: [{ id: TEAM_SURVIVOR }], error: null });
     matchesSelectEqMock.mockResolvedValue({
       data: [{ id: 'match-survivor' }, { id: 'match-survivor-2' }],
       error: null,
@@ -469,10 +485,10 @@ describe('SupabaseRepository.save() — A2: existing matches update ONLY schedul
 
     const tournament = mapTournamentFromSupabase(
       createTournamentRow({ version: null }),
-      [createTeamRow({ id: 'team-survivor', name: 'Survivor' })],
+      [createTeamRow({ id: TEAM_SURVIVOR, name: 'Survivor' })],
       [
-        createMatchRow({ id: 'match-survivor', team_a_id: 'team-survivor' }),
-        createMatchRow({ id: 'match-survivor-2', team_a_id: 'team-survivor' }),
+        survivorMatchRow('match-survivor'),
+        survivorMatchRow('match-survivor-2'),
       ]
     );
 
@@ -513,5 +529,104 @@ describe('SupabaseRepository.save() — C3a-2b I1: read error and insert safety'
 
     expect(matchesUpsertMock).toHaveBeenCalledTimes(1);
     expect(matchesUpsertMock.mock.calls[0][1]).toEqual({ onConflict: 'id', ignoreDuplicates: true });
+  });
+});
+
+// ============================================================================================
+// A-02 (MVP-Bauplan Spur A, GA1; V-TEAM-Review I6 + C2): Reihenfolge Teams vor Spielen, und ein
+// Voll-Speichern aus veraltetem lokalem Stand setzt eine in der Cloud aufgelöste Seite nicht zurück.
+// ============================================================================================
+
+describe('SupabaseRepository.save() — A-02: Reihenfolge und aufgelöste Seiten', () => {
+  it('I6: Teams upsert → Spiele löschen → Spiele schreiben → Teams löschen', async () => {
+    const order: string[] = [];
+    teamsUpsertMock.mockImplementation(async () => { order.push('teams.upsert'); return { error: null }; });
+    matchesDeleteSelectMock.mockImplementation(async () => {
+      order.push('matches.delete');
+      return { data: [{ id: 'match-removed' }], error: null };
+    });
+    matchesUpdateSelectMock.mockImplementation(async () => {
+      order.push('matches.update');
+      return { data: [{ id: 'match-survivor' }], error: null };
+    });
+    teamsDeleteSelectMock.mockImplementation(async () => {
+      order.push('teams.delete');
+      return { data: [{ id: 'team-removed' }], error: null };
+    });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+
+    expect(order).toEqual(['teams.upsert', 'matches.delete', 'matches.update', 'teams.delete']);
+  });
+
+  it('I6: ein neues Spiel wird eingefügt, bevor ein Team gelöscht wird', async () => {
+    const order: string[] = [];
+    matchesSelectEqMock.mockResolvedValue({
+      data: [{ id: 'match-removed', match_status: 'scheduled', match_number: 2, team_a_id: 'team-removed', team_b_id: null }],
+      error: null,
+    });
+    matchesUpsertMock.mockImplementation(async () => { order.push('matches.insert'); return { error: null }; });
+    matchesDeleteSelectMock.mockResolvedValue({ data: [{ id: 'match-removed' }], error: null });
+    teamsDeleteSelectMock.mockImplementation(async () => {
+      order.push('teams.delete');
+      return { data: [{ id: 'team-removed' }], error: null };
+    });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+
+    expect(order).toEqual(['matches.insert', 'teams.delete']);
+  });
+
+  it('@TM-027 Gegenbeispiel: lokal offenes Finale überschreibt die in der Cloud aufgelöste Heimseite nicht', async () => {
+    const resolvedElsewhere = testUuid(7);
+    const finalRow = createMatchRow({
+      id: 'match-final',
+      team_a_id: null,
+      slot_a_source: { kind: 'matchResult', matchId: testUuid(500), role: 'winner' },
+      team_b_id: TEAM_SURVIVOR,
+    } as Parameters<typeof createMatchRow>[0]);
+    const staleLocal = mapTournamentFromSupabase(
+      createTournamentRow({ version: null }),
+      [createTeamRow({ id: TEAM_SURVIVOR, name: 'Survivor' })],
+      [finalRow]
+    );
+    teamsSelectEqMock.mockResolvedValue({ data: [{ id: TEAM_SURVIVOR }], error: null });
+    matchesSelectEqMock.mockResolvedValue({
+      data: [{ id: 'match-final', match_status: 'scheduled', match_number: 9, team_a_id: resolvedElsewhere, team_b_id: TEAM_SURVIVOR }],
+      error: null,
+    });
+    matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-final' }], error: null });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(staleLocal)).resolves.toBeUndefined();
+
+    const payload = matchesUpdateMock.mock.calls[0][0];
+    expect(payload).not.toHaveProperty('team_a_id');
+    expect(payload).not.toHaveProperty('slot_a_source');
+    expect(payload).toHaveProperty('team_b_id', TEAM_SURVIVOR);
+  });
+
+  it('@TM-027 lokal offenes Finale, Cloud ebenfalls offen → Herkunft wird mitgeschrieben', async () => {
+    const source = { kind: 'matchResult', matchId: testUuid(500), role: 'winner' };
+    const local = mapTournamentFromSupabase(
+      createTournamentRow({ version: null }),
+      [createTeamRow({ id: TEAM_SURVIVOR, name: 'Survivor' })],
+      [createMatchRow({ id: 'match-final', team_a_id: null, slot_a_source: source, team_b_id: TEAM_SURVIVOR } as Parameters<typeof createMatchRow>[0])]
+    );
+    teamsSelectEqMock.mockResolvedValue({ data: [{ id: TEAM_SURVIVOR }], error: null });
+    matchesSelectEqMock.mockResolvedValue({
+      data: [{ id: 'match-final', match_status: 'scheduled', match_number: 9, team_a_id: null, team_b_id: TEAM_SURVIVOR }],
+      error: null,
+    });
+    matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-final' }], error: null });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(local)).resolves.toBeUndefined();
+
+    const payload = matchesUpdateMock.mock.calls[0][0];
+    expect(payload).toHaveProperty('team_a_id', null);
+    expect(payload).toHaveProperty('slot_a_source', source);
   });
 });
