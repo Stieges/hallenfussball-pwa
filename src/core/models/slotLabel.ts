@@ -38,7 +38,12 @@ export type SlotKey =
   | 'tournament:slot.winnerOf'
   | 'tournament:slot.loserOf'
   | 'tournament:slot.matchNumber'
-  | 'tournament:slot.unknown';
+  | 'tournament:slot.unknown'
+  | 'tournament:slot.playoffFinal'
+  | 'tournament:slot.playoffSemifinal'
+  | 'tournament:slot.playoffQuarterfinal'
+  | 'tournament:slot.playoffRoundOf16'
+  | 'tournament:slot.playoffPlace';
 
 export type SlotDescriptionValue = string | number | SlotDescription;
 
@@ -54,6 +59,30 @@ const RANK_WORDS: Record<number, SlotKey | undefined> = {
   3: 'tournament:slot.rank3',
   4: 'tournament:slot.rank4',
 };
+
+/**
+ * Bezeichnungen, die der Playoff-Generator erzeugt (`Match.label`, deutscher Text in der Datenhaltung).
+ * Die Anzeige übersetzt sie über Schlüssel + Nummer (K1-Rest, A-04a), damit EN keine deutschen Teile zeigt.
+ * Eigene, von der Leitung vergebene Bezeichnungen bleiben unverändert.
+ */
+const PLAYOFF_LABELS: ReadonlyArray<{ pattern: RegExp; key: SlotKey }> = [
+  { pattern: /^Finale$/, key: 'tournament:slot.playoffFinal' },
+  { pattern: /^(\d+)\. Halbfinale$/, key: 'tournament:slot.playoffSemifinal' },
+  { pattern: /^Viertelfinale (\d+)$/, key: 'tournament:slot.playoffQuarterfinal' },
+  { pattern: /^Achtelfinale (\d+)$/, key: 'tournament:slot.playoffRoundOf16' },
+  { pattern: /^Spiel um Platz (\d+)$/, key: 'tournament:slot.playoffPlace' },
+];
+
+/** Bezeichnung eines Spiels als Text (eigene Bezeichnung) oder Schlüssel + Nummer (Generator-Bezeichnung). */
+export function describeMatchLabel(label: string): SlotDescription {
+  for (const { pattern, key } of PLAYOFF_LABELS) {
+    const found = pattern.exec(label);
+    if (found !== null) {
+      return { key, vars: found[1] === undefined ? {} : { n: Number(found[1]) } };
+    }
+  }
+  return { text: label };
+}
 
 const UNKNOWN: SlotDescription = { key: 'tournament:slot.unknown', vars: {} };
 
@@ -83,7 +112,7 @@ export function describeSlot(slot: MatchSlot | undefined, ctx: SlotLabelContext)
   }
   let match: SlotDescriptionValue;
   if (previous.label !== undefined && previous.label !== '') {
-    match = previous.label;
+    match = describeMatchLabel(previous.label);
   } else if (previous.matchNumber !== undefined) {
     match = { key: 'tournament:slot.matchNumber', vars: { number: previous.matchNumber } };
   } else {
@@ -104,6 +133,11 @@ function translate(description: SlotDescription, locale: 'de' | 'en' | undefined
     vars[name] = typeof value === 'object' ? translate(value, locale) : value;
   }
   return i18next.t(description.key, { ...vars, ...(locale ? { lng: locale } : {}) });
+}
+
+/** Übersetzte Spielbezeichnung (z. B. „1. Halbfinale“ / „Semifinal 1“). */
+export function matchLabelText(label: string, locale?: 'de' | 'en'): string {
+  return translate(describeMatchLabel(label), locale);
 }
 
 /** Übersetzter Anzeigetext einer Spielseite. */

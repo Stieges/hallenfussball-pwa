@@ -709,6 +709,11 @@
     "rank1": "Erster",
     "rank2": "Zweiter",
     "rank3": "Dritter",
-    "rank4": "Vierter"
+    "rank4": "Vierter",
+    "playoffFinal": "Finale",
+    "playoffSemifinal": "{{n}}. Halbfinale",
+    "playoffQuarterfinal": "Viertelfinale {{n}}",
+    "playoffRoundOf16": "Achtelfinale {{n}}",
+    "playoffPlace": "Spiel um Platz {{n}}"
   }
 }

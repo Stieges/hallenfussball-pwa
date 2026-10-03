@@ -6,7 +6,7 @@
  * Instanz mit den DE- und EN-Texten aus tournament.json – damit prüft sie auch den gerenderten Wortlaut.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { describeSlot, slotLabel, teamDisplayName, type SlotKey } from '../slotLabel';
+import { describeSlot, describeMatchLabel, matchLabelText, slotLabel, teamDisplayName, type SlotKey } from '../slotLabel';
 import { teamSlot, pendingSlot } from '../matchSlot';
 import { testUuid } from '../../../test/testIds';
 import de from '../../../i18n/locales/de/tournament.json';
@@ -101,7 +101,7 @@ describe('@TM-015 describeSlot – offene Seite zeigt ihre Herkunft', () => {
     const slot = pendingSlot({ kind: 'matchResult', matchId: SEMI1, role: 'winner' });
     expect(describeSlot(slot, ctx)).toEqual({
       key: 'tournament:slot.winnerOf',
-      vars: { match: '1. Halbfinale' },
+      vars: { match: { key: 'tournament:slot.playoffSemifinal', vars: { n: 1 } } },
     });
   });
 
@@ -117,7 +117,10 @@ describe('@TM-015 describeSlot – offene Seite zeigt ihre Herkunft', () => {
   it('@TM-015 Gegenbeispiel: Verlierer zeigt loserOf, nicht winnerOf', () => {
     const slot = pendingSlot({ kind: 'matchResult', matchId: SEMI1, role: 'loser' });
     const result = describeSlot(slot, ctx);
-    expect(result).toEqual({ key: 'tournament:slot.loserOf', vars: { match: '1. Halbfinale' } });
+    expect(result).toEqual({
+      key: 'tournament:slot.loserOf',
+      vars: { match: { key: 'tournament:slot.playoffSemifinal', vars: { n: 1 } } },
+    });
   });
 
   it('@TM-015 Gegenbeispiel: Verweis auf ein nicht vorhandenes Spiel zeigt slot.unknown', () => {
@@ -168,6 +171,11 @@ describe('slot.* Texte in DE und EN', () => {
     'tournament:slot.loserOf',
     'tournament:slot.matchNumber',
     'tournament:slot.unknown',
+    'tournament:slot.playoffFinal',
+    'tournament:slot.playoffSemifinal',
+    'tournament:slot.playoffQuarterfinal',
+    'tournament:slot.playoffRoundOf16',
+    'tournament:slot.playoffPlace',
   ];
 
   it.each(keys)('@TM-015 %s existiert in beiden Sprachen mit denselben Platzhaltern', (key) => {
@@ -207,7 +215,7 @@ describe('@TM-015 gerenderter Wortlaut (echte i18n-Instanz, DE und EN)', () => {
 
   it.each([
     ['de', 'Sieger 1. Halbfinale', 'Verlierer Spiel 8'],
-    ['en', 'Winner of 1. Halbfinale', 'Loser of Match 8'],
+    ['en', 'Winner of Semifinal 1', 'Loser of Match 8'],
   ] as const)('@TM-015 Sieger/Verlierer eines Spiels in %s (inkl. verschachteltem Spielnummer-Text)', (locale, byLabel, byNumber) => {
     expect(slotLabel(pendingSlot({ kind: 'matchResult', matchId: SEMI1, role: 'winner' }), { ...ctx, locale })).toBe(byLabel);
     expect(slotLabel(pendingSlot({ kind: 'matchResult', matchId: SEMI2, role: 'loser' }), { ...ctx, locale })).toBe(byNumber);
@@ -215,5 +223,38 @@ describe('@TM-015 gerenderter Wortlaut (echte i18n-Instanz, DE und EN)', () => {
 
   it('@TM-033 unbekannt zeigt „?“ in beiden Sprachen', () => {
     expect(slotLabel(undefined, { ...ctx, locale: 'en' })).toBe('?');
+  });
+});
+
+describe('@TM-015 Playoff-Bezeichnungen als Schlüssel (K1-Rest): EN zeigt keine deutschen Teile', () => {
+  const hf1 = pendingSlot({ kind: 'matchResult', matchId: SEMI1, role: 'winner' });
+
+  it.each([
+    ['de', 'Sieger 1. Halbfinale'],
+    ['en', 'Winner of Semifinal 1'],
+  ] as const)('@TM-015 Sieger des 1. Halbfinales in %s: „%s“', (locale, expected) => {
+    expect(slotLabel(hf1, { ...ctx, locale })).toBe(expected);
+  });
+
+  it.each([
+    ['Finale', 'de', 'Finale'],
+    ['Finale', 'en', 'Final'],
+    ['2. Halbfinale', 'en', 'Semifinal 2'],
+    ['Viertelfinale 3', 'en', 'Quarterfinal 3'],
+    ['Achtelfinale 8', 'en', 'Round of 16, match 8'],
+    ['Spiel um Platz 5', 'en', 'Match for place 5'],
+    ['Spiel um Platz 5', 'de', 'Spiel um Platz 5'],
+  ] as const)('@TM-015 matchLabelText(%s, %s) = %s', (label, locale, expected) => {
+    expect(matchLabelText(label, locale)).toBe(expected);
+  });
+
+  it('@TM-015 Gegenbeispiel: eine eigene Bezeichnung der Leitung bleibt unverändert, auch in EN', () => {
+    expect(matchLabelText('Traumfinale', 'en')).toBe('Traumfinale');
+    expect(describeMatchLabel('Halbfinale')).toEqual({ text: 'Halbfinale' });
+  });
+
+  it('@TM-015 Gegenbeispiel: EN-Text der Herkunft enthält kein „Sieger“ und kein „Halbfinale“', () => {
+    const text = slotLabel(hf1, { ...ctx, locale: 'en' });
+    expect(text).not.toMatch(/Sieger|Halbfinale/);
   });
 });

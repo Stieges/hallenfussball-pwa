@@ -709,6 +709,11 @@
     "rank1": "1st",
     "rank2": "2nd",
     "rank3": "3rd",
-    "rank4": "4th"
+    "rank4": "4th",
+    "playoffFinal": "Final",
+    "playoffSemifinal": "Semifinal {{n}}",
+    "playoffQuarterfinal": "Quarterfinal {{n}}",
+    "playoffRoundOf16": "Round of 16, match {{n}}",
+    "playoffPlace": "Match for place {{n}}"
   }
 }
