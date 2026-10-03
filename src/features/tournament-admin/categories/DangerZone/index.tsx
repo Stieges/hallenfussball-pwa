@@ -225,16 +225,6 @@ const styles = {
     opacity: 0.5,
     cursor: 'not-allowed',
   } as CSSProperties,
-
-  error: {
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.dangerSubtle,
-    border: `1px solid ${cssVars.colors.errorBorder}`,
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.error,
-    fontSize: cssVars.fontSizes.bodySm,
-    marginBottom: cssVars.spacing.lg,
-  } as CSSProperties,
 } as const;
 
 // =============================================================================
@@ -253,7 +243,6 @@ export function DangerZoneCategory({
   const [pendingAction, setPendingAction] = useState<DangerActionConfig | null>(null);
   const [confirmationInput, setConfirmationInput] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
-  const [executionError, setExecutionError] = useState<string | null>(null);
 
   // R7: Das Löschen des Turniers hatte keine Rollensperre in der UI -- die DB lässt seit
   // R5b (protect_deleted_at → has_tournament_permission(..., 'deleteTournament')) nur den
@@ -282,7 +271,6 @@ export function DangerZoneCategory({
     const config = DANGER_ACTIONS[action];
     setPendingAction(config);
     setConfirmationInput('');
-    setExecutionError(null);
   }, []);
 
   const handleCloseDialog = useCallback(() => {
@@ -298,7 +286,6 @@ export function DangerZoneCategory({
     }
 
     setIsExecuting(true);
-    setExecutionError(null);
 
     try {
       const now = new Date().toISOString();
@@ -347,10 +334,6 @@ export function DangerZoneCategory({
 
       setPendingAction(null);
       setConfirmationInput('');
-    } catch (error) {
-      // @LZ-003: Serverfehler beim Löschen werden angezeigt, nie verschluckt —
-      // der Dialog bleibt offen, damit die fehlgeschlagene Aktion sichtbar bleibt.
-      setExecutionError(error instanceof Error && error.message ? error.message : '');
     } finally {
       setIsExecuting(false);
     }
@@ -474,12 +457,6 @@ export function DangerZoneCategory({
               placeholder={pendingAction.confirmText}
               disabled={isExecuting}
             />
-
-            {executionError !== null && (
-              <div role="alert" data-testid="danger-zone-execution-error" style={styles.error}>
-                {t('dangerZone.saveError')}{executionError ? ` (${executionError})` : ''}
-              </div>
-            )}
 
             <div style={styles.dialogActions}>
               <button

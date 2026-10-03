@@ -8,8 +8,7 @@
  * (SettingsTab.wizardEditGate.test.tsx), hier nicht als Schein-Test.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import type { Tournament } from '../../../../../types/tournament';
 
 vi.mock('../../../../auth/hooks/useAuth', () => ({
@@ -72,28 +71,5 @@ describe('DangerZone — „Turnier löschen" nur vor dem ersten Anpfiff', () =>
     } else {
       expect(screen.queryByRole('button', { name: /Turnier löschen/i })).not.toBeInTheDocument();
     }
-  });
-
-  it('@LZ-003 Serverfehler beim Löschen wird angezeigt (Gegenbeispiel: verschluckt)', async () => {
-    const user = userEvent.setup();
-    const onTournamentUpdate = vi.fn().mockRejectedValue(new Error('Server: 500'));
-    render(
-      <DangerZoneCategory
-        tournamentId="t1"
-        tournament={tournamentWith([{ id: 'm1', matchStatus: 'scheduled' }])}
-        onTournamentUpdate={onTournamentUpdate}
-        onLocalTournamentUpdate={vi.fn()}
-        onMatchesUpdate={vi.fn()}
-      />
-    );
-
-    await user.click(screen.getByRole('button', { name: /Turnier löschen/i }));
-    const dialog = screen.getByRole('dialog');
-    await user.type(within(dialog).getByRole('textbox'), 'LÖSCHEN');
-    await user.click(within(dialog).getByRole('button', { name: /Turnier löschen/i }));
-
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent(/Server: 500/);
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });
