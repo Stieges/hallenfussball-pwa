@@ -62,7 +62,7 @@ describe('DangerZone — „Turnier löschen" nur vor dem ersten Anpfiff', () =>
     ['@LZ-003', 'beendetes-Spiel', 'nicht angeboten', [{ id: 'm1', matchStatus: 'finished' }]],
     ['@LZ-003', 'nur-geplante-Spiele', 'angeboten', [{ id: 'm1', matchStatus: 'scheduled' }, { id: 'm2', matchStatus: 'waiting' }, { id: 'm3', matchStatus: 'skipped' }]],
     ['@LZ-003', 'Match-Liste-fehlt-Laden-fehlgeschlagen', 'nicht angeboten', undefined],
-    ['@LZ-003', 'matchStatus-fehlt-unvollstaendig', 'nicht angeboten', [{ id: 'm1' }]],
+    ['@LZ-003', 'matchStatus-fehlt-gilt-als-geplant', 'angeboten', [{ id: 'm1' }]],
     ['@LZ-003', 'matchStatus-unbekannt-nicht-feststellbar', 'nicht angeboten', [{ id: 'm1', matchStatus: 'irgendwas' }]],
   ] as [string, string, string, FixtureMatch[] | undefined][])('%s %s: „Turnier löschen" %s', (_kennung, _zeile, erwartung, matches) => {
     renderDangerZone(tournamentWith(matches));

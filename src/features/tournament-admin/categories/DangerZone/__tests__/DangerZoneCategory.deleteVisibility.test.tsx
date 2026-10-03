@@ -64,10 +64,12 @@ function makeMembership(role: TournamentMembership['role']): TournamentMembershi
 const tournament = {
   id: 't1', title: 'Test-Turnier', status: 'published',
   teams: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
-  // @LZ-003: ohne matchStatus ist der Anpfiff-Zustand nicht feststellbar und
-  // „Turnier löschen" würde ausgeblendet — die Fixture bildet deshalb nur
-  // geplante Spiele ab (expliziter matchStatus).
-  matches: [{ id: 'm1', scoreA: 1, scoreB: 0, matchStatus: 'scheduled' }, { id: 'm2', matchStatus: 'scheduled' }],
+  // @LZ-003 / K1: echter publish()-Zustand — die Spiele kommen OHNE matchStatus aus
+  // TournamentCreationService.publish(). Ein fehlender matchStatus gilt als 'scheduled'
+  // (geplant), nicht als „nicht feststellbar". Genau diese Fixture wurde in B-01a
+  // passend zum Code auf explizite matchStatus umgeschrieben und verdeckte so den
+  // K1-Fehler („Turnier löschen" fehlte bei frisch festgelegten Turnieren).
+  matches: [{ id: 'm1', scoreA: 1, scoreB: 0 }, { id: 'm2' }],
   startDate: '2026-03-01', startTime: '10:00',
 } as unknown as Tournament;
 

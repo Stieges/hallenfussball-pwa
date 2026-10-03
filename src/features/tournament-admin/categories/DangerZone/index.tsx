@@ -244,17 +244,21 @@ const styles = {
  * @LZ-003: Wurde seit dem Turnier-Festlegen schon ein Spiel angepfiffen?
  * Angepfiffen = laufend ('running'), pausiert ('paused' — DB-Wert laut
  * matches_match_status_check, im Frontend-Union fehlt er) oder beendet
- * ('finished'). Ist der Zustand NICHT feststellbar (Match-Liste fehlt, ein
- * matchStatus fehlt oder ist unbekannt — z. B. Laden fehlgeschlagen, offline,
- * unvollständige Daten), liefert die Funktion 'unknown' und die destruktive
- * Aktion wird nicht angeboten (fail-closed).
+ * ('finished'). Ein FEHLENDER matchStatus gilt als 'scheduled' (geplant) — wie im
+ * restlichen Projekt (types/tournament.ts „default: 'scheduled'", supabaseMappers,
+ * filterMatches): TournamentCreationService.publish() erzeugt die Spiele ohne
+ * matchStatus, ein frisch festgelegtes Turnier muss deshalb als „nicht angepfiffen"
+ * gelten. Ist der Zustand NICHT feststellbar (Match-Liste fehlt/ungültig, ein
+ * matchStatus ist unbekannt — z. B. Laden fehlgeschlagen, offline, unvollständige
+ * Daten), liefert die Funktion 'unknown' und die destruktive Aktion wird nicht
+ * angeboten (fail-closed).
  */
 function getMatchStartState(matches: Match[] | undefined): 'not-started' | 'started' | 'unknown' {
   if (!Array.isArray(matches)) {
     return 'unknown';
   }
   for (const match of matches) {
-    const status: string = match.matchStatus ?? '';
+    const status: string = match.matchStatus ?? 'scheduled';
     if (status === 'running' || status === 'paused' || status === 'finished') {
       return 'started';
     }
