@@ -35,6 +35,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test, expect } from './fixtures';
 import type { LoggedInRole } from './fixtures';
+import { expectSeededEngineMatch, getStoredAccessToken, runningEngineTarget } from './engineHelpers';
 import { getLocalServiceRoleClient } from './helpers';
 import { E2E_LIVE_CUP_ID, E2E_LIVE_CUP_TITLE, E2E_STRANGER_CUP_ID, E2E_STRANGER_CUP_TITLE } from './testData';
 
@@ -97,31 +98,6 @@ function hasPermission(role: RoleUnderTest, permission: string): boolean {
 // =============================================================================
 // ZWEITES ORAKEL: Server-RPC mit dem echten JWT der Rolle (I5/Ruling T)
 // =============================================================================
-
-const AUTH_DIR = path.join(__dirname, '..', '..', '..', 'playwright', '.auth');
-
-/**
- * Liest den bereits von `cloud-setup` (`auth.setup.ts`) gespeicherten Supabase-Access-Token aus
- * `playwright/.auth/<rolle>.json` -- derselbe storageState, den `asRole()` für den Browser-
- * Context nutzt. Kein zweiter Login: der Token ist bereits da und (`jwt_expiry=3600`,
- * `supabase/config.toml`) für die Dauer eines Testlaufs gültig.
- */
-function getStoredAccessToken(role: LoggedInRole): string {
-  const raw = JSON.parse(readFileSync(path.join(AUTH_DIR, `${role}.json`), 'utf8')) as {
-    origins?: Array<{ localStorage?: Array<{ name: string; value: string }> }>;
-  };
-  const item = raw.origins?.[0]?.localStorage?.find((entry) => entry.name === 'sb-127-auth-token');
-  if (!item) {
-    throw new Error(
-      `getStoredAccessToken: kein "sb-127-auth-token" in playwright/.auth/${role}.json gefunden -- lief cloud-setup?`
-    );
-  }
-  const session = JSON.parse(item.value) as { access_token?: unknown };
-  if (typeof session.access_token !== 'string') {
-    throw new Error(`getStoredAccessToken: access_token für Rolle "${role}" fehlt oder ist kein String.`);
-  }
-  return session.access_token;
-}
 
 /**
  * Ruft `has_tournament_permission(tournament_id, permission)` MIT dem JWT der Rolle auf (nicht
@@ -227,6 +203,10 @@ for (const role of ALL_ROLES) {
     test(`Cockpit: ${canWrite ? 'bedienbar' : 'gesperrt (cockpit-readonly-banner)'} (writeMatchData=${canWrite})`, async ({ asRole }) => {
       const serverCanWrite = await serverHasTournamentPermission(userKey, E2E_LIVE_CUP_ID, 'writeMatchData');
       expect(serverCanWrite).toBe(canWrite); // Zweites Orakel (I5).
+
+      // A-23 (R-3a-1): das automatisch gewählte Spiel ist das Engine-Laufspiel des Live-Cups --
+      // ein zu alter oder verbrauchter Seed würde per Auto-Finish die Auswahl verschieben.
+      await expectSeededEngineMatch(await runningEngineTarget(E2E_LIVE_CUP_ID, 'live-cup', 'Live-Cup'));
 
       const page = await asRole(userKey);
       // TAB_PATHS (tournamentTabUtils.ts) bildet den "management"-Tab auf das URL-Segment "live" ab.

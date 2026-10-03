@@ -162,30 +162,8 @@ export const E2E_LIVE_CUP_TEAM_NAMES = [
 export const E2E_LIVE_CUP_GROUP_A = E2E_LIVE_CUP_TEAM_NAMES.slice(0, 4);
 export const E2E_LIVE_CUP_GROUP_B = E2E_LIVE_CUP_TEAM_NAMES.slice(4, 8);
 
-/**
- * Fixrunde 2 (N8): Seed-Ausgangsstand des EINEN laufenden Live-Cup-Spiels (`scripts/e2e-seed.ts`,
- * Abschnitt "Live-Cup"). Alle vier Tests in `two-devices.cloud.spec.ts` (N4: inkl. des ehemals
- * eigenständigen Offline-Tests) bauen ihren Spielstand in `finally` darauf zurück -- vorher
- * dreimal literal `1, 0` im Code, jetzt EINE Quelle.
- */
-export const E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE = { home: 1, away: 0 } as const;
-
 /** Team-Namen des Public-Cup (kleiner, für "einige Ergebnisse"). */
 export const E2E_PUBLIC_CUP_TEAM_NAMES = ['Public Löwen', 'Public Adler', 'Public Falken', 'Public Bären'] as const;
-
-/**
- * Abschluss-Review (final-review.md, I2/Ruling AG): analog zu `E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE`
- * -- der Seed setzt jetzt EIN Public-Cup-Spiel direkt auf `matchStatus: 'running'` (Feld 1, wie der
- * `live`-Slide des Seed-Monitors ihn erwartet), genau wie beim Live-Cup DIREKT in der DB, nie über
- * `MatchExecutionService.initializeMatch()` -- das würde bei einem noch nie zuvor geladenen Spiel an
- * C-NSTART scheitern (`STATUS_TO_DB.NOT_STARTED='not_started'` verletzt die DB-CHECK-Constraint,
- * siehe `two-devices.cloud.spec.ts`, Testfall "C-NSTART"). Ohne dieses Bypass hätte JEDES
- * Public-Cup-Spiel diesen Fehler getroffen, sobald ein Test es zum ersten Mal startet -- der
- * Echtzeit-Nachweis "Monitor sieht Tor ohne Reload" (Verifikation #6 des Plans) wäre nie über
- * C-NSTART hinausgekommen. `resetRunningMatchScore()` (`tests/e2e/cloud/helpers.ts`) setzt diesen
- * Wert nach jedem Test zurück, genau wie beim Live-Cup.
- */
-export const E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE = { home: 1, away: 0 } as const;
 
 // =============================================================================
 // MITARBEITER-ROLLEN IM LIVE-CUP (verbindliche Tabelle aus dem Brief)

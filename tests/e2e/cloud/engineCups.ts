@@ -69,8 +69,12 @@ export const E2E_ENGINE_CUPS = [
   runningCup('SYNC'),
   runningCup('REJECT'),
   runningCup('RECONNECT'),
+  runningCup('QUEUE', false),
   runningCup('AMEND', true, [START, GOAL_HOME_NR7]),
-  runningCup('RETRACT', true, [START, GOAL_HOME_NR7]),
+  // Zusätzlich eine Gelbe Karte VOR dem Tor: das Protokoll zeigt Zurückgenommenes nur im Zeitfenster
+  // gezeigter wirksamer Einträge (U5, protocolEntries.takeRecent) -- ohne einen wirksamen Eintrag
+  // bliebe es nach der Rücknahme leer ("Noch keine Ereignisse").
+  runningCup('RETRACT', true, [START, { key: 'card-away', type: 'YELLOW_CARD', side: 'away', atOffsetMs: -40_000 }, GOAL_HOME_NR7]),
   runningCup('GELBROT'),
   {
     slug: 'HELPERAMEND',
