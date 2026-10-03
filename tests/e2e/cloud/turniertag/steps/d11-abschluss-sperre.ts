@@ -4,12 +4,13 @@
  * (`tournament-finish-button` im Admin-Center), danach sind Ergebnisse gesperrt und die
  * Bildschirme frei.
  */
-import { expectSollMarker, openTurniertagPath } from './shared';
+import { expectPageAnchor, expectSollMarker, openTurniertagPath } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function abschluss({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
   await openTurniertagPath(ownerPage, '/admin/dashboard');
+  await expectPageAnchor(ownerPage.getByText('Dashboard', { exact: true }).first(), 'Admin-Kategorie Dashboard');
   await expectSollMarker(ownerPage, 'tournament-finish-button');
 }
 

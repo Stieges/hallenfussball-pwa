@@ -8,7 +8,7 @@
  */
 import { expect } from '@playwright/test';
 import { E2E_DRAFT_CUP_ID } from '../../testData';
-import { fetchTurniertagBracket, fetchTurniertagTeams, TURNIERTAG_ID } from './shared';
+import { expectPageAnchor, fetchTurniertagBracket, fetchTurniertagTeams, TURNIERTAG_ID } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 interface DirektCase {
@@ -27,6 +27,7 @@ const CASES: readonly DirektCase[] = [
       const page = await asRole('owner');
       await page.goto(`/#/tournament/${TURNIERTAG_ID}/schedule?group=B`);
       await page.waitForLoadState('networkidle');
+      await expectPageAnchor(page.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
       // Der Filter steht in der URL: die Gruppe ist gewählt UND der Link bleibt erhalten.
       await expect(page.locator('[data-testid="filter-group"]')).toHaveValue('B', { timeout: 5000 });
       expect(page.url()).toContain('group=B');
@@ -52,6 +53,8 @@ const CASES: readonly DirektCase[] = [
       const page = await asRole('owner');
       await page.goto(`/#/tournament/${E2E_DRAFT_CUP_ID}/edit?step=3`);
       await page.waitForLoadState('networkidle');
+      // Die Schritt-Leiste existiert heute (Seitenanker); aktiv ist derzeit ein anderer Schritt.
+      await expectPageAnchor(page.locator('[aria-current="step"]').first(), 'Wizard-Schritt-Leiste');
       // Aktiver Schritt des Wizard-Reiters ist Schritt 3 (aria-current="step").
       await expect(page.locator('[aria-current="step"]')).toHaveAttribute('aria-label', /^Schritt 3:/, { timeout: 5000 });
     },

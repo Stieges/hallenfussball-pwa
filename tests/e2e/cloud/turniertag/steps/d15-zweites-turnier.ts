@@ -2,14 +2,15 @@
  * D15 Zweites Turnier am selben Tag: Monitore aus Vorlage/Turnier übernehmen, Bildschirm neu
  * koppeln. Besitzer: B-22 / B-21.
  * Besitzer: B-22/B-21 -- Soll-Marker: die Monitor-Verwaltung bietet "Monitore übernehmen"
- * (`monitors-adopt-button`).
+ * (`monitors-adopt-button`). Die Seite ist der Reiter "Monitore" (`/monitors`, nicht `/monitore`).
  */
-import { expectSollMarker, openTurniertagPath } from './shared';
+import { expectPageAnchor, expectSollMarker, openTurniertagPath } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function zweitesTurnier({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
-  await openTurniertagPath(ownerPage, '/monitore');
+  await openTurniertagPath(ownerPage, '/monitors');
+  await expectPageAnchor(ownerPage.getByRole('heading', { level: 2, name: 'Monitore konfigurieren' }), 'Reiter Monitore');
   await expectSollMarker(ownerPage, 'monitors-adopt-button');
 }
 

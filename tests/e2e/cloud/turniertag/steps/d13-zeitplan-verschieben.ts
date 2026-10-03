@@ -3,12 +3,13 @@
  * Besitzer: B-26 -- Soll-Marker: der Spielplan bietet "alle folgenden Spiele verschieben"
  * (`schedule-shift-button`).
  */
-import { expectSollMarker, openTurniertagPath } from './shared';
+import { expectPageAnchor, expectSollMarker, openTurniertagPath } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function zeitplanVerschieben({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
   await openTurniertagPath(ownerPage, '/schedule');
+  await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
   await expectSollMarker(ownerPage, 'schedule-shift-button');
 }
 

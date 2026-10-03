@@ -2,7 +2,7 @@
  * Gemeinsame Bausteine der Durchstich-Schritte (A-23): Zugriff auf den Turniertag-Cup per
  * Service-Role (nur lokaler Stack) und der "Soll-Marker" für noch nicht gebaute Schritte.
  */
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { getLocalServiceRoleClient } from '../../helpers';
 import { e2eUuid } from '../../e2eUuid';
 import { E2E_TURNIERTAG_CUP_ID } from '../../testData';
@@ -71,6 +71,18 @@ export function turniertagEventId(key: string): string {
  */
 export async function expectSollMarker(page: Page, testId: string): Promise<void> {
   await expect(page.locator(`[data-testid="${testId}"]`)).toBeVisible({ timeout: SOLL_TIMEOUT_MS });
+}
+
+/** Zeitgrenze für den Seitenanker: die Seite darf laden, der Anker soll nicht flackern. */
+export const ANCHOR_TIMEOUT_MS = 15000;
+
+/**
+ * Seitenanker eines `test.fail`-Schritts: ein Element, das auf der geöffneten Seite HEUTE existiert.
+ * Steht immer VOR dem Soll-Marker, damit der Schritt an einer falschen Seite nicht am Soll-Marker
+ * scheitert (sondern sichtbar am Anker) und das Signal "Besitzer fertig" am richtigen Grund hängt.
+ */
+export async function expectPageAnchor(locator: Locator, label: string): Promise<void> {
+  await expect(locator, `Seitenanker: ${label}`).toBeVisible({ timeout: ANCHOR_TIMEOUT_MS });
 }
 
 export async function openTurniertagPath(page: Page, pathSuffix: string): Promise<void> {

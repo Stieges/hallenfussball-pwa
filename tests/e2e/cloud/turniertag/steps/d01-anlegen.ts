@@ -9,7 +9,7 @@
  */
 import { expect } from '@playwright/test';
 import { E2E_TURNIERTAG_MONITOR_ID, E2E_TURNIERTAG_SHARE_CODE } from '../../testData';
-import { fetchTurniertagBracket, fetchTurniertagTeams, finalMatchLabel, finalrundeLabels, openSpielplanFinalrunde, openTurniertagPath, TURNIERTAG_ID } from './shared';
+import { expectPageAnchor, fetchTurniertagBracket, fetchTurniertagTeams, finalMatchLabel, finalrundeLabels, openSpielplanFinalrunde, openTurniertagPath, TURNIERTAG_ID } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function anlegen({ asRole }: StepContext): Promise<void> {
@@ -41,6 +41,7 @@ async function halbfinaleHerkunft(view: (typeof TM015_VIEWS)[number], { asRole, 
   if (view === 'Spielplan der Turnierleitung') {
     const ownerPage = await asRole('owner');
     await openSpielplanFinalrunde(ownerPage);
+    await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
     // Halbfinale 1 steht in der Finalrunde an erster Stelle.
     expect((await finalrundeLabels(ownerPage))[0]).toBe('Erster Gruppe A gegen Zweiter Gruppe B');
   } else if (view === 'Toms Cockpit') {
@@ -49,14 +50,17 @@ async function halbfinaleHerkunft(view: (typeof TM015_VIEWS)[number], { asRole, 
     const cockpitPage = await asRole('owner');
     await cockpitPage.goto(`/#/tournament/${TURNIERTAG_ID}/live?matchId=${hf1.id}`);
     await cockpitPage.waitForLoadState('networkidle');
+    await expectPageAnchor(cockpitPage.locator('[data-testid="team-name-home"]'), 'Cockpit des Spiels');
     await expect(cockpitPage.getByRole('option', { name: /^#13 / })).toHaveText(/Erster Gruppe A vs Zweiter Gruppe B/, { timeout: 5000 });
   } else if (view === 'Hallen-Monitor') {
     await anonPage.goto(`/#/display/${TURNIERTAG_ID}/${E2E_TURNIERTAG_MONITOR_ID}`);
     await anonPage.waitForLoadState('networkidle');
+    await expectPageAnchor(anonPage.getByText('Nächstes Spiel', { exact: true }), 'Hallen-Monitor (LiveSlide)');
     await expect(anonPage.locator('body')).toHaveText(/Erster Gruppe A\s+vs\s+Zweiter Gruppe B/i, { timeout: 5000 });
   } else {
     await anonPage.goto(`/#/live/${E2E_TURNIERTAG_SHARE_CODE}`);
     await anonPage.waitForLoadState('networkidle');
+    await expectPageAnchor(anonPage.getByRole('heading', { level: 1 }).first(), 'Zuschaueransicht');
     await expect(anonPage.locator('body')).toHaveText(HF1_ROW, { timeout: 5000 });
   }
 }

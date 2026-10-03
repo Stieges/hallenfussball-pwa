@@ -4,13 +4,14 @@
  * (`match-halftime-button`).
  */
 import { expectEngineMatchRunningUi, openCockpit } from '../../engineHelpers';
-import { expectSollMarker, fetchTurniertagBracket, TURNIERTAG_ID } from './shared';
+import { expectPageAnchor, expectSollMarker, fetchTurniertagBracket, TURNIERTAG_ID } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function halbzeitZeitstrafe({ asRole }: StepContext): Promise<void> {
   const { groupMatches } = await fetchTurniertagBracket();
   const ownerPage = await asRole('owner');
   await openCockpit(ownerPage, TURNIERTAG_ID, groupMatches[0].id);
+  await expectPageAnchor(ownerPage.locator('[data-testid="team-name-home"]'), 'Cockpit des Spiels');
   await expectEngineMatchRunningUi(ownerPage);
   await expectSollMarker(ownerPage, 'match-halftime-button');
 }

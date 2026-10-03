@@ -3,12 +3,13 @@
  * Besitzer: B-28a/B-34 -- Soll-Marker: die Turnierleitung lädt unter "Exporte" die Sicherung des
  * Turniers herunter (`backup-download-button`).
  */
-import { expectSollMarker, openTurniertagPath } from './shared';
+import { expectPageAnchor, expectSollMarker, openTurniertagPath } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function pdfSicherung({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
   await openTurniertagPath(ownerPage, '/admin/exports');
+  await expectPageAnchor(ownerPage.getByText('Exporte', { exact: true }).first(), 'Admin-Kategorie Exporte');
   await expectSollMarker(ownerPage, 'backup-download-button');
 }
 

@@ -5,12 +5,14 @@
  */
 import { expect } from '@playwright/test';
 import { E2E_TURNIERTAG_SHARE_CODE } from '../../testData';
-import { SOLL_TIMEOUT_MS } from './shared';
+import { expectPageAnchor, SOLL_TIMEOUT_MS } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function zuschauerLive({ anonPage }: StepContext): Promise<void> {
-  const request = anonPage.waitForRequest((req) => req.url().includes('/rpc/public_tournament'), { timeout: SOLL_TIMEOUT_MS });
   await anonPage.goto(`/#/live/${E2E_TURNIERTAG_SHARE_CODE}`);
+  await expectPageAnchor(anonPage.getByRole('heading', { level: 1 }).first(), 'Zuschauer-Seite');
+  const request = anonPage.waitForRequest((req) => req.url().includes('/rpc/public_tournament'), { timeout: SOLL_TIMEOUT_MS });
+  await anonPage.reload();
   await expect(request).resolves.toBeTruthy();
 }
 

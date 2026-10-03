@@ -3,12 +3,13 @@
  * Besitzer: A-16/A-17 -- Soll-Marker: die Turnierleitung zeigt unter "Team & Helfer" einen
  * QR-Code zum Beitritt (`helper-join-qr`).
  */
-import { expectSollMarker, openTurniertagPath } from './shared';
+import { expectPageAnchor, expectSollMarker, openTurniertagPath } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function helferPerQr({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
   await openTurniertagPath(ownerPage, '/admin/team-helpers');
+  await expectPageAnchor(ownerPage.getByText('Team & Helfer', { exact: true }).first(), 'Admin-Kategorie Team & Helfer');
   await expectSollMarker(ownerPage, 'helper-join-qr');
 }
 
