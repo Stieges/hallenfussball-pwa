@@ -11,7 +11,7 @@
  * Turniertag-Cup; ohne neuen Seed (`npm run test:env:seed`) ist der Cup verbraucht.
  */
 import { test } from './fixtures';
-import { steps as d01 } from './turniertag/steps/d01-anlegen';
+import { steps as d01, stepsNachGruppenabschluss as d01Monitor } from './turniertag/steps/d01-anlegen';
 import { steps as d02 } from './turniertag/steps/d02-cloud-stand';
 import { steps as direktaufruf } from './turniertag/steps/direktaufruf';
 import { steps as d03 } from './turniertag/steps/d03-helfer-qr';
@@ -31,7 +31,9 @@ import { steps as d15 } from './turniertag/steps/d15-zweites-turnier';
 import type { TurniertagStep } from './turniertag/steps/types';
 
 export const TURNIERTAG_STEPS: readonly TurniertagStep[] = [
-  ...d01, ...d02, ...direktaufruf, ...d03, ...d04, ...d05, ...d06, ...d07, ...d07b, ...d08, ...d09, ...d10, ...d11, ...d12, ...d13, ...d14, ...d15,
+  // d01Monitor (@TM-015 Hallen-Monitor) steht hinter d08: erst nach dem Gruppenabschluss zeigt
+  // die LiveSlide von Feld 1 das Halbfinale (Fixrunde 1, W-6.3).
+  ...d01, ...d02, ...direktaufruf, ...d03, ...d04, ...d05, ...d06, ...d07, ...d07b, ...d08, ...d01Monitor, ...d09, ...d10, ...d11, ...d12, ...d13, ...d14, ...d15,
 ];
 
 test.describe('Turniertag-Durchstich (D1-D15)', () => {

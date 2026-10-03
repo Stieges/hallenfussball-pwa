@@ -65,14 +65,25 @@ async function halbfinaleHerkunft(view: (typeof TM015_VIEWS)[number], { asRole, 
   }
 }
 
-export const steps: readonly TurniertagStep[] = [
-  { id: 'D1', title: 'Turnier steht: 8 Teams, 2 Gruppen, Top 4', scenarios: ['@OB-029'], owner: 'B-04/A-12 (Anlegen im Wizard)', expectedFail: false, run: anlegen },
-  ...TM015_VIEWS.map<TurniertagStep>((view) => ({
+function tm015Step(view: (typeof TM015_VIEWS)[number]): TurniertagStep {
+  return {
     id: `D1 @TM-015 ${view}`,
     title: `Halbfinale 1 zeigt "Erster Gruppe A gegen Zweiter Gruppe B" (${view})`,
     scenarios: ['@TM-015'],
     owner: view === 'Hallen-Monitor' || view === 'Zuschaueransicht' ? 'A-12 (+ B-35 Adapter)' : 'A-12',
     expectedFail: true,
     run: (ctx) => halbfinaleHerkunft(view, ctx),
-  })),
+  };
+}
+
+export const steps: readonly TurniertagStep[] = [
+  { id: 'D1', title: 'Turnier steht: 8 Teams, 2 Gruppen, Top 4', scenarios: ['@OB-029'], owner: 'B-04/A-12 (Anlegen im Wizard)', expectedFail: false, run: anlegen },
+  ...TM015_VIEWS.filter((view) => view !== 'Hallen-Monitor').map(tm015Step),
 ];
+
+/**
+ * @TM-015 "Hallen-Monitor" läuft erst nach D8 (Gruppenabschluss): die LiveSlide zeigt nur das
+ * laufende bzw. nächste Spiel von Feld 1 -- vor D8 ist das ein Gruppenspiel, HF1 erscheint nie.
+ * Die Zuschaueransicht zeigt die Tabelle aller Phasen und bleibt vor D8 (andere Ursache).
+ */
+export const stepsNachGruppenabschluss: readonly TurniertagStep[] = [tm015Step('Hallen-Monitor')];
