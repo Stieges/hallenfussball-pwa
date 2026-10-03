@@ -7,7 +7,7 @@ import { SwUpdateNotice } from './components/SwUpdateNotice';
 import { useTournaments } from './hooks/useTournaments';
 import { Tournament, TournamentStatus } from './types/tournament';
 import { generateTournamentId, generateUniqueId } from './utils/idGenerator';
-import { copyTeamsAndMatches } from './core/models/tournamentCopy';
+import { buildCopiedTournament } from './core/models/tournamentCopy';
 import { cssVars } from './design-tokens';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import { ConfirmDialog, useConfirmDialog } from './components/ui/ConfirmDialog';
@@ -456,20 +456,12 @@ function AppContent() {
       const newId = generateTournamentId();
 
       // Kopie mit neuen Team-/Spiel-IDs; Spielseiten über copySlot (V14), nie auf alten IDs
-      const { teams: copiedTeams, matches: copiedMatches } = copyTeamsAndMatches(tournament, generateUniqueId);
-      const copiedTournament: Tournament = {
-        ...tournament,
-        id: newId,
+      const copiedTournament = buildCopiedTournament(tournament, {
+        newId,
         title: `${tournament.title} ${t('tournament.copySuffix')}`,
-        status: 'draft',
-        createdAt: now,
-        updatedAt: now,
-        lastVisitedStep: 1, // Start at Step 1 so user can review
-        teams: copiedTeams,
-        matches: copiedMatches,
-        // Reset soft-delete state
-        deletedAt: undefined,
-      };
+        now,
+        makeId: generateUniqueId,
+      });
 
       await saveTournament(copiedTournament);
       // Stay on dashboard - user can see the new tournament

@@ -1,7 +1,7 @@
 /**
  * A-04a (K6) – Ein manueller Tausch der Leitung erreicht die Cloud (Voll-Speichern), eine nur lokal
  * aufgelöste Seite nicht. Prüft `assignTeamToSide` gegen die echte Entscheidung in `OfflineRepository`.
- * Anforderung: @TM-027.
+ * Vorgabe K6, keine Szenario-Kennung.
  */
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -54,19 +54,19 @@ describe('OfflineRepository.syncUp – K6: manuelles Umbesetzen', () => {
     supabase.get.mockResolvedValue(tournament({ ...cloudMatch, slotA: pendingSlot(source) }, 1));
   });
 
-  it('@TM-027 Pflichttest K6: manuelles Umbesetzen der Heimseite geht per Voll-Speichern in die Cloud', async () => {
+  it('K6 Pflichttest K6: manuelles Umbesetzen der Heimseite geht per Voll-Speichern in die Cloud', async () => {
     local.listForCurrentUser.mockResolvedValue([tournament(assignTeamToSide(resolvedMatch, 'A', UFER), 2)]);
     await repo.syncUp();
     expect(supabase.save).toHaveBeenCalledTimes(1);
   });
 
-  it('@TM-027 Gegenbeispiel K6: ohne Umbesetzen bleibt die nur lokal aufgelöste Seite ohne Voll-Speichern', async () => {
+  it('K6 Gegenbeispiel K6: ohne Umbesetzen bleibt die nur lokal aufgelöste Seite ohne Voll-Speichern', async () => {
     local.listForCurrentUser.mockResolvedValue([tournament(resolvedMatch, 2)]);
     await repo.syncUp();
     expect(supabase.save).not.toHaveBeenCalled();
   });
 
-  it('@TM-027 Gegenbeispiel K6: ein Tausch, der resolvedFrom behielte, ginge verloren (so darf assignTeamToSide nicht arbeiten)', async () => {
+  it('K6 Gegenbeispiel K6: ein Tausch, der resolvedFrom behielte, ginge verloren (so darf assignTeamToSide nicht arbeiten)', async () => {
     const stale = { ...resolvedMatch, slotA: teamSlot(UFER, source) } as Match;
     local.listForCurrentUser.mockResolvedValue([tournament(stale, 2)]);
     await repo.syncUp();

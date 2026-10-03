@@ -151,10 +151,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // Get filtered matches for display
   // FIX: Use schedule.allMatches as source ensuring we filter what is displayed (Preview/Generated),
   // rather than potentially stale tournament.matches (Persistence).
-  // Map ScheduledMatch to Match interface (originalTeamA -> teamA)
+  // ScheduledMatch trägt slotA/slotB unverändert; der Filter liest nur Slots (A-03)
   const sourceMatchesForFiltering = useMemo(() => {
-    // slotA/slotB reisen mit (`...sm`); der Filter liest nur Slots (A-03)
-    return schedule.allMatches.map(sm => ({ ...sm })) as unknown as Match[];
+    return schedule.allMatches as unknown as Match[];
   }, [schedule.allMatches]);
 
   const filteredMatches = useMemo(

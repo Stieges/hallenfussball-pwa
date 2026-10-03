@@ -1,6 +1,6 @@
 /**
  * A-04a (K6) – manueller Tausch/Umbesetzen durch die Leitung verwirft `resolvedFrom`.
- * @TM-027 (alle Geräte zeigen dieselbe Besetzung: der Tausch muss in die Cloud).
+ * Vorgabe K6 (A-03-Review); kein Szenario-Test (die Szenario-Aussage @TM-027 prüft die Auflösung, nicht der manuelle Tausch).
  */
 import { describe, it, expect } from 'vitest';
 import type { Match } from '../../../types/tournament';
@@ -19,14 +19,14 @@ const resolved = {
 } as Match;
 
 describe('assignTeamToSide (K6)', () => {
-  it('@TM-027 Umbesetzen verwirft resolvedFrom: die Seite ist direkt besetzt', () => {
+  it('K6 Umbesetzen verwirft resolvedFrom: die Seite ist direkt besetzt', () => {
     const changed = assignTeamToSide(resolved, 'A', UFER);
     expect(changed.slotA).toEqual(teamSlot(UFER));
     expect(changed.slotA).not.toHaveProperty('resolvedFrom');
     expect(changed.teamA).toBe(UFER);
   });
 
-  it('@TM-027 Gegenbeispiel: die andere Seite bleibt unverändert, auch ihre Herkunft', () => {
+  it('K6 Gegenbeispiel: die andere Seite bleibt unverändert, auch ihre Herkunft', () => {
     const withSourceB = { ...resolved, slotB: teamSlot(SUED, source) } as Match;
     const changed = assignTeamToSide(withSourceB, 'A', UFER);
     expect(changed.slotB).toEqual(teamSlot(SUED, source));
@@ -44,7 +44,7 @@ describe('swapTeamsBetweenMatches (K6)', () => {
     slotA: teamSlot(UFER, source), slotB: teamSlot(NORD),
   } as Match;
 
-  it('@TM-027 Tausch: beide Seiten tauschen das Team und tragen keine Herkunft mehr', () => {
+  it('K6 Tausch: beide Seiten tauschen das Team und tragen keine Herkunft mehr', () => {
     const [first, second] = swapTeamsBetweenMatches({ match: resolved, side: 'A' }, { match: other, side: 'A' });
     expect(first.slotA).toEqual(teamSlot(UFER));
     expect(second.slotA).toEqual(teamSlot(NORD));

@@ -12,7 +12,7 @@
 import { CSSProperties, useMemo } from 'react';
 import { cssVars } from '../design-tokens'
 import { GeneratedSchedule } from '../core/generators';
-import { Standing, Match, Team } from '../types/tournament';
+import { Standing, Match, Team, Tournament } from '../types/tournament';
 import {
   TournamentHeader,
   ParticipantsAndGroups,
@@ -135,6 +135,17 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     });
   }, [finalMatches, currentMatches]);
 
+  // Die Spielplan-Komponenten erwarten ein `Tournament`, lesen hier aber nur Gruppen, Teams und Spiele
+  // (`GeneratedSchedule.tournament` hat eine andere Form). Zwei schmale Stand-ins, einmal getypt statt `any`.
+  const groupsOnly = useMemo(
+    () => ({ groups: schedule.tournament.groups }) as unknown as Tournament,
+    [schedule.tournament.groups],
+  );
+  const sideTournament = useMemo(
+    () => ({ groups: schedule.tournament.groups, teams: tournamentTeams ?? schedule.teams, matches: schedule.allMatches }) as unknown as Tournament,
+    [schedule.tournament.groups, tournamentTeams, schedule.teams, schedule.allMatches],
+  );
+
   // Anzeige-Daten der Spielseiten: aktuelle Teams, Gruppen und alle Spiele (Vorgänger auch bei aktivem Filter)
   const sideSource = useMemo(() => ({
     teams: tournamentTeams ?? schedule.teams,
@@ -178,8 +189,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
         <ParticipantsAndGroups
           teams={schedule.teams}
           standings={standings}
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- GeneratedSchedule.tournament has different shape than Tournament; components only use 'groups'
-          tournament={{ groups: schedule.tournament.groups } as any}
+          tournament={groupsOnly}
         />
       )}
 
@@ -200,8 +210,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
           runningMatchIds={runningMatchIds}
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- GeneratedSchedule.tournament has different shape than Tournament; components only use 'groups'
-          tournament={{ groups: schedule.tournament.groups, teams: sideSource.teams, matches: schedule.allMatches } as any}
+          tournament={sideTournament}
           onMatchSwap={onMatchSwap}
           onNavigateToCockpit={onNavigateToCockpit}
         />
@@ -212,8 +221,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
         <GroupTables
           standings={standings}
           teams={schedule.teams}
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- GeneratedSchedule.tournament has different shape than Tournament; components only use 'groups'
-          tournament={{ groups: schedule.tournament.groups } as any}
+          tournament={groupsOnly}
           activeMatchTeamIds={activeMatchTeamIds}
         />
       )}

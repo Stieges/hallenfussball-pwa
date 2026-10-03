@@ -204,16 +204,16 @@ describe('Spielplan-Karten (Gruppenphase) zeigen Spielseiten über slotLabel', (
 describe('matchSides (Helfer)', () => {
   const ctx = buildSideContext({ teams }, shown);
 
-  it('@TM-015 besetzte Seite: Team-ID als id, nicht offen', () => {
+  it('A-04a besetzte Seite: Team-ID als id, nicht offen', () => {
     expect(sideDisplay(semi2, 'A', ctx)).toMatchObject({ id: NORD, name: 'FC Nord', pending: false });
   });
 
-  it('@TM-015 offene Seite: eigene id je Spiel und Seite, offen', () => {
+  it('A-04a offene Seite: eigene id je Spiel und Seite, offen', () => {
     expect(sideDisplay(semi1, 'B', ctx)).toMatchObject({ id: `${SEMI1}:B`, pending: true });
     expect(sideName(semi1, 'B', ctx)).toBe('Zweiter Gruppe B');
   });
 
-  it('@TM-015 Vorgängerspiel nur im Turnier gespeichert: wird gefunden', () => {
+  it('A-04a Vorgängerspiel nur im Turnier gespeichert: wird gefunden', () => {
     const fromStore = buildSideContext({ teams, matches: [{ id: SEMI1, label: '1. Halbfinale' }] }, [finale]);
     expect(sideName(finale, 'A', fromStore)).toBe('Sieger 1. Halbfinale');
   });

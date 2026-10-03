@@ -1,10 +1,10 @@
 /**
  * A-04a – „Turnier kopieren“ (V14): Slots dürfen nicht auf alte Team-/Spiel-IDs stehen bleiben.
- * @TM-015 (offene Seiten behalten ihre Herkunft, auch in der Kopie).
+ * Vorgabe V14 (V-TEAM-Plan), keine Szenario-Kennung.
  */
 import { describe, it, expect } from 'vitest';
-import type { Match, Team } from '../../../types/tournament';
-import { copyTeamsAndMatches } from '../tournamentCopy';
+import type { Match, Team, Tournament } from '../../../types/tournament';
+import { copyTeamsAndMatches, buildCopiedTournament } from '../tournamentCopy';
 import { teamSlot, pendingSlot } from '../matchSlot';
 import { testUuid } from '../../../test/testIds';
 
@@ -35,24 +35,24 @@ describe('copyTeamsAndMatches (V14)', () => {
   const [gruppe, semi, finale] = copy.matches;
   const [newT1, newT2] = copy.teams;
 
-  it('@TM-015 besetzte Seite zeigt auf die NEUE Team-ID, Namen bleiben', () => {
+  it('V14 besetzte Seite zeigt auf die NEUE Team-ID, Namen bleiben', () => {
     expect(newT1.id).not.toBe(T1);
     expect(gruppe.slotA).toEqual(teamSlot(newT1.id));
     expect(gruppe.slotB).toEqual(teamSlot(newT2.id));
     expect(newT1.name).toBe('FC Nord');
   });
 
-  it('@TM-015 aufgelöste Seite wird in der Kopie wieder offen und behält ihre Herkunft', () => {
+  it('V14 aufgelöste Seite wird in der Kopie wieder offen und behält ihre Herkunft', () => {
     expect(semi.slotA).toEqual(pendingSlot(groupRank));
     expect(semi.slotB).toEqual(pendingSlot({ kind: 'groupRank', group: 'B', rank: 2 }));
   });
 
-  it('@TM-015 Verweis auf ein Vorgängerspiel zeigt auf die NEUE Spiel-ID', () => {
+  it('V14 Verweis auf ein Vorgängerspiel zeigt auf die NEUE Spiel-ID', () => {
     expect(finale.slotA).toEqual(pendingSlot({ kind: 'matchResult', matchId: semi.id, role: 'winner' }));
     expect(finale.slotB).toEqual(pendingSlot({ kind: 'matchResult', matchId: gruppe.id, role: 'loser' }));
   });
 
-  it('@TM-015 Gegenbeispiel: nirgends bleibt eine alte Team- oder Spiel-ID stehen', () => {
+  it('V14 Gegenbeispiel: nirgends bleibt eine alte Team- oder Spiel-ID stehen', () => {
     const json = JSON.stringify(copy);
     for (const alt of [T1, T2, M_GROUP, M_SEMI, M_FINAL]) {
       expect(json).not.toContain(alt);
@@ -67,5 +67,27 @@ describe('copyTeamsAndMatches (V14)', () => {
   it('Gegenbeispiel: ein Spiel ohne Slots lehnt die Kopie ab statt Seiten zu raten', () => {
     const altdaten = [{ id: M_GROUP, round: 1, field: 1, teamA: T1, teamB: T2 }] as Match[];
     expect(() => copyTeamsAndMatches({ teams, matches: altdaten }, makeId)).toThrow(/keine Spielseiten/);
+  });
+});
+
+describe('buildCopiedTournament (Verdrahtung „Turnier kopieren“ in App.tsx)', () => {
+  const source = {
+    id: 'alt-turnier', title: 'Hallencup', status: 'published', lastVisitedStep: 5, deletedAt: '2026-01-01',
+    createdAt: '2026-01-01', updatedAt: '2026-01-02', teams, matches,
+  } as unknown as Tournament;
+  const copy = buildCopiedTournament(source, { newId: testUuid(900), title: 'Hallencup (Kopie)', now: '2026-10-03T10:00:00.000Z', makeId });
+
+  it('V14 das Turnier ist ein Entwurf mit neuer ID, Titel und Zeitstempeln', () => {
+    expect(copy).toMatchObject({ id: testUuid(900), title: 'Hallencup (Kopie)', status: 'draft', lastVisitedStep: 1, createdAt: '2026-10-03T10:00:00.000Z', updatedAt: '2026-10-03T10:00:00.000Z' });
+    expect(copy.deletedAt).toBeUndefined();
+  });
+
+  it('V14 die gespeicherten Spiele sind die kopierten (echte Slots auf neuen IDs), nicht die des Originals', () => {
+    const oldTeamIds = new Set(teams.map((team) => team.id));
+    const newTeamIds = new Set(copy.teams.map((team) => team.id));
+    for (const team of copy.teams) { expect(oldTeamIds.has(team.id)).toBe(false); }
+    const gruppe = copy.matches.find((match) => match.round === 1);
+    expect(gruppe?.slotA?.kind === 'team' && newTeamIds.has(gruppe.slotA.teamId)).toBe(true);
+    expect(JSON.stringify(copy.matches)).not.toContain(M_SEMI);
   });
 });

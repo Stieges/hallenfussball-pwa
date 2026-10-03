@@ -28,8 +28,14 @@ vi.mock('../../../lib/sentry', () => ({
 
 // Cockpit-Stub: zeigt die „nächsten Spiele“ als Text, damit ihre Namen prüfbar sind
 vi.mock('../../../components/live-cockpit', () => ({
-  LiveCockpit: (props: { upcomingMatches?: { homeTeam: { name: string }; awayTeam: { name: string } }[] }) => (
+  LiveCockpit: (props: {
+    upcomingMatches?: { homeTeam: { name: string }; awayTeam: { name: string } }[];
+    lastFinishedMatch?: { match: { homeTeam: { name: string }; awayTeam: { name: string } } } | null;
+  }) => (
     <div data-testid="cockpit-stub">
+      {props.lastFinishedMatch && (
+        <span data-testid="last">{props.lastFinishedMatch.match.homeTeam.name} gegen {props.lastFinishedMatch.match.awayTeam.name}</span>
+      )}
       {(props.upcomingMatches ?? []).map((match, index) => (
         <span key={index} data-testid="upcoming">{match.homeTeam.name} gegen {match.awayTeam.name}</span>
       ))}
@@ -81,9 +87,10 @@ vi.mock('react-i18next', async () => {
 });
 
 const mockGetLiveMatchData = vi.fn<() => Promise<LiveMatch>>();
+const mockLiveMatches = vi.hoisted(() => ({ map: new Map<string, unknown>() }));
 vi.mock('../../../hooks/useMatchExecution', () => ({
   useMatchExecution: () => ({
-    liveMatches: new Map<string, LiveMatch>(),
+    liveMatches: mockLiveMatches.map as Map<string, LiveMatch>,
     loadingStates: { goal: false, card: false, finish: false, undo: false, start: false },
     isAnyLoading: false,
     getLiveMatchData: mockGetLiveMatchData,
@@ -223,5 +230,40 @@ describe('ManagementTab – @TM-015 Toms Cockpit zeigt die Herkunft', () => {
     setup({ matches: [hf1], teams: [{ id: NORD, name: 'FC Nordlicht' }, { id: UFER, name: 'VfB Ufer' }] });
     expect(await screen.findByText(/FC Nordlicht vs Zweiter Gruppe B/)).toBeInTheDocument();
     expect(screen.queryByText(/FC Nord vs/)).toBeNull();
+  });
+});
+
+describe('ManagementTab – @TM-015 Cockpit mit laufendem Spiel: nächste Spiele und letztes Spiel', () => {
+  const G0 = testUuid(110);
+  const G1 = testUuid(111);
+  const finished = scheduled({
+    id: G0, matchNumber: 1, slot: 0, phase: 'groupStage', scoreA: 1, scoreB: 0,
+    slotA: teamSlot(NORD), slotB: teamSlot(UFER),
+  });
+  const current = scheduled({
+    id: G1, matchNumber: 2, slot: 1, phase: 'groupStage',
+    slotA: teamSlot(UFER), slotB: teamSlot(NORD),
+  });
+  const nextHf = { ...hf1, slot: 2 };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockOnline.value = true;
+    mockLiveMatches.map = new Map([[G1, { id: G1, homeTeam: { id: UFER, name: 'VfB Ufer' }, awayTeam: { id: NORD, name: 'FC Nord' }, events: [] }]]);
+    mockGetLiveMatchData.mockResolvedValue(mockLiveMatches.map.get(G1) as LiveMatch);
+  });
+
+  it('@TM-015 nächste Spiele zeigen „FC Nord gegen Zweiter Gruppe B“, das letzte Spiel die Teamnamen', async () => {
+    setup({ matches: [finished, current, nextHf] });
+    expect((await screen.findByTestId('upcoming'))).toHaveTextContent('FC Nord gegen Zweiter Gruppe B');
+    expect(screen.getByTestId('last')).toHaveTextContent('FC Nord gegen VfB Ufer');
+    expect(screen.queryByText(/ALTER NAME/)).toBeNull();
+  });
+
+  it('@TM-015 Gegenbeispiel: nach Umbenennen zeigen nächste Spiele und letztes Spiel den neuen Namen', async () => {
+    setup({ matches: [finished, current, nextHf], teams: [{ id: NORD, name: 'FC Nordlicht' }, { id: UFER, name: 'VfB Ufer' }] });
+    expect((await screen.findByTestId('upcoming'))).toHaveTextContent('FC Nordlicht gegen Zweiter Gruppe B');
+    expect(screen.getByTestId('last')).toHaveTextContent('FC Nordlicht gegen VfB Ufer');
+    expect(screen.queryByText(/FC Nord gegen/)).toBeNull();
   });
 });

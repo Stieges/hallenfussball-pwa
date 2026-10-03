@@ -5,7 +5,7 @@
  * aufgelöste Seiten werden wieder offen (die Kopie hat keine Ergebnisse), Verweise auf Vorgängerspiele
  * zeigen auf die neuen Spiel-IDs. Framework-frei.
  */
-import type { Match, Team } from '../../types/tournament';
+import type { Match, Team, Tournament } from '../../types/tournament';
 import { copySlot, transitionalTeamRef } from './matchSlot';
 
 export interface CopiedContent {
@@ -45,4 +45,28 @@ export function copyTeamsAndMatches(
     };
   });
   return { teams, matches };
+}
+
+/**
+ * Das kopierte Turnier für „Turnier kopieren“ (App.tsx): Entwurf mit neuer ID, neuen Team-/Spiel-IDs und
+ * Spielseiten über `copySlot`. `makeId` muss UUIDs liefern.
+ */
+export function buildCopiedTournament(
+  tournament: Tournament,
+  options: { newId: string; title: string; now: string; makeId: () => string },
+): Tournament {
+  const { teams, matches } = copyTeamsAndMatches(tournament, options.makeId);
+  return {
+    ...tournament,
+    id: options.newId,
+    title: options.title,
+    status: 'draft',
+    createdAt: options.now,
+    updatedAt: options.now,
+    lastVisitedStep: 1, // Start at Step 1 so user can review
+    teams,
+    matches,
+    // Reset soft-delete state
+    deletedAt: undefined,
+  };
 }
