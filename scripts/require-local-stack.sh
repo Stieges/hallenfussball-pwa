@@ -4,11 +4,43 @@
 # Abschnitt 1: "setzt einen laufenden Stack voraus und bricht mit klarer Meldung ab, wenn
 # keiner läuft"). Reine Prüfung, startet/ändert nichts.
 #
+# A-23 (@OB-029, Durchstich nur lokal): verweigert zusätzlich jeden Lauf, dessen Supabase-URL
+# nicht lokal ist. Geprüft werden `E2E_SUPABASE_URL` und `VITE_SUPABASE_URL` (falls gesetzt) und
+# die API-URL des laufenden Stacks. Lokal heißt: http://127.0.0.1 oder http://localhost, danach
+# nur Port und Pfad (kein "http://127.0.0.1.evil.example").
+#
 set -euo pipefail
 
-if ! supabase status -o json >/dev/null 2>&1; then
+LOCAL_URL_PATTERN='^http://(127\.0\.0\.1|localhost)(:[0-9]+)?(/.*)?$'
+
+require_local_url() {
+  local label="$1" value="$2"
+  if [[ ! "$value" =~ $LOCAL_URL_PATTERN ]]; then
+    echo "::error::Produktions-Sperre: ${label} \"${value}\" ist nicht lokal (erlaubt: http://127.0.0.1 oder http://localhost)." >&2
+    echo "E2E läuft nur gegen den lokalen Supabase-Stack. Abbruch, nichts wurde gestartet." >&2
+    exit 1
+  fi
+}
+
+# 1. Explizit gesetzte URLs (vor jeder Stack-Abfrage, damit die Sperre ohne Docker greift).
+for var in E2E_SUPABASE_URL VITE_SUPABASE_URL; do
+  if [ -n "${!var:-}" ]; then
+    require_local_url "$var" "${!var}"
+  fi
+done
+
+# 2. Läuft ein lokaler Stack?
+if ! status_json="$(supabase status -o json 2>/dev/null)"; then
   echo "::error::Kein laufender lokaler Supabase-Stack gefunden." >&2
   echo "'npm run test:e2e:cloud' braucht einen laufenden Stack mit eingespieltem Schema + Seed." >&2
   echo "Zuerst starten: npm run test:env:up   (oder für einen frischen Stand: npm run test:env:reset)" >&2
   exit 1
 fi
+
+# 3. Ist die API-URL des Stacks lokal?
+api_url="$(printf '%s' "$status_json" | sed -n 's/.*"API_URL"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+if [ -z "$api_url" ]; then
+  echo "::error::API_URL aus 'supabase status -o json' nicht lesbar." >&2
+  exit 1
+fi
+require_local_url "API_URL des Stacks" "$api_url"
