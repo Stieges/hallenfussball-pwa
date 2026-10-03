@@ -144,9 +144,9 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
 export const DANGER_ZONE_ITEMS: AdminCategory[] = [
   {
     id: 'danger-zone',
-    label: 'Spielplan neu generieren',
-    shortLabel: 'Neu generieren',
-    description: 'Spielplan komplett neu erstellen',
+    label: 'Gefahrenbereich',
+    shortLabel: 'Gefahrenbereich',
+    description: 'Destruktive Operationen - mit Vorsicht verwenden',
     icon: '🔄',
     group: 'danger',
     path: 'danger-zone',
@@ -159,20 +159,6 @@ export const DANGER_ZONE_ITEMS: AdminCategory[] = [
 // =============================================================================
 
 export const DANGER_ACTIONS: Record<DangerAction, DangerActionConfig> = {
-  regenerate_schedule: {
-    action: 'regenerate_schedule',
-    title: 'Spielplan neu generieren',
-    description:
-      'Erstellt den kompletten Spielplan neu. Alle bisherigen Zeiten und Zuordnungen werden verworfen.',
-    consequences: [
-      'Alle Spielzeiten werden neu berechnet',
-      'Manuelle Feld-Zuordnungen gehen verloren',
-      'Ergebnisse bleiben erhalten',
-    ],
-    confirmText: 'NEU GENERIEREN',
-    buttonLabel: 'Spielplan neu generieren',
-    severity: 'warning',
-  },
   reset_schedule: {
     action: 'reset_schedule',
     title: 'Spielplan zurücksetzen',

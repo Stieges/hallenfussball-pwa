@@ -281,34 +281,6 @@ export function DangerZoneCategory({
       const now = new Date().toISOString();
 
       switch (pendingAction.action) {
-        case 'regenerate_schedule': {
-          // Keep finished matches, reset scheduled/running matches to allow re-generation
-          // Note: Full regeneration requires using the schedule editor
-          const resetMatches = tournament.matches.map(match => {
-            if (match.matchStatus === 'finished') {
-              return match; // Keep finished matches
-            }
-            return {
-              ...match,
-              matchStatus: 'scheduled' as const,
-              scoreA: undefined,
-              scoreB: undefined,
-              timerStartTime: undefined,
-              timerPausedAt: undefined,
-              timerElapsedSeconds: undefined,
-              finishedAt: undefined,
-            };
-          });
-
-          onLocalTournamentUpdate({
-            ...tournament,
-            matches: resetMatches,
-            updatedAt: now,
-          });
-          onMatchesUpdate(diffMatchResultStatusUpdates(tournament.matches, resetMatches));
-          break;
-        }
-
         case 'reset_schedule': {
           // Reset ALL matches to initial scheduled state
           const resetMatches = tournament.matches.map(match => ({
@@ -375,7 +347,6 @@ export function DangerZoneCategory({
       >
         <div style={styles.actionHeader}>
           <span style={styles.actionIcon}>
-            {action === 'regenerate_schedule' && '🔄'}
             {action === 'reset_schedule' && '🗑️'}
             {action === 'end_tournament' && '🛑'}
             {action === 'archive_tournament' && '📦'}
@@ -429,9 +400,6 @@ export function DangerZoneCategory({
           <strong>{t('dangerZone.warningTitle')}</strong> {t('dangerZone.warningText')}
         </div>
       </div>
-
-      {/* Regenerate Schedule (Warning) */}
-      {renderActionCard('regenerate_schedule')}
 
       {/* Reset Schedule (Danger) */}
       {renderActionCard('reset_schedule')}

@@ -61,8 +61,6 @@
     "typeToConfirm": "Tippe {{text}} um fortzufahren:",
     "cancel": "Abbrechen",
     "executing": "Wird ausgeführt...",
-    "regenerateSchedule": "Spielplan neu generieren",
-    "regenerateScheduleDesc": "Löst den Spielplan erneut aus. Alle Pausen werden neu verteilt.",
     "resetSchedule": "Spielplan zurücksetzen",
     "resetScheduleDesc": "Setzt den Spielplan zurück. Alle Ergebnisse bleiben erhalten.",
     "endTournament": "Turnier vorzeitig beenden",

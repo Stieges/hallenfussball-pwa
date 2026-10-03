@@ -61,8 +61,6 @@
     "typeToConfirm": "Type {{text}} to continue:",
     "cancel": "Cancel",
     "executing": "Executing...",
-    "regenerateSchedule": "Regenerate schedule",
-    "regenerateScheduleDesc": "Regenerates the schedule. All breaks will be redistributed.",
     "resetSchedule": "Reset schedule",
     "resetScheduleDesc": "Resets the schedule. All results are preserved.",
     "endTournament": "End tournament early",
