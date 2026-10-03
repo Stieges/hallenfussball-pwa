@@ -167,8 +167,6 @@ export const DANGER_ACTIONS: Record<DangerAction, DangerActionConfig> = {
     consequences: [
       'Alle Ergebnisse werden gelöscht',
       'Alle Spielstatus werden zurückgesetzt',
-      'Torschützenliste wird geleert',
-      'Event-Log wird gelöscht',
       'Diese Aktion kann NICHT rückgängig gemacht werden',
     ],
     confirmText: 'ZURÜCKSETZEN',
