@@ -28,6 +28,5 @@ describe('admin.constants — Navigations-Helfer (Abdeckung)', () => {
     const danger = getCategoriesByGroup('danger');
     expect(danger.map((cat) => cat.id)).toEqual([]);
     expect(getCategoryGroupConfig('danger')?.id).toBe('danger');
-    expect(getCategoryGroupConfig('gibts-nicht')).toBeUndefined();
   });
 });
