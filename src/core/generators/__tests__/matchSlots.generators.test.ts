@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 import {
   generateGroupPhaseSchedule,
   generatePlayoffDefinitions,
+  generatePlayoffDefinitionsLegacy,
   generatePlayoffSchedule,
   type PlayoffMatchDefinition,
 } from '../index';
@@ -208,5 +209,51 @@ describe('Finalrunde (playoffScheduler) – Herkunft strukturiert, Verweis auf e
         startSlot: 0,
       }),
     ).toThrow(/semi9/);
+  });
+});
+
+describe('playoffScheduler – Randfälle', () => {
+  const base = { numberOfFields: 1, slotDurationMinutes: 10, breakBetweenSlotsMinutes: 2, minRestSlotsPerTeam: 1, startSlot: 0 };
+
+  it('ohne Definitionen entsteht kein Spiel', () => {
+    expect(generatePlayoffSchedule({ ...base, playoffDefinitions: [] })).toEqual([]);
+  });
+
+  it('ein Feld: alle Spiele nacheinander, Verweise zeigen trotzdem auf die geplanten Spiele', () => {
+    const matches = generatePlayoffSchedule({ ...base, playoffDefinitions: generatePlayoffDefinitions(2, { preset: 'top-4' }) });
+    expect(matches.map((m) => m.slot)).toEqual([0, 1, 2, 3]);
+    expect(matches.every((m) => m.scheduledTime === undefined)).toBe(true);
+    const ids = new Set(matches.map((m) => m.id));
+    const refs = matches.flatMap((m) => slotsOf(m)).flatMap((s) => (s.kind === 'pending' && s.source.kind === 'matchResult' ? [s.source.matchId] : []));
+    expect(refs).toHaveLength(4);
+    expect(refs.every((id) => ids.has(id))).toBe(true);
+  });
+
+  it('Kreisabhängigkeit wirft', () => {
+    const definitions: PlayoffMatchDefinition[] = [
+      { id: 'x', label: 'X', teamASource: 'y-winner', teamBSource: 'group-a-1st', parallelMode: 'parallelAllowed', dependencies: ['y'] },
+      { id: 'y', label: 'Y', teamASource: 'x-winner', teamBSource: 'group-b-1st', parallelMode: 'parallelAllowed', dependencies: ['x'] },
+    ];
+    expect(() => generatePlayoffSchedule({ ...base, playoffDefinitions: definitions })).toThrow(/Circular/);
+  });
+
+  it('Parallel-Schalter aus → Runde nur nacheinander', () => {
+    const modes = (preset: FinalsPreset, groups: number, flags: Record<string, boolean>) =>
+      Object.fromEntries(generatePlayoffDefinitions(groups, { preset, ...flags }).map((d) => [d.id, d.parallelMode]));
+    expect(modes('top-4', 2, { parallelSemifinals: false }).semi1).toBe('sequentialOnly');
+    expect(modes('top-4', 2, {}).semi1).toBe('parallelAllowed');
+    expect(modes('top-8', 4, { parallelQuarterfinals: false }).qf1).toBe('sequentialOnly');
+    expect(modes('top-16', 8, { parallelRoundOf16: false })['r16-1']).toBe('sequentialOnly');
+    expect(modes('top-4', 2, {}).final).toBe('sequentialOnly');
+  });
+
+  it.each([
+    [{ final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false }, []],
+    [{ final: true, thirdPlace: false, fifthSixth: false, seventhEighth: false }, ['final']],
+    [{ final: true, thirdPlace: true, fifthSixth: false, seventhEighth: false }, ['semi1', 'semi2', 'third-place', 'final']],
+    [{ final: true, thirdPlace: true, fifthSixth: true, seventhEighth: false }, ['semi1', 'semi2', 'place78-direct', 'place56-direct', 'third-place', 'final']],
+  ])('Legacy-Finals %o → Definitionen %o', (finals, ids) => {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Altweg wird von scheduleGenerator ohne finalsConfig noch genutzt
+    expect(generatePlayoffDefinitionsLegacy(2, finals).map((d) => d.id)).toEqual(ids);
   });
 });
