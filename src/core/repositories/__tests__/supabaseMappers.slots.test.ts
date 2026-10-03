@@ -7,8 +7,10 @@
  * Spiel mit 22023 ab (C-TEAMREF).
  *
  * Anforderungen: @FU-001 (Einträge kommen bei anderen Geräten an – setzt voraus, dass die Cloud
- * sie annimmt), @FU-053 (Teamtausch behält die Zuordnung zur Seite), @TM-027 (alle Geräte zeigen
- * dieselbe Besetzung – Lesen liefert genau die gespeicherte Besetzung).
+ * sie annimmt), @TM-027 (alle Geräte zeigen dieselbe Besetzung – Lesen liefert genau die gespeicherte
+ * Besetzung). Die Teamtausch-Tests prüfen nur, dass ein Tausch die Cloud erreicht – @FU-053 („Tor bleibt
+ * bei FC Nord“) erfüllt A-02 NICHT (Zwischenspeicher score_a/score_b folgt dem Tausch nicht; Befund
+ * beim Controller, Review A-02 I2).
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -113,7 +115,7 @@ describe('A-02 mapMatchToSupabase – Spielseite aus dem Slot, nie über Namen',
 });
 
 describe('A-02 mapMatchUpdateToSupabase – Slots nach Schlüssel-Regel', () => {
-  it('@FU-053 Teamtausch: getauschte Slots tauschen team_a_id/team_b_id', () => {
+  it('Teamtausch erreicht die Cloud: getauschte Slots tauschen team_a_id/team_b_id', () => {
     const update = mapMatchUpdateToSupabase({ id: 'm1', slotA: teamSlot(SUED), slotB: teamSlot(NORD) });
 
     expect(update.team_a_id).toBe(SUED);
@@ -122,7 +124,7 @@ describe('A-02 mapMatchUpdateToSupabase – Slots nach Schlüssel-Regel', () => 
     expect(update.slot_b_source).toBeNull();
   });
 
-  it('@FU-053 Gegenbeispiel: ein Update ohne Slot-Schlüssel lässt beide Team-Spalten unberührt', () => {
+  it('Gegenbeispiel: ein Update ohne Slot-Schlüssel lässt beide Team-Spalten unberührt', () => {
     const update = mapMatchUpdateToSupabase({ id: 'm1', field: 2, teamA: 'SV Süd', teamB: 'FC Nord' });
 
     expect(update).not.toHaveProperty('team_a_id');

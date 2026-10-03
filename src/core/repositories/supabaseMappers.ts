@@ -314,7 +314,7 @@ export function mapMatchToSupabase(
  * OFFEN (`team_x_id` NULL), in der Cloud aber schon BESETZT (ein anderes Gerät hat aufgelöst), werden
  * `team_x_id`/`slot_x_source` dieser Seite NICHT gesendet – ein veralteter lokaler Stand setzt eine
  * Auflösung nie zurück (die Turnierversion schützt hier nicht: Slot-Updates zählen sie nicht hoch).
- * Lokal besetzte Seiten werden immer gesendet (Tausch/Ersatz durch die Leitung, @FU-053).
+ * Lokal besetzte Seiten werden immer gesendet (Tausch/Ersatz durch die Leitung).
  */
 export function mapMatchToScheduleUpdate(
   row: MatchInsert,

@@ -518,8 +518,8 @@ describe('mapMatchUpdateToSupabase', () => {
     expect(typeof update.updated_at).toBe('string');
   });
 
-  // A-02: Namens-Map entfällt – Ersatz in supabaseMappers.slots.test.ts („@FU-053 Teamtausch …“,
-  // „@FU-053 Gegenbeispiel: ein Update ohne Slot-Schlüssel lässt beide Team-Spalten unberührt“).
+  // A-02: Namens-Map entfällt – Ersatz in supabaseMappers.slots.test.ts („Teamtausch erreicht die Cloud …“,
+  // „Gegenbeispiel: ein Update ohne Slot-Schlüssel lässt beide Team-Spalten unberührt“).
   it('teamA allein (Übergangsfeld) wird nicht gesendet (Ersatz für "does not map team changes without teamNameToId")', () => {
     const update = mapMatchUpdateToSupabase({ teamA: 'FC Alpha' });
 

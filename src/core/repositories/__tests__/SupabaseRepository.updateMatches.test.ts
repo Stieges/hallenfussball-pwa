@@ -163,7 +163,7 @@ describe('SupabaseRepository.updateMatches — 0-Zeilen-Update (Risiko 4)', () =
   });
 
   // A-02 (MVP-Bauplan Spur A): Spielseiten kommen aus dem Slot, nie über eine Namens-Suche.
-  it('@FU-053 Teamtausch: getauschte Slots erreichen die Cloud als getauschte Team-IDs, ohne Teams-Abfrage', async () => {
+  it('Teamtausch erreicht die Cloud: getauschte Slots erreichen die Cloud als getauschte Team-IDs, ohne Teams-Abfrage', async () => {
     hoisted.matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-1' }], error: null });
     const nord = testUuid(1);
     const sued = testUuid(2);
@@ -177,7 +177,7 @@ describe('SupabaseRepository.updateMatches — 0-Zeilen-Update (Risiko 4)', () =
     expect(hoisted.teamsSelectMock).not.toHaveBeenCalled();
   });
 
-  it('@FU-053 Gegenbeispiel: ein Teamname im Übergangsfeld teamA erreicht die Cloud nicht', async () => {
+  it('Gegenbeispiel: ein Teamname im Übergangsfeld teamA erreicht die Cloud nicht', async () => {
     const repo = new SupabaseRepository();
     await repo.updateMatches('tour-1', [{ id: 'match-1', teamA: 'FC Alpha' }]);
 

@@ -431,7 +431,7 @@ export class OfflineRepository implements ITournamentRepository {
         const remoteMatchIds = remote.matches.map(m => m.id).sort().join(',');
         if (localMatchIds !== remoteMatchIds) {return true;}
 
-        // A-02 (@FU-053, @TM-027): eine lokal BESETZTE Seite, die in der Cloud anders besetzt ist
+        // A-02 (@TM-027): eine lokal BESETZTE Seite, die in der Cloud anders besetzt ist
         // (Teamtausch/-ersatz durch die Leitung), braucht das Voll-Speichern – der Metadaten-Delta
         // kennt keine Spielseiten. Eine lokal OFFENE Seite zählt nie: der lokale Stand ist dann nur
         // veraltet (ein anderes Gerät hat aufgelöst) – kein Zurücksetzen (gleiche Regel wie

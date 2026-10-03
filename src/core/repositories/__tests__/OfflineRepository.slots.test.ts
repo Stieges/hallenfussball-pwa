@@ -5,7 +5,7 @@
  * Eine lokal OFFENE Seite gegen eine in der Cloud besetzte ist KEINE Änderung: der lokale Stand ist
  * nur veraltet (ein anderes Gerät hat aufgelöst) und darf die Auflösung nicht zurücksetzen.
  *
- * Anforderungen: @FU-053 (Teamtausch behält die Zuordnung zur Seite), @TM-027 (alle Geräte zeigen
+ * Anforderung: @TM-027 (alle Geräte zeigen
  * dieselbe Besetzung).
  */
 import 'fake-indexeddb/auto';
@@ -62,7 +62,7 @@ describe('OfflineRepository.syncUp – A-02: Spielseiten im Delta-Sync', () => {
     );
   });
 
-  it('@FU-053 lokaler Teamtausch (gleiche Spiel-ID) erzwingt ein Voll-Speichern', async () => {
+  it('Teamtausch erreicht die Cloud: lokaler Teamtausch (gleiche Spiel-ID) erzwingt ein Voll-Speichern', async () => {
     const local = tournament({ slotA: teamSlot(SUED), slotB: teamSlot(NORD) }, 2);
     const remote = tournament({ slotA: teamSlot(NORD), slotB: teamSlot(SUED) }, 1);
     mockLocal.listForCurrentUser.mockResolvedValue([local]);
