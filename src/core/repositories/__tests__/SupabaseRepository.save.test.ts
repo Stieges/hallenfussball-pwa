@@ -56,6 +56,10 @@ const hoisted = vi.hoisted(() => {
   const teamsDeleteInMock = vi.fn(() => ({ select: teamsDeleteSelectMock }));
   const teamsDeleteMock = vi.fn(() => ({ in: teamsDeleteInMock }));
   const teamsUpsertMock = vi.fn();
+  // A-02 Fixrunde 1 (I3): update().eq().select('id') -- zu löschende Teams mit Namenskollision umbenennen.
+  const teamsUpdateSelectMock = vi.fn();
+  const teamsUpdateEqMock = vi.fn(() => ({ select: teamsUpdateSelectMock }));
+  const teamsUpdateMock = vi.fn((_update: Record<string, unknown>) => ({ eq: teamsUpdateEqMock }));
 
   // A6 Fixrunde 1 (I2, Ruling AN): save() no longer throws for a protected match -- it notifies
   // instead. Spy on the notification channel (core/services/matchProtectionNotices.ts).
@@ -86,7 +90,7 @@ const hoisted = vi.hoisted(() => {
       return { upsert: tournamentsUpsertMock };
     }
     if (table === 'teams') {
-      return { select: teamsSelectMock, delete: teamsDeleteMock, upsert: teamsUpsertMock };
+      return { select: teamsSelectMock, delete: teamsDeleteMock, upsert: teamsUpsertMock, update: teamsUpdateMock };
     }
     if (table === 'matches') {
       return {
@@ -114,6 +118,9 @@ const hoisted = vi.hoisted(() => {
     teamsDeleteSelectMock,
     teamsDeleteMock,
     teamsUpsertMock,
+    teamsUpdateMock,
+    teamsUpdateEqMock,
+    teamsUpdateSelectMock,
     notifyMatchesProtectedMock,
     matchesSelectEqMock,
     matchesDeleteSelectMock,
@@ -146,6 +153,9 @@ const {
   teamsDeleteSelectMock,
   teamsDeleteMock,
   teamsUpsertMock,
+  teamsUpdateMock,
+  teamsUpdateEqMock,
+  teamsUpdateSelectMock,
   notifyMatchesProtectedMock,
   matchesSelectEqMock,
   matchesDeleteSelectMock,
@@ -628,5 +638,83 @@ describe('SupabaseRepository.save() — A-02: Reihenfolge und aufgelöste Seiten
     const payload = matchesUpdateMock.mock.calls[0][0];
     expect(payload).toHaveProperty('team_a_id', null);
     expect(payload).toHaveProperty('slot_a_source', source);
+  });
+});
+
+// ============================================================================================
+// A-02 Fixrunde 1 (Review I3): Teams werden VOR den Spielen upserted (I6) und erst danach gelöscht.
+// Wird ein Team entfernt und ein neues mit GLEICHEM Namen angelegt, kollidierte der Upsert mit der
+// noch vorhandenen Zeile (teams UNIQUE(tournament_id, name), 23505) -- die SAVE_TOURNAMENT-Mutation
+// hinge dauerhaft. Fix: die zu löschenden Teams mit Namenskollision zuerst umbenennen.
+// ============================================================================================
+
+describe('SupabaseRepository.save() — A-02 Fixrunde 1: gleichnamiges Ersatzteam', () => {
+  const NEW_TEAM = testUuid(9);
+
+  function tournamentWithReplacement(): Tournament {
+    return mapTournamentFromSupabase(
+      createTournamentRow({ version: null }),
+      [createTeamRow({ id: TEAM_SURVIVOR, name: 'Survivor' }), createTeamRow({ id: NEW_TEAM, name: 'FC Nord' })],
+      [survivorMatchRow('match-survivor')]
+    );
+  }
+
+  it('Team entfernt + gleichnamiges neu: altes Team erst umbenannt, dann Upsert, am Ende gelöscht (kein 23505)', async () => {
+    const order: string[] = [];
+    teamsSelectEqMock.mockResolvedValue({
+      data: [{ id: TEAM_SURVIVOR, name: 'Survivor' }, { id: 'team-removed', name: 'FC Nord' }],
+      error: null,
+    });
+    matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
+    teamsUpdateSelectMock.mockImplementation(async () => { order.push('teams.rename'); return { data: [{ id: 'team-removed' }], error: null }; });
+    teamsUpsertMock.mockImplementation(async () => { order.push('teams.upsert'); return { error: null }; });
+    teamsDeleteSelectMock.mockImplementation(async () => { order.push('teams.delete'); return { data: [{ id: 'team-removed' }], error: null }; });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(tournamentWithReplacement())).resolves.toBeUndefined();
+
+    expect(order).toEqual(['teams.rename', 'teams.upsert', 'teams.delete']);
+    expect(teamsUpdateMock).toHaveBeenCalledTimes(1);
+    const renamed = teamsUpdateMock.mock.calls[0][0];
+    expect(renamed.name).not.toBe('FC Nord');
+    expect(String(renamed.name)).toMatch(/^FC Nord /);
+    expect(teamsUpdateEqMock).toHaveBeenCalledWith('id', 'team-removed');
+  });
+
+  it('Gegenbeispiel: ein zu löschendes Team ohne Namenskollision wird NICHT umbenannt', async () => {
+    teamsSelectEqMock.mockResolvedValue({
+      data: [{ id: TEAM_SURVIVOR, name: 'Survivor' }, { id: 'team-removed', name: 'SV Süd' }],
+      error: null,
+    });
+    matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
+    teamsDeleteSelectMock.mockResolvedValue({ data: [{ id: 'team-removed' }], error: null });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(tournamentWithReplacement())).resolves.toBeUndefined();
+
+    expect(teamsUpdateMock).not.toHaveBeenCalled();
+    expect(teamsDeleteMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('Gegenbeispiel: ein bleibendes Team mit gleichem Namen wird nicht umbenannt (nur zu löschende)', async () => {
+    teamsSelectEqMock.mockResolvedValue({ data: [{ id: TEAM_SURVIVOR, name: 'Survivor' }], error: null });
+    matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+
+    expect(teamsUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it('Umbenennen ohne Wirkung (0 Zeilen, z. B. RLS) scheitert laut vor dem Upsert', async () => {
+    teamsSelectEqMock.mockResolvedValue({
+      data: [{ id: TEAM_SURVIVOR, name: 'Survivor' }, { id: 'team-removed', name: 'FC Nord' }],
+      error: null,
+    });
+    teamsUpdateSelectMock.mockResolvedValue({ data: [], error: null });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(tournamentWithReplacement())).rejects.toThrow(/rename/i);
+    expect(teamsUpsertMock).not.toHaveBeenCalled();
   });
 });

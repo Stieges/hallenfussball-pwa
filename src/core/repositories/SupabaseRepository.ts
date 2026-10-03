@@ -331,6 +331,47 @@ export class SupabaseRepository implements ITournamentRepository {
 
     // 2. Teams anlegen/aktualisieren -- VOR den Spielen (A-02, V-TEAM-Review I6): ein neues Spiel
     // darf nur auf ein Team zeigen, das es in der Cloud schon gibt (FK team_a_id/team_b_id).
+    // Zu löschende Teams (lokal entfernt, nicht von einem geschützten Spiel gebraucht) werden erst in
+    // Schritt 4 gelöscht -- hier schon berechnet, weil sie den Upsert blockieren können (s. u.).
+    const { data: existingTeams, error: existingTeamsError } = await getSupabase()
+      .from('teams')
+      .select('id, name')
+      .eq('tournament_id', tournament.id);
+
+    if (existingTeamsError) {
+      console.error('Failed to read existing teams:', existingTeamsError);
+      throw new RepositoryError('saveTeams', existingTeamsError.message, existingTeamsError);
+    }
+
+    const newTeamIds = new Set(teamRows.map((t) => t.id));
+    const teamsToDelete = (existingTeams ?? [])
+      .map((t) => t.id)
+      .filter((id) => !newTeamIds.has(id) && !protectedTeamIds.has(id));
+
+    // A-02 Fixrunde 1 (Review I3): Ein lokal entferntes Team, dessen Name ein eingehendes (neues)
+    // Team trägt („FC Nord“ raus, neues „FC Nord“ rein), existiert beim Upsert noch -- teams
+    // UNIQUE(tournament_id, name) würde mit 23505 ablehnen und die SAVE_TOURNAMENT-Mutation dauerhaft
+    // blockieren. Deshalb NUR diese Teams vorher umbenennen (Name + „ ~“ + ID-Anfang); gelöscht werden
+    // sie wie bisher in Schritt 4. Zähl-Prüfung wie R5-H1: 0 Zeilen (RLS) scheitert laut.
+    const incomingNames = new Set(teamRows.map((t) => t.name));
+    const deleteIds = new Set(teamsToDelete);
+    const collidingTeams = (existingTeams ?? []).filter(
+      (t) => deleteIds.has(t.id) && typeof t.name === 'string' && incomingNames.has(t.name)
+    );
+    for (const team of collidingTeams) {
+      const { data: renamed, error: renameError } = await getSupabase()
+        .from('teams')
+        .update({ name: `${team.name} ~${team.id.slice(0, 8)}` })
+        .eq('id', team.id)
+        .select('id');
+
+      if (renameError || (renamed?.length ?? 0) !== 1) {
+        const message = `Failed to rename team ${team.id} before replacing it: ${renameError?.message ?? '0 rows updated (RLS?), expected 1'}`;
+        console.error(message);
+        throw new RepositoryError('saveTeams', message, renameError ?? undefined);
+      }
+    }
+
     if (teamRows.length > 0) {
       const { error: teamsError } = await getSupabase()
         .from('teams')
@@ -453,15 +494,6 @@ export class SupabaseRepository implements ITournamentRepository {
     // 4. Teams löschen -- NACH den Spielen (A-02, V-TEAM-Review I6): zeigt ein bleibendes Spiel
     // noch auf ein Team, das lokal fehlt, scheitert das Löschen laut (FK/Pflicht-Besetzung) statt die
     // Paarung still zu verlieren; Spiele, die das Team nicht mehr brauchen, sind hier schon weg/umgestellt.
-    // First, get existing team IDs
-    const { data: existingTeams } = await getSupabase()
-      .from('teams')
-      .select('id')
-      .eq('tournament_id', tournament.id);
-
-    const existingTeamIds = new Set(existingTeams?.map((t) => t.id) ?? []);
-    const newTeamIds = new Set(teamRows.map((t) => t.id));
-
     // Delete teams that are no longer in the tournament
     //
     // R5b/R5-H1 (.superpowers/sdd/2026-09-22-rechte-und-cockpit-2/task-R5b-brief.md): teams_delete_v2
@@ -476,9 +508,7 @@ export class SupabaseRepository implements ITournamentRepository {
     // before any write) is excluded here too -- otherwise the team gets deleted (missing locally,
     // same as the match), and `matches.team_a_id`/`team_b_id` (ON DELETE SET NULL) silently loses
     // the pairing on the match that was supposedly "kept".
-    const teamsToDelete = [...existingTeamIds].filter(
-      (id) => !newTeamIds.has(id) && !protectedTeamIds.has(id)
-    );
+    // `teamsToDelete` wird vor Schritt 2 berechnet (A-02 Fixrunde 1, Umbenennen bei Namenskollision).
     if (teamsToDelete.length > 0) {
       const { data: deletedTeams, error: deleteError } = await getSupabase()
         .from('teams')
