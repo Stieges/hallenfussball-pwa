@@ -30,11 +30,16 @@ for var in E2E_SUPABASE_URL VITE_SUPABASE_URL; do
 done
 
 # 2. Läuft ein lokaler Stack?
-if ! status_json="$(supabase status -o json 2>/dev/null)"; then
-  echo "::error::Kein laufender lokaler Supabase-Stack gefunden." >&2
-  echo "'npm run test:e2e:cloud' braucht einen laufenden Stack mit eingespieltem Schema + Seed." >&2
-  echo "Zuerst starten: npm run test:env:up   (oder für einen frischen Stand: npm run test:env:reset)" >&2
-  exit 1
+# Nur für Tests: simulierte `supabase status -o json`-Ausgabe (Unit-Test ohne Docker).
+# Produktiv ungesetzt; der Wert ersetzt ausschließlich die Statusausgabe, nichts sonst.
+status_json="${E2E_REQUIRE_LOCAL_STACK_STATUS_JSON:-}"
+if [ -z "$status_json" ]; then
+  if ! status_json="$(supabase status -o json 2>/dev/null)"; then
+    echo "::error::Kein laufender lokaler Supabase-Stack gefunden." >&2
+    echo "'npm run test:e2e:cloud' braucht einen laufenden Stack mit eingespieltem Schema + Seed." >&2
+    echo "Zuerst starten: npm run test:env:up   (oder für einen frischen Stand: npm run test:env:reset)" >&2
+    exit 1
+  fi
 fi
 
 # 3. Ist die API-URL des Stacks lokal?

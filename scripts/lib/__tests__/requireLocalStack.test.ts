@@ -41,4 +41,31 @@ describe('require-local-stack.sh (@OB-029)', () => {
     expect(result.stderr).not.toContain('Produktions-Sperre');
     expect(result.stderr).toContain('Kein laufender lokaler Supabase-Stack');
   });
+
+  // N1: den Ziel-Host bestimmt allein API_URL aus `supabase status` (Schritt 3 des Skripts).
+  // Die Statusausgabe wird hier über den Test-Hook simuliert, damit die wirksame Sperre
+  // ohne Docker ein Gegenbeispiel bekommt.
+  describe('Schritt 3: API_URL aus "supabase status" (Test-Hook)', () => {
+    const runWithStatus = (apiUrl: string): { status: number | null; stderr: string } =>
+      runGuard({
+        PATH: '/usr/bin:/bin',
+        E2E_REQUIRE_LOCAL_STACK_STATUS_JSON: JSON.stringify({ API_URL: apiUrl }),
+      });
+
+    it.each([
+      ['https://x.supabase.co', 'Cloud-URL als API_URL'],
+      ['http://localhost.evil.example', 'getarnter Host als API_URL'],
+      ['http://127.0.0.1.evil.example:54321', 'getarnter Host mit Port als API_URL'],
+      ['http://localhost@evil.example', 'Benutzerinfo-Trick als API_URL'],
+    ])('Gegenbeispiel: nicht-lokale API_URL "%s" verweigert den Start (%s)', (apiUrl) => {
+      const result = runWithStatus(apiUrl);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('Produktions-Sperre');
+    });
+
+    it('lässt eine lokale API_URL aus "supabase status" durch (Exit 0)', () => {
+      const result = runWithStatus('http://127.0.0.1:54321');
+      expect(result.status).toBe(0);
+    });
+  });
 });
