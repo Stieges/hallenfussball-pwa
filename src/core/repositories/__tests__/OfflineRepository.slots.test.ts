@@ -96,4 +96,41 @@ describe('OfflineRepository.syncUp – A-02: Spielseiten im Delta-Sync', () => {
 
     expect(mockSupabase.save).not.toHaveBeenCalled();
   });
+
+  // A-03 (M4): Besetzung nur aus bestätigtem Server-Stand
+  it('@TM-035 nur lokal aufgelöste Seite (resolvedFrom) gegen offene Cloud-Seite ist keine Strukturänderung', async () => {
+    const source = { kind: 'matchResult', matchId: HF1, role: 'winner' } as const;
+    const local = tournament({ slotA: teamSlot(NORD, source), slotB: teamSlot(SUED) }, 2);
+    const remote = tournament({ slotA: pendingSlot(source), slotB: teamSlot(SUED) }, 1);
+    mockLocal.listForCurrentUser.mockResolvedValue([local]);
+    mockSupabase.get.mockResolvedValue(remote);
+
+    await offlineRepo.syncUp();
+
+    expect(mockSupabase.save).not.toHaveBeenCalled();
+  });
+
+  it('@TM-035 Gegenbeispiel: direkt besetzte Seite (ohne resolvedFrom) gegen offene Cloud-Seite erzwingt weiter das Voll-Speichern', async () => {
+    const source = { kind: 'matchResult', matchId: HF1, role: 'winner' } as const;
+    const local = tournament({ slotA: teamSlot(NORD), slotB: teamSlot(SUED) }, 2);
+    const remote = tournament({ slotA: pendingSlot(source), slotB: teamSlot(SUED) }, 1);
+    mockLocal.listForCurrentUser.mockResolvedValue([local]);
+    mockSupabase.get.mockResolvedValue(remote);
+
+    await offlineRepo.syncUp();
+
+    expect(mockSupabase.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('@TM-035 lokal aufgelöst mit anderem Team als die Cloud-Auflösung: kein Voll-Speichern (der Server entscheidet)', async () => {
+    const source = { kind: 'groupRank', group: 'A', rank: 1 } as const;
+    const local = tournament({ slotA: teamSlot(NORD, source), slotB: teamSlot(SUED) }, 2);
+    const remote = tournament({ slotA: teamSlot(SUED, source), slotB: teamSlot(SUED) }, 1);
+    mockLocal.listForCurrentUser.mockResolvedValue([local]);
+    mockSupabase.get.mockResolvedValue(remote);
+
+    await offlineRepo.syncUp();
+
+    expect(mockSupabase.save).not.toHaveBeenCalled();
+  });
 });

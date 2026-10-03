@@ -150,6 +150,45 @@ describe('A-02 mapMatchUpdateToSupabase – Slots nach Schlüssel-Regel', () => 
   });
 });
 
+describe('A-03 (M3) mapMatchUpdateToSupabase – C2-Schutz: offene Seite setzt keine aufgelöste Cloud-Seite zurück', () => {
+  const source = { kind: 'matchResult', matchId: HF1, role: 'winner' } as const;
+
+  it('@TM-027 Gegenbeispiel: Update mit offenem Slot lässt die aufgelöste team_a_id stehen', () => {
+    const update = mapMatchUpdateToSupabase(
+      { id: 'm1', slotA: pendingSlot(source), slotB: teamSlot(SUED) },
+      { team_a_id: NORD, team_b_id: SUED }
+    );
+    expect(update).not.toHaveProperty('team_a_id');
+    expect(update).not.toHaveProperty('slot_a_source');
+    expect(update.team_b_id).toBe(SUED);
+  });
+
+  it('@TM-027 Schutz gilt je Seite: auch die Gastseite bleibt, wenn sie in der Cloud besetzt ist', () => {
+    const update = mapMatchUpdateToSupabase(
+      { id: 'm1', slotB: pendingSlot(source) },
+      { team_a_id: null, team_b_id: NORD }
+    );
+    expect(update).not.toHaveProperty('team_b_id');
+    expect(update).not.toHaveProperty('slot_b_source');
+  });
+
+  it('@TM-027 offene Seite, Cloud ebenfalls offen: Herkunft wird geschrieben', () => {
+    const update = mapMatchUpdateToSupabase({ id: 'm1', slotA: pendingSlot(source) }, { team_a_id: null, team_b_id: null });
+    expect(update.team_a_id).toBeNull();
+    expect(update.slot_a_source).toEqual(source);
+  });
+
+  it('@TM-027 Gegenbeispiel: besetzte lokale Seite überschreibt die Cloud-Seite (Teamtausch)', () => {
+    const update = mapMatchUpdateToSupabase({ id: 'm1', slotA: teamSlot(SUED) }, { team_a_id: NORD, team_b_id: null });
+    expect(update.team_a_id).toBe(SUED);
+  });
+
+  it('ohne Cloud-Stand (remote undefined) schreibt eine offene Seite wie bisher', () => {
+    const update = mapMatchUpdateToSupabase({ id: 'm1', slotA: pendingSlot(source) });
+    expect(update.team_a_id).toBeNull();
+  });
+});
+
 describe('A-02 mapMatchToScheduleUpdate – Voll-Speichern setzt keine aufgelöste Seite zurück', () => {
   const pendingFinal = () =>
     mapMatchToSupabase(

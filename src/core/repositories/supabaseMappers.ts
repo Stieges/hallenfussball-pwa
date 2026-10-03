@@ -229,6 +229,11 @@ function slotColumns(slot: MatchSlot): { teamId: string | null; source: Json | n
   return { teamId: slotTeamId(slot) ?? null, source: slotSource(slot) ?? null };
 }
 
+/** C2 (@TM-027): lokal offene Seite (keine Team-ID) + in der Cloud besetzt → die Cloud-Seite bleibt. */
+function keepsRemoteSide(localTeamId: string | null, remoteTeamId: string | null | undefined): boolean {
+  return localTeamId === null && (remoteTeamId ?? null) !== null;
+}
+
 /**
  * Maps a frontend Match to Supabase insert format.
  *
@@ -320,8 +325,8 @@ export function mapMatchToScheduleUpdate(
   row: MatchInsert,
   remote?: Pick<MatchRow, 'team_a_id' | 'team_b_id'>
 ): MatchUpdate {
-  const keepRemoteA = (row.team_a_id ?? null) === null && (remote?.team_a_id ?? null) !== null;
-  const keepRemoteB = (row.team_b_id ?? null) === null && (remote?.team_b_id ?? null) !== null;
+  const keepRemoteA = keepsRemoteSide(row.team_a_id ?? null, remote?.team_a_id);
+  const keepRemoteB = keepsRemoteSide(row.team_b_id ?? null, remote?.team_b_id);
   return {
     ...(keepRemoteA ? {} : { team_a_id: row.team_a_id, slot_a_source: row.slot_a_source ?? null }),
     ...(keepRemoteB ? {} : { team_b_id: row.team_b_id, slot_b_source: row.slot_b_source ?? null }),
@@ -359,9 +364,14 @@ export function mapMatchToScheduleUpdate(
  * (A-01 Übergangsfeld) reach the cloud no more. An update that mentions no side still carries
  * `updated_at` (see AP4's only-updated_at-guard in SupabaseRepository.updateMatches for the
  * skip-if-empty rule).
+ *
+ * A-03 (M3): `remote` = Team-Spalten der Cloud-Zeile (`SupabaseRepository.updateMatches` liest sie, sobald
+ * ein Update eine offene Seite enthält). Offene lokale Seite + besetzte Cloud-Seite → die Spalten dieser
+ * Seite werden nicht gesendet (C2, siehe `mapMatchToScheduleUpdate`).
  */
 export function mapMatchUpdateToSupabase(
-  match: DomainMatchUpdate | Partial<Match>
+  match: DomainMatchUpdate | Partial<Match>,
+  remote?: Pick<MatchRow, 'team_a_id' | 'team_b_id'>
 ): MatchUpdate {
   const update: MatchUpdate = {};
 
@@ -370,13 +380,19 @@ export function mapMatchUpdateToSupabase(
   const slotB = match.slotB;
   if (slotA !== undefined && slotA !== null) {
     const a = slotColumns(slotA);
-    update.team_a_id = a.teamId;
-    update.slot_a_source = a.source;
+    // A-03 (M3, @TM-027): C2-Schutz wie im Voll-Speichern – eine lokal OFFENE Seite setzt eine in der
+    // Cloud schon besetzte nie zurück (der Stand dieses Geräts ist veraltet).
+    if (!keepsRemoteSide(a.teamId, remote?.team_a_id)) {
+      update.team_a_id = a.teamId;
+      update.slot_a_source = a.source;
+    }
   }
   if (slotB !== undefined && slotB !== null) {
     const b = slotColumns(slotB);
-    update.team_b_id = b.teamId;
-    update.slot_b_source = b.source;
+    if (!keepsRemoteSide(b.teamId, remote?.team_b_id)) {
+      update.team_b_id = b.teamId;
+      update.slot_b_source = b.source;
+    }
   }
 
   update.updated_at = new Date().toISOString();

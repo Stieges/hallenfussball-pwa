@@ -77,8 +77,14 @@ function stableKey(value: unknown): string {
     });
 }
 
-/** A-02: lokal besetzte Seite mit anderer Team-ID als in der Cloud? (offen/fehlend → nein) */
+/**
+ * A-02: lokal besetzte Seite mit anderer Team-ID als in der Cloud? (offen/fehlend → nein)
+ * A-03 (M4): eine nur lokal AUFGELÖSTE Seite (`resolvedFrom`: pending → Team durch die Auflösung auf diesem
+ * Gerät) ist keine Strukturänderung – die Besetzung kommt nur aus dem bestätigten Server-Stand, der
+ * Voll-Speichern darf sie nicht in die Cloud tragen (@TM-027, @TM-035).
+ */
 function sideDiffers(local: MatchSlot | undefined, remote: MatchSlot | undefined): boolean {
+    if (local?.kind === 'team' && local.resolvedFrom !== undefined) {return false;}
     const localId = local === undefined ? undefined : slotTeamId(local);
     if (localId === undefined) {return false;}
     return remote === undefined || slotTeamId(remote) !== localId;

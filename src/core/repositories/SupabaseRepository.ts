@@ -548,6 +548,35 @@ export class SupabaseRepository implements ITournamentRepository {
   }
 
   /**
+   * Team-Spalten der Cloud-Zeilen für Updates mit offener Seite (M3). Nur bei Bedarf gelesen; ein
+   * Lesefehler bricht das Update laut ab (kein Schreiben auf Verdacht).
+   */
+  private async readRemoteSides(
+    tournamentId: string,
+    updates: MatchUpdate[]
+  ): Promise<Map<string, { team_a_id: string | null; team_b_id: string | null }>> {
+    const ids = updates
+      .filter((u) => [u.slotA, u.slotB].some((slot) => slot?.kind === 'pending'))
+      .map((u) => u.id);
+    const sides = new Map<string, { team_a_id: string | null; team_b_id: string | null }>();
+    if (ids.length === 0) {
+      return sides;
+    }
+    const { data, error } = await getSupabase()
+      .from('matches')
+      .select('id, team_a_id, team_b_id')
+      .eq('tournament_id', tournamentId)
+      .in('id', ids);
+    if (error) {
+      throw new RepositoryError('updateMatches', `Cloud-Besetzung nicht lesbar: ${error.message}`, error);
+    }
+    for (const row of data ?? []) {
+      sides.set(row.id, { team_a_id: row.team_a_id, team_b_id: row.team_b_id });
+    }
+    return sides;
+  }
+
+  /**
    * Bulk updates multiple matches atomically
    */
   async updateMatches(
@@ -563,9 +592,13 @@ export class SupabaseRepository implements ITournamentRepository {
     const errors: Error[] = [];
     let sent = 0;
 
+    // A-03 (M3, C2): enthält ein Update eine OFFENE Seite, die Cloud-Besetzung vorher lesen – ein veralteter
+    // Stand dieses Geräts setzt eine aufgelöste Seite nie zurück.
+    const remoteSides = await this.readRemoteSides(tournamentId, updates);
+
     for (const update of updates) {
       // A-02: Spielseiten aus dem Slot, keine Name→ID-Suche über die Teams-Tabelle.
-      const supabaseUpdate: GeneratedMatchUpdate = mapMatchUpdateToSupabase(update);
+      const supabaseUpdate: GeneratedMatchUpdate = mapMatchUpdateToSupabase(update, remoteSides.get(update.id));
 
       // V4/F6: nur updated_at (reine Ergebnis-Änderung) → Zeile nicht touchen (syncDown
       // meldete sonst dauerhaft "remote is newer"), kein Zähler++, kein tournaments-Bump.
