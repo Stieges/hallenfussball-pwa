@@ -93,14 +93,26 @@ export async function openSpielplanFinalrunde(page: Page): Promise<void> {
  * (Halbfinale 1 zuerst). Wartet, bis alle vier Zeilen im Dokument stehen.
  */
 export async function finalrundeLabels(page: Page): Promise<string[]> {
-  let labels: string[] = [];
+  const byNumber = new Map<number, string>();
+  const collect = async (): Promise<void> => {
+    const labels = await page.getByRole('row').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') ?? ''));
+    for (const label of labels) {
+      const match = /^Spiel (\d+): (.+)$/.exec(label);
+      if (match) {
+        byNumber.set(Number(match[1]), match[2]);
+      }
+    }
+  };
+  // Die Liste rendert nur Zeilen im Umfeld des sichtbaren Bereichs: über die Seite scrollen und sammeln.
   await expect(async () => {
-    labels = (await page.getByRole('row').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') ?? '')))
-      .filter((label) => label.startsWith('Spiel '))
-      .map((label) => label.replace(/^Spiel \d+: /, ''));
-    expect(labels).toHaveLength(4);
-  }).toPass({ timeout: 15000 });
-  return labels;
+    for (const fraction of [0, 0.4, 0.7, 1]) {
+      await page.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), fraction);
+      await page.waitForTimeout(250);
+      await collect();
+    }
+    expect(byNumber.size).toBe(4);
+  }).toPass({ timeout: 20000 });
+  return [...byNumber.entries()].sort(([a], [b]) => a - b).map(([, label]) => label);
 }
 
 /** Anzeigetext einer offenen Spielseite aus ihrer Cloud-Herkunft (`slot_*_source`). */
