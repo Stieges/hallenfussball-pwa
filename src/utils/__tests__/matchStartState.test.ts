@@ -56,3 +56,37 @@ describe('getMatchStartState — Anpfiff-Zustand (S2, K1)', () => {
     ).toBe('started');
   });
 });
+
+describe('getMatchStartState — Live-Stand (S3, W1)', () => {
+  const planned = () => [matchWith('scheduled')];
+
+  it('(a) Live-Stand zeigt gestartetes Spiel, matches noch geplant: angepfiffen', () => {
+    expect(getMatchStartState(planned(), { status: 'ok', anyStarted: true })).toBe('started');
+  });
+
+  it('(b) Live-Stand nicht lesbar: nicht feststellbar (fail-closed)', () => {
+    expect(getMatchStartState(planned(), { status: 'error' })).toBe('unknown');
+  });
+
+  it('(c) Gegenbeispiel: alles geplant, Live-Stand leer: nicht angepfiffen', () => {
+    expect(getMatchStartState(planned(), { status: 'ok', anyStarted: false })).toBe('not-started');
+  });
+
+  it('Live-Stand noch nicht geladen: nicht feststellbar', () => {
+    expect(getMatchStartState(planned(), { status: 'loading' })).toBe('unknown');
+  });
+
+  it('kein Live-Signal (rein lokal): die Match-Liste entscheidet', () => {
+    expect(getMatchStartState(planned())).toBe('not-started');
+  });
+
+  it('matches zeigen angepfiffen, Live-Lesen fehlgeschlagen: angepfiffen', () => {
+    expect(getMatchStartState([matchWith('finished')], { status: 'error' })).toBe('started');
+  });
+
+  it('matches unbekannt, Live-Stand leer: nicht feststellbar', () => {
+    expect(getMatchStartState([matchWith('irgendwas')], { status: 'ok', anyStarted: false })).toBe(
+      'unknown'
+    );
+  });
+});

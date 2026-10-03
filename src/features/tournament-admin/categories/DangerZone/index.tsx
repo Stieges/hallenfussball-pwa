@@ -13,7 +13,7 @@ import { CategoryPage } from '../shared';
 import { DANGER_ACTIONS } from '../../constants/admin.constants';
 import { Dialog } from '../../../../components/dialogs/Dialog';
 import { buildFinishTournamentPatch } from '../../../../utils/tournamentStats';
-import { getMatchStartState } from '../../../../utils/matchStartState';
+import { useTournamentStartState } from '../../../../hooks/useTournamentStartState';
 import { useMyTournamentRole } from '../../../auth/hooks/useMyTournamentRole';
 import { canDeleteTournament } from '../../../auth/utils/permissions';
 import type { Tournament } from '../../../../types/tournament';
@@ -270,8 +270,9 @@ export function DangerZoneCategory({
   const canDelete = myRole ? canDeleteTournament(myRole) : false;
 
   // @LZ-003: „Turnier löschen" nur vor dem ersten Anpfiff — und nur, wenn der
-  // Anpfiff-Zustand überhaupt feststellbar ist (fail-closed, siehe getMatchStartState).
-  const matchStartState = getMatchStartState(tournament.matches);
+  // Anpfiff-Zustand überhaupt feststellbar ist (fail-closed, siehe
+  // useTournamentStartState/getMatchStartState).
+  const matchStartState = useTournamentStartState(tournament);
   const canOfferDelete = canDelete && matchStartState === 'not-started';
 
   // @OB-014: Fokus der Rückfrage liegt zuerst auf „Abbrechen".
