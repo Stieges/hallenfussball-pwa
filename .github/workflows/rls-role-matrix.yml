@@ -31,6 +31,12 @@ on:
       # muss (Seed von public.match_transitions, Gleichlauf-Beweis in Probe 7 des Harnesses).
       - 'src/core/match/matchTransitions.json'
       - 'scripts/match-event-log-check.sh'
+      # A-05 (M1, Controller-Zusatz aus dem A-02-Review): Slot-Migration 20261003_001 samt Fixture
+      # (Fixture nutzt den App-Weg TournamentCreationService -> mapTournamentToSupabase).
+      - 'scripts/match-slots-check.sh'
+      - 'scripts/match-slots-fixture.ts'
+      - 'src/core/models/**'
+      - 'src/core/repositories/supabaseMappers.ts'
 
 permissions:
   contents: read
@@ -39,7 +45,7 @@ jobs:
   rls-role-matrix:
     name: Rechte-Matrix gegen echtes RLS (Postgres-Wegwerfcontainer)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -67,3 +73,18 @@ jobs:
         # (final-review-B.md, M5: docs/TESTUMGEBUNG.md nannte den Modus, die CI führte ihn nicht
         # aus).
         run: bash scripts/match-event-log-check.sh --without-guard
+
+      - name: Node.js einrichten (Fixture des Slot-Beweises)
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Abhaengigkeiten installieren
+        run: npm ci
+
+      - name: Spielseiten als Slot pruefen (A-02, M1)
+        # Vierter Wegwerf-Container (eigener Skriptlauf, eigener trap): Bestandsdaten (E-A5), frisch
+        # angelegtes Turnier ueber den App-Weg, Pruefregeln slot_*_source / slot_*_present.
+        # Siehe scripts/match-slots-check.sh (Kopfkommentar).
+        run: bash scripts/match-slots-check.sh

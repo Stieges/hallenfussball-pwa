@@ -88,6 +88,7 @@ import {
 import { mapMatchEventToSupabase } from '../src/core/repositories/liveMatchMappers';
 import type { MatchEvent } from '../src/core/models/LiveMatch';
 import { generateFullSchedule } from '../src/core/generators/scheduleGenerator';
+import { matchSideTeamId, transitionalSides } from '../src/core/models/matchSlot';
 
 // =============================================================================
 // 0. PRODUKTIONS-SPERRE + CLIENT
@@ -269,8 +270,10 @@ function buildScheduledTournament(
     round: Math.floor(index / tournament.numberOfFields) + 1,
     field: scheduledMatch.field,
     slot: scheduledMatch.slot,
-    teamA: scheduledMatch.originalTeamA,
-    teamB: scheduledMatch.originalTeamB,
+    // A-05: Spielseiten als Slot (Team-ID oder Herkunft); teamA/teamB nur ueber die eine Schreibstelle.
+    ...transitionalSides(scheduledMatch.slotA, scheduledMatch.slotB),
+    slotA: scheduledMatch.slotA,
+    slotB: scheduledMatch.slotB,
     scoreA: scheduledMatch.scoreA,
     scoreB: scheduledMatch.scoreB,
     group: scheduledMatch.group,
@@ -443,8 +446,8 @@ async function main(): Promise<void> {
     { id: matchRunning.id, scoreA: 1, scoreB: 0, matchStatus: 'running', timerStartTime: now, timerElapsedSeconds: 300 },
   ]);
 
-  const runningHomeTeamId = liveCupTeams.find((t) => t.name === matchRunning.teamA)?.id ?? null;
-  const runningAwayTeamId = liveCupTeams.find((t) => t.name === matchRunning.teamB)?.id ?? null;
+  const runningHomeTeamId = matchSideTeamId(matchRunning, 'A') ?? null;
+  const runningAwayTeamId = matchSideTeamId(matchRunning, 'B') ?? null;
   const runningEvents: MatchEvent[] = [
     {
       id: e2eUuid(`event:live-cup:${matchRunning.id}:1`),
@@ -628,8 +631,10 @@ async function main(): Promise<void> {
     round: Math.floor(index / publicCup.numberOfFields) + 1,
     field: scheduledMatch.field,
     slot: scheduledMatch.slot,
-    teamA: scheduledMatch.originalTeamA,
-    teamB: scheduledMatch.originalTeamB,
+    // A-05: Spielseiten als Slot (Team-ID oder Herkunft); teamA/teamB nur ueber die eine Schreibstelle.
+    ...transitionalSides(scheduledMatch.slotA, scheduledMatch.slotB),
+    slotA: scheduledMatch.slotA,
+    slotB: scheduledMatch.slotB,
     scoreA: scheduledMatch.scoreA,
     scoreB: scheduledMatch.scoreB,
     group: scheduledMatch.group,
@@ -704,9 +709,8 @@ async function main(): Promise<void> {
     },
   ]);
 
-  const publicCupTeamIdByName = new Map(publicCupTeams.map((t) => [t.name, t.id]));
-  const publicCupRunningHomeTeamId = publicCupTeamIdByName.get(publicCupRunningMatch.teamA) ?? null;
-  const publicCupRunningAwayTeamId = publicCupTeamIdByName.get(publicCupRunningMatch.teamB) ?? null;
+  const publicCupRunningHomeTeamId = matchSideTeamId(publicCupRunningMatch, 'A') ?? null;
+  const publicCupRunningAwayTeamId = matchSideTeamId(publicCupRunningMatch, 'B') ?? null;
   const publicCupRunningEvents: MatchEvent[] = [
     {
       id: e2eUuid(`event:public-cup:${publicCupRunningMatch.id}:1`),
