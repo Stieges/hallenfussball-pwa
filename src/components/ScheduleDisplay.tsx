@@ -12,7 +12,8 @@
 import { CSSProperties, useMemo } from 'react';
 import { cssVars } from '../design-tokens'
 import { GeneratedSchedule } from '../core/generators';
-import { Standing, Match, Team, Tournament } from '../types/tournament';
+import { Standing, Match, Team } from '../types/tournament';
+import { toConflictMatch, type GroupStageSource, type ScheduleSource } from './schedule/scheduleSource';
 import {
   TournamentHeader,
   ParticipantsAndGroups,
@@ -135,14 +136,18 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     });
   }, [finalMatches, currentMatches]);
 
-  // Die Spielplan-Komponenten erwarten ein `Tournament`, lesen hier aber nur Gruppen, Teams und Spiele
-  // (`GeneratedSchedule.tournament` hat eine andere Form). Zwei schmale Stand-ins, einmal getypt statt `any`.
-  const groupsOnly = useMemo(
-    () => ({ groups: schedule.tournament.groups }) as unknown as Tournament,
+  // Eingaben der Spielplan-Komponenten: schmale Typen (`ScheduleSource`), kein vorgetäuschtes `Tournament`.
+  // Die Vorrunde bekommt die Spiele zusätzlich als `Match` für die Konflikterkennung im Bearbeitungsmodus.
+  const groupsOnly = useMemo<ScheduleSource>(
+    () => ({ groups: schedule.tournament.groups }),
     [schedule.tournament.groups],
   );
-  const sideTournament = useMemo(
-    () => ({ groups: schedule.tournament.groups, teams: tournamentTeams ?? schedule.teams, matches: schedule.allMatches }) as unknown as Tournament,
+  const groupStageSource = useMemo<GroupStageSource>(
+    () => ({
+      groups: schedule.tournament.groups,
+      teams: tournamentTeams ?? schedule.teams,
+      matches: schedule.allMatches.map(toConflictMatch),
+    }),
     [schedule.tournament.groups, tournamentTeams, schedule.teams, schedule.allMatches],
   );
 
@@ -210,7 +215,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
           runningMatchIds={runningMatchIds}
-          tournament={sideTournament}
+          tournament={groupStageSource}
           onMatchSwap={onMatchSwap}
           onNavigateToCockpit={onNavigateToCockpit}
         />

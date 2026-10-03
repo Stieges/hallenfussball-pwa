@@ -9,7 +9,7 @@ import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
-import { Tournament } from '../../types/tournament';
+import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { matchLabelText } from '../../core/models/slotLabel';
 import { buildSideContext, sideDisplay, type SideContext } from './matchSides';
@@ -27,7 +27,7 @@ export interface DesktopCardProps {
   /** Whether card is expanded */
   isExpanded: boolean;
   /** Tournament data for group name resolution */
-  tournament?: Tournament;
+  tournament?: ScheduleSource;
   /** Kontext der Spielseiten-Anzeige (Teams, Vorgängerspiele); ohne Angabe aus `tournament` gebaut */
   sideContext?: SideContext;
   /** Whether to show group label (hide for single-group tournaments) */

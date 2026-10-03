@@ -11,7 +11,7 @@ import { generateGroupLabels } from './groupHelpers';
 /**
  * Flexible Typen für Lookup-Funktionen (akzeptiert Tournament oder partielle Objekte)
  */
-type GroupLookupSource = Tournament | { groups?: TournamentGroup[] } | undefined;
+type GroupLookupSource = Tournament | { groups?: readonly TournamentGroup[] } | undefined;
 type FieldLookupSource = Tournament | { fields?: TournamentField[] } | undefined;
 
 // ============================================================================

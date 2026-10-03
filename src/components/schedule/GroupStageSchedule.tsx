@@ -24,7 +24,8 @@ import {
 } from '@dnd-kit/sortable';
 import { cssVars, spacingSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
-import { RefereeConfig, Tournament, RuntimeMatchEvent } from '../../types/tournament';
+import { RefereeConfig, RuntimeMatchEvent } from '../../types/tournament';
+import type { GroupStageSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { matchLabelText } from '../../core/models/slotLabel';
 import { buildSideContext, sideDisplay, sideName } from './matchSides';
@@ -66,7 +67,7 @@ interface GroupStageScheduleProps {
   /** MON-LIVE-INDICATOR-01: IDs of matches that are currently running */
   runningMatchIds?: Set<string>;
   /** Tournament data for group name resolution */
-  tournament?: Tournament;
+  tournament?: GroupStageSource;
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
   onMatchSwap?: (matchId1: string, matchId2: string) => void;
   /** Callback to navigate to cockpit with selected match */

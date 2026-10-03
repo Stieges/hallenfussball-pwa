@@ -48,11 +48,11 @@ export function buildSideContext(
   };
 }
 
-/** Anzeige einer Seite (`'A'` = Heim). Ohne Slot (Altdaten) erscheint `slot.unknown`, nie ein gespeicherter Name. */
+/** Anzeige einer Seite (`'A'` = Heim). Ein gespeicherter Anzeigename wird nie gelesen. */
 export function sideDisplay(match: SideMatch, side: 'A' | 'B', ctx: SideContext): SideDisplay {
   const slot = side === 'A' ? match.slotA : match.slotB;
   const name = slotLabel(slot, ctx);
-  const teamId = slot === undefined ? undefined : slotTeamId(slot);
+  const teamId = slotTeamId(slot);
   const team = teamId === undefined ? undefined : ctx.teams.find((candidate) => candidate.id === teamId);
   return {
     id: teamId ?? `${match.id}:${side}`,

@@ -5,14 +5,15 @@
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
-import { Standing, Tournament } from '../../types/tournament';
+import { Standing } from '../../types/tournament';
+import type { ScheduleSource } from './scheduleSource';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import { TeamAvatar } from '../ui/TeamAvatar';
 
 interface ParticipantsAndGroupsProps {
   teams: Array<{ id: string; name: string; group?: string }>;
   standings: Standing[];
-  tournament?: Tournament;
+  tournament?: ScheduleSource;
 }
 
 export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({

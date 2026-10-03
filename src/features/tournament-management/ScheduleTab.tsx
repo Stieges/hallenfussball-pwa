@@ -236,8 +236,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     if (!match) { return null; }
     return {
       id: runningMatchId,
-      teamA: slotLabel(match.slotA, slotContext),
-      teamB: slotLabel(match.slotB, slotContext),
+      homeName: slotLabel(match.slotA, slotContext),
+      awayName: slotLabel(match.slotB, slotContext),
       scoreA: match.scoreA,
       scoreB: match.scoreB,
     };
@@ -448,7 +448,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           onClose={handleCancelCockpitNavigation}
           onConfirm={handleConfirmCockpitNavigation}
           title={t('schedule.runningMatch.title')}
-          message={t('schedule.runningMatch.message', { teamA: runningMatchInfo.teamA, teamB: runningMatchInfo.teamB, scoreA: runningMatchInfo.scoreA, scoreB: runningMatchInfo.scoreB })}
+          message={t('schedule.runningMatch.message', { teamA: runningMatchInfo.homeName, teamB: runningMatchInfo.awayName, scoreA: runningMatchInfo.scoreA, scoreB: runningMatchInfo.scoreB })}
           confirmText={t('schedule.runningMatch.confirmSwitch')}
           cancelText={t('common.cancel')}
           variant="warning"

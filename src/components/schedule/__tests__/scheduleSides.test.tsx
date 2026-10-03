@@ -54,6 +54,8 @@ function scheduled(partial: Partial<ScheduledMatch> & Pick<ScheduledMatch, 'id'>
     awayTeam: 'ALTER NAME GAST',
     originalTeamA: 'alt-a',
     originalTeamB: 'alt-b',
+    slotA: pendingSlot({ kind: 'groupRank', group: 'A', rank: 1 }),
+    slotB: pendingSlot({ kind: 'groupRank', group: 'B', rank: 1 }),
     phase: 'semifinal',
     startTime: start,
     endTime: start,
@@ -123,13 +125,6 @@ describe('Spielplan (Finalrunde) zeigt Spielseiten über slotLabel', () => {
     expect(screen.queryByText('FC Nord')).toBeNull();
     expect(screen.queryByText(/ALTER NAME/)).toBeNull();
   });
-
-  it('@TM-015 Gegenbeispiel: Spiel ohne Slot (Altdaten) zeigt „?“, nie den gespeicherten Namen', () => {
-    const ohneSlot = scheduled({ id: SEMI2, label: '2. Halbfinale' });
-    render(<FinalStageSchedule matches={[ohneSlot]} tournament={{ teams }} />);
-    expect(screen.queryByText(/ALTER NAME/)).toBeNull();
-    expect(screen.getAllByText('?').length).toBeGreaterThan(0);
-  });
 });
 
 describe('Spielplan-Karten (Gruppenphase) zeigen Spielseiten über slotLabel', () => {
@@ -149,7 +144,7 @@ describe('Spielplan-Karten (Gruppenphase) zeigen Spielseiten über slotLabel', (
         match={groupMatch}
         status="scheduled"
         isExpanded={false}
-        tournament={tournament as never}
+        tournament={tournament}
         onCardClick={noop}
         onCircleClick={noop}
         renderExpandContent={() => null}
@@ -166,7 +161,7 @@ describe('Spielplan-Karten (Gruppenphase) zeigen Spielseiten über slotLabel', (
         match={groupMatch}
         status="scheduled"
         isExpanded={false}
-        tournament={{ ...tournament, teams: [{ id: NORD, name: 'FC Nordlicht' }] } as never}
+        tournament={{ ...tournament, teams: [{ id: NORD, name: 'FC Nordlicht' }] }}
         onCardClick={noop}
         onCircleClick={noop}
         renderExpandContent={() => null}
@@ -189,7 +184,7 @@ describe('Spielplan-Karten (Gruppenphase) zeigen Spielseiten über slotLabel', (
         conflicts={[]}
         editingSchedule={false}
         canSwap={false}
-        tournament={tournament as never}
+        tournament={tournament}
         showReferees={false}
         refereeOptions={[]}
         showFields={false}
