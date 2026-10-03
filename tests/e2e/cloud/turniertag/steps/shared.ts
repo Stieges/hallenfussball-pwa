@@ -88,31 +88,43 @@ export async function openSpielplanFinalrunde(page: Page): Promise<void> {
 }
 
 /**
- * Beschriftungen der Finalrunden-Zeilen im Spielplan der Turnierleitung (`role="row"`,
- * `aria-label="Spiel <n>: <Heim> gegen <Gast>"`), ohne die Anzeigenummer, in Anzeigereihenfolge
- * (Halbfinale 1 zuerst). Wartet, bis alle vier Zeilen im Dokument stehen.
+ * Beschriftungen der vier Finalrunden-Spiele im Spielplan der Turnierleitung ("<Heim> gegen <Gast>"),
+ * in Anzeigereihenfolge (Halbfinale 1 zuerst). Der Spielplan zeigt sie je nach Renderzustand als
+ * Karten (`role="row"`, `aria-label="Spiel <n>: <Heim> gegen <Gast>"`) oder als Tabelle der
+ * Finalrunde (`tr` mit Nr., Zeit, Runde, Heim, Ergebnis, Gast, Feld); beide Quellen werden gelesen.
+ * Die Liste rendert nur Zeilen im Umfeld des sichtbaren Bereichs: beim Warten über die Seite scrollen.
  */
 export async function finalrundeLabels(page: Page): Promise<string[]> {
-  const byNumber = new Map<number, string>();
+  const orderByLabel = new Map<string, number>();
+  const remember = (label: string, order: number): void => {
+    orderByLabel.set(label, Math.min(order, orderByLabel.get(label) ?? order));
+  };
   const collect = async (): Promise<void> => {
-    const labels = await page.getByRole('row').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') ?? ''));
-    for (const label of labels) {
+    const cards = await page.getByRole('row').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') ?? ''));
+    for (const label of cards) {
       const match = /^Spiel (\d+): (.+)$/.exec(label);
       if (match) {
-        byNumber.set(Number(match[1]), match[2]);
+        remember(match[2], Number(match[1]));
+      }
+    }
+    const table = await page.locator('tr').evaluateAll((els) =>
+      els.map((tr) => Array.from(tr.querySelectorAll('td')).map((td) => (td as HTMLElement).innerText.replace(/\s+/g, ' ').trim()))
+    );
+    for (const cells of table) {
+      if (cells.length >= 6 && /Halbfinale|^Finale$|Platz 3/.test(cells[2])) {
+        remember(`${cells[3]} gegen ${cells[5]}`, Number(cells[0]));
       }
     }
   };
-  // Die Liste rendert nur Zeilen im Umfeld des sichtbaren Bereichs: über die Seite scrollen und sammeln.
   await expect(async () => {
     for (const fraction of [0, 0.4, 0.7, 1]) {
       await page.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), fraction);
       await page.waitForTimeout(250);
       await collect();
     }
-    expect(byNumber.size).toBe(4);
+    expect(orderByLabel.size).toBe(4);
   }).toPass({ timeout: 20000 });
-  return [...byNumber.entries()].sort(([a], [b]) => a - b).map(([, label]) => label);
+  return [...orderByLabel.entries()].sort(([, a], [, b]) => a - b).map(([label]) => label);
 }
 
 /** Anzeigetext einer offenen Spielseite aus ihrer Cloud-Herkunft (`slot_*_source`). */
