@@ -19,6 +19,7 @@ import {
   FinalsRefereeMode,
 } from '../types/tournament';
 import { generateUniqueId } from './idGenerator';
+import { teamSlot, matchSideTeamId } from '../core/models/matchSlot';
 
 // Default placement criteria (same as in TournamentCreationService).
 // Keine `label`-Strings: die Anzeige löst über `id` gegen i18n auf
@@ -124,28 +125,27 @@ function parseJSONTournament(content: string): ImportValidationResult {
   // Parse matches if provided
   let matches: Match[] = [];
   if (json.matches && Array.isArray(json.matches)) {
-    matches = (json.matches as Array<Record<string, unknown>>).map((m, index) => {
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty mapped ID should use original
-      const teamAId = teamIdMap.get(String(m.teamA)) || String(m.teamA);
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty mapped ID should use original
-      const teamBId = teamIdMap.get(String(m.teamB)) || String(m.teamB);
-
-      // Check if team IDs are valid
-      if (!teams.find(t => t.id === teamAId)) {
-        warnings.push({
+    const parsed = (json.matches as Array<Record<string, unknown>>).map((m, index): Match | null => {
+      // A-03: Die Seiten eines Spiels sind Team-IDs aus der Datei, abgebildet auf die neuen Team-IDs.
+      // Eine ID, die in der Teamliste fehlt, ist ein Fehler – ein Slot ohne Team ist nicht darstellbar.
+      const teamAId = teamIdMap.get(String(m.teamA));
+      const teamBId = teamIdMap.get(String(m.teamB));
+      if (teamAId === undefined) {
+        errors.push({
           code: 'UNKNOWN_TEAM',
           field: `matches[${index}].teamA`,
           message: `Team A in Spiel ${index + 1} nicht gefunden`,
-          severity: 'warning',
         });
       }
-      if (!teams.find(t => t.id === teamBId)) {
-        warnings.push({
+      if (teamBId === undefined) {
+        errors.push({
           code: 'UNKNOWN_TEAM',
           field: `matches[${index}].teamB`,
           message: `Team B in Spiel ${index + 1} nicht gefunden`,
-          severity: 'warning',
         });
+      }
+      if (teamAId === undefined || teamBId === undefined) {
+        return null;
       }
 
       return {
@@ -153,8 +153,11 @@ function parseJSONTournament(content: string): ImportValidationResult {
         round: Number(m.round) || 1,
         field: Number(m.field) || 1,
         slot: m.slot ? Number(m.slot) : undefined,
+        // Übergangsfeld teamA/teamB (bis A-04b) trägt die Team-ID parallel zum Slot
         teamA: teamAId,
         teamB: teamBId,
+        slotA: teamSlot(teamAId),
+        slotB: teamSlot(teamBId),
         scoreA: m.scoreA !== undefined ? Number(m.scoreA) : undefined,
         scoreB: m.scoreB !== undefined ? Number(m.scoreB) : undefined,
         group: m.group ? String(m.group) : undefined,
@@ -163,6 +166,10 @@ function parseJSONTournament(content: string): ImportValidationResult {
         label: m.label ? String(m.label) : undefined,
       };
     });
+    if (errors.length > 0) {
+      return { isValid: false, errors, warnings };
+    }
+    matches = parsed.filter((m): m is Match => m !== null);
   }
 
   // Check fairness warnings (non-blocking)
@@ -487,12 +494,10 @@ export function checkFairnessWarnings(matches: Match[], teams: Team[]): ImportVa
   const teamMatches = new Map<string, number[]>();
 
   matches.forEach((match, index) => {
-    const teamAMatches = teamMatches.get(match.teamA) ?? [];
-    const teamBMatches = teamMatches.get(match.teamB) ?? [];
-    teamAMatches.push(index);
-    teamBMatches.push(index);
-    teamMatches.set(match.teamA, teamAMatches);
-    teamMatches.set(match.teamB, teamBMatches);
+    for (const teamId of [matchSideTeamId(match, 'A'), matchSideTeamId(match, 'B')]) {
+      if (teamId === undefined) { continue; } // offene Seite: kein Team
+      teamMatches.set(teamId, [...(teamMatches.get(teamId) ?? []), index]);
+    }
   });
 
   // Check for back-to-back matches
@@ -514,12 +519,13 @@ export function checkFairnessWarnings(matches: Match[], teams: Team[]): ImportVa
 
   // Check for teams playing against themselves
   for (const match of matches) {
-    if (match.teamA === match.teamB) {
-      const team = teams.find(t => t.id === match.teamA);
+    const idA = matchSideTeamId(match, 'A');
+    if (idA !== undefined && idA === matchSideTeamId(match, 'B')) {
+      const team = teams.find(t => t.id === idA);
       warnings.push({
         code: 'SELF_MATCH',
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use teamId
-        message: `Team "${team?.name || match.teamA}" spielt gegen sich selbst`,
+        message: `Team "${team?.name || idA}" spielt gegen sich selbst`,
         severity: 'warning',
       });
     }
@@ -528,8 +534,9 @@ export function checkFairnessWarnings(matches: Match[], teams: Team[]): ImportVa
   // Check match count distribution
   const matchCounts = new Map<string, number>();
   for (const match of matches) {
-    matchCounts.set(match.teamA, (matchCounts.get(match.teamA) ?? 0) + 1);
-    matchCounts.set(match.teamB, (matchCounts.get(match.teamB) ?? 0) + 1);
+    for (const teamId of [matchSideTeamId(match, 'A'), matchSideTeamId(match, 'B')]) {
+      if (teamId !== undefined) { matchCounts.set(teamId, (matchCounts.get(teamId) ?? 0) + 1); }
+    }
   }
 
   const counts = Array.from(matchCounts.values());

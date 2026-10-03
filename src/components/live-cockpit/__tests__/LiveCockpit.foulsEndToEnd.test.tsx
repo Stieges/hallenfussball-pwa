@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Tournament } from '../../../types/tournament';
+import { looseVs } from '../../../test/matchSlotFixtures';
 import { LocalMatchStore, ClockSync, MatchEngine, MatchCommands } from '../../../core/match/client';
 import { serverRules } from '../../../core/match';
 import type { MatchEngineContextValue } from '../../../features/match-engine/matchEngineContextInstance';
@@ -56,7 +57,7 @@ const MATCH_ID = 'match-e2e-1';
 
 const tournament = {
   id: 'tour-e2e',
-  matches: [{ id: MATCH_ID, teamA: 'teama', teamB: 'teamb', round: 1, field: 1, matchNumber: 1 }],
+  matches: [{ id: MATCH_ID, ...looseVs('teama', 'teamb'), round: 1, field: 1, matchNumber: 1 }],
   teams: [{ id: 'teama', name: 'FC Alpha' }, { id: 'teamb', name: 'SV Beta' }],
   groupPhaseGameDuration: 20,
 } as unknown as Tournament;

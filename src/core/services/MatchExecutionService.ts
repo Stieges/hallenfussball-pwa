@@ -9,7 +9,8 @@
 
 import { ILiveMatchRepository } from '../repositories/ILiveMatchRepository';
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
-import { OptimisticLockError } from '../errors';
+import { OptimisticLockError, MatchAwaitingTeamsError } from '../errors';
+import { matchSideTeamId } from '../models/matchSlot';
 import { LiveMatch, MatchStatus, LiveTeamInfo, MatchEvent, FinishResult } from '../models/LiveMatch';
 import { ScheduledMatch } from '../../core/generators';
 import { executeWithRetry } from '../utils/SingleFlight';
@@ -793,9 +794,20 @@ export class MatchExecutionService {
             ? sportRules.canDrawInGroupPhase
             : sportRules.canDrawInFinals;
 
-        // Resolve team data
-        const homeTeam = tournament.teams.find(t => t.id === scheduledMatch.originalTeamA || t.name === scheduledMatch.homeTeam);
-        const awayTeam = tournament.teams.find(t => t.id === scheduledMatch.originalTeamB || t.name === scheduledMatch.awayTeam);
+        // Team data NUR über die Team-ID aus dem Slot (A-03, @TM-033): eine offene Seite (oder ein fehlender
+        // Slot) lässt das Spiel nicht anlaufen – kein Fake-Team aus dem Anzeigetext, kein Namens-Lookup.
+        const homeId = matchSideTeamId(scheduledMatch, 'A');
+        const awayId = matchSideTeamId(scheduledMatch, 'B');
+        const openSides = [homeId === undefined ? 'A' : undefined, awayId === undefined ? 'B' : undefined]
+            .filter((side): side is 'A' | 'B' => side !== undefined);
+        if (openSides.length > 0) {
+            throw new MatchAwaitingTeamsError(scheduledMatch.id, openSides);
+        }
+        const homeTeam = tournament.teams.find(t => t.id === homeId);
+        const awayTeam = tournament.teams.find(t => t.id === awayId);
+        if (homeTeam === undefined || awayTeam === undefined) {
+            throw new Error(`Spiel ${scheduledMatch.id}: Team ${homeTeam === undefined ? homeId : awayId} nicht im Turnier`);
+        }
 
         const newMatch: LiveMatch = {
             id: scheduledMatch.id,
@@ -808,16 +820,16 @@ export class MatchExecutionService {
             refereeName: scheduledMatch.referee ? `SR ${scheduledMatch.referee}` : undefined,
             version: 1, // Initial version for optimistic locking (BUG-002)
             homeTeam: {
-                id: homeTeam?.id ?? scheduledMatch.homeTeam,
-                name: homeTeam?.name ?? scheduledMatch.homeTeam,
-                logo: homeTeam?.logo,
-                colors: homeTeam?.colors,
+                id: homeTeam.id,
+                name: homeTeam.name,
+                logo: homeTeam.logo,
+                colors: homeTeam.colors,
             },
             awayTeam: {
-                id: awayTeam?.id ?? scheduledMatch.awayTeam,
-                name: awayTeam?.name ?? scheduledMatch.awayTeam,
-                logo: awayTeam?.logo,
-                colors: awayTeam?.colors,
+                id: awayTeam.id,
+                name: awayTeam.name,
+                logo: awayTeam.logo,
+                colors: awayTeam.colors,
             },
             homeScore: scheduledMatch.scoreA ?? 0,
             awayScore: scheduledMatch.scoreB ?? 0,

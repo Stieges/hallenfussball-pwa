@@ -84,16 +84,17 @@ vi.mock('../../components/ui/Toast/ToastContext', () => ({
 }));
 
 import { useMatchExecution } from '../useMatchExecution';
+import { looseVs } from '../../test/matchSlotFixtures';
 
 function oldMatch(): Match {
   // B1-Umschaltung (C3a-2a): "scheduled" (bzw. fehlend) ohne bereits laufendes Alt-LiveMatch
   // waere jetzt ein NEUES Engine-Spiel (PC15a) -- dieses Fixture soll bewusst ein Altspiel
   // bleiben (das ist hier der einzige Testgegenstand), deshalb ein expliziter Nicht-scheduled-Status.
-  return { id: OLD_MATCH_ID, teamA: 'teama', teamB: 'teamb', round: 1, field: 1, matchNumber: 1, matchStatus: 'finished' };
+  return { id: OLD_MATCH_ID, ...looseVs('teama', 'teamb'), round: 1, field: 1, matchNumber: 1, matchStatus: 'finished' };
 }
 
 function engineMatch(): Match {
-  return { id: ENGINE_MATCH_ID, teamA: 'teamc', teamB: 'teamd', round: 1, field: 2, matchNumber: 2 };
+  return { id: ENGINE_MATCH_ID, ...looseVs('teamc', 'teamd'), round: 1, field: 2, matchNumber: 2 };
 }
 
 // Stabile Referenz: `tournament.matches` steht als Dependency im Lade-Effekt -- eine bei jedem

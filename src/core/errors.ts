@@ -302,3 +302,25 @@ export function isAbortError(error: unknown): boolean {
     e.code === 20
   );
 }
+
+// =============================================================================
+// MatchAwaitingTeamsError (A-03, @TM-033)
+// =============================================================================
+
+/**
+ * Ein Spiel lässt sich nicht anpfeifen, solange eine Seite noch offen ist (Slot `pending`) oder
+ * der Slot fehlt. Trägt die offenen Seiten, damit die Anzeige den Wartegrund nennen kann
+ * (Herkunft über `slotLabel`).
+ */
+export class MatchAwaitingTeamsError extends Error {
+  public readonly matchId: string;
+  /** Seiten (`'A'` = Heim), die noch kein Team haben. */
+  public readonly openSides: readonly ('A' | 'B')[];
+
+  constructor(matchId: string, openSides: readonly ('A' | 'B')[]) {
+    super(`Spiel ${matchId}: Seite ${openSides.join(' und ')} ist noch nicht besetzt`);
+    this.name = 'MatchAwaitingTeamsError';
+    this.matchId = matchId;
+    this.openSides = openSides;
+  }
+}
