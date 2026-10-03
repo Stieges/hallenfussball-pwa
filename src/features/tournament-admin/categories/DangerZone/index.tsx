@@ -50,7 +50,7 @@ const styles = {
     gap: cssVars.spacing.sm,
     padding: cssVars.spacing.md,
     background: cssVars.colors.warningSubtle,
-    border: `1px solid ${cssVars.colors.warningBorder}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.warningBorder}`,
     borderRadius: cssVars.borderRadius.lg,
     marginBottom: cssVars.spacing.lg,
     fontSize: cssVars.fontSizes.bodySm,
@@ -59,7 +59,7 @@ const styles = {
 
   actionCard: {
     background: cssVars.colors.surface,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.lg,
     padding: cssVars.spacing.lg,
     marginBottom: cssVars.spacing.md,
@@ -156,7 +156,7 @@ const styles = {
 
   dialogConsequences: {
     background: cssVars.colors.dangerSubtle,
-    border: `1px solid ${cssVars.colors.errorBorder}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.errorBorder}`,
     borderRadius: cssVars.borderRadius.md,
     padding: cssVars.spacing.md,
     marginBottom: cssVars.spacing.lg,
@@ -186,7 +186,7 @@ const styles = {
   confirmInput: {
     width: '100%',
     padding: cssVars.spacing.sm,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     background: cssVars.colors.surface,
     color: cssVars.colors.textPrimary,
@@ -203,7 +203,7 @@ const styles = {
 
   cancelButton: {
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     background: 'transparent',
     color: cssVars.colors.textPrimary,

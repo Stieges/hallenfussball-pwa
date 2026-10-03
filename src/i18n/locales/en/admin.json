@@ -61,7 +61,6 @@
     "typeToConfirm": "Type {{text}} to continue:",
     "cancel": "Cancel",
     "executing": "Executing...",
-    "saveError": "Saving failed. Please try again.",
     "resetSchedule": "Reset schedule",
     "resetScheduleDesc": "Resets the schedule. All results are preserved.",
     "endTournament": "End tournament early",

@@ -61,7 +61,6 @@
     "typeToConfirm": "Tippe {{text}} um fortzufahren:",
     "cancel": "Abbrechen",
     "executing": "Wird ausgeführt...",
-    "saveError": "Speichern fehlgeschlagen. Bitte erneut versuchen.",
     "resetSchedule": "Spielplan zurücksetzen",
     "resetScheduleDesc": "Setzt den Spielplan zurück. Alle Ergebnisse bleiben erhalten.",
     "endTournament": "Turnier vorzeitig beenden",

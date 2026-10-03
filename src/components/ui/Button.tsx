@@ -22,6 +22,8 @@ interface ButtonProps {
   loading?: boolean;
   /** Test ID for E2E testing */
   'data-testid'?: string;
+  /** Ref auf das nativ gerenderte Button-Element (z. B. Fokus-Ziele, G2) */
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
 /** Loading spinner - declared outside component to prevent recreation on each render */
@@ -55,6 +57,7 @@ export const Button: React.FC<ButtonProps> = ({
   pressEffect = true,
   loading = false,
   'data-testid': testId,
+  ref,
 }) => {
   const [isPressed, setIsPressed] = useState(false);
   const [isFocusVisible, setIsFocusVisible] = useState(false);
@@ -164,6 +167,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <button
+      ref={ref}
       type={type}
       onClick={isDisabled ? undefined : onClick}
       disabled={isDisabled}

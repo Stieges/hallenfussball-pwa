@@ -347,6 +347,14 @@ export const cssBorderRadius = {
 } as const;
 
 // =============================================================================
+// Border Width (fixed px token)
+// =============================================================================
+
+export const cssBorderWidth = {
+  thin: '1px',
+} as const;
+
+// =============================================================================
 // Shadows
 // =============================================================================
 
@@ -536,6 +544,7 @@ export const cssVars = {
   gradients: cssGradients,
   spacing: cssSpacing,
   borderRadius: cssBorderRadius,
+  borderWidth: cssBorderWidth,
   shadows: cssShadows,
   fontFamilies: cssFontFamilies,
   fontSizes: cssFontSizes,
@@ -560,6 +569,7 @@ export type CssVarColors = keyof typeof cssColors;
 export type CssVarGradients = keyof typeof cssGradients;
 export type CssVarSpacing = keyof typeof cssSpacing;
 export type CssVarBorderRadius = keyof typeof cssBorderRadius;
+export type CssVarBorderWidth = keyof typeof cssBorderWidth;
 export type CssVarShadows = keyof typeof cssShadows;
 export type CssVarFontFamilies = keyof typeof cssFontFamilies;
 export type CssVarFontSizes = keyof typeof cssFontSizes;
