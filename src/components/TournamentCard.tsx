@@ -18,6 +18,7 @@ import { cssVars } from '../design-tokens'
 import { getLocationName } from '../utils/locationHelpers';
 import { formatTournamentDate } from '../utils/tournamentCategories';
 import { TournamentActionMenu } from './TournamentActionMenu';
+import { useTournamentStartState } from '../hooks/useTournamentStartState';
 
 /** Map categoryLabel to TournamentActionMenu category */
 type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft' | 'trashed';
@@ -46,6 +47,9 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   testId,
 }) => {
   const { t } = useTranslation('dashboard');
+  // @LZ-003 / W4: Papierkorb nur vor dem ersten Anpfiff — gleiche gemeinsame
+  // Anpfiff-Funktion wie „Turnier löschen" (DangerZone) und „Im Wizard bearbeiten".
+  const matchStartState = useTournamentStartState(tournament);
 
   // Helper functions that need t()
   const getGroupSystemLabel = (groupSystem?: GroupSystem): string => {
@@ -93,7 +97,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   };
 
   const category = getCategory();
-  const deleteHandler = onSoftDelete;
+  const deleteHandler = matchStartState === 'not-started' ? onSoftDelete : undefined;
   const cardStyle: CSSProperties = {
     cursor: onClick ? 'pointer' : 'default',
     transition: 'all 0.2s ease',
