@@ -10,7 +10,6 @@
  */
 import i18next from 'i18next';
 import type { Team, TournamentGroup } from '../../types/tournament';
-import { getGroupDisplayName } from '../../utils/displayNames';
 import type { MatchSlot } from './schemas/MatchSlotSchema';
 
 /** Das, was die Anzeige von einem Spiel braucht, um es als Vorgänger zu benennen. */
@@ -30,6 +29,12 @@ export interface SlotLabelContext {
 /** Die Übersetzungsschlüssel der Spielseiten-Anzeige (`tournament.json`, Gruppe `slot`). */
 export type SlotKey =
   | 'tournament:slot.groupRank'
+  | 'tournament:slot.groupRankFallback'
+  | 'tournament:slot.groupDefault'
+  | 'tournament:slot.rank1'
+  | 'tournament:slot.rank2'
+  | 'tournament:slot.rank3'
+  | 'tournament:slot.rank4'
   | 'tournament:slot.winnerOf'
   | 'tournament:slot.loserOf'
   | 'tournament:slot.matchNumber'
@@ -41,6 +46,14 @@ export type SlotDescriptionValue = string | number | SlotDescription;
 export type SlotDescription =
   | { text: string }
   | { key: SlotKey; vars: Record<string, SlotDescriptionValue> };
+
+/** Ordinalwörter je Rang (1–4); andere Ränge nutzen `slot.groupRankFallback`. */
+const RANK_WORDS: Record<number, SlotKey | undefined> = {
+  1: 'tournament:slot.rank1',
+  2: 'tournament:slot.rank2',
+  3: 'tournament:slot.rank3',
+  4: 'tournament:slot.rank4',
+};
 
 const UNKNOWN: SlotDescription = { key: 'tournament:slot.unknown', vars: {} };
 
@@ -54,8 +67,15 @@ export function describeSlot(slot: MatchSlot | undefined, ctx: SlotLabelContext)
   }
   const source = slot.source;
   if (source.kind === 'groupRank') {
-    const group = getGroupDisplayName(source.group, { groups: ctx.groups ? [...ctx.groups] : undefined });
-    return { key: 'tournament:slot.groupRank', vars: { group, rank: source.rank } };
+    const customName = ctx.groups?.find((candidate) => candidate.id === source.group)?.customName;
+    // Ohne eigenen Namen ein Schlüssel statt hartkodiertem „Gruppe X“ – DE/EN-Parität
+    const group: SlotDescriptionValue = customName !== undefined && customName !== ''
+      ? customName
+      : { key: 'tournament:slot.groupDefault', vars: { id: source.group } };
+    const rankKey = RANK_WORDS[source.rank];
+    return rankKey === undefined
+      ? { key: 'tournament:slot.groupRankFallback', vars: { rank: source.rank, group } }
+      : { key: 'tournament:slot.groupRank', vars: { rankWord: { key: rankKey, vars: {} }, group } };
   }
   const previous = ctx.matches.find((candidate) => candidate.id === source.matchId);
   if (previous === undefined) {

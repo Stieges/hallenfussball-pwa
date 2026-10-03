@@ -699,10 +699,16 @@
     "saving": "Saving..."
   },
   "slot": {
-    "groupRank": "{{group}} – place {{rank}}",
+    "groupRank": "{{rankWord}} {{group}}",
     "winnerOf": "Winner of {{match}}",
     "loserOf": "Loser of {{match}}",
     "matchNumber": "Match {{number}}",
-    "unknown": "?"
+    "unknown": "?",
+    "groupRankFallback": "#{{rank}} {{group}}",
+    "groupDefault": "Group {{id}}",
+    "rank1": "1st",
+    "rank2": "2nd",
+    "rank3": "3rd",
+    "rank4": "4th"
   }
 }
