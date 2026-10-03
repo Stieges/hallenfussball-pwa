@@ -26,7 +26,8 @@ import { cssVars, spacingSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import { RefereeConfig, Tournament, RuntimeMatchEvent } from '../../types/tournament';
 import { getGroupShortCode } from '../../utils/displayNames';
-import { getTeamForDisplay } from '../../utils/teamHelpers';
+import { matchLabelText } from '../../core/models/slotLabel';
+import { buildSideContext, sideDisplay, sideName } from './matchSides';
 import {
   MatchCard,
   type MatchCardStatus,
@@ -381,6 +382,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     onNavigateToCockpit?.(matchId);
   }, [onNavigateToCockpit]);
 
+  // Spielseiten: Namen immer über slotLabel mit den aktuellen Teams (@TM-015), nie aus gespeichertem Anzeigetext
+  const sides = useMemo(() => buildSideContext(tournament, matches), [tournament, matches]);
+
   /**
    * Unified render function for expand content (used by both mobile and desktop)
    */
@@ -389,8 +393,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       return null;
     }
 
-    const homeTeam = getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam);
-    const awayTeam = getTeamForDisplay(tournament?.teams, match.originalTeamB, match.awayTeam);
+    const homeTeam = sideDisplay(match, 'A', sides);
+    const awayTeam = sideDisplay(match, 'B', sides);
 
     switch (expandType) {
       case 'quick':
@@ -460,8 +464,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             awayTeamName={awayTeam.name}
             homeScore={match.scoreA ?? 0}
             awayScore={match.scoreB ?? 0}
-            homeTeamId={match.originalTeamA}
-            awayTeamId={match.originalTeamB}
+            homeTeamId={homeTeam.id}
+            awayTeamId={awayTeam.id}
             events={events} // Pass events
             onEditScore={_editable ? () => {
               setExpandedMatchId(null);
@@ -487,7 +491,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       default:
         return null;
     }
-  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, tournament?.teams, liveMatches, _onStartCorrection, _editable]);
+  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, _onStartCorrection, _editable]);
 
   // Sort matches by displayOrder for rendering
   const sortedMatches = useMemo(() => {
@@ -588,6 +592,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             status={status}
             isExpanded={isExpanded}
             tournament={tournament}
+            sideContext={sides}
             showGroupLabel={showGroupLabel}
             onCardClick={handleCardClick}
             onCircleClick={handleCircleClick}
@@ -630,6 +635,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             editingSchedule={editingSchedule}
             canSwap={!!onMatchSwap}
             tournament={tournament}
+            sideContext={sides}
             showGroupLabel={showGroupLabel}
             showReferees={showReferees}
             refereeOptions={refereeOptions}
@@ -690,9 +696,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   {activeMatch.time}
                 </span>
                 <span style={{ fontWeight: cssVars.fontWeights.bold, flex: 1 }}>
-                  {activeMatch.homeTeam}
+                  {sideName(activeMatch, 'A', sides)}
                   <span style={{ color: cssVars.colors.textMuted, padding: `0 ${cssVars.spacing.sm}` }}>vs</span>
-                  {activeMatch.awayTeam}
+                  {sideName(activeMatch, 'B', sides)}
                 </span>
                 {hasGroups && (
                   <span style={{
@@ -760,6 +766,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                     editingSchedule={editingSchedule}
                     canSwap={!!onMatchSwap}
                     tournament={tournament}
+                    sideContext={sides}
                     showGroupLabel={showGroupLabel}
                     showReferees={showReferees}
                     refereeOptions={editableRefereeOptions}
@@ -803,7 +810,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   {activeMatch.time}
                 </span>
                 <span style={{ fontWeight: cssVars.fontWeights.semibold, flex: 1, fontSize: cssVars.fontSizes.sm }}>
-                  {activeMatch.homeTeam} <span style={{ color: cssVars.colors.textMuted }}>vs</span> {activeMatch.awayTeam}
+                  {sideName(activeMatch, 'A', sides)} <span style={{ color: cssVars.colors.textMuted }}>vs</span> {sideName(activeMatch, 'B', sides)}
                 </span>
               </div>
             )}
@@ -825,10 +832,10 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               matchNumber: match.matchNumber,
               scheduledTime: match.time,
               field: match.field,
-              group: match.label ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
+              group: (match.label === undefined ? undefined : matchLabelText(match.label)) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
               showGroupLabel,
-              homeTeam: getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam),
-              awayTeam: getTeamForDisplay(tournament?.teams, match.originalTeamB, match.awayTeam),
+              homeTeam: sideDisplay(match, 'A', sides),
+              awayTeam: sideDisplay(match, 'B', sides),
               homeScore: match.scoreA ?? 0,
               awayScore: match.scoreB ?? 0,
               status: status,
@@ -881,10 +888,10 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             }}
             homeScore={match.scoreA ?? 0}
             awayScore={match.scoreB ?? 0}
-            homeTeamId={match.originalTeamA}
-            awayTeamId={match.originalTeamB}
-            homeTeamName={match.homeTeam}
-            awayTeamName={match.awayTeam}
+            homeTeamId={sideDisplay(match, 'A', sides).id}
+            awayTeamId={sideDisplay(match, 'B', sides).id}
+            homeTeamName={sideName(match, 'A', sides)}
+            awayTeamName={sideName(match, 'B', sides)}
             events={events}
             onEditScore={_editable ? () => {
               // Close summary and start correction flow

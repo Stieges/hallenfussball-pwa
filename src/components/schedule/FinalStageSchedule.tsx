@@ -27,6 +27,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { cssVars, shadowSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import { RefereeConfig } from '../../types/tournament';
+import { matchLabelText } from '../../core/models/slotLabel';
+import { buildSideContext, sideDisplay, sideName, type SideSource } from './matchSides';
 import { MatchScoreCell } from './MatchScoreCell';
 import { LiveBadge } from './LiveBadge';
 
@@ -57,6 +59,8 @@ interface FinalStageScheduleProps {
   onMatchSwap?: (matchId1: string, matchId2: string) => void;
   /** Whether to show the section title (default: true) */
   showTitle?: boolean;
+  /** Teams, Gruppen und Spiele für die Anzeige der Spielseiten (@TM-015) */
+  tournament?: SideSource;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -76,8 +80,11 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   runningMatchIds,
   onMatchSwap,
   showTitle = true,
+  tournament,
 }) => {
   const { t } = useTranslation('tournament');
+  // Spielseiten: Namen immer über slotLabel mit den aktuellen Teams, nie aus gespeichertem Anzeigetext
+  const sides = useMemo(() => buildSideContext(tournament, matches), [tournament, matches]);
   // DnD State
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -481,9 +488,9 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   <td style={{ ...tdStyle, ...matchLabelCellStyle }}>{getFinalMatchLabel(match, t)}</td>
                   <td style={{
                     ...teamCellStyle,
-                    ...(isPlaceholderTeam(match.homeTeam) ? { color: cssVars.colors.textPlaceholder, fontStyle: 'italic' } : {})
+                    ...(sideDisplay(match, 'A', sides).pending ? { color: cssVars.colors.textPlaceholder, fontStyle: 'italic' } : {})
                   }}>
-                    {match.homeTeam}
+                    {sideName(match, 'A', sides)}
                   </td>
                   <td style={resultCellStyle}>
                     <MatchScoreCell
@@ -499,9 +506,9 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   </td>
                   <td style={{
                     ...teamCellStyle,
-                    ...(isPlaceholderTeam(match.awayTeam) ? { color: cssVars.colors.textPlaceholder, fontStyle: 'italic' } : {})
+                    ...(sideDisplay(match, 'B', sides).pending ? { color: cssVars.colors.textPlaceholder, fontStyle: 'italic' } : {})
                   }}>
-                    {match.awayTeam}
+                    {sideName(match, 'B', sides)}
                   </td>
                   {showFields && (() => {
                     const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
@@ -610,7 +617,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   </span>
                   <span style={{ color: cssVars.colors.textSecondary }}>{activeMatch.time}</span>
                   <span style={{ fontWeight: cssVars.fontWeights.semibold, flex: 1 }}>
-                    {activeMatch.homeTeam} <span style={{ color: cssVars.colors.textMuted }}>vs</span> {activeMatch.awayTeam}
+                    {sideName(activeMatch, 'A', sides)} <span style={{ color: cssVars.colors.textMuted }}>vs</span> {sideName(activeMatch, 'B', sides)}
                   </span>
                 </div>
               )}
@@ -627,8 +634,8 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
           const isRunning = runningMatchIds?.has(match.id);
           const isFinished = finishedMatches?.has(match.id) ?? false;
           const hasResult = match.scoreA !== undefined && match.scoreB !== undefined;
-          const homeIsPlaceholder = isPlaceholderTeam(match.homeTeam);
-          const awayIsPlaceholder = isPlaceholderTeam(match.awayTeam);
+          const homeIsPlaceholder = sideDisplay(match, 'A', sides).pending;
+          const awayIsPlaceholder = sideDisplay(match, 'B', sides).pending;
 
           // Determine winner/loser
           const homeWins = hasResult && (match.scoreA ?? 0) > (match.scoreB ?? 0);
@@ -694,7 +701,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     wordBreak: 'break-word' as const,
                     overflowWrap: 'break-word' as const
                   }}>
-                    {match.homeTeam}
+                    {sideName(match, 'A', sides)}
                   </span>
                 </div>
                 {canEditScore || inCorrectionMode ? (
@@ -734,7 +741,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     wordBreak: 'break-word' as const,
                     overflowWrap: 'break-word' as const
                   }}>
-                    {match.awayTeam}
+                    {sideName(match, 'B', sides)}
                   </span>
                 </div>
                 {canEditScore || inCorrectionMode ? (
@@ -871,24 +878,6 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   );
 };
 
-/**
- * Check if a team name is an unresolved placeholder
- * Examples: "TBD", "1. Gruppe A", "Sieger HF1", "group-a-1st"
- */
-function isPlaceholderTeam(teamName: string): boolean {
-  if (!teamName) { return false; }
-  const placeholderPatterns = [
-    /^TBD$/i,
-    /^\d+\.\s*(Gruppe|Group)/i,  // "1. Gruppe A"
-    /^(Sieger|Verlierer|Winner|Loser)/i,  // "Sieger HF1"
-    /group-[a-z]-\d+(st|nd|rd|th)/i,  // "group-a-1st"
-    /-winner$/i,  // "semi1-winner"
-    /-loser$/i,  // "semi1-loser"
-    /^bestSecond$/i,
-  ];
-  return placeholderPatterns.some(pattern => pattern.test(teamName));
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Translation function type simplified for standalone helper
 function getFinalMatchLabel(match: ScheduledMatch, t: (key: any) => string): string {
   if (match.finalType === 'final') { return t('finals.labels.final'); }
@@ -897,6 +886,6 @@ function getFinalMatchLabel(match: ScheduledMatch, t: (key: any) => string): str
   if (match.finalType === 'seventhEighth') { return t('finals.labels.seventhEighth'); }
   if (match.phase === 'semifinal') { return t('finals.labels.semifinal'); }
   if (match.phase === 'quarterfinal') { return t('finals.labels.quarterfinal'); }
-  if (match.label?.includes('Halbfinale')) { return match.label; }
+  if (match.label?.includes('Halbfinale')) { return matchLabelText(match.label); }
   return t('finals.labels.finalMatch');
 }

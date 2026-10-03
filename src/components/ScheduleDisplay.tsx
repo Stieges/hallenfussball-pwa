@@ -108,21 +108,6 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   const finalPhases = schedule.phases.filter(p => p.name !== 'groupStage');
   const finalMatches = finalPhases.flatMap(p => p.matches);
 
-  // Helper: Check if a team reference is a placeholder (not a real team ID)
-  const isPlaceholder = (teamRef: string): boolean => {
-    return (
-      teamRef === 'TBD' ||
-      teamRef.includes('group-') ||
-      teamRef.includes('-1st') ||
-      teamRef.includes('-2nd') ||
-      teamRef.includes('-3rd') ||
-      teamRef.includes('-4th') ||
-      teamRef.includes('bestSecond') ||
-      teamRef.includes('Sieger') ||
-      teamRef.includes('Verlierer')
-    );
-  };
-
   // Merge currentMatches scores into schedule matches (memoized to prevent re-computation)
   const groupPhaseMatches = useMemo(() => {
     if (!groupPhase || !currentMatches) { return groupPhase?.matches ?? []; }
@@ -140,91 +125,22 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     });
   }, [groupPhase, currentMatches]);
 
-  // FIX: Merge playoff matches with resolved team names from tournament.matches AND resolve placeholders via standings
+  // Finalspiele mit den aktuellen Ergebnissen. Die Namen der Seiten entstehen in den Spielplan-Komponenten
+  // aus den Slots (slotLabel, A-04a/@TM-015) – nicht aus gespeicherten Anzeigetexten.
   const finalPhaseMatches = useMemo(() => {
-    // Helper to resolve a team reference (ID or placeholder) to a name
-    const resolveName = (teamRef: string): string | undefined => {
-      // 1. Try finding a real team first
-      const team = schedule.teams.find(t => t.id === teamRef);
-      if (team) {return team.name;}
-
-      // 2. If it's a placeholder, try to resolve it from standings
-      if (isPlaceholder(teamRef) && standings.length > 0) {
-        // Format: group-<groupId>-<rank>st/nd/rd/th
-        // Regex to capture Group ID and Rank Number
-        const match = teamRef.match(/^group-(.+)-(\d+)(?:st|nd|rd|th)$/);
-        if (match) {
-          const groupId = match[1];
-          const rank = parseInt(match[2], 10);
-
-          // CRITICAL: Only resolve if the entire group is finished!
-          // Use currentMatches (live) if available, otherwise static schedule
-          const sourceMatches = currentMatches ?? (groupPhase?.matches ?? []);
-          const groupMatches = sourceMatches.filter(m => m.group === groupId && m.phase === 'groupStage');
-
-          if (groupMatches.length > 0) {
-            const isGroupFinished = groupMatches.every(m => {
-              // Match type has matchStatus, ScheduledMatch doesn't - use type assertion
-              const status = (m as Match).matchStatus ?? 'scheduled';
-              return status === 'finished' || status === 'skipped';
-            });
-            if (!isGroupFinished) {
-              // Format placeholder to be readable and i18n-ready
-              // TODO: Inject 'locale' from context/props in the future
-              const getLocalizedGroupPlaceholder = (r: number, g: string, locale: string = 'de') => {
-                if (locale === 'en') {return `${r}. Group ${g}`;} // Simplified EN
-                return `${r}. Gruppe ${g}`;
-              };
-              return getLocalizedGroupPlaceholder(rank, groupId);
-            }
-          }
-
-          // Filter standings for this group (assuming they are already sorted by rank)
-          const groupStandings = standings.filter(s => s.team.group === groupId);
-
-          // Get team at the specific rank (1-based index) - Rank 1 = Index 0
-          return groupStandings[rank - 1]?.team.name;
-        }
-      }
-      return undefined;
-    };
-
-    const matchesToMap = currentMatches ? finalMatches.map(sm => {
+    if (!currentMatches) { return finalMatches; }
+    return finalMatches.map(sm => {
       const currentMatch = currentMatches.find(m => m.id === sm.id);
-      if (currentMatch) {
-        return {
-          ...sm,
-          scoreA: currentMatch.scoreA,
-          scoreB: currentMatch.scoreB,
-          // Note: We might want to use currentMatch.teamA if it's resolved in DB, 
-          // but if it's still a placeholder, we use our resolver below.
-          // However, we must respect the 'currentMatch' struct if it has data.
-          // Let's use the schedule match as base for placeholders usually.
-        };
-      }
-      return sm;
-    }) : finalMatches;
-
-    return matchesToMap.map(m => {
-      let homeTeamName = m.homeTeam;
-      let awayTeamName = m.awayTeam;
-
-      // Try to resolve Home Team if it looks like a placeholder
-      // logic: m.originalTeamA is the ID/Placeholder. m.homeTeam is the Display Name (which might be "Gruppe A 1. Platz")
-      // We check m.originalTeamA (from scheduleMatch)
-      const resolvedHome = resolveName(m.originalTeamA);
-      if (resolvedHome) {homeTeamName = resolvedHome;}
-
-      const resolvedAway = resolveName(m.originalTeamB);
-      if (resolvedAway) {awayTeamName = resolvedAway;}
-
-      return {
-        ...m,
-        homeTeam: homeTeamName,
-        awayTeam: awayTeamName
-      };
+      return currentMatch ? { ...sm, scoreA: currentMatch.scoreA, scoreB: currentMatch.scoreB } : sm;
     });
-  }, [finalMatches, currentMatches, schedule.teams, standings, groupPhase?.matches]);
+  }, [finalMatches, currentMatches]);
+
+  // Anzeige-Daten der Spielseiten: aktuelle Teams, Gruppen und alle Spiele (Vorgänger auch bei aktivem Filter)
+  const sideSource = useMemo(() => ({
+    teams: tournamentTeams ?? schedule.teams,
+    groups: schedule.tournament.groups,
+    matches: schedule.allMatches,
+  }), [tournamentTeams, schedule.teams, schedule.tournament.groups, schedule.allMatches]);
 
   // US-VIEWER-FILTERS: Filter matches based on visibleMatchIds (if provided)
   const filteredGroupPhaseMatches = useMemo(() => {
@@ -285,7 +201,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onStartCorrection={onStartCorrection}
           runningMatchIds={runningMatchIds}
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- GeneratedSchedule.tournament has different shape than Tournament; components only use 'groups'
-          tournament={{ groups: schedule.tournament.groups, teams: tournamentTeams } as any}
+          tournament={{ groups: schedule.tournament.groups, teams: sideSource.teams, matches: schedule.allMatches } as any}
           onMatchSwap={onMatchSwap}
           onNavigateToCockpit={onNavigateToCockpit}
         />
@@ -319,6 +235,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onStartCorrection={onStartCorrection}
           runningMatchIds={runningMatchIds}
           onMatchSwap={onMatchSwap}
+          tournament={sideSource}
         />
       )}
 
