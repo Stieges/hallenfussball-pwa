@@ -10,15 +10,26 @@
  * @see docs/roadmap/P0-IMPLEMENTATION-PLAN.md#p0-2-wcag-413-focus-management
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
 interface UseFocusTrapOptions {
   /** Whether the trap is active */
   isActive: boolean;
   /** Element to return focus to on close */
   returnFocusTo?: HTMLElement | null;
-  /** Auto-focus first focusable element */
+  /** Auto-focus first focusable element (or initialFocusRef, falls gesetzt) */
   autoFocus?: boolean;
+  /**
+   * Explizites Start-Ziel für den Fokus (@OB-014: bei gefährlichen Rückfragen
+   * zuerst auf „Abbrechen", nicht auf das erste beliebige Element).
+   */
+  initialFocusRef?: RefObject<HTMLElement | null>;
+  /**
+   * @OB-014: Die Eingabetaste soll nichts auslösen — weder den Bestätigen- noch
+   * den Abbrechen-Knopf. Verhindert die Default-Aktivierung des fokussierten
+   * Buttons (und das Absenden eines fokussierten Eingabefelds).
+   */
+  suppressEnter?: boolean;
   /** Callback when escape is pressed */
   onEscape?: () => void;
 }
@@ -35,7 +46,7 @@ const FOCUSABLE_SELECTOR = [
 export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
   options: UseFocusTrapOptions
 ) {
-  const { isActive, returnFocusTo, autoFocus = true, onEscape } = options;
+  const { isActive, returnFocusTo, autoFocus = true, initialFocusRef, suppressEnter, onEscape } = options;
   const containerRef = useRef<T>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
@@ -54,10 +65,10 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
 
     const container = containerRef.current;
 
-    // Auto-focus first focusable element
+    // Auto-focus the configured target (fallback: first focusable element)
     if (autoFocus) {
-      const firstFocusable = container.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-      firstFocusable?.focus();
+      const initialFocusable = initialFocusRef?.current ?? container.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      initialFocusable?.focus();
     }
 
     // Set background as inert
@@ -78,6 +89,11 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       if (e.key === 'Escape' && onEscape) {
         e.preventDefault();
         onEscape();
+        return;
+      }
+
+      if (e.key === 'Enter' && suppressEnter) {
+        e.preventDefault();
         return;
       }
 
@@ -119,7 +135,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       const returnTarget = returnFocusTo ?? previousActiveElement.current;
       returnTarget?.focus();
     };
-  }, [isActive, autoFocus, onEscape, returnFocusTo]);
+  }, [isActive, autoFocus, initialFocusRef, suppressEnter, onEscape, returnFocusTo]);
 
   return { containerRef };
 }

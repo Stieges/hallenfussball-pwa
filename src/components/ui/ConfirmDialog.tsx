@@ -78,20 +78,19 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     }
   }, [onCancel, onClose]);
 
-  // Focus trap for accessibility
+  // Focus trap for accessibility — @OB-014: Fokus zuerst auf „Abbrechen"
+  // (nie auf den Bestätigen-Knopf), Enter löst nichts aus.
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const focusTrap = useFocusTrap({
     isActive: isOpen,
     onEscape: effectiveOnCancel,
+    initialFocusRef: cancelButtonRef,
+    suppressEnter: true,
   });
 
-  const confirmButtonRef = useRef<HTMLButtonElement>(null);
-
-  // Focus management and body scroll prevention
+  // Body scroll prevention
   useEffect(() => {
     if (isOpen) {
-      // Focus confirm button when dialog opens
-      setTimeout(() => confirmButtonRef.current?.focus(), 50);
-      // Prevent body scroll
       document.body.style.overflow = 'hidden';
     }
 
@@ -264,6 +263,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
           <div style={footerStyle}>
             <button
+              ref={cancelButtonRef}
               style={cancelButtonStyle}
               onClick={effectiveOnCancel}
               data-testid="confirm-dialog-cancel"
@@ -298,7 +298,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               </button>
             )}
             <button
-              ref={confirmButtonRef}
               style={confirmButtonStyle}
               onClick={onConfirm}
               data-testid="confirm-dialog-confirm"

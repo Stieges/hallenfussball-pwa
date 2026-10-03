@@ -27,6 +27,7 @@ import {
   TeamMatchAnalysis,
 } from '../../utils/teamHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { createPortal } from 'react-dom';
 
 interface TeamsTabProps {
@@ -55,6 +56,14 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     team: Team;
     analysis: TeamMatchAnalysis;
   } | null>(null);
+
+  // @OB-014: Fokus der Rückfrage liegt zuerst auf „Abbrechen", Enter löst nichts aus.
+  const closeDeleteDialog = useCallback(() => setDeleteConfirmTeam(null), []);
+  const deleteDialogTrap = useFocusTrap({
+    isActive: deleteConfirmTeam !== null,
+    onEscape: closeDeleteDialog,
+    suppressEnter: true,
+  });
 
   // Aktive und entfernte Teams
   const activeTeams = getActiveTeams(tournament.teams);
@@ -646,7 +655,12 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       {
         deleteConfirmTeam && (
           <div style={overlayStyle}>
-            <div style={dialogStyle}>
+            <div
+              ref={deleteDialogTrap.containerRef}
+              style={dialogStyle}
+              role="dialog"
+              aria-modal="true"
+            >
               <h3 style={{ margin: '0 0 16px 0', color: cssVars.colors.textPrimary }}>
                 {t('teams.deleteDialog.title')}
               </h3>
@@ -673,7 +687,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
               </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <Button variant="secondary" onClick={() => setDeleteConfirmTeam(null)}>
+                <Button variant="secondary" onClick={closeDeleteDialog}>
                   {t('common.cancel')}
                 </Button>
                 <Button

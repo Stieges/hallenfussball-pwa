@@ -6,7 +6,7 @@
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 5.11
  */
 
-import { CSSProperties, useState, useCallback } from 'react';
+import { CSSProperties, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage } from '../shared';
@@ -302,6 +302,9 @@ export function DangerZoneCategory({
   const matchStartState = getMatchStartState(tournament.matches);
   const canOfferDelete = canDelete && matchStartState === 'not-started';
 
+  // @OB-014: Fokus der Rückfrage liegt zuerst auf „Abbrechen".
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+
   const handleOpenDialog = useCallback((action: DangerAction) => {
     const config = DANGER_ACTIONS[action];
     setPendingAction(config);
@@ -469,6 +472,8 @@ export function DangerZoneCategory({
         title={pendingAction?.title ?? t('dangerZone.confirmation')}
         maxWidth="480px"
         closeOnBackdropClick={!isExecuting}
+        initialFocusRef={cancelButtonRef}
+        suppressEnter
       >
         {pendingAction && (
           <>
@@ -495,7 +500,6 @@ export function DangerZoneCategory({
               onChange={(e) => setConfirmationInput(e.target.value)}
               placeholder={pendingAction.confirmText}
               disabled={isExecuting}
-              autoFocus
             />
 
             {executionError !== null && (
@@ -506,6 +510,7 @@ export function DangerZoneCategory({
 
             <div style={styles.dialogActions}>
               <button
+                ref={cancelButtonRef}
                 style={styles.cancelButton}
                 onClick={handleCloseDialog}
                 disabled={isExecuting}

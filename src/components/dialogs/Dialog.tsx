@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, CSSProperties, useId } from 'react';
+import { ReactNode, useEffect, CSSProperties, useId, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { cssVars, mediaQueries } from '../../design-tokens'
 import { Icons } from '../ui/Icons';
@@ -11,6 +11,10 @@ export interface DialogProps {
   children: ReactNode;
   maxWidth?: string;
   closeOnBackdropClick?: boolean;
+  /** Start-Ziel des Fokus (@OB-014: bei Rückfragen zuerst „Abbrechen") */
+  initialFocusRef?: RefObject<HTMLElement | null>;
+  /** @OB-014: Enter löst in gefährlichen Rückfragen nichts aus */
+  suppressEnter?: boolean;
 }
 
 export const Dialog = ({
@@ -20,11 +24,15 @@ export const Dialog = ({
   children,
   maxWidth = '500px',
   closeOnBackdropClick = true,
+  initialFocusRef,
+  suppressEnter,
 }: DialogProps) => {
   // Focus trap for accessibility
   const focusTrap = useFocusTrap({
     isActive: isOpen,
     onEscape: onClose,
+    initialFocusRef,
+    suppressEnter,
   });
 
   // Stable unique ID for aria-labelledby (React 18+)
