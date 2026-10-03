@@ -5,7 +5,7 @@
  * und ein frisch geöffnetes zweites Gerät des Veranstalters sieht denselben Spielplan.
  */
 import { expect } from '@playwright/test';
-import { fetchTurniertagBracket, fetchTurniertagTeams, finalMatchLabel, finalrundeLabels, openSpielplanFinalrunde } from './shared';
+import { fetchTurniertagBracket, fetchTurniertagTeams, finalMatchLabel, finalrundeLabelOf, findFinalByLabel, openSpielplanFinalrunde } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function cloudStand({ asRole }: StepContext): Promise<void> {
@@ -30,11 +30,17 @@ async function cloudStand({ asRole }: StepContext): Promise<void> {
     }
   }
 
-  // Ein frisch geöffnetes zweites Gerät zeigt die Herkunft der Finalrunde aus der Cloud-Zeile
-  // (Halbfinale 1 zuerst).
+  // Ein frisch geöffnetes zweites Gerät zeigt die Herkunft der Finalrunde aus der Cloud-Zeile.
+  // Halbfinale 1: Match-ID über seine Bezeichnung ("1. Halbfinale"), dann gezielt seine
+  // Karte/Zeile in der Anzeige -- die Reihenfolge der beiden Halbfinale kippt je Seed (Befund
+  // für A-12), die Position in der Anzeige taugt nicht als Fundstelle.
   const secondDevice = await asRole('owner');
   await openSpielplanFinalrunde(secondDevice);
-  expect((await finalrundeLabels(secondDevice))[0]).toBe(finalMatchLabel(finals[0], finals));
+  const hf1 = findFinalByLabel(finals, '1. Halbfinale');
+  expect(
+    await finalrundeLabelOf(secondDevice, hf1, finals),
+    `Halbfinale 1 zeigt seine Cloud-Herkunft (Match ${hf1.id})`
+  ).toBe(finalMatchLabel(hf1, finals));
 }
 
 export const steps: readonly TurniertagStep[] = [

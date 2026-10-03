@@ -9,7 +9,7 @@
  */
 import { expect } from '@playwright/test';
 import { E2E_TURNIERTAG_MONITOR_ID, E2E_TURNIERTAG_SHARE_CODE } from '../../testData';
-import { expectPageAnchor, fetchTurniertagBracket, fetchTurniertagTeams, finalMatchLabel, finalrundeLabels, openSpielplanFinalrunde, openTurniertagPath, TURNIERTAG_ID } from './shared';
+import { expectPageAnchor, fetchTurniertagBracket, fetchTurniertagTeams, finalMatchLabel, finalrundeLabelOf, findFinalByLabel, finalrundeLabels, openSpielplanFinalrunde, openTurniertagPath, TURNIERTAG_ID } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function anlegen({ asRole }: StepContext): Promise<void> {
@@ -42,8 +42,15 @@ async function halbfinaleHerkunft(view: (typeof TM015_VIEWS)[number], { asRole, 
     const ownerPage = await asRole('owner');
     await openSpielplanFinalrunde(ownerPage);
     await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
-    // Halbfinale 1 steht in der Finalrunde an erster Stelle.
-    expect((await finalrundeLabels(ownerPage))[0]).toBe('Erster Gruppe A gegen Zweiter Gruppe B');
+    // Halbfinale 1: Match-ID über seine Bezeichnung ("1. Halbfinale"), dann gezielt seine
+    // Karte/Zeile -- nicht die Position in der Anzeige (Reihenfolge der Halbfinale kippt je
+    // Seed, eigener Befund für A-12). Die Aussage bleibt: HF1 zeigt "Erster Gruppe A gegen
+    // Zweiter Gruppe B".
+    const hf = findFinalByLabel(finals, '1. Halbfinale');
+    expect(
+      await finalrundeLabelOf(ownerPage, hf, finals),
+      `Halbfinale 1 (${hf.id}) zeigt "Erster Gruppe A gegen Zweiter Gruppe B"`
+    ).toBe('Erster Gruppe A gegen Zweiter Gruppe B');
   } else if (view === 'Toms Cockpit') {
     // Toms Gerät ist erst nach D3 (Helfer per QR) Mitglied; bis dahin öffnet die Turnierleitung das Cockpit.
     // Die Spielauswahl trägt für jedes Spiel "#<Nr> - <Heim> vs <Gast>": Halbfinale 1 ist Nr. 13.

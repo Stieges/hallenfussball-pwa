@@ -25,6 +25,7 @@ export interface TurniertagMatch {
   decided_by: string | null;
   score_a: number | null;
   score_b: number | null;
+  label: string | null;
 }
 
 export interface TurniertagTeam {
@@ -45,7 +46,7 @@ async function getRows<T>(query: string, label: string): Promise<T[]> {
 /** Alle Spiele des Turniertag-Cups in Spielplan-Reihenfolge (`slot`). */
 export function fetchTurniertagMatches(): Promise<TurniertagMatch[]> {
   return getRows<TurniertagMatch>(
-    `matches?tournament_id=eq.${TURNIERTAG_ID}&order=slot.asc,field.asc,id.asc&select=id,slot,phase,group_letter,team_a_id,team_b_id,slot_a_source,slot_b_source,match_status,decided_by,score_a,score_b`,
+    `matches?tournament_id=eq.${TURNIERTAG_ID}&order=slot.asc,field.asc,id.asc&select=id,slot,phase,group_letter,team_a_id,team_b_id,slot_a_source,slot_b_source,match_status,decided_by,score_a,score_b,label`,
     'fetchTurniertagMatches'
   );
 }
@@ -154,4 +155,64 @@ export function sourceLabel(source: TurniertagMatch['slot_a_source'], finals: re
 /** "<Heim> gegen <Gast>" eines Finalrunden-Spiels, wie der Spielplan es aus der Herkunft beschriftet. */
 export function finalMatchLabel(match: TurniertagMatch, finals: readonly TurniertagMatch[]): string {
   return `${sourceLabel(match.slot_a_source, finals)} gegen ${sourceLabel(match.slot_b_source, finals)}`;
+}
+
+/**
+ * Finalrunden-Spiel über seine Bezeichnung (Spalte `matches.label`, z. B. "1. Halbfinale") -- die
+ * Match-ID des Spiels, nie seine Position: die Reihenfolge der beiden Halbfinale kippt je Seed
+ * (eigener Befund für A-12), deshalb taugt weder die DB-Reihenfolge noch die Anzeige-Position
+ * als Fundstelle.
+ */
+export function findFinalByLabel(finals: readonly TurniertagMatch[], bezeichnung: string): TurniertagMatch {
+  const match = finals.find((m) => m.label === bezeichnung);
+  if (!match) {
+    throw new Error(
+      `Finalrunden-Spiel "${bezeichnung}" nicht gefunden (Bezeichnungen: ${finals.map((m) => `${m.id}=${m.label ?? '-'}`).join(', ')}).`
+    );
+  }
+  return match;
+}
+
+/**
+ * Karte/Zeile EINES Finalrunden-Spiels in der Anzeige ("<Heim> gegen <Gast>"), gezielt über seine
+ * Bezeichnung (Runde-Spalte der Tabelle) bzw. in der Karten-Form über die Herkunft aus seiner
+ * Cloud-Zeile -- nie über die Position in der Anzeige (Reihenfolge der Halbfinale je Seed
+ * zufällig, eigener Befund für A-12). Virtualisierung wie `finalrundeLabels`: über die Seite
+ * scrollen, bis die Fundstelle steht.
+ */
+export async function finalrundeLabelOf(
+  page: Page,
+  match: TurniertagMatch,
+  finals: readonly TurniertagMatch[]
+): Promise<string | undefined> {
+  const expected = finalMatchLabel(match, finals);
+  const bezeichnung = match.label;
+  let zeile: string | undefined;
+  let karte: string | undefined;
+  const collect = async (): Promise<void> => {
+    const cards = await page.getByRole('row').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') ?? ''));
+    for (const label of cards) {
+      const m = /^Spiel \d+: (.+)$/.exec(label);
+      if (m?.[1] === expected) {
+        karte = m[1];
+      }
+    }
+    const table = await page.locator('tr').evaluateAll((els) =>
+      els.map((tr) => Array.from(tr.querySelectorAll('td')).map((td) => (td as HTMLElement).innerText.replace(/\s+/g, ' ').trim()))
+    );
+    for (const cells of table) {
+      if (cells.length >= 6 && cells[2] === bezeichnung) {
+        zeile = `${cells[3]} gegen ${cells[5]}`;
+      }
+    }
+  };
+  await expect(async () => {
+    for (const fraction of [0, 0.4, 0.7, 1]) {
+      await page.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), fraction);
+      await page.waitForTimeout(250);
+      await collect();
+    }
+    expect(zeile ?? karte, `Karte/Zeile von "${bezeichnung ?? match.id}"`).toBeDefined();
+  }).toPass({ timeout: 20000 });
+  return zeile ?? karte;
 }
