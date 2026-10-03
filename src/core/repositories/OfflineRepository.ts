@@ -6,6 +6,8 @@ import { SupabaseRepository } from './SupabaseRepository';
 import { isAbortError, RepositoryError } from '../errors';
 import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
 import { captureFeatureError } from '../../lib/sentry';
+import { slotTeamId } from '../models/matchSlot';
+import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -64,6 +66,13 @@ export interface SyncConflict {
  * Cloud-Round-Trip bei JEDEM Sync eine Änderung und erzwingt dauerhaft den Voll-Save-Pfad.
  * Empirisch am Live-Projekt belegt (2026-09-17).
  */
+/** A-02: lokal besetzte Seite mit anderer Team-ID als in der Cloud? (offen/fehlend → nein) */
+function sideDiffers(local: MatchSlot | undefined, remote: MatchSlot | undefined): boolean {
+    const localId = local === undefined ? undefined : slotTeamId(local);
+    if (localId === undefined) {return false;}
+    return remote === undefined || slotTeamId(remote) !== localId;
+}
+
 function stableKey(value: unknown): string {
     return JSON.stringify(value, (_k, v: unknown) => {
         if (v === null || typeof v !== 'object' || Array.isArray(v)) { return v; }
@@ -421,6 +430,17 @@ export class OfflineRepository implements ITournamentRepository {
         const localMatchIds = local.matches.map(m => m.id).sort().join(',');
         const remoteMatchIds = remote.matches.map(m => m.id).sort().join(',');
         if (localMatchIds !== remoteMatchIds) {return true;}
+
+        // A-02 (@FU-053, @TM-027): eine lokal BESETZTE Seite, die in der Cloud anders besetzt ist
+        // (Teamtausch/-ersatz durch die Leitung), braucht das Voll-Speichern – der Metadaten-Delta
+        // kennt keine Spielseiten. Eine lokal OFFENE Seite zählt nie: der lokale Stand ist dann nur
+        // veraltet (ein anderes Gerät hat aufgelöst) – kein Zurücksetzen (gleiche Regel wie
+        // mapMatchToScheduleUpdate).
+        const remoteById = new Map(remote.matches.map(m => [m.id, m]));
+        if (local.matches.some(m => {
+            const r = remoteById.get(m.id);
+            return r !== undefined && (sideDiffers(m.slotA, r.slotA) || sideDiffers(m.slotB, r.slotB));
+        })) {return true;}
 
         // Groups/Fields
         if (JSON.stringify(local.groups) !== JSON.stringify(remote.groups)) {return true;}
