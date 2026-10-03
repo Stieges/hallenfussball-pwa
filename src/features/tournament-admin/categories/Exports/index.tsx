@@ -19,6 +19,8 @@ import { useMatchEngineContextOptional } from '../../../../features/match-engine
 import { loadEngineEventsForExport } from '../../../../features/match-engine/loadEngineEventsForExport';
 import { captureFeatureError } from '../../../../lib/sentry';
 import type { Match, Tournament } from '../../../../types/tournament';
+import { slotLabel } from '../../../../core/models/slotLabel';
+import { matchInvolvesTeam, matchSideTeamId } from '../../../../core/models/matchSlot';
 import type { MatchUpdate } from '../../../../core/models/types';
 import { diffMatchResultStatusUpdates } from '../../../../core/services';
 import { exportStatisticsToPDF } from '../../../../lib/pdfStatisticsExporter';
@@ -531,6 +533,7 @@ export function ExportsCategory({
                 const engineEventsById = await loadEngineEvents();
 
                 const getTeamName = (id?: string) => tournament.teams.find(t => t.id === id)?.name ?? 'Unbekannt';
+                const slotContext = { teams: tournament.teams, matches: tournament.matches, groups: tournament.groups };
 
                 // Filter Matches Logic: Include if AT LEAST ONE selected team is involved
                 // If no teams are selected, effectively exporting nothing (unless we want 'All' logic when empty? Typically explicit selection implies restriction)
@@ -538,7 +541,7 @@ export function ExportsCategory({
 
                 const matchesToExport = tournament.matches.filter(m => {
                   if (selectedTeamIds.length === 0) {return false;}
-                  return selectedTeamIds.includes(m.teamA) || selectedTeamIds.includes(m.teamB);
+                  return selectedTeamIds.some(teamId => matchInvolvesTeam(m, teamId));
                 });
 
                 if (matchesToExport.length === 0) {
@@ -551,8 +554,8 @@ export function ExportsCategory({
                 interface ExportEventItem {
                   matchId: string;
                   round: number;
-                  homeTeam: { id: string; name: string };
-                  guestTeam: { id: string; name: string };
+                  homeTeam: { id: string | null; name: string };
+                  guestTeam: { id: string | null; name: string };
                   minute: number;
                   type: string;
                   team: { id?: string; name: string };
@@ -581,8 +584,8 @@ export function ExportsCategory({
                 };
 
                 matchesToExport.forEach(match => {
-                  const homeTeamName = getTeamName(match.teamA);
-                  const guestTeamName = getTeamName(match.teamB);
+                  const homeTeamName = slotLabel(match.slotA, slotContext);
+                  const guestTeamName = slotLabel(match.slotB, slotContext);
 
                   // Filter Events Logic
                   const relevantEvents = eventsForMatch(match, engineEventsById).filter(e => selectedEventTypes.includes(e.type));
@@ -633,8 +636,8 @@ export function ExportsCategory({
                       const eventItem: ExportEventItem = {
                         matchId: match.id,
                         round: match.round,
-                        homeTeam: { id: match.teamA, name: homeTeamName },
-                        guestTeam: { id: match.teamB, name: guestTeamName },
+                        homeTeam: { id: matchSideTeamId(match, 'A') ?? null, name: homeTeamName },
+                        guestTeam: { id: matchSideTeamId(match, 'B') ?? null, name: guestTeamName },
                         minute: Math.floor(event.timestampSeconds / 60) + 1,
                         type: event.type,
                         team: { id: event.payload.teamId, name: teamName },
@@ -763,9 +766,8 @@ export function ExportsCategory({
               }
 
               const entries: AuditEntry[] = [];
-              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use fallback
-              const getTeamName = (id?: string) => tournament.teams.find(t => t.id === id)?.name || 'Unbekannt';
-              const getMatchLabel = (m: Match) => `${getTeamName(m.teamA)} vs ${getTeamName(m.teamB)}`;
+              const slotContext = { teams: tournament.teams, matches: tournament.matches, groups: tournament.groups };
+              const getMatchLabel = (m: Match) => `${slotLabel(m.slotA, slotContext)} vs ${slotLabel(m.slotB, slotContext)}`;
 
               // 1. Tournament Creation
               if (tournament.createdAt) {

@@ -9,6 +9,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Tournament } from '../../../../../types/tournament';
 import { ExportsCategory } from '../index';
+import { looseVs } from '../../../../../test/matchSlotFixtures';
 
 const mockLoadEngineEventsForExport = vi.hoisted(() => vi.fn());
 vi.mock('../../../../../features/match-engine/loadEngineEventsForExport', () => ({
@@ -42,7 +43,7 @@ const tournament = {
   placementLogic: [],
   teams: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
   matches: [
-    { id: 'm1', round: 1, field: 1, teamA: 'a', teamB: 'b', matchStatus: 'not_started' },
+    { id: 'm1', round: 1, field: 1, ...looseVs('a', 'b'), matchStatus: 'not_started' },
   ],
 } as unknown as Tournament;
 

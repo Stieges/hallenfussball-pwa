@@ -6,7 +6,7 @@
  * - Team name resolution
  */
 
-import { Tournament, Team, Match } from '../../../types/tournament';
+import { Tournament, Match } from '../../../types/tournament';
 import { STORAGE_KEYS } from '../../../constants/storage';
 import { LiveMatch } from '../../../components/match-cockpit/MatchCockpit';
 
@@ -47,19 +47,6 @@ export function isMatchFinished(
 
   // 3. Fallback: implicit detection (has scores = finished)
   return true;
-}
-
-/**
- * Resolve team ID to team name
- *
- * @param teamId - The team ID to resolve
- * @param teams - All tournament teams
- * @returns Team name or the original ID if not found
- */
-export function getTeamName(teamId: string, teams: Team[]): string {
-  const team = teams.find(t => t.id === teamId);
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should also fallback
-  return team?.name || teamId;
 }
 
 /**

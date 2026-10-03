@@ -32,7 +32,8 @@ import {
   useScheduleFilters,
   getFilterOptions,
 } from './hooks';
-import { isMatchFinished, getTeamName } from './utils';
+import { isMatchFinished } from './utils';
+import { slotLabel, type SlotLabelContext } from '../../core/models/slotLabel';
 import { ScheduleToolbar, ScheduleViewMode, ScheduleConflictContent } from './components';
 import { GeneratedSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
@@ -152,11 +153,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // rather than potentially stale tournament.matches (Persistence).
   // Map ScheduledMatch to Match interface (originalTeamA -> teamA)
   const sourceMatchesForFiltering = useMemo(() => {
-    return schedule.allMatches.map(sm => ({
-      ...sm,
-      teamA: sm.originalTeamA,
-      teamB: sm.originalTeamB,
-    })) as unknown as Match[];
+    // slotA/slotB reisen mit (`...sm`); der Filter liest nur Slots (A-03)
+    return schedule.allMatches.map(sm => ({ ...sm })) as unknown as Match[];
   }, [schedule.allMatches]);
 
   const filteredMatches = useMemo(
@@ -188,11 +186,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const [pendingCockpitMatchId, setPendingCockpitMatchId] = useState<string | null>(null);
   const [showRunningMatchDialog, setShowRunningMatchDialog] = useState(false);
 
-  // Helper to get team name
-  const getTeamNameById = useCallback((teamId: string): string => {
-    const team = tournament.teams.find(t => t.id === teamId);
-    return team?.name ?? teamId;
-  }, [tournament.teams]);
+  // Spielseiten: Team über die Team-ID, offene Seite über ihre Herkunft (@TM-015) – nie über gespeicherte Namen
+  const slotContext = useMemo((): SlotLabelContext => ({
+    teams: tournament.teams,
+    matches: tournament.matches,
+    groups: tournament.groups,
+  }), [tournament.teams, tournament.matches, tournament.groups]);
 
   // Handler for navigating to cockpit with running match check
   const handleNavigateToCockpit = useCallback((matchId: string) => {
@@ -238,12 +237,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     if (!match) { return null; }
     return {
       id: runningMatchId,
-      teamA: getTeamNameById(match.teamA),
-      teamB: getTeamNameById(match.teamB),
+      teamA: slotLabel(match.slotA, slotContext),
+      teamB: slotLabel(match.slotB, slotContext),
       scoreA: match.scoreA,
       scoreB: match.scoreB,
     };
-  }, [runningMatchIds, tournament.matches, getTeamNameById]);
+  }, [runningMatchIds, tournament.matches, slotContext]);
 
   // Action handlers (extracted for maintainability)
   const {
@@ -435,8 +434,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             onClose={handleCancelCorrection}
             onConfirm={handleConfirmCorrection}
             matchLabel={t('schedule.matchLabel', { round: match.round })}
-            teamA={getTeamName(match.teamA, tournament.teams)}
-            teamB={getTeamName(match.teamB, tournament.teams)}
+            teamA={slotLabel(match.slotA, slotContext)}
+            teamB={slotLabel(match.slotB, slotContext)}
             originalScoreA={correctionState.originalScoreA}
             originalScoreB={correctionState.originalScoreB}
           />

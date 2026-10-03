@@ -6,6 +6,7 @@
  */
 import type { Tournament } from '../../../types/tournament';
 import type { MatchUpdate } from '../../../core/models/types';
+import { transitionalTeamRef } from '../../../core/models/matchSlot';
 import { diffMatchResultStatusUpdates } from '../../../core/services';
 import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../../core/generators';
 import { buildValidMatches, isNewScheduledMatch, isForeignCandidate } from '../../../hooks/engineMatchModel';
@@ -62,8 +63,8 @@ export function applyAutoResolutionsAfterScoreChange(
         const [resultUpdate] = diffMatchResultStatusUpdates([before], [resolved]);
         pendingUpdates.set(id, {
           ...(resultUpdate ?? { id }),
-          teamA: resolved.teamA,
-          teamB: resolved.teamB,
+          teamA: transitionalTeamRef(resolved.slotA),
+          teamB: transitionalTeamRef(resolved.slotB),
           // A-03: die Cloud übernimmt Seiten nur aus den Slots (A-02) – ohne sie ginge die Auflösung verloren.
           slotA: resolved.slotA,
           slotB: resolved.slotB,
@@ -80,8 +81,8 @@ export function applyAutoResolutionsAfterScoreChange(
         pendingUpdates.set(id, {
           ...pendingUpdates.get(id),
           id,
-          teamA: resolved.teamA,
-          teamB: resolved.teamB,
+          teamA: transitionalTeamRef(resolved.slotA),
+          teamB: transitionalTeamRef(resolved.slotB),
           // A-03: die Cloud übernimmt Seiten nur aus den Slots (A-02) – ohne sie ginge die Auflösung verloren.
           slotA: resolved.slotA,
           slotB: resolved.slotB,

@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import type { Tournament, Match } from '../../../../types/tournament';
+import { slotLabel } from '../../../../core/models/slotLabel';
 
 // =============================================================================
 // PROPS
@@ -242,9 +243,9 @@ const styles = {
 // HELPERS
 // =============================================================================
 
-function getTeamName(tournament: Tournament, teamId: string, unknownLabel: string): string {
-  const team = tournament.teams.find(t => t.id === teamId);
-  return team?.name ?? unknownLabel;
+/** Anzeigetext einer Spielseite (@TM-015): Team über die Team-ID, offene Seite über ihre Herkunft. */
+function getSideName(tournament: Tournament, slot: Match['slotA']): string {
+  return slotLabel(slot, { teams: tournament.teams, matches: tournament.matches, groups: tournament.groups });
 }
 
 function getFieldName(tournament: Tournament, fieldNumber: number): string {
@@ -437,7 +438,7 @@ export function DashboardCategory({
               <div key={match.id} style={styles.runningMatchItem}>
                 <div>
                   <div style={styles.runningMatchTeams}>
-                    {getTeamName(tournament, match.teamA, t('dashboard.unknownTeam'))} vs {getTeamName(tournament, match.teamB, t('dashboard.unknownTeam'))}
+                    {getSideName(tournament, match.slotA)} vs {getSideName(tournament, match.slotB)}
                   </div>
                   <div style={styles.runningMatchField}>
                     {getFieldName(tournament, match.field)}
@@ -465,9 +466,9 @@ export function DashboardCategory({
               )}
             </div>
             <div style={styles.nextMatchTeams}>
-              <span>{getTeamName(tournament, stats.nextMatch.teamA, t('dashboard.unknownTeam'))}</span>
+              <span>{getSideName(tournament, stats.nextMatch.slotA)}</span>
               <span style={styles.nextMatchVs}>vs</span>
-              <span>{getTeamName(tournament, stats.nextMatch.teamB, t('dashboard.unknownTeam'))}</span>
+              <span>{getSideName(tournament, stats.nextMatch.slotB)}</span>
             </div>
             <div style={styles.nextMatchField}>
               {getFieldName(tournament, stats.nextMatch.field)}

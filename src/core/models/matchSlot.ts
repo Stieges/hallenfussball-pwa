@@ -43,6 +43,14 @@ export function slotTeamId(slot: MatchSlot): TeamId | undefined {
   return slot.kind === 'team' ? slot.teamId : undefined;
 }
 
+/**
+ * ÜBERGANG bis A-04b: Wert für das Übergangsfeld `Match.teamA/teamB` aus dem Slot (Team-ID, offen → `'TBD'`,
+ * wie der Cloud-Mapper). Für Schreiber, die das Feld für noch nicht umgestellte Leser mitführen – nie zum Lesen.
+ */
+export function transitionalTeamRef(slot: MatchSlot | undefined): string {
+  return slot === undefined ? 'TBD' : (slotTeamId(slot) ?? 'TBD');
+}
+
 /** Herkunft der Seite: offen → `source`, aufgelöst → `resolvedFrom`, direkt besetzt → `undefined`. */
 export function slotSource(slot: MatchSlot): SlotSource | undefined {
   return slot.kind === 'pending' ? slot.source : slot.resolvedFrom;
