@@ -1,6 +1,6 @@
 /**
  * A-04a (K6) – manueller Tausch/Umbesetzen durch die Leitung verwirft `resolvedFrom`.
- * Vorgabe K6 (A-03-Review); kein Szenario-Test (die Szenario-Aussage @TM-027 prüft die Auflösung, nicht der manuelle Tausch).
+ * Vorgabe K6 (A-03-Review); kein Szenario-Test.
  */
 import { describe, it, expect } from 'vitest';
 import type { Match } from '../../../types/tournament';

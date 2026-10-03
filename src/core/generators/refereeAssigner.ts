@@ -8,11 +8,11 @@
  */
 
 import { Match, RefereeConfig, Team } from '../../types/tournament';
-import { matchSideTeamId, matchInvolvesTeam, type MatchSidesLoose } from '../models/matchSlot';
+import { matchSideTeamId, matchInvolvesTeam, type MatchSides } from '../models/matchSlot';
 
 // Generic match interface that works with both Match and ScheduledMatch
 // Die Seiten kommen aus den Slots (Team-ID), nie aus Namen (A-03).
-interface MatchLike extends MatchSidesLoose {
+interface MatchLike extends MatchSides {
   id: string;
   field: number;
   slot?: number;

@@ -5,6 +5,10 @@ import { ITournamentRepository } from '../repositories/ITournamentRepository';
 import { Tournament } from '../models/types';
 import { generateFullSchedule } from '../generators';
 import { mapMatchUpdateToSupabase } from '../repositories/supabaseMappers';
+import { vs, testUuid } from '../../test/matchSlotFixtures';
+
+const T1 = testUuid(1);
+const T2 = testUuid(2);
 
 // Mock dependencies
 vi.mock('../generators', () => ({
@@ -208,7 +212,7 @@ describe('TournamentCreationService', () => {
         // those columns for existing matches (A2), so saveDraft must ALSO persist them via a
         // targeted updateMatches().
         it('persists a result/status change via updateMatches when editing an existing tournament', async () => {
-            const existingMatch = { id: 'm1', round: 1, field: 1, teamA: 'A', teamB: 'B', scoreA: 3, scoreB: 1, matchStatus: 'finished' as const };
+            const existingMatch = { id: 'm1', round: 1, field: 1, ...vs(T1, T2), scoreA: 3, scoreB: 1, matchStatus: 'finished' as const };
             mockRepo.get.mockResolvedValue({ id: 'tour-1', matches: [existingMatch] });
 
             const resetMatch = { ...existingMatch, scoreA: undefined, scoreB: undefined, matchStatus: 'scheduled' as const };
@@ -223,7 +227,7 @@ describe('TournamentCreationService', () => {
         });
 
         it('does NOT call updateMatches when nothing about the result/status changed', async () => {
-            const existingMatch = { id: 'm1', round: 1, field: 1, teamA: 'A', teamB: 'B', scoreA: 3, scoreB: 1, matchStatus: 'finished' as const };
+            const existingMatch = { id: 'm1', round: 1, field: 1, ...vs(T1, T2), scoreA: 3, scoreB: 1, matchStatus: 'finished' as const };
             mockRepo.get.mockResolvedValue({ id: 'tour-1', matches: [existingMatch] });
 
             const data = { id: 'tour-1', title: 'Renamed Draft', matches: [existingMatch] };
@@ -248,7 +252,7 @@ describe('TournamentCreationService', () => {
             // Mock generateFullSchedule return
             const mockSchedule = {
                 allMatches: [
-                    { id: 'm1', originalTeamA: 't1', originalTeamB: 't2', field: 1 },
+                    { id: 'm1', originalTeamA: T1, originalTeamB: T2, ...vs(T1, T2), field: 1 },
                 ],
             };
             (generateFullSchedule as any).mockReturnValue(mockSchedule);
@@ -267,7 +271,7 @@ describe('TournamentCreationService', () => {
                 title: 'Published',
                 status: 'published',
                 matches: expect.arrayContaining([
-                    expect.objectContaining({ id: 'm1', teamA: 't1' })
+                    expect.objectContaining({ id: 'm1', teamA: T1 })
                 ])
             }));
         });
@@ -282,7 +286,7 @@ describe('TournamentCreationService', () => {
         it('preserves matchStatus/timer/tiebreaker of a RUNNING match across regeneration (does not reset it)', async () => {
             const mockSchedule = {
                 allMatches: [
-                    { id: 'm1', originalTeamA: 't1', originalTeamB: 't2', field: 1 },
+                    { id: 'm1', originalTeamA: T1, originalTeamB: T2, ...vs(T1, T2), field: 1 },
                 ],
             };
             (generateFullSchedule as any).mockReturnValue(mockSchedule);
@@ -294,8 +298,7 @@ describe('TournamentCreationService', () => {
                         id: 'm1',
                         round: 1,
                         field: 1,
-                        teamA: 't1',
-                        teamB: 't2',
+                        ...vs(T1, T2),
                         matchStatus: 'running',
                         timerStartTime: '2026-01-01T10:00:00Z',
                         timerElapsedSeconds: 300,
@@ -334,7 +337,7 @@ describe('TournamentCreationService', () => {
         it('Reset im Wizard + publish: Status/Endzeit bleiben lokal korrekt, gehen bewusst nicht an die Cloud (V4)', async () => {
             const mockSchedule = {
                 allMatches: [
-                    { id: 'm1', originalTeamA: 't1', originalTeamB: 't2', field: 1 },
+                    { id: 'm1', originalTeamA: T1, originalTeamB: T2, ...vs(T1, T2), field: 1 },
                 ],
             };
             (generateFullSchedule as any).mockReturnValue(mockSchedule);
@@ -346,8 +349,7 @@ describe('TournamentCreationService', () => {
                         id: 'm1',
                         round: 1,
                         field: 1,
-                        teamA: 't1',
-                        teamB: 't2',
+                        ...vs(T1, T2),
                         scoreA: 2,
                         scoreB: 1,
                         matchStatus: 'finished',
@@ -369,8 +371,7 @@ describe('TournamentCreationService', () => {
                         id: 'm1',
                         round: 1,
                         field: 1,
-                        teamA: 't1',
-                        teamB: 't2',
+                        ...vs(T1, T2),
                         scoreA: undefined,
                         scoreB: undefined,
                         matchStatus: 'scheduled' as const,

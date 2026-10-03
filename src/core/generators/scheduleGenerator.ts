@@ -17,6 +17,7 @@ import {
 } from './playoffScheduler'
 import { getUniqueGroups } from '../../utils/groupHelpers'
 import { assignReferees } from './refereeAssigner'
+import { transitionalTeamRef } from '../models/matchSlot'
 import { GroupSizeInfo } from './playoffGenerator'
 import { slotLabel } from '../models/slotLabel'
 import sportGlossary from '../../i18n/glossary.json'
@@ -129,8 +130,8 @@ export function generateFullSchedule(
         endTime: matchEnd,
         // Properties required by ScheduledMatch interface
         time: formatTime(matchStart),
-        originalTeamA: m.teamA,
-        originalTeamB: m.teamB,
+        originalTeamA: transitionalTeamRef(m.slotA),
+        originalTeamB: transitionalTeamRef(m.slotB),
         duration: gameDuration,
 
         homeTeam: slotLabel(m.slotA, labelContext),

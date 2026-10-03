@@ -13,6 +13,7 @@ import { describe, it, expect } from 'vitest';
 import { generateFullSchedule } from '../../core/generators';
 import { Tournament, Team, Match } from '../../types/tournament';
 import { testUuid } from '../../test/testIds';
+import { transitionalSides } from '../../core/models/matchSlot';
 
 // Helper to create teams with groups
 const createTeamsWithGroups = (teamsPerGroup: number, groups: string[]): Team[] => {
@@ -114,8 +115,9 @@ describe('Finals Bug Reproduction', () => {
         round: Math.floor(index / freshTournament.numberOfFields) + 1,
         field: scheduledMatch.field,
         slot: scheduledMatch.slot,
-        teamA: scheduledMatch.originalTeamA,
-        teamB: scheduledMatch.originalTeamB,
+        slotA: scheduledMatch.slotA,
+        slotB: scheduledMatch.slotB,
+        ...transitionalSides(scheduledMatch.slotA, scheduledMatch.slotB),
         scoreA: scheduledMatch.scoreA,
         scoreB: scheduledMatch.scoreB,
         group: scheduledMatch.group,
@@ -181,8 +183,9 @@ describe('Finals Bug Reproduction', () => {
         round: Math.floor(index / freshTournament.numberOfFields) + 1,
         field: scheduledMatch.field,
         slot: scheduledMatch.slot,
-        teamA: scheduledMatch.originalTeamA,
-        teamB: scheduledMatch.originalTeamB,
+        slotA: scheduledMatch.slotA,
+        slotB: scheduledMatch.slotB,
+        ...transitionalSides(scheduledMatch.slotA, scheduledMatch.slotB),
         scoreA: scheduledMatch.scoreA,
         scoreB: scheduledMatch.scoreB,
         group: scheduledMatch.group,

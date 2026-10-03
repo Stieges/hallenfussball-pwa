@@ -12,7 +12,7 @@ import { Team, Match } from '../../types/tournament';
 import { FairnessCalculator } from '../../utils/FairnessCalculator';
 import { generateGroupStageMatchId } from '../../utils/idGenerator';
 import { parseDFBMatches, getDFBPattern } from '../../constants/dfbMatchPatterns';
-import { teamSlot, requireTeamId, matchSideTeamId } from '../models/matchSlot';
+import { teamSlot, requireTeamId, matchSideTeamId, transitionalSides } from '../models/matchSlot';
 
 /**
  * Represents a time slot in the schedule
@@ -82,8 +82,8 @@ export interface GlobalFairnessStats {
  * Pairing without home/away assignment yet
  */
 interface TeamPairing {
-  teamA: Team;
-  teamB: Team | null;
+  home: Team;
+  away: Team | null;
 }
 
 /**
@@ -109,7 +109,7 @@ function generateRoundRobinPairings(teams: Team[]): TeamPairing[] {
 
       // Skip if either team is the "bye"
       if (teamA && teamB) {
-        pairings.push({ teamA, teamB });
+        pairings.push({ home: teamA, away: teamB });
       }
     }
 
@@ -147,7 +147,7 @@ function generateDFBPairings(teams: Team[], patternCode: string): TeamPairing[] 
 
      
     if (teamA && teamB) {
-      pairings.push({ teamA, teamB });
+      pairings.push({ home: teamA, away: teamB });
     }
   }
 
@@ -429,13 +429,13 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
       for (let i = 0; i < remainingPairings.length; i++) {
         const { pairing } = remainingPairings[i];
 
-        // NOTE: pairing.teamB is guaranteed non-null here because BYE-pairings
+        // NOTE: pairing.away is guaranteed non-null here because BYE-pairings
         // are filtered out in generateRoundRobinPairings() at line 105
-        if (!pairing.teamB) { continue; } // Type guard for safety
+        if (!pairing.away) { continue; } // Type guard for safety
 
         const score = calculateFairnessScore(
-          pairing.teamA.id,
-          pairing.teamB.id,
+          pairing.home.id,
+          pairing.away.id,
           currentSlotIndex,
           field,
           teamStates,
@@ -444,8 +444,8 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
         );
 
         if (score < Infinity) {
-          const teamAState = teamStates.get(pairing.teamA.id);
-          const teamBState = teamStates.get(pairing.teamB.id);
+          const teamAState = teamStates.get(pairing.home.id);
+          const teamBState = teamStates.get(pairing.away.id);
           if (!teamAState || !teamBState) { continue; } // Skip if states not found
           const restA = currentSlotIndex - teamAState.lastSlot;
           const restB = currentSlotIndex - teamBState.lastSlot;
@@ -475,28 +475,29 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
       if (bestPairingIndex >= 0 && bestScore < Infinity) {
         const { groupId, pairing } = remainingPairings[bestPairingIndex];
 
-        // Type guard: pairing.teamB is non-null (BYE-pairings filtered earlier)
-        if (!pairing.teamB) { continue; }
+        // Type guard: pairing.away is non-null (BYE-pairings filtered earlier)
+        if (!pairing.away) { continue; }
 
-        const stateA = teamStates.get(pairing.teamA.id);
-        const stateB = teamStates.get(pairing.teamB.id);
+        const stateA = teamStates.get(pairing.home.id);
+        const stateB = teamStates.get(pairing.away.id);
         if (!stateA || !stateB) { continue; } // Skip if states not found
 
         // Debug logging (disabled for performance with large tournaments)
         // const restA = currentSlotIndex - stateA.lastSlot;
         // const restB = currentSlotIndex - stateB.lastSlot;
-        // console.log(`[FairScheduler] Slot ${currentSlotIndex}, Field ${field}: Scheduled ${pairing.teamA.name} vs ${pairing.teamB.name} (Group ${groupId}), Score: ${bestScore.toFixed(2)}, Rest: ${restA}/${restB} slots`);
+        // console.log(`[FairScheduler] Slot ${currentSlotIndex}, Field ${field}: Scheduled ${pairing.home.name} vs ${pairing.away.name} (Group ${groupId}), Score: ${bestScore.toFixed(2)}, Rest: ${restA}/${restB} slots`);
 
+        // @TM-015: Gruppenspiele tragen Team-IDs als Slot (wirft, wenn die ID keine UUID ist).
+        const sideA = teamSlot(pairing.home.id);
+        const sideB = teamSlot(pairing.away.id);
         const match: Match = {
           id: generateGroupStageMatchId(),
           round: currentSlotIndex + 1,
           field,
           slot: currentSlotIndex,
-          teamA: pairing.teamA.id,
-          teamB: pairing.teamB.id,
-          // @TM-015: Gruppenspiele tragen Team-IDs als Slot (wirft, wenn die ID keine UUID ist).
-          slotA: teamSlot(pairing.teamA.id),
-          slotB: teamSlot(pairing.teamB.id),
+          slotA: sideA,
+          slotB: sideB,
+          ...transitionalSides(sideA, sideB),
           group: groupId,
           scheduledTime: currentSlot.startTime,
         };
@@ -516,8 +517,8 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
         stateB.awayCount++; // Team B is away
 
         // Update FairnessCalculator caches after assignment
-        fairnessCalculator.recordAssignment(pairing.teamA.id);
-        fairnessCalculator.recordAssignment(pairing.teamB.id);
+        fairnessCalculator.recordAssignment(pairing.home.id);
+        fairnessCalculator.recordAssignment(pairing.away.id);
 
         remainingPairings.splice(bestPairingIndex, 1);
         progressThisSlot = true; // Mark that we made progress
@@ -566,11 +567,7 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
 
 /** Team-ID einer Seite eines vom Generator erzeugten Gruppenspiels (Invariante: beide Seiten besetzt). */
 function groupTeamId(match: Match, side: 'A' | 'B'): string {
-  const slot = side === 'A' ? match.slotA : match.slotB;
-  if (slot === undefined) {
-    throw new Error(`Gruppenspiel ${match.id}: Seite ${side} ohne Slot`);
-  }
-  return requireTeamId(slot);
+  return requireTeamId(side === 'A' ? match.slotA : match.slotB);
 }
 
 /**
@@ -612,13 +609,11 @@ function balanceHomeAway(matches: Match[], teamStates: Map<string, TeamScheduleS
 
     // Swap if it improves total balance
     if (newTotalImbalance < totalImbalance) {
-      // Swap teams (Übergang bis A-04b: alte Felder und Slots gemeinsam tauschen)
-      const temp = match.teamA;
-      match.teamA = match.teamB;
-      match.teamB = temp;
+      // Swap teams (die Slots tauschen; das Übergangsfeld wird daraus neu abgeleitet)
       const tempSlot = match.slotA;
       match.slotA = match.slotB;
       match.slotB = tempSlot;
+      Object.assign(match, transitionalSides(match.slotA, match.slotB));
 
       // Update balance counters
       balanceA.home--;

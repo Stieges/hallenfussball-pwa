@@ -61,6 +61,14 @@ describe('TeamSchema', () => {
 // MatchSchema
 // =============================================================================
 
+const SIDE_T1 = '11111111-1111-4111-8111-111111111111';
+const SIDE_T2 = '22222222-2222-4222-8222-222222222222';
+/** Beide Spielseiten als gültige Slots (Pflichtfelder seit A-04b). */
+const SIDES = {
+  slotA: { kind: 'team', teamId: SIDE_T1 },
+  slotB: { kind: 'team', teamId: SIDE_T2 },
+};
+
 describe('MatchSchema', () => {
   it('validates a match with events', () => {
     const match = {
@@ -69,6 +77,7 @@ describe('MatchSchema', () => {
       field: 1,
       teamA: 't1',
       teamB: 't2',
+      ...SIDES,
       events: [
         {
           id: 'e1',
@@ -99,11 +108,11 @@ describe('MatchSchema', () => {
   });
 
   it('accepts match without events', () => {
-    const result = MatchSchema.parse({ id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2' });
+    const result = MatchSchema.parse({ id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2', ...SIDES });
     expect(result.events).toBeUndefined();
   });
 
-  // A-01 (@TM-015): Spielseiten als Slot. Übergang bis A-04b: slotA/slotB optional neben teamA/teamB.
+  // A-01/A-04b (@TM-015): Spielseiten als Slot, Pflichtfelder neben dem Übergangsfeld teamA/teamB.
   const T1 = '11111111-1111-4111-8111-111111111111';
   const HF1 = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
@@ -116,13 +125,19 @@ describe('MatchSchema', () => {
   });
 
   it('@TM-015 Gegenbeispiel: Teamname im Slot wird abgelehnt', () => {
-    const match = { id: 'm1', round: 1, field: 1, teamA: 'FC Nord', teamB: 't2', slotA: { kind: 'team', teamId: 'FC Nord' } };
+    const match = { id: 'm1', round: 1, field: 1, teamA: 'FC Nord', teamB: 't2', ...SIDES, slotA: { kind: 'team', teamId: 'FC Nord' } };
     expect(MatchSchema.safeParse(match).success).toBe(false);
   });
 
   it('@TM-015 Gegenbeispiel: Platzhalter-Text im Slot wird abgelehnt', () => {
-    const match = { id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2', slotB: 'semi1-winner' };
+    const match = { id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2', ...SIDES, slotB: 'semi1-winner' };
     expect(MatchSchema.safeParse(match).success).toBe(false);
+  });
+
+  it('@TM-027 Gegenbeispiel: ein Spiel nur mit Übergangsfeld teamA/teamB (ohne Slots) wird abgelehnt', () => {
+    const altdaten = { id: 'm1', round: 1, field: 1, teamA: SIDE_T1, teamB: SIDE_T2 };
+    expect(MatchSchema.safeParse(altdaten).success).toBe(false);
+    expect(MatchSchema.safeParse({ ...altdaten, slotA: SIDES.slotA }).success).toBe(false);
   });
 
   // C-ZOD-DEC: Supabase liefert für nullable Spalten `null` statt `undefined`.
@@ -131,21 +146,21 @@ describe('MatchSchema', () => {
   // lokal verwarf (LocalStorageRepository.loadList).
   it('accepts decidedBy: null from the cloud and normalizes it to undefined', () => {
     const result = MatchSchema.parse({
-      id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2', decidedBy: null,
+      id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2', ...SIDES, decidedBy: null,
     });
     expect(result.decidedBy).toBeUndefined();
   });
 
   it('accepts finalType: null from the cloud and normalizes it to undefined', () => {
     const result = MatchSchema.parse({
-      id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2', finalType: null,
+      id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2', ...SIDES, finalType: null,
     });
     expect(result.finalType).toBeUndefined();
   });
 
   it('still accepts decidedBy/finalType as a real string', () => {
     const result = MatchSchema.parse({
-      id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2',
+      id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2', ...SIDES,
       decidedBy: 'penalty', finalType: 'final',
     });
     expect(result.decidedBy).toBe('penalty');
@@ -225,6 +240,7 @@ describe('TournamentSchema round-trip', () => {
           field: 1,
           teamA: 't1',
           teamB: 't2',
+          ...SIDES,
           events: [
             { id: 'e1', timestampSeconds: 60, type: 'GOAL', payload: { teamId: 't1' }, scoreAfter: { home: 1, away: 0 } },
           ],

@@ -31,7 +31,11 @@ describe('analyzeScheduleFairness über Slots', () => {
   });
 
   it('A-03 Gegenbeispiel: ein Name im Übergangsfeld teamA zählt nicht', () => {
-    const decoy: Match = { id: '1', round: 1, field: 1, slot: 0, teamA: 'Team A', teamB: 'Team B' };
+    const decoy: Match = {
+      id: '1', round: 1, field: 1, slot: 0,
+      ...slots(groupRank('A', 1), groupRank('A', 2)),
+      teamA: 'Team A', teamB: 'Team B',
+    };
 
     expect(analyzeScheduleFairness([decoy]).teamStats).toEqual([]);
   });

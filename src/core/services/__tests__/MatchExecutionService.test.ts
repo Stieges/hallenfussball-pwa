@@ -132,16 +132,10 @@ describe('MatchExecutionService', () => {
 
         it('@TM-033 Gegenbeispiel: der Anzeigename „Team A“ ersetzt keine Team-ID – unbekannte ID lässt das Spiel nicht anlaufen', async () => {
             // Slot zeigt auf eine ID, die nicht im Turnier steht; homeTeam trägt aber den Namen eines vorhandenen Teams
-            const unknown = { ...mockScheduledMatch, slotA: testTeamSlot('team-x'), homeTeam: 'Team A' } as ScheduledMatch;
+            const unknown = { ...mockScheduledMatch, slotA: testTeamSlot('team-x'), homeTeam: 'Team A' };
 
             await expect(service.initializeMatch('tour-1', unknown)).rejects.toThrow('team-x');
             expect(mockLiveMatchRepo.save).not.toHaveBeenCalled();
-        });
-
-        it('@TM-033 Gegenbeispiel: ein Spiel ohne Slots (Altdaten) lässt sich nicht anpfeifen, obwohl originalTeamA eine gültige ID trägt', async () => {
-            const noSlots = { ...mockScheduledMatch, slotA: undefined, slotB: undefined } as ScheduledMatch;
-
-            await expect(service.initializeMatch('tour-1', noSlots)).rejects.toBeInstanceOf(MatchAwaitingTeamsError);
         });
     });
 

@@ -8,14 +8,14 @@
 import { describe, it, expect } from 'vitest';
 import { diffMatchResultStatusUpdates } from '../matchResultStatusDiff';
 import type { Match } from '../../models/types';
+import { vs, testUuid } from '../../../test/matchSlotFixtures';
 
 function makeMatch(overrides: Partial<Match> = {}): Match {
   return {
     id: 'match-1',
     round: 1,
     field: 1,
-    teamA: 'Team A',
-    teamB: 'Team B',
+    ...vs(testUuid(1), testUuid(2)),
     ...overrides,
   };
 }

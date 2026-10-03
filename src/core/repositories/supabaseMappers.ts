@@ -28,7 +28,7 @@ import type {
 import type { MatchUpdate as DomainMatchUpdate } from '../models/types';
 import { RepositoryError } from '../errors';
 import { SlotSourceSchema, TeamIdSchema, type MatchSlot, type SlotSource } from '../models/schemas/MatchSlotSchema';
-import { pendingSlot, slotSource, slotTeamId, teamSlot } from '../models/matchSlot';
+import { pendingSlot, slotSource, slotTeamId, teamSlot, transitionalSides } from '../models/matchSlot';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -160,25 +160,22 @@ function slotFromRow(matchId: string, side: Side, teamId: string | null, source:
  * Maps a Supabase match row to frontend Match type.
  *
  * A-02: `slotA/slotB` aus Team-ID bzw. Herkunft (siehe `slotFromRow`). Das Übergangsfeld
- * `teamA/teamB` (A-01, entfällt in A-04b) trägt die Team-ID – wie ein lokal erzeugtes Spiel –, NICHT
+ * `teamA/teamB` (Übergangsfeld, Löschen in B-35) trägt die Team-ID – wie ein lokal erzeugtes Spiel –, NICHT
  * mehr den Namen: die Engine (`hooks/engineMatchModel.ts`) erwartet dort eine ID; mit Namen fiele jedes
  * Cloud-Spiel still aus `buildValidMatches`. Offene Seite → `'TBD'` (Anzeige folgt in A-03 über Slots).
  */
 export function mapMatchFromSupabase(row: MatchRow): Match {
   const slotA = slotFromRow(row.id, 'A', row.team_a_id, row.slot_a_source);
   const slotB = slotFromRow(row.id, 'B', row.team_b_id, row.slot_b_source);
-  const teamA = slotTeamId(slotA) ?? 'TBD';
-  const teamB = slotTeamId(slotB) ?? 'TBD';
 
   return {
     id: row.id,
     round: row.round,
     field: row.field,
     slot: row.slot ?? undefined,
-    teamA,
-    teamB,
     slotA,
     slotB,
+    ...transitionalSides(slotA, slotB),
     scoreA: row.score_a ?? undefined,
     scoreB: row.score_b ?? undefined,
     group: row.group_letter ?? undefined,
@@ -239,7 +236,7 @@ function keepsRemoteSide(localTeamId: string | null, remoteTeamId: string | null
  *
  * A-02 (MVP-Bauplan Spur A, C-TEAMREF): die Spielseiten kommen AUSSCHLIESSLICH aus `slotA/slotB` –
  * `team_x_id` = Team-ID, `slot_x_source` = Herkunft. Keine Namenssuche mehr: vorher suchte der
- * Mapper `match.teamA` (eine Team-ID) in einer Name→ID-Map, fand nichts, schrieb die ID als Text in
+ * Mapper das Übergangsfeld `teamA` (eine Team-ID) in einer Name→ID-Map, fand nichts, schrieb die ID als Text in
  * `team_x_placeholder` und `team_x_id = NULL` – `append_match_events` lehnte jedes Spiel mit 22023 ab.
  * `team_x_placeholder` wird nicht mehr befüllt (Altspalte, nur noch NULL).
  *

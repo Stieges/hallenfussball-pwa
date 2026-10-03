@@ -95,9 +95,9 @@ describe('needsPlayoffResolution', () => {
     expect(needsPlayoffResolution(tournamentOf([occupied]))).toBe(false);
   });
 
-  it('A-03 Gegenbeispiel: ein Spiel ohne Slots gilt nicht als offen (keine Namens- oder Textprüfung)', () => {
-    const noSlots: Match = { id: FINAL, round: 2, field: 1, isFinal: true, teamA: 'group-a-1st', teamB: 'TBD' };
-    expect(needsPlayoffResolution(tournamentOf([noSlots]))).toBe(false);
+  it('A-03 Gegenbeispiel: ein Platzhaltertext im Übergangsfeld macht eine besetzte Seite nicht offen', () => {
+    const occupied: Match = { id: FINAL, round: 2, field: 1, isFinal: true, ...vs(A1, B1), teamA: 'group-a-1st', teamB: 'TBD' };
+    expect(needsPlayoffResolution(tournamentOf([occupied]))).toBe(false);
   });
 });
 

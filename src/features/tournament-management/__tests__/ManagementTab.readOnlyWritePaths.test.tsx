@@ -29,6 +29,7 @@ import type { Tournament } from '../../../types/tournament';
 import type { GeneratedSchedule } from '../../../core/generators';
 import type { LiveMatch as CoreLiveMatch } from '../../../core/models/LiveMatch';
 import type { TournamentRole } from '../../auth/types/auth.types';
+import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
 // C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
@@ -109,11 +110,13 @@ const schedule = {
     {
       id: MATCH_RUNNING, matchNumber: 1, time: '10:00', field: 1, slot: 1,
       homeTeam: HOME.name, awayTeam: AWAY.name, originalTeamA: HOME.id, originalTeamB: AWAY.id,
+    slotA: testTeamSlot(HOME.id), slotB: testTeamSlot(AWAY.id),
       phase: 'groupStage', label: 'Gruppenphase', duration: 10,
     },
     {
       id: MATCH_TARGET, matchNumber: 2, time: '10:15', field: 1, slot: 2,
       homeTeam: HOME.name, awayTeam: AWAY.name, originalTeamA: HOME.id, originalTeamB: AWAY.id,
+    slotA: testTeamSlot(HOME.id), slotB: testTeamSlot(AWAY.id),
       phase: 'groupStage', label: 'Gruppenphase', duration: 10,
     },
   ],

@@ -140,8 +140,7 @@ describe('determineFinalPhase', () => {
     id: 'test',
     round: 1,
     field: 1,
-    teamA: 'A',
-    teamB: 'B',
+    ...slots(groupRank('A', 1), groupRank('A', 2)),
   };
 
   it('returns "final" when finalType is set', () => {
@@ -303,20 +302,12 @@ describe('scheduleMatches', () => {
 
   it('@TM-033 Gegenbeispiel: ein Teamname im Übergangsfeld teamA wird nicht angezeigt', () => {
     const matches: Match[] = [
-      { id: 'm1', round: 1, field: 1, teamA: 'Team B', teamB: 'Team A', slotA: vs(T1, T2).slotA, slotB: vs(T1, T2).slotB, slot: 0 },
+      { id: 'm1', round: 1, field: 1, ...vs(T1, T2), teamA: 'Team B', teamB: 'Team A', slot: 0 },
     ];
 
     const result = scheduleMatches({ ...base, matches, numberOfFields: 1, gameDuration: 10, phase: 'groupStage' });
 
     expect(result[0].homeTeam).toBe('Team A');
     expect(result[0].awayTeam).toBe('Team B');
-  });
-
-  it('@TM-033 Gegenbeispiel: Spiel ohne Slot zeigt slot.unknown statt des Texts aus teamA', () => {
-    const matches: Match[] = [{ id: 'm1', round: 1, field: 1, teamA: T1, teamB: T2, slot: 0 }];
-
-    const result = scheduleMatches({ ...base, matches, numberOfFields: 1, gameDuration: 10, phase: 'groupStage' });
-
-    expect(result[0].homeTeam).toBe('tournament:slot.unknown');
   });
 });

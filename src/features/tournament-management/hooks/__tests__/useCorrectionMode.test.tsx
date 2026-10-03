@@ -13,14 +13,14 @@ import type { ReactNode } from 'react';
 import { useCorrectionMode } from '../useCorrectionMode';
 import { ToastProvider } from '../../../../components/ui/Toast';
 import type { Tournament, Match } from '../../../../types/tournament';
+import { vs, testUuid } from '../../../../test/matchSlotFixtures';
 
 function createMatch(overrides: Partial<Match> = {}): Match {
   return {
     id: 'm1',
     round: 1,
     field: 1,
-    teamA: 'Team A',
-    teamB: 'Team B',
+    ...vs(testUuid(1), testUuid(2)),
     scoreA: 3,
     scoreB: 1,
     matchStatus: 'finished',

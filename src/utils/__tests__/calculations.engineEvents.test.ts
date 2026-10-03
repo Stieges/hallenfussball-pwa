@@ -11,6 +11,7 @@ import { toRuntimeEvents } from '../../core/match/client';
 import { ctx, ev, goal, start } from '../../core/match/client/__tests__/fixtures';
 import { calculateScorers, calculateFairPlay, eventsForMatch } from '../calculations';
 import type { Match, RuntimeMatchEvent, Team, Tournament } from '../../types/tournament';
+import { looseVs } from '../../test/matchSlotFixtures';
 
 function engineEvents(log: EngineEvent[]): RuntimeMatchEvent[] {
   const { state } = reduceMatch(log, ctx);
@@ -56,7 +57,7 @@ function tournamentWith(matches: Match[], teams?: Team[]): Tournament {
 }
 
 // Engine-Spiel: Turnierkopie OHNE match.events (dort schreibt die App nichts, §8 Nr. 12).
-const ENGINE_MATCH: Match = { id: 'm', round: 1, field: 1, teamA: 'teamA', teamB: 'teamB' };
+const ENGINE_MATCH: Match = { id: 'm', round: 1, field: 1, ...looseVs('teamA', 'teamB') };
 
 describe('Engine-Ereignisse für Torschützenliste/Fair-Play/Export (C3b-2b)', () => {
   it('Engine-Tor erscheint in Torschützenliste und Export, zurückgenommenes nicht', () => {

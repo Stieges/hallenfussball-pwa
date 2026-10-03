@@ -11,7 +11,7 @@
 import { Match, FinalsConfig } from '../../types/tournament';
 import { generatePlayoffMatches as generatePlayoffMatchesFromPreset, GroupSizeInfo } from './playoffGenerator';
 import { generateFinalsMatchId } from '../../utils/idGenerator';
-import { pendingSlot } from '../models/matchSlot';
+import { pendingSlot, transitionalSides } from '../models/matchSlot';
 import type { SlotSource } from '../models/schemas/MatchSlotSchema';
 
 /**
@@ -251,21 +251,23 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
   // Durchgang 2: Slots aus den Definitionen – Verweise zeigen auf die echten Spiel-IDs aus Durchgang 1
   const defIdToMatchId = new Map(planned.map((p) => [p.definition.id, p.id]));
 
-  return planned.map(({ definition: def, id, slot, field, scheduledTime }): Match => ({
-    id,
-    round: slot + 1,
-    field,
-    slot,
-    // Übergang bis A-04b: alter Platzhalter-Text für noch nicht umgestellte Leser (Resolver, Anzeige)
-    teamA: def.teamASource,
-    teamB: def.teamBSource,
-    slotA: pendingSlot(toSlotSource(def.teamASource, defIdToMatchId)),
-    slotB: pendingSlot(toSlotSource(def.teamBSource, defIdToMatchId)),
-    isFinal: true,
-    finalType: def.finalType,
-    label: def.label,
-    scheduledTime,
-  }));
+  return planned.map(({ definition: def, id, slot, field, scheduledTime }): Match => {
+    const slotA = pendingSlot(toSlotSource(def.teamASource, defIdToMatchId));
+    const slotB = pendingSlot(toSlotSource(def.teamBSource, defIdToMatchId));
+    return {
+      id,
+      round: slot + 1,
+      field,
+      slot,
+      slotA,
+      slotB,
+      ...transitionalSides(slotA, slotB),
+      isFinal: true,
+      finalType: def.finalType,
+      label: def.label,
+      scheduledTime,
+    };
+  });
 }
 
 /**

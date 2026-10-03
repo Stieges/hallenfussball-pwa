@@ -6,7 +6,7 @@
  * zeigen auf die neuen Spiel-IDs. Framework-frei.
  */
 import type { Match, Team, Tournament } from '../../types/tournament';
-import { copySlot, transitionalTeamRef } from './matchSlot';
+import { copySlot, transitionalSides } from './matchSlot';
 
 export interface CopiedContent {
   teams: Team[];
@@ -26,9 +26,6 @@ export function copyTeamsAndMatches(
 
   const teams = source.teams.map((team) => ({ ...team, id: teamIdMap.get(team.id) ?? team.id }));
   const matches = source.matches.map((match): Match => {
-    if (match.slotA === undefined || match.slotB === undefined) {
-      throw new Error(`Kopie: Spiel ${match.id} hat keine Spielseiten (Slots)`);
-    }
     const slotA = copySlot(match.slotA, teamIdMap, matchIdMap);
     const slotB = copySlot(match.slotB, teamIdMap, matchIdMap);
     return {
@@ -36,8 +33,7 @@ export function copyTeamsAndMatches(
       id: matchIdMap.get(match.id) ?? match.id,
       slotA,
       slotB,
-      teamA: transitionalTeamRef(slotA),
-      teamB: transitionalTeamRef(slotB),
+      ...transitionalSides(slotA, slotB),
       matchStatus: 'scheduled',
       scoreA: 0,
       scoreB: 0,

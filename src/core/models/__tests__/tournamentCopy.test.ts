@@ -63,11 +63,6 @@ describe('copyTeamsAndMatches (V14)', () => {
     expect(gruppe).toMatchObject({ matchStatus: 'scheduled', scoreA: 0, scoreB: 0, events: [], teamA: newT1.id, teamB: newT2.id });
     expect(semi).toMatchObject({ teamA: 'TBD', teamB: 'TBD' });
   });
-
-  it('Gegenbeispiel: ein Spiel ohne Slots lehnt die Kopie ab statt Seiten zu raten', () => {
-    const altdaten = [{ id: M_GROUP, round: 1, field: 1, teamA: T1, teamB: T2 }] as Match[];
-    expect(() => copyTeamsAndMatches({ teams, matches: altdaten }, makeId)).toThrow(/keine Spielseiten/);
-  });
 });
 
 describe('buildCopiedTournament (Verdrahtung „Turnier kopieren“ in App.tsx)', () => {

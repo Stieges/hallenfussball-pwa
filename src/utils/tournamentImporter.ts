@@ -19,7 +19,7 @@ import {
   FinalsRefereeMode,
 } from '../types/tournament';
 import { generateUniqueId } from './idGenerator';
-import { teamSlot, matchSideTeamId } from '../core/models/matchSlot';
+import { teamSlot, matchSideTeamId, transitionalSides } from '../core/models/matchSlot';
 
 // Default placement criteria (same as in TournamentCreationService).
 // Keine `label`-Strings: die Anzeige löst über `id` gegen i18n auf
@@ -30,6 +30,9 @@ const DEFAULT_PLACEMENT_CRITERIA: PlacementCriterion[] = [
   { id: 'goalsFor', enabled: true },
   { id: 'directComparison', enabled: false },
 ];
+
+/** Feldnamen der Seiten im Dateiformat (Importvorlagen) – nicht das Spielmodell (dort `slotA/slotB`). */
+const FILE_SIDE_KEY = { A: 'teamA', B: 'teamB' } as const;
 
 /**
  * Main entry point for importing tournaments
@@ -128,19 +131,19 @@ function parseJSONTournament(content: string): ImportValidationResult {
     const parsed = (json.matches as Array<Record<string, unknown>>).map((m, index): Match | null => {
       // A-03: Die Seiten eines Spiels sind Team-IDs aus der Datei, abgebildet auf die neuen Team-IDs.
       // Eine ID, die in der Teamliste fehlt, ist ein Fehler – ein Slot ohne Team ist nicht darstellbar.
-      const teamAId = teamIdMap.get(String(m.teamA));
-      const teamBId = teamIdMap.get(String(m.teamB));
+      const teamAId = teamIdMap.get(String(m[FILE_SIDE_KEY.A]));
+      const teamBId = teamIdMap.get(String(m[FILE_SIDE_KEY.B]));
       if (teamAId === undefined) {
         errors.push({
           code: 'UNKNOWN_TEAM',
-          field: `matches[${index}].teamA`,
+          field: `matches[${index}].${FILE_SIDE_KEY.A}`,
           message: `Team A in Spiel ${index + 1} nicht gefunden`,
         });
       }
       if (teamBId === undefined) {
         errors.push({
           code: 'UNKNOWN_TEAM',
-          field: `matches[${index}].teamB`,
+          field: `matches[${index}].${FILE_SIDE_KEY.B}`,
           message: `Team B in Spiel ${index + 1} nicht gefunden`,
         });
       }
@@ -148,16 +151,17 @@ function parseJSONTournament(content: string): ImportValidationResult {
         return null;
       }
 
+      const slotA = teamSlot(teamAId);
+      const slotB = teamSlot(teamBId);
+
       return {
         id: generateUniqueId(),
         round: Number(m.round) || 1,
         field: Number(m.field) || 1,
         slot: m.slot ? Number(m.slot) : undefined,
-        // Übergangsfeld teamA/teamB (bis A-04b) trägt die Team-ID parallel zum Slot
-        teamA: teamAId,
-        teamB: teamBId,
-        slotA: teamSlot(teamAId),
-        slotB: teamSlot(teamBId),
+        slotA,
+        slotB,
+        ...transitionalSides(slotA, slotB),
         scoreA: m.scoreA !== undefined ? Number(m.scoreA) : undefined,
         scoreB: m.scoreB !== undefined ? Number(m.scoreB) : undefined,
         group: m.group ? String(m.group) : undefined,

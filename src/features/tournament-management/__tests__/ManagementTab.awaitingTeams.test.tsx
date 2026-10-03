@@ -119,6 +119,8 @@ function scheduled(partial: Partial<ScheduledMatch> & Pick<ScheduledMatch, 'id'>
     startTime: start, endTime: start,
     // veraltete gespeicherte Anzeigetexte: dürfen nirgends erscheinen
     homeTeam: 'ALTER NAME HEIM', awayTeam: 'ALTER NAME GAST', originalTeamA: 'alt-a', originalTeamB: 'alt-b',
+    slotA: pendingSlot({ kind: 'groupRank', group: 'A', rank: 1 }),
+    slotB: pendingSlot({ kind: 'groupRank', group: 'B', rank: 1 }),
     ...partial,
   };
 }

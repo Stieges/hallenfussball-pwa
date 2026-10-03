@@ -2,7 +2,7 @@
  * Anzeige einer Spielseite – die EINE Funktion (A-03, MVP-Bauplan Spur A; Vorlage V-TEAM-Plan V12).
  *
  * - Team: `team.name`, gefunden NUR über `team.id`. Eine unbekannte Team-ID zeigt `slot.unknown` –
- *   nie einen Namen aus einer anderen Quelle (kein Namens-Lookup, kein Rückfall auf `Match.teamA`).
+ *   nie einen Namen aus einer anderen Quelle (kein Namens-Lookup, kein Rückfall auf das Übergangsfeld am Spiel).
  * - Offen: die Herkunft (Gruppenrang bzw. Sieger/Verlierer eines Spiels), @TM-015.
  * - Fehlt der Slot (Altdaten ohne `slotA`) oder das Vorgängerspiel: `slot.unknown`.
  *

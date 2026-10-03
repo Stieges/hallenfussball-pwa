@@ -264,21 +264,18 @@ export interface Match {
   field: number;
   slot?: number; // Time slot index for fair scheduling
   /**
-   * ÜBERGANG (A-01 → A-04b, MVP-Bauplan Spur A): Team-ID bzw. alter Platzhalter-Text.
-   * Neue Leser nutzen `slotA`; A-04b entfernt `teamA/teamB` und macht `slotA/slotB` zur Pflicht.
-   * (Kein `@deprecated`-Tag: `@typescript-eslint/no-deprecated` + `--max-warnings 0` würde jeden
-   * bestehenden Leser vor A-03/A-04 als Lint-Fehler melden.)
+   * DEPRECATED, nur Übergang (Löschen in B-35): Team-ID bzw. `'TBD'` für noch nicht umgestellte Leser der
+   * Spur B (Monitor, Zuschauer, PDF). Gelesen wird `slotA`; geschrieben wird nur über `transitionalSides`
+   * (`core/models/matchSlot.ts`). (Kein `@deprecated`-Tag: `@typescript-eslint/no-deprecated` + `--max-warnings 0`
+   * würde jeden Spur-B-Leser als Lint-Fehler melden.)
    */
   teamA: string;
-  /** ÜBERGANG, siehe `teamA`. */
+  /** DEPRECATED, siehe `teamA`. */
   teamB: string;
-  /**
-   * Heimseite als Slot: Team-ID oder strukturierte Herkunft (@TM-015). Generatoren setzen sie immer;
-   * optional nur während des Übergangs bis A-04b (Leser, die noch nicht umgestellt sind, bauen Spiele ohne Slot).
-   */
-  slotA?: MatchSlot;
+  /** Heimseite als Slot: Team-ID oder strukturierte Herkunft (@TM-015). Pflicht – die einzige Quelle der Seiten. */
+  slotA: MatchSlot;
   /** Gastseite als Slot, siehe `slotA`. */
-  slotB?: MatchSlot;
+  slotB: MatchSlot;
   scoreA?: number;
   scoreB?: number;
   group?: string;

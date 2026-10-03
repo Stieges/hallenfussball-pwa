@@ -13,12 +13,12 @@ interface TestMatch {
   field: number;
   slot?: number;
   referee?: number;
-  slotA?: MatchSlot;
-  slotB?: MatchSlot;
+  slotA: MatchSlot;
+  slotB: MatchSlot;
 }
 
 function createMatch(overrides: Partial<TestMatch> & { id: string }): TestMatch {
-  return { field: 1, slot: 0, ...overrides };
+  return { field: 1, slot: 0, slotA: groupRank('A', 1), slotB: groupRank('A', 2), ...overrides };
 }
 
 function createTeams(count: number): Team[] {

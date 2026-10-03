@@ -6,14 +6,14 @@
  * Herkunft stehen, hielte der Delta-Sync sie für eine nur lokal aufgelöste Seite und verwürfe den Tausch.
  */
 import type { Match } from '../../types/tournament';
-import { teamSlot, transitionalTeamRef } from './matchSlot';
+import { teamSlot, transitionalSides } from './matchSlot';
 
 /** Setzt `side` (`'A'` = Heim) des Spiels auf das Team; eine vorhandene Herkunft wird verworfen. */
 export function assignTeamToSide(match: Match, side: 'A' | 'B', teamId: string): Match {
   const slot = teamSlot(teamId);
   return side === 'A'
-    ? { ...match, slotA: slot, teamA: transitionalTeamRef(slot) }
-    : { ...match, slotB: slot, teamB: transitionalTeamRef(slot) };
+    ? { ...match, slotA: slot, ...transitionalSides(slot, match.slotB) }
+    : { ...match, slotB: slot, ...transitionalSides(match.slotA, slot) };
 }
 
 /** Tauscht die Seiten zweier Spiele (jeweils `'A'`/`'B'`); beide Seiten sind danach ohne Herkunft besetzt. */
@@ -31,7 +31,7 @@ export function swapTeamsBetweenMatches(
 
 function sideTeamId(match: Match, side: 'A' | 'B'): string {
   const slot = side === 'A' ? match.slotA : match.slotB;
-  if (slot?.kind !== 'team') {
+  if (slot.kind !== 'team') {
     throw new Error('Tausch: nur besetzte Seiten lassen sich tauschen');
   }
   return slot.teamId;

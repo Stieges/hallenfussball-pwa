@@ -8,13 +8,13 @@
  *
  * A-03 (MVP-Bauplan Spur A, Vorlage V-TEAM-Plan A5 d): arbeitet auf Slots, nicht auf Platzhalter-Texten.
  * Die Herkunft bleibt nach der Auflösung in `resolvedFrom` erhalten; bereits besetzte Seiten werden nie
- * angefasst. Das Übergangsfeld `teamA/teamB` wird mit der Team-ID parallel nachgezogen (entfällt in A-04b).
+ * angefasst. Das Übergangsfeld `teamA/teamB` wird mit der Team-ID parallel nachgezogen (`transitionalSides`, Löschen in B-35).
  */
 
 import { Match, Tournament } from '../../types/tournament';
 import { calculateStandings, getMatchWinner } from '../../utils/calculations';
 import sportGlossary from '../../i18n/glossary.json';
-import { isPendingSlot, resolveSlot } from '../models/matchSlot';
+import { isPendingSlot, resolveSlot, transitionalSides } from '../models/matchSlot';
 import type { MatchSlot, SlotSource } from '../models/schemas/MatchSlotSchema';
 
 /**
@@ -47,8 +47,7 @@ export const areAllGroupMatchesCompleted = (tournament: Tournament): boolean => 
 };
 
 const hasPendingSide = (match: Match): boolean =>
-  (match.slotA !== undefined && isPendingSlot(match.slotA)) ||
-  (match.slotB !== undefined && isPendingSlot(match.slotB));
+  isPendingSlot(match.slotA) || isPendingSlot(match.slotB);
 
 /**
  * Check if playoff matches need resolution (have an open side)
@@ -150,8 +149,7 @@ const resolveOpenSides = (tournament: Tournament, options: ResolveOptions): stri
       ...match,
       slotA,
       slotB,
-      teamA: newSlotA?.kind === 'team' ? newSlotA.teamId : match.teamA,
-      teamB: newSlotB?.kind === 'team' ? newSlotB.teamId : match.teamB,
+      ...transitionalSides(slotA, slotB),
     };
   });
 

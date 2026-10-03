@@ -42,7 +42,7 @@ vi.mock('../../lib/supabase', () => ({ isSupabaseConfigured: true, supabase: {} 
 import { useEngineMatches } from '../useEngineMatches';
 import { looseVs } from '../../test/matchSlotFixtures';
 
-function match(partial: Partial<Match> & Pick<Match, 'id' | 'teamA' | 'teamB'>): Match {
+function match(partial: Partial<Match> & Pick<Match, 'id' | 'teamA' | 'teamB' | 'slotA' | 'slotB'>): Match {
   return {
     round: 1,
     field: 1,

@@ -27,9 +27,9 @@ export interface ScheduledMatch {
   /** Original Team-ID oder Platzhalter (z.B. "group-b-2nd" für Playoffs) */
   originalTeamB: string
   /** Spielseite Heim als Slot (A-01), unverändert vom Spiel durchgereicht (A-02) */
-  slotA?: MatchSlot
+  slotA: MatchSlot
   /** Spielseite Gast als Slot (A-01), unverändert vom Spiel durchgereicht (A-02) */
-  slotB?: MatchSlot
+  slotB: MatchSlot
   /** Gruppe oder undefined für Finalspiele */
   group?: string
   /** Phase: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final' */

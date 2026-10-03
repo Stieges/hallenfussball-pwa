@@ -3,6 +3,7 @@
  */
 
 import { Match, Team, Standing, TournamentGroup } from '../../types/tournament'
+import { transitionalTeamRef } from '../models/matchSlot'
 import { slotLabel } from '../models/slotLabel'
 import { ScheduledMatch, SchedulePhaseType } from './scheduleTypes'
 
@@ -196,8 +197,8 @@ export function scheduleMatches(options: ScheduleMatchesOptions): ScheduledMatch
         field: match.field,
         homeTeam: slotLabel(match.slotA, labelContext),
         awayTeam: slotLabel(match.slotB, labelContext),
-        originalTeamA: match.teamA,
-        originalTeamB: match.teamB,
+        originalTeamA: transitionalTeamRef(match.slotA),
+        originalTeamB: transitionalTeamRef(match.slotB),
         slotA: match.slotA,
         slotB: match.slotB,
         group: match.group,

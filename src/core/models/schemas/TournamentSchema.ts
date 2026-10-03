@@ -31,11 +31,11 @@ export const MatchSchema = z.object({
     round: z.number(),
     field: z.number(),
     slot: z.number().optional(),
-    // Übergang A-01 → A-04b: teamA/teamB (alt) neben slotA/slotB (neu, @TM-015). A-04b entfernt teamA/teamB.
+    // Übergang: teamA/teamB (veraltet, nur von Spur B gelesen, Löschen in B-35) neben slotA/slotB (Pflicht, @TM-015).
     teamA: z.string(),
     teamB: z.string(),
-    slotA: MatchSlotSchema.optional(),
-    slotB: MatchSlotSchema.optional(),
+    slotA: MatchSlotSchema,
+    slotB: MatchSlotSchema,
     scoreA: z.number().min(0).optional(),
     scoreB: z.number().min(0).optional(),
     group: z.string().optional(),

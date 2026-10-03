@@ -35,7 +35,7 @@ const mockContext = {
 import { useEngineMatchReadiness } from '../useEngineMatchReadiness';
 import { looseVs } from '../../test/matchSlotFixtures';
 
-function match(partial: Partial<Match> & Pick<Match, 'id' | 'teamA' | 'teamB'>): Match {
+function match(partial: Partial<Match> & Pick<Match, 'id' | 'teamA' | 'teamB' | 'slotA' | 'slotB'>): Match {
   return {
     round: 1,
     field: 1,

@@ -88,11 +88,6 @@ describe('scheduleFingerprint – Slots statt Übergangsfeld', () => {
     const b = tournamentOf([m('a', { ...vs(NORD, UFER), teamA: 'irgendein Text' })]);
     expect(scheduleFingerprint(a)).toBe(scheduleFingerprint(b));
   });
-
-  it('A-03 ein Spielplan ohne Slots ergibt einen stabilen Fingerprint', () => {
-    const noSlots = tournamentOf([{ id: 'a', round: 1, field: 1, teamA: NORD, teamB: UFER }]);
-    expect(scheduleFingerprint(noSlots)).toBe(scheduleFingerprint(noSlots));
-  });
 });
 
 describe('getMatchWinner / calculateFinalsPlacement – Sieger aus den Slots', () => {

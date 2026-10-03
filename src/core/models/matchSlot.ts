@@ -44,11 +44,20 @@ export function slotTeamId(slot: MatchSlot): TeamId | undefined {
 }
 
 /**
- * ÜBERGANG bis A-04b: Wert für das Übergangsfeld `Match.teamA/teamB` aus dem Slot (Team-ID, offen → `'TBD'`,
- * wie der Cloud-Mapper). Für Schreiber, die das Feld für noch nicht umgestellte Leser mitführen – nie zum Lesen.
+ * ÜBERGANG bis B-35 (Löschen in B-35): Wert für das Übergangsfeld (`teamA`/`teamB` am Spiel) aus dem Slot (Team-ID,
+ * offen → `'TBD'`, wie der Cloud-Mapper). Nur für Schreiber, die das Feld für die noch nicht umgestellten
+ * Leser der Spur B (Monitor, Zuschauer, PDF) mitführen – nie zum Lesen.
  */
-export function transitionalTeamRef(slot: MatchSlot | undefined): string {
-  return slot === undefined ? 'TBD' : (slotTeamId(slot) ?? 'TBD');
+export function transitionalTeamRef(slot: MatchSlot): string {
+  return slotTeamId(slot) ?? 'TBD';
+}
+
+/**
+ * DIE EINE Schreibstelle für das Übergangsfeld (`teamA`/`teamB` am Spiel; ÜBERGANG, Löschen in B-35): leitet beide Felder aus den Slots
+ * ab. Alle Erzeuger/Änderer von Spielen spreaden das Ergebnis, statt die Felder selbst zu setzen.
+ */
+export function transitionalSides(slotA: MatchSlot, slotB: MatchSlot): { teamA: string; teamB: string } {
+  return { teamA: transitionalTeamRef(slotA), teamB: transitionalTeamRef(slotB) };
 }
 
 /** Herkunft der Seite: offen → `source`, aufgelöst → `resolvedFrom`, direkt besetzt → `undefined`. */
@@ -56,28 +65,18 @@ export function slotSource(slot: MatchSlot): SlotSource | undefined {
   return slot.kind === 'pending' ? slot.source : slot.resolvedFrom;
 }
 
-/**
- * Beide Seiten eines `Match`, solange `slotA/slotB` im Übergang (bis A-04b) optional sind.
- * Ein fehlender Slot ist keine besetzte Seite – es gibt keinen Rückfall auf `teamA/teamB`.
- */
-export interface MatchSidesLoose {
-  slotA?: MatchSlot;
-  slotB?: MatchSlot;
-}
-
-/** Team-ID einer Seite (`'A'` = Heim) oder `undefined`, wenn sie offen ist oder der Slot fehlt. */
-export function matchSideTeamId(match: MatchSidesLoose, side: 'A' | 'B'): TeamId | undefined {
-  const slot = side === 'A' ? match.slotA : match.slotB;
-  return slot === undefined ? undefined : slotTeamId(slot);
+/** Team-ID einer Seite (`'A'` = Heim) oder `undefined`, solange sie offen ist. */
+export function matchSideTeamId(match: MatchSides, side: 'A' | 'B'): TeamId | undefined {
+  return slotTeamId(side === 'A' ? match.slotA : match.slotB);
 }
 
 /** Team-IDs der besetzten Seiten (Heim zuerst). */
-export function matchTeamIds(match: MatchSidesLoose): TeamId[] {
+export function matchTeamIds(match: MatchSides): TeamId[] {
   return [matchSideTeamId(match, 'A'), matchSideTeamId(match, 'B')].filter((id): id is TeamId => id !== undefined);
 }
 
-/** Spielt das Team in diesem Spiel? Offene Seiten und fehlende Slots zählen nie. */
-export function matchInvolvesTeam(match: MatchSidesLoose, teamId: string): boolean {
+/** Spielt das Team in diesem Spiel? Offene Seiten zählen nie. */
+export function matchInvolvesTeam(match: MatchSides, teamId: string): boolean {
   return matchTeamIds(match).some((id) => id === teamId);
 }
 

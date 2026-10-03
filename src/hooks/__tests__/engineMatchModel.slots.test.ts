@@ -61,11 +61,6 @@ describe('buildValidMatches – nur besetzte Spiele sind anpfeifbar', () => {
     expect(buildValidMatches(tournamentOf([unknown]))).toEqual([]);
   });
 
-  it('@TM-033 Gegenbeispiel: ein Teamname im Übergangsfeld ersetzt keinen Slot (Spiel ohne Slots ist kein Engine-Spiel)', () => {
-    const legacy: Match = { id: HF1, round: 1, field: 1, teamA: NORD, teamB: UFER };
-    expect(buildValidMatches(tournamentOf([legacy]))).toEqual([]);
-  });
-
   it('@TM-033 Gegenbeispiel: dieselbe Team-ID auf beiden Seiten ist kein Engine-Spiel', () => {
     expect(buildValidMatches(tournamentOf([semi(vs(NORD, NORD))]))).toEqual([]);
   });

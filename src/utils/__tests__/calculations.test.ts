@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateStandings, getQualifiedTeams } from '../calculations';
 import { Team, Match, Tournament, Standing } from '../../types/tournament';
-import { vs, testUuid } from '../../test/matchSlotFixtures';
+import { vs, slots, groupRank, testUuid } from '../../test/matchSlotFixtures';
 
 // Helper to create a minimal tournament config
 const createTournament = (overrides?: Partial<Tournament>): Tournament => ({
@@ -158,10 +158,10 @@ describe('calculateStandings', () => {
       expect(standings.find((s) => s.team.id === t2)?.played).toBe(1);
     });
 
-    it('A-03 Gegenbeispiel: Spiel mit Teamnamen im Übergangsfeld und OHNE Slots zählt in keiner Tabelle', () => {
+    it('A-03 Gegenbeispiel: Spiel mit Teamnamen im Übergangsfeld und OFFENEN Seiten zählt in keiner Tabelle', () => {
       const teams = createTeams(2);
       const matches: Match[] = [
-        { id: 'm1', round: 1, field: 1, teamA: 'Team 1', teamB: 'Team 2', scoreA: 1, scoreB: 0 },
+        { id: 'm1', round: 1, field: 1, ...slots(groupRank('A', 1), groupRank('A', 2)), teamA: 'Team 1', teamB: 'Team 2', scoreA: 1, scoreB: 0 },
       ];
       const tournament = createTournament({ teams, matches });
 

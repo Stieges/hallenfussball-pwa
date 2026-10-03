@@ -8,6 +8,8 @@ import { generateFullSchedule } from '..';
 import type { Match, Team, Tournament } from '../../../types/tournament';
 import { createMockTournament } from '../../../test/factories';
 import { testUuid } from '../../../test/testIds';
+import { vs } from '../../../test/matchSlotFixtures';
+import { transitionalSides } from '../../models/matchSlot';
 
 const teams: Team[] = ['A', 'B'].flatMap((group, g) =>
   [1, 2, 3, 4].map((n) => ({ id: testUuid(g * 10 + n), name: `Team ${group}${n}`, group })),
@@ -47,10 +49,9 @@ describe('generateFullSchedule – Anzeige der Seiten', () => {
       round: index + 1,
       field: m.field,
       slot: m.slot,
-      teamA: m.originalTeamA,
-      teamB: m.originalTeamB,
       slotA: m.slotA,
       slotB: m.slotB,
+      ...transitionalSides(m.slotA, m.slotB),
       group: m.group,
       isFinal: m.phase !== 'groupStage',
       phase: m.phase,
@@ -66,14 +67,14 @@ describe('generateFullSchedule – Anzeige der Seiten', () => {
     );
   });
 
-  it('@TM-033 Gegenbeispiel: ein geladenes Spiel ohne Slots zeigt slot.unknown, nicht den Text aus teamA', () => {
+  it('@TM-033 Gegenbeispiel: ein Name im Übergangsfeld teamB wird nicht angezeigt, der Slot gilt', () => {
     const persisted: Match[] = [
-      { id: 'm1', round: 1, field: 1, slot: 0, teamA: teams[0].id, teamB: 'Team B2', group: 'A' },
+      { id: 'm1', round: 1, field: 1, slot: 0, ...vs(teams[0].id, teams[1].id), teamB: 'Team B2', group: 'A' },
     ];
     const loaded = generateFullSchedule(tournamentOf({ matches: persisted, finalsConfig: { preset: 'none' } }));
 
-    expect(loaded.allMatches[0].homeTeam).toBe('tournament:slot.unknown');
-    expect(loaded.allMatches[0].awayTeam).toBe('tournament:slot.unknown');
+    expect(loaded.allMatches[0].homeTeam).toBe(teams[0].name);
+    expect(loaded.allMatches[0].awayTeam).toBe(teams[1].name);
   });
 
   it('@TM-015 gespeicherte Gruppenspiele ohne Finalrunde: die Finalrunde wird erzeugt und mit Herkunft angezeigt', () => {
