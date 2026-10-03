@@ -13,9 +13,10 @@ import { CategoryPage } from '../shared';
 import { DANGER_ACTIONS } from '../../constants/admin.constants';
 import { Dialog } from '../../../../components/dialogs/Dialog';
 import { buildFinishTournamentPatch } from '../../../../utils/tournamentStats';
+import { getMatchStartState } from '../../../../utils/matchStartState';
 import { useMyTournamentRole } from '../../../auth/hooks/useMyTournamentRole';
 import { canDeleteTournament } from '../../../auth/utils/permissions';
-import type { Match, Tournament } from '../../../../types/tournament';
+import type { Tournament } from '../../../../types/tournament';
 import type { MatchUpdate } from '../../../../core/models/types';
 import { diffMatchResultStatusUpdates } from '../../../../core/services';
 import type { DangerAction, DangerActionConfig } from '../../types/admin.types';
@@ -235,39 +236,6 @@ const styles = {
     marginBottom: cssVars.spacing.lg,
   } as CSSProperties,
 } as const;
-
-// =============================================================================
-// MATCH-START STATE (@LZ-003)
-// =============================================================================
-
-/**
- * @LZ-003: Wurde seit dem Turnier-Festlegen schon ein Spiel angepfiffen?
- * Angepfiffen = laufend ('running'), pausiert ('paused' — DB-Wert laut
- * matches_match_status_check, im Frontend-Union fehlt er) oder beendet
- * ('finished'). Ein FEHLENDER matchStatus gilt als 'scheduled' (geplant) — wie im
- * restlichen Projekt (types/tournament.ts „default: 'scheduled'", supabaseMappers,
- * filterMatches): TournamentCreationService.publish() erzeugt die Spiele ohne
- * matchStatus, ein frisch festgelegtes Turnier muss deshalb als „nicht angepfiffen"
- * gelten. Ist der Zustand NICHT feststellbar (Match-Liste fehlt/ungültig, ein
- * matchStatus ist unbekannt — z. B. Laden fehlgeschlagen, offline, unvollständige
- * Daten), liefert die Funktion 'unknown' und die destruktive Aktion wird nicht
- * angeboten (fail-closed).
- */
-function getMatchStartState(matches: Match[] | undefined): 'not-started' | 'started' | 'unknown' {
-  if (!Array.isArray(matches)) {
-    return 'unknown';
-  }
-  for (const match of matches) {
-    const status: string = match.matchStatus ?? 'scheduled';
-    if (status === 'running' || status === 'paused' || status === 'finished') {
-      return 'started';
-    }
-    if (status !== 'scheduled' && status !== 'waiting' && status !== 'skipped') {
-      return 'unknown';
-    }
-  }
-  return 'not-started';
-}
 
 // =============================================================================
 // COMPONENT
