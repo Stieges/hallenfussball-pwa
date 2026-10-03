@@ -48,13 +48,28 @@ export function slotSource(slot: MatchSlot): SlotSource | undefined {
   return slot.kind === 'pending' ? slot.source : slot.resolvedFrom;
 }
 
-/** Team-IDs der besetzten Seiten (Heim zuerst). */
-export function matchTeamIds(match: MatchSides): TeamId[] {
-  return [slotTeamId(match.slotA), slotTeamId(match.slotB)].filter((id): id is TeamId => id !== undefined);
+/**
+ * Beide Seiten eines `Match`, solange `slotA/slotB` im Übergang (bis A-04b) optional sind.
+ * Ein fehlender Slot ist keine besetzte Seite – es gibt keinen Rückfall auf `teamA/teamB`.
+ */
+export interface MatchSidesLoose {
+  slotA?: MatchSlot;
+  slotB?: MatchSlot;
 }
 
-/** Spielt das Team in diesem Spiel? Offene Seiten zählen nie. */
-export function matchInvolvesTeam(match: MatchSides, teamId: string): boolean {
+/** Team-ID einer Seite (`'A'` = Heim) oder `undefined`, wenn sie offen ist oder der Slot fehlt. */
+export function matchSideTeamId(match: MatchSidesLoose, side: 'A' | 'B'): TeamId | undefined {
+  const slot = side === 'A' ? match.slotA : match.slotB;
+  return slot === undefined ? undefined : slotTeamId(slot);
+}
+
+/** Team-IDs der besetzten Seiten (Heim zuerst). */
+export function matchTeamIds(match: MatchSidesLoose): TeamId[] {
+  return [matchSideTeamId(match, 'A'), matchSideTeamId(match, 'B')].filter((id): id is TeamId => id !== undefined);
+}
+
+/** Spielt das Team in diesem Spiel? Offene Seiten und fehlende Slots zählen nie. */
+export function matchInvolvesTeam(match: MatchSidesLoose, teamId: string): boolean {
   return matchTeamIds(match).some((id) => id === teamId);
 }
 

@@ -697,5 +697,12 @@
     "cancel": "Abbrechen",
     "save": "Speichern",
     "saving": "Speichern..."
+  },
+  "slot": {
+    "groupRank": "{{group}} – {{rank}}. Platz",
+    "winnerOf": "Sieger {{match}}",
+    "loserOf": "Verlierer {{match}}",
+    "matchNumber": "Spiel {{number}}",
+    "unknown": "?"
   }
 }
