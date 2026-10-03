@@ -64,7 +64,10 @@ function makeMembership(role: TournamentMembership['role']): TournamentMembershi
 const tournament = {
   id: 't1', title: 'Test-Turnier', status: 'published',
   teams: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
-  matches: [{ id: 'm1', scoreA: 1, scoreB: 0 }, { id: 'm2' }],
+  // @LZ-003: ohne matchStatus ist der Anpfiff-Zustand nicht feststellbar und
+  // „Turnier löschen" würde ausgeblendet — die Fixture bildet deshalb nur
+  // geplante Spiele ab (expliziter matchStatus).
+  matches: [{ id: 'm1', scoreA: 1, scoreB: 0, matchStatus: 'scheduled' }, { id: 'm2', matchStatus: 'scheduled' }],
   startDate: '2026-03-01', startTime: '10:00',
 } as unknown as Tournament;
 

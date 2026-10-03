@@ -15,7 +15,7 @@ import { Dialog } from '../../../../components/dialogs/Dialog';
 import { buildFinishTournamentPatch } from '../../../../utils/tournamentStats';
 import { useMyTournamentRole } from '../../../auth/hooks/useMyTournamentRole';
 import { canDeleteTournament } from '../../../auth/utils/permissions';
-import type { Tournament } from '../../../../types/tournament';
+import type { Match, Tournament } from '../../../../types/tournament';
 import type { MatchUpdate } from '../../../../core/models/types';
 import { diffMatchResultStatusUpdates } from '../../../../core/services';
 import type { DangerAction, DangerActionConfig } from '../../types/admin.types';
@@ -27,7 +27,7 @@ import type { DangerAction, DangerActionConfig } from '../../types/admin.types';
 interface DangerZoneCategoryProps {
   tournamentId: string;
   tournament: Tournament;
-  onTournamentUpdate: (tournament: Tournament) => void;
+  onTournamentUpdate: (tournament: Tournament) => void | Promise<void>;
   /**
    * A2 Fixrunde 1 (Ruling AJ, I1: `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
    * task-A2-review.md`): "Ergebnisse zurücksetzen"/"Spielplan zurücksetzen" reset RESULT/STATUS
@@ -224,7 +224,46 @@ const styles = {
     opacity: 0.5,
     cursor: 'not-allowed',
   } as CSSProperties,
+
+  error: {
+    padding: cssVars.spacing.md,
+    background: cssVars.colors.dangerSubtle,
+    border: `1px solid ${cssVars.colors.errorBorder}`,
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.error,
+    fontSize: cssVars.fontSizes.bodySm,
+    marginBottom: cssVars.spacing.lg,
+  } as CSSProperties,
 } as const;
+
+// =============================================================================
+// MATCH-START STATE (@LZ-003)
+// =============================================================================
+
+/**
+ * @LZ-003: Wurde seit dem Turnier-Festlegen schon ein Spiel angepfiffen?
+ * Angepfiffen = laufend ('running'), pausiert ('paused' — DB-Wert laut
+ * matches_match_status_check, im Frontend-Union fehlt er) oder beendet
+ * ('finished'). Ist der Zustand NICHT feststellbar (Match-Liste fehlt, ein
+ * matchStatus fehlt oder ist unbekannt — z. B. Laden fehlgeschlagen, offline,
+ * unvollständige Daten), liefert die Funktion 'unknown' und die destruktive
+ * Aktion wird nicht angeboten (fail-closed).
+ */
+function getMatchStartState(matches: Match[] | undefined): 'not-started' | 'started' | 'unknown' {
+  if (!Array.isArray(matches)) {
+    return 'unknown';
+  }
+  for (const match of matches) {
+    const status: string = match.matchStatus ?? '';
+    if (status === 'running' || status === 'paused' || status === 'finished') {
+      return 'started';
+    }
+    if (status !== 'scheduled' && status !== 'waiting' && status !== 'skipped') {
+      return 'unknown';
+    }
+  }
+  return 'not-started';
+}
 
 // =============================================================================
 // COMPONENT
@@ -242,6 +281,7 @@ export function DangerZoneCategory({
   const [pendingAction, setPendingAction] = useState<DangerActionConfig | null>(null);
   const [confirmationInput, setConfirmationInput] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
+  const [executionError, setExecutionError] = useState<string | null>(null);
 
   // R7: Das Löschen des Turniers hatte keine Rollensperre in der UI -- die DB lässt seit
   // R5b (protect_deleted_at → has_tournament_permission(..., 'deleteTournament')) nur den
@@ -257,10 +297,16 @@ export function DangerZoneCategory({
   // gemeinsam mit TeamHelpersCategory und MemberList.
   const canDelete = myRole ? canDeleteTournament(myRole) : false;
 
+  // @LZ-003: „Turnier löschen" nur vor dem ersten Anpfiff — und nur, wenn der
+  // Anpfiff-Zustand überhaupt feststellbar ist (fail-closed, siehe getMatchStartState).
+  const matchStartState = getMatchStartState(tournament.matches);
+  const canOfferDelete = canDelete && matchStartState === 'not-started';
+
   const handleOpenDialog = useCallback((action: DangerAction) => {
     const config = DANGER_ACTIONS[action];
     setPendingAction(config);
     setConfirmationInput('');
+    setExecutionError(null);
   }, []);
 
   const handleCloseDialog = useCallback(() => {
@@ -276,6 +322,7 @@ export function DangerZoneCategory({
     }
 
     setIsExecuting(true);
+    setExecutionError(null);
 
     try {
       const now = new Date().toISOString();
@@ -309,12 +356,12 @@ export function DangerZoneCategory({
           // L5: dashboardStatus allein ist wirkungslos — utils/tournamentCategories.ts liest status,
           // manuallyCompleted und Spielergebnisse. Beide Aktionen teilen bewusst die Logik: Die App kennt
           // keinen Archiv-Zustand (TournamentStatus = 'draft' | 'published'); eigener Zustand = Follow-up (Task 22).
-          onTournamentUpdate({ ...tournament, ...buildFinishTournamentPatch(tournament) });
+          await onTournamentUpdate({ ...tournament, ...buildFinishTournamentPatch(tournament) });
           break;
         }
 
         case 'delete_tournament':
-          onTournamentUpdate({
+          await onTournamentUpdate({
             ...tournament,
             deletedAt: now,
             updatedAt: now,
@@ -325,7 +372,9 @@ export function DangerZoneCategory({
       setPendingAction(null);
       setConfirmationInput('');
     } catch (error) {
-      console.error('Error executing action:', error);
+      // @LZ-003: Serverfehler beim Löschen werden angezeigt, nie verschluckt —
+      // der Dialog bleibt offen, damit die fehlgeschlagene Aktion sichtbar bleibt.
+      setExecutionError(error instanceof Error && error.message ? error.message : '');
     } finally {
       setIsExecuting(false);
     }
@@ -410,8 +459,8 @@ export function DangerZoneCategory({
       {/* Archive Tournament (Warning) */}
       {renderActionCard('archive_tournament')}
 
-      {/* Delete Tournament (Danger) — R7: nur für den Eigentümer sichtbar, siehe canDelete oben */}
-      {canDelete && renderActionCard('delete_tournament')}
+      {/* Delete Tournament (Danger) — R7: nur für den Eigentümer, @LZ-003: nur vor dem ersten Anpfiff */}
+      {canOfferDelete && renderActionCard('delete_tournament')}
 
       {/* Confirmation Dialog */}
       <Dialog
@@ -448,6 +497,12 @@ export function DangerZoneCategory({
               disabled={isExecuting}
               autoFocus
             />
+
+            {executionError !== null && (
+              <div role="alert" data-testid="danger-zone-execution-error" style={styles.error}>
+                {t('dangerZone.saveError')}{executionError ? ` (${executionError})` : ''}
+              </div>
+            )}
 
             <div style={styles.dialogActions}>
               <button
