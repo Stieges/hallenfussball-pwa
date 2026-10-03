@@ -14,7 +14,11 @@ import { teamSlot, pendingSlot } from '../../../core/models/matchSlot';
 import { testUuid } from '../../../test/testIds';
 import { FinalStageSchedule } from '../FinalStageSchedule';
 import { DesktopCard } from '../DesktopCard';
+import { GroupStageSchedule } from '../GroupStageSchedule';
+import { SortableMobileCard } from '../SortableMobileCard';
+import { ScheduleDisplay } from '../../ScheduleDisplay';
 import { SortableDesktopCard } from '../SortableDesktopCard';
+import type { GeneratedSchedule } from '../../../core/generators';
 import { buildSideContext, sideDisplay, sideName } from '../matchSides';
 
 vi.mock('i18next', async () => {
@@ -30,6 +34,9 @@ vi.mock('i18next', async () => {
   });
   return { default: instance };
 });
+
+// Live-Daten sind hier nicht Gegenstand (kein Repository-Provider im Test)
+vi.mock('../../../hooks/useLiveMatches', () => ({ useLiveMatches: () => ({ liveMatches: new Map() }) }));
 
 const NORD = testUuid(1);
 const UFER = testUuid(2);
@@ -209,5 +216,65 @@ describe('matchSides (Helfer)', () => {
   it('@TM-015 Vorgängerspiel nur im Turnier gespeichert: wird gefunden', () => {
     const fromStore = buildSideContext({ teams, matches: [{ id: SEMI1, label: '1. Halbfinale' }] }, [finale]);
     expect(sideName(finale, 'A', fromStore)).toBe('Sieger 1. Halbfinale');
+  });
+});
+
+describe('Spielplan – Gruppenphase und Karten (weitere Ansichten)', () => {
+  const groupMatch = scheduled({
+    id: SEMI2, phase: 'groupStage', label: undefined,
+    slotA: teamSlot(NORD), slotB: pendingSlot({ kind: 'groupRank', group: 'B', rank: 1 }),
+  });
+  const tournament = { id: 't1', teams, matches: [], groups: [] } as never;
+  const noop = vi.fn();
+
+  it('@TM-015 GroupStageSchedule: Namen über slotLabel; Gegenbeispiel: nach Umbenennen der neue Name, nie der gespeicherte', () => {
+    const renamed = { ...(tournament as object), teams: [{ id: NORD, name: 'FC Nordlicht' }, teams[1]] } as never;
+    render(<GroupStageSchedule matches={[groupMatch]} hasGroups={false} tournament={renamed} />);
+    expect(screen.getAllByText('FC Nordlicht').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Erster Gruppe B').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/ALTER NAME/)).toBeNull();
+    expect(screen.queryByText('FC Nord')).toBeNull();
+  });
+
+  it('@TM-015 SortableMobileCard: Seiten über slotLabel', () => {
+    render(
+      <SortableMobileCard
+        match={groupMatch}
+        status="scheduled"
+        isExpanded={false}
+        displayedRef={undefined}
+        displayedField={1}
+        hasUnsavedChanges={false}
+        hasPendingField={false}
+        conflicts={[]}
+        editingSchedule={false}
+        canSwap={false}
+        tournament={tournament}
+        showReferees={false}
+        refereeOptions={[]}
+        showFields={false}
+        fieldOptions={[]}
+        onCardClick={noop}
+        onCircleClick={noop}
+        renderExpandContent={() => null}
+      />,
+    );
+    expect(screen.getAllByText('FC Nord').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Erster Gruppe B').length).toBeGreaterThan(0);
+  });
+
+  it('@TM-015 ScheduleDisplay (Container): Finalspiele zeigen die Herkunft, auch wenn ein Filter das Vorgängerspiel ausblendet', () => {
+    const schedule = {
+      tournament: { id: 't1', title: 'Hallencup', date: '2026-10-03', location: { name: 'Halle' }, ageClass: 'U11', groups: [] },
+      allMatches: [semi1, finale],
+      phases: [{ name: 'final', label: 'Finalrunde', matches: [semi1, finale], startTime: new Date(), endTime: new Date() }],
+      teams: teams.map((team) => ({ ...team, group: undefined })),
+      initialStandings: [],
+      numberOfFields: 1,
+      startTime: new Date('2026-10-03T10:00:00'),
+      endTime: new Date('2026-10-03T12:00:00'),
+    } as unknown as GeneratedSchedule;
+    render(<ScheduleDisplay schedule={schedule} visibleMatchIds={new Set([FINAL])} />);
+    expect(screen.getAllByText('Sieger 1. Halbfinale').length).toBeGreaterThan(0);
   });
 });
