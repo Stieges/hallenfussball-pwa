@@ -115,6 +115,7 @@ describe('@OB-014 Fokus bei gefährlichen Rückfragen', () => {
   it('@OB-014 Gegenbeispiel: Fokus auf „Bestätigen“ wäre rot – die Rückfrage fokussiert „Abbrechen“', async () => {
     const user = userEvent.setup();
     const onConfirm = vi.fn();
+    const onCancel = vi.fn();
     render(
       <ConfirmDialog
         title="Turnier löschen"
@@ -122,7 +123,7 @@ describe('@OB-014 Fokus bei gefährlichen Rückfragen', () => {
         variant="danger"
         confirmText="Bestätigen"
         onConfirm={onConfirm}
-        onCancel={vi.fn()}
+        onCancel={onCancel}
       />
     );
 
@@ -137,6 +138,8 @@ describe('@OB-014 Fokus bei gefährlichen Rückfragen', () => {
 
     await user.keyboard('{Enter}');
     expect(onConfirm).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(document.activeElement).toBe(cancel);
   });
 });
