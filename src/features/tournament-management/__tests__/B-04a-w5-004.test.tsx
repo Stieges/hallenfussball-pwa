@@ -15,7 +15,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Tournament } from '../../../types/tournament';
-import type { TournamentRepository } from '../../../core/repositories/TournamentRepository';
+import type { ITournamentRepository } from '../../../core/repositories/ITournamentRepository';
 import { TournamentCreationService } from '../../../core/services/TournamentCreationService';
 
 vi.mock('../../auth/hooks/useAuth', () => ({
@@ -69,7 +69,7 @@ class FakeRepository {
 function createService(): { service: TournamentCreationService; repo: FakeRepository } {
   const repo = new FakeRepository();
   const service = new TournamentCreationService(
-    repo as unknown as TournamentRepository
+    repo as unknown as ITournamentRepository
   );
   return { service, repo };
 }
