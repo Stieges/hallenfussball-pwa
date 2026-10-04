@@ -88,7 +88,8 @@
     "back": "Back",
     "jerseyNumber": "Jersey number (optional)",
     "yellowCard": "Yellow Card",
-    "redCard": "Red Card"
+    "redCard": "Red Card",
+    "close": "Close"
   },
   "timeAdjust": {
     "title": "Adjust Match Time",
@@ -141,7 +142,8 @@
     "assist1Aria": "Assist 1 jersey number",
     "assist2Aria": "Assist 2 jersey number",
     "placeholder": "—",
-    "eventDescription": "Goal"
+    "eventDescription": "Goal",
+    "close": "Close"
   },
   "sidebar": {
     "activePenalties": "Active Time Penalties",

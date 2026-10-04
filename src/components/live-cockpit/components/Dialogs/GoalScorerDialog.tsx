@@ -211,7 +211,7 @@ export function GoalScorerDialog({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Schließen"
+            aria-label={t('goalScorer.close')}
             data-testid="dialog-close-button"
             style={styles.closeButton}
           >

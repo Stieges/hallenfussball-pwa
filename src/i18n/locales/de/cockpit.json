@@ -88,7 +88,8 @@
     "back": "Zurück",
     "jerseyNumber": "Rückennummer (optional)",
     "yellowCard": "Gelbe Karte",
-    "redCard": "Rote Karte"
+    "redCard": "Rote Karte",
+    "close": "Schließen"
   },
   "timeAdjust": {
     "title": "Spielzeit anpassen",
@@ -141,7 +142,8 @@
     "assist1Aria": "Assist 1 Rückennummer",
     "assist2Aria": "Assist 2 Rückennummer",
     "placeholder": "—",
-    "eventDescription": "Tor"
+    "eventDescription": "Tor",
+    "close": "Schließen"
   },
   "sidebar": {
     "activePenalties": "Aktive Zeitstrafen",

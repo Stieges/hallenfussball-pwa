@@ -371,7 +371,7 @@ export function CardDialog({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Schließen"
+          aria-label={t('cardDialog.close')}
           data-testid="dialog-close-button"
           style={styles.closeButton}
         >
