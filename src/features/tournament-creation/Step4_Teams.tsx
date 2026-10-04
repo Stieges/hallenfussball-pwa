@@ -176,16 +176,19 @@ export const Step4_Teams: React.FC<Step4Props> = ({
     );
   };
 
-  // Auto-Generierung: Teams basierend auf numberOfTeams erstellen
+  // Auto-Generierung: nur fehlende aktive Teams ergänzen (B-02 Paket B1).
+  // isRemoved-Teams und vorhandene aktive Teams bleiben erhalten.
   const handleGenerateTeams = () => {
+    const existing = formData.teams ?? [];
+    const missing = Math.max(0, numberOfTeams - teams.length);
     const newTeams: Team[] = [];
-    for (let i = 1; i <= numberOfTeams; i++) {
+    for (let i = 1; i <= missing; i++) {
       newTeams.push({
         id: generateTeamId(),
-        name: `Team ${i}`,
+        name: `Team ${teams.length + i}`,
       });
     }
-    onUpdate('teams', newTeams);
+    onUpdate('teams', [...existing, ...newTeams]);
   };
 
   // Auto-Zuweisung: Teams gleichmäßig auf Gruppen verteilen

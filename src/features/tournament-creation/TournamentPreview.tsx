@@ -16,6 +16,7 @@ import { Button, Card } from '../../components/ui';
 import { cssVars } from '../../design-tokens'
 import { exportScheduleToPDF } from '../../lib/pdfExporter';
 import { getLocationName, getLocationAddressLine } from '../../utils/locationHelpers';
+import { activeTeams } from './utils/replanTeams';
 
 interface TournamentPreviewProps {
   tournament: Tournament;
@@ -250,7 +251,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           </div>
           <div style={infoItemStyle}>
             <span style={labelStyle}>Teams</span>
-            <span style={valueStyle}>{currentTournament.teams.length}</span>
+            <span style={valueStyle}>{activeTeams(currentTournament.teams).length}</span>
           </div>
           <div style={infoItemStyle}>
             <span style={labelStyle}>Spiele</span>
