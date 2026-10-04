@@ -37,6 +37,8 @@ export type ReplanPreviewResult =
       keptMatches: Match[];
       /** @W5-009: Hinweis je geschütztem Spiel – es wird NICHT entfernt. */
       keptNotices: Array<{ matchId: string; willBeRemoved: false }>;
+      /** @W5-009: Behaltene Spiele ohne Gegenstück im neuen Plan (Konflikt). */
+      conflictMatchIds: string[];
     }
   | { status: 'impossible'; reason: string; suggestion: string }
   /** @W5-008: Nach dem Anpfiff ist keine Neuplanung möglich (fail-closed). */
@@ -78,20 +80,114 @@ export function buildReplanPreview(
   try {
     const schedule = generateFullSchedule(replanInput);
     // @W5-009: Ein Spiel mit Ereignissen darf die Neuplanung nicht entfallen
-    // lassen – es bleibt erhalten, die Vorschau weist darauf hin.
-    const generatedIds = new Set(schedule.allMatches.map((m) => m.id));
-    const keptMatches = tournament.matches.filter(
-      (m) => matchHasEvents(m) && !generatedIds.has(m.id)
+    // lassen – es bleibt erhalten und ERSETZT das generierte Spiel mit
+    // derselben Paarung und Phase (ohne Anhängen). Nach dem Controller-Ruling
+    // behält es Anstoßzeit und Feld; kollidiert der neue Plan damit, gilt
+    // @W5-008 (Grund und Lösungsvorschlag, nicht bestätigbar).
+    const keptMatches = tournament.matches.filter(matchHasEvents);
+    const keptByPairing = keptMatches.map((m) => ({
+      match: m,
+      pairing: [m.teamA, m.teamB].sort().join(':'),
+      phase: m.phase ?? (m.isFinal ? 'final' : 'groupStage'),
+    }));
+    const usedGenerated = new Set<string>();
+    const replacements = new Map<string, Match>();
+    const conflictMatchIds: string[] = [];
+    for (const kept of keptByPairing) {
+      const counterpart = schedule.allMatches.find(
+        (g) =>
+          !usedGenerated.has(g.id) &&
+          [g.originalTeamA, g.originalTeamB].sort().join(':') === kept.pairing &&
+          g.phase === kept.phase
+      );
+      if (counterpart) {
+        usedGenerated.add(counterpart.id);
+        replacements.set(counterpart.id, kept.match);
+      } else {
+        conflictMatchIds.push(kept.match.id);
+      }
+    }
+    const merged = schedule.allMatches.map((g) => {
+      const kept = replacements.get(g.id);
+      if (!kept) {
+        return g;
+      }
+      // Controller-Ruling: Mit persistierter Anstoßzeit behält das geschützte
+      // Spiel Anstoßzeit UND Feld. Ohne persistierte Anstoßzeit gilt der neue
+      // Slot (Ergebnis/Ereignisse bleiben in jedem Fall erhalten).
+      const pinned = kept.scheduledTime !== undefined;
+      const keptStart = pinned ? new Date(kept.scheduledTime) : g.startTime;
+      return {
+        ...g,
+        id: kept.id,
+        field: pinned ? kept.field : g.field,
+        startTime: keptStart,
+        endTime: new Date(
+          keptStart.getTime() + (tournament.groupPhaseGameDuration ?? 0) * 60000
+        ),
+        originalTeamA: kept.teamA,
+        originalTeamB: kept.teamB,
+      };
+    });
+    // @W5-009 ohne Gegenstück: angehängt und im Panel als Konflikt gemeldet.
+    const appended = keptMatches
+      .filter((m) => conflictMatchIds.includes(m.id))
+      .map((m) => {
+        const keptStart = m.scheduledTime ? new Date(m.scheduledTime) : schedule.endTime;
+        return {
+          ...schedule.allMatches[0],
+          id: m.id,
+          field: m.field,
+          slot: schedule.allMatches.length,
+          startTime: keptStart,
+          endTime: new Date(
+            keptStart.getTime() + (tournament.groupPhaseGameDuration ?? 0) * 60000
+          ),
+          originalTeamA: m.teamA,
+          originalTeamB: m.teamB,
+          phase: m.phase ?? (m.isFinal ? 'final' : 'groupStage'),
+          finalType: m.finalType,
+          label: m.label,
+          group: m.group,
+          referee: m.referee,
+        };
+      });
+    const allMatches = [...merged, ...appended];
+    // Controller-Ruling: Behaltener Anstoß kollidiert mit dem neuen Plan.
+    const slotCount = new Map<string, number>();
+    for (const m of allMatches) {
+      const key = `${m.field}|${m.startTime.getTime()}`;
+      slotCount.set(key, (slotCount.get(key) ?? 0) + 1);
+    }
+    const keptIds = new Set(Array.from(replacements.values()).map((m) => m.id));
+    const collision = allMatches.some(
+      (m) =>
+        keptIds.has(m.id) &&
+        (slotCount.get(`${m.field}|${m.startTime.getTime()}`) ?? 0) > 1
+    );
+    if (collision) {
+      return {
+        status: 'impossible',
+        reason:
+          'Ein bereits gespieltes Spiel behält seinen Anstoß – der neue Plan belegt denselben Slot auf demselben Feld.',
+        suggestion:
+          'Mindestpause senken, ein Feld hinzufügen oder das behaltene Spiel vor der Neuplanung verschieben.',
+      };
+    }
+    const endTime = allMatches.reduce(
+      (max, m) => (m.endTime > max ? m.endTime : max),
+      schedule.endTime
     );
     return {
       status: 'preview',
-      schedule,
-      endTime: schedule.endTime,
+      schedule: { ...schedule, allMatches },
+      endTime,
       keptMatches,
       keptNotices: keptMatches.map((m) => ({
         matchId: m.id,
         willBeRemoved: false as const,
       })),
+      conflictMatchIds,
     };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
@@ -111,7 +207,14 @@ export function applyReplan(
   tournament: Tournament,
   preview: Extract<ReplanPreviewResult, { status: 'preview' }>
 ): Tournament {
-  const matches: Match[] = preview.schedule.allMatches.map((m, index) => ({
+  const keptById = new Map(preview.keptMatches.map((m) => [m.id, m]));
+  const matches: Match[] = preview.schedule.allMatches.map((m, index) => {
+    // @W5-009: Das behaltene Spiel liegt mit seinen Ergebnissen im Plan.
+    const kept = keptById.get(m.id);
+    if (kept) {
+      return kept;
+    }
+    return ({
     id: m.id,
     round: Math.floor(index / preview.schedule.numberOfFields) + 1,
     field: m.field,
@@ -123,11 +226,11 @@ export function applyReplan(
     phase: m.phase,
     finalType: m.finalType,
     label: m.label,
-    scheduledTime: m.startTime,
-    referee: m.referee,
-  }));
-  // @W5-009: geschützte Spiele bleiben mit ihren Ergebnissen erhalten.
-  return { ...tournament, matches: [...matches, ...preview.keptMatches] };
+      scheduledTime: m.startTime,
+      referee: m.referee,
+    });
+  });
+  return { ...tournament, matches };
 }
 
 export interface ReplanSession {
