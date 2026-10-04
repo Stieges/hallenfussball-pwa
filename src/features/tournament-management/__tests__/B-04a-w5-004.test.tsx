@@ -14,7 +14,7 @@
  * Mutation: `status = 'draft'` im Bearbeiten-Weg → @W5-004 rot.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Tournament } from '../../../types/tournament';
 
@@ -24,6 +24,10 @@ vi.mock('../../auth/hooks/useAuth', () => ({
 
 vi.mock('../../auth/hooks/useTournamentMembers', () => ({
   useTournamentMembers: () => ({ myMembership: null, isLoading: false }),
+}));
+
+vi.mock('../../../hooks/useTournaments', () => ({
+  useTournaments: () => ({ saveTournament: vi.fn(() => Promise.resolve()), tournaments: [] }),
 }));
 
 import { SettingsTab } from '../SettingsTab';
@@ -85,7 +89,7 @@ describe('B-04a @W5-004/@LZ-004 — Bearbeiten setzt nie auf Entwurf', () => {
     expect(wizardTournament.status).toBe('draft');
   });
 
-  it('@LZ-004 Turnier mit angepfiffenem Spiel: Bearbeiten nicht angeboten, Status unverändert', () => {
+  it('@LZ-004 Stammdaten eines laufenden Turniers speichern lässt Status und laufendes Spiel unverändert', () => {
     const running = {
       ...tournamentWith('published'),
       matches: [
@@ -109,6 +113,44 @@ describe('B-04a @W5-004/@LZ-004 — Bearbeiten setzt nie auf Entwurf', () => {
     ).not.toBeInTheDocument();
     expect(onEditInWizard).not.toHaveBeenCalled();
     expect(onTournamentUpdate).not.toHaveBeenCalled();
-    expect(running.status).toBe('published');
+
+    fireEvent.click(screen.getByRole('heading', { name: /settings\.editMetadata/ }));
+    fireEvent.change(screen.getByDisplayValue('Wintercup'), { target: { value: 'Neuer Cup' } });
+    fireEvent.click(screen.getByRole('button', { name: /common\.save/ }));
+
+    expect(onTournamentUpdate).toHaveBeenCalledTimes(1);
+    const updated = onTournamentUpdate.mock.calls[0][0] as Tournament;
+    expect(updated.status).toBe('published');
+    expect(updated.publishedAt).toBe(running.publishedAt);
+    expect(updated.matches[0].matchStatus).toBe('running');
+    expect(updated.title).toBe('Neuer Cup');
+
+    expect(
+      screen.queryByRole('button', { name: /settings\.advancedEditing\.editTeams/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it('@LZ-004 Gegenbeispiel: ohne Änderung ist Speichern deaktiviert und onTournamentUpdate bleibt ungerufen', () => {
+    const running = {
+      ...tournamentWith('published'),
+      matches: [
+        { id: 'm1', matchStatus: 'running' },
+        { id: 'm2', matchStatus: 'scheduled' },
+      ],
+    } as unknown as Tournament;
+    const onTournamentUpdate = vi.fn();
+
+    render(
+      <SettingsTab
+        tournament={running}
+        onTournamentUpdate={onTournamentUpdate}
+        onEditInWizard={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('heading', { name: /settings\.editMetadata/ }));
+
+    expect(screen.getByRole('button', { name: /common\.save/ })).toBeDisabled();
+    expect(onTournamentUpdate).not.toHaveBeenCalled();
   });
 });
