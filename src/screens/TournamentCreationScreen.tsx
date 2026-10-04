@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button, Icons } from '../components/ui';
 import { ProgressBar } from '../components/ProgressBar';
@@ -194,6 +194,10 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const [generatedSchedule, setGeneratedSchedule] = useState<ReturnType<typeof generateFullSchedule> | null>(null);
   const [replanSession, setReplanSession] = useState<ReplanSession | null>(null);
   const [showSaveNotification, setShowSaveNotification] = useState(false);
+  // @W1-023: Festlegen mit Ladezustand; Sperre verhindert zweites Turnier bei Doppelklick.
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishSuccess, setPublishSuccess] = useState(false);
+  const publishLockRef = useRef(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
 
@@ -328,12 +332,16 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   };
 
   const handlePublish = async (override?: Partial<Tournament>) => {
+    if (publishLockRef.current) { return; }
+    publishLockRef.current = true;
+    setIsPublishing(true);
     try {
       const published = await publishTournament(override);
 
       // Call external save callback if provided (e.g. for potential redirects or parent updates)
       // Though publishTournament already saves to repo.
       await saveTournament(published);
+      setPublishSuccess(true);
 
       if (!onSave) {
         onBack();
@@ -346,6 +354,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       setScheduleError(errorMessage);
       console.error('[TournamentCreationScreen] Publish failed:', error);
       // Stay on preview screen to show error
+    } finally {
+      publishLockRef.current = false;
+      setIsPublishing(false);
     }
   };
 
@@ -739,11 +750,17 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                     </div>
                   </div>
                 )}
+                {publishSuccess && (
+                  <div data-testid="publish-success" role="status">
+                    Turnier erfolgreich festgelegt.
+                  </div>
+                )}
                 <TournamentPreview
                   tournament={createDraftTournament()}
                   schedule={generatedSchedule}
                   onEdit={handleBackToEdit}
                   onPublish={() => void handlePublish()}
+                  isPublishing={isPublishing}
                   onTournamentChange={(updatedTournament) => {
                     // Update formData with the modified playoff config and referee config
                     setFormData((prev) => ({

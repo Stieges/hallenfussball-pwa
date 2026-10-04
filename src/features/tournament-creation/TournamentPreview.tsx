@@ -24,6 +24,7 @@ interface TournamentPreviewProps {
   onEdit: () => void;
   onPublish: () => void;
   onTournamentChange?: (tournament: Tournament) => void;
+  isPublishing?: boolean;
 }
 
 export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
@@ -32,6 +33,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   onEdit,
   onPublish,
   onTournamentChange,
+  isPublishing = false,
 }) => {
   const [currentTournament, setCurrentTournament] = useState(tournament);
   const [schedule, setSchedule] = useState(initialSchedule);
@@ -433,6 +435,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           <Button
             variant="primary"
             onClick={onPublish}
+            disabled={isPublishing}
             style={{
               fontSize: cssVars.fontSizes.lg,
               padding: '14px 32px',
@@ -440,7 +443,11 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
             }}
             data-testid="preview-publish"
           >
-            Turnier freigeben
+            {isPublishing ? (
+              <span data-testid="preview-publish-loading">Wird festgelegt …</span>
+            ) : (
+              'Turnier freigeben'
+            )}
           </Button>
         </div>
       </Card>
