@@ -56,5 +56,5 @@ export function finishingEvents(rows: readonly { type: string }[], events: Appen
     return events;
   }
   const inBreak = rows.some((r) => r.type === 'SECTION_END') && !rows.some((r) => r.type === 'SECTION_START');
-  return inBreak ? [eventOf('SECTION_START', Date.now(), Date.now(), { section: 2 }), ...events.slice(-1)] : events.slice(-1);
+  return inBreak ? [eventOf('SECTION_START', Date.now() - 600_000, Date.now() - 599_000, { section: 2 }), ...events.slice(-1)] : events.slice(-1);
 }
