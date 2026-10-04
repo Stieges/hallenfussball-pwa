@@ -59,16 +59,6 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     path: 'exports',
   },
   {
-    id: 'team-helpers',
-    label: 'Team & Helfer',
-    shortLabel: 'Team & Helfer',
-    description: 'Helfer einladen',
-    icon: '👥',
-    group: 'management',
-    path: 'team-helpers',
-    isComingSoon: true,
-  },
-  {
     id: 'sponsors',
     label: 'Sponsoren',
     description: 'Logos & Einblendungen',
@@ -106,16 +96,6 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     path: 'visibility',
   },
   {
-    id: 'notifications',
-    label: 'Benachrichtigungen',
-    shortLabel: 'Benachricht.',
-    description: 'Push & Sound',
-    icon: '🔔',
-    group: 'settings',
-    path: 'notifications',
-    isComingSoon: true,
-  },
-  {
     id: 'metadata',
     label: 'Meta-Daten',
     shortLabel: 'Meta-Daten',
@@ -123,17 +103,6 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     icon: '📝',
     group: 'settings',
     path: 'metadata',
-  },
-
-  // Support
-  {
-    id: 'help',
-    label: 'Hilfe & Support',
-    shortLabel: 'Hilfe',
-    description: 'FAQ, Tastenkürzel',
-    icon: '❓',
-    group: 'support',
-    path: 'help',
   },
 ];
 

@@ -19,6 +19,8 @@ import type { Breakpoint } from '../../../../hooks';
 
 interface ExtendedActionsPanelProps {
   onEditScore?: () => void;
+  /** @OB-002 (Platzhalter Nr. 2): „Spielzeit anpassen“ wird nicht angeboten – Prop bleibt
+   *  für Aufrufer bestehen, das Panel zeigt den Knopf jedoch nie. */
   onAdjustTime?: () => void;
   onYellowCard?: () => void;
   onRedCard?: () => void;
@@ -36,7 +38,8 @@ interface ExtendedActionsPanelProps {
 
 export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
   onEditScore,
-  onAdjustTime,
+  /** @OB-002: Knopf „Spielzeit anpassen“ ist ausgeblendet */
+  onAdjustTime: _onAdjustTime,
   onYellowCard,
   onRedCard,
   onTimePenalty,
@@ -96,19 +99,6 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
           aria-label={t('extended.editScoreAria')}
         >
           ✏️ {!isMobile && t('extended.score')}
-        </button>
-      )}
-
-      {/* Time Adjustment */}
-      {onAdjustTime && (
-        <button
-          style={buttonStyle(cssVars.colors.surface, cssVars.colors.textPrimary)}
-          onClick={onAdjustTime}
-          disabled={disabled}
-          type="button"
-          aria-label={t('extended.adjustTimeAria')}
-        >
-          ⏱️ {!isMobile && t('extended.time')}
         </button>
       )}
 

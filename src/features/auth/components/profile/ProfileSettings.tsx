@@ -13,42 +13,21 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
     isDark,
     onToggleTheme,
     onOpenSettings,
-    onShowInfo,
 }) => {
-    return (
-        <>
-            <ProfileToggle
-                label="Dark Mode"
-                icon="🌙"
-                checked={isDark}
-                onChange={onToggleTheme}
-            />
-            <ProfileToggle
-                label="Benachrichtigungen"
-                icon="🔔"
-                checked={true /* Mocked */}
-                onChange={() => onShowInfo('Benachrichtigungen werden in Kürze verfügbar sein.')}
-            />
-            <div style={styles.listRow}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
-                    <span style={{ fontSize: cssVars.fontSizes.lg }}>🌐</span>
-                    <span style={styles.listLabel}>Sprache</span>
-                </div>
-                <select
-                    style={styles.selectInput}
-                    value="de"
-                    onChange={() => alert('Sprache ist aktuell auf Deutsch festgelegt.')}
-                >
-                    <option value="de">Deutsch</option>
-                    <option value="en">English (BETA)</option>
-                </select>
-            </div>
-            <div style={styles.divider} />
-            <button style={styles.actionButton} onClick={onOpenSettings}>
-                ⚙️ Weitere Einstellungen
-            </button>
-        </>
-    );
+  return (
+    <>
+      <ProfileToggle
+        label="Dark Mode"
+        icon="🌙"
+        checked={isDark}
+        onChange={onToggleTheme}
+      />
+      <div style={styles.divider} />
+      <button style={styles.actionButton} onClick={onOpenSettings}>
+        ⚙️ Weitere Einstellungen
+      </button>
+    </>
+  );
 };
 
 const styles: Record<string, CSSProperties> = {

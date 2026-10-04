@@ -260,24 +260,6 @@ export function SettingsCategory({
     >
 
 
-      {/* Pause Tournament - Coming Soon */}
-      <CollapsibleSection icon="⏸️" title={t('settingsSection.pauseTournament')}>
-        <div style={styles.comingSoon}>
-          <p>
-            {t('settingsSection.pauseDesc')}
-          </p>
-          <span style={styles.badge}>{t('settingsSection.comingSoon')}</span>
-        </div>
-      </CollapsibleSection>
-
-      {/* Auto-Time-Continuation - Coming Soon */}
-      <CollapsibleSection icon="🔄" title={t('settingsSection.autoTimeContinuation')}>
-        <div style={styles.comingSoon}>
-          <p>{t('settingsSection.autoTimeDesc')}</p>
-          <span style={styles.badge}>{t('settingsSection.comingSoon')}</span>
-        </div>
-      </CollapsibleSection>
-
       {/* Duplicate Tournament - Functional */}
       <CollapsibleSection icon="📋" title={t('settingsSection.duplicateTournament')} defaultOpen>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
@@ -391,13 +373,17 @@ export function SettingsCategory({
           <div style={styles.inputRow}>
             <input
               type="number"
-              defaultValue={tournament.groupPhaseBreakDuration ?? 2}
+              value={tournament.groupPhaseBreakDuration ?? 2}
               min={0}
               max={30}
-              style={styles.input}
+              disabled
+              style={{ ...styles.input, opacity: 0.6 }}
             />
-            <span style={styles.inputUnit}>{t('settingsSection.minutes')}</span>
+            <span style={styles.inputUnit}>{t('settingsSection.minutesLocked')}</span>
           </div>
+          <p style={{ fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textMuted }}>
+            {t('settingsSection.gameTimeLockedHint')}
+          </p>
         </div>
       </CollapsibleSection>
     </CategoryPage>

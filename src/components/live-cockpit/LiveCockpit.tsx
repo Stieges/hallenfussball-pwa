@@ -936,7 +936,12 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               <span style={timerLabelStyle}>Spielzeit</span>
               <span
                 style={timerStyle}
-                onClick={() => !isLocked && setShowTimeAdjustDialog(true)}
+                onClick={() => {
+                  // @OB-002 (Platzhalter Nr. 2): „Spielzeit anpassen“ für neue Spiele ausgeblendet
+                  if (!isLocked && match.status !== 'NOT_STARTED') {
+                    setShowTimeAdjustDialog(true);
+                  }
+                }}
                 role="button"
                 tabIndex={0}
                 aria-disabled={isLocked}

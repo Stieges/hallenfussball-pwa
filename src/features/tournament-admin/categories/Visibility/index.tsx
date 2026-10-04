@@ -387,14 +387,6 @@ export function VisibilityCategory({
     updateTournament({ hideRankingsForPublic: !checked });
   };
 
-  const handleBambiniMode = (checked: boolean) => {
-    updateTournament({
-      isKidsTournament: checked,
-      // Bambini mode automatically hides rankings
-      hideRankingsForPublic: checked ? true : tournament.hideRankingsForPublic,
-    });
-  };
-
   return (
     <CategoryPage
       icon="👁"
@@ -498,14 +490,6 @@ export function VisibilityCategory({
                   >
                     <span>🔄</span>
                     <span>{isUpdating ? t('visibility.generating') : t('visibility.generateNewCode')}</span>
-                  </button>
-                  <button style={styles.actionButton}>
-                    <span>🖨️</span>
-                    <span>{t('visibility.printQr')}</span>
-                  </button>
-                  <button style={styles.actionButton}>
-                    <span>📥</span>
-                    <span>{t('visibility.downloadQr')}</span>
                   </button>
                 </div>
               </div>
@@ -626,30 +610,6 @@ export function VisibilityCategory({
         </div>
       </CollapsibleSection>
 
-      {/* Bambini Mode */}
-      <CollapsibleSection icon="👶" title={t('visibility.bambiniMode')} defaultOpen>
-        <label style={styles.checkbox}>
-          <input
-            type="checkbox"
-            checked={tournament.isKidsTournament || false}
-            onChange={(e) => handleBambiniMode(e.target.checked)}
-          />
-          <span>{t('visibility.enableBambiniMode')}</span>
-        </label>
-        <p style={{ color: cssVars.colors.textSecondary, marginTop: cssVars.spacing.md }}>
-          {t('visibility.whenEnabled')}:
-        </p>
-        <ul style={{ color: cssVars.colors.textSecondary, paddingLeft: cssVars.spacing.lg, margin: `${cssVars.spacing.sm} 0` }}>
-          <li>{t('visibility.noTables')}</li>
-          <li>{t('visibility.noPlacements')}</li>
-          <li>{t('visibility.focusOnFun')}</li>
-        </ul>
-        <div style={{ ...styles.tip, marginTop: cssVars.spacing.md }}>
-          <span>💡</span>
-          <span>{t('visibility.bambiniIdeal')}</span>
-        </div>
-      </CollapsibleSection>
-
       {/* Visibility Level */}
       <CollapsibleSection icon="🔒" title={t('visibility.tournamentVisibility')}>
         {isDraft && (
@@ -719,17 +679,6 @@ export function VisibilityCategory({
               </div>
               <div style={styles.radioDescription}>
                 {t('visibility.shareableDesc')}
-              </div>
-            </div>
-          </label>
-
-          {/* Public Listed Option (future) */}
-          <label style={{ ...styles.radioOption, opacity: 0.5, cursor: 'not-allowed' }}>
-            <input type="radio" name="visibility" disabled />
-            <div>
-              <div style={styles.radioLabel}>{t('visibility.publicListed')}</div>
-              <div style={styles.radioDescription}>
-                {t('visibility.publicListedDesc')}
               </div>
             </div>
           </label>

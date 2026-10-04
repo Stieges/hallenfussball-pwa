@@ -314,10 +314,7 @@ export function AdminMobileHub({
         {category.badge && category.badge > 0 && (
           <span style={styles.badge}>{category.badge}</span>
         )}
-        {category.isComingSoon && (
-          <span style={styles.comingSoonBadge}>{t('mobileHub.comingSoon')}</span>
-        )}
-        {!category.isComingSoon && !category.badge && (
+        {!category.badge && (
           <span style={styles.categoryArrow}>→</span>
         )}
       </button>

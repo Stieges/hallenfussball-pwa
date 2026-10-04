@@ -58,9 +58,6 @@ const MatchCockpitCategory = lazy(() =>
 const VisibilityCategory = lazy(() =>
   import('./categories/Visibility').then((m) => ({ default: m.VisibilityCategory }))
 );
-const NotificationsCategory = lazy(() =>
-  import('./categories/Notifications').then((m) => ({ default: m.NotificationsCategory }))
-);
 const MetadataCategory = lazy(() =>
   import('./categories/Metadata').then((m) => ({ default: m.MetadataCategory }))
 );
@@ -261,8 +258,6 @@ export function TournamentAdminCenter({
         return <MatchCockpitCategory {...categoryProps} />;
       case 'visibility':
         return <VisibilityCategory {...categoryProps} />;
-      case 'notifications':
-        return <NotificationsCategory {...categoryProps} />;
       case 'metadata':
         return <MetadataCategory {...categoryProps} />;
       case 'help':

@@ -319,9 +319,6 @@ export function AdminSidebar({
         {category.badge && category.badge > 0 && (
           <span style={styles.badge}>{category.badge}</span>
         )}
-        {category.isComingSoon && (
-          <span style={styles.comingSoonBadge}>{t('sidebar.comingSoon')}</span>
-        )}
       </button>
     );
   };

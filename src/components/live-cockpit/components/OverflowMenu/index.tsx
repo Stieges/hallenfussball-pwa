@@ -34,6 +34,8 @@ export interface OverflowMenuProps {
   onTimePenaltyClick?: () => void;
   onSubstitutionClick?: () => void;
   onEditResultClick?: () => void;
+  /** @OB-002 (Platzhalter Nr. 2): „Spielzeit anpassen“ wird nicht angeboten – Prop bleibt
+   *  für Aufrufer bestehen, das Menü zeigt den Eintrag jedoch nie. */
   onAdjustTimeClick?: () => void;
 
   /** Open Settings Dialog directly */
@@ -116,7 +118,8 @@ export function OverflowMenu({
   onTimePenaltyClick,
   onSubstitutionClick,
   onEditResultClick,
-  onAdjustTimeClick,
+  /** @OB-002: Eintrag „Spielzeit anpassen“ ist ausgeblendet */
+  onAdjustTimeClick: _onAdjustTimeClick,
 
 }: OverflowMenuProps) {
   const { t } = useTranslation('cockpit');
@@ -241,15 +244,6 @@ export function OverflowMenu({
             onClick={() => handleAction(onEditResultClick)}
           />
         )}
-
-        {onAdjustTimeClick && (
-          <MenuItem
-            icon="⏰"
-            label={t('menu.adjustTime')}
-            onClick={() => handleAction(onAdjustTimeClick)}
-          />
-        )}
-
 
       </div>
     </>

@@ -177,17 +177,19 @@ export const GameControls: React.FC<GameControlsProps> = ({
         {getMainButtonLabel()}
       </button>
 
-      {/* Edit Time */}
-      <button
-        style={btnStyle}
-        onClick={onEditTime}
-        disabled={disabled || isFinished}
-        type="button"
-        aria-label="Zeit bearbeiten"
-        data-testid="match-edit-time-button"
-      >
-        🕒 {!isMobile && 'Zeit'}
-      </button>
+      {/* Edit Time — @OB-002: „Spielzeit anpassen“ für neue Spiele ausgeblendet (Platzhalter Nr. 2) */}
+      {!isNotStarted && (
+        <button
+          style={btnStyle}
+          onClick={onEditTime}
+          disabled={disabled || isFinished}
+          type="button"
+          aria-label="Zeit bearbeiten"
+          data-testid="match-edit-time-button"
+        >
+          🕒 {!isMobile && 'Zeit'}
+        </button>
+      )}
 
       {/* Switch Sides */}
       <button
@@ -200,16 +202,18 @@ export const GameControls: React.FC<GameControlsProps> = ({
         🔄 {!isMobile && 'Seiten'}
       </button>
 
-      {/* Half Time */}
-      <button
-        style={btnStyle}
-        onClick={onHalfTime}
-        disabled={disabled || isFinished}
-        type="button"
-        aria-label="Halbzeit"
-      >
-        🌓 {!isMobile && 'Halbzeit'}
-      </button>
+      {/* Half Time — @OB-002: für neue Spiele ausgeblendet (Platzhalter Nr. 3) */}
+      {!isNotStarted && (
+        <button
+          style={btnStyle}
+          onClick={onHalfTime}
+          disabled={disabled || isFinished}
+          type="button"
+          aria-label="Halbzeit"
+        >
+          🌓 {!isMobile && 'Halbzeit'}
+        </button>
+      )}
 
       {/* Finish */}
       <button

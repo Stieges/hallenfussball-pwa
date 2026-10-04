@@ -90,20 +90,6 @@ export function MatchCockpitSettingsPanel({
     { value: 'custom', label: t('settings.customSound') },
   ];
 
-  const NETTO_WARNING_OPTIONS = [
-    { value: '60', label: t('settings.oneMinute') },
-    { value: '90', label: t('settings.oneThirtyMinutes') },
-    { value: '120', label: t('settings.twoMinutes') },
-    { value: '180', label: t('settings.threeMinutes') },
-  ];
-
-  const AUTO_ADVANCE_OPTIONS = [
-    { value: '5', label: t('settings.fiveSeconds') },
-    { value: '10', label: t('settings.tenSeconds') },
-    { value: '15', label: t('settings.fifteenSeconds') },
-    { value: '20', label: t('settings.twentySeconds') },
-  ];
-
   // Update a single setting
   const updateSetting = useCallback(
     <K extends keyof MatchCockpitSettings>(key: K, value: MatchCockpitSettings[K]) => {
@@ -194,33 +180,6 @@ export function MatchCockpitSettingsPanel({
             ))}
           </select>
         </SettingRow>
-
-        <SettingRow
-          label={t('settings.netTimeWarning')}
-          description={t('settings.netTimeWarningDesc')}
-        >
-          <Toggle
-            checked={settings.nettoWarningEnabled}
-            onChange={(v) => updateSetting('nettoWarningEnabled', v)}
-            label={t('settings.enableNetTimeWarning')}
-          />
-        </SettingRow>
-
-        {settings.nettoWarningEnabled && (
-          <SettingRow label={t('settings.warningTime')} description={t('settings.warningTimeDesc')}>
-            <select
-              value={String(settings.nettoWarningSeconds)}
-              onChange={(e) => updateSetting('nettoWarningSeconds', Number(e.target.value))}
-              style={styles.select}
-            >
-              {NETTO_WARNING_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </SettingRow>
-        )}
       </section>
 
       {/* Sound Section */}
@@ -335,14 +294,6 @@ export function MatchCockpitSettingsPanel({
             label={t('settings.enableVibration')}
           />
         </SettingRow>
-
-        <SettingRow label={t('settings.keepScreenOn')} description={t('settings.keepScreenOnDesc')}>
-          <Toggle
-            checked={settings.wakeLockEnabled}
-            onChange={(v) => updateSetting('wakeLockEnabled', v)}
-            label={t('settings.enableKeepScreenOn')}
-          />
-        </SettingRow>
       </section>
 
       {/* Auto-Advance Section */}
@@ -356,22 +307,6 @@ export function MatchCockpitSettingsPanel({
             label={t('settings.enableAutoEnd')}
           />
         </SettingRow>
-
-        {settings.autoFinishEnabled && (
-          <SettingRow label={t('settings.delay')} description={t('settings.delayDesc')}>
-            <select
-              value={String(settings.autoAdvanceSeconds)}
-              onChange={(e) => updateSetting('autoAdvanceSeconds', Number(e.target.value))}
-              style={styles.select}
-            >
-              {AUTO_ADVANCE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </SettingRow>
-        )}
       </section>
     </fieldset>
   );
