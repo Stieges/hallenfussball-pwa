@@ -355,10 +355,10 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         ...replanSession,
         preview: {
           status: 'refused',
-          reason:
+          reasonKey:
             freshState === 'started'
-              ? 'Das Turnier hat bereits angepfiffen – eine Neuplanung ist nur vor dem ersten Spiel möglich.'
-              : 'Der Startzustand des Turniers ist nicht feststellbar – eine Neuplanung ist deshalb nicht möglich.',
+              ? 'replan.reasonRefusedKickoff'
+              : 'replan.reasonRefusedUnknown',
         },
       });
       return;

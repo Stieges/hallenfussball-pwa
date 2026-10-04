@@ -68,7 +68,7 @@ describe('Neuplanung – Anpfiff-Sperre in openReplan (startState)', () => {
 
     expect(session.preview.status).toBe('refused');
     if (session.preview.status !== 'refused') { return; }
-    expect(session.preview.reason.length).toBeGreaterThan(0);
+    expect(session.preview.reasonKey.length).toBeGreaterThan(0);
     // nicht bestätigbar: confirm gibt den Ist-Stand zurück
     const after = session.confirm();
     expect(after.matches).toEqual(established.matches);
@@ -83,7 +83,7 @@ describe('Neuplanung – Anpfiff-Sperre in openReplan (startState)', () => {
 
     expect(session.preview.status).toBe('refused');
     if (session.preview.status !== 'refused') { return; }
-    expect(session.preview.reason.length).toBeGreaterThan(0);
+    expect(session.preview.reasonKey.length).toBeGreaterThan(0);
     expect(session.confirm().matches).toEqual(established.matches);
   });
 

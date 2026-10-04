@@ -522,6 +522,14 @@
     "suggestion": "Suggested solution",
     "notConfirmable": "The rescheduling cannot be confirmed. The current match plan remains in place.",
     "confirm": "Confirm",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "reasonFieldRemoved": "A match that has already been played is on a field that no longer exists in the new schedule.",
+    "reasonOverlap": "A match that has already been played keeps its kick-off – the playing time overlaps another slot on the same field.",
+    "reasonGeneratorFailed": "The schedule could not be created.",
+    "reasonRefusedKickoff": "The tournament has already kicked off – rescheduling is only possible before the first match.",
+    "reasonRefusedUnknown": "The tournament start status cannot be determined – rescheduling is therefore not possible.",
+    "suggestionCollision": "Lower the minimum rest period, add a field, or move the retained match before rescheduling.",
+    "suggestionMinRestOrAddField": "Lower the minimum rest period or add a field.",
+    "suggestionRestoreTeam": "Restore the team or create a new one."
   }
 }

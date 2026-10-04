@@ -522,6 +522,14 @@
     "suggestion": "Lösungsvorschlag",
     "notConfirmable": "Die Neuplanung lässt sich nicht bestätigen. Der bisherige Spielplan bleibt erhalten.",
     "confirm": "Bestätigen",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "reasonFieldRemoved": "Ein bereits gespieltes Spiel liegt auf einem Feld, das es im neuen Plan nicht mehr gibt.",
+    "reasonOverlap": "Ein bereits gespieltes Spiel behält seinen Anstoß – die Spielzeit überlappt einen anderen Termin auf demselben Feld.",
+    "reasonGeneratorFailed": "Der Spielplan konnte nicht erstellt werden.",
+    "reasonRefusedKickoff": "Das Turnier hat bereits angepfiffen – eine Neuplanung ist nur vor dem ersten Spiel möglich.",
+    "reasonRefusedUnknown": "Der Startzustand des Turniers ist nicht feststellbar – eine Neuplanung ist deshalb nicht möglich.",
+    "suggestionCollision": "Mindestpause senken, ein Feld hinzufügen oder das behaltene Spiel vor der Neuplanung verschieben.",
+    "suggestionMinRestOrAddField": "Mindestpause senken oder ein Feld hinzufügen.",
+    "suggestionRestoreTeam": "Team wiederherstellen oder ein neues Team anlegen."
   }
 }

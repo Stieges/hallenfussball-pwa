@@ -139,8 +139,8 @@ describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
     const session = openReplan(withPlayed, withPlayed, 'not-started');
     expect(session.preview.status).toBe('impossible');
     if (session.preview.status !== 'impossible') { return; }
-    expect(session.preview.reason.length).toBeGreaterThan(0);
-    expect(session.preview.suggestion.length).toBeGreaterThan(0);
+    expect(session.preview.reasonKey.length).toBeGreaterThan(0);
+    expect(session.preview.suggestionKey.length).toBeGreaterThan(0);
     expect(session.confirm().matches).toEqual(withPlayed.matches);
   });
 });
@@ -166,8 +166,8 @@ describe('Neuplanung – Kollision über alle behaltenen Spiele (W2, E1, E4)', (
     const preview = buildReplanPreview(withOrphan);
     expect(preview.status).toBe('impossible');
     if (preview.status !== 'impossible') { return; }
-    expect(preview.reason.length).toBeGreaterThan(0);
-    expect(preview.suggestion.length).toBeGreaterThan(0);
+    expect(preview.reasonKey.length).toBeGreaterThan(0);
+    expect(preview.suggestionKey.length).toBeGreaterThan(0);
   });
 
   it('E1 – um 2 Minuten versetzte Überlappung auf demselben Feld: impossible', () => {
@@ -194,8 +194,8 @@ describe('Neuplanung – Kollision über alle behaltenen Spiele (W2, E1, E4)', (
     const session = openReplan(withPlayed, withPlayed, 'not-started');
     expect(session.preview.status).toBe('impossible');
     if (session.preview.status !== 'impossible') { return; }
-    expect(session.preview.reason.length).toBeGreaterThan(0);
-    expect(session.preview.suggestion.length).toBeGreaterThan(0);
+    expect(session.preview.reasonKey.length).toBeGreaterThan(0);
+    expect(session.preview.suggestionKey.length).toBeGreaterThan(0);
     expect(session.confirm().matches).toEqual(withPlayed.matches);
   });
 
@@ -223,8 +223,8 @@ describe('Neuplanung – Kollision über alle behaltenen Spiele (W2, E1, E4)', (
     const preview = buildReplanPreview(updated);
     expect(preview.status).toBe('impossible');
     if (preview.status !== 'impossible') { return; }
-    expect(preview.reason.length).toBeGreaterThan(0);
-    expect(preview.suggestion.length).toBeGreaterThan(0);
+    expect(preview.reasonKey.length).toBeGreaterThan(0);
+    expect(preview.suggestionKey.length).toBeGreaterThan(0);
   });
 
   it('Gegenbeispiel – behaltenes Spiel ohne Überlappung: preview möglich', () => {

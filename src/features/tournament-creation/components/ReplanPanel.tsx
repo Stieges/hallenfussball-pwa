@@ -10,6 +10,7 @@ import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Match } from '../../../types/tournament';
 import type { ReplanPreviewResult } from '../utils/replan';
+import { formatReplanTime } from '../utils/replan';
 import { Dialog } from '../../../components/dialogs/Dialog';
 import { Button } from '../../../components/ui';
 import { cssVars } from '../../../design-tokens';
@@ -22,8 +23,7 @@ export interface ReplanPanelProps {
   onCancel: () => void;
 }
 
-const formatTime = (date: Date): string =>
-  date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
 
 const boxStyle: CSSProperties = {
   padding: cssVars.spacing.md,
@@ -45,7 +45,7 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
   onConfirm,
   onCancel,
 }) => {
-  const { t } = useTranslation('wizard');
+  const { t, i18n } = useTranslation('wizard');
   const previousIds = new Set(previousMatches.map((m) => m.id));
 
   const newCount =
@@ -74,7 +74,7 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
         {preview.status === 'preview' && (
           <>
             <div style={boxStyle} data-testid="replan-end-time">
-              <strong>{t('replan.endTime')}:</strong> {formatTime(preview.endTime)}
+              <strong>{t('replan.endTime')}:</strong> {formatReplanTime(preview.endTime, i18n.language)}
             </div>
             <div style={boxStyle} data-testid="replan-counts">
               <div>{t('replan.newMatches', { count: newCount })}</div>
@@ -108,11 +108,12 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
         {preview.status !== 'preview' && (
           <div style={boxStyle} data-testid="replan-blocked">
             <p style={hintStyle} data-testid="replan-reason">
-              <strong>{t('replan.reason')}:</strong> {preview.reason}
+              <strong>{t('replan.reason')}:</strong> {t(preview.reasonKey)}
+              {'detail' in preview && preview.detail ? ` (${preview.detail})` : ''}
             </p>
-            {'suggestion' in preview && (
+            {'suggestionKey' in preview && (
               <p style={hintStyle} data-testid="replan-suggestion">
-                <strong>{t('replan.suggestion')}:</strong> {preview.suggestion}
+                <strong>{t('replan.suggestion')}:</strong> {t(preview.suggestionKey)}
               </p>
             )}
             <p style={hintStyle} data-testid="replan-not-confirmable">

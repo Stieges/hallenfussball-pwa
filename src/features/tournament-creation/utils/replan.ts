@@ -28,6 +28,11 @@ function matchHasEvents(match: Match): boolean {
 
 export type ReplanAvailability = 'offered' | 'refused-after-kickoff' | 'unknown';
 
+/** W4: Uhrzeit je nach gewählter Sprache. */
+export function formatReplanTime(date: Date, locale: string): string {
+  return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+}
+
 export type ReplanPreviewResult =
   | {
       status: 'preview';
@@ -40,9 +45,15 @@ export type ReplanPreviewResult =
       /** @W5-009: Behaltene Spiele ohne Gegenstück im neuen Plan (Konflikt). */
       conflictMatchIds: string[];
     }
-  | { status: 'impossible'; reason: string; suggestion: string }
+  | {
+      status: 'impossible';
+      /** W4: i18n-Schlüssel statt deutscher Rohtext. */
+      reasonKey: string;
+      suggestionKey: string;
+      detail?: string;
+    }
   /** @W5-008: Nach dem Anpfiff ist keine Neuplanung möglich (fail-closed). */
-  | { status: 'refused'; reason: string };
+  | { status: 'refused'; reasonKey: string; detail?: string };
 
 export function getReplanAvailability(
   tournament: Pick<Tournament, 'matches' | 'status' | 'publishedAt'>
@@ -174,11 +185,10 @@ export function buildReplanPreview(
     if (collision) {
       return {
         status: 'impossible',
-        reason: removedField
-          ? 'Ein bereits gespieltes Spiel liegt auf einem Feld, das es im neuen Plan nicht mehr gibt.'
-          : 'Ein bereits gespieltes Spiel behält seinen Anstoß – die Spielzeit überlappt einen anderen Termin auf demselben Feld.',
-        suggestion:
-          'Mindestpause senken, ein Feld hinzufügen oder das behaltene Spiel vor der Neuplanung verschieben.',
+        reasonKey: removedField
+          ? 'replan.reasonFieldRemoved'
+          : 'replan.reasonOverlap',
+        suggestionKey: 'replan.suggestionCollision',
       };
     }
     const endTime = allMatches.reduce(
@@ -197,12 +207,16 @@ export function buildReplanPreview(
       conflictMatchIds,
     };
   } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    const suggestion =
-      activeTeams.length === 0
-        ? 'Team wiederherstellen oder ein neues Team anlegen.'
-        : 'Mindestpause senken oder ein Feld hinzufuegen.';
-    return { status: 'impossible', reason, suggestion };
+    const detail = err instanceof Error ? err.message : String(err);
+    return {
+      status: 'impossible',
+      reasonKey: 'replan.reasonGeneratorFailed',
+      suggestionKey:
+        activeTeams.length === 0
+          ? 'replan.suggestionRestoreTeam'
+          : 'replan.suggestionMinRestOrAddField',
+      detail,
+    };
   }
 }
 
@@ -264,10 +278,10 @@ export function openReplan(
       ? buildReplanPreview(updated)
       : {
           status: 'refused',
-          reason:
+          reasonKey:
             startState === 'started'
-              ? 'Das Turnier hat bereits angepfiffen – eine Neuplanung ist nur vor dem ersten Spiel möglich.'
-              : 'Der Startzustand des Turniers ist nicht feststellbar – eine Neuplanung ist deshalb nicht möglich.',
+              ? 'replan.reasonRefusedKickoff'
+              : 'replan.reasonRefusedUnknown',
         };
   return {
     preview,

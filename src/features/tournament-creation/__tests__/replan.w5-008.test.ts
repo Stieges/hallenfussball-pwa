@@ -54,8 +54,8 @@ describe('Neuplanung – Anpfiff-Prüfung (getMatchStartState)', () => {
 
     expect(session.preview.status).toBe('impossible');
     if (session.preview.status !== 'impossible') { return; }
-    expect(session.preview.reason.length).toBeGreaterThan(0);
-    expect(session.preview.suggestion.length).toBeGreaterThan(0);
+    expect(session.preview.reasonKey.length).toBeGreaterThan(0);
+    expect(session.preview.suggestionKey.length).toBeGreaterThan(0);
     // nicht bestaetigbar: confirm laesst den bisherigen Spielplan stehen
     expect(session.confirm().matches).toEqual(tournament.matches);
   });

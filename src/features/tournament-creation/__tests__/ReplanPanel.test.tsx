@@ -77,8 +77,9 @@ describe('ReplanPanel – Neuplanungs-Vorschau (@W5-005/007/008)', () => {
   it('@W5-008 – bei unmöglicher Neuplanung: Grund UND Lösungsvorschlag, Bestätigen gesperrt', () => {
     const impossible: ReplanPreviewResult = {
       status: 'impossible',
-      reason: 'Zu wenig Felder für die Mindestpause',
-      suggestion: 'Mindestpause senken oder ein Feld hinzufügen',
+      reasonKey: 'replan.reasonGeneratorFailed',
+      suggestionKey: 'replan.suggestionMinRestOrAddField',
+      detail: 'Zu wenig Felder für die Mindestpause',
     };
     render(
       <ReplanPanel
@@ -91,7 +92,7 @@ describe('ReplanPanel – Neuplanungs-Vorschau (@W5-005/007/008)', () => {
     );
 
     expect(screen.getByTestId('replan-reason')).toHaveTextContent('Zu wenig Felder');
-    expect(screen.getByTestId('replan-suggestion')).toHaveTextContent('Mindestpause senken');
+    expect(screen.getByTestId('replan-suggestion')).toHaveTextContent('replan.suggestionMinRestOrAddField');
     expect(screen.getByTestId('replan-not-confirmable')).toBeInTheDocument();
     expect(screen.getByTestId('replan-confirm')).toBeDisabled();
   });
@@ -99,7 +100,7 @@ describe('ReplanPanel – Neuplanungs-Vorschau (@W5-005/007/008)', () => {
   it('@W5-008 – bei refused: Bestätigen gesperrt, Grund sichtbar', () => {
     const refused: ReplanPreviewResult = {
       status: 'refused',
-      reason: 'Das Turnier hat bereits angepfiffen',
+      reasonKey: 'replan.reasonRefusedKickoff',
     };
     render(
       <ReplanPanel
@@ -111,7 +112,7 @@ describe('ReplanPanel – Neuplanungs-Vorschau (@W5-005/007/008)', () => {
       />
     );
 
-    expect(screen.getByTestId('replan-reason')).toHaveTextContent('angepfiffen');
+    expect(screen.getByTestId('replan-reason')).toHaveTextContent('replan.reasonRefusedKickoff');
     expect(screen.getByTestId('replan-confirm')).toBeDisabled();
   });
 
