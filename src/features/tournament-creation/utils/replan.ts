@@ -10,11 +10,29 @@ import {
   type GeneratedSchedule,
 } from '../../../core/generators';
 import { getMatchStartState } from '../../../utils/matchStartState';
+import { matchHasResult } from '../../../utils/teamHelpers';
+
+/** „Spiel mit Ereignissen" (@W5-009): Ergebnis, Laufzeit-Events oder Status ungleich geplant. */
+function matchHasEvents(match: Match): boolean {
+  return (
+    matchHasResult(match) ||
+    (match.events?.length ?? 0) > 0 ||
+    (match.matchStatus !== undefined && match.matchStatus !== 'scheduled')
+  );
+}
 
 export type ReplanAvailability = 'offered' | 'refused-after-kickoff';
 
 export type ReplanPreviewResult =
-  | { status: 'preview'; schedule: GeneratedSchedule; endTime: Date }
+  | {
+      status: 'preview';
+      schedule: GeneratedSchedule;
+      endTime: Date;
+      /** @W5-009: Spiele mit Ereignissen, die der neue Plan nicht entfallen lässt. */
+      keptMatches: Match[];
+      /** @W5-009: Hinweis je geschütztem Spiel – es wird NICHT entfernt. */
+      keptNotices: Array<{ matchId: string; willBeRemoved: false }>;
+    }
   | { status: 'impossible'; reason: string };
 
 export function getReplanAvailability(
@@ -49,7 +67,22 @@ export function buildReplanPreview(
   };
   try {
     const schedule = generateFullSchedule(replanInput);
-    return { status: 'preview', schedule, endTime: schedule.endTime };
+    // @W5-009: Ein Spiel mit Ereignissen darf die Neuplanung nicht entfallen
+    // lassen – es bleibt erhalten, die Vorschau weist darauf hin.
+    const generatedIds = new Set(schedule.allMatches.map((m) => m.id));
+    const keptMatches = tournament.matches.filter(
+      (m) => matchHasEvents(m) && !generatedIds.has(m.id)
+    );
+    return {
+      status: 'preview',
+      schedule,
+      endTime: schedule.endTime,
+      keptMatches,
+      keptNotices: keptMatches.map((m) => ({
+        matchId: m.id,
+        willBeRemoved: false as const,
+      })),
+    };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     return { status: 'impossible', reason };
@@ -79,7 +112,8 @@ export function applyReplan(
     scheduledTime: m.startTime,
     referee: m.referee,
   }));
-  return { ...tournament, matches };
+  // @W5-009: geschützte Spiele bleiben mit ihren Ergebnissen erhalten.
+  return { ...tournament, matches: [...matches, ...preview.keptMatches] };
 }
 
 export interface ReplanSession {
