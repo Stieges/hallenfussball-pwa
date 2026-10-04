@@ -30,7 +30,8 @@ interface UseFocusTrapOptions {
    * Buttons (und das Absenden eines fokussierten Eingabefelds).
    */
   suppressEnter?: boolean;
-  /** Callback when escape is pressed */
+  /** Callback when escape is pressed. Ohne diesen Callback legt der Dialog keinen
+   * History-Eintrag an (die Zurück-Taste führt dann zur vorigen Seite). */
   onEscape?: () => void;
   /**
    * @OB-012: Die Zurück-Taste des Handys schließt den Dialog wie „Abbrechen“.
@@ -50,6 +51,10 @@ const FOCUSABLE_SELECTOR = [
   'a[href]',
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
+
+const openDialogs: string[] = [];
+let dialogIdCounter = 0;
+let consumedPopState: PopStateEvent | null = null;
 
 export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
   options: UseFocusTrapOptions
@@ -73,27 +78,54 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
 
   // @OB-012: Zurück-Taste schließt den Dialog (eigener History-Eintrag)
   useEffect(() => {
-    if (!isActive || !closeOnBack) {
+    if (!isActive || !closeOnBack || !onEscapeRef.current) {
       return;
     }
 
-    window.history.pushState({ dialogOpen: true }, '');
-    let entryIsOurs = true;
+    dialogIdCounter += 1;
+    const dialogId = `focus-trap-${dialogIdCounter}`;
+    openDialogs.push(dialogId);
+    window.history.pushState({ dialogId }, '');
 
-    const handlePopState = () => {
+    let isClosing = false;
+
+    function detach() {
+      window.removeEventListener('popstate', handlePopState);
+      const index = openDialogs.indexOf(dialogId);
+      if (index !== -1) {
+        openDialogs.splice(index, 1);
+      }
+    }
+
+    function handlePopState(event: PopStateEvent) {
+      if (consumedPopState === event) {
+        return;
+      }
+      if (openDialogs[openDialogs.length - 1] !== dialogId) {
+        return;
+      }
+      consumedPopState = event;
+      if (isClosing) {
+        // Eigener Eintrag aus dem Cleanup: nur aufräumen, nicht zusätzlich schließen.
+        detach();
+        return;
+      }
       // Die Zurück-Taste hat den Eintrag verbraucht – der Dialog schließt wie „Abbrechen“.
-      entryIsOurs = false;
+      detach();
       onEscapeRef.current?.();
-    };
+    }
+
     window.addEventListener('popstate', handlePopState);
 
     return () => {
-      window.removeEventListener('popstate', handlePopState);
-      const state = window.history.state as { dialogOpen?: boolean } | null;
-      if (entryIsOurs && state?.dialogOpen) {
+      const state = window.history.state as { dialogId?: string } | null;
+      if (state?.dialogId === dialogId) {
         // Auf anderem Weg geschlossen: eigenen Eintrag entfernen.
+        isClosing = true;
         window.history.back();
+        return;
       }
+      detach();
     };
   }, [isActive, closeOnBack]);
 
