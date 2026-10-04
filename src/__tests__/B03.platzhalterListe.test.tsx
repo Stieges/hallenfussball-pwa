@@ -71,8 +71,26 @@ vi.mock('../hooks', async (importOriginal) => {
   return {
     ...actual,
     useTournaments: () => ({ saveTournament: vi.fn(() => Promise.resolve()) }),
+    // F-06 (Fixrunde 1): LiveCockpit rendert den Timer — useMatchSound braucht eine
+    // AudioContext-Umgebung, die jsdom nicht liefert (gleiches Muster wie
+    // LiveCockpit.readOnly.test.tsx).
+    useMatchSound: () => ({
+      play: vi.fn(), stop: vi.fn(), testPlay: vi.fn(), activate: vi.fn(),
+      isPlaying: false, isLoading: false, isReady: true, isActivated: true, error: null,
+    }),
   };
 });
+
+// F-06 (Fixrunde 1): SyncStatusIndicator (LiveCockpit-Header) zieht useSyncStatus direkt
+// aus hooks/useSyncStatus — ohne Repository-Context wirft es (gleiches Muster wie
+// LiveCockpit.readOnly.test.tsx).
+vi.mock('../hooks/useSyncStatus', () => ({
+  useSyncStatus: () => ({
+    status: 'synced', isSyncing: false, pendingChanges: 0, failedChanges: 0, failedMutations: [],
+    syncTournament: vi.fn(), retryFailedMutation: vi.fn(), discardFailedMutation: vi.fn(),
+    isCloudSyncAvailable: false,
+  }),
+}));
 
 vi.mock('../hooks/useTournaments', () => ({
   useTournaments: () => ({
@@ -501,17 +519,55 @@ const OB002: FunktionFall[] = [
     funktion: '„Spielzeit anpassen“',
     ort: 'das Cockpit von Spiel 9',
     pruefen: async () => {
-      const { OverflowMenu } = await import('../components/live-cockpit/components/OverflowMenu');
-      const { container } = render(
-        <OverflowMenu
-          isOpen
-          onClose={vi.fn()}
-          tournamentId="t1"
-          onAdjustTimeClick={vi.fn()}
+      // F-06 (Fixrunde 1): geprüft wird am ECHTEN Ort — GameControls mit Status NOT_STARTED
+      // (ohne „Zeit bearbeiten“) und das Antippen der Uhr in LiveCockpit (öffnet den
+      // Zeit-Dialog bei einem neuen Spiel nicht). Vorher renderte der Fall das ungenutzte
+      // OverflowMenu, das nirgends eingebunden ist.
+      const { GameControls } = await import('../components/live-cockpit/components/GameControls');
+      const controls = render(
+        <GameControls
+          status="NOT_STARTED"
+          onStart={vi.fn()}
+          onPauseResume={vi.fn()}
+          onEditTime={vi.fn()}
+          onSwitchSides={vi.fn()}
+          onFinish={vi.fn()}
         />
       );
-      expectRendered(container);
-      expectAbsent(/adjustTime|Zeit anpassen|Spielzeit anpassen/);
+      expectRendered(controls.container);
+      expect(screen.queryByRole('button', { name: 'Zeit bearbeiten' })).not.toBeInTheDocument();
+      expectAbsent(/Zeit bearbeiten|Spielzeit anpassen|adjustTime/);
+      controls.unmount();
+
+      const { LiveCockpit } = await import('../components/live-cockpit/LiveCockpit');
+      const match = {
+        id: 'match-1', number: 9, phaseLabel: 'Gruppenphase', fieldId: 'field-1',
+        scheduledKickoff: new Date().toISOString(), durationSeconds: 600,
+        homeTeam: { id: 'team-a', name: 'FC Alpha' }, awayTeam: { id: 'team-b', name: 'SV Beta' },
+        homeScore: 0, awayScore: 0, status: 'NOT_STARTED', elapsedSeconds: 0, playPhase: 'regular',
+        events: [],
+      };
+      render(
+        <LiveCockpit
+          fieldName="Feld 1"
+          tournamentName="Test-Turnier"
+          tournamentId="t1"
+          currentMatch={match as never}
+          upcomingMatches={[]}
+          onStart={vi.fn()}
+          onPause={vi.fn()}
+          onResume={vi.fn()}
+          onFinish={vi.fn()}
+          onGoal={vi.fn()}
+          onUndoLastEvent={vi.fn()}
+          onManualEditResult={vi.fn()}
+          onAdjustTime={vi.fn()}
+          onLoadNextMatch={vi.fn()}
+          onReopenLastMatch={vi.fn()}
+        />
+      );
+      fireEvent.click(screen.getByTestId('match-timer-display'));
+      expect(screen.queryByRole('dialog', { name: 'cockpit:timeAdjust.title' })).not.toBeInTheDocument();
     },
   },
   {
