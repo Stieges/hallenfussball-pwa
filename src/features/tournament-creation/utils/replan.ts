@@ -9,7 +9,10 @@ import {
   generateFullSchedule,
   type GeneratedSchedule,
 } from '../../../core/generators';
-import { getMatchStartState } from '../../../utils/matchStartState';
+import {
+  getMatchStartState,
+  type MatchStartState,
+} from '../../../utils/matchStartState';
 import { matchHasResult } from '../../../utils/teamHelpers';
 import { replaceSides } from './matchSides';
 import { teamReplacedLabel } from '../../tournament-admin/constants/admin.constants';
@@ -23,7 +26,7 @@ function matchHasEvents(match: Match): boolean {
   );
 }
 
-export type ReplanAvailability = 'offered' | 'refused-after-kickoff';
+export type ReplanAvailability = 'offered' | 'refused-after-kickoff' | 'unknown';
 
 export type ReplanPreviewResult =
   | {
@@ -35,7 +38,9 @@ export type ReplanPreviewResult =
       /** @W5-009: Hinweis je geschütztem Spiel – es wird NICHT entfernt. */
       keptNotices: Array<{ matchId: string; willBeRemoved: false }>;
     }
-  | { status: 'impossible'; reason: string; suggestion: string };
+  | { status: 'impossible'; reason: string; suggestion: string }
+  /** @W5-008: Nach dem Anpfiff ist keine Neuplanung möglich (fail-closed). */
+  | { status: 'refused'; reason: string };
 
 export function getReplanAvailability(
   tournament: Pick<Tournament, 'matches' | 'status' | 'publishedAt'>
@@ -47,7 +52,10 @@ export function getReplanAvailability(
     undefined,
     isEstablished
   );
-  return startState === 'not-started' ? 'offered' : 'refused-after-kickoff';
+  if (startState === 'not-started') {
+    return 'offered';
+  }
+  return startState === 'started' ? 'refused-after-kickoff' : 'unknown';
 }
 
 /**
@@ -136,9 +144,21 @@ export interface ReplanSession {
  */
 export function openReplan(
   current: Tournament,
-  updated: Tournament
+  updated: Tournament,
+  startState: MatchStartState = 'not-started'
 ): ReplanSession {
-  const preview = buildReplanPreview(updated);
+  // @W5-008: Nach dem Anpfiff (oder wenn der Startzustand nicht feststellbar
+  // ist) wird keine Neuplanung angeboten – confirm gibt den Ist-Stand zurück.
+  const preview: ReplanPreviewResult =
+    startState === 'not-started'
+      ? buildReplanPreview(updated)
+      : {
+          status: 'refused',
+          reason:
+            startState === 'started'
+              ? 'Das Turnier hat bereits angepfiffen – eine Neuplanung ist nur vor dem ersten Spiel möglich.'
+              : 'Der Startzustand des Turniers ist nicht feststellbar – eine Neuplanung ist deshalb nicht möglich.',
+        };
   return {
     preview,
     cancel: () => current,
