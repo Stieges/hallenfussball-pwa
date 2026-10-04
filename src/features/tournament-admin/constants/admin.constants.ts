@@ -213,6 +213,20 @@ export const ACTIVITY_LOG = {
 } as const;
 
 // =============================================================================
+// TEAM ERSETZEN (B-02, @W5-010)
+// =============================================================================
+
+export const TEAM_REPLACED_LOG = {
+  entityType: 'team',
+  canUndo: false,
+} as const;
+
+/** Verlauf-Text: „Team C durch Team N ersetzt" (@W5-010). */
+export function teamReplacedLabel(fromName: string, toName: string): string {
+  return `Team ${fromName} durch Team ${toName} ersetzt`;
+}
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 

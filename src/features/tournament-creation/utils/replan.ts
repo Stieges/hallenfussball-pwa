@@ -12,6 +12,7 @@ import {
 import { getMatchStartState } from '../../../utils/matchStartState';
 import { matchHasResult } from '../../../utils/teamHelpers';
 import { replaceSides } from './matchSides';
+import { teamReplacedLabel } from '../../tournament-admin/constants/admin.constants';
 
 /** „Spiel mit Ereignissen" (@W5-009): Ergebnis, Laufzeit-Events oder Status ungleich geplant. */
 function matchHasEvents(match: Match): boolean {
@@ -175,7 +176,7 @@ export function replaceTeam(
   return {
     tournament: { ...tournament, teams, matches },
     logEntry: {
-      label: `Team ${fromName} durch Team ${change.toTeam.name} ersetzt`,
+      label: teamReplacedLabel(fromName, change.toTeam.name),
       timestamp: new Date().toISOString(),
       person: change.person,
     },
