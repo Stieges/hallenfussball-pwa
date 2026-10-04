@@ -133,6 +133,11 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       consumedPopState = event;
       if (isClosing) {
         // Eigener Eintrag aus dem Cleanup: nur aufräumen, nicht zusätzlich schließen.
+        // Ausstehendes back() abbrechen – der History-Stand ist schon bewegt.
+        if (pendingRemoval?.dialogId === dialogId) {
+          clearTimeout(pendingRemoval.timer);
+          pendingRemoval = null;
+        }
         detach();
         return;
       }
@@ -157,7 +162,15 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
               return;
             }
             pendingRemoval = null;
-            window.history.back();
+            // Nur zurückspringen, wenn unser Eintrag noch oben liegt (F1).
+            const top: { dialogId?: string } | null =
+              window.history.state as { dialogId?: string } | null;
+            if (top?.dialogId === dialogId) {
+              window.history.back();
+              return;
+            }
+            // App-Navigation inzwischen: kein back(), nur Aufräumung.
+            detach();
           }, 0),
           detach,
         };
@@ -184,9 +197,11 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     const container = containerRef.current;
 
     // Escape-Stapel: nur der oberste offene Dialog reagiert auf Esc.
+    // onEscape wird über die Ref gelesen, damit Inline-Callbacks den Effekt
+    // nicht neu auslösen und die Stapel-Reihenfolge durcheinanderbringen (F2/F5).
     escapeTokenCounter += 1;
     const escapeToken = `escape-${escapeTokenCounter}`;
-    if (onEscape) {
+    if (onEscapeRef.current) {
       escapeStack.push(escapeToken);
     }
 
@@ -211,12 +226,13 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
 
     // Handle tab key for focus cycling
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && onEscape) {
+      const escapeHandler = onEscapeRef.current;
+      if (e.key === 'Escape' && escapeHandler) {
         if (escapeStack[escapeStack.length - 1] !== escapeToken) {
           return;
         }
         e.preventDefault();
-        onEscape();
+        escapeHandler();
         return;
       }
 
@@ -268,7 +284,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       const returnTarget = returnFocusTo ?? previousActiveElement.current;
       returnTarget?.focus();
     };
-  }, [isActive, autoFocus, initialFocusRef, suppressEnter, onEscape, returnFocusTo]);
+  }, [isActive, autoFocus, initialFocusRef, suppressEnter, returnFocusTo]);
 
   return { containerRef };
 }

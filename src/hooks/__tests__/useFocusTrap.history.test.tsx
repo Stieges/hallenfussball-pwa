@@ -236,3 +236,86 @@ describe('useFocusTrap History (B-03 Fixrunde 2)', () => {
     expect(screen.getByTestId('trap-aussen')).toBeTruthy();
   });
 });
+
+function InlineTrap({ testId, onClose }: { testId: string; onClose: () => void }) {
+  const { containerRef } = useFocusTrap({
+    isActive: true,
+    onEscape: () => onClose(),
+  });
+  return (
+    <div ref={containerRef} data-testid={testId}>
+      <button type="button" data-testid={`${testId}-close`} onClick={() => onClose()}>
+        Schliessen
+      </button>
+    </div>
+  );
+}
+
+function InlineAussenHost({ onClose }: { onClose: () => void }) {
+  const [tick, setTick] = useState(0);
+  return (
+    <div>
+      <button type="button" data-testid="rerender-aussen" onClick={() => setTick((t) => t + 1)}>
+        Neu rendern ({tick})
+      </button>
+      <InlineTrap testId="trap-aussen" onClose={onClose} />
+    </div>
+  );
+}
+
+function InlineNestedHost() {
+  const [aussenOpen, setAussenOpen] = useState(true);
+  const [innenOpen, setInnenOpen] = useState(true);
+  return (
+    <div>
+      {aussenOpen ? <InlineAussenHost onClose={() => setAussenOpen(false)} /> : null}
+      {innenOpen ? <InlineTrap testId="trap-innen" onClose={() => setInnenOpen(false)} /> : null}
+    </div>
+  );
+}
+
+describe('useFocusTrap History (B-03 Fixrunde 3)', () => {
+  let backSpy: MockInstance;
+  let pushSpy: MockInstance;
+
+  beforeEach(() => {
+    window.history.replaceState(BASE_MARKER, '');
+    backSpy = vi.spyOn(window.history, 'back').mockImplementation(() => undefined);
+    pushSpy = vi.spyOn(window.history, 'pushState');
+  });
+
+  afterEach(async () => {
+    cleanup();
+    await flushHistory();
+    vi.restoreAllMocks();
+  });
+
+  it('5: Esc nach Rerender mit Inline-Callbacks schliesst nur den inneren Dialog (F2/F5)', async () => {
+    render(<InlineNestedHost />);
+    expect(screen.getByTestId('trap-aussen')).toBeTruthy();
+    expect(screen.getByTestId('trap-innen')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('rerender-aussen'));
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await flushHistory();
+
+    expect(screen.queryByTestId('trap-innen')).toBeNull();
+    expect(screen.getByTestId('trap-aussen')).toBeTruthy();
+  });
+
+  it('6: App-Navigation vor dem Timer verhindert back() (F1)', async () => {
+    render(<DialogHost testId="trap-nav" />);
+    expect(pushSpy).toHaveBeenCalledTimes(1);
+    expect(topDialogId()).toBeTypeOf('string');
+
+    fireEvent.click(screen.getByTestId('trap-nav-close'));
+    expect(backSpy).not.toHaveBeenCalled();
+
+    window.history.pushState({ marker: 'app-nav' }, '');
+
+    await flushHistory();
+
+    expect(backSpy).not.toHaveBeenCalled();
+  });
+});
