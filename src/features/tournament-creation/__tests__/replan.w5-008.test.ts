@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { Match, Tournament } from '../../../types/tournament';
 import { getReplanAvailability, openReplan } from '../utils/replan';
 
@@ -58,5 +58,42 @@ describe('Neuplanung – Anpfiff-Prüfung (getMatchStartState)', () => {
     expect(session.preview.suggestionKey.length).toBeGreaterThan(0);
     // nicht bestaetigbar: confirm laesst den bisherigen Spielplan stehen
     expect(session.confirm().matches).toEqual(tournament.matches);
+  });
+});
+
+describe('Neuplanung – Szenario-Beispiel @W5-008 (Generator-Fehler)', () => {
+  const manyTeams = (count: number) =>
+    Array.from({ length: count }, (_, i) => ({
+      id: String(i + 1),
+      name: `Team ${i + 1}`,
+    }));
+
+  it('Mindestpause mit zu wenigen Feldern: Grund und Vorschlag, nicht bestätigbar', async () => {
+    const { createInstance } = await vi.importActual<typeof import('i18next')>('i18next');
+    const deWizard = (await import('../../../i18n/locales/de/wizard.json')).default;
+    const i18n = createInstance();
+    await i18n.init({
+      lng: 'de',
+      fallbackLng: 'de',
+      resources: { de: { wizard: deWizard } },
+      interpolation: { escapeValue: false },
+      returnNull: false,
+    });
+    const broken = {
+      ...baseTournament([]),
+      teams: manyTeams(101),
+      numberOfTeams: 101,
+      numberOfFields: 2,
+      minRestSlots: 5,
+    } as unknown as Parameters<typeof openReplan>[1];
+
+    const session = openReplan(broken, broken, 'not-started');
+    const preview = session.preview;
+    expect(preview.status).toBe('impossible');
+    if (preview.status !== 'impossible') { return; }
+    const suggestionDe = i18n.t(preview.suggestionKey, { ns: 'wizard' });
+    expect(suggestionDe).toContain('Mindestpause senken');
+    expect(suggestionDe).toContain('Feld hinzufügen');
+    expect(session.confirm().matches).toEqual(broken.matches);
   });
 });
