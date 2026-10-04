@@ -80,9 +80,11 @@ export function useTournamentStartState(
         map.forEach((match) => {
           // NOT_STARTED zählt nicht; RUNNING/PAUSED/FINISHED sind der Beweis,
           // dass seit dem Festlegen angepfiffen wurde (W1: laufend/pausiert —
-          // 'finished' aus dem Live-Repo mitgezählt, weil eine lokale
-          // tournament.matches-Kopie veraltet sein kann und ein beendetes Live-Spiel
-          // zwingend angepfiffen wurde).
+          // FINISHED mitgezählt, weil eine lokale tournament.matches-Kopie
+          // veraltet sein kann und ein beendetes Live-Spiel zwingend angepfiffen
+          // wurde). FINISHED mitgezählt stimmt nur für das lokale Repository:
+          // der Cloud-Live-Stand kennt beendete Spiele nicht — die Lücke ist
+          // Befund C-LIVE-STAND-BEENDET-FEHLT, Übergabe an Spur A.
           if (match.status !== 'NOT_STARTED') {
             anyStarted = true;
           }
