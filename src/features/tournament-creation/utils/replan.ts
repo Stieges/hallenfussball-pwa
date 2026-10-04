@@ -81,3 +81,30 @@ export function applyReplan(
   }));
   return { ...tournament, matches };
 }
+
+export interface ReplanSession {
+  preview: ReplanPreviewResult;
+  /** @W5-007: Abbrechen – gibt den unveränderten IST-Stand zurück. */
+  cancel: () => Tournament;
+  /** @W5-005: Bestätigen – ersetzt den Spielplan, Einstellungen bleiben. */
+  confirm: () => Tournament;
+}
+
+/**
+ * @W5-007: Vorschau einer Neuplanung, abbrechbar. Bis zur Bestätigung wird
+ * nichts verändert – cancel() liefert den Ist-Stand zurück.
+ */
+export function openReplan(
+  current: Tournament,
+  updated: Tournament
+): ReplanSession {
+  const preview = buildReplanPreview(updated);
+  return {
+    preview,
+    cancel: () => current,
+    confirm: () =>
+      preview.status === 'preview'
+        ? applyReplan(updated, preview)
+        : current,
+  };
+}
