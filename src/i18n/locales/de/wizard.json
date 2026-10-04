@@ -24,7 +24,6 @@
     },
     "minuteSuffix": "Min."
   },
-
   "step2": {
     "title": "Modus & Spielsystem",
     "structureLocked": {
@@ -46,11 +45,6 @@
     "specialRules": "Sonderregeln",
     "cockpitSection": "Match Cockpit Pro",
     "cockpitDescription": "Einstellungen für das Live-Spielverwaltungs-Cockpit: Timer, Sound, Haptik und Auto-Funktionen.",
-    "miniFussball": {
-      "title": "Mini-Fußball / Funino",
-      "description": "Dieses Feature wird in einer zukünftigen Version verfügbar sein. Es wird Feldrotation und spezielle Regeln für Mini-Fußball unterstützen.",
-      "comingSoon": "Coming Soon"
-    },
     "summaries": {
       "activeCriteria": "{{count}} aktive Kriterien",
       "refereeNone": "Keine",
@@ -69,21 +63,13 @@
       "cockpitStandard": "Standard"
     }
   },
-
   "modeSelection": {
     "label": "Turniermodus",
     "classic": {
       "title": "Klassisches Hallenturnier",
       "subtitle": "Gruppen + Finalrunde"
-    },
-    "miniFussball": {
-      "title": "Mini-Fußball / Funino",
-      "subtitle": "Feldrotation, mehrere Felder",
-      "disabledTitle": "Dieses Feature wird in einer zukünftigen Version verfügbar sein"
-    },
-    "comingSoon": "Coming Soon"
+    }
   },
-
   "step3": {
     "title": "Stammdaten",
     "tournamentName": "Turniername",
@@ -97,7 +83,6 @@
     "startTime": "Startzeit",
     "startTimePlaceholder": "09:00"
   },
-
   "location": {
     "label": "Veranstaltungsort",
     "placeholder": "Sporthalle Musterstadt",
@@ -112,7 +97,6 @@
     "countryPlaceholder": "Deutschland",
     "hint": "Diese Angaben sind optional und werden für PDF-Export und Detailansicht verwendet."
   },
-
   "contact": {
     "toggle": "Kontaktdaten (optional)",
     "name": "Ansprechpartner",
@@ -125,7 +109,6 @@
     "websitePlaceholder": "www.mein-verein.de",
     "hint": "Diese Angaben erscheinen in der Fußzeile des Spielplans und im PDF-Export."
   },
-
   "step4": {
     "title": "Teams",
     "addTeam": "Team hinzufügen",
@@ -166,7 +149,6 @@
       "distribution": "Gruppenverteilung: {{distribution}}"
     }
   },
-
   "step5": {
     "title": "Zusammenfassung",
     "tournamentName": "Turniername",
@@ -188,7 +170,6 @@
     "teamsCount": "{{count}} Teams",
     "showPreview": "Vorschau anzeigen"
   },
-
   "groupsAndFields": {
     "infoText": "Dieser Schritt ist optional. Du kannst direkt auf \"Weiter\" klicken – die Standard-Bezeichnungen (Gruppe A, B, C... und Feld 1, 2...) werden dann verwendet. Klappe die Sektionen unten auf, wenn du eigene Namen vergeben möchtest.",
     "fieldSection": {
@@ -210,14 +191,12 @@
     "roundRobinInfo": "Bei Jeder-gegen-Jeden werden alle Spiele automatisch auf die verfügbaren Felder verteilt.",
     "defaultGroupName": "Gruppe {{id}}"
   },
-
   "nameGrid": {
     "defaultHeader": "Standard",
     "customNameHeader": "Eigener Name",
     "shortCodeHeader": "Kürzel",
     "duplicateName": "Dieser Name wird bereits verwendet"
   },
-
   "gameTimeConfig": {
     "groupPhaseTitle": "Gruppenphase - Spielzeit-Einstellungen",
     "finalsTitle": "Finalrunde - Spielzeit-Einstellungen",
@@ -230,7 +209,6 @@
     "finalsHint": "Die Spielabschnitt-Einstellungen gelten auch für die Finalrunde",
     "minuteSuffix": "Min"
   },
-
   "finalsConfig": {
     "title": "Finalrunde",
     "recommendedHint_one": "⭐ = Empfohlen für {{count}} Gruppe",
@@ -261,7 +239,6 @@
       "minutes": "Minuten"
     }
   },
-
   "finalsOptions": {
     "none": {
       "label": "Keine Finalrunde",
@@ -331,7 +308,6 @@
       "explanation8g": "Nur bei mehrtägigen Großturnieren realistisch - sehr viele Spiele"
     }
   },
-
   "referees": {
     "title": "Schiedsrichter",
     "modeLabel": "Schiedsrichter-Modus",
@@ -368,7 +344,6 @@
       "hintNonParticipatingDescription": "Teams die aktuell nicht im Finalspiel stehen (flexibler)."
     }
   },
-
   "validation": {
     "ariaLabel": "Konfigurationswarnungen",
     "issueCount_one": "{{count}} Hinweis zur Konfiguration",
@@ -392,7 +367,6 @@
     "zeroPoints": "Punktesystem hat überall 0 Punkte - Tabelle wird nicht aussagekräftig",
     "zeroPointsSuggestion": "Standard-Punktesystem: 3 Punkte Sieg, 1 Punkt Unentschieden, 0 Punkte Niederlage"
   },
-
   "smartConfig": {
     "title": "Smart-Konfiguration",
     "ariaLabel": "Smart-Konfiguration",
@@ -430,13 +404,11 @@
     "applyAriaLabel": "Empfohlene Konfiguration übernehmen",
     "teamsWarning": "{{current}} Teams passen nicht in {{hours}}h. Alternative: {{suggested}} Teams oder mehr Zeit/Felder einplanen."
   },
-
   "bambini": {
     "title": "Erweiterte Bambini-Einstellungen",
     "hideScores": "Ergebnisse für Zuschauer verbergen",
     "hideRankings": "Tabellen für Zuschauer verbergen"
   },
-
   "pointSystem": {
     "title": "Punktesystem",
     "presets": {
@@ -452,7 +424,6 @@
       "hint": "Erlaubt sind positive, negative Zahlen und Null. Auch Kommazahlen sind möglich (z.B. 2.5)"
     }
   },
-
   "dfb": {
     "checkboxLabel": "DFB-Schlüsselsystem verwenden",
     "description": "Verwendet die offiziellen DFB-Ansetzungsmuster für Round-Robin Turniere",
@@ -469,7 +440,6 @@
     "patternCode": "Schlüssel: {{code}} = {{days}} Tag, {{teams}} Mannschaften",
     "patternCodeSubgroups": ", {{subgroups}} Untergruppen"
   },
-
   "durationEstimate": {
     "estimatedDuration": "Geschätzte Turnierdauer: ",
     "hoursAndMinutes": "{{hours}}h {{minutes}}min",
@@ -482,7 +452,6 @@
     "criticalWarning": "Diese Turnierdauer ist unrealistisch für einen Tag. Empfehlung: {{fields}} Felder oder Spieldauer auf {{duration}} Min reduzieren.",
     "durationWarning": "Tipp: Mit {{fields}} Feldern ca. {{hours}}h oder mit {{duration}} Min Spieldauer verkürzt sich die Dauer."
   },
-
   "placementLogic": {
     "title": "Platzierungslogik",
     "helpText": "Ziehe die Kriterien per Drag & Drop oder nutze die Pfeiltasten",
@@ -502,7 +471,6 @@
       "directComparison": "Direkter Vergleich"
     }
   },
-
   "options": {
     "groupSystem": {
       "roundRobin": "Jeder gegen jeden",

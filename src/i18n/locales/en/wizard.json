@@ -24,7 +24,6 @@
     },
     "minuteSuffix": "min"
   },
-
   "step2": {
     "title": "Mode & Game System",
     "structureLocked": {
@@ -46,11 +45,6 @@
     "specialRules": "Special Rules",
     "cockpitSection": "Match Cockpit Pro",
     "cockpitDescription": "Settings for the live match management cockpit: Timer, sound, haptics, and auto functions.",
-    "miniFussball": {
-      "title": "Mini-Football / Funino",
-      "description": "This feature will be available in a future version. It will support field rotation and special rules for mini-football.",
-      "comingSoon": "Coming Soon"
-    },
     "summaries": {
       "activeCriteria": "{{count}} active criteria",
       "refereeNone": "None",
@@ -69,21 +63,13 @@
       "cockpitStandard": "Standard"
     }
   },
-
   "modeSelection": {
     "label": "Tournament Mode",
     "classic": {
       "title": "Classic Indoor Tournament",
       "subtitle": "Groups + Final Round"
-    },
-    "miniFussball": {
-      "title": "Mini-Football / Funino",
-      "subtitle": "Field rotation, multiple fields",
-      "disabledTitle": "This feature will be available in a future version"
-    },
-    "comingSoon": "Coming Soon"
+    }
   },
-
   "step3": {
     "title": "Master Data",
     "tournamentName": "Tournament Name",
@@ -97,7 +83,6 @@
     "startTime": "Start Time",
     "startTimePlaceholder": "09:00"
   },
-
   "location": {
     "label": "Venue",
     "placeholder": "Sports Hall Example City",
@@ -112,7 +97,6 @@
     "countryPlaceholder": "Germany",
     "hint": "This information is optional and will be used for PDF export and detail view."
   },
-
   "contact": {
     "toggle": "Contact details (optional)",
     "name": "Contact Person",
@@ -125,7 +109,6 @@
     "websitePlaceholder": "www.my-club.com",
     "hint": "This information will appear in the schedule footer and PDF export."
   },
-
   "step4": {
     "title": "Teams",
     "addTeam": "Add Team",
@@ -166,7 +149,6 @@
       "distribution": "Group distribution: {{distribution}}"
     }
   },
-
   "step5": {
     "title": "Summary",
     "tournamentName": "Tournament Name",
@@ -188,7 +170,6 @@
     "teamsCount": "{{count}} teams",
     "showPreview": "Show Preview"
   },
-
   "groupsAndFields": {
     "infoText": "This step is optional. You can click \"Next\" directly – the default names (Group A, B, C... and Field 1, 2...) will be used. Expand the sections below if you want to use custom names.",
     "fieldSection": {
@@ -210,14 +191,12 @@
     "roundRobinInfo": "In round robin, all matches are automatically distributed across available fields.",
     "defaultGroupName": "Group {{id}}"
   },
-
   "nameGrid": {
     "defaultHeader": "Default",
     "customNameHeader": "Custom Name",
     "shortCodeHeader": "Short Code",
     "duplicateName": "This name is already used"
   },
-
   "gameTimeConfig": {
     "groupPhaseTitle": "Group Stage - Game Time Settings",
     "finalsTitle": "Final Round - Game Time Settings",
@@ -230,7 +209,6 @@
     "finalsHint": "Game period settings also apply to the final round",
     "minuteSuffix": "min"
   },
-
   "finalsConfig": {
     "title": "Final Round",
     "recommendedHint_one": "⭐ = Recommended for {{count}} group",
@@ -261,7 +239,6 @@
       "minutes": "minutes"
     }
   },
-
   "finalsOptions": {
     "none": {
       "label": "No Final Round",
@@ -331,7 +308,6 @@
       "explanation8g": "Only realistic for multi-day large tournaments - very many matches"
     }
   },
-
   "referees": {
     "title": "Referees",
     "modeLabel": "Referee Mode",
@@ -368,7 +344,6 @@
       "hintNonParticipatingDescription": "Teams not currently in the final match (more flexible)."
     }
   },
-
   "validation": {
     "ariaLabel": "Configuration warnings",
     "issueCount_one": "{{count}} configuration note",
@@ -392,7 +367,6 @@
     "zeroPoints": "Point system has 0 points everywhere - table won't be meaningful",
     "zeroPointsSuggestion": "Standard point system: 3 points win, 1 point draw, 0 points loss"
   },
-
   "smartConfig": {
     "title": "Smart Configuration",
     "ariaLabel": "Smart Configuration",
@@ -430,13 +404,11 @@
     "applyAriaLabel": "Apply recommended configuration",
     "teamsWarning": "{{current}} teams don't fit in {{hours}}h. Alternative: {{suggested}} teams or plan more time/fields."
   },
-
   "bambini": {
     "title": "Extended Bambini Settings",
     "hideScores": "Hide scores from spectators",
     "hideRankings": "Hide tables from spectators"
   },
-
   "pointSystem": {
     "title": "Point System",
     "presets": {
@@ -452,7 +424,6 @@
       "hint": "Positive, negative numbers, and zero are allowed. Decimals are also possible (e.g., 2.5)"
     }
   },
-
   "dfb": {
     "checkboxLabel": "Use DFB key system",
     "description": "Uses the official DFB scheduling patterns for round-robin tournaments",
@@ -469,7 +440,6 @@
     "patternCode": "Key: {{code}} = {{days}} day, {{teams}} teams",
     "patternCodeSubgroups": ", {{subgroups}} subgroups"
   },
-
   "durationEstimate": {
     "estimatedDuration": "Estimated tournament duration: ",
     "hoursAndMinutes": "{{hours}}h {{minutes}}min",
@@ -482,7 +452,6 @@
     "criticalWarning": "This tournament duration is unrealistic for one day. Recommendation: {{fields}} fields or reduce game time to {{duration}} min.",
     "durationWarning": "Tip: With {{fields}} fields approx. {{hours}}h or with {{duration}} min game time, duration decreases."
   },
-
   "placementLogic": {
     "title": "Placement Logic",
     "helpText": "Drag and drop criteria or use arrow keys",
@@ -502,7 +471,6 @@
       "directComparison": "Head-to-Head"
     }
   },
-
   "options": {
     "groupSystem": {
       "roundRobin": "Round robin",
