@@ -463,11 +463,12 @@ export interface Tournament {
   /**
    * ISO timestamp der ersten Freigabe. Monotoner Freigabe-Marker: gesetzt bleibt gesetzt.
    *
-   * Bewusst NICHT `status`: `status: 'draft'` ist ein transienter Wizard-Marker —
-   * SettingsTab.tsx setzt ein veröffentlichtes Turnier zum Bearbeiten zurück auf 'draft'
-   * und nur eine In-App-Rückkehr stellt den Status wieder her (App.tsx, originalStatusRef).
-   * Ein Reload mitten in der Bearbeitung ließe ein laufendes Turnier dauerhaft auf 'draft'
-   * stehen — eine Status-Prüfung würde es mitten im Spiel vom Netz nehmen.
+   * Bewusst NICHT `status`: `status: 'draft'` ist ein Wizard-Marker für noch nicht
+   * festgelegte Turniere. Bearbeiten über „Im Wizard bearbeiten" (SettingsTab) setzt ein
+   * festgelegtes Turnier NICHT mehr auf 'draft' zurück (@W5-004/@LZ-004); nach dem
+   * ersten Anpfiff wird dieser Weg gar nicht angeboten (@LZ-003). `publishedAt` bleibt
+   * als monotoner Freigabe-Marker bestehen, damit auch ein Reload mitten im Bearbeiten
+   * ein laufendes Turnier nicht vom Netz nimmt.
    *
    * Reist im `config`-JSONB mit (keine eigene DB-Spalte), siehe supabaseMappers.
    */

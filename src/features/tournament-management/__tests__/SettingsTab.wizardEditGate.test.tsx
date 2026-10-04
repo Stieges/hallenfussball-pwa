@@ -2,9 +2,9 @@
  * @LZ-003 / W3 (Fixrunde 1) — „Im Wizard bearbeiten" nur vor dem ersten Anpfiff.
  *
  * „Im Wizard bearbeiten" (hier: „Erweiterte Bearbeitung" mit den Buttons
- * Teams/Spielmodus/Gruppen & Felder) setzt das Turnier per handleEditInWizard auf
- * Entwurf zurück — derselbe Weg wie „Festlegen zurücknehmen". Nach dem ersten
- * Anpfiff wird dieser Weg nicht angeboten (gleiche Sperre wie „Turnier löschen",
+ * Teams/Spielmodus/Gruppen & Felder) reicht das Turnier per handleEditInWizard mit
+ * unverändertem Status an den Wizard weiter (@W5-004: setzt NIE auf Entwurf zurück).
+ * Nach dem ersten Anpfiff wird dieser Weg nicht angeboten (gleiche Sperre wie „Turnier löschen",
  * gemeinsame Funktion statt Kopie).
  *
  * Test:    nach Anpfiff nicht angeboten.
@@ -78,7 +78,7 @@ describe('SettingsTab — „Im Wizard bearbeiten" nur vor dem ersten Anpfiff (@
     ).toBeInTheDocument();
   });
 
-  it('Aufruf setzt das Turnier auf Entwurf und öffnet den Wizard-Schritt', async () => {
+  it('@W5-004 Aufruf behält den Status und öffnet den Wizard-Schritt', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     const user = userEvent.setup();
     const onEditInWizard = vi.fn();
@@ -93,7 +93,7 @@ describe('SettingsTab — „Im Wizard bearbeiten" nur vor dem ersten Anpfiff (@
     await user.click(screen.getByRole('button', { name: /settings\.advancedEditing\.editTeams/ }));
 
     expect(onEditInWizard).toHaveBeenCalledTimes(1);
-    // @W5-004: Bearbeiten setzt nie auf Entwurf zurück (alte Aussage „setzt auf Entwurf" widersprach @W5-004)
+    // @W5-004: Bearbeiten setzt nie auf Entwurf zurück
     expect(onEditInWizard.mock.calls[0][0].status).toBe('published');
     expect(onEditInWizard.mock.calls[0][1]).toBe(5);
   });

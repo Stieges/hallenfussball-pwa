@@ -3,20 +3,20 @@
  * NIE auf Entwurf zurück.
  *
  * Echter Bedienweg: Verwaltung (SettingsTab) → „Im Wizard bearbeiten" →
- * Titel ändern → Speichern (TournamentCreationService.saveDraft).
+ * handleEditInWizard reicht das Turnier mit unverändertem Status an App weiter
+ * (App.handleEditInWizard speichert genau dieses Objekt 1:1).
  * UI-Ort: src/features/tournament-management/SettingsTab.tsx
  * („Erweiterte Bearbeitung" / handleEditInWizard).
  *
- * Test:    veröffentlichtes Turnier bleibt nach dem Bearbeiten veröffentlicht.
- * Gegenbeispiel: ein Entwurf bleibt Entwurf.
- * Mutation: `status = 'draft'` zurück → rot.
+ * @W5-004: festgelegtes Turnier bleibt festgelegt; Gegenbeispiel: Entwurf bleibt Entwurf.
+ * @LZ-004: Turnier mit angepfiffenem Spiel (running): Bearbeiten wird nicht angeboten,
+ *          der Status bleibt unverändert.
+ * Mutation: `status = 'draft'` im Bearbeiten-Weg → @W5-004 rot.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Tournament } from '../../../types/tournament';
-import type { ITournamentRepository } from '../../../core/repositories/ITournamentRepository';
-import { TournamentCreationService } from '../../../core/services/TournamentCreationService';
 
 vi.mock('../../auth/hooks/useAuth', () => ({
   useAuth: () => ({ isAuthenticated: false }),
@@ -46,38 +46,7 @@ function tournamentWith(status: 'published' | 'draft'): Tournament {
   } as unknown as Tournament;
 }
 
-class FakeRepository {
-  private store = new Map<string, Tournament>();
-
-  async get(id: string): Promise<Tournament | null> {
-    return this.store.get(id) ?? null;
-  }
-
-  async save(tournament: Tournament): Promise<void> {
-    this.store.set(tournament.id, tournament);
-  }
-
-  async delete(id: string): Promise<void> {
-    this.store.delete(id);
-  }
-
-  async getAll(): Promise<Tournament[]> {
-    return [...this.store.values()];
-  }
-}
-
-function createService(): { service: TournamentCreationService; repo: FakeRepository } {
-  const repo = new FakeRepository();
-  const service = new TournamentCreationService(
-    repo as unknown as ITournamentRepository
-  );
-  return { service, repo };
-}
-
-async function editInWizardAndSave(
-  initial: Tournament,
-  service: TournamentCreationService
-): Promise<Tournament> {
+async function editInWizard(initial: Tournament): Promise<Tournament> {
   vi.spyOn(window, 'confirm').mockReturnValue(true);
   const user = userEvent.setup();
   const onEditInWizard = vi.fn();
@@ -93,31 +62,53 @@ async function editInWizardAndSave(
     screen.getByRole('button', { name: /settings\.advancedEditing\.editTeams/ })
   );
 
-  // App.tsx persistiert das übergebene Turnier und öffnet den Wizard.
-  const wizardTournament = onEditInWizard.mock.calls[0][0] as Tournament;
-  expect(wizardTournament.status).toBe(initial.status);
-
-  // Im Wizard: Titel ändern → Speichern (saveDraft wie im Bearbeiten-Modus).
-  return service.saveDraft({ ...wizardTournament, title: 'Neuer Titel' });
+  // App.handleEditInWizard persistiert genau dieses Objekt und öffnet den Wizard.
+  expect(onEditInWizard).toHaveBeenCalledTimes(1);
+  return onEditInWizard.mock.calls[0][0] as Tournament;
 }
 
 beforeEach(() => vi.clearAllMocks());
 
 describe('B-04a @W5-004/@LZ-004 — Bearbeiten setzt nie auf Entwurf', () => {
-  it('veröffentlichtes Turnier bleibt nach „Im Wizard bearbeiten" → Titel ändern → Speichern veröffentlicht', async () => {
-    const { service } = createService();
+  it('@W5-004 festgelegtes Turnier bleibt nach „Im Wizard bearbeiten" festgelegt', async () => {
+    const initial = tournamentWith('published');
 
-    const saved = await editInWizardAndSave(tournamentWith('published'), service);
+    const wizardTournament = await editInWizard(initial);
 
-    expect(saved.status).toBe('published');
-    expect(saved.title).toBe('Neuer Titel');
+    expect(wizardTournament.status).toBe('published');
+    expect(wizardTournament.publishedAt).toBe(initial.publishedAt);
   });
 
-  it('Gegenbeispiel: ein Entwurf bleibt Entwurf', async () => {
-    const { service } = createService();
+  it('@W5-004 Gegenbeispiel: ein Entwurf bleibt Entwurf', async () => {
+    const wizardTournament = await editInWizard(tournamentWith('draft'));
 
-    const saved = await editInWizardAndSave(tournamentWith('draft'), service);
+    expect(wizardTournament.status).toBe('draft');
+  });
 
-    expect(saved.status).toBe('draft');
+  it('@LZ-004 Turnier mit angepfiffenem Spiel: Bearbeiten nicht angeboten, Status unverändert', () => {
+    const running = {
+      ...tournamentWith('published'),
+      matches: [
+        { id: 'm1', matchStatus: 'running' },
+        { id: 'm2', matchStatus: 'scheduled' },
+      ],
+    } as unknown as Tournament;
+    const onEditInWizard = vi.fn();
+    const onTournamentUpdate = vi.fn();
+
+    render(
+      <SettingsTab
+        tournament={running}
+        onTournamentUpdate={onTournamentUpdate}
+        onEditInWizard={onEditInWizard}
+      />
+    );
+
+    expect(
+      screen.queryByRole('button', { name: /settings\.advancedEditing\.editTeams/ })
+    ).not.toBeInTheDocument();
+    expect(onEditInWizard).not.toHaveBeenCalled();
+    expect(onTournamentUpdate).not.toHaveBeenCalled();
+    expect(running.status).toBe('published');
   });
 });
