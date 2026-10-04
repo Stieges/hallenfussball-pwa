@@ -7,7 +7,7 @@
 import { expect } from '@playwright/test';
 import { fetchEngineRows } from '../../engineHelpers';
 import { fetchTurniertagBracket, fetchTurniertagMatches, SOLL_TIMEOUT_MS } from './shared';
-import { appendOwner, eventOf, regularResultEvents } from './playViaRpc';
+import { appendOwner, finishingEvents, regularResultEvents } from './playViaRpc';
 import type { StepContext, TurniertagStep } from './types';
 
 async function gruppenabschluss(_ctx: StepContext): Promise<void> {
@@ -17,20 +17,7 @@ async function gruppenabschluss(_ctx: StepContext): Promise<void> {
     if (rows.some((row) => row.type === 'MATCH_END')) {
       continue;
     }
-    const alreadyStarted = rows.some((row) => row.type === 'MATCH_START');
-    const events = regularResultEvents(match, (index % 3) + 1, index % 2);
-    let remaining;
-    if (alreadyStarted) {
-      const hasSectionEnd = rows.some((row) => row.type === 'SECTION_END');
-      const hasSectionStart = rows.some((row) => row.type === 'SECTION_START');
-      if (hasSectionEnd && !hasSectionStart) {
-        remaining = [eventOf('SECTION_START', Date.now() - 599_000, Date.now() - 600_000, { section: 2 }), ...events.slice(-1)];
-      } else {
-        remaining = events.slice(-1);
-      }
-    } else {
-      remaining = events;
-    }
+    const remaining = finishingEvents(rows, regularResultEvents(match, (index % 3) + 1, index % 2));
     const result = await appendOwner(match.id, remaining);
     expect(result.results.map((r) => r.status), `Gruppenspiel ${index + 1}`).toEqual(remaining.map(() => 'accepted'));
   }

@@ -50,3 +50,11 @@ export async function appendOwner(matchId: string, events: readonly AppendAsRole
 export function eventOf(type: string, at: number, start: number, extra: Partial<AppendAsRoleEvent> = {}): AppendAsRoleEvent {
   return event(type, at, { clockMs: at - start, ...extra });
 }
+
+export function finishingEvents(rows: readonly { type: string }[], events: AppendAsRoleEvent[]): AppendAsRoleEvent[] {
+  if (!rows.some((r) => r.type === 'MATCH_START')) {
+    return events;
+  }
+  const inBreak = rows.some((r) => r.type === 'SECTION_END') && !rows.some((r) => r.type === 'SECTION_START');
+  return inBreak ? [eventOf('SECTION_START', Date.now(), Date.now(), { section: 2 }), ...events.slice(-1)] : events.slice(-1);
+}
