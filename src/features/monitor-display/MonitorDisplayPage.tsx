@@ -1025,10 +1025,14 @@ export function MonitorDisplayPage({
   const pixelShift = usePixelShift(60_000, maxPixelShift, performanceSettings.enableAnimations);
 
   // Darstellbare Folien (@OB-011): Folien ohne Darstellung werden übersprungen,
-  // bleibt keine übrig, gilt die Zuschauer-QR-Folie.
+  // bleibt keine übrig (auch beim leeren Programm), gilt die Zuschauer-QR-Folie.
+  // F-04: Ist kein QR möglich (nicht öffentlich/ohne Share-Code), nimmt der Monitor
+  // die nächste immer darstellbare Folie (Spielplan) — der Bildschirm ist nie leer.
   const slides = useMemo(
-    () => selectDisplayableSlides(monitor?.slides ?? []) as MonitorSlide[],
-    [monitor]
+    () => selectDisplayableSlides(monitor?.slides ?? [], {
+      qrMoeglich: tournament?.isPublic === true && Boolean(tournament?.shareCode),
+    }) as MonitorSlide[],
+    [monitor, tournament]
   );
 
   // Current slide
@@ -1306,36 +1310,6 @@ export function MonitorDisplayPage({
           }}
         >
           {error ?? 'Konfiguration nicht gefunden'}
-        </div>
-        {onBack && (
-          <button onClick={onBack} style={backButtonStyle}>
-            ← Zurück
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  // No slides configured
-  if (monitor.slides.length === 0) {
-    return (
-      <div style={containerStyle} data-testid="monitor-no-slides-state">
-        <div style={{
-          fontSize: displayFontSizes.headingLG,
-          color: displayColors.textSecondary,
-          marginBottom: displaySpacing.sectionMD,
-        }}>
-          📺 {monitor.name}
-        </div>
-        <div
-          data-testid="monitor-no-slides-message"
-          style={{
-            fontSize: displayFontSizes.bodyLG,
-            color: displayColors.textMuted,
-          }}
-        >
-          Keine Slides konfiguriert.<br />
-          Füge im Monitor-Konfigurator Slides hinzu.
         </div>
         {onBack && (
           <button onClick={onBack} style={backButtonStyle}>
