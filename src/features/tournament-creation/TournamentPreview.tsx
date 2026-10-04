@@ -9,7 +9,8 @@
 
 import { CSSProperties, useState } from 'react';
 import { Tournament, FinalsConfig } from '../../types/tournament';
-import { GeneratedSchedule, generateFullSchedule } from '../../core/generators';
+import { GeneratedSchedule } from '../../core/generators';
+import { buildReplanPreview } from './utils/replan';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 import { Button, Card } from '../../components/ui';
@@ -38,18 +39,17 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
 
   // F-211: shared regeneration helper — keeps the previous schedule visible
   // on failure and surfaces the error in the UI without crashing the wizard.
+  // B-02: Neuplanung über buildReplanPreview (C-WIZ-NOREGEN) – bei vorhandenen
+  // Spielen wird frisch gelost, geschützte Spiele bleiben erhalten.
   const regenerateSchedule = (updatedTournament: Tournament): boolean => {
-    try {
-      const newSchedule = generateFullSchedule(updatedTournament);
-      setSchedule(newSchedule);
+    const result = buildReplanPreview(updatedTournament);
+    if (result.status === 'preview') {
+      setSchedule(result.schedule);
       setScheduleError(null);
       return true;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error('[TournamentPreview] Schedule generation failed:', err);
-      setScheduleError(message);
-      return false;
     }
+    setScheduleError(result.reason);
+    return false;
   };
 
   const handleFinalsConfigChange = (config: FinalsConfig) => {
