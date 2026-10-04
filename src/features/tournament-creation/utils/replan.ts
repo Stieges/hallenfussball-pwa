@@ -34,7 +34,7 @@ export type ReplanPreviewResult =
       /** @W5-009: Hinweis je geschütztem Spiel – es wird NICHT entfernt. */
       keptNotices: Array<{ matchId: string; willBeRemoved: false }>;
     }
-  | { status: 'impossible'; reason: string };
+  | { status: 'impossible'; reason: string; suggestion: string };
 
 export function getReplanAvailability(
   tournament: Pick<Tournament, 'matches' | 'status' | 'publishedAt'>
@@ -86,7 +86,11 @@ export function buildReplanPreview(
     };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    return { status: 'impossible', reason };
+    const suggestion =
+      activeTeams.length === 0
+        ? 'Team wiederherstellen oder ein neues Team anlegen.'
+        : 'Mindestpause senken oder ein Feld hinzufuegen.';
+    return { status: 'impossible', reason, suggestion };
   }
 }
 
