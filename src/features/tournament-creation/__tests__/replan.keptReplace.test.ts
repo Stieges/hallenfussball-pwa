@@ -144,3 +144,112 @@ describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
     expect(session.confirm().matches).toEqual(withPlayed.matches);
   });
 });
+
+describe('Neuplanung – Kollision über alle behaltenen Spiele (W2, E1, E4)', () => {
+  it('W2 – angehängtes behaltenes Spiel auf belegtem Slot: impossible', () => {
+    const established = baseTournament();
+    const target = generateFullSchedule(established).allMatches[0];
+    const orphan: Match = {
+      id: 'kept-orphan-collide',
+      round: 1,
+      field: target.field,
+      teamA: '9',
+      teamB: '8',
+      scoreA: 4,
+      scoreB: 4,
+      matchStatus: 'finished',
+      phase: 'groupStage',
+      scheduledTime: target.startTime,
+    };
+    const withOrphan: Tournament = { ...established, matches: [orphan] };
+
+    const preview = buildReplanPreview(withOrphan);
+    expect(preview.status).toBe('impossible');
+    if (preview.status !== 'impossible') { return; }
+    expect(preview.reason.length).toBeGreaterThan(0);
+    expect(preview.suggestion.length).toBeGreaterThan(0);
+  });
+
+  it('E1 – um 2 Minuten versetzte Überlappung auf demselben Feld: impossible', () => {
+    const established = baseTournament();
+    const generated = generateFullSchedule(established).allMatches;
+    const [first, second] = generated;
+    const played: Match = {
+      id: 'kept-offset',
+      round: 1,
+      field: second.field,
+      teamA: first.originalTeamA,
+      teamB: first.originalTeamB,
+      scoreA: 1,
+      scoreB: 0,
+      matchStatus: 'finished',
+      phase: 'groupStage',
+      scheduledTime: new Date(second.startTime.getTime() + 2 * 60000),
+    };
+    const withPlayed: Tournament = {
+      ...established,
+      matches: [played, ...generatedMatches(established).slice(1)],
+    };
+
+    const session = openReplan(withPlayed, withPlayed, 'not-started');
+    expect(session.preview.status).toBe('impossible');
+    if (session.preview.status !== 'impossible') { return; }
+    expect(session.preview.reason.length).toBeGreaterThan(0);
+    expect(session.preview.suggestion.length).toBeGreaterThan(0);
+    expect(session.confirm().matches).toEqual(withPlayed.matches);
+  });
+
+  it('E4 – behaltenes Spiel auf entferntem Feld: impossible', () => {
+    const established = baseTournament();
+    const generated = generateFullSchedule(established).allMatches;
+    const played: Match = {
+      id: 'kept-removed-field',
+      round: 1,
+      field: 2,
+      teamA: generated[0].originalTeamA,
+      teamB: generated[0].originalTeamB,
+      scoreA: 2,
+      scoreB: 1,
+      matchStatus: 'finished',
+      phase: 'groupStage',
+      scheduledTime: generated[0].startTime,
+    };
+    const withPlayed: Tournament = {
+      ...established,
+      matches: [played, ...generatedMatches(established).slice(1)],
+    };
+    const updated: Tournament = { ...withPlayed, numberOfFields: 1 };
+
+    const preview = buildReplanPreview(updated);
+    expect(preview.status).toBe('impossible');
+    if (preview.status !== 'impossible') { return; }
+    expect(preview.reason.length).toBeGreaterThan(0);
+    expect(preview.suggestion.length).toBeGreaterThan(0);
+  });
+
+  it('Gegenbeispiel – behaltenes Spiel ohne Überlappung: preview möglich', () => {
+    const established = baseTournament();
+    const generated = generateFullSchedule(established).allMatches;
+    const [first, second] = generated;
+    // Endet, bevor das nächste Spiel auf demselben Feld beginnt (2 Minuten Abstand).
+    const played: Match = {
+      id: 'kept-clear',
+      round: 1,
+      field: second.field,
+      teamA: first.originalTeamA,
+      teamB: first.originalTeamB,
+      scoreA: 1,
+      scoreB: 0,
+      matchStatus: 'finished',
+      phase: 'groupStage',
+      scheduledTime: new Date(second.startTime.getTime() - 12 * 60000),
+    };
+    const withPlayed: Tournament = {
+      ...established,
+      matches: [played, ...generatedMatches(established).slice(1)],
+    };
+
+    const session = openReplan(withPlayed, withPlayed, 'not-started');
+    expect(session.preview.status).toBe('preview');
+  });
+});

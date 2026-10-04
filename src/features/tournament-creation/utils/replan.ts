@@ -154,23 +154,29 @@ export function buildReplanPreview(
         };
       });
     const allMatches = [...merged, ...appended];
-    // Controller-Ruling: Behaltener Anstoß kollidiert mit dem neuen Plan.
-    const slotCount = new Map<string, number>();
-    for (const m of allMatches) {
-      const key = `${m.field}|${m.startTime.getTime()}`;
-      slotCount.set(key, (slotCount.get(key) ?? 0) + 1);
-    }
-    const keptIds = new Set(Array.from(replacements.values()).map((m) => m.id));
-    const collision = allMatches.some(
-      (m) =>
-        keptIds.has(m.id) &&
-        (slotCount.get(`${m.field}|${m.startTime.getTime()}`) ?? 0) > 1
+    // W2/E1/E4 (@W5-008): Kollision = Zeit-Überlappung auf demselben Feld für
+    // ALLE behaltenen Spiele (nicht nur ersetzte). Ein behaltenes Spiel auf
+    // einem entfernten Feld ist ebenfalls ein Konflikt.
+    const keptIds = new Set(keptMatches.map((m) => m.id));
+    const overlaps = (a: typeof allMatches[number], b: typeof allMatches[number]): boolean =>
+      a.startTime.getTime() < b.endTime.getTime() &&
+      b.startTime.getTime() < a.endTime.getTime();
+    const removedField = allMatches.some(
+      (m) => keptIds.has(m.id) && m.field > tournament.numberOfFields
     );
+    const collision =
+      removedField ||
+      allMatches.some(
+        (m) =>
+          keptIds.has(m.id) &&
+          allMatches.some((o) => o !== m && o.field === m.field && overlaps(m, o))
+      );
     if (collision) {
       return {
         status: 'impossible',
-        reason:
-          'Ein bereits gespieltes Spiel behält seinen Anstoß – der neue Plan belegt denselben Slot auf demselben Feld.',
+        reason: removedField
+          ? 'Ein bereits gespieltes Spiel liegt auf einem Feld, das es im neuen Plan nicht mehr gibt.'
+          : 'Ein bereits gespieltes Spiel behält seinen Anstoß – die Spielzeit überlappt einen anderen Termin auf demselben Feld.',
         suggestion:
           'Mindestpause senken, ein Feld hinzufügen oder das behaltene Spiel vor der Neuplanung verschieben.',
       };
