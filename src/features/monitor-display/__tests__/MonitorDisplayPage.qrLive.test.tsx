@@ -38,7 +38,8 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 
-// Nur unbekannte Folien → selectDisplayableSlides fällt auf die Zuschauer-QR-Folie zurück.
+// Nur unbekannte Folien → mit QR-Möglichkeit fällt selectDisplayableSlides auf die
+// Zuschauer-QR-Folie zurück, ohne QR-Möglichkeit auf die Spielplan-Folie (F11).
 function tournamentWith(overrides: Record<string, unknown>) {
   return {
     id: 'tour-1', title: 'Hallencup Ost', teams: [], matches: [],
@@ -66,17 +67,17 @@ describe('MonitorDisplayPage — Zuschauer-QR zeigt die Live-Adresse (F-03)', ()
     expect(value).not.toMatch(/\/tournament\//);
   });
 
-  it('Ohne isPublic keinen QR – auch nicht mit Share-Code', async () => {
+  it('Ohne isPublic keinen QR – auch nicht mit Share-Code (F11: Spielplan-Folie)', async () => {
     supabaseGet.mockResolvedValue(tournamentWith({ isPublic: false, shareCode: 'ABC123' }));
     const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
-    await waitFor(() => expect(container.textContent).toContain('Hallencup Ost'));
+    await waitFor(() => expect(container.textContent).toContain('Spielplan'));
     expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
   });
 
-  it('Ohne Share-Code keinen QR – auch wenn öffentlich', async () => {
+  it('Ohne Share-Code keinen QR – auch wenn öffentlich (F11: Spielplan-Folie)', async () => {
     supabaseGet.mockResolvedValue(tournamentWith({ isPublic: true }));
     const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
-    await waitFor(() => expect(container.textContent).toContain('Hallencup Ost'));
+    await waitFor(() => expect(container.textContent).toContain('Spielplan'));
     expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
   });
 });

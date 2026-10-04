@@ -89,8 +89,13 @@ describe('selectDisplayableSlides — F-04 Rückfallkette', () => {
     expect(selectDisplayableSlides([], { qrMoeglich: false })).toEqual([SPIELPLAN_FALLBACK_SLIDE]);
   });
 
-  it('Nicht leeres Programm ohne darstellbare Folien bleibt bei der QR-Folie (QrSlide zeigt ohne QR Turniername + neutralen Satz)', () => {
+  it('Nicht leeres Programm ohne darstellbare Folien: ohne QR-Möglichkeit Spielplan-Rückfall (F11)', () => {
     expect(selectDisplayableSlides([{ id: 'a', type: 'unknown' }], { qrMoeglich: false }))
+      .toEqual([SPIELPLAN_FALLBACK_SLIDE]);
+  });
+
+  it('Nicht leeres Programm ohne darstellbare Folien mit QR-Möglichkeit bleibt bei der QR-Folie', () => {
+    expect(selectDisplayableSlides([{ id: 'a', type: 'unknown' }]))
       .toEqual([ZUSCHAUER_QR_SLIDE]);
   });
 });
