@@ -17,7 +17,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ComponentProps, ReactElement } from 'react';
@@ -336,20 +336,15 @@ const OB001: PlatzhalterFall[] = [
     ort: 'das Admin Center',
     platzhalter: 'den Bereich „Benachrichtigungen“ und die Knöpfe der Hilfe-Seite ohne Inhalt, auch „E-Mail Support“ ohne belegte Adresse',
     pruefen: async () => {
-      const { HelpCategory } = await import('../features/tournament-admin/categories/Help');
       const sidebar = await renderAdminSidebar();
       expectRendered(sidebar.container);
       expectAbsent(/Benachrichtigungen/, /Hilfe/);
       sidebar.unmount();
-      const { container } = render(
-        <HelpCategory
-          tournamentId="t1"
-          tournament={makeTournament()}
-          onTournamentUpdate={vi.fn()}
-        />
-      );
+      // B-03 Fixrunde 1: Die leere Hilfe-Seite ist als toter Code entfernt (E-02).
+      // Der Platzhalter wird damit gar nicht mehr angeboten — die Aussage bleibt,
+      // die Prüfung folgt dem Muster aus @OB-011 (Quelltext/Datei statt Gerendertem).
+      expect(existsSync(join(SRC_ROOT, 'features', 'tournament-admin', 'categories', 'Help'))).toBe(false);
       expectAbsent(/E-Mail Support|linkCard/);
-      expect(container.querySelector('button')).toBeNull();
     },
   },
   {
@@ -1006,7 +1001,7 @@ describe('@OB-005 „Team & Helfer“ erscheint erst mit dem Einstieg per QR-Cod
     expectAbsent(/Team & Helfer/, /\bBald\b|Coming Soon|comingSoon/);
     const { ADMIN_CATEGORIES } = await import('../features/tournament-admin/constants/admin.constants');
     const eintrag = ADMIN_CATEGORIES.find((cat) => cat.id === 'team-helpers');
-    expect(eintrag?.isComingSoon === undefined).toBe(true);
+    expect(eintrag?.isComingSoon).toBeUndefined();
   });
 });
 

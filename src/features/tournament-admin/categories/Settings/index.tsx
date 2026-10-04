@@ -101,12 +101,6 @@ const styles = {
     color: cssVars.colors.textPrimary,
   } as CSSProperties,
 
-  comingSoon: {
-    textAlign: 'center',
-    padding: cssVars.spacing.lg,
-    color: cssVars.colors.textMuted,
-  } as CSSProperties,
-
   badge: {
     display: 'inline-block',
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,

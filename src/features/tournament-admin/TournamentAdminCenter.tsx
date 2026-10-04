@@ -62,11 +62,6 @@ const MetadataCategory = lazy(() =>
   import('./categories/Metadata').then((m) => ({ default: m.MetadataCategory }))
 );
 
-// Support
-const HelpCategory = lazy(() =>
-  import('./categories/Help').then((m) => ({ default: m.HelpCategory }))
-);
-
 // Danger Zone
 const DangerZoneCategory = lazy(() =>
   import('./categories/DangerZone').then((m) => ({ default: m.DangerZoneCategory }))
@@ -248,6 +243,7 @@ export function TournamentAdminCenter({
         return <ActivityLogCategory {...categoryProps} />;
       case 'exports':
         return <ExportsCategory {...categoryProps} />;
+      // @OB-005: „Team & Helfer" bleibt vorbereitet — sichtbar erst mit dem Einstieg per QR-Code.
       case 'team-helpers':
         return <TeamHelpersCategory {...categoryProps} />;
       case 'sponsors':
@@ -260,8 +256,6 @@ export function TournamentAdminCenter({
         return <VisibilityCategory {...categoryProps} />;
       case 'metadata':
         return <MetadataCategory {...categoryProps} />;
-      case 'help':
-        return <HelpCategory {...categoryProps} />;
       case 'danger-zone':
         return <DangerZoneCategory {...categoryProps} />;
       default:

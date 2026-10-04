@@ -126,14 +126,6 @@ const styles = {
     textAlign: 'center',
   } as CSSProperties,
 
-  comingSoonBadge: {
-    background: cssVars.colors.surfaceHover,
-    color: cssVars.colors.textMuted,
-    fontSize: cssVars.fontSizes.labelSm,
-    padding: '2px 6px',
-    borderRadius: cssVars.borderRadius.sm,
-  } as CSSProperties,
-
   separator: {
     height: 1,
     background: cssVars.colors.border,

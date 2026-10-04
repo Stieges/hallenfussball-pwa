@@ -48,7 +48,7 @@ import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { captureFeatureError } from '../../lib/sentry';
-import { selectDisplayableSlides } from './slideProgramme';
+import { selectDisplayableSlides, type QrRueckfallFolie } from './slideProgramme';
 
 // =============================================================================
 // THEME RESOLUTION
@@ -176,7 +176,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 // =============================================================================
 
 interface SlideRendererProps {
-  slide: MonitorSlide;
+  slide: MonitorSlide | QrRueckfallFolie;
   tournament: Tournament;
   performanceSettings: PerformanceSettings;
   theme: MonitorTheme;
@@ -218,6 +218,10 @@ function SlideRenderer({ slide, tournament, performanceSettings, theme, overscan
       return <CustomTextSlide slide={slide} style={slideStyle} />;
 
     case 'qr-code':
+      // E-03: Eigener Render-Pfad für die Zuschauer-QR-Folie (Rückfall, kein
+      // konfigurierbarer Folien-Typ).
+      return <QrSlide tournament={tournament} style={slideStyle} />;
+
     default:
       // @OB-011: Kein Entwickler-Hinweis — unbekannte Folien fallen auf die
       // Zuschauer-QR-Folie zurück (die Rotation überspringt sie ohnehin).
@@ -1031,7 +1035,7 @@ export function MonitorDisplayPage({
   const slides = useMemo(
     () => selectDisplayableSlides(monitor?.slides ?? [], {
       qrMoeglich: tournament?.isPublic === true && Boolean(tournament?.shareCode),
-    }) as MonitorSlide[],
+    }),
     [monitor, tournament]
   );
 

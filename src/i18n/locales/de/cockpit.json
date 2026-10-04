@@ -289,8 +289,7 @@
     "card": "Karte",
     "timePenalty": "Zeitstrafe",
     "substitution": "Wechsel",
-    "editResult": "Ergebnis bearbeiten",
-    "adjustTime": "Zeit anpassen"
+    "editResult": "Ergebnis bearbeiten"
   },
   "readOnly": {
     "banner": "Nur Ansicht — du hast keine Berechtigung, dieses Spiel zu bedienen."
@@ -298,8 +297,6 @@
   "extended": {
     "editScoreAria": "Ergebnis korrigieren",
     "score": "Ergebnis",
-    "adjustTimeAria": "Zeit anpassen",
-    "time": "Zeit",
     "yellowCardAria": "Gelbe Karte",
     "yellow": "Gelb",
     "redCardAria": "Rote Karte",

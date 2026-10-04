@@ -289,8 +289,7 @@
     "card": "Card",
     "timePenalty": "Time Penalty",
     "substitution": "Substitution",
-    "editResult": "Edit Result",
-    "adjustTime": "Adjust Time"
+    "editResult": "Edit Result"
   },
   "readOnly": {
     "banner": "View only — you don't have permission to control this match."
@@ -298,8 +297,6 @@
   "extended": {
     "editScoreAria": "Correct score",
     "score": "Score",
-    "adjustTimeAria": "Adjust time",
-    "time": "Time",
     "yellowCardAria": "Yellow card",
     "yellow": "Yellow",
     "redCardAria": "Red card",

@@ -7,11 +7,23 @@
  * Entwickler-Hinweis wie „wird in Phase 2 implementiert“ ist nirgends erlaubt.
  */
 
+import type { MonitorSlide } from '../../types/monitor';
+
 export interface MonitorSlideLike {
   id: string;
   type: string;
   duration?: number | null;
   config?: object;
+}
+
+/**
+ * Zuschauer-QR-Folie (@OB-011 Rückfall): eigener Render-Pfad statt eines
+ * Pseudo-Folientyps im Vertrag der Monitor-Konfiguration (E-03).
+ */
+export interface QrRueckfallFolie {
+  id: string;
+  type: 'qr-code';
+  duration: number;
 }
 
 /** Folien-Typen, die der Monitor heute darstellen kann (Phase 1). */
@@ -24,7 +36,7 @@ export const DISPLAYABLE_SLIDE_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /** Rückfall, wenn keine Folie des Programms darstellbar ist: die Zuschauer-QR-Folie. */
-export const ZUSCHAUER_QR_SLIDE: MonitorSlideLike = {
+export const ZUSCHAUER_QR_SLIDE: QrRueckfallFolie = {
   id: 'zuschauer-qr-folie',
   type: 'qr-code',
   duration: 15,
@@ -35,17 +47,18 @@ export const ZUSCHAUER_QR_SLIDE: MonitorSlideLike = {
  * Monitor die nächste immer darstellbare Folie — der Spielplan rendert auch ohne
  * Konfiguration und ohne Spiele (Feld 1, leere Liste); die Tabelle wäre die Alternative.
  */
-export const SPIELPLAN_FALLBACK_SLIDE: MonitorSlideLike = {
+export const SPIELPLAN_FALLBACK_SLIDE: MonitorSlide = {
   id: 'spielplan-folie',
   type: 'schedule-field',
   duration: 15,
   config: {},
+  order: 0,
 };
 
-export function selectDisplayableSlides(
-  slides: MonitorSlideLike[],
+export function selectDisplayableSlides<T extends MonitorSlideLike>(
+  slides: T[],
   options?: { qrMoeglich?: boolean },
-): MonitorSlideLike[] {
+): Array<T | MonitorSlide | QrRueckfallFolie> {
   const displayable = slides.filter((slide) => DISPLAYABLE_SLIDE_TYPES.has(slide.type));
   if (displayable.length > 0) {
     return displayable;
