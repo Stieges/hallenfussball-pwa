@@ -8,6 +8,7 @@ import { generateGroupLabels } from '../../utils/groupHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import { generateTeamId } from '../../utils/idGenerator';
 import { sanitizeTeamName } from '../../core/utils/textSanitizer';
+import { activeTeams } from './utils/replanTeams';
 import styles from './Step4_Teams.module.css';
 
 interface Step4Props {
@@ -109,7 +110,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
   const [logoUploadTeamId, setLogoUploadTeamId] = useState<string | null>(null);
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
 
-  const teams = formData.teams ?? [];
+  const teams = activeTeams(formData.teams ?? []);
   const canAssignGroups = formData.groupSystem === 'groupsAndFinals';
   const numberOfTeams = formData.numberOfTeams ?? 4;
   const numberOfGroups = formData.numberOfGroups ?? 2;
@@ -189,10 +190,13 @@ export const Step4_Teams: React.FC<Step4Props> = ({
 
   // Auto-Zuweisung: Teams gleichmäßig auf Gruppen verteilen
   const handleAutoAssignGroups = () => {
-    const updatedTeams = teams.map((team, index) => ({
-      ...team,
-      group: groupLabels[index % numberOfGroups],
-    }));
+    let activeIndex = 0;
+    const updatedTeams = (formData.teams ?? []).map((team) => {
+      if (team.isRemoved) { return team; }
+      const group = groupLabels[activeIndex % numberOfGroups];
+      activeIndex += 1;
+      return { ...team, group };
+    });
 
     onUpdate('teams', updatedTeams);
   };

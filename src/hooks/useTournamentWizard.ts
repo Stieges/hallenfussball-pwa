@@ -9,6 +9,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { Tournament, TournamentType, PlacementCriterion } from '../types/tournament';
 import { countMatchesWithResults } from '../utils/teamHelpers';
+import { removeTeamKeepingHistory } from '../features/tournament-creation/utils/replanTeams';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../config/sports';
 import { TournamentCreationService } from '../core/services/TournamentCreationService';
 import { useRepository } from './useRepository';
@@ -254,8 +255,13 @@ export function useTournamentWizard(
   }, [formData.teams, updateForm]);
 
   const removeTeam = useCallback((id: string) => {
-    updateForm('teams', formData.teams?.filter((t) => t.id !== id) ?? []);
-  }, [formData.teams, updateForm]);
+    // B-02 (A-05-Re-Review): Team mit Ergebnis-Spielen bleibt als isRemoved
+    // stehen, damit Verlauf und Ergebnisse zugeordnet bleiben.
+    updateForm(
+      'teams',
+      removeTeamKeepingHistory(formData.teams ?? [], formData.matches ?? [], id)
+    );
+  }, [formData.teams, formData.matches, updateForm]);
 
   const updateTeam = useCallback((id: string, updates: Partial<Tournament['teams'][0]>) => {
     updateForm(
