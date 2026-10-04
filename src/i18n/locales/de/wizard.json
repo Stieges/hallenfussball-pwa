@@ -507,5 +507,21 @@
       "erwachsene": "Erwachsene",
       "mixed": "Mixed"
     }
+  },
+  "replan": {
+    "title": "Neuplanung prüfen",
+    "endTime": "Endzeit",
+    "newMatches_one": "{{count}} neues Spiel",
+    "newMatches_other": "{{count}} neue Spiele",
+    "removedMatches_one": "{{count}} Spiel entfällt",
+    "removedMatches_other": "{{count}} Spiele entfallen",
+    "keptHint": "Bereits gespielte Spiele bleiben erhalten und werden nicht entfernt.",
+    "keptMatch": "Bleibt erhalten – wird nicht entfernt",
+    "conflict": "Kein Gegenstück im neuen Plan – das Spiel wird angehängt.",
+    "reason": "Grund",
+    "suggestion": "Lösungsvorschlag",
+    "notConfirmable": "Die Neuplanung lässt sich nicht bestätigen. Der bisherige Spielplan bleibt erhalten.",
+    "confirm": "Bestätigen",
+    "cancel": "Abbrechen"
   }
 }

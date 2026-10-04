@@ -507,5 +507,21 @@
       "erwachsene": "Adults",
       "mixed": "Mixed"
     }
+  },
+  "replan": {
+    "title": "Review rescheduling",
+    "endTime": "End time",
+    "newMatches_one": "{{count}} new match",
+    "newMatches_other": "{{count}} new matches",
+    "removedMatches_one": "{{count}} match is dropped",
+    "removedMatches_other": "{{count}} matches are dropped",
+    "keptHint": "Matches that have already been played are kept and will not be removed.",
+    "keptMatch": "Kept – will not be removed",
+    "conflict": "No counterpart in the new plan – the match is appended.",
+    "reason": "Reason",
+    "suggestion": "Suggested solution",
+    "notConfirmable": "The rescheduling cannot be confirmed. The current match plan remains in place.",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
   }
 }

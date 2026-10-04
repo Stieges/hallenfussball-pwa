@@ -5,6 +5,9 @@ import { ProgressBar } from '../components/ProgressBar';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { TournamentPreview } from '../features/tournament-creation/TournamentPreview';
+import { ReplanPanel } from '../features/tournament-creation/components/ReplanPanel';
+import { openReplan, type ReplanSession } from '../features/tournament-creation/utils/replan';
+import { useTournamentStartState } from '../hooks/useTournamentStartState';
 import { Step5_Overview as Step5_OverviewDirect } from '../features/tournament-creation/Step5_Overview';
 import { getStepFromSearchParams, buildWizardStepPath, type WizardStep } from '../features/tournament-creation';
 import { Tournament } from '../types/tournament';
@@ -83,6 +86,11 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 }) => {
   const { showSuccess, showWarning } = useToast();
   const { saveTournament: defaultSaveTournament } = useTournaments();
+  // B-02: Anpfiff-Sperre für die Neuplanung (Live-Signal über den gemeinsamen Hook)
+  const matchStartState = useTournamentStartState(
+    existingTournament ?? { id: '', matches: [], status: 'draft', publishedAt: undefined },
+    { enabled: Boolean(existingTournament) }
+  );
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
@@ -148,6 +156,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   // SCREEN-SPECIFIC STATE (not in hook)
   // ============================================================================
   const [generatedSchedule, setGeneratedSchedule] = useState<ReturnType<typeof generateFullSchedule> | null>(null);
+  const [replanSession, setReplanSession] = useState<ReplanSession | null>(null);
   const [showSaveNotification, setShowSaveNotification] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
@@ -260,6 +269,13 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     // Validate by attempting to generate schedule
     try {
       const tournament = createDraftTournament();
+      // B-02 Paket A (@W5-005): Im Bearbeiten-Modus wird die Strukturänderung
+      // als Neuplanung mit Vorschau angeboten – bis zur Bestätigung ändert sich
+      // nichts (@W5-007), nach dem Anpfiff nicht (@W5-008).
+      if (existingTournament) {
+        setReplanSession(openReplan(existingTournament, tournament, matchStartState));
+        return;
+      }
       const schedule = generateFullSchedule(tournament);
       // Store generated schedule for preview
       // Note: We're already on step 6, just setting the schedule triggers re-render
@@ -275,9 +291,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     }
   };
 
-  const handlePublish = async () => {
+  const handlePublish = async (override?: Partial<Tournament>) => {
     try {
-      const published = await publishTournament();
+      const published = await publishTournament(override);
 
       // Call external save callback if provided (e.g. for potential redirects or parent updates)
       // Though publishTournament already saves to repo.
@@ -303,6 +319,25 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       showSuccess('Turnier als Entwurf gespeichert!');
     } catch (error) {
       console.error('[TournamentCreation] Failed to manual save draft:', error);
+    }
+  };
+
+  // B-02 (@W5-005): Bestätigen ersetzt den Spielplan und veröffentlicht.
+  const handleReplanConfirm = async () => {
+    if (!replanSession) {
+      return;
+    }
+    const updated = replanSession.confirm();
+    setReplanSession(null);
+    setFormData((prev) => ({ ...prev, matches: updated.matches }));
+    await handlePublish({ matches: updated.matches });
+  };
+
+  // B-02 (@W5-007): Abbrechen stellt den Ist-Stand des Turniers wieder her.
+  const handleReplanCancel = () => {
+    setReplanSession(null);
+    if (existingTournament) {
+      setFormData(existingTournament);
     }
   };
 
@@ -362,7 +397,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   }, [wizardHandleNavigateToStep, hasUnsavedChanges, saveAsDraft, showWarning, navigate, existingTournament?.id]);
 
   // Dynamic width: wider for preview, narrower for wizard steps
-  const isShowingPreview = step === 6 && generatedSchedule;
+  const isShowingPreview = step === 6 && (generatedSchedule !== null || replanSession !== null);
   const containerMaxWidth = isShowingPreview ? '1600px' : '800px';
 
   return (
@@ -405,6 +440,16 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           onNavigateToSettings={onNavigateToSettings}
         />
       </header>
+
+      {replanSession && (
+        <ReplanPanel
+          isOpen
+          preview={replanSession.preview}
+          previousMatches={existingTournament?.matches ?? []}
+          onConfirm={() => void handleReplanConfirm()}
+          onCancel={handleReplanCancel}
+        />
+      )}
 
       {/* Quick Edit Banner */}
       {quickEditMode && (
