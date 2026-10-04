@@ -6,7 +6,7 @@
  * Bestätigen ist bei `impossible` und `refused` gesperrt; Abbrechen ändert
  * nichts (@W5-007).
  */
-import { CSSProperties } from 'react';
+import { CSSProperties, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Match, Team } from '../../../types/tournament';
 import { sideLabel } from '../utils/matchSides';
@@ -56,6 +56,8 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
   onCancel,
 }) => {
   const { t, i18n } = useTranslation('wizard');
+  // @OB-014: Startfokus auf „Abbrechen", Enter löst in der Neuplanungs-Rückfrage nichts aus.
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
   // E3: nach Paarung und Phase zählen – der Generator vergibt neue IDs.
   const previousKeys = new Set(
     previousMatches.map((m) =>
@@ -103,7 +105,8 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
       onClose={onCancel}
       title={t('replan.title')}
       closeOnBackdropClick={false}
-      maxWidth="560px"
+      initialFocusRef={cancelButtonRef}
+      suppressEnter
     >
       <div data-testid="replan-panel">
         {preview.status === 'preview' && (
@@ -162,7 +165,12 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
           </div>
         )}
         <div style={{ display: 'flex', gap: cssVars.spacing.md, justifyContent: 'flex-end' }}>
-          <Button variant="secondary" onClick={onCancel} data-testid="replan-cancel">
+          <Button
+            ref={cancelButtonRef}
+            variant="secondary"
+            onClick={onCancel}
+            data-testid="replan-cancel"
+          >
             {t('replan.cancel')}
           </Button>
           <Button
