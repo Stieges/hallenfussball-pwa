@@ -531,5 +531,10 @@
     "suggestionCollision": "Mindestpause senken, ein Feld hinzufügen oder das behaltene Spiel vor der Neuplanung verschieben.",
     "suggestionMinRestOrAddField": "Mindestpause senken oder ein Feld hinzufügen.",
     "suggestionRestoreTeam": "Team wiederherstellen oder ein neues Team anlegen."
+  },
+  "publish": {
+    "button": "Festlegen",
+    "loading": "Wird festgelegt …",
+    "success": "Turnier erfolgreich festgelegt."
   }
 }

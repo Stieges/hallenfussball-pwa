@@ -8,6 +8,7 @@
  */
 
 import { CSSProperties, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tournament, FinalsConfig } from '../../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
@@ -35,6 +36,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   onTournamentChange,
   isPublishing = false,
 }) => {
+  const { t } = useTranslation('wizard');
   const [currentTournament, setCurrentTournament] = useState(tournament);
   const [schedule, setSchedule] = useState(initialSchedule);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
@@ -444,9 +446,9 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
             data-testid="preview-publish"
           >
             {isPublishing ? (
-              <span data-testid="preview-publish-loading">Wird festgelegt …</span>
+              <span data-testid="preview-publish-loading">{t('publish.loading')}</span>
             ) : (
-              'Turnier freigeben'
+              t('publish.button')
             )}
           </Button>
         </div>

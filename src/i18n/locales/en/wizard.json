@@ -531,5 +531,10 @@
     "suggestionCollision": "Lower the minimum rest period, add a field, or move the retained match before rescheduling.",
     "suggestionMinRestOrAddField": "Lower the minimum rest period or add a field.",
     "suggestionRestoreTeam": "Restore the team or create a new one."
+  },
+  "publish": {
+    "button": "Finalise",
+    "loading": "Finalising …",
+    "success": "Tournament successfully finalised."
   }
 }

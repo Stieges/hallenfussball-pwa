@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import type { Tournament } from '../../../types/tournament';
 
 const spies = vi.hoisted(() => ({
@@ -174,23 +174,56 @@ function deferred(): { promise: Promise<Tournament>; resolve: (t: Tournament) =>
   return { promise, resolve };
 }
 
-const renderScreen = () =>
+function DashboardStub() {
+  return <div data-testid="dashboard-stub">Übersicht</div>;
+}
+
+function CreationRoute({
+  onSave,
+}: {
+  onSave: (tournament: Tournament) => void | Promise<void>;
+}) {
+  return (
+    <TournamentCreationScreen
+      onBack={spies.onBack}
+      onSave={onSave}
+      onNavigateToLogin={vi.fn()}
+      onNavigateToRegister={vi.fn()}
+      onNavigateToProfile={vi.fn()}
+    />
+  );
+}
+
+function NavigatingRoute() {
+  const navigate = useNavigate();
+  return (
+    <CreationRoute
+      onSave={async (tournament) => {
+        await spies.onSave(tournament);
+        await new Promise((r) => setTimeout(r, 10));
+        void navigate('/dashboard');
+      }}
+    />
+  );
+}
+
+const renderShell = (element: React.ReactNode) =>
   render(
     <MemoryRouter initialEntries={['/?step=6']}>
       <ToastProvider>
-        <TournamentCreationScreen
-          onBack={spies.onBack}
-          onSave={spies.onSave}
-          onNavigateToLogin={vi.fn()}
-          onNavigateToRegister={vi.fn()}
-          onNavigateToProfile={vi.fn()}
-        />
+        <Routes>
+          <Route path="/" element={element} />
+          <Route path="/dashboard" element={<DashboardStub />} />
+        </Routes>
       </ToastProvider>
     </MemoryRouter>
   );
 
-async function openPreview(): Promise<HTMLElement> {
-  renderScreen();
+const renderScreen = () => renderShell(<CreationRoute onSave={spies.onSave} />);
+const renderNavigatingScreen = () => renderShell(<NavigatingRoute />);
+
+async function openPreview(renderFn: () => void = renderScreen): Promise<HTMLElement> {
+  renderFn();
   fireEvent.click(screen.getByTestId('wizard-show-preview'));
   const publishButton = await screen.findByTestId('preview-publish');
   return publishButton;
@@ -221,8 +254,24 @@ describe('B-04a @W1-023 — Festlegen mit Ladezustand und Erfolgsmeldung', () =>
     pending.resolve({ ...baseTournament(), status: 'published' });
 
     await waitFor(() => {
-      expect(screen.getByTestId('publish-success')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('publish.success');
     });
     expect(spies.onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('@W1-023 Erfolgsmeldung bleibt als Toast sichtbar, wenn onSave auf die Übersicht wechselt', async () => {
+    const pending = deferred();
+    spies.publishTournament.mockReturnValue(pending.promise);
+
+    const publishButton = await openPreview(renderNavigatingScreen);
+    await act(async () => {
+      publishButton.click();
+    });
+
+    pending.resolve({ ...baseTournament(), status: 'published' });
+
+    await screen.findByTestId('dashboard-stub');
+    const toast = await screen.findByRole('alert');
+    expect(toast).toHaveTextContent('publish.success');
   });
 });
