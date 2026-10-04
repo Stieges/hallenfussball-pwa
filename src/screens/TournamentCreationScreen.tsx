@@ -498,6 +498,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           isOpen
           preview={replanSession.preview}
           previousMatches={existingTournament?.matches ?? []}
+          teams={existingTournament?.teams ?? []}
           onConfirm={() => void handleReplanConfirm()}
           onCancel={handleReplanCancel}
         />

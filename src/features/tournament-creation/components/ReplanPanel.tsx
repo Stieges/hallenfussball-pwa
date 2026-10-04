@@ -8,7 +8,8 @@
  */
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Match } from '../../../types/tournament';
+import type { Match, Team } from '../../../types/tournament';
+import { sideLabel } from '../utils/matchSides';
 import type { ReplanPreviewResult } from '../utils/replan';
 import { formatReplanTime } from '../utils/replan';
 import { Dialog } from '../../../components/dialogs/Dialog';
@@ -19,9 +20,17 @@ export interface ReplanPanelProps {
   isOpen: boolean;
   preview: ReplanPreviewResult;
   previousMatches: Match[];
+  teams: Team[];
   onConfirm: () => void;
   onCancel: () => void;
 }
+
+/** G3/E3: Paarungsschlüssel wie replan.ts – Paarung und Phase, nicht die ID. */
+const pairingKey = (
+  teamA: string,
+  teamB: string,
+  phase: string
+): string => [teamA, teamB].sort().join(':') + ':' + phase;
 
 
 
@@ -42,25 +51,51 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
   isOpen,
   preview,
   previousMatches,
+  teams,
   onConfirm,
   onCancel,
 }) => {
   const { t, i18n } = useTranslation('wizard');
-  const previousIds = new Set(previousMatches.map((m) => m.id));
+  // E3: nach Paarung und Phase zählen – der Generator vergibt neue IDs.
+  const previousKeys = new Set(
+    previousMatches.map((m) =>
+      pairingKey(m.teamA, m.teamB, m.phase ?? (m.isFinal ? 'final' : 'groupStage'))
+    )
+  );
+  const generatedKeys = new Set(
+    preview.status === 'preview'
+      ? preview.schedule.allMatches.map((g) =>
+          pairingKey(g.originalTeamA, g.originalTeamB, g.phase)
+        )
+      : []
+  );
 
   const newCount =
     preview.status === 'preview'
-      ? preview.schedule.allMatches.filter((m) => !previousIds.has(m.id)).length
+      ? preview.schedule.allMatches.filter(
+          (g) =>
+            !previousKeys.has(pairingKey(g.originalTeamA, g.originalTeamB, g.phase))
+        ).length
       : 0;
   const droppedCount =
     preview.status === 'preview'
       ? previousMatches.filter(
           (m) =>
-            !preview.schedule.allMatches.some((g) => g.id === m.id) &&
-            !preview.keptMatches.some((k) => k.id === m.id)
+            !generatedKeys.has(
+              pairingKey(m.teamA, m.teamB, m.phase ?? (m.isFinal ? 'final' : 'groupStage'))
+            )
         ).length
       : 0;
   const blocked = preview.status !== 'preview';
+  const pairingOf = (matchId: string): string => {
+    const match =
+      preview.status === 'preview'
+        ? preview.keptMatches.find((k) => k.id === matchId)
+        : undefined;
+    return match
+      ? `${sideLabel(match, 'A', teams)} – ${sideLabel(match, 'B', teams)}`
+      : matchId;
+  };
 
   return (
     <Dialog
@@ -76,7 +111,12 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
             <div style={boxStyle} data-testid="replan-end-time">
               <strong>{t('replan.endTime')}:</strong> {formatReplanTime(preview.endTime, i18n.language)}
             </div>
-            <div style={boxStyle} data-testid="replan-counts">
+            <div
+              style={boxStyle}
+              data-testid="replan-counts"
+              data-new-count={newCount}
+              data-dropped-count={droppedCount}
+            >
               <div>{t('replan.newMatches', { count: newCount })}</div>
               <div>{t('replan.removedMatches', { count: droppedCount })}</div>
             </div>
@@ -86,7 +126,7 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
                 <ul>
                   {preview.keptNotices.map((notice) => (
                     <li key={notice.matchId} style={hintStyle}>
-                      {t('replan.keptMatch')}
+                      {pairingOf(notice.matchId)}: {t('replan.keptMatch')}
                     </li>
                   ))}
                 </ul>
@@ -97,7 +137,7 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
                 <ul>
                   {preview.conflictMatchIds.map((matchId) => (
                     <li key={matchId} style={hintStyle}>
-                      {t('replan.conflict')}
+                      {pairingOf(matchId)}: {t('replan.conflict')}
                     </li>
                   ))}
                 </ul>

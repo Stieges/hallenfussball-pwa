@@ -61,6 +61,7 @@ describe('ReplanPanel – Neuplanungs-Vorschau (@W5-005/007/008)', () => {
         isOpen
         preview={previewResult}
         previousMatches={previousMatches}
+        teams={[{ id: '1', name: 'Team A' }, { id: '2', name: 'Team B' }, { id: '3', name: 'Team C' }, { id: '5', name: 'Team E' }]}
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
       />
@@ -86,6 +87,7 @@ describe('ReplanPanel – Neuplanungs-Vorschau (@W5-005/007/008)', () => {
         isOpen
         preview={impossible}
         previousMatches={previousMatches}
+        teams={[{ id: '1', name: 'Team A' }, { id: '2', name: 'Team B' }, { id: '3', name: 'Team C' }, { id: '5', name: 'Team E' }]}
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
       />
@@ -107,6 +109,7 @@ describe('ReplanPanel – Neuplanungs-Vorschau (@W5-005/007/008)', () => {
         isOpen
         preview={refused}
         previousMatches={previousMatches}
+        teams={[{ id: '1', name: 'Team A' }, { id: '2', name: 'Team B' }, { id: '3', name: 'Team C' }, { id: '5', name: 'Team E' }]}
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
       />
@@ -124,6 +127,7 @@ describe('ReplanPanel – Neuplanungs-Vorschau (@W5-005/007/008)', () => {
         isOpen
         preview={previewResult}
         previousMatches={previousMatches}
+        teams={[{ id: '1', name: 'Team A' }, { id: '2', name: 'Team B' }, { id: '3', name: 'Team C' }, { id: '5', name: 'Team E' }]}
         onConfirm={onConfirm}
         onCancel={onCancel}
       />
