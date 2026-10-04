@@ -351,27 +351,18 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
     expect(after[1]).toHaveAttribute('data-testid', 'team-name-home');
   });
 
-  it('Halbzeit: readOnly=true disabled + Klick setzt die Fouls NICHT zurück; readOnly=false enabled + Klick setzt sie zurück', async () => {
-    const match = makeMatch({
-      status: 'PAUSED',
-      events: [{ id: 'f1', matchId: 'match-1', type: 'FOUL', timestampSeconds: 5, payload: { teamId: 'team-a' } }],
-    });
-    const user = userEvent.setup();
-
-    const { unmount } = render(<LiveCockpit {...baseProps(match)} readOnly />);
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1');
-    const halfTimeButtonLocked = screen.getByRole('button', { name: 'Halbzeit' });
-    expect(halfTimeButtonLocked).toBeDisabled();
-    await user.click(halfTimeButtonLocked);
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1');
-    unmount();
-
-    render(<LiveCockpit {...baseProps(match)} />);
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1');
-    const halfTimeButtonUnlocked = screen.getByRole('button', { name: 'Halbzeit' });
-    expect(halfTimeButtonUnlocked).not.toBeDisabled();
-    await user.click(halfTimeButtonUnlocked);
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('0');
+  it('Halbzeit: der Knopf fehlt im Cockpit bei JEDEM Status (Platzhalter-Liste Nr. 3, @OB-002; B-08 baut Halbzeit)', () => {
+    // Ruling B-03 Fixrunde 1: Platzhalter-Liste Nr. 3, @OB-002; B-08 baut Halbzeit.
+    // Bis dahin verschwindet der Knopf „Halbzeit“ bei JEDEM Status — auch bei RUNNING und PAUSED.
+    // Die alte Aussage (disabled bei readOnly, Klick setzt die Fouls zurück) ist mit dem Ruling
+    // entfallen: handleHalfTime und der Knopf sind bis B-08 komplett entfernt.
+    for (const status of ['NOT_STARTED', 'RUNNING', 'PAUSED', 'FINISHED'] as const) {
+      const { unmount } = render(<LiveCockpit {...baseProps(makeMatch({ status }))} />);
+      expect(screen.queryByRole('button', { name: 'Halbzeit' })).not.toBeInTheDocument();
+      unmount();
+    }
+    render(<LiveCockpit {...baseProps(makeMatch({ status: 'RUNNING' }))} readOnly />);
+    expect(screen.queryByRole('button', { name: 'Halbzeit' })).not.toBeInTheDocument();
   });
 
   it('Einstellungen: readOnly=true öffnet den Dialog trotzdem, Eingaben sind disabled und lösen keinen Callback aus; readOnly=false alles wie vorher', async () => {

@@ -430,13 +430,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     showInfo('Seiten getauscht');
   }, [showInfo]);
 
-  const handleHalfTime = useCallback(() => {
-    // Reset fouls
-    setHomeFouls(0);
-    setAwayFouls(0);
-    showInfo('Halbzeit - Fouls zurückgesetzt');
-  }, [showInfo]);
-
   const handleFoulHome = useCallback(() => {
     if (!currentMatch) { return; }
     const newFouls = homeFouls + 1;
@@ -1034,14 +1027,13 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               onPauseResume={handlePauseResume}
               onEditTime={() => setShowTimeAdjustDialog(true)}
               onSwitchSides={handleSwitchSides}
-              onHalfTime={handleHalfTime}
               onFinish={handleFinish}
               onSettings={() => setShowSettingsDialog(true)}
               // BUG-002: Event Log for Mobile
               onEventLog={() => setShowEventLogBottomSheet(true)}
               canUndo={canUndo}
               breakpoint={breakpoint}
-              // Task R2: sperrt Rückgängig/Start-Pause/Zeit/Seiten/Halbzeit/Beenden, wenn
+              // Task R2: sperrt Rückgängig/Start-Pause/Zeit/Seiten/Beenden, wenn
               // readOnly/finished — unverändert gegenüber 235d947 (dort schon isFinished-gesperrt).
               // Settings/Event-Log sind davon NICHT betroffen (GameControls sperrt sie nie über
               // `disabled` — siehe dort). Fixrunde 3 (Review-Befund M): der Settings-Button öffnet

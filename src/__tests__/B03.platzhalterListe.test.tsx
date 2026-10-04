@@ -475,19 +475,24 @@ const OB002: FunktionFall[] = [
     ort: 'das Cockpit von Spiel 9',
     pruefen: async () => {
       const { GameControls } = await import('../components/live-cockpit/components/GameControls');
-      const { container } = render(
-        <GameControls
-          status="NOT_STARTED"
-          onStart={vi.fn()}
-          onPauseResume={vi.fn()}
-          onEditTime={vi.fn()}
-          onSwitchSides={vi.fn()}
-          onHalfTime={vi.fn()}
-          onFinish={vi.fn()}
-        />
-      );
-      expectRendered(container);
-      expectAbsent(/Halbzeit/);
+      // Ruling B-03 Fixrunde 1 (Platzhalter-Liste Nr. 3, @OB-002; B-08 baut Halbzeit):
+      // der Knopf verschwindet bei JEDEM Status — der Zeile NOT_STARTED sind die Fälle
+      // RUNNING und PAUSED hinzugefügt (sonst versteckt ein Status-Gate den Fehler).
+      for (const status of ['NOT_STARTED', 'RUNNING', 'PAUSED'] as const) {
+        const { container, unmount } = render(
+          <GameControls
+            status={status}
+            onStart={vi.fn()}
+            onPauseResume={vi.fn()}
+            onEditTime={vi.fn()}
+            onSwitchSides={vi.fn()}
+            onFinish={vi.fn()}
+          />
+        );
+        expectRendered(container);
+        expectAbsent(/Halbzeit/);
+        unmount();
+      }
     },
   },
   {
@@ -655,7 +660,6 @@ const OB003: AnkuendigungsFall[] = [
           onPauseResume={vi.fn()}
           onEditTime={vi.fn()}
           onSwitchSides={vi.fn()}
-          onHalfTime={vi.fn()}
           onFinish={vi.fn()}
         />
       );
