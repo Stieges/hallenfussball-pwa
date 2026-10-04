@@ -256,7 +256,7 @@ if [[ "$A_RESULT" == "allowed" ]]; then
 [Statusabfrage deleted_at gesetzt: $A_STATE]"
   [[ "$A_STATE" == "1" ]] || A_RESULT="denied"
 fi
-check "(a) Turnier mit nur geplanten Spielen: deleted_at setzen erlaubt" "allowed" "$A_RESULT"
+check "(a) Turnier mit nur geplanten Spielen: deleted_at setzen erlaubt @LZ-090 „Aber ein Turnier, in dem noch kein Spiel angepfiffen wurde, lässt sich löschen“" "allowed" "$A_RESULT"
 
 # (b) laufend: abgelehnt. Fehlertext muss die Sperre-Meldung 'tournament_started' tragen,
 # nicht eine zufaellige RLS- oder Fremdschluessel-Ablehnung.
@@ -265,9 +265,9 @@ B_RESULT="$LAST_WRITE_RESULT"
 if [[ "$B_RESULT" == "denied" ]]; then
   B_REASON="fail"
   grep -q "tournament_started" <<<"$LAST_WRITE_OUTPUT" && B_REASON="sperre"
-  check "(b) Turnier mit laufendem Spiel: deleted_at setzen abgelehnt (Meldung tournament_started)" "sperre" "$B_REASON"
+  check "(b) Turnier mit laufendem Spiel: deleted_at setzen abgelehnt (Meldung tournament_started) @LZ-090 „Tom hat das erste Gruppenspiel angepfiffen“" "sperre" "$B_REASON"
 else
-  check "(b) Turnier mit laufendem Spiel: deleted_at setzen abgelehnt" "denied" "$B_RESULT"
+  check "(b) Turnier mit laufendem Spiel: deleted_at setzen abgelehnt @LZ-090 „Tom hat das erste Gruppenspiel angepfiffen“" "denied" "$B_RESULT"
 fi
 
 # (c) pausiert: abgelehnt.
@@ -276,9 +276,9 @@ C_RESULT="$LAST_WRITE_RESULT"
 if [[ "$C_RESULT" == "denied" ]]; then
   C_REASON="fail"
   grep -q "tournament_started" <<<"$LAST_WRITE_OUTPUT" && C_REASON="sperre"
-  check "(c) Turnier mit pausiertem Spiel: deleted_at setzen abgelehnt (Meldung tournament_started)" "sperre" "$C_REASON"
+  check "(c) Turnier mit pausiertem Spiel: deleted_at setzen abgelehnt (Meldung tournament_started) @LZ-090 „Tom hat das erste Gruppenspiel angepfiffen“" "sperre" "$C_REASON"
 else
-  check "(c) Turnier mit pausiertem Spiel: deleted_at setzen abgelehnt" "denied" "$C_RESULT"
+  check "(c) Turnier mit pausiertem Spiel: deleted_at setzen abgelehnt @LZ-090 „Tom hat das erste Gruppenspiel angepfiffen“" "denied" "$C_RESULT"
 fi
 
 # (d) beendet: abgelehnt.
@@ -287,9 +287,9 @@ D_RESULT="$LAST_WRITE_RESULT"
 if [[ "$D_RESULT" == "denied" ]]; then
   D_REASON="fail"
   grep -q "tournament_started" <<<"$LAST_WRITE_OUTPUT" && D_REASON="sperre"
-  check "(d) Turnier mit beendetem Spiel: deleted_at setzen abgelehnt (Meldung tournament_started)" "sperre" "$D_REASON"
+  check "(d) Turnier mit beendetem Spiel: deleted_at setzen abgelehnt (Meldung tournament_started) @LZ-090 „das erste Gruppenspiel ist beendet“" "sperre" "$D_REASON"
 else
-  check "(d) Turnier mit beendetem Spiel: deleted_at setzen abgelehnt" "denied" "$D_RESULT"
+  check "(d) Turnier mit beendetem Spiel: deleted_at setzen abgelehnt @LZ-090 „das erste Gruppenspiel ist beendet“" "denied" "$D_RESULT"
 fi
 
 # (e) Spiel geplant, aber match_events vorhanden: abgelehnt.
@@ -298,9 +298,9 @@ E_RESULT="$LAST_WRITE_RESULT"
 if [[ "$E_RESULT" == "denied" ]]; then
   E_REASON="fail"
   grep -q "tournament_started" <<<"$LAST_WRITE_OUTPUT" && E_REASON="sperre"
-  check "(e) Turnier mit Ereignissen trotz geplantem Spiel: deleted_at setzen abgelehnt (Meldung tournament_started)" "sperre" "$E_REASON"
+  check "(e) Turnier mit Ereignissen trotz geplantem Spiel: deleted_at setzen abgelehnt (Meldung tournament_started) @LZ-090 „Olli hat den Spielplan zurückgesetzt, die Ereignisse sind erhalten“" "sperre" "$E_REASON"
 else
-  check "(e) Turnier mit Ereignissen trotz geplantem Spiel: deleted_at setzen abgelehnt" "denied" "$E_RESULT"
+  check "(e) Turnier mit Ereignissen trotz geplantem Spiel: deleted_at setzen abgelehnt @LZ-090 „Olli hat den Spielplan zurückgesetzt, die Ereignisse sind erhalten“" "denied" "$E_RESULT"
 fi
 
 # (f) hartes DELETE bei laufendem Spiel: die Policy tournaments_delete_v2 erlaubt dem Eigentuemer
@@ -311,9 +311,9 @@ F_RESULT="$LAST_WRITE_RESULT"
 if [[ "$F_RESULT" == "denied" ]]; then
   F_REASON="fail"
   grep -q "tournament_started" <<<"$LAST_WRITE_OUTPUT" && F_REASON="sperre"
-  check "(f) hartes DELETE bei laufendem Spiel abgelehnt (Meldung tournament_started)" "sperre" "$F_REASON"
+  check "(f) hartes DELETE bei laufendem Spiel abgelehnt (Meldung tournament_started) @LZ-090 „Tom hat das erste Gruppenspiel angepfiffen“" "sperre" "$F_REASON"
 else
-  check "(f) hartes DELETE bei laufendem Spiel abgelehnt" "denied" "$F_RESULT"
+  check "(f) hartes DELETE bei laufendem Spiel abgelehnt @LZ-090 „Tom hat das erste Gruppenspiel angepfiffen“" "denied" "$F_RESULT"
 fi
 
 # (f2) hartes DELETE bei pausiertem Spiel: abgelehnt (Status-Kern des Kriteriums).
@@ -322,9 +322,9 @@ F2_RESULT="$LAST_WRITE_RESULT"
 if [[ "$F2_RESULT" == "denied" ]]; then
   F2_REASON="fail"
   grep -q "tournament_started" <<<"$LAST_WRITE_OUTPUT" && F2_REASON="sperre"
-  check "(f2) hartes DELETE bei pausiertem Spiel abgelehnt (Meldung tournament_started)" "sperre" "$F2_REASON"
+  check "(f2) hartes DELETE bei pausiertem Spiel abgelehnt (Meldung tournament_started) @LZ-090 „Tom hat das erste Gruppenspiel angepfiffen“" "sperre" "$F2_REASON"
 else
-  check "(f2) hartes DELETE bei pausiertem Spiel abgelehnt" "denied" "$F2_RESULT"
+  check "(f2) hartes DELETE bei pausiertem Spiel abgelehnt @LZ-090 „Tom hat das erste Gruppenspiel angepfiffen“" "denied" "$F2_RESULT"
 fi
 
 # (f3) hartes DELETE bei beendetem Spiel: abgelehnt.
@@ -333,9 +333,9 @@ F3_RESULT="$LAST_WRITE_RESULT"
 if [[ "$F3_RESULT" == "denied" ]]; then
   F3_REASON="fail"
   grep -q "tournament_started" <<<"$LAST_WRITE_OUTPUT" && F3_REASON="sperre"
-  check "(f3) hartes DELETE bei beendetem Spiel abgelehnt (Meldung tournament_started)" "sperre" "$F3_REASON"
+  check "(f3) hartes DELETE bei beendetem Spiel abgelehnt (Meldung tournament_started) @LZ-090 „das erste Gruppenspiel ist beendet“" "sperre" "$F3_REASON"
 else
-  check "(f3) hartes DELETE bei beendetem Spiel abgelehnt" "denied" "$F3_RESULT"
+  check "(f3) hartes DELETE bei beendetem Spiel abgelehnt @LZ-090 „das erste Gruppenspiel ist beendet“" "denied" "$F3_RESULT"
 fi
 
 # (f4) hartes DELETE bei geplantem Spiel MIT Ereignis: abgelehnt -- E1/E6, der Hard-Delete-Pfad
@@ -345,9 +345,9 @@ F4_RESULT="$LAST_WRITE_RESULT"
 if [[ "$F4_RESULT" == "denied" ]]; then
   F4_REASON="fail"
   grep -q "tournament_started" <<<"$LAST_WRITE_OUTPUT" && F4_REASON="sperre"
-  check "(f4) hartes DELETE bei geplantem Spiel MIT Ereignis abgelehnt (Meldung tournament_started)" "sperre" "$F4_REASON"
+  check "(f4) hartes DELETE bei geplantem Spiel MIT Ereignis abgelehnt (Meldung tournament_started) @LZ-090 „Olli hat den Spielplan zurückgesetzt, die Ereignisse sind erhalten“" "sperre" "$F4_REASON"
 else
-  check "(f4) hartes DELETE bei geplantem Spiel MIT Ereignis abgelehnt" "denied" "$F4_RESULT"
+  check "(f4) hartes DELETE bei geplantem Spiel MIT Ereignis abgelehnt @LZ-090 „Olli hat den Spielplan zurückgesetzt, die Ereignisse sind erhalten“" "denied" "$F4_RESULT"
 fi
 
 # (f5) hartes DELETE eines Turniers nur mit geplanten Spielen OHNE Ereignisse (eigene Fixture):
@@ -361,7 +361,7 @@ if [[ "$F5_RESULT" == "allowed" ]]; then
 [Statusabfrage Turnier+Spiele nach Kaskade: $F5_STATE]"
   [[ "$F5_STATE" == "0" ]] || F5_RESULT="denied"
 fi
-check "(f5) hartes DELETE bei nur geplanten Spielen ohne Ereignisse erlaubt (Kaskade entfernt Turnier und Spiele)" "allowed" "$F5_RESULT"
+check "(f5) hartes DELETE bei nur geplanten Spielen ohne Ereignisse erlaubt (Kaskade entfernt Turnier und Spiele) @LZ-090 „Aber ein Turnier, in dem noch kein Spiel angepfiffen wurde, lässt sich löschen“" "allowed" "$F5_RESULT"
 
 # (g) Wiederherstellen: eigene Fixture mit VORBELEGTEM deleted_at (haengt nicht an (a)).
 # deleted_at zurueck auf NULL bleibt erlaubt.
@@ -374,7 +374,7 @@ if [[ "$G_RESULT" == "allowed" ]]; then
 [Statusabfrage deleted_at wieder NULL: $G_STATE]"
   [[ "$G_STATE" == "1" ]] || G_RESULT="denied"
 fi
-check "(g) deleted_at wieder auf NULL setzen (Wiederherstellen, eigene Fixture) erlaubt" "allowed" "$G_RESULT"
+check "(g) deleted_at wieder auf NULL setzen (Wiederherstellen, eigene Fixture) erlaubt @LZ-090 „Und ein Turnier im Papierkorb lässt sich weiterhin wiederherstellen“" "allowed" "$G_RESULT"
 
 # (h) Besitzer loescht DIREKT eine match_events-Alt-Zeile: abgelehnt. Die Ablehnung muss vom
 # TRIGGER kommen (Fehlertext "Ereignis"), nicht von einer RLS-Ablehnung — die delete-Policy
@@ -385,9 +385,9 @@ H_RESULT="$LAST_WRITE_RESULT"
 if [[ "$H_RESULT" == "denied" ]]; then
   H_REASON="fail"
   grep -q "Ereignis" <<<"$LAST_WRITE_OUTPUT" && H_REASON="trigger"
-  check "(h) Besitzer loescht match_events-Alt-Zeile direkt: abgelehnt (Meldung Ereignis)" "trigger" "$H_REASON"
+  check "(h) Besitzer loescht match_events-Alt-Zeile direkt: abgelehnt (Meldung Ereignis) @LZ-090 „Olli hat den Spielplan zurückgesetzt, die Ereignisse sind erhalten“" "trigger" "$H_REASON"
 else
-  check "(h) Besitzer loescht match_events-Alt-Zeile direkt: abgelehnt" "denied" "$H_RESULT"
+  check "(h) Besitzer loescht match_events-Alt-Zeile direkt: abgelehnt @LZ-090 „Olli hat den Spielplan zurückgesetzt, die Ereignisse sind erhalten“" "denied" "$H_RESULT"
 fi
 
 # (h2) Status-Reset plus Soft-Delete von T_EVENTS in einer Transaktion: weiter abgelehnt.
@@ -399,9 +399,9 @@ H2_RESULT="$LAST_WRITE_RESULT"
 if [[ "$H2_RESULT" == "denied" ]]; then
   H2_REASON="fail"
   grep -q "tournament_started" <<<"$LAST_WRITE_OUTPUT" && H2_REASON="sperre"
-  check "(h2) nach Status-Reset: Soft-Delete von T_EVENTS weiter abgelehnt (Meldung tournament_started)" "sperre" "$H2_REASON"
+  check "(h2) nach Status-Reset: Soft-Delete von T_EVENTS weiter abgelehnt (Meldung tournament_started) @LZ-090 „Olli hat den Spielplan zurückgesetzt, die Ereignisse sind erhalten“" "sperre" "$H2_REASON"
 else
-  check "(h2) nach Status-Reset: Soft-Delete von T_EVENTS weiter abgelehnt" "denied" "$H2_RESULT"
+  check "(h2) nach Status-Reset: Soft-Delete von T_EVENTS weiter abgelehnt @LZ-090 „Olli hat den Spielplan zurückgesetzt, die Ereignisse sind erhalten“" "denied" "$H2_RESULT"
 fi
 
 # (i) Wartungsrolle postgres: DELETE eines angepfiffenen Turniers MIT Ereignissen muss erlaubt
