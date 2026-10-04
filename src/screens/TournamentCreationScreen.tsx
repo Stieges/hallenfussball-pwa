@@ -19,7 +19,9 @@ import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { useToast } from '../components/ui/Toast';
 import { AuthSection } from '../components/layout/AuthSection';
 
-/** E2: Struktur = Teams, Felder, Modus, Spiel-/Pausenzeiten. Metadaten (Name, Ort, Datum, Texte) zählen nicht. */
+/** E2 + Controller-Ruling Fixrunde 2: Struktur = alles, was die Generatoren
+ *  außer Metadaten lesen — Teams, Felder, Modus, Gruppen, Finalrunde,
+ *  Startzeit und Datum. Übrige Metadaten (Name, Ort, Texte) zählen nicht. */
 function hasStructuralChanges(current: Tournament, next: Tournament): boolean {
   const teamSignature = (t: Tournament): string =>
     [...t.teams]
@@ -36,7 +38,20 @@ function hasStructuralChanges(current: Tournament, next: Tournament): boolean {
     current.groupPhaseBreakDuration !== next.groupPhaseBreakDuration ||
     current.finalRoundGameDuration !== next.finalRoundGameDuration ||
     current.finalRoundBreakDuration !== next.finalRoundBreakDuration ||
-    current.breakBetweenPhases !== next.breakBetweenPhases
+    current.breakBetweenPhases !== next.breakBetweenPhases ||
+    current.numberOfGroups !== next.numberOfGroups ||
+    current.date !== next.date ||
+    current.timeSlot !== next.timeSlot ||
+    current.startTime !== next.startTime ||
+    current.gamePeriods !== next.gamePeriods ||
+    current.halftimeBreak !== next.halftimeBreak ||
+    current.minRestSlots !== next.minRestSlots ||
+    current.useDFBKeys !== next.useDFBKeys ||
+    current.dfbKeyPattern !== next.dfbKeyPattern ||
+    JSON.stringify(current.groups) !== JSON.stringify(next.groups) ||
+    JSON.stringify(current.finalsConfig) !== JSON.stringify(next.finalsConfig) ||
+    JSON.stringify(current.finals) !== JSON.stringify(next.finals) ||
+    JSON.stringify(current.refereeConfig) !== JSON.stringify(next.refereeConfig)
   );
 }
 

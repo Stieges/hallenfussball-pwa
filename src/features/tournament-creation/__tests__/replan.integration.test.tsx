@@ -301,4 +301,37 @@ describe('B-02 Paket A – Neuplanen im Wizard mit Vorschau (Integration)', () =
     await screen.findByTestId('replan-panel');
     expect(spies.publishTournament).not.toHaveBeenCalled();
   });
+
+  it('E2 – Gruppenzahl geaendert: Speichern & Zurück fuehrt ins Neuplanen-Panel', async () => {
+    const current = spies.existing ?? established();
+    spies.formDataOverride = { ...current, numberOfGroups: 2 };
+    renderScreen(current, true);
+
+    fireEvent.click(screen.getByTestId('quickedit-save'));
+
+    await screen.findByTestId('replan-panel');
+    expect(spies.publishTournament).not.toHaveBeenCalled();
+  });
+
+  it('E2 – Startzeit geaendert: Speichern & Zurück fuehrt ins Neuplanen-Panel', async () => {
+    const current = spies.existing ?? established();
+    spies.formDataOverride = { ...current, timeSlot: '10:30', startTime: '10:30' };
+    renderScreen(current, true);
+
+    fireEvent.click(screen.getByTestId('quickedit-save'));
+
+    await screen.findByTestId('replan-panel');
+    expect(spies.publishTournament).not.toHaveBeenCalled();
+  });
+
+  it('E2 – Datum geaendert: Speichern & Zurück fuehrt ins Neuplanen-Panel', async () => {
+    const current = spies.existing ?? established();
+    spies.formDataOverride = { ...current, date: '2030-02-02' };
+    renderScreen(current, true);
+
+    fireEvent.click(screen.getByTestId('quickedit-save'));
+
+    await screen.findByTestId('replan-panel');
+    expect(spies.publishTournament).not.toHaveBeenCalled();
+  });
 });
