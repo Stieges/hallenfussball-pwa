@@ -98,7 +98,7 @@ describe('OfflineRepository.syncUp – A-02: Spielseiten im Delta-Sync', () => {
   });
 
   // A-03 (M4): Besetzung nur aus bestätigtem Server-Stand
-  it('@TM-035 nur lokal aufgelöste Seite (resolvedFrom) gegen offene Cloud-Seite ist keine Strukturänderung', async () => {
+  it('@TM-027 nur lokal aufgelöste Seite (resolvedFrom) gegen offene Cloud-Seite löst kein Voll-Speichern aus', async () => {
     const source = { kind: 'matchResult', matchId: HF1, role: 'winner' } as const;
     const local = tournament({ slotA: teamSlot(NORD, source), slotB: teamSlot(SUED) }, 2);
     const remote = tournament({ slotA: pendingSlot(source), slotB: teamSlot(SUED) }, 1);
@@ -110,7 +110,7 @@ describe('OfflineRepository.syncUp – A-02: Spielseiten im Delta-Sync', () => {
     expect(mockSupabase.save).not.toHaveBeenCalled();
   });
 
-  it('@TM-035 Gegenbeispiel: direkt besetzte Seite (ohne resolvedFrom) gegen offene Cloud-Seite erzwingt weiter das Voll-Speichern', async () => {
+  it('@TM-027 Gegenbeispiel: direkt besetzte Seite (ohne resolvedFrom) gegen offene Cloud-Seite erzwingt weiter das Voll-Speichern', async () => {
     const source = { kind: 'matchResult', matchId: HF1, role: 'winner' } as const;
     const local = tournament({ slotA: teamSlot(NORD), slotB: teamSlot(SUED) }, 2);
     const remote = tournament({ slotA: pendingSlot(source), slotB: teamSlot(SUED) }, 1);
@@ -122,7 +122,7 @@ describe('OfflineRepository.syncUp – A-02: Spielseiten im Delta-Sync', () => {
     expect(mockSupabase.save).toHaveBeenCalledTimes(1);
   });
 
-  it('@TM-035 lokal aufgelöst mit anderem Team als die Cloud-Auflösung: kein Voll-Speichern (der Server entscheidet)', async () => {
+  it('@TM-027 lokal aufgelöst mit anderem Team als die Cloud-Auflösung: löst kein Voll-Speichern aus', async () => {
     const source = { kind: 'groupRank', group: 'A', rank: 1 } as const;
     const local = tournament({ slotA: teamSlot(NORD, source), slotB: teamSlot(SUED) }, 2);
     const remote = tournament({ slotA: teamSlot(SUED, source), slotB: teamSlot(SUED) }, 1);
