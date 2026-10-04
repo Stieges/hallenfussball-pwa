@@ -98,6 +98,13 @@ export function buildReplanPreview(
     // behält es Anstoßzeit und Feld; kollidiert der neue Plan damit, gilt
     // @W5-008 (Grund und Lösungsvorschlag, nicht bestätigbar).
     const keptMatches = tournament.matches.filter(matchHasEvents);
+    // G6/W3: Spieldauer je Phase – Finalrunde hat eine eigene Dauer.
+    const durationFor = (phase: string | undefined): number =>
+      phase && phase !== 'groupStage'
+        ? (tournament.finalRoundGameDuration ??
+            tournament.groupPhaseGameDuration ??
+            0)
+        : (tournament.groupPhaseGameDuration ?? 0);
     const keptByPairing = keptMatches.map((m) => ({
       match: m,
       pairing: [m.teamA, m.teamB].sort().join(':'),
@@ -137,7 +144,7 @@ export function buildReplanPreview(
         field: pinned ? kept.field : g.field,
         startTime: keptStart,
         endTime: new Date(
-          keptStart.getTime() + (tournament.groupPhaseGameDuration ?? 0) * 60000
+          keptStart.getTime() + durationFor(kept.phase ?? (kept.isFinal ? 'final' : 'groupStage')) * 60000
         ),
         originalTeamA: kept.teamA,
         originalTeamB: kept.teamB,
@@ -155,7 +162,7 @@ export function buildReplanPreview(
           slot: schedule.allMatches.length,
           startTime: keptStart,
           endTime: new Date(
-            keptStart.getTime() + (tournament.groupPhaseGameDuration ?? 0) * 60000
+            keptStart.getTime() + durationFor(m.phase ?? (m.isFinal ? 'final' : 'groupStage')) * 60000
           ),
           originalTeamA: m.teamA,
           originalTeamB: m.teamB,
@@ -235,7 +242,14 @@ export function applyReplan(
     // @W5-009: Das behaltene Spiel liegt mit seinen Ergebnissen im Plan.
     const kept = keptById.get(m.id);
     if (kept) {
-      return kept;
+      // G6/W3: eine Wahrheitsquelle – das merged-Item (Zeit/Feld aus dem
+      // Merge) mit den Daten aus kept (Ergebnis, Events, Status).
+      return {
+        ...kept,
+        field: m.field,
+        slot: m.slot,
+        scheduledTime: m.startTime,
+      };
     }
     return ({
     id: m.id,
