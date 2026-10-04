@@ -3,13 +3,16 @@
  * Besitzer: B-21 -- Soll-Marker: der Bildschirm unter `/tv` zeigt seinen Kopplungs-Code
  * (`tv-pairing-code`).
  */
-import { expectSollMarker } from './shared';
+import { expect } from '@playwright/test';
+import { expectSollMarker, SOLL_TIMEOUT_MS } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function tvGekoppelt({ anonPage }: StepContext): Promise<void> {
   await anonPage.goto('/#/tv');
   await anonPage.waitForLoadState('networkidle');
   await expectSollMarker(anonPage, 'tv-pairing-code');
+  // Soll-Wirkung (sichtbar): der Kopplungs-Code ist ein echter Code (mind. 4 Zeichen, nur Buchstaben/Ziffern/Bindestrich), kein leeres Element.
+  await expect(anonPage.locator('[data-testid="tv-pairing-code"]')).toHaveText(/^\s*[A-Z0-9-]{4,}\s*$/i, { timeout: SOLL_TIMEOUT_MS });
 }
 
 export const steps: readonly TurniertagStep[] = [

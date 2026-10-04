@@ -34,7 +34,8 @@ export interface TurniertagTeam {
   group_letter: string | null;
 }
 
-async function getRows<T>(query: string, label: string): Promise<T[]> {
+/** Liest Zeilen per Service-Role-REST (nur lokaler Stack); die Soll-Wirkungen der `test.fail`-Schritte nutzen es. */
+export async function getRows<T>(query: string, label: string): Promise<T[]> {
   const { url, headers } = getLocalServiceRoleClient();
   const res = await fetch(`${url}/rest/v1/${query}`, { headers });
   if (!res.ok) {
@@ -67,6 +68,9 @@ export function turniertagEventId(key: string): string {
 
 /**
  * Soll-Marker eines noch nicht gebauten Schritts: das Bedienelement, das der Besitzer baut.
+ * Der Marker allein genügt NICHT (Fixrunde 1, 6.1): jeder `test.fail`-Schritt prüft danach mindestens
+ * EINE fachliche Wirkung (DB oder sichtbarer Zustand). Ein fremdes `data-testid` macht ihn so nicht grün.
+ * Der Besitzer stellt den Schritt erst auf `expectedFail: false`, wenn alle Soll-Zeilen grün sind.
  * Der Besitzer präzisiert den Marker beim Bauen -- bis dahin scheitert der Schritt hier und ist
  * als `test.fail` markiert. Wird er unerwartet grün, meldet Playwright "Expected to fail".
  */
