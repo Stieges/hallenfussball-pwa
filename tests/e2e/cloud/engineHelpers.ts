@@ -14,10 +14,10 @@ import { expect, type Browser, type BrowserContext, type Page } from '@playwrigh
 import { AUTH_DIR, type LoggedInRole } from './fixtures';
 import { getLocalServiceRoleClient } from './helpers';
 import { e2eUuid } from './e2eUuid';
+import { isSeedTooOld } from './seedAge';
 import { engineCupSeedEventIds, engineCupIds, getEngineCup, type EngineCupForm, type EngineCupSlug } from './engineCups';
 
 /** Restzeit-Reserve: ein Seed gilt als zu alt, wenn weniger als 5 min Spielzeit übrig sind. */
-const MIN_REMAINING_MS = 300_000;
 const CLIENT_FORMAT = 1;
 
 // =============================================================================
@@ -220,7 +220,7 @@ export async function expectSeededEngineMatch(target: SeededEngineTarget): Promi
     }
     const serverNow = await fetchServerNowMs();
     const ageMs = serverNow - Date.parse(startRow.client_time);
-    if (ageMs >= live.durationSeconds * 1000 - MIN_REMAINING_MS) {
+    if (isSeedTooOld(ageMs, live.durationSeconds)) {
       throw new Error(`${target.label}: Seed zu alt (${Math.round(ageMs / 1000)} s seit Anpfiff) -- npm run test:env:seed.`);
     }
   }
