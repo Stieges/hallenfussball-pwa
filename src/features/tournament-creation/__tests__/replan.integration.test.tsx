@@ -16,6 +16,7 @@ const spies = vi.hoisted(() => ({
   existing: undefined as Tournament | undefined,
   startState: 'not-started',
   recheck: vi.fn<() => Promise<'not-started' | 'started' | 'unknown'>>(),
+  formDataOverride: undefined as Partial<Tournament> | undefined,
 }));
 
 vi.mock('../../../lib/supabase', () => ({
@@ -79,7 +80,7 @@ vi.mock('../../../hooks/useTournamentWizard', () => ({
       throw new Error('Test-Setup fehlt: existingTournament');
     }
     // formData spiegelt die Strukturänderung: Feld hinzufügen (1 → 2)
-    const formData = { ...base, numberOfFields: 2 };
+    const formData = spies.formDataOverride ?? { ...base, numberOfFields: 2 };
     return {
       step: 6,
       formData,
@@ -173,7 +174,7 @@ const established = (): Tournament => {
   };
 };
 
-const renderScreen = (existing: Tournament) =>
+const renderScreen = (existing: Tournament, quickEditMode = false) =>
   render(
     <MemoryRouter>
       <ToastProvider>
@@ -181,6 +182,7 @@ const renderScreen = (existing: Tournament) =>
           onBack={vi.fn()}
           onSave={spies.onSave}
           existingTournament={existing}
+          quickEditMode={quickEditMode}
           onNavigateToLogin={vi.fn()}
           onNavigateToRegister={vi.fn()}
           onNavigateToProfile={vi.fn()}
@@ -195,6 +197,7 @@ describe('B-02 Paket A – Neuplanen im Wizard mit Vorschau (Integration)', () =
     spies.existing = established();
     spies.startState = 'not-started';
     spies.recheck.mockResolvedValue('not-started');
+    spies.formDataOverride = undefined;
     spies.publishTournament.mockImplementation((override?: Partial<Tournament>) =>
       Promise.resolve({ ...spies.existing, ...override } as Tournament)
     );
@@ -273,5 +276,29 @@ describe('B-02 Paket A – Neuplanen im Wizard mit Vorschau (Integration)', () =
     });
     expect(spies.publishTournament).not.toHaveBeenCalled();
     await screen.findByTestId('replan-blocked');
+  });
+
+  it('E2 – nur Metadaten geändert: Speichern & Zurück speichert direkt', async () => {
+    const current = spies.existing ?? established();
+    spies.formDataOverride = { ...current, title: 'Nur Titel geaendert' };
+    renderScreen(current, true);
+
+    fireEvent.click(screen.getByTestId('quickedit-save'));
+
+    await waitFor(() => {
+      expect(spies.publishTournament).toHaveBeenCalled();
+    });
+    expect(screen.queryByTestId('replan-panel')).not.toBeInTheDocument();
+  });
+
+  it('E2 – Struktur geaendert: Speichern & Zurück fuehrt ins Neuplanen-Panel', async () => {
+    const current = spies.existing ?? established();
+    spies.formDataOverride = { ...current, numberOfFields: 3 };
+    renderScreen(current, true);
+
+    fireEvent.click(screen.getByTestId('quickedit-save'));
+
+    await screen.findByTestId('replan-panel');
+    expect(spies.publishTournament).not.toHaveBeenCalled();
   });
 });

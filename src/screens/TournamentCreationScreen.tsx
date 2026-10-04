@@ -19,6 +19,27 @@ import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { useToast } from '../components/ui/Toast';
 import { AuthSection } from '../components/layout/AuthSection';
 
+/** E2: Struktur = Teams, Felder, Modus, Spiel-/Pausenzeiten. Metadaten (Name, Ort, Datum, Texte) zählen nicht. */
+function hasStructuralChanges(current: Tournament, next: Tournament): boolean {
+  const teamSignature = (t: Tournament): string =>
+    [...t.teams]
+      .map((team) => `${team.id}:${team.isRemoved ? 1 : 0}`)
+      .sort()
+      .join('|');
+  return (
+    teamSignature(current) !== teamSignature(next) ||
+    current.numberOfFields !== next.numberOfFields ||
+    current.mode !== next.mode ||
+    current.tournamentType !== next.tournamentType ||
+    current.groupSystem !== next.groupSystem ||
+    current.groupPhaseGameDuration !== next.groupPhaseGameDuration ||
+    current.groupPhaseBreakDuration !== next.groupPhaseBreakDuration ||
+    current.finalRoundGameDuration !== next.finalRoundGameDuration ||
+    current.finalRoundBreakDuration !== next.finalRoundBreakDuration ||
+    current.breakBetweenPhases !== next.breakBetweenPhases
+  );
+}
+
 // Lazy load step components for better performance
 const Step1_SportAndType = lazy(() =>
   import('../features/tournament-creation').then(module => ({ default: module.Step1_SportAndType }))
@@ -356,6 +377,19 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     }
   };
 
+  // E2: „Speichern & Zurück" – nur Metadaten geändert speichert direkt,
+  // eine Strukturänderung führt über handlePreview ins Neuplanen-Panel.
+  const handleSaveAndBack = () => {
+    if (
+      existingTournament &&
+      hasStructuralChanges(existingTournament, createDraftTournament())
+    ) {
+      handlePreview();
+      return;
+    }
+    void handlePublish();
+  };
+
   const handleBackToDashboard = () => {
     // Check if there are any unsaved changes
     /* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if any field has data */
@@ -488,8 +522,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           </div>
           <Button
             variant="primary"
-            onClick={() => void handlePublish()}
+            onClick={() => handleSaveAndBack()}
             style={{ background: cssVars.colors.success }}
+            data-testid="quickedit-save"
           >
             Speichern & Zurück
           </Button>
