@@ -26,16 +26,37 @@ import {
   type MatchStartState,
 } from '../utils/matchStartState';
 
+export interface UseTournamentStartStateOptions {
+  /**
+   * Ist die destruktive Aktion überhaupt vorgesehen? Ohne Aktion wird der
+   * Live-Stand NICHT gelesen (B-01a Fixrunde 2, P1): eine Server-Abfrage, die
+   * das Ergebnis nicht ändern kann, wird gespart.
+   */
+  enabled?: boolean;
+}
+
 export function useTournamentStartState(
-  tournament: Pick<Tournament, 'id' | 'matches' | 'status' | 'publishedAt'>
+  tournament: Pick<Tournament, 'id' | 'matches' | 'status' | 'publishedAt'>,
+  options?: UseTournamentStartStateOptions
 ): MatchStartState {
+  const enabled = options?.enabled ?? true;
   const liveRepository = useOptionalLiveMatchRepository();
-  const [live, setLive] = useState<LiveStartSignal>(
-    liveRepository ? { status: 'loading' } : undefined
-  );
+
+  // U0 (F1): „festgelegt" = veröffentlicht (status ODER der monotone Freigabe-
+  // Marker publishedAt — „Im Wizard bearbeiten" setzt transient auf 'draft' zurück).
+  const isEstablished = tournament.status === 'published' || tournament.publishedAt !== undefined;
+
+  // P1: Live-Abfrage nur, wenn sie das Ergebnis ändern kann: die Aktion ist
+  // vorgesehen (enabled), der Grundzustand aus den Spielen ist 'not-started'
+  // (nur dann kann der Live-Stand noch 'started' beweisen) und es sind Spiele
+  // geladen (matches.length > 0).
+  const fromMatches = getMatchStartState(tournament.matches, undefined, isEstablished);
+  const hasMatches = (tournament.matches?.length ?? 0) > 0;
+  const needsLive = enabled && fromMatches === 'not-started' && hasMatches;
+  const [live, setLive] = useState<LiveStartSignal>(undefined);
 
   useEffect(() => {
-    if (!liveRepository || !tournament.id) {
+    if (!needsLive || !liveRepository || !tournament.id) {
       return;
     }
     let cancelled = false;
@@ -67,10 +88,11 @@ export function useTournamentStartState(
     return () => {
       cancelled = true;
     };
-  }, [liveRepository, tournament.id]);
+  }, [needsLive, liveRepository, tournament.id]);
 
-  // U0 (F1): „festgelegt" = veröffentlicht (status ODER der monotone Freigabe-
-  // Marker publishedAt — „Im Wizard bearbeiten" setzt transient auf 'draft' zurück).
-  const isEstablished = tournament.status === 'published' || tournament.publishedAt !== undefined;
-  return getMatchStartState(tournament.matches, live, isEstablished);
+  // Ohne Bedarf für den Live-Stand entscheidet die lokale Match-Liste allein;
+  // mit Bedarf gilt 'loading', bis die Abfrage steht (fail-closed).
+  const signal: LiveStartSignal =
+    needsLive && liveRepository ? (live ?? { status: 'loading' }) : undefined;
+  return getMatchStartState(tournament.matches, signal, isEstablished);
 }
