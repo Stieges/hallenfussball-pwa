@@ -194,13 +194,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     );
 
     if (confirmWizard && onEditInWizard) {
-      // Set tournament back to draft status for wizard editing
-      const draftTournament: Tournament = {
+      // @W5-004/@LZ-004: Bearbeiten setzt ein Turnier NIE auf Entwurf zurück.
+      const wizardTournament: Tournament = {
         ...tournament,
-        status: 'draft',
         lastVisitedStep: targetStep,
       };
-      onEditInWizard(draftTournament, targetStep);
+      onEditInWizard(wizardTournament, targetStep);
     }
   };
 

@@ -93,7 +93,8 @@ describe('SettingsTab — „Im Wizard bearbeiten" nur vor dem ersten Anpfiff (@
     await user.click(screen.getByRole('button', { name: /settings\.advancedEditing\.editTeams/ }));
 
     expect(onEditInWizard).toHaveBeenCalledTimes(1);
-    expect(onEditInWizard.mock.calls[0][0].status).toBe('draft');
+    // @W5-004: Bearbeiten setzt nie auf Entwurf zurück (alte Aussage „setzt auf Entwurf" widersprach @W5-004)
+    expect(onEditInWizard.mock.calls[0][0].status).toBe('published');
     expect(onEditInWizard.mock.calls[0][1]).toBe(5);
   });
 });
