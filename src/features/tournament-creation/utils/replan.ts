@@ -4,13 +4,14 @@
  * Die Anpfiff-Prüfung nutzt die GEMEINSAME Funktion `getMatchStartState`
  * (src/utils/matchStartState.ts, @LZ-003 / B-01a) – keine Kopie.
  */
-import type { Match, Tournament } from '../../../types/tournament';
+import type { Match, Team, Tournament } from '../../../types/tournament';
 import {
   generateFullSchedule,
   type GeneratedSchedule,
 } from '../../../core/generators';
 import { getMatchStartState } from '../../../utils/matchStartState';
 import { matchHasResult } from '../../../utils/teamHelpers';
+import { replaceSides } from './matchSides';
 
 /** „Spiel mit Ereignissen" (@W5-009): Ergebnis, Laufzeit-Events oder Status ungleich geplant. */
 function matchHasEvents(match: Match): boolean {
@@ -140,5 +141,39 @@ export function openReplan(
       preview.status === 'preview'
         ? applyReplan(updated, preview)
         : current,
+  };
+}
+
+export interface ReplaceTeamResult {
+  tournament: Tournament;
+  logEntry: { label: string; timestamp: string; person: string };
+}
+
+/**
+ * @W5-010: Team ersetzen – Team N übernimmt Platz, Spiele und bisherige
+ * Ergebnisse von Team C. Paarungen und Anstoßzeiten bleiben unverändert,
+ * es wird nichts neu gelost. Der Verlauf hält „Team C durch Team N ersetzt"
+ * mit Zeit und Person fest.
+ */
+export function replaceTeam(
+  tournament: Tournament,
+  change: { fromTeamId: string; toTeam: Team; person: string }
+): ReplaceTeamResult {
+  const teams = tournament.teams.map((team) =>
+    team.id === change.fromTeamId ? change.toTeam : team
+  );
+  const matches = tournament.matches.map((match) =>
+    replaceSides(match, change.fromTeamId, change.toTeam.id)
+  );
+  const fromName =
+    tournament.teams.find((team) => team.id === change.fromTeamId)?.name ??
+    change.fromTeamId;
+  return {
+    tournament: { ...tournament, teams, matches },
+    logEntry: {
+      label: `Team ${fromName} durch Team ${change.toTeam.name} ersetzt`,
+      timestamp: new Date().toISOString(),
+      person: change.person,
+    },
   };
 }
