@@ -110,10 +110,6 @@ describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
     expect(preview.status).toBe('preview');
     if (preview.status !== 'preview') { return; }
     expect(preview.keptMatches.map((m) => m.id)).toContain(orphan.id);
-    if (!('conflictMatchIds' in preview)) {
-      expect(preview.conflictMatchIds).toBeDefined();
-      return;
-    }
     expect(preview.conflictMatchIds).toContain(orphan.id);
   });
 

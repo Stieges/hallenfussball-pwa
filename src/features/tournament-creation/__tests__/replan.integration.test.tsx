@@ -194,7 +194,8 @@ describe('B-02 Paket A – Neuplanen im Wizard mit Vorschau (Integration)', () =
   });
 
   it('@W5-005 – Feld hinzufügen → Vorschau mit Endzeit → Bestätigen ersetzt den Plan und veröffentlicht', async () => {
-    renderScreen(spies.existing);
+    const current = spies.existing ?? established();
+    renderScreen(current);
 
     fireEvent.click(screen.getByTestId('wizard-show-preview'));
 
@@ -213,11 +214,12 @@ describe('B-02 Paket A – Neuplanen im Wizard mit Vorschau (Integration)', () =
     const override = spies.publishTournament.mock.calls[0][0]!;
     // Der bestätigte Plan ist der neue: Das hinzugefügte Feld wird genutzt
     expect((override.matches ?? []).some((m) => m.field === 2)).toBe(true);
-    expect(spies.existing.matches.some((m) => m.field === 2)).toBe(false);
+    expect(current.matches.some((m) => m.field === 2)).toBe(false);
   });
 
   it('@W5-007 – Gegenbeispiel: Abbrechen lässt den Plan unverändert', async () => {
-    renderScreen(spies.existing);
+    const current = spies.existing ?? established();
+    renderScreen(current);
 
     fireEvent.click(screen.getByTestId('wizard-show-preview'));
     await screen.findByTestId('replan-end-time');
@@ -225,7 +227,7 @@ describe('B-02 Paket A – Neuplanen im Wizard mit Vorschau (Integration)', () =
     fireEvent.click(screen.getByTestId('replan-cancel'));
 
     await waitFor(() => {
-      expect(spies.setFormData).toHaveBeenCalledWith(spies.existing);
+      expect(spies.setFormData).toHaveBeenCalledWith(current);
     });
     expect(spies.publishTournament).not.toHaveBeenCalled();
     expect(spies.onSave).not.toHaveBeenCalled();

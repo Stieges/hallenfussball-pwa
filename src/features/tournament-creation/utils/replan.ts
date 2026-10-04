@@ -115,8 +115,9 @@ export function buildReplanPreview(
       // Controller-Ruling: Mit persistierter Anstoßzeit behält das geschützte
       // Spiel Anstoßzeit UND Feld. Ohne persistierte Anstoßzeit gilt der neue
       // Slot (Ergebnis/Ereignisse bleiben in jedem Fall erhalten).
-      const pinned = kept.scheduledTime !== undefined;
-      const keptStart = pinned ? new Date(kept.scheduledTime) : g.startTime;
+      const keptTime = kept.scheduledTime;
+      const pinned = keptTime !== undefined;
+      const keptStart = pinned ? new Date(keptTime) : g.startTime;
       return {
         ...g,
         id: kept.id,
@@ -145,7 +146,7 @@ export function buildReplanPreview(
           ),
           originalTeamA: m.teamA,
           originalTeamB: m.teamB,
-          phase: m.phase ?? (m.isFinal ? 'final' : 'groupStage'),
+          phase: (m.phase ?? (m.isFinal ? 'final' : 'groupStage')) as (typeof schedule.allMatches)[number]['phase'],
           finalType: m.finalType,
           label: m.label,
           group: m.group,
