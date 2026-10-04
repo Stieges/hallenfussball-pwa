@@ -39,7 +39,7 @@ export const TURNIERTAG_STEPS: readonly TurniertagStep[] = [
 test.describe('Turniertag-Durchstich (D1-D15)', () => {
   // 'default' statt 'parallel' (fullyParallel in der Config): die Schritte laufen nacheinander im selben
   // Worker; ein unerwartet grüner Schritt bricht die Kette nicht ab (nur 'serial' würde den Rest überspringen).
-  test.describe.configure({ mode: 'default' });
+  test.describe.configure({ mode: 'default', retries: 0 });
 
   // eslint-disable-next-line no-empty-pattern
   test.beforeEach(async ({}, testInfo) => {

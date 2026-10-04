@@ -44,5 +44,5 @@ async function cloudStand({ asRole }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D2', title: 'Cloud-Stand: Team-IDs, Herkunft der Finalrunde, zweites Gerät sieht denselben Spielplan', scenarios: ['@TM-015'], owner: 'A-02', expectedFail: false, run: cloudStand },
+  { id: 'D2', title: 'Cloud-Stand: Team-IDs, Herkunft der Finalrunde, zweites Gerät sieht denselben Spielplan', scenarios: [], owner: 'A-02', expectedFail: false, run: cloudStand },
 ];
