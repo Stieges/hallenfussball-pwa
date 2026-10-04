@@ -31,9 +31,9 @@ import { steps as d15 } from './turniertag/steps/d15-zweites-turnier';
 import type { TurniertagStep } from './turniertag/steps/types';
 
 export const TURNIERTAG_STEPS: readonly TurniertagStep[] = [
-  // d01Monitor (@TM-015 Hallen-Monitor) steht hinter d08: erst nach dem Gruppenabschluss zeigt
-  // die LiveSlide von Feld 1 das Halbfinale (Fixrunde 1, W-6.3).
-  ...d01, ...d02, ...direktaufruf, ...d03, ...d04, ...d05, ...d06, ...d07, ...d07b, ...d08, ...d01Monitor, ...d09, ...d10, ...d11, ...d12, ...d13, ...d14, ...d15,
+  // d01Monitor (@TM-015 Hallen-Monitor) steht vor d08: die Vorbereitung beendet nur die
+  // Gruppenspiele auf Feld 1, auf Feld 2 laufen Gruppe A und B noch (Szenario @TM-015).
+  ...d01, ...d02, ...direktaufruf, ...d03, ...d04, ...d05, ...d06, ...d07, ...d07b, ...d01Monitor, ...d08, ...d09, ...d10, ...d11, ...d12, ...d13, ...d14, ...d15,
 ];
 
 test.describe('Turniertag-Durchstich (D1-D15)', () => {
