@@ -20,6 +20,8 @@ import { teamReplacedLabel } from '../../tournament-admin/constants/admin.consta
 /** „Spiel mit Ereignissen" (@W5-009): Ergebnis, Laufzeit-Events oder Status ungleich geplant. */
 function matchHasEvents(match: Match): boolean {
   return (
+    match.scoreA !== undefined ||
+    match.scoreB !== undefined ||
     matchHasResult(match) ||
     (match.events?.length ?? 0) > 0 ||
     (match.matchStatus !== undefined && match.matchStatus !== 'scheduled')
