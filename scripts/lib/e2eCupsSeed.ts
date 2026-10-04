@@ -246,7 +246,7 @@ export async function seedTurniertagCup(
       groupSystem: 'groupsAndFinals',
       numberOfGroups: 2,
       groupPhaseGameDuration: 60,
-      gamePeriods: 1,
+      gamePeriods: 2,
       finals: { final: true, thirdPlace: true, fifthSixth: false, seventhEighth: false },
       finalsConfig: { preset: 'top-4' },
       teams,

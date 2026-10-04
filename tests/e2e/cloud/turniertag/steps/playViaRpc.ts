@@ -12,20 +12,34 @@ function event(type: string, at: number, extra: Partial<AppendAsRoleEvent> = {})
   return { id: randomUUID(), type, at, section: 1, clockMs: 0, teamId: null, targetId: null, payload: {}, ...extra };
 }
 
-/** Anpfiff, `goalsA`/`goalsB` Tore (Zeiten streng aufsteigend), Abpfiff -- alles in der Vergangenheit. */
+/** Anpfiff, Tore in zwei Abschnitten mit Halbzeit, Abpfiff -- alles in der Vergangenheit. */
 export function regularResultEvents(match: TurniertagMatch, goalsA: number, goalsB: number, startedOffsetMs = SPAN_MS): AppendAsRoleEvent[] {
   const start = Date.now() - startedOffsetMs;
   const events: AppendAsRoleEvent[] = [event('MATCH_START', start)];
   let at = start;
-  for (let i = 0; i < goalsA; i++) {
+  const halfA = Math.ceil(goalsA / 2);
+  const halfB = Math.ceil(goalsB / 2);
+  for (let i = 0; i < halfA; i++) {
     at += 1000;
     events.push(event('GOAL', at, { clockMs: at - start, teamId: match.team_a_id }));
   }
-  for (let i = 0; i < goalsB; i++) {
+  for (let i = 0; i < halfB; i++) {
     at += 1000;
     events.push(event('GOAL', at, { clockMs: at - start, teamId: match.team_b_id }));
   }
-  events.push(event('MATCH_END', at + 1000, { clockMs: at + 1000 - start }));
+  at += 1000;
+  events.push(event('SECTION_END', at, { clockMs: at - start }));
+  at += 1000;
+  events.push(event('SECTION_START', at, { clockMs: at - start, section: 2 }));
+  for (let i = halfA; i < goalsA; i++) {
+    at += 1000;
+    events.push(event('GOAL', at, { clockMs: at - start, teamId: match.team_a_id, section: 2 }));
+  }
+  for (let i = halfB; i < goalsB; i++) {
+    at += 1000;
+    events.push(event('GOAL', at, { clockMs: at - start, teamId: match.team_b_id, section: 2 }));
+  }
+  events.push(event('MATCH_END', at + 1000, { clockMs: at + 1000 - start, section: 2 }));
   return events;
 }
 
