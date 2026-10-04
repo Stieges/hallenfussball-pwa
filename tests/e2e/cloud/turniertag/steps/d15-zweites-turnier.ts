@@ -5,24 +5,35 @@
  * (`monitors-adopt-button`). Die Seite ist der Reiter "Monitore" (`/monitors`, nicht `/monitore`).
  */
 import { expect } from '@playwright/test';
+import { E2E_ZWEITES_TURNIER_ID } from '../../testData';
 import { expectPageAnchor, expectSollMarker, getRows, openTurniertagPath, SOLL_TIMEOUT_MS, TURNIERTAG_ID } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function zweitesTurnier({ asRole }: StepContext): Promise<void> {
+  // Vorbedingung: Monitore des Turniertag-Cups aus tournaments.config.monitors lesen.
+  const own = await getRows<{ config: { monitors?: { name: string }[] } }>(
+    `tournaments?id=eq.${TURNIERTAG_ID}&select=config`,
+    'Turniertag-Cup config'
+  );
+  const monitors = own[0]?.config?.monitors ?? [];
+  expect(monitors.length, 'Der Turniertag-Cup hat Monitore zum Übernehmen').toBeGreaterThan(0);
+  // Zweites Turnier öffnen (eigener leerer Seed-Cup) und dort übernehmen.
   const ownerPage = await asRole('owner');
-  await openTurniertagPath(ownerPage, '/monitors');
+  await openTurniertagPath(ownerPage, '/monitors', E2E_ZWEITES_TURNIER_ID);
   await expectPageAnchor(ownerPage.getByRole('heading', { level: 2, name: 'Monitore konfigurieren' }), 'Reiter Monitore');
   await expectSollMarker(ownerPage, 'monitors-adopt-button');
-  // Soll-Wirkung (DB): nach "Monitore übernehmen" existieren die Monitore des Turniertag-Cups
-  // (gleicher Name) auch in einem anderen Turnier.
-  const own = await getRows<{ name: string }>(`monitors?tournament_id=eq.${TURNIERTAG_ID}&select=name`, 'Monitore des Turniertag-Cups');
-  expect(own.length, 'Der Turniertag-Cup hat Monitore zum Übernehmen').toBeGreaterThan(0);
-  const query = `monitors?tournament_id=neq.${TURNIERTAG_ID}&name=in.(${own.map((m) => `"${m.name}"`).join(',')})&select=id`;
-  const before = (await getRows<{ id: string }>(query, 'übernommene Monitore vorher')).length;
+  // Soll-Wirkung (DB): nach "Monitore übernehmen" enthält config.monitors des zweiten Turniers
+  // den Monitor "Hallenbildschirm" des Turniertag-Cups.
   await ownerPage.locator('[data-testid="monitors-adopt-button"]').click();
-  await expect.poll(async () => (await getRows<{ id: string }>(query, 'übernommene Monitore nachher')).length, {
-    message: 'Monitore sind im zweiten Turnier angekommen', timeout: SOLL_TIMEOUT_MS,
-  }).toBeGreaterThan(before);
+  await expect.poll(async () => {
+    const rows = await getRows<{ config: { monitors?: { name: string }[] } }>(
+      `tournaments?id=eq.${E2E_ZWEITES_TURNIER_ID}&select=config`,
+      'Zweites Turnier config'
+    );
+    return (rows[0]?.config?.monitors ?? []).some((m) => m.name === 'Hallenbildschirm');
+  }, {
+    message: 'Monitor "Hallenbildschirm" ist im zweiten Turnier angekommen', timeout: SOLL_TIMEOUT_MS,
+  }).toBe(true);
 }
 
 export const steps: readonly TurniertagStep[] = [

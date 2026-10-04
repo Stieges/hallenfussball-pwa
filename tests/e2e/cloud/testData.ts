@@ -176,6 +176,10 @@ export const E2E_TURNIERTAG_MATCH_COUNT = 16;
 export const E2E_TURNIERTAG_SHARE_CODE = 'TURNTG';
 export const E2E_TURNIERTAG_MONITOR_ID = e2eUuid('monitor:turniertag-cup:1');
 
+/** Zweites Turnier am selben Tag (D15): leerer Seed-Cup ohne Monitore, übernimmt diese aus dem Turniertag-Cup. */
+export const E2E_ZWEITES_TURNIER_ID = e2eUuid('tournament:zweites-turnier');
+export const E2E_ZWEITES_TURNIER_TITLE = 'Zweites Turnier';
+
 /** Team-Namen des Public-Cup (kleiner, für "einige Ergebnisse"). */
 export const E2E_PUBLIC_CUP_TEAM_NAMES = ['Public Löwen', 'Public Adler', 'Public Falken', 'Public Bären'] as const;
 

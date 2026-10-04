@@ -100,6 +100,7 @@ import {
   seedLegacyCups,
   seedRunningEngineMatch,
   seedTurniertagCup,
+  seedZweitesTurnier,
 } from './lib/e2eCupsSeed';
 
 // =============================================================================
@@ -791,6 +792,7 @@ async function main(): Promise<void> {
   await seedEngineCups(engineDeps, ownerRepo, service, userIds.helper);
   await seedLegacyCups(engineDeps, ownerRepo, service, userIds.helper);
   await seedTurniertagCup(engineDeps, ownerRepo, service);
+  await seedZweitesTurnier(engineDeps, ownerRepo, service);
 
   log('Fertig.');
 }

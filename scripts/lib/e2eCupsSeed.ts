@@ -17,6 +17,8 @@ import {
   E2E_TURNIERTAG_MATCH_COUNT,
   E2E_TURNIERTAG_SHARE_CODE,
   E2E_TURNIERTAG_MONITOR_ID,
+  E2E_ZWEITES_TURNIER_ID,
+  E2E_ZWEITES_TURNIER_TITLE,
   ENGINE_CUP_SEED_NOW_START_OFFSET_MS,
   engineCupIds,
   engineEventId,
@@ -283,4 +285,42 @@ export async function seedTurniertagCup(
     throw new Error(`Fester Share-Code Turniertag-Cup: ${shareCodeError.message}`);
   }
   deps.log(`Turniertag-Cup: ${tournament.matches.length} Spiele (12 Gruppen, 2 Halbfinals, Platz 3, Finale).`);
+}
+
+/** D15: zweites Turnier am selben Tag -- leerer Cup ohne Monitore, übernimmt diese aus dem Turniertag-Cup. */
+export async function seedZweitesTurnier(
+  deps: EngineSeedDeps,
+  ownerRepo: ITournamentRepository,
+  service: TournamentCreationService
+): Promise<void> {
+  deps.log('Lege Zweites Turnier an…');
+  const teams: Team[] = ['Alpha', 'Beta', 'Gamma', 'Delta'].map((name, index) => ({
+    id: e2eUuid(`team:zweites-turnier:${name}`),
+    name,
+    group: index < 2 ? 'A' : 'B',
+  }));
+  const tournament = buildScheduledTournament(
+    service,
+    {
+      id: E2E_ZWEITES_TURNIER_ID,
+      title: E2E_ZWEITES_TURNIER_TITLE,
+      ageClass: 'U13',
+      date: new Date().toISOString().split('T')[0],
+      timeSlot: '09:00 - 16:00',
+      startTime: '09:00',
+      location: { name: 'Sporthalle Testumgebung' },
+      numberOfFields: 1,
+      numberOfTeams: teams.length,
+      groupSystem: 'groupsAndFinals',
+      numberOfGroups: 2,
+      groupPhaseGameDuration: 60,
+      gamePeriods: 1,
+      finals: { final: true, thirdPlace: false, fifthSixth: false, seventhEighth: false },
+      finalsConfig: { preset: 'top-2' },
+      teams,
+    },
+    /* isPublic */ false
+  );
+  await ownerRepo.save(tournament);
+  deps.log(`Zweites Turnier: ${tournament.matches.length} Spiele, keine Monitore.`);
 }

@@ -91,8 +91,8 @@ export async function expectPageAnchor(locator: Locator, label: string): Promise
   await expect(locator, `Seitenanker: ${label}`).toBeVisible({ timeout: ANCHOR_TIMEOUT_MS });
 }
 
-export async function openTurniertagPath(page: Page, pathSuffix: string): Promise<void> {
-  await page.goto(`/#/tournament/${TURNIERTAG_ID}${pathSuffix}`);
+export async function openTurniertagPath(page: Page, pathSuffix: string, tournamentId: string = TURNIERTAG_ID): Promise<void> {
+  await page.goto(`/#/tournament/${tournamentId}${pathSuffix}`);
   await page.waitForLoadState('networkidle');
 }
 
