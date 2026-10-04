@@ -48,6 +48,7 @@ import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { captureFeatureError } from '../../lib/sentry';
+import { selectDisplayableSlides } from './slideProgramme';
 
 // =============================================================================
 // THEME RESOLUTION
@@ -216,15 +217,42 @@ function SlideRenderer({ slide, tournament, performanceSettings, theme, overscan
     case 'custom-text':
       return <CustomTextSlide slide={slide} style={slideStyle} />;
 
+    case 'qr-code':
     default:
-      return (
-        <div style={slideStyle}>
-          <div style={{ fontSize: displayFontSizes.headingLG }}>
-            Slide-Typ "{slide.type}" wird in Phase 2 implementiert
-          </div>
-        </div>
-      );
+      // @OB-011: Kein Entwickler-Hinweis — unbekannte Folien fallen auf die
+      // Zuschauer-QR-Folie zurück (die Rotation überspringt sie ohnehin).
+      return <QrSlide tournament={tournament} style={slideStyle} />;
   }
+}
+
+// =============================================================================
+// ZUSCHAUER-QR-FOLIE (@OB-011 Rückfall)
+// =============================================================================
+
+interface QrSlideProps {
+  tournament: Tournament;
+  style: CSSProperties;
+}
+
+function QrSlide({ tournament, style }: QrSlideProps) {
+  const qrUrl = generateTournamentUrl(tournament.id);
+  return (
+    <div style={{ ...style, gap: displaySpacing.sectionMD }}>
+      <div style={{ fontSize: displayFontSizes.headingXL, fontWeight: 700 }}>
+        {tournament.title}
+      </div>
+      <QRCodeSVG
+        value={qrUrl}
+        size={220}
+        bgColor="white"
+        fgColor="black"
+        level="M"
+      />
+      <div style={{ fontSize: displayFontSizes.bodyMD }}>
+        {qrUrl}
+      </div>
+    </div>
+  );
 }
 
 // =============================================================================
@@ -982,10 +1010,17 @@ export function MonitorDisplayPage({
   const maxPixelShift = Math.min(2, Math.floor(overscanPx / 4));
   const pixelShift = usePixelShift(60_000, maxPixelShift, performanceSettings.enableAnimations);
 
+  // Darstellbare Folien (@OB-011): Folien ohne Darstellung werden übersprungen,
+  // bleibt keine übrig, gilt die Zuschauer-QR-Folie.
+  const slides = useMemo(
+    () => selectDisplayableSlides(monitor?.slides ?? []) as MonitorSlide[],
+    [monitor]
+  );
+
   // Current slide
   const currentSlide = useMemo(
-    () => monitor?.slides[slideState.currentIndex] ?? null,
-    [monitor, slideState.currentIndex]
+    () => slides[slideState.currentIndex] ?? null,
+    [slides, slideState.currentIndex]
   );
 
   // Slide duration
@@ -1156,11 +1191,11 @@ export function MonitorDisplayPage({
   // ==========================================================================
 
   const goToSlide = useCallback((index: number, direction: 'next' | 'prev') => {
-    if (!monitor || monitor.slides.length === 0) {return;}
+    if (slides.length === 0) {return;}
 
-    const nextIndex = ((index % monitor.slides.length) + monitor.slides.length) % monitor.slides.length;
+    const nextIndex = ((index % slides.length) + slides.length) % slides.length;
 
-    if (performanceSettings.enableTransitions && monitor.transition !== 'none') {
+    if (performanceSettings.enableTransitions && monitor?.transition !== 'none') {
       setSlideState(prev => ({ ...prev, isTransitioning: true, direction }));
 
       setTimeout(() => {
@@ -1169,7 +1204,7 @@ export function MonitorDisplayPage({
           isTransitioning: false,
           direction,
         });
-      }, monitor.transitionDuration);
+      }, monitor?.transitionDuration);
     } else {
       setSlideState({
         currentIndex: nextIndex,
@@ -1177,7 +1212,7 @@ export function MonitorDisplayPage({
         direction,
       });
     }
-  }, [monitor, performanceSettings.enableTransitions]);
+  }, [slides, monitor, performanceSettings.enableTransitions]);
 
   const nextSlide = useCallback(() => {
     goToSlide(slideState.currentIndex + 1, 'next');
@@ -1191,11 +1226,11 @@ export function MonitorDisplayPage({
   // nextSlide changes when slideState.currentIndex changes, which correctly
   // triggers a new timeout after each slide transition.
   useEffect(() => {
-    if (isPaused || !monitor || monitor.slides.length <= 1) {return;}
+    if (isPaused || slides.length <= 1) {return;}
 
     const timeout = setTimeout(nextSlide, slideDuration);
     return () => clearTimeout(timeout);
-  }, [isPaused, monitor, slideDuration, nextSlide]);
+  }, [isPaused, slides.length, slideDuration, nextSlide]);
 
   // ==========================================================================
   // KEYBOARD NAVIGATION
@@ -1326,7 +1361,7 @@ export function MonitorDisplayPage({
       </div>
 
       {/* Slide Indicator */}
-      {monitor.slides.length > 1 && (
+      {slides.length > 1 && (
         <div style={{
           position: 'fixed',
           bottom: displaySpacing.contentLG,
@@ -1336,7 +1371,7 @@ export function MonitorDisplayPage({
           gap: displaySpacing.inlineSM,
           zIndex: 100,
         }}>
-          {monitor.slides.map((_, idx) => (
+          {slides.map((_, idx) => (
             <div
               key={idx}
               style={{

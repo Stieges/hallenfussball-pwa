@@ -79,7 +79,8 @@ export type SlideType =
   | 'next-matches'       // Nächste X Spiele (Phase 2)
   | 'top-scorers'        // Torschützenliste (Phase 2)
   | 'sponsor'            // Sponsor mit QR-Code
-  | 'custom-text';       // Eigener Text / Ankündigung
+  | 'custom-text'        // Eigener Text / Ankündigung
+  | 'qr-code';           // Zuschauer-QR-Folie (interner Rückfall, @OB-011)
 
 /**
  * Slide-Type Metadaten für UI
