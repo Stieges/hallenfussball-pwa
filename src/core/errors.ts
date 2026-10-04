@@ -208,6 +208,8 @@ const TRANSIENT_NETWORK_MESSAGE_PATTERNS = [
  * Transient: network failures (fetch/TypeError, "Failed to fetch",
  * "NetworkError when attempting to fetch resource" (Firefox), "Load failed"
  * (Safari/iOS)), timeouts/aborts, HTTP 408, 429, 5xx.
+ * A-06a (Brief A1): additionally `name === 'TimeoutError'` (e.g. from
+ * `createRequestTimeoutError`) and `code === 23` (numeric DOMException TIMEOUT_ERR).
  * Permanent (default — everything not positively recognised as transient):
  * RLS/403, other 4xx, Postgres error codes (23xxx, P0001, 22P02),
  * OptimisticLockError, etc. — exactly today's behaviour.
@@ -235,6 +237,15 @@ export function isTransientMutationError(error: unknown): boolean {
   }
   if (isAbortError(error)) {
     return true;
+  }
+  // A-06a (Brief A1): `name === 'TimeoutError'` (AbortSignal-Zeitlimit) bzw. `code === 23`
+  // (DOMException TIMEOUT_ERR, nur als Zahl — strikt, sonst zählte `code: '23505'` mit) sind
+  // vorübergehend. `isAbortError` bleibt unangetastet (auch zum Stummschalten bei Navigation).
+  if (error && typeof error === 'object') {
+    const timeoutLike = error as { name?: unknown; code?: unknown };
+    if (timeoutLike.name === 'TimeoutError' || timeoutLike.code === 23) {
+      return true;
+    }
   }
   if (Array.isArray(error)) {
     // SupabaseRepository.updateMatches wraps per-match failures as
