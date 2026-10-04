@@ -317,6 +317,7 @@ export function mapMatchToSupabase(
  * `team_x_id`/`slot_x_source` dieser Seite NICHT gesendet – ein veralteter lokaler Stand setzt eine
  * Auflösung nie zurück (die Turnierversion schützt hier nicht: Slot-Updates zählen sie nicht hoch).
  * Lokal besetzte Seiten werden immer gesendet (Tausch/Ersatz durch die Leitung).
+ * Server-seitige Auflösung: A-13/A-14, Befund C-DELTA-LOKALE-AUFLOESUNG.
  */
 export function mapMatchToScheduleUpdate(
   row: MatchInsert,
