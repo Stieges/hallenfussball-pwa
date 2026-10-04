@@ -203,10 +203,20 @@ export function GoalScorerDialog({
         {/* Header with team color */}
         <div style={{ ...styles.header, borderColor: teamColor }}>
           <span style={styles.goalIcon}>⚽</span>
-          <div>
+          <div style={{ flex: 1 }}>
             <div id="goal-scorer-dialog-title" style={styles.headerTitle}>{t('goalScorer.title')}</div>
             <div style={{ ...styles.teamName, color: teamColor }}>{teamName}</div>
           </div>
+          {/* @OB-012: immer sichtbarer Schließen-Knopf */}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Schließen"
+            data-testid="dialog-close-button"
+            style={styles.closeButton}
+          >
+            ✕
+          </button>
         </div>
 
         {/* Jersey Number Input */}
@@ -349,6 +359,15 @@ const styles: Record<string, React.CSSProperties> = {
   teamName: {
     fontSize: cssVars.fontSizes.lg,
     fontWeight: cssVars.fontWeights.semibold,
+  },
+  closeButton: {
+    minWidth: 'var(--touch-target-minimum)',
+    minHeight: 'var(--touch-target-minimum)',
+    background: 'transparent',
+    border: 'none',
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.lg,
+    cursor: 'pointer',
   },
   inputSection: {
     padding: cssVars.spacing.lg,

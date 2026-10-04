@@ -63,6 +63,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const formTrap = useFocusTrap({
     isActive: !showEmailConfirmation && !showSuccess,
     onEscape: onBack,
+    // Kein Dialog: die Zurück-Taste navigiert hier über die Seite, nicht über den Trap.
+    closeOnBack: false,
   });
 
   const validateForm = async (): Promise<boolean> => {

@@ -32,6 +32,14 @@ interface UseFocusTrapOptions {
   suppressEnter?: boolean;
   /** Callback when escape is pressed */
   onEscape?: () => void;
+  /**
+   * @OB-012: Die Zurück-Taste des Handys schließt den Dialog wie „Abbrechen“.
+   * Der Dialog hält dafür einen eigenen History-Eintrag; beim Schließen auf
+   * anderem Weg (Esc, Schließen-Knopf) wird der Eintrag wieder entfernt, damit
+   * die nächste Zurück-Taste zur vorigen Seite führt (kein Geister-Dialog).
+   * Standard: an. Für seitenweite Fokusfallen (Login/Registrierung) abschalten.
+   */
+  closeOnBack?: boolean;
 }
 
 const FOCUSABLE_SELECTOR = [
@@ -46,9 +54,48 @@ const FOCUSABLE_SELECTOR = [
 export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
   options: UseFocusTrapOptions
 ) {
-  const { isActive, returnFocusTo, autoFocus = true, initialFocusRef, suppressEnter, onEscape } = options;
+  const {
+    isActive,
+    returnFocusTo,
+    autoFocus = true,
+    initialFocusRef,
+    suppressEnter,
+    onEscape,
+    closeOnBack = true,
+  } = options;
   const containerRef = useRef<T>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
+  const onEscapeRef = useRef(onEscape);
+
+  useEffect(() => {
+    onEscapeRef.current = onEscape;
+  });
+
+  // @OB-012: Zurück-Taste schließt den Dialog (eigener History-Eintrag)
+  useEffect(() => {
+    if (!isActive || !closeOnBack) {
+      return;
+    }
+
+    window.history.pushState({ dialogOpen: true }, '');
+    let entryIsOurs = true;
+
+    const handlePopState = () => {
+      // Die Zurück-Taste hat den Eintrag verbraucht – der Dialog schließt wie „Abbrechen“.
+      entryIsOurs = false;
+      onEscapeRef.current?.();
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      const state = window.history.state as { dialogOpen?: boolean } | null;
+      if (entryIsOurs && state?.dialogOpen) {
+        // Auf anderem Weg geschlossen: eigenen Eintrag entfernen.
+        window.history.back();
+      }
+    };
+  }, [isActive, closeOnBack]);
 
   // Store the element that had focus before trap activated
   useEffect(() => {
