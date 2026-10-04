@@ -399,6 +399,59 @@ describe('MutationQueue error handling', () => {
     expect(failed[0].type).toBe('DELETE_TOURNAMENT');
     expect(failed[0].lastError).toContain('tournament_started');
   });
+
+  it('@LZ-003 SAVE_TOURNAMENT (Soft-Delete) → gleiche Fehlerform, nicht transient, sichtbar gescheitert', async () => {
+    // Derselbe Sperre-Fehler wie oben, aber ueber den Soft-Delete-Pfad:
+    // save() mit neu gesetztem deleted_at stoesst auf denselben Trigger
+    // (protect_deleted_at, Block 2) und SupabaseRepository.save() reicht ihn
+    // als RepositoryError('save', ...) weiter -- gleiche Fehlerform wie der
+    // Delete-Fall (VR7).
+    const supabaseError = {
+      message: 'tournament_started: Turnier kann nach dem ersten Anpfiff nicht geloescht werden.',
+      details: null,
+      hint: null,
+      code: 'P0001',
+    };
+    const repoError = new RepositoryError('save', supabaseError.message, supabaseError);
+
+    // (1) Einordnung: NICHT transient -- wie beim Delete-Fall.
+    expect(isTransientMutationError(repoError)).toBe(false);
+
+    // (2) Fehlversuch zaehlt, Eintrag bleibt waehrend der Wiederholungen
+    // sichtbar geparkt -- kein stilles Verwerfen.
+    const queueRetry = createQueue({ online: false });
+    queueRetry.enqueue('SAVE_TOURNAMENT', { id: 't-lz003-soft', deletedAt: '2026-10-04T10:00:00Z' });
+    mockRepo.save.mockRejectedValueOnce(repoError);
+    onlineSpy.mockReturnValue(true);
+    await queueRetry.process();
+
+    expect(queueRetry.getPendingCount()).toBe(1);
+    expect(queueRetry.getFailedCount()).toBe(0);
+    const pending = JSON.parse(mockStorage.get('mutation_queue_v1') ?? '[]') as MutationItem[];
+    expect(pending[0].retryCount).toBe(1);
+
+    // (3) Nach MAX_RETRIES steht der Eintrag als gescheitert in der
+    // Fehlerliste -- ueber failedCount sichtbar, lastError traegt die Sperre.
+    const items: MutationItem[] = [
+      {
+        id: 'item-lz003-soft',
+        type: 'SAVE_TOURNAMENT',
+        payload: { id: 't-lz003-soft', deletedAt: '2026-10-04T10:00:00Z' },
+        timestamp: 1000,
+        retryCount: 4,
+      },
+    ];
+    const queueDead = createQueue({ online: false, preloadQueue: items });
+    mockRepo.save.mockRejectedValueOnce(repoError);
+    onlineSpy.mockReturnValue(true);
+    await queueDead.process();
+
+    expect(queueDead.getPendingCount()).toBe(0);
+    expect(queueDead.getFailedCount()).toBe(1);
+    const failed = queueDead.getFailedMutations();
+    expect(failed[0].type).toBe('SAVE_TOURNAMENT');
+    expect(failed[0].lastError).toContain('tournament_started');
+  });
 });
 
 // =============================================================================
