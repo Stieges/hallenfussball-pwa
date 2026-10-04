@@ -104,6 +104,28 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     // Nach dem Abpfiff zeigt der Helfer-Kopf kein sync-status mehr (Spiel beendet, nur ein Spiel im
     // Turnier): geprüft wird, dass nichts abgelehnt wurde -- die Annahme der MATCH_END-Zeile steht oben.
     await expect(helperPage.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
+    // Hinweis (Fixrunde 1, 4.1/N3): Diese letzte Prüfung ist LEER, solange das Cockpit nach dem Abpfiff
+    // des letzten Spiels nicht gerendert ist (C-COCKPIT-LAEDT-NACH-ABPFIFF). Die eigentliche Aussage
+    // `data-pending="0"` beim Helfer steht im Test "Cup FINISHAUSGANG" (test.fail, Besitzer B-11).
+    // Wo die Anzeige gerendert ist -- beim Owner, dessen Cockpit BEENDET zeigt -- gilt sie sofort:
+    await expect(ownerPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: owner3sMs });
+  });
+
+  test('Cup FINISHAUSGANG: nach dem Abpfiff des letzten Spiels zeigt der Helfer-Ausgang data-pending="0" (C-COCKPIT-LAEDT-NACH-ABPFIFF)', async ({ asRole }) => {
+    // Besitzer: B-11 (Cockpit-Umbau). Heute steht nach dem Abpfiff des LETZTEN Spiels dauerhaft
+    // "Spiel wird geladen…" statt des Cockpits (ManagementTab `isInitializingMatch`, Befund N3); der
+    // SyncStatusIndicator hängt nur im Cockpit und ist dann nicht gerendert. Die Aussage bleibt
+    // unverändert (data-pending="0" beim handelnden Gerät); sie scheitert erwartungsgemäß an der
+    // fehlenden Anzeige. Wird sie grün ("Expected to fail, but passed"), ist B-11 fertig: test.fail entfernen.
+    test.fail(true, 'Besitzer: B-11 (C-COCKPIT-LAEDT-NACH-ABPFIFF)');
+    const { ids, target } = cup('FINISHAUSGANG');
+    await expectSeededEngineMatch(target);
+    const helperPage = await asRole('helper');
+    await openCockpit(helperPage, ids.tournamentId, ids.matchId);
+    await expectEngineMatchRunningUi(helperPage);
+    await helperPage.locator('[data-testid="match-finish-button"]').click();
+    await expect.poll(async () => (await fetchEngineRows(ids.matchId)).filter((row) => row.type === 'MATCH_END').length, { timeout: 5000 }).toBe(1);
+    await expect(helperPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: 5000 });
   });
 
   test('Cup A2: owner speichert das Turnier mit veraltetem lokalen Stand, während helper ein Live-Spiel leitet: Toms Stand bleibt (Task A2)', async ({ asRole, browser }) => {

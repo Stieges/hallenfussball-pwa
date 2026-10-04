@@ -64,6 +64,7 @@ const GOAL_HOME_NR7: EngineSeedEventSpec = { ...GOAL_HOME, payload: { playerNumb
 export const E2E_ENGINE_CUPS = [
   runningCup('TOR'),
   runningCup('FINISH'),
+  runningCup('FINISHAUSGANG'),
   runningCup('A2'),
   runningCup('UNDO'),
   runningCup('SYNC'),
