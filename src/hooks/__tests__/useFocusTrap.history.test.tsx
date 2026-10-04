@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { useState } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import { StrictMode, useState } from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useFocusTrap } from '../useFocusTrap';
 
@@ -147,5 +147,92 @@ describe('useFocusTrap History-Mechanik (B-03 Fixliste 5)', () => {
       expect(screen.getByTestId('trap-aussen')).toBeTruthy();
       expect(topDialogId()).toEqual(aussenId);
     });
+  });
+});
+
+function SwapHost() {
+  const [phase, setPhase] = useState<'a' | 'b'>('a');
+  return (
+    <div>
+      {phase === 'a' ? (
+        <Trap key="trap-a" testId="trap-a" withEscape onClose={() => setPhase('b')} />
+      ) : (
+        <Trap key="trap-b" testId="trap-b" withEscape onClose={() => setPhase('a')} />
+      )}
+    </div>
+  );
+}
+
+describe('useFocusTrap History (B-03 Fixrunde 2)', () => {
+  let backSpy: MockInstance;
+  let pushSpy: MockInstance;
+  let replaceSpy: MockInstance;
+
+  beforeEach(() => {
+    window.history.replaceState(BASE_MARKER, '');
+    backSpy = vi.spyOn(window.history, 'back').mockImplementation(() => undefined);
+    pushSpy = vi.spyOn(window.history, 'pushState');
+    replaceSpy = vi.spyOn(window.history, 'replaceState');
+  });
+
+  afterEach(async () => {
+    cleanup();
+    await flushHistory();
+    vi.restoreAllMocks();
+  });
+
+  it('1: Dialogwechsel im selben Render – kein back, replaceState statt pushState, B bleibt offen', async () => {
+    render(<SwapHost />);
+    expect(screen.getByTestId('trap-a')).toBeTruthy();
+    expect(pushSpy).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId('trap-a-close'));
+    await flushHistory();
+
+    expect(screen.queryByTestId('trap-a')).toBeNull();
+    expect(screen.getByTestId('trap-b')).toBeTruthy();
+    expect(backSpy).not.toHaveBeenCalled();
+    expect(pushSpy).toHaveBeenCalledTimes(1);
+    expect(replaceSpy.mock.calls.length).toBeGreaterThanOrEqual(1);
+    const ersatz = replaceSpy.mock.calls[replaceSpy.mock.calls.length - 1][0] as { dialogId?: string };
+    expect(ersatz.dialogId).toBeTypeOf('string');
+    expect(topDialogId()).toBe(ersatz.dialogId);
+  });
+
+  it('2: StrictMode-Doppel-Mount – kein back und genau ein History-Eintrag', async () => {
+    render(
+      <StrictMode>
+        <DialogHost testId="trap-strict" />
+      </StrictMode>
+    );
+    await flushHistory();
+
+    expect(screen.getByTestId('trap-strict')).toBeTruthy();
+    expect(backSpy).not.toHaveBeenCalled();
+    expect(pushSpy).toHaveBeenCalledTimes(1);
+    expect(replaceSpy.mock.calls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('3: normales Schliessen ohne Folge-Dialog – genau ein back, erst nach dem Flush', async () => {
+    render(<DialogHost testId="trap-zu" />);
+    fireEvent.click(screen.getByTestId('trap-zu-close'));
+
+    expect(backSpy).not.toHaveBeenCalled();
+
+    await flushHistory();
+
+    expect(backSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('4: Esc bei zwei verschachtelten Dialogen schliesst nur den oberen', async () => {
+    render(<NestedHost />);
+    fireEvent.click(screen.getByTestId('trap-innen-oeffnen'));
+    expect(screen.getByTestId('trap-innen')).toBeTruthy();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await flushHistory();
+
+    expect(screen.queryByTestId('trap-innen')).toBeNull();
+    expect(screen.getByTestId('trap-aussen')).toBeTruthy();
   });
 });

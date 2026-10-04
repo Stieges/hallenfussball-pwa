@@ -56,6 +56,20 @@ const openDialogs: string[] = [];
 let dialogIdCounter = 0;
 let consumedPopState: PopStateEvent | null = null;
 
+// @OB-012 B-1: Aufgeschobenes back() beim Schließen. Wird in derselben Commit-Phase
+// ein neuer Dialog geöffnet, übernimmt er den Eintrag (replaceState) und bricht
+// das ausstehende back() ab – sonst schließt Chromium den neuen Dialog sofort.
+type PendingRemoval = {
+  dialogId: string;
+  timer: ReturnType<typeof setTimeout>;
+  detach: () => void;
+};
+let pendingRemoval: PendingRemoval | null = null;
+
+// Escape-Stapel: Auf Esc reagiert nur der oberste offene Dialog (Fixrunde 2).
+const escapeStack: string[] = [];
+let escapeTokenCounter = 0;
+
 export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
   options: UseFocusTrapOptions
 ) {
@@ -85,7 +99,19 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     dialogIdCounter += 1;
     const dialogId = `focus-trap-${dialogIdCounter}`;
     openDialogs.push(dialogId);
-    window.history.pushState({ dialogId }, '');
+
+    // B-1: Ausstehendes back() des schließenden Dialogs abbrechen und dessen
+    // Eintrag übernehmen, statt einen zweiten anzulegen.
+    const pending = pendingRemoval;
+    const topState = window.history.state as { dialogId?: string } | null;
+    if (pending && topState?.dialogId === pending.dialogId) {
+      clearTimeout(pending.timer);
+      pendingRemoval = null;
+      pending.detach();
+      window.history.replaceState({ dialogId }, '');
+    } else {
+      window.history.pushState({ dialogId }, '');
+    }
 
     let isClosing = false;
 
@@ -120,9 +146,22 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     return () => {
       const state = window.history.state as { dialogId?: string } | null;
       if (state?.dialogId === dialogId) {
-        // Auf anderem Weg geschlossen: eigenen Eintrag entfernen.
+        // Auf anderem Weg geschlossen: eigenen Eintrag entfernen – aber erst
+        // verzögert, damit ein im selben Render folgender Dialog den Eintrag
+        // übernehmen kann (B-1).
         isClosing = true;
-        window.history.back();
+        const entry: PendingRemoval = {
+          dialogId,
+          timer: setTimeout(() => {
+            if (pendingRemoval !== entry) {
+              return;
+            }
+            pendingRemoval = null;
+            window.history.back();
+          }, 0),
+          detach,
+        };
+        pendingRemoval = entry;
         return;
       }
       detach();
@@ -143,6 +182,13 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     }
 
     const container = containerRef.current;
+
+    // Escape-Stapel: nur der oberste offene Dialog reagiert auf Esc.
+    escapeTokenCounter += 1;
+    const escapeToken = `escape-${escapeTokenCounter}`;
+    if (onEscape) {
+      escapeStack.push(escapeToken);
+    }
 
     // Auto-focus the configured target (fallback: first focusable element)
     if (autoFocus) {
@@ -166,6 +212,9 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     // Handle tab key for focus cycling
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && onEscape) {
+        if (escapeStack[escapeStack.length - 1] !== escapeToken) {
+          return;
+        }
         e.preventDefault();
         onEscape();
         return;
@@ -204,6 +253,11 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     // Cleanup
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+
+      const escapeIndex = escapeStack.indexOf(escapeToken);
+      if (escapeIndex !== -1) {
+        escapeStack.splice(escapeIndex, 1);
+      }
 
       // Remove inert from siblings
       for (const element of inertElements) {
