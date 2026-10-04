@@ -5,14 +5,14 @@
  * Strafstoßschießen, nach den Schüssen steht `decided_by = 'penalty'` mit Strafstoß-Tabelle.
  */
 import { expect } from '@playwright/test';
-import { fetchTurniertagBracket, SOLL_TIMEOUT_MS } from './shared';
+import { fetchTurniertagBracket, findFinalByLabel, SOLL_TIMEOUT_MS } from './shared';
 import { appendOwner, eventOf, regularResultEvents } from './playViaRpc';
 import type { StepContext, TurniertagStep } from './types';
 
 async function halbfinaleElfmeter(_ctx: StepContext): Promise<void> {
   const { finals } = await fetchTurniertagBracket();
-  const hf1 = finals[0];
-  expect(hf1.team_a_id && hf1.team_b_id, 'Halbfinale 1 ist besetzt (D8)').toBeTruthy();
+  const hf1 = findFinalByLabel(finals, '1. Halbfinale');
+  expect(hf1.team_a_id && hf1.team_b_id, 'Halbfinale 1 ist besetzt (hängt an D8)').toBeTruthy();
   const start = Date.now() - 600_000;
   const base = regularResultEvents(hf1, 1, 1, 600_000);
   const regular = await appendOwner(hf1.id, base);
@@ -24,9 +24,28 @@ async function halbfinaleElfmeter(_ctx: StepContext): Promise<void> {
   ]);
   const shootout = await appendOwner(hf1.id, [choice, ...kicks, eventOf('SHOOTOUT_END', start + 130_000, start)]);
   expect(shootout.results.every((r) => r.status === 'accepted')).toBe(true);
-  await expect.poll(async () => (await fetchTurniertagBracket()).finals[0].decided_by, { timeout: SOLL_TIMEOUT_MS }).toBe('penalty');
+  await expect.poll(async () => findFinalByLabel((await fetchTurniertagBracket()).finals, '1. Halbfinale').decided_by, { timeout: SOLL_TIMEOUT_MS }).toBe('penalty');
+}
+
+/**
+ * D9b Halbfinale 2 regulär entscheiden (2:1), damit die Verlierer-/Sieger-Plätze von Platz 3 und
+ * Finale beide besetzt werden können (Fixrunde 1, N2). Besitzer: A-13 (Besetzung durch die Auflösung
+ * der Finalrunde, wie D8); die Verlierer/Sieger-Besetzung selbst gehört zu A-14.
+ */
+async function halbfinale2(_ctx: StepContext): Promise<void> {
+  const { finals } = await fetchTurniertagBracket();
+  const hf2 = findFinalByLabel(finals, '2. Halbfinale');
+  expect(hf2.team_a_id && hf2.team_b_id, 'Halbfinale 2 ist besetzt (hängt an D8)').toBeTruthy();
+  const events = regularResultEvents(hf2, 2, 1);
+  const result = await appendOwner(hf2.id, events);
+  expect(result.results.map((r) => r.status)).toEqual(events.map(() => 'accepted'));
+  await expect.poll(async () => {
+    const m = findFinalByLabel((await fetchTurniertagBracket()).finals, '2. Halbfinale');
+    return [m.match_status, m.score_a, m.score_b];
+  }, { message: 'Halbfinale 2 steht beendet auf 2:1', timeout: SOLL_TIMEOUT_MS }).toEqual(['finished', 2, 1]);
 }
 
 export const steps: readonly TurniertagStep[] = [
   { id: 'D9', title: 'Halbfinale unentschieden: Strafstoßschießen entscheidet', scenarios: [], owner: 'B-09/A-14', expectedFail: true, run: halbfinaleElfmeter },
+  { id: 'D9b', title: 'Halbfinale 2 regulär entschieden (Voraussetzung für Platz 3 und Finale)', scenarios: [], owner: 'A-13', expectedFail: true, run: halbfinale2 },
 ];
