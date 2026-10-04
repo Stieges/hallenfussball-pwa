@@ -41,7 +41,7 @@ import { TeamAvatar } from '../../components/ui/TeamAvatar';
 import { useLiveMatches } from '../../hooks/useLiveMatches';
 import type { LiveMatch } from '../../hooks/useLiveMatches';
 import { GoalAnimation, CardAnimation, LiveMatchDisplay } from '../../components/monitor';
-import { generateTournamentUrl } from '../../utils/shareUtils';
+import { generateTournamentUrl, generateLiveUrl } from '../../utils/shareUtils';
 import { QRCodeSVG } from 'qrcode.react';
 import sportGlossary from '../../i18n/glossary.json';
 import { usePixelShift } from '../../hooks/usePixelShift';
@@ -235,22 +235,36 @@ interface QrSlideProps {
 }
 
 function QrSlide({ tournament, style }: QrSlideProps) {
-  const qrUrl = generateTournamentUrl(tournament.id);
+  // F-03: Der QR zeigt die Zuschauer-Adresse (generateLiveUrl) — nie die Verwaltung
+  // (generateTournamentUrl). Nur bei isPublic && shareCode gibt es überhaupt einen QR.
+  const shareCode = tournament.shareCode;
+  const qrUrl = tournament.isPublic === true && typeof shareCode === 'string' && shareCode.length > 0
+    ? generateLiveUrl(shareCode)
+    : null;
   return (
     <div style={{ ...style, gap: displaySpacing.sectionMD }}>
       <div style={{ fontSize: displayFontSizes.headingXL, fontWeight: 700 }}>
         {tournament.title}
       </div>
-      <QRCodeSVG
-        value={qrUrl}
-        size={220}
-        bgColor="white"
-        fgColor="black"
-        level="M"
-      />
-      <div style={{ fontSize: displayFontSizes.bodyMD }}>
-        {qrUrl}
-      </div>
+      {qrUrl && (
+        <>
+          <QRCodeSVG
+            value={qrUrl}
+            size={220}
+            bgColor="white"
+            fgColor="black"
+            level="M"
+          />
+          <div style={{ fontSize: displayFontSizes.bodyMD }}>
+            {qrUrl}
+          </div>
+        </>
+      )}
+      {!qrUrl && (
+        <div style={{ fontSize: displayFontSizes.bodyMD }}>
+          Schau auf die Anzeige in der Halle – hier läuft das Spiel live mit.
+        </div>
+      )}
     </div>
   );
 }
