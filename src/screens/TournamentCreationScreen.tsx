@@ -349,6 +349,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     if (!replanSession) {
       return;
     }
+    if (replanSession.preview.status !== 'preview') {
+      return;
+    }
     const freshState = await recheck();
     if (freshState !== 'not-started') {
       setReplanSession({
