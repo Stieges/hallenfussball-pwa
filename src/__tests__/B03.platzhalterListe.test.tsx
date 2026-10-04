@@ -669,6 +669,24 @@ const OB002: FunktionFall[] = [
       expectAbsent(/[Cc]ookie/);
     },
   },
+  {
+    kennung: '@OB-002',
+    zeile: 'Datenschutz/Cookie-Einstellungen',
+    funktion: 'der Link „Cookie-Einstellungen“',
+    ort: 'der Datenschutzerklärung',
+    pruefen: async () => {
+      const { DatenschutzScreen } = await import('../screens/DatenschutzScreen');
+      const { container } = renderInRouter(
+        <DatenschutzScreen onBack={vi.fn()} onOpenCookieSettings={vi.fn()} />
+      );
+      expectRendered(container);
+      oeffneAlleAbschnitte(container);
+      expectAbsent(/im Footer/);
+      for (const bedienelement of container.querySelectorAll('button, a')) {
+        expect(bedienelement.textContent ?? '').not.toMatch(/Cookie-Einstellungen/);
+      }
+    },
+  },
 ];
 
 // ---------------------------------------------------------------------------
