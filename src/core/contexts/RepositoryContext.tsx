@@ -8,6 +8,7 @@ import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { SupabaseLiveMatchRepository } from '../repositories/SupabaseLiveMatchRepository';
 import { OfflineRepository } from '../repositories/OfflineRepository';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { RealtimeEnabledContext } from '../../lib/realtimeEnabled';
 
 // ============================================================================
 // TYPES
@@ -121,7 +122,9 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
 
     return (
         <RepositoryContext.Provider value={value}>
-            {children}
+            <RealtimeEnabledContext.Provider value={value.isRealtimeEnabled}>
+                {children}
+            </RealtimeEnabledContext.Provider>
         </RepositoryContext.Provider>
     );
 };

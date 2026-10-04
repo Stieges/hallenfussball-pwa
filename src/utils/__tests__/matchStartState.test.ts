@@ -64,7 +64,7 @@ describe('getMatchStartState — Live-Stand (S3, W1)', () => {
     expect(getMatchStartState(planned(), { status: 'ok', anyStarted: true })).toBe('started');
   });
 
-  it('(b) Live-Stand nicht lesbar: nicht feststellbar (fail-closed)', () => {
+  it('(b) Live-Stand nicht lesbar: nicht feststellbar (Komponentenvertrag)', () => {
     expect(getMatchStartState(planned(), { status: 'error' })).toBe('unknown');
   });
 

@@ -20,6 +20,8 @@
 import { useEffect, useState } from 'react';
 import type { Tournament } from '../types/tournament';
 import { useOptionalLiveMatchRepository } from '../core/contexts/RepositoryContext';
+import { useIsRealtimeEnabled } from '../lib/realtimeEnabled';
+import { useIsOnline } from './useOnlineStatus';
 import {
   getMatchStartState,
   type LiveStartSignal,
@@ -41,6 +43,13 @@ export function useTournamentStartState(
 ): MatchStartState {
   const enabled = options?.enabled ?? true;
   const liveRepository = useOptionalLiveMatchRepository();
+  const isRealtimeEnabled = useIsRealtimeEnabled();
+  const isOnline = useIsOnline();
+
+  // P2: Im Cloud-Modus ist der Live-Stand offline nicht lesbar — der Zustand
+  // ist dann „nicht feststellbar" (fail-closed), die Aktion wird nicht
+  // angeboten. Rein lokal entscheidet die Match-Liste allein (W1).
+  const offlineInCloud = isRealtimeEnabled && !isOnline;
 
   // U0 (F1): „festgelegt" = veröffentlicht (status ODER der monotone Freigabe-
   // Marker publishedAt — „Im Wizard bearbeiten" setzt transient auf 'draft' zurück).
@@ -56,7 +65,7 @@ export function useTournamentStartState(
   const [live, setLive] = useState<LiveStartSignal>(undefined);
 
   useEffect(() => {
-    if (!needsLive || !liveRepository || !tournament.id) {
+    if (!needsLive || offlineInCloud || !liveRepository || !tournament.id) {
       return;
     }
     let cancelled = false;
@@ -88,11 +97,16 @@ export function useTournamentStartState(
     return () => {
       cancelled = true;
     };
-  }, [needsLive, liveRepository, tournament.id]);
+  }, [needsLive, offlineInCloud, liveRepository, tournament.id]);
 
-  // Ohne Bedarf für den Live-Stand entscheidet die lokale Match-Liste allein;
-  // mit Bedarf gilt 'loading', bis die Abfrage steht (fail-closed).
-  const signal: LiveStartSignal =
-    needsLive && liveRepository ? (live ?? { status: 'loading' }) : undefined;
+  // P2: Offline im Cloud-Modus ist der Live-Stand nicht lesbar → 'error'
+  // (nicht feststellbar). Ohne Bedarf für den Live-Stand entscheidet die
+  // lokale Match-Liste allein; mit Bedarf gilt 'loading', bis die Abfrage
+  // steht (fail-closed).
+  const signal: LiveStartSignal = offlineInCloud
+    ? { status: 'error' }
+    : needsLive && liveRepository
+      ? (live ?? { status: 'loading' })
+      : undefined;
   return getMatchStartState(tournament.matches, signal, isEstablished);
 }
