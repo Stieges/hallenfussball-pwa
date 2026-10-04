@@ -14,6 +14,8 @@ const spies = vi.hoisted(() => ({
   setFormData: vi.fn(),
   onSave: vi.fn(),
   existing: undefined as Tournament | undefined,
+  startState: 'not-started',
+  recheck: vi.fn<() => Promise<'not-started' | 'started' | 'unknown'>>(),
 }));
 
 vi.mock('../../../lib/supabase', () => ({
@@ -37,7 +39,10 @@ vi.mock('../../../hooks/useTournaments', () => ({
 vi.mock('../../../hooks/useIsMobile', () => ({ useIsMobile: () => false }));
 
 vi.mock('../../../hooks/useTournamentStartState', () => ({
-  useTournamentStartState: () => 'not-started' as const,
+  useTournamentStartState: () => ({
+    state: spies.startState,
+    recheck: spies.recheck,
+  }),
 }));
 
 vi.mock('../../../lib/pdfExporter', () => ({ exportScheduleToPDF: vi.fn() }));
@@ -188,6 +193,8 @@ describe('B-02 Paket A – Neuplanen im Wizard mit Vorschau (Integration)', () =
   beforeEach(() => {
     vi.clearAllMocks();
     spies.existing = established();
+    spies.startState = 'not-started';
+    spies.recheck.mockResolvedValue('not-started');
     spies.publishTournament.mockImplementation((override?: Partial<Tournament>) =>
       Promise.resolve({ ...spies.existing, ...override } as Tournament)
     );
@@ -231,5 +238,40 @@ describe('B-02 Paket A – Neuplanen im Wizard mit Vorschau (Integration)', () =
     });
     expect(spies.publishTournament).not.toHaveBeenCalled();
     expect(spies.onSave).not.toHaveBeenCalled();
+  });
+
+  it('W1 (a) – Mock liefert started: Vorschau wird verweigert, Bestätigen veröffentlicht nicht', async () => {
+    spies.startState = 'started';
+    spies.recheck.mockResolvedValue('started');
+    const current = spies.existing ?? established();
+    renderScreen(current);
+
+    fireEvent.click(screen.getByTestId('wizard-show-preview'));
+    await screen.findByTestId('replan-blocked');
+    expect(screen.getByTestId('replan-confirm')).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId('replan-confirm'));
+
+    expect(spies.publishTournament).not.toHaveBeenCalled();
+    expect(spies.onSave).not.toHaveBeenCalled();
+  });
+
+  it('W1 (b) – Anpfiff zwischen Öffnen und Bestätigen: recheck verhindert das Veröffentlichen', async () => {
+    spies.startState = 'not-started';
+    spies.recheck.mockResolvedValue('started');
+    const current = spies.existing ?? established();
+    renderScreen(current);
+
+    fireEvent.click(screen.getByTestId('wizard-show-preview'));
+    await screen.findByTestId('replan-end-time');
+    expect(screen.getByTestId('replan-confirm')).toBeEnabled();
+
+    fireEvent.click(screen.getByTestId('replan-confirm'));
+
+    await waitFor(() => {
+      expect(spies.recheck).toHaveBeenCalledTimes(1);
+    });
+    expect(spies.publishTournament).not.toHaveBeenCalled();
+    await screen.findByTestId('replan-blocked');
   });
 });

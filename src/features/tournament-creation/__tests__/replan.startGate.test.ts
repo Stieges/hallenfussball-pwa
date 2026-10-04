@@ -113,3 +113,9 @@ describe('Neuplanung – Anpfiff-Sperre in openReplan (startState)', () => {
     expect(getReplanAvailability(unknownStatus)).toBe('unknown');
   });
 });
+
+describe('W1 – matchStartState ist Pflicht (fail-closed)', () => {
+  it('openReplan hat keinen Default für startState', () => {
+    expect(openReplan.length).toBeGreaterThanOrEqual(3);
+  });
+});

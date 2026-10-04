@@ -48,7 +48,8 @@ describe('Neuplanung – Anpfiff-Prüfung (getMatchStartState)', () => {
 
     const session = openReplan(
       tournament,
-      tournament
+      tournament,
+      'not-started'
     );
 
     expect(session.preview.status).toBe('impossible');

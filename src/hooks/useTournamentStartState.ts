@@ -17,7 +17,7 @@
  * ist der Zustand „nicht feststellbar" — die Aktion wird nicht angeboten
  * (fail-closed, Ruling W1).
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Tournament } from '../types/tournament';
 import { useOptionalLiveMatchRepository } from '../core/contexts/RepositoryContext';
 import { useIsRealtimeEnabled } from '../lib/realtimeEnabled';
@@ -37,10 +37,16 @@ export interface UseTournamentStartStateOptions {
   enabled?: boolean;
 }
 
+export interface TournamentStartStateResult {
+  state: MatchStartState;
+  /** W1: frischer Abruf des Live-Stands – fail-closed ('unknown' bei Fehler). */
+  recheck: () => Promise<MatchStartState>;
+}
+
 export function useTournamentStartState(
   tournament: Pick<Tournament, 'id' | 'matches' | 'status' | 'publishedAt'>,
   options?: UseTournamentStartStateOptions
-): MatchStartState {
+): TournamentStartStateResult {
   const enabled = options?.enabled ?? true;
   const liveRepository = useOptionalLiveMatchRepository();
   const isRealtimeEnabled = useIsRealtimeEnabled();
@@ -110,5 +116,41 @@ export function useTournamentStartState(
     : needsLive && liveRepository
       ? (live ?? { status: 'loading' })
       : undefined;
-  return getMatchStartState(tournament.matches, signal, isEstablished);
+
+  // W1: frischer Abruf des Live-Stands vor der Bestätigung. Liest unabhängig
+  // von `enabled`/`needsLive` nach – nur so schließt sich das Fenster zwischen
+  // dem Öffnen der Vorschau und dem Bestätigen. Fehler/Offline → 'unknown'.
+  const recheck = useCallback((): Promise<MatchStartState> => {
+    const fromLocal = getMatchStartState(tournament.matches, undefined, isEstablished);
+    if (fromLocal !== 'not-started') {
+      return Promise.resolve(fromLocal);
+    }
+    if (offlineInCloud) {
+      return Promise.resolve('unknown');
+    }
+    if (!liveRepository || !tournament.id) {
+      return Promise.resolve(fromLocal);
+    }
+    return liveRepository
+      .getAll(tournament.id)
+      .then((map) => {
+        let anyStarted = false;
+        map.forEach((match) => {
+          if (match.status !== 'NOT_STARTED') {
+            anyStarted = true;
+          }
+        });
+        return getMatchStartState(
+          tournament.matches,
+          { status: 'ok', anyStarted },
+          isEstablished
+        );
+      })
+      .catch(() => 'unknown');
+  }, [tournament.matches, tournament.id, isEstablished, offlineInCloud, liveRepository]);
+
+  return {
+    state: getMatchStartState(tournament.matches, signal, isEstablished),
+    recheck,
+  };
 }

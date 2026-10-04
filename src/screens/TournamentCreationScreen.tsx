@@ -87,7 +87,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const { showSuccess, showWarning } = useToast();
   const { saveTournament: defaultSaveTournament } = useTournaments();
   // B-02: Anpfiff-Sperre für die Neuplanung (Live-Signal über den gemeinsamen Hook)
-  const matchStartState = useTournamentStartState(
+  const { state: matchStartState, recheck } = useTournamentStartState(
     existingTournament ?? { id: '', matches: [], status: 'draft', publishedAt: undefined },
     { enabled: Boolean(existingTournament) }
   );
@@ -323,8 +323,23 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   };
 
   // B-02 (@W5-005): Bestätigen ersetzt den Spielplan und veröffentlicht.
+  // W1: Vor der Bestätigung wird der Anpfiff frisch geprüft (fail-closed).
   const handleReplanConfirm = async () => {
     if (!replanSession) {
+      return;
+    }
+    const freshState = await recheck();
+    if (freshState !== 'not-started') {
+      setReplanSession({
+        ...replanSession,
+        preview: {
+          status: 'refused',
+          reason:
+            freshState === 'started'
+              ? 'Das Turnier hat bereits angepfiffen – eine Neuplanung ist nur vor dem ersten Spiel möglich.'
+              : 'Der Startzustand des Turniers ist nicht feststellbar – eine Neuplanung ist deshalb nicht möglich.',
+        },
+      });
       return;
     }
     const updated = replanSession.confirm();

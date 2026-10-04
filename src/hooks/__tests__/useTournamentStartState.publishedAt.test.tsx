@@ -34,12 +34,12 @@ describe('useTournamentStartState — „festgelegt" über publishedAt (B-01a Fi
       useTournamentStartState(tournamentWith({ publishedAt: '2026-03-01T09:00:00Z' }))
     );
 
-    expect(result.current).toBe('unknown');
+    expect(result.current.state).toBe('unknown');
   });
 
   it('Gegenbeispiel: Entwurf ohne publishedAt: nicht angepfiffen', () => {
     const { result } = renderHook(() => useTournamentStartState(tournamentWith({})));
 
-    expect(result.current).toBe('not-started');
+    expect(result.current.state).toBe('not-started');
   });
 });

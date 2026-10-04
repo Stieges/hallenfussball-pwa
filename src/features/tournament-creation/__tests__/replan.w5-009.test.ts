@@ -70,7 +70,7 @@ describe('Neuplanung – Gespieltes bleibt erhalten', () => {
       matches: [played, ...established.matches.slice(1)],
     };
 
-    const session = openReplan(withPlayed, withPlayed);
+    const session = openReplan(withPlayed, withPlayed, 'not-started');
     expect(session.preview.status).toBe('preview');
     if (session.preview.status !== 'preview') { return; }
 

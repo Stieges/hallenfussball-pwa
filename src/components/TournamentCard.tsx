@@ -50,7 +50,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   // @LZ-003 / W4: Papierkorb nur vor dem ersten Anpfiff — gleiche gemeinsame
   // Anpfiff-Funktion wie „Turnier löschen" (DangerZone) und „Im Wizard bearbeiten".
   // P1: Live-Abfrage nur, wenn ein Papierkorb angeboten werden könnte.
-  const matchStartState = useTournamentStartState(tournament, {
+  const { state: matchStartState } = useTournamentStartState(tournament, {
     enabled: Boolean(onSoftDelete),
   });
 

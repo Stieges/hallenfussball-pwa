@@ -249,7 +249,7 @@ export interface ReplanSession {
 export function openReplan(
   current: Tournament,
   updated: Tournament,
-  startState: MatchStartState = 'not-started'
+  startState: MatchStartState
 ): ReplanSession {
   // @W5-008: Nach dem Anpfiff (oder wenn der Startzustand nicht feststellbar
   // ist) wird keine Neuplanung angeboten – confirm gibt den Ist-Stand zurück.

@@ -261,7 +261,7 @@ export function DangerZoneCategory({
   // @LZ-003: „Turnier löschen" nur vor dem ersten Anpfiff — und nur, wenn der
   // Anpfiff-Zustand überhaupt feststellbar ist (fail-closed, siehe
   // useTournamentStartState/getMatchStartState).
-  const matchStartState = useTournamentStartState(tournament);
+  const { state: matchStartState } = useTournamentStartState(tournament);
   const canOfferDelete = canDelete && matchStartState === 'not-started';
 
   // @OB-014: Fokus der Rückfrage liegt zuerst auf „Abbrechen".

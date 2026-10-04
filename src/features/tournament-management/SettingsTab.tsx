@@ -42,7 +42,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   // @LZ-003 / W3: „Im Wizard bearbeiten" setzt das Turnier auf Entwurf zurück —
   // nach dem ersten Anpfiff nicht anbieten (gleiche Sperre wie „Turnier löschen",
   // gemeinsame Funktion statt Kopie).
-  const matchStartState = useTournamentStartState(tournament);
+  const { state: matchStartState } = useTournamentStartState(tournament);
   const canEditInWizard = matchStartState === 'not-started';
   // Collapse-State für Formular-Bereich
   const [isFormCollapsed, setIsFormCollapsed] = useState(true);

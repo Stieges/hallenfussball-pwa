@@ -64,7 +64,7 @@ describe('Neuplanung abbrechen', () => {
       numberOfFields: 3,
     };
 
-    const session = openReplan(established, withFieldChange);
+    const session = openReplan(established, withFieldChange, 'not-started');
     expect(session.preview.status).toBe('preview');
 
     const afterCancel = session.cancel();
