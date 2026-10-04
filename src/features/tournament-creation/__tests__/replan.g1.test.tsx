@@ -162,7 +162,14 @@ const renderScreen = () =>
   render(
     <MemoryRouter>
       <ToastProvider>
-        <TournamentCreationScreen existingTournament={spies.existing} onBack={vi.fn()} onSave={spies.onSave} />
+        <TournamentCreationScreen
+          existingTournament={spies.existing}
+          onBack={vi.fn()}
+          onSave={spies.onSave}
+          onNavigateToLogin={vi.fn()}
+          onNavigateToRegister={vi.fn()}
+          onNavigateToProfile={vi.fn()}
+        />
       </ToastProvider>
     </MemoryRouter>
   );

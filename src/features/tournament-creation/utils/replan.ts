@@ -30,6 +30,19 @@ function matchHasEvents(match: Match): boolean {
 
 export type ReplanAvailability = 'offered' | 'refused-after-kickoff' | 'unknown';
 
+/** W4: die erlaubten i18n-Schlüssel für Grund und Vorschlag. */
+export type ReplanTextKey =
+  | 'replan.reasonFieldRemoved'
+  | 'replan.reasonOverlap'
+  | 'replan.reasonGeneratorFailed'
+  | 'replan.reasonRefusedKickoff'
+  | 'replan.reasonRefusedUnknown';
+
+export type ReplanSuggestionKey =
+  | 'replan.suggestionCollision'
+  | 'replan.suggestionMinRestOrAddField'
+  | 'replan.suggestionRestoreTeam';
+
 /** W4: Uhrzeit je nach gewählter Sprache. */
 export function formatReplanTime(date: Date, locale: string): string {
   return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
@@ -50,12 +63,12 @@ export type ReplanPreviewResult =
   | {
       status: 'impossible';
       /** W4: i18n-Schlüssel statt deutscher Rohtext. */
-      reasonKey: string;
-      suggestionKey: string;
+      reasonKey: ReplanTextKey;
+      suggestionKey: ReplanSuggestionKey;
       detail?: string;
     }
   /** @W5-008: Nach dem Anpfiff ist keine Neuplanung möglich (fail-closed). */
-  | { status: 'refused'; reasonKey: string; detail?: string };
+  | { status: 'refused'; reasonKey: ReplanTextKey; detail?: string };
 
 export function getReplanAvailability(
   tournament: Pick<Tournament, 'matches' | 'status' | 'publishedAt'>
