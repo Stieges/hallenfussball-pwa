@@ -189,6 +189,7 @@ export function SettingsCategory({
         title: duplicateName.trim() || `${tournament.title} (Kopie)`,
         createdAt: now,
         updatedAt: now,
+        status: 'draft',
 
         // Settings (conditionally copied)
         matchCockpitSettings: duplicateOptions.settings
