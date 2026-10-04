@@ -225,7 +225,7 @@ COMMENT ON FUNCTION "public"."protect_tournament_delete_started"() IS
    (tournament_has_started) -- Ruling Fixrunde 1, die Anforderung hat sich geaendert
    (@LZ-003, @SL-129: Ereignisse belegen den Anpfiff, auch nach einem Status-Reset).
    NUR fuer Client-Rollen (current_user IN authenticated/anon, Review-Fund E3):
-   service_role (Neu-Seed), postgres (Wartung, Kaskaden-Nachweis Fall 5'/Prueffall
+   service_role (Neu-Seed), postgres (Wartung, Kaskaden-Nachweis Fall 5-Prime/Prueffall
    (i)) und die FK-Kaskade aus auth.users (Konto-Loeschung) bleiben frei.';
 
 CREATE OR REPLACE TRIGGER "tournaments_protect_delete_started"
@@ -267,7 +267,7 @@ COMMENT ON FUNCTION "public"."protect_match_events_delete"() IS
    @SL-129): Ereignis-Zeilen belegen den Anpfiff und bleiben auch beim
    Status-Zuruecksetzen erhalten. Client-Rollen (authenticated/anon) duerfen sie
    deshalb nicht direkt loeschen (pg_trigger_depth() <= 1) -- auch keine Alt-Zeilen
-   ohne event_format. RAISE ... USING ERRCODE = 'insufficient_privilege' wie Guard (d)
+   ohne event_format. RAISE ... USING ERRCODE = "insufficient_privilege" wie Guard (d)
    der match_events_guard_engine_rows (20260928_001). Kaskade (Tiefe > 1) und
    Wartungsrollen bleiben erlaubt (E3) -- die Gesamtloeschung eines Turniers per
    Kaskade ist der einzige zugelassene Weg, eine Ereignis-Zeile zu entfernen.';
