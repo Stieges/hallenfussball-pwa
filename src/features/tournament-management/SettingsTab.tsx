@@ -39,8 +39,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onEditInWizard,
 }) => {
   const { t } = useTranslation('tournament');
-  // @LZ-003 / W3: „Im Wizard bearbeiten" setzt das Turnier auf Entwurf zurück —
-  // nach dem ersten Anpfiff nicht anbieten (gleiche Sperre wie „Turnier löschen",
+  // @W5-004: „Im Wizard bearbeiten" setzt ein festgelegtes Turnier NIE auf Entwurf zurück.
+  // @LZ-003 / W3: nach dem ersten Anpfiff nicht anbieten (gleiche Sperre wie „Turnier löschen",
   // gemeinsame Funktion statt Kopie).
   const { state: matchStartState } = useTournamentStartState(tournament);
   const canEditInWizard = matchStartState === 'not-started';

@@ -219,8 +219,9 @@ export class TournamentCreationService {
         // Veröffentlichen IST die Freigabe — aber nur beim ersten Mal. "Erweiterte Bearbeitung"
         // ruft publish() beim Speichern erneut auf; ohne diesen Guard würde ein bewusst privat
         // gestelltes Turnier hinter dem Rücken des Veranstalters wieder geteilt.
-        // Geprüft wird `publishedAt`, NICHT `status`: status 'draft' ist ein transienter
-        // Wizard-Marker (SettingsTab.tsx) und sagt nichts über die Freigabe aus.
+        // Geprüft wird `publishedAt`, NICHT `status`: `publishedAt` wird genau einmal beim
+        // ersten Festlegen gesetzt und überdauert die Bearbeitung (@W5-004: ein festgelegtes
+        // Turnier bleibt dabei festgelegt).
         const isFirstRelease = !data.publishedAt;
         if (isFirstRelease) {
             tournament.isPublic = true;

@@ -213,9 +213,9 @@ export function VisibilityCategory({
 
   // Ein Entwurf ist nicht öffentlich erreichbar — Teilen ist erst nach der Freigabe möglich.
   //
-  // Gate auf publishedAt, NICHT status: status='draft' ist ein transienter Wizard-Marker
-  // (SettingsTab.tsx setzt ein veröffentlichtes Turnier beim Öffnen des Bearbeiten-Wizards
-  // zurück auf 'draft'; ein Reload mitten in der Bearbeitung lässt es dauerhaft dort stehen).
+  // Gate auf publishedAt, NICHT status: `publishedAt` wird genau einmal beim ersten
+  // Festlegen gesetzt und überdauert die Bearbeitung (@W5-004: ein festgelegtes Turnier
+  // bleibt dabei festgelegt).
   // Mit status als Gate verlöre der Organisator mitten im laufenden Turnier den Link/QR-Code
   // und könnte ihn nicht mehr nachdrucken, obwohl das Turnier nachweislich online ist. Dasselbe
   // Prädikat wie im Service und in der Datenbankfunktion make_tournament_public — damit stimmen

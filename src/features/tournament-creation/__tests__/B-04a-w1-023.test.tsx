@@ -2,7 +2,7 @@
  * B-04 Paket a — @W1-023: „Festlegen" mit Ladezustand und Erfolgsmeldung.
  * Ein Doppelklick erzeugt kein zweites Turnier (genau ein Publish-Aufruf).
  *
- * Echter Bedienweg: Wizard Schritt 6 → Vorschau → „Turnier freigeben" (Festlegen).
+ * Echter Bedienweg: Wizard Schritt 6 → Vorschau → „Festlegen".
  * UI-Ort: src/screens/TournamentCreationScreen.tsx (handlePublish) +
  * src/features/tournament-creation/TournamentPreview.tsx (Button preview-publish).
  *
@@ -232,7 +232,7 @@ async function openPreview(renderFn: () => void = renderScreen): Promise<HTMLEle
 beforeEach(() => vi.clearAllMocks());
 
 describe('B-04a @W1-023 — Festlegen mit Ladezustand und Erfolgsmeldung', () => {
-  it('Doppelklick auf „Festlegen" löst genau einen Publish aus, sperrt den Knopf und zeigt Erfolg', async () => {
+  it('@W1-023 Doppelklick auf „Festlegen" löst genau einen Publish aus, sperrt den Knopf und zeigt Erfolg', async () => {
     const pending = deferred();
     spies.publishTournament.mockReturnValue(pending.promise);
 
