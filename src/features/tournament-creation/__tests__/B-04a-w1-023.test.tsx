@@ -10,7 +10,7 @@
  * Mutation: Sperre entfernen → zwei Aufrufe → rot.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Tournament } from '../../../types/tournament';
 
@@ -205,8 +205,11 @@ describe('B-04a @W1-023 — Festlegen mit Ladezustand und Erfolgsmeldung', () =>
 
     const publishButton = await openPreview();
 
-    fireEvent.click(publishButton);
-    fireEvent.click(publishButton);
+    // Doppelklick in einem Block: kein Re-Render dazwischen (echter Doppelklick).
+    await act(async () => {
+      publishButton.click();
+      publishButton.click();
+    });
 
     expect(spies.publishTournament).toHaveBeenCalledTimes(1);
 
