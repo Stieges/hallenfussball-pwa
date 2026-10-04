@@ -145,7 +145,12 @@ vi.mock('../../services/matchProtectionNotices', () => ({
 }));
 
 import { SupabaseRepository } from '../SupabaseRepository';
-import { TeamStillReferencedError, isTransientMutationError } from '../../errors';
+import {
+  TeamStillReferencedError,
+  AuthenticationError,
+  RepositoryError,
+  isTransientMutationError,
+} from '../../errors';
 
 const {
   getUserMock,
@@ -770,5 +775,84 @@ describe('SupabaseRepository.save() — A-05 Fixrunde 1 (@FU-086): Spiel zeigt n
     );
     await expect(new SupabaseRepository().save(consistent)).resolves.toBeUndefined();
     expect(teamsDeleteMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ============================================================================================
+// A-06a (MVP-Bauplan, Brief A1b): Netzfehler bei auth.getUser() ist vorübergehend, nicht
+// dauerhaft — auth-js liefert dafür { user: null, error: AuthRetryableFetchError }.
+// Szenarien: @FU-013, @FU-016, @FU-009.
+// ============================================================================================
+
+describe('SupabaseRepository.save() — A-06a A1b: Netzfehler bei auth.getUser()', () => {
+  it("@FU-009 A1b Test 1: 'Failed to fetch' (AuthRetryableFetchError) → RepositoryError, transient, kein from(...)-Aufruf", async () => {
+    getUserMock.mockResolvedValueOnce({
+      data: { user: null },
+      error: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError', status: 0 }),
+    });
+
+    const err = await new SupabaseRepository()
+      .save(makeTournamentWithOneTeamAndMatch())
+      .catch((e: unknown): unknown => e);
+
+    expect(err).toBeInstanceOf(RepositoryError);
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toContain('Failed to fetch');
+    expect(isTransientMutationError(err)).toBe(true);
+    expect(hoisted.fromMock).not.toHaveBeenCalled();
+  });
+
+  it("@FU-009 A1b Test 2: 'Load failed' (Safari) → RepositoryError, transient", async () => {
+    getUserMock.mockResolvedValueOnce({
+      data: { user: null },
+      error: Object.assign(new Error('Load failed'), { name: 'AuthRetryableFetchError', status: 0 }),
+    });
+
+    const err = await new SupabaseRepository()
+      .save(makeTournamentWithOneTeamAndMatch())
+      .catch((e: unknown): unknown => e);
+
+    expect(err).toBeInstanceOf(RepositoryError);
+    expect(isTransientMutationError(err)).toBe(true);
+    expect(hoisted.fromMock).not.toHaveBeenCalled();
+  });
+
+  it('@FU-009 A1b Gegenbeispiel: user null OHNE error (abgemeldet) → AuthenticationError, permanent', async () => {
+    getUserMock.mockResolvedValueOnce({ data: { user: null } });
+
+    const err = await new SupabaseRepository()
+      .save(makeTournamentWithOneTeamAndMatch())
+      .catch((e: unknown): unknown => e);
+
+    expect(err).toBeInstanceOf(AuthenticationError);
+    expect(isTransientMutationError(err)).toBe(false);
+  });
+
+  it('@FU-016 A1b Gegenbeispiel: AuthSessionMissingError (abgemeldet) → AuthenticationError, permanent', async () => {
+    getUserMock.mockResolvedValueOnce({
+      data: { user: null },
+      error: Object.assign(new Error('Auth session missing'), { name: 'AuthSessionMissingError' }),
+    });
+
+    const err = await new SupabaseRepository()
+      .save(makeTournamentWithOneTeamAndMatch())
+      .catch((e: unknown): unknown => e);
+
+    expect(err).toBeInstanceOf(AuthenticationError);
+    expect(isTransientMutationError(err)).toBe(false);
+  });
+
+  it("@FU-013 A1b Gegenbeispiel: AuthApiError 401 ('invalid JWT') bleibt permanent", async () => {
+    getUserMock.mockResolvedValueOnce({
+      data: { user: null },
+      error: Object.assign(new Error('invalid JWT'), { name: 'AuthApiError', status: 401 }),
+    });
+
+    const err = await new SupabaseRepository()
+      .save(makeTournamentWithOneTeamAndMatch())
+      .catch((e: unknown): unknown => e);
+
+    expect(err).toBeInstanceOf(RepositoryError);
+    expect(isTransientMutationError(err)).toBe(false);
   });
 });

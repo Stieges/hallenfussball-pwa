@@ -185,8 +185,13 @@ export class SupabaseRepository implements ITournamentRepository {
     // Get current user for owner_id
     const {
       data: { user },
+      error,
     } = await getSupabase().auth.getUser();
     if (!user) {
+      // A-06a (Brief A1b): Netzfehler bei auth.getUser() ist vorübergehend, kein Fehlversuch.
+      if (error && error.name !== 'AuthSessionMissingError') {
+        throw new RepositoryError('save', error.message, error);
+      }
       throw new AuthenticationError('Not authenticated', 'save');
     }
 
