@@ -22,7 +22,7 @@ async function makeContext(accountId: string) {
   // `let`, nicht `const`: `useSyncExternalStore` erkennt eine Aenderung nur, wenn `getStatus()`
   // eine NEUE Referenz liefert -- notify()/dismissRejected muessen deshalb ein frisches Objekt
   // zuweisen, nicht das bestehende mutieren.
-  let status = { pendingByTournament: {}, pendingByMatch: {}, rejectedByMatch: {}, reviewByMatch: {}, pausedMatches: {}, authRequired: false, clientOutdated: false, storagePersisted: null, lastError: null };
+  let status = { pendingByTournament: {}, pendingByMatch: {}, rejectedByMatch: {}, reviewByMatch: {}, pausedMatches: {}, authRequired: false, clientOutdated: false, storagePersisted: null, lastError: null, lastFailureKind: null };
   const dismissRejected = vi.fn(async (matchId: string, ids: string[]) => {
     await store.dismissRejected(matchCopyKey(accountId, matchId), ids);
     status = { ...status };

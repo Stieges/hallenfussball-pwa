@@ -72,6 +72,7 @@ function waitingStatus(pending: number): OutboxStatus {
     clientOutdated: false,
     storagePersisted: null,
     lastError: null,
+    lastFailureKind: null,
   };
 }
 
