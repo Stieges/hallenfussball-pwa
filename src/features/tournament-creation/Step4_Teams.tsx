@@ -191,6 +191,12 @@ export const Step4_Teams: React.FC<Step4Props> = ({
     onUpdate('teams', [...existing, ...newTeams]);
   };
 
+  // @W1-014: Teamzahl an die tatsächlich eingetragenen Teams anpassen — kein
+  // Rückschritt in einen früheren Schritt nötig, wenn die Zahl abweicht.
+  const handleAdjustTeamCount = () => {
+    onUpdate('numberOfTeams', teams.length);
+  };
+
   // Auto-Zuweisung: Teams gleichmäßig auf Gruppen verteilen
   const handleAutoAssignGroups = () => {
     let activeIndex = 0;
@@ -500,9 +506,20 @@ export const Step4_Teams: React.FC<Step4Props> = ({
             border: `1px solid ${cssVars.colors.errorBorder}`,
             color: cssVars.colors.error,
             fontSize: cssVars.fontSizes.sm,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            gap: cssVars.spacing.sm,
           }}
         >
           {t('step4.countMismatch', { actual: teams.length, expected: numberOfTeams })}
+          <Button
+            onClick={handleAdjustTeamCount}
+            variant="primary"
+            data-testid="wizard-adjust-team-count"
+          >
+            {t('step4.adjustTeamCount')}
+          </Button>
         </div>
       )}
 

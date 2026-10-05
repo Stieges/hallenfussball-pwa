@@ -119,6 +119,7 @@
     "duplicateName": "Dieser Name wird bereits verwendet",
     "emptyName": "Teamname darf nicht leer sein",
     "countMismatch": "{{actual}} von {{expected}} Teams hinzugefügt – bitte ergänzen oder entfernen",
+    "adjustTeamCount": "Teamzahl anpassen",
     "avatarExpand": "Logo und Farben für {{name}} bearbeiten",
     "avatarCollapse": "Logo und Farben für {{name}} einklappen",
     "collapseLabel": "Einklappen",
