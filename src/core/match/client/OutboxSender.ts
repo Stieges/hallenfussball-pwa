@@ -6,6 +6,8 @@
  * ruft er nur `requestCatchUp(matchId)` auf (das Nachladen verdrahtet C3).
  */
 import { isClientOutdated } from '../../repositories/appendMatchEventsRpc';
+import type { AppendableEvent, AppendResult } from '../../repositories/appendMatchEventsRpc';
+import { REQUEST_TIMEOUT_MS, withRequestTimeout } from '../../utils/syncRetryTiming';
 import { MatchQueue } from './matchQueue';
 import { matchCopyKey } from './matchCopy';
 import { OutboxStatusBook } from './outboxStatus';
@@ -244,10 +246,7 @@ export class OutboxSender {
       return 'halt';
     }
     const batch = copy.pending.slice(0, BATCH_LIMIT);
-    const result = await this.api.appendMatchEvents(queue.matchId, batch, {
-      clientFormat: this.clientFormat,
-      ...(this.deviceId !== undefined ? { deviceId: this.deviceId } : {}),
-    });
+    const result = await this.appendWithTimeout(queue, batch);
     // Fixrunde 2, N-1: der Netzaufruf selbst braucht Zeit -- das Konto kann WAEHREND
     // dieses Aufrufs gewechselt haben (auch wenn die Pruefung Z. 209 direkt davor noch
     // aktuell war). Ein veralteter Lauf darf danach den GLOBALEN Status (authRequired,
@@ -278,6 +277,17 @@ export class OutboxSender {
       await this.refresh();
     }
     return 'continue';
+  }
+
+  /** A3: der Netzaufruf bekommt REQUEST_TIMEOUT_MS -- haengende Anfragen werden abgebrochen. */
+  private appendWithTimeout(queue: MatchQueue, batch: readonly AppendableEvent[]): Promise<AppendResult> {
+    return withRequestTimeout(this.timers, REQUEST_TIMEOUT_MS, (signal) =>
+      this.api.appendMatchEvents(queue.matchId, batch, {
+        clientFormat: this.clientFormat,
+        ...(this.deviceId !== undefined ? { deviceId: this.deviceId } : {}),
+        signal,
+      }),
+    );
   }
 
   /** Fixrunde 2, N-1: gehoert diese Warteschlange (noch) zum aktiven Lauf/Konto? */

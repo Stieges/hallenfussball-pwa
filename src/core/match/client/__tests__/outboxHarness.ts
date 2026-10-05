@@ -6,6 +6,7 @@
 import { vi, type Mock } from 'vitest';
 import { RepositoryError } from '../../../errors';
 import type { AppendableEvent, AppendEventResult, AppendResult } from '../../../repositories/appendMatchEventsRpc';
+import { REQUEST_TIMEOUT_MS } from '../../../utils/syncRetryTiming';
 import { LocalMatchStore } from '../LocalMatchStore';
 import { OutboxSender } from '../OutboxSender';
 import type { OutboxApi, OutboxSenderDeps, OutboxTimers } from '../outboxTypes';
@@ -22,8 +23,10 @@ export interface Harness {
   catchUps: string[];
   /** m7: Aufrufe von `notifyStoreChange` (eigene Store-Schreibzugriffe). */
   storeChanges: string[];
-  /** Reihenfolge der an die Fake-Timer uebergebenen Verzoegerungen in ms. */
+  /** Reihenfolge der an die Fake-Timer uebergebenen Verzoegerungen in ms (delays = nur Wiederholungs-Wartezeiten). */
   delays: number[];
+  /** A3: aufgezeichnete Zeitlimit-Timer (REQUEST_TIMEOUT_MS) -- nicht Teil von `delays`. */
+  limitDelays: number[];
   persist: Mock<() => Promise<boolean>>;
   /** Laesst anstehende Fake-Timer ueber `ms` feuern und deren Arbeit zu Ende laufen. */
   tick(ms: number): Promise<void>;
@@ -36,13 +39,18 @@ export function makeHarness(setup: Partial<OutboxSenderDeps> = {}): Harness {
   const catchUps: string[] = [];
   const storeChanges: string[] = [];
   const delays: number[] = [];
+  const limitDelays: number[] = [];
   const pendingWork: Promise<unknown>[] = [];
   const persist = vi.fn(async () => true);
   vi.stubGlobal('navigator', { storage: { persist } });
 
   const timers: OutboxTimers = {
     setTimeout: (callback, ms) => {
-      delays.push(ms);
+      if (ms === REQUEST_TIMEOUT_MS) {
+        limitDelays.push(ms);
+      } else {
+        delays.push(ms);
+      }
       return setTimeout(() => {
         const result: unknown = callback();
         if (result instanceof Promise) {
@@ -83,6 +91,7 @@ export function makeHarness(setup: Partial<OutboxSenderDeps> = {}): Harness {
     catchUps,
     storeChanges,
     delays,
+    limitDelays,
     persist,
     settle,
     tick: async (ms: number) => {

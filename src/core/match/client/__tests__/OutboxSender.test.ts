@@ -57,7 +57,7 @@ describe('OutboxSender: Grundverhalten', () => {
     const copy = await h.store.load('acc', 'm1');
     expect(copy?.watermarkSeq).toBe(7);
     expect(copy?.confirmed).toEqual([]);
-    expect(h.api.mock.calls[0]?.[2]).toEqual({ clientFormat: 3, deviceId: 'device-1' });
+    expect(h.api.mock.calls[0]?.[2]).toEqual({ clientFormat: 3, deviceId: 'device-1', signal: expect.any(AbortSignal) });
     expect(sentIds(h.api)).toEqual([['e1', 'e2', 'e3']]);
   });
 
