@@ -237,7 +237,19 @@
       "goldenGoal": "Golden Goal",
       "goldenGoalDuration": "Golden Goal time:",
       "overtimeDuration": "Extra time:",
-      "minutes": "minutes"
+      "minutes": "minutes",
+      "byRound": {
+        "title": "Decision per knockout round",
+        "roundOf16": "Round of 16",
+        "quarterfinal": "Quarterfinal",
+        "semifinal": "Semifinal",
+        "final": "Final"
+      },
+      "options": {
+        "shootout": "Penalty shootout",
+        "overtime-then-shootout": "Extra time, then penalty shootout",
+        "goldenGoal": "Golden Goal"
+      }
     }
   },
   "finalsOptions": {

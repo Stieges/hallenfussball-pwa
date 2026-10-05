@@ -237,7 +237,19 @@
       "goldenGoal": "Golden Goal",
       "goldenGoalDuration": "Golden Goal-Zeit:",
       "overtimeDuration": "Verlängerung:",
-      "minutes": "Minuten"
+      "minutes": "Minuten",
+      "byRound": {
+        "title": "Entscheidung je K.-o.-Runde",
+        "roundOf16": "Achtelfinale",
+        "quarterfinal": "Viertelfinale",
+        "semifinal": "Halbfinale",
+        "final": "Finale"
+      },
+      "options": {
+        "shootout": "Strafstoßschießen",
+        "overtime-then-shootout": "Verlängerung, dann Strafstoßschießen",
+        "goldenGoal": "Golden Goal"
+      }
     }
   },
   "finalsOptions": {

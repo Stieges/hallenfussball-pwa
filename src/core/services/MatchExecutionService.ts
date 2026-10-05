@@ -16,6 +16,7 @@ import { executeWithRetry } from '../utils/SingleFlight';
 import { generateEventId } from '../utils/id';
 import { getEffectiveScore } from '../../utils/matchScore';
 import { getSportConfig } from '../../config/sports';
+import { resolveTiebreakMode } from '../match/tiebreakDecision';
 import sportGlossary from '../../i18n/glossary.json';
 
 // ============================================================================
@@ -781,7 +782,12 @@ export class MatchExecutionService {
         const tournament = await this.tournamentRepo.get(tournamentId);
         if (!tournament) { throw new Error(`Tournament ${tournamentId} not found`); }
 
-        const tiebreakerMode = tournament.finalsConfig?.tiebreaker;
+        // B-04c (@W2A-007/@W2A-009): die Entscheidungsregel wird je K.-o.-Runde über
+        // dieselbe Funktion ermittelt, die auch der Monitor nutzt (tiebreakDecision).
+        const tiebreakerMode = resolveTiebreakMode(
+            tournament.finalsConfig,
+            scheduledMatch.phase === 'groupStage' ? null : scheduledMatch.phase,
+        );
         const tiebreakerDuration = tournament.finalsConfig?.tiebreakerDuration ?? 5;
         const durationSeconds = tournament.groupPhaseGameDuration * 60;
 

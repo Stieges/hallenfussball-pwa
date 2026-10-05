@@ -174,6 +174,9 @@ export type TiebreakerMode =
   | 'overtime-then-shootout' // Verlängerung, dann Strafstoßschießen
   | 'goldenGoal';           // Golden Goal (erstes Tor in Verlängerung gewinnt)
 
+/** K.-o.-Runde, in der nach Unentschieden entschieden wird (B-04c, @W2A-007) */
+export type KnockoutRound = 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final';
+
 /**
  * Finals Configuration
  * Replaces the old Finals boolean structure with preset-based system
@@ -183,8 +186,9 @@ export interface FinalsConfig {
   parallelSemifinals?: boolean;      // Halbfinale gleichzeitig?
   parallelQuarterfinals?: boolean;   // Viertelfinale gleichzeitig?
   parallelRoundOf16?: boolean;       // Achtelfinale gleichzeitig?
-  tiebreaker?: TiebreakerMode;       // Entscheidung bei Unentschieden
+  tiebreaker?: TiebreakerMode;       // Entscheidung bei Unentschieden (Vorgabe je Runde)
   tiebreakerDuration?: number;       // Dauer in Minuten (für Verlängerung/Golden Goal)
+  tiebreakerByRound?: Partial<Record<KnockoutRound, TiebreakerMode>>; // Entscheidung je K.-o.-Runde (überschreibt `tiebreaker`)
 }
 
 /**

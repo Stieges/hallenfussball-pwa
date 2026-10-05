@@ -1,14 +1,17 @@
 import { CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
-import { Tournament, FinalsPreset, FinalsConfig, TiebreakerMode } from '../../../types/tournament';
+import { Tournament, FinalsPreset, FinalsConfig, TiebreakerMode, KnockoutRound } from '../../../types/tournament';
 import { getFinalsOptions, FinalsOption } from '../../../constants/finalsOptions';
+import { knockoutRoundsForPreset } from '../../../core/match/tiebreakDecision';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../../../config/sports';
 
 interface FinalsConfigurationProps {
   formData: Partial<Tournament>;
   onUpdate: <K extends keyof Tournament>(field: K, value: Tournament[K]) => void;
 }
+
+const TIEBREAKER_MODES: readonly TiebreakerMode[] = ['shootout', 'overtime-then-shootout', 'goldenGoal'];
 
 export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
   formData,
@@ -62,6 +65,18 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
     onUpdate('finalsConfig', newConfig);
   };
 
+  const handleTiebreakerRoundChange = (round: KnockoutRound, tiebreaker: TiebreakerMode) => {
+    const newConfig: FinalsConfig = {
+      ...formData.finalsConfig,
+      preset: formData.finalsConfig?.preset ?? 'none',
+      tiebreakerByRound: {
+        ...formData.finalsConfig?.tiebreakerByRound,
+        [round]: tiebreaker,
+      },
+    };
+    onUpdate('finalsConfig', newConfig);
+  };
+
   // Get sport config for defaults
   const sportConfig = getSportConfig(formData.sportId ?? DEFAULT_SPORT_ID);
   const currentTiebreaker = formData.finalsConfig?.tiebreaker ?? sportConfig.rules.defaultTiebreaker ?? 'shootout';
@@ -92,6 +107,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           type="radio"
           name="finalsPreset"
           value={option.preset}
+          data-testid={`finals-preset-${option.preset}`}
           checked={isSelected}
           onChange={() => handlePresetChange(option.preset)}
           style={{
@@ -378,6 +394,49 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>{t('finalsConfig.tiebreaker.minutes')}</span>
             </div>
           )}
+
+          {/* Entscheidung je K.-o.-Runde (@W2A-007) */}
+          {knockoutRoundsForPreset(currentPreset).map((round) => (
+            <label
+              key={round}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                marginTop: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
+                {t(`finalsConfig.tiebreaker.byRound.${round}`)}
+              </span>
+              <select
+                data-testid={`tiebreaker-round-${round}`}
+                value={formData.finalsConfig?.tiebreakerByRound?.[round] ?? currentTiebreaker}
+                onChange={(e) => {
+                  const mode = TIEBREAKER_MODES.find((m) => m === e.target.value);
+                  if (mode) {
+                    handleTiebreakerRoundChange(round, mode);
+                  }
+                }}
+                style={{
+                  padding: '6px 10px',
+                  background: cssVars.colors.inputBg,
+                  border: `1px solid ${cssVars.colors.border}`,
+                  borderRadius: cssVars.borderRadius.sm,
+                  color: cssVars.colors.textPrimary,
+                  fontSize: cssVars.fontSizes.sm,
+                }}
+              >
+                {TIEBREAKER_MODES.map((mode) => (
+                  <option key={mode} value={mode}>
+                    {t(`finalsConfig.tiebreaker.options.${mode}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
         </div>
       )}
     </div>
