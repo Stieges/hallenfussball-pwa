@@ -33,7 +33,7 @@ import { continueLog } from '../../../core/match/reduceMatch';
 import { initialState } from '../../../core/match/applyEvent';
 import type { EngineEvent, MatchContext, MatchRules } from '../../../core/match/types';
 import type { Tournament } from '../../../types/tournament';
-import serverRulesSchnellstart from '../../../core/match/__fixtures__/server-rules-schnellstart.json';
+import serverRulesSchnellstart from '../../../core/match/__contracts__/server-rules-schnellstart.json';
 
 vi.mock('../../../hooks/useRepository', () => ({
   useRepository: () => ({

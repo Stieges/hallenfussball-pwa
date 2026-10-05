@@ -346,10 +346,6 @@ echo "Fixtures durch die RPC..." >&2
 FIX_INDEX=0
 : > "$WORKDIR/plans.jsonl"
 for f in "$FIXTURES_DIR"/*.json; do
-  # @W1-004 (B-04b Fixrunde 1): server-rules-schnellstart.json ist KEIN Ereignis-Log,
-  # sondern der Regeln-Vertrag Schnellstart -> server_rules (Felder input/expected).
-  # Seine Faelle laufen weiter unten durch match_engine.server_rules (Kategorie Sonstiges).
-  if [[ "$(basename "$f")" == "server-rules-schnellstart.json" ]]; then continue; fi
   FIX_INDEX=$((FIX_INDEX + 1))
   jq -c --arg file "$(basename "$f")" --argjson idx "$FIX_INDEX" \
      --arg owner "$U_OWNER" --arg coadmin "$U_COADMIN" --arg helper "$U_HELPER" \
@@ -797,10 +793,10 @@ check Sonstiges "5d: Regelableitung (Standard, Begrenzung 1-4, Zahl als Text, du
    and .[3].sections == 1 and .[3].knockout == false and .[3].sectionSeconds == 720' "$out"
 
 # 5e: @W1-004 (B-04b Fixrunde 1) -- gemeinsamer Vertrag Schnellstart -> Server-Regeln.
-# Jeden Fall des Fixtures server-rules-schnellstart.json durch match_engine.server_rules
-# laufen lassen und == expected verlangen (dieselbe Datei prueft die TS-Seite in
-# B-04b-w1-004-default-rules.test.tsx gegen mapTournamentToSupabase).
-SCHNELLSTART_FIXTURE="$FIXTURES_DIR/server-rules-schnellstart.json"
+# Jeden Fall des Vertrags-Fixtures (src/core/match/__contracts__/server-rules-schnellstart.json)
+# durch match_engine.server_rules laufen lassen und == expected verlangen (dieselbe Datei
+# prueft die TS-Seite in B-04b-w1-004-default-rules.test.tsx gegen mapTournamentToSupabase).
+SCHNELLSTART_FIXTURE="$REPO_ROOT/src/core/match/__contracts__/server-rules-schnellstart.json"
 while IFS= read -r schnellstart_case; do
   ss_name="$(jq -r '.name' <<<"$schnellstart_case")"
   ss_expected="$(jq -c '.expected' <<<"$schnellstart_case")"
