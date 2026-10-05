@@ -5,10 +5,10 @@
  * beim Start/Stop/Kontowechsel NICHT verworfen, solange ein Lauf noch aussteht -- sonst
  * koennte ein zweiter, unabhaengiger Lauf fuer dasselbe Spiel entstehen.
  */
+import { backoffMsFor } from '../../utils/syncRetryTiming';
 import type { OutboxPause, OutboxTimers, TimeoutHandle } from './outboxTypes';
 
-/** RC9: 1, 2, 5, 10, 30, 30 ... s -- zaehlt nicht als Fehlversuch, Erfolg setzt zurueck. */
-const SEND_BACKOFF_MS: readonly number[] = [1000, 2000, 5000, 10000, 30000];
+/** 1, 2, 5, 5, 5 ... s (F4-Zusatz, Fundament L76/L157) -- zaehlt nicht als Fehlversuch, Erfolg setzt zurueck. */
 
 export class MatchQueue {
   running: Promise<void> | null = null;
@@ -27,11 +27,11 @@ export class MatchQueue {
     private readonly onRetry: (queue: MatchQueue) => Promise<void>,
   ) {}
 
-  /** Naechster Wert der Folge 1/2/5/10/30/30 s und einen Schritt weiter. */
+  /** Naechster Wert der Folge 1, 2, 5, 5, 5 ... s (F4-Zusatz, Fundament L76/L157) und einen Schritt weiter. */
   takeBackoffMs(): number {
-    const step = Math.min(this.backoffStep, SEND_BACKOFF_MS.length - 1);
+    const ms = backoffMsFor(this.backoffStep);
     this.backoffStep += 1;
-    return SEND_BACKOFF_MS[step];
+    return ms;
   }
 
   resetBackoff(): void {

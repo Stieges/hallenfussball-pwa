@@ -138,7 +138,7 @@ describe('OutboxSender: Grundverhalten', () => {
     expect(h.delays).toEqual([1000]);
   });
 
-  it('7: Backoff 1/2/5/10/30/30 s, ein Erfolg setzt zurueck', async () => {
+  it('7: Backoff 1/2/5/5/5 s, ein Erfolg setzt zurueck', async () => {
     const h = makeHarness();
     await h.store.create('acc', 'm7', ctx);
     await h.store.addPending('acc', 'm7', ev({ id: 'e1', type: 'GOAL', at: 1 }));
@@ -153,9 +153,16 @@ describe('OutboxSender: Grundverhalten', () => {
     expect(h.delays).toEqual([1000, 2000]);
     await h.tick(2000);
     await h.tick(5000);
-    await h.tick(10000);
-    await h.tick(30000);
-    expect(h.delays).toEqual([1000, 2000, 5000, 10000, 30000, 30000]);
+    await h.tick(5000);
+    await h.tick(5000);
+    expect(h.delays).toEqual([1000, 2000, 5000, 5000, 5000, 5000]);
+
+    await h.tick(5000);
+    await h.tick(5000);
+    await h.tick(5000);
+    await h.tick(5000);
+    expect(h.delays.length).toBe(10);
+    expect(Math.max(...h.delays)).toBe(5000);
 
     // Erfolg setzt den Backoff zurueck
     h.api.mockImplementation(async (_matchId, events) => acceptAll(events));
@@ -168,6 +175,35 @@ describe('OutboxSender: Grundverhalten', () => {
     });
     await h.sender.kick('m7');
     expect(h.delays[h.delays.length - 1]).toBe(1000);
+  });
+
+  it('A2 @FU-013 @FU-016: Internet kommt zurueck ohne online-Ereignis -> Uebertragung in hoechstens 10 s', async () => {
+    const h = makeHarness();
+    await h.store.create('acc', 'm10s', ctx);
+    for (const id of ['e1', 'e2', 'e3']) {
+      await h.store.addPending('acc', 'm10s', ev({ id, type: 'GOAL', at: 1 }));
+    }
+    h.api.mockImplementation(async () => {
+      throw networkError();
+    });
+
+    await h.sender.start('acc');
+    // mind. 60 s Fake-Zeit und >= 6 Fehlversuche, damit der Deckel 5 s wirklich greift
+    await h.tick(1000);
+    await h.tick(2000);
+    for (let i = 0; i < 12; i += 1) {
+      await h.tick(5000);
+    }
+    expect(h.api.mock.calls.length).toBeGreaterThanOrEqual(6);
+
+    // Gegenbeispiel: vor dem Umschalten ist nichts acked
+    expect(await idsIn(h, 'acc', 'm10s', 'acked')).toEqual([]);
+
+    // Worst Case: Netz direkt nach einem Fehlversuch, KEIN window/online-Ereignis
+    h.api.mockImplementation(async (_matchId, events) => acceptAll(events));
+    await h.tick(10000);
+    expect(await idsIn(h, 'acc', 'm10s', 'acked')).toEqual(['e1', 'e2', 'e3']);
+    expect(await idsIn(h, 'acc', 'm10s', 'pending')).toEqual([]);
   });
 
   it('M19: kick() hebt eine bestehende Backoff-Pause sofort auf, statt auf den Timer zu warten', async () => {
