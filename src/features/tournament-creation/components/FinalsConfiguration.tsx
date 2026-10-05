@@ -29,7 +29,11 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
   const currentPreset = formData.finalsConfig?.preset ?? 'none';
 
   const handlePresetChange = (preset: FinalsPreset) => {
+    // @W2A-008: Ein Moduswechsel setzt die Entscheidungsregel(n) bewusst NICHT zurück —
+    // sie bleiben auch über „Modus ohne K.-o.“ hinweg gespeichert und werden beim
+    // Zurückwechseln wieder angezeigt.
     const newConfig: FinalsConfig = {
+      ...formData.finalsConfig,
       preset,
       parallelSemifinals: formData.finalsConfig?.parallelSemifinals,
       parallelQuarterfinals: formData.finalsConfig?.parallelQuarterfinals,
@@ -322,6 +326,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               <input
                 type="radio"
                 name="tiebreaker"
+                data-testid="tiebreaker-shootout"
                 checked={currentTiebreaker === 'shootout'}
                 onChange={() => handleTiebreakerChange('shootout')}
                 style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.secondary }}
@@ -340,6 +345,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               <input
                 type="radio"
                 name="tiebreaker"
+                data-testid="tiebreaker-overtime-then-shootout"
                 checked={currentTiebreaker === 'overtime-then-shootout'}
                 onChange={() => handleTiebreakerChange('overtime-then-shootout')}
                 style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.secondary }}
@@ -358,6 +364,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               <input
                 type="radio"
                 name="tiebreaker"
+                data-testid="tiebreaker-goldenGoal"
                 checked={currentTiebreaker === 'goldenGoal'}
                 onChange={() => handleTiebreakerChange('goldenGoal')}
                 style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.secondary }}
