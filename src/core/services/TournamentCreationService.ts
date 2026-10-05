@@ -6,6 +6,19 @@ import { generateFullSchedule } from '../generators';
 import { generateShareCode } from '../../utils/shareCode';
 import { diffMatchResultStatusUpdates } from './matchResultStatusDiff';
 
+/**
+ * @W1-020 (B-04b Fixrunde 1): Sichtbarkeit NACH dem Festlegen -- es gibt die
+ * Fallunterscheidung nur einmal, damit Ankuendigung (TournamentPreview) und
+ * Wirkung (publish) nicht auseinanderlaufen. Beim ersten Festlegen (ohne
+ * publishedAt) wird das Turnier per Link teilbar; ein bereits festgelegtes
+ * Turnier behaelt seine bewusst gesetzte Sichtbarkeit (isPublic).
+ */
+export function visibilityAfterPublish(
+    data: Pick<Tournament, 'publishedAt' | 'isPublic'>
+): 'shareable' | 'private' {
+    return !data.publishedAt || data.isPublic ? 'shareable' : 'private';
+}
+
 export class TournamentCreationService {
     constructor(private readonly repository: ITournamentRepository) { }
 
@@ -236,8 +249,12 @@ export class TournamentCreationService {
         // Turnier bleibt dabei festgelegt).
         const isFirstRelease = !data.publishedAt;
         if (isFirstRelease) {
-            tournament.isPublic = true;
             tournament.publishedAt = new Date().toISOString();
+        }
+        // @W1-020: publish() wendet dieselbe Fallunterscheidung an, die die Vorschau
+        // vor dem Klick ankündigt (visibilityAfterPublish) -- nicht das aktuelle isPublic.
+        if (visibilityAfterPublish(data) === 'shareable') {
+            tournament.isPublic = true;
         }
 
         // Generate share code if public and no share code exists

@@ -18,6 +18,7 @@ import { cssVars } from '../../design-tokens'
 import { exportScheduleToPDF } from '../../lib/pdfExporter';
 import { getLocationName, getLocationAddressLine } from '../../utils/locationHelpers';
 import { activeTeams } from './utils/replanTeams';
+import { visibilityAfterPublish } from '../../core/services/TournamentCreationService';
 
 interface TournamentPreviewProps {
   tournament: Tournament;
@@ -444,7 +445,11 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
               textAlign: 'center',
             }}
           >
-            {t(currentTournament.isPublic ? 'publish.explanationPublic' : 'publish.explanationPrivate')}
+            {t(
+              visibilityAfterPublish(currentTournament) === 'shareable'
+                ? 'publish.explanationPublic'
+                : 'publish.explanationPrivate'
+            )}
           </p>
           <Button
             variant="primary"
