@@ -15,6 +15,8 @@ import {
   ImportValidationWarning,
   PlacementCriterion,
   FinalsPreset,
+  TiebreakerMode,
+  KnockoutRound,
   RefereeMode,
   FinalsRefereeMode,
 } from '../types/tournament';
@@ -223,6 +225,15 @@ function parseJSONTournament(content: string): ImportValidationResult {
         parallelSemifinals: Boolean(finalsConfigData.parallelSemifinals),
         parallelQuarterfinals: Boolean(finalsConfigData.parallelQuarterfinals),
         parallelRoundOf16: Boolean(finalsConfigData.parallelRoundOf16),
+        tiebreaker: finalsConfigData.tiebreaker as TiebreakerMode | undefined,
+        tiebreakerDuration:
+          typeof finalsConfigData.tiebreakerDuration === 'number'
+            ? finalsConfigData.tiebreakerDuration
+            : undefined,
+        tiebreakerByRound:
+          finalsConfigData.tiebreakerByRound && typeof finalsConfigData.tiebreakerByRound === 'object'
+            ? (finalsConfigData.tiebreakerByRound as Partial<Record<KnockoutRound, TiebreakerMode>>)
+            : undefined,
       }
     : undefined;
 

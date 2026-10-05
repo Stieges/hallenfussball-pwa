@@ -43,7 +43,8 @@ export function knockoutRoundsForPreset(preset: FinalsPreset): KnockoutRound[] {
  *
  * `undefined` = keine Entscheidung (z. B. Gruppenspiel). Die Runden-Regel
  * `finalsConfig.tiebreakerByRound[round]` überschreibt die Vorgabe
- * `finalsConfig.tiebreaker` (@W2A-007).
+ * `finalsConfig.tiebreaker` (@W2A-007). Ohne jede gespeicherte Regel gilt in einer
+ * K.-o.-Runde derselbe Rückfall wie beim Server: `'shootout'` (S14).
  */
 export function resolveTiebreakMode(
   finalsConfig: FinalsConfig | null | undefined,
@@ -52,5 +53,5 @@ export function resolveTiebreakMode(
   if (!round) {
     return undefined;
   }
-  return finalsConfig?.tiebreakerByRound?.[round] ?? finalsConfig?.tiebreaker;
+  return finalsConfig?.tiebreakerByRound?.[round] ?? finalsConfig?.tiebreaker ?? 'shootout';
 }

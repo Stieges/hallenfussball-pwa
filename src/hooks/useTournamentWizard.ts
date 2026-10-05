@@ -169,8 +169,9 @@ export function useTournamentWizard(
         updated.finalsConfig = {
           ...prev.finalsConfig,
           preset: sportConfig.defaults.defaultFinalsPreset,
-          tiebreaker: sportConfig.rules.defaultTiebreaker,
-          tiebreakerDuration: sportConfig.rules.defaultTiebreakerDuration,
+          tiebreaker: prev.finalsConfig?.tiebreaker ?? sportConfig.rules.defaultTiebreaker,
+          tiebreakerDuration:
+            prev.finalsConfig?.tiebreakerDuration ?? sportConfig.rules.defaultTiebreakerDuration,
         };
       }
 
