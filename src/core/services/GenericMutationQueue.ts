@@ -4,6 +4,7 @@ import { generateUniqueId } from '../../utils/idGenerator';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { captureFeatureError } from '../../lib/sentry';
 import { isTransientMutationError } from '../errors';
+import { QueueRetryTimer, globalQueueTimers, HOLD_RETRY_MS, type QueueTimers } from './mutationQueueRetry';
 
 /**
  * Structural (not enum-restricted) validation for a queued mutation item.
@@ -90,6 +91,8 @@ export interface MutationQueueConfig<TType extends string> {
      * Tournament-Series queue that hasn't opted in yet).
      */
     isKnownType?: (type: string) => boolean;
+    /** Injizierbare Timer (Standard: globale Wrapper wie MatchEngineProvider.tsx:72-75). */
+    timers?: QueueTimers;
 }
 
 /**
@@ -106,9 +109,14 @@ export class GenericMutationQueue<TType extends string> {
     private queue: GenericMutationItem<TType>[] = [];
     private failedQueue: FailedMutationItem<TType>[] = [];
     private isProcessing = false;
+    private disposed = false;
+    private retryTimer: QueueRetryTimer;
     private listeners: ((status: MutationQueueStatus) => void)[] = [];
 
     constructor(private config: MutationQueueConfig<TType>) {
+        this.retryTimer = new QueueRetryTimer(config.timers ?? globalQueueTimers(), () => {
+            void this.process();
+        });
         this.load();
         this.loadFailed();
 
@@ -419,7 +427,10 @@ export class GenericMutationQueue<TType extends string> {
         if (this.isProcessing || this.queue.length === 0) { return; }
         if (!(navigator.onLine)) { return; }
 
+        // Ein Lauf ersetzt einen anstehenden Wiederholungs-Zeitgeber.
+        this.retryTimer.clear();
         this.isProcessing = true;
+        let scheduleMs: number | null = null;
 
         try {
             // Process head of queue
@@ -438,6 +449,8 @@ export class GenericMutationQueue<TType extends string> {
                         // navigator.onLine — Hallen-WLAN-Anmeldeseite, Server-Überlastung):
                         // zählt nicht als Fehlversuch. Item bleibt unverändert an erster
                         // Stelle stehen und wird beim nächsten Anstoß erneut versucht.
+                        this.retryTimer.hold = false;
+                        scheduleMs = this.retryTimer.takeBackoffMs();
                         break;
                     }
 
@@ -456,17 +469,49 @@ export class GenericMutationQueue<TType extends string> {
                     } else {
                         // Keep in queue, stop processing for now (retry later)
                         this.save();
+                        // Echter Fehler: feste 30-s-Sperre, bis der Zeitgeber ruft.
+                        this.retryTimer.hold = true;
+                        scheduleMs = HOLD_RETRY_MS;
                         // break loop to retry later
                         break;
                     }
                 }
 
                 this.queue.shift(); // Remove handled item
+                this.retryTimer.reset();
+                this.retryTimer.hold = false;
                 this.save();
                 this.notifyListeners();
             }
         } finally {
             this.isProcessing = false;
         }
+
+        // Genau eine Planungsstelle (A-06d): kein Zeitgeber offline, disposed oder ohne Bedarf.
+        if (this.queue.length === 0) {
+            this.retryTimer.reset();
+            this.retryTimer.clear();
+            this.retryTimer.hold = false;
+            return;
+        }
+        if (scheduleMs !== null && navigator.onLine && !this.disposed) {
+            this.retryTimer.schedule(scheduleMs);
+        }
+    }
+
+    /**
+     * Anstoß von außen (resync, Sichtbarkeit) — während der 30-s-Sperre nach einem
+     * echten Fehler wird kein Versuch gezählt und nichts ausgelöst.
+     */
+    public async processIfDue(): Promise<void> {
+        if (this.retryTimer.hold) { return; }
+        return this.process();
+    }
+
+    /** Zeitgeber und Sperre löschen; `process()`/`enqueue` arbeiten weiter. */
+    public dispose(): void {
+        this.disposed = true;
+        this.retryTimer.clear();
+        this.retryTimer.hold = false;
     }
 }
