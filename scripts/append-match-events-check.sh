@@ -797,6 +797,7 @@ check Sonstiges "5d: Regelableitung (Standard, Begrenzung 1-4, Zahl als Text, du
 # durch match_engine.server_rules laufen lassen und == expected verlangen (dieselbe Datei
 # prueft die TS-Seite in B-04b-w1-004-default-rules.test.tsx gegen mapTournamentToSupabase).
 SCHNELLSTART_FIXTURE="$REPO_ROOT/src/core/match/__contracts__/server-rules-schnellstart.json"
+check Sonstiges "@W1-004: Vertrags-Fixture hat ≥ 2 Fälle" '. >= 2' "$(jq '.cases | length' "$SCHNELLSTART_FIXTURE" 2>/dev/null)"
 while IFS= read -r schnellstart_case; do
   ss_name="$(jq -r '.name' <<<"$schnellstart_case")"
   ss_expected="$(jq -c '.expected' <<<"$schnellstart_case")"
