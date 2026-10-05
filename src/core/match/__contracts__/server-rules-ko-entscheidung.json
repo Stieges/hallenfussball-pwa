@@ -31,7 +31,78 @@
         "sectionSeconds": 720,
         "breakSeconds": 60,
         "knockout": true,
+        "tiebreak": "shootout",
+        "overtimeSeconds": 300,
+        "shootersPerTeam": 5,
+        "suddenDeathAfter": 6,
+        "penaltySeconds": 120
+      },
+      "bekannteAbweichung": {
+        "befund": "C-KO-RUNDENREGEL-SERVER",
+        "uebergabe": "A-27 (Spur A)",
+        "serverHeute": {
+          "tiebreak": "goldenGoal"
+        }
+      }
+    },
+    {
+      "name": "Halbfinale ohne Runden-Regel (Rückfall globale Regel)",
+      "input": {
+        "durationMinutes": null,
+        "phase": "semifinal",
+        "groupDuration": 10,
+        "finalDuration": 12,
+        "config": {
+          "gamePeriods": 1,
+          "halftimeBreak": 1,
+          "matchCockpitSettings": {
+            "penaltyShootersPerTeam": null,
+            "penaltySuddenDeathAfter": null
+          }
+        },
+        "finals": {
+          "preset": "top-4",
+          "tiebreaker": "goldenGoal",
+          "tiebreakerDuration": 5
+        }
+      },
+      "expected": {
+        "sections": 1,
+        "sectionSeconds": 720,
+        "breakSeconds": 60,
+        "knockout": true,
         "tiebreak": "goldenGoal",
+        "overtimeSeconds": 300,
+        "shootersPerTeam": 5,
+        "suddenDeathAfter": 6,
+        "penaltySeconds": 120
+      }
+    },
+    {
+      "name": "K.-o.-Spiel ohne Regel (Rückfall shootout)",
+      "input": {
+        "durationMinutes": null,
+        "phase": "final",
+        "groupDuration": 10,
+        "finalDuration": 12,
+        "config": {
+          "gamePeriods": 1,
+          "halftimeBreak": 1,
+          "matchCockpitSettings": {
+            "penaltyShootersPerTeam": null,
+            "penaltySuddenDeathAfter": null
+          }
+        },
+        "finals": {
+          "preset": "top-4"
+        }
+      },
+      "expected": {
+        "sections": 1,
+        "sectionSeconds": 720,
+        "breakSeconds": 60,
+        "knockout": true,
+        "tiebreak": "shootout",
         "overtimeSeconds": 300,
         "shootersPerTeam": 5,
         "suddenDeathAfter": 6,

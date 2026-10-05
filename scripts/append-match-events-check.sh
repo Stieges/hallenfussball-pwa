@@ -280,6 +280,8 @@ SQL
 CATS=(Fixtures Rechte Idempotenz Kaskade Nebenlaeufig Sonstiges Rechte-Assertion)
 DEV=(0 0 0 0 0 0 0)
 OKS=(0 0 0 0 0 0 0)
+KNOWN=(0 0 0 0 0 0 0)
+KNOWN_LINES=()
 cat_index() {
   local i
   for i in "${!CATS[@]}"; do
@@ -290,6 +292,7 @@ cat_index() {
 }
 count_ok() { local i; i="$(cat_index "$1")"; OKS[i]=$((OKS[i] + 1)); }
 count_dev() { local i; i="$(cat_index "$1")"; DEV[i]=$((DEV[i] + 1)); }
+count_known() { local i; i="$(cat_index "$1")"; KNOWN[i]=$((KNOWN[i] + 1)); }
 
 # check <Kategorie> <Name> <jq-Ausdruck (liefert true)> <JSON>
 check() {
@@ -302,6 +305,32 @@ check() {
     echo "ABWEICHUNG  [$cat] $name"
     echo "    erwartet: $expr"
     echo "    erhalten: $(printf '%s' "$json" | head -c 1500)"
+  fi
+}
+
+# check_known <Kategorie> <Name> <expected-JSON> <serverHeute-merged-JSON> <out-JSON> <befund>
+# Vertragsfall mit Block `bekannteAbweichung` (feste Vertrags-Fixture):
+#   out == expected    -> die Abweichung ist behoben, die Markierung muss aus der Fixture
+#                        entfernt werden (Fehler -- der Schalter bleibt scharf)
+#   out == serverHeute -> BEKANNT (GitHub-Warnung, zaehlt NICHT in TOTAL_DEV)
+#   sonst              -> ABWEICHUNG (eine dritte, unbekannte Abweichung wird nicht verschluckt)
+check_known() {
+  local cat="$1" name="$2" expected="$3" server_heute="$4" out="$5" befund="$6"
+  if [[ -n "$out" ]] && jq -e --argjson e "$expected" '. == $e' <<<"$out" >/dev/null 2>&1; then
+    count_dev "$cat"
+    echo "ABWEICHUNG  [$cat] $name: bekannte Abweichung $befund ist behoben – „bekannteAbweichung“ aus der Fixture entfernen"
+  elif [[ -n "$out" ]] && jq -e --argjson s "$server_heute" '. == $s' <<<"$out" >/dev/null 2>&1; then
+    count_known "$cat"
+    local line="$name (Befund $befund, Übergabe A-27): Client erwartet $(jq -c '.tiebreak' <<<"$expected"), Server liefert $(jq -c '.tiebreak' <<<"$server_heute")"
+    echo "BEKANNT     [$cat] $line"
+    echo "::warning::[$cat] $line"
+    KNOWN_LINES+=("[$cat] $line")
+  else
+    count_dev "$cat"
+    echo "ABWEICHUNG  [$cat] $name"
+    echo "    erwartet: $expected"
+    echo "    serverHeute: $server_heute"
+    echo "    erhalten: $(printf '%s' "$out" | head -c 1500)"
   fi
 }
 
@@ -814,16 +843,20 @@ while IFS= read -r schnellstart_case; do
     ". == $ss_expected" "$out"
 done < <(jq -c '.cases[]' "$SCHNELLSTART_FIXTURE")
 
-# 5f: @W2A-009 (B-04c Paket c) -- K.o.-Entscheidung je Runde: server_rules liest die
-# Entscheidungsregel aus finals_config. Gelesen wird derzeit nur die globale `tiebreaker`
-# (die Runden-Regel `tiebreakerByRound` liest der Server NICHT -- Uebergabe an Spur A,
-# siehe task-B-04-report.md). Der Fall haelt den Vertrag fest: gleiche Eingabe wie der
-# Client-Weg, expected == Ableitung der SQL-Funktion.
+# 5f: @W2A-009 (B-04c Paket c) -- K.o.-Entscheidung je Runde: expected == Client-Regel
+# (resolveTiebreakMode); bekannte Server-Abweichungen nur mit Befund-Kennung (Block
+# `bekannteAbweichung` in der Fixture, Befund C-KO-RUNDENREGEL-SERVER -- der Server liest
+# derzeit nur die globale `tiebreaker`, die Runden-Regel `tiebreakerByRound` nicht,
+# Uebergabe an Spur A, siehe task-B-04-report.md). Markierte Faelle laufen ueber
+# check_known (BEKANNT mit ::warning::, solange der Server abweicht; Fehler, sobald er
+# es nicht mehr tut und die Markierung noch steht). Unmarkierte Faelle sind normale
+# Vertrags-Faelle ueber check (OK bzw. ABWEICHUNG).
 KO_FIXTURE="$REPO_ROOT/src/core/match/__contracts__/server-rules-ko-entscheidung.json"
 check Sonstiges "@W2A-009: K.o.-Entscheidungs-Fixture hat ≥ 1 Fall" '. >= 1' "$(jq '.cases | length' "$KO_FIXTURE" 2>/dev/null)"
 while IFS= read -r ko_case; do
   ko_name="$(jq -r '.name' <<<"$ko_case")"
   ko_expected="$(jq -c '.expected' <<<"$ko_case")"
+  ko_befund="$(jq -r '.bekannteAbweichung.befund // empty' <<<"$ko_case")"
   ko_phase="$(jq -r '.input.phase' <<<"$ko_case")"
   ko_gdur="$(jq -r '.input.groupDuration' <<<"$ko_case")"
   ko_fdur="$(jq -r '.input.finalDuration' <<<"$ko_case")"
@@ -833,8 +866,14 @@ while IFS= read -r ko_case; do
   ko_fin="$(jq -c '.input.finals' <<<"$ko_case")"
   if [[ "$ko_fin" == "null" ]]; then ko_fin_sql="NULL"; else ko_fin_sql="\$J\$${ko_fin}\$J\$::jsonb"; fi
   out="$(q "SELECT match_engine.server_rules($ko_dmin_sql, '$ko_phase', $ko_gdur, $ko_fdur, \$J\$${ko_cfg}\$J\$::jsonb, $ko_fin_sql);")"
-  check Sonstiges "@W2A-009: server_rules K.o.-Fall $ko_name == Fixture (Entscheidung je Runde)" \
-    ". == $ko_expected" "$out"
+  if [[ -n "$ko_befund" ]]; then
+    ko_server_heute="$(jq -c '.expected * .bekannteAbweichung.serverHeute' <<<"$ko_case")"
+    check_known Sonstiges "@W2A-009: server_rules K.o.-Fall $ko_name == Fixture (Entscheidung je Runde)" \
+      "$ko_expected" "$ko_server_heute" "$out" "$ko_befund"
+  else
+    check Sonstiges "@W2A-009: server_rules K.o.-Fall $ko_name == Fixture (Entscheidung je Runde)" \
+      ". == $ko_expected" "$out"
+  fi
 done < <(jq -c '.cases[]' "$KO_FIXTURE")
 
 # --- 9b. Fixrunde 1: S14, S13 + R14-Spalten, M4, M1 ------------------------------------------
@@ -955,12 +994,18 @@ fi
 # --- 12. Ergebnis -----------------------------------------------------------------------------
 echo ""
 TOTAL_DEV=0
+TOTAL_KNOWN=0
 SUMMARY=""
 for i in "${!CATS[@]}"; do
   TOTAL_DEV=$((TOTAL_DEV + DEV[i]))
-  SUMMARY+="${CATS[$i]}=${OKS[$i]}ok/${DEV[$i]}rot "
+  TOTAL_KNOWN=$((TOTAL_KNOWN + KNOWN[i]))
+  SUMMARY+="${CATS[$i]}=${OKS[$i]}ok/${DEV[i]}rot/${KNOWN[i]}bekannt "
 done
-echo "Ergebnis je Kategorie: $SUMMARY"
+echo "Ergebnis je Kategorie: $SUMMARY (bekannt=$TOTAL_KNOWN)"
+if [[ "${#KNOWN_LINES[@]}" -gt 0 ]]; then
+  echo "Bekannte Abweichungen (BEKANNT, kein Fehler, $TOTAL_KNOWN):"
+  printf '    %s\n' "${KNOWN_LINES[@]}"
+fi
 
 red_required() {
   local missing=()
