@@ -59,9 +59,18 @@ interface Fixture {
 }
 
 const fixturesDir = path.join(__dirname, '..', '__fixtures__');
+
+/**
+ * `server-rules-schnellstart.json` (@W1-004, B-04b Fixrunde 1) ist KEIN Ereignis-Log,
+ * sondern der Regeln-Vertrag Schnellstart -> server_rules (Felder `input`/`expected`).
+ * Verbraucher: `B-04b-w1-004-default-rules.test.tsx` und
+ * `scripts/append-match-events-check.sh` (Kategorie Sonstiges).
+ */
+const NON_EVENT_FIXTURES = new Set(['server-rules-schnellstart.json']);
+
 const fixtureFileNames = fs
   .readdirSync(fixturesDir)
-  .filter((name) => name.endsWith('.json'))
+  .filter((name) => name.endsWith('.json') && !NON_EVENT_FIXTURES.has(name))
   .sort();
 
 function loadFixture(fileName: string): Fixture {

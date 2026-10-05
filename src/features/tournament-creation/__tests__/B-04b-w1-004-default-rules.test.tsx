@@ -1,26 +1,39 @@
 /**
- * B-04 Paket b — @W1-004: Standardwerte sind gültige Spielregeln.
+ * B-04b Fixrunde 1 — @W1-004: Vertrag Schnellstart → Server-Regeln über ein gemeinsames Fixture.
  *
  * Gegeben ein Turnier wurde im Schnellstart ohne Änderung der Regeln angelegt
  * Wenn am Turniertag ein Spiel gestartet wird
  * Dann nimmt der Server die Regeln (Dauer, Abschnitte, Halbzeitpause,
  * Entscheidung im Finale) ohne Fehler an
  *
- * Echter Bedienweg: useTournamentWizard (Schnellstart-Entwurf ohne Regeländerung,
- * nur useRepository gemockt) → Regeln für Gruppen- UND Finalspiel wie am Anpfiff
- * ableiten → isPayloadValid (MATCH_START).
- * UI-Ort: src/hooks/useTournamentWizard.ts (Schnellstart-Entwurf) +
- * src/core/match/payloadValidation.ts (Regel-Prüfung beim Anpfiff).
+ * Echter Bedienweg: useTournamentWizard (Schnellstart-Entwurf) → echter
+ * mapTournamentToSupabase (supabaseMappers.ts) → die Zeilenfelder `config`,
+ * `finals_config`, `group_phase_duration`, `final_round_duration` enthalten den
+ * `input` des gemeinsamen Fixtures `server-rules-schnellstart.json`. Dessen
+ * `expected` besteht isPayloadValid und die TS-Engine nimmt MATCH_START damit an.
+ * Die SQL-Seite (match_engine.server_rules) prüft dasselbe Fixture in
+ * `scripts/append-match-events-check.sh` (Kategorie Sonstiges, @W1-004).
  *
- * Gegenbeispiel: Regeln mit negativer Halbzeitpause oder 0 Abschnitten → ungültig.
- * Mutation: Default `periods: 1` in src/config/sports/football.ts → `periods: 0` → rot.
+ * Der Server darf die Regeln nicht stillschweigend ändern: expected.sections ===
+ * draft.gamePeriods, expected.breakSeconds === draft.halftimeBreak * 60,
+ * expected.tiebreak === draft.finalsConfig.tiebreaker.
+ *
+ * Gegenbeispiel: Ein Entwurf mit `gamePeriods: 5` erzeugt eine Zeile, die vom
+ * Schnellstart-`input` abweicht (≠) — der Vergleich wirkt also.
+ * Mutation: (a) Im Mapper `gamePeriods` unter anderem Schlüssel schreiben
+ * (supabaseMappers.ts) → rot. (b) `periods: 1` → `2` in
+ * src/config/sports/football.ts → rot.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { useTournamentWizard } from '../../../hooks/useTournamentWizard';
+import { mapTournamentToSupabase } from '../../../core/repositories/supabaseMappers';
 import { isPayloadValid } from '../../../core/match/payloadValidation';
-import type { EngineEvent, MatchContext } from '../../../core/match/types';
+import { continueLog } from '../../../core/match/reduceMatch';
+import { initialState } from '../../../core/match/applyEvent';
+import type { EngineEvent, MatchContext, MatchRules } from '../../../core/match/types';
 import type { Tournament } from '../../../types/tournament';
+import serverRulesSchnellstart from '../../../core/match/__fixtures__/server-rules-schnellstart.json';
 
 vi.mock('../../../hooks/useRepository', () => ({
   useRepository: () => ({
@@ -31,89 +44,105 @@ vi.mock('../../../hooks/useRepository', () => ({
   }),
 }));
 
+type RegelInput = {
+  durationMinutes: number | null;
+  phase: string;
+  groupDuration: number;
+  finalDuration: number;
+  config: Record<string, number | string | boolean | null>;
+  finals: Record<string, number | string | boolean | null> | null;
+};
+
+type ServerRulesCase = {
+  name: string;
+  input: RegelInput;
+  expected: MatchRules;
+};
+
+const cases = (serverRulesSchnellstart as { cases: ServerRulesCase[] }).cases;
+
 const ctx: MatchContext = { matchId: 'm1', teamAId: 'teamA', teamBId: 'teamB' };
 
-type AnpfiffRules = {
-  sections: number;
-  sectionSeconds: number;
-  breakSeconds: number;
-  knockout: boolean;
-  tiebreak: string | null;
-  overtimeSeconds: number;
-  shootersPerTeam: number;
-  suddenDeathAfter: number;
-  penaltySeconds: number;
+type MappedRow = ReturnType<typeof mapTournamentToSupabase>['tournamentRow'];
+
+/** Zeilenfeld enthält jeden Blattwert des Fixture-Ausschnitts (Schlüssel + Wert). */
+const containsLeaves = (haystack: unknown, needle: Record<string, unknown> | null): boolean => {
+  const record = (haystack ?? {}) as Record<string, unknown>;
+  return Object.entries(needle ?? {}).every(([key, value]) => record[key] === value);
 };
 
-/**
- * Regeln für den MATCH_START beim Anpfiff — dieselbe Abbildung wie
- * `match_engine.server_rules` (supabase/migrations/20260928_003_append_match_events.sql,
- * dort dokumentiert unter "R4/R4b: Regeln, die der Server beim MATCH_START setzt").
- * Ohne Server-Clamps: Der Client schreibt offline dieselben Werte in den Payload,
- * die Prüfung gegen MatchRulesSchema erfolgt anschließend über isPayloadValid.
- */
-function matchRulesForAnpfiff(tournament: Tournament, phase: 'groupStage' | 'final'): AnpfiffRules {
-  const sections = tournament.gamePeriods ?? 1;
-  const totalMinutes = phase === 'groupStage'
-    ? tournament.groupPhaseGameDuration
-    : tournament.finalRoundGameDuration ?? tournament.groupPhaseGameDuration;
-  const settings = tournament.matchCockpitSettings;
-  return {
-    sections,
-    sectionSeconds: Math.floor((totalMinutes * 60) / sections),
-    breakSeconds: (tournament.halftimeBreak ?? 1) * 60,
-    knockout: phase !== 'groupStage',
-    tiebreak: tournament.finalsConfig?.tiebreaker ?? 'shootout',
-    overtimeSeconds: (tournament.finalsConfig?.tiebreakerDuration ?? 5) * 60,
-    shootersPerTeam: settings?.penaltyShootersPerTeam ?? 5,
-    suddenDeathAfter: settings?.penaltySuddenDeathAfter ?? 6,
-    penaltySeconds: 120,
+/** `input` des Fixtures steckt in den Zeilenfeldern, die der Mapper schreibt. */
+const rowCarriesInput = (row: MappedRow, input: RegelInput): boolean =>
+  containsLeaves(row.config, input.config) &&
+  containsLeaves(row.finals_config, input.finals) &&
+  row.group_phase_duration === input.groupDuration &&
+  row.final_round_duration === input.finalDuration;
+
+function setupWizard() {
+  const wizard = renderHook(() => useTournamentWizard());
+  const setField = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
+    act(() => {
+      wizard.result.current.updateForm(field, value);
+    });
   };
+  const draft = () => wizard.result.current.createDraftTournament();
+  return { setField, draft };
 }
 
-const startEvent = (rules: AnpfiffRules): EngineEvent => ({
-  id: 'evt-1',
-  type: 'MATCH_START',
-  actor: 'helper',
-  at: 1000,
-  section: 1,
-  clockMs: null,
-  payload: { rules },
-});
+describe('B-04b @W1-004 – Vertrag Schnellstart → Server-Regeln (gemeinsames Fixture)', () => {
+  it('Schnellstart-Zeile enthält den Fixture-input (config, finals_config, Dauern) je Fall', () => {
+    const { draft } = setupWizard();
+    const tournament = draft();
+    const { tournamentRow } = mapTournamentToSupabase(tournament, 'owner-1');
 
-const schnellstartTournament = (): Tournament => {
-  const { result } = renderHook(() => useTournamentWizard());
-  return result.current.createDraftTournament();
-};
-
-describe('B-04b @W1-004 – Standardwerte sind gültige Spielregeln', () => {
-  it('Schnellstart-Regeln für ein Gruppenspiel bestehen die Regel-Prüfung beim Anpfiff', () => {
-    const tournament = schnellstartTournament();
-    const rules = matchRulesForAnpfiff(tournament, 'groupStage');
-
-    expect(rules.sections).toBe(tournament.gamePeriods);
-    expect(rules.breakSeconds).toBe((tournament.halftimeBreak ?? 0) * 60);
-    expect(rules.knockout).toBe(false);
-    expect(isPayloadValid(startEvent(rules), ctx)).toBe(true);
+    expect(cases.length).toBeGreaterThanOrEqual(2);
+    for (const testCase of cases) {
+      expect(testCase.input.durationMinutes, `Fall ${testCase.name}`).toBeNull();
+      expect(rowCarriesInput(tournamentRow, testCase.input), `Fall ${testCase.name}`).toBe(true);
+    }
   });
 
-  it('Schnellstart-Regeln für ein Finalspiel (Entscheidung im Finale) bestehen die Regel-Prüfung', () => {
-    const tournament = schnellstartTournament();
-    const rules = matchRulesForAnpfiff(tournament, 'final');
+  it('Server ändert die Regeln nicht stillschweigend: expected folgt den Schnellstart-Vorgaben', () => {
+    const { draft } = setupWizard();
+    const tournament = draft();
 
-    expect(rules.knockout).toBe(true);
-    expect(rules.tiebreak).toBe(tournament.finalsConfig?.tiebreaker);
-    expect(isPayloadValid(startEvent(rules), ctx)).toBe(true);
+    for (const testCase of cases) {
+      expect(testCase.expected.sections, `Fall ${testCase.name}`).toBe(tournament.gamePeriods);
+      expect(testCase.expected.breakSeconds, `Fall ${testCase.name}`).toBe(
+        (tournament.halftimeBreak ?? 0) * 60
+      );
+      expect(testCase.expected.tiebreak, `Fall ${testCase.name}`).toBe(
+        tournament.finalsConfig?.tiebreaker
+      );
+    }
   });
 
-  it('Gegenbeispiel: negative Halbzeitpause oder 0 Abschnitte sind ungültig', () => {
-    const tournament = schnellstartTournament();
-    const groupRules = matchRulesForAnpfiff(tournament, 'groupStage');
+  it('expected besteht die Regel-Prüfung beim Anpfiff und die TS-Engine nimmt MATCH_START an', () => {
+    for (const testCase of cases) {
+      const startEvent: EngineEvent = {
+        id: `evt-${testCase.name}`,
+        type: 'MATCH_START',
+        actor: 'helper',
+        at: 1000,
+        section: 1,
+        clockMs: null,
+        payload: { rules: testCase.expected },
+        actorUser: 'helper',
+      };
+      expect(isPayloadValid(startEvent, ctx), `Fall ${testCase.name}`).toBe(true);
+      const outcome = continueLog(initialState(ctx), [startEvent], ctx);
+      expect(outcome.results[0].status, `Fall ${testCase.name}`).toBe('accepted');
+    }
+  });
 
-    const negativeBreak: AnpfiffRules = { ...groupRules, breakSeconds: -60 };
-    expect(isPayloadValid(startEvent(negativeBreak), ctx)).toBe(false);
+  it('Gegenbeispiel: Entwurf mit gamePeriods 5 weicht vom Schnellstart-input ab (≠)', () => {
+    const { setField, draft } = setupWizard();
+    setField('gamePeriods', 5);
+    const tournament = draft();
+    const { tournamentRow } = mapTournamentToSupabase(tournament, 'owner-1');
 
-    const zeroSections: AnpfiffRules = { ...groupRules, sections: 0 };
-    expect(isPayloadValid(startEvent(zeroSections), ctx)).toBe(false);
+    for (const testCase of cases) {
+      expect(rowCarriesInput(tournamentRow, testCase.input), `Fall ${testCase.name}`).toBe(false);
+    }
   });
 });

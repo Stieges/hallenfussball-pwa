@@ -346,6 +346,10 @@ echo "Fixtures durch die RPC..." >&2
 FIX_INDEX=0
 : > "$WORKDIR/plans.jsonl"
 for f in "$FIXTURES_DIR"/*.json; do
+  # @W1-004 (B-04b Fixrunde 1): server-rules-schnellstart.json ist KEIN Ereignis-Log,
+  # sondern der Regeln-Vertrag Schnellstart -> server_rules (Felder input/expected).
+  # Seine Faelle laufen weiter unten durch match_engine.server_rules (Kategorie Sonstiges).
+  if [[ "$(basename "$f")" == "server-rules-schnellstart.json" ]]; then continue; fi
   FIX_INDEX=$((FIX_INDEX + 1))
   jq -c --arg file "$(basename "$f")" --argjson idx "$FIX_INDEX" \
      --arg owner "$U_OWNER" --arg coadmin "$U_COADMIN" --arg helper "$U_HELPER" \
@@ -791,6 +795,27 @@ check Sonstiges "5d: Regelableitung (Standard, Begrenzung 1-4, Zahl als Text, du
    and .[1] == {"sections":4,"sectionSeconds":300,"breakSeconds":120,"knockout":true,"tiebreak":"goldenGoal","overtimeSeconds":180,"shootersPerTeam":5,"suddenDeathAfter":6,"penaltySeconds":120}
    and .[2] == {"sections":2,"sectionSeconds":210,"breakSeconds":60,"knockout":true,"tiebreak":"shootout","overtimeSeconds":300,"shootersPerTeam":3,"suddenDeathAfter":4,"penaltySeconds":120}
    and .[3].sections == 1 and .[3].knockout == false and .[3].sectionSeconds == 720' "$out"
+
+# 5e: @W1-004 (B-04b Fixrunde 1) -- gemeinsamer Vertrag Schnellstart -> Server-Regeln.
+# Jeden Fall des Fixtures server-rules-schnellstart.json durch match_engine.server_rules
+# laufen lassen und == expected verlangen (dieselbe Datei prueft die TS-Seite in
+# B-04b-w1-004-default-rules.test.tsx gegen mapTournamentToSupabase).
+SCHNELLSTART_FIXTURE="$FIXTURES_DIR/server-rules-schnellstart.json"
+while IFS= read -r schnellstart_case; do
+  ss_name="$(jq -r '.name' <<<"$schnellstart_case")"
+  ss_expected="$(jq -c '.expected' <<<"$schnellstart_case")"
+  ss_phase="$(jq -r '.input.phase' <<<"$schnellstart_case")"
+  ss_gdur="$(jq -r '.input.groupDuration' <<<"$schnellstart_case")"
+  ss_fdur="$(jq -r '.input.finalDuration' <<<"$schnellstart_case")"
+  ss_dmin="$(jq -r '.input.durationMinutes' <<<"$schnellstart_case")"
+  if [[ "$ss_dmin" == "null" ]]; then ss_dmin_sql="NULL"; else ss_dmin_sql="$ss_dmin"; fi
+  ss_cfg="$(jq -c '.input.config' <<<"$schnellstart_case")"
+  ss_fin="$(jq -c '.input.finals' <<<"$schnellstart_case")"
+  if [[ "$ss_fin" == "null" ]]; then ss_fin_sql="NULL"; else ss_fin_sql="\$J\$${ss_fin}\$J\$::jsonb"; fi
+  out="$(q "SELECT match_engine.server_rules($ss_dmin_sql, '$ss_phase', $ss_gdur, $ss_fdur, \$J\$${ss_cfg}\$J\$::jsonb, $ss_fin_sql);")"
+  check Sonstiges "@W1-004: server_rules Schnellstart-Fall $ss_name == Fixture (Vertrag Schnellstart -> Anpfiff-Regeln)" \
+    ". == $ss_expected" "$out"
+done < <(jq -c '.cases[]' "$SCHNELLSTART_FIXTURE")
 
 # --- 9b. Fixrunde 1: S14, S13 + R14-Spalten, M4, M1 ------------------------------------------
 echo "Fixrunde 1 (S13, S14, R14, M1, M4)..." >&2
