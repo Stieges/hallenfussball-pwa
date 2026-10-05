@@ -814,6 +814,29 @@ while IFS= read -r schnellstart_case; do
     ". == $ss_expected" "$out"
 done < <(jq -c '.cases[]' "$SCHNELLSTART_FIXTURE")
 
+# 5f: @W2A-009 (B-04c Paket c) -- K.o.-Entscheidung je Runde: server_rules liest die
+# Entscheidungsregel aus finals_config. Gelesen wird derzeit nur die globale `tiebreaker`
+# (die Runden-Regel `tiebreakerByRound` liest der Server NICHT -- Uebergabe an Spur A,
+# siehe task-B-04-report.md). Der Fall haelt den Vertrag fest: gleiche Eingabe wie der
+# Client-Weg, expected == Ableitung der SQL-Funktion.
+KO_FIXTURE="$REPO_ROOT/src/core/match/__contracts__/server-rules-ko-entscheidung.json"
+check Sonstiges "@W2A-009: K.o.-Entscheidungs-Fixture hat ≥ 1 Fall" '. >= 1' "$(jq '.cases | length' "$KO_FIXTURE" 2>/dev/null)"
+while IFS= read -r ko_case; do
+  ko_name="$(jq -r '.name' <<<"$ko_case")"
+  ko_expected="$(jq -c '.expected' <<<"$ko_case")"
+  ko_phase="$(jq -r '.input.phase' <<<"$ko_case")"
+  ko_gdur="$(jq -r '.input.groupDuration' <<<"$ko_case")"
+  ko_fdur="$(jq -r '.input.finalDuration' <<<"$ko_case")"
+  ko_dmin="$(jq -r '.input.durationMinutes' <<<"$ko_case")"
+  if [[ "$ko_dmin" == "null" ]]; then ko_dmin_sql="NULL"; else ko_dmin_sql="$ko_dmin"; fi
+  ko_cfg="$(jq -c '.input.config' <<<"$ko_case")"
+  ko_fin="$(jq -c '.input.finals' <<<"$ko_case")"
+  if [[ "$ko_fin" == "null" ]]; then ko_fin_sql="NULL"; else ko_fin_sql="\$J\$${ko_fin}\$J\$::jsonb"; fi
+  out="$(q "SELECT match_engine.server_rules($ko_dmin_sql, '$ko_phase', $ko_gdur, $ko_fdur, \$J\$${ko_cfg}\$J\$::jsonb, $ko_fin_sql);")"
+  check Sonstiges "@W2A-009: server_rules K.o.-Fall $ko_name == Fixture (Entscheidung je Runde)" \
+    ". == $ko_expected" "$out"
+done < <(jq -c '.cases[]' "$KO_FIXTURE")
+
 # --- 9b. Fixrunde 1: S14, S13 + R14-Spalten, M4, M1 ------------------------------------------
 echo "Fixrunde 1 (S13, S14, R14, M1, M4)..." >&2
 # S14: K.o.-Spiel ohne finals_config.tiebreaker -> Remis nach Spielende geht ins Strafstossschiessen.

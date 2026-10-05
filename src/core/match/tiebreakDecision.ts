@@ -23,6 +23,13 @@ const ROUNDS_BY_PRESET: Record<FinalsPreset, KnockoutRound[]> = {
   'all-places': ['semifinal', 'final'],
 };
 
+const KNOCKOUT_ROUNDS: readonly KnockoutRound[] = ['roundOf16', 'quarterfinal', 'semifinal', 'final'];
+
+/** K.-o.-Runde aus einer Phasen-Angabe — außerhalb einer K.-o.-Runde (z. B. Gruppenspiel) `null`. */
+export function knockoutRoundOf(phase: string | null | undefined): KnockoutRound | null {
+  return KNOCKOUT_ROUNDS.find((round) => round === phase) ?? null;
+}
+
 /**
  * K.-o.-Runden, für die ein Finalmodus eine Entscheidung bei Unentschieden
  * vorsieht (liefert die Runden der UI-Auswahl je Runde).

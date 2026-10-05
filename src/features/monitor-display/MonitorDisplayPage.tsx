@@ -39,16 +39,15 @@ import { LocalStorageRepository } from '../../core/repositories/LocalStorageRepo
 import { calculateStandings } from '../../utils/calculations';
 import { TeamAvatar } from '../../components/ui/TeamAvatar';
 import { useLiveMatches } from '../../hooks/useLiveMatches';
-import type { LiveMatch } from '../../hooks/useLiveMatches';
 import { GoalAnimation, CardAnimation, LiveMatchDisplay } from '../../components/monitor';
 import { generateTournamentUrl, generateLiveUrl } from '../../utils/shareUtils';
 import { QRCodeSVG } from 'qrcode.react';
-import sportGlossary from '../../i18n/glossary.json';
 import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { captureFeatureError } from '../../lib/sentry';
 import { selectDisplayableSlides, type QrRueckfallFolie } from './slideProgramme';
+import { toLiveMatch } from './monitorMatch';
 
 // =============================================================================
 // THEME RESOLUTION
@@ -276,51 +275,6 @@ function QrSlide({ tournament, style }: QrSlideProps) {
 // =============================================================================
 // LIVE SLIDE
 // =============================================================================
-
-/**
- * Convert Tournament Match + Team[] to LiveMatch format for LiveMatchDisplay.
- */
-function toLiveMatch(match: Match, teams: Team[], tournament: Tournament): LiveMatch {
-  const findTeam = (id: string) =>
-    teams.find(t => t.id === id || t.name === id) ?? { id, name: id };
-
-  const statusMap: Record<string, 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED'> = {
-    running: 'RUNNING',
-    finished: 'FINISHED',
-    scheduled: 'NOT_STARTED',
-    waiting: 'NOT_STARTED',
-    skipped: 'FINISHED',
-  };
-
-  const durationMinutes = tournament.groupPhaseGameDuration ?? tournament.gameDuration ?? 8;
-
-  // Derive referee name from referee number
-  const refereeTeam = match.referee
-    ? teams.find(t => t.name === `SR${match.referee}` || t.name === `Schiedsrichter ${match.referee}`)
-    : undefined;
-
-  return {
-    id: match.id,
-    number: match.matchNumber ?? match.round,
-    phaseLabel: match.label ?? match.phase ?? sportGlossary.terms.groupStage.de,
-    fieldId: `field-${match.field}`,
-    field: match.field,
-    scheduledKickoff: match.scheduledTime ? new Date(match.scheduledTime).toISOString() : '',
-    durationSeconds: durationMinutes * 60,
-    refereeName: refereeTeam?.name,
-    homeTeam: findTeam(match.teamA),
-    awayTeam: findTeam(match.teamB),
-    homeScore: match.scoreA ?? 0,
-    awayScore: match.scoreB ?? 0,
-    status: statusMap[match.matchStatus ?? 'scheduled'] ?? 'NOT_STARTED',
-    elapsedSeconds: match.timerElapsedSeconds ?? 0,
-    events: [],
-    timerStartTime: match.timerStartTime,
-    timerPausedAt: match.timerPausedAt,
-    timerElapsedSeconds: match.timerElapsedSeconds,
-    group: match.group,
-  };
-}
 
 interface LiveSlideProps {
   slide: MonitorSlide;

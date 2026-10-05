@@ -1,0 +1,42 @@
+{
+  "title": "Vertrag K.o.-Entscheidung je Runde -> Server-Regeln (B-04c, @W2A-009)",
+  "cases": [
+    {
+      "name": "K.-o.-Entscheidung je Runde",
+      "input": {
+        "durationMinutes": null,
+        "phase": "semifinal",
+        "groupDuration": 10,
+        "finalDuration": 12,
+        "config": {
+          "gamePeriods": 1,
+          "halftimeBreak": 1,
+          "matchCockpitSettings": {
+            "penaltyShootersPerTeam": null,
+            "penaltySuddenDeathAfter": null
+          }
+        },
+        "finals": {
+          "preset": "top-4",
+          "tiebreaker": "goldenGoal",
+          "tiebreakerDuration": 5,
+          "tiebreakerByRound": {
+            "semifinal": "shootout",
+            "final": "overtime-then-shootout"
+          }
+        }
+      },
+      "expected": {
+        "sections": 1,
+        "sectionSeconds": 720,
+        "breakSeconds": 60,
+        "knockout": true,
+        "tiebreak": "goldenGoal",
+        "overtimeSeconds": 300,
+        "shootersPerTeam": 5,
+        "suddenDeathAfter": 6,
+        "penaltySeconds": 120
+      }
+    }
+  ]
+}
