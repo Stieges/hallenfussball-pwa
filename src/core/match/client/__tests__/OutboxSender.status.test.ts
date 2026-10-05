@@ -259,10 +259,22 @@ describe('OutboxSender: Status und Konten', () => {
     const h = makeHarness();
     await seed(h, 'acc', 'm1');
     await h.store.addPending('acc', 'm1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
-    h.api.mockImplementation(async () => {
-      throw rpcError('54000', 'append_match_events: Spiel m1 ist voll');
+    // E2 (Review A-06c): Ursprung muss TRANSIENT sein -- bei 54000 haette handleFailure
+    // den Wert schon auf 'permanent' gesetzt und der Rueckfall (:227) wuerde nicht bewiesen.
+    // Erst der Nachlauf (refresh -> store.forAccount) in handleFailure scheitert einmalig.
+    let failNextForAccount = false;
+    const realForAccount = h.store.forAccount.bind(h.store);
+    vi.spyOn(h.store, 'forAccount').mockImplementation(async (accountId: string) => {
+      if (failNextForAccount) {
+        failNextForAccount = false;
+        throw new Error('Speicher defekt');
+      }
+      return realForAccount(accountId);
     });
-    vi.spyOn(h.store, 'rejectAllPending').mockRejectedValue(new Error('Speicher defekt'));
+    h.api.mockImplementation(async () => {
+      failNextForAccount = true;
+      throw networkError();
+    });
 
     await h.sender.start('acc');
     await h.settle();
