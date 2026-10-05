@@ -132,6 +132,7 @@ describe('OutboxSender: Status und Konten', () => {
     expect(empty.authRequired).toBe(false);
     expect(empty.clientOutdated).toBe(false);
     expect(empty.lastError).toBeNull();
+    expect(empty.lastFailureKind).toBeNull();
   });
 
   it('storagePersisted zeigt das Ergebnis von navigator.storage.persist', async () => {

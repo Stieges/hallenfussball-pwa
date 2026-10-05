@@ -53,6 +53,8 @@ export interface OutboxStatus {
   /** `null`, solange der Browser die Persistenz-Anfrage nicht kennt/beantwortet. */
   storagePersisted: boolean | null;
   lastError: string | null;
+  /** Fehlerklasse des letzten Fehlers: vorlaeufig (Netz/Zeitlimit/Abbruch) oder dauerhaft. */
+  lastFailureKind: 'transient' | 'permanent' | null;
 }
 
 export function emptyOutboxStatus(): OutboxStatus {
@@ -66,5 +68,6 @@ export function emptyOutboxStatus(): OutboxStatus {
     clientOutdated: false,
     storagePersisted: null,
     lastError: null,
+    lastFailureKind: null,
   };
 }
