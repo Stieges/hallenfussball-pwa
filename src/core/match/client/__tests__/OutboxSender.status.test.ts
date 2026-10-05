@@ -229,6 +229,32 @@ describe('OutboxSender: Status und Konten', () => {
     expect(h.sender.getStatus().lastFailureKind).toBe('transient');
   });
 
+  it('@FU-004 @FU-013: Zwischenklassen auth/notReady/matchFull/matchGone setzen lastFailureKind auf permanent', async () => {
+    // E1 (Review A-06c): Die vier Zwischenklassen duerfen NICHT auf 'transient' fallen --
+    // sonst stuende in A-06i „kein Internet" statt „Uebertragung gestoert" (Brief A10, § 6.3).
+    const cases: readonly { code: string; message: string }[] = [
+      { code: '22023', message: 'append_match_events: Spiel m1 hat noch keine zwei Teams' },
+      { code: '42501', message: 'permission denied for function append_match_events' },
+      { code: '54000', message: 'append_match_events: Spiel m1 ist voll' },
+      { code: '55000', message: 'append_match_events: Spiel m1 nicht mehr beschreibbar' },
+    ];
+    for (const { code, message } of cases) {
+      // Eigene IndexedDB je Fall -- dieselben Schluessel duerfen nicht erben.
+      vi.stubGlobal('indexedDB', new IDBFactory());
+      const h = makeHarness();
+      await seed(h, 'acc', 'm1');
+      await h.store.addPending('acc', 'm1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+      h.api.mockImplementation(async () => {
+        throw rpcError(code, message);
+      });
+
+      await h.sender.start('acc');
+      await h.settle();
+
+      expect(h.sender.getStatus().lastFailureKind, `SQLSTATE ${code}`).toBe('permanent');
+    }
+  });
+
   it('@FU-004 @FU-013: Rueckfall-catch meldet permanent, wenn handleFailure selbst scheitert', async () => {
     const h = makeHarness();
     await seed(h, 'acc', 'm1');
