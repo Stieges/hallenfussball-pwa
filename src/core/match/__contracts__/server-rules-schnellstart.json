@@ -10,7 +10,11 @@
         "finalDuration": 10,
         "config": {
           "gamePeriods": 1,
-          "halftimeBreak": 1
+          "halftimeBreak": 1,
+          "matchCockpitSettings": {
+            "penaltyShootersPerTeam": null,
+            "penaltySuddenDeathAfter": null
+          }
         },
         "finals": {
           "preset": "none",
@@ -39,7 +43,11 @@
         "finalDuration": 10,
         "config": {
           "gamePeriods": 1,
-          "halftimeBreak": 1
+          "halftimeBreak": 1,
+          "matchCockpitSettings": {
+            "penaltyShootersPerTeam": null,
+            "penaltySuddenDeathAfter": null
+          }
         },
         "finals": {
           "preset": "none",

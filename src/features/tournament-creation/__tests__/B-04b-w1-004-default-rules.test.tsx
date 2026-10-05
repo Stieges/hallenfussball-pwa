@@ -14,15 +14,22 @@
  * Die SQL-Seite (match_engine.server_rules) prüft dasselbe Fixture in
  * `scripts/append-match-events-check.sh` (Kategorie Sonstiges, @W1-004).
  *
- * Der Server darf die Regeln nicht stillschweigend ändern: expected.sections ===
- * draft.gamePeriods, expected.breakSeconds === draft.halftimeBreak * 60,
- * expected.tiebreak === draft.finalsConfig.tiebreaker.
+ * Der Server darf die Regeln nicht stillschweigend ändern: Die Zeile wird auf
+ * alle von `server_rules` gelesenen Eingaben projiziert — aus `config`:
+ * `gamePeriods`, `halftimeBreak`, `matchCockpitSettings.penaltyShootersPerTeam`,
+ * `matchCockpitSettings.penaltySuddenDeathAfter`; aus `finals_config`:
+ * `tiebreaker`, `tiebreakerDuration` — und per `toEqual` gegen dieselbe
+ * Projektion des Fixture-`input` verglichen (fehlende Werte als `null` im
+ * Fixture). Zusätzlich folgt `expected` den Schnellstart-Vorgaben:
+ * expected.sections === draft.gamePeriods, expected.breakSeconds ===
+ * draft.halftimeBreak * 60, expected.tiebreak === draft.finalsConfig.tiebreaker.
  *
- * Gegenbeispiel: Ein Entwurf mit `gamePeriods: 5` erzeugt eine Zeile, die vom
+ * Gegenbeispiel: Ein Entwurf mit `gamePeriods: 5` bzw.
+ * `matchCockpitSettings.penaltyShootersPerTeam: 3` erzeugt eine Zeile, die vom
  * Schnellstart-`input` abweicht (≠) — der Vergleich wirkt also.
- * Mutation: (a) Im Mapper `gamePeriods` unter anderem Schlüssel schreiben
- * (supabaseMappers.ts) → rot. (b) `periods: 1` → `2` in
- * src/config/sports/football.ts → rot.
+ * Mutation: (a) Ein von `server_rules` gelesenes Feld im Mapper unter anderem
+ * Schlüssel schreiben (supabaseMappers.ts, z. B. `gamePeriods`) → rot.
+ * (b) `periods: 1` → `2` in src/config/sports/football.ts → rot.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
@@ -32,6 +39,7 @@ import { isPayloadValid } from '../../../core/match/payloadValidation';
 import { continueLog } from '../../../core/match/reduceMatch';
 import { initialState } from '../../../core/match/applyEvent';
 import type { EngineEvent, MatchContext, MatchRules } from '../../../core/match/types';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../types/tournament';
 import type { Tournament } from '../../../types/tournament';
 import serverRulesSchnellstart from '../../../core/match/__contracts__/server-rules-schnellstart.json';
 
@@ -49,8 +57,8 @@ type RegelInput = {
   phase: string;
   groupDuration: number;
   finalDuration: number;
-  config: Record<string, number | string | boolean | null>;
-  finals: Record<string, number | string | boolean | null> | null;
+  config: Record<string, unknown>;
+  finals: Record<string, unknown> | null;
 };
 
 type ServerRulesCase = {
@@ -63,20 +71,31 @@ const cases = (serverRulesSchnellstart as { cases: ServerRulesCase[] }).cases;
 
 const ctx: MatchContext = { matchId: 'm1', teamAId: 'teamA', teamBId: 'teamB' };
 
-type MappedRow = ReturnType<typeof mapTournamentToSupabase>['tournamentRow'];
+const asRecord = (value: unknown): Record<string, unknown> =>
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 
-/** Zeilenfeld enthält jeden Blattwert des Fixture-Ausschnitts (Schlüssel + Wert). */
-const containsLeaves = (haystack: unknown, needle: Record<string, unknown> | null): boolean => {
-  const record = (haystack ?? {}) as Record<string, unknown>;
-  return Object.entries(needle ?? {}).every(([key, value]) => record[key] === value);
+/** Alle von `server_rules` aus `config` gelesenen Felder (fehlend = null). */
+const configProjektion = (config: unknown) => {
+  const c = asRecord(config);
+  const settings = asRecord(c.matchCockpitSettings);
+  return {
+    gamePeriods: c.gamePeriods ?? null,
+    halftimeBreak: c.halftimeBreak ?? null,
+    matchCockpitSettings: {
+      penaltyShootersPerTeam: settings.penaltyShootersPerTeam ?? null,
+      penaltySuddenDeathAfter: settings.penaltySuddenDeathAfter ?? null,
+    },
+  };
 };
 
-/** `input` des Fixtures steckt in den Zeilenfeldern, die der Mapper schreibt. */
-const rowCarriesInput = (row: MappedRow, input: RegelInput): boolean =>
-  containsLeaves(row.config, input.config) &&
-  containsLeaves(row.finals_config, input.finals) &&
-  row.group_phase_duration === input.groupDuration &&
-  row.final_round_duration === input.finalDuration;
+/** Alle von `server_rules` aus `finals_config` gelesenen Felder (fehlend = null). */
+const finalsProjektion = (finals: unknown) => {
+  const f = asRecord(finals);
+  return {
+    tiebreaker: f.tiebreaker ?? null,
+    tiebreakerDuration: f.tiebreakerDuration ?? null,
+  };
+};
 
 function setupWizard() {
   const wizard = renderHook(() => useTournamentWizard());
@@ -90,7 +109,7 @@ function setupWizard() {
 }
 
 describe('B-04b @W1-004 – Vertrag Schnellstart → Server-Regeln (gemeinsames Fixture)', () => {
-  it('Schnellstart-Zeile enthält den Fixture-input (config, finals_config, Dauern) je Fall', () => {
+  it('Schnellstart-Zeile trägt die volle Projektion des Fixture-input (config, finals_config, Dauern) je Fall', () => {
     const { draft } = setupWizard();
     const tournament = draft();
     const { tournamentRow } = mapTournamentToSupabase(tournament, 'owner-1');
@@ -98,7 +117,18 @@ describe('B-04b @W1-004 – Vertrag Schnellstart → Server-Regeln (gemeinsames 
     expect(cases.length).toBeGreaterThanOrEqual(2);
     for (const testCase of cases) {
       expect(testCase.input.durationMinutes, `Fall ${testCase.name}`).toBeNull();
-      expect(rowCarriesInput(tournamentRow, testCase.input), `Fall ${testCase.name}`).toBe(true);
+      expect(configProjektion(tournamentRow.config), `Fall ${testCase.name} config`).toEqual(
+        configProjektion(testCase.input.config)
+      );
+      expect(finalsProjektion(tournamentRow.finals_config), `Fall ${testCase.name} finals`).toEqual(
+        finalsProjektion(testCase.input.finals)
+      );
+      expect(tournamentRow.group_phase_duration, `Fall ${testCase.name} Dauer`).toBe(
+        testCase.input.groupDuration
+      );
+      expect(tournamentRow.final_round_duration, `Fall ${testCase.name} Dauer`).toBe(
+        testCase.input.finalDuration
+      );
     }
   });
 
@@ -142,7 +172,22 @@ describe('B-04b @W1-004 – Vertrag Schnellstart → Server-Regeln (gemeinsames 
     const { tournamentRow } = mapTournamentToSupabase(tournament, 'owner-1');
 
     for (const testCase of cases) {
-      expect(rowCarriesInput(tournamentRow, testCase.input), `Fall ${testCase.name}`).toBe(false);
+      expect(configProjektion(tournamentRow.config), `Fall ${testCase.name}`).not.toEqual(
+        configProjektion(testCase.input.config)
+      );
+    }
+  });
+
+  it('Gegenbeispiel: Entwurf mit penaltyShootersPerTeam 3 weicht vom Schnellstart-input ab (≠)', () => {
+    const { setField, draft } = setupWizard();
+    setField('matchCockpitSettings', { ...DEFAULT_MATCH_COCKPIT_SETTINGS, penaltyShootersPerTeam: 3 });
+    const tournament = draft();
+    const { tournamentRow } = mapTournamentToSupabase(tournament, 'owner-1');
+
+    for (const testCase of cases) {
+      expect(configProjektion(tournamentRow.config), `Fall ${testCase.name}`).not.toEqual(
+        configProjektion(testCase.input.config)
+      );
     }
   });
 });
