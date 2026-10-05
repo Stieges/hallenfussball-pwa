@@ -203,7 +203,7 @@ export class OutboxSender {
         // M-g: heute unerreichbar (`sendOneBatch` faengt bereits alles) -- aber
         // defensiv trotzdem einen Status hinterlassen statt still zu verwerfen.
         if (this.isCurrentQueue(queue)) {
-          this.book.set({ lastError: classifySendFailure(error).message });
+          this.book.set({ lastError: classifySendFailure(error).message, lastFailureKind: 'permanent' });
         }
         queue.scheduleRetry('backoff', PERMANENT_RETRY_MS);
       })
@@ -224,7 +224,7 @@ export class OutboxSender {
       } catch {
         // Speicherfehler o. a.: Eintraege bleiben pending, spaeterer Versuch.
         if (this.isCurrentQueue(queue)) {
-          this.book.set({ lastError: classifySendFailure(error).message });
+          this.book.set({ lastError: classifySendFailure(error).message, lastFailureKind: 'permanent' });
         }
         queue.scheduleRetry('backoff', PERMANENT_RETRY_MS);
         return 'done';
@@ -270,7 +270,7 @@ export class OutboxSender {
     if (isCurrent) {
       // M-f: eine abweichende (nicht-null) `id` aendert die Zuordnung nicht (Index
       // entscheidet), wird aber sichtbar gemacht -- nichts wird still verworfen.
-      this.book.set({ lastError: idMismatches.length > 0 ? describeIdMismatches(idMismatches) : null });
+      this.book.set({ lastError: idMismatches.length > 0 ? describeIdMismatches(idMismatches) : null, lastFailureKind: null });
       if (resolution.ackedIds.length > 0) {
         this.requestCatchUp(queue.matchId);
       }
@@ -299,7 +299,10 @@ export class OutboxSender {
     const failure = classifySendFailure(error);
     const isCurrent = this.isCurrentQueue(queue);
     if (isCurrent) {
-      this.book.set({ lastError: failure.message });
+      this.book.set({
+        lastError: failure.message,
+        lastFailureKind: failure.kind === 'transient' ? 'transient' : 'permanent',
+      });
     }
     switch (failure.kind) {
       case 'auth': {

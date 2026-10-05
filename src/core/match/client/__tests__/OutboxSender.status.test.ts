@@ -6,8 +6,9 @@ import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { OutboxStatus } from '../outboxTypes';
+import { REQUEST_TIMEOUT_MS, createRequestTimeoutError } from '../../../utils/syncRetryTiming';
 import { ctx, ev } from './fixtures';
-import { acceptAll, makeHarness, networkError, sentIds, sentMatches, type Harness } from './outboxHarness';
+import { acceptAll, makeHarness, networkError, rpcError, sentIds, sentMatches, type Harness } from './outboxHarness';
 
 async function seed(h: Harness, accountId: string, matchId: string, tournamentId?: string): Promise<void> {
   await h.store.create(accountId, matchId, ctx, tournamentId);
@@ -151,5 +152,95 @@ describe('OutboxSender: Status und Konten', () => {
     await h.sender.start('acc');
     expect(h.persist).not.toHaveBeenCalled();
     expect(h.sender.getStatus().storagePersisted).toBeNull();
+  });
+
+  it('@FU-004 @FU-013: lastFailureKind – Netzwerkfehler transient, fremder Fehler permanent im ersten Versuch, Erfolg null', async () => {
+    const h = makeHarness();
+    await seed(h, 'acc', 'm1');
+    await h.store.addPending('acc', 'm1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+    h.api.mockImplementation(async () => {
+      throw networkError();
+    });
+
+    await h.sender.start('acc');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBe('transient');
+
+    h.api.mockImplementation(async () => {
+      throw rpcError('XX000', 'Unerwartete Antwort von append_match_events');
+    });
+    await h.store.addPending('acc', 'm1', ev({ id: 'e2', type: 'GOAL', at: 2 }));
+    await h.sender.kick('m1');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBe('permanent');
+
+    h.api.mockImplementation(async (_matchId, events) => acceptAll(events));
+    await h.sender.kick('m1');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBeNull();
+  });
+
+  it('@FU-004 @FU-013: Gegenbeispiel – kick() ohne Erfolg setzt lastFailureKind nicht zurueck', async () => {
+    const h = makeHarness();
+    await seed(h, 'acc', 'm1');
+    await h.store.addPending('acc', 'm1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+    h.api.mockImplementation(async () => {
+      throw networkError();
+    });
+
+    await h.sender.start('acc');
+    await h.settle();
+    expect(h.sender.getStatus().lastFailureKind).toBe('transient');
+
+    await h.sender.kick('m2');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBe('transient');
+  });
+
+  it('@FU-004 @FU-013: Abbruchfehler (AbortError: …) wird als transient gefuehrt', async () => {
+    const h = makeHarness();
+    await seed(h, 'acc', 'm1');
+    await h.store.addPending('acc', 'm1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+    h.api.mockImplementation(async () => {
+      throw rpcError('', 'AbortError: The operation was aborted');
+    });
+
+    await h.sender.start('acc');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBe('transient');
+  });
+
+  it('@FU-004 @FU-013: Zeitlimitfehler (TimeoutError) wird als transient gefuehrt', async () => {
+    const h = makeHarness();
+    await seed(h, 'acc', 'm1');
+    await h.store.addPending('acc', 'm1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+    h.api.mockImplementation(async () => {
+      throw createRequestTimeoutError(REQUEST_TIMEOUT_MS);
+    });
+
+    await h.sender.start('acc');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBe('transient');
+  });
+
+  it('@FU-004 @FU-013: Rueckfall-catch meldet permanent, wenn handleFailure selbst scheitert', async () => {
+    const h = makeHarness();
+    await seed(h, 'acc', 'm1');
+    await h.store.addPending('acc', 'm1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+    h.api.mockImplementation(async () => {
+      throw rpcError('54000', 'append_match_events: Spiel m1 ist voll');
+    });
+    vi.spyOn(h.store, 'rejectAllPending').mockRejectedValue(new Error('Speicher defekt'));
+
+    await h.sender.start('acc');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBe('permanent');
   });
 });
