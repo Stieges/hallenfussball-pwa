@@ -146,8 +146,11 @@ export class TournamentCreationService {
                     }
                 }
                 break;
-            case 5:
-                if ((data.teams?.length ?? 0) < 2) {
+            case 5: {
+                // @W1-014 (B-04b Fixrunde 1): entfernte Teams (isRemoved) zaehlen nirgends mit --
+                // Mindestzahl, F-209 und die Fehlermeldung sehen nur die aktiven Teams.
+                const activeTeams = (data.teams ?? []).filter(t => !t.isRemoved);
+                if (activeTeams.length < 2) {
                     errors.push('Mindestens 2 Teams erforderlich');
                 }
                 if (data.teams) {
@@ -164,11 +167,20 @@ export class TournamentCreationService {
                 if (
                     typeof data.numberOfTeams === 'number' &&
                     Array.isArray(data.teams) &&
-                    data.teams.length !== data.numberOfTeams
+                    activeTeams.length !== data.numberOfTeams
                 ) {
-                    errors.push(`Anzahl Teams: ${data.teams.length} von ${data.numberOfTeams} hinzugefügt`);
+                    errors.push(`Anzahl Teams: ${activeTeams.length} von ${data.numberOfTeams} hinzugefügt`);
+                }
+                // @W1-014: Bei Gruppen braucht jedes aktive Team eine Gruppe -- sonst faellt es
+                // in generateGroupStageMatches still aus dem Spielplan (nur Teams mit Gruppe).
+                if (data.groupSystem === 'groupsAndFinals') {
+                    const withoutGroup = activeTeams.filter(t => !t.group).length;
+                    if (withoutGroup > 0) {
+                        errors.push(`${withoutGroup} Teams ohne Gruppe`);
+                    }
                 }
                 break;
+            }
         }
 
         return errors;

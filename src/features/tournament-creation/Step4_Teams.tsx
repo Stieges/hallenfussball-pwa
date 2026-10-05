@@ -176,6 +176,12 @@ export const Step4_Teams: React.FC<Step4Props> = ({
     );
   };
 
+  // @W1-014: aktive Teams ohne Gruppe bei Gruppen-Turnieren -- Angebot
+  // „Gruppen automatisch zuweisen“ an derselben Stelle wie „Teamzahl anpassen“.
+  const unassignedGroups = canAssignGroups
+    ? teams.filter((team) => !team.group).length
+    : 0;
+
   // Auto-Generierung: nur fehlende aktive Teams ergänzen (B-02 Paket B1).
   // isRemoved-Teams und vorhandene aktive Teams bleiben erhalten.
   const handleGenerateTeams = () => {
@@ -232,7 +238,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
           </Button>
         )}
 
-        {canAssignGroups && teams.length > 0 && (formData.numberOfGroups ?? 0) > 1 && (
+        {canAssignGroups && teams.length > 0 && (formData.numberOfGroups ?? 0) > 1 && unassignedGroups === 0 && (
           <Button
             onClick={handleAutoAssignGroups}
             variant="secondary"
@@ -519,6 +525,37 @@ export const Step4_Teams: React.FC<Step4Props> = ({
             data-testid="wizard-adjust-team-count"
           >
             {t('step4.adjustTeamCount')}
+          </Button>
+        </div>
+      )}
+
+      {unassignedGroups > 0 && (
+        <div
+          role="alert"
+          data-testid="wizard-teams-without-group"
+          style={{
+            marginTop: cssVars.spacing.md,
+            padding: cssVars.spacing.md,
+            background: cssVars.colors.errorLight,
+            borderRadius: cssVars.borderRadius.md,
+            border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.errorBorder}`,
+            color: cssVars.colors.error,
+            fontSize: cssVars.fontSizes.sm,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            gap: cssVars.spacing.sm,
+          }}
+        >
+          {unassignedGroups > 1
+            ? t('step4.warnings.unassigned_other', { count: unassignedGroups })
+            : t('step4.warnings.unassigned_one', { count: unassignedGroups })}
+          <Button
+            onClick={handleAutoAssignGroups}
+            variant="primary"
+            data-testid="wizard-auto-assign-groups"
+          >
+            {t('step4.autoAssignGroups')}
           </Button>
         </div>
       )}
