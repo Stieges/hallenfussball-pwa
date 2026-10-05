@@ -536,6 +536,8 @@
   "publish": {
     "button": "Festlegen",
     "loading": "Wird festgelegt …",
-    "success": "Turnier erfolgreich festgelegt."
+    "success": "Turnier erfolgreich festgelegt.",
+    "explanationPrivate": "Der Spielplan wird fest. Danach ist das Turnier nur für die eingeloggte Turnierleitung sichtbar.",
+    "explanationPublic": "Der Spielplan wird fest. Danach kann jeder mit dem Link zuschauen."
   }
 }

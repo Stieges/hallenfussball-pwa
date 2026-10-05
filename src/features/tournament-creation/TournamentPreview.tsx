@@ -434,6 +434,18 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           <Button variant="secondary" onClick={() => void handleExportPDF()} data-testid="preview-export-pdf">
             PDF Exportieren
           </Button>
+          <p
+            data-testid="publish-explanation"
+            style={{
+              flexBasis: '100%',
+              margin: 0,
+              fontSize: cssVars.fontSizes.sm,
+              color: cssVars.colors.textSecondary,
+              textAlign: 'center',
+            }}
+          >
+            {t(currentTournament.isPublic ? 'publish.explanationPublic' : 'publish.explanationPrivate')}
+          </p>
           <Button
             variant="primary"
             onClick={onPublish}

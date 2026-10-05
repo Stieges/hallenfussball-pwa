@@ -536,6 +536,8 @@
   "publish": {
     "button": "Finalise",
     "loading": "Finalising …",
-    "success": "Tournament successfully finalised."
+    "success": "Tournament successfully finalised.",
+    "explanationPrivate": "The schedule becomes fixed. Afterwards the tournament is visible only to the signed-in tournament directors.",
+    "explanationPublic": "The schedule becomes fixed. Afterwards anyone with the link can watch."
   }
 }
