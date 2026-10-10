@@ -1353,4 +1353,23 @@ describe('MutationQueue A-06d2 Sperre nach echtem Fehler (@FU-013, Entscheidung 
     expect(save).toHaveBeenCalledTimes(1);
     expect(mq.getPendingCount()).toBe(0);
   });
+
+  it('Gegenbeispiel (A-06d2): keine Pause, kein authHold – resumeAfterAuth sendet sofort', async () => {
+    let fail = true;
+    const save = vi.fn(async () => {
+      if (fail) { fail = false; setOnLine(false); throw rlsError(); }
+    });
+    mq = makeRealQueue(save);
+    setOnLine(true);
+    mq.enqueue('SAVE_TOURNAMENT', tour('t1'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(openTimers()).toBe(0);
+
+    setOnLine(true); // ohne online-Ereignis
+    await mq.resumeAfterAuth();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(mq.getPendingCount()).toBe(0);
+  });
 });
