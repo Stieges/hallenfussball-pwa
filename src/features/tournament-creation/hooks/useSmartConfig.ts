@@ -3,6 +3,7 @@ import { Tournament } from '../../../types/tournament';
 import { useToast } from '../../../components/ui/Toast/ToastContext';
 import {
   LockedConstraints,
+  MatchStructure,
   Recommendation,
   SmartConfigResult,
   StoredConfig,
@@ -186,7 +187,14 @@ export function useSmartConfig({
   const handleCalculate = useCallback(() => {
     const constraints = getConstraints();
     const teamsToUse = lockTeams ? constraintTeams : (formData.numberOfTeams ?? 6);
-    const result = calculateRecommendation(availableHours, teamsToUse, constraints);
+    // @W4-020: Gruppenzahl und Finalrunden-Wahl aus dem Wizard-Zustand
+    const structure: MatchStructure = usesGroups
+      ? {
+          groupCount: lockGroups ? constraintGroups : (formData.numberOfGroups ?? 2),
+          finalsPlan: formData.finalsConfig?.preset ?? 'none',
+        }
+      : {};
+    const result = calculateRecommendation(availableHours, teamsToUse, constraints, structure);
 
     if (result.constraintsImpossible) {
       const constraintsList = buildConstraintsList(constraints, usesGroups);
@@ -197,7 +205,19 @@ export function useSmartConfig({
     } else {
       setRecommendation(result.recommendation);
     }
-  }, [getConstraints, lockTeams, constraintTeams, formData.numberOfTeams, availableHours, usesGroups, showWarning]);
+  }, [
+    getConstraints,
+    lockTeams,
+    constraintTeams,
+    lockGroups,
+    constraintGroups,
+    formData.numberOfTeams,
+    formData.numberOfGroups,
+    formData.finalsConfig?.preset,
+    availableHours,
+    usesGroups,
+    showWarning,
+  ]);
 
   const handleApply = useCallback(() => {
     if (!recommendation) {return;}
