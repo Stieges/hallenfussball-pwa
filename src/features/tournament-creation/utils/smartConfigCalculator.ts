@@ -3,6 +3,9 @@
  * Extracted from SmartConfig.tsx for testability and reusability
  */
 
+import type { FinalsPreset } from '../../../types/tournament';
+import { getExpectedMatchCount } from '../../../core/generators/playoffGenerator';
+
 const STORAGE_KEY = 'smartConfig';
 
 /** Stored configuration from localStorage */
@@ -52,6 +55,35 @@ export interface CalculationResult {
   minRequiredHours?: number;
 }
 
+/**
+ * Spielstruktur des Turniers (@W4-020).
+ * groupCount fehlt oder < 2 → jeder gegen jeden über alle Teams.
+ * finalsPlan wird nur zusammen mit Gruppen gezählt.
+ */
+export interface MatchStructure {
+  groupCount?: number;
+  finalsPlan?: FinalsPreset;
+}
+
+/**
+ * Anzahl der Spiele eines Turniers: Gruppenspiele je Gruppe (n·(n−1)/2, bei
+ * ungleichen Gruppen größere Gruppen zuerst) plus Spiele der Finalrunde.
+ */
+export function countTournamentMatches(teams: number, structure: MatchStructure = {}): number {
+  const { groupCount, finalsPlan = 'none' } = structure;
+  if (groupCount === undefined || groupCount < 2) {
+    return (teams * (teams - 1)) / 2;
+  }
+  const baseSize = Math.floor(teams / groupCount);
+  const largerGroups = teams % groupCount;
+  let groupGames = 0;
+  for (let index = 0; index < groupCount; index++) {
+    const size = index < largerGroups ? baseSize + 1 : baseSize;
+    groupGames += (size * (size - 1)) / 2;
+  }
+  return groupGames + getExpectedMatchCount(finalsPlan, groupCount);
+}
+
 // Storage functions
 export function loadStoredConfig(): StoredConfig {
   try {
@@ -80,11 +112,12 @@ export function saveStoredConfig(config: StoredConfig): void {
 export function calculateRecommendation(
   availableHours: number,
   currentTeams: number,
-  constraints: LockedConstraints = {}
+  constraints: LockedConstraints = {},
+  structure: MatchStructure = {}
 ): CalculationResult {
   // Start with current team count and find optimal fields
   const teams = currentTeams;
-  const totalMatches = (teams * (teams - 1)) / 2;
+  const totalMatches = countTournamentMatches(teams, structure);
 
   // Try different configurations
   const configurations: Recommendation[] = [];
@@ -157,7 +190,7 @@ export function calculateRecommendation(
 
   // Fallback without constraints: reduce teams
   const reducedTeams = Math.max(4, Math.floor(teams * 0.7));
-  const reducedMatches = (reducedTeams * (reducedTeams - 1)) / 2;
+  const reducedMatches = countTournamentMatches(reducedTeams, structure);
   const fields = Math.ceil(reducedMatches / (availableHours * 60 / 12));
 
   return {
