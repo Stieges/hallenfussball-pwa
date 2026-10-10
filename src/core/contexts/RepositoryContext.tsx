@@ -114,6 +114,20 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
         };
     }, [user]);
 
+    // A-06f Teil 1 (Brief A7): Bei Objektwechsel (Konto/Abmeldung) die Queue des alten Repos abraeumen.
+    // Kein Cleanup beim Unmount; StrictMode loest im Mount keinen dispose aus (gleiches Objekt).
+    const activeQueueRef = useRef<OfflineRepository['mutationQueue'] | null>(null);
+    useEffect(() => {
+        const queue = value.tournamentRepository instanceof OfflineRepository
+            ? value.tournamentRepository.mutationQueue
+            : null;
+        const previous = activeQueueRef.current;
+        if (previous && previous !== queue) {
+            previous.dispose();
+        }
+        activeQueueRef.current = queue;
+    }, [value]);
+
     // Cleanup subscriptions on unmount
     useEffect(() => {
         return () => {
