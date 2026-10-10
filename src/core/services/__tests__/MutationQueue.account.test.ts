@@ -153,6 +153,38 @@ describe('MutationQueue Konto-Ausgang (A-07b, @FU-006 / @FU-019)', () => {
     });
   });
 
+  describe('Fixrunde 1: dispose() beendet den laufenden Durchgang', () => {
+    it('Pflicht: 3 Items, 1. execute haengt, dispose -> Freigabe: kein 2. Versand, kein Speichern durch die alte Instanz', async () => {
+      const { OfflineRepository } = await import('../../repositories/OfflineRepository');
+      const repo = createMockRepo();
+      let release: () => void = () => undefined;
+      repo.save.mockImplementationOnce(() => new Promise<void>((resolve) => { release = resolve; }));
+
+      net.online = false;
+      const offline = new OfflineRepository({ save: vi.fn(async () => undefined) } as never, repo as never, 'A');
+      track(offline.mutationQueue);
+      await offline.save(tournament('t1'));
+      await offline.save(tournament('t2'));
+      await offline.save(tournament('t3'));
+      expect(storedItems('mutation_queue_v1:A')).toHaveLength(3);
+
+      net.online = true;
+      const queue = offline.mutationQueue;
+      void queue.process();
+      await flush();
+      expect(repo.save).toHaveBeenCalledTimes(1);
+
+      queue.dispose();
+      const setItemBefore = vi.mocked(safeLocalStorage.setItem).mock.calls.length;
+      release();
+      await flush();
+
+      expect(repo.save).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(safeLocalStorage.setItem).mock.calls.length).toBe(setItemBefore);
+      expect(storedItems('mutation_queue_v1:A')).toHaveLength(3);
+    });
+  });
+
   describe('@FU-019 Altschluessel-Uebernahme', () => {
     it('Altschluessel mit 3 Items + Queue fuer A: 3 Items in mutation_queue_v1:A, Altschluessel weg', () => {
       net.online = false;

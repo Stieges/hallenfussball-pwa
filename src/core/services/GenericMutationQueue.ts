@@ -445,6 +445,8 @@ export class GenericMutationQueue<TType extends string> {
     public async process(): Promise<void> {
         // A-06f: solange die Anmeldung abgelaufen ist, startet kein Lauf (auch nicht über Timer/online/enqueue).
         if (this.isProcessing || this.queue.length === 0 || this.retryTimer.authHold) { return; }
+        // A-07b Fixrunde 1: eine entsorgte Instanz startet keinen Lauf mehr (Konto-/Token-Wechsel).
+        if (this.disposed) { return; }
         if (!(navigator.onLine)) { return; }
 
         // Ein Lauf ersetzt einen anstehenden Wiederholungs-Zeitgeber.
@@ -455,7 +457,8 @@ export class GenericMutationQueue<TType extends string> {
         try {
             // Process head of queue
             while (this.queue.length > 0) {
-                if (!(navigator.onLine)) { break; }
+                // A-07b Fixrunde 1: nach dispose() kein weiterer Versuch, kein Speichern durch die alte Instanz.
+                if (this.disposed || !(navigator.onLine)) { break; }
 
                 const item = this.queue[0]; // Peek
 
@@ -463,6 +466,8 @@ export class GenericMutationQueue<TType extends string> {
                     // A-06e: gemerkter Versuch + Race gegen REQUEST_TIMEOUT_MS; A-06f Fixrunde 2: Generation am Versuch
                     await this.inFlight.attempt(item.id, () => this.config.execute(item), REQUEST_TIMEOUT_MS, this.retryTimer.authEpoch);
                 } catch (error) {
+                    // A-07b Fixrunde 1: entsorgte Instanz schreibt nach einem Fehler nichts mehr.
+                    if (this.disposed) { break; }
                     if (import.meta.env.DEV) { console.warn(`MutationQueue: Error processing ${item.type} (${item.id})`, error); }
 
                     const authFailure = isAuthExpired(error);
@@ -508,6 +513,8 @@ export class GenericMutationQueue<TType extends string> {
                     }
                 }
 
+                // A-07b Fixrunde 1: Versand ist während des Laufs durch dispose() entsorgt – Eintrag nicht entfernen, nicht speichern.
+                if (this.disposed) { break; }
                 this.lastFailure = null;
                 this.queue.shift(); // Remove handled item
                 this.retryTimer.reset();
