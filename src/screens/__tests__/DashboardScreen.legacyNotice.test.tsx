@@ -20,6 +20,11 @@ vi.mock('../../core/storage/StorageFactory', () => ({
     } as unknown as IStorageAdapter),
 }));
 vi.mock('../../lib/sentry', () => ({ captureFeatureError: vi.fn() }));
+// A-07c: die Abmelde-Logik in AuthSection liest useRepositories(); hier ohne Queue.
+vi.mock('../../core/contexts/RepositoryContext', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../core/contexts/RepositoryContext')>()),
+  useRepositories: () => ({ tournamentRepository: {} }),
+}));
 vi.mock('../../features/auth/hooks/useTournamentLimit', () => ({
   useTournamentLimit: () => ({ canCreate: true, isAtLimit: false, isNearLimit: false, isLimited: false }),
   ANONYMOUS_TOURNAMENT_LIMIT: 3,

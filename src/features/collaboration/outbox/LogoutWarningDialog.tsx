@@ -33,7 +33,7 @@ const messageStyle: CSSProperties = {
 export function LogoutWarningDialog({ isOpen, count, onCancel, onConfirm }: LogoutWarningDialogProps) {
   const { t } = useTranslation('common');
   return (
-    <Dialog isOpen={isOpen} onClose={onCancel} title={String(t('outbox.logoutWarning.title'))}>
+    <Dialog isOpen={isOpen} onClose={onCancel} title={String(t('outbox.logoutWarning.title', { count }))}>
       <div data-testid="logout-warning-dialog">
         <p style={messageStyle}>{t('outbox.logoutWarning.message', { count })}</p>
         <div style={actionsStyle}>

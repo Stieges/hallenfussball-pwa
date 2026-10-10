@@ -39,4 +39,13 @@ describe('outbox.logoutWarning.message — Ein-/Mehrzahl (Review m2)', () => {
       '3 entries are still waiting to be sent. They stay on this device and will be sent with this account after your next sign-in.',
     );
   });
+
+  it('Titel (A-07c): DE "1 Eintrag" / "3 Einträge noch nicht übertragen"', async () => {
+    const i18nextModule = await vi.importActual<typeof import('i18next')>('i18next');
+    const i18n = (i18nextModule as unknown as { default: typeof import('i18next').default }).default;
+    await i18n.init({ lng: 'de', resources: { de: { common: deCommon } } });
+
+    expect(i18n.t('common:outbox.logoutWarning.title', { count: 1 })).toBe('1 Eintrag noch nicht übertragen');
+    expect(i18n.t('common:outbox.logoutWarning.title', { count: 3 })).toBe('3 Einträge noch nicht übertragen');
+  });
 });

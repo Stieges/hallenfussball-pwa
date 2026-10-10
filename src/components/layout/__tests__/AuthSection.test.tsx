@@ -29,6 +29,12 @@ vi.mock('../../../features/auth/hooks/useAuth', () => ({
 
 vi.mock('../../../hooks/useIsMobile', () => ({ useIsMobile: () => false }));
 
+// A-07c: der Abmelde-Hook liest die Konto-Queue ueber useRepositories(); hier ohne Queue.
+vi.mock('../../../core/contexts/RepositoryContext', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../core/contexts/RepositoryContext')>()),
+  useRepositories: () => ({ tournamentRepository: {} }),
+}));
+
 function renderWithResync(ui: ReactElement) {
   return render(<ResyncNowContext.Provider value={resyncNow}>{ui}</ResyncNowContext.Provider>);
 }

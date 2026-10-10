@@ -51,6 +51,12 @@ vi.mock('../../../../components/ui/Toast', () => ({
 // irrelevant, deshalb still gestellt.
 vi.mock('../GuestBanner', () => ({ GuestBanner: () => null }));
 
+// A-07c: der Hook liest die Konto-Queue ueber useRepositories(); hier ohne Queue (wie Gast/Altbestand).
+vi.mock('../../../../core/contexts/RepositoryContext', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../core/contexts/RepositoryContext')>()),
+  useRepositories: () => ({ tournamentRepository: {} }),
+}));
+
 const CTX: MatchContext = { matchId: 'm1', teamAId: 'team-a', teamBId: 'team-b' };
 
 function ev(id: string): EngineEvent {
