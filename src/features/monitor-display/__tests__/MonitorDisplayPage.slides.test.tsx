@@ -129,9 +129,11 @@ describe('MonitorDisplayPage — Folieninhalt (Bestand)', () => {
   it('Bestand: Spielplan-Folie Feld 2 zeigt die Paarungen ohne Uhrzeit', async () => {
     await renderMonitor(buildTournament(), [slide('schedule-field', { fieldId: 'field-2' })]);
     // Nur der Folien-Container: das <style>-Element der Seite enthält Dezimalzahlen (0.95).
+    // Kein \b: der Text verkettet Zellen ohne Leerzeichen („SC Ost14:20DJK“). Ergebnisse der
+    // Fixture sind einstellig (2:1), ein Treffer hier ist daher eine Uhrzeit.
     const folie = screen.getByText(/Spielplan Feld 2/).parentElement?.textContent ?? '';
     expect(folie).toContain('DJK Berg');
-    expect(folie).not.toMatch(/\b\d{1,2}[:.]\d{2}\b/);
+    expect(folie).not.toMatch(/\d{1,2}[:.]\d{2}/);
   });
 
   it('Bestand: Tabelle zählt das laufende Spiel 7 mit seinem Zwischenstand (FC Nord 6 Punkte)', async () => {
