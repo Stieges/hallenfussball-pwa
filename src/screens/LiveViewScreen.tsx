@@ -756,7 +756,11 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
               <ScheduleDisplay
                 schedule={filteredSchedule}
                 currentStandings={filteredStandings}
-                currentMatches={tournament.matches}
+                currentMatches={
+                  tournament.hideScoresForPublic
+                    ? tournament.matches.map((m) => ({ ...m, scoreA: undefined, scoreB: undefined }))
+                    : tournament.matches
+                }
                 tournamentTeams={tournament.teams}
                 editable={false}
               />

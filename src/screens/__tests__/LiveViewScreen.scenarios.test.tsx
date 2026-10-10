@@ -4,7 +4,7 @@
  * Heutiges Verhalten wird festgehalten; Soll-Verhalten, das heute verfehlt wird, als test.fails.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { generateFullSchedule } from '../../core/generators';
 import type { ScheduledMatch } from '../../core/generators';
@@ -166,19 +166,21 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
   });
 
   describe('Befund F-B13-11: Ergebnis-Leck trotz hideScoresForPublic', () => {
-    it('Bestand (F-B13-11): Stand 2:0 von Spiel 1 ist trotz hideScoresForPublic sichtbar', async () => {
-      const t = buildLiveViewTournament({ hideScoresForPublic: true });
-      const m1 = matchOf(t, 1);
-      await renderWith(t);
-      expect(screen.getAllByText(m1.homeTeam).length).toBeGreaterThan(0);
-      expect(screen.getAllByText('2:0').length).toBeGreaterThan(0);
+    it('Gegenbeispiel F-B13-11: ohne hideScoresForPublic steht der Stand 2:0 von Spiel 1 im Spielplan', async () => {
+      const t = buildLiveViewTournament({ hideScoresForPublic: false });
+      const { container } = await renderWith(t);
+      const plan = container.querySelector<HTMLElement>('.group-stage-schedule');
+      expect(plan).not.toBeNull();
+      expect(within(plan!).getAllByText('2:0').length).toBeGreaterThan(0);
     });
 
-    it.fails('Befund F-B13-11 (C-ZUSCHAUER-ERGEBNIS-LECK): Soll – Stand 2:0 von Spiel 1 erscheint bei hideScoresForPublic nicht', async () => {
+    it('Befund F-B13-11 (C-ZUSCHAUER-ERGEBNIS-LECK): Soll – Stand 2:0 von Spiel 1 erscheint bei hideScoresForPublic nicht im Spielplan', async () => {
       const t = buildLiveViewTournament({ hideScoresForPublic: true });
-      await renderWith(t);
-      // Soll: kein Stand im Spielplan
-      expect(screen.queryAllByText('2:0')).toHaveLength(0);
+      const { container } = await renderWith(t);
+      // Soll: kein Stand im Spielplan (Torverhältnis in der Tabelle ist Befund F-B13-12, nicht hier)
+      const plan = container.querySelector<HTMLElement>('.group-stage-schedule');
+      expect(plan).not.toBeNull();
+      expect(within(plan!).queryAllByText('2:0')).toHaveLength(0);
     });
   });
 
