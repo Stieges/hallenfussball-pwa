@@ -40,6 +40,20 @@ describe('@W4-020 Verdrahtung Smart Config', () => {
     expect(result.current.recommendation?.totalMatches).toBe(16);
   });
 
+  it('gesperrte Gruppenzahl im Panel ändert die Empfehlung nicht: maßgeblich ist die Wizard-Gruppenzahl', () => {
+    const { result } = renderHook(() =>
+      useSmartConfig({ formData: gruppenFormData(), onApply: vi.fn() })
+    );
+    act(() => {
+      result.current.setLockGroups(true);
+      result.current.setConstraintGroups(4);
+    });
+    act(() => {
+      result.current.handleCalculate();
+    });
+    expect(result.current.recommendation?.totalMatches).toBe(16);
+  });
+
   it('Gegenbeispiel: gleiche 8 Teams als Jeder-gegen-jeden → 28 Spiele', () => {
     const { result } = renderHook(() =>
       useSmartConfig({

@@ -187,10 +187,10 @@ export function useSmartConfig({
   const handleCalculate = useCallback(() => {
     const constraints = getConstraints();
     const teamsToUse = lockTeams ? constraintTeams : (formData.numberOfTeams ?? 6);
-    // @W4-020: Gruppenzahl und Finalrunden-Wahl aus dem Wizard-Zustand
+    // @W4-020: Gruppenzahl und Finalrunden-Wahl aus dem Wizard-Zustand (formData), nicht aus dem Panel-Lock
     const structure: MatchStructure = usesGroups
       ? {
-          groupCount: lockGroups ? constraintGroups : (formData.numberOfGroups ?? 2),
+          groupCount: formData.numberOfGroups ?? 2,
           finalsPlan: formData.finalsConfig?.preset ?? 'none',
         }
       : {};
@@ -209,8 +209,6 @@ export function useSmartConfig({
     getConstraints,
     lockTeams,
     constraintTeams,
-    lockGroups,
-    constraintGroups,
     formData.numberOfTeams,
     formData.numberOfGroups,
     formData.finalsConfig?.preset,
