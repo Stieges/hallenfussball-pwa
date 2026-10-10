@@ -1207,6 +1207,54 @@ describe('MutationQueue A-06d2 Sperre nach echtem Fehler (@FU-013, Entscheidung 
     expect(save).toHaveBeenCalledTimes(2);
   });
 
+  it('hold ohne Zeitgeber hängt nicht: Gerät geht beim echten Fehler offline, danach online → Queue läuft weiter', async () => {
+    let first = true;
+    const save = vi.fn(async () => {
+      if (first) {
+        first = false;
+        setOnLine(false); // Gerät geht offline, während der Fehler gemeldet wird → kein Zeitgeber
+        throw rlsError();
+      }
+    });
+    mq = makeRealQueue(save);
+    setOnLine(true);
+    mq.enqueue('SAVE_TOURNAMENT', tour('t1'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(delays).toEqual([]);
+    expect(openTimers()).toBe(0);
+
+    setOnLine(true);
+    window.dispatchEvent(new Event('online'));
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(mq.getPendingCount()).toBe(0);
+  });
+
+  it('vorübergehende Folge ist keine Pause: Anstoß während der 1-s-Folge startet sofort', async () => {
+    let first = true;
+    const save = vi.fn(async () => {
+      if (first) {
+        first = false;
+        throw new RepositoryError('saveTournament', 'TypeError: Failed to fetch', { code: '', message: 'TypeError: Failed to fetch' });
+      }
+    });
+    mq = makeRealQueue(save);
+    mq.enqueue('SAVE_TOURNAMENT', tour('t1'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(delays).toEqual([1000]);
+    expect(mq.getLastFailure()).toBe('transient');
+
+    // t = 0 + Folge läuft (1000 ms): neuer Eintrag stößt sofort an, ohne auf den Zeitgeber zu warten.
+    mq.enqueue('SAVE_TOURNAMENT', tour('t2'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(3);
+    expect(mq.getPendingCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(save).toHaveBeenCalledTimes(3);
+  });
+
   /** Vier weitere echte Fehler bis zum Dead-Letter (t = 120 000); liefert die Id des Eintrags. */
   async function deadLetterFirstItem(save: ReturnType<typeof vi.fn>): Promise<string> {
     await startPauseWithOneFailure(save);

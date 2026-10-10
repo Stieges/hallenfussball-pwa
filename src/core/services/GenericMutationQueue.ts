@@ -85,7 +85,7 @@ export interface MutationQueueConfig<TType extends string> {
      * *does* enter the queue can sit at the head and head-of-line-block
      * every mutation behind it: transient failures retry via timer 1/2/5/5/5 s
      * without counting, real ones count and pause 30 s (nudges via
-     * `processIfDue` wait that out), from MAX_RETRIES on the head is
+     * `processIfDue`, `enqueue` and `online` wait that out), from MAX_RETRIES on the head is
      * dead-lettered (process() intentionally `break`s, not `continue`s).
      *
      * When omitted, every structurally-valid item is accepted (today's
@@ -100,8 +100,8 @@ export interface MutationQueueConfig<TType extends string> {
 /**
  * Offline-first mutation queue machinery: persists to localStorage, retries
  * transient failures via timer 1/2/5/5/5 s without counting; real failures
- * count and pause 30 s (nudges via `processIfDue` wait that out); from
- * MAX_RETRIES on the item is dead-lettered. Coalesces duplicate mutations,
+ * count and pause 30 s (nudges via `processIfDue`, `enqueue` and `online`
+ * wait that out); from MAX_RETRIES on the item is dead-lettered. Coalesces duplicate mutations,
  * validates on load with Zod, and notifies subscribers of status changes.
  *
  * Tournament-specific behaviour (mutation types, executor, coalesce rules,

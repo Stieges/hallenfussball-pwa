@@ -3,8 +3,8 @@
  *
  * Vorübergehende Fehler: Zeitgeber 1/2/5/5/5 s ohne Zählung der Fehlversuche.
  * Echte (nicht-finale) Fehler: Zählung + feste 30-s-Sperre; Anstöße über
- * `processIfDue` warten diese 30 s ab. Ab MAX_RETRIES Dead-Letter
- * (siehe GenericMutationQueue).
+ * `processIfDue`, `enqueue` und `online` warten diese 30 s ab (A-06d2).
+ * Ab MAX_RETRIES Dead-Letter (siehe GenericMutationQueue).
  */
 
 import { withRequestTimeout } from '../utils/syncRetryTiming';
@@ -43,7 +43,10 @@ export function globalQueueTimers(): QueueTimers {
 export class QueueRetryTimer {
     private handle: QueueTimerHandle | null = null;
     private backoffStep = 0;
-    /** 30-s-Sperre nach einem echten Fehler: `processIfDue` stößt dann nicht an. */
+    /**
+     * 30-s-Sperre nach einem echten Fehler: `processIfDue`, `enqueue` und `online`
+     * stoßen dann nicht an (A-06d2).
+     */
     hold = false;
     /**
      * A-06f: Anmeldung abgelaufen. Getrennt von `hold`; kein Zeitgeber, nur
