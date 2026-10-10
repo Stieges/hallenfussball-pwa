@@ -16,6 +16,7 @@ import { fetchEngineMatchIds, type EngineMatchIdsQueryClient } from '../features
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { scheduleFingerprint } from '../utils/scheduleFingerprint';
 import { buildValidMatches, computeLiveMatches, isNewScheduledMatch, type ValidMatchEntry } from './engineMatchModel';
+import { useEngineLiveFallback } from './useEngineLiveFallback';
 
 // P8 (Fixrunde 3, W11): Bestandsschutz -- `buildValidMatches`/`isNewScheduledMatch`/
 // `computeLiveMatches`/`ValidMatchEntry` sind nach `./engineMatchModel` ausgelagert (reine
@@ -91,6 +92,8 @@ export function useEngineMatches(
   localLiveMatches: Map<string, LiveMatch>,
 ): UseEngineMatchesResult {
   const context = useMatchEngineContextOptional();
+  // A-06k (@FU-025): bei unterbrochenem Realtime-Kanal Abfrage statt Push (Gast: nichts).
+  useEngineLiveFallback(context?.engine ?? null, enabled, tournament.id);
   const [engineMatchIds, setEngineMatchIds] = useState<Set<string>>(new Set());
   // N-m5: Lesezugriff fuer den Fehlerfall der Sammelabfrage OHNE `engineMatchIds` als
   // Effekt-Abhaengigkeit -- das wuerde bei jedem `setEngineMatchIds`-Aufruf den ganzen

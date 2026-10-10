@@ -19,6 +19,7 @@ import { useRepositories } from '../core/contexts/RepositoryContext';
 import type { LiveMatch as CoreLiveMatch } from '../core/models/LiveMatch';
 import { toRuntimeMatchEvents } from '../utils/matchEvents';
 import { cardKindOf } from '../utils/cardKind';
+import { setRealtimeChannelStatus, clearRealtimeChannelStatus } from './realtimeChannelStatus';
 
 // Types - MatchEvent is re-exported from tournament.ts
 export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
@@ -452,8 +453,14 @@ export function useLiveMatches(tournamentId: string, options?: UseLiveMatchesOpt
       // Realtime mode: Subscribe to changes
       void loadFromRepository();
 
+      // A-06k (@FU-025): Kanal-Zustand fuer den Hinweis im Admin-Kopf; spaete Rueckmeldungen nach
+      // dem Cleanup werden ignoriert.
+      let subscribed = true;
       realtimeRepo.subscribe(tournamentId, {
         onMatchChange: handleRealtimeChange,
+        onStatusChange: (status) => {
+          if (subscribed) { setRealtimeChannelStatus(tournamentId, status); }
+        },
         onError: (error) => {
           console.error('Realtime subscription error:', error);
           // Could fall back to polling here if needed
@@ -478,6 +485,8 @@ export function useLiveMatches(tournamentId: string, options?: UseLiveMatchesOpt
       }, REALTIME_TIMER_INTERVAL);
 
       return () => {
+        subscribed = false;
+        clearRealtimeChannelStatus(tournamentId);
         realtimeRepo.unsubscribe(tournamentId);
         clearInterval(timerInterval);
       };
