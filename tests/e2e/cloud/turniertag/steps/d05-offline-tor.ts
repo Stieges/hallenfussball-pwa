@@ -28,5 +28,5 @@ async function offlineTor({ browser }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D5', title: 'Tor offline eintragen, wieder online: nichts geht verloren', scenarios: [], owner: 'A-06', expectedFail: false, run: offlineTor },
+  { id: 'D5', title: 'Tor offline eintragen, wieder online: nichts geht verloren', scenarios: ['@FU-013'], owner: 'A-06', expectedFail: false, run: offlineTor },
 ];

@@ -10,7 +10,7 @@
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import { expect, type Browser, type BrowserContext, type Page, type Route } from '@playwright/test';
 import { AUTH_DIR, type LoggedInRole } from './fixtures';
 import { getLocalServiceRoleClient } from './helpers';
 import { e2eUuid } from './e2eUuid';
@@ -260,4 +260,66 @@ export async function newRoleContext(browser: Browser, role: LoggedInRole): Prom
 export async function expectOutboxSettled(page: Page, timeout = 10000): Promise<void> {
   await expect(page.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout });
   await expect(page.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
+}
+
+// =============================================================================
+// A-06l: ABGEFANGENE ÜBERTRAGUNG (kein setOffline: navigator.onLine bleibt true)
+// =============================================================================
+
+const APPEND_RPC_PATTERN = '**/rest/v1/rpc/append_match_events';
+
+export interface AppendRpcBlock {
+  /** Anzahl der bisher abgefangenen Anfragen. */
+  count(): number;
+  /** Hebt die Sperre auf; weitere Anfragen laufen durch. */
+  release(): Promise<void>;
+}
+
+/**
+ * Hallen-WLAN ohne Internet: jede Übertragung (`append_match_events`) scheitert mit
+ * `internetdisconnected`, das Gerät hält sich aber weiter für online.
+ */
+export async function blockAppendRpcNoInternet(page: Page): Promise<AppendRpcBlock> {
+  let count = 0;
+  const handler = (route: Route): Promise<void> => {
+    count += 1;
+    return route.abort('internetdisconnected');
+  };
+  await page.route(APPEND_RPC_PATTERN, handler);
+  return { count: () => count, release: () => page.unroute(APPEND_RPC_PATTERN, handler) };
+}
+
+/**
+ * Hängende Anfrage: die erste Übertragung bekommt nie eine Antwort (weder `fulfill` noch
+ * `abort`), alle weiteren laufen ungehindert zum Server.
+ */
+export async function holdFirstAppendRpc(page: Page): Promise<{ count(): number }> {
+  let count = 0;
+  await page.route(APPEND_RPC_PATTERN, (route) => {
+    count += 1;
+    if (count === 1) {
+      return undefined;
+    }
+    return route.continue();
+  });
+  return { count: () => count };
+}
+
+/** Schluckt das `online`-Ereignis, damit nur der Resync beim Zurückkehren die Übertragung anstoßen kann. */
+export async function swallowOnlineEvents(context: BrowserContext): Promise<void> {
+  await context.addInitScript(() => {
+    window.addEventListener('online', (event) => event.stopImmediatePropagation(), true);
+  });
+}
+
+/** Simuliert Sperren und Entsperren des Tablets: `hidden`, dann `visible`, jeweils mit `visibilitychange`. */
+export async function simulateWakeFromSleep(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const setState = (state: 'hidden' | 'visible'): void => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
+      document.dispatchEvent(new Event('visibilitychange'));
+    };
+    setState('hidden');
+    setState('visible');
+  });
 }

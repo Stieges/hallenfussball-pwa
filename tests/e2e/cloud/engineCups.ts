@@ -70,6 +70,10 @@ export const E2E_ENGINE_CUPS = [
   runningCup('SYNC'),
   runningCup('REJECT'),
   runningCup('RECONNECT'),
+  // A-06l: Offline-Robustheit (WLAN ohne Internet, hängende Anfrage, Rückkehr aus dem Ruhezustand).
+  runningCup('OFFLINEWLAN'),
+  runningCup('HAENGT'),
+  runningCup('RUHEZUSTAND'),
   runningCup('QUEUE', false),
   runningCup('AMEND', true, [START, GOAL_HOME_NR7]),
   // Zusätzlich eine Gelbe Karte VOR dem Tor: das Protokoll zeigt Zurückgenommenes nur im Zeitfenster
