@@ -379,7 +379,7 @@ export class MatchExecutionService {
                 team,
                 playerNumber: options?.playerNumber,
                 // B-04d (@W2A-029): die Dauer folgt der beim Anpfiff übernommenen
-                // Spielregel (Schnitt in initializeMatch), nicht dem laufenden
+                // Spielregel (Schnitt in startMatch), nicht dem laufenden
                 // Turnier — eine Regeländerung wirkt erst ab dem nächsten Anpfiff.
                 durationSeconds: options?.durationSeconds ?? match.timePenaltyDurationSeconds ?? 120,
             },
@@ -806,9 +806,8 @@ export class MatchExecutionService {
         const tiebreakerDuration = tournament.finalsConfig?.tiebreakerDuration ?? 5;
         const durationSeconds = tournament.groupPhaseGameDuration * 60;
 
-        // B-04d (@W2A-029): die Spielregeln werden beim Anpfiff übernommen. Eine
-        // geänderte Zeitstrafendauer wirkt deshalb erst ab dem nächsten Anpfiff —
-        // ein laufendes Spiel rechnet weiter mit dem beim Anpfiff übernommenen Stand.
+        // B-04d (@W2A-029): Vorbelegung. Maßgeblich ist der Schnitt beim Anpfiff
+        // in startMatch; bis dahin gilt dieser Wert nur als Anzeige-Vorgabe.
         const timePenaltyDurationSeconds =
             tournament.matchCockpitSettings?.timePenaltyDurationSeconds ?? 120;
 

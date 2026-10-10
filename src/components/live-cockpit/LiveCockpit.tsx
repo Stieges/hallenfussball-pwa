@@ -1100,7 +1100,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         homeTeam={match.homeTeam}
         awayTeam={match.awayTeam}
         // BUG-006: Pre-select 2 minutes and team based on button clicked
-        preselectedDurationSeconds={120}
+        preselectedDurationSeconds={match.timePenaltyDurationSeconds ?? cockpitSettings.timePenaltyDurationSeconds}
         preselectedTeamSide={pendingPenaltySide ?? undefined}
         autoDismissSeconds={10}
       />

@@ -549,7 +549,7 @@ export interface MatchCockpitSettings {
   /**
    * Dauer einer Zeitstrafe in Sekunden (Spielregel, Default: 120 = 2 Minuten).
    * Gilt ab dem nächsten Anpfiff: das Cockpit übernimmt den Wert beim Anpfiff
-   * in den Spielstand (initializeMatch), ein laufendes Spiel rechnet weiter mit
+   * in den Spielstand (startMatch), ein laufendes Spiel rechnet weiter mit
    * seinem Stand.
    */
   timePenaltyDurationSeconds: number;
