@@ -8,7 +8,7 @@ import { render, screen, act } from '@testing-library/react';
 import type { MonitorSlide } from '../../../types/monitor';
 import type { Tournament } from '../../../types/tournament';
 import {
-  attachMonitor, buildTournament, FIXTURE_MATCHES, slide, withMonitor,
+  attachMonitor, buildTournament, FIXTURE_MATCHES, slide, withMatch, withMonitor,
 } from './monitorFixture';
 
 /** Folienprogramm Feld 1: Live-Spiel (Anhalten laut Parameter), Tabelle Gruppe A. */
@@ -148,6 +148,21 @@ describe('MonitorDisplayPage — Rückfall bei nur übersprungenen Live-Folien (
     await starte(monitorTurnier(buildTournament({ matches: ohneSpiel }), [slide('live', { fieldId: 'field-1' })]));
     expect(screen.getByTestId('qr-code')).toBeInTheDocument();
     expect(screen.queryByText('Nächstes Spiel')).not.toBeInTheDocument();
+  });
+
+  // @ZM-077 (Seite, Fixrunde 2): Programm nur aus Live-Folie. Abpfiff 2:1 → Endstand bis 29 999 ms, bei 30 000 ms QR.
+  it('nur Live-Folie: Abpfiff 2:1 → Endstand bis 29 999 ms, bei 30 000 ms Zuschauer-QR', async () => {
+    const live = [slide('live', { fieldId: 'field-1' })];
+    await starte(monitorTurnier(buildTournament(), live));
+    liefere(monitorTurnier(buildTournament({ matches: withMatch('match-7', { matchStatus: 'finished', scoreA: 2, scoreB: 1 }) }), live));
+    await vorspulenInSchritten(5_000);
+    expect(screen.getByLabelText('Heim: 2')).toBeInTheDocument();
+    await vorspulenInSchritten(29_999);
+    expect(screen.getByLabelText('Heim: 2')).toBeInTheDocument();
+    expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
+    await vorspulenInSchritten(1);
+    expect(screen.queryByLabelText('Heim: 2')).not.toBeInTheDocument();
+    expect(screen.getByTestId('qr-code')).toBeInTheDocument();
   });
 
   // Gegenbeispiel: sobald auf Feld 1 gespielt wird, kommt die Live-Folie zurück.

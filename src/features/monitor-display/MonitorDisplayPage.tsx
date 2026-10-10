@@ -26,7 +26,7 @@ import { GoalAnimation, CardAnimation } from '../../components/monitor';
 import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import {
-  mitRueckfall, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
+  alleUebersprungen, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
 } from './slideProgramme';
 import { useSlideshow } from './useSlideshow';
 import { boundFieldNumbers, visibleGoal } from './monitorGoalFilter';
@@ -109,15 +109,14 @@ export function MonitorDisplayPage({
   // bleibt keine übrig (auch beim leeren Programm), gilt die Zuschauer-QR-Folie.
   // F-04: Ist kein QR möglich (nicht öffentlich/ohne Share-Code), nimmt der Monitor
   // die nächste immer darstellbare Folie (Spielplan) — der Bildschirm ist nie leer.
-  // Sind alle Live-Folien ohne Spiel, gilt der Rückfall (B-16e1 Ruling, @ZM-122).
-  const slides = useMemo(() => {
-    const qrMoeglich = tournament?.isPublic === true && Boolean(tournament?.shareCode);
-    return mitRueckfall(
-      selectDisplayableSlides(monitor?.slides ?? [], { qrMoeglich }),
-      tournament?.matches ?? [],
-      qrMoeglich ? ZUSCHAUER_QR_SLIDE : SPIELPLAN_FALLBACK_SLIDE
-    );
-  }, [monitor, tournament]);
+  const qrMoeglich = tournament?.isPublic === true && Boolean(tournament?.shareCode);
+  const slides = useMemo(
+    () => selectDisplayableSlides(monitor?.slides ?? [], { qrMoeglich }),
+    [monitor, qrMoeglich]
+  );
+  // Rückfall (B-16e1 Ruling, @ZM-122): Sind alle Live-Folien ohne Spiel, zeigt die Seite QR bzw. Spielplan.
+  // Nur ohne Pin: Während eines Spiels und der 30-s-Haltezeit (@ZM-077) bleibt die Live-Folie sichtbar.
+  const rueckfallFolie = qrMoeglich ? ZUSCHAUER_QR_SLIDE : SPIELPLAN_FALLBACK_SLIDE;
 
   // Folienfolge (B-16c): Takt, Pause, Pfeiltasten, Leertaste und Übergang liegen in useSlideshow.
   const defaultSlideDuration = monitor?.defaultSlideDuration ?? 15;
@@ -135,10 +134,11 @@ export function MonitorDisplayPage({
   const boundFields = useMemo(() => boundFieldNumbers(monitor?.slides ?? []), [monitor]);
 
   // Current slide
-  const currentSlide = useMemo(
-    () => slides[slideState.currentIndex] ?? null,
-    [slides, slideState.currentIndex]
-  );
+  const currentSlide = useMemo(() => {
+    const rueckfallAktiv = slideState.pinnedMatchId === null
+      && alleUebersprungen(slides, tournament?.matches ?? []);
+    return rueckfallAktiv ? rueckfallFolie : slides[slideState.currentIndex] ?? null;
+  }, [slides, slideState.currentIndex, slideState.pinnedMatchId, rueckfallFolie, tournament]);
 
   // Heartbeat alle 30 s (Takt und Deps in useMonitorHeartbeat)
   useMonitorHeartbeat(monitor?.id ?? null, tournament?.id ?? null, slideState.currentIndex, cacheStatus.status);

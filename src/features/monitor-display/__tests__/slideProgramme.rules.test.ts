@@ -7,9 +7,7 @@ import { describe, it, expect } from 'vitest';
 import type { MonitorSlide } from '../../../types/monitor';
 import {
   FINAL_RESULT_HOLD_MS,
-  mitRueckfall,
-  SPIELPLAN_FALLBACK_SLIDE,
-  ZUSCHAUER_QR_SLIDE,
+  alleUebersprungen,
   nextSlide,
   wakeAt,
   type RuleMatch,
@@ -145,21 +143,21 @@ describe('@ZM-079 Anhalten im laufenden Spiel ausgeschaltet: Pin löst sich, Tak
   });
 });
 
-describe('Rückfall, wenn alle Folien übersprungen sind (Ruling B-16e1)', () => {
-  it('nur Live-Folie, kein Spiel auf Feld 1 → Zuschauer-QR-Folie', () => {
-    expect(mitRueckfall([LIVE_F1], [{ id: 'm9', field: 1, matchStatus: 'scheduled' }], ZUSCHAUER_QR_SLIDE)).toEqual([ZUSCHAUER_QR_SLIDE]);
+describe('Rückfall: alle Folien übersprungen (Ruling B-16e1)', () => {
+  it('nur Live-Folie, kein Spiel auf Feld 1 → alle übersprungen', () => {
+    expect(alleUebersprungen([LIVE_F1], [{ id: 'm9', field: 1, matchStatus: 'scheduled' }])).toBe(true);
   });
 
-  it('nur Live-Folie, kein QR möglich → Spielplan-Rückfall', () => {
-    expect(mitRueckfall([LIVE_F1], [], SPIELPLAN_FALLBACK_SLIDE)).toEqual([SPIELPLAN_FALLBACK_SLIDE]);
+  it('Gegenbeispiel: Spiel läuft auf Feld 1 → nicht übersprungen', () => {
+    expect(alleUebersprungen([LIVE_F1], [{ id: 'm7', field: 1, matchStatus: 'running' }])).toBe(false);
   });
 
-  it('Gegenbeispiel: Spiel läuft auf Feld 1 → Live-Folie bleibt', () => {
-    expect(mitRueckfall([LIVE_F1], [{ id: 'm7', field: 1, matchStatus: 'running' }], ZUSCHAUER_QR_SLIDE)).toEqual([LIVE_F1]);
+  it('Gegenbeispiel: Tabelle in der Liste → nicht übersprungen', () => {
+    expect(alleUebersprungen([LIVE_F1, TABELLE], [])).toBe(false);
   });
 
-  it('Gegenbeispiel: Tabelle sichtbar → keine Ersetzung', () => {
-    expect(mitRueckfall([LIVE_F1, TABELLE], [], ZUSCHAUER_QR_SLIDE)).toEqual([LIVE_F1, TABELLE]);
+  it('leere Liste → nicht übersprungen (Rückfall regelt selectDisplayableSlides)', () => {
+    expect(alleUebersprungen([], [])).toBe(false);
   });
 });
 
