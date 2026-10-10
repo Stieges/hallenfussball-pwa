@@ -17,7 +17,6 @@ import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../design-tokens';
 import { ScheduleDisplay } from '../components/ScheduleDisplay';
-import { GroupTables } from '../components/schedule/GroupTables';
 import { formatDateGerman } from '../utils/locationHelpers';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -35,7 +34,8 @@ import {
   myTeamName,
 } from '../features/public-view/publicScheduleFilters';
 import { useTheme } from '../hooks/useTheme';
-import { BaseThemeSelector } from '../features/settings/components/BaseThemeSelector';
+import { PublicStandingsTab } from '../features/public-view/components/PublicStandingsTab';
+import { PublicInfoTab } from '../features/public-view/components/PublicInfoTab';
 
 export interface LiveViewScreenProps {
   shareCode: string;
@@ -403,133 +403,17 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
         )}
 
         {activeTab === 'standings' && (
-          <>
-            {/* Standings Tab */}
-            {tournament.hideRankingsForPublic ? (
-              <Card>
-                <div
-                  style={{
-                    padding: cssVars.spacing.xl,
-                    textAlign: 'center',
-                    color: cssVars.colors.textMuted,
-                  }}
-                >
-                  <p style={{ fontSize: cssVars.fontSizes.lg, marginBottom: cssVars.spacing.sm }}>
-                    🏆 Tabellen ausgeblendet
-                  </p>
-                  <p style={{ fontSize: cssVars.fontSizes.sm }}>
-                    (Bambini-Modus aktiviert)
-                  </p>
-                </div>
-              </Card>
-            ) : (
-              <Card>
-                <GroupTables
-                  standings={currentStandings}
-                  teams={tournament.teams}
-                  tournament={tournament}
-                />
-              </Card>
-            )}
-          </>
+          <PublicStandingsTab tournament={tournament} standings={currentStandings} />
         )}
 
         {activeTab === 'settings' && (
-          <>
-            {/* Settings/Info Tab */}
-            <Card>
-              <div style={{ padding: cssVars.spacing.lg }}>
-                <h2 style={{ fontSize: cssVars.fontSizes.xl, marginBottom: cssVars.spacing.lg, color: cssVars.colors.textPrimary }}>
-                  Turnier-Info
-                </h2>
-
-                {/* Tournament Details */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.md }}>
-                  <div>
-                    <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>Name:</span>
-                    <p style={{ fontSize: cssVars.fontSizes.lg, color: cssVars.colors.textPrimary }}>{tournament.title}</p>
-                  </div>
-
-                  {tournament.date && (
-                    <div>
-                      <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>Datum:</span>
-                      <p style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textPrimary }}>
-                        {formatDateGerman(tournament.date)}
-                      </p>
-                    </div>
-                  )}
-
-                  {tournament.location.name && (
-                    <div>
-                      <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>Ort:</span>
-                      <p style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textPrimary }}>
-                        {tournament.location.name}
-                        {tournament.location.city && `, ${tournament.location.city}`}
-                      </p>
-                    </div>
-                  )}
-
-                  <div>
-                    <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>Teams:</span>
-                    <p style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textPrimary }}>
-                      {tournament.teams.length} Teams
-                    </p>
-                  </div>
-
-                  <div>
-                    <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>Share-Code:</span>
-                    <p style={{
-                      fontSize: cssVars.fontSizes.xl,
-                      fontWeight: cssVars.fontWeights.bold,
-                      color: cssVars.colors.primary,
-                      letterSpacing: '0.1em',
-                    }}>
-                      {shareCode.toUpperCase()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Theme Selection */}
-            <Card>
-              <div style={{ padding: cssVars.spacing.lg }}>
-                <h3 style={{
-                  fontSize: cssVars.fontSizes.lg,
-                  marginBottom: cssVars.spacing.md,
-                  color: cssVars.colors.textPrimary,
-                }}>
-                  Darstellung
-                </h3>
-                <BaseThemeSelector
-                  value={theme}
-                  onChange={setTheme}
-                  resolvedTheme={resolvedTheme}
-                />
-              </div>
-            </Card>
-
-            {/* Privacy Notice */}
-            {(tournament.hideScoresForPublic || tournament.hideRankingsForPublic) && (
-              <Card>
-                <div
-                  style={{
-                    padding: cssVars.spacing.lg,
-                    background: cssVars.colors.warningLight,
-                    borderRadius: cssVars.borderRadius.md,
-                  }}
-                >
-                  <p style={{ color: cssVars.colors.warning, fontWeight: cssVars.fontWeights.medium }}>
-                    🔒 Bambini-Modus aktiv
-                  </p>
-                  <p style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm, marginTop: cssVars.spacing.xs }}>
-                    {tournament.hideScoresForPublic && 'Spielstände werden nicht angezeigt. '}
-                    {tournament.hideRankingsForPublic && 'Tabellen werden nicht angezeigt.'}
-                  </p>
-                </div>
-              </Card>
-            )}
-          </>
+          <PublicInfoTab
+            tournament={tournament}
+            shareCode={shareCode}
+            theme={theme}
+            setTheme={setTheme}
+            resolvedTheme={resolvedTheme}
+          />
         )}
 
         {/* Footer */}
