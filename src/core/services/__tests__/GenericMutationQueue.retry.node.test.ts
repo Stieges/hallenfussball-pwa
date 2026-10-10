@@ -65,8 +65,8 @@ describe('QueueRetryTimer (A-06d)', () => {
 import 'fake-indexeddb/auto';
 import { GenericMutationQueue, type GenericMutationItem } from '../GenericMutationQueue';
 import { MutationQueue } from '../MutationQueue';
-import { RepositoryError, TeamStillReferencedError } from '../../errors';
-import type { QueueTimers } from '../mutationQueueRetry';
+import { AuthenticationError, RepositoryError, TeamStillReferencedError } from '../../errors';
+import { type QueueTimers, isAuthExpired } from '../mutationQueueRetry';
 import { REQUEST_TIMEOUT_MS } from '../../utils/syncRetryTiming';
 import type { SupabaseRepository } from '../../repositories/SupabaseRepository';
 import type { Tournament } from '../../models/types';
@@ -854,5 +854,50 @@ describe('GenericMutationQueue A-06e (@FU-016/@FU-004)', () => {
     expect(listener).toHaveBeenCalled();
     expect(q.getLastFailure()).toBe('permanent');
     expect(listener).toHaveBeenCalledWith({ pendingCount: 1, failedCount: 0 });
+  });
+});
+
+// =============================================================================
+// A-06f (@FU-009): Erkennung „Anmeldung abgelaufen“ – beide Fehlerformen
+// =============================================================================
+
+describe('isAuthExpired (A-06f, @FU-009)', () => {
+  const authApi = (status: number, message = 'Invalid JWT'): Error =>
+    Object.assign(new Error(message), { name: 'AuthApiError', status });
+
+  it('AuthenticationError → abgelaufen', () => {
+    expect(isAuthExpired(new AuthenticationError('Not authenticated', 'save'))).toBe(true);
+  });
+
+  it('RepositoryError mit AuthApiError 401 → abgelaufen', () => {
+    expect(isAuthExpired(new RepositoryError('save', 'Invalid JWT', authApi(401)))).toBe(true);
+  });
+
+  it('RepositoryError mit AuthApiError 403 → abgelaufen', () => {
+    expect(isAuthExpired(new RepositoryError('save', 'Forbidden', authApi(403)))).toBe(true);
+  });
+
+  it('AuthApiError 400 „Invalid Refresh Token“ → abgelaufen (bare und in RepositoryError)', () => {
+    const msg = 'Invalid Refresh Token: Refresh Token Not Found';
+    expect(isAuthExpired(authApi(400, msg))).toBe(true);
+    expect(isAuthExpired(new RepositoryError('save', msg, authApi(400, msg)))).toBe(true);
+  });
+
+  it('Gegenbeispiel: AuthRetryableFetchError 0 und 503 → nicht abgelaufen', () => {
+    const fetchErr = (status: number): Error =>
+      Object.assign(new Error('fetch failed'), { name: 'AuthRetryableFetchError', status });
+    expect(isAuthExpired(fetchErr(0))).toBe(false);
+    expect(isAuthExpired(fetchErr(503))).toBe(false);
+    expect(isAuthExpired(new RepositoryError('save', 'HTTP 503', fetchErr(503)))).toBe(false);
+  });
+
+  it('Gegenbeispiel: TeamStillReferencedError → nicht abgelaufen', () => {
+    expect(isAuthExpired(new TeamStillReferencedError('m1'))).toBe(false);
+  });
+
+  it('Gegenbeispiel: AuthApiError 400 ohne Refresh-Token-Text und sonstige Fehler → nicht abgelaufen', () => {
+    expect(isAuthExpired(authApi(400, 'Bad request'))).toBe(false);
+    expect(isAuthExpired(new Error('boom'))).toBe(false);
+    expect(isAuthExpired(null)).toBe(false);
   });
 });

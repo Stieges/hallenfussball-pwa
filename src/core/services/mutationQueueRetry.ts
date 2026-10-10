@@ -8,6 +8,7 @@
  */
 
 import { withRequestTimeout } from '../utils/syncRetryTiming';
+import { AuthenticationError, RepositoryError } from '../errors';
 
 
 /** Wiederholungs-Folge für vorübergehende Fehler: 1, 2, 5, 5, 5 s (Brief A5). */
@@ -44,6 +45,11 @@ export class QueueRetryTimer {
     private backoffStep = 0;
     /** 30-s-Sperre nach einem echten Fehler: `processIfDue` stößt dann nicht an. */
     hold = false;
+    /**
+     * A-06f: Anmeldung abgelaufen. Getrennt von `hold`; kein Zeitgeber, nur
+     * `resumeAfterAuth()` hebt die Sperre auf.
+     */
+    authHold = false;
 
     constructor(
         private readonly timers: QueueTimers,
@@ -170,4 +176,33 @@ export class QueueInFlight {
         this.current = record;
         return record;
     }
+}
+
+/** Status-Codes eines abgelaufenen Anmeldestatus (AuthApiError aus @supabase/auth-js). */
+const AUTH_EXPIRED_STATUSES = [401, 403] as const;
+
+/**
+ * Erkennt „Anmeldung abgelaufen“ (A-06f, @FU-009). Beide Fehlerformen zählen:
+ * - `AuthenticationError`;
+ * - `RepositoryError` mit `originalError` = AuthApiError 401/403;
+ * - AuthApiError 400 „Invalid Refresh Token…“ (bare oder als `originalError`).
+ * `AuthRetryableFetchError` (Status 0 / 503) und alle übrigen Fehler sind NICHT
+ * „abgelaufen“ — sie laufen über den transienten Weg.
+ */
+export function isAuthExpired(error: unknown): boolean {
+  if (error instanceof AuthenticationError) { return true; }
+  if (error instanceof RepositoryError) {
+    return isAuthApiExpired(error.originalError, true);
+  }
+  return isAuthApiExpired(error, false);
+}
+
+function isAuthApiExpired(candidate: unknown, wrapped: boolean): boolean {
+  if (!candidate || typeof candidate !== 'object') { return false; }
+  const e = candidate as { name?: unknown; status?: unknown; message?: unknown };
+  if (e.name !== 'AuthApiError') { return false; }
+  if (typeof e.status === 'number' && (AUTH_EXPIRED_STATUSES as readonly number[]).includes(e.status) && wrapped) {
+    return true;
+  }
+  return e.status === 400 && typeof e.message === 'string' && e.message.includes('Invalid Refresh Token');
 }
