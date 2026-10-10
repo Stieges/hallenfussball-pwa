@@ -1,6 +1,7 @@
 /**
- * Folienfolge des Monitors mit Fake-Timern (B-16a2, Spur B). Heutiges Verhalten; was heute
+ * Folienfolge des Monitors mit Fake-Timern (B-16a2 Fixrunde 1, Spur B). Heutiges Verhalten; was heute
  * nicht dem Soll entspricht, steht als `it.fails` mit grünem „Bestand:“-Zwilling daneben.
+ * Jeder Poll liefert einen strukturellen Klon (wie SupabaseRepository.get), die Zeit läuft in Schritten.
  * Keine Produktivdatei wird geändert.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -59,14 +60,26 @@ function pointsOf(teamName: string): string | null {
   return screen.getByText(teamName).parentElement?.lastElementChild?.textContent ?? null;
 }
 
+/** Deckkraft des ersten Vorfahren-Elements mit gesetzter Opazität (Übergangs-Wrapper). */
+function opazitaet(text: string): string {
+  let el: HTMLElement | null = screen.getByText(text);
+  while (el && !el.style.opacity) { el = el.parentElement; }
+  return el?.style.opacity ?? 'keine';
+}
+
 /** Turnier mit eingehängtem Monitor (Profil `high`, Pollen alle 5 s, sofern nicht überschrieben). */
 function monitorTurnier(tournament: Tournament, slides: MonitorSlide[], overrides: Parameters<typeof withMonitor>[0] = {}): Tournament {
   return attachMonitor(tournament, withMonitor({ slides, ...overrides }));
 }
 
+/** Jeder Poll liefert einen strukturellen Klon, so wie SupabaseRepository.get neue Objekte baut. */
+function liefere(data: Tournament): void {
+  supabaseGet.mockImplementation(async () => structuredClone(data));
+}
+
 /** Startet die Seite über die Cloud-Quelle und lässt den Erstlade-Effekt laufen (Fake-Timer). */
 async function starte(data: Tournament): Promise<void> {
-  supabaseGet.mockResolvedValue(data);
+  liefere(data);
   localGet.mockResolvedValue(null);
   render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
   await vorspulen(0);
@@ -75,6 +88,28 @@ async function starte(data: Tournament): Promise<void> {
 /** Spult die Fake-Timer vor und lässt die Effekte danach laufen. */
 async function vorspulen(ms: number): Promise<void> {
   await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+}
+
+/** Spult in Schritten vor, damit zwischen Polls und Timern gerendert wird. */
+async function vorspulenInSchritten(ms: number, schritt = 1_000): Promise<void> {
+  let rest = ms;
+  while (rest > 0) {
+    const s = Math.min(schritt, rest);
+    await vorspulen(s);
+    rest -= s;
+  }
+}
+
+/** Spult in Schritten vor und prüft nach jedem Schritt (inkl. Start). */
+async function vorspulenPruefend(ms: number, pruefe: () => void, schritt = 1_000): Promise<void> {
+  pruefe();
+  let rest = ms;
+  while (rest > 0) {
+    const s = Math.min(schritt, rest);
+    await vorspulen(s);
+    rest -= s;
+    pruefe();
+  }
 }
 
 beforeEach(() => {
@@ -87,68 +122,115 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const FALLE_DAUER = [
+  { fall: 'Monitor-Standard 15 s', overrides: {} },
+  { fall: 'ohne Monitor-Standard, Fallback 15 s', overrides: { defaultSlideDuration: undefined as unknown as number } },
+];
+
 describe('MonitorDisplayPage — Anzeigedauer je Folie (@ZM-130, Fake-Timer)', () => {
-  it('@ZM-130 Zeile 2: Folie mit Dauer 25 s steht 25 s, 1 ms vor Ablauf kein Wechsel', async () => {
+  it.fails('@ZM-130 Zeile 2: Folie mit Dauer 25 s steht 25 s, 1 ms vor Ablauf kein Wechsel', async () => {
     await starte(monitorTurnier(buildTournament(), [
       slide('custom-text', { headline: 'Lange Folie' }, 25),
       slide('custom-text', { headline: 'Kurze Folie' }),
     ]));
+    await vorspulenInSchritten(24_999);
     expect(screen.getByText('Lange Folie')).toBeInTheDocument();
-    await vorspulen(24_999);
-    expect(screen.getByText('Lange Folie')).toBeInTheDocument();
-    expect(screen.queryByText('Kurze Folie')).not.toBeInTheDocument();
     await vorspulen(1);
     expect(screen.getByText('Kurze Folie')).toBeInTheDocument();
   });
 
-  it.each([
-    { fall: 'Monitor-Standard 15 s', overrides: {} },
-    { fall: 'ohne Monitor-Standard, Fallback 15 s', overrides: { defaultSlideDuration: undefined as unknown as number } },
-  ])('@ZM-130 leere Folien-Dauer ($fall) → 15 s, 1 ms vor Ablauf kein Wechsel', async ({ overrides }) => {
+  it('Bestand (Befund C-MON-TAKT-STEHT): Folie mit Dauer 25 s bleibt bei Poll alle 5 s stehen', async () => {
+    await starte(monitorTurnier(buildTournament(), [
+      slide('custom-text', { headline: 'Lange Folie' }, 25),
+      slide('custom-text', { headline: 'Kurze Folie' }),
+    ]));
+    await vorspulenInSchritten(25_001);
+    expect(screen.getByText('Lange Folie')).toBeInTheDocument();
+  });
+
+  it.fails.each(FALLE_DAUER)('@ZM-130 leere Folien-Dauer ($fall) → 15 s, 1 ms vor Ablauf kein Wechsel', async ({ overrides }) => {
     await starte(monitorTurnier(buildTournament(), [
       slide('custom-text', { headline: 'Erste Folie' }),
       slide('custom-text', { headline: 'Zweite Folie' }),
     ], overrides));
-    await vorspulen(14_999);
+    await vorspulenInSchritten(14_999);
     expect(screen.getByText('Erste Folie')).toBeInTheDocument();
     await vorspulen(1);
     expect(screen.getByText('Zweite Folie')).toBeInTheDocument();
   });
+
+  it.each(FALLE_DAUER)('Bestand (Befund C-MON-TAKT-STEHT): leere Folien-Dauer ($fall) bleibt bei Poll alle 5 s stehen', async ({ overrides }) => {
+    await starte(monitorTurnier(buildTournament(), [
+      slide('custom-text', { headline: 'Erste Folie' }),
+      slide('custom-text', { headline: 'Zweite Folie' }),
+    ], overrides));
+    await vorspulenInSchritten(30_001);
+    expect(screen.getByText('Erste Folie')).toBeInTheDocument();
+  });
+
+  it('Bestand: Ein-Folien-Monitor wechselt nicht und blendet nicht aus (Übergang fade)', async () => {
+    await starte(monitorTurnier(buildTournament(), [slide('custom-text', { headline: 'Einzige Folie' })], {
+      transition: 'fade', transitionDuration: 500,
+    }));
+    await vorspulenPruefend(15_000, () => {
+      expect(opazitaet('Einzige Folie')).toBe('1');
+    });
+    await vorspulen(500);
+    expect(opazitaet('Einzige Folie')).toBe('1');
+  });
 });
 
 describe('MonitorDisplayPage — Folienfolge bei laufendem Spiel (Fake-Timer)', () => {
-  // Pflichttest @ZM-079 über die gerenderte Seite mit echtem Timer-Pfad.
-  it('@ZM-079 Anhalten aus: Live-Spiel, Tabelle und Sponsor wechseln im Takt (15 s, 30 s)', async () => {
+  // Pflichttest @ZM-079 über die gerenderte Seite mit echtem Timer-Pfad und Klon je Poll.
+  it.fails('@ZM-079 Anhalten aus: Live-Spiel, Tabelle und Sponsor wechseln im Takt (15 s, 30 s)', async () => {
     const folien = [
       slide('live', { fieldId: 'field-1', pauseRotationDuringMatch: false }),
       slide('standings', { groupId: 'A' }),
       slide('sponsor', { sponsorId: 'sp-1' }),
     ];
     await starte(monitorTurnier(buildTournament({ sponsors: [FIXTURE_SPONSOR] }), folien));
-    expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
-    await vorspulen(14_999);
+    await vorspulenInSchritten(14_999);
     expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
     await vorspulen(1);
     expect(screen.queryByLabelText('Heim: 1')).not.toBeInTheDocument();
     expect(screen.getByText(/Gruppe A/)).toBeInTheDocument();
-    await vorspulen(14_999);
+    await vorspulenInSchritten(14_999);
     expect(screen.queryByText('Bäckerei Maier')).not.toBeInTheDocument();
     await vorspulen(1);
     expect(screen.getByText('Bäckerei Maier')).toBeInTheDocument();
   });
 
-  // @ZM-074: Soll (it.fails) und grüner Bestand-Zwilling.
-  it.fails('@ZM-074 1. Halbzeit: Live-Spiel bleibt zwei Minuten stehen', async () => {
-    await starte(monitorTurnier(buildTournament({ sponsors: [FIXTURE_SPONSOR] }), programm()));
-    await vorspulen(120_000);
+  it('Bestand (Befund C-MON-TAKT-STEHT): Live-Spiel bleibt bei Poll alle 5 s stehen, auch nach 30 s', async () => {
+    const folien = [
+      slide('live', { fieldId: 'field-1', pauseRotationDuringMatch: false }),
+      slide('standings', { groupId: 'A' }),
+      slide('sponsor', { sponsorId: 'sp-1' }),
+    ];
+    await starte(monitorTurnier(buildTournament({ sponsors: [FIXTURE_SPONSOR] }), folien));
+    await vorspulenInSchritten(30_001);
     expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
   });
 
-  it('Bestand: Live-Folie wechselt trotz laufendem Spiel 7 nach 15 s auf die Tabelle (1. Halbzeit)', async () => {
+  // @ZM-074: Soll (it.fails). Ohne Takt-Fix bleibt das Live-Spiel stehen und der Test scheitert erst
+  // an der Rückkehr des Programms nach dem Abpfiff. Das ist ein Befund, kein Beleg für Anhalten.
+  it.fails('@ZM-074 1. Halbzeit: Live-Spiel bleibt zwei Minuten stehen', async () => {
     await starte(monitorTurnier(buildTournament({ sponsors: [FIXTURE_SPONSOR] }), programm()));
-    await vorspulen(15_000);
-    expect(screen.queryByLabelText('Heim: 1')).not.toBeInTheDocument();
-    expect(screen.getByText(/Gruppe A/)).toBeInTheDocument();
+    await vorspulenPruefend(120_000, () => {
+      expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
+    }, 5_000);
+    const beendet = spiele({ 'match-7': { matchStatus: 'finished', scoreA: 2, scoreB: 1 } });
+    liefere(monitorTurnier(buildTournament({ sponsors: [FIXTURE_SPONSOR], matches: beendet }), programm()));
+    let sponsorGesehen = false;
+    await vorspulenPruefend(45_000, () => {
+      if (screen.queryByText('Bäckerei Maier')) { sponsorGesehen = true; }
+    });
+    expect(sponsorGesehen).toBe(true);
+  });
+
+  it('Bestand: Live-Folie zeigt zu Beginn das laufende Spiel 7 mit Stand 1:0', async () => {
+    await starte(monitorTurnier(buildTournament({ sponsors: [FIXTURE_SPONSOR] }), programm()));
+    expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Gast: 0')).toBeInTheDocument();
   });
 
   // @ZM-075: Der Poll liefert Spiel 9 als laufend. Soll: Live-Folie mit Spiel 9 direkt nach dem Poll.
@@ -159,44 +241,47 @@ describe('MonitorDisplayPage — Folienfolge bei laufendem Spiel (Fake-Timer)', 
   it.fails('@ZM-075 Anpfiff: Monitor zeigt nach dem Poll das Live-Spiel 9', async () => {
     const folien = folienTabelleLive();
     await starte(monitorTurnier(buildTournament({ matches: vorAnpfiff() }), folien));
-    supabaseGet.mockResolvedValue(monitorTurnier(buildTournament({ matches: nachAnpfiff() }), folien));
+    liefere(monitorTurnier(buildTournament({ matches: nachAnpfiff() }), folien));
     await vorspulen(5_000);
     expect(screen.getByText('Kickers West')).toBeInTheDocument();
   });
 
-  it('Bestand: nach dem Poll mit laufendem Spiel 9 bleibt die Tabelle stehen, bis der Takt wechselt', async () => {
+  it('Bestand: nach dem Poll mit laufendem Spiel 9 zeigt der Monitor noch die Tabelle', async () => {
     const folien = folienTabelleLive();
     await starte(monitorTurnier(buildTournament({ matches: vorAnpfiff() }), folien));
-    supabaseGet.mockResolvedValue(monitorTurnier(buildTournament({ matches: nachAnpfiff() }), folien));
+    liefere(monitorTurnier(buildTournament({ matches: nachAnpfiff() }), folien));
     await vorspulen(5_000);
     expect(screen.queryByText('Kickers West')).not.toBeInTheDocument();
     expect(screen.getByText(/Gruppe A/)).toBeInTheDocument();
-    await vorspulen(15_000);
-    expect(screen.getByText('Kickers West')).toBeInTheDocument();
   });
 
-  // @ZM-077: Abpfiff mit 2:1 – Soll: die Live-Folie zeigt das Endergebnis.
+  // @ZM-077: Abpfiff mit 2:1 – Soll: 2:1 bis 29 999 ms nach dem Abpfiff, bei 30 000 ms die nächste Folie.
   const folienLive = () => [slide('live', { fieldId: 'field-1' }), slide('standings', { groupId: 'A' })];
   const nachAbpfiff = () => spiele({ 'match-7': { matchStatus: 'finished', scoreA: 2, scoreB: 1 } });
 
-  it.fails('@ZM-077 Abpfiff: Live-Folie zeigt das Endergebnis 2:1 nach dem Poll', async () => {
+  it.fails('@ZM-077 Abpfiff: Live-Folie zeigt 2:1 bis 29 999 ms, bei 30 000 ms die nächste Folie', async () => {
     const folien = folienLive();
     await starte(monitorTurnier(buildTournament(), folien));
-    supabaseGet.mockResolvedValue(monitorTurnier(buildTournament({ matches: nachAbpfiff() }), folien));
+    liefere(monitorTurnier(buildTournament({ matches: nachAbpfiff() }), folien));
     await vorspulen(5_000);
-    expect(screen.getByLabelText('Heim: 2')).toBeInTheDocument();
+    await vorspulenPruefend(29_999, () => {
+      expect(screen.getByLabelText('Heim: 2')).toBeInTheDocument();
+    });
+    await vorspulen(1);
+    expect(screen.queryByLabelText('Heim: 2')).not.toBeInTheDocument();
+    expect(screen.getByText(/Gruppe A/)).toBeInTheDocument();
   });
 
   it('Bestand: nach dem Abpfiff zeigt die Live-Folie „Nächstes Spiel“ statt des Endergebnisses', async () => {
     const folien = folienLive();
     await starte(monitorTurnier(buildTournament(), folien));
-    supabaseGet.mockResolvedValue(monitorTurnier(buildTournament({ matches: nachAbpfiff() }), folien));
+    liefere(monitorTurnier(buildTournament({ matches: nachAbpfiff() }), folien));
     await vorspulen(5_000);
     expect(screen.queryByLabelText('Heim: 2')).not.toBeInTheDocument();
     expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument();
   });
 
-  // @ZM-122: Erstes Spiel auf Feld 1 um 13:00, Stand 12:45 – die Live-Folie darf nicht erscheinen.
+  // @ZM-122: Erstes Spiel auf Feld 1 um 13:00, Stand 12:45 – die Live-Folie darf über einen Durchlauf nicht erscheinen.
   const ersterSpielUm13 = () => buildTournament({
     matches: spiele({
       'match-7': { field: 2 },
@@ -204,9 +289,12 @@ describe('MonitorDisplayPage — Folienfolge bei laufendem Spiel (Fake-Timer)', 
     }),
   });
 
-  it.fails('@ZM-122 erstes Spiel 13:00: Feld-1-Monitor überspringt die Live-Folie', async () => {
+  it.fails('@ZM-122 erstes Spiel 13:00: Feld-1-Monitor überspringt die Live-Folie über einen Durchlauf', async () => {
     await starte(monitorTurnier(ersterSpielUm13(), folienLive()));
-    expect(screen.queryByText('Nächstes Spiel')).not.toBeInTheDocument();
+    await vorspulenPruefend(30_000, () => {
+      expect(screen.queryByText('Nächstes Spiel')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText(/Gruppe A/)).toBeInTheDocument();
   });
 
   it('Bestand: vor dem ersten Spiel auf Feld 1 zeigt die Live-Folie „Nächstes Spiel“ mit TuS Mitte', async () => {
