@@ -97,6 +97,17 @@ describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
     expect(updated.matches.filter((m) => slotPairingOf(m) === slotPairingOf(played))).toHaveLength(1);
   });
 
+  it('@W5-009 – Spiel mit nur halbem Ergebnis gilt als geschützt und bleibt in der Neuplanung', () => {
+    const established = baseTournament();
+    const half: Match = { ...generatedMatches(established)[0], scoreA: 2 };
+    const withHalf: Tournament = { ...established, matches: [half] };
+
+    const preview = buildReplanPreview(withHalf);
+    expect(preview.status).toBe('preview');
+    if (preview.status !== 'preview') { return; }
+    expect(preview.keptMatches.map((m) => m.id)).toContain(half.id);
+  });
+
   it('@W5-009 – ohne Gegenstück wird das Spiel angehängt und als Konflikt gemeldet', () => {
     const established = baseTournament();
     // Team '9' spielt nicht mit – die Paarung hat im neuen Plan kein Gegenstück.

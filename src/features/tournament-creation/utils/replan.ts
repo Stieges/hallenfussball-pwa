@@ -13,21 +13,10 @@ import {
   getMatchStartState,
   type MatchStartState,
 } from '../../../utils/matchStartState';
-import { matchHasResult } from '../../../utils/teamHelpers';
+import { matchHasEvents } from '../../../utils/teamHelpers';
 import { replaceSides } from './matchSides';
 import { transitionalSides } from '../../../core/models/matchSlot';
 import { teamReplacedLabel } from '../../tournament-admin/constants/admin.constants';
-
-/** „Spiel mit Ereignissen" (@W5-009): Ergebnis, Laufzeit-Events oder Status ungleich geplant. */
-function matchHasEvents(match: Match): boolean {
-  return (
-    match.scoreA !== undefined ||
-    match.scoreB !== undefined ||
-    matchHasResult(match) ||
-    (match.events?.length ?? 0) > 0 ||
-    (match.matchStatus !== undefined && match.matchStatus !== 'scheduled')
-  );
-}
 
 export type ReplanAvailability = 'offered' | 'refused-after-kickoff' | 'unknown';
 

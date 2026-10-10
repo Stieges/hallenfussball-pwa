@@ -21,6 +21,20 @@ export function matchHasResult(match: Match): boolean {
 }
 
 /**
+ * „Spiel mit Ereignissen" (@W5-009): Ergebnis (auch halb), Laufzeit-Events oder Status ungleich geplant.
+ * Ein geschütztes Spiel bleibt beim Entfernen eines Teams und bei der Neuplanung erhalten.
+ */
+export function matchHasEvents(match: Match): boolean {
+  return (
+    match.scoreA !== undefined ||
+    match.scoreB !== undefined ||
+    matchHasResult(match) ||
+    (match.events?.length ?? 0) > 0 ||
+    (match.matchStatus !== undefined && match.matchStatus !== 'scheduled')
+  );
+}
+
+/**
  * Get all matches involving a specific team
  */
 export function getTeamMatches(matches: Match[], teamId: string): Match[] {
@@ -96,10 +110,13 @@ export function deleteTeamSafely(
     throw new Error(`Team with ID ${teamId} not found`);
   }
 
-  const analysis = analyzeTeamMatches(team, tournament.matches);
+  // @W5-009: geschützt ist jedes Spiel mit Ereignissen (matchHasEvents), nicht erst eines mit vollem Ergebnis.
+  const teamMatches = getTeamMatches(tournament.matches, teamId);
+  const protectedIds = teamMatches.filter(matchHasEvents).map(m => m.id);
+  const unprotectedIds = teamMatches.filter(m => !matchHasEvents(m)).map(m => m.id);
 
-  // If team has matches with results, mark as removed instead of deleting
-  if (analysis.matchesWithResults > 0) {
+  // If team has protected matches, mark as removed instead of deleting
+  if (protectedIds.length > 0) {
     // Mark team as removed
     const updatedTeams = tournament.teams.map(t =>
       t.id === teamId
@@ -107,23 +124,23 @@ export function deleteTeamSafely(
         : t
     );
 
-    // Remove only matches without results
+    // Remove only unprotected matches
     const updatedMatches = tournament.matches.filter(
-      m => !analysis.matchesWithoutResultsIds.includes(m.id)
+      m => !unprotectedIds.includes(m.id)
     );
 
     return {
       success: true,
       team,
-      matchesRemoved: analysis.matchesWithoutResults,
-      matchesPreserved: analysis.matchesWithResults,
+      matchesRemoved: unprotectedIds.length,
+      matchesPreserved: protectedIds.length,
       updatedTeams,
       updatedMatches,
-      removedMatchIds: analysis.matchesWithoutResultsIds,
+      removedMatchIds: unprotectedIds,
     };
   }
 
-  // Team has NO matches with results - fully delete
+  // Team has NO protected matches - fully delete
   const updatedTeams = tournament.teams.filter(t => t.id !== teamId);
   const updatedMatches = tournament.matches.filter(
     m => !matchInvolvesTeam(m, teamId)
@@ -132,11 +149,11 @@ export function deleteTeamSafely(
   return {
     success: true,
     team,
-    matchesRemoved: analysis.matchesWithoutResults,
+    matchesRemoved: unprotectedIds.length,
     matchesPreserved: 0,
     updatedTeams,
     updatedMatches,
-    removedMatchIds: analysis.matchesWithoutResultsIds,
+    removedMatchIds: unprotectedIds,
   };
 }
 

@@ -67,6 +67,18 @@ describe('useTournamentWizard.removeTeam (@FU-086)', () => {
     expect(result.current.formData.matches?.map((m) => m.id)).toEqual(['m-ab']);
   });
 
+  it('@W5-009 Team mit halb gesetztem Ergebnis: Team wird isRemoved, das Spiel bleibt (Neuplanung behaelt es)', () => {
+    const halfScored = mapTournamentFromSupabase(
+      createTournamentRow({ version: null }),
+      [createTeamRow({ id: A, name: 'FC Nord' }), createTeamRow({ id: B, name: 'SV Sued' }), createTeamRow({ id: C, name: 'TSV Ost' })],
+      [createMatchRow({ id: 'm-ab', team_a_id: A, team_b_id: B, score_a: 2 })]
+    );
+    const { result } = renderHook(() => useTournamentWizard(halfScored));
+    act(() => result.current.removeTeam(B));
+    expect(result.current.formData.teams?.find((t) => t.id === B)?.isRemoved).toBe(true);
+    expect(result.current.formData.matches?.map((m) => m.id)).toEqual(['m-ab']);
+  });
+
   it('@FU-086 Gegenbeispiel: Team ohne Spielplan entfernen aendert nichts an den Spielen (Entwurf)', () => {
     const base = tournament();
     const { result } = renderHook(() => useTournamentWizard({ ...base, matches: [] }));
