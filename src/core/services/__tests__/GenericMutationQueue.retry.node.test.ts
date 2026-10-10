@@ -721,4 +721,74 @@ describe('GenericMutationQueue A-06e (@FU-016/@FU-004)', () => {
     expect(execute).toHaveBeenCalledTimes(1);
     expect(openTimers()).toBe(0);
   });
+
+  it("A6 Test 4 (@FU-016): Kopf-Schutz – A in Arbeit, A' wird angehängt und nach Erfolg mit A'-Payload gesendet", async () => {
+    const seen: Tournament[] = [];
+    let n = 0;
+    let releaseA: () => void = () => undefined;
+    const save = vi.fn();
+    save.mockImplementation((t: Tournament) => {
+      seen.push(t);
+      n += 1;
+      return n === 1 ? new Promise<void>((res) => { releaseA = res; }) : Promise.resolve();
+    });
+    mq = makeRealQueue(save);
+    setOnLine(false);
+    mq.enqueue('SAVE_TOURNAMENT', { ...tour('a'), title: 'A' });
+    setOnLine(true);
+    const run = mq.process();
+    await settle();
+
+    mq.enqueue('SAVE_TOURNAMENT', { ...tour('a'), title: "A'" });
+    expect(mq.getPendingCount()).toBe(2);
+
+    releaseA();
+    await run;
+    await settle();
+    expect(seen.map((t) => t.title)).toEqual(['A', "A'"]);
+    expect(mq.getPendingCount()).toBe(0);
+  });
+
+  it("A6 Test 4 Erweiterung (@FU-016): A scheitert transient, dann A'' → Queue [A, A''], Payload-Reihenfolge A, A''", async () => {
+    const seen: Tournament[] = [];
+    let n = 0;
+    let failA: (e: unknown) => void = () => undefined;
+    const save = vi.fn();
+    save.mockImplementation((t: Tournament) => {
+      seen.push(t);
+      n += 1;
+      return n === 1 ? new Promise<void>((_res, rej) => { failA = rej; }) : Promise.resolve();
+    });
+    mq = makeRealQueue(save);
+    setOnLine(false);
+    mq.enqueue('SAVE_TOURNAMENT', { ...tour('a'), title: 'A' });
+    setOnLine(true);
+    const run = mq.process();
+    await settle();
+
+    mq.enqueue('SAVE_TOURNAMENT', { ...tour('a'), title: "A'" });
+    expect(mq.getPendingCount()).toBe(2);
+
+    failA(netError());
+    await run;
+    await settle();
+    expect(mq.getLastFailure()).toBe('transient');
+
+    mq.enqueue('SAVE_TOURNAMENT', { ...tour('a'), title: "A''" });
+    expect(mq.getPendingCount()).toBe(2);
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await settle();
+    expect(seen.map((t) => t.title)).toEqual(['A', 'A', "A''"]);
+    expect(mq.getPendingCount()).toBe(0);
+  });
+
+  it("A6 Test 4 Gegenbeispiel (@FU-016): ohne laufenden Durchgang wird weiter zusammengefasst (Queue-Länge 1)", async () => {
+    const save = vi.fn();
+    mq = makeRealQueue(save);
+    setOnLine(false);
+    mq.enqueue('SAVE_TOURNAMENT', { ...tour('a'), title: 'A' });
+    mq.enqueue('SAVE_TOURNAMENT', { ...tour('a'), title: "A'" });
+    expect(mq.getPendingCount()).toBe(1);
+  });
 });

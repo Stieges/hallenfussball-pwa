@@ -156,9 +156,15 @@ export class GenericMutationQueue<TType extends string> {
         // Try to coalesce with existing mutation
         const coalesceKey = this.config.coalesceKey(type, payload);
         if (coalesceKey) {
-            const existingIndex = this.queue.findIndex(
-                item => this.config.coalesceKey(item.type, item.payload) === coalesceKey
-            );
+            // Kopf-Schutz (A-06e): solange ein Durchgang läuft oder ein Versuch
+            // gemerkt ist, ist Index 0 gesperrt; Zusammenfassen immer in den
+            // LETZTEN Treffer (Rückwärtsschleife, kein findLastIndex/ES2023).
+            const headLocked = this.isProcessing || this.inFlight.isActive;
+            let existingIndex = -1;
+            for (let i = this.queue.length - 1; i >= 0; i--) {
+                if (i === 0 && headLocked) { continue; }
+                if (this.config.coalesceKey(this.queue[i].type, this.queue[i].payload) === coalesceKey) { existingIndex = i; break; }
+            }
 
             if (existingIndex !== -1) {
                 // Replace existing mutation with newer payload
