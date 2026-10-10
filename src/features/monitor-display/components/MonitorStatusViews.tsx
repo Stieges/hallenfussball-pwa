@@ -18,7 +18,7 @@ const backButtonStyle: CSSProperties = {
   padding: `${displaySpacing.contentMD} ${displaySpacing.contentXL}`,
   fontSize: displayFontSizes.bodyMD,
   background: displayColors.primary,
-  color: '#fff',
+  color: displayColors.textPrimary,
   border: 'none',
   borderRadius: cssVars.borderRadius.md,
   cursor: 'pointer',
