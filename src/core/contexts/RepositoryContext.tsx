@@ -20,6 +20,8 @@ import { RealtimeEnabledContext } from '../../lib/realtimeEnabled';
  */
 interface RepositoryUser {
     globalRole: string;
+    /** A-07b (@FU-006): Konto, dem die Warteschlange gehoert. Gast/ohne Konto: kein Kontoschluessel. */
+    id?: string;
 }
 
 interface RepositoryContextValue {
@@ -75,7 +77,7 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
         if (canUseSupabase) {
             try {
                 const supabaseTournamentRepo = new SupabaseRepository();
-                const offlineTournamentRepo = new OfflineRepository(localTournamentRepo, supabaseTournamentRepo);
+                const offlineTournamentRepo = new OfflineRepository(localTournamentRepo, supabaseTournamentRepo, user?.id);
 
                 // Create Supabase live match repo
                 const supabaseLiveMatchRepo = new SupabaseLiveMatchRepository();
