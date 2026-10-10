@@ -214,6 +214,7 @@ export const PublicLiveViewScreen: React.FC<PublicLiveViewScreenProps> = ({
                 <Card>
                     <ScheduleDisplay
                         schedule={filteredSchedule}
+                        hidePendingOrigin={tournament.hideScoresForPublic}
                         currentStandings={filteredStandings}
                         currentMatches={tournament.matches}
                         tournamentTeams={tournament.teams}

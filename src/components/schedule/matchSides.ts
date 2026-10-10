@@ -18,6 +18,8 @@ export interface SideContext {
   teams: readonly SideTeam[];
   matches: readonly SlotLabelMatch[];
   groups?: readonly TournamentGroup[];
+  /** Kindermodus: offene Seiten zeigen „noch offen“ statt der Herkunft (@TM-036). */
+  hidePendingOrigin?: boolean;
 }
 
 export interface SideDisplay extends TeamForDisplay {
@@ -32,6 +34,7 @@ export interface SideSource {
   teams?: readonly SideTeam[];
   groups?: readonly TournamentGroup[];
   matches?: readonly SlotLabelMatch[];
+  hidePendingOrigin?: boolean;
 }
 
 /** Kontext aus dem Turnier und den angezeigten Spielen (Vorgängerspiele stehen oft nur im Angezeigten). */
@@ -45,13 +48,14 @@ export function buildSideContext(
     teams: tournament?.teams ?? [],
     matches: [...shownMatches, ...persisted],
     groups: tournament?.groups,
+    hidePendingOrigin: tournament?.hidePendingOrigin,
   };
 }
 
 /** Anzeige einer Seite (`'A'` = Heim). Ein gespeicherter Anzeigename wird nie gelesen. */
 export function sideDisplay(match: SideMatch, side: 'A' | 'B', ctx: SideContext): SideDisplay {
   const slot = side === 'A' ? match.slotA : match.slotB;
-  const name = slotLabel(slot, ctx);
+  const name = slotLabel(slot, { ...ctx, hidePendingOrigin: ctx.hidePendingOrigin });
   const teamId = slotTeamId(slot);
   const team = teamId === undefined ? undefined : ctx.teams.find((candidate) => candidate.id === teamId);
   return {

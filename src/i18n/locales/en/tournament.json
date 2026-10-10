@@ -728,6 +728,7 @@
     "playoffRoundOf16": "Round of 16, match {{n}}",
     "playoffPlace": "Match for place {{n}}",
     "awaitGroup": "Completion of {{group}}",
-    "awaitMatch": "Completion of {{match}}"
+    "awaitMatch": "Completion of {{match}}",
+    "undecided": "open"
   }
 }

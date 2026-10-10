@@ -24,6 +24,11 @@ export interface SlotLabelContext {
   matches: readonly SlotLabelMatch[];
   groups?: readonly TournamentGroup[];
   locale?: 'de' | 'en';
+  /**
+   * Kindermodus (`hideScoresForPublic`, @TM-036): Öffentliche Ansichten zeigen bei offenen Seiten KEINE Herkunft
+   * mit Platz, sondern „noch offen“. Besetzte Seiten bleiben unverändert (Teamname).
+   */
+  hidePendingOrigin?: boolean;
 }
 
 /** Die Übersetzungsschlüssel der Spielseiten-Anzeige (`tournament.json`, Gruppe `slot`). */
@@ -45,7 +50,8 @@ export type SlotKey =
   | 'tournament:slot.playoffRoundOf16'
   | 'tournament:slot.playoffPlace'
   | 'tournament:slot.awaitGroup'
-  | 'tournament:slot.awaitMatch';
+  | 'tournament:slot.awaitMatch'
+  | 'tournament:slot.undecided';
 
 export type SlotDescriptionValue = string | number | SlotDescription;
 
@@ -176,6 +182,9 @@ export function matchLabelText(label: string, locale?: 'de' | 'en'): string {
 
 /** Übersetzter Anzeigetext einer Spielseite. */
 export function slotLabel(slot: MatchSlot | undefined, ctx: SlotLabelContext): string {
+  if (ctx.hidePendingOrigin === true && slot?.kind === 'pending') {
+    return translate({ key: 'tournament:slot.undecided', vars: {} }, ctx.locale);
+  }
   return translate(describeSlot(slot, ctx), ctx.locale);
 }
 

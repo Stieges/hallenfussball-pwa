@@ -728,6 +728,7 @@
     "playoffRoundOf16": "Achtelfinale {{n}}",
     "playoffPlace": "Spiel um Platz {{n}}",
     "awaitGroup": "Abschluss von {{group}}",
-    "awaitMatch": "Abschluss von {{match}}"
+    "awaitMatch": "Abschluss von {{match}}",
+    "undecided": "noch offen"
   }
 }

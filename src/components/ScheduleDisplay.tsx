@@ -38,6 +38,8 @@ interface ScheduleDisplayProps {
   showGroupTables?: boolean;
   /** Optional: Quelle für die Teilnehmerliste; Vorgabe ist currentStandings bzw. initialStandings. */
   participantStandings?: Standing[];
+  /** Kindermodus (@TM-036): offene Seiten zeigen „noch offen“ statt der Herkunft (öffentliche Ansichten). */
+  hidePendingOrigin?: boolean;
   /** Optional: Current matches with live scores (overrides schedule scores) */
   currentMatches?: Match[];
   /** Zeige QR-Code für Live-Tracking */
@@ -86,6 +88,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   currentStandings,
   showGroupTables = true,
   participantStandings,
+  hidePendingOrigin = false,
   currentMatches,
   showQRCode = false,
   qrCodeUrl,
@@ -153,7 +156,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     teams: tournamentTeams ?? schedule.teams,
     groups: schedule.tournament.groups,
     matches: schedule.allMatches,
-  }), [tournamentTeams, schedule.teams, schedule.tournament.groups, schedule.allMatches]);
+    hidePendingOrigin,
+  }), [tournamentTeams, schedule.teams, schedule.tournament.groups, schedule.allMatches, hidePendingOrigin]);
 
   // US-VIEWER-FILTERS: Filter matches based on visibleMatchIds (if provided)
   const filteredGroupPhaseMatches = useMemo(() => {
