@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import type { GoalEventInfo } from '../../../hooks/useLiveMatches';
 import type { Tournament } from '../../../types/tournament';
-import { attachMonitor, buildTournament, slide, withMonitor } from './monitorFixture';
+import { attachMonitor, buildTournament, slide, withMatch, withMonitor } from './monitorFixture';
 
 const { supabaseGet, localGet, live } = vi.hoisted(() => ({
   supabaseGet: vi.fn(),
@@ -100,5 +100,31 @@ describe('MonitorDisplayPage — Pause über die Leertaste (B-16c Fixrunde, Fake
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
     await vorspulen(0);
     expect(screen.getByText('FC Nord').parentElement?.textContent).toBe('FC Nord1:0SV Süd');
+  });
+});
+
+describe('MonitorDisplayPage — Heim/Gast der Live-Folie und nächstes Spiel (B-16d1 Fixliste 1)', () => {
+  it('Live-Folie Feld 1 mit laufendem Spiel 7: FC Nord (Heim) steht vor SV Süd (Gast)', async () => {
+    liefere(attachMonitor(buildTournament(), withMonitor({ slides: [slide('live', { fieldId: 'field-1' })] })));
+    localGet.mockResolvedValue(null);
+    const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    await vorspulen(0);
+    const text = container.textContent ?? '';
+    expect(text.indexOf('FC Nord')).toBeGreaterThanOrEqual(0);
+    expect(text.indexOf('FC Nord')).toBeLessThan(text.indexOf('SV Süd'));
+  });
+
+  it('Folie „nächstes Spiel“ Feld 1 nach Ende von Spiel 7: TuS Mitte steht vor Kickers West', async () => {
+    liefere(attachMonitor(
+      buildTournament({ matches: withMatch('match-7', { matchStatus: 'finished' }) }),
+      withMonitor({ slides: [slide('live', { fieldId: 'field-1' })] }),
+    ));
+    localGet.mockResolvedValue(null);
+    const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    await vorspulen(0);
+    const text = container.textContent ?? '';
+    expect(text).toContain('Nächstes Spiel');
+    expect(text.indexOf('TuS Mitte')).toBeGreaterThanOrEqual(0);
+    expect(text.indexOf('TuS Mitte')).toBeLessThan(text.indexOf('Kickers West'));
   });
 });
