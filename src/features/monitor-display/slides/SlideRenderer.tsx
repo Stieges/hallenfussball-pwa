@@ -17,10 +17,12 @@ interface SlideRendererProps {
   performanceSettings: PerformanceSettings;
   theme: MonitorTheme;
   overscanPx?: number;
+  /** Gepinntes Spiel der Live-Folie (B-16e1): die Folie zeigt es auch nach Abpfiff. */
+  pinnedMatchId?: string | null;
 }
 
 /** Wählt die Folien-Komponente nach Typ; unbekannte Typen fallen auf die Zuschauer-QR-Folie. */
-export function SlideRenderer({ slide, tournament, performanceSettings, theme, overscanPx }: SlideRendererProps) {
+export function SlideRenderer({ slide, tournament, performanceSettings, theme, overscanPx, pinnedMatchId }: SlideRendererProps) {
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
@@ -40,7 +42,7 @@ export function SlideRenderer({ slide, tournament, performanceSettings, theme, o
 
   switch (slide.type) {
     case 'live':
-      return <LiveSlide slide={slide} tournament={tournament} performanceSettings={performanceSettings} theme={theme} style={slideStyle} />;
+      return <LiveSlide slide={slide} tournament={tournament} performanceSettings={performanceSettings} theme={theme} style={slideStyle} pinnedMatchId={pinnedMatchId} />;
 
     case 'standings':
       return <StandingsSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} />;

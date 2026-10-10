@@ -233,9 +233,8 @@ describe('MonitorDisplayPage — Folienfolge bei laufendem Spiel (Fake-Timer)', 
     expect(screen.getByText('Bäckerei Maier')).toBeInTheDocument();
   });
 
-  // @ZM-074: Soll (it.fails). Ohne Takt-Fix bleibt das Live-Spiel stehen und der Test scheitert erst
-  // an der Rückkehr des Programms nach dem Abpfiff. Das ist ein Befund, kein Beleg für Anhalten.
-  it.fails('@ZM-074 1. Halbzeit: Live-Spiel bleibt zwei Minuten stehen', async () => {
+  // @ZM-074: Live-Spiel hält die Folie zwei Minuten lang (Pin, kein Takt).
+  it('@ZM-074 1. Halbzeit: Live-Spiel bleibt zwei Minuten stehen', async () => {
     await starte(monitorTurnier(buildTournament({ sponsors: [FIXTURE_SPONSOR] }), programm()));
     await vorspulenPruefend(120_000, () => {
       expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
@@ -243,7 +242,8 @@ describe('MonitorDisplayPage — Folienfolge bei laufendem Spiel (Fake-Timer)', 
     const beendet = spiele({ 'match-7': { matchStatus: 'finished', scoreA: 2, scoreB: 1 } });
     liefere(monitorTurnier(buildTournament({ sponsors: [FIXTURE_SPONSOR], matches: beendet }), programm()));
     let sponsorGesehen = false;
-    await vorspulenPruefend(45_000, () => {
+    // 30 s Endergebnis (ab dem Poll bei 125 s) + 15 s Tabelle = Sponsor bei 170 s; das Fenster deckt das ab.
+    await vorspulenPruefend(55_000, () => {
       if (screen.queryByText('Bäckerei Maier')) { sponsorGesehen = true; }
     });
     expect(sponsorGesehen).toBe(true);
@@ -255,12 +255,12 @@ describe('MonitorDisplayPage — Folienfolge bei laufendem Spiel (Fake-Timer)', 
     expect(screen.getByLabelText('Gast: 0')).toBeInTheDocument();
   });
 
-  // @ZM-075: Der Poll liefert Spiel 9 als laufend. Soll: Live-Folie mit Spiel 9 direkt nach dem Poll.
+  // @ZM-075: Der Poll liefert Spiel 9 als laufend. Live-Folie mit Spiel 9 direkt nach dem Poll.
   const folienTabelleLive = () => [slide('standings', { groupId: 'A' }), slide('live', { fieldId: 'field-1' })];
   const vorAnpfiff = () => spiele({ 'match-7': { matchStatus: 'finished', scoreA: 2, scoreB: 1 } });
   const nachAnpfiff = () => spiele({ 'match-7': { matchStatus: 'finished', scoreA: 2, scoreB: 1 }, 'match-9': { matchStatus: 'running' } });
 
-  it.fails('@ZM-075 Anpfiff: Monitor zeigt nach dem Poll das Live-Spiel 9', async () => {
+  it('@ZM-075 Anpfiff: Monitor zeigt nach dem Poll das Live-Spiel 9', async () => {
     const folien = folienTabelleLive();
     await starte(monitorTurnier(buildTournament({ matches: vorAnpfiff() }), folien));
     liefere(monitorTurnier(buildTournament({ matches: nachAnpfiff() }), folien));
@@ -268,20 +268,11 @@ describe('MonitorDisplayPage — Folienfolge bei laufendem Spiel (Fake-Timer)', 
     expect(screen.getByText('Kickers West')).toBeInTheDocument();
   });
 
-  it('Bestand: nach dem Poll mit laufendem Spiel 9 zeigt der Monitor noch die Tabelle', async () => {
-    const folien = folienTabelleLive();
-    await starte(monitorTurnier(buildTournament({ matches: vorAnpfiff() }), folien));
-    liefere(monitorTurnier(buildTournament({ matches: nachAnpfiff() }), folien));
-    await vorspulen(5_000);
-    expect(screen.queryByText('Kickers West')).not.toBeInTheDocument();
-    expect(screen.getByText(/Gruppe A/)).toBeInTheDocument();
-  });
-
   // @ZM-077: Abpfiff mit 2:1 – Soll: 2:1 bis 29 999 ms nach dem Abpfiff, bei 30 000 ms die nächste Folie.
   const folienLive = () => [slide('live', { fieldId: 'field-1' }), slide('standings', { groupId: 'A' })];
   const nachAbpfiff = () => spiele({ 'match-7': { matchStatus: 'finished', scoreA: 2, scoreB: 1 } });
 
-  it.fails('@ZM-077 Abpfiff: Live-Folie zeigt 2:1 bis 29 999 ms, bei 30 000 ms die nächste Folie', async () => {
+  it('@ZM-077 Abpfiff: Live-Folie zeigt 2:1 bis 29 999 ms, bei 30 000 ms die nächste Folie', async () => {
     const folien = folienLive();
     await starte(monitorTurnier(buildTournament(), folien));
     liefere(monitorTurnier(buildTournament({ matches: nachAbpfiff() }), folien));
@@ -294,15 +285,6 @@ describe('MonitorDisplayPage — Folienfolge bei laufendem Spiel (Fake-Timer)', 
     expect(screen.getByText(/Gruppe A/)).toBeInTheDocument();
   });
 
-  it('Bestand: nach dem Abpfiff zeigt die Live-Folie „Nächstes Spiel“ statt des Endergebnisses', async () => {
-    const folien = folienLive();
-    await starte(monitorTurnier(buildTournament(), folien));
-    liefere(monitorTurnier(buildTournament({ matches: nachAbpfiff() }), folien));
-    await vorspulen(5_000);
-    expect(screen.queryByLabelText('Heim: 2')).not.toBeInTheDocument();
-    expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument();
-  });
-
   // @ZM-122: Erstes Spiel auf Feld 1 um 13:00, Stand 12:45 – die Live-Folie darf über einen Durchlauf nicht erscheinen.
   const ersterSpielUm13 = () => buildTournament({
     matches: spiele({
@@ -311,18 +293,12 @@ describe('MonitorDisplayPage — Folienfolge bei laufendem Spiel (Fake-Timer)', 
     }),
   });
 
-  it.fails('@ZM-122 erstes Spiel 13:00: Feld-1-Monitor überspringt die Live-Folie über einen Durchlauf', async () => {
+  it('@ZM-122 erstes Spiel 13:00: Feld-1-Monitor überspringt die Live-Folie über einen Durchlauf', async () => {
     await starte(monitorTurnier(ersterSpielUm13(), folienLive()));
     await vorspulenPruefend(30_000, () => {
       expect(screen.queryByText('Nächstes Spiel')).not.toBeInTheDocument();
     });
     expect(screen.getByText(/Gruppe A/)).toBeInTheDocument();
-  });
-
-  it('Bestand: vor dem ersten Spiel auf Feld 1 zeigt die Live-Folie „Nächstes Spiel“ mit TuS Mitte', async () => {
-    await starte(monitorTurnier(ersterSpielUm13(), folienLive()));
-    expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument();
-    expect(screen.getByText('TuS Mitte')).toBeInTheDocument();
   });
 
   // @ZM-090: Kindermodus, Programm hat nur Tabelle – Soll: die Zuschauer-QR-Folie.

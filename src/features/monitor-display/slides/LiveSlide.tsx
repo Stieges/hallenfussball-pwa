@@ -5,6 +5,7 @@ import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../t
 import { TeamAvatar } from '../../../components/ui/TeamAvatar';
 import { LiveMatchDisplay } from '../../../components/monitor';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
+import { isMatchInProgress } from '../slideProgramme';
 import { toLiveMatch } from '../monitorMatch';
 import { sideLabel, sideTeam } from '../matchSides';
 
@@ -14,9 +15,11 @@ interface LiveSlideProps {
   performanceSettings: PerformanceSettings;
   theme: MonitorTheme;
   style: CSSProperties;
+  /** Gepinntes Spiel (B-16e1): bleibt bis zum Ende der Haltezeit sichtbar, auch mit Endstand. */
+  pinnedMatchId?: string | null;
 }
 
-export function LiveSlide({ slide, tournament, theme, style }: LiveSlideProps) {
+export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: LiveSlideProps) {
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
@@ -25,9 +28,10 @@ export function LiveSlide({ slide, tournament, theme, style }: LiveSlideProps) {
   const fieldName = field?.customName ?? field?.defaultName ?? `Feld ${fieldNumber}`;
   const { matches, teams } = tournament;
 
-  // Find currently running match on this field
-  const runningMatch = matches.find(
-    m => m.field === fieldNumber && m.matchStatus === 'running'
+  // Gepinntes Spiel (@ZM-075/077), sonst das laufende Spiel auf diesem Feld (Halbzeit zählt mit)
+  const pinnedMatch = pinnedMatchId ? matches.find(m => m.id === pinnedMatchId) : undefined;
+  const runningMatch = pinnedMatch ?? matches.find(
+    m => m.field === fieldNumber && isMatchInProgress(m)
   );
 
   // Find next scheduled match if no live match

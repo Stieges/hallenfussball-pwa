@@ -19,6 +19,8 @@ export interface SlideView {
   currentIndex: number;
   isTransitioning: boolean;
   direction: 'next' | 'prev';
+  /** Gepinntes Spiel der Live-Folie (B-16e1); null ohne Pin. */
+  pinnedMatchId: string | null;
 }
 
 export interface SlideshowControl {
@@ -43,6 +45,8 @@ export function useSlideshow(program: SlideProgram, transitionMs: number | null)
     startedAt: Date.now(),
     paused: false,
     direction: 'next',
+    pinnedMatchId: null,
+    finalUntil: null,
   }));
   const [transitionDirection, setTransitionDirection] = useState<'next' | 'prev' | null>(null);
   const [tick, setTick] = useState(0);
@@ -114,6 +118,18 @@ export function useSlideshow(program: SlideProgram, transitionMs: number | null)
   const view = useMemo(() => clampState(state, count), [state, count]);
   const wake = wakeAt(program, view);
 
+  // Jede neue Programm-Referenz (neue Daten je Poll) sofort auswerten: Spielregeln wirken beim Empfang.
+  // Der Takt startet nur neu, wenn sich Folie, Seite, Pin oder Haltezeit tatsächlich ändern (C-MON-TAKT-STEHT).
+  useEffect(() => {
+    const cur = currentState();
+    const next = nextSlide(programRef.current, cur, Date.now());
+    const changed = next.index !== cur.index
+      || next.page !== cur.page
+      || (next.pinnedMatchId ?? null) !== (cur.pinnedMatchId ?? null)
+      || (next.finalUntil ?? null) !== (cur.finalUntil ?? null);
+    if (changed) { applyChange(next); }
+  }, [program, applyChange, currentState]);
+
   // Genau ein Timer bis wakeAt. Während eines Übergangs ruht er.
   useEffect(() => {
     if (wake === null || transitionDirection !== null) { return; }
@@ -152,6 +168,7 @@ export function useSlideshow(program: SlideProgram, transitionMs: number | null)
     currentIndex: view.index,
     isTransitioning: transitionDirection !== null,
     direction: transitionDirection ?? view.direction,
+    pinnedMatchId: view.pinnedMatchId ?? null,
   }), [view, transitionDirection]);
 
   return { slideState, isPaused: view.paused };

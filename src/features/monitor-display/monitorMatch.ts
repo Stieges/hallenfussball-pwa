@@ -24,8 +24,10 @@ export function toLiveMatch(match: Match, teams: Team[], tournament: Tournament)
   const findTeam = (side: MatchSide, id: string) =>
     sideTeam(match, side, teams) ?? { id, name: id };
 
+  // `paused` (Halbzeit, C-MON-PAUSE) ist kein MatchStatus-Wert, kommt aber aus dem Speicher.
   const statusMap: Record<string, 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED'> = {
     running: 'RUNNING',
+    paused: 'PAUSED',
     finished: 'FINISHED',
     scheduled: 'NOT_STARTED',
     waiting: 'NOT_STARTED',

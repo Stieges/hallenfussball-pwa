@@ -115,14 +115,16 @@ export function MonitorDisplayPage({
 
   // Folienfolge (B-16c): Takt, Pause, Pfeiltasten, Leertaste und Übergang liegen in useSlideshow.
   const defaultSlideDuration = monitor?.defaultSlideDuration ?? 15;
+  // Spiele für die Anhalte- und Feldregeln (B-16e1): jede neue Turnier-Referenz wertet die Regeln aus.
   const slideProgram = useMemo<SlideProgram>(
-    () => ({ slides, defaultDurationSec: defaultSlideDuration }),
-    [slides, defaultSlideDuration]
+    () => ({ slides, defaultDurationSec: defaultSlideDuration, matches: tournament?.matches }),
+    [slides, defaultSlideDuration, tournament]
   );
   const transitionMs = performanceSettings.enableTransitions && monitor?.transition !== 'none'
     ? (monitor?.transitionDuration ?? 0)
     : null;
   const { slideState, isPaused } = useSlideshow(slideProgram, transitionMs);
+
 
   // Current slide
   const currentSlide = useMemo(
@@ -188,6 +190,7 @@ export function MonitorDisplayPage({
               performanceSettings={performanceSettings}
               theme={monitor.theme}
               overscanPx={monitor.overscanPx}
+              pinnedMatchId={slideState.pinnedMatchId}
             />
           </TransitionWrapper>
         )}
