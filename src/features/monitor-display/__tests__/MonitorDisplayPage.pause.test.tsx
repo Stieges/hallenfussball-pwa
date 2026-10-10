@@ -1,0 +1,95 @@
+/**
+ * Pause über die Seite (B-16c Fixrunde 1, Spur B): Leertaste hält die Folie an, Fortsetzen startet
+ * eine volle Anzeigedauer. Eigene Datei, damit die eingefrorenen a-Dateien unverändert bleiben.
+ * Jeder Poll liefert einen strukturellen Klon (wie SupabaseRepository.get), die Zeit läuft in Schritten.
+ */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, act, fireEvent } from '@testing-library/react';
+import type { GoalEventInfo } from '../../../hooks/useLiveMatches';
+import type { Tournament } from '../../../types/tournament';
+import { attachMonitor, buildTournament, slide, withMonitor } from './monitorFixture';
+
+const { supabaseGet, localGet, live } = vi.hoisted(() => ({
+  supabaseGet: vi.fn(),
+  localGet: vi.fn(),
+  live: { goal: null as GoalEventInfo | null, clearGoal: vi.fn() },
+}));
+
+vi.mock('../../../lib/supabase', () => ({
+  isSupabaseConfigured: true,
+  supabase: { from: vi.fn(() => ({ upsert: vi.fn().mockResolvedValue({}) })), rpc: vi.fn().mockResolvedValue({ error: null }) },
+}));
+vi.mock('../../../core/repositories/SupabaseRepository', () => ({
+  SupabaseRepository: vi.fn(function SupabaseRepository() { return { get: supabaseGet }; }),
+}));
+vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
+  LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { get: localGet }; }),
+}));
+vi.mock('qrcode.react', async () => {
+  const React = await import('react');
+  return {
+    QRCodeSVG: ({ value }: { value: string }) => React.createElement('svg', { 'data-testid': 'qr-code', 'data-value': value }),
+  };
+});
+vi.mock('../../../hooks/useLiveMatches', () => ({
+  useLiveMatches: () => ({
+    liveMatches: new Map(), runningMatches: [], pausedMatches: [], runningMatchIds: new Set<string>(),
+    getMatchById: () => undefined, lastGoalEvent: live.goal, clearLastGoalEvent: live.clearGoal,
+    lastCardEvent: null, clearLastCardEvent: vi.fn(), calculateElapsedSeconds: () => 0,
+  }),
+}));
+
+import { MonitorDisplayPage } from '../MonitorDisplayPage';
+
+function monitorTurnier(): Tournament {
+  return attachMonitor(buildTournament(), withMonitor({
+    slides: [slide('custom-text', { headline: 'Folie A' }), slide('custom-text', { headline: 'Folie B' })],
+  }));
+}
+
+/** Jeder Poll liefert einen strukturellen Klon, so wie SupabaseRepository.get neue Objekte baut. */
+function liefere(data: Tournament): void {
+  supabaseGet.mockImplementation(async () => structuredClone(data));
+}
+
+async function vorspulen(ms: number): Promise<void> {
+  await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+}
+
+/** Spult in 1-s-Schritten vor, damit zwischen Polls und Timern gerendert wird. */
+async function vorspulenInSchritten(ms: number): Promise<void> {
+  for (let i = 0; i < ms / 1_000; i++) { await vorspulen(1_000); }
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  live.goal = null;
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe('MonitorDisplayPage — Pause über die Leertaste (B-16c Fixrunde, Fake-Timer)', () => {
+  it('Leertaste bei 5 s hält Folie A an; Fortsetzen zeigt B genau nach einer vollen Dauer (15 s)', async () => {
+    liefere(monitorTurnier());
+    localGet.mockResolvedValue(null);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    await vorspulen(0);
+    expect(screen.getByText('Folie A')).toBeInTheDocument();
+
+    await vorspulenInSchritten(5_000);
+    fireEvent.keyDown(window, { key: ' ' });
+    await vorspulenInSchritten(600_000);
+    expect(screen.getByText('Folie A')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: ' ' });
+    await vorspulenInSchritten(14_000);
+    expect(screen.getByText('Folie A')).toBeInTheDocument();
+    await vorspulen(999);
+    expect(screen.getByText('Folie A')).toBeInTheDocument();
+    await vorspulen(1);
+    expect(screen.getByText('Folie B')).toBeInTheDocument();
+  });
+});

@@ -29,15 +29,13 @@ describe('useSlideshow (B-16c)', () => {
     expect(result.current.slideState).toMatchObject({ currentIndex: 1, isTransitioning: false });
   });
 
-  it('Unmount mitten im Übergang: der Übergangs-Timer setzt keinen Zustand mehr', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  it('Unmount mitten im Übergang: kein Timer bleibt übrig', async () => {
     const { result, unmount } = renderHook(() => useSlideshow(zweiFolien, 500));
     await vorspulen(15_000);
     expect(result.current.slideState.isTransitioning).toBe(true);
 
     unmount();
-    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
-    expect(consoleError).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('Index-Klemme: schrumpft die Folienliste, zeigt der Hook die letzte vorhandene Folie', async () => {
