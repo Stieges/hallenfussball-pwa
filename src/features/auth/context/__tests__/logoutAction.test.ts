@@ -36,6 +36,8 @@ import { logout } from '../logoutAction';
 const TOKEN_KEY = 'sb-localhost-auth-token';
 const QUEUE_KEY = 'mutation_queue_v1';
 const QUEUE_VALUE = JSON.stringify([{ id: 'e1' }, { id: 'e2' }, { id: 'e3' }]);
+const FAILED_KEY = 'mutation_queue_failed_v1';
+const FAILED_VALUE = JSON.stringify([{ id: 'f1' }]);
 
 function b64url(value: unknown): string {
   return Buffer.from(JSON.stringify(value)).toString('base64url');
@@ -74,10 +76,12 @@ describe('logout (A-07a) – nur dieses Gerät, Ausgang bleibt', () => {
     net.calls.length = 0;
     safeLocalStorage.clear();
     safeLocalStorage.setItem(QUEUE_KEY, QUEUE_VALUE);
+    safeLocalStorage.setItem(FAILED_KEY, FAILED_VALUE);
     net.respond = null;
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -93,6 +97,7 @@ describe('logout (A-07a) – nur dieses Gerät, Ausgang bleibt', () => {
     expect(logoutCalls[0].url).toContain('scope=local');
     expect(hasSupabaseToken()).toBe(false);
     expect(safeLocalStorage.getItem(QUEUE_KEY)).toBe(QUEUE_VALUE);
+    expect(safeLocalStorage.getItem(FAILED_KEY)).toBe(FAILED_VALUE);
     expect(deps.setUser).toHaveBeenCalledWith(null);
   });
 
@@ -103,9 +108,20 @@ describe('logout (A-07a) – nur dieses Gerät, Ausgang bleibt', () => {
     };
     const deps = createMockAuthActionDeps();
 
-    await expect(logout(deps)).resolves.toBeUndefined();
+    // auth-js wiederholt den Refresh mit Backoff (200, 400, 800 … ms, setTimeout). Fake-Timer spulen ~25 s vor.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    let settled = false;
+    const pending = logout(deps).finally(() => {
+      settled = true;
+    });
+    // Timer werden erst nach und nach angelegt; so lange in Schritten vorspulen, bis logout fertig ist.
+    for (let step = 0; step < 100 && !settled; step++) {
+      await vi.advanceTimersByTimeAsync(1_000);
+    }
+    await expect(pending).resolves.toBeUndefined();
+    vi.useRealTimers();
 
     expect(hasSupabaseToken()).toBe(false);
     expect(deps.setUser).toHaveBeenCalledWith(null);
-  }, 60_000); // auth-js wiederholt den Refresh bei Netzfehler mit echten Timern (200, 400, 800 … ms)
+  });
 });
