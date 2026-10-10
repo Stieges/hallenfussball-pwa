@@ -4,7 +4,7 @@ import { generateUniqueId } from '../../utils/idGenerator';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { captureFeatureError } from '../../lib/sentry';
 import { isTransientMutationError } from '../errors';
-import { QueueInFlight, QueueRetryTimer, globalQueueTimers, HOLD_RETRY_MS, type QueueTimers } from './mutationQueueRetry';
+import { QueueInFlight, QueueRetryTimer, globalQueueTimers, HOLD_RETRY_MS, isAuthExpired, type QueueTimers } from './mutationQueueRetry';
 import { REQUEST_TIMEOUT_MS } from '../utils/syncRetryTiming';
 
 /**
@@ -442,7 +442,8 @@ export class GenericMutationQueue<TType extends string> {
      * Stops on error (preserving order) unless max retries exceeded.
      */
     public async process(): Promise<void> {
-        if (this.isProcessing || this.queue.length === 0) { return; }
+        // A-06f: solange die Anmeldung abgelaufen ist, startet kein Lauf (auch nicht über Timer/online/enqueue).
+        if (this.isProcessing || this.queue.length === 0 || this.retryTimer.authHold) { return; }
         if (!(navigator.onLine)) { return; }
 
         // Ein Lauf ersetzt einen anstehenden Wiederholungs-Zeitgeber.
@@ -462,6 +463,12 @@ export class GenericMutationQueue<TType extends string> {
                     await this.inFlight.attempt(item.id, () => this.config.execute(item), REQUEST_TIMEOUT_MS);
                 } catch (error) {
                     if (import.meta.env.DEV) { console.warn(`MutationQueue: Error processing ${item.type} (${item.id})`, error); }
+
+                    if (isAuthExpired(error)) {
+                        // A-06f (@FU-009): Anmeldung abgelaufen – zählt nicht, kein Zeitgeber; nur resumeAfterAuth() hebt auf.
+                        this.retryTimer.authHold = true; this.lastFailure = 'permanent'; this.notifyListeners();
+                        break;
+                    }
 
                     if (isTransientMutationError(error)) {
                         // Vorübergehender Fehler (z. B. kein echtes Internet trotz
@@ -527,6 +534,16 @@ export class GenericMutationQueue<TType extends string> {
      */
     public async processIfDue(): Promise<void> {
         if (this.retryTimer.hold) { return; }
+        return this.process();
+    }
+
+    /**
+     * A-06f (@FU-009): Nach erneuter Anmeldung aufrufen – hebt die Anmelde-Sperre
+     * (`authHold`) auf und sendet die Queue weiter. Aufrufer: Anmelde-Ereignis
+     * im Sync-Wiring (kommt mit A-06g; bis dahin bewusst ohne Aufrufer).
+     */
+    public async resumeAfterAuth(): Promise<void> {
+        this.retryTimer.authHold = false;
         return this.process();
     }
 

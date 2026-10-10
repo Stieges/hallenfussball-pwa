@@ -901,3 +901,104 @@ describe('isAuthExpired (A-06f, @FU-009)', () => {
     expect(isAuthExpired(null)).toBe(false);
   });
 });
+
+// =============================================================================
+// A-06f authHold (@FU-009, @FU-013): Anmeldung abgelaufen hält die Queue an,
+// zählt nicht, plant keinen Zeitgeber; nur resumeAfterAuth() sendet weiter.
+// =============================================================================
+
+describe('MutationQueue A-06f authHold (@FU-009/@FU-013)', () => {
+  beforeEach(() => {
+    mockStorage.clear();
+    qId = 0;
+    delays = [];
+    limitDelays = [];
+    openHandles = new Set();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    recTimers = {
+      setTimeout: (cb, ms) => {
+        if (ms === REQUEST_TIMEOUT_MS) { limitDelays.push(ms); } else { delays.push(ms); }
+        const h = setTimeout(() => { openHandles.delete(h); cb(); }, ms);
+        openHandles.add(h);
+        return h;
+      },
+      clearTimeout: (h) => { openHandles.delete(h); clearTimeout(h); },
+    };
+    const nav = { onLine: true };
+    Object.defineProperty(globalThis, 'navigator', { value: nav, configurable: true });
+    setOnLine = (v: boolean) => { nav.onLine = v; };
+    // Node-Umgebung: ein EventTarget als window, damit der `online`-Listener registriert wird.
+    vi.stubGlobal('window', new EventTarget());
+  });
+
+  afterEach(() => {
+    q?.dispose();
+    mq?.dispose();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  function authExpiredApiError(status: number, message: string): RepositoryError {
+    return new RepositoryError('save', message, Object.assign(new Error(message), { name: 'AuthApiError', status }));
+  }
+
+  async function runAuthHoldScenario(saveError: unknown): Promise<void> {
+    const save = vi.fn().mockRejectedValue(saveError);
+    mq = makeRealQueue(save);
+    setOnLine(false);
+    for (let i = 0; i < 40; i++) { mq.enqueue('SAVE_TOURNAMENT', tour(`t${i}`)); }
+    setOnLine(true);
+
+    await mq.process();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(mqRetryCount()).toBe(0);
+    expect(mq.getLastFailure()).toBe('permanent');
+
+    // Kein Zeitgeber, kein Fehlversuch, nichts zählt – auch nach 10 Minuten nicht.
+    await vi.advanceTimersByTimeAsync(600000);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(mq.getPendingCount()).toBe(40);
+    expect(mq.getFailedCount()).toBe(0);
+    expect(mqRetryCount()).toBe(0);
+    expect(openTimers()).toBe(0);
+
+    // Neue Einträge und ein `online`-Ereignis starten keinen Versuch.
+    for (let i = 40; i < 43; i++) { mq.enqueue('SAVE_TOURNAMENT', tour(`t${i}`)); }
+    window.dispatchEvent(new Event('online'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(mq.getPendingCount()).toBe(43);
+    expect(mq.getFailedCount()).toBe(0);
+    expect(openTimers()).toBe(0);
+
+    // Nach Anmeldung: resumeAfterAuth sendet die ganze Queue weiter.
+    save.mockResolvedValue(undefined);
+    await mq.resumeAfterAuth();
+    expect(mq.getPendingCount()).toBe(0);
+    expect(mq.getFailedCount()).toBe(0);
+  }
+
+  it('echter Weg (@FU-009): AuthenticationError → 40 pending, failedCount 0, retryCount 0; resumeAfterAuth leert die Queue', async () => {
+    await runAuthHoldScenario(new AuthenticationError('Not authenticated', 'save'));
+  });
+
+  it('echter Weg (@FU-009): RepositoryError mit AuthApiError 401 → gleiche Sperre, resumeAfterAuth leert die Queue', async () => {
+    await runAuthHoldScenario(authExpiredApiError(401, 'Invalid JWT'));
+  });
+
+  it('Gegenbeispiel (@FU-013): AuthRetryableFetchError 503 → transienter Weg, Wartezeit 1000, kein authHold', async () => {
+    const fetchErr = Object.assign(new Error('HTTP 503'), { name: 'AuthRetryableFetchError', status: 503 });
+    const save = vi.fn().mockRejectedValue(new RepositoryError('save', 'HTTP 503', fetchErr));
+    mq = makeRealQueue(save);
+    setOnLine(false);
+    mq.enqueue('SAVE_TOURNAMENT', tour('t1'));
+    setOnLine(true);
+
+    await mq.process();
+    expect(delays).toEqual([1000]);
+    expect(mqRetryCount()).toBe(0);
+    expect(mq.getLastFailure()).toBe('transient');
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+});
