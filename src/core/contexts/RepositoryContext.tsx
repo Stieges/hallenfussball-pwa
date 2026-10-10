@@ -20,8 +20,8 @@ import { RealtimeEnabledContext } from '../../lib/realtimeEnabled';
  */
 interface RepositoryUser {
     globalRole: string;
-    /** A-07b (@FU-006): Konto, dem die Warteschlange gehoert. Gast/ohne Konto: kein Kontoschluessel. */
-    id?: string;
+    /** A-07b (@FU-006): Konto, dem die Warteschlange gehoert (Pflicht: jede Queue hat ein Konto). */
+    id: string;
 }
 
 interface RepositoryContextValue {
