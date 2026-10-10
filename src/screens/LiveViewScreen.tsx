@@ -17,18 +17,15 @@ import { useState, useEffect, CSSProperties, useCallback, useRef, TouchEvent } f
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cssVars, layoutHeights } from '../design-tokens';
-import { Tournament, Standing } from '../types/tournament';
-import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
-import { calculateStandings } from '../utils/calculations';
+import { Standing } from '../types/tournament';
+import { GeneratedSchedule } from '../core/generators';
 import { ScheduleDisplay } from '../components/ScheduleDisplay';
 import { GroupTables } from '../components/schedule/GroupTables';
 import { formatDateGerman } from '../utils/locationHelpers';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { PublicBottomNav, PublicNavTab } from '../components/ui/PublicBottomNav';
-import { SupabaseRepository } from '../core/repositories/SupabaseRepository';
-import { LocalStorageRepository } from '../core/repositories/LocalStorageRepository';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { usePublicTournament } from '../features/public-view/usePublicTournament';
 import { useTheme } from '../hooks/useTheme';
 import { useHaptic } from '../hooks/useHaptic';
 import { BaseThemeSelector } from '../features/settings/components/BaseThemeSelector';
@@ -42,11 +39,8 @@ const getMyTeamStorageKey = (shareCode: string) => `live:${shareCode}:myTeam`;
 
 export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => {
   const { t: tSport } = useTranslation('sport');
-  const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [schedule, setSchedule] = useState<GeneratedSchedule | null>(null);
-  const [currentStandings, setCurrentStandings] = useState<Standing[]>([]);
-  const [loadingState, setLoadingState] = useState<'loading' | 'error' | 'not-found' | 'success'>('loading');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { tournament, schedule, standings: currentStandings, loadingState, errorMessage, refresh } =
+    usePublicTournament(shareCode);
 
   // Theme hook
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -150,80 +144,6 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     setShowTeamSelector(false);
   }, [shareCode, triggerHaptic]);
 
-  // Load tournament from Supabase (with localStorage fallback)
-  const loadTournament = useCallback(async (isRefreshAction = false) => {
-    if (!isRefreshAction) {
-      setLoadingState('loading');
-    }
-    setErrorMessage(null);
-
-    let found: Tournament | null = null;
-
-    // Try Supabase first (if configured)
-    if (isSupabaseConfigured) {
-      try {
-        const supabaseRepo = new SupabaseRepository();
-        found = await supabaseRepo.getByShareCode(shareCode);
-      } catch (error) {
-        console.warn('Supabase lookup failed, trying localStorage:', error);
-      }
-    }
-
-    // Fallback to localStorage if not found in Supabase
-    if (!found) {
-      try {
-        const localRepo = new LocalStorageRepository();
-        found = await localRepo.getByShareCode(shareCode);
-      } catch (error) {
-        console.warn('LocalStorage lookup failed:', error);
-      }
-    }
-
-    if (!found) {
-      setLoadingState('not-found');
-      return;
-    }
-
-    try {
-
-      setTournament(found);
-
-      // Generate schedule
-      const generatedSchedule = generateFullSchedule(found);
-      setSchedule(generatedSchedule);
-
-      // Calculate standings
-      const uniqueGroups = Array.from(
-        new Set(found.teams.map((t) => t.group).filter(Boolean))
-      ) as string[];
-
-      const allStandings: Standing[] = [];
-      uniqueGroups.forEach((group) => {
-        const teamsInGroup = found.teams.filter((t) => t.group === group);
-        const groupStandings = calculateStandings(
-          teamsInGroup,
-          found.matches,
-          found,
-          group
-        );
-        allStandings.push(...groupStandings);
-      });
-
-      setCurrentStandings(allStandings);
-      setLoadingState('success');
-    } catch (error) {
-      console.error('Error loading tournament:', error);
-      if (!isRefreshAction) {
-        setLoadingState('error');
-        setErrorMessage('Fehler beim Laden des Turniers');
-      }
-    }
-  }, [shareCode]);
-
-  // Initial load
-  useEffect(() => {
-    void loadTournament(false);
-  }, [loadTournament]);
 
   // Pull-to-refresh handlers
   const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
@@ -253,7 +173,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
       triggerHaptic('medium');
       setIsRefreshing(true);
       setPullDistance(0);
-      void loadTournament(true).then(() => {
+      void refresh().then(() => {
         triggerHaptic('success');
         setIsRefreshing(false);
       });
@@ -261,7 +181,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
       setPullDistance(0);
     }
     pullStartY.current = null;
-  }, [pullDistance, isRefreshing, loadTournament, triggerHaptic]);
+  }, [pullDistance, isRefreshing, refresh, triggerHaptic]);
 
   // Apply privacy filters and user filters
   const getFilteredSchedule = (): GeneratedSchedule | null => {
