@@ -177,6 +177,9 @@ export type TiebreakerMode =
 /** K.-o.-Runde, in der nach Unentschieden entschieden wird (B-04c, @W2A-007) */
 export type KnockoutRound = 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final';
 
+/** Runden-Schlüssel der Entscheidungsregel inkl. Platzierungsspiele (B-04c Fixrunde 2, @W2A-039) */
+export type TiebreakerRoundKey = KnockoutRound | 'placement';
+
 /**
  * Finals Configuration
  * Replaces the old Finals boolean structure with preset-based system
@@ -188,7 +191,7 @@ export interface FinalsConfig {
   parallelRoundOf16?: boolean;       // Achtelfinale gleichzeitig?
   tiebreaker?: TiebreakerMode;       // Entscheidung bei Unentschieden (Vorgabe je Runde)
   tiebreakerDuration?: number;       // Dauer in Minuten (für Verlängerung/Golden Goal)
-  tiebreakerByRound?: Partial<Record<KnockoutRound, TiebreakerMode>>; // Entscheidung je K.-o.-Runde (überschreibt `tiebreaker`)
+  tiebreakerByRound?: Partial<Record<TiebreakerRoundKey, TiebreakerMode>>; // Entscheidung je Runde (überschreibt `tiebreaker`); `placement` = Platzierungsspiele (@W2A-039)
 }
 
 /**
