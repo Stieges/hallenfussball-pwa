@@ -62,7 +62,9 @@ async function renderWithI18n(ui: ReactElement, lng: 'de' | 'en' = 'de') {
     interpolation: { escapeValue: false },
     returnNull: false,
   });
-  return render(<I18nextProvider i18n={instance}>{ui}</I18nextProvider>);
+  const wrap = (node: ReactElement) => <I18nextProvider i18n={instance}>{node}</I18nextProvider>;
+  const result = render(wrap(ui));
+  return { ...result, rerender: (node: ReactElement) => result.rerender(wrap(node)) };
 }
 
 function outboxWith(partial: Partial<OutboxStatus>): OutboxStatus {
@@ -179,6 +181,39 @@ describe('SyncStatusIndicator — Antippen zeigt Wartedetails (A-06j, DE)', () =
 
     fireEvent.mouseDown(document.body);
 
+    expect(screen.queryByTestId('sync-wait-details')).not.toBeInTheDocument();
+  });
+
+  it('Fix 1: gemerkter Offen-Zustand wird zurueckgesetzt, wenn die Warteschlange leer ist', async () => {
+    hoisted.sync.pendingChanges = 2;
+    hoisted.outbox = outboxWith({ pendingByTournament: { t1: 2 }, lastFailureKind: 'permanent', lastError: 'Serverfehler X' });
+    const view = await renderWithI18n(<SyncStatusIndicator tournamentId="t1" />);
+    fireEvent.click(screen.getByTestId('sync-status'));
+    expect(screen.getByTestId('sync-wait-details')).toBeInTheDocument();
+
+    hoisted.sync.pendingChanges = 0;
+    hoisted.outbox = EMPTY_OUTBOX;
+    view.rerender(<SyncStatusIndicator tournamentId="t1" />);
+    expect(screen.queryByTestId('sync-wait-details')).not.toBeInTheDocument();
+
+    hoisted.sync.pendingChanges = 1;
+    hoisted.outbox = outboxWith({ pendingByTournament: { t1: 1 }, lastFailureKind: 'permanent', lastError: 'Serverfehler X' });
+    view.rerender(<SyncStatusIndicator tournamentId="t1" />);
+    expect(screen.queryByTestId('sync-wait-details')).not.toBeInTheDocument();
+  });
+
+  it('Fix 1: gemerkter Offen-Zustand wird zurueckgesetzt, wenn fehlgeschlagene Eintraege auftauchen', async () => {
+    hoisted.sync.pendingChanges = 1;
+    const view = await renderWithI18n(<SyncStatusIndicator tournamentId="t1" />);
+    fireEvent.click(screen.getByTestId('sync-status'));
+    expect(screen.getByTestId('sync-wait-details')).toBeInTheDocument();
+
+    hoisted.sync.failedChanges = 1;
+    view.rerender(<SyncStatusIndicator tournamentId="t1" />);
+    expect(screen.queryByTestId('sync-wait-details')).not.toBeInTheDocument();
+
+    hoisted.sync.failedChanges = 0;
+    view.rerender(<SyncStatusIndicator tournamentId="t1" />);
     expect(screen.queryByTestId('sync-wait-details')).not.toBeInTheDocument();
   });
 

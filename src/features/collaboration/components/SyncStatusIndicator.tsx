@@ -78,6 +78,14 @@ export function SyncStatusIndicator({
     const [showWaitDetails, setShowWaitDetails] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
+    // A-06j Fixrunde 1: der gemerkte Offen-Zustand gilt nur, solange etwas wartet und nichts
+    // fehlgeschlagen ist. Sonst wuerde das Feld beim naechsten Warten ungefragt wieder aufspringen.
+    useEffect(() => {
+        if (waitingCount === 0 || failedChanges > 0) {
+            setShowWaitDetails(false);
+        }
+    }, [waitingCount, failedChanges]);
+
     // Click/touch outside closes the failed-list popover. Not useClickOutside() here: that hook's
     // RefObject<T> (non-nullable current) doesn't accept the RefObject<T | null> a DOM useRef
     // actually produces (React 19 types) -- a pre-existing mismatch, out of scope to fix here.
