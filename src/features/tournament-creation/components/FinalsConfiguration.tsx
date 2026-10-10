@@ -20,7 +20,7 @@ const roundSelectStyle: CSSProperties = {
   border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
   borderRadius: cssVars.borderRadius.sm,
   color: cssVars.colors.textPrimary,
-  fontSize: cssVars.fontSizes.sm,
+  fontSize: cssVars.fontSizes.lg,
 };
 
 export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
