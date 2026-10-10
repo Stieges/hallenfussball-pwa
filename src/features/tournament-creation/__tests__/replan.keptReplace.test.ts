@@ -4,6 +4,7 @@ import { generateFullSchedule } from '../../../core/generators';
 import { buildReplanPreview, applyReplan, openReplan } from '../utils/replan';
 import { looseVs } from '../../../test/matchSlotFixtures';
 import { testUuid } from '../../../test/testIds';
+import { matchSideTeamId } from '../../../core/models/matchSlot';
 
 const baseTournament = (): Tournament =>
   ({
@@ -89,6 +90,11 @@ describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
     const kept = updated.matches.find((m) => m.id === played.id);
     expect(kept?.scoreA).toBe(2);
     expect(kept?.scoreB).toBe(1);
+    expect(kept?.slotA).toEqual(played.slotA);
+    expect(kept?.slotB).toEqual(played.slotB);
+    const slotPairingOf = (m: Match): string =>
+      [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')].map(String).sort().join(':');
+    expect(updated.matches.filter((m) => slotPairingOf(m) === slotPairingOf(played))).toHaveLength(1);
   });
 
   it('@W5-009 – ohne Gegenstück wird das Spiel angehängt und als Konflikt gemeldet', () => {

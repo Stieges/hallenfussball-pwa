@@ -3,6 +3,7 @@ import type { Tournament } from '../../../types/tournament';
 import { generateFullSchedule } from '../../../core/generators';
 import { buildReplanPreview, applyReplan } from '../utils/replan';
 import { testUuid } from '../../../test/testIds';
+import { matchSideTeamId } from '../../../core/models/matchSlot';
 
 const baseTournament = (): Tournament =>
   ({
@@ -85,5 +86,11 @@ describe('Neuplanung – Struktur ändern vor dem ersten Anpfiff', () => {
     expect(updated.matches.length).toBe(preview.schedule.allMatches.length);
     const updatedSides = updated.matches.flatMap((m) => [m.teamA, m.teamB]);
     expect(updatedSides).toContain(testUuid(5));
+    const updatedSlotSides = updated.matches.flatMap((m) => [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')]);
+    expect(updatedSlotSides).toContain(testUuid(5));
+    preview.schedule.allMatches.forEach((g, i) => {
+      expect(updated.matches[i].slotA).toEqual(g.slotA);
+      expect(updated.matches[i].slotB).toEqual(g.slotB);
+    });
   });
 });

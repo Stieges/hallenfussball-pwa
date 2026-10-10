@@ -165,6 +165,14 @@ describe('Team ersetzen', () => {
       expect(back.slotB).toEqual(m.slotB);
     });
 
+    // Die Seite bleibt gleich (A bleibt A, B bleibt B), nur das Team wird getauscht.
+    const replacedId = (id: string | undefined) => (id === testUuid(3) ? testUuid(9) : id);
+    established.matches.forEach((b) => {
+      const after = result.tournament.matches.find((m) => m.id === b.id);
+      expect(matchSideTeamId(after!, 'A')).toBe(replacedId(matchSideTeamId(b, 'A')));
+      expect(matchSideTeamId(after!, 'B')).toBe(replacedId(matchSideTeamId(b, 'B')));
+    });
+
     // Unbeteiligte Spiele behalten ihre Slots unverändert.
     established.matches
       .filter((m) => !matchInvolvesTeam(m, testUuid(3)))
