@@ -11,7 +11,7 @@
  * - Teams mit Matches MIT Ergebnissen: Team wird als "entfernt" markiert
  */
 
-import { useState, CSSProperties, useCallback } from 'react';
+import { useState, CSSProperties, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, Input, Button, TeamAvatar, ColorPicker, LogoUploadDialog } from '../../components/ui';
 import { Tournament, Team, TeamLogo } from '../../types/tournament';
@@ -27,6 +27,7 @@ import {
   TeamMatchAnalysis,
 } from '../../utils/teamHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { createPortal } from 'react-dom';
 
 interface TeamsTabProps {
@@ -55,6 +56,17 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     team: Team;
     analysis: TeamMatchAnalysis;
   } | null>(null);
+
+  // @OB-014: Fokus der Rückfrage liegt zuerst auf „Abbrechen", Enter löst nichts aus.
+  // G2: explizites Start-Ziel statt DOM-Reihenfolge.
+  const closeDeleteDialog = useCallback(() => setDeleteConfirmTeam(null), []);
+  const deleteCancelRef = useRef<HTMLButtonElement>(null);
+  const deleteDialogTrap = useFocusTrap({
+    isActive: deleteConfirmTeam !== null,
+    onEscape: closeDeleteDialog,
+    initialFocusRef: deleteCancelRef,
+    suppressEnter: true,
+  });
 
   // Aktive und entfernte Teams
   const activeTeams = getActiveTeams(tournament.teams);
@@ -646,8 +658,15 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       {
         deleteConfirmTeam && (
           <div style={overlayStyle}>
-            <div style={dialogStyle}>
-              <h3 style={{ margin: '0 0 16px 0', color: cssVars.colors.textPrimary }}>
+            <div
+              ref={deleteDialogTrap.containerRef}
+              style={dialogStyle}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="team-delete-dialog-title"
+              data-testid="team-delete-dialog"
+            >
+              <h3 id="team-delete-dialog-title" style={{ margin: '0 0 16px 0', color: cssVars.colors.textPrimary }}>
                 {t('teams.deleteDialog.title')}
               </h3>
 
@@ -673,7 +692,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
               </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <Button variant="secondary" onClick={() => setDeleteConfirmTeam(null)}>
+                <Button ref={deleteCancelRef} variant="secondary" onClick={closeDeleteDialog}>
                   {t('common.cancel')}
                 </Button>
                 <Button

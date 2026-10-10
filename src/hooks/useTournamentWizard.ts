@@ -93,7 +93,7 @@ export interface UseTournamentWizardReturn {
 
   // Persistence
   saveDraft: () => Promise<Tournament>;
-  publishTournament: () => Promise<Tournament>;
+  publishTournament: (override?: Partial<Tournament>) => Promise<Tournament>;
 }
 
 export function useTournamentWizard(
@@ -168,8 +168,9 @@ export function useTournamentWizard(
         updated.finalsConfig = {
           ...prev.finalsConfig,
           preset: sportConfig.defaults.defaultFinalsPreset,
-          tiebreaker: sportConfig.rules.defaultTiebreaker,
-          tiebreakerDuration: sportConfig.rules.defaultTiebreakerDuration,
+          tiebreaker: prev.finalsConfig?.tiebreaker ?? sportConfig.rules.defaultTiebreaker,
+          tiebreakerDuration:
+            prev.finalsConfig?.tiebreakerDuration ?? sportConfig.rules.defaultTiebreakerDuration,
         };
       }
 
@@ -382,9 +383,10 @@ export function useTournamentWizard(
   }, [creationService, formData, step]);
 
   // Publish tournament
-  const publishTournament = useCallback(async (): Promise<Tournament> => {
+  const publishTournament = useCallback(async (override?: Partial<Tournament>): Promise<Tournament> => {
     const published = await creationService.publish({
       ...formData,
+      ...override,
       lastVisitedStep: step,
     });
     setFormData(published);

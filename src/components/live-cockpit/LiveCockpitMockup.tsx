@@ -339,13 +339,6 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
     showInfo('Seiten getauscht');
   }, [showInfo]);
 
-  const handleHalfTime = useCallback(() => {
-    // Reset fouls
-    setHomeFouls(0);
-    setAwayFouls(0);
-    showInfo('Halbzeit - Fouls zurückgesetzt');
-  }, [showInfo]);
-
   const handleFoulHome = useCallback(() => {
     if (!currentMatch || readOnly) { return; }
     const newFouls = homeFouls + 1;
@@ -883,7 +876,6 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
               onPauseResume={handlePauseResume}
               onEditTime={() => setShowTimeAdjustDialog(true)}
               onSwitchSides={handleSwitchSides}
-              onHalfTime={handleHalfTime}
               onFinish={handleFinish}
               onSettings={() => setShowSettingsDialog(true)}
               // BUG-002: Event Log for Mobile

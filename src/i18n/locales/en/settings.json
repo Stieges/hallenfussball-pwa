@@ -3,7 +3,6 @@
   "back": "Back",
   "backWithArrow": "← Back",
   "backAriaLabel": "Back",
-
   "categories": {
     "appearance": "Appearance",
     "language": "Language",
@@ -14,12 +13,10 @@
     "privacy": "Privacy",
     "legal": "Legal"
   },
-
   "appearance": {
     "theme": "Theme",
     "fontSize": "Font Size"
   },
-
   "baseTheme": {
     "selectLabel": "Select theme",
     "currentPrefix": "current: ",
@@ -40,7 +37,6 @@
       "description": "Maximum readability in bright ambient light"
     }
   },
-
   "fontSize": {
     "selectLabel": "Select font size",
     "small": "Small",
@@ -48,7 +44,6 @@
     "large": "Large",
     "xLarge": "Extra Large"
   },
-
   "accentTheme": {
     "default": "Default (Green)",
     "fcBayern": "FC Bayern Munich",
@@ -58,14 +53,12 @@
     "hsv": "Hamburger SV",
     "custom": "Custom Colors"
   },
-
   "language": {
     "label": "Language",
     "description": "Select app language",
     "de": "Deutsch",
     "en": "English"
   },
-
   "behavior": {
     "confirmDelete": {
       "label": "Confirm Delete",
@@ -84,20 +77,7 @@
       "description": "Vibrate on actions"
     }
   },
-
   "data": {
-    "export": {
-      "label": "Export All Data",
-      "description": "Tournaments and settings as JSON",
-      "action": "Export",
-      "todo": "Export will be implemented soon"
-    },
-    "import": {
-      "label": "Import Data",
-      "description": "Restore from a backup file",
-      "action": "Import",
-      "todo": "Import will be implemented soon"
-    },
     "clearCache": {
       "label": "Clear Cache",
       "description": "Delete temporary data",
@@ -113,7 +93,6 @@
       "errorMessage": "Error resetting. Please try again or clear browser data manually."
     }
   },
-
   "support": {
     "bug": {
       "label": "Report Bug",
@@ -132,7 +111,6 @@
     },
     "emailBody": "My message:"
   },
-
   "about": {
     "version": "Version",
     "changelog": {
@@ -141,7 +119,6 @@
       "content": "Version {{version}}\n\n• Added settings screen\n• Theme selection\n• Adjustable font size"
     }
   },
-
   "privacy": {
     "errorTracking": {
       "label": "Error Tracking",
@@ -159,21 +136,14 @@
       "successMessage": "Your consent has been revoked."
     }
   },
-
   "legal": {
     "imprint": "Imprint",
-    "privacy": "Privacy Policy",
-    "terms": {
-      "label": "Terms of Service",
-      "todo": "Terms of Service will be added soon"
-    }
+    "privacy": "Privacy Policy"
   },
-
   "settingItem": {
     "openAriaLabel": "Open {{label}}",
     "proBadge": "Pro Feature"
   },
-
   "consent": {
     "title": "Privacy Settings",
     "description": "We use anonymized error tracking to improve the app. Optionally, you can enable session replays to help us fix issues.",

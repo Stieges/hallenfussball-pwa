@@ -7,6 +7,19 @@ import { generateShareCode } from '../../utils/shareCode';
 import { transitionalSides } from '../models/matchSlot';
 import { diffMatchResultStatusUpdates } from './matchResultStatusDiff';
 
+/**
+ * @W1-020 (B-04b Fixrunde 1): Sichtbarkeit NACH dem Festlegen -- es gibt die
+ * Fallunterscheidung nur einmal, damit Ankuendigung (TournamentPreview) und
+ * Wirkung (publish) nicht auseinanderlaufen. Beim ersten Festlegen (ohne
+ * publishedAt) wird das Turnier per Link teilbar; ein bereits festgelegtes
+ * Turnier behaelt seine bewusst gesetzte Sichtbarkeit (isPublic).
+ */
+export function visibilityAfterPublish(
+    data: Pick<Tournament, 'publishedAt' | 'isPublic'>
+): 'shareable' | 'private' {
+    return !data.publishedAt || data.isPublic ? 'shareable' : 'private';
+}
+
 export class TournamentCreationService {
     constructor(private readonly repository: ITournamentRepository) { }
 
@@ -147,8 +160,11 @@ export class TournamentCreationService {
                     }
                 }
                 break;
-            case 5:
-                if ((data.teams?.length ?? 0) < 2) {
+            case 5: {
+                // @W1-014 (B-04b Fixrunde 1): entfernte Teams (isRemoved) zaehlen nirgends mit --
+                // Mindestzahl, F-209 und die Fehlermeldung sehen nur die aktiven Teams.
+                const activeTeams = (data.teams ?? []).filter(t => !t.isRemoved);
+                if (activeTeams.length < 2) {
                     errors.push('Mindestens 2 Teams erforderlich');
                 }
                 if (data.teams) {
@@ -165,11 +181,20 @@ export class TournamentCreationService {
                 if (
                     typeof data.numberOfTeams === 'number' &&
                     Array.isArray(data.teams) &&
-                    data.teams.length !== data.numberOfTeams
+                    activeTeams.length !== data.numberOfTeams
                 ) {
-                    errors.push(`Anzahl Teams: ${data.teams.length} von ${data.numberOfTeams} hinzugefügt`);
+                    errors.push(`Anzahl Teams: ${activeTeams.length} von ${data.numberOfTeams} hinzugefügt`);
+                }
+                // @W1-014: Bei Gruppen braucht jedes aktive Team eine Gruppe -- sonst faellt es
+                // in generateGroupStageMatches still aus dem Spielplan (nur Teams mit Gruppe).
+                if (data.groupSystem === 'groupsAndFinals') {
+                    const withoutGroup = activeTeams.filter(t => !t.group).length;
+                    if (withoutGroup > 0) {
+                        errors.push(`${withoutGroup} Teams ohne Gruppe`);
+                    }
                 }
                 break;
+            }
         }
 
         return errors;
@@ -220,12 +245,17 @@ export class TournamentCreationService {
         // Veröffentlichen IST die Freigabe — aber nur beim ersten Mal. "Erweiterte Bearbeitung"
         // ruft publish() beim Speichern erneut auf; ohne diesen Guard würde ein bewusst privat
         // gestelltes Turnier hinter dem Rücken des Veranstalters wieder geteilt.
-        // Geprüft wird `publishedAt`, NICHT `status`: status 'draft' ist ein transienter
-        // Wizard-Marker (SettingsTab.tsx) und sagt nichts über die Freigabe aus.
+        // Geprüft wird `publishedAt`, NICHT `status`: `publishedAt` wird genau einmal beim
+        // ersten Festlegen gesetzt und überdauert die Bearbeitung (@W5-004: ein festgelegtes
+        // Turnier bleibt dabei festgelegt).
         const isFirstRelease = !data.publishedAt;
         if (isFirstRelease) {
-            tournament.isPublic = true;
             tournament.publishedAt = new Date().toISOString();
+        }
+        // @W1-020: publish() wendet dieselbe Fallunterscheidung an, die die Vorschau
+        // vor dem Klick ankündigt (visibilityAfterPublish) -- nicht das aktuelle isPublic.
+        if (visibilityAfterPublish(data) === 'shareable') {
+            tournament.isPublic = true;
         }
 
         // Generate share code if public and no share code exists

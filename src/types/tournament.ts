@@ -175,6 +175,12 @@ export type TiebreakerMode =
   | 'overtime-then-shootout' // Verlängerung, dann Strafstoßschießen
   | 'goldenGoal';           // Golden Goal (erstes Tor in Verlängerung gewinnt)
 
+/** K.-o.-Runde, in der nach Unentschieden entschieden wird (B-04c, @W2A-007) */
+export type KnockoutRound = 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final';
+
+/** Runden-Schlüssel der Entscheidungsregel inkl. Platzierungsspiele (B-04c Fixrunde 2, @W2A-039) */
+export type TiebreakerRoundKey = KnockoutRound | 'placement';
+
 /**
  * Finals Configuration
  * Replaces the old Finals boolean structure with preset-based system
@@ -184,8 +190,9 @@ export interface FinalsConfig {
   parallelSemifinals?: boolean;      // Halbfinale gleichzeitig?
   parallelQuarterfinals?: boolean;   // Viertelfinale gleichzeitig?
   parallelRoundOf16?: boolean;       // Achtelfinale gleichzeitig?
-  tiebreaker?: TiebreakerMode;       // Entscheidung bei Unentschieden
+  tiebreaker?: TiebreakerMode;       // Entscheidung bei Unentschieden (Vorgabe je Runde)
   tiebreakerDuration?: number;       // Dauer in Minuten (für Verlängerung/Golden Goal)
+  tiebreakerByRound?: Partial<Record<TiebreakerRoundKey, TiebreakerMode>>; // Entscheidung je Runde (überschreibt `tiebreaker`); `placement` = Platzierungsspiele (@W2A-039)
 }
 
 /**
@@ -475,11 +482,12 @@ export interface Tournament {
   /**
    * ISO timestamp der ersten Freigabe. Monotoner Freigabe-Marker: gesetzt bleibt gesetzt.
    *
-   * Bewusst NICHT `status`: `status: 'draft'` ist ein transienter Wizard-Marker —
-   * SettingsTab.tsx setzt ein veröffentlichtes Turnier zum Bearbeiten zurück auf 'draft'
-   * und nur eine In-App-Rückkehr stellt den Status wieder her (App.tsx, originalStatusRef).
-   * Ein Reload mitten in der Bearbeitung ließe ein laufendes Turnier dauerhaft auf 'draft'
-   * stehen — eine Status-Prüfung würde es mitten im Spiel vom Netz nehmen.
+   * Bewusst NICHT `status`: `status: 'draft'` ist ein Wizard-Marker für noch nicht
+   * festgelegte Turniere. Bearbeiten über „Im Wizard bearbeiten" (SettingsTab) setzt ein
+   * festgelegtes Turnier NICHT mehr auf 'draft' zurück (@W5-004/@LZ-004); nach dem
+   * ersten Anpfiff wird dieser Weg gar nicht angeboten (@LZ-003). `publishedAt` bleibt
+   * als monotoner Freigabe-Marker bestehen, damit auch ein Reload mitten im Bearbeiten
+   * ein laufendes Turnier nicht vom Netz nimmt.
    *
    * Reist im `config`-JSONB mit (keine eigene DB-Spalte), siehe supabaseMappers.
    */
@@ -549,6 +557,15 @@ export interface MatchCockpitSettings {
   /** Round after which sudden death begins. Default: 6 */
   penaltySuddenDeathAfter: number;
 
+  // Spielregel Zeitstrafe (@W2A-029)
+  /**
+   * Dauer einer Zeitstrafe in Sekunden (Spielregel, Default: 120 = 2 Minuten).
+   * Gilt ab dem nächsten Anpfiff: das Cockpit übernimmt den Wert beim Anpfiff
+   * in den Spielstand (startMatch), ein laufendes Spiel rechnet weiter mit
+   * seinem Stand.
+   */
+  timePenaltyDurationSeconds: number;
+
   // Sound Settings
   /** Enable end-of-match horn sound. Default: false */
   soundEnabled: boolean;
@@ -584,6 +601,9 @@ export const DEFAULT_MATCH_COCKPIT_SETTINGS: MatchCockpitSettings = {
   finalDecider: 'penalty',
   penaltyShootersPerTeam: 5,
   penaltySuddenDeathAfter: 6,
+
+  // Spielregel Zeitstrafe (@W2A-029)
+  timePenaltyDurationSeconds: 120,
 
   // Sound
   soundEnabled: false,

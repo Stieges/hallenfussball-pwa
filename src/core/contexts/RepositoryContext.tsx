@@ -8,6 +8,7 @@ import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { SupabaseLiveMatchRepository } from '../repositories/SupabaseLiveMatchRepository';
 import { OfflineRepository } from '../repositories/OfflineRepository';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { RealtimeEnabledContext } from '../../lib/realtimeEnabled';
 
 // ============================================================================
 // TYPES
@@ -121,7 +122,9 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
 
     return (
         <RepositoryContext.Provider value={value}>
-            {children}
+            <RealtimeEnabledContext.Provider value={value.isRealtimeEnabled}>
+                {children}
+            </RealtimeEnabledContext.Provider>
         </RepositoryContext.Provider>
     );
 };
@@ -165,4 +168,15 @@ export const useLiveMatchRepository = () => {
         throw new Error('useLiveMatchRepository must be used within a RepositoryProvider');
     }
     return context.liveMatchRepository;
+};
+
+/**
+ * Null-sicherer Zugriff auf dasselbe Live-Repo-Service, das auch das Cockpit liest
+ * (ILiveMatchRepository.getAll). Ohne RepositoryProvider im Baum (isolierte
+ * Komponenten-Tests, rein lokale Nutzung) wird `null` geliefert statt zu werfen —
+ * dann entscheidet die lokale Match-Liste allein (Ruling W1).
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const useOptionalLiveMatchRepository = (): ILiveMatchRepository | null => {
+    return useContext(RepositoryContext)?.liveMatchRepository ?? null;
 };

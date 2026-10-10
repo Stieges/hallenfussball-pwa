@@ -102,7 +102,8 @@
     "jerseyNumber": "Jersey number (optional)",
     "yellowCard": "Yellow Card",
     "yellowRedCard": "Yellow-Red Card",
-    "redCard": "Red Card"
+    "redCard": "Red Card",
+    "close": "Close"
   },
   "cardButtons": {
     "yellowAria": "Yellow card for {{teamName}}",
@@ -160,7 +161,8 @@
     "assist1Aria": "Assist 1 jersey number",
     "assist2Aria": "Assist 2 jersey number",
     "placeholder": "—",
-    "eventDescription": "Goal"
+    "eventDescription": "Goal",
+    "close": "Close"
   },
   "sidebar": {
     "activePenalties": "Active Time Penalties",
@@ -208,6 +210,14 @@
     "countdown": "Countdown (5:00 → 0:00)",
     "elapsed": "Elapsed (0:00 → 5:00)",
     "timerDescription": "How should the timer be displayed?",
+    "timePenalty": "Time penalty",
+    "timePenaltyDuration": "Time penalty duration",
+    "timePenaltyDurationDesc": "Game rule – applies from the next kick-off",
+    "penaltyShootout": "$t(sport:events.penaltyShootout)",
+    "penaltyShooters": "Number of shooters",
+    "penaltyShootersDesc": "Shooters per team in the penalty shootout",
+    "penaltyShootersRangeError": "Valid: 1 to 5 shooters",
+    "rulesOnlyByLead": "Only the tournament lead can change rules",
     "netTimeWarning": "Net Time Warning",
     "netTimeWarningDesc": "Warning when added time is reached",
     "enableNetTimeWarning": "Enable net time warning",
@@ -311,8 +321,7 @@
     "card": "Card",
     "timePenalty": "Time Penalty",
     "substitution": "Substitution",
-    "editResult": "Edit Result",
-    "adjustTime": "Adjust Time"
+    "editResult": "Edit Result"
   },
   "readOnly": {
     "banner": "View only — you don't have permission to control this match."
@@ -320,8 +329,6 @@
   "extended": {
     "editScoreAria": "Correct score",
     "score": "Score",
-    "adjustTimeAria": "Adjust time",
-    "time": "Time",
     "yellowCardAria": "Yellow card",
     "yellow": "Yellow",
     "redCardAria": "Red card",

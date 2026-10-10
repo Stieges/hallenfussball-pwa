@@ -14,7 +14,6 @@
     "backToTournament": "Back to tournament",
     "criticalActions": "Critical Actions",
     "warnings": "{{count}} warnings",
-    "comingSoon": "Soon",
     "warningClickAria": "Warning: {{title}}. Click to navigate to fix.",
     "showAll": "Show all"
   },
@@ -25,8 +24,7 @@
     "noResults": "No results for \"{{query}}\"",
     "criticalActions": "Critical Actions",
     "warnings": "{{count}} Warnings",
-    "andMore": "and {{count}} more",
-    "comingSoon": "Soon"
+    "andMore": "and {{count}} more"
   },
   "categories": {
     "dashboard": "Dashboard",
@@ -61,8 +59,6 @@
     "typeToConfirm": "Type {{text}} to continue:",
     "cancel": "Cancel",
     "executing": "Executing...",
-    "regenerateSchedule": "Regenerate schedule",
-    "regenerateScheduleDesc": "Regenerates the schedule. All breaks will be redistributed.",
     "resetSchedule": "Reset schedule",
     "resetScheduleDesc": "Resets the schedule. All results are preserved.",
     "endTournament": "End tournament early",
@@ -97,7 +93,6 @@
     "upcoming": "Upcoming",
     "quickActions": "Quick Actions",
     "openSchedule": "Open Schedule",
-    "pauseSettings": "Pause Settings",
     "visibility": "Visibility",
     "export": "Export",
     "activityLog": "Activity Log",
@@ -217,9 +212,6 @@
     "roleTrainer": "Coach",
     "roleViewer": "Viewer",
     "usedCount": "{{used}}/{{max}} used",
-    "refereeAssignment": "Referee assignment",
-    "refereeModeDisabled": "Referee mode is disabled.",
-    "refereeComingSoon": "Referee overview will be available in a later version.",
     "invitationUses": "{{useCount}}/{{maxUses}} used"
   },
   "sponsorsSection": {
@@ -229,10 +221,6 @@
   "settingsSection": {
     "title": "Tournament Settings",
     "description": "Non-destructive tournament operations and field management",
-    "pauseTournament": "Pause tournament",
-    "pauseDesc": "Pauses all running activities and adds a pause block to the schedule.",
-    "autoTimeContinuation": "Auto time continuation",
-    "autoTimeDesc": "Automatically adjusts schedule times to delays.",
     "duplicateTournament": "Duplicate tournament",
     "duplicateDesc": "Creates a copy as template for next year.",
     "tournamentSettings": "Tournament settings",
@@ -250,8 +238,7 @@
     "minutesLocked": "Minutes 🔒",
     "gameTimeLockedHint": "Locked because matches have already started. Reset schedule to change.",
     "breakTime": "Break time between matches",
-    "minutes": "Minutes",
-    "comingSoon": "Coming Soon"
+    "minutes": "Minutes"
   },
   "matchCockpitSection": {
     "title": "Match Cockpit",
@@ -262,14 +249,11 @@
     "description": "Control what is publicly visible and sharing options",
     "qrAndSharing": "QR Code & Sharing",
     "contentVisibility": "Content Visibility",
-    "bambiniMode": "Bambini Mode",
     "tournamentVisibility": "Tournament Visibility",
     "private": "🔒 Private",
     "privateDesc": "Only visible to logged-in tournament directors. No public view.",
     "shareable": "🔗 Shareable with link",
     "shareableDesc": "Anyone with the link can watch. Not findable in search engines.",
-    "publicListed": "🌍 Publicly listed",
-    "publicListedDesc": "Searchable on the internet. (Coming soon)",
     "shareCode": "Share code",
     "copied": "✓ Copied!",
     "copy": "📋 Copy",
@@ -288,12 +272,6 @@
     "results": "Results",
     "rankings": "Tables / Rankings",
     "disabledByBambini": "(disabled by Bambini mode)",
-    "enableBambiniMode": "Enable Bambini mode",
-    "whenEnabled": "When enabled",
-    "noTables": "Hide tables",
-    "noPlacements": "Hide rankings",
-    "focusOnFun": "Focus on fun instead of competition",
-    "bambiniIdeal": "Ideal for youth tournaments without focus on results.",
     "localModeActive": "Local mode active: Share codes are stored locally. For cloud sync and cross-device sharing, please log in.",
     "shareCodeInfo": "With \"Shareable with link\", a 6-digit share code is generated (e.g. ABC123). The code is easy to remember and type.",
     "errorMakingPublic": "Error making tournament public.",
@@ -301,25 +279,6 @@
     "errorMakingPrivate": "Error making tournament private.",
     "errorRegeneratingCode": "Error generating new code.",
     "saved": "Saved"
-  },
-  "notifications": {
-    "title": "Notifications",
-    "description": "Push and sound settings",
-    "system": "Notification System",
-    "comingSoonTitle": "Notifications coming soon",
-    "comingSoonDesc": "A comprehensive notification system for tournament directors and coaches is in development.",
-    "featurePushTrainer": "Push notifications to coaches before match start",
-    "featureRealtimeAlerts": "Real-time alerts for match end, cards and corrections",
-    "featureSoundSignals": "Customizable sound signals for different events",
-    "featureBrowserPush": "Browser push and in-app notifications",
-    "inDevelopment": "In development",
-    "soundSettingsNote": "Sound settings for Match Cockpit Pro can be found under Settings → Match Cockpit Pro.",
-    "trainerNotifications": "Coach notifications",
-    "trainerNotificationsDesc": "Coaches can be notified when their team is playing next. Requires Coach Cockpit.",
-    "requiresTrainerCockpit": "Requires Coach Cockpit",
-    "tlNotifications": "Tournament director notifications",
-    "tlNotificationsDesc": "Tournament director specific alerts for match end, red cards and result corrections.",
-    "requiresPushSystem": "Requires Push System"
   },
   "metadata": {
     "title": "Metadata & Notes",

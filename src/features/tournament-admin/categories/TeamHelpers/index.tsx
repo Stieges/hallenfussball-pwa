@@ -201,17 +201,6 @@ export function TeamHelpersCategory({
         </CollapsibleSection>
       )}
 
-      {/* Referee Assignment - Coming Soon */}
-      <CollapsibleSection icon="👔" title={t('teamHelpers.refereeAssignment')}>
-        <div style={styles.comingSoon}>
-          <p>
-            {tournament.refereeConfig?.mode === 'none'
-              ? t('teamHelpers.refereeModeDisabled')
-              : t('teamHelpers.refereeComingSoon')}
-          </p>
-        </div>
-      </CollapsibleSection>
-
       {/* Invite Dialog */}
       {showInviteDialog && (
         <InviteDialog
@@ -362,13 +351,6 @@ const styles = {
     color: cssVars.colors.textSecondary,
     background: cssVars.colors.surfaceLight,
     borderRadius: cssVars.borderRadius.sm,
-  } as CSSProperties,
-
-  // Coming Soon
-  comingSoon: {
-    textAlign: 'center',
-    padding: cssVars.spacing.xl,
-    color: cssVars.colors.textMuted,
   } as CSSProperties,
 } as const;
 

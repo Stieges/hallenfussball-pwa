@@ -67,16 +67,13 @@ function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): Li
 describe('LiveCockpit — Fouls für das ganze Spiel (C3b-2, G11)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('kein Reset bei Halbzeit', async () => {
-    const user = userEvent.setup();
+  // Merge Spur A/B: der Halbzeit-Knopf ist seit B-03 Fixrunde 1 (Platzhalter-Liste Nr. 3, @OB-002) bis B-08
+  // ausgeblendet -- es gibt keinen Halbzeit-Weg, der die Fouls zuruecksetzen koennte (G11 bleibt erfuellt).
+  it('kein Reset bei Halbzeit (kein Halbzeit-Knopf bis B-08, Zaehler aus den Ereignissen)', () => {
     render(<LiveCockpit {...baseProps(makeMatch())} />);
     expect(screen.getByTestId('foul-count-home')).toHaveTextContent('2');
     expect(screen.getByTestId('foul-count-away')).toHaveTextContent('1');
-
-    await user.click(screen.getByRole('button', { name: 'Halbzeit' }));
-
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('2');
-    expect(screen.getByTestId('foul-count-away')).toHaveTextContent('1');
+    expect(screen.queryByRole('button', { name: 'Halbzeit' })).not.toBeInTheDocument();
   });
 
   it('zurückgenommenes Foul zählt nicht', () => {
@@ -152,15 +149,13 @@ describe('LiveCockpit — M7: Toasts i18n, Foul ohne Zahl, 5er-Warnung (F3a)', (
     expect(onFoul).not.toHaveBeenCalled();
   });
 
-  it('Halbzeit-, Karten- und Zeitstrafen-Toast kommen aus i18n', async () => {
+  // Merge Spur A/B: Halbzeit-Teil entfaellt mit dem Halbzeit-Knopf (B-03 Fixrunde 1, bis B-08).
+  it('Karten- und Zeitstrafen-Toast kommen aus i18n', async () => {
     const onCard = vi.fn();
     const onTimePenalty = vi.fn();
     const user = userEvent.setup();
     tCalls.length = 0;
     render(<LiveCockpit {...baseProps(makeMatch(), { onCard, onTimePenalty })} />);
-
-    await user.click(screen.getByRole('button', { name: 'Halbzeit' }));
-    expect(await screen.findByText('Halbzeit')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Gelbe Karte für FC Alpha' }));
     await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
@@ -169,7 +164,6 @@ describe('LiveCockpit — M7: Toasts i18n, Foul ohne Zahl, 5er-Warnung (F3a)', (
     await user.click(screen.getByRole('button', { name: 'Zeitstrafe für FC Alpha' }));
     await user.click(screen.getByRole('button', { name: /Ohne Nr\./ }));
     expect(await screen.findByText('2 Min Zeitstrafe für FC Alpha')).toBeInTheDocument();
-    expect(tCalls).toContain('toast.halftime');
     expect(tCalls).toContain('toast.yellowCard');
     expect(tCalls).toContain('toast.timePenalty');
   });

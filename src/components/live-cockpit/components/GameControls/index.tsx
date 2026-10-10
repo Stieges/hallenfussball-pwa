@@ -2,7 +2,7 @@
  * GameControls - Match control buttons
  *
  * Based on mockup: scoreboard-desktop.html
- * Controls: Undo, Start/Pause, Zeit, Seiten, Halbzeit, Beenden
+ * Controls: Undo, Start/Pause, Zeit, Seiten, Beenden
  */
 
 import { type CSSProperties } from 'react';
@@ -22,7 +22,6 @@ export interface GameControlsProps {
   onPauseResume: () => void;
   onEditTime: () => void;
   onSwitchSides: () => void;
-  onHalfTime: () => void;
   onFinish: () => void;
   onSettings?: () => void;
   /** BUG-002: Event log button for mobile retroactive editing */
@@ -34,7 +33,7 @@ export interface GameControlsProps {
   undoHint?: string;
   breakpoint?: Breakpoint;
   /** Task R2: readOnly/finished lock (isLocked in LiveCockpit) — disables Undo, Start/Pause,
-   *  Zeit, Seiten, Halbzeit, Beenden. Native `disabled` on each <button>, not just visual.
+   *  Zeit, Seiten, Beenden. Native `disabled` on each <button>, not just visual.
    *  Fixrunde 2/3 (M2, Review-Befund M): does NOT cover Settings or Event-Log — both had no
    *  `disabled` at all before R2 (commit 235d947) and must stay that way, auch unter readOnly.
    *  Settings zeigt echte, synchronisierte Werte (kein Lokalzustand) — Regel 2 erlaubt "ansehen",
@@ -54,7 +53,6 @@ export const GameControls: React.FC<GameControlsProps> = ({
   onPauseResume,
   onEditTime,
   onSwitchSides,
-  onHalfTime,
   onFinish,
   onSettings,
   onEventLog,
@@ -194,17 +192,19 @@ export const GameControls: React.FC<GameControlsProps> = ({
         {getMainButtonLabel()}
       </button>
 
-      {/* Edit Time */}
-      <button
-        style={btnStyle}
-        onClick={onEditTime}
-        disabled={disabled || isFinished}
-        type="button"
-        aria-label="Zeit bearbeiten"
-        data-testid="match-edit-time-button"
-      >
-        🕒 {!isMobile && 'Zeit'}
-      </button>
+      {/* Edit Time — @OB-002: „Spielzeit anpassen“ für neue Spiele ausgeblendet (Platzhalter Nr. 2) */}
+      {!isNotStarted && (
+        <button
+          style={btnStyle}
+          onClick={onEditTime}
+          disabled={disabled || isFinished}
+          type="button"
+          aria-label="Zeit bearbeiten"
+          data-testid="match-edit-time-button"
+        >
+          🕒 {!isMobile && 'Zeit'}
+        </button>
+      )}
 
       {/* Switch Sides */}
       <button
@@ -215,17 +215,6 @@ export const GameControls: React.FC<GameControlsProps> = ({
         aria-label="Seiten tauschen"
       >
         🔄 {!isMobile && 'Seiten'}
-      </button>
-
-      {/* Half Time */}
-      <button
-        style={btnStyle}
-        onClick={onHalfTime}
-        disabled={disabled || isFinished}
-        type="button"
-        aria-label="Halbzeit"
-      >
-        🌓 {!isMobile && 'Halbzeit'}
       </button>
 
       {/* Finish */}

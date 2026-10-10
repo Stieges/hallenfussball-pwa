@@ -22,6 +22,12 @@ vi.mock('../../../components/ui/Toast/ToastContext', () => ({
   useToast: () => ({ showError: mockShowError, showSuccess: vi.fn(), showWarning: vi.fn(), showInfo: vi.fn() }),
 }));
 const mockCaptureFeatureError = vi.fn();
+// Merge Spur A/B: ManagementTab loest seit B-04 Fixrunde 1 (@W2A-030) die Spielregel-Rolle ueber
+// useEffectiveTournamentRole auf; das braucht useAuth. Hier nicht Gegenstand.
+vi.mock('../../auth/hooks/useAuth', () => ({
+  useAuth: () => ({ isAuthenticated: true, user: { id: 'user-1' } }),
+}));
+
 vi.mock('../../../lib/sentry', () => ({
   captureFeatureError: (...args: unknown[]) => mockCaptureFeatureError(...args),
 }));

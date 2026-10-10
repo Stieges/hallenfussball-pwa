@@ -39,6 +39,12 @@ vi.mock('../../../components/ui/Toast/ToastContext', () => ({
 }));
 
 // Keine Mitgliedschafts-Abfrage (Supabase) — ohne Membership erlaubt ManagementTab die Bearbeitung.
+// B-04 Fixrunde 1 (@W2A-030): ManagementTab löst die Spielregel-Rolle über useEffectiveTournamentRole
+// aus; das braucht useAuth. Die Mitgliedschaft liefert der Mock oben, daher nur ein angemeldeter Nutzer.
+vi.mock('../../auth/hooks/useAuth', () => ({
+  useAuth: () => ({ isAuthenticated: true, user: { id: 'user-1' } }),
+}));
+
 vi.mock('../../auth/hooks/useTournamentMembers', () => ({
   useTournamentMembers: () => ({ myMembership: null, members: [], isLoading: false, error: null }),
 }));

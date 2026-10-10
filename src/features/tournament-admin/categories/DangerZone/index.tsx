@@ -6,13 +6,14 @@
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 5.11
  */
 
-import { CSSProperties, useState, useCallback } from 'react';
+import { CSSProperties, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage } from '../shared';
 import { DANGER_ACTIONS } from '../../constants/admin.constants';
 import { Dialog } from '../../../../components/dialogs/Dialog';
 import { buildFinishTournamentPatch } from '../../../../utils/tournamentStats';
+import { useTournamentStartState } from '../../../../hooks/useTournamentStartState';
 import { useMyTournamentRole } from '../../../auth/hooks/useMyTournamentRole';
 import { canDeleteTournament } from '../../../auth/utils/permissions';
 import type { Tournament } from '../../../../types/tournament';
@@ -27,7 +28,7 @@ import type { DangerAction, DangerActionConfig } from '../../types/admin.types';
 interface DangerZoneCategoryProps {
   tournamentId: string;
   tournament: Tournament;
-  onTournamentUpdate: (tournament: Tournament) => void;
+  onTournamentUpdate: (tournament: Tournament) => void | Promise<void>;
   /**
    * A2 Fixrunde 1 (Ruling AJ, I1: `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
    * task-A2-review.md`): "Ergebnisse zurücksetzen"/"Spielplan zurücksetzen" reset RESULT/STATUS
@@ -49,7 +50,7 @@ const styles = {
     gap: cssVars.spacing.sm,
     padding: cssVars.spacing.md,
     background: cssVars.colors.warningSubtle,
-    border: `1px solid ${cssVars.colors.warningBorder}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.warningBorder}`,
     borderRadius: cssVars.borderRadius.lg,
     marginBottom: cssVars.spacing.lg,
     fontSize: cssVars.fontSizes.bodySm,
@@ -58,7 +59,7 @@ const styles = {
 
   actionCard: {
     background: cssVars.colors.surface,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.lg,
     padding: cssVars.spacing.lg,
     marginBottom: cssVars.spacing.md,
@@ -155,7 +156,7 @@ const styles = {
 
   dialogConsequences: {
     background: cssVars.colors.dangerSubtle,
-    border: `1px solid ${cssVars.colors.errorBorder}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.errorBorder}`,
     borderRadius: cssVars.borderRadius.md,
     padding: cssVars.spacing.md,
     marginBottom: cssVars.spacing.lg,
@@ -185,7 +186,7 @@ const styles = {
   confirmInput: {
     width: '100%',
     padding: cssVars.spacing.sm,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     background: cssVars.colors.surface,
     color: cssVars.colors.textPrimary,
@@ -202,7 +203,7 @@ const styles = {
 
   cancelButton: {
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     background: 'transparent',
     color: cssVars.colors.textPrimary,
@@ -257,6 +258,15 @@ export function DangerZoneCategory({
   // gemeinsam mit TeamHelpersCategory und MemberList.
   const canDelete = myRole ? canDeleteTournament(myRole) : false;
 
+  // @LZ-003: „Turnier löschen" nur vor dem ersten Anpfiff — und nur, wenn der
+  // Anpfiff-Zustand überhaupt feststellbar ist (fail-closed, siehe
+  // useTournamentStartState/getMatchStartState).
+  const { state: matchStartState } = useTournamentStartState(tournament);
+  const canOfferDelete = canDelete && matchStartState === 'not-started';
+
+  // @OB-014: Fokus der Rückfrage liegt zuerst auf „Abbrechen".
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+
   const handleOpenDialog = useCallback((action: DangerAction) => {
     const config = DANGER_ACTIONS[action];
     setPendingAction(config);
@@ -281,34 +291,6 @@ export function DangerZoneCategory({
       const now = new Date().toISOString();
 
       switch (pendingAction.action) {
-        case 'regenerate_schedule': {
-          // Keep finished matches, reset scheduled/running matches to allow re-generation
-          // Note: Full regeneration requires using the schedule editor
-          const resetMatches = tournament.matches.map(match => {
-            if (match.matchStatus === 'finished') {
-              return match; // Keep finished matches
-            }
-            return {
-              ...match,
-              matchStatus: 'scheduled' as const,
-              scoreA: undefined,
-              scoreB: undefined,
-              timerStartTime: undefined,
-              timerPausedAt: undefined,
-              timerElapsedSeconds: undefined,
-              finishedAt: undefined,
-            };
-          });
-
-          onLocalTournamentUpdate({
-            ...tournament,
-            matches: resetMatches,
-            updatedAt: now,
-          });
-          onMatchesUpdate(diffMatchResultStatusUpdates(tournament.matches, resetMatches));
-          break;
-        }
-
         case 'reset_schedule': {
           // Reset ALL matches to initial scheduled state
           const resetMatches = tournament.matches.map(match => ({
@@ -337,12 +319,12 @@ export function DangerZoneCategory({
           // L5: dashboardStatus allein ist wirkungslos — utils/tournamentCategories.ts liest status,
           // manuallyCompleted und Spielergebnisse. Beide Aktionen teilen bewusst die Logik: Die App kennt
           // keinen Archiv-Zustand (TournamentStatus = 'draft' | 'published'); eigener Zustand = Follow-up (Task 22).
-          onTournamentUpdate({ ...tournament, ...buildFinishTournamentPatch(tournament) });
+          await onTournamentUpdate({ ...tournament, ...buildFinishTournamentPatch(tournament) });
           break;
         }
 
         case 'delete_tournament':
-          onTournamentUpdate({
+          await onTournamentUpdate({
             ...tournament,
             deletedAt: now,
             updatedAt: now,
@@ -352,8 +334,6 @@ export function DangerZoneCategory({
 
       setPendingAction(null);
       setConfirmationInput('');
-    } catch (error) {
-      console.error('Error executing action:', error);
     } finally {
       setIsExecuting(false);
     }
@@ -375,7 +355,6 @@ export function DangerZoneCategory({
       >
         <div style={styles.actionHeader}>
           <span style={styles.actionIcon}>
-            {action === 'regenerate_schedule' && '🔄'}
             {action === 'reset_schedule' && '🗑️'}
             {action === 'end_tournament' && '🛑'}
             {action === 'archive_tournament' && '📦'}
@@ -430,9 +409,6 @@ export function DangerZoneCategory({
         </div>
       </div>
 
-      {/* Regenerate Schedule (Warning) */}
-      {renderActionCard('regenerate_schedule')}
-
       {/* Reset Schedule (Danger) */}
       {renderActionCard('reset_schedule')}
 
@@ -442,8 +418,8 @@ export function DangerZoneCategory({
       {/* Archive Tournament (Warning) */}
       {renderActionCard('archive_tournament')}
 
-      {/* Delete Tournament (Danger) — R7: nur für den Eigentümer sichtbar, siehe canDelete oben */}
-      {canDelete && renderActionCard('delete_tournament')}
+      {/* Delete Tournament (Danger) — R7: nur für den Eigentümer, @LZ-003: nur vor dem ersten Anpfiff */}
+      {canOfferDelete && renderActionCard('delete_tournament')}
 
       {/* Confirmation Dialog */}
       <Dialog
@@ -452,6 +428,8 @@ export function DangerZoneCategory({
         title={pendingAction?.title ?? t('dangerZone.confirmation')}
         maxWidth="480px"
         closeOnBackdropClick={!isExecuting}
+        initialFocusRef={cancelButtonRef}
+        suppressEnter
       >
         {pendingAction && (
           <>
@@ -478,11 +456,11 @@ export function DangerZoneCategory({
               onChange={(e) => setConfirmationInput(e.target.value)}
               placeholder={pendingAction.confirmText}
               disabled={isExecuting}
-              autoFocus
             />
 
             <div style={styles.dialogActions}>
               <button
+                ref={cancelButtonRef}
                 style={styles.cancelButton}
                 onClick={handleCloseDialog}
                 disabled={isExecuting}

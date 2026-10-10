@@ -19,7 +19,8 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 // ---------------------------------------------------------------------------
 
 interface FooterProps {
-  /** Open cookie settings modal/banner */
+  /** @OB-002 (Platzhalter Nr. 15): „Cookie-Einstellungen“ ist ausgeblendet – der
+   *  Einstieg kommt erst mit Zielbild Ü3; die Prop bleibt für Aufrufer bestehen. */
   onOpenCookieSettings?: () => void;
 }
 
@@ -27,7 +28,7 @@ interface FooterProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function Footer({ onOpenCookieSettings }: FooterProps) {
+export function Footer({ onOpenCookieSettings: _onOpenCookieSettings }: FooterProps) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { t } = useTranslation('common');
@@ -43,10 +44,6 @@ export function Footer({ onOpenCookieSettings }: FooterProps) {
 
   const handleDatenschutzClick = () => {
     void navigate('/datenschutz');
-  };
-
-  const handleCookieSettingsClick = () => {
-    onOpenCookieSettings?.();
   };
 
   // ---------------------------------------------------------------------------
@@ -122,16 +119,6 @@ export function Footer({ onOpenCookieSettings }: FooterProps) {
           data-testid="footer-datenschutz-link"
         >
           {t('footer.datenschutz')}
-        </button>
-        {!isMobile && <span style={separatorStyle}>•</span>}
-        <button
-          type="button"
-          style={linkStyle}
-          onClick={handleCookieSettingsClick}
-          aria-label={t('footer.cookieSettingsAriaLabel')}
-          data-testid="footer-cookie-settings-link"
-        >
-          {t('footer.cookieSettings')}
         </button>
       </nav>
     </footer>

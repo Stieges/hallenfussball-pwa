@@ -37,7 +37,7 @@ import { test, expect } from './fixtures';
 import type { LoggedInRole } from './fixtures';
 import { expectSeededEngineMatch, getStoredAccessToken, runningEngineTarget } from './engineHelpers';
 import { getLocalServiceRoleClient } from './helpers';
-import { E2E_LIVE_CUP_ID, E2E_LIVE_CUP_TITLE, E2E_STRANGER_CUP_ID, E2E_STRANGER_CUP_TITLE } from './testData';
+import { E2E_DRAFT_CUP_ID, E2E_LIVE_CUP_ID, E2E_LIVE_CUP_TITLE, E2E_STRANGER_CUP_ID, E2E_STRANGER_CUP_TITLE } from './testData';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -147,7 +147,12 @@ for (const role of ALL_ROLES) {
       }
     });
 
-    test(`role-badge zeigt "${role}"`, async ({ asRole }) => {
+    // B-03 (@OB-005, Commit 5e7fe273): „Team & Helfer" ist als Platzhalter aus dem Admin-Center
+    // ausgeblendet (Kategorie aus ADMIN_CATEGORIES entfernt, die URL .../admin/team-helpers fällt
+    // auf das Dashboard zurück) -- bis zum Einstieg per QR-Code ist MemberList (member-list,
+    // role-badge, invite-create-button) über die Oberfläche nicht erreichbar. Gewollte Änderung,
+    // keine Regression; das Server-Orakel (Rechte-Orakel oben) bleibt aktiv.
+    test.fixme(`role-badge zeigt "${role}" (UI nicht erreichbar, B-03 @OB-005)`, async ({ asRole }) => {
       const page = await asRole(userKey);
       await page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/admin/team-helpers`);
       await page.waitForLoadState('networkidle');
@@ -164,7 +169,7 @@ for (const role of ALL_ROLES) {
       await expect(myBadge).toHaveAttribute('data-role', role);
     });
 
-    test(`Löschen-Bereich (danger-zone-delete): ${canDelete ? 'sichtbar' : 'nicht sichtbar'} (deleteTournament=${canDelete})`, async ({ asRole }) => {
+    test(`Löschen-Bereich (danger-zone-delete): ${canDelete ? 'nur vor dem Anpfiff sichtbar' : 'nicht sichtbar'} (deleteTournament=${canDelete})`, async ({ asRole }) => {
       const serverCanDelete = await serverHasTournamentPermission(userKey, E2E_LIVE_CUP_ID, 'deleteTournament');
       expect(serverCanDelete).toBe(canDelete); // Zweites Orakel (I5): Server-RPC vs. JSON-Erwartung.
 
@@ -173,17 +178,23 @@ for (const role of ALL_ROLES) {
       await page.waitForLoadState('networkidle');
 
       const deleteButton = page.locator('[data-testid="danger-zone-delete"]');
+      // Der Live-Cup ist angepfiffen -- @LZ-003 (B-01a, Commit d821510b): „Turnier löschen" wird
+      // nach dem ersten Anpfiff NIE angeboten, auch dem Eigentümer nicht. Die anderen
+      // Danger-Zone-Inhalte bleiben sichtbar.
+      await expect(page.getByText('Kritische Aktionen', { exact: false }).first()).toBeVisible({ timeout: 15000 });
+      await expect(deleteButton).toHaveCount(0);
+
       if (canDelete) {
+        // Rollen mit deleteTournament sehen den Knopf VOR dem ersten Anpfiff: Entwurf-Cup
+        // (keine Spiele, gehört dem Eigentümer).
+        await page.goto(`/#/tournament/${E2E_DRAFT_CUP_ID}/admin/danger-zone`);
+        await page.waitForLoadState('networkidle');
         await expect(deleteButton).toBeVisible({ timeout: 15000 });
-      } else {
-        // Andere Danger-Zone-Aktionen (z.B. Spielplan neu generieren) bleiben sichtbar --
-        // NUR der Löschen-Button ist owner-only (siehe DangerZone/index.tsx `canDelete`-Gate).
-        await expect(page.getByText('Kritische Aktionen', { exact: false }).first()).toBeVisible({ timeout: 15000 });
-        await expect(deleteButton).toHaveCount(0);
       }
     });
 
-    test(`Einladen (invite-create-button): ${canInvite ? 'sichtbar' : 'nicht sichtbar'} (manageMembers=${canInvite})`, async ({ asRole }) => {
+    // B-03 (@OB-005): siehe Kommentar beim role-badge-Test -- Einladen-UI ist nicht erreichbar.
+    test.fixme(`Einladen (invite-create-button): ${canInvite ? 'sichtbar' : 'nicht sichtbar'} (manageMembers=${canInvite}) (UI nicht erreichbar, B-03 @OB-005)`, async ({ asRole }) => {
       const serverCanInvite = await serverHasTournamentPermission(userKey, E2E_LIVE_CUP_ID, 'manageMembers');
       expect(serverCanInvite).toBe(canInvite); // Zweites Orakel (I5).
 

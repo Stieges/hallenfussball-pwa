@@ -101,6 +101,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const formTrap = useFocusTrap({
     isActive: !resetPasswordSent && !magicLinkSent && !showSuccess,
     onEscape: onBack,
+    // Kein Dialog: die Zurück-Taste navigiert hier über die Seite, nicht über den Trap.
+    closeOnBack: false,
   });
 
   const handleSubmit = async (e: React.SyntheticEvent) => {

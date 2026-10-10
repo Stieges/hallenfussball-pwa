@@ -145,12 +145,6 @@ const styles = {
     marginTop: cssVars.spacing.md,
   } as CSSProperties,
 
-  comingSoon: {
-    textAlign: 'center',
-    padding: cssVars.spacing.lg,
-    color: cssVars.colors.textMuted,
-  } as CSSProperties,
-
   badge: {
     display: 'inline-block',
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,

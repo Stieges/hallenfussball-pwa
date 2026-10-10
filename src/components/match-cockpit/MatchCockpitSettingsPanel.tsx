@@ -7,9 +7,11 @@
  * @see docs/concepts/MATCH-COCKPIT-PRO-KONZEPT.md Section 4
  */
 
-import { CSSProperties, useCallback, useRef, useState } from 'react';
+import { CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
+import { Input } from '../ui';
+import { useRulesLocked } from './RulesLockContext';
 import type {
   MatchCockpitSettings,
   MatchSoundPreset,
@@ -90,18 +92,12 @@ export function MatchCockpitSettingsPanel({
     { value: 'custom', label: t('settings.customSound') },
   ];
 
-  const NETTO_WARNING_OPTIONS = [
-    { value: '60', label: t('settings.oneMinute') },
-    { value: '90', label: t('settings.oneThirtyMinutes') },
-    { value: '120', label: t('settings.twoMinutes') },
-    { value: '180', label: t('settings.threeMinutes') },
-  ];
-
-  const AUTO_ADVANCE_OPTIONS = [
-    { value: '5', label: t('settings.fiveSeconds') },
-    { value: '10', label: t('settings.tenSeconds') },
-    { value: '15', label: t('settings.fifteenSeconds') },
-    { value: '20', label: t('settings.twentySeconds') },
+  // Spielregel Zeitstrafe (@W2A-029): die Turnierleitung stellt die Dauer ein
+  // (gleiche Auswahl wie die Spielsteuerung, siehe TimePenaltyDialog).
+  const TIME_PENALTY_OPTIONS: { value: number; label: string }[] = [
+    { value: 60, label: t('timePenalty.oneMin') },
+    { value: 120, label: t('timePenalty.twoMin') },
+    { value: 300, label: t('timePenalty.fiveMin') },
   ];
 
   // Update a single setting
@@ -111,6 +107,30 @@ export function MatchCockpitSettingsPanel({
     },
     [settings, onChange]
   );
+
+  // Regelfelder sind für Nicht-Turnierleitung gesperrt (@W2A-030)
+  const rulesLocked = useRulesLocked();
+
+  // Spielregel Schützenzahl (@W2A-034): ungültige Werte (z. B. 0 Schützen) werden
+  // beim Verlassen des Feldes abgelehnt — am Feld steht der gültige Bereich.
+  const [schuetzenEntwurf, setSchuetzenEntwurf] = useState(String(settings.penaltyShootersPerTeam));
+  const [schuetzenFehler, setSchuetzenFehler] = useState(false);
+
+  // Wert von außen (z. B. nach dem Speichern oder bei Umschalten) in den Entwurf übernehmen
+  useEffect(() => {
+    setSchuetzenEntwurf(String(settings.penaltyShootersPerTeam));
+  }, [settings.penaltyShootersPerTeam]);
+
+  const handleSchuetzenBlur = useCallback(() => {
+    const wert = Number(schuetzenEntwurf);
+    if (!Number.isInteger(wert) || wert < 1 || wert > 5) {
+      setSchuetzenFehler(true);
+      setSchuetzenEntwurf(String(settings.penaltyShootersPerTeam));
+      return;
+    }
+    setSchuetzenFehler(false);
+    updateSetting('penaltyShootersPerTeam', wert);
+  }, [schuetzenEntwurf, settings.penaltyShootersPerTeam, updateSetting]);
 
   // Handle sound preset change
   const handleSoundChange = useCallback(
@@ -194,33 +214,52 @@ export function MatchCockpitSettingsPanel({
             ))}
           </select>
         </SettingRow>
+      </section>
 
-        <SettingRow
-          label={t('settings.netTimeWarning')}
-          description={t('settings.netTimeWarningDesc')}
-        >
-          <Toggle
-            checked={settings.nettoWarningEnabled}
-            onChange={(v) => updateSetting('nettoWarningEnabled', v)}
-            label={t('settings.enableNetTimeWarning')}
+      {/* Spielregel Zeitstrafe (@W2A-029) — gilt ab dem nächsten Anpfiff */}
+      <section style={styles.section}>
+        <h3 style={styles.sectionTitle}>{t('settings.timePenalty')}</h3>
+
+        <SettingRow label={t('settings.timePenaltyDuration')} description={t('settings.timePenaltyDurationDesc')}>
+          <select
+            data-testid="settings-time-penalty-duration"
+            value={settings.timePenaltyDurationSeconds}
+            onChange={(e) => updateSetting('timePenaltyDurationSeconds', Number(e.target.value))}
+            disabled={rulesLocked}
+            style={{ ...styles.select, fontSize: cssVars.fontSizes.lg }}
+          >
+            {TIME_PENALTY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </SettingRow>
+        {rulesLocked && (
+          <p style={{ margin: 0, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>
+            {t('settings.rulesOnlyByLead')}
+          </p>
+        )}
+      </section>
+
+      {/* Spielregel Schützenzahl (@W2A-034) */}
+      <section style={styles.section}>
+        <h3 style={styles.sectionTitle}>{t('settings.penaltyShootout')}</h3>
+
+        <SettingRow label={t('settings.penaltyShooters')} description={t('settings.penaltyShootersDesc')}>
+          <Input
+            type="number"
+            value={schuetzenEntwurf}
+            onChange={(v) => {
+              setSchuetzenEntwurf(v);
+              setSchuetzenFehler(false);
+            }}
+            onBlur={handleSchuetzenBlur}
+            disabled={rulesLocked}
+            errorMessage={schuetzenFehler ? t('settings.penaltyShootersRangeError') : undefined}
+            data-testid="settings-penalty-shooters"
           />
         </SettingRow>
-
-        {settings.nettoWarningEnabled && (
-          <SettingRow label={t('settings.warningTime')} description={t('settings.warningTimeDesc')}>
-            <select
-              value={String(settings.nettoWarningSeconds)}
-              onChange={(e) => updateSetting('nettoWarningSeconds', Number(e.target.value))}
-              style={styles.select}
-            >
-              {NETTO_WARNING_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </SettingRow>
-        )}
       </section>
 
       {/* Sound Section */}
@@ -335,14 +374,6 @@ export function MatchCockpitSettingsPanel({
             label={t('settings.enableVibration')}
           />
         </SettingRow>
-
-        <SettingRow label={t('settings.keepScreenOn')} description={t('settings.keepScreenOnDesc')}>
-          <Toggle
-            checked={settings.wakeLockEnabled}
-            onChange={(v) => updateSetting('wakeLockEnabled', v)}
-            label={t('settings.enableKeepScreenOn')}
-          />
-        </SettingRow>
       </section>
 
       {/* Auto-Advance Section */}
@@ -356,22 +387,6 @@ export function MatchCockpitSettingsPanel({
             label={t('settings.enableAutoEnd')}
           />
         </SettingRow>
-
-        {settings.autoFinishEnabled && (
-          <SettingRow label={t('settings.delay')} description={t('settings.delayDesc')}>
-            <select
-              value={String(settings.autoAdvanceSeconds)}
-              onChange={(e) => updateSetting('autoAdvanceSeconds', Number(e.target.value))}
-              style={styles.select}
-            >
-              {AUTO_ADVANCE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </SettingRow>
-        )}
       </section>
     </fieldset>
   );

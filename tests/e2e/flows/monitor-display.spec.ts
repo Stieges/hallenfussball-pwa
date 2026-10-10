@@ -131,13 +131,21 @@ test.describe('Monitor Display', () => {
   });
 
   test.describe('MON-B02: Monitor ohne Slides', () => {
-    test('zeigt Hinweis wenn keine Slides konfiguriert', async ({ page, seedIndexedDB }) => {
+    // B-03 (F-04, @OB-011): Ein leeres Folienprogramm bleibt nie leer – statt des alten
+    // Hinweises „Keine Slides konfiguriert" zeigt der Monitor eine immer darstellbare Folie
+    // (hier: Spielplan, da das Turnier nicht öffentlich ist und keinen QR-Code erlaubt).
+    test('zeigt bei leerem Folienprogramm eine Standardfolie statt Leerzustand', async ({ page, seedIndexedDB }) => {
       await setupTournamentWithMonitor(seedIndexedDB, { slides: [] });
       // HashRouter requires /#/ prefix for routes
       await page.goto('/#/display/test-tournament/monitor-1');
 
-      // Use data-testid for reliable element selection (Best Practice)
-      await expect(page.getByTestId('monitor-no-slides-message')).toBeVisible({ timeout: 10000 });
+      // Standardfolie (Spielplan) zeigt die Paarung aus dem Turnier
+      await expect(page.getByText('FC Bayern').first()).toBeVisible({ timeout: 10000 });
+
+      // Alter Leerzustand und Fehlertext dürfen nie erscheinen
+      await expect(page.getByTestId('monitor-no-slides-message')).toHaveCount(0);
+      await expect(page.getByTestId('monitor-no-slides-state')).toHaveCount(0);
+      await expect(page.getByTestId('monitor-error-message')).toHaveCount(0);
     });
   });
 

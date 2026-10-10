@@ -24,8 +24,15 @@
 #   5. Eigentuemer loescht das GESAMTE Turnier (Spiele UND Ereignisse
 #      vorhanden) ueber DELETE FROM tournaments (kein separates
 #      Matches-DELETE mehr davor, siehe SupabaseRepository.delete()
-#      nach diesem Task)                                                -> muss ERLAUBT sein
-#      (Kaskade: pg_trigger_depth() > 1 im Trigger).
+#      nach diesem Task)                                                -> muss ABGELEHNT
+#      werden (tournament_started: Ereignisse belegen den Anpfiff,
+#      @LZ-003/@SL-129 -- Ruling B-01b Fixrunde 1, die Anforderung hat
+#      sich geaendert: frueher war dieser Fall bewusst erlaubt).
+#   5'. Wartungsrolle postgres loescht dasselbe Turnier (T_MAIN, Kaskade)  -> muss ERLAUBT
+#      sein (E3: Seed/Konto-Loeschung/Admin). Der Kaskaden-Nachweis 5b/5c
+#      laeuft weiter -- "Spiel mit Ereignissen wird nie still geloescht"
+#      (A6) bleibt erfuellt, weil die Gesamtloeschung per Kaskade der
+#      einzige zugelassene Weg ist.
 #   Co-Admin kann Turniere nicht loeschen (tournaments_delete_v2 ist Eigentuemer-only,
 #   Baseline Zeile 1750) — dafuer gibt es hier bewusst keine Probe.
 #
@@ -257,6 +264,13 @@ check "4. Co-Admin loescht Spiel OHNE Ereignis (direkt)" "allowed" "$LAST_DELETE
 # wiederum per ON DELETE CASCADE an matches (Baseline :1461/:1465) -- eine zweistufige Kaskade.
 # tournaments_delete_v2 (Baseline :1750) ist Eigentuemer-only -- deshalb keine Co-Admin-Probe hier.
 #
+# B-01b Fixrunde 1 (Ruling, die Anforderung hat sich geaendert -- @LZ-003 und @SL-129:
+# Ereignisse belegen den Anpfiff und bleiben auch beim Status-Zuruecksetzen erhalten): dieser
+# Fall wird jetzt ABGELEHNT (tournament_started), weil das Turnier Ereignisse hat. Der
+# BEFORE-DELETE-Trigger protect_tournament_delete_started (20261004_101) zaehlt wie der
+# Soft-Delete-Pfad Status ODER Ereignisse. Das war die einzige erlaubte Aenderung einer
+# bestehenden Aussage dieses Skripts.
+#
 # run_delete() COMMITted bewusst NICHT (wie run_write() in rls-role-matrix.sh -- das reicht, um
 # eine Policy/einen Trigger anhand des psql-Befehls-Tags zu messen). Fuer DIESE Probe reicht das
 # nicht: "allowed" beweist nur, dass die Anweisung durchging, nicht dass die Kaskade wirklich
@@ -279,9 +293,35 @@ if [[ $R5_EC -ne 0 ]]; then
 else
   grep -qE '^DELETE [1-9][0-9]*$' <<<"$R5_OUT" && R5="allowed" || R5="denied"
 fi
-check "5. Eigentuemer loescht Turnier MIT Spielen+Ereignissen (Kaskade)" "allowed" "$R5"
+check "5. Eigentuemer loescht Turnier MIT Spielen+Ereignissen (Kaskade)" "denied" "$R5"
+if [[ "$R5" == "denied" ]]; then
+  R5_REASON="fail"
+  grep -q "tournament_started" <<<"$R5_OUT" && R5_REASON="sperre"
+  check "5a. Die Ablehnung kommt von der Sperre (tournament_started), nicht von RLS" "sperre" "$R5_REASON"
+fi
 
-# Beleg, dass Probe 5 tatsaechlich etwas geloescht hat, statt an RLS zu scheitern und dabei
+# 5'. Wartungsrolle postgres (KEIN SET LOCAL ROLE) loescht dasselbe Turnier -- E3: Seed,
+# Konto-Loeschung (auth.users-Kaskade) und Admin duerfen angepfiffene Turniere weiterhin
+# vollstaendig loeschen. Der pg_trigger_depth()-Kaskadennachweis 5b/5c laeuft hier weiter:
+# die Ereignis-Zeilen verschwinden nur ueber die Kaskade (Tiefe > 1), nie "still" durch
+# einen direkten Weg.
+set +e
+R5P_OUT="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+DELETE FROM public.tournaments WHERE id = '$T_CASCADE';
+COMMIT;
+SQL
+)"
+R5P_EC=$?
+set -e
+if [[ $R5P_EC -ne 0 ]]; then
+  R5P="denied"
+else
+  grep -qE '^DELETE [1-9][0-9]*$' <<<"$R5P_OUT" && R5P="allowed" || R5P="denied"
+fi
+check "5'. postgres (Wartungsrolle) loescht Turnier MIT Spielen+Ereignissen (Kaskade)" "allowed" "$R5P"
+
+# Beleg, dass Probe 5' tatsaechlich etwas geloescht hat, statt an Rechten zu scheitern und dabei
 # zufaellig wie "allowed" auszusehen (waere hier unmoeglich, aber die Gegenprobe kostet nichts).
 REMAINING_MATCHES="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM public.matches WHERE tournament_id = '$T_CASCADE';")"

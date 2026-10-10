@@ -54,19 +54,6 @@ export const sectionStyles = {
     textDecoration: 'underline',
   } as CSSProperties,
 
-  buttonLink: {
-    color: cssVars.colors.primary,
-    textDecoration: 'underline',
-    background: 'none',
-    border: 'none',
-    padding: 0,
-    font: 'inherit',
-    cursor: 'pointer',
-    minHeight: '44px',
-    display: 'inline-flex',
-    alignItems: 'center',
-  } as CSSProperties,
-
   table: {
     width: '100%',
     borderCollapse: 'collapse',

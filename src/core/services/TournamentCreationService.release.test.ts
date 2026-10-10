@@ -1,12 +1,10 @@
 /**
  * Task 3 — "Ein Turnier bleibt Entwurf, bis es jemand aktiv freigibt."
  *
- * Der Freigabe-Marker ist `publishedAt`, NICHT `status`: SettingsTab.tsx (~194) setzt ein
- * bereits veröffentlichtes Turnier zum Bearbeiten zurück auf `status: 'draft'`, und nur eine
- * In-App-Rückkehr stellt den Status wieder her (App.tsx, originalStatusRef). Ein Reload mitten
- * in der Bearbeitung lässt ein laufendes Turnier dauerhaft auf `draft` stehen. Eine
- * Status-Prüfung würde es also mitten im Spiel vom Netz nehmen bzw. — hier relevant — ein
- * bewusst privat gestelltes Turnier hinter dem Rücken des Veranstalters wieder teilen.
+ * Der Freigabe-Marker ist `publishedAt`, NICHT `status`: `publishedAt` wird genau einmal
+ * beim ersten Festlegen gesetzt und überdauert die Bearbeitung (@W5-004: ein festgelegtes
+ * Turnier bleibt dabei festgelegt). Eine Status-Prüfung würde ein bewusst privat
+ * gestelltes Turnier hinter dem Rücken des Veranstalters wieder teilen.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { TournamentCreationService } from './TournamentCreationService';

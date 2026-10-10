@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Card, Select, NumberStepper, CollapsibleSection } from '../../components/ui';
 import { Tournament, GroupSystem, PlacementCriterion, MatchCockpitSettings, DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
-import { cssVars, displaySizes } from '../../design-tokens'
+import { cssVars } from '../../design-tokens'
 import { getGroupSystemOptions } from '../../constants/tournamentOptions';
 import { getDFBPattern } from '../../constants/dfbMatchPatterns';
 import styles from './Step2_ModeAndSystem.module.css';
@@ -440,49 +440,6 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             />
           </CollapsibleSection>
         </>
-      )}
-
-      {/* Mini-Fußball Mode - Coming Soon */}
-      {formData.mode === 'miniFussball' && (
-        <div style={{
-          padding: '32px',
-          textAlign: 'center',
-          background: cssVars.colors.secondaryBadge,
-          borderRadius: cssVars.borderRadius.md,
-          border: `1px solid ${cssVars.colors.secondaryBorder}`,
-          marginTop: '16px',
-        }}>
-          <div style={{ fontSize: displaySizes.lg, marginBottom: '16px' }}>🚧</div>
-          <h3 style={{
-            color: cssVars.colors.textPrimary,
-            fontSize: cssVars.fontSizes.xl,
-            margin: '0 0 8px 0'
-          }}>
-            {t('step2.miniFussball.title')}
-          </h3>
-          <p style={{
-            color: cssVars.colors.textSecondary,
-            fontSize: cssVars.fontSizes.md,
-            margin: '0 0 16px 0',
-            lineHeight: '1.5'
-          }}>
-            {t('step2.miniFussball.description')}
-          </p>
-          <span style={{
-            display: 'inline-block',
-            padding: '6px 16px',
-            background: cssVars.colors.secondarySelected,
-            border: `1px solid ${cssVars.colors.secondaryBorderStrong}`,
-            borderRadius: '16px',
-            fontSize: cssVars.fontSizes.sm,
-            fontWeight: cssVars.fontWeights.semibold,
-            color: cssVars.colors.secondary,
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-          }}>
-            {t('step2.miniFussball.comingSoon')}
-          </span>
-        </div>
       )}
     </Card>
   );

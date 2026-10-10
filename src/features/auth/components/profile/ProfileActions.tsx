@@ -1,6 +1,5 @@
 import React, { CSSProperties } from 'react';
 import { cssVars } from '../../../../design-tokens';
-import { ProfileToggle } from './ProfileToggle';
 
 interface ProfileActionsProps {
   /** Current 2FA state */
@@ -16,8 +15,6 @@ interface ProfileActionsProps {
 }
 
 export const ProfileActions: React.FC<ProfileActionsProps> = ({
-  is2FAEnabled,
-  on2FAToggle,
   onChangePassword,
   passwordResetCooldown,
   onLogout,
@@ -26,12 +23,6 @@ export const ProfileActions: React.FC<ProfileActionsProps> = ({
 
   return (
     <>
-      <ProfileToggle
-        label="Zwei-Faktor-Authentifizierung (2FA)"
-        icon="🛡️"
-        checked={is2FAEnabled}
-        onChange={on2FAToggle}
-      />
       <button
         style={{
           ...styles.actionButton,

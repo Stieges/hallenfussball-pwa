@@ -33,7 +33,7 @@ interface DashboardNavProps {
   onTabChange?: (tab: DashboardTab) => void;
   /** Number of trashed tournaments (shown as badge on Papierkorb) */
   trashedCount?: number;
-  /** Number of tournaments expiring soon (within 7 days) */
+  /** Number of tournaments expiring within 7 days */
   expiringSoonCount?: number;
   /** Use URL-based navigation (default: true) */
   useUrlNavigation?: boolean;

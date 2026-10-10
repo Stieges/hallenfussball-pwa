@@ -81,6 +81,9 @@ export interface LiveMatch {
   tiebreakerMode?: 'shootout' | 'overtime-then-shootout' | 'goldenGoal'; // From tournament config
   awaitingTiebreakerChoice?: boolean;   // True when match ended in draw, waiting for tiebreaker
 
+  // Zeitstrafe-Dauer in Sekunden, beim Anpfiff aus der Spielregel übernommen (@W2A-029)
+  timePenaltyDurationSeconds?: number;
+
   // Match Cockpit Pro: Per-match setting overrides
   cockpitOverrides?: import('../../types/tournament').MatchCockpitOverrides;
 }

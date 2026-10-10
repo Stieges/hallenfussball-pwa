@@ -34,7 +34,6 @@ export interface OverflowMenuProps {
   onTimePenaltyClick?: () => void;
   onSubstitutionClick?: () => void;
   onEditResultClick?: () => void;
-  onAdjustTimeClick?: () => void;
 
   /** Open Settings Dialog directly */
   onSettingsClick?: () => void;
@@ -116,8 +115,6 @@ export function OverflowMenu({
   onTimePenaltyClick,
   onSubstitutionClick,
   onEditResultClick,
-  onAdjustTimeClick,
-
 }: OverflowMenuProps) {
   const { t } = useTranslation('cockpit');
   const menuRef = useRef<HTMLDivElement>(null);
@@ -241,15 +238,6 @@ export function OverflowMenu({
             onClick={() => handleAction(onEditResultClick)}
           />
         )}
-
-        {onAdjustTimeClick && (
-          <MenuItem
-            icon="⏰"
-            label={t('menu.adjustTime')}
-            onClick={() => handleAction(onAdjustTimeClick)}
-          />
-        )}
-
 
       </div>
     </>

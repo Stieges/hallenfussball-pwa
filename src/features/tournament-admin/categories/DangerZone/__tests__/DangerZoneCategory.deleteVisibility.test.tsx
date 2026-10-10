@@ -64,6 +64,11 @@ function makeMembership(role: TournamentMembership['role']): TournamentMembershi
 const tournament = {
   id: 't1', title: 'Test-Turnier', status: 'published',
   teams: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
+  // @LZ-003 / K1: echter publish()-Zustand — die Spiele kommen OHNE matchStatus aus
+  // TournamentCreationService.publish(). Ein fehlender matchStatus gilt als 'scheduled'
+  // (geplant), nicht als „nicht feststellbar". Genau diese Fixture wurde in B-01a
+  // passend zum Code auf explizite matchStatus umgeschrieben und verdeckte so den
+  // K1-Fehler („Turnier löschen" fehlte bei frisch festgelegten Turnieren).
   matches: [{ id: 'm1', scoreA: 1, scoreB: 0 }, { id: 'm2' }],
   startDate: '2026-03-01', startTime: '10:00',
 } as unknown as Tournament;
@@ -150,12 +155,14 @@ describe('DangerZoneCategory — "Turnier löschen" nur für den Eigentümer (Ta
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
-  it('andere Gefahrenzone-Aktionen bleiben für den Co-Admin unverändert sichtbar (kein Overreach)', () => {
+  it('andere Gefahrenzone-Aktionen bleiben für den Co-Admin sichtbar (kein Overreach)', () => {
     setupWithMembership('co-admin');
 
     expect(screen.getByRole('button', { name: /Turnier beenden/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Turnier archivieren/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Spielplan neu generieren/i })).toBeInTheDocument();
+    // Ersatz-Aussage für die hier früher erwartete Aktion: „Spielplan neu generieren"
+    // wird seit B-01a (@OB-006/@OB-007) NIE angeboten — auch nicht dem Co-Admin.
+    expect(screen.queryByRole('button', { name: /Spielplan neu generieren/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Spielplan zurücksetzen/i })).toBeInTheDocument();
   });
 });

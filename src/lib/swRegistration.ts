@@ -7,7 +7,7 @@
  *
  * This module flips to `prompt` semantics so we can control the update flow:
  * a persistent notice („Neue App-Version verfügbar“ + Knopf „Jetzt
- * aktualisieren“) is shown as soon as a new bundle waits — it never
+ * aktualisieren“) is shown once a new bundle waits — it never
  * auto-hides and the button reloads immediately (no lock, no idle check).
  * Automatically reloading happens ONLY in the idle state (no modal dialog AND
  * outbox of the current account empty, see `swIdle.ts`); right before
