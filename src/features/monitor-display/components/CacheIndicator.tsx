@@ -36,7 +36,7 @@ export function CacheIndicator({ cacheStatus, visible }: CacheIndicatorProps) {
       <div style={{
         width: displayMonitor.marker.indicatorSize,
         height: displayMonitor.marker.indicatorSize,
-        borderRadius: displayMonitor.radius.circle,
+        borderRadius: cssVars.borderRadius.full,
         background: getStatusColor(),
       }} />
       <span>{cacheStatus.ageSeconds}s</span>

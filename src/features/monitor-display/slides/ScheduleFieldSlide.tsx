@@ -73,7 +73,7 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style }: Schedule
             <div style={{
               width: displayMonitor.marker.scheduleSize,
               height: displayMonitor.marker.scheduleSize,
-              borderRadius: displayMonitor.radius.circle,
+              borderRadius: cssVars.borderRadius.full,
               background: getStatusColor(match),
               flexShrink: 0,
             }} />

@@ -254,7 +254,6 @@ export const displayMonitor = {
   /** Ecken */
   radius: {
     card: '12px',
-    circle: '50%',
   },
 
   /** Punkte und Markierungen */

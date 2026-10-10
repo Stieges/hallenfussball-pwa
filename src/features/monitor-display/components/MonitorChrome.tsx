@@ -24,7 +24,7 @@ export function SlideDots({ count, currentIndex, enableTransitions }: SlideDotsP
           style={{
             width: displayMonitor.marker.indicatorSize,
             height: displayMonitor.marker.indicatorSize,
-            borderRadius: displayMonitor.radius.circle,
+            borderRadius: cssVars.borderRadius.full,
             background: idx === currentIndex
               ? displayColors.primary
               : displayColors.textMuted,

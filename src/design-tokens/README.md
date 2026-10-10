@@ -158,7 +158,6 @@ displayMonitor.qr.sizeLarge         // 220 (QR-Folie)
 displayMonitor.qr.sizeSmall         // 150 (Sponsor-Folie)
 displayMonitor.overscanDefaultPx    // 48
 displayMonitor.radius.card          // '12px'
-displayMonitor.radius.circle        // '50%'
 displayMonitor.marker.indicatorSize // '10px'
 displayMonitor.size.*               // Logo-, Text-, Tabellen- und Spielplan-Maße
 ```
