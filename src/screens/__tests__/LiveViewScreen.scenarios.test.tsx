@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { generateFullSchedule } from '../../core/generators';
 import type { ScheduledMatch } from '../../core/generators';
 import type { Tournament } from '../../types/tournament';
@@ -34,12 +34,23 @@ import { RepositoryProvider } from '../../core/contexts/RepositoryContext';
 const MY_TEAM_KEY = `live:${SHARE_CODE}:myTeam`;
 const GROUP_B_TEAMS = ['VfL Mitte', 'FC Hafen', 'SV Berg', 'TuS Tal'];
 
+// Zeigt die aktuelle URL-Suche im DOM, damit Klick-Tests die Schreibseite prüfen können.
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="loc" style={{ display: 'none' }}>{location.search}</output>;
+}
+
+function currentSearch(): URLSearchParams {
+  return new URLSearchParams(screen.getByTestId('loc').textContent ?? '');
+}
+
 function renderScreen(query = '') {
   // RepositoryProvider mit user=null wie in der App: lokale Repos, kein Netz.
   return render(
     <RepositoryProvider user={null}>
       <MemoryRouter initialEntries={[`/live/${SHARE_CODE}${query}`]}>
         <LiveViewScreen shareCode={SHARE_CODE} />
+        <LocationProbe />
       </MemoryRouter>
     </RepositoryProvider>
   );
@@ -111,13 +122,20 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
     expect(screen.queryByText('FC Nord')).toBeNull();
   });
 
-  it('@ZM-005 Zuschauer-Seite zeigt keine Tabelle von Gruppe A oder B', async () => {
+  it('Bestand: Tabellen-Tab zeigt bei ausgeschalteten Tabellen keine Team-Zeile von Gruppe A oder B', async () => {
     const t = buildLiveViewTournament({ hideRankingsForPublic: true });
     await renderWith(t, '?tab=standings');
     expect(screen.getByText(/Tabellen ausgeblendet/)).toBeInTheDocument();
     for (const name of ['FC Nord', 'SV Süd', 'TSV West', 'SC Ost', ...GROUP_B_TEAMS]) {
       expect(screen.queryByText(name)).toBeNull();
     }
+  });
+
+  it.fails('@ZM-005 Zuschauer-Seite – Befund F-B13-4: Spielplan-Tab zeigt keine Tabelle von Gruppe A oder Gruppe B (heute: leere Hüllen)', async () => {
+    const t = buildLiveViewTournament({ hideRankingsForPublic: true });
+    const { container } = await renderWith(t);
+    // Soll: keine Tabelle im Spielplan-Tab
+    expect(container.querySelector('.standings-table')).toBeNull();
   });
 
   it('@ZM-019 Zuschauerin – die Zuschauer-Seite bietet keinen Schalter an', async () => {
@@ -156,7 +174,7 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       expect(screen.getAllByText('2:0').length).toBeGreaterThan(0);
     });
 
-    it.fails('Bestand (Fehler F-B13-11, C-ZUSCHAUER-ERGEBNIS-LECK): Stand 2:0 von Spiel 1 erscheint nicht trotz hideScoresForPublic', async () => {
+    it.fails('Befund F-B13-11 (C-ZUSCHAUER-ERGEBNIS-LECK): Soll – Stand 2:0 von Spiel 1 erscheint bei hideScoresForPublic nicht', async () => {
       const t = buildLiveViewTournament({ hideScoresForPublic: true });
       await renderWith(t);
       // Soll: kein Stand im Spielplan
@@ -193,14 +211,24 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       // Spiel 1 und Spiel 7 haben beide einen Stand und gelten darum als beendet;
       // jede Karte steht zweimal im DOM (Desktop- und Mobil-Ansicht).
       expect(countOccurrences(text, 'matchCard.finished')).toBe(4);
+      // Je Spiel: der Status steht am Kreis (data-match-status), nicht nur im Zähler.
+      const circles = container.querySelectorAll(`[data-testid="match-circle-${m7.id}"]`);
+      expect(circles.length).toBeGreaterThan(0);
+      for (const circle of circles) {
+        expect(circle).toHaveAttribute('data-match-status', 'finished');
+      }
     });
 
-    it('Bestand (F-B13-8): übersprungenes Spiel 5 erhält keinen Hinweis "ausgefallen"', async () => {
+    it('Bestand (F-B13-8): übersprungenes Spiel 5 bleibt geplant, ohne Status "ausgefallen"', async () => {
       const t = buildLiveViewTournament({ hideRankingsForPublic: true });
       const m5 = matchOf(t, 5);
       const { container } = await renderWith(t);
       expect(screen.getAllByText(m5.homeTeam).length).toBeGreaterThan(0);
-      expect(container.textContent ?? '').not.toContain('ausgefallen');
+      const circles = container.querySelectorAll(`[data-testid="match-circle-${m5.id}"]`);
+      expect(circles.length).toBeGreaterThan(0);
+      for (const circle of circles) {
+        expect(circle).toHaveAttribute('data-match-status', 'scheduled');
+      }
     });
 
     it('Bestand: Status-Filter „Live“ (?s=live) zeigt nur die Paarung von Spiel 7', async () => {
@@ -220,6 +248,33 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       for (const name of GROUP_B_TEAMS) {
         expect(screen.queryByText(name)).toBeNull();
       }
+    });
+
+    it('Bestand: Team wählen speichert Mein Team und „Nur meine“ schreibt my=1 in die URL', async () => {
+      const t = buildLiveViewTournament({ hideRankingsForPublic: true });
+      await renderWith(t);
+      fireEvent.click(screen.getByRole('button', { name: 'Team wählen' }));
+      const nord = screen.getAllByRole('button', { name: /FC Nord/ });
+      fireEvent.click(nord[nord.length - 1]);
+      expect(localStorage.setItem).toHaveBeenCalledWith(MY_TEAM_KEY, 'team-nord');
+      fireEvent.click(screen.getByRole('button', { name: /Nur meine/ }));
+      expect(currentSearch().get('my')).toBe('1');
+      for (const name of GROUP_B_TEAMS) {
+        expect(screen.queryByText(name)).toBeNull();
+      }
+    });
+
+    it('Bestand: Filter-Chips schreiben g und s in die URL und filtern', async () => {
+      const t = buildLiveViewTournament({ hideRankingsForPublic: true });
+      await renderWith(t);
+      fireEvent.click(screen.getByRole('button', { name: 'Gruppe B' }));
+      expect(currentSearch().get('g')).toBe('B');
+      expect(screen.queryByText('FC Nord')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Beendet' }));
+      expect(currentSearch().get('s')).toBe('finished');
+      const alle = screen.getAllByRole('button', { name: 'Alle' });
+      fireEvent.click(alle[alle.length - 1]);
+      expect(currentSearch().has('s')).toBe(false);
     });
 
     it('Bestand: Pull-to-refresh lädt das Turnier ein zweites Mal', async () => {
