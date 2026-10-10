@@ -11,6 +11,7 @@ import { CSSProperties, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import { Input } from '../ui';
+import { useRulesLocked } from './RulesLockContext';
 import type {
   MatchCockpitSettings,
   MatchSoundPreset,
@@ -106,6 +107,9 @@ export function MatchCockpitSettingsPanel({
     },
     [settings, onChange]
   );
+
+  // Regelfelder sind für Nicht-Turnierleitung gesperrt (@W2A-030)
+  const rulesLocked = useRulesLocked();
 
   // Spielregel Schützenzahl (@W2A-034): ungültige Werte (z. B. 0 Schützen) werden
   // beim Verlassen des Feldes abgelehnt — am Feld steht der gültige Bereich.
@@ -216,6 +220,7 @@ export function MatchCockpitSettingsPanel({
             data-testid="settings-time-penalty-duration"
             value={settings.timePenaltyDurationSeconds}
             onChange={(e) => updateSetting('timePenaltyDurationSeconds', Number(e.target.value))}
+            disabled={rulesLocked}
             style={{ ...styles.select, fontSize: cssVars.fontSizes.lg }}
           >
             {TIME_PENALTY_OPTIONS.map((opt) => (
@@ -225,6 +230,11 @@ export function MatchCockpitSettingsPanel({
             ))}
           </select>
         </SettingRow>
+        {rulesLocked && (
+          <p style={{ margin: 0, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>
+            {t('settings.rulesOnlyByLead')}
+          </p>
+        )}
       </section>
 
       {/* Spielregel Schützenzahl (@W2A-034) */}
@@ -240,6 +250,7 @@ export function MatchCockpitSettingsPanel({
               setSchuetzenFehler(false);
             }}
             onBlur={handleSchuetzenBlur}
+            disabled={rulesLocked}
             errorMessage={schuetzenFehler ? t('settings.penaltyShootersRangeError') : undefined}
             data-testid="settings-penalty-shooters"
           />

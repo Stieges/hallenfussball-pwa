@@ -195,6 +195,7 @@
     "penaltyShooters": "Number of shooters",
     "penaltyShootersDesc": "Shooters per team in the penalty shootout",
     "penaltyShootersRangeError": "Valid: 1 to 10 shooters",
+    "rulesOnlyByLead": "Only the tournament lead can change rules",
     "netTimeWarning": "Net Time Warning",
     "netTimeWarningDesc": "Warning when added time is reached",
     "enableNetTimeWarning": "Enable net time warning",
