@@ -3,7 +3,8 @@ import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { LocalStorageRepository } from '../repositories/LocalStorageRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
-import { GuestStoreReadError } from '../errors';
+import { AuthenticationError, GuestStoreReadError } from '../errors';
+import { supabase } from '../../lib/supabase';
 import {
     GenericMutationQueue,
     type GenericMutationItem,
@@ -147,6 +148,18 @@ function adoptLegacyKey(legacyKey: string, targetKey: string): void {
     safeLocalStorage.removeItem(legacyKey);
 }
 
+/**
+ * A-07b (@FU-006): Konto-Wache direkt vor jedem Versand. Die lokale Sitzung (kein Netz) muss
+ * noch dem Konto der Warteschlange gehoeren. Sonst wirft sie `AuthenticationError`: die
+ * Queue haelt wie bei abgelaufener Anmeldung an (kein Versand, kein Fehlversuch).
+ */
+async function assertSessionOwnsQueue(accountId: string): Promise<void> {
+    const session = supabase ? (await supabase.auth.getSession()).data.session : null;
+    if (session?.user.id !== accountId) {
+        throw new AuthenticationError('Konto der Warteschlange ist nicht mehr angemeldet');
+    }
+}
+
 export class MutationQueue extends GenericMutationQueue<MutationType> {
     constructor(
         supabaseRepo: SupabaseRepository,
@@ -200,6 +213,9 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
             },
 
             execute: async (item) => {
+                if (accountId) {
+                    await assertSessionOwnsQueue(accountId);
+                }
                 switch (item.type) {
                     case 'SAVE_TOURNAMENT': {
                         const tournament = item.payload as Tournament;
