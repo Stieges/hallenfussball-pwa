@@ -450,8 +450,6 @@ export class GenericMutationQueue<TType extends string> {
         this.retryTimer.clear();
         this.isProcessing = true;
         let scheduleMs: number | null = null;
-        // A-06f Fixrunde 1: Anmelde-Generation beim Laufstart (siehe holdForAuth).
-        const authEpoch = this.retryTimer.authEpoch;
 
         try {
             // Process head of queue
@@ -461,19 +459,19 @@ export class GenericMutationQueue<TType extends string> {
                 const item = this.queue[0]; // Peek
 
                 try {
-                    // A-06e: gemerkter Versuch + Race gegen REQUEST_TIMEOUT_MS
-                    await this.inFlight.attempt(item.id, () => this.config.execute(item), REQUEST_TIMEOUT_MS);
+                    // A-06e: gemerkter Versuch + Race gegen REQUEST_TIMEOUT_MS; A-06f Fixrunde 2: Generation am Versuch
+                    await this.inFlight.attempt(item.id, () => this.config.execute(item), REQUEST_TIMEOUT_MS, this.retryTimer.authEpoch);
                 } catch (error) {
                     if (import.meta.env.DEV) { console.warn(`MutationQueue: Error processing ${item.type} (${item.id})`, error); }
 
                     const authFailure = isAuthExpired(error);
-                    if (authFailure && this.retryTimer.holdForAuth(authEpoch)) {
+                    if (authFailure && this.retryTimer.holdForAuth(this.inFlight.lastEpoch)) {
                         // A-06f (@FU-009): Anmeldung abgelaufen – zählt nicht, kein Zeitgeber; nur resumeAfterAuth() hebt auf.
                         this.lastFailure = 'permanent'; this.notifyListeners();
                         break;
                     }
 
-                    // Auch ein veralteter Anmeldefehler (nach resumeAfterAuth, A-06f Fixrunde 1) läuft hier durch.
+                    // Veralteter Anmeldefehler (Versuch vor resumeAfterAuth) läuft hier durch.
                     if (authFailure || isTransientMutationError(error)) {
                         // Vorübergehender Fehler (z. B. kein echtes Internet trotz
                         // navigator.onLine — Hallen-WLAN-Anmeldeseite, Server-Überlastung):
@@ -549,7 +547,6 @@ export class GenericMutationQueue<TType extends string> {
     public async resumeAfterAuth(): Promise<void> {
         this.retryTimer.authEpoch += 1;
         this.retryTimer.authHold = false;
-        this.inFlight.discard();
         return this.process();
     }
 

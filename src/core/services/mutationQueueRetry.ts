@@ -114,6 +114,8 @@ type InFlightRecord = {
     itemId: string;
     settled: Promise<InFlightOutcome>;
     windows: number;
+    /** A-06f Fixrunde 2: Anmelde-Generation beim Start dieses Versuchs (nicht des Laufs). */
+    epoch: number;
 };
 
 /** Mikroaufgaben-Spülung für den Schnellpfad ohne Zeitlimit-Timer (A-06e). */
@@ -133,6 +135,11 @@ async function microtaskDrain(rounds = 10): Promise<void> {
  */
 export class QueueInFlight {
     private current: InFlightRecord | null = null;
+    /**
+     * A-06f Fixrunde 2: Generation des zuletzt beteiligten Versuchs (gesetzt vor dem
+     * Warten, also auch bei Fehlern). Der Aufrufer reicht sie an `holdForAuth` weiter.
+     */
+    lastEpoch = 0;
 
     constructor(private readonly timers: QueueTimers) {}
 
@@ -141,19 +148,16 @@ export class QueueInFlight {
         return this.current !== null;
     }
 
-    /** Vergisst den gemerkten Versuch (A-06f Fixrunde 1: alter Token nach Anmeldung). */
-    discard(): void {
-        this.current = null;
-    }
-
     /**
      * Führt `run` für `itemId` aus oder wartet auf den gemerkten Versuch.
      * Wirft den Fehler des Versuchs bzw. bei Zeitlimit einen `TimeoutError`
-     * (läuft im transienten Zweig der Queue).
+     * (läuft im transienten Zweig der Queue). `epoch` gilt nur für einen neu
+     * gestarteten Versuch; ein gemerkter behält seine Start-Generation.
      */
-    async attempt(itemId: string, run: () => Promise<void>, ms: number): Promise<void> {
+    async attempt(itemId: string, run: () => Promise<void>, ms: number, epoch: number): Promise<void> {
         const existing = this.current;
-        const record = (existing?.itemId === itemId ? existing : null) ?? this.start(itemId, run);
+        const record = (existing?.itemId === itemId ? existing : null) ?? this.start(itemId, run, epoch);
+        this.lastEpoch = record.epoch;
         let outcome: InFlightOutcome;
         try {
             // Schnellpfad: endet der Versuch sofort, wird KEIN Zeitlimit-Timer
@@ -181,7 +185,7 @@ export class QueueInFlight {
      * ihre Rejects daran); geworfene Fehler und Rejects landen in `settled`, das
      * nie ablehnt.
      */
-    private start(itemId: string, run: () => Promise<void>): InFlightRecord {
+    private start(itemId: string, run: () => Promise<void>, epoch: number): InFlightRecord {
         const settled = (async (): Promise<InFlightOutcome> => {
             try {
                 await run();
@@ -190,7 +194,7 @@ export class QueueInFlight {
                 return { ok: false, error };
             }
         })();
-        const record: InFlightRecord = { itemId, settled, windows: 0 };
+        const record: InFlightRecord = { itemId, settled, windows: 0, epoch };
         this.current = record;
         return record;
     }

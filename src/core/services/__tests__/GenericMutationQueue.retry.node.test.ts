@@ -1037,6 +1037,61 @@ describe('MutationQueue A-06f authHold (@FU-009/@FU-013)', () => {
     expect(openTimers()).toBe(0);
   });
 
+  // A-06f Fixrunde 2 (P1): gemerkter Versuch nach Fenster 1, resumeAfterAuth, der alte
+  // Versuch endet danach mit Anmeldefehler. Der Lauf darf dessen Fehler nicht als neue
+  // Anmeldung werten: Queue läuft wie ein vorübergehender Fehler weiter.
+  it('gemerkter Versuch (@FU-009): resumeAfterAuth nach Fenster 1, Alt-Versuch endet mit AuthenticationError → Queue leer, kein Stillstand', async () => {
+    const { save, rejectFirst } = hangingFirstSave();
+    mq = makeRealQueue(save);
+    mq.enqueue('SAVE_TOURNAMENT', tour('t1'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+
+    // Fenster 1 des gemerkten Versuchs (Zeitlimit), danach Anmeldung.
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS);
+    // Der Lauf wartet auf den alten Versuch, daher nicht vor dem Ablehnen awaiten.
+    const resumed = mq.resumeAfterAuth();
+    rejectFirst(new AuthenticationError('Not authenticated', 'save'));
+
+    await vi.advanceTimersByTimeAsync(5000);
+    await resumed;
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(mq.getPendingCount()).toBe(0);
+    expect(mq.getLastFailure()).toBeNull();
+    expect(openTimers()).toBe(0);
+  });
+
+  // A-06f Fixrunde 2 (P2): routinemäßiges Wecken bei noch gültiger Anmeldung. Der alte
+  // Versuch v1 hängt, Fenster 1 läuft ab, v2 wird eingereiht, dann landet v1. Der Server-Endstand
+  // muss v2 sein – der alte Versuch darf v2 nicht überschreiben.
+  it('gemerkter Versuch (@FU-004): resumeAfterAuth bei hängendem gültigem Versuch, v2 nach Fenster 1 → Reihenfolge v1, v2 bleibt erhalten', async () => {
+    const log: string[] = [];
+    let landFirst: () => void = () => undefined;
+    const titled = (title: string): Tournament => ({ id: 't1', title, matches: [] } as unknown as Tournament);
+    const save = vi.fn()
+      .mockImplementationOnce((t: Tournament) => {
+        log.push(`start1:${t.title}`);
+        return new Promise<void>((resolve) => {
+          landFirst = () => { log.push(`land1:${t.title}`); resolve(); };
+        });
+      })
+      .mockImplementation(async (t: Tournament) => { log.push(`send:${t.title}`); });
+    mq = makeRealQueue(save);
+    mq.enqueue('SAVE_TOURNAMENT', titled('v1'));
+    await vi.advanceTimersByTimeAsync(0);
+
+    await mq.resumeAfterAuth();
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS);
+    mq.enqueue('SAVE_TOURNAMENT', titled('v2'));
+    await vi.advanceTimersByTimeAsync(1000);
+
+    landFirst();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(log).toEqual(['start1:v1', 'land1:v1', 'send:v2']);
+    expect(mq.getPendingCount()).toBe(0);
+  });
+
   it('Gegenbeispiel (@FU-013): AuthRetryableFetchError 503 → transienter Weg, Wartezeit 1000, kein authHold', async () => {
     const fetchErr = Object.assign(new Error('HTTP 503'), { name: 'AuthRetryableFetchError', status: 503 });
     const save = vi.fn().mockRejectedValue(new RepositoryError('save', 'HTTP 503', fetchErr));
