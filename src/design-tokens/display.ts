@@ -231,9 +231,6 @@ export const displayMonitor = {
   /** Abdunkelung hinter Hinweisen (Pause-Badge, Cache-Anzeige); bewusst theme-unabhängig */
   overlay: 'rgba(0, 0, 0, 0.7)',
 
-  /** Schriftstapel der Monitor-Seite (nicht identisch mit fontFamilies.body) */
-  fontStack: 'Inter, system-ui, sans-serif',
-
   /** QR-Codes: SVG-Attributwerte (QRCodeSVG löst keine CSS-Variablen auf) */
   qr: {
     foreground: '#000000',

@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { monitorThemes, displayMonitor } from '../../../design-tokens';
+import { monitorThemes, displayMonitor, cssVars } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
 import type { QrRueckfallFolie } from '../slideProgramme';
@@ -37,7 +37,7 @@ export function SlideRenderer({ slide, tournament, performanceSettings, theme, o
     boxSizing: 'border-box',
     background: themeColors.backgroundGradient,
     color: themeColors.text,
-    fontFamily: displayMonitor.fontStack,
+    fontFamily: cssVars.fontFamilies.body,
   };
 
   switch (slide.type) {

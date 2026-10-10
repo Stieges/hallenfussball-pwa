@@ -151,7 +151,6 @@ Feste Werte der Monitor-Folien (B-16d2), benannt nach Verwendung. Theme-abhängi
 
 ```typescript
 displayMonitor.overlay              // 'rgba(0, 0, 0, 0.7)' (Pause-Badge, Cache-Anzeige, theme-unabhängig)
-displayMonitor.fontStack            // 'Inter, system-ui, sans-serif'
 displayMonitor.qr.foreground        // '#000000' (QR-Vordergrund, SVG-Attribut)
 displayMonitor.qr.background        // '#ffffff' (QR-Hintergrund, SVG-Attribut)
 displayMonitor.qr.sizeLarge         // 220 (QR-Folie)

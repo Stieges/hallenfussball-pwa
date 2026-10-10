@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { displayColors, displayMonitor } from '../../../design-tokens';
+import { displayColors, cssVars } from '../../../design-tokens';
 
 /** Vollflächiger Rahmen der Monitor-Seite (auch für Lade- und Fehlerzustand). */
 export const containerStyle: CSSProperties = {
@@ -11,5 +11,5 @@ export const containerStyle: CSSProperties = {
   justifyContent: 'center',
   background: displayColors.background,
   color: displayColors.textPrimary,
-  fontFamily: displayMonitor.fontStack,
+  fontFamily: cssVars.fontFamilies.body,
 };
