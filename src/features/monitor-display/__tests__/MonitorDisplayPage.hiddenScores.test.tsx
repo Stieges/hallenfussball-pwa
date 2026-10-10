@@ -83,6 +83,9 @@ describe('@W2A-031 Monitor im Kindermodus: Live-Folie ohne Stand', () => {
     expect(screen.queryByLabelText('Gast: 0')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Heim')).toBeInTheDocument();
     expect(screen.queryByText('1:0')).not.toBeInTheDocument();
+    // Sichtbarer Inhalt: die Stand-Blöcke enthalten keine Ziffer (aria allein beweist das nicht)
+    expect(screen.getByLabelText('Heim').textContent).toBe('');
+    expect(screen.getByLabelText('Gast').textContent).toBe('');
   });
 
   it('Spielplan-Folie zeigt Paarung und Feld, ohne Ergebnis und ohne „-:-“', async () => {
@@ -126,6 +129,12 @@ describe('Gegenbeispiele ohne Schalter (Ergebnisse öffentlich)', () => {
     live.card = gelbeKarte();
     await renderMonitor(buildTournament({ sponsors: [FIXTURE_SPONSOR], hideScoresForPublic: false }), [slide('sponsor', { sponsorId: 'sp-1' })]);
     expect(await screen.findByText('DJK Berg')).toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel ohne Schalter: die Stand-Blöcke zeigen den sichtbaren Stand 1:0', async () => {
+    await renderMonitor(buildTournament({ hideScoresForPublic: false }), [slide('live', { fieldId: 'field-1' })]);
+    expect(screen.getByLabelText('Heim: 1').textContent).toBe('1');
+    expect(screen.getByLabelText('Gast: 0').textContent).toBe('0');
   });
 
   it('@ZM-083 Eingang: die Tor-Einblendung bleibt grün', async () => {
