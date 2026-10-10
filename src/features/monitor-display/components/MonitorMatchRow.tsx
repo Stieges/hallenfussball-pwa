@@ -5,6 +5,8 @@ import type { MonitorTheme } from '../../../types/monitor';
 import { formatTime } from '../../../core/generators/scheduleHelpers';
 import { getFieldDisplayName } from '../../../utils/displayNames';
 import { resolveTheme } from '../monitorDisplayHelpers';
+
+type MonitorColors = (typeof monitorThemes)[keyof typeof monitorThemes];
 import { sideLabel } from '../matchSides';
 
 interface MonitorMatchRowProps {
@@ -16,6 +18,8 @@ interface MonitorMatchRowProps {
   hidePendingOrigin: boolean;
   /** Ergebnis anzeigen (Spielplan, f3); die Folie „Nächste Spiele“ zeigt nie ein Ergebnis. */
   showScore?: boolean;
+  /** Statuspunkt vorn und Rahmen für ein laufendes Spiel (Spielplan, B-16f3); Standard aus. */
+  showStatus?: boolean;
 }
 
 /** Uhrzeit des Spiels als HH:MM; fehlt sie oder ist sie unlesbar, ein Strich. */
@@ -26,8 +30,17 @@ function kickoffText(match: Match): string {
 }
 
 /** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung (optional Ergebnis und Bezeichnung). */
-export function MonitorMatchRow({ match, teams, tournament, theme, hidePendingOrigin, showScore = false }: MonitorMatchRowProps) {
+function statusColor(match: Match, colors: MonitorColors): string {
+  switch (match.matchStatus) {
+    case 'running': return colors.liveDot;
+    case 'finished': return colors.progressBar;
+    default: return colors.textMuted;
+  }
+}
+
+export function MonitorMatchRow({ match, teams, tournament, theme, hidePendingOrigin, showScore = false, showStatus = false }: MonitorMatchRowProps) {
   const colors = monitorThemes[resolveTheme(theme)];
+  const running = showStatus && match.matchStatus === 'running';
   const ctx = { teams, hidePendingOrigin };
   const cell: CSSProperties = {
     fontSize: displayFontSizes.bodyLG,
@@ -46,11 +59,22 @@ export function MonitorMatchRow({ match, teams, tournament, theme, hidePendingOr
         gap: displaySpacing.contentLG,
         width: '100%',
         padding: displaySpacing.contentLG,
-        background: colors.surface,
+        background: running ? colors.surfaceHover : colors.surface,
         borderRadius: displayMonitor.radius.card,
-        border: `${cssVars.borderWidth.thin} solid ${colors.border}`,
+        border: running
+          ? `${displayMonitor.marker.liveBorderWidth} solid ${colors.liveDot}`
+          : `${cssVars.borderWidth.thin} solid ${colors.border}`,
       }}
     >
+      {showStatus && (
+        <div data-testid="monitor-match-status" style={{
+          width: displayMonitor.marker.scheduleSize,
+          height: displayMonitor.marker.scheduleSize,
+          borderRadius: cssVars.borderRadius.full,
+          background: statusColor(match, colors),
+          flexShrink: 0,
+        }} />
+      )}
       <div style={{ ...cell, fontWeight: cssVars.fontWeights.semibold, minWidth: displayMonitor.size.scheduleMinColumnWidth }}>
         {kickoffText(match)}
       </div>

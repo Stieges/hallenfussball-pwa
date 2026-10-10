@@ -1,11 +1,14 @@
 /**
- * Inhalte der Monitor-Folien (B-16f1): reine Auswahl- und Seitenfunktionen, ohne React.
+ * Inhalte der Monitor-Folien (B-16f1, f3): reine Auswahl- und Seitenfunktionen, ohne React.
  *
- * Sortierung, „nächste Spiele“, Feldplan und Seitenschnitt. Die Folien (f2/f3) rufen nur diese Funktionen auf;
- * die Takt-Logik (Seiten je Folie) liegt in slideProgramme.ts und bekommt die Seitenzahl über `pageCount`.
+ * Sortierung, „nächste Spiele“, Feldplan, Tabellen-Abschnitte und Seitenzahl. Die Folien rufen nur diese
+ * Funktionen auf; die Takt-Logik (Seiten je Folie) liegt in slideProgramme.ts und bekommt die Seitenzahl
+ * über `pageCount`.
  */
 import type { Match, Tournament } from '../../types/tournament';
+import { DEFAULT_SLIDE_CONFIG } from '../../types/monitor';
 import { isMatchInProgress, type ProgramSlide } from './slideProgramme';
+import { fieldIdToNumber } from './monitorDisplayHelpers';
 
 /** Zeilen je Seite bis B-17 misst (@ZM-129). */
 export const MONITOR_ROWS_PER_PAGE = 6;
@@ -55,6 +58,38 @@ export function fieldSchedule(matches: readonly Match[], field: number): Match[]
   return matches.filter(m => m.field === field).sort(compareKickoff);
 }
 
+/** Zeilen „Nächste Spiele“ einer Folie: die nächsten offenen Spiele, höchstens `matchCount` (Vorgabe aus DEFAULT_SLIDE_CONFIG). */
+export function nextMatchList(matches: readonly Match[], matchCount: number | undefined): Match[] {
+  return upcomingMatches(matches, { count: matchCount ?? DEFAULT_SLIDE_CONFIG.matchCount ?? 3 });
+}
+
+/** Finalrunde: K.O.-Spiele (`isFinal` oder eine Phase außer der Gruppenphase), in Anpfiff-Reihenfolge. */
+export function finalRoundMatches(matches: readonly Match[]): Match[] {
+  return matches
+    .filter(m => m.isFinal === true || (m.phase !== undefined && m.phase !== 'groupStage'))
+    .sort(compareKickoff);
+}
+
+/** Gruppen-IDs: aus der Gruppenkonfiguration, sonst aus den Teams (sortiert, ohne Dubletten). */
+export function groupIds(tournament: Tournament): string[] {
+  if (tournament.groups && tournament.groups.length > 0) {
+    return tournament.groups.map(g => g.id);
+  }
+  const ids = new Set<string>();
+  tournament.teams.forEach(team => { if (team.group) { ids.add(team.group); } });
+  return [...ids].sort();
+}
+
+/** Ein Abschnitt der Folie „Alle Tabellen / Finalrunde“: eine Gruppentabelle oder die Finalrunde. */
+export type StandingsSection = { kind: 'group'; groupId: string } | { kind: 'finals' };
+
+/** Abschnitte je Seite (R-f3): je Gruppe eine Tabelle, danach die Finalrunde, wenn es Finalspiele gibt. */
+export function standingsSections(tournament: Tournament): StandingsSection[] {
+  const sections: StandingsSection[] = groupIds(tournament).map(groupId => ({ kind: 'group', groupId }));
+  if (finalRoundMatches(tournament.matches).length > 0) { sections.push({ kind: 'finals' }); }
+  return sections;
+}
+
 /** Zeilen der Seite `page` (0-basiert). Jede Zeile liegt auf genau einer Seite. */
 export function pageOf<T>(items: readonly T[], page: number, perPage: number = MONITOR_ROWS_PER_PAGE): T[] {
   const start = page * perPage;
@@ -67,9 +102,19 @@ export function pagesFor(items: number, perPage: number = MONITOR_ROWS_PER_PAGE)
 }
 
 /**
- * Seitenzahl einer Folie für den Takt (B-16f1). Die Folien-Füllung (Spielplan, Tabellen) kommt in f2/f3;
- * bis dahin hat jede Folie eine Seite. B-17 misst die Seitenzahl und ersetzt diese Funktion.
+ * Seitenzahl einer Folie für den Takt (B-16f1, f3). Alle Tabellen: ein Abschnitt je Seite. Spielplan und
+ * Nächste Spiele: je MONITOR_ROWS_PER_PAGE Zeilen. Andere Folien: eine Seite. B-17 misst die Seitenzahl.
  */
-export function monitorPageCount(_slide: ProgramSlide, _tournament?: Tournament | null): number {
-  return 1;
+export function monitorPageCount(slide: ProgramSlide, tournament?: Tournament | null): number {
+  if (!tournament || !('config' in slide)) { return 1; }
+  switch (slide.type) {
+    case 'all-standings':
+      return Math.max(1, standingsSections(tournament).length);
+    case 'schedule-field':
+      return pagesFor(fieldSchedule(tournament.matches, fieldIdToNumber(slide.config.fieldId)).length);
+    case 'next-matches':
+      return pagesFor(nextMatchList(tournament.matches, slide.config.matchCount).length);
+    default:
+      return 1;
+  }
 }

@@ -12,7 +12,7 @@ import { generateLiveUrl } from '../../utils/shareUtils';
 type SichtbarkeitsTurnier = Pick<Tournament, 'hideScoresForPublic' | 'isPublic' | 'shareCode'>;
 
 /** Folien-Typen, die Ergebnisse oder Tabellen zeigen; bei ausgeblendeten Ergebnissen nie zeigbar. */
-const WERTENDE_FOLIEN: ReadonlySet<string> = new Set(['standings']);
+const WERTENDE_FOLIEN: ReadonlySet<string> = new Set(['standings', 'all-standings']);
 
 /** Stände und Ergebnisse sind öffentlich, wenn die Turnierleitung sie nicht ausgeblendet hat. */
 export function scoresPublic(turnier: Pick<SichtbarkeitsTurnier, 'hideScoresForPublic'> | null | undefined): boolean {

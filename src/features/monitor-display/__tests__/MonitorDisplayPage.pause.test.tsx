@@ -99,7 +99,10 @@ describe('MonitorDisplayPage — Pause über die Leertaste (B-16c Fixrunde, Fake
     localGet.mockResolvedValue(null);
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
     await vorspulen(0);
-    expect(screen.getByText('FC Nord').parentElement?.textContent).toBe('FC Nord1:0SV Süd');
+    // B-16f3: Zeile mit Uhrzeit und Feld; geprüft wird nur die Reihenfolge der Teams (A vor B) und der Stand.
+    const zeile = screen.getByText('FC Nord').closest('[data-testid="monitor-match-row"]')?.textContent ?? '';
+    expect(zeile).toContain('1:0');
+    expect(zeile.indexOf('FC Nord')).toBeLessThan(zeile.indexOf('SV Süd'));
   });
 });
 

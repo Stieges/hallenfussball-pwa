@@ -43,6 +43,11 @@
     "nextMatches": {
       "title": "Nächste Spiele",
       "none": "Keine weiteren Spiele"
+    },
+    "page": "Seite {{page}} / {{pages}}",
+    "allStandings": {
+      "finals": "Finalrunde",
+      "none": "Noch keine Tabellen"
     }
   }
 }

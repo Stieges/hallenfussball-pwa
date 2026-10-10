@@ -2,25 +2,29 @@ import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, displayFontSizes, displayMonitor, displaySpacing, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
-import { DEFAULT_SLIDE_CONFIG, type MonitorSlide, type MonitorTheme } from '../../../types/monitor';
+import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { resolveTheme } from '../monitorDisplayHelpers';
 import { scoresPublic } from '../publicVisibility';
-import { upcomingMatches } from '../slideContent';
+import { nextMatchList, pageOf, pagesFor } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
+import { SlidePageHint } from '../components/SlidePageHint';
 
 interface NextMatchesSlideProps {
   slide: MonitorSlide;
   tournament: Tournament;
   theme: MonitorTheme;
   style: CSSProperties;
+  /** Seite der Folie (B-16f3), 0-basiert; ab 7 Zeilen blättert die Folie (@ZM-129). */
+  page?: number;
 }
 
 /** Folie „Nächste Spiele“ (@ZM-071, @ZM-078): die nächsten offenen Spiele über alle Felder, nie ein Ergebnis. */
-export function NextMatchesSlide({ slide, tournament, theme, style }: NextMatchesSlideProps) {
+export function NextMatchesSlide({ slide, tournament, theme, style, page = 0 }: NextMatchesSlideProps) {
   const { t } = useTranslation('monitor');
   const colors = monitorThemes[resolveTheme(theme)];
-  const count = slide.config.matchCount ?? DEFAULT_SLIDE_CONFIG.matchCount ?? 3;
-  const rows = upcomingMatches(tournament.matches, { count });
+  const list = nextMatchList(tournament.matches, slide.config.matchCount);
+  const rows = pageOf(list, page);
+  const pages = pagesFor(list.length);
   const hidePendingOrigin = !scoresPublic(tournament);
 
   return (
@@ -58,6 +62,8 @@ export function NextMatchesSlide({ slide, tournament, theme, style }: NextMatche
           ))}
         </div>
       )}
+
+      <SlidePageHint page={page} pages={pages} color={colors.textMuted} />
     </div>
   );
 }

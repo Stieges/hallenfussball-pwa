@@ -11,6 +11,7 @@ import { SponsorSlide } from './SponsorSlide';
 import { NextMatchesSlide } from './NextMatchesSlide';
 import { CustomTextSlide } from './CustomTextSlide';
 import { QrSlide } from './QrSlide';
+import { AllStandingsSlide } from './AllStandingsSlide';
 
 interface SlideRendererProps {
   slide: MonitorSlide | QrRueckfallFolie;
@@ -20,12 +21,12 @@ interface SlideRendererProps {
   overscanPx?: number;
   /** Gepinntes Spiel der Live-Folie (B-16e1): die Folie zeigt es auch nach Abpfiff. */
   pinnedMatchId?: string | null;
-  /** Seite der Folie (B-16f1); Folien mit Seiten werten sie in f3 aus, bis dahin ohne Wirkung. */
+  /** Seite der Folie (B-16f1, ausgewertet ab f3). */
   page?: number;
 }
 
 /** Wählt die Folien-Komponente nach Typ; unbekannte Typen fallen auf die Zuschauer-QR-Folie. */
-export function SlideRenderer({ slide, tournament, performanceSettings, theme, overscanPx, pinnedMatchId }: SlideRendererProps) {
+export function SlideRenderer({ slide, tournament, performanceSettings, theme, overscanPx, pinnedMatchId, page = 0 }: SlideRendererProps) {
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
@@ -51,13 +52,16 @@ export function SlideRenderer({ slide, tournament, performanceSettings, theme, o
       return <StandingsSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} />;
 
     case 'schedule-field':
-      return <ScheduleFieldSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} />;
+      return <ScheduleFieldSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} page={page} />;
 
     case 'sponsor':
       return <SponsorSlide slide={slide} tournament={tournament} performanceSettings={performanceSettings} theme={theme} style={slideStyle} />;
 
     case 'next-matches':
-      return <NextMatchesSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} />;
+      return <NextMatchesSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} page={page} />;
+
+    case 'all-standings':
+      return <AllStandingsSlide tournament={tournament} theme={theme} style={slideStyle} page={page} />;
 
     case 'custom-text':
       return <CustomTextSlide slide={slide} style={slideStyle} />;

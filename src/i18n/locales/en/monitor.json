@@ -43,6 +43,11 @@
     "nextMatches": {
       "title": "Next matches",
       "none": "No more matches"
+    },
+    "page": "Page {{page}} / {{pages}}",
+    "allStandings": {
+      "finals": "Final round",
+      "none": "No tables yet"
     }
   }
 }
