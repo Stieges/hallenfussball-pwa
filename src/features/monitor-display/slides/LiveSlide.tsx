@@ -9,6 +9,7 @@ import { isMatchInProgress } from '../slideProgramme';
 import { scoresPublic } from '../publicVisibility';
 import { toLiveMatch } from '../monitorMatch';
 import { sideLabel, sideTeam } from '../matchSides';
+import { upcomingMatches } from '../slideContent';
 
 interface LiveSlideProps {
   slide: MonitorSlide;
@@ -35,10 +36,11 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
     m => m.field === fieldNumber && isMatchInProgress(m)
   );
 
-  // Find next scheduled match if no live match
+  // Nächstes offenes Spiel dieses Feldes, in Anpfiff-Reihenfolge (B-16f2, C-MON-NAECHSTES-UNSORTIERT)
   const nextMatch = !runningMatch
-    ? matches.find(m => m.field === fieldNumber && (!m.matchStatus || m.matchStatus === 'scheduled'))
-    : null;
+    ? upcomingMatches(matches, { count: 1, field: fieldNumber })[0]
+    : undefined;
+  const labelCtx = { teams, hidePendingOrigin: !scoresPublic(tournament) };
 
   // Delegate to LiveMatchDisplay for running matches
   if (runningMatch) {
@@ -105,7 +107,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
                     color: themeColors.text,
                     marginTop: cssVars.spacing.md,
                   }}>
-                    {sideLabel(nextMatch, 'A', teams)}
+                    {sideLabel(nextMatch, 'A', labelCtx)}
                   </div>
                 </div>
 
@@ -126,7 +128,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
                     color: themeColors.text,
                     marginTop: cssVars.spacing.md,
                   }}>
-                    {sideLabel(nextMatch, 'B', teams)}
+                    {sideLabel(nextMatch, 'B', labelCtx)}
                   </div>
                 </div>
               </div>

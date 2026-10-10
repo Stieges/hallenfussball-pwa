@@ -38,5 +38,11 @@
   "cardAnimation": {
     "redCard": "ROTE KARTE",
     "yellowCard": "GELBE KARTE"
+  },
+  "slides": {
+    "nextMatches": {
+      "title": "Nächste Spiele",
+      "none": "Keine weiteren Spiele"
+    }
   }
 }

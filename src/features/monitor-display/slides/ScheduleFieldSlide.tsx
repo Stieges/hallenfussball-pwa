@@ -29,6 +29,7 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style }: Schedule
 
   // B-16e2 (@W2A-031): Kindermodus – kein Ergebnis, Paarung und Feld bleiben
   const ergebnisseAusgeblendet = !scoresPublic(tournament);
+  const labelCtx = { teams, hidePendingOrigin: ergebnisseAusgeblendet };
 
   const getStatusColor = (match: Match) => {
     switch (match.matchStatus) {
@@ -92,7 +93,7 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style }: Schedule
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}>
-              {sideLabel(match, 'A', teams)}
+              {sideLabel(match, 'A', labelCtx)}
             </div>
 
             {/* Score */}
@@ -119,7 +120,7 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style }: Schedule
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}>
-              {sideLabel(match, 'B', teams)}
+              {sideLabel(match, 'B', labelCtx)}
             </div>
           </div>
         ))}

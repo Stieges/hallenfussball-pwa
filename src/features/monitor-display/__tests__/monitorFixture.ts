@@ -101,3 +101,33 @@ export function withMonitor(overrides: Partial<TournamentMonitor> & { performanc
 export function attachMonitor(tournament: Tournament, monitor: TournamentMonitor): Tournament {
   return { ...tournament, monitors: [monitor] };
 }
+
+/** Gruppenspiele mit Anpfiffzeiten (B-16f2): Spiel 1 13:40, 7 14:00, 8 14:20, 9 14:40. */
+export function withScheduledTimes(): Match[] {
+  const zeit: Record<string, Date> = {
+    'match-1': new Date(2026, 9, 10, 13, 40),
+    'match-7': new Date(2026, 9, 10, 14, 0),
+    'match-8': new Date(2026, 9, 10, 14, 20),
+    'match-9': new Date(2026, 9, 10, 14, 40),
+  };
+  return FIXTURE_MATCHES.map(m => (zeit[m.id] ? { ...m, scheduledTime: zeit[m.id] } : m));
+}
+
+/**
+ * Playoffs (B-16f2) vor den Gruppenspielen im Array; Anpfiffe nach den Gruppenspielen.
+ * HF1 group-a-1st – group-b-2nd (Feld 1, 15:00), HF2 group-b-1st – group-a-2nd (Feld 2, 15:00),
+ * Platz 3 semi1-loser – semi2-loser (Feld 1, 15:20), Finale semi1-winner – semi2-winner (Feld 2, 15:40).
+ */
+export function withPlayoffs(): Match[] {
+  const po = (id: string, matchNumber: number, field: number, teamA: string, teamB: string, label: string, stunde: number, min: number): Match => ({
+    id, matchNumber, round: matchNumber < 12 ? 6 : 7, field, teamA, teamB, label, matchStatus: 'scheduled',
+    scheduledTime: new Date(2026, 9, 10, stunde, min),
+  });
+  return [
+    po('po-hf1', 10, 1, 'group-a-1st', 'group-b-2nd', '1. Halbfinale', 15, 0),
+    po('po-hf2', 11, 2, 'group-b-1st', 'group-a-2nd', '2. Halbfinale', 15, 0),
+    po('po-p3', 12, 1, 'semi1-loser', 'semi2-loser', 'Spiel um Platz 3', 15, 20),
+    po('po-final', 13, 2, 'semi1-winner', 'semi2-winner', 'Finale', 15, 40),
+    ...withScheduledTimes(),
+  ];
+}

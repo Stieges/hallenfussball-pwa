@@ -38,5 +38,11 @@
   "cardAnimation": {
     "redCard": "RED CARD",
     "yellowCard": "YELLOW CARD"
+  },
+  "slides": {
+    "nextMatches": {
+      "title": "Next matches",
+      "none": "No more matches"
+    }
   }
 }

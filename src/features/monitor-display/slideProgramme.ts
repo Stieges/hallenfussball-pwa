@@ -34,6 +34,7 @@ export const DISPLAYABLE_SLIDE_TYPES: ReadonlySet<string> = new Set([
   'schedule-field',
   'sponsor',
   'custom-text',
+  'next-matches',
 ]);
 
 /** Rückfall, wenn keine Folie des Programms darstellbar ist: die Zuschauer-QR-Folie. */

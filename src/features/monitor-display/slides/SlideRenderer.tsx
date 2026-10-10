@@ -8,6 +8,7 @@ import { LiveSlide } from './LiveSlide';
 import { StandingsSlide } from './StandingsSlide';
 import { ScheduleFieldSlide } from './ScheduleFieldSlide';
 import { SponsorSlide } from './SponsorSlide';
+import { NextMatchesSlide } from './NextMatchesSlide';
 import { CustomTextSlide } from './CustomTextSlide';
 import { QrSlide } from './QrSlide';
 
@@ -54,6 +55,9 @@ export function SlideRenderer({ slide, tournament, performanceSettings, theme, o
 
     case 'sponsor':
       return <SponsorSlide slide={slide} tournament={tournament} performanceSettings={performanceSettings} theme={theme} style={slideStyle} />;
+
+    case 'next-matches':
+      return <NextMatchesSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} />;
 
     case 'custom-text':
       return <CustomTextSlide slide={slide} style={slideStyle} />;

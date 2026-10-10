@@ -687,5 +687,8 @@
     "cancel": "Abbrechen",
     "save": "Speichern",
     "saving": "Speichern..."
+  },
+  "slot": {
+    "undecided": "noch offen"
   }
 }
