@@ -24,6 +24,8 @@ import { ContactForm } from '../../components/ContactForm';
 import { SponsorManagement } from './SponsorManagement';
 import { FieldManagement } from './FieldManagement';
 import { useTournamentStartState } from '../../hooks/useTournamentStartState';
+import { useMyTournamentRole } from '../auth/hooks/useMyTournamentRole';
+import { canManageTournament } from '../auth/utils/permissions';
 
 interface SettingsTabProps {
   tournament: Tournament;
@@ -44,6 +46,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   // gemeinsame Funktion statt Kopie).
   const { state: matchStartState } = useTournamentStartState(tournament);
   const canEditInWizard = matchStartState === 'not-started';
+  // B-04d (@W2A-030): Regeln ändern nur die Turnierleitung (inkl. Co-Admin) —
+  // Helfern bietet die App das nicht an. Vorhandene Rechte-Prüfung
+  // (useMyTournamentRole + canManageTournament aus der zentralen Rechtetabelle),
+  // keine eigene Rechte-Logik.
+  const { role: myRole } = useMyTournamentRole(tournament.id);
+  const canChangeRules = myRole ? canManageTournament(myRole) : false;
   // Collapse-State für Formular-Bereich
   const [isFormCollapsed, setIsFormCollapsed] = useState(true);
 
@@ -473,8 +481,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           />
         </div>
 
-        {/* Wizard-Bearbeitung Buttons — nur vor dem ersten Anpfiff (@LZ-003 / W3) */}
-        {onEditInWizard && canEditInWizard && (
+        {/* Wizard-Bearbeitung Buttons — nur vor dem ersten Anpfiff (@LZ-003 / W3)
+            und nur für die Turnierleitung inkl. Co-Admin (@W2A-030) */}
+        {onEditInWizard && canEditInWizard && canChangeRules && (
           <Card style={{ marginTop: cssVars.spacing.lg, background: cssVars.colors.warningBannerBg, border: `1px solid ${cssVars.colors.warningBannerBorder}` }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.md }}>
               <span style={{ fontSize: cssVars.fontSizes.xxl }}>⚠️</span>
@@ -490,6 +499,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   <button
+                    data-testid="wizard-edit-edit-teams"
                     onClick={() => handleEditInWizard(5)}
                     style={{
                       padding: '10px 16px',
@@ -506,6 +516,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     {t('settings.advancedEditing.editTeams')}
                   </button>
                   <button
+                    data-testid="wizard-edit-change-game-mode"
                     onClick={() => handleEditInWizard(3)}
                     style={{
                       padding: '10px 16px',
@@ -522,6 +533,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     {t('settings.advancedEditing.changeGameMode')}
                   </button>
                   <button
+                    data-testid="wizard-edit-groups-and-fields"
                     onClick={() => handleEditInWizard(4)}
                     style={{
                       padding: '10px 16px',
