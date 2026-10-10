@@ -11,6 +11,12 @@ import {
   attachMonitor, buildTournament, slide, withMonitor,
 } from './monitorFixture';
 
+/** Folienprogramm Feld 1: Live-Spiel (Anhalten laut Parameter), Tabelle Gruppe A. */
+const programmLive = (pauseRotationDuringMatch: boolean) => [
+  slide('live', { fieldId: 'field-1', pauseRotationDuringMatch }),
+  slide('standings', { groupId: 'A' }),
+];
+
 const { supabaseGet, localGet } = vi.hoisted(() => ({
   supabaseGet: vi.fn(),
   localGet: vi.fn(),
@@ -114,5 +120,24 @@ describe('MonitorDisplayPage — Takt-Gegenprobe (C-MON-TAKT-STEHT, Klon je Poll
     expect(screen.getByText('Folie A')).toBeInTheDocument();
     await vorspulenInSchritten(1_000);
     expect(screen.getByText('Folie B')).toBeInTheDocument();
+  });
+
+  // @ZM-079 (Seite): Anhalten im laufenden Spiel ausschalten. Der Poll mit dem Klon löst den Pin,
+  // der Takt läuft ab dem Poll (5 s) und die Tabelle erscheint 15 s danach.
+  it('Anhalten im laufenden Spiel ausgeschaltet: Pin löst sich am Poll, Tabelle nach 15 s', async () => {
+    await starte(monitorTurnier(buildTournament(), programmLive(true)));
+    liefere(monitorTurnier(buildTournament(), programmLive(false)));
+    await vorspulenInSchritten(19_000);
+    expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
+    await vorspulenInSchritten(1_000);
+    expect(screen.getByText(/Gruppe A/)).toBeInTheDocument();
+  });
+
+  // Gegenbeispiel: Anhalten bleibt an, das Live-Spiel bleibt über 30 s stehen.
+  it('Gegenbeispiel: Anhalten an, Poll mit Klon → Live-Spiel bleibt gepinnt', async () => {
+    await starte(monitorTurnier(buildTournament(), programmLive(true)));
+    liefere(monitorTurnier(buildTournament(), programmLive(true)));
+    await vorspulenInSchritten(30_000);
+    expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
   });
 });

@@ -124,6 +124,24 @@ describe('Feldbindung: Spiel auf Feld 2 pinnt die Live-Folie von Feld 1 nicht', 
   });
 });
 
+describe('@ZM-079 Anhalten im laufenden Spiel ausgeschaltet: Pin löst sich, Takt läuft', () => {
+  it('gepinnt auf laufendem Spiel, Schalter aus → sofort gelöst, nach 15 s die nächste Folie', () => {
+    const live = folie('live-f1', 'live', { fieldId: 'field-1', pauseRotationDuringMatch: false });
+    const p = programm([live, TABELLE], [{ id: 'm7', field: 1, matchStatus: 'running' }]);
+    const gepinnt = zustand({ pinnedMatchId: 'm7' });
+    const geloest = nextSlide(p, gepinnt, 1_000);
+    expect(geloest).toMatchObject({ index: 0, pinnedMatchId: null, finalUntil: null, startedAt: 1_000 });
+    expect(nextSlide(p, geloest, 15_999)).toBe(geloest);
+    expect(nextSlide(p, geloest, 16_000)).toMatchObject({ index: 1 });
+  });
+
+  it('Gegenbeispiel: Anhalten an → Pin bleibt über 120 s', () => {
+    const p = programm([LIVE_F1, TABELLE], [{ id: 'm7', field: 1, matchStatus: 'running' }]);
+    const zustaende = laufe(p, zustand({ pinnedMatchId: 'm7' }), 0, 120_000);
+    for (const s of zustaende) { expect(s).toMatchObject({ index: 0, pinnedMatchId: 'm7' }); }
+  });
+});
+
 describe('Manuelle Pause (Taste) friert alles ein', () => {
   it('pausiert: kein Pin und kein Takt', () => {
     const p = programm([LIVE_F1, TABELLE], [{ id: 'm7', field: 1, matchStatus: 'running' }]);

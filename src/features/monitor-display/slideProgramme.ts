@@ -205,7 +205,10 @@ export function nextSlide(program: SlideProgram, state: SlideshowState, now: num
 
   if ((state.pinnedMatchId ?? null) !== null) {
     const pinned = matches.find(m => m.id === state.pinnedMatchId);
-    if (pinned && isMatchInProgress(pinned) && (state.finalUntil ?? null) === null) { return state; }
+    if (pinned && isMatchInProgress(pinned)) {
+      // @ZM-079: Der Pin ist nicht mehr erlaubt (Anhalten aus, Live-Folie entfernt): der Takt läuft ab jetzt.
+      return { ...state, pinnedMatchId: null, finalUntil: null, startedAt: now };
+    }
     if ((state.finalUntil ?? null) === null) {
       return { ...state, finalUntil: now + FINAL_RESULT_HOLD_MS };
     }
