@@ -63,6 +63,8 @@ interface UseSmartConfigReturn {
 
   // Derived state
   showTeamsWarning: boolean;
+  /** Rückmeldung „Übernommen“ nach Übernehmen, bis Eingaben oder Berechnung sich ändern (@W4-022) */
+  applied: boolean;
 }
 
 /**
@@ -90,6 +92,7 @@ export function useSmartConfig({
 
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [teamsKeptTimeShort, setTeamsKeptTimeShort] = useState(false);
+  const [applied, setApplied] = useState(false);
   const [lastApplied, setLastApplied] = useState<StoredConfig['lastApplied']>(
     () => loadStoredConfig().lastApplied
   );
@@ -127,6 +130,21 @@ export function useSmartConfig({
     formData.numberOfFields,
     formData.groupPhaseGameDuration,
     formData.groupPhaseBreakDuration,
+  ]);
+
+  // Rückmeldung „Übernommen“ verschwindet, sobald der Nutzer eine Eingabe ändert
+  useEffect(() => {
+    setApplied(false);
+  }, [
+    availableHours,
+    lockTeams,
+    lockFields,
+    lockGameDuration,
+    lockBreakDuration,
+    constraintTeams,
+    constraintFields,
+    constraintGameDuration,
+    constraintBreakDuration,
   ]);
 
   // Save hours and constraints to localStorage when changed
@@ -171,6 +189,7 @@ export function useSmartConfig({
   ]);
 
   const handleCalculate = useCallback(() => {
+    setApplied(false);
     const constraints = getConstraints();
     const teamsToUse = lockTeams ? constraintTeams : (formData.numberOfTeams ?? 6);
     // @W4-020: Gruppenzahl und Finalrunden-Wahl aus dem Wizard-Zustand (formData), nicht aus dem Panel-Lock
@@ -216,6 +235,7 @@ export function useSmartConfig({
     };
 
     onApply(config);
+    setApplied(true);
 
     // Save applied config to localStorage
     const appliedConfig = {
@@ -289,5 +309,6 @@ export function useSmartConfig({
     handleApply,
     handleQuickApply,
     showTeamsWarning,
+    applied,
   };
 }

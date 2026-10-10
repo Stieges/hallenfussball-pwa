@@ -423,6 +423,7 @@
     },
     "apply": "Konfiguration übernehmen",
     "applyAriaLabel": "Empfohlene Konfiguration übernehmen",
+    "applied": "Übernommen",
     "teamsKeptTimeShort": "Die Zeit reicht mit {{teams}} Teams nicht. Die Teamzahl bleibt fix: mehr Zeit oder Felder einplanen.",
     "teamsWarning": "{{current}} Teams passen nicht in {{hours}}h. Alternative: {{suggested}} Teams oder mehr Zeit/Felder einplanen."
   },

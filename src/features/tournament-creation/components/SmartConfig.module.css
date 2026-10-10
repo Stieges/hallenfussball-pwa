@@ -209,6 +209,13 @@
   line-height: 1.4;
 }
 
+.appliedText {
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
 /* Quick Apply Section */
 .quickApply {
   display: flex;

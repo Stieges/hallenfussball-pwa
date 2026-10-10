@@ -43,6 +43,7 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
     handleApply,
     handleQuickApply,
     showTeamsWarning,
+    applied,
   } = useSmartConfig({ formData, onApply });
 
   return (
@@ -248,6 +249,12 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
             </p>
           )}
         </div>
+      )}
+
+      {applied && (
+        <p className={styles.appliedText} role="status" data-testid="smart-config-applied">
+          {t('smartConfig.applied')}
+        </p>
       )}
     </div>
   );

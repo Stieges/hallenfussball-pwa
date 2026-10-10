@@ -278,3 +278,42 @@ describe('@W4-022 Übernehmen übergibt exakt die angezeigten Werte', () => {
     expect(screen.getByTestId('smart-config-teams-short')).toBeTruthy();
   });
 });
+
+describe('B-38 Rückmeldung „Übernommen“ nach Übernehmen', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('Hinweis-Fall: nach Übernehmen erscheint „Übernommen“ (Panel bleibt offen), bei Änderung der Eingabe verschwindet sie', () => {
+    render(<SmartConfig formData={teams12FormData()} onApply={vi.fn()} />);
+    fireEvent.click(screen.getByText('Smart-Konfiguration'));
+    fireEvent.change(screen.getByLabelText('Stunden'), { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText('Minuten'), { target: { value: '5' } });
+    fireEvent.click(screen.getByLabelText('Optimale Konfiguration berechnen'));
+    expect(screen.queryByTestId('smart-config-applied')).toBeNull();
+
+    fireEvent.click(screen.getByLabelText('Empfohlene Konfiguration übernehmen'));
+    const status = screen.getByTestId('smart-config-applied');
+    expect(status.textContent).toBe('Übernommen');
+    expect(status.getAttribute('role')).toBe('status');
+
+    fireEvent.change(screen.getByLabelText('Minuten'), { target: { value: '10' } });
+    expect(screen.queryByTestId('smart-config-applied')).toBeNull();
+  });
+
+  it('Gegenbeispiel: normale Empfehlung, Übernehmen zeigt die Rückmeldung; Neu-Berechnen blendet sie aus', () => {
+    render(<SmartConfig formData={teams12FormData()} onApply={vi.fn()} />);
+    fireEvent.click(screen.getByText('Smart-Konfiguration'));
+    fireEvent.change(screen.getByLabelText('Stunden'), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText('Minuten'), { target: { value: '0' } });
+    fireEvent.click(screen.getByLabelText('Optimale Konfiguration berechnen'));
+    expect(screen.queryByTestId('smart-config-applied')).toBeNull();
+
+    fireEvent.click(screen.getByLabelText('Empfohlene Konfiguration übernehmen'));
+    expect(screen.getByTestId('smart-config-applied')).toBeTruthy();
+
+    // Panel schließt sich bei normaler Empfehlung; Wieder-Öffnen rechnet neu
+    fireEvent.click(screen.getByText('Smart-Konfiguration'));
+    expect(screen.queryByTestId('smart-config-applied')).toBeNull();
+  });
+});
