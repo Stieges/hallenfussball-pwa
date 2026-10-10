@@ -792,6 +792,33 @@ describe('GenericMutationQueue A-06e (@FU-016/@FU-004)', () => {
     expect(mq.getPendingCount()).toBe(1);
   });
 
+  it("A6 Test 4b (@FU-016): Kopf-Schutz zwischen den Zeitlimit-Fenstern – A' wird angehängt, nicht in den gemerkten Kopf gefasst", async () => {
+    const seen: Tournament[] = [];
+    let n = 0;
+    let releaseA: () => void = () => undefined;
+    const save = vi.fn();
+    save.mockImplementation((t: Tournament) => {
+      seen.push(t); n += 1;
+      return n === 1 ? new Promise<void>((res) => { releaseA = res; }) : Promise.resolve();
+    });
+    mq = makeRealQueue(save);
+    setOnLine(false);
+    mq.enqueue('SAVE_TOURNAMENT', { ...tour('a'), title: 'A' });
+    setOnLine(true);
+    const run = mq.process();
+    await vi.advanceTimersByTimeAsync(15000);
+    await run;
+    expect(mq.getLastFailure()).toBe('transient');
+    mq.enqueue('SAVE_TOURNAMENT', { ...tour('a'), title: "A'" });
+    expect(mq.getPendingCount()).toBe(2);
+    releaseA();
+    await settle();
+    await vi.advanceTimersByTimeAsync(2000);
+    await settle();
+    expect(seen.map((t) => t.title)).toEqual(['A', "A'"]);
+    expect(mq.getPendingCount()).toBe(0);
+  });
+
   it("A6 Test 5 (@FU-016): getLastFailure transient → 'transient', Erfolg → null, Listener aufgerufen", async () => {
     const listener = vi.fn();
     const execute = vi.fn().mockRejectedValueOnce(netError()).mockResolvedValue(undefined);
@@ -801,7 +828,9 @@ describe('GenericMutationQueue A-06e (@FU-016/@FU-004)', () => {
     q.enqueue('SAVE_THING', { id: 'a' });
     setOnLine(true);
 
+    listener.mockClear();
     await q.process();
+    expect(listener).toHaveBeenCalled();
     expect(q.getLastFailure()).toBe('transient');
     expect(listener).toHaveBeenCalledWith({ pendingCount: 1, failedCount: 0 });
 
@@ -820,7 +849,9 @@ describe('GenericMutationQueue A-06e (@FU-016/@FU-004)', () => {
     q.enqueue('SAVE_THING', { id: 'a' });
     setOnLine(true);
 
+    listener.mockClear();
     await q.process();
+    expect(listener).toHaveBeenCalled();
     expect(q.getLastFailure()).toBe('permanent');
     expect(listener).toHaveBeenCalledWith({ pendingCount: 1, failedCount: 0 });
   });
