@@ -9,7 +9,7 @@ import type { CardEventInfo, GoalEventInfo } from '../../../hooks/useLiveMatches
 import type { MonitorSlide } from '../../../types/monitor';
 import type { Tournament } from '../../../types/tournament';
 import {
-  attachMonitor, buildTournament, FIXTURE_SPONSOR, slide, withFlags, withMatch, withMonitor,
+  attachMonitor, buildTournament, FIXTURE_SPONSOR, slide, withMatch, withMonitor,
 } from './monitorFixture';
 
 const { supabaseGet, localGet, live } = vi.hoisted(() => ({
@@ -148,15 +148,6 @@ describe('MonitorDisplayPage — Folieninhalt (Bestand)', () => {
     expect(screen.queryByText(/Ergebnisse aufs Handy/)).not.toBeInTheDocument();
   });
 
-  it('Bestand (Befund C-KIDS-HIDE): Tabelle zeigt Punkte trotz hideScoresForPublic', async () => {
-    await renderMonitor(tabelle(withFlags({ hideScoresForPublic: true })), [slide('standings', { groupId: 'A' })]);
-    expect(pointsOf('FC Nord')).toBe('3');
-  });
-
-  it('Bestand (Befund C-MON-SPONSOR-QR): Sponsor-Folie ohne qrTarget verweist auf das Turnier', async () => {
-    await renderMonitor(buildTournament({ sponsors: [FIXTURE_SPONSOR] }), [slide('sponsor', { sponsorId: 'sp-1' })]);
-    expect(screen.getByTestId('qr-code').getAttribute('data-value')).toContain('/#/tournament/');
-  });
 });
 
 describe('MonitorDisplayPage — Tasten (Bestand)', () => {

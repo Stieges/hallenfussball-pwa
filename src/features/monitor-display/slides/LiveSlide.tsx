@@ -6,6 +6,7 @@ import { TeamAvatar } from '../../../components/ui/TeamAvatar';
 import { LiveMatchDisplay } from '../../../components/monitor';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
 import { isMatchInProgress } from '../slideProgramme';
+import { scoresPublic } from '../publicVisibility';
 import { toLiveMatch } from '../monitorMatch';
 import { sideLabel, sideTeam } from '../matchSides';
 
@@ -50,6 +51,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
           fullscreen
           theme={theme}
           colorScheme={slide.config.liveColorScheme}
+          hideScore={!scoresPublic(tournament)}
         />
       </div>
     );

@@ -3,8 +3,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { cssVars, displayEffects, displayFontSizes, displaySpacing, monitorThemes, displayMonitor } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
-import { generateTournamentUrl } from '../../../utils/shareUtils';
 import { getSafeUrl, resolveTheme } from '../monitorDisplayHelpers';
+import { zuschauerUrl } from '../publicVisibility';
 
 interface SponsorSlideProps {
   slide: MonitorSlide;
@@ -36,12 +36,12 @@ export function SponsorSlide({ slide, tournament, performanceSettings, theme, st
   // Use logoUrl or logoBase64
   const logoSrc = sponsor.logoUrl ?? sponsor.logoBase64;
 
-  // Generate QR code URL with validation to prevent XSS
-  const fallbackUrl = generateTournamentUrl(tournament.id);
+  // QR-Ziel (B-16e2, R7): Rückfall ist die Zuschauer-Adresse (nie die Verwaltung); ohne sie kein QR.
+  const fallbackUrl = zuschauerUrl(tournament);
   const qrUrl = slide.config.qrTarget === 'sponsor-website' && sponsor.websiteUrl
-    ? getSafeUrl(sponsor.websiteUrl, fallbackUrl)
+    ? getSafeUrl(sponsor.websiteUrl, fallbackUrl ?? '')
     : slide.config.qrTarget === 'custom' && slide.config.customQrUrl
-      ? getSafeUrl(slide.config.customQrUrl, fallbackUrl)
+      ? getSafeUrl(slide.config.customQrUrl, fallbackUrl ?? '')
       : fallbackUrl;
 
   return (
@@ -83,7 +83,7 @@ export function SponsorSlide({ slide, tournament, performanceSettings, theme, st
       )}
 
       {/* QR Code Placeholder */}
-      {slide.config.showQrCode !== false && (
+      {slide.config.showQrCode !== false && qrUrl && (
         <div style={{
           display: 'flex',
           flexDirection: 'column',

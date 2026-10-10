@@ -4,6 +4,7 @@ import type { Match, Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
 import { sideLabel } from '../matchSides';
+import { scoresPublic } from '../publicVisibility';
 
 interface ScheduleFieldSlideProps {
   slide: MonitorSlide;
@@ -25,6 +26,9 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style }: Schedule
   const fieldMatches = matches
     .filter(m => m.field === fieldNumber)
     .slice(0, 6);
+
+  // B-16e2 (@W2A-031): Kindermodus – kein Ergebnis, Paarung und Feld bleiben
+  const ergebnisseAusgeblendet = !scoresPublic(tournament);
 
   const getStatusColor = (match: Match) => {
     switch (match.matchStatus) {
@@ -92,17 +96,19 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style }: Schedule
             </div>
 
             {/* Score */}
-            <div style={{
-              minWidth: displayMonitor.size.scheduleMinColumnWidth,
-              textAlign: 'center',
-              fontSize: displayFontSizes.bodyXL,
-              fontWeight: cssVars.fontWeights.bold,
-              color: match.matchStatus === 'finished' ? themeColors.score : themeColors.textMuted,
-            }}>
-              {match.scoreA !== undefined && match.scoreB !== undefined
-                ? `${match.scoreA}:${match.scoreB}`
-                : '-:-'}
-            </div>
+            {!ergebnisseAusgeblendet && (
+              <div style={{
+                minWidth: displayMonitor.size.scheduleMinColumnWidth,
+                textAlign: 'center',
+                fontSize: displayFontSizes.bodyXL,
+                fontWeight: cssVars.fontWeights.bold,
+                color: match.matchStatus === 'finished' ? themeColors.score : themeColors.textMuted,
+              }}>
+                {match.scoreA !== undefined && match.scoreB !== undefined
+                  ? `${match.scoreA}:${match.scoreB}`
+                  : '-:-'}
+              </div>
+            )}
 
             {/* Team B */}
             <div style={{

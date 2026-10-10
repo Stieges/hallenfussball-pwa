@@ -55,11 +55,6 @@ function programm(): MonitorSlide[] {
   return [slide('live', { fieldId: 'field-1' }), slide('standings', { groupId: 'A' }), slide('sponsor', { sponsorId: 'sp-1' })];
 }
 
-/** Punkte-Zelle (letzte Spalte) der Tabellenzeile eines Teams. */
-function pointsOf(teamName: string): string | null {
-  return screen.getByText(teamName).parentElement?.lastElementChild?.textContent ?? null;
-}
-
 /** Deckkraft des ersten Vorfahren-Elements mit gesetzter Opazität (Übergangs-Wrapper). */
 function opazitaet(text: string): string {
   let el: HTMLElement | null = screen.getByText(text);
@@ -301,33 +296,17 @@ describe('MonitorDisplayPage — Folienfolge bei laufendem Spiel (Fake-Timer)', 
     expect(screen.getByText(/Gruppe A/)).toBeInTheDocument();
   });
 
-  // @ZM-090: Kindermodus, Programm hat nur Tabelle – Soll: die Zuschauer-QR-Folie.
-  it.fails('@ZM-090 Kindermodus: ohne zeigbare Folie zeigt der Monitor die Zuschauer-QR-Folie', async () => {
+  // @ZM-090: Kindermodus, Programm hat nur Tabelle – die Zuschauer-QR-Folie (B-16e2 gedreht).
+  it('@ZM-090 Kindermodus: ohne zeigbare Folie zeigt der Monitor die Zuschauer-QR-Folie', async () => {
     await starte(monitorTurnier(buildTournament(withFlags({ hideScoresForPublic: true })), [slide('standings', { groupId: 'A' })]));
     expect(screen.getByTestId('qr-code')).toBeInTheDocument();
   });
 
-  it('Bestand: Kindermodus-Monitor mit nur einer Tabelle zeigt Punkte statt QR-Folie', async () => {
-    const turnier = buildTournament({
-      ...withFlags({ hideScoresForPublic: true }),
-      matches: spiele({ 'match-7': { scoreA: undefined, scoreB: undefined } }),
-    });
-    await starte(monitorTurnier(turnier, [slide('standings', { groupId: 'A' })]));
-    expect(pointsOf('FC Nord')).toBe('3');
-    expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
-  });
-
-  // @ZM-118: Kindermodus – Soll: keine Tor-Einblendung. Bestand: die Einblendung erscheint.
-  it.fails('@ZM-118 Kindermodus: Tor in Spiel 8 wird nicht eingeblendet', async () => {
+  // @ZM-118: Kindermodus – keine Tor-Einblendung (B-16e2 gedreht).
+  it('@ZM-118 Kindermodus: Tor in Spiel 8 wird nicht eingeblendet', async () => {
     live.goal = goalInMatch8();
     await starte(monitorTurnier(buildTournament({ sponsors: [FIXTURE_SPONSOR], hideScoresForPublic: true }), [slide('sponsor', { sponsorId: 'sp-1' })]));
     expect(screen.queryByText('DJK Berg')).not.toBeInTheDocument();
-  });
-
-  it('Bestand: Tor-Einblendung „DJK Berg“ erscheint trotz Kindermodus', async () => {
-    live.goal = goalInMatch8();
-    await starte(monitorTurnier(buildTournament({ sponsors: [FIXTURE_SPONSOR], hideScoresForPublic: true }), [slide('sponsor', { sponsorId: 'sp-1' })]));
-    expect(screen.getByText('DJK Berg')).toBeInTheDocument();
   });
 });
 

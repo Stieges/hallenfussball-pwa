@@ -58,9 +58,11 @@ export const SPIELPLAN_FALLBACK_SLIDE: MonitorSlide = {
 
 export function selectDisplayableSlides<T extends MonitorSlideLike>(
   slides: T[],
-  options?: { qrMoeglich?: boolean },
+  options?: { qrMoeglich?: boolean; isShowable?: (slide: T) => boolean },
 ): Array<T | MonitorSlide | QrRueckfallFolie> {
-  const displayable = slides.filter((slide) => DISPLAYABLE_SLIDE_TYPES.has(slide.type));
+  // B-16e2 (@ZM-090): Folien, die bei ausgeblendeten Ergebnissen nicht zeigbar sind, fallen weg.
+  const displayable = slides.filter((slide) =>
+    DISPLAYABLE_SLIDE_TYPES.has(slide.type) && (options?.isShowable?.(slide) ?? true));
   if (displayable.length > 0) {
     return displayable;
   }

@@ -28,6 +28,7 @@ import { useWakeLock } from '../../hooks/useWakeLock';
 import {
   alleUebersprungen, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
 } from './slideProgramme';
+import { isSlideShowable } from './publicVisibility';
 import { useSlideshow } from './useSlideshow';
 import { boundFieldNumbers, visibleGoal } from './monitorGoalFilter';
 import { getPerformanceSettings } from './monitorDisplayHelpers';
@@ -78,9 +79,12 @@ export function MonitorDisplayPage({
   const [showCacheIndicator, setShowCacheIndicator] = useState(false);
 
   // Live match events for animations (einzige Stelle mit useLiveMatches)
+  // B-16e2 (@ZM-118): Kindermodus – keine Tor- oder Karten-Einblendung
+  const ergebnisseAusgeblendet = tournament?.hideScoresForPublic === true;
   const { lastGoalEvent, clearLastGoalEvent, lastCardEvent, clearLastCardEvent } = useMonitorEvents(
     tournamentId,
-    origin
+    origin,
+    ergebnisseAusgeblendet
   );
 
   // L7: Hallen-Monitore laufen stundenlang unbeaufsichtigt; ohne Wake Lock dimmen Smart-TVs und
@@ -110,9 +114,13 @@ export function MonitorDisplayPage({
   // F-04: Ist kein QR möglich (nicht öffentlich/ohne Share-Code), nimmt der Monitor
   // die nächste immer darstellbare Folie (Spielplan) — der Bildschirm ist nie leer.
   const qrMoeglich = tournament?.isPublic === true && Boolean(tournament?.shareCode);
+  // B-16e2 (@ZM-090): Bei ausgeblendeten Ergebnissen fallen wertende Folien weg (Rückfall: QR)
   const slides = useMemo(
-    () => selectDisplayableSlides(monitor?.slides ?? [], { qrMoeglich }),
-    [monitor, qrMoeglich]
+    () => selectDisplayableSlides(monitor?.slides ?? [], {
+      qrMoeglich,
+      isShowable: (slide) => isSlideShowable(slide, { hideScoresForPublic: ergebnisseAusgeblendet }),
+    }),
+    [monitor, qrMoeglich, ergebnisseAusgeblendet]
   );
   // Rückfall (B-16e1 Ruling, @ZM-122): Sind alle Live-Folien ohne Spiel, zeigt die Seite QR bzw. Spielplan.
   // Nur ohne Pin: Während eines Spiels und der 30-s-Haltezeit (@ZM-077) bleibt die Live-Folie sichtbar.

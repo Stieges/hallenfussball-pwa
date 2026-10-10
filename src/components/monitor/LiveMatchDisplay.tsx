@@ -35,6 +35,8 @@ export interface LiveMatchDisplayProps {
   theme?: MonitorTheme;
   /** Color scheme for position colors (home/away blocks) */
   colorScheme?: LiveColorScheme;
+  /** Kindermodus (B-16e2, @W2A-031): ohne Stand, Paarung/Uhr/Phase bleiben */
+  hideScore?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -83,6 +85,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   fullscreen = false,
   theme = 'dark',
   colorScheme,
+  hideScore = false,
 }) => {
   const { themeColors } = useMonitorTheme(theme);
   const scheme = colorScheme ?? DEFAULT_LIVE_COLOR_SCHEME;
@@ -251,13 +254,15 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
             backgroundColor={homeColor}
             position="home"
             size={size}
+            hideScore={hideScore}
           />
-          <span style={separatorStyle}>:</span>
+          {!hideScore && <span style={separatorStyle}>:</span>}
           <ScoreBlock
             score={match.awayScore}
             backgroundColor={awayColor}
             position="away"
             size={size}
+            hideScore={hideScore}
           />
         </div>
 

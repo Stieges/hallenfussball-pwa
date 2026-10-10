@@ -19,6 +19,8 @@ export interface ScoreBlockProps {
   position: 'home' | 'away';
   /** Size variant */
   size?: 'md' | 'lg' | 'xl';
+  /** Kindermodus (B-16e2, @W2A-031): Stand verbergen, der farbige Block bleibt */
+  hideScore?: boolean;
 }
 
 const sizeConfig = {
@@ -44,6 +46,7 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
   backgroundColor,
   position,
   size = 'xl',
+  hideScore = false,
 }) => {
   const textColor = getScoreTextColor(backgroundColor);
   const config = sizeConfig[size];
@@ -84,10 +87,10 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
     <div
       style={blockStyle}
       data-position={position}
-      aria-label={`${position === 'home' ? 'Heim' : 'Gast'}: ${score}`}
+      aria-label={hideScore ? (position === 'home' ? 'Heim' : 'Gast') : `${position === 'home' ? 'Heim' : 'Gast'}: ${score}`}
     >
       <div style={glowStyle} />
-      <span style={scoreStyle}>{score}</span>
+      {!hideScore && <span style={scoreStyle}>{score}</span>}
     </div>
   );
 };
