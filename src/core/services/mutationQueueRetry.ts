@@ -101,6 +101,17 @@ export class QueueRetryTimer {
     }
 
     /**
+     * A-06d2 (§ 7): Anmeldung erneuert – hebt `authHold` auf. Liefert true, wenn jetzt
+     * ein Versuch startet: `authHold` war gesetzt, oder keine 30-s-Pause läuft. Während
+     * einer Pause (echter Fehler) bleibt es false; der Zeitgeber löst den Versuch aus.
+     */
+    releaseAuthHold(): boolean {
+        const wasAuthHold = this.authHold;
+        this.authHold = false;
+        return wasAuthHold || !this.inPause;
+    }
+
+    /**
      * Anmeldefehler eines Versuchs, der mit Generation `epoch` gestartet wurde:
      * setzt `authHold` nur, wenn seither keine erneute Anmeldung kam. Sonst
      * (veraltet, A-06f Fixrunde 1) false – der Aufrufer behandelt ihn wie vorübergehend.

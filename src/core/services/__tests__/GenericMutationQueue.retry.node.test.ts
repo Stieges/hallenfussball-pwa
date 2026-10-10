@@ -1304,6 +1304,47 @@ describe('MutationQueue A-06d2 Sperre nach echtem Fehler (@FU-013, Entscheidung 
     expect(mq?.getFailedCount()).toBe(0);
   });
 
+  it('Token-Erneuerung in der Pause (A-06d2, § 7): resumeAfterAuth ohne authHold löst keinen Versuch aus und zählt nicht', async () => {
+    const save = saveFollowsFlag();
+    await startPauseWithOneFailure(save);
+
+    await vi.advanceTimersByTimeAsync(5000); // t = 5 000, Pause läuft
+    await mq?.resumeAfterAuth();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(mqRetryCount()).toBe(1);
+    expect(mq?.getFailedCount()).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(24999); // t = 29 999
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(mqRetryCount()).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(1); // t = 30 000: genau ein Versuch
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(mqRetryCount()).toBe(2);
+  });
+
+  it('Gegenbeispiel (A-06d2, @FU-009): Anmelde-Sperre (authHold) – resumeAfterAuth sendet sofort, ohne Pause', async () => {
+    let first = true;
+    const save = vi.fn(async () => {
+      if (first) {
+        first = false;
+        throw new AuthenticationError('Not authenticated', 'save');
+      }
+    });
+    mq = makeRealQueue(save);
+    mq.enqueue('SAVE_TOURNAMENT', tour('t1'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(mqRetryCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(save).toHaveBeenCalledTimes(1);
+
+    await mq.resumeAfterAuth();
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(mq.getPendingCount()).toBe(0);
+  });
+
   it('Gegenbeispiel 2 (ohne Pause): enqueue startet ohne vorherigen echten Fehler sofort', async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     mq = makeRealQueue(save);

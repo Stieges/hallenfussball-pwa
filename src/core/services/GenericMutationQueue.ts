@@ -544,10 +544,13 @@ export class GenericMutationQueue<TType extends string> {
      * A-06f (@FU-009): Nach erneuter Anmeldung aufrufen – hebt die Anmelde-Sperre
      * (`authHold`) auf und sendet die Queue weiter. Aufrufer: Anmelde-Ereignis
      * im Sync-Wiring (kommt mit A-06g; bis dahin bewusst ohne Aufrufer).
+     * A-06d2: läuft gerade die 30-s-Pause nach einem echten Fehler, startet hier
+     * nichts – der Zeitgeber sendet nach Ablauf.
      */
     public async resumeAfterAuth(): Promise<void> {
         this.retryTimer.authEpoch += 1;
-        this.retryTimer.authHold = false;
+        // A-06d2: während einer 30-s-Pause nur die Generation erhöhen (kein zählender Anstoß).
+        if (!this.retryTimer.releaseAuthHold()) { return; }
         return this.process();
     }
 
