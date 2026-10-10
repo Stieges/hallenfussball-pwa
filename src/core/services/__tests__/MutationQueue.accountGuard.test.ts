@@ -48,7 +48,7 @@ import { MutationQueue } from '../MutationQueue';
 
 function createMockRepo() {
   return {
-    save: vi.fn(async () => undefined),
+    save: vi.fn(async (): Promise<void> => undefined),
     delete: vi.fn(async () => undefined),
     updateMatch: vi.fn(async () => undefined),
     updateMatches: vi.fn(async () => undefined),
@@ -95,8 +95,8 @@ describe('MutationQueue Konto-Ausgang (A-07b, @FU-006 / @FU-019)', () => {
   describe('Race-Pflichttest (@FU-006)', () => {
     it('sendet nach einem Kontowechsel waehrend eines laufenden Durchgangs kein weiteres Item von A', async () => {
       const repo = createMockRepo();
-      let releaseFirst: (() => void) | null = null;
-      repo.save.mockImplementationOnce(() => new Promise<void>((resolve) => { releaseFirst = resolve; }));
+      const gate = { release: (): void => undefined };
+      repo.save.mockImplementationOnce(() => new Promise<void>((resolve) => { gate.release = resolve; }));
 
       const queue = track(new MutationQueue(repo as never, undefined, undefined, 'A'));
       queue.enqueue('SAVE_TOURNAMENT', tournament('t1'));
@@ -108,7 +108,7 @@ describe('MutationQueue Konto-Ausgang (A-07b, @FU-006 / @FU-019)', () => {
 
       // Sitzung wechselt auf B, dann kommt die Antwort auf das erste Item.
       session.userId = 'B';
-      releaseFirst?.();
+      gate.release();
       await flush();
 
       expect(repo.save).toHaveBeenCalledTimes(1);

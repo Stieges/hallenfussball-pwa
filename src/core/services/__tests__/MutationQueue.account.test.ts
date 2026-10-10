@@ -48,7 +48,7 @@ import { MutationQueue } from '../MutationQueue';
 
 function createMockRepo() {
   return {
-    save: vi.fn(async () => undefined),
+    save: vi.fn(async (): Promise<void> => undefined),
     delete: vi.fn(async () => undefined),
     updateMatch: vi.fn(async () => undefined),
     updateMatches: vi.fn(async () => undefined),
