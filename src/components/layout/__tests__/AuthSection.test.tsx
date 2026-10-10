@@ -5,10 +5,15 @@
  * fuer den anderen Weg).
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReactElement } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AuthSection } from '../AuthSection';
+import { ResyncNowContext } from '../../../features/match-engine/resyncNowContext';
 
 const logout = vi.fn();
+const reconnect = vi.fn();
+const resyncNow = vi.fn((): Promise<void> => Promise.resolve());
+const authMock: { connectionState: string } = { connectionState: 'online' };
 
 vi.mock('../../../features/auth/hooks/useAuth', () => ({
   useAuth: () => ({
@@ -17,12 +22,16 @@ vi.mock('../../../features/auth/hooks/useAuth', () => ({
     isGuest: false,
     isLoading: false,
     logout,
-    connectionState: 'online',
-    reconnect: vi.fn(),
+    connectionState: authMock.connectionState,
+    reconnect,
   }),
 }));
 
 vi.mock('../../../hooks/useIsMobile', () => ({ useIsMobile: () => false }));
+
+function renderWithResync(ui: ReactElement) {
+  return render(<ResyncNowContext.Provider value={resyncNow}>{ui}</ResyncNowContext.Provider>);
+}
 
 function fakeStore(waiting: number) {
   const copy = {
@@ -57,7 +66,12 @@ function openDropdownAndClickLogout() {
 }
 
 describe('AuthSection — Abmelde-Warnung im Konto-Dropdown (Review I3)', () => {
-  beforeEach(() => logout.mockClear());
+  beforeEach(() => {
+    logout.mockClear();
+    reconnect.mockClear();
+    resyncNow.mockClear();
+    authMock.connectionState = 'online';
+  });
 
   it('wartende Eintraege zeigen die D-C2-Warnung, ohne direkt abzumelden', async () => {
     render(
@@ -99,5 +113,45 @@ describe('AuthSection — Abmelde-Warnung im Konto-Dropdown (Review I3)', () => 
     openDropdownAndClickLogout();
     await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
     expect(screen.queryByTestId('logout-warning-dialog')).toBeNull();
+  });
+});
+
+describe('AuthSection — handleReconnect (A-06h)', () => {
+  beforeEach(() => {
+    reconnect.mockClear();
+    resyncNow.mockClear();
+    authMock.connectionState = 'online';
+  });
+
+  it('Klick auf das Offline-Badge ruft reconnect UND resyncNow je 1x', () => {
+    authMock.connectionState = 'offline';
+    renderWithResync(
+      <AuthSection
+        onNavigateToLogin={vi.fn()}
+        onNavigateToRegister={vi.fn()}
+        onNavigateToProfile={vi.fn()}
+        createMatchStore={() => fakeStore(0)}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('auth-offline-badge'));
+
+    expect(reconnect).toHaveBeenCalledTimes(1);
+    expect(resyncNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('Gegenbeispiel: ohne Klick wird nichts angestossen', () => {
+    authMock.connectionState = 'offline';
+    renderWithResync(
+      <AuthSection
+        onNavigateToLogin={vi.fn()}
+        onNavigateToRegister={vi.fn()}
+        onNavigateToProfile={vi.fn()}
+        createMatchStore={() => fakeStore(0)}
+      />,
+    );
+
+    expect(reconnect).not.toHaveBeenCalled();
+    expect(resyncNow).not.toHaveBeenCalled();
   });
 });

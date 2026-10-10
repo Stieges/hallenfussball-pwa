@@ -19,6 +19,7 @@ import React, { useState, useRef, useEffect, useMemo, CSSProperties } from 'reac
 import { useTranslation } from 'react-i18next';
 import { safeLocalStorage } from '../../core/utils/safeStorage';
 import { useAuth } from '../../features/auth/hooks/useAuth';
+import { useResyncNow } from '../../features/match-engine/useResyncNow';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { MobileAuthBottomSheet } from '../../features/auth/components/MobileAuthBottomSheet';
 import type { WaitingEntriesSource } from '../../features/collaboration/outbox/countWaitingEntries';
@@ -118,6 +119,8 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
   createMatchStore,
 }) => {
   const { user, isAuthenticated, isGuest, isLoading, logout, connectionState, reconnect } = useAuth();
+  const resyncNow = useResyncNow();
+  const handleReconnect = () => { void reconnect(); void resyncNow(); };
   const isMobile = useIsMobile();
   const { t } = useTranslation('common');
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -262,7 +265,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
       <div style={styles.container}>
         <VisuallyHidden>{statusText}</VisuallyHidden>
         {connectionState === 'offline' && (
-          <HeaderOfflineBadge onReconnect={() => void reconnect()} />
+          <HeaderOfflineBadge onReconnect={handleReconnect} />
         )}
         {/* Show avatar skeleton only - expecting authenticated user */}
         <div style={styles.avatarSkeleton} aria-hidden="true" />
@@ -280,7 +283,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
         <VisuallyHidden>{statusText}</VisuallyHidden>
         {/* Offline Badge */}
         {connectionState === 'offline' && (
-          <HeaderOfflineBadge onReconnect={() => void reconnect()} />
+          <HeaderOfflineBadge onReconnect={handleReconnect} />
         )}
         {/* Name (nur Desktop) */}
         {!isMobile && (
@@ -384,7 +387,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
           <VisuallyHidden>{statusText}</VisuallyHidden>
           {/* Offline Badge */}
           {connectionState === 'offline' && (
-            <HeaderOfflineBadge onReconnect={() => void reconnect()} />
+            <HeaderOfflineBadge onReconnect={handleReconnect} />
           )}
           {/* Gast-Badge (nur Desktop) */}
           {!isMobile && (
@@ -442,7 +445,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
         <VisuallyHidden>{statusText}</VisuallyHidden>
         {/* Offline Badge */}
         {connectionState === 'offline' && (
-          <HeaderOfflineBadge onReconnect={() => void reconnect()} />
+          <HeaderOfflineBadge onReconnect={handleReconnect} />
         )}
         {/* Mobile: Single Icon - öffnet BottomSheet */}
         {isMobile ? (
