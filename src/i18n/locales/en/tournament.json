@@ -177,7 +177,10 @@
       "title": "Delete team?",
       "confirmMessage": "Do you really want to delete \"{{name}}\"?",
       "markedAsRemoved": "The team will be marked as \"removed\". Results will be preserved for fairness to other teams.",
-      "markAsRemoved": "Mark as removed"
+      "markAsRemoved": "Mark as removed",
+      "warningUnprotected": "\"{{name}}\" has {{count}} planned matches without result and without events. These will be removed from the schedule.",
+      "warningProtected": "\"{{name}}\" has {{count}} matches with a result or events. The team will be marked as \"removed\", these matches are kept.",
+      "warningMixed": "\"{{name}}\" has {{protected}} matches with a result or events and {{unprotected}} without.\n\n• The {{unprotected}} matches without result and events will be removed.\n• The {{protected}} matches with a result or events are kept.\n• The team will be marked as \"removed\"."
     }
   },
   "settings": {

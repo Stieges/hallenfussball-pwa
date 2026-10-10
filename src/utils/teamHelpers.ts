@@ -52,6 +52,11 @@ export interface TeamMatchAnalysis {
   matchesWithoutResults: number;
   matchesWithResultsIds: string[];
   matchesWithoutResultsIds: string[];
+  /** @W5-009: geschützt = matchHasEvents (Ergebnis auch halb, Ereignisse oder Status ungleich geplant). */
+  matchesProtected: number;
+  matchesProtectedIds: string[];
+  matchesUnprotected: number;
+  matchesUnprotectedIds: string[];
 }
 
 export function analyzeTeamMatches(
@@ -62,6 +67,8 @@ export function analyzeTeamMatches(
 
   const withResults = teamMatches.filter(matchHasResult);
   const withoutResults = teamMatches.filter(m => !matchHasResult(m));
+  const protectedMatches = teamMatches.filter(matchHasEvents);
+  const unprotectedMatches = teamMatches.filter(m => !matchHasEvents(m));
 
   return {
     teamId: team.id,
@@ -71,6 +78,10 @@ export function analyzeTeamMatches(
     matchesWithoutResults: withoutResults.length,
     matchesWithResultsIds: withResults.map(m => m.id),
     matchesWithoutResultsIds: withoutResults.map(m => m.id),
+    matchesProtected: protectedMatches.length,
+    matchesProtectedIds: protectedMatches.map(m => m.id),
+    matchesUnprotected: unprotectedMatches.length,
+    matchesUnprotectedIds: unprotectedMatches.map(m => m.id),
   };
 }
 
@@ -110,10 +121,10 @@ export function deleteTeamSafely(
     throw new Error(`Team with ID ${teamId} not found`);
   }
 
-  // @W5-009: geschützt ist jedes Spiel mit Ereignissen (matchHasEvents), nicht erst eines mit vollem Ergebnis.
-  const teamMatches = getTeamMatches(tournament.matches, teamId);
-  const protectedIds = teamMatches.filter(matchHasEvents).map(m => m.id);
-  const unprotectedIds = teamMatches.filter(m => !matchHasEvents(m)).map(m => m.id);
+  // @W5-009: dieselbe Aufteilung wie die Warnung im Dialog (analyzeTeamMatches, matchHasEvents).
+  const analysis = analyzeTeamMatches(team, tournament.matches);
+  const protectedIds = analysis.matchesProtectedIds;
+  const unprotectedIds = analysis.matchesUnprotectedIds;
 
   // If team has protected matches, mark as removed instead of deleting
   if (protectedIds.length > 0) {
@@ -158,28 +169,38 @@ export function deleteTeamSafely(
 }
 
 /**
- * Generate warning message for team deletion
+ * Warnung im Lösch-Dialog als i18n-Schlüssel + Werte (Texte liegen in tournament.json, teams.deleteDialog).
+ * Die Aufteilung folgt deleteTeamSafely: geschützte Spiele bleiben, die übrigen fallen weg.
  */
-export function getTeamDeletionWarning(analysis: TeamMatchAnalysis): string | null {
-  if (analysis.matchesWithResults === 0 && analysis.matchesWithoutResults === 0) {
+export interface TeamDeletionWarning {
+  key:
+    | 'teams.deleteDialog.warningUnprotected'
+    | 'teams.deleteDialog.warningProtected'
+    | 'teams.deleteDialog.warningMixed';
+  values: Record<string, string | number>;
+}
+
+export function getTeamDeletionWarning(analysis: TeamMatchAnalysis): TeamDeletionWarning | null {
+  const name = analysis.teamName;
+  const protectedCount = analysis.matchesProtected;
+  const unprotectedCount = analysis.matchesUnprotected;
+
+  if (protectedCount === 0 && unprotectedCount === 0) {
     return null; // No matches, no warning needed
   }
 
-  if (analysis.matchesWithResults === 0) {
-    // Only matches without results - simple deletion
-    return `"${analysis.teamName}" hat ${analysis.matchesWithoutResults} geplante Spiele ohne Ergebnisse. Diese werden aus dem Spielplan entfernt.`;
+  if (protectedCount === 0) {
+    return { key: 'teams.deleteDialog.warningUnprotected', values: { name, count: unprotectedCount } };
   }
 
-  if (analysis.matchesWithoutResults === 0) {
-    // Only matches with results - team will be marked as removed
-    return `"${analysis.teamName}" hat ${analysis.matchesWithResults} Spiele mit Ergebnissen. Das Team wird als "entfernt" markiert, die Ergebnisse bleiben erhalten.`;
+  if (unprotectedCount === 0) {
+    return { key: 'teams.deleteDialog.warningProtected', values: { name, count: protectedCount } };
   }
 
-  // Mixed case
-  return `"${analysis.teamName}" hat ${analysis.matchesWithResults} Spiele mit Ergebnissen und ${analysis.matchesWithoutResults} ohne Ergebnisse.\n\n` +
-    `• Die ${analysis.matchesWithoutResults} Spiele ohne Ergebnisse werden entfernt.\n` +
-    `• Die ${analysis.matchesWithResults} Spiele mit Ergebnissen bleiben erhalten.\n` +
-    `• Das Team wird als "entfernt" markiert.`;
+  return {
+    key: 'teams.deleteDialog.warningMixed',
+    values: { name, protected: protectedCount, unprotected: unprotectedCount },
+  };
 }
 
 /**

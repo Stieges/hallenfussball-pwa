@@ -177,7 +177,10 @@
       "title": "Team löschen?",
       "confirmMessage": "Möchtest du \"{{name}}\" wirklich löschen?",
       "markedAsRemoved": "Das Team wird als \"entfernt\" markiert. Die Ergebnisse bleiben für die Fairness der anderen Teams erhalten.",
-      "markAsRemoved": "Als entfernt markieren"
+      "markAsRemoved": "Als entfernt markieren",
+      "warningUnprotected": "\"{{name}}\" hat {{count}} geplante Spiele ohne Ergebnis und ohne Ereignisse. Diese werden aus dem Spielplan entfernt.",
+      "warningProtected": "\"{{name}}\" hat {{count}} Spiele mit Ergebnis oder Ereignissen. Das Team wird als \"entfernt\" markiert, diese Spiele bleiben erhalten.",
+      "warningMixed": "\"{{name}}\" hat {{protected}} Spiele mit Ergebnis oder Ereignissen und {{unprotected}} ohne.\n\n• Die {{unprotected}} Spiele ohne Ergebnis und Ereignisse werden entfernt.\n• Die {{protected}} Spiele mit Ergebnis oder Ereignissen bleiben erhalten.\n• Das Team wird als \"entfernt\" markiert."
     }
   },
   "settings": {
