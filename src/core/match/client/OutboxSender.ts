@@ -237,6 +237,12 @@ export class OutboxSender {
     // das sich waehrend eines laufenden Aufrufs schon auf ein anderes Konto geaendert haben kann.
     const copy = await this.store.load(queue.accountId, queue.matchId);
     if (!copy || copy.pending.length === 0) {
+      // A-06m-P1 (@FU-010): wurde der Eintrag zwischenzeitlich per Push/Abfrage bestaetigt
+      // (`applyConfirmed`), weiss der Status nichts davon -- neu zaehlen, sonst bleibt "wartet" stehen.
+      if (this.isCurrentQueue(queue)) {
+        queue.resetBackoff();
+        await this.refresh();
+      }
       return 'done';
     }
     // Fixrunde 2, I1-R: `store.load` ist eine echte (asynchrone) IndexedDB-Anfrage --

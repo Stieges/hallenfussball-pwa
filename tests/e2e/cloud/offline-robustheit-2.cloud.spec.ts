@@ -134,11 +134,6 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
   });
 
   test('@FU-010 Bestätigung verloren, Live-Verbindung steht: das Gerät zeigt das Tor als übertragen', async ({ browser }) => {
-    test.fixme(
-      true,
-      'Produktfehler A-06m-P1: kommt die Bestätigung per Live-Push vor dem Wiederholen an, bleibt der Zähler auf "1 Eintrag wartet – kein Internet" ' +
-        '(src/core/match/client/OutboxSender.ts:239-240, tryOneBatch kehrt bei leerer Warteschlange ohne refresh() zurück; Zähler wird erst beim nächsten Antippen/Eintrag neu berechnet).'
-    );
     test.setTimeout(60_000);
     const ids = engineCupIds('DOPPELTLIVE');
     await expectSeededEngineMatch(engineCupTarget('DOPPELTLIVE'));
