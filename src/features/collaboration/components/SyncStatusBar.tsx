@@ -14,6 +14,11 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { SyncStatus } from '../../../core/repositories/OfflineRepository';
 import { SyncRejectedHint } from './SyncRejectedHint';
+import {
+    LABEL_KEY_BY_STATUS,
+    STATUS_CONFIG,
+    type StatusConfig,
+} from './syncStatusDisplay';
 
 // =============================================================================
 // TYPES
@@ -43,55 +48,6 @@ export interface SyncStatusBarProps {
     /** C2b: zeigt die Ablehnungsliste an (RejectedEntriesPanel) */
     onShowRejected?: () => void;
 }
-
-// =============================================================================
-// STATUS CONFIG
-// =============================================================================
-
-// Fixrunde 1 (Review I2): nur Icon/Farbe sind statisch (React-Hook-frei, module-level) --
-// der Label-TEXT kommt jetzt aus i18n (siehe LABEL_KEY_BY_STATUS unten, im Component-Body
-// über useTranslation aufgelöst). Vorher stand hier "Synchronisiert"/"Fehler"/... hartkodiert.
-interface StatusConfig {
-    icon: string;
-    color: string;
-    bgColor: string;
-}
-
-const STATUS_CONFIG: Record<SyncStatus, StatusConfig> = {
-    synced: {
-        icon: '✓',
-        color: cssVars.colors.success,
-        bgColor: 'transparent',
-    },
-    updated: {
-        icon: '↓',
-        color: cssVars.colors.primary,
-        bgColor: 'transparent',
-    },
-    conflict: {
-        icon: '⚠',
-        color: cssVars.colors.warning,
-        bgColor: cssVars.colors.warningLight,
-    },
-    error: {
-        icon: '✕',
-        color: cssVars.colors.error,
-        bgColor: cssVars.colors.errorLight,
-    },
-    offline: {
-        icon: '○',
-        color: cssVars.colors.textMuted,
-        bgColor: cssVars.colors.surfaceElevated,
-    },
-};
-
-const LABEL_KEY_BY_STATUS: Record<SyncStatus, string> = {
-    synced: 'syncStatus.label.synced',
-    updated: 'syncStatus.label.updated',
-    conflict: 'syncStatus.label.conflict',
-    error: 'syncStatus.label.error',
-    offline: 'syncStatus.label.offline',
-};
 
 // =============================================================================
 // STYLES
