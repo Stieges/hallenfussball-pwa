@@ -1,4 +1,4 @@
-import { cssVars, displayColors, displayFontSizes, displaySpacing, zIndex, displayMonitor } from '../../../design-tokens';
+import { cssVars, displayColors, displayFontSizes, displaySpacing, displayTransitions, zIndex, displayMonitor } from '../../../design-tokens';
 
 interface SlideDotsProps {
   count: number;
@@ -29,7 +29,7 @@ export function SlideDots({ count, currentIndex, enableTransitions }: SlideDotsP
               ? displayColors.primary
               : displayColors.textMuted,
             opacity: idx === currentIndex ? 1 : 0.4,
-            transition: enableTransitions ? `all ${displayMonitor.marker.transitionDuration} ease` : 'none',
+            transition: enableTransitions ? `all ${displayTransitions.hover.duration} ease` : 'none',
           }}
         />
       ))}

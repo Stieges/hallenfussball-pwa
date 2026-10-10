@@ -263,8 +263,6 @@ export const displayMonitor = {
     indicatorSize: '10px',
     /** Status-Punkt je Spielzeile im Spielplan */
     scheduleSize: '12px',
-    /** Übergang der Punkte beim Folienwechsel */
-    transitionDuration: '200ms',
     /** Rahmen einer laufenden Spielzeile */
     liveBorderWidth: '2px',
   },
