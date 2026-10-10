@@ -114,7 +114,9 @@ describe('MonitorDisplayPage — Heim/Gast der Live-Folie und nächstes Spiel (B
     expect(text.indexOf('FC Nord')).toBeLessThan(text.indexOf('SV Süd'));
   });
 
-  it('Folie „nächstes Spiel“ Feld 1 nach Ende von Spiel 7: TuS Mitte steht vor Kickers West', async () => {
+  // Ruling B-16e1 (@ZM-122): Ist die einzige Folie eine Live-Folie ohne Spiel auf ihrem Feld, gilt der Rückfall
+  // (Zuschauer-QR). „Nächstes Spiel“ erscheint nicht mehr. Der frühere Stand (TuS Mitte vor Kickers West) entfällt.
+  it('Live-Folie Feld 1 nach Ende von Spiel 7, kein weiteres Spiel auf Feld 1 → Zuschauer-QR statt „Nächstes Spiel“', async () => {
     liefere(attachMonitor(
       buildTournament({ matches: withMatch('match-7', { matchStatus: 'finished' }) }),
       withMonitor({ slides: [slide('live', { fieldId: 'field-1' })] }),
@@ -122,9 +124,7 @@ describe('MonitorDisplayPage — Heim/Gast der Live-Folie und nächstes Spiel (B
     localGet.mockResolvedValue(null);
     const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
     await vorspulen(0);
-    const text = container.textContent ?? '';
-    expect(text).toContain('Nächstes Spiel');
-    expect(text.indexOf('TuS Mitte')).toBeGreaterThanOrEqual(0);
-    expect(text.indexOf('TuS Mitte')).toBeLessThan(text.indexOf('Kickers West'));
+    expect(container.querySelector('[data-testid="qr-code"]')).not.toBeNull();
+    expect(container.textContent ?? '').not.toContain('Nächstes Spiel');
   });
 });

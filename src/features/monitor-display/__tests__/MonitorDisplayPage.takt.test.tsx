@@ -8,7 +8,7 @@ import { render, screen, act } from '@testing-library/react';
 import type { MonitorSlide } from '../../../types/monitor';
 import type { Tournament } from '../../../types/tournament';
 import {
-  attachMonitor, buildTournament, slide, withMonitor,
+  attachMonitor, buildTournament, FIXTURE_MATCHES, slide, withMonitor,
 } from './monitorFixture';
 
 /** Folienprogramm Feld 1: Live-Spiel (Anhalten laut Parameter), Tabelle Gruppe A. */
@@ -139,5 +139,21 @@ describe('MonitorDisplayPage — Takt-Gegenprobe (C-MON-TAKT-STEHT, Klon je Poll
     liefere(monitorTurnier(buildTournament(), programmLive(true)));
     await vorspulenInSchritten(30_000);
     expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
+  });
+});
+
+describe('MonitorDisplayPage — Rückfall bei nur übersprungenen Live-Folien (Ruling B-16e1, @ZM-122)', () => {
+  it('nur Live-Folie, kein Spiel auf Feld 1 → Zuschauer-QR-Folie statt „Nächstes Spiel“', async () => {
+    const ohneSpiel = FIXTURE_MATCHES.map(m => ({ ...m, matchStatus: 'scheduled' as const }));
+    await starte(monitorTurnier(buildTournament({ matches: ohneSpiel }), [slide('live', { fieldId: 'field-1' })]));
+    expect(screen.getByTestId('qr-code')).toBeInTheDocument();
+    expect(screen.queryByText('Nächstes Spiel')).not.toBeInTheDocument();
+  });
+
+  // Gegenbeispiel: sobald auf Feld 1 gespielt wird, kommt die Live-Folie zurück.
+  it('Gegenbeispiel: Spiel läuft auf Feld 1 → Live-Folie statt QR', async () => {
+    await starte(monitorTurnier(buildTournament(), [slide('live', { fieldId: 'field-1' })]));
+    expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
+    expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
   });
 });

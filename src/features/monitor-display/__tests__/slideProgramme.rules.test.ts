@@ -7,6 +7,9 @@ import { describe, it, expect } from 'vitest';
 import type { MonitorSlide } from '../../../types/monitor';
 import {
   FINAL_RESULT_HOLD_MS,
+  mitRueckfall,
+  SPIELPLAN_FALLBACK_SLIDE,
+  ZUSCHAUER_QR_SLIDE,
   nextSlide,
   wakeAt,
   type RuleMatch,
@@ -139,6 +142,24 @@ describe('@ZM-079 Anhalten im laufenden Spiel ausgeschaltet: Pin löst sich, Tak
     const p = programm([LIVE_F1, TABELLE], [{ id: 'm7', field: 1, matchStatus: 'running' }]);
     const zustaende = laufe(p, zustand({ pinnedMatchId: 'm7' }), 0, 120_000);
     for (const s of zustaende) { expect(s).toMatchObject({ index: 0, pinnedMatchId: 'm7' }); }
+  });
+});
+
+describe('Rückfall, wenn alle Folien übersprungen sind (Ruling B-16e1)', () => {
+  it('nur Live-Folie, kein Spiel auf Feld 1 → Zuschauer-QR-Folie', () => {
+    expect(mitRueckfall([LIVE_F1], [{ id: 'm9', field: 1, matchStatus: 'scheduled' }], ZUSCHAUER_QR_SLIDE)).toEqual([ZUSCHAUER_QR_SLIDE]);
+  });
+
+  it('nur Live-Folie, kein QR möglich → Spielplan-Rückfall', () => {
+    expect(mitRueckfall([LIVE_F1], [], SPIELPLAN_FALLBACK_SLIDE)).toEqual([SPIELPLAN_FALLBACK_SLIDE]);
+  });
+
+  it('Gegenbeispiel: Spiel läuft auf Feld 1 → Live-Folie bleibt', () => {
+    expect(mitRueckfall([LIVE_F1], [{ id: 'm7', field: 1, matchStatus: 'running' }], ZUSCHAUER_QR_SLIDE)).toEqual([LIVE_F1]);
+  });
+
+  it('Gegenbeispiel: Tabelle sichtbar → keine Ersetzung', () => {
+    expect(mitRueckfall([LIVE_F1, TABELLE], [], ZUSCHAUER_QR_SLIDE)).toEqual([LIVE_F1, TABELLE]);
   });
 });
 

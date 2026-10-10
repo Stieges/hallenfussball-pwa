@@ -176,6 +176,15 @@ function pinTarget(program: SlideProgram, state: SlideshowState, matches: readon
   return null;
 }
 
+/**
+ * @ZM-122 + Controller-Ruling (B-16e1): Sind alle Folien übersprungen, gilt der Rückfall des
+ * selectDisplayableSlides-Rückfalls (Zuschauer-QR-Folie, ohne QR der Spielplan). Sobald ein Spiel läuft,
+ * kommen die Live-Folien wieder in die Liste.
+ */
+export function mitRueckfall(slides: ProgramSlide[], matches: readonly RuleMatch[], rueckfall: ProgramSlide): ProgramSlide[] {
+  return slides.length > 0 && slides.every(slide => isSkipped(slide, matches)) ? [rueckfall] : slides;
+}
+
 /** Ein Schritt des Takts zur nächsten sichtbaren Folie; bleibt nichts übrig, bleibt die Folie stehen. */
 function advance(program: SlideProgram, state: SlideshowState, now: number, matches: readonly RuleMatch[]): SlideshowState {
   const target = firstVisible(program, state.index + 1, matches) ?? state.index;
