@@ -21,6 +21,7 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
     setMinutes,
     availableHours,
     recommendation,
+    teamsKeptTimeShort,
     lastApplied,
     lockTeams,
     setLockTeams,
@@ -233,6 +234,12 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
                 {t('smartConfig.apply')}
               </button>
             </>
+          )}
+
+          {teamsKeptTimeShort && (
+            <p className={styles.warningText} role="alert" data-testid="smart-config-teams-short">
+              <span aria-hidden="true">⚠️</span> {t('smartConfig.teamsKeptTimeShort', { teams: formData.numberOfTeams })}
+            </p>
           )}
 
           {showTeamsWarning && (

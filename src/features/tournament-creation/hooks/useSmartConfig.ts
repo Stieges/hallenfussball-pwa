@@ -32,6 +32,8 @@ interface UseSmartConfigReturn {
 
   // Recommendation
   recommendation: Recommendation | null;
+  /** Festgehaltene Teamzahl passt mit keiner Konfiguration in die Zeit (@W4-022) */
+  teamsKeptTimeShort: boolean;
   lastApplied: StoredConfig['lastApplied'];
 
   // Constraint locks
@@ -87,6 +89,7 @@ export function useSmartConfig({
   const setMinutes = (value: number) => setMinutesState(Math.max(0, Math.min(59, value)));
 
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+  const [teamsKeptTimeShort, setTeamsKeptTimeShort] = useState(false);
   const [lastApplied, setLastApplied] = useState<StoredConfig['lastApplied']>(
     () => loadStoredConfig().lastApplied
   );
@@ -185,8 +188,10 @@ export function useSmartConfig({
         `Mit den Einschränkungen (${constraintsList.join(', ')}) werden mindestens ${result.minRequiredHours}h benötigt. Aktuell verfügbar: ${availableHours}h.`
       );
       setRecommendation(null);
+      setTeamsKeptTimeShort(false);
     } else {
       setRecommendation(result.recommendation);
+      setTeamsKeptTimeShort(result.teamsKeptTimeShort === true);
     }
   }, [
     getConstraints,
@@ -222,9 +227,13 @@ export function useSmartConfig({
     saveStoredConfig({ lastHours: availableHours, lastApplied: appliedConfig });
     setLastApplied(appliedConfig);
 
+    // Solange die Zeit mit der festen Teamzahl nicht reicht, bleibt die Empfehlung mit Hinweis sichtbar (@W4-022)
+    if (teamsKeptTimeShort) {
+      return;
+    }
     setIsOpen(false);
     setRecommendation(null);
-  }, [recommendation, onApply, availableHours]);
+  }, [recommendation, onApply, availableHours, teamsKeptTimeShort]);
 
   const handleQuickApply = useCallback(() => {
     if (!lastApplied) {return;}
@@ -258,6 +267,7 @@ export function useSmartConfig({
     setMinutes,
     availableHours,
     recommendation,
+    teamsKeptTimeShort,
     lastApplied,
     lockTeams,
     setLockTeams,

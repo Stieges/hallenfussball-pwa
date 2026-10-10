@@ -9,13 +9,25 @@
  * Gegenbeispiel: jeder gegen jeden → kein Gruppentext.
  * Mutation: Strukturtext entfernt → rot.
  *
+ * @W4-022: Eine festgehaltene Teamzahl ändert die Zeit-Empfehlung nie.
+ *
+ * Gegeben die Turnierleitung hat „Anzahl Teams: 12“ festgehalten und die verfügbare Zeit reicht dafür nicht
+ * Wenn sie die Zeit-Empfehlung berechnen lässt und übernimmt
+ * Dann bleiben es 12 Teams
+ * Und die Empfehlung sagt, dass die Zeit mit 12 Teams nicht reicht
+ *
+ * Gegenbeispiel: Teamzahl nicht fix → die Empfehlung darf die Teamzahl vorschlagen (8 statt 12).
+ * Mutation: Teamzahl-Fix überschreibbar (Fallback reduziert trotz Fix) → rot;
+ * Hinweis entfernt → rot.
+ *
  * Die Oberfläche läuft über die echte Komponente und den echten Hook; die Übersetzung
  * kommt aus der deutschen wizard.json, damit der Text geprüft werden kann.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, renderHook, act } from '@testing-library/react';
 import type { Tournament } from '../../../types/tournament';
 import { SmartConfig } from '../components/SmartConfig';
+import { useSmartConfig } from '../hooks/useSmartConfig';
 
 vi.mock('../../../components/ui/Toast/ToastContext', () => ({
   useToast: () => ({ showWarning: vi.fn(), showSuccess: vi.fn(), showError: vi.fn() }),
@@ -82,5 +94,72 @@ describe('@W4-021 Zeit-Empfehlung nennt die Spielstruktur', () => {
 
     expect(screen.getByText('28 Spiele')).toBeTruthy();
     expect(screen.queryByTestId('smart-config-structure')).toBeNull();
+  });
+});
+
+const teams12FormData = (): Partial<Tournament> => ({
+  numberOfTeams: 12,
+  groupSystem: 'roundRobin',
+  numberOfFields: 1,
+  groupPhaseGameDuration: 10,
+  groupPhaseBreakDuration: 2,
+});
+
+describe('@W4-022 festgehaltene Teamzahl ändert die Zeit-Empfehlung nie', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('Hook: 12 Teams fix, Zeit zu knapp → Empfehlung und Übernehmen bleiben bei 12 Teams, Hinweis gesetzt', () => {
+    const onApply = vi.fn();
+    const { result } = renderHook(() =>
+      useSmartConfig({ formData: teams12FormData(), onApply })
+    );
+    act(() => {
+      result.current.setHours(0);
+      result.current.setMinutes(5);
+    });
+    act(() => {
+      result.current.handleCalculate();
+    });
+    expect(result.current.recommendation?.teams).toBe(12);
+    expect(result.current.teamsKeptTimeShort).toBe(true);
+
+    act(() => {
+      result.current.handleApply();
+    });
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ numberOfTeams: 12 }));
+    expect(result.current.teamsKeptTimeShort).toBe(true);
+  });
+
+  it('Gegenbeispiel Hook: Teamzahl nicht fix → Empfehlung darf 12 auf 8 reduzieren, kein Hinweis', () => {
+    const { result } = renderHook(() =>
+      useSmartConfig({ formData: teams12FormData(), onApply: vi.fn() })
+    );
+    act(() => {
+      result.current.setLockTeams(false);
+      result.current.setHours(0);
+      result.current.setMinutes(5);
+    });
+    act(() => {
+      result.current.handleCalculate();
+    });
+    expect(result.current.recommendation?.teams).toBe(8);
+    expect(result.current.teamsKeptTimeShort).toBe(false);
+  });
+
+  it('Oberfläche: Hinweis „reicht nicht“ bleibt nach Übernehmen sichtbar, übernommen werden 12 Teams', () => {
+    const onApply = vi.fn();
+    render(<SmartConfig formData={teams12FormData()} onApply={onApply} />);
+    fireEvent.click(screen.getByText('Smart-Konfiguration'));
+    fireEvent.change(screen.getByLabelText('Stunden'), { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText('Minuten'), { target: { value: '5' } });
+    fireEvent.click(screen.getByLabelText('Optimale Konfiguration berechnen'));
+
+    expect(screen.getByTestId('smart-config-teams-short').textContent).toContain('12 Teams');
+    fireEvent.click(screen.getByLabelText('Empfohlene Konfiguration übernehmen'));
+
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ numberOfTeams: 12 }));
+    expect(screen.getByTestId('smart-config-teams-short')).toBeTruthy();
   });
 });

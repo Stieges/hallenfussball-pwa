@@ -423,6 +423,7 @@
     },
     "apply": "Apply Configuration",
     "applyAriaLabel": "Apply recommended configuration",
+    "teamsKeptTimeShort": "The time is not enough for {{teams}} teams. The number of teams stays fixed: plan more time or fields.",
     "teamsWarning": "{{current}} teams don't fit in {{hours}}h. Alternative: {{suggested}} teams or plan more time/fields."
   },
   "bambini": {

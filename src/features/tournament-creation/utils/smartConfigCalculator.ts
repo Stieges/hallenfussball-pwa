@@ -152,6 +152,8 @@ export function calculateRecommendation(
 
   // Track minimum hours needed with constraints
   let minHoursWithConstraints = Infinity;
+  // Schnellste Konfiguration (für eine festgehaltene Teamzahl, @W4-022)
+  let fastest: Recommendation | null = null;
 
   for (const gameDuration of gameDurations) {
     for (const breakDuration of breakDurations) {
@@ -164,6 +166,17 @@ export function calculateRecommendation(
         // Track minimum hours needed
         if (estimatedHours < minHoursWithConstraints) {
           minHoursWithConstraints = estimatedHours;
+        }
+        if (fastest === null || estimatedHours < fastest.estimatedHours) {
+          fastest = {
+            teams,
+            fields,
+            gameDuration,
+            breakDuration,
+            totalMatches,
+            estimatedHours,
+            ...structureOf(structure),
+          };
         }
 
         if (estimatedHours <= availableHours) {
@@ -203,6 +216,16 @@ export function calculateRecommendation(
       recommendation: null,
       constraintsImpossible: true,
       minRequiredHours: Math.ceil(minHoursWithConstraints * 10) / 10,
+    };
+  }
+
+  // Festgehaltene Teamzahl: nie verändern, auch wenn die Zeit nicht reicht (@W4-022).
+  // Empfohlen wird die schnellste Konfiguration, der Hinweis sagt, dass die Zeit nicht reicht.
+  if (constraints.teams !== undefined && fastest !== null) {
+    return {
+      recommendation: fastest,
+      constraintsImpossible: false,
+      teamsKeptTimeShort: true,
     };
   }
 
