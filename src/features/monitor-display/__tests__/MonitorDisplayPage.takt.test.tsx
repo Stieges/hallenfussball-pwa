@@ -130,7 +130,7 @@ describe('MonitorDisplayPage — Takt-Gegenprobe (C-MON-TAKT-STEHT, Klon je Poll
     await vorspulenInSchritten(19_000);
     expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
     await vorspulenInSchritten(1_000);
-    expect(screen.getByText(/Gruppe A/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Heim: 1')).not.toBeInTheDocument();
   });
 
   // Gegenbeispiel: Anhalten bleibt an, das Live-Spiel bleibt über 30 s stehen.
