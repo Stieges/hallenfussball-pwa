@@ -10,6 +10,7 @@ import {
     type FailedMutationItem as GenericFailedMutationItem,
 } from './GenericMutationQueue';
 import type { QueueTimers } from './mutationQueueRetry';
+import { safeLocalStorage } from '../utils/safeStorage';
 
 export { MAX_RETRIES, type MutationQueueStatus } from './GenericMutationQueue';
 
@@ -103,11 +104,66 @@ async function skipUploadForGuestEntries(
     }
 }
 
+const LEGACY_QUEUE_KEY = 'mutation_queue_v1';
+const LEGACY_FAILED_KEY = 'mutation_queue_failed_v1';
+
+/** A-07b (@FU-006): jede Queue schreibt unter dem Schluessel ihres Kontos. */
+function accountScopedKey(baseKey: string, accountId: string | undefined): string {
+    return accountId ? `${baseKey}:${accountId}` : baseKey;
+}
+
+function parseQueueArray(raw: string): Array<{ id?: unknown }> | null {
+    try {
+        const parsed: unknown = JSON.parse(raw);
+        return Array.isArray(parsed) ? (parsed as Array<{ id?: unknown }>) : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * A-07b (@FU-019): Uebernimmt den Altschluessel (ohne Konto) einmalig in den Schluessel des
+ * Kontos. Der Altschluessel wird erst entfernt, wenn der Schreibvorgang im Zielschluessel
+ * zurückgelesen bestaetigt ist. Enthaelt der Zielschluessel schon Eintraege, werden beide
+ * Listen zusammengefuehrt (ohne doppelte IDs). Unlesbare Daten bleiben unangetastet.
+ */
+function adoptLegacyKey(legacyKey: string, targetKey: string): void {
+    const legacyRaw = safeLocalStorage.getItem(legacyKey);
+    if (!legacyRaw) { return; }
+    const legacyItems = parseQueueArray(legacyRaw);
+    if (!legacyItems) { return; }
+
+    let merged = legacyRaw;
+    const targetRaw = safeLocalStorage.getItem(targetKey);
+    if (targetRaw) {
+        const targetItems = parseQueueArray(targetRaw);
+        if (!targetItems) { return; }
+        const known = new Set(targetItems.map((item) => item.id));
+        merged = JSON.stringify([...legacyItems.filter((item) => !known.has(item.id)), ...targetItems]);
+    }
+
+    safeLocalStorage.setItem(targetKey, merged);
+    if (safeLocalStorage.getItem(targetKey) !== merged) { return; }
+    safeLocalStorage.removeItem(legacyKey);
+}
+
 export class MutationQueue extends GenericMutationQueue<MutationType> {
-    constructor(supabaseRepo: SupabaseRepository, localRepo: LocalStorageRepository = new LocalStorageRepository(), timers?: QueueTimers) {
+    constructor(
+        supabaseRepo: SupabaseRepository,
+        localRepo: LocalStorageRepository = new LocalStorageRepository(),
+        timers?: QueueTimers,
+        accountId?: string,
+    ) {
+        const storageKey = accountScopedKey(LEGACY_QUEUE_KEY, accountId);
+        const failedStorageKey = accountScopedKey(LEGACY_FAILED_KEY, accountId);
+        if (accountId) {
+            // Vor dem Laden der Basisklasse: die erste angemeldete Queue übernimmt den Altbestand.
+            adoptLegacyKey(LEGACY_QUEUE_KEY, storageKey);
+            adoptLegacyKey(LEGACY_FAILED_KEY, failedStorageKey);
+        }
         super({
-            storageKey: 'mutation_queue_v1',
-            failedStorageKey: 'mutation_queue_failed_v1',
+            storageKey,
+            failedStorageKey,
             sentryFeature: 'sync',
             ...(timers ? { timers } : {}),
             // Unknown-type items are rejected at load exactly like schema-invalid

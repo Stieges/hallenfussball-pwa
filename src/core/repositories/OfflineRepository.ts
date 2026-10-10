@@ -126,9 +126,11 @@ export class OfflineRepository implements ITournamentRepository {
 
     constructor(
         private localRepo: LocalStorageRepository,
-        private supabaseRepo: SupabaseRepository
+        private supabaseRepo: SupabaseRepository,
+        /** A-07b: Konto, dem die Warteschlange gehoert (@FU-006). Ohne Angabe: Altschluessel. */
+        accountId?: string
     ) {
-        this._mutationQueue = new MutationQueue(supabaseRepo, localRepo);
+        this._mutationQueue = new MutationQueue(supabaseRepo, localRepo, undefined, accountId);
     }
 
     /**
