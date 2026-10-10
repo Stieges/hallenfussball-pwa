@@ -25,7 +25,7 @@ import {
   monitorThemes,
   cssVars,
 } from '../../design-tokens';
-import type { Tournament, Match, Team } from '../../types/tournament';
+import type { Tournament, Match } from '../../types/tournament';
 import type {
   TournamentMonitor,
   MonitorSlide,
@@ -48,6 +48,7 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { captureFeatureError } from '../../lib/sentry';
 import { selectDisplayableSlides, type QrRueckfallFolie } from './slideProgramme';
 import { toLiveMatch } from './monitorMatch';
+import { monitorSideName, monitorSideTeam } from './monitorSides';
 
 // =============================================================================
 // THEME RESOLUTION
@@ -114,12 +115,6 @@ function fieldIdToNumber(fieldId: string | undefined): number {
   if (!fieldId) {return 1;}
   const num = parseInt(fieldId.replace('field-', ''), 10);
   return isNaN(num) ? 1 : num;
-}
-
-/** Get team name from team ID or name */
-function getTeamName(teams: Team[], teamIdOrName: string): string {
-  const team = teams.find(t => t.id === teamIdOrName || t.name === teamIdOrName);
-  return team?.name ?? teamIdOrName;
 }
 
 /** Get group display name */
@@ -321,9 +316,6 @@ function LiveSlide({ slide, tournament, theme, style }: LiveSlideProps) {
 
   // No live match - show next match or idle state based on whenIdle config
   const whenIdleType = slide.config.whenIdle?.type ?? 'next-match';
-  const getTeamObject = (teamIdOrName: string) =>
-    teams.find(t => t.id === teamIdOrName || t.name === teamIdOrName);
-
   return (
     <div style={style}>
       <div style={{
@@ -343,8 +335,8 @@ function LiveSlide({ slide, tournament, theme, style }: LiveSlideProps) {
         </div>
       ) : nextMatch ? (
         (() => {
-          const nextTeamA = getTeamObject(nextMatch.teamA);
-          const nextTeamB = getTeamObject(nextMatch.teamB);
+          const nextTeamA = monitorSideTeam(nextMatch, 'A', teams);
+          const nextTeamB = monitorSideTeam(nextMatch, 'B', teams);
           return (
             <>
               <div style={{
@@ -369,7 +361,7 @@ function LiveSlide({ slide, tournament, theme, style }: LiveSlideProps) {
                     color: themeColors.text,
                     marginTop: cssVars.spacing.md,
                   }}>
-                    {getTeamName(teams, nextMatch.teamA)}
+                    {monitorSideName(nextMatch, 'A', tournament)}
                   </div>
                 </div>
 
@@ -390,7 +382,7 @@ function LiveSlide({ slide, tournament, theme, style }: LiveSlideProps) {
                     color: themeColors.text,
                     marginTop: cssVars.spacing.md,
                   }}>
-                    {getTeamName(teams, nextMatch.teamB)}
+                    {monitorSideName(nextMatch, 'B', tournament)}
                   </div>
                 </div>
               </div>
@@ -540,7 +532,7 @@ function ScheduleFieldSlide({ slide, tournament, theme, style }: ScheduleFieldSl
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
   const field = tournament.fields?.find(f => f.id === slide.config.fieldId);
   const fieldName = field?.customName ?? field?.defaultName ?? `Feld ${fieldNumber}`;
-  const { matches, teams } = tournament;
+  const { matches } = tournament;
 
   // Filter matches for this field
   const fieldMatches = matches
@@ -607,7 +599,7 @@ function ScheduleFieldSlide({ slide, tournament, theme, style }: ScheduleFieldSl
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}>
-              {getTeamName(teams, match.teamA)}
+              {monitorSideName(match, 'A', tournament)}
             </div>
 
             {/* Score */}
@@ -632,7 +624,7 @@ function ScheduleFieldSlide({ slide, tournament, theme, style }: ScheduleFieldSl
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}>
-              {getTeamName(teams, match.teamB)}
+              {monitorSideName(match, 'B', tournament)}
             </div>
           </div>
         ))}
