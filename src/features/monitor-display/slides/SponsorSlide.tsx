@@ -1,0 +1,114 @@
+import type { CSSProperties } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import { displayEffects, displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
+import type { Tournament } from '../../../types/tournament';
+import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
+import { generateTournamentUrl } from '../../../utils/shareUtils';
+import { getSafeUrl, resolveTheme } from '../monitorDisplayHelpers';
+
+interface SponsorSlideProps {
+  slide: MonitorSlide;
+  tournament: Tournament;
+  performanceSettings: PerformanceSettings;
+  theme: MonitorTheme;
+  style: CSSProperties;
+}
+
+/** Sponsor-Folie: Logo oder Name, Stufen-Badge und QR-Code zur Zielseite. */
+export function SponsorSlide({ slide, tournament, performanceSettings, theme, style }: SponsorSlideProps) {
+  const resolvedTheme = resolveTheme(theme);
+  const themeColors = monitorThemes[resolvedTheme];
+
+  const sponsorId = slide.config.sponsorId;
+  const sponsors = tournament.sponsors ?? [];
+  const sponsor = sponsors.find(s => s.id === sponsorId);
+
+  if (!sponsor) {
+    return (
+      <div style={style}>
+        <div style={{ fontSize: displayFontSizes.headingMD, color: themeColors.textMuted }}>
+          Sponsor nicht gefunden
+        </div>
+      </div>
+    );
+  }
+
+  // Use logoUrl or logoBase64
+  const logoSrc = sponsor.logoUrl ?? sponsor.logoBase64;
+
+  // Generate QR code URL with validation to prevent XSS
+  const fallbackUrl = generateTournamentUrl(tournament.id);
+  const qrUrl = slide.config.qrTarget === 'sponsor-website' && sponsor.websiteUrl
+    ? getSafeUrl(sponsor.websiteUrl, fallbackUrl)
+    : slide.config.qrTarget === 'custom' && slide.config.customQrUrl
+      ? getSafeUrl(slide.config.customQrUrl, fallbackUrl)
+      : fallbackUrl;
+
+  return (
+    <div style={style}>
+      {/* Sponsor Logo or Name */}
+      {logoSrc ? (
+        <img
+          src={logoSrc}
+          alt={sponsor.name}
+          style={{
+            maxWidth: '400px',
+            maxHeight: '300px',
+            objectFit: 'contain',
+            marginBottom: displaySpacing.sectionLG,
+            boxShadow: performanceSettings.enableGlow ? displayEffects.cardShadow : 'none',
+          }}
+        />
+      ) : (
+        <div style={{
+          fontSize: displayFontSizes.headingXL,
+          fontWeight: 700,
+          color: themeColors.text,
+          marginBottom: displaySpacing.sectionLG,
+        }}>
+          {sponsor.name}
+        </div>
+      )}
+
+      {/* Sponsor Tier Badge */}
+      {sponsor.tier && (
+        <div style={{
+          fontSize: displayFontSizes.bodyMD,
+          color: themeColors.textSecondary,
+          marginBottom: displaySpacing.sectionMD,
+          textTransform: 'capitalize',
+        }}>
+          {sponsor.tier === 'gold' ? '🥇' : sponsor.tier === 'silver' ? '🥈' : '🥉'} {sponsor.tier} Sponsor
+        </div>
+      )}
+
+      {/* QR Code Placeholder */}
+      {slide.config.showQrCode !== false && (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          marginTop: displaySpacing.sectionMD,
+        }}>
+          <QRCodeSVG
+            value={qrUrl}
+            size={150}
+            bgColor="#ffffff"
+            fgColor="#000000"
+            level="M"
+            style={{
+              borderRadius: '12px',
+            }}
+          />
+          <div style={{
+            fontSize: displayFontSizes.bodySM,
+            color: themeColors.textMuted,
+            marginTop: displaySpacing.contentSM,
+          }}>
+            Scan für mehr Info
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

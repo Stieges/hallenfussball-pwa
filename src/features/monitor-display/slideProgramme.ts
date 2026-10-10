@@ -3,8 +3,8 @@
  *
  * Eine Folie ohne Darstellung (ältere Einstellungen, Folien-Typ ohne
  * Umsetzung) darf den Monitor nicht aufhalten: Sie wird übersprungen. Bleibt
- * keine darstellbare Folie übrig, gilt die Zuschauer-QR-Folie. Ein
- * Entwickler-Hinweis wie „wird in Phase 2 implementiert“ ist nirgends erlaubt.
+ * keine darstellbare Folie übrig, gilt die Zuschauer-QR-Folie. Entwickler-Hinweise
+ * dieser Art (Platzhalter-Texte für Folien) sind nirgends erlaubt.
  */
 
 import type { MonitorSlide } from '../../types/monitor';
