@@ -69,6 +69,13 @@ describe('applyDelta – Lade-Regeln', () => {
     expect(next.lastFetch).toBe(4242);
   });
 
+  it('(4) Gegenprobe N2: Cloud sauber leer (kein lookupFailed), lokale Kopie wird übernommen', () => {
+    const next = applyDelta(withData('cloud'), snapshot('local', false), ctx);
+    expect(next.origin).toBe('local');
+    expect(next.lastFetch).toBe(4242);
+    expect(next.error).toBeNull();
+  });
+
   it('(5) monitor null → „Monitor nicht gefunden“, auch mit Daten', () => {
     const next = applyDelta(withData('cloud'), snapshot('cloud', false, null), ctx);
     expect(next.error).toBe('Monitor nicht gefunden: mon-1');
