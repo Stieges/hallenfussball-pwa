@@ -41,8 +41,14 @@ describe('generatePlayoffMatches preset=none', () => {
 // =============================================================================
 
 describe('generatePlayoffMatches with < 2 groups', () => {
-  it('returns empty array for 1 group', () => {
-    expect(generatePlayoffMatches(1, { preset: 'top-4' })).toEqual([]);
+  it('returns empty array for 1 group, außer Top 4 (@TM-142)', () => {
+    expect(generatePlayoffMatches(1, { preset: 'final-only' })).toEqual([]);
+    expect(generatePlayoffMatches(1, { preset: 'top-4' }).length).toBeGreaterThan(0);
+  });
+
+  it('@TM-142 Gegenbeispiel: Top 4 bei einer Gruppe mit weniger als 4 Teams bricht sichtbar ab', () => {
+    expect(() => generatePlayoffMatches(1, { preset: 'top-4' }, { A: 3 })).toThrow(/mindestens 4 Teams/);
+    expect(generatePlayoffMatches(1, { preset: 'top-4' }, { A: 4 })).toHaveLength(4);
   });
 
   it('returns empty array for 0 groups', () => {
@@ -285,6 +291,21 @@ describe('generatePlayoffMatches preset=all-places', () => {
     expect(ids).not.toContain('place56-direct');
     // 2 semis + third + final = 4
     expect(matches).toHaveLength(4);
+  });
+
+  it('@TM-142 Top 4 bei 1 Gruppe: HF1 = Erster gegen Vierter, HF2 = Zweiter gegen Dritter', () => {
+    const m = generatePlayoffMatches(1, { preset: 'top-4' });
+    const semi1 = m.find(x => x.id === 'semi1')!;
+    const semi2 = m.find(x => x.id === 'semi2')!;
+    expect([semi1.home, semi1.away]).toEqual(['group-a-1st', 'group-a-4th']);
+    expect([semi2.home, semi2.away]).toEqual(['group-a-2nd', 'group-a-3rd']);
+    expect(m.map(x => x.id)).toEqual(expect.arrayContaining(['third-place', 'final']));
+  });
+
+  it('@TM-002 Gegenbeispiel: bei 1 Gruppe verweist keine Herkunft auf eine andere Gruppe', () => {
+    const refs = generatePlayoffMatches(1, { preset: 'top-4' }).flatMap(x => [x.home, x.away]).filter(r => r.startsWith('group-'));
+    expect(refs.length).toBeGreaterThan(0);
+    expect(refs.every(r => r.startsWith('group-a-'))).toBe(true);
   });
 
   it('@TM-015 Halbfinale bei 2 Gruppen wie Top 4: HF1 = Erster A gegen Zweiter B, HF2 = Erster B gegen Zweiter A', () => {
