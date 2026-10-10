@@ -507,4 +507,66 @@ describe('GenericMutationQueue Weg B (A-06d, @FU-013/@FU-004)', () => {
     await vi.advanceTimersByTimeAsync(30000);
     expect(save).toHaveBeenCalledTimes(2);
   });
+
+  it('Fix 1 (@FU-013): dispose während laufendem process → danach kein Zeitgeber (Gegenbeispiel ohne dispose: [1000])', async () => {
+    let rejectD: (e: unknown) => void = () => undefined;
+    const execute = vi.fn(() => new Promise<void>((_res, rej) => { rejectD = rej; }));
+    q = makeQ(execute);
+    setOnLine(false);
+    q.enqueue('SAVE_THING', { id: 'a' });
+    setOnLine(true);
+    const run = q.process();
+    q.dispose();
+    rejectD(netError());
+    await run;
+    expect(delays).toEqual([]);
+    expect(openTimers()).toBe(0);
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(execute).toHaveBeenCalledTimes(1);
+
+    let rejectE: (e: unknown) => void = () => undefined;
+    const execute2 = vi.fn(() => new Promise<void>((_res, rej) => { rejectE = rej; }));
+    const q2 = makeQ(execute2, 'test_queue_retry_fix1_v1');
+    setOnLine(false);
+    q2.enqueue('SAVE_THING', { id: 'b' });
+    setOnLine(true);
+    const run2 = q2.process();
+    rejectE(netError());
+    await run2;
+    expect(delays).toEqual([1000]);
+    expect(openTimers()).toBe(1);
+    q2.dispose();
+  });
+
+  it('Fix 2 (@FU-013): transienter Fehler hebt die 30-s-Sperre auf (Gegenbeispiel: Sperre wirkt vorher)', async () => {
+    const execute = vi.fn().mockRejectedValueOnce(rlsError()).mockRejectedValue(netError());
+    q = makeQ(execute as (item: GenericMutationItem<QType>) => Promise<void>);
+    setOnLine(false);
+    q.enqueue('SAVE_THING', { id: 'a' });
+    setOnLine(true);
+    await q.process();
+    await q.processIfDue();
+    expect(execute).toHaveBeenCalledTimes(1);
+    await q.process();
+    expect(delays).toEqual([30000, 1000]);
+    await q.processIfDue();
+    expect(execute).toHaveBeenCalledTimes(3);
+  });
+
+  it('Fix 3 (@FU-013): Erfolg setzt die Folge zurück, auch wenn danach noch Items warten', async () => {
+    const execute = vi.fn()
+      .mockRejectedValueOnce(netError())
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValue(netError());
+    q = makeQ(execute as (item: GenericMutationItem<QType>) => Promise<void>);
+    setOnLine(false);
+    q.enqueue('SAVE_THING', { id: 'a' });
+    q.enqueue('SAVE_THING', { id: 'b' });
+    setOnLine(true);
+    await q.process();
+    expect(delays).toEqual([1000]);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(q.getPendingCount()).toBe(1);
+    expect(delays).toEqual([1000, 1000]);
+  });
 });
