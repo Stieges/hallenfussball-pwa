@@ -63,6 +63,11 @@ export class QueueRetryTimer {
         return this.handle !== null;
     }
 
+    /** A-06d2 (Entscheidung § 7): 30-s-Pause nach echtem Fehler läuft (Sperre + Zeitgeber). */
+    get inPause(): boolean {
+        return this.hold && this.isOpen;
+    }
+
     /** Planung (idempotent): löscht einen anstehenden Timer, nie zwei gleichzeitig. */
     schedule(ms: number): void {
         this.clear();

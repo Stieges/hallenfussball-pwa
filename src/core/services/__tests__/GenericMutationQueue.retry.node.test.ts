@@ -1108,3 +1108,160 @@ describe('MutationQueue A-06f authHold (@FU-009/@FU-013)', () => {
     expect(save).toHaveBeenCalledTimes(2);
   });
 });
+
+// =============================================================================
+// A-06d2 – Sperre nach echtem Fehler (Daniel-Entscheidung § 7, 2026-10-10):
+// Während der 30-s-Pause lösen `enqueue` und das `online`-Ereignis keinen
+// Versuch aus und zählen nicht. „Erneut senden“ sendet weiterhin sofort.
+// =============================================================================
+
+describe('MutationQueue A-06d2 Sperre nach echtem Fehler (@FU-013, Entscheidung § 7)', () => {
+  let failing = true;
+
+  beforeEach(() => {
+    mockStorage.clear();
+    qId = 0;
+    delays = [];
+    limitDelays = [];
+    openHandles = new Set();
+    failing = true;
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    recTimers = {
+      setTimeout: (cb, ms) => {
+        if (ms === REQUEST_TIMEOUT_MS) { limitDelays.push(ms); } else { delays.push(ms); }
+        const h = setTimeout(() => { openHandles.delete(h); cb(); }, ms);
+        openHandles.add(h);
+        return h;
+      },
+      clearTimeout: (h) => { openHandles.delete(h); clearTimeout(h); },
+    };
+    const nav = { onLine: true };
+    Object.defineProperty(globalThis, 'navigator', { value: nav, configurable: true });
+    setOnLine = (v: boolean) => { nav.onLine = v; };
+    // Node-Umgebung: ein EventTarget als window, damit der `online`-Listener registriert wird.
+    vi.stubGlobal('window', new EventTarget());
+  });
+
+  afterEach(() => {
+    q?.dispose();
+    mq?.dispose();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  /** Speichern schlägt echt (permanent) fehl, solange `failing` gesetzt ist. */
+  function saveFollowsFlag(): ReturnType<typeof vi.fn> {
+    return vi.fn(async () => {
+      if (failing) { throw rlsError(); }
+    });
+  }
+
+  /** Erster echter Fehlversuch für t1 (t = 0) – danach läuft die 30-s-Pause. */
+  async function startPauseWithOneFailure(save: ReturnType<typeof vi.fn>): Promise<void> {
+    mq = makeRealQueue(save);
+    setOnLine(false);
+    mq.enqueue('SAVE_TOURNAMENT', tour('t1'));
+    setOnLine(true);
+    await mq.process();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(mqRetryCount()).toBe(1);
+    expect(delays).toEqual([30000]);
+  }
+
+  it('echter Weg: 4 Bearbeitungen in 10 s während der Pause zählen nicht, nach 30 s genau ein Versuch', async () => {
+    const save = saveFollowsFlag();
+    await startPauseWithOneFailure(save);
+
+    for (const id of ['t2', 't3', 't4', 't5']) {
+      await vi.advanceTimersByTimeAsync(2000);
+      mq?.enqueue('SAVE_TOURNAMENT', tour(id));
+    }
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(mqRetryCount()).toBe(1);
+    expect(mq?.getFailedCount()).toBe(0);
+    expect(mq?.getPendingCount()).toBe(5);
+
+    await vi.advanceTimersByTimeAsync(21999); // t = 29 999
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(mqRetryCount()).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(1); // t = 30 000: genau ein Versuch
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(mqRetryCount()).toBe(2);
+    expect(mq?.getFailedCount()).toBe(0);
+  });
+
+  it('echter Weg: online-Ereignis während der Pause startet keinen Versuch, nach 30 s genau ein Versuch', async () => {
+    const save = saveFollowsFlag();
+    await startPauseWithOneFailure(save);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    window.dispatchEvent(new Event('online'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(mqRetryCount()).toBe(1);
+    expect(mq?.getFailedCount()).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(25000); // t = 30 000
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
+  /** Vier weitere echte Fehler bis zum Dead-Letter (t = 120 000); liefert die Id des Eintrags. */
+  async function deadLetterFirstItem(save: ReturnType<typeof vi.fn>): Promise<string> {
+    await startPauseWithOneFailure(save);
+    for (let i = 0; i < 4; i++) { await vi.advanceTimersByTimeAsync(30000); }
+    expect(mq?.getFailedCount()).toBe(1);
+    expect(mq?.getPendingCount()).toBe(0);
+    const failed = mq?.getFailedMutations()[0];
+    if (!failed) { throw new Error('Dead-Letter-Eintrag fehlt'); }
+    return failed.id;
+  }
+
+  /** Startet eine neue Pause: t2 schlägt echt fehl, solange `failing` gesetzt ist. */
+  async function startNewPauseWithT2(): Promise<void> {
+    mq?.enqueue('SAVE_TOURNAMENT', tour('t2'));
+    await vi.advanceTimersByTimeAsync(0);
+  }
+
+  it('Gegenbeispiel (§ 7): „Erneut senden“ (retryFailedMutation) sendet während der Pause sofort', async () => {
+    const save = saveFollowsFlag();
+    const failedId = await deadLetterFirstItem(save);
+    expect(save).toHaveBeenCalledTimes(5);
+
+    await startNewPauseWithT2();
+    expect(save).toHaveBeenCalledTimes(6);
+
+    failing = false;
+    expect(mq?.retryFailedMutation(failedId)).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(8);
+    expect(mq?.getPendingCount()).toBe(0);
+    expect(mq?.getFailedCount()).toBe(0);
+  });
+
+  it('Gegenbeispiel (§ 7): „Alle erneut senden“ (retryAllFailed) sendet während der Pause sofort', async () => {
+    const save = saveFollowsFlag();
+    await deadLetterFirstItem(save);
+    expect(save).toHaveBeenCalledTimes(5);
+
+    await startNewPauseWithT2();
+    expect(save).toHaveBeenCalledTimes(6);
+
+    failing = false;
+    expect(mq?.retryAllFailed()).toBe(1);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(8);
+    expect(mq?.getPendingCount()).toBe(0);
+    expect(mq?.getFailedCount()).toBe(0);
+  });
+
+  it('Gegenbeispiel 2 (ohne Pause): enqueue startet ohne vorherigen echten Fehler sofort', async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    mq = makeRealQueue(save);
+    mq.enqueue('SAVE_TOURNAMENT', tour('t1'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(mq.getPendingCount()).toBe(0);
+  });
+});

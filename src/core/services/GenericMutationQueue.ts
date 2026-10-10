@@ -139,6 +139,7 @@ export class GenericMutationQueue<TType extends string> {
     }
 
     private readonly handleOnline = (): void => {
+        if (this.retryTimer.inPause) { return; } // A-06d2: während der 30-s-Pause kein Versuch
         // eslint-disable-next-line no-console
         if (import.meta.env.DEV) { console.log('MutationQueue: Online detected, processing queue...'); }
         void this.process();
@@ -182,8 +183,8 @@ export class GenericMutationQueue<TType extends string> {
                     console.log(`MutationQueue: Coalesced ${type} for ${coalesceKey}`);
                 }
 
-                // Still trigger processing
-                if (navigator.onLine) {
+                // Still trigger processing (A-06d2: nicht während der 30-s-Pause)
+                if (navigator.onLine && !this.retryTimer.inPause) {
                     void this.process();
                 }
                 return;
@@ -203,8 +204,8 @@ export class GenericMutationQueue<TType extends string> {
         this.save();
         this.notifyListeners();
 
-        // Optimistic processing
-        if (navigator.onLine) {
+        // Optimistic processing (A-06d2: nicht während der 30-s-Pause)
+        if (navigator.onLine && !this.retryTimer.inPause) {
             void this.process();
         }
     }
