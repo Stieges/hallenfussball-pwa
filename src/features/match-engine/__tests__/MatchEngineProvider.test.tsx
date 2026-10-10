@@ -407,6 +407,7 @@ describe('MatchEngineProvider: resyncNow und Wiederaufnahme (A-06g)', () => {
     mockAuth.session = { token: 'token-2' };
     rerender(<Tree />);
     expect(resumeAuthSpy).toHaveBeenCalledTimes(1);
+    expect(queue.resumeAfterAuth).not.toHaveBeenCalled();
     await flushFakeTimers();
     expect(queue.resumeAfterAuth).toHaveBeenCalledTimes(1);
   });
