@@ -10,8 +10,9 @@
  * „passend gemacht" werden kann.
  *
  * Pflichttest: je Fall `expected.tiebreak === resolveTiebreakMode(finals,
- * knockoutRoundOf(phase)) ?? 'shootout'`; jeder markierte Fall trägt `befund` und
- * `serverHeute` mit abweichendem `tiebreak`.
+ * knockoutRoundOf(phase), finalType) ?? 'shootout'`; jeder markierte Fall trägt `befund` und
+ * `serverHeute` mit abweichendem `tiebreak`. Der Fall „Spiel um Platz 3 mit
+ * Platzierungs-Regel" (@W2A-039) klassifiziert über `finalType`, nicht über die Phase.
  * Gegenbeispiel: Fall ohne Runden-Regel trägt KEINE Markierung (läuft im Skript als
  * normaler Vertrag auf `OK`, nicht als `BEKANNT`).
  * Mutation: `expected.tiebreak` auf "goldenGoal" zurücksetzen → rot.
@@ -25,6 +26,7 @@ interface Vertragsfall {
   name: string;
   input: {
     phase: string;
+    finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth';
     finals: FinalsConfig | null;
   };
   expected: {
@@ -47,7 +49,7 @@ describe('B-04c Fixrunde 1 – Vertrag K.o.-Entscheidung erwartet den Client-Wer
     for (const fall of faelle) {
       const rundentyp = knockoutRoundOf(fall.input.phase);
       expect(rundentyp, `Fall ${fall.name}: phase ist eine K.-o.-Runde`).not.toBeNull();
-      const clientWert = resolveTiebreakMode(fall.input.finals, rundentyp) ?? 'shootout';
+      const clientWert = resolveTiebreakMode(fall.input.finals, rundentyp, fall.input.finalType) ?? 'shootout';
       expect(clientWert, `Fall ${fall.name}`).toBe(fall.expected.tiebreak);
     }
   });

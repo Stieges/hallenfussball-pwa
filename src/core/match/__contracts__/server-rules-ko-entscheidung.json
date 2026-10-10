@@ -79,6 +79,51 @@
       }
     },
     {
+      "name": "Spiel um Platz 3 mit Platzierungs-Regel",
+      "input": {
+        "durationMinutes": null,
+        "phase": "final",
+        "finalType": "thirdPlace",
+        "groupDuration": 10,
+        "finalDuration": 12,
+        "config": {
+          "gamePeriods": 1,
+          "halftimeBreak": 1,
+          "matchCockpitSettings": {
+            "penaltyShootersPerTeam": null,
+            "penaltySuddenDeathAfter": null
+          }
+        },
+        "finals": {
+          "preset": "top-4",
+          "tiebreaker": "overtime-then-shootout",
+          "tiebreakerDuration": 5,
+          "tiebreakerByRound": {
+            "final": "overtime-then-shootout",
+            "placement": "shootout"
+          }
+        }
+      },
+      "expected": {
+        "sections": 1,
+        "sectionSeconds": 720,
+        "breakSeconds": 60,
+        "knockout": true,
+        "tiebreak": "shootout",
+        "overtimeSeconds": 300,
+        "shootersPerTeam": 5,
+        "suddenDeathAfter": 6,
+        "penaltySeconds": 120
+      },
+      "bekannteAbweichung": {
+        "befund": "C-KO-RUNDENREGEL-SERVER",
+        "uebergabe": "A-27 (Spur A)",
+        "serverHeute": {
+          "tiebreak": "overtime-then-shootout"
+        }
+      }
+    },
+    {
       "name": "K.-o.-Spiel ohne Regel (Rückfall shootout)",
       "input": {
         "durationMinutes": null,
