@@ -88,7 +88,8 @@ function tm015Step(view: (typeof TM015_VIEWS)[number]): TurniertagStep {
     title: `Halbfinale 1 zeigt "Erster Gruppe A gegen Zweiter Gruppe B" (${view})`,
     scenarios: ['@TM-015'],
     owner: view === 'Hallen-Monitor' || view === 'Zuschaueransicht' ? 'A-12 (+ B-35 Adapter)' : 'A-12',
-    expectedFail: true,
+    // Spielplan der Turnierleitung ist seit dem Generator-Fix (Top 4 über Kreuz) grün; die anderen Ansichten bleiben offen.
+    expectedFail: view !== 'Spielplan der Turnierleitung',
     run: (ctx) => halbfinaleHerkunft(view, ctx),
   };
 }
