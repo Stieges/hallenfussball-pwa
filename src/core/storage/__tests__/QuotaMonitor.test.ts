@@ -4,6 +4,7 @@ import { getQuotaStatus, logQuotaStatus } from '../QuotaMonitor';
 /**
  * @FU-004 – Speicher-Teil: Warnstufen des Speicherverbrauchs.
  * Die Browser-Schätzung (navigator.storage.estimate) wird je Test vorgegeben.
+ * Hinweis: kein produktiver Aufrufer, Szenario-Bezug nur mittelbar.
  */
 
 function stubEstimate(impl: () => Promise<unknown>): void {
@@ -51,6 +52,24 @@ describe('QuotaMonitor – Warnstufen (@FU-004)', () => {
 
   it('ab 95 % kritisch', async () => {
     stubEstimate(() => Promise.resolve({ usage: 96, quota: 100 }));
+
+    const status = await getQuotaStatus();
+
+    expect(status?.isWarning).toBe(true);
+    expect(status?.isCritical).toBe(true);
+  });
+
+  it('genau 80 % ist Warnung (Grenze inklusiv)', async () => {
+    stubEstimate(() => Promise.resolve({ usage: 80, quota: 100 }));
+
+    const status = await getQuotaStatus();
+
+    expect(status?.isWarning).toBe(true);
+    expect(status?.isCritical).toBe(false);
+  });
+
+  it('genau 95 % ist kritisch (Grenze inklusiv)', async () => {
+    stubEstimate(() => Promise.resolve({ usage: 95, quota: 100 }));
 
     const status = await getQuotaStatus();
 
