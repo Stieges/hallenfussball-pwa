@@ -40,6 +40,13 @@ describe('compareKickoff – Anpfiff-Reihenfolge', () => {
     expect(sortiert.map(m => m.id)).toEqual(['g1', 'g2', 'platz3']);
   });
 
+  it('unlesbare Uhrzeit (NaN) steht hinter allen Spielen mit Uhrzeit', () => {
+    const kaputt = spiel('kaputt', { matchNumber: 1, scheduledTime: 'kaputt' as unknown as Date });
+    const frueh = spiel('frueh', { matchNumber: 9, scheduledTime: um(14, 0) });
+    const spaet = spiel('spaet', { matchNumber: 2, scheduledTime: um(15, 0) });
+    expect([kaputt, spaet, frueh].sort(compareKickoff).map(m => m.id)).toEqual(['frueh', 'spaet', 'kaputt']);
+  });
+
   it('ohne Uhrzeit nach Spielnummer, dann Runde, dann Id; fehlende Uhrzeit ans Ende', () => {
     const ohneZeit = spiel('ohne', { scheduledTime: undefined, matchNumber: 1 });
     const spaet = spiel('spaet', { matchNumber: 5, scheduledTime: um(16, 0) });
@@ -77,6 +84,11 @@ describe('isUpcoming – offene Spiele', () => {
 
   it('unterbrochen (paused) zählt nie als offen', () => {
     expect(isUpcoming(spiel('m', { matchStatus: unbekannterStatus('paused') }))).toBe(false);
+  });
+
+  it('Laufzeitstatus paused und finished zählen nie als nächstes Spiel', () => {
+    expect(upcomingMatches([spiel('p', { matchStatus: unbekannterStatus('paused') })], { count: 1 })).toEqual([]);
+    expect(upcomingMatches([spiel('f', { matchStatus: 'finished' })], { count: 1 })).toEqual([]);
   });
 
   it('beendet und übersprungen zählen nie als offen', () => {
