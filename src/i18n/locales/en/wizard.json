@@ -243,7 +243,8 @@
         "roundOf16": "Round of 16",
         "quarterfinal": "Quarterfinal",
         "semifinal": "Semifinal",
-        "final": "Final"
+        "final": "Final",
+        "placement": "Placement matches"
       },
       "options": {
         "shootout": "Penalty shootout",

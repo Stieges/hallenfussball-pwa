@@ -782,11 +782,13 @@ export class MatchExecutionService {
         const tournament = await this.tournamentRepo.get(tournamentId);
         if (!tournament) { throw new Error(`Tournament ${tournamentId} not found`); }
 
-        // B-04c (@W2A-007/@W2A-009): die Entscheidungsregel wird je K.-o.-Runde über
+        // B-04c (@W2A-007/@W2A-009/@W2A-039): die Entscheidungsregel wird je K.-o.-Runde über
         // dieselbe Funktion ermittelt, die auch der Monitor nutzt (tiebreakDecision).
+        // Platzierungsspiele werden über `finalType` klassifiziert (nicht über die Phase).
         const tiebreakerMode = resolveTiebreakMode(
             tournament.finalsConfig,
             scheduledMatch.phase === 'groupStage' ? null : scheduledMatch.phase,
+            scheduledMatch.finalType,
         );
         const tiebreakerDuration = tournament.finalsConfig?.tiebreakerDuration ?? 5;
         const durationSeconds = tournament.groupPhaseGameDuration * 60;

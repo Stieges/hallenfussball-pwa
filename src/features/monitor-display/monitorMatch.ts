@@ -58,6 +58,6 @@ export function toLiveMatch(match: Match, teams: Team[], tournament: Tournament)
     timerPausedAt: match.timerPausedAt,
     timerElapsedSeconds: match.timerElapsedSeconds,
     group: match.group,
-    tiebreakerMode: resolveTiebreakMode(tournament.finalsConfig, knockoutRoundOf(match.phase)),
+    tiebreakerMode: resolveTiebreakMode(tournament.finalsConfig, knockoutRoundOf(match.phase), match.finalType),
   };
 }

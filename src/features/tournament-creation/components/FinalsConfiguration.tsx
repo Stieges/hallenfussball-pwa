@@ -1,9 +1,9 @@
 import { CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
-import { Tournament, FinalsPreset, FinalsConfig, TiebreakerMode, KnockoutRound } from '../../../types/tournament';
+import { Tournament, FinalsPreset, FinalsConfig, TiebreakerMode, TiebreakerRoundKey } from '../../../types/tournament';
 import { getFinalsOptions, FinalsOption } from '../../../constants/finalsOptions';
-import { knockoutRoundsForPreset } from '../../../core/match/tiebreakDecision';
+import { knockoutRoundsForPreset, presetHasPlacementGames } from '../../../core/match/tiebreakDecision';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../../../config/sports';
 
 interface FinalsConfigurationProps {
@@ -12,6 +12,16 @@ interface FinalsConfigurationProps {
 }
 
 const TIEBREAKER_MODES: readonly TiebreakerMode[] = ['shootout', 'overtime-then-shootout', 'goldenGoal'];
+
+const roundSelectStyle: CSSProperties = {
+  minHeight: cssVars.touchTargets.minimum,
+  padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+  background: cssVars.colors.inputBg,
+  border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
+  borderRadius: cssVars.borderRadius.sm,
+  color: cssVars.colors.textPrimary,
+  fontSize: cssVars.fontSizes.sm,
+};
 
 export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
   formData,
@@ -69,7 +79,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
     onUpdate('finalsConfig', newConfig);
   };
 
-  const handleTiebreakerRoundChange = (round: KnockoutRound, tiebreaker: TiebreakerMode) => {
+  const handleTiebreakerRoundChange = (round: TiebreakerRoundKey, tiebreaker: TiebreakerMode) => {
     const newConfig: FinalsConfig = {
       ...formData.finalsConfig,
       preset: formData.finalsConfig?.preset ?? 'none',
@@ -170,6 +180,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
         <div style={{ marginTop: '16px' }}>
           <button
             onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+            data-testid="finals-advanced-options-toggle"
             style={{
               width: '100%',
               padding: '10px 12px',
@@ -427,14 +438,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                     handleTiebreakerRoundChange(round, mode);
                   }
                 }}
-                style={{
-                  padding: '6px 10px',
-                  background: cssVars.colors.inputBg,
-                  border: `1px solid ${cssVars.colors.border}`,
-                  borderRadius: cssVars.borderRadius.sm,
-                  color: cssVars.colors.textPrimary,
-                  fontSize: cssVars.fontSizes.sm,
-                }}
+                style={roundSelectStyle}
               >
                 {TIEBREAKER_MODES.map((mode) => (
                   <option key={mode} value={mode}>
@@ -444,6 +448,45 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               </select>
             </label>
           ))}
+
+          {/* Platzierungsspiele: eigene Entscheidungsregel, vorbelegt mit der Finale-Regel (@W2A-039) */}
+          {presetHasPlacementGames(currentPreset) && (
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: cssVars.spacing.sm,
+                marginTop: cssVars.spacing.sm,
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
+                {t('finalsConfig.tiebreaker.byRound.placement')}
+              </span>
+              <select
+                data-testid="tiebreaker-round-placement"
+                value={
+                  formData.finalsConfig?.tiebreakerByRound?.placement
+                  ?? formData.finalsConfig?.tiebreakerByRound?.final
+                  ?? currentTiebreaker
+                }
+                onChange={(e) => {
+                  const mode = TIEBREAKER_MODES.find((m) => m === e.target.value);
+                  if (mode) {
+                    handleTiebreakerRoundChange('placement', mode);
+                  }
+                }}
+                style={roundSelectStyle}
+              >
+                {TIEBREAKER_MODES.map((mode) => (
+                  <option key={mode} value={mode}>
+                    {t(`finalsConfig.tiebreaker.options.${mode}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       )}
     </div>

@@ -243,7 +243,8 @@
         "roundOf16": "Achtelfinale",
         "quarterfinal": "Viertelfinale",
         "semifinal": "Halbfinale",
-        "final": "Finale"
+        "final": "Finale",
+        "placement": "Platzierungsspiele"
       },
       "options": {
         "shootout": "Strafstoßschießen",
