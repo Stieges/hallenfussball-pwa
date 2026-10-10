@@ -168,10 +168,16 @@ describe('MonitorDisplayPage — Anzeigedauer je Folie (@ZM-130, Fake-Timer)', (
     expect(screen.getByText('Erste Folie')).toBeInTheDocument();
   });
 
+  // Ohne Klon: Dieser Test prüft den Übergang des Takt-Timers, nicht den Datenweg. Mit einem Klon je Poll
+  // würde der Timer bei jedem Poll zurückgesetzt (C-MON-TAKT-STEHT) und nie feuern.
   it('Bestand: Ein-Folien-Monitor wechselt nicht und blendet nicht aus (Übergang fade)', async () => {
-    await starte(monitorTurnier(buildTournament(), [slide('custom-text', { headline: 'Einzige Folie' })], {
+    const daten = monitorTurnier(buildTournament(), [slide('custom-text', { headline: 'Einzige Folie' })], {
       transition: 'fade', transitionDuration: 500,
-    }));
+    });
+    supabaseGet.mockResolvedValue(daten);
+    localGet.mockResolvedValue(null);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    await vorspulen(0);
     await vorspulenPruefend(15_000, () => {
       expect(opazitaet('Einzige Folie')).toBe('1');
     });
