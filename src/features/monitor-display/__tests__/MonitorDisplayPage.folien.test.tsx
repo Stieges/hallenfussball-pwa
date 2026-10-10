@@ -110,7 +110,7 @@ describe('@ZM-071 Nächste Spiele: Zeilen über alle Felder, Uhrzeit und Feld, n
   });
 });
 
-describe('@ZM-078 Nächste Spiele nach Abpfiff: Spiel 7 fällt aus der Liste; Spiel 8 läuft (Szenario @ZM-083)', () => {
+describe('@ZM-078 Nächste Spiele nach Abpfiff: Spiel 7 fällt aus der Liste; Spiel 8 läuft', () => {
   it('Sponsor (15 s) → Nächste Spiele; Poll bei 5 s meldet Spiel 7 beendet 2:1; ab 15 s ohne Spiel 7', async () => {
     const folien = [slide('sponsor', { sponsorId: 'sp-1' }), slide('next-matches', { matchCount: 3 })];
     const laeuft = withScheduledTimes().map(m => (m.id === 'match-8' ? { ...m, matchStatus: 'running' as const } : m));
