@@ -79,10 +79,30 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
    * Die erste Übertragung erreicht den Server, die Antwort geht verloren. Das Gerät schickt dasselbe
    * Tor (gleiche Ereignis-ID) erneut. `answers` hält, was der Server auf jeden Versuch geantwortet hat.
    */
-  async function loseFirstResponse(page: Page): Promise<{ attempts: () => number; answers: string[]; sent: AppendAsRoleEvent[][] }> {
+  async function loseFirstResponse(
+    page: Page,
+    options: { holdCatchUp?: boolean } = {}
+  ): Promise<{ attempts: () => number; answers: string[]; sent: AppendAsRoleEvent[][] }> {
     const state = { count: 0, answers: [] as string[], sent: [] as AppendAsRoleEvent[][] };
+    // Das Nachladen (GET match_events, auch das 5-s-Ausweichen) würde den Eintrag vor der Wiederholung
+    // bestätigen und den zweiten Versuch überflüssig machen: bis zum zweiten Versuch zurückhalten.
+    let releaseCatchUp: () => void = () => undefined;
+    const secondAttemptStarted = new Promise<void>((resolve) => {
+      releaseCatchUp = resolve;
+    });
+    if (options.holdCatchUp) {
+      await page.route('**/rest/v1/match_events?*', async (route) => {
+        if (route.request().method() === 'GET') {
+          await secondAttemptStarted;
+        }
+        await route.continue();
+      });
+    }
     await page.route(APPEND_RPC_PATTERN, async (route) => {
       state.count += 1;
+      if (state.count >= 2) {
+        releaseCatchUp();
+      }
       state.sent.push(appendBodyOf(route).p_events);
       const response = await route.fetch();
       const json = (await response.json()) as { results: Array<{ status: string }> };
@@ -109,7 +129,7 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
     try {
       await openSettledCockpit(page, ids.tournamentId, ids.matchId);
       const syncStatus = page.locator('[data-testid="sync-status"]');
-      const lost = await loseFirstResponse(page);
+      const lost = await loseFirstResponse(page, { holdCatchUp: true });
 
       await enterGoal(page, 'home');
       await expect.poll(() => lost.attempts(), { timeout: 10000 }).toBeGreaterThanOrEqual(2);
@@ -140,9 +160,14 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
     const { context, page } = await newRoleContext(browser, 'owner');
     try {
       await openSettledCockpit(page, ids.tournamentId, ids.matchId);
-      await loseFirstResponse(page);
+      const lost = await loseFirstResponse(page);
       await enterGoal(page, 'home');
-      await expect(page.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: 10000 });
+      // Erst warten, bis der Versuch mit verlorener Antwort passiert ist (sonst steht der Zähler noch auf 0),
+      // dann die Wiederholung (1 s) und den Push abwarten: das Gerät muss das Tor als übertragen zeigen.
+      await expect.poll(() => lost.attempts(), { timeout: 10000 }).toBeGreaterThanOrEqual(1);
+      await page.waitForTimeout(3000);
+      await expect(page.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: 5000 });
+      await expect(page.locator('[data-testid="sync-wait-details"]')).toHaveCount(0);
     } finally {
       await context.close();
     }
@@ -173,6 +198,10 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
       await expect(helperStatus).toHaveAttribute('data-pending', '3', { timeout: 5000 });
       expect((await fetchEngineRows(ids.matchId)).length).toBe(baseRows);
 
+      // Gegenprobe: solange Toms Einträge warten, steht die Zeitstrafe nicht im Verlauf des zweiten Geräts.
+      const ownerPenaltyRow = ownerPage.locator('span', { hasText: /^⏱ 2 Min / });
+      await expect(ownerPenaltyRow).toHaveCount(0);
+
       await helperContext.setOffline(false);
       // Tor und Zeitstrafe sind in der DB, die Karte nicht.
       await expect.poll(async () => (await fetchEngineRows(ids.matchId)).length, { timeout: 20000 }).toBe(baseRows + 2);
@@ -188,7 +217,12 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
       await expect(helperPage.locator('[data-testid="outbox-rejected-item"]')).toHaveCount(1);
       // Zweites Gerät: das Tor ist da, die Karte steht nirgends.
       await expect(ownerPage.locator('[data-testid="score-home"]')).toHaveText('2', { timeout: 10000 });
-      await expect(ownerPage.getByText(/Zeitstrafe/).first()).toBeVisible({ timeout: 10000 });
+      await expect(ownerPenaltyRow).toHaveCount(1, { timeout: 10000 });
+      await expect(ownerPage.locator('[data-testid="score-home"]')).toHaveText('2', { timeout: 10000 });
+      // Nur die Gelbe Karte steht unter "nicht übernommen" -- weder Tor noch Zeitstrafe.
+      const rejectedItem = helperPage.locator('[data-testid="outbox-rejected-item"]');
+      await expect(rejectedItem).toContainText('Gelbe Karte');
+      await expect(rejectedItem).not.toContainText(/\bTor\b|Zeitstrafe/);
       await expect(ownerPage.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
     } finally {
       await helperContext.close();
