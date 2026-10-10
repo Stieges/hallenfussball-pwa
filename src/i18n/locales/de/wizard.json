@@ -435,7 +435,8 @@
       "win": "Sieg",
       "draw": "Unentschieden",
       "loss": "Niederlage",
-      "hint": "Erlaubt sind positive, negative Zahlen und Null. Auch Kommazahlen sind möglich (z.B. 2.5)"
+      "hint": "Erlaubt sind Werte von 0 bis 99. Auch Kommazahlen sind möglich (z.B. 2.5)",
+      "rangeError": "Gültig: 0 bis 99 Punkte"
     }
   },
   "dfb": {

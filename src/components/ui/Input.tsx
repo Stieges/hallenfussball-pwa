@@ -5,6 +5,8 @@ interface InputProps {
   type?: 'text' | 'number' | 'email' | 'tel' | 'date' | 'time';
   value: string | number;
   onChange?: (value: string) => void;
+  /** Wird beim Verlassen des Feldes ausgelöst (z. B. Regelwert-Prüfung, @W2A-034) */
+  onBlur?: () => void;
   placeholder?: string;
   min?: string | number;
   max?: string | number;
@@ -26,6 +28,7 @@ export const Input: React.FC<InputProps> = ({
   type = 'text',
   value,
   onChange,
+  onBlur,
   placeholder,
   min,
   max,
@@ -107,6 +110,7 @@ export const Input: React.FC<InputProps> = ({
         onBlur={(e) => {
           e.target.style.borderColor = hasError ? cssVars.colors.error : cssVars.colors.border;
           e.target.style.boxShadow = 'none';
+          onBlur?.();
         }}
       />
       {errorMessage && (

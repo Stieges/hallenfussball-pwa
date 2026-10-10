@@ -1,4 +1,4 @@
-import { CSSProperties, useMemo } from 'react';
+import { CSSProperties, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '../../../components/ui';
 import { cssVars } from '../../../design-tokens'
@@ -17,6 +17,16 @@ interface Preset {
   sublabel: string;
 }
 
+/** Gültiger Bereich der Punkte-Werte (@W2A-034): 0 bis 99, Kommazahlen erlaubt. */
+const MIN_POINTS = 0;
+const MAX_POINTS = 99;
+
+function istGueltigerPunktwert(roh: string): boolean {
+  if (roh.trim() === '') { return false; }
+  const wert = Number(roh);
+  return Number.isFinite(wert) && wert >= MIN_POINTS && wert <= MAX_POINTS;
+}
+
 export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
   formData,
   onUpdate,
@@ -30,6 +40,25 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
   ];
 
   const currentPoints = formData.pointSystem ?? { win: 3, draw: 1, loss: 0 };
+
+  // @W2A-034: Eingabe als Entwurf halten und erst beim Verlassen des Feldes
+  // übernehmen — ein ungültiger Wert (z. B. negative Punkte) wird nicht
+  // übernommen, am Feld erscheint der gültige Bereich.
+  const [entwurf, setEntwurf] = useState({
+    win: String(currentPoints.win),
+    draw: String(currentPoints.draw),
+    loss: String(currentPoints.loss),
+  });
+  const [fehler, setFehler] = useState({ win: false, draw: false, loss: false });
+
+  // Synchronisation, wenn die Werte von außen kommen (z. B. Preset-Klick)
+  useEffect(() => {
+    setEntwurf({
+      win: String(currentPoints.win),
+      draw: String(currentPoints.draw),
+      loss: String(currentPoints.loss),
+    });
+  }, [currentPoints.win, currentPoints.draw, currentPoints.loss]);
 
   // Determine if current values match a preset or are custom
   const isCustom = useMemo(() => {
@@ -56,11 +85,22 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
   };
 
   const handleCustomChange = (field: keyof PointSystem, value: string) => {
-    const newSystem: PointSystem = {
+    setEntwurf((vorher) => ({ ...vorher, [field]: value }));
+    setFehler((vorher) => ({ ...vorher, [field]: false }));
+  };
+
+  const handleCustomBlur = (field: keyof PointSystem) => {
+    if (!istGueltigerPunktwert(entwurf[field])) {
+      // Wert nicht übernehmen — Eingabe auf den gültigen Stand zurücksetzen
+      setFehler((vorher) => ({ ...vorher, [field]: true }));
+      setEntwurf((vorher) => ({ ...vorher, [field]: String(currentPoints[field]) }));
+      return;
+    }
+    setFehler((vorher) => ({ ...vorher, [field]: false }));
+    onUpdate('pointSystem', {
       ...currentPoints,
-      [field]: parseFloat(value) || 0,
-    };
-    onUpdate('pointSystem', newSystem);
+      [field]: Number(entwurf[field]),
+    });
   };
 
   const presetButtonStyle = (isActive: boolean): CSSProperties => ({
@@ -150,8 +190,11 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
               <Input
                 type="number"
                 step="0.5"
-                value={currentPoints.win}
+                value={entwurf.win}
                 onChange={(v) => handleCustomChange('win', v)}
+                onBlur={() => handleCustomBlur('win')}
+                errorMessage={fehler.win ? t('pointSystem.custom.rangeError') : undefined}
+                data-testid="point-system-win"
               />
             </div>
             <div>
@@ -167,8 +210,11 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
               <Input
                 type="number"
                 step="0.5"
-                value={currentPoints.draw}
+                value={entwurf.draw}
                 onChange={(v) => handleCustomChange('draw', v)}
+                onBlur={() => handleCustomBlur('draw')}
+                errorMessage={fehler.draw ? t('pointSystem.custom.rangeError') : undefined}
+                data-testid="point-system-draw"
               />
             </div>
             <div>
@@ -184,8 +230,11 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
               <Input
                 type="number"
                 step="0.5"
-                value={currentPoints.loss}
+                value={entwurf.loss}
                 onChange={(v) => handleCustomChange('loss', v)}
+                onBlur={() => handleCustomBlur('loss')}
+                errorMessage={fehler.loss ? t('pointSystem.custom.rangeError') : undefined}
+                data-testid="point-system-loss"
               />
             </div>
           </div>

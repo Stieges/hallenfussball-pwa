@@ -10,6 +10,7 @@
 import { CSSProperties, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
+import { Input } from '../ui';
 import type {
   MatchCockpitSettings,
   MatchSoundPreset,
@@ -105,6 +106,22 @@ export function MatchCockpitSettingsPanel({
     },
     [settings, onChange]
   );
+
+  // Spielregel Schützenzahl (@W2A-034): ungültige Werte (z. B. 0 Schützen) werden
+  // beim Verlassen des Feldes abgelehnt — am Feld steht der gültige Bereich.
+  const [schuetzenEntwurf, setSchuetzenEntwurf] = useState(String(settings.penaltyShootersPerTeam));
+  const [schuetzenFehler, setSchuetzenFehler] = useState(false);
+
+  const handleSchuetzenBlur = useCallback(() => {
+    const wert = Number(schuetzenEntwurf);
+    if (!Number.isInteger(wert) || wert < 1 || wert > 10) {
+      setSchuetzenFehler(true);
+      setSchuetzenEntwurf(String(settings.penaltyShootersPerTeam));
+      return;
+    }
+    setSchuetzenFehler(false);
+    updateSetting('penaltyShootersPerTeam', wert);
+  }, [schuetzenEntwurf, settings.penaltyShootersPerTeam, updateSetting]);
 
   // Handle sound preset change
   const handleSoundChange = useCallback(
@@ -207,6 +224,25 @@ export function MatchCockpitSettingsPanel({
               </option>
             ))}
           </select>
+        </SettingRow>
+      </section>
+
+      {/* Spielregel Schützenzahl (@W2A-034) */}
+      <section style={styles.section}>
+        <h3 style={styles.sectionTitle}>{t('settings.penaltyShootout')}</h3>
+
+        <SettingRow label={t('settings.penaltyShooters')} description={t('settings.penaltyShootersDesc')}>
+          <Input
+            type="number"
+            value={schuetzenEntwurf}
+            onChange={(v) => {
+              setSchuetzenEntwurf(v);
+              setSchuetzenFehler(false);
+            }}
+            onBlur={handleSchuetzenBlur}
+            errorMessage={schuetzenFehler ? t('settings.penaltyShootersRangeError') : undefined}
+            data-testid="settings-penalty-shooters"
+          />
         </SettingRow>
       </section>
 
