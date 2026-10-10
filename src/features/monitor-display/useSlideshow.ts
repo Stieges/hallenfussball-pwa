@@ -17,6 +17,8 @@ import {
 
 export interface SlideView {
   currentIndex: number;
+  /** Seite der aktuellen Folie (B-16f1, 0-basiert); ohne Seiten immer 0. */
+  page: number;
   isTransitioning: boolean;
   direction: 'next' | 'prev';
   /** Gepinntes Spiel der Live-Folie (B-16e1); null ohne Pin. */
@@ -166,6 +168,7 @@ export function useSlideshow(program: SlideProgram, transitionMs: number | null)
 
   const slideState = useMemo<SlideView>(() => ({
     currentIndex: view.index,
+    page: view.page,
     isTransitioning: transitionDirection !== null,
     direction: transitionDirection ?? view.direction,
     pinnedMatchId: view.pinnedMatchId ?? null,

@@ -29,6 +29,7 @@ import {
   alleUebersprungen, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
 } from './slideProgramme';
 import { isSlideShowable } from './publicVisibility';
+import { monitorPageCount } from './slideContent';
 import { useSlideshow } from './useSlideshow';
 import { boundFieldNumbers, visibleGoal } from './monitorGoalFilter';
 import { getPerformanceSettings } from './monitorDisplayHelpers';
@@ -130,7 +131,12 @@ export function MonitorDisplayPage({
   const defaultSlideDuration = monitor?.defaultSlideDuration ?? 15;
   // Spiele für die Anhalte- und Feldregeln (B-16e1): jede neue Turnier-Referenz wertet die Regeln aus.
   const slideProgram = useMemo<SlideProgram>(
-    () => ({ slides, defaultDurationSec: defaultSlideDuration, matches: tournament?.matches }),
+    () => ({
+      slides,
+      defaultDurationSec: defaultSlideDuration,
+      matches: tournament?.matches,
+      pageCount: (slide) => monitorPageCount(slide, tournament),
+    }),
     [slides, defaultSlideDuration, tournament]
   );
   const transitionMs = performanceSettings.enableTransitions && monitor?.transition !== 'none'
@@ -207,6 +213,7 @@ export function MonitorDisplayPage({
               theme={monitor.theme}
               overscanPx={monitor.overscanPx}
               pinnedMatchId={slideState.pinnedMatchId}
+              page={slideState.page}
             />
           </TransitionWrapper>
         )}

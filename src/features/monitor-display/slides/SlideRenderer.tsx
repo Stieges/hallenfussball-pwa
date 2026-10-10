@@ -19,6 +19,8 @@ interface SlideRendererProps {
   overscanPx?: number;
   /** Gepinntes Spiel der Live-Folie (B-16e1): die Folie zeigt es auch nach Abpfiff. */
   pinnedMatchId?: string | null;
+  /** Seite der Folie (B-16f1); Folien mit Seiten werten sie in f3 aus, bis dahin ohne Wirkung. */
+  page?: number;
 }
 
 /** Wählt die Folien-Komponente nach Typ; unbekannte Typen fallen auf die Zuschauer-QR-Folie. */

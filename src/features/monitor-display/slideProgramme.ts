@@ -234,10 +234,14 @@ export function nextSlide(program: SlideProgram, state: SlideshowState, now: num
     }
   }
 
-  if (count <= 1) { return state; }
   const slide = program.slides[wrapIndex(state.index, count)];
+  const pages = pagesOf(program, slide);
+  // Seiten-Klemme (B-16f1): Seite außerhalb der Folie (Seitenzahl gesunken) → Seite 0 mit neuem Takt.
+  if (state.page >= pages) { return { ...state, page: 0, startedAt: now }; }
+  // B-16f1: Stillstand nur ohne Folienwechsel UND ohne Seitenwechsel (c-Bedenken 2).
+  if (count <= 1 && pages <= 1) { return state; }
   if (now - state.startedAt < slideDurationMs(slide, program.defaultDurationSec)) { return state; }
-  if (state.page + 1 < pagesOf(program, slide)) {
+  if (state.page + 1 < pages) {
     return { ...state, page: state.page + 1, startedAt: now, direction: 'next' };
   }
   return advance(program, state, now, matches);
@@ -264,6 +268,7 @@ export function wakeAt(program: SlideProgram, state: SlideshowState): number | n
   const count = program.slides.length;
   if (state.paused || count === 0) { return null; }
   if ((state.pinnedMatchId ?? null) !== null) { return state.finalUntil ?? null; }
-  if (count <= 1) { return null; }
+  // B-16f1: Eine Folie mit mehreren Seiten hat einen Takt (Seitenwechsel), eine Folie mit einer Seite nie.
+  if (count <= 1 && pagesOf(program, program.slides[0]) <= 1) { return null; }
   return state.startedAt + slideDurationMs(program.slides[wrapIndex(state.index, count)], program.defaultDurationSec);
 }
