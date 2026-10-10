@@ -32,6 +32,11 @@ export interface DisplayContext {
   tournamentId: string;
   monitorId: string;
   now: number;
+  /**
+   * Herkunft für den F-324-Schutz. Fehlt sie, gilt `state.origin`. Die Seite setzt sie beim
+   * Ziel-Wechsel auf null (wie der frühere dataSourceRef), ohne `origin` der Realtime-Anbindung zu löschen.
+   */
+  guardOrigin?: DisplayOrigin | null;
 }
 
 const CONNECTION_ERROR =
@@ -71,7 +76,8 @@ export function applyDelta(
 
   // F-324: Ein Cloud-Aussetzer darf einen laufenden Bildschirm nicht auf die lokale Kopie
   // zurückstufen (lokal kann älter sein als das, was gerade zu sehen ist).
-  if (state.hasData && delta.lookupFailed && delta.origin === 'local' && state.origin === 'cloud') {
+  const guardOrigin = ctx.guardOrigin !== undefined ? ctx.guardOrigin : state.origin;
+  if (state.hasData && delta.lookupFailed && delta.origin === 'local' && guardOrigin === 'cloud') {
     return state;
   }
 
