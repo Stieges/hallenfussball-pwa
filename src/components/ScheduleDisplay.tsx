@@ -35,6 +35,8 @@ interface ScheduleDisplayProps {
   currentStandings?: Standing[];
   /** Optional, Vorgabe true: Gruppentabellen anzeigen. false blendet sie komplett aus (Zuschauer im Kindermodus). */
   showGroupTables?: boolean;
+  /** Optional: Quelle für die Teilnehmerliste; Vorgabe ist currentStandings bzw. initialStandings. */
+  participantStandings?: Standing[];
   /** Optional: Current matches with live scores (overrides schedule scores) */
   currentMatches?: Match[];
   /** Zeige QR-Code für Live-Tracking */
@@ -82,6 +84,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   schedule,
   currentStandings,
   showGroupTables = true,
+  participantStandings,
   currentMatches,
   showQRCode = false,
   qrCodeUrl,
@@ -264,7 +267,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
       {hasGroups && (
         <ParticipantsAndGroups
           teams={schedule.teams}
-          standings={standings}
+          standings={participantStandings ?? standings}
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- GeneratedSchedule.tournament has different shape than Tournament; components only use 'groups'
           tournament={{ groups: schedule.tournament.groups } as any}
         />

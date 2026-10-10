@@ -95,6 +95,33 @@ describe('W2A-031 Zuschauer-Seite: hideScoresForPublic blendet Stände, Tabellen
     expect(container.querySelectorAll('.standings-table').length).toBeGreaterThan(0);
   });
 
+  it('Fix 1 (B2): Kindermodus – Teilnehmerliste zeigt alle 8 Teams der Gruppen, ohne Platz', async () => {
+    const t = buildLiveViewTournament({ hideScoresForPublic: true });
+    const { container } = await renderWith(t);
+
+    const list = container.querySelector('.participants-and-groups');
+    expect(list).not.toBeNull();
+    expect(list?.querySelectorAll('li')).toHaveLength(8);
+    expect(list?.textContent).toContain('FC Nord');
+    expect(list?.textContent).toContain('TuS Tal');
+  });
+
+  it('Fix 1 Gegenbeispiel 1: ohne Kindermodus steht die Teilnehmerliste wie bisher mit 8 Teams', async () => {
+    const t = buildLiveViewTournament({ hideScoresForPublic: false, hideRankingsForPublic: false });
+    const { container } = await renderWith(t);
+
+    expect(container.querySelector('.participants-and-groups')?.querySelectorAll('li')).toHaveLength(8);
+    expect(container.querySelectorAll('.standings-table tbody tr').length).toBeGreaterThan(0);
+  });
+
+  it('Fix 1 Gegenbeispiel 2: hideRankingsForPublic ohne Kindermodus bleibt wie vorher (Gruppenkästen ohne Teams)', async () => {
+    const t = buildLiveViewTournament({ hideScoresForPublic: false, hideRankingsForPublic: true });
+    const { container } = await renderWith(t);
+
+    // Gruppenkästen bleiben wie vorher, aber ohne Teamnamen (standings = [])
+    expect(container.querySelectorAll('.participants-and-groups li')).toHaveLength(0);
+  });
+
   it('Gegenbeispiel: ohne hideScoresForPublic bleibt der Tabellen-Tab mit Tabellen', async () => {
     const t = buildLiveViewTournament({ hideScoresForPublic: false, hideRankingsForPublic: false });
     const { container } = await renderWith(t, '?tab=standings');
