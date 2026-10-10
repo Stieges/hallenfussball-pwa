@@ -21,6 +21,18 @@ vi.mock('../../../core/contexts/RepositoryContext', () => ({
   useRepositories: () => mockRepositories,
 }));
 
+// Umgebungsunabhaengig: ohne VITE_SUPABASE_* waere `isSupabaseConfigured` false und jedes Konto "guest".
+const supabaseState = vi.hoisted(() => ({ configured: true }));
+vi.mock('../../../lib/supabase', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../../lib/supabase')>();
+  return {
+    ...original,
+    get isSupabaseConfigured() {
+      return supabaseState.configured;
+    },
+  };
+});
+
 vi.mock('../../../lib/sentry', () => ({ captureFeatureError: vi.fn() }));
 import { captureFeatureError } from '../../../lib/sentry';
 import { MatchEngineProvider } from '../MatchEngineProvider';
@@ -44,12 +56,25 @@ async function settleLastCall(spy: { mock: { results: { value: unknown }[] } }):
 
 describe('MatchEngineProvider', () => {
   beforeEach(() => {
+    supabaseState.configured = true;
     mockAuth.user = { id: 'user-1', globalRole: 'organizer' };
     mockAuth.session = { token: 'token-1' };
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('Gegenbeispiel: ohne konfiguriertes Supabase startet die Engine trotz angemeldetem Nutzer als Gast', async () => {
+    supabaseState.configured = false;
+    const startSpy = vi.spyOn(MatchEngine.prototype, 'start');
+    render(
+      <MatchEngineProvider>
+        <Probe onReady={() => undefined} />
+      </MatchEngineProvider>,
+    );
+    await waitFor(() => expect(startSpy).toHaveBeenCalledWith('guest'));
+    expect(startSpy).not.toHaveBeenCalledWith('user-1');
   });
 
   it('startet die MatchEngine mit dem abgeleiteten Konto beim ersten Rendern', async () => {
