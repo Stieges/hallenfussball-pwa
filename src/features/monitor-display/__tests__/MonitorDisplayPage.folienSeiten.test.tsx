@@ -204,6 +204,16 @@ describe('@ZM-129 Spielplan mit 13 Spielen: 3 Seiten, jede Zeile genau auf einer
   });
 });
 
+describe('@ZM-129 Nächste Spiele mit 8 offenen Spielen (matchCount 10): 2 Seiten, 6 und 2 Zeilen', () => {
+  it('Seite 1 zeigt 14:00 bis 14:25, nach 15 s Seite 2 mit 14:30 und 14:35 über den echten Takt', async () => {
+    await starte(monitorTurnier(buildTournament({ matches: dreizehnSpiele().slice(0, 8) }), [slide('next-matches', { matchCount: 10 })]));
+    expect(screen.getByText('monitor:slides.page')).toBeInTheDocument();
+    expect(uhrzeiten()).toEqual(['14:00', '14:05', '14:10', '14:15', '14:20', '14:25']);
+    await vorspulenInSchritten(15_000);
+    expect(uhrzeiten()).toEqual(['14:30', '14:35']);
+  });
+});
+
 describe('@ZM-089 Kindermodus: Alle Tabellen wird übersprungen, nie Finalrunde oder Tabellenplatz', () => {
   it('nur Alle Tabellen im Programm → Zuschauer-QR', async () => {
     await starte(monitorTurnier(buildTournament({ hideScoresForPublic: true, matches: mitFinalrunde() }), [slide('all-standings')]));
