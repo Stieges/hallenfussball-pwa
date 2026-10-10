@@ -76,7 +76,7 @@ test.describe('Offline-Robustheit des Ausgangs', () => {
     }
   });
 
-  test('@FU-016 hängende Anfrage: nach höchstens 20 s zweiter Versuch, Eintrag kommt an', async ({ browser }) => {
+  test('@FU-016 hängende Anfrage: nach höchstens 20 s zweiter Versuch, beide Einträge kommen an', async ({ browser }) => {
     test.setTimeout(90_000);
     const ids = engineCupIds('HAENGT');
     const baseRows = await expectSeededEngineMatch(engineCupTarget('HAENGT'));
@@ -96,9 +96,15 @@ test.describe('Offline-Robustheit des Ausgangs', () => {
       expect((await fetchEngineRows(ids.matchId)).length).toBe(baseRows);
       await expect(page.locator('[data-testid="sync-failed-list"]')).toHaveCount(0);
 
+      // @FU-016 "die anderen wartenden Einträge bleiben nicht dauerhaft stehen": ein zweiter Eintrag
+      // entsteht, während die erste Anfrage noch hängt, und muss mit dem zweiten Versuch ebenfalls ankommen.
+      await enterGoal(page, 'away');
+      await expect(syncStatus).toHaveAttribute('data-pending', '2', { timeout: 5000 });
+      expect((await fetchEngineRows(ids.matchId)).length).toBe(baseRows);
+
       await expect.poll(() => held.count(), { timeout: 20_000, intervals: [500] }).toBeGreaterThanOrEqual(2);
       await expect(syncStatus).toHaveAttribute('data-pending', '0', { timeout: 10000 });
-      await expect.poll(async () => (await fetchEngineRows(ids.matchId)).length, { timeout: 10000 }).toBe(baseRows + 1);
+      await expect.poll(async () => (await fetchEngineRows(ids.matchId)).length, { timeout: 10000 }).toBe(baseRows + 2);
       await expect(page.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
     } finally {
       await context.close();
