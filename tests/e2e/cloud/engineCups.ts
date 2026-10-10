@@ -74,6 +74,14 @@ export const E2E_ENGINE_CUPS = [
   runningCup('OFFLINEWLAN'),
   runningCup('HAENGT'),
   runningCup('RUHEZUSTAND'),
+  // A-06m: genau einmal (@FU-010), Einzel-Ablehnung (@FU-011), Realtime unterbrochen (@FU-025), Tab-Wechsel.
+  runningCup('DOPPELT'),
+  runningCup('DOPPELTLIVE'),
+  runningCup('TEILABLEHNUNG'),
+  runningCup('ALLEDREI'),
+  runningCup('REALTIME'),
+  runningCup('TABWECHSEL'),
+  runningCup('TABSCHNELL'),
   runningCup('QUEUE', false),
   runningCup('AMEND', true, [START, GOAL_HOME_NR7]),
   // Zusätzlich eine Gelbe Karte VOR dem Tor: das Protokoll zeigt Zurückgenommenes nur im Zeitfenster
