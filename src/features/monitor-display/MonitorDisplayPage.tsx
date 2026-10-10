@@ -1199,14 +1199,17 @@ export function MonitorDisplayPage({
   }, [goToSlide, slideState.currentIndex]);
 
   // Auto-advance slides
-  // nextSlide changes when slideState.currentIndex changes, which correctly
-  // triggers a new timeout after each slide transition.
+  // Der Takt hängt nur an Pause, Folienanzahl, Dauer und aktueller Folie (C-MON-TAKT-STEHT).
+  // nextSlide steht über eine Ref im Timer und ist keine Abhängigkeit: Sonst würde jeder Poll
+  // (neue Objekte aus dem Repository) den Timer neu setzen und die Folie nie wechseln.
+  const nextSlideRef = useRef(nextSlide);
+  nextSlideRef.current = nextSlide;
   useEffect(() => {
     if (isPaused || slides.length <= 1) {return;}
 
-    const timeout = setTimeout(nextSlide, slideDuration);
+    const timeout = setTimeout(() => nextSlideRef.current(), slideDuration);
     return () => clearTimeout(timeout);
-  }, [isPaused, slides.length, slideDuration, nextSlide]);
+  }, [isPaused, slides.length, slideDuration, slideState.currentIndex]);
 
   // ==========================================================================
   // KEYBOARD NAVIGATION

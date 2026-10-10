@@ -5,7 +5,7 @@
  * Keine Produktivdatei wird geändert.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import type { GoalEventInfo } from '../../../hooks/useLiveMatches';
 import type { Match, Tournament } from '../../../types/tournament';
 import type { MonitorSlide } from '../../../types/monitor';
@@ -128,7 +128,7 @@ const FALLE_DAUER = [
 ];
 
 describe('MonitorDisplayPage — Anzeigedauer je Folie (@ZM-130, Fake-Timer)', () => {
-  it.fails('@ZM-130 Zeile 2: Folie mit Dauer 25 s steht 25 s, 1 ms vor Ablauf kein Wechsel', async () => {
+  it('@ZM-130 Zeile 2: Folie mit Dauer 25 s steht 25 s, 1 ms vor Ablauf kein Wechsel', async () => {
     await starte(monitorTurnier(buildTournament(), [
       slide('custom-text', { headline: 'Lange Folie' }, 25),
       slide('custom-text', { headline: 'Kurze Folie' }),
@@ -139,16 +139,7 @@ describe('MonitorDisplayPage — Anzeigedauer je Folie (@ZM-130, Fake-Timer)', (
     expect(screen.getByText('Kurze Folie')).toBeInTheDocument();
   });
 
-  it('Bestand (Befund C-MON-TAKT-STEHT): Folie mit Dauer 25 s bleibt bei Poll alle 5 s stehen', async () => {
-    await starte(monitorTurnier(buildTournament(), [
-      slide('custom-text', { headline: 'Lange Folie' }, 25),
-      slide('custom-text', { headline: 'Kurze Folie' }),
-    ]));
-    await vorspulenInSchritten(25_001);
-    expect(screen.getByText('Lange Folie')).toBeInTheDocument();
-  });
-
-  it.fails.each(FALLE_DAUER)('@ZM-130 leere Folien-Dauer ($fall) → 15 s, 1 ms vor Ablauf kein Wechsel', async ({ overrides }) => {
+  it.each(FALLE_DAUER)('@ZM-130 leere Folien-Dauer ($fall) → 15 s, 1 ms vor Ablauf kein Wechsel', async ({ overrides }) => {
     await starte(monitorTurnier(buildTournament(), [
       slide('custom-text', { headline: 'Erste Folie' }),
       slide('custom-text', { headline: 'Zweite Folie' }),
@@ -159,17 +150,53 @@ describe('MonitorDisplayPage — Anzeigedauer je Folie (@ZM-130, Fake-Timer)', (
     expect(screen.getByText('Zweite Folie')).toBeInTheDocument();
   });
 
-  it.each(FALLE_DAUER)('Bestand (Befund C-MON-TAKT-STEHT): leere Folien-Dauer ($fall) bleibt bei Poll alle 5 s stehen', async ({ overrides }) => {
-    await starte(monitorTurnier(buildTournament(), [
-      slide('custom-text', { headline: 'Erste Folie' }),
-      slide('custom-text', { headline: 'Zweite Folie' }),
-    ], overrides));
-    await vorspulenInSchritten(30_001);
-    expect(screen.getByText('Erste Folie')).toBeInTheDocument();
-  });
-
   // Ohne Klon: Dieser Test prüft den Übergang des Takt-Timers, nicht den Datenweg. Mit einem Klon je Poll
   // würde der Timer bei jedem Poll zurückgesetzt (C-MON-TAKT-STEHT) und nie feuern.
+  // Gegenbeispiele zum Takt-Fix: Dauer- und Tastenänderungen setzen den Takt neu, ein Poll mit reinem
+  // Inhaltswechsel setzt ihn nicht zurück.
+  it('@ZM-130 Poll ändert die Dauer der nächsten Folie: sie gilt ab dem Wechsel auf sie', async () => {
+    const folienA = slide('custom-text', { headline: 'Folie A' });
+    const folienB = slide('custom-text', { headline: 'Folie B' });
+    await starte(monitorTurnier(buildTournament(), [folienA, folienB]));
+    liefere(monitorTurnier(buildTournament(), [folienA, { ...folienB, duration: 25 }]));
+    await vorspulenInSchritten(14_999);
+    expect(screen.getByText('Folie A')).toBeInTheDocument();
+    await vorspulen(1);
+    expect(screen.getByText('Folie B')).toBeInTheDocument();
+    await vorspulenInSchritten(24_999);
+    expect(screen.getByText('Folie B')).toBeInTheDocument();
+    await vorspulen(1);
+    expect(screen.getByText('Folie A')).toBeInTheDocument();
+  });
+
+  it('@ZM-130 Taste startet den Takt neu: nächster Wechsel 15 s nach der Taste', async () => {
+    await starte(monitorTurnier(buildTournament(), [
+      slide('custom-text', { headline: 'Folie A' }),
+      slide('custom-text', { headline: 'Folie B' }),
+      slide('custom-text', { headline: 'Folie C' }),
+    ]));
+    await vorspulenInSchritten(10_000);
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    expect(screen.getByText('Folie B')).toBeInTheDocument();
+    await vorspulenInSchritten(14_999);
+    expect(screen.getByText('Folie B')).toBeInTheDocument();
+    await vorspulen(1);
+    expect(screen.getByText('Folie C')).toBeInTheDocument();
+  });
+
+  it('@ZM-130 Poll mit Inhaltswechsel bei 10 s verschiebt den Wechsel nicht (weiterhin 15 000 ms)', async () => {
+    const folienA = slide('custom-text', { headline: 'Folie A' });
+    const folienB = slide('custom-text', { headline: 'Folie B' });
+    await starte(monitorTurnier(buildTournament(), [folienA, folienB]));
+    await vorspulenInSchritten(9_000);
+    liefere(monitorTurnier(buildTournament({ matches: spiele({ 'match-7': { scoreA: 2 } }) }), [folienA, folienB]));
+    await vorspulen(1_000);
+    await vorspulenInSchritten(4_999);
+    expect(screen.getByText('Folie A')).toBeInTheDocument();
+    await vorspulen(1);
+    expect(screen.getByText('Folie B')).toBeInTheDocument();
+  });
+
   it('Bestand: Ein-Folien-Monitor wechselt nicht und blendet nicht aus (Übergang fade)', async () => {
     const daten = monitorTurnier(buildTournament(), [slide('custom-text', { headline: 'Einzige Folie' })], {
       transition: 'fade', transitionDuration: 500,
@@ -188,7 +215,7 @@ describe('MonitorDisplayPage — Anzeigedauer je Folie (@ZM-130, Fake-Timer)', (
 
 describe('MonitorDisplayPage — Folienfolge bei laufendem Spiel (Fake-Timer)', () => {
   // Pflichttest @ZM-079 über die gerenderte Seite mit echtem Timer-Pfad und Klon je Poll.
-  it.fails('@ZM-079 Anhalten aus: Live-Spiel, Tabelle und Sponsor wechseln im Takt (15 s, 30 s)', async () => {
+  it('@ZM-079 Anhalten aus: Live-Spiel, Tabelle und Sponsor wechseln im Takt (15 s, 30 s)', async () => {
     const folien = [
       slide('live', { fieldId: 'field-1', pauseRotationDuringMatch: false }),
       slide('standings', { groupId: 'A' }),
@@ -204,17 +231,6 @@ describe('MonitorDisplayPage — Folienfolge bei laufendem Spiel (Fake-Timer)', 
     expect(screen.queryByText('Bäckerei Maier')).not.toBeInTheDocument();
     await vorspulen(1);
     expect(screen.getByText('Bäckerei Maier')).toBeInTheDocument();
-  });
-
-  it('Bestand (Befund C-MON-TAKT-STEHT): Live-Spiel bleibt bei Poll alle 5 s stehen, auch nach 30 s', async () => {
-    const folien = [
-      slide('live', { fieldId: 'field-1', pauseRotationDuringMatch: false }),
-      slide('standings', { groupId: 'A' }),
-      slide('sponsor', { sponsorId: 'sp-1' }),
-    ];
-    await starte(monitorTurnier(buildTournament({ sponsors: [FIXTURE_SPONSOR] }), folien));
-    await vorspulenInSchritten(30_001);
-    expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
   });
 
   // @ZM-074: Soll (it.fails). Ohne Takt-Fix bleibt das Live-Spiel stehen und der Test scheitert erst
