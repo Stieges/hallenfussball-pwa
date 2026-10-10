@@ -64,7 +64,8 @@ describe('W2A-031 Zuschauer-Seite: hideScoresForPublic blendet Stände, Tabellen
     expect(within(nav).getByRole('button', { name: 'Spiele' })).toBeInTheDocument();
 
     // Keine Gruppentabellen-Zeilen, kein Stand
-    expect(container.querySelectorAll('.standings-table tbody tr')).toHaveLength(0);
+    expect(container.querySelector('.standings-table')).toBeNull();
+    expect(container.querySelector('.group-tables-container')).toBeNull();
     expect(container.textContent).not.toMatch(/\b2\s*:\s*0\b/);
     expect(container.textContent).not.toMatch(/\b1\s*:\s*0\b/);
 
@@ -81,8 +82,17 @@ describe('W2A-031 Zuschauer-Seite: hideScoresForPublic blendet Stände, Tabellen
     const nav = screen.getByRole('navigation', { name: 'Public Navigation' });
     expect(within(nav).getByRole('button', { name: 'Spiele' })).toHaveAttribute('aria-current', 'page');
     expect(within(nav).queryByRole('button', { name: 'Tabellen' })).toBeNull();
-    expect(container.querySelectorAll('.standings-table tbody tr')).toHaveLength(0);
+    expect(container.querySelector('.standings-table')).toBeNull();
+    expect(container.querySelector('.group-tables-container')).toBeNull();
     expect(screen.getAllByText(/FC Nord/).length).toBeGreaterThan(0);
+  });
+
+  it('Fix 2 Gegenbeispiel: ohne Kindermodus steht die Gruppentabelle im Spielplan-Tab', async () => {
+    const t = buildLiveViewTournament({ hideScoresForPublic: false, hideRankingsForPublic: false });
+    const { container } = await renderWith(t);
+
+    expect(container.querySelector('.group-tables-container')).not.toBeNull();
+    expect(container.querySelectorAll('.standings-table').length).toBeGreaterThan(0);
   });
 
   it('Gegenbeispiel: ohne hideScoresForPublic bleibt der Tabellen-Tab mit Tabellen', async () => {
