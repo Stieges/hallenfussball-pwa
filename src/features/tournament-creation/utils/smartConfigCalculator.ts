@@ -70,12 +70,34 @@ export interface MatchStructure {
   finalsPlan?: FinalsPreset;
 }
 
+/**
+ * Finalrunde, die der Generator bei dieser Gruppenzahl tatsächlich spielt (@W4-021).
+ * Spiegelt die Rückfälle in core/generators/playoffGenerator.ts.
+ */
+export function effectiveFinalsPreset(groupCount: number, preset: FinalsPreset): FinalsPreset {
+  switch (preset) {
+    case 'top-16':
+      if (groupCount >= 8) {return 'top-16';}
+      return groupCount >= 4 ? 'top-8' : 'top-4';
+    case 'top-8':
+      return groupCount >= 4 ? 'top-8' : 'top-4';
+    case 'all-places':
+      if (groupCount === 2) {return 'all-places';}
+      return groupCount >= 4 ? 'top-8' : 'top-4';
+    default:
+      return preset;
+  }
+}
+
 /** Spielstruktur, die in die Empfehlung übernommen wird (nur bei mindestens 2 Gruppen). */
 function structureOf(structure: MatchStructure): Pick<Recommendation, 'groupCount' | 'finalsPlan'> {
   if (structure.groupCount === undefined || structure.groupCount < 2) {
     return {};
   }
-  return { groupCount: structure.groupCount, finalsPlan: structure.finalsPlan ?? 'none' };
+  return {
+    groupCount: structure.groupCount,
+    finalsPlan: effectiveFinalsPreset(structure.groupCount, structure.finalsPlan ?? 'none'),
+  };
 }
 
 /**

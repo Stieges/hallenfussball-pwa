@@ -95,6 +95,31 @@ describe('@W4-021 Zeit-Empfehlung nennt die Spielstruktur', () => {
     expect(screen.getByText('28 Spiele')).toBeTruthy();
     expect(screen.queryByTestId('smart-config-structure')).toBeNull();
   });
+
+  it('Rückfall: Top 8 mit 2 Gruppen wird als gerechnete Finalrunde Halbfinale + Finale genannt (16 Spiele)', () => {
+    oeffnenUndBerechnen({
+      ...gruppenFormData(),
+      finalsConfig: { preset: 'top-8' },
+    });
+
+    expect(screen.getByTestId('smart-config-structure').textContent).toBe(
+      '2 Gruppen, Halbfinale + Finale'
+    );
+    expect(screen.getByText('16 Spiele')).toBeTruthy();
+  });
+
+  it('Gegenbeispiel Rückfall: Top 8 mit 4 Gruppen bleibt Viertelfinale bis Finale', () => {
+    oeffnenUndBerechnen({
+      ...gruppenFormData(),
+      numberOfTeams: 16,
+      numberOfGroups: 4,
+      finalsConfig: { preset: 'top-8' },
+    });
+
+    expect(screen.getByTestId('smart-config-structure').textContent).toBe(
+      '4 Gruppen, Viertelfinale bis Finale'
+    );
+  });
 });
 
 const teams12FormData = (): Partial<Tournament> => ({
