@@ -8,7 +8,7 @@
  * damit sie nicht endlos wiederholt wird. Turniere ohne Einträge laufen wie bisher.
  */
 import 'fake-indexeddb/auto';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SupabaseRepository } from '../../repositories/SupabaseRepository';
 import type { Tournament } from '../../models/types';
 import { LocalMatchStore } from '../../match/client/LocalMatchStore';
@@ -60,12 +60,19 @@ function tournament(id: string, ...matchIds: string[]): Tournament {
 describe('MutationQueue SAVE_TOURNAMENT — G7-Wache (C3b-2c)', () => {
   let mockRepo: ReturnType<typeof createMockRepo>;
   let onlineSpy: ReturnType<typeof vi.spyOn>;
+  const created: MutationQueue[] = [];
+  const track = (q: MutationQueue): MutationQueue => { created.push(q); return q; };
 
   beforeEach(() => {
     mockStorage.clear();
     idCounter = 0;
+    created.length = 0;
     mockRepo = createMockRepo();
     onlineSpy = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    created.forEach(q => q.dispose());
   });
 
   it('speichert ein Turnier mit Gast-Einträgen nicht hoch und lässt die Mutation als erledigt gelten', async () => {
@@ -73,7 +80,7 @@ describe('MutationQueue SAVE_TOURNAMENT — G7-Wache (C3b-2c)', () => {
     await store.create('guest', 'mq-guard-m1', ctx);
     await store.addConfirmedLocal('guest', 'mq-guard-m1', ev({ id: 'e1', type: 'GOAL', at: 1000, teamId: 'teamA' }));
 
-    const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository);
+    const queue = track(new MutationQueue(mockRepo as unknown as SupabaseRepository));
     queue.enqueue('SAVE_TOURNAMENT', tournament('t-guard', 'mq-guard-m1'));
 
     onlineSpy.mockReturnValue(true);
@@ -88,7 +95,7 @@ describe('MutationQueue SAVE_TOURNAMENT — G7-Wache (C3b-2c)', () => {
     const store = new LocalMatchStore();
     await store.create('guest', 'mq-free-m1', ctx);
 
-    const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository);
+    const queue = track(new MutationQueue(mockRepo as unknown as SupabaseRepository));
     queue.enqueue('SAVE_TOURNAMENT', tournament('t-free', 'mq-free-m1'));
 
     onlineSpy.mockReturnValue(true);
@@ -102,7 +109,7 @@ describe('MutationQueue SAVE_TOURNAMENT — G7-Wache (C3b-2c)', () => {
   it('Lesefehler des lokalen Speichers verwirft SAVE_TOURNAMENT NICHT (PC29): kein Upload, Mutation bleibt', async () => {
     const readSpy = vi.spyOn(LocalMatchStore.prototype, 'forAccount').mockRejectedValue(new Error('DB weg'));
     try {
-      const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository);
+      const queue = track(new MutationQueue(mockRepo as unknown as SupabaseRepository));
       queue.enqueue('SAVE_TOURNAMENT', tournament('t-readerr', 'mq-readerr-m1'));
 
       onlineSpy.mockReturnValue(true);
@@ -125,7 +132,7 @@ describe('MutationQueue SAVE_TOURNAMENT — G7-Wache (C3b-2c)', () => {
       .spyOn(LocalMatchStore.prototype, 'forAccount')
       .mockRejectedValue(new DOMException('aborted', 'AbortError'));
     try {
-      const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository);
+      const queue = track(new MutationQueue(mockRepo as unknown as SupabaseRepository));
       queue.enqueue('SAVE_TOURNAMENT', tournament('t-readerr2', 'mq-readerr2-m1'));
       onlineSpy.mockReturnValue(true);
 
@@ -155,7 +162,7 @@ describe('MutationQueue SAVE_TOURNAMENT — G7-Wache (C3b-2c)', () => {
       readSpy.mockRejectedValueOnce(makeError());
     }
     try {
-      const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository);
+      const queue = track(new MutationQueue(mockRepo as unknown as SupabaseRepository));
       queue.enqueue('SAVE_TOURNAMENT', tournament('t-i1-broken', 'mq-i1-broken-m1'));
       queue.enqueue('SAVE_TOURNAMENT', tournament('t-i1-free', 'mq-i1-free-m1'));
       onlineSpy.mockReturnValue(true);
@@ -185,7 +192,7 @@ describe('MutationQueue SAVE_TOURNAMENT — G7-Wache (C3b-2c)', () => {
       readSpy.mockRejectedValueOnce(new Error('DB weg'));
     }
     try {
-      const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository);
+      const queue = track(new MutationQueue(mockRepo as unknown as SupabaseRepository));
       queue.enqueue('SAVE_TOURNAMENT', tournament('t-hol-broken', 'mq-hol-broken-m1'));
       queue.enqueue('SAVE_TOURNAMENT', tournament('t-hol-free', 'mq-hol-free-m1'));
       onlineSpy.mockReturnValue(true);

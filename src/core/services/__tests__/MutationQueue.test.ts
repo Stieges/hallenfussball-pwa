@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MutationQueue } from '../MutationQueue';
 import type { MutationItem, FailedMutationItem } from '../MutationQueue';
 
@@ -48,13 +48,19 @@ function createMockRepo() {
 
 let mockRepo: ReturnType<typeof createMockRepo>;
 let onlineSpy: ReturnType<typeof vi.spyOn>;
+let created: MutationQueue[] = [];
 
 beforeEach(() => {
   mockStorage.clear();
   idCounter = 0;
+  created = [];
   mockRepo = createMockRepo();
   // Default: navigator.onLine = true
   onlineSpy = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+});
+
+afterEach(() => {
+  created.forEach(q => q.dispose());
 });
 
 // Helper to create a queue without auto-processing
@@ -69,7 +75,9 @@ function createQueue(opts?: { online?: boolean; preloadQueue?: MutationItem[]; p
     mockStorage.set('mutation_queue_failed_v1', JSON.stringify(opts.preloadFailed));
   }
    
-  return new MutationQueue(mockRepo as any);
+  const queue = new MutationQueue(mockRepo as any);
+  created.push(queue);
+  return queue;
 }
 
 // =============================================================================

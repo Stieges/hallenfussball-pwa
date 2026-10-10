@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GenericMutationQueue, MAX_RETRIES } from '../GenericMutationQueue';
 import type { GenericMutationItem, FailedMutationItem } from '../GenericMutationQueue';
 import { RepositoryError } from '../../errors';
@@ -28,11 +28,17 @@ vi.mock('../../../utils/idGenerator', () => ({
 type TestType = 'SAVE_THING' | 'DELETE_THING';
 
 let onlineSpy: ReturnType<typeof vi.spyOn>;
+let created: GenericMutationQueue<TestType>[] = [];
 
 beforeEach(() => {
   mockStorage.clear();
   idCounter = 0;
+  created = [];
   onlineSpy = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+});
+
+afterEach(() => {
+  created.forEach(q => q.dispose());
 });
 
 function makeQueue(opts?: {
@@ -55,6 +61,7 @@ function makeQueue(opts?: {
     sentryFeature: 'sync',
     ...(opts?.isKnownType ? { isKnownType: opts.isKnownType } : {}),
   });
+  created.push(queue);
   return { queue, execute };
 }
 
@@ -406,5 +413,34 @@ describe('GenericMutationQueue', () => {
     expect(execute).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'DELETE_THING', payload: 'thing-1' })
     );
+  });
+});
+
+// =============================================================================
+// A-06d: dispose() meldet den online-Listener ab
+// =============================================================================
+
+describe('GenericMutationQueue dispose/online (A-06d)', () => {
+  it('dispose() → window-Ereignis online ruft execute nicht mehr auf (Gegenbeispiel ohne dispose: aufgerufen)', async () => {
+    const execute = vi.fn().mockResolvedValue(undefined);
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'a' });
+    expect(execute).not.toHaveBeenCalled();
+
+    queue.dispose();
+    onlineSpy.mockReturnValue(true);
+    window.dispatchEvent(new Event('online'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(execute).not.toHaveBeenCalled();
+
+    const execute2 = vi.fn().mockResolvedValue(undefined);
+    const { queue: queue2 } = makeQueue({ execute: execute2, online: false });
+    queue2.enqueue('SAVE_THING', { id: 'b' });
+    onlineSpy.mockReturnValue(true);
+    window.dispatchEvent(new Event('online'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(execute2).toHaveBeenCalled();
   });
 });

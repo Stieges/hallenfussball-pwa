@@ -4,7 +4,7 @@
  * Vorgabe K6, keine Szenario-Kennung.
  */
 import 'fake-indexeddb/auto';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { OfflineRepository } from '../OfflineRepository';
 import { SupabaseRepository } from '../SupabaseRepository';
 import { LocalStorageRepository } from '../LocalStorageRepository';
@@ -52,6 +52,10 @@ describe('OfflineRepository.syncUp – K6: manuelles Umbesetzen', () => {
     supabase.updateTournamentMetadata.mockResolvedValue(undefined);
     repo = new OfflineRepository(local as unknown as LocalStorageRepository, supabase as unknown as SupabaseRepository);
     supabase.get.mockResolvedValue(tournament({ ...cloudMatch, slotA: pendingSlot(source) }, 1));
+  });
+
+  afterEach(() => {
+    repo.mutationQueue.dispose();
   });
 
   it('K6 Pflichttest K6: manuelles Umbesetzen der Heimseite geht per Voll-Speichern in die Cloud', async () => {

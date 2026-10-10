@@ -1,6 +1,6 @@
 
 import 'fake-indexeddb/auto';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { OfflineRepository } from './OfflineRepository';
 import { SupabaseRepository } from './SupabaseRepository';
 import { LocalStorageRepository } from './LocalStorageRepository';
@@ -48,6 +48,10 @@ describe('OfflineRepository - Granular Sync', () => {
         mockSupabase.updateMatches.mockResolvedValue(undefined);
 
         offlineRepo = new OfflineRepository(mockLocal, mockSupabase);
+    });
+
+    afterEach(() => {
+        offlineRepo.mutationQueue.dispose();
     });
 
     it('should perform granular metadata update when only title changes', async () => {

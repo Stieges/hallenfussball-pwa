@@ -82,9 +82,10 @@ export interface MutationQueueConfig<TType extends string> {
      * schema-invalid item (filtered out, same Sentry/logging path) — it
      * never enters the queue. This exists because an unrecognized type that
      * *does* enter the queue can sit at the head and head-of-line-block
-     * every mutation behind it for up to MAX_RETRIES processing cycles
-     * (process() intentionally `break`s, not `continue`s, on a non-final
-     * retry failure, to preserve ordering for genuine transient failures).
+     * every mutation behind it: transient failures retry via timer 1/2/5/5/5 s
+     * without counting, real ones count and pause 30 s (nudges via
+     * `processIfDue` wait that out), from MAX_RETRIES on the head is
+     * dead-lettered (process() intentionally `break`s, not `continue`s).
      *
      * When omitted, every structurally-valid item is accepted (today's
      * default for a consumer that doesn't need this — e.g. a future
@@ -97,9 +98,10 @@ export interface MutationQueueConfig<TType extends string> {
 
 /**
  * Offline-first mutation queue machinery: persists to localStorage, retries
- * with exponential backoff via MAX_RETRIES, coalesces duplicate mutations,
- * dead-letters permanently failing items, validates on load with Zod, and
- * notifies subscribers of status changes.
+ * transient failures via timer 1/2/5/5/5 s without counting; real failures
+ * count and pause 30 s (nudges via `processIfDue` wait that out); from
+ * MAX_RETRIES on the item is dead-lettered. Coalesces duplicate mutations,
+ * validates on load with Zod, and notifies subscribers of status changes.
  *
  * Tournament-specific behaviour (mutation types, executor, coalesce rules,
  * storage keys) is injected via MutationQueueConfig — see MutationQueue.ts
@@ -122,11 +124,7 @@ export class GenericMutationQueue<TType extends string> {
 
         // Auto-process on online
         if (typeof window !== 'undefined') {
-            window.addEventListener('online', () => {
-                // eslint-disable-next-line no-console
-                if (import.meta.env.DEV) { console.log('MutationQueue: Online detected, processing queue...'); }
-                void this.process();
-            });
+            window.addEventListener('online', this.handleOnline);
 
             // Try processing on start if online
             if (navigator.onLine) {
@@ -134,6 +132,12 @@ export class GenericMutationQueue<TType extends string> {
             }
         }
     }
+
+    private readonly handleOnline = (): void => {
+        // eslint-disable-next-line no-console
+        if (import.meta.env.DEV) { console.log('MutationQueue: Online detected, processing queue...'); }
+        void this.process();
+    };
 
     /**
      * Add a mutation to the queue and persist it.
@@ -508,10 +512,11 @@ export class GenericMutationQueue<TType extends string> {
         return this.process();
     }
 
-    /** Zeitgeber und Sperre löschen; `process()`/`enqueue` arbeiten weiter. */
+    /** Zeitgeber/Sperre löschen, `online`-Listener abmelden; `process()`/`enqueue` arbeiten weiter. */
     public dispose(): void {
         this.disposed = true;
         this.retryTimer.clear();
         this.retryTimer.hold = false;
+        if (typeof window !== 'undefined') { window.removeEventListener('online', this.handleOnline); }
     }
 }

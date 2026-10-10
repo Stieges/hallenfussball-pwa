@@ -45,6 +45,12 @@ interface RepoMocks {
   };
 }
 
+const createdQueues: Array<{ dispose(): void }> = [];
+afterEach(() => {
+  createdQueues.forEach(q => q.dispose());
+  createdQueues.length = 0;
+});
+
 function createRepo(): { repo: OfflineRepository; mocks: RepoMocks } {
   const mocks: RepoMocks = {
     local: {
@@ -65,6 +71,7 @@ function createRepo(): { repo: OfflineRepository; mocks: RepoMocks } {
     mocks.local as unknown as LocalStorageRepository,
     mocks.cloud as unknown as SupabaseRepository,
   );
+  createdQueues.push(repo.mutationQueue);
   return { repo, mocks };
 }
 

@@ -83,15 +83,19 @@ function tournament(id: string, ...matchIds: string[]): Tournament {
 
 describe('MutationQueue SAVE_TOURNAMENT — I1 GuestStoreReadError (Node-Realm, C3b-2 F1)', () => {
   let mockRepo: ReturnType<typeof createMockRepo>;
+  const created: MutationQueue[] = [];
+  const track = (q: MutationQueue): MutationQueue => { created.push(q); return q; };
 
   beforeEach(() => {
     mockStorage.clear();
     idCounter = 0;
+    created.length = 0;
     mockRepo = createMockRepo();
     stubNavigatorOnLine(false);
   });
 
   afterEach(() => {
+    created.forEach(q => q.dispose());
     vi.restoreAllMocks();
   });
 
@@ -100,7 +104,7 @@ describe('MutationQueue SAVE_TOURNAMENT — I1 GuestStoreReadError (Node-Realm, 
       .spyOn(LocalMatchStore.prototype, 'forAccount')
       .mockRejectedValue(Object.assign(new Error('The operation was aborted'), { name: 'AbortError' }));
     try {
-      const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository, createMockLocalRepo());
+      const queue = track(new MutationQueue(mockRepo as unknown as SupabaseRepository, createMockLocalRepo()));
       queue.enqueue('SAVE_TOURNAMENT', tournament('t-abort', 'mq-node-abort-m1'));
 
       stubNavigatorOnLine(true);
@@ -126,7 +130,7 @@ describe('MutationQueue SAVE_TOURNAMENT — I1 GuestStoreReadError (Node-Realm, 
       readSpy.mockRejectedValueOnce(new Error('Transaction timeout'));
     }
     try {
-      const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository, createMockLocalRepo());
+      const queue = track(new MutationQueue(mockRepo as unknown as SupabaseRepository, createMockLocalRepo()));
       queue.enqueue('SAVE_TOURNAMENT', tournament('t-timeout-broken', 'mq-node-timeout-broken-m1'));
       queue.enqueue('SAVE_TOURNAMENT', tournament('t-timeout-free', 'mq-node-timeout-free-m1'));
       stubNavigatorOnLine(true);

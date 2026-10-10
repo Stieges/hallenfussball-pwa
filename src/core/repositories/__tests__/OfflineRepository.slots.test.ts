@@ -9,7 +9,7 @@
  * dieselbe Besetzung).
  */
 import 'fake-indexeddb/auto';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { OfflineRepository } from '../OfflineRepository';
 import { SupabaseRepository } from '../SupabaseRepository';
 import { LocalStorageRepository } from '../LocalStorageRepository';
@@ -60,6 +60,10 @@ describe('OfflineRepository.syncUp – A-02: Spielseiten im Delta-Sync', () => {
       mockLocal as unknown as LocalStorageRepository,
       mockSupabase as unknown as SupabaseRepository
     );
+  });
+
+  afterEach(() => {
+    offlineRepo.mutationQueue.dispose();
   });
 
   it('Teamtausch erreicht die Cloud: lokaler Teamtausch (gleiche Spiel-ID) erzwingt ein Voll-Speichern', async () => {

@@ -77,14 +77,23 @@ function stubNavigatorOnLine(value: boolean): void {
 describe('MutationQueue — M1 gleiche Gast-Wache für UPDATE_*/DELETE (C3b-2 F1)', () => {
   let mockRepo: ReturnType<typeof createMockRepo>;
 
+  const created: MutationQueue[] = [];
+  function makeQ(...args: ConstructorParameters<typeof MutationQueue>): MutationQueue {
+    const q = new MutationQueue(...args);
+    created.push(q);
+    return q;
+  }
+
   beforeEach(() => {
     mockStorage.clear();
     idCounter = 0;
+    created.length = 0;
     mockRepo = createMockRepo();
     stubNavigatorOnLine(false);
   });
 
   afterEach(() => {
+    created.forEach(q => q.dispose());
     vi.restoreAllMocks();
   });
 
@@ -96,7 +105,7 @@ describe('MutationQueue — M1 gleiche Gast-Wache für UPDATE_*/DELETE (C3b-2 F1
 
   it('UPDATE_MATCH: Gast-Turnier (lokal, Gast-Einträge) → kein Upload, Mutation erledigt', async () => {
     await seedGuestEntries('m1-um-guest');
-    const queue = new MutationQueue(
+    const queue = makeQ(
       mockRepo as unknown as SupabaseRepository,
       localRepoReturning(tournament('t-um-guest', 'm1-um-guest')),
     );
@@ -110,7 +119,7 @@ describe('MutationQueue — M1 gleiche Gast-Wache für UPDATE_*/DELETE (C3b-2 F1
   });
 
   it('UPDATE_MATCH: lokales Turnier ohne Gast-Einträge → Upload wie bisher', async () => {
-    const queue = new MutationQueue(
+    const queue = makeQ(
       mockRepo as unknown as SupabaseRepository,
       localRepoReturning(tournament('t-um-free', 'm1-um-free')),
     );
@@ -123,7 +132,7 @@ describe('MutationQueue — M1 gleiche Gast-Wache für UPDATE_*/DELETE (C3b-2 F1
   });
 
   it('UPDATE_MATCH: Turnier lokal NICHT vorhanden (null) → KEINE Wache, Mutation läuft normal', async () => {
-    const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository, localRepoReturning(null));
+    const queue = makeQ(mockRepo as unknown as SupabaseRepository, localRepoReturning(null));
     queue.enqueue('UPDATE_MATCH', { tournamentId: 't-um-unknown', update: { matchId: 'm1-um-unknown', scoreA: 1 } });
     stubNavigatorOnLine(true);
     await queue.process();
@@ -134,7 +143,7 @@ describe('MutationQueue — M1 gleiche Gast-Wache für UPDATE_*/DELETE (C3b-2 F1
 
   it('UPDATE_MATCHES: Gast-Turnier → kein Upload', async () => {
     await seedGuestEntries('m1-ums-guest');
-    const queue = new MutationQueue(
+    const queue = makeQ(
       mockRepo as unknown as SupabaseRepository,
       localRepoReturning(tournament('t-ums-guest', 'm1-ums-guest')),
     );
@@ -150,7 +159,7 @@ describe('MutationQueue — M1 gleiche Gast-Wache für UPDATE_*/DELETE (C3b-2 F1
   });
 
   it('UPDATE_MATCHES: lokales Turnier ohne Gast-Einträge → Upload wie bisher', async () => {
-    const queue = new MutationQueue(
+    const queue = makeQ(
       mockRepo as unknown as SupabaseRepository,
       localRepoReturning(tournament('t-ums-free', 'm1-ums-free')),
     );
@@ -165,7 +174,7 @@ describe('MutationQueue — M1 gleiche Gast-Wache für UPDATE_*/DELETE (C3b-2 F1
 
   it('UPDATE_TOURNAMENT_METADATA: Gast-Turnier → kein Upload', async () => {
     await seedGuestEntries('m1-meta-guest');
-    const queue = new MutationQueue(
+    const queue = makeQ(
       mockRepo as unknown as SupabaseRepository,
       localRepoReturning(tournament('t-meta-guest', 'm1-meta-guest')),
     );
@@ -178,7 +187,7 @@ describe('MutationQueue — M1 gleiche Gast-Wache für UPDATE_*/DELETE (C3b-2 F1
   });
 
   it('UPDATE_TOURNAMENT_METADATA: lokales Turnier ohne Gast-Einträge → Upload wie bisher', async () => {
-    const queue = new MutationQueue(
+    const queue = makeQ(
       mockRepo as unknown as SupabaseRepository,
       localRepoReturning(tournament('t-meta-free', 'm1-meta-free')),
     );
@@ -192,7 +201,7 @@ describe('MutationQueue — M1 gleiche Gast-Wache für UPDATE_*/DELETE (C3b-2 F1
 
   it('DELETE_TOURNAMENT: Gast-Turnier → keine Löschung in der Cloud', async () => {
     await seedGuestEntries('m1-del-guest');
-    const queue = new MutationQueue(
+    const queue = makeQ(
       mockRepo as unknown as SupabaseRepository,
       localRepoReturning(tournament('t-del-guest', 'm1-del-guest')),
     );
@@ -205,7 +214,7 @@ describe('MutationQueue — M1 gleiche Gast-Wache für UPDATE_*/DELETE (C3b-2 F1
   });
 
   it('DELETE_TOURNAMENT: lokales Turnier ohne Gast-Einträge → Löschung wie bisher', async () => {
-    const queue = new MutationQueue(
+    const queue = makeQ(
       mockRepo as unknown as SupabaseRepository,
       localRepoReturning(tournament('t-del-free', 'm1-del-free')),
     );
@@ -218,7 +227,7 @@ describe('MutationQueue — M1 gleiche Gast-Wache für UPDATE_*/DELETE (C3b-2 F1
   });
 
   it('DELETE_TOURNAMENT: Turnier lokal NICHT vorhanden (null) → KEINE Wache, Löschung läuft normal', async () => {
-    const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository, localRepoReturning(null));
+    const queue = makeQ(mockRepo as unknown as SupabaseRepository, localRepoReturning(null));
     queue.enqueue('DELETE_TOURNAMENT', 't-del-unknown');
     stubNavigatorOnLine(true);
     await queue.process();
