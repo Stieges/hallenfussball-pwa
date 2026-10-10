@@ -72,3 +72,74 @@ export function selectDisplayableSlides<T extends MonitorSlideLike>(
   }
   return [ZUSCHAUER_QR_SLIDE];
 }
+
+// =============================================================================
+// Folienfolge (B-16c): reine Funktionen mit `now`. Keine Timer, kein React –
+// der Hook `useSlideshow` plant den einen Timer, die Seite steuert nur Tasten.
+// =============================================================================
+
+export type ProgramSlide = MonitorSlide | QrRueckfallFolie;
+
+export interface SlideProgram {
+  slides: ProgramSlide[];
+  /** Monitor-Standard in Sekunden, wenn die Folie keine eigene Dauer hat. */
+  defaultDurationSec: number;
+  /** Seitenzahl einer Folie; fehlt die Funktion, gilt 1 (B-17 misst die Seitenzahl). */
+  pageCount?: (slide: ProgramSlide) => number;
+}
+
+export interface SlideshowState {
+  index: number;
+  page: number;
+  startedAt: number;
+  paused: boolean;
+  direction: 'next' | 'prev';
+}
+
+/** Anzeigedauer einer Seite in ms: eigene Dauer, sonst Monitor-Standard (@ZM-130). */
+export function slideDurationMs(slide: ProgramSlide, defaultDurationSec: number): number {
+  return (slide.duration ?? defaultDurationSec) * 1000;
+}
+
+function wrapIndex(index: number, length: number): number {
+  return ((index % length) + length) % length;
+}
+
+function pagesOf(program: SlideProgram, slide: ProgramSlide): number {
+  return program.pageCount ? program.pageCount(slide) : 1;
+}
+
+/**
+ * Takt: Pausiert oder höchstens eine Folie → unverändert. Ist die Anzeigedauer der Seite abgelaufen,
+ * kommt die nächste Seite; nach der letzten Seite die nächste Folie (Seite 0). Ein Schritt je Aufruf.
+ */
+export function nextSlide(program: SlideProgram, state: SlideshowState, now: number): SlideshowState {
+  const count = program.slides.length;
+  if (state.paused || count <= 1) { return state; }
+  const slide = program.slides[wrapIndex(state.index, count)];
+  if (now - state.startedAt < slideDurationMs(slide, program.defaultDurationSec)) { return state; }
+  if (state.page + 1 < pagesOf(program, slide)) {
+    return { ...state, page: state.page + 1, startedAt: now, direction: 'next' };
+  }
+  return { ...state, index: wrapIndex(state.index + 1, count), page: 0, startedAt: now, direction: 'next' };
+}
+
+/** Taste: eine Folie vor (+1) oder zurück (−1), modulo, immer auf Seite 0 und mit neuem Takt. */
+export function stepSlide(program: SlideProgram, state: SlideshowState, delta: 1 | -1, now: number): SlideshowState {
+  const count = program.slides.length;
+  if (count === 0) { return state; }
+  return {
+    ...state,
+    index: wrapIndex(state.index + delta, count),
+    page: 0,
+    startedAt: now,
+    direction: delta > 0 ? 'next' : 'prev',
+  };
+}
+
+/** Nächster Zeitpunkt (ms), zu dem `nextSlide` etwas ändert; null = nie (pausiert oder keine Folienfolge). */
+export function wakeAt(program: SlideProgram, state: SlideshowState): number | null {
+  const count = program.slides.length;
+  if (state.paused || count <= 1) { return null; }
+  return state.startedAt + slideDurationMs(program.slides[wrapIndex(state.index, count)], program.defaultDurationSec);
+}

@@ -15,7 +15,7 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-10 bis P1-12
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef, CSSProperties } from 'react';
+import { useState, useEffect, useMemo, useRef, CSSProperties } from 'react';
 import {
   displayColors,
   displayFontSizes,
@@ -43,7 +43,8 @@ import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { supabase } from '../../lib/supabase';
 import { captureFeatureError } from '../../lib/sentry';
-import { selectDisplayableSlides, type QrRueckfallFolie } from './slideProgramme';
+import { selectDisplayableSlides, type QrRueckfallFolie, type SlideProgram } from './slideProgramme';
+import { useSlideshow } from './useSlideshow';
 import { toLiveMatch } from './monitorMatch';
 import { createLegacyMonitorSource } from './monitorDataSource';
 import { useMonitorDisplayData } from './useMonitorDisplayData';
@@ -906,12 +907,6 @@ export function MonitorDisplayPage({
     { tournamentId, monitorId },
     monitorPollIntervalMs
   );
-  const [slideState, setSlideState] = useState<SlideState>({
-    currentIndex: 0,
-    isTransitioning: false,
-    direction: 'next',
-  });
-  const [isPaused, setIsPaused] = useState(false);
   const [showCacheIndicator, setShowCacheIndicator] = useState(false);
 
   // Live match events for animations (einzige Stelle mit useLiveMatches)
@@ -953,17 +948,23 @@ export function MonitorDisplayPage({
     [monitor, tournament]
   );
 
+  // Folienfolge (B-16c): Takt, Pause, Pfeiltasten, Leertaste und Übergang liegen in useSlideshow.
+  const defaultSlideDuration = monitor?.defaultSlideDuration ?? 15;
+  const slideProgram = useMemo<SlideProgram>(
+    () => ({ slides, defaultDurationSec: defaultSlideDuration }),
+    [slides, defaultSlideDuration]
+  );
+  const transitionMs = performanceSettings.enableTransitions && monitor?.transition !== 'none'
+    ? (monitor?.transitionDuration ?? 0)
+    : null;
+  const { slideState, isPaused } = useSlideshow(slideProgram, transitionMs);
+
   // Current slide
   const currentSlide = useMemo(
     () => slides[slideState.currentIndex] ?? null,
     [slides, slideState.currentIndex]
   );
 
-  // Slide duration
-  const slideDuration = useMemo(
-    () => (currentSlide?.duration ?? monitor?.defaultSlideDuration ?? 15) * 1000,
-    [currentSlide, monitor]
-  );
 
   // Heartbeat sender — every 30s so admin dashboard can show online status.
   // Deps nur Ids und Primitive: neue Objekte je Poll würden den Takt sonst bei jedem Poll neu starten
@@ -1001,73 +1002,12 @@ export function MonitorDisplayPage({
   }, [monitorKey, tournamentKey, slideState.currentIndex, cacheStatus.status]);
 
   // ==========================================================================
-  // SLIDESHOW LOGIC
-  // ==========================================================================
-
-  const goToSlide = useCallback((index: number, direction: 'next' | 'prev') => {
-    if (slides.length === 0) {return;}
-
-    const nextIndex = ((index % slides.length) + slides.length) % slides.length;
-
-    if (performanceSettings.enableTransitions && monitor?.transition !== 'none') {
-      setSlideState(prev => ({ ...prev, isTransitioning: true, direction }));
-
-      setTimeout(() => {
-        setSlideState({
-          currentIndex: nextIndex,
-          isTransitioning: false,
-          direction,
-        });
-      }, monitor?.transitionDuration);
-    } else {
-      setSlideState({
-        currentIndex: nextIndex,
-        isTransitioning: false,
-        direction,
-      });
-    }
-  }, [slides, monitor, performanceSettings.enableTransitions]);
-
-  const nextSlide = useCallback(() => {
-    goToSlide(slideState.currentIndex + 1, 'next');
-  }, [goToSlide, slideState.currentIndex]);
-
-  const prevSlide = useCallback(() => {
-    goToSlide(slideState.currentIndex - 1, 'prev');
-  }, [goToSlide, slideState.currentIndex]);
-
-  // Auto-advance slides
-  // Der Takt hängt nur an Pause, Folienanzahl, Dauer und aktueller Folie (C-MON-TAKT-STEHT).
-  // nextSlide steht über eine Ref im Timer und ist keine Abhängigkeit: Sonst würde jeder Poll
-  // (neue Objekte aus dem Repository) den Timer neu setzen und die Folie nie wechseln.
-  const nextSlideRef = useRef(nextSlide);
-  nextSlideRef.current = nextSlide;
-  useEffect(() => {
-    if (isPaused || slides.length <= 1) {return;}
-
-    const timeout = setTimeout(() => nextSlideRef.current(), slideDuration);
-    return () => clearTimeout(timeout);
-  }, [isPaused, slides.length, slideDuration, slideState.currentIndex]);
-
-  // ==========================================================================
-  // KEYBOARD NAVIGATION
+  // KEYBOARD (Escape, c; Pfeile und Leertaste liegen in useSlideshow)
   // ==========================================================================
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.key) {
-        case 'ArrowRight':
-        case 'ArrowDown':
-          nextSlide();
-          break;
-        case 'ArrowLeft':
-        case 'ArrowUp':
-          prevSlide();
-          break;
-        case ' ':
-          e.preventDefault();
-          setIsPaused(p => !p);
-          break;
         case 'Escape':
           onBack?.();
           break;
@@ -1079,7 +1019,7 @@ export function MonitorDisplayPage({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nextSlide, prevSlide, onBack]);
+  }, [onBack]);
 
   // ==========================================================================
   // RENDER
