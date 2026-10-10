@@ -7,11 +7,14 @@
  *
  * @see .superpowers/sdd/2026-09-26-pr-c-ausgang/task-C3a-brief.md (v2, 1.2)
  */
-import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useAuth } from '../auth/hooks/useAuth';
 import { useRepositories } from '../../core/contexts/RepositoryContext';
 import type { SupabaseLiveMatchRepository } from '../../core/repositories/SupabaseLiveMatchRepository';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { resyncNow } from './resyncNow';
+import { ResyncNowContext } from './resyncNowContext';
+import { cancelQueueResumes, queueOf, scheduleQueueResume, type ResumableQueue } from './queueWiring';
 import { safeLocalStorage } from '../../core/utils/safeStorage';
 import {
   LocalMatchStore,
@@ -111,12 +114,18 @@ function buildBundle(
 
 export function MatchEngineProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const { user, session } = useAuth();
-  const { supabaseLiveMatchRepo } = useRepositories();
+  const { supabaseLiveMatchRepo, tournamentRepository } = useRepositories();
 
   const accountId = computeAccountId(user?.id, user?.globalRole);
 
   const repoRef = useRef<SupabaseLiveMatchRepository | null>(supabaseLiveMatchRepo);
   repoRef.current = supabaseLiveMatchRepo;
+
+  // A-06g: immer die AKTUELLE Queue (Repo-Wechsel bei Kontowechsel), nie eine alte Closure.
+  const queueRef = useRef<ResumableQueue | null>(null);
+  queueRef.current = queueOf(tournamentRepository);
+  // Ausstehende Wiederaufnahmen nach Anmeldung (setTimeout 0); beim Unmount geloescht.
+  const resumeTimersRef = useRef(new Set<ReturnType<typeof setTimeout>>());
 
   const bundleRef = useRef<Omit<MatchEngineContextValue, 'accountId'> | null>(null);
   bundleRef.current ??= buildBundle(repoRef);
@@ -126,6 +135,18 @@ export function MatchEngineProvider({ children }: { children: ReactNode }): Reac
   // s. Doku an `MatchEngineContextValue.accountId`) -- Hooks, die `context` in einer
   // Abhaengigkeitsliste fuehren, bauen ihren Kopien-Cache dadurch zuverlaessig neu auf.
   const contextValue = useMemo<MatchEngineContextValue>(() => ({ ...bundle, accountId }), [bundle, accountId]);
+
+  const resync = useCallback(
+    () =>
+      resyncNow({
+        clock: bundle.clock,
+        sender: bundle.sender,
+        engine: bundle.engine,
+        mutationQueue: queueRef.current,
+        isGuest: accountId === 'guest',
+      }),
+    [bundle, accountId],
+  );
 
   const previousAccountRef = useRef<string | null>(null);
   const sessionTokenRef = useRef<string | undefined>(undefined);
@@ -191,14 +212,46 @@ export function MatchEngineProvider({ children }: { children: ReactNode }): Reac
     };
   }, [accountId, bundle]);
 
+  // A-06g (@FU-015): Rueckkehr in den Vordergrund -> resyncNow (nur 'visible', nie Gast).
+  useEffect(() => {
+    if (accountId === 'guest') {
+      return undefined;
+    }
+    const handleVisibility = (): void => {
+      if (document.visibilityState === 'visible') {
+        void resync();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [accountId, resync]);
+
+  // Unmount: ausstehende Wiederaufnahmen loeschen, bevor irgendetwas entsorgt wird (A-06g).
+  useEffect(() => {
+    const timers = resumeTimersRef.current;
+    return () => {
+      cancelQueueResumes(timers);
+    };
+  }, []);
+
   // RC9: SIGNED_IN/TOKEN_REFRESHED DESSELBEN Kontos -> Sender weiter (kein Kontowechsel-Neuaufbau).
+  // A-06g (@FU-009): zusaetzlich die Queue wecken (setTimeout, s. queueWiring.ts). Abmelden: kein Aufruf.
   useEffect(() => {
     const token = session?.token;
-    if (token !== undefined && token !== sessionTokenRef.current && previousAccountRef.current === accountId) {
+    if (token === undefined) {
+      cancelQueueResumes(resumeTimersRef.current);
+    } else if (token !== sessionTokenRef.current && previousAccountRef.current === accountId) {
       void bundle.sender.resumeAuth();
+      scheduleQueueResume(resumeTimersRef.current, queueRef);
     }
     sessionTokenRef.current = token;
   }, [session, accountId, bundle]);
 
-  return <MatchEngineContext.Provider value={contextValue}>{children}</MatchEngineContext.Provider>;
+  return (
+    <ResyncNowContext.Provider value={resync}>
+      <MatchEngineContext.Provider value={contextValue}>{children}</MatchEngineContext.Provider>
+    </ResyncNowContext.Provider>
+  );
 }

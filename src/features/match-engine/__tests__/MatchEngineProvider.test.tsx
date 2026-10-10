@@ -4,9 +4,9 @@
  * `useRepositories` sind gemockt.
  */
 import 'fake-indexeddb/auto';
-import { StrictMode } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { MatchEngine, ClockSync } from '../../../core/match/client';
 import { OutboxSender } from '../../../core/match/client';
 
@@ -16,13 +16,16 @@ const mockAuth: { user: { id: string; globalRole: string } | null; session: { to
 };
 vi.mock('../../auth/hooks/useAuth', () => ({ useAuth: () => mockAuth }));
 
-const mockRepositories = { supabaseLiveMatchRepo: null as unknown };
+const mockRepositories: { supabaseLiveMatchRepo: unknown; tournamentRepository: unknown } = { supabaseLiveMatchRepo: null, tournamentRepository: {} };
 vi.mock('../../../core/contexts/RepositoryContext', () => ({
   useRepositories: () => mockRepositories,
 }));
 
+vi.mock('../../../lib/sentry', () => ({ captureFeatureError: vi.fn() }));
+import { captureFeatureError } from '../../../lib/sentry';
 import { MatchEngineProvider } from '../MatchEngineProvider';
 import { useMatchEngineContext } from '../useMatchEngineContext';
+import { useResyncNow } from '../useResyncNow';
 
 function Probe({ onReady }: { onReady: (ctx: ReturnType<typeof useMatchEngineContext>) => void }) {
   const ctx = useMatchEngineContext();
@@ -280,5 +283,186 @@ describe('MatchEngineProvider', () => {
     // zurueck. `start()` laeuft deshalb nur EINMAL, nicht zweimal (der bisherige Kommentar an dieser
     // Stelle behauptete das Gegenteil).
     expect(startSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** A-06g: Sichtbarkeit (`resyncNow`) und Wiederaufnahme nach Anmeldung (`resumeAfterAuth`). */
+function fakeQueue(resume: () => Promise<void> = () => Promise.resolve()) {
+  return { processIfDue: vi.fn(() => Promise.resolve()), resumeAfterAuth: vi.fn(resume) };
+}
+
+/** Laesst den Mount (Engine-Start, Anmelde-Wiederaufnahme per setTimeout 0) vollstaendig ablaufen. */
+async function settle(): Promise<void> {
+  await act(async () => {
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+  });
+}
+
+/** Fake-Timer weiterdrehen OHNE `act` (act nutzt selbst setTimeout und wuerde dann haengen). */
+async function flushFakeTimers(): Promise<void> {
+  vi.advanceTimersByTime(0);
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+function setVisibility(value: 'visible' | 'hidden'): void {
+  Object.defineProperty(document, 'visibilityState', { configurable: true, value });
+}
+
+function Tree({ onReady }: { onReady?: (ctx: ReturnType<typeof useMatchEngineContext>) => void }) {
+  return (
+    <MatchEngineProvider>
+      <Probe onReady={onReady ?? (() => undefined)} />
+    </MatchEngineProvider>
+  );
+}
+
+describe('MatchEngineProvider: resyncNow und Wiederaufnahme (A-06g)', () => {
+  let queue: ReturnType<typeof fakeQueue>;
+
+  beforeEach(() => {
+    mockAuth.user = { id: 'user-1', globalRole: 'organizer' };
+    mockAuth.session = { token: 'token-1' };
+    queue = fakeQueue();
+    mockRepositories.tournamentRepository = { mutationQueue: queue };
+    vi.mocked(captureFeatureError).mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    Reflect.deleteProperty(document, 'visibilityState');
+    mockRepositories.tournamentRepository = {};
+  });
+
+  it('V1: sichtbar + visibilitychange -> kick und processIfDue je 1x', async () => {
+    const { unmount } = render(<Tree />);
+    await settle();
+    const kickSpy = vi.spyOn(OutboxSender.prototype, 'kick');
+    queue.processIfDue.mockClear();
+    setVisibility('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    await waitFor(() => expect(kickSpy).toHaveBeenCalledTimes(1));
+    expect(queue.processIfDue).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('V2 Gegenbeispiel: hidden -> nichts', async () => {
+    const { unmount } = render(<Tree />);
+    await settle();
+    const kickSpy = vi.spyOn(OutboxSender.prototype, 'kick');
+    queue.processIfDue.mockClear();
+    setVisibility('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    await act(async () => { await Promise.resolve(); });
+    expect(kickSpy).not.toHaveBeenCalled();
+    expect(queue.processIfDue).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it('V3 Gegenbeispiel: Gast -> nichts', async () => {
+    mockAuth.user = { id: 'user-1', globalRole: 'guest' };
+    const { unmount } = render(<Tree />);
+    await settle();
+    const kickSpy = vi.spyOn(OutboxSender.prototype, 'kick');
+    setVisibility('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    await act(async () => { await Promise.resolve(); });
+    expect(kickSpy).not.toHaveBeenCalled();
+    expect(queue.processIfDue).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it('V4 Gegenbeispiel: nach Unmount -> nichts', async () => {
+    const { unmount } = render(<Tree />);
+    await settle();
+    unmount();
+    queue.processIfDue.mockClear();
+    setVisibility('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    await act(async () => { await Promise.resolve(); });
+    expect(queue.processIfDue).not.toHaveBeenCalled();
+  });
+
+  it('V5: ohne Provider loest useResyncNow() auf, ohne Wurf', async () => {
+    const seen: Array<() => Promise<void>> = [];
+    function Bare({ onReady }: { onReady: (fn: () => Promise<void>) => void }) {
+      const resync = useResyncNow();
+      useEffect(() => {
+        onReady(resync);
+      }, [resync, onReady]);
+      return null;
+    }
+    render(<Bare onReady={(fn) => { seen.push(fn); }} />);
+    expect(seen).toHaveLength(1);
+    await expect(seen[0]()).resolves.toBeUndefined();
+  });
+
+  it('R1: neues Session-Token -> resumeAuth UND resumeAfterAuth je 1x (nach dem Timer)', async () => {
+    const { rerender } = render(<Tree />);
+    await settle();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    queue.resumeAfterAuth.mockClear();
+    const resumeAuthSpy = vi.spyOn(OutboxSender.prototype, 'resumeAuth');
+    mockAuth.session = { token: 'token-2' };
+    rerender(<Tree />);
+    expect(resumeAuthSpy).toHaveBeenCalledTimes(1);
+    await flushFakeTimers();
+    expect(queue.resumeAfterAuth).toHaveBeenCalledTimes(1);
+  });
+
+  it('R2: Abmelden -> resumeAuth 0x und resumeAfterAuth 0x', async () => {
+    const { rerender } = render(<Tree />);
+    await settle();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    queue.resumeAfterAuth.mockClear();
+    const resumeAuthSpy = vi.spyOn(OutboxSender.prototype, 'resumeAuth');
+    mockAuth.session = null;
+    rerender(<Tree />);
+    await flushFakeTimers();
+    expect(resumeAuthSpy).not.toHaveBeenCalled();
+    expect(queue.resumeAfterAuth).not.toHaveBeenCalled();
+  });
+
+  it('RACE 1: haengendes resumeAfterAuth blockiert ein zweites Anmelde-Ereignis nicht', async () => {
+    queue = fakeQueue(() => new Promise<void>(() => undefined));
+    mockRepositories.tournamentRepository = { mutationQueue: queue };
+    const { rerender } = render(<Tree />);
+    await settle();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    queue.resumeAfterAuth.mockClear();
+    mockAuth.session = { token: 'token-2' };
+    rerender(<Tree />);
+    await flushFakeTimers();
+    mockAuth.session = { token: 'token-3' };
+    rerender(<Tree />);
+    await flushFakeTimers();
+    expect(queue.resumeAfterAuth).toHaveBeenCalledTimes(2);
+  });
+
+  it('RACE 2: Unmount vor dem Timer -> resumeAfterAuth wird nicht mehr aufgerufen', async () => {
+    const { rerender, unmount } = render(<Tree />);
+    await settle();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    queue.resumeAfterAuth.mockClear();
+    mockAuth.session = { token: 'token-2' };
+    rerender(<Tree />);
+    unmount();
+    await flushFakeTimers();
+    expect(queue.resumeAfterAuth).not.toHaveBeenCalled();
+  });
+
+  it('RACE 3: resumeAfterAuth lehnt ab -> Fehler gemeldet, keine unbehandelte Ablehnung', async () => {
+    queue = fakeQueue(() => Promise.reject(new Error('Anmeldung abgelaufen')));
+    mockRepositories.tournamentRepository = { mutationQueue: queue };
+    const { rerender } = render(<Tree />);
+    await settle();
+    vi.mocked(captureFeatureError).mockClear();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    mockAuth.session = { token: 'token-2' };
+    rerender(<Tree />);
+    await flushFakeTimers();
+    await act(async () => { await Promise.resolve(); });
+    expect(captureFeatureError).toHaveBeenCalledTimes(1);
   });
 });
