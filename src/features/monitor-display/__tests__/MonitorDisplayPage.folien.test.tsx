@@ -9,6 +9,7 @@ import type { Tournament } from '../../../types/tournament';
 import type { MatchStatus } from '../../../types/tournament';
 import { PERFORMANCE_PROFILES } from '../../../types/monitor';
 import { LiveSlide } from '../slides/LiveSlide';
+import { ScheduleFieldSlide } from '../slides/ScheduleFieldSlide';
 import {
   attachMonitor, buildTournament, FIXTURE_SPONSOR, slide, withMonitor, withPlayoffs, withScheduledTimes,
 } from './monitorFixture';
@@ -206,5 +207,28 @@ describe('@W2A-031 Kindermodus an der Live-Folie: offener Platz zeigt „noch of
     expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument();
     expect(screen.queryByText('1. Gruppe A')).toBeNull();
     expect(screen.getAllByText('tournament:slot.undecided')).toHaveLength(2);
+  });
+});
+
+describe('@W2A-031 Kindermodus an der Spielplan-Folie: offener Platz zeigt „noch offen“, nie einen Tabellenplatz', () => {
+  // Feld 1: HF1 (group-a-1st) steht in der Liste; ohne Kindermodus die Herkunft, mit Kindermodus „noch offen“.
+  const spielplan = (hide: boolean) => render(
+    <ScheduleFieldSlide
+      slide={slide('schedule-field', { fieldId: 'field-1' })}
+      tournament={buildTournament({ hideScoresForPublic: hide, matches: withPlayoffs() })}
+      theme="dark"
+      style={{}}
+    />,
+  );
+
+  it('ohne Kindermodus: die Spielplan-Folie nennt „1. Gruppe A“', () => {
+    spielplan(false);
+    expect(screen.getByText('1. Gruppe A')).toBeInTheDocument();
+  });
+
+  it('mit Kindermodus: offener Platz zeigt tournament:slot.undecided, kein „1. Gruppe A“', () => {
+    spielplan(true);
+    expect(screen.queryByText('1. Gruppe A')).toBeNull();
+    expect(screen.getAllByText('tournament:slot.undecided').length).toBeGreaterThanOrEqual(2);
   });
 });
