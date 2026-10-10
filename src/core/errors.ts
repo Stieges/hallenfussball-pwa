@@ -78,6 +78,18 @@ export class SyncError extends AppError {
 }
 
 /**
+ * A-07b Fixrunde 1 (@FU-006): `supabase.auth.getSession()` hat geworfen (lokaler Sitzungsspeicher
+ * nicht lesbar). Vorübergehend: die Mutation zählt nicht als Fehlversuch, sie bleibt stehen und
+ * der nächste Durchgang versucht es erneut. Klassifiziert in `isTransientMutationError`.
+ */
+export class SessionReadError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = 'SessionReadError';
+  }
+}
+
+/**
  * I1 (task-C3b2-review.md, PC29-Fixrunde F1): thrown by the mutation-queue guest guard
  * (`MutationQueue.ts` SAVE_TOURNAMENT/UPDATE_MATCH/UPDATE_MATCHES/
  * UPDATE_TOURNAMENT_METADATA/DELETE_TOURNAMENT) when reading the local guest-engine
@@ -91,18 +103,6 @@ export class SyncError extends AppError {
  * an "aborted"/"timeout"/"fetch" substring. `cause` is kept for diagnostics only, never
  * read for classification.
  */
-/**
- * A-07b Fixrunde 1 (@FU-006): `supabase.auth.getSession()` hat geworfen (lokaler Sitzungsspeicher
- * nicht lesbar). Vorübergehend: die Mutation zählt nicht als Fehlversuch, sie bleibt stehen und
- * der nächste Durchgang versucht es erneut. Klassifiziert in `isTransientMutationError`.
- */
-export class SessionReadError extends Error {
-  constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
-    this.name = 'SessionReadError';
-  }
-}
-
 export class GuestStoreReadError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
     super(message, options);
