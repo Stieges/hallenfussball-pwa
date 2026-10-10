@@ -287,6 +287,15 @@ describe('generatePlayoffMatches preset=all-places', () => {
     expect(matches).toHaveLength(4);
   });
 
+  it('@TM-015 Halbfinale bei 2 Gruppen wie Top 4: HF1 = Erster A gegen Zweiter B, HF2 = Erster B gegen Zweiter A', () => {
+    const matches = generatePlayoffMatches(2, { preset: 'all-places' });
+    const semi1 = matches.find(m => m.id === 'semi1')!;
+    const semi2 = matches.find(m => m.id === 'semi2')!;
+
+    expect([semi1.home, semi1.away]).toEqual(['group-a-1st', 'group-b-2nd']);
+    expect([semi2.home, semi2.away]).toEqual(['group-b-1st', 'group-a-2nd']);
+  });
+
   it('place56 uses 3rd place from each group', () => {
     const matches = generatePlayoffMatches(2, { preset: 'all-places' });
     const place56 = matches.find(m => m.id === 'place56-direct')!;

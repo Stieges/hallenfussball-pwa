@@ -286,10 +286,10 @@ function generateAllPlaces(numberOfGroups: number, groupSizes?: GroupSizeInfo): 
       ? Math.min(groupSizes['A'] || 2, groupSizes['B'] || 2)
       : 4; // Default to 4 if no size info (legacy behavior)
 
-    // 1. Halbfinale (parallel möglich bei mehreren Feldern)
+    // 1. Halbfinale (parallel möglich bei mehreren Feldern), über Kreuz wie Top 4 (@TM-015)
     matches.push(
-      { id: 'semi1', label: '1. Halbfinale', home: 'group-a-2nd', away: 'group-b-1st', dependsOn: [] },
-      { id: 'semi2', label: '2. Halbfinale', home: 'group-a-1st', away: 'group-b-2nd', dependsOn: [] }
+      { id: 'semi1', label: '1. Halbfinale', home: 'group-a-1st', away: 'group-b-2nd', dependsOn: [] },
+      { id: 'semi2', label: '2. Halbfinale', home: 'group-b-1st', away: 'group-a-2nd', dependsOn: [] }
     );
 
     // 2. Platzierungsspiele - nur wenn beide Gruppen genug Teams haben
