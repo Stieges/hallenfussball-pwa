@@ -1,6 +1,7 @@
 /**
  * Pause über die Seite (B-16c Fixrunde 1, Spur B): Leertaste hält die Folie an, Fortsetzen startet
- * eine volle Anzeigedauer. Eigene Datei, damit die eingefrorenen a-Dateien unverändert bleiben.
+ * eine volle Anzeigedauer. Dazu die Seitenzuordnung der Spielplan-Zeile (B-16d1 Lücke: Seite A links,
+ * Seite B rechts). Eigene Datei, damit die eingefrorenen a-Dateien unverändert bleiben.
  * Jeder Poll liefert einen strukturellen Klon (wie SupabaseRepository.get), die Zeit läuft in Schritten.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -91,5 +92,13 @@ describe('MonitorDisplayPage — Pause über die Leertaste (B-16c Fixrunde, Fake
     expect(screen.getByText('Folie A')).toBeInTheDocument();
     await vorspulen(1);
     expect(screen.getByText('Folie B')).toBeInTheDocument();
+  });
+
+  it('Spielplan-Zeile: Seite A links, Seite B rechts (Feld 1: FC Nord 1:0 SV Süd)', async () => {
+    liefere(attachMonitor(buildTournament(), withMonitor({ slides: [slide('schedule-field', { fieldId: 'field-1' })] })));
+    localGet.mockResolvedValue(null);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    await vorspulen(0);
+    expect(screen.getByText('FC Nord').parentElement?.textContent).toBe('FC Nord1:0SV Süd');
   });
 });
