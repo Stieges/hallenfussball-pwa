@@ -18,6 +18,8 @@ import {
     LABEL_KEY_BY_STATUS,
     STATUS_CONFIG,
     type StatusConfig,
+    type WaitReason,
+    WAITING_CONFIG,
 } from './syncStatusDisplay';
 
 // =============================================================================
@@ -47,6 +49,10 @@ export interface SyncStatusBarProps {
     reviewCount?: number;
     /** C2b: zeigt die Ablehnungsliste an (RejectedEntriesPanel) */
     onShowRejected?: () => void;
+    /** A-06i: Wartegrund fuer noch wartende Eintraege (deriveWaitReason); null/undefined = neutral */
+    waitReason?: WaitReason | null;
+    /** A-06i: Detailtext (letzter Fehler) -- nur im Titel bei 'disturbed' */
+    waitDetail?: string;
 }
 
 // =============================================================================
@@ -159,6 +165,8 @@ export function SyncStatusBar({
     rejectedCount = 0,
     reviewCount = 0,
     onShowRejected,
+    waitReason = null,
+    waitDetail,
 }: SyncStatusBarProps) {
     const { t } = useTranslation('common');
     const hasPending = pendingCount > 0;
@@ -172,8 +180,16 @@ export function SyncStatusBar({
     // 'error', wenn die MutationQueue passiv dead-lettert -- ein gescheiterter Eintrag zeigte
     // weiterhin ein grünes "✓".
     const effectiveStatus: SyncStatus = isSyncing ? 'synced' : hasFailed ? 'error' : status;
-    const config = STATUS_CONFIG[effectiveStatus];
-    const label = String(t(LABEL_KEY_BY_STATUS[effectiveStatus], { defaultValue: LABEL_KEY_BY_STATUS[effectiveStatus] }));
+    // A-06i (Vorrang laut Brief A10): isSyncing > hasFailed > conflict/error > WAITING > Status.
+    const isWaiting = hasPending && !isSyncing
+        && (effectiveStatus === 'synced' || effectiveStatus === 'updated' || effectiveStatus === 'offline');
+    const config = isWaiting ? WAITING_CONFIG : STATUS_CONFIG[effectiveStatus];
+    const waitingKey = waitReason === 'noInternet'
+        ? 'syncStatus.waitingNoInternet'
+        : waitReason === 'disturbed' ? 'syncStatus.waitingDisturbed' : 'syncStatus.waiting';
+    const label = isWaiting
+        ? String(t(waitingKey, { count: pendingCount }))
+        : String(t(LABEL_KEY_BY_STATUS[effectiveStatus], { defaultValue: LABEL_KEY_BY_STATUS[effectiveStatus] }));
     const styles = useMemo(() => createStyles(config, compact), [config, compact]);
 
     function formatLastSync(timestamp?: string): string | null {
@@ -245,14 +261,15 @@ export function SyncStatusBar({
         }
     };
 
-    const pendingSuffix = hasPending ? ` - ${String(t('syncStatus.pendingCountLabel', { count: pendingCount }))}` : '';
+    const pendingSuffix = hasPending && !isWaiting ? ` - ${String(t('syncStatus.pendingCountLabel', { count: pendingCount }))}` : '';
     const failedSuffix = hasFailed ? ` - ${String(t('syncStatus.failedCountLabel', { count: failedCount }))}` : '';
     const lastSyncSuffix = lastSyncText && !hasPending && !hasFailed ? ` - ${lastSyncText}` : '';
+    const waitDetailSuffix = isWaiting && waitReason === 'disturbed' && waitDetail ? ` – ${waitDetail}` : '';
 
     const ariaLabel = isSyncing ? t('syncStatus.syncingAriaLabel') : label;
     const title = isSyncing
         ? t('syncStatus.syncingAriaLabel')
-        : `${label}${pendingSuffix}${failedSuffix}${lastSyncSuffix}`;
+        : `${label}${pendingSuffix}${failedSuffix}${lastSyncSuffix}${waitDetailSuffix}`;
 
     return (
         <>
@@ -291,7 +308,7 @@ export function SyncStatusBar({
                 )}
 
                 {/* Show pending count if any */}
-                {!compact && hasPending && !isSyncing && (
+                {!compact && hasPending && !isSyncing && !isWaiting && (
                     <span style={{
                         ...styles.label,
                         color: cssVars.colors.warning,
