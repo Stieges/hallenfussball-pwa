@@ -115,6 +115,7 @@ export {
   displayTransitions,
   displayLayout,
   displayEffects,
+  displayMonitor,
   displayColorSchemes,
   monitorThemes,
   monitorColorSchemes,

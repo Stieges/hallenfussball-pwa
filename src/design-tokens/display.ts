@@ -220,6 +220,68 @@ export const displayEffects = {
 } as const;
 
 // =============================================================================
+// DISPLAY MONITOR (B-16d2: Literale der Monitor-Folien als Tokens)
+// =============================================================================
+
+/**
+ * Feste Werte der Monitor-Folien. Die Werte entsprechen den früheren Literalen (keine Sichtänderung),
+ * benannt nach Verwendung. Theme-abhängige Farben bleiben in monitorThemes.
+ */
+export const displayMonitor = {
+  /** Abdunkelung hinter Hinweisen (Pause-Badge, Cache-Anzeige); bewusst theme-unabhängig */
+  overlay: 'rgba(0, 0, 0, 0.7)',
+
+  /** Schriftstapel der Monitor-Seite (nicht identisch mit fontFamilies.body) */
+  fontStack: 'Inter, system-ui, sans-serif',
+
+  /** QR-Codes: SVG-Attributwerte (QRCodeSVG löst keine CSS-Variablen auf) */
+  qr: {
+    foreground: '#000000',
+    background: '#ffffff',
+    sizeLarge: 220,
+    sizeSmall: 150,
+  },
+
+  /** Text */
+  text: {
+    /** Zeilenabstand ungeteilter Fließtexte (unitlos, wie bisher 1.5) */
+    lineHeight: 1.5,
+  },
+
+  /** Rand der Folie, wenn die Monitor-Konfiguration keinen Overscan hat */
+  overscanDefaultPx: 48,
+
+  /** Ecken */
+  radius: {
+    card: '12px',
+    circle: '50%',
+  },
+
+  /** Punkte und Markierungen */
+  marker: {
+    /** Positions-Punkt unten und Cache-Status-Punkt */
+    indicatorSize: '10px',
+    /** Status-Punkt je Spielzeile im Spielplan */
+    scheduleSize: '12px',
+    /** Übergang der Punkte beim Folienwechsel */
+    transitionDuration: '200ms',
+    /** Rahmen einer laufenden Spielzeile */
+    liveBorderWidth: '2px',
+  },
+
+  /** Maße einzelner Folien */
+  size: {
+    sponsorLogoMaxWidth: '400px',
+    sponsorLogoMaxHeight: '300px',
+    textMaxWidth: '800px',
+    standingsMaxWidth: '800px',
+    standingsColumns: '48px 1fr 48px 48px 48px 64px 64px',
+    scheduleMaxWidth: '900px',
+    scheduleMinColumnWidth: '100px',
+  },
+} as const;
+
+// =============================================================================
 // MONITOR THEME COLOR SCHEMES
 // =============================================================================
 
@@ -518,6 +580,7 @@ export const displayTokens = {
   transitions: displayTransitions,
   layout: displayLayout,
   effects: displayEffects,
+  monitor: displayMonitor,
   colorSchemes: displayColorSchemes,
   themes: monitorThemes,
   monitorColorSchemes,
