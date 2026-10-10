@@ -59,3 +59,20 @@ describe('Gegenbeispiel: eine Folie mit einer Seite', () => {
     expect(wakeAt({ slides: [folie('A')], defaultDurationSec: 15 }, zustand())).toBeNull();
   });
 });
+
+describe('Seitenzahl 0 klemmt auf 1 (Fixliste f1): kein Dauer-Neustart', () => {
+  const null0: SlideProgram = { slides: [folie('A', 20), folie('B', 20)], defaultDurationSec: 15, pageCount: () => 0 };
+
+  it('Schritt vor Ablauf: keine Änderung', () => {
+    const s = zustand({ startedAt: 0 });
+    expect(nextSlide(null0, s, 19_999)).toBe(s);
+  });
+
+  it('nach Ablauf der Dauer wechselt die Folie trotzdem (Folie B, Seite 0)', () => {
+    expect(nextSlide(null0, zustand({ startedAt: 0 }), 20_000)).toMatchObject({ index: 1, page: 0, startedAt: 20_000 });
+  });
+
+  it('wakeAt zeigt das Ende der Folie, nicht null', () => {
+    expect(wakeAt(null0, zustand({ startedAt: 0 }))).toBe(20_000);
+  });
+});

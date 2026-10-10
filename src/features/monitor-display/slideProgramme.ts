@@ -131,8 +131,10 @@ function wrapIndex(index: number, length: number): number {
   return ((index % length) + length) % length;
 }
 
+/** Seitenzahl einer Folie, mindestens 1 (0, negativ oder unlesbar klemmt auf 1 – kein Dauer-Neustart). */
 function pagesOf(program: SlideProgram, slide: ProgramSlide): number {
-  return program.pageCount ? program.pageCount(slide) : 1;
+  const n = program.pageCount ? program.pageCount(slide) : 1;
+  return Math.max(1, Math.floor(n) || 1);
 }
 
 /** Feldnummer einer Live-Folie; sonst null. Ohne fieldId gilt Feld 1 (wie LiveSlide). */
