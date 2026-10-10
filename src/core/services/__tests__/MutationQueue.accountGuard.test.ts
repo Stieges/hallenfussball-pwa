@@ -12,7 +12,7 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Tournament } from '../../models/types';
 
-const session = vi.hoisted(() => ({ userId: null as string | null }));
+const session = vi.hoisted(() => ({ userId: null as string | null, failNext: false, returnError: false }));
 const net = vi.hoisted(() => ({ online: true }));
 
 const mockStorage = new Map<string, string>();
@@ -36,10 +36,20 @@ vi.mock('../../../lib/supabase', () => ({
   isSupabaseConfigured: true,
   supabase: {
     auth: {
-      getSession: vi.fn(async () => ({
-        data: { session: session.userId ? { user: { id: session.userId } } : null },
-        error: null,
-      })),
+      getSession: vi.fn(async () => {
+        if (session.failNext) {
+          session.failNext = false;
+          throw new Error('Sitzungsspeicher nicht lesbar');
+        }
+        if (session.returnError) {
+          // Fehler mit noch vorhandenen Sitzungsdaten: der Fehler gewinnt (Halt).
+          return { data: { session: { user: { id: 'A' } } }, error: new Error('refresh failed') };
+        }
+        return {
+          data: { session: session.userId ? { user: { id: session.userId } } : null },
+          error: null,
+        };
+      }),
     },
   },
 }));
@@ -83,6 +93,8 @@ describe('MutationQueue Konto-Ausgang (A-07b, @FU-006 / @FU-019)', () => {
     mockStorage.clear();
     created.length = 0;
     session.userId = 'A';
+    session.failNext = false;
+    session.returnError = false;
     net.online = true;
     vi.stubGlobal("navigator", { get onLine() { return net.online; } });
   });
@@ -124,6 +136,40 @@ describe('MutationQueue Konto-Ausgang (A-07b, @FU-006 / @FU-019)', () => {
       session.userId = null;
       const queue = track(new MutationQueue(repo as never, undefined, undefined, 'A'));
       queue.enqueue('SAVE_TOURNAMENT', tournament('t1'));
+      await flush();
+
+      expect(repo.save).not.toHaveBeenCalled();
+      expect(queue.getPendingCount()).toBe(1);
+      expect(storedItems('mutation_queue_v1:A')[0].retryCount).toBe(0);
+    });
+  });
+
+  describe('getSession-Fehler (Fixrunde 1)', () => {
+    it('Pflichttest: geworfenes getSession ist vorübergehend – kein Fehlversuch, kein Halt, nächster Durchgang sendet', async () => {
+      const repo = createMockRepo();
+      session.failNext = true;
+      const queue = track(new MutationQueue(repo as never, undefined, undefined, 'A'));
+      queue.enqueue('SAVE_TOURNAMENT', tournament('t1'));
+      await flush();
+
+      expect(repo.save).not.toHaveBeenCalled();
+      expect(queue.getLastFailure()).toBe('transient');
+      expect(queue.getPendingCount()).toBe(1);
+      expect(storedItems('mutation_queue_v1:A')[0].retryCount).toBe(0);
+
+      await vi.advanceTimersByTimeAsync(1000); // Wiederholung nach der ersten Backoff-Stufe
+      await flush();
+      expect(repo.save).toHaveBeenCalledTimes(1);
+      expect(queue.getPendingCount()).toBe(0);
+    });
+
+    it('Gegenbeispiel: zurückgegebener getSession-Fehler hält an wie bisher (kein Versand, auch nach langer Zeit)', async () => {
+      const repo = createMockRepo();
+      session.returnError = true;
+      const queue = track(new MutationQueue(repo as never, undefined, undefined, 'A'));
+      queue.enqueue('SAVE_TOURNAMENT', tournament('t1'));
+      await flush();
+      await vi.advanceTimersByTimeAsync(60_000);
       await flush();
 
       expect(repo.save).not.toHaveBeenCalled();

@@ -91,6 +91,18 @@ export class SyncError extends AppError {
  * an "aborted"/"timeout"/"fetch" substring. `cause` is kept for diagnostics only, never
  * read for classification.
  */
+/**
+ * A-07b Fixrunde 1 (@FU-006): `supabase.auth.getSession()` hat geworfen (lokaler Sitzungsspeicher
+ * nicht lesbar). Vorübergehend: die Mutation zählt nicht als Fehlversuch, sie bleibt stehen und
+ * der nächste Durchgang versucht es erneut. Klassifiziert in `isTransientMutationError`.
+ */
+export class SessionReadError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = 'SessionReadError';
+  }
+}
+
 export class GuestStoreReadError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
     super(message, options);
@@ -228,6 +240,9 @@ export function isTransientMutationError(error: unknown): boolean {
   // pattern (`isAbortError`, TRANSIENT_NETWORK_MESSAGE_PATTERNS below) closes that gap.
   if (error instanceof GuestStoreReadError) {
     return false;
+  }
+  if (error instanceof SessionReadError) {
+    return true;
   }
   if (error instanceof OptimisticLockError) {
     return false;

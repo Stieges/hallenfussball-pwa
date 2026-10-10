@@ -3,7 +3,7 @@ import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { LocalStorageRepository } from '../repositories/LocalStorageRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
-import { AuthenticationError, GuestStoreReadError } from '../errors';
+import { AuthenticationError, GuestStoreReadError, SessionReadError } from '../errors';
 import { supabase } from '../../lib/supabase';
 import {
     GenericMutationQueue,
@@ -154,8 +154,18 @@ function adoptLegacyKey(legacyKey: string, targetKey: string): void {
  * Queue haelt wie bei abgelaufener Anmeldung an (kein Versand, kein Fehlversuch).
  */
 async function assertSessionOwnsQueue(accountId: string): Promise<void> {
-    const session = supabase ? (await supabase.auth.getSession()).data.session : null;
-    if (session?.user.id !== accountId) {
+    if (!supabase) {
+        throw new AuthenticationError('Konto der Warteschlange ist nicht mehr angemeldet');
+    }
+    let result: Awaited<ReturnType<typeof supabase.auth.getSession>>;
+    try {
+        result = await supabase.auth.getSession();
+    } catch (error) {
+        // Wurf = vorübergehend (kein Fehlversuch, kein Halt); der nächste Durchgang prüft erneut.
+        throw new SessionReadError('Sitzung vorübergehend nicht lesbar', { cause: error });
+    }
+    // Ein zurückgegebener Fehler bleibt ein Halt wie bisher.
+    if (result.error || result.data.session?.user.id !== accountId) {
         throw new AuthenticationError('Konto der Warteschlange ist nicht mehr angemeldet');
     }
 }
