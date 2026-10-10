@@ -69,6 +69,12 @@ describe('SyncStatusBar — wartende Eintraege (A-06i, DE)', () => {
     expect(screen.getByTestId('sync-status')).toHaveAttribute('aria-label', '1 Eintrag wartet – Übertragung gestört');
   });
 
+  it('Fixpunkt A-06j: im Wartezustand (nicht kompakt) kein Inline-Text "ausstehend" und kein Titel-Zusatz', async () => {
+    await renderWithI18n(<SyncStatusBar status="synced" pendingCount={8} waitReason="noInternet" />);
+    expect(screen.queryByText(/ausstehend/)).not.toBeInTheDocument();
+    expect(screen.getByTestId('sync-status')).not.toHaveAttribute('title', expect.stringContaining('ausstehend'));
+  });
+
   it('ohne waitReason: neutraler Text "N Einträge warten"', async () => {
     await renderWithI18n(<SyncStatusBar status="synced" pendingCount={2} />);
     expect(screen.getByTestId('sync-status')).toHaveAttribute('aria-label', '2 Einträge warten');
