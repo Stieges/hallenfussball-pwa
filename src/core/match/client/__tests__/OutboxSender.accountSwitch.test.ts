@@ -24,7 +24,6 @@ describe('OutboxSender: Kopien von A werden nach start(B) nicht gesendet (@FU-00
     const h = makeHarness();
     await h.store.create('accA', 'mA', ctx);
     await h.store.addPending('accA', 'mA', ev({ id: 'a1', type: 'GOAL', at: 1 }));
-    await h.store.addPending('accA', 'mA', ev({ id: 'a2', type: 'GOAL', at: 2 }));
     await h.store.create('accB', 'mB', ctx);
     await h.store.addPending('accB', 'mB', ev({ id: 'b1', type: 'GOAL', at: 1 }));
 
@@ -45,6 +44,8 @@ describe('OutboxSender: Kopien von A werden nach start(B) nicht gesendet (@FU-00
     }
     const callsBeforeSwitch = h.api.mock.calls.length;
     expect(callsBeforeSwitch).toBe(1);
+    // a2 kommt erst während des laufenden Aufrufs dazu, steht also nicht im gesendeten Stapel.
+    await h.store.addPending('accA', 'mA', ev({ id: 'a2', type: 'GOAL', at: 2 }));
 
     await h.sender.start('accB'); // Kontowechsel, A's Aufruf haengt noch
     await h.settle();
@@ -59,5 +60,7 @@ describe('OutboxSender: Kopien von A werden nach start(B) nicht gesendet (@FU-00
     expect(matchesAfterSwitch).not.toContain('mA');
     // B hat seine eigenen Eintraege gesendet.
     expect(await idsIn(h, 'accB', 'mB', 'acked')).toEqual(['b1']);
+    // a2 bleibt in As Speicher wartend (nie gesendet).
+    expect(await idsIn(h, 'accA', 'mA', 'pending')).toEqual(['a2']);
   });
 });

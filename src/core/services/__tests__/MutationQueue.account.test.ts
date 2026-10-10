@@ -44,6 +44,7 @@ vi.mock('../../../lib/supabase', () => ({
   },
 }));
 
+import { safeLocalStorage } from '../../utils/safeStorage';
 import { MutationQueue } from '../MutationQueue';
 
 function createMockRepo() {
@@ -113,6 +114,42 @@ describe('MutationQueue Konto-Ausgang (A-07b, @FU-006 / @FU-019)', () => {
       expect(queueB.getPendingCount()).toBe(0);
       expect(repoB.save).not.toHaveBeenCalled();
       expect(storedItems('mutation_queue_v1:A')).toHaveLength(2);
+    });
+  });
+
+  describe('Fixrunde 1: Zusammenführung und Speicher voll', () => {
+    const item = (id: string, tournamentId: string) => ({
+      id,
+      type: 'SAVE_TOURNAMENT',
+      payload: tournament(tournamentId),
+      timestamp: 1,
+      retryCount: 0,
+    });
+
+    it('Altschluessel + belegter Kontoschluessel: Vereinigung ohne Doppel-IDs, Kontoeintrag nicht überschrieben', () => {
+      net.online = false;
+      mockStorage.set('mutation_queue_v1', JSON.stringify([item('L1', 'legacy-l1'), item('S', 'legacy-s')]));
+      mockStorage.set('mutation_queue_v1:A', JSON.stringify([item('S', 'target-s'), item('T1', 'target-t1')]));
+
+      track(new MutationQueue(createMockRepo() as never, undefined, undefined, 'A'));
+
+      const merged = storedItems('mutation_queue_v1:A');
+      expect(merged.map((entry) => entry.id)).toEqual(['L1', 'S', 'T1']);
+      expect(new Set(merged.map((entry) => entry.id)).size).toBe(merged.length);
+      expect(merged.find((entry) => entry.id === 'S')?.payload.id).toBe('target-s');
+      expect(mockStorage.has('mutation_queue_v1')).toBe(false);
+    });
+
+    it('Speicher voll (setItem schreibt still nicht): Altschluessel bleibt erhalten', () => {
+      net.online = false;
+      mockStorage.set('mutation_queue_v1', JSON.stringify([item('L1', 'legacy-l1'), item('L2', 'legacy-l2')]));
+      const before = mockStorage.get('mutation_queue_v1');
+      vi.mocked(safeLocalStorage.setItem).mockImplementationOnce(() => undefined); // Schreibvorgang geht verloren
+
+      track(new MutationQueue(createMockRepo() as never, undefined, undefined, 'A'));
+
+      expect(mockStorage.get('mutation_queue_v1')).toBe(before);
+      expect(storedItems('mutation_queue_v1')).toHaveLength(2);
     });
   });
 
