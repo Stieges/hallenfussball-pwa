@@ -96,9 +96,25 @@ export function publicMatches(tournament: Tournament): Match[] {
   return tournament.hideScoresForPublic ? tournament.matches.map(withoutScore) : tournament.matches;
 }
 
-/** Gruppentabellen nur, wenn die Turnierleitung sie nicht verbirgt. */
+/**
+ * Gruppentabellen nur, wenn die Turnierleitung sie nicht verbirgt. Ohne Stände gibt es auch keine
+ * Tabelle, also keinen Platz und keine Punkte (hideScoresForPublic, W2A-031).
+ */
 export function visibleStandings(tournament: Tournament, standings: Standing[]): Standing[] {
-  return tournament.hideRankingsForPublic ? [] : standings;
+  return tournament.hideRankingsForPublic || tournament.hideScoresForPublic ? [] : standings;
+}
+
+/** Der Tabellen-Tab wird nur angeboten, wenn Stände sichtbar sein dürfen (W2A-031). */
+export function standingsTabAvailable(tournament: Tournament): boolean {
+  return !tournament.hideScoresForPublic;
+}
+
+/** Ein Direktaufruf des Tabellen-Tabs fällt auf den Spielplan zurück, wenn der Tab nicht angeboten wird. */
+export function effectiveNavTab<T extends 'schedule' | 'standings' | 'settings'>(
+  tab: T,
+  tournament: Tournament
+): T | 'schedule' {
+  return tab === 'standings' && !standingsTabAvailable(tournament) ? 'schedule' : tab;
 }
 
 export function uniqueGroups(tournament: Tournament): string[] {

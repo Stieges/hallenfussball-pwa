@@ -30,6 +30,8 @@ import {
   visibleStandings,
   uniqueGroups,
   myTeamName,
+  standingsTabAvailable,
+  effectiveNavTab,
 } from '../features/public-view/publicScheduleFilters';
 import { useTheme } from '../hooks/useTheme';
 import { PublicStandingsTab } from '../features/public-view/components/PublicStandingsTab';
@@ -114,6 +116,8 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     return null;
   }
 
+  // Tabellen-Tab nur, wenn Stände sichtbar sein dürfen; Direktaufruf fällt auf den Spielplan zurück (W2A-031)
+  const tab = effectiveNavTab(activeTab, tournament);
   const filteredSchedule = publicSchedule(schedule, tournament, filters);
   const filteredStandings = visibleStandings(tournament, currentStandings);
   const myTeamLabel = myTeamName(tournament, myTeamId);
@@ -154,7 +158,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
         </div>
 
         {/* "Mein Team" Bar - only on schedule tab */}
-        {activeTab === 'schedule' && (
+        {tab === 'schedule' && (
           <MyTeamBar
             myTeamLabel={myTeamLabel}
             myTeamId={myTeamId}
@@ -165,7 +169,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
         )}
 
         {/* Filter Bar - only on schedule tab */}
-        {activeTab === 'schedule' && (
+        {tab === 'schedule' && (
           <PublicFilterBar
             groups={groups}
             selectedGroup={selectedGroup}
@@ -188,7 +192,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
         )}
 
         {/* Tab Content */}
-        {activeTab === 'schedule' && (
+        {tab === 'schedule' && (
           <>
             {/* Schedule Display */}
             <Card>
@@ -203,11 +207,11 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
           </>
         )}
 
-        {activeTab === 'standings' && (
+        {tab === 'standings' && (
           <PublicStandingsTab tournament={tournament} standings={currentStandings} />
         )}
 
-        {activeTab === 'settings' && (
+        {tab === 'settings' && (
           <PublicInfoTab
             tournament={tournament}
             shareCode={shareCode}
@@ -231,7 +235,11 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
       </div>
 
       {/* Bottom Navigation */}
-      <PublicBottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+      <PublicBottomNav
+        activeTab={tab}
+        onTabChange={handleTabChange}
+        hiddenTabs={standingsTabAvailable(tournament) ? [] : ['standings']}
+      />
     </div>
   );
 };
