@@ -10,6 +10,7 @@
 
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { useSyncStatus } from '../../../hooks/useSyncStatus';
+import { useResyncNow } from '../../match-engine/useResyncNow';
 import { SyncStatusBar } from './SyncStatusBar';
 import { SyncFailedList } from './SyncFailedList';
 
@@ -53,6 +54,9 @@ export function SyncStatusIndicator({
         discardFailedMutation,
         isCloudSyncAvailable,
     } = useSyncStatus();
+    // A-06h (Brief A9): Klick stoesst IMMER die Uebertragung an (resyncNow), auch bei
+    // pendingChanges > 0 (@FU-013 "sobald frei, alle uebertragen"). Oben bei den anderen Hooks.
+    const resyncNow = useResyncNow();
 
     const [showFailedList, setShowFailedList] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -78,11 +82,12 @@ export function SyncStatusIndicator({
     }, [showFailedList]);
 
     const handleClick = () => {
+        void resyncNow();
         if (failedChanges > 0) {
             setShowFailedList((prev) => !prev);
             return;
         }
-        if (tournamentId) {
+        if (pendingChanges === 0 && tournamentId) {
             void syncTournament(tournamentId);
         }
     };
