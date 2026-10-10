@@ -21,7 +21,7 @@ import { useToast } from '../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../lib/sentry';
 import { useEngineExecutionBridge } from './useEngineExecutionBridge';
 import { useEngineCommandWiring } from './useEngineCommandWiring';
-import { setRealtimeChannelStatus, clearRealtimeChannelStatus } from './realtimeChannelStatus';
+import { trackRealtimeChannelStatus } from './realtimeChannelStatus';
 import { scheduleFingerprint } from '../utils/scheduleFingerprint';
 
 // ============================================================================
@@ -262,14 +262,10 @@ export function useMatchExecution({
         if (!realtimeRepo || !tournament.id) { return; }
 
         const tournamentId = tournament.id;
-        // A-06k (@FU-025): Kanal-Zustand fuer Engine-Ausweichen und Hinweis. Nach dem Cleanup
-        // (`subscribed` = false) ignoriert der Zustand spaete Rueckmeldungen des alten Kanals.
-        let subscribed = true;
+        const tracker = trackRealtimeChannelStatus(tournamentId); // A-06k (@FU-025)
         realtimeRepo.subscribe(tournamentId, {
             onMatchChange: handleRealtimeChange,
-            onStatusChange: (status) => {
-                if (subscribed) { setRealtimeChannelStatus(tournamentId, status); }
-            },
+            onStatusChange: tracker.onStatusChange,
             onError: (error) => {
                 captureFeatureError(error, 'hooks', 'cockpitRealtime', { tournamentId });
             },
@@ -279,8 +275,7 @@ export function useMatchExecution({
         // `supabaseLiveMatchRepo` einzeln): so schließt Reacts Cleanup aus dem VORHERIGEN Render
         // über die alte Repo-Instanz und meldet genau die ab, statt deren Kanal zu verwaisen.
         return () => {
-            subscribed = false;
-            clearRealtimeChannelStatus(tournamentId);
+            tracker.stop();
             realtimeRepo.unsubscribe(tournamentId);
         };
     }, [tournament.id, realtimeRepo, handleRealtimeChange]);

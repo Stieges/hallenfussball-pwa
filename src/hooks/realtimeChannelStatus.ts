@@ -32,6 +32,27 @@ export function clearRealtimeChannelStatus(tournamentId: string): void {
   notify();
 }
 
+/**
+ * Status-Melder eines Abonnenten. `onStatusChange` schreibt nur, solange der Abonnent aktiv ist;
+ * `stop()` (Cleanup) deaktiviert ihn und loescht den Zustand, damit ein spaeter Rueckruf des alten
+ * Kanals keinen falschen Zustand hinterlaesst.
+ */
+export function trackRealtimeChannelStatus(tournamentId: string): {
+  onStatusChange: (status: RealtimeChannelStatus) => void;
+  stop: () => void;
+} {
+  let active = true;
+  return {
+    onStatusChange: (status) => {
+      if (active) { setRealtimeChannelStatus(tournamentId, status); }
+    },
+    stop: () => {
+      active = false;
+      clearRealtimeChannelStatus(tournamentId);
+    },
+  };
+}
+
 /** true, sobald ein gemeldeter Zustand NICHT `SUBSCRIBED` ist (also Abfrage-Ausweichen noetig). */
 export function isRealtimeInterrupted(status: RealtimeChannelStatus | undefined): boolean {
   return status !== undefined && status !== 'SUBSCRIBED';

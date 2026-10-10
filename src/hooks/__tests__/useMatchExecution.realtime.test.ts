@@ -21,6 +21,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useMatchExecution } from '../useMatchExecution';
+import { useRealtimeChannelStatus } from '../realtimeChannelStatus';
+import type { RealtimeChannelStatus } from '../../core/repositories/SupabaseLiveMatchRepository';
 import type { Tournament } from '../../types/tournament';
 import type { LiveMatch } from '../../core/models/LiveMatch';
 
@@ -33,6 +35,7 @@ type MatchChangeHandler = (matchId: string, match: LiveMatch | null, changeType:
 
 interface SubscribeOptions {
   onMatchChange?: MatchChangeHandler;
+  onStatusChange?: (status: RealtimeChannelStatus) => void;
   onError?: (error: Error) => void;
 }
 
@@ -187,6 +190,17 @@ function latestOnMatchChange(): MatchChangeHandler {
   const handler = last?.[1]?.onMatchChange;
   if (!handler) {
     throw new Error('subscribe() wurde nicht (oder ohne onMatchChange) aufgerufen');
+  }
+  return handler;
+}
+
+/** Holt den Status-Callback des letzten subscribe() (A-06k, @FU-025). */
+function latestOnStatusChange(): (status: RealtimeChannelStatus) => void {
+  const calls = mockSubscribe.mock.calls;
+  const last = calls[calls.length - 1];
+  const handler = last?.[1]?.onStatusChange;
+  if (!handler) {
+    throw new Error('subscribe() wurde nicht (oder ohne onStatusChange) aufgerufen');
   }
   return handler;
 }
@@ -349,5 +363,23 @@ describe('useMatchExecution — Abo-Lebenszyklus', () => {
     expect(mockCaptureFeatureError).toHaveBeenCalledWith(error, 'hooks', 'cockpitRealtime', {
       tournamentId: 'tour-1',
     });
+  });
+});
+
+describe('useMatchExecution — Kanal-Status (A-06k, @FU-025)', () => {
+  it('reicht den Kanal-Status des Abos an den Store weiter (Verdrahtung Abo -> Store)', async () => {
+    const { result, unmount } = await renderAndFlush();
+    expect(result.current).toBeDefined();
+
+    const status = renderHook(() => useRealtimeChannelStatus('tour-1'));
+    expect(status.result.current).toBeUndefined();
+
+    act(() => {
+      latestOnStatusChange()('CLOSED');
+    });
+    expect(status.result.current).toBe('CLOSED');
+
+    unmount();
+    expect(status.result.current).toBeUndefined();
   });
 });
