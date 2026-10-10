@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { displayEffects, displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
+import { cssVars, displayEffects, displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { calculateStandings } from '../../../utils/calculations';
@@ -40,7 +40,7 @@ export function StandingsSlide({ slide, tournament, theme, style }: StandingsSli
         width: '100%',
         maxWidth: '800px',
         background: themeColors.surface,
-        borderRadius: '16px',
+        borderRadius: cssVars.borderRadius.lg,
         padding: displaySpacing.contentLG,
         boxShadow: displayEffects.cardShadow,
         border: `1px solid ${themeColors.border}`,
