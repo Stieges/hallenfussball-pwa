@@ -103,7 +103,7 @@ const SERVER_STATE_KEYS = [
 const IN_SCOPE_SZENARIEN = [
   'Zurücknehmen ist dauerhaft',
   'Wiederholte Übertragung erzeugt keinen zweiten Eintrag',
-  'Ein abgelehnter Eintrag hält die anderen nicht auf',
+  'Ein nicht übernommener Eintrag hält die anderen nicht auf',
   'Gleichzeitiger Anpfiff',
   'Teamtausch behält die Zuordnung zur Seite',
   'Helfer kann ein beendetes Spiel nicht korrigieren',
