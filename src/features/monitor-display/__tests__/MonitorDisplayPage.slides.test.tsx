@@ -158,16 +158,21 @@ describe('MonitorDisplayPage — Folieninhalt (Bestand)', () => {
 });
 
 describe('MonitorDisplayPage — Tasten (Bestand)', () => {
-  const zweiFolien = () => [slide('custom-text', { headline: 'Erste Folie' }), slide('custom-text', { headline: 'Zweite Folie' })];
+  const zweiFolien = () => [
+    slide('custom-text', { headline: 'Erste Folie' }),
+    slide('custom-text', { headline: 'Zweite Folie' }),
+    slide('custom-text', { headline: 'Dritte Folie' }),
+  ];
 
-  it('Bestand: ArrowRight springt weiter, ArrowLeft am Anfang auf die letzte Folie', async () => {
+  it('Bestand: ArrowRight springt weiter, ArrowLeft geht zurück und am Anfang auf die letzte Folie', async () => {
     await renderMonitor(buildTournament(), zweiFolien());
     expect(screen.getByText('Erste Folie')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'ArrowRight' });
     expect(screen.getByText('Zweite Folie')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
+    expect(screen.getByText('Erste Folie')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    expect(screen.getByText('Zweite Folie')).toBeInTheDocument();
+    expect(screen.getByText('Dritte Folie')).toBeInTheDocument();
   });
 
   it('Bestand: Leertaste schaltet den Pausen-Indikator ein und wieder aus', async () => {
@@ -215,39 +220,34 @@ describe('MonitorDisplayPage — Einblendungen (Tor)', () => {
 });
 
 describe('MonitorDisplayPage — Karteneinblendung (@ZM-119, Fake-Timer)', () => {
+  // Szenario-Daten: DJK Berg Nr. 4, Spiel 8, Sponsor-Folie „Bäckerei Maier“.
   const gelbeKarte: CardEventInfo = {
-    matchId: 'match-7', teamId: 'team-sued', teamName: 'SV Süd', side: 'away', cardType: 'YELLOW', timestamp: 2,
+    matchId: 'match-8', teamId: 'team-berg', teamName: 'DJK Berg', side: 'home', cardType: 'YELLOW',
+    playerNumber: 4, timestamp: 2,
   };
 
   async function renderMitKarte(): Promise<void> {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
     live.card = gelbeKarte;
-    supabaseGet.mockResolvedValue(attachMonitor(buildTournament(), withMonitor({ slides: [slide('custom-text', { headline: 'Willkommen' })] })));
+    const tournament = buildTournament({ sponsors: [FIXTURE_SPONSOR] });
+    supabaseGet.mockResolvedValue(attachMonitor(tournament, withMonitor({ slides: [slide('sponsor', { sponsorId: 'sp-1' })] })));
     localGet.mockResolvedValue(null);
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect(screen.getByText('SV Süd')).toBeInTheDocument();
+    expect(screen.getByText('DJK Berg')).toBeInTheDocument();
   }
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it.fails('@ZM-119 Karte: bei 3199 ms noch sichtbar, bei 3200 ms weg und clear 1× gerufen', async () => {
-    await renderMitKarte();
-    await act(async () => { await vi.advanceTimersByTimeAsync(3199); });
-    expect(screen.getByText('SV Süd')).toBeInTheDocument();
-    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
-    expect(screen.queryByText('SV Süd')).not.toBeInTheDocument();
-    expect(live.clearCard).toHaveBeenCalledTimes(1);
-  });
-
-  it('Bestand: Karte verschwindet schon bei 3000 ms, clear erst bei 3200 ms', async () => {
+  // Kein Soll-Anspruch: die Verweildauer 3199/3200 ms steht nicht im Szenario (Review B3).
+  it('Bestand: Karte erscheint und verschwindet von selbst (bei 3000 ms), Aufräumen 200 ms später', async () => {
     await renderMitKarte();
     await act(async () => { await vi.advanceTimersByTimeAsync(2999); });
-    expect(screen.getByText('SV Süd')).toBeInTheDocument();
+    expect(screen.getByText('DJK Berg')).toBeInTheDocument();
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
-    expect(screen.queryByText('SV Süd')).not.toBeInTheDocument();
+    expect(screen.queryByText('DJK Berg')).not.toBeInTheDocument();
     expect(live.clearCard).not.toHaveBeenCalled();
     await act(async () => { await vi.advanceTimersByTimeAsync(199); });
     expect(live.clearCard).not.toHaveBeenCalled();

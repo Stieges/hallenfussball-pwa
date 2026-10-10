@@ -33,7 +33,7 @@ export const FIXTURE_FIELDS: TournamentField[] = [
 export const FIXTURE_MATCHES: Match[] = [
   { id: 'match-1', matchNumber: 1, round: 1, field: 2, group: 'A', teamA: 'team-nord', teamB: 'team-ost', scoreA: 2, scoreB: 1, matchStatus: 'finished' },
   { id: 'match-7', matchNumber: 7, round: 3, field: 1, group: 'A', teamA: 'team-nord', teamB: 'team-sued', scoreA: 1, scoreB: 0, matchStatus: 'running' },
-  { id: 'match-8', matchNumber: 8, round: 4, field: 2, group: 'B', teamA: 'team-berg', teamB: 'team-mitte', matchStatus: 'scheduled' },
+  { id: 'match-8', matchNumber: 8, round: 4, field: 2, group: 'B', teamA: 'team-berg', teamB: 'team-mitte', matchStatus: 'scheduled', scheduledTime: new Date('2026-10-10T14:20:00') },
   { id: 'match-9', matchNumber: 9, round: 5, field: 1, group: 'B', teamA: 'team-mitte', teamB: 'team-west', matchStatus: 'scheduled', scheduledTime: new Date('2026-10-10T14:40:00') },
 ];
 
