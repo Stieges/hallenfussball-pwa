@@ -115,20 +115,20 @@ function generateTop4(numberOfGroups: number): PlayoffMatch[] {
   const matches: PlayoffMatch[] = [];
 
   if (numberOfGroups === 2) {
-    // Halbfinale mit Kreuzspiel
+    // Halbfinale über Kreuz (@TM-015, Vorlage „Top 4“): HF1 = Erster A gegen Zweiter B, HF2 = Erster B gegen Zweiter A
     matches.push(
       {
         id: 'semi1',
         label: '1. Halbfinale',
-        home: 'group-a-2nd',
-        away: 'group-b-1st',
+        home: 'group-a-1st',
+        away: 'group-b-2nd',
         dependsOn: [],
       },
       {
         id: 'semi2',
         label: '2. Halbfinale',
-        home: 'group-a-1st',
-        away: 'group-b-2nd',
+        home: 'group-b-1st',
+        away: 'group-a-2nd',
         dependsOn: [],
       }
     );

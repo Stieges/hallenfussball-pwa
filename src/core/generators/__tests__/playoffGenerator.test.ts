@@ -87,16 +87,16 @@ describe('generatePlayoffMatches preset=top-4', () => {
     expect(ids).toContain('final');
   });
 
-  it('uses cross-seeding for 2 groups', () => {
+  it('@TM-015 Vorlage Top 4 bei 2 Gruppen: HF1 = Erster A gegen Zweiter B (über Kreuz)', () => {
     const matches = generatePlayoffMatches(2, { preset: 'top-4' });
     const semi1 = matches.find(m => m.id === 'semi1')!;
     const semi2 = matches.find(m => m.id === 'semi2')!;
 
-    // Cross: A2 vs B1, A1 vs B2
-    expect(semi1.home).toBe('group-a-2nd');
-    expect(semi1.away).toBe('group-b-1st');
-    expect(semi2.home).toBe('group-a-1st');
-    expect(semi2.away).toBe('group-b-2nd');
+    // @TM-015 / Turniermodi „Vorlage Top 4“: HF1 = Erster A gegen Zweiter B, HF2 = Erster B gegen Zweiter A (über Kreuz)
+    expect(semi1.home).toBe('group-a-1st');
+    expect(semi1.away).toBe('group-b-2nd');
+    expect(semi2.home).toBe('group-b-1st');
+    expect(semi2.away).toBe('group-a-2nd');
   });
 
   it('final depends on both semifinals', () => {
