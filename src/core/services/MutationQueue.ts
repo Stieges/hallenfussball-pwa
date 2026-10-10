@@ -9,6 +9,7 @@ import {
     type GenericMutationItem,
     type FailedMutationItem as GenericFailedMutationItem,
 } from './GenericMutationQueue';
+import type { QueueTimers } from './mutationQueueRetry';
 
 export { MAX_RETRIES, type MutationQueueStatus } from './GenericMutationQueue';
 
@@ -103,11 +104,12 @@ async function skipUploadForGuestEntries(
 }
 
 export class MutationQueue extends GenericMutationQueue<MutationType> {
-    constructor(supabaseRepo: SupabaseRepository, localRepo: LocalStorageRepository = new LocalStorageRepository()) {
+    constructor(supabaseRepo: SupabaseRepository, localRepo: LocalStorageRepository = new LocalStorageRepository(), timers?: QueueTimers) {
         super({
             storageKey: 'mutation_queue_v1',
             failedStorageKey: 'mutation_queue_failed_v1',
             sentryFeature: 'sync',
+            ...(timers ? { timers } : {}),
             // Unknown-type items are rejected at load exactly like schema-invalid
             // ones (see GenericMutationQueue.isKnownType doc) — restores 1:1
             // load-time fidelity with the pre-extraction enum-restricted schema.
