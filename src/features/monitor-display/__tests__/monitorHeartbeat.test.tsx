@@ -73,7 +73,10 @@ describe('MonitorDisplayPage – Heartbeat (C-MON-HEARTBEAT-JE-POLL)', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     const start = heartbeatCalls();
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(29_999); });
+    for (let i = 0; i < 29; i++) {
+      await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    }
+    await act(async () => { await vi.advanceTimersByTimeAsync(999); });
     expect(heartbeatCalls() - start).toBe(0);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });

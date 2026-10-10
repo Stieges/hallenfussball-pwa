@@ -127,6 +127,28 @@ describe('useMonitorDisplayData', () => {
     expect(result.current.loading).toBe(false);
   });
 
+  it('Ziel-Wechsel nach Cloud-Erfolg: bis zur Antwort bleiben origin und Turnier stehen (Realtime nicht abgemeldet)', async () => {
+    const pendingT2 = deferred<DisplayDelta>();
+    const fetchT1 = vi.fn<MonitorDataSource['fetch']>().mockResolvedValue(snapshot());
+    const fetchT2 = vi.fn<MonitorDataSource['fetch']>().mockReturnValue(pendingT2.promise);
+    const { result, rerender } = renderHook(
+      ({ src, t }: { src: MonitorDataSource; t: MonitorDisplayTarget }) => useMonitorDisplayData(src, t, pollFor5s),
+      { initialProps: { src: { fetch: fetchT1 }, t: target('tour-1') } }
+    );
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(result.current.origin).toBe('cloud');
+    const altesTurnier = result.current.tournament;
+
+    rerender({ src: { fetch: fetchT2 }, t: target('tour-2') });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(fetchT2).toHaveBeenCalledTimes(1);
+    expect(result.current.hasData).toBe(false);
+    expect(result.current.origin).toBe('cloud');
+    expect(result.current.tournament).toBe(altesTurnier);
+
+    await act(async () => { pendingT2.resolve(snapshot()); await vi.advanceTimersByTimeAsync(0); });
+  });
+
   it('gleiche Quelle bei rerender: kein zusätzlicher Abruf', async () => {
     const fetch = vi.fn<MonitorDataSource['fetch']>().mockResolvedValue(snapshot());
     const src: MonitorDataSource = { fetch };
