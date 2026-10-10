@@ -187,4 +187,27 @@ describe('@W4-022 festgehaltene Teamzahl ändert die Zeit-Empfehlung nie', () =>
     expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ numberOfTeams: 12 }));
     expect(screen.getByTestId('smart-config-teams-short')).toBeTruthy();
   });
+
+  it('Hinweis nennt die gerechnete Teamzahl (12), nicht die Wizard-Teamzahl (10)', () => {
+    const onApply = vi.fn();
+    render(
+      <SmartConfig
+        formData={{ ...teams12FormData(), numberOfTeams: 10 }}
+        onApply={onApply}
+      />
+    );
+    fireEvent.click(screen.getByText('Smart-Konfiguration'));
+    // Erste Auswahlliste = festgehaltene Teamzahl im Panel
+    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: '12' } });
+    fireEvent.change(screen.getByLabelText('Stunden'), { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText('Minuten'), { target: { value: '5' } });
+    fireEvent.click(screen.getByLabelText('Optimale Konfiguration berechnen'));
+
+    const hinweis = screen.getByTestId('smart-config-teams-short').textContent ?? '';
+    expect(hinweis).toContain('12 Teams');
+    expect(hinweis).not.toContain('10 Teams');
+
+    fireEvent.click(screen.getByLabelText('Empfohlene Konfiguration übernehmen'));
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ numberOfTeams: 12 }));
+  });
 });

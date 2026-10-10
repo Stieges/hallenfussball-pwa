@@ -238,7 +238,7 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
 
           {teamsKeptTimeShort && (
             <p className={styles.warningText} role="alert" data-testid="smart-config-teams-short">
-              <span aria-hidden="true">⚠️</span> {t('smartConfig.teamsKeptTimeShort', { teams: formData.numberOfTeams })}
+              <span aria-hidden="true">⚠️</span> {t('smartConfig.teamsKeptTimeShort', { teams: recommendation?.teams })}
             </p>
           )}
 
