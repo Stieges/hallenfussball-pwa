@@ -37,8 +37,6 @@ interface UseSmartConfigReturn {
   // Constraint locks
   lockTeams: boolean;
   setLockTeams: (locked: boolean) => void;
-  lockGroups: boolean;
-  setLockGroups: (locked: boolean) => void;
   lockFields: boolean;
   setLockFields: (locked: boolean) => void;
   lockGameDuration: boolean;
@@ -49,8 +47,6 @@ interface UseSmartConfigReturn {
   // Constraint values
   constraintTeams: number;
   setConstraintTeams: (value: number) => void;
-  constraintGroups: number;
-  setConstraintGroups: (value: number) => void;
   constraintFields: number;
   setConstraintFields: (value: number) => void;
   constraintGameDuration: number;
@@ -64,7 +60,6 @@ interface UseSmartConfigReturn {
   handleQuickApply: () => void;
 
   // Derived state
-  usesGroups: boolean;
   showTeamsWarning: boolean;
 }
 
@@ -98,14 +93,12 @@ export function useSmartConfig({
 
   // Constraint locks
   const [lockTeams, setLockTeams] = useState(true); // Teams locked by default
-  const [lockGroups, setLockGroups] = useState(false);
   const [lockFields, setLockFields] = useState(false);
   const [lockGameDuration, setLockGameDuration] = useState(false);
   const [lockBreakDuration, setLockBreakDuration] = useState(false);
 
   // Constraint values (use current form values as defaults)
   const [constraintTeams, setConstraintTeams] = useState(formData.numberOfTeams ?? 6);
-  const [constraintGroups, setConstraintGroups] = useState(formData.numberOfGroups ?? 2);
   const [constraintFields, setConstraintFields] = useState(formData.numberOfFields ?? 1);
   const [constraintGameDuration, setConstraintGameDuration] = useState(
     formData.groupPhaseGameDuration ?? 10
@@ -123,13 +116,11 @@ export function useSmartConfig({
   // Sync constraint values with formData when it changes
   useEffect(() => {
     setConstraintTeams(formData.numberOfTeams ?? 6);
-    setConstraintGroups(formData.numberOfGroups ?? 2);
     setConstraintFields(formData.numberOfFields ?? 1);
     setConstraintGameDuration(formData.groupPhaseGameDuration ?? 10);
     setConstraintBreakDuration(formData.groupPhaseBreakDuration ?? 2);
   }, [
     formData.numberOfTeams,
-    formData.numberOfGroups,
     formData.numberOfFields,
     formData.groupPhaseGameDuration,
     formData.groupPhaseBreakDuration,
@@ -140,7 +131,6 @@ export function useSmartConfig({
     const stored = loadStoredConfig();
     const constraints: LockedConstraints = {};
     if (lockTeams) {constraints.teams = constraintTeams;}
-    if (lockGroups && usesGroups) {constraints.groups = constraintGroups;}
     if (lockFields) {constraints.fields = constraintFields;}
     if (lockGameDuration) {constraints.gameDuration = constraintGameDuration;}
     if (lockBreakDuration) {constraints.breakDuration = constraintBreakDuration;}
@@ -149,39 +139,32 @@ export function useSmartConfig({
   }, [
     availableHours,
     lockTeams,
-    lockGroups,
     lockFields,
     lockGameDuration,
     lockBreakDuration,
     constraintTeams,
-    constraintGroups,
     constraintFields,
     constraintGameDuration,
     constraintBreakDuration,
-    usesGroups,
   ]);
 
   // Build constraints object
   const getConstraints = useCallback((): LockedConstraints => {
     const constraints: LockedConstraints = {};
     if (lockTeams) {constraints.teams = constraintTeams;}
-    if (lockGroups && usesGroups) {constraints.groups = constraintGroups;}
     if (lockFields) {constraints.fields = constraintFields;}
     if (lockGameDuration) {constraints.gameDuration = constraintGameDuration;}
     if (lockBreakDuration) {constraints.breakDuration = constraintBreakDuration;}
     return constraints;
   }, [
     lockTeams,
-    lockGroups,
     lockFields,
     lockGameDuration,
     lockBreakDuration,
     constraintTeams,
-    constraintGroups,
     constraintFields,
     constraintGameDuration,
     constraintBreakDuration,
-    usesGroups,
   ]);
 
   const handleCalculate = useCallback(() => {
@@ -197,7 +180,7 @@ export function useSmartConfig({
     const result = calculateRecommendation(availableHours, teamsToUse, constraints, structure);
 
     if (result.constraintsImpossible) {
-      const constraintsList = buildConstraintsList(constraints, usesGroups);
+      const constraintsList = buildConstraintsList(constraints);
       showWarning(
         `Mit den Einschränkungen (${constraintsList.join(', ')}) werden mindestens ${result.minRequiredHours}h benötigt. Aktuell verfügbar: ${availableHours}h.`
       );
@@ -278,8 +261,6 @@ export function useSmartConfig({
     lastApplied,
     lockTeams,
     setLockTeams,
-    lockGroups,
-    setLockGroups,
     lockFields,
     setLockFields,
     lockGameDuration,
@@ -288,8 +269,6 @@ export function useSmartConfig({
     setLockBreakDuration,
     constraintTeams,
     setConstraintTeams,
-    constraintGroups,
-    setConstraintGroups,
     constraintFields,
     setConstraintFields,
     constraintGameDuration,
@@ -299,7 +278,6 @@ export function useSmartConfig({
     handleCalculate,
     handleApply,
     handleQuickApply,
-    usesGroups,
     showTeamsWarning,
   };
 }

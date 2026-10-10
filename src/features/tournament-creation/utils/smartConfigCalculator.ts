@@ -24,7 +24,6 @@ export interface StoredConfig {
 /** Fixed constraints that the algorithm cannot change */
 export interface LockedConstraints {
   teams?: number;         // e.g., "exactly 8 teams"
-  groups?: number;        // e.g., "exactly 2 groups" (only for groupsAndFinals)
   fields?: number;        // e.g., "only 1 field available"
   gameDuration?: number;  // e.g., "exactly 10 min game duration"
   breakDuration?: number; // e.g., "exactly 3 min break"
@@ -46,6 +45,10 @@ export interface Recommendation {
   breakDuration: number;
   totalMatches: number;
   estimatedHours: number;
+  /** Gruppenzahl, mit der gerechnet wurde (nur bei mindestens 2 Gruppen, @W4-021) */
+  groupCount?: number;
+  /** Finalrunde, mit der gerechnet wurde (zusammen mit groupCount) */
+  finalsPlan?: FinalsPreset;
 }
 
 /** Result of calculation attempt */
@@ -53,6 +56,8 @@ export interface CalculationResult {
   recommendation: Recommendation | null;
   constraintsImpossible: boolean;
   minRequiredHours?: number;
+  /** Festgehaltene Teamzahl passt mit keiner Konfiguration in die Zeit (@W4-022) */
+  teamsKeptTimeShort?: boolean;
 }
 
 /**
@@ -63,6 +68,14 @@ export interface CalculationResult {
 export interface MatchStructure {
   groupCount?: number;
   finalsPlan?: FinalsPreset;
+}
+
+/** Spielstruktur, die in die Empfehlung übernommen wird (nur bei mindestens 2 Gruppen). */
+function structureOf(structure: MatchStructure): Pick<Recommendation, 'groupCount' | 'finalsPlan'> {
+  if (structure.groupCount === undefined || structure.groupCount < 2) {
+    return {};
+  }
+  return { groupCount: structure.groupCount, finalsPlan: structure.finalsPlan ?? 'none' };
 }
 
 /**
@@ -161,6 +174,7 @@ export function calculateRecommendation(
             breakDuration,
             totalMatches,
             estimatedHours,
+            ...structureOf(structure),
           });
         }
       }
@@ -205,6 +219,7 @@ export function calculateRecommendation(
       breakDuration: 2,
       totalMatches: reducedMatches,
       estimatedHours: (reducedMatches / Math.max(1, fields)) * 12 / 60,
+      ...structureOf(structure),
     },
     constraintsImpossible: false,
   };
@@ -213,13 +228,9 @@ export function calculateRecommendation(
 /**
  * Build constraints list for display in warnings
  */
-export function buildConstraintsList(
-  constraints: LockedConstraints,
-  usesGroups: boolean
-): string[] {
+export function buildConstraintsList(constraints: LockedConstraints): string[] {
   const list: string[] = [];
   if (constraints.teams) {list.push(`${constraints.teams} Teams`);}
-  if (constraints.groups && usesGroups) {list.push(`${constraints.groups} Gruppen`);}
   if (constraints.fields) {
     list.push(`${constraints.fields} ${constraints.fields === 1 ? 'Feld' : 'Felder'}`);
   }

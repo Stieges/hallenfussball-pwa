@@ -205,14 +205,11 @@ describe('@W4-020 Hilfsfunktionen des Smart-Config-Moduls', () => {
     expect(loadStoredConfig()).toEqual({ lastHours: 4 });
   });
 
-  it('buildConstraintsList: Gruppen nur bei Gruppenmodus, Singular bei einem Feld', () => {
-    expect(buildConstraintsList({ teams: 8, groups: 2, fields: 1 }, false)).toEqual([
-      '8 Teams',
-      '1 Feld',
-    ]);
+  it('buildConstraintsList: Singular bei einem Feld (B-38 @W4-021: keine Gruppen mehr in der Liste)', () => {
+    expect(buildConstraintsList({ teams: 8, fields: 1 })).toEqual(['8 Teams', '1 Feld']);
     expect(
-      buildConstraintsList({ groups: 2, fields: 2, gameDuration: 10, breakDuration: 3 }, true)
-    ).toEqual(['2 Gruppen', '2 Felder', '10 Min Spieldauer', '3 Min Pause']);
-    expect(buildConstraintsList({ breakDuration: 3, groups: 2 }, false)).toEqual(['3 Min Pause']);
+      buildConstraintsList({ fields: 2, gameDuration: 10, breakDuration: 3 })
+    ).toEqual(['2 Felder', '10 Min Spieldauer', '3 Min Pause']);
+    expect(buildConstraintsList({ breakDuration: 3 })).toEqual(['3 Min Pause']);
   });
 });

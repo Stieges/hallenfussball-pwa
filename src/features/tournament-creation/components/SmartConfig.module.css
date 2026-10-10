@@ -161,6 +161,12 @@
   color: var(--color-text-primary);
 }
 
+.resultStructure {
+  margin-bottom: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
 .resultFooter {
   margin-top: var(--spacing-md);
   padding-top: var(--spacing-md);

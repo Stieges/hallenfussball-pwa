@@ -40,14 +40,11 @@ describe('@W4-020 Verdrahtung Smart Config', () => {
     expect(result.current.recommendation?.totalMatches).toBe(16);
   });
 
-  it('gesperrte Gruppenzahl im Panel ändert die Empfehlung nicht: maßgeblich ist die Wizard-Gruppenzahl', () => {
+  it('(B-38 @W4-021) das Panel hat kein Gruppenfeld mehr: maßgeblich ist die Wizard-Gruppenzahl', () => {
     const { result } = renderHook(() =>
       useSmartConfig({ formData: gruppenFormData(), onApply: vi.fn() })
     );
-    act(() => {
-      result.current.setLockGroups(true);
-      result.current.setConstraintGroups(4);
-    });
+    expect('setLockGroups' in result.current).toBe(false);
     act(() => {
       result.current.handleCalculate();
     });
