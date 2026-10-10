@@ -171,3 +171,40 @@ describe('C-MON-NAECHSTES-UNSORTIERT: Live-Folie nimmt das früheste offene Spie
     expect(screen.queryByText('Verlierer 1. Halbfinale')).toBeNull();
   });
 });
+
+describe('@W2A-031 Kindermodus an der Live-Folie: offener Platz zeigt „noch offen“, nie einen Tabellenplatz', () => {
+  // Feld 1 ohne laufendes Spiel: Spiele 7 und 9 beendet, das früheste offene Spiel ist HF1 (group-a-1st).
+  const feldEins = (hide: boolean) => buildTournament({
+    hideScoresForPublic: hide,
+    matches: withPlayoffs().map(m => (m.id === 'match-7' || m.id === 'match-9' ? { ...m, matchStatus: 'finished' as const, scoreA: 1, scoreB: 0 } : m)),
+  });
+
+  it('ohne Kindermodus: „Nächstes Spiel“ nennt „1. Gruppe A“', () => {
+    render(
+      <LiveSlide
+        slide={slide('live', { fieldId: 'field-1' })}
+        tournament={feldEins(false)}
+        performanceSettings={PERFORMANCE_PROFILES.high}
+        theme="dark"
+        style={{}}
+      />,
+    );
+    expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument();
+    expect(screen.getByText('1. Gruppe A')).toBeInTheDocument();
+  });
+
+  it('mit Kindermodus: beide offenen Plätze zeigen tournament:slot.undecided, kein „1. Gruppe A“', () => {
+    render(
+      <LiveSlide
+        slide={slide('live', { fieldId: 'field-1' })}
+        tournament={feldEins(true)}
+        performanceSettings={PERFORMANCE_PROFILES.high}
+        theme="dark"
+        style={{}}
+      />,
+    );
+    expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument();
+    expect(screen.queryByText('1. Gruppe A')).toBeNull();
+    expect(screen.getAllByText('tournament:slot.undecided')).toHaveLength(2);
+  });
+});
