@@ -5,6 +5,7 @@ import {
   nextSlide,
   stepSlide,
   wakeAt,
+  type ProgramSlide,
   type SlideProgram,
   type SlideshowState,
 } from '../slideProgramme';
@@ -15,7 +16,7 @@ const folie = (id: string, duration: number | null = null) =>
 const programm = (
   slides: MonitorSlide[],
   defaultDurationSec = 15,
-  pageCount?: (s: MonitorSlide) => number,
+  pageCount?: (s: ProgramSlide) => number,
 ): SlideProgram => ({ slides, defaultDurationSec, pageCount });
 
 const zustand = (over: Partial<SlideshowState> = {}): SlideshowState => ({
@@ -25,8 +26,8 @@ const zustand = (over: Partial<SlideshowState> = {}): SlideshowState => ({
 const A = folie('A');
 const B = folie('B');
 
-describe('nextSlide – Takt-Grenzen (B-16c)', () => {
-  it.each([
+type Takt = [string, MonitorSlide[], number, SlideshowState, number, 'same' | Partial<SlideshowState>];
+const TAKT_FAELLE: Takt[] = [
     ['Standard 15 s: 14 999 ms kein Wechsel', [A, B], 15, zustand(), 14_999, 'same'],
     ['Standard 15 s: 15 000 ms Folie B', [A, B], 15, zustand(), 15_000, { index: 1, page: 0, startedAt: 15_000 }],
     ['eigene Dauer 25 s: 24 999 ms kein Wechsel', [folie('A', 25), B], 15, zustand(), 24_999, 'same'],
@@ -37,7 +38,10 @@ describe('nextSlide – Takt-Grenzen (B-16c)', () => {
     ['pausiert, nach 10 min kein Wechsel', [A, B], 15, zustand({ paused: true }), 600_000, 'same'],
     ['eine Folie, nach 10 min kein Wechsel', [A], 15, zustand(), 600_000, 'same'],
     ['keine Folie, nach 10 min kein Wechsel', [], 15, zustand(), 600_000, 'same'],
-  ])('%s', (_name, slides, defaultSec, state, now, expected) => {
+];
+
+describe('nextSlide – Takt-Grenzen (B-16c)', () => {
+  it.each(TAKT_FAELLE)('%s', (_name, slides, defaultSec, state, now, expected) => {
     const result = nextSlide(programm(slides, defaultSec), state, now);
     if (expected === 'same') {
       expect(result).toBe(state);
