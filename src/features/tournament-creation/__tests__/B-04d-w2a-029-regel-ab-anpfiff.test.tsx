@@ -90,12 +90,12 @@ function setup() {
   const tournamentService = new TournamentService(repository as unknown as ITournamentRepository);
 
   const liveSaves: unknown[] = [];
-  const liveMatches = new Map<string, Record<string, unknown>>();
+  const liveMatches = new Map<string, { id: string } & Record<string, unknown>>();
   const liveMatchRepo = {
-    get: vi.fn((tournamentId: string, matchId: string) =>
+    get: vi.fn((_tournamentId: string, matchId: string) =>
       Promise.resolve(liveMatches.get(matchId) ?? null)
     ),
-    save: vi.fn((tournamentId: string, match: Record<string, unknown>) => {
+    save: vi.fn((_tournamentId: string, match: { id: string } & Record<string, unknown>) => {
       liveMatches.set(match.id, match);
       liveSaves.push(match);
       return Promise.resolve(match);

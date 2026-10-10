@@ -33,7 +33,7 @@ import enWizard from '../../../i18n/locales/en/wizard.json';
 import deCockpit from '../../../i18n/locales/de/cockpit.json';
 import enCockpit from '../../../i18n/locales/en/cockpit.json';
 
-function punkteHarness(onUpdate: ReturnType<typeof vi.fn>, start: PointSystem) {
+function punkteHarness(onUpdate: (system: PointSystem) => void, start: PointSystem) {
   function Harness() {
     const [punkte, setPunkte] = useState<PointSystem>(start);
     return (
@@ -50,7 +50,7 @@ function punkteHarness(onUpdate: ReturnType<typeof vi.fn>, start: PointSystem) {
   return Harness;
 }
 
-function settingsHarness(onChange: ReturnType<typeof vi.fn>) {
+function settingsHarness(onChange: (settings: MatchCockpitSettings) => void) {
   function Harness() {
     const [settings, setSettings] = useState<MatchCockpitSettings>(DEFAULT_MATCH_COCKPIT_SETTINGS);
     return (
