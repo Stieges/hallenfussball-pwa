@@ -43,11 +43,16 @@ export function AllStandingsSlide({ tournament, theme, style, page = 0 }: AllSta
     );
   }
 
-  if (section.kind === 'group') {
-    const standings = calculateStandings(tournament.teams, tournament.matches, tournament, section.groupId);
+  if (section.kind === 'group' || section.kind === 'overall') {
+    const standings = section.kind === 'group'
+      ? calculateStandings(tournament.teams, tournament.matches, tournament, section.groupId)
+      : calculateStandings(tournament.teams, tournament.matches, tournament);
+    const name = section.kind === 'group'
+      ? getGroupDisplayName(tournament, section.groupId)
+      : t('slides.allStandings.overall');
     return (
       <div style={style}>
-        <div style={headingStyle}>📊 {getGroupDisplayName(tournament, section.groupId)}</div>
+        <div style={headingStyle}>📊 {name}</div>
         <StandingsTable rows={standings} themeColors={colors} />
         <SlidePageHint page={index} pages={sections.length} color={colors.textMuted} />
       </div>

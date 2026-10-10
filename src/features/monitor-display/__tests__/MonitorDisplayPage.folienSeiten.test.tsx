@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import type { Match, Tournament } from '../../../types/tournament';
 import {
-  attachMonitor, buildTournament, slide, withMonitor, withPlayoffs, withScheduledTimes,
+  attachMonitor, buildTournament, FIXTURE_TEAMS, slide, withMonitor, withPlayoffs, withScheduledTimes,
 } from './monitorFixture';
 
 const { supabaseGet, localGet } = vi.hoisted(() => ({
@@ -232,5 +232,34 @@ describe('@ZM-089 Kindermodus: Alle Tabellen wird übersprungen, nie Finalrunde 
     expect(screen.getByText('Danach')).toBeInTheDocument();
     expect(screen.queryByText('monitor:slides.allStandings.finals')).toBeNull();
     expect(screen.queryByText('DJK Berg')).toBeNull();
+  });
+});
+
+describe('Alle Tabellen ohne Gruppen (Jeder gegen Jeden): eine Gesamttabelle (Controller-Ruling B-16f3 Fixrunde 1)', () => {
+  const ohneGruppen = () => FIXTURE_TEAMS.map(team => ({ ...team, group: undefined }));
+
+  it('ein Abschnitt „Gesamttabelle“ mit allen Teams, keine Seitenanzeige, nie „Noch keine Tabellen“', async () => {
+    await starte(monitorTurnier(buildTournament({ teams: ohneGruppen(), matches: withScheduledTimes() }), [slide('all-standings')]));
+    expect(screen.getByText(/monitor:slides\.allStandings\.overall/)).toBeInTheDocument();
+    expect(screen.getByText('FC Nord')).toBeInTheDocument();
+    expect(screen.getByText('DJK Berg')).toBeInTheDocument();
+    expect(screen.queryByText('monitor:slides.allStandings.none')).toBeNull();
+    expect(screen.queryByText('monitor:slides.page')).toBeNull();
+    await vorspulenInSchritten(30_000);
+    expect(screen.getByText('FC Nord')).toBeInTheDocument();
+  });
+
+  it('Kindermodus: auch ohne Gruppen übersprungen, Zuschauer-QR statt Gesamttabelle', async () => {
+    await starte(monitorTurnier(buildTournament({ teams: ohneGruppen(), matches: withScheduledTimes(), hideScoresForPublic: true }), [slide('all-standings')]));
+    expect(screen.getByTestId('qr-code').getAttribute('data-value')).toContain('/#/live/ABC123');
+    expect(screen.queryByText(/monitor:slides\.allStandings\.overall/)).toBeNull();
+  });
+
+  it('Gegenbeispiel mit Gruppen: je Gruppe ein Abschnitt, keine Gesamttabelle', async () => {
+    await starte(monitorTurnier(buildTournament({ matches: withScheduledTimes() }), [slide('all-standings')]));
+    expect(screen.queryByText(/monitor:slides\.allStandings\.overall/)).toBeNull();
+    expect(screen.queryByText('DJK Berg')).toBeNull();
+    await vorspulenInSchritten(15_000);
+    expect(screen.getByText('DJK Berg')).toBeInTheDocument();
   });
 });

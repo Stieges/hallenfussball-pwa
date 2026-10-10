@@ -81,11 +81,16 @@ export function groupIds(tournament: Tournament): string[] {
 }
 
 /** Ein Abschnitt der Folie „Alle Tabellen / Finalrunde“: eine Gruppentabelle oder die Finalrunde. */
-export type StandingsSection = { kind: 'group'; groupId: string } | { kind: 'finals' };
+export type StandingsSection = { kind: 'group'; groupId: string } | { kind: 'overall' } | { kind: 'finals' };
 
-/** Abschnitte je Seite (R-f3): je Gruppe eine Tabelle, danach die Finalrunde, wenn es Finalspiele gibt. */
+/**
+ * Abschnitte je Seite (R-f3): je Gruppe eine Tabelle, danach die Finalrunde, wenn es Finalspiele gibt.
+ * Ohne Gruppen (Jeder gegen Jeden, Controller-Ruling B-16f3 Fixrunde 1): eine Gesamttabelle über alle Teams.
+ */
 export function standingsSections(tournament: Tournament): StandingsSection[] {
-  const sections: StandingsSection[] = groupIds(tournament).map(groupId => ({ kind: 'group', groupId }));
+  const ids = groupIds(tournament);
+  const sections: StandingsSection[] = ids.map(groupId => ({ kind: 'group', groupId }));
+  if (ids.length === 0 && tournament.teams.length > 0) { sections.push({ kind: 'overall' }); }
   if (finalRoundMatches(tournament.matches).length > 0) { sections.push({ kind: 'finals' }); }
   return sections;
 }

@@ -47,6 +47,7 @@
     "page": "Page {{page}} / {{pages}}",
     "allStandings": {
       "finals": "Final round",
+      "overall": "Overall standings",
       "none": "No tables yet"
     }
   }
