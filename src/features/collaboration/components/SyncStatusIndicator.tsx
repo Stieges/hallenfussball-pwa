@@ -11,8 +11,11 @@
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { useSyncStatus } from '../../../hooks/useSyncStatus';
 import { useResyncNow } from '../../match-engine/useResyncNow';
+import { useMatchEngineContextOptional } from '../../match-engine/useMatchEngineContext';
+import { useOutboxStatus } from '../outbox/useOutboxStatus';
 import { SyncStatusBar } from './SyncStatusBar';
 import { SyncFailedList } from './SyncFailedList';
+import { deriveWaitReason } from './syncStatusDisplay';
 
 export interface SyncStatusIndicatorProps {
     /** Tournament to sync when clicked (no-op if omitted) */
@@ -53,7 +56,18 @@ export function SyncStatusIndicator({
         retryFailedMutation,
         discardFailedMutation,
         isCloudSyncAvailable,
+        queueLastFailure,
     } = useSyncStatus();
+    // A-06j (Brief A10): echter Ausgangs-Status des Senders (lastFailureKind/lastError) und die
+    // Queue-Fehlerklasse ergeben zusammen den Wartegrund fuer die Bar.
+    const outbox = useOutboxStatus(useMatchEngineContextOptional()?.sender ?? null);
+    const waitingCount = pendingChanges + enginePendingCount;
+    const waitReason = deriveWaitReason({
+        pendingCount: waitingCount,
+        status,
+        outboxKind: outbox.lastFailureKind,
+        queueFailure: queueLastFailure,
+    });
     // A-06h (Brief A9): Klick stoesst IMMER die Uebertragung an (resyncNow), auch bei
     // pendingChanges > 0 (@FU-013 "sobald frei, alle uebertragen"). Oben bei den anderen Hooks.
     const resyncNow = useResyncNow();
@@ -105,13 +119,15 @@ export function SyncStatusIndicator({
                 status={status}
                 isSyncing={isSyncing}
                 lastSyncedAt={lastSyncedAt}
-                pendingCount={pendingChanges + enginePendingCount}
+                pendingCount={waitingCount}
                 failedCount={failedChanges}
                 onSyncClick={handleClick}
                 compact={compact}
                 rejectedCount={rejectedCount}
                 reviewCount={reviewCount}
                 onShowRejected={onShowRejected}
+                waitReason={waitReason}
+                waitDetail={outbox.lastError ?? undefined}
             />
 
             {showFailedList && (
