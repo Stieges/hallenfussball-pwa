@@ -4,8 +4,9 @@
  * task-A6-review.md, I2/Ruling AN): "owner speichert einen Spielplan, in dem ein Spiel mit
  * Ereignissen fehlt → Spiel + Ereignisse bleiben, der Rest wird gespeichert, ein sichtbarer
  * Hinweis erscheint (KEIN dauerhafter Fehler in der Warteschlange)." Zusätzlich ein Cloud-Nachweis
- * für die geänderte `SupabaseRepository.delete()` (I3): ein Turnier mit Spielen UND Ereignissen
- * lässt sich vollständig löschen (Kaskade).
+ * für die `SupabaseRepository.delete()` (I3/B-01b Fixrunde 1): die Löschung eines Turniers mit
+ * Spielen UND Ereignissen wird vom Server abgelehnt (tournament_started, @LZ-003/@SL-129),
+ * die Zeile bleibt -- Rückbau per service_role (Wartungsrolle).
  *
  * Läuft nur in den `cloud-*`-Projekten, braucht einen laufenden lokalen Stack MIT der neuen
  * Migration (`20260925_002_protect_matches_with_events.sql`, `npm run test:env:up`/`:reset`
@@ -277,7 +278,7 @@ test('Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Spiel + Er
   }
 });
 
-test('Owner löscht ein Turnier mit Spielen UND Ereignissen vollständig (A6/I3, delete()-Kaskade)', async ({
+test('Owner löscht ein Turnier mit Spielen UND Ereignissen: wird abgelehnt (B-01b, tournament_started)', async ({
   asRole,
 }) => {
   const { url, headers } = getLocalServiceRoleClient();
@@ -296,7 +297,7 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen vollständig (A6/I3,
         id: tournamentId,
         owner_id: ownerId,
         status: 'published',
-        title: 'A6 E2E — delete() Kaskade',
+        title: 'A6 E2E — delete() abgelehnt',
         date: '2026-09-25',
         number_of_teams: 2,
         group_phase_duration: 15,
@@ -346,6 +347,23 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen vollständig (A6/I3,
     // exakt derselbe Repository-Aufruf, hier direkt über die Queue ausgelöst, um die zusätzliche
     // Soft-Delete-Vorstufe nicht extra durchklicken zu müssen.
     const ownerPage = await asRole('owner');
+
+    // B-01b Fixrunde 1 (Ruling -- die Anforderung hat sich geändert, @LZ-003 und @SL-129:
+    // Ereignisse belegen den Anpfiff): die Erwartung ist umgekehrt. Der Server lehnt
+    // DELETE_TOURNAMENT mit 'tournament_started' ab (BEFORE-DELETE-Trigger,
+    // 20261004_101_protect_deleted_at.sql), die Zeile bleibt stehen. Analog zu Fall 5 in
+    // scripts/protect-matches-with-events-check.sh.
+    const deleteErrorBodies: string[] = [];
+    ownerPage.on('response', (res) => {
+      if (res.request().method() === 'DELETE' && res.url().includes('/rest/v1/tournaments')) {
+        void res.text().then((body) => {
+          if (body) {
+            deleteErrorBodies.push(body);
+          }
+        });
+      }
+    });
+
     await ownerPage.goto('/#/');
     await ownerPage.waitForLoadState('networkidle');
 
@@ -363,32 +381,51 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen vollständig (A6/I3,
     await ownerPage.reload();
     await ownerPage.waitForLoadState('networkidle');
 
-    // Kein `sync-status`-Element auf dem Dashboard (SyncStatusIndicator sitzt nur im AdminHeader/
-    // LiveCockpit, siehe App.tsx) -- und nach dem Löschen wäre die Admin-Seite dieses Turniers
-    // ohnehin weg. Definitiver Beleg statt UI-Status: die Turnierzeile ist in der DB verschwunden
-    // (expect.poll, die MutationQueue verarbeitet nach dem Reload asynchron).
-    await expect.poll(
-      async () => {
-        const res = await fetch(`${url}/rest/v1/tournaments?id=eq.${tournamentId}&select=id`, { headers });
-        return ((await res.json()) as unknown[]).length;
-      },
-      { message: 'Turnierzeile sollte nach der DELETE_TOURNAMENT-Mutation verschwunden sein', timeout: 20000 }
-    ).toBe(0);
+    // 1. Die Mutation wurde versucht und als PERMANENTER Fehler gezählt -- der Fehler ist nicht
+    //    transient (GenericMutationQueue.process(): transient lässt retryCount unangetastet).
+    await expect
+      .poll(
+        async () =>
+          ownerPage.evaluate(() => {
+            const raw = window.localStorage.getItem('mutation_queue_v1');
+            const items = raw ? (JSON.parse(raw) as Array<{ retryCount: number }>) : [];
+            return items.reduce((max, item) => Math.max(max, item.retryCount), 0);
+          }),
+        {
+          message:
+            'DELETE_TOURNAMENT sollte als permanenter Fehler (nicht transient) in der Queue gezählt werden',
+          timeout: 20000,
+        }
+      )
+      .toBeGreaterThanOrEqual(1);
 
-    // Spiel UND Ereignis sind ebenfalls vollständig weg (Kaskade) -- keine Waise.
+    // 2. Die Ablehnung kam vom Server mit 'tournament_started' (ERRCODE P0001).
+    await expect
+      .poll(async () => deleteErrorBodies.join(' | '), {
+        message: 'Die DELETE-Anfrage sollte mit tournament_started abgelehnt werden',
+        timeout: 20000,
+      })
+      .toContain('tournament_started');
+
+    // 3. Die Turnierzeile bleibt stehen -- kein stilles Verschwinden.
+    const tournamentAfterRes = await fetch(`${url}/rest/v1/tournaments?id=eq.${tournamentId}&select=id`, {
+      headers,
+    });
+    expect((await tournamentAfterRes.json()) as unknown[]).toHaveLength(1);
+
+    // Spiel UND Ereignis bleiben ebenfalls unangetastet -- der Anpfiff-Beleg wird nie still entfernt.
     const matchAfterRes = await fetch(`${url}/rest/v1/matches?id=eq.${matchId}&select=id`, { headers });
-    expect((await matchAfterRes.json()) as unknown[]).toHaveLength(0);
+    expect((await matchAfterRes.json()) as unknown[]).toHaveLength(1);
 
     const eventsAfterRes = await fetch(
       `${url}/rest/v1/match_events?match_id=eq.${matchId}&select=id`,
       { headers }
     );
-    expect((await eventsAfterRes.json()) as unknown[]).toHaveLength(0);
+    expect((await eventsAfterRes.json()) as unknown[]).toHaveLength(1);
   } finally {
-    // Falls der Test VOR dem eigentlichen delete() scheitert, bleibt die Turnierzeile stehen --
-    // dann räumt dieselbe Kaskade sie hier auf. Ist sie schon weg (Erfolgsfall), ist das ein
-    // no-op (DELETE auf 0 Zeilen ist kein Fehler).
-    await safeCleanup('A6 E2E: delete()-Kaskade-Fixture zurückbauen (falls noch vorhanden)', async () => {
+    // Rückbau per service_role (Wartungsrolle, E3): darf auch angepfiffene Turniere hart
+    // löschen, die Kaskade räumt Spiele und Ereignisse mit auf.
+    await safeCleanup('B-01b E2E: delete()-Fixture zurückbauen (service_role)', async () => {
       const res = await fetch(`${url}/rest/v1/tournaments?id=eq.${tournamentId}`, {
         method: 'DELETE',
         headers: { ...headers, Prefer: 'return=minimal' },

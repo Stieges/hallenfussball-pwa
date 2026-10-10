@@ -488,13 +488,6 @@ export function DashboardCategory({
           </button>
           <button
             style={styles.actionButton}
-            onClick={() => { void navigate(`/tournament/${tournamentId}/admin/settings`); }}
-          >
-            <span style={styles.actionIcon}>⏸️</span>
-            <span>{t('dashboard.pauseSettings')}</span>
-          </button>
-          <button
-            style={styles.actionButton}
             onClick={() => { void navigate(`/tournament/${tournamentId}/admin/visibility`); }}
           >
             <span style={styles.actionIcon}>👁️</span>

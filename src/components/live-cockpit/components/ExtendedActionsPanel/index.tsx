@@ -19,7 +19,6 @@ import type { Breakpoint } from '../../../../hooks';
 
 interface ExtendedActionsPanelProps {
   onEditScore?: () => void;
-  onAdjustTime?: () => void;
   onYellowCard?: () => void;
   onRedCard?: () => void;
   onTimePenalty?: () => void;
@@ -36,7 +35,6 @@ interface ExtendedActionsPanelProps {
 
 export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
   onEditScore,
-  onAdjustTime,
   onYellowCard,
   onRedCard,
   onTimePenalty,
@@ -96,19 +94,6 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
           aria-label={t('extended.editScoreAria')}
         >
           ✏️ {!isMobile && t('extended.score')}
-        </button>
-      )}
-
-      {/* Time Adjustment */}
-      {onAdjustTime && (
-        <button
-          style={buttonStyle(cssVars.colors.surface, cssVars.colors.textPrimary)}
-          onClick={onAdjustTime}
-          disabled={disabled}
-          type="button"
-          aria-label={t('extended.adjustTimeAria')}
-        >
-          ⏱️ {!isMobile && t('extended.time')}
         </button>
       )}
 

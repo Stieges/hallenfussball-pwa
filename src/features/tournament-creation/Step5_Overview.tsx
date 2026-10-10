@@ -4,6 +4,7 @@ import { Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
 import { getFullLocationAddress } from '../../utils/locationHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
+import { activeTeams } from './utils/replanTeams';
 import styles from './Step5_Overview.module.css';
 
 interface Step5Props {
@@ -109,7 +110,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
             {t('step5.teamsLabel')}
           </div>
           <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
-            {t('step5.teamsCount', { count: formData.teams?.length ?? 0 })}
+            {t('step5.teamsCount', { count: activeTeams(formData.teams ?? []).length })}
           </div>
           {formData.teams && formData.teams.length > 0 && (
             <div className={styles.teamsContainer}>

@@ -8,6 +8,7 @@
  */
 
 import { CSSProperties, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tournament, FinalsConfig } from '../../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
@@ -16,6 +17,8 @@ import { Button, Card } from '../../components/ui';
 import { cssVars } from '../../design-tokens'
 import { exportScheduleToPDF } from '../../lib/pdfExporter';
 import { getLocationName, getLocationAddressLine } from '../../utils/locationHelpers';
+import { activeTeams } from './utils/replanTeams';
+import { visibilityAfterPublish } from '../../core/services/TournamentCreationService';
 
 interface TournamentPreviewProps {
   tournament: Tournament;
@@ -23,6 +26,7 @@ interface TournamentPreviewProps {
   onEdit: () => void;
   onPublish: () => void;
   onTournamentChange?: (tournament: Tournament) => void;
+  isPublishing?: boolean;
 }
 
 export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
@@ -31,7 +35,9 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   onEdit,
   onPublish,
   onTournamentChange,
+  isPublishing = false,
 }) => {
+  const { t } = useTranslation('wizard');
   const [currentTournament, setCurrentTournament] = useState(tournament);
   const [schedule, setSchedule] = useState(initialSchedule);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
@@ -250,7 +256,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           </div>
           <div style={infoItemStyle}>
             <span style={labelStyle}>Teams</span>
-            <span style={valueStyle}>{currentTournament.teams.length}</span>
+            <span style={valueStyle}>{activeTeams(currentTournament.teams).length}</span>
           </div>
           <div style={infoItemStyle}>
             <span style={labelStyle}>Spiele</span>
@@ -429,9 +435,26 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           <Button variant="secondary" onClick={() => void handleExportPDF()} data-testid="preview-export-pdf">
             PDF Exportieren
           </Button>
+          <p
+            data-testid="publish-explanation"
+            style={{
+              flexBasis: '100%',
+              margin: 0,
+              fontSize: cssVars.fontSizes.sm,
+              color: cssVars.colors.textSecondary,
+              textAlign: 'center',
+            }}
+          >
+            {t(
+              visibilityAfterPublish(currentTournament) === 'shareable'
+                ? 'publish.explanationPublic'
+                : 'publish.explanationPrivate'
+            )}
+          </p>
           <Button
             variant="primary"
             onClick={onPublish}
+            disabled={isPublishing}
             style={{
               fontSize: cssVars.fontSizes.lg,
               padding: '14px 32px',
@@ -439,7 +462,11 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
             }}
             data-testid="preview-publish"
           >
-            Turnier freigeben
+            {isPublishing ? (
+              <span data-testid="preview-publish-loading">{t('publish.loading')}</span>
+            ) : (
+              t('publish.button')
+            )}
           </Button>
         </div>
       </Card>

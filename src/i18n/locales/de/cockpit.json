@@ -88,7 +88,8 @@
     "back": "Zurück",
     "jerseyNumber": "Rückennummer (optional)",
     "yellowCard": "Gelbe Karte",
-    "redCard": "Rote Karte"
+    "redCard": "Rote Karte",
+    "close": "Schließen"
   },
   "timeAdjust": {
     "title": "Spielzeit anpassen",
@@ -141,7 +142,8 @@
     "assist1Aria": "Assist 1 Rückennummer",
     "assist2Aria": "Assist 2 Rückennummer",
     "placeholder": "—",
-    "eventDescription": "Tor"
+    "eventDescription": "Tor",
+    "close": "Schließen"
   },
   "sidebar": {
     "activePenalties": "Aktive Zeitstrafen",
@@ -186,6 +188,14 @@
     "countdown": "Countdown (5:00 → 0:00)",
     "elapsed": "Elapsed (0:00 → 5:00)",
     "timerDescription": "Wie soll der Timer angezeigt werden?",
+    "timePenalty": "Zeitstrafe",
+    "timePenaltyDuration": "Dauer der Zeitstrafe",
+    "timePenaltyDurationDesc": "Spielregel – gilt ab dem nächsten Anpfiff",
+    "penaltyShootout": "$t(sport:events.penaltyShootout)",
+    "penaltyShooters": "Anzahl Schützen",
+    "penaltyShootersDesc": "Schützen je Team beim Strafstoßschießen",
+    "penaltyShootersRangeError": "Gültig: 1 bis 5 Schützen",
+    "rulesOnlyByLead": "Regeln ändert nur die Turnierleitung",
     "netTimeWarning": "Netto-Zeit Warnung",
     "netTimeWarningDesc": "Warnung wenn Nachspielzeit erreicht wird",
     "enableNetTimeWarning": "Netto-Zeit Warnung aktivieren",
@@ -289,8 +299,7 @@
     "card": "Karte",
     "timePenalty": "Zeitstrafe",
     "substitution": "Wechsel",
-    "editResult": "Ergebnis bearbeiten",
-    "adjustTime": "Zeit anpassen"
+    "editResult": "Ergebnis bearbeiten"
   },
   "readOnly": {
     "banner": "Nur Ansicht — du hast keine Berechtigung, dieses Spiel zu bedienen."
@@ -298,8 +307,6 @@
   "extended": {
     "editScoreAria": "Ergebnis korrigieren",
     "score": "Ergebnis",
-    "adjustTimeAria": "Zeit anpassen",
-    "time": "Zeit",
     "yellowCardAria": "Gelbe Karte",
     "yellow": "Gelb",
     "redCardAria": "Rote Karte",

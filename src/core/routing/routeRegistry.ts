@@ -47,6 +47,16 @@ interface RouteDef {
   guard?: (pathname: string) => boolean;
 }
 
+/**
+ * Routen, die es NUR im Entwicklungs-Build geben darf. @OB-035: In der
+ * veröffentlichten App ist `/test-live` eine unbekannte Adresse und zeigt
+ * „Seite nicht gefunden" (App.tsx rendert das bei `matchRoute === null`).
+ */
+const DEV_ONLY_ROUTES: readonly RouteDef[] = [
+  // App.tsx:305 — path === '/test-live' (DEV-only local test screen)
+  { name: 'localTest', pattern: /^\/test-live$/, paramNames: [] },
+];
+
 const ROUTES: readonly RouteDef[] = [
   // App.tsx:147 — ['/', '/archiv', '/papierkorb'].includes(location.pathname)
   { name: 'dashboard', pattern: /^\/$/, paramNames: [] },
@@ -97,8 +107,8 @@ const ROUTES: readonly RouteDef[] = [
   { name: 'authConfirm', pattern: /^\/auth\/confirm$/, paramNames: [] },
   // App.tsx:316 — path === '/set-password'
   { name: 'setPassword', pattern: /^\/set-password$/, paramNames: [] },
-  // App.tsx:305 — path === '/test-live' (DEV-only local test screen)
-  { name: 'localTest', pattern: /^\/test-live$/, paramNames: [] },
+  // App.tsx:305 — path === '/test-live': nur im Entwicklungs-Build registriert
+  ...(import.meta.env.DEV ? DEV_ONLY_ROUTES : []),
 
   // App.tsx:314 — path === '/login'
   { name: 'login', pattern: /^\/login$/, paramNames: [] },

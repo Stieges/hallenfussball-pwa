@@ -15,10 +15,16 @@ import {
   ImportValidationWarning,
   PlacementCriterion,
   FinalsPreset,
+  TiebreakerMode,
+  TiebreakerRoundKey,
   RefereeMode,
   FinalsRefereeMode,
 } from '../types/tournament';
 import { generateUniqueId } from './idGenerator';
+import {
+  isTiebreakerMode,
+  isTiebreakerRoundKey,
+} from '../core/match/tiebreakDecision';
 
 // Default placement criteria (same as in TournamentCreationService).
 // Keine `label`-Strings: die Anzeige löst über `id` gegen i18n auf
@@ -29,6 +35,23 @@ const DEFAULT_PLACEMENT_CRITERIA: PlacementCriterion[] = [
   { id: 'goalsFor', enabled: true },
   { id: 'directComparison', enabled: false },
 ];
+
+/**
+ * Entscheidungsregeln je Runde (B-04c Fixrunde 3 / F3-1): nur Paare mit gültigem
+ * Rundenschlüssel UND gültigem Regelwert werden übernommen; sonst `undefined`.
+ */
+function parseTiebreakerByRound(
+  raw: unknown,
+): Partial<Record<TiebreakerRoundKey, TiebreakerMode>> | undefined {
+  if (!raw || typeof raw !== 'object') {
+    return undefined;
+  }
+  const paare = Object.entries(raw).filter(
+    (paar): paar is [TiebreakerRoundKey, TiebreakerMode] =>
+      isTiebreakerRoundKey(paar[0]) && isTiebreakerMode(paar[1]),
+  );
+  return paare.length > 0 ? Object.fromEntries(paare) : undefined;
+}
 
 /**
  * Main entry point for importing tournaments
@@ -223,6 +246,14 @@ function parseJSONTournament(content: string): ImportValidationResult {
         parallelSemifinals: Boolean(finalsConfigData.parallelSemifinals),
         parallelQuarterfinals: Boolean(finalsConfigData.parallelQuarterfinals),
         parallelRoundOf16: Boolean(finalsConfigData.parallelRoundOf16),
+        tiebreaker: isTiebreakerMode(finalsConfigData.tiebreaker)
+          ? finalsConfigData.tiebreaker
+          : undefined,
+        tiebreakerDuration:
+          typeof finalsConfigData.tiebreakerDuration === 'number'
+            ? finalsConfigData.tiebreakerDuration
+            : undefined,
+        tiebreakerByRound: parseTiebreakerByRound(finalsConfigData.tiebreakerByRound),
       }
     : undefined;
 

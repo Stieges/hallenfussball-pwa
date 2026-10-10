@@ -106,16 +106,6 @@ export const ModeSelection: React.FC<ModeSelectionProps> = ({
           subtitle={t('modeSelection.classic.subtitle')}
           testId="wizard-mode-classic"
         />
-        <ModeButton
-          isSelected={selectedMode === 'miniFussball'}
-          onClick={() => onModeChange('miniFussball')}
-          title={t('modeSelection.miniFussball.title')}
-          subtitle={t('modeSelection.miniFussball.subtitle')}
-          disabled={true}
-          disabledTitle={t('modeSelection.miniFussball.disabledTitle')}
-          badge={t('modeSelection.comingSoon')}
-          testId="wizard-mode-miniFussball"
-        />
       </div>
     </div>
   );

@@ -12,14 +12,16 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tournament } from '../../types/tournament';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS, Tournament } from '../../types/tournament';
 import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
 import { LiveCockpit } from '../../components/live-cockpit';
 import { MatchSummary } from '../../components/match-cockpit/MatchCockpit';
 import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useMatchExecution } from '../../hooks/useMatchExecution';
 import { useTournamentMembers } from '../auth/hooks/useTournamentMembers';
-import { canEditResults } from '../auth/utils/permissions';
+import { useEffectiveTournamentRole } from '../auth/hooks/useMyTournamentRole';
+import { canEditResults, canManageTournament } from '../auth/utils/permissions';
+import { RulesLockProvider } from '../../components/match-cockpit/RulesLockContext';
 import { toRuntimeMatchEvents } from '../../utils/matchEvents';
 import styles from './ManagementTab.module.css';
 
@@ -82,7 +84,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   } = useMatchExecution({ tournament, onLocalTournamentUpdate });
 
   // Permission check: Get current user's role in this tournament
-  const { myMembership } = useTournamentMembers(tournament.id);
+  const { myMembership, isLoading: membersLoading } = useTournamentMembers(tournament.id);
+
+  // Spielregeln (@W2A-030) ändert nur die Turnierleitung: vorhandene Rechte-Logik, keine Sonderregel
+  const { role: myRole } = useEffectiveTournamentRole(tournament.id, myMembership, membersLoading);
+  const canChangeRules = myRole ? canManageTournament(myRole) : false;
 
 
   // Determine if user can edit results for a specific match
@@ -374,14 +380,24 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   }, [handleFinish]);
 
   const handleUpdateSettings = useCallback(async (settings: import('../../types/tournament').MatchCockpitSettings) => {
+    // @W2A-030: Regelfelder speichert nur die Turnierleitung. Alle anderen behalten den
+    // gespeicherten Stand, auch wenn die Eingabe im Dialog etwas anderes sagt.
+    const gespeichert = tournament.matchCockpitSettings ?? DEFAULT_MATCH_COCKPIT_SETTINGS;
+    const erlaubt = canChangeRules
+      ? settings
+      : {
+          ...settings,
+          timePenaltyDurationSeconds: gespeichert.timePenaltyDurationSeconds,
+          penaltyShootersPerTeam: gespeichert.penaltyShootersPerTeam,
+        };
     // Merge with existing tournament settings
     const updatedTournament = {
       ...tournament,
-      matchCockpitSettings: settings,
+      matchCockpitSettings: erlaubt,
     };
     // Persist
     onTournamentUpdate(updatedTournament);
-  }, [tournament, onTournamentUpdate]);
+  }, [tournament, onTournamentUpdate, canChangeRules]);
 
   // Ereignis-Payload EINMAL an der Prop-Grenze normalisieren.
   // Der MatchExecutionService schreibt `{ team, delta, durationSeconds }`, das
@@ -452,42 +468,44 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
       {/* LIVE COCKPIT */}
       {currentMatch ? (
-        <LiveCockpit
-          fieldName={t('management.field', { number: selectedFieldNumber })}
-          tournamentName={tournament.title}
-          tournamentId={tournament.id}
-          cockpitSettings={tournament.matchCockpitSettings}
-          readOnly={!checkCanEditMatch([currentMatch.homeTeam.id, currentMatch.awayTeam.id])}
-          currentMatch={cockpitMatch}
-          lastFinishedMatch={lastFinishedMatch}
-          upcomingMatches={upcomingMatches}
-          highlightNextMatchMinutesBefore={5}
-          onStart={(matchId) => { void handleStart(matchId); }}
-          onPause={(matchId) => { void handlePause(matchId); }}
-          onResume={(matchId) => { void handleResume(matchId); }}
-          onFinish={(matchId) => { void handleFinishAndReset(matchId); }}
-          onGoal={(matchId, teamId, delta, options) => { void handleGoal(matchId, teamId, delta, options); }}
-          onUndoLastEvent={(matchId) => { void handleUndoLastEvent(matchId); }}
-          onManualEditResult={(matchId, home, away) => { void handleManualEditResult(matchId, home, away); }}
-          onAdjustTime={(matchId, time) => { void handleAdjustTime(matchId, time); }}
-          onLoadNextMatch={handleLoadNextMatch}
-          onReopenLastMatch={handleReopenLastMatch}
-          // Event tracking callbacks
-          onTimePenalty={(matchId, teamId, options) => { void handleTimePenalty(matchId, teamId, options); }}
-          onCard={(matchId, teamId, type, options) => { void handleCard(matchId, teamId, type, options); }}
-          onSubstitution={(matchId, teamId, options) => { void handleSubstitution(matchId, teamId, options); }}
-          onFoul={(matchId, teamId) => { void handleFoul(matchId, teamId); }}
-          // Tiebreaker callbacks
-          onStartOvertime={(matchId) => { void handleStartOvertime(matchId); }}
-          onStartGoldenGoal={(matchId) => { void handleStartGoldenGoal(matchId); }}
-          onStartPenaltyShootout={(matchId) => { void handleStartPenaltyShootout(matchId); }}
-          onRecordPenaltyResult={(matchId, home, away) => { void handleRecordPenaltyResult(matchId, home, away); }}
-          onForceFinish={(matchId) => { void handleForceFinish(matchId); }}
-          onAbortPenaltyShootout={(matchId) => { void handleAbortPenaltyShootout(matchId); }}
-          onUpdateEvent={(matchId, eventId, updates) => { void handleUpdateEvent(matchId, eventId, updates); }}
-          onDeleteEvent={(matchId, eventId) => { void handleDeleteEvent(matchId, eventId); }}
-          onUpdateSettings={(settings) => { void handleUpdateSettings(settings); }}
-        />
+        <RulesLockProvider value={!canChangeRules}>
+          <LiveCockpit
+            fieldName={t('management.field', { number: selectedFieldNumber })}
+            tournamentName={tournament.title}
+            tournamentId={tournament.id}
+            cockpitSettings={tournament.matchCockpitSettings}
+            readOnly={!checkCanEditMatch([currentMatch.homeTeam.id, currentMatch.awayTeam.id])}
+            currentMatch={cockpitMatch}
+            lastFinishedMatch={lastFinishedMatch}
+            upcomingMatches={upcomingMatches}
+            highlightNextMatchMinutesBefore={5}
+            onStart={(matchId) => { void handleStart(matchId); }}
+            onPause={(matchId) => { void handlePause(matchId); }}
+            onResume={(matchId) => { void handleResume(matchId); }}
+            onFinish={(matchId) => { void handleFinishAndReset(matchId); }}
+            onGoal={(matchId, teamId, delta, options) => { void handleGoal(matchId, teamId, delta, options); }}
+            onUndoLastEvent={(matchId) => { void handleUndoLastEvent(matchId); }}
+            onManualEditResult={(matchId, home, away) => { void handleManualEditResult(matchId, home, away); }}
+            onAdjustTime={(matchId, time) => { void handleAdjustTime(matchId, time); }}
+            onLoadNextMatch={handleLoadNextMatch}
+            onReopenLastMatch={handleReopenLastMatch}
+            // Event tracking callbacks
+            onTimePenalty={(matchId, teamId, options) => { void handleTimePenalty(matchId, teamId, options); }}
+            onCard={(matchId, teamId, type, options) => { void handleCard(matchId, teamId, type, options); }}
+            onSubstitution={(matchId, teamId, options) => { void handleSubstitution(matchId, teamId, options); }}
+            onFoul={(matchId, teamId) => { void handleFoul(matchId, teamId); }}
+            // Tiebreaker callbacks
+            onStartOvertime={(matchId) => { void handleStartOvertime(matchId); }}
+            onStartGoldenGoal={(matchId) => { void handleStartGoldenGoal(matchId); }}
+            onStartPenaltyShootout={(matchId) => { void handleStartPenaltyShootout(matchId); }}
+            onRecordPenaltyResult={(matchId, home, away) => { void handleRecordPenaltyResult(matchId, home, away); }}
+            onForceFinish={(matchId) => { void handleForceFinish(matchId); }}
+            onAbortPenaltyShootout={(matchId) => { void handleAbortPenaltyShootout(matchId); }}
+            onUpdateEvent={(matchId, eventId, updates) => { void handleUpdateEvent(matchId, eventId, updates); }}
+            onDeleteEvent={(matchId, eventId) => { void handleDeleteEvent(matchId, eventId); }}
+            onUpdateSettings={(settings) => { void handleUpdateSettings(settings); }}
+          />
+        </RulesLockProvider>
       ) : isInitializingMatch ? (
         <div className={styles.noMatches}>
           {t('management.matchLoading')}

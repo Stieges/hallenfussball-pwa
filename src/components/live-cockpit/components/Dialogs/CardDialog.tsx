@@ -367,6 +367,16 @@ export function CardDialog({
             />
           </div>
         )}
+        {/* @OB-012: immer sichtbarer Schließen-Knopf */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t('cardDialog.close')}
+          data-testid="dialog-close-button"
+          style={styles.closeButton}
+        >
+          ✕
+        </button>
         {step === 1 && renderStep1CardType()}
         {step === 2 && renderStep2Team()}
         {step === 3 && renderStep3Player()}
@@ -396,6 +406,19 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: cssVars.spacing.lg,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: cssVars.spacing.sm,
+    right: cssVars.spacing.sm,
+    minWidth: 'var(--touch-target-minimum)',
+    minHeight: 'var(--touch-target-minimum)',
+    background: 'transparent',
+    border: 'none',
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.lg,
+    cursor: 'pointer',
+    zIndex: 1,
   },
   headerWithBack: {
     display: 'flex',

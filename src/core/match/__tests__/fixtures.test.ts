@@ -59,6 +59,7 @@ interface Fixture {
 }
 
 const fixturesDir = path.join(__dirname, '..', '__fixtures__');
+
 const fixtureFileNames = fs
   .readdirSync(fixturesDir)
   .filter((name) => name.endsWith('.json'))

@@ -39,15 +39,15 @@ import { LocalStorageRepository } from '../../core/repositories/LocalStorageRepo
 import { calculateStandings } from '../../utils/calculations';
 import { TeamAvatar } from '../../components/ui/TeamAvatar';
 import { useLiveMatches } from '../../hooks/useLiveMatches';
-import type { LiveMatch } from '../../hooks/useLiveMatches';
 import { GoalAnimation, CardAnimation, LiveMatchDisplay } from '../../components/monitor';
-import { generateTournamentUrl } from '../../utils/shareUtils';
+import { generateTournamentUrl, generateLiveUrl } from '../../utils/shareUtils';
 import { QRCodeSVG } from 'qrcode.react';
-import sportGlossary from '../../i18n/glossary.json';
 import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { captureFeatureError } from '../../lib/sentry';
+import { selectDisplayableSlides, type QrRueckfallFolie } from './slideProgramme';
+import { toLiveMatch } from './monitorMatch';
 
 // =============================================================================
 // THEME RESOLUTION
@@ -175,7 +175,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 // =============================================================================
 
 interface SlideRendererProps {
-  slide: MonitorSlide;
+  slide: MonitorSlide | QrRueckfallFolie;
   tournament: Tournament;
   performanceSettings: PerformanceSettings;
   theme: MonitorTheme;
@@ -216,65 +216,65 @@ function SlideRenderer({ slide, tournament, performanceSettings, theme, overscan
     case 'custom-text':
       return <CustomTextSlide slide={slide} style={slideStyle} />;
 
+    case 'qr-code':
+      // E-03: Eigener Render-Pfad für die Zuschauer-QR-Folie (Rückfall, kein
+      // konfigurierbarer Folien-Typ).
+      return <QrSlide tournament={tournament} style={slideStyle} />;
+
     default:
-      return (
-        <div style={slideStyle}>
-          <div style={{ fontSize: displayFontSizes.headingLG }}>
-            Slide-Typ "{slide.type}" wird in Phase 2 implementiert
-          </div>
-        </div>
-      );
+      // @OB-011: Kein Entwickler-Hinweis — unbekannte Folien fallen auf die
+      // Zuschauer-QR-Folie zurück (die Rotation überspringt sie ohnehin).
+      return <QrSlide tournament={tournament} style={slideStyle} />;
   }
+}
+
+// =============================================================================
+// ZUSCHAUER-QR-FOLIE (@OB-011 Rückfall)
+// =============================================================================
+
+interface QrSlideProps {
+  tournament: Tournament;
+  style: CSSProperties;
+}
+
+function QrSlide({ tournament, style }: QrSlideProps) {
+  // F-03: Der QR zeigt die Zuschauer-Adresse (generateLiveUrl) — nie die Verwaltung
+  // (generateTournamentUrl). Nur bei isPublic && shareCode gibt es überhaupt einen QR.
+  const shareCode = tournament.shareCode;
+  const qrUrl = tournament.isPublic === true && typeof shareCode === 'string' && shareCode.length > 0
+    ? generateLiveUrl(shareCode)
+    : null;
+  return (
+    <div style={{ ...style, gap: displaySpacing.sectionMD }}>
+      <div style={{ fontSize: displayFontSizes.headingXL, fontWeight: 700 }}>
+        {tournament.title}
+      </div>
+      {qrUrl && (
+        <>
+          <QRCodeSVG
+            value={qrUrl}
+            size={220}
+            bgColor="white"
+            fgColor="black"
+            level="M"
+          />
+          <div style={{ fontSize: displayFontSizes.bodyMD }}>
+            {qrUrl}
+          </div>
+        </>
+      )}
+      {!qrUrl && (
+        <div style={{ fontSize: displayFontSizes.bodyMD }}>
+          Schau auf die Anzeige in der Halle – hier läuft das Spiel live mit.
+        </div>
+      )}
+    </div>
+  );
 }
 
 // =============================================================================
 // LIVE SLIDE
 // =============================================================================
-
-/**
- * Convert Tournament Match + Team[] to LiveMatch format for LiveMatchDisplay.
- */
-function toLiveMatch(match: Match, teams: Team[], tournament: Tournament): LiveMatch {
-  const findTeam = (id: string) =>
-    teams.find(t => t.id === id || t.name === id) ?? { id, name: id };
-
-  const statusMap: Record<string, 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED'> = {
-    running: 'RUNNING',
-    finished: 'FINISHED',
-    scheduled: 'NOT_STARTED',
-    waiting: 'NOT_STARTED',
-    skipped: 'FINISHED',
-  };
-
-  const durationMinutes = tournament.groupPhaseGameDuration ?? tournament.gameDuration ?? 8;
-
-  // Derive referee name from referee number
-  const refereeTeam = match.referee
-    ? teams.find(t => t.name === `SR${match.referee}` || t.name === `Schiedsrichter ${match.referee}`)
-    : undefined;
-
-  return {
-    id: match.id,
-    number: match.matchNumber ?? match.round,
-    phaseLabel: match.label ?? match.phase ?? sportGlossary.terms.groupStage.de,
-    fieldId: `field-${match.field}`,
-    field: match.field,
-    scheduledKickoff: match.scheduledTime ? new Date(match.scheduledTime).toISOString() : '',
-    durationSeconds: durationMinutes * 60,
-    refereeName: refereeTeam?.name,
-    homeTeam: findTeam(match.teamA),
-    awayTeam: findTeam(match.teamB),
-    homeScore: match.scoreA ?? 0,
-    awayScore: match.scoreB ?? 0,
-    status: statusMap[match.matchStatus ?? 'scheduled'] ?? 'NOT_STARTED',
-    elapsedSeconds: match.timerElapsedSeconds ?? 0,
-    events: [],
-    timerStartTime: match.timerStartTime,
-    timerPausedAt: match.timerPausedAt,
-    timerElapsedSeconds: match.timerElapsedSeconds,
-    group: match.group,
-  };
-}
 
 interface LiveSlideProps {
   slide: MonitorSlide;
@@ -982,10 +982,21 @@ export function MonitorDisplayPage({
   const maxPixelShift = Math.min(2, Math.floor(overscanPx / 4));
   const pixelShift = usePixelShift(60_000, maxPixelShift, performanceSettings.enableAnimations);
 
+  // Darstellbare Folien (@OB-011): Folien ohne Darstellung werden übersprungen,
+  // bleibt keine übrig (auch beim leeren Programm), gilt die Zuschauer-QR-Folie.
+  // F-04: Ist kein QR möglich (nicht öffentlich/ohne Share-Code), nimmt der Monitor
+  // die nächste immer darstellbare Folie (Spielplan) — der Bildschirm ist nie leer.
+  const slides = useMemo(
+    () => selectDisplayableSlides(monitor?.slides ?? [], {
+      qrMoeglich: tournament?.isPublic === true && Boolean(tournament?.shareCode),
+    }),
+    [monitor, tournament]
+  );
+
   // Current slide
   const currentSlide = useMemo(
-    () => monitor?.slides[slideState.currentIndex] ?? null,
-    [monitor, slideState.currentIndex]
+    () => slides[slideState.currentIndex] ?? null,
+    [slides, slideState.currentIndex]
   );
 
   // Slide duration
@@ -1156,11 +1167,11 @@ export function MonitorDisplayPage({
   // ==========================================================================
 
   const goToSlide = useCallback((index: number, direction: 'next' | 'prev') => {
-    if (!monitor || monitor.slides.length === 0) {return;}
+    if (slides.length === 0) {return;}
 
-    const nextIndex = ((index % monitor.slides.length) + monitor.slides.length) % monitor.slides.length;
+    const nextIndex = ((index % slides.length) + slides.length) % slides.length;
 
-    if (performanceSettings.enableTransitions && monitor.transition !== 'none') {
+    if (performanceSettings.enableTransitions && monitor?.transition !== 'none') {
       setSlideState(prev => ({ ...prev, isTransitioning: true, direction }));
 
       setTimeout(() => {
@@ -1169,7 +1180,7 @@ export function MonitorDisplayPage({
           isTransitioning: false,
           direction,
         });
-      }, monitor.transitionDuration);
+      }, monitor?.transitionDuration);
     } else {
       setSlideState({
         currentIndex: nextIndex,
@@ -1177,7 +1188,7 @@ export function MonitorDisplayPage({
         direction,
       });
     }
-  }, [monitor, performanceSettings.enableTransitions]);
+  }, [slides, monitor, performanceSettings.enableTransitions]);
 
   const nextSlide = useCallback(() => {
     goToSlide(slideState.currentIndex + 1, 'next');
@@ -1188,14 +1199,17 @@ export function MonitorDisplayPage({
   }, [goToSlide, slideState.currentIndex]);
 
   // Auto-advance slides
-  // nextSlide changes when slideState.currentIndex changes, which correctly
-  // triggers a new timeout after each slide transition.
+  // Der Takt hängt nur an Pause, Folienanzahl, Dauer und aktueller Folie (C-MON-TAKT-STEHT).
+  // nextSlide steht über eine Ref im Timer und ist keine Abhängigkeit: Sonst würde jeder Poll
+  // (neue Objekte aus dem Repository) den Timer neu setzen und die Folie nie wechseln.
+  const nextSlideRef = useRef(nextSlide);
+  nextSlideRef.current = nextSlide;
   useEffect(() => {
-    if (isPaused || !monitor || monitor.slides.length <= 1) {return;}
+    if (isPaused || slides.length <= 1) {return;}
 
-    const timeout = setTimeout(nextSlide, slideDuration);
+    const timeout = setTimeout(() => nextSlideRef.current(), slideDuration);
     return () => clearTimeout(timeout);
-  }, [isPaused, monitor, slideDuration, nextSlide]);
+  }, [isPaused, slides.length, slideDuration, slideState.currentIndex]);
 
   // ==========================================================================
   // KEYBOARD NAVIGATION
@@ -1267,36 +1281,6 @@ export function MonitorDisplayPage({
     );
   }
 
-  // No slides configured
-  if (monitor.slides.length === 0) {
-    return (
-      <div style={containerStyle} data-testid="monitor-no-slides-state">
-        <div style={{
-          fontSize: displayFontSizes.headingLG,
-          color: displayColors.textSecondary,
-          marginBottom: displaySpacing.sectionMD,
-        }}>
-          📺 {monitor.name}
-        </div>
-        <div
-          data-testid="monitor-no-slides-message"
-          style={{
-            fontSize: displayFontSizes.bodyLG,
-            color: displayColors.textMuted,
-          }}
-        >
-          Keine Slides konfiguriert.<br />
-          Füge im Monitor-Konfigurator Slides hinzu.
-        </div>
-        {onBack && (
-          <button onClick={onBack} style={backButtonStyle}>
-            ← Zurück
-          </button>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div style={containerStyle}>
       {/* Slide Container — pixelShift for OLED anti-burn-in */}
@@ -1326,7 +1310,7 @@ export function MonitorDisplayPage({
       </div>
 
       {/* Slide Indicator */}
-      {monitor.slides.length > 1 && (
+      {slides.length > 1 && (
         <div style={{
           position: 'fixed',
           bottom: displaySpacing.contentLG,
@@ -1336,7 +1320,7 @@ export function MonitorDisplayPage({
           gap: displaySpacing.inlineSM,
           zIndex: 100,
         }}>
-          {monitor.slides.map((_, idx) => (
+          {slides.map((_, idx) => (
             <div
               key={idx}
               style={{

@@ -430,13 +430,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     showInfo('Seiten getauscht');
   }, [showInfo]);
 
-  const handleHalfTime = useCallback(() => {
-    // Reset fouls
-    setHomeFouls(0);
-    setAwayFouls(0);
-    showInfo('Halbzeit - Fouls zurückgesetzt');
-  }, [showInfo]);
-
   const handleFoulHome = useCallback(() => {
     if (!currentMatch) { return; }
     const newFouls = homeFouls + 1;
@@ -936,7 +929,12 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               <span style={timerLabelStyle}>Spielzeit</span>
               <span
                 style={timerStyle}
-                onClick={() => !isLocked && setShowTimeAdjustDialog(true)}
+                onClick={() => {
+                  // @OB-002 (Platzhalter Nr. 2): „Spielzeit anpassen“ für neue Spiele ausgeblendet
+                  if (!isLocked && match.status !== 'NOT_STARTED') {
+                    setShowTimeAdjustDialog(true);
+                  }
+                }}
                 role="button"
                 tabIndex={0}
                 aria-disabled={isLocked}
@@ -1029,14 +1027,13 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               onPauseResume={handlePauseResume}
               onEditTime={() => setShowTimeAdjustDialog(true)}
               onSwitchSides={handleSwitchSides}
-              onHalfTime={handleHalfTime}
               onFinish={handleFinish}
               onSettings={() => setShowSettingsDialog(true)}
               // BUG-002: Event Log for Mobile
               onEventLog={() => setShowEventLogBottomSheet(true)}
               canUndo={canUndo}
               breakpoint={breakpoint}
-              // Task R2: sperrt Rückgängig/Start-Pause/Zeit/Seiten/Halbzeit/Beenden, wenn
+              // Task R2: sperrt Rückgängig/Start-Pause/Zeit/Seiten/Beenden, wenn
               // readOnly/finished — unverändert gegenüber 235d947 (dort schon isFinished-gesperrt).
               // Settings/Event-Log sind davon NICHT betroffen (GameControls sperrt sie nie über
               // `disabled` — siehe dort). Fixrunde 3 (Review-Befund M): der Settings-Button öffnet
@@ -1103,7 +1100,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         homeTeam={match.homeTeam}
         awayTeam={match.awayTeam}
         // BUG-006: Pre-select 2 minutes and team based on button clicked
-        preselectedDurationSeconds={120}
+        preselectedDurationSeconds={match.timePenaltyDurationSeconds ?? cockpitSettings.timePenaltyDurationSeconds}
         preselectedTeamSide={pendingPenaltySide ?? undefined}
         autoDismissSeconds={10}
       />

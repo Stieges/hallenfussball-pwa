@@ -58,18 +58,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const navigate = useNavigate();
   const { t } = useTranslation('settings');
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const {
-    fontSize,
-    setFontSize,
-    confirmDelete,
-    autoSave,
-    timerSound,
-    hapticFeedback,
-    toggleConfirmDelete,
-    toggleAutoSave,
-    toggleTimerSound,
-    toggleHapticFeedback,
-  } = useSettings();
+  const { fontSize, setFontSize } = useSettings();
 
   // Consent state
   const [consent, setConsent] = useState<ConsentStatus | null>(() =>
@@ -259,66 +248,8 @@ ${t('support.emailBody')}
           />
         </SettingsCategory>
 
-        {/* App-Verhalten */}
-        <SettingsCategory title={t('categories.behavior')} icon="⚡">
-          <SettingItem
-            variant="toggle"
-            icon="⚠️"
-            label={t('behavior.confirmDelete.label')}
-            description={t('behavior.confirmDelete.description')}
-            value={confirmDelete}
-            onChange={toggleConfirmDelete}
-          />
-          <SettingItem
-            variant="toggle"
-            icon="💾"
-            label={t('behavior.autoSave.label')}
-            description={t('behavior.autoSave.description')}
-            value={autoSave}
-            onChange={toggleAutoSave}
-          />
-          <SettingItem
-            variant="toggle"
-            icon="🔔"
-            label={t('behavior.timerSound.label')}
-            description={t('behavior.timerSound.description')}
-            value={timerSound}
-            onChange={toggleTimerSound}
-          />
-          <SettingItem
-            variant="toggle"
-            icon="📳"
-            label={t('behavior.hapticFeedback.label')}
-            description={t('behavior.hapticFeedback.description')}
-            value={hapticFeedback}
-            onChange={toggleHapticFeedback}
-          />
-        </SettingsCategory>
-
         {/* Daten */}
         <SettingsCategory title={t('categories.data')} icon="💾">
-          <SettingItem
-            variant="action"
-            icon="📤"
-            label={t('data.export.label')}
-            description={t('data.export.description')}
-            actionLabel={t('data.export.action')}
-            onClick={() => {
-              // TODO: Implement export
-              alert(t('data.export.todo'));
-            }}
-          />
-          <SettingItem
-            variant="action"
-            icon="📥"
-            label={t('data.import.label')}
-            description={t('data.import.description')}
-            actionLabel={t('data.import.action')}
-            onClick={() => {
-              // TODO: Implement import
-              alert(t('data.import.todo'));
-            }}
-          />
           <SettingItem
             variant="action"
             icon="🗑️"
@@ -440,15 +371,6 @@ ${t('support.emailBody')}
             icon="🔒"
             label={t('legal.privacy')}
             onClick={() => void navigate('/datenschutz')}
-          />
-          <SettingItem
-            variant="link"
-            icon="📜"
-            label={t('legal.terms.label')}
-            onClick={() => {
-              // TODO: Add Terms of Service page
-              alert(t('legal.terms.todo'));
-            }}
           />
         </SettingsCategory>
       </div>

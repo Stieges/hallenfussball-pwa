@@ -59,16 +59,6 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     path: 'exports',
   },
   {
-    id: 'team-helpers',
-    label: 'Team & Helfer',
-    shortLabel: 'Team & Helfer',
-    description: 'Helfer einladen',
-    icon: '👥',
-    group: 'management',
-    path: 'team-helpers',
-    isComingSoon: true,
-  },
-  {
     id: 'sponsors',
     label: 'Sponsoren',
     description: 'Logos & Einblendungen',
@@ -106,16 +96,6 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     path: 'visibility',
   },
   {
-    id: 'notifications',
-    label: 'Benachrichtigungen',
-    shortLabel: 'Benachricht.',
-    description: 'Push & Sound',
-    icon: '🔔',
-    group: 'settings',
-    path: 'notifications',
-    isComingSoon: true,
-  },
-  {
     id: 'metadata',
     label: 'Meta-Daten',
     shortLabel: 'Meta-Daten',
@@ -123,17 +103,6 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     icon: '📝',
     group: 'settings',
     path: 'metadata',
-  },
-
-  // Support
-  {
-    id: 'help',
-    label: 'Hilfe & Support',
-    shortLabel: 'Hilfe',
-    description: 'FAQ, Tastenkürzel',
-    icon: '❓',
-    group: 'support',
-    path: 'help',
   },
 ];
 
@@ -144,9 +113,9 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
 export const DANGER_ZONE_ITEMS: AdminCategory[] = [
   {
     id: 'danger-zone',
-    label: 'Spielplan neu generieren',
-    shortLabel: 'Neu generieren',
-    description: 'Spielplan komplett neu erstellen',
+    label: 'Gefahrenbereich',
+    shortLabel: 'Gefahrenbereich',
+    description: 'Destruktive Operationen - mit Vorsicht verwenden',
     icon: '🔄',
     group: 'danger',
     path: 'danger-zone',
@@ -159,20 +128,6 @@ export const DANGER_ZONE_ITEMS: AdminCategory[] = [
 // =============================================================================
 
 export const DANGER_ACTIONS: Record<DangerAction, DangerActionConfig> = {
-  regenerate_schedule: {
-    action: 'regenerate_schedule',
-    title: 'Spielplan neu generieren',
-    description:
-      'Erstellt den kompletten Spielplan neu. Alle bisherigen Zeiten und Zuordnungen werden verworfen.',
-    consequences: [
-      'Alle Spielzeiten werden neu berechnet',
-      'Manuelle Feld-Zuordnungen gehen verloren',
-      'Ergebnisse bleiben erhalten',
-    ],
-    confirmText: 'NEU GENERIEREN',
-    buttonLabel: 'Spielplan neu generieren',
-    severity: 'warning',
-  },
   reset_schedule: {
     action: 'reset_schedule',
     title: 'Spielplan zurücksetzen',
@@ -181,8 +136,6 @@ export const DANGER_ACTIONS: Record<DangerAction, DangerActionConfig> = {
     consequences: [
       'Alle Ergebnisse werden gelöscht',
       'Alle Spielstatus werden zurückgesetzt',
-      'Torschützenliste wird geleert',
-      'Event-Log wird gelöscht',
       'Diese Aktion kann NICHT rückgängig gemacht werden',
     ],
     confirmText: 'ZURÜCKSETZEN',
@@ -258,6 +211,20 @@ export const ACTIVITY_LOG = {
   defaultRetentionDays: 90,
   pageSize: 50,
 } as const;
+
+// =============================================================================
+// TEAM ERSETZEN (B-02, @W5-010)
+// =============================================================================
+
+export const TEAM_REPLACED_LOG = {
+  entityType: 'team',
+  canUndo: false,
+} as const;
+
+/** Verlauf-Text: „Team C durch Team N ersetzt" (@W5-010). */
+export function teamReplacedLabel(fromName: string, toName: string): string {
+  return `Team ${fromName} durch Team ${toName} ersetzt`;
+}
 
 // =============================================================================
 // HELPER FUNCTIONS

@@ -8,6 +8,7 @@ import { generateGroupLabels } from '../../utils/groupHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import { generateTeamId } from '../../utils/idGenerator';
 import { sanitizeTeamName } from '../../core/utils/textSanitizer';
+import { activeTeams } from './utils/replanTeams';
 import styles from './Step4_Teams.module.css';
 
 interface Step4Props {
@@ -109,7 +110,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
   const [logoUploadTeamId, setLogoUploadTeamId] = useState<string | null>(null);
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
 
-  const teams = formData.teams ?? [];
+  const teams = activeTeams(formData.teams ?? []);
   const canAssignGroups = formData.groupSystem === 'groupsAndFinals';
   const numberOfTeams = formData.numberOfTeams ?? 4;
   const numberOfGroups = formData.numberOfGroups ?? 2;
@@ -175,24 +176,42 @@ export const Step4_Teams: React.FC<Step4Props> = ({
     );
   };
 
-  // Auto-Generierung: Teams basierend auf numberOfTeams erstellen
+  // @W1-014: aktive Teams ohne Gruppe bei Gruppen-Turnieren -- Angebot
+  // „Gruppen automatisch zuweisen“ an derselben Stelle wie „Teamzahl anpassen“.
+  const unassignedGroups = canAssignGroups
+    ? teams.filter((team) => !team.group).length
+    : 0;
+
+  // Auto-Generierung: nur fehlende aktive Teams ergänzen (B-02 Paket B1).
+  // isRemoved-Teams und vorhandene aktive Teams bleiben erhalten.
   const handleGenerateTeams = () => {
+    const existing = formData.teams ?? [];
+    const missing = Math.max(0, numberOfTeams - teams.length);
     const newTeams: Team[] = [];
-    for (let i = 1; i <= numberOfTeams; i++) {
+    for (let i = 1; i <= missing; i++) {
       newTeams.push({
         id: generateTeamId(),
-        name: `Team ${i}`,
+        name: `Team ${teams.length + i}`,
       });
     }
-    onUpdate('teams', newTeams);
+    onUpdate('teams', [...existing, ...newTeams]);
+  };
+
+  // @W1-014: Teamzahl an die tatsächlich eingetragenen Teams anpassen — kein
+  // Rückschritt in einen früheren Schritt nötig, wenn die Zahl abweicht.
+  const handleAdjustTeamCount = () => {
+    onUpdate('numberOfTeams', teams.length);
   };
 
   // Auto-Zuweisung: Teams gleichmäßig auf Gruppen verteilen
   const handleAutoAssignGroups = () => {
-    const updatedTeams = teams.map((team, index) => ({
-      ...team,
-      group: groupLabels[index % numberOfGroups],
-    }));
+    let activeIndex = 0;
+    const updatedTeams = (formData.teams ?? []).map((team) => {
+      if (team.isRemoved) { return team; }
+      const group = groupLabels[activeIndex % numberOfGroups];
+      activeIndex += 1;
+      return { ...team, group };
+    });
 
     onUpdate('teams', updatedTeams);
   };
@@ -219,7 +238,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
           </Button>
         )}
 
-        {canAssignGroups && teams.length > 0 && (formData.numberOfGroups ?? 0) > 1 && (
+        {canAssignGroups && teams.length > 0 && (formData.numberOfGroups ?? 0) > 1 && unassignedGroups === 0 && (
           <Button
             onClick={handleAutoAssignGroups}
             variant="secondary"
@@ -493,9 +512,51 @@ export const Step4_Teams: React.FC<Step4Props> = ({
             border: `1px solid ${cssVars.colors.errorBorder}`,
             color: cssVars.colors.error,
             fontSize: cssVars.fontSizes.sm,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            gap: cssVars.spacing.sm,
           }}
         >
           {t('step4.countMismatch', { actual: teams.length, expected: numberOfTeams })}
+          <Button
+            onClick={handleAdjustTeamCount}
+            variant="primary"
+            data-testid="wizard-adjust-team-count"
+          >
+            {t('step4.adjustTeamCount')}
+          </Button>
+        </div>
+      )}
+
+      {unassignedGroups > 0 && (
+        <div
+          role="alert"
+          data-testid="wizard-teams-without-group"
+          style={{
+            marginTop: cssVars.spacing.md,
+            padding: cssVars.spacing.md,
+            background: cssVars.colors.errorLight,
+            borderRadius: cssVars.borderRadius.md,
+            border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.errorBorder}`,
+            color: cssVars.colors.error,
+            fontSize: cssVars.fontSizes.sm,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            gap: cssVars.spacing.sm,
+          }}
+        >
+          {unassignedGroups > 1
+            ? t('step4.warnings.unassigned_other', { count: unassignedGroups })
+            : t('step4.warnings.unassigned_one', { count: unassignedGroups })}
+          <Button
+            onClick={handleAutoAssignGroups}
+            variant="primary"
+            data-testid="wizard-auto-assign-groups"
+          >
+            {t('step4.autoAssignGroups')}
+          </Button>
         </div>
       )}
 

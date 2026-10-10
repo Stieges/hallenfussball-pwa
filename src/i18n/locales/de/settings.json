@@ -3,7 +3,6 @@
   "back": "Zurück",
   "backWithArrow": "← Zurück",
   "backAriaLabel": "Zurück",
-
   "categories": {
     "appearance": "Erscheinungsbild",
     "language": "Sprache",
@@ -14,12 +13,10 @@
     "privacy": "Datenschutz",
     "legal": "Rechtliches"
   },
-
   "appearance": {
     "theme": "Theme",
     "fontSize": "Schriftgröße"
   },
-
   "baseTheme": {
     "selectLabel": "Theme auswählen",
     "currentPrefix": "aktuell: ",
@@ -40,7 +37,6 @@
       "description": "Maximale Lesbarkeit bei hellem Umgebungslicht"
     }
   },
-
   "fontSize": {
     "selectLabel": "Schriftgröße auswählen",
     "small": "Klein",
@@ -48,7 +44,6 @@
     "large": "Groß",
     "xLarge": "Sehr groß"
   },
-
   "accentTheme": {
     "default": "Standard (Grün)",
     "fcBayern": "FC Bayern München",
@@ -58,14 +53,12 @@
     "hsv": "Hamburger SV",
     "custom": "Eigene Farben"
   },
-
   "language": {
     "label": "Sprache",
     "description": "App-Sprache auswählen",
     "de": "Deutsch",
     "en": "English"
   },
-
   "behavior": {
     "confirmDelete": {
       "label": "Löschen bestätigen",
@@ -84,20 +77,7 @@
       "description": "Vibration bei Aktionen"
     }
   },
-
   "data": {
-    "export": {
-      "label": "Alle Daten exportieren",
-      "description": "Turniere und Einstellungen als JSON",
-      "action": "Exportieren",
-      "todo": "Export wird in Kürze implementiert"
-    },
-    "import": {
-      "label": "Daten importieren",
-      "description": "Aus einer Backup-Datei wiederherstellen",
-      "action": "Importieren",
-      "todo": "Import wird in Kürze implementiert"
-    },
     "clearCache": {
       "label": "Cache leeren",
       "description": "Temporäre Daten löschen",
@@ -113,7 +93,6 @@
       "errorMessage": "Fehler beim Zurücksetzen. Bitte versuche es erneut oder lösche die Browser-Daten manuell."
     }
   },
-
   "support": {
     "bug": {
       "label": "Fehler melden",
@@ -132,7 +111,6 @@
     },
     "emailBody": "Meine Nachricht:"
   },
-
   "about": {
     "version": "Version",
     "changelog": {
@@ -141,7 +119,6 @@
       "content": "Version {{version}}\n\n• Settings-Screen hinzugefügt\n• Theme-Auswahl\n• Schriftgröße anpassbar"
     }
   },
-
   "privacy": {
     "errorTracking": {
       "label": "Error-Tracking",
@@ -159,21 +136,14 @@
       "successMessage": "Ihre Einwilligung wurde widerrufen."
     }
   },
-
   "legal": {
     "imprint": "Impressum",
-    "privacy": "Datenschutz",
-    "terms": {
-      "label": "Nutzungsbedingungen",
-      "todo": "Nutzungsbedingungen werden in Kürze hinzugefügt"
-    }
+    "privacy": "Datenschutz"
   },
-
   "settingItem": {
     "openAriaLabel": "{{label}} öffnen",
     "proBadge": "Pro-Feature"
   },
-
   "consent": {
     "title": "Datenschutz-Einstellungen",
     "description": "Wir nutzen anonymisiertes Error-Tracking, um die App zu verbessern. Optional können Sie Session-Replays aktivieren, um uns bei der Fehlerbehebung zu helfen.",

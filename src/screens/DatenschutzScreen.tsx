@@ -32,7 +32,8 @@ import { sectionStyles } from './legal/legalStyles';
 
 interface DatenschutzScreenProps {
   onBack: () => void;
-  /** Open cookie settings modal */
+  /** Wird hier nicht ausgewertet: der Link „Cookie-Einstellungen“ ist @OB-002 folgend
+   * ausgeblendet. Die Prop bleibt, bis App.tsx (gesperrt) nicht mehr übergibt. */
   onOpenCookieSettings?: () => void;
 }
 
@@ -51,7 +52,7 @@ function PlaceholderText({ text }: { text: string }) {
 // Component
 // ---------------------------------------------------------------------------
 
-export function DatenschutzScreen({ onBack, onOpenCookieSettings }: DatenschutzScreenProps) {
+export function DatenschutzScreen({ onBack }: DatenschutzScreenProps) {
   const { company, contact, supervisoryAuthority } = LEGAL_CONFIG;
 
   return (
@@ -190,21 +191,9 @@ export function DatenschutzScreen({ onBack, onOpenCookieSettings }: DatenschutzS
             § 25 Abs. 1 TDDDG).
           </Paragraph>
           <Paragraph>
-            <strong>Einwilligung widerrufen:</strong> Sie können Ihre Einwilligung jederzeit über{' '}
-            {onOpenCookieSettings ? (
-              <button
-                type="button"
-                style={sectionStyles.buttonLink}
-                onClick={onOpenCookieSettings}
-                data-testid="cookie-settings-link"
-              >
-                Cookie-Einstellungen
-              </button>
-            ) : (
-              <span>"Cookie-Einstellungen" im Footer</span>
-            )}{' '}
-            widerrufen. Nach dem Widerruf werden die Analyse-Cookies gelöscht und keine weiteren
-            Daten mehr erfasst.
+            <strong>Einwilligung widerrufen:</strong> Die Einwilligung kann jederzeit mit Wirkung
+            für die Zukunft widerrufen werden. Nach dem Widerruf werden die Analyse-Cookies
+            gelöscht und keine weiteren Daten mehr erfasst.
           </Paragraph>
           <Paragraph>
             <strong>Datenübermittlung in die USA:</strong> Google kann Daten in die USA übermitteln.

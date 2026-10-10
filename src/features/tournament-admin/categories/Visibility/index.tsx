@@ -213,9 +213,9 @@ export function VisibilityCategory({
 
   // Ein Entwurf ist nicht öffentlich erreichbar — Teilen ist erst nach der Freigabe möglich.
   //
-  // Gate auf publishedAt, NICHT status: status='draft' ist ein transienter Wizard-Marker
-  // (SettingsTab.tsx setzt ein veröffentlichtes Turnier beim Öffnen des Bearbeiten-Wizards
-  // zurück auf 'draft'; ein Reload mitten in der Bearbeitung lässt es dauerhaft dort stehen).
+  // Gate auf publishedAt, NICHT status: `publishedAt` wird genau einmal beim ersten
+  // Festlegen gesetzt und überdauert die Bearbeitung (@W5-004: ein festgelegtes Turnier
+  // bleibt dabei festgelegt).
   // Mit status als Gate verlöre der Organisator mitten im laufenden Turnier den Link/QR-Code
   // und könnte ihn nicht mehr nachdrucken, obwohl das Turnier nachweislich online ist. Dasselbe
   // Prädikat wie im Service und in der Datenbankfunktion make_tournament_public — damit stimmen
@@ -387,14 +387,6 @@ export function VisibilityCategory({
     updateTournament({ hideRankingsForPublic: !checked });
   };
 
-  const handleBambiniMode = (checked: boolean) => {
-    updateTournament({
-      isKidsTournament: checked,
-      // Bambini mode automatically hides rankings
-      hideRankingsForPublic: checked ? true : tournament.hideRankingsForPublic,
-    });
-  };
-
   return (
     <CategoryPage
       icon="👁"
@@ -498,14 +490,6 @@ export function VisibilityCategory({
                   >
                     <span>🔄</span>
                     <span>{isUpdating ? t('visibility.generating') : t('visibility.generateNewCode')}</span>
-                  </button>
-                  <button style={styles.actionButton}>
-                    <span>🖨️</span>
-                    <span>{t('visibility.printQr')}</span>
-                  </button>
-                  <button style={styles.actionButton}>
-                    <span>📥</span>
-                    <span>{t('visibility.downloadQr')}</span>
                   </button>
                 </div>
               </div>
@@ -626,30 +610,6 @@ export function VisibilityCategory({
         </div>
       </CollapsibleSection>
 
-      {/* Bambini Mode */}
-      <CollapsibleSection icon="👶" title={t('visibility.bambiniMode')} defaultOpen>
-        <label style={styles.checkbox}>
-          <input
-            type="checkbox"
-            checked={tournament.isKidsTournament || false}
-            onChange={(e) => handleBambiniMode(e.target.checked)}
-          />
-          <span>{t('visibility.enableBambiniMode')}</span>
-        </label>
-        <p style={{ color: cssVars.colors.textSecondary, marginTop: cssVars.spacing.md }}>
-          {t('visibility.whenEnabled')}:
-        </p>
-        <ul style={{ color: cssVars.colors.textSecondary, paddingLeft: cssVars.spacing.lg, margin: `${cssVars.spacing.sm} 0` }}>
-          <li>{t('visibility.noTables')}</li>
-          <li>{t('visibility.noPlacements')}</li>
-          <li>{t('visibility.focusOnFun')}</li>
-        </ul>
-        <div style={{ ...styles.tip, marginTop: cssVars.spacing.md }}>
-          <span>💡</span>
-          <span>{t('visibility.bambiniIdeal')}</span>
-        </div>
-      </CollapsibleSection>
-
       {/* Visibility Level */}
       <CollapsibleSection icon="🔒" title={t('visibility.tournamentVisibility')}>
         {isDraft && (
@@ -719,17 +679,6 @@ export function VisibilityCategory({
               </div>
               <div style={styles.radioDescription}>
                 {t('visibility.shareableDesc')}
-              </div>
-            </div>
-          </label>
-
-          {/* Public Listed Option (future) */}
-          <label style={{ ...styles.radioOption, opacity: 0.5, cursor: 'not-allowed' }}>
-            <input type="radio" name="visibility" disabled />
-            <div>
-              <div style={styles.radioLabel}>{t('visibility.publicListed')}</div>
-              <div style={styles.radioDescription}>
-                {t('visibility.publicListedDesc')}
               </div>
             </div>
           </label>

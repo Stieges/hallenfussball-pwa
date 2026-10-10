@@ -30,11 +30,14 @@ const NAV_ITEMS: PublicNavItem[] = [
 export interface PublicBottomNavProps {
   activeTab: PublicNavTab;
   onTabChange: (tab: PublicNavTab) => void;
+  /** Tabs, die nicht angeboten werden (z. B. Tabellen bei ausgeblendeten Ständen) */
+  hiddenTabs?: PublicNavTab[];
 }
 
 export const PublicBottomNav: React.FC<PublicBottomNavProps> = ({
   activeTab,
   onTabChange,
+  hiddenTabs = [],
 }) => {
   const containerStyle: CSSProperties = {
     position: 'fixed',
@@ -84,7 +87,7 @@ export const PublicBottomNav: React.FC<PublicBottomNavProps> = ({
 
   return (
     <nav style={containerStyle} aria-label="Public Navigation">
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.filter((item) => !hiddenTabs.includes(item.id)).map((item) => {
         const isActive = activeTab === item.id;
         const IconComponent = Icons[item.icon];
 
