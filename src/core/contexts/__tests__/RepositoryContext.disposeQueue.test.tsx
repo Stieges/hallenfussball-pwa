@@ -16,8 +16,11 @@ import type { Tournament } from '../../models/types';
 
 const session = vi.hoisted(() => ({ userId: null as string | null }));
 const net = vi.hoisted(() => ({ online: true }));
+const gate = vi.hoisted(() => ({ promise: Promise.resolve() }));
 const remote = vi.hoisted(() => ({
-  save: vi.fn(async (..._args: unknown[]): Promise<void> => undefined),
+  save: vi.fn(async (..._args: unknown[]): Promise<void> => {
+    await gate.promise;
+  }),
 }));
 
 const mockStorage = new Map<string, string>();
@@ -115,6 +118,7 @@ describe('RepositoryContext — alte Queue wird bei Objektwechsel abgeraeumt (A-
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     mockStorage.clear();
     remote.save.mockClear();
+    gate.promise = Promise.resolve();
     session.userId = 'A';
     net.online = true;
     currentUser = null;
@@ -157,6 +161,38 @@ describe('RepositoryContext — alte Queue wird bei Objektwechsel abgeraeumt (A-
       renderHook(() => useRepositories(), { wrapper: wrapperFor(true) });
 
       expect(disposeSpy).toHaveBeenCalledTimes(0);
+    });
+  });
+
+  describe('Fixrunde 1: Token-Erneuerung mitten im Durchgang (@FU-006, @FU-013)', () => {
+    it('Pflicht: neues Nutzer-Objekt mit gleicher id -> gleiches Repo, dispose 0x, genau 1 Versand, keine Dead-Letter', async () => {
+      net.online = false;
+      currentUser = { globalRole: 'user', id: 'A' };
+      const { result, rerender } = renderHook(() => useRepositories(), { wrapper: wrapperFor(false) });
+      const repoA = result.current.tournamentRepository;
+      await repoA.save(tournament('a1'));
+      expect(storedItems('mutation_queue_v1:A')).toHaveLength(1);
+
+      // Versand von a1 haengt.
+      let release: () => void = () => undefined;
+      gate.promise = new Promise<void>((resolve) => { release = resolve; });
+      net.online = true;
+      const queueA = queueOf(repoA);
+      void queueA.process();
+      await flush();
+      expect(remote.save).toHaveBeenCalledTimes(1);
+
+      // Token-Erneuerung: neues Objekt, gleiche id.
+      currentUser = { globalRole: 'user', id: 'A' };
+      rerender();
+      expect(result.current.tournamentRepository).toBe(repoA);
+      expect(disposeSpy).toHaveBeenCalledTimes(0);
+
+      release();
+      await flush();
+      expect(remote.save).toHaveBeenCalledTimes(1);
+      expect(storedItems('mutation_queue_v1:A')).toHaveLength(0);
+      expect(mockStorage.has('mutation_queue_failed_v1:A')).toBe(false);
     });
   });
 
