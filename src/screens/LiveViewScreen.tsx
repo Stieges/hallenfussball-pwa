@@ -13,9 +13,9 @@
  * @see docs/concepts/PUBLIC-PAGE-KONZEPT-v4-FINAL.md
  */
 
-import { useState, CSSProperties, useCallback, useRef, TouchEvent } from 'react';
+import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, layoutHeights } from '../design-tokens';
+import { cssVars } from '../design-tokens';
 import { ScheduleDisplay } from '../components/ScheduleDisplay';
 import { GroupTables } from '../components/schedule/GroupTables';
 import { formatDateGerman } from '../utils/locationHelpers';
@@ -24,6 +24,9 @@ import { Button } from '../components/ui/Button';
 import { PublicBottomNav } from '../components/ui/PublicBottomNav';
 import { usePublicTournament } from '../features/public-view/usePublicTournament';
 import { usePublicViewFilters } from '../features/public-view/usePublicViewFilters';
+import { usePullToRefresh, getRefreshIndicatorStyle, getRefreshSpinnerStyle, PULL_THRESHOLD } from '../features/public-view/usePullToRefresh';
+import { publicPageContainerStyle, publicPageContentStyle } from '../features/public-view/publicPageStyles';
+import { PublicLoadingView, PublicNotFoundView, PublicErrorView } from '../features/public-view/components/PublicStatusViews';
 import {
   publicSchedule,
   publicMatches,
@@ -32,7 +35,6 @@ import {
   myTeamName,
 } from '../features/public-view/publicScheduleFilters';
 import { useTheme } from '../hooks/useTheme';
-import { useHaptic } from '../hooks/useHaptic';
 import { BaseThemeSelector } from '../features/settings/components/BaseThemeSelector';
 
 export interface LiveViewScreenProps {
@@ -47,15 +49,8 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   // Theme hook
   const { theme, setTheme, resolvedTheme } = useTheme();
 
-  // Haptic feedback hook
-  const { triggerHaptic } = useHaptic();
-
-  // Pull-to-refresh state
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [pullDistance, setPullDistance] = useState(0);
-  const pullStartY = useRef<number | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const PULL_THRESHOLD = 80; // Minimum pull distance to trigger refresh
+  // Pull-to-refresh (B-13d1)
+  const { containerRef, isRefreshing, pullDistance, handlers: pullHandlers } = usePullToRefresh(refresh);
 
   // URL-Zustand, Filter, Tab und „Mein Team“ (Hook, B-13c)
   const {
@@ -73,57 +68,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   const { showOnlyMyTeam, myTeamId, selectedGroup, selectedPhase, selectedStatus } = filters;
 
 
-  // Pull-to-refresh handlers
-  const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
-    // Only trigger if at top of scroll
-    if (containerRef.current?.scrollTop === 0) {
-      pullStartY.current = e.touches[0].clientY;
-    }
-  }, []);
-
-  const handleTouchMove = useCallback((e: TouchEvent<HTMLDivElement>) => {
-    if (pullStartY.current === null || isRefreshing) {
-      return;
-    }
-
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - pullStartY.current;
-
-    // Only pull down, and apply dampening
-    if (diff > 0 && containerRef.current?.scrollTop === 0) {
-      const dampenedDistance = Math.min(diff * 0.5, 120);
-      setPullDistance(dampenedDistance);
-    }
-  }, [isRefreshing]);
-
-  const handleTouchEnd = useCallback(() => {
-    if (pullDistance >= PULL_THRESHOLD && !isRefreshing) {
-      triggerHaptic('medium');
-      setIsRefreshing(true);
-      setPullDistance(0);
-      void refresh().then(() => {
-        triggerHaptic('success');
-        setIsRefreshing(false);
-      });
-    } else {
-      setPullDistance(0);
-    }
-    pullStartY.current = null;
-  }, [pullDistance, isRefreshing, refresh, triggerHaptic]);
-
   // Styles
-  const containerStyle: CSSProperties = {
-    minHeight: 'var(--min-h-screen)',
-    background: `linear-gradient(135deg, ${cssVars.colors.background} 0%, ${cssVars.colors.backgroundDark} 100%)`,
-    padding: cssVars.spacing.md,
-    paddingBottom: `calc(${layoutHeights.bottomNav} + ${cssVars.spacing.lg} + env(safe-area-inset-bottom, 0px))`,
-  };
-
-  const contentStyle: CSSProperties = {
-    maxWidth: '1200px',
-    margin: '0 auto',
-  };
-
   const headerStyle: CSSProperties = {
     marginBottom: cssVars.spacing.lg,
     textAlign: 'center',
@@ -151,16 +96,6 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     fontWeight: cssVars.fontWeights.semibold,
     letterSpacing: '0.1em',
     marginTop: cssVars.spacing.sm,
-  };
-
-  const errorContainerStyle: CSSProperties = {
-    textAlign: 'center',
-    padding: cssVars.spacing.xxl,
-  };
-
-  const errorIconStyle: CSSProperties = {
-    fontSize: '4rem',
-    marginBottom: cssVars.spacing.lg,
   };
 
   const myTeamBarStyle: CSSProperties = {
@@ -245,91 +180,15 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     transition: 'all 0.15s ease',
   });
 
-  // Loading state
+  // Zustandsansichten (B-13d1)
   if (loadingState === 'loading') {
-    return (
-      <div style={containerStyle}>
-        <div style={contentStyle}>
-          <div style={{ ...errorContainerStyle, color: cssVars.colors.textSecondary }}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                border: `3px solid ${cssVars.colors.border}`,
-                borderTopColor: cssVars.colors.primary,
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
-                margin: '0 auto',
-                marginBottom: cssVars.spacing.lg,
-              }}
-            />
-            <p>Turnier wird geladen...</p>
-            <p style={{ fontSize: cssVars.fontSizes.sm, marginTop: cssVars.spacing.sm }}>
-              Code: {shareCode}
-            </p>
-            <style>{`
-              @keyframes spin {
-                to { transform: rotate(360deg); }
-              }
-            `}</style>
-          </div>
-        </div>
-      </div>
-    );
+    return <PublicLoadingView shareCode={shareCode} />;
   }
-
-  // Not found state
   if (loadingState === 'not-found') {
-    return (
-      <div style={containerStyle}>
-        <div style={contentStyle}>
-          <Card>
-            <div style={errorContainerStyle}>
-              <div style={errorIconStyle}>🔍</div>
-              <h2 style={{ fontSize: cssVars.fontSizes.xl, marginBottom: cssVars.spacing.md }}>
-                Turnier nicht gefunden
-              </h2>
-              <p style={{ color: cssVars.colors.textMuted, marginBottom: cssVars.spacing.lg }}>
-                Der Code <strong>{shareCode}</strong> ist ungültig oder das Turnier wurde nicht freigegeben.
-              </p>
-              <Button
-                variant="secondary"
-                onClick={() => window.location.href = '/'}
-              >
-                Zur Startseite
-              </Button>
-            </div>
-          </Card>
-        </div>
-      </div>
-    );
+    return <PublicNotFoundView shareCode={shareCode} />;
   }
-
-  // Error state
   if (loadingState === 'error') {
-    return (
-      <div style={containerStyle}>
-        <div style={contentStyle}>
-          <Card>
-            <div style={errorContainerStyle}>
-              <div style={errorIconStyle}>⚠️</div>
-              <h2 style={{ fontSize: cssVars.fontSizes.xl, marginBottom: cssVars.spacing.md }}>
-                Fehler beim Laden
-              </h2>
-              <p style={{ color: cssVars.colors.textMuted, marginBottom: cssVars.spacing.lg }}>
-                {errorMessage ?? 'Ein unbekannter Fehler ist aufgetreten.'}
-              </p>
-              <Button
-                variant="secondary"
-                onClick={() => window.location.reload()}
-              >
-                Erneut versuchen
-              </Button>
-            </div>
-          </Card>
-        </div>
-      </div>
-    );
+    return <PublicErrorView errorMessage={errorMessage} />;
   }
 
   // Success - show tournament
@@ -342,44 +201,17 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   const myTeamLabel = myTeamName(tournament, myTeamId);
   const groups = uniqueGroups(tournament);
 
-  // Pull-to-refresh indicator style
-  const refreshIndicatorStyle: CSSProperties = {
-    position: 'absolute',
-    top: 0,
-    left: '50%',
-    transform: `translateX(-50%) translateY(${pullDistance > 0 || isRefreshing ? '0' : '-100%'})`,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: `${Math.max(pullDistance, isRefreshing ? 60 : 0)}px`,
-    width: '100%',
-    transition: pullDistance > 0 ? 'none' : 'all 0.3s ease',
-    overflow: 'hidden',
-  };
-
-  const spinnerStyle: CSSProperties = {
-    width: 32,
-    height: 32,
-    border: `3px solid ${cssVars.colors.border}`,
-    borderTopColor: cssVars.colors.primary,
-    borderRadius: '50%',
-    animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
-    transform: isRefreshing ? 'none' : `rotate(${pullDistance * 3}deg)`,
-    opacity: pullDistance > 20 || isRefreshing ? 1 : pullDistance / 20,
-    transition: isRefreshing ? 'none' : 'opacity 0.1s ease',
-  };
-
   return (
     <div
       ref={containerRef}
-      style={{ ...containerStyle, position: 'relative', overflowY: 'auto' }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      style={{ ...publicPageContainerStyle, position: 'relative', overflowY: 'auto' }}
+      onTouchStart={pullHandlers.onTouchStart}
+      onTouchMove={pullHandlers.onTouchMove}
+      onTouchEnd={pullHandlers.onTouchEnd}
     >
       {/* Pull-to-refresh indicator */}
-      <div style={refreshIndicatorStyle}>
-        <div style={spinnerStyle} />
+      <div style={getRefreshIndicatorStyle(pullDistance, isRefreshing)}>
+        <div style={getRefreshSpinnerStyle(pullDistance, isRefreshing)} />
         {pullDistance >= PULL_THRESHOLD && !isRefreshing && (
           <span style={{
             marginLeft: cssVars.spacing.sm,
@@ -391,7 +223,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
         )}
       </div>
 
-      <div style={{ ...contentStyle, transform: `translateY(${pullDistance}px)`, transition: pullDistance > 0 ? 'none' : 'transform 0.3s ease' }}>
+      <div style={{ ...publicPageContentStyle, transform: `translateY(${pullDistance}px)`, transition: pullDistance > 0 ? 'none' : 'transform 0.3s ease' }}>
         {/* Header */}
         <div style={headerStyle}>
           <h1 style={titleStyle}>{tournament.title}</h1>
