@@ -44,9 +44,20 @@ export type LiveMatchChangeHandler = (
   changeType: 'INSERT' | 'UPDATE' | 'DELETE'
 ) => void;
 
+/** A-06k (@FU-025): Zustand des Realtime-Kanals (Werte von supabase-js `REALTIME_SUBSCRIBE_STATES`). */
+export type RealtimeChannelStatus = 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED';
+
 export interface SubscriptionOptions {
   onMatchChange?: LiveMatchChangeHandler;
   onError?: (error: Error) => void;
+  /** A-06k (@FU-025): meldet jeden Kanal-Zustand; Aufrufer wechselt bei != SUBSCRIBED auf Abfrage. */
+  onStatusChange?: (status: RealtimeChannelStatus) => void;
+}
+
+const REALTIME_CHANNEL_STATUSES: readonly string[] = ['SUBSCRIBED', 'CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'];
+
+function isRealtimeChannelStatus(value: string): value is RealtimeChannelStatus {
+  return REALTIME_CHANNEL_STATUSES.includes(value);
 }
 
 // ============================================================================
@@ -408,9 +419,10 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
         }
       )
       .subscribe((status: string) => {
-        if (status === 'SUBSCRIBED') {
-          // Successfully subscribed to realtime changes
-        } else if (status === 'CHANNEL_ERROR') {
+        if (isRealtimeChannelStatus(status)) {
+          options.onStatusChange?.(status);
+        }
+        if (status === 'CHANNEL_ERROR') {
           options.onError?.(new Error('Realtime subscription failed'));
         }
       });
