@@ -43,7 +43,7 @@ const styles = {
     } as CSSProperties,
     detail: {
         fontSize: cssVars.fontSizes.bodySm,
-        color: cssVars.colors.error,
+        color: cssVars.colors.warning,
         wordBreak: 'break-word',
     } as CSSProperties,
 } as const;

@@ -13,6 +13,7 @@ import deCommon from '../../../../i18n/locales/de/common.json';
 import enCommon from '../../../../i18n/locales/en/common.json';
 import { SyncStatusIndicator } from '../SyncStatusIndicator';
 import { emptyOutboxStatus, type OutboxStatus } from '../../../../core/match/client/outboxTypes';
+import { cssVars } from '../../../../design-tokens';
 
 // Stabile Referenz: useSyncExternalStore verlangt gleichbleibende Snapshots.
 const EMPTY_OUTBOX = emptyOutboxStatus();
@@ -215,6 +216,17 @@ describe('SyncStatusIndicator — Antippen zeigt Wartedetails (A-06j, DE)', () =
     hoisted.sync.failedChanges = 0;
     view.rerender(<SyncStatusIndicator tournamentId="t1" />);
     expect(screen.queryByTestId('sync-wait-details')).not.toBeInTheDocument();
+  });
+
+  it('Fix 2: Detailtext des Wartefelds nutzt die Warnfarbe, nicht die Fehlerfarbe', async () => {
+    hoisted.sync.pendingChanges = 2;
+    hoisted.outbox = outboxWith({ pendingByTournament: { t1: 2 }, lastFailureKind: 'permanent', lastError: 'Serverfehler X' });
+    await renderWithI18n(<SyncStatusIndicator tournamentId="t1" />);
+    fireEvent.click(screen.getByTestId('sync-status'));
+
+    const detail = screen.getByText('Serverfehler X');
+    expect(detail).toHaveStyle({ color: cssVars.colors.warning });
+    expect(detail).not.toHaveStyle({ color: cssVars.colors.error });
   });
 
   it('bei fehlgeschlagenen Eintraegen bleibt die Fehlerliste, kein Wartefeld', async () => {
