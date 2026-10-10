@@ -211,3 +211,70 @@ describe('@W4-022 festgehaltene Teamzahl ändert die Zeit-Empfehlung nie', () =>
     expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ numberOfTeams: 12 }));
   });
 });
+
+describe('@W4-022 Übernehmen übergibt exakt die angezeigten Werte', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('(a) Teams 12 fest, Rest frei, 1 h → angezeigte Werte == onApply-Werte, 12 Teams, Hinweis sichtbar', () => {
+    const onApply = vi.fn();
+    const { result } = renderHook(() =>
+      useSmartConfig({ formData: teams12FormData(), onApply })
+    );
+    act(() => {
+      result.current.setHours(1);
+      result.current.setMinutes(0);
+    });
+    act(() => {
+      result.current.handleCalculate();
+    });
+    const shown = result.current.recommendation;
+    expect(shown?.teams).toBe(12);
+    expect(result.current.teamsKeptTimeShort).toBe(true);
+
+    act(() => {
+      result.current.handleApply();
+    });
+    expect(onApply).toHaveBeenCalledWith({
+      numberOfTeams: shown?.teams,
+      numberOfFields: shown?.fields,
+      groupPhaseGameDuration: shown?.gameDuration,
+      groupPhaseBreakDuration: shown?.breakDuration,
+    });
+  });
+
+  it('(b) Gegenbeispiel: 12 Teams fest, genug Zeit (10 h) → normale Empfehlung, kein Hinweis', () => {
+    const { result } = renderHook(() =>
+      useSmartConfig({ formData: teams12FormData(), onApply: vi.fn() })
+    );
+    act(() => {
+      result.current.setHours(10);
+      result.current.setMinutes(0);
+    });
+    act(() => {
+      result.current.handleCalculate();
+    });
+    expect(result.current.recommendation?.teams).toBe(12);
+    expect(result.current.teamsKeptTimeShort).toBe(false);
+  });
+
+  it('(c) Teams 12 + Felder 2 fest, Zeit zu knapp → Empfehlung und Hinweis sichtbar, Übernehmen mit 12 Teams und 2 Feldern', () => {
+    const onApply = vi.fn();
+    render(<SmartConfig formData={teams12FormData()} onApply={onApply} />);
+    fireEvent.click(screen.getByText('Smart-Konfiguration'));
+    // Checkbox 0 = Teams (schon fest), Checkbox 1 = Felder
+    fireEvent.click(screen.getAllByRole('checkbox')[1]);
+    fireEvent.change(screen.getAllByRole('combobox')[1], { target: { value: '2' } });
+    fireEvent.change(screen.getByLabelText('Stunden'), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText('Minuten'), { target: { value: '0' } });
+    fireEvent.click(screen.getByLabelText('Optimale Konfiguration berechnen'));
+
+    expect(screen.getByTestId('smart-config-teams-short')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Empfohlene Konfiguration übernehmen'));
+    expect(onApply).toHaveBeenCalledWith(
+      expect.objectContaining({ numberOfTeams: 12, numberOfFields: 2 })
+    );
+    expect(screen.getByTestId('smart-config-teams-short')).toBeTruthy();
+  });
+});

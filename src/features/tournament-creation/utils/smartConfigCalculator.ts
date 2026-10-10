@@ -230,6 +230,17 @@ export function calculateRecommendation(
     };
   }
 
+  // Festgehaltene Teamzahl: nie verändern, auch wenn die Zeit nicht reicht (@W4-022).
+  // Festgehaltene Werte bleiben wie eingestellt, freie Werte nehmen die schnellste Konfiguration.
+  // Der Hinweis sagt, dass die Zeit nicht reicht; „Übernehmen“ bleibt möglich.
+  if (constraints.teams !== undefined && fastest !== null) {
+    return {
+      recommendation: fastest,
+      constraintsImpossible: false,
+      teamsKeptTimeShort: true,
+    };
+  }
+
   // Check if constraints make it impossible
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if any constraint is set
   const hasConstraints = constraints.fields || constraints.gameDuration || constraints.breakDuration;
@@ -238,16 +249,6 @@ export function calculateRecommendation(
       recommendation: null,
       constraintsImpossible: true,
       minRequiredHours: Math.ceil(minHoursWithConstraints * 10) / 10,
-    };
-  }
-
-  // Festgehaltene Teamzahl: nie verändern, auch wenn die Zeit nicht reicht (@W4-022).
-  // Empfohlen wird die schnellste Konfiguration, der Hinweis sagt, dass die Zeit nicht reicht.
-  if (constraints.teams !== undefined && fastest !== null) {
-    return {
-      recommendation: fastest,
-      constraintsImpossible: false,
-      teamsKeptTimeShort: true,
     };
   }
 
