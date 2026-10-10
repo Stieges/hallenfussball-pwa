@@ -18,7 +18,7 @@ vi.unmock('i18next');
 vi.unmock('react-i18next');
 
 const logout = vi.fn();
-const repoState = vi.hoisted(() => ({ repo: {} }));
+const repoState = vi.hoisted((): { repo: unknown } => ({ repo: {} }));
 
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({

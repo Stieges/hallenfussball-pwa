@@ -9,7 +9,7 @@ import { useGuardedLogout } from '../useGuardedLogout';
 import type { WaitingEntriesSource } from '../countWaitingEntries';
 
 // A-07c (@FU-006): der Hook liest die Konto-Queue ueber useRepositories().tournamentRepository.
-const repoState = vi.hoisted(() => ({ repo: {} }));
+const repoState = vi.hoisted((): { repo: unknown } => ({ repo: {} }));
 
 vi.mock('../../../../core/contexts/RepositoryContext', () => ({
   useRepositories: () => ({ tournamentRepository: repoState.repo }),
