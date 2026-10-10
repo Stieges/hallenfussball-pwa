@@ -73,7 +73,9 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   const removedTeams = getRemovedTeams(tournament.teams);
 
   // @W5-009: Warnung im Lösch-Dialog (i18n-Schlüssel), gleiche Aufteilung wie deleteTeamSafely.
-  const deletionWarning = deleteConfirmTeam ? getTeamDeletionWarning(deleteConfirmTeam.analysis) : null;
+  const deletionWarning = deleteConfirmTeam
+    ? getTeamDeletionWarning(deleteConfirmTeam.analysis, (key, values) => t(key as never, values))
+    : null;
 
   // Team-Analyse für alle Teams
   const teamAnalyses: Record<string, TeamMatchAnalysis> = {};
@@ -675,9 +677,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
               <div style={{ marginBottom: '16px' }}>
                 <p style={{ color: cssVars.colors.textSecondary, margin: '0 0 12px 0' }}>
-                  {deletionWarning
-                    ? t(deletionWarning.key, deletionWarning.values)
-                    : t('teams.deleteDialog.confirmMessage', { name: deleteConfirmTeam.team.name })}
+                  {deletionWarning ?? t('teams.deleteDialog.confirmMessage', { name: deleteConfirmTeam.team.name })}
                 </p>
 
                 {deleteConfirmTeam.analysis.matchesProtected > 0 && (

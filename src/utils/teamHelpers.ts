@@ -168,19 +168,14 @@ export function deleteTeamSafely(
   };
 }
 
+/** Übersetzungsfunktion für die Lösch-Warnung (i18next-kompatibel, Plural über `count`). */
+export type TranslateFn = (key: string, values?: Record<string, string | number>) => string;
+
 /**
- * Warnung im Lösch-Dialog als i18n-Schlüssel + Werte (Texte liegen in tournament.json, teams.deleteDialog).
+ * Warnung im Lösch-Dialog (Texte in tournament.json, teams.deleteDialog, Plural `_one`/`_other`).
  * Die Aufteilung folgt deleteTeamSafely: geschützte Spiele bleiben, die übrigen fallen weg.
  */
-export interface TeamDeletionWarning {
-  key:
-    | 'teams.deleteDialog.warningUnprotected'
-    | 'teams.deleteDialog.warningProtected'
-    | 'teams.deleteDialog.warningMixed';
-  values: Record<string, string | number>;
-}
-
-export function getTeamDeletionWarning(analysis: TeamMatchAnalysis): TeamDeletionWarning | null {
+export function getTeamDeletionWarning(analysis: TeamMatchAnalysis, t: TranslateFn): string | null {
   const name = analysis.teamName;
   const protectedCount = analysis.matchesProtected;
   const unprotectedCount = analysis.matchesUnprotected;
@@ -190,17 +185,18 @@ export function getTeamDeletionWarning(analysis: TeamMatchAnalysis): TeamDeletio
   }
 
   if (protectedCount === 0) {
-    return { key: 'teams.deleteDialog.warningUnprotected', values: { name, count: unprotectedCount } };
+    return t('teams.deleteDialog.warningUnprotected', { name, count: unprotectedCount });
   }
 
   if (unprotectedCount === 0) {
-    return { key: 'teams.deleteDialog.warningProtected', values: { name, count: protectedCount } };
+    return t('teams.deleteDialog.warningProtected', { name, count: protectedCount });
   }
 
-  return {
-    key: 'teams.deleteDialog.warningMixed',
-    values: { name, protected: protectedCount, unprotected: unprotectedCount },
-  };
+  return t('teams.deleteDialog.warningMixed', {
+    name,
+    kept: t('teams.deleteDialog.partKept', { count: protectedCount }),
+    removed: t('teams.deleteDialog.partRemoved', { count: unprotectedCount }),
+  });
 }
 
 /**

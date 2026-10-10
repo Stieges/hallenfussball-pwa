@@ -178,9 +178,15 @@
       "confirmMessage": "Do you really want to delete \"{{name}}\"?",
       "markedAsRemoved": "The team will be marked as \"removed\". Results will be preserved for fairness to other teams.",
       "markAsRemoved": "Mark as removed",
-      "warningUnprotected": "\"{{name}}\" has {{count}} planned matches without result and without events. These will be removed from the schedule.",
-      "warningProtected": "\"{{name}}\" has {{count}} matches with a result or events. The team will be marked as \"removed\", these matches are kept.",
-      "warningMixed": "\"{{name}}\" has {{protected}} matches with a result or events and {{unprotected}} without.\n\n• The {{unprotected}} matches without result and events will be removed.\n• The {{protected}} matches with a result or events are kept.\n• The team will be marked as \"removed\"."
+      "warningUnprotected_one": "\"{{name}}\" has one planned match without result and without events. It will be removed from the schedule.",
+      "warningUnprotected_other": "\"{{name}}\" has {{count}} planned matches without result and without events. These will be removed from the schedule.",
+      "warningProtected_one": "\"{{name}}\" has one match with a result or events. The team will be marked as \"removed\", the match is kept.",
+      "warningProtected_other": "\"{{name}}\" has {{count}} matches with a result or events. The team will be marked as \"removed\", these matches are kept.",
+      "partKept_one": "{{count}} match with a result or events is kept",
+      "partKept_other": "{{count}} matches with a result or events are kept",
+      "partRemoved_one": "{{count}} match without result and events is removed",
+      "partRemoved_other": "{{count}} matches without result and events are removed",
+      "warningMixed": "\"{{name}}\":\n\n• {{kept}}.\n• {{removed}}.\n• The team will be marked as \"removed\"."
     }
   },
   "settings": {

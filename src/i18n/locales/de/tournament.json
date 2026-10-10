@@ -178,9 +178,15 @@
       "confirmMessage": "Möchtest du \"{{name}}\" wirklich löschen?",
       "markedAsRemoved": "Das Team wird als \"entfernt\" markiert. Die Ergebnisse bleiben für die Fairness der anderen Teams erhalten.",
       "markAsRemoved": "Als entfernt markieren",
-      "warningUnprotected": "\"{{name}}\" hat {{count}} geplante Spiele ohne Ergebnis und ohne Ereignisse. Diese werden aus dem Spielplan entfernt.",
-      "warningProtected": "\"{{name}}\" hat {{count}} Spiele mit Ergebnis oder Ereignissen. Das Team wird als \"entfernt\" markiert, diese Spiele bleiben erhalten.",
-      "warningMixed": "\"{{name}}\" hat {{protected}} Spiele mit Ergebnis oder Ereignissen und {{unprotected}} ohne.\n\n• Die {{unprotected}} Spiele ohne Ergebnis und Ereignisse werden entfernt.\n• Die {{protected}} Spiele mit Ergebnis oder Ereignissen bleiben erhalten.\n• Das Team wird als \"entfernt\" markiert."
+      "warningUnprotected_one": "\"{{name}}\" hat ein geplantes Spiel ohne Ergebnis und ohne Ereignisse. Es wird aus dem Spielplan entfernt.",
+      "warningUnprotected_other": "\"{{name}}\" hat {{count}} geplante Spiele ohne Ergebnis und ohne Ereignisse. Diese werden aus dem Spielplan entfernt.",
+      "warningProtected_one": "\"{{name}}\" hat ein Spiel mit Ergebnis oder Ereignissen. Das Team wird als \"entfernt\" markiert, das Spiel bleibt erhalten.",
+      "warningProtected_other": "\"{{name}}\" hat {{count}} Spiele mit Ergebnis oder Ereignissen. Das Team wird als \"entfernt\" markiert, diese Spiele bleiben erhalten.",
+      "partKept_one": "{{count}} Spiel mit Ergebnis oder Ereignissen bleibt erhalten",
+      "partKept_other": "{{count}} Spiele mit Ergebnis oder Ereignissen bleiben erhalten",
+      "partRemoved_one": "{{count}} Spiel ohne Ergebnis und ohne Ereignisse wird entfernt",
+      "partRemoved_other": "{{count}} Spiele ohne Ergebnis und ohne Ereignisse werden entfernt",
+      "warningMixed": "\"{{name}}\":\n\n• {{kept}}.\n• {{removed}}.\n• Das Team wird als \"entfernt\" markiert."
     }
   },
   "settings": {
