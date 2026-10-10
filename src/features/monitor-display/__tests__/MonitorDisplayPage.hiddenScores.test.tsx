@@ -92,6 +92,7 @@ describe('@ZM-090 / @ZM-118 Kindermodus am Monitor', () => {
   it('@ZM-118 Kindermodus: Tor in Spiel 8 wird nicht eingeblendet', async () => {
     live.goal = torInSpiel8();
     await renderMonitor(buildTournament({ sponsors: [FIXTURE_SPONSOR], hideScoresForPublic: true }), [slide('sponsor', { sponsorId: 'sp-1' })]);
+    expect(await screen.findByText('Bäckerei Maier')).toBeInTheDocument();
     expect(screen.queryByText('DJK Berg')).not.toBeInTheDocument();
   });
 });
