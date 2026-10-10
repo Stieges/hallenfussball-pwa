@@ -100,11 +100,10 @@ describe('useEngineLiveFallback (A-06k, @FU-025)', () => {
     const engine = makeEngine();
     setup(true, engine);
 
-    act(() => {
-      setRealtimeChannelStatus(TOURNAMENT, 'CLOSED');
-      setRealtimeChannelStatus(TOURNAMENT, 'SUBSCRIBED');
-      setRealtimeChannelStatus(TOURNAMENT, 'CLOSED');
-    });
+    // Drei getrennte Ereignisse (je eigenes act), damit React die Wechsel nicht zusammenfasst.
+    act(() => setRealtimeChannelStatus(TOURNAMENT, 'CLOSED'));
+    act(() => setRealtimeChannelStatus(TOURNAMENT, 'SUBSCRIBED'));
+    act(() => setRealtimeChannelStatus(TOURNAMENT, 'CLOSED'));
 
     await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
     expect(engine.catchUpLoaded).toHaveBeenCalledTimes(1);
