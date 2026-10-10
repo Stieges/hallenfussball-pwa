@@ -108,7 +108,7 @@ export const OfflineModeIndicator: React.FC<OfflineModeIndicatorProps> = ({
         size={compact ? 'sm' : 'md'}
         onClick={handleReconnect}
         aria-label={t('offlineIndicator.reconnectAriaLabel')}
-        data-testid="offline-banner-connect"
+        data-testid="offline-mode-connect"
       >
         {t('actions.connect')}
       </Button>

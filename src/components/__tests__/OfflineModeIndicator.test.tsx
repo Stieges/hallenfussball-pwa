@@ -29,7 +29,7 @@ describe('OfflineModeIndicator — Verbinden-Knopf (A-06h)', () => {
   it('Klick ruft reconnect UND resyncNow je 1x', () => {
     renderWithResync(<OfflineModeIndicator />);
 
-    fireEvent.click(screen.getByTestId('offline-banner-connect'));
+    fireEvent.click(screen.getByTestId('offline-mode-connect'));
 
     expect(reconnect).toHaveBeenCalledTimes(1);
     expect(resyncNow).toHaveBeenCalledTimes(1);
