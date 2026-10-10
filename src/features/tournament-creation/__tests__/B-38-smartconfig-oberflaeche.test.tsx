@@ -24,6 +24,7 @@
  * kommt aus der deutschen wizard.json, damit der Text geprüft werden kann.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useState } from 'react';
 import { render, screen, fireEvent, renderHook, act } from '@testing-library/react';
 import type { Tournament } from '../../../types/tournament';
 import { SmartConfig } from '../components/SmartConfig';
@@ -314,6 +315,58 @@ describe('B-38 Rückmeldung „Übernommen“ nach Übernehmen', () => {
 
     // Panel schließt sich bei normaler Empfehlung; Wieder-Öffnen rechnet neu
     fireEvent.click(screen.getByText('Smart-Konfiguration'));
+    expect(screen.queryByTestId('smart-config-applied')).toBeNull();
+  });
+});
+
+/** Wizard-Harness: onApply schreibt die übernommenen Werte zurück in formData (wie im echten Wizard). */
+function WizardHarness({ initial }: { initial: Partial<Tournament> }) {
+  const [formData, setFormData] = useState<Partial<Tournament>>(initial);
+  return (
+    <SmartConfig
+      formData={formData}
+      onApply={(config) => setFormData((prev) => ({ ...prev, ...config }))}
+    />
+  );
+}
+
+describe('B-38 Rückmeldung „Übernommen“ im Wizard mit Rückfluss aus formData', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('(i) Hinweis-Fall: nach Übernehmen bleibt „Übernommen“ sichtbar, obwohl formData zurückgeschrieben wird', () => {
+    render(<WizardHarness initial={teams12FormData()} />);
+    fireEvent.click(screen.getByText('Smart-Konfiguration'));
+    fireEvent.change(screen.getByLabelText('Stunden'), { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText('Minuten'), { target: { value: '5' } });
+    fireEvent.click(screen.getByLabelText('Optimale Konfiguration berechnen'));
+    fireEvent.click(screen.getByLabelText('Empfohlene Konfiguration übernehmen'));
+
+    expect(screen.getByTestId('smart-config-applied').textContent).toBe('Übernommen');
+  });
+
+  it('(ii) Normalfall: nach Übernehmen (10 h) bleibt „Übernommen“ sichtbar', () => {
+    render(<WizardHarness initial={teams12FormData()} />);
+    fireEvent.click(screen.getByText('Smart-Konfiguration'));
+    fireEvent.change(screen.getByLabelText('Stunden'), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText('Minuten'), { target: { value: '0' } });
+    fireEvent.click(screen.getByLabelText('Optimale Konfiguration berechnen'));
+    fireEvent.click(screen.getByLabelText('Empfohlene Konfiguration übernehmen'));
+
+    expect(screen.getByTestId('smart-config-applied').textContent).toBe('Übernommen');
+  });
+
+  it('Gegenbeispiel: Eingabe nach Übernehmen (Minuten ändern) blendet „Übernommen“ aus', () => {
+    render(<WizardHarness initial={teams12FormData()} />);
+    fireEvent.click(screen.getByText('Smart-Konfiguration'));
+    fireEvent.change(screen.getByLabelText('Stunden'), { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText('Minuten'), { target: { value: '5' } });
+    fireEvent.click(screen.getByLabelText('Optimale Konfiguration berechnen'));
+    fireEvent.click(screen.getByLabelText('Empfohlene Konfiguration übernehmen'));
+    expect(screen.getByTestId('smart-config-applied')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Minuten'), { target: { value: '10' } });
     expect(screen.queryByTestId('smart-config-applied')).toBeNull();
   });
 });

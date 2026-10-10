@@ -67,6 +67,14 @@ interface UseSmartConfigReturn {
   applied: boolean;
 }
 
+/** Setter, der vor jeder Änderung `onChange` aufruft (Rückmeldung „Übernommen“ zurücksetzen). */
+function withApplyReset<T>(set: (value: T) => void, onChange: () => void): (value: T) => void {
+  return (value: T) => {
+    onChange();
+    set(value);
+  };
+}
+
 /**
  * Hook for Smart Config state and logic
  * Extracted from SmartConfig.tsx for better separation of concerns
@@ -87,8 +95,16 @@ export function useSmartConfig({
   const availableHours = hours + minutes / 60;
 
   // Setters with validation
-  const setHours = (value: number) => setHoursState(Math.max(0, Math.min(12, value)));
-  const setMinutes = (value: number) => setMinutesState(Math.max(0, Math.min(59, value)));
+  // Eingaben des Nutzers setzen die Rückmeldung „Übernommen“ zurück (@W4-022).
+  // Der Sync aus formData darf das nicht (Wizard schreibt nach Übernehmen zurück).
+  const setHours = (value: number) => {
+    setApplied(false);
+    setHoursState(Math.max(0, Math.min(12, value)));
+  };
+  const setMinutes = (value: number) => {
+    setApplied(false);
+    setMinutesState(Math.max(0, Math.min(59, value)));
+  };
 
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [teamsKeptTimeShort, setTeamsKeptTimeShort] = useState(false);
@@ -98,20 +114,31 @@ export function useSmartConfig({
   );
 
   // Constraint locks
-  const [lockTeams, setLockTeams] = useState(true); // Teams locked by default
-  const [lockFields, setLockFields] = useState(false);
-  const [lockGameDuration, setLockGameDuration] = useState(false);
-  const [lockBreakDuration, setLockBreakDuration] = useState(false);
+  const [lockTeams, setLockTeamsState] = useState(true); // Teams locked by default
+  const [lockFields, setLockFieldsState] = useState(false);
+  const [lockGameDuration, setLockGameDurationState] = useState(false);
+  const [lockBreakDuration, setLockBreakDurationState] = useState(false);
 
   // Constraint values (use current form values as defaults)
-  const [constraintTeams, setConstraintTeams] = useState(formData.numberOfTeams ?? 6);
-  const [constraintFields, setConstraintFields] = useState(formData.numberOfFields ?? 1);
-  const [constraintGameDuration, setConstraintGameDuration] = useState(
+  const [constraintTeams, setConstraintTeamsState] = useState(formData.numberOfTeams ?? 6);
+  const [constraintFields, setConstraintFieldsState] = useState(formData.numberOfFields ?? 1);
+  const [constraintGameDuration, setConstraintGameDurationState] = useState(
     formData.groupPhaseGameDuration ?? 10
   );
-  const [constraintBreakDuration, setConstraintBreakDuration] = useState(
+  const [constraintBreakDuration, setConstraintBreakDurationState] = useState(
     formData.groupPhaseBreakDuration ?? 2
   );
+
+  // Nutzer-Setter für Sperren und Festwerte: setzen die Rückmeldung zurück
+  const resetApplied = () => setApplied(false);
+  const setLockTeams = withApplyReset(setLockTeamsState, resetApplied);
+  const setLockFields = withApplyReset(setLockFieldsState, resetApplied);
+  const setLockGameDuration = withApplyReset(setLockGameDurationState, resetApplied);
+  const setLockBreakDuration = withApplyReset(setLockBreakDurationState, resetApplied);
+  const setConstraintTeams = withApplyReset(setConstraintTeamsState, resetApplied);
+  const setConstraintFields = withApplyReset(setConstraintFieldsState, resetApplied);
+  const setConstraintGameDuration = withApplyReset(setConstraintGameDurationState, resetApplied);
+  const setConstraintBreakDuration = withApplyReset(setConstraintBreakDurationState, resetApplied);
 
   // Derived state
   const usesGroups = formData.groupSystem === 'groupsAndFinals';
@@ -120,31 +147,17 @@ export function useSmartConfig({
   const { showWarning } = useToast();
 
   // Sync constraint values with formData when it changes
+  // (Rohe Setter, damit der Sync die Rückmeldung „Übernommen“ nicht zurücksetzt)
   useEffect(() => {
-    setConstraintTeams(formData.numberOfTeams ?? 6);
-    setConstraintFields(formData.numberOfFields ?? 1);
-    setConstraintGameDuration(formData.groupPhaseGameDuration ?? 10);
-    setConstraintBreakDuration(formData.groupPhaseBreakDuration ?? 2);
+    setConstraintTeamsState(formData.numberOfTeams ?? 6);
+    setConstraintFieldsState(formData.numberOfFields ?? 1);
+    setConstraintGameDurationState(formData.groupPhaseGameDuration ?? 10);
+    setConstraintBreakDurationState(formData.groupPhaseBreakDuration ?? 2);
   }, [
     formData.numberOfTeams,
     formData.numberOfFields,
     formData.groupPhaseGameDuration,
     formData.groupPhaseBreakDuration,
-  ]);
-
-  // Rückmeldung „Übernommen“ verschwindet, sobald der Nutzer eine Eingabe ändert
-  useEffect(() => {
-    setApplied(false);
-  }, [
-    availableHours,
-    lockTeams,
-    lockFields,
-    lockGameDuration,
-    lockBreakDuration,
-    constraintTeams,
-    constraintFields,
-    constraintGameDuration,
-    constraintBreakDuration,
   ]);
 
   // Save hours and constraints to localStorage when changed
