@@ -96,6 +96,37 @@ describe('useEngineLiveFallback (A-06k, @FU-025)', () => {
     expect(engine.catchUpLoaded).toHaveBeenCalledTimes(1);
   });
 
+  it('Nachladen beim Wiederverbinden: CLOSED -> SUBSCRIBED ruft catchUpLoaded genau einmal zusaetzlich auf', async () => {
+    const engine = makeEngine();
+    setup(true, engine);
+
+    act(() => setRealtimeChannelStatus(TOURNAMENT, 'CLOSED'));
+    act(() => setRealtimeChannelStatus(TOURNAMENT, 'SUBSCRIBED'));
+    expect(engine.catchUpLoaded).toHaveBeenCalledTimes(1);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(20000); });
+    expect(engine.catchUpLoaded).toHaveBeenCalledTimes(1);
+  });
+
+  it('Gegenbeispiel SUBSCRIBED von Anfang an: kein Nachladen', () => {
+    const engine = makeEngine();
+    setup(true, engine);
+
+    act(() => setRealtimeChannelStatus(TOURNAMENT, 'SUBSCRIBED'));
+
+    expect(engine.catchUpLoaded).not.toHaveBeenCalled();
+  });
+
+  it('Gegenbeispiel Gast (enabled=false): CLOSED -> SUBSCRIBED loest kein Nachladen aus', () => {
+    const engine = makeEngine();
+    setup(false, engine);
+
+    act(() => setRealtimeChannelStatus(TOURNAMENT, 'CLOSED'));
+    act(() => setRealtimeChannelStatus(TOURNAMENT, 'SUBSCRIBED'));
+
+    expect(engine.catchUpLoaded).not.toHaveBeenCalled();
+  });
+
   it('RACE: CLOSED -> SUBSCRIBED -> CLOSED schnell hintereinander ergibt genau EIN Intervall', async () => {
     const engine = makeEngine();
     setup(true, engine);
@@ -105,8 +136,9 @@ describe('useEngineLiveFallback (A-06k, @FU-025)', () => {
     act(() => setRealtimeChannelStatus(TOURNAMENT, 'SUBSCRIBED'));
     act(() => setRealtimeChannelStatus(TOURNAMENT, 'CLOSED'));
 
+    // 1x Nachladen beim SUBSCRIBED + genau 1 Intervall-Tick nach 5 s (doppeltes Intervall ergaebe 3).
     await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
-    expect(engine.catchUpLoaded).toHaveBeenCalledTimes(1);
+    expect(engine.catchUpLoaded).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -4,7 +4,7 @@
  * Tor eines Helfers spaetestens nach 10 s auch ohne Push sichtbar wird. Bei SUBSCRIBED stoppt das
  * Intervall. Gast (`enabled` false) bekommt nichts.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRealtimeChannelStatus, isRealtimeInterrupted } from './realtimeChannelStatus';
 
 export const ENGINE_LIVE_FALLBACK_INTERVAL_MS = 5000;
@@ -16,11 +16,14 @@ export interface EngineCatchUpPort {
 export function useEngineLiveFallback(engine: EngineCatchUpPort | null, enabled: boolean, tournamentId: string): void {
   const status = useRealtimeChannelStatus(tournamentId);
   const active = enabled && engine !== null && isRealtimeInterrupted(status);
+  // Merkt sich, dass der Kanal seit dem letzten Wiederverbinden unterbrochen war (Nachladen fällig).
+  const wasInterruptedRef = useRef(false);
 
   useEffect(() => {
     if (!active || !engine) {
       return undefined;
     }
+    wasInterruptedRef.current = true;
     const timer = setInterval(() => {
       engine.catchUpLoaded().catch(() => undefined);
     }, ENGINE_LIVE_FALLBACK_INTERVAL_MS);
@@ -28,4 +31,14 @@ export function useEngineLiveFallback(engine: EngineCatchUpPort | null, enabled:
       clearInterval(timer);
     };
   }, [active, engine]);
+
+  // Beim Übergang unterbrochen -> SUBSCRIBED: einmal nachladen, damit ein Tor aus dem Übergangsfenster
+  // nicht liegen bleibt (der Push liefert nur künftige Änderungen).
+  useEffect(() => {
+    if (!enabled || !engine || status !== 'SUBSCRIBED' || !wasInterruptedRef.current) {
+      return;
+    }
+    wasInterruptedRef.current = false;
+    engine.catchUpLoaded().catch(() => undefined);
+  }, [enabled, engine, status]);
 }
