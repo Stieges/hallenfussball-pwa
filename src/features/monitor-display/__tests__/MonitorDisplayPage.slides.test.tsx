@@ -206,7 +206,7 @@ describe('MonitorDisplayPage — Einblendungen (Tor)', () => {
     expect(await screen.findByText('DJK Berg')).toBeInTheDocument();
   });
 
-  it.fails('@ZM-083 Feld 1: Tor auf Feld 2 wird auf dem Feld-1-Monitor nicht eingeblendet', async () => {
+  it('@ZM-083 Feld 1: Tor auf Feld 2 wird auf dem Feld-1-Monitor nicht eingeblendet', async () => {
     live.goal = goalInMatch8;
     await renderMonitor(buildTournament(), [slide('live', { fieldId: 'field-1' })]);
     // Effekte nach dem Laden flushen, bevor die Einblendung geprüft wird (sonst falsches Grün).
@@ -214,11 +214,6 @@ describe('MonitorDisplayPage — Einblendungen (Tor)', () => {
     expect(screen.queryByText('DJK Berg')).not.toBeInTheDocument();
   });
 
-  it('Bestand: Tor auf Feld 2 wird auf dem Feld-1-Monitor eingeblendet', async () => {
-    live.goal = goalInMatch8;
-    await renderMonitor(buildTournament(), [slide('live', { fieldId: 'field-1' })]);
-    expect(await screen.findByText('DJK Berg')).toBeInTheDocument();
-  });
 });
 
 describe('MonitorDisplayPage — Karteneinblendung (@ZM-119, Fake-Timer)', () => {

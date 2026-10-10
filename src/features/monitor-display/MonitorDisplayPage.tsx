@@ -27,6 +27,7 @@ import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { selectDisplayableSlides, type SlideProgram } from './slideProgramme';
 import { useSlideshow } from './useSlideshow';
+import { boundFieldNumbers, visibleGoal } from './monitorGoalFilter';
 import { getPerformanceSettings } from './monitorDisplayHelpers';
 import { createLegacyMonitorSource } from './monitorDataSource';
 import { useMonitorDisplayData } from './useMonitorDisplayData';
@@ -125,6 +126,8 @@ export function MonitorDisplayPage({
     : null;
   const { slideState, isPaused } = useSlideshow(slideProgram, transitionMs);
 
+  // Tor-Einblendung nach Feld der Live-Folien (B-16e1, @ZM-083)
+  const boundFields = useMemo(() => boundFieldNumbers(monitor?.slides ?? []), [monitor]);
 
   // Current slide
   const currentSlide = useMemo(
@@ -213,7 +216,7 @@ export function MonitorDisplayPage({
 
       {/* Goal Animation Overlay */}
       <GoalAnimation
-        goalEvent={lastGoalEvent}
+        goalEvent={visibleGoal(lastGoalEvent, tournament.matches, boundFields)}
         onAnimationComplete={clearLastGoalEvent}
         sportId={tournament?.sportId}
       />
