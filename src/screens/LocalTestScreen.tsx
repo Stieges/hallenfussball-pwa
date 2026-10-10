@@ -26,6 +26,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useHaptic } from '../hooks/useHaptic';
 import { BaseThemeSelector } from '../features/settings/components/BaseThemeSelector';
 import { Icons } from '../components/ui/Icons';
+import { matchTeamIds, matchInvolvesTeam } from '../core/models/matchSlot';
 import { ShareDialog } from '../components/dialogs/ShareDialog';
 
 // localStorage key for "Mein Team" selection
@@ -244,8 +245,7 @@ export const LocalTestScreen: React.FC = () => {
     tournament.matches
       .filter((m) => m.matchStatus === 'running')
       .forEach((m) => {
-        activeTeams.add(m.teamA);
-        activeTeams.add(m.teamB);
+        matchTeamIds(m).forEach((teamId) => activeTeams.add(teamId));
       });
     return activeTeams;
   }, [tournament.matches]);
@@ -273,7 +273,7 @@ export const LocalTestScreen: React.FC = () => {
     // Filter by "Nur meine Spiele"
     if (showOnlyMyTeam && myTeamId) {
       filteredMatches = filteredMatches.filter(
-        (m) => m.originalTeamA === myTeamId || m.originalTeamB === myTeamId
+        (m) => matchInvolvesTeam(m, myTeamId)
       );
     }
 

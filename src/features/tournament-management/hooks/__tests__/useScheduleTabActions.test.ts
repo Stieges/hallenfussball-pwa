@@ -10,6 +10,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { Tournament, Match } from '../../../../types/tournament';
+import { looseVs } from '../../../../test/matchSlotFixtures';
 
 // P4 (Fixrunde 3): kontrollierbarer Ref-Inhalt fuer `useEngineOverlaidMatchIds` -- steuert, ob ein
 // Spiel als "Engine-ueberlagert" (bereits laufendes/beendetes Engine-Spiel MIT echtem Inhalt) gilt.
@@ -25,8 +26,7 @@ function createMatch(overrides: Partial<Match> = {}): Match {
     id: 'm1',
     round: 1,
     field: 1,
-    teamA: 'Team A',
-    teamB: 'Team B',
+    ...looseVs('Team A', 'Team B'),
     ...overrides,
   };
 }
@@ -160,7 +160,7 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
       { id: 'team-b', name: 'Team B' },
     ];
     const tournament = createTournament(
-      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b', matchStatus: 'scheduled' })],
+      [createMatch({ id: 'm1', ...looseVs('team-a', 'team-b'), matchStatus: 'scheduled' })],
       teams,
     );
     const { result, onMatchesUpdate, onLocalTournamentUpdate, onTournamentUpdate, showWarning } =
@@ -182,7 +182,7 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
       { id: 'team-b', name: 'Team B' },
     ];
     const tournament = createTournament(
-      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b', scoreA: 3, scoreB: 1 })],
+      [createMatch({ id: 'm1', ...looseVs('team-a', 'team-b'), scoreA: 3, scoreB: 1 })],
       teams,
     );
     const { result, onMatchesUpdate } = renderActions(tournament);
@@ -205,7 +205,7 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
       { id: 'team-b', name: 'Team B' },
     ];
     const tournament = createTournament(
-      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b', matchStatus: 'running', scoreA: 1, scoreB: 0 })],
+      [createMatch({ id: 'm1', ...looseVs('team-a', 'team-b'), matchStatus: 'running', scoreA: 1, scoreB: 0 })],
       teams,
     );
     const { result, onMatchesUpdate, showWarning } = renderActions(tournament);
@@ -225,7 +225,7 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
       { id: 'team-b', name: 'Team B' },
     ];
     const tournament = createTournament(
-      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b', matchStatus: 'finished', scoreA: 2, scoreB: 1 })],
+      [createMatch({ id: 'm1', ...looseVs('team-a', 'team-b'), matchStatus: 'finished', scoreA: 2, scoreB: 1 })],
       teams,
     );
     const { result, onMatchesUpdate, showWarning } = renderActions(tournament, { lockFinishedResults: false });
@@ -247,7 +247,7 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
       { id: 'team-b', name: 'Team B' },
     ];
     const tournament = createTournament(
-      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b' })],
+      [createMatch({ id: 'm1', ...looseVs('team-a', 'team-b') })],
       teams,
     );
     // `localStorage` ist in `src/test/setup.dom.ts` global als `vi.fn()`-Stubs gemockt (kein
@@ -277,7 +277,7 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
       { id: 'team-b', name: 'Team B' },
     ];
     const tournament = createTournament(
-      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b', matchStatus: 'running' })],
+      [createMatch({ id: 'm1', ...looseVs('team-a', 'team-b'), matchStatus: 'running' })],
       teams,
     );
     const { result, onMatchesUpdate, showWarning } = renderActions(tournament);
@@ -301,7 +301,7 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
       { id: 'team-b', name: 'Team B' },
     ];
     const tournament = createTournament(
-      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b', matchStatus: 'skipped' })],
+      [createMatch({ id: 'm1', ...looseVs('team-a', 'team-b'), matchStatus: 'skipped' })],
       teams,
     );
     const { result, onMatchesUpdate, showWarning } = renderActions(tournament);

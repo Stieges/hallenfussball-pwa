@@ -6,6 +6,8 @@ import { ITournamentRepository } from '../../repositories/ITournamentRepository'
 import { LiveMatch } from '../../models/LiveMatch';
 import { ScheduledMatch } from '../../../core/generators';
 import { MatchStatus } from '../../models/LiveMatch';
+import { MatchAwaitingTeamsError } from '../../errors';
+import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
 // Mock implementations
 const mockLiveMatchRepo = {
@@ -48,6 +50,8 @@ describe('MatchExecutionService', () => {
         matchNumber: 1,
         originalTeamA: 'team-a',
         originalTeamB: 'team-b',
+        slotA: testTeamSlot('team-a'),
+        slotB: testTeamSlot('team-b'),
         tournamendId: 'tour-1' // Not in interface? Check scheduleTypes or generic. ScheduledMatch doesn't have tournamentId usually.
     } as unknown as ScheduledMatch;
 
@@ -85,6 +89,54 @@ describe('MatchExecutionService', () => {
         expect(result.status).toBe('NOT_STARTED');
         expect(result.homeTeam.name).toBe('Team A');
         expect(mockLiveMatchRepo.save).toHaveBeenCalledWith('tour-1', expect.any(Object));
+    });
+
+    describe('initializeMatch – Besetzung der Seiten (A-03)', () => {
+        const tournamentWithTeams = {
+            id: 'tour-1',
+            teams: [
+                { id: 'team-a', name: 'Team A' },
+                { id: 'team-b', name: 'Team B' }
+            ]
+        };
+
+        beforeEach(() => {
+            vi.mocked(mockLiveMatchRepo.get).mockResolvedValue(null);
+            vi.mocked(mockTournamentRepo.get).mockResolvedValue(tournamentWithTeams);
+        });
+
+        it('@TM-033 Pflicht: ein Spiel mit offener Seite lässt sich nicht anpfeifen (kein Live-Spiel, nichts gespeichert)', async () => {
+            const pending = { kind: 'pending', source: { kind: 'groupRank', group: 'B', rank: 2 } } as const;
+            const awaiting = { ...mockScheduledMatch, slotB: pending, awayTeam: 'Zweiter Gruppe B' } as ScheduledMatch;
+
+            const attempt = service.initializeMatch('tour-1', awaiting);
+
+            await expect(attempt).rejects.toBeInstanceOf(MatchAwaitingTeamsError);
+            await expect(attempt).rejects.toMatchObject({ matchId: 'match-1', openSides: ['B'] });
+            expect(mockLiveMatchRepo.save).not.toHaveBeenCalled();
+        });
+
+        it('@TM-033 beide Seiten offen: beide werden als Wartegrund genannt', async () => {
+            const pending = { kind: 'pending', source: { kind: 'groupRank', group: 'A', rank: 1 } } as const;
+            const awaiting = { ...mockScheduledMatch, slotA: pending, slotB: pending } as ScheduledMatch;
+
+            await expect(service.initializeMatch('tour-1', awaiting)).rejects.toMatchObject({ openSides: ['A', 'B'] });
+        });
+
+        it('@TM-034 zwei besetzte Seiten: das Spiel läuft an, Teams aus der Teamliste', async () => {
+            const result = await service.initializeMatch('tour-1', mockScheduledMatch);
+
+            expect(result.homeTeam).toMatchObject({ id: 'team-a', name: 'Team A' });
+            expect(result.awayTeam).toMatchObject({ id: 'team-b', name: 'Team B' });
+        });
+
+        it('@TM-033 Gegenbeispiel: der Anzeigename „Team A“ ersetzt keine Team-ID – unbekannte ID lässt das Spiel nicht anlaufen', async () => {
+            // Slot zeigt auf eine ID, die nicht im Turnier steht; homeTeam trägt aber den Namen eines vorhandenen Teams
+            const unknown = { ...mockScheduledMatch, slotA: testTeamSlot('team-x'), homeTeam: 'Team A' };
+
+            await expect(service.initializeMatch('tour-1', unknown)).rejects.toThrow('team-x');
+            expect(mockLiveMatchRepo.save).not.toHaveBeenCalled();
+        });
     });
 
     it('should start a match', async () => {

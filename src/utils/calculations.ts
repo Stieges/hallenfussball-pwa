@@ -1,6 +1,8 @@
 import { Match, Tournament, Standing, Team, PlacementCriterion, RuntimeMatchEvent } from '../types/tournament';
 import { DEFAULT_FAIR_PLAY_PROFILE, type FairPlayProfile } from '../core/stats/fairPlayProfiles';
 import { cardKindOf } from './cardKind';
+import { matchSideTeamId } from '../core/models/matchSlot';
+import type { TeamId } from '../core/models/schemas/MatchSlotSchema';
 
 /**
  * Calculate standings for a group or all teams
@@ -34,16 +36,12 @@ export const calculateStandings = (
 
   // Calculate stats from matches
   relevantMatches.forEach((match) => {
-    // Match by team name OR ID (match.teamA/teamB can be either depending on context)
-    // - In tournament.matches: usually team names (from schedule display)
-    // - In ScheduledMatch: also team names (homeTeam/awayTeam resolved)
-    // - In some edge cases: team IDs
-    const teamAStanding = standings.find(
-      (s) => s.team.name === match.teamA || s.team.id === match.teamA
-    );
-    const teamBStanding = standings.find(
-      (s) => s.team.name === match.teamB || s.team.id === match.teamB
-    );
+    // A-03: Die Zuordnung läuft NUR über die Team-ID aus dem Slot – ein Name zählt nie.
+    // Offene Seiten und fehlende Slots haben keine Team-ID und gehen in keine Tabelle ein.
+    const idA = matchSideTeamId(match, 'A');
+    const idB = matchSideTeamId(match, 'B');
+    const teamAStanding = idA === undefined ? undefined : standings.find((s) => s.team.id === idA);
+    const teamBStanding = idB === undefined ? undefined : standings.find((s) => s.team.id === idB);
 
     if (!teamAStanding || !teamBStanding || match.scoreA === undefined || match.scoreB === undefined) {
       return;
@@ -146,16 +144,16 @@ const compareDirectMatches = (
   b: Standing,
   matches: Match[]
 ): number => {
-  // Helper to check if match team reference matches a standing's team (by ID or name)
-  const matchesTeam = (matchTeam: string, standing: Standing) =>
-    matchTeam === standing.team.id || matchTeam === standing.team.name;
+  // Seite des Spiels gehört zu diesem Team? Nur über die Team-ID aus dem Slot (A-03).
+  const matchesTeam = (side: 'A' | 'B', m: Match, standing: Standing) =>
+    matchSideTeamId(m, side) === standing.team.id;
 
   // Find all direct matches between these two teams
   const directMatches = matches.filter(
     (m) =>
       (m.scoreA !== undefined && m.scoreB !== undefined) &&
-      ((matchesTeam(m.teamA, a) && matchesTeam(m.teamB, b)) ||
-        (matchesTeam(m.teamA, b) && matchesTeam(m.teamB, a)))
+      ((matchesTeam('A', m, a) && matchesTeam('B', m, b)) ||
+        (matchesTeam('A', m, b) && matchesTeam('B', m, a)))
   );
 
   if (directMatches.length === 0) {
@@ -177,7 +175,7 @@ const compareDirectMatches = (
     if (match.scoreA === undefined || match.scoreB === undefined) { return; }
     const scoreA = match.scoreA;
     const scoreB = match.scoreB;
-    const isAHome = matchesTeam(match.teamA, a);
+    const isAHome = matchesTeam('A', match, a);
 
     const aScore = isAHome ? scoreA : scoreB;
     const bScore = isAHome ? scoreB : scoreA;
@@ -251,52 +249,42 @@ export interface FinalsPlacementResult {
 }
 
 /**
- * Determine the winner of a finals match considering overtime and penalties
+ * Determine the winner of a finals match considering overtime and penalties.
+ * Liefert Team-IDs aus den Slots; solange eine Seite offen ist (oder der Slot fehlt) gibt es keinen
+ * Gewinner (`null`).
  */
-const getMatchWinner = (match: Match): { winner: string; loser: string } | null => {
+export const getMatchWinner = (match: Match): { winner: TeamId; loser: TeamId } | null => {
   if (match.scoreA === undefined || match.scoreB === undefined) {
     return null; // Match not finished
   }
+  const idA = matchSideTeamId(match, 'A');
+  const idB = matchSideTeamId(match, 'B');
+  if (idA === undefined || idB === undefined) {
+    return null; // a side is still open
+  }
 
-  let winnerTeam: string;
-  let loserTeam: string;
+  let sideAWins: boolean;
 
   // Check if decided by penalties
   if (match.decidedBy === 'penalty' && match.penaltyScoreA !== undefined && match.penaltyScoreB !== undefined) {
-    if (match.penaltyScoreA > match.penaltyScoreB) {
-      winnerTeam = match.teamA;
-      loserTeam = match.teamB;
-    } else {
-      winnerTeam = match.teamB;
-      loserTeam = match.teamA;
-    }
+    sideAWins = match.penaltyScoreA > match.penaltyScoreB;
   }
   // Check if decided by overtime/golden goal
   else if ((match.decidedBy === 'overtime' || match.decidedBy === 'goldenGoal') &&
     match.overtimeScoreA !== undefined && match.overtimeScoreB !== undefined) {
-    const totalA = match.scoreA + match.overtimeScoreA;
-    const totalB = match.scoreB + match.overtimeScoreB;
-    if (totalA > totalB) {
-      winnerTeam = match.teamA;
-      loserTeam = match.teamB;
-    } else {
-      winnerTeam = match.teamB;
-      loserTeam = match.teamA;
-    }
+    sideAWins = match.scoreA + match.overtimeScoreA > match.scoreB + match.overtimeScoreB;
   }
   // Regular time decision
   else if (match.scoreA > match.scoreB) {
-    winnerTeam = match.teamA;
-    loserTeam = match.teamB;
+    sideAWins = true;
   } else if (match.scoreB > match.scoreA) {
-    winnerTeam = match.teamB;
-    loserTeam = match.teamA;
+    sideAWins = false;
   } else {
     // Draw in finals without tiebreaker - shouldn't happen, but handle gracefully
     return null;
   }
 
-  return { winner: winnerTeam, loser: loserTeam };
+  return sideAWins ? { winner: idA, loser: idB } : { winner: idB, loser: idA };
 };
 
 /**
@@ -334,9 +322,9 @@ export const calculateFinalsPlacement = (
   const placements: FinalPlacement[] = [];
   const placedTeamIds = new Set<string>();
 
-  // Helper to find team by name or ID
-  const findTeam = (nameOrId: string): Team | undefined => {
-    return teams.find(t => t.name === nameOrId || t.id === nameOrId);
+  // Team nur über die Team-ID (A-03) – ein Name findet keins
+  const findTeam = (teamId: string): Team | undefined => {
+    return teams.find(t => t.id === teamId);
   };
 
   // Process finals matches by finalType priority

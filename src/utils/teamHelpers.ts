@@ -8,6 +8,7 @@
  */
 
 import { Match, Team, Tournament } from '../types/tournament';
+import { matchInvolvesTeam } from '../core/models/matchSlot';
 
 /**
  * Check if a match has a result (score entered)
@@ -23,7 +24,7 @@ export function matchHasResult(match: Match): boolean {
  * Get all matches involving a specific team
  */
 export function getTeamMatches(matches: Match[], teamId: string): Match[] {
-  return matches.filter(m => m.teamA === teamId || m.teamB === teamId);
+  return matches.filter(m => matchInvolvesTeam(m, teamId));
 }
 
 /**
@@ -86,7 +87,7 @@ export interface TeamDeletionResult {
  * - Matches WITH results: Keep in schedule, mark team as removed
  */
 export function deleteTeamSafely(
-  tournament: Tournament,
+  tournament: Pick<Tournament, 'teams' | 'matches'>,
   teamId: string
 ): TeamDeletionResult {
   const team = tournament.teams.find(t => t.id === teamId);
@@ -125,7 +126,7 @@ export function deleteTeamSafely(
   // Team has NO matches with results - fully delete
   const updatedTeams = tournament.teams.filter(t => t.id !== teamId);
   const updatedMatches = tournament.matches.filter(
-    m => m.teamA !== teamId && m.teamB !== teamId
+    m => !matchInvolvesTeam(m, teamId)
   );
 
   return {
@@ -307,31 +308,5 @@ export function getTeamForDisplay(
   return {
     id: teamId,
     name: fallbackName,
-  };
-}
-
-/**
- * Find a team by name and return display-ready team object with logo and colors
- * Useful when only team name is available (e.g., from ScheduledMatch.homeTeam)
- */
-export function getTeamByNameForDisplay(
-  teams: Team[] | undefined,
-  teamName: string
-): TeamForDisplay {
-  const team = teams?.find(t => t.name === teamName);
-
-  if (team) {
-    return {
-      id: team.id,
-      name: team.name,
-      logo: team.logo,
-      colors: team.colors,
-    };
-  }
-
-  // Fallback: Create basic team object
-  return {
-    id: `temp-${teamName}`,
-    name: teamName,
   };
 }

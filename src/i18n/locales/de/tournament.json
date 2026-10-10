@@ -373,7 +373,10 @@
     "matchLoading": "Spiel wird geladen...",
     "noMatchesOnField": "Keine Spiele auf diesem Feld vorhanden",
     "enginePreparing": "Spiel wird vorbereitet …",
-    "engineReadyError": "Spiel konnte nicht vorbereitet werden — bitte erneut versuchen"
+    "engineReadyError": "Spiel konnte nicht vorbereitet werden — bitte erneut versuchen",
+    "awaitingTitle": "Anpfiff noch nicht möglich",
+    "awaitingReason": "Wartegrund: {{reason}}",
+    "awaitingOffline": "Dein Gerät hat kein Netz – dein Stand kann veraltet sein. Die Besetzung steht am Server vielleicht schon fest."
   },
   "tables": {
     "noGroups": "Dieses Turnier hat keine Gruppen.",
@@ -697,5 +700,25 @@
     "cancel": "Abbrechen",
     "save": "Speichern",
     "saving": "Speichern..."
+  },
+  "slot": {
+    "groupRank": "{{rankWord}} {{group}}",
+    "winnerOf": "Sieger {{match}}",
+    "loserOf": "Verlierer {{match}}",
+    "matchNumber": "Spiel {{number}}",
+    "unknown": "?",
+    "groupRankFallback": "{{rank}}. {{group}}",
+    "groupDefault": "Gruppe {{id}}",
+    "rank1": "Erster",
+    "rank2": "Zweiter",
+    "rank3": "Dritter",
+    "rank4": "Vierter",
+    "playoffFinal": "Finale",
+    "playoffSemifinal": "{{n}}. Halbfinale",
+    "playoffQuarterfinal": "Viertelfinale {{n}}",
+    "playoffRoundOf16": "Achtelfinale {{n}}",
+    "playoffPlace": "Spiel um Platz {{n}}",
+    "awaitGroup": "Abschluss von {{group}}",
+    "awaitMatch": "Abschluss von {{match}}"
   }
 }

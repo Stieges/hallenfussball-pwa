@@ -9,6 +9,7 @@
  */
 import type { Tournament, Team } from '../types/tournament';
 import type { LiveMatch } from '../core/models/LiveMatch';
+import { matchSideTeamId } from '../core/models/matchSlot';
 import { serverRules, type MatchContext } from '../core/match';
 import { toLiveMatchView, type LiveMatchMeta } from '../core/match/client';
 import type { MatchEngineContextValue } from '../features/match-engine/matchEngineContextInstance';
@@ -39,39 +40,33 @@ export interface ValidMatchEntry {
   awayVisual: { logo?: Team['logo']; colors?: Team['colors'] };
 }
 
-/** W4: Platzhalter/leere Team-IDs oder gleiche Team-ID auf beiden Seiten -> keine Kopie. */
-function isPlaceholderTeamId(teamId: string | undefined, tournament: Tournament): boolean {
-  if (!teamId) {
-    return true;
-  }
-  const lowered = teamId.toLowerCase();
-  if (lowered === 'tbd' || lowered.trim() === '') {
-    return true;
-  }
-  return !tournament.teams.some((team) => team.id.toLowerCase() === lowered);
+/**
+ * W4/V17 (A-03): Ein Spiel wird nur dann ein Engine-Spiel, wenn BEIDE Seiten besetzt sind (Slot `team`),
+ * die Team-IDs verschieden sind und beide in der Teamliste stehen. Offene Seiten (Slot `pending`),
+ * fehlende Slots und unbekannte Team-IDs ergeben keinen Eintrag – kein Namens-Lookup, keine Kopie.
+ */
+function findTeamById(tournament: Tournament, teamId: string): Team | undefined {
+  return tournament.teams.find((team) => team.id.toLowerCase() === teamId);
 }
 
 export function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
   const entries: ValidMatchEntry[] = [];
   for (const match of tournament.matches) {
-    const teamAId = match.teamA?.toLowerCase();
-    const teamBId = match.teamB?.toLowerCase();
-    if (
-      teamAId === undefined ||
-      teamBId === undefined ||
-      teamAId === teamBId ||
-      isPlaceholderTeamId(teamAId, tournament) ||
-      isPlaceholderTeamId(teamBId, tournament)
-    ) {
+    const teamAId = matchSideTeamId(match, 'A')?.toLowerCase();
+    const teamBId = matchSideTeamId(match, 'B')?.toLowerCase();
+    if (teamAId === undefined || teamBId === undefined || teamAId === teamBId) {
       continue;
+    }
+    const homeTeam = findTeamById(tournament, teamAId);
+    const awayTeam = findTeamById(tournament, teamBId);
+    if (homeTeam === undefined || awayTeam === undefined) {
+      continue; // unbekannte Team-ID: kein Engine-Spiel, kein Name aus anderer Quelle
     }
     // m5: der Server liefert `match_id` klein zurueck (uuid als Text) -- die Sammelabfrage
     // (`engineMatchIds`) und die Engine-eigenen Store-Schluessel muessen dieselbe Schreibweise
     // verwenden, sonst greift `engineMatchIds.has(matchId)` bei gross geschriebenen IDs nicht.
     const matchId = match.id.toLowerCase();
     const ctx: MatchContext = { matchId, teamAId, teamBId };
-    const homeTeam = tournament.teams.find((team) => team.id.toLowerCase() === teamAId);
-    const awayTeam = tournament.teams.find((team) => team.id.toLowerCase() === teamBId);
     const meta: LiveMatchMeta = {
       id: match.id,
       number: match.matchNumber ?? match.round,
@@ -79,8 +74,8 @@ export function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
       fieldId: `field-${match.field}`,
       scheduledKickoff: (match.scheduledTime ?? new Date()).toISOString(),
       refereeName: match.referee !== undefined ? `SR ${match.referee}` : undefined,
-      homeTeam: { id: ctx.teamAId, name: homeTeam?.name ?? match.teamA },
-      awayTeam: { id: ctx.teamBId, name: awayTeam?.name ?? match.teamB },
+      homeTeam: { id: ctx.teamAId, name: homeTeam.name },
+      awayTeam: { id: ctx.teamBId, name: awayTeam.name },
       version: 0,
     };
     entries.push({
@@ -91,8 +86,8 @@ export function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
       phase: match.phase,
       matchStatus: match.matchStatus,
       hasExistingResult: (match.scoreA ?? 0) > 0 || (match.scoreB ?? 0) > 0,
-      homeVisual: { logo: homeTeam?.logo, colors: homeTeam?.colors },
-      awayVisual: { logo: awayTeam?.logo, colors: awayTeam?.colors },
+      homeVisual: { logo: homeTeam.logo, colors: homeTeam.colors },
+      awayVisual: { logo: awayTeam.logo, colors: awayTeam.colors },
     });
   }
   return entries;

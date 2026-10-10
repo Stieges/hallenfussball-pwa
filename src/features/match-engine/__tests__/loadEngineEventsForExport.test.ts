@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Tournament } from '../../../types/tournament';
 import { LocalMatchStore, ClockSync, MatchEngine, MatchCommands } from '../../../core/match/client';
 import { serverRules } from '../../../core/match';
+import { looseVs } from '../../../test/matchSlotFixtures';
 import type { MatchEngineContextValue } from '../matchEngineContextInstance';
 
 const mockIsSupabaseConfigured = vi.hoisted(() => ({ current: false }));
@@ -31,9 +32,9 @@ function tournament(withIdleMatch = false): Tournament {
   return {
     id: 'tour-export',
     matches: [
-      { id: MATCH_ID, teamA: 'teama', teamB: 'teamb', round: 1, field: 1, matchNumber: 1 },
+      { id: MATCH_ID, ...looseVs('teama', 'teamb'), round: 1, field: 1, matchNumber: 1 },
       ...(withIdleMatch
-        ? [{ id: IDLE_MATCH_ID, teamA: 'teamb', teamB: 'teama', round: 2, field: 1, matchNumber: 2 }]
+        ? [{ id: IDLE_MATCH_ID, ...looseVs('teamb', 'teama'), round: 2, field: 1, matchNumber: 2 }]
         : []),
     ],
     teams: [{ id: 'teama', name: 'Heim' }, { id: 'teamb', name: 'Gast' }],

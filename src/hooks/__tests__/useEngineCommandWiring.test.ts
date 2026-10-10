@@ -27,6 +27,7 @@ vi.mock('../../features/auth/hooks/useMyTournamentRole', () => ({
 
 import { useEngineCommandWiring, type EngineCommandFallbackHandlers } from '../useEngineCommandWiring';
 import type { MatchEngineContextValue } from '../../features/match-engine/matchEngineContextInstance';
+import { looseVs } from '../../test/matchSlotFixtures';
 
 const ENGINE_MATCH_ID = 'engine-1';
 const OLD_MATCH_ID = 'old-1';
@@ -63,8 +64,8 @@ function tournament(): Tournament {
   return {
     id: 'tour-wiring',
     matches: [
-      { id: ENGINE_MATCH_ID, teamA: 'teama', teamB: 'teamb', round: 1, field: 1, matchNumber: 1 },
-      { id: OLD_MATCH_ID, teamA: 'teama', teamB: 'teamb', round: 1, field: 2, matchNumber: 2, matchStatus: 'finished' },
+      { id: ENGINE_MATCH_ID, ...looseVs('teama', 'teamb'), round: 1, field: 1, matchNumber: 1 },
+      { id: OLD_MATCH_ID, ...looseVs('teama', 'teamb'), round: 1, field: 2, matchNumber: 2, matchStatus: 'finished' },
     ],
     teams: [
       { id: 'teama', name: 'Heim' },
@@ -280,7 +281,7 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
     const isEngineDestinedMatchId = (matchId: string) => matchId === RACE_MATCH_ID;
     const raceTournament: Tournament = {
       ...tournament(),
-      matches: [...tournament().matches, { id: RACE_MATCH_ID, teamA: 'teama', teamB: 'teamb', round: 1, field: 3, matchNumber: 3 }],
+      matches: [...tournament().matches, { id: RACE_MATCH_ID, ...looseVs('teama', 'teamb'), round: 1, field: 3, matchNumber: 3 }],
     };
     const { result } = renderHook(() =>
       useEngineCommandWiring(raceTournament, engineContext, engineLiveMatches, fallback, isEngineDestinedMatchId, ensureEngineMatchReady),

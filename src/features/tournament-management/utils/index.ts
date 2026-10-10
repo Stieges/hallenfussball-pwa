@@ -4,7 +4,6 @@
 
 export {
   isMatchFinished,
-  getTeamName,
   isMatchRunning,
   getFinishedMatchIds,
 } from './scheduleHelpers';

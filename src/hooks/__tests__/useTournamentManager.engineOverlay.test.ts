@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { Tournament } from '../../core/models/types';
 import { useTournamentManager } from '../useTournamentManager';
+import { looseVs } from '../../test/matchSlotFixtures';
 
 const mockLoadTournament = vi.fn();
 const mockUpdateTournament = vi.fn();
@@ -54,8 +55,7 @@ function makeTournament(overrides: Partial<Tournament> = {}): Tournament {
         id: 'm1',
         round: 1,
         field: 1,
-        teamA: 'teamA',
-        teamB: 'teamB',
+        ...looseVs('teamA', 'teamB'),
         scoreA: 0,
         scoreB: 0,
         matchStatus: 'scheduled',
@@ -298,7 +298,7 @@ describe('useTournamentManager x useEngineOverlayForTournament (W7)', () => {
     const t = makeTournament({
       matches: [
         ...makeTournament().matches,
-        { id: 'm2', round: 1, field: 2, teamA: 'teamA', teamB: 'teamB', scoreA: 0, scoreB: 0, matchStatus: 'finished' },
+        { id: 'm2', round: 1, field: 2, ...looseVs('teamA', 'teamB'), scoreA: 0, scoreB: 0, matchStatus: 'finished' },
       ],
     });
     mockLoadTournament.mockResolvedValue(t);

@@ -80,6 +80,7 @@ vi.mock('../../../hooks/useMatchExecution', () => ({
 }));
 
 import { ManagementTab } from '../ManagementTab';
+import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
 const MATCH_ID = 'match-1';
 const HOME = { id: 'team-a', name: 'FC Alpha' };
@@ -125,6 +126,7 @@ const schedule = {
     id: MATCH_ID, matchNumber: 1, time: '10:00', field: 1, slot: 1,
     homeTeam: HOME.name, awayTeam: AWAY.name,
     originalTeamA: HOME.id, originalTeamB: AWAY.id,
+    slotA: testTeamSlot(HOME.id), slotB: testTeamSlot(AWAY.id),
     phase: 'groupStage', label: 'Gruppenphase', duration: 10,
   }],
   phases: [],

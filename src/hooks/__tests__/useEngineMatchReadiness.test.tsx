@@ -33,8 +33,9 @@ const mockContext = {
 } as unknown as MatchEngineContextValue;
 
 import { useEngineMatchReadiness } from '../useEngineMatchReadiness';
+import { looseVs } from '../../test/matchSlotFixtures';
 
-function match(partial: Partial<Match> & Pick<Match, 'id' | 'teamA' | 'teamB'>): Match {
+function match(partial: Partial<Match> & Pick<Match, 'id' | 'teamA' | 'teamB' | 'slotA' | 'slotB'>): Match {
   return {
     round: 1,
     field: 1,
@@ -62,7 +63,7 @@ describe('useEngineMatchReadiness', () => {
   });
 
   it('isEngineDestinedMatch ist schon VOR dem asynchronen ensureMatch synchron wahr fuer ein neues scheduled-Spiel', () => {
-    const t = tournament([match({ id: 'm-race', teamA: 'teamA', teamB: 'teamB', matchStatus: 'scheduled' })]);
+    const t = tournament([match({ id: 'm-race', ...looseVs('teamA', 'teamB'), matchStatus: 'scheduled' })]);
     const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
 
     expect(result.current.isEngineDestinedMatch('m-race')).toBe(true);
@@ -71,14 +72,14 @@ describe('useEngineMatchReadiness', () => {
   it('isEngineDestinedMatch bleibt false fuer ein bereits abgeschlossenes Altspiel MIT eingetragenem Ergebnis', () => {
     // Ergebnis gesetzt (echtes, unzweideutiges Altspiel) -- ein `finished` Spiel OHNE Ergebnis waere
     // seit P2 (E1-Randfall) ein "fremd-Kandidat" (s. eigene Tests unten), kein reines Altspiel mehr.
-    const t = tournament([match({ id: 'm-old', teamA: 'teamA', teamB: 'teamB', matchStatus: 'finished', scoreA: 3, scoreB: 0 })]);
+    const t = tournament([match({ id: 'm-old', ...looseVs('teamA', 'teamB'), matchStatus: 'finished', scoreA: 3, scoreB: 0 })]);
     const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
 
     expect(result.current.isEngineDestinedMatch('m-old')).toBe(false);
   });
 
   it('isEngineDestinedMatch bleibt false fuer ein scheduled-Spiel MIT bereits laufendem Alt-LiveMatch (Uebergangsschutz)', () => {
-    const t = tournament([match({ id: 'm-transition', teamA: 'teamA', teamB: 'teamB', matchStatus: 'scheduled' })]);
+    const t = tournament([match({ id: 'm-transition', ...looseVs('teamA', 'teamB'), matchStatus: 'scheduled' })]);
     const oldLiveMatches = new Map<string, LiveMatch>([
       ['m-transition', { id: 'm-transition', status: 'RUNNING' } as unknown as LiveMatch],
     ]);
@@ -88,7 +89,7 @@ describe('useEngineMatchReadiness', () => {
   });
 
   it('ensureEngineMatchReady liefert nach ensureMatch eine echte Engine-Ansicht fuer ein neues Spiel', async () => {
-    const t = tournament([match({ id: 'm-race-ready', teamA: 'teamA', teamB: 'teamB', matchStatus: 'scheduled' })]);
+    const t = tournament([match({ id: 'm-race-ready', ...looseVs('teamA', 'teamB'), matchStatus: 'scheduled' })]);
     const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
 
     const ready = await result.current.ensureEngineMatchReady('m-race-ready');
@@ -99,14 +100,14 @@ describe('useEngineMatchReadiness', () => {
   });
 
   it('ensureEngineMatchReady liefert null fuer ein unbekanntes Spiel (nicht im Spielplan)', async () => {
-    const t = tournament([match({ id: 'm-known', teamA: 'teamA', teamB: 'teamB' })]);
+    const t = tournament([match({ id: 'm-known', ...looseVs('teamA', 'teamB') })]);
     const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
 
     await expect(result.current.ensureEngineMatchReady('m-unknown')).resolves.toBeNull();
   });
 
   it('ohne MatchEngineProvider (context null): isEngineDestinedMatch false, ensureEngineMatchReady liefert null', async () => {
-    const t = tournament([match({ id: 'm-no-provider', teamA: 'teamA', teamB: 'teamB', matchStatus: 'scheduled' })]);
+    const t = tournament([match({ id: 'm-no-provider', ...looseVs('teamA', 'teamB'), matchStatus: 'scheduled' })]);
     const { result } = renderHook(() => useEngineMatchReadiness(t, null, new Map()));
 
     expect(result.current.isEngineDestinedMatch('m-no-provider')).toBe(false);
@@ -118,18 +119,18 @@ describe('useEngineMatchReadiness', () => {
   // ein Ergebnis. Die B1-Klausel allein (nur `scheduled`) haette es als reines Altspiel behandelt --
   // `service.initializeMatch`/`liveMatchRepository.save` liefen, ein Anpfiff ginge ueber den Altweg.
   it('P2: ein fremd (auf einem anderen Geraet) laufendes Spiel (matchStatus != scheduled, keine Altzeile, kein Ergebnis) ist engine-destined', () => {
-    const t = tournament([match({ id: 'm-foreign', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const t = tournament([match({ id: 'm-foreign', ...looseVs('teamA', 'teamB'), matchStatus: 'running' })]);
     const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
 
     expect(result.current.isEngineDestinedMatch('m-foreign')).toBe(true);
   });
 
   it('P2: ein "fremdes" Spiel MIT bereits eingetragenem Ergebnis oder aktiver Altzeile ist NICHT engine-destined (echtes Altspiel/Uebergang)', () => {
-    const withResult = tournament([match({ id: 'm-foreign-result', teamA: 'teamA', teamB: 'teamB', matchStatus: 'finished', scoreA: 2, scoreB: 1 })]);
+    const withResult = tournament([match({ id: 'm-foreign-result', ...looseVs('teamA', 'teamB'), matchStatus: 'finished', scoreA: 2, scoreB: 1 })]);
     const { result: r1 } = renderHook(() => useEngineMatchReadiness(withResult, mockContext, new Map()));
     expect(r1.current.isEngineDestinedMatch('m-foreign-result')).toBe(false);
 
-    const withOldRunning = tournament([match({ id: 'm-foreign-old', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const withOldRunning = tournament([match({ id: 'm-foreign-old', ...looseVs('teamA', 'teamB'), matchStatus: 'running' })]);
     const oldLiveMatches = new Map<string, LiveMatch>([
       ['m-foreign-old', { id: 'm-foreign-old', status: 'RUNNING' } as unknown as LiveMatch],
     ]);
@@ -149,7 +150,7 @@ describe('useEngineMatchReadiness', () => {
       }],
       newWatermark: 1,
     });
-    const t = tournament([match({ id: 'm-foreign-has-events', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const t = tournament([match({ id: 'm-foreign-has-events', ...looseVs('teamA', 'teamB'), matchStatus: 'running' })]);
     const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
 
     const ready = await result.current.ensureEngineMatchReady('m-foreign-has-events');
@@ -160,7 +161,7 @@ describe('useEngineMatchReadiness', () => {
 
   it('P2 (beide Ausgaenge): Server liefert KEINE Ereignisse -- ensureEngineMatchReady liefert null (Altspiel, alter Weg erlaubt)', async () => {
     mockFetchConfirmed.mockResolvedValue({ events: [], newWatermark: 0 });
-    const t = tournament([match({ id: 'm-foreign-no-events', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const t = tournament([match({ id: 'm-foreign-no-events', ...looseVs('teamA', 'teamB'), matchStatus: 'running' })]);
     const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
 
     await expect(result.current.ensureEngineMatchReady('m-foreign-no-events')).resolves.toBeNull();
@@ -171,7 +172,7 @@ describe('useEngineMatchReadiness', () => {
   // als bestaetigtes Altspiel gelten (das waere `null`). Unklar bleibt "vorlaeufig nur lesen".
   it('E1 offline: scheitert die Server-Abfrage fuer einen fremd-Kandidaten, wirft ensureEngineMatchReady statt null zu liefern (bleibt unklar)', async () => {
     mockFetchConfirmed.mockRejectedValueOnce(new Error('Netz weg'));
-    const t = tournament([match({ id: 'm-foreign-offline', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const t = tournament([match({ id: 'm-foreign-offline', ...looseVs('teamA', 'teamB'), matchStatus: 'running' })]);
     const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
 
     await expect(result.current.ensureEngineMatchReady('m-foreign-offline')).rejects.toThrow();
@@ -179,7 +180,7 @@ describe('useEngineMatchReadiness', () => {
 
   it('E1 offline: nach einer gescheiterten Klaerung loest ein ERNEUTER Aufruf mit funktionierendem Netz korrekt auf (kein dauerhaftes "unklar")', async () => {
     mockFetchConfirmed.mockRejectedValueOnce(new Error('Netz weg'));
-    const t = tournament([match({ id: 'm-foreign-retry', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const t = tournament([match({ id: 'm-foreign-retry', ...looseVs('teamA', 'teamB'), matchStatus: 'running' })]);
     const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
 
     await expect(result.current.ensureEngineMatchReady('m-foreign-retry')).rejects.toThrow();
@@ -193,7 +194,7 @@ describe('useEngineMatchReadiness', () => {
   it('E1 offline: Gast/ohne Supabase loest trotz scheiternder fetchConfirmed sofort als Altspiel auf (kein Wurf) -- runCatchUp ruft fetchConfirmed fuer guest gar nicht auf', async () => {
     mockFetchConfirmed.mockRejectedValue(new Error('sollte fuer guest nie aufgerufen werden'));
     await mockContext.engine.start('guest');
-    const t = tournament([match({ id: 'm-foreign-guest', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const t = tournament([match({ id: 'm-foreign-guest', ...looseVs('teamA', 'teamB'), matchStatus: 'running' })]);
     const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
 
     await expect(result.current.ensureEngineMatchReady('m-foreign-guest')).resolves.toBeNull();
@@ -205,7 +206,7 @@ describe('useEngineMatchReadiness', () => {
   // fremd-Kandidat gegolten (mit echtem Kontext, anders als das reine "kein Kontext"-Gate). Der
   // Fix in `engineMatchModel.ts` ist die einzige Quelle fuer alle drei Funktionen dieses Hooks.
   it('Fixrunde 5: ein uebersprungenes Spiel (matchStatus skipped) ohne Ergebnis ist NICHT engine-destined/fremd-Kandidat', () => {
-    const t = tournament([match({ id: 'm-skipped', teamA: 'teamA', teamB: 'teamB', matchStatus: 'skipped' })]);
+    const t = tournament([match({ id: 'm-skipped', ...looseVs('teamA', 'teamB'), matchStatus: 'skipped' })]);
     const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
 
     expect(result.current.isForeignCandidateMatch('m-skipped')).toBe(false);

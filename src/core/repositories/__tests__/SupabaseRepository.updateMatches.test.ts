@@ -21,6 +21,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MatchUpdate } from '../../models/types';
+import { teamSlot, pendingSlot } from '../../models/matchSlot';
+import { testUuid } from '../../../test/testIds';
 
 // ============================================================================
 // MOCKS
@@ -37,6 +39,11 @@ const hoisted = vi.hoisted(() => {
   const matchesUpdateEqIdMock = vi.fn((_col: string, _val: string) => ({ eq: matchesUpdateEqTournamentMock }));
   const matchesUpdateMock = vi.fn(() => ({ eq: matchesUpdateEqIdMock }));
 
+  // matches: select('id, team_a_id, team_b_id').eq('tournament_id').in('id', ids) -- A-03 (M3): Cloud-Besetzung lesen
+  const matchesSelectInMock = vi.fn();
+  const matchesSelectEqMock = vi.fn(() => ({ in: matchesSelectInMock }));
+  const matchesSelectMock = vi.fn((_cols: string) => ({ eq: matchesSelectEqMock }));
+
   // tournaments: update(...).eq('id').select('id') -- unchanged, no .select()-based row check
   // added here (deliberately, see file doc).
   const tournamentsUpdateSelectMock = vi.fn().mockResolvedValue({ data: [], error: null });
@@ -48,7 +55,7 @@ const hoisted = vi.hoisted(() => {
       return { select: teamsSelectMock };
     }
     if (table === 'matches') {
-      return { update: matchesUpdateMock };
+      return { update: matchesUpdateMock, select: matchesSelectMock };
     }
     if (table === 'tournaments') {
       return { update: tournamentsUpdateMock };
@@ -60,7 +67,10 @@ const hoisted = vi.hoisted(() => {
 
   return {
     teamsSelectEqMock,
+    teamsSelectMock,
     matchesUpdateSelectMock,
+    matchesSelectMock,
+    matchesSelectInMock,
     matchesUpdateMock,
     matchesUpdateEqIdMock,
     tournamentsUpdateSelectMock,
@@ -85,8 +95,8 @@ describe('SupabaseRepository.updateMatches — 0-Zeilen-Update (Risiko 4)', () =
 
   // Ersatz-Assertion für den 0-Zeilen-/RLS-Guard: eine reine Ergebnis-Änderung ist seit
   // V4 nur noch { updated_at } und wird gar nicht erst gesendet (F6) — der Guard-Test braucht
-  // deshalb ein Update mit echten Nicht-V4-Spalten (teamA mappt auf team_a_id/team_a_placeholder).
-  const update: MatchUpdate = { id: 'match-1', teamA: 'FC Alpha' };
+  // deshalb ein Update mit echten Nicht-V4-Spalten (A-02: slotA mappt auf team_a_id/slot_a_source).
+  const update: MatchUpdate = { id: 'match-1', slotA: teamSlot(testUuid(1)) };
 
   it('throws when the match update affects 0 rows (RLS filtered it away, no Postgres error)', async () => {
     hoisted.matchesUpdateSelectMock.mockResolvedValue({ data: [], error: null });
@@ -147,7 +157,7 @@ describe('SupabaseRepository.updateMatches — 0-Zeilen-Update (Risiko 4)', () =
   it('gemischtes Batch: nur das Update mit echten Spalten wird gesendet, tournaments-Bump genau einmal', async () => {
     hoisted.matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-2' }], error: null });
     const resultOnly: MatchUpdate = { id: 'match-1', matchStatus: 'running' };
-    const teamChange: MatchUpdate = { id: 'match-2', teamA: 'FC Alpha' };
+    const teamChange: MatchUpdate = { id: 'match-2', slotA: teamSlot(testUuid(1)) };
 
     const repo = new SupabaseRepository();
     await repo.updateMatches('tour-1', [resultOnly, teamChange]);
@@ -157,5 +167,82 @@ describe('SupabaseRepository.updateMatches — 0-Zeilen-Update (Risiko 4)', () =
     expect(hoisted.matchesUpdateEqIdMock).toHaveBeenCalledTimes(1);
     expect(hoisted.matchesUpdateEqIdMock).toHaveBeenCalledWith('id', 'match-2');
     expect(hoisted.tournamentsUpdateMock).toHaveBeenCalledTimes(1);
+  });
+
+  // A-02 (MVP-Bauplan Spur A): Spielseiten kommen aus dem Slot, nie über eine Namens-Suche.
+  it('Teamtausch erreicht die Cloud: getauschte Slots erreichen die Cloud als getauschte Team-IDs, ohne Teams-Abfrage', async () => {
+    hoisted.matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-1' }], error: null });
+    const nord = testUuid(1);
+    const sued = testUuid(2);
+
+    const repo = new SupabaseRepository();
+    await repo.updateMatches('tour-1', [{ id: 'match-1', slotA: teamSlot(sued), slotB: teamSlot(nord) }]);
+
+    expect(hoisted.matchesUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ team_a_id: sued, team_b_id: nord })
+    );
+    expect(hoisted.teamsSelectMock).not.toHaveBeenCalled();
+  });
+
+  it('Gegenbeispiel: ein Teamname im Übergangsfeld teamA erreicht die Cloud nicht', async () => {
+    const repo = new SupabaseRepository();
+    await repo.updateMatches('tour-1', [{ id: 'match-1', teamA: 'FC Alpha' }]);
+
+    expect(hoisted.matchesUpdateMock).not.toHaveBeenCalled();
+  });
+
+  // A-03 (M3, @TM-027): C2-Schutz auch im Delta-Weg
+  describe('@TM-027 offene Seite im Update setzt eine in der Cloud aufgelöste Seite nicht zurück', () => {
+    const nord = testUuid(1);
+    const pendingA = pendingSlot({ kind: 'groupRank', group: 'A', rank: 1 });
+
+    it('@TM-027 Gegenbeispiel: Update mit offenem Slot lässt die aufgelöste team_a_id stehen', async () => {
+      hoisted.matchesSelectInMock.mockResolvedValue({
+        data: [{ id: 'match-1', team_a_id: nord, team_b_id: null }],
+        error: null,
+      });
+      hoisted.matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-1' }], error: null });
+
+      const repo = new SupabaseRepository();
+      // gleichzeitig ändert das Update die Feldzuordnung der anderen Seite, damit das Update gesendet wird
+      await repo.updateMatches('tour-1', [{ id: 'match-1', slotA: pendingA, slotB: teamSlot(testUuid(2)) }]);
+
+      const sent = (hoisted.matchesUpdateMock.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      expect(sent).not.toHaveProperty('team_a_id');
+      expect(sent).not.toHaveProperty('slot_a_source');
+      expect(sent).toMatchObject({ team_b_id: testUuid(2) });
+      expect(hoisted.matchesSelectMock).toHaveBeenCalledWith('id, team_a_id, team_b_id');
+      expect(hoisted.matchesSelectInMock).toHaveBeenCalledWith('id', ['match-1']);
+    });
+
+    it('@TM-027 offene Seite, Cloud ebenfalls offen: Herkunft wird geschrieben', async () => {
+      hoisted.matchesSelectInMock.mockResolvedValue({ data: [{ id: 'match-1', team_a_id: null, team_b_id: null }], error: null });
+      hoisted.matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-1' }], error: null });
+
+      const repo = new SupabaseRepository();
+      await repo.updateMatches('tour-1', [{ id: 'match-1', slotA: pendingA }]);
+
+      expect(hoisted.matchesUpdateMock).toHaveBeenCalledWith(
+        expect.objectContaining({ team_a_id: null, slot_a_source: { kind: 'groupRank', group: 'A', rank: 1 } })
+      );
+    });
+
+    it('@TM-027 Gegenbeispiel: besetzte lokale Seite überschreibt die Cloud-Seite (Teamtausch) und braucht keine Cloud-Abfrage', async () => {
+      hoisted.matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-1' }], error: null });
+
+      const repo = new SupabaseRepository();
+      await repo.updateMatches('tour-1', [{ id: 'match-1', slotA: teamSlot(testUuid(2)) }]);
+
+      expect(hoisted.matchesSelectMock).not.toHaveBeenCalled();
+      expect(hoisted.matchesUpdateMock).toHaveBeenCalledWith(expect.objectContaining({ team_a_id: testUuid(2) }));
+    });
+
+    it('@TM-027 Lesefehler der Cloud-Besetzung bricht das Update laut ab, ohne zu schreiben', async () => {
+      hoisted.matchesSelectInMock.mockResolvedValue({ data: null, error: { message: 'boom' } });
+
+      const repo = new SupabaseRepository();
+      await expect(repo.updateMatches('tour-1', [{ id: 'match-1', slotA: pendingA }])).rejects.toThrow(/boom/);
+      expect(hoisted.matchesUpdateMock).not.toHaveBeenCalled();
+    });
   });
 });

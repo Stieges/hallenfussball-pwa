@@ -12,6 +12,7 @@
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { DndContext, closestCenter, DragOverlay, Announcements } from '@dnd-kit/core';
+import { buildSideContext, sideName } from '../../components/schedule/matchSides';
 import { Tournament, Match } from '../../types/tournament';
 import type { MatchUpdate } from '../../core/models/types';
 
@@ -452,11 +453,9 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
       if (!match) {
         return `Spiel ${matchId}`;
       }
-      const teams = tournament.teams;
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use team ID fallback
-      const homeTeam = teams.find(t => t.id === match.teamA)?.name || match.teamA;
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use team ID fallback
-      const awayTeam = teams.find(t => t.id === match.teamB)?.name || match.teamB;
+      const sideContext = buildSideContext(tournament, [match]);
+      const homeTeam = sideName(match, 'A', sideContext);
+      const awayTeam = sideName(match, 'B', sideContext);
       return `Spiel ${match.round}: ${homeTeam} gegen ${awayTeam}`;
     };
 
@@ -488,7 +487,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
         return `Verschieben von ${getMatchLabel(active.id)} abgebrochen.`;
       },
     };
-  }, [tournament.matches, tournament.teams]);
+  }, [tournament]);
 
   // Build schedule grid
   const scheduleGrid = useMemo(
@@ -663,6 +662,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
                         <DraggableMatch
                           match={match}
                           teams={tournament.teams}
+                          tournament={tournament}
                           isEditing={isEditing}
                           isSelected={state.selectedMatchId === match.id}
                           conflicts={conflictResult.getMatchConflicts(match.id)}
@@ -711,6 +711,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
                 <DraggableMatch
                   match={activeMatch}
                   teams={tournament.teams}
+                  tournament={tournament}
                   isEditing={true}
                   isSelected={true}
                   compact={compact}

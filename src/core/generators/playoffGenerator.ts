@@ -17,7 +17,7 @@ import { FinalsPreset, FinalsConfig } from '../../types/tournament';
 export interface PlayoffMatch {
   id: string;
   label: string;
-  home: string;        // z.B. "1A", "2B", "winner-semi1", "loser-qf2"
+  home: string;        // z.B. "group-a-1st", "semi1-winner", "qf2-loser"
   away: string;
   rank?: number | [number, number]; // Platzierung(en), die ausgespielt werden
   dependsOn?: string[]; // IDs von Spielen, die vorher stattfinden müssen

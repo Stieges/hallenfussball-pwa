@@ -10,26 +10,13 @@
  * Produktion und keine echten Geheimnisse.
  */
 
-import { createHash } from 'node:crypto';
-
 // =============================================================================
 // DETERMINISTISCHE IDs
 // =============================================================================
 
-/**
- * Deterministische UUID aus einem stabilen Seed-String (keine Zufallswerte, kein `uuid`-Paket
- * nötig). Kein RFC-4122-v5 (kein externes Namespace-Hashing-Schema vorgeschrieben) — nur
- * stabil, kollisionsarm (SHA-256) und ein gültiges `uuid`-Spaltenformat für Postgres.
- */
-export function e2eUuid(seed: string): string {
-  const hash = createHash('sha256').update(`hallenfussball-e2e:${seed}`).digest('hex');
-  const bytes = hash.slice(0, 32).split('');
-  // Version-Nibble auf "4" (kosmetisch, Postgres erzwingt das nicht, hält die IDs aber
-  // von echten, per gen_random_uuid() erzeugten Zeilen visuell unterscheidbar).
-  bytes[12] = '4';
-  const hex = bytes.join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
-}
+import { e2eUuid } from './e2eUuid';
+
+export { e2eUuid };
 
 // =============================================================================
 // PASSWORT + REGISTRIERUNGSCODE
@@ -176,29 +163,25 @@ export const E2E_LIVE_CUP_GROUP_A = E2E_LIVE_CUP_TEAM_NAMES.slice(0, 4);
 export const E2E_LIVE_CUP_GROUP_B = E2E_LIVE_CUP_TEAM_NAMES.slice(4, 8);
 
 /**
- * Fixrunde 2 (N8): Seed-Ausgangsstand des EINEN laufenden Live-Cup-Spiels (`scripts/e2e-seed.ts`,
- * Abschnitt "Live-Cup"). Alle vier Tests in `two-devices.cloud.spec.ts` (N4: inkl. des ehemals
- * eigenständigen Offline-Tests) bauen ihren Spielstand in `finally` darauf zurück -- vorher
- * dreimal literal `1, 0` im Code, jetzt EINE Quelle.
+ * A-23 (Durchstich, `turniertag.spec.ts`): Turnier mit 8 Teams in 2 Gruppen und Top 4
+ * (Halbfinale über Kreuz, Spiel um Platz 3, Finale). Der Seed legt es privat und unberührt an;
+ * die Schritte D1-D15 spielen den Turniertag darauf durch.
  */
-export const E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE = { home: 1, away: 0 } as const;
+export const E2E_TURNIERTAG_CUP_ID = e2eUuid('tournament:turniertag-cup');
+export const E2E_TURNIERTAG_CUP_TITLE = 'Turniertag-Cup';
+export const E2E_TURNIERTAG_TEAM_NAMES = ['Adler', 'Bären', 'Falken', 'Löwen', 'Panther', 'Tiger', 'Wölfe', 'Füchse'] as const;
+/** 2 Gruppen à 4 Teams: 2 x 6 Gruppenspiele + 2 Halbfinals + Platz 3 + Finale. */
+export const E2E_TURNIERTAG_MATCH_COUNT = 16;
+/** Der Turniertag-Cup ist veröffentlicht (Zuschauer-Seite, Bildschirm) mit festem Code und einem Monitor. */
+export const E2E_TURNIERTAG_SHARE_CODE = 'TURNTG';
+export const E2E_TURNIERTAG_MONITOR_ID = e2eUuid('monitor:turniertag-cup:1');
+
+/** Zweites Turnier am selben Tag (D15): leerer Seed-Cup ohne Monitore, übernimmt diese aus dem Turniertag-Cup. */
+export const E2E_ZWEITES_TURNIER_ID = e2eUuid('tournament:zweites-turnier');
+export const E2E_ZWEITES_TURNIER_TITLE = 'Zweites Turnier';
 
 /** Team-Namen des Public-Cup (kleiner, für "einige Ergebnisse"). */
 export const E2E_PUBLIC_CUP_TEAM_NAMES = ['Public Löwen', 'Public Adler', 'Public Falken', 'Public Bären'] as const;
-
-/**
- * Abschluss-Review (final-review.md, I2/Ruling AG): analog zu `E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE`
- * -- der Seed setzt jetzt EIN Public-Cup-Spiel direkt auf `matchStatus: 'running'` (Feld 1, wie der
- * `live`-Slide des Seed-Monitors ihn erwartet), genau wie beim Live-Cup DIREKT in der DB, nie über
- * `MatchExecutionService.initializeMatch()` -- das würde bei einem noch nie zuvor geladenen Spiel an
- * C-NSTART scheitern (`STATUS_TO_DB.NOT_STARTED='not_started'` verletzt die DB-CHECK-Constraint,
- * siehe `two-devices.cloud.spec.ts`, Testfall "C-NSTART"). Ohne dieses Bypass hätte JEDES
- * Public-Cup-Spiel diesen Fehler getroffen, sobald ein Test es zum ersten Mal startet -- der
- * Echtzeit-Nachweis "Monitor sieht Tor ohne Reload" (Verifikation #6 des Plans) wäre nie über
- * C-NSTART hinausgekommen. `resetRunningMatchScore()` (`tests/e2e/cloud/helpers.ts`) setzt diesen
- * Wert nach jedem Test zurück, genau wie beim Live-Cup.
- */
-export const E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE = { home: 1, away: 0 } as const;
 
 // =============================================================================
 // MITARBEITER-ROLLEN IM LIVE-CUP (verbindliche Tabelle aus dem Brief)
@@ -233,3 +216,6 @@ export const E2E_LIVE_CUP_COLLABORATORS: E2ELiveCupCollaboratorSpec[] = [
   { userKey: 'viewer', role: 'viewer' },
   { userKey: 'revoked', role: 'co-admin', revoked: true },
 ];
+
+// Engine-Cups (A-23/C3b-3a, S5): einzige Quelle in `engineCups.ts` (Dateigrenze 300 Zeilen).
+export * from './engineCups';

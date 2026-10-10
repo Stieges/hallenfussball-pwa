@@ -26,6 +26,9 @@ import type {
 // (since A2 Fixrunde 3, N2) allows `null` on result/status fields to survive the offline mutation
 // queue's JSON round-trip.
 import type { MatchUpdate as DomainMatchUpdate } from '../models/types';
+import { RepositoryError } from '../errors';
+import { SlotSourceSchema, TeamIdSchema, type MatchSlot, type SlotSource } from '../models/schemas/MatchSlotSchema';
+import { pendingSlot, slotSource, slotTeamId, teamSlot, transitionalSides } from '../models/matchSlot';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -33,9 +36,16 @@ type TournamentInsert = Database['public']['Tables']['tournaments']['Insert'];
 type TournamentUpdate = Database['public']['Tables']['tournaments']['Update'];
 type TeamRow = Database['public']['Tables']['teams']['Row'];
 type TeamInsert = Database['public']['Tables']['teams']['Insert'];
-type MatchRow = Database['public']['Tables']['matches']['Row'];
-type MatchInsert = Database['public']['Tables']['matches']['Insert'];
-type MatchUpdate = Database['public']['Tables']['matches']['Update'];
+// A-02 (MVP-Bauplan Spur A): Herkunftsspalten aus `supabase/migrations/20261003_001_match_slots.sql`.
+// `src/types/supabase.ts` wird erst nach dem Merge auf `main` neu erzeugt (Skill supabase-types-regen) –
+// bis dahin hier von Hand ergänzt.
+interface MatchSlotColumns {
+  slot_a_source?: Json | null;
+  slot_b_source?: Json | null;
+}
+type MatchRow = Database['public']['Tables']['matches']['Row'] & MatchSlotColumns;
+type MatchInsert = Database['public']['Tables']['matches']['Insert'] & MatchSlotColumns;
+type MatchUpdate = Database['public']['Tables']['matches']['Update'] & MatchSlotColumns;
 type CollaboratorInsert = Database['public']['Tables']['tournament_collaborators']['Insert'];
 type CollaboratorUpdate = Database['public']['Tables']['tournament_collaborators']['Update'];
 type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
@@ -116,30 +126,56 @@ export function mapTeamToSupabase(
 // MATCH MAPPERS
 // =============================================================================
 
+type Side = 'A' | 'B';
+
 /**
- * Maps a Supabase match row to frontend Match type
- * Note: teamA/teamB are stored as UUIDs in Supabase, but frontend uses team names
- * The teamIdToName map is used for conversion
+ * A-02: Spielseite aus der Zeile – `team_x_id` gesetzt → Team-Slot (Herkunft, falls vorhanden, als
+ * `resolvedFrom`); sonst offener Slot mit Herkunft. Keine Namens-Map, kein Platzhalter-Text.
+ * Weder Team-ID noch Herkunft oder eine ungültige Herkunft → lautes Scheitern (die DB-Prüfung
+ * `matches_slot_x_present`/`matches_slot_x_source_valid` macht das unerreichbar; tritt es doch auf,
+ * ist die Zeile kaputt und darf nicht still als „TBD“ weiterleben).
  */
-export function mapMatchFromSupabase(
-  row: MatchRow,
-  teamIdToName: Map<string, string>
-): Match {
-  // Get team names from IDs, fallback to placeholder or 'TBD'
-  const teamA = row.team_a_id
-    ? teamIdToName.get(row.team_a_id) ?? row.team_a_placeholder ?? 'TBD'
-    : row.team_a_placeholder ?? 'TBD';
-  const teamB = row.team_b_id
-    ? teamIdToName.get(row.team_b_id) ?? row.team_b_placeholder ?? 'TBD'
-    : row.team_b_placeholder ?? 'TBD';
+function slotFromRow(matchId: string, side: Side, teamId: string | null, source: Json | null | undefined): MatchSlot {
+  let origin: SlotSource | undefined;
+  if (source !== null && source !== undefined) {
+    const parsed = SlotSourceSchema.safeParse(source);
+    if (!parsed.success) {
+      throw new RepositoryError('mapMatch', `Spiel ${matchId}, Seite ${side}: Herkunft ungültig (${JSON.stringify(source)})`);
+    }
+    origin = parsed.data;
+  }
+  if (teamId !== null) {
+    if (!TeamIdSchema.safeParse(teamId).success) {
+      throw new RepositoryError('mapMatch', `Spiel ${matchId}, Seite ${side}: Team-ID ist keine UUID (${teamId})`);
+    }
+    return teamSlot(teamId, origin);
+  }
+  if (origin === undefined) {
+    throw new RepositoryError('mapMatch', `Spiel ${matchId}, Seite ${side}: weder Team-ID noch Herkunft`);
+  }
+  return pendingSlot(origin);
+}
+
+/**
+ * Maps a Supabase match row to frontend Match type.
+ *
+ * A-02: `slotA/slotB` aus Team-ID bzw. Herkunft (siehe `slotFromRow`). Das Übergangsfeld
+ * `teamA/teamB` (Übergangsfeld, Löschen in B-35) trägt die Team-ID – wie ein lokal erzeugtes Spiel –, NICHT
+ * mehr den Namen: die Engine (`hooks/engineMatchModel.ts`) erwartet dort eine ID; mit Namen fiele jedes
+ * Cloud-Spiel still aus `buildValidMatches`. Offene Seite → `'TBD'` (Anzeige folgt in A-03 über Slots).
+ */
+export function mapMatchFromSupabase(row: MatchRow): Match {
+  const slotA = slotFromRow(row.id, 'A', row.team_a_id, row.slot_a_source);
+  const slotB = slotFromRow(row.id, 'B', row.team_b_id, row.slot_b_source);
 
   return {
     id: row.id,
     round: row.round,
     field: row.field,
     slot: row.slot ?? undefined,
-    teamA,
-    teamB,
+    slotA,
+    slotB,
+    ...transitionalSides(slotA, slotB),
     scoreA: row.score_a ?? undefined,
     scoreB: row.score_b ?? undefined,
     group: row.group_letter ?? undefined,
@@ -176,33 +212,54 @@ type MatchInsertWithOwner = MatchInsert & {
   is_public?: boolean | null;
 };
 
+/** A-02: Slot einer Seite – fehlt er, scheitert das Schreiben laut (kein Rückfall auf `teamA`). */
+function requireSlot(match: Pick<Match, 'id' | 'slotA' | 'slotB'>, side: Side): MatchSlot {
+  const slot = side === 'A' ? match.slotA : match.slotB;
+  if (slot === undefined) {
+    throw new RepositoryError('mapMatch', `Spiel ${match.id}: Seite ${side} ohne Slot (Team-ID oder Herkunft)`);
+  }
+  return slot;
+}
+
+/** Spalten einer Seite: Team-ID (offen → NULL) und Herkunft (direkt besetzt → NULL). */
+function slotColumns(slot: MatchSlot): { teamId: string | null; source: Json | null } {
+  return { teamId: slotTeamId(slot) ?? null, source: slotSource(slot) ?? null };
+}
+
+/** C2 (@TM-027): lokal offene Seite (keine Team-ID) + in der Cloud besetzt → die Cloud-Seite bleibt. */
+function keepsRemoteSide(localTeamId: string | null, remoteTeamId: string | null | undefined): boolean {
+  return localTeamId === null && (remoteTeamId ?? null) !== null;
+}
+
 /**
- * Maps a frontend Match to Supabase insert format
- * Note: teamA/teamB names need to be resolved to UUIDs
- * The teamNameToId map is used for conversion
+ * Maps a frontend Match to Supabase insert format.
+ *
+ * A-02 (MVP-Bauplan Spur A, C-TEAMREF): die Spielseiten kommen AUSSCHLIESSLICH aus `slotA/slotB` –
+ * `team_x_id` = Team-ID, `slot_x_source` = Herkunft. Keine Namenssuche mehr: vorher suchte der
+ * Mapper das Übergangsfeld `teamA` (eine Team-ID) in einer Name→ID-Map, fand nichts, schrieb die ID als Text in
+ * `team_x_placeholder` und `team_x_id = NULL` – `append_match_events` lehnte jedes Spiel mit 22023 ab.
+ * `team_x_placeholder` wird nicht mehr befüllt (Altspalte, nur noch NULL).
  *
  * C3a-2b (V4b/F2/R1): the INSERT carries only NEUTRAL initial values for result/status/timer
  * columns — score_a/score_b are hard-set to `null` (NOT `match.scoreA ?? null`: the DB default
  * is `0`, which would fake a played 0:0), match_status hard 'scheduled', timer_elapsed_seconds
  * hard `0`. Every other result/status/timer/skip column (actual_end, timer_start_time,
  * timer_paused_at, overtime_*, penalty_*, decided_by, skipped_reason, skipped_at) is not sent at
- * all. Guest migration / addMatch therefore lose local results honestly instead of faking them.
+ * all. Guest migration therefore loses local results honestly instead of faking them.
  *
  * @param match - The match to map
  * @param tournamentId - The tournament ID
- * @param teamNameToId - Map from team names to IDs
  * @param ownerId - Optional owner ID for RLS denormalization
  * @param isPublic - Optional public visibility flag
  */
 export function mapMatchToSupabase(
   match: Match,
   tournamentId: string,
-  teamNameToId: Map<string, string>,
   ownerId?: string,
   isPublic?: boolean
 ): MatchInsertWithOwner {
-  const teamAId = teamNameToId.get(match.teamA);
-  const teamBId = teamNameToId.get(match.teamB);
+  const a = slotColumns(requireSlot(match, 'A'));
+  const b = slotColumns(requireSlot(match, 'B'));
 
   return {
     id: match.id,
@@ -210,10 +267,12 @@ export function mapMatchToSupabase(
     round: match.round,
     field: match.field,
     slot: match.slot ?? null,
-    team_a_id: teamAId ?? null,
-    team_b_id: teamBId ?? null,
-    team_a_placeholder: teamAId ? null : match.teamA,
-    team_b_placeholder: teamBId ? null : match.teamB,
+    team_a_id: a.teamId,
+    team_b_id: b.teamId,
+    slot_a_source: a.source,
+    slot_b_source: b.source,
+    team_a_placeholder: null,
+    team_b_placeholder: null,
     score_a: null,
     score_b: null,
     group_letter: match.group ?? null,
@@ -247,15 +306,28 @@ export function mapMatchToSupabase(
  * last_modified_by, version, owner_id, is_public. A full-save from a stale local state (e.g. the
  * tournament owner editing a team name) must never overwrite a helper's in-progress live match.
  *
- * Included ("schedule columns"): team_a_id/team_b_id (+ placeholders), round, field, slot,
+ * Included ("schedule columns"): team_a_id/team_b_id + slot_a_source/slot_b_source (A-02),
+ * team_a/b_placeholder (always NULL since A-02), round, field, slot,
  * group_letter, is_final, final_type, label, scheduled_start, match_number, phase,
  * referee_number — everything the Schedule Editor / Wizard can change about WHEN/WHERE/WHO
  * plays, never the running result.
+ *
+ * A-02 (V-TEAM-Review C2, @TM-027): `remote` = Team-Spalten der Cloud-Zeile. Ist eine Seite lokal
+ * OFFEN (`team_x_id` NULL), in der Cloud aber schon BESETZT (ein anderes Gerät hat aufgelöst), werden
+ * `team_x_id`/`slot_x_source` dieser Seite NICHT gesendet – ein veralteter lokaler Stand setzt eine
+ * Auflösung nie zurück (die Turnierversion schützt hier nicht: Slot-Updates zählen sie nicht hoch).
+ * Lokal besetzte Seiten werden immer gesendet (Tausch/Ersatz durch die Leitung).
+ * Server-seitige Auflösung: A-13/A-14, Befund C-DELTA-LOKALE-AUFLOESUNG.
  */
-export function mapMatchToScheduleUpdate(row: MatchInsert): MatchUpdate {
+export function mapMatchToScheduleUpdate(
+  row: MatchInsert,
+  remote?: Pick<MatchRow, 'team_a_id' | 'team_b_id'>
+): MatchUpdate {
+  const keepRemoteA = keepsRemoteSide(row.team_a_id ?? null, remote?.team_a_id);
+  const keepRemoteB = keepsRemoteSide(row.team_b_id ?? null, remote?.team_b_id);
   return {
-    team_a_id: row.team_a_id,
-    team_b_id: row.team_b_id,
+    ...(keepRemoteA ? {} : { team_a_id: row.team_a_id, slot_a_source: row.slot_a_source ?? null }),
+    ...(keepRemoteB ? {} : { team_b_id: row.team_b_id, slot_b_source: row.slot_b_source ?? null }),
     team_a_placeholder: row.team_a_placeholder,
     team_b_placeholder: row.team_b_placeholder,
     round: row.round,
@@ -283,27 +355,42 @@ export function mapMatchToScheduleUpdate(row: MatchInsert): MatchUpdate {
  * (R1): no value writes AND no explicit NULL clears — the row stays cleanly stale until C3d.
  * Local storage is unaffected (LocalStorageRepository keeps all fields).
  *
- * The A2 key-presence rule now applies ONLY to team fields: a caller that includes `teamA`/`teamB`
- * (with `teamNameToId`) gets them mapped, a caller that omits them leaves them untouched. An
- * update that mentions no team still carries `updated_at` (see AP4's only-updated_at-guard in
- * SupabaseRepository.updateMatches for the skip-if-empty rule).
+ * The A2 key-presence rule now applies ONLY to the match sides. A-02: the sides come from
+ * `slotA`/`slotB` (never from `teamA`/`teamB`, never via a name lookup) – a caller that includes a
+ * slot gets `team_x_id` + `slot_x_source` written, a caller that omits it (or sends `null`, the
+ * queue's JSON form of a present `undefined`) leaves both columns untouched. `teamA`/`teamB` alone
+ * (A-01 Übergangsfeld) reach the cloud no more. An update that mentions no side still carries
+ * `updated_at` (see AP4's only-updated_at-guard in SupabaseRepository.updateMatches for the
+ * skip-if-empty rule).
+ *
+ * A-03 (M3): `remote` = Team-Spalten der Cloud-Zeile (`SupabaseRepository.updateMatches` liest sie, sobald
+ * ein Update eine offene Seite enthält). Offene lokale Seite + besetzte Cloud-Seite → die Spalten dieser
+ * Seite werden nicht gesendet (C2, siehe `mapMatchToScheduleUpdate`).
  */
 export function mapMatchUpdateToSupabase(
   match: DomainMatchUpdate | Partial<Match>,
-  teamNameToId?: Map<string, string>
+  remote?: Pick<MatchRow, 'team_a_id' | 'team_b_id'>
 ): MatchUpdate {
   const update: MatchUpdate = {};
 
-  // Handle team changes if teamNameToId is provided
-  if (teamNameToId && match.teamA !== undefined) {
-    const teamAId = teamNameToId.get(match.teamA);
-    update.team_a_id = teamAId ?? null;
-    update.team_a_placeholder = teamAId ? null : match.teamA;
+  // `null` kann nur aus der Warteschlange kommen (normalizeMatchUpdateForQueue) – nie ein gültiger Slot.
+  const slotA = match.slotA;
+  const slotB = match.slotB;
+  if (slotA !== undefined && slotA !== null) {
+    const a = slotColumns(slotA);
+    // A-03 (M3, @TM-027): C2-Schutz wie im Voll-Speichern – eine lokal OFFENE Seite setzt eine in der
+    // Cloud schon besetzte nie zurück (der Stand dieses Geräts ist veraltet).
+    if (!keepsRemoteSide(a.teamId, remote?.team_a_id)) {
+      update.team_a_id = a.teamId;
+      update.slot_a_source = a.source;
+    }
   }
-  if (teamNameToId && match.teamB !== undefined) {
-    const teamBId = teamNameToId.get(match.teamB);
-    update.team_b_id = teamBId ?? null;
-    update.team_b_placeholder = teamBId ? null : match.teamB;
+  if (slotB !== undefined && slotB !== null) {
+    const b = slotColumns(slotB);
+    if (!keepsRemoteSide(b.teamId, remote?.team_b_id)) {
+      update.team_b_id = b.teamId;
+      update.slot_b_source = b.source;
+    }
   }
 
   update.updated_at = new Date().toISOString();
@@ -416,14 +503,12 @@ export function mapTournamentFromSupabase(
   matchRows: MatchRow[]
 ): Tournament {
   // Build team ID to name map for match conversion
-  const teamIdToName = new Map<string, string>();
-  teamRows.forEach((t) => teamIdToName.set(t.id, t.name));
 
   // Map teams
   const teams = teamRows.map(mapTeamFromSupabase);
 
   // Map matches
-  const matches = matchRows.map((m) => mapMatchFromSupabase(m, teamIdToName));
+  const matches = matchRows.map((m) => mapMatchFromSupabase(m));
 
   // Parse config JSON
   const config = (row.config as TournamentConfig | null) ?? {};
@@ -653,10 +738,8 @@ export function mapTournamentToSupabase(
   const teamRows = tournament.teams.map((team) =>
     mapTeamToSupabase(team, tournament.id, ownerId, isPublic)
   );
-  const teamNameToId = new Map<string, string>();
-  tournament.teams.forEach((t) => teamNameToId.set(t.name, t.id));
   const matchRows = tournament.matches.map((match) =>
-    mapMatchToSupabase(match, tournament.id, teamNameToId, ownerId, isPublic)
+    mapMatchToSupabase(match, tournament.id, ownerId, isPublic)
   );
 
   return { tournamentRow, teamRows, matchRows };

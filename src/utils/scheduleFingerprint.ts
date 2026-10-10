@@ -23,8 +23,9 @@ export function scheduleFingerprint(tournament: Tournament): string {
     .map((match) =>
       [
         match.id,
-        match.teamA,
-        match.teamB,
+        // Slots statt Namen/IDs im Übergangsfeld: eine Auflösung (offen → Team) ändert den Fingerprint (A-03)
+        JSON.stringify(match.slotA ?? null),
+        JSON.stringify(match.slotB ?? null),
         match.referee ?? '',
         match.field,
         match.round,

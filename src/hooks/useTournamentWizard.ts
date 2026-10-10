@@ -8,7 +8,7 @@
 
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { Tournament, TournamentType, PlacementCriterion } from '../types/tournament';
-import { countMatchesWithResults } from '../utils/teamHelpers';
+import { countMatchesWithResults, deleteTeamSafely } from '../utils/teamHelpers';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../config/sports';
 import { TournamentCreationService } from '../core/services/TournamentCreationService';
 import { useRepository } from './useRepository';
@@ -253,9 +253,19 @@ export function useTournamentWizard(
     updateForm('teams', [...(formData.teams ?? []), newTeam]);
   }, [formData.teams, updateForm]);
 
+  // A-05 Fixrunde 1 (@FU-086): wie `deleteTeamSafely` im TeamsTab. Spiele ohne Ergebnis, die auf das Team zeigen,
+  // fallen weg; hat das Team Spiele mit Ergebnis, bleibt es als `isRemoved` stehen. Nie bleibt ein Spiel mit einer
+  // gelöschten Team-ID stehen (sonst scheitert das Speichern in der Cloud, ON DELETE SET NULL vs. Slot-Pflicht).
   const removeTeam = useCallback((id: string) => {
-    updateForm('teams', formData.teams?.filter((t) => t.id !== id) ?? []);
-  }, [formData.teams, updateForm]);
+    const teams = formData.teams ?? [];
+    const matches = formData.matches ?? [];
+    if (!teams.some((t) => t.id === id)) { return; }
+    const result = deleteTeamSafely({ teams, matches }, id);
+    updateForm('teams', result.updatedTeams);
+    if (matches.length > 0) {
+      updateForm('matches', result.updatedMatches);
+    }
+  }, [formData.teams, formData.matches, updateForm]);
 
   const updateTeam = useCallback((id: string, updates: Partial<Tournament['teams'][0]>) => {
     updateForm(

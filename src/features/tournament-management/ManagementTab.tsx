@@ -23,6 +23,11 @@ import { canEditResults } from '../auth/utils/permissions';
 import { toRuntimeMatchEvents } from '../../utils/matchEvents';
 import { useToast } from '../../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../../lib/sentry';
+import { MatchAwaitingTeamsError } from '../../core/errors';
+import { awaitingLabel, matchLabelText } from '../../core/models/slotLabel';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { buildSideContext, sideDisplay, sideName } from '../../components/schedule/matchSides';
+import { AwaitingTeamsNotice } from './components/AwaitingTeamsNotice';
 import styles from './ManagementTab.module.css';
 
 interface ManagementTabProps {
@@ -57,6 +62,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const [isInitializingMatch, setIsInitializingMatch] = useState<boolean>(false);
   // P7: `getLiveMatchData` kann werfen -- unterscheidet "kein Spiel" von "noch nicht bereit".
   const [engineReadyError, setEngineReadyError] = useState<boolean>(false);
+  // @TM-033: das Spiel hat noch eine offene Seite – kein Fehler, sondern ein Wartegrund
+  const [awaitingTeams, setAwaitingTeams] = useState<boolean>(false);
+  const { isOnline } = useOnlineStatus();
   // Minor 4: "Erneut versuchen" erzwingt einen neuen Ladeversuch ueber diesen Zaehler (s. u.).
   const [retryToken, setRetryToken] = useState(0);
 
@@ -151,58 +159,29 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     }
   }, [initialMatchId, schedule.allMatches, onInitialMatchConsumed, hasRunningMatch, handleFinish, checkCanEditMatch]);
 
-  // Helper: Check if a team reference is a placeholder (not a real team ID)
-  const isPlaceholder = useCallback((teamRef: string): boolean => {
-    return (
-      teamRef === 'TBD' ||
-      teamRef.includes('-winner') ||
-      teamRef.includes('-loser') ||
-      teamRef.startsWith('group-') ||
-      teamRef.startsWith('semi') ||
-      teamRef.startsWith('quarter') ||
-      teamRef.startsWith('final')
-    );
-  }, []);
+  // Spielseiten: Team über die Team-ID, offene Seite über ihre Herkunft (@TM-015) – nie über gespeicherte Namen
+  const sides = useMemo(
+    () => buildSideContext(
+      { teams: tournament.teams, groups: tournament.groups, matches: schedule.allMatches },
+    ),
+    [tournament.teams, tournament.groups, schedule.allMatches],
+  );
 
-  // Helper: Get team name from team ID
-  const getTeamName = useCallback((teamId: string): string | null => {
-    const team = schedule.teams.find(t => t.id === teamId);
-    return team?.name ?? null;
-  }, [schedule.teams]);
-
-  // Convert ScheduledMatch to MatchSummary with proper team resolution
-  // BUG-FIX: Use originalTeamA/B as IDs and resolve actual team names
+  // Convert ScheduledMatch to MatchSummary
   const toMatchSummary = useCallback((sm: ScheduledMatch): MatchSummary => {
-    // Use original team references as IDs
-    const homeId = sm.originalTeamA || sm.homeTeam;
-    const awayId = sm.originalTeamB || sm.awayTeam;
-
-    // Resolve team names - prefer lookup from teams array if not a placeholder
-    let homeName = sm.homeTeam;
-    let awayName = sm.awayTeam;
-
-    if (!isPlaceholder(homeId)) {
-      const resolved = getTeamName(homeId);
-      if (resolved) { homeName = resolved; }
-    }
-
-    if (!isPlaceholder(awayId)) {
-      const resolved = getTeamName(awayId);
-      if (resolved) { awayName = resolved; }
-    }
-
+    const home = sideDisplay(sm, 'A', sides);
+    const away = sideDisplay(sm, 'B', sides);
     return {
       id: sm.id,
       number: sm.matchNumber,
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty label should use phase-based default
-      phaseLabel: sm.label || (sm.phase === 'groupStage' ? t('management.groupStage') : t('management.finalRound')),
+      phaseLabel: sm.label ? matchLabelText(sm.label) : (sm.phase === 'groupStage' ? t('management.groupStage') : t('management.finalRound')),
       scheduledKickoff: sm.time,
       fieldId: `field-${sm.field}`,
-      homeTeam: { id: homeId, name: homeName },
-      awayTeam: { id: awayId, name: awayName },
+      homeTeam: { id: home.id, name: home.name },
+      awayTeam: { id: away.id, name: away.name },
       tournamentPhase: sm.phase, // For detecting phase changes
     };
-  }, [isPlaceholder, getTeamName, t]);
+  }, [sides, t]);
 
   // Get matches for selected field
   const fieldMatches = useMemo(() =>
@@ -230,6 +209,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // C-3 FIX: cancellation bei schnellem Feldwechsel. Minor 2: Reset VOR jedem fruehen Ausstieg.
   useEffect(() => {
     setEngineReadyError(false);
+    setAwaitingTeams(false);
     if (!currentMatchData) {
       return;
     }
@@ -247,6 +227,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     void getLiveMatchData(currentMatchData)
       .catch((error: unknown) => {
         if (cancelled) { return; }
+        // @TM-033: offene Seite = Wartegrund, kein Fehler (kein Toast, keine Sentry-Meldung)
+        if (error instanceof MatchAwaitingTeamsError) {
+          setAwaitingTeams(true);
+          return;
+        }
         // P7: Toast + Sentry statt stiller Leeranzeige; "Spiel wird vorbereitet" statt "Keine Spiele".
         const normalizedError = error instanceof Error ? error : new Error(String(error));
         captureFeatureError(normalizedError, 'tournament', 'ensureEngineMatchReady');
@@ -424,6 +409,15 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     return { ...currentMatch, events: cockpitEvents };
   }, [currentMatch, cockpitEvents]);
 
+  // @TM-033: Wartegründe der offenen Seiten des gewählten Spiels
+  const awaitingReasons = useMemo(() => {
+    if (!currentMatchData) { return []; }
+    const ctx = { teams: tournament.teams, matches: schedule.allMatches, groups: tournament.groups };
+    const reasons = [awaitingLabel(currentMatchData.slotA, ctx), awaitingLabel(currentMatchData.slotB, ctx)]
+      .filter((reason): reason is string => reason !== undefined);
+    return Array.from(new Set(reasons));
+  }, [currentMatchData, tournament.teams, tournament.groups, schedule.allMatches]);
+
   return (
     <div className={styles.container}>
       {/* FIELD SELECTOR (if multiple fields) */}
@@ -457,7 +451,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           <option value="">{t('management.autoNextMatch')}</option>
           {fieldMatches.map(match => (
             <option key={match.id} value={match.id}>
-              #{match.matchNumber} - {match.homeTeam} vs {match.awayTeam} ({match.time})
+              #{match.matchNumber} - {sideName(match, 'A', sides)} vs {sideName(match, 'B', sides)} ({match.time})
               {match.scoreA !== undefined ? ` [${match.scoreA}:${match.scoreB}]` : ''}
             </option>
           ))}
@@ -501,6 +495,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           onUpdateEvent={(matchId, eventId, updates) => { void handleUpdateEvent(matchId, eventId, updates); }}
           onDeleteEvent={(matchId, eventId) => { void handleDeleteEvent(matchId, eventId); }}
           onUpdateSettings={(settings) => { void handleUpdateSettings(settings); }}
+        />
+      ) : awaitingTeams && currentMatchData ? (
+        <AwaitingTeamsNotice
+          reasons={awaitingReasons}
+          offline={!isOnline}
         />
       ) : isInitializingMatch ? (
         <div className={styles.noMatches}>

@@ -307,6 +307,22 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen vollständig (A6/I3,
       throw new Error(`Turnier anlegen fehlgeschlagen: ${tournamentRes.status} ${await tournamentRes.text()}`);
     }
 
+    // A-23: Spiele tragen Pflicht-Slots (matches_slot_a_present/_b_present, A-02) -- ohne Teams
+    // lehnt die DB das Spiel ab.
+    const teamAId = randomUUID();
+    const teamBId = randomUUID();
+    const teamsRes = await fetch(`${url}/rest/v1/teams`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify([
+        { id: teamAId, tournament_id: tournamentId, name: 'A6 Kaskade Team A' },
+        { id: teamBId, tournament_id: tournamentId, name: 'A6 Kaskade Team B' },
+      ]),
+    });
+    if (!teamsRes.ok) {
+      throw new Error(`Teams anlegen fehlgeschlagen: ${teamsRes.status} ${await teamsRes.text()}`);
+    }
+
     const matchRes = await fetch(`${url}/rest/v1/matches`, {
       method: 'POST',
       headers: jsonHeaders,
@@ -316,6 +332,8 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen vollständig (A6/I3,
         round: 1,
         field: 1,
         match_number: 1,
+        team_a_id: teamAId,
+        team_b_id: teamBId,
         match_status: 'scheduled',
       }),
     });

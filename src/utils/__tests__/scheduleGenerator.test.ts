@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { generateFullSchedule } from '../../core/generators';
 import { Tournament, Team } from '../../types/tournament';
+import { testUuid } from '../../test/testIds';
 
 // Helper to create a minimal tournament config
 // Note: minRestSlots: 0 allows back-to-back matches which is needed for 1 field scenarios
@@ -41,7 +42,7 @@ const createTournament = (overrides?: Partial<Tournament>): Tournament => ({
 // Helper to create teams
 const createTeams = (count: number, group?: string): Team[] =>
   Array.from({ length: count }, (_, i) => ({
-    id: `team-${i + 1}`,
+    id: testUuid(i + 1),
     name: `Team ${i + 1}`,
     group,
   }));
@@ -119,8 +120,8 @@ describe('generateFullSchedule', () => {
 
   describe('Group Phase + Finals', () => {
     it('generates group matches for 2 groups', () => {
-      const teamsA = createTeams(4, 'A').map((t, i) => ({ ...t, id: `a-${i}`, name: `Team A${i + 1}`, group: 'A' }));
-      const teamsB = createTeams(4, 'B').map((t, i) => ({ ...t, id: `b-${i}`, name: `Team B${i + 1}`, group: 'B' }));
+      const teamsA = createTeams(4, 'A').map((t, i) => ({ ...t, id: testUuid(100 + i), name: `Team A${i + 1}`, group: 'A' }));
+      const teamsB = createTeams(4, 'B').map((t, i) => ({ ...t, id: testUuid(200 + i), name: `Team B${i + 1}`, group: 'B' }));
       const allTeams = [...teamsA, ...teamsB];
 
       const tournament = createTournament({
@@ -145,8 +146,8 @@ describe('generateFullSchedule', () => {
     });
 
     it('generates finals with top-4 preset', () => {
-      const teamsA = createTeams(4, 'A').map((t, i) => ({ ...t, id: `a-${i}`, name: `Team A${i + 1}`, group: 'A' }));
-      const teamsB = createTeams(4, 'B').map((t, i) => ({ ...t, id: `b-${i}`, name: `Team B${i + 1}`, group: 'B' }));
+      const teamsA = createTeams(4, 'A').map((t, i) => ({ ...t, id: testUuid(100 + i), name: `Team A${i + 1}`, group: 'A' }));
+      const teamsB = createTeams(4, 'B').map((t, i) => ({ ...t, id: testUuid(200 + i), name: `Team B${i + 1}`, group: 'B' }));
       const allTeams = [...teamsA, ...teamsB];
 
       const tournament = createTournament({
@@ -171,8 +172,8 @@ describe('generateFullSchedule', () => {
     it('handles odd team count (5 teams) with groups and finals', () => {
       // BUG FIX: This test verifies that odd team counts don't cause scheduling deadlock
       // Previously, the scheduler would fail with "2 Matches fehlen" error
-      const teamsA = createTeams(3, 'A').map((t, i) => ({ ...t, id: `a-${i}`, name: `Team A${i + 1}`, group: 'A' }));
-      const teamsB = createTeams(2, 'B').map((t, i) => ({ ...t, id: `b-${i}`, name: `Team B${i + 1}`, group: 'B' }));
+      const teamsA = createTeams(3, 'A').map((t, i) => ({ ...t, id: testUuid(100 + i), name: `Team A${i + 1}`, group: 'A' }));
+      const teamsB = createTeams(2, 'B').map((t, i) => ({ ...t, id: testUuid(200 + i), name: `Team B${i + 1}`, group: 'B' }));
       const allTeams = [...teamsA, ...teamsB];
 
       const tournament = createTournament({
@@ -200,8 +201,8 @@ describe('generateFullSchedule', () => {
     it('handles all-places preset with small groups (no invalid placement matches)', () => {
       // BUG FIX: This test verifies that all-places preset doesn't generate
       // placement matches for positions that don't exist in small groups
-      const teamsA = createTeams(3, 'A').map((t, i) => ({ ...t, id: `a-${i}`, name: `Team A${i + 1}`, group: 'A' }));
-      const teamsB = createTeams(3, 'B').map((t, i) => ({ ...t, id: `b-${i}`, name: `Team B${i + 1}`, group: 'B' }));
+      const teamsA = createTeams(3, 'A').map((t, i) => ({ ...t, id: testUuid(100 + i), name: `Team A${i + 1}`, group: 'A' }));
+      const teamsB = createTeams(3, 'B').map((t, i) => ({ ...t, id: testUuid(200 + i), name: `Team B${i + 1}`, group: 'B' }));
       const allTeams = [...teamsA, ...teamsB];
 
       const tournament = createTournament({
@@ -329,7 +330,7 @@ describe('generateFullSchedule', () => {
       schedule.allMatches.forEach(match => {
         expect(match.homeTeam).toBeTruthy();
         expect(match.awayTeam).toBeTruthy();
-        expect(match.homeTeam).not.toContain('team-'); // Should be name, not ID
+        expect(teams.some(t => t.id === match.homeTeam)).toBe(false); // Should be name, not ID
       });
     });
   });
@@ -347,8 +348,8 @@ describe('generateFullSchedule', () => {
     });
 
     it('creates finals phases when configured', () => {
-      const teamsA = createTeams(4, 'A').map((t, i) => ({ ...t, id: `a-${i}`, name: `Team A${i + 1}`, group: 'A' }));
-      const teamsB = createTeams(4, 'B').map((t, i) => ({ ...t, id: `b-${i}`, name: `Team B${i + 1}`, group: 'B' }));
+      const teamsA = createTeams(4, 'A').map((t, i) => ({ ...t, id: testUuid(100 + i), name: `Team A${i + 1}`, group: 'A' }));
+      const teamsB = createTeams(4, 'B').map((t, i) => ({ ...t, id: testUuid(200 + i), name: `Team B${i + 1}`, group: 'B' }));
       const allTeams = [...teamsA, ...teamsB];
 
       const tournament = createTournament({

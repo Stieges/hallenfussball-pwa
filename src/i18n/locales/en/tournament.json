@@ -373,7 +373,10 @@
     "matchLoading": "Loading match...",
     "noMatchesOnField": "No matches on this field",
     "enginePreparing": "Match is being prepared …",
-    "engineReadyError": "Match could not be prepared — please try again"
+    "engineReadyError": "Match could not be prepared — please try again",
+    "awaitingTitle": "Kick-off not possible yet",
+    "awaitingReason": "Waiting for: {{reason}}",
+    "awaitingOffline": "Your device has no network – your data may be out of date. The line-up may already be set on the server."
   },
   "tables": {
     "noGroups": "This tournament has no groups.",
@@ -697,5 +700,25 @@
     "cancel": "Cancel",
     "save": "Save",
     "saving": "Saving..."
+  },
+  "slot": {
+    "groupRank": "{{rankWord}} {{group}}",
+    "winnerOf": "Winner of {{match}}",
+    "loserOf": "Loser of {{match}}",
+    "matchNumber": "Match {{number}}",
+    "unknown": "?",
+    "groupRankFallback": "#{{rank}} {{group}}",
+    "groupDefault": "Group {{id}}",
+    "rank1": "1st",
+    "rank2": "2nd",
+    "rank3": "3rd",
+    "rank4": "4th",
+    "playoffFinal": "Final",
+    "playoffSemifinal": "Semifinal {{n}}",
+    "playoffQuarterfinal": "Quarterfinal {{n}}",
+    "playoffRoundOf16": "Round of 16, match {{n}}",
+    "playoffPlace": "Match for place {{n}}",
+    "awaitGroup": "Completion of {{group}}",
+    "awaitMatch": "Completion of {{match}}"
   }
 }

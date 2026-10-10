@@ -1,3 +1,6 @@
+import { testTeamSlot } from './matchSlotFixtures'
+import { testUuid } from './testIds'
+import { transitionalSides } from '../core/models/matchSlot'
 import { Tournament, Team, Match, FinalsConfig, PointSystem, PlacementCriterion, LocationDetails, Finals } from '../types/tournament'
 
 /**
@@ -59,7 +62,7 @@ export function createMockTeams(count: number, groupCount = 2): Team[] {
   const groups = 'ABCDEFGH'.split('').slice(0, groupCount)
   return Array.from({ length: count }, (_, i) =>
     createMockTeam({
-      id: `team-${i + 1}`,
+      id: testUuid(i + 1),
       name: `Team ${i + 1}`,
       group: groups[i % groupCount],
     })
@@ -70,16 +73,22 @@ export function createMockTeams(count: number, groupCount = 2): Team[] {
  * Test Factory für Match-Objekte
  */
 export function createMockMatch(overrides?: Partial<Match>): Match {
+  // Die Seiten kommen aus den Slots; `teamA/teamB` als Override ist nur Kurzschreibweise für Fixture-Kurz-IDs
+  // (`team-1`, keine UUIDs – deshalb ohne `teamSlot`, Testumgebung). Das Übergangsfeld folgt den Slots.
+  const slotA = overrides?.slotA ?? testTeamSlot(overrides?.teamA ?? testUuid(1))
+  const slotB = overrides?.slotB ?? testTeamSlot(overrides?.teamB ?? testUuid(2))
   return {
     id: `match-${Math.random().toString(36).substring(2, 11)}`,
-    teamA: 'team-1',
-    teamB: 'team-2',
+    slotA,
+    slotB,
     scoreA: undefined,
     scoreB: undefined,
     group: 'A',
     round: 1,
     field: 1,
     ...overrides,
+    // Das Übergangsfeld folgt IMMER den Slots: ein `teamA`-Override (auch ein Köder mit Namen) wird hier überschrieben.
+    ...transitionalSides(slotA, slotB),
   }
 }
 

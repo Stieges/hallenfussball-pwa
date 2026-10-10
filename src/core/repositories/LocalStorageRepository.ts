@@ -4,7 +4,10 @@ import { TournamentSchema } from '../models/schemas/TournamentSchema';
 import { STORAGE_KEYS } from '../../constants/storage';
 import { hydrateTournament } from './hydration';
 import { createStorage } from '../storage/StorageFactory';
+import type { IStorageAdapter } from '../storage/IStorageAdapter';
 import { captureFeatureError } from '../../lib/sentry';
+import { isLegacyTournamentShape } from '../models/legacyFormat';
+import { quarantineLegacyTournaments, LEGACY_TOURNAMENTS_NOTICE_EVENT } from '../storage/legacyTournamentStore';
 
 /**
  * A2 Fixrunde 3 (N2, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md`):
@@ -233,7 +236,9 @@ export class LocalStorageRepository implements ITournamentRepository {
             if (!raw) { return []; }
             if (!Array.isArray(raw)) { return []; }
 
-            return raw.map((item) => {
+            const current = await this.setLegacyAside(raw, storage);
+
+            return current.map((item) => {
                 const itemData = item as Record<string, unknown>;
                 // Validate each item
                 const result = TournamentSchema.safeParse(itemData);
@@ -259,6 +264,35 @@ export class LocalStorageRepository implements ITournamentRepository {
             }
             return [];
         }
+    }
+
+    /**
+     * A-05 (@FU-007): Altformat (Spiel ohne slotA/slotB) wird nicht gelesen. Es wird unter
+     * `tournaments_legacy_v1` beiseitegelegt, aus der Liste genommen, gemeldet und der Oberflaeche
+     * angezeigt. Die Liste wird erst bereinigt, wenn das Beiseitelegen gelungen ist.
+     */
+    private async setLegacyAside(raw: unknown[], storage: IStorageAdapter): Promise<unknown[]> {
+        const legacy = raw.filter(isLegacyTournamentShape);
+        if (legacy.length === 0) { return raw; }
+        const current = raw.filter((item) => !isLegacyTournamentShape(item));
+        for (const item of legacy) {
+            const id = (item as { id?: unknown }).id;
+            captureFeatureError(
+                new Error(`Tournament ${String(id)} hat das Altformat (Spiel ohne slotA/slotB) und wurde beiseitegelegt`),
+                'repository', 'loadList:legacyFormat',
+                { tournamentId: String(id) }
+            );
+        }
+        try {
+            await quarantineLegacyTournaments(legacy);
+            await storage.set(STORAGE_KEYS.TOURNAMENTS, current);
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent(LEGACY_TOURNAMENTS_NOTICE_EVENT, { detail: { count: legacy.length } }));
+            }
+        } catch (e) {
+            captureFeatureError(e instanceof Error ? e : new Error(String(e)), 'repository', 'loadList:legacyQuarantine');
+        }
+        return current;
     }
 
     /**

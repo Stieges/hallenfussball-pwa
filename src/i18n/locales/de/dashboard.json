@@ -13,6 +13,11 @@
     "trash": "Papierkorb"
   },
 
+  "legacyNotice": {
+    "message": "Turniere im alten Format wurden beiseitegelegt, aber nicht gelöscht. Sie lassen sich in dieser Version nicht mehr öffnen.",
+    "dismiss": "Hinweis schließen"
+  },
+
   "buttons": {
     "import": "Importieren",
     "newTournament": "Neues Turnier",

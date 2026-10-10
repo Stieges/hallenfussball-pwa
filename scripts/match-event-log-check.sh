@@ -42,6 +42,16 @@ elif [[ "${1:-}" == "--without-guard" ]]; then
   MODE="without-guard"
 fi
 
+# A-05: Seit 20261003_001 braucht jede Spielseite Team-ID oder Herkunft (matches_slot_*_present). Im Modus
+# --without-migration fehlt die Migration samt Spalten -> die Fixtures lassen die Slot-Spalten dann weg.
+if [[ "$MODE" == "without-migration" ]]; then
+  SLOT_COLS=""
+  SLOT_VALS=""
+else
+  SLOT_COLS=", slot_a_source, slot_b_source"
+  SLOT_VALS=", '{\"kind\":\"groupRank\",\"group\":\"A\",\"rank\":1}'::jsonb, '{\"kind\":\"groupRank\",\"group\":\"A\",\"rank\":2}'::jsonb"
+fi
+
 POSTGRES_IMAGE="supabase/postgres:17.6.1.063"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
@@ -128,6 +138,8 @@ TEAM_A="$(uuid_for team:a)"
 TEAM_B="$(uuid_for team:b)"
 T_BESTAND="$(uuid_for tournament:bestand)"
 M_BESTAND="$(uuid_for match:bestand)"
+TEAM_BESTAND_A="$(uuid_for team:bestand-a)"
+TEAM_BESTAND_B="$(uuid_for team:bestand-b)"
 EB1="$(uuid_for event:bestand-1)"
 EB2="$(uuid_for event:bestand-2)"
 EB3="$(uuid_for event:bestand-3)"
@@ -165,8 +177,12 @@ VALUES
 INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, config)
 VALUES ('$T_BESTAND', '$U_OWNER', 'Match-Event-Log — Bestand', '2026-09-28', 8, 15, '{}'::jsonb);
 
-INSERT INTO public.matches (id, tournament_id, round, field, match_status)
-VALUES ('$M_BESTAND', '$T_BESTAND', 1, 1, 'running');
+-- A-05: Bestandsspiele tragen je Seite ein Team (wie Prod nach dem Aufraeumen, Bauplan E-A5); sonst
+-- verweigert 20261003_001 absichtlich die Migration.
+INSERT INTO public.teams (id, tournament_id, name)
+VALUES ('$TEAM_BESTAND_A', '$T_BESTAND', 'Bestand A'), ('$TEAM_BESTAND_B', '$T_BESTAND', 'Bestand B');
+INSERT INTO public.matches (id, tournament_id, round, field, match_status, team_a_id, team_b_id)
+VALUES ('$M_BESTAND', '$T_BESTAND', 1, 1, 'running', '$TEAM_BESTAND_A', '$TEAM_BESTAND_B');
 
 INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away)
 VALUES
@@ -555,8 +571,10 @@ INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, grou
 VALUES ('$T_TEAMDEL', '$U_OWNER', 'Match-Event-Log — Team-Delete', '2026-09-28', 8, 15, '{}'::jsonb);
 INSERT INTO public.teams (id, tournament_id, name)
 VALUES ('$TEAM_C', '$T_TEAMDEL', 'Team C'), ('$TEAM_D', '$T_TEAMDEL', 'Team D');
-INSERT INTO public.matches (id, tournament_id, round, field, match_status, team_a_id, team_b_id)
-VALUES ('$M_TEAMDEL', '$T_TEAMDEL', 1, 1, 'running', '$TEAM_C', '$TEAM_D');
+-- A-05: aufgeloeste Seiten behalten ihre Herkunft (slot_*_source); ohne sie verweigert
+-- matches_slot_*_present das ON DELETE SET NULL beim Team-Loeschen.
+INSERT INTO public.matches (id, tournament_id, round, field, match_status, team_a_id, team_b_id${SLOT_COLS})
+VALUES ('$M_TEAMDEL', '$T_TEAMDEL', 1, 1, 'running', '$TEAM_C', '$TEAM_D'${SLOT_VALS});
 COMMIT;
 SQL
   docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 >/dev/null <<SQL
@@ -616,8 +634,8 @@ INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, grou
 VALUES ('$T_MR1', '$U_OWNER', 'Match-Event-Log — MR1', '2026-09-28', 8, 15, '{"publishedAt":"2026-09-28T00:00:00.000Z"}'::jsonb, false);
 INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at)
 VALUES ('$(uuid_for membership:mr1-collab)', '$T_MR1', '$U_COLLAB', 'collaborator', now());
-INSERT INTO public.matches (id, tournament_id, round, field, match_status)
-VALUES ('$M_MR1', '$T_MR1', 1, 1, 'running');
+INSERT INTO public.matches (id, tournament_id, round, field, match_status${SLOT_COLS})
+VALUES ('$M_MR1', '$T_MR1', 1, 1, 'running'${SLOT_VALS});
 COMMIT;
 SQL
   docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 >/dev/null <<SQL
@@ -664,8 +682,8 @@ INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, grou
 VALUES ('$T_LEGACY', '$U_OWNER', 'Match-Event-Log — legacy', '2026-09-28', 8, 15, '{}'::jsonb);
 INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at)
 VALUES ('$(uuid_for membership:legacy-collab)', '$T_LEGACY', '$U_COLLAB', 'collaborator', now());
-INSERT INTO public.matches (id, tournament_id, round, field, match_status)
-VALUES ('$M_LEGACY', '$T_LEGACY', 1, 1, 'running');
+INSERT INTO public.matches (id, tournament_id, round, field, match_status${SLOT_COLS})
+VALUES ('$M_LEGACY', '$T_LEGACY', 1, 1, 'running'${SLOT_VALS});
 COMMIT;
 SQL
 
@@ -695,8 +713,8 @@ INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, a
   ('$(uuid_for membership:authors-collab)', '$T_AUTH', '$U_COLLAB', 'collaborator', now()),
   ('$(uuid_for membership:authors-trainer)', '$T_AUTH', '$U_TRAINER', 'trainer', now()),
   ('$(uuid_for membership:authors-viewer)', '$T_AUTH', '$U_VIEWER', 'viewer', now());
-INSERT INTO public.matches (id, tournament_id, round, field, match_status)
-VALUES ('$M_AUTH', '$T_AUTH', 1, 1, 'running');
+INSERT INTO public.matches (id, tournament_id, round, field, match_status${SLOT_COLS})
+VALUES ('$M_AUTH', '$T_AUTH', 1, 1, 'running'${SLOT_VALS});
 INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away)
 VALUES ('$E_AUTH', '$M_AUTH', 'GOAL', 10, 1, 0);
 INSERT INTO public.match_event_authors (event_id, tournament_id, user_id)

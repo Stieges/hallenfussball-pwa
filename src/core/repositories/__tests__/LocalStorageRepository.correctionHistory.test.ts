@@ -36,7 +36,12 @@ describe('LocalStorageRepository — correctionHistory-Roundtrip (updateMatches)
       id: 't1',
       status: 'published',
       createdAt: '2026-01-01T00:00:00.000Z',
-      matches: [{ id: 'm1', scoreA: 3, scoreB: 1, matchStatus: 'finished' }],
+      // Seit A-05 gilt ein Spiel ohne slotA/slotB als Altformat und wird beiseitegelegt – das Spiel traegt Slots.
+      matches: [{
+        id: 'm1', scoreA: 3, scoreB: 1, matchStatus: 'finished',
+        slotA: { kind: 'team', teamId: '11111111-1111-4111-8111-111111111111' },
+        slotB: { kind: 'team', teamId: '22222222-2222-4222-8222-222222222222' },
+      }],
     };
     storageGet.mockResolvedValue([storedTournament]);
 

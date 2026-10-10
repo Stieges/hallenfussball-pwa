@@ -22,6 +22,7 @@ import { ManagementTab } from '../ManagementTab';
 import type { Tournament } from '../../../types/tournament';
 import type { GeneratedSchedule } from '../../../core/generators';
 import type { LiveMatch as CoreLiveMatch, MatchEvent as CoreMatchEvent } from '../../../core/models/LiveMatch';
+import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
 // Kein Ton im jsdom (IndexedDB/AudioContext).
 vi.mock('../../../hooks/useMatchSound', () => ({
@@ -134,6 +135,8 @@ const schedule = {
       awayTeam: AWAY.name,
       originalTeamA: HOME.id,
       originalTeamB: AWAY.id,
+      slotA: testTeamSlot(HOME.id),
+      slotB: testTeamSlot(AWAY.id),
       phase: 'groupStage',
       label: 'Gruppenphase',
       duration: 10,

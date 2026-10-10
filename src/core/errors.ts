@@ -230,6 +230,9 @@ export function isTransientMutationError(error: unknown): boolean {
   if (error instanceof OptimisticLockError) {
     return false;
   }
+  if (error instanceof TeamStillReferencedError) {
+    return false;
+  }
   if (isAbortError(error)) {
     return true;
   }
@@ -301,4 +304,45 @@ export function isAbortError(error: unknown): boolean {
     e.code === '20' ||
     e.code === 20
   );
+}
+
+// =============================================================================
+// TeamStillReferencedError (A-05 Fixrunde 1, @FU-086)
+// =============================================================================
+
+/**
+ * `SupabaseRepository.save()`: Ein zu speicherndes Spiel zeigt noch auf ein Team, das mit demselben
+ * Speichern gelöscht würde. Nicht wiederholbar (nicht transient): der Fehler liegt im Stand, nicht im
+ * Netz. Wird vor dem ersten Schreiben geworfen, es bleibt also nichts halb geschrieben.
+ */
+export class TeamStillReferencedError extends Error {
+  public readonly matchId: string;
+
+  constructor(matchId: string) {
+    super(`Spiel ${matchId} zeigt noch auf ein Team, das gelöscht würde – Speichern abgebrochen, nichts geschrieben`);
+    this.name = 'TeamStillReferencedError';
+    this.matchId = matchId;
+  }
+}
+
+// =============================================================================
+// MatchAwaitingTeamsError (A-03, @TM-033)
+// =============================================================================
+
+/**
+ * Ein Spiel lässt sich nicht anpfeifen, solange eine Seite noch offen ist (Slot `pending`) oder
+ * der Slot fehlt. Trägt die offenen Seiten, damit die Anzeige den Wartegrund nennen kann
+ * (Herkunft über `slotLabel`).
+ */
+export class MatchAwaitingTeamsError extends Error {
+  public readonly matchId: string;
+  /** Seiten (`'A'` = Heim), die noch kein Team haben. */
+  public readonly openSides: readonly ('A' | 'B')[];
+
+  constructor(matchId: string, openSides: readonly ('A' | 'B')[]) {
+    super(`Spiel ${matchId}: Seite ${openSides.join(' und ')} ist noch nicht besetzt`);
+    this.name = 'MatchAwaitingTeamsError';
+    this.matchId = matchId;
+    this.openSides = openSides;
+  }
 }

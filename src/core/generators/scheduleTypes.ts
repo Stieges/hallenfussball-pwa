@@ -3,6 +3,7 @@
  */
 
 import { RefereeConfig, LocationDetails, ContactInfo, Standing, TournamentGroup, TournamentField, RuntimeMatchEvent } from '../../types/tournament'
+import type { MatchSlot } from '../models/schemas/MatchSlotSchema'
 
 // ============================================================================
 // SCHEDULED MATCH
@@ -21,10 +22,17 @@ export interface ScheduledMatch {
   homeTeam: string
   /** Auswärts-Team Name (übersetzt für Anzeige) */
   awayTeam: string
-  /** Original Team-ID oder Platzhalter (z.B. "group-a-1st" für Playoffs) */
+  /**
+   * ÜBERGANG (zweites Übergangsfeld neben `teamA` am Spiel, Löschen in B-35): Team-ID oder `'TBD'` für eine offene Seite,
+   * abgeleitet aus `slotA` (`transitionalTeamRef`). Gelesen nur von `LiveViewScreen` (Spur B); neue Leser nutzen `slotA`.
+   */
   originalTeamA: string
-  /** Original Team-ID oder Platzhalter (z.B. "group-b-2nd" für Playoffs) */
+  /** ÜBERGANG, siehe `originalTeamA` (aus `slotB`). */
   originalTeamB: string
+  /** Spielseite Heim als Slot (A-01), unverändert vom Spiel durchgereicht (A-02) */
+  slotA: MatchSlot
+  /** Spielseite Gast als Slot (A-01), unverändert vom Spiel durchgereicht (A-02) */
+  slotB: MatchSlot
   /** Gruppe oder undefined für Finalspiele */
   group?: string
   /** Phase: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final' */

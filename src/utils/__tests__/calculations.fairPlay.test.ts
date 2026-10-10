@@ -15,6 +15,7 @@ import { ctx, ev, start } from '../../core/match/client/__tests__/fixtures';
 import { calculateFairPlay } from '../calculations';
 import { DFBNET_PROFILE, UEFA_PROFILE, FIFA_PROFILE, type FairPlayProfile } from '../../core/stats/fairPlayProfiles';
 import type { Match, RuntimeMatchEvent, Team, Tournament } from '../../types/tournament';
+import { looseVs } from '../../test/matchSlotFixtures';
 
 function engineEvents(log: EngineEvent[]): RuntimeMatchEvent[] {
   const { state } = reduceMatch(log, ctx);
@@ -59,7 +60,7 @@ function tournamentWith(matches: Match[], teams?: Team[]): Tournament {
   };
 }
 
-const MATCH: Match = { id: 'm', round: 1, field: 1, teamA: 'teamA', teamB: 'teamB' };
+const MATCH: Match = { id: 'm', round: 1, field: 1, ...looseVs('teamA', 'teamB') };
 
 function pointsFor(log: EngineEvent[], profile: FairPlayProfile, teamName = 'FC Alpha'): number {
   const map = new Map([['m', engineEvents(log)]]);

@@ -19,6 +19,7 @@ import { useMatchExecution } from '../useMatchExecution';
 import { OptimisticLockError } from '../../core/errors';
 import type { Tournament } from '../../types/tournament';
 import type { LiveMatch } from '../../core/models/LiveMatch';
+import { looseVs } from '../../test/matchSlotFixtures';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -289,7 +290,7 @@ describe('useMatchExecution — I2 (Fixrunde 1): Lade-Effekt reagiert nicht auf 
     const tournament: Tournament = {
       id: 'tour-1',
       matches: [
-        { id: 'match-1', teamA: 'team-a', teamB: 'team-b', round: 1, field: 1, matchNumber: 1 },
+        { id: 'match-1', ...looseVs('team-a', 'team-b'), round: 1, field: 1, matchNumber: 1 },
       ],
       teams: [
         { id: 'team-a', name: 'Heim' },
@@ -324,7 +325,7 @@ describe('useMatchExecution — I2 (Fixrunde 1): Lade-Effekt reagiert nicht auf 
     const tournament: Tournament = {
       id: 'tour-1',
       matches: [
-        { id: 'match-1', teamA: 'team-a', teamB: 'team-b', round: 1, field: 1, matchNumber: 1 },
+        { id: 'match-1', ...looseVs('team-a', 'team-b'), round: 1, field: 1, matchNumber: 1 },
       ],
       teams: [
         { id: 'team-a', name: 'Heim' },

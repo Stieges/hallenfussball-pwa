@@ -7,6 +7,7 @@ import { SwUpdateNotice } from './components/SwUpdateNotice';
 import { useTournaments } from './hooks/useTournaments';
 import { Tournament, TournamentStatus } from './types/tournament';
 import { generateTournamentId, generateUniqueId } from './utils/idGenerator';
+import { buildCopiedTournament } from './core/models/tournamentCopy';
 import { cssVars } from './design-tokens';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import { ConfirmDialog, useConfirmDialog } from './components/ui/ConfirmDialog';
@@ -454,51 +455,12 @@ function AppContent() {
       const now = new Date().toISOString();
       const newId = generateTournamentId();
 
-      // Create a deep copy with new IDs
-      const copiedTournament: Tournament = {
-        ...tournament,
-        id: newId,
+      // Kopie mit neuen Team-/Spiel-IDs; Spielseiten über copySlot (V14), nie auf alten IDs
+      const copiedTournament = buildCopiedTournament(tournament, {
+        newId,
         title: `${tournament.title} ${t('tournament.copySuffix')}`,
-        status: 'draft',
-        createdAt: now,
-        updatedAt: now,
-        lastVisitedStep: 1, // Start at Step 1 so user can review
-        // Generate new IDs for teams
-        teams: tournament.teams.map(team => ({
-          ...team,
-          id: generateUniqueId(),
-        })),
-        // Generate new IDs for matches and update team references
-        matches: tournament.matches.map(match => {
-          const newMatchId = generateUniqueId();
-          return {
-            ...match,
-            id: newMatchId,
-            matchStatus: 'scheduled' as const,
-            scoreA: 0,
-            scoreB: 0,
-            events: [],
-          };
-        }),
-        // Reset soft-delete state
-        deletedAt: undefined,
-      };
-
-      // Update match team IDs to use new team IDs
-      const teamIdMap = new Map<string, string>();
-      tournament.teams.forEach((oldTeam, index) => {
-        teamIdMap.set(oldTeam.id, copiedTournament.teams[index]?.id ?? oldTeam.id);
-      });
-
-      copiedTournament.matches = copiedTournament.matches.map((match, index) => {
-        const originalMatch = tournament.matches[index];
-        const newTeamA = teamIdMap.get(originalMatch.teamA) ?? match.teamA;
-        const newTeamB = teamIdMap.get(originalMatch.teamB) ?? match.teamB;
-        return {
-          ...match,
-          teamA: newTeamA,
-          teamB: newTeamB,
-        };
+        now,
+        makeId: generateUniqueId,
       });
 
       await saveTournament(copiedTournament);

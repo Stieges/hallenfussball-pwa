@@ -93,7 +93,6 @@
     "goals": "Goals",
     "goalsPerMatch": "avg {{avg}} per match",
     "runningMatches": "Running Matches ({{count}})",
-    "unknownTeam": "Unknown",
     "nextMatch": "Next Match",
     "upcoming": "Upcoming",
     "quickActions": "Quick Actions",
@@ -134,8 +133,7 @@
     "noEntries": "No entries found.",
     "tryDifferentFilters": "Try different filter settings.",
     "emptyLogHint": "The activity log will be filled once changes are made to the tournament.",
-    "loadMore": "Load more ({{count}} more)",
-    "unknown": "Unknown"
+    "loadMore": "Load more ({{count}} more)"
   },
   "exports": {
     "title": "Exports",

@@ -5,12 +5,11 @@ import {
   formatTime,
   calculateTotalMatchDuration,
   determineFinalPhase,
-  resolveTeamName,
-  translatePlaceholder,
   createInitialStandings,
   scheduleMatches,
 } from '../scheduleHelpers';
-import type { Match, Team, TournamentGroup } from '../../../types/tournament';
+import type { Match, Team } from '../../../types/tournament';
+import { testUuid, vs, slots, groupRank, resultOf } from '../../../test/matchSlotFixtures';
 
 // =============================================================================
 // parseStartTime
@@ -141,8 +140,7 @@ describe('determineFinalPhase', () => {
     id: 'test',
     round: 1,
     field: 1,
-    teamA: 'A',
-    teamB: 'B',
+    ...slots(groupRank('A', 1), groupRank('A', 2)),
   };
 
   it('returns "final" when finalType is set', () => {
@@ -167,79 +165,6 @@ describe('determineFinalPhase', () => {
 
   it('defaults to "final" for unknown id patterns', () => {
     expect(determineFinalPhase({ ...baseMatch, id: 'final' })).toBe('final');
-  });
-});
-
-// =============================================================================
-// translatePlaceholder
-// =============================================================================
-
-describe('translatePlaceholder', () => {
-  it('translates group placeholder to German', () => {
-    const result = translatePlaceholder('group-a-1st', 'de');
-    expect(result).toBe('Gruppe A - 1. Platz');
-  });
-
-  it('translates group placeholder to English', () => {
-    const result = translatePlaceholder('group-b-2nd', 'en');
-    expect(result).toBe('Gruppe B - 2nd Place');
-  });
-
-  it('uses custom group name when provided', () => {
-    const groups: TournamentGroup[] = [
-      { id: 'A', customName: 'Lions' },
-      { id: 'B', customName: 'Tigers' },
-    ];
-    const result = translatePlaceholder('group-a-1st', 'de', groups);
-    expect(result).toBe('Lions - 1. Platz');
-  });
-
-  it('translates final placeholders (German)', () => {
-    expect(translatePlaceholder('semi1-winner', 'de')).toBe('Sieger HF 1');
-    expect(translatePlaceholder('qf1-loser', 'de')).toBe('Verlierer VF 1');
-  });
-
-  it('translates final placeholders (English)', () => {
-    expect(translatePlaceholder('semi1-winner', 'en')).toBe('Winner SF 1');
-    expect(translatePlaceholder('qf2-winner', 'en')).toBe('Winner QF 2');
-  });
-
-  it('returns original placeholder for unknown strings', () => {
-    expect(translatePlaceholder('unknown-thing', 'de')).toBe('unknown-thing');
-  });
-
-  it('handles 3rd/4th ordinal suffixes in English', () => {
-    const result = translatePlaceholder('group-c-3rd', 'en');
-    expect(result).toBe('Gruppe C - 3rd Place');
-  });
-
-  it('handles 4th ordinal suffix in English', () => {
-    const result = translatePlaceholder('group-d-4th', 'en');
-    expect(result).toBe('Gruppe D - 4th Place');
-  });
-});
-
-// =============================================================================
-// resolveTeamName
-// =============================================================================
-
-describe('resolveTeamName', () => {
-  const teamMap = new Map([
-    ['team-1', 'FC Bayern'],
-    ['team-2', 'BVB Dortmund'],
-  ]);
-
-  it('resolves known team ID to name', () => {
-    expect(resolveTeamName('team-1', teamMap, 'de')).toBe('FC Bayern');
-  });
-
-  it('falls back to translatePlaceholder for unknown ID', () => {
-    expect(resolveTeamName('group-a-1st', teamMap, 'de')).toBe('Gruppe A - 1. Platz');
-  });
-
-  it('passes groups through to translatePlaceholder', () => {
-    const groups: TournamentGroup[] = [{ id: 'A', customName: 'Wolves' }];
-    expect(resolveTeamName('group-a-1st', teamMap, 'en', groups)).toBe('Wolves - 1st Place');
   });
 });
 
@@ -274,36 +199,38 @@ describe('createInitialStandings', () => {
 
 // =============================================================================
 // scheduleMatches
+//
+// A-03: `translatePlaceholder` / `resolveTeamName` sind durch `slotLabel` ersetzt – ihre Aussagen
+// (Gruppenrang mit Gruppennamen, Sieger/Verlierer, unbekannt) stehen in
+// src/core/models/__tests__/slotLabel.test.ts; hier prüfen die Tests, dass der Spielplan sie nutzt.
 // =============================================================================
 
 describe('scheduleMatches', () => {
-  const teamMap = new Map([
-    ['t1', 'Team A'],
-    ['t2', 'Team B'],
-    ['t3', 'Team C'],
-    ['t4', 'Team D'],
-  ]);
+  const [T1, T2, T3, T4] = [1, 2, 3, 4].map(testUuid);
+  const teams: Team[] = [
+    { id: T1, name: 'Team A' },
+    { id: T2, name: 'Team B' },
+    { id: T3, name: 'Team C' },
+    { id: T4, name: 'Team D' },
+  ];
+  const base = {
+    startTime: new Date(2026, 0, 1, 10, 0),
+    breakDuration: 2,
+    gamePeriods: 1,
+    halftimeBreak: 0,
+    teams,
+    locale: 'de' as const,
+    startMatchNumber: 1,
+  };
 
   it('schedules matches with correct times and numbers', () => {
     const matches: Match[] = [
-      { id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2', slot: 0 },
-      { id: 'm2', round: 1, field: 2, teamA: 't3', teamB: 't4', slot: 0 },
-      { id: 'm3', round: 2, field: 1, teamA: 't1', teamB: 't3', slot: 1 },
+      { id: 'm1', round: 1, field: 1, ...vs(T1, T2), slot: 0 },
+      { id: 'm2', round: 1, field: 2, ...vs(T3, T4), slot: 0 },
+      { id: 'm3', round: 2, field: 1, ...vs(T1, T3), slot: 1 },
     ];
 
-    const result = scheduleMatches({
-      matches,
-      startTime: new Date(2026, 0, 1, 10, 0),
-      numberOfFields: 2,
-      gameDuration: 10,
-      breakDuration: 2,
-      gamePeriods: 1,
-      halftimeBreak: 0,
-      phase: 'groupStage',
-      teamMap,
-      locale: 'de',
-      startMatchNumber: 1,
-    });
+    const result = scheduleMatches({ ...base, matches, numberOfFields: 2, gameDuration: 10, phase: 'groupStage' });
 
     expect(result).toHaveLength(3);
     // First slot: 10:00
@@ -319,22 +246,17 @@ describe('scheduleMatches', () => {
   });
 
   it('calculates duration including halftime breaks', () => {
-    const matches: Match[] = [
-      { id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2', slot: 0 },
-    ];
+    const matches: Match[] = [{ id: 'm1', round: 1, field: 1, ...vs(T1, T2), slot: 0 }];
 
     const result = scheduleMatches({
+      ...base,
       matches,
-      startTime: new Date(2026, 0, 1, 10, 0),
       numberOfFields: 1,
       gameDuration: 12,
       breakDuration: 3,
       gamePeriods: 2,
       halftimeBreak: 2,
       phase: 'groupStage',
-      teamMap,
-      locale: 'de',
-      startMatchNumber: 1,
     });
 
     // 12 min game + 1 break * 2 min halftime = 14 min total
@@ -343,23 +265,11 @@ describe('scheduleMatches', () => {
 
   it('uses round-based sorting when slot is undefined', () => {
     const matches: Match[] = [
-      { id: 'm2', round: 2, field: 1, teamA: 't3', teamB: 't4' },
-      { id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2' },
+      { id: 'm2', round: 2, field: 1, ...vs(T3, T4) },
+      { id: 'm1', round: 1, field: 1, ...vs(T1, T2) },
     ];
 
-    const result = scheduleMatches({
-      matches,
-      startTime: new Date(2026, 0, 1, 10, 0),
-      numberOfFields: 1,
-      gameDuration: 10,
-      breakDuration: 2,
-      gamePeriods: 1,
-      halftimeBreak: 0,
-      phase: 'groupStage',
-      teamMap,
-      locale: 'de',
-      startMatchNumber: 1,
-    });
+    const result = scheduleMatches({ ...base, matches, numberOfFields: 1, gameDuration: 10, phase: 'groupStage' });
 
     // Round 1 (slot=0) should come first
     expect(result[0].homeTeam).toBe('Team A');
@@ -368,23 +278,36 @@ describe('scheduleMatches', () => {
 
   it('sets phase to groupStage or detects final phase', () => {
     const matches: Match[] = [
-      { id: 'semi1', round: 1, field: 1, teamA: 't1', teamB: 't2', isFinal: true, slot: 0 },
+      { id: 'semi1', round: 1, field: 1, ...vs(T1, T2), isFinal: true, slot: 0 },
     ];
 
-    const result = scheduleMatches({
-      matches,
-      startTime: new Date(2026, 0, 1, 10, 0),
-      numberOfFields: 1,
-      gameDuration: 10,
-      breakDuration: 2,
-      gamePeriods: 1,
-      halftimeBreak: 0,
-      phase: 'final',
-      teamMap,
-      locale: 'de',
-      startMatchNumber: 1,
-    });
+    const result = scheduleMatches({ ...base, matches, numberOfFields: 1, gameDuration: 10, phase: 'final' });
 
     expect(result[0].phase).toBe('semifinal');
+  });
+
+  it('@TM-015 offene Seite zeigt im Spielplan ihre Herkunft, besetzte Seite den Namen', () => {
+    const semi1 = testUuid(201);
+    const matches: Match[] = [
+      { id: semi1, round: 1, field: 1, ...slots(groupRank('A', 2), groupRank('B', 1)), isFinal: true, slot: 0, label: '1. Halbfinale' },
+      { id: testUuid(202), round: 2, field: 1, ...slots(resultOf(semi1, 'winner'), resultOf(semi1, 'loser')), isFinal: true, slot: 1 },
+    ];
+
+    const result = scheduleMatches({ ...base, matches, numberOfFields: 1, gameDuration: 10, phase: 'final' });
+
+    expect(result[0].homeTeam).toBe('tournament:slot.groupRank');
+    expect(result[1].homeTeam).toBe('tournament:slot.winnerOf');
+    expect(result[1].awayTeam).toBe('tournament:slot.loserOf');
+  });
+
+  it('@TM-033 Gegenbeispiel: ein Teamname im Übergangsfeld teamA wird nicht angezeigt', () => {
+    const matches: Match[] = [
+      { id: 'm1', round: 1, field: 1, ...vs(T1, T2), teamA: 'Team B', teamB: 'Team A', slot: 0 },
+    ];
+
+    const result = scheduleMatches({ ...base, matches, numberOfFields: 1, gameDuration: 10, phase: 'groupStage' });
+
+    expect(result[0].homeTeam).toBe('Team A');
+    expect(result[0].awayTeam).toBe('Team B');
   });
 });
