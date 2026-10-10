@@ -109,8 +109,18 @@ export class MatchExecutionService {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
         if (!match) { throw new Error(`Match ${matchId} not found`); }
 
+        // B-04d (@W2A-029): der Anpfiff bindet die Spielregeln. Ein noch nicht
+        // angepfiffenes Spiel übernimmt eine geänderte Regel deshalb sofort,
+        // ein laufendes Spiel behält seinen beim Anpfiff übernommenen Stand.
+        const tournament = await this.tournamentRepo.get(tournamentId);
+        const timePenaltyDurationSeconds =
+            tournament?.matchCockpitSettings?.timePenaltyDurationSeconds
+            ?? match.timePenaltyDurationSeconds
+            ?? 120;
+
         const updated: LiveMatch = {
             ...match,
+            timePenaltyDurationSeconds,
             status: 'RUNNING',
             timerStartTime: new Date().toISOString(),
             timerElapsedSeconds: match.elapsedSeconds,
@@ -368,7 +378,10 @@ export class MatchExecutionService {
             payload: {
                 team,
                 playerNumber: options?.playerNumber,
-                durationSeconds: options?.durationSeconds ?? 120, // Default 2 minutes
+                // B-04d (@W2A-029): die Dauer folgt der beim Anpfiff übernommenen
+                // Spielregel (Schnitt in initializeMatch), nicht dem laufenden
+                // Turnier — eine Regeländerung wirkt erst ab dem nächsten Anpfiff.
+                durationSeconds: options?.durationSeconds ?? match.timePenaltyDurationSeconds ?? 120,
             },
             scoreAfter: { home: match.homeScore, away: match.awayScore },
         };
@@ -793,6 +806,12 @@ export class MatchExecutionService {
         const tiebreakerDuration = tournament.finalsConfig?.tiebreakerDuration ?? 5;
         const durationSeconds = tournament.groupPhaseGameDuration * 60;
 
+        // B-04d (@W2A-029): die Spielregeln werden beim Anpfiff übernommen. Eine
+        // geänderte Zeitstrafendauer wirkt deshalb erst ab dem nächsten Anpfiff —
+        // ein laufendes Spiel rechnet weiter mit dem beim Anpfiff übernommenen Stand.
+        const timePenaltyDurationSeconds =
+            tournament.matchCockpitSettings?.timePenaltyDurationSeconds ?? 120;
+
         // Task 6 (Ruling 2): ob diese Phase mit Unentschieden enden darf, kommt jetzt aus der
         // Sport-Konfiguration statt implizit angenommen zu werden. Für Fußball ist
         // canDrawInGroupPhase immer true und canDrawInFinals immer false — siehe needsTiebreaker().
@@ -834,6 +853,7 @@ export class MatchExecutionService {
             events: [],
             tournamentPhase: scheduledMatch.phase,
             canEndInDraw,
+            timePenaltyDurationSeconds,
             tiebreakerMode,
             overtimeDurationSeconds: tiebreakerDuration * 60,
         };

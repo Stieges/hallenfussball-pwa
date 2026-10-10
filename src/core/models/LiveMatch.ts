@@ -123,6 +123,13 @@ export interface LiveMatch {
      */
     canEndInDraw?: boolean;
 
+    /**
+     * Dauer einer Zeitstrafe in Sekunden — Schnitt der Spielregel beim Anpfiff
+     * (initializeMatch, @W2A-029). Ein laufendes Spiel rechnet weiter mit diesem
+     * Stand, auch wenn die Turnierleitung die Regel danach ändert.
+     */
+    timePenaltyDurationSeconds?: number;
+
     // Tiebreaker
     playPhase?: PlayPhase;
     tiebreakerMode?: TiebreakerMode;

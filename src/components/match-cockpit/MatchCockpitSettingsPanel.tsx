@@ -90,6 +90,14 @@ export function MatchCockpitSettingsPanel({
     { value: 'custom', label: t('settings.customSound') },
   ];
 
+  // Spielregel Zeitstrafe (@W2A-029): die Turnierleitung stellt die Dauer ein
+  // (gleiche Auswahl wie die Spielsteuerung, siehe TimePenaltyDialog).
+  const TIME_PENALTY_OPTIONS: { value: number; label: string }[] = [
+    { value: 60, label: t('timePenalty.oneMin') },
+    { value: 120, label: t('timePenalty.twoMin') },
+    { value: 300, label: t('timePenalty.fiveMin') },
+  ];
+
   // Update a single setting
   const updateSetting = useCallback(
     <K extends keyof MatchCockpitSettings>(key: K, value: MatchCockpitSettings[K]) => {
@@ -174,6 +182,26 @@ export function MatchCockpitSettingsPanel({
             style={styles.select}
           >
             {TIMER_DIRECTION_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </SettingRow>
+      </section>
+
+      {/* Spielregel Zeitstrafe (@W2A-029) — gilt ab dem nächsten Anpfiff */}
+      <section style={styles.section}>
+        <h3 style={styles.sectionTitle}>{t('settings.timePenalty')}</h3>
+
+        <SettingRow label={t('settings.timePenaltyDuration')} description={t('settings.timePenaltyDurationDesc')}>
+          <select
+            data-testid="settings-time-penalty-duration"
+            value={settings.timePenaltyDurationSeconds}
+            onChange={(e) => updateSetting('timePenaltyDurationSeconds', Number(e.target.value))}
+            style={{ ...styles.select, fontSize: cssVars.fontSizes.lg }}
+          >
+            {TIME_PENALTY_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>

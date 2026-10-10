@@ -545,6 +545,15 @@ export interface MatchCockpitSettings {
   /** Round after which sudden death begins. Default: 6 */
   penaltySuddenDeathAfter: number;
 
+  // Spielregel Zeitstrafe (@W2A-029)
+  /**
+   * Dauer einer Zeitstrafe in Sekunden (Spielregel, Default: 120 = 2 Minuten).
+   * Gilt ab dem nächsten Anpfiff: das Cockpit übernimmt den Wert beim Anpfiff
+   * in den Spielstand (initializeMatch), ein laufendes Spiel rechnet weiter mit
+   * seinem Stand.
+   */
+  timePenaltyDurationSeconds: number;
+
   // Sound Settings
   /** Enable end-of-match horn sound. Default: false */
   soundEnabled: boolean;
@@ -580,6 +589,9 @@ export const DEFAULT_MATCH_COCKPIT_SETTINGS: MatchCockpitSettings = {
   finalDecider: 'penalty',
   penaltyShootersPerTeam: 5,
   penaltySuddenDeathAfter: 6,
+
+  // Spielregel Zeitstrafe (@W2A-029)
+  timePenaltyDurationSeconds: 120,
 
   // Sound
   soundEnabled: false,
