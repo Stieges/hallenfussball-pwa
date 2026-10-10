@@ -987,6 +987,56 @@ describe('MutationQueue A-06f authHold (@FU-009/@FU-013)', () => {
     await runAuthHoldScenario(authExpiredApiError(401, 'Invalid JWT'));
   });
 
+  // Race (A-06f Fixrunde 1): ein Versuch hängt, `resumeAfterAuth()` kommt währenddessen,
+  // danach endet der Versuch mit Anmeldefehler – die Queue darf nicht bis zum nächsten
+  // Anmelde-Ereignis stehen, sondern läuft wie ein vorübergehender Fehler weiter.
+  function hangingFirstSave(): { save: ReturnType<typeof vi.fn>; rejectFirst: (e: unknown) => void } {
+    const handle: { rejectFirst: (e: unknown) => void } = { rejectFirst: () => undefined };
+    const save = vi.fn()
+      .mockImplementationOnce(() => new Promise<void>((_resolve, reject) => { handle.rejectFirst = reject; }))
+      .mockResolvedValue(undefined);
+    return { save, rejectFirst: (e) => handle.rejectFirst(e) };
+  }
+
+  it('Race (@FU-009): resumeAfterAuth während eines laufenden Versuchs, der danach mit Anmeldefehler endet → Queue läuft nach 1 s weiter', async () => {
+    const { save, rejectFirst } = hangingFirstSave();
+    mq = makeRealQueue(save);
+    mq.enqueue('SAVE_TOURNAMENT', tour('t1'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+
+    // Anmeldung kommt, während der erste Versuch noch hängt.
+    await mq.resumeAfterAuth();
+
+    // Der alte Versuch endet danach mit Anmeldefehler (alter Token).
+    rejectFirst(new AuthenticationError('Not authenticated', 'save'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mq.getLastFailure()).toBe('transient');
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(mq.getPendingCount()).toBe(0);
+    expect(mq.getFailedCount()).toBe(0);
+    expect(openTimers()).toBe(0);
+  });
+
+  it('Gegenbeispiel Race (@FU-009): ohne resumeAfterAuth während des Versuchs bleibt die Anmelde-Sperre – nach 10 Minuten kein Versuch', async () => {
+    const { save, rejectFirst } = hangingFirstSave();
+    mq = makeRealQueue(save);
+    mq.enqueue('SAVE_TOURNAMENT', tour('t1'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+
+    rejectFirst(new AuthenticationError('Not authenticated', 'save'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mq.getLastFailure()).toBe('permanent');
+
+    await vi.advanceTimersByTimeAsync(600000);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(mq.getPendingCount()).toBe(1);
+    expect(openTimers()).toBe(0);
+  });
+
   it('Gegenbeispiel (@FU-013): AuthRetryableFetchError 503 → transienter Weg, Wartezeit 1000, kein authHold', async () => {
     const fetchErr = Object.assign(new Error('HTTP 503'), { name: 'AuthRetryableFetchError', status: 503 });
     const save = vi.fn().mockRejectedValue(new RepositoryError('save', 'HTTP 503', fetchErr));

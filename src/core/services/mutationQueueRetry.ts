@@ -50,6 +50,8 @@ export class QueueRetryTimer {
      * `resumeAfterAuth()` hebt die Sperre auf.
      */
     authHold = false;
+    /** A-06f Fixrunde 1: Generation der Anmeldung; steigt bei jedem `resumeAfterAuth()`. */
+    authEpoch = 0;
 
     constructor(
         private readonly timers: QueueTimers,
@@ -89,6 +91,17 @@ export class QueueRetryTimer {
     reset(): void {
         this.backoffStep = 0;
     }
+
+    /**
+     * Anmeldefehler eines Versuchs, der mit Generation `epoch` gestartet wurde:
+     * setzt `authHold` nur, wenn seither keine erneute Anmeldung kam. Sonst
+     * (veraltet, A-06f Fixrunde 1) false – der Aufrufer behandelt ihn wie vorübergehend.
+     */
+    holdForAuth(epoch: number): boolean {
+        if (epoch !== this.authEpoch) { return false; }
+        this.authHold = true;
+        return true;
+    }
 }
 
 /** Ergebnis eines gemerkten Versuchs (A-06e): erledigt oder Fehler — `settled` lehnt nie ab. */
@@ -126,6 +139,11 @@ export class QueueInFlight {
     /** Läuft ein gemerkter Versuch? */
     get isActive(): boolean {
         return this.current !== null;
+    }
+
+    /** Vergisst den gemerkten Versuch (A-06f Fixrunde 1: alter Token nach Anmeldung). */
+    discard(): void {
+        this.current = null;
     }
 
     /**

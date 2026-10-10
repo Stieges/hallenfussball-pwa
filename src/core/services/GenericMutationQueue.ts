@@ -450,6 +450,8 @@ export class GenericMutationQueue<TType extends string> {
         this.retryTimer.clear();
         this.isProcessing = true;
         let scheduleMs: number | null = null;
+        // A-06f Fixrunde 1: Anmelde-Generation beim Laufstart (siehe holdForAuth).
+        const authEpoch = this.retryTimer.authEpoch;
 
         try {
             // Process head of queue
@@ -464,13 +466,15 @@ export class GenericMutationQueue<TType extends string> {
                 } catch (error) {
                     if (import.meta.env.DEV) { console.warn(`MutationQueue: Error processing ${item.type} (${item.id})`, error); }
 
-                    if (isAuthExpired(error)) {
+                    const authFailure = isAuthExpired(error);
+                    if (authFailure && this.retryTimer.holdForAuth(authEpoch)) {
                         // A-06f (@FU-009): Anmeldung abgelaufen – zählt nicht, kein Zeitgeber; nur resumeAfterAuth() hebt auf.
-                        this.retryTimer.authHold = true; this.lastFailure = 'permanent'; this.notifyListeners();
+                        this.lastFailure = 'permanent'; this.notifyListeners();
                         break;
                     }
 
-                    if (isTransientMutationError(error)) {
+                    // Auch ein veralteter Anmeldefehler (nach resumeAfterAuth, A-06f Fixrunde 1) läuft hier durch.
+                    if (authFailure || isTransientMutationError(error)) {
                         // Vorübergehender Fehler (z. B. kein echtes Internet trotz
                         // navigator.onLine — Hallen-WLAN-Anmeldeseite, Server-Überlastung):
                         // zählt nicht als Fehlversuch. Item bleibt unverändert an erster
@@ -543,7 +547,9 @@ export class GenericMutationQueue<TType extends string> {
      * im Sync-Wiring (kommt mit A-06g; bis dahin bewusst ohne Aufrufer).
      */
     public async resumeAfterAuth(): Promise<void> {
+        this.retryTimer.authEpoch += 1;
         this.retryTimer.authHold = false;
+        this.inFlight.discard();
         return this.process();
     }
 
