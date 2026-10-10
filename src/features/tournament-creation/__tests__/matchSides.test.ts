@@ -1,17 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import type { Match, Team } from '../../../types/tournament';
 import { sideLabel, replaceSides } from '../utils/matchSides';
-import { looseVs } from '../../../test/matchSlotFixtures';
+import { vs } from '../../../test/matchSlotFixtures';
+import { testUuid } from '../../../test/testIds';
 
 const teams: Team[] = [
-  { id: '1', name: 'A' },
-  { id: '2', name: 'B' },
+  { id: testUuid(1), name: 'A' },
+  { id: testUuid(2), name: 'B' },
 ];
 const match: Match = {
   id: 'm1',
   round: 1,
   field: 1,
-  ...looseVs('1', '2'),
+  ...vs(testUuid(1), testUuid(2)),
 };
 
 describe('matchSides – Ein-Stellen-Regel Wizard', () => {
@@ -26,8 +27,8 @@ describe('matchSides – Ein-Stellen-Regel Wizard', () => {
   });
 
   it('replaceSides ersetzt nur die betroffene Seite', () => {
-    const replaced = replaceSides(match, '1', '9');
-    expect(replaced.teamA).toBe('9');
-    expect(replaced.teamB).toBe('2');
+    const replaced = replaceSides(match, testUuid(1), testUuid(9));
+    expect(replaced.teamA).toBe(testUuid(9));
+    expect(replaced.teamB).toBe(testUuid(2));
   });
 });

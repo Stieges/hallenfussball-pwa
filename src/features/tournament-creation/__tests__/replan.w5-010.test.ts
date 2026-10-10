@@ -3,6 +3,8 @@ import type { Match, Tournament } from '../../../types/tournament';
 import { generateFullSchedule } from '../../../core/generators';
 import { replaceTeam } from '../utils/replan';
 import { testUuid } from '../../../test/testIds';
+import { matchInvolvesTeam, matchSideTeamId, transitionalSides } from '../../../core/models/matchSlot';
+import { mapMatchFromSupabase, mapMatchUpdateToSupabase } from '../../../core/repositories/supabaseMappers';
 
 const baseTournament = (): Tournament =>
   ({
@@ -109,5 +111,67 @@ describe('Team ersetzen', () => {
     });
     expect(result.logEntry.label).toContain('Team C durch Team N ersetzt');
     expect(result.logEntry.timestamp).toBeTruthy();
+  });
+
+  it('@W5-010 – der Team-Wechsel steht in den Slots und geht über den Cloud-Mapper nicht verloren', () => {
+    const base = baseTournament();
+    const established: Tournament = {
+      ...base,
+      matches: generateFullSchedule(base).allMatches.map((m, index) => ({
+        id: m.id,
+        round: index + 1,
+        field: m.field,
+        slotA: m.slotA,
+        slotB: m.slotB,
+        ...transitionalSides(m.slotA, m.slotB),
+        scheduledTime: m.startTime,
+      })),
+    };
+    const result = replaceTeam(established, {
+      fromTeamId: testUuid(3),
+      toTeam: { id: testUuid(9), name: 'N' },
+      person: 'Helferin Mia',
+    });
+
+    const involvedC = established.matches.filter((m) => matchInvolvesTeam(m, testUuid(3)));
+    const replaced = result.tournament.matches.filter((m) => matchInvolvesTeam(m, testUuid(9)));
+    expect(replaced.length).toBe(involvedC.length);
+
+    // Slot und abgeleitetes Übergangsfeld zeigen das neue Team.
+    replaced.forEach((m) => {
+      expect(m.teamA === testUuid(9) || m.teamB === testUuid(9)).toBe(true);
+      if (matchSideTeamId(m, 'A') === testUuid(9)) {
+        expect(m.teamA).toBe(testUuid(9));
+      }
+      if (matchSideTeamId(m, 'B') === testUuid(9)) {
+        expect(m.teamB).toBe(testUuid(9));
+      }
+    });
+
+    // Cloud-Mapper schreibt die Slots, Rücklesen liefert das neue Team wieder.
+    result.tournament.matches.forEach((m) => {
+      const update = mapMatchUpdateToSupabase(m);
+      const row = {
+        id: m.id,
+        round: m.round,
+        field: m.field,
+        team_a_id: update.team_a_id ?? null,
+        team_b_id: update.team_b_id ?? null,
+        slot_a_source: update.slot_a_source ?? null,
+        slot_b_source: update.slot_b_source ?? null,
+      } as unknown as Parameters<typeof mapMatchFromSupabase>[0];
+      const back = mapMatchFromSupabase(row);
+      expect(back.slotA).toEqual(m.slotA);
+      expect(back.slotB).toEqual(m.slotB);
+    });
+
+    // Unbeteiligte Spiele behalten ihre Slots unverändert.
+    established.matches
+      .filter((m) => !matchInvolvesTeam(m, testUuid(3)))
+      .forEach((b) => {
+        const after = result.tournament.matches.find((m) => m.id === b.id);
+        expect(after?.slotA).toEqual(b.slotA);
+        expect(after?.slotB).toEqual(b.slotB);
+      });
   });
 });

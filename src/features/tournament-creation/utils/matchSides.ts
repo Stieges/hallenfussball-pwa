@@ -4,6 +4,8 @@
  * später auf Slots um.
  */
 import type { Match, Team } from '../../../types/tournament';
+import { matchSideTeamId } from '../../../core/models/matchSlot';
+import { assignTeamToSide } from '../../../core/models/matchAssignment';
 
 export function sideLabel(
   match: Pick<Match, 'teamA' | 'teamB'>,
@@ -15,17 +17,21 @@ export function sideLabel(
 }
 
 /**
- * Ersetzt eine Seiten-Zuordnung (Team-Wechsel @W5-010) – zweiter und letzter
- * Zugriff auf match.teamA/teamB in diesem Modul (Ein-Stellen-Regel).
+ * Ersetzt eine Seiten-Zuordnung (Team-Wechsel @W5-010). Die Seiten werden über
+ * den Slot-Helfer `assignTeamToSide` gesetzt (Slot ist die Wahrheit, das
+ * Übergangsfeld `teamA/teamB` wird daraus abgeleitet).
  */
 export function replaceSides(
   match: Match,
   fromTeamId: string,
   toTeamId: string
 ): Match {
-  return {
-    ...match,
-    teamA: match.teamA === fromTeamId ? toTeamId : match.teamA,
-    teamB: match.teamB === fromTeamId ? toTeamId : match.teamB,
-  };
+  let next = match;
+  if (matchSideTeamId(match, 'A') === fromTeamId) {
+    next = assignTeamToSide(next, 'A', toTeamId);
+  }
+  if (matchSideTeamId(match, 'B') === fromTeamId) {
+    next = assignTeamToSide(next, 'B', toTeamId);
+  }
+  return next;
 }
