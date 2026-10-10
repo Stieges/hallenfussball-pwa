@@ -14,12 +14,10 @@
  */
 
 import { CSSProperties } from 'react';
-import { useTranslation } from 'react-i18next';
 import { cssVars } from '../design-tokens';
 import { ScheduleDisplay } from '../components/ScheduleDisplay';
 import { formatDateGerman } from '../utils/locationHelpers';
 import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
 import { PublicBottomNav } from '../components/ui/PublicBottomNav';
 import { usePublicTournament } from '../features/public-view/usePublicTournament';
 import { usePublicViewFilters } from '../features/public-view/usePublicViewFilters';
@@ -36,13 +34,15 @@ import {
 import { useTheme } from '../hooks/useTheme';
 import { PublicStandingsTab } from '../features/public-view/components/PublicStandingsTab';
 import { PublicInfoTab } from '../features/public-view/components/PublicInfoTab';
+import { MyTeamBar } from '../features/public-view/components/MyTeamBar';
+import { PublicFilterBar } from '../features/public-view/components/PublicFilterBar';
+import { TeamSelectorDialog } from '../features/public-view/components/TeamSelectorDialog';
 
 export interface LiveViewScreenProps {
   shareCode: string;
 }
 
 export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => {
-  const { t: tSport } = useTranslation('sport');
   const { tournament, schedule, standings: currentStandings, loadingState, errorMessage, refresh } =
     usePublicTournament(shareCode);
 
@@ -97,88 +97,6 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     letterSpacing: '0.1em',
     marginTop: cssVars.spacing.sm,
   };
-
-  const myTeamBarStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surfaceElevated,
-    borderRadius: cssVars.borderRadius.lg,
-    marginBottom: cssVars.spacing.lg,
-    gap: cssVars.spacing.md,
-    flexWrap: 'wrap',
-  };
-
-  const teamSelectorStyle: CSSProperties = {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: cssVars.spacing.md,
-    zIndex: 1000,
-  };
-
-  const teamSelectorContentStyle: CSSProperties = {
-    background: cssVars.colors.background,
-    borderRadius: cssVars.borderRadius.xl,
-    padding: cssVars.spacing.lg,
-    maxWidth: '400px',
-    width: '100%',
-    maxHeight: '80vh',
-    overflow: 'auto',
-  };
-
-  const filterBarStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.md,
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.lg,
-    marginBottom: cssVars.spacing.lg,
-  };
-
-  const filterRowStyle: CSSProperties = {
-    display: 'flex',
-    gap: cssVars.spacing.sm,
-    flexWrap: 'wrap',
-    alignItems: 'center',
-  };
-
-  const filterLabelStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textMuted,
-    minWidth: '60px',
-  };
-
-  const chipStyle = (active: boolean): CSSProperties => ({
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    borderRadius: cssVars.borderRadius.full,
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: active ? cssVars.fontWeights.semibold : cssVars.fontWeights.normal,
-    background: active ? cssVars.colors.primary : cssVars.colors.surfaceElevated,
-    color: active ? cssVars.colors.background : cssVars.colors.textSecondary,
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  });
-
-  const toggleStyle = (active: boolean): CSSProperties => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    borderRadius: cssVars.borderRadius.md,
-    fontSize: cssVars.fontSizes.sm,
-    background: active ? cssVars.colors.primarySubtle : 'transparent',
-    color: active ? cssVars.colors.primary : cssVars.colors.textMuted,
-    border: `1px solid ${active ? cssVars.colors.primary : cssVars.colors.border}`,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  });
 
   // Zustandsansichten (B-13d1)
   if (loadingState === 'loading') {
@@ -237,153 +155,36 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
 
         {/* "Mein Team" Bar - only on schedule tab */}
         {activeTab === 'schedule' && (
-          <div style={myTeamBarStyle}>
-            <div>
-              <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
-                Mein Team:
-              </span>{' '}
-              <strong style={{ color: cssVars.colors.textPrimary }}>
-                {myTeamLabel ?? 'Nicht ausgewählt'}
-              </strong>
-            </div>
-            <div style={{ display: 'flex', gap: cssVars.spacing.sm, alignItems: 'center' }}>
-              {myTeamId && (
-                <button
-                  style={toggleStyle(showOnlyMyTeam)}
-                  onClick={() => handleShowOnlyMyTeamChange(!showOnlyMyTeam)}
-                >
-                  <span>⭐</span>
-                  <span>Nur meine</span>
-                </button>
-              )}
-              <Button
-                variant={myTeamId ? 'secondary' : 'primary'}
-                size="sm"
-                onClick={() => setShowTeamSelector(true)}
-              >
-                {myTeamId ? 'Ändern' : 'Team wählen'}
-              </Button>
-            </div>
-          </div>
+          <MyTeamBar
+            myTeamLabel={myTeamLabel}
+            myTeamId={myTeamId}
+            showOnlyMyTeam={showOnlyMyTeam}
+            onShowOnlyMyTeamChange={handleShowOnlyMyTeamChange}
+            onOpenTeamSelector={() => setShowTeamSelector(true)}
+          />
         )}
 
         {/* Filter Bar - only on schedule tab */}
         {activeTab === 'schedule' && (
-          <div style={filterBarStyle}>
-          {/* Group Filter */}
-          {groups.length > 1 && (
-            <div style={filterRowStyle}>
-              <span style={filterLabelStyle}>Gruppe:</span>
-              <button
-                style={chipStyle(selectedGroup === null)}
-                onClick={() => handleGroupChange(null)}
-              >
-                Alle
-              </button>
-              {groups.map((group) => (
-                <button
-                  key={group}
-                  style={chipStyle(selectedGroup === group)}
-                  onClick={() => handleGroupChange(group)}
-                >
-                  Gruppe {group}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Phase Filter */}
-          <div style={filterRowStyle}>
-            <span style={filterLabelStyle}>Phase:</span>
-            <button
-              style={chipStyle(selectedPhase === 'all')}
-              onClick={() => handlePhaseChange('all')}
-            >
-              Alle
-            </button>
-            <button
-              style={chipStyle(selectedPhase === 'groupStage')}
-              onClick={() => handlePhaseChange('groupStage')}
-            >
-              {tSport('tournament.groupStage')}
-            </button>
-            <button
-              style={chipStyle(selectedPhase === 'final')}
-              onClick={() => handlePhaseChange('final')}
-            >
-              Finalrunde
-            </button>
-          </div>
-
-          {/* Status Filter */}
-          <div style={filterRowStyle}>
-            <span style={filterLabelStyle}>Status:</span>
-            <button
-              style={chipStyle(selectedStatus === 'all')}
-              onClick={() => handleStatusChange('all')}
-            >
-              Alle
-            </button>
-            <button
-              style={chipStyle(selectedStatus === 'scheduled')}
-              onClick={() => handleStatusChange('scheduled')}
-            >
-              Geplant
-            </button>
-            <button
-              style={chipStyle(selectedStatus === 'live')}
-              onClick={() => handleStatusChange('live')}
-            >
-              🔴 Live
-            </button>
-            <button
-              style={chipStyle(selectedStatus === 'finished')}
-              onClick={() => handleStatusChange('finished')}
-            >
-              Beendet
-            </button>
-          </div>
-        </div>
+          <PublicFilterBar
+            groups={groups}
+            selectedGroup={selectedGroup}
+            selectedPhase={selectedPhase}
+            selectedStatus={selectedStatus}
+            onGroupChange={handleGroupChange}
+            onPhaseChange={handlePhaseChange}
+            onStatusChange={handleStatusChange}
+          />
         )}
 
         {/* Team Selector Modal */}
         {showTeamSelector && (
-          <div style={teamSelectorStyle} onClick={() => setShowTeamSelector(false)}>
-            <div style={teamSelectorContentStyle} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ marginBottom: cssVars.spacing.md, fontSize: cssVars.fontSizes.lg }}>
-                Mein Team wählen
-              </h3>
-              <p style={{ marginBottom: cssVars.spacing.md, color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
-                Wähle dein Team, um seine Spiele hervorzuheben.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm }}>
-                {/* "Kein Team" option */}
-                <Button
-                  variant={myTeamId === null ? 'primary' : 'secondary'}
-                  onClick={() => selectMyTeam(null)}
-                  style={{ justifyContent: 'flex-start' }}
-                >
-                  Kein Team (alle anzeigen)
-                </Button>
-                {/* Teams */}
-                {tournament.teams.map((team) => (
-                  <Button
-                    key={team.id}
-                    variant={myTeamId === team.id ? 'primary' : 'secondary'}
-                    onClick={() => selectMyTeam(team.id)}
-                    style={{ justifyContent: 'flex-start' }}
-                  >
-                    {team.name}
-                    {team.group && (
-                      <span style={{ marginLeft: 'auto', color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
-                        Gruppe {team.group}
-                      </span>
-                    )}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
+          <TeamSelectorDialog
+            teams={tournament.teams}
+            myTeamId={myTeamId}
+            onSelectTeam={selectMyTeam}
+            onClose={() => setShowTeamSelector(false)}
+          />
         )}
 
         {/* Tab Content */}
