@@ -144,6 +144,9 @@ export function buildReplanPreview(
       return {
         ...g,
         id: kept.id,
+        // B3b: Seiten des behaltenen Spiels (nicht des Generators), sonst zeigt die Vorschau andere Slots.
+        slotA: kept.slotA,
+        slotB: kept.slotB,
         field: pinned ? kept.field : g.field,
         startTime: keptStart,
         endTime: new Date(
@@ -161,6 +164,9 @@ export function buildReplanPreview(
         return {
           ...schedule.allMatches[0],
           id: m.id,
+          // B3b: Slots des angehängten Spiels selbst, nicht die des Generator-Spiels 0.
+          slotA: m.slotA,
+          slotB: m.slotB,
           field: m.field,
           slot: schedule.allMatches.length,
           startTime: keptStart,

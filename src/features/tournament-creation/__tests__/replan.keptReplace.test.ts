@@ -133,6 +133,53 @@ describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
     expect(preview.conflictMatchIds).toContain(orphan.id);
   });
 
+  it('B3b – Vorschau: ersetztes Spiel trägt die Slots des behaltenen Spiels, nicht die des Generators', () => {
+    const established = baseTournament();
+    const g = generatedMatches(established)[0];
+    // Gleiche Paarung, aber Seiten getauscht: die Vorschau muss die Slots des behaltenen Spiels zeigen.
+    const played: Match = {
+      ...g,
+      teamA: g.teamB,
+      teamB: g.teamA,
+      slotA: g.slotB,
+      slotB: g.slotA,
+      scoreA: 2,
+      scoreB: 1,
+      matchStatus: 'finished',
+    };
+    const withPlayed: Tournament = {
+      ...established,
+      matches: [played, ...generatedMatches(established).slice(1)],
+    };
+
+    const preview = buildReplanPreview(withPlayed);
+    expect(preview.status).toBe('preview');
+    if (preview.status !== 'preview') { return; }
+    const item = preview.schedule.allMatches.find((m) => m.id === played.id);
+    expect(item?.slotA).toEqual(played.slotA);
+    expect(item?.slotB).toEqual(played.slotB);
+  });
+
+  it('B3b – Vorschau: angehängtes Konfliktspiel trägt seine eigenen Slots, nicht die von Spiel 0', () => {
+    const established = baseTournament();
+    const orphan: Match = {
+      id: 'kept-orphan-slots',
+      round: 1,
+      field: 1,
+      ...looseVs(testUuid(9), testUuid(1)),
+      scoreA: 4,
+      scoreB: 4,
+      matchStatus: 'finished',
+      phase: 'groupStage',
+    };
+    const preview = buildReplanPreview({ ...established, matches: [orphan] });
+    expect(preview.status).toBe('preview');
+    if (preview.status !== 'preview') { return; }
+    const item = preview.schedule.allMatches.find((m) => m.id === orphan.id);
+    expect(item?.slotA).toEqual(orphan.slotA);
+    expect(item?.slotB).toEqual(orphan.slotB);
+  });
+
   it('Controller-Ruling: Kollision von behaltenem Anstoß mit dem neuen Plan – @W5-008, nicht bestätigbar', () => {
     const established = baseTournament();
     const generated = generateFullSchedule(established).allMatches;
