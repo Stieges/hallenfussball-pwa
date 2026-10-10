@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ReactElement } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { createInstance } from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import deCommon from '../../../../i18n/locales/de/common.json';
@@ -114,3 +114,83 @@ describe('SyncStatusIndicator — Wartegrund aus Outbox und Queue (A-06j, DE)', 
     );
   });
 });
+
+describe('SyncStatusIndicator — Antippen zeigt Wartedetails (A-06j, DE)', () => {
+  beforeEach(() => {
+    hoisted.outbox = EMPTY_OUTBOX;
+    hoisted.sync.status = 'synced';
+    hoisted.sync.isSyncing = false;
+    hoisted.sync.pendingChanges = 0;
+    hoisted.sync.failedChanges = 0;
+    hoisted.sync.failedMutations = [];
+    hoisted.sync.isCloudSyncAvailable = true;
+    hoisted.sync.queueLastFailure = null;
+  });
+
+  it('Pflichttest: Antippen zeigt "Übertragung gestört" und den Serverfehler im Detail-Feld', async () => {
+    hoisted.sync.pendingChanges = 2;
+    hoisted.outbox = outboxWith({
+      pendingByTournament: { t1: 2 },
+      lastFailureKind: 'permanent',
+      lastError: 'Serverfehler X',
+    });
+    await renderWithI18n(<SyncStatusIndicator tournamentId="t1" />);
+
+    fireEvent.click(screen.getByTestId('sync-status'));
+
+    const details = screen.getByTestId('sync-wait-details');
+    expect(details).toHaveTextContent('2 Einträge warten – Übertragung gestört');
+    expect(details).toHaveTextContent('Serverfehler X');
+  });
+
+  it('Gegenbeispiel: ohne Antippen erscheint kein Detail-Feld', async () => {
+    hoisted.sync.pendingChanges = 2;
+    hoisted.outbox = outboxWith({ pendingByTournament: { t1: 2 }, lastFailureKind: 'permanent', lastError: 'Serverfehler X' });
+    await renderWithI18n(<SyncStatusIndicator tournamentId="t1" />);
+
+    expect(screen.queryByTestId('sync-wait-details')).not.toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel: ohne wartende Eintraege oeffnet Antippen kein Wartefeld', async () => {
+    await renderWithI18n(<SyncStatusIndicator tournamentId="t1" />);
+
+    fireEvent.click(screen.getByTestId('sync-status'));
+
+    expect(screen.queryByTestId('sync-wait-details')).not.toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel: transienter Fehler zeigt im Detail "kein Internet", nicht "gestört"', async () => {
+    hoisted.sync.pendingChanges = 1;
+    hoisted.outbox = outboxWith({ pendingByTournament: { t1: 1 }, lastFailureKind: 'transient', lastError: 'Netzwerkfehler' });
+    await renderWithI18n(<SyncStatusIndicator tournamentId="t1" />);
+
+    fireEvent.click(screen.getByTestId('sync-status'));
+
+    const details = screen.getByTestId('sync-wait-details');
+    expect(details).toHaveTextContent('1 Eintrag wartet – kein Internet');
+    expect(details).not.toHaveTextContent('gestört');
+  });
+
+  it('Schliesst sich per Klick ausserhalb wie die Fehlerliste', async () => {
+    hoisted.sync.pendingChanges = 1;
+    await renderWithI18n(<SyncStatusIndicator tournamentId="t1" />);
+    fireEvent.click(screen.getByTestId('sync-status'));
+    expect(screen.getByTestId('sync-wait-details')).toBeInTheDocument();
+
+    fireEvent.mouseDown(document.body);
+
+    expect(screen.queryByTestId('sync-wait-details')).not.toBeInTheDocument();
+  });
+
+  it('bei fehlgeschlagenen Eintraegen bleibt die Fehlerliste, kein Wartefeld', async () => {
+    hoisted.sync.pendingChanges = 1;
+    hoisted.sync.failedChanges = 1;
+    await renderWithI18n(<SyncStatusIndicator tournamentId="t1" />);
+
+    fireEvent.click(screen.getByTestId('sync-status'));
+
+    expect(screen.getByTestId('sync-failed-list')).toBeInTheDocument();
+    expect(screen.queryByTestId('sync-wait-details')).not.toBeInTheDocument();
+  });
+});
+

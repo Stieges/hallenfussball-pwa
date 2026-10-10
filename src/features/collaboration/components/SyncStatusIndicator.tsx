@@ -15,6 +15,7 @@ import { useMatchEngineContextOptional } from '../../match-engine/useMatchEngine
 import { useOutboxStatus } from '../outbox/useOutboxStatus';
 import { SyncStatusBar } from './SyncStatusBar';
 import { SyncFailedList } from './SyncFailedList';
+import { SyncWaitDetails } from './SyncWaitDetails';
 import { deriveWaitReason } from './syncStatusDisplay';
 
 export interface SyncStatusIndicatorProps {
@@ -73,18 +74,22 @@ export function SyncStatusIndicator({
     const resyncNow = useResyncNow();
 
     const [showFailedList, setShowFailedList] = useState(false);
+    // A-06j (E1): Antippen im kompakten Modus zeigt den Wartegrund mit Details.
+    const [showWaitDetails, setShowWaitDetails] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Click/touch outside closes the failed-list popover. Not useClickOutside() here: that hook's
     // RefObject<T> (non-nullable current) doesn't accept the RefObject<T | null> a DOM useRef
     // actually produces (React 19 types) -- a pre-existing mismatch, out of scope to fix here.
+    const anyPopoverOpen = showFailedList || showWaitDetails;
     useEffect(() => {
-        if (!showFailedList) {
+        if (!anyPopoverOpen) {
             return;
         }
         const handler = (event: MouseEvent | TouchEvent) => {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 setShowFailedList(false);
+                setShowWaitDetails(false);
             }
         };
         document.addEventListener('mousedown', handler);
@@ -93,13 +98,16 @@ export function SyncStatusIndicator({
             document.removeEventListener('mousedown', handler);
             document.removeEventListener('touchstart', handler);
         };
-    }, [showFailedList]);
+    }, [anyPopoverOpen]);
 
     const handleClick = () => {
         void resyncNow();
         if (failedChanges > 0) {
             setShowFailedList((prev) => !prev);
             return;
+        }
+        if (compact && waitingCount > 0) {
+            setShowWaitDetails((prev) => !prev);
         }
         if (pendingChanges === 0 && tournamentId) {
             void syncTournament(tournamentId);
@@ -129,6 +137,10 @@ export function SyncStatusIndicator({
                 waitReason={waitReason}
                 waitDetail={outbox.lastError ?? undefined}
             />
+
+            {compact && showWaitDetails && failedChanges === 0 && waitingCount > 0 && (
+                <SyncWaitDetails pendingCount={waitingCount} waitReason={waitReason} detail={outbox.lastError ?? undefined} />
+            )}
 
             {showFailedList && (
                 <SyncFailedList
