@@ -969,6 +969,7 @@ describe('MutationQueue A-06f authHold (@FU-009/@FU-013)', () => {
     expect(save).toHaveBeenCalledTimes(1);
     expect(mq.getPendingCount()).toBe(43);
     expect(mq.getFailedCount()).toBe(0);
+    expect(mqRetryCount()).toBe(0);
     expect(openTimers()).toBe(0);
 
     // Nach Anmeldung: resumeAfterAuth sendet die ganze Queue weiter.
