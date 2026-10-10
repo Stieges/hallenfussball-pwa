@@ -570,3 +570,155 @@ describe('GenericMutationQueue Weg B (A-06d, @FU-013/@FU-004)', () => {
     expect(delays).toEqual([1000, 1000]);
   });
 });
+
+// =============================================================================
+// A-06e – Zeitlimit 15 s mit gemerktem Versuch (Weg B), Kopf-Schutz,
+// getLastFailure (Brief A6, @FU-016/@FU-004)
+// =============================================================================
+
+describe('GenericMutationQueue A-06e (@FU-016/@FU-004)', () => {
+  beforeEach(() => {
+    mockStorage.clear();
+    qId = 0;
+    delays = [];
+    limitDelays = [];
+    openHandles = new Set();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    recTimers = {
+      setTimeout: (cb, ms) => {
+        if (ms === REQUEST_TIMEOUT_MS) { limitDelays.push(ms); } else { delays.push(ms); }
+        const h = setTimeout(() => { openHandles.delete(h); cb(); }, ms);
+        openHandles.add(h);
+        return h;
+      },
+      clearTimeout: (h) => { openHandles.delete(h); clearTimeout(h); },
+    };
+    const nav = { onLine: true };
+    Object.defineProperty(globalThis, 'navigator', { value: nav, configurable: true });
+    setOnLine = (v: boolean) => { nav.onLine = v; };
+  });
+
+  afterEach(() => {
+    q?.dispose();
+    mq?.dispose();
+    vi.useRealTimers();
+  });
+
+  it('A6 Test 1 (echter Weg, @FU-016): execute hängt → tick(15000) limitDelays [15000], delays [1000], retryCount 0, getLastFailure transient; zweites Item nach Fenster-Grenze 33 s', async () => {
+    let n = 0;
+    const save = vi.fn();
+    save.mockImplementation(() => {
+      n += 1;
+      return n === 1 ? new Promise<void>(() => undefined) : Promise.resolve();
+    });
+    mq = makeRealQueue(save);
+    setOnLine(false);
+    mq.enqueue('SAVE_TOURNAMENT', tour('t1'));
+    mq.enqueue('SAVE_TOURNAMENT', tour('t2'));
+    setOnLine(true);
+
+    const run = mq.process();
+    await vi.advanceTimersByTimeAsync(15000);
+    await run;
+    expect(limitDelays).toEqual([15000]);
+    expect(delays).toEqual([1000]);
+    expect(mqRetryCount()).toBe(0);
+    expect(mq.getLastFailure()).toBe('transient');
+
+    await vi.advanceTimersByTimeAsync(17999);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(mq.getPendingCount()).toBe(2);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await settle();
+    expect(save).toHaveBeenCalledTimes(3);
+    expect(mq.getPendingCount()).toBe(0);
+  });
+
+  it('A6 Test 2 (@FU-016): alter Versuch löst bei t = 20 s erfolgreich auf → shift, execute nur 1×', async () => {
+    const release: Array<() => void> = [];
+    const execute = vi.fn(() => new Promise<void>((res) => { release.push(res); }));
+    q = makeQ(execute);
+    setOnLine(false);
+    q.enqueue('SAVE_THING', { id: 'a' });
+    setOnLine(true);
+
+    const run = q.process();
+    await vi.advanceTimersByTimeAsync(16000);
+    await run;
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(q.getPendingCount()).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(4000);
+    release[0]();
+    await settle();
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(q.getPendingCount()).toBe(0);
+    expect(q.getLastFailure()).toBeNull();
+    expect(openTimers()).toBe(0);
+  });
+
+  it('A6 Test 3 (@FU-016): alter Versuch hängt 2 Fenster → execute 1× bis t = 32 999, bei t = 33 000 execute 2×', async () => {
+    const release: Array<() => void> = [];
+    const execute = vi.fn(() => new Promise<void>((res) => { release.push(res); }));
+    q = makeQ(execute);
+    setOnLine(false);
+    q.enqueue('SAVE_THING', { id: 'a' });
+    setOnLine(true);
+
+    const run = q.process();
+    await vi.advanceTimersByTimeAsync(32999);
+    await run;
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(q.getPendingCount()).toBe(1);
+    expect(limitDelays.slice(0, 2)).toEqual([15000, 15000]);
+    expect(delays.slice(0, 2)).toEqual([1000, 2000]);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(execute).toHaveBeenCalledTimes(2);
+
+    release[0]();
+    await settle();
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(q.getPendingCount()).toBe(1);
+  });
+
+  it('A6 Test 6 (@FU-016): Gegenbeispiel Zeitlimit – Antwort bei 14 900 ms → shift, getLastFailure null, openTimers 0', async () => {
+    const release: Array<() => void> = [];
+    const execute = vi.fn(() => new Promise<void>((res) => { release.push(res); }));
+    q = makeQ(execute);
+    setOnLine(false);
+    q.enqueue('SAVE_THING', { id: 'a' });
+    setOnLine(true);
+
+    const run = q.process();
+    await vi.advanceTimersByTimeAsync(14900);
+    release[0]();
+    await run;
+    expect(q.getPendingCount()).toBe(0);
+    expect(q.getLastFailure()).toBeNull();
+    expect(openTimers()).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(20000);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(limitDelays).toEqual([15000]);
+  });
+
+  it('A-06d-Übergabe (@FU-016): dispose bei hängendem execute → Zeitlimit-Timer gelöscht, danach wird nichts geplant', async () => {
+    const execute = vi.fn(() => new Promise<void>(() => undefined));
+    q = makeQ(execute);
+    setOnLine(false);
+    q.enqueue('SAVE_THING', { id: 'a' });
+    setOnLine(true);
+
+    const run = q.process();
+    q.dispose();
+    await vi.advanceTimersByTimeAsync(15000);
+    await run;
+    expect(delays).toEqual([]);
+    expect(openTimers()).toBe(0);
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(openTimers()).toBe(0);
+  });
+});

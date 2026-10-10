@@ -4,7 +4,8 @@ import { generateUniqueId } from '../../utils/idGenerator';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { captureFeatureError } from '../../lib/sentry';
 import { isTransientMutationError } from '../errors';
-import { QueueRetryTimer, globalQueueTimers, HOLD_RETRY_MS, type QueueTimers } from './mutationQueueRetry';
+import { QueueInFlight, QueueRetryTimer, globalQueueTimers, HOLD_RETRY_MS, type QueueTimers } from './mutationQueueRetry';
+import { REQUEST_TIMEOUT_MS } from '../utils/syncRetryTiming';
 
 /**
  * Structural (not enum-restricted) validation for a queued mutation item.
@@ -113,12 +114,16 @@ export class GenericMutationQueue<TType extends string> {
     private isProcessing = false;
     private disposed = false;
     private retryTimer: QueueRetryTimer;
+    private inFlight: QueueInFlight;
+    private lastFailure: 'transient' | 'permanent' | null = null;
     private listeners: ((status: MutationQueueStatus) => void)[] = [];
 
     constructor(private config: MutationQueueConfig<TType>) {
-        this.retryTimer = new QueueRetryTimer(config.timers ?? globalQueueTimers(), () => {
+        const timers = config.timers ?? globalQueueTimers();
+        this.retryTimer = new QueueRetryTimer(timers, () => {
             void this.process();
         });
+        this.inFlight = new QueueInFlight(timers);
         this.load();
         this.loadFailed();
 
@@ -216,6 +221,9 @@ export class GenericMutationQueue<TType extends string> {
             failedCount: this.failedQueue.length,
         };
     }
+
+    /** Letzter Fehlerabschluss (A-06e): 'transient' | 'permanent' | null nach Erfolg. */
+    public getLastFailure(): 'transient' | 'permanent' | null { return this.lastFailure; }
 
     public subscribe(listener: (status: MutationQueueStatus) => void): () => void {
         this.listeners.push(listener);
@@ -444,7 +452,8 @@ export class GenericMutationQueue<TType extends string> {
                 const item = this.queue[0]; // Peek
 
                 try {
-                    await this.config.execute(item);
+                    // A-06e: gemerkter Versuch + Race gegen REQUEST_TIMEOUT_MS
+                    await this.inFlight.attempt(item.id, () => this.config.execute(item), REQUEST_TIMEOUT_MS);
                 } catch (error) {
                     if (import.meta.env.DEV) { console.warn(`MutationQueue: Error processing ${item.type} (${item.id})`, error); }
 
@@ -453,6 +462,7 @@ export class GenericMutationQueue<TType extends string> {
                         // navigator.onLine — Hallen-WLAN-Anmeldeseite, Server-Überlastung):
                         // zählt nicht als Fehlversuch. Item bleibt unverändert an erster
                         // Stelle stehen und wird beim nächsten Anstoß erneut versucht.
+                        this.lastFailure = 'transient';
                         this.retryTimer.hold = false;
                         scheduleMs = this.retryTimer.takeBackoffMs();
                         break;
@@ -481,6 +491,7 @@ export class GenericMutationQueue<TType extends string> {
                     }
                 }
 
+                this.lastFailure = null;
                 this.queue.shift(); // Remove handled item
                 this.retryTimer.reset();
                 this.retryTimer.hold = false;
