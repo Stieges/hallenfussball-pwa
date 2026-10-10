@@ -370,3 +370,33 @@ describe('B-38 Rückmeldung „Übernommen“ im Wizard mit Rückfluss aus formD
     expect(screen.queryByTestId('smart-config-applied')).toBeNull();
   });
 });
+
+describe('B-38 Teamzahl-Warnung nur ohne Team-Sperre (@W4-022)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('festgehaltene Teamzahl 8 bei Wizard 12, Zeit reicht → keine Warnung „12 Teams passen nicht“', () => {
+    render(<SmartConfig formData={teams12FormData()} onApply={vi.fn()} />);
+    fireEvent.click(screen.getByText('Smart-Konfiguration'));
+    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: '8' } });
+    fireEvent.change(screen.getByLabelText('Stunden'), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText('Minuten'), { target: { value: '0' } });
+    fireEvent.click(screen.getByLabelText('Optimale Konfiguration berechnen'));
+
+    expect(screen.queryByText(/12 Teams passen nicht/)).toBeNull();
+  });
+
+  it('Gegenbeispiel: Teamzahl frei, Wizard 12, 30 min → Warnung „12 Teams passen nicht“ mit Alternative 8', () => {
+    render(<SmartConfig formData={teams12FormData()} onApply={vi.fn()} />);
+    fireEvent.click(screen.getByText('Smart-Konfiguration'));
+    // Erste Checkbox = Teamzahl-Sperre: ausschalten
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    fireEvent.change(screen.getByLabelText('Stunden'), { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText('Minuten'), { target: { value: '30' } });
+    fireEvent.click(screen.getByLabelText('Optimale Konfiguration berechnen'));
+
+    const warnung = screen.getByText(/12 Teams passen nicht/);
+    expect(warnung.textContent).toContain('Alternative: 8 Teams');
+  });
+});

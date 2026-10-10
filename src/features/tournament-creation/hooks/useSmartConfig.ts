@@ -287,9 +287,12 @@ export function useSmartConfig({
     }
   }, [isOpen, handleCalculate]);
 
-  // Derived: show warning if recommended teams is less than current
+  // Derived: Alternative zur Wizard-Teamzahl nur, wenn die Teamzahl frei ist (@W4-022).
+  // Bei festgehaltener Teamzahl wurde nicht mit der Wizard-Zahl gerechnet.
   const showTeamsWarning =
-    recommendation !== null && recommendation.teams < (formData.numberOfTeams ?? 6);
+    recommendation !== null &&
+    !lockTeams &&
+    recommendation.teams < (formData.numberOfTeams ?? 6);
 
   return {
     isOpen,
