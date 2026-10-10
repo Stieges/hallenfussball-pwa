@@ -13,19 +13,24 @@
  * @see docs/concepts/PUBLIC-PAGE-KONZEPT-v4-FINAL.md
  */
 
-import { useState, useEffect, CSSProperties, useCallback, useRef, TouchEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, CSSProperties, useCallback, useRef, TouchEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, layoutHeights } from '../design-tokens';
-import { Standing } from '../types/tournament';
-import { GeneratedSchedule } from '../core/generators';
 import { ScheduleDisplay } from '../components/ScheduleDisplay';
 import { GroupTables } from '../components/schedule/GroupTables';
 import { formatDateGerman } from '../utils/locationHelpers';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { PublicBottomNav, PublicNavTab } from '../components/ui/PublicBottomNav';
+import { PublicBottomNav } from '../components/ui/PublicBottomNav';
 import { usePublicTournament } from '../features/public-view/usePublicTournament';
+import { usePublicViewFilters } from '../features/public-view/usePublicViewFilters';
+import {
+  publicSchedule,
+  publicMatches,
+  visibleStandings,
+  uniqueGroups,
+  myTeamName,
+} from '../features/public-view/publicScheduleFilters';
 import { useTheme } from '../hooks/useTheme';
 import { useHaptic } from '../hooks/useHaptic';
 import { BaseThemeSelector } from '../features/settings/components/BaseThemeSelector';
@@ -33,9 +38,6 @@ import { BaseThemeSelector } from '../features/settings/components/BaseThemeSele
 export interface LiveViewScreenProps {
   shareCode: string;
 }
-
-// localStorage key for "Mein Team" selection
-const getMyTeamStorageKey = (shareCode: string) => `live:${shareCode}:myTeam`;
 
 export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => {
   const { t: tSport } = useTranslation('sport');
@@ -55,94 +57,20 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   const containerRef = useRef<HTMLDivElement>(null);
   const PULL_THRESHOLD = 80; // Minimum pull distance to trigger refresh
 
-  // URL search params for deep-linking
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  // Read initial filter values from URL
-  const urlGroup = searchParams.get('g');
-  const urlPhase = searchParams.get('p') as 'all' | 'groupStage' | 'final' | null;
-  const urlStatus = searchParams.get('s') as 'all' | 'scheduled' | 'live' | 'finished' | null;
-  const urlTab = searchParams.get('tab') as PublicNavTab | null;
-  const urlMyTeamOnly = searchParams.get('my') === '1';
-
-  // "Mein Team" state
-  const [myTeamId, setMyTeamId] = useState<string | null>(null);
-  const [showTeamSelector, setShowTeamSelector] = useState(false);
-  const [showOnlyMyTeam, setShowOnlyMyTeam] = useState(urlMyTeamOnly);
-
-  // Filter state - initialized from URL
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(urlGroup);
-  const [selectedPhase, setSelectedPhase] = useState<'all' | 'groupStage' | 'final'>(urlPhase ?? 'all');
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'scheduled' | 'live' | 'finished'>(urlStatus ?? 'all');
-
-  // Bottom nav tab state - initialized from URL
-  const [activeTab, setActiveTab] = useState<PublicNavTab>(urlTab ?? 'schedule');
-
-  // Update URL when filters change
-  const updateUrlParams = useCallback((params: Record<string, string | null>) => {
-    setSearchParams((prev) => {
-      const newParams = new URLSearchParams(prev);
-      Object.entries(params).forEach(([key, value]) => {
-        if (value === null || value === 'all' || value === 'schedule' || (key === 'my' && value === '0')) {
-          newParams.delete(key);
-        } else {
-          newParams.set(key, value);
-        }
-      });
-      return newParams;
-    }, { replace: true });
-  }, [setSearchParams]);
-
-  // Wrapper functions to update state AND URL (with haptic feedback)
-  const handleGroupChange = useCallback((group: string | null) => {
-    triggerHaptic('selection');
-    setSelectedGroup(group);
-    updateUrlParams({ g: group });
-  }, [updateUrlParams, triggerHaptic]);
-
-  const handlePhaseChange = useCallback((phase: 'all' | 'groupStage' | 'final') => {
-    triggerHaptic('selection');
-    setSelectedPhase(phase);
-    updateUrlParams({ p: phase === 'all' ? null : phase });
-  }, [updateUrlParams, triggerHaptic]);
-
-  const handleStatusChange = useCallback((status: 'all' | 'scheduled' | 'live' | 'finished') => {
-    triggerHaptic('selection');
-    setSelectedStatus(status);
-    updateUrlParams({ s: status === 'all' ? null : status });
-  }, [updateUrlParams, triggerHaptic]);
-
-  const handleTabChange = useCallback((tab: PublicNavTab) => {
-    triggerHaptic('medium');
-    setActiveTab(tab);
-    updateUrlParams({ tab: tab === 'schedule' ? null : tab });
-  }, [updateUrlParams, triggerHaptic]);
-
-  const handleShowOnlyMyTeamChange = useCallback((value: boolean) => {
-    triggerHaptic('selection');
-    setShowOnlyMyTeam(value);
-    updateUrlParams({ my: value ? '1' : null });
-  }, [updateUrlParams, triggerHaptic]);
-
-  // Load "Mein Team" from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem(getMyTeamStorageKey(shareCode));
-    if (stored) {
-      setMyTeamId(stored);
-    }
-  }, [shareCode]);
-
-  // Save "Mein Team" to localStorage
-  const selectMyTeam = useCallback((teamId: string | null) => {
-    triggerHaptic('success');
-    setMyTeamId(teamId);
-    if (teamId) {
-      localStorage.setItem(getMyTeamStorageKey(shareCode), teamId);
-    } else {
-      localStorage.removeItem(getMyTeamStorageKey(shareCode));
-    }
-    setShowTeamSelector(false);
-  }, [shareCode, triggerHaptic]);
+  // URL-Zustand, Filter, Tab und „Mein Team“ (Hook, B-13c)
+  const {
+    filters,
+    activeTab,
+    showTeamSelector,
+    setShowTeamSelector,
+    handleGroupChange,
+    handlePhaseChange,
+    handleStatusChange,
+    handleTabChange,
+    handleShowOnlyMyTeamChange,
+    selectMyTeam,
+  } = usePublicViewFilters(shareCode);
+  const { showOnlyMyTeam, myTeamId, selectedGroup, selectedPhase, selectedStatus } = filters;
 
 
   // Pull-to-refresh handlers
@@ -182,125 +110,6 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     }
     pullStartY.current = null;
   }, [pullDistance, isRefreshing, refresh, triggerHaptic]);
-
-  // Apply privacy filters and user filters
-  const getFilteredSchedule = (): GeneratedSchedule | null => {
-    if (!schedule || !tournament) {
-      return null;
-    }
-
-    // First apply user filters
-    let result = applyFilters(schedule);
-
-    // Then apply privacy filters (hide scores if needed)
-    if (tournament.hideScoresForPublic) {
-      result = {
-        ...result,
-        allMatches: result.allMatches.map((match) => ({
-          ...match,
-          scoreA: undefined,
-          scoreB: undefined,
-        })),
-        phases: result.phases.map((phase) => ({
-          ...phase,
-          matches: phase.matches.map((match) => ({
-            ...match,
-            scoreA: undefined,
-            scoreB: undefined,
-          })),
-        })),
-      };
-    }
-
-    return result;
-  };
-
-  // Filter standings if hideRankingsForPublic is enabled
-  const getFilteredStandings = (): Standing[] => {
-    if (!tournament) {
-      return [];
-    }
-    return tournament.hideRankingsForPublic ? [] : currentStandings;
-  };
-
-  // Get my team's matches (highlighted)
-  const getMyTeamName = (): string | null => {
-    if (!myTeamId || !tournament) {
-      return null;
-    }
-    const team = tournament.teams.find((t) => t.id === myTeamId);
-    return team?.name ?? null;
-  };
-
-  // Get unique groups from tournament
-  const getUniqueGroups = (): string[] => {
-    if (!tournament) {
-      return [];
-    }
-    return Array.from(
-      new Set(tournament.teams.map((t) => t.group).filter(Boolean))
-    ) as string[];
-  };
-
-  // Apply all filters to schedule
-  const applyFilters = (sched: GeneratedSchedule): GeneratedSchedule => {
-    let filteredMatches = [...sched.allMatches];
-
-    // Filter by "Nur meine Spiele" - use originalTeamA/originalTeamB for team IDs
-    if (showOnlyMyTeam && myTeamId) {
-      filteredMatches = filteredMatches.filter(
-        (m) => m.originalTeamA === myTeamId || m.originalTeamB === myTeamId
-      );
-    }
-
-    // Filter by group
-    if (selectedGroup) {
-      filteredMatches = filteredMatches.filter((m) => m.group === selectedGroup);
-    }
-
-    // Filter by phase
-    if (selectedPhase !== 'all') {
-      filteredMatches = filteredMatches.filter((m) => {
-        if (selectedPhase === 'groupStage') {
-          return m.phase === 'groupStage';
-        } else {
-          // final phase includes all non-groupStage phases
-          return m.phase !== 'groupStage';
-        }
-      });
-    }
-
-    // Filter by status
-    if (selectedStatus !== 'all') {
-      filteredMatches = filteredMatches.filter((m) => {
-        // Find the match in tournament.matches for status
-        const liveMatch = tournament?.matches.find((tm) => tm.id === m.id);
-        const matchStatus = liveMatch?.matchStatus ?? 'scheduled';
-
-        if (selectedStatus === 'finished') {
-          return matchStatus === 'finished';
-        } else if (selectedStatus === 'live') {
-          // UI uses 'live' but MatchStatus uses 'running'
-          return matchStatus === 'running';
-        } else {
-          // scheduled = not running and not finished
-          return matchStatus === 'scheduled' || matchStatus === 'waiting';
-        }
-      });
-    }
-
-    // Rebuild phases with filtered matches
-    const filteredPhases = sched.phases.map((phase) => ({
-      ...phase,
-      matches: phase.matches.filter((m) => filteredMatches.some((fm) => fm.id === m.id)),
-    })).filter((phase) => phase.matches.length > 0);
-
-    return {
-      ...sched,
-      allMatches: filteredMatches,
-      phases: filteredPhases,
-    };
-  };
 
   // Styles
   const containerStyle: CSSProperties = {
@@ -528,13 +337,10 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     return null;
   }
 
-  const filteredSchedule = getFilteredSchedule();
-  const filteredStandings = getFilteredStandings();
-  const myTeamName = getMyTeamName();
-
-  if (!filteredSchedule) {
-    return null;
-  }
+  const filteredSchedule = publicSchedule(schedule, tournament, filters);
+  const filteredStandings = visibleStandings(tournament, currentStandings);
+  const myTeamLabel = myTeamName(tournament, myTeamId);
+  const groups = uniqueGroups(tournament);
 
   // Pull-to-refresh indicator style
   const refreshIndicatorStyle: CSSProperties = {
@@ -605,7 +411,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
                 Mein Team:
               </span>{' '}
               <strong style={{ color: cssVars.colors.textPrimary }}>
-                {myTeamName ?? 'Nicht ausgewählt'}
+                {myTeamLabel ?? 'Nicht ausgewählt'}
               </strong>
             </div>
             <div style={{ display: 'flex', gap: cssVars.spacing.sm, alignItems: 'center' }}>
@@ -633,7 +439,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
         {activeTab === 'schedule' && (
           <div style={filterBarStyle}>
           {/* Group Filter */}
-          {getUniqueGroups().length > 1 && (
+          {groups.length > 1 && (
             <div style={filterRowStyle}>
               <span style={filterLabelStyle}>Gruppe:</span>
               <button
@@ -642,7 +448,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
               >
                 Alle
               </button>
-              {getUniqueGroups().map((group) => (
+              {groups.map((group) => (
                 <button
                   key={group}
                   style={chipStyle(selectedGroup === group)}
@@ -756,11 +562,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
               <ScheduleDisplay
                 schedule={filteredSchedule}
                 currentStandings={filteredStandings}
-                currentMatches={
-                  tournament.hideScoresForPublic
-                    ? tournament.matches.map((m) => ({ ...m, scoreA: undefined, scoreB: undefined }))
-                    : tournament.matches
-                }
+                currentMatches={publicMatches(tournament)}
                 tournamentTeams={tournament.teams}
                 editable={false}
               />
