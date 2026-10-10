@@ -18,6 +18,7 @@ import type {
   KnockoutRound,
   Match,
   TiebreakerMode,
+  TiebreakerRoundKey,
 } from '../../types/tournament';
 
 const ROUNDS_BY_PRESET: Record<FinalsPreset, KnockoutRound[]> = {
@@ -36,6 +37,30 @@ const PLACEMENT_FINAL_TYPES: readonly NonNullable<Match['finalType']>[] = [
   'fifthSixth',
   'seventhEighth',
 ];
+
+const TIEBREAKER_MODES: readonly TiebreakerMode[] = [
+  'shootout',
+  'overtime-then-shootout',
+  'goldenGoal',
+];
+
+const TIEBREAKER_ROUND_KEYS: readonly TiebreakerRoundKey[] = [
+  'roundOf16',
+  'quarterfinal',
+  'semifinal',
+  'final',
+  'placement',
+];
+
+/** Gültiger Regelwert (Import-Prüfung, B-04c Fixrunde 3 / F3-1). */
+export function isTiebreakerMode(value: unknown): value is TiebreakerMode {
+  return TIEBREAKER_MODES.some((modus) => modus === value);
+}
+
+/** Gültiger Rundenschlüssel inkl. `placement` (Import-Prüfung, B-04c Fixrunde 3 / F3-1). */
+export function isTiebreakerRoundKey(key: string): key is TiebreakerRoundKey {
+  return TIEBREAKER_ROUND_KEYS.some((schluessel) => schluessel === key);
+}
 
 const PRESETS_WITH_PLACEMENT_GAMES: readonly FinalsPreset[] = [
   'top-4',
