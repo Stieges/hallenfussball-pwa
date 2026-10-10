@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
+import { displayFontSizes, displaySpacing, monitorThemes, displayMonitor, cssVars } from '../../../design-tokens';
 import type { Match, Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
@@ -39,7 +39,7 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style }: Schedule
       {/* Header */}
       <div style={{
         fontSize: displayFontSizes.headingLG,
-        fontWeight: 600,
+        fontWeight: cssVars.fontWeights.semibold,
         marginBottom: displaySpacing.sectionMD,
         color: themeColors.text,
       }}>
@@ -52,7 +52,7 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style }: Schedule
         flexDirection: 'column',
         gap: displaySpacing.contentMD,
         width: '100%',
-        maxWidth: '900px',
+        maxWidth: displayMonitor.size.scheduleMaxWidth,
       }}>
         {fieldMatches.map((match) => (
           <div
@@ -63,15 +63,17 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style }: Schedule
               gap: displaySpacing.contentLG,
               padding: displaySpacing.contentLG,
               background: match.matchStatus === 'running' ? themeColors.surfaceHover : themeColors.surface,
-              borderRadius: '12px',
-              border: match.matchStatus === 'running' ? `2px solid ${themeColors.liveDot}` : `1px solid ${themeColors.border}`,
+              borderRadius: displayMonitor.radius.card,
+              border: match.matchStatus === 'running'
+                ? `${displayMonitor.marker.liveBorderWidth} solid ${themeColors.liveDot}`
+                : `${cssVars.borderWidth.thin} solid ${themeColors.border}`,
             }}
           >
             {/* Status Indicator */}
             <div style={{
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
+              width: displayMonitor.marker.scheduleSize,
+              height: displayMonitor.marker.scheduleSize,
+              borderRadius: displayMonitor.radius.circle,
               background: getStatusColor(match),
               flexShrink: 0,
             }} />
@@ -91,10 +93,10 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style }: Schedule
 
             {/* Score */}
             <div style={{
-              minWidth: '100px',
+              minWidth: displayMonitor.size.scheduleMinColumnWidth,
               textAlign: 'center',
               fontSize: displayFontSizes.bodyXL,
-              fontWeight: 700,
+              fontWeight: cssVars.fontWeights.bold,
               color: match.matchStatus === 'finished' ? themeColors.score : themeColors.textMuted,
             }}>
               {match.scoreA !== undefined && match.scoreB !== undefined

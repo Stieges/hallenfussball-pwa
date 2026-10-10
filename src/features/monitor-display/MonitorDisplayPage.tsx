@@ -19,6 +19,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { displayMonitor } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
@@ -97,7 +98,7 @@ export function MonitorDisplayPage({
 
   // Anti-burn-in pixel shift for OLED/Plasma displays
   // Scale shift amount with overscan — no shift when overscan is 0 (would clip content)
-  const overscanPx = monitor?.overscanPx ?? 48;
+  const overscanPx = monitor?.overscanPx ?? displayMonitor.overscanDefaultPx;
   const maxPixelShift = Math.min(2, Math.floor(overscanPx / 4));
   const pixelShift = usePixelShift(60_000, maxPixelShift, performanceSettings.enableAnimations);
 

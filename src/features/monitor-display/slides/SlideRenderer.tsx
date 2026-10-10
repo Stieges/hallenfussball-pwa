@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { monitorThemes } from '../../../design-tokens';
+import { monitorThemes, displayMonitor } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
 import type { QrRueckfallFolie } from '../slideProgramme';
@@ -31,12 +31,11 @@ export function SlideRenderer({ slide, tournament, performanceSettings, theme, o
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: `${overscanPx ?? 48}px`,
+    padding: `${overscanPx ?? displayMonitor.overscanDefaultPx}px`,
     boxSizing: 'border-box',
     background: themeColors.backgroundGradient,
     color: themeColors.text,
-    // eslint-disable-next-line local-rules/no-hardcoded-font-styles -- Monitor-Schrift Inter; kein Token mit gleichem Wert (B-16d2, Verschiebung)
-    fontFamily: 'Inter, system-ui, sans-serif',
+    fontFamily: displayMonitor.fontStack,
   };
 
   switch (slide.type) {

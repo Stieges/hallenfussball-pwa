@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { cssVars, displayEffects, displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
+import { cssVars, displayEffects, displayFontSizes, displaySpacing, monitorThemes, displayMonitor } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { calculateStandings } from '../../../utils/calculations';
@@ -28,7 +28,7 @@ export function StandingsSlide({ slide, tournament, theme, style }: StandingsSli
       {/* Header */}
       <div style={{
         fontSize: displayFontSizes.headingLG,
-        fontWeight: 600,
+        fontWeight: cssVars.fontWeights.semibold,
         marginBottom: displaySpacing.sectionMD,
         color: themeColors.text,
       }}>
@@ -38,23 +38,23 @@ export function StandingsSlide({ slide, tournament, theme, style }: StandingsSli
       {/* Table */}
       <div style={{
         width: '100%',
-        maxWidth: '800px',
+        maxWidth: displayMonitor.size.standingsMaxWidth,
         background: themeColors.surface,
         borderRadius: cssVars.borderRadius.lg,
         padding: displaySpacing.contentLG,
         boxShadow: displayEffects.cardShadow,
-        border: `1px solid ${themeColors.border}`,
+        border: `${cssVars.borderWidth.thin} solid ${themeColors.border}`,
       }}>
         {/* Table Header */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '48px 1fr 48px 48px 48px 64px 64px',
+          gridTemplateColumns: displayMonitor.size.standingsColumns,
           gap: displaySpacing.inlineMD,
           padding: `${displaySpacing.contentSM} ${displaySpacing.contentMD}`,
-          borderBottom: `1px solid ${themeColors.border}`,
+          borderBottom: `${cssVars.borderWidth.thin} solid ${themeColors.border}`,
           fontSize: displayFontSizes.bodySM,
           color: themeColors.textMuted,
-          fontWeight: 500,
+          fontWeight: cssVars.fontWeights.medium,
         }}>
           <div>#</div>
           <div>Team</div>
@@ -71,15 +71,15 @@ export function StandingsSlide({ slide, tournament, theme, style }: StandingsSli
             key={row.team.id}
             style={{
               display: 'grid',
-              gridTemplateColumns: '48px 1fr 48px 48px 48px 64px 64px',
+              gridTemplateColumns: displayMonitor.size.standingsColumns,
               gap: displaySpacing.inlineMD,
               padding: `${displaySpacing.contentMD} ${displaySpacing.contentMD}`,
-              borderBottom: idx < standings.length - 1 ? `1px solid ${themeColors.border}` : 'none',
+              borderBottom: idx < standings.length - 1 ? `${cssVars.borderWidth.thin} solid ${themeColors.border}` : 'none',
               fontSize: displayFontSizes.bodyLG,
               color: themeColors.text,
             }}
           >
-            <div style={{ fontWeight: 600 }}>{idx + 1}</div>
+            <div style={{ fontWeight: cssVars.fontWeights.semibold }}>{idx + 1}</div>
             <div style={{
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -102,7 +102,7 @@ export function StandingsSlide({ slide, tournament, theme, style }: StandingsSli
             </div>
             <div style={{
               textAlign: 'center',
-              fontWeight: 700,
+              fontWeight: cssVars.fontWeights.bold,
               color: themeColors.score,
             }}>
               {row.points}

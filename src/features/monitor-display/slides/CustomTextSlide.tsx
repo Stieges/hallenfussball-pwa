@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { displayColorSchemes, displayFontSizes, displaySpacing } from '../../../design-tokens';
+import { cssVars, displayColorSchemes, displayFontSizes, displaySpacing, displayMonitor } from '../../../design-tokens';
 import type { MonitorSlide } from '../../../types/monitor';
 
 interface CustomTextSlideProps {
@@ -25,7 +25,7 @@ export function CustomTextSlide({ slide, style }: CustomTextSlideProps) {
       {slide.config.headline && (
         <div style={{
           fontSize: displayFontSizes.headingXL,
-          fontWeight: 700,
+          fontWeight: cssVars.fontWeights.bold,
           marginBottom: displaySpacing.sectionMD,
         }}>
           {slide.config.headline}
@@ -36,8 +36,8 @@ export function CustomTextSlide({ slide, style }: CustomTextSlideProps) {
       {slide.config.body && (
         <div style={{
           fontSize: displayFontSizes.headingMD,
-          maxWidth: '800px',
-          lineHeight: 1.5,
+          maxWidth: displayMonitor.size.textMaxWidth,
+          lineHeight: displayMonitor.text.lineHeight,
         }}>
           {slide.config.body}
         </div>

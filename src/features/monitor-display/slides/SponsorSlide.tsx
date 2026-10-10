@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { displayEffects, displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
+import { cssVars, displayEffects, displayFontSizes, displaySpacing, monitorThemes, displayMonitor } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
 import { generateTournamentUrl } from '../../../utils/shareUtils';
@@ -52,8 +52,8 @@ export function SponsorSlide({ slide, tournament, performanceSettings, theme, st
           src={logoSrc}
           alt={sponsor.name}
           style={{
-            maxWidth: '400px',
-            maxHeight: '300px',
+            maxWidth: displayMonitor.size.sponsorLogoMaxWidth,
+            maxHeight: displayMonitor.size.sponsorLogoMaxHeight,
             objectFit: 'contain',
             marginBottom: displaySpacing.sectionLG,
             boxShadow: performanceSettings.enableGlow ? displayEffects.cardShadow : 'none',
@@ -62,7 +62,7 @@ export function SponsorSlide({ slide, tournament, performanceSettings, theme, st
       ) : (
         <div style={{
           fontSize: displayFontSizes.headingXL,
-          fontWeight: 700,
+          fontWeight: cssVars.fontWeights.bold,
           color: themeColors.text,
           marginBottom: displaySpacing.sectionLG,
         }}>
@@ -92,12 +92,12 @@ export function SponsorSlide({ slide, tournament, performanceSettings, theme, st
         }}>
           <QRCodeSVG
             value={qrUrl}
-            size={150}
-            bgColor="#ffffff"
-            fgColor="#000000"
+            size={displayMonitor.qr.sizeSmall}
+            bgColor={displayMonitor.qr.background}
+            fgColor={displayMonitor.qr.foreground}
             level="M"
             style={{
-              borderRadius: '12px',
+              borderRadius: displayMonitor.radius.card,
             }}
           />
           <div style={{

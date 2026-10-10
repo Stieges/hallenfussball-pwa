@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { displayFontSizes, displaySpacing } from '../../../design-tokens';
+import { cssVars, displayFontSizes, displaySpacing, displayMonitor } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import { generateLiveUrl } from '../../../utils/shareUtils';
 
@@ -19,16 +19,16 @@ export function QrSlide({ tournament, style }: QrSlideProps) {
     : null;
   return (
     <div style={{ ...style, gap: displaySpacing.sectionMD }}>
-      <div style={{ fontSize: displayFontSizes.headingXL, fontWeight: 700 }}>
+      <div style={{ fontSize: displayFontSizes.headingXL, fontWeight: cssVars.fontWeights.bold }}>
         {tournament.title}
       </div>
       {qrUrl && (
         <>
           <QRCodeSVG
             value={qrUrl}
-            size={220}
-            bgColor="white"
-            fgColor="black"
+            size={displayMonitor.qr.sizeLarge}
+            bgColor={displayMonitor.qr.background}
+            fgColor={displayMonitor.qr.foreground}
             level="M"
           />
           <div style={{ fontSize: displayFontSizes.bodyMD }}>

@@ -1,4 +1,4 @@
-import { cssVars, displayColors, displayFontSizes, displaySpacing, zIndex } from '../../../design-tokens';
+import { cssVars, displayColors, displayFontSizes, displaySpacing, zIndex, displayMonitor } from '../../../design-tokens';
 
 interface SlideDotsProps {
   count: number;
@@ -22,14 +22,14 @@ export function SlideDots({ count, currentIndex, enableTransitions }: SlideDotsP
         <div
           key={idx}
           style={{
-            width: '10px',
-            height: '10px',
-            borderRadius: '50%',
+            width: displayMonitor.marker.indicatorSize,
+            height: displayMonitor.marker.indicatorSize,
+            borderRadius: displayMonitor.radius.circle,
             background: idx === currentIndex
               ? displayColors.primary
               : displayColors.textMuted,
             opacity: idx === currentIndex ? 1 : 0.4,
-            transition: enableTransitions ? 'all 200ms ease' : 'none',
+            transition: enableTransitions ? `all ${displayMonitor.marker.transitionDuration} ease` : 'none',
           }}
         />
       ))}
@@ -48,7 +48,7 @@ export function PauseBadge() {
         left: '50%',
         transform: 'translateX(-50%)',
         padding: `${displaySpacing.contentSM} ${displaySpacing.contentMD}`,
-        background: 'rgba(0, 0, 0, 0.7)',
+        background: displayMonitor.overlay,
         borderRadius: cssVars.borderRadius.md,
         fontSize: displayFontSizes.bodySM,
         color: displayColors.textPrimary,

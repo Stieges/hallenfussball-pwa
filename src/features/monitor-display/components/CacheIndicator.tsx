@@ -1,4 +1,4 @@
-import { cssVars, displayColors, displayFontSizes, displaySpacing, zIndex } from '../../../design-tokens';
+import { cssVars, displayColors, displayFontSizes, displaySpacing, zIndex, displayMonitor } from '../../../design-tokens';
 import type { CacheStatus } from '../../../types/monitor';
 
 interface CacheIndicatorProps {
@@ -27,16 +27,16 @@ export function CacheIndicator({ cacheStatus, visible }: CacheIndicatorProps) {
       alignItems: 'center',
       gap: displaySpacing.inlineSM,
       padding: `${displaySpacing.contentSM} ${displaySpacing.contentMD}`,
-      background: 'rgba(0, 0, 0, 0.7)',
+      background: displayMonitor.overlay,
       borderRadius: cssVars.borderRadius.md,
       fontSize: displayFontSizes.bodySM,
       color: displayColors.textPrimary,
       zIndex: zIndex.navigation,
     }}>
       <div style={{
-        width: '10px',
-        height: '10px',
-        borderRadius: '50%',
+        width: displayMonitor.marker.indicatorSize,
+        height: displayMonitor.marker.indicatorSize,
+        borderRadius: displayMonitor.radius.circle,
         background: getStatusColor(),
       }} />
       <span>{cacheStatus.ageSeconds}s</span>
