@@ -97,6 +97,38 @@ describe('B-04d @W2A-034 – Ungültiger Regelwert wird abgelehnt', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it('Pflichttest: 6 Schützen (über der Obergrenze 5) zeigt den Bereich und wird nicht übernommen', () => {
+    const onChange = vi.fn();
+    const SettingsHarness = settingsHarness(onChange);
+    render(<SettingsHarness />);
+
+    const feld = screen.getByTestId('settings-penalty-shooters');
+    fireEvent.change(feld, { target: { value: '6' } });
+    fireEvent.blur(feld);
+
+    expect(screen.getByRole('alert').textContent).toContain('settings.penaltyShootersRangeError');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('Pflichttest: Schützenzahl, die von außen geändert wird, steht im Feld und wird nicht mit dem alten Wert überschrieben', () => {
+    const onChange = vi.fn();
+    const settingsMit = (schuetzen: number): MatchCockpitSettings => ({
+      ...DEFAULT_MATCH_COCKPIT_SETTINGS,
+      penaltyShootersPerTeam: schuetzen,
+    });
+    const { rerender } = render(
+      <MatchCockpitSettingsPanel settings={settingsMit(5)} tournamentId="t1" onChange={onChange} />
+    );
+
+    rerender(<MatchCockpitSettingsPanel settings={settingsMit(3)} tournamentId="t1" onChange={onChange} />);
+
+    const feld = screen.getByTestId<HTMLInputElement>('settings-penalty-shooters');
+    expect(feld.value).toBe('3');
+    fireEvent.focus(feld);
+    fireEvent.blur(feld);
+    expect(onChange).not.toHaveBeenCalledWith(expect.objectContaining({ penaltyShootersPerTeam: 5 }));
+  });
+
   it('Gegenbeispiel: gültige Regelwerte werden übernommen', () => {
     const onUpdate = vi.fn();
     const PunkteHarness = punkteHarness(onUpdate, { win: 4, draw: 1, loss: 0 });
@@ -120,6 +152,19 @@ describe('B-04d @W2A-034 – Ungültiger Regelwert wird abgelehnt', () => {
     expect(schuetzenFeld).not.toHaveAttribute('aria-invalid');
   });
 
+  it('Gegenbeispiel: 5 Schützen (Obergrenze) wird übernommen', () => {
+    const onChange = vi.fn();
+    const SettingsHarness = settingsHarness(onChange);
+    render(<SettingsHarness />);
+
+    const feld = screen.getByTestId('settings-penalty-shooters');
+    fireEvent.change(feld, { target: { value: '5' } });
+    fireEvent.blur(feld);
+
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ penaltyShootersPerTeam: 5 }));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('Die Bereichs-Hinweise nennen die gültigen Grenzen in DE und EN', () => {
     const dePunkte = (deWizard as { pointSystem: { custom: { rangeError: string } } })
       .pointSystem.custom.rangeError;
@@ -136,7 +181,8 @@ describe('B-04d @W2A-034 – Ungültiger Regelwert wird abgelehnt', () => {
     }
     for (const meldung of [deSchuetzen, enSchuetzen]) {
       expect(meldung).toContain('1');
-      expect(meldung).toContain('10');
+      expect(meldung).toContain('5');
+      expect(meldung).not.toContain('10');
     }
   });
 });

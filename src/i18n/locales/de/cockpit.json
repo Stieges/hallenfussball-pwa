@@ -194,7 +194,7 @@
     "penaltyShootout": "$t(sport:events.penaltyShootout)",
     "penaltyShooters": "Anzahl Schützen",
     "penaltyShootersDesc": "Schützen je Team beim Strafstoßschießen",
-    "penaltyShootersRangeError": "Gültig: 1 bis 10 Schützen",
+    "penaltyShootersRangeError": "Gültig: 1 bis 5 Schützen",
     "rulesOnlyByLead": "Regeln ändert nur die Turnierleitung",
     "netTimeWarning": "Netto-Zeit Warnung",
     "netTimeWarningDesc": "Warnung wenn Nachspielzeit erreicht wird",

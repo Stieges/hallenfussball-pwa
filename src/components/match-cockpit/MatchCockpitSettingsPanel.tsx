@@ -7,7 +7,7 @@
  * @see docs/concepts/MATCH-COCKPIT-PRO-KONZEPT.md Section 4
  */
 
-import { CSSProperties, useCallback, useRef, useState } from 'react';
+import { CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import { Input } from '../ui';
@@ -116,9 +116,14 @@ export function MatchCockpitSettingsPanel({
   const [schuetzenEntwurf, setSchuetzenEntwurf] = useState(String(settings.penaltyShootersPerTeam));
   const [schuetzenFehler, setSchuetzenFehler] = useState(false);
 
+  // Wert von außen (z. B. nach dem Speichern oder bei Umschalten) in den Entwurf übernehmen
+  useEffect(() => {
+    setSchuetzenEntwurf(String(settings.penaltyShootersPerTeam));
+  }, [settings.penaltyShootersPerTeam]);
+
   const handleSchuetzenBlur = useCallback(() => {
     const wert = Number(schuetzenEntwurf);
-    if (!Number.isInteger(wert) || wert < 1 || wert > 10) {
+    if (!Number.isInteger(wert) || wert < 1 || wert > 5) {
       setSchuetzenFehler(true);
       setSchuetzenEntwurf(String(settings.penaltyShootersPerTeam));
       return;
