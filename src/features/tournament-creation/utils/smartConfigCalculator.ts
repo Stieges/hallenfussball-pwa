@@ -4,7 +4,7 @@
  */
 
 import type { FinalsPreset } from '../../../types/tournament';
-import { getExpectedMatchCount } from '../../../core/generators/playoffGenerator';
+import { generatePlayoffMatches, type GroupSizeInfo } from '../../../core/generators/playoffGenerator';
 
 const STORAGE_KEY = 'smartConfig';
 
@@ -77,11 +77,15 @@ export function countTournamentMatches(teams: number, structure: MatchStructure 
   const baseSize = Math.floor(teams / groupCount);
   const largerGroups = teams % groupCount;
   let groupGames = 0;
+  // Gruppengrößen für den Generator: „Alle Plätze“ hängt bei 2 Gruppen von der kleinsten Gruppe ab
+  const groupSizes: GroupSizeInfo = {};
   for (let index = 0; index < groupCount; index++) {
     const size = index < largerGroups ? baseSize + 1 : baseSize;
     groupGames += (size * (size - 1)) / 2;
+    groupSizes[String.fromCharCode(65 + index)] = size;
   }
-  return groupGames + getExpectedMatchCount(finalsPlan, groupCount);
+  const finalsMatches = generatePlayoffMatches(groupCount, { preset: finalsPlan }, groupSizes);
+  return groupGames + finalsMatches.length;
 }
 
 // Storage functions

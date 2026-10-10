@@ -12,6 +12,8 @@
  * Mutation: Formel zurück auf n·(n−1)/2 → rot; Finalrunde nicht mitgezählt → rot.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { FinalsPreset, Team, Tournament } from '../../../types/tournament';
+import { generateFullSchedule } from '../../../core/generators';
 import {
   buildConstraintsList,
   calculateRecommendation,
@@ -19,6 +21,91 @@ import {
   loadStoredConfig,
   saveStoredConfig,
 } from '../utils/smartConfigCalculator';
+
+/** Turnier mit groupCount Gruppen (Teams i % groupCount → Gruppe A, B, …) für den echten Generator. */
+const gruppenTurnier = (teams: number, groupCount: number, preset: FinalsPreset): Tournament => {
+  const labels = ['A', 'B', 'C', 'D'];
+  const teamList: Team[] = Array.from({ length: teams }, (_, index) => ({
+    id: `t${index + 1}`,
+    name: `Team ${index + 1}`,
+    group: labels[index % groupCount],
+  }));
+  return {
+    id: 'b05',
+    title: 'B-05 Stichprobe',
+    ageClass: 'U13',
+    sport: 'football',
+    tournamentType: 'classic',
+    mode: 'groupsAndFinals',
+    groupSystem: 'groupsAndFinals',
+    date: '2030-01-01',
+    timeSlot: '09:00',
+    startDate: '2030-01-01',
+    startTime: '09:00',
+    numberOfTeams: teams,
+    numberOfFields: 2,
+    numberOfGroups: groupCount,
+    groupPhaseGameDuration: 10,
+    groupPhaseBreakDuration: 2,
+    finalsConfig: { preset },
+    placementLogic: [],
+    teams: teamList,
+    matches: [],
+    status: 'published',
+    publishedAt: '2026-10-04T08:00:00Z',
+    isKidsTournament: false,
+    hideScoresForPublic: false,
+    hideRankingsForPublic: false,
+    resultMode: 'goals',
+    pointSystem: { win: 3, draw: 1, loss: 0 },
+    finals: { final: true, thirdPlace: false, fifthSixth: false, seventhEighth: false },
+    location: { name: 'Halle' },
+    createdAt: '2026-10-04T08:00:00Z',
+    updatedAt: '2026-10-04T08:00:00Z',
+  } as unknown as Tournament;
+};
+
+describe('@W4-020 Finalrunde „Alle Plätze“ zählt mit echten Gruppengrößen', () => {
+  it('6 Teams in 2 Gruppen (3+3), Alle Plätze → 6 Gruppen- + 5 Finalspiele = 11', () => {
+    expect(countTournamentMatches(6, { groupCount: 2, finalsPlan: 'all-places' })).toBe(11);
+  });
+
+  it('5 Teams in 2 Gruppen (3+2), Alle Plätze → 4 Gruppen- + 4 Finalspiele = 8', () => {
+    expect(countTournamentMatches(5, { groupCount: 2, finalsPlan: 'all-places' })).toBe(8);
+  });
+
+  it('7 Teams in 2 Gruppen (4+3), Alle Plätze → 9 Gruppen- + 5 Finalspiele = 14', () => {
+    expect(countTournamentMatches(7, { groupCount: 2, finalsPlan: 'all-places' })).toBe(14);
+  });
+
+  it('8 Teams in 2 Gruppen (4+4), Alle Plätze → 12 + 6 = 18', () => {
+    expect(countTournamentMatches(8, { groupCount: 2, finalsPlan: 'all-places' })).toBe(18);
+  });
+
+  it('Stichprobe gegen generateFullSchedule: Zählung stimmt mit dem echten Spielplan überein', () => {
+    const faelle: Array<[number, number, FinalsPreset]> = [
+      [6, 2, 'all-places'],
+      [5, 2, 'all-places'],
+      [7, 2, 'all-places'],
+      [8, 2, 'all-places'],
+      [9, 2, 'all-places'],
+      [8, 2, 'top-4'],
+      [9, 2, 'top-4'],
+      [8, 2, 'final-only'],
+      [8, 2, 'none'],
+      [8, 4, 'top-8'],
+      [8, 4, 'all-places'],
+      [12, 4, 'top-16'],
+    ];
+    for (const [teams, groups, preset] of faelle) {
+      const tatsaechlich = generateFullSchedule(gruppenTurnier(teams, groups, preset)).allMatches
+        .length;
+      expect(countTournamentMatches(teams, { groupCount: groups, finalsPlan: preset })).toBe(
+        tatsaechlich
+      );
+    }
+  });
+});
 
 describe('@W4-020 Zeit-Empfehlung zählt tatsächliche Spiele', () => {
   it('8 Teams, 2 Gruppen à 4, Top 4 (HF + Platz 3 + Finale) → 16 Spiele', () => {
