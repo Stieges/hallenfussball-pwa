@@ -42,8 +42,8 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 
-function monitorTurnier(tournament: Tournament, slides: MonitorSlide[]): Tournament {
-  return attachMonitor(tournament, withMonitor({ slides }));
+function monitorTurnier(tournament: Tournament, slides: MonitorSlide[], overrides: Parameters<typeof withMonitor>[0] = {}): Tournament {
+  return attachMonitor(tournament, withMonitor({ slides, ...overrides }));
 }
 
 /** Jeder Poll liefert einen strukturellen Klon, so wie SupabaseRepository.get neue Objekte baut. */
@@ -90,6 +90,18 @@ describe('MonitorDisplayPage — Takt-Gegenprobe (C-MON-TAKT-STEHT, Klon je Poll
       if (reihenfolge.at(-1) !== aktuell) { reihenfolge.push(aktuell); }
     }
     expect(reihenfolge).toEqual(['A', 'B', 'A', 'B', 'A']);
+  });
+
+  // Profil low pollt alle 10 s: Der Wechsel muss bei 15 s passieren, nicht erst beim Poll bei 20 s.
+  it('Profil low (Poll alle 10 s): Wechsel bei 15 s, nicht erst beim nächsten Poll', async () => {
+    await starte(monitorTurnier(buildTournament(), [
+      slide('custom-text', { headline: 'Folie A' }),
+      slide('custom-text', { headline: 'Folie B' }),
+    ], { performanceMode: 'low' }));
+    await vorspulenInSchritten(14_999);
+    expect(screen.getByText('Folie A')).toBeInTheDocument();
+    await vorspulenInSchritten(1);
+    expect(screen.getByText('Folie B')).toBeInTheDocument();
   });
 
   it('Poll mit neuen Objekten gleicher Daten verschiebt den Wechsel nicht (weiterhin 15 s)', async () => {
