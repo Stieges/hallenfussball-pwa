@@ -168,6 +168,9 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
       await page.waitForTimeout(3000);
       await expect(page.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: 5000 });
       await expect(page.locator('[data-testid="sync-wait-details"]')).toHaveCount(0);
+      // Push-Weg erzwungen: genau ein Sendeversuch (kein stiller Erfolg über eine Wiederholung mit "duplicate").
+      expect(lost.attempts()).toBe(1);
+      expect(lost.answers).toEqual(['accepted']);
     } finally {
       await context.close();
     }
