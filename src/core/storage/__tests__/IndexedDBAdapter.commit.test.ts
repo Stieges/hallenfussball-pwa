@@ -74,6 +74,33 @@ describe('IndexedDBAdapter – Commit vor Erfolgsmeldung (@FU-004)', () => {
     await expect(adapter.get('turnier-52')).resolves.toEqual({ name: 'Bleibt auch' });
   });
 
+  it('Quota beim Commit: Ursache bleibt erhalten (originalError = Quota-Fehler)', async () => {
+    const adapter = new IndexedDBAdapter();
+    await adapter.init();
+
+    const quota = new DOMException('Quota exceeded', 'QuotaExceededError');
+    const original = IDBObjectStore.prototype.put;
+    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (
+      this: IDBObjectStore,
+      ...args: unknown[]
+    ) {
+      const request = (original as (...a: unknown[]) => IDBRequest).apply(this, args);
+      request.addEventListener('success', () => {
+        const tx = this.transaction;
+        tx.abort();
+        Object.defineProperty(tx, 'error', { get: () => quota, configurable: true });
+      });
+      return request;
+    } as never);
+
+    const error = await adapter.set('turnier-54', { name: 'Quota' }).then(
+      () => null,
+      (e: unknown) => e
+    );
+    expect(error).toBeInstanceOf(StorageError);
+    expect(error).toMatchObject({ name: 'StorageError', originalError: quota });
+  });
+
   it('Gegenbeispiel: normaler Schreibvorgang → resolve, Eintrag lesbar', async () => {
     const adapter = new IndexedDBAdapter();
     await adapter.init();
