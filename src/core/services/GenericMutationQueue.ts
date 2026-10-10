@@ -468,12 +468,13 @@ export class GenericMutationQueue<TType extends string> {
                         // navigator.onLine — Hallen-WLAN-Anmeldeseite, Server-Überlastung):
                         // zählt nicht als Fehlversuch. Item bleibt unverändert an erster
                         // Stelle stehen und wird beim nächsten Anstoß erneut versucht.
-                        this.lastFailure = 'transient';
+                        this.lastFailure = 'transient'; this.notifyListeners();
                         this.retryTimer.hold = false;
                         scheduleMs = this.retryTimer.takeBackoffMs();
                         break;
                     }
 
+                    this.lastFailure = 'permanent'; this.notifyListeners();
                     item.retryCount++;
 
                     if (item.retryCount >= MAX_RETRIES) {

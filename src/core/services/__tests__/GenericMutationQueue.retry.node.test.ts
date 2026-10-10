@@ -791,4 +791,37 @@ describe('GenericMutationQueue A-06e (@FU-016/@FU-004)', () => {
     mq.enqueue('SAVE_TOURNAMENT', { ...tour('a'), title: "A'" });
     expect(mq.getPendingCount()).toBe(1);
   });
+
+  it("A6 Test 5 (@FU-016): getLastFailure transient → 'transient', Erfolg → null, Listener aufgerufen", async () => {
+    const listener = vi.fn();
+    const execute = vi.fn().mockRejectedValueOnce(netError()).mockResolvedValue(undefined);
+    q = makeQ(execute as (item: GenericMutationItem<QType>) => Promise<void>);
+    q.subscribe(listener);
+    setOnLine(false);
+    q.enqueue('SAVE_THING', { id: 'a' });
+    setOnLine(true);
+
+    await q.process();
+    expect(q.getLastFailure()).toBe('transient');
+    expect(listener).toHaveBeenCalledWith({ pendingCount: 1, failedCount: 0 });
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await settle();
+    expect(q.getLastFailure()).toBeNull();
+    expect(Object.keys(q.getStatus()).sort()).toEqual(['failedCount', 'pendingCount']);
+  });
+
+  it("A6 Test 5b (@FU-016): echter Fehler → getLastFailure 'permanent', Listener aufgerufen", async () => {
+    const listener = vi.fn();
+    const execute = vi.fn().mockRejectedValue(rlsError());
+    q = makeQ(execute as (item: GenericMutationItem<QType>) => Promise<void>);
+    q.subscribe(listener);
+    setOnLine(false);
+    q.enqueue('SAVE_THING', { id: 'a' });
+    setOnLine(true);
+
+    await q.process();
+    expect(q.getLastFailure()).toBe('permanent');
+    expect(listener).toHaveBeenCalledWith({ pendingCount: 1, failedCount: 0 });
+  });
 });
