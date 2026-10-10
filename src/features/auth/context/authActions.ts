@@ -15,11 +15,12 @@ import type { Session as SupabaseSession } from '@supabase/supabase-js';
 import { mapSupabaseUser, mapSupabaseSession, createLocalGuestUser, type ProfileData } from './authMapper';
 import { migrateGuestTournaments } from '../services/guestMigrationService';
 import { createAuthRetryService, isAbortError } from '../../../core/services';
-import { clearProfileCache, cacheUserProfile } from '../services/profileCacheService';
+import { cacheUserProfile } from '../services/profileCacheService';
 import { isFeatureEnabled } from '../../../config';
 import { mapProfileUpdateToSupabase } from '../../../core/repositories/supabaseMappers';
 import { executeWithTimeout } from '../../../core/utils/SingleFlight';
 import { captureFeatureError, setUserContext as setSentryUserContext } from '../../../lib/sentry';
+import { logout as logoutAction, type LogoutOptions } from './logoutAction';
 
 /**
  * Timeout for auth operations (login, register, etc.)
@@ -480,43 +481,10 @@ export async function loginWithGoogle(): Promise<{ success: boolean; error?: str
 }
 
 /**
- * Logout
+ * Logout (nur dieses Gerät, siehe logoutAction.ts)
  */
-export async function logout(deps: AuthActionDeps): Promise<void> {
-  // Local cleanup that MUST run regardless of signOut success/failure
-  const cleanupLocal = () => {
-    safeLocalStorage.removeItem('auth:guestUser');
-    safeLocalStorage.removeItem('auth:cachedUser');
-    // Clear legacy keys (Fix 4)
-    clearLegacyAuthKeys();
-    // Clear offline mutation queue to prevent replaying with wrong user (Fix 5)
-    safeLocalStorage.removeItem('mutation_queue_v1');
-    safeLocalStorage.removeItem('mutation_queue_failed_v1');
-    void clearProfileCache();
-    setUserAndSentry(deps, null);
-    deps.setSession(null);
-    deps.setIsGuest(false);
-  };
-
-  if (!isSupabaseConfigured || !supabase) {
-    cleanupLocal();
-    return;
-  }
-
-  try {
-    await supabase.auth.signOut();
-  } catch (err) {
-    if (import.meta.env.DEV) {
-      console.error('Logout signOut error:', err);
-    }
-    if (err instanceof Error) {
-      captureFeatureError(err, 'auth', 'logout');
-    }
-    // Fallback: clear local tokens manually since signOut failed
-    await clearStaleAuthState();
-  } finally {
-    cleanupLocal();
-  }
+export async function logout(deps: AuthActionDeps, options?: LogoutOptions): Promise<void> {
+  return logoutAction(deps, options);
 }
 
 /**

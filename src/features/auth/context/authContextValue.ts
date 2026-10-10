@@ -22,7 +22,7 @@ export interface AuthContextValue extends AuthState {
   /** Loggt mit Google OAuth ein (async) */
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   /** Loggt den User aus (async) */
-  logout: () => Promise<void>;
+  logout: (options?: { scope?: 'local' }) => Promise<void>;
   /**
    * Fährt als Gast fort (async)
    * Versucht zuerst Supabase Anonymous Auth, fällt auf lokalen Gast zurück

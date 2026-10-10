@@ -1,0 +1,111 @@
+/**
+ * Abmelden (A-07a) – @AN-023 „Abmelden am Handy, Tablet bleibt“, @FU-006 „Ausgang bleibt beim Abmelden“.
+ *
+ * Echter supabase-js-Client mit Map-Speicher und Fake-fetch. Gegen den echten Client
+ * wird geprüft, was beim Abmelden tatsächlich am Netz und im Speicher passiert.
+ */
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createMockAuthActionDeps } from './mocks/supabaseMock';
+import { safeLocalStorage } from '../../../../core/utils/safeStorage';
+
+const net = vi.hoisted(() => ({
+  calls: [] as Array<{ url: string; method: string }>,
+  // null = Standard-Antwort 204 ohne Body (Logout erfolgreich)
+  respond: null as null | ((url: string, init?: RequestInit) => Promise<Response>),
+}));
+
+vi.mock('../../../../lib/supabase', async () => {
+  const { createClient } = await import('@supabase/supabase-js');
+  // Wie in der Produktion (src/lib/supabase.ts): Sitzung liegt im safeLocalStorage.
+  const { safeLocalStorage } = await import('../../../../core/utils/safeStorage');
+  const fakeFetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = String(input);
+    net.calls.push({ url, method: init?.method ?? 'GET' });
+    return net.respond ? net.respond(url, init) : Promise.resolve(new Response(null, { status: 204 }));
+  };
+  const client = createClient('http://localhost:54321', 'anon-key', {
+    auth: { storage: safeLocalStorage, autoRefreshToken: false, persistSession: true },
+    global: { fetch: fakeFetch },
+  });
+  return { supabase: client, isSupabaseConfigured: true };
+});
+
+import { logout } from '../logoutAction';
+
+const TOKEN_KEY = 'sb-localhost-auth-token';
+const QUEUE_KEY = 'mutation_queue_v1';
+const QUEUE_VALUE = JSON.stringify([{ id: 'e1' }, { id: 'e2' }, { id: 'e3' }]);
+
+function b64url(value: unknown): string {
+  return Buffer.from(JSON.stringify(value)).toString('base64url');
+}
+
+function sessionFixture(expiresAtSeconds: number): string {
+  const accessToken = `${b64url({ alg: 'HS256', typ: 'JWT' })}.${b64url({
+    sub: 'user-a',
+    role: 'authenticated',
+    exp: expiresAtSeconds,
+  })}.signature`;
+  return JSON.stringify({
+    access_token: accessToken,
+    token_type: 'bearer',
+    expires_in: 3600,
+    expires_at: expiresAtSeconds,
+    refresh_token: 'refresh-a',
+    user: { id: 'user-a', aud: 'authenticated', email: 'a@example.test', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' },
+  });
+}
+
+function hasSupabaseToken(): boolean {
+  for (let i = 0; i < safeLocalStorage.length; i++) {
+    const key = safeLocalStorage.key(i);
+    if (key && /^sb-.*-auth-token$/.test(key)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const nowSeconds = () => Math.floor(Date.now() / 1000);
+
+describe('logout (A-07a) – nur dieses Gerät, Ausgang bleibt', () => {
+  beforeEach(() => {
+    net.calls.length = 0;
+    safeLocalStorage.clear();
+    safeLocalStorage.setItem(QUEUE_KEY, QUEUE_VALUE);
+    net.respond = null;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('Pflicht: Abmelden schickt genau POST …/logout?scope=local, Ausgang bleibt, Gerät ist abgemeldet', async () => {
+    safeLocalStorage.setItem(TOKEN_KEY, sessionFixture(nowSeconds() + 3600));
+    const deps = createMockAuthActionDeps();
+
+    await logout(deps);
+
+    const logoutCalls = net.calls.filter((c) => c.url.includes('/auth/v1/logout'));
+    expect(logoutCalls).toHaveLength(1);
+    expect(logoutCalls[0].method).toBe('POST');
+    expect(logoutCalls[0].url).toContain('scope=local');
+    expect(hasSupabaseToken()).toBe(false);
+    expect(safeLocalStorage.getItem(QUEUE_KEY)).toBe(QUEUE_VALUE);
+    expect(deps.setUser).toHaveBeenCalledWith(null);
+  });
+
+  it('Gegenbeispiel: offline + Zugang abgelaufen → Token trotzdem weg, setUser(null), kein throw', async () => {
+    safeLocalStorage.setItem(TOKEN_KEY, sessionFixture(nowSeconds() - 600));
+    net.respond = async () => {
+      throw new TypeError('Failed to fetch');
+    };
+    const deps = createMockAuthActionDeps();
+
+    await expect(logout(deps)).resolves.toBeUndefined();
+
+    expect(hasSupabaseToken()).toBe(false);
+    expect(deps.setUser).toHaveBeenCalledWith(null);
+  }, 60_000); // auth-js wiederholt den Refresh bei Netzfehler mit echten Timern (200, 400, 800 … ms)
+});
