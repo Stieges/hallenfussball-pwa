@@ -26,7 +26,6 @@ const styles = {
         top: 'calc(100% + 8px)',
         right: 0,
         zIndex: cssVars.zIndex.dropdown,
-        width: 280,
         maxWidth: '90vw',
         background: cssVars.colors.surface,
         border: `1px solid ${cssVars.colors.border}`,
