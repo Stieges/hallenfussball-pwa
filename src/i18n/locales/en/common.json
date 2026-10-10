@@ -97,6 +97,7 @@
     "waitingNoInternet_other": "{{count}} entries waiting – no internet",
     "waitingDisturbed_one": "{{count}} entry waiting – transmission disrupted",
     "waitingDisturbed_other": "{{count}} entries waiting – transmission disrupted",
+    "realtimeInterrupted": "Live connection interrupted",
     "lastSyncNow": "Just now",
     "lastSyncMinutes": "{{count}} min ago",
     "lastSyncHours": "{{count}} h ago",

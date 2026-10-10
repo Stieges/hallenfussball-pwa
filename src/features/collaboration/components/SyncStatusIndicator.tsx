@@ -9,7 +9,10 @@
  */
 
 import { CSSProperties, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { cssVars } from '../../../design-tokens';
 import { useSyncStatus } from '../../../hooks/useSyncStatus';
+import { isRealtimeInterrupted, useRealtimeChannelStatus } from '../../../hooks/realtimeChannelStatus';
 import { useResyncNow } from '../../match-engine/useResyncNow';
 import { useMatchEngineContextOptional } from '../../match-engine/useMatchEngineContext';
 import { useOutboxStatus } from '../outbox/useOutboxStatus';
@@ -36,6 +39,15 @@ export interface SyncStatusIndicatorProps {
 const containerStyle: CSSProperties = {
     position: 'relative',
     display: 'inline-flex',
+};
+
+// A-06k (@FU-025): sichtbarer Hinweis, solange der Realtime-Kanal unterbrochen ist.
+const realtimeHintStyle: CSSProperties = {
+    alignSelf: 'center',
+    marginLeft: cssVars.spacing.xs,
+    color: cssVars.colors.warning,
+    fontSize: cssVars.fontSizes.bodySm,
+    whiteSpace: 'nowrap',
 };
 
 export function SyncStatusIndicator({
@@ -72,6 +84,9 @@ export function SyncStatusIndicator({
     // A-06h (Brief A9): Klick stoesst IMMER die Uebertragung an (resyncNow), auch bei
     // pendingChanges > 0 (@FU-013 "sobald frei, alle uebertragen"). Oben bei den anderen Hooks.
     const resyncNow = useResyncNow();
+    // A-06k (@FU-025): Kanal-Zustand des Turniers (CLOSED/CHANNEL_ERROR/TIMED_OUT = unterbrochen).
+    const { t } = useTranslation('common');
+    const realtimeInterrupted = isRealtimeInterrupted(useRealtimeChannelStatus(tournamentId));
 
     const [showFailedList, setShowFailedList] = useState(false);
     // A-06j (E1): Antippen im kompakten Modus zeigt den Wartegrund mit Details.
@@ -145,6 +160,12 @@ export function SyncStatusIndicator({
                 waitReason={waitReason}
                 waitDetail={outbox.lastError ?? undefined}
             />
+
+            {realtimeInterrupted && (
+                <span style={realtimeHintStyle} role="status" data-testid="realtime-interrupted-hint">
+                    {t('syncStatus.realtimeInterrupted')}
+                </span>
+            )}
 
             {compact && showWaitDetails && failedChanges === 0 && waitingCount > 0 && (
                 <SyncWaitDetails pendingCount={waitingCount} waitReason={waitReason} detail={outbox.lastError ?? undefined} />
