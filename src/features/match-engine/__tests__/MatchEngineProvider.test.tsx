@@ -425,6 +425,19 @@ describe('MatchEngineProvider: resyncNow und Wiederaufnahme (A-06g)', () => {
     expect(queue.resumeAfterAuth).not.toHaveBeenCalled();
   });
 
+  it('R3: Abmelden, waehrend der Timer zum Wecken noch aussteht -> resumeAfterAuth 0x', async () => {
+    const { rerender } = render(<Tree />);
+    await settle();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    queue.resumeAfterAuth.mockClear();
+    mockAuth.session = { token: 'token-2' };
+    rerender(<Tree />);
+    mockAuth.session = null;
+    rerender(<Tree />);
+    await flushFakeTimers();
+    expect(queue.resumeAfterAuth).not.toHaveBeenCalled();
+  });
+
   it('RACE 1: haengendes resumeAfterAuth blockiert ein zweites Anmelde-Ereignis nicht', async () => {
     queue = fakeQueue(() => new Promise<void>(() => undefined));
     mockRepositories.tournamentRepository = { mutationQueue: queue };
