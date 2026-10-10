@@ -57,6 +57,24 @@ describe('applyViewFilters', () => {
     expect(result.allMatches.map((m) => m.matchNumber)).not.toContain(7);
   });
 
+  it('Status scheduled enthält geplante Spiele (Spiel 9 ist drin)', () => {
+    const { t, schedule } = scheduleOf();
+    const result = applyViewFilters(schedule, t, { ...NO_FILTER, selectedStatus: 'scheduled' });
+    expect(result.allMatches.map((m) => m.matchNumber)).toContain(9);
+  });
+
+  it('Status scheduled enthält wartende (waiting) Spiele, Status live nicht', () => {
+    const { t, schedule } = scheduleOf();
+    const waitingTournament = {
+      ...t,
+      matches: t.matches.map((tm) => (tm.matchNumber === 9 ? { ...tm, matchStatus: 'waiting' as const } : tm)),
+    };
+    const scheduled = applyViewFilters(schedule, waitingTournament, { ...NO_FILTER, selectedStatus: 'scheduled' });
+    expect(scheduled.allMatches.map((m) => m.matchNumber)).toContain(9);
+    const live = applyViewFilters(schedule, waitingTournament, { ...NO_FILTER, selectedStatus: 'live' });
+    expect(live.allMatches.map((m) => m.matchNumber)).not.toContain(9);
+  });
+
   it('„Nur meine“ ohne gewähltes Team filtert nicht', () => {
     const { t, schedule } = scheduleOf();
     const result = applyViewFilters(schedule, t, { ...NO_FILTER, showOnlyMyTeam: true, myTeamId: null });
