@@ -968,9 +968,11 @@ export function MonitorDisplayPage({
   // Heartbeat sender — every 30s so admin dashboard can show online status.
   // Deps nur Ids und Primitive: neue Objekte je Poll würden den Takt sonst bei jedem Poll neu starten
   // (C-MON-HEARTBEAT-JE-POLL).
+  const monitorKey = monitor?.id ?? null;
+  const tournamentKey = tournament?.id ?? null;
   const heartbeatErrorReported = useRef(false);
   useEffect(() => {
-    if (!monitor || !tournament) {
+    if (!monitorKey || !tournamentKey) {
       return;
     }
 
@@ -979,8 +981,8 @@ export function MonitorDisplayPage({
         return;
       }
       const { error } = await supabase.rpc('record_monitor_heartbeat', {
-        p_monitor_id: monitor.id,
-        p_tournament_id: tournament.id,
+        p_monitor_id: monitorKey,
+        p_tournament_id: tournamentKey,
         p_slide_index: slideState.currentIndex,
         p_cache_status: cacheStatus.status,
         p_user_agent: navigator.userAgent,
@@ -996,7 +998,7 @@ export function MonitorDisplayPage({
     void sendHeartbeat();
     const interval = setInterval(() => void sendHeartbeat(), 30_000);
     return () => clearInterval(interval);
-  }, [monitor, tournament, slideState.currentIndex, cacheStatus.status]);
+  }, [monitorKey, tournamentKey, slideState.currentIndex, cacheStatus.status]);
 
   // ==========================================================================
   // SLIDESHOW LOGIC
