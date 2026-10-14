@@ -35,6 +35,23 @@ export function istAbgefangeneTaste(key: string): boolean {
   return ABGEFANGENE_TASTEN.has(key);
 }
 
+/** Taste für die Cache-Anzeige (@ME-021): „c“ ohne Strg/Cmd/Alt und ohne Autowiederholung. */
+export const CACHE_TASTE = 'c';
+
+export function istCacheTaste(e: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'altKey' | 'repeat'>): boolean {
+  if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) { return false; }
+  return e.key.toLowerCase() === CACHE_TASTE;
+}
+
+/**
+ * Ist das Ziel ein Eingabefeld? Dort gehören Tasten dem Feld, nicht der Seite (B-17 Review M1).
+ */
+export function istEingabeZiel(ziel: EventTarget | null): boolean {
+  if (!(ziel instanceof HTMLElement)) { return false; }
+  if (ziel.isContentEditable || ziel.getAttribute('contenteditable') === 'true') { return true; }
+  return ['INPUT', 'TEXTAREA', 'SELECT'].includes(ziel.tagName);
+}
+
 /** Löst eine Taste das Vollbild aus? Mit Strg, Cmd oder Alt bleibt sie dem Browser (z. B. Suche). */
 export function istVollbildTaste(e: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'altKey' | 'repeat'>): boolean {
   if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) { return false; }

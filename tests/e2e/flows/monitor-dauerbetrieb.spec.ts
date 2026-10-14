@@ -1,17 +1,26 @@
 /**
- * Monitor-Dauerbetrieb (B-17): Layout ohne Überlappung und ohne Scrollbalken bei 1280×720 und 1920×1080,
- * mit einem Teamnamen von 50 Zeichen inkl. Umlauten und ß; Monitorschrift = App-Schrift (Inter Variable);
- * Escape und Leertaste verlassen die Seite nicht.
+ * Monitor-Dauerbetrieb (B-17 Fixrunde 1): Layout und Tasten der Monitor-Seite.
  *
- * Szenarien: @ME-013 (Größen), @ZM-086 (keine Überlappung), @ME-022 (Escape), @ME-003 (keine Eingabe).
- * Benötigt keinen Supabase-Stack: der Monitor liest die Turnier-Daten aus IndexedDB (seedIndexedDB).
+ * Szenarien: @ME-013 (Größen, 125 %), @ZM-086 (keine Überlappung von 720p bis 4K), @ZM-087 (Teamname bis 50
+ * Zeichen vollständig, ohne „…“), @ZM-125 (Schrift nicht unter 3 % der Bildhöhe), @ME-022 (Tasten ohne Wirkung).
+ *
+ * Läuft ohne Supabase-Stack: der Monitor liest aus IndexedDB (seedIndexedDB), der Dev-Server startet im
+ * Offline-Modus. Nur im Projekt desktop, damit die CI die Größen nicht je Gerätprofil wiederholt.
  */
+import type { Page } from '@playwright/test';
 import { test, expect, type TestOptions } from '../helpers/test-fixtures';
 
-/** Genau 50 Zeichen, mit Umlauten und ß. */
-const LANGER_TEAMNAME = 'Größenwahn Übungsteam Füßen Ösen Äpfel Ölkrug Ähre';
+/** Genau 50 Zeichen, mit Umlauten und ß (@ZM-087). */
+const LANGER_NAME = 'Größenwahn Übungsteam Füßen Ösen Äpfel Ölkrug Ähre';
+/** Ein mittellanger Name, der vorher in Bebas Neue passte (Review K2). */
+const MITTEL_NAME = 'Sportfreunde Lotte';
+
+test.beforeEach(() => {
+  test.skip(test.info().project.name !== 'desktop', 'läuft nur im Projekt desktop');
+});
 
 async function seedLiveTournament(seedIndexedDB: TestOptions['seedIndexedDB']): Promise<void> {
+  const now = new Date().toISOString();
   const tournament = {
     id: 'dauer-turnier',
     title: 'Hallencup Nord',
@@ -35,8 +44,8 @@ async function seedLiveTournament(seedIndexedDB: TestOptions['seedIndexedDB']): 
     pointSystem: { win: 3, draw: 1, loss: 0 },
     groups: [{ id: 'g1', name: 'Gruppe A', teamIds: ['t1', 't2'] }],
     teams: [
-      { id: 't1', name: LANGER_TEAMNAME, color: '#DC2626' },
-      { id: 't2', name: 'SV Süd', color: '#FACC15' },
+      { id: 't1', name: LANGER_NAME, color: '#DC2626' },
+      { id: 't2', name: MITTEL_NAME, color: '#FACC15' },
     ],
     matches: [
       {
@@ -47,19 +56,19 @@ async function seedLiveTournament(seedIndexedDB: TestOptions['seedIndexedDB']): 
         teamB: 't2',
         homeTeamId: 't1',
         awayTeamId: 't2',
-        homeScore: 1,
+        homeScore: 10,
         awayScore: 0,
-        scoreA: 1,
+        scoreA: 10,
         scoreB: 0,
         status: 'RUNNING',
         matchStatus: 'running',
         field: 1,
         fieldNumber: 1,
         groupId: 'g1',
-        scheduledTime: new Date().toISOString(),
+        scheduledTime: now,
         durationSeconds: 600,
         elapsedSeconds: 320,
-        timerStartTime: new Date().toISOString(),
+        timerStartTime: now,
         timerElapsedSeconds: 320,
       },
     ],
@@ -73,73 +82,222 @@ async function seedLiveTournament(seedIndexedDB: TestOptions['seedIndexedDB']): 
         theme: 'dark',
         performanceMode: 'auto',
         slides: [{ id: 's1', type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 }],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
       },
     ],
     fields: [{ id: 'field-1', defaultName: 'Feld 1' }],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   };
   await seedIndexedDB({ tournaments: [tournament] });
 }
 
-/** Der Live-Folie zeigt den Teamnamen gekürzt (@ZM-087); der volle Name steht im title-Attribut. */
-const teamNameLocator = (page: import('@playwright/test').Page) => page.locator(`[title="${LANGER_TEAMNAME}"]`).first();
+/** Die Live-Folie ist da, sobald der Teamname mit vollem Namen im DOM steht. */
+async function oeffneMonitor(page: Page, seedIndexedDB: TestOptions['seedIndexedDB']): Promise<void> {
+  await seedLiveTournament(seedIndexedDB);
+  await page.goto('/#/display/dauer-turnier/mon-1');
+  await expect(page.locator(`[title="${LANGER_NAME}"]`)).toBeVisible({ timeout: 15_000 });
+}
 
-for (const [breite, hoehe] of [[1280, 720], [1920, 1080]] as const) {
-  test.describe(`Layout ${breite}×${hoehe} (@ME-013, @ZM-086)`, () => {
-    test.use({ viewport: { width: breite, height: hoehe } });
+/** Schrift und Überlappung der Live-Folie, gemessen am angezeigten Text (nicht am title-Attribut). */
+async function messeLiveFolie(page: Page) {
+  return page.evaluate((namen) => {
+    type Box = { name: string; top: number; bottom: number; left: number; right: number };
+    const box = (el: Element, name: string): Box => {
+      const r = el.getBoundingClientRect();
+      return { name, top: r.top, bottom: r.bottom, left: r.left, right: r.right };
+    };
+    const leaf = (re: RegExp): Element | undefined => Array.from(document.querySelectorAll('body *'))
+      .find((e) => e.childElementCount === 0 && re.test(e.textContent ?? ''));
 
-    test('kein Scrollbalken, keine Überlappung, Teamname nicht abgeschnitten, Monitorschrift = App-Schrift', async ({ page, seedIndexedDB }) => {
-      expect(LANGER_TEAMNAME.length).toBe(50);
-      await seedLiveTournament(seedIndexedDB);
-      await page.goto('/#/display/dauer-turnier/mon-1');
+    const teams = namen.map((n) => {
+      const el = document.querySelector(`[title="${n}"]`);
+      if (!(el instanceof HTMLElement)) { throw new Error(`Teamname ${n} nicht gefunden`); }
+      const stil = getComputedStyle(el);
+      return {
+        name: n,
+        text: el.textContent ?? '',
+        abgeschnitten: el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1,
+        zeilenhoehe: parseFloat(stil.lineHeight) || parseFloat(stil.fontSize) * 1.2,
+        höhe: el.getBoundingClientRect().height,
+        schriftPx: parseFloat(stil.fontSize),
+        family: stil.fontFamily,
+        el,
+      };
+    });
 
-      const name = teamNameLocator(page);
-      await expect(name).toBeVisible({ timeout: 15_000 });
+    // Glyphen-Messung: dieselbe Zeichenkette in Inter und in einer Ausweichschrift muss verschieden breit sein.
+    const messe = (family: string, text: string) => {
+      const m = document.createElement('span');
+      Object.assign(m.style, { position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap', fontFamily: family, fontWeight: '700' });
+      m.textContent = text;
+      document.body.appendChild(m);
+      const w = m.getBoundingClientRect().width;
+      m.remove();
+      return w;
+    };
+    const glyphen = teams.map((t) => ({
+      inter: messe('"Inter Variable"', t.text),
+      ausweich: messe('monospace', t.text),
+    }));
 
-      const messung = await name.evaluate((el) => {
-        const doc = document.documentElement;
-        const r = el.getBoundingClientRect();
-        const uhr = Array.from(document.querySelectorAll('body *'))
-          .find((e) => e.childElementCount === 0 && /^\d{2}:\d{2}/.test(e.textContent ?? '')) as HTMLElement | undefined;
-        const u = uhr?.getBoundingClientRect();
-        return {
-          scrollY: doc.scrollHeight - doc.clientHeight,
-          scrollX: doc.scrollWidth - doc.clientWidth,
-          abgeschnitten: (el as HTMLElement).scrollWidth - (el as HTMLElement).clientWidth,
-          imBild: r.left >= 0 && r.right <= window.innerWidth && r.top >= 0 && r.bottom <= window.innerHeight,
-          ueberlappt: u ? !(r.bottom <= u.top || u.bottom <= r.top) : null,
-          schrift: getComputedStyle(el).fontFamily,
-          interGeladen: document.fonts.check('16px "Inter Variable"'),
-        };
-      });
+    const bloecke: Box[] = [];
+    const kopf = leaf(/^LIVE$/);
+    if (kopf) { bloecke.push(box(kopf, 'LIVE-Kennzeichen')); }
+    const feld = leaf(/^Feld 1/);
+    if (feld) { bloecke.push(box(feld, 'Feld/Spiel')); }
+    document.querySelectorAll('[data-position]').forEach((el) => {
+      bloecke.push(box(el, `Stand ${el.getAttribute('data-position')}`));
+    });
+    teams.forEach((t) => bloecke.push(box(t.el, `Team ${t.name.slice(0, 12)}`)));
+    const uhr = leaf(/^\d{2}:\d{2}/);
+    if (uhr) { bloecke.push(box(uhr, 'Uhr')); }
+    const hinweis = document.querySelector('[data-testid="monitor-wakelock-hint"]');
+    if (hinweis) { bloecke.push(box(hinweis, 'Hinweis')); }
 
-      expect(messung.scrollY, 'vertikaler Scrollbalken').toBeLessThanOrEqual(0);
-      expect(messung.scrollX, 'horizontaler Scrollbalken').toBeLessThanOrEqual(0);
-      expect(messung.abgeschnitten, 'Teamname abgeschnitten').toBeLessThanOrEqual(0);
-      expect(messung.imBild, 'Teamname außerhalb des Bildes').toBe(true);
-      expect(messung.ueberlappt, 'Teamname überlagert die Uhr').toBe(false);
-      // Monitorschrift = App-Schrift (Daniel 10.10.): kein Bebas-Neue-Rückfall, kein System-Fallback.
-      expect(messung.schrift.startsWith('"Inter Variable"'), messung.schrift).toBe(true);
-      expect(messung.interGeladen, 'Inter Variable geladen').toBe(true);
+    const ueberlappungen: string[] = [];
+    for (let i = 0; i < bloecke.length; i++) {
+      for (let j = i + 1; j < bloecke.length; j++) {
+        const a = bloecke[i]; const b = bloecke[j];
+        const schneidet = a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+        if (schneidet) { ueberlappungen.push(`${a.name} ↔ ${b.name}`); }
+      }
+    }
+
+    const doc = document.documentElement;
+    const ausserhalb = bloecke.filter((b) => b.left < -0.5 || b.top < -0.5 || b.right > window.innerWidth + 0.5 || b.bottom > window.innerHeight + 0.5).map((b) => b.name);
+
+    return {
+      scrollY: doc.scrollHeight - doc.clientHeight,
+      scrollX: doc.scrollWidth - doc.clientWidth,
+      hoehe: window.innerHeight,
+      teams: teams.map((t, i) => ({
+        name: t.name,
+        text: t.text,
+        abgeschnitten: t.abgeschnitten,
+        zeilen: Math.round(t.höhe / t.zeilenhoehe),
+        schriftPx: t.schriftPx,
+        family: t.family,
+        interGlyphen: glyphen[i].inter !== glyphen[i].ausweich,
+        interGeladen: Array.from(document.fonts).some((f) => f.family.replace(/["']/g, '') === 'Inter Variable' && f.status === 'loaded'),
+      })),
+      ueberlappungen,
+      ausserhalb,
+    };
+  }, [LANGER_NAME, MITTEL_NAME]);
+}
+
+const GROESSEN: Array<{ name: string; width: number; height: number; dsf?: number }> = [
+  { name: '800×600', width: 800, height: 600 },
+  { name: '1024×768', width: 1024, height: 768 },
+  { name: '1280×720', width: 1280, height: 720 },
+  { name: '1366×768', width: 1366, height: 768 },
+  { name: '1920×1080', width: 1920, height: 1080 },
+  { name: '2560×1440', width: 2560, height: 1440 },
+  { name: '3840×2160', width: 3840, height: 2160 },
+  { name: '1920×1080 bei 125 % (Viewport 1536×864)', width: 1536, height: 864, dsf: 1.25 },
+];
+
+for (const groesse of GROESSEN) {
+  test.describe(`Live-Folie ${groesse.name} (@ME-013, @ZM-086, @ZM-087)`, () => {
+    test.use({
+      viewport: { width: groesse.width, height: groesse.height },
+      deviceScaleFactor: groesse.dsf ?? 1,
+    });
+
+    test('ohne Scrollbalken, ohne Überlappung, Teamnamen vollständig, Monitorschrift = App-Schrift', async ({ page, seedIndexedDB }) => {
+      expect(LANGER_NAME.length).toBe(50);
+      await oeffneMonitor(page, seedIndexedDB);
+      // Die Schrift wird nach dem Laden von Inter neu gemessen (teamNameFit); kurz warten, bis das gesetzt ist.
+      await page.evaluate(() => document.fonts.ready);
+      await page.waitForTimeout(300);
+
+      const m = await messeLiveFolie(page);
+
+      expect(m.scrollY, 'vertikaler Scrollbalken').toBeLessThanOrEqual(0);
+      expect(m.scrollX, 'horizontaler Scrollbalken').toBeLessThanOrEqual(0);
+      expect(m.ausserhalb, 'Element außerhalb des Bildes').toEqual([]);
+      expect(m.ueberlappungen, 'überlappende Elemente').toEqual([]);
+
+      for (const t of m.teams) {
+        expect(t.text, `${t.name}: voller Name, kein Kürzel`).toBe(t.name);
+        expect(t.text, `${t.name}: keine Kürzung`).not.toContain('…');
+        expect(t.abgeschnitten, `${t.name}: abgeschnitten`).toBe(false);
+        expect(t.zeilen, `${t.name}: höchstens zwei Zeilen`).toBeLessThanOrEqual(2);
+        expect(t.schriftPx, `${t.name}: nicht unter 3 % der Bildhöhe`).toBeGreaterThanOrEqual(m.hoehe * 0.03 - 0.5);
+        expect(t.family.startsWith('"Inter Variable"'), t.family).toBe(true);
+        expect(t.interGlyphen, `${t.name}: Glyphen aus Inter`).toBe(true);
+        expect(t.interGeladen, 'Inter Variable geladen').toBe(true);
+      }
     });
   });
 }
 
-test.describe('Tasten verlassen die Monitor-Seite nicht (@ME-022, @ME-003)', () => {
-  test('Escape, Leertaste und Backspace lassen die Seite offen', async ({ page, seedIndexedDB }) => {
-    await seedLiveTournament(seedIndexedDB);
+test.describe('Tasten ohne Wirkung (@ME-022, @ME-003)', () => {
+  test('Escape, Leertaste, Backspace und Pfeile verlassen die Seite nicht und halten oder schalten die Folie nicht', async ({ page, seedIndexedDB }) => {
+    const now = new Date().toISOString();
+    await seedIndexedDB({
+      tournaments: [{
+        id: 'dauer-turnier',
+        title: 'Hallencup Nord',
+        name: 'Hallencup Nord',
+        status: 'published',
+        sport: 'hallenfussball',
+        sportId: 'football-indoor',
+        tournamentType: 'classic',
+        mode: 'classic',
+        numberOfFields: 1,
+        numberOfTeams: 0,
+        groupPhaseGameDuration: 10,
+        placementLogic: ['points', 'goalDiff', 'goalsFor'],
+        finals: { enabled: false },
+        isKidsTournament: false,
+        hideScoresForPublic: false,
+        hideRankingsForPublic: false,
+        isPublic: true,
+        shareCode: 'ABC123',
+        resultMode: 'standard',
+        pointSystem: { win: 3, draw: 1, loss: 0 },
+        groups: [],
+        teams: [],
+        matches: [],
+        monitors: [{
+          id: 'mon-1',
+          name: 'Hallenmonitor Halle',
+          defaultSlideDuration: 3,
+          transition: 'none',
+          transitionDuration: 0,
+          theme: 'dark',
+          performanceMode: 'auto',
+          slides: [
+            { id: 's1', type: 'custom-text', config: { headline: 'Erste Folie' }, duration: null, order: 0 },
+            { id: 's2', type: 'custom-text', config: { headline: 'Zweite Folie' }, duration: null, order: 1 },
+          ],
+          createdAt: now,
+          updatedAt: now,
+        }],
+        fields: [],
+        createdAt: now,
+        updatedAt: now,
+      }],
+    });
     await page.goto('/#/display/dauer-turnier/mon-1');
-    await expect(teamNameLocator(page)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Erste Folie', { exact: true })).toBeVisible({ timeout: 15_000 });
 
     await page.keyboard.press('Escape');
     await page.keyboard.press(' ');
     await page.keyboard.press('Backspace');
     await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowLeft');
 
+    // Sofort danach: weder Sprung noch Pausen-Badge.
     await expect(page).toHaveURL(/#\/display\/dauer-turnier\/mon-1/);
-    await expect(teamNameLocator(page)).toBeVisible();
+    await expect(page.getByText('Erste Folie', { exact: true })).toBeVisible();
+    await expect(page.getByText('Zweite Folie', { exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('monitor-pause-indicator')).toHaveCount(0);
+
+    // Die Folienfolge läuft weiter: nach der Dauer von 3 s kommt die zweite Folie.
+    await expect(page.getByText('Zweite Folie', { exact: true })).toBeVisible({ timeout: 8_000 });
   });
 });

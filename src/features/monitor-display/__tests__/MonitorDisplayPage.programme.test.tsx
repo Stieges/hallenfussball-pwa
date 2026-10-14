@@ -164,7 +164,9 @@ describe('MonitorDisplayPage — Anzeigedauer je Folie (@ZM-130, Fake-Timer)', (
     expect(screen.getByText('Folie A')).toBeInTheDocument();
   });
 
-  it('@ZM-130 Taste startet den Takt neu: nächster Wechsel 15 s nach der Taste', async () => {
+  // Begründung: @ME-022 und Record monitor-einrichten Z. 175–177 („Pfeiltasten … schalten nicht weiter“).
+  // Vorher: Pfeiltaste startete den Takt neu (Gegenbeispiel zum Soll).
+  it('@ZM-130 Pfeiltaste hat keine Wirkung: Folie A bleibt bis 15 s, dann Folie B (kein Neustart des Takts)', async () => {
     await starte(monitorTurnier(buildTournament(), [
       slide('custom-text', { headline: 'Folie A' }),
       slide('custom-text', { headline: 'Folie B' }),
@@ -172,11 +174,11 @@ describe('MonitorDisplayPage — Anzeigedauer je Folie (@ZM-130, Fake-Timer)', (
     ]));
     await vorspulenInSchritten(10_000);
     fireEvent.keyDown(window, { key: 'ArrowRight' });
-    expect(screen.getByText('Folie B')).toBeInTheDocument();
-    await vorspulenInSchritten(14_999);
-    expect(screen.getByText('Folie B')).toBeInTheDocument();
+    expect(screen.getByText('Folie A')).toBeInTheDocument();
+    await vorspulenInSchritten(4_999);
+    expect(screen.getByText('Folie A')).toBeInTheDocument();
     await vorspulen(1);
-    expect(screen.getByText('Folie C')).toBeInTheDocument();
+    expect(screen.getByText('Folie B')).toBeInTheDocument();
   });
 
   it('@ZM-130 Poll mit Inhaltswechsel bei 10 s verschiebt den Wechsel nicht (weiterhin 15 000 ms)', async () => {

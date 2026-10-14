@@ -255,19 +255,6 @@ export function nextSlide(program: SlideProgram, state: SlideshowState, now: num
   return advance(program, state, now, matches);
 }
 
-/** Taste: eine Folie vor (+1) oder zurück (−1), modulo, immer auf Seite 0 und mit neuem Takt. */
-export function stepSlide(program: SlideProgram, state: SlideshowState, delta: 1 | -1, now: number): SlideshowState {
-  const count = program.slides.length;
-  if (count === 0) { return state; }
-  return {
-    ...state,
-    index: wrapIndex(state.index + delta, count),
-    page: 0,
-    startedAt: now,
-    direction: delta > 0 ? 'next' : 'prev',
-  };
-}
-
 /**
  * Nächster Zeitpunkt (ms), zu dem `nextSlide` etwas ändert; null = nie (pausiert, keine Folienfolge,
  * oder gepinnt während des Spiels: dann wartet der Monitor auf neue Daten).

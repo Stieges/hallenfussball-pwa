@@ -148,23 +148,24 @@ describe('MonitorDisplayPage — Tasten (Bestand)', () => {
     slide('custom-text', { headline: 'Dritte Folie' }),
   ];
 
-  it('Bestand: ArrowRight springt weiter, ArrowLeft geht zurück und am Anfang auf die letzte Folie', async () => {
+  // B-17 Fixrunde (@ME-022, Record monitor-einrichten Z. 175–177): Pfeiltasten schalten nicht weiter.
+  // Vorher: ArrowRight/ArrowLeft wechselten die Folie (Gegenbeispiel zum Soll).
+  it('B-17: Pfeiltasten schalten nicht weiter und nicht zurück', async () => {
     await renderMonitor(buildTournament(), zweiFolien());
     expect(screen.getByText('Erste Folie')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'ArrowRight' });
-    expect(screen.getByText('Zweite Folie')).toBeInTheDocument();
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
     expect(screen.getByText('Erste Folie')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    expect(screen.getByText('Dritte Folie')).toBeInTheDocument();
+    expect(screen.getByText('Erste Folie')).toBeInTheDocument();
   });
 
-  it('Bestand: Leertaste schaltet den Pausen-Indikator ein und wieder aus', async () => {
+  // B-17 Fixrunde (@ME-022, Record Z. 175–177): Leertaste hält nicht an, es gibt kein Pausen-Badge mehr.
+  // Vorher: Leertaste schaltete den Pausen-Indikator (Gegenbeispiel zum Soll).
+  it('B-17: Leertaste hat keine Wirkung, kein Pausen-Indikator', async () => {
     await renderMonitor(buildTournament(), zweiFolien());
     fireEvent.keyDown(window, { key: ' ' });
-    expect(screen.getByTestId('monitor-pause-indicator')).toBeInTheDocument();
-    fireEvent.keyDown(window, { key: ' ' });
     expect(screen.queryByTestId('monitor-pause-indicator')).not.toBeInTheDocument();
+    expect(screen.getByText('Erste Folie')).toBeInTheDocument();
   });
 
   // B-17 (@ME-022, Befund C-MONITOR-DAUERBETRIEB): Escape verlässt die Seite nicht mehr; das alte Verhalten

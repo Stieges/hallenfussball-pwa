@@ -6,8 +6,8 @@
  * Features:
  * - Automatischer Slide-Wechsel mit konfigurierbarer Dauer
  * - Fade/Slide/None Transitions
- * - Tasten (B-17): Pfeile und Leertaste schalten bzw. halten; „f“ = Vollbild; Escape und Backspace verlassen
- *   die Seite nie (Escape beendet nur das Vollbild, das macht der Browser); Mauszeiger verschwindet bei Ruhe
+ * - Tasten (B-17, @ME-022): ohne Wirkung sind Pfeile, Leertaste, Escape und Backspace; „f“ = Vollbild, „c“ =
+ *   Cache-Anzeige. Escape beendet nur das Vollbild (Browser). Der Mauszeiger verschwindet bei Ruhe.
  * - Performance-Modi (high/low/auto)
  * - Cache-Status-Indikator für Admins
  *
@@ -19,7 +19,7 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-10 bis P1-12
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { displayMonitor } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
@@ -28,7 +28,9 @@ import { GoalAnimation, CardAnimation, useFullscreen } from '../../components/mo
 import { TimedNotice } from '../../components/ui/molecules/TimedNotice';
 import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
-import { istBrowserQuelle, istVollbildTaste, WAKE_LOCK_HINWEIS_MS } from './monitorDauerbetrieb';
+import {
+  istBrowserQuelle, istCacheTaste, istEingabeZiel, istVollbildTaste, WAKE_LOCK_HINWEIS_MS,
+} from './monitorDauerbetrieb';
 import { useIdleCursor, useTastenAbfang } from './useMonitorDauerbetrieb';
 import {
   alleUebersprungen, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
@@ -46,7 +48,7 @@ import { SlideRenderer } from './slides/SlideRenderer';
 import { TransitionWrapper } from './components/TransitionWrapper';
 import { CacheIndicator } from './components/CacheIndicator';
 import { MonitorLoadingView, MonitorErrorView } from './components/MonitorStatusViews';
-import { SlideDots, PauseBadge, MonitorKeyframes } from './components/MonitorChrome';
+import { SlideDots, MonitorKeyframes } from './components/MonitorChrome';
 import { containerStyle } from './components/monitorStyles';
 
 // =============================================================================
@@ -105,6 +107,18 @@ export function MonitorDisplayPage({
   // Ecke. In der Browser-Quelle nie, dort steuert der Rechner den Bildschirm.
   const wakeLockHinweis = wakeLock.error !== null
     && !istBrowserQuelle(window.location.hash, navigator.userAgent);
+  // W4: „einmal“ ist ein Zustand der Seite. Gezeigt wird der Hinweis höchstens einmal je Seiten-Instanz, auch wenn
+  // die Seite zwischendurch in den Lade- oder Fehlerzustand geht und zurückkehrt.
+  const [hinweisPhase, setHinweisPhase] = useState<'bereit' | 'zeigt' | 'erledigt'>('bereit');
+  const ansichtBereit = !loading && !error && tournament !== null && monitor !== null;
+  useEffect(() => {
+    if (hinweisPhase === 'bereit' && ansichtBereit && wakeLockHinweis) {
+      setHinweisPhase('zeigt');
+    } else if (hinweisPhase === 'zeigt' && (!ansichtBereit || !wakeLockHinweis)) {
+      setHinweisPhase('erledigt');
+    }
+  }, [hinweisPhase, ansichtBereit, wakeLockHinweis]);
+  const hinweisAbgelaufen = useCallback(() => setHinweisPhase('erledigt'), []);
 
   // Derived state
   const performanceSettings = useMemo(
@@ -155,7 +169,7 @@ export function MonitorDisplayPage({
   const transitionMs = performanceSettings.enableTransitions && monitor?.transition !== 'none'
     ? (monitor?.transitionDuration ?? 0)
     : null;
-  const { slideState, isPaused } = useSlideshow(slideProgram, transitionMs);
+  const { slideState } = useSlideshow(slideProgram, transitionMs);
 
   // Tor-Einblendung nach Feld der Live-Folien (B-16e1, @ZM-083)
   const boundFields = useMemo(() => boundFieldNumbers(monitor?.slides ?? []), [monitor]);
@@ -171,17 +185,18 @@ export function MonitorDisplayPage({
   useMonitorHeartbeat(monitor?.id ?? null, tournament?.id ?? null, slideState.currentIndex, cacheStatus.status);
 
   // ==========================================================================
-  // KEYBOARD (f = Vollbild, c = Cache-Anzeige; Pfeile und Leertaste liegen in useSlideshow;
+  // KEYBOARD (f = Vollbild, c = Cache-Anzeige; Pfeile und Leertaste ohne Wirkung, @ME-022;
   // Escape und Backspace verlassen die Seite nicht, siehe useTastenAbfang)
   // ==========================================================================
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (istEingabeZiel(e.target)) { return; }
       if (istVollbildTaste(e)) {
         toggleFullscreen();
         return;
       }
-      if (e.key === 'c') {
+      if (istCacheTaste(e)) {
         setShowCacheIndicator(s => !s);
       }
     };
@@ -241,14 +256,12 @@ export function MonitorDisplayPage({
         />
       )}
 
-      {/* Pause Indicator */}
-      {isPaused && <PauseBadge />}
-
       {/* Hinweis: Bildschirm kann sich abschalten (nur im normalen Browser, einmal, B-17) */}
-      {wakeLockHinweis && (
+      {hinweisPhase === 'zeigt' && (
         <TimedNotice
           text={t('dauerbetrieb.wakeLockHint')}
           durationMs={WAKE_LOCK_HINWEIS_MS}
+          onDone={hinweisAbgelaufen}
           testId="monitor-wakelock-hint"
         />
       )}

@@ -2,7 +2,7 @@
  * Hooks für den Monitor-Dauerbetrieb (B-17): Mauszeiger nach Ruhe ausblenden, Tasten abfangen.
  */
 import { useEffect, useState } from 'react';
-import { MAUSZEIGER_RUHE_MS, istAbgefangeneTaste } from './monitorDauerbetrieb';
+import { MAUSZEIGER_RUHE_MS, istAbgefangeneTaste, istEingabeZiel } from './monitorDauerbetrieb';
 
 /**
  * Liefert `true`, wenn der Mauszeiger ruht (kein Mausbewegen und kein Tippen auf dem Bildschirm seit `ruheMs`).
@@ -40,6 +40,7 @@ export function useIdleCursor(ruheMs: number = MAUSZEIGER_RUHE_MS): boolean {
 export function useTastenAbfang(): void {
   useEffect(() => {
     const abfangen = (e: KeyboardEvent) => {
+      if (istEingabeZiel(e.target)) { return; }
       if (istAbgefangeneTaste(e.key)) { e.preventDefault(); }
     };
     window.addEventListener('keydown', abfangen);

@@ -164,7 +164,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     display: 'flex',
     alignItems: 'flex-start',
     justifyContent: 'center',
-    gap: layout.blockGap,
+    gap: layout.teamNamesGap,
     width: '100%',
     // B-17: Mindesthöhe statt fester Höhe – der Spaltenfluss schiebt die Uhr nach unten, statt sie zu überlagern
     minHeight: layout.teamNames,
@@ -173,7 +173,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   };
 
   const teamNameContainerStyle: CSSProperties = {
-    width: layout.blockWidth,
+    width: layout.teamNameWidth,
     display: 'flex',
     justifyContent: 'center',
   };

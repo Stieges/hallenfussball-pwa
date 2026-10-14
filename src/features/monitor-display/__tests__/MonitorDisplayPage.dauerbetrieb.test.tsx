@@ -1,14 +1,17 @@
 /**
- * Monitor-Seite im Dauerbetrieb (B-17): Mauszeiger, Vollbild-Taste, Tasten, Wake-Lock-Hinweis.
- * Gegenbeispiele: Escape und Leertaste verlassen die Seite nicht; der Hinweis erscheint nie in der Browser-Quelle.
- * Szenarien: @ME-002, @ME-003, @ME-005, @ME-006, @ME-022.
+ * Monitor-Seite im Dauerbetrieb (B-17 + Fixrunde 1): Mauszeiger, Vollbild-Taste, Tasten, Hinweis, Bildrand.
+ * Szenarien: @ME-002, @ME-003, @ME-005, @ME-006, @ME-019, @ME-020, @ME-021, @ME-022, @ZM-130.
+ * Gegenbeispiele: Leertaste und Pfeile wirken nicht (@ME-022); Escape verlässt die Seite nicht; der Hinweis erscheint
+ * nie in der Browser-Quelle und höchstens einmal je Seite.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import type { Tournament } from '../../../types/tournament';
+import { PERFORMANCE_PROFILES } from '../../../types/monitor';
 import deMonitor from '../../../i18n/locales/de/monitor.json';
 import enMonitor from '../../../i18n/locales/en/monitor.json';
 import { attachMonitor, buildTournament, slide, withMonitor } from './monitorFixture';
+import { SlideRenderer } from '../slides/SlideRenderer';
 
 const { supabaseGet, localGet } = vi.hoisted(() => ({
   supabaseGet: vi.fn(),
@@ -44,16 +47,16 @@ import { MonitorDisplayPage } from '../MonitorDisplayPage';
 /** Die Test-Umgebung liefert den Schlüssel als Text (src/test/setup.ts); der DE/EN-Wortlaut steht im JSON-Test unten. */
 const HINWEIS = 'monitor:dauerbetrieb.wakeLockHint';
 
-function monitorTurnier(): Tournament {
-  return attachMonitor(buildTournament(), withMonitor({
-    slides: [slide('custom-text', { headline: 'Folie A' }), slide('custom-text', { headline: 'Folie B' })],
-  }));
+function monitorTurnier(overscanPx?: number, folien = [
+  slide('custom-text', { headline: 'Folie A' }, 4),
+  slide('custom-text', { headline: 'Folie B' }),
+]): Tournament {
+  return attachMonitor(buildTournament(), withMonitor({ slides: folien, ...(overscanPx !== undefined ? { overscanPx } : {}) }));
 }
 
-function wakeLockUnterstuetzt(): ReturnType<typeof vi.fn> {
+function wakeLockUnterstuetzt(): void {
   const request = vi.fn().mockResolvedValue({ release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() });
   Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
-  return request;
 }
 
 function wakeLockFehlt(): void {
@@ -83,6 +86,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   wakeLockFehlt();
+  Reflect.deleteProperty(document.documentElement, 'requestFullscreen');
+  Reflect.deleteProperty(document, 'fullscreenElement');
 });
 
 describe('Mauszeiger (@ME-002)', () => {
@@ -123,7 +128,10 @@ describe('Vollbild per Taste „f“ (@ME-002)', () => {
   });
 });
 
-describe('Tasten verlassen die Seite nicht (@ME-003, @ME-022)', () => {
+describe('Tasten ohne Wirkung und ohne Verlassen der Seite (@ME-022, @ME-003)', () => {
+  // Record monitor-einrichten Z. 175–177: „Leertaste und Pfeiltasten halten das Folienprogramm nicht mehr an und
+  // schalten nicht weiter.“ Vorher hielt die Leertaste an und schalteten die Pfeile weiter (Gegenbeispiel zum Soll).
+
   it('Escape: die Seite bleibt offen, zeigt weiter die Folie, und nichts springt zur Startseite', async () => {
     const { onBack } = seite();
     await vorspulen(0);
@@ -134,27 +142,28 @@ describe('Tasten verlassen die Seite nicht (@ME-003, @ME-022)', () => {
     expect(screen.getByText('Folie A')).toBeInTheDocument();
   });
 
-  it('Escape im Vollbild: die Seite beendet nur das Vollbild und bleibt offen', async () => {
+  it('Escape bei gesetztem fullscreenElement: die Seite bleibt offen (der Browser beendet nur das Vollbild)', async () => {
     Object.defineProperty(document, 'fullscreenElement', { value: document.documentElement, configurable: true });
     const { onBack } = seite();
     await vorspulen(0);
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onBack).not.toHaveBeenCalled();
     expect(screen.getByText('Folie A')).toBeInTheDocument();
-    Reflect.deleteProperty(document, 'fullscreenElement');
   });
 
-  it('Leertaste hält die Folie an, verlässt die Seite aber nicht', async () => {
+  it('Leertaste verlässt die Seite nicht, hält nichts an und zeigt kein Pausen-Badge', async () => {
     const { onBack } = seite();
     await vorspulen(0);
     const e = new KeyboardEvent('keydown', { key: ' ', cancelable: true });
     act(() => { window.dispatchEvent(e); });
     expect(onBack).not.toHaveBeenCalled();
     expect(e.defaultPrevented).toBe(true);
-    expect(screen.getByTestId('monitor-pause-indicator')).toBeInTheDocument();
+    expect(screen.queryByTestId('monitor-pause-indicator')).not.toBeInTheDocument();
+    await vorspulen(4_000);
+    expect(screen.getByText('Folie B')).toBeInTheDocument();
   });
 
-  it('Backspace und Pfeiltasten verlassen die Seite nicht', async () => {
+  it('Backspace und Pfeiltasten verlassen die Seite nicht und schalten nicht weiter', async () => {
     const { onBack } = seite();
     await vorspulen(0);
     for (const key of ['Backspace', 'ArrowRight', 'ArrowLeft']) {
@@ -163,11 +172,49 @@ describe('Tasten verlassen die Seite nicht (@ME-003, @ME-022)', () => {
       expect(e.defaultPrevented, key).toBe(true);
     }
     expect(onBack).not.toHaveBeenCalled();
+    expect(screen.getByText('Folie A')).toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel: in einem Eingabefeld gehören Leertaste und Pfeile dem Feld, „f“ löst kein Vollbild aus', async () => {
+    const request = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(document.documentElement, 'requestFullscreen', { value: request, configurable: true });
+    seite();
+    await vorspulen(0);
+    const feld = document.createElement('input');
+    document.body.appendChild(feld);
+    const leer = new KeyboardEvent('keydown', { key: ' ', cancelable: true, bubbles: true });
+    act(() => { feld.dispatchEvent(leer); });
+    expect(leer.defaultPrevented).toBe(false);
+    fireEvent.keyDown(feld, { key: 'f' });
+    expect(request).not.toHaveBeenCalled();
+    feld.remove();
+  });
+});
+
+describe('Taste „c“: Cache-Anzeige (@ME-021)', () => {
+  it('„c“ blendet die Anzeige ein, ein zweiter Druck blendet sie aus', async () => {
+    seite();
+    await vorspulen(0);
+    expect(screen.queryByTestId('monitor-cache-indicator')).not.toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'c' });
+    expect(screen.getByTestId('monitor-cache-indicator')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'c' });
+    expect(screen.queryByTestId('monitor-cache-indicator')).not.toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel: Strg+c, Cmd+c, Alt+c und gehaltenes „c“ schalten die Anzeige nicht um', async () => {
+    seite();
+    await vorspulen(0);
+    fireEvent.keyDown(window, { key: 'c', ctrlKey: true });
+    fireEvent.keyDown(window, { key: 'c', metaKey: true });
+    fireEvent.keyDown(window, { key: 'c', altKey: true });
+    fireEvent.keyDown(window, { key: 'c', repeat: true });
+    expect(screen.queryByTestId('monitor-cache-indicator')).not.toBeInTheDocument();
   });
 });
 
 describe('Bildschirm bleibt an, Hinweis nur im normalen Browser (@ME-005, @ME-006)', () => {
-  it('ohne Wake Lock erscheint der Hinweis einmal und verschwindet nach 10 Sekunden', async () => {
+  it('ohne Wake Lock erscheint der Hinweis und verschwindet nach 10 Sekunden', async () => {
     wakeLockFehlt();
     seite();
     await vorspulen(0);
@@ -191,11 +238,54 @@ describe('Bildschirm bleibt an, Hinweis nur im normalen Browser (@ME-005, @ME-00
     expect(screen.getByText('Folie A')).toBeInTheDocument();
   });
 
-  it('der Hinweis blockiert nicht: das Folienprogramm läuft weiter', async () => {
+  it('der Hinweis blockiert nicht: Folie B kommt bei sichtbarem Hinweis', async () => {
     wakeLockFehlt();
     seite();
     await vorspulen(0);
     expect(screen.getByText('Folie A')).toBeInTheDocument();
+    await vorspulen(4_000);
+    expect(screen.getByText('Folie B')).toBeInTheDocument();
+    expect(screen.getByTestId('monitor-wakelock-hint')).toBeInTheDocument();
+  });
+
+  it('W4: der Hinweis erscheint nach Ablauf nie wieder, auch nicht nach Lade- oder Fehlerzustand', async () => {
+    wakeLockFehlt();
+    seite();
+    await vorspulen(0);
+    await vorspulen(10_000);
+    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+
+    localGet.mockResolvedValue(null);
+    await vorspulen(30_000);
+    expect(screen.getByTestId('monitor-error-state')).toBeInTheDocument();
+
+    localGet.mockResolvedValue(monitorTurnier());
+    await vorspulen(30_000);
+    expect(screen.getByText('Folie A')).toBeInTheDocument();
+    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+  });
+});
+
+describe('Bildrand je Monitor (@ME-020)', () => {
+  const folie = () => slide('custom-text', { headline: 'Rand' });
+  const rendere = (overscanPx: number) => render(
+    <SlideRenderer
+      slide={folie()}
+      tournament={buildTournament()}
+      performanceSettings={PERFORMANCE_PROFILES.high}
+      theme="dark"
+      overscanPx={overscanPx}
+    />,
+  );
+
+  it('ein gesetzter Bildrand wirkt als Innenabstand der Folie', () => {
+    const { container } = rendere(60);
+    expect((container.firstElementChild as HTMLElement).style.padding).toBe('60px');
+  });
+
+  it('Gegenbeispiel: Bildrand 0 lässt keinen Rand stehen', () => {
+    const { container } = rendere(0);
+    expect((container.firstElementChild as HTMLElement).style.padding).toBe('0px');
   });
 });
 

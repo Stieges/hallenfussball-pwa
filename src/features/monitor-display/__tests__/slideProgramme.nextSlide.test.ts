@@ -1,9 +1,8 @@
-/** B-16c – Folienfolge als reine Funktionen: Takt-Grenzen, Pause, Tasten, Seiten (@ZM-130 Logik). */
+/** B-16c – Folienfolge als reine Funktionen: Takt-Grenzen, Pause, Seiten (@ZM-130 Logik). Tasten wirken nicht (@ME-022). */
 import { describe, it, expect } from 'vitest';
 import type { MonitorSlide } from '../../../types/monitor';
 import {
   nextSlide,
-  stepSlide,
   wakeAt,
   type ProgramSlide,
   type SlideProgram,
@@ -72,28 +71,6 @@ describe('@ZM-130 Zeilen 3/4: Seiten je Folie (Logik; Seitenzahl misst B-17)', (
     const s2 = nextSlide(p, s1, 30_000);
     expect(s2).toMatchObject({ index: 0, page: 2 });
     expect(nextSlide(p, s2, 45_000)).toMatchObject({ index: 1, page: 0 });
-  });
-});
-
-describe('stepSlide – Tasten (B-16c)', () => {
-  const dreiFolien = programm([A, B, folie('C')]);
-
-  it('zurück von Folie 0 → letzte Folie, mit neuem Takt und Richtung prev', () => {
-    expect(stepSlide(dreiFolien, zustand(), -1, 5_000)).toMatchObject({
-      index: 2, page: 0, startedAt: 5_000, direction: 'prev',
-    });
-  });
-
-  it('vor von der letzten Folie → Folie 0', () => {
-    expect(stepSlide(dreiFolien, zustand({ index: 2 }), 1, 5_000)).toMatchObject({
-      index: 0, page: 0, startedAt: 5_000, direction: 'next',
-    });
-  });
-
-  it('Taste setzt die Seite auf 0 und behält den Pausenzustand', () => {
-    expect(stepSlide(dreiFolien, zustand({ page: 2, paused: true }), 1, 7_000)).toMatchObject({
-      page: 0, startedAt: 7_000, paused: true,
-    });
   });
 });
 

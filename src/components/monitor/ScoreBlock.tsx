@@ -37,7 +37,8 @@ const sizeConfig = {
   xl: {
     fontSize: displayFontSizes.scoreXXL,
     borderRadius: '20px',
-    minHeight: '280px',
+    // B-17 Fixrunde: keine Mindesthöhe, der Stand passt sich der Flex-Fläche an (sonst überlagert er die Kopfzeile bei 600 px Höhe)
+    minHeight: '0px',
   },
 } as const;
 

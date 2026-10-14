@@ -1,4 +1,4 @@
-import { cssVars, displayColors, displayFontSizes, displaySpacing, displayTransitions, zIndex, displayMonitor } from '../../../design-tokens';
+import { cssVars, displayColors, displaySpacing, displayTransitions, zIndex, displayMonitor } from '../../../design-tokens';
 
 interface SlideDotsProps {
   count: number;
@@ -33,29 +33,6 @@ export function SlideDots({ count, currentIndex, enableTransitions }: SlideDotsP
           }}
         />
       ))}
-    </div>
-  );
-}
-
-/** Hinweis „Pausiert“ bei angehaltener Diashow. */
-export function PauseBadge() {
-  return (
-    <div
-      data-testid="monitor-pause-indicator"
-      style={{
-        position: 'fixed',
-        bottom: displaySpacing.sectionLG,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        padding: `${displaySpacing.contentSM} ${displaySpacing.contentMD}`,
-        background: displayMonitor.overlay,
-        borderRadius: cssVars.borderRadius.md,
-        fontSize: displayFontSizes.bodySM,
-        color: displayColors.textPrimary,
-        zIndex: zIndex.sticky,
-      }}
-    >
-      ⏸ Pausiert (Leertaste zum Fortsetzen)
     </div>
   );
 }

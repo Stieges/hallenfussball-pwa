@@ -172,6 +172,9 @@ export const displayLayout = {
   // Max Content Width
   maxContentWidth: '1600px',
 
+  // Breite des kleinen Hinweises in der Ecke (B-17, @ME-006)
+  noticeMaxWidth: '40%',
+
   // Slide Aspect Ratios
   aspectRatio: {
     standard: '16 / 9',
@@ -195,6 +198,9 @@ export const displayLayout = {
     footer: '8%',
     blockWidth: '35%',
     blockGap: '10%',
+    // B-17 Fixrunde: Teamnamen bekommen eine breitere Box, damit 50 Zeichen auf zwei Zeilen passen (@ZM-087)
+    teamNameWidth: '46%',
+    teamNamesGap: '2%',
   },
 } as const;
 

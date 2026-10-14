@@ -1,10 +1,13 @@
+// @vitest-environment jsdom
 /**
  * Regeln des Monitor-Dauerbetriebs (B-17): Tasten, Vollbild-Taste, Browser-Quelle.
  * Gegenbeispiele: Escape und Leertaste verlassen die Seite nicht; Strg+f gehört dem Browser.
  * Szenarien: @ME-002, @ME-003, @ME-006, @ME-022.
  */
 import { describe, it, expect } from 'vitest';
-import { istAbgefangeneTaste, istBrowserQuelle, istVollbildTaste, MAUSZEIGER_RUHE_MS, VOLLBILD_TASTE } from '../monitorDauerbetrieb';
+import {
+  istAbgefangeneTaste, istBrowserQuelle, istCacheTaste, istEingabeZiel, istVollbildTaste, MAUSZEIGER_RUHE_MS, VOLLBILD_TASTE,
+} from '../monitorDauerbetrieb';
 
 const taste = (key: string, extra: Partial<KeyboardEvent> = {}) =>
   ({ key, ctrlKey: false, metaKey: false, altKey: false, repeat: false, ...extra });
@@ -61,5 +64,27 @@ describe('istBrowserQuelle (@ME-006)', () => {
   it('die Ruhe-Zeit des Mauszeigers ist wenige Sekunden', () => {
     expect(MAUSZEIGER_RUHE_MS).toBeGreaterThanOrEqual(2_000);
     expect(MAUSZEIGER_RUHE_MS).toBeLessThanOrEqual(5_000);
+  });
+});
+
+describe('istCacheTaste und istEingabeZiel (@ME-021, Review M1)', () => {
+  it('„c“ ohne Modifikator und ohne Wiederholung schaltet die Anzeige; Gegenbeispiele nicht', () => {
+    expect(istCacheTaste(taste('c'))).toBe(true);
+    expect(istCacheTaste(taste('c', { ctrlKey: true }))).toBe(false);
+    expect(istCacheTaste(taste('c', { metaKey: true }))).toBe(false);
+    expect(istCacheTaste(taste('c', { altKey: true }))).toBe(false);
+    expect(istCacheTaste(taste('c', { repeat: true }))).toBe(false);
+  });
+
+  it('Eingabefelder sind Eingabeziele; Schaltflächen und die Seite selbst nicht', () => {
+    expect(istEingabeZiel(document.createElement('input'))).toBe(true);
+    expect(istEingabeZiel(document.createElement('textarea'))).toBe(true);
+    expect(istEingabeZiel(document.createElement('select'))).toBe(true);
+    const bearbeitbar = document.createElement('div');
+    bearbeitbar.setAttribute('contenteditable', 'true');
+    expect(istEingabeZiel(bearbeitbar)).toBe(true);
+    expect(istEingabeZiel(document.createElement('button'))).toBe(false);
+    expect(istEingabeZiel(document.body)).toBe(false);
+    expect(istEingabeZiel(null)).toBe(false);
   });
 });

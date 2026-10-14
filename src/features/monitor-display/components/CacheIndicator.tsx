@@ -19,7 +19,7 @@ export function CacheIndicator({ cacheStatus, visible }: CacheIndicatorProps) {
   };
 
   return (
-    <div style={{
+    <div data-testid="monitor-cache-indicator" style={{
       position: 'fixed',
       top: displaySpacing.contentMD,
       right: displaySpacing.contentMD,
