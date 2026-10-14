@@ -16,6 +16,7 @@ import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import { clearProfileCache } from '../services/profileCacheService';
 import { captureFeatureError, setUserContext as setSentryUserContext } from '../../../lib/sentry';
 import { isAuthApiError, isAuthRetryableFetchError } from '@supabase/supabase-js';
+import { clearSignedOutElsewhere, markOwnSignOut } from './remoteSignOut';
 
 export interface LogoutOptions {
   /** `local`: nur dieses Gerät. `others`: alle anderen Geräte, dieses bleibt angemeldet (A-07d1). */
@@ -87,7 +88,11 @@ async function logoutOthers(): Promise<LogoutResult> {
   try {
     const { data, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
-      return { ok: false, reason: reasonForOthersFailure(sessionError) };
+      // Ohne Netzfehler gilt die Sitzung hier als abgelaufen (R-1); 5xx bleibt `server`.
+      if (isAuthRetryableFetchError(sessionError)) {
+        return { ok: false, reason: sessionError.status === 0 ? 'network' : 'server' };
+      }
+      return { ok: false, reason: 'session' };
     }
     const accessToken = data.session?.access_token;
     if (!accessToken) {
@@ -110,6 +115,9 @@ export async function logout(deps: LogoutDeps, options: LogoutOptions = { scope:
   if (options.scope === 'others') {
     return logoutOthers();
   }
+  // Eigenes Abmelden: kein „von einem anderen Gerät abgemeldet“-Hinweis (A-07d2).
+  markOwnSignOut();
+  clearSignedOutElsewhere();
   if (!isSupabaseConfigured || !supabase) {
     cleanupLocal(deps);
     return { ok: true };

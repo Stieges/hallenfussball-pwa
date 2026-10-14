@@ -144,6 +144,11 @@ export const loginStyles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.error,
   },
+  signedOutHint: {
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
+    margin: `0 0 ${cssVars.spacing.md}`,
+  },
   button: {
     minHeight: '56px',
   },
