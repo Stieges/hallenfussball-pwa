@@ -30,6 +30,11 @@ vi.mock('../../../../core/utils/safeStorage', () => ({
   safeSessionStorage: store.session,
 }));
 
+vi.mock('../../../../lib/sentry', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/sentry')>()),
+  captureFeatureError: vi.fn(),
+}));
+
 vi.mock('../../services/profileCacheService', () => ({
   cacheUserProfile: vi.fn(async () => undefined),
   clearProfileCache: vi.fn(async () => undefined),
@@ -51,6 +56,7 @@ vi.mock('../../../../lib/supabase', async () => {
 });
 
 import { supabase } from '../../../../lib/supabase';
+import { captureFeatureError } from '../../../../lib/sentry';
 import { AuthProvider } from '../AuthContext';
 import { AuthContext } from '../authContextInstance';
 
@@ -71,8 +77,12 @@ function sessionFixture(): { raw: string; access: string } {
   return { raw, access };
 }
 
+/** Wie GoTrue: JSON-Antworten tragen `X-Supabase-Api-Version` (M1). Ohne ihn liest auth-js `code` nicht. */
 function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'X-Supabase-Api-Version': '2024-01-01' },
+  });
 }
 
 function Probe() {
@@ -133,6 +143,7 @@ describe('AuthProvider – Prüfung der Sitzung durch ein anderes Gerät (A-07d2
     await waitFor(() => expect(store.session.getItem('auth:signedOutElsewhere')).toBe('1'));
     expect(store.local.getItem(TOKEN_KEY)).toBeNull();
     expect(store.local.getItem(QUEUE_KEY)).toBe(QUEUE_VALUE);
+    expect(net.calls.filter((c) => c.url.includes('/auth/v1/logout'))).toHaveLength(0);
   });
 
   it.each([
@@ -230,3 +241,70 @@ describe('AuthProvider – Race: SIGNED_OUT während eines älteren TOKEN_REFRES
     expect(screen.getByTestId('probe').textContent).toBe('none');
   });
 });
+
+describe('AuthProvider – Zeitgrenze und Fehlerfang (A-07d2, M3 und N2)', () => {
+  beforeEach(() => {
+    store.local.clear();
+    store.session.clear();
+    net.calls.length = 0;
+    net.respond = null;
+    setVisibility('visible');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    cleanup();
+  });
+
+  it('M3: hängende Prüfung blockiert nicht – nach der Zeitgrenze läuft die nächste Prüfung wieder', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    store.local.setItem(TOKEN_KEY, sessionFixture().raw);
+    let userCalls = 0;
+    net.respond = async (url) => {
+      if (url.includes('/rest/v1/profiles')) {return json({ display_name: 'A', avatar_url: null, role: 'user' });}
+      if (url.includes('/auth/v1/user')) {
+        userCalls++;
+        // Erste Prüfung hängt (z. B. langsamer Start), die zweite antwortet.
+        return userCalls === 1 ? new Promise<Response>(() => undefined) : json(USER);
+      }
+      return new Response(null, { status: 204 });
+    };
+
+    renderProvider();
+    await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+    expect(userCalls).toBe(1);
+
+    // Zeitgrenze der Prüfung (8 s) abwarten, dann sichtbar werden.
+    await act(async () => { await vi.advanceTimersByTimeAsync(8_500); });
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+
+    expect(userCalls).toBe(2);
+    expect(store.local.getItem(TOKEN_KEY)).not.toBeNull();
+  });
+
+  it('N2: Fehler im onAuthStateChange-Zweig wird gemeldet, kein unbehandeltes Promise', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    if (!supabase) {throw new Error('Test-Client fehlt');}
+    const subscribeSpy = vi.spyOn(supabase.auth, 'onAuthStateChange');
+    net.respond = async () => new Response(null, { status: 204 });
+    renderProvider();
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    const callback = subscribeSpy.mock.calls[0]?.[0] as (event: string, session: unknown) => void;
+
+    // Ab jetzt wirft das Lesen des Gast-Schlüssels: updateAuthState lehnt ab.
+    const realGetItem = store.local.getItem.bind(store.local);
+    vi.spyOn(store.local, 'getItem').mockImplementation((key: string) => {
+      if (key === 'auth:guestUser') {throw new Error('Speicher nicht lesbar');}
+      return realGetItem(key);
+    });
+    act(() => { callback('SIGNED_OUT', null); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    expect(captureFeatureError).toHaveBeenCalledWith(expect.any(Error), 'auth', 'onAuthStateChange');
+  });
+});
+

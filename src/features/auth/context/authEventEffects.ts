@@ -8,7 +8,7 @@
 import type { AuthChangeEvent, Session as SupabaseSession } from '@supabase/supabase-js';
 import { safeLocalStorage, safeSessionStorage } from '../../../core/utils/safeStorage';
 import { clearProfileCache } from '../services/profileCacheService';
-import { clearSignedOutElsewhere, isOwnSignOutRecent, setSignedOutElsewhere } from './remoteSignOut';
+import { clearOwnSignOut, clearSignedOutElsewhere, isOwnSignOut, setSignedOutElsewhere } from './remoteSignOut';
 
 export function applyAuthEventEffects(
   event: AuthChangeEvent,
@@ -29,6 +29,8 @@ export function applyAuthEventEffects(
     safeLocalStorage.removeItem('auth:guestUser');
     setIsGuest(false);
     clearSignedOutElsewhere();
+    // Neue Sitzung: ein eigenes Abmelden davor zählt nicht mehr (M2, kein Zeitfenster).
+    clearOwnSignOut();
   }
 
   // On sign out (including server-side token revocation),
@@ -38,7 +40,7 @@ export function applyAuthEventEffects(
     safeLocalStorage.removeItem('auth:guestUser');
     void clearProfileCache();
     // Ohne eigenes Abmelden kam das Ende der Sitzung vom Server: Hinweis auf der Anmeldeseite.
-    if (!isOwnSignOutRecent()) {
+    if (!isOwnSignOut()) {
       setSignedOutElsewhere();
     }
   }

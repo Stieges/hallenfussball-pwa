@@ -3,11 +3,19 @@
  * Echter supabase-js-Client mit Map-Speicher und Fake-fetch (wie logoutAction.test.ts).
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { AuthRefreshDiscardedError } from '@supabase/supabase-js';
 import { safeLocalStorage, safeSessionStorage } from '../../../../core/utils/safeStorage';
 import { supabase } from '../../../../lib/supabase';
 import { applyAuthEventEffects } from '../authEventEffects';
-import { hasSignedOutElsewhere, verifySessionOnServer, isSessionRejectedByServer } from '../remoteSignOut';
+import {
+  hasSignedOutElsewhere,
+  isOwnSignOut,
+  markOwnSignOut,
+  REMOTE_CHECK_TIMEOUT_MS,
+  verifySessionOnServer,
+  isSessionRejectedByServer,
+} from '../remoteSignOut';
 import { logout } from '../logoutAction';
 import { createMockAuthActionDeps } from './mocks/supabaseMock';
 
@@ -50,8 +58,17 @@ function sessionFixture(): string {
   });
 }
 
+/** Wie GoTrue: jede JSON-Antwort trägt den API-Versions-Header (M1). Ohne ihn liest auth-js `code` nicht. */
 function jsonResponse(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'X-Supabase-Api-Version': '2024-01-01' },
+  });
+}
+
+function requireClient() {
+  if (!supabase) {throw new Error('Test-Client fehlt');}
+  return supabase;
 }
 
 describe('verifySessionOnServer (A-07d2) – Antwort des Servers zur Sitzung', () => {
@@ -63,35 +80,83 @@ describe('verifySessionOnServer (A-07d2) – Antwort des Servers zur Sitzung', (
     net.respond = null;
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('Gegenbeispiel: 200 → valid, nichts passiert', async () => {
     net.respond = async () => jsonResponse({ id: 'user-a', aud: 'authenticated', email: 'a@example.test', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' }, 200);
-    if (!supabase) {throw new Error('Test-Client fehlt');}
 
-    expect(await verifySessionOnServer(supabase)).toBe('valid');
+    expect(await verifySessionOnServer(requireClient())).toBe('valid');
     expect(net.calls.some((c) => c.url.includes('/auth/v1/user'))).toBe(true);
   });
 
-  it.each([401, 403])('Pflicht: Server antwortet %i (Sitzung serverseitig weg) → rejected', async (status) => {
+  it.each([401, 403])('Pflicht: Server antwortet %i mit session_not_found (Sitzung serverseitig weg) → rejected, ohne /logout', async (status) => {
     net.respond = async () => jsonResponse({ code: 'session_not_found', message: 'gone' }, status);
-    if (!supabase) {throw new Error('Test-Client fehlt');}
 
-    expect(await verifySessionOnServer(supabase)).toBe('rejected');
+    expect(await verifySessionOnServer(requireClient())).toBe('rejected');
+    expect(net.calls.some((c) => c.url.includes('/logout'))).toBe(false);
   });
+
+  it.each(['refresh_token_already_used', 'refresh_token_not_found', 'session_expired', 'user_not_found'])(
+    'Positivliste: Code %s → rejected',
+    async (code) => {
+      net.respond = async () => jsonResponse({ code, message: 'gone' }, 400);
+
+      expect(await verifySessionOnServer(requireClient())).toBe('rejected');
+    },
+  );
 
   it.each([500, 503])('Gegenbeispiel: Server-Fehler %i ist keine Antwort über die Sitzung → unknown', async (status) => {
     net.respond = async () => jsonResponse({ message: 'boom' }, status);
-    if (!supabase) {throw new Error('Test-Client fehlt');}
 
-    expect(await verifySessionOnServer(supabase)).toBe('unknown');
+    expect(await verifySessionOnServer(requireClient())).toBe('unknown');
   });
 
   it('Gegenbeispiel: Netz weg (fetch wirft) → unknown, Sitzung bleibt', async () => {
     net.respond = async () => {
       throw new TypeError('Failed to fetch');
     };
-    if (!supabase) {throw new Error('Test-Client fehlt');}
 
-    expect(await verifySessionOnServer(supabase)).toBe('unknown');
+    expect(await verifySessionOnServer(requireClient())).toBe('unknown');
+    expect(safeLocalStorage.getItem(TOKEN_KEY)).not.toBeNull();
+  });
+
+  // B1: Nur die Positivliste meldet ab. Alles andere lässt die Sitzung stehen.
+  it.each([
+    ['429 Rate-Limit (viele Geräte hinter einer IP)', { code: 'over_request_rate_limit', message: 'slow down' }, 429],
+    ['403 bad_jwt (falsch gehende Uhr des Geräts)', { code: 'bad_jwt', message: 'token issued in the future' }, 403],
+  ])('B1 Gegenbeispiel: %s → unknown, Sitzung bleibt, kein /logout', async (_label, body, status) => {
+    net.respond = async () => jsonResponse(body, status);
+
+    expect(await verifySessionOnServer(requireClient())).toBe('unknown');
+    expect(safeLocalStorage.getItem(TOKEN_KEY)).not.toBeNull();
+    expect(net.calls.some((c) => c.url.includes('/logout'))).toBe(false);
+  });
+
+  it('B1 Gegenbeispiel: HTML-Seite eines Proxys/Hallen-WLANs (404, kein JSON; AuthUnknownError) → unknown, Sitzung bleibt', async () => {
+    net.respond = async () => new Response('<html><body>Anmeldeportal</body></html>', {
+      status: 404,
+      headers: { 'Content-Type': 'text/html' },
+    });
+
+    expect(await verifySessionOnServer(requireClient())).toBe('unknown');
+    expect(safeLocalStorage.getItem(TOKEN_KEY)).not.toBeNull();
+  });
+
+  it('B1 Gegenbeispiel: AuthRefreshDiscardedError (Refresh-Wettlauf zweier Fenster) → kein Abmelden', () => {
+    expect(isSessionRejectedByServer(new AuthRefreshDiscardedError())).toBe(false);
+  });
+
+  // M3: Ein hängender Aufruf sperrt die Prüfung nicht dauerhaft.
+  it('M3: hängender getUser → nach der Zeitgrenze unknown', async () => {
+    net.respond = async () => new Promise<Response>(() => undefined);
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+
+    const pending = verifySessionOnServer(requireClient());
+    await vi.advanceTimersByTimeAsync(REMOTE_CHECK_TIMEOUT_MS);
+
+    expect(await pending).toBe('unknown');
     expect(safeLocalStorage.getItem(TOKEN_KEY)).not.toBeNull();
   });
 
@@ -103,13 +168,18 @@ describe('verifySessionOnServer (A-07d2) – Antwort des Servers zur Sitzung', (
 
 describe('Merker eigenes Abmelden (A-07d2) – kein Hinweis bei eigenem Abmelden', () => {
   beforeEach(() => {
+    net.calls.length = 0;
+    net.respond = null;
     safeLocalStorage.clear();
     safeSessionStorage.clear();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('Gegenbeispiel: SIGNED_OUT nach eigenem Abmelden → kein Hinweis', () => {
-    // logoutAction setzt den Merker vor dem SIGNED_OUT, das auth-js danach meldet.
-    safeLocalStorage.setItem('auth:ownSignOutAt', String(Date.now()));
+    markOwnSignOut();
 
     applyAuthEventEffects('SIGNED_OUT', null, () => undefined);
 
@@ -118,8 +188,7 @@ describe('Merker eigenes Abmelden (A-07d2) – kein Hinweis bei eigenem Abmelden
 
   it('Gegenbeispiel (echter Weg): eigenes Abmelden per logout → SIGNED_OUT danach ohne Hinweis', async () => {
     safeLocalStorage.setItem(TOKEN_KEY, sessionFixture());
-    if (!supabase) {throw new Error('Test-Client fehlt');}
-    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data } = requireClient().auth.onAuthStateChange((event, session) => {
       // Wie AuthContext: Auswertung nach dem Ereignis, hier synchron.
       applyAuthEventEffects(event, session, () => undefined);
     });
@@ -128,6 +197,51 @@ describe('Merker eigenes Abmelden (A-07d2) – kein Hinweis bei eigenem Abmelden
     await new Promise((resolve) => setTimeout(resolve, 0));
     data.subscription.unsubscribe();
 
+    expect(safeLocalStorage.getItem(TOKEN_KEY)).toBeNull();
+    expect(hasSignedOutElsewhere()).toBe(false);
+  });
+
+  // M2: kein Zeitfenster. Ein Merker von vor 60 s gilt noch.
+  it('M2: Merker 60 s alt → SIGNED_OUT ohne Hinweis', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-15T10:00:00Z'));
+    markOwnSignOut();
+    vi.setSystemTime(new Date('2026-10-15T10:01:00Z'));
+
+    applyAuthEventEffects('SIGNED_OUT', null, () => undefined);
+
+    expect(hasSignedOutElsewhere()).toBe(false);
+  });
+
+  // M2: auth-js meldet SIGNED_OUT erst nach der Antwort auf POST /logout. Dauert die Antwort länger als 10 s, bleibt der Merker.
+  it('M2: langsame Logout-Antwort (> 10 s) → SIGNED_OUT danach ohne Hinweis', async () => {
+    safeLocalStorage.setItem(TOKEN_KEY, sessionFixture());
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const startedAt = Date.now();
+    let releaseLogout: (() => void) | null = null;
+    net.respond = async (url) => {
+      if (url.includes('/logout')) {
+        return new Promise<Response>((resolve) => {
+          releaseLogout = () => resolve(new Response(null, { status: 204 }));
+        });
+      }
+      return new Response(null, { status: 204 });
+    };
+    const { data } = requireClient().auth.onAuthStateChange((event, session) => {
+      applyAuthEventEffects(event, session, () => undefined);
+    });
+
+    const pending = logout(createMockAuthActionDeps());
+    for (let i = 0; i < 100 && releaseLogout === null; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    vi.setSystemTime(startedAt + 12_000);
+    (releaseLogout as (() => void) | null)?.();
+    await pending;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    data.subscription.unsubscribe();
+
+    expect(safeLocalStorage.getItem(TOKEN_KEY)).toBeNull();
     expect(hasSignedOutElsewhere()).toBe(false);
   });
 
@@ -137,18 +251,15 @@ describe('Merker eigenes Abmelden (A-07d2) – kein Hinweis bei eigenem Abmelden
     expect(hasSignedOutElsewhere()).toBe(true);
   });
 
-  it('Merker ist abgelaufen → wieder Hinweis', () => {
-    safeLocalStorage.setItem('auth:ownSignOutAt', String(Date.now() - 60_000));
-
-    applyAuthEventEffects('SIGNED_OUT', null, () => undefined);
-
-    expect(hasSignedOutElsewhere()).toBe(true);
-  });
-
-  it('SIGNED_IN hebt den Hinweis wieder auf', () => {
+  it('SIGNED_IN hebt Hinweis und Merker auf; danach wieder Hinweis bei SIGNED_OUT vom Server', () => {
     safeSessionStorage.setItem('auth:signedOutElsewhere', '1');
+    markOwnSignOut();
     applyAuthEventEffects('SIGNED_IN', { user: { id: 'user-a' } } as never, () => undefined);
 
     expect(hasSignedOutElsewhere()).toBe(false);
+    expect(isOwnSignOut()).toBe(false);
+
+    applyAuthEventEffects('SIGNED_OUT', null, () => undefined);
+    expect(hasSignedOutElsewhere()).toBe(true);
   });
 });

@@ -1,35 +1,63 @@
 /**
  * Abmeldung durch ein anderes Gerät (A-07d2, @AN-024 „Das verlorene Handy merkt die Abmeldung“).
  *
- * - Merker: Ein Abmelden auf diesem Gerät setzt `markOwnSignOut()`. Ein SIGNED_OUT ohne
- *   diesen Merker kommt vom Server (anderes Gerät hat „alle anderen“ abgemeldet) und löst den
- *   Hinweis auf der Anmeldeseite aus. Der Merker liegt in localStorage, damit auch andere Tabs
- *   (auth-js-BroadcastChannel) ein eigenes Abmelden erkennen.
+ * - Merker: Ein Abmelden auf diesem Gerät setzt `markOwnSignOut()` und gilt bis zum nächsten
+ *   SIGNED_IN (kein Zeitfenster, M2). Ein SIGNED_OUT ohne diesen Merker kommt vom Server (anderes
+ *   Gerät hat „alle anderen“ abgemeldet) und löst den Hinweis aus. Der Merker liegt in localStorage,
+ *   damit auch andere Tabs (auth-js-BroadcastChannel) ein eigenes Abmelden erkennen.
  * - Prüfung: beim Start, bei `online` und bei `visibilitychange` (sichtbar) fragt `getUser()` den
- *   Server. Antwortet der Server mit einem Fehler über die Sitzung (z. B. 403 `session_not_found`,
- *   beim Client `AuthSessionMissingError`), wird lokal abgemeldet – ohne Löschen der Ausgangs-
- *   Einträge (A-07b). Netzfehler und 5xx sind keine Antwort über die Sitzung → nichts passiert.
+ *   Server (mit Zeitgrenze, M3). Nur eine Positivliste zählt als Antwort „Sitzung weg“ (B1): Uhr,
+ *   Rate-Limit, Proxy-Seiten, Refresh-Wettlauf und Netz bleiben angemeldet.
  */
 
 import { useEffect, useRef } from 'react';
-import { isAuthError, isAuthRetryableFetchError, type SupabaseClient } from '@supabase/supabase-js';
+import {
+  isAuthApiError,
+  isAuthSessionMissingError,
+  type SupabaseClient,
+} from '@supabase/supabase-js';
 import { safeLocalStorage, safeSessionStorage } from '../../../core/utils/safeStorage';
+import { executeWithTimeout } from '../../../core/utils/SingleFlight';
 import { captureFeatureError } from '../../../lib/sentry';
 
 export const SIGNED_OUT_ELSEWHERE_KEY = 'auth:signedOutElsewhere';
-const OWN_SIGN_OUT_KEY = 'auth:ownSignOutAt';
-/** Wie lange ein eigenes Abmelden als Ursache eines SIGNED_OUT gilt (auth-js meldet synchron genug). */
-export const OWN_SIGN_OUT_WINDOW_MS = 10_000;
+/** window-Ereignis, sobald sich der Hinweis ändert (die Meldung im App-Baum liest ihn neu). */
+export const SIGNED_OUT_ELSEWHERE_CHANGED = 'auth:signedOutElsewhereChanged';
+const OWN_SIGN_OUT_KEY = 'auth:ownSignOut';
+/** Obergrenze für die Prüfung über die Sitzung. Danach gilt sie als „unbekannt“ und blockiert nichts (M3). */
+export const REMOTE_CHECK_TIMEOUT_MS = 8_000;
+
+/**
+ * Codes, mit denen GoTrue sagt: diese Sitzung oder dieses Konto gibt es serverseitig nicht mehr.
+ * Alles andere (403 bad_jwt bei falscher Uhr, 429, unbekannte Fehler) ist keine Aussage über die Sitzung.
+ */
+const SESSION_GONE_CODES: readonly string[] = [
+  'session_not_found',
+  'refresh_token_not_found',
+  'refresh_token_already_used',
+  'session_expired',
+  'user_not_found',
+];
 
 /** Merker setzen: dieses Gerät meldet sich selbst ab (aufgerufen von logoutAction). */
-export function markOwnSignOut(now: number = Date.now()): void {
-  safeLocalStorage.setItem(OWN_SIGN_OUT_KEY, String(now));
+export function markOwnSignOut(): void {
+  safeLocalStorage.setItem(OWN_SIGN_OUT_KEY, '1');
 }
 
-/** Ist ein eigenes Abmelden (auf diesem Gerät oder in einem anderen Tab) gerade eben passiert? */
-export function isOwnSignOutRecent(now: number = Date.now()): boolean {
-  const at = Number(safeLocalStorage.getItem(OWN_SIGN_OUT_KEY));
-  return Number.isFinite(at) && at <= now && now - at < OWN_SIGN_OUT_WINDOW_MS;
+/** Hat dieses Gerät (oder ein anderer Tab) sich seit dem letzten SIGNED_IN selbst abgemeldet? */
+export function isOwnSignOut(): boolean {
+  return safeLocalStorage.getItem(OWN_SIGN_OUT_KEY) !== null;
+}
+
+/** Merker löschen: ein neues SIGNED_IN beginnt eine neue Sitzung. */
+export function clearOwnSignOut(): void {
+  safeLocalStorage.removeItem(OWN_SIGN_OUT_KEY);
+}
+
+function notifySignedOutElsewhereChanged(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(SIGNED_OUT_ELSEWHERE_CHANGED));
+  }
 }
 
 export function hasSignedOutElsewhere(): boolean {
@@ -38,26 +66,29 @@ export function hasSignedOutElsewhere(): boolean {
 
 export function setSignedOutElsewhere(): void {
   safeSessionStorage.setItem(SIGNED_OUT_ELSEWHERE_KEY, '1');
+  notifySignedOutElsewhereChanged();
 }
 
 export function clearSignedOutElsewhere(): void {
   safeSessionStorage.removeItem(SIGNED_OUT_ELSEWHERE_KEY);
+  notifySignedOutElsewhereChanged();
 }
 
 /**
- * Antwort des Servers, dass diese Sitzung nicht mehr gilt. Alles ohne Auth-Fehlerklasse
- * (Abbruch, Netz) und Netz-/5xx-Fehler (`AuthRetryableFetchError`) zählt nicht.
+ * Antwort des Servers, dass diese Sitzung nicht mehr gilt: `AuthSessionMissingError` (der Client
+ * übersetzt `session_not_found` so) oder ein `AuthApiError` mit einem der Codes oben.
  */
 export function isSessionRejectedByServer(error: unknown): boolean {
-  return isAuthError(error) && !isAuthRetryableFetchError(error);
+  return isAuthSessionMissingError(error)
+    || (isAuthApiError(error) && SESSION_GONE_CODES.includes(error.code ?? ''));
 }
 
 export type SessionCheckOutcome = 'valid' | 'rejected' | 'unknown';
 
-/** Fragt den Server nach dem Konto dieser Sitzung. Wirft nicht. */
+/** Fragt den Server nach dem Konto dieser Sitzung. Wirft nicht, blockiert nicht länger als REMOTE_CHECK_TIMEOUT_MS. */
 export async function verifySessionOnServer(client: SupabaseClient): Promise<SessionCheckOutcome> {
   try {
-    const { error } = await client.auth.getUser();
+    const { error } = await executeWithTimeout(() => client.auth.getUser(), REMOTE_CHECK_TIMEOUT_MS);
     if (!error) {
       return 'valid';
     }

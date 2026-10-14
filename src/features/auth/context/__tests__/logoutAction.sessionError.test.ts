@@ -48,7 +48,8 @@ function b64url(value: unknown): string {
   return Buffer.from(JSON.stringify(value)).toString('base64url');
 }
 
-function sessionFixture(expiresAtSeconds: number): string {
+/** Eigenes Refresh-Token je Test: auth-js cached Refresh-Fehler pro Token im geteilten Client. */
+function sessionFixture(expiresAtSeconds: number, refreshToken = 'refresh-a'): string {
   const accessToken = `${b64url({ alg: 'HS256', typ: 'JWT' })}.${b64url({
     sub: 'user-a',
     role: 'authenticated',
@@ -59,7 +60,7 @@ function sessionFixture(expiresAtSeconds: number): string {
     token_type: 'bearer',
     expires_in: 3600,
     expires_at: expiresAtSeconds,
-    refresh_token: 'refresh-a',
+    refresh_token: refreshToken,
     user: { id: 'user-a', aud: 'authenticated', email: 'a@example.test', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' },
   });
 }
@@ -99,5 +100,46 @@ describe('logout (A-07d1 R-1) – Sitzung beim Abmelden auf anderen Geräten', (
     expect(result).toEqual({ ok: false, reason: 'session' });
     expect(net.calls.filter((c) => c.url.includes('/auth/v1/logout'))).toHaveLength(0);
     expect(deps.setUser).not.toHaveBeenCalled();
+  });
+
+  // N3: Positivliste. Nur Sitzung-weg-Codes sind `session`; Netz ist `network`; alles andere ist `server`.
+  it.each(['refresh_token_already_used', 'session_expired'])('N3: Refresh mit Code %s → reason session', async (code) => {
+    safeLocalStorage.setItem(TOKEN_KEY, sessionFixture(nowSeconds() - 600, `refresh-code-${code}`));
+    net.respond = async (url) => (url.includes('grant_type=refresh_token')
+      ? new Response(JSON.stringify({ code, message: 'gone' }), { status: 400, headers: { 'Content-Type': 'application/json', 'X-Supabase-Api-Version': '2024-01-01' } })
+      : new Response(null, { status: 204 }));
+
+    expect(await logout(createMockAuthActionDeps(), { scope: 'others' })).toEqual({ ok: false, reason: 'session' });
+  });
+
+  it('N3: Refresh-Antwort ist keine JSON-Seite (Proxy, AuthUnknownError) → reason server, nicht session', async () => {
+    safeLocalStorage.setItem(TOKEN_KEY, sessionFixture(nowSeconds() - 600, 'refresh-html'));
+    net.respond = async (url) => (url.includes('grant_type=refresh_token')
+      ? new Response('<html><body>Anmeldeportal</body></html>', { status: 404, headers: { 'Content-Type': 'text/html' } })
+      : new Response(null, { status: 204 }));
+
+    expect(await logout(createMockAuthActionDeps(), { scope: 'others' })).toEqual({ ok: false, reason: 'server' });
+    expect(net.calls.filter((c) => c.url.includes('/auth/v1/logout'))).toHaveLength(0);
+  });
+
+  it('N3: Netz weg beim Refresh (fetch wirft, status 0) → reason network', async () => {
+    // auth-js wiederholt Netzfehler beim Refresh mit Backoff: Fake-Timer, damit der Test nicht wartet.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      safeLocalStorage.setItem(TOKEN_KEY, sessionFixture(nowSeconds() - 600, 'refresh-network'));
+      net.respond = async (url) => {
+        if (url.includes('grant_type=refresh_token')) {
+          throw new TypeError('Failed to fetch');
+        }
+        return new Response(null, { status: 204 });
+      };
+
+      const pending = logout(createMockAuthActionDeps(), { scope: 'others' });
+      await vi.advanceTimersByTimeAsync(120_000);
+
+      expect(await pending).toEqual({ ok: false, reason: 'network' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

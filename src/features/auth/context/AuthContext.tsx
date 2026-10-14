@@ -96,6 +96,11 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
+/** Fehler im onAuthStateChange-Zweig (N2) melden, ohne sie zu verschlucken. */
+function reportCallbackError(err: unknown): void {
+  captureFeatureError(err instanceof Error ? err : new Error(String(err)), 'auth', 'onAuthStateChange');
+}
+
 /**
  * AuthProvider - Wrapper für Auth-State mit Supabase
  */
@@ -398,15 +403,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const { data } = supabase.auth.onAuthStateChange(
           (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
             // Synchron bleiben (A-07d2, C-AUTH-CALLBACK-ASYNC): die Arbeit läuft danach.
-            setTimeout(async () => {
+            setTimeout(() => {
               if (import.meta.env.DEV) {
                 // eslint-disable-next-line no-console -- Useful for auth debugging
                 console.log('Auth state change:', event);
               }
 
               if (mounted) {
-                applyAuthEventEffects(event, newSession, setIsGuest);
-                await updateAuthState(newSession);
+                // Fehlerfang (N2): sonst wäre die Ablehnung ein unbehandeltes Promise.
+                void (async () => {
+                  applyAuthEventEffects(event, newSession, setIsGuest);
+                  await updateAuthState(newSession);
+                })().catch(reportCallbackError);
               }
             }, 0);
           }
