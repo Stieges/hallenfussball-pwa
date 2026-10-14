@@ -22,6 +22,7 @@ import { styles } from './UserProfileScreen.styles';
 import { ProfileHeader, ProfileStats, ProfileActions } from './profile';
 import { ProfileSettings } from './profile/ProfileSettings';
 import { ProfileTournaments } from './profile/ProfileTournaments';
+import { LogoutOthersSection } from './LogoutOthersSection';
 
 interface UserProfileScreenProps {
   /** Zurück-Handler */
@@ -215,6 +216,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
               passwordResetCooldown={passwordResetCooldown}
               onLogout={handleLogout}
             />
+            <LogoutOthersSection />
           </Card>
 
           {isGuest && (
