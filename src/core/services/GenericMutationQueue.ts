@@ -118,6 +118,7 @@ export class GenericMutationQueue<TType extends string> {
     private inFlight: QueueInFlight;
     private lastFailure: 'transient' | 'permanent' | 'storage' | null = null;
     private listeners: ((status: MutationQueueStatus) => void)[] = [];
+    private readonly storageReported = new Set<string>(); // A-07i Fixrunde 1: Sentry je Ursache nur einmal
 
     constructor(private config: MutationQueueConfig<TType>) {
         const timers = config.timers ?? globalQueueTimers();
@@ -397,10 +398,10 @@ export class GenericMutationQueue<TType extends string> {
         if (!safeLocalStorage.setItemPersisted(key, JSON.stringify(value))) { this.reportStorageFailure(action); }
     }
 
-    /** A-07i: Speichern fehlgeschlagen → Störungsanzeige „Gerätespeicher voll“ (lastFailure 'storage') + Sentry. */
+    /** A-07i: Speichern fehlgeschlagen → Störungsanzeige „Gerätespeicher voll“ (lastFailure 'storage') + Sentry (1× je Ursache). */
     protected reportStorageFailure(action: string): void {
         this.lastFailure = 'storage'; this.notifyListeners();
-        captureFeatureError(new StorageError('Warteschlange nicht dauerhaft gespeichert'), this.config.sentryFeature, action);
+        if (!this.storageReported.has(action)) { this.storageReported.add(action); captureFeatureError(new StorageError('Warteschlange nicht dauerhaft gespeichert'), this.config.sentryFeature, action); }
     }
 
     private loadFailed() {

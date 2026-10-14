@@ -139,6 +139,23 @@ describe('MutationQueue bei vollem Geraetespeicher (A-07i, @FU-004 / @FU-007)', 
     queue.dispose();
   });
 
+  it('A-07i Fixrunde 1: 5 Eintraege bei vollem Speicher -> Stoerung bleibt, Sentry genau 1x je Ursache', async () => {
+    setOnline(false);
+    const storage = new QuotaStorage();
+    const { MutationQueue } = await loadModules(storage);
+    storage.quotaExceeded = true;
+
+    const queue = new MutationQueue(createMockRepo() as never, undefined, undefined, undefined);
+    for (let i = 1; i <= 5; i++) {
+      queue.enqueue('SAVE_TOURNAMENT', tournament(`t${i}`));
+    }
+
+    expect(queue.getPendingCount()).toBe(5);
+    expect(queue.getLastFailure()).toBe('storage');
+    expect(sentry.captureFeatureError).toHaveBeenCalledTimes(1);
+    queue.dispose();
+  });
+
   it('Pflicht: Altschluessel bleibt, nach Neustart ohne Doppelversand (Speicher voll, dann frei)', async () => {
     setOnline(true);
     const storage = new QuotaStorage();
