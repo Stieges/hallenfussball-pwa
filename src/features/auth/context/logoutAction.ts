@@ -15,7 +15,7 @@ import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import { clearProfileCache } from '../services/profileCacheService';
 import { captureFeatureError, setUserContext as setSentryUserContext } from '../../../lib/sentry';
-import { isAuthRetryableFetchError } from '@supabase/supabase-js';
+import { isAuthApiError, isAuthRetryableFetchError } from '@supabase/supabase-js';
 
 export interface LogoutOptions {
   /** `local`: nur dieses Gerät. `others`: alle anderen Geräte, dieses bleibt angemeldet (A-07d1). */
@@ -25,7 +25,7 @@ export interface LogoutOptions {
 /** Ergebnis des Abmeldens. Nur `others` meldet Fehler zurück; `local` räumt in jedem Fall auf. */
 export type LogoutResult =
   | { ok: true }
-  | { ok: false; reason: 'unavailable' | 'network' | 'server' };
+  | { ok: false; reason: 'unavailable' | 'session' | 'network' | 'server' };
 
 /** Nur die Zustandssetter, die das Abmelden braucht (strukturell kompatibel zu AuthActionDeps). */
 export interface LogoutDeps {
@@ -59,24 +59,50 @@ function cleanupLocal(deps: LogoutDeps): void {
 }
 
 /**
- * Abmelden auf allen anderen Geräten (@AN-024). Nur der Server-Aufruf: kein lokales Aufräumen,
- * kein `setUser(null)`, dieses Gerät bleibt angemeldet. Fehler kommen als Rückgabe, nie still.
+ * Grund für einen Fehler beim Abmelden der anderen Geräte.
+ * 401/403/404 = diese Sitzung ist serverseitig nicht mehr gültig; `network` nur ohne HTTP-Antwort
+ * (status 0); alles andere (5xx, 429, unbekannt) = `server`.
+ */
+function reasonForOthersFailure(error: unknown): 'session' | 'network' | 'server' {
+  if (isAuthApiError(error) && [401, 403, 404].includes(error.status)) {
+    return 'session';
+  }
+  if (isAuthRetryableFetchError(error) && error.status === 0) {
+    return 'network';
+  }
+  return 'server';
+}
+
+/**
+ * Abmelden auf allen anderen Geräten (@AN-024). Nur der Server-Aufruf mit dem Zugang dieses Geräts
+ * (`admin.signOut(jwt, 'others')`, öffentlicher `/logout`-Endpunkt, keine Service-Rolle): kein
+ * lokales Aufräumen, kein `setUser(null)`, dieses Gerät bleibt angemeldet. Fehler kommen als
+ * Rückgabe, nie still. `supabase.auth.signOut({scope:'others'})` wird bewusst nicht genutzt: auth-js
+ * meldet dort keine Fehler, wenn keine Sitzung da ist (`_signOut`, GoTrueClient.ts:4080ff).
  */
 async function logoutOthers(): Promise<LogoutResult> {
   if (!isSupabaseConfigured || !supabase) {
     return { ok: false, reason: 'unavailable' };
   }
   try {
-    const { error } = await supabase.auth.signOut({ scope: 'others' });
+    const { data, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      return { ok: false, reason: reasonForOthersFailure(sessionError) };
+    }
+    const accessToken = data.session?.access_token;
+    if (!accessToken) {
+      return { ok: false, reason: 'session' };
+    }
+    const { error } = await supabase.auth.admin.signOut(accessToken, 'others');
     if (!error) {
       return { ok: true };
     }
-    return { ok: false, reason: isAuthRetryableFetchError(error) ? 'network' : 'server' };
+    return { ok: false, reason: reasonForOthersFailure(error) };
   } catch (err) {
     if (err instanceof Error) {
       captureFeatureError(err, 'auth', 'logout');
     }
-    return { ok: false, reason: isAuthRetryableFetchError(err) ? 'network' : 'server' };
+    return { ok: false, reason: reasonForOthersFailure(err) };
   }
 }
 

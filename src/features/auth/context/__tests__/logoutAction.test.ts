@@ -14,6 +14,7 @@ const net = vi.hoisted(() => ({
   calls: [] as Array<{ url: string; method: string }>,
   // null = Standard-Antwort 204 ohne Body (Logout erfolgreich)
   respond: null as null | ((url: string, init?: RequestInit) => Promise<Response>),
+  configured: true,
 }));
 
 vi.mock('../../../../lib/supabase', async () => {
@@ -29,7 +30,12 @@ vi.mock('../../../../lib/supabase', async () => {
     auth: { storage: safeLocalStorage, autoRefreshToken: false, persistSession: true },
     global: { fetch: fakeFetch },
   });
-  return { supabase: client, isSupabaseConfigured: true };
+  return {
+    supabase: client,
+    get isSupabaseConfigured() {
+      return net.configured;
+    },
+  };
 });
 
 import { logout } from '../logoutAction';
@@ -138,6 +144,7 @@ describe('logout (A-07d1) – auf allen anderen Geräten abmelden', () => {
     safeLocalStorage.setItem(QUEUE_KEY, QUEUE_VALUE);
     safeLocalStorage.setItem(FAILED_KEY, FAILED_VALUE);
     net.respond = null;
+    net.configured = true;
   });
 
   afterEach(() => {
@@ -169,18 +176,72 @@ describe('logout (A-07d1) – auf allen anderen Geräten abmelden', () => {
     expect(result).toEqual({ ok: true });
   });
 
-  it('Gegenbeispiel: Server antwortet 500 → { ok: false }, Sitzung bleibt, kein stilles Scheitern', async () => {
+  it.each([500, 503])('Gegenbeispiel: Server antwortet %i → reason server, Sitzung bleibt', async (status) => {
     safeLocalStorage.setItem(TOKEN_KEY, sessionFixture(nowSeconds() + 3600));
     net.respond = async () =>
       new Response(JSON.stringify({ message: 'boom' }), {
-        status: 500,
+        status,
         headers: { 'Content-Type': 'application/json' },
       });
     const deps = createMockAuthActionDeps();
 
     const result = await logout(deps, { scope: 'others' });
 
-    expect(result.ok).toBe(false);
+    expect(result).toEqual({ ok: false, reason: 'server' });
+    expect(hasSupabaseToken()).toBe(true);
+    expect(deps.setUser).not.toHaveBeenCalled();
+  });
+
+  it.each([401, 403, 404])('Gegenbeispiel: Server antwortet %i (Sitzung serverseitig weg) → reason session, kein Erfolg', async (status) => {
+    safeLocalStorage.setItem(TOKEN_KEY, sessionFixture(nowSeconds() + 3600));
+    net.respond = async () =>
+      new Response(JSON.stringify({ code: 'session_not_found', message: 'gone' }), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    const deps = createMockAuthActionDeps();
+
+    const result = await logout(deps, { scope: 'others' });
+
+    expect(result).toEqual({ ok: false, reason: 'session' });
+    expect(net.calls.filter((c) => c.url.includes('/auth/v1/logout'))).toHaveLength(1);
+    expect(deps.setUser).not.toHaveBeenCalled();
+  });
+
+  it('Gegenbeispiel: keine Sitzung → reason session, kein Server-Aufruf (kein falscher Erfolg)', async () => {
+    const deps = createMockAuthActionDeps();
+
+    const result = await logout(deps, { scope: 'others' });
+
+    expect(result).toEqual({ ok: false, reason: 'session' });
+    expect(net.calls.filter((c) => c.url.includes('/auth/v1/logout'))).toHaveLength(0);
+    expect(deps.setUser).not.toHaveBeenCalled();
+  });
+
+  it('Gegenbeispiel: Aufruf wirft unerwartet (catch-Zweig) → { ok: false, reason: server }, Sitzung bleibt', async () => {
+    safeLocalStorage.setItem(TOKEN_KEY, sessionFixture(nowSeconds() + 3600));
+    if (!supabase) {
+      throw new Error('Test-Client fehlt');
+    }
+    vi.spyOn(supabase.auth.admin, 'signOut').mockRejectedValue(new Error('unerwartet'));
+    const deps = createMockAuthActionDeps();
+
+    const result = await logout(deps, { scope: 'others' });
+
+    expect(result).toEqual({ ok: false, reason: 'server' });
+    expect(hasSupabaseToken()).toBe(true);
+    expect(deps.setUser).not.toHaveBeenCalled();
+  });
+
+  it('Gegenbeispiel: Supabase nicht konfiguriert → reason unavailable, nichts wird angefasst', async () => {
+    safeLocalStorage.setItem(TOKEN_KEY, sessionFixture(nowSeconds() + 3600));
+    net.configured = false;
+    const deps = createMockAuthActionDeps();
+
+    const result = await logout(deps, { scope: 'others' });
+
+    expect(result).toEqual({ ok: false, reason: 'unavailable' });
+    expect(net.calls).toHaveLength(0);
     expect(hasSupabaseToken()).toBe(true);
     expect(deps.setUser).not.toHaveBeenCalled();
   });

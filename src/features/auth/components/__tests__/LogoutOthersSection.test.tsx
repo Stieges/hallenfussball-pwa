@@ -62,7 +62,7 @@ describe('LogoutOthersSection (A-07d1, @AN-024)', () => {
     expect(logout).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Andere Geräte abmelden' }));
 
-    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith('Alle anderen Geräte sind abgemeldet.'));
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith('Die anderen Geräte werden abgemeldet, sobald sie sich mit dem Server verbinden.'));
     expect(logout).toHaveBeenCalledTimes(1);
     expect(logout).toHaveBeenCalledWith({ scope: 'others' });
     expect(showError).not.toHaveBeenCalled();
@@ -91,5 +91,40 @@ describe('LogoutOthersSection (A-07d1, @AN-024)', () => {
       ),
     );
     expect(showSuccess).not.toHaveBeenCalled();
+  });
+
+  it('Gegenbeispiel: keine Sitzung → Fehler-Toast „Deine Anmeldung ist abgelaufen“, kein Erfolg', async () => {
+    logout.mockResolvedValue({ ok: false, reason: 'session' });
+    renderSection();
+
+    fireEvent.click(screen.getByTestId('logout-others'));
+    fireEvent.click(screen.getByRole('button', { name: 'Andere Geräte abmelden' }));
+
+    await waitFor(() =>
+      expect(showError).toHaveBeenCalledWith(
+        'Die anderen Geräte konnten nicht abgemeldet werden: Deine Anmeldung ist abgelaufen – bitte melde dich neu an.',
+      ),
+    );
+    expect(showSuccess).not.toHaveBeenCalled();
+  });
+
+  it('B4: während des Aufrufs ist der Knopf gesperrt und zeigt „Wird abgemeldet …“', async () => {
+    let resolveLogout: (value: { ok: true }) => void = () => undefined;
+    logout.mockReturnValue(
+      new Promise<{ ok: true }>((resolve) => {
+        resolveLogout = resolve;
+      }),
+    );
+    renderSection();
+
+    fireEvent.click(screen.getByTestId('logout-others'));
+    fireEvent.click(screen.getByRole('button', { name: 'Andere Geräte abmelden' }));
+
+    const pendingButton = await screen.findByRole('button', { name: 'Wird abgemeldet …' });
+    expect(pendingButton).toBeDisabled();
+
+    resolveLogout({ ok: true });
+    await waitFor(() => expect(screen.getByTestId('logout-others')).not.toBeDisabled());
+    expect(screen.getByTestId('logout-others')).toHaveTextContent('Auf allen anderen Geräten abmelden');
   });
 });
