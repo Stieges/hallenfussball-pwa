@@ -131,7 +131,8 @@
       "withoutScoresDesc": "Leere Felder zum manuellen Ausfüllen",
       "includeStandings": "Tabellen einschließen",
       "includeStandingsDesc": "Zeigt Gruppen-Tabellen im PDF"
-    }
+    },
+    "close": "Schließen"
   },
   "teams": {
     "title": "Teams verwalten",
@@ -701,7 +702,6 @@
     "time": "Zeit",
     "participants": "Teilnehmer",
     "groupStage": "Gruppenphase",
-    "standings": "Tabelle",
     "standingsOfGroup": "Tabelle – {{group}}",
     "finalRanking": "Platzierung",
     "nr": "Nr",
@@ -730,6 +730,16 @@
     "durationMinutes": "{{minutes}} Min.",
     "modeGroupsAndFinals": "Gruppen + Finals",
     "modeRoundRobin": "Jeder gegen Jeden",
-    "unrenderableName": "Teamname ‚{{name}}‘ enthält Zeichen, die im PDF nicht dargestellt werden können"
+    "unrenderableName": "Teamname ‚{{name}}‘ enthält Zeichen, die im PDF nicht dargestellt werden können",
+    "phase": {
+      "roundOf16": "Achtelfinale",
+      "quarterfinal": "Viertelfinale",
+      "semifinal": "Halbfinale",
+      "final": "Finalspiele"
+    },
+    "groupName": "Gruppe {{id}}",
+    "unrenderableField": "{{field}} ‚{{text}}‘ enthält Zeichen, die im PDF nicht dargestellt werden können",
+    "tournamentTitle": "Turniername",
+    "ageClass": "Altersklasse"
   }
 }

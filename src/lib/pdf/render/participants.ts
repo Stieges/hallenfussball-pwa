@@ -35,7 +35,7 @@ function boxTitle(doc: jsPDF, text: string, x: number, boxTop: number): void {
 }
 
 function groupTitle(group: string, schedule: GeneratedSchedule, t: PdfTexts): string {
-  return group !== 'Alle' ? getGroupDisplayName(group, schedule.tournament) : t.participants;
+  return group !== 'Alle' ? t.groupLabel(group, getGroupDisplayName(group, schedule.tournament)) : t.participants;
 }
 
 export function renderParticipants(

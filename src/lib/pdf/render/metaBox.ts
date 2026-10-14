@@ -43,16 +43,11 @@ export function renderMetaBox(
     if (!dateStr) {
       return t.noDate;
     }
-    // Bereits im Format TT.MM.JJJJ: unverändert übernehmen
+    // Bereits im Format TT.MM.JJJJ: unverändert übernehmen. Sonst JJJJ-MM-TT über Intl (Sprache des Dokuments).
     if (dateStr.includes('.')) {
       return dateStr;
     }
-    // Sonst aus JJJJ-MM-TT umbauen
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[2]}.${parts[1]}.${parts[0]}`;
-    }
-    return dateStr;
+    return t.formatDate(dateStr);
   };
 
   // Linke Spalte. Veranstalter nur, wenn angegeben.

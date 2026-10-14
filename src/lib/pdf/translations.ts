@@ -47,10 +47,23 @@ export interface PdfTexts {
   standingsOfGroup: (group: string) => string;
   durationMinutes: (minutes: number) => string;
   refereeNumber: (number: number | string) => string;
+  tournamentTitle: string;
+  ageClass: string;
   unrenderableName: (name: string) => string;
+  /** Feldname mit Text, der nicht darstellbar ist (z. B. Turniername, Halle, Veranstalter). */
+  unrenderableField: (field: string, text: string) => string;
+  /** Titel der Finalphase. Unbekannte Phasen bleiben beim Namen aus dem Plan. */
+  phaseTitle: (name: string, fallback: string) => string;
+  /** Gruppenname. Der generische Name „Gruppe X“ wird übersetzt, ein eigener Name bleibt. */
+  groupLabel: (id: string, displayName: string) => string;
+  /** Spieltag aus `JJJJ-MM-TT` in der Sprache des Dokuments; anderes Format bleibt unverändert. */
+  formatDate: (isoDate: string) => string;
   /** Uhrzeit `HH:mm` in der Sprache des Dokuments. */
   formatClock: (date: Date) => string;
 }
+
+const FINAL_PHASES = ['roundOf16', 'quarterfinal', 'semifinal', 'final'] as const;
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** Sprache des Dokuments: Englisch, sonst Deutsch (Vorgabe). */
 export function resolvePdfLocale(language: string | undefined): PdfLocale {
@@ -61,6 +74,7 @@ export function resolvePdfLocale(language: string | undefined): PdfLocale {
 export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfTexts {
   const s = (key: string): string => translate(`pdf.${key}`);
   const clock = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const day = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
 
   return {
     organizer: s('organizer'),
@@ -99,7 +113,21 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     standingsOfGroup: group => translate('pdf.standingsOfGroup', { group }),
     durationMinutes: minutes => translate('pdf.durationMinutes', { minutes }),
     refereeNumber: number => translate('pdf.refereeNumber', { number }),
+    tournamentTitle: s('tournamentTitle'),
+    ageClass: s('ageClass'),
     unrenderableName: name => translate('pdf.unrenderableName', { name }),
+    unrenderableField: (field, text) => translate('pdf.unrenderableField', { field, text }),
+    phaseTitle: (name, fallback) =>
+      (FINAL_PHASES as readonly string[]).includes(name) ? s(`phase.${name}`) : fallback,
+    groupLabel: (id, displayName) =>
+      displayName === `Gruppe ${id}` ? translate('pdf.groupName', { id }) : displayName,
+    formatDate: isoDate => {
+      const match = ISO_DATE.exec(isoDate);
+      if (!match) {
+        return isoDate;
+      }
+      return day.format(new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))));
+    },
     formatClock: date => clock.format(date),
   };
 }

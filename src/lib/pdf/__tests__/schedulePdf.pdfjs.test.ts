@@ -44,12 +44,33 @@ function occurrences(haystack: string, needle: string): number {
 const SPECIAL = ['Gençlerbirliği Nord', 'KS Łódź Süd', 'Fußball Düren 1907', 'Işıklar Ğazi', 'Źródło Ost'];
 const LONG_50 = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
 
+/** Textstücke in Reihenfolge, leerer Leerraum entfernt. Abschnitte werden über Titel begrenzt. */
+function tokensOf(pages: string[][]): string[] {
+  return pages.flat().map(squash).filter(t => t !== '');
+}
+
+/** Stücke von `startToken` bis vor das erste Stück, das `endToken` gleicht (oder bis zum Ende). */
+function section(tokens: string[], startToken: string, endToken?: string): string[] {
+  const start = tokens.indexOf(startToken);
+  if (start < 0) {throw new Error(`Abschnitt ${startToken} fehlt im PDF-Text`);}
+  const end = endToken ? tokens.indexOf(endToken, start + 1) : -1;
+  return tokens.slice(start, end < 0 ? undefined : end);
+}
+
 describe('@BM-048 aus dem PDF gelesen (pdfjs, ToUnicode)', () => {
-  it.each(SPECIAL)('„%s“ steht Zeichen für Zeichen in Teilnehmern, Spielen und Tabelle', async name => {
+  it.each(SPECIAL)('„%s“ steht je Ort einzeln: Teilnehmer, Spiele und Tabelle', async name => {
     const bytes = await pdfBytes(scheduleWithNames([name, ...HALLENCUP_TEAMS.slice(1).map(t => t.name)]));
-    const pdf = await extractPdfText(bytes);
-    // Teilnehmer, mindestens eine Spielzeile und die Tabelle: je ein Vorkommen.
-    expect(occurrences(allText(pdf.pages), squash(name))).toBeGreaterThanOrEqual(3);
+    const tokens = tokensOf((await extractPdfText(bytes)).pages);
+    const key = squash(name);
+    // Teilnehmer: Stück „n. Name“ (Gruppe A ist der erste Kasten).
+    const participants = section(tokens, 'Teilnehmer', 'Gruppenphase');
+    expect(participants.some(t => /^\d+\./.test(t) && t.endsWith(key))).toBe(true);
+    // Spiele: Zeile mit dem Namen als eigenes Stück in der Gruppenphase, vor der ersten Tabelle.
+    const matches = section(tokens, 'Gruppenphase', 'Tabelle–GruppeA');
+    expect(matches).toContain(key);
+    // Tabelle Gruppe A: Name als eigenes Stück zwischen Titel und Gruppe B.
+    const table = section(tokens, 'Tabelle–GruppeA', 'Tabelle–GruppeB');
+    expect(table).toContain(key);
   });
 
   it('Gegenbeispiel: Namen ohne Sonderzeichen stehen unverändert', async () => {
@@ -64,6 +85,22 @@ describe('Review Focus 5: 50-Zeichen-Name aus dem PDF', () => {
     const text = allText(pdf.pages);
     expect(occurrences(text, squash(LONG_50))).toBeGreaterThanOrEqual(3);
     expect(text).not.toContain('…');
+  });
+});
+
+describe('Sprache: EN-Plan ohne deutsche Wörter', () => {
+  it('kein deutscher Abschnittstitel, Phasen und Gruppen auf Englisch', async () => {
+    const pdf = await extractPdfText(await pdfBytes(generateFullSchedule(hallencupTournament(), 'de'), 'en'));
+    // Bekannte Ausnahme: Herkunftsplatzhalter der Finalspiele („Gruppe A - 2. Platz“) kommen aus dem Generator
+    // und werden erst mit B-35 (`slotLabel`) übersetzt. Nur dieses Muster wird herausgenommen.
+    const text = pdf.pages.flat().join(' ').replace(/Gruppe [A-Z] - \d\. Platz/g, '');
+    // Negativliste: deutsche Wörter aus Titeln, Phasen und Gruppen.
+    for (const word of ['Finalspiele', 'Halbfinale', 'Viertelfinale', 'Gruppe ', 'Gruppenphase', 'Teilnehmer', 'Tabelle', 'Platzierung', 'Spiel um Platz', 'Kein Datum']) {
+      expect(text, word).not.toContain(word);
+    }
+    for (const word of ['Group stage', 'Group A', 'Teams', 'Standings', 'Final ranking', 'Finals']) {
+      expect(text, word).toContain(word);
+    }
   });
 });
 

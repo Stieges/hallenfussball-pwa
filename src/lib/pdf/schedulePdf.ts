@@ -57,11 +57,29 @@ function appTranslator(locale: PdfLocale): PdfTranslator {
   return (key, values) => i18next.t(key, key, { ns: 'tournament', lng: locale, ...values });
 }
 
-/** Hinweis je Teamname mit Zeichen, die die eingebettete Schrift nicht trägt (B-28a2, Daniel 14.10.). */
-export function unrenderableTeamNotes(schedule: GeneratedSchedule, t: PdfTexts): string[] {
-  return schedule.teams
+/**
+ * Hinweise auf Zeichen, die die eingebettete Schrift nicht trägt: gedruckte Freitexte (Turniername, Altersklasse,
+ * Veranstalter, Halle) und Teamnamen (B-28a2, Daniel 14.10.; Fixrunde F8).
+ */
+export function unrenderableNotes(
+  schedule: GeneratedSchedule,
+  t: PdfTexts,
+  organizerName: string,
+  hallName: string
+): string[] {
+  const fields: Array<[label: string, text: string]> = [
+    [t.tournamentTitle, schedule.tournament.title],
+    [t.ageClass, schedule.tournament.ageClass],
+    [t.organizer, organizerName],
+    [t.hall, hallName],
+  ];
+  const notes = fields
+    .filter(([, text]) => text !== '' && unrenderableChars(text).length > 0)
+    .map(([label, text]) => t.unrenderableField(label, text));
+  const teamNotes = schedule.teams
     .filter(team => unrenderableChars(team.name).length > 0)
     .map(team => t.unrenderableName(team.name));
+  return [...notes, ...teamNotes];
 }
 
 /** Baut das Spielplan-PDF, ohne es zu speichern. */
@@ -76,7 +94,7 @@ export async function buildSchedulePdf({ schedule, standings, options = {} }: Sc
   } = options;
 
   const t = buildPdfTexts(translate, locale);
-  const notes = unrenderableTeamNotes(schedule, t);
+  const notes = unrenderableNotes(schedule, t, organizerName, hallName);
   const geo = pageGeometry('a4', 'portrait');
 
   const doc = new jsPDF({

@@ -88,6 +88,23 @@ describe('Nicht darstellbare Zeichen: Hinweis, PDF entsteht trotzdem', () => {
     expect(result.notes).toEqual(['Teamname ‚Ярославль Nord‘ enthält Zeichen, die im PDF nicht dargestellt werden können']);
   });
 
+  it('Turniername, Veranstalter und Halle: je ein Hinweis mit dem Feldnamen (F8)', async () => {
+    const tournament = hallencupTournament({
+      title: 'Турнир Nord',
+      organizer: 'Ярославль e.V.',
+      location: { name: 'Halle Łódź' },
+    });
+    const result = await exportScheduleToPDF(generateFullSchedule(tournament, 'de'), undefined, {
+      translate: translatorFor('de'),
+      hallName: 'Halle Ł\u0301ódź Ярославль',
+    });
+    expect(result.notes).toEqual([
+      'Turniername ‚Турнир Nord‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
+      'Veranstalter ‚Ярославль e.V.‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
+      'Halle ‚Halle Ł\u0301ódź Ярославль‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
+    ]);
+  });
+
   it('Gegenbeispiel: darstellbare Namen erzeugen keinen Hinweis', async () => {
     const result = await exportScheduleToPDF(hallencupSchedule(), undefined, {
       translate: translatorFor('de'),

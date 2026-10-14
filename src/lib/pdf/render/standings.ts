@@ -117,7 +117,7 @@ export function renderGroupStandings(
     doc.setFontSize(printFonts.groupTitle);
     doc.setTextColor(...printColors.textMain);
     doc.setFont(PDF_FONT.family, 'bold');
-    doc.text(t.standingsOfGroup(getGroupDisplayName(group, schedule.tournament)), geo.left, yPos);
+    doc.text(t.standingsOfGroup(t.groupLabel(group, getGroupDisplayName(group, schedule.tournament))), geo.left, yPos);
     yPos += printMetrics.sectionTitleUnderline;
 
     const groupTeams = schedule.teams.filter(team => team.group === group);

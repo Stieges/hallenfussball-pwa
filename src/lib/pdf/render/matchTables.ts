@@ -180,7 +180,7 @@ export function renderFinalsSection(
     yPos = ensureSpace(doc, yPos, printMetrics.sectionTitleMinSpace, geo);
 
     // Phasentitel
-    yPos = sectionTitle(doc, phase.label, geo, yPos, printFonts.phaseTitle);
+    yPos = sectionTitle(doc, t.phaseTitle(phase.name, phase.label), geo, yPos, printFonts.phaseTitle);
 
     // Nach Spielnummer, damit die Reihenfolge des Plans bleibt
     const sortedMatches = [...phase.matches].sort((a, b) => a.matchNumber - b.matchNumber);

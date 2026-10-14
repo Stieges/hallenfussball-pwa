@@ -131,7 +131,8 @@
       "withoutScoresDesc": "Empty fields for manual entry",
       "includeStandings": "Include tables",
       "includeStandingsDesc": "Shows group tables in PDF"
-    }
+    },
+    "close": "Close"
   },
   "teams": {
     "title": "Manage Teams",
@@ -701,7 +702,6 @@
     "time": "Time",
     "participants": "Teams",
     "groupStage": "Group stage",
-    "standings": "Standings",
     "standingsOfGroup": "Standings – {{group}}",
     "finalRanking": "Final ranking",
     "nr": "No.",
@@ -730,6 +730,16 @@
     "durationMinutes": "{{minutes}} min",
     "modeGroupsAndFinals": "Groups + finals",
     "modeRoundRobin": "Round robin",
-    "unrenderableName": "Team name ‘{{name}}’ contains characters that cannot be shown in the PDF"
+    "unrenderableName": "Team name ‘{{name}}’ contains characters that cannot be shown in the PDF",
+    "phase": {
+      "roundOf16": "Round of 16",
+      "quarterfinal": "Quarter-finals",
+      "semifinal": "Semi-finals",
+      "final": "Finals"
+    },
+    "groupName": "Group {{id}}",
+    "unrenderableField": "{{field}} ‘{{text}}’ contains characters that cannot be shown in the PDF",
+    "tournamentTitle": "Tournament name",
+    "ageClass": "Age group"
   }
 }
