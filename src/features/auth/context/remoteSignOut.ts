@@ -94,7 +94,9 @@ export async function verifySessionOnServer(client: SupabaseClient): Promise<Ses
     }
     return isSessionRejectedByServer(error) ? 'rejected' : 'unknown';
   } catch (err) {
-    if (err instanceof Error) {
+    // Zeitüberschreitung (langsames Netz, hängender Start) ist keine Störung: ohne Sentry-Meldung.
+    // Gleiche Erkennung wie SingleFlight.executeWithRetry („timed out“).
+    if (err instanceof Error && !err.message.includes('timed out')) {
       captureFeatureError(err, 'auth', 'remoteSessionCheck');
     }
     return 'unknown';

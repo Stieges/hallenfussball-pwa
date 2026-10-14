@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AuthRefreshDiscardedError } from '@supabase/supabase-js';
+import { AuthRefreshDiscardedError, type SupabaseClient } from '@supabase/supabase-js';
 import { safeLocalStorage, safeSessionStorage } from '../../../../core/utils/safeStorage';
 import { supabase } from '../../../../lib/supabase';
 import { applyAuthEventEffects } from '../authEventEffects';
@@ -17,6 +17,7 @@ import {
   isSessionRejectedByServer,
 } from '../remoteSignOut';
 import { logout } from '../logoutAction';
+import { captureFeatureError } from '../../../../lib/sentry';
 import { createMockAuthActionDeps } from './mocks/supabaseMock';
 
 const net = vi.hoisted(() => ({
@@ -38,6 +39,11 @@ vi.mock('../../../../lib/supabase', async () => {
   });
   return { supabase: client, isSupabaseConfigured: true };
 });
+
+vi.mock('../../../../lib/sentry', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../lib/sentry')>()),
+  captureFeatureError: vi.fn(),
+}));
 
 const TOKEN_KEY = 'sb-localhost-auth-token';
 
@@ -150,6 +156,7 @@ describe('verifySessionOnServer (A-07d2) – Antwort des Servers zur Sitzung', (
 
   // M3: Ein hängender Aufruf sperrt die Prüfung nicht dauerhaft.
   it('M3: hängender getUser → nach der Zeitgrenze unknown', async () => {
+    vi.mocked(captureFeatureError).mockClear();
     net.respond = async () => new Promise<Response>(() => undefined);
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 
@@ -158,6 +165,15 @@ describe('verifySessionOnServer (A-07d2) – Antwort des Servers zur Sitzung', (
 
     expect(await pending).toBe('unknown');
     expect(safeLocalStorage.getItem(TOKEN_KEY)).not.toBeNull();
+    // Zeitüberschreitung wird nicht an Sentry gemeldet.
+    expect(captureFeatureError).not.toHaveBeenCalled();
+  });
+
+  it('Gegenbeispiel: anderer unerwarteter Fehler (kein Timeout) wird weiterhin gemeldet → unknown', async () => {
+    const stub = { auth: { getUser: async () => { throw new TypeError('kaputt'); } } } as unknown as SupabaseClient;
+
+    expect(await verifySessionOnServer(stub)).toBe('unknown');
+    expect(captureFeatureError).toHaveBeenCalledWith(expect.any(TypeError), 'auth', 'remoteSessionCheck');
   });
 
   it('isSessionRejectedByServer: Nicht-Auth-Fehler und Netzfehler zählen nicht', () => {
