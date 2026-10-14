@@ -164,7 +164,7 @@ describe('SyncStatusIndicator — Geraetespeicher voll (A-07i, @FU-004 / @FU-007
 
     expect(screen.getByTestId('sync-status')).toHaveAttribute(
       'aria-label',
-      '1 Eintrag wartet – Speicher des Browsers gesperrt – Einträge gehen beim Schließen verloren',
+      '1 Eintrag wartet – Speicher des Browsers gesperrt, Einträge gehen beim Schließen verloren',
     );
   });
 
