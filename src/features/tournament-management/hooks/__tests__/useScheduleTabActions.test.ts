@@ -7,11 +7,12 @@
  * proves Fixrunde 1's "nur einen Weg" requirement: handleScoreChange now goes through the SAME
  * `diffMatchResultStatusUpdates` helper as every other result/status-changing caller.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useScheduleTabActions } from '../useScheduleTabActions';
 import type { Tournament, Match } from '../../../../types/tournament';
 import { calculateStandings } from '../../../../utils/calculations';
+import { STORAGE_KEYS } from '../../../../constants/storage';
 
 function createMatch(overrides: Partial<Match> = {}): Match {
   return {
@@ -137,24 +138,38 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
   });
 });
 
+// localStorage ist in der DOM-Testumgebung ein vi.fn-Mock (src/test/setup.dom.ts): der Live-Store
+// wird deshalb über getItem gestellt.
+function stubLiveStore(eintraege: Record<string, { status: string }>): void {
+  vi.mocked(localStorage.getItem).mockImplementation((key: string) =>
+    key === STORAGE_KEYS.liveMatches('test-tournament') ? JSON.stringify(eintraege) : null
+  );
+}
+
+afterEach(() => {
+  vi.mocked(localStorage.getItem).mockReset();
+});
+
+// Turnier mit zwei Teams in Gruppe A, damit die Tabelle (calculateStandings) rechnen kann.
+const tabellenTurnier = (matches: Match[]): Tournament => (({
+  ...createTournament(matches),
+  teams: [
+    { id: 'team-a', name: 'Team A', group: 'A' },
+    { id: 'team-b', name: 'Team B', group: 'A' },
+  ],
+  placementLogic: [{ id: 'points', label: 'Punkte', enabled: true }],
+}));
+
 // @FU-080 / @TM-143 (B-40 Fixrunde 1): Ergebnis direkt im Spielplan eingetragen -> die Tabelle zählt es.
 describe('useScheduleTabActions — Ergebnis im Spielplan zählt in der Tabelle (@FU-080, @TM-143)', () => {
-  const tabellenTurnier = (matches: Match[]): Tournament => (({
-    ...createTournament(matches),
-    teams: [
-      { id: 'team-a', name: 'Team A', group: 'A' },
-      { id: 'team-b', name: 'Team B', group: 'A' },
-    ],
-    placementLogic: [{ id: 'points', label: 'Punkte', enabled: true }],
-  }));
   const punkteVon = (turnier: Tournament, name: string) =>
     calculateStandings(turnier.teams, turnier.matches, turnier, 'A').find((s) => s.team.name === name)?.points;
 
-  it('beide Ergebnisse eingetragen: Status finished, Tabelle rechnet mit 3:1', () => {
+  it('beide Ergebnisse eingetragen: Status finished (lokal und im Payload), Tabelle rechnet mit 3:1', () => {
     const turnier = tabellenTurnier([
       createMatch({ id: 'm1', group: 'A', teamA: 'Team A', teamB: 'Team B' }),
     ]);
-    const { result, onLocalTournamentUpdate } = renderActions(turnier);
+    const { result, onLocalTournamentUpdate, onMatchesUpdate } = renderActions(turnier);
 
     act(() => {
       result.current.handleScoreChange('m1', 3, 1);
@@ -162,23 +177,83 @@ describe('useScheduleTabActions — Ergebnis im Spielplan zählt in der Tabelle 
 
     const aktualisiert = onLocalTournamentUpdate.mock.calls[0][0] as Tournament;
     expect(aktualisiert.matches[0].matchStatus).toBe('finished');
+    expect(onMatchesUpdate.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ id: 'm1', scoreA: 3, scoreB: 1, matchStatus: 'finished' }),
+    ]);
     expect(punkteVon(aktualisiert, 'Team A')).toBe(3);
     expect(punkteVon(aktualisiert, 'Team B')).toBe(0);
   });
 
-  it('Gegenbeispiel: nur ein Wert gesetzt -> kein finished, Tabelle zählt nicht', () => {
+  it('Gegenbeispiel: Live-Store NOT_STARTED (initialisiert, nicht gespielt) -> trotzdem finished', () => {
+    stubLiveStore({ m1: { status: 'NOT_STARTED' } });
     const turnier = tabellenTurnier([
-      createMatch({ id: 'm1', group: 'A', teamA: 'Team A', teamB: 'Team B' }),
+      createMatch({ id: 'm1', group: 'A', teamA: 'Team A', teamB: 'Team B', matchStatus: 'scheduled' }),
     ]);
-    const { result, onLocalTournamentUpdate } = renderActions(turnier);
+    const { result, onMatchesUpdate } = renderActions(turnier);
 
     act(() => {
-      // Die Eingabezelle ruft nur mit beiden Werten auf; hier ein unvollständiger Wert.
-      result.current.handleScoreChange('m1', 3, undefined as unknown as number);
+      result.current.handleScoreChange('m1', 3, 1);
+    });
+
+    expect(onMatchesUpdate.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ id: 'm1', matchStatus: 'finished' }),
+    ]);
+  });
+});
+
+// B-40 Fixrunde 2 (W2/H1): echte Schutzklauseln über den Hook. Laufend oder pausiert darf durch einen
+// Spielplan-Eintrag nicht zu `finished` werden; der Status bleibt stehen.
+describe('useScheduleTabActions — laufend/pausiert bleibt laufend/pausiert (@FU-080, @TM-143)', () => {
+  afterEach(() => {
+    vi.mocked(localStorage.getItem).mockReset();
+    vi.restoreAllMocks();
+  });
+
+  it('gespeicherter Status paused bleibt paused, Payload ohne matchStatus', () => {
+    const turnier = tabellenTurnier([
+      createMatch({ id: 'm1', group: 'A', teamA: 'Team A', teamB: 'Team B', matchStatus: 'paused' }),
+    ]);
+    const { result, onLocalTournamentUpdate, onMatchesUpdate } = renderActions(turnier);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 3, 1);
     });
 
     const aktualisiert = onLocalTournamentUpdate.mock.calls[0][0] as Tournament;
-    expect(aktualisiert.matches[0].matchStatus).toBeUndefined();
-    expect(punkteVon(aktualisiert, 'Team A')).toBe(0);
+    expect(aktualisiert.matches[0].matchStatus).toBe('paused');
+    expect(onMatchesUpdate.mock.calls[0][0][0]).not.toHaveProperty('matchStatus');
+  });
+
+  it('Live-Store PAUSED (lokale Halbzeit) bei Status scheduled führt nicht zu finished', () => {
+    stubLiveStore({ m1: { status: 'PAUSED' } });
+    const turnier = tabellenTurnier([
+      createMatch({ id: 'm1', group: 'A', teamA: 'Team A', teamB: 'Team B', matchStatus: 'scheduled' }),
+    ]);
+    const { result, onLocalTournamentUpdate, onMatchesUpdate } = renderActions(turnier);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 3, 1);
+    });
+
+    const aktualisiert = onLocalTournamentUpdate.mock.calls[0][0] as Tournament;
+    expect(aktualisiert.matches[0].matchStatus).toBe('scheduled');
+    expect(onMatchesUpdate.mock.calls[0][0][0]).not.toHaveProperty('matchStatus');
+  });
+
+  it('Live-Store RUNNING bei Status scheduled führt nicht zu finished (nach „trotzdem eintragen“)', () => {
+    stubLiveStore({ m1: { status: 'RUNNING' } });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const turnier = tabellenTurnier([
+      createMatch({ id: 'm1', group: 'A', teamA: 'Team A', teamB: 'Team B', matchStatus: 'scheduled' }),
+    ]);
+    const { result, onLocalTournamentUpdate, onMatchesUpdate } = renderActions(turnier);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 3, 1);
+    });
+
+    const aktualisiert = onLocalTournamentUpdate.mock.calls[0][0] as Tournament;
+    expect(aktualisiert.matches[0].matchStatus).toBe('scheduled');
+    expect(onMatchesUpdate.mock.calls[0][0][0]).not.toHaveProperty('matchStatus');
   });
 });

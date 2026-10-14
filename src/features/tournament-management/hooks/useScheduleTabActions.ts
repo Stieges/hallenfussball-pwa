@@ -12,7 +12,7 @@ import { Tournament } from '../../../types/tournament';
 import { MatchUpdate } from '../../../core/models/types';
 import { diffMatchResultStatusUpdates } from '../../../core/services';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
-import { isMatchFinished, isMatchRunning } from '../utils';
+import { isMatchFinished, isMatchLiveOrPaused, isMatchRunning } from '../utils';
 import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../../core/generators';
 
 interface UseScheduleTabActionsProps {
@@ -197,9 +197,11 @@ export function useScheduleTabActions({
       if (match.id !== matchId) {
         return match;
       }
-      // Laufend/unterbrochen: Live-Store oder Turnierstatus (DB kennt zusätzlich 'paused').
+      // Laufend/unterbrochen: Live-Store (auch lokale Pause/Halbzeit, die die Warnung nicht kennt)
+      // oder gespeicherter Status (DB kennt zusätzlich 'paused').
       const isLive =
         isMatchRunning(matchId, tournament.id) ||
+        isMatchLiveOrPaused(matchId, tournament.id) ||
         (match.matchStatus as string | undefined) === 'running' ||
         (match.matchStatus as string | undefined) === 'paused';
       const becomesFinished = enteredBothScores && !isLive;
