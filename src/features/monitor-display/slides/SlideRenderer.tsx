@@ -67,8 +67,8 @@ export function SlideRenderer({ slide, tournament, performanceSettings, theme, o
       return <CustomTextSlide slide={slide} style={slideStyle} />;
 
     case 'qr-code':
-      // E-03: Eigener Render-Pfad für die Zuschauer-QR-Folie (Rückfall, kein
-      // konfigurierbarer Folien-Typ).
+      // E-03: Eigener Render-Pfad für die Zuschauer-QR-Folie (Programm-Folie
+      // `qr-code` und Rückfall).
       return <QrSlide tournament={tournament} style={slideStyle} />;
 
     default:

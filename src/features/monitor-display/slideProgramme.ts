@@ -74,8 +74,8 @@ export function selectDisplayableSlides<T extends MonitorSlideLike>(
   }
   // F-04/F11: Das Programm bleibt nie leer — ist nichts Darstellbares übrig und kein QR
   // möglich (nicht öffentlich/ohne Share-Code), nimmt der Monitor die nächste immer
-  // darstellbare Folie (Spielplan). Eine qr-code-Folie im Programm selbst zeigt ohne QR
-  // Turniername und einen neutralen Satz (F-03/QrSlide).
+  // darstellbare Folie (Spielplan). Eine qr-code-Folie im Programm entfällt oben schon
+  // ohne möglichen QR (B-16f4); der Rückfall QrSlide zeigt dann nur den neutralen Satz (F-03).
   if (displayable.length === 0 && options?.qrMoeglich === false) {
     return [SPIELPLAN_FALLBACK_SLIDE];
   }
