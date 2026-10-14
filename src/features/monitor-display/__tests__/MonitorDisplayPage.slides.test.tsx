@@ -130,14 +130,6 @@ describe('MonitorDisplayPage — Folieninhalt (Bestand)', () => {
     await renderMonitor(buildTournament(), [slide('standings', { groupId: 'A' })]);
     expect(pointsOf('FC Nord')).toBe('6');
   });
-
-  it('Bestand: QR-Rückfall zeigt die Zuschauer-Adresse, nicht „Ergebnisse aufs Handy“', async () => {
-    // Nur nicht darstellbare Folien (Phase 2) → Rückfall auf die Zuschauer-QR-Folie.
-    await renderMonitor(buildTournament(), [slide('top-scorers')]); // next-matches seit f2 darstellbar
-    expect(screen.getByText(/#\/live\/ABC123/)).toBeInTheDocument();
-    expect(screen.queryByText(/Ergebnisse aufs Handy/)).not.toBeInTheDocument();
-  });
-
 });
 
 describe('MonitorDisplayPage — Tasten (Bestand)', () => {

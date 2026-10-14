@@ -36,6 +36,7 @@ export const DISPLAYABLE_SLIDE_TYPES: ReadonlySet<string> = new Set([
   'custom-text',
   'next-matches',
   'all-standings',
+  'qr-code',
 ]);
 
 /** Rückfall, wenn keine Folie des Programms darstellbar ist: die Zuschauer-QR-Folie. */
@@ -63,8 +64,11 @@ export function selectDisplayableSlides<T extends MonitorSlideLike>(
   options?: { qrMoeglich?: boolean; isShowable?: (slide: T) => boolean },
 ): Array<T | MonitorSlide | QrRueckfallFolie> {
   // B-16e2 (@ZM-090): Folien, die bei ausgeblendeten Ergebnissen nicht zeigbar sind, fallen weg.
+  // B-16f4: Eine Zuschauer-QR-Folie entfällt ohne öffentliches Turnier mit Share-Code (kein leerer QR).
   const displayable = slides.filter((slide) =>
-    DISPLAYABLE_SLIDE_TYPES.has(slide.type) && (options?.isShowable?.(slide) ?? true));
+    DISPLAYABLE_SLIDE_TYPES.has(slide.type)
+    && (slide.type !== 'qr-code' || options?.qrMoeglich === true)
+    && (options?.isShowable?.(slide) ?? true));
   if (displayable.length > 0) {
     return displayable;
   }

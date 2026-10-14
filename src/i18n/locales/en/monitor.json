@@ -44,6 +44,9 @@
       "title": "Next matches",
       "none": "No more matches"
     },
+    "qr": {
+      "headline": "Results on your phone"
+    },
     "page": "Page {{page}} / {{pages}}",
     "allStandings": {
       "finals": "Final round",

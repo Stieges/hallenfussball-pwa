@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { cssVars, displayFontSizes, displaySpacing, displayMonitor } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
@@ -11,6 +12,7 @@ interface QrSlideProps {
 
 /** Zuschauer-QR-Folie (@OB-011 Rückfall). */
 export function QrSlide({ tournament, style }: QrSlideProps) {
+  const { t } = useTranslation('monitor');
   // F-03: Der QR zeigt die Zuschauer-Adresse (generateLiveUrl) — nie die Verwaltung
   // (generateTournamentUrl). Nur bei isPublic && shareCode gibt es überhaupt einen QR.
   const qrUrl = zuschauerUrl(tournament);
@@ -21,6 +23,9 @@ export function QrSlide({ tournament, style }: QrSlideProps) {
       </div>
       {qrUrl && (
         <>
+          <div style={{ fontSize: displayFontSizes.headingLG, fontWeight: cssVars.fontWeights.semibold }}>
+            {t('slides.qr.headline')}
+          </div>
           <QRCodeSVG
             value={qrUrl}
             size={displayMonitor.qr.sizeLarge}

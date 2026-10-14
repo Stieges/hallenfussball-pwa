@@ -44,6 +44,9 @@
       "title": "Nächste Spiele",
       "none": "Keine weiteren Spiele"
     },
+    "qr": {
+      "headline": "Ergebnisse aufs Handy"
+    },
     "page": "Seite {{page}} / {{pages}}",
     "allStandings": {
       "finals": "Finalrunde",

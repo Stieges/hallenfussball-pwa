@@ -8,6 +8,8 @@ import type { MonitorSlide } from '../../../types/monitor';
 import type { Tournament } from '../../../types/tournament';
 import type { MatchStatus } from '../../../types/tournament';
 import { PERFORMANCE_PROFILES } from '../../../types/monitor';
+import de from '../../../i18n/locales/de/monitor.json';
+import en from '../../../i18n/locales/en/monitor.json';
 import { LiveSlide } from '../slides/LiveSlide';
 import { ScheduleFieldSlide } from '../slides/ScheduleFieldSlide';
 import {
@@ -230,5 +232,45 @@ describe('@W2A-031 Kindermodus an der Spielplan-Folie: offener Platz zeigt „no
     spielplan(true);
     expect(screen.queryByText('1. Gruppe A')).toBeNull();
     expect(screen.getAllByText('tournament:slot.undecided').length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('@ZM-071 Zuschauer-QR: Programm-Folie mit Überschrift „Ergebnisse aufs Handy“ und QR zur Zuschauer-Seite', () => {
+  it('Programm qr-code zeigt die Überschrift und den QR mit der Zuschauer-Adresse', async () => {
+    await starte(monitorTurnier(buildTournament(), [slide('qr-code'), slide('custom-text', { headline: 'Danach' })]));
+    expect(screen.getByText('monitor:slides.qr.headline')).toBeInTheDocument();
+    expect(screen.getByTestId('qr-code').getAttribute('data-value')).toContain('/#/live/ABC123');
+  });
+
+  it('Gegenbeispiel: nicht öffentlich → keine QR-Folie, keine Verwaltungs-Adresse, die nächste Folie läuft', async () => {
+    await starte(monitorTurnier(buildTournament({ isPublic: false }), [slide('qr-code'), slide('custom-text', { headline: 'Danach' })]));
+    expect(screen.queryByTestId('qr-code')).toBeNull();
+    expect(screen.queryByText('monitor:slides.qr.headline')).toBeNull();
+    expect(document.body.innerHTML).not.toContain('/#/tournament/');
+    expect(screen.getByText('Danach')).toBeInTheDocument();
+  });
+});
+
+describe('@ZM-130 Zeile 1: Zuschauer-QR ohne eigene Dauer nimmt den Monitor-Standard (20 s)', () => {
+  it('QR-Folie zwischen zwei Folien: bei 19 999 ms noch QR, bei 20 000 ms die nächste Folie', async () => {
+    await starte(monitorTurnier(buildTournament(), [
+      slide('custom-text', { headline: 'Vorher' }, 20),
+      slide('qr-code', {}, null),
+      slide('custom-text', { headline: 'Danach' }, 20),
+    ], { defaultSlideDuration: 20 }));
+    await vorspulenInSchritten(20_000);
+    expect(screen.getByTestId('qr-code')).toBeInTheDocument();
+    await vorspulenInSchritten(19_999);
+    expect(screen.getByTestId('qr-code')).toBeInTheDocument();
+    expect(screen.queryByText('Danach')).toBeNull();
+    await vorspulenInSchritten(1);
+    expect(screen.getByText('Danach')).toBeInTheDocument();
+  });
+});
+
+describe('B-16f4 Texte: „Ergebnisse aufs Handy“ (DE wörtlich, EN vorhanden)', () => {
+  it('monitor.json DE enthält den Satz wörtlich, EN hat den Schlüssel', () => {
+    expect(de.slides.qr.headline).toBe('Ergebnisse aufs Handy');
+    expect(en.slides.qr.headline).toBe('Results on your phone');
   });
 });
