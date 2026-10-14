@@ -11,6 +11,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useScheduleTabActions } from '../useScheduleTabActions';
 import type { Tournament, Match } from '../../../../types/tournament';
+import { calculateStandings } from '../../../../utils/calculations';
 
 function createMatch(overrides: Partial<Match> = {}): Match {
   return {
@@ -133,5 +134,51 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
 
     expect(onMatchesUpdate).not.toHaveBeenCalled();
     expect(showWarning).toHaveBeenCalled();
+  });
+});
+
+// @FU-080 / @TM-143 (B-40 Fixrunde 1): Ergebnis direkt im Spielplan eingetragen -> die Tabelle zählt es.
+describe('useScheduleTabActions — Ergebnis im Spielplan zählt in der Tabelle (@FU-080, @TM-143)', () => {
+  const tabellenTurnier = (matches: Match[]): Tournament => (({
+    ...createTournament(matches),
+    teams: [
+      { id: 'team-a', name: 'Team A', group: 'A' },
+      { id: 'team-b', name: 'Team B', group: 'A' },
+    ],
+    placementLogic: [{ id: 'points', label: 'Punkte', enabled: true }],
+  }));
+  const punkteVon = (turnier: Tournament, name: string) =>
+    calculateStandings(turnier.teams, turnier.matches, turnier, 'A').find((s) => s.team.name === name)?.points;
+
+  it('beide Ergebnisse eingetragen: Status finished, Tabelle rechnet mit 3:1', () => {
+    const turnier = tabellenTurnier([
+      createMatch({ id: 'm1', group: 'A', teamA: 'Team A', teamB: 'Team B' }),
+    ]);
+    const { result, onLocalTournamentUpdate } = renderActions(turnier);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 3, 1);
+    });
+
+    const aktualisiert = onLocalTournamentUpdate.mock.calls[0][0] as Tournament;
+    expect(aktualisiert.matches[0].matchStatus).toBe('finished');
+    expect(punkteVon(aktualisiert, 'Team A')).toBe(3);
+    expect(punkteVon(aktualisiert, 'Team B')).toBe(0);
+  });
+
+  it('Gegenbeispiel: nur ein Wert gesetzt -> kein finished, Tabelle zählt nicht', () => {
+    const turnier = tabellenTurnier([
+      createMatch({ id: 'm1', group: 'A', teamA: 'Team A', teamB: 'Team B' }),
+    ]);
+    const { result, onLocalTournamentUpdate } = renderActions(turnier);
+
+    act(() => {
+      // Die Eingabezelle ruft nur mit beiden Werten auf; hier ein unvollständiger Wert.
+      result.current.handleScoreChange('m1', 3, undefined as unknown as number);
+    });
+
+    const aktualisiert = onLocalTournamentUpdate.mock.calls[0][0] as Tournament;
+    expect(aktualisiert.matches[0].matchStatus).toBeUndefined();
+    expect(punkteVon(aktualisiert, 'Team A')).toBe(0);
   });
 });

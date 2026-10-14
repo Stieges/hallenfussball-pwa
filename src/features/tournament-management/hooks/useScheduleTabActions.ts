@@ -189,10 +189,24 @@ export function useScheduleTabActions({
     // Save to history BEFORE making changes (for Undo)
     saveToHistory();
 
-    // Update tournament matches
-    const updatedMatches = tournament.matches.map((match) =>
-      match.id === matchId ? { ...match, scoreA, scoreB } : match
-    );
+    // Update tournament matches. @FU-080 / @TM-143 (B-40 Fixrunde 1): beide Ergebnisse direkt
+    // im Spielplan eingetragen = Spiel ist abgepfiffen (`finished`), sonst zählt es nicht in der
+    // Tabelle. Ein laufendes Spiel behält seinen Status (der Helfer steuert ihn).
+    const enteredBothScores = typeof scoreA === 'number' && typeof scoreB === 'number';
+    const updatedMatches = tournament.matches.map((match) => {
+      if (match.id !== matchId) {
+        return match;
+      }
+      // Laufend/unterbrochen: Live-Store oder Turnierstatus (DB kennt zusätzlich 'paused').
+      const isLive =
+        isMatchRunning(matchId, tournament.id) ||
+        (match.matchStatus as string | undefined) === 'running' ||
+        (match.matchStatus as string | undefined) === 'paused';
+      const becomesFinished = enteredBothScores && !isLive;
+      return becomesFinished
+        ? { ...match, scoreA, scoreB, matchStatus: 'finished' as const }
+        : { ...match, scoreA, scoreB };
+    });
 
     const updatedTournament = {
       ...tournament,
