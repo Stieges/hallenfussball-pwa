@@ -38,6 +38,9 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
+
 // Nur unbekannte Folien → mit QR-Möglichkeit fällt selectDisplayableSlides auf die
 // Zuschauer-QR-Folie zurück, ohne QR-Möglichkeit auf die Spielplan-Folie (F11).
 function tournamentWith(overrides: Record<string, unknown>) {

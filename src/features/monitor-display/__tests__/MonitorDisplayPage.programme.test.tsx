@@ -45,6 +45,9 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
+
 /** Spielliste mit Überschreibungen je Spiel-Id (die Fixture hat keine Verkettung). */
 function spiele(patches: Record<string, Partial<Match>>): Match[] {
   return FIXTURE_MATCHES.map(m => ({ ...m, ...patches[m.id] }));

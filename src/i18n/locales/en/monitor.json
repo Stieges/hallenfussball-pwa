@@ -45,16 +45,55 @@
       "none": "No more matches"
     },
     "qr": {
-      "headline": "Results on your phone"
+      "headline": "Results on your phone",
+      "idleHint": "Watch the screen in the hall – the match is live here."
     },
     "page": "Page {{page}} / {{pages}}",
     "allStandings": {
       "finals": "Final round",
       "overall": "Overall standings",
       "none": "No tables yet"
+    },
+    "field": "Field {{number}}",
+    "schedule": {
+      "title": "📋 Schedule {{field}}"
+    },
+    "live": {
+      "idleSkip": "Waiting for the next match...",
+      "nextMatch": "Next match",
+      "noMatch": "No match scheduled"
+    },
+    "sponsor": {
+      "notFound": "Sponsor not found",
+      "scanMore": "Scan for more info",
+      "tier": "{{tier}} sponsor"
     }
   },
   "dauerbetrieb": {
     "wakeLockHint": "The screen may switch off according to this device's power-saving setting."
+  },
+  "loading": "Loading display...",
+  "error": {
+    "notFound": "Configuration not found",
+    "back": "← Back",
+    "connection": "The tournament could not be loaded: connection to the server failed. The next attempt runs automatically.",
+    "tournamentNotFound": "Tournament not found: {{id}}. If this screen runs on a different device than the organiser laptop, the tournament must be set to \"Shareable by link\" in the visibility settings.",
+    "monitorNotFound": "Monitor not found: {{id}}",
+    "fetchFailed": "Error while loading",
+    "cloudTimeout": "Cloud request aborted after {{ms}} ms (timeout)"
+  },
+  "group": {
+    "label": "Group"
+  },
+  "standings": {
+    "header": {
+      "rank": "#",
+      "team": "Team",
+      "won": "W",
+      "drawn": "D",
+      "lost": "L",
+      "goalDiff": "GD",
+      "points": "Pts"
+    }
   }
 }

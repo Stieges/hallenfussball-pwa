@@ -31,6 +31,9 @@ vi.mock('../../core/repositories/LocalStorageRepository', () => ({
 import { LiveViewScreen } from '../LiveViewScreen';
 import { RepositoryProvider } from '../../core/contexts/RepositoryContext';
 
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../test/realDeI18n')).initRealDeI18n();
+
 const MY_TEAM_KEY = `live:${SHARE_CODE}:myTeam`;
 const GROUP_B_TEAMS = ['VfL Mitte', 'FC Hafen', 'SV Berg', 'TuS Tal'];
 
@@ -72,9 +75,6 @@ function matchOf(tournament: Tournament, matchNumber: number): ScheduledMatch {
   return found;
 }
 
-function countOccurrences(text: string, needle: string): number {
-  return text.split(needle).length - 1;
-}
 
 describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
   beforeEach(() => {
@@ -212,7 +212,11 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       expect(text).not.toContain('matchCard.live');
       // Spiel 1 und Spiel 7 haben beide einen Stand und gelten darum als beendet;
       // jede Karte steht zweimal im DOM (Desktop- und Mobil-Ansicht).
-      expect(countOccurrences(text, 'matchCard.finished')).toBe(4);
+      // Status-Beschriftung „Ende“ als eigenes Blatt-Element (B-41: deutscher Text statt Schlüssel).
+      const endeLabels = Array.from(container.querySelectorAll('*')).filter(
+        (el) => el.children.length === 0 && el.textContent === 'Ende'
+      );
+      expect(endeLabels).toHaveLength(4);
       // Je Spiel: der Status steht am Kreis (data-match-status), nicht nur im Zähler.
       const circles = container.querySelectorAll(`[data-testid="match-circle-${m7.id}"]`);
       expect(circles.length).toBeGreaterThan(0);

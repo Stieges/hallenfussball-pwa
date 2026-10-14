@@ -40,7 +40,7 @@ export function QrSlide({ tournament, style }: QrSlideProps) {
       )}
       {!qrUrl && (
         <div style={{ fontSize: displayFontSizes.bodyMD }}>
-          Schau auf die Anzeige in der Halle – hier läuft das Spiel live mit.
+          {t('slides.qr.idleHint')}
         </div>
       )}
     </div>

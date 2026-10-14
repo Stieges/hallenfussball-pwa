@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { cssVars, displayEffects, displayFontSizes, displaySpacing, monitorThemes, displayMonitor } from '../../../design-tokens';
 import { calculateStandings } from '../../../utils/calculations';
 
@@ -11,6 +12,7 @@ interface StandingsTableProps {
 
 /** Tabelle einer Gruppe (Kopf und Zeilen), wie sie am Monitor steht (B-16f3, Organismus). */
 export function StandingsTable({ rows, themeColors }: StandingsTableProps) {
+  const { t } = useTranslation('monitor');
   return (
     <div style={{
       width: '100%',
@@ -32,13 +34,13 @@ export function StandingsTable({ rows, themeColors }: StandingsTableProps) {
         color: themeColors.textMuted,
         fontWeight: cssVars.fontWeights.medium,
       }}>
-        <div>#</div>
-        <div>Team</div>
-        <div style={{ textAlign: 'center' }}>S</div>
-        <div style={{ textAlign: 'center' }}>U</div>
-        <div style={{ textAlign: 'center' }}>N</div>
-        <div style={{ textAlign: 'center' }}>Diff</div>
-        <div style={{ textAlign: 'center' }}>Pkt</div>
+        <div>{t('standings.header.rank')}</div>
+        <div>{t('standings.header.team')}</div>
+        <div style={{ textAlign: 'center' }}>{t('standings.header.won')}</div>
+        <div style={{ textAlign: 'center' }}>{t('standings.header.drawn')}</div>
+        <div style={{ textAlign: 'center' }}>{t('standings.header.lost')}</div>
+        <div style={{ textAlign: 'center' }}>{t('standings.header.goalDiff')}</div>
+        <div style={{ textAlign: 'center' }}>{t('standings.header.points')}</div>
       </div>
 
       {/* Table Rows */}

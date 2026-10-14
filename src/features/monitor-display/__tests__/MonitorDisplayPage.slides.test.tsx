@@ -58,6 +58,9 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
+
 /** Punkte-Zelle (letzte Spalte) der Tabellenzeile eines Teams. */
 function pointsOf(teamName: string): string | null {
   return screen.getByText(teamName).parentElement?.lastElementChild?.textContent ?? null;

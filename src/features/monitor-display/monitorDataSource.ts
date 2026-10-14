@@ -4,6 +4,7 @@
  * Herausgelöst aus MonitorDisplayPage.loadData (Abruf-Teil). Die Seite selbst bleibt in b1
  * unverändert; die Verdrahtung folgt in B-16b2.
  */
+import i18n from 'i18next';
 import { SupabaseRepository } from '../../core/repositories/SupabaseRepository';
 import { LocalStorageRepository } from '../../core/repositories/LocalStorageRepository';
 import { isSupabaseConfigured } from '../../lib/supabase';
@@ -40,7 +41,7 @@ const CLOUD_TIMEOUT_MS = 4_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Cloud-Anfrage nach ${ms}ms abgebrochen (Timeout)`)), ms);
+    const timer = setTimeout(() => reject(new Error(i18n.t('monitor:error.cloudTimeout', { ms }))), ms);
     promise.then(
       (value) => { clearTimeout(timer); resolve(value); },
       (err: unknown) => { clearTimeout(timer); reject(err instanceof Error ? err : new Error(String(err))); }

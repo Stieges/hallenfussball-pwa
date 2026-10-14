@@ -14,6 +14,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../design-tokens';
 import { ScheduleDisplay } from '../components/ScheduleDisplay';
 import { formatDateGerman } from '../utils/locationHelpers';
@@ -45,6 +46,7 @@ export interface LiveViewScreenProps {
 }
 
 export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => {
+  const { t } = useTranslation('publicView');
   const { tournament, schedule, standings: currentStandings, loadingState, errorMessage, refresh } =
     usePublicTournament(shareCode);
 
@@ -140,7 +142,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
             fontSize: cssVars.fontSizes.sm,
             color: cssVars.colors.textMuted,
           }}>
-            Loslassen zum Aktualisieren
+            {t('liveView.pullRelease')}
           </span>
         )}
       </div>
@@ -153,7 +155,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
             {tournament.ageClass} • {formatDateGerman(tournament.date)}
           </p>
           <div style={shareCodeBadgeStyle}>
-            LIVE: {shareCode}
+            {t('liveView.badge', { code: shareCode })}
           </div>
         </div>
 
@@ -232,7 +234,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
             fontSize: cssVars.fontSizes.xs,
           }}
         >
-          <p>Erstellt mit Hallenfußball-App</p>
+          <p>{t('liveView.footer')}</p>
         </div>
       </div>
 

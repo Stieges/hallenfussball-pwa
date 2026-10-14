@@ -3,6 +3,7 @@
  * Texte und Aufbau wörtlich aus LiveViewScreen übernommen.
  */
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { publicPageContainerStyle, publicPageContentStyle } from '../publicPageStyles';
 import { Card } from '../../../components/ui/Card';
@@ -18,7 +19,9 @@ const errorIconStyle: CSSProperties = {
   marginBottom: cssVars.spacing.lg,
 };
 
-export const PublicLoadingView: React.FC<{ shareCode: string }> = ({ shareCode }) => (
+export const PublicLoadingView: React.FC<{ shareCode: string }> = ({ shareCode }) => {
+  const { t } = useTranslation('publicView');
+  return (
   <div style={publicPageContainerStyle}>
     <div style={publicPageContentStyle}>
       <div style={{ ...errorContainerStyle, color: cssVars.colors.textSecondary }}>
@@ -34,9 +37,9 @@ export const PublicLoadingView: React.FC<{ shareCode: string }> = ({ shareCode }
             marginBottom: cssVars.spacing.lg,
           }}
         />
-        <p>Turnier wird geladen...</p>
+        <p>{t('loading.title')}</p>
         <p style={{ fontSize: cssVars.fontSizes.sm, marginTop: cssVars.spacing.sm }}>
-          Code: {shareCode}
+          {t('loading.code', { code: shareCode })}
         </p>
         <style>{`
           @keyframes spin {
@@ -46,52 +49,59 @@ export const PublicLoadingView: React.FC<{ shareCode: string }> = ({ shareCode }
       </div>
     </div>
   </div>
-);
+  );
+};
 
-export const PublicNotFoundView: React.FC<{ shareCode: string }> = ({ shareCode }) => (
+export const PublicNotFoundView: React.FC<{ shareCode: string }> = ({ shareCode }) => {
+  const { t } = useTranslation('publicView');
+  return (
   <div style={publicPageContainerStyle}>
     <div style={publicPageContentStyle}>
       <Card>
         <div style={errorContainerStyle}>
           <div style={errorIconStyle}>🔍</div>
           <h2 style={{ fontSize: cssVars.fontSizes.xl, marginBottom: cssVars.spacing.md }}>
-            Turnier nicht gefunden
+            {t('notFound.title')}
           </h2>
           <p style={{ color: cssVars.colors.textMuted, marginBottom: cssVars.spacing.lg }}>
-            Der Code <strong>{shareCode}</strong> ist ungültig oder das Turnier wurde nicht freigegeben.
+            {t('notFound.bodyBefore')} <strong>{shareCode}</strong> {t('notFound.bodyAfter')}
           </p>
           <Button
             variant="secondary"
             onClick={() => window.location.href = '/'}
           >
-            Zur Startseite
+            {t('notFound.home')}
           </Button>
         </div>
       </Card>
     </div>
   </div>
-);
+  );
+};
 
-export const PublicErrorView: React.FC<{ errorMessage: string | null }> = ({ errorMessage }) => (
+export const PublicErrorView: React.FC<{ errorMessage: string | null }> = ({ errorMessage }) => {
+  const { t } = useTranslation('publicView');
+  return (
   <div style={publicPageContainerStyle}>
     <div style={publicPageContentStyle}>
       <Card>
         <div style={errorContainerStyle}>
           <div style={errorIconStyle}>⚠️</div>
           <h2 style={{ fontSize: cssVars.fontSizes.xl, marginBottom: cssVars.spacing.md }}>
-            Fehler beim Laden
+            {t('error.title')}
           </h2>
           <p style={{ color: cssVars.colors.textMuted, marginBottom: cssVars.spacing.lg }}>
-            {errorMessage ?? 'Ein unbekannter Fehler ist aufgetreten.'}
+            {errorMessage ?? t('error.unknown')}
           </p>
           <Button
             variant="secondary"
             onClick={() => window.location.reload()}
           >
-            Erneut versuchen
+            {t('error.retry')}
           </Button>
         </div>
       </Card>
     </div>
   </div>
-);
+  );
+};

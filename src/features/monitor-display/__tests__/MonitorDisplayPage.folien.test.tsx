@@ -47,6 +47,9 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
+
 function monitorTurnier(tournament: Tournament, slides: MonitorSlide[], overrides: Parameters<typeof withMonitor>[0] = {}): Tournament {
   return attachMonitor(tournament, withMonitor({ slides, ...overrides }));
 }
@@ -86,7 +89,7 @@ const zeilen = () => screen.queryAllByTestId('monitor-match-row');
 describe('@ZM-071 Nächste Spiele: Zeilen über alle Felder, Uhrzeit und Feld, nie ein Ergebnis', () => {
   it('zeigt Spiel 8 (14:20, Feld 2) und Spiel 9 (14:40, Feld 1); laufendes und beendetes Spiel fehlen', async () => {
     await starte(monitorTurnier(buildTournament({ matches: withScheduledTimes() }), [slide('next-matches', { matchCount: 3 })]));
-    expect(screen.getByText('monitor:slides.nextMatches.title')).toBeInTheDocument();
+    expect(screen.getByText('Nächste Spiele')).toBeInTheDocument();
     expect(zeilen()).toHaveLength(2);
     expect(zeilen()[0]).toHaveTextContent('14:20');
     expect(zeilen()[0]).toHaveTextContent('Feld 2');
@@ -107,7 +110,7 @@ describe('@ZM-071 Nächste Spiele: Zeilen über alle Felder, Uhrzeit und Feld, n
   it('keine offenen Spiele: neutraler Satz statt leerer Folie (R-f1)', async () => {
     const alleFertig = withScheduledTimes().map(m => ({ ...m, matchStatus: 'finished' as const }));
     await starte(monitorTurnier(buildTournament({ matches: alleFertig }), [slide('next-matches', { matchCount: 3 })]));
-    expect(screen.getByText('monitor:slides.nextMatches.none')).toBeInTheDocument();
+    expect(screen.getByText('Keine weiteren Spiele')).toBeInTheDocument();
     expect(zeilen()).toHaveLength(0);
   });
 });
@@ -125,7 +128,7 @@ describe('@ZM-078 Nächste Spiele nach Abpfiff: Spiel 7 fällt aus der Liste; Sp
     expect(screen.getByText('Bäckerei Maier')).toBeInTheDocument();
     await vorspulenInSchritten(1);
     expect(screen.queryByText('Bäckerei Maier')).toBeNull();
-    expect(screen.getByText('monitor:slides.nextMatches.title')).toBeInTheDocument();
+    expect(screen.getByText('Nächste Spiele')).toBeInTheDocument();
     expect(screen.queryByText('SV Süd')).toBeNull();
     expect(zeilen()).toHaveLength(1);
     expect(zeilen()[0]).toHaveTextContent('14:40');
@@ -152,7 +155,7 @@ describe('@ZM-089 Kindermodus: offenes Halbfinale als nächstes Spiel', () => {
     await starte(monitorTurnier(spaeter(true), [slide('next-matches', { matchCount: 1 })]));
     expect(zeilen()).toHaveLength(1);
     expect(screen.queryByText('1. Gruppe A')).toBeNull();
-    expect(within(zeilen()[0]).getAllByText('tournament:slot.undecided')).toHaveLength(2);
+    expect(within(zeilen()[0]).getAllByText('noch offen')).toHaveLength(2);
     expect(screen.queryByText('1:0')).toBeNull();
   });
 });
@@ -208,7 +211,7 @@ describe('@W2A-031 Kindermodus an der Live-Folie: offener Platz zeigt „noch of
     );
     expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument();
     expect(screen.queryByText('1. Gruppe A')).toBeNull();
-    expect(screen.getAllByText('tournament:slot.undecided')).toHaveLength(2);
+    expect(screen.getAllByText('noch offen')).toHaveLength(2);
   });
 });
 
@@ -231,21 +234,21 @@ describe('@W2A-031 Kindermodus an der Spielplan-Folie: offener Platz zeigt „no
   it('mit Kindermodus: offener Platz zeigt tournament:slot.undecided, kein „1. Gruppe A“', () => {
     spielplan(true);
     expect(screen.queryByText('1. Gruppe A')).toBeNull();
-    expect(screen.getAllByText('tournament:slot.undecided').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('noch offen').length).toBeGreaterThanOrEqual(2);
   });
 });
 
 describe('@ZM-071 Zuschauer-QR: Programm-Folie mit Überschrift „Ergebnisse aufs Handy“ und QR zur Zuschauer-Seite', () => {
   it('Programm qr-code zeigt die Überschrift und den QR mit der Zuschauer-Adresse', async () => {
     await starte(monitorTurnier(buildTournament(), [slide('qr-code'), slide('custom-text', { headline: 'Danach' })]));
-    expect(screen.getByText('monitor:slides.qr.headline')).toBeInTheDocument();
+    expect(screen.getByText('Ergebnisse aufs Handy')).toBeInTheDocument();
     expect(screen.getByTestId('qr-code').getAttribute('data-value')).toContain('/#/live/ABC123');
   });
 
   it('Gegenbeispiel: nicht öffentlich → keine QR-Folie, keine Verwaltungs-Adresse, die nächste Folie läuft', async () => {
     await starte(monitorTurnier(buildTournament({ isPublic: false }), [slide('qr-code'), slide('custom-text', { headline: 'Danach' })]));
     expect(screen.queryByTestId('qr-code')).toBeNull();
-    expect(screen.queryByText('monitor:slides.qr.headline')).toBeNull();
+    expect(screen.queryByText('Ergebnisse aufs Handy')).toBeNull();
     expect(document.body.innerHTML).not.toContain('/#/tournament/');
     expect(screen.getByText('Danach')).toBeInTheDocument();
   });

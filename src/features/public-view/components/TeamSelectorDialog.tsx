@@ -5,6 +5,7 @@
  * Texte wörtlich übernommen.
  */
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars, zIndex } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import type { Team } from '../../../types/tournament';
@@ -43,14 +44,16 @@ export const TeamSelectorDialog: React.FC<TeamSelectorDialogProps> = ({
   myTeamId,
   onSelectTeam,
   onClose,
-}) => (
+}) => {
+  const { t } = useTranslation('publicView');
+  return (
   <div style={teamSelectorStyle} onClick={onClose} data-testid="team-selector-dialog">
     <div style={teamSelectorContentStyle} onClick={(e) => e.stopPropagation()}>
       <h3 style={{ marginBottom: cssVars.spacing.md, fontSize: cssVars.fontSizes.lg }}>
-        Mein Team wählen
+        {t('teamSelector.title')}
       </h3>
       <p style={{ marginBottom: cssVars.spacing.md, color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
-        Wähle dein Team, um seine Spiele hervorzuheben.
+        {t('teamSelector.hint')}
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm }}>
         {/* "Kein Team" option */}
@@ -59,7 +62,7 @@ export const TeamSelectorDialog: React.FC<TeamSelectorDialogProps> = ({
           onClick={() => onSelectTeam(null)}
           style={{ justifyContent: 'flex-start' }}
         >
-          Kein Team (alle anzeigen)
+          {t('teamSelector.none')}
         </Button>
         {/* Teams */}
         {teams.map((team) => (
@@ -72,7 +75,7 @@ export const TeamSelectorDialog: React.FC<TeamSelectorDialogProps> = ({
             {team.name}
             {team.group && (
               <span style={{ marginLeft: 'auto', color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
-                Gruppe {team.group}
+                {t('teamSelector.group', { group: team.group })}
               </span>
             )}
           </Button>
@@ -80,4 +83,5 @@ export const TeamSelectorDialog: React.FC<TeamSelectorDialogProps> = ({
       </div>
     </div>
   </div>
-);
+  );
+};

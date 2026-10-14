@@ -40,6 +40,9 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
+
 function monitorTurnier(tournament: Tournament, slides: ReturnType<typeof slide>[], overrides: Parameters<typeof withMonitor>[0] = {}): Tournament {
   return attachMonitor(tournament, withMonitor({ slides, ...overrides }));
 }
@@ -121,7 +124,7 @@ describe('@ZM-071 Alle Tabellen / Finalrunde: Seite 0 Gruppe A, Seite 1 Gruppe B
     expect(screen.queryByText('FC Nord')).toBeNull();
 
     await vorspulenInSchritten(15_000);
-    expect(screen.getByText('monitor:slides.allStandings.finals')).toBeInTheDocument();
+    expect(screen.getByText('Finalrunde')).toBeInTheDocument();
     expect(screen.getByText('Finale')).toBeInTheDocument();
     expect(screen.getByText('Sieger 1. Halbfinale')).toBeInTheDocument();
     expect(screen.getByText('Sieger 2. Halbfinale')).toBeInTheDocument();
@@ -189,7 +192,7 @@ describe('@ZM-130 Zeile 3: Seitenwechsel über die gerenderte Seite (echter Poll
 describe('@ZM-129 Spielplan mit 13 Spielen: 3 Seiten, jede Zeile genau auf einer Seite', () => {
   it('Seiten 6, 6 und 1 Zeilen; die Vereinigung ist alle 13 Uhrzeiten, keine doppelt', async () => {
     await starte(monitorTurnier(buildTournament({ matches: dreizehnSpiele() }), [slide('schedule-field', { fieldId: 'field-1' })]));
-    expect(screen.getByText('monitor:slides.page')).toBeInTheDocument();
+    expect(screen.getByText(/^Seite \d+ \/ \d+$/)).toBeInTheDocument();
     const seite1 = uhrzeiten();
     await vorspulenInSchritten(15_000);
     const seite2 = uhrzeiten();
@@ -207,7 +210,7 @@ describe('@ZM-129 Spielplan mit 13 Spielen: 3 Seiten, jede Zeile genau auf einer
 describe('@ZM-129 Nächste Spiele mit 8 offenen Spielen (matchCount 10): 2 Seiten, 6 und 2 Zeilen', () => {
   it('Seite 1 zeigt 14:00 bis 14:25, nach 15 s Seite 2 mit 14:30 und 14:35 über den echten Takt', async () => {
     await starte(monitorTurnier(buildTournament({ matches: dreizehnSpiele().slice(0, 8) }), [slide('next-matches', { matchCount: 10 })]));
-    expect(screen.getByText('monitor:slides.page')).toBeInTheDocument();
+    expect(screen.getByText(/^Seite \d+ \/ \d+$/)).toBeInTheDocument();
     expect(uhrzeiten()).toEqual(['14:00', '14:05', '14:10', '14:15', '14:20', '14:25']);
     await vorspulenInSchritten(15_000);
     expect(uhrzeiten()).toEqual(['14:30', '14:35']);
@@ -218,7 +221,7 @@ describe('@ZM-089 Kindermodus: Alle Tabellen wird übersprungen, nie Finalrunde 
   it('nur Alle Tabellen im Programm → Zuschauer-QR', async () => {
     await starte(monitorTurnier(buildTournament({ hideScoresForPublic: true, matches: mitFinalrunde() }), [slide('all-standings')]));
     expect(screen.getByTestId('qr-code').getAttribute('data-value')).toContain('/#/live/ABC123');
-    expect(screen.queryByText('monitor:slides.allStandings.finals')).toBeNull();
+    expect(screen.queryByText('Finalrunde')).toBeNull();
     expect(screen.queryByText('Gruppe A', { exact: false })).toBeNull();
   });
 
@@ -230,7 +233,7 @@ describe('@ZM-089 Kindermodus: Alle Tabellen wird übersprungen, nie Finalrunde 
     expect(screen.getByText('Danach')).toBeInTheDocument();
     await vorspulenInSchritten(60_000);
     expect(screen.getByText('Danach')).toBeInTheDocument();
-    expect(screen.queryByText('monitor:slides.allStandings.finals')).toBeNull();
+    expect(screen.queryByText('Finalrunde')).toBeNull();
     expect(screen.queryByText('DJK Berg')).toBeNull();
   });
 });
@@ -240,11 +243,11 @@ describe('Alle Tabellen ohne Gruppen (Jeder gegen Jeden): eine Gesamttabelle (Co
 
   it('ein Abschnitt „Gesamttabelle“ mit allen Teams, keine Seitenanzeige, nie „Noch keine Tabellen“', async () => {
     await starte(monitorTurnier(buildTournament({ teams: ohneGruppen(), matches: withScheduledTimes() }), [slide('all-standings')]));
-    expect(screen.getByText(/monitor:slides\.allStandings\.overall/)).toBeInTheDocument();
+    expect(screen.getByText(/Gesamttabelle/)).toBeInTheDocument();
     expect(screen.getByText('FC Nord')).toBeInTheDocument();
     expect(screen.getByText('DJK Berg')).toBeInTheDocument();
-    expect(screen.queryByText('monitor:slides.allStandings.none')).toBeNull();
-    expect(screen.queryByText('monitor:slides.page')).toBeNull();
+    expect(screen.queryByText('Noch keine Tabellen')).toBeNull();
+    expect(screen.queryByText(/^Seite \d+ \/ \d+$/)).toBeNull();
     await vorspulenInSchritten(30_000);
     expect(screen.getByText('FC Nord')).toBeInTheDocument();
   });
@@ -252,12 +255,12 @@ describe('Alle Tabellen ohne Gruppen (Jeder gegen Jeden): eine Gesamttabelle (Co
   it('Kindermodus: auch ohne Gruppen übersprungen, Zuschauer-QR statt Gesamttabelle', async () => {
     await starte(monitorTurnier(buildTournament({ teams: ohneGruppen(), matches: withScheduledTimes(), hideScoresForPublic: true }), [slide('all-standings')]));
     expect(screen.getByTestId('qr-code').getAttribute('data-value')).toContain('/#/live/ABC123');
-    expect(screen.queryByText(/monitor:slides\.allStandings\.overall/)).toBeNull();
+    expect(screen.queryByText('Gesamttabelle')).toBeNull();
   });
 
   it('Gegenbeispiel mit Gruppen: je Gruppe ein Abschnitt, keine Gesamttabelle', async () => {
     await starte(monitorTurnier(buildTournament({ matches: withScheduledTimes() }), [slide('all-standings')]));
-    expect(screen.queryByText(/monitor:slides\.allStandings\.overall/)).toBeNull();
+    expect(screen.queryByText('Gesamttabelle')).toBeNull();
     expect(screen.queryByText('DJK Berg')).toBeNull();
     await vorspulenInSchritten(15_000);
     expect(screen.getByText('DJK Berg')).toBeInTheDocument();

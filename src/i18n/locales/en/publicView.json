@@ -1,0 +1,64 @@
+{
+  "loading": {
+    "title": "Loading tournament...",
+    "code": "Code: {{code}}"
+  },
+  "notFound": {
+    "title": "Tournament not found",
+    "bodyBefore": "The code",
+    "bodyAfter": "is invalid or the tournament has not been shared.",
+    "home": "Go to start page"
+  },
+  "error": {
+    "title": "Error while loading",
+    "unknown": "An unknown error occurred.",
+    "retry": "Try again",
+    "loadFailed": "Error while loading the tournament"
+  },
+  "liveView": {
+    "pullRelease": "Release to refresh",
+    "badge": "LIVE: {{code}}",
+    "footer": "Created with Hallenfußball App"
+  },
+  "myTeam": {
+    "label": "My team:",
+    "none": "Not selected",
+    "onlyMine": "Only mine",
+    "change": "Change",
+    "choose": "Choose team"
+  },
+  "teamSelector": {
+    "title": "Choose my team",
+    "hint": "Pick your team to highlight its matches.",
+    "none": "No team (show all)",
+    "group": "Group {{group}}"
+  },
+  "filter": {
+    "group": "Group:",
+    "phase": "Phase:",
+    "status": "Status:",
+    "all": "All",
+    "groupChip": "Group {{group}}",
+    "finalRound": "Final round",
+    "scheduled": "Scheduled",
+    "live": "🔴 Live",
+    "finished": "Finished"
+  },
+  "standings": {
+    "hidden": "🏆 Standings hidden",
+    "bambini": "(Bambini mode enabled)"
+  },
+  "info": {
+    "title": "Tournament info",
+    "name": "Name:",
+    "date": "Date:",
+    "location": "Location:",
+    "teams": "Teams:",
+    "teamCount": "{{n}} teams",
+    "shareCode": "Share code:",
+    "theme": "Display",
+    "bambiTitle": "🔒 Bambini mode active",
+    "hiddenScores": "Scores are not shown. ",
+    "hiddenRankings": "Standings are not shown."
+  }
+}

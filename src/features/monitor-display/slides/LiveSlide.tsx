@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars, displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
@@ -22,12 +23,13 @@ interface LiveSlideProps {
 }
 
 export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: LiveSlideProps) {
+  const { t } = useTranslation('monitor');
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
   const field = tournament.fields?.find(f => f.id === slide.config.fieldId);
-  const fieldName = field?.customName ?? field?.defaultName ?? `Feld ${fieldNumber}`;
+  const fieldName = field?.customName ?? field?.defaultName ?? t('slides.field', { number: fieldNumber });
   const { matches, teams } = tournament;
 
   // Gepinntes Spiel (@ZM-075/077), sonst das laufende Spiel auf diesem Feld (Halbzeit zählt mit)
@@ -77,7 +79,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
           fontSize: displayFontSizes.bodyLG,
           color: themeColors.textMuted,
         }}>
-          Warte auf nächstes Spiel...
+          {t('slides.live.idleSkip')}
         </div>
       ) : nextMatch ? (
         (() => {
@@ -90,7 +92,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
                 color: themeColors.textMuted,
                 marginBottom: displaySpacing.contentLG,
               }}>
-                Nächstes Spiel
+                {t('slides.live.nextMatch')}
               </div>
               <div style={{
                 display: 'flex',
@@ -140,7 +142,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
           fontSize: displayFontSizes.bodyLG,
           color: themeColors.textMuted,
         }}>
-          Kein Spiel geplant
+          {t('slides.live.noMatch')}
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { displayFontSizes, displaySpacing, monitorThemes, displayMonitor, cssVars } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
@@ -19,11 +20,12 @@ interface ScheduleFieldSlideProps {
 
 /** Spielplan eines Feldes (@ZM-071): alle Spiele in Anpfiff-Reihenfolge mit Uhrzeit, je Seite 6 Zeilen (@ZM-129). */
 export function ScheduleFieldSlide({ slide, tournament, theme, style, page = 0 }: ScheduleFieldSlideProps) {
+  const { t } = useTranslation('monitor');
   const themeColors = monitorThemes[resolveTheme(theme)];
 
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
   const field = tournament.fields?.find(f => f.id === slide.config.fieldId);
-  const fieldName = field?.customName ?? field?.defaultName ?? `Feld ${fieldNumber}`;
+  const fieldName = field?.customName ?? field?.defaultName ?? t('slides.field', { number: fieldNumber });
 
   const schedule = fieldSchedule(tournament.matches, fieldNumber);
   const pages = pagesFor(schedule.length);
@@ -41,7 +43,7 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style, page = 0 }
         marginBottom: displaySpacing.sectionMD,
         color: themeColors.text,
       }}>
-        📋 Spielplan {fieldName}
+        {t('slides.schedule.title', { field: fieldName })}
       </div>
 
       {/* Match List */}
