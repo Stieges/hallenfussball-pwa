@@ -563,7 +563,8 @@
       "moveDown": "Move down",
       "edit": "Edit",
       "remove": "Remove",
-      "addSlide": "Add slide"
+      "addSlide": "Add slide",
+      "qrHidden": "Without a public tournament this slide is skipped"
     }
   },
   "colorScheme": {

@@ -563,7 +563,8 @@
       "moveDown": "Nach unten",
       "edit": "Bearbeiten",
       "remove": "Entfernen",
-      "addSlide": "Slide hinzufügen"
+      "addSlide": "Slide hinzufügen",
+      "qrHidden": "Ohne öffentliches Turnier wird diese Folie übersprungen"
     }
   },
   "colorScheme": {

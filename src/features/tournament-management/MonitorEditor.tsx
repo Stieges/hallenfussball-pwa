@@ -71,6 +71,21 @@ const THEME_OPTIONS: { value: MonitorTheme; labelKey: string; descriptionKey: st
 
 const DURATION_PRESETS = [5, 10, 15, 20, 30, 45, 60];
 
+/**
+ * Positivliste der Folien-Typen im Editor (@OB-002: Funktion erst anbieten, wenn sie wirkt).
+ * Schedule-group und top-scorers haben keinen Renderer im Monitor und bleiben verborgen.
+ */
+const MONITOR_SLIDE_TYPES_OFFERED: readonly SlideType[] = [
+  'live',
+  'standings',
+  'schedule-field',
+  'sponsor',
+  'custom-text',
+  'qr-code',
+  'all-standings',
+  'next-matches',
+];
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -160,10 +175,13 @@ export function MonitorEditor({
     }));
   }, [tournament.groups, tournament.numberOfGroups, tournament.groupSystem, t]);
 
-  // Available slide types (Phase 1 only)
+  // Ohne öffentliches Turnier mit Share-Code entfällt die Zuschauer-QR-Folie im Monitor (@ZM-071, F-04)
+  const zuschauerQrMoeglich = tournament.isPublic === true && Boolean(tournament.shareCode);
+
+  // Angebotene Folien-Typen: nur was der Monitor darstellt (@OB-002)
   const availableSlideTypes: SlideTypeOption[] = useMemo(() => {
     return SLIDE_TYPES
-      .filter(s => s.phase === 1)
+      .filter(s => MONITOR_SLIDE_TYPES_OFFERED.includes(s.type))
       .map(s => ({
         type: s.type,
         label: s.label,
@@ -787,6 +805,11 @@ export function MonitorEditor({
                     >
                       <div style={{ fontSize: cssVars.fontSizes.xxl, marginBottom: '4px' }}>{st.icon}</div>
                       <div style={{ fontSize: cssVars.fontSizes.sm }}>{st.label}</div>
+                      {st.type === 'qr-code' && !zuschauerQrMoeglich && (
+                        <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>
+                          {t('monitorEditor.slides.qrHidden')}
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
