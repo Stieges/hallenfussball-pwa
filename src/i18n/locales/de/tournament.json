@@ -281,6 +281,40 @@
       "deleteFailed": "Fehler beim Löschen",
       "duplicateFailed": "Fehler beim Duplizieren",
       "copyFailed": "URL konnte nicht kopiert werden"
+    },
+    "transfer": {
+      "openButton": "Monitore übernehmen",
+      "exportButton": "Einstellungen exportieren",
+      "title": "Monitore übernehmen",
+      "intro": "Übernimmt Monitore, Folien, Reihenfolge, Dauer und Bildrand. Teams, Spiele und Tabellen kommen aus diesem Turnier.",
+      "fromTournament": "Aus einem anderen Turnier",
+      "loading": "Turniere werden geladen …",
+      "noSources": "Kein anderes Turnier mit Monitoren gefunden.",
+      "sourceMeta_one": "{{count}} Monitor",
+      "sourceMeta_other": "{{count}} Monitore",
+      "fromTemplate": "Vorlage",
+      "templateButton": "Vorlage „Hallen-Standard“",
+      "templateDescription": "Ein Monitor mit Live-Spiel, Nächsten Spielen, Tabelle und Zuschauer-QR.",
+      "fromFile": "Aus Datei",
+      "chooseFile": "Datei auswählen",
+      "fileChosen": "Gewählte Datei: {{name}}",
+      "summary_one": "{{count}} Monitor mit {{slides}} Folie",
+      "summary_other": "{{count}} Monitore mit {{slides}} Folien",
+      "confirm": "Übernehmen",
+      "cancel": "Abbrechen",
+      "close": "Schließen",
+      "done_one": "{{count}} Monitor übernommen.",
+      "done_other": "{{count}} Monitore übernommen.",
+      "skippedSponsor": "Sponsor „{{name}}“ fehlt in diesem Turnier – Folie nicht übernommen",
+      "noScreenChange": "Laufende Bildschirme bleiben unverändert. Die neuen Monitore sind noch keinem Bildschirm zugeordnet.",
+      "errors": {
+        "tooLarge": "Die Datei ist zu groß (maximal 256 KB). Es wurde nichts geändert.",
+        "notMonitorConfig": "Diese Datei enthält keine Monitor-Einstellungen. Es wurde nichts geändert.",
+        "unsupportedVersion": "Diese Version der Monitor-Datei wird nicht unterstützt. Es wurde nichts geändert.",
+        "invalid": "Die Datei ist beschädigt oder enthält ungültige Einstellungen. Es wurde nichts geändert.",
+        "readFailed": "Die Datei konnte nicht gelesen werden. Es wurde nichts geändert.",
+        "saveFailed": "Die Monitore konnten nicht übernommen werden."
+      }
     }
   },
   "sponsor": {

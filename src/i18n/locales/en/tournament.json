@@ -281,6 +281,40 @@
       "deleteFailed": "Error deleting",
       "duplicateFailed": "Error duplicating",
       "copyFailed": "Could not copy URL"
+    },
+    "transfer": {
+      "openButton": "Take over monitors",
+      "exportButton": "Export settings",
+      "title": "Take over monitors",
+      "intro": "Takes over monitors, slides, order, duration and screen margin. Teams, matches and tables come from this tournament.",
+      "fromTournament": "From another tournament",
+      "loading": "Loading tournaments …",
+      "noSources": "No other tournament with monitors found.",
+      "sourceMeta_one": "{{count}} monitor",
+      "sourceMeta_other": "{{count}} monitors",
+      "fromTemplate": "Template",
+      "templateButton": "Template \"Hall standard\"",
+      "templateDescription": "One monitor with live match, next matches, table and spectator QR code.",
+      "fromFile": "From file",
+      "chooseFile": "Choose file",
+      "fileChosen": "Chosen file: {{name}}",
+      "summary_one": "{{count}} monitor with {{slides}} slide",
+      "summary_other": "{{count}} monitors with {{slides}} slides",
+      "confirm": "Take over",
+      "cancel": "Cancel",
+      "close": "Close",
+      "done_one": "{{count}} monitor taken over.",
+      "done_other": "{{count}} monitors taken over.",
+      "skippedSponsor": "Sponsor \"{{name}}\" is missing in this tournament – slide not taken over",
+      "noScreenChange": "Running screens stay unchanged. The new monitors are not yet assigned to any screen.",
+      "errors": {
+        "tooLarge": "The file is too large (maximum 256 KB). Nothing was changed.",
+        "notMonitorConfig": "This file contains no monitor settings. Nothing was changed.",
+        "unsupportedVersion": "This version of the monitor file is not supported. Nothing was changed.",
+        "invalid": "The file is damaged or contains invalid settings. Nothing was changed.",
+        "readFailed": "The file could not be read. Nothing was changed.",
+        "saveFailed": "The monitors could not be taken over."
+      }
     }
   },
   "sponsor": {
