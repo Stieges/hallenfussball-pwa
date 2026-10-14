@@ -4,6 +4,7 @@
  * Aufbau: Kopf, Meta-Box, Hinweis, Teilnehmer, Gruppenphase, Gruppentabellen (optional), Finalrunde,
  * Platzierung. A4 hoch. Die Geometrie kommt aus `layout.ts`, Farben und Maße aus `design-tokens/print.ts`.
  */
+import i18next from 'i18next';
 import jsPDF from 'jspdf';
 import type { GeneratedSchedule } from '../../core/generators';
 import type { Standing } from '../../types/tournament';
@@ -15,10 +16,18 @@ import { renderHeader } from './render/header';
 import { renderHints } from './render/hints';
 import { renderMetaBox } from './render/metaBox';
 import { renderParticipants } from './render/participants';
-import { TRANSLATIONS, type Language } from './translations';
+import {
+  buildPdfTexts,
+  resolvePdfLocale,
+  type PdfLocale,
+  type PdfTranslator,
+} from './translations';
 
 export interface PDFExportOptions {
-  locale?: Language;
+  /** Sprache des Dokuments. Vorgabe: Sprache der App. */
+  locale?: PdfLocale;
+  /** Übersetzer für `pdf.*`. Vorgabe: i18next der App; Tests reichen die Ressource durch. */
+  translate?: PdfTranslator;
   includeStandings?: boolean;
   includeScores?: boolean;
   organizerName?: string;
@@ -31,17 +40,24 @@ export interface SchedulePdfInput {
   options?: PDFExportOptions;
 }
 
+/** Übersetzer der App: i18next, Namespace `tournament`, Sprache des Dokuments. */
+function appTranslator(locale: PdfLocale): PdfTranslator {
+  // Fehlt ein Schlüssel, erscheint der Schlüssel selbst (sichtbar statt still leer).
+  return (key, values) => i18next.t(key, key, { ns: 'tournament', lng: locale, ...values });
+}
+
 /** Baut das Spielplan-PDF, ohne es zu speichern. */
 export async function buildSchedulePdf({ schedule, standings, options = {} }: SchedulePdfInput): Promise<jsPDF> {
   const {
-    locale = 'de',
+    locale = resolvePdfLocale(i18next.language),
+    translate = appTranslator(locale),
     includeStandings = true,
     includeScores = false,
     organizerName = schedule.tournament.organizer ?? '',
     hallName = getLocationName(schedule.tournament),
   } = options;
 
-  const t = TRANSLATIONS[locale];
+  const t = buildPdfTexts(translate, locale);
   const geo = pageGeometry('a4', 'portrait');
 
   const doc = new jsPDF({
@@ -50,6 +66,7 @@ export async function buildSchedulePdf({ schedule, standings, options = {} }: Sc
     format: 'a4',
   });
 
+  doc.setLanguage(locale);
   doc.setFont('helvetica');
 
   let yPos = geo.top;

@@ -33,8 +33,8 @@ function boxTitle(doc: jsPDF, text: string, x: number, boxTop: number): void {
   doc.text(text, x + printMetrics.boxPadding, boxTop + printMetrics.boxPadding + printMetrics.boxTextOffset);
 }
 
-function groupTitle(group: string, schedule: GeneratedSchedule): string {
-  return group !== 'Alle' ? getGroupDisplayName(group, schedule.tournament) : 'Teilnehmer';
+function groupTitle(group: string, schedule: GeneratedSchedule, t: PdfTexts): string {
+  return group !== 'Alle' ? getGroupDisplayName(group, schedule.tournament) : t.participants;
 }
 
 export function renderParticipants(
@@ -115,7 +115,7 @@ export function renderParticipants(
     doc.setLineWidth(printMetrics.boxBorderWidth);
     doc.roundedRect(leftX, rowStartY, colWidth, leftBoxHeight, printMetrics.boxRadius, printMetrics.boxRadius);
 
-    boxTitle(doc, groupTitle(leftGroup, schedule), leftX, rowStartY);
+    boxTitle(doc, groupTitle(leftGroup, schedule, t), leftX, rowStartY);
     teamCounter = teamLines(doc, leftTeams, leftX, rowStartY + boxPadding + printMetrics.boxTextOffset + printMetrics.boxTitleAdvance, teamCounter);
 
     // Rechter Kasten, falls vorhanden
@@ -125,7 +125,7 @@ export function renderParticipants(
       doc.setLineWidth(printMetrics.boxBorderWidth);
       doc.roundedRect(rightX, rowStartY, colWidth, rightBoxHeight, printMetrics.boxRadius, printMetrics.boxRadius);
 
-      boxTitle(doc, groupTitle(rightGroup, schedule), rightX, rowStartY);
+      boxTitle(doc, groupTitle(rightGroup, schedule, t), rightX, rowStartY);
       teamCounter = teamLines(doc, rightTeams, rightX, rowStartY + boxPadding + printMetrics.boxTextOffset + printMetrics.boxTitleAdvance, teamCounter);
     }
 

@@ -114,7 +114,7 @@ export function renderGroupStage(
     row.push(sideLabel(match, 'A'), resultCell(match, includeScores), sideLabel(match, 'B'));
 
     if (withReferee) {
-      row.push(match.referee ? `SR${match.referee}` : '-');
+      row.push(match.referee ? t.refereeNumber(match.referee) : '-');
     }
 
     return row;
@@ -263,7 +263,7 @@ function renderFinalsTable(
     row.push(sideLabel(match, 'A'), resultCell(match, includeScores), sideLabel(match, 'B'));
 
     if (withReferee) {
-      row.push(match.referee ? `SR${match.referee}` : '-');
+      row.push(match.referee ? t.refereeNumber(match.referee) : '-');
     }
 
     return row;

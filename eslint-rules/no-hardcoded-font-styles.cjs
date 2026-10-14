@@ -14,7 +14,7 @@
  *
  * Exceptions (allowed px values):
  * - scoreSizes, timerSize (fixed display sizes)
- * - Files: pdfExporter.ts, LiveCockpit*, *Monitor* (special display contexts)
+ * - Files: LiveCockpit*, *Monitor* (special display contexts)
  */
 
 'use strict';
@@ -44,7 +44,6 @@ module.exports = {
 
     // Files/paths that are allowed to use hardcoded values
     const allowedPatterns = [
-      'pdfExporter',       // PDF generation needs absolute sizes
       'live-cockpit',      // Score/timer displays use fixed sizes
       'match-cockpit',     // Score/timer displays use fixed sizes
       'Monitor',           // Monitor displays use fixed sizes

@@ -67,7 +67,6 @@ export const PDFExportDialog = ({
       };
 
       await exportScheduleToPDF(updatedSchedule, includeStandings ? standings : undefined, {
-        locale: 'de',
         includeScores,
         includeStandings,
         // Only pass organizerName if it has a value, otherwise let pdfExporter use the fallback

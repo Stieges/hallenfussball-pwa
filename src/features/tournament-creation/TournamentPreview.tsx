@@ -142,7 +142,6 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
 
   const handleExportPDF = async () => {
     await exportScheduleToPDF(schedule, schedule.initialStandings, {
-      locale: 'de',
       includeStandings: true,
       // organizerName wird automatisch aus schedule.tournament.organizer gezogen
       hallName: getLocationName(currentTournament),

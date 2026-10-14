@@ -28,16 +28,10 @@ export function renderMetaBox(
   const firstGroupMatch = schedule.phases.find(p => p.name === 'groupStage')?.matches[0];
   const groupDuration = firstGroupMatch?.duration ?? DEFAULT_GROUP_DURATION_MIN;
 
-  const startTime = schedule.startTime.toLocaleTimeString('de-DE', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-  const endTime = schedule.endTime.toLocaleTimeString('de-DE', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const startTime = t.formatClock(schedule.startTime);
+  const endTime = t.formatClock(schedule.endTime);
 
-  const mode = schedule.teams.some(team => team.group) ? 'Gruppen + Finals' : 'Jeder gegen Jeden';
+  const mode = schedule.teams.some(team => team.group) ? t.modeGroupsAndFinals : t.modeRoundRobin;
 
   // Adresszeile der Halle (Straße, Ort)
   const locationAddressLine = getLocationAddressLine(schedule.tournament);
@@ -46,7 +40,7 @@ export function renderMetaBox(
   const formatGameDay = (): string => {
     const dateStr = schedule.tournament.date;
     if (!dateStr) {
-      return 'Kein Datum';
+      return t.noDate;
     }
     // Bereits im Format TT.MM.JJJJ: unverändert übernehmen
     if (dateStr.includes('.')) {
@@ -74,7 +68,7 @@ export function renderMetaBox(
   // Rechte Spalte
   const rightFields = [
     { label: t.mode, value: mode },
-    { label: t.matchDuration, value: `${groupDuration} Min.` },
+    { label: t.matchDuration, value: t.durationMinutes(groupDuration) },
   ];
 
   // Breite der längsten Beschriftung je Spalte (inkl. Doppelpunkt)
