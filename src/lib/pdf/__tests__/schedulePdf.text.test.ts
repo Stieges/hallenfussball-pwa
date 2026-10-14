@@ -52,6 +52,20 @@ describe('@BM-048 Teamnamen mit Sonderzeichen stehen im PDF', () => {
   });
 });
 
+describe('Abdeckung der eingebetteten Schrift (Inter)', () => {
+  it.each([
+    ['Ǆ', 'U+01C4 Ǆ'],
+    ['ŉ', 'U+0149 ŉ'],
+    ['\u00ad', 'U+00AD weiches Trennzeichen'],
+  ])('%s liegt nicht in der Abdeckung und wird gemeldet (%s)', (char) => {
+    expect(unrenderableChars(`Team ${char} Nord`)).toEqual([char]);
+  });
+
+  it('Steuerzeichen liegen nicht in der Abdeckung', () => {
+    expect(unrenderableChars('\u0007\u0001')).toEqual(['\u0007', '\u0001']);
+  });
+});
+
 describe('Review Focus 5: 50-Zeichen-Name mit ä/ö/ü/ß', () => {
   it('ist 50 Zeichen lang und steht vollständig, ohne „…“', async () => {
     expect(LONG_50).toHaveLength(50);

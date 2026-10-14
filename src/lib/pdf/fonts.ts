@@ -1,6 +1,6 @@
 /**
- * Schrift des Spielplan-PDFs (B-28a2). Eingebettet statt `helvetica`, damit ł, ğ, ı, ź und die übrigen
- * Latein-erweitert-Zeichen darstellbar sind (@BM-048).
+ * Schrift des Spielplan-PDFs (B-28a2, Daniel 15.10.: Inter überall). Eingebettet statt `helvetica`, damit ł, ğ,
+ * ı, ź und die übrigen Latein-erweitert-Zeichen darstellbar sind (@BM-048).
  *
  * EINE Stelle zum Tauschen der Schrift: das Objekt `PDF_FONT` unten (Name, Dateien, Lader, Abdeckung).
  * Render-Dateien und Tests lesen nur `PDF_FONT.family` bzw. die Abdeckung, nie einen Schriftnamen.
@@ -20,9 +20,17 @@ export const PDF_FONT = {
     normal: () => import('./fontData/regular'),
     bold: () => import('./fontData/bold'),
   },
-  /** Latein erweitert (Latin-1 Supplement, Latin Extended-A/B) plus die nötigen Satzzeichen. */
+  /**
+   * Abdeckung der eingebetteten Teilmenge: ASCII, Latin-1 und Latin Extended-A/B, ohne U+00AD (weiches Trennzeichen),
+   * U+0149 (ŉ) und U+01C4 (Ǆ), die Inter-Teilmenge trägt sie nicht. Steuerzeichen fehlen ebenfalls. Gegenprüfung:
+   * `schedulePdf.text.test.ts` vergleicht mit der Zeichenliste der Schrift.
+   */
   coverage: [
-    [0x0000, 0x024f],
+    [0x0020, 0x007e],
+    [0x00a0, 0x00ac],
+    [0x00ae, 0x0148],
+    [0x014a, 0x01c3],
+    [0x01c5, 0x024f],
     [0x2013, 0x2014],
     [0x2018, 0x201a],
     [0x201c, 0x201e],
