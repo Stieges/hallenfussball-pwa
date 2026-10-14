@@ -46,6 +46,7 @@ function matchTableOptions(
       right: geo.right,
     },
     styles: {
+      font: PDF_FONT.family,
       fontSize: printFonts.table,
       cellPadding: printMetrics.tableCellPadding,
       lineColor: [...printColors.border],

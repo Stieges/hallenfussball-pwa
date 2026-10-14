@@ -67,6 +67,7 @@ function drawStandingsTable(
       right: geo.right,
     },
     styles: {
+      font: PDF_FONT.family,
       fontSize: printFonts.tableSmall,
       cellPadding: printMetrics.tableCellPaddingCompact,
       lineColor: [...printColors.border],
