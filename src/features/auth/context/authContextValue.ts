@@ -6,6 +6,7 @@
  */
 
 import type { AuthState, LoginResult, RegisterResult, User } from '../types/auth.types';
+import type { LogoutResult } from './logoutAction';
 
 /**
  * AuthContext Value Type
@@ -22,7 +23,7 @@ export interface AuthContextValue extends AuthState {
   /** Loggt mit Google OAuth ein (async) */
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   /** Loggt den User aus (async) */
-  logout: (options?: { scope?: 'local' }) => Promise<void>;
+  logout: (options?: { scope?: 'local' | 'others' }) => Promise<LogoutResult>;
   /**
    * Fährt als Gast fort (async)
    * Versucht zuerst Supabase Anonymous Auth, fällt auf lokalen Gast zurück

@@ -15,10 +15,17 @@ import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import { clearProfileCache } from '../services/profileCacheService';
 import { captureFeatureError, setUserContext as setSentryUserContext } from '../../../lib/sentry';
+import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 
 export interface LogoutOptions {
-  scope?: 'local';
+  /** `local`: nur dieses Gerät. `others`: alle anderen Geräte, dieses bleibt angemeldet (A-07d1). */
+  scope?: 'local' | 'others';
 }
+
+/** Ergebnis des Abmeldens. Nur `others` meldet Fehler zurück; `local` räumt in jedem Fall auf. */
+export type LogoutResult =
+  | { ok: true }
+  | { ok: false; reason: 'unavailable' | 'network' | 'server' };
 
 /** Nur die Zustandssetter, die das Abmelden braucht (strukturell kompatibel zu AuthActionDeps). */
 export interface LogoutDeps {
@@ -51,15 +58,40 @@ function cleanupLocal(deps: LogoutDeps): void {
   deps.setIsGuest(false);
 }
 
-export async function logout(deps: LogoutDeps, options: LogoutOptions = { scope: 'local' }): Promise<void> {
+/**
+ * Abmelden auf allen anderen Geräten (@AN-024). Nur der Server-Aufruf: kein lokales Aufräumen,
+ * kein `setUser(null)`, dieses Gerät bleibt angemeldet. Fehler kommen als Rückgabe, nie still.
+ */
+async function logoutOthers(): Promise<LogoutResult> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { ok: false, reason: 'unavailable' };
+  }
+  try {
+    const { error } = await supabase.auth.signOut({ scope: 'others' });
+    if (!error) {
+      return { ok: true };
+    }
+    return { ok: false, reason: isAuthRetryableFetchError(error) ? 'network' : 'server' };
+  } catch (err) {
+    if (err instanceof Error) {
+      captureFeatureError(err, 'auth', 'logout');
+    }
+    return { ok: false, reason: isAuthRetryableFetchError(err) ? 'network' : 'server' };
+  }
+}
+
+export async function logout(deps: LogoutDeps, options: LogoutOptions = { scope: 'local' }): Promise<LogoutResult> {
+  if (options.scope === 'others') {
+    return logoutOthers();
+  }
   if (!isSupabaseConfigured || !supabase) {
     cleanupLocal(deps);
-    return;
+    return { ok: true };
   }
 
   try {
     // auth-js gibt Fehler zurück, statt zu werfen (z. B. offline mit abgelaufenem Zugang).
-    const { error } = await supabase.auth.signOut({ scope: options.scope ?? 'local' });
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) {
       removeSupabaseTokens();
     }
@@ -74,4 +106,5 @@ export async function logout(deps: LogoutDeps, options: LogoutOptions = { scope:
   } finally {
     cleanupLocal(deps);
   }
+  return { ok: true };
 }

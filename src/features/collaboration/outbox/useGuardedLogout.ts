@@ -13,7 +13,7 @@ import { countWaitingEntries, type WaitingEntriesSource } from './countWaitingEn
 export interface UseGuardedLogoutOptions {
   isGuest: boolean;
   accountId: string;
-  logout: () => void | Promise<void>;
+  logout: () => unknown;
   /** Kleine injizierbare Fabrik der lokalen Spielkopie (Standard: neue LocalMatchStore-Instanz). */
   createMatchStore?: () => WaitingEntriesSource;
   /** Nach dem Abmelden aufgerufen (z.B. Navigation zurueck). */

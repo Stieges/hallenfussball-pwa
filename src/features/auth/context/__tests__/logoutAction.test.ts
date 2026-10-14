@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createMockAuthActionDeps } from './mocks/supabaseMock';
 import { safeLocalStorage } from '../../../../core/utils/safeStorage';
+import { supabase } from '../../../../lib/supabase';
 
 const net = vi.hoisted(() => ({
   calls: [] as Array<{ url: string; method: string }>,
@@ -118,10 +119,83 @@ describe('logout (A-07a) – nur dieses Gerät, Ausgang bleibt', () => {
     for (let step = 0; step < 100 && !settled; step++) {
       await vi.advanceTimersByTimeAsync(1_000);
     }
-    await expect(pending).resolves.toBeUndefined();
+    await expect(pending).resolves.toEqual({ ok: true });
     vi.useRealTimers();
 
     expect(hasSupabaseToken()).toBe(false);
     expect(deps.setUser).toHaveBeenCalledWith(null);
+  });
+});
+
+/**
+ * A-07d1 – „Auf allen anderen Geräten abmelden“ (@AN-024 „Der Laptop bleibt angemeldet“).
+ * Scope `others`: nur der Server-Aufruf, kein lokales Aufräumen, kein SIGNED_OUT am eigenen Gerät.
+ */
+describe('logout (A-07d1) – auf allen anderen Geräten abmelden', () => {
+  beforeEach(() => {
+    net.calls.length = 0;
+    safeLocalStorage.clear();
+    safeLocalStorage.setItem(QUEUE_KEY, QUEUE_VALUE);
+    safeLocalStorage.setItem(FAILED_KEY, FAILED_VALUE);
+    net.respond = null;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('Pflicht: scope others schickt genau POST …/logout?scope=others, Token bleibt, kein Abmelden hier', async () => {
+    safeLocalStorage.setItem(TOKEN_KEY, sessionFixture(nowSeconds() + 3600));
+    const deps = createMockAuthActionDeps();
+    const events: string[] = [];
+    if (!supabase) {
+      throw new Error('Test-Client fehlt');
+    }
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      events.push(event);
+    });
+
+    const result = await logout(deps, { scope: 'others' });
+    data.subscription.unsubscribe();
+
+    const logoutCalls = net.calls.filter((c) => c.url.includes('/auth/v1/logout'));
+    expect(logoutCalls).toHaveLength(1);
+    expect(logoutCalls[0].method).toBe('POST');
+    expect(logoutCalls[0].url).toContain('scope=others');
+    expect(hasSupabaseToken()).toBe(true);
+    expect(deps.setUser).not.toHaveBeenCalled();
+    expect(events).not.toContain('SIGNED_OUT');
+    expect(safeLocalStorage.getItem(QUEUE_KEY)).toBe(QUEUE_VALUE);
+    expect(result).toEqual({ ok: true });
+  });
+
+  it('Gegenbeispiel: Server antwortet 500 → { ok: false }, Sitzung bleibt, kein stilles Scheitern', async () => {
+    safeLocalStorage.setItem(TOKEN_KEY, sessionFixture(nowSeconds() + 3600));
+    net.respond = async () =>
+      new Response(JSON.stringify({ message: 'boom' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    const deps = createMockAuthActionDeps();
+
+    const result = await logout(deps, { scope: 'others' });
+
+    expect(result.ok).toBe(false);
+    expect(hasSupabaseToken()).toBe(true);
+    expect(deps.setUser).not.toHaveBeenCalled();
+  });
+
+  it('Gegenbeispiel: Netz weg (fetch wirft) → { ok: false, reason: network }, Sitzung bleibt', async () => {
+    safeLocalStorage.setItem(TOKEN_KEY, sessionFixture(nowSeconds() + 3600));
+    net.respond = async () => {
+      throw new TypeError('Failed to fetch');
+    };
+    const deps = createMockAuthActionDeps();
+
+    const result = await logout(deps, { scope: 'others' });
+
+    expect(result).toEqual({ ok: false, reason: 'network' });
+    expect(hasSupabaseToken()).toBe(true);
+    expect(deps.setUser).not.toHaveBeenCalled();
   });
 });

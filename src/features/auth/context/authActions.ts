@@ -20,7 +20,7 @@ import { isFeatureEnabled } from '../../../config';
 import { mapProfileUpdateToSupabase } from '../../../core/repositories/supabaseMappers';
 import { executeWithTimeout } from '../../../core/utils/SingleFlight';
 import { captureFeatureError, setUserContext as setSentryUserContext } from '../../../lib/sentry';
-import { logout as logoutAction, type LogoutOptions } from './logoutAction';
+import { logout as logoutAction, type LogoutOptions, type LogoutResult } from './logoutAction';
 
 /**
  * Timeout for auth operations (login, register, etc.)
@@ -481,9 +481,9 @@ export async function loginWithGoogle(): Promise<{ success: boolean; error?: str
 }
 
 /**
- * Logout (nur dieses Gerät, siehe logoutAction.ts)
+ * Logout (dieses Gerät, oder `scope: 'others'` für alle anderen Geräte – siehe logoutAction.ts)
  */
-export async function logout(deps: AuthActionDeps, options?: LogoutOptions): Promise<void> {
+export async function logout(deps: AuthActionDeps, options?: LogoutOptions): Promise<LogoutResult> {
   return logoutAction(deps, options);
 }
 

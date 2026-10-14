@@ -660,7 +660,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
 
   const logout = useCallback(
-    (options?: { scope?: 'local' }) => authActions.logout(actionDeps, options),
+    (options?: { scope?: 'local' | 'others' }) => authActions.logout(actionDeps, options),
     [actionDeps]
   );
 
