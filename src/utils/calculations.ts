@@ -1,6 +1,14 @@
 import { Match, Tournament, Standing, Team, PlacementCriterion } from '../types/tournament';
 
 /**
+ * Zählt ein Spiel für die Tabelle? Nur abgepfiffene Spiele (@TM-143): laufende oder
+ * unterbrochene Spiele tragen einen Zwischenstand, der die Tabelle nicht verändern darf.
+ * Ein nicht gesetzter Status (`undefined`) zählt wie bisher, sofern ein Ergebnis vorliegt.
+ */
+const isCountedForStandings = (match: Match): boolean =>
+  match.matchStatus === undefined || match.matchStatus === 'finished';
+
+/**
  * Calculate standings for a group or all teams
  */
 export const calculateStandings = (
@@ -11,8 +19,12 @@ export const calculateStandings = (
 ): Standing[] => {
   // Filter matches for the specific group if provided
   const relevantMatches = group
-    ? matches.filter((m) => m.group === group && m.scoreA !== undefined && m.scoreB !== undefined)
-    : matches.filter((m) => m.scoreA !== undefined && m.scoreB !== undefined && !m.isFinal);
+    ? matches.filter(
+        (m) => m.group === group && m.scoreA !== undefined && m.scoreB !== undefined && isCountedForStandings(m)
+      )
+    : matches.filter(
+        (m) => m.scoreA !== undefined && m.scoreB !== undefined && !m.isFinal && isCountedForStandings(m)
+      );
 
   // Filter teams for the specific group
   const relevantTeams = group ? teams.filter((t) => t.group === group) : teams;

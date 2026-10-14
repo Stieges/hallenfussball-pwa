@@ -126,8 +126,17 @@ describe('MonitorDisplayPage — Folieninhalt (Bestand)', () => {
     expect(screen.queryByText('1. Halbzeit')).not.toBeInTheDocument();
   });
 
-  it('Bestand: Tabelle zählt das laufende Spiel 7 mit seinem Zwischenstand (FC Nord 6 Punkte)', async () => {
+  // @TM-143 (B-40): Der Bestand „6 Punkte“ (laufendes Spiel 7 zählte mit Zwischenstand) ist bewusst umgedreht.
+  it('@TM-143 Tabelle zählt das laufende Spiel 7 nicht (FC Nord 3 Punkte, nur Spiel 1)', async () => {
     await renderMonitor(buildTournament(), [slide('standings', { groupId: 'A' })]);
+    expect(pointsOf('FC Nord')).toBe('3');
+  });
+
+  it('@TM-143 Tabelle zählt Spiel 7 nach dem Abpfiff (FC Nord 6 Punkte)', async () => {
+    await renderMonitor(
+      buildTournament({ matches: withMatch('match-7', { matchStatus: 'finished' }) }),
+      [slide('standings', { groupId: 'A' })],
+    );
     expect(pointsOf('FC Nord')).toBe('6');
   });
 });
