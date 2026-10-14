@@ -145,7 +145,7 @@ module.exports = {
       'LiveCockpitMockup',  // Demo-Screen, nicht produktiv gerendert
       'MatchCockpitDemoScreen', // Demo-Screen, nicht produktiv gerendert
       'pdfExporter.ts',     // PDF-Layout-Konstanten, wie in no-hardcoded-font-styles.cjs
-      '/src/lib/pdf/',      // Spielplan-PDF (B-28a1): feste PDF-Texte bis B-28a2 nach i18n wandern
+      '/src/lib/pdf/translations.ts', // Spielplan-PDF (B-28a1): feste PDF-Texte bis B-28a2 nach i18n wandern
     ];
     if (allowedPatterns.some((p) => normalized.includes(p))) {
       return {};
