@@ -20,10 +20,18 @@ export interface StatusConfig {
 }
 
 /** Wartegrund: 'noInternet' = Verbindung fehlt/voruebergehend, 'disturbed' = Server-Problem, 'storageFull' = Geraetespeicher voll (A-07i). */
-export type WaitReason = 'noInternet' | 'disturbed' | 'storageFull';
+export type WaitReason = 'noInternet' | 'disturbed' | 'storageFull' | 'storageBlocked';
 
 /** Fehlerklasse des letzten Versuchs der MutationQueue (`getLastFailure()`). */
-export type QueueFailure = 'transient' | 'permanent' | 'storage' | null | undefined;
+export type QueueFailure = 'transient' | 'permanent' | 'storage' | 'storageBlocked' | null | undefined;
+
+/** i18n-Schluessel je Wartegrund (Plural ueber count: _one/_other). */
+export const WAITING_KEY_BY_REASON = {
+    noInternet: 'syncStatus.waitingNoInternet',
+    disturbed: 'syncStatus.waitingDisturbed',
+    storageFull: 'syncStatus.waitingStorageFull',
+    storageBlocked: 'syncStatus.waitingStorageBlocked',
+} as const satisfies Record<WaitReason, string>;
 
 // =============================================================================
 // CONFIG
@@ -99,6 +107,9 @@ export function deriveWaitReason(input: {
     }
     if (queueFailure === 'storage') {
         return 'storageFull';
+    }
+    if (queueFailure === 'storageBlocked') {
+        return 'storageBlocked';
     }
     if (status === 'offline' || outboxKind === 'transient' || queueFailure === 'transient') {
         return 'noInternet';

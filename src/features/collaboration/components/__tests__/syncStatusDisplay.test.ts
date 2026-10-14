@@ -14,6 +14,10 @@ describe('deriveWaitReason: Geraetespeicher voll (A-07i, @FU-004)', () => {
     expect(deriveWaitReason({ pendingCount: 2, status: 'offline', outboxKind: 'transient', queueFailure: 'storage' })).toBe('storageFull');
   });
 
+  it('queueFailure storageBlocked -> storageBlocked (eigener Wartegrund, A-07i 1b)', () => {
+    expect(deriveWaitReason({ pendingCount: 1, status: 'synced', outboxKind: null, queueFailure: 'storageBlocked' })).toBe('storageBlocked');
+  });
+
   it('ohne wartende Eintraege bleibt es bei null', () => {
     expect(deriveWaitReason({ pendingCount: 0, status: 'synced', outboxKind: null, queueFailure: 'storage' })).toBeNull();
   });

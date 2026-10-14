@@ -9,7 +9,7 @@
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
-import type { WaitReason } from './syncStatusDisplay';
+import { WAITING_KEY_BY_REASON, type WaitReason } from './syncStatusDisplay';
 
 export interface SyncWaitDetailsProps {
     /** Anzahl wartender Eintraege (> 0) */
@@ -51,13 +51,7 @@ const styles = {
 export function SyncWaitDetails({ pendingCount, waitReason, detail }: SyncWaitDetailsProps) {
     const { t } = useTranslation('common');
     const summary = String(
-        waitReason === 'noInternet'
-            ? t('syncStatus.waitingNoInternet', { count: pendingCount })
-            : waitReason === 'disturbed'
-                ? t('syncStatus.waitingDisturbed', { count: pendingCount })
-                : waitReason === 'storageFull'
-                    ? t('syncStatus.waitingStorageFull')
-                    : t('syncStatus.waiting', { count: pendingCount }),
+        t(waitReason ? WAITING_KEY_BY_REASON[waitReason] : 'syncStatus.waiting', { count: pendingCount }),
     );
     const showDetail = waitReason === 'disturbed' && Boolean(detail);
 

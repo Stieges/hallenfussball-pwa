@@ -26,6 +26,7 @@ vi.mock('../../utils/safeStorage', () => ({
       mockStorage.set(key, value);
       return true;
     }),
+    getIsAvailable: vi.fn(() => true),
     removeItem: vi.fn((key: string) => {
       mockStorage.delete(key);
     }),

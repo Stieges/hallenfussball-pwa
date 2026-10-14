@@ -30,7 +30,7 @@ const hoisted = vi.hoisted(() => ({
     failedChanges: 0,
     failedMutations: [] as never[],
     isCloudSyncAvailable: true,
-    queueLastFailure: null as 'transient' | 'permanent' | 'storage' | null,
+    queueLastFailure: null as 'transient' | 'permanent' | 'storage' | 'storageBlocked' | null,
   },
 }));
 
@@ -137,12 +137,34 @@ describe('SyncStatusIndicator — Geraetespeicher voll (A-07i, @FU-004 / @FU-007
 
     expect(screen.getByTestId('sync-status')).toHaveAttribute(
       'aria-label',
-      expect.stringContaining('Gerätespeicher voll – Einträge werden nicht dauerhaft gespeichert'),
+      expect.stringContaining('1 Eintrag wartet – Gerätespeicher voll, Einträge werden nicht dauerhaft gespeichert'),
     );
 
     fireEvent.click(screen.getByTestId('sync-status'));
     expect(screen.getByTestId('sync-wait-details')).toHaveTextContent(
-      'Gerätespeicher voll – Einträge werden nicht dauerhaft gespeichert',
+      '1 Eintrag wartet – Gerätespeicher voll, Einträge werden nicht dauerhaft gespeichert',
+    );
+  });
+
+  it('A-07i 1c: Anzahl im Plural: 3 Eintraege -> "3 Einträge warten – Gerätespeicher voll, ..."', async () => {
+    hoisted.sync.pendingChanges = 3;
+    hoisted.sync.queueLastFailure = 'storage';
+    await renderWithI18n(<SyncStatusIndicator tournamentId="t1" />);
+
+    expect(screen.getByTestId('sync-status')).toHaveAttribute(
+      'aria-label',
+      '3 Einträge warten – Gerätespeicher voll, Einträge werden nicht dauerhaft gespeichert',
+    );
+  });
+
+  it('A-07i 1b: gesperrter Browserspeicher zeigt eigenen Text (nicht "voll")', async () => {
+    hoisted.sync.pendingChanges = 1;
+    hoisted.sync.queueLastFailure = 'storageBlocked';
+    await renderWithI18n(<SyncStatusIndicator tournamentId="t1" />);
+
+    expect(screen.getByTestId('sync-status')).toHaveAttribute(
+      'aria-label',
+      '1 Eintrag wartet – Speicher des Browsers gesperrt – Einträge gehen beim Schließen verloren',
     );
   });
 

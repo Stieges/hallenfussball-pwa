@@ -20,6 +20,7 @@ import {
     type StatusConfig,
     type WaitReason,
     WAITING_CONFIG,
+    WAITING_KEY_BY_REASON,
 } from './syncStatusDisplay';
 
 // =============================================================================
@@ -184,11 +185,7 @@ export function SyncStatusBar({
     const isWaiting = hasPending && !isSyncing
         && (effectiveStatus === 'synced' || effectiveStatus === 'updated' || effectiveStatus === 'offline');
     const config = isWaiting ? WAITING_CONFIG : STATUS_CONFIG[effectiveStatus];
-    // A-07i: 'storageFull' hat einen festen Wortlaut ohne Anzahl.
-    const waitingKey = waitReason === 'noInternet'
-        ? 'syncStatus.waitingNoInternet'
-        : waitReason === 'disturbed' ? 'syncStatus.waitingDisturbed'
-        : waitReason === 'storageFull' ? 'syncStatus.waitingStorageFull' : 'syncStatus.waiting';
+    const waitingKey = waitReason ? WAITING_KEY_BY_REASON[waitReason] : 'syncStatus.waiting';
     const label = isWaiting
         ? String(t(waitingKey, { count: pendingCount }))
         : String(t(LABEL_KEY_BY_STATUS[effectiveStatus], { defaultValue: LABEL_KEY_BY_STATUS[effectiveStatus] }));

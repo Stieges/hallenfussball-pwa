@@ -222,6 +222,23 @@ describe('MutationQueue bei vollem Geraetespeicher (A-07i, @FU-004 / @FU-007)', 
     second.dispose();
   });
 
+  it('A-07i 1b: gesperrter Browserspeicher -> eigener Wert storageBlocked, Sentry genau 1x bei 5 Eintraegen', async () => {
+    setOnline(false);
+    const storage = new QuotaStorage();
+    storage.quotaExceeded = true; // schon das Pruefschreiben beim Laden schlaegt fehl -> Speicher gesperrt
+    const { MutationQueue } = await loadModules(storage);
+
+    const queue = new MutationQueue(createMockRepo() as never, undefined, undefined, undefined);
+    for (let i = 1; i <= 5; i++) {
+      queue.enqueue('SAVE_TOURNAMENT', tournament(`t${i}`));
+    }
+
+    expect(queue.getPendingCount()).toBe(5);
+    expect(queue.getLastFailure()).toBe('storageBlocked');
+    expect(sentry.captureFeatureError).toHaveBeenCalledTimes(1);
+    queue.dispose();
+  });
+
   it('Gegenbeispiel: normaler Speicher -> keine Stoerung, kein Sentry, Versand wie bisher', async () => {
     setOnline(true);
     const storage = new QuotaStorage();

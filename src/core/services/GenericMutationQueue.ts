@@ -116,7 +116,7 @@ export class GenericMutationQueue<TType extends string> {
     private disposed = false;
     private retryTimer: QueueRetryTimer;
     private inFlight: QueueInFlight;
-    private lastFailure: 'transient' | 'permanent' | 'storage' | null = null;
+    private lastFailure: 'transient' | 'permanent' | 'storage' | 'storageBlocked' | null = null;
     private listeners: ((status: MutationQueueStatus) => void)[] = [];
     private readonly storageReported = new Set<string>(); // A-07i Fixrunde 1: Sentry je Ursache nur einmal
 
@@ -232,7 +232,7 @@ export class GenericMutationQueue<TType extends string> {
     }
 
     /** Letzter Fehlerabschluss (A-06e): 'transient' | 'permanent' | null nach Erfolg; 'storage' = Gerätespeicher voll (A-07i). */
-    public getLastFailure(): 'transient' | 'permanent' | 'storage' | null { return this.lastFailure; }
+    public getLastFailure(): 'transient' | 'permanent' | 'storage' | 'storageBlocked' | null { return this.lastFailure; }
 
     public subscribe(listener: (status: MutationQueueStatus) => void): () => void {
         this.listeners.push(listener);
@@ -400,7 +400,7 @@ export class GenericMutationQueue<TType extends string> {
 
     /** A-07i: Speichern fehlgeschlagen → Störungsanzeige „Gerätespeicher voll“ (lastFailure 'storage') + Sentry (1× je Ursache). */
     protected reportStorageFailure(action: string): void {
-        this.lastFailure = 'storage'; this.notifyListeners();
+        this.lastFailure = safeLocalStorage.getIsAvailable() ? 'storage' : 'storageBlocked'; this.notifyListeners(); // 1b: gesperrt vs. voll
         if (!this.storageReported.has(action)) { this.storageReported.add(action); captureFeatureError(new StorageError('Warteschlange nicht dauerhaft gespeichert'), this.config.sentryFeature, action); }
     }
 
