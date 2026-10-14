@@ -27,7 +27,7 @@ const programm = (slides: MonitorSlide[], matches: RuleMatch[] = []): SlideProgr
 });
 
 const zustand = (over: Partial<SlideshowState> = {}): SlideshowState => ({
-  index: 0, page: 0, startedAt: 0, paused: false, direction: 'next', ...over,
+  index: 0, page: 0, startedAt: 0, direction: 'next', ...over,
 });
 
 /** Lässt die Regeln in Schritten von `schritt` ms über `dauer` ms laufen und liefert jeden Zustand. */
@@ -161,10 +161,3 @@ describe('Rückfall: alle Folien übersprungen (Ruling B-16e1)', () => {
   });
 });
 
-describe('Manuelle Pause (Taste) friert alles ein', () => {
-  it('pausiert: kein Pin und kein Takt', () => {
-    const p = programm([LIVE_F1, TABELLE], [{ id: 'm7', field: 1, matchStatus: 'running' }]);
-    const s = zustand({ paused: true });
-    expect(nextSlide(p, s, 1_000)).toBe(s);
-  });
-});

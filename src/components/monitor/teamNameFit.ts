@@ -49,13 +49,16 @@ export function waehleTeamNameSchrift(
 }
 
 /**
- * Misst im Browser mit einem versteckten Messfeld derselben Breite und Schrift. Ohne Layout (jsdom) passt jeder
- * Kandidat bei der größten Schrift; das prüft die Playwright-Spec.
+ * Misst im Browser mit einem versteckten Messfeld derselben Breite und Schrift. Die größte Schrift ist der
+ * berechnete Wert der CSS-Vorgabe (`vorgabe`, z. B. clamp(48px, 5vw, 72px)), gemessen am Messfeld, nicht am Inline-Stil
+ * des Elements (B-17 Fixrunde 2: sonst erbt das Element 16 px und jeder Name wird auf die Untergrenze gedrückt).
+ * Ohne Layout (jsdom) passt jeder Kandidat bei der größten Schrift; das prüft die Playwright-Spec.
  */
 export function useTeamNameFit(
   ref: RefObject<HTMLDivElement | null>,
   kandidaten: readonly string[],
   aktiv: boolean,
+  vorgabe: string,
 ): TeamNameWahl | null {
   const [wahl, setWahl] = useState<TeamNameWahl | null>(null);
   const [tick, setTick] = useState(0);
@@ -63,20 +66,21 @@ export function useTeamNameFit(
 
   useEffect(() => {
     const neu = () => setTick(t => t + 1);
+    const schrift = document.fonts;
     window.addEventListener('resize', neu);
-    // Erst nach dem Laden der Schrift messen, sonst passt die Größe zur Ausweichschrift
-    void document.fonts?.ready.then(neu);
-    return () => window.removeEventListener('resize', neu);
+    // Neu messen, sobald Inter geladen ist; sonst passt die Größe zur Ausweichschrift
+    schrift?.addEventListener('loadingdone', neu);
+    void schrift?.ready.then(neu);
+    return () => {
+      window.removeEventListener('resize', neu);
+      schrift?.removeEventListener('loadingdone', neu);
+    };
   }, []);
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!aktiv || !el) { return; }
     const liste = schluessel.split('\u0000');
-
-    // Größte Schrift = Wert der CSS-Vorgabe (ohne eigenen Inline-Stil)
-    el.style.fontSize = '';
-    const maxPx = parseFloat(getComputedStyle(el).fontSize);
     const stil = getComputedStyle(el);
 
     const messfeld = document.createElement('div');
@@ -97,6 +101,10 @@ export function useTeamNameFit(
     });
     document.body.appendChild(messfeld);
 
+    // Obergrenze: berechneter Wert der Vorgabe (clamp wird am Viewport aufgelöst)
+    messfeld.style.fontSize = vorgabe;
+    const maxPx = parseFloat(getComputedStyle(messfeld).fontSize);
+
     const passt = (text: string, px: number): boolean => {
       messfeld.style.fontSize = `${px}px`;
       messfeld.textContent = text;
@@ -111,7 +119,7 @@ export function useTeamNameFit(
 
     el.style.fontSize = `${neu.px}px`;
     setWahl(prev => (prev?.text === neu.text && prev.px === neu.px ? prev : neu));
-  }, [ref, schluessel, aktiv, tick]);
+  }, [ref, schluessel, aktiv, vorgabe, tick]);
 
   return aktiv ? wahl : null;
 }

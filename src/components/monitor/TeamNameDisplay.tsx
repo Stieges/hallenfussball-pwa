@@ -51,7 +51,12 @@ export const TeamNameDisplay: React.FC<TeamNameDisplayProps> = ({
 
   const displayNames = getDisplayNames(name);
   const passtAnpassen = size === 'xl' && !variant;
-  const wahl = useTeamNameFit(ref, [displayNames.full, displayNames.medium, displayNames.short], passtAnpassen);
+  const wahl = useTeamNameFit(
+    ref,
+    [displayNames.full, displayNames.medium, displayNames.short],
+    passtAnpassen,
+    config.fontSize,
+  );
 
   let displayText: string;
   if (variant) {

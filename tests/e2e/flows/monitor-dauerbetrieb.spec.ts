@@ -9,17 +9,27 @@
  */
 import type { Page } from '@playwright/test';
 import { test, expect, type TestOptions } from '../helpers/test-fixtures';
+import { displayFontSizes } from '../../../src/design-tokens';
 
 /** Genau 50 Zeichen, mit Umlauten und ß (@ZM-087). */
 const LANGER_NAME = 'Größenwahn Übungsteam Füßen Ösen Äpfel Ölkrug Ähre';
 /** Ein mittellanger Name, der vorher in Bebas Neue passte (Review K2). */
 const MITTEL_NAME = 'Sportfreunde Lotte';
+/** Ein kurzer Name (Review Fixrunde 2: muss in Vorgabegröße einzeilig stehen). */
+const KURZ_NAME = 'SV Süd';
+
+/** Projekte, in denen diese Spec läuft: Chromium (desktop) und WebKit (desktop-webkit, Safari). */
+const PROJEKTE = ['desktop', 'desktop-webkit'];
 
 test.beforeEach(() => {
-  test.skip(test.info().project.name !== 'desktop', 'läuft nur im Projekt desktop');
+  test.skip(!PROJEKTE.includes(test.info().project.name), 'läuft nur in den Desktop-Projekten');
 });
 
-async function seedLiveTournament(seedIndexedDB: TestOptions['seedIndexedDB']): Promise<void> {
+async function seedLiveTournament(
+  seedIndexedDB: TestOptions['seedIndexedDB'],
+  heim: string = LANGER_NAME,
+  gast: string = MITTEL_NAME,
+): Promise<void> {
   const now = new Date().toISOString();
   const tournament = {
     id: 'dauer-turnier',
@@ -44,8 +54,8 @@ async function seedLiveTournament(seedIndexedDB: TestOptions['seedIndexedDB']): 
     pointSystem: { win: 3, draw: 1, loss: 0 },
     groups: [{ id: 'g1', name: 'Gruppe A', teamIds: ['t1', 't2'] }],
     teams: [
-      { id: 't1', name: LANGER_NAME, color: '#DC2626' },
-      { id: 't2', name: MITTEL_NAME, color: '#FACC15' },
+      { id: 't1', name: heim, color: '#DC2626' },
+      { id: 't2', name: gast, color: '#FACC15' },
     ],
     matches: [
       {
@@ -94,15 +104,22 @@ async function seedLiveTournament(seedIndexedDB: TestOptions['seedIndexedDB']): 
 }
 
 /** Die Live-Folie ist da, sobald der Teamname mit vollem Namen im DOM steht. */
-async function oeffneMonitor(page: Page, seedIndexedDB: TestOptions['seedIndexedDB']): Promise<void> {
-  await seedLiveTournament(seedIndexedDB);
+async function oeffneMonitor(
+  page: Page,
+  seedIndexedDB: TestOptions['seedIndexedDB'],
+  heim: string = LANGER_NAME,
+  gast: string = MITTEL_NAME,
+): Promise<void> {
+  await seedLiveTournament(seedIndexedDB, heim, gast);
   await page.goto('/#/display/dauer-turnier/mon-1');
-  await expect(page.locator(`[title="${LANGER_NAME}"]`)).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(`[title="${heim}"]`)).toBeVisible({ timeout: 15_000 });
+  await page.evaluate(() => document.fonts.ready);
+  await page.waitForTimeout(300);
 }
 
 /** Schrift und Überlappung der Live-Folie, gemessen am angezeigten Text (nicht am title-Attribut). */
-async function messeLiveFolie(page: Page) {
-  return page.evaluate((namen) => {
+async function messeLiveFolie(page: Page, namen: string[], vorgabe: string) {
+  return page.evaluate(({ namen, vorgabe }) => {
     type Box = { name: string; top: number; bottom: number; left: number; right: number };
     const box = (el: Element, name: string): Box => {
       const r = el.getBoundingClientRect();
@@ -122,7 +139,8 @@ async function messeLiveFolie(page: Page) {
         zeilenhoehe: parseFloat(stil.lineHeight) || parseFloat(stil.fontSize) * 1.2,
         höhe: el.getBoundingClientRect().height,
         schriftPx: parseFloat(stil.fontSize),
-        family: stil.fontFamily,
+        // WebKit serialisiert ohne Anführungszeichen; die erste Schriftfamilie zählt
+        family: stil.fontFamily.replace(/["']/g, ''),
         el,
       };
     });
@@ -168,7 +186,16 @@ async function messeLiveFolie(page: Page) {
     const doc = document.documentElement;
     const ausserhalb = bloecke.filter((b) => b.left < -0.5 || b.top < -0.5 || b.right > window.innerWidth + 0.5 || b.bottom > window.innerHeight + 0.5).map((b) => b.name);
 
+    // Vorgabegröße aus dem Token, berechnet im Browser (clamp am Viewport)
+    const vorgabeMessfeld = document.createElement('span');
+    vorgabeMessfeld.style.fontSize = vorgabe;
+    vorgabeMessfeld.textContent = 'x';
+    document.body.appendChild(vorgabeMessfeld);
+    const vorgabePx = parseFloat(getComputedStyle(vorgabeMessfeld).fontSize);
+    vorgabeMessfeld.remove();
+
     return {
+      vorgabePx,
       scrollY: doc.scrollHeight - doc.clientHeight,
       scrollX: doc.scrollWidth - doc.clientWidth,
       hoehe: window.innerHeight,
@@ -185,7 +212,7 @@ async function messeLiveFolie(page: Page) {
       ueberlappungen,
       ausserhalb,
     };
-  }, [LANGER_NAME, MITTEL_NAME]);
+  }, { namen, vorgabe });
 }
 
 const GROESSEN: Array<{ name: string; width: number; height: number; dsf?: number }> = [
@@ -209,11 +236,7 @@ for (const groesse of GROESSEN) {
     test('ohne Scrollbalken, ohne Überlappung, Teamnamen vollständig, Monitorschrift = App-Schrift', async ({ page, seedIndexedDB }) => {
       expect(LANGER_NAME.length).toBe(50);
       await oeffneMonitor(page, seedIndexedDB);
-      // Die Schrift wird nach dem Laden von Inter neu gemessen (teamNameFit); kurz warten, bis das gesetzt ist.
-      await page.evaluate(() => document.fonts.ready);
-      await page.waitForTimeout(300);
-
-      const m = await messeLiveFolie(page);
+      const m = await messeLiveFolie(page, [LANGER_NAME, MITTEL_NAME], displayFontSizes.teamName);
 
       expect(m.scrollY, 'vertikaler Scrollbalken').toBeLessThanOrEqual(0);
       expect(m.scrollX, 'horizontaler Scrollbalken').toBeLessThanOrEqual(0);
@@ -226,10 +249,40 @@ for (const groesse of GROESSEN) {
         expect(t.abgeschnitten, `${t.name}: abgeschnitten`).toBe(false);
         expect(t.zeilen, `${t.name}: höchstens zwei Zeilen`).toBeLessThanOrEqual(2);
         expect(t.schriftPx, `${t.name}: nicht unter 3 % der Bildhöhe`).toBeGreaterThanOrEqual(m.hoehe * 0.03 - 0.5);
-        expect(t.family.startsWith('"Inter Variable"'), t.family).toBe(true);
+        // Untergrenze der Schrift: Der lange Name ist größer als 3 %, wenn er zweizeilig größer passt
+        if (t.name === LANGER_NAME) {
+          expect(t.schriftPx, `${t.name}: zweizeilig größer als die Untergrenze`).toBeGreaterThan(m.hoehe * 0.03 + 1);
+        }
+        expect(t.family.startsWith('Inter Variable,'), t.family).toBe(true);
         expect(t.interGlyphen, `${t.name}: Glyphen aus Inter`).toBe(true);
         expect(t.interGeladen, 'Inter Variable geladen').toBe(true);
       }
+    });
+  });
+}
+
+// Review Fixrunde 2 (K2-Regression): kurze und mittellange Namen bleiben in der Vorgabegröße, einzeilig.
+// Die Vorgabe ist die Obergrenze: Ein Name bleibt in der Vorgabegröße, solange er höchstens zwei Zeilen braucht.
+// „SV Süd“ ist bei 720p und 1080p einzeilig; „Sportfreunde Lotte“ ist bei 720p zweizeilig (64 px passt nicht in eine
+// Zeile der 46-%-Box), bei 1080p einzeilig. Einzeilig bei 720p wäre nur unterhalb der Vorgabe möglich (Bedenken im Report).
+for (const [breite, hoehe, lotteEinzeilig] of [[1280, 720, false], [1920, 1080, true]] as const) {
+  test.describe(`Kurze Namen ${breite}×${hoehe} bleiben in Vorgabegröße (@ZM-125, @ZM-087)`, () => {
+    test.use({ viewport: { width: breite, height: hoehe } });
+
+    test('„SV Süd“ und „Sportfreunde Lotte“ stehen in der Vorgabegröße des Tokens, ohne Kürzung', async ({ page, seedIndexedDB }) => {
+      await oeffneMonitor(page, seedIndexedDB, KURZ_NAME, MITTEL_NAME);
+      const m = await messeLiveFolie(page, [KURZ_NAME, MITTEL_NAME], displayFontSizes.teamName);
+      for (const t of m.teams) {
+        expect(t.text, t.name).toBe(t.name);
+        expect(t.abgeschnitten, `${t.name}: abgeschnitten`).toBe(false);
+        expect(t.schriftPx, `${t.name}: Vorgabegröße ${m.vorgabePx} px`).toBeGreaterThanOrEqual(m.vorgabePx - 0.5);
+        expect(t.zeilen, `${t.name}: höchstens zwei Zeilen`).toBeLessThanOrEqual(2);
+      }
+      expect(m.teams.find((t) => t.name === KURZ_NAME)?.zeilen, 'SV Süd einzeilig').toBe(1);
+      if (lotteEinzeilig) {
+        expect(m.teams.find((t) => t.name === MITTEL_NAME)?.zeilen, 'Sportfreunde Lotte einzeilig').toBe(1);
+      }
+      expect(m.ueberlappungen).toEqual([]);
     });
   });
 }

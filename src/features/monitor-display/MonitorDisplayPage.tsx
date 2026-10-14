@@ -24,14 +24,15 @@ import { displayMonitor } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
 import { useTranslation } from 'react-i18next';
-import { GoalAnimation, CardAnimation, useFullscreen } from '../../components/monitor';
+import { GoalAnimation, CardAnimation } from '../../components/monitor';
 import { TimedNotice } from '../../components/ui/molecules/TimedNotice';
 import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
+import { vollbildUmschalten } from './vollbild';
 import {
   istBrowserQuelle, istCacheTaste, istEingabeZiel, istVollbildTaste, WAKE_LOCK_HINWEIS_MS,
 } from './monitorDauerbetrieb';
-import { useIdleCursor, useTastenAbfang } from './useMonitorDauerbetrieb';
+import { useIdleCursor, useTastenAbfang, useWakeLockNachEingabe } from './useMonitorDauerbetrieb';
 import {
   alleUebersprungen, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
 } from './slideProgramme';
@@ -86,7 +87,6 @@ export function MonitorDisplayPage({
   );
   const [showCacheIndicator, setShowCacheIndicator] = useState(false);
   const { t } = useTranslation('monitor');
-  const { toggleFullscreen } = useFullscreen();
   const cursorRuht = useIdleCursor();
   useTastenAbfang();
 
@@ -103,6 +103,8 @@ export function MonitorDisplayPage({
   // Beamer-Laptops ab. Erst aktivieren, wenn ein Monitor geladen ist — auf der Fehlerseite wäre
   // die Permission-Anfrage sinnlos. Kein Destructuring: noUnusedLocals ist aktiv.
   const wakeLock = useWakeLock(monitor !== null);
+  // B-17 Fixrunde 2: schlägt die erste Anfrage fehl (Safari), fordert die erste Eingabe sie erneut an.
+  useWakeLockNachEingabe(wakeLock.error, wakeLock.request);
   // B-17 (@ME-006): Kann das Gerät den Bildschirm nicht anlassen, zeigt die Seite das einmal klein in einer
   // Ecke. In der Browser-Quelle nie, dort steuert der Rechner den Bildschirm.
   const wakeLockHinweis = wakeLock.error !== null
@@ -154,7 +156,7 @@ export function MonitorDisplayPage({
   // Nur ohne Pin: Während eines Spiels und der 30-s-Haltezeit (@ZM-077) bleibt die Live-Folie sichtbar.
   const rueckfallFolie = qrMoeglich ? ZUSCHAUER_QR_SLIDE : SPIELPLAN_FALLBACK_SLIDE;
 
-  // Folienfolge (B-16c): Takt, Pause, Pfeiltasten, Leertaste und Übergang liegen in useSlideshow.
+  // Folienfolge (B-16c): Takt und Übergang liegen in useSlideshow. Tasten wirken nicht (@ME-022).
   const defaultSlideDuration = monitor?.defaultSlideDuration ?? 15;
   // Spiele für die Anhalte- und Feldregeln (B-16e1): jede neue Turnier-Referenz wertet die Regeln aus.
   const slideProgram = useMemo<SlideProgram>(
@@ -193,7 +195,7 @@ export function MonitorDisplayPage({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (istEingabeZiel(e.target)) { return; }
       if (istVollbildTaste(e)) {
-        toggleFullscreen();
+        vollbildUmschalten();
         return;
       }
       if (istCacheTaste(e)) {
@@ -203,7 +205,7 @@ export function MonitorDisplayPage({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleFullscreen]);
+  }, []);
 
   // ==========================================================================
   // RENDER

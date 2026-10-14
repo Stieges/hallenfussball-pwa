@@ -28,11 +28,26 @@ const ABGEFANGENE_TASTEN: ReadonlySet<string> = new Set([
   'ArrowRight',
   'ArrowUp',
   'ArrowDown',
+  // Zurück/Vor auf Fernbedienungen und Maustasten (B-17 Fixrunde 2)
+  'BrowserBack',
+  'BrowserForward',
 ]);
+
+/** Mac-Weg zurück und vor: Cmd+[ und Cmd+] (B-17 Fixrunde 2). */
+const MAC_NAVIGATION_TASTEN: ReadonlySet<string> = new Set(['[', ']']);
 
 /** Soll die Seite diese Taste abfangen (Standardaktion unterdrücken), damit sie nichts auslöst? */
 export function istAbgefangeneTaste(key: string): boolean {
   return ABGEFANGENE_TASTEN.has(key);
+}
+
+/**
+ * Fängt den Tastendruck ab, der die Seite verlassen würde: die Liste oben, dazu Cmd+[ und Cmd+].
+ * Cmd+F, Strg+F und andere Kombinationen gehören weiter dem Browser.
+ */
+export function istAbgefangenerTastendruck(e: Pick<KeyboardEvent, 'key' | 'metaKey'>): boolean {
+  if (istAbgefangeneTaste(e.key)) { return true; }
+  return e.metaKey && MAC_NAVIGATION_TASTEN.has(e.key);
 }
 
 /** Taste für die Cache-Anzeige (@ME-021): „c“ ohne Strg/Cmd/Alt und ohne Autowiederholung. */

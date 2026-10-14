@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useIdleCursor, useTastenAbfang } from '../useMonitorDauerbetrieb';
+import { useIdleCursor, useTastenAbfang, useWakeLockNachEingabe } from '../useMonitorDauerbetrieb';
 
 beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); });
@@ -65,5 +65,22 @@ describe('useTastenAbfang (@ME-003, @ME-022)', () => {
     const e = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
     window.dispatchEvent(e);
     expect(e.defaultPrevented).toBe(false);
+  });
+});
+
+describe('useWakeLockNachEingabe (B-17 Fixrunde 2)', () => {
+  it('fordert nach der ersten Eingabe einmal erneut an, wenn die Anfrage fehlgeschlagen ist', () => {
+    const anfordern = vi.fn().mockResolvedValue(undefined);
+    renderHook(() => useWakeLockNachEingabe('Wake Lock konnte nicht aktiviert werden', anfordern));
+    act(() => { window.dispatchEvent(new Event('pointerdown')); });
+    act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f' })); });
+    expect(anfordern).toHaveBeenCalledTimes(1);
+  });
+
+  it('Gegenbeispiel: ohne Fehler wird bei Eingaben nichts angefordert', () => {
+    const anfordern = vi.fn().mockResolvedValue(undefined);
+    renderHook(() => useWakeLockNachEingabe(null, anfordern));
+    act(() => { window.dispatchEvent(new Event('pointerdown')); });
+    expect(anfordern).not.toHaveBeenCalled();
   });
 });

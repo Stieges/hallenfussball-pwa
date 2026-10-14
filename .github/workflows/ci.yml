@@ -72,7 +72,8 @@ jobs:
       fail-fast: false
       matrix:
         # Breakpoint-basierte Viewports (Primary)
-        project: [mobile-sm, mobile-md, tablet-portrait, desktop]
+        # desktop-webkit (B-17 Fixrunde 2): Desktop Safari, läuft nur die Monitor-Spec (testMatch in playwright.config.ts)
+        project: [mobile-sm, mobile-md, tablet-portrait, desktop, desktop-webkit]
 
     steps:
       - name: Checkout

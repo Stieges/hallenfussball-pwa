@@ -6,7 +6,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
-  istAbgefangeneTaste, istBrowserQuelle, istCacheTaste, istEingabeZiel, istVollbildTaste, MAUSZEIGER_RUHE_MS, VOLLBILD_TASTE,
+  istAbgefangenerTastendruck, istAbgefangeneTaste, istBrowserQuelle, istCacheTaste, istEingabeZiel, istVollbildTaste,
+  MAUSZEIGER_RUHE_MS, VOLLBILD_TASTE,
 } from '../monitorDauerbetrieb';
 
 const taste = (key: string, extra: Partial<KeyboardEvent> = {}) =>
@@ -86,5 +87,25 @@ describe('istCacheTaste und istEingabeZiel (@ME-021, Review M1)', () => {
     expect(istEingabeZiel(document.createElement('button'))).toBe(false);
     expect(istEingabeZiel(document.body)).toBe(false);
     expect(istEingabeZiel(null)).toBe(false);
+  });
+});
+
+describe('istAbgefangenerTastendruck (B-17 Fixrunde 2, Mac und Windows)', () => {
+  const druck = (key: string, extra: Partial<KeyboardEvent> = {}) => ({ key, metaKey: false, ...extra });
+
+  it('Cmd+[ und Cmd+] (Zurück/Vor auf dem Mac) werden abgefangen, ebenso BrowserBack und BrowserForward', () => {
+    expect(istAbgefangenerTastendruck(druck('[', { metaKey: true }))).toBe(true);
+    expect(istAbgefangenerTastendruck(druck(']', { metaKey: true }))).toBe(true);
+    expect(istAbgefangenerTastendruck(druck('BrowserBack'))).toBe(true);
+    expect(istAbgefangenerTastendruck(druck('BrowserForward'))).toBe(true);
+  });
+
+  it('Gegenbeispiel: Cmd+F und Strg+F bleiben beim Browser', () => {
+    expect(istAbgefangenerTastendruck(druck('f', { metaKey: true }))).toBe(false);
+    expect(istAbgefangenerTastendruck(druck('f', { ctrlKey: true }))).toBe(false);
+  });
+
+  it('Gegenbeispiel: „[“ ohne Cmd fängt nichts ab', () => {
+    expect(istAbgefangenerTastendruck(druck('['))).toBe(false);
   });
 });

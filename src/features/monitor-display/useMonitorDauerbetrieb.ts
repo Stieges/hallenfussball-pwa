@@ -2,7 +2,7 @@
  * Hooks für den Monitor-Dauerbetrieb (B-17): Mauszeiger nach Ruhe ausblenden, Tasten abfangen.
  */
 import { useEffect, useState } from 'react';
-import { MAUSZEIGER_RUHE_MS, istAbgefangeneTaste, istEingabeZiel } from './monitorDauerbetrieb';
+import { MAUSZEIGER_RUHE_MS, istAbgefangenerTastendruck, istEingabeZiel } from './monitorDauerbetrieb';
 
 /**
  * Liefert `true`, wenn der Mauszeiger ruht (kein Mausbewegen und kein Tippen auf dem Bildschirm seit `ruheMs`).
@@ -41,9 +41,30 @@ export function useTastenAbfang(): void {
   useEffect(() => {
     const abfangen = (e: KeyboardEvent) => {
       if (istEingabeZiel(e.target)) { return; }
-      if (istAbgefangeneTaste(e.key)) { e.preventDefault(); }
+      if (istAbgefangenerTastendruck(e)) { e.preventDefault(); }
     };
     window.addEventListener('keydown', abfangen);
     return () => window.removeEventListener('keydown', abfangen);
   }, []);
+}
+
+/**
+ * Fordert den Wake Lock nach der ersten Eingabe erneut an, wenn die erste Anfrage fehlgeschlagen ist (B-17
+ * Fixrunde 2). Safari verlangt dafür manchmal eine Nutzergeste. Nur einmal je Fehlerfall.
+ */
+export function useWakeLockNachEingabe(fehler: string | null, anfordern: () => Promise<void>): void {
+  useEffect(() => {
+    if (fehler === null) { return undefined; }
+    const nochmal = (): void => {
+      window.removeEventListener('pointerdown', nochmal);
+      window.removeEventListener('keydown', nochmal);
+      void anfordern();
+    };
+    window.addEventListener('pointerdown', nochmal);
+    window.addEventListener('keydown', nochmal);
+    return () => {
+      window.removeEventListener('pointerdown', nochmal);
+      window.removeEventListener('keydown', nochmal);
+    };
+  }, [fehler, anfordern]);
 }

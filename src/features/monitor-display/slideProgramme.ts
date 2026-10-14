@@ -114,7 +114,6 @@ export interface SlideshowState {
   index: number;
   page: number;
   startedAt: number;
-  paused: boolean;
   direction: 'next' | 'prev';
   /** Gepinntes Spiel: die Live-Folie hält, solange es läuft (kein Takt). */
   pinnedMatchId?: string | null;
@@ -211,7 +210,7 @@ function advance(program: SlideProgram, state: SlideshowState, now: number, matc
  */
 export function nextSlide(program: SlideProgram, state: SlideshowState, now: number): SlideshowState {
   const count = program.slides.length;
-  if (state.paused || count === 0) { return state; }
+  if (count === 0) { return state; }
   const matches = program.matches ?? [];
 
   const pin = pinTarget(program, state, matches);
@@ -261,7 +260,7 @@ export function nextSlide(program: SlideProgram, state: SlideshowState, now: num
  */
 export function wakeAt(program: SlideProgram, state: SlideshowState): number | null {
   const count = program.slides.length;
-  if (state.paused || count === 0) { return null; }
+  if (count === 0) { return null; }
   if ((state.pinnedMatchId ?? null) !== null) { return state.finalUntil ?? null; }
   // B-16f1: Eine Folie mit mehreren Seiten hat einen Takt (Seitenwechsel), eine Folie mit einer Seite nie.
   if (count <= 1 && pagesOf(program, program.slides[0]) <= 1) { return null; }

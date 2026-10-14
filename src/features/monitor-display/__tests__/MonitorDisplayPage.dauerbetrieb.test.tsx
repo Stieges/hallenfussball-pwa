@@ -289,6 +289,64 @@ describe('Bildrand je Monitor (@ME-020)', () => {
   });
 });
 
+describe('Vollbild ohne Standard-API und Mac-Navigation (B-17 Fixrunde 2)', () => {
+  it('„f“ wirft ohne Vollbild-API nichts', async () => {
+    Reflect.deleteProperty(document.documentElement, 'requestFullscreen');
+    Reflect.deleteProperty(document.documentElement, 'webkitRequestFullscreen');
+    seite();
+    await vorspulen(0);
+    expect(() => fireEvent.keyDown(window, { key: 'f' })).not.toThrow();
+  });
+
+  it('„f“ nutzt den webkit-Rückfall, wenn die Standard-API fehlt', async () => {
+    Reflect.deleteProperty(document.documentElement, 'requestFullscreen');
+    const webkit = vi.fn();
+    Object.defineProperty(document.documentElement, 'webkitRequestFullscreen', { value: webkit, configurable: true });
+    seite();
+    await vorspulen(0);
+    fireEvent.keyDown(window, { key: 'f' });
+    expect(webkit).toHaveBeenCalledTimes(1);
+    Reflect.deleteProperty(document.documentElement, 'webkitRequestFullscreen');
+  });
+
+  it('Cmd+[ verlässt die Seite nicht (Mac-Weg zurück)', async () => {
+    const { onBack } = seite();
+    await vorspulen(0);
+    const e = new KeyboardEvent('keydown', { key: '[', metaKey: true, cancelable: true });
+    act(() => { window.dispatchEvent(e); });
+    expect(e.defaultPrevented).toBe(true);
+    expect(onBack).not.toHaveBeenCalled();
+  });
+});
+
+describe('Wake Lock nach der ersten Eingabe (B-17 Fixrunde 2)', () => {
+  it('schlägt die erste Anfrage fehl, fordert die erste Eingabe sie erneut an und der Hinweis verschwindet', async () => {
+    const request = vi.fn()
+      .mockRejectedValueOnce(new Error('NotAllowedError'))
+      .mockResolvedValue({ release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() });
+    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+    seite();
+    await vorspulen(0);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('monitor-wakelock-hint')).toBeInTheDocument();
+
+    act(() => { window.dispatchEvent(new Event('pointerdown')); });
+    await vorspulen(0);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel: gelingt die erste Anfrage, gibt es keine zweite', async () => {
+    const request = vi.fn().mockResolvedValue({ release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() });
+    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+    seite();
+    await vorspulen(0);
+    act(() => { window.dispatchEvent(new Event('pointerdown')); });
+    await vorspulen(0);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('Hinweis-Text in beiden Sprachen (@ME-006, i18n)', () => {
   it('DE und EN haben den Schlüssel dauerbetrieb.wakeLockHint mit Text', () => {
     expect(deMonitor.dauerbetrieb.wakeLockHint).toMatch(/Energiespar/);

@@ -1,7 +1,7 @@
 /**
  * Folienfolge des Monitors (B-16c): Takt und Übergang. Tasten wirken nicht (@ME-022, Befund C-MONITOR-DAUERBETRIEB).
  *
- * Die Regeln stehen in slideProgramme.ts (nextSlide / stepSlide / wakeAt). Dieser Hook plant genau
+ * Die Regeln stehen in slideProgramme.ts (nextSlide / wakeAt). Dieser Hook plant genau
  * einen Timer bis wakeAt. Der Takt hängt nur an Zahlen (wakeAt, Übergang, Tick), nie an Objekten
  * aus dem Repository: Jeder Poll liefert neue Objekte, sonst würde der Takt bei jedem Poll neu
  * starten (C-MON-TAKT-STEHT).
@@ -43,7 +43,6 @@ export function useSlideshow(program: SlideProgram, transitionMs: number | null)
     index: 0,
     page: 0,
     startedAt: Date.now(),
-    paused: false,
     direction: 'next',
     pinnedMatchId: null,
     finalUntil: null,

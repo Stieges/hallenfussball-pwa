@@ -19,7 +19,7 @@ const programm = (
 ): SlideProgram => ({ slides, defaultDurationSec, pageCount });
 
 const zustand = (over: Partial<SlideshowState> = {}): SlideshowState => ({
-  index: 0, page: 0, startedAt: 0, paused: false, direction: 'next', ...over,
+  index: 0, page: 0, startedAt: 0, direction: 'next', ...over,
 });
 
 const A = folie('A');
@@ -34,7 +34,6 @@ const TAKT_FAELLE: Takt[] = [
     ['null → Monitor-Standard 20 s: 19 999 ms kein Wechsel', [folie('A', null), B], 20, zustand(), 19_999, 'same'],
     ['null → Monitor-Standard 20 s: 20 000 ms Folie B', [folie('A', null), B], 20, zustand(), 20_000, { index: 1, startedAt: 20_000 }],
     ['letzte Folie → Folie 0, Seite 0', [A, B], 15, zustand({ index: 1 }), 15_000, { index: 0, page: 0, startedAt: 15_000 }],
-    ['pausiert, nach 10 min kein Wechsel', [A, B], 15, zustand({ paused: true }), 600_000, 'same'],
     ['eine Folie, nach 10 min kein Wechsel', [A], 15, zustand(), 600_000, 'same'],
     ['keine Folie, nach 10 min kein Wechsel', [], 15, zustand(), 600_000, 'same'],
 ];
@@ -77,7 +76,6 @@ describe('@ZM-130 Zeilen 3/4: Seiten je Folie (Logik; Seitenzahl misst B-17)', (
 describe('wakeAt – nächster Zeitpunkt (B-16c)', () => {
   it('Startzeit + Dauer der Seite; null bei Pause und bei höchstens einer Folie', () => {
     expect(wakeAt(programm([folie('A', 25), B]), zustand({ startedAt: 1_000 }))).toBe(26_000);
-    expect(wakeAt(programm([A, B]), zustand({ paused: true }))).toBeNull();
     expect(wakeAt(programm([A]), zustand())).toBeNull();
   });
 });
