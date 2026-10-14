@@ -211,7 +211,8 @@ describe('useScheduleTabActions — laufend/pausiert bleibt laufend/pausiert (@F
 
   it('gespeicherter Status paused bleibt paused, Payload ohne matchStatus', () => {
     const turnier = tabellenTurnier([
-      createMatch({ id: 'm1', group: 'A', teamA: 'Team A', teamB: 'Team B', matchStatus: 'paused' }),
+      // Die DB kennt 'paused' (matches_match_status_check), der TS-Typ MatchStatus noch nicht.
+      createMatch({ id: 'm1', group: 'A', teamA: 'Team A', teamB: 'Team B', matchStatus: 'paused' as unknown as Match['matchStatus'] }),
     ]);
     const { result, onLocalTournamentUpdate, onMatchesUpdate } = renderActions(turnier);
 

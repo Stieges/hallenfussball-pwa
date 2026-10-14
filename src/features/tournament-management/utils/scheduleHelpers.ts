@@ -83,17 +83,17 @@ export function isMatchRunning(matchId: string, tournamentId: string): boolean {
 }
 
 /**
- * Ist ein Spiel lokal begonnen und noch nicht abgepfiffen (RUNNING, PAUSED, HALF_TIME)? (@TM-143)
+ * Ist ein Spiel lokal begonnen und noch nicht abgepfiffen (RUNNING oder PAUSED)? (@TM-143)
  *
- * Anders als `isMatchRunning` (nur RUNNING, Live-Warnung) zählt hier jede begonnene, nicht
- * abgepfiffene Stufe. NOT_STARTED (initialisiert, noch nicht gespielt) zählt nicht, FINISHED auch nicht.
+ * Anders als `isMatchRunning` (nur RUNNING, Live-Warnung) zählt hier auch die lokale Pause.
+ * NOT_STARTED (initialisiert, noch nicht gespielt) zählt nicht, FINISHED auch nicht.
  */
 export function isMatchLiveOrPaused(matchId: string, tournamentId: string): boolean {
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.liveMatches(tournamentId));
     if (stored) {
       const status = (JSON.parse(stored) as StoredLiveMatches)[matchId]?.status;
-      return status === 'RUNNING' || status === 'PAUSED' || status === 'HALF_TIME';
+      return status === 'RUNNING' || status === 'PAUSED';
     }
   } catch {
     // Ignore parse errors
