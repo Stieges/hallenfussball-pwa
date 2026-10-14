@@ -30,7 +30,7 @@ const hoisted = vi.hoisted(() => ({
     failedChanges: 0,
     failedMutations: [] as never[],
     isCloudSyncAvailable: true,
-    queueLastFailure: null as 'transient' | 'permanent' | null,
+    queueLastFailure: null as 'transient' | 'permanent' | 'storage' | null,
   },
 }));
 
@@ -114,6 +114,46 @@ describe('SyncStatusIndicator — Wartegrund aus Outbox und Queue (A-06j, DE)', 
     expect(screen.getByTestId('sync-status')).toHaveAttribute(
       'aria-label',
       '1 Eintrag wartet – Übertragung gestört',
+    );
+  });
+});
+
+describe('SyncStatusIndicator — Geraetespeicher voll (A-07i, @FU-004 / @FU-007, DE)', () => {
+  beforeEach(() => {
+    hoisted.outbox = EMPTY_OUTBOX;
+    hoisted.sync.status = 'synced';
+    hoisted.sync.isSyncing = false;
+    hoisted.sync.pendingChanges = 0;
+    hoisted.sync.failedChanges = 0;
+    hoisted.sync.failedMutations = [];
+    hoisted.sync.isCloudSyncAvailable = true;
+    hoisted.sync.queueLastFailure = null;
+  });
+
+  it('Pflichttest: Speicher voll -> Meldung in der Bar und im Antippen-Feld sichtbar', async () => {
+    hoisted.sync.pendingChanges = 1;
+    hoisted.sync.queueLastFailure = 'storage';
+    await renderWithI18n(<SyncStatusIndicator tournamentId="t1" />);
+
+    expect(screen.getByTestId('sync-status')).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('Gerätespeicher voll – Einträge werden nicht dauerhaft gespeichert'),
+    );
+
+    fireEvent.click(screen.getByTestId('sync-status'));
+    expect(screen.getByTestId('sync-wait-details')).toHaveTextContent(
+      'Gerätespeicher voll – Einträge werden nicht dauerhaft gespeichert',
+    );
+  });
+
+  it('Gegenbeispiel: ohne Speicherfehler erscheint die Meldung nicht', async () => {
+    hoisted.sync.pendingChanges = 1;
+    hoisted.sync.queueLastFailure = null;
+    await renderWithI18n(<SyncStatusIndicator tournamentId="t1" />);
+
+    expect(screen.getByTestId('sync-status')).not.toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('Gerätespeicher voll'),
     );
   });
 });

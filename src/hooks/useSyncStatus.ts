@@ -34,7 +34,7 @@ export interface SyncState {
     /** Failed mutations (dead-letter queue) with their reason (lastError), newest last */
     failedMutations: FailedMutationItem[];
     /** A-06j: Fehlerklasse des letzten Queue-Versuchs (`getLastFailure()`); optional, damit Mocks gueltig bleiben */
-    queueLastFailure?: 'transient' | 'permanent' | null;
+    queueLastFailure?: 'transient' | 'permanent' | 'storage' | null;
 }
 
 export interface UseSyncStatusReturn extends SyncState {

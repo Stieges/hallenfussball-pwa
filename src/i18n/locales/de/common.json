@@ -97,6 +97,7 @@
     "waitingNoInternet_other": "{{count}} Einträge warten – kein Internet",
     "waitingDisturbed_one": "{{count}} Eintrag wartet – Übertragung gestört",
     "waitingDisturbed_other": "{{count}} Einträge warten – Übertragung gestört",
+    "waitingStorageFull": "Gerätespeicher voll – Einträge werden nicht dauerhaft gespeichert",
     "realtimeInterrupted": "Live-Verbindung unterbrochen",
     "lastSyncNow": "Gerade eben",
     "lastSyncMinutes": "vor {{count}} Min.",

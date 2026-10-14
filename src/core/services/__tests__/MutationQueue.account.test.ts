@@ -22,6 +22,10 @@ vi.mock('../../utils/safeStorage', () => ({
     setItem: vi.fn((key: string, value: string) => {
       mockStorage.set(key, value);
     }),
+    setItemPersisted: vi.fn((key: string, value: string) => {
+      mockStorage.set(key, value);
+      return true;
+    }),
     removeItem: vi.fn((key: string) => {
       mockStorage.delete(key);
     }),
@@ -140,16 +144,17 @@ describe('MutationQueue Konto-Ausgang (A-07b, @FU-006 / @FU-019)', () => {
       expect(mockStorage.has('mutation_queue_v1')).toBe(false);
     });
 
-    it('Speicher voll (setItem schreibt still nicht): Altschluessel bleibt erhalten', () => {
+    it('Speicher voll (setItemPersisted meldet false): Altschluessel bleibt erhalten, Stoerung gemeldet', () => {
       net.online = false;
       mockStorage.set('mutation_queue_v1', JSON.stringify([item('L1', 'legacy-l1'), item('L2', 'legacy-l2')]));
       const before = mockStorage.get('mutation_queue_v1');
-      vi.mocked(safeLocalStorage.setItem).mockImplementationOnce(() => undefined); // Schreibvorgang geht verloren
+      vi.mocked(safeLocalStorage.setItemPersisted).mockImplementationOnce(() => false); // Schreibvorgang geht verloren
 
-      track(new MutationQueue(createMockRepo() as never, undefined, undefined, 'A'));
+      const queue = track(new MutationQueue(createMockRepo() as never, undefined, undefined, 'A'));
 
       expect(mockStorage.get('mutation_queue_v1')).toBe(before);
       expect(storedItems('mutation_queue_v1')).toHaveLength(2);
+      expect(queue.getLastFailure()).toBe('storage');
     });
   });
 
@@ -175,12 +180,12 @@ describe('MutationQueue Konto-Ausgang (A-07b, @FU-006 / @FU-019)', () => {
       expect(repo.save).toHaveBeenCalledTimes(1);
 
       queue.dispose();
-      const setItemBefore = vi.mocked(safeLocalStorage.setItem).mock.calls.length;
+      const setItemBefore = vi.mocked(safeLocalStorage.setItemPersisted).mock.calls.length;
       release();
       await flush();
 
       expect(repo.save).toHaveBeenCalledTimes(1);
-      expect(vi.mocked(safeLocalStorage.setItem).mock.calls.length).toBe(setItemBefore);
+      expect(vi.mocked(safeLocalStorage.setItemPersisted).mock.calls.length).toBe(setItemBefore);
       expect(storedItems('mutation_queue_v1:A')).toHaveLength(3);
     });
   });

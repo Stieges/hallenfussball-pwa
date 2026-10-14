@@ -113,6 +113,26 @@ class SafeStorage implements Storage {
         }
     }
 
+    /**
+     * A-07i (@FU-004, @FU-007): `true` nur, wenn der ECHTE Speicher den Wert genommen hat
+     * (kein Wurf, Read-back gleich). Fällt auf den RAM aus (Wurf, oder Speicher von Anfang an
+     * nicht nutzbar), liefert `false` – der Aufrufer muss das melden, statt still weiterzulaufen.
+     */
+    setItemPersisted(key: string, value: string): boolean {
+        if (!this.isAvailable) {
+            this.memoryFallback.setItem(key, value);
+            return false;
+        }
+        try {
+            this.storage.setItem(key, value);
+            return this.storage.getItem(key) === value;
+        } catch (e) {
+            console.warn('[SafeStorage] setItemPersisted failed, using fallback', e);
+            this.memoryFallback.setItem(key, value);
+            return false;
+        }
+    }
+
     getIsAvailable(): boolean {
         return this.isAvailable;
     }

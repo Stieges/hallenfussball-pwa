@@ -55,7 +55,9 @@ export function SyncWaitDetails({ pendingCount, waitReason, detail }: SyncWaitDe
             ? t('syncStatus.waitingNoInternet', { count: pendingCount })
             : waitReason === 'disturbed'
                 ? t('syncStatus.waitingDisturbed', { count: pendingCount })
-                : t('syncStatus.waiting', { count: pendingCount }),
+                : waitReason === 'storageFull'
+                    ? t('syncStatus.waitingStorageFull')
+                    : t('syncStatus.waiting', { count: pendingCount }),
     );
     const showDetail = waitReason === 'disturbed' && Boolean(detail);
 

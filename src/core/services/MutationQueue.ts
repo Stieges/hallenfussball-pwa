@@ -127,25 +127,27 @@ function parseQueueArray(raw: string): Array<{ id?: unknown }> | null {
  * Kontos. Der Altschluessel wird erst entfernt, wenn der Schreibvorgang im Zielschluessel
  * zurückgelesen bestaetigt ist. Enthaelt der Zielschluessel schon Eintraege, werden beide
  * Listen zusammengefuehrt (ohne doppelte IDs). Unlesbare Daten bleiben unangetastet.
+ * A-07i: liefert `false`, wenn der Zielschluessel nicht im echten Speicher angekommen ist –
+ * der Altschluessel bleibt dann stehen (kein Verlust), der Aufrufer meldet die Stoerung.
  */
-function adoptLegacyKey(legacyKey: string, targetKey: string): void {
+function adoptLegacyKey(legacyKey: string, targetKey: string): boolean {
     const legacyRaw = safeLocalStorage.getItem(legacyKey);
-    if (!legacyRaw) { return; }
+    if (!legacyRaw) { return true; }
     const legacyItems = parseQueueArray(legacyRaw);
-    if (!legacyItems) { return; }
+    if (!legacyItems) { return true; }
 
     let merged = legacyRaw;
     const targetRaw = safeLocalStorage.getItem(targetKey);
     if (targetRaw) {
         const targetItems = parseQueueArray(targetRaw);
-        if (!targetItems) { return; }
+        if (!targetItems) { return true; }
         const known = new Set(targetItems.map((item) => item.id));
         merged = JSON.stringify([...legacyItems.filter((item) => !known.has(item.id)), ...targetItems]);
     }
 
-    safeLocalStorage.setItem(targetKey, merged);
-    if (safeLocalStorage.getItem(targetKey) !== merged) { return; }
+    if (!safeLocalStorage.setItemPersisted(targetKey, merged)) { return false; }
     safeLocalStorage.removeItem(legacyKey);
+    return true;
 }
 
 /**
@@ -179,10 +181,12 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
     ) {
         const storageKey = accountScopedKey(LEGACY_QUEUE_KEY, accountId);
         const failedStorageKey = accountScopedKey(LEGACY_FAILED_KEY, accountId);
+        let adoptionFailed = false;
         if (accountId) {
             // Vor dem Laden der Basisklasse: die erste angemeldete Queue übernimmt den Altbestand.
-            adoptLegacyKey(LEGACY_QUEUE_KEY, storageKey);
-            adoptLegacyKey(LEGACY_FAILED_KEY, failedStorageKey);
+            const queueAdopted = adoptLegacyKey(LEGACY_QUEUE_KEY, storageKey);
+            const failedAdopted = adoptLegacyKey(LEGACY_FAILED_KEY, failedStorageKey);
+            adoptionFailed = !queueAdopted || !failedAdopted;
         }
         super({
             storageKey,
@@ -289,5 +293,6 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                 }
             },
         });
+        if (adoptionFailed) { this.reportStorageFailure('adoptLegacyKey'); }
     }
 }

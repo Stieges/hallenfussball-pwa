@@ -27,7 +27,7 @@ const hoisted = vi.hoisted(() => ({
     failedChanges: 0,
     failedMutations: [] as never[],
     isCloudSyncAvailable: true,
-    queueLastFailure: null as 'transient' | 'permanent' | null,
+    queueLastFailure: null as 'transient' | 'permanent' | 'storage' | null,
   },
 }));
 

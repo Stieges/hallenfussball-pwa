@@ -55,7 +55,9 @@ describe('SafeStorage Vertrag: setItem wirft (Quota)', () => {
     vi.restoreAllMocks();
   });
 
-  it('getItem liefert nach fehlgeschlagenem setItem weiterhin den alten Wert aus dem echten Speicher', async () => {
+  // Ist-Verhalten, Grundlage des Read-back in adoptLegacyKey. setItem selbst meldet den Fehler
+  // nicht; Persistenz-Fehler meldet setItemPersisted (A-07i, Befund @FU-004 / C-QUEUE-SPEICHER-VOLL).
+  it('Ist-Verhalten: getItem liefert nach fehlgeschlagenem setItem weiterhin den alten Wert aus dem echten Speicher', async () => {
     const storage = new QuotaStorage();
     storage.setItem('k', 'alt');
     const safe = await loadSafeLocalStorage(storage);
@@ -65,5 +67,24 @@ describe('SafeStorage Vertrag: setItem wirft (Quota)', () => {
 
     expect(safe.getItem('k')).toBe('alt');
     expect(storage.getItem('k')).toBe('alt');
+  });
+
+  it('setItemPersisted liefert false bei Quota und laesst den alten Wert im echten Speicher', async () => {
+    const storage = new QuotaStorage();
+    storage.setItem('k', 'alt');
+    const safe = await loadSafeLocalStorage(storage);
+
+    storage.quotaExceeded = true;
+
+    expect(safe.setItemPersisted('k', 'neu')).toBe(false);
+    expect(storage.getItem('k')).toBe('alt');
+  });
+
+  it('setItemPersisted liefert true bei normalem Speicher und schreibt den Wert', async () => {
+    const storage = new QuotaStorage();
+    const safe = await loadSafeLocalStorage(storage);
+
+    expect(safe.setItemPersisted('k', 'neu')).toBe(true);
+    expect(storage.getItem('k')).toBe('neu');
   });
 });

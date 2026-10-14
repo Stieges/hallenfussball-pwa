@@ -19,11 +19,11 @@ export interface StatusConfig {
     bgColor: string;
 }
 
-/** Wartegrund: 'noInternet' = Verbindung fehlt/voruebergehend, 'disturbed' = Server-Problem. */
-export type WaitReason = 'noInternet' | 'disturbed';
+/** Wartegrund: 'noInternet' = Verbindung fehlt/voruebergehend, 'disturbed' = Server-Problem, 'storageFull' = Geraetespeicher voll (A-07i). */
+export type WaitReason = 'noInternet' | 'disturbed' | 'storageFull';
 
 /** Fehlerklasse des letzten Versuchs der MutationQueue (`getLastFailure()`). */
-export type QueueFailure = 'transient' | 'permanent' | null | undefined;
+export type QueueFailure = 'transient' | 'permanent' | 'storage' | null | undefined;
 
 // =============================================================================
 // CONFIG
@@ -82,9 +82,10 @@ export const WAITING_CONFIG: StatusConfig = {
  * Leitet aus Status, Outbox-Fehlerklasse und Queue-Fehlerklasse ab, warum Eintraege warten.
  * Reihenfolge der Regeln ist verbindlich (Brief A10):
  * 1. keine wartenden Eintraege -> null
- * 2. status offline oder irgendein 'transient' (auch gemischt mit 'permanent') -> 'noInternet'
- * 3. outboxKind 'permanent' oder queueFailure 'permanent' -> 'disturbed'
- * 4. sonst null
+ * 2. queueFailure 'storage' (A-07i, Geraetespeicher voll: Eintraege nicht dauerhaft gespeichert) -> 'storageFull'
+ * 3. status offline oder irgendein 'transient' (auch gemischt mit 'permanent') -> 'noInternet'
+ * 4. outboxKind 'permanent' oder queueFailure 'permanent' -> 'disturbed'
+ * 5. sonst null
  */
 export function deriveWaitReason(input: {
     pendingCount: number;
@@ -95,6 +96,9 @@ export function deriveWaitReason(input: {
     const { pendingCount, status, outboxKind, queueFailure } = input;
     if (pendingCount === 0) {
         return null;
+    }
+    if (queueFailure === 'storage') {
+        return 'storageFull';
     }
     if (status === 'offline' || outboxKind === 'transient' || queueFailure === 'transient') {
         return 'noInternet';

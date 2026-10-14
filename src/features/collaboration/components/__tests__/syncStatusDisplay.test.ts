@@ -5,6 +5,20 @@
 import { describe, it, expect } from 'vitest';
 import { deriveWaitReason } from '../syncStatusDisplay';
 
+describe('deriveWaitReason: Geraetespeicher voll (A-07i, @FU-004)', () => {
+  it('queueFailure storage bei wartenden Eintraegen -> storageFull', () => {
+    expect(deriveWaitReason({ pendingCount: 1, status: 'synced', outboxKind: null, queueFailure: 'storage' })).toBe('storageFull');
+  });
+
+  it('storageFull gewinnt vor offline (Verlust auf dem Geraet ist wichtiger als der Netzstatus)', () => {
+    expect(deriveWaitReason({ pendingCount: 2, status: 'offline', outboxKind: 'transient', queueFailure: 'storage' })).toBe('storageFull');
+  });
+
+  it('ohne wartende Eintraege bleibt es bei null', () => {
+    expect(deriveWaitReason({ pendingCount: 0, status: 'synced', outboxKind: null, queueFailure: 'storage' })).toBeNull();
+  });
+});
+
 describe('deriveWaitReason (A-06i)', () => {
   it('liefert null ohne wartende Eintraege, auch bei transientem Fehler', () => {
     expect(deriveWaitReason({ pendingCount: 0, status: 'synced', outboxKind: 'transient', queueFailure: 'transient' })).toBeNull();

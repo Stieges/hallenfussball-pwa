@@ -11,6 +11,7 @@ import { RepositoryError, isTransientMutationError } from '../../errors';
 const mockStorage = new Map<string, string>();
 vi.mock('../../utils/safeStorage', () => ({
   safeLocalStorage: {
+    setItemPersisted: vi.fn((key: string, value: string) => { mockStorage.set(key, value); return true; }),
     getItem: vi.fn((key: string) => mockStorage.get(key) ?? null),
     setItem: vi.fn((key: string, value: string) => { mockStorage.set(key, value); }),
     removeItem: vi.fn((key: string) => { mockStorage.delete(key); }),

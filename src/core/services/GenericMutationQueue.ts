@@ -4,6 +4,7 @@ import { generateUniqueId } from '../../utils/idGenerator';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { captureFeatureError } from '../../lib/sentry';
 import { isTransientMutationError } from '../errors';
+import { StorageError } from '../storage/StorageError';
 import { QueueInFlight, QueueRetryTimer, globalQueueTimers, HOLD_RETRY_MS, isAuthExpired, type QueueTimers } from './mutationQueueRetry';
 import { REQUEST_TIMEOUT_MS } from '../utils/syncRetryTiming';
 
@@ -115,7 +116,7 @@ export class GenericMutationQueue<TType extends string> {
     private disposed = false;
     private retryTimer: QueueRetryTimer;
     private inFlight: QueueInFlight;
-    private lastFailure: 'transient' | 'permanent' | null = null;
+    private lastFailure: 'transient' | 'permanent' | 'storage' | null = null;
     private listeners: ((status: MutationQueueStatus) => void)[] = [];
 
     constructor(private config: MutationQueueConfig<TType>) {
@@ -229,8 +230,8 @@ export class GenericMutationQueue<TType extends string> {
         };
     }
 
-    /** Letzter Fehlerabschluss (A-06e): 'transient' | 'permanent' | null nach Erfolg. */
-    public getLastFailure(): 'transient' | 'permanent' | null { return this.lastFailure; }
+    /** Letzter Fehlerabschluss (A-06e): 'transient' | 'permanent' | null nach Erfolg; 'storage' = Gerätespeicher voll (A-07i). */
+    public getLastFailure(): 'transient' | 'permanent' | 'storage' | null { return this.lastFailure; }
 
     public subscribe(listener: (status: MutationQueueStatus) => void): () => void {
         this.listeners.push(listener);
@@ -389,13 +390,17 @@ export class GenericMutationQueue<TType extends string> {
         }
     }
 
-    private save() {
-        try {
-            safeLocalStorage.setItem(this.config.storageKey, JSON.stringify(this.queue));
-        } catch (e) {
-            if (import.meta.env.DEV) { console.error('MutationQueue: Failed to save queue', e); }
-            if (e instanceof Error) { captureFeatureError(e, this.config.sentryFeature, 'saveQueue'); }
-        }
+    private save() { this.persist(this.config.storageKey, this.queue, 'saveQueue'); }
+
+    /** A-07i (@FU-004): nur ein im echten Speicher angekommener Stand gilt als gespeichert. */
+    private persist(key: string, value: unknown, action: string): void {
+        if (!safeLocalStorage.setItemPersisted(key, JSON.stringify(value))) { this.reportStorageFailure(action); }
+    }
+
+    /** A-07i: Speichern fehlgeschlagen → Störungsanzeige „Gerätespeicher voll“ (lastFailure 'storage') + Sentry. */
+    protected reportStorageFailure(action: string): void {
+        this.lastFailure = 'storage'; this.notifyListeners();
+        captureFeatureError(new StorageError('Warteschlange nicht dauerhaft gespeichert'), this.config.sentryFeature, action);
     }
 
     private loadFailed() {
@@ -429,14 +434,7 @@ export class GenericMutationQueue<TType extends string> {
         }
     }
 
-    private saveFailed() {
-        try {
-            safeLocalStorage.setItem(this.config.failedStorageKey, JSON.stringify(this.failedQueue));
-        } catch (e) {
-            if (import.meta.env.DEV) { console.error('MutationQueue: Failed to save failed queue', e); }
-            if (e instanceof Error) { captureFeatureError(e, this.config.sentryFeature, 'saveFailedQueue'); }
-        }
-    }
+    private saveFailed() { this.persist(this.config.failedStorageKey, this.failedQueue, 'saveFailedQueue'); }
 
     /**
      * Process the queue sequentially.
