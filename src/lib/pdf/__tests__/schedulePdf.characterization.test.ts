@@ -18,7 +18,7 @@ import {
   sideName,
   withMatchScore,
 } from './pdfFixture';
-import { flatText, renderSchedulePdf } from './pdfText';
+import { flatText, renderSchedulePdf, rowFrom } from './pdfText';
 
 // jsPDF-Instanzen mitschreiben lassen (Rückfall-Mitschnitt, siehe pdfCapture.ts).
 vi.mock('jspdf', async (importOriginal) => {
@@ -29,6 +29,10 @@ vi.mock('jspdf', async (importOriginal) => {
 
 const SCHEDULE_OPTIONS = { locale: 'de' as const };
 const HINWEIS = 'Ergebnisse bitte nach Spielende eintragen';
+/** Ergebnis-Platzhalter ohne Spielstand (Exporter: '     :     '). */
+const PLATZHALTER = /^ +: +$/;
+/** Gruppenzeile: Nr, Zeit, Feld, Gr, Heim, Ergebnis, Gast (mit Feld- und Gruppen-Spalte). */
+const GRUPPEN_ZEILE = 7;
 
 describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
   it('Pflichttest: A4 hoch (210 × 297) und Dateiname „Hallencup_Nord_Spielplan.pdf“', async () => {
@@ -98,6 +102,7 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
       expect(text[i + 2]).toBe(String(m.field));
       expect(text[i + 3]).toBe(getGroupShortCode(m.group ?? '', schedule.tournament));
       expect(text[i + 4]).toBe(sideName(m, 'A'));
+      expect(text[i + 5], `Ergebnis-Platzhalter Spiel ${m.matchNumber}`).toMatch(PLATZHALTER);
       expect(text[i + 6]).toBe(sideName(m, 'B'));
     }
   });
@@ -164,34 +169,39 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
 });
 
 describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als it.fails', () => {
-  it('IST @BM-012: laufendes Spiel druckt 1 : 0 (Bestand)', async () => {
+  it('IST @BM-012: laufendes Spiel 12 druckt 1 : 0 in seiner Zeile (Bestand)', async () => {
     const schedule = withMatchScore(hallencupSchedule(), 12, { scoreA: 1, scoreB: 0 });
     const pdf = await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: true });
+    const row = rowFrom(flatText(pdf), 12, matchByNumber(schedule, 12).time, GRUPPEN_ZEILE);
 
-    expect(flatText(pdf)).toContain('1 : 0');
+    expect(row).toContain('1 : 0');
   });
 
-  it.fails('@BM-012 Ziel: laufendes Spiel ohne Zwischenstand, Zeile „läuft“', async () => {
+  it.fails('@BM-012 Ziel: Spiel 12 steht in seiner Zeile als „läuft“, ohne Zwischenstand', async () => {
     const schedule = withMatchScore(hallencupSchedule(), 12, { scoreA: 1, scoreB: 0 });
     const pdf = await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: true });
-    const text = flatText(pdf);
+    const row = rowFrom(flatText(pdf), 12, matchByNumber(schedule, 12).time, GRUPPEN_ZEILE);
 
-    expect(text).toContain('läuft');
-    expect(text).not.toContain('1 : 0');
+    expect(row).toContain('läuft');
+    expect(row).not.toContain('1:0');
+    expect(row).not.toContain('1 : 0');
   });
 
-  it('IST @BM-011: beendetes Spiel erscheint nur mit Schalter „Mit Spielstand“ (Bestand)', async () => {
+  it('IST @BM-011: beendetes Spiel 11 zeigt ohne Schalter nur den Platzhalter (Bestand)', async () => {
     const schedule = withMatchScore(hallencupSchedule(), 11, { scoreA: 2, scoreB: 1 });
     const pdf = await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: false });
+    const row = rowFrom(flatText(pdf), 11, matchByNumber(schedule, 11).time, GRUPPEN_ZEILE);
 
-    expect(flatText(pdf)).not.toContain('2 : 1');
+    expect(row[5]).toMatch(PLATZHALTER);
+    expect(row).not.toContain('2 : 1');
   });
 
-  it.fails('@BM-011 Ziel: beendetes Spiel 11 druckt „2 : 1“ auch ohne Schalter', async () => {
+  it.fails('@BM-011 Ziel: beendetes Spiel 11 steht mit „2:1“ in seiner Zeile, auch ohne Schalter', async () => {
     const schedule = withMatchScore(hallencupSchedule(), 11, { scoreA: 2, scoreB: 1 });
     const pdf = await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: false });
+    const row = rowFrom(flatText(pdf), 11, matchByNumber(schedule, 11).time, GRUPPEN_ZEILE);
 
-    expect(flatText(pdf)).toContain('2 : 1');
+    expect(row).toContain('2:1');
   });
 
   it('IST @BM-010: keine Seitenzahl und kein Stand auf den Seiten (Bestand)', async () => {
@@ -202,12 +212,15 @@ describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als i
     expect(text.some(t => t.includes('Stand '))).toBe(false);
   });
 
-  it.fails('@BM-010 Ziel: jede Seite trägt „Stand … · Seite x von y“', async () => {
+  it.fails('@BM-010 Ziel: jede Seite trägt „Hallencup Nord · Stand 14.11. 15:07 · Seite x von y“ (Muster)', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, SCHEDULE_OPTIONS);
+    const zeile = /^Hallencup Nord · Stand \d{2}\.\d{2}\. \d{2}:\d{2} · Seite (\d+) von (\d+)$/;
 
-    for (const page of pdf.pages) {
-      expect(page.some(t => t.includes('Seite ') && t.includes(' von '))).toBe(true);
-    }
+    pdf.pages.forEach((page, i) => {
+      const treffer = page.map(t => zeile.exec(t)).find(m => m !== null);
+      expect(treffer?.[1], `Seite ${i + 1}`).toBe(String(i + 1));
+      expect(treffer?.[2], `Seite ${i + 1}`).toBe(String(pdf.pages.length));
+    });
   });
 
   it('IST @BM-032: Platzierung bleibt auch bei ausgeschalteten Tabellen (Bestand)', async () => {

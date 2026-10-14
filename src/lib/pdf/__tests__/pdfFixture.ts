@@ -5,7 +5,7 @@
  * à vier Teams, Halbfinale 1/2, Spiel um Platz 3, Finale. Die Spielliste entsteht über den **echten**
  * `generateFullSchedule` (nur aufrufen, nichts verändern). Reine Testdaten.
  */
-import type { Team, Tournament } from '../../../types/tournament';
+import type { Standing, Team, Tournament } from '../../../types/tournament';
 import { createMockTournament } from '../../../test/factories';
 import { generateFullSchedule } from '../../../core/generators';
 import type { GeneratedSchedule, ScheduledMatch } from '../../../core/generators';
@@ -73,6 +73,39 @@ export function withMatchScore(
     phases: schedule.phases.map(p => ({ ...p, matches: p.matches.map(apply) })),
   };
 }
+
+/**
+ * Echte Tabellen-Werte je Gruppe (direkt gebaut, nicht über `calculations.ts` – B-40). Gleichstand nach Punkten
+ * in Gruppe A (Berg und Nord, 6 Pkt.): die Tordifferenz entscheidet. Alle Zahlen sind konsistent (Sp = S+U+N).
+ */
+export const HALLENCUP_STANDINGS: Standing[] = (() => {
+  const team = (id: string): Team => {
+    const found = HALLENCUP_TEAMS.find(t => t.id === id);
+    if (!found) {throw new Error(`Team ${id} fehlt in HALLENCUP_TEAMS`);}
+    return found;
+  };
+  const row = (id: string, won: number, drawn: number, lost: number, goalsFor: number, goalsAgainst: number): Standing => ({
+    team: team(id),
+    played: won + drawn + lost,
+    won,
+    drawn,
+    lost,
+    goalsFor,
+    goalsAgainst,
+    goalDifference: goalsFor - goalsAgainst,
+    points: won * 3 + drawn,
+  });
+  return [
+    row('team-berg', 2, 0, 1, 5, 2),  // Gruppe A, 6 Pkt., +3
+    row('team-nord', 2, 0, 1, 4, 3),  // Gruppe A, 6 Pkt., +1
+    row('team-sued', 1, 1, 1, 3, 4),  // Gruppe A, 4 Pkt., -1
+    row('team-tal', 0, 0, 3, 1, 4),   // Gruppe A, 0 Pkt., -3
+    row('team-west', 3, 0, 0, 7, 1),  // Gruppe B, 9 Pkt., +6
+    row('team-ost', 1, 1, 1, 3, 3),   // Gruppe B, 4 Pkt., 0
+    row('team-mitte', 1, 0, 2, 3, 5), // Gruppe B, 3 Pkt., -2
+    row('team-hof', 0, 1, 2, 2, 6),   // Gruppe B, 1 Pkt., -4
+  ];
+})();
 
 /** Eine Spielnummer aus dem Plan (wirft, wenn sie fehlt – damit ein Test nie leer grün ist). */
 export function matchByNumber(schedule: GeneratedSchedule, matchNumber: number): ScheduledMatch {

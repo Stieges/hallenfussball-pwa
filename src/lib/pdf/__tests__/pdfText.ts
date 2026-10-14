@@ -30,3 +30,26 @@ export async function renderSchedulePdf(
 export function flatText(pdf: RenderedPdf): string[] {
   return pdf.pages.flat();
 }
+
+/**
+ * Die `width` Zellen einer Spielzeile ab der Spielnummer (Nr, Zeit, Feld, …). Wirft, wenn die Zeile fehlt:
+ * ein fehlender Eintrag darf nie als „leer erfüllt“ durchgehen.
+ */
+export function rowFrom(text: string[], matchNumber: number, time: string, width: number): string[] {
+  const i = text.findIndex((t, idx) => t === String(matchNumber) && text[idx + 1] === time);
+  if (i < 0) {
+    throw new Error(`Zeile Spiel ${matchNumber} (${time}) fehlt im PDF-Text`);
+  }
+  return text.slice(i, i + width);
+}
+
+/** Textstücke ohne leere Zellen (autoTable schreibt leere Zellen als ''). */
+export function nonEmpty(text: string[]): string[] {
+  return text.filter(t => t !== '');
+}
+
+/** Kommt die Folge `expected` zusammenhängend in `text` vor (leere Zellen zählen nicht)? */
+export function containsSequence(text: string[], expected: string[]): boolean {
+  const tokens = nonEmpty(text);
+  return tokens.some((_, i) => expected.every((e, j) => tokens[i + j] === e));
+}
