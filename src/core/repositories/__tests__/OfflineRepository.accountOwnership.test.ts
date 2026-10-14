@@ -205,4 +205,56 @@ describe('A-07e Konto-Ausgang lokaler Kopien (@AN-024, @FU-006)', () => {
     session.userId = null;
     expect(idsOf(await new LocalStorageRepository().listForCurrentUser())).toEqual(['U2']);
   });
+
+  it('M-1 Anmelden als A (echter Weg: Dashboard-Liste + syncUp) laedt Probelauf und alt nicht hoch, Marker unveraendert', async () => {
+    stores.raw.set('tournaments', [{ ...t('probe'), ownerId: 'guest' }, t('alt')]);
+
+    session.userId = 'A';
+    const cloudA = cloudFor('A');
+    const repoA = track(new OfflineRepository(new LocalStorageRepository(), cloudA as never, 'A'));
+    await repoA.listForCurrentUser();
+    await repoA.syncUp();
+    await flush();
+
+    expect(cloudA.save).not.toHaveBeenCalled();
+    const owners = Object.fromEntries(storedTournaments().map((x) => [x.id, x.ownerId]));
+    expect(owners).toEqual({ probe: 'guest', alt: 'guest' });
+  });
+
+  it('S-1 Hintergrund-Aktualisierung einer zwischengespeicherten Kopie (neuere Cloud-Version) behaelt den Konto-Marker: Gast-Liste nach Abmelden leer', async () => {
+    cloud.set('T', { owner: 'A', t: { ...t('T'), version: 1 } });
+    const cloudA = cloudFor('A');
+    const repoA = track(new OfflineRepository(new LocalStorageRepository(), cloudA as never, 'A'));
+    await repoA.get('T');
+    cloud.set('T', { owner: 'A', t: { ...t('T'), version: 2, title: 'neuer Stand' } });
+
+    await repoA.get('T');
+    await flush();
+    expect(storedTournaments().find((x) => x.id === 'T')?.version).toBe(2);
+    repoA.mutationQueue.dispose();
+
+    session.userId = null;
+    expect(idsOf(await new LocalStorageRepository().listForCurrentUser())).toEqual([]);
+  });
+
+  it('S-1 Speichern ohne Marker ueber eine Kopie mit Konto-Marker behaelt den Marker (Gegenstueck zur Hintergrund-Aktualisierung)', async () => {
+    await new LocalStorageRepository().save({ ...t('T'), ownerId: 'A' });
+    await new LocalStorageRepository().save(t('T'));
+
+    expect(storedTournaments().find((x) => x.id === 'T')?.ownerId).toBe('A');
+  });
+
+  it('S-3 Einzelabruf ist kontogebunden: Gast sieht fremde Kopie nicht, Gast-Turnier bleibt erreichbar, B sieht A nicht, A sieht A', async () => {
+    stores.raw.set('tournaments', [{ ...t('T'), ownerId: 'A' }, { ...t('probe'), ownerId: 'guest' }]);
+
+    session.userId = null;
+    expect(await new LocalStorageRepository().get('T')).toBeNull();
+    expect((await new LocalStorageRepository().get('probe'))?.id).toBe('probe');
+
+    session.userId = 'B';
+    expect(await new LocalStorageRepository().get('T')).toBeNull();
+
+    session.userId = 'A';
+    expect((await new LocalStorageRepository().get('T'))?.id).toBe('T');
+  });
 });

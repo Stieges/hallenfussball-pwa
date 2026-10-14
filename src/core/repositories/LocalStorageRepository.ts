@@ -6,6 +6,7 @@ import { hydrateTournament } from './hydration';
 import { createStorage } from '../storage/StorageFactory';
 import type { IStorageAdapter } from '../storage/IStorageAdapter';
 import { captureFeatureError } from '../../lib/sentry';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { isLegacyTournamentShape } from '../models/legacyFormat';
 import { quarantineLegacyTournaments, LEGACY_TOURNAMENTS_NOTICE_EVENT } from '../storage/legacyTournamentStore';
 
@@ -34,9 +35,29 @@ const GUEST_OWNER = 'guest';
 
 export class LocalStorageRepository implements ITournamentRepository {
 
+    /**
+     * A-07e S-3 (@AN-024): Einzelabruf ist kontogebunden wie die Liste. Gastmodus (keine Sitzung)
+     * sieht 'guest'-Kopien und Altbestand; ein Konto sieht nur seine eigenen Kopien. Eine fremde
+     * Kopie verhaelt sich wie „nicht gefunden“. Lokal nichts gefunden -> Aufrufer holt aus der Cloud.
+     */
     async get(id: string): Promise<Tournament | null> {
         const list = await this.loadList();
-        return list.find(t => t.id === id) ?? null;
+        const found = list.find(t => t.id === id);
+        if (!found) { return null; }
+        const account = await this.currentAccountId();
+        const visible = account === null ? (found.ownerId ?? GUEST_OWNER) === GUEST_OWNER : found.ownerId === account;
+        return visible ? found : null;
+    }
+
+    /** Konto der aktuellen Sitzung; null = Gastmodus oder ohne Supabase. */
+    private async currentAccountId(): Promise<string | null> {
+        if (!isSupabaseConfigured || !supabase) { return null; }
+        try {
+            const { data } = await supabase.auth.getSession();
+            return data.session?.user.id ?? null;
+        } catch {
+            return null;
+        }
     }
 
     async getByShareCode(code: string): Promise<Tournament | null> {
@@ -133,6 +154,9 @@ export class LocalStorageRepository implements ITournamentRepository {
     /**
      * A-07e Grenzfall Altbestand: unmarkierte Kopien anhand der Cloud-Liste dieses Kontos markieren
      * (ID in der Cloud-Liste -> Konto), alles danach Unmarkierte wird 'guest'.
+     * H-1 (Opus A-07e): Die Cloud-Liste enthaelt nur `owner_id = user.id`. Turniere, bei denen das
+     * Konto nur Helfer oder Mitwirkender ist, und Altbestand fremder Konten werden hier 'guest'.
+     * Das gilt nur einmal beim Uebergang von Altbestand (Plattform nicht produktiv, Kurswechsel 01.10.).
      */
     async assignUnmarkedOwners(accountId: string, cloudIds: ReadonlySet<string>): Promise<void> {
         const list = await this.loadList();

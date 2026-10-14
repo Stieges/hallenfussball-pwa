@@ -214,7 +214,7 @@ export class OfflineRepository implements ITournamentRepository {
                     && cloudVersion >= localVersion;
 
                 if (cloudVersion > localVersion || visibilityStale) {
-                    await this.localRepo.save(cloudData);
+                    await this.localRepo.save(this.owned(cloudData));
                     if (import.meta.env.DEV) {
                         // eslint-disable-next-line no-console -- Debug logging for background sync updates
                         console.log(`[OfflineRepository] Background sync: Updated tournament ${id} from v${localVersion} to v${cloudVersion}${visibilityStale ? ' (isPublic war veraltet)' : ''}`);
