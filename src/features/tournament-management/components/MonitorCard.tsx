@@ -71,9 +71,9 @@ function MonitorCard({
                 title={heartbeatStatus === 'online' ? t('monitors.heartbeat.online') : heartbeatStatus === 'stale' ? t('monitors.heartbeat.stale') : t('monitors.heartbeat.offline')}
               >
                 <span style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
+                  width: cssVars.spacing.sm,
+                  height: cssVars.spacing.sm,
+                  borderRadius: cssVars.borderRadius.full,
                   backgroundColor: 'currentColor',
                   flexShrink: 0,
                 }} />

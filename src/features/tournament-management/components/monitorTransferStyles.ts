@@ -32,10 +32,10 @@ export const optionStyle = (active: boolean): CSSProperties => ({
   justifyContent: 'space-between',
   alignItems: 'center',
   gap: cssVars.spacing.md,
-  minHeight: '44px',
+  minHeight: cssVars.touchTargets.minimum,
   padding: cssVars.spacing.md,
   borderRadius: cssVars.borderRadius.md,
-  border: `1px solid ${active ? cssVars.colors.primary : cssVars.colors.border}`,
+  border: `${cssVars.borderWidth.thin} solid ${active ? cssVars.colors.primary : cssVars.colors.border}`,
   background: active ? cssVars.colors.surfaceLight : cssVars.colors.surface,
   color: cssVars.colors.textPrimary,
   fontSize: cssVars.fontSizes.md,
@@ -53,7 +53,7 @@ export const alertStyle: CSSProperties = {
   margin: 0,
   padding: cssVars.spacing.sm,
   borderRadius: cssVars.borderRadius.sm,
-  background: `${cssVars.colors.error}22`,
+  background: cssVars.colors.errorSubtle,
   color: cssVars.colors.error,
   fontSize: cssVars.fontSizes.sm,
 };
@@ -66,7 +66,7 @@ export const actionsStyle: CSSProperties = {
 };
 
 export const fileInputStyle: CSSProperties = {
-  minHeight: '44px',
+  minHeight: cssVars.touchTargets.minimum,
   fontSize: cssVars.fontSizes.sm,
   color: cssVars.colors.textPrimary,
 };

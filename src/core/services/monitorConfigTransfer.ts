@@ -83,15 +83,15 @@ export type MonitorConfigPayload = z.infer<typeof monitorConfigSchema>;
 // --- VORLAGE ---
 
 /**
- * Vorlage „Hallen-Standard“ (@ME-058): Live-Spiel, Nächste Spiele, Tabelle, Zuschauer-QR.
- * Ohne fieldId: die Live-Folie zeigt dann Feld 1, ohne groupId die Tabelle aller Gruppen.
+ * Vorlage „Hallen-Standard“ (@ME-058): Live-Spiel auf Feld 1, Nächste Spiele, Tabellen aller Gruppen, Zuschauer-QR.
+ * Der Monitorname ist ein i18n-Schlüssel; die UI setzt den sichtbaren Namen (monitors.transfer.templateMonitorName).
  */
 export const HALLEN_STANDARD: MonitorConfigPayload = {
   kind: MONITOR_CONFIG_KIND,
   version: MONITOR_CONFIG_VERSION,
   monitors: [
     {
-      name: 'Hallen-Monitor',
+      name: 'hallen-standard',
       defaultSlideDuration: 15,
       transition: 'fade',
       transitionDuration: 500,
@@ -99,9 +99,9 @@ export const HALLEN_STANDARD: MonitorConfigPayload = {
       performanceMode: 'auto',
       overscanPx: 48,
       slides: [
-        { type: 'live', config: {}, duration: null },
+        { type: 'live', config: { fieldId: 'field-1' }, duration: null },
         { type: 'next-matches', config: { matchCount: 3 }, duration: null },
-        { type: 'standings', config: {}, duration: null },
+        { type: 'all-standings', config: {}, duration: null },
         { type: 'qr-code', config: {}, duration: null },
       ],
     },
@@ -110,14 +110,19 @@ export const HALLEN_STANDARD: MonitorConfigPayload = {
 
 // --- EXPORT ---
 
+/** Kopie eines flachen Objekts, damit Datei und Ziel keine Referenzen auf das Quellturnier teilen (@ME-044) */
+function copyOf<T extends object>(value: T | undefined): T | undefined {
+  return value === undefined ? undefined : { ...value };
+}
+
 function exportSlideConfig(config: SlideConfig, sponsorName: string | undefined): TransferSlideConfig {
   return {
-    groupId: config.groupId, fieldId: config.fieldId, whenIdle: config.whenIdle,
+    groupId: config.groupId, fieldId: config.fieldId, whenIdle: copyOf(config.whenIdle),
     pauseRotationDuringMatch: config.pauseRotationDuringMatch, matchCount: config.matchCount,
     numberOfPlayers: config.numberOfPlayers, sponsorName, showQrCode: config.showQrCode,
     qrTarget: config.qrTarget === 'custom' ? undefined : config.qrTarget,
     headline: config.headline, body: config.body, textAlign: config.textAlign,
-    colorScheme: config.colorScheme, liveColorScheme: config.liveColorScheme,
+    colorScheme: config.colorScheme, liveColorScheme: copyOf(config.liveColorScheme),
   };
 }
 
@@ -194,10 +199,7 @@ export function importMonitorConfig(text: string): MonitorConfigImportResult {
   }
 
   const parsed = monitorConfigSchema.safeParse(raw);
-  if (!parsed.success) {
-    return { ok: false, error: 'invalid' };
-  }
-  return { ok: true, payload: parsed.data };
+  return parsed.success ? { ok: true, payload: parsed.data } : { ok: false, error: 'invalid' };
 }
 
 // --- ÜBERNEHMEN (Payload -> neue Monitore des Zielturniers) ---
@@ -232,11 +234,11 @@ function uniqueName(base: string, taken: Set<string>): string {
 
 function toSlideConfig(config: TransferSlideConfig, sponsorId: string | undefined): SlideConfig {
   return {
-    groupId: config.groupId, fieldId: config.fieldId, whenIdle: config.whenIdle,
+    groupId: config.groupId, fieldId: config.fieldId, whenIdle: copyOf(config.whenIdle),
     pauseRotationDuringMatch: config.pauseRotationDuringMatch, matchCount: config.matchCount,
     numberOfPlayers: config.numberOfPlayers, sponsorId, showQrCode: config.showQrCode,
     qrTarget: config.qrTarget, headline: config.headline, body: config.body,
-    textAlign: config.textAlign, colorScheme: config.colorScheme, liveColorScheme: config.liveColorScheme,
+    textAlign: config.textAlign, colorScheme: config.colorScheme, liveColorScheme: copyOf(config.liveColorScheme),
   };
 }
 

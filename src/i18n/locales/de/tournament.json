@@ -294,12 +294,10 @@
       "sourceMeta_other": "{{count}} Monitore",
       "fromTemplate": "Vorlage",
       "templateButton": "Vorlage „Hallen-Standard“",
-      "templateDescription": "Ein Monitor mit Live-Spiel, Nächsten Spielen, Tabelle und Zuschauer-QR.",
+      "templateDescription": "Ein Monitor mit Live-Spiel, Nächsten Spielen, Tabellen und Zuschauer-QR.",
       "fromFile": "Aus Datei",
       "chooseFile": "Datei auswählen",
       "fileChosen": "Gewählte Datei: {{name}}",
-      "summary_one": "{{count}} Monitor mit {{slides}} Folie",
-      "summary_other": "{{count}} Monitore mit {{slides}} Folien",
       "confirm": "Übernehmen",
       "cancel": "Abbrechen",
       "close": "Schließen",
@@ -308,13 +306,19 @@
       "skippedSponsor": "Sponsor „{{name}}“ fehlt in diesem Turnier – Folie nicht übernommen",
       "noScreenChange": "Laufende Bildschirme bleiben unverändert. Die neuen Monitore sind noch keinem Bildschirm zugeordnet.",
       "errors": {
-        "tooLarge": "Die Datei ist zu groß (maximal 256 KB). Es wurde nichts geändert.",
-        "notMonitorConfig": "Diese Datei enthält keine Monitor-Einstellungen. Es wurde nichts geändert.",
+        "tooLarge": "Die Datei ist zu groß (maximal {{limit}}). Es wurde nichts geändert.",
+        "notMonitorConfig": "Diese Datei enthält keine Monitor-Einstellungen",
         "unsupportedVersion": "Diese Version der Monitor-Datei wird nicht unterstützt. Es wurde nichts geändert.",
         "invalid": "Die Datei ist beschädigt oder enthält ungültige Einstellungen. Es wurde nichts geändert.",
         "readFailed": "Die Datei konnte nicht gelesen werden. Es wurde nichts geändert.",
         "saveFailed": "Die Monitore konnten nicht übernommen werden."
-      }
+      },
+      "templateMonitorName": "Hallen-Standard",
+      "monitorsCount_one": "{{count}} Monitor",
+      "monitorsCount_other": "{{count}} Monitore",
+      "slidesCount_one": "{{count}} Folie",
+      "slidesCount_other": "{{count}} Folien",
+      "summary": "{{monitors}} mit {{slides}}"
     }
   },
   "sponsor": {

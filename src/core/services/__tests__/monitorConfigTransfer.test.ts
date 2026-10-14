@@ -109,7 +109,7 @@ describe('importMonitorConfig', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.payload.monitors[0].slides.map(s => s.type))
-        .toEqual(['live', 'next-matches', 'standings', 'qr-code']);
+        .toEqual(['live', 'next-matches', 'all-standings', 'qr-code']);
     }
   });
 
@@ -230,7 +230,7 @@ describe('instantiateMonitorConfig', () => {
       now: NOW,
     });
     expect(skippedSponsors).toEqual([]);
-    expect(monitors[0].slides.map(s => s.type)).toEqual(['live', 'next-matches', 'standings', 'qr-code']);
+    expect(monitors[0].slides.map(s => s.type)).toEqual(['live', 'next-matches', 'all-standings', 'qr-code']);
     expect(monitors[0].slides[1].config.matchCount).toBe(3);
   });
 
@@ -262,3 +262,83 @@ function monitorJson() {
 function monitorJsonWith(slides: unknown[]) {
   return { ...monitorJson(), slides };
 }
+
+// --- Fixrunde 1 (Opus-Review F4/F6): Treue des Exports, Rundweg, keine geteilten Objekte ---
+
+describe('Treue von Export und Übernahme (Fixrunde F4, F6)', () => {
+  it('sortiert die Folien nach order, auch wenn das Array anders liegt', () => {
+    const shuffled = monitor({
+      slides: [
+        slide({ id: 'c', type: 'qr-code', config: {}, order: 2 }),
+        slide({ id: 'a', type: 'live', config: { fieldId: 'field-2' }, order: 0 }),
+        slide({ id: 'b', type: 'standings', config: { groupId: 'B' }, order: 1 }),
+      ],
+    });
+    const payload = exportMonitorConfig([shuffled], []);
+    expect(payload.monitors[0].slides.map(s => s.type)).toEqual(['live', 'standings', 'qr-code']);
+  });
+
+  it('exportiert groupId, fieldId und liveColorScheme', () => {
+    const colors = { preset: 'modern' as const, homeColor: '#111111', awayColor: '#222222', useTeamColors: true };
+    const source = monitor({
+      slides: [
+        slide({ id: 'l', type: 'live', config: { fieldId: 'field-2', liveColorScheme: colors }, order: 0 }),
+        slide({ id: 't', type: 'standings', config: { groupId: 'B' }, order: 1 }),
+      ],
+    });
+    const [exported] = exportMonitorConfig([source], []).monitors;
+    expect(exported.slides[0].config).toMatchObject({ fieldId: 'field-2', liveColorScheme: colors });
+    expect(exported.slides[1].config).toMatchObject({ groupId: 'B' });
+  });
+
+  it('Rundweg Export → Datei → Import → Übernehmen erhält Folien, Felder, Gruppen und Farben bis auf IDs', () => {
+    const colors = { preset: 'modern' as const, homeColor: '#111111', awayColor: '#222222', useTeamColors: false };
+    const source = monitor({
+      overscanPx: 12,
+      slides: [
+        slide({ id: 'l', type: 'live', config: { fieldId: 'field-2', liveColorScheme: colors, whenIdle: { type: 'next-match', timeoutSeconds: 30 } }, order: 0 }),
+        slide({ id: 'n', type: 'next-matches', config: { matchCount: 4 }, duration: 25, order: 1 }),
+        slide({ id: 't', type: 'standings', config: { groupId: 'B' }, order: 2 }),
+      ],
+    });
+    const text = JSON.stringify(exportMonitorConfig([source], [sponsorNord]));
+    const parsed = importMonitorConfig(text);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) {return;}
+
+    const { monitors } = instantiateMonitorConfig(parsed.payload, {
+      sponsors: [],
+      existingNames: [],
+      generateId: idGenerator(),
+      now: NOW,
+    });
+    const [target] = monitors;
+    expect(target.overscanPx).toBe(12);
+    expect(target.slides.map(({ type, duration, order, config }) => ({ type, duration, order, config }))).toEqual([
+      { type: 'live', duration: null, order: 0, config: { fieldId: 'field-2', liveColorScheme: colors, whenIdle: { type: 'next-match', timeoutSeconds: 30 } } },
+      { type: 'next-matches', duration: 25, order: 1, config: { matchCount: 4 } },
+      { type: 'standings', duration: null, order: 2, config: { groupId: 'B' } },
+    ]);
+  });
+
+  it('teilt keine Objekte mit dem Quellturnier (@ME-044): Änderungen am Ziel verändern die Quelle nicht', () => {
+    const source = monitor({
+      slides: [
+        slide({ id: 'l', type: 'live', config: { whenIdle: { type: 'next-match' }, liveColorScheme: { preset: 'classic', homeColor: '#1E40AF', awayColor: '#DC2626', useTeamColors: false } }, order: 0 }),
+      ],
+    });
+    const before = structuredClone(source);
+    const { monitors } = instantiateMonitorConfig(exportMonitorConfig([source], []), {
+      sponsors: [],
+      existingNames: [],
+      generateId: idGenerator(),
+      now: NOW,
+    });
+
+    const config = monitors[0].slides[0].config;
+    if (config.whenIdle) {config.whenIdle.type = 'skip';}
+    if (config.liveColorScheme) {config.liveColorScheme.homeColor = '#000000';}
+
+    expect(source).toEqual(before);
+  });
+});

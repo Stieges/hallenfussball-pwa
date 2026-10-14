@@ -20,7 +20,8 @@ import type { Tournament } from '../../types/tournament';
 import { SLIDE_TYPES } from '../../types/monitor';
 import { useMonitors } from '../../hooks';
 import { useMonitorHeartbeats } from '../../hooks/useMonitorHeartbeats';
-import { usePermissions } from '../../hooks/usePermissions';
+import { useMyTournamentRole } from '../auth/hooks/useMyTournamentRole';
+import { canManageTournament } from '../auth/utils/permissions';
 import { MonitorCard } from './components/MonitorCard';
 import { MonitorTransferSheet } from './MonitorTransferSheet';
 import { downloadMonitorConfig } from './monitorConfigDownload';
@@ -80,9 +81,10 @@ export function MonitorsConfigTab({
   // Heartbeat status for all monitors in this tournament
   const heartbeats = useMonitorHeartbeats(tournament.id);
 
-  // Übernehmen und Exportieren: nur Turnierleitung und Co-Admin (@ME-043)
-  const { hasPermission } = usePermissions(tournament.id);
-  const canTransfer = hasPermission('edit_tournament');
+  // Übernehmen und Exportieren: nur Turnierleitung und Co-Admin (@ME-043).
+  // Vorhandene Rechteprüfung wie in SettingsTab (useMyTournamentRole + canManageTournament).
+  const { role: myRole } = useMyTournamentRole(tournament.id);
+  const canTransfer = myRole ? canManageTournament(myRole) : false;
 
   // ==========================================================================
   // HANDLERS

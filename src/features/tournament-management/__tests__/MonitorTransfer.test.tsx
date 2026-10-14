@@ -14,10 +14,10 @@ import type { Tournament } from '../../../types/tournament';
 import type { TournamentMonitor } from '../../../types/monitor';
 import { MONITOR_CONFIG_MAX_BYTES } from '../../../core/services/monitorConfigTransfer';
 
-const { mockActive, mockHasPermission } = vi.hoisted(() => ({
-  mockActive: { current: [] as unknown[] },
-  mockHasPermission: { current: (_permission: string): boolean => true },
-}));
+const { mockActive, mockRole } = vi.hoisted(() => {
+  const role: { current: string | null } = { current: 'owner' };
+  return { mockActive: { current: [] as unknown[] }, mockRole: role };
+});
 
 vi.mock('../../../hooks', async () => {
   const mod = await import('../../../hooks/useMonitors');
@@ -28,8 +28,8 @@ vi.mock('../../../hooks/useTournaments', () => ({
   useTournaments: () => ({ activeTournaments: mockActive.current, loading: false }),
 }));
 
-vi.mock('../../../hooks/usePermissions', () => ({
-  usePermissions: () => ({ hasPermission: (p: string) => mockHasPermission.current(p) }),
+vi.mock('../../auth/hooks/useMyTournamentRole', () => ({
+  useMyTournamentRole: () => ({ role: mockRole.current }),
 }));
 
 vi.mock('../../../hooks/useMonitorHeartbeats', () => ({
@@ -105,7 +105,7 @@ describe('Monitore übernehmen (B-22)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockActive.current = [nord, sued];
-    mockHasPermission.current = () => true;
+    mockRole.current = 'owner';
     Object.defineProperty(URL, 'createObjectURL', { value: vi.fn(() => 'blob:monitor'), configurable: true, writable: true });
     Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true, writable: true });
   });
@@ -226,7 +226,9 @@ describe('Monitore übernehmen (B-22)', () => {
 
     await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
     const [created] = savedMonitors(onUpdate);
-    expect(created.slides.map(s => s.type)).toEqual(['live', 'next-matches', 'standings', 'qr-code']);
+    expect(created.slides.map(s => s.type)).toEqual(['live', 'next-matches', 'all-standings', 'qr-code']);
+    expect(created.name).toBe('tournament:monitors.transfer.templateMonitorName');
+    expect(created.slides[0].config.fieldId).toBe('field-1');
   });
 
   it('@ME-045 lässt bestehende Monitore des Zielturniers unverändert', async () => {
@@ -244,19 +246,84 @@ describe('Monitore übernehmen (B-22)', () => {
     expect(monitors[1].id).not.toBe('mon-bestand');
   });
 
-  it('@ME-043 zeigt „Monitore übernehmen“ nur, wenn die Turnierleitung das Recht hat', () => {
-    mockHasPermission.current = () => false;
-    renderTab(sued, vi.fn());
-    expect(screen.queryByTestId('monitors-transfer-open')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('monitors-transfer-export')).not.toBeInTheDocument();
+  it.each<[string, string | null, boolean]>([
+    ['Eigentümer', 'owner', true],
+    ['Co-Admin', 'co-admin', true],
+    ['Helfer (trainer)', 'trainer', false],
+    ['Mitwirkender', 'collaborator', false],
+    ['Betrachter', 'viewer', false],
+    ['ohne Rolle', null, false],
+  ])('@ME-043 %s: Übernehmen und Exportieren sichtbar = %s', (_label, role, visible) => {
+    mockRole.current = role;
+    renderTab(nord, vi.fn());
+    if (visible) {
+      expect(screen.getByTestId('monitors-transfer-open')).toBeInTheDocument();
+      expect(screen.getByTestId('monitors-transfer-export')).toBeInTheDocument();
+    } else {
+      expect(screen.queryByTestId('monitors-transfer-open')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('monitors-transfer-export')).not.toBeInTheDocument();
+    }
   });
 
-  it('@ME-040 exportiert die Monitor-Einstellungen als Datei', async () => {
+  it('@ME-040 exportiert die Monitor-Einstellungen als Datei ohne IDs und Teams', async () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     renderTab(nord, vi.fn());
     await userEvent.click(screen.getByTestId('monitors-transfer-export'));
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
     expect(click).toHaveBeenCalledTimes(1);
+    const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as Blob;
+    const text = await blob.text();
+    expect(text).toContain('"kind": "monitor-config"');
+    expect(text).not.toMatch(/mon-nord|sp-nord|Nord Team/);
     click.mockRestore();
+  });
+
+  it('@ME-044 nach dem Übernehmen ist die Quelle unverändert und wird nicht gespeichert', async () => {
+    const snapshot = JSON.stringify(nord);
+    const onUpdate = renderTab(sued);
+    await openSheet();
+    await userEvent.click(screen.getByTestId('transfer-source-nord'));
+    await userEvent.click(screen.getByTestId('transfer-confirm'));
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+    expect((onUpdate.mock.calls[0][0] as Tournament).id).toBe('sued');
+    expect(JSON.stringify(nord)).toBe(snapshot);
+
+    // Änderung am Ziel-Monitor (z. B. Tabellen-Folie entfernen) berührt die Quelle nicht
+    const [created] = savedMonitors(onUpdate);
+    created.slides.splice(1, 1);
+    expect(nord.monitors?.[0].slides).toHaveLength(3);
+  });
+
+  it('@ME-045 Quelle bleibt unverändert, neue Monitore sind noch keinem Bildschirm zugeordnet', async () => {
+    const snapshot = JSON.stringify(nord);
+    const onUpdate = renderTab(sued);
+    await openSheet();
+    await userEvent.click(screen.getByTestId('transfer-source-nord'));
+    await userEvent.click(screen.getByTestId('transfer-confirm'));
+
+    await screen.findByTestId('transfer-done');
+    expect(screen.getByText(/monitors\.transfer\.noScreenChange/)).toBeInTheDocument();
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(nord)).toBe(snapshot);
+  });
+
+  it('@ME-046 (Teil 1) läuft das Spiel im alten Turnier weiter, bleibt dessen Monitor unberührt', async () => {
+    const running = tournament({
+      id: 'nord',
+      title: 'Hallencup Nord',
+      monitors: [monitor({ id: 'mon-nord' })],
+      sponsors: [{ id: 'sp-nord', name: 'Bäckerei Krume' }] as unknown as Tournament['sponsors'],
+    });
+    mockActive.current = [running, sued];
+    const onUpdate = renderTab(sued);
+    await openSheet();
+    await userEvent.click(screen.getByTestId('transfer-source-nord'));
+    await userEvent.click(screen.getByTestId('transfer-confirm'));
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+    expect(running.monitors?.[0].id).toBe('mon-nord');
+    expect(running.monitors?.[0].slides[0].id).toBe('sl-1');
+    expect(onUpdate.mock.calls.map(c => (c[0] as Tournament).id)).toEqual(['sued']);
   });
 });

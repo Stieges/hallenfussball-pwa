@@ -59,10 +59,13 @@ export interface MonitorTransferSheetProps {
   onApply: (monitors: TournamentMonitor[]) => Promise<void>;
 }
 
+/** Größenlimit als Anzeigetext, aus der Konstante erzeugt (z. B. „256 KB“) */
+const SIZE_LIMIT_LABEL = `${MONITOR_CONFIG_MAX_BYTES / 1024} KB`;
+
 function importErrorMessage(t: TFunction<'tournament'>, error: MonitorConfigImportError): string {
   switch (error) {
     case 'too-large':
-      return t('monitors.transfer.errors.tooLarge');
+      return t('monitors.transfer.errors.tooLarge', { limit: SIZE_LIMIT_LABEL });
     case 'not-monitor-config':
       return t('monitors.transfer.errors.notMonitorConfig');
     case 'unsupported-version':
@@ -102,11 +105,17 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
 
   const payload = useMemo<MonitorConfigPayload | null>(() => {
     if (!choice) {return null;}
-    if (choice.kind === 'template') {return HALLEN_STANDARD;}
+    if (choice.kind === 'template') {
+      // Der Monitorname ist in der Vorlage ein Schlüssel; die UI setzt den übersetzten Namen
+      return {
+        ...HALLEN_STANDARD,
+        monitors: HALLEN_STANDARD.monitors.map(m => ({ ...m, name: t('monitors.transfer.templateMonitorName') })),
+      };
+    }
     if (choice.kind === 'file') {return choice.payload;}
     const source = sources.find(s => s.id === choice.tournamentId);
     return source ? exportMonitorConfig(source.monitors ?? [], source.sponsors ?? []) : null;
-  }, [choice, sources]);
+  }, [choice, sources, t]);
 
   const slideCount = payload?.monitors.reduce((sum, m) => sum + m.slides.length, 0) ?? 0;
   const monitorCount = payload?.monitors.length ?? 0;
@@ -254,7 +263,10 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
 
             {payload && (
               <p data-testid="transfer-summary" style={{ margin: 0, color: cssVars.colors.textPrimary }}>
-                {t('monitors.transfer.summary', { count: monitorCount, slides: slideCount })}
+                {t('monitors.transfer.summary', {
+                  monitors: t('monitors.transfer.monitorsCount', { count: monitorCount }),
+                  slides: t('monitors.transfer.slidesCount', { count: slideCount }),
+                })}
               </p>
             )}
             {error && <p role="alert" style={alertStyle}>{error}</p>}

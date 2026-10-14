@@ -294,12 +294,10 @@
       "sourceMeta_other": "{{count}} monitors",
       "fromTemplate": "Template",
       "templateButton": "Template \"Hall standard\"",
-      "templateDescription": "One monitor with live match, next matches, table and spectator QR code.",
+      "templateDescription": "One monitor with live match, next matches, tables and spectator QR code.",
       "fromFile": "From file",
       "chooseFile": "Choose file",
       "fileChosen": "Chosen file: {{name}}",
-      "summary_one": "{{count}} monitor with {{slides}} slide",
-      "summary_other": "{{count}} monitors with {{slides}} slides",
       "confirm": "Take over",
       "cancel": "Cancel",
       "close": "Close",
@@ -308,13 +306,19 @@
       "skippedSponsor": "Sponsor \"{{name}}\" is missing in this tournament – slide not taken over",
       "noScreenChange": "Running screens stay unchanged. The new monitors are not yet assigned to any screen.",
       "errors": {
-        "tooLarge": "The file is too large (maximum 256 KB). Nothing was changed.",
-        "notMonitorConfig": "This file contains no monitor settings. Nothing was changed.",
+        "tooLarge": "The file is too large (maximum {{limit}}). Nothing was changed.",
+        "notMonitorConfig": "This file contains no monitor settings",
         "unsupportedVersion": "This version of the monitor file is not supported. Nothing was changed.",
         "invalid": "The file is damaged or contains invalid settings. Nothing was changed.",
         "readFailed": "The file could not be read. Nothing was changed.",
         "saveFailed": "The monitors could not be taken over."
-      }
+      },
+      "templateMonitorName": "Hall standard",
+      "monitorsCount_one": "{{count}} monitor",
+      "monitorsCount_other": "{{count}} monitors",
+      "slidesCount_one": "{{count}} slide",
+      "slidesCount_other": "{{count}} slides",
+      "summary": "{{monitors}} with {{slides}}"
     }
   },
   "sponsor": {
