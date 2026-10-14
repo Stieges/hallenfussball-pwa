@@ -194,6 +194,34 @@ describe('MutationQueue bei vollem Geraetespeicher (A-07i, @FU-004 / @FU-007)', 
     third.dispose();
   });
 
+  it('A-07i Fixrunde 1: Eintrag gespeichert -> Speicher voll -> gesendet -> Neustart (Speicher frei) -> kein erneuter Versand', async () => {
+    setOnline(false);
+    const storage = new QuotaStorage();
+    const { MutationQueue } = await loadModules(storage);
+
+    const repo1 = createMockRepo();
+    const first = new MutationQueue(repo1 as never, undefined, undefined, undefined);
+    first.enqueue('SAVE_TOURNAMENT', tournament('t1'));
+    expect(storage.raw('mutation_queue_v1')).not.toBeNull();
+
+    // Speicher wird voll, bevor der Eintrag gesendet ist: Versand klappt, das Entfernen nicht.
+    storage.quotaExceeded = true;
+    setOnline(true);
+    await first.process();
+    await flush();
+    expect(repo1.save).toHaveBeenCalledTimes(1);
+    expect(storage.raw('mutation_queue_v1')).toBeNull();
+    first.dispose();
+
+    // Neustart mit freiem Speicher: der gesendete Eintrag darf nicht noch einmal gehen.
+    storage.quotaExceeded = false;
+    const repo2 = createMockRepo();
+    const second = new MutationQueue(repo2 as never, undefined, undefined, undefined);
+    await flush();
+    expect(repo2.save).not.toHaveBeenCalled();
+    second.dispose();
+  });
+
   it('Gegenbeispiel: normaler Speicher -> keine Stoerung, kein Sentry, Versand wie bisher', async () => {
     setOnline(true);
     const storage = new QuotaStorage();

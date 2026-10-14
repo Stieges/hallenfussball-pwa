@@ -395,7 +395,7 @@ export class GenericMutationQueue<TType extends string> {
 
     /** A-07i (@FU-004): nur ein im echten Speicher angekommener Stand gilt als gespeichert. */
     private persist(key: string, value: unknown, action: string): void {
-        if (!safeLocalStorage.setItemPersisted(key, JSON.stringify(value))) { this.reportStorageFailure(action); }
+        if (!safeLocalStorage.setItemPersisted(key, JSON.stringify(value))) { if (Array.isArray(value) && value.length === 0) { safeLocalStorage.removeItem(key); } this.reportStorageFailure(action); } // A-07i Fixrunde 1 (2): leerer Stand -> veralteten Schluessel entfernen (Doppelversand)
     }
 
     /** A-07i: Speichern fehlgeschlagen → Störungsanzeige „Gerätespeicher voll“ (lastFailure 'storage') + Sentry (1× je Ursache). */
