@@ -24,6 +24,14 @@ function mergeMatchUpdate(match: Match, update: MatchUpdate): Match {
     return merged as unknown as Match;
 }
 
+/**
+ * A-07e: Konto-Marker `Tournament.ownerId` der lokalen Kopie. `'guest'` = im Gastmodus angelegt.
+ * Ohne Marker = Altbestand: im Gastmodus wie `'guest'` gezeigt, beim naechsten Laden eines Kontos
+ * anhand der Cloud-Liste markiert (`assignUnmarkedOwners`). Gleicher Wert wie GUEST_ACCOUNT_ID
+ * in `match/client/guestEngineEntries.ts`, dort nicht importiert (Zyklusvermeidung).
+ */
+const GUEST_OWNER = 'guest';
+
 export class LocalStorageRepository implements ITournamentRepository {
 
     async get(id: string): Promise<Tournament | null> {
@@ -44,9 +52,10 @@ export class LocalStorageRepository implements ITournamentRepository {
 
         if (index >= 0) {
             const currentVersion = list[index].version ?? 0;
-            list[index] = { ...tournament, version: currentVersion + 1, updatedAt: new Date().toISOString() };
+            // A-07e: bestehender Konto-Marker bleibt, wenn der Aufrufer keinen setzt
+            list[index] = { ...tournament, ownerId: tournament.ownerId ?? list[index].ownerId, version: currentVersion + 1, updatedAt: new Date().toISOString() };
         } else {
-            list.push({ ...tournament, version: 1, updatedAt: new Date().toISOString() });
+            list.push({ ...tournament, ownerId: tournament.ownerId ?? GUEST_OWNER, version: 1, updatedAt: new Date().toISOString() });
         }
 
         await this.saveList(list);
@@ -109,8 +118,28 @@ export class LocalStorageRepository implements ITournamentRepository {
         await this.saveList(filtered);
     }
 
+    /** Gastmodus: nur Kopien ohne Konto (Altbestand ohne Marker zaehlt als 'guest'). */
     async listForCurrentUser(): Promise<Tournament[]> {
-        return this.loadList();
+        const list = await this.loadList();
+        return list.filter(t => (t.ownerId ?? GUEST_OWNER) === GUEST_OWNER);
+    }
+
+    /** A-07e: lokale Kopien eines Kontos (Marker = accountId). */
+    async listOwnedBy(accountId: string): Promise<Tournament[]> {
+        const list = await this.loadList();
+        return list.filter(t => t.ownerId === accountId);
+    }
+
+    /**
+     * A-07e Grenzfall Altbestand: unmarkierte Kopien anhand der Cloud-Liste dieses Kontos markieren
+     * (ID in der Cloud-Liste -> Konto), alles danach Unmarkierte wird 'guest'.
+     */
+    async assignUnmarkedOwners(accountId: string, cloudIds: ReadonlySet<string>): Promise<void> {
+        const list = await this.loadList();
+        if (list.every(t => t.ownerId !== undefined)) { return; }
+        await this.saveList(list.map(t => t.ownerId !== undefined
+            ? t
+            : { ...t, ownerId: cloudIds.has(t.id) ? accountId : GUEST_OWNER }));
     }
 
     /**

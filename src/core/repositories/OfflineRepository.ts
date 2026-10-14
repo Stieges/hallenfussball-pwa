@@ -128,9 +128,19 @@ export class OfflineRepository implements ITournamentRepository {
         private localRepo: LocalStorageRepository,
         private supabaseRepo: SupabaseRepository,
         /** A-07b: Konto, dem die Warteschlange gehoert (@FU-006). Ohne Angabe: Altschluessel. */
-        accountId?: string
+        private accountId?: string
     ) {
         this._mutationQueue = new MutationQueue(supabaseRepo, localRepo, undefined, accountId);
+    }
+
+    /** A-07e: Kopie gehoert dem Konto dieses Repositorys (ohne Konto unveraendert). */
+    private owned(tournament: Tournament): Tournament {
+        return this.accountId === undefined ? tournament : { ...tournament, ownerId: this.accountId };
+    }
+
+    /** A-07e: lokale Kopien des Kontos; ohne Konto (nur Tests) wie bisher alle. */
+    private localListForAccount(): Promise<Tournament[]> {
+        return this.accountId === undefined ? this.localRepo.listForCurrentUser() : this.localRepo.listOwnedBy(this.accountId);
     }
 
     /**
@@ -164,7 +174,7 @@ export class OfflineRepository implements ITournamentRepository {
 
             if (cloudData) {
                 // Cache for next time
-                await this.localRepo.save(cloudData);
+                await this.localRepo.save(this.owned(cloudData));
                 return cloudData;
             }
         } catch (error) {
@@ -241,7 +251,7 @@ export class OfflineRepository implements ITournamentRepository {
      */
     async save(tournament: Tournament): Promise<void> {
         // 1. Save Local
-        await this.localRepo.save(tournament);
+        await this.localRepo.save(this.owned(tournament));
 
         // 2. Enqueue Cloud Persistence
         this.mutationQueue.enqueue('SAVE_TOURNAMENT', tournament);
@@ -293,10 +303,10 @@ export class OfflineRepository implements ITournamentRepository {
                 this.supabaseRepo.listForCurrentUser(),
                 timeoutPromise
             ]);
-            const localList = await this.localRepo.listForCurrentUser();
-
             // Merge: Add local-only tournaments that haven't been synced yet
             const cloudIds = new Set(cloudList.map(t => t.id));
+            if (this.accountId !== undefined) { await this.localRepo.assignUnmarkedOwners(this.accountId, cloudIds); }
+            const localList = await this.localListForAccount();
             const localOnly = localList.filter(t => !cloudIds.has(t.id));
 
             // Return cloud list + unsynced local tournaments
@@ -311,7 +321,7 @@ export class OfflineRepository implements ITournamentRepository {
                 }
             }
             // Fallback to all local tournaments
-            return await this.localRepo.listForCurrentUser();
+            return await this.localListForAccount();
         }
     }
 
@@ -320,8 +330,8 @@ export class OfflineRepository implements ITournamentRepository {
      */
     async syncUp(): Promise<void> {
         try {
-            // Use public API to get local list
-            const localList = await this.localRepo.listForCurrentUser();
+            // A-07e: nur eigene Kopien des Kontos (Gast-Kopien nie hochladen)
+            const localList = await this.localListForAccount();
 
             for (const localT of localList) {
                 try {
@@ -557,7 +567,7 @@ export class OfflineRepository implements ITournamentRepository {
 
             // Case: No local data - just save remote
             if (!localT) {
-                await this.localRepo.save(remoteT);
+                await this.localRepo.save(this.owned(remoteT));
                 return { status: 'updated', data: remoteT };
             }
 
@@ -581,7 +591,7 @@ export class OfflineRepository implements ITournamentRepository {
                 }
 
                 // No conflicts - safe to update local
-                await this.localRepo.save(remoteT);
+                await this.localRepo.save(this.owned(remoteT));
                 return { status: 'updated', data: remoteT };
             }
 
@@ -642,7 +652,7 @@ export class OfflineRepository implements ITournamentRepository {
                 // Pull remote to local
                 const remote = await this.supabaseRepo.get(tournamentId);
                 if (remote) {
-                    await this.localRepo.save(remote);
+                    await this.localRepo.save(this.owned(remote));
                     return { status: 'updated', data: remote };
                 }
             }
