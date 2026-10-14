@@ -257,4 +257,21 @@ describe('A-07e Konto-Ausgang lokaler Kopien (@AN-024, @FU-006)', () => {
     session.userId = 'A';
     expect((await new LocalStorageRepository().get('T'))?.id).toBe('T');
   });
+
+  it('S-1 Race: lokale Kopie fehlt bei der Hintergrund-Aktualisierung, die neue Kopie gehoert trotzdem dem Konto', async () => {
+    cloud.set('T', { owner: 'A', t: { ...t('T'), version: 2 } });
+    const local = new LocalStorageRepository();
+    await local.save({ ...t('T'), ownerId: 'A', version: 1 });
+    const repoA = track(new OfflineRepository(local, cloudFor('A') as never, 'A'));
+    const realGet = local.get.bind(local);
+    vi.spyOn(local, 'get').mockImplementationOnce(realGet).mockImplementationOnce(async () => {
+      await local.delete('T'); // lokale Kopie verschwindet zwischen Lesen und Aktualisieren
+      return null;
+    });
+
+    await repoA.get('T');
+    await flush();
+
+    expect(storedTournaments().find((x) => x.id === 'T')?.ownerId).toBe('A');
+  });
 });
