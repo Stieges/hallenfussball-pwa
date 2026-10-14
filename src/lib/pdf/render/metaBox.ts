@@ -9,6 +9,7 @@ import { printColors, printFonts, printMetrics, printSpacing } from '../../../de
 import { getLocationAddressLine } from '../../../utils/locationHelpers';
 import { ensureSpace, type PageGeometry } from '../layout';
 import type { PdfTexts } from '../translations';
+import { PDF_FONT } from '../fonts';
 
 /** Spielzeit, falls die Gruppenphase keine Dauer liefert (Minuten). */
 const DEFAULT_GROUP_DURATION_MIN = 10;
@@ -73,7 +74,7 @@ export function renderMetaBox(
 
   // Breite der längsten Beschriftung je Spalte (inkl. Doppelpunkt)
   doc.setFontSize(printFonts.meta);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT.family, 'normal');
 
   const leftMaxLabelWidth = Math.max(...leftFields.map(f => doc.getTextWidth(`${f.label}:`)));
   const rightMaxLabelWidth = Math.max(...rightFields.map(f => doc.getTextWidth(`${f.label}:`)));
@@ -103,11 +104,11 @@ export function renderMetaBox(
   leftFields.forEach((field) => {
     doc.setFontSize(printFonts.meta);
     doc.setTextColor(...printColors.textMuted);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(PDF_FONT.family, 'normal');
     doc.text(`${field.label}:`, leftColumnX, currentYLeft);
 
     doc.setTextColor(...printColors.textMain);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(PDF_FONT.family, 'bold');
     doc.text(field.value, leftColumnX + valueStartXLeft, currentYLeft);
 
     currentYLeft += lineHeight + rowGap;
@@ -116,7 +117,7 @@ export function renderMetaBox(
     if (field.label === t.hall && locationAddressLine) {
       doc.setFontSize(printFonts.metaSmall);
       doc.setTextColor(...printColors.textMuted);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(PDF_FONT.family, 'normal');
       doc.text(locationAddressLine, leftColumnX + valueStartXLeft, currentYLeft);
       currentYLeft += lineHeight + rowGap;
     }
@@ -129,11 +130,11 @@ export function renderMetaBox(
   rightFields.forEach((field) => {
     doc.setFontSize(printFonts.meta);
     doc.setTextColor(...printColors.textMuted);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(PDF_FONT.family, 'normal');
     doc.text(`${field.label}:`, rightColumnX, currentYRight);
 
     doc.setTextColor(...printColors.textMain);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(PDF_FONT.family, 'bold');
     doc.text(field.value, rightColumnX + valueStartXRight, currentYRight);
 
     currentYRight += lineHeight + rowGap;

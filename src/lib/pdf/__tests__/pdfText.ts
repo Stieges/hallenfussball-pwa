@@ -33,6 +33,11 @@ function resourceTranslator(resource: Record<string, unknown>): PdfTranslator {
 
 const RESOURCES: Record<PdfLocale, Record<string, unknown>> = { de: deTournament, en: enTournament };
 
+/** Übersetzer mit der echten Ressource der Sprache (für Tests, die `exportScheduleToPDF` direkt aufrufen). */
+export function translatorFor(locale: PdfLocale): PdfTranslator {
+  return resourceTranslator(RESOURCES[locale]);
+}
+
 /** Rendert den Export und gibt Dateiname, Seitenmaße und Text je Seite zurück. Vorgabe: Deutsch. */
 export async function renderSchedulePdf(
   schedule: GeneratedSchedule,
@@ -40,7 +45,7 @@ export async function renderSchedulePdf(
   options: PDFExportOptions = {},
 ): Promise<RenderedPdf> {
   const locale = options.locale ?? 'de';
-  const withTexts: PDFExportOptions = { locale, translate: resourceTranslator(RESOURCES[locale]), ...options };
+  const withTexts: PDFExportOptions = { locale, translate: translatorFor(locale), ...options };
   resetCapture();
   await exportScheduleToPDF(schedule, standings, withTexts);
   const rendered = lastCapture();

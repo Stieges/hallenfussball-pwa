@@ -9,6 +9,7 @@ import jsPDF from 'jspdf';
 import type { GeneratedSchedule } from '../../core/generators';
 import type { Standing } from '../../types/tournament';
 import { getLocationName } from '../../utils/locationHelpers';
+import { registerPdfFonts, PDF_FONT, unrenderableChars } from './fonts';
 import { pageGeometry } from './layout';
 import { renderGroupStage, renderFinalsSection } from './render/matchTables';
 import { renderGroupStandings, renderFinalRanking } from './render/standings';
@@ -20,6 +21,7 @@ import {
   buildPdfTexts,
   resolvePdfLocale,
   type PdfLocale,
+  type PdfTexts,
   type PdfTranslator,
 } from './translations';
 
@@ -34,6 +36,15 @@ export interface PDFExportOptions {
   hallName?: string;
 }
 
+/** Ergebnis des Exports: das PDF ist immer erzeugt, `notes` sind sichtbare Hinweise an den Nutzer. */
+export interface SchedulePdfResult {
+  notes: string[];
+}
+
+export interface SchedulePdfBuild extends SchedulePdfResult {
+  doc: jsPDF;
+}
+
 export interface SchedulePdfInput {
   schedule: GeneratedSchedule;
   standings: Standing[] | undefined;
@@ -46,8 +57,15 @@ function appTranslator(locale: PdfLocale): PdfTranslator {
   return (key, values) => i18next.t(key, key, { ns: 'tournament', lng: locale, ...values });
 }
 
+/** Hinweis je Teamname mit Zeichen, die die eingebettete Schrift nicht trägt (B-28a2, Daniel 14.10.). */
+export function unrenderableTeamNotes(schedule: GeneratedSchedule, t: PdfTexts): string[] {
+  return schedule.teams
+    .filter(team => unrenderableChars(team.name).length > 0)
+    .map(team => t.unrenderableName(team.name));
+}
+
 /** Baut das Spielplan-PDF, ohne es zu speichern. */
-export async function buildSchedulePdf({ schedule, standings, options = {} }: SchedulePdfInput): Promise<jsPDF> {
+export async function buildSchedulePdf({ schedule, standings, options = {} }: SchedulePdfInput): Promise<SchedulePdfBuild> {
   const {
     locale = resolvePdfLocale(i18next.language),
     translate = appTranslator(locale),
@@ -58,6 +76,7 @@ export async function buildSchedulePdf({ schedule, standings, options = {} }: Sc
   } = options;
 
   const t = buildPdfTexts(translate, locale);
+  const notes = unrenderableTeamNotes(schedule, t);
   const geo = pageGeometry('a4', 'portrait');
 
   const doc = new jsPDF({
@@ -66,8 +85,9 @@ export async function buildSchedulePdf({ schedule, standings, options = {} }: Sc
     format: 'a4',
   });
 
+  await registerPdfFonts(doc);
   doc.setLanguage(locale);
-  doc.setFont('helvetica');
+  doc.setFont(PDF_FONT.family);
 
   let yPos = geo.top;
 
@@ -123,7 +143,7 @@ export async function buildSchedulePdf({ schedule, standings, options = {} }: Sc
   // 8. Platzierung ganz am Ende
   renderFinalRanking(doc, schedule, standings, t, geo, yPos);
 
-  return doc;
+  return { doc, notes };
 }
 
 /** Dateiname `<Titel>_Spielplan.pdf`, Leerzeichen durch Unterstriche. */
@@ -131,12 +151,13 @@ export function schedulePdfFilename(schedule: GeneratedSchedule): string {
   return `${schedule.tournament.title.replace(/\s+/g, '_')}_Spielplan.pdf`;
 }
 
-/** Baut das Spielplan-PDF und speichert es. */
+/** Baut das Spielplan-PDF und speichert es. Rückgabe: Hinweise für den Nutzer (leer, wenn keine). */
 export async function exportScheduleToPDF(
   schedule: GeneratedSchedule,
   standings: Standing[] | undefined,
   options: PDFExportOptions = {}
-): Promise<void> {
-  const doc = await buildSchedulePdf({ schedule, standings, options });
+): Promise<SchedulePdfResult> {
+  const { doc, notes } = await buildSchedulePdf({ schedule, standings, options });
   doc.save(schedulePdfFilename(schedule));
+  return { notes };
 }

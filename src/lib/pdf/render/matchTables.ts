@@ -12,6 +12,7 @@ import { ensureSpace, type PageGeometry } from '../layout';
 import { sideLabel } from '../matchSides';
 import { tableEndY } from '../jspdfTypes';
 import type { PdfTexts } from '../translations';
+import { PDF_FONT } from '../fonts';
 
 /** Ergebnis-Platzhalter ohne Spielstand (Textzelle, wird in B-28a3 ersetzt). */
 const RESULT_PLACEHOLDER = '     :     ';
@@ -64,7 +65,7 @@ function matchTableOptions(
 function sectionTitle(doc: jsPDF, text: string, geo: PageGeometry, yPos: number, size: number): number {
   doc.setFontSize(size);
   doc.setTextColor(...printColors.textMain);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT.family, 'bold');
   doc.text(text, geo.left, yPos);
   return yPos + printMetrics.sectionTitleUnderline;
 }
@@ -241,7 +242,7 @@ function renderFinalsTable(
     yPos = ensureSpace(doc, yPos, printMetrics.finalsSubtitleMinSpace, geo);
     doc.setFontSize(printFonts.table);
     doc.setTextColor(...printColors.textMuted);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(PDF_FONT.family, 'bold');
     doc.text(subtitle, geo.left, yPos);
     yPos += printMetrics.finalsSubtitleAdvance;
   }

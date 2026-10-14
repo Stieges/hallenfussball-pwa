@@ -30,10 +30,13 @@ export const PDFExportDialog = ({
   const [includeStandings, setIncludeStandings] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string>('');
+  // Hinweise nach dem Export (z. B. Teamnamen mit Zeichen, die das PDF nicht darstellt). Das PDF ist trotzdem erzeugt.
+  const [notes, setNotes] = useState<string[]>([]);
 
   const handleExport = async () => {
     setIsGenerating(true);
     setError('');
+    setNotes([]);
 
     try {
       // Merge current scores from tournament.matches into schedule
@@ -66,13 +69,20 @@ export const PDFExportDialog = ({
         })),
       };
 
-      await exportScheduleToPDF(updatedSchedule, includeStandings ? standings : undefined, {
+      const result = await exportScheduleToPDF(updatedSchedule, includeStandings ? standings : undefined, {
         includeScores,
         includeStandings,
         // Only pass organizerName if it has a value, otherwise let pdfExporter use the fallback
         ...(tournament.organizer?.trim() ? { organizerName: tournament.organizer } : {}),
         hallName: getLocationName(tournament),
       });
+
+      if (result.notes.length > 0) {
+        // Mit Hinweisen bleibt der Dialog offen, damit der Nutzer sie liest
+        setNotes(result.notes);
+        setIsGenerating(false);
+        return;
+      }
 
       // Success - close dialog after short delay
       setTimeout(() => {
@@ -244,6 +254,9 @@ export const PDFExportDialog = ({
 
         {/* Error Message */}
         {error && <div style={errorStyle}>{error}</div>}
+        {notes.map(note => (
+          <div key={note} style={errorStyle}>{note}</div>
+        ))}
 
         {/* Action Buttons */}
         <div style={buttonGroupStyle}>

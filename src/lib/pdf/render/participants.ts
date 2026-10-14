@@ -8,6 +8,7 @@ import { printColors, printFonts, printMetrics, printSpacing } from '../../../de
 import { getGroupDisplayName } from '../../../utils/displayNames';
 import { ensureSpace, type PageGeometry } from '../layout';
 import type { PdfTexts } from '../translations';
+import { PDF_FONT } from '../fonts';
 
 type Team = GeneratedSchedule['teams'][number];
 
@@ -16,7 +17,7 @@ function teamLines(doc: jsPDF, teams: Team[], x: number, startY: number, firstNu
   let currentY = startY;
   let counter = firstNumber;
   doc.setFontSize(printFonts.tableSmall);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT.family, 'normal');
   teams.forEach(team => {
     doc.text(`${counter}. ${team.name}`, x + printMetrics.boxPadding, currentY);
     currentY += printMetrics.teamLineHeight;
@@ -29,7 +30,7 @@ function teamLines(doc: jsPDF, teams: Team[], x: number, startY: number, firstNu
 function boxTitle(doc: jsPDF, text: string, x: number, boxTop: number): void {
   doc.setFontSize(printFonts.table);
   doc.setTextColor(...printColors.textMain);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT.family, 'bold');
   doc.text(text, x + printMetrics.boxPadding, boxTop + printMetrics.boxPadding + printMetrics.boxTextOffset);
 }
 
@@ -49,7 +50,7 @@ export function renderParticipants(
   // Abschnittstitel
   doc.setFontSize(printFonts.sectionTitle);
   doc.setTextColor(...printColors.textMain);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT.family, 'bold');
   doc.text(t.participants, geo.left, yPos);
   yPos += printMetrics.sectionTitleAdvance;
 

@@ -11,6 +11,7 @@ import { getGroupDisplayName } from '../../../utils/displayNames';
 import { ensureSpace, type PageGeometry } from '../layout';
 import { tableEndY } from '../jspdfTypes';
 import type { PdfTexts } from '../translations';
+import { PDF_FONT } from '../fonts';
 
 /** Standings aus dem Aufruf, sonst die Startwerte des Plans. */
 function resolveStandings(schedule: GeneratedSchedule, standings: Standing[] | undefined): Standing[] {
@@ -114,7 +115,7 @@ export function renderGroupStandings(
     // Titel „Tabelle – Gruppe X“
     doc.setFontSize(printFonts.groupTitle);
     doc.setTextColor(...printColors.textMain);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(PDF_FONT.family, 'bold');
     doc.text(t.standingsOfGroup(getGroupDisplayName(group, schedule.tournament)), geo.left, yPos);
     yPos += printMetrics.sectionTitleUnderline;
 
@@ -145,7 +146,7 @@ export function renderFinalRanking(
   // Abschnittstitel
   doc.setFontSize(printFonts.sectionTitle);
   doc.setTextColor(...printColors.textMain);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT.family, 'bold');
   doc.text(t.finalRanking, geo.left, yPos);
   yPos += printMetrics.sectionTitleUnderline;
 
