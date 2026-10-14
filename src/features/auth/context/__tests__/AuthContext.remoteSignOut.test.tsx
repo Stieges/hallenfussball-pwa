@@ -6,6 +6,7 @@
 import { useContext } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen, waitFor, cleanup } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 
 const net = vi.hoisted(() => ({
   calls: [] as Array<{ url: string; method: string }>,
@@ -90,11 +91,14 @@ function Probe() {
   return <div data-testid="probe">{ctx?.user ? 'user' : 'none'}</div>;
 }
 
-function renderProvider() {
+/** Route wie in der App (HashRouter über main.tsx); Standard: Dashboard. */
+function renderProvider(route = '/') {
   return render(
-    <AuthProvider>
-      <Probe />
-    </AuthProvider>,
+    <MemoryRouter initialEntries={[route]}>
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -141,6 +145,8 @@ describe('AuthProvider – Prüfung der Sitzung durch ein anderes Gerät (A-07d2
 
     await waitFor(() => expect(screen.getByTestId('probe').textContent).toBe('none'));
     await waitFor(() => expect(store.session.getItem('auth:signedOutElsewhere')).toBe('1'));
+    // B2: Gerät stand auf dem Dashboard (keine Navigation) – der Hinweis erscheint dort.
+    expect(screen.getByTestId('signed-out-elsewhere').getAttribute('role')).toBe('status');
     expect(store.local.getItem(TOKEN_KEY)).toBeNull();
     expect(store.local.getItem(QUEUE_KEY)).toBe(QUEUE_VALUE);
     expect(net.calls.filter((c) => c.url.includes('/auth/v1/logout'))).toHaveLength(0);
@@ -171,6 +177,7 @@ describe('AuthProvider – Prüfung der Sitzung durch ein anderes Gerät (A-07d2
     expect(screen.getByTestId('probe').textContent).toBe('user');
     expect(store.local.getItem(TOKEN_KEY)).not.toBeNull();
     expect(store.session.getItem('auth:signedOutElsewhere')).toBeNull();
+    expect(screen.queryByTestId('signed-out-elsewhere')).toBeNull();
   });
 });
 

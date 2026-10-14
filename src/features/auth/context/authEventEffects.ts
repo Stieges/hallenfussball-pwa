@@ -7,6 +7,7 @@
 
 import type { AuthChangeEvent, Session as SupabaseSession } from '@supabase/supabase-js';
 import { safeLocalStorage, safeSessionStorage } from '../../../core/utils/safeStorage';
+import { captureFeatureError } from '../../../lib/sentry';
 import { clearProfileCache } from '../services/profileCacheService';
 import { clearOwnSignOut, clearSignedOutElsewhere, isOwnSignOut, setSignedOutElsewhere } from './remoteSignOut';
 
@@ -44,4 +45,9 @@ export function applyAuthEventEffects(
       setSignedOutElsewhere();
     }
   }
+}
+
+/** Fehler im onAuthStateChange-Zweig (N2) melden, ohne sie zu verschlucken. */
+export function reportAuthCallbackError(err: unknown): void {
+  captureFeatureError(err instanceof Error ? err : new Error(String(err)), 'auth', 'onAuthStateChange');
 }

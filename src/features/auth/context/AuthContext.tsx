@@ -33,7 +33,8 @@ import { isFeatureEnabled } from '../../../config';
 import { captureFeatureError } from '../../../lib/sentry';
 import { executeWithTimeout } from '../../../core/utils/SingleFlight';
 import { useRemoteSessionCheck } from './remoteSignOut';
-import { applyAuthEventEffects } from './authEventEffects';
+import { applyAuthEventEffects, reportAuthCallbackError } from './authEventEffects';
+import { SignedOutElsewhereNotice } from '../components/SignedOutElsewhereNotice';
 
 // Re-export the context for consumers
 export { AuthContext } from './authContextInstance';
@@ -94,11 +95,6 @@ const AUTH_ABORT_RETRY_DELAY_MS = 2_000;
 
 interface AuthProviderProps {
   children: React.ReactNode;
-}
-
-/** Fehler im onAuthStateChange-Zweig (N2) melden, ohne sie zu verschlucken. */
-function reportCallbackError(err: unknown): void {
-  captureFeatureError(err instanceof Error ? err : new Error(String(err)), 'auth', 'onAuthStateChange');
 }
 
 /**
@@ -414,7 +410,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 void (async () => {
                   applyAuthEventEffects(event, newSession, setIsGuest);
                   await updateAuthState(newSession);
-                })().catch(reportCallbackError);
+                })().catch(reportAuthCallbackError);
               }
             }, 0);
           }
@@ -714,5 +710,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     updatePassword,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  // Globaler Hinweis „abgemeldet durch anderes Gerät“ (B2): auf /login zeigt ihn die Anmeldeseite selbst.
+  return <AuthContext.Provider value={value}>{children}<SignedOutElsewhereNotice /></AuthContext.Provider>;
 }
