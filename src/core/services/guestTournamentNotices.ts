@@ -2,7 +2,8 @@
  * guestTournamentNotices.ts — C3b-2c (G7): Hinweis-Kanal für ausgeblendete Gast-Turniere.
  *
  * G7 (task-C3b-plan.md, Zeile G7): Wird ein Turnier mit Engine-Einträgen im
- * Gastkonto beim Anmelden NICHT hochgeladen (Migration, useInitialSync), gibt es
+ * Gastkonto beim Anmelden NICHT hochgeladen (A-07e: keine automatische Migration mehr,
+ * useInitialSync entfernt; Sender bleibt bis A-28), gibt es
  * einmalig den Hinweis „nur im Gastmodus nutzbar – kann ins Konto übernommen
  * werden" (Übernahme = C3b-4).
  *
@@ -25,7 +26,7 @@ const listeners = new Set<Listener>();
 const notified = new Set<string>();
 /**
  * M11 (task-C3b2-review.md): ein Hinweis, der VOR dem ersten Abo kommt (z. B.
- * `useInitialSync` meldet frueher als `useGuestTournamentNotices` mountet), wurde
+ * ein frueherer Sender meldet vor dem Mount von `useGuestTournamentNotices`), wurde
  * bisher trotzdem als „gemeldet" gemerkt und ging fuer die Sitzung verloren — ohne
  * jeden Zuhoerer war `listeners.forEach` ein no-op, aber `notified.add` lief schon.
  * Jetzt: ohne Zuhoerer wird NICHT als gemeldet gemerkt, sondern gepuffert; der
@@ -34,7 +35,7 @@ const notified = new Set<string>();
  */
 const pending: GuestTournamentNotice[] = [];
 
-/** Ruft die Skip-Stellen (Migration, useInitialSync) auf. Je Turnier-ID nur einmal. */
+/** Ruft die Skip-Stellen auf (A-07e: Migration und useInitialSync entfernt, Befund bis A-28). Je Turnier-ID nur einmal. */
 export function notifyGuestTournamentHidden(notice: GuestTournamentNotice): void {
   if (notified.has(notice.tournamentId)) {
     return;

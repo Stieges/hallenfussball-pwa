@@ -83,6 +83,7 @@ describe('authActions ohne automatische Gast-Migration (A-07e)', () => {
     );
 
     expect(result.success).toBe(true);
+    expect(result.error).toBeUndefined();
     expect(migrateGuestTournaments).not.toHaveBeenCalled();
     expect(result.wasMigrated).toBe(false);
   });

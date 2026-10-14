@@ -3,8 +3,8 @@
  *
  * G7 (task-C3b-plan.md, Zeile G7): Ein Turnier, für das die lokale Engine-Kopie des
  * Gastkontos ('guest') bestätigte Einträge hat, darf auf KEINEM Upload-Weg in das
- * Konto geladen werden (Migration, syncUp, Queue-Flush, resolveConflict/syncTournament,
- * useInitialSync) — sonst gingen die Einträge verloren. Zuordnung: matchId ∈
+ * Konto geladen werden (syncUp, Queue-Flush, resolveConflict/syncTournament; die
+ * automatische Migration und useInitialSync sind mit A-07e entfallen) — sonst gingen die Einträge verloren. Zuordnung: matchId ∈
  * tournament.matches, „Einträge" = confirmed.length > 0.
  *
  * Framework-frei (core/match/client, kein React).
