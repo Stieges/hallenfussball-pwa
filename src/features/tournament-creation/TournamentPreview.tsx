@@ -14,6 +14,7 @@ import { GeneratedSchedule, generateFullSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 import { Button, Card } from '../../components/ui';
+import { useOptionalToast } from '../../components/ui/Toast';
 import { cssVars } from '../../design-tokens'
 import { exportScheduleToPDF } from '../../lib/pdfExporter';
 import { getLocationName, getLocationAddressLine } from '../../utils/locationHelpers';
@@ -41,6 +42,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   const [currentTournament, setCurrentTournament] = useState(tournament);
   const [schedule, setSchedule] = useState(initialSchedule);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const toast = useOptionalToast();
 
   // F-211: shared regeneration helper — keeps the previous schedule visible
   // on failure and surfaces the error in the UI without crashing the wizard.
@@ -141,11 +143,13 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   };
 
   const handleExportPDF = async () => {
-    await exportScheduleToPDF(schedule, schedule.initialStandings, {
+    const { notes } = await exportScheduleToPDF(schedule, schedule.initialStandings, {
       includeStandings: true,
       // organizerName wird automatisch aus schedule.tournament.organizer gezogen
       hallName: getLocationName(currentTournament),
     });
+    // Hinweise (z. B. Zeichen, die das PDF nicht darstellt) bleiben stehen, bis der Nutzer sie schließt
+    notes.forEach(note => toast?.showWarning(note, { duration: 0 }));
   };
 
   const containerStyle: CSSProperties = {

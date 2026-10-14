@@ -2,6 +2,7 @@ import { useState, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from './Dialog';
 import { Button } from '../ui/Button';
+import { InlineNotice } from '../ui/molecules';
 import { cssVars } from '../../design-tokens'
 import { exportScheduleToPDF } from '../../lib/pdfExporter';
 import { GeneratedSchedule } from '../../core/generators';
@@ -171,6 +172,10 @@ export const PDFExportDialog = ({
     gap: cssVars.spacing.md,
   };
 
+  const noteTextStyle: CSSProperties = {
+    margin: 0,
+  };
+
   const errorStyle: CSSProperties = {
     padding: cssVars.spacing.md,
     borderRadius: cssVars.borderRadius.sm,
@@ -254,31 +259,45 @@ export const PDFExportDialog = ({
 
         {/* Error Message */}
         {error && <div style={errorStyle}>{error}</div>}
-        {notes.map(note => (
-          <div key={note} style={errorStyle}>{note}</div>
-        ))}
+
+        {/* Hinweise nach dem Export: das PDF ist erzeugt, der Dialog bleibt offen */}
+        {notes.length > 0 && (
+          <InlineNotice data-testid="pdf-export-notes">
+            {notes.map((note, index) => (
+              <p key={`${index}-${note}`} style={noteTextStyle}>{note}</p>
+            ))}
+          </InlineNotice>
+        )}
 
         {/* Action Buttons */}
-        <div style={buttonGroupStyle}>
-          <Button
-            variant="secondary"
-            size="md"
-            onClick={onClose}
-            disabled={isGenerating}
-            fullWidth
-          >
-            {t('pdfExport.cancel')}
-          </Button>
-          <Button
-            variant="primary"
-            size="md"
-            onClick={() => void handleExport()}
-            disabled={isGenerating}
-            fullWidth
-          >
-            {isGenerating ? t('pdfExport.exporting') : t('pdfExport.export')}
-          </Button>
-        </div>
+        {notes.length > 0 ? (
+          <div style={buttonGroupStyle}>
+            <Button variant="primary" size="md" onClick={onClose} fullWidth>
+              {t('pdfExport.close')}
+            </Button>
+          </div>
+        ) : (
+          <div style={buttonGroupStyle}>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={onClose}
+              disabled={isGenerating}
+              fullWidth
+            >
+              {t('pdfExport.cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => void handleExport()}
+              disabled={isGenerating}
+              fullWidth
+            >
+              {isGenerating ? t('pdfExport.exporting') : t('pdfExport.export')}
+            </Button>
+          </div>
+        )}
       </div>
     </Dialog>
   );
