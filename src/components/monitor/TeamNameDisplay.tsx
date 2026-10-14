@@ -58,7 +58,7 @@ export const TeamNameDisplay: React.FC<TeamNameDisplayProps> = ({
     fontSize: config.fontSize,
     fontWeight: 700,
     color: themeColors.text,
-    fontFamily: cssVars.fontFamilies.display,
+    fontFamily: cssVars.fontFamilies.body,
     textAlign: 'center',
     maxWidth,
     overflow: 'hidden',

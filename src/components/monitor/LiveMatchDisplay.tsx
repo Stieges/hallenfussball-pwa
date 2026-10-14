@@ -146,7 +146,8 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     justifyContent: 'center',
     gap: layout.blockGap,
     width: '100%',
-    flex: `0 0 ${layout.score}`,
+    // B-17: schrumpft, statt Teamnamen und Uhr zu überlagern (720p–4K, @ZM-086)
+    flex: `0 1 ${layout.score}`,
     minHeight: 0,
   };
 
@@ -165,7 +166,8 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     justifyContent: 'center',
     gap: layout.blockGap,
     width: '100%',
-    height: layout.teamNames,
+    // B-17: Mindesthöhe statt fester Höhe – der Spaltenfluss schiebt die Uhr nach unten, statt sie zu überlagern
+    minHeight: layout.teamNames,
     flexShrink: 0,
     paddingTop: cssVars.spacing.md,
   };
@@ -179,7 +181,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   const timerAreaStyle: CSSProperties = {
     width: '100%',
     maxWidth: '700px',
-    height: layout.timer,
+    minHeight: layout.timer,
     display: 'flex',
     alignItems: 'center',
     flexShrink: 0,

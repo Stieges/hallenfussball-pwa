@@ -53,5 +53,8 @@
       "overall": "Overall standings",
       "none": "No tables yet"
     }
+  },
+  "dauerbetrieb": {
+    "wakeLockHint": "The screen may switch off according to this device's power-saving setting."
   }
 }

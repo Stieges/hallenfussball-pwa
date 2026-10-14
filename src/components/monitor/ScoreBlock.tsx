@@ -68,7 +68,7 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
     fontSize: config.fontSize,
     fontWeight: 700,
     color: textColor,
-    fontFamily: cssVars.fontFamilies.display,
+    fontFamily: cssVars.fontFamilies.body,
     lineHeight: 1,
     textShadow: `0 2px 8px rgba(0, 0, 0, 0.3)`,
     userSelect: 'none',

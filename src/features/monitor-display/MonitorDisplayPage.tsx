@@ -6,7 +6,8 @@
  * Features:
  * - Automatischer Slide-Wechsel mit konfigurierbarer Dauer
  * - Fade/Slide/None Transitions
- * - Keyboard-Navigation (Pfeiltasten, Escape, Space)
+ * - Tasten (B-17): Pfeile und Leertaste schalten bzw. halten; „f“ = Vollbild; Escape und Backspace verlassen
+ *   die Seite nie (Escape beendet nur das Vollbild, das macht der Browser); Mauszeiger verschwindet bei Ruhe
  * - Performance-Modi (high/low/auto)
  * - Cache-Status-Indikator für Admins
  *
@@ -22,9 +23,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { displayMonitor } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
-import { GoalAnimation, CardAnimation } from '../../components/monitor';
+import { useTranslation } from 'react-i18next';
+import { GoalAnimation, CardAnimation, useFullscreen } from '../../components/monitor';
+import { TimedNotice } from '../../components/ui/molecules/TimedNotice';
 import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
+import { istBrowserQuelle, istVollbildTaste, WAKE_LOCK_HINWEIS_MS } from './monitorDauerbetrieb';
+import { useIdleCursor, useTastenAbfang } from './useMonitorDauerbetrieb';
 import {
   alleUebersprungen, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
 } from './slideProgramme';
@@ -78,6 +83,10 @@ export function MonitorDisplayPage({
     monitorPollIntervalMs
   );
   const [showCacheIndicator, setShowCacheIndicator] = useState(false);
+  const { t } = useTranslation('monitor');
+  const { toggleFullscreen } = useFullscreen();
+  const cursorRuht = useIdleCursor();
+  useTastenAbfang();
 
   // Live match events for animations (einzige Stelle mit useLiveMatches)
   // B-16e2 (@ZM-118): Kindermodus – keine Tor- oder Karten-Einblendung
@@ -91,7 +100,11 @@ export function MonitorDisplayPage({
   // L7: Hallen-Monitore laufen stundenlang unbeaufsichtigt; ohne Wake Lock dimmen Smart-TVs und
   // Beamer-Laptops ab. Erst aktivieren, wenn ein Monitor geladen ist — auf der Fehlerseite wäre
   // die Permission-Anfrage sinnlos. Kein Destructuring: noUnusedLocals ist aktiv.
-  useWakeLock(monitor !== null);
+  const wakeLock = useWakeLock(monitor !== null);
+  // B-17 (@ME-006): Kann das Gerät den Bildschirm nicht anlassen, zeigt die Seite das einmal klein in einer
+  // Ecke. In der Browser-Quelle nie, dort steuert der Rechner den Bildschirm.
+  const wakeLockHinweis = wakeLock.error !== null
+    && !istBrowserQuelle(window.location.hash, navigator.userAgent);
 
   // Derived state
   const performanceSettings = useMemo(
@@ -158,24 +171,24 @@ export function MonitorDisplayPage({
   useMonitorHeartbeat(monitor?.id ?? null, tournament?.id ?? null, slideState.currentIndex, cacheStatus.status);
 
   // ==========================================================================
-  // KEYBOARD (Escape, c; Pfeile und Leertaste liegen in useSlideshow)
+  // KEYBOARD (f = Vollbild, c = Cache-Anzeige; Pfeile und Leertaste liegen in useSlideshow;
+  // Escape und Backspace verlassen die Seite nicht, siehe useTastenAbfang)
   // ==========================================================================
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case 'Escape':
-          onBack?.();
-          break;
-        case 'c':
-          setShowCacheIndicator(s => !s);
-          break;
+      if (istVollbildTaste(e)) {
+        toggleFullscreen();
+        return;
+      }
+      if (e.key === 'c') {
+        setShowCacheIndicator(s => !s);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onBack]);
+  }, [toggleFullscreen]);
 
   // ==========================================================================
   // RENDER
@@ -190,7 +203,7 @@ export function MonitorDisplayPage({
   }
 
   return (
-    <div style={containerStyle}>
+    <div style={{ ...containerStyle, cursor: cursorRuht ? 'none' : undefined }}>
       {/* Slide Container — pixelShift for OLED anti-burn-in */}
       <div style={{
         position: 'relative',
@@ -230,6 +243,15 @@ export function MonitorDisplayPage({
 
       {/* Pause Indicator */}
       {isPaused && <PauseBadge />}
+
+      {/* Hinweis: Bildschirm kann sich abschalten (nur im normalen Browser, einmal, B-17) */}
+      {wakeLockHinweis && (
+        <TimedNotice
+          text={t('dauerbetrieb.wakeLockHint')}
+          durationMs={WAKE_LOCK_HINWEIS_MS}
+          testId="monitor-wakelock-hint"
+        />
+      )}
 
       {/* Cache Indicator (Admin only) */}
       <CacheIndicator cacheStatus={cacheStatus} visible={showCacheIndicator} />

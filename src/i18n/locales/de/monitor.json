@@ -53,5 +53,8 @@
       "overall": "Gesamttabelle",
       "none": "Noch keine Tabellen"
     }
+  },
+  "dauerbetrieb": {
+    "wakeLockHint": "Der Bildschirm kann sich nach der Energiespar-Einstellung des Geräts abschalten."
   }
 }

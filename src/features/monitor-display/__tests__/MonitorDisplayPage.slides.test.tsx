@@ -167,10 +167,12 @@ describe('MonitorDisplayPage — Tasten (Bestand)', () => {
     expect(screen.queryByTestId('monitor-pause-indicator')).not.toBeInTheDocument();
   });
 
-  it('Bestand: Escape ruft onBack genau einmal auf', async () => {
+  // B-17 (@ME-022, Befund C-MONITOR-DAUERBETRIEB): Escape verlässt die Seite nicht mehr; das alte Verhalten
+  // (Rücksprung zur Startseite) war der Fehler. Vorher: onBack einmal aufgerufen.
+  it('B-17: Escape ruft onBack nicht auf, die Seite bleibt offen', async () => {
     const { onBack } = await renderMonitor(buildTournament(), zweiFolien());
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onBack).not.toHaveBeenCalled();
   });
 
   it('Bestand: Taste c blendet die Cache-Anzeige ein', async () => {
