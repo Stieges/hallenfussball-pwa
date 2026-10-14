@@ -546,6 +546,37 @@ describe('Playoff Resolver - DEF-003 Fix', () => {
     });
   });
 
+  // @TM-143 (B-40 Fixrunde 1, F2): Finalrunde nur nach abgepfiffener Gruppe, mit der Tabelle, die
+  // die Anzeige zeigt. Das letzte Gruppenspiel läuft mit Zwischenstand und darf nichts auslösen.
+  describe('Weiterkommen zählt wie die Tabelle (@TM-143)', () => {
+    const gruppenMatches = (letztesSpiel: Partial<Match>): Match[] => [
+      // Gruppe A: team-1 gewinnt 1:0, dann läuft team-2 gegen team-1 mit 2:0 für team-2.
+      { id: 'a1', round: 1, field: 1, teamA: 'team-1', teamB: 'team-2', group: 'Gruppe A', isFinal: false, scoreA: 1, scoreB: 0, matchStatus: 'finished' },
+      { id: 'a2', round: 2, field: 1, teamA: 'team-2', teamB: 'team-1', group: 'Gruppe A', isFinal: false, scoreA: 2, scoreB: 0, ...letztesSpiel },
+      // Gruppe B: team-3 gewinnt 3:0 und ist abgepfiffen.
+      { id: 'b1', round: 1, field: 2, teamA: 'team-3', teamB: 'team-4', group: 'Gruppe B', isFinal: false, scoreA: 3, scoreB: 0, matchStatus: 'finished' },
+      { id: 'final-1', round: 3, field: 1, teamA: 'group-a-1st', teamB: 'group-b-1st', isFinal: true },
+    ];
+
+    it('laufendes letztes Gruppenspiel mit Zwischenstand löst die Finalrunde nicht auf', () => {
+      const tournament = createTournament(createTeams(), gruppenMatches({ matchStatus: 'running' }));
+
+      const result = autoResolvePlayoffsIfReady(tournament);
+
+      expect(result).toBeNull();
+      expect(tournament.matches.find((m) => m.id === 'final-1')?.teamA).toBe('group-a-1st');
+    });
+
+    it('nach dem Abpfiff wird mit der Tabelle aufgelöst (team-2 ist Gruppensieger)', () => {
+      const tournament = createTournament(createTeams(), gruppenMatches({ matchStatus: 'finished' }));
+
+      const result = autoResolvePlayoffsIfReady(tournament);
+
+      expect(result?.wasResolved).toBe(true);
+      expect(tournament.matches.find((m) => m.id === 'final-1')?.teamA).toBe('team-2');
+    });
+  });
+
   describe('Integration Test - Complete Tournament Flow', () => {
     it('correctly resolves complex 4-team, 2-group tournament', () => {
       const teams = createTeams();

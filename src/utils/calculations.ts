@@ -1,11 +1,17 @@
 import { Match, Tournament, Standing, Team, PlacementCriterion } from '../types/tournament';
 
 /**
- * Zählt ein Spiel für die Tabelle? Nur abgepfiffene Spiele (@TM-143): laufende oder
- * unterbrochene Spiele tragen einen Zwischenstand, der die Tabelle nicht verändern darf.
- * Ein nicht gesetzter Status (`undefined`) zählt wie bisher, sofern ein Ergebnis vorliegt.
+ * Zählt ein Spiel für Tabelle, Weiterkommen und Finalrunden-Auflösung? (@TM-143)
+ *
+ * Nur abgepfiffene Spiele (`finished`): laufende oder unterbrochene Spiele tragen einen
+ * Zwischenstand, der nicht zählen darf. Ein nicht gesetzter Status (`undefined`) zählt nur, weil
+ * ältere lokale Turniere (Zod `optional`) und Testfixtures ohne Status existieren. Produktiv setzt
+ * der Mapper `null` auf 'scheduled' und der Wizard 'scheduled', ein `undefined` entsteht dort kaum.
+ *
+ * Eine gemeinsame Prüfung für alle Rechenwege (Tabelle, playoffResolver), damit "fertig" und
+ * "zählt" nie auseinanderlaufen.
  */
-const isCountedForStandings = (match: Match): boolean =>
+export const countsForStandings = (match: Match): boolean =>
   match.matchStatus === undefined || match.matchStatus === 'finished';
 
 /**
@@ -20,10 +26,10 @@ export const calculateStandings = (
   // Filter matches for the specific group if provided
   const relevantMatches = group
     ? matches.filter(
-        (m) => m.group === group && m.scoreA !== undefined && m.scoreB !== undefined && isCountedForStandings(m)
+        (m) => m.group === group && m.scoreA !== undefined && m.scoreB !== undefined && countsForStandings(m)
       )
     : matches.filter(
-        (m) => m.scoreA !== undefined && m.scoreB !== undefined && !m.isFinal && isCountedForStandings(m)
+        (m) => m.scoreA !== undefined && m.scoreB !== undefined && !m.isFinal && countsForStandings(m)
       );
 
   // Filter teams for the specific group

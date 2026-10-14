@@ -6,7 +6,7 @@
  */
 
 import { Tournament } from '../../types/tournament';
-import { calculateStandings } from '../../utils/calculations';
+import { calculateStandings, countsForStandings } from '../../utils/calculations';
 import sportGlossary from '../../i18n/glossary.json';
 
 /**
@@ -20,7 +20,9 @@ export interface PlayoffResolutionResult {
 }
 
 /**
- * Check if all group phase matches are completed
+ * Check if all group phase matches are completed.
+ * "Abgeschlossen" = dieselbe Regel wie in der Tabelle (`countsForStandings`, @TM-143): ein Ergebnis
+ * allein reicht nicht, ein laufendes Spiel mit Zwischenstand gilt noch nicht als fertig.
  */
 export const areAllGroupMatchesCompleted = (tournament: Tournament): boolean => {
   const groupMatches = tournament.matches.filter(
@@ -32,7 +34,8 @@ export const areAllGroupMatchesCompleted = (tournament: Tournament): boolean => 
   }
 
   return groupMatches.every(
-    (match) => match.scoreA !== undefined && match.scoreB !== undefined
+    (match) =>
+      match.scoreA !== undefined && match.scoreB !== undefined && countsForStandings(match)
   );
 };
 
