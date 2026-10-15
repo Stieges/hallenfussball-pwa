@@ -16,7 +16,7 @@ import jsPDF from 'jspdf';
 import type { GeneratedSchedule } from '../../core/generators';
 import type { Standing, Tournament } from '../../types/tournament';
 import { getLocationName } from '../../utils/locationHelpers';
-import { registerPdfFonts, PDF_FONT } from './fonts';
+import { registerPdfFonts, fontOf } from './fonts';
 import { pageGeometry, startPage, type PdfOrientation } from './layout';
 import { dayOf, headerFacts, ruleFacts } from './headerFacts';
 import { schedulePdfFilename } from './filename';
@@ -145,7 +145,7 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
   const mode = await registerPdfFonts(doc);
   guardDocText(doc, mode.covers);
   doc.setLanguage(locale);
-  doc.setFont(PDF_FONT.family);
+  doc.setFont(fontOf(doc));
   const notes = buildNotes(
     schedule,
     t,
@@ -222,7 +222,7 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
       yPos,
       koLines(rules, t),
       // Uhrzeiten der Finalrunde stehen unter Vorbehalt, solange die Gruppenphase läuft (W7)
-      { section: sections.handle('finals'), tentativeNote: groupPhase && groupPhaseOpen(groupPhase.matches) ? t.timesTentative : undefined }
+      { section: sections.handle('finals'), tentativeNote: edition !== 'final' && closed !== true && groupPhase && groupPhaseOpen(groupPhase.matches) ? t.timesTentative : undefined }
     );
   }
   renderRanking(

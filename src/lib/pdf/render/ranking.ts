@@ -8,7 +8,7 @@
 import type jsPDF from 'jspdf';
 import { printColors, printLimits, printMetrics, printStroke, printType } from '../../../design-tokens/print';
 import { ascentMm, continuationTop, ensureSpace, type PageGeometry } from '../layout';
-import { PDF_FONT } from '../fonts';
+import { fontOf } from '../fonts';
 import type { SectionHandle } from '../sections';
 import type { PlacementState, RankEntry } from '../placement';
 import type { PdfTexts } from '../translations';
@@ -33,7 +33,7 @@ function nameLines(doc: jsPDF, name: string | undefined, room: number): string[]
   if (name === undefined) {
     return [];
   }
-  doc.setFont(PDF_FONT.family, 'normal');
+  doc.setFont(fontOf(doc), 'normal');
   doc.setFontSize(printLimits.teamPt);
   return doc.splitTextToSize(name, room) as string[];
 }
@@ -51,11 +51,11 @@ function drawSlot(doc: jsPDF, left: number, width: number, top: number, height: 
   const lineStart = left + printMetrics.placeNumberWidth + printMetrics.placeNumberGap;
 
   doc.setTextColor(...printColors.ink);
-  doc.setFont(PDF_FONT.family, 'bold');
+  doc.setFont(fontOf(doc), 'bold');
   doc.setFontSize(printLimits.teamPt);
   doc.text(`${slot.place}.`, left + printMetrics.placeNumberWidth, baseline, { align: 'right' });
   const lines = nameLines(doc, slot.name, nameRoom(width));
-  doc.setFont(PDF_FONT.family, 'normal');
+  doc.setFont(fontOf(doc), 'normal');
   lines.forEach((line, i) => doc.text(line, lineStart, baseline + i * printMetrics.participantAdvance));
   doc.setDrawColor(...printColors.ink);
   doc.setLineWidth(printStroke.box);
@@ -87,12 +87,12 @@ export function renderRanking(doc: jsPDF, input: RankingInput, t: PdfTexts, geo:
 
   doc.setFontSize(printType.h2);
   doc.setTextColor(...printColors.ink);
-  doc.setFont(PDF_FONT.family, 'bold');
+  doc.setFont(fontOf(doc), 'bold');
   doc.text(section.heading(doc, yPos, t.finalRanking), geo.left, yPos);
   yPos += printMetrics.sectionTitleUnderline;
 
   if (pending) {
-    doc.setFont(PDF_FONT.family, 'normal');
+    doc.setFont(fontOf(doc), 'normal');
     doc.setFontSize(printType.body);
     doc.text(hasFinalRound ? t.placementPending.afterFinal : t.placementPending.afterLast, geo.left, yPos + ascentMm(printType.body));
     yPos += printMetrics.placeSentenceAdvance;

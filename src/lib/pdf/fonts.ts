@@ -13,17 +13,12 @@ type CodepointRange = readonly [from: number, to: number];
 /** Registrierter Name der eingebetteten Schrift in jsPDF und Name der Standardschrift für den Rückfall (B6). */
 const EMBEDDED_FAMILY = 'pdfSans';
 const FALLBACK_FAMILY = 'helvetica';
-/**
- * Schrift des gerade gebauten Dokuments. `registerPdfFonts` setzt sie vor dem ersten Zeichnen; danach läuft der Bau
- * synchron (kein `await`), also kann kein zweiter Bau dazwischenfunken.
- */
-let activeFamily: string = EMBEDDED_FAMILY;
+/** Schrift je Dokument (B6, F1): kein Modulzustand, parallele Bauten stören sich nicht. */
+const familyOf = new WeakMap<object, string>();
 
 export const PDF_FONT = {
-  /** Registrierter Schriftname in jsPDF: die eingebettete Schrift, im Rückfall `helvetica` (nur lesen, nie zwischenspeichern). */
-  get family(): string {
-    return activeFamily;
-  },
+  /** Registrierter Schriftname der eingebetteten Schrift in jsPDF. Render-Code liest `fontOf(doc)`, im Rückfall `helvetica`. */
+  family: EMBEDDED_FAMILY,
   /** Dateinamen im virtuellen Dateisystem von jsPDF, je Schnitt. */
   files: { normal: 'pdfSans-normal.ttf', bold: 'pdfSans-bold.ttf' },
   /** Lazy geladene Schriftdaten (base64), je Schnitt. Eigener Chunk, nicht im Haupt-Chunk. */
@@ -102,6 +97,11 @@ export function unrenderableChars(text: string, covers: GlyphCheck = isPdfGlyph)
   return [...missing];
 }
 
+/** Schriftname dieses Dokuments: die eingebettete Schrift, im Rückfall `helvetica` (gesetzt von `registerPdfFonts`). */
+export function fontOf(doc: jsPDF): string {
+  return familyOf.get(doc) ?? EMBEDDED_FAMILY;
+}
+
 /** Ergebnis der Schriftwahl: ob der Rückfall gilt und welche Zeichen die gewählte Schrift trägt. */
 export interface PdfFontMode {
   fallback: boolean;
@@ -120,10 +120,10 @@ export async function registerPdfFonts(doc: jsPDF): Promise<PdfFontMode> {
     doc.addFont(PDF_FONT.files.normal, EMBEDDED_FAMILY, 'normal');
     doc.addFileToVFS(PDF_FONT.files.bold, bold.default);
     doc.addFont(PDF_FONT.files.bold, EMBEDDED_FAMILY, 'bold');
-    activeFamily = EMBEDDED_FAMILY;
+    familyOf.set(doc, EMBEDDED_FAMILY);
     return { fallback: false, covers: isPdfGlyph };
   } catch {
-    activeFamily = FALLBACK_FAMILY;
+    familyOf.set(doc, FALLBACK_FAMILY);
     return { fallback: true, covers: isStandardGlyph };
   }
 }

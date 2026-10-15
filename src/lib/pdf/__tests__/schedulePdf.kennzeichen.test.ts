@@ -154,4 +154,19 @@ describe('W7 „Uhrzeiten voraussichtlich“ in der Finalrunde, solange die Grup
     expect(titel(pages[0])).not.toContain(NOTE);
     expect(pageText(pages[0])).not.toContain(NOTE);
   });
+
+  it('F2 Fassung final und abgeschlossenes Turnier: kein Hinweis, auch wenn Gruppenspiele keinen Status tragen', async () => {
+    const offen = mitGruppenstatus(hallencupSchedule(), undefined);
+    for (const extra of [{ edition: 'final' as const }, { closed: true }]) {
+      const { pages } = await layoutOf({ now: NOW, ...extra }, offen);
+      pages.forEach(page => expect(pageText(page)).not.toContain(NOTE));
+    }
+  });
+
+  it('F2 Gegenbeispiel: Fassung Spielplan und zum Ausfüllen mit offener Gruppenphase tragen den Hinweis weiter', async () => {
+    for (const edition of ['plan', 'blank'] as const) {
+      const { pages } = await layoutOf({ now: NOW, edition }, mitGruppenstatus(hallencupSchedule(), undefined));
+      expect(pages[2].texts.some(t => t.str === NOTE)).toBe(true);
+    }
+  });
 });

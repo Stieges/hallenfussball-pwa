@@ -33,6 +33,13 @@ describe('printable: eine Stelle für den Ersatz', () => {
     expect(printable('Łódź Gençler Ğazi Динамо')).toBe('Łódź Gençler Ğazi Динамо');
   });
 
+  it('F4: Variantenwähler und ZWJ fallen weg (⚽️ ergibt ein „?“), NFD wird zu NFC, CRLF zu LF', () => {
+    expect(printable('⚽\uFE0F')).toBe('?');
+    expect(printable('⚽\u200D⚽')).toBe('??');
+    expect(printable('Mu\u0308ller')).toBe('Müller');
+    expect(printable('a\r\nb\rc')).toBe('a\nb\nc');
+  });
+
   it('Gegenbeispiel: Zeilenumbruch bleibt, andere Steuerzeichen werden ersetzt', () => {
     expect(printable('a\nb')).toBe('a\nb');
     expect(printable('a\u0007b')).toBe('a?b');
@@ -197,13 +204,52 @@ describe('B6 @DR-013 Rückfall: Schrift lädt nicht → PDF mit Standardschrift 
     expect(pdf.pages.flat().some(s => s.includes('Łódź Süd'))).toBe(true);
   });
 
-  it('nach einem Fehlschlag ist der nächste Lauf wieder in der eingebetteten Schrift', async () => {
+  it('nach einem Fehlschlag ist der nächste Lauf wieder in der eingebetteten Schrift (Inter, kein „?“)', async () => {
     const spy = vi.spyOn(PDF_FONT.load, 'normal').mockRejectedValueOnce(new Error('offline'));
     await fallbackBuild();
     spy.mockRestore();
     const build = await fallbackBuild('Łódź Süd');
+    const pdf = await extractPdfText(new Uint8Array(build.doc.output('arraybuffer')));
 
     expect(build.notes).toEqual([]);
-    expect(PDF_FONT.family).toBe('pdfSans');
+    expect(pdf.pages.flat().some(s => s.includes('Łódź Süd'))).toBe(true);
+    expect(pdf.pages.flat().some(s => s.includes('?'))).toBe(false);
+  });
+
+  /** Antwort nach `n` Microtasks (0 = sofort). */
+  const nach = <T>(n: number, wert: () => Promise<T>): Promise<T> => {
+    let kette: Promise<void> = Promise.resolve();
+    for (let i = 0; i < n; i++) {
+      kette = kette.then(() => undefined);
+    }
+    return kette.then(wert);
+  };
+
+  // A lädt nach j, B scheitert nach k Microtasks: für manche (j, k) liegt der Fehler von B zwischen dem Laden von A und dem
+  // ersten Zeichnen von A. Mit Modulzustand wurde A dann Helvetica (Review C3, F1). Hier läuft das ganze Raster.
+  it('F1 Wettlauf: überlappende Bauten, A lädt, B fällt zurück – jedes Dokument behält seine Schrift und sein Urteil (Raster j × k)', async () => {
+    const geladen = await PDF_FONT.load.normal();
+    const geladenFett = await PDF_FONT.load.bold();
+    const fehler: string[] = [];
+    for (let j = 0; j <= 8; j++) {
+      for (let k = 0; k <= 8; k++) {
+        let aufrufe = 0;
+        vi.spyOn(PDF_FONT.load, 'normal').mockImplementation(() => {
+          aufrufe += 1;
+          return aufrufe === 1 ? nach(j, async () => geladen) : nach(k, () => Promise.reject(new Error('offline')));
+        });
+        vi.spyOn(PDF_FONT.load, 'bold').mockImplementation(() => nach(j, async () => geladenFett));
+        const [a, b] = await Promise.all([fallbackBuild('Łódź Süd'), fallbackBuild('Łódź Süd')]);
+        const textA = (await extractPdfText(new Uint8Array(a.doc.output('arraybuffer')))).pages.flat();
+        const textB = (await extractPdfText(new Uint8Array(b.doc.output('arraybuffer')))).pages.flat();
+        const ok = a.notes.length === 0 && textA.some(s => s.includes('Łódź Süd')) && (b.notes[0]?.includes('Ersatzschrift') ?? false) && textB.some(s => s.includes('?ód? Süd'));
+        if (!ok) {
+          fehler.push(`j=${j} k=${k}`);
+        }
+        vi.restoreAllMocks();
+      }
+    }
+
+    expect(fehler).toEqual([]);
   });
 });

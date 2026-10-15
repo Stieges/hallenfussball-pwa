@@ -10,7 +10,7 @@ import type jsPDF from 'jspdf';
 import type { RowInput, Styles, UserOptions } from 'jspdf-autotable';
 import { printColors, printGap, printMetrics, printStroke, printType } from '../../../design-tokens/print';
 import { tableMargins, type PageGeometry } from '../layout';
-import { PDF_FONT } from '../fonts';
+import { fontOf, PDF_FONT } from '../fonts';
 
 /** Innenabstand als autoTable-Objekt aus Vertikal- und Horizontalwert. */
 export function pad(vertical: number, horizontal: number): { top: number; bottom: number; left: number; right: number } {
@@ -27,7 +27,8 @@ export function matchTableOptions(
   head: RowInput[],
   body: RowInput[],
   columnStyles: Record<number, Partial<Styles>>,
-  padV: number = printGap.bodyPadV
+  padV: number = printGap.bodyPadV,
+  font: string = PDF_FONT.family
 ): UserOptions {
   return {
     startY,
@@ -40,7 +41,7 @@ export function matchTableOptions(
     // Keine Füllung im Body: eine weiße Zelle übermalte die untere Hälfte der Zeilenlinie darüber (C1-F S1)
     alternateRowStyles: { fillColor: false, textColor: [...printColors.ink] },
     styles: {
-      font: PDF_FONT.family,
+      font,
       fontSize: printType.body,
       cellPadding: pad(padV, printGap.bodyPadH),
       fillColor: false,
@@ -51,7 +52,7 @@ export function matchTableOptions(
       lineWidth: { bottom: printStroke.row },
     },
     headStyles: {
-      font: PDF_FONT.family,
+      font,
       fontSize: printType.head,
       cellPadding: pad(printGap.headPadV, printGap.headPadH),
       fillColor: [...printColors.tint],
@@ -69,12 +70,12 @@ export function matchTableOptions(
 export function sectionTitle(doc: jsPDF, text: string, geo: PageGeometry, yPos: number, size: number, note?: string): number {
   doc.setFontSize(size);
   doc.setTextColor(...printColors.ink);
-  doc.setFont(PDF_FONT.family, 'bold');
+  doc.setFont(fontOf(doc), 'bold');
   doc.text(text, geo.left, yPos);
   if (note !== undefined) {
     // Hinweis hinter dem Titel auf derselben Grundlinie, normal und kleiner (Rundenhinweis, @DR-001 Ausnahmeliste)
     const left = geo.left + doc.getTextWidth(text) + printMetrics.roundNoteGap;
-    doc.setFont(PDF_FONT.family, 'normal');
+    doc.setFont(fontOf(doc), 'normal');
     doc.setFontSize(printType.roundNote);
     doc.text(note, left, yPos);
   }

@@ -11,7 +11,7 @@ import { getGroupDisplayName } from '../../../utils/displayNames';
 import { ensureSpace, tableMargins, type PageGeometry } from '../layout';
 import { tableEndY } from '../jspdfTypes';
 import type { PdfTexts } from '../translations';
-import { PDF_FONT } from '../fonts';
+import { fontOf } from '../fonts';
 import type { SectionHandle } from '../sections';
 
 /** Standings aus dem Aufruf, sonst die Startwerte des Plans. */
@@ -71,7 +71,7 @@ function drawStandingsTable(
     tableLineColor: [...printColors.ink],
     alternateRowStyles: { fillColor: [...printColors.paper], textColor: [...printColors.ink] },
     styles: {
-      font: PDF_FONT.family,
+      font: fontOf(doc),
       fontSize: printType.tableSBody,
       textColor: [...printColors.ink],
       cellPadding: printGap.compactPad,
@@ -123,7 +123,7 @@ export function renderGroupStandings(
     // Titel „Tabelle – Gruppe X“
     doc.setFontSize(printType.caption);
     doc.setTextColor(...printColors.ink);
-    doc.setFont(PDF_FONT.family, 'bold');
+    doc.setFont(fontOf(doc), 'bold');
     doc.text(section.heading(doc, yPos, t.standingsOfGroup(t.groupLabel(group, getGroupDisplayName(group, schedule.tournament)))), geo.left, yPos);
     yPos += printMetrics.sectionTitleUnderline;
 

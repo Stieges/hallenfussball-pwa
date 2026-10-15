@@ -17,6 +17,7 @@ import type { ScoreSpec } from '../scoreLayout';
 import type { StatefulMatch } from '../tournamentState';
 import type { PdfTexts } from '../translations';
 import { drawLiveBar, drawRefereeField, drawScoreCell, scoreCellMinHeight, scoreSpecFor } from './scoreCell';
+import { fontOf } from '../fonts';
 import { matchTableOptions, pad } from './matchTables';
 
 type ColumnKey = 'nr' | 'time' | 'field' | 'group' | 'home' | 'result' | 'away' | 'referee';
@@ -98,7 +99,7 @@ export function renderMatchTable(doc: jsPDF, input: MatchTableInput, ctx: MatchT
   });
 
   autoTable(doc, {
-    ...matchTableOptions(ctx.geo, startY, head, body, columnStyles, input.padV),
+    ...matchTableOptions(ctx.geo, startY, head, body, columnStyles, input.padV, fontOf(doc)),
     didDrawCell: data => {
       if (data.section !== 'body') {
         return;

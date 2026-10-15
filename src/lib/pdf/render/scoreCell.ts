@@ -10,7 +10,7 @@ import type { TiebreakerMode } from '../../../types/tournament';
 import type { ResultState } from '../matchResult';
 import { refereeFieldRect, scoreCellLayout, scoreContentHeight, type Rect, type ScoreSpec, type SmallRow } from '../scoreLayout';
 import type { PdfTexts } from '../translations';
-import { PDF_FONT } from '../fonts';
+import { fontOf } from '../fonts';
 
 /** Beschriftungen der kleinen Felder, die die Regel der Runde vorsieht (@DR-019). */
 function ruleLabels(mode: TiebreakerMode | undefined, t: PdfTexts): string[] {
@@ -73,7 +73,7 @@ export function drawScoreCell(doc: jsPDF, cell: Rect, spec: ScoreSpec): void {
     doc.rect(box.x, box.y, box.w, box.h, 'S');
   }
   for (const piece of texts) {
-    doc.setFont(PDF_FONT.family, piece.bold ? 'bold' : 'normal');
+    doc.setFont(fontOf(doc), piece.bold ? 'bold' : 'normal');
     doc.setFontSize(piece.size);
     doc.text(piece.text, piece.x, piece.y, { align: 'center' });
   }

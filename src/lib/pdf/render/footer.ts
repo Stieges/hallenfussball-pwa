@@ -10,7 +10,7 @@
 import type { jsPDF } from 'jspdf';
 import { printColors, printMetrics, printStroke, printType } from '../../../design-tokens/print';
 import type { PageGeometry } from '../layout';
-import { PDF_FONT } from '../fonts';
+import { fontOf } from '../fonts';
 import { clipToWidth } from './textFit';
 
 /** Inhalt der Fußzeile, fertig übersetzt. */
@@ -25,7 +25,7 @@ export interface FooterContent {
 }
 
 function setFooterFace(doc: jsPDF): void {
-  doc.setFont(PDF_FONT.family, 'normal');
+  doc.setFont(fontOf(doc), 'normal');
   doc.setFontSize(printType.foot);
   doc.setTextColor(...printColors.ink);
 }

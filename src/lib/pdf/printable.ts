@@ -13,11 +13,15 @@ import { isPdfGlyph, type GlyphCheck } from './fonts';
 const SUBSTITUTE = '?';
 /** Zeilenumbruch bleibt: mehrzeilige Zellen und `splitTextToSize` brauchen ihn. */
 const LINE_BREAK = '\n';
+/** Variantenwähler-16 (U+FE0F) und Zero-Width-Joiner (U+200D): unsichtbar, kein „?“ für sie. */
+const INVISIBLE = /[\uFE0F\u200D]/g;
 
 /** Ersetzt jedes nicht druckbare Zeichen (je Codepunkt) durch „?“. */
 export function printable(text: string, covers: GlyphCheck = isPdfGlyph): string {
   let result = '';
-  for (const char of text) {
+  // Vorher: zusammengesetzte Form (NFD-„ü“ bleibt „ü“), einheitliche Zeilenenden, Variantenwähler und ZWJ ohne Ersatz
+  const prepared = text.normalize('NFC').replace(/\r\n?/g, LINE_BREAK).replace(INVISIBLE, '');
+  for (const char of prepared) {
     result += char === LINE_BREAK || covers(char) ? char : SUBSTITUTE;
   }
   return result;

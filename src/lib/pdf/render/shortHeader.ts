@@ -7,7 +7,7 @@
 import type { jsPDF } from 'jspdf';
 import { printColors, printGap, printMetrics, printStroke, printType } from '../../../design-tokens/print';
 import type { PageGeometry } from '../layout';
-import { PDF_FONT } from '../fonts';
+import { fontOf } from '../fonts';
 import { clipToWidth } from './textFit';
 
 /**
@@ -26,7 +26,7 @@ const MAX_TITLE_LINES = 2;
  * Titelzeilen des Kurzkopfs innerhalb der Satzbreite, höchstens zwei. Ist der Titel länger, endet die zweite Zeile mit „…“.
  */
 export function shortHeadTitleLines(doc: jsPDF, title: string, width: number): string[] {
-  doc.setFont(PDF_FONT.family, 'bold');
+  doc.setFont(fontOf(doc), 'bold');
   doc.setFontSize(printType.titleShort);
   const lines = doc.splitTextToSize(title, width) as string[];
   if (lines.length <= MAX_TITLE_LINES) {
@@ -51,7 +51,7 @@ export function drawShortHeads(doc: jsPDF, geo: PageGeometry, head: ShortHeadTex
 function drawShortHead(doc: jsPDF, head: ShortHeadText, geo: PageGeometry, subtitle: string): void {
   const extra = (head.titleLines.length - 1) * printMetrics.shortTitleAdvance;
   doc.setTextColor(...printColors.ink);
-  doc.setFont(PDF_FONT.family, 'bold');
+  doc.setFont(fontOf(doc), 'bold');
   doc.setFontSize(printType.titleShort);
   head.titleLines.forEach((line, index) => {
     doc.text(line, geo.left, geo.top + printGap.shortHeadTitleBaseline + index * printMetrics.shortTitleAdvance);

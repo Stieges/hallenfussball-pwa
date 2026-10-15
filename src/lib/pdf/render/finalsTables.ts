@@ -12,7 +12,7 @@ import { ascentMm, ensureSpace, type PageGeometry } from '../layout';
 import { bracketRoundPerMatch, koModeFor, type KoKey } from '../koSlots';
 import type { StatefulMatch } from '../tournamentState';
 import type { PdfTexts } from '../translations';
-import { PDF_FONT } from '../fonts';
+import { fontOf } from '../fonts';
 import { renderMatchTable, type MatchTableContext } from './matchTable';
 import { sectionTitle } from './matchTables';
 import type { SectionHandle } from '../sections';
@@ -76,7 +76,7 @@ function drawKoLines(doc: jsPDF, lines: string[], geo: PageGeometry, yPos: numbe
     return yPos;
   }
   doc.setTextColor(...printColors.ink);
-  doc.setFont(PDF_FONT.family, 'normal');
+  doc.setFont(fontOf(doc), 'normal');
   doc.setFontSize(printType.note);
   for (const line of lines) {
     const wrapped = doc.splitTextToSize(line, geo.contentWidth) as string[];

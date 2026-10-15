@@ -4,7 +4,9 @@
  * des Rands, Schrift der Fußzeile ab 7,5 pt), @W1-031, @W1-032 (Kontakt nur auf Übergabe).
  */
 import { describe, expect, it } from 'vitest';
-import { printLimits, printType } from '../../../design-tokens/print';
+import { generateFullSchedule } from '../../../core/generators';
+import { printLimits, printPage, printType } from '../../../design-tokens/print';
+import { hallencupTournament } from './pdfFixture';
 import { FIXTURES, layoutOf, pageText } from './pdfFixtureLayout';
 import { DESCENT_REGULAR_EM } from './pdfFontMetrics';
 import type { LayoutPage, LayoutText } from './pdfjsLayout';
@@ -135,5 +137,19 @@ describe('@BM-035 @DR-011 Fassung final: statt „Stand …“ steht die Abschlu
       const { pages } = await layoutOf({ now: NOW, edition, closedAt: new Date(2026, 10, 14, 17, 40) });
       pages.forEach(page => expect(pageText(page)).not.toContain('abgeschlossen'));
     }
+  });
+});
+
+describe('F3 Breitenmessung: gemessen wird, was gedruckt wird', () => {
+  it('Titel aus nicht druckbaren Zeichen: Fußzeile und Kurzkopf bleiben im Satzspiegel (getTextWidth misst „?“, nicht das fehlende Glyph)', async () => {
+    const titel = '⚽'.repeat(60);
+    const tournament = hallencupTournament({ title: titel });
+    const { pages, width } = await layoutOf({ now: NOW, tournament, online: false }, generateFullSchedule(tournament, 'de'));
+    const rechts = width - printPage.margin.right;
+
+    pages.forEach((page, i) => {
+      page.texts.forEach(t => expect(t.x + t.w, `Seite ${i + 1} „${t.str}“`).toBeLessThanOrEqual(rechts + TOL));
+    });
+    expect(pages[0].texts.some(t => t.str.includes('?'))).toBe(true);
   });
 });

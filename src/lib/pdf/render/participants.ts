@@ -10,7 +10,7 @@ import { printColors, printFont, printGap, printLimits, printMetrics, printStrok
 import { getGroupDisplayName } from '../../../utils/displayNames';
 import { ensureSpace, type PageGeometry } from '../layout';
 import type { PdfTexts } from '../translations';
-import { PDF_FONT } from '../fonts';
+import { fontOf } from '../fonts';
 import type { SectionHandle } from '../sections';
 
 type Team = GeneratedSchedule['teams'][number];
@@ -38,7 +38,7 @@ function ascent(size: number): number {
 function setFace(doc: jsPDF, size: number, bold: boolean): void {
   doc.setFontSize(size);
   doc.setTextColor(...printColors.ink);
-  doc.setFont(PDF_FONT.family, bold ? 'bold' : 'normal');
+  doc.setFont(fontOf(doc), bold ? 'bold' : 'normal');
 }
 
 function groupTitle(group: string, schedule: GeneratedSchedule, t: PdfTexts): string {
@@ -131,7 +131,7 @@ export function renderParticipants(
   // Abschnittstitel mit Linie darunter
   doc.setFontSize(printType.h2);
   doc.setTextColor(...printColors.ink);
-  doc.setFont(PDF_FONT.family, 'bold');
+  doc.setFont(fontOf(doc), 'bold');
   doc.text(section.heading(doc, yPos, t.participants), geo.left, yPos);
   const ruleY = yPos + printMetrics.sectionTitleUnderline;
   doc.setDrawColor(...printColors.ink);
