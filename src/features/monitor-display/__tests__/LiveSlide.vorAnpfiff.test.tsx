@@ -40,4 +40,18 @@ describe('@ZM-138 Vor dem Anpfiff: nächstes Spiel mit Anstoßzeit', () => {
     expect(screen.queryByText(/Anstoß/)).toBeNull();
     expect(FIXTURE_MATCHES.some(m => m.matchStatus === 'running')).toBe(true);
   });
+
+  it('whenIdle „skip“ wirkt: keine Anstoßzeit, sondern der Leerlauf-Text (Einstellung whenIdle muss wirken)', () => {
+    render(
+      <LiveSlide
+        slide={slide('live', { fieldId: 'field-2', whenIdle: { type: 'skip' } })}
+        tournament={buildTournament()}
+        performanceSettings={performanceSettings}
+        theme="dark"
+        style={{}}
+      />,
+    );
+    expect(screen.getByText(/slides\.live\.idleSkip/)).toBeInTheDocument();
+    expect(screen.queryByText(/14:20/)).toBeNull();
+  });
 });
