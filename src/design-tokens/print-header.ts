@@ -13,6 +13,9 @@ export const printHeader = {
   logoGap: 4,
   /** Größengrenze der Bilddaten einer Grafik in Byte (2 MB): größere Dateien gelten als unbrauchbar (@DR-024). */
   logoMaxBytes: 2_097_152,
+  /** Pixelgrenze einer Grafik (aus dem Dateikopf gelesen, vor dem Dekodieren): höchstens 4000 Bildpunkte je Seite und 16 Megapixel. */
+  logoMaxSidePx: 4000,
+  logoMaxPixels: 16_000_000,
   /** Titel: höchstens drei Zeilen (@BM-021). Passt er bei voller Schrift nicht, wird die Schrift in Schritten kleiner. */
   titleMaxLines: 3,
   titleMinPt: 18,

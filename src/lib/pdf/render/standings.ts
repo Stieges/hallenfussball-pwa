@@ -33,9 +33,9 @@ function standingsHeader(t: PdfTexts): RowInput[] {
  * Eine Zeile der Tabelle. Null-Werte bleiben leer. Die Platz-Spalte ist nur gefüllt, wenn `rankColumn` gilt
  * (Gruppentabelle mit gespielten Spielen, B-28a3-4b Punkt 1, Controller 15.10.).
  */
-function standingRow(standing: Standing, index: number, rankColumn: boolean): CellInput[] {
+function standingRow(standing: Standing, index: number, rankColumn: boolean, place?: number): CellInput[] {
   return [
-    rankColumn ? (index + 1).toString() : '',
+    rankColumn ? (place ?? index + 1).toString() : '',
     standing.team.name,
     standing.played > 0 ? standing.played.toString() : '',
     standing.won > 0 ? standing.won.toString() : '',
@@ -60,9 +60,10 @@ function drawStandingsTable(
   t: PdfTexts,
   startY: number,
   standings: Standing[],
-  rankColumn: boolean
+  rankColumn: boolean,
+  placeOf?: (standing: Standing) => number
 ): number {
-  const data: RowInput[] = standings.map((standing, index): CellInput[] => standingRow(standing, index, rankColumn));
+  const data: RowInput[] = standings.map((standing, index): CellInput[] => standingRow(standing, index, rankColumn, placeOf?.(standing)));
 
   const options: UserOptions = {
     startY,
@@ -147,7 +148,7 @@ export function renderGroupStandings(
       .sort(finalTable ? (a, b) => placeOf(a) - placeOf(b) : compareRanking);
 
     const gespielt = finalTable !== undefined || groupStandings.some(standing => standing.played > 0);
-    const end = drawStandingsTable(doc, geo, t, yPos, groupStandings, gespielt);
+    const end = drawStandingsTable(doc, geo, t, yPos, groupStandings, gespielt, finalTable ? placeOf : undefined);
     yPos = end + printGap.sectionGap + printMetrics.standingsGroupAdvance;
   });
 

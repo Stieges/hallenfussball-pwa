@@ -44,3 +44,39 @@ export function isUsableLogo(logo: LogoImage, maxBytes: number): boolean {
   }
   return signature.every((byte, i) => bytes[i] === byte);
 }
+
+/** Bildmaße in Bildpunkten. */
+export interface PixelSize {
+  width: number;
+  height: number;
+}
+
+const SOF_MARKERS_EXCLUDED = new Set([0xc4, 0xc8, 0xcc]);
+
+/**
+ * Bildmaße aus dem Dateikopf (PNG: IHDR, JPEG: erster SOF-Block), ohne das Bild zu dekodieren. `undefined`, wenn der
+ * Kopf fehlt oder unlesbar ist.
+ */
+export function imageSizeOf(logo: LogoImage): PixelSize | undefined {
+  const bytes = bytesOf(logo.data);
+  if (bytes === undefined) {
+    return undefined;
+  }
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (logo.format === 'PNG') {
+    // Signatur (8 Byte), Blocklänge (4), „IHDR“ (4), dann Breite und Höhe als 32-Bit-Zahlen
+    return bytes.length >= 24 ? { width: view.getUint32(16), height: view.getUint32(20) } : undefined;
+  }
+  let at = 2;
+  while (at + 9 < bytes.length) {
+    if (bytes[at] !== 0xff) {
+      return undefined;
+    }
+    const marker = bytes[at + 1];
+    if (marker >= 0xc0 && marker <= 0xcf && !SOF_MARKERS_EXCLUDED.has(marker)) {
+      return { height: view.getUint16(at + 5), width: view.getUint16(at + 7) };
+    }
+    at += 2 + view.getUint16(at + 2);
+  }
+  return undefined;
+}

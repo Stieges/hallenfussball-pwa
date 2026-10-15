@@ -98,6 +98,18 @@ describe('@DR-009 Abschlusstabelle bei Jeder gegen jeden in einer Gruppe ohne Fi
     expect(tabelle.map(t => t.str.trim())).toEqual(['Team E', 'Team D', 'Team C', 'Team B', 'Team A']);
   });
 
+  it('die Spalte „Pl“ trägt den gespeicherten Platz, bei geteilten Plätzen 1., 2., 2., 4.', async () => {
+    const { tournament, schedule } = jederGegenJeden(4);
+    const places = [1, 2, 2, 4];
+    const rank = tournament.teams.map((team, i) => ({ place: places[i], team }));
+    const { pages } = await kopfPdf({ edition: 'final', closed: true, closedAt: new Date('2026-11-14T16:40:00'), ranking: rank }, tournament, schedule);
+    const seite = pages.find(p => p.texts.some(t => ohneNummer(t.str) === 'Abschlusstabelle'));
+    const titel = heading(pages, 'Abschlusstabelle');
+    const spalte = (seite?.texts ?? []).filter(t => t.y > (titel?.y ?? 0) + 6 && t.x < 25 && /^\d+$/.test(t.str.trim())).sort((a, b) => a.y - b.y);
+
+    expect(spalte.map(t => t.str.trim())).toEqual(['1', '2', '2', '4']);
+  });
+
   it('Gegenbeispiel: vor dem Abschluss bleibt der Block mit Schreiblinien, keine Abschlusstabelle', async () => {
     const { tournament, schedule } = jederGegenJeden(5);
     const { pages } = await kopfPdf({}, tournament, schedule);

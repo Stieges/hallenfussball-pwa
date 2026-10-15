@@ -9,7 +9,7 @@ import { printType } from '../../../design-tokens/print';
 import { pageGeometry } from '../layout';
 import { hallencupTournament } from './pdfFixture';
 import { bboxOf, expectedMatrix, headBottom, kopfPdf, overlaps, qrRects, textBox, titleLines, TOL } from './pdfKopfSupport';
-import { brokenJpegLogo, fixtureLogo, garbageLogo, oversizedLogo, truncatedPngLogo } from './pdfLogoFixture';
+import { brokenJpegLogo, fixtureLogo, garbageLogo, hugePixelLogo, oversizedLogo, truncatedPngLogo } from './pdfLogoFixture';
 import { squash } from './pdfjsText';
 
 const geo = pageGeometry('a4', 'portrait');
@@ -125,6 +125,15 @@ describe('@DR-024 unbrauchbare Bilddaten: der Spielplan entsteht trotzdem, mit H
     const { pages, notes } = await kopfPdf({ logoLeft: logo });
 
     expect(pages.length).toBeGreaterThan(0);
+    expect(pages[0].images).toHaveLength(0);
+    expect(notes.some(n => n.toLowerCase().includes('grafik'))).toBe(true);
+  });
+
+  it('10000 × 10000 Bildpunkte (wenige Byte): schnell abgelehnt, ohne Dekodieren, mit Hinweis', async () => {
+    const start = performance.now();
+    const { pages, notes } = await kopfPdf({ logoLeft: hugePixelLogo() });
+
+    expect(performance.now() - start).toBeLessThan(5000);
     expect(pages[0].images).toHaveLength(0);
     expect(notes.some(n => n.toLowerCase().includes('grafik'))).toBe(true);
   });
