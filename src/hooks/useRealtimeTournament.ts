@@ -35,9 +35,6 @@ export interface UseRealtimeTournamentOptions {
   /** Callback when any tournament data changes */
   onUpdate?: (payload: RealtimePayload) => void;
 
-  /** Callback for tournament table changes specifically */
-  onTournamentChange?: (payload: RealtimePayload) => void;
-
   /** Callback for team changes */
   onTeamChange?: (payload: RealtimePayload) => void;
 
@@ -90,7 +87,6 @@ export function useRealtimeTournament(
   const {
     enabled = true,
     onUpdate,
-    onTournamentChange,
     onTeamChange,
     onMatchChange,
     onMatchEventChange,
@@ -104,7 +100,6 @@ export function useRealtimeTournament(
   // Use refs for callbacks to avoid re-subscriptions on callback changes
   const callbacksRef = useRef({
     onUpdate,
-    onTournamentChange,
     onTeamChange,
     onMatchChange,
     onMatchEventChange,
@@ -116,14 +111,13 @@ export function useRealtimeTournament(
   useEffect(() => {
     callbacksRef.current = {
       onUpdate,
-      onTournamentChange,
       onTeamChange,
       onMatchChange,
       onMatchEventChange,
       onStatusChange,
       onError,
     };
-  }, [onUpdate, onTournamentChange, onTeamChange, onMatchChange, onMatchEventChange, onStatusChange, onError]);
+  }, [onUpdate, onTeamChange, onMatchChange, onMatchEventChange, onStatusChange, onError]);
 
   // Subscribe/unsubscribe effect
   useEffect(() => {
@@ -137,11 +131,6 @@ export function useRealtimeTournament(
     }
 
     // Create wrapper callbacks that call both specific and generic handlers
-    const handleTournamentChange = (payload: RealtimePayload) => {
-      callbacksRef.current.onTournamentChange?.(payload);
-      callbacksRef.current.onUpdate?.(payload);
-    };
-
     const handleTeamChange = (payload: RealtimePayload) => {
       callbacksRef.current.onTeamChange?.(payload);
       callbacksRef.current.onUpdate?.(payload);
@@ -181,7 +170,6 @@ export function useRealtimeTournament(
 
     realtimeService.subscribeTournament({
       tournamentId,
-      onTournamentChange: handleTournamentChange,
       onTeamChange: handleTeamChange,
       onMatchChange: handleMatchChange,
       onMatchEventChange: handleMatchEventChange,

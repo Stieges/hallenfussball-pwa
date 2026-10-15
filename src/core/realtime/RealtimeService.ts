@@ -227,21 +227,18 @@ export class RealtimeService {
       );
     }
 
-    // Subscribe to tournament itself
-    if (options.onTournamentChange) {
-      channel.on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tournaments',
-          filter: `id=eq.${tournamentId}`,
-        },
-        (payload) => {
-          options.onTournamentChange?.(this.normalizePayload(payload, 'tournaments'));
-        }
-      );
-    }
+    // A-08f3b2 (C-SPIELPLAN-PUSH-KANAL-OFFEN, @FU-087): KEINE Bindung auf `tournaments` -- die Tabelle steht
+    // nicht in der Publikation `supabase_realtime` (Migration 20260928_001 § 9). Eine solche Bindung lässt den
+    // Server den GANZEN Kanal ablehnen (System-Nachricht status 'error'), der Kanal bleibt aber SUBSCRIBED:
+    // keine Pushes, und das Abfrage-Ausweichen greift nicht.
+
+    // A-08f3b2: Lehnt der Server die postgres_changes-Abos nach dem Beitritt ab, zählt das wie CHANNEL_ERROR
+    // (realtime-js meldet das nicht über den subscribe-Rückruf) -> Abfrage-Ausweichen greift.
+    channel.on('system', {}, (payload: { status?: string; extension?: string; message?: string }) => {
+      if (payload.extension === 'postgres_changes' && payload.status === 'error') {
+        this.reportChannelError(tournamentId, options, payload.message);
+      }
+    });
 
     // Handle subscription status
     channel.subscribe((status: string) => {
@@ -254,10 +251,8 @@ export class RealtimeService {
         }
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         // A-08f-F2: TIMED_OUT (Beitritt laeuft in den Timeout) zaehlt wie CHANNEL_ERROR -> Abfrage-Ausweichen greift
-        const error = new Error(`Subscription failed for ${tournamentId}`);
-        this.state.lastError = error;
-        this.updateStatus('error');
-        options.onError?.(error);
+        this.reportChannelError(tournamentId, options);
+        return;
       } else if (status === 'CLOSED') {
         if (!this.state.isPaused) {
           this.updateStatus('disconnected');
@@ -271,9 +266,17 @@ export class RealtimeService {
     this.updateStatus('connecting');
   }
 
+  private reportChannelError(tournamentId: string, options: TournamentSubscriptionOptions, detail?: string): void {
+    const error = new Error(`Subscription failed for ${tournamentId}${detail ? `: ${detail}` : ''}`);
+    this.state.lastError = error;
+    this.updateStatus('error');
+    options.onError?.(error);
+    options.onStatusChange?.(this.state.status);
+  }
+
   private normalizePayload(
     raw: { eventType: string; new: unknown; old: unknown },
-    table: 'tournaments' | 'teams' | 'matches' | 'match_events'
+    table: 'teams' | 'matches' | 'match_events'
   ): RealtimePayload {
     return {
       eventType: raw.eventType as 'INSERT' | 'UPDATE' | 'DELETE',

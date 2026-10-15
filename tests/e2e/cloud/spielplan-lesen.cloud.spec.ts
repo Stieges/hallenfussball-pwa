@@ -80,10 +80,8 @@ test.describe('Spielplan liest fremde Tore', () => {
   });
 
   test('@FU-087 Eigentümer, Kanal offen: Helfer-Tor erscheint im Spielplan nach höchstens 3 s', async ({ browser }) => {
-    // Befund C-SPIELPLAN-PUSH-KANAL-OFFEN (A-08g): bei offenem, "joined" Kanal erscheint das fremde Tor im Spielplan
-    // des Eigentümers auch nach 60 s nicht (geschlossener Kanal: Abfrage greift, siehe Test oben). Produktivcode
-    // gehört nicht in A-08g -- Klärung beim Controller, dann test.fail entfernen.
-    test.fail(true, 'C-SPIELPLAN-PUSH-KANAL-OFFEN: Push auf matches erreicht den Spielplan bei offenem Kanal nicht.');
+    // A-08f3b2 (C-SPIELPLAN-PUSH-KANAL-OFFEN behoben): die Bindung auf `tournaments` (nicht in der Publikation)
+    // liess den Server den ganzen Kanal ablehnen, der Kanal blieb trotzdem "joined" -- kein Push, keine Abfrage.
     test.setTimeout(90_000);
     const ids = engineCupIds('SPIELPLANKANAL');
     await expectSeededEngineMatch(engineCupTarget('SPIELPLANKANAL'));

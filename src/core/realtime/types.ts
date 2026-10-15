@@ -38,8 +38,6 @@ export interface RealtimeSubscription {
 export interface TournamentSubscriptionOptions {
   /** Tournament ID to subscribe to */
   tournamentId: string;
-  /** Called when any tournament data changes */
-  onTournamentChange?: RealtimeCallback;
   /** Called when team data changes */
   onTeamChange?: RealtimeCallback;
   /** Called when match data changes */
