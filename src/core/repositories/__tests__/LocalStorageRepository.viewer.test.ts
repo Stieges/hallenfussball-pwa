@@ -55,4 +55,13 @@ describe('A-07e S-3 Gast-Hälfte', () => {
     stores.raw.set('tournaments', [{ ...t('T'), ownerId: 'A' }]);
     expect((await new LocalStorageRepository().get('T'))?.id).toBe('T');
   });
+
+  it('N-3 (S-2): Gast stellt eine Sicherung mit ownerId A wieder her, das Turnier bleibt im Gastmodus erreichbar', async () => {
+    const guest = new LocalStorageRepository({ viewer: 'guest' });
+
+    await guest.save({ ...t('R'), ownerId: 'A' });
+
+    expect((await guest.get('R'))?.id).toBe('R');
+    expect(storedTournaments().find((x) => x.id === 'R')?.ownerId).toBe('guest');
+  });
 });

@@ -41,6 +41,11 @@ export class LocalStorageRepository implements ITournamentRepository {
 
     constructor(private readonly options: LocalStorageRepositoryOptions = {}) {}
 
+    /** N-3 (S-2): Im Gastmodus bekommt jede gespeicherte Kopie den Gast-Marker, auch eine Sicherung mit fremdem Marker. */
+    private guestOr(owner: string | undefined): string | undefined {
+        return this.options.viewer === 'guest' ? GUEST_OWNER : owner;
+    }
+
     /** A-07e: im Gastmodus nur 'guest'-Kopien und Altbestand sichtbar; sonst alles. */
     private visibleHere(tournament: Tournament): boolean {
         return this.options.viewer !== 'guest' || (tournament.ownerId ?? GUEST_OWNER) === GUEST_OWNER;
@@ -66,9 +71,9 @@ export class LocalStorageRepository implements ITournamentRepository {
         if (index >= 0) {
             const currentVersion = list[index].version ?? 0;
             // A-07e: bestehender Konto-Marker bleibt, wenn der Aufrufer keinen setzt
-            list[index] = { ...tournament, ownerId: tournament.ownerId ?? list[index].ownerId, version: currentVersion + 1, updatedAt: new Date().toISOString() };
+            list[index] = { ...tournament, ownerId: this.guestOr(tournament.ownerId ?? list[index].ownerId), version: currentVersion + 1, updatedAt: new Date().toISOString() };
         } else {
-            list.push({ ...tournament, ownerId: tournament.ownerId ?? GUEST_OWNER, version: 1, updatedAt: new Date().toISOString() });
+            list.push({ ...tournament, ownerId: this.guestOr(tournament.ownerId ?? GUEST_OWNER), version: 1, updatedAt: new Date().toISOString() });
         }
 
         await this.saveList(list);
