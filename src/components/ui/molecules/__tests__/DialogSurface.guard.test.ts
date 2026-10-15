@@ -34,6 +34,11 @@ const AUSNAHMEN: Record<string, { zaehler: Zaehler; erlaubt: number; grund: stri
     erlaubt: 2,
     grund: 'Aufklappmenü (kein Modal, keine Fokusfalle): fixe Fläche und Klick-Fänger enthalten Overlay-Farbe, sind aber keine Abdunkelung eines Dialogs.',
   },
+  'features/auth/components/SetPasswordScreen.tsx': {
+    zaehler: 'scrims',
+    erlaubt: 1,
+    grund: 'Seite (kein Dialog, role=main): die fixe Fläche mit backdrop-Farbe ist der Seitenhintergrund der Passwort-Karte über eine eigene Route.',
+  },
   'features/collaboration/components/SyncFailedList.tsx': {
     zaehler: 'marker',
     erlaubt: 1,
@@ -43,16 +48,6 @@ const AUSNAHMEN: Record<string, { zaehler: Zaehler; erlaubt: number; grund: stri
     zaehler: 'marker',
     erlaubt: 1,
     grund: 'Auswahl-Popover am Feld (kein Modal, keine Abdunkelung, kein Fokusfang).',
-  },
-  'features/auth/components/SetPasswordScreen.tsx': {
-    zaehler: 'marker',
-    erlaubt: 4,
-    grund: 'Ganzseitige Karte (Passwort setzen, vier Zustände) über die eigene Route, kein Overlay über einer Seite.',
-  },
-  'features/auth/components/AuthConfirmPage.tsx': {
-    zaehler: 'marker',
-    erlaubt: 1,
-    grund: 'Ganzseitige Karte der E-Mail-Bestätigung über die eigene Route, kein Overlay über einer Seite.',
   },
 };
 
@@ -175,6 +170,7 @@ describe('@OB-055 Wächter – Gegenbeispiele (jede Schreibweise wird erkannt)',
     ['overlayStrong-Token', "const s = {\n  position: 'fixed',\n  backgroundColor: cssVars.colors.overlayStrong,\n};"],
     ['rgba(0, 0, 0, …)', "const s = {\n  position: 'fixed',\n  background: 'rgba(0, 0, 0, 0.6)',\n};"],
     ['rgba(0,0,0,…) ohne Leerzeichen', 'const s = {\n  position: "fixed",\n  background: "rgba(0,0,0,.5)",\n};'],
+    ['backdrop-Token', "const s = {\n  position: 'fixed',\n  background: cssVars.colors.backdrop,\n};"],
     ['Overlay-Farbe vor position', "const s = {\n  background: 'rgba(0, 0, 0, 0.6)',\n  position: 'fixed',\n};"],
   ])('Abdunkelung erkannt: %s', (_name, source) => {
     expect(countScrims(source)).toBe(1);

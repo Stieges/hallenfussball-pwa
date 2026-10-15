@@ -41,7 +41,7 @@ export function countDialogMarkers(source: string): number {
 }
 
 const FIXED = /position\s*:\s*['"]fixed['"]/;
-const OVERLAY_COLOR = /colors\.overlay\w*|--color-overlay\w*|rgba\(\s*0\s*,\s*0\s*,\s*0/;
+const OVERLAY_COLOR = /colors\.(?:overlay|backdrop)\w*|--color-(?:overlay|backdrop)\w*|rgba\(\s*0\s*,\s*0\s*,\s*0/;
 /** Zeilen Abstand, in dem Overlay-Farbe und `position: fixed` zusammengehören. */
 const SCRIM_WINDOW = 12;
 

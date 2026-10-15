@@ -37,7 +37,8 @@ describe('@OB-021 DialogSurface – Handy-Blatt', () => {
     setWidth(390);
     const { panel, scrim } = mount();
     expect(panel.getAttribute('data-layout')).toBe('sheet');
-    expect(scrim.style.justifyContent).toBe('flex-end');
+    expect(panel.style.marginTop).toBe('auto');
+    expect(scrim.style.justifyContent).toBe('flex-start');
     expect(scrim.style.alignItems).toBe('stretch');
     expect(scrim.style.padding).toBe('0px');
     expect(panel.style.width).toBe('100%');
@@ -96,6 +97,15 @@ describe('@OB-021 DialogSurface – Handy-Blatt', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('Blatt: Höhe in dvh mit vh-Rückfall, Überlauf scrollt in der Fläche', () => {
+    setWidth(390);
+    const { panel } = mount();
+    const css = document.querySelector('style')?.textContent ?? '';
+    expect(css).toMatch(/\[data-layout="sheet"\]\s*\{\s*max-height: 90vh;\s*max-height: 90dvh;/);
+    expect(panel.style.overflowY).toBe('auto');
+    expect(panel.style.maxHeight).toBe('');
   });
 
   it('Blatt hat weiter die deckende Fläche und die Abdunkelung', () => {

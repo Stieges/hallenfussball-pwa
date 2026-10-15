@@ -9,6 +9,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { LoginResetPasswordDialog, LoginSuccessDialog } from '../../../features/auth/components/LoginDialogs';
 import { RegisterSuccessDialog } from '../../../features/auth/components/RegisterDialogs';
 import { LoginScreen } from '../../../features/auth/components/LoginScreen';
+import { RegisterScreen } from '../../../features/auth/components/RegisterScreen';
 import { CorrectionDialog } from '../CorrectionDialog';
 import { ConflictDialog } from '../../../features/schedule-editor/components/ConflictDialog';
 import { ToastProvider } from '../../ui/Toast';
@@ -16,9 +17,19 @@ import { ToastProvider } from '../../ui/Toast';
 vi.mock('../../../features/auth/hooks/useAuth', () => ({
   useAuth: () => ({
     login: vi.fn(), sendMagicLink: vi.fn(), loginWithGoogle: vi.fn(), continueAsGuest: vi.fn(),
-    resetPassword: vi.fn(), connectionState: 'connected', reconnect: vi.fn(),
+    resetPassword: vi.fn(), register: vi.fn(), isGuest: false, connectionState: 'connected', reconnect: vi.fn(),
   }),
 }));
+
+/** Verlaufseinträge des Dialogs: neuer Eintrag (pushState) oder übernommener (replaceState nach einem Vorgänger). */
+function spyHistory() {
+  const push = vi.spyOn(window.history, 'pushState');
+  const replace = vi.spyOn(window.history, 'replaceState');
+  return {
+    calls: () => push.mock.calls.length + replace.mock.calls.length,
+    restore: () => { push.mockRestore(); replace.mockRestore(); },
+  };
+}
 
 const panel = () => screen.getByRole('dialog');
 const scrim = () => panel().parentElement!;
@@ -79,10 +90,28 @@ describe('@OB-055 B-43b3 Verhalten – Anmeldung und Registrierung', () => {
     expect(panel()).toBeInTheDocument();
   });
 
-  it('Anmeldung (Formular): öffnet keinen Verlaufseintrag (Zurück-Taste navigiert die Seite)', () => {
-    const before = window.history.length;
+  it('Anmeldung (Formular): legt keinen Verlaufseintrag an (Zurück-Taste navigiert die Seite)', () => {
+    const history = spyHistory();
     render(<LoginScreen onBack={vi.fn()} />);
-    expect(window.history.length).toBe(before);
+    expect(history.calls()).toBe(0);
+    history.restore();
+  });
+
+  it('Registrierung (Formular): legt keinen Verlaufseintrag an; Esc ruft onBack einmal', () => {
+    const history = spyHistory();
+    const onBack = vi.fn();
+    render(<ToastProvider><RegisterScreen onBack={onBack} /></ToastProvider>);
+    expect(history.calls()).toBe(0);
+    history.restore();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('Gegenbeispiel: ein Unterdialog (Erfolg) legt einen Verlaufseintrag an', () => {
+    const history = spyHistory();
+    render(<LoginSuccessDialog migratedCount={0} onClose={vi.fn()} />);
+    expect(history.calls()).toBeGreaterThan(0);
+    history.restore();
   });
 });
 

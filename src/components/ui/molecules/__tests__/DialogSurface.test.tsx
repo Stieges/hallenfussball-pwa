@@ -82,7 +82,7 @@ describe('DialogSurface – Schließen optional (Einwilligung, @OB-055-Baustein)
 describe('DialogSurface – Form am Handy und Lesebreite', () => {
   it('Blatt (placement=sheet) sitzt unten am Bildschirm', () => {
     const { panel } = renderSurface({ placement: 'sheet' });
-    expect(panel.parentElement!.style.justifyContent).toBe('flex-end');
+    expect(panel.style.marginTop).toBe('auto');
   });
 
   it('übernimmt die Lesebreite über maxWidth', () => {

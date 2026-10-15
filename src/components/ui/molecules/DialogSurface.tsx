@@ -145,7 +145,7 @@ export const DialogSurface = ({
   // Zentrierte Dialoge werden am Handy zum Blatt; Vollbild bleibt Vollbild.
   const isSheet = !isFull && (placement === 'sheet' || belowSheetWidth);
   const layout = isFull ? 'fullscreen' : isSheet ? 'sheet' : 'center';
-  const sheetMaxHeight = placement === 'sheet' ? '80vh' : '90vh';
+  const sheetHeight = placement === 'sheet' ? '80' : '90';
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (dismissible && closeOnBackdropClick && e.target === e.currentTarget) {
@@ -163,7 +163,9 @@ export const DialogSurface = ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: isSheet ? 'stretch' : 'center',
-    justifyContent: isSheet ? 'flex-end' : 'center',
+    // Blatt: Fläche rutscht per margin-top: auto nach unten; ein Überlauf läuft nach unten und scrollt
+    // (bei flex-end wäre die Oberkante unerreichbar).
+    justifyContent: isSheet ? 'flex-start' : 'center',
     zIndex,
     padding: isSheet || isFull ? 0 : cssVars.spacing.lg,
     overflowY: isFull ? 'hidden' : 'auto',
@@ -182,7 +184,9 @@ export const DialogSurface = ({
     width: '100%',
     maxWidth: isFull || (isSheet && placement === 'center') ? '100%' : maxWidth,
     ...(isFull ? { height: '100%', display: 'flex', flexDirection: 'column' as const } : {}),
-    maxHeight: isFull ? '100%' : isSheet ? sheetMaxHeight : '90vh',
+    // Blatt: Höhe über CSS (dvh mit vh-Rückfall, siehe Style-Block), sonst 90vh
+    maxHeight: isFull ? '100%' : isSheet ? undefined : '90vh',
+    marginTop: isSheet ? 'auto' : undefined,
     overflowY: isFull ? 'hidden' : 'auto',
     position: 'relative',
     paddingBottom: isSheet ? `env(safe-area-inset-bottom, ${cssVars.spacing.md})` : undefined,
@@ -218,6 +222,10 @@ export const DialogSurface = ({
         @keyframes dialogSurfaceSlideUp {
           from { transform: translateY(100%); }
           to { transform: translateY(0); }
+        }
+        .dialog-surface-panel[data-layout="sheet"] {
+          max-height: ${sheetHeight}vh;
+          max-height: ${sheetHeight}dvh;
         }
         ${mediaQueries.tabletDown} {
           .dialog-surface-scrim[data-layout="center"] {
