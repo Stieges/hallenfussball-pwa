@@ -18,7 +18,7 @@
  *   - `generateFullSchedule`/`fairScheduler` (dieselben Generatoren wie der Wizard) für den
  *     Spielplan,
  *   - `mapTournamentToSupabase`/`mapMembershipInsertToSupabase`/
- *     `mapMatchEventToSupabase` (echte Mapper aus `src/core/repositories/`) für die Zeilenform —
+ *     (echte Mapper aus `src/core/repositories/`) für die Zeilenform —
  * aber die eigentlichen Schreibzugriffe laufen über einen Service-Role-Client (kein
  * `auth.getUser()`-Session nötig, RLS ist für den Seed irrelevant, `SupabaseRepository` selbst
  * ist an eine Vite-Singleton-Session gebunden und dafür nicht einsetzbar). `SeedRepository` unten
@@ -35,9 +35,8 @@
  *     ist für Einladungs-LINKS gebaut (keine Ziel-E-Mail im Feld), nicht für an eine konkrete
  *     Adresse adressierte Einladungen mit `invite_email`. Wir bauen die Zeile direkt im
  *     `CollaboratorInsert`-Format (demselben Typ, den der Mapper auch zurückgibt).
- *   - `match_events` für das laufende Spiel: `mapMatchEventToSupabase` ist der echte Mapper
- *     (aus `liveMatchMappers.ts`, derselbe, den `SupabaseLiveMatchRepository` beim Live-Spiel
- *     nutzt) — hier direkt verwendet, weil `ITournamentRepository.save()` keine Events schreibt.
+ *   - `match_events` für Engine-Spiele: Schreibzugriff über `append_match_events` (Owner-JWT,
+ *     `engineSeedDb.ts`), nicht über `ITournamentRepository.save()`, das keine Events schreibt.
  *   - Google-Provider (`app_metadata.provider`): Auth-Admin-API, kein DB-Mapper-Thema.
  *   - Ergebnis-/Status-Spalten in `SeedRepository.updateMatches`: seit V4 sendet der Client-Mapper
  *     sie nicht mehr — der Seed schreibt sie roh (Kommentar dort, Scope-Review F3).

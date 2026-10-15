@@ -8,9 +8,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { mapMatchEventToSupabase } from '../../src/core/repositories/liveMatchMappers';
 import { callAppendMatchEvents } from '../../src/core/repositories/appendMatchEventsRpc';
-import type { MatchEvent } from '../../src/core/models/LiveMatch';
 import type { Database } from '../../src/types/supabase';
 import {
   assertAllAccepted,
@@ -175,28 +173,4 @@ export async function assertLegacyMatch(admin: SupabaseClient, slug: string, mat
   const row = await readMatch(admin, matchId);
   const engineRows = (await readEngineRows(admin, matchId)).length;
   assertStateAndEngineRows(slug, { status: row.match_status, engineRows }, { status, engineRows: 0 });
-}
-
-/** Alt-Ereignisse (ohne event_format) für das Ghost-Altspiel, Muster des früheren Live-Cup-Seeds. */
-export async function insertLegacyGhostEvents(
-  admin: SupabaseClient,
-  matchId: string,
-  homeTeamId: string | null,
-  idFor: (key: string) => string
-): Promise<void> {
-  const events: MatchEvent[] = [
-    { id: idFor('legacy-goal'), matchId, timestampSeconds: 180, type: 'GOAL', payload: { team: 'home' }, scoreAfter: { home: 1, away: 0 } },
-    { id: idFor('legacy-start'), matchId, timestampSeconds: 30, type: 'STATUS_CHANGE', payload: { toStatus: 'RUNNING' }, scoreAfter: { home: 0, away: 0 } },
-  ];
-  const rows = events.map((event) => {
-    const eventRow = mapMatchEventToSupabase(event, matchId);
-    if (event.payload.team === 'home') {
-      eventRow.team_id = homeTeamId;
-    }
-    return eventRow;
-  });
-  const { error } = await admin.from('match_events').insert(rows);
-  if (error) {
-    throw new Error(`Altspiel-Ereignisse: ${error.message}`);
-  }
 }

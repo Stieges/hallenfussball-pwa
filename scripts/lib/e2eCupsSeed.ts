@@ -37,7 +37,6 @@ import { matchSideTeamId, transitionalSides } from '../../src/core/models/matchS
 import {
   assertEngineAutoSelect,
   assertLegacyMatch,
-  insertLegacyGhostEvents,
   seedEngineMatch,
   type EngineSeedDeps,
 } from './engineSeedDb';
@@ -244,9 +243,6 @@ export async function seedLegacyCups(
         ? { id: ids.matchId, scoreA: cup.scoreA, scoreB: cup.scoreB, matchStatus: 'finished', finishedAt: nowIso }
         : { id: ids.matchId, scoreA: cup.scoreA, scoreB: cup.scoreB, matchStatus: 'running', timerStartTime: nowIso, timerElapsedSeconds: 300 },
     ]);
-    if (cup.rawStatus === 'running') {
-      await insertLegacyGhostEvents(deps.admin, ids.matchId, ids.homeTeamId, (key) => e2eUuid(`event:legacy-cup:${cup.slug}:${key}`));
-    }
     await assertLegacyMatch(deps.admin, cup.slug, ids.matchId, cup.rawStatus);
     deps.log(`Altspiel-Cup ${cup.slug}: ${cup.rawStatus}, keine Engine-Zeile.`);
   }
