@@ -58,16 +58,19 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     const text = flatText(pdf);
     const alles = text.join(' ');
 
-    expect(text).toContain('Veranstalter:');
+    // Angabentabelle (Daniel 15.10., v7.2): Bezeichnung und Wert als eigene Texte, Bezeichnungen ohne Doppelpunkt
+    expect(text).toContain('Veranstalter');
     expect(text).toContain('SV Nord 1921 e. V.');
-    expect(text).toContain('Halle:');
+    expect(text).toContain('Halle');
     expect(alles).toContain('Sporthalle am Park');
-    expect(text).toContain('Spieltag:');
+    expect(text).toContain('Spieltag');
     expect(text).toContain('14.11.2026');
-    expect(text).toContain('Zeit:');
+    expect(text).toContain('Zeit');
     expect(text.some(t => /^13:00 - \d{2}:\d{2}$/.test(t))).toBe(true);
-    expect(alles).toContain('Modus: Gruppen + Finale');
-    expect(alles).toContain('Spielzeit: 10 Min. · Zeitstrafe 2 Min.');
+    expect(text).toContain('Modus');
+    expect(text).toContain('Gruppen + Finale');
+    expect(text).toContain('Spielzeit');
+    expect(text).toContain('10 Min. · Zeitstrafe 2 Min.');
   });
 
   it('Teilnehmer: Gruppen A und B, Kennungen A1–B4 in Zuteilungsreihenfolge, nicht alphabetisch (v7.2 gen.py:165–168, Daniel 15.10.)', async () => {

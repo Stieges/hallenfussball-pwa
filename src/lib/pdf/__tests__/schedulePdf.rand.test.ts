@@ -38,7 +38,7 @@ const istBlackOderWhite = (hex: string): boolean => hex === SCHWARZ || hex === W
 /** Textstücke der Spieltabellen: Teamnamen unterhalb des Titels „Gruppenphase“, ohne Tabellenseiten (dort Tabellenschrift). */
 function teamTexts(pages: LayoutPage[], namen: string[]): LayoutText[] {
   return pages
-    .filter(page => !page.texts.some(t => t.str.startsWith('Tabelle') || t.str === 'Platzierung'))
+    .filter(page => !page.texts.some(t => t.str.startsWith('Tabelle') || (t.str === 'Platzierung' && Math.abs(t.size - printType.h2) < 0.05)))
     .flatMap(page => {
       const titel = page.texts.find(t => t.str === 'Gruppenphase');
       return page.texts.filter(t => namen.includes(t.str) && (!titel || t.y > titel.y));

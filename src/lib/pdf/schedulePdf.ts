@@ -101,6 +101,7 @@ function headerFacts(schedule: GeneratedSchedule, t: PdfTexts, organizerName: st
   if (organizerName) {
     facts.push({ label: t.organizer, value: organizerName });
   }
+  facts.push({ label: t.ageClass, value: schedule.tournament.ageClass });
   const address = getLocationAddressLine(schedule.tournament);
   facts.push({ label: t.hall, value: address ? `${hallName}, ${address}` : hallName });
   // Datum als TT.MM.JJJJ: bereits so gespeichert unverändert, sonst über Intl in der Sprache des Dokuments
@@ -109,6 +110,14 @@ function headerFacts(schedule: GeneratedSchedule, t: PdfTexts, organizerName: st
   facts.push({ label: t.gameday, value: gameday });
   facts.push({ label: t.time, value: `${t.formatClock(schedule.startTime)} - ${t.formatClock(schedule.endTime)}` });
   return facts;
+}
+
+/** Regelzeilen aus `pdfRuleLines` („Bezeichnung: Wert“) als Zeilen der Angabentabelle (Daniel 15.10., v7.2). */
+function ruleFacts(lines: string[]): HeaderFact[] {
+  return lines.map(line => {
+    const cut = line.indexOf(': ');
+    return cut < 0 ? { label: line, value: '' } : { label: line.slice(0, cut), value: line.slice(cut + 2) };
+  });
 }
 
 /** Baut das Spielplan-PDF, ohne es zu speichern. */
@@ -150,11 +159,9 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
   let yPos = renderHeader(
     doc,
     {
-      kicker: edition === 'blank' ? t.kicker.blank : t.kicker.plan,
+      kicker: edition === 'blank' ? t.kicker.blank : undefined,
       title: schedule.tournament.title,
-      ageClass: schedule.tournament.ageClass,
-      facts: headerFacts(schedule, t, organizerName, hallName),
-      rules: pdfRuleLines(rules, t),
+      facts: [...headerFacts(schedule, t, organizerName, hallName), ...ruleFacts(pdfRuleLines(rules, t))],
     },
     geo
   );

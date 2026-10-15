@@ -5,13 +5,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
-import { printColumns, printLimits, printType } from '../../../design-tokens/print';
+import { printColumns, printLimits, printMetrics, printType } from '../../../design-tokens/print';
 import type { PlacementCriterion, Team, Tournament } from '../../../types/tournament';
 import { HALLENCUP_TEAMS, hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { layoutOf } from './pdfFixtureLayout';
 import { pageGeometry } from '../layout';
 import type { LayoutPage, LayoutText } from './pdfjsLayout';
 import { squash } from './pdfjsText';
+import { fettMap } from './pdfSchnitt';
 
 const BFV = 'BFV-Richtlinien für Futsal und private Hallenturniere';
 const LONG_50 = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
@@ -85,28 +86,24 @@ describe('W1 Kurzkopf: langer Turniername bricht um und bleibt im Rand', () => {
   });
 });
 
-describe('@DR-006 Kopf Seite 1: Regelzeilen unter den Turnierdaten', () => {
-  it('Modus, Platzierung, Spielzeit und Regelwerk stehen auf Seite 1 in dieser Reihenfolge', async () => {
+describe('@DR-006 Kopf Seite 1: Regeln in der Angabentabelle unter den Turnierdaten', () => {
+  it('Modus, Platzierung, Spielzeit und Regelwerk stehen als Bezeichnungen in dieser Reihenfolge, untereinander', async () => {
     const tournament = hallencupMitRegelwerk();
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
-    const zeilen = pages[0].texts.map(trimmed);
-
-    const reihe = [
-      'Modus: Gruppen + Finale',
-      'Platzierung: Punkte – Tordifferenz – Tore – direkter Vergleich',
-      'Spielzeit: 10 Min. · Zeitstrafe 2 Min.',
-      `Regelwerk: ${BFV}`,
-    ];
-    const stellen = reihe.map(zeile => zeilen.indexOf(zeile));
-    stellen.forEach((stelle, i) => expect(stelle, reihe[i]).toBeGreaterThanOrEqual(0));
-    expect([...stellen].sort((a, b) => a - b)).toEqual(stellen);
+    const bezeichnungen = ['Modus', 'Platzierung', 'Spielzeit', 'Regelwerk'];
+    const stellen = bezeichnungen.map(name => pages[0].texts.find(t => trimmed(t) === name));
+    stellen.forEach((t, i) => expect(t, bezeichnungen[i]).toBeDefined());
+    const ys = stellen.map(t => t?.y ?? 0);
+    expect([...ys].sort((a, b) => a - b)).toEqual(ys);
+    expect(pages[0].texts.map(trimmed)).toEqual(expect.arrayContaining(['Gruppen + Finale', 'Spielzeit']));
+    expect(pages[0].texts.map(trimmed)).toContain(BFV);
   });
 
-  it('@DR-007 Gegenbeispiel: ohne eingetragenes Regelwerk erscheint keine Zeile „Regelwerk“', async () => {
+  it('@DR-007 Gegenbeispiel: ohne eingetragenes Regelwerk erscheint keine Bezeichnung „Regelwerk“', async () => {
     const tournament = hallencupTournament({ title: 'Hallencup Ost', placementLogic: PLACEMENT });
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
 
-    expect(pages[0].texts.map(trimmed).some(zeile => zeile.startsWith('Regelwerk'))).toBe(false);
+    expect(pages[0].texts.map(trimmed)).not.toContain('Regelwerk');
   });
 });
 
@@ -129,7 +126,7 @@ describe('Kopf: Titel und Angaben überlappen sich nicht', () => {
     const tournament = hallencupMitRegelwerk();
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
     const titel = pages[0].texts.find(t => trimmed(t) === 'Hallencup Nord');
-    const angabe = pages[0].texts.find(t => trimmed(t) === 'Veranstalter:');
+    const angabe = pages[0].texts.find(t => trimmed(t) === 'Veranstalter');
 
     expect(titel && angabe, 'Titel und Angabe gefunden').toBeDefined();
     expect((angabe?.y ?? 0) - (titel?.y ?? 0)).toBeGreaterThanOrEqual(5.5);
@@ -263,8 +260,8 @@ describe('Teilnehmer und Schiedsrichter', () => {
   });
 });
 
-describe('@BM-052 Kicker', () => {
-  it('ohne Ergebnisse steht „Spielplan zum Ausfüllen“ im Kopf, mit Ergebnissen „Spielplan“', async () => {
+describe('@BM-052 Kicker: nur in der Fassung „zum Ausfüllen“', () => {
+  it('ohne Ergebnisse steht „Spielplan zum Ausfüllen“ im Kopf, in der Fassung „plan“ kein Kicker „Spielplan“', async () => {
     const tournament = hallencupMitRegelwerk();
     const schedule = hallencupSchedule(tournament);
 
@@ -272,64 +269,73 @@ describe('@BM-052 Kicker', () => {
     expect(leer.pages[0].texts.map(trimmed)).toContain('Spielplan zum Ausfüllen');
 
     const mit = await layoutOf({ tournament, edition: 'plan' }, schedule);
-    expect(mit.pages[0].texts.map(trimmed)).toContain('Spielplan');
+    expect(mit.pages[0].texts.map(trimmed)).not.toContain('Spielplan');
+    expect(mit.pages[0].texts.map(trimmed)).not.toContain('Spielplan zum Ausfüllen');
   });
 
-  it('W3 ohne Wahl der Fassung und ohne Ergebnisse heißt der Kopf „Spielplan“', async () => {
+  it('W3 ohne Wahl der Fassung und ohne Ergebnisse steht kein Kicker „Spielplan“ im Kopf', async () => {
     const tournament = hallencupMitRegelwerk();
     const { pages } = await layoutOf({ tournament, includeScores: false }, hallencupSchedule(tournament));
 
-    expect(pages[0].texts.map(trimmed)).toContain('Spielplan');
+    expect(pages[0].texts.map(trimmed)).not.toContain('Spielplan');
     expect(pages[0].texts.map(trimmed)).not.toContain('Spielplan zum Ausfüllen');
   });
 });
 
-/** Fixrunde B-28a3-3b, Punkt 3: genau 60 Zeichen (Qualitätsziel A5.1 „Druck“), dazu ein Titel weit über 110 Zeichen. */
-const TITEL_60 = 'Internationaler Hallenfußball-Wintercup der SG Nord-Süd 2026';
-const TITEL_LANG = `${TITEL_60} ${TITEL_60} ${TITEL_60}`;
-
-describe('K3 Fixrunde: Untertitel und Kurzkopf-Linie liegen unter der zweiten Titelzeile', () => {
-  it('@BM-052 Folgeseite mit zwei Titelzeilen: Untertitel ≥ 5,5 mm unter Zeile 2, Linie darunter, Inhalt darunter', async () => {
+describe('Punkt 5 Kopf nach v7.2 (Daniel 15.10.)', () => {
+  it('(b) der Turniername steht zentriert über die volle Seitenbreite (± 1 mm), jede Zeile', async () => {
     const tournament = hallencupMitRegelwerk({ title: LANGER_TITEL });
-    const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
-    const folge = pages[1];
-    const titelZeilen = folge.texts.filter(t => t.y < 30 && Math.abs(t.size - printType.titleShort) <= SIZE_TOL);
-    const untertitel = folge.texts.find(t => t.y < 36 && Math.abs(t.size - printType.subtitle) <= SIZE_TOL);
-    const linie = folge.lines.find(l => Math.abs(l.y1 - l.y2) < 0.01 && l.y1 < 36);
-    expect(new Set(titelZeilen.map(t => Math.round(t.y * 10))).size, 'zwei Titelzeilen').toBe(2);
-    expect(untertitel, 'Untertitel gefunden').toBeDefined();
-    expect(linie, 'Kurzkopf-Linie gefunden').toBeDefined();
+    const { pages, width } = await layoutOf({ tournament }, hallencupSchedule(tournament));
+    const titelZeilen = pages[0].texts.filter(t => Math.abs(t.size - printType.title) <= SIZE_TOL);
 
-    const zeile2 = Math.max(...titelZeilen.map(t => t.y));
-    expect((untertitel?.y ?? 0) - zeile2).toBeGreaterThanOrEqual(5.5);
-    expect((linie?.y1 ?? 0) - (untertitel?.y ?? 0)).toBeGreaterThanOrEqual(2);
-    const inhalt = Math.min(...folge.texts.filter(t => t.y > (linie?.y1 ?? 0)).map(t => t.y));
-    expect(inhalt - (linie?.y1 ?? 0)).toBeGreaterThanOrEqual(1.5);
-  });
-});
-
-describe('K3 Fixrunde: Grenzen des Kurzkopf-Titels', () => {
-  it('@BM-052 ein Turniername mit genau 60 Zeichen steht vollständig auf der Folgeseite, ohne „…“', async () => {
-    expect(TITEL_60.length).toBe(60);
-    const tournament = hallencupMitRegelwerk({ title: TITEL_60 });
-    const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
-    const kopf = pages[1].texts
-      .filter(t => t.y < 30 && Math.abs(t.size - printType.titleShort) <= SIZE_TOL)
-      .map(t => t.str)
-      .join(' ');
-
-    expect(squash(kopf)).toBe(squash(TITEL_60));
-    expect(kopf).not.toContain('…');
+    expect(titelZeilen.length).toBeGreaterThanOrEqual(1);
+    for (const zeile of titelZeilen) {
+      expect(Math.abs(zeile.x + zeile.w / 2 - width / 2), `„${zeile.str}“`).toBeLessThanOrEqual(1);
+    }
   });
 
-  it('@BM-052 ein Turniername weit über 110 Zeichen endet im Kurzkopf mit „…“', async () => {
-    const tournament = hallencupMitRegelwerk({ title: TITEL_LANG });
+  it('(c) die Altersklasse steht als eigene Zeile „Altersklasse“ in der Angabentabelle, nicht neben dem Titel', async () => {
+    const tournament = hallencupMitRegelwerk();
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
-    const kopf = pages[1].texts
-      .filter(t => t.y < 30 && Math.abs(t.size - printType.titleShort) <= SIZE_TOL)
-      .map(t => t.str.trim());
+    const bezeichnung = pages[0].texts.find(t => trimmed(t) === 'Altersklasse');
+    const wert = pages[0].texts.find(t => trimmed(t) === 'D-Junioren');
 
-    expect(kopf.length).toBeLessThanOrEqual(2);
-    expect(kopf[kopf.length - 1].endsWith('…')).toBe(true);
+    expect(bezeichnung, 'Bezeichnung Altersklasse').toBeDefined();
+    expect(wert, 'Wert Altersklasse').toBeDefined();
+    expect(Math.abs((wert?.y ?? 0) - (bezeichnung?.y ?? 0))).toBeLessThan(0.5);
+    expect(Math.abs((bezeichnung?.size ?? 0) - printType.meta)).toBeLessThanOrEqual(SIZE_TOL);
+  });
+
+  it('Tabelle: Bezeichnungen fett, Werte normal, eine Schriftgröße, alle Werte in derselben Spalte', async () => {
+    const tournament = hallencupMitRegelwerk();
+    const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
+    const bezeichnungen = ['Veranstalter', 'Altersklasse', 'Halle', 'Spieltag', 'Zeit', 'Modus', 'Platzierung', 'Spielzeit', 'Regelwerk'];
+    const kopf = pages[0].texts.filter(t => t.y < 90);
+    const fett = await fettMap(kopf);
+    const labels = bezeichnungen.map(name => kopf.find(t => trimmed(t) === name));
+    labels.forEach((t, i) => {
+      expect(t, bezeichnungen[i]).toBeDefined();
+      expect(fett.get(t!), `„${bezeichnungen[i]}“ fett`).toBe(true);
+      expect(Math.abs((t?.size ?? 0) - printType.meta)).toBeLessThanOrEqual(SIZE_TOL);
+    });
+    const unterkante = pages[0].texts.find(t => trimmed(t) === 'Teilnehmer')?.y ?? 90;
+    const werte = kopf.filter(t => t.x > 30 && t.y < unterkante && t.str.trim() !== '' && !fett.get(t) && t.y > (labels[0]?.y ?? 0));
+    const linksKanten = new Set(werte.map(t => Math.round(t.x * 10)));
+    expect(linksKanten.size, 'alle Werte beginnen in einer Spalte').toBe(1);
+    werte.forEach(t => expect(Math.abs(t.size - printType.meta), `„${t.str}“`).toBeLessThanOrEqual(SIZE_TOL));
+  });
+
+  it('(d) die Angabentabelle bleibt links, die QR-Spalte rechts ist frei (auch bei umbrochenem Wert)', async () => {
+    const tournament = hallencupMitRegelwerk();
+    const langer = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921 e. V., Abteilung Hallenfußball mit Jugendmannschaften';
+    const { pages } = await layoutOf({ tournament, organizerName: langer }, hallencupSchedule(tournament));
+    expect(pages[0].texts.map(trimmed).filter(z => z.startsWith('Sportgemeinschaft') || z.includes('Jugendmannschaften')).length, 'Wert umbricht').toBeGreaterThanOrEqual(2);
+    const geo = pageGeometry('a4', 'portrait');
+    const grenze = geo.left + geo.contentWidth - printMetrics.qrColumnWidth - printMetrics.qrColumnGap;
+    const fett = await fettMap(pages[0].texts);
+    const werte = pages[0].texts.filter(t => t.y > 25 && t.y < 90 && !fett.get(t) && t.str.trim() !== '' && t.size <= printType.meta + SIZE_TOL);
+
+    expect(werte.length).toBeGreaterThan(0);
+    werte.forEach(t => expect(t.x + t.w, `„${t.str}“`).toBeLessThanOrEqual(grenze + SIZE_TOL));
   });
 });
