@@ -48,6 +48,52 @@ describe('G1 Zeilenlinien statt Vollgitter', () => {
   });
 });
 
+describe('C1-F S1 Zeilenlinien nicht übermalt', () => {
+  it('unter der Überschrift der Spieltabelle liegt keine weiße Füllung (sie würde die untere Hälfte der Zeilenlinie überdecken)', async () => {
+    const tournament = hallencupTournament();
+    const [seite1] = await lesen(hallencupSchedule(tournament), tournament);
+    const { von } = spielbereich(seite1);
+    const weiss = seite1.rects.filter(r => r.fill === '#ffffff' && r.y > von && r.h > 1);
+
+    expect(weiss).toEqual([]);
+  });
+
+  it('Finalseite: ebenfalls keine weiße Füllung in den Tabellen', async () => {
+    const tournament = hallencupTournament();
+    const pages = await lesen(hallencupSchedule(tournament), tournament);
+    const finale = pages.find(page => page.texts.some(t => t.str.trim() === 'Halbfinale'));
+    const titel = finale?.texts.find(t => t.str.trim() === 'Halbfinale');
+
+    const platzierung = finale?.texts.find(t => t.str.trim() === 'Platzierung');
+
+    // Die Platzierung darunter ist keine Spieltabelle und bleibt außer Betracht
+    expect(finale?.rects.filter(r => r.fill === '#ffffff' && r.y > (titel?.y ?? 0) && r.y < (platzierung?.y ?? 0) && r.h > 1)).toEqual([]);
+  });
+});
+
+describe('C1-F S3b Spiele nach Anstoßzeit, unabhängig von der Reihenfolge im Plan', () => {
+  it('Jeder gegen jeden mit „Teams pfeifen“ und zwei Feldern: die Uhrzeiten laufen von oben nach unten nicht zurück', async () => {
+    const teams = teamsEinerGruppe().concat([{ id: 'x1', name: 'SC Ost', group: 'A' }, { id: 'x2', name: 'FC Mitte', group: 'A' }]).map(t => ({ ...t, group: undefined }));
+    const tournament = hallencupTournament({ teams, numberOfTeams: 6, groupSystem: 'roundRobin', refereeConfig: { mode: 'teams' } });
+    const pages = await lesen(generateFullSchedule(tournament, 'de'), tournament);
+    const zeiten = pages.flatMap(page => page.texts
+      .filter(t => /^\d{2}:\d{2}$/.test(t.str.trim()) && Math.abs(t.size - printType.time) < SIZE_TOL)
+      .sort((a, b) => a.y - b.y)
+      .map(t => t.str.trim()));
+
+    expect(zeiten.length).toBeGreaterThan(10);
+    expect(zeiten).toEqual([...zeiten].sort());
+  });
+
+  it('Gegenbeispiel Plan in Zeitfolge: Gruppen + Finale mit zwei Feldern bleibt in Zeitfolge', async () => {
+    const tournament = hallencupTournament();
+    const [seite1] = await lesen(hallencupSchedule(tournament), tournament);
+    const zeiten = seite1.texts.filter(t => /^\d{2}:\d{2}$/.test(t.str.trim()) && Math.abs(t.size - printType.time) < SIZE_TOL).sort((a, b) => a.y - b.y).map(t => t.str.trim());
+
+    expect(zeiten).toEqual([...zeiten].sort());
+  });
+});
+
 describe('W10 / @BM-022 keine Spielzeile über zwei Seiten', () => {
   /** Teams mit Namen, die auf drei Zeilen umbrechen: hohe Zeilen, die am Seitenende geteilt werden könnten. */
   const langesTurnier = (anzahl: number) => {

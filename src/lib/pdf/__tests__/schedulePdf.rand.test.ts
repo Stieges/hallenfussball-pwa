@@ -5,7 +5,7 @@
  * Plan a3-2 (M1 Tabellen-Unterrand, M2 gleiche Teamgröße hoch und quer, K1 Schriftgrößen aus den Tokens).
  *
  * Die Oberkante einer Zeile ist Grundlinie − Schriftgröße × Ascent der Schrift. Der Ascent wird aus der eingebetteten
- * Schriftdatei gelesen (`pdfFontMetrics`), nicht aus dem Token; das Token `printFont.ascentEm` wird dagegen geprüft.
+ * Schriftdatei gelesen (`pdfFontMetrics`), nicht aus dem Token; fett erkennt `fettKennung` an der Schriftkennung (`LayoutText.bold` trifft die eingebettete Schrift nie); das Token `printFont.ascentEm` wird dagegen geprüft.
  */
 import { describe, expect, it } from 'vitest';
 import { continuationTop, pageGeometry, tableMargins } from '../layout';
@@ -15,6 +15,7 @@ import { FIXTURES, layoutOf, zwanzigSchedule } from './pdfFixtureLayout';
 import { ASCENT_BOLD_EM, ASCENT_REGULAR_EM } from './pdfFontMetrics';
 import { hallencupSchedule } from './pdfFixture';
 import type { LayoutPage, LayoutText } from './pdfjsLayout';
+import { fettKennung } from './pdfScoreSupport';
 
 const TOL = 0.05;
 const SEITENZAHL = /^Seite \d+ von \d+$/;
@@ -24,8 +25,8 @@ const SCHWARZ = '#000000';
 const TOL_PROZENT = (printLimits.grayTolerance / printColors.paper[0]) * 100;
 
 /** Oberkante eines Textstücks in mm: Grundlinie minus Oberlänge. */
-const oberkante = (t: LayoutText): number =>
-  t.y - t.size * (t.bold ? ASCENT_BOLD_EM : ASCENT_REGULAR_EM) * printUnit.mmPerPt;
+const oberkante = (t: LayoutText, fett: string | undefined): number =>
+  t.y - t.size * (t.font === fett ? ASCENT_BOLD_EM : ASCENT_REGULAR_EM) * printUnit.mmPerPt;
 
 /** Schwarzanteil einer Graustufe in Prozent: 0 = Weiß, 100 = Schwarz. */
 function schwarzProzent(hex: string): number {
@@ -51,7 +52,7 @@ describe.each(FIXTURES)('@DR-001 Rand: $name', ({ options, schedule }) => {
     const oben = pageGeometry('a4', options.orientation ?? 'portrait').top;
 
     pages.forEach((page, i) => {
-      page.texts.forEach(t => expect(oberkante(t), `Seite ${i + 1} „${t.str}“ oben`).toBeGreaterThanOrEqual(oben - TOL));
+      page.texts.forEach(t => expect(oberkante(t, fettKennung(pages)), `Seite ${i + 1} „${t.str}“ oben`).toBeGreaterThanOrEqual(oben - TOL));
     });
   });
 

@@ -144,3 +144,11 @@ export function istFett(page: LayoutPage, text: LayoutText): boolean {
   }
   return text.font === kopf.font;
 }
+
+/**
+ * Kennung des fetten Schnitts im ganzen Dokument (pdfjs vergibt sie dokumentweit): die Schrift der Spaltenköpfe „Nr“.
+ * `undefined`, wenn das Dokument keinen Spaltenkopf hat.
+ */
+export function fettKennung(pages: LayoutPage[]): string | undefined {
+  return pages.flatMap(page => page.texts).find(t => t.str.trim() === 'Nr' && Math.abs(t.size - printType.head) <= SIZE_TOL)?.font;
+}

@@ -9,7 +9,9 @@ import { getRefereeDisplayName, type GeneratedSchedule, type ScheduledMatch } fr
 export function refereeLabelFor(schedule: Pick<GeneratedSchedule, 'refereeConfig' | 'teams'>): (match: ScheduledMatch) => string {
   return match => {
     const number = match.referee;
-    if (number === undefined) {
+    // Ohne Schiedsrichter-Modus blendet die App die Zuteilung aus; eine alte Nummer am Spiel zählt nicht (C1-F)
+    const active = schedule.refereeConfig?.mode === 'organizer' || schedule.refereeConfig?.mode === 'teams';
+    if (number === undefined || !active) {
       return '';
     }
     // Nummer ohne zugehöriges Team (veraltete Zuteilung): die Nummer zeigen statt abzubrechen

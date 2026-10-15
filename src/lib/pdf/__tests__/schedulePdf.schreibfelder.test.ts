@@ -4,7 +4,7 @@
  * Strafstoßschießen, Finale mit Verlängerung und Strafstoßschießen), @DR-018 (jedes Spiel in der Vorlage).
  */
 import { describe, expect, it } from 'vitest';
-import { printBox, printType } from '../../../design-tokens/print';
+import { printBox, printGap, printType } from '../../../design-tokens/print';
 import type { Match, Tournament } from '../../../types/tournament';
 import { finalsMatches, hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { hallencupMitStand, kaestchenIn, SIZE_TOL, textsIn, TOL, zeileVon, type Zeile } from './pdfScoreSupport';
@@ -176,5 +176,25 @@ describe('@DR-019 laufend, ausgefallen, beendet', () => {
     expect(klein(zeile)).toHaveLength(4);
     expect(ziffern.map(t => t.str.trim())).toEqual(['3', '3', '5', '4']);
     expect(wort(zeile, 'nach Verlängerung') && wort(zeile, 'Strafstoßschießen')).toBeTruthy();
+  });
+});
+
+describe('C1-F S2 Finalzeilen: Polster wie v7.2 (1,8 mm)', () => {
+  it('Finale: die kleinen Felder haben oben und unten mindestens printGap.finalPadV Abstand zu den Zeilenlinien', async () => {
+    const zeile = zeileVon(await seiten(), FINALE);
+    const felder = [...gross(zeile), ...klein(zeile)];
+    const oben = Math.min(...felder.map(f => f.y)) - zeile.top;
+    const unten = zeile.bottom - Math.max(...felder.map(f => f.y + f.h));
+
+    expect(oben, 'Abstand oben').toBeGreaterThanOrEqual(printGap.finalPadV - TOL);
+    expect(unten, 'Abstand unten').toBeGreaterThanOrEqual(printGap.finalPadV - TOL);
+  });
+
+  it('Gegenbeispiel: Gruppenzeilen behalten das schmale Polster (printGap.bodyPadV)', async () => {
+    const zeile = zeileVon(await seiten(), 10);
+    const felder = gross(zeile);
+    const oben = Math.min(...felder.map(f => f.y)) - zeile.top;
+
+    expect(oben).toBeLessThan(printGap.finalPadV);
   });
 });

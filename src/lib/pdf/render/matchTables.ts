@@ -26,7 +26,8 @@ export function matchTableOptions(
   startY: number,
   head: RowInput[],
   body: RowInput[],
-  columnStyles: Record<number, Partial<Styles>>
+  columnStyles: Record<number, Partial<Styles>>,
+  padV: number = printGap.bodyPadV
 ): UserOptions {
   return {
     startY,
@@ -36,11 +37,13 @@ export function matchTableOptions(
     showHead: 'everyPage',
     rowPageBreak: 'avoid',
     tableLineColor: [...printColors.ink],
-    alternateRowStyles: { fillColor: [...printColors.paper], textColor: [...printColors.ink] },
+    // Keine Füllung im Body: eine weiße Zelle übermalte die untere Hälfte der Zeilenlinie darüber (C1-F S1)
+    alternateRowStyles: { fillColor: false, textColor: [...printColors.ink] },
     styles: {
       font: PDF_FONT.family,
       fontSize: printType.body,
-      cellPadding: pad(printGap.bodyPadV, printGap.bodyPadH),
+      cellPadding: pad(padV, printGap.bodyPadH),
+      fillColor: false,
       textColor: [...printColors.ink],
       lineColor: [...printColors.ink],
       valign: 'middle',

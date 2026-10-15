@@ -116,6 +116,7 @@ export function renderFinalsSection(
       widths: printColumns.finals,
       showField: numberOfFields > 1,
       mode: koModeFor(koKeyOf(round.key), finalsConfig),
+      padV: printGap.finalPadV,
     }, ctx, yPos);
     // Grundlinie der nächsten Überschrift (Runde oder Platzierung), B-28a3-4F F3
     yPos = end + printGap.sectionGap + ascentMm(printType.h2);

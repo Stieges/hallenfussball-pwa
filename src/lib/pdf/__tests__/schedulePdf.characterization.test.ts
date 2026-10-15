@@ -191,7 +191,7 @@ describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als i
     expect(row.slice(5, 8)).toEqual(['', ':', 'läuft']);
   });
 
-  it('@BM-011 F4: ohne Schalter „Ergebnisse zeigen“ bleibt die Zelle von Spiel 11 leer', async () => {
+  it('@BM-011 F3: ohne Schalter „Ergebnisse zeigen“ bleibt die Zelle von Spiel 11 leer', async () => {
     const stand = beendetesSpiel11();
     const pdf = await renderSchedulePdf(stand.schedule, undefined, { ...SCHEDULE_OPTIONS, tournament: stand.tournament, includeScores: false });
     const row = rowFrom(flatText(pdf), 11, matchByNumber(stand.schedule, 11).time, GRUPPEN_ZEILE);

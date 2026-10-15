@@ -172,6 +172,8 @@ export const printGap = {
   /** table.m td: Innenabstand vertikal / horizontal */
   bodyPadV: 0.6,
   bodyPadH: 1.5,
+  /** tr.fin td: Innenabstand oben und unten in der Finalrunde (kleine Felder stoßen sonst an die Zeilenlinie) */
+  finalPadV: 1.8,
   /** table.m td.nr: Innenabstand links und rechts (Spielnummer passt in die schmale Spalte) */
   nrPad: 0.5,
   /** table.s thead th und td: Innenabstand (vertikal und horizontal gleich) */

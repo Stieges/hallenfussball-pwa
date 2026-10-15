@@ -75,4 +75,11 @@ describe('@DR-025 Spalte „SR“', () => {
     expect(feld(leer, 'finals')).toHaveLength(1);
     expect(inSpalte(belegt, 'finals').map(t => t.str.trim())).toEqual(['1']);
   });
+
+  it('C1-F Modus „none“ mit alter Nummer am Spiel: keine Nummer, ein leeres Schreibfeld', async () => {
+    const zeile = zeileVon(await seiten({ mode: 'none' }, { 7: 3 }), 7);
+
+    expect(inSpalte(zeile)).toEqual([]);
+    expect(feld(zeile)).toHaveLength(1);
+  });
 });

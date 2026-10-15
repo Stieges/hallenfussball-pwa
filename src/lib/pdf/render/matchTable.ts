@@ -41,6 +41,8 @@ export interface MatchTableInput {
   groupCode?: (match: ScheduledMatch) => string;
   /** Regel der Runde bei K.-o.-Spielen: bestimmt die kleinen Felder. */
   mode?: TiebreakerMode;
+  /** Innenabstand oben und unten; Vorgabe `printGap.bodyPadV`, die Finalrunde nimmt `printGap.finalPadV`. */
+  padV?: number;
 }
 
 interface Row { match: StatefulMatch; spec: ScoreSpec; referee: string }
@@ -56,7 +58,7 @@ function buildColumns(input: MatchTableInput, ctx: MatchTableContext): Column[] 
   const { t } = ctx;
   const { widths } = input;
   const columns: Column[] = [
-    { key: 'nr', head: t.nr, style: { halign: 'center', cellWidth: widths.nr, fontSize: printType.nr, cellPadding: pad(printGap.bodyPadV, printGap.nrPad) }, cell: r => r.match.matchNumber.toString() },
+    { key: 'nr', head: t.nr, style: { halign: 'center', cellWidth: widths.nr, fontSize: printType.nr, cellPadding: pad(input.padV ?? printGap.bodyPadV, printGap.nrPad) }, cell: r => r.match.matchNumber.toString() },
     { key: 'time', head: t.timeHeader, style: { halign: 'center', cellWidth: widths.time, fontSize: printType.time, fontStyle: 'bold' }, cell: r => r.match.time },
   ];
   if (input.showField) {
@@ -72,7 +74,7 @@ function buildColumns(input: MatchTableInput, ctx: MatchTableContext): Column[] 
       key: 'result',
       head: t.result,
       style: { halign: 'center', cellWidth: widths.result },
-      cell: r => ({ content: '', styles: { minCellHeight: scoreCellMinHeight(r.spec, printGap.bodyPadV) } }),
+      cell: r => ({ content: '', styles: { minCellHeight: scoreCellMinHeight(r.spec, input.padV ?? printGap.bodyPadV) } }),
     },
     { key: 'away', head: t.away, style: { halign: 'left' }, cell: r => sideLabel(r.match, 'B') },
     { key: 'referee', head: t.referee, style: { halign: 'center', cellWidth: widths.referee }, cell: r => r.referee },
@@ -96,7 +98,7 @@ export function renderMatchTable(doc: jsPDF, input: MatchTableInput, ctx: MatchT
   });
 
   autoTable(doc, {
-    ...matchTableOptions(ctx.geo, startY, head, body, columnStyles),
+    ...matchTableOptions(ctx.geo, startY, head, body, columnStyles, input.padV),
     didDrawCell: data => {
       if (data.section !== 'body') {
         return;

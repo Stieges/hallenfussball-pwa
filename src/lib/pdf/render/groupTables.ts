@@ -14,6 +14,11 @@ import { sectionTitle } from './matchTables';
 
 type GeneratedTournament = GeneratedSchedule['tournament'];
 
+/** Anstoßzeit, dann Feld, dann Nummer: die Tabelle liest sich nach der Uhr, auch wenn der Plan anders geordnet ist. */
+function inKickoffOrder(matches: StatefulMatch[]): StatefulMatch[] {
+  return [...matches].sort((a, b) => a.startTime.getTime() - b.startTime.getTime() || a.field - b.field || a.matchNumber - b.matchNumber);
+}
+
 /** Gruppenphase: Titel, dann die Spieltabelle. Rückgabe: nächste freie Grundlinie. */
 export function renderGroupStage(
   doc: jsPDF,
@@ -32,7 +37,7 @@ export function renderGroupStage(
   const hasMultipleGroups = new Set(matches.map(match => match.group).filter(Boolean)).size > 1;
 
   const end = renderMatchTable(doc, {
-    matches,
+    matches: inKickoffOrder(matches),
     widths: printColumns.match,
     showField: numberOfFields > 1,
     ...(hasMultipleGroups ? { groupCode: match => (match.group ? getGroupShortCode(match.group, tournament) : '-') } : {}),
