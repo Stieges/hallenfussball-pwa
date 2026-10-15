@@ -827,7 +827,8 @@
         "semi": "Halbfinale"
       },
       "winner": "Sieger {{round}} {{n}}",
-      "loser": "Verlierer {{round}} {{n}}"
+      "loser": "Verlierer {{round}} {{n}}",
+      "undecided": "noch offen"
     },
     "finalTable": "Abschlusstabelle"
   }

@@ -17,7 +17,7 @@ import type { GeneratedSchedule } from '../../core/generators';
 import type { Standing } from '../../types/tournament';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import { getLocationName } from '../../utils/locationHelpers';
-import { qrModules, viewerUrl } from '../qr/publicQr';
+import { qrModules } from '../qr/publicQr';
 import { registerPdfFonts, fontOf } from './fonts';
 import { pageGeometry, startPage } from './layout';
 import type { PDFExportOptions } from './pdfOptions';
@@ -28,6 +28,7 @@ import { guardDocText } from './printable';
 import { planSections, type SectionKey } from './sections';
 import { closedLine, footerLine, standLine } from './standText';
 import { groupPhaseOpen } from './tournamentState';
+import { pdfContentRules } from './visibility';
 import { countFooterLines, drawFooters, type FooterContent } from './render/footer';
 import { renderGroupStage } from './render/groupTables';
 import type { MatchTableContext } from './render/matchTable';
@@ -81,8 +82,9 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
   const {
     locale = resolvePdfLocale(i18next.language),
     translate = appTranslator(locale),
-    includeStandings = true,
-    includeScores = false,
+    includeStandings: wantStandings = true,
+    includeScores: wantScores = false,
+    audience = 'organizer',
     organizerName = schedule.tournament.organizer ?? '',
     hallName = getLocationName(schedule.tournament),
     orientation = 'portrait',
@@ -98,6 +100,10 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
 
   const t = buildPdfTexts(translate, locale);
   const rules = pdfRulesFrom(tournament, schedule);
+  // Sichtbarkeit an einer Stelle (C5): die Schalter des Turniers begrenzen den Wunsch des Dialogs
+  const content = pdfContentRules(tournament, audience, options.viewerBaseUrl);
+  const includeStandings = wantStandings && content.tables;
+  const includeScores = wantScores && content.results;
 
   const doc = new jsPDF({
     orientation,
@@ -124,8 +130,7 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
     ...(options.logoRight && !logoRight ? [t.logoUnusable('right')] : []),
   ];
   // Zuschauer-QR nur bei online geteiltem Turnier (@ZM-064)
-  const url = viewerUrl(tournament, options.viewerBaseUrl);
-  const qr = url === null ? undefined : { modules: qrModules(url), caption: options.viewerResultsHidden ? t.qrCaption.plan : t.qrCaption.results };
+  const qr = content.qrUrl === null ? undefined : { modules: qrModules(content.qrUrl), caption: options.viewerResultsHidden === true || !content.results ? t.qrCaption.plan : t.qrCaption.results };
 
   // Fußzeile und Kurzkopf vor dem Seitenmaß messen: sie bestimmen, wo der Satzspiegel endet bzw. Folgeseiten beginnen
   const footer: FooterContent = {
@@ -152,7 +157,7 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
     ...(groupPhase ? (['groupStage'] as const) : []),
     ...(hasTables ? (['tables'] as const) : []),
     ...(finalPhases.length > 0 ? (['finals'] as const) : []),
-    ...(finalTable ? [] : (['ranking'] as const)),
+    ...(finalTable || !content.tables ? [] : (['ranking'] as const)),
   ];
   const sections = planSections(present, geo);
   // Jeder gegen jeden hat keine Gruppen: der Abschnitt heißt „Spiele“ (Controller, B-28a3-4)
@@ -184,6 +189,7 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
       t,
       isTeam: name => schedule.teams.some(team => team.name === name),
       groupName: id => t.groupLabel(id, getGroupDisplayName(id, schedule.tournament)),
+      hidePendingOrigin: content.hidePendingOrigin,
     },
   };
 
@@ -212,7 +218,7 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
       { section: sections.handle('finals'), tentativeNote: edition !== 'final' && closed !== true && groupPhase && groupPhaseOpen(groupPhase.matches) ? t.timesTentative : undefined }
     );
   }
-  if (!finalTable) {
+  if (!finalTable && content.tables) {
     renderRanking(
       doc,
       { state: placement, teamCount: schedule.teams.length, ranking, hasFinalRound: finalPhases.length > 0 },

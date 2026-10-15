@@ -827,7 +827,8 @@
         "semi": "Semi-final"
       },
       "winner": "Winner {{round}} {{n}}",
-      "loser": "Loser {{round}} {{n}}"
+      "loser": "Loser {{round}} {{n}}",
+      "undecided": "open"
     },
     "finalTable": "Final standings"
   }

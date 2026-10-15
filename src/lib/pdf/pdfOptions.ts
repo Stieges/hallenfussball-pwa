@@ -5,6 +5,7 @@ import type { Tournament } from '../../types/tournament';
 import type { LogoImage } from '../images/logoBytes';
 import type { PdfOrientation } from './layout';
 import type { RankEntry } from './placement';
+import type { PdfAudience } from './visibility';
 import type { PdfLocale, PdfTranslator } from './translations';
 
 export interface PDFExportOptions {
@@ -14,6 +15,11 @@ export interface PDFExportOptions {
   translate?: PdfTranslator;
   includeStandings?: boolean;
   includeScores?: boolean;
+  /**
+   * Zielgruppe (B-28 C5, @BM-032): `organizer` (Vorgabe) oder `viewer` („Nur Spielplan“). Die Schalter des Turniers
+   * „Ergebnisse“ und „Gruppentabellen“ wirken in beiden Fällen und begrenzen `includeScores`/`includeStandings` (`visibility.ts`).
+   */
+  audience?: PdfAudience;
   organizerName?: string;
   hallName?: string;
   /** Ausrichtung des A4-Blatts. Vorgabe: hoch. */

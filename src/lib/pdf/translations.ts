@@ -83,6 +83,8 @@ export interface PdfTexts {
   origin: {
     groupPlace: (place: number, group: string) => string;
     fromRound: (kind: OriginKind, round: OriginRound, n: number) => string;
+    /** Gruppen-Herkunft, solange die Tabellen ausgeblendet sind (@BM-032). */
+    undecided: string;
   };
   modeGroupsAndFinals: string;
   modeRoundRobin: string;
@@ -254,6 +256,7 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
         return translate('pdf.origin.groupPlace', { place: ordinal, group });
       },
       fromRound: (kind, round, n) => translate(`pdf.origin.${kind}`, { round: s(`origin.round.${round}`), n }),
+      undecided: s('origin.undecided'),
     },
     modeGroupsAndFinals: s('modeGroupsAndFinals'),
     modeRoundRobin: s('modeRoundRobin'),

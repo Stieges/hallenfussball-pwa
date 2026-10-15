@@ -14,6 +14,11 @@ const LEGACY_SLOT = /^(?<kind>winner|loser)-(?<round>qf|sf)-(?<n>\d+)$/i;
 export type OriginRound = 'r16' | 'qf' | 'semi';
 export type OriginKind = 'winner' | 'loser';
 
+/** Ist `raw` der Rohschlüssel eines Gruppenplatzes (`group-a-2nd`)? Sieger und Verlierer einer Runde sind es nicht. */
+export function isGroupOrigin(raw: string): boolean {
+  return GROUP_PLACE.test(raw);
+}
+
 /**
  * Klartext der Herkunft; ein Wert, der kein Rohschlüssel ist, kommt unverändert zurück. `groupName` liefert den
  * Anzeigenamen einer Gruppe (eigene Namen des Turniers); ohne ihn gilt „Gruppe X“ in der Sprache des Dokuments.
