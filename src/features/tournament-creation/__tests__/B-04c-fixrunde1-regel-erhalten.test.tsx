@@ -19,15 +19,11 @@ import type { ComponentProps } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { useTournamentWizard } from '../../../hooks/useTournamentWizard';
 import { FinalsConfiguration } from '../components/FinalsConfiguration';
-import { MatchExecutionService } from '../../../core/services/MatchExecutionService';
+import { startEngineSpiel } from '../../../test/engineSpielFixture';
 import { TiebreakerBanner } from '../../../components/match-cockpit/TiebreakerBanner';
 import { validateAndParseTournamentImport } from '../../../utils/tournamentImporter';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../../../config/sports';
-import type { ILiveMatchRepository } from '../../../core/repositories/ILiveMatchRepository';
-import type { ITournamentRepository } from '../../../core/repositories/ITournamentRepository';
-import type { ScheduledMatch } from '../../../core/generators';
 import type { Tournament, FinalsPreset } from '../../../types/tournament';
-import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
 vi.mock('../../../hooks/useRepository', () => ({
   useRepository: () => ({
@@ -98,41 +94,10 @@ function entwurfPerUi(schritte: () => void): Tournament {
   return entwurf;
 }
 
-function scheduledMatch(phase: string): ScheduledMatch {
-  return {
-    id: `m-${phase}`,
-    matchNumber: 1,
-    field: 1,
-    label: phase,
-    phase,
-    homeTeam: 'Alpha',
-    awayTeam: 'Beta',
-    originalTeamA: 'teamA',
-    originalTeamB: 'teamB',
-    slotA: testTeamSlot('teamA'),
-    slotB: testTeamSlot('teamB'),
-    startTime: new Date('2026-10-05T10:00:00.000Z'),
-  } as unknown as ScheduledMatch;
-}
-
+/** Cockpit-Seite auf dem Engine-Weg (A-08d1): Regel und Überlaufzeit aus dem Engine-Stand. */
 async function cockpitLive(tournament: Tournament, phase: string) {
-  const liveMatchRepo = {
-    get: vi.fn(() => Promise.resolve(null)),
-    save: vi.fn((_tournamentId: string, match: unknown) => Promise.resolve(match)),
-  };
-  const tournamentRepo = {
-    // Merge Spur A/B: initializeMatch liest die Seiten seit A-03 nur ueber die Team-ID aus dem Slot und
-    // verlangt das Team im Turnier (kein Fake-Team mehr); der Wizard-Entwurf hat diese Teams nicht.
-    get: vi.fn(() => Promise.resolve({
-      ...tournament,
-      teams: [...(tournament.teams ?? []), { id: 'teamA', name: 'Alpha' }, { id: 'teamB', name: 'Beta' }],
-    })),
-  };
-  const service = new MatchExecutionService(
-    liveMatchRepo as unknown as ILiveMatchRepository,
-    tournamentRepo as unknown as ITournamentRepository,
-  );
-  return service.initializeMatch('t1', scheduledMatch(phase));
+  const spiel = await startEngineSpiel(tournament, phase);
+  return { tiebreakerMode: spiel.tiebreakerMode, overtimeDurationSeconds: spiel.rules.overtimeSeconds };
 }
 
 describe('B-04c Fixrunde 1 – Regel geht nicht verloren, Rückfall wie der Server', () => {

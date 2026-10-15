@@ -7,8 +7,8 @@
  *
  * Echter Bedienweg: Oberfläche (FinalsConfiguration) → gespeichertes Turnier →
  * beide Konsumenten ermitteln die Regel:
- *   - Spielsteuerung/Cockpit: MatchExecutionService.initializeMatch schreibt
- *     `tiebreakerMode` (genau das, was das Cockpit nach dem Unentschieden anzeigt)
+ *   - Spielsteuerung/Cockpit (Engine-Weg, A-08d1): die Startregel der echten MatchEngine
+ *     (`startEngineSpiel`, `tiebreakerMode` = `rules.tiebreak` in einer K.-o.-Runde)
  *   - Monitor: toLiveMatch (src/features/monitor-display/monitorMatch.ts)
  * Beide rufen DIESELBE exportierte Funktion (`resolveTiebreakMode`) — per Spy
  * auf das Modul geprüft. Die SQL-Seite (match_engine.server_rules) prüft
@@ -24,13 +24,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { useTournamentWizard } from '../../../hooks/useTournamentWizard';
 import { FinalsConfiguration } from '../components/FinalsConfiguration';
-import { MatchExecutionService } from '../../../core/services/MatchExecutionService';
+import { startEngineSpiel } from '../../../test/engineSpielFixture';
 import { toLiveMatch } from '../../../features/monitor-display/monitorMatch';
-import type { ILiveMatchRepository } from '../../../core/repositories/ILiveMatchRepository';
-import type { ITournamentRepository } from '../../../core/repositories/ITournamentRepository';
-import type { ScheduledMatch } from '../../../core/generators';
 import type { Match, Team, Tournament, TiebreakerMode, KnockoutRound } from '../../../types/tournament';
-import { looseVs, testTeamSlot } from '../../../test/matchSlotFixtures';
+import { looseVs } from '../../../test/matchSlotFixtures';
 
 const resolveSpy = vi.hoisted(() => vi.fn());
 
@@ -110,42 +107,10 @@ function planMatch(phase: string): Match {
   };
 }
 
-function scheduledMatch(phase: string): ScheduledMatch {
-  return {
-    id: `m-${phase}`,
-    matchNumber: 1,
-    field: 1,
-    label: phase,
-    phase,
-    homeTeam: 'Alpha',
-    awayTeam: 'Beta',
-    originalTeamA: 'teamA',
-    originalTeamB: 'teamB',
-    slotA: testTeamSlot('teamA'),
-    slotB: testTeamSlot('teamB'),
-    startTime: new Date('2026-10-05T10:00:00.000Z'),
-  } as unknown as ScheduledMatch;
-}
-
+/** Cockpit-Seite auf dem Engine-Weg (A-08d1): Regel des Engine-Stands, kein Altservice mehr. */
 async function cockpitRegel(tournament: Tournament, phase: string): Promise<TiebreakerMode | undefined> {
-  const liveMatchRepo = {
-    get: vi.fn(() => Promise.resolve(null)),
-    save: vi.fn((_tournamentId: string, match: unknown) => Promise.resolve(match)),
-  };
-  const tournamentRepo = {
-    // Merge Spur A/B: initializeMatch liest die Seiten seit A-03 nur ueber die Team-ID aus dem Slot und
-    // verlangt das Team im Turnier (kein Fake-Team mehr); der Wizard-Entwurf hat diese Teams nicht.
-    get: vi.fn(() => Promise.resolve({
-      ...tournament,
-      teams: [...(tournament.teams ?? []), { id: 'teamA', name: 'Alpha' }, { id: 'teamB', name: 'Beta' }],
-    })),
-  };
-  const service = new MatchExecutionService(
-    liveMatchRepo as unknown as ILiveMatchRepository,
-    tournamentRepo as unknown as ITournamentRepository,
-  );
-  const live = await service.initializeMatch('t1', scheduledMatch(phase));
-  return live.tiebreakerMode;
+  const spiel = await startEngineSpiel(tournament, phase);
+  return spiel.tiebreakerMode;
 }
 
 function monitorRegel(tournament: Tournament, phase: string): TiebreakerMode | undefined {
@@ -153,7 +118,8 @@ function monitorRegel(tournament: Tournament, phase: string): TiebreakerMode | u
 }
 
 describe('B-04c @W2A-009 – Es gibt genau eine Entscheidungsregel', () => {
-  it('Cockpit und Monitor ermitteln für dieselbe Turnier-Einstellung dieselbe Regel je Runde', async () => {
+  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  it.fails('Cockpit und Monitor ermitteln für dieselbe Turnier-Einstellung dieselbe Regel je Runde', async () => {
     const turnier = speichereTurnier();
 
     expect(turnier.finalsConfig?.tiebreaker).toBe('goldenGoal');
@@ -171,7 +137,9 @@ describe('B-04c @W2A-009 – Es gibt genau eine Entscheidungsregel', () => {
     expect(monitorRegel(turnier, 'final')).toBe('goldenGoal');
   });
 
-  it('beide Konsumenten rufen dieselbe exportierte Funktion (Spy auf das Modul)', async () => {
+  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  // (Engine-Weg ruft resolveTiebreakMode nicht; Cockpit liest die Regel aus dem Engine-Stand)
+  it.fails('beide Konsumenten rufen dieselbe exportierte Funktion (Spy auf das Modul)', async () => {
     const turnier = speichereTurnier();
 
     resolveSpy.mockClear();

@@ -292,3 +292,25 @@ describe('checkRetract / describeEventTarget (Loeschen im Protokoll, G3)', () =>
     expect(describeEventTarget(input(log, 'helper').state, 'nix')).toBeNull();
   });
 });
+
+describe('minusTarget: 0:0-Finale mit Verlängerungstor (@FU-071, A-08d1 A2)', () => {
+  it('0:0 nach der regulären Zeit: Minus in der Verlängerung trifft das Verlängerungstor (früherer PIN-Fall)', () => {
+    const log = [
+      startWith(KO_RULES),
+      end(601_000),
+      ev({ id: 'ss', type: 'SECTION_START', at: 661_000, section: 2, clockMs: 600_000 }),
+      goal('g3', 'teamA', 700_000, 640_000),
+    ];
+    expect(minusTarget(input(log, 'helper'), 'teamA')).toEqual({
+      target: { id: 'g3', kind: 'goal', teamId: 'teamA' },
+      blockReason: null,
+    });
+    expect(minusTarget(input(log, 'helper'), 'teamB')).toEqual({ target: null, blockReason: null });
+  });
+
+  it('Gegenbeispiel: ein Tor in der regulären Spielzeit bleibt in der Verlängerung gesperrt (regularGoal)', () => {
+    // 1:1 nach der regulären Zeit -> Verlängerung; das Tor von A ist ein reguläres Tor
+    const log = [startWith(KO_RULES), goal('g1', 'teamA', 2000, 30_000), goal('g2', 'teamB', 3000, 40_000), end(601_000)];
+    expect(minusTarget(input(log, 'helper'), 'teamA')).toEqual({ target: null, blockReason: 'regularGoal' });
+  });
+});

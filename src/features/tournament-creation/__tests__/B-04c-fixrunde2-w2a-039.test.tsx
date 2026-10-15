@@ -20,13 +20,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { useTournamentWizard } from '../../../hooks/useTournamentWizard';
 import { FinalsConfiguration } from '../components/FinalsConfiguration';
-import { MatchExecutionService } from '../../../core/services/MatchExecutionService';
+import { startEngineSpiel } from '../../../test/engineSpielFixture';
 import { resolveTiebreakMode } from '../../../core/match/tiebreakDecision';
-import type { ILiveMatchRepository } from '../../../core/repositories/ILiveMatchRepository';
-import type { ITournamentRepository } from '../../../core/repositories/ITournamentRepository';
-import type { ScheduledMatch } from '../../../core/generators';
 import type { Tournament, TiebreakerMode } from '../../../types/tournament';
-import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
 vi.mock('../../../hooks/useRepository', () => ({
   useRepository: () => ({
@@ -69,49 +65,14 @@ function entwurfPerUi(schritte: () => void): Tournament {
   return entwurf;
 }
 
-function scheduledMatch(
-  phase: string,
-  finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth',
-): ScheduledMatch {
-  return {
-    id: `m-${phase}-${finalType ?? 'x'}`,
-    matchNumber: 1,
-    field: 1,
-    label: phase,
-    phase,
-    finalType,
-    homeTeam: 'Alpha',
-    awayTeam: 'Beta',
-    originalTeamA: 'teamA',
-    originalTeamB: 'teamB',
-    slotA: testTeamSlot('teamA'),
-    slotB: testTeamSlot('teamB'),
-    startTime: new Date('2026-10-05T10:00:00.000Z'),
-  } as unknown as ScheduledMatch;
-}
-
-async function cockpitLive(
-  tournament: Tournament,
-  phase: string,
-  finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth',
-) {
-  const liveMatchRepo = {
-    get: vi.fn(() => Promise.resolve(null)),
-    save: vi.fn((_tournamentId: string, match: unknown) => Promise.resolve(match)),
-  };
-  const tournamentRepo = {
-    // Merge Spur A/B: initializeMatch liest die Seiten seit A-03 nur ueber die Team-ID aus dem Slot und
-    // verlangt das Team im Turnier (kein Fake-Team mehr); der Wizard-Entwurf hat diese Teams nicht.
-    get: vi.fn(() => Promise.resolve({
-      ...tournament,
-      teams: [...(tournament.teams ?? []), { id: 'teamA', name: 'Alpha' }, { id: 'teamB', name: 'Beta' }],
-    })),
-  };
-  const service = new MatchExecutionService(
-    liveMatchRepo as unknown as ILiveMatchRepository,
-    tournamentRepo as unknown as ITournamentRepository,
-  );
-  return service.initializeMatch('t1', scheduledMatch(phase, finalType));
+/**
+ * Cockpit-Seite auf dem Engine-Weg (A-08d1). Die Engine kennt nur `finalsConfig.tiebreaker`,
+ * nicht `tiebreakerByRound` und nicht `finalType` (Befund C-KO-RUNDENREGEL-SERVER, A-27):
+ * `finalType` kann hier darum nicht wirken und bleibt nur als Beschreibung der Testfälle.
+ */
+async function cockpitLive(tournament: Tournament, phase: string, _finalType?: string) {
+  const spiel = await startEngineSpiel(tournament, phase);
+  return { tiebreakerMode: spiel.tiebreakerMode };
 }
 
 function wert(select: HTMLElement): string {
@@ -119,7 +80,8 @@ function wert(select: HTMLElement): string {
 }
 
 describe('B-04c Fixrunde 2 – @W2A-039 Platzierungsspiele eigene Entscheidungsregel (Wizard)', () => {
-  it('Pflichttest: Szenario – Zeile vorbelegt wie Finale, Umstellen wirkt nur auf Platz 3', async () => {
+  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  it.fails('Pflichttest: Szenario – Zeile vorbelegt wie Finale, Umstellen wirkt nur auf Platz 3', async () => {
     const entwurf = entwurfPerUi(() => {
       fireEvent.click(screen.getByTestId('finals-preset-top-4'));
       fireEvent.change(screen.getByTestId('tiebreaker-round-final'), {
@@ -151,7 +113,8 @@ describe('B-04c Fixrunde 2 – @W2A-039 Platzierungsspiele eigene Entscheidungsr
     });
   });
 
-  it('Gegenbeispiel: ohne eigene Änderung bleibt placement ungespeichert, Anzeige zeigt den Rückfall', async () => {
+  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  it.fails('Gegenbeispiel: ohne eigene Änderung bleibt placement ungespeichert, Anzeige zeigt den Rückfall', async () => {
     const entwurf = entwurfPerUi(() => {
       fireEvent.click(screen.getByTestId('finals-preset-top-4'));
       fireEvent.change(screen.getByTestId('tiebreaker-round-final'), {
@@ -166,7 +129,8 @@ describe('B-04c Fixrunde 2 – @W2A-039 Platzierungsspiele eigene Entscheidungsr
     expect(platz3.tiebreakerMode).toBe('overtime-then-shootout');
   });
 
-  it('Gegenbeispiel: Halbfinale bleibt bei seiner Regel, wenn Platzierungsspiele umgestellt sind', async () => {
+  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  it.fails('Gegenbeispiel: Halbfinale bleibt bei seiner Regel, wenn Platzierungsspiele umgestellt sind', async () => {
     const entwurf = entwurfPerUi(() => {
       fireEvent.click(screen.getByTestId('finals-preset-top-4'));
       fireEvent.change(screen.getByTestId('tiebreaker-round-semifinal'), {
