@@ -5,6 +5,9 @@
  * BUG-MOD-004 FIX: Properly handles multi-day tournaments
  */
 
+/** Sekunden je Minute (Umrechnung, kein Maß). */
+export const SECONDS_PER_MINUTE = 60;
+
 /**
  * Calculates minutes until a scheduled time
  *

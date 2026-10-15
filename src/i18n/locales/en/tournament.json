@@ -741,6 +741,45 @@
     "groupName": "Group {{id}}",
     "unrenderableField": "{{field}} ‘{{text}}’ contains characters that cannot be shown in the PDF",
     "tournamentTitle": "Tournament name",
-    "ageClass": "Age group"
+    "ageClass": "Age group",
+    "rules": {
+      "label": {
+        "mode": "Mode",
+        "placement": "Placement",
+        "duration": "Game time",
+        "rulebook": "Rulebook",
+        "ko": "K.O."
+      },
+      "modeRoundRobin": "Round robin",
+      "criterion": {
+        "points": "Points",
+        "goalDifference": "Goal difference",
+        "goalsFor": "Goals",
+        "directComparison": "head-to-head"
+      },
+      "criteriaJoin": " – ",
+      "join": " · ",
+      "pointsLine": "Win {{win}}, draw {{draw}} {{unit}}",
+      "pointsLoss": ", loss {{loss}} {{unit}}",
+      "pointOne": "point",
+      "pointMany": "points",
+      "groupDuration": "Groups {{duration}}",
+      "finalDuration": "Finals {{duration}}",
+      "penalty": "Time penalty {{duration}}",
+      "seconds": "{{seconds}} sec",
+      "round": {
+        "roundOf16": "Round of 16",
+        "quarterfinal": "Quarter-finals",
+        "semifinal": "Semi-finals",
+        "final": "Final"
+      },
+      "koAll": "{{label}}: if drawn, {{rule}}",
+      "koRound": "{{round}}: if drawn, {{rule}}",
+      "ruleShootout": "penalty shootout, {{shooters}}",
+      "ruleOvertimeThenShootout": "extra time, then penalty shootout, {{shooters}}",
+      "ruleGoldenGoal": "golden goal",
+      "shooters": "{{n}} shooters",
+      "shootersOne": "1 shooter"
+    }
   }
 }

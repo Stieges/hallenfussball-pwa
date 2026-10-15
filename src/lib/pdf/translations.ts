@@ -5,6 +5,8 @@
  * (`__tests__/pdfText.ts`). Datum und Uhrzeit laufen über `Intl.DateTimeFormat(locale)`.
  */
 
+import type { KnockoutRound } from '../../types/tournament';
+
 export type PdfLocale = 'de' | 'en';
 
 /** Übersetzt einen Schlüssel unter `tournament` (z. B. `pdf.nr`) mit optionalen Werten. */
@@ -62,10 +64,74 @@ export interface PdfTexts {
   formatDate: (isoDate: string) => string;
   /** Uhrzeit `HH:mm` in der Sprache des Dokuments. */
   formatClock: (date: Date) => string;
+  /** Texte der Regelzeilen im Kopf und der K.-o.-Zeilen (`pdf.rules.*`, B-28a3-3a). */
+  rules: PdfRuleTexts;
+}
+
+/** Texte der Regelzeilen (`pdf.rules.*`). Die Kriterien tragen die Wortlaute aus @DR-020. */
+export interface PdfRuleTexts {
+  /** Zeilenbeschriftungen vor dem Doppelpunkt. */
+  label: { mode: string; placement: string; duration: string; rulebook: string; ko: string };
+  modeRoundRobin: string;
+  /** Beschriftung eines Platzierungskriteriums; unbekannte IDs bleiben beim Rückfall. */
+  criterion: (id: string, fallback: string) => string;
+  /** Trenner zwischen Kriterien („Punkte – Tordifferenz“). */
+  criteriaJoin: string;
+  /** Trenner zwischen Angaben in einer Zeile („Spielzeit: 10 Min. · Zeitstrafe 2 Min.“). */
+  join: string;
+  /** Punkte-Zusatz bei abweichendem Punktsystem, z. B. „Sieg 2, Unentschieden 1 Punkt“. */
+  pointsLine: (win: number, draw: number) => string;
+  /** Niederlagen-Zusatz, nur bei Niederlagenpunkten ungleich 0. */
+  pointsLoss: (loss: number) => string;
+  groupDuration: (duration: string) => string;
+  finalDuration: (duration: string) => string;
+  penalty: (duration: string) => string;
+  seconds: (seconds: number) => string;
+  round: (round: KnockoutRound) => string;
+  koAll: (rule: string) => string;
+  koRound: (round: string, rule: string) => string;
+  ruleShootout: (shooters: string) => string;
+  ruleOvertimeThenShootout: (shooters: string) => string;
+  ruleGoldenGoal: string;
+  shooters: (count: number) => string;
 }
 
 const FINAL_PHASES = ['roundOf16', 'quarterfinal', 'semifinal', 'final'] as const;
+const PLACEMENT_CRITERIA = ['points', 'goalDifference', 'goalsFor', 'directComparison'] as const;
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** Baut die Texte der Regelzeilen über den Übersetzer (`pdf.rules.*`). */
+function buildRuleTexts(translate: PdfTranslator, s: (key: string) => string): PdfRuleTexts {
+  const r = (key: string): string => s(`rules.${key}`);
+  const unit = (n: number): string => (n === 1 ? r('pointOne') : r('pointMany'));
+  return {
+    label: {
+      mode: r('label.mode'),
+      placement: r('label.placement'),
+      duration: r('label.duration'),
+      rulebook: r('label.rulebook'),
+      ko: r('label.ko'),
+    },
+    modeRoundRobin: r('modeRoundRobin'),
+    criterion: (id, fallback) =>
+      (PLACEMENT_CRITERIA as readonly string[]).includes(id) ? r(`criterion.${id}`) : fallback,
+    criteriaJoin: r('criteriaJoin'),
+    join: r('join'),
+    pointsLine: (win, draw) => translate('pdf.rules.pointsLine', { win, draw, unit: unit(draw) }),
+    pointsLoss: loss => translate('pdf.rules.pointsLoss', { loss, unit: unit(loss) }),
+    groupDuration: duration => translate('pdf.rules.groupDuration', { duration }),
+    finalDuration: duration => translate('pdf.rules.finalDuration', { duration }),
+    penalty: duration => translate('pdf.rules.penalty', { duration }),
+    seconds: seconds => translate('pdf.rules.seconds', { seconds }),
+    round: round => r(`round.${round}`),
+    koAll: rule => translate('pdf.rules.koAll', { label: r('label.ko'), rule }),
+    koRound: (round, rule) => translate('pdf.rules.koRound', { round, rule }),
+    ruleShootout: shooters => translate('pdf.rules.ruleShootout', { shooters }),
+    ruleOvertimeThenShootout: shooters => translate('pdf.rules.ruleOvertimeThenShootout', { shooters }),
+    ruleGoldenGoal: r('ruleGoldenGoal'),
+    shooters: n => (n === 1 ? r('shootersOne') : translate('pdf.rules.shooters', { n })),
+  };
+}
 
 /** Sprache des Dokuments: Englisch, sonst Deutsch (Vorgabe). */
 export function resolvePdfLocale(language: string | undefined): PdfLocale {
@@ -132,5 +198,6 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
       return day.format(new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))));
     },
     formatClock: date => clock.format(date),
+    rules: buildRuleTexts(translate, s),
   };
 }

@@ -741,6 +741,45 @@
     "groupName": "Gruppe {{id}}",
     "unrenderableField": "{{field}} ‚{{text}}‘ enthält Zeichen, die im PDF nicht dargestellt werden können",
     "tournamentTitle": "Turniername",
-    "ageClass": "Altersklasse"
+    "ageClass": "Altersklasse",
+    "rules": {
+      "label": {
+        "mode": "Modus",
+        "placement": "Platzierung",
+        "duration": "Spielzeit",
+        "rulebook": "Regelwerk",
+        "ko": "K.-o."
+      },
+      "modeRoundRobin": "Jeder gegen jeden",
+      "criterion": {
+        "points": "Punkte",
+        "goalDifference": "Tordifferenz",
+        "goalsFor": "Tore",
+        "directComparison": "direkter Vergleich"
+      },
+      "criteriaJoin": " – ",
+      "join": " · ",
+      "pointsLine": "Sieg {{win}}, Unentschieden {{draw}} {{unit}}",
+      "pointsLoss": ", Niederlage {{loss}} {{unit}}",
+      "pointOne": "Punkt",
+      "pointMany": "Punkte",
+      "groupDuration": "Gruppen {{duration}}",
+      "finalDuration": "Finalrunde {{duration}}",
+      "penalty": "Zeitstrafe {{duration}}",
+      "seconds": "{{seconds}} Sek.",
+      "round": {
+        "roundOf16": "Achtelfinale",
+        "quarterfinal": "Viertelfinale",
+        "semifinal": "Halbfinale",
+        "final": "Finale"
+      },
+      "koAll": "{{label}}: bei Gleichstand {{rule}}",
+      "koRound": "{{round}}: bei Gleichstand {{rule}}",
+      "ruleShootout": "Strafstoßschießen, {{shooters}}",
+      "ruleOvertimeThenShootout": "Verlängerung, dann Strafstoßschießen, {{shooters}}",
+      "ruleGoldenGoal": "Golden Goal",
+      "shooters": "{{n}} Schützen",
+      "shootersOne": "1 Schütze"
+    }
   }
 }
