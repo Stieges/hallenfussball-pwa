@@ -501,7 +501,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                       isFinished={finishedMatches?.has(match.id) ?? false}
                       inCorrectionMode={correctionMatchId === match.id}
                       onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
-                      onStartCorrection={() => onStartCorrection?.(match.id)}
+                      onStartCorrection={onStartCorrection ? () => onStartCorrection(match.id) : undefined}
                     />
                   </td>
                   <td style={{
@@ -773,9 +773,9 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               </div>
 
               {/* Correction button for finished matches */}
-              {isFinished && !inCorrectionMode && (
+              {isFinished && !inCorrectionMode && onStartCorrection && (
                 <button
-                  onClick={() => onStartCorrection?.(match.id)}
+                  onClick={() => onStartCorrection(match.id)}
                   style={{
                     marginTop: cssVars.spacing.xs,
                     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
