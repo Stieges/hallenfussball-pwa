@@ -85,9 +85,9 @@ describe('@ZM-140 Kasten-Rahmen und Gruppen-Text', () => {
     expect(document.querySelector('[data-position="home"]')).toHaveStyle({ borderStyle: 'solid' });
   });
 
-  it('Gelber Kasten bekommt keinen Rahmen', () => {
+  it('Gelber Kasten bekommt nur den dezenten Rahmen (B-44a2: einheitlich, schmaler als bei Schwarz)', () => {
     render(<LiveMatchDisplay match={createMatch()} colorScheme={{ preset: 'classic', homeColor: '#FDE047', awayColor: '#DC2626', useTeamColors: false }} />);
-    expect(document.querySelector('[data-position="home"]')).not.toHaveStyle({ borderStyle: 'solid' });
+    expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe('2px');
   });
 
   it('Gruppe läuft über i18n', () => {
@@ -97,7 +97,7 @@ describe('@ZM-140 Kasten-Rahmen und Gruppen-Text', () => {
   });
 });
 
-describe('H3 @ZM-125 Breiten: Kästen etwa 33 % Bildbreite, Namensspalte wie vorher', () => {
+describe('H3 @ZM-125 Breiten: Kästen etwa 33 % Bildbreite, Namensspalte in Kastenbreite', () => {
   it('Raster: zwei gleiche Spalten ohne Trennbreite, Kasten füllt 66 % seiner Spalte (= 33 % Bildbreite)', () => {
     render(<LiveMatchDisplay match={createMatch()} />);
     expect(screen.getByTestId('live-grid').style.gridTemplateColumns).toMatch(/minmax\(0,\s?1fr\)\s0%\sminmax\(0,\s?1fr\)/);
@@ -107,9 +107,9 @@ describe('H3 @ZM-125 Breiten: Kästen etwa 33 % Bildbreite, Namensspalte wie vor
     expect(0.66 * 0.5).toBeCloseTo(0.33, 2);
   });
 
-  it('Namensspalte: 92 % der Spalte (= 46 % Bildbreite, wie vor dem Umbau)', () => {
+  it('Namensspalte: so breit wie der Kasten (B-44a2: 66 % der Spalte = 33 % Bildbreite, vorher 92 %)', () => {
     render(<LiveMatchDisplay match={createMatch()} />);
-    expect(screen.getByTestId('live-name-home').style.width).toBe('92%');
-    expect(screen.getByTestId('live-name-away').style.width).toBe('92%');
+    expect(screen.getByTestId('live-name-home').style.width).toBe('66%');
+    expect(screen.getByTestId('live-name-away').style.width).toBe('66%');
   });
 });

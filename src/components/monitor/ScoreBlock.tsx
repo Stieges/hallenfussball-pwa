@@ -10,6 +10,7 @@
 import { CSSProperties } from 'react';
 import { cssVars, displayFontSizes, getScoreTextColor } from '../../design-tokens';
 import { scoreDigitFontSize } from './scoreDigitSize';
+import type { BlockFrame } from './liveBlockFrame';
 
 export interface ScoreBlockProps {
   /** Score number to display */
@@ -22,8 +23,8 @@ export interface ScoreBlockProps {
   size?: 'md' | 'lg' | 'xl';
   /** Kindermodus (B-16e2, @W2A-031): Stand verbergen, der farbige Block bleibt */
   hideScore?: boolean;
-  /** Heller Rahmen bei zu geringem Kontrast zum Hintergrund (@ZM-140) */
-  frameColor?: string;
+  /** Rahmen (B-44a2): dezent, bei zu geringem Kontrast zum Hintergrund kräftig (@ZM-140) */
+  frame?: BlockFrame;
 }
 
 const sizeConfig = {
@@ -51,7 +52,7 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
   position,
   size = 'xl',
   hideScore = false,
-  frameColor,
+  frame,
 }) => {
   const textColor = getScoreTextColor(backgroundColor);
   const config = sizeConfig[size];
@@ -67,7 +68,8 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
     height: '100%',
     backgroundColor,
     borderRadius: config.borderRadius,
-    border: frameColor ? `3px solid ${frameColor}` : undefined,
+    boxSizing: 'border-box',
+    border: frame ? `${frame.width} solid ${frame.color}` : undefined,
     position: 'relative',
     overflow: 'hidden',
   };

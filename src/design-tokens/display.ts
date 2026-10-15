@@ -44,6 +44,8 @@ export const displayFontSizes = {
   // @ZM-125: Uhr deutlich größer als die Teamnamen (mindestens 1,5 ×)
   clockXL: 'clamp(72px, 7.5vw, 120px)',
   teamName: 'clamp(48px, 5vw, 72px)',   // Team-Name unter Score-Block
+  // B-44a2 (@ZM-137, @ZM-125): Hinweistexte unter der Uhr, mindestens 3 % der Bildhöhe (lesbar aus 10 m)
+  clockHint: '3.2vh',
 
   // Meta/Badge
   meta: '14px',          // Gruppe, Feld-Label
@@ -193,7 +195,9 @@ export const displayLayout = {
 
   // Stadium-Grade Score Layout (prozentuale Bildschirmaufteilung)
   scoreArea: {
-    header: '8%',
+    header: '6%',
+    // B-44a2: Abstand zwischen Kopfzeile (LIVE, Feld, Gruppe) und Kästen
+    headerGap: '1.5vh',
     score: '55%',
     teamNames: '12%',
     timer: '17%',
@@ -202,11 +206,30 @@ export const displayLayout = {
     blockWidth: '66%',
     blockGap: '0%',
     // B-17 Fixrunde: Teamnamen bekommen eine breitere Box, damit 50 Zeichen auf zwei Zeilen passen (@ZM-087)
-    // Namensspalte = 92 % einer Spalte = 46 % Bildbreite (wie vor dem Raster-Umbau)
-    teamNameWidth: '92%',
+    // B-44a2: Namensspalte = Kastenbreite (66 % einer Spalte = 33 % Bildbreite), vorher 92 %
+    teamNameWidth: '66%',
     teamNamesGap: '2%',
     // @ZM-140 Raster: Mittelspalte zwischen den Kästen (Trenner, im Kindermodus leer)
     separatorWidth: '0%',
+    // B-44a2 (@ZM-125): Kasten hoch, annähernd quadratisch (Breite 33 % der Bildbreite); der Stand ist das Größte
+    blockHeight: '42vh',
+    // B-44a2: Namen höchstens so breit wie ihr Kasten (gleicher Wert wie blockWidth), bis zu zwei Zeilen
+    nameLines: 2,
+    // B-44a2: Platz unter den Namen für Uhr, Balken und Hinweise; bleibt in jedem Zustand reserviert (gleiche Lage)
+    lowerHeight: '25vh',
+    // B-44a2: Abstand zwischen Namen und Uhr (liegt innerhalb von lowerHeight)
+    lowerPaddingTop: '2vh',
+    // B-44a2: Abstand zwischen Uhr und Hinweisen sowie zwischen Hinweisen
+    hintGap: '1vh',
+    hintGapAbove: '1.6vh',
+    // B-44a2: senkrechter Innenabstand der Folie (Höhe ist knapp, vorher clamp(24px, 3vw, 48px) auch senkrecht)
+    paddingY: '1.5vh',
+    // B-44a2: Balkenbreite (vorher 700px fest)
+    progressWidth: '36vw',
+    // B-44a2: Rahmen der Kästen, einheitlich in beiden: dezent, bei Kontrast unter 3 : 1 kräftig
+    frameWidthSubtle: '2px',
+    frameWidthStrong: '4px',
+    frameSubtleMix: '45%',
   },
 } as const;
 

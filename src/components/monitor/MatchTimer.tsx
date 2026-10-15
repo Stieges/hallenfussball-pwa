@@ -9,7 +9,7 @@
 
 import { CSSProperties, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes } from '../../design-tokens';
+import { cssVars, displayFontSizes, displayLayout, displaySpacing } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
 import { MatchStatus } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
@@ -63,7 +63,7 @@ const sizeStyles: Record<string, { time: string; progress: string; gap: string }
   sm: { time: '18px', progress: '6px', gap: '6px' },
   md: { time: '28px', progress: '8px', gap: '10px' },
   lg: { time: '42px', progress: '12px', gap: '14px' },
-  xl: { time: displayFontSizes.clockXL, progress: '16px', gap: '20px' },
+  xl: { time: displayFontSizes.clockXL, progress: '1.2vh', gap: '1.2vh' },
 };
 
 export const MatchTimer: React.FC<MatchTimerProps> = ({
@@ -122,7 +122,7 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     // M2: neutrale Hervorhebung (Umkehrung der Textfarbe), keine Buntfarbe
     ...(highlight && {
       backgroundColor: themeColors.text,
-      padding: `${size === 'xl' ? '8px' : '4px'} ${size === 'xl' ? '24px' : '12px'}`,
+      padding: `${size === 'xl' ? '0.8vh' : '4px'} ${size === 'xl' ? '2vh' : '12px'}`,
       borderRadius: '999px',
     }),
   };
@@ -135,18 +135,32 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     color: highlight ? themeColors.background : themeColors.timerNormal,
     textShadow: highlight ? 'none' : themeColors.textShadowLight,
     letterSpacing: '0.02em',
+    lineHeight: 1,
   };
 
   // H1: Hinweise stehen direkt auf dem Monitor-Hintergrund, Text in der Textfarbe (Kontrast ≥ 4,5 : 1)
+  // B-44a2: Hinweise in Hinweisgröße (≥ 3 % Bildhöhe), kompakt gesetzt, mit Abstand zur Uhr (xl)
   const hintStyle: CSSProperties = {
-    fontSize: displayFontSizes.bodySM,
+    fontSize: size === 'xl' ? displayFontSizes.clockHint : displayFontSizes.bodySM,
     fontWeight: cssVars.fontWeights.bold,
     color: themeColors.text,
     textAlign: 'center',
   };
 
+  const hintGroupStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    columnGap: displaySpacing.sectionMD,
+    rowGap: displayLayout.scoreArea.hintGap,
+    lineHeight: 1.2,
+    marginTop: size === 'xl' ? displayLayout.scoreArea.hintGapAbove : undefined,
+  };
+
   const progressContainerStyle: CSSProperties = {
     width: '100%',
+    maxWidth: size === 'xl' ? displayLayout.scoreArea.progressWidth : undefined,
     height: currentSize.progress,
     backgroundColor: themeColors.progressTrack,
     borderRadius: currentSize.progress,
@@ -166,6 +180,13 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     boxShadow: themeColors.progressShadow,
   };
 
+  // H2: der Text „abgelaufen“ nur ohne Abpfiff (nicht FINISHED)
+  const hints: string[] = [];
+  if (abgelaufen && status !== 'FINISHED') { hints.push(t('liveMatch.clock.ended')); }
+  if (!abgelaufen && clock.hinweisUhrHaelt) { hints.push(t('liveMatch.clock.holdsOnInterruption')); }
+  if (clock.angehalten) { hints.push(t('liveMatch.clock.stopped')); }
+  if (status === 'PAUSED' && !clock.angehalten) { hints.push(t('timer.pause')); }
+
   return (
     <>
       <div style={containerStyle}>
@@ -179,18 +200,10 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
           </div>
         )}
 
-        {/* H2: der Text nur ohne Abpfiff (nicht FINISHED) */}
-        {abgelaufen && status !== 'FINISHED' && (
-          <div style={hintStyle}>{t('liveMatch.clock.ended')}</div>
-        )}
-        {!abgelaufen && clock.hinweisUhrHaelt && (
-          <div style={hintStyle}>{t('liveMatch.clock.holdsOnInterruption')}</div>
-        )}
-        {clock.angehalten && (
-          <div style={hintStyle}>{t('liveMatch.clock.stopped')}</div>
-        )}
-        {status === 'PAUSED' && !clock.angehalten && (
-          <div style={hintStyle}>{t('timer.pause')}</div>
+        {hints.length > 0 && (
+          <div style={hintGroupStyle} data-testid="clock-hints">
+            {hints.map(text => <div key={text} style={hintStyle}>{text}</div>)}
+          </div>
         )}
       </div>
     </>

@@ -13,16 +13,21 @@
 
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayLayout, type MonitorThemeColors } from '../../design-tokens';
-import { needsContrastFrame } from '../../design-tokens/display';
+import { cssVars, displayFontSizes, displayLayout } from '../../design-tokens';
 import type { MonitorTheme, LiveColorScheme } from '../../types/monitor';
 import { DEFAULT_LIVE_COLOR_SCHEME } from '../../types/monitor';
-import { LiveMatch, MatchStatus } from '../../hooks/useLiveMatches';
+import { LiveMatch } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
 import { MatchTimer } from './MatchTimer';
+import { TEAM_NAME_ZEILENHOEHE } from './teamNameFit';
 import type { ClockMode } from '../../core/match/clockDisplay';
 import { ScoreBlock } from './ScoreBlock';
 import { TeamNameDisplay } from './TeamNameDisplay';
+import { getStatusInfo } from './liveStatus';
+import { getBlockFrame } from './liveBlockFrame';
+
+export { NoMatchDisplay } from './NoMatchDisplay';
+export type { NoMatchDisplayProps } from './NoMatchDisplay';
 
 export interface LiveMatchDisplayProps {
   /** The live match to display */
@@ -46,23 +51,6 @@ export interface LiveMatchDisplayProps {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function getStatusInfo(
-  status: MatchStatus,
-  themeColors: MonitorThemeColors
-): { label: string; color: string; bgColor: string } {
-  switch (status) {
-    case 'RUNNING':
-      return { label: 'LIVE', color: themeColors.liveBadgeText, bgColor: themeColors.liveBadgeBg };
-    case 'PAUSED':
-      return { label: 'PAUSE', color: themeColors.pauseBadgeText, bgColor: themeColors.pauseBadgeBg };
-    case 'FINISHED':
-      return { label: 'BEENDET', color: themeColors.textSecondary, bgColor: themeColors.border };
-    case 'NOT_STARTED':
-    default:
-      return { label: 'WARTET', color: themeColors.textSecondary, bgColor: themeColors.border };
-  }
-}
 
 /**
  * Resolve team color: team color (if enabled + available) → scheme color
@@ -114,7 +102,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     width: '100%',
     height: fullscreen ? '100%' : 'auto',
     minHeight: fullscreen ? '100%' : size === 'xl' ? '70vh' : '50vh',
-    padding: fullscreen ? 'clamp(24px, 3vw, 48px)' : cssVars.spacing.xxl,
+    padding: fullscreen ? `${layout.paddingY} clamp(24px, 3vw, 48px)` : cssVars.spacing.xxl,
     background: themeColors.backgroundGradient,
     borderRadius: fullscreen ? 0 : cssVars.borderRadius.xl,
     border: fullscreen ? 'none' : `4px solid ${isRunning ? themeColors.borderActive : themeColors.border}`,
@@ -130,13 +118,17 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     justifyContent: 'space-between',
     width: '100%',
     height: layout.header,
+    marginBottom: layout.headerGap,
     flexShrink: 0,
   };
 
   // @ZM-140 Raster: Kasten (Zeile 1) und Namen (Zeile 2) teilen sich ein Raster, Spalten 1 | 2 | 3
+  // B-44a2: Zeile 1 hat die feste Kastenhöhe (auch im Kindermodus, gleiche Lage), Zeile 2 reserviert zwei Namenszeilen
+  const nameRowHeight = `calc(${displayFontSizes.teamName} * ${TEAM_NAME_ZEILENHOEHE * layout.nameLines})`;
   const gridStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: `minmax(0, 1fr) ${layout.separatorWidth} minmax(0, 1fr)`,
+    gridTemplateRows: `${layout.blockHeight} ${nameRowHeight}`,
     columnGap: layout.blockGap,
     rowGap: layout.teamNamesGap,
     alignItems: 'center',
@@ -144,15 +136,21 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     flexShrink: 0,
   };
 
+  // B-44a2: Doppelpunkt genau mittig – Zelle ohne Breite, Flex mit Mitte lässt das Zeichen nach beiden Seiten gleich überstehen
   const separatorStyle: CSSProperties = {
     gridRow: 1,
     gridColumn: 2,
+    display: 'flex',
+    justifyContent: 'center',
+    justifySelf: 'center',
+    alignSelf: 'center',
+    width: 0,
     fontSize: size === 'xl' ? 'clamp(80px, 10vw, 140px)' : '64px',
     fontWeight: 700,
+    lineHeight: 1,
     color: themeColors.text,
     opacity: 0.8,
     userSelect: 'none',
-    textAlign: 'center',
   };
 
   const blockCellStyle = (column: 1 | 3): CSSProperties => ({
@@ -162,14 +160,16 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     justifyContent: 'center',
     justifySelf: 'center',
     width: layout.blockWidth,
-    height: '100%',
+    height: layout.blockHeight,
     minWidth: 0,
   });
 
-  const nameCellStyle = (column: 1 | 3, row: number): CSSProperties => ({
-    gridRow: row,
+  // B-44a2: Namen oben bündig unter dem Kasten, höchstens so breit wie der Kasten; im Kindermodus mittig über beide Zeilen (kein Kasten darüber)
+  const nameCellStyle = (column: 1 | 3): CSSProperties => ({
+    gridRow: hideScore ? '1 / 3' : 2,
     gridColumn: column,
     justifySelf: 'center',
+    alignSelf: hideScore ? 'center' : 'start',
     width: layout.teamNameWidth,
     display: 'flex',
     justifyContent: 'center',
@@ -177,12 +177,16 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     maxWidth: '100%',
   });
 
+  // B-44a2: unterer Bereich (Uhr, Balken, Hinweise) hat in jedem Zustand dieselbe Höhe, der Block verschiebt sich nicht
   const timerAreaStyle: CSSProperties = {
     width: '100%',
-    maxWidth: '700px',
-    minHeight: layout.timer,
+    boxSizing: 'border-box',
+    minHeight: layout.lowerHeight,
+    paddingTop: layout.lowerPaddingTop,
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
+    justifyContent: 'flex-start',
     flexShrink: 0,
   };
 
@@ -257,7 +261,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
                 backgroundColor={homeColor}
                 position="home"
                 size={size}
-                frameColor={needsContrastFrame(homeColor, themeColors.background) ? themeColors.text : undefined}
+                frame={getBlockFrame(homeColor, themeColors.background, themeColors.text)}
               />
             </div>
           )}
@@ -271,22 +275,21 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
                 backgroundColor={awayColor}
                 position="away"
                 size={size}
-                frameColor={needsContrastFrame(awayColor, themeColors.background) ? themeColors.text : undefined}
+                frame={getBlockFrame(awayColor, themeColors.background, themeColors.text)}
               />
             </div>
           )}
-          <div style={nameCellStyle(1, hideScore ? 1 : 2)} data-testid="live-name-home">
+          <div style={nameCellStyle(1)} data-testid="live-name-home">
             <TeamNameDisplay name={match.homeTeam.name} size={size} theme={theme} maxWidth="100%" />
           </div>
-          <div style={nameCellStyle(3, hideScore ? 1 : 2)} data-testid="live-name-away">
+          <div style={nameCellStyle(3)} data-testid="live-name-away">
             <TeamNameDisplay name={match.awayTeam.name} size={size} theme={theme} maxWidth="100%" />
           </div>
         </div>
 
-        {/* Timer */}
-        {/* H2: nach dem Abpfiff nur das Endergebnis, keine Uhr */}
-        {(isRunning || isPaused) && (
-          <div style={timerAreaStyle}>
+        {/* Unterer Bereich: feste Höhe in jedem Zustand (B-44a2); H2: nach dem Abpfiff keine Uhr, nur das Endergebnis */}
+        <div style={timerAreaStyle} data-testid="live-lower">
+          {(isRunning || isPaused) && (
             <MatchTimer
               elapsedSeconds={match.elapsedSeconds}
               durationSeconds={match.durationSeconds}
@@ -298,15 +301,22 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
               theme={theme}
               clockMode={clockMode}
             />
-          </div>
-        )}
-
-        {/* Kindermodus: klein unter der Uhr (@W2A-031) */}
-        {hideScore && (
-          <div style={{ fontSize: displayFontSizes.bodySM, color: themeColors.textSecondary, textAlign: 'center' }}>
-            {t('liveMatch.withoutResult')}
-          </div>
-        )}
+          )}
+          {/* Kindermodus (@W2A-031): lesbar in Textfarbe, mit Abstand zur Uhr */}
+          {hideScore && (
+            <div
+              data-testid="live-without-result"
+              style={{
+                fontSize: displayFontSizes.clockHint,
+                color: themeColors.text,
+                textAlign: 'center',
+                marginTop: layout.hintGapAbove,
+              }}
+            >
+              {t('liveMatch.withoutResult')}
+            </div>
+          )}
+        </div>
 
         {/* Footer: Referee */}
         {match.refereeName && (
@@ -342,64 +352,3 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   );
 };
 
-// ---------------------------------------------------------------------------
-// No Match Display (unchanged)
-// ---------------------------------------------------------------------------
-
-export interface NoMatchDisplayProps {
-  message?: string;
-  size?: 'md' | 'lg' | 'xl';
-  fullscreen?: boolean;
-  theme?: MonitorTheme;
-}
-
-export const NoMatchDisplay: React.FC<NoMatchDisplayProps> = ({
-  message = 'Kein laufendes Spiel',
-  size = 'xl',
-  fullscreen = false,
-  theme = 'dark',
-}) => {
-  const { themeColors } = useMonitorTheme(theme);
-
-  const containerStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: fullscreen ? 'clamp(32px, 4vw, 64px)' : size === 'xl' ? '64px' : cssVars.spacing.xxl,
-    background: themeColors.backgroundGradient,
-    borderRadius: fullscreen ? 0 : cssVars.borderRadius.xl,
-    border: fullscreen ? 'none' : `3px solid ${themeColors.border}`,
-    minHeight: fullscreen ? '100%' : size === 'xl' ? '50vh' : '35vh',
-    height: fullscreen ? '100%' : 'auto',
-    width: '100%',
-    maxWidth: fullscreen ? 'none' : '1200px',
-    margin: '0 auto',
-    boxShadow: fullscreen ? 'none' : cssVars.shadows.lg,
-  };
-
-  return (
-    <div style={containerStyle}>
-      <div style={{ fontSize: size === 'xl' ? '100px' : '72px', marginBottom: cssVars.spacing.xl, opacity: 0.6 }}>
-        ⏸️
-      </div>
-      <div style={{
-        fontSize: size === 'xl' ? 'clamp(36px, 4vw, 48px)' : '28px',
-        fontWeight: 600,
-        color: themeColors.text,
-        textAlign: 'center',
-        textShadow: themeColors.textShadowLight,
-      }}>
-        {message}
-      </div>
-      <div style={{
-        fontSize: size === 'xl' ? 'clamp(18px, 2vw, 24px)' : '18px',
-        color: themeColors.textSecondary,
-        marginTop: cssVars.spacing.lg,
-        textAlign: 'center',
-      }}>
-        Die Tabellen werden angezeigt, bis ein Spiel gestartet wird
-      </div>
-    </div>
-  );
-};

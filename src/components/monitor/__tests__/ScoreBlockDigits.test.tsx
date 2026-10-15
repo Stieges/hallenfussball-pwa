@@ -24,7 +24,7 @@ describe('Ziffern im Kasten haben Luft', () => {
 
   it('der Kasten ist ein Größen-Container (cq-Einheiten wirken)', () => {
     const { container } = render(<ScoreBlock score={12} backgroundColor="#1E40AF" position="home" />);
-    const block = container.querySelector('[data-position="home"]')!;
+    const block = container.querySelector<HTMLElement>('[data-position="home"]')!;
     expect(block.style.containerType).toBe('size');
     expect(container.textContent).toBe('12');
   });
