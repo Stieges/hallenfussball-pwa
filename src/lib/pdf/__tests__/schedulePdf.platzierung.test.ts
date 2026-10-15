@@ -226,6 +226,31 @@ describe('@DR-009 Platzierung zweispaltig', () => {
     for (const t of zeilen.filter(t => t.x < mitte)) {expect(t.x + t.w, t.str).toBeLessThan(mitte);}
   });
 
+  it('@BM-021 final: ein 50-Zeichen-Name wird umbrochen, nie gekürzt (≤ 3 Zeilen, alle Wörter, keine Überlappung)', async () => {
+    const lang = 'Sportverein Blau-Weiss Hintertupfingen Jugend e.V.';
+    const ranking = ENDSTAND.map((e, i) => (i === 0 ? { ...e, team: { ...e.team, name: lang } } : e));
+    const { pages } = await platzierung({ ranking, closed: true });
+    const seite = pages[pages.length - 1];
+    const geo = pageGeometry('a4', 'portrait');
+    const mitte = geo.left + geo.contentWidth / 2;
+    const titel = seite.texts.find(t => t.str.trim() === 'Platzierung');
+    const links = seite.texts.filter(t => titel && t.y > titel.y && t.x < mitte && !/^Seite \d/.test(t.str.trim()) && t.str.trim() !== '' && t.str.trim() !== 'Platzierung');
+    const ersteZeile = links.filter(t => t.y < (links.find(x => /^\d+\./.test(x.str.trim()) && x.str.trim().startsWith("2."))?.y ?? Infinity) - SIZE_TOL);
+    const gesamt = ersteZeile.map(t => t.str.trim()).join(' ');
+
+    expect(lang.length).toBe(50);
+    for (const wort of lang.split(' ')) {expect(gesamt, wort).toContain(wort);}
+    expect(new Set(ersteZeile.map(t => Math.round(t.y))).size).toBeLessThanOrEqual(3);
+    expect(new Set(ersteZeile.map(t => Math.round(t.y))).size).toBeGreaterThan(1);
+    for (const t of seite.texts.filter(t => titel && t.y > titel.y && t.x < mitte && t.str.trim() !== '' && !/^Seite \d/.test(t.str.trim()))) {
+      expect(t.x + t.w, t.str).toBeLessThan(mitte);
+    }
+    // Zeilenpaar bleibt gleich hoch: Platz 5 (rechts) steht auf der Höhe von Platz 1 (links)
+    const fuenf = seite.texts.find(t => t.str.trim().startsWith("5."));
+    const eins = seite.texts.find(t => t.str.trim().startsWith("1."));
+    expect(fuenf?.y).toBeCloseTo(eins?.y ?? -1, 1);
+  });
+
   it('liegt auf der Finalseite unter der Finaltabelle, ohne sie zu überlappen, und über dem Seitenende', async () => {
     const { pages } = await platzierung();
     const geo = pageGeometry('a4', 'portrait');

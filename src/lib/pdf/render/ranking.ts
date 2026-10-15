@@ -3,7 +3,7 @@
  * 1 bis ⌈n/2⌉ links, der Rest rechts, gleiche Zeilen nebeneinander).
  * Offen: Satz „Die Platzierung steht nach dem Finale (letzten Spiel) fest“ und je Team eine Schreiblinie, ohne Teamnamen
  * und ohne Punkte. Abgeschlossen: alle Plätze mit Teamnamen laut gespeichertem Endstand. Teamnamen 12 pt (@DR-001),
- * der Seitenumbruch fällt nur zwischen zwei Zeilen. Nur Zeichnen; Maße aus `design-tokens/print.ts`.
+ * lange Namen laufen auf bis zu drei Zeilen und werden nie gekürzt (@BM-021), die Zeile wächst für beide Spalten; der Seitenumbruch fällt nur zwischen zwei Zeilen. Nur Zeichnen; Maße aus `design-tokens/print.ts`.
  */
 import type jsPDF from 'jspdf';
 import { printColors, printLimits, printMetrics, printStroke, printType } from '../../../design-tokens/print';
@@ -27,26 +27,44 @@ interface Slot {
   name: string | undefined;
 }
 
-/** Ein Platz in einer Spalte: Nummer rechtsbündig, Schreiblinie bis zum Spaltenende, im Endstand der Name darauf. */
-function drawSlot(doc: jsPDF, left: number, width: number, top: number, slot: Slot): void {
-  const bottom = top + printMetrics.placeRowHeight;
-  const baseline = bottom - printMetrics.placeTextLift;
+/** Zeilen eines Namens in der Breite `room` (12 pt). Nie gekürzt: lange Namen laufen auf weitere Zeilen (@BM-021). */
+function nameLines(doc: jsPDF, name: string | undefined, room: number): string[] {
+  if (name === undefined) {
+    return [];
+  }
+  doc.setFont(PDF_FONT.family, 'normal');
+  doc.setFontSize(printLimits.teamPt);
+  return doc.splitTextToSize(name, room) as string[];
+}
+
+/** Breite für Namen in einer Spalte: Spaltenbreite ohne Nummer. */
+const nameRoom = (width: number): number => width - printMetrics.placeNumberWidth - printMetrics.placeNumberGap;
+
+/**
+ * Ein Platz in einer Spalte: Nummer rechtsbündig, im Endstand der Name (mehrzeilig) darauf, Schreiblinie unter der
+ * letzten Zeile. `height` ist die gemeinsame Zeilenhöhe des Paares.
+ */
+function drawSlot(doc: jsPDF, left: number, width: number, top: number, height: number, slot: Slot): void {
+  const bottom = top + height;
+  const baseline = top + printMetrics.placeRowHeight - printMetrics.placeTextLift;
   const lineStart = left + printMetrics.placeNumberWidth + printMetrics.placeNumberGap;
 
   doc.setTextColor(...printColors.ink);
   doc.setFont(PDF_FONT.family, 'bold');
   doc.setFontSize(printLimits.teamPt);
   doc.text(`${slot.place}.`, left + printMetrics.placeNumberWidth, baseline, { align: 'right' });
-  if (slot.name !== undefined) {
-    doc.setFont(PDF_FONT.family, 'normal');
-    const room = left + width - lineStart;
-    // Ein zu langer Name wird auf die erste Zeile gekürzt, damit er nicht in die Nachbarspalte läuft
-    const lines = doc.splitTextToSize(slot.name, room) as string[];
-    doc.text(lines[0] ?? slot.name, lineStart, baseline);
-  }
+  const lines = nameLines(doc, slot.name, nameRoom(width));
+  doc.setFont(PDF_FONT.family, 'normal');
+  lines.forEach((line, i) => doc.text(line, lineStart, baseline + i * printMetrics.participantAdvance));
   doc.setDrawColor(...printColors.ink);
   doc.setLineWidth(printStroke.box);
   doc.line(lineStart, bottom, left + width, bottom);
+}
+
+/** Höhe eines Zeilenpaares: Grundhöhe, je weitere Namenszeile (links oder rechts, die längere zählt) ein Zeilenabstand mehr. */
+function pairHeight(doc: jsPDF, width: number, pair: Array<Slot | undefined>): number {
+  const most = Math.max(1, ...pair.map(slot => nameLines(doc, slot?.name, nameRoom(width)).length));
+  return printMetrics.placeRowHeight + (most - 1) * printMetrics.participantAdvance;
 }
 
 /** Platzierung zeichnen. Rückgabe: y unter der letzten Zeile. */
@@ -83,16 +101,17 @@ export function renderRanking(doc: jsPDF, input: RankingInput, t: PdfTexts, geo:
   const rightLeft = geo.left + columnWidth + printMetrics.placeColumnGap;
   let top = yPos;
   for (let row = 0; row < rowCount; row++) {
-    if (top + printMetrics.placeRowHeight > geo.bottom) {
+    const right = slots[row + rowCount];
+    const height = pairHeight(doc, columnWidth, [slots[row], right]);
+    if (top + height > geo.bottom) {
       doc.addPage();
       top = continuationTop(geo);
     }
-    drawSlot(doc, geo.left, columnWidth, top, slots[row]);
-    const right = slots[row + rowCount];
+    drawSlot(doc, geo.left, columnWidth, top, height, slots[row]);
     if (right !== undefined) {
-      drawSlot(doc, rightLeft, columnWidth, top, right);
+      drawSlot(doc, rightLeft, columnWidth, top, height, right);
     }
-    top += printMetrics.placeRowHeight;
+    top += height;
   }
   return top;
 }
