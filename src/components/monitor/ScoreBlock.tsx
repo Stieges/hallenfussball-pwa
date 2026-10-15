@@ -9,6 +9,7 @@
 
 import { CSSProperties } from 'react';
 import { cssVars, displayFontSizes, getScoreTextColor } from '../../design-tokens';
+import { scoreDigitFontSize } from './scoreDigitSize';
 
 export interface ScoreBlockProps {
   /** Score number to display */
@@ -60,6 +61,8 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%', // die Zelle im Raster bestimmt die Breite (displayLayout.scoreArea.blockWidth)
+    // Controller-Zusatz H3: Ziffern richten sich nach dem Kasten (nur Live-Monitor, size xl)
+    containerType: size === 'xl' ? 'size' : undefined,
     minHeight: config.minHeight,
     height: '100%',
     backgroundColor,
@@ -70,7 +73,7 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
   };
 
   const scoreStyle: CSSProperties = {
-    fontSize: config.fontSize,
+    fontSize: size === 'xl' ? scoreDigitFontSize() : config.fontSize,
     fontWeight: 700,
     color: textColor,
     fontFamily: cssVars.fontFamilies.body,
