@@ -57,20 +57,40 @@ function tournament(overrides: Partial<Tournament> & { id: string }): Tournament
   return { title: overrides.id, teams: [], matches: [], monitors: [], sponsors: [], ...overrides } as unknown as Tournament;
 }
 
+const SV_NORD = { id: 'sp-nord', name: 'SV Nord', createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z' };
+
+/** Sponsor-Folie mit eigenem QR-Ziel als Träger (K1): nur die Sponsor-Folie wertet qrTarget aus */
 const nord = tournament({
   id: 'nord',
   title: 'Hallencup Nord',
+  sponsors: [SV_NORD],
   monitors: [monitor({
     name: 'Halle',
     slides: [
       { id: 'sl-1', type: 'live', config: { fieldId: 'field-2' }, duration: null, order: 0 },
       { id: 'sl-2', type: 'standings', config: { groupId: 'C' }, duration: null, order: 1 },
-      { id: 'sl-3', type: 'qr-code', config: { qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' }, duration: null, order: 2 },
+      { id: 'sl-3', type: 'sponsor', config: { sponsorId: 'sp-nord', qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' }, duration: null, order: 2 },
     ],
   })],
 });
 
-const sued = tournament({ id: 'sued', title: 'Hallencup Süd', numberOfFields: 1, numberOfGroups: 2 });
+const sued = tournament({
+  id: 'sued', title: 'Hallencup Süd', numberOfFields: 1, numberOfGroups: 2,
+  sponsors: [{ ...SV_NORD, id: 'sp-sued' }],
+});
+
+/** Quelle mit ungültiger eigener Adresse (M1) */
+const nordUngueltig = tournament({
+  id: 'nord',
+  title: 'Hallencup Nord',
+  sponsors: [SV_NORD],
+  monitors: [monitor({
+    name: 'Halle',
+    slides: [
+      { id: 'sl-1', type: 'sponsor', config: { sponsorId: 'sp-nord', qrTarget: 'custom', customQrUrl: 'javascript:alert(1)' }, duration: null, order: 0 },
+    ],
+  })],
+});
 
 async function renderWithI18n(target: Tournament) {
   const Wrapper = await createRealI18nWrapper();
@@ -144,7 +164,7 @@ describe('Monitore übernehmen – B-22b Texte (echtes i18n)', () => {
       monitors: [{
         name: 'Datei', defaultSlideDuration: 15, transition: 'fade', transitionDuration: 500,
         theme: 'dark', performanceMode: 'auto',
-        slides: [{ type: 'qr-code', config: { qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' }, duration: null }],
+        slides: [{ type: 'sponsor', config: { sponsorName: 'SV Nord', qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' }, duration: null }],
       }],
     })], 'monitore.json', { type: 'application/json' });
     await userEvent.upload(screen.getByTestId('transfer-file'), file);
@@ -152,5 +172,17 @@ describe('Monitore übernehmen – B-22b Texte (echtes i18n)', () => {
 
     expect(await screen.findByText('Eigener Link aus der Datei nicht übernommen – die QR-Folie zeigt auf die Zuschauer-Seite')).toBeInTheDocument();
     await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+  });
+
+  it('@ME-063 meldet eine ungültige eigene Adresse aus dem Turnier wörtlich (M1)', async () => {
+    mockActive.current = [nordUngueltig, sued];
+    const onUpdate = await renderWithI18n(sued);
+    await userEvent.click(screen.getByTestId('monitors-transfer-open'));
+    await userEvent.click(await screen.findByTestId('transfer-source-nord'));
+    await userEvent.click(screen.getByTestId('transfer-confirm'));
+
+    expect(await screen.findByText('Eigener Link mit ungültiger Adresse nicht übernommen (nur http oder https) – die QR-Folie zeigt auf die Zuschauer-Seite')).toBeInTheDocument();
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+    expect((onUpdate.mock.calls[0][0] as Tournament).monitors?.[0].slides[0].config.customQrUrl).toBeUndefined();
   });
 });

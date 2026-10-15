@@ -54,21 +54,34 @@ function tournament(overrides: Partial<Tournament> & { id: string }): Tournament
   return { title: overrides.id, teams: [], matches: [], monitors: [], sponsors: [], ...overrides } as unknown as Tournament;
 }
 
-/** Quelle mit einer Folie für Feld 2 und einer Tabelle für Gruppe C */
-const nordZweiFelder = tournament({
-  id: 'nord',
-  title: 'Hallencup Nord',
-  monitors: [monitor({
-    slides: [
-      { id: 'sl-1', type: 'live', config: { fieldId: 'field-2' }, duration: null, order: 0 },
-      { id: 'sl-2', type: 'standings', config: { groupId: 'C' }, duration: null, order: 1 },
-      { id: 'sl-3', type: 'qr-code', config: { qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' }, duration: null, order: 2 },
-    ],
-  })],
-});
+const SV_NORD = { id: 'sp-nord', name: 'SV Nord', createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z' };
 
-/** Zielturnier „Süd“ mit nur einem Feld und zwei Gruppen */
-const sued = tournament({ id: 'sued', title: 'Hallencup Süd', numberOfFields: 1, numberOfGroups: 2 });
+/**
+ * Quelle mit einer Folie für Feld 2, einer Tabelle für Gruppe C und einer Sponsor-Folie mit eigenem QR-Ziel.
+ * Die Sponsor-Folie ist der Träger, der qrTarget auswertet (K1); die QR-Folie tut das nicht.
+ */
+function nordMit(customQrUrl: string): Tournament {
+  return tournament({
+    id: 'nord',
+    title: 'Hallencup Nord',
+    sponsors: [SV_NORD],
+    monitors: [monitor({
+      slides: [
+        { id: 'sl-1', type: 'live', config: { fieldId: 'field-2' }, duration: null, order: 0 },
+        { id: 'sl-2', type: 'standings', config: { groupId: 'C' }, duration: null, order: 1 },
+        { id: 'sl-3', type: 'sponsor', config: { sponsorId: 'sp-nord', qrTarget: 'custom', customQrUrl }, duration: null, order: 2 },
+      ],
+    })],
+  });
+}
+
+const nordZweiFelder = nordMit('https://sv-nord.de');
+
+/** Zielturnier „Süd“ mit nur einem Feld, zwei Gruppen und dem Sponsor aus der Quelle (Zuordnung über den Namen) */
+const sued = tournament({
+  id: 'sued', title: 'Hallencup Süd', numberOfFields: 1, numberOfGroups: 2,
+  sponsors: [{ ...SV_NORD, id: 'sp-sued' }],
+});
 
 function renderTab(target: Tournament) {
   const onUpdate = vi.fn().mockResolvedValue(undefined);
@@ -127,7 +140,7 @@ describe('Monitore übernehmen – B-22b', () => {
       await userEvent.click(screen.getByTestId('transfer-confirm'));
 
       await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
-      expect(savedTournament(onUpdate).monitors?.[0].slides.map(s => s.type)).toEqual(['standings', 'qr-code']);
+      expect(savedTournament(onUpdate).monitors?.[0].slides.map(s => s.type)).toEqual(['standings', 'sponsor']);
     });
 
     it('Tabellen-Folie mit fehlender Gruppe: „Alle Tabellen zeigen“ macht eine Gesamttabelle', async () => {
@@ -203,6 +216,22 @@ describe('Monitore übernehmen – B-22b', () => {
       const qr = savedTournament(onUpdate).monitors?.[0].slides[2].config;
       expect(qr?.qrTarget).toBe('custom');
       expect(qr?.customQrUrl).toBe('https://sv-nord.de');
+      await screen.findByTestId('transfer-done');
+      expect(screen.queryByTestId('transfer-custom-qr-invalid')).not.toBeInTheDocument();
+    });
+
+    it('ungültige eigene Adresse aus dem Turnier (javascript:) wird verworfen und gemeldet (M1)', async () => {
+      mockActive.current = [nordMit('javascript:alert(1)'), sued];
+      const onUpdate = renderTab(sued);
+      await chooseSource('nord');
+      await userEvent.click(screen.getByTestId('transfer-confirm'));
+
+      await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+      const qr = savedTournament(onUpdate).monitors?.[0].slides[2].config;
+      expect(qr?.qrTarget).toBeUndefined();
+      expect(qr?.customQrUrl).toBeUndefined();
+      expect(qr?.sponsorId).toBe('sp-sued');
+      expect(await screen.findByTestId('transfer-custom-qr-invalid')).toHaveTextContent('monitors.transfer.customQrInvalid');
     });
 
     it('aus einer Datei wird der eigene Link nicht übernommen und gemeldet', async () => {
@@ -213,7 +242,7 @@ describe('Monitore übernehmen – B-22b', () => {
         monitors: [{
           name: 'Datei-Monitor', defaultSlideDuration: 15, transition: 'fade', transitionDuration: 500,
           theme: 'dark', performanceMode: 'auto',
-          slides: [{ type: 'qr-code', config: { qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' }, duration: null }],
+          slides: [{ type: 'sponsor', config: { sponsorName: 'SV Nord', qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' }, duration: null }],
         }],
       });
       await userEvent.upload(screen.getByTestId('transfer-file'), file);
@@ -226,14 +255,24 @@ describe('Monitore übernehmen – B-22b', () => {
       expect(await screen.findByTestId('transfer-custom-qr-file')).toBeInTheDocument();
     });
 
-    it('Gegenbeispiel: Datei ohne eigenen Link zeigt keinen Hinweis', async () => {
-      renderTab(sued);
+    it('Gegenbeispiel: Datei mit QR-Ziel ohne eigenen Link zeigt keinen Hinweis und behält das Ziel', async () => {
+      const onUpdate = renderTab(sued);
       await userEvent.click(screen.getByTestId('monitors-transfer-open'));
-      await userEvent.click(screen.getByTestId('transfer-template'));
+      const file = jsonFile({
+        kind: 'monitor-config', version: 1,
+        monitors: [{
+          name: 'Datei-Monitor', defaultSlideDuration: 15, transition: 'fade', transitionDuration: 500,
+          theme: 'dark', performanceMode: 'auto',
+          slides: [{ type: 'sponsor', config: { sponsorName: 'SV Nord', qrTarget: 'sponsor-website' }, duration: null }],
+        }],
+      });
+      await userEvent.upload(screen.getByTestId('transfer-file'), file);
       await userEvent.click(screen.getByTestId('transfer-confirm'));
 
       await screen.findByTestId('transfer-done');
       expect(screen.queryByTestId('transfer-custom-qr-file')).not.toBeInTheDocument();
+      await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+      expect(savedTournament(onUpdate).monitors?.[0].slides[0].config.qrTarget).toBe('sponsor-website');
     });
   });
 });
