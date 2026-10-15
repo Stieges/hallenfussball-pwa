@@ -748,7 +748,7 @@
         "placement": "Placement",
         "duration": "Game time",
         "rulebook": "Rulebook",
-        "ko": "K.O."
+        "ko": "Knockout"
       },
       "modeRoundRobin": "Round robin",
       "criterion": {
@@ -768,11 +768,12 @@
       "penalty": "Time penalty {{duration}}",
       "seconds": "{{seconds}} sec",
       "round": {
-        "roundOf16": "Round of 16",
-        "quarterfinal": "Quarter-finals",
-        "semifinal": "Semi-finals",
-        "final": "Final",
-        "placement": "Placement games"
+        "roundOf16": "round of 16",
+        "quarterfinal": "quarter-finals",
+        "semifinal": "semi-finals",
+        "final": "final",
+        "placement": "placement games",
+        "thirdPlace": "third-place match"
       },
       "koAll": "{{label}}: if drawn, {{rule}}",
       "koRound": "{{round}}: if drawn, {{rule}}",
@@ -780,8 +781,7 @@
       "ruleOvertimeThenShootout": "extra time, then penalty shootout, {{shooters}}",
       "ruleGoldenGoal": "golden goal",
       "shooters": "{{n}} shooters",
-      "shootersOne": "1 shooter",
-      "roundsJoin": " and "
+      "shootersOne": "1 shooter"
     }
   }
 }

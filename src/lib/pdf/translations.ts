@@ -5,7 +5,7 @@
  * (`__tests__/pdfText.ts`). Datum und Uhrzeit laufen über `Intl.DateTimeFormat(locale)`.
  */
 
-import type { KnockoutRound } from '../../types/tournament';
+import type { KoKey } from './koSlots';
 
 export type PdfLocale = 'de' | 'en';
 
@@ -87,10 +87,12 @@ export interface PdfRuleTexts {
   finalDuration: (duration: string) => string;
   penalty: (duration: string) => string;
   seconds: (seconds: number) => string;
-  /** Rundenname; `placement` steht für die Platzierungsspiele (Spiel um Platz 3, 5, 7). */
-  round: (round: KnockoutRound | 'placement') => string;
-  /** Trenner zwischen Rundennamen einer gemeinsamen Regel („Halbfinale und Platzierungsspiele“). */
-  roundsJoin: string;
+  /** Rundenname; `placement` steht für die Platzierungsspiele (3, 5, 7), `thirdPlace` für das Spiel um Platz 3. */
+  round: (key: KoKey) => string;
+  /** Aufzählung von Rundennamen nach der Sprache („Halbfinale, Platzierungsspiele und Finale“). */
+  joinList: (items: string[]) => string;
+  /** Großschreibung des ersten Buchstabens einer Zeile (EN-Rundennamen stehen klein in der Aufzählung). */
+  startUpper: (text: string) => string;
   koAll: (rule: string) => string;
   koRound: (round: string, rule: string) => string;
   ruleShootout: (shooters: string) => string;
@@ -104,7 +106,7 @@ const PLACEMENT_CRITERIA = ['points', 'goalDifference', 'goalsFor', 'directCompa
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** Baut die Texte der Regelzeilen über den Übersetzer (`pdf.rules.*`). */
-function buildRuleTexts(translate: PdfTranslator, s: (key: string) => string): PdfRuleTexts {
+function buildRuleTexts(translate: PdfTranslator, s: (key: string) => string, locale: PdfLocale): PdfRuleTexts {
   const r = (key: string): string => s(`rules.${key}`);
   const unit = (n: number): string => (n === 1 ? r('pointOne') : r('pointMany'));
   return {
@@ -126,8 +128,9 @@ function buildRuleTexts(translate: PdfTranslator, s: (key: string) => string): P
     finalDuration: duration => translate('pdf.rules.finalDuration', { duration }),
     penalty: duration => translate('pdf.rules.penalty', { duration }),
     seconds: seconds => translate('pdf.rules.seconds', { seconds }),
-    round: round => r(`round.${round}`),
-    roundsJoin: r('roundsJoin'),
+    round: key => r(`round.${key}`),
+    joinList: items => new Intl.ListFormat(locale, { type: 'conjunction' }).format(items),
+    startUpper: text => text.charAt(0).toLocaleUpperCase(locale) + text.slice(1),
     koAll: rule => translate('pdf.rules.koAll', { label: r('label.ko'), rule }),
     koRound: (round, rule) => translate('pdf.rules.koRound', { round, rule }),
     ruleShootout: shooters => translate('pdf.rules.ruleShootout', { shooters }),
@@ -202,6 +205,6 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
       return day.format(new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))));
     },
     formatClock: date => clock.format(date),
-    rules: buildRuleTexts(translate, s),
+    rules: buildRuleTexts(translate, s, locale),
   };
 }

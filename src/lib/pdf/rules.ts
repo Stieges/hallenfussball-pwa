@@ -2,7 +2,7 @@
  * Regelzeilen des Spielplan-PDFs (B-28a3-3a, @DR-006, @DR-007, @DR-008, @DR-015, @DR-020).
  *
  * Rein: keine Zeichnung, keine React-Abhängigkeit, kein Import aus `features/`. Die Regeln kommen aus dem
- * Turnier (`pdfRulesFrom`), die Wörter aus `t.rules` (`tournament:pdf.rules.*`).
+ * Turnier (`pdfRulesFrom`), die K.-o.-Runden aus dem erzeugten Plan (`koSlots.ts`), die Wörter aus `t.rules`.
  */
 import {
   DEFAULT_MATCH_COCKPIT_SETTINGS,
@@ -10,15 +10,16 @@ import {
   type TiebreakerMode,
   type Tournament,
 } from '../../types/tournament';
-import { knockoutRoundsForPreset, presetHasPlacementGames, resolveTiebreakMode } from '../../core/match/tiebreakDecision';
+import type { GeneratedSchedule } from '../../core/generators';
 import { footballIndoorConfig } from '../../config/sports/football';
 import { SECONDS_PER_MINUTE } from '../../utils/timeHelpers';
 import type { PdfTexts } from './translations';
+import { koModeFor, koSlotsFrom, type KoKey } from './koSlots';
 
 /** Standard-Punktesystem der Hallensportart (3/1/0): nur davon weicht der Punkte-Zusatz ab. */
 const STANDARD_POINTS = footballIndoorConfig.defaults.pointSystem;
 
-/** Eingang der Regelzeilen: Auszug aus dem Turnier plus Regelwerk (Feld kommt mit w1, bis dahin optional). */
+/** Eingang der Regelzeilen: Auszug aus dem Turnier, Regelwerk und die K.-o.-Schlüssel des erzeugten Plans. */
 export type PdfRules = Pick<
   Tournament,
   | 'groupSystem'
@@ -28,10 +29,10 @@ export type PdfRules = Pick<
   | 'pointSystem'
   | 'finalsConfig'
   | 'matchCockpitSettings'
-> & { rulebook?: string };
+> & { rulebook?: string; koSlots: KoKey[] };
 
-/** Adapter: Turnier → Eingang. Solange `rulebook` am Turnier fehlt, liefert er `undefined`. */
-export function pdfRulesFrom(tournament: Tournament): PdfRules {
+/** Adapter: Turnier und erzeugter Plan → Eingang. Solange `rulebook` am Turnier fehlt, liefert er `undefined`. */
+export function pdfRulesFrom(tournament: Tournament, schedule: GeneratedSchedule): PdfRules {
   const rulebook = 'rulebook' in tournament && typeof tournament.rulebook === 'string' ? tournament.rulebook : undefined;
   return {
     groupSystem: tournament.groupSystem,
@@ -42,6 +43,7 @@ export function pdfRulesFrom(tournament: Tournament): PdfRules {
     finalsConfig: tournament.finalsConfig,
     matchCockpitSettings: tournament.matchCockpitSettings,
     rulebook,
+    koSlots: koSlotsFrom(schedule.allMatches.filter(m => m.phase !== 'groupStage')),
   };
 }
 
@@ -62,43 +64,30 @@ export function pdfRuleLines(rules: PdfRules, t: PdfTexts): string[] {
 }
 
 /**
- * K.-o.-Zeilen über der Finalrunde (@DR-015): je Runde mit eigener Regel eine Zeile, Runden mit gleicher Regel
- * zusammen („Halbfinale und Platzierungsspiele: …“). Haben alle Runden dieselbe Regel, genau eine Zeile ohne Rundennamen.
- * Reihenfolge wie im Turnierablauf: Platzierungsspiele vor dem Finale. Die Platzierungsregel folgt ohne eigene
- * Vorgabe dem Finale (@W2A-039, `resolveTiebreakMode`).
+ * K.-o.-Zeilen über der Finalrunde (@DR-015): je Regel eine Zeile, Runden mit gleicher Regel zusammen
+ * („Halbfinale und Spiel um Platz 3: …“). Haben alle Runden dieselbe Regel, genau eine Zeile ohne Rundennamen.
  */
 export function koLines(rules: PdfRules, t: PdfTexts): string[] {
-  const finalsConfig = rules.finalsConfig;
-  const preset = finalsConfig?.preset ?? 'none';
-  const rounds = knockoutRoundsForPreset(preset);
-  if (rounds.length === 0) {
+  if (rules.koSlots.length === 0) {
     return [];
   }
   const shooters = t.rules.shooters(rules.matchCockpitSettings?.penaltyShootersPerTeam ?? DEFAULT_MATCH_COCKPIT_SETTINGS.penaltyShootersPerTeam);
-  const knockout = rounds.map(round => ({
-    label: t.rules.round(round),
-    mode: resolveTiebreakMode(finalsConfig, round) ?? 'shootout',
-  }));
-  // Die Finalrunde endet immer mit dem Finale (letzte Runde); Platzierungsspiele liegen davor.
-  const placement = presetHasPlacementGames(preset)
-    ? [{ label: t.rules.round('placement'), mode: resolveTiebreakMode(finalsConfig, null, 'thirdPlace') ?? 'shootout' }]
-    : [];
-  const slots = [...knockout.slice(0, -1), ...placement, ...knockout.slice(-1)];
-
   const groups: Array<{ labels: string[]; mode: TiebreakerMode }> = [];
-  for (const slot of slots) {
-    const group = groups.find(entry => entry.mode === slot.mode);
+  for (const key of rules.koSlots) {
+    const mode = koModeFor(key, rules.finalsConfig);
+    const label = t.rules.round(key);
+    const group = groups.find(entry => entry.mode === mode);
     if (group) {
-      group.labels.push(slot.label);
+      group.labels.push(label);
     } else {
-      groups.push({ labels: [slot.label], mode: slot.mode });
+      groups.push({ labels: [label], mode });
     }
   }
   const [only] = groups;
   if (only && groups.length === 1) {
     return [t.rules.koAll(ruleText(only.mode, shooters, t))];
   }
-  return groups.map(entry => t.rules.koRound(entry.labels.join(t.rules.roundsJoin), ruleText(entry.mode, shooters, t)));
+  return groups.map(entry => t.rules.koRound(t.rules.startUpper(t.rules.joinList(entry.labels)), ruleText(entry.mode, shooters, t)));
 }
 
 function modeText(rules: PdfRules, t: PdfTexts): string {
@@ -122,10 +111,10 @@ function pointsText(points: PointSystem, t: PdfTexts): string {
   return `${t.rules.pointsLine(points.win, points.draw)}${loss}`;
 }
 
+/** Spielzeit: Gruppen- und Finalrunden-Dauer (Finalrunde nur, wenn es Finalspiele gibt), Zeitstrafe. */
 function durationText(rules: PdfRules, t: PdfTexts): string {
   const groupMinutes = rules.groupPhaseGameDuration;
-  const hasFinals = knockoutRoundsForPreset(rules.finalsConfig?.preset ?? 'none').length > 0;
-  const finalMinutes = hasFinals ? rules.finalRoundGameDuration : undefined;
+  const finalMinutes = rules.koSlots.length > 0 ? rules.finalRoundGameDuration : undefined;
   const parts =
     finalMinutes !== undefined && finalMinutes !== groupMinutes
       ? [t.rules.groupDuration(t.durationMinutes(groupMinutes)), t.rules.finalDuration(t.durationMinutes(finalMinutes))]

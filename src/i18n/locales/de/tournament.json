@@ -772,7 +772,8 @@
         "quarterfinal": "Viertelfinale",
         "semifinal": "Halbfinale",
         "final": "Finale",
-        "placement": "Platzierungsspiele"
+        "placement": "Platzierungsspiele",
+        "thirdPlace": "Spiel um Platz 3"
       },
       "koAll": "{{label}}: bei Gleichstand {{rule}}",
       "koRound": "{{round}}: bei Gleichstand {{rule}}",
@@ -780,8 +781,7 @@
       "ruleOvertimeThenShootout": "Verlängerung, dann Strafstoßschießen, {{shooters}}",
       "ruleGoldenGoal": "Golden Goal",
       "shooters": "{{n}} Schützen",
-      "shootersOne": "1 Schütze",
-      "roundsJoin": " und "
+      "shootersOne": "1 Schütze"
     }
   }
 }
