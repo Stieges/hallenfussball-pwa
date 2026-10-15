@@ -33,4 +33,18 @@ describe('useRealtimePollFallback (@FU-087)', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(REALTIME_POLL_FALLBACK_INTERVAL_MS * 2); });
     expect(refresh).toHaveBeenCalledTimes(2);
   });
+
+  it('@FU-087 verborgener Tab -> keine Abfrage; wieder sichtbar -> Abfrage', async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined);
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    renderHook(() => useRealtimePollFallback(KEY, true, refresh));
+    act(() => setRealtimeChannelStatus(KEY, 'CLOSED'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(REALTIME_POLL_FALLBACK_INTERVAL_MS * 3); });
+    expect(refresh).not.toHaveBeenCalled();
+
+    visibility.mockReturnValue('visible');
+    await act(async () => { await vi.advanceTimersByTimeAsync(REALTIME_POLL_FALLBACK_INTERVAL_MS); });
+    expect(refresh).toHaveBeenCalledTimes(1);
+    visibility.mockRestore();
+  });
 });

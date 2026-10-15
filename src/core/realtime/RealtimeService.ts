@@ -252,7 +252,8 @@ export class RealtimeService {
           // eslint-disable-next-line no-console
           console.log('[RealtimeService] Subscribed to:', tournamentId);
         }
-      } else if (status === 'CHANNEL_ERROR') {
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        // A-08f-F2: TIMED_OUT (Beitritt laeuft in den Timeout) zaehlt wie CHANNEL_ERROR -> Abfrage-Ausweichen greift
         const error = new Error(`Subscription failed for ${tournamentId}`);
         this.state.lastError = error;
         this.updateStatus('error');

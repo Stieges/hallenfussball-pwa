@@ -132,4 +132,24 @@ describe('Spielplan Ende-zu-Ende -- Abfrage-Ausweichen des Turnier-Kanals (A-08f
     expect(mockLoadTournament).toHaveBeenCalledTimes(initialLoads);
     expect(firstCardText(view.container)).not.toContain('1:0');
   });
+
+  it('@FU-087 Unmount: Status wird geloescht, ein spaeter CLOSED-Rueckruf bleibt wirkungslos, kein Nachladen', async () => {
+    const { before } = buildTournaments();
+    const first = await renderHost(before);
+    act(() => reportChannelStatus('disconnected'));
+    first.unmount();
+    const lateCallback = reportChannelStatus;
+    const loadsAfterUnmount = mockLoadTournament.mock.calls.length;
+
+    // Spaeter Rueckruf des alten Kanals (removeChannel meldet asynchron CLOSED)
+    act(() => lateCallback('disconnected'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(20000); });
+    expect(mockLoadTournament).toHaveBeenCalledTimes(loadsAfterUnmount);
+
+    // Neu oeffnen: ohne haengendes CLOSED keine Abfrage vor dem ersten Kanalstatus
+    await renderHost(before);
+    const loadsAfterRemount = mockLoadTournament.mock.calls.length;
+    await act(async () => { await vi.advanceTimersByTimeAsync(20000); });
+    expect(mockLoadTournament).toHaveBeenCalledTimes(loadsAfterRemount);
+  });
 });

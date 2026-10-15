@@ -26,6 +26,8 @@ export function useRealtimePollFallback(
       return undefined;
     }
     const timer = setInterval(() => {
+      // Verborgener Tab: nicht abfragen (der Kanal wird beim Sichtbarwerden ohnehin neu aufgebaut).
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') { return; }
       refreshRef.current().catch(() => undefined);
     }, REALTIME_POLL_FALLBACK_INTERVAL_MS);
     return () => {

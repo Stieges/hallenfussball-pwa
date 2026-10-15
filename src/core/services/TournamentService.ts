@@ -22,8 +22,11 @@ export class TournamentService {
 
         if (!tournament) {return null;}
 
-        // Ensure schedule is initialized (handles empty matches)
-        const matches = await this.scheduleService.initializeSchedule(id);
+        // Ensure schedule is initialized (handles empty matches). A-08f-F2: vorhandene Spiele direkt
+        // verwenden -- kein zweiter repository.get (halbiert die Last beim Abfrage-Ausweichen).
+        const matches = tournament.matches.length > 0
+            ? tournament.matches
+            : await this.scheduleService.initializeSchedule(id);
 
         // Return tournament with potentially updated matches
         return {

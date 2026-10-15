@@ -165,6 +165,23 @@ describe('RealtimeService — subscription lifecycle', () => {
   });
 });
 
+describe('RealtimeService — TIMED_OUT (A-08f-F2, @FU-087)', () => {
+  it('TIMED_OUT meldet error an onStatusChange und onError (loest Abfrage-Ausweichen aus)', () => {
+    const service = new RealtimeService();
+    const onStatusChange = vi.fn();
+    const onError = vi.fn();
+    service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn(), onError, onStatusChange });
+
+    channels.at(-1)?.statusCallback?.('TIMED_OUT');
+
+    expect(onStatusChange).toHaveBeenLastCalledWith('error');
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(service.getState().status).toBe('error');
+
+    service.destroy();
+  });
+});
+
 describe('RealtimeService — pause/resume + visibility', () => {
   beforeEach(() => {
     resetMocks();
