@@ -25,9 +25,10 @@ export interface EventFieldChanges {
   clearPlayerNumber?: boolean;
 }
 
+/** A-08c: nur noch Typ-Kompatibilität für `LiveCockpit` (Altzweige entfernt, ohne Engine-Ansicht passiert nichts). */
 export interface LegacyEditHandlers {
   onGoal: (matchId: string, teamId: string, delta: -1) => void;
-  onUndoLastEvent: (matchId: string) => void;
+  onUndoLastEvent?: (matchId: string) => void;
   onUpdateEvent?: (matchId: string, eventId: string, updates: { playerNumber?: number; incomplete?: boolean }) => void;
   onDeleteEvent?: (matchId: string, eventId: string) => void;
 }
@@ -36,7 +37,7 @@ export interface EventEditingParams {
   tournamentId: string;
   match: EditingMatch | null;
   readOnly: boolean;
-  legacy: LegacyEditHandlers;
+  legacy?: LegacyEditHandlers;
   notify: { success: (message: string) => void; error: (message: string) => void };
 }
 
@@ -68,15 +69,4 @@ export const KIND_KEYS = {
   substitution: 'engine.retract.kind.substitution',
   shootoutKick: 'engine.retract.kind.shootoutKick',
 } as const satisfies Record<TargetKind, string>;
-
-function isOvertimePhase(match: EditingMatch): boolean {
-  return match.playPhase === 'overtime' || match.playPhase === 'goldenGoal';
-}
-
-/** Alt-Regel (Verlaengerung zaehlt nur Verlaengerungstreffer), unveraendert aus dem Cockpit uebernommen. */
-export function legacyCanMinus(match: EditingMatch, side: Side): boolean {
-  const regular = side === 'home' ? match.homeScore : match.awayScore;
-  const overtime = side === 'home' ? match.overtimeScoreA : match.overtimeScoreB;
-  return (isOvertimePhase(match) ? (overtime ?? 0) : regular) > 0 && match.status !== 'FINISHED';
-}
 

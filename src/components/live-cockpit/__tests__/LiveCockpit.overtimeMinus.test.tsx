@@ -88,7 +88,7 @@ describe('LiveCockpit — Minus-Button-Guard in der Verlängerung', () => {
     expect(onGoal).not.toHaveBeenCalled();
   });
 
-  it('Regression: overtime, homeScore 1 / overtimeScoreA 2 — "−1" ruft onGoal weiterhin auf', async () => {
+  it('A-08c: ohne Engine-Ansicht: overtime, homeScore 1 / overtimeScoreA 2 — "−1" bleibt gesperrt, kein onGoal', async () => {
     const onGoal = vi.fn();
     const user = userEvent.setup();
     render(
@@ -96,43 +96,41 @@ describe('LiveCockpit — Minus-Button-Guard in der Verlängerung', () => {
         {...baseProps(makeMatch({ playPhase: 'overtime', homeScore: 1, overtimeScoreA: 2 }), { onGoal })}
       />
     );
-
-    await user.click(screen.getByTestId('goal-minus-button-home'));
-
-    expect(onGoal).toHaveBeenCalledWith('match-1', 'team-a', -1);
-  });
-
-  it('Regression: reguläre Phase unverändert — homeScore 1 erlaubt "−1"', async () => {
-    const onGoal = vi.fn();
-    const user = userEvent.setup();
-    render(
-      <LiveCockpit
-        {...baseProps(makeMatch({ playPhase: 'regular', homeScore: 1 }), { onGoal })}
-      />
-    );
-
-    await user.click(screen.getByTestId('goal-minus-button-home'));
-
-    expect(onGoal).toHaveBeenCalledWith('match-1', 'team-a', -1);
-  });
-
-  it('PIN: 0:0-Finale in der Verlängerung — "−1" ist bedienbar, obwohl der reguläre Stand 0 ist', async () => {
-    // Der gefährlichere Zwilling des gemeldeten Fehlklicks: So entsteht eine Verlängerung
-    // überhaupt am häufigsten. Mit der alten Sperre (`homeScore > 0`) war der Knopf hier
-    // dauerhaft gesperrt — ein irrtümlich erfasstes Golden Goal war damit nicht zurücknehmbar.
-    const onGoal = vi.fn();
-    const user = userEvent.setup();
-    render(
-      <LiveCockpit
-        {...baseProps(makeMatch({ playPhase: 'goldenGoal', homeScore: 0, overtimeScoreA: 2 }), { onGoal })}
-      />
-    );
-
+    // A-08c: der Altweg ist entfernt -- ohne Engine-Ansicht ist Minus gesperrt und loest nichts aus.
     const minusHome = screen.getByTestId('goal-minus-button-home');
-    expect(minusHome).not.toBeDisabled();
+    expect(minusHome).toBeDisabled();
     await user.click(minusHome);
+    expect(onGoal).not.toHaveBeenCalled();
+  });
 
-    expect(onGoal).toHaveBeenCalledWith('match-1', 'team-a', -1);
+  it('A-08c: ohne Engine-Ansicht: reguläre Phase, homeScore 1 — "−1" bleibt gesperrt, kein onGoal', async () => {
+    const onGoal = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <LiveCockpit
+        {...baseProps(makeMatch({ homeScore: 1 }), { onGoal })}
+      />
+    );
+    // A-08c: der Altweg ist entfernt -- ohne Engine-Ansicht ist Minus gesperrt und loest nichts aus.
+    const minusHome = screen.getByTestId('goal-minus-button-home');
+    expect(minusHome).toBeDisabled();
+    await user.click(minusHome);
+    expect(onGoal).not.toHaveBeenCalled();
+  });
+
+  it('A-08c: ohne Engine-Ansicht: 0:0-Finale in der Verlängerung — "−1" gesperrt, kein onGoal', async () => {
+    const onGoal = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <LiveCockpit
+        {...baseProps(makeMatch({ playPhase: 'overtime', homeScore: 0, overtimeScoreA: 1 }), { onGoal })}
+      />
+    );
+    // A-08c: der Altweg ist entfernt -- ohne Engine-Ansicht ist Minus gesperrt und loest nichts aus.
+    const minusHome = screen.getByTestId('goal-minus-button-home');
+    expect(minusHome).toBeDisabled();
+    await user.click(minusHome);
+    expect(onGoal).not.toHaveBeenCalled();
   });
 
   it('Regression: reguläre Phase unverändert — homeScore 0 bleibt gesperrt (Button disabled, kein onGoal)', async () => {

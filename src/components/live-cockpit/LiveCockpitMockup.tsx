@@ -294,7 +294,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
 
   const handleUndo = useCallback(() => {
     if (!currentMatch || readOnly) { return; }
-    onUndoLastEvent(currentMatch.id);
+    onUndoLastEvent?.(currentMatch.id);
     showInfo('Letzte Aktion rückgängig gemacht');
   }, [currentMatch, onUndoLastEvent, showInfo, readOnly]);
 
@@ -325,7 +325,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
         // Actually, negative elapsed is possible if user sets > duration (not typical but possible logic)
       }
 
-      onAdjustTime(currentMatch.id, newElapsedSeconds);
+      onAdjustTime?.(currentMatch.id, newElapsedSeconds);
 
       const mins = Math.floor(newDisplaySeconds / 60);
       const secs = newDisplaySeconds % 60;

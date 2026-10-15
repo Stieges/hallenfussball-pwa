@@ -305,26 +305,20 @@ describe('LiveCockpit — Fixrunde 2 (H1b/M1): Mobiles Ereignisprotokoll-Sheet',
 describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter readOnly', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('Rückgängig: readOnly=true disabled + Klick ruft onUndoLastEvent NICHT auf; readOnly=false enabled + Klick ruft es auf', async () => {
+  it('A-08c: ohne Engine-Ansicht gibt es keinen Rückgängig-Knopf, auch nicht unter readOnly=false (Altweg entfernt)', () => {
     const onUndoLastEvent = vi.fn();
     const match = makeMatch({
       status: 'PAUSED',
       events: [{ id: 'e1', matchId: 'match-1', type: 'GOAL', timestampSeconds: 10, payload: { teamId: 'team-a' }, scoreAfter: { home: 1, away: 0 } }],
     });
-    const user = userEvent.setup();
 
     const { unmount } = render(<LiveCockpit {...baseProps(match, { onUndoLastEvent })} readOnly />);
-    const undoButtonLocked = screen.getByTestId('match-undo-button');
-    expect(undoButtonLocked).toBeDisabled();
-    await user.click(undoButtonLocked);
-    expect(onUndoLastEvent).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('match-undo-button')).toBeNull();
     unmount();
 
     render(<LiveCockpit {...baseProps(match, { onUndoLastEvent })} />);
-    const undoButtonUnlocked = screen.getByTestId('match-undo-button');
-    expect(undoButtonUnlocked).not.toBeDisabled();
-    await user.click(undoButtonUnlocked);
-    expect(onUndoLastEvent).toHaveBeenCalledWith('match-1');
+    expect(screen.queryByTestId('match-undo-button')).toBeNull();
+    expect(onUndoLastEvent).not.toHaveBeenCalled();
   });
 
   it('Seitenwechsel: readOnly=true disabled; readOnly=false enabled + Klick tauscht die Teams tatsächlich', async () => {

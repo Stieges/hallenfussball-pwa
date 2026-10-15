@@ -20,7 +20,8 @@ export interface GameControlsProps {
   onUndo?: () => void;
   onStart: () => void;
   onPauseResume: () => void;
-  onEditTime: () => void;
+  /** A-08c: ohne Handler kein Zeit-Knopf (@FU-071). */
+  onEditTime?: () => void;
   onSwitchSides: () => void;
   onFinish: () => void;
   onSettings?: () => void;
@@ -193,7 +194,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
       </button>
 
       {/* Edit Time — @OB-002: „Spielzeit anpassen“ für neue Spiele ausgeblendet (Platzhalter Nr. 2) */}
-      {!isNotStarted && (
+      {!isNotStarted && onEditTime && (
         <button
           style={btnStyle}
           onClick={onEditTime}

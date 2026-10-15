@@ -30,7 +30,6 @@ import { useActorRole } from './useActorRole';
 import {
   HINT_KEYS,
   KIND_KEYS,
-  legacyCanMinus,
   type EventEditingParams,
   type EventFieldChanges,
   type Side,
@@ -39,7 +38,7 @@ import {
 
 export type { EditingMatch, EventEditingParams, EventFieldChanges, LegacyEditHandlers, Side, SideState } from './engineEventEditingSupport';
 
-export function useEngineEventEditing({ tournamentId, match, readOnly, legacy, notify }: EventEditingParams) {
+export function useEngineEventEditing({ tournamentId, match, readOnly, notify }: EventEditingParams) {
   const { t } = useTranslation('cockpit');
   const context = useMatchEngineContextOptional();
   const actor = useActorRole(tournamentId);
@@ -91,7 +90,7 @@ export function useEngineEventEditing({ tournamentId, match, readOnly, legacy, n
       return { canMinus: false };
     }
     if (!minusSel) {
-      return { canMinus: legacyCanMinus(match, side) };
+      return { canMinus: false };
     }
     const selection = minusSel[side];
     const teamName = side === 'home' ? match.homeTeam.name : match.awayTeam.name;
@@ -143,23 +142,17 @@ export function useEngineEventEditing({ tournamentId, match, readOnly, legacy, n
       if (target) {
         return retract(target);
       }
-      if (!minusSel && legacyCanMinus(match, side)) {
-        legacy.onGoal(match.id, side === 'home' ? match.homeTeam.id : match.awayTeam.id, -1);
-      }
       return Promise.resolve();
     },
-    [match, minusSel, retract, legacy],
+    [match, minusSel, retract],
   );
 
   const undo = useCallback((): Promise<void> => {
     if (undoSel) {
       return undoSel.target ? retract(undoSel.target) : Promise.resolve();
     }
-    if (match) {
-      legacy.onUndoLastEvent(match.id);
-    }
     return Promise.resolve();
-  }, [undoSel, match, retract, legacy]);
+  }, [undoSel, retract]);
 
   const remove = useCallback(
     (eventId: string): Promise<void> => {
@@ -167,7 +160,6 @@ export function useEngineEventEditing({ tournamentId, match, readOnly, legacy, n
         return Promise.resolve();
       }
       if (!engineInput) {
-        legacy.onDeleteEvent?.(match.id, eventId);
         return Promise.resolve();
       }
       const check = checkRetract(engineInput.input, eventId);
@@ -178,7 +170,7 @@ export function useEngineEventEditing({ tournamentId, match, readOnly, legacy, n
       }
       return retract(target);
     },
-    [match, engineInput, legacy, notify, hintOf, t, retract],
+    [match, engineInput, notify, hintOf, t, retract],
   );
 
   const update = useCallback(
@@ -188,9 +180,6 @@ export function useEngineEventEditing({ tournamentId, match, readOnly, legacy, n
       }
       const nextNumber = changes.clearPlayerNumber ? undefined : changes.playerNumber;
       if (!engineInput || !commands) {
-        if (changes.clearPlayerNumber || changes.playerNumber !== undefined) {
-          legacy.onUpdateEvent?.(match.id, eventId, { playerNumber: nextNumber, incomplete: nextNumber === undefined });
-        }
         return Promise.resolve();
       }
       const { state } = engineInput.input;
@@ -211,7 +200,7 @@ export function useEngineEventEditing({ tournamentId, match, readOnly, legacy, n
         t('engine.amend.done', { target: targetText(after) }),
       );
     },
-    [match, engineInput, commands, actor, legacy, notify, run, t, targetText],
+    [match, engineInput, commands, actor, notify, run, t, targetText],
   );
 
   /** Sperrtext fuer "Loeschen" im Bearbeiten-Dialog (G3), `undefined` = erlaubt. */
@@ -232,10 +221,9 @@ export function useEngineEventEditing({ tournamentId, match, readOnly, legacy, n
       : undefined;
   };
 
-  const legacyCanUndo = match !== null && match.events.length > 0 && match.status !== 'FINISHED';
   // readOnly sperrt die Bedienung ueber `disabled` im Cockpit; hier zaehlt nur, ob es ein Ziel gibt.
   const undoHint = readOnly ? undefined : hintOf(undoSel?.blockReason ?? null);
-  const canUndo = undoSel ? undoSel.target !== null : legacyCanUndo;
+  const canUndo = undoSel ? undoSel.target !== null : false;
 
   const sides = { home: sideState('home'), away: sideState('away') };
 

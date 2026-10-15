@@ -1,7 +1,7 @@
 /**
  * useEngineEventEditing (C3b-1): Minus/Rueckgaengig/Loeschen/Bearbeiten fuer Engine-Spiele auf
  * RETRACT/AMEND -- Zielwahl, Sperrgruende + Hinweistexte (G1-G5, G10), Toast erst nach aufgeloestem
- * `submit` (G4). Altspiele (ohne Engine-Kopie mit Ereignissen) laufen unveraendert ueber die Alt-Handler.
+ * `submit` (G4). Altspiele (ohne Engine-Ansicht) haben seit A-08c keinen Altweg mehr: ohne Engine-Ansicht passiert nichts.
  */
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -299,34 +299,32 @@ describe('useEngineEventEditing -- Hinweistext je Sperrgrund (G3)', () => {
   });
 });
 
-describe('useEngineEventEditing -- Altspiel (keine Engine-Ereignisse)', () => {
+describe('useEngineEventEditing -- Altspiel ohne Engine-Ansicht (A-08c: Altweg entfernt, @FU-071)', () => {
   const legacyMatch = {
     id: 'legacy-1', homeTeam: { id: 'h', name: 'H' }, awayTeam: { id: 'a', name: 'A' },
     homeScore: 1, awayScore: 0, status: 'RUNNING', playPhase: 'regular',
     events: [{ id: 'e1', type: 'GOAL' }],
   };
 
-  it('Minus/Undo/Update/Delete gehen an die Alt-Handler; Update leitet incomplete fuer den Alt-Weg ab', () => {
+  it('A-08c: ohne Engine-Ansicht sind Rueckgaengig und Minus gesperrt; Aktionen erreichen keinen Alt-Handler', () => {
     const legacy = { onGoal: vi.fn(), onUndoLastEvent: vi.fn(), onUpdateEvent: vi.fn(), onDeleteEvent: vi.fn() };
     const params = { tournamentId: 't', match: legacyMatch, readOnly: false, legacy, notify: { success: vi.fn(), error: vi.fn() } };
     const { result } = renderHook(() => useEngineEventEditing(params));
-    expect(result.current.canUndo).toBe(true);
-    expect(result.current.sides.home.canMinus).toBe(true);
+    expect(result.current.canUndo).toBe(false);
+    expect(result.current.sides.home.canMinus).toBe(false);
     expect(result.current.sides.away.canMinus).toBe(false);
     void result.current.minus('home');
-    expect(legacy.onGoal).toHaveBeenCalledWith('legacy-1', 'h', -1);
     void result.current.undo();
-    expect(legacy.onUndoLastEvent).toHaveBeenCalledWith('legacy-1');
     void result.current.update('e1', { playerNumber: 3 });
-    expect(legacy.onUpdateEvent).toHaveBeenCalledWith('legacy-1', 'e1', { playerNumber: 3, incomplete: false });
-    void result.current.update('e1', { clearPlayerNumber: true });
-    expect(legacy.onUpdateEvent).toHaveBeenCalledWith('legacy-1', 'e1', { playerNumber: undefined, incomplete: true });
     void result.current.remove('e1');
-    expect(legacy.onDeleteEvent).toHaveBeenCalledWith('legacy-1', 'e1');
+    expect(legacy.onGoal).not.toHaveBeenCalled();
+    expect(legacy.onUndoLastEvent).not.toHaveBeenCalled();
+    expect(legacy.onUpdateEvent).not.toHaveBeenCalled();
+    expect(legacy.onDeleteEvent).not.toHaveBeenCalled();
     expect(params.notify.success).not.toHaveBeenCalled();
   });
 
-  it('Altspiel beendet: Rueckgaengig und Minus gesperrt (wie bisher)', () => {
+  it('A-08c: Altspiel beendet -> Rueckgaengig und Minus gesperrt', () => {
     const params = {
       tournamentId: 't', match: { ...legacyMatch, status: 'FINISHED' }, readOnly: false,
       legacy: { onGoal: vi.fn(), onUndoLastEvent: vi.fn() }, notify: { success: vi.fn(), error: vi.fn() },
@@ -336,9 +334,9 @@ describe('useEngineEventEditing -- Altspiel (keine Engine-Ereignisse)', () => {
     expect(result.current.sides.home.canMinus).toBe(false);
   });
 
-  it('Altspiel Verlaengerung: Minus zaehlt die Verlaengerungstreffer', () => {
+  it('A-08c: Verlaengerung ohne Engine-Ansicht -> Minus gesperrt (kein Altweg mehr)', () => {
     const params = {
-      tournamentId: 't', match: { ...legacyMatch, playPhase: 'overtime', homeScore: 1, overtimeScoreA: 0 }, readOnly: false,
+      tournamentId: 't', match: { ...legacyMatch, playPhase: 'overtime', homeScore: 1, overtimeScoreA: 2 }, readOnly: false,
       legacy: { onGoal: vi.fn(), onUndoLastEvent: vi.fn() }, notify: { success: vi.fn(), error: vi.fn() },
     };
     const { result } = renderHook(() => useEngineEventEditing(params));

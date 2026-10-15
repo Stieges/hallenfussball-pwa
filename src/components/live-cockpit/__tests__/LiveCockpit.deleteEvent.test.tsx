@@ -65,7 +65,7 @@ async function deleteFirstEventViaDialog(user: ReturnType<typeof userEvent.setup
 describe('LiveCockpit — Ereignis-Löschung (L9)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('L9: ruft onDeleteEvent mit matchId + eventId auf, NICHT onGoal (keine doppelte Dekrementierung)', async () => {
+  it('A-08c: ohne Engine-Ansicht loest Loeschen weder onDeleteEvent noch onGoal aus (Altweg entfernt)', async () => {
     const onDeleteEvent = vi.fn();
     const onGoal = vi.fn();
     const user = userEvent.setup();
@@ -73,7 +73,7 @@ describe('LiveCockpit — Ereignis-Löschung (L9)', () => {
 
     await deleteFirstEventViaDialog(user);
 
-    expect(onDeleteEvent).toHaveBeenCalledWith('match-1', 'e1');
+    expect(onDeleteEvent).not.toHaveBeenCalled();
     expect(onGoal).not.toHaveBeenCalled();
   });
 

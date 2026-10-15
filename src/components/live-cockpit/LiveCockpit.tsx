@@ -388,7 +388,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         // Actually, negative elapsed is possible if user sets > duration (not typical but possible logic)
       }
 
-      onAdjustTime(currentMatch.id, newElapsedSeconds);
+      onAdjustTime?.(currentMatch.id, newElapsedSeconds);
 
       const mins = Math.floor(newDisplaySeconds / 60);
       const secs = newDisplaySeconds % 60;
@@ -860,7 +860,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
                 style={timerStyle}
                 onClick={() => {
                   // @OB-002 (Platzhalter Nr. 2): „Spielzeit anpassen“ für neue Spiele ausgeblendet
-                  if (!isLocked && match.status !== 'NOT_STARTED') {
+                  if (onAdjustTime && !isLocked && match.status !== 'NOT_STARTED') {
                     setShowTimeAdjustDialog(true);
                   }
                 }}
@@ -940,7 +940,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               onUndo={editing.undoVisible ? handleUndo : undefined}
               onStart={handleStart}
               onPauseResume={handlePauseResume}
-              onEditTime={() => setShowTimeAdjustDialog(true)}
+              onEditTime={onAdjustTime ? () => setShowTimeAdjustDialog(true) : undefined}
               onSwitchSides={handleSwitchSides}
               onFinish={handleFinish}
               onSettings={() => setShowSettingsDialog(true)}

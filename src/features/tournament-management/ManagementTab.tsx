@@ -80,24 +80,12 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handlePause,
     handleResume,
     handleFinish,
-    handleForceFinish,
     handleGoal,
     handleTimePenalty,
     handleCard,
     handleSubstitution,
     handleFoul,
-    handleUndoLastEvent,
-    handleManualEditResult,
-    handleAdjustTime,
     hasRunningMatch,
-    // Tiebreaker handlers
-    handleStartOvertime,
-    handleStartGoldenGoal,
-    handleStartPenaltyShootout,
-    handleRecordPenaltyResult,
-    handleAbortPenaltyShootout,
-    handleUpdateEvent,
-    handleDeleteEvent,
   } = useCockpitExecution(tournament);
 
   // Permission check: Get current user's role in this tournament
@@ -464,26 +452,15 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             onResume={(matchId) => { void handleResume(matchId); }}
             onFinish={(matchId) => { void handleFinishAndReset(matchId); }}
             onGoal={(matchId, teamId, delta, options) => { void handleGoal(matchId, teamId, delta, options); }}
-            onUndoLastEvent={(matchId) => { void handleUndoLastEvent(matchId); }}
-            onManualEditResult={(matchId, home, away) => { void handleManualEditResult(matchId, home, away); }}
-            onAdjustTime={(matchId, time) => { void handleAdjustTime(matchId, time); }}
+            // A-08c (@FU-071): Undo, Direkteintrag, Zeit, Wiedereröffnen, K.-o.-/Strafstoß-Handler und
+            // Ereignis-Bearbeiten/-Löschen haben keinen Engine-Weg und werden NICHT übergeben
+            // -- das Cockpit blendet die zugehörigen Knöpfe aus.
             onLoadNextMatch={handleLoadNextMatch}
-            // A-08a: Wiedereröffnen ist ohne Altweg nicht verdrahtet; die Prop entfällt in A-08c.
-            onReopenLastMatch={() => undefined}
             // Event tracking callbacks
             onTimePenalty={(matchId, teamId, options) => { void handleTimePenalty(matchId, teamId, options); }}
             onCard={(matchId, teamId, type, options) => { void handleCard(matchId, teamId, type, options); }}
             onSubstitution={(matchId, teamId, options) => { void handleSubstitution(matchId, teamId, options); }}
             onFoul={(matchId, teamId) => { void handleFoul(matchId, teamId); }}
-            // Tiebreaker callbacks
-            onStartOvertime={(matchId) => { void handleStartOvertime(matchId); }}
-            onStartGoldenGoal={(matchId) => { void handleStartGoldenGoal(matchId); }}
-            onStartPenaltyShootout={(matchId) => { void handleStartPenaltyShootout(matchId); }}
-            onRecordPenaltyResult={(matchId, home, away) => { void handleRecordPenaltyResult(matchId, home, away); }}
-            onForceFinish={(matchId) => { void handleForceFinish(matchId); }}
-            onAbortPenaltyShootout={(matchId) => { void handleAbortPenaltyShootout(matchId); }}
-            onUpdateEvent={(matchId, eventId, updates) => { void handleUpdateEvent(matchId, eventId, updates); }}
-            onDeleteEvent={(matchId, eventId) => { void handleDeleteEvent(matchId, eventId); }}
             onUpdateSettings={(settings) => { void handleUpdateSettings(settings); }}
           />
         </RulesLockProvider>
