@@ -9,6 +9,7 @@ import { captureFeatureError } from '../../lib/sentry';
 import { slotTeamId } from '../models/matchSlot';
 import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
 import { mergeServerLedFields } from './serverLedMatchFields';
+import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisionSource } from './serverRevisionRegistry';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -122,10 +123,10 @@ export function isReleaseRefusal(error: unknown): boolean {
     return error.message.includes(RELEASE_REFUSAL_MARKER);
 }
 
-export class OfflineRepository implements ITournamentRepository {
+export class OfflineRepository implements ITournamentRepository, ServerRevisionSource {
     private _mutationQueue: MutationQueue;
-    /** A-08f3a Monotonie (Regel S): zuletzt übernommene Server-Revision je Spiel, je Turnier; nur im Speicher. */
-    private readonly adoptedRevisions = new Map<string, Map<string, number>>();
+    /** A-08f3a Monotonie (Regel S) + a2/b Benachrichtigung: zuletzt übernommene Server-Revision je Spiel, je Turnier. */
+    private readonly serverRevisions = new ServerRevisionRegistry();
 
     constructor(
         private localRepo: LocalStorageRepository,
@@ -144,6 +145,16 @@ export class OfflineRepository implements ITournamentRepository {
     /** A-07e: lokale Kopien des Kontos; ohne Konto (nur Tests) wie bisher alle. */
     private localListForAccount(): Promise<Tournament[]> {
         return this.accountId === undefined ? this.localRepo.listForCurrentUser() : this.localRepo.listOwnedBy(this.accountId);
+    }
+
+    /** A-08f3a2: Spiele mit Server-Revision > 1 (Schnelleingabe gesperrt wie heute, Rückbau in e2). */
+    serverLedMatchIds(tournamentId: string): ReadonlySet<string> {
+        return this.serverRevisions.serverLedMatchIds(tournamentId);
+    }
+
+    /** A-08f3a2/b: meldet je Übernahme die Spiele mit gestiegener Revision. */
+    subscribeServerRevisions(tournamentId: string, listener: ServerRevisionListener): () => void {
+        return this.serverRevisions.subscribe(tournamentId, listener);
     }
 
     /**
@@ -226,10 +237,10 @@ export class OfflineRepository implements ITournamentRepository {
                 } else if (localData) {
                     // A-08f3a Feldweg (@FU-087, @FU-023): Tore erhöhen nur `matches.version`, nie die Turnier-Version.
                     // Die Entscheidung fällt ohne `await` vor dem Schreiben, damit ein älterer Stand nicht nachrückt.
-                    const lastAdopted = this.adoptedRevisions.get(id) ?? new Map<string, number>();
-                    const merged = mergeServerLedFields(localData, cloudData, cloudRead.matchRevisions, lastAdopted, 'stufe1');
-                    this.adoptedRevisions.set(id, new Map([...lastAdopted, ...merged.adopted]));
-                    if (merged.changed) { await this.localRepo.applyServerMatchFields(id, merged.patch); }
+                    const merged = mergeServerLedFields(localData, cloudData, cloudRead.matchRevisions, this.serverRevisions.get(id), 'stufe1');
+                    const applied = merged.changed ? this.localRepo.applyServerMatchFields(id, merged.patch) : undefined;
+                    this.serverRevisions.record(id, merged.adopted);
+                    await applied;
                 }
             }
         } catch (error) {

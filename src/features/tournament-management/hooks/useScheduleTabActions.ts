@@ -13,7 +13,7 @@ import { MatchUpdate } from '../../../core/models/types';
 import { diffMatchResultStatusUpdates } from '../../../core/services';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
 import { isMatchFinished, isMatchRunning } from '../utils';
-import { useEngineOverlaidMatchIds } from '../../../hooks/useEngineOverlayForTournament';
+import { useLockedScoreMatchIds } from './useLockedScoreMatchIds';
 import { isEngineControlledScoreChange, applyAutoResolutionsAfterScoreChange } from './scoreChangeHelpers';
 
 interface UseScheduleTabActionsProps {
@@ -69,7 +69,7 @@ export function useScheduleTabActions({
   // Fixrunde 2/6: dieselbe Uebersetzung wie useEngineCommandWiring.ts (NotOnEngineYetError).
   const { t: tCockpit } = useTranslation('cockpit');
   // P4: dieselbe Menge, die useTournamentManager vor Overlay-Lecks schuetzt (I3) -- s. scoreChangeHelpers.ts.
-  const overlaidMatchIdsRef = useEngineOverlaidMatchIds(tournament);
+  const overlaidMatchIdsRef = useLockedScoreMatchIds(tournament); // A-08f3a2: + server-gefuehrte Spiele
 
   // W11: `handleRedistributeSR`/`handleRedistributeFields` teilen sich dieselbe Form (Aenderungen
   // berechnen, Matches damit patchen, Turnier speichern) -- ein gemeinsamer Helfer statt zweier
