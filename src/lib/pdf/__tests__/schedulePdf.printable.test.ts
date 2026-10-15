@@ -7,8 +7,10 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { generateFullSchedule } from '../../../core/generators';
-import { PDF_FONT } from '../fonts';
-import { printable } from '../printable';
+import { jsPDF } from 'jspdf';
+import { printType } from '../../../design-tokens/print';
+import { fontOf, PDF_FONT, registerPdfFonts } from '../fonts';
+import { guardDocText, printable } from '../printable';
 import { buildSchedulePdf, exportScheduleToPDF } from '../schedulePdf';
 import { HALLENCUP_TEAMS, hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { layoutOf, pageText } from './pdfFixtureLayout';
@@ -43,6 +45,21 @@ describe('printable: eine Stelle für den Ersatz', () => {
   it('Gegenbeispiel: Zeilenumbruch bleibt, andere Steuerzeichen werden ersetzt', () => {
     expect(printable('a\nb')).toBe('a\nb');
     expect(printable('a\u0007b')).toBe('a?b');
+  });
+});
+
+describe('F3 guardDocText: Messen und Zeichnen sehen denselben Text', () => {
+  it.each(['getTextWidth', 'getStringUnitWidth', 'splitTextToSize'] as const)('%s misst „⚽⚽⚽“ wie „???“', async name => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const mode = await registerPdfFonts(doc);
+    guardDocText(doc, mode.covers);
+    doc.setFont(fontOf(doc));
+    doc.setFontSize(printType.body);
+
+    // `getTextWidth` ist die Rohbreite, die Auswahl `name` liefert Zahl oder Zeilenliste; beide müssen gleich sein
+    const gemessen = (text: string): unknown => (doc[name] as (t: string, w?: number) => unknown)(text, 1000);
+    expect(gemessen('⚽⚽⚽')).toEqual(gemessen('???'));
+    expect(doc.getTextWidth('⚽⚽⚽')).toBeGreaterThan(0);
   });
 });
 

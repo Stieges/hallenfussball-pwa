@@ -38,7 +38,10 @@ function cleaned(value: unknown, covers: GlyphCheck): unknown {
   return value;
 }
 
-/** Textfunktionen von jsPDF, deren erstes Argument gedruckter oder gemessener Text ist. */
+/**
+ * Textfunktionen von jsPDF, deren erstes Argument gedruckter oder gemessener Text ist. `getTextWidth` ruft intern
+ * `this.getStringUnitWidth`, bleibt aber gelistet, falls jsPDF das ändert (Test: `schedulePdf.printable.test.ts`, F3).
+ */
 const TEXT_FUNCTIONS = ['text', 'splitTextToSize', 'getTextWidth', 'getStringUnitWidth', 'getTextDimensions'] as const;
 
 /**
