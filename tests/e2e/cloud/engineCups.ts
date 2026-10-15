@@ -61,6 +61,23 @@ function runningCup(slug: string, helper = true, events: readonly EngineSeedEven
 /** Tor Heim mit Nr. 7 (fester Schlüssel `goal-home`), Grundlage für AMEND/RETRACT-Cups. */
 const GOAL_HOME_NR7: EngineSeedEventSpec = { ...GOAL_HOME, payload: { playerNumber: 7 } };
 
+/** Beendet 1:1: Tor Heim mit Nr. 7, Tor Gast ohne Nummer (Nachtrag nach Abpfiff, @FU-056). */
+function finishedCup(slug: string): EngineCupSpec {
+  return {
+    slug,
+    title: `Engine-Cup ${slug}`,
+    form: 'finished',
+    events: [
+      START,
+      { ...GOAL_HOME_NR7, atOffsetMs: -50_000 },
+      { key: 'goal-away', type: 'GOAL', side: 'away', atOffsetMs: -40_000 },
+      { key: 'end', type: 'MATCH_END', atOffsetMs: -20_000 },
+    ],
+    expected: { status: 'finished', scoreA: 1, scoreB: 1 },
+    helper: true,
+  };
+}
+
 export const E2E_ENGINE_CUPS = [
   runningCup('TOR'),
   runningCup('FINISH'),
@@ -91,6 +108,13 @@ export const E2E_ENGINE_CUPS = [
   // bliebe es nach der Rücknahme leer ("Noch keine Ereignisse").
   runningCup('RETRACT', true, [START, { key: 'card-away', type: 'YELLOW_CARD', side: 'away', atOffsetMs: -40_000 }, GOAL_HOME_NR7]),
   runningCup('GELBROT'),
+  // A-08g: Server-Nachweise (Schreibweg nur über Ereignisse, Nachtrag) und Spielplan-Lesen (@FU-087).
+  runningCup('SCHREIBWEGLAUF'),
+  runningCup('SPIELPLANOWNER'),
+  runningCup('SPIELPLANKANAL'),
+  runningCup('SPIELPLANHELFER'),
+  finishedCup('SCHREIBWEG'),
+  finishedCup('NACHTRAG'),
   {
     slug: 'HELPERAMEND',
     title: 'Engine-Cup HELPERAMEND',

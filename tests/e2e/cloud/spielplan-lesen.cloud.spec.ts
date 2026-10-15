@@ -1,0 +1,161 @@
+/**
+ * tests/e2e/cloud/spielplan-lesen.cloud.spec.ts — A-08g: der Spielplan des Eigentümers und des Helfers zeigt
+ * fremde Tore über die Abfrage, auch wenn die Live-Verbindung zu ist (@FU-087), und übernimmt Änderungen der
+ * Co-Admin (@FU-089). Eigentümer-Fall wie im Plan A-08f3 "Ergänzung A-08g": ZUERST der Live-Tab (lädt die
+ * Engine-Kopien, H-1), dann der Spielplan. Nur cloud-desktop (Engine-Cups werden verbraucht).
+ */
+import { randomUUID } from 'node:crypto';
+import type { Page } from '@playwright/test';
+import { test, expect } from './fixtures';
+import {
+  appendAsRole,
+  engineCupTarget,
+  expectEngineMatchRunningUi,
+  expectOutboxSettled,
+  expectSeededEngineMatch,
+  newRoleContext,
+  openCockpit,
+  type AppendAsRoleEvent,
+} from './engineHelpers';
+import { enterGoal } from './helpers';
+import { restAsRole, serviceRest } from './restAsRole';
+import { E2E_LIVE_CUP_ID, engineCupIds, type EngineCupSlug } from './testData';
+
+/** Schließt alle Realtime-Kanäle der App (derselbe Client wie in der App, Vite-Dev-Modul). */
+async function closeRealtimeChannels(page: Page): Promise<void> {
+  await page.evaluate("import('/src/lib/supabase.ts').then((m) => m.supabase.removeAllChannels())");
+  await page.waitForTimeout(1000);
+  expect(await page.evaluate("import('/src/lib/supabase.ts').then((m) => m.supabase.getChannels().length)")).toBe(0);
+}
+
+async function openLiveThenSchedule(page: Page, slug: EngineCupSlug): Promise<void> {
+  const ids = engineCupIds(slug);
+  await openCockpit(page, ids.tournamentId, ids.matchId); // Live-Tab zuerst: lädt die Engine-Kopie
+  await expectEngineMatchRunningUi(page);
+  await page.locator('[data-testid="desktop-tab-spielplan"]').click();
+  await expect(page.locator(`[data-testid="match-circle-${ids.matchId}"]`)).toContainText('1:0', { timeout: 15000 });
+}
+
+function homeGoal(slug: EngineCupSlug, nth: number): AppendAsRoleEvent {
+  return { id: randomUUID(), type: 'GOAL', at: Date.now(), section: 1, clockMs: 61000 + nth * 1000, teamId: engineCupIds(slug).homeTeamId, targetId: null, payload: {} };
+}
+
+async function tournamentVersion(tournamentId: string): Promise<number> {
+  const rows = (await serviceRest('GET', `tournaments?id=eq.${tournamentId}&select=version`)).json as Array<{ version: number | null }>;
+  return rows[0].version ?? 1; // Spalte kann NULL sein, zählt wie Version 1
+}
+
+test.describe('Spielplan liest fremde Tore', () => {
+  // eslint-disable-next-line no-empty-pattern
+  test.beforeEach(async ({}, testInfo) => {
+    test.skip(!testInfo.project.name.includes('desktop'), 'Engine-Cups nur auf cloud-desktop.');
+  });
+
+  test('@FU-087 Eigentümer, Kanal zu: Helfer-Tor erscheint in Spielplan und Tabelle nach höchstens 10 s, ohne Hinweis', async ({ browser }) => {
+    test.setTimeout(90_000);
+    const ids = engineCupIds('SPIELPLANOWNER');
+    await expectSeededEngineMatch(engineCupTarget('SPIELPLANOWNER'));
+    const owner = await newRoleContext(browser, 'owner');
+    const helper = await newRoleContext(browser, 'helper');
+    try {
+      await openLiveThenSchedule(owner.page, 'SPIELPLANOWNER');
+      await closeRealtimeChannels(owner.page);
+      await openCockpit(helper.page, ids.tournamentId, ids.matchId);
+      await expectEngineMatchRunningUi(helper.page);
+      await enterGoal(helper.page, 'home');
+      await expectOutboxSettled(helper.page);
+
+      await expect(owner.page.locator(`[data-testid="match-circle-${ids.matchId}"]`)).toContainText('2:0', { timeout: 10000 });
+      await expect(owner.page.locator('[data-testid="realtime-interrupted-hint"]')).toHaveCount(0);
+
+      await owner.page.locator('[data-testid="desktop-tab-tabellen"]').click();
+      await owner.page.getByText('Gesamtplatzierung').first().click();
+      const homeRow = owner.page.getByRole('row').filter({ hasText: ids.homeTeamName });
+      await expect(homeRow).toContainText('2:0', { timeout: 10000 });
+      await expect(owner.page.locator('[data-testid="realtime-interrupted-hint"]')).toHaveCount(0);
+    } finally {
+      await owner.context.close();
+      await helper.context.close();
+    }
+  });
+
+  test('@FU-087 Eigentümer, Kanal offen: Helfer-Tor erscheint im Spielplan nach höchstens 3 s', async ({ browser }) => {
+    // Befund C-SPIELPLAN-PUSH-KANAL-OFFEN (A-08g): bei offenem, "joined" Kanal erscheint das fremde Tor im Spielplan
+    // des Eigentümers auch nach 60 s nicht (geschlossener Kanal: Abfrage greift, siehe Test oben). Produktivcode
+    // gehört nicht in A-08g -- Klärung beim Controller, dann test.fail entfernen.
+    test.fail(true, 'C-SPIELPLAN-PUSH-KANAL-OFFEN: Push auf matches erreicht den Spielplan bei offenem Kanal nicht.');
+    test.setTimeout(90_000);
+    const ids = engineCupIds('SPIELPLANKANAL');
+    await expectSeededEngineMatch(engineCupTarget('SPIELPLANKANAL'));
+    const owner = await newRoleContext(browser, 'owner');
+    const helper = await newRoleContext(browser, 'helper');
+    try {
+      await openLiveThenSchedule(owner.page, 'SPIELPLANKANAL');
+      await owner.page.waitForTimeout(2000); // Kanal aufgebaut
+      expect(await owner.page.evaluate("import('/src/lib/supabase.ts').then((m) => m.supabase.getChannels().length)")).toBeGreaterThan(0);
+      await openCockpit(helper.page, ids.tournamentId, ids.matchId);
+      await expectEngineMatchRunningUi(helper.page);
+      await enterGoal(helper.page, 'home');
+      await expectOutboxSettled(helper.page); // ab hier hat der Server das Tor; die 3 s zählen ab dann
+      await expect(owner.page.locator(`[data-testid="match-circle-${ids.matchId}"]`)).toContainText('2:0', { timeout: 3000 });
+    } finally {
+      await owner.context.close();
+      await helper.context.close();
+    }
+  });
+
+  test('@FU-087 Helfer-Fall: 10 Tore nacheinander, der Spielplan des Helfers bleibt nie stehen, tournaments.version bleibt <= 3', async ({ browser }) => {
+    test.setTimeout(240_000);
+    const ids = engineCupIds('SPIELPLANHELFER');
+    await expectSeededEngineMatch(engineCupTarget('SPIELPLANHELFER'));
+    const viewer = await newRoleContext(browser, 'helper');
+    try {
+      await openLiveThenSchedule(viewer.page, 'SPIELPLANHELFER');
+      await closeRealtimeChannels(viewer.page);
+      const circle = viewer.page.locator(`[data-testid="match-circle-${ids.matchId}"]`);
+      for (let k = 1; k <= 10; k++) {
+        const answer = await appendAsRole('helper', ids.matchId, [homeGoal('SPIELPLANHELFER', k)]);
+        expect(answer.results[0].status).toBe('accepted');
+        await expect(circle, `Tor ${k}`).toContainText(`${1 + k}:0`, { timeout: 10000 });
+      }
+      expect(await tournamentVersion(ids.tournamentId)).toBeLessThanOrEqual(3);
+      await expect(viewer.page.locator('[data-testid="realtime-interrupted-hint"]')).toHaveCount(0);
+    } finally {
+      await viewer.context.close();
+    }
+  });
+
+  test('@FU-089 Eine Änderung der Co-Admin erscheint nach einer eigenen Änderung des Eigentümers nach höchstens 10 s', async ({ browser }) => {
+    test.fail(true, 'A-08f3c1/c2 (nach I1): Spielplan-Spalten fremder Änderungen werden nach eigener Änderung noch nicht übernommen (C-LOKALVERSION-DRIFT).');
+    test.setTimeout(120_000);
+    // Stand-in (Befund im Report): die Oberfläche kennt kein "Spiel überspringen" und keine Anstoßzeit-Eingabe im
+    // Spielplan. Die eigene Änderung des Eigentümers ist eine gespeicherte Metadaten-Änderung (Ort) -- sie zählt
+    // die lokale Turnier-Version hoch, das ist der Auslöser von C-LOKALVERSION-DRIFT. Die Änderung der Co-Admin
+    // geht mit ihrem Schlüssel direkt an die Spalte der Anstoßzeit (kein Eingabefeld dafür in der Oberfläche).
+    const matches = (await serviceRest('GET', `matches?tournament_id=eq.${E2E_LIVE_CUP_ID}&order=slot.asc,field.asc,id.asc&select=id,scheduled_start`)).json as Array<{ id: string; scheduled_start: string }>;
+    const spiel5 = matches[4];
+    const [{ location_name: originalLocation }] = (await serviceRest('GET', `tournaments?id=eq.${E2E_LIVE_CUP_ID}&select=location_name`)).json as Array<{ location_name: string }>;
+    const owner = await newRoleContext(browser, 'owner');
+    try {
+      await owner.page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/settings`);
+      await owner.page.waitForLoadState('networkidle');
+      await owner.page.getByText('Metadaten bearbeiten').click();
+      await owner.page.locator('input[type="text"]').nth(3).fill('Halle Zwei');
+      await owner.page.getByRole('button', { name: 'Speichern' }).click();
+      await expect.poll(async () => ((await serviceRest('GET', `tournaments?id=eq.${E2E_LIVE_CUP_ID}&select=location_name`)).json as Array<{ location_name: string }>)[0].location_name, {
+        message: 'eigene Änderung des Eigentümers gespeichert',
+        timeout: 10000,
+      }).toBe('Halle Zwei');
+
+      await owner.page.locator('[data-testid="desktop-tab-spielplan"]').click();
+      await expect(owner.page.getByText('14:10').first()).toBeVisible({ timeout: 15000 });
+      const res = await restAsRole('coadmin', 'PATCH', `matches?id=eq.${spiel5.id}`, { scheduled_start: '14:40:00' });
+      expect(res.status, res.text).toBeLessThan(300);
+      await expect(owner.page.getByText('14:40').first()).toBeVisible({ timeout: 10000 });
+    } finally {
+      await serviceRest('PATCH', `matches?id=eq.${spiel5.id}`, { scheduled_start: spiel5.scheduled_start });
+      await serviceRest('PATCH', `tournaments?id=eq.${E2E_LIVE_CUP_ID}`, { location_name: originalLocation });
+      await owner.context.close();
+    }
+  });
+});
