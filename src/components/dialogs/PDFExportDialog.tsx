@@ -8,6 +8,7 @@ import { exportScheduleToPDF } from '../../lib/pdfExporter';
 import { GeneratedSchedule } from '../../core/generators';
 import { Standing, Tournament } from '../../types/tournament';
 import { getLocationName } from '../../utils/locationHelpers';
+import { withTournamentState } from '../../lib/pdf/tournamentState';
 
 export interface PDFExportDialogProps {
   isOpen: boolean;
@@ -40,35 +41,8 @@ export const PDFExportDialog = ({
     setNotes([]);
 
     try {
-      // Merge current scores from tournament.matches into schedule
-      const updatedSchedule = {
-        ...schedule,
-        allMatches: schedule.allMatches.map(sm => {
-          const tournamentMatch = tournament.matches.find(tm => tm.id === sm.id);
-          if (tournamentMatch) {
-            return {
-              ...sm,
-              scoreA: tournamentMatch.scoreA,
-              scoreB: tournamentMatch.scoreB,
-            };
-          }
-          return sm;
-        }),
-        phases: schedule.phases.map(phase => ({
-          ...phase,
-          matches: phase.matches.map(sm => {
-            const tournamentMatch = tournament.matches.find(tm => tm.id === sm.id);
-            if (tournamentMatch) {
-              return {
-                ...sm,
-                scoreA: tournamentMatch.scoreA,
-                scoreB: tournamentMatch.scoreB,
-              };
-            }
-            return sm;
-          }),
-        })),
-      };
+      // Turnierstand (Ergebnis, Status, Korrektur, Strafstoß) in den Plan einmischen (B-28a3-4, withTournamentState)
+      const updatedSchedule = withTournamentState(schedule, tournament);
 
       const result = await exportScheduleToPDF(updatedSchedule, includeStandings ? standings : undefined, {
         includeScores,

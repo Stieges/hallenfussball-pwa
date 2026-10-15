@@ -783,6 +783,10 @@
       "ruleGoldenGoal": "golden goal",
       "shooters": "{{n}} shooters",
       "shootersOne": "1 shooter"
-    }
+    },
+    "stand": "As of {{date}} {{time}}",
+    "offlineNote": "– offline",
+    "footer": "{{title}} · {{stand}} · Page {{page}} of {{total}}",
+    "closedAt": "closed on {{date}} {{time}}"
   }
 }
