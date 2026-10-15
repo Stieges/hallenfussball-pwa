@@ -164,16 +164,16 @@ export function useScheduleTabActions({
       return;
     }
 
+    const scoredMatch = tournament.matches.find((m) => m.id === matchId);
     // Block editing finished matches (if lock is enabled)
-    if (lockFinishedResults && isMatchFinished(matchId, tournament.matches, tournament.id)) {
+    if (lockFinishedResults && scoredMatch && isMatchFinished(scoredMatch)) {
       showWarning(t('actions.matchAlreadyFinished'));
       return;
     }
 
     // Check if match is currently live
-    if (isMatchRunning(matchId, tournament.id)) {
+    if (scoredMatch && isMatchRunning(scoredMatch)) {
       const confirmEdit = window.confirm(t('actions.liveMatchWarning'));
-
       if (!confirmEdit) { return; }
     }
 

@@ -40,7 +40,8 @@ export function isEngineControlledScoreChange(
   if (isForeignCandidate(engineEntry, new Map())) {
     return true;
   }
-  return !isMatchRunning(matchId, tournament.id) && isNewScheduledMatch(engineEntry, new Map());
+  const scoredMatch = tournament.matches.find((m) => m.id === matchId);
+  return !(scoredMatch && isMatchRunning(scoredMatch)) && isNewScheduledMatch(engineEntry, new Map());
 }
 
 /**

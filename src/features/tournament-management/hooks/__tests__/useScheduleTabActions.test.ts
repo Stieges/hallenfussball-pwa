@@ -122,12 +122,16 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
         timerElapsedSeconds: 300,
       }),
     ]);
+    // A-08f2: `matchStatus` running loest den Live-Hinweis aus -- Bestaetigung erteilen.
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const { result, onMatchesUpdate } = renderActions(tournament);
 
     act(() => {
       result.current.handleScoreChange('m1', 2, 1);
     });
 
+    expect(confirmSpy).toHaveBeenCalled();
+    confirmSpy.mockRestore();
     expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
     const updates = onMatchesUpdate.mock.calls[0][0];
     expect(updates).toEqual([{ id: 'm1', scoreA: 2, scoreB: 1 }]);
@@ -241,19 +245,18 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
   // Gegenprobe (P4): ein laufendes 0:0-ALTSPIEL (Altstart setzt kein `matchStatus`, daher
   // `'scheduled'`) ist NICHT Engine-ueberlagert -- es muss den bestehenden Live-Hinweis
   // (`isMatchRunning`/`window.confirm`) zeigen, NICHT den engine.notYet-Toast.
-  it('P4 Gegenprobe: ein laufendes 0:0-Altspiel (kein Engine-Overlay, Legacy-isMatchRunning) zeigt den Live-Hinweis statt engine.notYet', () => {
+  // A-08f2 (@FU-087): "laufend" kommt aus dem Turnier-Spiel (`matchStatus`), nicht aus localStorage.
+  // Ein laufendes Spiel ohne lokale Kopie ist ein fremd laufendes Engine-Spiel (Minor 5): es wird
+  // mit engine.notYet gesperrt, NICHT ueber window.confirm am RPC vorbeigeschrieben.
+  it('P4 (A-08f2): ein laufendes Spiel laut matchStatus wird gesperrt (engine.notYet), kein Confirm, kein Schreiben', () => {
     const teams: Tournament['teams'] = [
       { id: 'team-a', name: 'Team A' },
       { id: 'team-b', name: 'Team B' },
     ];
     const tournament = createTournament(
-      [createMatch({ id: 'm1', ...looseVs('team-a', 'team-b') })],
+      [createMatch({ id: 'm1', ...looseVs('team-a', 'team-b'), matchStatus: 'running' })],
       teams,
     );
-    // `localStorage` ist in `src/test/setup.dom.ts` global als `vi.fn()`-Stubs gemockt (kein
-    // echter Speicher) -- `getItem` direkt auf den erwarteten Wert stellen statt `setItem` zu
-    // erwarten.
-    vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify({ m1: { status: 'RUNNING' } }));
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const { result, onMatchesUpdate, showWarning } = renderActions(tournament);
 
@@ -261,10 +264,36 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
       result.current.handleScoreChange('m1', 5, 5);
     });
 
-    expect(confirmSpy).toHaveBeenCalled();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(showWarning).toHaveBeenCalled();
+    expect(onMatchesUpdate).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  // A-08f2 Gegenbeispiel (@FU-087): ein veralteter Eintrag `liveMatches-<id>` (RUNNING) macht ein
+  // Spiel, das im Turnier NICHT laufend ist, nicht zu einem laufenden Spiel -- kein Live-Hinweis.
+  it('@FU-087 Gegenbeispiel: veralteter localStorage-Eintrag RUNNING, Turnier-Spiel nicht laufend -> kein Live-Hinweis, Ergebnis wird gespeichert', () => {
+    const teams: Tournament['teams'] = [
+      { id: 'team-a', name: 'Team A' },
+      { id: 'team-b', name: 'Team B' },
+    ];
+    const tournament = createTournament(
+      [createMatch({ id: 'm1', ...looseVs('team-a', 'team-b'), scoreA: 1, scoreB: 0 })],
+      teams,
+    );
+    vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify({ m1: { status: 'RUNNING' } }));
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const { result, onMatchesUpdate, showWarning } = renderActions(tournament);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 5, 5);
+    });
+
+    expect(confirmSpy).not.toHaveBeenCalled();
     expect(showWarning).not.toHaveBeenCalled();
     expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
     confirmSpy.mockRestore();
+    vi.mocked(localStorage.getItem).mockReturnValue(null);
   });
 
   // Minor 5 (Fixrunde 4): ein fremd laufendes Engine-Spiel, dessen Kopie auf DIESEM Geraet noch

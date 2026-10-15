@@ -17,7 +17,7 @@ vi.mock('../../../hooks/usePermissions', () => ({
   usePermissions: () => ({ canCorrectResults: true, hasPermission: () => true }),
 }));
 vi.mock('../../../hooks/useLiveMatches', () => ({ useLiveMatches: () => ({ liveMatches: new Map() }) }));
-vi.mock('../hooks/useRunningMatches', () => ({ useRunningMatches: () => ({ runningMatchIds: new Set<string>() }) }));
+vi.mock('../hooks/useRunningMatchIds', () => ({ useRunningMatchIds: () => new Set<string>() }));
 
 import { ScheduleTab } from '../ScheduleTab';
 

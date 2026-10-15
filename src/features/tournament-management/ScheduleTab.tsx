@@ -10,7 +10,7 @@
  *
  * Refactored: Logic extracted to custom hooks for maintainability
  * - useScheduleHistory: Undo/Redo functionality
- * - useRunningMatches: Live match detection
+ * - useRunningMatchIds: Live match detection (useLiveMatches)
  * - usePendingChanges: Edit mode state
  * - useScheduleTabActions: Action handlers
  */
@@ -24,7 +24,7 @@ import { Tournament, Standing, Match } from '../../types/tournament';
 import { MatchUpdate } from '../../core/models/types';
 import {
   useScheduleHistory,
-  useRunningMatches,
+  useRunningMatchIds,
   usePendingChanges,
   useScheduleTabActions,
   useScheduleFilters,
@@ -119,9 +119,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     });
 
   // Running matches (for live indicators)
-  const { runningMatchIds } = useRunningMatches({
-    tournamentId: tournament.id,
-  });
+  const runningMatchIds = useRunningMatchIds(tournament.id);
 
   // US-VIEWER-FILTERS: Schedule filtering
   const filterOptions = useMemo(() => getFilterOptions(tournament), [tournament]);
@@ -273,7 +271,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // The lockFinishedResults setting only controls whether editing is prevented
   const finishedMatchIds = new Set(
     tournament.matches
-      .filter(m => isMatchFinished(m.id, tournament.matches, tournament.id))
+      .filter(m => isMatchFinished(m))
       .map(m => m.id)
   );
 
