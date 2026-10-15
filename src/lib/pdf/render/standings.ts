@@ -27,10 +27,13 @@ function standingsHeader(t: PdfTexts): RowInput[] {
   return [[t.pos, t.team, t.played, t.won, t.drawn, t.lost, t.goals, t.diff, t.points]];
 }
 
-/** Eine Zeile der Tabelle. Null-Werte bleiben leer. */
-function standingRow(standing: Standing, index: number): CellInput[] {
+/**
+ * Eine Zeile der Tabelle. Null-Werte bleiben leer. Die Platz-Spalte ist nur gefüllt, wenn in der Tabelle gespielte
+ * Spiele stehen (B-28a3-4b Punkt 1, Controller 15.10.): ohne Ergebnisse wirkt die Nummer sonst wie eine Rangfolge.
+ */
+function standingRow(standing: Standing, index: number, gespielt: boolean): CellInput[] {
   return [
-    (index + 1).toString(),
+    gespielt ? (index + 1).toString() : '',
     standing.team.name,
     standing.played > 0 ? standing.played.toString() : '',
     standing.won > 0 ? standing.won.toString() : '',
@@ -56,7 +59,8 @@ function drawStandingsTable(
   startY: number,
   standings: Standing[]
 ): number {
-  const data: RowInput[] = standings.map((standing, index): CellInput[] => standingRow(standing, index));
+  const gespielt = standings.some(standing => standing.played > 0);
+  const data: RowInput[] = standings.map((standing, index): CellInput[] => standingRow(standing, index, gespielt));
 
   const options: UserOptions = {
     startY,
