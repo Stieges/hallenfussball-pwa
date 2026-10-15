@@ -68,26 +68,49 @@ export interface Finding {
   text: string;
 }
 
-/** Findet deutsche Anzeige-Kandidaten in einem Quelltext. */
+/** Zeilennummer (1-basiert) zu einer Zeichenposition im Quelltext. */
+function lineOf(source: string, index: number): number {
+  let line = 1;
+  for (let i = 0; i < index; i++) {
+    if (source.charCodeAt(i) === 10) {line++;}
+  }
+  return line;
+}
+
+/**
+ * Findet deutsche Anzeige-Kandidaten in einem Quelltext.
+ * JSX-Text wird über den ganzen Quelltext gesucht (auch über Zeilenumbrüche hinweg),
+ * String-Literale zeilenweise.
+ */
 export function findGermanLiterals(source: string): Finding[] {
   const findings: Finding[] = [];
-  const lines = stripComments(source).split('\n');
-  lines.forEach((rawLine, idx) => {
-    const line = rawLine;
+  const stripped = stripComments(source);
+  const lines = stripped.split('\n');
+
+  // JSX-Text: Text zwischen `>` (schließt ein Tag/Attribut) und `<` bzw. `{`.
+  // `=>` (Pfeil) und Generics wie `Array<T>` ergeben keinen Buchstaben-Text vor `<`/`{`.
+  const jsxRx = />([^<>{}]*)(?=<|\{)/g;
+  let jm: RegExpExecArray | null;
+  while ((jm = jsxRx.exec(stripped)) !== null) {
+    const before = stripped[jm.index - 1];
+    if (before === '=' || before === '-') {continue;}
+    const text = jm[1];
+    if (!/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(text)) {continue;}
+    const lineNo = lineOf(stripped, jm.index);
+    const lineText = lines[lineNo - 1] ?? '';
+    if (/^\s*import\s|\brequire\(|\bimport\(/.test(lineText)) {continue;}
+    if (/console\.|captureFeatureError|data-testid|\bclassName=|\bdata-/.test(lineText)) {continue;}
+    if (isGermanDisplayText(text)) {findings.push({ line: lineNo, kind: 'jsx', text });}
+  }
+
+  lines.forEach((line, idx) => {
     const lineNo = idx + 1;
     if (/^\s*import\s|^\s*export\s+(\*|\{[^}]*\})\s+from\s|\brequire\(|\bimport\(/.test(line)) {return;}
     if (/console\.|captureFeatureError|data-testid|\bclassName=|\bdata-/.test(line)) {return;}
 
-    // JSX-Text: `>Text<` bzw. `>Text{` – ein `>` nach Attribut/Tag, kein `=>` und kein Generic.
-    const jsxRx = /(?<![=<-])>\s*([^<>{}\n]*[A-Za-zÀ-ÖØ-öø-ÿ][^<>{}\n]*?)\s*(?=<|\{|$)/g;
-    let m: RegExpExecArray | null;
-    while ((m = jsxRx.exec(line)) !== null) {
-      const text = m[1];
-      if (isGermanDisplayText(text)) {findings.push({ line: lineNo, kind: 'jsx', text });}
-    }
-
     // String-Literale ('…', "…", `…` mit ${…} als Platzhalter).
     const litRx = /'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\\n]|\\.)*)`/g;
+    let m: RegExpExecArray | null;
     while ((m = litRx.exec(line)) !== null) {
       const raw = m[1] ?? m[2] ?? m[3] ?? '';
       const text = raw.replace(/\$\{[^}]*\}/g, '{}');
@@ -137,6 +160,8 @@ describe('B-41 Quelltext-Scan: keine festen deutschen Texte auf Zuschauer-Seite 
     expect(findGermanLiterals("const k = 'groupStage'; const s = 'live';")).toHaveLength(0);
     expect(findGermanLiterals("fetch('https://example.org/api')")).toHaveLength(0);
     expect(findGermanLiterals('// Kommentar: Turnier wird geladen')).toHaveLength(0);
+    // Mehrzeiliger JSX-Text (Text auf eigener Zeile, wie in der Mutationsprobe B-41 gefunden)
+    expect(findGermanLiterals('<Button>\n  Zur Startseite\n</Button>')).toHaveLength(1);
   });
 
   it('keine deutschen Literale in den Scan-Ordnern (30 s Zeitlimit)', () => {
