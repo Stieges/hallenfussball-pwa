@@ -128,6 +128,19 @@ describe('@DR-009 Platzierung vor dem Abschluss', () => {
     expect(aus.weitere).toEqual([]);
   });
 
+  it('@BM-046 Gruppen ohne Finalrunde (finalsConfig.preset none): Satz „nach dem letzten Spiel“, Schreiblinie je Team', async () => {
+    const tournament = hallencupTournament({
+      finalsConfig: { preset: 'none' },
+      finals: { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false },
+    });
+    const { aus } = await platzierung({}, undefined, generateFullSchedule(tournament, 'de'), tournament);
+
+    expect(aus.satz).toEqual([SATZ_LETZTES]);
+    expect(aus.platzNummern).toEqual(NUMMERN_8);
+    expect(aus.linien).toBe(8);
+    expect(aus.weitere).toEqual([]);
+  });
+
   it('@DR-009 mit Finalrunde steht nirgends „nach dem letzten Spiel“', async () => {
     const { aus } = await platzierung();
 
@@ -159,6 +172,16 @@ describe('@DR-009 Platzierung nach dem Abschluss', () => {
 
     expect(aus.satz).toEqual([]);
     expect(aus.platzNummern).toEqual(NUMMERN_8);
+    expect(aus.weitere.map(w => w.str)).toEqual(ENDSTAND_NAMEN);
+  });
+
+  it('@DR-009 final: geteilte Plätze 5, 5, 7 werden genau so gedruckt, ohne „6.“ (Platznummer aus place, nicht aus der Position)', async () => {
+    const plaetze = [1, 2, 3, 4, 5, 5, 7, 8];
+    const ranking = ENDSTAND.map((e, i) => ({ ...e, place: plaetze[i] }));
+    const { aus } = await platzierung({ ranking, closed: true });
+
+    expect(aus.platzNummern).toEqual(['1.', '2.', '3.', '4.', '5.', '5.', '7.', '8.']);
+    expect(aus.platzNummern).not.toContain('6.');
     expect(aus.weitere.map(w => w.str)).toEqual(ENDSTAND_NAMEN);
   });
 
@@ -249,6 +272,31 @@ describe('@DR-009 Platzierung zweispaltig', () => {
     const fuenf = seite.texts.find(t => t.str.trim().startsWith("5."));
     const eins = seite.texts.find(t => t.str.trim().startsWith("1."));
     expect(fuenf?.y).toBeCloseTo(eins?.y ?? -1, 1);
+  });
+
+  it('@BM-021 final: 50-Zeichen-Name auf Platz 5 (rechts): Paar 1/5 gleich hoch, „2.“ unter der letzten Namenszeile, nichts überlappt', async () => {
+    const lang = 'Sportverein Blau-Weiss Hintertupfingen Jugend e.V.';
+    const ranking = ENDSTAND.map((e, i) => (i === 4 ? { ...e, team: { ...e.team, name: lang } } : e));
+    const { pages } = await platzierung({ ranking, closed: true });
+    const seite = pages[pages.length - 1];
+    const geo = pageGeometry('a4', 'portrait');
+    const mitte = geo.left + geo.contentWidth / 2;
+    const titel = seite.texts.find(t => t.str.trim() === 'Platzierung');
+    if (!titel) {throw new Error('Überschrift fehlt');}
+    const liste = seite.texts.filter(t => t.y > titel.y && t.str.trim() !== '' && !/^Seite \d/.test(t.str.trim()));
+    const platz = (n: number) => liste.find(t => new RegExp(`^${n}\\.`).test(t.str.trim()));
+    const [eins, zwei, fuenf, sechs] = [platz(1), platz(2), platz(5), platz(6)];
+    if (!eins || !zwei || !fuenf || !sechs) {throw new Error('Platzzeilen fehlen');}
+    const namenRechts = liste.filter(t => t.x > mitte && t.y >= fuenf.y - SIZE_TOL && t.y < sechs.y - SIZE_TOL);
+    const letzteZeile = Math.max(...namenRechts.map(t => t.y));
+
+    expect(new Set(namenRechts.map(t => Math.round(t.y))).size).toBeGreaterThan(1);
+    expect(new Set(namenRechts.map(t => Math.round(t.y))).size).toBeLessThanOrEqual(3);
+    expect(namenRechts.map(t => t.str.trim()).join(' ')).toContain('Hintertupfingen');
+    expect(fuenf.y).toBeCloseTo(eins.y, 1);
+    expect(zwei.y - letzteZeile).toBeGreaterThanOrEqual(printMetrics.placeRowHeight - SIZE_TOL);
+    for (const t of namenRechts) {expect(t.x + t.w, t.str).toBeLessThanOrEqual(geo.left + geo.contentWidth + SIZE_TOL);}
+    for (const t of liste.filter(t => t.x < mitte)) {expect(t.x + t.w, t.str).toBeLessThan(mitte);}
   });
 
   it('liegt auf der Finalseite unter der Finaltabelle, ohne sie zu überlappen, und über dem Seitenende', async () => {
