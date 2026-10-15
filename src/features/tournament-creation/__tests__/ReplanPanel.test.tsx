@@ -31,6 +31,7 @@ const previewResult: Extract<ReplanPreviewResult, { status: 'preview' }> = {
         endTime: new Date('2030-01-01T09:42:00Z'),
         originalTeamA: '1',
         originalTeamB: '2',
+        ...looseVs('1', '2'),
         phase: 'groupStage',
       },
       {
@@ -41,6 +42,7 @@ const previewResult: Extract<ReplanPreviewResult, { status: 'preview' }> = {
         endTime: new Date('2030-01-01T09:42:00Z'),
         originalTeamA: '3',
         originalTeamB: '5',
+        ...looseVs('3', '5'),
         phase: 'groupStage',
       },
     ],

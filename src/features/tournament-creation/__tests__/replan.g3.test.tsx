@@ -29,6 +29,7 @@ const gen = (id: string, teamA: string, teamB: string) => ({
   endTime: new Date('2030-01-01T09:42:00Z'),
   originalTeamA: teamA,
   originalTeamB: teamB,
+  ...looseVs(teamA, teamB),
   phase: 'groupStage',
 });
 

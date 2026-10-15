@@ -1,9 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { Match, Tournament } from '../../../types/tournament';
 import { generateFullSchedule } from '../../../core/generators';
 import { buildReplanPreview, applyReplan } from '../utils/replan';
 import { testUuid } from '../../../test/testIds';
 import { matchSideTeamId, resolveSlot } from '../../../core/models/matchSlot';
+import { render, screen } from '@testing-library/react';
+import { ReplanPanel } from '../components/ReplanPanel';
+import { resultOf } from '../../../test/matchSlotFixtures';
 import { sideLabel } from '../utils/matchSides';
 
 const baseTournament = (): Tournament =>
@@ -112,5 +115,72 @@ describe('B-35 – Neuplanung liest nur Slots (@TM-015)', () => {
     const [m] = generatedWithDecoy(baseTournament());
     expect(sideLabel(m, 'A', baseTournament().teams)).not.toContain('KOEDER');
     expect(sideLabel(m, 'A', baseTournament().teams)).toMatch(/^[A-D]$/);
+  });
+
+  it('F3: sideLabel nennt Sieger/Verlierer mit den echten Vorgängerspielen', () => {
+    const prev = { id: testUuid(50), label: '1. Halbfinale' };
+    const m = { slotA: resultOf(testUuid(50), 'winner'), slotB: resultOf(testUuid(50), 'loser') };
+    const withMatches = sideLabel(m, 'A', [], [prev]);
+    const without = sideLabel(m, 'A', [], []);
+    expect(withMatches).not.toBe(without);
+  });
+});
+
+vi.mock('../../../components/dialogs/Dialog', () => ({
+  Dialog: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
+    isOpen ? <div>{children}</div> : null,
+}));
+
+describe('B-35-F1 – Neuplanung mit Finalrunde', () => {
+  const withFinals = (): Tournament => ({
+    ...baseTournament(),
+    numberOfTeams: 8,
+    numberOfGroups: 2,
+    groupSystem: 'groupsAndFinals',
+    teams: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
+      id: testUuid(n),
+      name: `T${n}`,
+      group: n <= 4 ? 'A' : 'B',
+    })),
+    finals: { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false },
+    finalsConfig: {
+      preset: 'top-4',
+      tiebreakerByRound: { final: 'overtime-then-shootout', placement: 'shootout' },
+    },
+  } as unknown as Tournament);
+
+  it('unveränderte Finalspiele (Halbfinale, Finale mit Platzhaltern) zählen weder als neu noch als entfallen', () => {
+    const t = withFinals();
+    const generated = generateFullSchedule(t).allMatches;
+    expect(generated.some((m) => m.phase !== 'groupStage')).toBe(true);
+    const matches: Match[] = generated.map((m, index) => ({
+      id: m.id,
+      round: index + 1,
+      field: m.field,
+      teamA: 'x',
+      teamB: 'x',
+      slotA: m.slotA,
+      slotB: m.slotB,
+      phase: m.phase,
+      isFinal: m.phase !== 'groupStage',
+    }));
+    const established: Tournament = { ...t, matches };
+    const preview = buildReplanPreview(established);
+    expect(preview.status).toBe('preview');
+    if (preview.status !== 'preview') { return; }
+    expect(preview.conflictMatchIds).toEqual([]);
+    render(
+      <ReplanPanel
+        isOpen
+        preview={preview}
+        previousMatches={matches}
+        teams={established.teams}
+        onConfirm={() => undefined}
+        onCancel={() => undefined}
+      />
+    );
+    const counts = screen.getByTestId('replan-counts');
+    expect(counts.getAttribute('data-new-count')).toBe('0');
+    expect(counts.getAttribute('data-dropped-count')).toBe('0');
   });
 });

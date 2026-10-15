@@ -14,8 +14,8 @@ import {
   type MatchStartState,
 } from '../../../utils/matchStartState';
 import { matchHasEvents } from '../../../utils/teamHelpers';
-import { replaceSides, sidePairingRef } from './matchSides';
-import { transitionalSides } from '../../../core/models/matchSlot';
+import { replaceSides } from './matchSides';
+import { transitionalSides, transitionalTeamRef } from '../../../core/models/matchSlot';
 import { teamReplacedLabel } from '../../tournament-admin/constants/admin.constants';
 
 export type ReplanAvailability = 'offered' | 'refused-after-kickoff' | 'unknown';
@@ -110,7 +110,7 @@ export function buildReplanPreview(
         : (tournament.groupPhaseGameDuration ?? 0);
     const keptByPairing = keptMatches.map((m) => ({
       match: m,
-      pairing: [sidePairingRef(m, 'A'), sidePairingRef(m, 'B')].sort().join(':'),
+      pairing: [transitionalTeamRef(m.slotA), transitionalTeamRef(m.slotB)].sort().join(':'),
       phase: m.phase ?? (m.isFinal ? 'final' : 'groupStage'),
     }));
     const usedGenerated = new Set<string>();
@@ -120,7 +120,7 @@ export function buildReplanPreview(
       const counterpart = schedule.allMatches.find(
         (g) =>
           !usedGenerated.has(g.id) &&
-          [g.originalTeamA, g.originalTeamB].sort().join(':') === kept.pairing &&
+          [transitionalTeamRef(g.slotA), transitionalTeamRef(g.slotB)].sort().join(':') === kept.pairing &&
           g.phase === kept.phase
       );
       if (counterpart) {
@@ -152,8 +152,8 @@ export function buildReplanPreview(
         endTime: new Date(
           keptStart.getTime() + durationFor(kept.phase ?? (kept.isFinal ? 'final' : 'groupStage')) * 60000
         ),
-        originalTeamA: sidePairingRef(kept, 'A'),
-        originalTeamB: sidePairingRef(kept, 'B'),
+        originalTeamA: transitionalTeamRef(kept.slotA),
+        originalTeamB: transitionalTeamRef(kept.slotB),
       };
     });
     // @W5-009 ohne Gegenstück: angehängt und im Panel als Konflikt gemeldet.
@@ -173,8 +173,8 @@ export function buildReplanPreview(
           endTime: new Date(
             keptStart.getTime() + durationFor(m.phase ?? (m.isFinal ? 'final' : 'groupStage')) * 60000
           ),
-          originalTeamA: sidePairingRef(m, 'A'),
-          originalTeamB: sidePairingRef(m, 'B'),
+          originalTeamA: transitionalTeamRef(m.slotA),
+          originalTeamB: transitionalTeamRef(m.slotB),
           phase: (m.phase ?? (m.isFinal ? 'final' : 'groupStage')) as (typeof schedule.allMatches)[number]['phase'],
           finalType: m.finalType,
           label: m.label,

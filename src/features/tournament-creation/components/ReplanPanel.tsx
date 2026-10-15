@@ -9,7 +9,8 @@
 import { CSSProperties, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Match, Team } from '../../../types/tournament';
-import { sideLabel, sidePairingRef } from '../utils/matchSides';
+import { sideLabel } from '../utils/matchSides';
+import { transitionalTeamRef } from '../../../core/models/matchSlot';
 import type { ReplanPreviewResult } from '../utils/replan';
 import { formatReplanTime } from '../utils/replan';
 import { Dialog } from '../../../components/dialogs/Dialog';
@@ -61,13 +62,13 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
   // E3: nach Paarung und Phase zählen – der Generator vergibt neue IDs.
   const previousKeys = new Set(
     previousMatches.map((m) =>
-      pairingKey(sidePairingRef(m, 'A'), sidePairingRef(m, 'B'), m.phase ?? (m.isFinal ? 'final' : 'groupStage'))
+      pairingKey(transitionalTeamRef(m.slotA), transitionalTeamRef(m.slotB), m.phase ?? (m.isFinal ? 'final' : 'groupStage'))
     )
   );
   const generatedKeys = new Set(
     preview.status === 'preview'
       ? preview.schedule.allMatches.map((g) =>
-          pairingKey(g.originalTeamA, g.originalTeamB, g.phase)
+          pairingKey(transitionalTeamRef(g.slotA), transitionalTeamRef(g.slotB), g.phase)
         )
       : []
   );
@@ -76,7 +77,7 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
     preview.status === 'preview'
       ? preview.schedule.allMatches.filter(
           (g) =>
-            !previousKeys.has(pairingKey(g.originalTeamA, g.originalTeamB, g.phase))
+            !previousKeys.has(pairingKey(transitionalTeamRef(g.slotA), transitionalTeamRef(g.slotB), g.phase))
         ).length
       : 0;
   const droppedCount =
@@ -84,7 +85,7 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
       ? previousMatches.filter(
           (m) =>
             !generatedKeys.has(
-              pairingKey(sidePairingRef(m, 'A'), sidePairingRef(m, 'B'), m.phase ?? (m.isFinal ? 'final' : 'groupStage'))
+              pairingKey(transitionalTeamRef(m.slotA), transitionalTeamRef(m.slotB), m.phase ?? (m.isFinal ? 'final' : 'groupStage'))
             )
         ).length
       : 0;
@@ -95,7 +96,7 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
         ? preview.keptMatches.find((k) => k.id === matchId)
         : undefined;
     return match
-      ? `${sideLabel(match, 'A', teams)} – ${sideLabel(match, 'B', teams)}`
+      ? `${sideLabel(match, 'A', teams, previousMatches)} – ${sideLabel(match, 'B', teams, previousMatches)}`
       : matchId;
   };
 
