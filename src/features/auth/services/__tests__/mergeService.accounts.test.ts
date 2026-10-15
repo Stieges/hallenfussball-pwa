@@ -62,7 +62,7 @@ function makeSessionStorage(): Storage {
   };
 }
 
-describe('mergeAccounts', () => {
+describe('Bestand (geparkt/zu entfernen, @AN-015): mergeAccounts', () => {
   beforeEach(() => {
     shared.client = makeClient();
     shared.configured = true;
@@ -183,7 +183,7 @@ describe('mergeAccounts', () => {
   });
 });
 
-describe('Zwischenspeicher der anonymen ID für die Zusammenführung', () => {
+describe('Bestand (geparkt/zu entfernen, @AN-015): Zwischenspeicher der anonymen ID', () => {
   beforeEach(() => {
     vi.stubGlobal('sessionStorage', makeSessionStorage());
   });

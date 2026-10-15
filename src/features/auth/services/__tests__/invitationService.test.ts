@@ -143,6 +143,9 @@ describe('invitationService', () => {
       expect(result.inviteLink).toMatch(/\/invite\?token=/);
       const code = result.inviteLink!.split('token=')[1];
       expect(code).toHaveLength(32);
+      // Der gespeicherte Code ist genau der Token im Link (sonst liefe der Link ins Leere).
+      const insertBuilder = state.builders[0] as Builder;
+      expect(insertBuilder.insert).toHaveBeenCalledWith(expect.objectContaining({ invite_code: code }));
     });
 
     it('Gegenbeispiel: ein Insert-Fehler wird mit der Originalmeldung zurückgegeben und liefert keinen Link', async () => {

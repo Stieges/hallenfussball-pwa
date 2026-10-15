@@ -19,7 +19,7 @@ vi.mock('../../../../lib/supabase', () => ({
 
 import { validateRegistrationCode } from '../validateRegistrationCode';
 
-describe('validateRegistrationCode', () => {
+describe('Bestand (geparkt/zu entfernen, @AN-005): validateRegistrationCode', () => {
   beforeEach(() => {
     state.client = { functions: { invoke: vi.fn() } };
     vi.spyOn(console, 'error').mockImplementation(() => undefined);

@@ -98,7 +98,7 @@ describe('parseHashRouterParams', () => {
   });
 });
 
-describe('isPasswordRecoveryPending', () => {
+describe('Bestand (geparkt, @AN-010): isPasswordRecoveryPending', () => {
   beforeEach(() => {
     safeSessionStorage.clear();
   });
@@ -191,7 +191,7 @@ describe('parseAllAuthParams', () => {
   });
 });
 
-describe('handleExistingSession', () => {
+describe('Bestand (geparkt, @AN-010): handleExistingSession', () => {
   beforeEach(() => {
     safeSessionStorage.clear();
     safeLocalStorage.clear();
@@ -204,14 +204,14 @@ describe('handleExistingSession', () => {
     expect(safeLocalStorage.getItem('auth:guestUser')).toBeNull();
   });
 
-  it('leitet bei type=recovery zum Passwort-Setzen und räumt den Wiederherstellungs-Eintrag auf', () => {
+  it('Bestand (@AN-010): leitet bei type=recovery zum Passwort-Setzen und räumt den Wiederherstellungs-Eintrag auf', () => {
     safeSessionStorage.setItem('auth:passwordRecovery', 'true');
 
     expect(handleExistingSession('recovery')).toEqual({ handled: true, redirectTo: '/set-password' });
     expect(safeSessionStorage.getItem('auth:passwordRecovery')).toBeNull();
   });
 
-  it('Gegenbeispiel: ein offener Wiederherstellungs-Eintrag ohne type führt ebenfalls zum Passwort-Setzen', () => {
+  it('Bestand (@AN-010): ein offener Wiederherstellungs-Eintrag ohne type führt ebenfalls zum Passwort-Setzen', () => {
     safeSessionStorage.setItem('auth:passwordRecovery', 'true');
 
     expect(handleExistingSession(null).redirectTo).toBe('/set-password');
@@ -271,7 +271,7 @@ describe('handleCodeExchange', () => {
     });
   });
 
-  it('leitet nach erfolgreichem Austausch bei type=recovery zum Passwort-Setzen', async () => {
+  it('Bestand (@AN-010): leitet nach erfolgreichem Austausch bei type=recovery zum Passwort-Setzen', async () => {
     state.client!.auth.exchangeCodeForSession.mockResolvedValue({ error: null });
     state.client!.auth.getSession.mockResolvedValue({ data: { session: { user: {} } } });
 
@@ -319,7 +319,7 @@ describe('handleImplicitFlow', () => {
     expect(safeLocalStorage.getItem('auth:guestUser')).toBeNull();
   });
 
-  it('leitet bei type=recovery zum Passwort-Setzen', async () => {
+  it('Bestand (@AN-010): leitet bei type=recovery zum Passwort-Setzen', async () => {
     state.client!.auth.setSession.mockResolvedValue({ error: null });
     state.client!.auth.getSession.mockResolvedValue({ data: { session: { user: {} } } });
 
@@ -329,7 +329,8 @@ describe('handleImplicitFlow', () => {
     });
   });
 
-  it('gibt die Fehlermeldung von setSession zurück und prüft keine Sitzung', async () => {
+  // Bestand: die rohe Server-Meldung wird als Text angezeigt (Befund, Ziel-Record 2026-10-02_anmelden Ü1.1; authCallbackHelpers.ts:258).
+  it('Bestand (Befund rohe setSession-Meldung): gibt die Server-Meldung zurück und prüft keine Sitzung', async () => {
     state.client!.auth.setSession.mockResolvedValue({ error: { message: 'token revoked' } });
 
     expect(await handleImplicitFlow('AT', 'RT', null)).toEqual({ handled: true, error: 'token revoked' });

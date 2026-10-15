@@ -173,6 +173,12 @@ describe('profileCacheService', () => {
       expect(await restoreUserFromCache()).toMatchObject({ id: 'idb' });
     });
 
+    it('liefert im Offline-Start auch einen über 30 Tage alten Eintrag (Ü1.2, ohne Netz weiterarbeiten)', async () => {
+      shared.store.set(KEY, { user: makeUser({ id: 'alt' }), cachedAt: new Date(Date.now() - 90 * DAY).toISOString() });
+
+      expect(await restoreUserFromCache()).toMatchObject({ id: 'alt' });
+    });
+
     it('Gegenbeispiel: ohne OFFLINE_FIRST wird IndexedDB nicht gelesen', async () => {
       shared.offlineFirst = false;
       await cacheUserProfile(makeUser({ id: 'idb' }));
