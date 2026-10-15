@@ -24,7 +24,12 @@
     "group": "Group {{group}}",
     "referee": "Referee: {{name}}",
     "noRunningMatch": "No running match",
-    "tablesShownMessage": "Tables will be shown until a match starts"
+    "tablesShownMessage": "Tables will be shown until a match starts",
+    "clock": {
+      "ended": "Playing time over – result to follow",
+      "holdsOnInterruption": "Clock stops on interruption",
+      "stopped": "stopped"
+    }
   },
   "timer": {
     "pause": "Pause",

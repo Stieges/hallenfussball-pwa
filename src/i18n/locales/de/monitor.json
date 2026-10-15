@@ -24,7 +24,12 @@
     "group": "Gruppe {{group}}",
     "referee": "Schiedsrichter: {{name}}",
     "noRunningMatch": "Kein laufendes Spiel",
-    "tablesShownMessage": "Die Tabellen werden angezeigt, bis ein Spiel gestartet wird"
+    "tablesShownMessage": "Die Tabellen werden angezeigt, bis ein Spiel gestartet wird",
+    "clock": {
+      "ended": "Spielzeit abgelaufen – Ergebnis folgt",
+      "holdsOnInterruption": "Uhr hält bei Unterbrechung",
+      "stopped": "angehalten"
+    }
   },
   "timer": {
     "pause": "Pause",

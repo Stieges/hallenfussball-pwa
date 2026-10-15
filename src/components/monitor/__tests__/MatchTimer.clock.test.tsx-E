@@ -1,0 +1,82 @@
+/**
+ * @ZM-139 Monitor zeigt die Restzeit · @ZM-137 Hervorhebung nur in der angehaltenen Schlussphase
+ */
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MatchTimer } from '../MatchTimer';
+import de from '../../../i18n/locales/de/monitor.json';
+
+// i18n ist in Tests ein Durchreicher (Schlüssel). Die deutschen Texte prüft der letzte Block gegen die JSON.
+
+const nowIso = () => new Date().toISOString();
+
+describe('@ZM-139 MatchTimer zeigt Restzeit', () => {
+  it('Spiel 11: 6-Minuten-Abschnitt bei gespielten 4:10 zeigt 01:50 und nicht 04:10', () => {
+    render(<MatchTimer elapsedSeconds={250} durationSeconds={360} status="PAUSED" timerElapsedSeconds={250} />);
+    expect(screen.getByTestId('monitor-clock')).toHaveTextContent('01:50');
+    expect(screen.queryByText('04:10')).toBeNull();
+  });
+});
+
+describe('@ZM-137 Uhr-Hervorhebung und Hinweise', () => {
+  it('vor der Schlussphase: neutral, ohne Hinweis', () => {
+    render(<MatchTimer elapsedSeconds={100} durationSeconds={360} status="PAUSED" timerElapsedSeconds={100} />);
+    expect(screen.getByTestId('monitor-clock')).toHaveAttribute('data-phase', 'normal');
+    expect(screen.queryByText('liveMatch.clock.holdsOnInterruption')).toBeNull();
+  });
+
+  it('angehaltene Schlussphase: Hervorhebung, Hinweis und „angehalten“', () => {
+    render(<MatchTimer elapsedSeconds={300} durationSeconds={360} status="PAUSED" timerElapsedSeconds={300} />);
+    expect(screen.getByTestId('monitor-clock')).toHaveAttribute('data-phase', 'schlussphaseAngehalten');
+    expect(screen.getByText('liveMatch.clock.holdsOnInterruption')).toBeInTheDocument();
+    expect(screen.getByText('liveMatch.clock.stopped')).toBeInTheDocument();
+  });
+
+  it('laufende Schlussphase: Hinweis, aber nicht „angehalten“', () => {
+    render(<MatchTimer elapsedSeconds={300} durationSeconds={360} status="RUNNING" timerStartTime={nowIso()} timerElapsedSeconds={300} />);
+    expect(screen.getByText('liveMatch.clock.holdsOnInterruption')).toBeInTheDocument();
+    expect(screen.queryByText('liveMatch.clock.stopped')).toBeNull();
+  });
+
+  it('immer angehalten: Hinweis schon vor der Schlussphase, ohne Farbwechsel', () => {
+    render(<MatchTimer elapsedSeconds={100} durationSeconds={360} status="PAUSED" timerElapsedSeconds={100} clockMode="immer-angehalten" />);
+    expect(screen.getByText('liveMatch.clock.holdsOnInterruption')).toBeInTheDocument();
+    expect(screen.getByTestId('monitor-clock')).toHaveAttribute('data-phase', 'normal');
+  });
+
+  it('immer durchlaufend: nie Hinweis, nie Hervorhebung', () => {
+    render(<MatchTimer elapsedSeconds={350} durationSeconds={360} status="RUNNING" timerStartTime={nowIso()} timerElapsedSeconds={350} clockMode="immer-durchlaufend" />);
+    expect(screen.queryByText('liveMatch.clock.holdsOnInterruption')).toBeNull();
+    expect(screen.getByTestId('monitor-clock')).toHaveAttribute('data-phase', 'normal');
+  });
+
+  it('nach Ablauf: 00:00 und „Spielzeit abgelaufen – Ergebnis folgt“, nie Nachspielzeit', () => {
+    render(<MatchTimer elapsedSeconds={400} durationSeconds={360} status="FINISHED" timerElapsedSeconds={400} />);
+    expect(screen.getByTestId('monitor-clock')).toHaveTextContent('00:00');
+    expect(screen.getByText('liveMatch.clock.ended')).toBeInTheDocument();
+    expect(screen.queryByText('Nachspielzeit')).toBeNull();
+  });
+
+  it('keine Eskalation: kein Sekundenbruchteil in der Schlussphase (Gegenbeispiel zu 10-s-Countdown)', () => {
+    render(<MatchTimer elapsedSeconds={355} durationSeconds={360} status="PAUSED" timerElapsedSeconds={355} />);
+    expect(screen.getByTestId('monitor-clock')).toHaveTextContent(/^00:05$/);
+  });
+});
+
+describe('Monitor-Uhr: Texte und weitere Zustände', () => {
+  it('deutsche Texte stehen wörtlich in der Übersetzung', () => {
+    expect(de.liveMatch.clock.holdsOnInterruption).toBe('Uhr hält bei Unterbrechung');
+    expect(de.liveMatch.clock.stopped).toBe('angehalten');
+    expect(de.liveMatch.clock.ended).toBe('Spielzeit abgelaufen – Ergebnis folgt');
+  });
+
+  it('Pause-Badge bleibt bei pausiertem Spiel sichtbar', () => {
+    render(<MatchTimer elapsedSeconds={100} durationSeconds={600} status="PAUSED" timerElapsedSeconds={100} />);
+    expect(screen.getByText('Pause')).toBeInTheDocument();
+  });
+
+  it('Start: 00:00 Restzeit bei gespielten 0 Sekunden wird als volle Abschnittslänge gezeigt', () => {
+    render(<MatchTimer elapsedSeconds={0} durationSeconds={600} status="NOT_STARTED" />);
+    expect(screen.getByTestId('monitor-clock')).toHaveTextContent('10:00');
+  });
+});
