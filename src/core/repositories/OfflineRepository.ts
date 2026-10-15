@@ -8,6 +8,7 @@ import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
 import { captureFeatureError } from '../../lib/sentry';
 import { slotTeamId } from '../models/matchSlot';
 import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
+import { mergeServerLedFields } from './serverLedMatchFields';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -123,6 +124,8 @@ export function isReleaseRefusal(error: unknown): boolean {
 
 export class OfflineRepository implements ITournamentRepository {
     private _mutationQueue: MutationQueue;
+    /** A-08f3a Monotonie (Regel S): zuletzt übernommene Server-Revision je Spiel, je Turnier; nur im Speicher. */
+    private readonly adoptedRevisions = new Map<string, Map<string, number>>();
 
     constructor(
         private localRepo: LocalStorageRepository,
@@ -195,8 +198,9 @@ export class OfflineRepository implements ITournamentRepository {
      */
     private async refreshFromCloudInBackground(id: string): Promise<void> {
         try {
-            const cloudData = await this.supabaseRepo.get(id);
-            if (cloudData) {
+            const cloudRead = await this.supabaseRepo.getWithMatchRevisions(id);
+            if (cloudRead) {
+                const cloudData = cloudRead.tournament;
                 // Only update if cloud version is newer
                 const localData = await this.localRepo.get(id);
                 const cloudVersion = cloudData.version ?? 0;
@@ -219,6 +223,13 @@ export class OfflineRepository implements ITournamentRepository {
                         // eslint-disable-next-line no-console -- Debug logging for background sync updates
                         console.log(`[OfflineRepository] Background sync: Updated tournament ${id} from v${localVersion} to v${cloudVersion}${visibilityStale ? ' (isPublic war veraltet)' : ''}`);
                     }
+                } else if (localData) {
+                    // A-08f3a Feldweg (@FU-087, @FU-023): Tore erhöhen nur `matches.version`, nie die Turnier-Version.
+                    // Die Entscheidung fällt ohne `await` vor dem Schreiben, damit ein älterer Stand nicht nachrückt.
+                    const lastAdopted = this.adoptedRevisions.get(id) ?? new Map<string, number>();
+                    const merged = mergeServerLedFields(localData, cloudData, cloudRead.matchRevisions, lastAdopted, 'stufe1');
+                    this.adoptedRevisions.set(id, new Map([...lastAdopted, ...merged.adopted]));
+                    if (merged.changed) { await this.localRepo.applyServerMatchFields(id, merged.patch); }
                 }
             }
         } catch (error) {

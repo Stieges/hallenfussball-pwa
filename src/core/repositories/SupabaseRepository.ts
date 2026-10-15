@@ -44,6 +44,12 @@ function getSupabase() {
   return supabase;
 }
 
+/** A-08f3a: Cloud-Stand eines Turniers mit Revision je Spiel. */
+export interface CloudReadWithRevisions {
+  tournament: Tournament;
+  matchRevisions: Map<string, number>;
+}
+
 export class SupabaseRepository implements ITournamentRepository {
   constructor() {
     if (!isSupabaseConfigured) {
@@ -57,6 +63,14 @@ export class SupabaseRepository implements ITournamentRepository {
    * Loads a tournament by ID with all related data (teams, matches)
    */
   async get(id: string): Promise<Tournament | null> {
+    return (await this.getWithMatchRevisions(id))?.tournament ?? null;
+  }
+
+  /**
+   * A-08f3a: wie `get`, dazu die Server-Revision je Spiel (`matches.version`, nur durch Einträge erhöht).
+   * Grundlage für den Feldweg in `OfflineRepository` (Regel S, Monotonie je Spiel).
+   */
+  async getWithMatchRevisions(id: string): Promise<CloudReadWithRevisions | null> {
     // Fetch tournament
     const { data: tournamentRow, error: tournamentError } = await getSupabase()
       .from('tournaments')
@@ -108,11 +122,10 @@ export class SupabaseRepository implements ITournamentRepository {
     }
 
     // Convert to frontend types
-    return mapTournamentFromSupabase(
-      tournamentRow,
-      teamRows,
-      matchRows
-    );
+    return {
+      tournament: mapTournamentFromSupabase(tournamentRow, teamRows, matchRows),
+      matchRevisions: new Map(matchRows.map((row) => [row.id, row.version ?? 1])),
+    };
   }
 
   /**

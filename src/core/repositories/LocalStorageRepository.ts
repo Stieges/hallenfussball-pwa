@@ -8,6 +8,7 @@ import type { IStorageAdapter } from '../storage/IStorageAdapter';
 import { captureFeatureError } from '../../lib/sentry';
 import { isLegacyTournamentShape } from '../models/legacyFormat';
 import { quarantineLegacyTournaments, LEGACY_TOURNAMENTS_NOTICE_EVENT } from '../storage/legacyTournamentStore';
+import { applyServerLedPatch, type ServerLedMatchPatch } from './serverLedMatchFields';
 
 /**
  * A2 Fixrunde 3 (N2, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md`):
@@ -39,7 +40,32 @@ export interface LocalStorageRepositoryOptions {
 
 export class LocalStorageRepository implements ITournamentRepository {
 
+    /** A-08f3a: Ende der Schreibkette dieser Instanz (Fehler brechen die Kette nicht). */
+    private writeChain: Promise<unknown> = Promise.resolve();
+
     constructor(private readonly options: LocalStorageRepositoryOptions = {}) {}
+
+    /**
+     * A-08f3a: Jede Schreibmethode liest, ändert und speichert die ganze Liste. Ohne Kette überschreiben sich
+     * zwei gleichzeitige Schreibvorgänge (Feldweg aus der Cloud und eigenes `updateMatches`). Wirkt je
+     * Instanz (`RepositoryContext` teilt eine Instanz zwischen Repository und Warteschlange).
+     */
+    private serialize<T>(write: () => Promise<T>): Promise<T> {
+        const run = this.writeChain.then(write, write);
+        this.writeChain = run.catch(() => undefined);
+        return run;
+    }
+
+    /** A-08f3a: server-geführte Spielfelder (Feldweg) übernehmen – ohne Änderung an version, updatedAt, ownerId. */
+    applyServerMatchFields(id: string, patch: ReadonlyMap<string, ServerLedMatchPatch>): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === id);
+            if (index === -1) { return; }
+            list[index] = { ...list[index], matches: applyServerLedPatch(list[index].matches, patch) };
+            await this.saveList(list);
+        });
+    }
 
     /** N-3 (S-2): Im Gastmodus bekommt jede gespeicherte Kopie den Gast-Marker, auch eine Sicherung mit fremdem Marker. */
     private guestOr(owner: string | undefined): string | undefined {
@@ -64,76 +90,84 @@ export class LocalStorageRepository implements ITournamentRepository {
         return list.find(t => t.shareCode?.toUpperCase() === normalizedCode && t.isPublic) ?? null;
     }
 
-    async save(tournament: Tournament): Promise<void> {
-        const list = await this.loadList();
-        const index = list.findIndex(t => t.id === tournament.id);
+    save(tournament: Tournament): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === tournament.id);
 
-        if (index >= 0) {
-            const currentVersion = list[index].version ?? 0;
-            // A-07e: bestehender Konto-Marker bleibt, wenn der Aufrufer keinen setzt
-            list[index] = { ...tournament, ownerId: this.guestOr(tournament.ownerId ?? list[index].ownerId), version: currentVersion + 1, updatedAt: new Date().toISOString() };
-        } else {
-            list.push({ ...tournament, ownerId: this.guestOr(tournament.ownerId ?? GUEST_OWNER), version: 1, updatedAt: new Date().toISOString() });
-        }
+            if (index >= 0) {
+                const currentVersion = list[index].version ?? 0;
+                // A-07e: bestehender Konto-Marker bleibt, wenn der Aufrufer keinen setzt
+                list[index] = { ...tournament, ownerId: this.guestOr(tournament.ownerId ?? list[index].ownerId), version: currentVersion + 1, updatedAt: new Date().toISOString() };
+            } else {
+                list.push({ ...tournament, ownerId: this.guestOr(tournament.ownerId ?? GUEST_OWNER), version: 1, updatedAt: new Date().toISOString() });
+            }
 
-        await this.saveList(list);
+            await this.saveList(list);
+        });
     }
 
-    async updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
-        const list = await this.loadList();
-        const index = list.findIndex(t => t.id === id);
+    updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === id);
 
-        if (index === -1) {
-            throw new Error(`Tournament ${id} not found`);
-        }
+            if (index === -1) {
+                throw new Error(`Tournament ${id} not found`);
+            }
 
-        list[index] = {
-            ...list[index],
-            ...metadata,
-            version: (list[index].version ?? 0) + 1,
-            updatedAt: new Date().toISOString()
-        };
+            list[index] = {
+                ...list[index],
+                ...metadata,
+                version: (list[index].version ?? 0) + 1,
+                updatedAt: new Date().toISOString()
+            };
 
-        await this.saveList(list);
+            await this.saveList(list);
+        });
     }
 
     async updateMatch(tournamentId: string, update: MatchUpdate): Promise<void> {
         return this.updateMatches(tournamentId, [update]);
     }
 
-    async updateMatches(tournamentId: string, updates: MatchUpdate[], _baseVersion?: number): Promise<void> {
-        const list = await this.loadList();
-        const tournamentIndex = list.findIndex(t => t.id === tournamentId);
+    updateMatches(tournamentId: string, updates: MatchUpdate[], _baseVersion?: number): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const tournamentIndex = list.findIndex(t => t.id === tournamentId);
 
-        if (tournamentIndex === -1) {
-            throw new Error(`Tournament ${tournamentId} not found`);
-        }
-
-        const tournament = list[tournamentIndex];
-        const updateMap = new Map(updates.map(u => [u.id, u]));
-
-        const updatedMatches = tournament.matches.map(m => {
-            const update = updateMap.get(m.id);
-            if (update) {
-                return mergeMatchUpdate(m, update);
+            if (tournamentIndex === -1) {
+                throw new Error(`Tournament ${tournamentId} not found`);
             }
-            return m;
+
+            const tournament = list[tournamentIndex];
+            const updateMap = new Map(updates.map(u => [u.id, u]));
+
+            const updatedMatches = tournament.matches.map(m => {
+                const update = updateMap.get(m.id);
+                if (update) {
+                    return mergeMatchUpdate(m, update);
+                }
+                return m;
+            });
+
+            list[tournamentIndex] = {
+                ...tournament,
+                matches: updatedMatches,
+                version: (tournament.version ?? 0) + 1,
+                updatedAt: new Date().toISOString()
+            };
+
+            await this.saveList(list);
         });
-
-        list[tournamentIndex] = {
-            ...tournament,
-            matches: updatedMatches,
-            version: (tournament.version ?? 0) + 1,
-            updatedAt: new Date().toISOString()
-        };
-
-        await this.saveList(list);
     }
 
-    async delete(id: string): Promise<void> {
-        const list = await this.loadList();
-        const filtered = list.filter(t => !(t.id === id && this.visibleHere(t)));
-        await this.saveList(filtered);
+    delete(id: string): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const filtered = list.filter(t => !(t.id === id && this.visibleHere(t)));
+            await this.saveList(filtered);
+        });
     }
 
     /** Gastmodus: nur Kopien ohne Konto (Altbestand ohne Marker zaehlt als 'guest'). */
@@ -155,25 +189,29 @@ export class LocalStorageRepository implements ITournamentRepository {
      * Konto nur Helfer oder Mitwirkender ist, und Altbestand fremder Konten werden hier 'guest'.
      * Das gilt nur einmal beim Uebergang von Altbestand (Plattform nicht produktiv, Kurswechsel 01.10.).
      */
-    async assignUnmarkedOwners(accountId: string, cloudIds: ReadonlySet<string>): Promise<void> {
-        const list = await this.loadList();
-        if (list.every(t => t.ownerId !== undefined)) { return; }
-        await this.saveList(list.map(t => t.ownerId !== undefined
-            ? t
-            : { ...t, ownerId: cloudIds.has(t.id) ? accountId : GUEST_OWNER }));
+    assignUnmarkedOwners(accountId: string, cloudIds: ReadonlySet<string>): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            if (list.every(t => t.ownerId !== undefined)) { return; }
+            await this.saveList(list.map(t => t.ownerId !== undefined
+                ? t
+                : { ...t, ownerId: cloudIds.has(t.id) ? accountId : GUEST_OWNER }));
+        });
     }
 
     /**
      * Updates the local version number after a successful cloud sync.
      * Does NOT increment - sets it to the exact value from cloud.
      */
-    async updateLocalVersion(id: string, version: number): Promise<void> {
-        const list = await this.loadList();
-        const index = list.findIndex(t => t.id === id);
-        if (index !== -1) {
-            list[index] = { ...list[index], version };
-            await this.saveList(list);
-        }
+    updateLocalVersion(id: string, version: number): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === id);
+            if (index !== -1) {
+                list[index] = { ...list[index], version };
+                await this.saveList(list);
+            }
+        });
     }
 
     // ==========================================================================
@@ -184,84 +222,90 @@ export class LocalStorageRepository implements ITournamentRepository {
      * Makes a tournament publicly accessible by generating a local share code.
      * Note: Local share codes are only valid within this browser instance.
      */
-    async makeTournamentPublic(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
-        const list = await this.loadList();
-        const index = list.findIndex(t => t.id === tournamentId);
+    makeTournamentPublic(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === tournamentId);
 
-        if (index === -1) {
-            return null;
-        }
+            if (index === -1) {
+                return null;
+            }
 
-        const shareCode = this.generateLocalShareCode();
-        const createdAt = new Date().toISOString();
+            const shareCode = this.generateLocalShareCode();
+            const createdAt = new Date().toISOString();
 
-        list[index] = {
-            ...list[index],
-            isPublic: true,
-            shareCode,
-            shareCodeCreatedAt: createdAt,
-            version: (list[index].version ?? 0) + 1,
-            updatedAt: createdAt
-        };
+            list[index] = {
+                ...list[index],
+                isPublic: true,
+                shareCode,
+                shareCodeCreatedAt: createdAt,
+                version: (list[index].version ?? 0) + 1,
+                updatedAt: createdAt
+            };
 
-        await this.saveList(list);
+            await this.saveList(list);
 
-        return { shareCode, createdAt };
+            return { shareCode, createdAt };
+        });
     }
 
     /**
      * Makes a tournament private by removing the share code.
      */
-    async makeTournamentPrivate(tournamentId: string): Promise<void> {
-        const list = await this.loadList();
-        const index = list.findIndex(t => t.id === tournamentId);
+    makeTournamentPrivate(tournamentId: string): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === tournamentId);
 
-        if (index === -1) {
-            throw new Error(`Tournament ${tournamentId} not found`);
-        }
+            if (index === -1) {
+                throw new Error(`Tournament ${tournamentId} not found`);
+            }
 
-        list[index] = {
-            ...list[index],
-            isPublic: false,
-            shareCode: undefined,
-            shareCodeCreatedAt: undefined,
-            version: (list[index].version ?? 0) + 1,
-            updatedAt: new Date().toISOString()
-        };
+            list[index] = {
+                ...list[index],
+                isPublic: false,
+                shareCode: undefined,
+                shareCodeCreatedAt: undefined,
+                version: (list[index].version ?? 0) + 1,
+                updatedAt: new Date().toISOString()
+            };
 
-        await this.saveList(list);
+            await this.saveList(list);
+        });
     }
 
     /**
      * Regenerates the share code for a public tournament.
      */
-    async regenerateShareCode(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
-        const list = await this.loadList();
-        const index = list.findIndex(t => t.id === tournamentId);
+    regenerateShareCode(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === tournamentId);
 
-        if (index === -1) {
-            return null;
-        }
+            if (index === -1) {
+                return null;
+            }
 
-        const tournament = list[index];
-        if (!tournament.isPublic) {
-            return null;
-        }
+            const tournament = list[index];
+            if (!tournament.isPublic) {
+                return null;
+            }
 
-        const shareCode = this.generateLocalShareCode();
-        const createdAt = new Date().toISOString();
+            const shareCode = this.generateLocalShareCode();
+            const createdAt = new Date().toISOString();
 
-        list[index] = {
-            ...list[index],
-            shareCode,
-            shareCodeCreatedAt: createdAt,
-            version: (list[index].version ?? 0) + 1,
-            updatedAt: createdAt
-        };
+            list[index] = {
+                ...list[index],
+                shareCode,
+                shareCodeCreatedAt: createdAt,
+                version: (list[index].version ?? 0) + 1,
+                updatedAt: createdAt
+            };
 
-        await this.saveList(list);
+            await this.saveList(list);
 
-        return { shareCode, createdAt };
+            return { shareCode, createdAt };
+        });
     }
 
     /**

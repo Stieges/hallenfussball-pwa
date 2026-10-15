@@ -62,17 +62,20 @@ vi.mock('../../../lib/supabase', () => ({
 
 import { OfflineRepository } from '../OfflineRepository';
 import { LocalStorageRepository } from '../LocalStorageRepository';
+import { readWithRevisions } from '../../../test/fakeCloudRepository';
 
 type CloudEntry = { owner: string; t: Tournament };
 const cloud = new Map<string, CloudEntry>();
 
 /** Cloud-Sicht eines Kontos: nur dessen Turniere, save landet unter diesem Konto. */
 function cloudFor(userId: string) {
+  const get = vi.fn(async (id: string) => {
+    const entry = cloud.get(id);
+    return entry?.owner === userId ? entry.t : null;
+  });
   return {
-    get: vi.fn(async (id: string) => {
-      const entry = cloud.get(id);
-      return entry?.owner === userId ? entry.t : null;
-    }),
+    get,
+    getWithMatchRevisions: vi.fn(readWithRevisions(get)),
     save: vi.fn(async (t: Tournament) => {
       cloud.set(t.id, { owner: userId, t });
     }),

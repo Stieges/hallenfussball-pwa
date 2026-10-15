@@ -9,13 +9,14 @@
  * dieselbe Besetzung).
  */
 import 'fake-indexeddb/auto';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import { OfflineRepository } from '../OfflineRepository';
 import { SupabaseRepository } from '../SupabaseRepository';
 import { LocalStorageRepository } from '../LocalStorageRepository';
 import type { Match, Tournament } from '../../models/types';
 import { pendingSlot, teamSlot } from '../../models/matchSlot';
 import { testUuid } from '../../../test/testIds';
+import { readWithRevisions } from '../../../test/fakeCloudRepository';
 
 vi.mock('../SupabaseRepository');
 vi.mock('../LocalStorageRepository');
@@ -43,7 +44,8 @@ function tournament(match: Partial<Match>, version: number): Tournament {
 describe('OfflineRepository.syncUp – A-02: Spielseiten im Delta-Sync', () => {
   let offlineRepo: OfflineRepository;
   let mockSupabase: {
-    get: ReturnType<typeof vi.fn>;
+    get: Mock<(id: string) => Promise<Tournament | null>>;
+    getWithMatchRevisions: ReturnType<typeof vi.fn>;
     save: ReturnType<typeof vi.fn>;
     updateTournamentMetadata: ReturnType<typeof vi.fn>;
   };
@@ -55,6 +57,7 @@ describe('OfflineRepository.syncUp – A-02: Spielseiten im Delta-Sync', () => {
     mockLocal = new LocalStorageRepository() as unknown as typeof mockLocal;
     mockLocal.updateLocalVersion.mockResolvedValue(undefined);
     mockSupabase.save.mockResolvedValue(undefined);
+    mockSupabase.getWithMatchRevisions.mockImplementation(readWithRevisions((id: string) => mockSupabase.get(id)));
     mockSupabase.updateTournamentMetadata.mockResolvedValue(undefined);
     offlineRepo = new OfflineRepository(
       mockLocal as unknown as LocalStorageRepository,

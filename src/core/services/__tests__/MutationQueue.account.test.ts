@@ -60,6 +60,7 @@ function createMockRepo() {
     updateMatches: vi.fn(async () => undefined),
     updateTournamentMetadata: vi.fn(async () => undefined),
     get: vi.fn(async () => null),
+    getWithMatchRevisions: vi.fn(async () => null),
   };
 }
 

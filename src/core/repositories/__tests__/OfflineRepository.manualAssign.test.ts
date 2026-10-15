@@ -4,7 +4,7 @@
  * Vorgabe K6, keine Szenario-Kennung.
  */
 import 'fake-indexeddb/auto';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import { OfflineRepository } from '../OfflineRepository';
 import { SupabaseRepository } from '../SupabaseRepository';
 import { LocalStorageRepository } from '../LocalStorageRepository';
@@ -12,6 +12,7 @@ import type { Match, Tournament } from '../../models/types';
 import { pendingSlot, teamSlot } from '../../models/matchSlot';
 import { assignTeamToSide } from '../../models/matchAssignment';
 import { testUuid } from '../../../test/testIds';
+import { readWithRevisions } from '../../../test/fakeCloudRepository';
 
 vi.mock('../SupabaseRepository');
 vi.mock('../LocalStorageRepository');
@@ -33,7 +34,7 @@ function tournament(match: Match, version: number): Tournament {
 
 describe('OfflineRepository.syncUp – K6: manuelles Umbesetzen', () => {
   let repo: OfflineRepository;
-  let supabase: { get: ReturnType<typeof vi.fn>; save: ReturnType<typeof vi.fn>; updateTournamentMetadata: ReturnType<typeof vi.fn> };
+  let supabase: { get: Mock<(id: string) => Promise<Tournament | null>>; getWithMatchRevisions: ReturnType<typeof vi.fn>; save: ReturnType<typeof vi.fn>; updateTournamentMetadata: ReturnType<typeof vi.fn> };
   let local: { listForCurrentUser: ReturnType<typeof vi.fn>; updateLocalVersion: ReturnType<typeof vi.fn> };
 
   // Heimseite lokal aus „Sieger HF1“ aufgelöst zu FC Nord; die Cloud kennt dieselbe Besetzung
@@ -49,6 +50,7 @@ describe('OfflineRepository.syncUp – K6: manuelles Umbesetzen', () => {
     local = new LocalStorageRepository() as unknown as typeof local;
     local.updateLocalVersion.mockResolvedValue(undefined);
     supabase.save.mockResolvedValue(undefined);
+    supabase.getWithMatchRevisions.mockImplementation(readWithRevisions((id: string) => supabase.get(id)));
     supabase.updateTournamentMetadata.mockResolvedValue(undefined);
     repo = new OfflineRepository(local as unknown as LocalStorageRepository, supabase as unknown as SupabaseRepository);
     supabase.get.mockResolvedValue(tournament({ ...cloudMatch, slotA: pendingSlot(source) }, 1));

@@ -3,6 +3,7 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { OfflineRepository } from './OfflineRepository';
 import { SupabaseRepository } from './SupabaseRepository';
+import { readWithRevisions } from '../../test/fakeCloudRepository';
 import { LocalStorageRepository } from './LocalStorageRepository';
 import { Tournament } from '../models/types';
 
@@ -43,6 +44,7 @@ describe('OfflineRepository - Granular Sync', () => {
         mockLocal.updateLocalVersion.mockResolvedValue(undefined); // Critical for Phase 2 fix verification
 
         mockSupabase.get.mockResolvedValue(null);
+        mockSupabase.getWithMatchRevisions.mockImplementation(readWithRevisions((id: string) => mockSupabase.get(id)));
         mockSupabase.save.mockResolvedValue(undefined);
         mockSupabase.updateTournamentMetadata.mockResolvedValue(undefined);
         mockSupabase.updateMatches.mockResolvedValue(undefined);

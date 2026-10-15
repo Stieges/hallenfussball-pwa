@@ -7,11 +7,12 @@
  * `syncTournament` bleiben ohne Upload. Turniere ohne Einträge laufen wie bisher.
  */
 import 'fake-indexeddb/auto';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { OfflineRepository } from '../OfflineRepository';
 import type { LocalStorageRepository } from '../LocalStorageRepository';
 import type { SupabaseRepository } from '../SupabaseRepository';
 import type { Tournament } from '../../models/types';
+import { readWithRevisions } from '../../../test/fakeCloudRepository';
 import { LocalMatchStore } from '../../match/client/LocalMatchStore';
 import { ctx, ev } from '../../match/client/__tests__/fixtures';
 
@@ -37,7 +38,8 @@ interface RepoMocks {
     get: ReturnType<typeof vi.fn>;
   };
   cloud: {
-    get: ReturnType<typeof vi.fn>;
+    get: Mock<(id: string) => Promise<Tournament | null>>;
+    getWithMatchRevisions: ReturnType<typeof vi.fn>;
     save: ReturnType<typeof vi.fn>;
     updateTournamentMetadata: ReturnType<typeof vi.fn>;
     updateMatches: ReturnType<typeof vi.fn>;
@@ -61,12 +63,14 @@ function createRepo(): { repo: OfflineRepository; mocks: RepoMocks } {
     },
     cloud: {
       get: vi.fn(async () => null),
+      getWithMatchRevisions: vi.fn(),
       save: vi.fn(async () => undefined),
       updateTournamentMetadata: vi.fn(async () => undefined),
       updateMatches: vi.fn(async () => undefined),
       delete: vi.fn(async () => undefined),
     },
   };
+  mocks.cloud.getWithMatchRevisions.mockImplementation(readWithRevisions((id: string) => mocks.cloud.get(id)));
   const repo = new OfflineRepository(
     mocks.local as unknown as LocalStorageRepository,
     mocks.cloud as unknown as SupabaseRepository,

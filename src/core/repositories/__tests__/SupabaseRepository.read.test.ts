@@ -111,6 +111,24 @@ describe('SupabaseRepository.get / getByShareCode – Besetzung als Slots (@TM-0
     await expect(new SupabaseRepository().get('tournament-1')).rejects.toThrow(RepositoryError);
   });
 
+  it('@FU-087 getWithMatchRevisions(): Revision je Spiel aus matches.version, Turnier wie get()', async () => {
+    enqueue('tournaments', { data: TOURNAMENT, error: null });
+    enqueue('teams', { data: TEAMS, error: null });
+    enqueue('matches', { data: [{ ...MATCHES[0], version: 3, score_a: 1, score_b: 0, match_status: 'running' }, MATCHES[1]], error: null });
+
+    const read = await new SupabaseRepository().getWithMatchRevisions('tournament-1');
+
+    expect(read?.matchRevisions.get('m-group')).toBe(3);
+    expect(read?.matchRevisions.get('m-final')).toBe(1);
+    expect(read?.tournament.matches[0]).toMatchObject({ scoreA: 1, scoreB: 0, matchStatus: 'running' });
+  });
+
+  it('getWithMatchRevisions(): nicht gefunden → null', async () => {
+    enqueue('tournaments', { data: null, error: { message: 'none', code: 'PGRST116' } });
+
+    await expect(new SupabaseRepository().getWithMatchRevisions('x')).resolves.toBeNull();
+  });
+
   it('get(): nicht gefunden (PGRST116) → null', async () => {
     enqueue('tournaments', { data: null, error: { message: 'none', code: 'PGRST116' } });
 
