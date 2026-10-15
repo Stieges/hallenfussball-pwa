@@ -285,3 +285,66 @@ describe('MatchCommands – @FU-070 Spielende nur einmal', () => {
     expect(kick.mock.calls.length).toBe(kicksAfterFirst);
   });
 });
+
+// A-08b3 (@FU-070, B1): gleichzeitige Aufrufe je Spiel laufen nacheinander -- die Vorpruefung
+// sieht den Stand nach dem vorigen Eintrag (Doppeltipp / Automatik + Knopf).
+describe('MatchCommands – @FU-070 gleichzeitige Aufrufe je Spiel (B1)', () => {
+  let store: LocalMatchStore;
+  const NOW = 1_790_000_000_000;
+
+  beforeEach(() => {
+    store = new LocalMatchStore();
+  });
+
+  it('@FU-070 Pflicht: Promise.all([finish, finish]) -> genau ein MATCH_END, ein kick', async () => {
+    const engine = await makeEngine(NOW, 'acc-b1-finish', store);
+    const kick = vi.fn(async () => undefined);
+    const commands = new MatchCommands({ engine, store, sender: { kick }, accountId: 'acc-b1-finish' });
+    await commands.start(ctx.matchId, ctx, 'leitung', RULES);
+    const kicksBefore = kick.mock.calls.length;
+
+    await Promise.all([
+      commands.finish(ctx.matchId, ctx, 'leitung'),
+      commands.finish(ctx.matchId, ctx, 'leitung'),
+    ]);
+
+    const copy = await store.load('acc-b1-finish', ctx.matchId);
+    expect(copy?.pending.map((e) => e.type)).toEqual(['MATCH_START', 'MATCH_END']);
+    expect(kick.mock.calls.length).toBe(kicksBefore + 1);
+  });
+
+  it('@FU-070 Gegenbeispiel: Promise.all([goal, goal]) -> zwei GOAL-Ereignisse', async () => {
+    const engine = await makeEngine(NOW, 'acc-b1-goal', store);
+    const kick = vi.fn(async () => undefined);
+    const commands = new MatchCommands({ engine, store, sender: { kick }, accountId: 'acc-b1-goal' });
+    await commands.start(ctx.matchId, ctx, 'leitung', RULES);
+
+    await Promise.all([
+      commands.goal(ctx.matchId, ctx, 'helper', ctx.teamAId, false),
+      commands.goal(ctx.matchId, ctx, 'helper', ctx.teamAId, false),
+    ]);
+
+    const copy = await store.load('acc-b1-goal', ctx.matchId);
+    expect(copy?.pending.filter((e) => e.type === 'GOAL')).toHaveLength(2);
+  });
+
+  it('@FU-070 Fehlerfall: scheitert der erste Eintrag (Speicher voll), laeuft der zweite trotzdem', async () => {
+    const engine = await makeEngine(NOW, 'acc-b1-error', store);
+    const kick = vi.fn(async () => undefined);
+    const commands = new MatchCommands({ engine, store, sender: { kick }, accountId: 'acc-b1-error' });
+    await commands.start(ctx.matchId, ctx, 'leitung', RULES);
+    vi.spyOn(store, 'addPending').mockRejectedValueOnce(new LocalStoreFullError());
+
+    const results = await Promise.allSettled([
+      commands.goal(ctx.matchId, ctx, 'helper', ctx.teamAId, false),
+      commands.goal(ctx.matchId, ctx, 'helper', ctx.teamBId, false),
+    ]);
+
+    expect(results[0].status).toBe('rejected');
+    expect(results[1].status).toBe('fulfilled');
+    const copy = await store.load('acc-b1-error', ctx.matchId);
+    const goals = copy?.pending.filter((e) => e.type === 'GOAL') ?? [];
+    expect(goals).toHaveLength(1);
+    expect(goals[0].teamId).toBe(ctx.teamBId);
+  });
+});

@@ -80,6 +80,8 @@ export interface BatchResolution {
   ackedIds: string[];
   rejected: RejectedEntry[];
   reviewIds: string[];
+  /** A-08b3 (B2, @FU-070): Server-Antwort `noop` -- Eintrag wird aus `pending` entfernt, nicht `acked`. */
+  droppedIds?: string[];
   cascade?: CascadeInfo;
 }
 
@@ -87,6 +89,7 @@ export interface BatchResolution {
 export function applyResolution(copy: MatchCopy, resolution: BatchResolution): void {
   const ackedIds = new Set(resolution.ackedIds);
   const reviewIds = new Set(resolution.reviewIds);
+  const droppedIds = new Set(resolution.droppedIds ?? []);
   const explicitRejected = new Map(resolution.rejected.map((entry) => [entry.event.id, entry]));
   const cascade = resolution.cascade;
   const cascadeRejectedIds = cascade !== undefined ? new Set(cascade.rejectedIds) : null;
@@ -102,6 +105,9 @@ export function applyResolution(copy: MatchCopy, resolution: BatchResolution): v
     }
     if (reviewIds.has(event.id)) {
       movedReview.push(event);
+      continue;
+    }
+    if (droppedIds.has(event.id)) {
       continue;
     }
     if (explicitRejected.has(event.id)) {

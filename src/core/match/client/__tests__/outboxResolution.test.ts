@@ -156,3 +156,63 @@ describe('buildResolution: Zuordnung ueber den Index', () => {
     expect(idMismatches).toEqual([]);
   });
 });
+
+// A-08b3 (@FU-070, B2): der Server antwortet `noop` auf ein zweites Spielende (Mehrgeraete).
+// Der Eintrag wandert NICHT nach `acked`, sondern verschwindet aus `pending`.
+describe('@FU-070 noop-Antwort des Servers (B2)', () => {
+  it('@FU-070 Pflicht: noop -> acked leer, pending ohne den Eintrag, wartend = 0', () => {
+    const end = ev({ id: 'end2', type: 'MATCH_END', at: 2 });
+    const batch = [end];
+    const results = [{ id: end.id, status: 'noop' as const }];
+
+    const { resolution } = buildResolution(batch, results, NOW);
+    expect(resolution.ackedIds).toEqual([]);
+
+    const copy: MatchCopy = {
+      formatVersion: 2,
+      accountId: 'acc',
+      matchId: 'm',
+      ctx,
+      confirmed: [],
+      watermarkSeq: 0,
+      acked: [],
+      pending: [end],
+      rejected: [],
+      review: [],
+      updatedAt: 0,
+    };
+    applyResolution(copy, resolution);
+
+    expect(copy.acked).toEqual([]);
+    expect(copy.pending).toEqual([]);
+    expect(copy.acked.length + copy.pending.length).toBe(0);
+    expect(copy.rejected).toEqual([]);
+  });
+
+  it('@FU-070 Gegenbeispiel: accepted -> wie bisher acked, nicht verworfen', () => {
+    const end = ev({ id: 'end1', type: 'MATCH_END', at: 2 });
+    const batch = [end];
+    const results = [{ id: end.id, status: 'accepted' as const }];
+
+    const { resolution } = buildResolution(batch, results, NOW);
+    expect(resolution.ackedIds).toEqual(['end1']);
+
+    const copy: MatchCopy = {
+      formatVersion: 2,
+      accountId: 'acc',
+      matchId: 'm',
+      ctx,
+      confirmed: [],
+      watermarkSeq: 0,
+      acked: [],
+      pending: [end],
+      rejected: [],
+      review: [],
+      updatedAt: 0,
+    };
+    applyResolution(copy, resolution);
+
+    expect(copy.acked.map((e) => e.id)).toEqual(['end1']);
+    expect(copy.pending).toEqual([]);
+  });
+});

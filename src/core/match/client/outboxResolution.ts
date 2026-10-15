@@ -77,12 +77,19 @@ export function buildResolution(
 
   const ackedIds: string[] = [];
   const reviewIds: string[] = [];
+  const droppedIds: string[] = [];
   const rejected: RejectedEntry[] = [];
   for (let i = 0; i < batch.length; i += 1) {
     const event = batch[i];
     const result = results[i];
-    if (result.status === 'accepted' || result.status === 'duplicate' || result.status === 'noop') {
+    if (result.status === 'accepted' || result.status === 'duplicate') {
       ackedIds.push(event.id);
+      continue;
+    }
+    // A-08b3 (B2, @FU-070): `noop` (zweites Spielende, Mehrgeraete) ist kein neuer Eintrag am
+    // Server -- er wird aus `pending` entfernt statt als `acked` liegen zu bleiben.
+    if (result.status === 'noop') {
+      droppedIds.push(event.id);
       continue;
     }
     if (result.status === 'review') {
@@ -115,5 +122,14 @@ export function buildResolution(
       ? { rejectedIds: Array.from(rejectedIds), ...(cascadeRoot ? { rootId: cascadeRoot.id } : {}), rejectedAt: now }
       : undefined;
 
-  return { resolution: { ackedIds, rejected, reviewIds, ...(cascade ? { cascade } : {}) }, idMismatches };
+  return {
+    resolution: {
+      ackedIds,
+      rejected,
+      reviewIds,
+      ...(droppedIds.length > 0 ? { droppedIds } : {}),
+      ...(cascade ? { cascade } : {}),
+    },
+    idMismatches,
+  };
 }

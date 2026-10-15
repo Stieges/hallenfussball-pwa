@@ -91,6 +91,9 @@ function definedFields<T extends Record<string, unknown>>(fields: T): Partial<T>
 }
 
 export class MatchCommands {
+  /** A-08b3 (B1, @FU-070): letzter Aufruf je Spiel -- neue Aufrufe warten darauf. */
+  private readonly chains = new Map<string, Promise<void>>();
+
   constructor(private readonly deps: MatchCommandsDeps) {}
 
   async start(matchId: string, ctx: MatchContext, actor: Actor, rules: MatchRules): Promise<void> {
@@ -180,7 +183,13 @@ export class MatchCommands {
     await this.submit(matchId, ctx, actor, 'AMEND', null, payload, targetId);
   }
 
-  private async submit(
+  /**
+   * A-08b3 (B1, @FU-070): Aufrufe je Spiel laufen nacheinander. Die Vorpruefung liest den Stand
+   * erst, wenn der vorige Eintrag gespeichert und angezeigt ist -- zwei Spielenden im selben
+   * Moment ergeben so genau ein `MATCH_END`. Ein Fehler eines Eintrags wird an DESSEN Aufrufer
+   * geworfen, die Kette laeuft mit dem naechsten Eintrag weiter.
+   */
+  private submit(
     matchId: string,
     ctx: MatchContext,
     actor: Actor,
@@ -188,6 +197,30 @@ export class MatchCommands {
     teamId: string | null,
     payload: Record<string, unknown>,
     targetId: string | null = null,
+  ): Promise<void> {
+    const previous = this.chains.get(matchId) ?? Promise.resolve();
+    const run = previous.then(() => this.submitNow(matchId, ctx, actor, type, teamId, payload, targetId));
+    const tail = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.chains.set(matchId, tail);
+    void tail.then(() => {
+      if (this.chains.get(matchId) === tail) {
+        this.chains.delete(matchId);
+      }
+    });
+    return run;
+  }
+
+  private async submitNow(
+    matchId: string,
+    ctx: MatchContext,
+    actor: Actor,
+    type: EventType,
+    teamId: string | null,
+    payload: Record<string, unknown>,
+    targetId: string | null,
   ): Promise<void> {
     const view = this.deps.engine.view(matchId);
     if (!view) {

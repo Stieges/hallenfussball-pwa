@@ -32,7 +32,7 @@ describe('OutboxSender: Grundverhalten', () => {
     vi.unstubAllGlobals();
   });
 
-  it('1: accepted/duplicate/noop -> acked, requestCatchUp genau einmal je Stapel, Wasserstand unveraendert', async () => {
+  it('1: accepted/duplicate -> acked, noop -> weder acked noch pending (A-08b3, @FU-070), requestCatchUp genau einmal je Stapel, Wasserstand unveraendert', async () => {
     const h = makeHarness();
     await h.store.create('acc', 'm1', ctx, 't1');
     for (const id of ['e1', 'e2', 'e3']) {
@@ -49,7 +49,8 @@ describe('OutboxSender: Grundverhalten', () => {
 
     await h.sender.start('acc');
 
-    expect(await idsIn(h, 'acc', 'm1', 'acked')).toEqual(['e1', 'e2', 'e3']);
+    // A-08b3 (B2, @FU-070): noop wandert nicht nach acked, sondern verschwindet aus pending.
+    expect(await idsIn(h, 'acc', 'm1', 'acked')).toEqual(['e1', 'e2']);
     expect(await idsIn(h, 'acc', 'm1', 'pending')).toEqual([]);
     expect(h.catchUps).toEqual(['m1']);
     // m7: resolveBatch benachrichtigt die MatchEngine (Ansicht aktualisiert sich ohne Neuladen).
