@@ -29,9 +29,18 @@ describe('TeamNameDisplay xl – gemeinsame Größe (B3)', () => {
     expect(screen.getByText('SV Blau-Weiß Kiel').style.fontSize).toBe('40px');
   });
 
-  it('meldet die eigene passende Größe, wenn sie messbar ist', () => {
-    const onFitPx = vi.fn();
-    render(<TeamNameDisplay name="SV Blau-Weiß Kiel" size="xl" onFitPx={onFitPx} />);
-    for (const call of onFitPx.mock.calls) { expect(Number.isFinite(call[0])).toBe(true); }
+  it('meldet die eigene Messung, nicht die vorgegebene gemeinsame Größe (keine Ratsche)', () => {
+    const ohne = vi.fn();
+    const { unmount } = render(<TeamNameDisplay name="SV Blau-Weiß Kiel" size="xl" onFitPx={ohne} />);
+    unmount();
+    expect(ohne).toHaveBeenCalled();
+    const eigen = ohne.mock.calls[ohne.mock.calls.length - 1][0] as number;
+    expect(Number.isFinite(eigen)).toBe(true);
+    expect(eigen).toBeGreaterThan(20);
+
+    const mit = vi.fn();
+    render(<TeamNameDisplay name="SV Blau-Weiß Kiel" size="xl" sizePx={20} onFitPx={mit} />);
+    expect(mit).toHaveBeenCalled();
+    for (const call of mit.mock.calls) { expect(call[0]).toBe(eigen); }
   });
 });
