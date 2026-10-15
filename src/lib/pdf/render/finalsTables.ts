@@ -158,14 +158,14 @@ function renderFinalsTable(
         0: { halign: 'center', cellWidth: printColumns.finals.nr, fontSize: printType.nr, cellPadding: { top: printGap.bodyPadV, bottom: printGap.bodyPadV, left: printGap.nrPad, right: printGap.nrPad } },
         1: { halign: 'center', cellWidth: printColumns.finals.time, fontSize: printType.time, fontStyle: 'bold' },
         2: { halign: 'center', cellWidth: printColumns.finals.field },
-        3: { halign: 'left' },                                       // Heim
+        3: { halign: 'right' },                                      // Heim endet am Ergebnis
         4: { halign: 'center', cellWidth: printColumns.finals.result, fontSize: printType.result, fontStyle: 'bold' },
         5: { halign: 'left' },                                       // Gast
       }
     : {
         0: { halign: 'center', cellWidth: printColumns.finals.nr, fontSize: printType.nr, cellPadding: { top: printGap.bodyPadV, bottom: printGap.bodyPadV, left: printGap.nrPad, right: printGap.nrPad } },
         1: { halign: 'center', cellWidth: printColumns.finals.time, fontSize: printType.time, fontStyle: 'bold' },
-        2: { halign: 'left' },                                       // Heim
+        2: { halign: 'right' },                                      // Heim endet am Ergebnis
         3: { halign: 'center', cellWidth: printColumns.finals.result, fontSize: printType.result, fontStyle: 'bold' },
         4: { halign: 'left' },                                       // Gast
       };

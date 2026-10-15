@@ -135,7 +135,7 @@ export function renderGroupStage(
     styles[colIndex++] = { halign: 'center', cellWidth: printColumns.match.time, fontSize: printType.time, fontStyle: 'bold' };
     if (showFieldColumn) {styles[colIndex++] = { halign: 'center', cellWidth: printColumns.match.field };}
     if (hasMultipleGroups) {styles[colIndex++] = { halign: 'center', cellWidth: printColumns.match.group, fontStyle: 'bold' };}
-    styles[colIndex++] = { halign: 'left' }; // Heim
+    styles[colIndex++] = { halign: 'right' }; // Heim endet am Ergebnis (Punkt 7, Daniel 15.10.)
     styles[colIndex++] = { halign: 'center', cellWidth: printColumns.match.result, fontSize: printType.result, fontStyle: 'bold' };
     styles[colIndex] = { halign: 'left' }; // Gast
 
