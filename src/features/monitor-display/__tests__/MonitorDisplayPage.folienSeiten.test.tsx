@@ -255,12 +255,12 @@ describe('Alle Tabellen ohne Gruppen (Jeder gegen Jeden): eine Gesamttabelle (Co
   it('Kindermodus: auch ohne Gruppen übersprungen, Zuschauer-QR statt Gesamttabelle', async () => {
     await starte(monitorTurnier(buildTournament({ teams: ohneGruppen(), matches: withScheduledTimes(), hideScoresForPublic: true }), [slide('all-standings')]));
     expect(screen.getByTestId('qr-code').getAttribute('data-value')).toContain('/#/live/ABC123');
-    expect(screen.queryByText('Gesamttabelle')).toBeNull();
+    expect(screen.queryByText(/Gesamttabelle/)).toBeNull();
   });
 
   it('Gegenbeispiel mit Gruppen: je Gruppe ein Abschnitt, keine Gesamttabelle', async () => {
     await starte(monitorTurnier(buildTournament({ matches: withScheduledTimes() }), [slide('all-standings')]));
-    expect(screen.queryByText('Gesamttabelle')).toBeNull();
+    expect(screen.queryByText(/Gesamttabelle/)).toBeNull();
     expect(screen.queryByText('DJK Berg')).toBeNull();
     await vorspulenInSchritten(15_000);
     expect(screen.getByText('DJK Berg')).toBeInTheDocument();

@@ -26,6 +26,7 @@ const SCAN_FILES = ['screens/LiveViewScreen.tsx'];
 const DE_FUNCTION_WORDS = [
   'der', 'die', 'das', 'und', 'oder', 'nicht', 'ist', 'sind', 'wird', 'werden', 'ein', 'eine',
   'einen', 'auf', 'mit', 'für', 'von', 'zum', 'zur', 'dem', 'den', 'kein', 'keine', 'mein', 'dein',
+  'gemeldet', 'angezeigt',
   'alle', 'noch', 'wähle', 'läuft', 'bis', 'wurde',
 ];
 /** Typische deutsche Substantive/Verben in Anzeigetexten (Großschreibung wie im Satzanfang). */
@@ -36,6 +37,7 @@ const DE_NOUNS = [
   'Loslassen', 'Schiedsrichter', 'Stand', 'Beendet', 'Geplant', 'Finalrunde', 'Alle', 'Kein',
   'Keine', 'Nicht', 'Nächstes', 'Nächste', 'Bitte', 'Mein', 'Erstellt', 'Konfiguration', 'Erneut',
   'Darstellung', 'Ausgeblendet', 'Ausgewählt', 'Nur', 'Bambini', 'Hallenfußball', 'Hallenfussball',
+  'Mannschaften', 'Spielstände', 'Spielplan',
 ];
 
 const UMLAUT_OR_SZ = /[äöüÄÖÜß]/;
@@ -77,36 +79,58 @@ function lineOf(source: string, index: number): number {
   return line;
 }
 
+/** Attributwerte, die kein Anzeigetext sind (Test-IDs, CSS-Klassen, Daten-Attribute). */
+const TECHNISCHE_ATTRIBUTE =
+  /\b(data-[\w-]+|className)=("[^"]*"|'[^']*'|\{[^}\n]*\})/g;
+
+export interface ScanOptionen {
+  /** Ob die Datei JSX enthält (.tsx). Nur dann wird Text nach `}` als JSX-Text gewertet. */
+  tsx?: boolean;
+}
+
 /**
  * Findet deutsche Anzeige-Kandidaten in einem Quelltext.
- * JSX-Text wird über den ganzen Quelltext gesucht (auch über Zeilenumbrüche hinweg),
- * String-Literale zeilenweise.
+ * - JSX-Text: Text zwischen `>` bzw. `}` und `<`/`{`, über Zeilenumbrüche hinweg (`>`), bei `}`
+ *   nur einzeilig und nur in .tsx (Text nach einem `{Ausdruck}`).
+ * - String-Literale zeilenweise, inkl. Attributwerte wie aria-label.
+ * - Technische Attributwerte (data-…, className) werden ausgeblendet, nicht ganze Zeilen.
  */
-export function findGermanLiterals(source: string): Finding[] {
+export function findGermanLiterals(source: string, optionen: ScanOptionen = {}): Finding[] {
+  const tsx = optionen.tsx ?? true;
   const findings: Finding[] = [];
-  const stripped = stripComments(source);
+  const stripped = stripComments(source).replace(TECHNISCHE_ATTRIBUTE, (m) => ' '.repeat(m.length));
   const lines = stripped.split('\n');
 
-  // JSX-Text: Text zwischen `>` (schließt ein Tag/Attribut) und `<` bzw. `{`.
-  // `=>` (Pfeil) und Generics wie `Array<T>` ergeben keinen Buchstaben-Text vor `<`/`{`.
-  const jsxRx = />([^<>{}]*)(?=<|\{)/g;
+  const pruefeJsx = (text: string, index: number): void => {
+    if (!/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(text)) {return;}
+    if (/[;),(=:]\s*$/.test(text)) {return;}
+    const lineNo = lineOf(stripped, index);
+    const lineText = lines[lineNo - 1] ?? '';
+    if (/^\s*import\s|\brequire\(|\bimport\(/.test(lineText)) {return;}
+    if (isGermanDisplayText(text)) {findings.push({ line: lineNo, kind: 'jsx', text: text.trim() });}
+  };
+
+  // `>` schließt ein Tag bzw. Attribut. `=>` (Pfeil) und Generics ergeben keinen Text davor.
+  const gtRx = />([^<>{}]*)(?=<|\{)/g;
   let jm: RegExpExecArray | null;
-  while ((jm = jsxRx.exec(stripped)) !== null) {
+  while ((jm = gtRx.exec(stripped)) !== null) {
     const before = stripped[jm.index - 1];
     if (before === '=' || before === '-') {continue;}
-    const text = jm[1];
-    if (!/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(text)) {continue;}
-    const lineNo = lineOf(stripped, jm.index);
-    const lineText = lines[lineNo - 1] ?? '';
-    if (/^\s*import\s|\brequire\(|\bimport\(/.test(lineText)) {continue;}
-    if (/console\.|captureFeatureError|data-testid|\bclassName=|\bdata-/.test(lineText)) {continue;}
-    if (isGermanDisplayText(text)) {findings.push({ line: lineNo, kind: 'jsx', text });}
+    pruefeJsx(jm[1], jm.index);
+  }
+
+  // `}` schließt einen {Ausdruck}; danach folgender Text (nur einzeilig, nur .tsx).
+  if (tsx) {
+    const klammerRx = /\}([^<>{}\n]*)(?=<|\{)/g;
+    while ((jm = klammerRx.exec(stripped)) !== null) {
+      pruefeJsx(jm[1], jm.index);
+    }
   }
 
   lines.forEach((line, idx) => {
     const lineNo = idx + 1;
     if (/^\s*import\s|^\s*export\s+(\*|\{[^}]*\})\s+from\s|\brequire\(|\bimport\(/.test(line)) {return;}
-    if (/console\.|captureFeatureError|data-testid|\bclassName=|\bdata-/.test(line)) {return;}
+    if (/console\.|captureFeatureError/.test(line)) {return;}
 
     // String-Literale ('…', "…", `…` mit ${…} als Platzhalter).
     const litRx = /'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\\n]|\\.)*)`/g;
@@ -160,6 +184,11 @@ describe('B-41 Quelltext-Scan: keine festen deutschen Texte auf Zuschauer-Seite 
     expect(findGermanLiterals("const k = 'groupStage'; const s = 'live';")).toHaveLength(0);
     expect(findGermanLiterals("fetch('https://example.org/api')")).toHaveLength(0);
     expect(findGermanLiterals('// Kommentar: Turnier wird geladen')).toHaveLength(0);
+    // Fixrunde 1 (Opus-M2/M2b): Text in derselben Zeile wie data-testid und Text nach {Ausdruck}
+    expect(findGermanLiterals('<span data-testid="x">Zur Startseite</span>')).toHaveLength(1);
+    expect(findGermanLiterals('<p>{n} Mannschaften gemeldet</p>')).toHaveLength(1);
+    expect(findGermanLiterals('<p>{n} Mannschaften gemeldet</p>', { tsx: false })).toHaveLength(0);
+    expect(findGermanLiterals('<span aria-label="Zurück zur Übersicht">x</span>')).toHaveLength(1);
     // Mehrzeiliger JSX-Text (Text auf eigener Zeile, wie in der Mutationsprobe B-41 gefunden)
     expect(findGermanLiterals('<Button>\n  Zur Startseite\n</Button>')).toHaveLength(1);
   });
@@ -171,7 +200,7 @@ describe('B-41 Quelltext-Scan: keine festen deutschen Texte auf Zuschauer-Seite 
     const found: { file: string; line: number; kind: string; text: string }[] = [];
     for (const abs of files) {
       const rel = relative(SRC_ROOT, abs);
-      for (const f of findGermanLiterals(readFileSync(abs, 'utf8'))) {
+      for (const f of findGermanLiterals(readFileSync(abs, 'utf8'), { tsx: abs.endsWith('.tsx') })) {
         found.push({ file: rel, line: f.line, kind: f.kind, text: f.text.trim() });
       }
     }
