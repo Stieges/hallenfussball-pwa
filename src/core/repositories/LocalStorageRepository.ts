@@ -32,12 +32,24 @@ function mergeMatchUpdate(match: Match, update: MatchUpdate): Match {
  */
 const GUEST_OWNER = 'guest';
 
+export interface LocalStorageRepositoryOptions {
+    /** A-07e: 'guest' = Gastmodus. `get` und `delete` sehen nur 'guest'-Kopien und Altbestand. Ohne Angabe roh. */
+    viewer?: 'guest';
+}
+
 export class LocalStorageRepository implements ITournamentRepository {
 
-    /** Roh (ohne Konto-Bindung). Die Bindung sitzt in OfflineRepository.get bzw. beim Gast-Repository (viewer). */
+    constructor(private readonly options: LocalStorageRepositoryOptions = {}) {}
+
+    /** A-07e: im Gastmodus nur 'guest'-Kopien und Altbestand sichtbar; sonst alles. */
+    private visibleHere(tournament: Tournament): boolean {
+        return this.options.viewer !== 'guest' || (tournament.ownerId ?? GUEST_OWNER) === GUEST_OWNER;
+    }
+
+    /** Ohne `viewer` roh (Konto-Bindung in OfflineRepository.get); mit `viewer: 'guest'` nur Gast-Sicht. */
     async get(id: string): Promise<Tournament | null> {
         const list = await this.loadList();
-        return list.find(t => t.id === id) ?? null;
+        return list.find(t => t.id === id && this.visibleHere(t)) ?? null;
     }
 
     async getByShareCode(code: string): Promise<Tournament | null> {
@@ -115,7 +127,7 @@ export class LocalStorageRepository implements ITournamentRepository {
 
     async delete(id: string): Promise<void> {
         const list = await this.loadList();
-        const filtered = list.filter(t => t.id !== id);
+        const filtered = list.filter(t => !(t.id === id && this.visibleHere(t)));
         await this.saveList(filtered);
     }
 

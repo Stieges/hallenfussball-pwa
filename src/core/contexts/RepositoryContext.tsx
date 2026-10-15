@@ -112,7 +112,7 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
         // Fallback / Guest -> Local Only
         supabaseLiveMatchRepoRef.current = null;
         return {
-            tournamentRepository: localTournamentRepo,
+            tournamentRepository: new LocalStorageRepository({ viewer: 'guest' }),
             liveMatchRepository: localLiveMatchRepo,
             isRealtimeEnabled: false,
             supabaseLiveMatchRepo: null,
