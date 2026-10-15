@@ -62,6 +62,26 @@ describe('OutboxSender: Grundverhalten', () => {
     expect(sentIds(h.api)).toEqual([['e1', 'e2', 'e3']]);
   });
 
+  it('1a (A-08b3 F1, @FU-070): Stapel nur aus noop -> genau ein requestCatchUp, Gegenbeispiel leerer Stapel -> keiner', async () => {
+    const h = makeHarness();
+    await h.store.create('acc', 'm-noop', ctx);
+    await h.store.addPending('acc', 'm-noop', ev({ id: 'n1', type: 'GOAL', at: 1 }));
+    h.api.mockImplementation(async (_matchId, events) => success([resultOf(events[0].id, 'noop')]));
+
+    await h.sender.start('acc');
+
+    // F1: der Server-noop raeumt den Eintrag weg; der Abgleich mit dem Server muss trotzdem laufen.
+    expect(await idsIn(h, 'acc', 'm-noop', 'pending')).toEqual([]);
+    expect(await idsIn(h, 'acc', 'm-noop', 'acked')).toEqual([]);
+    expect(h.catchUps).toEqual(['m-noop']);
+
+    // Gegenbeispiel: ohne Eintraege wird nichts gesendet und kein Abgleich angefordert.
+    const h2 = makeHarness();
+    await h2.store.create('acc', 'm-leer', ctx);
+    await h2.sender.start('acc');
+    expect(h2.catchUps).toEqual([]);
+  });
+
   it('2: rejected -> rejected mit Code und Detail, der Rest des Stapels bleibt unberuehrt', async () => {
     const h = makeHarness();
     await h.store.create('acc', 'm2', ctx);

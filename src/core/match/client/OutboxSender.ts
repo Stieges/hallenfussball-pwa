@@ -277,7 +277,8 @@ export class OutboxSender {
       // M-f: eine abweichende (nicht-null) `id` aendert die Zuordnung nicht (Index
       // entscheidet), wird aber sichtbar gemacht -- nichts wird still verworfen.
       this.book.set({ lastError: idMismatches.length > 0 ? describeIdMismatches(idMismatches) : null, lastFailureKind: null });
-      if (resolution.ackedIds.length > 0) {
+      // A-08b3 F1 (@FU-070): ein Stapel nur aus Server-noop (droppedIds) braucht den Abgleich genauso.
+      if (resolution.ackedIds.length > 0 || (resolution.droppedIds?.length ?? 0) > 0) {
         this.requestCatchUp(queue.matchId);
       }
       await this.refresh();
