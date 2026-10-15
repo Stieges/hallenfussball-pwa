@@ -56,30 +56,41 @@ describe('W10 / @BM-022 keine Spielzeile über zwei Seiten', () => {
     return hallencupTournament({ teams, numberOfTeams: teams.length });
   };
 
-  /** Je Spielzeile: Seite, Spielnummer, Anzahl ganzer Kästchen zwischen den Zeilenlinien ihrer Zeile. */
-  async function zeilenBefund(anzahl: number) {
-    const tournament = langesTurnier(anzahl);
-    const pages = await lesen(generateFullSchedule(tournament, 'de'), tournament);
-    const befund: Array<{ seite: number; nr: string; kaesten: number }> = [];
-    pages.forEach((page, seite) => {
-      const linien = zeilenLinien(page);
-      const nummern = page.texts.filter(t => /^\d+$/.test(t.str.trim()) && t.x < 20 && Math.abs(t.size - printType.nr) < SIZE_TOL);
-      for (const nr of nummern) {
+  /**
+   * Befund einer Seite: Nummern ihrer Spielzeilen, Zeilen mit nicht genau zwei Kästchen und Tabellen, deren erste Zeile
+   * unter dem Spaltenkopf keine Spielnummer trägt (Rest einer geteilten Zeile von der Seite davor).
+   */
+  function seitenBefund(page: LayoutPage): { nummern: string[]; ohneKaesten: string[]; fortsetzungen: number } {
+    const linien = zeilenLinien(page);
+    const nummern = page.texts.filter(t => /^\d+$/.test(t.str.trim()) && t.x < 20 && Math.abs(t.size - printType.nr) < SIZE_TOL);
+    const ohneKaesten = nummern
+      .filter(nr => {
         const oben = Math.max(...linien.filter(y => y < nr.y));
         const unten = Math.min(...linien.filter(y => y > nr.y));
-        const kaesten = kaestchen(page, printBox.scoreField.w, printBox.scoreField.h, oben - TOL, unten + TOL);
-        befund.push({ seite, nr: nr.str.trim(), kaesten: kaesten.length });
-      }
-    });
-    return { befund, seiten: pages.length };
+        return kaestchen(page, printBox.scoreField.w, printBox.scoreField.h, oben - TOL, unten + TOL).length !== 2;
+      })
+      .map(nr => nr.str.trim());
+    const koepfe = page.texts.filter(t => t.str.trim() === 'Nr' && Math.abs(t.size - printType.head) < SIZE_TOL);
+    const fortsetzungen = koepfe.filter(kopf => {
+      const kopfUnten = Math.min(...linien.filter(y => y > kopf.y));
+      const ersteUnten = Math.min(...linien.filter(y => y > kopfUnten + TOL));
+      return !nummern.some(nr => nr.y > kopfUnten && nr.y < ersteUnten);
+    }).length;
+    return { nummern: koepfe.length > 0 ? nummern.map(nr => nr.str.trim()) : [], ohneKaesten, fortsetzungen };
   }
 
-  it.each([10, 12, 14, 16])('%i Teams mit dreizeiligen Namen: jede Zeile trägt ihre zwei Kästchen ganz zwischen ihren Linien, jede Nummer einmal', async anzahl => {
-    const { befund, seiten } = await zeilenBefund(anzahl);
+  // Ob eine Zeile am Seitenende geteilt würde, hängt von der Lage der Seitengrenze ab (autoTable teilt Zeilen mit mehreren
+  // Textzeilen, wenn ihre Mindesthöhe noch passt). Darum mehrere Größen: ohne `rowPageBreak: 'avoid'` trifft es mehrere.
+  it.each([10, 12, 14, 16, 20])('%i Teams mit dreizeiligen Namen: jede Tabelle beginnt mit einer ganzen Zeile, jede Zeile hat ihre zwei Kästchen, jede Nummer einmal', async anzahl => {
+    const tournament = langesTurnier(anzahl);
+    const pages = await lesen(generateFullSchedule(tournament, 'de'), tournament);
+    const befunde = pages.map(seitenBefund);
+    const nummern = befunde.flatMap(b => b.nummern);
 
-    expect(seiten, 'läuft über mehrere Seiten').toBeGreaterThan(2);
-    expect(befund.filter(z => z.kaesten !== 2).map(z => `Spiel ${z.nr} auf Seite ${z.seite + 1}: ${z.kaesten} Kästchen`)).toEqual([]);
-    expect(new Set(befund.map(z => z.nr)).size, 'jede Spielnummer genau einmal').toBe(befund.length);
+    expect(pages.length, 'läuft über mehrere Seiten').toBeGreaterThan(2);
+    expect(befunde.map((b, i) => (b.fortsetzungen > 0 ? `Seite ${i + 1} beginnt mit dem Rest einer geteilten Zeile` : '')).filter(Boolean)).toEqual([]);
+    expect(befunde.flatMap(b => b.ohneKaesten), 'Zeilen ohne zwei ganze Kästchen').toEqual([]);
+    expect(new Set(nummern).size, 'jede Spielnummer genau einmal').toBe(nummern.length);
   });
 });
 
