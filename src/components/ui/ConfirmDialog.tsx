@@ -102,18 +102,22 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     warning: {
       icon: '⚠️',
       accent: cssVars.colors.warning,
-      confirmBg: cssVars.colors.warning,
+      headerBg: cssVars.colors.warningLight,
+      // Weiß auf Warnfarbe wäre 3,19 : 1 (hell); der Hover-Ton hält 4,5 : 1 (@OB-055).
+      confirmBg: cssVars.colors.warningHover,
       confirmHover: cssVars.colors.warningHover,
     },
     danger: {
       icon: '🚨',
       accent: cssVars.colors.error,
+      headerBg: cssVars.colors.errorLight,
       confirmBg: cssVars.colors.error,
       confirmHover: cssVars.colors.errorHover,
     },
     info: {
       icon: 'ℹ️',
       accent: cssVars.colors.primary,
+      headerBg: cssVars.colors.primaryLight,
       confirmBg: cssVars.colors.primary,
       confirmHover: cssVars.colors.primaryHover,
     },
@@ -127,7 +131,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     gap: cssVars.spacing.md,
     padding: cssVars.spacing.lg,
     borderBottom: `1px solid ${cssVars.colors.border}`,
-    backgroundColor: `${variantConfig.accent}15`,
+    backgroundColor: variantConfig.headerBg,
   };
 
   const iconStyle: CSSProperties = {
@@ -159,7 +163,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     backgroundColor: cssVars.colors.surfaceDarkMedium,
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
+    // textPrimary statt textSecondary: die Detailbox liegt hell auf 4,41 : 1 (@OB-055).
+    color: cssVars.colors.textPrimary,
     fontFamily: cssVars.fontFamilies.mono,
   };
 

@@ -7,6 +7,10 @@
  * (Blatt von unten bei placement="sheet"; zentriert, oben ausgerichtet unter
  * tabletDown bei placement="center").
  *
+ * Bewusste Entscheidung (Review B-43a, F8): zentrierte Dialoge bleiben am Handy
+ * zentriert bzw. oben ausgerichtet und werden NICHT zum Blatt; nur placement="sheet"
+ * ist ein Blatt von unten. Änderung, falls gewünscht, in B-43b (Daniel entscheidet).
+ *
  * Verbindliche Vorgaben: @OB-055 (deckende Fläche, Kontrast), @OB-056 (Einwilligung
  * – Schließen-Verhalten über `dismissible`).
  */
@@ -117,7 +121,7 @@ export const DialogSurface = ({
     maxHeight: isSheet ? '80vh' : '90vh',
     overflowY: 'auto',
     position: 'relative',
-    paddingBottom: isSheet ? 'env(safe-area-inset-bottom, 16px)' : undefined,
+    paddingBottom: isSheet ? `env(safe-area-inset-bottom, ${cssVars.spacing.md})` : undefined,
     animation: isSheet
       ? 'dialogSurfaceSlideUp 0.3s ease-out'
       : 'dialogSurfaceSlideIn 0.2s ease-out',

@@ -37,6 +37,13 @@ describe('@OB-056 Einwilligung – gleich gewichtete Antworten', () => {
     }
   });
 
+  it('die Widerruf-Rückfrage „Einwilligung widerrufen“ spricht ebenfalls „du“ an (DE, @OB-056)', () => {
+    const revoke = (deSettings.privacy as Record<string, Record<string, string>>).revoke;
+    for (const text of [revoke.confirmMessage, revoke.successMessage]) {
+      expect(text).not.toMatch(/\b(Sie|Ihnen|Ihre|Ihr|Ihrem|Ihren|Ihrer)\b/);
+    }
+  });
+
   it('Verhalten unverändert: Esc schließt den Dialog nicht und ruft keine Antwort auf', () => {
     const onConsent = vi.fn();
     render(<ConsentDialog isOpen onConsent={onConsent} />);

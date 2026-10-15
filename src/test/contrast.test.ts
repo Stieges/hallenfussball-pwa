@@ -26,6 +26,11 @@ describe('Kontrast-Helfer (@OB-055)', () => {
     expect(meetsContrast('#000000', '#FFFFFF')).toBe(true);
   });
 
+  it('Gegenbeispiel: halbdurchsichtige Schrift zählt mit ihrer Deckkraft (rgba(0,0,0,.5) auf Weiß unter 4,5 : 1)', () => {
+    expect(contrastRatio('rgba(0, 0, 0, 0.5)', '#FFFFFF')).toBeLessThan(MIN_TEXT_CONTRAST);
+    expect(meetsContrast('rgba(0, 0, 0, 0.5)', '#FFFFFF')).toBe(false);
+  });
+
   it('rechnet WCAG-Kontrast korrekt (Schwarz auf Weiß = 21 : 1)', () => {
     expect(contrastRatio('#000000', '#FFFFFF')).toBeCloseTo(21, 5);
   });

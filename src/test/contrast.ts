@@ -67,9 +67,25 @@ export function relativeLuminance(value: string): number {
   return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
 }
 
-/** WCAG-Kontrastverhältnis (1 … 21). Der Hintergrund muss deckend sein. */
+/**
+ * Mischt eine (ggf. halbdurchsichtige) Farbe über einen deckenden Untergrund und
+ * liefert eine deckende rgb()-Farbe. Der Untergrund muss deckend sein.
+ */
+export function over(top: string, under: string): string {
+  const t = parseColor(top);
+  const u = parseColor(under);
+  if (u.a !== 1) {throw new Error(`Untergrund muss deckend sein: "${under}"`);}
+  const mix = (x: number, y: number) => Math.round(t.a * x + (1 - t.a) * y);
+  return `rgb(${mix(t.r, u.r)}, ${mix(t.g, u.g)}, ${mix(t.b, u.b)})`;
+}
+
+/**
+ * WCAG-Kontrastverhältnis (1 … 21). Die Deckkraft der Schrift wird über den
+ * Hintergrund gemischt; der Hintergrund muss deckend sein (sonst vorher `over`).
+ */
 export function contrastRatio(foreground: string, background: string): number {
-  const l1 = relativeLuminance(foreground);
+  const fg = parseColor(foreground).a === 1 ? foreground : over(foreground, background);
+  const l1 = relativeLuminance(fg);
   const l2 = relativeLuminance(background);
   const hi = Math.max(l1, l2);
   const lo = Math.min(l1, l2);
