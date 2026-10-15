@@ -18,6 +18,8 @@ const BFV = 'BFV-Richtlinien für Futsal und private Hallenturniere';
 const LONG_50 = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
 /** Toleranz für die Größe, die pdfjs aus der Textmatrix liest. */
 const SIZE_TOL = 0.05;
+/** Kopfangaben (Bezeichnungen und Werte) in 10,5 pt (Daniel 15.10., bewusste Abweichung von v7.2 mit 9,5 pt). Literal, damit der Test den Wert festhält. */
+const KOPF_PT = 10.5;
 
 const PLACEMENT: PlacementCriterion[] = [
   { id: 'points', enabled: true },
@@ -283,6 +285,18 @@ describe('@BM-052 Kicker: nur in der Fassung „zum Ausfüllen“', () => {
 });
 
 describe('Punkt 5 Kopf nach v7.2 (Daniel 15.10.)', () => {
+  it('Angabentabelle: Bezeichnungen und Werte stehen in 10,5 pt (B-28a3-4G Punkt 1)', async () => {
+    const tournament = hallencupMitRegelwerk();
+    const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
+    const bezeichnungen = ['Veranstalter', 'Altersklasse', 'Halle', 'Termin', 'Modus', 'Platzierung', 'Spielzeit', 'Regelwerk'];
+    const kopf = pages[0].texts.filter(t => t.y < 90 && t.str.trim() !== '');
+    const stellen = [...bezeichnungen, 'D-Junioren'].map(name => kopf.find(t => trimmed(t) === name));
+    stellen.forEach((t, i) => expect(t, `Fundstelle ${i}`).toBeDefined());
+    for (const t of kopf.filter(z => bezeichnungen.includes(trimmed(z)) || trimmed(z) === 'D-Junioren')) {
+      expect(Math.abs(t.size - KOPF_PT), `„${t.str}“`).toBeLessThanOrEqual(SIZE_TOL);
+    }
+  });
+
   it('(b) der Turniername steht zentriert über die volle Seitenbreite (± 1 mm), jede Zeile', async () => {
     const tournament = hallencupMitRegelwerk({ title: LANGER_TITEL });
     const { pages, width } = await layoutOf({ tournament }, hallencupSchedule(tournament));
@@ -303,7 +317,7 @@ describe('Punkt 5 Kopf nach v7.2 (Daniel 15.10.)', () => {
     expect(bezeichnung, 'Bezeichnung Altersklasse').toBeDefined();
     expect(wert, 'Wert Altersklasse').toBeDefined();
     expect(Math.abs((wert?.y ?? 0) - (bezeichnung?.y ?? 0))).toBeLessThan(0.5);
-    expect(Math.abs((bezeichnung?.size ?? 0) - printType.meta)).toBeLessThanOrEqual(SIZE_TOL);
+    expect(Math.abs((bezeichnung?.size ?? 0) - KOPF_PT)).toBeLessThanOrEqual(SIZE_TOL);
   });
 
   it('Tabelle: Bezeichnungen fett, Werte normal, eine Schriftgröße, alle Werte in derselben Spalte', async () => {
@@ -316,13 +330,13 @@ describe('Punkt 5 Kopf nach v7.2 (Daniel 15.10.)', () => {
     labels.forEach((t, i) => {
       expect(t, bezeichnungen[i]).toBeDefined();
       expect(fett.get(t!), `„${bezeichnungen[i]}“ fett`).toBe(true);
-      expect(Math.abs((t?.size ?? 0) - printType.meta)).toBeLessThanOrEqual(SIZE_TOL);
+      expect(Math.abs((t?.size ?? 0) - KOPF_PT)).toBeLessThanOrEqual(SIZE_TOL);
     });
     const unterkante = pages[0].texts.find(t => trimmed(t) === 'Teilnehmer')?.y ?? 90;
     const werte = kopf.filter(t => t.x > 30 && t.y < unterkante && t.str.trim() !== '' && !fett.get(t) && t.y > (labels[0]?.y ?? 0));
     const linksKanten = new Set(werte.map(t => Math.round(t.x * 10)));
     expect(linksKanten.size, 'alle Werte beginnen in einer Spalte').toBe(1);
-    werte.forEach(t => expect(Math.abs(t.size - printType.meta), `„${t.str}“`).toBeLessThanOrEqual(SIZE_TOL));
+    werte.forEach(t => expect(Math.abs(t.size - KOPF_PT), `„${t.str}“`).toBeLessThanOrEqual(SIZE_TOL));
   });
 
   it('(d) die Angabentabelle bleibt links, die QR-Spalte rechts ist frei (auch bei umbrochenem Wert)', async () => {
@@ -333,7 +347,7 @@ describe('Punkt 5 Kopf nach v7.2 (Daniel 15.10.)', () => {
     const geo = pageGeometry('a4', 'portrait');
     const grenze = geo.left + geo.contentWidth - printMetrics.qrColumnWidth - printMetrics.qrColumnGap;
     const fett = await fettMap(pages[0].texts);
-    const werte = pages[0].texts.filter(t => t.y > 25 && t.y < 90 && !fett.get(t) && t.str.trim() !== '' && t.size <= printType.meta + SIZE_TOL);
+    const werte = pages[0].texts.filter(t => t.y > 25 && t.y < 90 && !fett.get(t) && t.str.trim() !== '' && t.size <= KOPF_PT + SIZE_TOL);
 
     expect(werte.length).toBeGreaterThan(0);
     werte.forEach(t => expect(t.x + t.w, `„${t.str}“`).toBeLessThanOrEqual(grenze + SIZE_TOL));

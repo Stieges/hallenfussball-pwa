@@ -69,8 +69,8 @@ export const printType = {
   titleShort: 16,
   /** .head.short .subtitle */
   subtitle: 10.5,
-  /** .meta */
-  meta: 9.5,
+  /** .meta: Kopfangaben (Bezeichnungen und Werte). 10,5 pt statt v7.2 9,5 pt (Daniel 15.10., bewusste Abweichung). */
+  meta: 10.5,
   /** h2 */
   h2: 13,
   /** table.m thead th */
@@ -200,8 +200,8 @@ export const printMetrics = {
   shortTitleAdvance: 6,
   /** Kopf: Abstand Titel-Grundlinie → erste Angabe (Unterlänge des Titels plus Oberlänge der Angabe) */
   headBlockGap: 6,
-  /** Kopf: Zeilenabstand der Angaben und Regelzeilen (9,5 pt) */
-  factAdvance: 4.2,
+  /** Kopf: Zeilenabstand der Angaben und Regelzeilen (10,5 pt × 1,22 wie v7.2 .meta) */
+  factAdvance: 4.5,
   factLabelGap: 3,
 
   /** Abschnittstitel */
