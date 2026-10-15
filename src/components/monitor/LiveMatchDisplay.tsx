@@ -7,8 +7,6 @@
  * - Teams (12%):  Team names centered below score blocks
  * - Timer (17%):  Large centered timer with progress bar
  * - Footer (8%):  Referee info
- *
- * @see MONITOR-LIVE-SCORE-REDESIGN.md
  */
 
 import { CSSProperties, useCallback, useState } from 'react';
@@ -24,7 +22,8 @@ import type { ClockMode } from '../../core/match/clockDisplay';
 import { ScoreBlock } from './ScoreBlock';
 import { TeamNameDisplay } from './TeamNameDisplay';
 import { getStatusInfo } from './liveStatus';
-import { getBlockFrame } from './liveBlockFrame';
+import { LiveFinalScore } from './LiveFinalScore';
+import { getBlockFrames } from './liveBlockFrame';
 
 export { NoMatchDisplay } from './NoMatchDisplay';
 export type { NoMatchDisplayProps } from './NoMatchDisplay';
@@ -91,6 +90,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   const awayColor = resolveColor('away', scheme, match.awayTeam);
 
   const layout = displayLayout.scoreArea;
+  const frames = getBlockFrames(homeColor, awayColor, themeColors.background, themeColors.text);
 
   // B3: beide Teamnamen in derselben Größe (die kleinere der beiden passenden)
   const [namePx, setNamePx] = useState<{ home?: number; away?: number }>({});
@@ -238,7 +238,6 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   return (
     <>
       <div style={containerStyle}>
-        {/* Header: LIVE badge | Field | Group */}
         <div style={headerStyle} data-testid="live-header">
           <div style={{ ...badgeStyle, justifySelf: 'start' }} data-testid="live-badge">
             <span style={liveDotStyle} />
@@ -261,7 +260,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
                 backgroundColor={homeColor}
                 position="home"
                 size={size}
-                frame={getBlockFrame(homeColor, themeColors.background, themeColors.text)}
+                frame={frames.home}
               />
             </div>
           )}
@@ -275,7 +274,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
                 backgroundColor={awayColor}
                 position="away"
                 size={size}
-                frame={getBlockFrame(awayColor, themeColors.background, themeColors.text)}
+                frame={frames.away}
               />
             </div>
           )}
@@ -306,6 +305,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
 
         {/* Unterer Bereich: feste Höhe in jedem Zustand (B-44a2); H2: nach dem Abpfiff keine Uhr, nur das Endergebnis */}
         <div style={timerAreaStyle} data-testid="live-lower">
+          {match.status === 'FINISHED' && <LiveFinalScore color={themeColors.text} />}
           {(isRunning || isPaused) && (
             <MatchTimer
               elapsedSeconds={match.elapsedSeconds}

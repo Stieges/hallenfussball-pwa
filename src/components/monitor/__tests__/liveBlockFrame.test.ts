@@ -1,7 +1,7 @@
 /** B-44a2 Rahmenregel (@ZM-140): beide Kästen einheitlich mit dezentem Rahmen, kräftig bei Kontrast unter 3 : 1. */
 import { describe, it, expect } from 'vitest';
 import { displayLayout, monitorThemes } from '../../../design-tokens';
-import { getBlockFrame } from '../liveBlockFrame';
+import { getBlockFrame, getBlockFrames } from '../liveBlockFrame';
 
 const L = displayLayout.scoreArea;
 const bg = monitorThemes.dark.background;
@@ -35,5 +35,20 @@ describe('getBlockFrame', () => {
     for (const c of ['#1E40AF', '#DC2626', '#FDE047', '#000000', '#FFFFFF', '#16A34A']) {
       expect(getBlockFrame(c, bg, text).width).toMatch(/px$/);
     }
+  });
+});
+
+describe('getBlockFrames (Entscheidung Daniel 2026-10-15): gleiche Rahmenbreite beider Kästen', () => {
+  it('Blau (kräftig) und Rot (dezent): beide bekommen die kräftige Breite, Farben bleiben je Kasten', () => {
+    const f = getBlockFrames('#1E40AF', '#DC2626', bg, text);
+    expect(f.home.width).toBe(L.frameWidthStrong);
+    expect(f.away.width).toBe(f.home.width);
+    expect(f.away.color).not.toBe(f.home.color);
+  });
+
+  it('Gegenbeispiel: zwei dezente Kästen behalten die dezente Breite', () => {
+    const f = getBlockFrames('#DC2626', '#FDE047', bg, text);
+    expect(f.home.width).toBe(L.frameWidthSubtle);
+    expect(f.away.width).toBe(L.frameWidthSubtle);
   });
 });

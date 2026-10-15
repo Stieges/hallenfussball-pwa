@@ -100,16 +100,16 @@ describe('Rahmenlogik einheitlich', () => {
     expect(away.style.borderWidth).toBe(L.frameWidthSubtle);
   });
 
-  it('Standard: Blau (unter 3 : 1) kräftig, Rot dezent', () => {
+  it('Standard: Blau (unter 3 : 1) macht beide Rahmen kräftig (gleiche Breite, Entscheidung 2026-10-15)', () => {
     render(<LiveMatchDisplay match={createMatch()} />);
     expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe(L.frameWidthStrong);
-    expect(document.querySelector<HTMLElement>('[data-position="away"]')!.style.borderWidth).toBe(L.frameWidthSubtle);
+    expect(document.querySelector<HTMLElement>('[data-position="away"]')!.style.borderWidth).toBe(L.frameWidthStrong);
   });
 
-  it('Schwarz: kräftiger Rahmen, der andere Kasten bleibt dezent', () => {
+  it('Schwarz: kräftiger Rahmen, der andere Kasten bekommt dieselbe Breite', () => {
     render(<LiveMatchDisplay match={createMatch()} colorScheme={{ preset: 'classic', homeColor: '#000000', awayColor: '#DC2626', useTeamColors: false }} />);
     expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe(L.frameWidthStrong);
-    expect(document.querySelector<HTMLElement>('[data-position="away"]')!.style.borderWidth).toBe(L.frameWidthSubtle);
+    expect(document.querySelector<HTMLElement>('[data-position="away"]')!.style.borderWidth).toBe(L.frameWidthStrong);
   });
 });
 
