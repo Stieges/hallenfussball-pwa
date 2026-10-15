@@ -28,6 +28,7 @@ function createTestTournamentWithMatch() {
     title: 'Cockpit Test Turnier',
     status: 'published',
     sport: 'football',
+    sportId: 'football-indoor', // Pflichtfeld im TournamentSchema (A-08f3b2)
     tournamentType: 'classic',
     mode: 'classic',
     date: futureDate,
@@ -51,11 +52,12 @@ function createTestTournamentWithMatch() {
     pointSystem: { win: 3, draw: 1, loss: 0 },
     location: { name: 'Test-Halle' },
     ageClass: 'U12',
+    // Team-IDs als UUID (TeamIdSchema seit A-01)
     teams: [
-      { id: 'team-home', name: 'Home United' },
-      { id: 'team-away', name: 'Away FC' },
-      { id: 'team-3', name: 'Test Team C' },
-      { id: 'team-4', name: 'Test Team D' },
+      { id: '00000000-0000-4000-8000-0000000000e1', name: 'Home United' },
+      { id: '00000000-0000-4000-8000-0000000000e2', name: 'Away FC' },
+      { id: '00000000-0000-4000-8000-0000000000e3', name: 'Test Team C' },
+      { id: '00000000-0000-4000-8000-0000000000e4', name: 'Test Team D' },
     ],
     // Let the app generate matches from the schedule
     matches: [],
