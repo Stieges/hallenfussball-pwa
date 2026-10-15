@@ -9,6 +9,7 @@ import { GeneratedSchedule } from '../../core/generators';
 import { Standing, Tournament } from '../../types/tournament';
 import { getLocationName } from '../../utils/locationHelpers';
 import { withTournamentState } from '../../lib/pdf/tournamentState';
+import type { PdfAudience } from '../../lib/pdf/visibility';
 
 export interface PDFExportDialogProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ export interface PDFExportDialogProps {
   tournament: Tournament;
   schedule: GeneratedSchedule;
   standings: Standing[];
+  /** Zielgruppe des PDFs: `viewer` druckt „Nur Spielplan“ (keine Ergebnisse, keine Tabellen, @BM-032). Vorgabe: Veranstalter. */
+  audience?: PdfAudience;
 }
 
 export const PDFExportDialog = ({
@@ -24,6 +27,7 @@ export const PDFExportDialog = ({
   tournament,
   schedule,
   standings,
+  audience = 'organizer',
 }: PDFExportDialogProps) => {
   const { t } = useTranslation('tournament');
   // Default: Include scores if any match has scores
@@ -47,6 +51,7 @@ export const PDFExportDialog = ({
       const result = await exportScheduleToPDF(updatedSchedule, includeStandings ? standings : undefined, {
         includeScores,
         includeStandings,
+        audience,
         // Fassung: „Spielplan zum Ausfüllen“ nur auf ausdrückliche Wahl „Ohne Spielstand“
         edition: includeScores ? 'plan' : 'blank',
         // Regelzeilen und K.-o.-Zeilen im Kopf kommen aus dem Turnier (B-28a3-3b)

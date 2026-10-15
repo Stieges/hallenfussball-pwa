@@ -8,14 +8,17 @@
  */
 import type { ScheduledMatch } from '../../core/generators';
 import { isGroupOrigin, originLabel } from './origin';
+import type { StructuralOrigin } from './originStructure';
 import type { PdfTexts } from './translations';
 
 /** Kontext der Spielseiten. */
 export interface PdfSideContext {
-  /** Gruppen-Herkunft eines offenen Platzes wird „noch offen“ (Tabellen aus, B-28 C5); Sieger/Verlierer bleiben. */
+  /** Gruppen-Herkunft eines Finalplatzes wird „noch offen“ (Tabellen aus, B-28 C5); Sieger/Verlierer bleiben. */
   hidePendingOrigin?: boolean;
-  /** Fassung zum Ausfüllen (B-28 C6): auch ein besetzter Platz zeigt seine Herkunft, nie das feststehende Team. */
+  /** Fassung zum Ausfüllen (B-28 C6): ein Finalplatz zeigt immer seine Herkunft, nie das feststehende Team. */
   originOnly?: boolean;
+  /** Herkunft aus der Turnierstruktur (`originStructure.ts`); nötig für besetzte Finalplätze bei `originOnly`/`hidePendingOrigin`. */
+  structure?: StructuralOrigin;
   /** Texte des Dokuments: ohne sie bleibt die Anzeige, wie der Generator sie liefert. */
   t?: PdfTexts;
   /** Ist `name` der Name eines Teams des Plans? Dann ist der Platz besetzt. */
@@ -24,13 +27,26 @@ export interface PdfSideContext {
   groupName?: (id: string) => string;
 }
 
+/** Besetzter Finalplatz bei `originOnly` oder `hidePendingOrigin`: Herkunft aus der Struktur, nie der Teamname. */
+function occupiedFinalLabel(shown: string, key: string | undefined, ctx: PdfSideContext, t: PdfTexts): string {
+  const group = key !== undefined && isGroupOrigin(key);
+  const known = key !== undefined && (group || originLabel(key, t) !== key);
+  if (!known || (ctx.hidePendingOrigin === true && group)) {
+    return t.origin.undecided;
+  }
+  return ctx.originOnly === true ? originLabel(key, t, ctx.groupName) : shown;
+}
+
 /** Anzeige der Seite `A` (Heim) oder `B` (Gast) eines Spiels. */
 export function sideLabel(match: ScheduledMatch, side: 'A' | 'B', ctx: PdfSideContext = {}): string {
   const shown = side === 'A' ? match.homeTeam : match.awayTeam;
   const raw = side === 'A' ? match.originalTeamA : match.originalTeamB;
-  const occupied = ctx.isTeam?.(shown) === true;
-  if (!ctx.t || (occupied && ctx.originOnly !== true)) {
+  if (!ctx.t) {
     return shown;
+  }
+  if (ctx.isTeam?.(shown) === true) {
+    const restricted = ctx.originOnly === true || ctx.hidePendingOrigin === true;
+    return restricted && match.phase !== 'groupStage' ? occupiedFinalLabel(shown, ctx.structure?.(match, side), ctx, ctx.t) : shown;
   }
   if (ctx.hidePendingOrigin === true && (isGroupOrigin(raw) || isGroupOrigin(shown))) {
     return ctx.t.origin.undecided;

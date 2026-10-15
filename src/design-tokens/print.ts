@@ -161,9 +161,12 @@ export const printBox = {
   smallLineEm: 1.1,
   /** Fassung zum Ausfüllen (B-28 C6): Mindesthöhe einer Zeile der leeren Gruppentabelle (Kugelschreiber, wie die Platzierungszeile) */
   blankRow: 8,
-  /** Schreiblinie unter der Herkunft eines Finalteams: Abstand zur Unterkante der Zelle, Abstand Grundlinie der Herkunft → Linie */
+  /**
+   * Schreiblinie unter der Herkunft eines Finalteams: Abstand der Linie zur Unterkante der Zelle; Platz zum Schreiben
+   * mindestens von der Grundlinie der Herkunft (an der Oberkante der Zelle) bis zur Linie (Kugelschreiber, 7 mm)
+   */
   writeLineInset: 2,
-  writeTextGap: 0.8,
+  writeSpace: 7,
 } as const;
 
 /** Abstände in mm (`druck.css`, wo vorhanden). */

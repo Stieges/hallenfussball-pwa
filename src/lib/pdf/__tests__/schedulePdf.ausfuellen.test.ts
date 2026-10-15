@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { generateFullSchedule } from '../../../core/generators';
 import { printBox, printColors, printType } from '../../../design-tokens/print';
 import type { Team } from '../../../types/tournament';
+import { pageGeometry } from '../layout';
 import { buildSchedulePdf, type PDFExportOptions } from '../schedulePdf';
 import { HALLENCUP_STANDINGS, finalsMatches, hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { readLayout, type LayoutPage } from './pdfjsLayout';
@@ -18,13 +19,16 @@ import { squash } from './pdfjsText';
 const TOM = new Date(2026, 10, 14, 15, 7);
 const ERGEBNIS = { 11: { scoreA: 2, scoreB: 1, matchStatus: 'finished' as const } };
 
-/** Halbfinale 1 mit festem Team: so kommt ein besetzter Platz aus dem Turnierstand an. */
+/**
+ * Halbfinale 1 mit festem Team, so wie die App es besetzt: `playoffResolver` ersetzt den Platzhalter durch die Team-ID,
+ * ein Herkunftsschlüssel steht nicht mehr im Spiel. Laut Generator ist Halbfinale 1 „Zweiter Gruppe A“ gegen „Erster Gruppe B“.
+ */
 function halbfinaleBesetzt(): { schedule: ReturnType<typeof hallencupSchedule>; nummer: number } {
   const tournament = hallencupTournament();
   const stand = mitStand(hallencupSchedule(tournament), tournament, ERGEBNIS);
   const hf = finalsMatches(stand.schedule).filter(m => m.finalType === undefined).sort((a, b) => a.matchNumber - b.matchNumber)[0];
   hf.homeTeam = 'FC Nord';
-  hf.originalTeamA = 'group-a-1st';
+  hf.originalTeamA = 'team-nord';
   return { schedule: stand.schedule, nummer: hf.matchNumber };
 }
 
@@ -75,7 +79,7 @@ describe('@DR-005 @BM-052 Pflichtfall: Tom um 15:07, Spiel 11 steht 2:1, Halbfin
     for (const name of namen) {
       expect(seite.texts.some(t => t.str.trim() === name), name).toBe(true);
     }
-    expect(gezaehlt.filter(t => /\d/.test(t.str) && t.y < 270).map(t => t.str)).toEqual([]);
+    expect(gezaehlt.filter(t => /\d/.test(t.str) && t.y < pageGeometry('a4', 'portrait').footRuleY).map(t => t.str)).toEqual([]);
     expect(seite.texts.filter(t => t.str.trim() === ':').length).toBeGreaterThanOrEqual(namen.length);
     expect(seite.lines.filter(senkrecht).length).toBeGreaterThanOrEqual(namen.length);
   });
@@ -105,16 +109,35 @@ describe('@DR-005 @BM-052 Pflichtfall: Tom um 15:07, Spiel 11 steht 2:1, Halbfin
     expect(squash(pages.flatMap(p => p.texts.map(t => t.str)).join(' '))).not.toContain(squash('nach jedem Spiel'));
   });
 
-  it('Halbfinale 1: „Erster Gruppe A“ klein über einer Schreiblinie, nicht „FC Nord“', async () => {
+  it('Halbfinale 1 (besetzt mit Team-ID): „Zweiter Gruppe A“ aus der Turnierstruktur klein an der Oberkante, ≥ Token über der Schreiblinie, nicht „FC Nord“', async () => {
     const { pages, nummer } = await seiten('blank');
     const zeile = zeileVon(pages, nummer);
-    const herkunft = textsIn(zeile).find(t => t.str.trim() === 'Erster Gruppe A');
+    const herkunft = textsIn(zeile).find(t => t.str.trim() === 'Zweiter Gruppe A');
     const linien = zeile.page.lines.filter(l => waagerecht(l) && l.y1 > zeile.top + TOL && l.y1 < zeile.bottom - TOL && Math.abs(l.x2 - l.x1) > 10);
 
     expect(herkunft, 'Herkunft').toBeDefined();
     expect(Math.abs((herkunft?.size ?? 0) - printType.origin)).toBeLessThanOrEqual(SIZE_TOL);
     expect(textsIn(zeile).some(t => t.str.trim() === 'FC Nord')).toBe(false);
-    expect(linien.some(l => l.y1 > (herkunft?.y ?? Infinity) && Math.min(l.x1, l.x2) < (herkunft?.x ?? 0) + 1), 'Linie unter der Herkunft').toBe(true);
+    const linie = linien.find(l => l.y1 > (herkunft?.y ?? Infinity) && Math.min(l.x1, l.x2) < (herkunft?.x ?? 0) + 1);
+    expect(linie, 'Linie unter der Herkunft').toBeDefined();
+    // W2: Platz zum Schreiben zwischen Herkunft und Linie, die Herkunft sitzt oben in der Zelle
+    expect((linie?.y1 ?? 0) - (herkunft?.y ?? 0)).toBeGreaterThanOrEqual(printBox.writeSpace - TOL);
+    expect((herkunft?.y ?? Infinity) - zeile.top).toBeLessThan(printBox.writeSpace);
+  });
+
+  it('K1 fail-safe: lässt sich die Herkunft nicht bestimmen (Spiel nicht im Plan der Struktur), steht „noch offen“, nie der Name', async () => {
+    const { schedule, nummer } = halbfinaleBesetzt();
+    const hf = finalsMatches(schedule).find(m => m.matchNumber === nummer);
+    if (hf) {hf.finalType = 'seventhEighth';}
+    const { doc } = await buildSchedulePdf({
+      schedule, standings: HALLENCUP_STANDINGS,
+      options: { locale: 'de', translate: translatorFor('de'), tournament: hallencupTournament(), edition: 'blank', now: TOM },
+    });
+    const pages = await readLayout(new Uint8Array(doc.output('arraybuffer')));
+    const texte = textsIn(zeileVon(pages, nummer)).map(t => t.str.trim());
+
+    expect(texte).toContain('noch offen');
+    expect(texte).not.toContain('FC Nord');
   });
 
   it('Gegenbeispiel: in der Fassung „Spielplan“ steht das besetzte Team „FC Nord“ im Halbfinale 1', async () => {
@@ -132,6 +155,14 @@ describe('@DR-005 @BM-052 Pflichtfall: Tom um 15:07, Spiel 11 steht 2:1, Halbfin
 });
 
 describe('@DR-018 Sichtbarkeit gilt auch in der Fassung zum Ausfüllen', () => {
+  it('Gruppentabellen aus, Fassung „Spielplan“: besetztes Halbfinale 1 zeigt „noch offen“ statt des Teams', async () => {
+    const { pages, nummer } = await seiten('plan', {}, hallencupTournament({ hideRankingsForPublic: true }));
+    const texte = textsIn(zeileVon(pages, nummer)).map(t => t.str.trim());
+
+    expect(texte).toContain('noch offen');
+    expect(texte).not.toContain('FC Nord');
+  });
+
   it('Gruppentabellen aus: keine Tabelle, Gruppen-Herkunft „noch offen“ über der Linie', async () => {
     const { pages, nummer } = await seiten('blank', {}, hallencupTournament({ hideRankingsForPublic: true }));
     const zeile = zeileVon(pages, nummer);

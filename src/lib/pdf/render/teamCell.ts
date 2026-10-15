@@ -6,6 +6,7 @@
  */
 import type jsPDF from 'jspdf';
 import { printBox, printColors, printStroke, printType } from '../../../design-tokens/print';
+import { ascentMm } from '../layout';
 import type { Rect } from '../scoreLayout';
 import { fontOf } from '../fonts';
 
@@ -21,8 +22,16 @@ export interface TeamCellLayout {
   baseline: number;
 }
 
-/** Linie und Textanker einer Teamzelle. `padH` ist der Innenabstand links und rechts. */
-export function teamCellLayout(cell: Rect, side: TeamSide, padH: number): TeamCellLayout {
+/** Mindesthöhe der Zelle: Innenabstand oben, Herkunft, Platz zum Schreiben bis zur Linie, Abstand der Linie zur Unterkante. */
+export function teamCellMinHeight(padV: number): number {
+  return padV + ascentMm(printType.origin) + printBox.writeSpace + printBox.writeLineInset;
+}
+
+/**
+ * Linie und Textanker einer Teamzelle. `padH` links und rechts, `padV` oben: die Herkunft sitzt an der Oberkante der
+ * Zelle, die Linie unten; dazwischen bleiben mindestens `printBox.writeSpace` zum Schreiben.
+ */
+export function teamCellLayout(cell: Rect, side: TeamSide, padH: number, padV: number): TeamCellLayout {
   const lineY = cell.y + cell.h - printBox.writeLineInset;
   const x1 = cell.x + padH;
   const x2 = cell.x + cell.w - padH;
@@ -30,13 +39,13 @@ export function teamCellLayout(cell: Rect, side: TeamSide, padH: number): TeamCe
     line: { x1, x2, y: lineY },
     align: side === 'home' ? 'right' : 'left',
     textX: side === 'home' ? x2 : x1,
-    baseline: lineY - printBox.writeTextGap,
+    baseline: cell.y + padV + ascentMm(printType.origin),
   };
 }
 
-/** Zeichnet Herkunft und Schreiblinie in die Zelle `cell`. Zu lange Herkunft bricht um und wächst nach oben. */
-export function drawTeamCell(doc: jsPDF, cell: Rect, side: TeamSide, origin: string, padH: number): void {
-  const layout = teamCellLayout(cell, side, padH);
+/** Zeichnet Herkunft und Schreiblinie in die Zelle `cell`. Zu lange Herkunft bricht um und wächst nach unten. */
+export function drawTeamCell(doc: jsPDF, cell: Rect, side: TeamSide, origin: string, pad: { h: number; v: number }): void {
+  const layout = teamCellLayout(cell, side, pad.h, pad.v);
   doc.setDrawColor(...printColors.ink);
   doc.setTextColor(...printColors.ink);
   doc.setLineWidth(printStroke.box);
@@ -46,6 +55,6 @@ export function drawTeamCell(doc: jsPDF, cell: Rect, side: TeamSide, origin: str
   const lines = doc.splitTextToSize(origin, layout.line.x2 - layout.line.x1) as string[];
   const advance = doc.getLineHeight() * doc.internal.scaleFactor ** -1;
   lines.forEach((text, index) => {
-    doc.text(text, layout.textX, layout.baseline - (lines.length - 1 - index) * advance, { align: layout.align });
+    doc.text(text, layout.textX, layout.baseline + index * advance, { align: layout.align });
   });
 }

@@ -59,3 +59,26 @@ describe('PDFExportDialog – Hinweise nach dem Export', () => {
     expect(screen.queryByTestId('pdf-export-notes')).not.toBeInTheDocument();
   });
 });
+
+describe('PDFExportDialog – Zielgruppe (B-28 C5-F, W1)', () => {
+  beforeEach(() => {
+    exportMock.mockReset();
+    exportMock.mockResolvedValue({ notes: [] });
+  });
+
+  it('Vorgabe: Veranstalter', async () => {
+    renderDialog(vi.fn());
+    fireEvent.click(screen.getByText('tournament:pdfExport.export'));
+
+    await waitFor(() => expect(exportMock).toHaveBeenCalledTimes(1));
+    expect(exportMock.mock.calls[0][2].audience).toBe('organizer');
+  });
+
+  it('Zuschauer: „Nur Spielplan“ wird an den Export gereicht', async () => {
+    render(<PDFExportDialog isOpen onClose={vi.fn()} tournament={tournament} schedule={schedule} standings={[]} audience="viewer" />);
+    fireEvent.click(screen.getByText('tournament:pdfExport.export'));
+
+    await waitFor(() => expect(exportMock).toHaveBeenCalledTimes(1));
+    expect(exportMock.mock.calls[0][2].audience).toBe('viewer');
+  });
+});

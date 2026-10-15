@@ -29,6 +29,7 @@ import { planSections, type SectionKey } from './sections';
 import { closedLine, footerLine, standLine } from './standText';
 import { groupPhaseOpen } from './tournamentState';
 import { pdfContentRules } from './visibility';
+import { structuralOrigin } from './originStructure';
 import { countFooterLines, drawFooters, type FooterContent } from './render/footer';
 import { renderGroupStage } from './render/groupTables';
 import type { MatchTableContext } from './render/matchTable';
@@ -192,6 +193,7 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
       groupName: id => t.groupLabel(id, getGroupDisplayName(id, schedule.tournament)),
       hidePendingOrigin: content.hidePendingOrigin,
       originOnly: edition === 'blank',
+      ...(edition === 'blank' || content.hidePendingOrigin ? { structure: structuralOrigin(tournament) } : {}),
     },
   };
 

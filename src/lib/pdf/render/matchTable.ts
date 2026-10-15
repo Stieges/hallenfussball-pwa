@@ -17,7 +17,7 @@ import type { ScoreSpec } from '../scoreLayout';
 import type { StatefulMatch } from '../tournamentState';
 import type { PdfTexts } from '../translations';
 import { drawLiveBar, drawRefereeField, drawScoreCell, scoreCellMinHeight, scoreSpecFor } from './scoreCell';
-import { drawTeamCell } from './teamCell';
+import { drawTeamCell, teamCellMinHeight } from './teamCell';
 import { fontOf } from '../fonts';
 import { matchTableOptions, pad } from './matchTables';
 
@@ -80,7 +80,7 @@ function buildColumns(input: MatchTableInput, ctx: MatchTableContext): Column[] 
       key: 'result',
       head: t.result,
       style: { halign: 'center', cellWidth: widths.result },
-      cell: r => ({ content: '', styles: { minCellHeight: scoreCellMinHeight(r.spec, input.padV ?? printGap.bodyPadV) } }),
+      cell: r => ({ content: '', styles: { minCellHeight: Math.max(scoreCellMinHeight(r.spec, input.padV ?? printGap.bodyPadV), input.writeIn ? teamCellMinHeight(input.padV ?? printGap.bodyPadV) : 0) } }),
     },
     { key: 'away', head: t.away, style: { halign: 'left' }, cell: r => (input.writeIn ? '' : r.away) },
     { key: 'referee', head: t.referee, style: { halign: 'center', cellWidth: widths.referee }, cell: r => r.referee },
@@ -129,7 +129,7 @@ export function renderMatchTable(doc: jsPDF, input: MatchTableInput, ctx: MatchT
         case 'home':
         case 'away':
           if (input.writeIn) {
-            drawTeamCell(doc, cell, columns[data.column.index].key === 'home' ? 'home' : 'away', columns[data.column.index].key === 'home' ? row.home : row.away, printGap.bodyPadH);
+            drawTeamCell(doc, cell, columns[data.column.index].key === 'home' ? 'home' : 'away', columns[data.column.index].key === 'home' ? row.home : row.away, { h: printGap.bodyPadH, v: input.padV ?? printGap.bodyPadV });
           }
           break;
         case 'referee':
