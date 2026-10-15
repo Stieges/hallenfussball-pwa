@@ -95,7 +95,8 @@ export const semanticColorsLight = {
   errorBorder: 'rgba(220, 38, 38, 0.25)',
 
   warning: palette.amber[600],
-  warningHover: palette.amber[700],
+  /** Hover der Warn-Knöpfe: dunkler als warningSolid (B-43b3), weiße Schrift hält ≥ 4,5 : 1 */
+  warningHover: palette.amber[800],
   warningSolid: palette.amber[700],
   warningLight: 'rgba(217, 119, 6, 0.1)',
   warningSubtle: 'rgba(217, 119, 6, 0.05)',

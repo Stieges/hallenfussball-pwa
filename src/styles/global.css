@@ -149,7 +149,7 @@
      Colors - Warning
      =========================================== */
   --color-warning: #FF9100;
-  --color-warning-hover: #FF6D00;
+  --color-warning-hover: #FF9100;
   --color-warning-solid: #FF6D00;
   --color-warning-subtle: rgba(255, 145, 0, 0.08);
   --color-warning-light: rgba(255, 145, 0, 0.15);
@@ -654,7 +654,7 @@ html[data-font-size="x-large"] {
      Colors - Warning
      =========================================== */
   --color-warning: #D97706;
-  --color-warning-hover: #B45309;
+  --color-warning-hover: #92400E;
   --color-warning-solid: #B45309;
   --color-warning-subtle: rgba(217, 119, 6, 0.05);
   --color-warning-light: rgba(217, 119, 6, 0.1);

@@ -15,6 +15,9 @@ export const breakpoints = {
   /** Small phones and below */
   mobile: '480px',
 
+  /** Unterhalb davon erscheinen zentrierte Dialoge als Blatt von unten (B-43b3, @OB-021) */
+  sheet: '600px',
+
   /** Tablets and large phones */
   tablet: '768px',
 
@@ -34,6 +37,7 @@ export const breakpoints = {
 
 export const breakpointValues = {
   mobile: 480,
+  sheet: 600,
   tablet: 768,
   desktop: 1024,
   wide: 1280,

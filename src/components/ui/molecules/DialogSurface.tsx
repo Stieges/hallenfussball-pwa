@@ -7,16 +7,17 @@
  * (Blatt von unten bei placement="sheet"; zentriert, oben ausgerichtet unter
  * tabletDown bei placement="center").
  *
- * Bewusste Entscheidung (Review B-43a, F8): zentrierte Dialoge bleiben am Handy
- * zentriert bzw. oben ausgerichtet und werden NICHT zum Blatt; nur placement="sheet"
- * ist ein Blatt von unten. Änderung, falls gewünscht, in B-43b (Daniel entscheidet).
+ * Handy-Blatt (B-43b3, @OB-021/@OB-055): zentrierte Dialoge erscheinen unter
+ * breakpoints.sheet (600 px) als Blatt von unten (volle Breite, unten verankert, Safe-Area);
+ * size="fullscreen" bleibt Vollbild. `data-layout` zeigt die wirksame Form
+ * (center | sheet | fullscreen), `data-placement` die angeforderte.
  *
  * Verbindliche Vorgaben: @OB-055 (deckende Fläche, Kontrast), @OB-056 (Einwilligung
  * – Schließen-Verhalten über `dismissible`).
  */
-import { CSSProperties, ReactNode, RefObject, useEffect, useId } from 'react';
+import { CSSProperties, ReactNode, RefObject, useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { cssVars, dialogWidths, mediaQueries } from '../../../design-tokens';
+import { breakpointValues, cssVars, dialogWidths, mediaQueries } from '../../../design-tokens';
 import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 // B-43b2: Scroll-Sperre per Referenzzählung (wie inert in useFocusTrap). Verschachtelte
@@ -38,6 +39,19 @@ function releaseScrollLock(): void {
   if (scrollLockCount === 0) {
     document.body.style.overflow = overflowBeforeLock;
   }
+}
+
+/** Ist das Fenster schmaler als das Blatt-Token? (Größenänderung wird verfolgt.) */
+function useBelowSheetWidth(): boolean {
+  const query = () => typeof window !== 'undefined' && window.innerWidth < breakpointValues.sheet;
+  const [below, setBelow] = useState<boolean>(query);
+  useEffect(() => {
+    const onResize = () => setBelow(query());
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return below;
 }
 
 export interface DialogSurfaceProps {
@@ -74,12 +88,16 @@ export interface DialogSurfaceProps {
   ariaLabel?: string;
   /** Start-Ziel des Fokus (@OB-014: bei gefährlichen Rückfragen zuerst „Abbrechen“). */
   initialFocusRef?: RefObject<HTMLElement | null>;
+  /** Zurück-Taste schließt (Standard: wie dismissible). false für Seiten, auf denen Zurück navigiert. */
+  closeOnBack?: boolean;
   /** @OB-014: Enter löst in gefährlichen Rückfragen nichts aus. */
   suppressEnter?: boolean;
   /** Zusätzliche Klasse der Fläche (für Feinregeln der Aufrufer). */
   panelClassName?: string;
   /** data-testid der Fläche (Standard: dialog-surface). */
   testId?: string;
+  /** data-testid der Abdunkelung (für Tests, die darauf klicken). */
+  scrimTestId?: string;
   children: ReactNode;
 }
 
@@ -99,18 +117,21 @@ export const DialogSurface = ({
   ariaLabel,
   initialFocusRef,
   suppressEnter,
+  closeOnBack,
   panelClassName,
   testId = 'dialog-surface',
+  scrimTestId,
   children,
 }: DialogSurfaceProps) => {
   const focusTrap = useFocusTrap({
     isActive: isOpen,
     onEscape: dismissible ? onClose : undefined,
-    closeOnBack: dismissible,
+    closeOnBack: closeOnBack ?? dismissible,
     initialFocusRef,
     suppressEnter,
   });
   const generatedId = useId();
+  const belowSheetWidth = useBelowSheetWidth();
 
   useEffect(() => {
     if (!isOpen) {return undefined;}
@@ -120,8 +141,11 @@ export const DialogSurface = ({
 
   if (!isOpen) {return null;}
 
-  const isSheet = placement === 'sheet';
   const isFull = size === 'fullscreen';
+  // Zentrierte Dialoge werden am Handy zum Blatt; Vollbild bleibt Vollbild.
+  const isSheet = !isFull && (placement === 'sheet' || belowSheetWidth);
+  const layout = isFull ? 'fullscreen' : isSheet ? 'sheet' : 'center';
+  const sheetMaxHeight = placement === 'sheet' ? '80vh' : '90vh';
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (dismissible && closeOnBackdropClick && e.target === e.currentTarget) {
@@ -156,9 +180,9 @@ export const DialogSurface = ({
         : cssVars.borderRadius.lg,
     boxShadow: cssVars.shadows.lg,
     width: '100%',
-    maxWidth: isFull ? '100%' : maxWidth,
+    maxWidth: isFull || (isSheet && placement === 'center') ? '100%' : maxWidth,
     ...(isFull ? { height: '100%', display: 'flex', flexDirection: 'column' as const } : {}),
-    maxHeight: isFull ? '100%' : isSheet ? '80vh' : '90vh',
+    maxHeight: isFull ? '100%' : isSheet ? sheetMaxHeight : '90vh',
     overflowY: isFull ? 'hidden' : 'auto',
     position: 'relative',
     paddingBottom: isSheet ? `env(safe-area-inset-bottom, ${cssVars.spacing.md})` : undefined,
@@ -168,12 +192,13 @@ export const DialogSurface = ({
   };
 
   const dialog = (
-    <div style={scrimStyle} className="dialog-surface-scrim" data-placement={placement} data-size={size} onClick={handleBackdropClick}>
+    <div style={scrimStyle} className="dialog-surface-scrim" data-placement={placement} data-layout={layout} data-size={size} data-testid={scrimTestId} onClick={handleBackdropClick}>
       <div
         ref={focusTrap.containerRef}
         style={panelStyle}
         className={['dialog-surface-panel', panelClassName].filter(Boolean).join(' ')}
         data-placement={placement}
+        data-layout={layout}
         data-size={size}
         data-testid={testId}
         onClick={(e) => e.stopPropagation()}
@@ -195,12 +220,12 @@ export const DialogSurface = ({
           to { transform: translateY(0); }
         }
         ${mediaQueries.tabletDown} {
-          .dialog-surface-scrim[data-placement="center"]:not([data-size="fullscreen"]) {
+          .dialog-surface-scrim[data-layout="center"] {
             padding: ${cssVars.spacing.sm} !important;
             padding-top: ${cssVars.spacing.xl} !important;
             align-items: flex-start !important;
           }
-          .dialog-surface-panel[data-placement="center"]:not([data-size="fullscreen"]) {
+          .dialog-surface-panel[data-layout="center"] {
             max-width: 100% !important;
           }
         }
