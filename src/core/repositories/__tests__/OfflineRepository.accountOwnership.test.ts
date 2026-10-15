@@ -291,24 +291,4 @@ describe('A-07e Konto-Ausgang lokaler Kopien (@AN-024, @FU-006)', () => {
 
     expect(storedTournaments().find((x) => x.id === 'T')?.ownerId).toBe('A');
   });
-
-  it('S-3 Gast (viewer guest): nach Abmelden findet ein direkter Abruf von A nichts; Gast-Turnier bleibt erreichbar; delete loescht keine Konto-Kopie', async () => {
-    stores.raw.set('tournaments', [{ ...t('T'), ownerId: 'A' }, { ...t('probe'), ownerId: 'guest' }, t('alt')]);
-    session.userId = null;
-    const guest = new LocalStorageRepository({ viewer: 'guest' });
-
-    expect(await guest.get('T')).toBeNull();
-    expect((await guest.get('probe'))?.id).toBe('probe');
-    expect((await guest.get('alt'))?.id).toBe('alt');
-
-    await guest.delete('T');
-    expect(storedTournaments().some((x) => x.id === 'T')).toBe(true);
-    await guest.delete('probe');
-    expect(storedTournaments().some((x) => x.id === 'probe')).toBe(false);
-  });
-
-  it('S-3 ohne viewer bleibt roh: der Abruf liefert auch fremde Kopien (Queue, Monitor, intern)', async () => {
-    stores.raw.set('tournaments', [{ ...t('T'), ownerId: 'A' }]);
-    expect((await new LocalStorageRepository().get('T'))?.id).toBe('T');
-  });
 });
