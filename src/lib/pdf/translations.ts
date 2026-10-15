@@ -87,7 +87,10 @@ export interface PdfRuleTexts {
   finalDuration: (duration: string) => string;
   penalty: (duration: string) => string;
   seconds: (seconds: number) => string;
-  round: (round: KnockoutRound) => string;
+  /** Rundenname; `placement` steht für die Platzierungsspiele (Spiel um Platz 3, 5, 7). */
+  round: (round: KnockoutRound | 'placement') => string;
+  /** Trenner zwischen Rundennamen einer gemeinsamen Regel („Halbfinale und Platzierungsspiele“). */
+  roundsJoin: string;
   koAll: (rule: string) => string;
   koRound: (round: string, rule: string) => string;
   ruleShootout: (shooters: string) => string;
@@ -124,6 +127,7 @@ function buildRuleTexts(translate: PdfTranslator, s: (key: string) => string): P
     penalty: duration => translate('pdf.rules.penalty', { duration }),
     seconds: seconds => translate('pdf.rules.seconds', { seconds }),
     round: round => r(`round.${round}`),
+    roundsJoin: r('roundsJoin'),
     koAll: rule => translate('pdf.rules.koAll', { label: r('label.ko'), rule }),
     koRound: (round, rule) => translate('pdf.rules.koRound', { round, rule }),
     ruleShootout: shooters => translate('pdf.rules.ruleShootout', { shooters }),

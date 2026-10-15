@@ -105,7 +105,7 @@ describe('Regelzeilen folgen den Einstellungen (@DR-020)', () => {
 });
 
 describe('K.-o.-Zeilen je Runde (@DR-015)', () => {
-  it('@DR-015 Halbfinale Strafstoßschießen, Finale Verlängerung: zwei Zeilen', () => {
+  it('@DR-015 (a) nur Halbfinale und Finale weichen ab: zwei Zeilen, Platz-3-Spiel folgt dem Finale', () => {
     const rules = rulesOf({
       finalsConfig: {
         preset: 'top-4',
@@ -114,13 +114,26 @@ describe('K.-o.-Zeilen je Runde (@DR-015)', () => {
     });
     expect(koLines(rules, de)).toEqual([
       'Halbfinale: bei Gleichstand Strafstoßschießen, 5 Schützen',
+      'Platzierungsspiele und Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 5 Schützen',
+    ]);
+  });
+
+  it('@DR-015 (b) Halbfinale und Platz-3-Spiel Strafstoß, Finale Verlängerung: zwei Zeilen', () => {
+    const rules = rulesOf({
+      finalsConfig: {
+        preset: 'top-4',
+        tiebreakerByRound: { semifinal: 'shootout', placement: 'shootout', final: 'overtime-then-shootout' },
+      },
+    });
+    expect(koLines(rules, de)).toEqual([
+      'Halbfinale und Platzierungsspiele: bei Gleichstand Strafstoßschießen, 5 Schützen',
       'Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 5 Schützen',
     ]);
   });
 
-  it('@DR-015 gleiche Regel in allen Runden: genau eine Zeile', () => {
+  it('@DR-015 (c) gleiche Regel in allen Runden: genau eine Zeile ohne Rundennamen', () => {
     const rules = rulesOf({ finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' } });
-    expect(koLines(rules, de)).toHaveLength(1);
+    expect(koLines(rules, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen']);
   });
 });
 

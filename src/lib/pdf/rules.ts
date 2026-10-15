@@ -10,7 +10,7 @@ import {
   type TiebreakerMode,
   type Tournament,
 } from '../../types/tournament';
-import { knockoutRoundsForPreset, resolveTiebreakMode } from '../../core/match/tiebreakDecision';
+import { knockoutRoundsForPreset, presetHasPlacementGames, resolveTiebreakMode } from '../../core/match/tiebreakDecision';
 import { footballIndoorConfig } from '../../config/sports/football';
 import { SECONDS_PER_MINUTE } from '../../utils/timeHelpers';
 import type { PdfTexts } from './translations';
@@ -61,23 +61,44 @@ export function pdfRuleLines(rules: PdfRules, t: PdfTexts): string[] {
   return lines;
 }
 
-/** K.-o.-Zeilen über der Finalrunde: eine Zeile, wenn alle Runden dieselbe Regel haben, sonst eine je Runde. */
+/**
+ * K.-o.-Zeilen über der Finalrunde (@DR-015): je Runde mit eigener Regel eine Zeile, Runden mit gleicher Regel
+ * zusammen („Halbfinale und Platzierungsspiele: …“). Haben alle Runden dieselbe Regel, genau eine Zeile ohne Rundennamen.
+ * Reihenfolge wie im Turnierablauf: Platzierungsspiele vor dem Finale. Die Platzierungsregel folgt ohne eigene
+ * Vorgabe dem Finale (@W2A-039, `resolveTiebreakMode`).
+ */
 export function koLines(rules: PdfRules, t: PdfTexts): string[] {
   const finalsConfig = rules.finalsConfig;
-  const rounds = knockoutRoundsForPreset(finalsConfig?.preset ?? 'none');
+  const preset = finalsConfig?.preset ?? 'none';
+  const rounds = knockoutRoundsForPreset(preset);
   if (rounds.length === 0) {
     return [];
   }
   const shooters = t.rules.shooters(rules.matchCockpitSettings?.penaltyShootersPerTeam ?? DEFAULT_MATCH_COCKPIT_SETTINGS.penaltyShootersPerTeam);
-  const decided = rounds.map(round => ({
-    round,
-    rule: ruleText(resolveTiebreakMode(finalsConfig, round) ?? 'shootout', shooters, t),
+  const knockout = rounds.map(round => ({
+    label: t.rules.round(round),
+    mode: resolveTiebreakMode(finalsConfig, round) ?? 'shootout',
   }));
-  const [head] = decided;
-  if (head && decided.every(entry => entry.rule === head.rule)) {
-    return [t.rules.koAll(head.rule)];
+  // Die Finalrunde endet immer mit dem Finale (letzte Runde); Platzierungsspiele liegen davor.
+  const placement = presetHasPlacementGames(preset)
+    ? [{ label: t.rules.round('placement'), mode: resolveTiebreakMode(finalsConfig, null, 'thirdPlace') ?? 'shootout' }]
+    : [];
+  const slots = [...knockout.slice(0, -1), ...placement, ...knockout.slice(-1)];
+
+  const groups: Array<{ labels: string[]; mode: TiebreakerMode }> = [];
+  for (const slot of slots) {
+    const group = groups.find(entry => entry.mode === slot.mode);
+    if (group) {
+      group.labels.push(slot.label);
+    } else {
+      groups.push({ labels: [slot.label], mode: slot.mode });
+    }
   }
-  return decided.map(entry => t.rules.koRound(t.rules.round(entry.round), entry.rule));
+  const [only] = groups;
+  if (only && groups.length === 1) {
+    return [t.rules.koAll(ruleText(only.mode, shooters, t))];
+  }
+  return groups.map(entry => t.rules.koRound(entry.labels.join(t.rules.roundsJoin), ruleText(entry.mode, shooters, t)));
 }
 
 function modeText(rules: PdfRules, t: PdfTexts): string {

@@ -771,7 +771,8 @@
         "roundOf16": "Round of 16",
         "quarterfinal": "Quarter-finals",
         "semifinal": "Semi-finals",
-        "final": "Final"
+        "final": "Final",
+        "placement": "Placement games"
       },
       "koAll": "{{label}}: if drawn, {{rule}}",
       "koRound": "{{round}}: if drawn, {{rule}}",
@@ -779,7 +780,8 @@
       "ruleOvertimeThenShootout": "extra time, then penalty shootout, {{shooters}}",
       "ruleGoldenGoal": "golden goal",
       "shooters": "{{n}} shooters",
-      "shootersOne": "1 shooter"
+      "shootersOne": "1 shooter",
+      "roundsJoin": " and "
     }
   }
 }
