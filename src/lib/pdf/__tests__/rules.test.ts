@@ -273,3 +273,12 @@ describe('Englischer Wortlaut (@DR-022)', () => {
     ]);
   });
 });
+
+describe('F6 N4 Test-Fixture nutzt die Produktions-ID „directComparison“', () => {
+  it('die Factory trägt keine Kennung headToHead; die Regelzeile zeigt „direkter Vergleich“ klein', () => {
+    const turnier = hallencupTournament();
+    expect(turnier.placementLogic.map(criterion => criterion.id)).not.toContain('headToHead');
+    const zeilen = pdfRuleLines(pdfRulesFrom(turnier, hallencupSchedule(turnier)), de);
+    expect(zeilen.join('\n')).toContain('direkter Vergleich');
+  });
+});

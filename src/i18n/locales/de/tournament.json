@@ -698,8 +698,10 @@
     "hall": "Halle",
     "matchDuration": "Spielzeit",
     "mode": "Modus",
-    "gameday": "Spieltag",
-    "time": "Zeit",
+    "appointment": "Termin",
+    "appointmentLine": "{{day}} · Beginn {{start}} · Ende voraussichtlich {{end}} · {{fields}}",
+    "fieldOne": "1 Feld",
+    "fieldMany": "{{n}} Felder",
     "participants": "Teilnehmer",
     "groupStage": "Gruppenphase",
     "standingsOfGroup": "Tabelle – {{group}}",
@@ -785,9 +787,9 @@
       "shootersOne": "1 Schütze"
     },
     "stand": "Stand {{date}} {{time}}",
-    "offlineNote": "– ohne Verbindung",
+    "offlineNote": "– ohne Verbindung, Einträge anderer Geräte können fehlen",
     "footer": "{{title}} · {{stand}} · Seite {{page}} von {{total}}",
-    "closedAt": "abgeschlossen am {{date}} {{time}}",
+    "closedAt": "Endstand – abgeschlossen am {{date}} um {{time}}",
     "matches": "Spiele"
   }
 }

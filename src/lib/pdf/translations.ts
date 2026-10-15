@@ -17,8 +17,12 @@ export interface PdfTexts {
   hall: string;
   matchDuration: string;
   mode: string;
-  gameday: string;
-  time: string;
+  /** Kopfzeile „Termin“ (B-28a3-4F, N2: eine Zeile wie v7.2). */
+  appointment: string;
+  /** Wert der Terminzeile: Tag, Beginn, Ende voraussichtlich, Felder. */
+  appointmentLine: (parts: { day: string; start: string; end: string; fields: string }) => string;
+  /** Anzahl der Felder: „1 Feld“, „2 Felder“. */
+  fields: (count: number) => string;
   participants: string;
   groupStage: string;
   /** Abschnitt der Spiele bei „Jeder gegen jeden“ (statt „Gruppenphase“). */
@@ -63,6 +67,8 @@ export interface PdfTexts {
   groupLabel: (id: string, displayName: string) => string;
   /** Spieltag aus `JJJJ-MM-TT` in der Sprache des Dokuments; anderes Format bleibt unverändert. */
   formatDate: (isoDate: string) => string;
+  /** Wochentag aus `JJJJ-MM-TT` in der Sprache des Dokuments; anderes Format ergibt leer. */
+  formatWeekday: (isoDate: string) => string;
   /** Uhrzeit `HH:mm` in der Sprache des Dokuments. */
   formatClock: (date: Date) => string;
   /** Texte der Regelzeilen im Kopf und der K.-o.-Zeilen (`pdf.rules.*`, B-28a3-3a). */
@@ -147,18 +153,26 @@ export function resolvePdfLocale(language: string | undefined): PdfLocale {
 }
 
 /** Baut alle Texte über den Übersetzer. Schlüssel liegen unter `pdf.*`. */
+/** Datum `JJJJ-MM-TT` als UTC-Datum (zonenunabhängig). Anderes Format: `undefined`. */
+function isoToUtc(isoDate: string): Date | undefined {
+  const match = ISO_DATE.exec(isoDate);
+  return match ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))) : undefined;
+}
+
 export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfTexts {
   const s = (key: string): string => translate(`pdf.${key}`);
   const clock = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const day = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' });
 
   return {
     organizer: s('organizer'),
     hall: s('hall'),
     matchDuration: s('matchDuration'),
     mode: s('mode'),
-    gameday: s('gameday'),
-    time: s('time'),
+    appointment: s('appointment'),
+    appointmentLine: parts => translate('pdf.appointmentLine', parts),
+    fields: count => (count === 1 ? s('fieldOne') : translate('pdf.fieldMany', { n: count })),
     participants: s('participants'),
     groupStage: s('groupStage'),
     matches: s('matches'),
@@ -198,11 +212,12 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     groupLabel: (id, displayName) =>
       displayName === `Gruppe ${id}` ? translate('pdf.groupName', { id }) : displayName,
     formatDate: isoDate => {
-      const match = ISO_DATE.exec(isoDate);
-      if (!match) {
-        return isoDate;
-      }
-      return day.format(new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))));
+      const utc = isoToUtc(isoDate);
+      return utc ? day.format(utc) : isoDate;
+    },
+    formatWeekday: isoDate => {
+      const utc = isoToUtc(isoDate);
+      return utc ? weekday.format(utc) : '';
     },
     formatClock: date => clock.format(date),
     rules: buildRuleTexts(translate, s, locale),

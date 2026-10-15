@@ -43,16 +43,19 @@ const TABELLE_B = [
   '4', 'SV Hof', '3', '1', '2', '2:6', '-4', '1',
 ];
 
-/** Platzierung gesamt: Punkte, dann Tordifferenz, dann Tore. */
+/**
+ * Platzierung gesamt: Punkte, dann Tordifferenz, dann Tore. Die Platz-Spalte bleibt leer bis a4-4 (B-28a3-4F F5,
+ * @DR-009), die Zeilen beginnen also mit dem Teamnamen.
+ */
 const PLATZIERUNG = [
-  '1', 'TSV West', '3', '3', '7:1', '+6', '9',
-  '2', 'DJK Berg', '3', '2', '1', '5:2', '+3', '6',
-  '3', 'FC Nord', '3', '2', '1', '4:3', '+1', '6',
-  '4', 'SC Ost', '3', '1', '1', '1', '3:3', '4',
-  '5', 'SV Süd', '3', '1', '1', '1', '3:4', '-1', '4',
-  '6', 'FC Mitte', '3', '1', '2', '3:5', '-2', '3',
-  '7', 'SV Hof', '3', '1', '2', '2:6', '-4', '1',
-  '8', 'TuS Tal', '3', '3', '1:4', '-3',
+  'TSV West', '3', '3', '7:1', '+6', '9',
+  'DJK Berg', '3', '2', '1', '5:2', '+3', '6',
+  'FC Nord', '3', '2', '1', '4:3', '+1', '6',
+  'SC Ost', '3', '1', '1', '1', '3:3', '4',
+  'SV Süd', '3', '1', '1', '1', '3:4', '-1', '4',
+  'FC Mitte', '3', '1', '2', '3:5', '-2', '3',
+  'SV Hof', '3', '1', '2', '2:6', '-4', '1',
+  'TuS Tal', '3', '3', '1:4', '-3',
 ];
 
 describe('Finalrunde gegen HEUTE (B-28a0 Fixrunde 1, @BM-009)', () => {

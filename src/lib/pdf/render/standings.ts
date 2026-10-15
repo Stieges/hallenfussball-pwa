@@ -28,12 +28,13 @@ function standingsHeader(t: PdfTexts): RowInput[] {
 }
 
 /**
- * Eine Zeile der Tabelle. Null-Werte bleiben leer. Die Platz-Spalte ist nur gefüllt, wenn in der Tabelle gespielte
- * Spiele stehen (B-28a3-4b Punkt 1, Controller 15.10.): ohne Ergebnisse wirkt die Nummer sonst wie eine Rangfolge.
+ * Eine Zeile der Tabelle. Null-Werte bleiben leer. Die Platz-Spalte ist nur gefüllt, wenn `rankColumn` gilt
+ * (Gruppentabelle mit gespielten Spielen, B-28a3-4b Punkt 1, Controller 15.10.) – die Gesamt-Platzierung bleibt bis
+ * a4-4 leer (B-28a3-4F F5, @DR-009): eine Nummer nach dem ersten Spiel wäre eine Übergangsplatzierung.
  */
-function standingRow(standing: Standing, index: number, gespielt: boolean): CellInput[] {
+function standingRow(standing: Standing, index: number, rankColumn: boolean): CellInput[] {
   return [
-    gespielt ? (index + 1).toString() : '',
+    rankColumn ? (index + 1).toString() : '',
     standing.team.name,
     standing.played > 0 ? standing.played.toString() : '',
     standing.won > 0 ? standing.won.toString() : '',
@@ -51,16 +52,16 @@ function standingRow(standing: Standing, index: number, gespielt: boolean): Cell
   ];
 }
 
-/** Gemeinsame Tabelle für Gruppentabellen und Platzierung. */
+/** Gemeinsame Tabelle für Gruppentabellen und Platzierung. `rankColumn`: Platz-Spalte füllen. */
 function drawStandingsTable(
   doc: jsPDF,
   geo: PageGeometry,
   t: PdfTexts,
   startY: number,
-  standings: Standing[]
+  standings: Standing[],
+  rankColumn: boolean
 ): number {
-  const gespielt = standings.some(standing => standing.played > 0);
-  const data: RowInput[] = standings.map((standing, index): CellInput[] => standingRow(standing, index, gespielt));
+  const data: RowInput[] = standings.map((standing, index): CellInput[] => standingRow(standing, index, rankColumn));
 
   const options: UserOptions = {
     startY,
@@ -130,7 +131,8 @@ export function renderGroupStandings(
       .filter(s => groupTeams.some(team => team.id === s.team.id))
       .sort(compareRanking);
 
-    const end = drawStandingsTable(doc, geo, t, yPos, groupStandings);
+    const gespielt = groupStandings.some(standing => standing.played > 0);
+    const end = drawStandingsTable(doc, geo, t, yPos, groupStandings, gespielt);
     yPos = end + printGap.sectionGap + printMetrics.standingsGroupAdvance;
   });
 
@@ -158,7 +160,7 @@ export function renderFinalRanking(
 
   const finalStandings = [...resolveStandings(schedule, standings)].sort(compareRanking);
 
-  const end = drawStandingsTable(doc, geo, t, yPos, finalStandings);
+  const end = drawStandingsTable(doc, geo, t, yPos, finalStandings, false);
   yPos = end + printGap.sectionGap;
 
   return yPos;

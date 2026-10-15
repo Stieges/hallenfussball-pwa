@@ -6,6 +6,7 @@ import { closedLine, footerLine, standLine } from '../standText';
 import { translatorFor } from './pdfText';
 
 const JETZT = new Date(2026, 10, 14, 15, 7);
+const ABSCHLUSS = new Date(2026, 10, 14, 17, 40);
 const de = translatorFor('de');
 const en = translatorFor('en');
 
@@ -18,10 +19,14 @@ describe('@ZP-052 Stand im Spielplan-PDF', () => {
     expect(standLine(JETZT, true, en)).toBe('As of 14.11. 15:07');
   });
 
-  it('@BM-023 Gegenbeispiel: ohne Netz (online: false) steht „– ohne Verbindung“ dahinter, mit Netz nicht', () => {
-    expect(standLine(JETZT, false, de)).toBe('Stand 14.11. 15:07 – ohne Verbindung');
-    expect(standLine(JETZT, false, en)).toBe('As of 14.11. 15:07 – offline');
+  it('@BM-023 ohne Netz (online: false): „– ohne Verbindung, Einträge anderer Geräte können fehlen“, wörtlich', () => {
+    expect(standLine(JETZT, false, de)).toBe('Stand 14.11. 15:07 – ohne Verbindung, Einträge anderer Geräte können fehlen');
+    expect(standLine(JETZT, false, en)).toBe('As of 14.11. 15:07 – offline, entries from other devices may be missing');
+  });
+
+  it('@BM-023 Gegenbeispiel: mit Netz (online: true) steht kein Zusatz', () => {
     expect(standLine(JETZT, true, de)).not.toContain('ohne Verbindung');
+    expect(standLine(JETZT, true, en)).not.toContain('offline');
   });
 });
 
@@ -39,9 +44,12 @@ describe('@ZP-052 Fußzeile: Titel · Stand · Seite', () => {
   });
 });
 
-describe('@ZP-052 Endstand-Fassung: „abgeschlossen am …“', () => {
-  it('DE und EN wörtlich', () => {
-    expect(closedLine(JETZT, de)).toBe('abgeschlossen am 14.11. 15:07');
-    expect(closedLine(JETZT, en)).toBe('closed on 14.11. 15:07');
+describe('@BM-035 @DR-011 Endstand-Fassung: „Endstand – abgeschlossen am …“ (B-28a3-4F F2)', () => {
+  it('DE wörtlich: „Endstand – abgeschlossen am 14.11.2026 um 17:40“', () => {
+    expect(closedLine(ABSCHLUSS, de)).toBe('Endstand – abgeschlossen am 14.11.2026 um 17:40');
+  });
+
+  it('EN sinngleich mit Jahr und Uhrzeit: „Final result – closed on 14.11.2026 at 17:40“', () => {
+    expect(closedLine(ABSCHLUSS, en)).toBe('Final result – closed on 14.11.2026 at 17:40');
   });
 });

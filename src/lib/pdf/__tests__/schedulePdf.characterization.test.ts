@@ -53,7 +53,7 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     expect(pdf.pages[0]).toContain('D-Junioren');
   });
 
-  it('Angaben: Veranstalter, Halle, Spieltag, Zeit, Modus und Spielzeit', async () => {
+  it('Angaben: Veranstalter, Halle, Termin, Modus und Spielzeit', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, SCHEDULE_OPTIONS);
     const text = flatText(pdf);
     const alles = text.join(' ');
@@ -63,10 +63,10 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     expect(text).toContain('SV Nord 1921 e. V.');
     expect(text).toContain('Halle');
     expect(alles).toContain('Sporthalle am Park');
-    expect(text).toContain('Spieltag');
-    expect(text).toContain('14.11.2026');
-    expect(text).toContain('Zeit');
-    expect(text.some(t => /^13:00 - \d{2}:\d{2}$/.test(t))).toBe(true);
+    // Termin wie v7.2 in einer Zeile: Wochentag, Datum · Beginn · Ende voraussichtlich · Felder (B-28a3-4F, N2)
+    expect(text).toContain('Termin');
+    expect(text).not.toContain('Spieltag');
+    expect(alles).toMatch(/Samstag, 14\.11\.2026 · Beginn 13:00 · Ende voraussichtlich \d{2}:\d{2} · 2 Felder/);
     expect(text).toContain('Modus');
     expect(text).toContain('Gruppen + Finale');
     expect(text).toContain('Spielzeit');

@@ -26,7 +26,8 @@ export function footerLine(title: string, stand: string, page: number, total: nu
   return translate('pdf.footer', { title, stand, page, total });
 }
 
-/** Endstand-Fassung: „abgeschlossen am 14.11. 15:07“ (@ZP-052). */
+/** Endstand-Fassung: „Endstand – abgeschlossen am 14.11.2026 um 17:40“ (@BM-035, @DR-011; B-28a3-4F F2, mit Jahr). */
 export function closedLine(closedAt: Date, translate: PdfTranslator): string {
-  return translate('pdf.closedAt', stempel(closedAt));
+  const { date, time } = stempel(closedAt);
+  return translate('pdf.closedAt', { date: `${date}${closedAt.getFullYear()}`, time });
 }

@@ -136,8 +136,10 @@ export function renderParticipants(
   yPos += printMetrics.sectionTitleAdvance;
 
   const blocks = buildBlocks(schedule, t);
+  // Rückgabe: Grundlinie des nächsten Abschnittstitels. Der Titel steht mit seiner Grundlinie an dieser Stelle,
+  // seine Oberkante liegt also um die Oberlänge darüber (B-28a3-4F F3, Review M4).
   if (blocks.length === 0) {
-    return yPos + printGap.sectionGap;
+    return yPos + printGap.sectionGap + ascent(printType.h2);
   }
   const perRow = blocksPerRow(blocks.length, geo.contentWidth);
   const gap = printMetrics.participantBoxGap;
@@ -150,5 +152,5 @@ export function renderParticipants(
     drawRow(doc, row, geo, yPos, boxWidth, rowHeight);
     yPos += rowHeight + printMetrics.participantBoxRowGap;
   }
-  return yPos - printMetrics.participantBoxRowGap + printGap.sectionGap;
+  return yPos - printMetrics.participantBoxRowGap + printGap.sectionGap + ascent(printType.h2);
 }

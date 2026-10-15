@@ -698,8 +698,10 @@
     "hall": "Hall",
     "matchDuration": "Match duration",
     "mode": "Format",
-    "gameday": "Matchday",
-    "time": "Time",
+    "appointment": "Date",
+    "appointmentLine": "{{day}} · Start {{start}} · Expected end {{end}} · {{fields}}",
+    "fieldOne": "1 field",
+    "fieldMany": "{{n}} fields",
     "participants": "Teams",
     "groupStage": "Group stage",
     "standingsOfGroup": "Standings – {{group}}",
@@ -785,9 +787,9 @@
       "shootersOne": "1 shooter"
     },
     "stand": "As of {{date}} {{time}}",
-    "offlineNote": "– offline",
+    "offlineNote": "– offline, entries from other devices may be missing",
     "footer": "{{title}} · {{stand}} · Page {{page}} of {{total}}",
-    "closedAt": "closed on {{date}} {{time}}",
+    "closedAt": "Final result – closed on {{date}} at {{time}}",
     "matches": "Matches"
   }
 }

@@ -309,7 +309,7 @@ describe('Punkt 5 Kopf nach v7.2 (Daniel 15.10.)', () => {
   it('Tabelle: Bezeichnungen fett, Werte normal, eine Schriftgröße, alle Werte in derselben Spalte', async () => {
     const tournament = hallencupMitRegelwerk();
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
-    const bezeichnungen = ['Veranstalter', 'Altersklasse', 'Halle', 'Spieltag', 'Zeit', 'Modus', 'Platzierung', 'Spielzeit', 'Regelwerk'];
+    const bezeichnungen = ['Veranstalter', 'Altersklasse', 'Halle', 'Termin', 'Modus', 'Platzierung', 'Spielzeit', 'Regelwerk'];
     const kopf = pages[0].texts.filter(t => t.y < 90);
     const fett = await fettMap(kopf);
     const labels = bezeichnungen.map(name => kopf.find(t => trimmed(t) === name));

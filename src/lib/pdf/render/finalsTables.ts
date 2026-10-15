@@ -9,7 +9,7 @@ import autoTable, { type CellInput, type RowInput, type Styles } from 'jspdf-aut
 import type { ScheduledMatch } from '../../../core/generators';
 import { printColors, printType, printMetrics, printGap, printColumns } from '../../../design-tokens/print';
 import type { KnockoutRound } from '../../../types/tournament';
-import { ensureSpace, type PageGeometry } from '../layout';
+import { ascentMm, ensureSpace, type PageGeometry } from '../layout';
 import { bracketRoundPerMatch } from '../koSlots';
 import { sideLabel } from '../matchSides';
 import { tableEndY } from '../jspdfTypes';
@@ -159,6 +159,7 @@ function renderFinalsTable(
 
   autoTable(doc, matchTableOptions(geo, yPos, headers, data, columnStyles));
 
-  yPos = tableEndY(doc) + printGap.sectionGap;
+  // Rückgabe: Grundlinie der nächsten Überschrift (Runde oder Platzierung), B-28a3-4F F3
+  yPos = tableEndY(doc) + printGap.sectionGap + ascentMm(printType.h2);
   return yPos;
 }

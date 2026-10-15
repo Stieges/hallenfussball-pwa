@@ -67,8 +67,6 @@ export const printType = {
   /** .title (Kurzkopf: `titleShort`) */
   title: 26,
   titleShort: 16,
-  /** .title .age */
-  age: 13,
   /** .head.short .subtitle */
   subtitle: 10.5,
   /** .meta */
@@ -200,17 +198,11 @@ export const printMetrics = {
   titleAdvance: 9.6,
   /** Kurzkopf: Zeilenabstand des umbrochenen Titels (16 pt × 1,05, höchstens zwei Zeilen) */
   shortTitleAdvance: 6,
-  /** Kopf: Abstand Titel → Altersklasse in derselben Zeile (v7.2 margin-left 3 mm), sonst Zeilenabstand darunter */
-  ageGap: 3,
-  ageLineAdvance: 6,
   /** Kopf: Abstand Titel-Grundlinie → erste Angabe (Unterlänge des Titels plus Oberlänge der Angabe) */
   headBlockGap: 6,
-  /** Kopf: Zeilenabstand der Angaben (9,5 pt) und Abstand Angaben → Regelzeilen */
+  /** Kopf: Zeilenabstand der Angaben und Regelzeilen (9,5 pt) */
   factAdvance: 4.2,
   factLabelGap: 3,
-  factsToRules: 1.5,
-  /** Kopf: Zeilenabstand der Regelzeilen (10,5 pt, v7.2 .rules-line) */
-  ruleAdvance: 4.5,
 
   /** Abschnittstitel */
   sectionTitleMinSpace: 10,

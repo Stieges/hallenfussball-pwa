@@ -50,6 +50,28 @@ function platzZiffern(pages: LayoutPage[]): { kopfzeilen: number; ziffern: strin
   return { kopfzeilen, ziffern };
 }
 
+/**
+ * Ziffern in der Platz-Spalte unter der Überschrift `ueberschrift` (ab ihrer Höhe, auf derselben Seite). `kopfzeilen`
+ * zählt die Tabellenköpfe „Pl“ unter der Überschrift, damit ein leerer Befund nicht als Erfolg zählt.
+ */
+function platzZiffernUnter(pages: LayoutPage[], ueberschrift: string): { kopfzeilen: number; ziffern: string[] } {
+  const geo = pageGeometry('a4', 'portrait');
+  let kopfzeilen = 0;
+  const ziffern: string[] = [];
+  for (const page of pages) {
+    const titel = page.texts.find(t => trimmed(t) === ueberschrift);
+    const kopf = titel ? page.texts.find(t => trimmed(t) === 'Pl' && t.y > titel.y) : undefined;
+    if (!kopf) {continue;}
+    kopfzeilen++;
+    for (const t of page.texts) {
+      if (t.y > kopf.y && t.x >= geo.left && t.x < geo.left + printColumns.standings.pos && /^\d+$/.test(trimmed(t))) {
+        ziffern.push(trimmed(t));
+      }
+    }
+  }
+  return { kopfzeilen, ziffern };
+}
+
 describe('Punkt 1 Platz-Spalte ohne gespielte Spiele', () => {
   it('ohne Ergebnisse: Gruppentabellen und Platzierung haben keine Ziffer in der Platz-Spalte', async () => {
     const tournament = hallencupTournament();
@@ -65,5 +87,13 @@ describe('Punkt 1 Platz-Spalte ohne gespielte Spiele', () => {
     const { ziffern } = platzZiffern(pages);
 
     expect(ziffern).toEqual(expect.arrayContaining(['1', '2', '3', '4']));
+  });
+
+  it('F5 Platzierung bleibt auch mit gespielten Spielen ohne Ziffern (keine Übergangsplatzierung vor a4-4, @DR-009)', async () => {
+    const pages = await seitenMit(HALLENCUP_STANDINGS);
+    const { kopfzeilen, ziffern } = platzZiffernUnter(pages, 'Platzierung');
+
+    expect(kopfzeilen, 'Tabellenkopf „Pl“ unter der Überschrift Platzierung').toBe(1);
+    expect(ziffern).toEqual([]);
   });
 });

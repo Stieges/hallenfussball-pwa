@@ -95,7 +95,28 @@ export function unrenderableNotes(
   return [...notes, ...teamNotes];
 }
 
-/** Angaben im Kopf: Veranstalter (nur wenn angegeben), Halle mit Adresse, Spieltag, Zeit. */
+/**
+ * Termin wie v7.2 in einer Zeile (B-28a3-4F, N2): „Samstag, 14.11.2026 · Beginn 13:00 · Ende voraussichtlich 16:35 ·
+ * 2 Felder“. Datum im Format TT.MM.JJJJ bleibt unverändert, sonst mit Wochentag in der Sprache des Dokuments.
+ */
+function appointmentValue(schedule: GeneratedSchedule, t: PdfTexts): string {
+  const date = schedule.tournament.date;
+  let day = t.noDate;
+  if (date) {
+    const dotted = date.includes('.');
+    const formatted = dotted ? date : t.formatDate(date);
+    const weekday = dotted ? '' : t.formatWeekday(date);
+    day = weekday === '' ? formatted : `${weekday}, ${formatted}`;
+  }
+  return t.appointmentLine({
+    day,
+    start: t.formatClock(schedule.startTime),
+    end: t.formatClock(schedule.endTime),
+    fields: t.fields(schedule.numberOfFields),
+  });
+}
+
+/** Angaben im Kopf: Veranstalter (nur wenn angegeben), Altersklasse, Halle mit Adresse, Termin. */
 function headerFacts(schedule: GeneratedSchedule, t: PdfTexts, organizerName: string, hallName: string): HeaderFact[] {
   const facts: HeaderFact[] = [];
   if (organizerName) {
@@ -104,11 +125,7 @@ function headerFacts(schedule: GeneratedSchedule, t: PdfTexts, organizerName: st
   facts.push({ label: t.ageClass, value: schedule.tournament.ageClass });
   const address = getLocationAddressLine(schedule.tournament);
   facts.push({ label: t.hall, value: address ? `${hallName}, ${address}` : hallName });
-  // Datum als TT.MM.JJJJ: bereits so gespeichert unverändert, sonst über Intl in der Sprache des Dokuments
-  const date = schedule.tournament.date;
-  const gameday = !date ? t.noDate : date.includes('.') ? date : t.formatDate(date);
-  facts.push({ label: t.gameday, value: gameday });
-  facts.push({ label: t.time, value: `${t.formatClock(schedule.startTime)} - ${t.formatClock(schedule.endTime)}` });
+  facts.push({ label: t.appointment, value: appointmentValue(schedule, t) });
   return facts;
 }
 
