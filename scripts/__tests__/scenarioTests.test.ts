@@ -1,6 +1,6 @@
 // A-09: scenario-tests.mjs (Plattform-Record "Testabdeckung", @TA-006, @TA-007, @TA-008)
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -124,5 +124,28 @@ describe('scenario-tests.mjs', () => {
     const r = lauf('--task', 'A-99', '--plan', join(ordner, 'plan.md'))
     expect(r.status).toBe(0)
     expect(r.stdout).toMatch(/MVP-Kennungen: 1 \(Aufgabe A-99\)/)
+  })
+})
+
+describe('mvp-kennungen-erzeugen.mjs', () => {
+  it('@TA-006 die Erzeugung aus einer Beispiel-JSON ergibt dieselbe Liste samt soll', () => {
+    const quelle = join(ordner, 'anf.json')
+    writeFileSync(
+      quelle,
+      JSON.stringify({ klasse: 'mvp', soll: 3, kennungen: ['HE-001', 'HE-004', 'ZM-096'], je_record: { helfer: 2, zuschauer: 1, leer: 0 }, zahlen: {} }),
+    )
+    const ziel = join(ordner, 'out.json')
+    const r = spawnSync('node', [resolve(__dirname, '..', 'mvp-kennungen-erzeugen.mjs'), '--anf-json', quelle, '--out', ziel], { encoding: 'utf8' })
+    expect(r.status).toBe(0)
+    const erg = JSON.parse(readFileSync(ziel, 'utf8'))
+    expect(erg.soll).toBe(3)
+    expect(erg.records).toEqual({ helfer: ['HE-001', 'HE-004'], zuschauer: ['ZM-096'] })
+  })
+
+  it('@TA-006 weicht soll von der Kennungszahl ab, bricht die Erzeugung ab', () => {
+    const quelle = join(ordner, 'anf.json')
+    writeFileSync(quelle, JSON.stringify({ klasse: 'mvp', soll: 4, kennungen: ['HE-001'], je_record: { helfer: 1 } }))
+    const r = spawnSync('node', [resolve(__dirname, '..', 'mvp-kennungen-erzeugen.mjs'), '--anf-json', quelle, '--out', join(ordner, 'o.json')], { encoding: 'utf8' })
+    expect(r.status).not.toBe(0)
   })
 })
