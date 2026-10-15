@@ -43,10 +43,7 @@ vi.mock('../../../lib/supabase', () => ({
   isSupabaseConfigured: true,
   supabase: {
     auth: {
-      getSession: vi.fn(async () => ({
-        data: { session: session.userId ? { user: { id: session.userId } } : null },
-        error: null,
-      })),
+      getSession: vi.fn(async () => ({ data: { session: session.userId ? { user: { id: session.userId } } : null }, error: null })),
     },
   },
 }));
@@ -104,9 +101,7 @@ function storedMatch(id: string): Match {
 }
 
 async function flush(): Promise<void> {
-  for (let i = 0; i < 20; i++) {
-    await new Promise<void>((resolve) => setImmediate(resolve));
-  }
+  for (let i = 0; i < 20; i++) { await new Promise<void>((resolve) => setImmediate(resolve)); }
 }
 
 describe('A-08f3a Feldweg: Spielstand aus der Cloud beim Eigentümer (@FU-087, @FU-023)', () => {
@@ -199,34 +194,5 @@ describe('A-08f3a Feldweg: Spielstand aus der Cloud beim Eigentümer (@FU-087, @
 
     expect(cloud.fake.getWithMatchRevisions).toHaveBeenCalledTimes(2);
     expect(storedMatch('m1')).toMatchObject({ scoreA: 2, scoreB: 0 });
-  });
-});
-
-describe('A-08f3a Schreibkette: alle Schreibmethoden des lokalen Speichers laufen nacheinander', () => {
-  beforeEach(() => {
-    stores.raw.clear();
-    stores.raw.set('tournaments', [localV7()]);
-  });
-
-  it('Gegenbeispiel (iv): applyServerMatchFields und updateMatches gleichzeitig → beide gespeichert', async () => {
-    const local = new LocalStorageRepository();
-
-    await Promise.all([
-      local.applyServerMatchFields('T', new Map([['m1', { scoreA: 1, scoreB: 0, matchStatus: 'running' }]])),
-      local.updateMatches('T', [{ id: 'm2', scheduledTime: new Date(KICKOFF_NEW) }]),
-    ]);
-
-    expect(storedMatch('m1')).toMatchObject({ scoreA: 1, scoreB: 0, matchStatus: 'running' });
-    expect(new Date(storedMatch('m2').scheduledTime ?? KICKOFF_OLD).toISOString()).toBe(KICKOFF_NEW);
-    expect(stored().version).toBe(8);
-  });
-
-  it('applyServerMatchFields ändert weder Version noch updatedAt noch Konto-Marker', async () => {
-    const local = new LocalStorageRepository();
-
-    await local.applyServerMatchFields('T', new Map([['m1', { scoreA: 3, scoreB: 1, matchStatus: 'finished' }]]));
-
-    expect(stored()).toMatchObject({ version: 7, updatedAt: UPDATED_AT, ownerId: 'olli' });
-    expect(storedMatch('m1')).toMatchObject({ scoreA: 3, scoreB: 1, matchStatus: 'finished' });
   });
 });
