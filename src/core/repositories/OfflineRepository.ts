@@ -162,7 +162,7 @@ export class OfflineRepository implements ITournamentRepository {
         // 1. LOCAL-FIRST: Try local storage immediately
         const localData = await this.localRepo.get(id);
 
-        if (localData) {
+        if (localData && (this.accountId === undefined || localData.ownerId === this.accountId)) { // A-07e: fremd/unmarkiert = nicht lokal
             // Found locally - return immediately, sync in background
             void this.refreshFromCloudInBackground(id);
             return localData;

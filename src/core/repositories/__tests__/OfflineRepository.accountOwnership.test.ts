@@ -244,18 +244,35 @@ describe('A-07e Konto-Ausgang lokaler Kopien (@AN-024, @FU-006)', () => {
     expect(storedTournaments().find((x) => x.id === 'T')?.ownerId).toBe('A');
   });
 
-  it('S-3 Einzelabruf ist kontogebunden: Gast sieht fremde Kopie nicht, Gast-Turnier bleibt erreichbar, B sieht A nicht, A sieht A', async () => {
-    stores.raw.set('tournaments', [{ ...t('T'), ownerId: 'A' }, { ...t('probe'), ownerId: 'guest' }]);
-
+  it('S-3 P1 (Gegenbeispiel): offline, Sitzung null, Konto A liest seine eigene Kopie', async () => {
+    stores.raw.set('tournaments', [{ ...t('T'), ownerId: 'A' }]);
     session.userId = null;
-    expect(await new LocalStorageRepository().get('T')).toBeNull();
-    expect((await new LocalStorageRepository().get('probe'))?.id).toBe('probe');
+    net.online = false;
+    const repoA = track(new OfflineRepository(new LocalStorageRepository(), cloudFor('A') as never, 'A'));
 
+    expect((await repoA.get('T'))?.id).toBe('T');
+  });
+
+  it('S-3 P2: lokal neuerer Stand (v3) wird bei der Hintergrund-Aktualisierung nicht durch Cloud v2 ueberschrieben', async () => {
+    stores.raw.set('tournaments', [{ ...t('T'), ownerId: 'A', version: 3, title: 'lokal-neu' }]);
+    cloud.set('T', { owner: 'A', t: { ...t('T'), version: 2, title: 'cloud-alt' } });
+    const repoA = track(new OfflineRepository(new LocalStorageRepository(), cloudFor('A') as never, 'A'));
+
+    expect((await repoA.get('T'))?.title).toBe('lokal-neu');
+    await flush();
+
+    const stored = storedTournaments().find((x) => x.id === 'T');
+    expect(stored?.title).toBe('lokal-neu');
+    expect(stored?.version).toBe(3);
+  });
+
+  it('S-3 (c): Konto B bekommt die lokale Kopie von A nicht; Altbestand ohne Marker ist fuer ein Konto nicht lokal', async () => {
+    stores.raw.set('tournaments', [{ ...t('T'), ownerId: 'A' }, t('U')]);
     session.userId = 'B';
-    expect(await new LocalStorageRepository().get('T')).toBeNull();
+    const repoB = track(new OfflineRepository(new LocalStorageRepository(), cloudFor('B') as never, 'B'));
 
-    session.userId = 'A';
-    expect((await new LocalStorageRepository().get('T'))?.id).toBe('T');
+    expect(await repoB.get('T')).toBeNull();
+    expect(await repoB.get('U')).toBeNull();
   });
 
   it('S-1 Race: lokale Kopie fehlt bei der Hintergrund-Aktualisierung, die neue Kopie gehoert trotzdem dem Konto', async () => {
