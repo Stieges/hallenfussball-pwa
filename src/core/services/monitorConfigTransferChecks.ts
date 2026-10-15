@@ -134,14 +134,17 @@ export interface FileCustomQrLink {
   url: string;
 }
 
-function isHttpUrl(value: string | undefined): boolean {
-  if (!value) {return false;}
+/** Normalisierte http/https-Adresse (@ME-063): Leerzeichen am Rand weg, Schema klein; sonst null */
+function normalizeHttpUrl(value: string | undefined): string | null {
+  if (!value) {return null;}
+  const trimmed = value.trim();
   try {
-    const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:';
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {return null;}
   } catch {
-    return false;
+    return null;
   }
+  return trimmed.replace(/^[a-z]+:/i, scheme => scheme.toLowerCase());
 }
 
 /**
@@ -158,13 +161,14 @@ export function sanitizeCustomQr(
     ...monitor,
     slides: monitor.slides.map((slide, si): TransferSlide => {
       if (slide.config.qrTarget !== 'custom') {return slide;}
-      if (!isHttpUrl(slide.config.customQrUrl)) {
+      const url = normalizeHttpUrl(slide.config.customQrUrl);
+      if (url === null) {
         skipped.invalidUrl += 1;
         const { qrTarget: _qr, customQrUrl: _url, ...config } = slide.config;
         return { ...slide, config };
       }
-      if (source === 'file') {fileLinks.push({ key: slideKey(mi, si), url: slide.config.customQrUrl ?? '' });}
-      return slide;
+      if (source === 'file') {fileLinks.push({ key: slideKey(mi, si), url });}
+      return { ...slide, config: { ...slide.config, customQrUrl: url } };
     }),
   }));
   return { payload: { ...payload, monitors }, skipped, fileLinks };

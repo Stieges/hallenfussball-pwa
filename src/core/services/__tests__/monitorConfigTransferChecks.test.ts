@@ -114,6 +114,13 @@ describe('sanitizeCustomQr (@ME-063)', () => {
     expect(skipped).toEqual({ invalidUrl: 0 });
   });
 
+  it.each(['HTTPS://sv-nord.de', '  https://sv-nord.de  '])('normalisiert die Adresse „%s“ (Schema klein, Rand getrimmt, F3)', (raw) => {
+    const data = payload([slide('qr-code', { qrTarget: 'custom', customQrUrl: raw })]);
+    const { payload: out, fileLinks } = sanitizeCustomQr(data, 'file');
+    expect(out.monitors[0].slides[0].config.customQrUrl).toBe('https://sv-nord.de');
+    expect(fileLinks).toEqual([{ key: '0:0', url: 'https://sv-nord.de' }]);
+  });
+
   it.each(['javascript:alert(1)', 'ftp://sv-nord.de', 'kein Link'])('verwirft aus einer Datei eine Adresse wie „%s“ und zählt sie', (url) => {
     const data = payload([slide('qr-code', { qrTarget: 'custom', customQrUrl: url })]);
     const { payload: out, skipped, fileLinks } = sanitizeCustomQr(data, 'file');

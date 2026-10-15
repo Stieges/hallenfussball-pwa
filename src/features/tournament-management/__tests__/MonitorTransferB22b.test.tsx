@@ -222,6 +222,8 @@ describe('Monitore übernehmen – B-22b', () => {
     it('nimmt den eigenen Link aus einem eigenen Turnier mit', async () => {
       const onUpdate = renderTab(sued);
       await chooseSource('nord');
+      await screen.findByTestId('transfer-summary');
+      expect(screen.queryByTestId(/^transfer-file-link/)).not.toBeInTheDocument();
       await userEvent.click(screen.getByTestId('transfer-confirm'));
 
       await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
@@ -230,7 +232,6 @@ describe('Monitore übernehmen – B-22b', () => {
       expect(qr?.customQrUrl).toBe('https://sv-nord.de');
       await screen.findByTestId('transfer-done');
       expect(screen.queryByTestId('transfer-custom-qr-invalid')).not.toBeInTheDocument();
-      expect(screen.queryByTestId(/^transfer-file-link/)).not.toBeInTheDocument();
     });
 
     it('ungültige eigene Adresse aus dem Turnier (javascript:) wird verworfen und gemeldet (M1)', async () => {
@@ -275,10 +276,38 @@ describe('Monitore übernehmen – B-22b', () => {
       expect(qr?.customQrUrl).toBeUndefined();
     });
 
+    it('@ME-063 nach „Link entfernen“ zeigt die Zeile den Zustand, „Link behalten“ macht es rückgängig', async () => {
+      const onUpdate = renderTab(sued);
+      await userEvent.click(screen.getByTestId('monitors-transfer-open'));
+      await userEvent.upload(screen.getByTestId('transfer-file'), jsonFile(dateiMitLink('https://sv-nord.de')));
+      await userEvent.click(await screen.findByTestId('transfer-file-link-0:0-remove'));
+
+      expect(screen.getByTestId('transfer-file-link-0:0')).toHaveTextContent('monitors.transfer.customQrRemoved');
+      expect(screen.getByTestId('transfer-file-link-0:0-remove')).toHaveTextContent('monitors.transfer.customQrKeep');
+      await userEvent.click(screen.getByTestId('transfer-file-link-0:0-remove'));
+      expect(screen.getByTestId('transfer-file-link-0:0')).toHaveTextContent('monitors.transfer.customQrCheck');
+      await userEvent.click(screen.getByTestId('transfer-confirm'));
+
+      await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+      expect(savedTournament(onUpdate).monitors?.[0].slides[0].config.qrTarget).toBe('custom');
+    });
+
+    it.each(['HTTPS://sv-nord.de', '  https://sv-nord.de  '])('@ME-063 übernimmt die Adresse „%s“ normalisiert (F3)', async (raw) => {
+      const onUpdate = renderTab(sued);
+      await userEvent.click(screen.getByTestId('monitors-transfer-open'));
+      await userEvent.upload(screen.getByTestId('transfer-file'), jsonFile(dateiMitLink(raw)));
+      await screen.findByTestId('transfer-file-link-0:0');
+      await userEvent.click(screen.getByTestId('transfer-confirm'));
+
+      await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+      expect(savedTournament(onUpdate).monitors?.[0].slides[0].config.customQrUrl).toBe('https://sv-nord.de');
+    });
+
     it('@ME-063 aus einer Datei mit ungültiger Adresse (javascript:) wird sie verworfen und gemeldet', async () => {
       const onUpdate = renderTab(sued);
       await userEvent.click(screen.getByTestId('monitors-transfer-open'));
       await userEvent.upload(screen.getByTestId('transfer-file'), jsonFile(dateiMitLink('javascript:alert(1)')));
+      await screen.findByTestId('transfer-summary');
       expect(screen.queryByTestId('transfer-file-link-0:0')).not.toBeInTheDocument();
       await userEvent.click(screen.getByTestId('transfer-confirm'));
 
@@ -301,10 +330,11 @@ describe('Monitore übernehmen – B-22b', () => {
         }],
       });
       await userEvent.upload(screen.getByTestId('transfer-file'), file);
+      await screen.findByTestId('transfer-summary');
+      expect(screen.queryByTestId(/^transfer-file-link/)).not.toBeInTheDocument();
       await userEvent.click(screen.getByTestId('transfer-confirm'));
 
       await screen.findByTestId('transfer-done');
-      expect(screen.queryByTestId('transfer-custom-qr-file')).not.toBeInTheDocument();
       await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
       expect(savedTournament(onUpdate).monitors?.[0].slides[0].config.qrTarget).toBe('sponsor-website');
     });

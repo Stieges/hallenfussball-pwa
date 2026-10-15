@@ -322,6 +322,8 @@
       "renamed": "The imported monitor is now called ‘{{name}}’",
       "customQrCheck": "Custom link from the file: “{{url}}” – please check that the address is right",
       "customQrRemove": "Remove link",
+      "customQrRemoved": "Link will be removed – the QR slide points to the spectator page",
+      "customQrKeep": "Keep link",
       "customQrInvalid": "Custom link with an invalid address was not taken over (only http or https) – the QR slide points to the spectator page",
       "issues": {
         "title": "Slides with a missing field or group",

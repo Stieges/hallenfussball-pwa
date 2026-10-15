@@ -176,6 +176,27 @@ describe('Monitore übernehmen – B-22b Texte (echtes i18n)', () => {
     expect((onUpdate.mock.calls[0][0] as Tournament).monitors?.[0].slides[0].config.customQrUrl).toBe('https://sv-nord.de');
   });
 
+  it('@ME-063 nach „Link entfernen“ steht die Zeile wörtlich da, „Link behalten“ macht es rückgängig', async () => {
+    await renderWithI18n(sued);
+    await userEvent.click(screen.getByTestId('monitors-transfer-open'));
+    const file = new File([JSON.stringify({
+      kind: 'monitor-config', version: 1,
+      monitors: [{
+        name: 'Datei', defaultSlideDuration: 15, transition: 'fade', transitionDuration: 500,
+        theme: 'dark', performanceMode: 'auto',
+        slides: [{ type: 'sponsor', config: { sponsorName: 'SV Nord', qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' }, duration: null }],
+      }],
+    })], 'monitore.json', { type: 'application/json' });
+    await userEvent.upload(screen.getByTestId('transfer-file'), file);
+    await userEvent.click(await screen.findByTestId('transfer-file-link-0:0-remove'));
+
+    expect(screen.getByText('Link wird entfernt – die QR-Folie zeigt auf die Zuschauer-Seite')).toBeInTheDocument();
+    expect(screen.getByTestId('transfer-file-link-0:0-remove')).toHaveTextContent('Link behalten');
+    await userEvent.click(screen.getByTestId('transfer-file-link-0:0-remove'));
+    expect(screen.getByText('Eigener Link aus der Datei: „https://sv-nord.de“ – bitte prüfen, ob die Adresse stimmt')).toBeInTheDocument();
+    expect(screen.getByTestId('transfer-file-link-0:0-remove')).toHaveTextContent('Link entfernen');
+  });
+
   it('@ME-063 meldet eine ungültige eigene Adresse aus dem Turnier wörtlich (M1)', async () => {
     mockActive.current = [nordUngueltig, sued];
     const onUpdate = await renderWithI18n(sued);

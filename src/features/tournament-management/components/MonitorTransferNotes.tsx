@@ -62,7 +62,11 @@ export function MonitorTransferIssues({ issues, fixes, onFix, fileLinks, qrRemov
         const removed = qrRemoved[link.key];
         return (
           <div key={`qr-${link.key}`} style={issueRowStyle} data-testid={`transfer-file-link-${link.key}`}>
-            <p role="status" style={issueTextStyle}>{t('monitors.transfer.customQrCheck', { url: link.url })}</p>
+            <p role="status" style={issueTextStyle}>
+              {removed
+                ? t('monitors.transfer.customQrRemoved')
+                : t('monitors.transfer.customQrCheck', { url: link.url })}
+            </p>
             <div style={choiceRowStyle}>
               <Button
                 variant="ghost"
@@ -71,7 +75,7 @@ export function MonitorTransferIssues({ issues, fixes, onFix, fileLinks, qrRemov
                 data-testid={`transfer-file-link-${link.key}-remove`}
                 onClick={() => onQrRemove(link.key)}
               >
-                {t('monitors.transfer.customQrRemove')}
+                {removed ? t('monitors.transfer.customQrKeep') : t('monitors.transfer.customQrRemove')}
               </Button>
             </div>
           </div>
