@@ -16,7 +16,7 @@ import {
   hallencupSchedule,
   matchByNumber,
   sideName,
-  withMatchScore,
+  withMatchResult,
 } from './pdfFixture';
 import { flatText, renderSchedulePdf, rowFrom } from './pdfText';
 
@@ -108,7 +108,7 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
   });
 
   it('Gegenbeispiel Ergebnis: beendetes Spiel 11 druckt „2 : 1“ nur mit eingeschaltetem Spielstand', async () => {
-    const schedule = withMatchScore(hallencupSchedule(), 11, { scoreA: 2, scoreB: 1 });
+    const schedule = withMatchResult(hallencupSchedule(), 11, { scoreA: 2, scoreB: 1 });
     const m = matchByNumber(schedule, 11);
 
     const mit = flatText(await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: true }));
@@ -170,7 +170,7 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
 
 describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als it.fails', () => {
   it('IST @BM-012: laufendes Spiel 12 druckt 1 : 0 in seiner Zeile (Bestand)', async () => {
-    const schedule = withMatchScore(hallencupSchedule(), 12, { scoreA: 1, scoreB: 0 });
+    const schedule = withMatchResult(hallencupSchedule(), 12, { scoreA: 1, scoreB: 0 }, 'running');
     const pdf = await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: true });
     const row = rowFrom(flatText(pdf), 12, matchByNumber(schedule, 12).time, GRUPPEN_ZEILE);
 
@@ -178,7 +178,7 @@ describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als i
   });
 
   it.fails('@BM-012 Ziel: Spiel 12 steht in seiner Zeile als „läuft“, ohne Zwischenstand', async () => {
-    const schedule = withMatchScore(hallencupSchedule(), 12, { scoreA: 1, scoreB: 0 });
+    const schedule = withMatchResult(hallencupSchedule(), 12, { scoreA: 1, scoreB: 0 }, 'running');
     const pdf = await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: true });
     const row = rowFrom(flatText(pdf), 12, matchByNumber(schedule, 12).time, GRUPPEN_ZEILE);
 
@@ -188,7 +188,7 @@ describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als i
   });
 
   it('IST @BM-011: beendetes Spiel 11 zeigt ohne Schalter nur den Platzhalter (Bestand)', async () => {
-    const schedule = withMatchScore(hallencupSchedule(), 11, { scoreA: 2, scoreB: 1 });
+    const schedule = withMatchResult(hallencupSchedule(), 11, { scoreA: 2, scoreB: 1 });
     const pdf = await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: false });
     const row = rowFrom(flatText(pdf), 11, matchByNumber(schedule, 11).time, GRUPPEN_ZEILE);
 
@@ -197,7 +197,7 @@ describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als i
   });
 
   it.fails('@BM-011 Ziel: beendetes Spiel 11 steht mit „2:1“ in seiner Zeile, auch ohne Schalter', async () => {
-    const schedule = withMatchScore(hallencupSchedule(), 11, { scoreA: 2, scoreB: 1 });
+    const schedule = withMatchResult(hallencupSchedule(), 11, { scoreA: 2, scoreB: 1 });
     const pdf = await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: false });
     const row = rowFrom(flatText(pdf), 11, matchByNumber(schedule, 11).time, GRUPPEN_ZEILE);
 

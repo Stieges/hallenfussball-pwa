@@ -5,7 +5,7 @@
  * à vier Teams, Halbfinale 1/2, Spiel um Platz 3, Finale. Die Spielliste entsteht über den **echten**
  * `generateFullSchedule` (nur aufrufen, nichts verändern). Reine Testdaten.
  */
-import type { Standing, Team, Tournament } from '../../../types/tournament';
+import type { Match, MatchStatus, Standing, Team, Tournament } from '../../../types/tournament';
 import { createMockTournament } from '../../../test/factories';
 import { generateFullSchedule } from '../../../core/generators';
 import type { GeneratedSchedule, ScheduledMatch } from '../../../core/generators';
@@ -56,22 +56,57 @@ export function hallencupSchedule(tournament: Tournament = hallencupTournament()
 }
 
 /**
- * Setzt den Spielstand eines Spiels (Nummer, 1-basiert) am Plan – so wie `PDFExportDialog` ihn vor dem
- * Export aus `tournament.matches` einmischt. Status (läuft, ausgefallen, korrigiert) steht heute nicht am
- * ScheduledMatch; das ist Arbeit von a3 (`withTournamentState`).
+ * Setzt Spielstand und Status eines Spiels (Nummer, 1-basiert) am Plan und spiegelt beides in
+ * `tournament.matches` der Fixture, so wie `PDFExportDialog` es vor dem Export aus dem Turnier einmischt.
+ * Standard ist `finished` (Ergebnis gilt als beendet). Laufende Spiele (@BM-012) werden ausdrücklich mit
+ * `'running'` gesetzt. Korrektur-Status und Historie kommen mit a3-4 (`withTournamentState`).
  */
-export function withMatchScore(
+/** Plan mit gespiegelten Turnier-Spielen (Ergebnis und Status), wie sie der Dialog einmischt. */
+export type FixtureSchedule = GeneratedSchedule & { fixtureMatches: Match[] };
+
+export function withMatchResult(
   schedule: GeneratedSchedule,
   matchNumber: number,
   score: { scoreA: number; scoreB: number },
-): GeneratedSchedule {
+  matchStatus: MatchStatus = 'finished',
+): FixtureSchedule {
+  const base = schedule.allMatches.find(m => m.matchNumber === matchNumber);
+  if (!base) {
+    throw new Error(`Spiel ${matchNumber} fehlt im Fixture-Plan`);
+  }
   const apply = (m: ScheduledMatch): ScheduledMatch =>
     m.matchNumber === matchNumber ? { ...m, ...score } : m;
+  const mirror: Match = {
+    id: base.id,
+    round: 0,
+    field: base.field,
+    teamA: base.originalTeamA,
+    teamB: base.originalTeamB,
+    group: base.group,
+    phase: base.phase,
+    matchNumber,
+    ...score,
+    matchStatus,
+  };
   return {
     ...schedule,
     allMatches: schedule.allMatches.map(apply),
     phases: schedule.phases.map(p => ({ ...p, matches: p.matches.map(apply) })),
+    fixtureMatches: [...fixtureMatchesOf(schedule).filter(m => m.matchNumber !== matchNumber), mirror],
   };
+}
+
+function fixtureMatchesOf(schedule: GeneratedSchedule): Match[] {
+  return (schedule as Partial<FixtureSchedule>).fixtureMatches ?? [];
+}
+
+/**
+ * Wächter für Fixtures: Spielnummern, die ein Ergebnis tragen, aber nicht `finished` sind. Leer heißt ok.
+ */
+export function unfinishedWithResult(schedule: GeneratedSchedule): number[] {
+  return fixtureMatchesOf(schedule)
+    .filter(m => m.matchNumber !== undefined && m.scoreA !== undefined && m.matchStatus !== 'finished')
+    .map(m => m.matchNumber!);
 }
 
 /**
