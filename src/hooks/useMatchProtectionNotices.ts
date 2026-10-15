@@ -23,7 +23,7 @@ export function useMatchProtectionNotices(): void {
         .join(', ');
       showInfo(
         t('syncStatus.matchProtectedHint', {
-          defaultValue: 'Spiel {{matchLabel}} hat Einträge und wurde nicht gelöscht.',
+          defaultValue: 'Spiel {{matchLabel}} hat Einträge – nur die Turnierleitung kann es absetzen',
           matchLabel,
           count: notice.matches.length,
         }),

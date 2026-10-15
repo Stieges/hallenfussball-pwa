@@ -56,7 +56,7 @@ async function fetchOwnerId(url: string, headers: Record<string, string>): Promi
   return ownerId;
 }
 
-test('Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Spiel + Ereignisse bleiben, Rest wird gespeichert, sichtbarer Hinweis (A6, Ruling AN)', async ({
+test('@FU-012 Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Spiel + Ereignisse bleiben, Rest wird gespeichert, sichtbarer Hinweis (A6, Ruling AN)', async ({
   asRole,
 }) => {
   const { url, headers } = getLocalServiceRoleClient();
@@ -220,7 +220,7 @@ test('Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Spiel + Er
     // MINDESTENS ein sichtbarer, korrekt formulierter Hinweis -- nicht die exakte Anzahl.
     const toast = ownerPage.getByRole('alert').filter({ hasText: 'Spiel 2' }).first();
     await expect(toast).toBeVisible({ timeout: 20000 });
-    await expect(toast).toContainText('hat Einträge und wurde nicht gelöscht');
+    await expect(toast).toContainText('hat Einträge – nur die Turnierleitung kann es absetzen');
 
     // --- 5. Die Mutation gilt als ERFOLGREICH -- keine Dead-Letter-Anzeige (Ruling AN: das darf
     //        kein dauerhafter Fehler sein). Projekt-unabhängig über localStorage geprüft statt

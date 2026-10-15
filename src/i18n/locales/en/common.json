@@ -108,7 +108,7 @@
     "failedListTitle": "Failed transfers",
     "failedListEmpty": "No failed transfers.",
     "failedReasonUnknown": "Unknown error",
-    "matchProtectedHint": "Match {{matchLabel}} has entries and was not deleted.",
+    "matchProtectedHint": "Match {{matchLabel}} has entries – only the tournament director can remove it",
     "retry": "Try again",
     "retryAriaLabel": "Retry transfer",
     "discard": "Discard",

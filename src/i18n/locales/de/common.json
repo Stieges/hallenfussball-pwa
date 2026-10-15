@@ -108,7 +108,7 @@
     "failedListTitle": "Gescheiterte Übertragungen",
     "failedListEmpty": "Keine gescheiterten Übertragungen.",
     "failedReasonUnknown": "Unbekannter Fehler",
-    "matchProtectedHint": "Spiel {{matchLabel}} hat Einträge und wurde nicht gelöscht.",
+    "matchProtectedHint": "Spiel {{matchLabel}} hat Einträge – nur die Turnierleitung kann es absetzen",
     "retry": "Erneut versuchen",
     "retryAriaLabel": "Übertragung erneut versuchen",
     "discard": "Verwerfen",
