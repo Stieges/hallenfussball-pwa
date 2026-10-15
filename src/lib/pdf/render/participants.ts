@@ -1,7 +1,7 @@
 /**
  * Teilnehmer als Blöcke (B-28a3-4b Punkt 8, Daniel 15.10.): je Gruppe ein Kasten mit „Gruppe A“ und den Kennungen
  * A1… fett, Teamnamen 12 pt. Kästen nebeneinander, bei mehr Gruppen umbrechend. Namen brechen um (bis drei Zeilen),
- * nie gekürzt. Ohne Gruppen ein Kasten über die volle Breite mit nummerierten Namen. Unter dem Abschnittstitel eine
+ * nie gekürzt. Alle Namen eines Kastens bündig (B-28a3-4G Punkt 2). Ohne Gruppen ein Kasten über die volle Breite mit nummerierten Namen. Unter dem Abschnittstitel eine
  * Linie (v7.2). Nur Zeichnen.
  */
 import type jsPDF from 'jspdf';
@@ -72,6 +72,10 @@ function placeBlock(doc: jsPDF, block: Block, boxWidth: number): { height: numbe
   const inset = printMetrics.participantBoxInset;
   const nameSize = printLimits.teamPt;
   const items: Placed[] = [];
+  // Namen beginnen überall an derselben x-Position: Innenrand + breiteste Kennung des Kastens + Abstand (B-28a3-4G Punkt 2)
+  setFace(doc, nameSize, true);
+  const widestId = Math.max(0, ...block.entries.map(entry => doc.getTextWidth(entry.id)));
+  const nameX = inset + widestId + printMetrics.participantLabelGap;
   let baseline = inset + ascent(printType.caption);
   if (block.title !== undefined) {
     items.push({ text: block.title, dx: inset, baseline, bold: true, size: printType.caption });
@@ -80,8 +84,6 @@ function placeBlock(doc: jsPDF, block: Block, boxWidth: number): { height: numbe
     baseline = inset + ascent(nameSize);
   }
   for (const entry of block.entries) {
-    setFace(doc, nameSize, true);
-    const nameX = inset + doc.getTextWidth(entry.id) + printMetrics.participantLabelGap;
     setFace(doc, nameSize, false);
     const lines = doc.splitTextToSize(entry.name, boxWidth - nameX - inset) as string[];
     items.push({ text: entry.id, dx: inset, baseline, bold: true, size: nameSize });

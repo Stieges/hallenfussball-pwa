@@ -5,6 +5,7 @@
  * Szenarien: @DR-001, @DR-002, @BM-021, @BM-009.
  */
 import { describe, expect, it } from 'vitest';
+import { generateFullSchedule } from '../../../core/generators';
 import { printLimits } from '../../../design-tokens/print';
 import type { Team } from '../../../types/tournament';
 import { HALLENCUP_TEAMS, hallencupSchedule, hallencupTournament } from './pdfFixture';
@@ -105,5 +106,44 @@ describe('Punkt 8 Teilnehmer als Blöcke je Gruppe (Daniel 15.10.)', () => {
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
 
     expect(kaesten(pages[0])).toHaveLength(1);
+  });
+});
+
+/** Linke Kanten der Teamnamen in einem Kasten (Kennung und Name getrennt gelesen). */
+function namensKanten(page: LayoutPage, kasten: Box, namen: string[]): number[] {
+  return namen.map(name => {
+    const stueck = textIn(page, kasten).find(t => trimmed(t) === name);
+    expect(stueck, `Name „${name}“ im Kasten`).toBeDefined();
+    return stueck?.x ?? 0;
+  });
+}
+
+describe('B-28a3-4G Punkt 2 Teamnamen bündig im Kasten', () => {
+  const ZWOELF = Array.from({ length: 14 }, (_, i) => `Verein ${i + 1}`);
+
+  it('Gruppe A mit zehn Teams (A1 und A10): alle Namen des Kastens beginnen auf derselben x-Position (± 0,2 mm)', async () => {
+    const teams: Team[] = ZWOELF.map((name, i) => ({ id: `team-${i}`, name, group: i < 10 ? 'A' : 'B' }));
+    const tournament = hallencupTournament({ teams, numberOfTeams: teams.length });
+    const { pages } = await layoutOf({ tournament }, generateFullSchedule(tournament, 'de'));
+    const [gruppeA] = kaesten(pages[0]);
+    const namen = teams.filter(t => t.group === 'A').map(t => t.name);
+
+    expect(textIn(pages[0], gruppeA).some(t => trimmed(t) === 'A10'), 'Kennung A10 im Kasten').toBe(true);
+    const kanten = namensKanten(pages[0], gruppeA, namen);
+    for (const x of kanten) {
+      expect(Math.abs(x - kanten[0]), 'linke Kante').toBeLessThanOrEqual(0.2);
+    }
+  });
+
+  it('ohne Gruppen (Jeder gegen jeden) mit Nummern 1. bis 14.: die Namen bündig, auch bei „1.“ und „10.“', async () => {
+    const teams: Team[] = ZWOELF.map((name, i) => ({ id: `team-${i}`, name, group: undefined }));
+    const tournament = hallencupTournament({ teams, numberOfTeams: teams.length, groupSystem: 'roundRobin' });
+    const { pages } = await layoutOf({ tournament }, generateFullSchedule(tournament, 'de'));
+    const [kasten] = kaesten(pages[0]);
+    const kanten = namensKanten(pages[0], kasten, ZWOELF);
+
+    for (const x of kanten) {
+      expect(Math.abs(x - kanten[0]), 'linke Kante').toBeLessThanOrEqual(0.2);
+    }
   });
 });
