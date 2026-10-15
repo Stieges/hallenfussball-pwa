@@ -90,7 +90,7 @@ describe('Regelzeilen folgen den Einstellungen (@DR-020)', () => {
     ],
   ];
 
-  it.each(PRIMARY_ROWS)('@DR-020 %s → Zeile „%s“ steht im Kopf', (_name, overrides, line) => {
+  it.each(PRIMARY_ROWS)('@DR-020 Zeile im Kopf für %s', (_name, overrides, line) => {
     expect(pdfRuleLines(rulesOf(overrides), de)).toContain(line);
   });
 
