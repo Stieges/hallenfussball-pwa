@@ -70,7 +70,7 @@ async function vorspulen(ms: number): Promise<void> {
 /** Rendert die Seite. `wurzel()` liefert den Rahmen der geladenen Seite (erst nach dem Laden gültig). */
 function seite(onBack = vi.fn()) {
   const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={onBack} />);
-  const wurzel = (): HTMLElement => container.firstElementChild as HTMLElement;
+  const wurzel = (): HTMLElement => container.querySelector('[lang="de"] > div')!;
   return { onBack, wurzel };
 }
 

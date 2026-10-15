@@ -7,7 +7,7 @@
  * lesbare Herkunft („1. Gruppe A“, „Sieger 1. Halbfinale“); bei ausgeblendeten Ergebnissen (Kindermodus,
  * @W2A-031) steht stattdessen „noch offen“ (`tournament:slot.undecided`, wortgleich zu Spur A).
  */
-import i18n from 'i18next';
+import { anzeigeT } from '../../i18n/anzeigeSprache';
 import type { Match, Team } from '../../types/tournament';
 import { resolvePlayoffPlaceholder } from '../../utils/displayNames';
 
@@ -35,6 +35,6 @@ export function sideTeam(match: Match, side: MatchSide, teams: Team[]): Team | u
 export function sideLabel(match: Match, side: MatchSide, ctx: SideContext): string {
   const team = sideTeam(match, side, ctx.teams);
   if (team) { return team.name; }
-  if (ctx.hidePendingOrigin) { return i18n.t('tournament:slot.undecided'); }
+  if (ctx.hidePendingOrigin) { return anzeigeT('tournament:slot.undecided'); }
   return resolvePlayoffPlaceholder(sideId(match, side), 'de');
 }

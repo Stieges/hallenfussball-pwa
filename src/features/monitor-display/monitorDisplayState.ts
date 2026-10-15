@@ -4,7 +4,7 @@
  * Regeln wörtlich aus MonitorDisplayPage.loadData (Lade-Regeln). Die Seite nutzt diese Bausteine
  * noch nicht; die Verdrahtung folgt in B-16b2.
  */
-import i18n from 'i18next';
+import { anzeigeT } from '../../i18n/anzeigeSprache';
 import type { Tournament } from '../../types/tournament';
 import type { TournamentMonitor } from '../../types/monitor';
 import type { DisplayDelta, DisplayOrigin } from './monitorDataSource';
@@ -41,11 +41,11 @@ export interface DisplayContext {
 }
 
 function connectionError(): string {
-  return i18n.t('monitor:error.connection');
+  return anzeigeT('monitor:error.connection');
 }
 
 function notFoundError(tournamentId: string): string {
-  return i18n.t('monitor:error.tournamentNotFound', { id: tournamentId });
+  return anzeigeT('monitor:error.tournamentNotFound', { id: tournamentId });
 }
 
 /**
@@ -81,7 +81,7 @@ export function applyDelta(
 
   if (!delta.monitor) {
     // Turnier-Abruf war erfolgreich; der Monitor existiert nicht mehr. Kein hasData-Schutz.
-    return { ...state, error: i18n.t('monitor:error.monitorNotFound', { id: ctx.monitorId }), loading: false };
+    return { ...state, error: anzeigeT('monitor:error.monitorNotFound', { id: ctx.monitorId }), loading: false };
   }
 
   return {
@@ -105,7 +105,7 @@ export function applyFetchError(state: MonitorDisplayState, err: unknown): Monit
   }
   return {
     ...state,
-    error: err instanceof Error ? err.message : i18n.t('monitor:error.fetchFailed'),
+    error: err instanceof Error ? err.message : anzeigeT('monitor:error.fetchFailed'),
     loading: false,
   };
 }

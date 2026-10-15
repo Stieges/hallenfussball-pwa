@@ -23,7 +23,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { displayMonitor } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, I18nextProvider } from 'react-i18next';
+import { ANZEIGE_SPRACHE, anzeigeI18n } from '../../i18n/anzeigeSprache';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
 import { TimedNotice } from '../../components/ui/molecules/TimedNotice';
 import { usePixelShift } from '../../hooks/usePixelShift';
@@ -70,7 +71,7 @@ const monitorPollIntervalMs = (m: TournamentMonitor | null): number =>
 // MAIN COMPONENT
 // =============================================================================
 
-export function MonitorDisplayPage({
+function MonitorDisplayPageContent({
   tournamentId,
   monitorId,
   onBack,
@@ -285,6 +286,17 @@ export function MonitorDisplayPage({
       />
 
       <MonitorKeyframes />
+    </div>
+  );
+}
+
+/** Monitor-Seite mit fester Anzeigesprache (B-41, src/i18n/anzeigeSprache.ts): eigene Instanz, globale Sprache bleibt unberührt. */
+export function MonitorDisplayPage(props: MonitorDisplayPageProps) {
+  return (
+    <div lang={ANZEIGE_SPRACHE} style={{ display: 'contents' }}>
+      <I18nextProvider i18n={anzeigeI18n()}>
+        <MonitorDisplayPageContent {...props} />
+      </I18nextProvider>
     </div>
   );
 }

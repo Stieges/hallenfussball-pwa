@@ -6,7 +6,7 @@
  * Die Quelle muss stabil sein (Modulkonstante oder useMemo), sonst lädt der Hook bei jedem Render neu.
  */
 import { useState, useEffect, useCallback } from 'react';
-import i18n from 'i18next';
+import { anzeigeT } from '../../i18n/anzeigeSprache';
 import { Tournament, Standing } from '../../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../../core/generators';
 import { calculateStandings } from '../../utils/calculations';
@@ -112,7 +112,7 @@ export function usePublicTournament(
       console.error('Error loading tournament:', error);
       if (!isRefreshAction) {
         setLoadingState('error');
-        setErrorMessage(i18n.t('publicView:error.loadFailed'));
+        setErrorMessage(anzeigeT('publicView:error.loadFailed'));
       }
     }
   }, [shareCode, source]);

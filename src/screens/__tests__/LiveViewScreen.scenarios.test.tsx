@@ -287,7 +287,7 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       const t = buildLiveViewTournament();
       const { container } = await renderWith(t);
       expect(supabaseGet).toHaveBeenCalledTimes(1);
-      const root = container.firstElementChild as HTMLElement;
+      const root = container.querySelector('[lang="de"] > div')!;
       fireEvent.touchStart(root, { touches: [{ clientY: 0 }] });
       fireEvent.touchMove(root, { touches: [{ clientY: 200 }] });
       fireEvent.touchEnd(root);
