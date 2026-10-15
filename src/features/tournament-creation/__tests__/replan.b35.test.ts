@@ -87,9 +87,10 @@ describe('B-35 – Neuplanung liest nur Slots (@TM-015)', () => {
     const established = baseTournament();
     const origin = { kind: 'groupRank', group: 'A', rank: 1 } as const;
     const all = generatedWithDecoy(established);
+    const teamIdA = String(matchSideTeamId(all[0], 'A'));
     const played: Match = {
       ...all[0],
-      slotA: resolveSlot(origin, testUuid(1)),
+      slotA: resolveSlot(origin, teamIdA),
       scoreA: 3,
       scoreB: 2,
       matchStatus: 'finished',
@@ -98,9 +99,10 @@ describe('B-35 – Neuplanung liest nur Slots (@TM-015)', () => {
     const preview = buildReplanPreview(withPlayed);
     expect(preview.status).toBe('preview');
     if (preview.status !== 'preview') { return; }
+    expect(preview.conflictMatchIds).toEqual([]);
     const updated = applyReplan(withPlayed, preview);
     const kept = updated.matches.find((m) => m.id === played.id);
-    expect(kept?.slotA).toEqual({ kind: 'team', teamId: testUuid(1), resolvedFrom: origin });
+    expect(kept?.slotA).toEqual({ kind: 'team', teamId: teamIdA, resolvedFrom: origin });
     expect(kept?.slotB).toEqual(played.slotB);
     const merged = preview.schedule.allMatches.find((m) => m.id === played.id);
     expect(merged?.slotA).toEqual(played.slotA);
