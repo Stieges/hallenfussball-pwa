@@ -24,3 +24,11 @@ export function qrModules(url: string): boolean[][] {
   const { modules } = QRCode.create(url, {});
   return Array.from({ length: modules.size }, (_, row) => Array.from({ length: modules.size }, (_, col) => Boolean(modules.get(row, col))));
 }
+
+/**
+ * Kurzadresse zum Abtippen (B-28 C7, @DR-010, F-N4): die Zuschauer-Adresse ohne `https://`, mit dem `#` des Links. Sie
+ * führt zur selben Adresse wie der QR (`https://` + Kurzadresse = QR-Inhalt); ein Pfad ohne `#` ist nicht geroutet.
+ */
+export function shortViewerAddress(url: string): string {
+  return url.replace(/^https?:\/\//, '');
+}

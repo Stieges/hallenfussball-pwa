@@ -4,6 +4,7 @@
  */
 const UMLAUTS: Record<string, string> = { ä: 'ae', ö: 'oe', ü: 'ue', ß: 'ss' };
 const FALLBACK_SLUG = 'turnier';
+const FALLBACK_NOTICE = 'Turnier';
 
 const two = (n: number): string => String(n).padStart(2, '0');
 
@@ -22,4 +23,13 @@ export function titleSlug(title: string): string {
 export function schedulePdfFilename(title: string, now: Date): string {
   const day = `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
   return `spielplan-${titleSlug(title)}-${day}-${two(now.getHours())}${two(now.getMinutes())}.pdf`;
+}
+
+/** `Hallencup_Nord_Aushang_A4.pdf`: Titel mit Unterstrichen statt Leerraum, ohne Zeichen, die Dateinamen sprengen (B-28 C7). */
+export function noticePdfFilename(title: string): string {
+  const name = title
+    .replace(/[\\/:*?"<>|]/g, '')
+    .trim()
+    .replace(/\s+/g, '_');
+  return `${name === '' ? FALLBACK_NOTICE : name}_Aushang_A4.pdf`;
 }

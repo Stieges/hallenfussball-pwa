@@ -810,6 +810,14 @@
       "results": "Live-Ergebnisse",
       "plan": "Spielplan aufs Handy"
     },
+    "notice": {
+      "callPlan": "Spielplan aufs Handy",
+      "callResults": "Spielplan und Ergebnisse aufs Handy",
+      "step1": "1. Kamera-App am Handy öffnen",
+      "step2": "2. Auf den QR-Code richten",
+      "step3": "3. Link antippen – ohne Anmeldung, ohne App.",
+      "addressLabel": "Oder im Browser eintippen:"
+    },
     "logoUnusableLeft": "Die linke Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF",
     "logoUnusableRight": "Die rechte Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF",
     "origin": {

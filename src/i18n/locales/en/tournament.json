@@ -810,6 +810,14 @@
       "results": "Live results",
       "plan": "Schedule on your phone"
     },
+    "notice": {
+      "callPlan": "Schedule on your phone",
+      "callResults": "Schedule and results on your phone",
+      "step1": "1. Open the camera app on your phone",
+      "step2": "2. Point it at the QR code",
+      "step3": "3. Tap the link – no sign-up, no app.",
+      "addressLabel": "Or type into your browser:"
+    },
     "logoUnusableLeft": "The left header graphic could not be used and is missing from the PDF",
     "logoUnusableRight": "The right header graphic could not be used and is missing from the PDF",
     "origin": {
