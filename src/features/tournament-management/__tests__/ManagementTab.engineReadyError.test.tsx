@@ -56,8 +56,8 @@ const mockGetLiveMatchData = vi.fn<() => Promise<LiveMatch>>().mockRejectedValue
 // Feld-/Spielwechsel auf ein Spiel, das BEREITS eine Engine-Kopie hat (kein erneuter
 // getLiveMatchData-Aufruf noetig).
 let mockLiveMatches = new Map<string, LiveMatch>();
-vi.mock('../../../hooks/useMatchExecution', () => ({
-  useMatchExecution: () => ({
+vi.mock('../../../hooks/useCockpitExecution', () => ({
+  useCockpitExecution: () => ({
     liveMatches: mockLiveMatches,
     loadingStates: { goal: false, card: false, finish: false, undo: false, start: false },
     isAnyLoading: false,

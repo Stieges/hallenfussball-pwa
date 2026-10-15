@@ -7,7 +7,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { Tournament } from '../../types/tournament';
 import type { LiveMatch } from '../../core/models/LiveMatch';
-import { LocalMatchStore, ClockSync, MatchEngine } from '../../core/match/client';
 
 const mockShowWarning = vi.fn();
 const mockShowError = vi.fn();
@@ -26,8 +25,8 @@ vi.mock('../../features/auth/hooks/useMyTournamentRole', () => ({
 }));
 
 import { useEngineCommandWiring, type EngineCommandFallbackHandlers } from '../useEngineCommandWiring';
-import type { MatchEngineContextValue } from '../../features/match-engine/matchEngineContextInstance';
 import { looseVs } from '../../test/matchSlotFixtures';
+import { makeEngineContext } from '../../test/engineContextFixture';
 
 const ENGINE_MATCH_ID = 'engine-1';
 const OLD_MATCH_ID = 'old-1';
@@ -73,35 +72,6 @@ function tournament(): Tournament {
     ],
     groupPhaseGameDuration: 20,
   } as unknown as Tournament;
-}
-
-// Jeder Test bekommt ein EIGENES Konto: `fake-indexeddb` teilt die Kopie zwischen Tests (kein
-// Reset zwischen `it()`-Bloecken) -- ein gemeinsames Konto wuerde MATCH_START aus einem
-// vorigen Test wiederfinden (Zustand waere faelschlich schon 'running').
-let accountCounter = 0;
-async function makeEngineContext() {
-  const accountId = `acc-wiring-${(accountCounter += 1)}`;
-  const store = new LocalMatchStore();
-  const clock = new ClockSync(() => Promise.resolve(1_790_000_000_000), () => 1_790_000_000_000, {
-    get: () => null,
-    set: () => undefined,
-  });
-  const engine = new MatchEngine({
-    store,
-    clock,
-    sender: { start: vi.fn().mockResolvedValue(undefined), stop: vi.fn() },
-    fetchConfirmed: vi.fn(),
-    now: () => 1_790_000_000_000,
-  });
-  await engine.start(accountId);
-  await engine.ensureMatch(ENGINE_MATCH_ID, { matchId: ENGINE_MATCH_ID, teamAId: 'teama', teamBId: 'teamb' });
-  return {
-    engine,
-    store,
-    clock,
-    sender: { kick: vi.fn().mockResolvedValue(undefined) },
-    accountId,
-  } as unknown as MatchEngineContextValue;
 }
 
 describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {

@@ -372,3 +372,29 @@ export class MatchAwaitingTeamsError extends Error {
     this.openSides = openSides;
   }
 }
+
+// =============================================================================
+// MatchNotOnEngineError (A-08a, @FU-069)
+// =============================================================================
+
+/**
+ * Grund, warum ein Spiel NICHT über die Engine geleitet werden kann:
+ * - `resultEntered`: Spielstand liegt schon vor (Schnelleingabe/Altbestand) -> Hinweis, keine Leitung
+ * - `skipped`: Spiel ist abgesetzt
+ * - `other`: sonstige Engine-Wartezeit (Anzeige wie "Spiel wird vorbereitet")
+ */
+export type MatchNotOnEngineReason = 'resultEntered' | 'skipped' | 'other';
+
+/**
+ * Das Cockpit hat für dieses Spiel keine Engine-Ansicht und es gibt keinen Altweg mehr (A-08a).
+ * Trägt nur den Grund, nie Spiel-IDs oder Teamnamen (Anzeige übersetzt den Grund).
+ */
+export class MatchNotOnEngineError extends Error {
+  public readonly reason: MatchNotOnEngineReason;
+
+  constructor(reason: MatchNotOnEngineReason) {
+    super(`Spiel ist nicht über die Engine leitbar (${reason})`);
+    this.name = 'MatchNotOnEngineError';
+    this.reason = reason;
+  }
+}

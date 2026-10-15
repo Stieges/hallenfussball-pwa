@@ -63,8 +63,8 @@ const HOME = { id: 'team-a', name: 'FC Alpha' };
 const AWAY = { id: 'team-b', name: 'SV Beta' };
 const liveMatches = new Map<string, CoreLiveMatch>();
 
-vi.mock('../../../hooks/useMatchExecution', () => ({
-  useMatchExecution: () => ({
+vi.mock('../../../hooks/useCockpitExecution', () => ({
+  useCockpitExecution: () => ({
     liveMatches,
     loadingStates: { goal: false, card: false, finish: false, undo: false, start: false },
     isAnyLoading: false,

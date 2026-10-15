@@ -64,8 +64,8 @@ vi.mock('../../auth/hooks/useTournamentMembers', () => ({
   }),
 }));
 
-vi.mock('../../../hooks/useMatchExecution', () => ({
-  useMatchExecution: () => ({
+vi.mock('../../../hooks/useCockpitExecution', () => ({
+  useCockpitExecution: () => ({
     // Bei JEDEM Aufruf eine neue Map — so verhält sich der echte Hook auch
     // (`setLiveMatches(prev => new Map(prev)...)`). Gäbe die Attrappe die modulweite Map
     // zurück, bliebe deren Identität konstant, `currentMatch` würde nie neu berechnet und

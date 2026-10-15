@@ -17,7 +17,7 @@ import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
 import { LiveCockpit } from '../../components/live-cockpit';
 import { MatchSummary } from '../../components/match-cockpit/MatchCockpit';
 import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { useMatchExecution } from '../../hooks/useMatchExecution';
+import { useCockpitExecution } from '../../hooks/useCockpitExecution';
 import { useTournamentMembers } from '../auth/hooks/useTournamentMembers';
 import { useEffectiveTournamentRole } from '../auth/hooks/useMyTournamentRole';
 import { canEditResults, canManageTournament } from '../auth/utils/permissions';
@@ -25,7 +25,7 @@ import { RulesLockProvider } from '../../components/match-cockpit/RulesLockConte
 import { toRuntimeMatchEvents } from '../../utils/matchEvents';
 import { useToast } from '../../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../../lib/sentry';
-import { MatchAwaitingTeamsError } from '../../core/errors';
+import { MatchAwaitingTeamsError, MatchNotOnEngineError, type MatchNotOnEngineReason } from '../../core/errors';
 import { awaitingLabel, matchLabelText } from '../../core/models/slotLabel';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { buildSideContext, sideDisplay, sideName } from '../../components/schedule/matchSides';
@@ -52,12 +52,12 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   tournament,
   schedule,
   onTournamentUpdate,
-  onLocalTournamentUpdate,
   initialMatchId,
   onInitialMatchConsumed,
 }) => {
   const { t } = useTranslation('tournament');
   const { t: tCommon } = useTranslation('common');
+  const { t: tCockpit } = useTranslation('cockpit');
   const { showError } = useToast();
   const [selectedFieldNumber, setSelectedFieldNumber] = useState<number>(1);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
@@ -66,11 +66,13 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const [engineReadyError, setEngineReadyError] = useState<boolean>(false);
   // @TM-033: das Spiel hat noch eine offene Seite – kein Fehler, sondern ein Wartegrund
   const [awaitingTeams, setAwaitingTeams] = useState<boolean>(false);
+  // A-08a (@FU-069): Spiel ist nicht über die Engine leitbar (z. B. Ergebnis schon eingetragen)
+  const [notOnEngineReason, setNotOnEngineReason] = useState<MatchNotOnEngineReason | null>(null);
   const { isOnline } = useOnlineStatus();
   // Minor 4: "Erneut versuchen" erzwingt einen neuen Ladeversuch ueber diesen Zaehler (s. u.).
   const [retryToken, setRetryToken] = useState(0);
 
-  // Use extracted hook for live match management
+  // A-08a: Cockpit nur über Engine-Ereignisse (kein Altservice, kein Altweg)
   const {
     liveMatches,
     getLiveMatchData,
@@ -87,7 +89,6 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handleUndoLastEvent,
     handleManualEditResult,
     handleAdjustTime,
-    handleReopenMatch,
     hasRunningMatch,
     // Tiebreaker handlers
     handleStartOvertime,
@@ -97,7 +98,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handleAbortPenaltyShootout,
     handleUpdateEvent,
     handleDeleteEvent,
-  } = useMatchExecution({ tournament, onLocalTournamentUpdate });
+  } = useCockpitExecution(tournament);
 
   // Permission check: Get current user's role in this tournament
   const { myMembership, isLoading: membersLoading } = useTournamentMembers(tournament.id);
@@ -117,14 +118,6 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   }, [myMembership, userTeamIds]);
 
   // Confirm dialogs
-  const startWithResultDialog = useConfirmDialog({
-    title: t('management.existingResults'),
-    message: '',
-    variant: 'warning',
-    confirmText: t('management.startAnyway'),
-    cancelText: t('common.cancel'),
-  });
-
   const switchMatchDialog = useConfirmDialog({
     title: t('management.runningMatch'),
     message: '',
@@ -216,6 +209,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   useEffect(() => {
     setEngineReadyError(false);
     setAwaitingTeams(false);
+    setNotOnEngineReason(null);
     if (!currentMatchData) {
       return;
     }
@@ -236,6 +230,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         // @TM-033: offene Seite = Wartegrund, kein Fehler (kein Toast, keine Sentry-Meldung)
         if (error instanceof MatchAwaitingTeamsError) {
           setAwaitingTeams(true);
+          return;
+        }
+        // A-08a (@FU-069): nicht leitbar mit Grund -> Hinweis statt Fehlerzweig (kein Toast, kein Sentry)
+        if (error instanceof MatchNotOnEngineError && error.reason !== 'other') {
+          setNotOnEngineReason(error.reason);
           return;
         }
         // P7: Toast + Sentry statt stiller Leeranzeige; "Spiel wird vorbereitet" statt "Keine Spiele".
@@ -293,25 +292,6 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       : fieldMatches.map(toMatchSummary);
   }, [fieldMatches, currentMatchData, toMatchSummary]);
 
-  // Handler: Start match with confirmation for existing results
-  const handleStart = useCallback(async (matchId: string) => {
-    const match = liveMatches.get(matchId);
-    if (!match) { return; }
-
-    const hasExistingResult = match.homeScore > 0 || match.awayScore > 0;
-
-    if (hasExistingResult && match.status === 'NOT_STARTED') {
-      const confirmed = await startWithResultDialog.confirm({
-        message: t('management.existingResultsMessage', { homeScore: match.homeScore, awayScore: match.awayScore }),
-        details: t('management.matchDetails', { number: match.number, home: match.homeTeam.name, away: match.awayTeam.name }),
-      });
-
-      if (!confirmed) { return; }
-    }
-
-    void hookHandleStart(matchId);
-  }, [liveMatches, hookHandleStart, startWithResultDialog, t]);
-
   // Handler: Match selection change with warning for running match
   const handleMatchSelectionChange = useCallback(async (newMatchId: string | null) => {
     const runningMatch = hasRunningMatch();
@@ -364,14 +344,6 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       }
     }
   }, [fieldMatches, currentMatchData, schedule.allMatches, selectedFieldNumber]);
-
-  // Handler: Reopen last match
-  const handleReopenLastMatch = useCallback(() => {
-     
-    if (!lastFinishedMatchData) { return; }
-    setSelectedMatchId(lastFinishedMatchData.id);
-    void handleReopenMatch(lastFinishedMatchData);
-  }, [lastFinishedMatchData, handleReopenMatch]);
 
   const handleFinishAndReset = useCallback(async (matchId: string) => {
     await handleFinish(matchId);
@@ -487,7 +459,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             lastFinishedMatch={lastFinishedMatch}
             upcomingMatches={upcomingMatches}
             highlightNextMatchMinutesBefore={5}
-            onStart={(matchId) => { void handleStart(matchId); }}
+            onStart={(matchId) => { void hookHandleStart(matchId); }}
             onPause={(matchId) => { void handlePause(matchId); }}
             onResume={(matchId) => { void handleResume(matchId); }}
             onFinish={(matchId) => { void handleFinishAndReset(matchId); }}
@@ -496,7 +468,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             onManualEditResult={(matchId, home, away) => { void handleManualEditResult(matchId, home, away); }}
             onAdjustTime={(matchId, time) => { void handleAdjustTime(matchId, time); }}
             onLoadNextMatch={handleLoadNextMatch}
-            onReopenLastMatch={handleReopenLastMatch}
+            // A-08a: Wiedereröffnen ist ohne Altweg nicht verdrahtet; die Prop entfällt in A-08c.
+            onReopenLastMatch={() => undefined}
             // Event tracking callbacks
             onTimePenalty={(matchId, teamId, options) => { void handleTimePenalty(matchId, teamId, options); }}
             onCard={(matchId, teamId, type, options) => { void handleCard(matchId, teamId, type, options); }}
@@ -523,6 +496,12 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         <div className={styles.noMatches}>
           {t('management.matchLoading')}
         </div>
+      ) : notOnEngineReason ? (
+        <div className={styles.noMatches} data-testid="cockpit-not-on-engine">
+          {notOnEngineReason === 'resultEntered'
+            ? tCockpit('engine.retract.hint.goalFinished')
+            : t('filter.status.skipped')}
+        </div>
       ) : engineReadyError ? (
         <div className={styles.noMatches}>
           {t('management.enginePreparing')}
@@ -535,7 +514,6 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       )}
 
       {/* CONFIRM DIALOGS */}
-      <ConfirmDialog {...startWithResultDialog.dialogProps} />
       <ConfirmDialog {...switchMatchDialog.dialogProps} />
     </div>
   );

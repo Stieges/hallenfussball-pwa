@@ -94,8 +94,8 @@ vi.mock('react-i18next', async () => {
 
 const mockGetLiveMatchData = vi.fn<() => Promise<LiveMatch>>();
 const mockLiveMatches = vi.hoisted(() => ({ map: new Map<string, unknown>() }));
-vi.mock('../../../hooks/useMatchExecution', () => ({
-  useMatchExecution: () => ({
+vi.mock('../../../hooks/useCockpitExecution', () => ({
+  useCockpitExecution: () => ({
     liveMatches: mockLiveMatches.map as Map<string, LiveMatch>,
     loadingStates: { goal: false, card: false, finish: false, undo: false, start: false },
     isAnyLoading: false,
