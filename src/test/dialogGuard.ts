@@ -10,12 +10,27 @@ const ROLE_DIALOG = /role\s*=\s*(?:\{\s*)?["'`](?:dialog|alertdialog)["'`]/;
 /** Zeilen Abstand, in dem ein `role` ein `aria-modal` „erklärt“. */
 const ROLE_NEARBY = 5;
 
+/**
+ * `role="alertdialog"` als Prop des Bausteins (`<DialogSurface … role="alertdialog">`) ist kein
+ * eigenes Overlay: die Zeile liegt im öffnenden Tag von DialogSurface (B-43b2).
+ */
+function isDialogSurfaceProp(lines: string[], index: number): boolean {
+  for (let j = index; j >= 0 && index - j <= 15; j -= 1) {
+    if (lines[j].includes('<DialogSurface')) {return true;}
+    if (j < index && lines[j].trimEnd().endsWith('>')) {return false;}
+  }
+  return false;
+}
+
 /** Marker je Zeile: role-Dialog, createPortal, aria-modal ohne role in der Nähe. */
 export function countDialogMarkers(source: string): number {
   const lines = source.split('\n');
   const roleLines = lines.flatMap((line, i) => (ROLE_DIALOG.test(line) ? [i] : []));
   let count = 0;
   lines.forEach((line, i) => {
+    if (ROLE_DIALOG.test(line) && isDialogSurfaceProp(lines, i)) {
+      return;
+    }
     if (ROLE_DIALOG.test(line) || line.includes('createPortal(')) {
       count += 1;
     } else if (line.includes('aria-modal') && !roleLines.some((j) => Math.abs(i - j) <= ROLE_NEARBY)) {

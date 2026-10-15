@@ -1,0 +1,202 @@
+/**
+ * @OB-055 / @OB-021 (B-43b2) — Cockpit- und Match-Cockpit-Dialoge stehen auf DialogSurface:
+ * deckende Fläche (gemessen über die aufgelöste Farbe, hell und dunkel), Abdunkelung aus dem
+ * Overlay-Token, jeder Text mit mindestens 4,5 : 1 (große Schrift und Symbole 3 : 1) gegen
+ * die Fläche, auf der er liegt. Dazu das Verhalten wie vor der Umstellung (Esc genau einmal,
+ * Fokus-Ziel, Klick auf die Abdunkelung) für CardDialog, GoalScorerDialog, TimePenaltyDialog
+ * und EditScoreDialog. Befund C-DIALOG-FLAECHE-DURCHSICHTIG.
+ */
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { CardDialog } from '../components/Dialogs/CardDialog';
+import { EventEditDialog } from '../components/Dialogs/EventEditDialog';
+import { GoalScorerDialog } from '../components/Dialogs/GoalScorerDialog';
+import { HalftimeResetDialog } from '../components/Dialogs/HalftimeResetDialog';
+import { RestartConfirmDialog } from '../components/Dialogs/RestartConfirmDialog';
+import { SettingsDialog } from '../components/Dialogs/SettingsDialog';
+import { SubstitutionDialog } from '../components/Dialogs/SubstitutionDialog';
+import { TimeAdjustDialog } from '../components/Dialogs/TimeAdjustDialog';
+import { TimePenaltyDialog } from '../components/Dialogs/TimePenaltyDialog';
+import { PenaltyShootoutDialog as LivePenaltyShootoutDialog } from '../components/Tiebreaker/PenaltyShootoutDialog';
+import { TiebreakerBanner } from '../components/Tiebreaker/TiebreakerBanner';
+import { ScoreEditDialog } from '../components/ScoreEditDialog';
+import { OpenEntriesBottomSheet } from '../components/OpenEntries/OpenEntriesBottomSheet';
+import { EditScoreDialog } from '../../match-cockpit/EditScoreDialog';
+import { EditTimeDialog } from '../../match-cockpit/EditTimeDialog';
+import { PenaltyShootoutDialog as MatchPenaltyShootoutDialog } from '../../match-cockpit/PenaltyShootoutDialog';
+import type { LiveMatch } from '../../match-cockpit/MatchCockpit';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS, type EditableMatchEvent, type MatchEvent } from '../../../types/tournament';
+import { measurePanelContrast } from '../../../test/dialogContrast';
+import { isOpaque, resolveToken, type ThemeName } from '../../../test/contrast';
+
+const THEMES: ThemeName[] = ['light', 'dark'];
+const noop = vi.fn();
+const home = { id: 'h', name: 'VfB Ufer' };
+const away = { id: 'a', name: 'SC Nord' };
+
+const editableEvent: EditableMatchEvent = { id: 'e1', type: 'GOAL', matchMinute: 3.5, teamId: 'h', incomplete: true };
+const openEvent = { id: 'e1', type: 'GOAL', matchMinute: 3.5, teamId: 'h', incomplete: true } as unknown as MatchEvent;
+const liveMatch = {
+  id: 'm1', number: 1, phaseLabel: 'Finale', fieldId: 'f1', scheduledKickoff: '2026-10-01T10:00:00.000Z',
+  durationSeconds: 600, homeTeam: home, awayTeam: away, homeScore: 1, awayScore: 1, status: 'finished',
+  elapsedSeconds: 600, events: [], penaltyScoreA: 0, penaltyScoreB: 0,
+} as unknown as LiveMatch;
+
+interface Kind {
+  name: string;
+  mount: () => Promise<void> | void;
+}
+
+const KINDS: Kind[] = [
+  { name: 'CardDialog', mount: () => void render(<CardDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
+  { name: 'EventEditDialog', mount: () => void render(<EventEditDialog isOpen onClose={noop} event={editableEvent} homeTeam={home} awayTeam={away} onUpdate={noop} onDelete={noop} />) },
+  { name: 'GoalScorerDialog', mount: () => void render(<GoalScorerDialog isOpen onClose={noop} onConfirm={noop} teamName="VfB Ufer" />) },
+  { name: 'HalftimeResetDialog', mount: () => void render(<HalftimeResetDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} homeFouls={2} awayFouls={3} currentHalf={1} />) },
+  { name: 'RestartConfirmDialog', mount: () => void render(<RestartConfirmDialog isOpen onClose={noop} onConfirm={noop} homeTeam="VfB Ufer" awayTeam="SC Nord" homeScore={1} awayScore={0} elapsedTime="04:12" />) },
+  { name: 'SettingsDialog', mount: () => void render(<SettingsDialog isOpen onClose={noop} settings={DEFAULT_MATCH_COCKPIT_SETTINGS} onChange={noop} tournamentId="t1" />) },
+  { name: 'SubstitutionDialog', mount: () => void render(<SubstitutionDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
+  { name: 'SubstitutionDialog (Team gewählt)', mount: () => void render(<SubstitutionDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} preselectedTeamSide="home" />) },
+  { name: 'TimeAdjustDialog', mount: () => void render(<TimeAdjustDialog isOpen onClose={noop} onConfirm={noop} currentTimeSeconds={125} matchDurationMinutes={10} />) },
+  { name: 'TimePenaltyDialog', mount: () => void render(<TimePenaltyDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
+  { name: 'Tiebreaker/PenaltyShootoutDialog', mount: () => void render(<LivePenaltyShootoutDialog homeTeamName="VfB Ufer" awayTeamName="SC Nord" onRecordShot={noop} onFinish={noop} onCancel={noop} />) },
+  { name: 'Tiebreaker/TiebreakerBanner', mount: () => void render(<TiebreakerBanner homeTeamName="VfB Ufer" awayTeamName="SC Nord" score={2} onStartPenaltyShootout={noop} onEndAsDraw={noop} />) },
+  { name: 'ScoreEditDialog', mount: () => void render(<ScoreEditDialog isOpen onClose={noop} onConfirm={noop} currentHomeScore={1} currentAwayScore={0} homeTeamName="VfB Ufer" awayTeamName="SC Nord" />) },
+  {
+    name: 'OpenEntriesBottomSheet (aufgeklappt)',
+    mount: async () => {
+      render(<OpenEntriesBottomSheet openEvents={[openEvent]} homeTeam={home} awayTeam={away} onEditEvent={noop} />);
+      await userEvent.setup().click(screen.getByRole('button', { name: /offene Eingaben/ }));
+    },
+  },
+  { name: 'match-cockpit/EditScoreDialog', mount: () => void render(<EditScoreDialog homeTeamName="VfB Ufer" awayTeamName="SC Nord" currentHomeScore={1} currentAwayScore={0} onSubmit={noop} onCancel={noop} />) },
+  { name: 'match-cockpit/EditTimeDialog', mount: () => void render(<EditTimeDialog currentElapsedSeconds={125} durationSeconds={600} onSubmit={noop} onCancel={noop} />) },
+  { name: 'match-cockpit/PenaltyShootoutDialog', mount: () => void render(<MatchPenaltyShootoutDialog match={liveMatch} onSubmit={noop} onCancel={noop} />) },
+];
+
+function panelOf(): HTMLElement {
+  const panel = document.querySelector<HTMLElement>('.dialog-surface-panel');
+  expect(panel, 'nutzt DialogSurface (Panel .dialog-surface-panel)').not.toBeNull();
+  return panel!;
+}
+
+describe('@OB-055 B-43b2 – Cockpit-Dialoge: deckende Fläche und Kontrast', () => {
+  it.each(THEMES.flatMap((theme) => KINDS.map((kind) => [theme, kind.name, kind] as const)))(
+    '%s – %s: deckende Fläche, Abdunkelung aus dem Overlay-Token, Text ≥ 4,5 : 1',
+    async (theme, _name, kind) => {
+      await kind.mount();
+      const panel = panelOf();
+
+      const surface = panel.style.background || panel.style.backgroundColor;
+      expect(isOpaque(resolveToken(theme, surface)), `Fläche „${surface}“ deckend`).toBe(true);
+      expect(panel.style.background).toBe('var(--color-surface-elevated)');
+      expect(panel.style.backdropFilter).toBe('');
+      expect(panel.parentElement!.style.backgroundColor).toMatch(/^var\(--color-overlay/);
+      expect(panel.getAttribute('aria-modal')).toBe('true');
+
+      const { geprueft, zuSchwach } = measurePanelContrast(theme, panel);
+      expect(zuSchwach, 'Text unter der Mindeststärke').toEqual([]);
+      expect(geprueft, 'es wurde Text geprüft').toBeGreaterThan(0);
+    },
+  );
+
+  it('Gegenbeispiel: eine durchsichtige Fläche wird als nicht deckend erkannt', () => {
+    expect(isOpaque(resolveToken('dark', 'rgba(255, 255, 255, 0.08)'))).toBe(false);
+  });
+
+  it('TiebreakerBanner bleibt ein alertdialog und ist nicht wegklickbar (Entscheidung ist Pflicht)', () => {
+    const onEndAsDraw = vi.fn();
+    render(<TiebreakerBanner homeTeamName="A" awayTeamName="B" score={1} onEndAsDraw={onEndAsDraw} onCancel={noop} />);
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.getAttribute('data-testid')).toBe('tiebreaker-banner');
+    fireEvent.click(dialog.parentElement!);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByRole('alertdialog')).toBeTruthy();
+    expect(onEndAsDraw).not.toHaveBeenCalled();
+  });
+});
+
+describe('@OB-055 B-43b2 – Verhalten wie vor der Umstellung', () => {
+  it('CardDialog: Esc ruft onClose genau einmal auf', () => {
+    const onClose = vi.fn();
+    render(<CardDialog isOpen onClose={onClose} onConfirm={noop} homeTeam={home} awayTeam={away} />);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('CardDialog: Fokus startet auf dem Schließen-Knopf, Klick auf die Abdunkelung schließt', () => {
+    const onClose = vi.fn();
+    render(<CardDialog isOpen onClose={onClose} onConfirm={noop} homeTeam={home} awayTeam={away} />);
+    expect(document.activeElement).toBe(screen.getByTestId('dialog-close-button'));
+    fireEvent.click(screen.getByRole('dialog').parentElement!);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('CardDialog: Klick in die Fläche schließt nicht; geschlossen rendert nichts', () => {
+    const onClose = vi.fn();
+    const { rerender } = render(<CardDialog isOpen onClose={onClose} onConfirm={noop} homeTeam={home} awayTeam={away} />);
+    fireEvent.click(screen.getByRole('dialog'));
+    expect(onClose).not.toHaveBeenCalled();
+    rerender(<CardDialog isOpen={false} onClose={onClose} onConfirm={noop} homeTeam={home} awayTeam={away} />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('GoalScorerDialog: Esc ruft onClose genau einmal auf, speichert aber nichts', () => {
+    const onClose = vi.fn();
+    const onConfirm = vi.fn();
+    render(<GoalScorerDialog isOpen onClose={onClose} onConfirm={onConfirm} teamName="VfB Ufer" />);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('GoalScorerDialog: Fokus liegt auf dem Trikotnummer-Feld', async () => {
+    render(<GoalScorerDialog isOpen onClose={noop} onConfirm={noop} teamName="VfB Ufer" />);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('cockpit:goalScorer.jerseyAria')));
+  });
+
+  it('GoalScorerDialog: Klick auf die Abdunkelung speichert das Tor unvollständig und schließt', () => {
+    const onClose = vi.fn();
+    const onConfirm = vi.fn();
+    render(<GoalScorerDialog isOpen onClose={onClose} onConfirm={onConfirm} teamName="VfB Ufer" />);
+    fireEvent.click(screen.getByRole('dialog').parentElement!);
+    expect(onConfirm).toHaveBeenCalledWith(null, [], true);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('TimePenaltyDialog: Esc einmal, Fokus im Dialog, Abdunkelung schließt', () => {
+    const onClose = vi.fn();
+    render(<TimePenaltyDialog isOpen onClose={onClose} onConfirm={noop} homeTeam={home} awayTeam={away} />);
+    expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('dialog').parentElement!);
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('EditScoreDialog: Esc ruft onCancel genau einmal auf, Fokus im Dialog, Abdunkelung bricht ab', () => {
+    const onCancel = vi.fn();
+    render(<EditScoreDialog homeTeamName="A" awayTeamName="B" currentHomeScore={1} currentAwayScore={0} onSubmit={noop} onCancel={onCancel} />);
+    expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('dialog').parentElement!);
+    expect(onCancel).toHaveBeenCalledTimes(2);
+  });
+
+  it('Gegenbeispiel: nach dem Schließen sperrt kein Dialog mehr den Hintergrund', () => {
+    const { unmount } = render(<EditScoreDialog homeTeamName="A" awayTeamName="B" currentHomeScore={1} currentAwayScore={0} onSubmit={noop} onCancel={noop} />);
+    expect(document.body.style.overflow).toBe('hidden');
+    unmount();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('verschachtelt: ein Cockpit-Dialog über einem zweiten lässt den Hintergrund gesperrt, bis der letzte schließt', () => {
+    const a = render(<EditScoreDialog homeTeamName="A" awayTeamName="B" currentHomeScore={1} currentAwayScore={0} onSubmit={noop} onCancel={noop} />);
+    const b = render(<EditTimeDialog currentElapsedSeconds={5} durationSeconds={600} onSubmit={noop} onCancel={noop} />);
+    b.unmount();
+    expect(document.body.style.overflow).toBe('hidden');
+    a.unmount();
+    expect(document.body.style.overflow).toBe('');
+  });
+});

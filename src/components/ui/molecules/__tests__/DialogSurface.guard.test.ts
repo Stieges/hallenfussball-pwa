@@ -13,9 +13,18 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { countDialogMarkers, countScrims } from '../../../../test/dialogGuard';
 
-/** Stand nach B-43b1 (vorher 42 / 29). */
-const OBERGRENZE_MARKER = 31;
-const OBERGRENZE_SCRIMS = 21;
+/** Stand nach B-43b2 (vorher 42 / 29, nach b1 31 / 21; Cockpit: 15 Marker und 13 Scrims entfernt, 2 Scrims des OverflowMenu ausgenommen). Dürfen nur sinken. */
+const OBERGRENZE_MARKER = 16;
+const OBERGRENZE_SCRIMS = 6;
+
+/**
+ * Begründete Ausnahmen: Dateien, die kein Modal sind und deshalb nicht in den Zählern stehen.
+ * Jede Ausnahme braucht einen Grund; die Datei muss existieren (sonst veraltet die Liste).
+ */
+const AUSNAHMEN: Record<string, string> = {
+  'components/live-cockpit/components/OverflowMenu/index.tsx':
+    'Aufklappmenü (kein Modal, keine Fokusfalle): fixe Fläche und Klick-Fänger enthalten Overlay-Farbe, sind aber keine Abdunkelung eines Dialogs.',
+};
 
 const SRC = resolve(process.cwd(), 'src');
 
@@ -38,6 +47,7 @@ function zaehle(fn: (source: string) => number): { summe: number; treffer: strin
   const treffer: string[] = [];
   for (const file of produktivDateien(SRC)) {
     if (file.endsWith('DialogSurface.tsx')) {continue;}
+    if (Object.keys(AUSNAHMEN).some((rel) => file.endsWith(rel))) {continue;}
     const n = fn(readFileSync(file, 'utf8'));
     if (n > 0) {
       summe += n;
@@ -59,6 +69,18 @@ describe('@OB-055 Architektur-Wächter DialogSurface', () => {
   }, 60_000);
 });
 
+describe('@OB-055 Wächter – Ausnahmeliste', () => {
+  it.each(Object.entries(AUSNAHMEN))('%s: Datei existiert und der Grund ist begründet', (rel, grund) => {
+    expect(statSync(join(SRC, rel)).isFile()).toBe(true);
+    expect(grund.length).toBeGreaterThan(30);
+  });
+
+  it('Gegenbeispiel: ohne die Ausnahme würde das Menü als Abdunkelung gezählt', () => {
+    const menu = readFileSync(join(SRC, 'components/live-cockpit/components/OverflowMenu/index.tsx'), 'utf8');
+    expect(countScrims(menu)).toBeGreaterThan(0);
+  });
+});
+
 describe('@OB-055 Wächter – Gegenbeispiele (jede Schreibweise wird erkannt)', () => {
   it.each([
     ['doppelte Anführungszeichen', '<div role="dialog" />'],
@@ -77,6 +99,13 @@ describe('@OB-055 Wächter – Gegenbeispiele (jede Schreibweise wird erkannt)',
 
   it('Marker: role und aria-modal nebeneinander zählen einmal (kein Doppeltreffer)', () => {
     expect(countDialogMarkers('<div\n  role="dialog"\n  aria-modal="true"\n/>')).toBe(1);
+  });
+
+  it('Marker: role als Prop im öffnenden Tag von DialogSurface zählt nicht, daneben ein eigenes Element schon', () => {
+    const prop = '<DialogSurface\n  isOpen\n  role="alertdialog"\n  maxWidth={w}\n>\n  <p>x</p>\n</DialogSurface>';
+    expect(countDialogMarkers(prop)).toBe(0);
+    expect(countDialogMarkers(`${prop}\n<div role="alertdialog" />`)).toBe(1);
+    expect(countDialogMarkers('<DialogSurface isOpen>\n  <p>x</p>\n</DialogSurface>\n<div\n  role="dialog"\n/>')).toBe(1);
   });
 
   it('Marker: ein normales Element ohne Dialog-Rolle zählt nicht', () => {
@@ -117,9 +146,35 @@ describe('T1 Dialogbreiten kommen nur aus dialogWidths', () => {
     'components/match-cockpit/PostMatchModal.tsx',
     'features/tournament-management/MonitorEditor.tsx',
     'features/tournament-management/TeamsTab.tsx',
+    // B-43b2: Cockpit- und Match-Cockpit-Dialoge
+    'components/live-cockpit/components/Dialogs/CardDialog.tsx',
+    'components/live-cockpit/components/Dialogs/EventEditDialog.tsx',
+    'components/live-cockpit/components/Dialogs/GoalScorerDialog.tsx',
+    'components/live-cockpit/components/Dialogs/HalftimeResetDialog.tsx',
+    'components/live-cockpit/components/Dialogs/RestartConfirmDialog.tsx',
+    'components/live-cockpit/components/Dialogs/SettingsDialog.tsx',
+    'components/live-cockpit/components/Dialogs/SubstitutionDialog.tsx',
+    'components/live-cockpit/components/Dialogs/TimeAdjustDialog.tsx',
+    'components/live-cockpit/components/Dialogs/TimePenaltyDialog.tsx',
+    'components/live-cockpit/components/Tiebreaker/PenaltyShootoutDialog.tsx',
+    'components/live-cockpit/components/Tiebreaker/TiebreakerBanner.tsx',
+    'components/live-cockpit/components/ScoreEditDialog/index.tsx',
+    'components/live-cockpit/components/OpenEntries/OpenEntriesBottomSheet.tsx',
+    'components/match-cockpit/EditScoreDialog.tsx',
+    'components/match-cockpit/EditTimeDialog.tsx',
+    'components/match-cockpit/PenaltyShootoutDialog.tsx',
   ];
+  /** JSX-Prop `maxWidth="480px"` und Stilwert `maxWidth: '400px'`; Dialogbreiten liegen bei 350 px und mehr (Eingabefelder mit 100–140 px und Vorschaubilder mit 300 px sind keine). */
+  const BREITEN_LITERAL = /maxWidth\s*[=:]\s*\{?\s*['"]?(?:3[5-9]|[4-9]\d)\d(px)?['"]?/;
   it.each(DATEIEN)('%s: kein maxWidth-Literal in px', (datei) => {
     const source = readFileSync(join(SRC, datei), 'utf8');
-    expect(source).not.toMatch(/maxWidth\s*=\s*\{?\s*['"]?\d+(px)?['"]?/);
+    expect(source).not.toMatch(BREITEN_LITERAL);
+  });
+
+  it('Gegenbeispiel: Stilwert und Prop mit Literal werden erkannt', () => {
+    expect("maxWidth: '400px'").toMatch(BREITEN_LITERAL);
+    expect('maxWidth="480px"').toMatch(BREITEN_LITERAL);
+    expect('maxWidth={dialogWidths.md}').not.toMatch(BREITEN_LITERAL);
+    expect("maxWidth: '120px'").not.toMatch(BREITEN_LITERAL);
   });
 });
