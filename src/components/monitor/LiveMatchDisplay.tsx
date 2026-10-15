@@ -112,10 +112,11 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     overflow: 'hidden',
   };
 
+  // B-44a2: feste drei Spalten (Marke links, Feld/Spiel Mitte, Gruppe rechts), auch wenn eine Gruppe fehlt
   const headerStyle: CSSProperties = {
-    display: 'flex',
+    display: 'grid',
+    gridTemplateColumns: '1fr auto 1fr',
     alignItems: 'center',
-    justifyContent: 'space-between',
     width: '100%',
     height: layout.header,
     marginBottom: layout.headerGap,
@@ -166,10 +167,11 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
 
   // B-44a2: Namen oben bündig unter dem Kasten, höchstens so breit wie der Kasten; im Kindermodus mittig über beide Zeilen (kein Kasten darüber)
   const nameCellStyle = (column: 1 | 3): CSSProperties => ({
-    gridRow: hideScore ? '1 / 3' : 2,
+    gridRow: hideScore ? 1 : 2,
     gridColumn: column,
     justifySelf: 'center',
-    alignSelf: hideScore ? 'center' : 'start',
+    alignSelf: 'start',
+    marginTop: hideScore ? layout.kidsNamesOffset : undefined,
     width: layout.teamNameWidth,
     display: 'flex',
     justifyContent: 'center',
@@ -181,7 +183,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   const timerAreaStyle: CSSProperties = {
     width: '100%',
     boxSizing: 'border-box',
-    minHeight: layout.lowerHeight,
+    height: layout.lowerHeight, // fest (nicht min): Inhalt kann die Lage nie verschieben
     paddingTop: layout.lowerPaddingTop,
     display: 'flex',
     flexDirection: 'column',
@@ -210,6 +212,9 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
+    // B-44a2: eine Marken-Gestaltung für alle Zustände, feste Mindestbreite
+    width: layout.badgeWidth,
+    justifyContent: 'center',
     animation: isRunning ? 'livePulse 1.5s ease-in-out infinite' : undefined,
   };
 
@@ -217,8 +222,8 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     width: '14px',
     height: '14px',
     borderRadius: '50%',
-    backgroundColor: statusInfo.color,
-    boxShadow: isRunning ? `0 0 8px ${statusInfo.color}` : undefined,
+    backgroundColor: statusInfo.dotColor,
+    boxShadow: isRunning ? `0 0 8px ${statusInfo.dotColor}` : undefined,
     animation: isRunning ? 'liveDotPulse 1s ease-in-out infinite' : undefined,
   };
 
@@ -236,20 +241,18 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     <>
       <div style={containerStyle}>
         {/* Header: LIVE badge | Field | Group */}
-        <div style={headerStyle}>
-          <div style={badgeStyle}>
-            {isRunning && <span style={liveDotStyle} />}
+        <div style={headerStyle} data-testid="live-header">
+          <div style={{ ...badgeStyle, justifySelf: 'start' }} data-testid="live-badge">
+            <span style={liveDotStyle} />
             {statusInfo.label}
           </div>
           <div style={infoStyle}>
             Feld {match.field ?? 1} — Spiel {match.number}
           </div>
-          {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show if either has value */}
-          {(group || match.group) && (
-            <div style={{ ...infoStyle, color: themeColors.text }}>
-              {t('liveMatch.group', { group: group ?? match.group })}
-            </div>
-          )}
+          <div style={{ ...infoStyle, color: themeColors.text, justifySelf: 'end' }}>
+            { }
+            {(group || match.group) ? t('liveMatch.group', { group: group ?? match.group }) : null}
+          </div>
         </div>
 
         {/* Raster: Kästen, Trenner, Namen mittig unter ihrem Kasten (@ZM-140); Kindermodus ohne Kästen */}
@@ -280,11 +283,28 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
             </div>
           )}
           <div style={nameCellStyle(1)} data-testid="live-name-home">
-            <TeamNameDisplay name={match.homeTeam.name} size={size} theme={theme} maxWidth="100%" />
+            <TeamNameDisplay name={match.homeTeam.name} size={size} theme={theme} maxWidth="100%" fontSize={hideScore ? displayFontSizes.teamNameKids : undefined} />
           </div>
           <div style={nameCellStyle(3)} data-testid="live-name-away">
-            <TeamNameDisplay name={match.awayTeam.name} size={size} theme={theme} maxWidth="100%" />
+            <TeamNameDisplay name={match.awayTeam.name} size={size} theme={theme} maxWidth="100%" fontSize={hideScore ? displayFontSizes.teamNameKids : undefined} />
           </div>
+          {/* Kindermodus (@W2A-031): lesbar in Textfarbe, in der Namenszeile (Kastenreihe zeigt die Namen) */}
+          {hideScore && (
+            <div
+              data-testid="live-without-result"
+              style={{
+                gridRow: 2,
+                gridColumn: '1 / 4',
+                justifySelf: 'center',
+                alignSelf: 'start',
+                fontSize: displayFontSizes.clockHint,
+                color: themeColors.text,
+                textAlign: 'center',
+              }}
+            >
+              {t('liveMatch.withoutResult')}
+            </div>
+          )}
         </div>
 
         {/* Unterer Bereich: feste Höhe in jedem Zustand (B-44a2); H2: nach dem Abpfiff keine Uhr, nur das Endergebnis */}
@@ -301,20 +321,6 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
               theme={theme}
               clockMode={clockMode}
             />
-          )}
-          {/* Kindermodus (@W2A-031): lesbar in Textfarbe, mit Abstand zur Uhr */}
-          {hideScore && (
-            <div
-              data-testid="live-without-result"
-              style={{
-                fontSize: displayFontSizes.clockHint,
-                color: themeColors.text,
-                textAlign: 'center',
-                marginTop: layout.hintGapAbove,
-              }}
-            >
-              {t('liveMatch.withoutResult')}
-            </div>
           )}
         </div>
 

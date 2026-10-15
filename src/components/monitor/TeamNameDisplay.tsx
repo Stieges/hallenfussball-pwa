@@ -25,6 +25,8 @@ export interface TeamNameDisplayProps {
   theme?: MonitorTheme;
   /** Max width constraint (CSS value) */
   maxWidth?: string;
+  /** Schriftgröße (CSS) statt der Vorgabe der Größe, z. B. große Namen im Kindermodus (B-44a2) */
+  fontSize?: string;
   /** Override: force a specific variant */
   variant?: 'full' | 'medium' | 'short';
 }
@@ -43,10 +45,11 @@ export const TeamNameDisplay: React.FC<TeamNameDisplayProps> = ({
   size = 'xl',
   theme = 'dark',
   maxWidth = '100%',
+  fontSize,
   variant,
 }) => {
   const { themeColors } = useMonitorTheme(theme);
-  const config = sizeConfig[size];
+  const config = { fontSize: fontSize ?? sizeConfig[size].fontSize };
   const ref = useRef<HTMLDivElement>(null);
 
   const displayNames = getDisplayNames(name);

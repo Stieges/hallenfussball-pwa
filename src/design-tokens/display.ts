@@ -46,6 +46,8 @@ export const displayFontSizes = {
   teamName: 'clamp(48px, 5vw, 72px)',   // Team-Name unter Score-Block
   // B-44a2 (@ZM-137, @ZM-125): Hinweistexte unter der Uhr, mindestens 3 % der Bildhöhe (lesbar aus 10 m)
   clockHint: '3.2vh',
+  // B-44a2: Namen im Kindermodus stehen in der Kastenreihe und sind größer (kein Stand)
+  teamNameKids: 'clamp(64px, 7vw, 120px)',
 
   // Meta/Badge
   meta: '14px',          // Gruppe, Feld-Label
@@ -198,6 +200,10 @@ export const displayLayout = {
     header: '6%',
     // B-44a2: Abstand zwischen Kopfzeile (LIVE, Feld, Gruppe) und Kästen
     headerGap: '1.5vh',
+    // B-44a2: Marke gleich breit für LIVE, PAUSE, BEENDET
+    badgeWidth: '11em',
+    // B-44a2: Kindermodus: Namen oben bündig in der Kastenreihe, mit Abstand von oben
+    kidsNamesOffset: '8vh',
     score: '55%',
     teamNames: '12%',
     timer: '17%',

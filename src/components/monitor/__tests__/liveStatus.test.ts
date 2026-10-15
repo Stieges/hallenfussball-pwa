@@ -16,8 +16,10 @@ function composite(color: string, under: string): string {
   return toHex([0, 1, 2].map(i => parseFloat(m[i + 1]) * a + u[i] * (1 - a)) as Rgb);
 }
 
-// Hell: nur BEENDET/WARTET (B-44a2). LIVE/PAUSE im hellen Theme liegen unter 4,5 : 1 (Befund, nicht Teil von B-44a2).
-const STATUS_BY_THEME = { dark: ['FINISHED', 'NOT_STARTED', 'RUNNING', 'PAUSED'], light: ['FINISHED', 'NOT_STARTED'] } as const;
+const STATUS_BY_THEME = {
+  dark: ['FINISHED', 'NOT_STARTED', 'RUNNING', 'PAUSED'],
+  light: ['FINISHED', 'NOT_STARTED', 'RUNNING', 'PAUSED'],
+} as const;
 
 describe.each(['dark', 'light'] as const)('Marken im Theme %s', (name) => {
   const theme = monitorThemes[name];

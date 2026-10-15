@@ -6,6 +6,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { LiveMatchDisplay } from '../LiveMatchDisplay';
 import { MatchTimer } from '../MatchTimer';
+import { TeamNameDisplay } from '../TeamNameDisplay';
 import type { LiveMatch } from '../../../hooks/useLiveMatches';
 import { displayFontSizes, displayLayout, monitorThemes } from '../../../design-tokens';
 import { getContrastRatio } from '../../../design-tokens/display';
@@ -62,6 +63,13 @@ describe('Kasten hoch und Namen in Kastenbreite', () => {
   });
 });
 
+describe('Namen im Kindermodus groß', () => {
+  it('TeamNameDisplay nimmt die Schriftgröße aus dem Token', () => {
+    render(<TeamNameDisplay name="TuS Holm" variant="full" fontSize={displayFontSizes.teamNameKids} />);
+    expect(screen.getByText('TuS Holm').style.fontSize).toBe(displayFontSizes.teamNameKids);
+  });
+});
+
 describe('Doppelpunkt genau mittig', () => {
   it('Trenner-Zelle ist Flex mit Mitte, ohne eigene Breite (wächst nach beiden Seiten gleich)', () => {
     render(<LiveMatchDisplay match={createMatch()} />);
@@ -69,6 +77,7 @@ describe('Doppelpunkt genau mittig', () => {
     expect(sep.style.display).toBe('flex');
     expect(sep.style.justifyContent).toBe('center');
     expect(sep.style.justifySelf).toBe('center');
+    expect(parseFloat(sep.style.width)).toBe(0);
   });
 });
 
@@ -103,25 +112,28 @@ describe('Gleiche Lage in allen Zuständen', () => {
     ['Kindermodus', createMatch(), true],
   ] as const)('%s: unterer Bereich mit fester Höhe, Raster mit fester Kastenzeile', (_n, match, kids) => {
     render(<LiveMatchDisplay match={match} hideScore={kids} />);
-    expect(screen.getByTestId('live-lower').style.minHeight).toBe(L.lowerHeight);
+    expect(screen.getByTestId('live-lower').style.height).toBe(L.lowerHeight);
     expect(screen.getByTestId('live-lower').style.paddingTop).toBe(L.lowerPaddingTop);
     expect(screen.getByTestId('live-grid').style.gridTemplateRows).toContain(L.blockHeight);
   });
 
-  it('Kindermodus: Namen mittig über Kasten- und Namenszeile, gleiche Rasterhöhe', () => {
+  it('Kindermodus: Namen groß in der Kastenreihe, gleiche Rasterhöhe', () => {
     render(<LiveMatchDisplay match={createMatch()} hideScore />);
-    expect(screen.getByTestId('live-name-home').style.gridRow).toBe('1 / 3');
-    expect(screen.getByTestId('live-name-home').style.alignSelf).toBe('center');
+    expect(screen.getByTestId('live-name-home').style.gridRow).toBe('1');
+    expect(parseFloat(displayFontSizes.teamNameKids.replace('clamp(', ''))).toBeGreaterThan(parseFloat(displayFontSizes.teamName.replace('clamp(', '')));
+    expect(screen.getByTestId('live-name-home').style.alignSelf).toBe('start');
+    expect(screen.getByTestId('live-name-away').style.alignSelf).toBe('start');
+    expect(screen.getByTestId('live-name-home').style.marginTop).toBe(L.kidsNamesOffset);
   });
 });
 
 describe('„ohne Ergebnis“ lesbar und mit Abstand (Kindermodus)', () => {
-  it('Textfarbe statt blasser Zweitfarbe, Hinweisgröße, Abstand zum Balken', () => {
+  it('Textfarbe statt blasser Zweitfarbe, Hinweisgröße, in der Namenszeile (unter den großen Namen)', () => {
     render(<LiveMatchDisplay match={createMatch()} hideScore />);
     const el = screen.getByTestId('live-without-result');
     expect(el.style.color).toBe('rgb(255, 255, 255)');
     expect(el.style.fontSize).toBe(displayFontSizes.clockHint);
-    expect(el.style.marginTop).toBe(L.hintGapAbove);
+    expect(el.style.gridRow).toBe('2');
   });
   it('Kontrast der echten Theme-Werte (Text auf Hintergrund) ≥ 4,5 : 1', () => {
     for (const t of [monitorThemes.dark, monitorThemes.light]) {
@@ -155,8 +167,79 @@ describe('Hinweise unter der Uhr (@ZM-137)', () => {
     expect((group.children[0] as HTMLElement).style.fontSize).toBe(displayFontSizes.clockHint);
   });
 
-  it('Gegenbeispiel: ohne Hinweis keine leere Gruppe', () => {
+  it('ohne Hinweis bleibt die Hinweiszeile als leere Zeile fester Höhe stehen (Lage ändert sich nie)', () => {
     render(<MatchTimer elapsedSeconds={10} durationSeconds={360} status="RUNNING" timerStartTime={new Date().toISOString()} timerElapsedSeconds={10} clockMode="immer-durchlaufend" size="xl" />);
-    expect(screen.queryByTestId('clock-hints')).toBeNull();
+    const group = screen.getByTestId('clock-hints');
+    expect(group.children.length).toBe(0);
+    expect(group.style.minHeight).not.toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Festes Raster: Zeilen liegen in jedem Zustand an denselben Stellen (Controller-Zusatz, Daniel: „uneinheitlich“)
+// jsdom hat kein Layout; verglichen werden deshalb alle Stile, die Lage und Höhe der Zeilen bestimmen.
+// Die gemessenen Oberkanten im Browser (± 1 %) prüft das Sichtnachweis-Skript (b44a2-shots.mjs).
+// ---------------------------------------------------------------------------
+const ZUSTAENDE: ReadonlyArray<readonly [string, Partial<LiveMatch>, boolean]> = [
+  ['laufend', {}, false],
+  ['Schlussphase', { elapsedSeconds: 550, timerElapsedSeconds: 550, status: 'PAUSED' }, false],
+  ['angehalten', { status: 'PAUSED', elapsedSeconds: 300, timerElapsedSeconds: 300 }, false],
+  ['abgelaufen', { elapsedSeconds: 700, timerElapsedSeconds: 700 }, false],
+  ['Endergebnis', { status: 'FINISHED' }, false],
+  ['zweistellig', { homeScore: 12 }, false],
+  ['Kindermodus', {}, true],
+  ['lange Namen', { awayTeam: { id: 't2', name: 'Sportgemeinschaft Fortuna Nordheim-Süd 1921 e. V. 2' } }, false],
+];
+const LAGE_IDS = ['live-header', 'live-badge', 'live-grid', 'live-lower'] as const;
+
+function signatur(match: Partial<LiveMatch>, kids: boolean): Record<string, string> {
+  const { unmount } = render(<LiveMatchDisplay match={createMatch(match)} hideScore={kids} />);
+  const sig: Record<string, string> = {};
+  for (const id of LAGE_IDS) {
+    const s = screen.getByTestId(id).style;
+    sig[id] = [s.height, s.minHeight, s.width, s.gridTemplateRows, s.gridTemplateColumns, s.marginBottom, s.paddingTop].join('|');
+  }
+  sig.nameHome = screen.getByTestId('live-name-home').style.width;
+  const clock = screen.queryByTestId('monitor-clock');
+  sig.clock = clock ? [clock.style.padding, (clock.firstElementChild as HTMLElement).style.fontSize, (clock.firstElementChild as HTMLElement).style.lineHeight].join('|') : 'keine Uhr';
+  const hints = screen.queryByTestId('clock-hints');
+  sig.hints = hints ? [hints.style.minHeight, hints.style.marginTop, hints.style.flexWrap].join('|') : 'keine Hinweiszeile';
+  unmount();
+  return sig;
+}
+
+describe('Festes Raster: gleiche Lage in allen Zuständen', () => {
+  const base = signatur({}, false);
+  it.each(ZUSTAENDE)('%s: Kopfzeile, Marke, Rasterzeilen, unterer Bereich wie im Normalfall', (_n, match, kids) => {
+    const sig = signatur(match, kids);
+    for (const id of [...LAGE_IDS, 'nameHome'] as const) { expect(sig[id]).toBe(base[id]); }
+  });
+
+  it.each(ZUSTAENDE.filter(([n]) => n !== 'Endergebnis'))('%s: Uhr und Hinweiszeile haben dieselben Maße (Hervorhebung nur über Füllung)', (_n, match, kids) => {
+    const sig = signatur(match, kids);
+    expect(sig.clock).toBe(base.clock);
+    expect(sig.hints).toBe(base.hints);
+  });
+
+  it('Hervorhebung nur über die Füllung: gleiche Polsterung mit und ohne Hervorhebung', () => {
+    const a = signatur({}, false).clock;
+    const b = signatur({ status: 'PAUSED', elapsedSeconds: 300, timerElapsedSeconds: 300 }, false).clock;
+    expect(a).toBe(b);
+  });
+
+  it('Marke: dieselbe Breite für LIVE, PAUSE und BEENDET', () => {
+    const widths = (['RUNNING', 'PAUSED', 'FINISHED'] as const).map((status) => {
+      const { unmount } = render(<LiveMatchDisplay match={createMatch({ status })} />);
+      const w = screen.getByTestId('live-badge').style.width;
+      unmount();
+      return w;
+    });
+    expect(new Set(widths).size).toBe(1);
+    expect(widths[0]).toBe(L.badgeWidth);
+  });
+
+  it('Kopfzeile ist ein Raster mit drei Spalten, auch ohne Gruppe', () => {
+    render(<LiveMatchDisplay match={createMatch({ group: undefined })} />);
+    expect(screen.getByTestId('live-header').style.gridTemplateColumns).toBe('1fr auto 1fr');
   });
 });

@@ -120,11 +120,10 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     alignItems: 'baseline',
     gap: size === 'xl' ? '12px' : '8px',
     // M2: neutrale Hervorhebung (Umkehrung der Textfarbe), keine Buntfarbe
-    ...(highlight && {
-      backgroundColor: themeColors.text,
-      padding: `${size === 'xl' ? '0.8vh' : '4px'} ${size === 'xl' ? '2vh' : '12px'}`,
-      borderRadius: '999px',
-    }),
+    // B-44a2: Größe und Lage der Uhr sind in jeder Phase gleich, nur die Füllung wechselt
+    padding: `${size === 'xl' ? '0.8vh' : '4px'} ${size === 'xl' ? '2vh' : '12px'}`,
+    borderRadius: '999px',
+    backgroundColor: highlight ? themeColors.text : 'transparent',
   };
 
   const timeStyle: CSSProperties = {
@@ -150,7 +149,10 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
   const hintGroupStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    // B-44a2: immer dieselbe Zeile, feste Höhe auch ohne Hinweis (Lage ändert sich nie)
+    flexWrap: 'nowrap',
+    whiteSpace: 'nowrap',
+    minHeight: size === 'xl' ? `calc(${displayFontSizes.clockHint} * 1.2)` : undefined,
     justifyContent: 'center',
     columnGap: displaySpacing.sectionMD,
     rowGap: displayLayout.scoreArea.hintGap,
@@ -200,7 +202,7 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
           </div>
         )}
 
-        {hints.length > 0 && (
+        {(hints.length > 0 || size === 'xl') && (
           <div style={hintGroupStyle} data-testid="clock-hints">
             {hints.map(text => <div key={text} style={hintStyle}>{text}</div>)}
           </div>
