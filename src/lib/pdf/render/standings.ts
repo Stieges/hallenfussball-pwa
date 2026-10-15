@@ -8,7 +8,7 @@ import type { GeneratedSchedule } from '../../../core/generators';
 import type { Standing } from '../../../types/tournament';
 import { printColors, printType, printMetrics, printGap, printStroke, printColumns } from '../../../design-tokens/print';
 import { getGroupDisplayName } from '../../../utils/displayNames';
-import { ensureSpace, type PageGeometry } from '../layout';
+import { ensureSpace, tableMargins, type PageGeometry } from '../layout';
 import { tableEndY } from '../jspdfTypes';
 import type { PdfTexts } from '../translations';
 import { PDF_FONT } from '../fonts';
@@ -62,10 +62,7 @@ function drawStandingsTable(
     startY,
     head: standingsHeader(t),
     body: data,
-    margin: {
-      left: geo.left,
-      right: geo.right,
-    },
+    margin: tableMargins(geo),
     tableLineColor: [...printColors.ink],
     alternateRowStyles: { fillColor: [...printColors.paper], textColor: [...printColors.ink] },
     styles: {

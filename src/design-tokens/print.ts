@@ -27,6 +27,23 @@ export const printLimits = {
   timePt: 14,
   /** Ergebnis (Daniel 15.10.): mindestens 18 pt. */
   resultPt: 18,
+  /** Teamnamen in den Spieltabellen (Heim und Gast): mindestens 12 pt. */
+  teamPt: 12,
+  /** Raster-Untergrenze in Prozent Schwarz (@DR-001, Plan N3). Der Test misst die Füllung gegen dieses Limit. */
+  tintMinPercent: 12,
+  /** Toleranz in Graustufen (0–255) für die Rundung beim Schreiben der Farbe ins PDF. */
+  grayTolerance: 1,
+} as const;
+
+/** Schrift des PDFs: Inter 4.1 (eingebettet, `fonts.ts`). Oberkante einer Zeile = Grundlinie − Schriftgröße × ascentEm. */
+export const printFont = {
+  /** hhea-Ascender von Inter 4.1: 1984/2048 em. Kein Glyph ragt höher (Akzente auf Großbuchstaben bleiben darunter). */
+  ascentEm: 0.96875,
+} as const;
+
+/** Umrechnung in mm. Die Render- und Maß-Dateien rechnen damit, keine eigene Zahl. */
+export const printUnit = {
+  mmPerPt: 25.4 / 72,
 } as const;
 
 /** Seitenformate in mm und Seitenränder (`@page`: oben 14, rechts 15, unten 12, links 15). */

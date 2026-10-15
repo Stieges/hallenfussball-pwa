@@ -1,0 +1,56 @@
+/**
+ * Gemeinsame Helfer der Seitentests des Spielplan-PDFs (B-28a3-2, Fixrunde): Fixtures mit 12 und 20 Spielen, hoch und
+ * quer, und das Lesen des fertigen PDFs über `pdfjsLayout`.
+ */
+import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
+import type { Team } from '../../../types/tournament';
+import { buildSchedulePdf, type PDFExportOptions } from '../schedulePdf';
+import { hallencupSchedule, hallencupTournament } from './pdfFixture';
+import { readLayout, type LayoutPage } from './pdfjsLayout';
+import { translatorFor } from './pdfText';
+
+/** Zehn Teams in zwei Gruppen à fünf: 20 Gruppenspiele. */
+export const ZEHN_TEAMS: Team[] = [
+  'FC Nord', 'SV Süd', 'DJK Berg', 'TuS Tal', 'SC Hügel',
+  'TSV West', 'SC Ost', 'FC Mitte', 'SV Hof', 'TuS Weit',
+].map((name, i) => ({ id: `team-${i}`, name, group: i < 5 ? 'A' : 'B' }));
+
+export function zwanzigSchedule(): GeneratedSchedule {
+  return generateFullSchedule(hallencupTournament({ teams: ZEHN_TEAMS, numberOfTeams: ZEHN_TEAMS.length }), 'de');
+}
+
+export interface PdfLesung {
+  pages: LayoutPage[];
+  width: number;
+  height: number;
+}
+
+/** Seiten des fertigen PDFs, so wie `exportScheduleToPDF` sie speichern würde. */
+export async function layoutOf(options: PDFExportOptions = {}, schedule: GeneratedSchedule = hallencupSchedule()): Promise<PdfLesung> {
+  const { doc } = await buildSchedulePdf({
+    schedule,
+    standings: undefined,
+    options: { locale: 'de', translate: translatorFor('de'), ...options },
+  });
+  const pages = await readLayout(new Uint8Array(doc.output('arraybuffer')));
+  return { pages, width: doc.internal.pageSize.getWidth(), height: doc.internal.pageSize.getHeight() };
+}
+
+export interface PdfFixture {
+  name: string;
+  options: PDFExportOptions;
+  schedule: () => GeneratedSchedule;
+}
+
+/** Die vier Pflicht-Fixtures: 12 und 20 Spiele, jeweils hoch und quer. */
+export const FIXTURES: PdfFixture[] = [
+  { name: '12 Spiele, hoch', options: {}, schedule: hallencupSchedule },
+  { name: '20 Spiele, hoch', options: {}, schedule: zwanzigSchedule },
+  { name: '12 Spiele, quer', options: { orientation: 'landscape' }, schedule: hallencupSchedule },
+  { name: '20 Spiele, quer', options: { orientation: 'landscape' }, schedule: zwanzigSchedule },
+];
+
+/** Alle Textstücke einer Seite, durch Leerzeichen verbunden. */
+export function pageText(page: LayoutPage): string {
+  return page.texts.map(t => t.str).join(' ');
+}

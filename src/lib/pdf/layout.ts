@@ -5,7 +5,7 @@
  * Finalrunde mit Platzierung (neue Seite). Leere Abschnitte entfallen; die Aufrufer prüfen das vorab.
  */
 import type { jsPDF } from 'jspdf';
-import { printColors, printGap, printPage, printStroke, printType } from '../../design-tokens/print';
+import { printColors, printFont, printGap, printPage, printStroke, printType, printUnit } from '../../design-tokens/print';
 import { PDF_FONT } from './fonts';
 
 export type PdfFormat = 'a4';
@@ -49,24 +49,52 @@ export function continuationTop(geo: PageGeometry): number {
   return geo.top + printGap.shortHeadHeight;
 }
 
+/** Oberlänge einer Zeile über der Grundlinie in mm: Schriftgröße (pt) × Ascent der Schrift. */
+export function ascentMm(sizePt: number): number {
+  return sizePt * printFont.ascentEm * printUnit.mmPerPt;
+}
+
+/** Grundlinie einer Zeile in `sizePt`, deren Oberkante auf `geo.top` liegt (@DR-001: oben mindestens 12 mm). */
+export function firstBaseline(geo: PageGeometry, sizePt: number): number {
+  return geo.top + ascentMm(sizePt);
+}
+
+/** Schriftgröße der ersten Zeile eines Abschnitts. */
+const FIRST_LINE_PT: Record<PdfSection, number> = {
+  participantsAndGroups: printType.title,
+  tables: printType.caption,
+  finals: printType.h2,
+};
+
 /**
  * Beginn eines Abschnitts. Seite 1 ist beim Dokumentstart schon da; jeder spätere Abschnitt beginnt auf einer neuen Seite.
- * Rückgabe: y der ersten Zeile.
+ * Rückgabe: Grundlinie der ersten Zeile (Oberkante auf `geo.top`).
  */
 export function startPage(doc: jsPDF, section: PdfSection, geo: PageGeometry): number {
   if (section !== 'participantsAndGroups') {
     doc.addPage();
   }
-  return geo.top;
+  return firstBaseline(geo, FIRST_LINE_PT[section]);
 }
 
-/** Stellt sicher, dass `minSpace` mm ab `yPos` passen. Sonst neue Seite, Rückgabe ist die Oberkante. */
+/**
+ * Stellt sicher, dass `minSpace` mm ab `yPos` passen. Sonst neue Seite; Rückgabe ist die Grundlinie der ersten Zeile
+ * dort. Gemessen mit h2, der größten Zeile, die nach einem Seitenumbruch steht (Gruppentitel, Phasentitel, Platzierung).
+ */
 export function ensureSpace(doc: jsPDF, yPos: number, minSpace: number, geo: PageGeometry): number {
   if (yPos + minSpace > geo.bottom) {
     doc.addPage();
-    return geo.top;
+    return firstBaseline(geo, printType.h2);
   }
   return yPos;
+}
+
+/**
+ * Seitenränder für autoTable: links und rechts der Satzspiegel, unten bis zur Satzspiegel-Unterkante (@DR-001, M1),
+ * oben `top` (Vorgabe: Oberkante; Folgeseiten mit Kurzkopf übergeben die Unterkante des Kopfs).
+ */
+export function tableMargins(geo: PageGeometry, top: number = geo.top): { left: number; right: number; top: number; bottom: number } {
+  return { left: geo.left, right: geo.right, top, bottom: geo.height - geo.bottom };
 }
 
 /** Kurzkopf einer Folgeseite: Turniername groß, Altersklasse darunter, dünne Linie. Gezeichnet über `willDrawPage`. */

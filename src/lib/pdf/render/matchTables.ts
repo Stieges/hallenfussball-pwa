@@ -11,7 +11,7 @@ import type { GeneratedSchedule, ScheduledMatch } from '../../../core/generators
 import type { RefereeConfig } from '../../../types/tournament';
 import { printColors, printGap, printMetrics, printStroke, printType, printColumns } from '../../../design-tokens/print';
 import { getGroupShortCode } from '../../../utils/displayNames';
-import { continuationTop, drawShortHead, ensureSpace, type PageGeometry } from '../layout';
+import { continuationTop, drawShortHead, ensureSpace, tableMargins, type PageGeometry } from '../layout';
 import { sideLabel } from '../matchSides';
 import { tableEndY } from '../jspdfTypes';
 import type { PdfTexts } from '../translations';
@@ -43,22 +43,23 @@ function pad(vertical: number, horizontal: number): { top: number; bottom: numbe
   return { top: vertical, bottom: vertical, left: horizontal, right: horizontal };
 }
 
-/** Gemeinsame Tabellenoptionen für Spieltabellen. Nur die Spaltenstile unterscheiden sich. */
+/**
+ * Gemeinsame Tabellenoptionen für Spieltabellen. Nur die Spaltenstile unterscheiden sich. `newPageTop` ist die
+ * Oberkante auf Folgeseiten (vorgabe: Oberkante des Satzspiegels; Gruppenphase: unter dem Kurzkopf).
+ */
 export function matchTableOptions(
   geo: PageGeometry,
   startY: number,
   head: RowInput[],
   body: RowInput[],
-  columnStyles: Record<number, Partial<Styles>>
+  columnStyles: Record<number, Partial<Styles>>,
+  newPageTop: number = geo.top
 ): UserOptions {
   return {
     startY,
     head,
     body,
-    margin: {
-      left: geo.left,
-      right: geo.right,
-    },
+    margin: tableMargins(geo, newPageTop),
     showHead: 'everyPage',
     tableLineColor: [...printColors.ink],
     alternateRowStyles: { fillColor: [...printColors.paper], textColor: [...printColors.ink] },
@@ -167,8 +168,7 @@ export function renderGroupStage(
   })();
 
   autoTable(doc, {
-    ...matchTableOptions(geo, yPos, headers, data, columnStyles),
-    margin: { left: geo.left, right: geo.right, top: continuationTop(geo) },
+    ...matchTableOptions(geo, yPos, headers, data, columnStyles, continuationTop(geo)),
     willDrawPage: hook => {
       // Der Aufruf kommt auch für die erste Seite der Tabelle; der Kurzkopf nur ab der Folgeseite.
       if (hook.pageNumber > 1) {

@@ -1,50 +1,27 @@
 /**
  * Seitenaufbau des Spielplan-PDFs am gerenderten Dokument (B-28a3-2, Spur C): pdfjs liest die Bytes über `pdfjsLayout`.
- * Nachweise: @DR-002 (feste Seiten, Folgeseite mit wiederholtem Spaltenkopf, leere Seiten entfallen, „Seite x von y“),
- * @DR-001 (Rand, nur Schwarz und Raster), @BM-017 (A4 hoch und quer).
+ * Nachweise: @DR-002 (feste Seiten, Folgeseite mit wiederholtem Spaltenkopf, leere Seiten entfallen, „Seite x von y“).
+ * Ränder, Farben, Raster und Schriftgrößen stehen in `schedulePdf.rand.test.ts`.
  *
  * Fixtures: 12 Spiele = `hallencupSchedule()` (zwei Gruppen à vier Teams), 20 Spiele = zwei Gruppen à fünf Teams.
  */
 import { describe, expect, it } from 'vitest';
 import { generateFullSchedule } from '../../../core/generators';
-import { printColors, printLimits, printPage, printType } from '../../../design-tokens/print';
-import type { Team } from '../../../types/tournament';
-import { buildSchedulePdf, type PDFExportOptions } from '../schedulePdf';
-import { colorsUsed, readLayout, type LayoutPage } from './pdfjsLayout';
+import { printColumns, printType } from '../../../design-tokens/print';
+import { pageGeometry } from '../layout';
 import { groupMatches, hallencupSchedule, hallencupTournament } from './pdfFixture';
-import { translatorFor } from './pdfText';
+import { layoutOf, pageText, zwanzigSchedule } from './pdfFixtureLayout';
+import type { LayoutPage } from './pdfjsLayout';
 
 const TOL = 0.05;
 const SEITENZAHL = /^Seite \d+ von \d+$/;
-/** Erlaubte Farben im Inhalt: Schwarz, Weiß und das 12-%-Raster (als hex). */
-const ERLAUBT = ['#000000', '#ffffff', hex(printColors.tint)];
 
-function hex(rgb: readonly number[]): string {
-  return `#${rgb.map(v => v.toString(16).padStart(2, '0')).join('')}`;
-}
-
-/** Zehn Teams in zwei Gruppen à fünf: 20 Gruppenspiele. */
-const ZEHN_TEAMS: Team[] = [
-  'FC Nord', 'SV Süd', 'DJK Berg', 'TuS Tal', 'SC Hügel',
-  'TSV West', 'SC Ost', 'FC Mitte', 'SV Hof', 'TuS Weit',
-].map((name, i) => ({ id: `team-${i}`, name, group: i < 5 ? 'A' : 'B' }));
-
-const zwanzig = () => generateFullSchedule(hallencupTournament({ teams: ZEHN_TEAMS, numberOfTeams: ZEHN_TEAMS.length }), 'de');
-
-/** Seiten des fertigen PDFs, so wie `exportScheduleToPDF` sie speichern würde. */
-async function layoutOf(options: PDFExportOptions = {}, schedule = hallencupSchedule()) {
-  const { doc } = await buildSchedulePdf({
-    schedule,
-    standings: undefined,
-    options: { locale: 'de', translate: translatorFor('de'), ...options },
-  });
-  const pages = await readLayout(new Uint8Array(doc.output('arraybuffer')));
-  return { pages, width: doc.internal.pageSize.getWidth(), height: doc.internal.pageSize.getHeight() };
-}
-
-/** Alle Textstücke einer Seite, durch Leerzeichen verbunden. */
-function pageText(page: LayoutPage): string {
-  return page.texts.map(t => t.str).join(' ');
+/** Spielnummern einer Seite: Ziffern in der Spalte ganz links (Nr.), nicht Feld oder Gruppe. */
+function spielnummern(page: LayoutPage): number[] {
+  const { left } = pageGeometry('a4', 'portrait');
+  return page.texts
+    .filter(t => /^\d{1,2}$/.test(t.str) && t.x < left + printColumns.match.nr)
+    .map(t => Number(t.str));
 }
 
 describe('@DR-002 Seitenaufbau: 12 Spiele passen auf drei Seiten in fester Reihenfolge', () => {
@@ -99,7 +76,7 @@ describe('@DR-002 Seitenaufbau: 12 Spiele passen auf drei Seiten in fester Reihe
 
 describe('@DR-002 Folgeseite: 20 Spiele laufen auf eine Folgeseite mit Kurzkopf und Spaltenkopf', () => {
   it('vier Seiten: Seite 2 ist die Folgeseite, „Seite x von 4“ auf jeder', async () => {
-    const schedule = zwanzig();
+    const schedule = zwanzigSchedule();
     expect(groupMatches(schedule)).toHaveLength(20);
     const { pages } = await layoutOf({}, schedule);
 
@@ -110,7 +87,7 @@ describe('@DR-002 Folgeseite: 20 Spiele laufen auf eine Folgeseite mit Kurzkopf 
   });
 
   it('Folgeseite: Kurzkopf mit dem Turniernamen, Spaltenkopf wiederholt, Spiele laufen weiter', async () => {
-    const { pages } = await layoutOf({}, zwanzig());
+    const { pages } = await layoutOf({}, zwanzigSchedule());
     const folge = pages[1];
 
     const kurzkopf = folge.texts.find(t => t.str === 'Hallencup Nord');
@@ -122,8 +99,15 @@ describe('@DR-002 Folgeseite: 20 Spiele laufen auf eine Folgeseite mit Kurzkopf 
     expect(pageText(pages[0])).not.toContain('Tabelle – Gruppe A');
   });
 
+  it('Spielnummern: lückenlos und ohne Doppel über Seite 1 und Folgeseite (Seite 1: 1–17, Folgeseite: 18–20)', async () => {
+    const { pages } = await layoutOf({}, zwanzigSchedule());
+
+    expect(spielnummern(pages[0])).toEqual(Array.from({ length: 17 }, (_, i) => i + 1));
+    expect(spielnummern(pages[1])).toEqual([18, 19, 20]);
+  });
+
   it('Gegenbeispiel: quer mit 5er-Gruppen bekommt eine Folgeseite mit Kurzkopf, Tabellen beginnen trotzdem neu', async () => {
-    const { pages, width, height } = await layoutOf({ orientation: 'landscape' }, zwanzig());
+    const { pages, width, height } = await layoutOf({ orientation: 'landscape' }, zwanzigSchedule());
 
     expect(width).toBeCloseTo(297, 1);
     expect(height).toBeCloseTo(210, 1);
@@ -133,65 +117,5 @@ describe('@DR-002 Folgeseite: 20 Spiele laufen auf eine Folgeseite mit Kurzkopf 
     const tabellen = pages.findIndex(p => pageText(p).includes('Tabelle – Gruppe A'));
     expect(tabellen).toBeGreaterThan(1);
     expect(pages[tabellen].texts.some(t => t.str === '20')).toBe(false);
-  });
-});
-
-describe('@DR-001 Rand, Farben und Raster', () => {
-  it('Ränder im Token: alle Seitenränder mindestens printLimits.margin', () => {
-    expect(printPage.margin.top).toBeGreaterThanOrEqual(printLimits.margin);
-    expect(printPage.margin.right).toBeGreaterThanOrEqual(printLimits.margin);
-    expect(printPage.margin.bottom).toBeGreaterThanOrEqual(printLimits.margin);
-    expect(printPage.margin.left).toBeGreaterThanOrEqual(printLimits.margin);
-  });
-
-  it('kein Textstück und keine Linie näher als printLimits.margin am Rand (12 Spiele)', async () => {
-    const { pages, width, height } = await layoutOf();
-    const m = printLimits.margin;
-
-    pages.forEach((page, i) => {
-      page.texts.forEach(t => {
-        expect(t.x, `Seite ${i + 1} „${t.str}“ links`).toBeGreaterThanOrEqual(m - TOL);
-        expect(t.y, `Seite ${i + 1} „${t.str}“ oben`).toBeGreaterThanOrEqual(m - TOL);
-        expect(t.y, `Seite ${i + 1} „${t.str}“ unten`).toBeLessThanOrEqual(height - m + TOL);
-      });
-      page.lines.forEach(l => {
-        expect(Math.min(l.x1, l.x2), `Seite ${i + 1} Linie links`).toBeGreaterThanOrEqual(m - TOL);
-        expect(Math.max(l.x1, l.x2), `Seite ${i + 1} Linie rechts`).toBeLessThanOrEqual(width - m + TOL);
-      });
-    });
-  });
-
-  it('Farben: im Inhalt nur Schwarz, Weiß und das Raster, kein Grau im Text', async () => {
-    const { pages } = await layoutOf();
-
-    pages.forEach((page, i) => {
-      page.colors.forEach(c => expect(ERLAUBT, `Seite ${i + 1}`).toContain(c));
-    });
-  });
-
-  it('Raster: Tabellenköpfe tragen 12 % Schwarz (#e0e0e0)', async () => {
-    const { pages } = await layoutOf();
-
-    expect(colorsUsed(pages[0])).toContain(hex(printColors.tint));
-    expect(pages[0].rects.some(r => r.fill === hex(printColors.tint))).toBe(true);
-  });
-});
-
-describe('Schriftgrößen aus den Tokens', () => {
-  it('Uhrzeit und Ergebnis mit den Untergrenzen aus printLimits', async () => {
-    const { pages } = await layoutOf();
-    const zeiten = pages[0].texts.filter(t => /^\d{1,2}:\d{2}$/.test(t.str));
-
-    expect(zeiten.length).toBeGreaterThan(0);
-    zeiten.forEach(z => expect(Math.abs(z.size - printLimits.timePt)).toBeLessThanOrEqual(TOL));
-    expect(printType.result).toBeGreaterThanOrEqual(printLimits.resultPt);
-  });
-
-  it('keine Schrift unter der Mindestgröße (Ausnahmen laut Liste ab 7,5 pt)', async () => {
-    const { pages } = await layoutOf();
-
-    pages.forEach((page, i) => {
-      page.texts.forEach(t => expect(t.size, `Seite ${i + 1} „${t.str}“`).toBeGreaterThanOrEqual(printLimits.minFontPt - TOL));
-    });
   });
 });
