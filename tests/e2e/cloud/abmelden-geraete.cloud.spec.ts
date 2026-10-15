@@ -12,6 +12,16 @@
  * abmelden“ beendet jede andere Sitzung des Kontos, auch die gespeicherte aus `playwright/.auth/`.
  * Die drei Fälle laufen nacheinander (serial), ein Cup je Fall. Ein verbrauchter Cup braucht
  * `npm run test:env:seed`. Wartezeiten nur über Ereignisse (`expect`/`expect.poll`), kein `sleep`.
+ *
+ * CI-Retries: `playwright.config.ts` hat `retries` in der CI. Scheitert ein Fall dieser seriellen
+ * Gruppe, wiederholt Playwright die ganze Gruppe, und die Wiederholung scheitert sicher an
+ * „Seed verbraucht“ (ABMELDEN1/ABMELDEN3 haben Ereignisse bekommen). Ein einzelner Flake lässt sich
+ * hier also nicht durch Wiederholung retten, sondern nur durch neuen Seed und neuen Lauf.
+ *
+ * Abgrenzung (Lücken-Tabelle): Wartende Einträge beim Weg „von einem anderen Gerät abgemeldet“
+ * (`remoteSignOut` meldet lokal ohne Warnung ab, der Ausgang bleibt) sind durch die Unit-Tests aus
+ * A-07d2 abgedeckt (`AuthContext.remoteSignOut.test.tsx`), nicht durch diese Spec. Der Weg „eigenes
+ * Abmelden mit wartendem Eintrag“ ist hier Ende-zu-Ende geprüft (@FU-006).
  */
 
 import { test, expect } from './fixtures';
@@ -126,13 +136,28 @@ test.describe('Abmelden und andere Geräte', () => {
       // Keine automatische Gast-Migration: nicht in der DB, und unter dem Konto auch nicht gezeigt.
       expect(await countTournamentsByTitle(GUEST_TOURNAMENT_TITLE)).toBe(0);
       await expect(guestCard).toHaveCount(0);
+      // Gegenbeispiel zur späteren Prüfung: das Konto-Turnier öffnen, Titel sichtbar. So entsteht auf dem
+      // Laptop die lokale Kopie, die nach der fremden Abmeldung verborgen sein muss (A-07e).
+      await laptop.page.goto(`/#/tournament/${ids.tournamentId}`);
+      await expect(laptop.page.getByText('Engine-Cup ABMELDEN2').first()).toBeVisible({ timeout: 15000 });
+      await laptop.page.goto('/#/');
+      await expect(laptop.page.locator(`[data-testid="tournament-card-${ids.tournamentId}"]`)).toBeVisible({ timeout: 15000 });
 
       // Tablet: anmelden (zweites Gerät), Gegenbeispiel vorab: sieht seine Turniere.
       await loginAsRole(tablet.page, 'abmelden');
       await tablet.page.goto('/#/');
       await expect(tablet.page.locator(`[data-testid="tournament-card-${ids.tournamentId}"]`)).toBeVisible({ timeout: 15000 });
 
+      const laptopToken = await readSessionAccessToken(laptop.page);
+      const tabletToken = await readSessionAccessToken(tablet.page);
+      if (!laptopToken || !tabletToken) {
+        throw new Error('Beide Geräte müssen vor „andere abmelden“ eine Sitzung haben.');
+      }
+      expect(await fetchAuthUserStatus(laptopToken)).toBe(200);
       await logoutOtherDevicesViaUi(tablet.page);
+      // Serverseitig: Laptop-Sitzung beendet, Tablet-Sitzung gilt weiter.
+      expect(await fetchAuthUserStatus(laptopToken)).toBe(403);
+      expect(await fetchAuthUserStatus(tabletToken)).toBe(200);
 
       // Laptop steht auf dem Dashboard und kommt in den Vordergrund: Hinweis genau dort, ohne Navigation.
       await expect(laptop.page).toHaveURL(/#\/$/);
@@ -148,7 +173,10 @@ test.describe('Abmelden und andere Geräte', () => {
         await expect(laptop.page.locator(`[data-testid="tournament-card-${engineCupIds(slug).tournamentId}"]`)).toHaveCount(0);
       }
       await laptop.page.goto(`/#/tournament/${ids.tournamentId}`);
-      await laptop.page.waitForLoadState('networkidle');
+      // Erst auf den Endzustand warten (das Laden aus dem lokalen Speicher erzeugt keinen Netzverkehr,
+      // `networkidle` reicht nicht): „Lade Turnier…“ weg und „Turnier nicht gefunden“ da.
+      await expect(laptop.page.getByText('Turnier nicht gefunden', { exact: true })).toBeVisible({ timeout: 15000 });
+      await expect(laptop.page.getByText('Lade Turnier')).toHaveCount(0);
       await expect(laptop.page.getByText('Engine-Cup ABMELDEN2')).toHaveCount(0);
       await expect(laptop.page.getByText('Heim ABMELDEN2')).toHaveCount(0);
       await expect(laptop.page.locator('[data-testid="auth-avatar-button"]')).toHaveCount(0);
@@ -167,6 +195,7 @@ test.describe('Abmelden und andere Geräte', () => {
       // Tablet bleibt: nach Vordergrund weiter angemeldet, Turniere sichtbar, kein Hinweis.
       await tablet.page.goto('/#/');
       await simulateWakeFromSleep(tablet.page);
+      await expect.poll(() => readSessionAccessToken(tablet.page), { timeout: 10000, message: 'Tablet behält seine Sitzung' }).not.toBeNull();
       await expect(tablet.page.locator('[data-testid="auth-avatar-button"]')).toBeVisible();
       await expect(tablet.page.locator(`[data-testid="tournament-card-${ids.tournamentId}"]`)).toBeVisible({ timeout: 15000 });
       await expect(tablet.page.locator('[data-testid="signed-out-elsewhere"]')).toHaveCount(0);
@@ -200,6 +229,9 @@ test.describe('Abmelden und andere Geräte', () => {
       await expect(page.locator(`[data-testid="tournament-card-${E2E_STRANGER_CUP_ID}"]`)).toBeVisible({ timeout: 15000 });
       await page.evaluate(() => window.dispatchEvent(new Event('online')));
       await expect(page.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
+      // Die DB-Zeile allein beweist die Wache nicht: B hat auf ABMELDEN3 ohnehin keine Rechte, die RPC
+      // würde ablehnen. Der Nachweis der Wache sind (1) B meldet sich ohne Warnung ab (für B wartet nichts)
+      // und (2) die spätere Übertragung unter A (Eintrag noch da, kommt an).
       expect((await fetchEngineRows(ids.matchId)).length).toBe(baseRows);
       // Für B wartet nichts: kein „Eintrag noch nicht übertragen“ beim Abmelden (A's Eintrag gehört B nicht).
       await page.locator('[data-testid="auth-avatar-button"]').click();

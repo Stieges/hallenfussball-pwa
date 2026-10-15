@@ -386,7 +386,13 @@ export async function logoutViaUiConfirmingWarning(page: Page, waitingCount: num
   await page.locator('[data-testid="auth-logout-button"]').click();
   const dialog = page.locator('[data-testid="logout-warning-dialog"]');
   await expect(dialog).toBeVisible({ timeout: 5000 });
-  await expect(page.getByRole('dialog')).toContainText(String(waitingCount));
+  // Wortlaut aus common.json (outbox.logoutWarning.title_one/_other), Anzahl als Parameter.
+  const expectedTitle = waitingCount === 1
+    ? '1 Eintrag noch nicht übertragen'
+    : `${waitingCount} Einträge noch nicht übertragen`;
+  await expect(page.getByRole('dialog')).toContainText(expectedTitle);
+  // Erst nach der Bestätigung wird abgemeldet: bis dahin besteht die Sitzung noch.
+  expect(await readSessionAccessToken(page)).not.toBeNull();
   await page.locator('[data-testid="logout-warning-confirm"]').click();
   // Auf der Cockpit-Seite zeigt das Gerät danach „Turnier nicht gefunden“ ohne Kopfzeile (kein
   // Konto-Inhalt mehr), deshalb ist die gelöschte Sitzung das Merkmal, nicht ein Anmelde-Knopf.
