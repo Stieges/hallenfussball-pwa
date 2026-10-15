@@ -22,7 +22,6 @@ import { useTournamentMembers } from '../auth/hooks/useTournamentMembers';
 import { useEffectiveTournamentRole } from '../auth/hooks/useMyTournamentRole';
 import { canEditResults, canManageTournament } from '../auth/utils/permissions';
 import { RulesLockProvider } from '../../components/match-cockpit/RulesLockContext';
-import { toRuntimeMatchEvents } from '../../utils/matchEvents';
 import { useToast } from '../../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../../lib/sentry';
 import { MatchAwaitingTeamsError, MatchNotOnEngineError, type MatchNotOnEngineReason } from '../../core/errors';
@@ -358,32 +357,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     onTournamentUpdate(updatedTournament);
   }, [tournament, onTournamentUpdate, canChangeRules]);
 
-  // Ereignis-Payload EINMAL an der Prop-Grenze normalisieren.
-  // Der MatchExecutionService schreibt `{ team, delta, durationSeconds }`, das
-  // Cockpit liest `{ teamId, teamName, direction, penaltyDuration }`. Ohne diese
-  // Umrechnung blieben Foulzähler nach einem Reload auf 0, jede Zeile im
-  // Ereignis-Log nannte das Gastteam und jede Zeitstrafe las sich als "2 Min".
-  // Die Umrechnung gehört hierher und nicht in die vier Lesestellen im Cockpit.
-  // Die normalisierten Ereignisse brauchen eine EIGENE Memoisierung mit `currentMatch.events`
-  // als Abhängigkeit. Läge das Mapping im Memo unten, entstünde bei jeder Änderung am Match —
-  // auch einer reinen Uhr- oder Statusänderung — ein frisches Array. Das Cockpit hat
-  // `currentMatch?.events` in der Abhängigkeitsliste seines Reset-Effekts (LiveCockpit.tsx),
-  // der Dialoge schließt und `pendingGoalSide` löscht: Der Torschützen-Dialog verlöre mitten
-  // im Auto-Dismiss-Countdown seinen Zustand und das Tor würde nie gebucht.
-  const rawEvents = currentMatch?.events;
-  const homeTeam = currentMatch?.homeTeam;
-  const awayTeam = currentMatch?.awayTeam;
-  const cockpitEvents = useMemo(
-    () => (rawEvents && homeTeam && awayTeam)
-      ? toRuntimeMatchEvents(rawEvents, homeTeam, awayTeam)
-      : [],
-    [rawEvents, homeTeam, awayTeam]
-  );
-
-  const cockpitMatch = useMemo(() => {
-    if (!currentMatch) { return null; }
-    return { ...currentMatch, events: cockpitEvents };
-  }, [currentMatch, cockpitEvents]);
+  // A-08d2b (B1): Ereignisse kommen vom Engine-Weg bereits im Laufzeitformat (teamId) -- keine
+  // Umrechnung mehr an der Prop-Grenze. Das Cockpit bekommt das Match unveraendert.
 
   // @TM-033: Wartegründe der offenen Seiten des gewählten Spiels
   const awaitingReasons = useMemo(() => {
@@ -443,7 +418,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             tournamentId={tournament.id}
             cockpitSettings={tournament.matchCockpitSettings}
             readOnly={!checkCanEditMatch([currentMatch.homeTeam.id, currentMatch.awayTeam.id])}
-            currentMatch={cockpitMatch}
+            currentMatch={currentMatch}
             lastFinishedMatch={lastFinishedMatch}
             upcomingMatches={upcomingMatches}
             highlightNextMatchMinutesBefore={5}
