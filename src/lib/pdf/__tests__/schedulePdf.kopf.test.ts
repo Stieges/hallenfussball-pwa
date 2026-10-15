@@ -218,15 +218,15 @@ describe('@DR-001 Teamnamen mindestens 12 pt, überall', () => {
 });
 
 describe('Teilnehmer und Schiedsrichter', () => {
-  it('Teilnehmer stehen als Zeilen je Gruppe: „A1 DJK Berg“ und die weiteren Kennungen folgen im selben Abschnitt', async () => {
+  it('Teilnehmer stehen als Zeilen je Gruppe: „A1 FC Nord“ und die weiteren Kennungen folgen im selben Abschnitt', async () => {
     const tournament = hallencupMitRegelwerk();
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
     const seite1 = squash(pages[0].texts.map(trimmed).join(' '));
 
     expect(seite1).toContain(squash('Gruppe A'));
-    expect(seite1).toContain(squash('A1 DJK Berg'));
-    expect(seite1).toContain(squash('A2 FC Nord'));
-    expect(seite1).toContain(squash('B4 TSV West'));
+    expect(seite1).toContain(squash('A1 FC Nord'));
+    expect(seite1).toContain(squash('A3 DJK Berg'));
+    expect(seite1).toContain(squash('B4 SV Hof'));
   });
 
   it('W4 ohne Gruppen steht vor jedem Namen nur die Nummer', async () => {
@@ -235,7 +235,7 @@ describe('Teilnehmer und Schiedsrichter', () => {
     const { pages } = await layoutOf({ tournament }, generateFullSchedule(tournament, 'de'));
     const seite1 = squash(pages[0].texts.map(trimmed).join(' '));
 
-    expect(seite1).toContain(squash('1. DJK Berg'));
+    expect(seite1).toContain(squash('1. FC Nord'));
     expect(seite1).not.toMatch(/[AB]\d\s/);
   });
 

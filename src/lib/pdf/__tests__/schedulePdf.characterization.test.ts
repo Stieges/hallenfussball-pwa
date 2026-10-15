@@ -70,7 +70,7 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     expect(alles).toContain('Spielzeit: 10 Min. · Zeitstrafe 2 Min.');
   });
 
-  it('Teilnehmer: Gruppen A und B, Teams alphabetisch in jeder Gruppe, Kennungen A1–B4 (v7.2, Daniel 15.10.)', async () => {
+  it('Teilnehmer: Gruppen A und B, Kennungen A1–B4 in Zuteilungsreihenfolge, nicht alphabetisch (v7.2 gen.py:165–168, Daniel 15.10.)', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, SCHEDULE_OPTIONS);
     const text = flatText(pdf);
     const alles = text.join(' ');
@@ -78,14 +78,14 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     expect(text).toContain('Gruppe A');
     expect(text).toContain('Gruppe B');
     const expected = [
-      'A1 DJK Berg',
-      'A2 FC Nord',
-      'A3 SV Süd',
+      'A1 FC Nord',
+      'A2 SV Süd',
+      'A3 DJK Berg',
       'A4 TuS Tal',
-      'B1 FC Mitte',
+      'B1 TSV West',
       'B2 SC Ost',
-      'B3 SV Hof',
-      'B4 TSV West',
+      'B3 FC Mitte',
+      'B4 SV Hof',
     ];
     for (const line of expected) {
       expect(alles).toContain(line);

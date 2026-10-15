@@ -60,7 +60,7 @@ export function renderParticipants(
   doc.text(t.participants, geo.left, yPos);
   yPos += printMetrics.sectionTitleAdvance;
 
-  // Teams nach Gruppe sortieren, in jeder Gruppe alphabetisch
+  // Teams nach Gruppe, in jeder Gruppe in Zuteilungsreihenfolge (v7.2 gen.py:165–168, Daniel 15.10.)
   const teamsByGroup = new Map<string, Team[]>();
   schedule.teams.forEach(team => {
     const groupKey = team.group ?? 'Alle';
@@ -68,8 +68,6 @@ export function renderParticipants(
     groupTeams.push(team);
     teamsByGroup.set(groupKey, groupTeams);
   });
-  teamsByGroup.forEach(teams => teams.sort((a, b) => a.name.localeCompare(b.name)));
-
   // Kennungen A1–B4 je Gruppe (v7.2, Daniel 15.10.); ohne Gruppen laufen die Nummern 1 bis n durch
   const groups = Array.from(teamsByGroup.keys()).sort();
   const onlyOneGroup = groups.length === 1;
