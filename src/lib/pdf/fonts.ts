@@ -21,8 +21,10 @@ export const PDF_FONT = {
     bold: () => import('./fontData/bold'),
   },
   /**
-   * Abdeckung der eingebetteten Teilmenge: ASCII, Latin-1 und Latin Extended-A/B, ohne U+00AD (weiches Trennzeichen),
-   * U+0149 (ŉ) und U+01C4 (Ǆ), die Inter-Teilmenge trägt sie nicht. Steuerzeichen fehlen ebenfalls. Die Tests
+   * Abdeckung der eingebetteten Teilmenge: ASCII, Latin-1, Latin Extended-A/B, Griechisch (U+0370–03FF) und
+   * Kyrillisch (U+0400–04FF), je nur die Codepunkte, die die Schrift trägt (Lücken ausgenommen). Ausgenommen sind
+   * außerdem U+00AD (weiches Trennzeichen), U+0149 (ŉ) und U+01C4 (Ǆ), die Inter-Teilmenge trägt sie nicht.
+   * Steuerzeichen fehlen ebenfalls. Die Tests
    * (`schedulePdf.text.test.ts`) prüfen nur drei dieser Lücken und die Steuerzeichen. Die Gleichheit mit der
    * cmap der Schrift ist beim Kürzen geprüft (B-28a2-Fixrunde), nicht als Dauertest.
    */
@@ -32,6 +34,18 @@ export const PDF_FONT = {
     [0x00ae, 0x0148],
     [0x014a, 0x01c3],
     [0x01c5, 0x024f],
+    [0x0374, 0x0376],
+    [0x037a, 0x037f],
+    [0x0384, 0x038a],
+    [0x038c, 0x038c],
+    [0x038e, 0x03a1],
+    [0x03a3, 0x03d7],
+    [0x03dc, 0x03dd],
+    [0x03f0, 0x03f6],
+    [0x03f9, 0x03fa],
+    [0x03fc, 0x0479],
+    [0x0480, 0x049d],
+    [0x04a0, 0x04ff],
     [0x2013, 0x2014],
     [0x2018, 0x201a],
     [0x201c, 0x201e],

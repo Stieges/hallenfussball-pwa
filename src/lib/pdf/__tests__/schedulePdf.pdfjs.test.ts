@@ -79,6 +79,27 @@ describe('@BM-048 aus dem PDF gelesen (pdfjs, ToUnicode)', () => {
   });
 });
 
+describe('@DR-014 Kyrillisch und Griechisch aus dem PDF gelesen', () => {
+  it.each(['Динамо Север', 'Ολυμπιακός'])('„%s“ steht je Ort einzeln: Teilnehmer, Spiele und Tabelle', async name => {
+    const bytes = await pdfBytes(scheduleWithNames([name, ...HALLENCUP_TEAMS.slice(1).map(t => t.name)]));
+    const tokens = tokensOf((await extractPdfText(bytes)).pages);
+    const key = squash(name);
+    const participants = section(tokens, 'Teilnehmer', 'Gruppenphase');
+    expect(participants.some(t => /^\d+\./.test(t) && t.endsWith(key))).toBe(true);
+    const matches = section(tokens, 'Gruppenphase', 'Tabelle–GruppeA');
+    expect(matches).toContain(key);
+    const table = section(tokens, 'Tabelle–GruppeA', 'Tabelle–GruppeB');
+    expect(table).toContain(key);
+  });
+
+  it('Gegenbeispiel DR-012: arabischer Name, das PDF entsteht trotzdem und ist lesbar', async () => {
+    const bytes = await pdfBytes(scheduleWithNames(['الأهلي', ...HALLENCUP_TEAMS.slice(1).map(t => t.name)]));
+    const pdf = await extractPdfText(bytes);
+    expect(pdf.pages.length).toBeGreaterThan(0);
+    expect(allText(pdf.pages)).toContain(squash('SV Süd'));
+  });
+});
+
 describe('Review Focus 5: 50-Zeichen-Name aus dem PDF', () => {
   it('steht vollständig (Zeilenumbrüche in Zellen zählen nicht), ohne „…“', async () => {
     const pdf = await extractPdfText(await pdfBytes(scheduleWithNames([LONG_50, ...HALLENCUP_TEAMS.slice(1).map(t => t.name)])));

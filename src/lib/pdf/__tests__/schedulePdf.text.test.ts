@@ -79,29 +79,46 @@ describe('Review Focus 5: 50-Zeichen-Name mit ä/ö/ü/ß', () => {
   });
 });
 
-describe('Nicht darstellbare Zeichen: Hinweis, PDF entsteht trotzdem', () => {
-  it('kyrillischer Name: ein Hinweis mit dem Namen, Export liefert trotzdem ein PDF', async () => {
-    const schedule = scheduleWithNames(['Ярославль Nord', ...HALLENCUP_TEAMS.slice(1).map(t => t.name)]);
+describe('@DR-014 Kyrillisch und Griechisch: darstellbar, kein Hinweis', () => {
+  const CYR_GRK = ['Динамо Север', 'Ολυμπιακός'];
+
+  it('beide Namen: jedes Zeichen in der Abdeckung, kein Hinweis beim Erzeugen', async () => {
+    for (const name of CYR_GRK) {
+      expect(unrenderableChars(name)).toEqual([]);
+    }
+    const schedule = scheduleWithNames([...CYR_GRK, ...HALLENCUP_TEAMS.slice(2).map(t => t.name)]);
     const result = await exportScheduleToPDF(schedule, undefined, {
       translate: translatorFor('de'),
     });
-    expect(result.notes).toEqual(['Teamname ‚Ярославль Nord‘ enthält Zeichen, die im PDF nicht dargestellt werden können']);
+    expect(result.notes).toEqual([]);
+  });
+});
+
+describe('Nicht darstellbare Zeichen: Hinweis, PDF entsteht trotzdem', () => {
+  it('arabischer Name (Gegenbeispiel DR-012): ein Hinweis mit dem Namen, Export liefert trotzdem ein PDF', async () => {
+    const schedule = scheduleWithNames(['الأهلي', ...HALLENCUP_TEAMS.slice(1).map(t => t.name)]);
+    const result = await exportScheduleToPDF(schedule, undefined, {
+      translate: translatorFor('de'),
+    });
+    expect(result.notes).toEqual(['Teamname ‚الأهلي‘ enthält Zeichen, die im PDF nicht dargestellt werden können']);
+    const captured = await renderSchedulePdf(schedule, undefined, {});
+    expect(captured.pages.length).toBeGreaterThan(0);
   });
 
   it('Turniername, Veranstalter und Halle: je ein Hinweis mit dem Feldnamen (F8)', async () => {
     const tournament = hallencupTournament({
-      title: 'Турнир Nord',
-      organizer: 'Ярославль e.V.',
+      title: 'بطولة Nord',
+      organizer: 'الأهلي e.V.',
       location: { name: 'Halle Łódź' },
     });
     const result = await exportScheduleToPDF(generateFullSchedule(tournament, 'de'), undefined, {
       translate: translatorFor('de'),
-      hallName: 'Halle Ł\u0301ódź Ярославль',
+      hallName: 'Halle Ł\u0301ódź الأهلي',
     });
     expect(result.notes).toEqual([
-      'Turniername ‚Турнир Nord‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
-      'Veranstalter ‚Ярославль e.V.‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
-      'Halle ‚Halle Ł\u0301ódź Ярославль‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
+      'Turniername ‚بطولة Nord‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
+      'Veranstalter ‚الأهلي e.V.‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
+      'Halle ‚Halle Ł\u0301ódź الأهلي‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
     ]);
   });
 
