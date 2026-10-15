@@ -66,7 +66,8 @@
     "live": {
       "idleSkip": "Warte auf nächstes Spiel...",
       "nextMatch": "Nächstes Spiel",
-      "noMatch": "Kein Spiel geplant"
+      "noMatch": "Kein Spiel geplant",
+      "kickoff": "Anstoß"
     },
     "sponsor": {
       "notFound": "Sponsor nicht gefunden",

@@ -11,6 +11,7 @@ import { scoresPublic } from '../publicVisibility';
 import { toLiveMatch } from '../monitorMatch';
 import { sideLabel, sideTeam } from '../matchSides';
 import { upcomingMatches } from '../slideContent';
+import { formatTime } from '../../../core/generators/scheduleHelpers';
 
 interface LiveSlideProps {
   slide: MonitorSlide;
@@ -134,6 +135,16 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
                   </div>
                 </div>
               </div>
+              {/* @ZM-138: Anstoßzeit des nächsten Spiels */}
+              {nextMatch.scheduledTime && (
+                <div style={{
+                  fontSize: displayFontSizes.bodyLG,
+                  color: themeColors.textSecondary,
+                  marginTop: displaySpacing.contentLG,
+                }}>
+                  {t('slides.live.kickoff')} {formatTime(nextMatch.scheduledTime)}
+                </div>
+              )}
             </>
           );
         })()
