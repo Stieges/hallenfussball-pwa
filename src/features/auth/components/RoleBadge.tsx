@@ -32,7 +32,7 @@ const roleColors: Record<
     text: cssVars.colors.onWarning,
   },
   trainer: {
-    background: cssVars.colors.info,
+    background: cssVars.colors.secondaryHover,
     text: cssVars.colors.onPrimary,
   },
   collaborator: {
