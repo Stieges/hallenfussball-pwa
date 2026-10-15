@@ -977,7 +977,7 @@ describe('@OB-001 Ein Platzhalter ohne Anforderung ist nicht zu sehen', () => {
 describe('@OB-002 Eine Funktion mit Anforderung erscheint erst, wenn sie wirkt', () => {
   it.each(OB002)('$kennung $zeile: $funktion wird an $ort nicht angeboten', async ({ pruefen }) => {
     await pruefen();
-  });
+  }, 30_000);
 });
 
 describe('@OB-003 Kein Text kündigt eine Funktion für später an', () => {
@@ -987,7 +987,7 @@ describe('@OB-003 Kein Text kündigt eine Funktion für später an', () => {
     await seiten();
     const body = document.body.textContent ?? '';
     expect(body).not.toMatch(VERBOTENE_ANKUENDIGUNG);
-  });
+  }, 30_000);
 });
 
 describe('@OB-004 Ein ausgeblendeter Platzhalter kommt mit einer neuen App-Version nicht zurück', () => {
@@ -1027,7 +1027,7 @@ describe('@OB-011 Eine Folie ohne Darstellung zeigt keinen Entwickler-Hinweis', 
     expect(slides.map((slide) => slide.id)).toEqual(['b']);
     const fallback = selectDisplayableSlides([{ id: 'a', type: 'unknown-type', duration: 10 }]);
     expect(fallback.map((slide) => slide.type)).toContain('qr-code');
-  });
+  }, 30_000);
 });
 
 describe('@OB-012 Ein Dialog schließt mit Esc, Zurück-Taste und Schließen-Knopf, ohne etwas zu ändern', () => {

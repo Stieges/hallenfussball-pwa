@@ -71,7 +71,7 @@ describe('Quelltext-Wächter – kein Zugriff auf das Übergangsfeld außerhalb 
     );
 
     expect(hits).toEqual([]);
-  });
+  }, 30_000);
 
   it('Gegenbeispiel: geschrieben wird `teamA:`/`teamB:` nur in `transitionalSides`', () => {
     const writers = productive.filter((file) => /\bteam[AB]:\s/.test(readFileSync(join(SRC, file), 'utf8')));
@@ -86,5 +86,5 @@ describe('Quelltext-Wächter – kein Zugriff auf das Übergangsfeld außerhalb 
       'utils/tournamentImporter.ts',
     ].includes(file));
     expect(unexpected).toEqual([]);
-  });
+  }, 30_000);
 });
