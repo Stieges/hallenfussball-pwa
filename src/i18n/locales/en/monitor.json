@@ -29,7 +29,8 @@
       "ended": "Playing time over – result to follow",
       "holdsOnInterruption": "Clock stops on interruption",
       "stopped": "stopped"
-    }
+    },
+    "withoutResult": "without result"
   },
   "timer": {
     "pause": "Pause",

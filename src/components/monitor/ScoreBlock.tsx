@@ -21,6 +21,8 @@ export interface ScoreBlockProps {
   size?: 'md' | 'lg' | 'xl';
   /** Kindermodus (B-16e2, @W2A-031): Stand verbergen, der farbige Block bleibt */
   hideScore?: boolean;
+  /** Heller Rahmen bei zu geringem Kontrast zum Hintergrund (@ZM-140) */
+  frameColor?: string;
 }
 
 const sizeConfig = {
@@ -48,6 +50,7 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
   position,
   size = 'xl',
   hideScore = false,
+  frameColor,
 }) => {
   const textColor = getScoreTextColor(backgroundColor);
   const config = sizeConfig[size];
@@ -61,6 +64,7 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
     height: '100%',
     backgroundColor,
     borderRadius: config.borderRadius,
+    border: frameColor ? `3px solid ${frameColor}` : undefined,
     position: 'relative',
     overflow: 'hidden',
   };

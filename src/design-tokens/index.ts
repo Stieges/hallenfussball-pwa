@@ -121,6 +121,7 @@ export {
   monitorColorSchemes,
   getScoreTextColor,
   criticalPhaseColors,
+  liveColorSchemeDefaults,
   type DisplayTokens,
   type DisplayFontSizeKey,
   type DisplayColorKey,

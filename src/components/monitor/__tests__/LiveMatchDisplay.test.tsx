@@ -105,7 +105,7 @@ describe('LiveMatchDisplay', () => {
       const match = createMockMatch({ group: 'A' });
       render(<LiveMatchDisplay match={match} group="A" />);
 
-      expect(screen.getByText(/Gruppe A/)).toBeInTheDocument();
+      expect(screen.getByText(/liveMatch\.group/)).toBeInTheDocument(); // Gruppe läuft über i18n (@ZM-140-Raster)
     });
 
     it('zeigt Schiedsrichter-Info wenn vorhanden', () => {

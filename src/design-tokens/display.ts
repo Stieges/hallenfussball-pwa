@@ -201,6 +201,8 @@ export const displayLayout = {
     // B-17 Fixrunde: Teamnamen bekommen eine breitere Box, damit 50 Zeichen auf zwei Zeilen passen (@ZM-087)
     teamNameWidth: '46%',
     teamNamesGap: '2%',
+    // @ZM-140 Raster: Mittelspalte zwischen den Kästen (Trenner, im Kindermodus leer)
+    separatorWidth: '12%',
   },
 } as const;
 
@@ -507,8 +509,31 @@ function calculateLuminance(hex: string): number {
  * Returns white text on dark backgrounds, dark text on light backgrounds.
  */
 export function getScoreTextColor(backgroundHex: string): string {
-  return calculateLuminance(backgroundHex) > 0.4 ? '#171717' : '#FFFFFF';
+  // @ZM-140: die Ziffernfarbe mit dem höheren Kontrast (mindestens 4,5 : 1 bei Schwarz oder Weiß)
+  return getContrastRatio(backgroundHex, '#171717') >= getContrastRatio(backgroundHex, '#FFFFFF')
+    ? '#171717'
+    : '#FFFFFF';
 }
+
+/** Kontrastverhältnis nach WCAG (1 bis 21) zweier Hex-Farben. */
+export function getContrastRatio(colorHex: string, otherHex: string): number {
+  const a = calculateLuminance(colorHex);
+  const b = calculateLuminance(otherHex);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+/**
+ * @ZM-140: Der Kasten braucht einen hellen Rahmen, wenn er sich mit weniger als 3 : 1 vom Hintergrund abhebt.
+ */
+export function needsContrastFrame(blockHex: string, backgroundHex: string): boolean {
+  return getContrastRatio(blockHex, backgroundHex) < 3;
+}
+
+/** Vorgabe-Farben des Live-Farbschemas ohne eingetragene Farbe (@ZM-140): Heim Blau, Gast Rot. */
+export const liveColorSchemeDefaults = {
+  homeColor: '#1E40AF',
+  awayColor: '#DC2626',
+} as const;
 
 // =============================================================================
 // CRITICAL PHASE (Last Minute Modus)
@@ -542,6 +567,7 @@ export const displayTokens = {
   themes: monitorThemes,
   monitorColorSchemes,
   criticalPhaseColors,
+  liveColorSchemeDefaults,
 } as const;
 
 export type DisplayTokens = typeof displayTokens;

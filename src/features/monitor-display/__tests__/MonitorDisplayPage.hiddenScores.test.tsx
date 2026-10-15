@@ -81,11 +81,12 @@ describe('@W2A-031 Monitor im Kindermodus: Live-Folie ohne Stand', () => {
     expect(screen.getAllByText(/Feld 1/).length).toBeGreaterThan(0);
     expect(screen.queryByLabelText('Heim: 1')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Gast: 0')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Heim')).toBeInTheDocument();
     expect(screen.queryByText('1:0')).not.toBeInTheDocument();
-    // Sichtbarer Inhalt: die Stand-Blöcke enthalten keine Ziffer (aria allein beweist das nicht)
-    expect(screen.getByLabelText('Heim').textContent).toBe('');
-    expect(screen.getByLabelText('Gast').textContent).toBe('');
+    // B-44a (@W2A-031 neu gefasst): im Kindermodus gibt es keine leeren Kästen mehr, Namen bleiben groß,
+    // darunter die Uhr und klein „ohne Ergebnis“
+    expect(screen.queryByLabelText('Heim')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Gast')).not.toBeInTheDocument();
+    expect(screen.getByText(/liveMatch\.withoutResult/)).toBeInTheDocument();
   });
 
   it('Spielplan-Folie zeigt Paarung und Feld, ohne Ergebnis und ohne „-:-“', async () => {

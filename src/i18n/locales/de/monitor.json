@@ -29,7 +29,8 @@
       "ended": "Spielzeit abgelaufen – Ergebnis folgt",
       "holdsOnInterruption": "Uhr hält bei Unterbrechung",
       "stopped": "angehalten"
-    }
+    },
+    "withoutResult": "ohne Ergebnis"
   },
   "timer": {
     "pause": "Pause",

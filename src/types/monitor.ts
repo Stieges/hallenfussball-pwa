@@ -1,3 +1,4 @@
+import { liveColorSchemeDefaults } from '../design-tokens/display';
 /**
  * Monitor Types - Monitor-Konfigurator
  *
@@ -192,8 +193,8 @@ export interface LiveColorScheme {
  */
 export const DEFAULT_LIVE_COLOR_SCHEME: LiveColorScheme = {
   preset: 'classic',
-  homeColor: '#1E40AF',
-  awayColor: '#DC2626',
+  homeColor: liveColorSchemeDefaults.homeColor,
+  awayColor: liveColorSchemeDefaults.awayColor,
   useTeamColors: false,
 };
 
