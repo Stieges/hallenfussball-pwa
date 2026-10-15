@@ -236,9 +236,14 @@ describe('@OB-055 B-43b1 – umgestellte Dialoge: deckende Fläche und Kontrast'
         geprueft += 1;
       });
       expect(zuSchwach, 'Text unter 4,5 : 1').toEqual([]);
+
       expect(geprueft, 'es wurde Text geprüft').toBeGreaterThan(0);
     },
   );
+
+  // Gemessen in B-43b1-F: Token --color-border (alle Knopf- und Feldränder) hat 1,23 : 1 zur Fläche (hell).
+  // Wert gehört dem Design-System -> Entscheidung bei Daniel, kein Umbau hier.
+  it.todo('@OB-055 Knopf- und Feldränder mindestens 3 : 1 – blockiert durch Token --color-border (1,23 : 1)');
 
   it('Gegenbeispiel: eine durchsichtige Fläche (rgba(255,255,255,.05)) wird als nicht deckend erkannt', () => {
     expect(isOpaque(resolveToken('dark', 'rgba(255, 255, 255, 0.05)'))).toBe(false);

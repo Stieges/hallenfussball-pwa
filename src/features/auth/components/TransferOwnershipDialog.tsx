@@ -6,7 +6,7 @@
  * @see docs/concepts/ANMELDUNG-KONZEPT.md Abschnitt 5.5
  */
 
-import React, { useState, CSSProperties } from 'react';
+import React, { useState, useEffect, useRef, CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens'
 import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { Button } from '../../../components/ui/Button';
@@ -40,6 +40,12 @@ export const TransferOwnershipDialog: React.FC<TransferOwnershipDialogProps> = (
 }) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [confirmationStep, setConfirmationStep] = useState(false);
+  const backButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Nach „Weiter“ liegt der Fokus auf „Zurück“, damit Enter nichts Endgültiges auslöst.
+  useEffect(() => {
+    if (confirmationStep) {backButtonRef.current?.focus();}
+  }, [confirmationStep]);
 
 
   const selectedCoAdmin = coAdmins.find((c) => c.membership.userId === selectedUserId);
@@ -129,6 +135,7 @@ export const TransferOwnershipDialog: React.FC<TransferOwnershipDialogProps> = (
 
         <div style={styles.footer}>
           <Button
+            ref={backButtonRef}
             variant="ghost"
             onClick={() => setConfirmationStep(false)}
             disabled={isLoading}

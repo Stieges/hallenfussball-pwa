@@ -12,7 +12,7 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-05
  */
 
-import { useState, useCallback, useMemo, useEffect, useRef, CSSProperties } from 'react';
+import { useState, useCallback, useMemo, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import type { Tournament, TournamentGroup } from '../../types/tournament';
@@ -124,30 +124,7 @@ export function MonitorEditor({
   const [editingSlideId, setEditingSlideId] = useState<string | null>(null);
   const [isAddingSlide, setIsAddingSlide] = useState(false);
 
-  // Focus management: Remember what was focused before opening
-  const previousFocusRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    // Store the currently focused element when modal opens
-    previousFocusRef.current = document.activeElement as HTMLElement;
-
-    // Return focus when modal closes (cleanup)
-    return () => {
-      previousFocusRef.current?.focus();
-    };
-  }, []);
-
-  // Handle escape key to close modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  // Esc, Fokusfalle und Fokus-Rückgabe liefert DialogSurface (useFocusTrap).
 
   // Unique ID for aria-labelledby
   const titleId = `monitor-editor-title-${monitorId}`;
