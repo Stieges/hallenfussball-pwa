@@ -5,7 +5,7 @@
  * Nachweise (Mutationen in pdfExporter.ts, danach `git checkout`):
  * - M1 Finalrunde Heim/Gast vertauscht → Test „Finalrunde: jede Zeile …“ rot.
  * - M2 Teamname in der Gruppentabelle leer → Test „Gruppentabellen …“ rot.
- * - M3 Ergebnis-Platzhalter leer → Zeilen-Tests (Gruppe und Finalrunde) rot.
+ * - M3 Ergebniszelle ohne Doppelpunkt → Zeilen-Tests (Gruppe und Finalrunde) rot.
  */
 import { describe, it, expect, vi } from 'vitest';
 import {
@@ -23,9 +23,8 @@ vi.mock('jspdf', async (importOriginal) => {
 });
 
 const OPTIONS = { locale: 'de' as const, includeStandings: true };
-const PLATZHALTER = /^ +: +$/;
-/** Finalzeile: Nr, Zeit, Feld, Heim, Ergebnis, Gast (ohne Gruppen-Spalte, mit Feld-Spalte bei zwei Feldern). */
-const FINAL_ZEILE = 6;
+/** Finalzeile im Mitschnitt: Nr, Zeit, Feld, Heim, leere Ergebnis-Zelle, Doppelpunkt, kleine Felder (Doppelpunkt), Gast. */
+const FINAL_ZEILE = 12;
 
 /** Gruppentabelle A: Berg und Nord mit 6 Pkt., Berg vor Nord durch Tordifferenz +3 gegen +1. */
 const TABELLE_A = [
@@ -59,7 +58,7 @@ const PLATZIERUNG = [
 ];
 
 describe('Finalrunde gegen HEUTE (B-28a0 Fixrunde 1, @BM-009)', () => {
-  it('Finalrunde: jede Zeile trägt Nr, Zeit, Feld, Heim, Ergebnis-Platzhalter, Gast in Spielseiten-Reihenfolge', async () => {
+  it('Finalrunde: jede Zeile trägt Nr, Zeit, Feld, Heim, leere Ergebniszelle, Gast in Spielseiten-Reihenfolge', async () => {
     const schedule = hallencupSchedule();
     const text = flatText(await renderSchedulePdf(schedule, undefined, OPTIONS));
     const finals = finalsMatches(schedule);
@@ -69,8 +68,9 @@ describe('Finalrunde gegen HEUTE (B-28a0 Fixrunde 1, @BM-009)', () => {
       const zeile = rowFrom(text, m.matchNumber, m.time, FINAL_ZEILE);
       expect(zeile[2], `Feld Spiel ${m.matchNumber}`).toBe(String(m.field));
       expect(zeile[3], `Heim Spiel ${m.matchNumber}`).toBe(sideName(m, 'A'));
-      expect(zeile[4], `Ergebnis-Platzhalter Spiel ${m.matchNumber}`).toMatch(PLATZHALTER);
-      expect(zeile[5], `Gast Spiel ${m.matchNumber}`).toBe(sideName(m, 'B'));
+      expect(zeile[4], `Ergebniszelle Spiel ${m.matchNumber}`).toBe('');
+      expect(zeile[5], `Doppelpunkt Spiel ${m.matchNumber}`).toBe(':');
+      expect(zeile.indexOf(sideName(m, 'B')), `Gast Spiel ${m.matchNumber} nach dem Ergebnis`).toBeGreaterThan(5);
     }
   });
 

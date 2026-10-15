@@ -1,7 +1,7 @@
 /**
  * Teilnehmer als Blöcke (B-28a3-4b Punkt 8, Daniel 15.10.): je Gruppe ein Kasten mit „Gruppe A“ und den Kennungen
  * A1… fett, Teamnamen 12 pt. Kästen nebeneinander, bei mehr Gruppen umbrechend. Namen brechen um (bis drei Zeilen),
- * nie gekürzt. Alle Namen eines Kastens bündig (B-28a3-4G Punkt 2). Ohne Gruppen ein Kasten über die volle Breite mit nummerierten Namen. Unter dem Abschnittstitel eine
+ * nie gekürzt. Alle Namen eines Kastens bündig (B-28a3-4G Punkt 2). Ohne Gruppen ein Kasten über die volle Breite, Kennungen ebenfalls A1… Unter dem Abschnittstitel eine
  * Linie (v7.2). Nur Zeichnen.
  */
 import type jsPDF from 'jspdf';
@@ -44,7 +44,7 @@ function groupTitle(group: string, schedule: GeneratedSchedule, t: PdfTexts): st
   return t.groupLabel(group, getGroupDisplayName(group, schedule.tournament));
 }
 
-/** Blöcke je Gruppe in sortierter Reihenfolge. Kennungen A1… je Gruppe, ohne Gruppen 1., 2. … (Zuteilungsreihenfolge). */
+/** Blöcke je Gruppe in sortierter Reihenfolge. Kennungen A1… je Gruppe, ohne Gruppen ebenfalls A1… (Zuteilungsreihenfolge, B-28 C1). */
 function buildBlocks(schedule: GeneratedSchedule, t: PdfTexts): Block[] {
   const teamsByGroup = new Map<string, Team[]>();
   schedule.teams.forEach(team => {
@@ -53,11 +53,11 @@ function buildBlocks(schedule: GeneratedSchedule, t: PdfTexts): Block[] {
   });
   const groups = Array.from(teamsByGroup.keys()).sort();
   const onlyOneGroup = groups.length === 1;
-  let counter = 1;
   return groups.map(group => {
     const teams = teamsByGroup.get(group) ?? [];
+    // Kennung immer Buchstabe + Nummer (B-28 C1): ohne Gruppen (Jeder gegen jeden) ist es eine Gruppe „A“
     const entries = teams.map((team, index) => ({
-      id: group === 'Alle' ? `${counter++}.` : `${group}${index + 1}`,
+      id: `${group === 'Alle' ? 'A' : group}${index + 1}`,
       name: team.name,
     }));
     return { title: onlyOneGroup || group === 'Alle' ? undefined : groupTitle(group, schedule, t), entries };

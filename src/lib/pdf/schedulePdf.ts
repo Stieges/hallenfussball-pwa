@@ -14,7 +14,9 @@ import type { Standing, Tournament } from '../../types/tournament';
 import { getLocationAddressLine, getLocationName } from '../../utils/locationHelpers';
 import { registerPdfFonts, PDF_FONT, unrenderableChars } from './fonts';
 import { drawPageNumbers, pageGeometry, startPage, type PdfOrientation } from './layout';
-import { renderGroupStage } from './render/matchTables';
+import { renderGroupStage } from './render/groupTables';
+import type { MatchTableContext } from './render/matchTable';
+import { refereeLabelFor } from './refereeLabel';
 import { renderFinalsSection } from './render/finalsTables';
 import { renderGroupStandings, renderFinalRanking } from './render/standings';
 import { renderHeader, type HeaderFact } from './render/header';
@@ -184,14 +186,21 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
   );
   yPos = renderParticipants(doc, schedule, t, geo, yPos);
 
+  // Ergebnis je Spiel aus seinem Zustand (matchResult), Schiedsrichter aus dem Plan (@DR-025)
+  const tableContext: MatchTableContext = {
+    t,
+    geo,
+    result: { edition, results: includeScores },
+    refereeLabel: refereeLabelFor(schedule),
+  };
+
   const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
   if (groupPhase) {
     renderGroupStage(
       doc,
       groupPhase.matches,
-      t,
+      tableContext,
       schedule.numberOfFields,
-      includeScores,
       geo,
       yPos,
       schedule.tournament,
@@ -214,9 +223,9 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
     yPos = renderFinalsSection(
       doc,
       finalPhases.flatMap(phase => phase.matches),
-      t,
+      tableContext,
       schedule.numberOfFields,
-      includeScores,
+      rules.finalsConfig,
       geo,
       yPos,
       koLines(rules, t)

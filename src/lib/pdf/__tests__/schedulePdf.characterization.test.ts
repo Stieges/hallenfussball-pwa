@@ -6,7 +6,7 @@
  * Mutation (nach dem Commit, dann `git checkout`): in pdfExporter.ts Heim/Gast der Gruppenspiele vertauschen → Zeilen-Test rot.
  *
  * IST-Fälle: „IST @…“ = Bestand heute (grün). Das Ziel der Anforderung steht als `it.fails` daneben: läuft es
- * fehl, ist die Abweichung noch da. a3/a4 drehen die `it.fails` um.
+ * fehl, ist die Abweichung noch da. a3/a4 drehen die `it.fails` um (Ergebniszellen: B-28 C1).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { getGroupShortCode } from '../../../utils/displayNames';
@@ -17,9 +17,9 @@ import {
   hallencupTournament,
   matchByNumber,
   sideName,
-  withMatchResult,
 } from './pdfFixture';
 import { flatText, renderSchedulePdf, rowFrom } from './pdfText';
+import { mitStand } from './pdfScoreSupport';
 
 // jsPDF-Instanzen mitschreiben lassen (Rückfall-Mitschnitt, siehe pdfCapture.ts).
 vi.mock('jspdf', async (importOriginal) => {
@@ -32,10 +32,15 @@ vi.mock('jspdf', async (importOriginal) => {
 const SCHEDULE_OPTIONS = { locale: 'de' as const, tournament: hallencupTournament() };
 /** Der Hinweis „Ergebnisse bitte nach Spielende eintragen“ entfällt mit der Meta-Box (B-28a3-3b, v7.2). */
 const HINWEIS = 'Ergebnisse bitte nach Spielende eintragen';
-/** Ergebnis-Platzhalter ohne Spielstand (Exporter: '     :     '). */
-const PLATZHALTER = /^ +: +$/;
-/** Gruppenzeile: Nr, Zeit, Feld, Gr, Heim, Ergebnis, Gast (mit Feld- und Gruppen-Spalte). */
-const GRUPPEN_ZEILE = 7;
+/**
+ * Gruppenzeile im Mitschnitt: Nr, Zeit, Feld, Gr, Heim, leere Ergebnis-Zelle, Doppelpunkt (aus der Ergebniszelle,
+ * B-28 C1), Gast, leere Zelle „SR“. Ziffern und Kennzeichen folgen zwischen Doppelpunkt und Gast.
+ */
+const GRUPPEN_ZEILE = 9;
+
+/** Plan und Turnier mit dem beendeten Spiel 11 (2:1), so wie der Dialog es einmischt. */
+const beendetesSpiel11 = () =>
+  mitStand(hallencupSchedule(), SCHEDULE_OPTIONS.tournament, { 11: { matchStatus: 'finished', scoreA: 2, scoreB: 1 } });
 
 describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
   it('Pflichttest: A4 hoch (210 × 297) und Dateiname „Hallencup_Nord_Spielplan.pdf“', async () => {
@@ -108,22 +113,24 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
       expect(text[i + 2]).toBe(String(m.field));
       expect(text[i + 3]).toBe(getGroupShortCode(m.group ?? '', schedule.tournament));
       expect(text[i + 4]).toBe(sideName(m, 'A'));
-      expect(text[i + 5], `Ergebnis-Platzhalter Spiel ${m.matchNumber}`).toMatch(PLATZHALTER);
-      expect(text[i + 6]).toBe(sideName(m, 'B'));
+      expect(text[i + 5], `Ergebniszelle Spiel ${m.matchNumber}`).toBe('');
+      expect(text[i + 6], `Doppelpunkt Spiel ${m.matchNumber}`).toBe(':');
+      expect(text[i + 7]).toBe(sideName(m, 'B'));
     }
   });
 
-  it('Gegenbeispiel Ergebnis: beendetes Spiel 11 druckt „2 : 1“ nur mit eingeschaltetem Spielstand', async () => {
-    const schedule = withMatchResult(hallencupSchedule(), 11, { scoreA: 2, scoreB: 1 });
-    const m = matchByNumber(schedule, 11);
+  it('Gegenbeispiel Ergebnis: beendetes Spiel 11 druckt „2“ und „1“ nur mit eingeschaltetem Spielstand', async () => {
+    const stand = beendetesSpiel11();
+    const m = matchByNumber(stand.schedule, 11);
 
-    const mit = flatText(await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: true }));
+    const mit = flatText(await renderSchedulePdf(stand.schedule, undefined, { ...SCHEDULE_OPTIONS, tournament: stand.tournament, includeScores: true }));
     const i = mit.findIndex((t, idx) => t === '11' && mit[idx + 1] === m.time);
     expect(i).toBeGreaterThanOrEqual(0);
-    expect(mit[i + 5]).toBe('2 : 1');
+    expect(mit.slice(i + 6, i + 9)).toEqual([':', '2', '1']);
 
-    const ohne = flatText(await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: false }));
-    expect(ohne).not.toContain('2 : 1');
+    const ohne = flatText(await renderSchedulePdf(stand.schedule, undefined, { ...SCHEDULE_OPTIONS, tournament: stand.tournament, includeScores: false }));
+    const j = ohne.findIndex((t, idx) => t === '11' && ohne[idx + 1] === m.time);
+    expect(ohne.slice(j + 6, j + 8)).toEqual([':', sideName(m, 'B')]);
   });
 
   it('Finalrunde: Untertitel „Spiel um Platz 3“ und beide Teams des Finales', async () => {
@@ -175,39 +182,22 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
 });
 
 describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als it.fails', () => {
-  it('IST @BM-012: laufendes Spiel 12 druckt 1 : 0 in seiner Zeile (Bestand)', async () => {
-    const schedule = withMatchResult(hallencupSchedule(), 12, { scoreA: 1, scoreB: 0 }, 'running');
-    const pdf = await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: true });
-    const row = rowFrom(flatText(pdf), 12, matchByNumber(schedule, 12).time, GRUPPEN_ZEILE);
+  it('@BM-012: Spiel 12 steht in seiner Zeile als „läuft“, ohne Zwischenstand', async () => {
+    const stand = mitStand(hallencupSchedule(), SCHEDULE_OPTIONS.tournament, { 12: { matchStatus: 'running', scoreA: 1, scoreB: 0 } });
+    const pdf = await renderSchedulePdf(stand.schedule, undefined, { ...SCHEDULE_OPTIONS, tournament: stand.tournament, includeScores: true });
+    const row = rowFrom(flatText(pdf), 12, matchByNumber(stand.schedule, 12).time, GRUPPEN_ZEILE);
 
-    expect(row).toContain('1 : 0');
+    // leere Zelle, Doppelpunkt, Kennzeichen, dann der Gast: keine Ziffer dazwischen
+    expect(row.slice(5, 8)).toEqual(['', ':', 'läuft']);
   });
 
-  it.fails('@BM-012 Ziel: Spiel 12 steht in seiner Zeile als „läuft“, ohne Zwischenstand', async () => {
-    const schedule = withMatchResult(hallencupSchedule(), 12, { scoreA: 1, scoreB: 0 }, 'running');
-    const pdf = await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: true });
-    const row = rowFrom(flatText(pdf), 12, matchByNumber(schedule, 12).time, GRUPPEN_ZEILE);
+  it('@BM-011 F4: ohne Schalter „Ergebnisse zeigen“ bleibt die Zelle von Spiel 11 leer', async () => {
+    const stand = beendetesSpiel11();
+    const pdf = await renderSchedulePdf(stand.schedule, undefined, { ...SCHEDULE_OPTIONS, tournament: stand.tournament, includeScores: false });
+    const row = rowFrom(flatText(pdf), 11, matchByNumber(stand.schedule, 11).time, GRUPPEN_ZEILE);
 
-    expect(row).toContain('läuft');
-    expect(row).not.toContain('1:0');
-    expect(row).not.toContain('1 : 0');
-  });
-
-  it('IST @BM-011: beendetes Spiel 11 zeigt ohne Schalter nur den Platzhalter (Bestand)', async () => {
-    const schedule = withMatchResult(hallencupSchedule(), 11, { scoreA: 2, scoreB: 1 });
-    const pdf = await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: false });
-    const row = rowFrom(flatText(pdf), 11, matchByNumber(schedule, 11).time, GRUPPEN_ZEILE);
-
-    expect(row[5]).toMatch(PLATZHALTER);
-    expect(row).not.toContain('2 : 1');
-  });
-
-  it.fails('@BM-011 Ziel: beendetes Spiel 11 steht mit „2:1“ in seiner Zeile, auch ohne Schalter', async () => {
-    const schedule = withMatchResult(hallencupSchedule(), 11, { scoreA: 2, scoreB: 1 });
-    const pdf = await renderSchedulePdf(schedule, undefined, { ...SCHEDULE_OPTIONS, includeScores: false });
-    const row = rowFrom(flatText(pdf), 11, matchByNumber(schedule, 11).time, GRUPPEN_ZEILE);
-
-    expect(row).toContain('2:1');
+    expect(row.slice(5, 7)).toEqual(['', ':']);
+    expect(row[7]).toBe(sideName(matchByNumber(stand.schedule, 11), 'B'));
   });
 
   it('@BM-010 Teilschritt B-28a3-2: jede Seite trägt „Seite x von y“; der Stand fehlt noch (Fußzeile in a3-6)', async () => {

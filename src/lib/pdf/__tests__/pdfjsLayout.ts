@@ -12,7 +12,11 @@ const MM_PER_PT = 25.4 / 72;
 const STANDARD_FONTS = fileURLToPath(new URL('../../../../node_modules/pdfjs-dist/standard_fonts/', import.meta.url));
 const OPS = pdfjs.OPS;
 
-export interface LayoutText { str: string; x: number; y: number; size: number; bold: boolean; /** Breite des Textstücks in mm. */ w: number }
+export interface LayoutText {
+  str: string; x: number; y: number; size: number; bold: boolean; /** Breite des Textstücks in mm. */ w: number;
+  /** Kennung der Schrift in pdfjs. Die eingebetteten Schnitte tragen denselben Namen; `bold` trifft sie nicht, die Kennung unterscheidet sie. */
+  font: string;
+}
 export interface LayoutRect { x: number; y: number; w: number; h: number; fill?: string; stroke?: string }
 export interface LayoutLine { x1: number; y1: number; x2: number; y2: number; width: number; color: string }
 /** Eine Seite: Text, Rechtecke, Linien und alle im Inhalt gesetzten Farben (hex, auch für Text). */
@@ -140,7 +144,7 @@ async function readPage(page: pdfjs.PDFPageProxy): Promise<LayoutPage> {
     const t = item.transform;
     const p = toMm(t[4], t[5]);
     const name = (page.commonObjs.has(item.fontName) ? page.commonObjs.get(item.fontName)?.name : '') ?? '';
-    texts.push({ str: item.str, x: p.x, y: p.y, size: Math.hypot(t[0], t[1]), bold: /bold/i.test(name), w: item.width * MM_PER_PT });
+    texts.push({ str: item.str, x: p.x, y: p.y, size: Math.hypot(t[0], t[1]), bold: /bold/i.test(name), w: item.width * MM_PER_PT, font: item.fontName });
   }
   return { texts, rects, lines, colors: [...colors].sort() };
 }

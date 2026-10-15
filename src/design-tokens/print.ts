@@ -39,6 +39,10 @@ export const printLimits = {
 export const printFont = {
   /** hhea-Ascender von Inter 4.1: 1984/2048 em. Kein Glyph ragt höher (Akzente auf Großbuchstaben bleiben darunter). */
   ascentEm: 0.96875,
+  /** sCapHeight von Inter 4.1: 1490/2048 em. Ziffern stehen auf Versalhöhe; damit werden sie im Kasten mittig gesetzt. */
+  capEm: 0.7275,
+  /** Mitte des Doppelpunkts über der Grundlinie in em (Punkte von 0 bis x-Höhe 1118/2048 em): damit steht er mittig im Kasten. */
+  colonMidEm: 0.28,
 } as const;
 
 /** Umrechnung in mm. Die Render- und Maß-Dateien rechnen damit, keine eigene Zahl. */
@@ -87,6 +91,8 @@ export const printType = {
   resultColon: 15,
   /** .mark */
   mark: 9,
+  /** .cancel: Text „ausgefallen“ im Kasten */
+  cancel: 11,
   /** .pen .lbl */
   penLabel: 8.5,
   /** .pen .f */
@@ -125,6 +131,32 @@ export const printStroke = {
   shortHead: 0.5,
   /** .foot border-top */
   foot: 0.3,
+  /** .score .f, .cancel, .pen .f: Rahmen der Ergebnis- und Schreibfelder */
+  box: 0.3,
+} as const;
+
+/** Felder und Balken der Ergebnisspalte in mm (`druck.css`: .score, .pen, .cancel, tr.live). */
+export const printBox = {
+  /** .score .f: Ergebniskästchen, eine zweistellige Zahl mit Kugelschreiber passt hinein */
+  scoreField: { w: 12, h: 8 },
+  /** .pen .f (nach `.pen .f` Überschreibung): kleine Felder für Verlängerung und Strafstoßschießen */
+  penField: { w: 12, h: 7 },
+  /** .cancel: Kasten „ausgefallen“ */
+  cancel: { w: 27, h: 8 },
+  /** Schreibfeld in der Spalte „SR“: Höhe, Breite folgt der Spalte */
+  refereeFieldH: 8,
+  /** .score gap: Abstand Kästchen ↔ Doppelpunkt, Breite des Doppelpunkts */
+  scoreGap: 1,
+  colonWidth: 2,
+  /** tr.live td:first-child border-left: Balken links an der Zeile */
+  liveBar: 1.8,
+  /** Abstand Kasten → Kennzeichen darunter (.mark margin-top), Abstand Zeilen kleiner Felder (.pen margin-top) */
+  markGap: 0.5,
+  penGap: 1.2,
+  /** Abstand Beschriftung → kleine Felder (.pen .lbl margin-bottom) */
+  penLabelGap: 0.6,
+  /** Zeilenhöhe von Kennzeichen und Feldbeschriftung als Vielfaches der Schrift (line-height 1,1) */
+  smallLineEm: 1.1,
 } as const;
 
 /** Abstände in mm (`druck.css`, wo vorhanden). */
@@ -164,6 +196,8 @@ export const printColumns = {
     field: 10,
     group: 9,
     result: 30,
+    /** Spalte „SR“ (@DR-025): Nummer, Teamname oder Schreibfeld */
+    referee: 24,
   },
   /** Finalrunde: Ergebnisspalte breiter */
   finals: {
@@ -171,6 +205,7 @@ export const printColumns = {
     time: 17,
     field: 10,
     result: 44,
+    referee: 20,
   },
   /** Gruppentabellen und Platzierung */
   standings: {

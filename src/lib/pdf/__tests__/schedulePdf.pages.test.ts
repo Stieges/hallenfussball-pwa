@@ -80,7 +80,8 @@ describe('@DR-002 Folgeseite: 30 Spiele laufen über Seite 1 hinaus, Folgeseite 
     expect(groupMatches(schedule)).toHaveLength(30);
     const { pages } = await layoutOf({}, schedule);
 
-    expect(pages).toHaveLength(4);
+    // Die Zeilen sind mit den Kästchen höher (B-28 C1, 8 mm): 30 Spiele brauchen eine Seite mehr
+    expect(pages).toHaveLength(5);
     pages.forEach((page, i) => {
       expect(pageText(page), `Seite ${i + 1}`).toContain(`Seite ${i + 1} von ${pages.length}`);
     });

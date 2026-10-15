@@ -228,14 +228,15 @@ describe('Teilnehmer und Schiedsrichter', () => {
     expect(seite1).toContain(squash('B4 SV Hof'));
   });
 
-  it('W4 ohne Gruppen steht vor jedem Namen nur die Nummer', async () => {
+  it('W4 ohne Gruppen steht vor jedem Namen die Kennung A1… (B-28 C1: immer Buchstabe und Nummer)', async () => {
     const teams = HALLENCUP_TEAMS.map(team => ({ ...team, group: undefined }));
     const tournament = hallencupMitRegelwerk({ teams, groupSystem: 'roundRobin' });
     const { pages } = await layoutOf({ tournament }, generateFullSchedule(tournament, 'de'));
     const seite1 = squash(pages[0].texts.map(trimmed).join(' '));
 
-    expect(seite1).toContain(squash('1. FC Nord'));
-    expect(seite1).not.toMatch(/[AB]\d\s/);
+    expect(seite1).toContain(squash('A1 FC Nord'));
+    expect(seite1).toContain(squash('A8 SV Hof'));
+    expect(seite1).not.toContain(squash('1. FC Nord'));
   });
 
   it('W2 die Teilnehmerzeile auf Seite 1 hat mindestens 12 pt', async () => {
@@ -247,15 +248,15 @@ describe('Teilnehmer und Schiedsrichter', () => {
     expect(zeile?.size ?? 0).toBeGreaterThanOrEqual(printLimits.teamPt - SIZE_TOL);
   });
 
-  it('keine Spalte und kein Text „Schiedsrichter“ oder „SR“, auch wenn Schiedsrichter eingeteilt sind', async () => {
+  it('@DR-025 die Spalte trägt „SR“, das Wort „Schiedsrichter“ steht nirgends (Spalte mit Nummer oder leerem Feld)', async () => {
     const tournament = hallencupMitRegelwerk({ refereeConfig: { mode: 'organizer', numberOfReferees: 2 } });
     const schedule = hallencupSchedule(tournament);
     expect(schedule.allMatches.some(m => m.referee !== undefined), 'Schiedsrichter sind eingeteilt').toBe(true);
 
     const { pages } = await layoutOf({ tournament }, schedule);
+    expect(pages[0].texts.some(t => trimmed(t) === 'SR'), 'Spaltenkopf').toBe(true);
     for (const page of pages) {
       for (const t of page.texts) {
-        expect(trimmed(t)).not.toMatch(/^SR\d*$/);
         expect(trimmed(t)).not.toContain('Schiedsrichter');
       }
     }

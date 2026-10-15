@@ -35,6 +35,16 @@ export interface PdfTexts {
   home: string;
   result: string;
   away: string;
+  /** Spaltenkopf „SR“ (@DR-025). */
+  referee: string;
+  /** Kennzeichen unter dem Ergebnis eines laufenden Spiels (@BM-012) und im Kasten eines ausgefallenen (@BM-013). */
+  live: string;
+  skipped: string;
+  /** „korrigiert 14:52“ (@BM-013); `time` kommt aus `formatClock`. */
+  corrected: (time: string) => string;
+  /** Beschriftung der kleinen Felder in K.-o.-Spielen (@DR-019). */
+  afterOvertime: string;
+  shootout: string;
   pos: string;
   team: string;
   played: string;
@@ -184,6 +194,12 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     home: s('home'),
     result: s('result'),
     away: s('away'),
+    referee: s('referee'),
+    live: s('live'),
+    skipped: s('skipped'),
+    corrected: time => translate('pdf.corrected', { time }),
+    afterOvertime: s('afterOvertime'),
+    shootout: s('shootout'),
     pos: s('pos'),
     team: s('team'),
     played: s('played'),
