@@ -184,12 +184,10 @@ test('Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Spiel + Er
 
     const mappedStalePayload = mapTournamentFromSupabase(tournamentRow, teamRows, staleMatchRows);
     // `version` bewusst entfernt: ohne sie nimmt `SupabaseRepository.save()` den
-    // Legacy/Fallback-Zweig (blindes Upsert statt Optimistic-Locking-Vergleich) -- robuster
-    // gegen einen möglichen Wettlauf mit `useInitialSync.ts#syncLocalToCloud`, das beim ALLERERSTEN
-    // Laden einer der App noch unbekannten Seite ebenfalls die Turnierzeile anfasst (beobachtet:
-    // ein `OptimisticLockError`, wenn `version` gesetzt blieb -- nicht Teil dessen, was A6 hier
-    // beweisen soll). A6 selbst betrifft ausschließlich die matches-Behandlung weiter unten in
-    // save(), nicht den Tournament-Zeilen-Schritt.
+    // Legacy/Fallback-Zweig (blindes Upsert statt Optimistic-Locking-Vergleich). Der frühere
+    // Wettlauf mit useInitialSync (A-07e, entfernt) ist damit erledigt; der Fallback bleibt
+    // für diesen Test als bewusste Vorgabe. A6 selbst betrifft ausschließlich die
+    // matches-Behandlung weiter unten in save(), nicht den Tournament-Zeilen-Schritt.
     const { version: _unusedVersion, ...stalePayload } = mappedStalePayload;
 
     // --- 3. Die veraltete SAVE_TOURNAMENT-Mutation VOR dem ersten Laden der Seite injizieren

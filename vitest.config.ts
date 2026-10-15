@@ -28,7 +28,6 @@ const DOM_ONLY_TS_TESTS = [
   'src/hooks/__tests__/useMatchExecution.engineGuards.test.ts',
   'src/hooks/__tests__/useMatchExecution.realtime.test.ts',
   'src/hooks/__tests__/useMatchExecution.test.ts',
-  'src/hooks/__tests__/useInitialSync.guestGuard.test.ts',
   'src/hooks/__tests__/useGuestTournamentNotices.test.ts',
   'src/hooks/__tests__/useTournaments.guestHide.test.ts',
   'src/hooks/__tests__/useMatchTimer.test.ts',
