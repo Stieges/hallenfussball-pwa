@@ -48,6 +48,13 @@ describe('tournamentSlotTargets', () => {
     expect(tournamentSlotTargets({ numberOfGroups: 1 }).groupIds).toEqual(['default']);
     expect(tournamentSlotTargets({ groups: [{ id: 'X' }] }).groupIds).toEqual(['X']);
   });
+
+  it('Jeder gegen Jeden hat nur die Gruppe „default“, auch mit übrig gebliebener Gruppenzahl (K2)', () => {
+    const roundRobin = tournamentSlotTargets({ groupSystem: 'roundRobin', numberOfGroups: 3 });
+    expect(roundRobin.groupIds).toEqual(['default']);
+    expect(slideReferenceProblem({ type: 'standings', config: { groupId: 'C' } }, roundRobin)).toBe('group');
+    expect(slideReferenceProblem({ type: 'standings', config: { groupId: 'default' } }, roundRobin)).toBeNull();
+  });
 });
 
 describe('slideReferenceProblem (@ME-061)', () => {

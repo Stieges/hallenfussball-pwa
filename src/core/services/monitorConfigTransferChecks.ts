@@ -17,7 +17,7 @@ export interface SlotTargets {
   groupIds: readonly string[];
 }
 
-type TournamentSlotSource = Partial<Pick<Tournament, 'fields' | 'numberOfFields' | 'groups' | 'numberOfGroups'>>;
+type TournamentSlotSource = Partial<Pick<Tournament, 'fields' | 'numberOfFields' | 'groups' | 'numberOfGroups' | 'groupSystem'>>;
 
 /** Gleiche Regeln wie der Monitor-Editor: Felder aus `fields`, sonst aus der Anzahl; Gruppen wie dort */
 export function tournamentSlotTargets(tournament: TournamentSlotSource): SlotTargets {
@@ -26,7 +26,10 @@ export function tournamentSlotTargets(tournament: TournamentSlotSource): SlotTar
     : Array.from({ length: Math.max(1, tournament.numberOfFields ?? 1) }, (_, i) => `field-${i + 1}`);
 
   let groupIds: string[];
-  if (tournament.groups && tournament.groups.length > 0) {
+  if (tournament.groupSystem === 'roundRobin') {
+    // Jeder gegen Jeden: eine Gruppe, auch wenn noch eine Gruppenzahl gespeichert ist (K2)
+    groupIds = ['default'];
+  } else if (tournament.groups && tournament.groups.length > 0) {
     groupIds = tournament.groups.map(g => g.id);
   } else {
     const numGroups = tournament.numberOfGroups ?? 1;
