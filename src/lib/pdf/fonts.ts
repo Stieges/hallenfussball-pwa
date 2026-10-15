@@ -22,8 +22,9 @@ export const PDF_FONT = {
   },
   /**
    * Abdeckung der eingebetteten Teilmenge: ASCII, Latin-1 und Latin Extended-A/B, ohne U+00AD (weiches Trennzeichen),
-   * U+0149 (ŉ) und U+01C4 (Ǆ), die Inter-Teilmenge trägt sie nicht. Steuerzeichen fehlen ebenfalls. Gegenprüfung:
-   * `schedulePdf.text.test.ts` vergleicht mit der Zeichenliste der Schrift.
+   * U+0149 (ŉ) und U+01C4 (Ǆ), die Inter-Teilmenge trägt sie nicht. Steuerzeichen fehlen ebenfalls. Die Tests
+   * (`schedulePdf.text.test.ts`) prüfen nur drei dieser Lücken und die Steuerzeichen. Die Gleichheit mit der
+   * cmap der Schrift ist beim Kürzen geprüft (B-28a2-Fixrunde), nicht als Dauertest.
    */
   coverage: [
     [0x0020, 0x007e],

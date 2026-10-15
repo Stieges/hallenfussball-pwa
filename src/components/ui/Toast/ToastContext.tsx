@@ -136,14 +136,6 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
 };
 
 /**
- * Hook to access toast functions
- *
- * @example
- * const { showSuccess, showError } = useToast();
- * showSuccess('Turnier gespeichert!');
- * showError('Fehler beim Laden.');
- */
-/**
  * Wie `useToast`, liefert aber `null` ohne Provider. Für Komponenten, die auch ohne Provider rendern (Tests);
  * in der App ist der `ToastProvider` immer vorhanden.
  */
@@ -151,6 +143,14 @@ export function useOptionalToast(): ToastContextValue | null {
   return useContext(ToastContext);
 }
 
+/**
+ * Hook to access toast functions
+ *
+ * @example
+ * const { showSuccess, showError } = useToast();
+ * showSuccess('Turnier gespeichert!');
+ * showError('Fehler beim Laden.');
+ */
 export function useToast(): ToastContextValue {
   const context = useContext(ToastContext);
 

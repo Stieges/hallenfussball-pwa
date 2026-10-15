@@ -10,12 +10,7 @@ const de = buildPdfTexts(translatorFor('de'), 'de');
 const en = buildPdfTexts(translatorFor('en'), 'en');
 
 describe('Spieltag-Datum über Intl (F7)', () => {
-  it('DE: TT.MM.JJJJ', () => {
-    expect(de.formatDate('2027-01-18')).toBe('18.01.2027');
-  });
-  it('EN: Intl in englischer Form', () => {
-    expect(en.formatDate('2027-01-18')).toBe('01/18/2027');
-  });
+  // Zonenunabhängige Prüfung der Werte: translations.tz.test.ts. Hier nur das Durchreichen.
   it('ein Datum im Format TT.MM.JJJJ bleibt unverändert', () => {
     expect(en.formatDate('18.01.2027')).toBe('18.01.2027');
   });
