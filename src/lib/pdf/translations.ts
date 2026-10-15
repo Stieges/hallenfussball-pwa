@@ -28,6 +28,8 @@ export interface PdfTexts {
   /** Abschnitt der Spiele bei „Jeder gegen jeden“ (statt „Gruppenphase“). */
   matches: string;
   finalRanking: string;
+  /** Satz über den Schreiblinien der offenen Platzierung (@DR-009): mit Finalrunde „nach dem Finale“, sonst „nach dem letzten Spiel“. */
+  placementPending: { afterFinal: string; afterLast: string };
   nr: string;
   timeHeader: string;
   field: string;
@@ -187,6 +189,7 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     groupStage: s('groupStage'),
     matches: s('matches'),
     finalRanking: s('finalRanking'),
+    placementPending: { afterFinal: s('placementPending.afterFinal'), afterLast: s('placementPending.afterLast') },
     nr: s('nr'),
     timeHeader: s('timeHeader'),
     field: s('field'),

@@ -43,8 +43,8 @@ const TABELLE_B = [
 ];
 
 /**
- * Platzierung gesamt: Punkte, dann Tordifferenz, dann Tore. Die Platz-Spalte bleibt leer bis a4-4 (B-28a3-4F F5,
- * @DR-009), die Zeilen beginnen also mit dem Teamnamen.
+ * Rangfolge nach Punkten, Tordifferenz, Toren über alle acht Teams: so sah die Gesamt-Platzierung vor B-28 C2 aus. Sie
+ * darf nicht mehr erscheinen (C-RANK-FIN, @DR-009); die Konstante dient dem Gegenbeispiel.
  */
 const PLATZIERUNG = [
   'TSV West', '3', '3', '7:1', '+6', '9',
@@ -103,16 +103,18 @@ describe('Gruppentabellen und Platzierung mit echten Standings (B-28a0 Fixrunde 
     expect(containsSequence(text, TABELLE_B), 'Tabelle Gruppe B').toBe(true);
   });
 
-  it('Platzierung gesamt: alle acht Teams nach Punkten, Tordifferenz, Toren sortiert', async () => {
+  it('@DR-009 Platzierung gesamt zeigt keine Rangfolge nach Punkten (C-RANK-FIN), auch mit gespielten Spielen', async () => {
     const text = flatText(await renderSchedulePdf(hallencupSchedule(), HALLENCUP_STANDINGS, OPTIONS));
 
-    expect(containsSequence(text, PLATZIERUNG)).toBe(true);
+    expect(text).toContain('Platzierung');
+    expect(containsSequence(text, PLATZIERUNG)).toBe(false);
   });
 
-  it('Gegenbeispiel: ohne Tabellen steht die Platzierung trotzdem mit allen Teams', async () => {
+  it('Gegenbeispiel: ohne Tabellen bleibt die Platzierung ohne Punkte-Rangfolge', async () => {
     const text = flatText(await renderSchedulePdf(hallencupSchedule(), HALLENCUP_STANDINGS, { ...OPTIONS, includeStandings: false }));
 
     expect(text).not.toContain('Tabelle – Gruppe A');
-    expect(containsSequence(text, PLATZIERUNG)).toBe(true);
+    expect(text).toContain('Platzierung');
+    expect(containsSequence(text, PLATZIERUNG)).toBe(false);
   });
 });

@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { printFont, printGap, printType, printUnit } from '../../../design-tokens/print';
+import { continuationTop, pageGeometry } from '../layout';
 import { hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { layoutOf } from './pdfFixtureLayout';
 import type { LayoutPage, LayoutText } from './pdfjsLayout';
@@ -68,6 +69,11 @@ describe('F3 Abschnittstitel mit Abstand zum vorigen Block', () => {
       for (const name of ueberschriften) {
         const titel = page.texts.find(t => trimmed(t) === name && Math.abs(t.size - printType.h2) <= SIZE_TOL);
         if (!titel) {continue;}
+        // Eine Überschrift am Anfang einer Folgeseite hat nur den Kurzkopf über sich (Platzierung, @DR-009: Liste bleibt ganz)
+        if (oberkante(titel) <= continuationTop(pageGeometry('a4', 'portrait')) + SIZE_TOL) {
+          geprueft.push(name);
+          continue;
+        }
         const abstand = abstandZuDarueber(page, titel);
         if (abstand === undefined) {continue;}
         geprueft.push(name);

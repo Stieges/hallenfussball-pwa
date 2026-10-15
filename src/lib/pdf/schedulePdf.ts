@@ -18,7 +18,9 @@ import { renderGroupStage } from './render/groupTables';
 import type { MatchTableContext } from './render/matchTable';
 import { refereeLabelFor } from './refereeLabel';
 import { renderFinalsSection } from './render/finalsTables';
-import { renderGroupStandings, renderFinalRanking } from './render/standings';
+import { renderGroupStandings } from './render/standings';
+import { placementState, type RankEntry } from './placement';
+import { renderRanking } from './render/ranking';
 import { renderHeader, type HeaderFact } from './render/header';
 import { drawShortHeads, shortHeadTitleLines } from './render/shortHeader';
 import { renderParticipants } from './render/participants';
@@ -47,6 +49,12 @@ export interface PDFExportOptions {
    * des Nutzers ergibt `blank`; ohne Ergebnisse allein bleibt es bei `plan`.
    */
   edition?: 'plan' | 'blank';
+  /**
+   * Gespeicherter Endstand (alle Teams in der Reihenfolge der Plätze) und Abschluss des Turniers (B-28 C2, @DR-009).
+   * Bis A-19/A-21a fehlen beide: die Platzierung bleibt offen. Die Fassung zum Ausfüllen zeigt nie einen Endstand.
+   */
+  ranking?: RankEntry[];
+  closed?: boolean;
   /** Turnier für die Regelzeilen im Kopf und die K.-o.-Zeilen (B-28a3-3b, Fixrunde W6). Pflicht. */
   tournament: Tournament;
 }
@@ -150,6 +158,8 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
     hallName = getLocationName(schedule.tournament),
     orientation = 'portrait',
     edition = 'plan',
+    ranking = [],
+    closed,
     tournament,
   } = options;
 
@@ -231,7 +241,18 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
       koLines(rules, t)
     );
   }
-  renderFinalRanking(doc, schedule, standings, t, geo, yPos);
+  renderRanking(
+    doc,
+    {
+      state: placementState({ edition, ranking, closed, teamCount: schedule.teams.length }),
+      teamCount: schedule.teams.length,
+      ranking,
+      hasFinalRound: finalPhases.length > 0,
+    },
+    t,
+    geo,
+    yPos
+  );
 
   // Kurzkopf auf jeder Folgeseite, dann die Seitenzahlen über alle Seiten
   drawShortHeads(doc, geo, shortHead);

@@ -270,4 +270,12 @@ export const printMetrics = {
 
   /** Standings-Abstand nach einer Gruppentabelle (sectionGap + 4) */
   standingsGroupAdvance: 4,
+
+  /** Platzierung (@DR-009): Zeilenhöhe je Platz (Schreiblinie für Kugelschreiber), Breite der Platznummer, Abstand Nummer → Linie/Name */
+  placeRowHeight: 10,
+  placeNumberWidth: 10,
+  placeNumberGap: 2,
+  /** Platzierung: Abstand Satz → erste Zeile, Abstand Schreiblinie → Grundlinie der Schrift darüber */
+  placeSentenceAdvance: 6,
+  placeTextLift: 1.5,
 } as const;

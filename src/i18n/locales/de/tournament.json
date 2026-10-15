@@ -706,6 +706,10 @@
     "groupStage": "Gruppenphase",
     "standingsOfGroup": "Tabelle – {{group}}",
     "finalRanking": "Platzierung",
+    "placementPending": {
+      "afterFinal": "Die Platzierung steht nach dem Finale fest",
+      "afterLast": "Die Platzierung steht nach dem letzten Spiel fest"
+    },
     "nr": "Nr",
     "timeHeader": "Zeit",
     "field": "Feld",

@@ -1,6 +1,6 @@
 /**
- * Tabellen: Gruppentabellen (nur bei `includeStandings`) und Gesamt-Platzierung (immer). Sortiert nach Punkten,
- * Tordifferenz, Toren. Teamnamen mindestens 12 pt (@DR-001), Umbruch innerhalb der Zelle. Nur Zeichnen.
+ * Gruppentabellen (nur bei `includeStandings`), sortiert nach Punkten, Tordifferenz, Toren. Die Gesamt-Platzierung steht
+ * in `ranking.ts` (B-28 C2). Teamnamen mindestens 12 pt (@DR-001), Umbruch innerhalb der Zelle. Nur Zeichnen.
  */
 import type jsPDF from 'jspdf';
 import autoTable, { type CellInput, type RowInput, type UserOptions } from 'jspdf-autotable';
@@ -29,8 +29,7 @@ function standingsHeader(t: PdfTexts): RowInput[] {
 
 /**
  * Eine Zeile der Tabelle. Null-Werte bleiben leer. Die Platz-Spalte ist nur gefüllt, wenn `rankColumn` gilt
- * (Gruppentabelle mit gespielten Spielen, B-28a3-4b Punkt 1, Controller 15.10.) – die Gesamt-Platzierung bleibt bis
- * a4-4 leer (B-28a3-4F F5, @DR-009): eine Nummer nach dem ersten Spiel wäre eine Übergangsplatzierung.
+ * (Gruppentabelle mit gespielten Spielen, B-28a3-4b Punkt 1, Controller 15.10.).
  */
 function standingRow(standing: Standing, index: number, rankColumn: boolean): CellInput[] {
   return [
@@ -52,7 +51,7 @@ function standingRow(standing: Standing, index: number, rankColumn: boolean): Ce
   ];
 }
 
-/** Gemeinsame Tabelle für Gruppentabellen und Platzierung. `rankColumn`: Platz-Spalte füllen. */
+/** Tabelle einer Gruppe. `rankColumn`: Platz-Spalte füllen. */
 function drawStandingsTable(
   doc: jsPDF,
   geo: PageGeometry,
@@ -137,31 +136,5 @@ export function renderGroupStandings(
   });
 
   yPos += printGap.sectionGap;
-  return yPos;
-}
-
-/** Platzierung über alle Teams, immer am Ende des Dokuments. */
-export function renderFinalRanking(
-  doc: jsPDF,
-  schedule: GeneratedSchedule,
-  standings: Standing[] | undefined,
-  t: PdfTexts,
-  geo: PageGeometry,
-  yPos: number
-): number {
-  yPos = ensureSpace(doc, yPos, printMetrics.sectionTableMinSpace, geo);
-
-  // Abschnittstitel
-  doc.setFontSize(printType.h2);
-  doc.setTextColor(...printColors.ink);
-  doc.setFont(PDF_FONT.family, 'bold');
-  doc.text(t.finalRanking, geo.left, yPos);
-  yPos += printMetrics.sectionTitleUnderline;
-
-  const finalStandings = [...resolveStandings(schedule, standings)].sort(compareRanking);
-
-  const end = drawStandingsTable(doc, geo, t, yPos, finalStandings, false);
-  yPos = end + printGap.sectionGap;
-
   return yPos;
 }

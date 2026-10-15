@@ -706,6 +706,10 @@
     "groupStage": "Group stage",
     "standingsOfGroup": "Standings – {{group}}",
     "finalRanking": "Final ranking",
+    "placementPending": {
+      "afterFinal": "The final ranking is decided after the final",
+      "afterLast": "The final ranking is decided after the last match"
+    },
     "nr": "No.",
     "timeHeader": "Time",
     "field": "Pitch",

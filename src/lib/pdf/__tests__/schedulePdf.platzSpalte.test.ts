@@ -78,7 +78,7 @@ describe('Punkt 1 Platz-Spalte ohne gespielte Spiele', () => {
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
     const { kopfzeilen, ziffern } = platzZiffern(pages);
 
-    expect(kopfzeilen, 'Tabellen mit Platz-Spalte: Gruppe A, Gruppe B, Platzierung').toBeGreaterThanOrEqual(3);
+    expect(kopfzeilen, 'Tabellen mit Platz-Spalte: Gruppe A, Gruppe B (die Platzierung ist seit C2 keine Tabelle mehr)').toBe(2);
     expect(ziffern).toEqual([]);
   });
 
@@ -89,11 +89,11 @@ describe('Punkt 1 Platz-Spalte ohne gespielte Spiele', () => {
     expect(ziffern).toEqual(expect.arrayContaining(['1', '2', '3', '4']));
   });
 
-  it('F5 Platzierung bleibt auch mit gespielten Spielen ohne Ziffern (keine Übergangsplatzierung vor a4-4, @DR-009)', async () => {
+  it('F5 Platzierung ist auch mit gespielten Spielen keine Punktetabelle (keine Übergangsplatzierung, @DR-009)', async () => {
     const pages = await seitenMit(HALLENCUP_STANDINGS);
     const { kopfzeilen, ziffern } = platzZiffernUnter(pages, 'Platzierung');
 
-    expect(kopfzeilen, 'Tabellenkopf „Pl“ unter der Überschrift Platzierung').toBe(1);
+    expect(kopfzeilen, 'kein Tabellenkopf „Pl“ unter der Überschrift Platzierung').toBe(0);
     expect(ziffern).toEqual([]);
   });
 });
