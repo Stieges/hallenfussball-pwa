@@ -11,20 +11,17 @@
  * Bauen und Speichern sind getrennt: `buildSchedulePdf` liefert das Dokument, den Dateinamen und die Hinweise
  * (Zeichen, die als „?“ erscheinen, Ersatzschrift) VOR dem Speichern (@DR-012).
  */
-import i18next from 'i18next';
-import jsPDF from 'jspdf';
+import type jsPDF from 'jspdf';
 import type { GeneratedSchedule } from '../../core/generators';
 import type { Standing } from '../../types/tournament';
 import { getGroupDisplayName } from '../../utils/displayNames';
-import { getLocationName } from '../../utils/locationHelpers';
 import { qrModules } from '../qr/publicQr';
-import { registerPdfFonts, fontOf } from './fonts';
 import { pageGeometry, startPage } from './layout';
 import type { PDFExportOptions } from './pdfOptions';
+import { openDocument, toPdfInput, type SchedulePdfInput } from './pdfInput';
 import { dayOf, headerFacts, ruleFacts } from './headerFacts';
 import { schedulePdfFilename } from './filename';
 import { buildNotes } from './notes';
-import { guardDocText } from './printable';
 import { planSections, type SectionKey } from './sections';
 import { closedLine, footerLine, standLine } from './standText';
 import { groupPhaseOpen } from './tournamentState';
@@ -46,7 +43,7 @@ import { qrSide } from './render/qrCode';
 import { drawShortHeads, shortHeadTitleLines, shortQrColumn } from './render/shortHeader';
 import { renderParticipants } from './render/participants';
 import { koLines, pdfRuleLines, pdfRulesFrom, placementLine } from './rules';
-import { buildPdfTexts, resolvePdfLocale, type PdfLocale, type PdfTexts, type PdfTranslator } from './translations';
+import type { PdfTexts } from './translations';
 
 export type { PDFExportOptions } from './pdfOptions';
 
@@ -61,17 +58,7 @@ export interface SchedulePdfBuild extends SchedulePdfResult {
   filename: string;
 }
 
-export interface SchedulePdfInput {
-  schedule: GeneratedSchedule;
-  standings: Standing[] | undefined;
-  options: PDFExportOptions;
-}
-
-/** Übersetzer der App: i18next, Namespace `tournament`, Sprache des Dokuments. */
-function appTranslator(locale: PdfLocale): PdfTranslator {
-  // Fehlt ein Schlüssel, erscheint der Schlüssel selbst (sichtbar statt still leer).
-  return (key, values) => i18next.t(key, key, { ns: 'tournament', lng: locale, ...values });
-}
+export type { SchedulePdfInput } from './pdfInput';
 
 /** Zeile „Kontakt: …“ nur bei übergebenem, nicht leerem Kontakt. */
 function contactRow(contact: string | undefined, t: PdfTexts): string | undefined {
@@ -80,44 +67,20 @@ function contactRow(contact: string | undefined, t: PdfTexts): string | undefine
 }
 
 /** Baut das Spielplan-PDF, ohne es zu speichern. */
-export async function buildSchedulePdf({ schedule, standings, options }: SchedulePdfInput): Promise<SchedulePdfBuild> {
-  const {
-    locale = resolvePdfLocale(i18next.language),
-    translate = appTranslator(locale),
-    includeStandings: wantStandings = true,
-    includeScores: wantScores = false,
-    audience = 'organizer',
-    organizerName = schedule.tournament.organizer ?? '',
-    hallName = getLocationName(schedule.tournament),
-    orientation = 'portrait',
-    edition = 'plan',
-    ranking = [],
-    closed,
-    now = new Date(),
-    online = true,
-    closedAt,
-    contact,
-    tournament,
-  } = options;
+export async function buildSchedulePdf(source: SchedulePdfInput): Promise<SchedulePdfBuild> {
+  const { schedule, options } = source;
+  const input = toPdfInput(source);
+  const { tournament, translate, edition, audience, now, online, orientation, contact, organizerName, hallName } = input;
+  const { ranking, closed, closedAt, standings } = input.state;
 
-  const t = buildPdfTexts(translate, locale);
   const rules = pdfRulesFrom(tournament, schedule);
   // Sichtbarkeit an einer Stelle (C5): die Schalter des Turniers begrenzen den Wunsch des Dialogs
   const content = pdfContentRules(tournament, audience, options.viewerBaseUrl);
-  const includeStandings = wantStandings && content.tables;
-  const includeScores = wantScores && content.results;
-
-  const doc = new jsPDF({
-    orientation,
-    unit: 'mm',
-    format: 'a4',
-  });
+  const includeStandings = input.wish.standings && content.tables;
+  const includeScores = input.wish.scores && content.results;
 
   // Schrift zuerst: lädt sie nicht, gilt die Standardschrift (B6). Danach läuft der Bau ohne Warten.
-  const mode = await registerPdfFonts(doc);
-  guardDocText(doc, mode.covers);
-  doc.setLanguage(locale);
-  doc.setFont(fontOf(doc));
+  const { doc, t, mode } = await openDocument(input);
   // Kopfgrafiken: nur was sich lesen und zeichnen lässt; sonst fehlt die Grafik und ein Hinweis entsteht (@DR-023)
   const logoLeft = usableLogo(options.logoLeft);
   const logoRight = usableLogo(options.logoRight);

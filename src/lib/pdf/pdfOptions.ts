@@ -13,6 +13,8 @@ export interface PDFExportOptions {
   locale?: PdfLocale;
   /** Übersetzer für `pdf.*`. Vorgabe: i18next der App; Tests reichen die Ressource durch. */
   translate?: PdfTranslator;
+  /** Übersetzer einer anderen Sprache (zweisprachiger Aushang, @DR-022). Vorgabe: i18next der App. */
+  translateIn?: (locale: PdfLocale) => PdfTranslator;
   includeStandings?: boolean;
   includeScores?: boolean;
   /**

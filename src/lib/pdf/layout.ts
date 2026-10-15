@@ -8,13 +8,17 @@
  */
 import type { jsPDF } from 'jspdf';
 import { printFont, printGap, printMetrics, printPage, printType, printUnit } from '../../design-tokens/print';
+import { printFormat } from '../../design-tokens/print-format';
 
-export type PdfFormat = 'a4';
+/** Angeboten wird A4; A3 und A2 sind vorbereitet (`print-format.ts`). */
+export type PdfFormat = 'a4' | 'a3' | 'a2';
 export type PdfOrientation = 'portrait' | 'landscape';
 /** Abschnitte in fester Reihenfolge. Der erste liegt auf Seite 1. */
 export type PdfSection = 'participantsAndGroups' | 'tables' | 'finals';
 
 export interface PageGeometry {
+  /** Maßstab des Formats gegenüber A4 (A4 = 1): die Ränder sind hier einmal skaliert; Schrift und Felder lesen ihn von hier. */
+  scale: number;
   width: number;
   height: number;
   /** Breite des Satzspiegels zwischen den Seitenrändern. */
@@ -44,12 +48,14 @@ export interface PageGeometry {
  * dann mindestens so hoch wie der Block.
  */
 export function pageGeometry(format: PdfFormat, orientation: PdfOrientation, shortTitleLines = 1, footerLines = 1, shortQrSide = 0): PageGeometry {
-  const size = printPage[format][orientation];
-  const margin = printPage.margin;
+  const { scale, [orientation]: size } = printFormat[format];
+  // Maßstab an dieser einen Stelle: Ränder × scale; alles Weitere (Satzspiegel, Fuß) leitet sich aus ihnen ab
+  const margin = { top: printPage.margin.top * scale, right: printPage.margin.right * scale, bottom: printPage.margin.bottom * scale, left: printPage.margin.left * scale };
   const lastBaseline = size.height - margin.bottom - descentMm(printType.foot);
   const footerY = lastBaseline - (footerLines - 1) * printMetrics.footAdvance;
   const footRuleY = footerY - ascentMm(printType.foot) - printGap.footRuleGap;
   return {
+    scale,
     width: size.width,
     height: size.height,
     contentWidth: size.width - margin.left - margin.right,
