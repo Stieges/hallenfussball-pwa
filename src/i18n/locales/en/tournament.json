@@ -730,7 +730,7 @@
       "blank": "Schedule to fill in"
     },
     "durationMinutes": "{{minutes}} min",
-    "modeGroupsAndFinals": "Groups + finals",
+    "modeGroupsAndFinals": "Groups + Finals",
     "modeRoundRobin": "Round robin",
     "unrenderableName": "Team name ‘{{name}}’ contains characters that cannot be shown in the PDF",
     "phase": {

@@ -730,7 +730,7 @@
       "blank": "Spielplan zum Ausfüllen"
     },
     "durationMinutes": "{{minutes}} Min.",
-    "modeGroupsAndFinals": "Gruppen + Finals",
+    "modeGroupsAndFinals": "Gruppen + Finale",
     "modeRoundRobin": "Jeder gegen Jeden",
     "unrenderableName": "Teamname ‚{{name}}‘ enthält Zeichen, die im PDF nicht dargestellt werden können",
     "phase": {

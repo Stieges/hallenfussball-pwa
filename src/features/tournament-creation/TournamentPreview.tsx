@@ -145,6 +145,8 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   const handleExportPDF = async () => {
     const { notes } = await exportScheduleToPDF(schedule, schedule.initialStandings, {
       includeStandings: true,
+      // Fixrunde B-28a3-3b (Controller-Freigabe, nur diese Zeile): Regelzeilen brauchen das Turnier
+      tournament: currentTournament,
       // organizerName wird automatisch aus schedule.tournament.organizer gezogen
       hallName: getLocationName(currentTournament),
     });

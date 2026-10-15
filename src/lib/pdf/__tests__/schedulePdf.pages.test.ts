@@ -80,7 +80,7 @@ describe('@DR-002 Folgeseite: 30 Spiele laufen über Seite 1 hinaus, Folgeseite 
     expect(groupMatches(schedule)).toHaveLength(30);
     const { pages } = await layoutOf({}, schedule);
 
-    expect(pages.length).toBeGreaterThanOrEqual(4);
+    expect(pages).toHaveLength(4);
     pages.forEach((page, i) => {
       expect(pageText(page), `Seite ${i + 1}`).toContain(`Seite ${i + 1} von ${pages.length}`);
     });

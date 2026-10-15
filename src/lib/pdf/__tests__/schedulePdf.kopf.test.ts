@@ -54,6 +54,37 @@ function findPage(pages: LayoutPage[], text: string): number {
   return pages.findIndex(page => page.texts.some(t => trimmed(t) === text));
 }
 
+const LANGER_TITEL = 'Internationaler Hallenfußball-Wintercup der Sportgemeinschaft Nordheim 2026';
+
+describe('W1 Kurzkopf: langer Turniername bricht um und bleibt im Rand', () => {
+  it.each([
+    ['hoch', {}],
+    ['quer', { orientation: 'landscape' as const }],
+  ])('jede Textstelle hat mindestens 15 mm Abstand zum rechten Rand, %s', async (_name, extra) => {
+    const tournament = hallencupMitRegelwerk({ title: LANGER_TITEL });
+    const { pages, width } = await layoutOf({ tournament, ...extra }, hallencupSchedule(tournament));
+
+    expect(pages.length).toBeGreaterThanOrEqual(2);
+    for (const page of pages) {
+      for (const t of page.texts) {
+        expect(t.x + t.w, `„${t.str}“`).toBeLessThanOrEqual(width - 15 + SIZE_TOL);
+      }
+    }
+  });
+
+  it('der Kurzkopf-Titel steht auf Folgeseiten in zwei Zeilen (16 pt)', async () => {
+    const tournament = hallencupMitRegelwerk({ title: LANGER_TITEL });
+    const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
+    const zeilen = new Set(
+      pages[1].texts
+        .filter(t => Math.abs(t.size - 16) <= SIZE_TOL)
+        .map(t => Math.round(t.y * 10)),
+    );
+
+    expect(zeilen.size).toBe(2);
+  });
+});
+
 describe('@DR-006 Kopf Seite 1: Regelzeilen unter den Turnierdaten', () => {
   it('Modus, Platzierung, Spielzeit und Regelwerk stehen auf Seite 1 in dieser Reihenfolge', async () => {
     const tournament = hallencupMitRegelwerk();
@@ -61,7 +92,7 @@ describe('@DR-006 Kopf Seite 1: Regelzeilen unter den Turnierdaten', () => {
     const zeilen = pages[0].texts.map(trimmed);
 
     const reihe = [
-      'Modus: Gruppen + Finals',
+      'Modus: Gruppen + Finale',
       'Platzierung: Punkte – Tordifferenz – Tore – direkter Vergleich',
       'Spielzeit: 10 Min. · Zeitstrafe 2 Min.',
       `Regelwerk: ${BFV}`,
@@ -143,7 +174,7 @@ describe('@DR-001 Teamnamen mindestens 12 pt, überall', () => {
 
     const fundstellen = pages.flatMap(page => page.texts).filter(t => {
       const text = trimmed(t);
-      return text.length >= 3 && NAMEN.some(name => name.includes(text));
+      return text.length >= 3 && NAMEN.some(name => text.includes(name) || name.includes(text));
     });
     expect(fundstellen.length).toBeGreaterThan(0);
     for (const t of fundstellen) {
@@ -187,14 +218,34 @@ describe('@DR-001 Teamnamen mindestens 12 pt, überall', () => {
 });
 
 describe('Teilnehmer und Schiedsrichter', () => {
-  it('Teilnehmer stehen als Zeilen je Gruppe: „1. DJK Berg“ und die weiteren Namen folgen im selben Abschnitt', async () => {
+  it('Teilnehmer stehen als Zeilen je Gruppe: „A1 DJK Berg“ und die weiteren Kennungen folgen im selben Abschnitt', async () => {
     const tournament = hallencupMitRegelwerk();
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
     const seite1 = squash(pages[0].texts.map(trimmed).join(' '));
 
     expect(seite1).toContain(squash('Gruppe A'));
+    expect(seite1).toContain(squash('A1 DJK Berg'));
+    expect(seite1).toContain(squash('A2 FC Nord'));
+    expect(seite1).toContain(squash('B4 TSV West'));
+  });
+
+  it('W4 ohne Gruppen steht vor jedem Namen nur die Nummer', async () => {
+    const teams = HALLENCUP_TEAMS.map(team => ({ ...team, group: undefined }));
+    const tournament = hallencupMitRegelwerk({ teams, groupSystem: 'roundRobin' });
+    const { pages } = await layoutOf({ tournament }, generateFullSchedule(tournament, 'de'));
+    const seite1 = squash(pages[0].texts.map(trimmed).join(' '));
+
     expect(seite1).toContain(squash('1. DJK Berg'));
-    expect(seite1).toContain(squash('2. FC Nord'));
+    expect(seite1).not.toMatch(/[AB]\d\s/);
+  });
+
+  it('W2 die Teilnehmerzeile auf Seite 1 hat mindestens 12 pt', async () => {
+    const tournament = hallencupMitRegelwerk();
+    const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
+    const zeile = pages[0].texts.find(t => trimmed(t).includes('DJK Berg'));
+
+    expect(zeile, 'Teilnehmerzeile gefunden').toBeDefined();
+    expect(zeile?.size ?? 0).toBeGreaterThanOrEqual(printLimits.teamPt - SIZE_TOL);
   });
 
   it('keine Spalte und kein Text „Schiedsrichter“ oder „SR“, auch wenn Schiedsrichter eingeteilt sind', async () => {
@@ -217,10 +268,18 @@ describe('@BM-052 Kicker', () => {
     const tournament = hallencupMitRegelwerk();
     const schedule = hallencupSchedule(tournament);
 
-    const leer = await layoutOf({ tournament, includeScores: false }, schedule);
+    const leer = await layoutOf({ tournament, edition: 'blank' }, schedule);
     expect(leer.pages[0].texts.map(trimmed)).toContain('Spielplan zum Ausfüllen');
 
-    const mit = await layoutOf({ tournament, includeScores: true }, schedule);
+    const mit = await layoutOf({ tournament, edition: 'plan' }, schedule);
     expect(mit.pages[0].texts.map(trimmed)).toContain('Spielplan');
+  });
+
+  it('W3 ohne Wahl der Fassung und ohne Ergebnisse heißt der Kopf „Spielplan“', async () => {
+    const tournament = hallencupMitRegelwerk();
+    const { pages } = await layoutOf({ tournament, includeScores: false }, hallencupSchedule(tournament));
+
+    expect(pages[0].texts.map(trimmed)).toContain('Spielplan');
+    expect(pages[0].texts.map(trimmed)).not.toContain('Spielplan zum Ausfüllen');
   });
 });

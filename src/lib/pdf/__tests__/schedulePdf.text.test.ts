@@ -89,6 +89,7 @@ describe('@DR-014 Kyrillisch und Griechisch: darstellbar, kein Hinweis', () => {
     const schedule = scheduleWithNames([...CYR_GRK, ...HALLENCUP_TEAMS.slice(2).map(t => t.name)]);
     const result = await exportScheduleToPDF(schedule, undefined, {
       translate: translatorFor('de'),
+      tournament: hallencupTournament(),
     });
     expect(result.notes).toEqual([]);
   });
@@ -99,6 +100,7 @@ describe('Nicht darstellbare Zeichen: Hinweis, PDF entsteht trotzdem', () => {
     const schedule = scheduleWithNames(['الأهلي', ...HALLENCUP_TEAMS.slice(1).map(t => t.name)]);
     const result = await exportScheduleToPDF(schedule, undefined, {
       translate: translatorFor('de'),
+      tournament: hallencupTournament(),
     });
     expect(result.notes).toEqual(['Teamname ‚الأهلي‘ enthält Zeichen, die im PDF nicht dargestellt werden können']);
     const captured = await renderSchedulePdf(schedule, undefined, {});
@@ -113,6 +115,7 @@ describe('Nicht darstellbare Zeichen: Hinweis, PDF entsteht trotzdem', () => {
     });
     const result = await exportScheduleToPDF(generateFullSchedule(tournament, 'de'), undefined, {
       translate: translatorFor('de'),
+      tournament: hallencupTournament(),
       hallName: 'Halle Ł\u0301ódź الأهلي',
     });
     expect(result.notes).toEqual([
@@ -125,6 +128,7 @@ describe('Nicht darstellbare Zeichen: Hinweis, PDF entsteht trotzdem', () => {
   it('Gegenbeispiel: darstellbare Namen erzeugen keinen Hinweis', async () => {
     const result = await exportScheduleToPDF(hallencupSchedule(), undefined, {
       translate: translatorFor('de'),
+      tournament: hallencupTournament(),
     });
     expect(result.notes).toEqual([]);
   });

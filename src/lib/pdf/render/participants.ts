@@ -70,13 +70,18 @@ export function renderParticipants(
   });
   teamsByGroup.forEach(teams => teams.sort((a, b) => a.name.localeCompare(b.name)));
 
-  // Nummern laufen durch alle Gruppen (1 bis n), wie bisher
+  // Kennungen A1–B4 je Gruppe (v7.2, Daniel 15.10.); ohne Gruppen laufen die Nummern 1 bis n durch
   const groups = Array.from(teamsByGroup.keys()).sort();
   const onlyOneGroup = groups.length === 1;
   let counter = 1;
   for (const group of groups) {
     const teams = teamsByGroup.get(group) ?? [];
-    const names = teams.map(team => `${counter++}. ${team.name}`).join(' · ');
+    const names = teams
+      .map((team, index) => {
+        const id = group === 'Alle' ? `${counter++}.` : `${group}${index + 1}`;
+        return `${id} ${team.name}`;
+      })
+      .join(' · ');
     yPos = drawRow(doc, names, onlyOneGroup ? undefined : groupTitle(group, schedule, t), geo, yPos);
   }
 

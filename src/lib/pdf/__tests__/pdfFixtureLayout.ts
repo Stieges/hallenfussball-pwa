@@ -4,10 +4,10 @@
  */
 import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
 import type { Team } from '../../../types/tournament';
-import { buildSchedulePdf, type PDFExportOptions } from '../schedulePdf';
+import { buildSchedulePdf } from '../schedulePdf';
 import { hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { readLayout, type LayoutPage } from './pdfjsLayout';
-import { translatorFor } from './pdfText';
+import { translatorFor, type TestPdfOptions } from './pdfText';
 
 /** Zehn Teams in zwei Gruppen à fünf: 20 Gruppenspiele. */
 export const ZEHN_TEAMS: Team[] = [
@@ -33,11 +33,11 @@ export interface PdfLesung {
 }
 
 /** Seiten des fertigen PDFs, so wie `exportScheduleToPDF` sie speichern würde. */
-export async function layoutOf(options: PDFExportOptions = {}, schedule: GeneratedSchedule = hallencupSchedule()): Promise<PdfLesung> {
+export async function layoutOf(options: TestPdfOptions = {}, schedule: GeneratedSchedule = hallencupSchedule()): Promise<PdfLesung> {
   const { doc } = await buildSchedulePdf({
     schedule,
     standings: undefined,
-    options: { locale: 'de', translate: translatorFor('de'), ...options },
+    options: { locale: 'de', translate: translatorFor('de'), tournament: hallencupTournament(), ...options },
   });
   const pages = await readLayout(new Uint8Array(doc.output('arraybuffer')));
   return { pages, width: doc.internal.pageSize.getWidth(), height: doc.internal.pageSize.getHeight() };
@@ -45,7 +45,7 @@ export async function layoutOf(options: PDFExportOptions = {}, schedule: Generat
 
 export interface PdfFixture {
   name: string;
-  options: PDFExportOptions;
+  options: TestPdfOptions;
   schedule: () => GeneratedSchedule;
 }
 

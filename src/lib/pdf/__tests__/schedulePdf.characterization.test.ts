@@ -66,11 +66,11 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     expect(text).toContain('14.11.2026');
     expect(text).toContain('Zeit:');
     expect(text.some(t => /^13:00 - \d{2}:\d{2}$/.test(t))).toBe(true);
-    expect(alles).toContain('Modus: Gruppen + Finals');
+    expect(alles).toContain('Modus: Gruppen + Finale');
     expect(alles).toContain('Spielzeit: 10 Min. · Zeitstrafe 2 Min.');
   });
 
-  it('Teilnehmer: Gruppen A und B, Teams alphabetisch in jeder Gruppe, durchlaufend nummeriert 1–8', async () => {
+  it('Teilnehmer: Gruppen A und B, Teams alphabetisch in jeder Gruppe, Kennungen A1–B4 (v7.2, Daniel 15.10.)', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, SCHEDULE_OPTIONS);
     const text = flatText(pdf);
     const alles = text.join(' ');
@@ -78,14 +78,14 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     expect(text).toContain('Gruppe A');
     expect(text).toContain('Gruppe B');
     const expected = [
-      '1. DJK Berg',
-      '2. FC Nord',
-      '3. SV Süd',
-      '4. TuS Tal',
-      '5. FC Mitte',
-      '6. SC Ost',
-      '7. SV Hof',
-      '8. TSV West',
+      'A1 DJK Berg',
+      'A2 FC Nord',
+      'A3 SV Süd',
+      'A4 TuS Tal',
+      'B1 FC Mitte',
+      'B2 SC Ost',
+      'B3 SV Hof',
+      'B4 TSV West',
     ];
     for (const line of expected) {
       expect(alles).toContain(line);

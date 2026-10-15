@@ -7,7 +7,7 @@
  * ab der zweiten beginnt unter dem Kurzkopf (`render/shortHeader.ts`).
  */
 import type { jsPDF } from 'jspdf';
-import { printColors, printFont, printGap, printPage, printType, printUnit } from '../../design-tokens/print';
+import { printColors, printFont, printGap, printMetrics, printPage, printType, printUnit } from '../../design-tokens/print';
 import { PDF_FONT } from './fonts';
 
 export type PdfFormat = 'a4';
@@ -22,6 +22,8 @@ export interface PageGeometry {
   contentWidth: number;
   /** Oberkante des Satzspiegels, y der ersten Zeile auf Seite 1 eines Abschnitts. */
   top: number;
+  /** Höhe des Kurzkopfs bis zum Inhalt der Folgeseiten (wächst mit einer zweiten Titelzeile). */
+  shortHeadHeight: number;
   /** Unterkante des Satzspiegels (y-Koordinate), oberhalb der Seitenzahl. */
   bottom: number;
   /** Grundlinie der Seitenzahl (y-Koordinate), am unteren Seitenrand. */
@@ -31,7 +33,11 @@ export interface PageGeometry {
   right: number;
 }
 
-export function pageGeometry(format: PdfFormat, orientation: PdfOrientation): PageGeometry {
+/**
+ * Maße einer Seite. `shortTitleLines` ist die Zahl der Titelzeilen des Kurzkopfs (1 oder 2, `shortHeader.ts`); sie
+ * verschiebt den Satzspiegel der Folgeseiten nach unten.
+ */
+export function pageGeometry(format: PdfFormat, orientation: PdfOrientation, shortTitleLines = 1): PageGeometry {
   const size = printPage[format][orientation];
   const margin = printPage.margin;
   return {
@@ -39,6 +45,7 @@ export function pageGeometry(format: PdfFormat, orientation: PdfOrientation): Pa
     height: size.height,
     contentWidth: size.width - margin.left - margin.right,
     top: margin.top,
+    shortHeadHeight: printGap.shortHeadHeight + (shortTitleLines - 1) * printMetrics.shortTitleAdvance,
     bottom: size.height - margin.bottom - printGap.footSpace,
     footerY: size.height - margin.bottom,
     left: margin.left,
@@ -48,7 +55,7 @@ export function pageGeometry(format: PdfFormat, orientation: PdfOrientation): Pa
 
 /** Oberkante des Satzspiegels auf Folgeseiten: unter dem Kurzkopf. */
 export function continuationTop(geo: PageGeometry): number {
-  return geo.top + printGap.shortHeadHeight;
+  return geo.top + geo.shortHeadHeight;
 }
 
 /** Oberlänge einer Zeile über der Grundlinie in mm: Schriftgröße (pt) × Ascent der Schrift. */

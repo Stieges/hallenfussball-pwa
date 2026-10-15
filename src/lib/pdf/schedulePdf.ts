@@ -18,7 +18,7 @@ import { renderGroupStage } from './render/matchTables';
 import { renderFinalsSection } from './render/finalsTables';
 import { renderGroupStandings, renderFinalRanking } from './render/standings';
 import { renderHeader, type HeaderFact } from './render/header';
-import { drawShortHeads } from './render/shortHeader';
+import { drawShortHeads, shortHeadTitleLines } from './render/shortHeader';
 import { renderParticipants } from './render/participants';
 import { koLines, pdfRuleLines, pdfRulesFrom } from './rules';
 import {
@@ -41,10 +41,12 @@ export interface PDFExportOptions {
   /** Ausrichtung des A4-Blatts. Vorgabe: hoch. */
   orientation?: PdfOrientation;
   /**
-   * Turnier für die Regelzeilen im Kopf und die K.-o.-Zeilen (B-28a3-3b). Ohne Turnier entfallen beide; der Aufrufer
-   * (Dialog) übergibt es.
+   * Fassung (B-28a3-3b, @BM-052): `plan` = „Spielplan“ (Vorgabe), `blank` = „Spielplan zum Ausfüllen“. Nur der Wunsch
+   * des Nutzers ergibt `blank`; ohne Ergebnisse allein bleibt es bei `plan`.
    */
-  tournament?: Tournament;
+  edition?: 'plan' | 'blank';
+  /** Turnier für die Regelzeilen im Kopf und die K.-o.-Zeilen (B-28a3-3b, Fixrunde W6). Pflicht. */
+  tournament: Tournament;
 }
 
 /** Ergebnis des Exports: das PDF ist immer erzeugt, `notes` sind sichtbare Hinweise an den Nutzer. */
@@ -59,7 +61,7 @@ export interface SchedulePdfBuild extends SchedulePdfResult {
 export interface SchedulePdfInput {
   schedule: GeneratedSchedule;
   standings: Standing[] | undefined;
-  options?: PDFExportOptions;
+  options: PDFExportOptions;
 }
 
 /** Übersetzer der App: i18next, Namespace `tournament`, Sprache des Dokuments. */
@@ -110,7 +112,7 @@ function headerFacts(schedule: GeneratedSchedule, t: PdfTexts, organizerName: st
 }
 
 /** Baut das Spielplan-PDF, ohne es zu speichern. */
-export async function buildSchedulePdf({ schedule, standings, options = {} }: SchedulePdfInput): Promise<SchedulePdfBuild> {
+export async function buildSchedulePdf({ schedule, standings, options }: SchedulePdfInput): Promise<SchedulePdfBuild> {
   const {
     locale = resolvePdfLocale(i18next.language),
     translate = appTranslator(locale),
@@ -119,14 +121,13 @@ export async function buildSchedulePdf({ schedule, standings, options = {} }: Sc
     organizerName = schedule.tournament.organizer ?? '',
     hallName = getLocationName(schedule.tournament),
     orientation = 'portrait',
+    edition = 'plan',
     tournament,
   } = options;
 
   const t = buildPdfTexts(translate, locale);
   const notes = unrenderableNotes(schedule, t, organizerName, hallName);
-  const geo = pageGeometry('a4', orientation);
-  const shortHead = { title: schedule.tournament.title, subtitle: schedule.tournament.ageClass };
-  const rules = tournament ? pdfRulesFrom(tournament, schedule) : undefined;
+  const rules = pdfRulesFrom(tournament, schedule);
 
   const doc = new jsPDF({
     orientation,
@@ -138,15 +139,22 @@ export async function buildSchedulePdf({ schedule, standings, options = {} }: Sc
   doc.setLanguage(locale);
   doc.setFont(PDF_FONT.family);
 
+  // Kurzkopf vor dem Seitenmaß messen: er bestimmt, wo Folgeseiten unter ihm beginnen
+  const shortHead = {
+    titleLines: shortHeadTitleLines(doc, schedule.tournament.title, pageGeometry('a4', orientation).contentWidth),
+    subtitle: schedule.tournament.ageClass,
+  };
+  const geo = pageGeometry('a4', orientation, shortHead.titleLines.length);
+
   // Seite 1: Kopf mit Regelzeilen, Teilnehmer, Gruppenspiele (Folgeseiten bei Platzmangel)
   let yPos = renderHeader(
     doc,
     {
-      kicker: includeScores ? t.kicker.plan : t.kicker.blank,
+      kicker: edition === 'blank' ? t.kicker.blank : t.kicker.plan,
       title: schedule.tournament.title,
       ageClass: schedule.tournament.ageClass,
       facts: headerFacts(schedule, t, organizerName, hallName),
-      rules: rules ? pdfRuleLines(rules, t) : [],
+      rules: pdfRuleLines(rules, t),
     },
     geo
   );
@@ -185,7 +193,7 @@ export async function buildSchedulePdf({ schedule, standings, options = {} }: Sc
       includeScores,
       geo,
       yPos,
-      rules ? koLines(rules, t) : []
+      koLines(rules, t)
     );
   }
   renderFinalRanking(doc, schedule, standings, t, geo, yPos);
@@ -206,7 +214,7 @@ export function schedulePdfFilename(schedule: GeneratedSchedule): string {
 export async function exportScheduleToPDF(
   schedule: GeneratedSchedule,
   standings: Standing[] | undefined,
-  options: PDFExportOptions = {}
+  options: PDFExportOptions
 ): Promise<SchedulePdfResult> {
   const { doc, notes } = await buildSchedulePdf({ schedule, standings, options });
   doc.save(schedulePdfFilename(schedule));

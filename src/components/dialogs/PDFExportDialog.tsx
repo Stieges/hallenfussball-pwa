@@ -26,8 +26,8 @@ export const PDFExportDialog = ({
 }: PDFExportDialogProps) => {
   const { t } = useTranslation('tournament');
   // Default: Include scores if any match has scores
-  const hasScores = schedule.allMatches.some(m => m.scoreA !== undefined || m.scoreB !== undefined);
-  const [includeScores, setIncludeScores] = useState(hasScores);
+  // Vorgabe „Mit Spielstand“: die Fassung „Spielplan zum Ausfüllen“ wählt der Nutzer ausdrücklich (@BM-052)
+  const [includeScores, setIncludeScores] = useState(true);
   const [includeStandings, setIncludeStandings] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string>('');
@@ -73,6 +73,8 @@ export const PDFExportDialog = ({
       const result = await exportScheduleToPDF(updatedSchedule, includeStandings ? standings : undefined, {
         includeScores,
         includeStandings,
+        // Fassung: „Spielplan zum Ausfüllen“ nur auf ausdrückliche Wahl „Ohne Spielstand“
+        edition: includeScores ? 'plan' : 'blank',
         // Regelzeilen und K.-o.-Zeilen im Kopf kommen aus dem Turnier (B-28a3-3b)
         tournament,
         // Only pass organizerName if it has a value, otherwise let pdfExporter use the fallback

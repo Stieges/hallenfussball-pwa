@@ -10,7 +10,12 @@ import type { Standing } from '../../../types/tournament';
 import type { PdfLocale, PdfTranslator } from '../translations';
 import deTournament from '../../../i18n/locales/de/tournament.json';
 import enTournament from '../../../i18n/locales/en/tournament.json';
+import type { Tournament } from '../../../types/tournament';
+import { hallencupTournament } from './pdfFixture';
 import { lastCapture, resetCapture, type CapturedDoc } from './pdfCapture';
+
+/** Optionen für Testaufrufe: ohne Turnier wird das „Hallencup Nord“ der Fixture genommen (Pflicht im Export). */
+export type TestPdfOptions = Omit<PDFExportOptions, 'tournament'> & { tournament?: Tournament };
 
 export type RenderedPdf = CapturedDoc;
 
@@ -42,10 +47,10 @@ export function translatorFor(locale: PdfLocale): PdfTranslator {
 export async function renderSchedulePdf(
   schedule: GeneratedSchedule,
   standings: Standing[] | undefined,
-  options: PDFExportOptions = {},
+  options: TestPdfOptions = {},
 ): Promise<RenderedPdf> {
   const locale = options.locale ?? 'de';
-  const withTexts: PDFExportOptions = { locale, translate: translatorFor(locale), ...options };
+  const withTexts: PDFExportOptions = { locale, translate: translatorFor(locale), tournament: hallencupTournament(), ...options };
   resetCapture();
   await exportScheduleToPDF(schedule, standings, withTexts);
   const rendered = lastCapture();

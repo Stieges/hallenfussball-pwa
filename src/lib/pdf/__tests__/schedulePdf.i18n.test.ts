@@ -29,7 +29,7 @@ beforeAll(async () => {
 
 async function build(): Promise<Uint8Array> {
   const schedule = generateFullSchedule(hallencupTournament(), 'de');
-  const { doc } = await buildSchedulePdf({ schedule, standings: undefined, options: {} });
+  const { doc } = await buildSchedulePdf({ schedule, standings: undefined, options: { tournament: hallencupTournament() } });
   return new Uint8Array(doc.output('arraybuffer'));
 }
 

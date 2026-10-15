@@ -54,7 +54,7 @@ describe('Adapter pdfRulesFrom (@DR-006)', () => {
 describe('Pflichtzeilen Kopf (@DR-006): Hallencup mit BFV-Regelwerk', () => {
   it('@DR-006 Modus, Platzierung, Spielzeit mit Zeitstrafe, Regelwerk in dieser Reihenfolge', () => {
     expect(pdfRuleLines(rulesOf({}, BFV), de)).toEqual([
-      'Modus: Gruppen + Finals',
+      'Modus: Gruppen + Finale',
       'Platzierung: Punkte – Tordifferenz – Tore – direkter Vergleich',
       'Spielzeit: 10 Min. · Zeitstrafe 2 Min.',
       `Regelwerk: ${BFV}`,
@@ -255,7 +255,7 @@ describe('Englischer Wortlaut (@DR-022)', () => {
   it('@DR-022 EN: Zeilen und Knockout-Zeile in Englisch', () => {
     const rules = rulesOf({ finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' } }, BFV);
     expect(pdfRuleLines(rules, en)).toEqual([
-      'Mode: Groups + finals',
+      'Mode: Groups + Finals',
       'Placement: Points – Goal difference – Goals – head-to-head',
       'Game time: 10 min · Time penalty 2 min',
       `Rulebook: ${BFV}`,

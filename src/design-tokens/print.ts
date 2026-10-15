@@ -148,7 +148,7 @@ export const printGap = {
   compactPad: 1.2,
   /** Kopf Seite 1: Abstand Unterkante Text → Kopflinie (v7.2 .head padding-bottom 2,5 mm plus Unterlänge) */
   headPadBottom: 3.2,
-  /** Kurzkopf (Folgeseiten): Gesamthöhe bis zum Inhalt, Grundlinien von Titel und Untertitel, Linie */
+  /** Kurzkopf (Folgeseiten): Gesamthöhe bis zum Inhalt bei einer Titelzeile, Grundlinien von Titel und Untertitel, Linie */
   shortHeadHeight: 16,
   shortHeadTitleBaseline: 6,
   shortHeadSubBaseline: 11.5,
@@ -198,6 +198,8 @@ export const printMetrics = {
   /** Kopf: Abstand Kicker → Titel (v7.2 margin 0,6 mm), Zeilenabstand umbrochener Titel (26 pt × 1,05) */
   kickerToTitle: 0.6,
   titleAdvance: 9.6,
+  /** Kurzkopf: Zeilenabstand des umbrochenen Titels (16 pt × 1,05, höchstens zwei Zeilen) */
+  shortTitleAdvance: 6,
   /** Kopf: Abstand Titel → Altersklasse in derselben Zeile (v7.2 margin-left 3 mm), sonst Zeilenabstand darunter */
   ageGap: 3,
   ageLineAdvance: 6,
