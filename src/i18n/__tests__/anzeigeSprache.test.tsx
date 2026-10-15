@@ -163,10 +163,10 @@ describe('Monitor-Folien bei Browsersprache en (B-41 Fixrunde 2)', () => {
     expect(screen.queryByText('Next matches')).toBeNull();
   });
 
-  it('(b) Folie „Alle Tabellen“ mit Gruppen zeigt „📊 Gruppe A“', async () => {
+  it('(b) Folie „Alle Tabellen“ mit Gruppen zeigt „Gruppe A“ (B-44b: Linien-Symbol statt Emoji)', async () => {
     await starteMonitor(monitorTurnier(buildTournament(), [slide('all-standings')]));
-    expect(screen.getByText('📊 Gruppe A')).toBeInTheDocument();
-    expect(screen.queryByText('📊 Group A')).toBeNull();
+    expect(screen.getByText('Gruppe A')).toBeInTheDocument();
+    expect(screen.queryByText('Group A')).toBeNull();
   });
 
   it('Soll: Cloud-Timeout-Text bleibt deutsch (monitorDataSource, geloggte Meldung)', async () => {

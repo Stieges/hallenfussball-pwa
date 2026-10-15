@@ -142,9 +142,14 @@ function pagesOf(program: SlideProgram, slide: ProgramSlide): number {
   return Math.max(1, Math.floor(n) || 1);
 }
 
-/** Feldnummer einer Live-Folie; sonst null. Ohne fieldId gilt Feld 1 (wie LiveSlide). */
+/** Live-Folie? (Typ `live` mit Konfiguration) */
+function isLiveSlide(slide: ProgramSlide): boolean {
+  return slide.type === 'live' && 'config' in slide;
+}
+
+/** Feldnummer einer Live-Folie mit eigenem Feld; sonst null. B-44b (F2): ohne eigenes Feld zeigt die Folie alle laufenden Spiele. */
 function liveFieldOf(slide: ProgramSlide): number | null {
-  if (slide.type !== 'live' || !('config' in slide)) { return null; }
+  if (!isLiveSlide(slide) || !('config' in slide) || !slide.config.fieldId) { return null; }
   return fieldIdToNumber(slide.config.fieldId);
 }
 
@@ -152,10 +157,15 @@ function runningOn(matches: readonly RuleMatch[], field: number): RuleMatch | un
   return matches.find(m => m.field === field && isMatchInProgress(m));
 }
 
+/** Laufendes Spiel der Live-Folie: auf ihrem Feld, ohne eigenes Feld auf irgendeinem Feld. */
+function runningFor(slide: ProgramSlide, matches: readonly RuleMatch[]): RuleMatch | undefined {
+  const field = liveFieldOf(slide);
+  return field === null ? matches.find(m => isMatchInProgress(m)) : runningOn(matches, field);
+}
+
 /** @ZM-122: Live-Folie ohne laufendes Spiel auf ihrem Feld wird übersprungen. */
 function isSkipped(slide: ProgramSlide, matches: readonly RuleMatch[]): boolean {
-  const field = liveFieldOf(slide);
-  return field !== null && runningOn(matches, field) === undefined;
+  return isLiveSlide(slide) && runningFor(slide, matches) === undefined;
 }
 
 /** Erste nicht übersprungene Folie ab `from` (zyklisch); null, wenn alle übersprungen sind. */
@@ -171,9 +181,12 @@ function firstVisible(program: SlideProgram, from: number, matches: readonly Rul
 /**
  * @ZM-074/075: Die erste Live-Folie (ab der aktuellen Folie gezählt), deren Feld ein laufendes Spiel hat
  * und die den Takt anhält (`pauseRotationDuringMatch !== false`). Null = kein Pinnen.
+ * B-44b (F2): Die Vorbelegung hält nur bei genau einer Live-Folie; mehrere Live-Folien wechseln auch während
+ * laufender Spiele. Live-Folien ohne eigenes Feld (alle Spiele nebeneinander) halten nie.
  */
 function pinTarget(program: SlideProgram, state: SlideshowState, matches: readonly RuleMatch[]): { index: number; matchId: string } | null {
   const count = program.slides.length;
+  if (program.slides.filter(isLiveSlide).length !== 1) { return null; }
   for (let k = 0; k < count; k++) {
     const i = wrapIndex(state.index + k, count);
     const slide = program.slides[i];

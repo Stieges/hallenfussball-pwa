@@ -30,7 +30,8 @@
       "holdsOnInterruption": "Uhr hält bei Unterbrechung",
       "stopped": "angehalten"
     },
-    "withoutResult": "ohne Ergebnis"
+    "withoutResult": "ohne Ergebnis",
+    "finalScore": "Endstand"
   },
   "timer": {
     "pause": "Pause",
@@ -61,10 +62,11 @@
       "none": "Noch keine Tabellen"
     },
     "schedule": {
-      "title": "📋 Spielplan {{field}}"
+      "title": "Spielplan {{field}}"
     },
     "live": {
       "idleSkip": "Warte auf nächstes Spiel...",
+      "allFields": "Alle Felder",
       "nextMatch": "Nächstes Spiel",
       "noMatch": "Kein Spiel geplant",
       "kickoff": "Anstoß"

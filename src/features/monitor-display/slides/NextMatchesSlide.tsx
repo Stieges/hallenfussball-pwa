@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayMonitor, displaySpacing, monitorThemes } from '../../../design-tokens';
+import { displayList, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { resolveTheme } from '../monitorDisplayHelpers';
@@ -8,6 +8,7 @@ import { scoresPublic } from '../publicVisibility';
 import { nextMatchList, pageOf, pagesFor } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
+import { SlideHeading } from '../components/SlideHeading';
 
 interface NextMatchesSlideProps {
   slide: MonitorSlide;
@@ -29,26 +30,18 @@ export function NextMatchesSlide({ slide, tournament, theme, style, page = 0 }: 
 
   return (
     <div style={style}>
-      <div style={{
-        fontSize: displayFontSizes.headingLG,
-        fontWeight: cssVars.fontWeights.semibold,
-        marginBottom: displaySpacing.sectionMD,
-        color: colors.text,
-      }}>
-        {t('slides.nextMatches.title')}
-      </div>
+      <SlideHeading icon="nextMatches" color={colors.text}>{t('slides.nextMatches.title')}</SlideHeading>
 
       {rows.length === 0 ? (
-        <div style={{ fontSize: displayFontSizes.bodyLG, color: colors.textMuted }}>
+        <div style={{ fontSize: displayList.fontSizes.team, color: colors.textMuted }}>
           {t('slides.nextMatches.none')}
         </div>
       ) : (
         <div style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: displaySpacing.contentMD,
+          gap: displayList.rowGap,
           width: '100%',
-          maxWidth: displayMonitor.size.scheduleMaxWidth,
         }}>
           {rows.map(match => (
             <MonitorMatchRow

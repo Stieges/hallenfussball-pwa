@@ -613,7 +613,28 @@
       "performanceLabel": "Performance",
       "themeLabel": "Farbschema",
       "overscan": "TV-Rand ({{px}}px)",
-      "noMargin": "Kein Rand"
+      "noMargin": "Kein Rand",
+      "transitions": {
+        "fade": "Überblenden",
+        "slide": "Schieben",
+        "none": "Harter Schnitt"
+      },
+      "performance": {
+        "auto": "Automatisch",
+        "autoDesc": "Das Gerät entscheidet, ob Animationen laufen",
+        "high": "Voll",
+        "highDesc": "Alle Animationen, für leistungsstarke Geräte",
+        "low": "Sparsam",
+        "lowDesc": "Weniger Animationen, für ältere Fernseher"
+      },
+      "themes": {
+        "dark": "Dunkel",
+        "darkDesc": "Heller Text auf dunklem Grund",
+        "light": "Hell",
+        "lightDesc": "Dunkler Text auf hellem Grund",
+        "auto": "Automatisch",
+        "autoDesc": "Folgt der Einstellung des Geräts"
+      }
     },
     "slides": {
       "title": "Slides ({{count}})",

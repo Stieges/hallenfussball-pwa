@@ -1,10 +1,11 @@
 import type { CSSProperties } from 'react';
-import { cssVars, displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
+import { monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { calculateStandings } from '../../../utils/calculations';
 import { getGroupDisplayName, resolveTheme } from '../monitorDisplayHelpers';
 import { StandingsTable } from '../components/StandingsTable';
+import { SlideHeading } from '../components/SlideHeading';
 
 interface StandingsSlideProps {
   slide: MonitorSlide;
@@ -26,15 +27,7 @@ export function StandingsSlide({ slide, tournament, theme, style }: StandingsSli
 
   return (
     <div style={style}>
-      {/* Header */}
-      <div style={{
-        fontSize: displayFontSizes.headingLG,
-        fontWeight: cssVars.fontWeights.semibold,
-        marginBottom: displaySpacing.sectionMD,
-        color: themeColors.text,
-      }}>
-        📊 {groupName}
-      </div>
+      <SlideHeading icon="standings" color={themeColors.text}>{groupName}</SlideHeading>
 
       <StandingsTable rows={standings} themeColors={themeColors} />
     </div>

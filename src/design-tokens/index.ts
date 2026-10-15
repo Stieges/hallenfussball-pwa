@@ -132,6 +132,7 @@ export {
   type MonitorThemeColors,
   type MonitorColorPresetKey,
 } from './display';
+export { displayList } from './displayList';
 
 export {
   touchTargets,

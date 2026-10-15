@@ -30,7 +30,8 @@
       "holdsOnInterruption": "Clock stops on interruption",
       "stopped": "stopped"
     },
-    "withoutResult": "without result"
+    "withoutResult": "without result",
+    "finalScore": "Final score"
   },
   "timer": {
     "pause": "Pause",
@@ -61,10 +62,11 @@
       "none": "No tables yet"
     },
     "schedule": {
-      "title": "📋 Schedule {{field}}"
+      "title": "Schedule {{field}}"
     },
     "live": {
       "idleSkip": "Waiting for the next match...",
+      "allFields": "All fields",
       "nextMatch": "Next match",
       "noMatch": "No match scheduled",
       "kickoff": "Kickoff"

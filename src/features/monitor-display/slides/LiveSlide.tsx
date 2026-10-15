@@ -11,6 +11,7 @@ import { scoresPublic } from '../publicVisibility';
 import { toLiveMatch } from '../monitorMatch';
 import { sideLabel, sideTeam } from '../matchSides';
 import { upcomingMatches } from '../slideContent';
+import { MultiFieldLive } from '../components/MultiFieldLive';
 import { formatTime } from '../../../core/generators/scheduleHelpers';
 
 interface LiveSlideProps {
@@ -35,15 +36,26 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
 
   // Gepinntes Spiel (@ZM-075/077), sonst das laufende Spiel auf diesem Feld (Halbzeit zählt mit)
   const pinnedMatch = pinnedMatchId ? matches.find(m => m.id === pinnedMatchId) : undefined;
-  const runningMatch = pinnedMatch ?? matches.find(
-    m => m.field === fieldNumber && isMatchInProgress(m)
-  );
+  // B-44b (F2): ohne eigenes Feld gelten alle laufenden Spiele; mit mehreren stehen sie nebeneinander (bis 4)
+  const allFields = !slide.config.fieldId;
+  const runningAll = allFields ? matches.filter(m => isMatchInProgress(m)).sort((a, b) => a.field - b.field) : [];
+  const runningMatch = pinnedMatch ?? (allFields
+    ? runningAll[0]
+    : matches.find(m => m.field === fieldNumber && isMatchInProgress(m)));
 
   // Nächstes offenes Spiel dieses Feldes, in Anpfiff-Reihenfolge (B-16f2, C-MON-NAECHSTES-UNSORTIERT)
   const nextMatch = !runningMatch
-    ? upcomingMatches(matches, { count: 1, field: fieldNumber })[0]
+    ? upcomingMatches(matches, { count: 1, field: allFields ? undefined : fieldNumber })[0]
     : undefined;
   const labelCtx = { teams, hidePendingOrigin: !scoresPublic(tournament) };
+
+  if (allFields && !pinnedMatch && runningAll.length > 1) {
+    return (
+      <div style={style}>
+        <MultiFieldLive matches={runningAll} teams={teams} tournament={tournament} theme={theme} hideScore={!scoresPublic(tournament)} />
+      </div>
+    );
+  }
 
   // Delegate to LiveMatchDisplay for running matches
   if (runningMatch) {
@@ -72,7 +84,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
         color: themeColors.textSecondary,
         marginBottom: displaySpacing.sectionMD,
       }}>
-        ⚽ {fieldName}
+        {allFields ? t('slides.live.allFields') : fieldName}
       </div>
 
       {whenIdleType === 'skip' ? (

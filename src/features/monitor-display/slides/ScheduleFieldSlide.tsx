@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { displayFontSizes, displaySpacing, monitorThemes, displayMonitor, cssVars } from '../../../design-tokens';
+import { displayList, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
@@ -8,6 +8,7 @@ import { scoresPublic } from '../publicVisibility';
 import { fieldSchedule, pageOf, pagesFor } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
+import { SlideHeading } from '../components/SlideHeading';
 
 interface ScheduleFieldSlideProps {
   slide: MonitorSlide;
@@ -36,23 +37,14 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style, page = 0 }
 
   return (
     <div style={style}>
-      {/* Header */}
-      <div style={{
-        fontSize: displayFontSizes.headingLG,
-        fontWeight: cssVars.fontWeights.semibold,
-        marginBottom: displaySpacing.sectionMD,
-        color: themeColors.text,
-      }}>
-        {t('slides.schedule.title', { field: fieldName })}
-      </div>
+      <SlideHeading icon="schedule" color={themeColors.text}>{t('slides.schedule.title', { field: fieldName })}</SlideHeading>
 
       {/* Match List */}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: displaySpacing.contentMD,
+        gap: displayList.rowGap,
         width: '100%',
-        maxWidth: displayMonitor.size.scheduleMaxWidth,
       }}>
         {rows.map(match => (
           <MonitorMatchRow

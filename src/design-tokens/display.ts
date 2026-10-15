@@ -329,8 +329,6 @@ export const displayMonitor = {
   marker: {
     /** Positions-Punkt unten und Cache-Status-Punkt */
     indicatorSize: '10px',
-    /** Status-Punkt je Spielzeile im Spielplan */
-    scheduleSize: '12px',
     /** Rahmen einer laufenden Spielzeile */
     liveBorderWidth: '2px',
   },
@@ -340,10 +338,6 @@ export const displayMonitor = {
     sponsorLogoMaxWidth: '400px',
     sponsorLogoMaxHeight: '300px',
     textMaxWidth: '800px',
-    standingsMaxWidth: '800px',
-    standingsColumns: '48px 1fr 48px 48px 48px 64px 64px',
-    scheduleMaxWidth: '900px',
-    scheduleMinColumnWidth: '100px',
   },
 } as const;
 

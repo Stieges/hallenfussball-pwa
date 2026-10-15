@@ -613,7 +613,28 @@
       "performanceLabel": "Performance",
       "themeLabel": "Color Scheme",
       "overscan": "TV margin ({{px}}px)",
-      "noMargin": "No margin"
+      "noMargin": "No margin",
+      "transitions": {
+        "fade": "Fade",
+        "slide": "Slide",
+        "none": "Hard cut"
+      },
+      "performance": {
+        "auto": "Automatic",
+        "autoDesc": "The device decides whether animations run",
+        "high": "Full",
+        "highDesc": "All animations, for powerful devices",
+        "low": "Economy",
+        "lowDesc": "Fewer animations, for older TVs"
+      },
+      "themes": {
+        "dark": "Dark",
+        "darkDesc": "Light text on a dark background",
+        "light": "Light",
+        "lightDesc": "Dark text on a light background",
+        "auto": "Automatic",
+        "autoDesc": "Follows the device setting"
+      }
     },
     "slides": {
       "title": "Slides ({{count}})",

@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { cssVars, displayFontSizes, displayMonitor, displaySpacing, monitorThemes } from '../../../design-tokens';
+import { cssVars, displayList, displayMonitor, monitorThemes } from '../../../design-tokens';
 import type { Match, Team, Tournament } from '../../../types/tournament';
 import type { MonitorTheme } from '../../../types/monitor';
 import { formatTime } from '../../../core/generators/scheduleHelpers';
@@ -42,13 +42,14 @@ export function MonitorMatchRow({ match, teams, tournament, theme, hidePendingOr
   const colors = monitorThemes[resolveTheme(theme)];
   const running = showStatus && match.matchStatus === 'running';
   const ctx = { teams, hidePendingOrigin };
+  // B-44b (@ZM-125, @ZM-087): Schrift relativ zur Bildhöhe, Namen umbrechen statt zu kürzen
   const cell: CSSProperties = {
-    fontSize: displayFontSizes.bodyLG,
+    fontSize: displayList.fontSizes.team,
     color: colors.text,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    minWidth: 0,
+    overflowWrap: 'break-word',
   };
+  const score = match.scoreA !== undefined && match.scoreB !== undefined ? `${match.scoreA}:${match.scoreB}` : '-:-';
 
   return (
     <div
@@ -56,9 +57,10 @@ export function MonitorMatchRow({ match, teams, tournament, theme, hidePendingOr
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: displaySpacing.contentLG,
+        gap: displayList.cellGap,
         width: '100%',
-        padding: displaySpacing.contentLG,
+        padding: `${displayList.rowPaddingY} ${displayList.rowPaddingX}`,
+        boxSizing: 'border-box',
         background: running ? colors.surfaceHover : colors.surface,
         borderRadius: displayMonitor.radius.card,
         border: running
@@ -68,28 +70,35 @@ export function MonitorMatchRow({ match, teams, tournament, theme, hidePendingOr
     >
       {showStatus && (
         <div data-testid="monitor-match-status" style={{
-          width: displayMonitor.marker.scheduleSize,
-          height: displayMonitor.marker.scheduleSize,
+          width: displayList.markerSize,
+          height: displayList.markerSize,
           borderRadius: cssVars.borderRadius.full,
           background: statusColor(match, colors),
           flexShrink: 0,
         }} />
       )}
-      <div style={{ ...cell, fontWeight: cssVars.fontWeights.semibold, minWidth: displayMonitor.size.scheduleMinColumnWidth }}>
+      <div style={{ ...cell, fontWeight: cssVars.fontWeights.semibold, flex: `0 0 ${displayList.timeWidth}` }}>
         {kickoffText(match)}
       </div>
-      <div style={{ ...cell, color: colors.textMuted, minWidth: displayMonitor.size.scheduleMinColumnWidth }}>
+      <div style={{ ...cell, color: colors.textMuted, flex: `0 0 ${displayList.fieldWidth}` }}>
         {getFieldDisplayName(match.field, tournament)}
       </div>
-      <div style={{ ...cell, flex: 1, textAlign: 'right' }}>{sideLabel(match, 'A', ctx)}</div>
-      {showScore && (
-        <div style={{ ...cell, textAlign: 'center', fontWeight: cssVars.fontWeights.bold }}>
-          {match.scoreA !== undefined && match.scoreB !== undefined ? `${match.scoreA}:${match.scoreB}` : '-:-'}
-        </div>
-      )}
-      <div style={{ ...cell, flex: 1 }}>{sideLabel(match, 'B', ctx)}</div>
+      <div style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}>{sideLabel(match, 'A', ctx)}</div>
+      <div
+        data-testid="monitor-match-separator"
+        style={{
+          ...cell,
+          flex: `0 0 ${displayList.separatorWidth}`,
+          textAlign: 'center',
+          fontWeight: showScore ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
+          color: showScore ? colors.text : colors.textMuted,
+        }}
+      >
+        {showScore ? score : '–'}
+      </div>
+      <div style={{ ...cell, flex: '1 1 0' }}>{sideLabel(match, 'B', ctx)}</div>
       {match.label && (
-        <div style={{ ...cell, color: colors.textMuted }}>{match.label}</div>
+        <div style={{ ...cell, color: colors.textMuted, flex: '0 1 auto', maxWidth: '25%' }}>{match.label}</div>
       )}
     </div>
   );
