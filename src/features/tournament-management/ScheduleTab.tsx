@@ -11,7 +11,6 @@
  * Refactored: Logic extracted to custom hooks for maintainability
  * - useScheduleHistory: Undo/Redo functionality
  * - useRunningMatches: Live match detection
- * - useCorrectionMode: Correction dialog flow
  * - usePendingChanges: Edit mode state
  * - useScheduleTabActions: Action handlers
  */
@@ -26,7 +25,6 @@ import { MatchUpdate } from '../../core/models/types';
 import {
   useScheduleHistory,
   useRunningMatches,
-  useCorrectionMode,
   usePendingChanges,
   useScheduleTabActions,
   useScheduleFilters,
@@ -39,7 +37,6 @@ import { GeneratedSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { ScheduleEditor } from '../schedule-editor';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
-import { CorrectionDialog } from '../../components/dialogs';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useAppSettings } from '../../hooks/useUserProfile';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -74,8 +71,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const { t } = useTranslation('tournament');
   // App settings for result lock behavior
   const appSettings = useAppSettings();
-  // Permission check for corrections and timer control
-  const { canCorrectResults, hasPermission } = usePermissions(tournament.id);
+  // Permission check for timer control
+  const { hasPermission } = usePermissions(tournament.id);
   const canControlTimer = hasPermission('control_timer');
   // Toast notifications
   const { showWarning, showSuccess } = useToast();
@@ -166,20 +163,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     () => new Set(filteredMatches.map(m => m.id)),
     [filteredMatches]
   );
-
-  // Correction mode state and handlers
-  const {
-    correctionState,
-    showCorrectionDialog,
-    handleStartCorrection,
-    handleCancelCorrection,
-    handleConfirmCorrection,
-  } = useCorrectionMode({
-    tournament,
-    onLocalTournamentUpdate,
-    onMatchesUpdate,
-    canCorrectResults,
-  });
 
   // Running match navigation dialog state
   const [pendingCockpitMatchId, setPendingCockpitMatchId] = useState<string | null>(null);
@@ -374,8 +357,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 onFieldChange={handleFieldChange}
                 onMatchSwap={isEditing ? handleMatchSwap : undefined}
                 finishedMatches={finishedMatchIds}
-                correctionMatchId={correctionState?.matchId ?? null}
-                onStartCorrection={handleStartCorrection}
                 runningMatchIds={runningMatchIds}
                 onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
                 visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
@@ -421,25 +402,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           />
         }
       />
-
-      {/* Correction Dialog */}
-      {correctionState && (() => {
-        const match = tournament.matches.find(m => m.id === correctionState.matchId);
-        if (!match) { return null; }
-
-        return (
-          <CorrectionDialog
-            isOpen={showCorrectionDialog}
-            onClose={handleCancelCorrection}
-            onConfirm={handleConfirmCorrection}
-            matchLabel={t('schedule.matchLabel', { round: match.round })}
-            teamA={slotLabel(match.slotA, slotContext)}
-            teamB={slotLabel(match.slotB, slotContext)}
-            originalScoreA={correctionState.originalScoreA}
-            originalScoreB={correctionState.originalScoreB}
-          />
-        );
-      })()}
 
       {/* Running Match Navigation Dialog */}
       {showRunningMatchDialog && runningMatchInfo && (
