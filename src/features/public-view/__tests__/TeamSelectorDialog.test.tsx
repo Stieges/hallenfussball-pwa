@@ -30,7 +30,7 @@ describe('TeamSelectorDialog (B-13d2)', () => {
 
   it('Klick auf den Hintergrund schließt den Dialog', () => {
     const { onClose } = renderDialog();
-    fireEvent.click(screen.getByTestId('team-selector-dialog'));
+    fireEvent.click(screen.getByTestId('team-selector-backdrop'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

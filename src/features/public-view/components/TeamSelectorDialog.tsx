@@ -6,7 +6,8 @@
  */
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, zIndex } from '../../../design-tokens';
+import { cssVars, dialogWidths } from '../../../design-tokens';
+import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { Button } from '../../../components/ui/Button';
 import type { Team } from '../../../types/tournament';
 
@@ -18,25 +19,8 @@ export interface TeamSelectorDialogProps {
   onClose: () => void;
 }
 
-const teamSelectorStyle: CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0, 0, 0, 0.5)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: cssVars.spacing.md,
-  zIndex: zIndex.navigation,
-};
-
 const teamSelectorContentStyle: CSSProperties = {
-  background: cssVars.colors.background,
-  borderRadius: cssVars.borderRadius.xl,
   padding: cssVars.spacing.lg,
-  maxWidth: '400px',
-  width: '100%',
-  maxHeight: '80vh',
-  overflow: 'auto',
 };
 
 export const TeamSelectorDialog: React.FC<TeamSelectorDialogProps> = ({
@@ -48,12 +32,19 @@ export const TeamSelectorDialog: React.FC<TeamSelectorDialogProps> = ({
   const { t } = useTranslation('publicView');
   const { t: tSport } = useTranslation('sport');
   return (
-  <div style={teamSelectorStyle} onClick={onClose} data-testid="team-selector-dialog">
-    <div style={teamSelectorContentStyle} onClick={(e) => e.stopPropagation()}>
-      <h3 style={{ marginBottom: cssVars.spacing.md, fontSize: cssVars.fontSizes.lg }}>
+  <DialogSurface
+    isOpen
+    onClose={onClose}
+    maxWidth={dialogWidths.sm}
+    labelledBy="team-selector-title"
+    testId="team-selector-dialog"
+    scrimTestId="team-selector-backdrop"
+  >
+    <div style={teamSelectorContentStyle}>
+      <h2 id="team-selector-title" style={{ marginBottom: cssVars.spacing.md, fontSize: cssVars.fontSizes.lg }}>
         {t('teamSelector.title')}
-      </h3>
-      <p style={{ marginBottom: cssVars.spacing.md, color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
+      </h2>
+      <p style={{ marginBottom: cssVars.spacing.md, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
         {t('teamSelector.hint')}
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm }}>
@@ -75,7 +66,7 @@ export const TeamSelectorDialog: React.FC<TeamSelectorDialogProps> = ({
           >
             {team.name}
             {team.group && (
-              <span style={{ marginLeft: 'auto', color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
+              <span style={{ marginLeft: 'auto', fontSize: cssVars.fontSizes.sm }}>
                 {tSport('tournament.groupWithLetter', { letter: team.group })}
               </span>
             )}
@@ -83,6 +74,6 @@ export const TeamSelectorDialog: React.FC<TeamSelectorDialogProps> = ({
         ))}
       </div>
     </div>
-  </div>
+  </DialogSurface>
   );
 };

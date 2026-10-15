@@ -10,8 +10,8 @@
 
 import { useState, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../design-tokens'
-import { useFocusTrap } from '../../hooks';
+import { cssVars, dialogWidths } from '../../design-tokens';
+import { DialogSurface } from '../ui/molecules/DialogSurface';
 import { useToast } from '../ui/Toast';
 import { CorrectionReason, CORRECTION_REASONS } from '../../types/userProfile';
 
@@ -45,12 +45,6 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
   const [reason, setReason] = useState<CorrectionReason>('input_error');
   const [note, setNote] = useState<string>('');
 
-  // WCAG 4.1.3: Focus trap for accessibility
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: onClose,
-  });
-
   if (!isOpen) { return null; }
 
   const handleConfirm = () => {
@@ -66,29 +60,8 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
     onConfirm(scoreA, scoreB, reason, note || undefined);
   };
 
-  const overlayStyle: CSSProperties = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: cssVars.colors.overlayStrong,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.lg,
-  };
-
-  const dialogStyle: CSSProperties = {
-    backgroundColor: cssVars.colors.surfaceElevated,
-    color: cssVars.colors.textPrimary,
-    borderRadius: cssVars.borderRadius.lg,
+  const bodyStyle: CSSProperties = {
     padding: cssVars.spacing.xl,
-    maxWidth: '450px',
-    width: '100%',
-    boxShadow: cssVars.shadows.lg,
-    border: `2px solid ${cssVars.colors.warning}`,
   };
 
   const headerStyle: CSSProperties = {
@@ -204,7 +177,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
     backgroundColor: cssVars.colors.editorDirtyBg,
     borderRadius: cssVars.borderRadius.md,
     fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.warning,
+    color: cssVars.colors.textPrimary,
     marginBottom: cssVars.spacing.lg,
   };
 
@@ -227,27 +200,26 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
   const cancelButtonStyle: CSSProperties = {
     ...buttonBaseStyle,
     backgroundColor: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.textSecondary}`,
     color: cssVars.colors.textSecondary,
   };
 
   const confirmButtonStyle: CSSProperties = {
     ...buttonBaseStyle,
-    backgroundColor: cssVars.colors.warning,
+    backgroundColor: cssVars.colors.warningSolid,
     border: 'none',
     color: cssVars.colors.onWarning,
   };
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div
-        ref={focusTrap.containerRef}
-        style={dialogStyle}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="correction-dialog-title"
-      >
+    <DialogSurface
+      isOpen
+      onClose={onClose}
+      maxWidth={dialogWidths.md}
+      accent={cssVars.colors.warning}
+      labelledBy="correction-dialog-title"
+    >
+      <div style={bodyStyle}>
         <div style={headerStyle}>
           <span style={{ fontSize: cssVars.fontSizes.xxl }} aria-hidden="true">⚠️</span>
           <h2 id="correction-dialog-title" style={titleStyle}>{t('correctionDialog.title')}</h2>
@@ -324,11 +296,17 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
           <button style={cancelButtonStyle} onClick={onClose}>
             {t('correctionDialog.cancel')}
           </button>
-          <button style={confirmButtonStyle} onClick={handleConfirm} data-testid="correction-confirm-button">
+          <button
+            style={confirmButtonStyle}
+            onClick={handleConfirm}
+            data-testid="correction-confirm-button"
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = cssVars.colors.warningHover; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = cssVars.colors.warningSolid; }}
+          >
             {t('correctionDialog.confirm')}
           </button>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 };

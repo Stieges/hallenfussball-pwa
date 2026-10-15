@@ -23,7 +23,8 @@ import { useLoginForm } from '../hooks/useLoginForm';
 import { checkOAuthOnlyUser, getOAuthPasswordResetMessage } from '../utils/authHelpers';
 import { AUTH_ERRORS } from '../constants';
 import { loginStyles as styles } from './LoginScreen.styles';
-import { useFocusTrap } from '../../../hooks/useFocusTrap';
+import { dialogWidths } from '../../../design-tokens';
+import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { LoginResetPasswordDialog, LoginMagicLinkDialog, LoginSuccessDialog } from './LoginDialogs';
 import { OfflineBanner } from './OfflineBanner';
 import { ConnectingIndicator } from './ConnectingIndicator';
@@ -96,14 +97,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [migratedCount, setMigratedCount] = useState(0);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [resetPasswordSent, setResetPasswordSent] = useState(false);
-
-  // Focus trap for main login form
-  const formTrap = useFocusTrap({
-    isActive: !resetPasswordSent && !magicLinkSent && !showSuccess,
-    onEscape: onBack,
-    // Kein Dialog: die Zurück-Taste navigiert hier über die Seite, nicht über den Trap.
-    closeOnBack: false,
-  });
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
@@ -213,10 +206,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && onBack) {
-      onBack();
-    }
+  const handleBackdropClick = () => {
+    onBack?.();
   };
 
   // Reset Password Sent State
@@ -252,14 +243,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   }
 
   return (
-    <div style={styles.backdrop} onClick={handleBackdropClick}>
-      <div
-        ref={formTrap.containerRef}
-        style={styles.card}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="login-title"
-      >
+    <DialogSurface
+      isOpen
+      onClose={onBack}
+      onBackdropClick={handleBackdropClick}
+      // Kein Dialog-Verlauf: die Zurück-Taste navigiert hier über die Seite, nicht über den Dialog.
+      closeOnBack={false}
+      maxWidth={dialogWidths.sm}
+      labelledBy="login-title"
+    >
+      <div style={styles.dialogBody}>
         {/* Header with back and close buttons */}
         <div style={styles.header}>
           {onBack && (
@@ -449,7 +442,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </button>
         </p>
       </div>
-    </div>
+    </DialogSurface>
   );
 };
 

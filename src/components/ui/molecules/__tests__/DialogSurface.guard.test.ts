@@ -13,26 +13,53 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { countDialogMarkers, countScrims } from '../../../../test/dialogGuard';
 
-/** Stand nach B-43b2 (vorher 42 / 29, nach b1 31 / 21; Cockpit: 15 Marker und 13 Scrims entfernt, 2 Scrims des OverflowMenu ausgenommen). Dürfen nur sinken. */
-const OBERGRENZE_MARKER = 16;
-const OBERGRENZE_SCRIMS = 6;
+/**
+ * Stand nach B-43b3 (vorher 42 / 29, nach b1 31 / 21, nach b2 16 / 6): keine eigenen Dialoge
+ * und keine eigenen Abdunkelungen mehr. Was übrig bleibt, steht begründet in AUSNAHMEN.
+ * Die Obergrenzen dürfen nur sinken – neue Dialoge gehören auf DialogSurface.
+ */
+const OBERGRENZE_MARKER = 0;
+const OBERGRENZE_SCRIMS = 0;
 
 type Zaehler = 'marker' | 'scrims';
 
 /**
  * Begründete Ausnahmen: Dateien, die kein Modal sind. Die Ausnahme gilt NUR für den genannten
- * Zähler (B-43b2-F): ein Dialog-Marker (role=dialog, aria-modal, createPortal) im Menü würde
- * weiter gezählt. Jede Ausnahme braucht einen Grund; die Datei muss existieren.
+ * Zähler und nur bis `erlaubt` Treffer (B-43b3): jeder weitere Marker bzw. jede weitere
+ * Abdunkelung in der Datei wird gezählt. Jede Ausnahme braucht einen Grund; die Datei muss existieren.
  */
-const AUSNAHMEN: Record<string, { zaehler: Zaehler; grund: string }> = {
+const AUSNAHMEN: Record<string, { zaehler: Zaehler; erlaubt: number; grund: string }> = {
   'components/live-cockpit/components/OverflowMenu/index.tsx': {
     zaehler: 'scrims',
+    erlaubt: 2,
     grund: 'Aufklappmenü (kein Modal, keine Fokusfalle): fixe Fläche und Klick-Fänger enthalten Overlay-Farbe, sind aber keine Abdunkelung eines Dialogs.',
+  },
+  'features/collaboration/components/SyncFailedList.tsx': {
+    zaehler: 'marker',
+    erlaubt: 1,
+    grund: 'Nicht-modales Popover unter der Sync-Leiste (absolut positioniert, deckende Fläche, ohne Abdunkelung); die Rückfrage darin nutzt ConfirmDialog.',
+  },
+  'components/ui/ColorPicker.tsx': {
+    zaehler: 'marker',
+    erlaubt: 1,
+    grund: 'Auswahl-Popover am Feld (kein Modal, keine Abdunkelung, kein Fokusfang).',
+  },
+  'features/auth/components/SetPasswordScreen.tsx': {
+    zaehler: 'marker',
+    erlaubt: 4,
+    grund: 'Ganzseitige Karte (Passwort setzen, vier Zustände) über die eigene Route, kein Overlay über einer Seite.',
+  },
+  'features/auth/components/AuthConfirmPage.tsx': {
+    zaehler: 'marker',
+    erlaubt: 1,
+    grund: 'Ganzseitige Karte der E-Mail-Bestätigung über die eigene Route, kein Overlay über einer Seite.',
   },
 };
 
-function ausgenommen(file: string, zaehler: Zaehler): boolean {
-  return Object.entries(AUSNAHMEN).some(([rel, a]) => a.zaehler === zaehler && file.endsWith(rel));
+/** Treffer einer Datei, die nach Abzug der erlaubten Ausnahme übrig bleiben. */
+function abzugAusnahme(file: string, zaehler: Zaehler, n: number): number {
+  const a = Object.entries(AUSNAHMEN).find(([rel, x]) => x.zaehler === zaehler && file.endsWith(rel))?.[1];
+  return a ? Math.max(0, n - a.erlaubt) : n;
 }
 
 const SRC = resolve(process.cwd(), 'src');
@@ -56,8 +83,7 @@ function zaehle(zaehler: Zaehler, fn: (source: string) => number): { summe: numb
   const treffer: string[] = [];
   for (const file of produktivDateien(SRC)) {
     if (file.endsWith('DialogSurface.tsx')) {continue;}
-    if (ausgenommen(file, zaehler)) {continue;}
-    const n = fn(readFileSync(file, 'utf8'));
+    const n = abzugAusnahme(file, zaehler, fn(readFileSync(file, 'utf8')));
     if (n > 0) {
       summe += n;
       treffer.push(`${file} (${n})`);
@@ -84,10 +110,15 @@ describe('@OB-055 Wächter – Ausnahmeliste', () => {
     expect(a.grund.length).toBeGreaterThan(30);
   });
 
-  it('Gegenbeispiel: das Menü ist nur vom Abdunkelungs-Zähler ausgenommen, nie vom Marker-Zähler', () => {
+  it('Gegenbeispiel: eine Ausnahme gilt nur für ihren Zähler und nur bis zur erlaubten Zahl', () => {
     const menu = join(SRC, 'components/live-cockpit/components/OverflowMenu/index.tsx');
-    expect(ausgenommen(menu, 'scrims')).toBe(true);
-    expect(ausgenommen(menu, 'marker')).toBe(false);
+    expect(abzugAusnahme(menu, 'scrims', 2)).toBe(0);
+    expect(abzugAusnahme(menu, 'scrims', 3)).toBe(1);
+    expect(abzugAusnahme(menu, 'marker', 1)).toBe(1);
+    const popover = join(SRC, 'features/collaboration/components/SyncFailedList.tsx');
+    expect(abzugAusnahme(popover, 'marker', 1)).toBe(0);
+    expect(abzugAusnahme(popover, 'marker', 2)).toBe(1);
+    expect(abzugAusnahme(popover, 'scrims', 1)).toBe(1);
     // Ein Dialog-Marker im Menü würde gezählt (Mutation: role="dialog" aria-modal="true" im Menü).
     expect(countDialogMarkers(`${readFileSync(menu, 'utf8')}\n<div role="dialog" aria-modal="true" />`)).toBeGreaterThan(
       countDialogMarkers(readFileSync(menu, 'utf8')),
@@ -97,6 +128,13 @@ describe('@OB-055 Wächter – Ausnahmeliste', () => {
   it('Gegenbeispiel: ohne die Ausnahme würde das Menü als Abdunkelung gezählt', () => {
     const menu = readFileSync(join(SRC, 'components/live-cockpit/components/OverflowMenu/index.tsx'), 'utf8');
     expect(countScrims(menu)).toBeGreaterThan(0);
+  });
+
+  it('Die erlaubten Marker der Ausnahmedateien stimmen mit dem Stand überein (nicht mehr, nicht weniger)', () => {
+    for (const [rel, a] of Object.entries(AUSNAHMEN)) {
+      const n = (a.zaehler === 'marker' ? countDialogMarkers : countScrims)(readFileSync(join(SRC, rel), 'utf8'));
+      expect(n, rel).toBe(a.erlaubt);
+    }
   });
 });
 
@@ -181,6 +219,16 @@ describe('T1 Dialogbreiten kommen nur aus dialogWidths', () => {
     'components/match-cockpit/EditScoreDialog.tsx',
     'components/match-cockpit/EditTimeDialog.tsx',
     'components/match-cockpit/PenaltyShootoutDialog.tsx',
+    // B-43b3: Anmeldung, Spielbericht, Zuschauer, Schedule-Editor
+    'features/auth/components/LoginDialogs.tsx',
+    'features/auth/components/LoginScreen.tsx',
+    'features/auth/components/RegisterDialogs.tsx',
+    'features/auth/components/RegisterScreen.tsx',
+    'features/auth/components/MergeAccountDialog.tsx',
+    'components/schedule/MatchSummary/index.tsx',
+    'components/dialogs/CorrectionDialog.tsx',
+    'features/public-view/components/TeamSelectorDialog.tsx',
+    'features/schedule-editor/components/ConflictDialog.tsx',
   ];
   /** JSX-Prop `maxWidth="480px"` und Stilwert `maxWidth: '400px'`; Dialogbreiten liegen bei 350 px und mehr (Eingabefelder mit 100–140 px und Vorschaubilder mit 300 px sind keine). */
   const BREITEN_LITERAL = /maxWidth\s*[=:]\s*\{?\s*['"]?(?:3[5-9]|[4-9]\d)\d(px)?['"]?/;

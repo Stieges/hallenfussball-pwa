@@ -6,8 +6,8 @@
  * die Knopffläche. Halbdurchsichtige Flächen und Schrift werden vorher über den
  * deckenden Untergrund gemischt (Helfer `over`). Hell und dunkel.
  *
- * Die Zeile „Ergebnis korrigieren“ (CorrectionDialog) ist eine eigene Dialog-
- * Komponente und wird in B-43b umgestellt (it.todo unten).
+ * Die Zeile „Ergebnis korrigieren“ (CorrectionDialog) steht seit B-43b3 ebenfalls auf
+ * DialogSurface und läuft in dieser Tabelle mit.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -15,6 +15,8 @@ import { ConsentDialog } from '../ConsentDialog';
 import { Dialog } from '../Dialog';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { BottomSheet } from '../../ui/BottomSheet';
+import { CorrectionDialog } from '../CorrectionDialog';
+import { ToastProvider } from '../../ui/Toast';
 import {
   contrastRatio,
   over,
@@ -82,6 +84,24 @@ const KINDS: Array<{ name: string; mount: () => void }> = [
       ),
   },
   {
+    name: '„Ergebnis korrigieren“ (CorrectionDialog)',
+    mount: () =>
+      render(
+        <ToastProvider>
+          <CorrectionDialog
+            isOpen
+            onClose={vi.fn()}
+            onConfirm={vi.fn()}
+            matchLabel="Spiel 4"
+            teamA="FC Nord"
+            teamB="SV Süd"
+            originalScoreA={2}
+            originalScoreB={1}
+          />
+        </ToastProvider>,
+      ),
+  },
+  {
     name: 'ein allgemeiner Dialog (Dialog.tsx)',
     mount: () =>
       render(
@@ -136,8 +156,6 @@ function borderTokenOf(el: HTMLElement): string | null {
 }
 
 describe('@OB-055 Beispieltabelle – je Dialog-Art', () => {
-  it.todo('@OB-055 „Ergebnis korrigieren“ (CorrectionDialog) – Umstellung auf DialogSurface in B-43b');
-
   it.each(THEMES.flatMap((theme) => KINDS.map((kind) => [theme, kind.name, kind.mount] as const)))(
     '%s – %s: deckende Fläche, jeder Text und jedes Bedienelement kontrastreich',
     (theme, _name, mount) => {
