@@ -318,7 +318,24 @@
       "monitorsCount_other": "{{count}} Monitore",
       "slidesCount_one": "{{count}} Folie",
       "slidesCount_other": "{{count}} Folien",
-      "summary": "{{monitors}} mit {{slides}}"
+      "summary": "{{monitors}} mit {{slides}}",
+      "renamed": "Der übernommene Monitor heißt jetzt ‚{{name}}‘",
+      "customQrFromFile": "Eigener Link aus der Datei nicht übernommen – die QR-Folie zeigt auf die Zuschauer-Seite",
+      "customQrInvalid": "Eigener Link mit ungültiger Adresse nicht übernommen (nur http oder https) – die QR-Folie zeigt auf die Zuschauer-Seite",
+      "issues": {
+        "title": "Folien mit fehlendem Feld oder fehlender Gruppe",
+        "fieldMissing": "Folie ‚{{slide}}‘ – dieses Turnier hat kein {{field}}",
+        "groupMissing": "Folie ‚{{slide}}‘ – dieses Turnier hat keine {{group}}",
+        "slideLive": "Live: {{ref}}",
+        "slideSchedule": "Spielplan: {{ref}}",
+        "slideTable": "Tabelle: {{ref}}",
+        "fieldName": "Feld {{number}}",
+        "groupName": "Gruppe {{letter}}",
+        "reassignField": "Auf Feld 1 umstellen",
+        "allGroups": "Alle Tabellen zeigen",
+        "removeSlide": "Folie entfernen",
+        "keepHint": "Wählst du nichts, bleibt die Folie erhalten und ist im Monitor-Editor markiert."
+      }
     }
   },
   "sponsor": {
@@ -602,7 +619,9 @@
       "edit": "Bearbeiten",
       "remove": "Entfernen",
       "addSlide": "Slide hinzufügen",
-      "qrHidden": "Ohne öffentliches Turnier wird diese Folie übersprungen"
+      "qrHidden": "Ohne öffentliches Turnier wird diese Folie übersprungen",
+      "referenceField": "Feld fehlt in diesem Turnier – bitte anpassen",
+      "referenceGroup": "Gruppe fehlt in diesem Turnier – bitte anpassen"
     }
   },
   "colorScheme": {

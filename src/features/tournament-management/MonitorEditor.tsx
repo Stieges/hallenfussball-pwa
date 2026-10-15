@@ -28,6 +28,8 @@ import { SLIDE_TYPES } from '../../types/monitor';
 import { useMonitors, useSponsors, useFields } from '../../hooks';
 import { SlideConfigEditor } from './components/SlideConfigEditor';
 import { SlidePreview } from './components/SlidePreview';
+import { SlideReferenceWarning } from './components/SlideReferenceWarning';
+import { tournamentSlotTargets } from '../../core/services/monitorConfigTransferChecks';
 
 // =============================================================================
 // TYPES
@@ -174,6 +176,9 @@ export function MonitorEditor({
       customName: t('monitorEditor.groupLabel', { letter: String.fromCharCode(65 + i) }),
     }));
   }, [tournament.groups, tournament.numberOfGroups, tournament.groupSystem, t]);
+
+  // Felder und Gruppen des Turniers für den Warnhinweis an Folien (B-22b, @ME-061)
+  const slotTargets = useMemo(() => tournamentSlotTargets(tournament), [tournament]);
 
   // Ohne öffentliches Turnier mit Share-Code entfällt die Zuschauer-QR-Folie im Monitor (@ZM-071, F-04)
   const zuschauerQrMoeglich = tournament.isPublic === true && Boolean(tournament.shareCode);
@@ -763,6 +768,7 @@ export function MonitorEditor({
                         </button>
                       </div>
                     </div>
+                    <SlideReferenceWarning slide={slide} targets={slotTargets} />
 
                     {/* Slide Preview + Config (wenn bearbeitet) */}
                     {isEditing && (

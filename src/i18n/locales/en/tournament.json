@@ -318,7 +318,24 @@
       "monitorsCount_other": "{{count}} monitors",
       "slidesCount_one": "{{count}} slide",
       "slidesCount_other": "{{count}} slides",
-      "summary": "{{monitors}} with {{slides}}"
+      "summary": "{{monitors}} with {{slides}}",
+      "renamed": "The imported monitor is now called ‘{{name}}’",
+      "customQrFromFile": "Custom link from the file was not taken over – the QR slide points to the spectator page",
+      "customQrInvalid": "Custom link with an invalid address was not taken over (only http or https) – the QR slide points to the spectator page",
+      "issues": {
+        "title": "Slides with a missing field or group",
+        "fieldMissing": "Slide ‘{{slide}}’ – this tournament has no {{field}}",
+        "groupMissing": "Slide ‘{{slide}}’ – this tournament has no {{group}}",
+        "slideLive": "Live: {{ref}}",
+        "slideSchedule": "Schedule: {{ref}}",
+        "slideTable": "Standings: {{ref}}",
+        "fieldName": "Field {{number}}",
+        "groupName": "Group {{letter}}",
+        "reassignField": "Move to field 1",
+        "allGroups": "Show all standings",
+        "removeSlide": "Remove slide",
+        "keepHint": "If you choose nothing, the slide stays and is marked in the monitor editor."
+      }
     }
   },
   "sponsor": {
@@ -602,7 +619,9 @@
       "edit": "Edit",
       "remove": "Remove",
       "addSlide": "Add slide",
-      "qrHidden": "Without a public tournament this slide is skipped"
+      "qrHidden": "Without a public tournament this slide is skipped",
+      "referenceField": "Field is missing in this tournament – please adjust",
+      "referenceGroup": "Group is missing in this tournament – please adjust"
     }
   },
   "colorScheme": {

@@ -1,7 +1,6 @@
 /**
- * Monitor-Konfiguration exportieren, prüfen und übernehmen (B-22, H1.4). Rein, kein React.
- * Die Datei enthält keine Teams, Spiele, Ergebnisse, IDs oder Monitor-Links; Sponsor-Folien
- * werden über den Namen zugeordnet. Import = nicht vertrauenswürdig (Größe, Art, Version, Schema).
+ * Monitor-Konfiguration exportieren, prüfen und übernehmen (B-22, B-22b). Rein, kein React.
+ * Keine Teams, Spiele, Ergebnisse oder IDs; Sponsor per Name. Eigener QR-Link: monitorConfigTransferChecks.ts.
  * @see docs/anforderungen/2026-10-03_monitor-einrichten.md (@ME-039 bis @ME-046, @ME-058)
  */
 
@@ -35,8 +34,8 @@ const transferSlideConfigSchema = z.object({
   // Nur Name, keine Sponsor-ID: fremde IDs haben im Zielturnier keine Bedeutung
   sponsorName: z.string().trim().min(1).max(100).optional(),
   showQrCode: z.boolean().optional(),
-  // 'custom' ist bewusst nicht erlaubt: fremde Ziel-URLs werden nicht übernommen
-  qrTarget: z.enum(['tournament', 'sponsor-website']).optional(),
+  qrTarget: z.enum(['tournament', 'sponsor-website', 'custom']).optional(),
+  customQrUrl: z.string().max(2048).optional(),
   headline: z.string().max(100).optional(),
   body: z.string().max(500).optional(),
   textAlign: z.enum(['left', 'center', 'right']).optional(),
@@ -120,7 +119,7 @@ function exportSlideConfig(config: SlideConfig, sponsorName: string | undefined)
     groupId: config.groupId, fieldId: config.fieldId, whenIdle: copyOf(config.whenIdle),
     pauseRotationDuringMatch: config.pauseRotationDuringMatch, matchCount: config.matchCount,
     numberOfPlayers: config.numberOfPlayers, sponsorName, showQrCode: config.showQrCode,
-    qrTarget: config.qrTarget === 'custom' ? undefined : config.qrTarget,
+    qrTarget: config.qrTarget, customQrUrl: config.qrTarget === 'custom' ? config.customQrUrl : undefined,
     headline: config.headline, body: config.body, textAlign: config.textAlign,
     colorScheme: config.colorScheme, liveColorScheme: copyOf(config.liveColorScheme),
   };
@@ -218,6 +217,8 @@ export interface InstantiateMonitorConfigResult {
   monitors: TournamentMonitor[];
   /** Namen der Sponsoren, die im Zielturnier fehlen (Folien übersprungen, @ME-041) */
   skippedSponsors: string[];
+  /** Umbenannte Monitore, z. B. „Halle“ → „Halle (2)“ (@ME-062) */
+  renamed: { from: string; to: string }[];
 }
 
 function uniqueName(base: string, taken: Set<string>): string {
@@ -237,7 +238,7 @@ function toSlideConfig(config: TransferSlideConfig, sponsorId: string | undefine
     groupId: config.groupId, fieldId: config.fieldId, whenIdle: copyOf(config.whenIdle),
     pauseRotationDuringMatch: config.pauseRotationDuringMatch, matchCount: config.matchCount,
     numberOfPlayers: config.numberOfPlayers, sponsorId, showQrCode: config.showQrCode,
-    qrTarget: config.qrTarget, headline: config.headline, body: config.body,
+    qrTarget: config.qrTarget, customQrUrl: config.customQrUrl, headline: config.headline, body: config.body,
     textAlign: config.textAlign, colorScheme: config.colorScheme, liveColorScheme: copyOf(config.liveColorScheme),
   };
 }
@@ -252,11 +253,10 @@ export function instantiateMonitorConfig(
 ): InstantiateMonitorConfigResult {
   const taken = new Set(options.existingNames.map(name => name.toLowerCase()));
   const skippedSponsors: string[] = [];
-
+  const renamed: { from: string; to: string }[] = [];
   const monitors = payload.monitors.map((entry): TournamentMonitor => {
     const id = options.generateId('mon');
     const slides: MonitorSlide[] = [];
-
     for (const slide of entry.slides) {
       let sponsorId: string | undefined;
       if (slide.type === 'sponsor') {
@@ -277,10 +277,12 @@ export function instantiateMonitorConfig(
       });
     }
 
+    const name = uniqueName(entry.name, taken);
+    if (name !== entry.name) {renamed.push({ from: entry.name, to: name});}
     return {
       ...DEFAULT_MONITOR,
       id,
-      name: uniqueName(entry.name, taken),
+      name,
       defaultSlideDuration: entry.defaultSlideDuration,
       transition: entry.transition,
       transitionDuration: entry.transitionDuration,
@@ -293,5 +295,5 @@ export function instantiateMonitorConfig(
     };
   });
 
-  return { monitors, skippedSponsors };
+  return { monitors, skippedSponsors, renamed };
 }

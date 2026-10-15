@@ -8,7 +8,6 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
 import { cssVars } from '../../design-tokens';
 import {
   actionsStyle,
@@ -27,16 +26,13 @@ import type { Tournament } from '../../types/tournament';
 import type { TournamentMonitor } from '../../types/monitor';
 import { useTournaments } from '../../hooks/useTournaments';
 import {
-  exportMonitorConfig,
-  HALLEN_STANDARD,
-  importMonitorConfig,
-  instantiateMonitorConfig,
-  MONITOR_CONFIG_MAX_BYTES,
+  exportMonitorConfig, HALLEN_STANDARD, importMonitorConfig, instantiateMonitorConfig, MONITOR_CONFIG_MAX_BYTES,
 } from '../../core/services/monitorConfigTransfer';
-import type {
-  MonitorConfigImportError,
-  MonitorConfigPayload,
-} from '../../core/services/monitorConfigTransfer';
+import type { MonitorConfigPayload } from '../../core/services/monitorConfigTransfer';
+import { importErrorMessage, newId } from './components/monitorTransferHelpers';
+import { applySlideFixes, findReferenceIssues, sanitizeCustomQr, tournamentSlotTargets } from '../../core/services/monitorConfigTransferChecks';
+import type { CustomQrSkipped, ReferenceIssue, SlideFix } from '../../core/services/monitorConfigTransferChecks';
+import { MonitorTransferIssues, MonitorTransferResultNotes } from './components/MonitorTransferNotes';
 
 // =============================================================================
 // TYPES & HELPERS
@@ -50,6 +46,14 @@ type TransferChoice =
 interface TransferResult {
   count: number;
   skippedSponsors: string[];
+  renamed: { from: string; to: string }[];
+  customQrSkipped: CustomQrSkipped;
+}
+
+/** Entscheidungen je Folie gelten nur für die Auswahl, zu der sie getroffen wurden */
+interface FixState {
+  choice: TransferChoice;
+  fixes: Record<string, SlideFix>;
 }
 
 export interface MonitorTransferSheetProps {
@@ -57,30 +61,6 @@ export interface MonitorTransferSheetProps {
   onClose: () => void;
   /** Speichert die neuen Monitore (ändert keine bestehenden Monitore) */
   onApply: (monitors: TournamentMonitor[]) => Promise<void>;
-}
-
-/** Größenlimit als Anzeigetext, aus der Konstante erzeugt (z. B. „256 KB“) */
-const SIZE_LIMIT_LABEL = `${MONITOR_CONFIG_MAX_BYTES / 1024} KB`;
-
-function importErrorMessage(t: TFunction<'tournament'>, error: MonitorConfigImportError): string {
-  switch (error) {
-    case 'too-large':
-      return t('monitors.transfer.errors.tooLarge', { limit: SIZE_LIMIT_LABEL });
-    case 'not-monitor-config':
-      return t('monitors.transfer.errors.notMonitorConfig');
-    case 'unsupported-version':
-      return t('monitors.transfer.errors.unsupportedVersion');
-    case 'invalid':
-      return t('monitors.transfer.errors.invalid');
-  }
-}
-
-function newId(prefix: 'mon' | 'slide'): string {
-  try {
-    return `${prefix}-${crypto.randomUUID()}`;
-  } catch {
-    return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-  }
 }
 
 // =============================================================================
@@ -96,6 +76,7 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
   const [error, setError] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
   const [result, setResult] = useState<TransferResult | null>(null);
+  const [fixState, setFixState] = useState<FixState | null>(null);
 
   // Quellen: andere aktive Turniere mit Monitoren (@ME-043: nur die eigenen, die die Liste liefert)
   const sources = useMemo(
@@ -103,7 +84,7 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
     [activeTournaments, tournament.id]
   );
 
-  const payload = useMemo<MonitorConfigPayload | null>(() => {
+  const rawPayload = useMemo<MonitorConfigPayload | null>(() => {
     if (!choice) {return null;}
     if (choice.kind === 'template') {
       // Der Monitorname ist in der Vorlage ein Schlüssel; die UI setzt den übersetzten Namen
@@ -117,8 +98,29 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
     return source ? exportMonitorConfig(source.monitors ?? [], source.sponsors ?? []) : null;
   }, [choice, sources, t]);
 
+  // Eigener QR-Link: aus Datei verworfen, aus Turnier nur mit http/https (@ME-063)
+  const prepared = useMemo(() => {
+    if (!choice || !rawPayload) {return null;}
+    return sanitizeCustomQr(rawPayload, choice.kind === 'file' ? 'file' : 'tournament');
+  }, [choice, rawPayload]);
+  const payload = prepared?.payload ?? null;
+  const currentFixes = fixState?.choice === choice ? fixState.fixes : {};
+
+  // Folien mit Feld/Gruppe, die dieses Turnier nicht hat (@ME-061)
+  const issues = useMemo<ReferenceIssue[]>(
+    () => (payload ? findReferenceIssues(payload, tournamentSlotTargets(tournament)) : []),
+    [payload, tournament]
+  );
+
   const slideCount = payload?.monitors.reduce((sum, m) => sum + m.slides.length, 0) ?? 0;
   const monitorCount = payload?.monitors.length ?? 0;
+
+  const handleFix = (key: string, fix: SlideFix | null) => {
+    if (!choice) {return;}
+    const next: Record<string, SlideFix> = Object.fromEntries(Object.entries(currentFixes).filter(([k]) => k !== key));
+    if (fix) {next[key] = fix;}
+    setFixState({ choice, fixes: next });
+  };
 
   const handleFile = async (file: File | undefined) => {
     setError(null);
@@ -157,14 +159,15 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
     setIsApplying(true);
     setError(null);
     try {
-      const { monitors, skippedSponsors } = instantiateMonitorConfig(payload, {
+      const resolved = applySlideFixes(payload, currentFixes);
+      const { monitors, skippedSponsors, renamed } = instantiateMonitorConfig(resolved, {
         sponsors: tournament.sponsors ?? [],
         existingNames: (tournament.monitors ?? []).map(m => m.name),
         generateId: newId,
         now: new Date().toISOString(),
       });
       await onApply(monitors);
-      setResult({ count: monitors.length, skippedSponsors });
+      setResult({ count: monitors.length, skippedSponsors, renamed, customQrSkipped: prepared?.skipped ?? { fromFile: 0, invalidUrl: 0 } });
     } catch {
       setError(t('monitors.transfer.errors.saveFailed'));
     } finally {
@@ -180,11 +183,11 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
             <p data-testid="transfer-done" style={{ margin: 0, color: cssVars.colors.textPrimary }}>
               {t('monitors.transfer.done', { count: result.count })}
             </p>
-            {result.skippedSponsors.map((name, index) => (
-              <p key={`${name}-${index}`} data-testid="transfer-skipped-sponsor" role="status" style={mutedStyle}>
-                {t('monitors.transfer.skippedSponsor', { name })}
-              </p>
-            ))}
+            <MonitorTransferResultNotes
+              renamed={result.renamed}
+              customQrSkipped={result.customQrSkipped}
+              skippedSponsors={result.skippedSponsors}
+            />
             <p style={mutedStyle}>{t('monitors.transfer.noScreenChange')}</p>
             <div style={actionsStyle}>
               <Button variant="primary" onClick={onClose} data-testid="transfer-close">
@@ -269,6 +272,7 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
                 })}
               </p>
             )}
+            <MonitorTransferIssues issues={issues} fixes={currentFixes} onFix={handleFix} />
             {error && <p role="alert" style={alertStyle}>{error}</p>}
 
             <div style={actionsStyle}>

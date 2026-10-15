@@ -86,14 +86,14 @@ describe('exportMonitorConfig', () => {
     expect(payload.monitors[0].slides.map(s => s.type)).toEqual(['live', 'standings']);
   });
 
-  it('übernimmt eigene Ziel-URLs nicht (qrTarget custom wird nicht exportiert)', () => {
+  it('exportiert den eigenen QR-Link (qrTarget custom + customQrUrl, @ME-063)', () => {
     const payload = exportMonitorConfig(
-      [monitor({ slides: [slide({ type: 'qr-code', config: { qrTarget: 'custom', customQrUrl: 'https://evil.example' } })] })],
+      [monitor({ slides: [slide({ type: 'qr-code', config: { qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' } })] })],
       []
     );
     const config = payload.monitors[0].slides[0].config;
-    expect(config.qrTarget).toBeUndefined();
-    expect(JSON.stringify(payload)).not.toContain('evil.example');
+    expect(config.qrTarget).toBe('custom');
+    expect(config.customQrUrl).toBe('https://sv-nord.de');
   });
 });
 
@@ -140,10 +140,15 @@ describe('importMonitorConfig', () => {
     ['Dauer außerhalb der Grenze', { monitors: [{ ...monitorJson(), defaultSlideDuration: 0 }] }],
     ['Sponsor-Folie ohne Sponsornamen', { monitors: [monitorJsonWith([{ type: 'sponsor', config: {}, duration: null }])] }],
     ['unbekannter Folientyp', { monitors: [monitorJsonWith([{ type: 'evil', config: {}, duration: null }])] }],
-    ['eigene Ziel-URL als qrTarget custom', { monitors: [monitorJsonWith([{ type: 'qr-code', config: { qrTarget: 'custom' }, duration: null }])] }],
   ])('lehnt kaputte Inhalte ab (%s)', (_label, body) => {
     const text = JSON.stringify({ kind: 'monitor-config', version: 1, ...body });
     expect(importMonitorConfig(text)).toEqual({ ok: false, error: 'invalid' });
+  });
+
+  it('nimmt einen eigenen QR-Link aus der Datei an (wird beim Übernehmen verworfen, @ME-063)', () => {
+    const body = { monitors: [monitorJsonWith([{ type: 'qr-code', config: { qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' }, duration: null }])] };
+    const result = importMonitorConfig(JSON.stringify({ kind: 'monitor-config', version: 1, ...body }));
+    expect(result.ok).toBe(true);
   });
 
   it('verwirft fremde Felder wie Teams oder Monitor-Links', () => {
