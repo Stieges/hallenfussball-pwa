@@ -19,6 +19,8 @@ export interface PdfSideContext {
   originOnly?: boolean;
   /** Herkunft aus der Turnierstruktur (`originStructure.ts`); nötig für besetzte Finalplätze bei `originOnly`/`hidePendingOrigin`. */
   structure?: StructuralOrigin;
+  /** Gruppe des Teams mit diesem Namen: ein besetzter Platz zählt nur, wenn sie zur Gruppen-Herkunft passt. */
+  groupOf?: (name: string) => string | undefined;
   /** Texte des Dokuments: ohne sie bleibt die Anzeige, wie der Generator sie liefert. */
   t?: PdfTexts;
   /** Ist `name` der Name eines Teams des Plans? Dann ist der Platz besetzt. */
@@ -30,7 +32,9 @@ export interface PdfSideContext {
 /** Besetzter Finalplatz bei `originOnly` oder `hidePendingOrigin`: Herkunft aus der Struktur, nie der Teamname. */
 function occupiedFinalLabel(shown: string, key: string | undefined, ctx: PdfSideContext, t: PdfTexts): string {
   const group = key !== undefined && isGroupOrigin(key);
-  const known = key !== undefined && (group || originLabel(key, t) !== key);
+  // Gruppen-Herkunft nur, wenn das besetzte Team in der genannten Gruppe spielt; sonst ist die Zuordnung geraten
+  const fits = !group || ctx.groupOf?.(shown)?.toLowerCase() === key.split('-')[1]?.toLowerCase();
+  const known = key !== undefined && fits && (group || originLabel(key, t) !== key);
   if (!known || (ctx.hidePendingOrigin === true && group)) {
     return t.origin.undecided;
   }

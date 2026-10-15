@@ -140,6 +140,43 @@ describe('@DR-005 @BM-052 Pflichtfall: Tom um 15:07, Spiel 11 steht 2:1, Halbfin
     expect(texte).not.toContain('FC Nord');
   });
 
+  it('K1-R: Turnier mit 3 Gruppen bei unverändertem Plan – keine geratene Herkunft, „noch offen“', async () => {
+    const { pages, nummer } = await seiten('blank', {}, hallencupTournament({ numberOfGroups: 3 }));
+    const texte = textsIn(zeileVon(pages, nummer)).map(t => t.str.trim());
+
+    expect(texte).toContain('noch offen');
+    expect(texte.filter(t => t.includes('Gruppe A'))).toEqual([]);
+    expect(texte).not.toContain('FC Nord');
+  });
+
+  it('K1-R: Runde stimmt nicht überein (Halbfinale gegen Viertelfinale) – „noch offen“', async () => {
+    const { schedule, nummer } = halbfinaleBesetzt();
+    const hf = finalsMatches(schedule).find(m => m.matchNumber === nummer);
+    if (hf) {hf.phase = 'quarterfinal';}
+    const { doc } = await buildSchedulePdf({
+      schedule, standings: HALLENCUP_STANDINGS,
+      options: { locale: 'de', translate: translatorFor('de'), tournament: hallencupTournament(), edition: 'blank', now: TOM },
+    });
+    const texte = textsIn(zeileVon(await readLayout(new Uint8Array(doc.output('arraybuffer'))), nummer)).map(t => t.str.trim());
+
+    expect(texte).toContain('noch offen');
+    expect(texte).not.toContain('Zweiter Gruppe A');
+  });
+
+  it('K1-R: das besetzte Team spielt nicht in der Gruppe der Herkunft – „noch offen“', async () => {
+    const { schedule, nummer } = halbfinaleBesetzt();
+    const hf = finalsMatches(schedule).find(m => m.matchNumber === nummer);
+    if (hf) {hf.homeTeam = 'TSV West';}
+    const { doc } = await buildSchedulePdf({
+      schedule, standings: HALLENCUP_STANDINGS,
+      options: { locale: 'de', translate: translatorFor('de'), tournament: hallencupTournament(), edition: 'blank', now: TOM },
+    });
+    const texte = textsIn(zeileVon(await readLayout(new Uint8Array(doc.output('arraybuffer'))), nummer)).map(t => t.str.trim());
+
+    expect(texte).toContain('noch offen');
+    expect(texte).not.toContain('Zweiter Gruppe A');
+  });
+
   it('Gegenbeispiel: in der Fassung „Spielplan“ steht das besetzte Team „FC Nord“ im Halbfinale 1', async () => {
     const { pages, nummer } = await seiten('plan');
 
