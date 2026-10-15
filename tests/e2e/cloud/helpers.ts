@@ -6,7 +6,7 @@
  * E-Mails/Passwort/Rollen) — keine Werte hier verstreut nochmal literal.
  */
 
-import type { Page } from '@playwright/test';
+import type { Browser, BrowserContext, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 import { E2E_USERS, E2E_TEST_PASSWORD, type E2EUserKey } from './testData';
 import { getLocalSupabaseStatus } from '../../../scripts/lib/localSupabaseStatus';
@@ -341,4 +341,120 @@ export function getLocalServiceRoleClient(): LocalServiceRoleClient {
     headers: { apikey: status.serviceRoleKey, Authorization: `Bearer ${status.serviceRoleKey}` },
   };
   return cachedServiceRoleClient;
+}
+
+// =============================================================================
+// A-07d3: ABMELDEN, ANDERE GERÄTE ABMELDEN, KONTO-TRENNUNG
+// =============================================================================
+
+/** Frischer Browser-Kontext OHNE gespeicherte Anmeldung (ein „Gerät“), mit Einwilligung gesetzt. */
+export async function newFreshContext(browser: Browser): Promise<{ context: BrowserContext; page: Page }> {
+  const context = await browser.newContext();
+  await context.addInitScript(() => {
+    window.localStorage.setItem('app:consent', JSON.stringify({ errorTracking: true, sessionReplay: false, timestamp: Date.now(), version: 1 }));
+  });
+  return { context, page: await context.newPage() };
+}
+
+/** Zugangsschlüssel der Sitzung dieses Geräts (`sb-*-auth-token` im localStorage) oder null. */
+export async function readSessionAccessToken(page: Page): Promise<string | null> {
+  return page.evaluate(() => {
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key?.startsWith('sb-') && key.endsWith('-auth-token')) {
+        const parsed = JSON.parse(window.localStorage.getItem(key) ?? 'null') as { access_token?: unknown } | null;
+        return typeof parsed?.access_token === 'string' ? parsed.access_token : null;
+      }
+    }
+    return null;
+  });
+}
+
+/** HTTP-Status von `GET /auth/v1/user` mit diesem Zugangsschlüssel: 200 = Sitzung gilt, 403 = Sitzung beendet. */
+export async function fetchAuthUserStatus(accessToken: string): Promise<number> {
+  const { url, anonKey } = getLocalServiceRoleClient();
+  const res = await fetch(`${url}/auth/v1/user`, { headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}` } });
+  return res.status;
+}
+
+/**
+ * Abmelden über die Oberfläche, wenn Einträge warten: die Abmelde-Warnung erscheint (mit der
+ * erwarteten Anzahl im Titel) und wird bestätigt. Danach ist das Gerät abgemeldet.
+ */
+export async function logoutViaUiConfirmingWarning(page: Page, waitingCount: number): Promise<void> {
+  await page.locator('[data-testid="auth-avatar-button"]').click();
+  await page.locator('[data-testid="auth-logout-button"]').click();
+  const dialog = page.locator('[data-testid="logout-warning-dialog"]');
+  await expect(dialog).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole('dialog')).toContainText(String(waitingCount));
+  await page.locator('[data-testid="logout-warning-confirm"]').click();
+  // Auf der Cockpit-Seite zeigt das Gerät danach „Turnier nicht gefunden“ ohne Kopfzeile (kein
+  // Konto-Inhalt mehr), deshalb ist die gelöschte Sitzung das Merkmal, nicht ein Anmelde-Knopf.
+  await expect(dialog).toHaveCount(0, { timeout: 10000 });
+  await expect.poll(() => readSessionAccessToken(page), { timeout: 10000 }).toBeNull();
+  await expect(page.locator('[data-testid="auth-avatar-button"]')).toHaveCount(0);
+}
+
+/** Profil öffnen und „Auf allen anderen Geräten abmelden“ bestätigen; wartet auf die Erfolgsmeldung. */
+export async function logoutOtherDevicesViaUi(page: Page): Promise<void> {
+  await page.goto('/#/profile');
+  await page.locator('[data-testid="logout-others"]').click();
+  await page.locator('[data-testid="confirm-dialog-confirm"]').click();
+  await expect(page.getByText('Die anderen Geräte werden abgemeldet', { exact: false })).toBeVisible({ timeout: 10000 });
+}
+
+/**
+ * Legt im Gastmodus ein lokales Turnier an (IndexedDB `hallenfussball/cache`, Schlüssel
+ * `tournaments`, wie die Offline-Suite) und lädt neu. Die Seite muss vorher einmal geladen sein
+ * (die Datenbank entsteht beim Start). Rückgabe: die Turnier-ID.
+ */
+export async function seedGuestTournament(page: Page, title: string): Promise<string> {
+  const id = await page.evaluate(async (tournamentTitle) => {
+    // Entwurf mit den Standardwerten der App selbst (Vite-Dev-Server liefert die Quelle aus).
+    const modulePath = '/src/core/services/TournamentCreationService.ts';
+    const { TournamentCreationService } = (await import(/* @vite-ignore */ modulePath)) as {
+      TournamentCreationService: new (repository: object) => {
+        createDraft: (data: object) => { id: string };
+      };
+    };
+    const draft = new TournamentCreationService({}).createDraft({
+      title: tournamentTitle,
+      ageClass: 'U13',
+      date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      timeSlot: '09:00 - 16:00',
+      startTime: '09:00',
+      location: { name: 'Gast-Halle' },
+      numberOfTeams: 2,
+      teams: [
+        { id: 'guest-team-1', name: 'Gast Team 1' },
+        { id: 'guest-team-2', name: 'Gast Team 2' },
+      ],
+    });
+    const stored = { ...(JSON.parse(JSON.stringify(draft)) as object), ownerId: 'guest' };
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('hallenfussball', 1);
+      request.onerror = () => reject(new Error('IndexedDB nicht zu öffnen'));
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction('cache', 'readwrite');
+        transaction.objectStore('cache').put({ key: 'tournaments', value: [stored] });
+        transaction.oncomplete = () => { db.close(); resolve(); };
+        transaction.onerror = () => { db.close(); reject(new Error('Schreiben in IndexedDB fehlgeschlagen')); };
+      };
+    });
+    return draft.id;
+  }, title);
+  await page.reload();
+  await page.waitForLoadState('networkidle');
+  return id;
+}
+
+/** Anzahl Turniere in der Datenbank mit diesem Titel (Service-Rolle) -- Beleg „nicht hochgeladen“. */
+export async function countTournamentsByTitle(title: string): Promise<number> {
+  const { url, headers } = getLocalServiceRoleClient();
+  const res = await fetch(`${url}/rest/v1/tournaments?title=eq.${encodeURIComponent(title)}&select=id`, { headers });
+  if (!res.ok) {
+    throw new Error(`countTournamentsByTitle(${title}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+  }
+  return ((await res.json()) as unknown[]).length;
 }

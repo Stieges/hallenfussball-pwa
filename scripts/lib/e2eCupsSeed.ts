@@ -9,7 +9,10 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  E2E_ABMELDEN_CUPS,
   E2E_ENGINE_CUPS,
+  type EngineCupSlug,
+  type EngineCupSpec,
   E2E_LEGACY_CUPS,
   E2E_TURNIERTAG_CUP_ID,
   E2E_TURNIERTAG_CUP_TITLE,
@@ -165,6 +168,36 @@ async function addHelper(admin: SupabaseClient, tournamentId: string, helperId: 
   }
 }
 
+async function seedOneEngineCup(
+  deps: EngineSeedDeps,
+  ownerRepo: ITournamentRepository,
+  service: TournamentCreationService,
+  cup: EngineCupSpec,
+  helperId: string | null
+): Promise<void> {
+  const ids = engineCupIds(cup.slug as EngineCupSlug);
+  const tournament = buildSingleMatchCup(service, ids, cup.title);
+  tournament.matches[0].id = ids.matchId;
+  await ownerRepo.save(tournament);
+  if (cup.helper) {
+    if (!helperId) {
+      throw new Error(`Engine-Cup ${cup.slug} braucht einen Helfer, aber keiner wurde übergeben.`);
+    }
+    await addHelper(deps.admin, ids.tournamentId, helperId);
+  }
+  await seedEngineMatch(deps, {
+    slug: cup.slug,
+    matchId: ids.matchId,
+    homeTeamId: ids.homeTeamId,
+    awayTeamId: ids.awayTeamId,
+    form: cup.form,
+    specs: cup.events,
+    idFor: (key) => engineEventId(cup.slug as EngineCupSlug, key),
+    startOffsetMs: ENGINE_START_OFFSET_MS,
+    expected: cup.expected,
+  });
+}
+
 export async function seedEngineCups(
   deps: EngineSeedDeps,
   ownerRepo: ITournamentRepository,
@@ -173,24 +206,22 @@ export async function seedEngineCups(
 ): Promise<void> {
   deps.log(`Lege ${E2E_ENGINE_CUPS.length} Engine-Cups an…`);
   for (const cup of E2E_ENGINE_CUPS) {
-    const ids = engineCupIds(cup.slug);
-    const tournament = buildSingleMatchCup(service, ids, cup.title);
-    tournament.matches[0].id = ids.matchId;
-    await ownerRepo.save(tournament);
-    if (cup.helper) {
-      await addHelper(deps.admin, ids.tournamentId, helperId);
-    }
-    await seedEngineMatch(deps, {
-      slug: cup.slug,
-      matchId: ids.matchId,
-      homeTeamId: ids.homeTeamId,
-      awayTeamId: ids.awayTeamId,
-      form: cup.form,
-      specs: cup.events,
-      idFor: (key) => engineEventId(cup.slug, key),
-      startOffsetMs: ENGINE_START_OFFSET_MS,
-      expected: cup.expected,
-    });
+    await seedOneEngineCup(deps, ownerRepo, service, cup, helperId);
+  }
+}
+
+/**
+ * A-07d3: Engine-Cups des Kontos `abmelden` (nicht `owner`). `deps.ownerClient` und `ownerRepo`
+ * gehören zu diesem Konto -- die RPC `append_match_events` prüft den Eigentümer.
+ */
+export async function seedAbmeldenCups(
+  deps: EngineSeedDeps,
+  ownerRepo: ITournamentRepository,
+  service: TournamentCreationService
+): Promise<void> {
+  deps.log(`Lege ${E2E_ABMELDEN_CUPS.length} Abmelde-Cups an…`);
+  for (const cup of E2E_ABMELDEN_CUPS) {
+    await seedOneEngineCup(deps, ownerRepo, service, cup, null);
   }
 }
 

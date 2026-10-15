@@ -136,7 +136,16 @@ export const E2E_ENGINE_CUPS = [
   },
 ] as const satisfies readonly EngineCupSpec[];
 
-export type EngineCupSlug = (typeof E2E_ENGINE_CUPS)[number]['slug'];
+/**
+ * A-07d3: je ein laufendes Engine-Spiel für die drei Fälle von `abmelden-geraete.cloud.spec.ts`.
+ * Eigentümer ist das Konto `abmelden` (nicht `owner`), siehe `testData.ts`. `scripts/e2e-seed.ts`
+ * legt sie mit dessen Anmeldung an; `E2E_ENGINE_CUPS` (Eigentümer `owner`) bleibt unverändert.
+ */
+export const E2E_ABMELDEN_CUP_SLUGS = ['ABMELDEN1', 'ABMELDEN2', 'ABMELDEN3'] as const;
+export type AbmeldenCupSlug = (typeof E2E_ABMELDEN_CUP_SLUGS)[number];
+export const E2E_ABMELDEN_CUPS: readonly EngineCupSpec[] = E2E_ABMELDEN_CUP_SLUGS.map((slug) => runningCup(slug, false));
+
+export type EngineCupSlug = (typeof E2E_ENGINE_CUPS)[number]['slug'] | AbmeldenCupSlug;
 
 export interface EngineCupIds {
   tournamentId: string;
@@ -163,7 +172,7 @@ export function engineEventId(slug: EngineCupSlug, key: string): string {
 }
 
 export function getEngineCup(slug: EngineCupSlug): EngineCupSpec {
-  const cup = E2E_ENGINE_CUPS.find((candidate) => candidate.slug === slug);
+  const cup = [...E2E_ENGINE_CUPS, ...E2E_ABMELDEN_CUPS].find((candidate) => candidate.slug === slug);
   if (!cup) {
     throw new Error(`Engine-Cup ${slug} ist nicht definiert.`);
   }

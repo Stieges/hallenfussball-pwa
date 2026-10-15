@@ -74,6 +74,8 @@ import {
   E2E_PUBLIC_CUP_TEAM_NAMES,
   E2E_LIVE_CUP_COLLABORATORS,
   E2E_ENGINE_CUPS,
+  E2E_ABMELDEN_CUPS,
+  type EngineCupSlug,
   E2E_TURNIERTAG_CUP_ID,
   E2E_LEGACY_CUPS,
   engineCupIds,
@@ -97,6 +99,7 @@ import type { EngineSeedDeps } from './lib/engineSeedDb';
 import {
   buildScheduledTournament,
   seedEngineCups,
+  seedAbmeldenCups,
   seedLegacyCups,
   seedRunningEngineMatch,
   seedTurniertagCup,
@@ -348,6 +351,7 @@ async function main(): Promise<void> {
     E2E_RELEASE_CUP_ID,
     E2E_TURNIERTAG_CUP_ID,
     ...E2E_ENGINE_CUPS.map((cup) => engineCupIds(cup.slug).tournamentId),
+    ...E2E_ABMELDEN_CUPS.map((cup) => engineCupIds(cup.slug as EngineCupSlug).tournamentId),
     ...E2E_LEGACY_CUPS.map((cup) => legacyCupIds(cup.slug).tournamentId),
   ];
   const { error: deleteTournamentsError } = await admin.from('tournaments').delete().in('id', allTournamentIds);
@@ -791,6 +795,10 @@ async function main(): Promise<void> {
 
   await seedEngineCups(engineDeps, ownerRepo, service, userIds.helper);
   await seedLegacyCups(engineDeps, ownerRepo, service, userIds.helper);
+  // A-07d3: Cups des eigenen Kontos `abmelden` (eigene Anmeldung für Eigentümer-Prüfung der RPC).
+  const abmeldenRepo = new SeedRepository(admin, userIds.abmelden);
+  const abmeldenDeps: EngineSeedDeps = { ...engineDeps, ownerClient: asTypedUserClient(userIds.abmelden) };
+  await seedAbmeldenCups(abmeldenDeps, abmeldenRepo, new TournamentCreationService(abmeldenRepo));
   await seedTurniertagCup(engineDeps, ownerRepo, service);
   await seedZweitesTurnier(engineDeps, ownerRepo, service);
 

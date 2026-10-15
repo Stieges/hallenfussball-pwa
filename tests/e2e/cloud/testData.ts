@@ -46,7 +46,8 @@ export type E2EUserKey =
   | 'stranger'
   | 'google'
   | 'logouttest'
-  | 'logouttestMobile';
+  | 'logouttestMobile'
+  | 'abmelden';
 
 export interface E2EUserSpec {
   key: E2EUserKey;
@@ -87,6 +88,12 @@ export const E2E_USERS: Record<E2EUserKey, E2EUserSpec> = {
   // Logout-Test selbst prüft genau das UI-Verhalten von signOut(), also die einzige Prüfung, bei
   // der das tatsächlich etwas kaputt machen könnte.
   logouttestMobile: { key: 'logouttestMobile', email: 'logouttest-mobile@test.local', displayName: 'Mona Logouttest' },
+  // A-07d3: EIGENES Konto für `abmelden-geraete.cloud.spec.ts`. „Auf allen anderen Geräten abmelden"
+  // (`scope: 'others'`) beendet jede andere Sitzung des Kontos, auch die gespeicherte aus
+  // `playwright/.auth/` -- deshalb teilt sich dieses Konto kein anderer Spec. Es besitzt nur die
+  // Abmelde-Cups (`E2E_ABMELDEN_CUPS` in `engineCups.ts`). Kein storageState, der Spec meldet sich
+  // selbst über die Oberfläche an.
+  abmelden: { key: 'abmelden', email: 'abmelden@test.local', displayName: 'Anja Abmelden' },
 };
 
 /** Adressen für offene/abgelaufene/widerrufene Einladungen OHNE eigenes Konto. */
