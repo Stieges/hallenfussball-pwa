@@ -8,7 +8,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { cssVars, displayFontSizes, displayLayout, getScoreTextColor } from '../../design-tokens';
+import { cssVars, displayFontSizes, getScoreTextColor } from '../../design-tokens';
 
 export interface ScoreBlockProps {
   /** Score number to display */
@@ -59,7 +59,7 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: displayLayout.scoreArea.blockWidth,
+    width: '100%', // die Zelle im Raster bestimmt die Breite (displayLayout.scoreArea.blockWidth)
     minHeight: config.minHeight,
     height: '100%',
     backgroundColor,

@@ -70,3 +70,29 @@ describe('@ZM-137 Uhr-Art × Zeitpunkte (Tabelle)', () => {
     expect(d.phase).toBe('normal');
   });
 });
+
+describe('M1 Abschnitte, Verlängerung, Schlussphase-Länge (@SL-069, @SL-136, @SL-081, @ZM-139)', () => {
+  it('@SL-069: in der letzten Minute des ersten Abschnitts (2 Abschnitte) gibt es keine Hervorhebung', () => {
+    const d = getClockDisplay({ gespielt: 300, abschnittSekunden: 360, uhrArt: 'durchlaufend-letzte-minute-angehalten', angehalten: true, abschnitt: 1, abschnitteGesamt: 2 });
+    expect(d.phase).toBe('normal');
+    expect(d.hervorhebung).toBe(false);
+    expect(d.hinweisUhrHaelt).toBe(false);
+  });
+
+  it('@SL-069 Gegenbeispiel: im letzten Abschnitt zählt dieselbe Minute', () => {
+    const d = getClockDisplay({ gespielt: 300, abschnittSekunden: 360, uhrArt: 'durchlaufend-letzte-minute-angehalten', angehalten: false, abschnitt: 2, abschnitteGesamt: 2 });
+    expect(d.phase).toBe('schlussphaseAngehalten');
+  });
+
+  it('@SL-136: Schlussphase 2 Minuten, Abschnitt 6 Minuten: 3:59 kein Hinweis, 4:00 Hervorhebung', () => {
+    const vor = getClockDisplay({ gespielt: 239, abschnittSekunden: 360, uhrArt: 'durchlaufend-letzte-minute-angehalten', angehalten: false, schlussphaseSekunden: 120, abschnitt: 2, abschnitteGesamt: 2 });
+    const ab = getClockDisplay({ gespielt: 240, abschnittSekunden: 360, uhrArt: 'durchlaufend-letzte-minute-angehalten', angehalten: false, schlussphaseSekunden: 120, abschnitt: 2, abschnitteGesamt: 2 });
+    expect(vor.hinweisUhrHaelt).toBe(false);
+    expect(ab.hervorhebung).toBe(true);
+  });
+
+  it('Verlängerung: die letzte Minute der Verlängerung ist die Schlussphase', () => {
+    const d = getClockDisplay({ gespielt: 300, abschnittSekunden: 360, uhrArt: 'durchlaufend-letzte-minute-angehalten', angehalten: false, verlaengerung: true, abschnitt: 1, abschnitteGesamt: 2 });
+    expect(d.phase).toBe('schlussphaseAngehalten');
+  });
+});

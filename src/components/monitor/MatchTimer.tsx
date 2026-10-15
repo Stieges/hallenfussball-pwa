@@ -9,7 +9,7 @@
 
 import { CSSProperties, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, criticalPhaseColors } from '../../design-tokens';
+import { cssVars, displayFontSizes } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
 import { MatchStatus } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
@@ -59,11 +59,11 @@ function calculateRealTimeElapsed(
   return (timerElapsedSeconds ?? 0) + runtimeSeconds;
 }
 
-const sizeStyles: Record<string, { time: string; progress: string; gap: string; hint: string }> = {
-  sm: { time: '18px', progress: '6px', gap: '6px', hint: '12px' },
-  md: { time: '28px', progress: '8px', gap: '10px', hint: '14px' },
-  lg: { time: '42px', progress: '12px', gap: '14px', hint: '18px' },
-  xl: { time: 'clamp(48px, 5vw, 72px)', progress: '16px', gap: '20px', hint: 'clamp(16px, 1.6vw, 22px)' },
+const sizeStyles: Record<string, { time: string; progress: string; gap: string }> = {
+  sm: { time: '18px', progress: '6px', gap: '6px' },
+  md: { time: '28px', progress: '8px', gap: '10px' },
+  lg: { time: '42px', progress: '12px', gap: '14px' },
+  xl: { time: displayFontSizes.clockXL, progress: '16px', gap: '20px' },
 };
 
 export const MatchTimer: React.FC<MatchTimerProps> = ({
@@ -119,8 +119,9 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     display: 'flex',
     alignItems: 'baseline',
     gap: size === 'xl' ? '12px' : '8px',
+    // M2: neutrale Hervorhebung (Umkehrung der Textfarbe), keine Buntfarbe
     ...(highlight && {
-      backgroundColor: criticalPhaseColors.critical,
+      backgroundColor: themeColors.text,
       padding: `${size === 'xl' ? '8px' : '4px'} ${size === 'xl' ? '24px' : '12px'}`,
       borderRadius: '999px',
     }),
@@ -130,15 +131,17 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     fontSize: currentSize.time,
     fontWeight: cssVars.fontWeights.bold,
     fontFamily: cssVars.fontFamilies.heading,
-    color: highlight ? criticalPhaseColors.criticalText : abgelaufen ? themeColors.timerOvertime : themeColors.timerNormal,
+    // M3: abgelaufen ist neutral, der Text trägt die Aussage
+    color: highlight ? themeColors.background : themeColors.timerNormal,
     textShadow: highlight ? 'none' : themeColors.textShadowLight,
     letterSpacing: '0.02em',
   };
 
+  // H1: Hinweise stehen direkt auf dem Monitor-Hintergrund, Text in der Textfarbe (Kontrast ≥ 4,5 : 1)
   const hintStyle: CSSProperties = {
-    fontSize: currentSize.hint,
+    fontSize: displayFontSizes.bodySM,
     fontWeight: cssVars.fontWeights.bold,
-    color: highlight ? criticalPhaseColors.criticalText : themeColors.textSecondary,
+    color: themeColors.text,
     textAlign: 'center',
   };
 
@@ -156,7 +159,7 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     height: '100%',
     width: `${progressPercent}%`,
     background: highlight
-      ? criticalPhaseColors.critical
+      ? themeColors.text
       : `linear-gradient(90deg, ${themeColors.progressBar} 0%, ${themeColors.liveBadgeText} 100%)`,
     borderRadius: currentSize.progress,
     transition: 'width 1s linear',
@@ -176,7 +179,8 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
           </div>
         )}
 
-        {abgelaufen && (
+        {/* H2: der Text nur ohne Abpfiff (nicht FINISHED) */}
+        {abgelaufen && status !== 'FINISHED' && (
           <div style={hintStyle}>{t('liveMatch.clock.ended')}</div>
         )}
         {!abgelaufen && clock.hinweisUhrHaelt && (
@@ -186,7 +190,7 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
           <div style={hintStyle}>{t('liveMatch.clock.stopped')}</div>
         )}
         {status === 'PAUSED' && !clock.angehalten && (
-          <div style={hintStyle}>Pause</div>
+          <div style={hintStyle}>{t('timer.pause')}</div>
         )}
       </div>
     </>

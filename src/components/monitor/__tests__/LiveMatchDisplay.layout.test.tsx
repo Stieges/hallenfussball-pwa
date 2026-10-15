@@ -96,3 +96,20 @@ describe('@ZM-140 Kasten-Rahmen und Gruppen-Text', () => {
     expect(de.liveMatch.group).toBe('Gruppe {{group}}');
   });
 });
+
+describe('H3 @ZM-125 Breiten: Kästen etwa 33 % Bildbreite, Namensspalte wie vorher', () => {
+  it('Raster: zwei gleiche Spalten ohne Trennbreite, Kasten füllt 66 % seiner Spalte (= 33 % Bildbreite)', () => {
+    render(<LiveMatchDisplay match={createMatch()} />);
+    expect(screen.getByTestId('live-grid').style.gridTemplateColumns).toMatch(/minmax\(0,\s?1fr\)\s0%\sminmax\(0,\s?1fr\)/);
+    expect(screen.getByTestId('live-block-home').style.width).toBe('66%');
+    expect(screen.getByTestId('live-block-away').style.width).toBe('66%');
+    // 66 % einer halben Spalte (50 % Bildbreite) ergeben 33 % der Bildbreite
+    expect(0.66 * 0.5).toBeCloseTo(0.33, 2);
+  });
+
+  it('Namensspalte: 92 % der Spalte (= 46 % Bildbreite, wie vor dem Umbau)', () => {
+    render(<LiveMatchDisplay match={createMatch()} />);
+    expect(screen.getByTestId('live-name-home').style.width).toBe('92%');
+    expect(screen.getByTestId('live-name-away').style.width).toBe('92%');
+  });
+});

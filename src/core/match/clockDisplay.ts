@@ -1,7 +1,7 @@
 /**
- * Restzeit und Uhr-Hervorhebung (@ZM-139, @ZM-137, @SL-003).
+ * Restzeit und Uhr-Hervorhebung (@ZM-139, @ZM-137, @SL-003, @SL-069, @SL-136).
  * Eine reine Funktion für Monitor, Zuschauer-Seite und (später) Cockpit.
- * Gespielte Zeit = Spielzeit im Abschnitt. Die Uhr zählt herunter.
+ * Gespielte Zeit = Spielzeit im aktuellen Abschnitt. Die Uhr zählt herunter.
  */
 
 /** Uhr-Art je Turnier (Vorbelegung: durchlaufend, letzte Minute angehalten). */
@@ -23,8 +23,14 @@ export interface ClockDisplayInput {
   uhrArt?: ClockMode;
   /** Spiel ist unterbrochen (Pause) */
   angehalten: boolean;
-  /** Länge der Schlussphase, Vorgabe SCHLUSSPHASE_SEKUNDEN */
+  /** Länge der Schlussphase, Vorgabe SCHLUSSPHASE_SEKUNDEN (@SL-136) */
   schlussphaseSekunden?: number;
+  /** Aktueller Abschnitt, 1-basiert; fehlt er, gilt der einzige Abschnitt als letzter (@SL-069) */
+  abschnitt?: number;
+  /** Anzahl der Abschnitte des Spiels */
+  abschnitteGesamt?: number;
+  /** Spielzeit läuft in der Verlängerung; deren letzte Minute zählt als Schlussphase (@SL-081) */
+  verlaengerung?: boolean;
 }
 
 export interface ClockDisplay {
@@ -50,7 +56,14 @@ export function getClockDisplay(input: ClockDisplayInput): ClockDisplay {
     return { restSekunden: 0, phase: 'abgelaufen', hervorhebung: false, hinweisUhrHaelt: false, angehalten: false };
   }
 
-  const inSchlussphase = uhrArt === 'durchlaufend-letzte-minute-angehalten' && restSekunden <= schlussphase;
+  // Schlussphase nur im letzten Abschnitt oder in der Verlängerung (@SL-069, @SL-081)
+  const letzterAbschnitt = input.verlaengerung === true
+    || input.abschnitt === undefined
+    || input.abschnitteGesamt === undefined
+    || input.abschnitt >= input.abschnitteGesamt;
+  const inSchlussphase = uhrArt === 'durchlaufend-letzte-minute-angehalten'
+    && letzterAbschnitt
+    && restSekunden <= schlussphase;
   const phase: ClockPhase = inSchlussphase ? 'schlussphaseAngehalten' : 'normal';
   const hinweisUhrHaelt = inSchlussphase || uhrArt === 'immer-angehalten';
   const angehalten = input.angehalten && hinweisUhrHaelt;

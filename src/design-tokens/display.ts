@@ -41,6 +41,8 @@ export const displayFontSizes = {
   bodySM: '16px',        // Kleine Infos, Labels
 
   // Team Names (Stadium-Grade)
+  // @ZM-125: Uhr deutlich größer als die Teamnamen (mindestens 1,5 ×)
+  clockXL: 'clamp(72px, 7.5vw, 120px)',
   teamName: 'clamp(48px, 5vw, 72px)',   // Team-Name unter Score-Block
 
   // Meta/Badge
@@ -196,13 +198,15 @@ export const displayLayout = {
     teamNames: '12%',
     timer: '17%',
     footer: '8%',
-    blockWidth: '35%',
-    blockGap: '10%',
+    // H3 @ZM-125: Kasten = 66 % einer halben Spalte (zwei Spalten, je 50 % Bildbreite) = 33 % Bildbreite
+    blockWidth: '66%',
+    blockGap: '0%',
     // B-17 Fixrunde: Teamnamen bekommen eine breitere Box, damit 50 Zeichen auf zwei Zeilen passen (@ZM-087)
-    teamNameWidth: '46%',
+    // Namensspalte = 92 % einer Spalte = 46 % Bildbreite (wie vor dem Raster-Umbau)
+    teamNameWidth: '92%',
     teamNamesGap: '2%',
     // @ZM-140 Raster: Mittelspalte zwischen den Kästen (Trenner, im Kindermodus leer)
-    separatorWidth: '12%',
+    separatorWidth: '0%',
   },
 } as const;
 

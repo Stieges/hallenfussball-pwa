@@ -11,7 +11,11 @@ import {
 } from '../../../design-tokens/display';
 import { DEFAULT_LIVE_COLOR_SCHEME } from '../../../types/monitor';
 
-const DARK_BACKGROUND = '#0A0A14';
+import { monitorThemes } from '../../../design-tokens';
+
+// M4: gegen die echten Hintergrund-Tokens, nicht gegen einen Testwert
+const DARK_BACKGROUND = monitorThemes.dark.background;
+const LIGHT_BACKGROUND = monitorThemes.light.background;
 const SAMPLE_COLORS = ['#1E40AF', '#DC2626', '#FDE047', '#000000', '#FFFFFF', '#16A34A', '#F97316'];
 
 describe('@ZM-140 Ziffernfarbe nach Kontrast', () => {
@@ -32,17 +36,26 @@ describe('@ZM-140 Ziffernfarbe nach Kontrast', () => {
   });
 });
 
-describe('@ZM-140 Kasten hebt sich vom Hintergrund ab', () => {
-  it('Schwarz auf dunklem Hintergrund: Rahmen nötig', () => {
+describe('@ZM-140 Kasten hebt sich vom Hintergrund ab (echte Token-Werte)', () => {
+  it('Schwarz auf dunklem Monitor-Hintergrund: Rahmen nötig', () => {
     expect(needsContrastFrame('#000000', DARK_BACKGROUND)).toBe(true);
   });
 
-  it('Gelb auf dunklem Hintergrund: kein Rahmen', () => {
+  it('Gelb auf dunklem Monitor-Hintergrund: kein Rahmen', () => {
     expect(needsContrastFrame('#FDE047', DARK_BACKGROUND)).toBe(false);
   });
 
-  it.each(SAMPLE_COLORS)('Rahmen genau dann, wenn Kontrast zu %s unter 3 : 1 liegt', (bg) => {
-    expect(needsContrastFrame(bg, DARK_BACKGROUND)).toBe(getContrastRatio(bg, DARK_BACKGROUND) < 3);
+  it('Blau auf dunklem Monitor-Hintergrund: Rahmen (Kontrast unter 3 : 1)', () => {
+    expect(getContrastRatio('#1E40AF', DARK_BACKGROUND)).toBeLessThan(3);
+    expect(needsContrastFrame('#1E40AF', DARK_BACKGROUND)).toBe(true);
+  });
+
+  it('Weiß auf hellem Monitor-Hintergrund: Rahmen nötig', () => {
+    expect(needsContrastFrame('#FFFFFF', LIGHT_BACKGROUND)).toBe(true);
+  });
+
+  it('Schwarz auf hellem Monitor-Hintergrund: kein Rahmen', () => {
+    expect(needsContrastFrame('#000000', LIGHT_BACKGROUND)).toBe(false);
   });
 });
 

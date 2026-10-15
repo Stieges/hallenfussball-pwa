@@ -160,6 +160,8 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     gridColumn: column,
     display: 'flex',
     justifyContent: 'center',
+    justifySelf: 'center',
+    width: layout.blockWidth,
     height: '100%',
     minWidth: 0,
   });
@@ -168,6 +170,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     gridRow: row,
     gridColumn: column,
     justifySelf: 'center',
+    width: layout.teamNameWidth,
     display: 'flex',
     justifyContent: 'center',
     minWidth: 0,
@@ -281,7 +284,8 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
         </div>
 
         {/* Timer */}
-        {(isRunning || isPaused || match.status === 'FINISHED') && (
+        {/* H2: nach dem Abpfiff nur das Endergebnis, keine Uhr */}
+        {(isRunning || isPaused) && (
           <div style={timerAreaStyle}>
             <MatchTimer
               elapsedSeconds={match.elapsedSeconds}
