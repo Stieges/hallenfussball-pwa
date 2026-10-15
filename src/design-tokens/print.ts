@@ -159,6 +159,11 @@ export const printBox = {
   penLabelGap: 0.6,
   /** Zeilenhöhe von Kennzeichen und Feldbeschriftung als Vielfaches der Schrift (line-height 1,1) */
   smallLineEm: 1.1,
+  /** Fassung zum Ausfüllen (B-28 C6): Mindesthöhe einer Zeile der leeren Gruppentabelle (Kugelschreiber, wie die Platzierungszeile) */
+  blankRow: 8,
+  /** Schreiblinie unter der Herkunft eines Finalteams: Abstand zur Unterkante der Zelle, Abstand Grundlinie der Herkunft → Linie */
+  writeLineInset: 2,
+  writeTextGap: 0.8,
 } as const;
 
 /** Abstände in mm (`druck.css`, wo vorhanden). */

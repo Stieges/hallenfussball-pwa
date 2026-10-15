@@ -35,6 +35,7 @@ import type { MatchTableContext } from './render/matchTable';
 import { refereeLabelFor } from './refereeLabel';
 import { renderFinalsSection } from './render/finalsTables';
 import { renderGroupStandings } from './render/standings';
+import { renderBlankStandings } from './render/blankStandings';
 import { placementState } from './placement';
 import { renderRanking } from './render/ranking';
 import { renderHeader } from './render/header';
@@ -43,7 +44,7 @@ import { printHeader } from '../../design-tokens/print-header';
 import { qrSide } from './render/qrCode';
 import { drawShortHeads, shortHeadTitleLines, shortQrColumn } from './render/shortHeader';
 import { renderParticipants } from './render/participants';
-import { koLines, pdfRuleLines, pdfRulesFrom } from './rules';
+import { koLines, pdfRuleLines, pdfRulesFrom, placementLine } from './rules';
 import { buildPdfTexts, resolvePdfLocale, type PdfLocale, type PdfTexts, type PdfTranslator } from './translations';
 
 export type { PDFExportOptions } from './pdfOptions';
@@ -190,6 +191,7 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
       isTeam: name => schedule.teams.some(team => team.name === name),
       groupName: id => t.groupLabel(id, getGroupDisplayName(id, schedule.tournament)),
       hidePendingOrigin: content.hidePendingOrigin,
+      originOnly: edition === 'blank',
     },
   };
 
@@ -199,7 +201,10 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
 
   // Gruppentabellen, eigene Seite (nur wenn es Gruppen gibt und sie gewünscht sind)
   if (hasTables) {
-    yPos = renderGroupStandings(doc, schedule, standings, t, geo, startPage(doc, 'tables', geo), sections.handle('tables'), finalTable ? { title: t.finalTable, order: ranking } : undefined);
+    const tablesTop = startPage(doc, 'tables', geo);
+    yPos = edition === 'blank'
+      ? renderBlankStandings(doc, schedule, t, geo, tablesTop, sections.handle('tables'), placementLine(rules, t))
+      : renderGroupStandings(doc, schedule, standings, t, geo, tablesTop, sections.handle('tables'), finalTable ? { title: t.finalTable, order: ranking } : undefined);
   }
 
   // Finalrunde mit K.-o.-Zeilen, eigene Seite. Die Platzierung steht am Ende: mit Finalrunde auf deren Seite, ohne

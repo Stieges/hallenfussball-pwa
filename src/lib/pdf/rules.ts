@@ -51,9 +51,9 @@ export function pdfRulesFrom(tournament: Tournament, schedule: GeneratedSchedule
 export function pdfRuleLines(rules: PdfRules, t: PdfTexts): string[] {
   const { label } = t.rules;
   const lines = [`${label.mode}: ${modeText(rules, t)}`];
-  const placement = placementText(rules, t);
+  const placement = placementLine(rules, t);
   if (placement !== '') {
-    lines.push(`${label.placement}: ${placement}`);
+    lines.push(placement);
   }
   lines.push(`${label.duration}: ${durationText(rules, t)}`);
   const rulebook = rules.rulebook?.trim() ?? '';
@@ -61,6 +61,12 @@ export function pdfRuleLines(rules: PdfRules, t: PdfTexts): string[] {
     lines.push(`${label.rulebook}: ${rulebook}`);
   }
   return lines;
+}
+
+/** Zeile „Platzierung: Punkte – Tordifferenz …“; leer, wenn kein Kriterium und kein Punkte-Zusatz gilt. */
+export function placementLine(rules: PdfRules, t: PdfTexts): string {
+  const placement = placementText(rules, t);
+  return placement === '' ? '' : `${t.rules.label.placement}: ${placement}`;
 }
 
 /**

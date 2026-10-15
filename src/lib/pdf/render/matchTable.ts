@@ -17,6 +17,7 @@ import type { ScoreSpec } from '../scoreLayout';
 import type { StatefulMatch } from '../tournamentState';
 import type { PdfTexts } from '../translations';
 import { drawLiveBar, drawRefereeField, drawScoreCell, scoreCellMinHeight, scoreSpecFor } from './scoreCell';
+import { drawTeamCell } from './teamCell';
 import { fontOf } from '../fonts';
 import { matchTableOptions, pad } from './matchTables';
 
@@ -46,9 +47,11 @@ export interface MatchTableInput {
   mode?: TiebreakerMode;
   /** Innenabstand oben und unten; Vorgabe `printGap.bodyPadV`, die Finalrunde nimmt `printGap.finalPadV`. */
   padV?: number;
+  /** Fassung zum Ausfüllen (C6): Heim und Gast als Herkunft klein über einer Schreiblinie statt als Teamname. */
+  writeIn?: boolean;
 }
 
-interface Row { match: StatefulMatch; spec: ScoreSpec; referee: string }
+interface Row { match: StatefulMatch; spec: ScoreSpec; referee: string; home: string; away: string }
 
 interface Column {
   key: ColumnKey;
@@ -72,14 +75,14 @@ function buildColumns(input: MatchTableInput, ctx: MatchTableContext): Column[] 
     columns.push({ key: 'group', head: t.group, style: { halign: 'center', cellWidth: widths.group, fontStyle: 'bold' }, cell: r => groupCode(r.match) });
   }
   columns.push(
-    { key: 'home', head: t.home, style: { halign: 'right' }, cell: r => sideLabel(r.match, 'A', ctx.side) }, // Heim endet am Ergebnis
+    { key: 'home', head: t.home, style: { halign: 'right' }, cell: r => (input.writeIn ? '' : r.home) }, // Heim endet am Ergebnis
     {
       key: 'result',
       head: t.result,
       style: { halign: 'center', cellWidth: widths.result },
       cell: r => ({ content: '', styles: { minCellHeight: scoreCellMinHeight(r.spec, input.padV ?? printGap.bodyPadV) } }),
     },
-    { key: 'away', head: t.away, style: { halign: 'left' }, cell: r => sideLabel(r.match, 'B', ctx.side) },
+    { key: 'away', head: t.away, style: { halign: 'left' }, cell: r => (input.writeIn ? '' : r.away) },
     { key: 'referee', head: t.referee, style: { halign: 'center', cellWidth: widths.referee }, cell: r => r.referee },
   );
   return columns;
@@ -92,6 +95,8 @@ export function renderMatchTable(doc: jsPDF, input: MatchTableInput, ctx: MatchT
     match,
     spec: scoreSpecFor(resultState(match, ctx.result), input.mode, ctx.t),
     referee: ctx.refereeLabel(match),
+    home: sideLabel(match, 'A', ctx.side),
+    away: sideLabel(match, 'B', ctx.side),
   }));
   const head: RowInput[] = [columns.map(column => column.head)];
   const body: RowInput[] = rows.map(row => columns.map(column => column.cell(row)));
@@ -119,6 +124,12 @@ export function renderMatchTable(doc: jsPDF, input: MatchTableInput, ctx: MatchT
         case 'nr':
           if (row.spec.kind === 'live') {
             drawLiveBar(doc, cell);
+          }
+          break;
+        case 'home':
+        case 'away':
+          if (input.writeIn) {
+            drawTeamCell(doc, cell, columns[data.column.index].key === 'home' ? 'home' : 'away', columns[data.column.index].key === 'home' ? row.home : row.away, printGap.bodyPadH);
           }
           break;
         case 'referee':
