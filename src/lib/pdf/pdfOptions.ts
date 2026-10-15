@@ -9,12 +9,13 @@ import type { PdfAudience } from './visibility';
 import type { PdfLocale, PdfTranslator } from './translations';
 
 export interface PDFExportOptions {
-  /** Sprache des Dokuments. Vorgabe: Sprache der App. */
+  /**
+   * Sprache des Dokuments (@DR-022: Ausdrucke folgen durchgängig dieser Sprache, auch der Aushang). Die Sprache kommt
+   * nur über `PdfInput.locale`; nur `toPdfInput` setzt sie ersatzweise aus der App-Sprache (Vorbereitung @DR-028: Wahl im Dialog).
+   */
   locale?: PdfLocale;
   /** Übersetzer für `pdf.*`. Vorgabe: i18next der App; Tests reichen die Ressource durch. */
   translate?: PdfTranslator;
-  /** Übersetzer einer anderen Sprache (zweisprachiger Aushang, @DR-022). Vorgabe: i18next der App. */
-  translateIn?: (locale: PdfLocale) => PdfTranslator;
   includeStandings?: boolean;
   includeScores?: boolean;
   /**

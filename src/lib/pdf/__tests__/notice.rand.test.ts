@@ -7,7 +7,7 @@ import QRCode from 'qrcode';
 import { describe, expect, it } from 'vitest';
 import { printLimits } from '../../../design-tokens/print';
 import { generateLiveUrl } from '../../../utils/shareUtils';
-import { printNotice } from '../../../design-tokens/print-notice';
+import { printHeader } from '../../../design-tokens/print-header';
 import { NOTICE_BASE_URL, NOTICE_FIXTURES, noticePdf, noticeTextBox, NOTICE_TOL, qrBox, SHARE_CODE } from './pdfNoticeSupport';
 
 describe.each(NOTICE_FIXTURES)('@DR-017 Rand und Schwarz-Weiß: $name', ({ tournament, options }) => {
@@ -21,6 +21,12 @@ describe.each(NOTICE_FIXTURES)('@DR-017 Rand und Schwarz-Weiß: $name', ({ tourn
       expect(box.x + box.w, `„${t.str}“ rechts`).toBeLessThanOrEqual(width - m + NOTICE_TOL);
       expect(box.y, `„${t.str}“ oben`).toBeGreaterThanOrEqual(m - NOTICE_TOL);
       expect(t.y, `„${t.str}“ unten`).toBeLessThanOrEqual(height - m + NOTICE_TOL);
+    });
+    page.images.forEach(image => {
+      expect(image.x, 'Grafik links').toBeGreaterThanOrEqual(m - NOTICE_TOL);
+      expect(image.x + image.w, 'Grafik rechts').toBeLessThanOrEqual(width - m + NOTICE_TOL);
+      expect(image.y, 'Grafik oben').toBeGreaterThanOrEqual(m - NOTICE_TOL);
+      expect(image.y + image.h, 'Grafik unten').toBeLessThanOrEqual(height - m + NOTICE_TOL);
     });
     page.rects.forEach(r => {
       expect(r.x).toBeGreaterThanOrEqual(m - NOTICE_TOL);
@@ -40,7 +46,7 @@ describe.each(NOTICE_FIXTURES)('@DR-017 Rand und Schwarz-Weiß: $name', ({ tourn
     const { page, width, height } = await noticePdf(tournament, options);
     const box = qrBox(page);
     const size = QRCode.create(generateLiveUrl(SHARE_CODE, NOTICE_BASE_URL)).modules.size;
-    const zone = (box.w / size) * printNotice.qrQuietModules - NOTICE_TOL;
+    const zone = (box.w / size) * printHeader.qrQuietModules - NOTICE_TOL;
     const quiet = { x: box.x - zone, y: box.y - zone, w: box.w + 2 * zone, h: box.h + 2 * zone };
 
     expect(quiet.x).toBeGreaterThanOrEqual(printLimits.margin - NOTICE_TOL);

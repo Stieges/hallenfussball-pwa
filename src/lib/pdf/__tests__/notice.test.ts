@@ -3,9 +3,10 @@
  * Szenarien: @BM-001 (A4), @BM-006 (nur Schwarz/Weiß), @BM-007 (Titel vollständig, QR ≥ 120 mm), @BM-008 (kein Stand),
  * @BM-043 (Zuschauer-Adresse), @ZM-060, @DR-010 (Kurzadresse, Aufruf), @DR-022 (zweisprachig), @DR-023/@DR-024 (Grafiken).
  */
+import i18next from 'i18next';
 import QRCode from 'qrcode';
 import { describe, expect, it } from 'vitest';
-import { printLimits } from '../../../design-tokens/print';
+import { printFont, printLimits, printUnit } from '../../../design-tokens/print';
 import { printHeader } from '../../../design-tokens/print-header';
 import { printNotice } from '../../../design-tokens/print-notice';
 import { generateLiveUrl, generateTournamentUrl } from '../../../utils/shareUtils';
@@ -14,9 +15,9 @@ import { toPdfInput } from '../pdfInput';
 import { shortViewerAddress } from '../../qr/publicQr';
 import { hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { fixtureLogo } from './pdfLogoFixture';
-import { squash } from './pdfjsText';
+import { pdfLanguage, squash } from './pdfjsText';
 import { translatorFor } from './pdfText';
-import { allText, drawnNoticeMatrix, noticePdf, noticeTextBox, NOTICE_BASE_URL, NOTICE_TOL, qrBox, SIXTY } from './pdfNoticeSupport';
+import { allText, drawnNoticeMatrix, noticePdf, noticeTextBox, NOTICE_BASE_URL, NOTICE_TOL, qrBox, BM007_NAME, SIXTY } from './pdfNoticeSupport';
 
 const matrixOf = (url: string): boolean[][] => {
   const { modules } = QRCode.create(url);
@@ -121,6 +122,31 @@ describe('@BM-007 Turniername vollständig, höchstens zwei Zeilen', () => {
     expect(box.w).toBeGreaterThanOrEqual(MIN_EDGE);
   });
 
+  it('F4 @BM-007 der Name aus dem Szenario, wörtlich: vollständig, höchstens zwei Zeilen, QR mindestens 120 mm', async () => {
+    const { page } = await noticePdf({ title: BM007_NAME });
+    const box = qrBox(page);
+    const lines = page.texts.filter(t => t.size >= printNotice.titleMinPt && t.y < box.y);
+
+    expect(lines.length).toBeLessThanOrEqual(printNotice.titleMaxLines);
+    expect(squash(lines.map(l => l.str).join(' '))).toBe(squash(BM007_NAME));
+    expect(box.w).toBeGreaterThanOrEqual(MIN_EDGE);
+  });
+
+  it('der 60-Zeichen-Titel hat wirklich 60 Zeichen', () => {
+    expect(SIXTY).toHaveLength(60);
+  });
+
+  it('F2 Titelzeilen überlappen nicht: Abstand der Grundlinien = Schrift × titleLineEm, mindestens die Zeilenhöhe', async () => {
+    const { page } = await noticePdf({ title: SIXTY });
+    const box = qrBox(page);
+    const [first, second] = page.texts.filter(t => t.size >= printNotice.titleMinPt && t.y < box.y);
+    const cap = first.size * printFont.ascentEm * printUnit.mmPerPt;
+
+    expect(second).toBeDefined();
+    expect(second.y - first.y).toBeCloseTo(first.size * printNotice.titleLineEm * printUnit.mmPerPt, 1);
+    expect(second.y - first.y, 'Zeilen überlappen nicht').toBeGreaterThan(cap);
+  });
+
   it('kurzer Titel: volle Schrift 40 pt', async () => {
     const { page } = await noticePdf();
     const title = page.texts.find(t => t.str.includes('Hallencup'));
@@ -138,28 +164,41 @@ describe('@BM-008 kein Stand, keine Uhrzeit', () => {
   });
 });
 
-describe('@DR-022 Sprache', () => {
-  it('deutsche App: nur Deutsch', async () => {
+describe('@DR-022 Sprache: allein PdfInput.locale, einsprachig', () => {
+  it('deutsch: nur Deutsch', async () => {
     const { page } = await noticePdf();
 
-    expect(allText(page)).not.toMatch(/phone|Open the camera/);
+    expect(allText(page)).not.toMatch(/phone|camera|Schedule/);
   });
 
-  it('englische App: zweisprachig, Englisch und Deutsch', async () => {
+  it('englisch: nur Englisch, keine zweite Sprache', async () => {
     const { page } = await noticePdf({}, { locale: 'en' });
-    const text = squash(allText(page));
+    const text = allText(page);
 
-    expect(text).toContain(squash('Schedule and results on your phone'));
-    expect(text).toContain(squash('Spielplan und Ergebnisse aufs Handy'));
+    expect(squash(text)).toContain(squash('Schedule and results on your phone'));
+    expect(text).not.toMatch(/Spielplan|Handy|Kamera|Ergebnisse|Anmeldung/);
   });
 
-  it('englisch + Kindermodus: beide Sprachen ohne „results“ und ohne „Ergebnisse“', async () => {
+  it('englisch + Kindermodus: „Schedule on your phone“, kein „results“', async () => {
     const { page } = await noticePdf({ isKidsTournament: true }, { locale: 'en' });
     const text = allText(page);
 
     expect(squash(text)).toContain(squash('Schedule on your phone'));
-    expect(squash(text)).toContain(squash('Spielplan aufs Handy'));
-    expect(text).not.toMatch(/results|Ergebnisse/);
+    expect(text).not.toMatch(/results|Ergebnisse|Spielplan/);
+  });
+
+  it('locale „de“ bei englischer App-Sprache ergibt ein deutsches PDF (Sprache nie aus der App)', async () => {
+    const app = i18next.language;
+    i18next.language = 'en';
+    try {
+      const { page, build } = await noticePdf({}, { locale: 'de' });
+
+      expect(squash(allText(page))).toContain(squash('Spielplan und Ergebnisse aufs Handy'));
+      expect(allText(page)).not.toMatch(/phone/);
+      expect(build.ok && pdfLanguage(new Uint8Array(build.doc.output('arraybuffer')))).toBe('de');
+    } finally {
+      i18next.language = app;
+    }
   });
 });
 
@@ -221,5 +260,23 @@ describe('@DR-001 Mindestgröße', () => {
     const { page } = await noticePdf({}, { locale: 'en' });
 
     page.texts.forEach(t => expect(t.size, `„${t.str}“`).toBeGreaterThanOrEqual(printLimits.minFontPt - NOTICE_TOL));
+  });
+});
+
+describe('@DR-022 Spielplan: die Sprache kommt allein aus dem Eingang', () => {
+  it('locale „de“ bei englischer App-Sprache ergibt einen deutschen Spielplan', async () => {
+    const { kopfPdf } = await import('./pdfKopfSupport');
+    const app = i18next.language;
+    i18next.language = 'en';
+    try {
+      const { pages } = await kopfPdf({ locale: 'de' });
+      const text = pages.flatMap(p => p.texts.map(t => t.str)).join(' ');
+
+      expect(text).toContain('Teilnehmer');
+      expect(text).not.toContain('Participants');
+      expect(text, 'Datum nach deutscher Schreibweise').toMatch(/14\.11\.2026/);
+    } finally {
+      i18next.language = app;
+    }
   });
 });

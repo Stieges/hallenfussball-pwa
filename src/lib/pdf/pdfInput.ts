@@ -36,9 +36,8 @@ export interface PdfInput {
   now: Date;
   online: boolean;
   locale: PdfLocale;
-  /** Übersetzer der Sprache `locale`; `translateIn` liefert den einer anderen Sprache (zweisprachiger Aushang, @DR-022). */
+  /** Übersetzer der Sprache `locale`. */
   translate: PdfTranslator;
-  translateIn: (locale: PdfLocale) => PdfTranslator;
   graphics: { left: LogoImage | undefined; right: LogoImage | undefined };
   orientation: PdfOrientation;
   viewerBaseUrl: string | undefined;
@@ -57,8 +56,8 @@ export function appTranslator(locale: PdfLocale): PdfTranslator {
 
 /** Löst die Vorgaben des Aufrufers auf: ein Ort für jede Vorgabe, gleich für jedes Dokument. */
 export function toPdfInput({ schedule, standings, options }: SchedulePdfInput): PdfInput {
+  // Einzige Stelle, an der die App-Sprache einfließt (nur wenn der Aufrufer keine Sprache wählt); danach gilt nur `input.locale`
   const locale = options.locale ?? resolvePdfLocale(i18next.language);
-  const translateIn = options.translateIn ?? appTranslator;
   return {
     tournament: options.tournament,
     schedule,
@@ -68,8 +67,7 @@ export function toPdfInput({ schedule, standings, options }: SchedulePdfInput): 
     now: options.now ?? new Date(),
     online: options.online ?? true,
     locale,
-    translate: options.translate ?? translateIn(locale),
-    translateIn,
+    translate: options.translate ?? appTranslator(locale),
     graphics: { left: options.logoLeft, right: options.logoRight },
     orientation: options.orientation ?? 'portrait',
     viewerBaseUrl: options.viewerBaseUrl,
