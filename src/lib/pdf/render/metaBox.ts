@@ -5,7 +5,7 @@
  */
 import type jsPDF from 'jspdf';
 import type { GeneratedSchedule } from '../../../core/generators';
-import { printColors, printFonts, printMetrics, printSpacing } from '../../../design-tokens/print';
+import { printColors, printType, printMetrics, printGap } from '../../../design-tokens/print';
 import { getLocationAddressLine } from '../../../utils/locationHelpers';
 import { ensureSpace, type PageGeometry } from '../layout';
 import type { PdfTexts } from '../translations';
@@ -68,7 +68,7 @@ export function renderMetaBox(
   ];
 
   // Breite der längsten Beschriftung je Spalte (inkl. Doppelpunkt)
-  doc.setFontSize(printFonts.meta);
+  doc.setFontSize(printType.meta);
   doc.setFont(PDF_FONT.family, 'normal');
 
   const leftMaxLabelWidth = Math.max(...leftFields.map(f => doc.getTextWidth(`${f.label}:`)));
@@ -88,7 +88,7 @@ export function renderMetaBox(
   const startX = geo.left;
 
   // Abgerundeter Rahmen
-  doc.setDrawColor(...printColors.borderDark);
+  doc.setDrawColor(...printColors.ink);
   doc.setLineWidth(printMetrics.metaBorderWidth);
   doc.roundedRect(startX, startY, geo.contentWidth, contentHeight, printMetrics.boxRadius, printMetrics.boxRadius);
 
@@ -97,12 +97,12 @@ export function renderMetaBox(
   let currentYLeft = startY + padding + printMetrics.metaTextOffset;
 
   leftFields.forEach((field) => {
-    doc.setFontSize(printFonts.meta);
-    doc.setTextColor(...printColors.textMuted);
+    doc.setFontSize(printType.meta);
+    doc.setTextColor(...printColors.ink);
     doc.setFont(PDF_FONT.family, 'normal');
     doc.text(`${field.label}:`, leftColumnX, currentYLeft);
 
-    doc.setTextColor(...printColors.textMain);
+    doc.setTextColor(...printColors.ink);
     doc.setFont(PDF_FONT.family, 'bold');
     doc.text(field.value, leftColumnX + valueStartXLeft, currentYLeft);
 
@@ -110,8 +110,8 @@ export function renderMetaBox(
 
     // Adresszeile unter „Halle“
     if (field.label === t.hall && locationAddressLine) {
-      doc.setFontSize(printFonts.metaSmall);
-      doc.setTextColor(...printColors.textMuted);
+      doc.setFontSize(printType.meta);
+      doc.setTextColor(...printColors.ink);
       doc.setFont(PDF_FONT.family, 'normal');
       doc.text(locationAddressLine, leftColumnX + valueStartXLeft, currentYLeft);
       currentYLeft += lineHeight + rowGap;
@@ -123,18 +123,18 @@ export function renderMetaBox(
   let currentYRight = startY + padding + printMetrics.metaTextOffset;
 
   rightFields.forEach((field) => {
-    doc.setFontSize(printFonts.meta);
-    doc.setTextColor(...printColors.textMuted);
+    doc.setFontSize(printType.meta);
+    doc.setTextColor(...printColors.ink);
     doc.setFont(PDF_FONT.family, 'normal');
     doc.text(`${field.label}:`, rightColumnX, currentYRight);
 
-    doc.setTextColor(...printColors.textMain);
+    doc.setTextColor(...printColors.ink);
     doc.setFont(PDF_FONT.family, 'bold');
     doc.text(field.value, rightColumnX + valueStartXRight, currentYRight);
 
     currentYRight += lineHeight + rowGap;
   });
 
-  yPos = startY + contentHeight + printSpacing.sectionGap;
+  yPos = startY + contentHeight + printGap.sectionGap;
   return yPos;
 }

@@ -6,7 +6,7 @@ import type jsPDF from 'jspdf';
 import autoTable, { type CellInput, type RowInput, type UserOptions } from 'jspdf-autotable';
 import type { GeneratedSchedule } from '../../../core/generators';
 import type { Standing } from '../../../types/tournament';
-import { printColors, printFonts, printMetrics, printSpacing, printStandingsColumns } from '../../../design-tokens/print';
+import { printColors, printType, printMetrics, printGap, printStroke, printColumns } from '../../../design-tokens/print';
 import { getGroupDisplayName } from '../../../utils/displayNames';
 import { ensureSpace, type PageGeometry } from '../layout';
 import { tableEndY } from '../jspdfTypes';
@@ -66,29 +66,33 @@ function drawStandingsTable(
       left: geo.left,
       right: geo.right,
     },
+    tableLineColor: [...printColors.ink],
+    alternateRowStyles: { fillColor: [...printColors.paper], textColor: [...printColors.ink] },
     styles: {
       font: PDF_FONT.family,
-      fontSize: printFonts.tableSmall,
-      cellPadding: printMetrics.tableCellPaddingCompact,
-      lineColor: [...printColors.border],
-      lineWidth: printMetrics.tableLineWidth,
+      fontSize: printType.tableSBody,
+      textColor: [...printColors.ink],
+      cellPadding: printGap.compactPad,
+      lineColor: [...printColors.ink],
+      lineWidth: printStroke.row,
     },
     headStyles: {
-      fillColor: [...printColors.headBg],
-      textColor: [...printColors.textMain],
+      fontSize: printType.tableSHead,
+      fillColor: [...printColors.tint],
+      textColor: [...printColors.ink],
       fontStyle: 'bold',
       halign: 'center',
     },
     columnStyles: {
-      0: { halign: 'center', cellWidth: printStandingsColumns.pos },
-      1: { halign: 'left', cellWidth: printStandingsColumns.team },
-      2: { halign: 'center', cellWidth: printStandingsColumns.played },
-      3: { halign: 'center', cellWidth: printStandingsColumns.won },
-      4: { halign: 'center', cellWidth: printStandingsColumns.drawn },
-      5: { halign: 'center', cellWidth: printStandingsColumns.lost },
-      6: { halign: 'center', cellWidth: printStandingsColumns.goals },
-      7: { halign: 'center', cellWidth: printStandingsColumns.diff },
-      8: { halign: 'center', cellWidth: printStandingsColumns.points },
+      0: { halign: 'center', cellWidth: printColumns.standings.pos },
+      1: { halign: 'left' }, // Team: Rest der Breite
+      2: { halign: 'center', cellWidth: printColumns.standings.played },
+      3: { halign: 'center', cellWidth: printColumns.standings.won },
+      4: { halign: 'center', cellWidth: printColumns.standings.drawn },
+      5: { halign: 'center', cellWidth: printColumns.standings.lost },
+      6: { halign: 'center', cellWidth: printColumns.standings.goals },
+      7: { halign: 'center', cellWidth: printColumns.standings.diff },
+      8: { halign: 'center', cellWidth: printColumns.standings.points },
     },
   };
   autoTable(doc, options);
@@ -114,8 +118,8 @@ export function renderGroupStandings(
     yPos = ensureSpace(doc, yPos, printMetrics.sectionTableMinSpace, geo);
 
     // Titel „Tabelle – Gruppe X“
-    doc.setFontSize(printFonts.groupTitle);
-    doc.setTextColor(...printColors.textMain);
+    doc.setFontSize(printType.caption);
+    doc.setTextColor(...printColors.ink);
     doc.setFont(PDF_FONT.family, 'bold');
     doc.text(t.standingsOfGroup(t.groupLabel(group, getGroupDisplayName(group, schedule.tournament))), geo.left, yPos);
     yPos += printMetrics.sectionTitleUnderline;
@@ -126,10 +130,10 @@ export function renderGroupStandings(
       .sort(compareRanking);
 
     const end = drawStandingsTable(doc, geo, t, yPos, groupStandings);
-    yPos = end + printSpacing.sectionGap + printMetrics.standingsGroupAdvance;
+    yPos = end + printGap.sectionGap + printMetrics.standingsGroupAdvance;
   });
 
-  yPos += printSpacing.sectionGap;
+  yPos += printGap.sectionGap;
   return yPos;
 }
 
@@ -145,8 +149,8 @@ export function renderFinalRanking(
   yPos = ensureSpace(doc, yPos, printMetrics.sectionTableMinSpace, geo);
 
   // Abschnittstitel
-  doc.setFontSize(printFonts.sectionTitle);
-  doc.setTextColor(...printColors.textMain);
+  doc.setFontSize(printType.h2);
+  doc.setTextColor(...printColors.ink);
   doc.setFont(PDF_FONT.family, 'bold');
   doc.text(t.finalRanking, geo.left, yPos);
   yPos += printMetrics.sectionTitleUnderline;
@@ -154,7 +158,7 @@ export function renderFinalRanking(
   const finalStandings = [...resolveStandings(schedule, standings)].sort(compareRanking);
 
   const end = drawStandingsTable(doc, geo, t, yPos, finalStandings);
-  yPos = end + printSpacing.sectionGap;
+  yPos = end + printGap.sectionGap;
 
   return yPos;
 }

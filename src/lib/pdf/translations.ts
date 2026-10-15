@@ -41,6 +41,8 @@ export interface PdfTexts {
   fifthSixth: string;
   seventhEighth: string;
   hintResults: string;
+  /** Seitenzahl „Seite x von y“ (Fußzeile). */
+  pageOf: (page: number, total: number) => string;
   noDate: string;
   modeGroupsAndFinals: string;
   modeRoundRobin: string;
@@ -107,6 +109,7 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     fifthSixth: s('fifthSixth'),
     seventhEighth: s('seventhEighth'),
     hintResults: s('hintResults'),
+    pageOf: (page, total) => translate('pdf.pageOf', { page, total }),
     noDate: s('noDate'),
     modeGroupsAndFinals: s('modeGroupsAndFinals'),
     modeRoundRobin: s('modeRoundRobin'),

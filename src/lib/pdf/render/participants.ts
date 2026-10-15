@@ -4,7 +4,7 @@
  */
 import type jsPDF from 'jspdf';
 import type { GeneratedSchedule } from '../../../core/generators';
-import { printColors, printFonts, printMetrics, printSpacing } from '../../../design-tokens/print';
+import { printColors, printType, printMetrics, printGap, printStroke } from '../../../design-tokens/print';
 import { getGroupDisplayName } from '../../../utils/displayNames';
 import { ensureSpace, type PageGeometry } from '../layout';
 import type { PdfTexts } from '../translations';
@@ -16,7 +16,7 @@ type Team = GeneratedSchedule['teams'][number];
 function teamLines(doc: jsPDF, teams: Team[], x: number, startY: number, firstNumber: number): number {
   let currentY = startY;
   let counter = firstNumber;
-  doc.setFontSize(printFonts.tableSmall);
+  doc.setFontSize(printType.teams);
   doc.setFont(PDF_FONT.family, 'normal');
   teams.forEach(team => {
     doc.text(`${counter}. ${team.name}`, x + printMetrics.boxPadding, currentY);
@@ -28,8 +28,8 @@ function teamLines(doc: jsPDF, teams: Team[], x: number, startY: number, firstNu
 
 /** Gruppentitel in einem Kasten. */
 function boxTitle(doc: jsPDF, text: string, x: number, boxTop: number): void {
-  doc.setFontSize(printFonts.table);
-  doc.setTextColor(...printColors.textMain);
+  doc.setFontSize(printType.body);
+  doc.setTextColor(...printColors.ink);
   doc.setFont(PDF_FONT.family, 'bold');
   doc.text(text, x + printMetrics.boxPadding, boxTop + printMetrics.boxPadding + printMetrics.boxTextOffset);
 }
@@ -48,8 +48,8 @@ export function renderParticipants(
   yPos = ensureSpace(doc, yPos, printMetrics.sectionTitleMinSpace, geo);
 
   // Abschnittstitel
-  doc.setFontSize(printFonts.sectionTitle);
-  doc.setTextColor(...printColors.textMain);
+  doc.setFontSize(printType.h2);
+  doc.setTextColor(...printColors.ink);
   doc.setFont(PDF_FONT.family, 'bold');
   doc.text(t.participants, geo.left, yPos);
   yPos += printMetrics.sectionTitleAdvance;
@@ -82,14 +82,14 @@ export function renderParticipants(
     const rowStartY = yPos;
 
     const boxX = geo.left;
-    doc.setDrawColor(...printColors.borderDark);
-    doc.setLineWidth(printMetrics.boxBorderWidth);
+    doc.setDrawColor(...printColors.ink);
+    doc.setLineWidth(printStroke.box);
     doc.roundedRect(boxX, rowStartY, geo.contentWidth, boxHeight, printMetrics.boxRadius, printMetrics.boxRadius);
 
-    doc.setTextColor(...printColors.textMain);
+    doc.setTextColor(...printColors.ink);
     teamLines(doc, allTeams, boxX, rowStartY + boxPadding + printMetrics.boxTextOffset, 1);
 
-    yPos = rowStartY + boxHeight + printSpacing.sectionGap;
+    yPos = rowStartY + boxHeight + printGap.sectionGap;
     return yPos;
   }
 
@@ -112,8 +112,8 @@ export function renderParticipants(
 
     // Linker Kasten
     const leftX = geo.left;
-    doc.setDrawColor(...printColors.borderDark);
-    doc.setLineWidth(printMetrics.boxBorderWidth);
+    doc.setDrawColor(...printColors.ink);
+    doc.setLineWidth(printStroke.box);
     doc.roundedRect(leftX, rowStartY, colWidth, leftBoxHeight, printMetrics.boxRadius, printMetrics.boxRadius);
 
     boxTitle(doc, groupTitle(leftGroup, schedule, t), leftX, rowStartY);
@@ -122,8 +122,8 @@ export function renderParticipants(
     // Rechter Kasten, falls vorhanden
     if (rightGroup) {
       const rightX = geo.left + colWidth + colGap;
-      doc.setDrawColor(...printColors.borderDark);
-      doc.setLineWidth(printMetrics.boxBorderWidth);
+      doc.setDrawColor(...printColors.ink);
+      doc.setLineWidth(printStroke.box);
       doc.roundedRect(rightX, rowStartY, colWidth, rightBoxHeight, printMetrics.boxRadius, printMetrics.boxRadius);
 
       boxTitle(doc, groupTitle(rightGroup, schedule, t), rightX, rowStartY);
@@ -134,6 +134,6 @@ export function renderParticipants(
     yPos = rowStartY + rowHeight + printMetrics.boxRowAdvance;
   }
 
-  yPos += printSpacing.sectionGap;
+  yPos += printGap.sectionGap;
   return yPos;
 }

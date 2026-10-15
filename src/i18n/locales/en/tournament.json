@@ -726,6 +726,7 @@
     "fifthSixth": "Match for 5th place",
     "seventhEighth": "Match for 7th place",
     "hintResults": "Please enter results after each match ends",
+    "pageOf": "Page {{page}} of {{total}}",
     "noDate": "No date",
     "durationMinutes": "{{minutes}} min",
     "modeGroupsAndFinals": "Groups + finals",

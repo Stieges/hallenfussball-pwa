@@ -726,6 +726,7 @@
     "fifthSixth": "Spiel um Platz 5",
     "seventhEighth": "Spiel um Platz 7",
     "hintResults": "Ergebnisse bitte nach Spielende eintragen",
+    "pageOf": "Seite {{page}} von {{total}}",
     "noDate": "Kein Datum",
     "durationMinutes": "{{minutes}} Min.",
     "modeGroupsAndFinals": "Gruppen + Finals",

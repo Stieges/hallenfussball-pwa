@@ -204,11 +204,13 @@ describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als i
     expect(row).toContain('2:1');
   });
 
-  it('IST @BM-010: keine Seitenzahl und kein Stand auf den Seiten (Bestand)', async () => {
+  it('@BM-010 Teilschritt B-28a3-2: jede Seite trägt „Seite x von y“; der Stand fehlt noch (Fußzeile in a3-6)', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, SCHEDULE_OPTIONS);
     const text = flatText(pdf);
 
-    expect(text.some(t => t.startsWith('Seite '))).toBe(false);
+    pdf.pages.forEach((page, i) => {
+      expect(page, `Seite ${i + 1}`).toContain(`Seite ${i + 1} von ${pdf.pages.length}`);
+    });
     expect(text.some(t => t.includes('Stand '))).toBe(false);
   });
 

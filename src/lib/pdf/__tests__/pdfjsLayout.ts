@@ -15,7 +15,8 @@ const OPS = pdfjs.OPS;
 export interface LayoutText { str: string; x: number; y: number; size: number; bold: boolean }
 export interface LayoutRect { x: number; y: number; w: number; h: number; fill?: string; stroke?: string }
 export interface LayoutLine { x1: number; y1: number; x2: number; y2: number; width: number; color: string }
-export interface LayoutPage { texts: LayoutText[]; rects: LayoutRect[]; lines: LayoutLine[] }
+/** Eine Seite: Text, Rechtecke, Linien und alle im Inhalt gesetzten Farben (hex, auch für Text). */
+export interface LayoutPage { texts: LayoutText[]; rects: LayoutRect[]; lines: LayoutLine[]; colors: string[] }
 export interface Box { x: number; y: number; w: number; h: number }
 
 type Matrix = [number, number, number, number, number, number];
@@ -72,6 +73,7 @@ async function readPage(page: pdfjs.PDFPageProxy): Promise<LayoutPage> {
   const ops = await page.getOperatorList();
   const rects: LayoutRect[] = [];
   const lines: LayoutLine[] = [];
+  const colors = new Set<string>();
   const stack: Array<{ ctm: Matrix; fill: string; stroke: string; lw: number }> = [];
   let ctm: Matrix = IDENTITY;
   let fill = '#000000';
@@ -114,8 +116,8 @@ async function readPage(page: pdfjs.PDFPageProxy): Promise<LayoutPage> {
       case OPS.save: stack.push({ ctm, fill, stroke, lw }); break;
       case OPS.restore: { const s = stack.pop(); if (s) {({ ctm, fill, stroke, lw } = s);} break; }
       case OPS.transform: ctm = mul(args as Matrix, ctm); break;
-      case OPS.setFillRGBColor: fill = colorOf(args); break;
-      case OPS.setStrokeRGBColor: stroke = colorOf(args); break;
+      case OPS.setFillRGBColor: fill = colorOf(args); colors.add(fill); break;
+      case OPS.setStrokeRGBColor: stroke = colorOf(args); colors.add(stroke); break;
       case OPS.setLineWidth: lw = args[0] as number; break;
       case OPS.constructPath: {
         // pdfjs v6: [paintOp, [pathData], [bbox]]
@@ -140,7 +142,7 @@ async function readPage(page: pdfjs.PDFPageProxy): Promise<LayoutPage> {
     const name = (page.commonObjs.has(item.fontName) ? page.commonObjs.get(item.fontName)?.name : '') ?? '';
     texts.push({ str: item.str, x: p.x, y: p.y, size: Math.hypot(t[0], t[1]), bold: /bold/i.test(name) });
   }
-  return { texts, rects, lines };
+  return { texts, rects, lines, colors: [...colors].sort() };
 }
 
 /** Alle Seiten eines PDFs (Bytes). Die Bytes werden kopiert, pdfjs übergibt sie an den Worker. */

@@ -6,7 +6,7 @@ import type jsPDF from 'jspdf';
 import autoTable, { type CellInput, type RowInput, type Styles } from 'jspdf-autotable';
 import type { ScheduledMatch } from '../../../core/generators';
 import type { RefereeConfig } from '../../../types/tournament';
-import { printColors, printFonts, printMetrics, printSpacing, printTableColumns } from '../../../design-tokens/print';
+import { printColors, printType, printMetrics, printGap, printColumns } from '../../../design-tokens/print';
 import { ensureSpace, type PageGeometry } from '../layout';
 import { sideLabel } from '../matchSides';
 import { tableEndY } from '../jspdfTypes';
@@ -47,7 +47,7 @@ export function renderFinalsSection(
     yPos = ensureSpace(doc, yPos, printMetrics.sectionTitleMinSpace, geo);
 
     // Phasentitel
-    yPos = sectionTitle(doc, t.phaseTitle(phase.name, phase.label), geo, yPos, printFonts.phaseTitle);
+    yPos = sectionTitle(doc, t.phaseTitle(phase.name, phase.label), geo, yPos, printType.h2);
 
     // Nach Spielnummer, damit die Reihenfolge des Plans bleibt
     const sortedMatches = [...phase.matches].sort((a, b) => a.matchNumber - b.matchNumber);
@@ -108,8 +108,8 @@ function renderFinalsTable(
   // Untertitel für Platzierungsspiele
   if (subtitle) {
     yPos = ensureSpace(doc, yPos, printMetrics.finalsSubtitleMinSpace, geo);
-    doc.setFontSize(printFonts.table);
-    doc.setTextColor(...printColors.textMuted);
+    doc.setFontSize(printType.body);
+    doc.setTextColor(...printColors.ink);
     doc.setFont(PDF_FONT.family, 'bold');
     doc.text(subtitle, geo.left, yPos);
     yPos += printMetrics.finalsSubtitleAdvance;
@@ -141,26 +141,26 @@ function renderFinalsTable(
   // Spaltenstile mit und ohne Feld-Spalte
   const columnStyles: Record<number, Partial<Styles>> = showFieldColumn
     ? {
-        0: { halign: 'center', cellWidth: printTableColumns.nr },
-        1: { halign: 'center', cellWidth: printTableColumns.time },
-        2: { halign: 'center', cellWidth: printTableColumns.field },
+        0: { halign: 'center', cellWidth: printColumns.finals.nr, fontSize: printType.nr, cellPadding: { top: printGap.bodyPadV, bottom: printGap.bodyPadV, left: printGap.nrPad, right: printGap.nrPad } },
+        1: { halign: 'center', cellWidth: printColumns.finals.time, fontSize: printType.time, fontStyle: 'bold' },
+        2: { halign: 'center', cellWidth: printColumns.finals.field },
         3: { halign: 'left' },                                       // Heim
-        4: { halign: 'center', cellWidth: printTableColumns.result },
+        4: { halign: 'center', cellWidth: printColumns.finals.result, fontSize: printType.result, fontStyle: 'bold' },
         5: { halign: 'left' },                                       // Gast
       }
     : {
-        0: { halign: 'center', cellWidth: printTableColumns.nr },
-        1: { halign: 'center', cellWidth: printTableColumns.time },
+        0: { halign: 'center', cellWidth: printColumns.finals.nr, fontSize: printType.nr, cellPadding: { top: printGap.bodyPadV, bottom: printGap.bodyPadV, left: printGap.nrPad, right: printGap.nrPad } },
+        1: { halign: 'center', cellWidth: printColumns.finals.time, fontSize: printType.time, fontStyle: 'bold' },
         2: { halign: 'left' },                                       // Heim
-        3: { halign: 'center', cellWidth: printTableColumns.result },
+        3: { halign: 'center', cellWidth: printColumns.finals.result, fontSize: printType.result, fontStyle: 'bold' },
         4: { halign: 'left' },                                       // Gast
       };
   if (withReferee) {
-    columnStyles[showFieldColumn ? 6 : 5] = { halign: 'center', cellWidth: printTableColumns.referee };
+    columnStyles[showFieldColumn ? 6 : 5] = { halign: 'center', cellWidth: printColumns.finals.referee };
   }
 
   autoTable(doc, matchTableOptions(geo, yPos, headers, data, columnStyles));
 
-  yPos = tableEndY(doc) + printSpacing.sectionGap;
+  yPos = tableEndY(doc) + printGap.sectionGap;
   return yPos;
 }

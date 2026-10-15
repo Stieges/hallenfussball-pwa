@@ -1,64 +1,182 @@
 /**
  * Druck-Tokens für das PDF (`src/lib/pdf/**`). Druck, mm/pt/RGB.
  *
- * Wertgleich zu den früheren `PDF_STYLE`-Konstanten und Layout-Maßen aus `pdfExporter.ts` (B-28a1).
- * Render-Dateien lesen nur diese Tokens, keine Literale für Farben, Maße oder Schriftgrößen.
+ * Quelle der Werte, soweit nicht anders vermerkt: Druckentwurf v7.2 (`druck-scratch/druck.css`, B-28a3-2).
+ * Die Render-Dateien lesen nur diese Tokens, keine Literale für Farben, Maße oder Schriftgrößen (Token-Wächter).
+ * Maße, die v7.2 nicht festlegt (Kopf, Meta-Box, Teilnehmerkästen), bleiben bis a3-3/a4 in `printMetrics`.
  * Bildschirm-Tokens stehen in den übrigen Dateien dieses Ordners.
  */
 
-/** RGB 0–255, Werte aus den Hex-Kommentaren übernommen. */
+/** Papier: nur Schwarz und Weiß, dazu das 12-%-Raster für Tabellenköpfe. Kein Grau im Text. */
 export const printColors = {
-  /** #e5e7eb – Tabellenlinien */
-  border: [229, 231, 235],
-  /** #d4d4d8 – Rahmen der Boxen und Meta-Box */
-  borderDark: [212, 212, 216],
-  /** #f9fafb – Tabellenkopf */
-  headBg: [249, 250, 251],
-  /** #111827 – Fließtext */
-  textMain: [17, 24, 39],
-  /** #6b7280 – Labels und Hinweise */
-  textMuted: [107, 114, 128],
-  /** #ffffff */
-  white: [255, 255, 255],
+  /** --ink: Text, Linien, Rahmen */
+  ink: [0, 0, 0],
+  /** --paper: Hintergrund */
+  paper: [255, 255, 255],
+  /** --tint: 12 % Schwarz (#e0e0e0), nur Tabellenköpfe */
+  tint: [224, 224, 224],
 } as const;
 
-/** Schriftgrößen in pt. */
-export const printFonts = {
-  h1: 18,
-  h2: 15,
-  meta: 11,
-  metaSmall: 10,
-  sectionTitle: 14,
-  phaseTitle: 14,
-  groupTitle: 13,
-  table: 11,
-  tableSmall: 10,
-  hint: 10,
+/** Untergrenzen (@DR-001). Die Tests lesen sie hier, nie eine zweite Zahl im Test. */
+export const printLimits = {
+  /** Kein Textstück näher als diese Strecke am Papierrand, mm. */
+  margin: 12,
+  /** Kleinste Schrift in pt. Ausnahmen laut Liste (Kopfangaben, Spaltenköpfe, Fußzeile, Kennzeichen, Feldbeschriftungen). */
+  minFontPt: 7.5,
+  /** Uhrzeit (Daniel 15.10.): mindestens 14 pt. */
+  timePt: 14,
+  /** Ergebnis (Daniel 15.10.): mindestens 18 pt. */
+  resultPt: 18,
 } as const;
 
-/** Seitenränder und Abstände in mm. */
-export const printSpacing = {
-  pageMargin: {
-    top: 14,
-    bottom: 16,
-    left: 16,
-    right: 16,
-  },
-  /** Abstand zwischen Abschnitten */
-  sectionGap: 6,
-  /** Abstand zwischen Blöcken innerhalb eines Abschnitts */
-  blockGap: 4,
-} as const;
-
-/** Seitenformate in mm. Die Ausrichtung wählt die Zeile. */
+/** Seitenformate in mm und Seitenränder (`@page`: oben 14, rechts 15, unten 12, links 15). */
 export const printPage = {
   a4: {
     portrait: { width: 210, height: 297 },
     landscape: { width: 297, height: 210 },
   },
+  margin: {
+    top: 14,
+    right: 15,
+    bottom: 12,
+    left: 15,
+  },
 } as const;
 
-/** Weitere Maße in mm, je Baustein benannt. Nur Zahlen aus dem früheren Layout. */
+/** Schriftgrößen in pt (`druck.css`). Uhrzeit und Ergebnis stehen in `printLimits`. */
+export const printType = {
+  /** .kicker */
+  kicker: 8.5,
+  /** .title (Kurzkopf: `titleShort`) */
+  title: 26,
+  titleShort: 16,
+  /** .title .age */
+  age: 13,
+  /** .head.short .subtitle */
+  subtitle: 10.5,
+  /** .meta */
+  meta: 9.5,
+  /** h2 */
+  h2: 13,
+  /** .teams */
+  teams: 10.5,
+  /** table.m thead th */
+  head: 9,
+  /** table.m td */
+  body: 12,
+  /** table.m td.nr */
+  nr: 10.5,
+  /** table.m td.zeit (Uhrzeit, Untergrenze in `printLimits.timePt`) */
+  time: 14,
+  /** .score .f (Ergebnisfeld, Untergrenze in `printLimits.resultPt`) */
+  result: 18,
+  /** .score .col (Doppelpunkt zwischen den Feldern) */
+  resultColon: 15,
+  /** .mark */
+  mark: 9,
+  /** .pen .lbl */
+  penLabel: 8.5,
+  /** .pen .f */
+  penField: 11,
+  /** .pen-done */
+  penDone: 9,
+  /** tr.round td */
+  round: 11,
+  /** tr.round td .note */
+  roundNote: 9,
+  /** .origin-s, td.team small */
+  origin: 9,
+  /** .ko-line, .rules-line */
+  note: 10.5,
+  /** table.s caption */
+  caption: 11.5,
+  /** table.s thead th */
+  tableSHead: 9,
+  /** table.s td */
+  tableSBody: 11,
+  /** .rank */
+  rank: 11.5,
+  /** .foot */
+  foot: 9,
+} as const;
+
+/** Linien und Rahmen in mm (`druck.css`). */
+export const printStroke = {
+  /** .head border-bottom */
+  head: 0.7,
+  /** table thead border (Kopf und Abschnittslinie) */
+  thead: 0.5,
+  /** Zeilenlinie der Tabellen */
+  row: 0.25,
+  /** Teilnehmerkästen und Meta-Box, Rahmen (Entwurf: 0,3; Bestand 0,5 bleibt bis a3-3) */
+  box: 0.3,
+  /** Kurzkopf-Linie */
+  shortHead: 0.5,
+  /** .foot border-top */
+  foot: 0.3,
+} as const;
+
+/** Abstände in mm (`druck.css`, wo vorhanden). */
+export const printGap = {
+  /** Abstand zwischen Tabellen und Abschnitten (`.s-gap` 5 mm) */
+  sectionGap: 5,
+  /** h2 margin oben und unten */
+  h2Top: 4,
+  h2Bottom: 1.8,
+  /** table.m thead th: Innenabstand vertikal / horizontal */
+  headPadV: 1.3,
+  headPadH: 1.5,
+  /** table.m td: Innenabstand vertikal / horizontal */
+  bodyPadV: 0.6,
+  bodyPadH: 1.5,
+  /** table.m td.nr: Innenabstand links und rechts (Spielnummer passt in die schmale Spalte) */
+  nrPad: 0.5,
+  /** table.s thead th und td: Innenabstand (vertikal und horizontal gleich) */
+  compactPad: 1.2,
+  /** Kurzkopf (Folgeseiten): Gesamthöhe bis zum Inhalt, Grundlinien von Titel und Untertitel, Linie */
+  shortHeadHeight: 16,
+  shortHeadTitleBaseline: 6,
+  shortHeadSubBaseline: 11.5,
+  shortHeadRule: 14,
+  /** Platz zwischen Satzspiegel und Seitenzahl */
+  footSpace: 4,
+} as const;
+
+/** Spaltenbreiten in mm (`<colgroup>` in `gen.py`). Heim und Gast bekommen den Rest. */
+export const printColumns = {
+  /** Spielzeilen der Gruppenphase */
+  match: {
+    nr: 7,
+    time: 17,
+    field: 10,
+    group: 9,
+    result: 30,
+    referee: 15,
+  },
+  /** Finalrunde: Ergebnisspalte breiter */
+  finals: {
+    nr: 7,
+    time: 17,
+    field: 10,
+    result: 44,
+    referee: 15,
+  },
+  /** Gruppentabellen und Platzierung */
+  standings: {
+    pos: 10,
+    played: 11,
+    won: 10,
+    drawn: 10,
+    lost: 10,
+    goals: 21,
+    diff: 13,
+    points: 13,
+  },
+} as const;
+
+/**
+ * Übrige Layout-Maße in mm, die v7.2 nicht festlegt. Sie bleiben bis zu a3-3 (Kopf) und a4 (Teilnehmer) unverändert.
+ */
 export const printMetrics = {
   /** Mindestplatz für den Kopf */
   headerMinSpace: 14,
@@ -96,7 +214,6 @@ export const printMetrics = {
   sectionTitleAdvance: 4,
 
   /** Teilnehmer-Kästen */
-  boxBorderWidth: 0.5,
   boxPadding: 3,
   boxTitleHeight: 6,
   /** Abstand Kastenoberkante → Gruppentitel bzw. erste Zeile */
@@ -114,34 +231,6 @@ export const printMetrics = {
   finalsSubtitleMinSpace: 8,
   finalsSubtitleAdvance: 4,
 
-  /** Tabellen */
-  tableCellPadding: 2,
-  tableCellPaddingCompact: 1.5,
-  tableLineWidth: 0.3,
-
   /** Standings-Abstand nach einer Gruppentabelle (sectionGap + 4) */
   standingsGroupAdvance: 4,
-} as const;
-
-/** Spaltenbreiten der Spieltabellen in mm. */
-export const printTableColumns = {
-  nr: 10,
-  time: 15,
-  field: 15,
-  group: 10,
-  result: 25,
-  referee: 15,
-} as const;
-
-/** Spaltenbreiten der Tabellen (Pos, Team, Sp, S, U, N, Tore, Diff, Pkt) in mm. */
-export const printStandingsColumns = {
-  pos: 8,
-  team: 37,
-  played: 8,
-  won: 7,
-  drawn: 7,
-  lost: 7,
-  goals: 12,
-  diff: 10,
-  points: 11,
 } as const;
