@@ -81,7 +81,11 @@
     "startDate": "Startdatum",
     "startDatePastError": "Startdatum darf nicht in der Vergangenheit liegen",
     "startTime": "Startzeit",
-    "startTimePlaceholder": "09:00"
+    "startTimePlaceholder": "09:00",
+    "rulebook": "Regelwerk (optional)",
+    "rulebookPlaceholder": "z. B. BFV-Richtlinien für Futsal",
+    "rulebookLimit": "Höchstens 80 Zeichen.",
+    "rulebookTruncated": "Auf 80 Zeichen gekürzt."
   },
   "location": {
     "label": "Veranstaltungsort",

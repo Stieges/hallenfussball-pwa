@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Card, Combobox, Input } from '../../components/ui';
+import { RulebookField } from '../../components/ui/molecules/RulebookField';
 import { Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../constants/tournamentOptions';
@@ -40,6 +41,17 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         value={formData.organizer ?? ''}
         onChange={(v) => onUpdate('organizer', v)}
         placeholder={t('step3.organizerPlaceholder')}
+        style={{ marginTop: '16px' }}
+      />
+
+      <RulebookField
+        label={t('step3.rulebook')}
+        placeholder={t('step3.rulebookPlaceholder')}
+        limitHint={t('step3.rulebookLimit')}
+        truncatedHint={t('step3.rulebookTruncated')}
+        value={formData.rulebook}
+        onChange={(v) => onUpdate('rulebook', v)}
+        testId="wizard-rulebook"
         style={{ marginTop: '16px' }}
       />
 

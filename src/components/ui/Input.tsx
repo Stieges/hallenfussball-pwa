@@ -8,6 +8,8 @@ interface InputProps {
   /** Wird beim Verlassen des Feldes ausgelöst (z. B. Regelwert-Prüfung, @W2A-034) */
   onBlur?: () => void;
   placeholder?: string;
+  /** Höchstlänge der Eingabe (nativ über maxLength am input) */
+  maxLength?: number;
   min?: string | number;
   max?: string | number;
   step?: string | number;
@@ -30,6 +32,7 @@ export const Input: React.FC<InputProps> = ({
   onChange,
   onBlur,
   placeholder,
+  maxLength,
   min,
   max,
   step,
@@ -93,6 +96,7 @@ export const Input: React.FC<InputProps> = ({
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
+        maxLength={maxLength}
         min={min}
         max={max}
         step={step}

@@ -419,6 +419,7 @@ export interface Tournament {
   startTime?: string; // New: HH:mm format (24h)
   location: LocationDetails;
   organizer?: string; // Veranstalter-Name (optional)
+  rulebook?: string; // Regelwerk-Text für den Ausdruck, höchstens 80 Zeichen (@DR-016)
   contactInfo?: ContactInfo; // Kontaktinformationen (optional)
 
   // Step 4: Teams

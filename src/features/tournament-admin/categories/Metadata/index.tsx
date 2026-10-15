@@ -14,6 +14,7 @@ import { CategoryPage, CollapsibleSection } from '../shared';
 import { Input, Combobox } from '../../../../components/ui';
 import { LocationForm } from '../../../../components/LocationForm';
 import { ContactForm } from '../../../../components/ContactForm';
+import { RulebookField } from '../../../../components/ui/molecules/RulebookField';
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../../../constants/tournamentOptions';
 import type { Tournament } from '../../../../types/tournament';
 
@@ -165,6 +166,7 @@ export function MetadataCategory({
   const [formData, setFormData] = useState<Partial<Tournament>>({
     title: tournament.title,
     organizer: tournament.organizer,
+    rulebook: tournament.rulebook,
     ageClass: tournament.ageClass,
     location: tournament.location,
     contactInfo: tournament.contactInfo,
@@ -181,6 +183,7 @@ export function MetadataCategory({
     setFormData({
       title: tournament.title,
       organizer: tournament.organizer,
+      rulebook: tournament.rulebook,
       ageClass: tournament.ageClass,
       location: tournament.location,
       contactInfo: tournament.contactInfo,
@@ -195,6 +198,7 @@ export function MetadataCategory({
     const originalData = {
       title: tournament.title,
       organizer: tournament.organizer ?? '',
+      rulebook: tournament.rulebook ?? '',
       ageClass: tournament.ageClass,
       locationName: tournament.location.name,
       locationCity: tournament.location.city ?? '',
@@ -210,6 +214,7 @@ export function MetadataCategory({
     const currentData = {
       title: formData.title ?? '',
       organizer: formData.organizer ?? '',
+      rulebook: formData.rulebook ?? '',
       ageClass: formData.ageClass ?? DEFAULT_VALUES.ageClass,
       locationName: formData.location?.name ?? '',
       locationCity: formData.location?.city ?? '',
@@ -252,6 +257,7 @@ export function MetadataCategory({
       ...tournament,
       title: formData.title ?? tournament.title,
       organizer: formData.organizer,
+      rulebook: formData.rulebook,
       ageClass: formData.ageClass ?? tournament.ageClass,
       location: formData.location ?? tournament.location,
       contactInfo: formData.contactInfo,
@@ -279,6 +285,7 @@ export function MetadataCategory({
     setFormData({
       title: tournament.title,
       organizer: tournament.organizer,
+      rulebook: tournament.rulebook,
       ageClass: tournament.ageClass,
       location: tournament.location,
       contactInfo: tournament.contactInfo,
@@ -332,6 +339,16 @@ export function MetadataCategory({
             value={formData.organizer ?? ''}
             onChange={(v) => handleUpdate('organizer', v)}
             placeholder={t('metadata.organizerPlaceholder')}
+          />
+
+          <RulebookField
+            label={t('metadata.rulebook')}
+            placeholder={t('metadata.rulebookPlaceholder')}
+            limitHint={t('metadata.rulebookLimit')}
+            truncatedHint={t('metadata.rulebookTruncated')}
+            value={formData.rulebook}
+            onChange={(v) => handleUpdate('rulebook', v)}
+            testId="metadata-rulebook"
           />
 
           <Combobox
