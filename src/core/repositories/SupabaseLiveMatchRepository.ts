@@ -241,8 +241,8 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
             // Guards, obwohl ein beendetes Spiel live_state == null hat (der Server setzt das,
             // der Client sendet es nicht mehr) — das lässt isMatchActive() unten false zurückgeben. Ohne diese
             // Ausnahme wurde JEDE Spielende-Aktualisierung wie eine Löschung behandelt (siehe
-            // Zweig unten) und useMatchExecution.ts ignoriert eine solche Löschung bewusst
-            // (Kommentar dort: "Cockpit braucht beendete Spiele weiterhin") — ein zweites,
+            // Zweig unten) und wird bewusst NICHT als Löschung behandelt (Cockpit braucht beendete
+            // Spiele weiterhin) — ein zweites,
             // bereits geöffnetes Cockpit (z. B. der Owner) erfuhr dadurch NIE per Realtime, dass
             // ein Helfer das Spiel beendet hat, sondern hätte manuell neu laden müssen.
             const isFinished = matchRow.match_status === 'finished';
