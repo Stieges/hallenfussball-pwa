@@ -225,7 +225,7 @@ export function MonitorEditor({
     setError(null);
 
     try {
-      const newSlide = await addSlide(monitorId, type);
+      const newSlide = await addSlide(monitorId, type, type === 'live' && fields[0] ? { fieldId: fields[0].id } : undefined); // @ME-066
       if (newSlide) {
         setEditingSlideId(newSlide.id);
       }
@@ -235,7 +235,7 @@ export function MonitorEditor({
     } finally {
       setIsLoading(false);
     }
-  }, [monitorId, addSlide, t]);
+  }, [monitorId, addSlide, fields, t]);
 
   const handleUpdateSlide = useCallback(async (
     slideId: string,

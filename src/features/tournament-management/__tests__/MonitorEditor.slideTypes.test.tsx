@@ -55,8 +55,8 @@ describe('MonitorEditor – angebotene Folien-Typen', () => {
     vi.clearAllMocks();
     hoisted.monitor.slides = [];
     // Neue Folie ohne Config (wie ein Monitor ohne matchCount) – prüft die Vorbelegung im Editor
-    hoisted.addSlide.mockImplementation(async (_monitorId: string, type: MonitorSlide['type']) => {
-      const slide: MonitorSlide = { id: `s-${hoisted.monitor.slides.length}`, type, config: {}, duration: 15, order: hoisted.monitor.slides.length };
+    hoisted.addSlide.mockImplementation(async (_monitorId: string, type: MonitorSlide['type'], config?: MonitorSlide['config']) => {
+      const slide: MonitorSlide = { id: `s-${hoisted.monitor.slides.length}`, type, config: { ...config }, duration: 15, order: hoisted.monitor.slides.length };
       hoisted.monitor.slides.push(slide);
       return slide;
     });
@@ -108,5 +108,24 @@ describe('MonitorEditor – angebotene Folien-Typen', () => {
     expect(container.querySelector('select[id$="-whenIdle"]')).toBeNull();
     expect(screen.queryByText(/whenIdleLabel/)).toBeNull();
     expect(screen.getByText(/pauseRotation/)).toBeInTheDocument();
+  });
+
+  it('@ME-066 Neue Live-Spiel-Folie ist mit dem ersten Feld vorbelegt und gilt als eingerichtet', async () => {
+    const user = userEvent.setup();
+    renderEditor(tournament());
+    await openAddMenu(user);
+    await user.click(screen.getByRole('button', { name: /Live-Spiel/ }));
+    expect(hoisted.addSlide).toHaveBeenCalledWith('monitor-1', 'live', { fieldId: 'f1' });
+    expect(hoisted.monitor.slides[0].config.fieldId).toBe('f1');
+    expect(screen.queryByText(/notConfigured/)).toBeNull();
+  });
+
+  it('@ME-066 Gegenbeispiel: eine Folie ohne Feldbezug (Nächste Spiele) bekommt keine Feld-Vorbelegung', async () => {
+    const user = userEvent.setup();
+    renderEditor(tournament());
+    await openAddMenu(user);
+    await user.click(screen.getByRole('button', { name: /Nächste Spiele/ }));
+    expect(hoisted.addSlide).toHaveBeenCalledWith('monitor-1', 'next-matches', undefined);
+    expect(hoisted.monitor.slides[0].config.fieldId).toBeUndefined();
   });
 });
