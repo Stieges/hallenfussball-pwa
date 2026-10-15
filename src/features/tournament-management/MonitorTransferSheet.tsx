@@ -26,11 +26,11 @@ import type { Tournament } from '../../types/tournament';
 import type { TournamentMonitor } from '../../types/monitor';
 import { useTournaments } from '../../hooks/useTournaments';
 import {
-  exportMonitorConfig, HALLEN_STANDARD, importMonitorConfig, instantiateMonitorConfig, MONITOR_CONFIG_MAX_BYTES,
+  exportMonitorConfig, HALLEN_STANDARD, instantiateMonitorConfig,
 } from '../../core/services/monitorConfigTransfer';
 import type { MonitorConfigPayload } from '../../core/services/monitorConfigTransfer';
-import { importErrorMessage, newId } from './components/monitorTransferHelpers';
-import { applySlideFixes, findReferenceIssues, sanitizeCustomQr, tournamentSlotTargets } from '../../core/services/monitorConfigTransferChecks';
+import { newId, readTransferFile } from './components/monitorTransferHelpers';
+import { applyCustomQrRemovals, applySlideFixes, findReferenceIssues, sanitizeCustomQr, tournamentSlotTargets } from '../../core/services/monitorConfigTransferChecks';
 import type { CustomQrSkipped, ReferenceIssue, SlideFix } from '../../core/services/monitorConfigTransferChecks';
 import { MonitorTransferIssues, MonitorTransferResultNotes } from './components/MonitorTransferNotes';
 
@@ -54,6 +54,8 @@ interface TransferResult {
 interface FixState {
   choice: TransferChoice;
   fixes: Record<string, SlideFix>;
+  /** „Link entfernen“ bei eigenen Links aus einer Datei (@ME-063) */
+  qrRemoved: Record<string, boolean>;
 }
 
 export interface MonitorTransferSheetProps {
@@ -104,7 +106,10 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
     return sanitizeCustomQr(rawPayload, choice.kind === 'file' ? 'file' : 'tournament');
   }, [choice, rawPayload]);
   const payload = prepared?.payload ?? null;
-  const currentFixes = fixState?.choice === choice ? fixState.fixes : {};
+  const current = fixState?.choice === choice ? fixState : null;
+  const currentFixes = current?.fixes ?? {};
+  const qrRemoved = current?.qrRemoved ?? {};
+  const fileLinks = prepared?.fileLinks ?? [];
 
   // Folien mit Feld/Gruppe, die dieses Turnier nicht hat (@ME-061)
   const issues = useMemo<ReferenceIssue[]>(
@@ -119,37 +124,24 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
     if (!choice) {return;}
     const next: Record<string, SlideFix> = Object.fromEntries(Object.entries(currentFixes).filter(([k]) => k !== key));
     if (fix) {next[key] = fix;}
-    setFixState({ choice, fixes: next });
+    setFixState({ choice, fixes: next, qrRemoved });
+  };
+
+  const handleQrRemove = (key: string) => {
+    if (!choice) {return;}
+    setFixState({ choice, fixes: currentFixes, qrRemoved: { ...qrRemoved, [key]: !qrRemoved[key] } });
   };
 
   const handleFile = async (file: File | undefined) => {
     setError(null);
     setResult(null);
     if (!file) {return;}
-
-    // Größe vor dem Lesen prüfen; der Service prüft zusätzlich den Text
-    if (file.size > MONITOR_CONFIG_MAX_BYTES) {
-      setChoice(null);
-      setFileError(importErrorMessage(t, 'too-large'));
-      return;
-    }
-
-    let text: string;
-    try {
-      text = await file.text();
-    } catch {
-      setChoice(null);
-      setFileError(t('monitors.transfer.errors.readFailed'));
-      return;
-    }
-
-    const parsed = importMonitorConfig(text);
+    const parsed = await readTransferFile(file, t);
     if (!parsed.ok) {
       setChoice(null);
-      setFileError(importErrorMessage(t, parsed.error));
+      setFileError(parsed.message);
       return;
     }
-
     setFileError(null);
     setChoice({ kind: 'file', fileName: file.name, payload: parsed.payload });
   };
@@ -159,7 +151,8 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
     setIsApplying(true);
     setError(null);
     try {
-      const resolved = applySlideFixes(payload, currentFixes);
+      const removed = new Set(Object.keys(qrRemoved).filter(key => qrRemoved[key]));
+      const resolved = applySlideFixes(applyCustomQrRemovals(payload, removed), currentFixes);
       const { monitors, skippedSponsors, renamed } = instantiateMonitorConfig(resolved, {
         sponsors: tournament.sponsors ?? [],
         existingNames: (tournament.monitors ?? []).map(m => m.name),
@@ -167,7 +160,7 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
         now: new Date().toISOString(),
       });
       await onApply(monitors);
-      setResult({ count: monitors.length, skippedSponsors, renamed, customQrSkipped: prepared?.skipped ?? { fromFile: 0, invalidUrl: 0 } });
+      setResult({ count: monitors.length, skippedSponsors, renamed, customQrSkipped: prepared?.skipped ?? { invalidUrl: 0 } });
     } catch {
       setError(t('monitors.transfer.errors.saveFailed'));
     } finally {
@@ -272,7 +265,14 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
                 })}
               </p>
             )}
-            <MonitorTransferIssues issues={issues} fixes={currentFixes} onFix={handleFix} />
+            <MonitorTransferIssues
+              issues={issues}
+              fixes={currentFixes}
+              onFix={handleFix}
+              fileLinks={fileLinks}
+              qrRemoved={qrRemoved}
+              onQrRemove={handleQrRemove}
+            />
             {error && <p role="alert" style={alertStyle}>{error}</p>}
 
             <div style={actionsStyle}>

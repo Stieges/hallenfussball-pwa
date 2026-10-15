@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 import type { MonitorConfigPayload, TransferSlide } from '../monitorConfigTransfer';
 import { instantiateMonitorConfig } from '../monitorConfigTransfer';
 import {
+  applyCustomQrRemovals,
   applySlideFixes,
   findReferenceIssues,
   REASSIGN_FIELD_ID,
@@ -105,18 +106,29 @@ describe('findReferenceIssues und applySlideFixes (@ME-061)', () => {
 });
 
 describe('sanitizeCustomQr (@ME-063)', () => {
-  it('verwirft den eigenen Link aus einer Datei und zählt ihn', () => {
+  it('behält einen gültigen eigenen Link aus einer Datei und nennt ihn zum Prüfen', () => {
     const data = payload([slide('qr-code', { qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' })]);
-    const { payload: out, skipped } = sanitizeCustomQr(data, 'file');
-    expect(out.monitors[0].slides[0].config).toEqual({});
-    expect(skipped).toEqual({ fromFile: 1, invalidUrl: 0 });
+    const { payload: out, skipped, fileLinks } = sanitizeCustomQr(data, 'file');
+    expect(out.monitors[0].slides[0].config).toEqual({ qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' });
+    expect(fileLinks).toEqual([{ key: '0:0', url: 'https://sv-nord.de' }]);
+    expect(skipped).toEqual({ invalidUrl: 0 });
   });
 
-  it('behält einen gültigen https-Link aus dem Turnier', () => {
+  it.each(['javascript:alert(1)', 'ftp://sv-nord.de', 'kein Link'])('verwirft aus einer Datei eine Adresse wie „%s“ und zählt sie', (url) => {
+    const data = payload([slide('qr-code', { qrTarget: 'custom', customQrUrl: url })]);
+    const { payload: out, skipped, fileLinks } = sanitizeCustomQr(data, 'file');
+    expect(out.monitors[0].slides[0].config.qrTarget).toBeUndefined();
+    expect(out.monitors[0].slides[0].config.customQrUrl).toBeUndefined();
+    expect(fileLinks).toEqual([]);
+    expect(skipped.invalidUrl).toBe(1);
+  });
+
+  it('behält einen gültigen https-Link aus dem Turnier ohne Prüf-Hinweis', () => {
     const data = payload([slide('qr-code', { qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' })]);
-    const { payload: out, skipped } = sanitizeCustomQr(data, 'tournament');
+    const { payload: out, skipped, fileLinks } = sanitizeCustomQr(data, 'tournament');
     expect(out.monitors[0].slides[0].config).toEqual({ qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' });
-    expect(skipped).toEqual({ fromFile: 0, invalidUrl: 0 });
+    expect(fileLinks).toEqual([]);
+    expect(skipped).toEqual({ invalidUrl: 0 });
   });
 
   it.each(['javascript:alert(1)', 'ftp://sv-nord.de', 'kein Link'])('verwirft aus dem Turnier eine Adresse wie „%s“', (url) => {
@@ -128,9 +140,27 @@ describe('sanitizeCustomQr (@ME-063)', () => {
 
   it('ändert nichts ohne eigenen Link (Gegenbeispiel)', () => {
     const data = payload([slide('qr-code', { qrTarget: 'sponsor-website' })]);
-    const { payload: out, skipped } = sanitizeCustomQr(data, 'file');
+    const { payload: out, skipped, fileLinks } = sanitizeCustomQr(data, 'file');
     expect(out).toEqual(data);
-    expect(skipped).toEqual({ fromFile: 0, invalidUrl: 0 });
+    expect(fileLinks).toEqual([]);
+    expect(skipped).toEqual({ invalidUrl: 0 });
+  });
+});
+
+describe('applyCustomQrRemovals (@ME-063 „Link entfernen“)', () => {
+  it('setzt die Folie auf das QR-Ziel „Turnier“ und entfernt den Link', () => {
+    const data = payload([
+      slide('sponsor', { qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' }),
+      slide('live', { fieldId: 'field-1' }),
+    ]);
+    const out = applyCustomQrRemovals(data, new Set(['0:0']));
+    expect(out.monitors[0].slides[0].config).toEqual({ qrTarget: 'tournament' });
+    expect(out.monitors[0].slides[1]).toEqual(data.monitors[0].slides[1]);
+  });
+
+  it('ohne Auswahl bleibt die Payload unverändert (Gegenbeispiel)', () => {
+    const data = payload([slide('sponsor', { qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' })]);
+    expect(applyCustomQrRemovals(data, new Set())).toEqual(data);
   });
 });
 

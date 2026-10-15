@@ -123,10 +123,15 @@ export function applySlideFixes(payload: MonitorConfigPayload, fixes: Readonly<R
 }
 
 export interface CustomQrSkipped {
-  /** Eigene Links aus einer Datei (@ME-063) */
-  fromFile: number;
-  /** Eigene Links mit einer Adresse, die nicht http/https ist */
+  /** Eigene Links mit einer Adresse, die nicht http/https ist (aus Turnier oder Datei) */
   invalidUrl: number;
+}
+
+/** Eigener Link aus einer Datei, der übernommen wird und zum Prüfen angezeigt wird (@ME-063) */
+export interface FileCustomQrLink {
+  /** Schlüssel „Monitor:Folie“ in der Payload-Reihenfolge */
+  key: string;
+  url: string;
 }
 
 function isHttpUrl(value: string | undefined): boolean {
@@ -140,28 +145,43 @@ function isHttpUrl(value: string | undefined): boolean {
 }
 
 /**
- * Eigener QR-Link (@ME-063): aus einer Datei wird er nie übernommen; aus einem Turnier nur, wenn
- * die Adresse http/https ist. Übernommen wird dann die Standardeinstellung (Zuschauer-Seite).
+ * Eigener QR-Link (@ME-063): eine Adresse, die nicht http/https ist, wird immer verworfen und gemeldet.
+ * Gültige Links bleiben; aus einer Datei werden sie zum Prüfen gelistet.
  */
 export function sanitizeCustomQr(
   payload: MonitorConfigPayload,
   source: 'tournament' | 'file',
-): { payload: MonitorConfigPayload; skipped: CustomQrSkipped } {
-  const skipped: CustomQrSkipped = { fromFile: 0, invalidUrl: 0 };
-  const monitors = payload.monitors.map(monitor => ({
+): { payload: MonitorConfigPayload; skipped: CustomQrSkipped; fileLinks: FileCustomQrLink[] } {
+  const skipped: CustomQrSkipped = { invalidUrl: 0 };
+  const fileLinks: FileCustomQrLink[] = [];
+  const monitors = payload.monitors.map((monitor, mi) => ({
     ...monitor,
-    slides: monitor.slides.map((slide): TransferSlide => {
+    slides: monitor.slides.map((slide, si): TransferSlide => {
       if (slide.config.qrTarget !== 'custom') {return slide;}
-      if (source === 'file') {
-        skipped.fromFile += 1;
-      } else if (!isHttpUrl(slide.config.customQrUrl)) {
+      if (!isHttpUrl(slide.config.customQrUrl)) {
         skipped.invalidUrl += 1;
-      } else {
-        return slide;
+        const { qrTarget: _qr, customQrUrl: _url, ...config } = slide.config;
+        return { ...slide, config };
       }
-      const { qrTarget: _qr, customQrUrl: _url, ...config } = slide.config;
-      return { ...slide, config };
+      if (source === 'file') {fileLinks.push({ key: slideKey(mi, si), url: slide.config.customQrUrl ?? '' });}
+      return slide;
     }),
   }));
-  return { payload: { ...payload, monitors }, skipped };
+  return { payload: { ...payload, monitors }, skipped, fileLinks };
+}
+
+/** „Link entfernen“ (@ME-063): die gewählten Folien zeigen danach auf das QR-Ziel „Turnier“ */
+export function applyCustomQrRemovals(payload: MonitorConfigPayload, keys: ReadonlySet<string>): MonitorConfigPayload {
+  if (keys.size === 0) {return payload;}
+  return {
+    ...payload,
+    monitors: payload.monitors.map((monitor, mi) => ({
+      ...monitor,
+      slides: monitor.slides.map((slide, si): TransferSlide => {
+        if (!keys.has(slideKey(mi, si))) {return slide;}
+        const { customQrUrl: _url, ...config } = slide.config;
+        return { ...slide, config: { ...config, qrTarget: 'tournament' } };
+      }),
+    })),
+  };
 }

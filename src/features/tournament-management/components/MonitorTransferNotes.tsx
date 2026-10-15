@@ -7,7 +7,7 @@ import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
-import type { CustomQrSkipped, ReferenceIssue, SlideFix } from '../../../core/services/monitorConfigTransferChecks';
+import type { CustomQrSkipped, FileCustomQrLink, ReferenceIssue, SlideFix } from '../../../core/services/monitorConfigTransferChecks';
 import { alertStyle, mutedStyle, sectionStyle } from './monitorTransferStyles';
 
 const issueRowStyle: CSSProperties = {
@@ -44,15 +44,39 @@ export interface MonitorTransferIssuesProps {
   /** Getroffene Entscheidungen je Folie (Schlüssel „Monitor:Folie“) */
   fixes: Readonly<Record<string, SlideFix>>;
   onFix: (key: string, fix: SlideFix | null) => void;
+  /** Eigene Links aus der Datei, die zum Prüfen angezeigt werden (@ME-063) */
+  fileLinks: FileCustomQrLink[];
+  /** „Link entfernen“ gewählt (Schlüssel „Monitor:Folie“) */
+  qrRemoved: Readonly<Record<string, boolean>>;
+  onQrRemove: (key: string) => void;
 }
 
 /** Je fehlender Referenz eine Folie mit den Entscheidungen; ohne Wahl bleibt die Folie */
-export function MonitorTransferIssues({ issues, fixes, onFix }: MonitorTransferIssuesProps) {
+export function MonitorTransferIssues({ issues, fixes, onFix, fileLinks, qrRemoved, onQrRemove }: MonitorTransferIssuesProps) {
   const { t } = useTranslation('tournament');
-  if (issues.length === 0) {return null;}
+  if (issues.length === 0 && fileLinks.length === 0) {return null;}
 
   return (
     <section style={sectionStyle} aria-label={t('monitors.transfer.issues.title')} data-testid="transfer-issues">
+      {fileLinks.map(link => {
+        const removed = qrRemoved[link.key];
+        return (
+          <div key={`qr-${link.key}`} style={issueRowStyle} data-testid={`transfer-file-link-${link.key}`}>
+            <p role="status" style={issueTextStyle}>{t('monitors.transfer.customQrCheck', { url: link.url })}</p>
+            <div style={choiceRowStyle}>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-pressed={removed}
+                data-testid={`transfer-file-link-${link.key}-remove`}
+                onClick={() => onQrRemove(link.key)}
+              >
+                {t('monitors.transfer.customQrRemove')}
+              </Button>
+            </div>
+          </div>
+        );
+      })}
       {issues.map(issue => {
         const isField = issue.problem === 'field';
         const ref = isField
@@ -88,7 +112,7 @@ export function MonitorTransferIssues({ issues, fixes, onFix }: MonitorTransferI
           </div>
         );
       })}
-      <p style={mutedStyle}>{t('monitors.transfer.issues.keepHint')}</p>
+      {issues.length > 0 && <p style={mutedStyle}>{t('monitors.transfer.issues.keepHint')}</p>}
     </section>
   );
 }
@@ -114,11 +138,6 @@ export function MonitorTransferResultNotes({ renamed, customQrSkipped, skippedSp
           {t('monitors.transfer.renamed', { name: entry.to })}
         </p>
       ))}
-      {customQrSkipped.fromFile > 0 && (
-        <p data-testid="transfer-custom-qr-file" role="status" style={mutedStyle}>
-          {t('monitors.transfer.customQrFromFile')}
-        </p>
-      )}
       {customQrSkipped.invalidUrl > 0 && (
         <p data-testid="transfer-custom-qr-invalid" role="alert" style={alertStyle}>
           {t('monitors.transfer.customQrInvalid')}

@@ -156,7 +156,7 @@ describe('Monitore übernehmen – B-22b Texte (echtes i18n)', () => {
     expect(await screen.findByText('Der übernommene Monitor heißt jetzt ‚Halle (2)‘')).toBeInTheDocument();
   });
 
-  it('@ME-063 meldet den nicht übernommenen eigenen Link aus der Datei wörtlich', async () => {
+  it('@ME-063 nennt die Adresse aus der Datei mit der Bitte zu prüfen und bietet „Link entfernen“ an', async () => {
     const onUpdate = await renderWithI18n(sued);
     await userEvent.click(screen.getByTestId('monitors-transfer-open'));
     const file = new File([JSON.stringify({
@@ -168,10 +168,12 @@ describe('Monitore übernehmen – B-22b Texte (echtes i18n)', () => {
       }],
     })], 'monitore.json', { type: 'application/json' });
     await userEvent.upload(screen.getByTestId('transfer-file'), file);
-    await userEvent.click(screen.getByTestId('transfer-confirm'));
 
-    expect(await screen.findByText('Eigener Link aus der Datei nicht übernommen – die QR-Folie zeigt auf die Zuschauer-Seite')).toBeInTheDocument();
+    expect(await screen.findByText('Eigener Link aus der Datei: „https://sv-nord.de“ – bitte prüfen, ob die Adresse stimmt')).toBeInTheDocument();
+    expect(screen.getByTestId('transfer-file-link-0:0-remove')).toHaveTextContent('Link entfernen');
+    await userEvent.click(screen.getByTestId('transfer-confirm'));
     await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+    expect((onUpdate.mock.calls[0][0] as Tournament).monitors?.[0].slides[0].config.customQrUrl).toBe('https://sv-nord.de');
   });
 
   it('@ME-063 meldet eine ungültige eigene Adresse aus dem Turnier wörtlich (M1)', async () => {

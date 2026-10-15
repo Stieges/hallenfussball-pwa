@@ -98,6 +98,18 @@ function savedTournament(onUpdate: ReturnType<typeof vi.fn>): Tournament {
   return onUpdate.mock.calls[0][0] as Tournament;
 }
 
+/** Datei mit einer Sponsor-Folie und eigenem QR-Link (@ME-063) */
+function dateiMitLink(url: string) {
+  return {
+    kind: 'monitor-config', version: 1,
+    monitors: [{
+      name: 'Datei-Monitor', defaultSlideDuration: 15, transition: 'fade', transitionDuration: 500,
+      theme: 'dark', performanceMode: 'auto',
+      slides: [{ type: 'sponsor', config: { sponsorName: 'SV Nord', qrTarget: 'custom', customQrUrl: url }, duration: null }],
+    }],
+  };
+}
+
 function jsonFile(body: unknown, name = 'monitore.json'): File {
   return new File([JSON.stringify(body)], name, { type: 'application/json' });
 }
@@ -218,6 +230,7 @@ describe('Monitore übernehmen – B-22b', () => {
       expect(qr?.customQrUrl).toBe('https://sv-nord.de');
       await screen.findByTestId('transfer-done');
       expect(screen.queryByTestId('transfer-custom-qr-invalid')).not.toBeInTheDocument();
+      expect(screen.queryByTestId(/^transfer-file-link/)).not.toBeInTheDocument();
     });
 
     it('ungültige eigene Adresse aus dem Turnier (javascript:) wird verworfen und gemeldet (M1)', async () => {
@@ -234,25 +247,46 @@ describe('Monitore übernehmen – B-22b', () => {
       expect(await screen.findByTestId('transfer-custom-qr-invalid')).toHaveTextContent('monitors.transfer.customQrInvalid');
     });
 
-    it('aus einer Datei wird der eigene Link nicht übernommen und gemeldet', async () => {
+    it('@ME-063 aus einer Datei bleibt der eigene Link und die Rückmeldung nennt die Adresse zum Prüfen', async () => {
       const onUpdate = renderTab(sued);
       await userEvent.click(screen.getByTestId('monitors-transfer-open'));
-      const file = jsonFile({
-        kind: 'monitor-config', version: 1,
-        monitors: [{
-          name: 'Datei-Monitor', defaultSlideDuration: 15, transition: 'fade', transitionDuration: 500,
-          theme: 'dark', performanceMode: 'auto',
-          slides: [{ type: 'sponsor', config: { sponsorName: 'SV Nord', qrTarget: 'custom', customQrUrl: 'https://sv-nord.de' }, duration: null }],
-        }],
-      });
-      await userEvent.upload(screen.getByTestId('transfer-file'), file);
+      await userEvent.upload(screen.getByTestId('transfer-file'), jsonFile(dateiMitLink('https://sv-nord.de')));
+
+      expect(await screen.findByTestId('transfer-file-link-0:0')).toHaveTextContent('monitors.transfer.customQrCheck');
+      expect(screen.getByTestId('transfer-file-link-0:0-remove')).toBeInTheDocument();
+      await userEvent.click(screen.getByTestId('transfer-confirm'));
+
+      await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+      const qr = savedTournament(onUpdate).monitors?.[0].slides[0].config;
+      expect(qr?.qrTarget).toBe('custom');
+      expect(qr?.customQrUrl).toBe('https://sv-nord.de');
+    });
+
+    it('@ME-063 „Link entfernen“ setzt die Folie auf das QR-Ziel Turnier', async () => {
+      const onUpdate = renderTab(sued);
+      await userEvent.click(screen.getByTestId('monitors-transfer-open'));
+      await userEvent.upload(screen.getByTestId('transfer-file'), jsonFile(dateiMitLink('https://sv-nord.de')));
+      await userEvent.click(await screen.findByTestId('transfer-file-link-0:0-remove'));
+      await userEvent.click(screen.getByTestId('transfer-confirm'));
+
+      await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+      const qr = savedTournament(onUpdate).monitors?.[0].slides[0].config;
+      expect(qr?.qrTarget).toBe('tournament');
+      expect(qr?.customQrUrl).toBeUndefined();
+    });
+
+    it('@ME-063 aus einer Datei mit ungültiger Adresse (javascript:) wird sie verworfen und gemeldet', async () => {
+      const onUpdate = renderTab(sued);
+      await userEvent.click(screen.getByTestId('monitors-transfer-open'));
+      await userEvent.upload(screen.getByTestId('transfer-file'), jsonFile(dateiMitLink('javascript:alert(1)')));
+      expect(screen.queryByTestId('transfer-file-link-0:0')).not.toBeInTheDocument();
       await userEvent.click(screen.getByTestId('transfer-confirm'));
 
       await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
       const qr = savedTournament(onUpdate).monitors?.[0].slides[0].config;
       expect(qr?.qrTarget).toBeUndefined();
       expect(qr?.customQrUrl).toBeUndefined();
-      expect(await screen.findByTestId('transfer-custom-qr-file')).toBeInTheDocument();
+      expect(await screen.findByTestId('transfer-custom-qr-invalid')).toBeInTheDocument();
     });
 
     it('Gegenbeispiel: Datei mit QR-Ziel ohne eigenen Link zeigt keinen Hinweis und behält das Ziel', async () => {

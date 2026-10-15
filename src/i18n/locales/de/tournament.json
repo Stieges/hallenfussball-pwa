@@ -320,7 +320,8 @@
       "slidesCount_other": "{{count}} Folien",
       "summary": "{{monitors}} mit {{slides}}",
       "renamed": "Der übernommene Monitor heißt jetzt ‚{{name}}‘",
-      "customQrFromFile": "Eigener Link aus der Datei nicht übernommen – die QR-Folie zeigt auf die Zuschauer-Seite",
+      "customQrCheck": "Eigener Link aus der Datei: „{{url}}“ – bitte prüfen, ob die Adresse stimmt",
+      "customQrRemove": "Link entfernen",
       "customQrInvalid": "Eigener Link mit ungültiger Adresse nicht übernommen (nur http oder https) – die QR-Folie zeigt auf die Zuschauer-Seite",
       "issues": {
         "title": "Folien mit fehlendem Feld oder fehlender Gruppe",
