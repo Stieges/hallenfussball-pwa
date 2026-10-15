@@ -147,12 +147,25 @@ describe('FairScheduler — Pausen-Fairness-Invariante (property)', () => {
  * B-42: laengste Einzelpause und Dauer (@W4-024). Zeitraster wie generate(): 10 min Spiel, 2 min Wechsel.
  * Der Mittelwert allein verdeckt lange Einzelpausen; deshalb werden sie direkt geprueft.
  */
-const MAX_LONGEST_PAUSE_MIN = 150; // Obergrenze knapp ueber dem Hoechstwert im Eingaberaum (146 min, 16 Teams / 1 Feld)
-
 function longestPauseMinutes(matches: Match[]): number {
   const analysis = analyzeScheduleFairness(matches);
   const longestGap = Math.max(0, ...analysis.teamStats.map((s) => s.maxRest));
   return longestGap === 0 ? 0 : longestGap * 12 - 10;
+}
+
+/** Plan von Seed 0 (heutiges Verhalten) fuer dieselbe Eingabe wie generate(). */
+function seedZero(numTeams: number, numFields: number): Match[] {
+  return scheduleGroupPhaseVariant(
+    {
+      groups: new Map([['A', createTeams(numTeams)]]),
+      numberOfFields: numFields,
+      slotDurationMinutes: 10,
+      breakBetweenSlotsMinutes: 2,
+      minRestSlotsPerTeam: 1,
+      startTime: new Date('2024-01-01T09:00:00'),
+    },
+    0,
+  );
 }
 
 function durationMinutes(matches: Match[]): number {
@@ -161,15 +174,16 @@ function durationMinutes(matches: Match[]): number {
 }
 
 describe('FairScheduler — laengste Einzelpause und Dauer (property)', () => {
-  it('no team waits longer than MAX_LONGEST_PAUSE_MIN between two own matches', () => {
+  it('no team waits longer between two own matches than seed 0 (heute)', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 4, max: 16 }),
         fc.integer({ min: 1, max: 3 }),
         (numTeams, numFields) => {
           const matches = generate(numTeams, numFields);
+          const heute = seedZero(numTeams, numFields);
 
-          expect(longestPauseMinutes(matches)).toBeLessThanOrEqual(MAX_LONGEST_PAUSE_MIN);
+          expect(longestPauseMinutes(matches)).toBeLessThanOrEqual(longestPauseMinutes(heute));
         },
       ),
       { numRuns: 15 },
@@ -183,17 +197,7 @@ describe('FairScheduler — laengste Einzelpause und Dauer (property)', () => {
         fc.integer({ min: 1, max: 3 }),
         (numTeams, numFields) => {
           const matches = generate(numTeams, numFields);
-          const heute = scheduleGroupPhaseVariant(
-            {
-              groups: new Map([['A', createTeams(numTeams)]]),
-              numberOfFields: numFields,
-              slotDurationMinutes: 10,
-              breakBetweenSlotsMinutes: 2,
-              minRestSlotsPerTeam: 1,
-              startTime: new Date('2024-01-01T09:00:00'),
-            },
-            0,
-          );
+          const heute = seedZero(numTeams, numFields);
 
           expect(durationMinutes(matches)).toBeLessThanOrEqual(durationMinutes(heute));
         },

@@ -27,18 +27,28 @@ export interface VariantMetrics {
 export const MAX_TIE_BREAK_VARIANTS = 50;
 
 /**
- * Arbeitsbudget in Rechenschritten (Paarungen x Teams x Felder). Kleine Plaene
- * bekommen alle 50 Varianten; grosse weniger, damit ein Plan unter ~300 ms bleibt
- * (24 Teams / 3 Felder: 7 Varianten). Deterministisch: nur von der Eingabe abhaengig.
+ * Arbeitsbudget in Rechenschritten (siehe variantWorkUnits). Gemessen auf dem Entwicklungsrechner
+ * ca. 4e-5 ms je Einheit. 4e6 Einheiten bleiben damit unter ca. 160 ms je Variantenlauf-Budget.
+ * Kleine Plaene (MVP-Bereich) bekommen alle 50 Varianten, grosse weniger.
  */
-export const VARIANT_WORK_BUDGET = 150_000;
+export const VARIANT_WORK_BUDGET = 4_000_000;
 
 /**
- * Anzahl der Gleichstands-Varianten fuer einen Plan dieser Groesse.
+ * Grobe Arbeitsschaetzung eines Laufs: Die Greedy-Schleife geht ueber alle Zeitfenster (ca.
+ * Paarungen / Felder), je Fenster ueber alle Paarungen, und jede Bewertung kostet ca. Teams.
+ * Die Paarungen gehen also ungefaehr quadratisch ein, bei einem Feld besonders stark.
+ */
+export function variantWorkUnits(pairingCount: number, teamCount: number, fieldCount: number): number {
+  const slotEstimate = Math.ceil(pairingCount / Math.max(1, fieldCount));
+  return Math.max(1, pairingCount * slotEstimate * teamCount);
+}
+
+/**
+ * Anzahl der Gleichstands-Varianten fuer einen Plan dieser Groesse (mindestens 1).
  */
 export function variantCountFor(pairingCount: number, teamCount: number, fieldCount: number): number {
-  const work = Math.max(1, pairingCount * teamCount * fieldCount);
-  return Math.max(1, Math.min(MAX_TIE_BREAK_VARIANTS, Math.floor(VARIANT_WORK_BUDGET / work)));
+  const units = variantWorkUnits(pairingCount, teamCount, fieldCount);
+  return Math.max(1, Math.min(MAX_TIE_BREAK_VARIANTS, Math.floor(VARIANT_WORK_BUDGET / units)));
 }
 
 /**

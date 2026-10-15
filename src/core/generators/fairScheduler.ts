@@ -20,6 +20,7 @@ import {
   variantCountFor,
   type VariantMetrics,
 } from './scheduleVariants';
+import { IncompleteScheduleError } from './incompleteScheduleError';
 
 /**
  * Represents a time slot in the schedule
@@ -372,17 +373,15 @@ function buildAllPairings(groups: Map<string, Team[]>, dfbPatternCode?: string):
  * Fehler fuer einen Spielplan, der nicht alle Spiele unterbringt (@W4-025).
  * Wird nie still zurueckgegeben.
  */
-function incompleteScheduleError(missingMatches: number): Error {
-  return new Error(
-    `Spielplan konnte nicht vollständig erstellt werden. ` +
-    `${missingMatches} Matches fehlen. ` +
-    `Bitte mehr Felder hinzufügen oder minRestSlotsPerTeam reduzieren.`
-  );
+function incompleteScheduleError(missingMatches: number): IncompleteScheduleError {
+  return new IncompleteScheduleError(missingMatches);
 }
 
 /**
  * Erzeugt genau einen Plan fuer einen Gleichstands-Seed, ohne Auswahl.
  * Seed 0 entspricht dem bisherigen Verhalten. Wirft, wenn Spiele fehlen.
+ *
+ * @internal Nur fuer Tests und Vergleiche; die App nutzt generateGroupPhaseSchedule.
  */
 export function scheduleGroupPhaseVariant(options: GroupPhaseScheduleOptions, seed: number): Match[] {
   const validationError = validateSchedulingConstraints(options);
@@ -432,7 +431,6 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
   }
 
   if (!best) {
-    console.error('[FairScheduler] No variant could place all matches');
     throw firstError ?? incompleteScheduleError(allPairings.length);
   }
   return best.matches;
