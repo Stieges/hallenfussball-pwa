@@ -281,9 +281,8 @@ export const printMetrics = {
   placeColumnGap: 8,
   placeNumberWidth: 10,
   placeNumberGap: 2,
-  /** Fußzeile (9 pt × 1,2): Zeilenabstand; Titel in der Fußzeile wird nie unter diese Zeichenzahl gekürzt; Seitenzahl für die Breitenmessung (größte erwartete) */
+  /** Fußzeile (9 pt × 1,2): Zeilenabstand; Seitenzahl für die Breitenmessung (größte erwartete) */
   footAdvance: 3.8,
-  footTitleMin: 12,
   footWorstPage: 99,
   /** Hinweise an den Nutzer zeigen von einem langen Freitext (Regelwerk) höchstens diese Zeichen */
   noteExcerptMax: 60,

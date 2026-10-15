@@ -10,6 +10,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync, 
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import { afterEach, describe, expect, it } from 'vitest';
 import { checkPdfFontPrecache } from '../../../../scripts/check-pdf-font-precache.cjs';
 
@@ -67,11 +68,20 @@ describe('B6 Prüfer für das Precache-Manifest', () => {
     expect(checkPdfFontPrecache(root).problems.join(' ')).toContain('bold.ts: 0 Chunks');
   });
 
-  it('ohne dist/sw.js: übersprungen, kein Fehler', () => {
+  const lauf = (root: string) => spawnSync('node', [join(ROOT, 'scripts', 'check-pdf-font-precache.cjs'), root], { encoding: 'utf8' });
+
+  it('P3 Skript bricht ab (Exit 1), wenn dist/sw.js fehlt: kein stilles Durchlaufen', () => {
     const root = miniProjekt('');
     rmSync(join(root, 'dist', 'sw.js'));
+    const ergebnis = lauf(root);
 
-    expect(checkPdfFontPrecache(root)).toEqual({ skipped: true, problems: [], chunks: [] });
+    expect(ergebnis.status).toBe(1);
+    expect(ergebnis.stderr).toContain('dist/sw.js fehlt');
+  });
+
+  it('P3 Skript bricht ab, wenn ein Chunk fehlt, und läuft durch (Exit 0), wenn beide stehen', () => {
+    expect(lauf(miniProjekt('e.precacheAndRoute([{url:"assets/regular-AAAA1111.js"}])')).status).toBe(1);
+    expect(lauf(miniProjekt('x "assets/regular-AAAA1111.js" "assets/bold-BBBB2222.js"')).status).toBe(0);
   });
 });
 

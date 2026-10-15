@@ -31,24 +31,11 @@ function setFooterFace(doc: jsPDF): void {
 }
 
 /**
- * Zeilen der Hauptfußzeile einer Seite: eine Zeile; ist sie zu breit, wird der Titel mit „…“ gekürzt (nie unter
- * `footTitleMin` Zeichen); reicht das nicht (langer Netzhinweis), bricht sie auf zwei Zeilen um.
+ * Zeilen der Hauptfußzeile einer Seite: eine Zeile; ist sie zu breit (langer Titel, Netzhinweis), bricht sie um. Der
+ * Titel wird nie gekürzt (Daniel 15.10.).
  */
 function mainRows(doc: jsPDF, content: FooterContent, width: number, page: number, total: number): string[] {
-  const full = content.line(content.title, content.stand, page, total);
-  if (doc.getTextWidth(full) <= width) {
-    return [full];
-  }
-  let cut = content.title;
-  while (cut.length > printMetrics.footTitleMin && doc.getTextWidth(content.line(`${cut}…`, content.stand, page, total)) > width) {
-    cut = cut.slice(0, -1);
-  }
-  const shortened = content.line(`${cut.trimEnd()}…`, content.stand, page, total);
-  if (doc.getTextWidth(shortened) <= width) {
-    return [shortened];
-  }
-  const [first = '', ...rest] = doc.splitTextToSize(full, width) as string[];
-  return rest.length === 0 ? [first] : [first, clipToWidth(doc, rest.join(' '), width)];
+  return doc.splitTextToSize(content.line(content.title, content.stand, page, total), width) as string[];
 }
 
 /** Alle Zeilen einer Seite: Hauptfußzeile, dann der Kontakt (auf Breite gekürzt). */

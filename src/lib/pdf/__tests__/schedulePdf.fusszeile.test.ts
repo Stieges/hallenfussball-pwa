@@ -153,3 +153,22 @@ describe('F3 Breitenmessung: gemessen wird, was gedruckt wird', () => {
     expect(pages[0].texts.some(t => t.str.includes('?'))).toBe(true);
   });
 });
+
+describe('P2 langer Turniername: die Fußzeile bricht um und kürzt nie', () => {
+  const LANG = 'Internationaler Hallenfußball-Wintercup der SG Nordheim 2026';
+
+  it.each([['online', true], ['ohne Verbindung', false]])('60-Zeichen-Titel (%s) steht vollständig in der Fußzeile, ohne „…“, oberhalb des Rands', async (_n, online) => {
+    expect(LANG).toHaveLength(60);
+    const tournament = hallencupTournament({ title: LANG });
+    const { pages, height } = await layoutOf({ now: NOW, tournament, online }, generateFullSchedule(tournament, 'de'));
+
+    pages.forEach((page, i) => {
+      const { texte } = fussbereich(page);
+      const fuss = texte.map(t => t.str).join(' ');
+      expect(fuss, `Seite ${i + 1}`).toContain(LANG);
+      expect(fuss).toContain(`Seite ${i + 1} von ${pages.length}`);
+      expect(fuss).not.toContain('…');
+      texte.forEach(t => expect(t.y + t.size * DESCENT_REGULAR_EM * MM_PER_PT).toBeLessThanOrEqual(height - printLimits.margin + TOL));
+    });
+  });
+});

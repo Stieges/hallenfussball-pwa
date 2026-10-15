@@ -7,7 +7,8 @@
  * erkennt der Check die Chunks am Inhalt (Anfang der base64-Schrift aus der Quelldatei), nicht am Namen.
  *
  * Läuft nach jedem `npm run build` (npm-Hook `postbuild`) und als Vitest-Test (`precache.build.test.ts`).
- * Ohne `dist/sw.js` überspringt der Aufruf (Exit 0), mit `--require` schlägt er dann fehl.
+ * Der Skriptaufruf bricht den Build ab (Exit 1), auch wenn `dist/sw.js` fehlt (Daniel 15.10.). Nur die Funktion meldet
+ * `skipped`, damit der Test ohne frischen Build den echten `dist` überspringen kann. Optionales Argument: Projektwurzel.
  */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -58,10 +59,10 @@ function checkPdfFontPrecache(root) {
 module.exports = { checkPdfFontPrecache };
 
 if (require.main === module) {
-  const result = checkPdfFontPrecache(path.resolve(__dirname, '..'));
+  const result = checkPdfFontPrecache(path.resolve(process.argv[2] ?? path.join(__dirname, '..')));
   if (result.skipped) {
-    console.log('PDF-Schrift-Precache: dist/sw.js fehlt, Prüfung übersprungen.');
-    process.exit(process.argv.includes('--require') ? 1 : 0);
+    console.error('PDF-Schrift-Precache FEHLER: dist/sw.js fehlt, die Schrift-Chunks sind nicht prüfbar.');
+    process.exit(1);
   }
   if (result.problems.length > 0) {
     console.error(`PDF-Schrift-Precache FEHLER:\n- ${result.problems.join('\n- ')}`);
