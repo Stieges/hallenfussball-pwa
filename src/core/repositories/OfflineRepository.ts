@@ -8,7 +8,7 @@ import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
 import { captureFeatureError } from '../../lib/sentry';
 import { slotTeamId } from '../models/matchSlot';
 import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
-import { decideCloudAdoption } from './cloudAdoption';
+import { decideCloudAdoption, isCloudReadTimeout, withCloudReadTimeout } from './cloudAdoption';
 import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisionSource } from './serverRevisionRegistry';
 
 /**
@@ -129,6 +129,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     private readonly serverRevisions = new ServerRevisionRegistry();
     /** A-08f3b: laufender Cloud-Abruf je Turnier (ein Abruf je Turnier). */
     private readonly cloudReads = new Map<string, Promise<Tournament | null>>();
+    private readonly cloudReadRerun = new Set<string>();
 
     constructor(
         private localRepo: LocalStorageRepository,
@@ -180,7 +181,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         const localData = await this.localRepo.get(id);
 
         if (localData && (this.accountId === undefined || localData.ownerId === this.accountId)) { // A-07e: fremd/unmarkiert = nicht lokal
-            const refreshed = this.refreshFromCloudInBackground(id);
+            // A-08f3b-F F3: Sperre a2 auch nach Neuladen ohne Netz – Revisionen aus der lokalen Kopie
+            this.serverRevisions.record(id, await this.localRepo.readServerRevisions(id));
+            const refreshed = this.refreshFromCloudInBackground(id, options?.fresh);
             if (!options?.fresh) { return localData; }
             await refreshed;
             return (await this.localRepo.get(id)) ?? localData;
@@ -202,11 +205,11 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     }
 
     /** Background sync: Cloud lesen und zusammenführen (Versionsweg oder Feldweg). Fehler werden nur gemeldet. */
-    private async refreshFromCloudInBackground(id: string): Promise<void> {
+    private async refreshFromCloudInBackground(id: string, fresh?: boolean): Promise<void> {
         try {
-            await this.syncFromCloud(id);
+            await this.syncFromCloud(id, undefined, fresh);
         } catch (error) {
-            if (!isAbortError(error) && error instanceof Error) {
+            if (!isAbortError(error) && !isCloudReadTimeout(error) && error instanceof Error) {
                 captureFeatureError(error, 'repository', 'backgroundSync', { tournamentId: id });
             }
         }
@@ -215,20 +218,31 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     /**
      * A-08f3b: ein Abruf je Turnier für alle Cloud-Lesewege (frisch und im Hintergrund). Entscheidung und Schreiben
      * laufen in einem Kettenschritt des lokalen Speichers (`cloudAdoption.ts`); `firstCopy` = erster Cloud-Weg.
+     * A-08f3b-F: Ein `fresh` während eines laufenden Abrufs fordert genau einen Nachzügler an (F1, Muster
+     * `MatchEngine.catchUp`); jeder Abruf hat ein Zeitlimit, danach wird der Eintrag geräumt (F2).
      */
-    private syncFromCloud(id: string, firstCopy?: boolean): Promise<Tournament | null> {
+    private syncFromCloud(id: string, firstCopy?: boolean, fresh?: boolean): Promise<Tournament | null> {
         const running = this.cloudReads.get(id);
-        if (running) { return running; }
+        if (running) {
+            if (fresh) { this.cloudReadRerun.add(id); }
+            return running;
+        }
         const run = (async () => {
-            const read = await this.supabaseRepo.getWithMatchRevisions(id);
-            if (!read) { return null; }
-            const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined, owned: (t: Tournament) => this.owned(t) };
-            const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => decideCloudAdoption(local, read, stored, options));
-            this.serverRevisions.record(id, adoption.revisions);
-            return read.tournament;
-        })().finally(() => this.cloudReads.delete(id));
+            let result = await this.readAndAdopt(id, firstCopy);
+            while (this.cloudReadRerun.delete(id)) { result = await this.readAndAdopt(id, firstCopy); }
+            return result;
+        })().finally(() => { this.cloudReads.delete(id); this.cloudReadRerun.delete(id); });
         this.cloudReads.set(id, run);
         return run;
+    }
+
+    private async readAndAdopt(id: string, firstCopy?: boolean): Promise<Tournament | null> {
+        const read = await withCloudReadTimeout(this.supabaseRepo.getWithMatchRevisions(id));
+        if (!read) { return null; }
+        const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined, owned: (t: Tournament) => this.owned(t) };
+        const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => decideCloudAdoption(local, read, stored, options));
+        this.serverRevisions.record(id, adoption.revisions);
+        return read.tournament;
     }
 
     async getByShareCode(code: string): Promise<Tournament | null> {

@@ -110,4 +110,18 @@ describe('A-08f3a2 Schnelleingabe: fremdes Engine-Spiel nach dem Feldweg bleibt 
     expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
     expect(onMatchesUpdate.mock.calls[0][0]).toEqual([expect.objectContaining({ id: 'm9', scoreA: 2, scoreB: 0 })]);
   });
+
+  it('A-08f3b-F F3: Neuladen ohne Netz (Cloud wirft) → Sperre aus den gespeicherten Revisionen bleibt', async () => {
+    repo.mutationQueue.dispose();
+    const offline = createFakeCloud({ tournament: tournament({}), revisions: new Map() });
+    offline.fake.getWithMatchRevisions.mockRejectedValue(new Error('offline'));
+    repo = new OfflineRepository(new LocalStorageRepository(), offline.fake as never, 'olli'); // neue Instanz = Neuladen
+    repos.tournamentRepository = repo;
+
+    const { current, onMatchesUpdate, showWarning } = await enterScore('m1');
+
+    expect(current.matches.find((m) => m.id === 'm1')).toMatchObject({ scoreA: 1, scoreB: 0, matchStatus: 'running' });
+    expect(showWarning).toHaveBeenCalledTimes(1);
+    expect(onMatchesUpdate).not.toHaveBeenCalled();
+  });
 });

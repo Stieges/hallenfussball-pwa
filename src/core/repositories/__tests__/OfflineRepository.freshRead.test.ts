@@ -106,7 +106,7 @@ describe('A-08f3b frisch lesen, ein Abruf je Turnier, Revisionen in der lokalen 
     expect(got?.matches.find((m) => m.id === 'm1')?.matchStatus).toBe('scheduled');
   });
 
-  it('ein Abruf je Turnier: Hintergrund-Abruf und fresh gleichzeitig → ein Abruf, fresh sieht das Ergebnis', async () => {
+  it('ein Abruf je Turnier: fresh während eines Hintergrund-Abrufs → höchstens ein Folgeabruf, fresh sieht das Ergebnis', async () => {
     const cloud = createFakeCloud(state(7, RUNNING(1), 3));
     const slow = cloud.holdNextRead();
     const repo = repoFor(cloud);
@@ -116,7 +116,7 @@ describe('A-08f3b frisch lesen, ein Abruf je Turnier, Revisionen in der lokalen 
     slow.release();
 
     expect((await fresh)?.matches.find((m) => m.id === 'm1')).toMatchObject(RUNNING(1));
-    expect(cloud.fake.getWithMatchRevisions).toHaveBeenCalledTimes(1);
+    expect(cloud.fake.getWithMatchRevisions).toHaveBeenCalledTimes(2); // A-08f3b-F F1: Nachzügler
   });
 
   it('Versionsweg pflegt die Revisionen: danach rückt ein älterer Stand (Revision 5) nicht nach', async () => {

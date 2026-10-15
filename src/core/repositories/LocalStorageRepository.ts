@@ -66,6 +66,11 @@ export class LocalStorageRepository implements ITournamentRepository {
         await this.saveList(list);
     }
 
+    /** A-08f3b-F F3: gespeicherte Revisionen je Spiel (für die Sperre nach Neuladen ohne Netz). */
+    async readServerRevisions(id: string): Promise<Map<string, number>> {
+        return readServerRevisions(await createStorage(), id);
+    }
+
     /** A-08f3b: Cloud-Stand in einem Kettenschritt übernehmen; Revisionen je Spiel liegen in der lokalen Kopie (zwei Tabs). */
     adoptCloudRead(id: string, decide: (local: Tournament | null, stored: ReadonlyMap<string, number>) => CloudAdoption): Promise<CloudAdoption> {
         return this.serialize(async () => {

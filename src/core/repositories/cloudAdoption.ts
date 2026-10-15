@@ -83,3 +83,26 @@ export async function writeServerRevisions(
     const kept = [...revisions].filter(([matchId]) => matchIds === undefined || matchIds.has(matchId));
     await storage.set(revisionKey(tournamentId), Object.fromEntries(kept));
 }
+
+/** A-08f3b-F F2: Zeitlimit eines Cloud-Abrufs (Hallen-WLAN, Auth-Sperre). Unter dem 5-s-Takt mal zwei, über üblichen Antwortzeiten. */
+export const CLOUD_READ_TIMEOUT_MS = 8000;
+
+class CloudReadTimeoutError extends Error {
+    constructor() {
+        super(`Cloud-Abruf nach ${CLOUD_READ_TIMEOUT_MS} ms abgebrochen`);
+        this.name = 'CloudReadTimeoutError';
+    }
+}
+
+/** Zeitüberschreitung ist erwartbar (nächster Takt versucht es neu) und wird nicht gemeldet. */
+export function isCloudReadTimeout(error: unknown): boolean {
+    return error instanceof CloudReadTimeoutError;
+}
+
+export function withCloudReadTimeout<T>(request: Promise<T>): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new CloudReadTimeoutError()), CLOUD_READ_TIMEOUT_MS);
+    });
+    return Promise.race([request, timeout]).finally(() => clearTimeout(timer));
+}

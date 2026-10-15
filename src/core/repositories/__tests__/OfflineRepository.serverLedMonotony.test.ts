@@ -119,4 +119,27 @@ describe('A-08f3a-F Feldweg: NULL aus der Cloud und Monotonie-Ablage', () => {
     expect(cloud.fake.getWithMatchRevisions).toHaveBeenCalledTimes(3);
     expect(storedM1()).toMatchObject({ scoreA: 2, scoreB: 0 });
   });
+
+  it('F4 Versionsweg mit älterer Revision (gelesen 5, gespeichert 6) → Ablage bleibt bei 6', async () => {
+    stores.raw.set('tournaments', [tournament({ scoreA: 2, scoreB: 0, matchStatus: 'running' })]);
+    stores.raw.set('serverRevisions-T', { m1: 6, m2: 1 });
+    const stale = { ...tournament({ scoreA: 1, scoreB: 0, matchStatus: 'running' }), version: 8 };
+    repo = new OfflineRepository(new LocalStorageRepository(), createFakeCloud({ tournament: stale, revisions: revisions(5) }).fake as never, 'olli');
+
+    await repo.get('T', { fresh: true });
+
+    expect(stores.raw.get('serverRevisions-T')).toMatchObject({ m1: 6 });
+    expect(storedM1()).toMatchObject({ scoreA: 2, scoreB: 0 });
+  });
+
+  it('F5 Versionsweg bei gleicher Revision → Cloud-Felder gewinnen', async () => {
+    stores.raw.set('tournaments', [tournament({ scoreA: 1, scoreB: 0, matchStatus: 'running' })]);
+    stores.raw.set('serverRevisions-T', { m1: 3, m2: 1 });
+    const newer = { ...tournament({ scoreA: 2, scoreB: 0, matchStatus: 'running' }), version: 8 };
+    repo = new OfflineRepository(new LocalStorageRepository(), createFakeCloud({ tournament: newer, revisions: revisions(3) }).fake as never, 'olli');
+
+    await repo.get('T', { fresh: true });
+
+    expect(storedM1()).toMatchObject({ scoreA: 2, scoreB: 0 });
+  });
 });
