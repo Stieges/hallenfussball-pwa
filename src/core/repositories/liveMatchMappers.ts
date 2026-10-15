@@ -5,7 +5,7 @@
  * Used by SupabaseLiveMatchRepository for real-time match state sync.
  */
 
-import type { Tables, TablesInsert } from '../../types/supabase';
+import type { Tables } from '../../types/supabase';
 import type {
   LiveMatch,
   LiveTeamInfo,
@@ -17,7 +17,6 @@ import type {
   TiebreakerMode,
 } from '../models/LiveMatch';
 import type { TeamLogo, TeamColors } from '../../types/tournament';
-import { toSupabaseEventId } from '../utils/id';
 
 // ============================================================================
 // TYPE ALIASES
@@ -25,12 +24,8 @@ import { toSupabaseEventId } from '../utils/id';
 
 type MatchRow = Tables<'matches'>;
 type MatchEventRow = Tables<'match_events'>;
-type MatchEventInsert = TablesInsert<'match_events'>;
 type TeamRow = Tables<'teams'>;
 
-/** MatchEventInsert, mit `id` als garantiert gesetztem string — mapMatchEventToSupabase
- *  setzt ihn immer, auch wenn der generierte Supabase-Typ ihn als optional führt. */
-type MatchEventInsertWithId = MatchEventInsert & { id: string };
 
 // ============================================================================
 // STATUS MAPPING
@@ -126,36 +121,6 @@ export function mapMatchEventFromSupabase(row: MatchEventRow): MatchEvent {
       home: row.score_home,
       away: row.score_away,
     },
-  };
-}
-
-/**
- * Maps a MatchEvent to Supabase match_events insert format.
- *
- * C-EVID (Sofort-Fix 2026-09-25): `match_events.id` ist eine Postgres-`uuid`-Spalte. Neue
- * Ereignisse haben bereits eine UUID als lokale Kennung (s. `core/utils/id.ts`), Alt-
- * Ereignisse mit Text-Kennung (`${matchId}-goal-${Date.now()}-${zufall}` u.ä.) werden hier
- * deterministisch in eine UUID umgerechnet — `toSupabaseEventId` lässt echte UUIDs
- * unverändert. Die lokale Kennung (`MatchEvent.id`) bleibt unverändert, nur der an
- * Supabase gesendete Wert ändert sich.
- */
-export function mapMatchEventToSupabase(
-  event: MatchEvent,
-  matchId: string
-): MatchEventInsertWithId {
-  return {
-    id: toSupabaseEventId(event.id),
-    match_id: matchId,
-    timestamp_seconds: event.timestampSeconds,
-    type: event.type,
-    payload: event.payload,
-    score_home: event.scoreAfter.home,
-    score_away: event.scoreAfter.away,
-    team_id: null, // Could be mapped if we track team_id in payload
-    player_id: null, // Could be mapped if we track player_id
-    period: null,
-    incomplete: false,
-    is_deleted: false,
   };
 }
 
@@ -264,35 +229,6 @@ export function mapLiveMatchFromSupabase(
 }
 
 /**
- * Maps a LiveMatch to Supabase match update format
- *
- * Returns both the match update and new events to insert
- */
-export function mapLiveMatchToSupabase(
-  liveMatch: LiveMatch,
-  existingEventIds: Set<string> = new Set<string>()
-): {
-  matchUpdate: Partial<MatchRow>;
-  newEvents: MatchEventInsertWithId[];
-} {
-  // V4 (C3a-2b): der Client schreibt Ergebnis-/Status-/Uhr-/live_state-Spalten nicht mehr —
-  // matchUpdate trägt nur noch updated_at (F1/F6). live_state-Clears bleiben in delete()/clear().
-  const matchUpdate: Partial<MatchRow> = {
-    updated_at: new Date().toISOString(),
-  };
-
-  // Find new events (not yet in DB). Ruling R: der Abgleich "schon übertragen?" vergleicht
-  // die GEMAPPTE (Supabase-)Kennung, nicht die lokale MatchEvent.id — sonst würden
-  // Alt-Ereignisse mit Text-Kennung bei jedem save() erneut gesendet, weil ihre lokale ID
-  // nie im (aus DB-UUIDs gefüllten) existingEventIds-Cache steht.
-  const newEvents = liveMatch.events
-    .map((event) => mapMatchEventToSupabase(event, liveMatch.id))
-    .filter((mapped) => !existingEventIds.has(mapped.id));
-
-  return { matchUpdate, newEvents };
-}
-
-/**
  * Checks if a match is "active" (has live state).
  * Includes running, paused, AND initialized NOT_STARTED matches
  * that have live_state set (created by initializeMatch but not yet started).
@@ -309,9 +245,3 @@ export function isMatchActive(matchRow: MatchRow): boolean {
   return liveState !== null && liveState !== undefined;
 }
 
-/**
- * Clears live state when match finishes
- */
-export function clearLiveState(): { live_state: null } {
-  return { live_state: null };
-}
