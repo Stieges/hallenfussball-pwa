@@ -12,8 +12,10 @@
  */
 
 import { test, expect } from './fixtures';
-import { engineCupTarget, expectEngineMatchRunningUi, expectSeededEngineMatch, openCockpit } from './engineHelpers';
-import { engineCupIds } from './testData';
+import { engineCupTarget, expectEngineMatchRunningUi, expectSeededEngineMatch, fetchUserIdByEmail, openCockpit } from './engineHelpers';
+import { expectLegacyQueueKeysEmpty, queueKeys } from './helpers';
+import { E2E_USERS, engineCupIds } from './testData';
+import { HOLD_RETRY_MS } from '../../../src/core/services/mutationQueueRetry';
 
 test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10s als gescheitert sichtbar, retry/verwerfen wirken (Task A4, C-SYNC Teil B)', async ({ asRole }, testInfo) => {
   test.skip(!testInfo.project.name.includes('desktop'), 'Engine-Cups nur auf cloud-desktop.');
@@ -25,8 +27,9 @@ test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10
   await expect(ownerPage.locator('[data-testid="sync-status"]')).toBeVisible({ timeout: 10000 });
 
   const badMutationId = `a4-test-${Date.now()}`;
+  const keys = queueKeys(await fetchUserIdByEmail(E2E_USERS.owner.email));
   await ownerPage.evaluate(
-    ({ id, tournamentId }) => {
+    ({ id, tournamentId, queueKey }) => {
       const item = {
         id,
         type: 'UPDATE_TOURNAMENT_METADATA',
@@ -34,30 +37,35 @@ test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10
         timestamp: Date.now(),
         retryCount: 0,
       };
-      window.localStorage.setItem('mutation_queue_v1', JSON.stringify([item]));
+      window.localStorage.setItem(queueKey, JSON.stringify([item]));
     },
-    { id: badMutationId, tournamentId: ids.tournamentId }
+    { id: badMutationId, tournamentId: ids.tournamentId, queueKey: keys.queue }
   );
+  // Uhr der Seite steuerbar machen (läuft normal weiter, bis `fastForward` sie über die 30-s-Pause schiebt).
+  await ownerPage.clock.install();
   // Neu laden: eine frische Queue lädt den Eintrag und unternimmt (online) den ersten von 5 Versuchen.
   await ownerPage.reload();
   await ownerPage.waitForLoadState('networkidle');
   await expectEngineMatchRunningUi(ownerPage);
+  await expectLegacyQueueKeysEmpty(ownerPage);
 
   const readQueueState = () =>
-    ownerPage.evaluate(() => {
-      const failedRaw = window.localStorage.getItem('mutation_queue_failed_v1');
+    ownerPage.evaluate(({ queueKey, failedKey }) => {
+      const failedRaw = window.localStorage.getItem(failedKey);
       const failed = failedRaw ? (JSON.parse(failedRaw) as unknown[]) : [];
       if (failed.length > 0) { return { retryCount: -1, deadLettered: true }; }
-      const queuedRaw = window.localStorage.getItem('mutation_queue_v1');
+      const queuedRaw = window.localStorage.getItem(queueKey);
       const queued = queuedRaw ? (JSON.parse(queuedRaw) as Array<{ retryCount?: number }>) : [];
       return { retryCount: queued[0]?.retryCount ?? 0, deadLettered: false };
-    });
+    }, { queueKey: keys.queue, failedKey: keys.failed });
 
   await expect.poll(async () => (await readQueueState()).retryCount, { message: 'Anstoß 1 (Neuladen): retryCount soll 1 sein', timeout: 8000 }).toBeGreaterThanOrEqual(1);
   let lastRetryCount = (await readQueueState()).retryCount;
   for (let attempt = 2; attempt <= 5; attempt++) {
     if ((await readQueueState()).deadLettered) { break; }
-    await ownerPage.evaluate(() => window.dispatchEvent(new Event('online')));
+    // Seit A-06d2 wartet jeder Anstoß (online/enqueue) die 30-s-Pause nach einem echten Fehler ab; der
+    // Zeitgeber der Queue sendet danach selbst. Die Uhr der Seite springt über die Pause (kein echtes Warten).
+    await ownerPage.clock.fastForward(HOLD_RETRY_MS + 1000);
     await expect.poll(async () => {
       const state = await readQueueState();
       return state.deadLettered || state.retryCount > lastRetryCount;
@@ -79,7 +87,7 @@ test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10
 
   // "Verwerfen": für den isolierten Nachweis ein direkt gesetzter Dead-Letter-Eintrag.
   await ownerPage.evaluate(
-    ({ id }) => {
+    ({ id, queueKey, failedKey }) => {
       const item = {
         id,
         type: 'UPDATE_TOURNAMENT_METADATA',
@@ -89,10 +97,10 @@ test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10
         failedAt: Date.now(),
         lastError: 'new row for relation "tournaments" violates check constraint "tournaments_status_check"',
       };
-      window.localStorage.setItem('mutation_queue_v1', '[]');
-      window.localStorage.setItem('mutation_queue_failed_v1', JSON.stringify([item]));
+      window.localStorage.setItem(queueKey, '[]');
+      window.localStorage.setItem(failedKey, JSON.stringify([item]));
     },
-    { id: badMutationId }
+    { id: badMutationId, queueKey: keys.queue, failedKey: keys.failed }
   );
   await ownerPage.reload();
   await ownerPage.waitForLoadState('networkidle');
@@ -103,6 +111,7 @@ test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10
   await ownerPage.locator(`[data-testid="sync-discard-${badMutationId}"]`).click();
   await ownerPage.locator('[data-testid="confirm-dialog-confirm"]').click();
   await expect(syncStatus).toHaveAttribute('data-state', 'idle', { timeout: 5000 });
-  const failedAfterDiscard = await ownerPage.evaluate(() => window.localStorage.getItem('mutation_queue_failed_v1'));
+  const failedAfterDiscard = await ownerPage.evaluate((failedKey) => window.localStorage.getItem(failedKey), keys.failed);
+  await expectLegacyQueueKeysEmpty(ownerPage);
   expect(failedAfterDiscard === null || failedAfterDiscard === '[]').toBe(true);
 });

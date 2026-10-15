@@ -24,7 +24,7 @@ describe('OutboxNotice', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('clientOutdated hat Vorrang und zeigt den Aktualisieren-Knopf', () => {
+  it('@FU-005 clientOutdated hat Vorrang und zeigt den Aktualisieren-Knopf', () => {
     const { onReload } = renderNotice(
       makeStatus({
         clientOutdated: true,

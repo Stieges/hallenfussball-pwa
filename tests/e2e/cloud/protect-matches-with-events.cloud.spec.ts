@@ -31,7 +31,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { test, expect } from './fixtures';
-import { getLocalServiceRoleClient, safeCleanup } from './helpers';
+import { expectLegacyQueueKeysEmpty, getLocalServiceRoleClient, queueKeys, safeCleanup } from './helpers';
 import { E2E_USERS } from './testData';
 import { mapTournamentFromSupabase } from '../../../src/core/repositories/supabaseMappers';
 import type { Database } from '../../../src/types/supabase';
@@ -199,7 +199,8 @@ test('@FU-012 Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Sp
     //        Die echte MutationQueue lädt `mutation_queue_v1` beim App-Start und verarbeitet es
     //        sofort (`if (navigator.onLine) { void this.process(); }`, GenericMutationQueue.ts). ---
     const ownerPage = await asRole('owner');
-    await ownerPage.addInitScript((payload) => {
+    const staleKeys = queueKeys(ownerId);
+    await ownerPage.addInitScript(({ payload, queueKey }) => {
       const item = {
         id: 'a6-e2e-stale-save',
         type: 'SAVE_TOURNAMENT',
@@ -207,8 +208,8 @@ test('@FU-012 Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Sp
         timestamp: Date.now(),
         retryCount: 0,
       };
-      window.localStorage.setItem('mutation_queue_v1', JSON.stringify([item]));
-    }, stalePayload);
+      window.localStorage.setItem(queueKey, JSON.stringify([item]));
+    }, { payload: stalePayload, queueKey: staleKeys.queue });
 
     // --- 4. Sichtbarer Hinweis (I2, Ruling AN) -- ein Toast (role="alert"), KEIN dauerhafter
     //        Fehler in der Warteschlange. ---
@@ -228,12 +229,13 @@ test('@FU-012 Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Sp
     //        hinter einer Spoke-Hub-Navigation auf `cloud-mobile`, die ohne einen zusätzlichen
     //        Klickpfad nicht erreichbar ist; der Toast (Schritt 4) und die DB-Zeilen (Schritt 6/7)
     //        sind der eigentliche, projektunabhängige Beleg. ---
-    const failedTypesAfter = await ownerPage.evaluate(() => {
-      const raw = window.localStorage.getItem('mutation_queue_failed_v1');
+    const failedTypesAfter = await ownerPage.evaluate((failedKey) => {
+      const raw = window.localStorage.getItem(failedKey);
       if (!raw) { return []; }
       const parsed = JSON.parse(raw) as Array<{ id?: string }>;
       return parsed.map((item) => item.id).filter((id): id is string => typeof id === 'string');
-    });
+    }, staleKeys.failed);
+    await expectLegacyQueueKeysEmpty(ownerPage);
     expect(failedTypesAfter).not.toContain('a6-e2e-stale-save');
 
     // --- 6. Spiel + Ereignis stehen unverändert in der DB (nicht still gelöscht) ---------------
@@ -383,7 +385,8 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen: wird abgelehnt (B-0
     await ownerPage.goto('/#/');
     await ownerPage.waitForLoadState('networkidle');
 
-    await ownerPage.evaluate((id) => {
+    const deleteKeys = queueKeys(ownerId);
+    await ownerPage.evaluate(({ id, queueKey }) => {
       const item = {
         id: 'a6-e2e-delete-tournament',
         type: 'DELETE_TOURNAMENT',
@@ -391,8 +394,8 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen: wird abgelehnt (B-0
         timestamp: Date.now(),
         retryCount: 0,
       };
-      window.localStorage.setItem('mutation_queue_v1', JSON.stringify([item]));
-    }, tournamentId);
+      window.localStorage.setItem(queueKey, JSON.stringify([item]));
+    }, { id: tournamentId, queueKey: deleteKeys.queue });
 
     await ownerPage.reload();
     await ownerPage.waitForLoadState('networkidle');
@@ -402,11 +405,11 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen: wird abgelehnt (B-0
     await expect
       .poll(
         async () =>
-          ownerPage.evaluate(() => {
-            const raw = window.localStorage.getItem('mutation_queue_v1');
+          ownerPage.evaluate((queueKey) => {
+            const raw = window.localStorage.getItem(queueKey);
             const items = raw ? (JSON.parse(raw) as Array<{ retryCount: number }>) : [];
             return items.reduce((max, item) => Math.max(max, item.retryCount), 0);
-          }),
+          }, deleteKeys.queue),
         {
           message:
             'DELETE_TOURNAMENT sollte als permanenter Fehler (nicht transient) in der Queue gezählt werden',
@@ -414,6 +417,7 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen: wird abgelehnt (B-0
         }
       )
       .toBeGreaterThanOrEqual(1);
+    await expectLegacyQueueKeysEmpty(ownerPage);
 
     // 2. Die Ablehnung kam vom Server mit 'tournament_started' (ERRCODE P0001).
     await expect

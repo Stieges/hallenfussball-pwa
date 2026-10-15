@@ -150,15 +150,39 @@ export async function waitForSync(page: Page, options: WaitForSyncOptions = {}):
 // =============================================================================
 
 /**
- * Task A1 (Sofortschutz): liest `localStorage['mutation_queue_failed_v1']` (Dead-Letter der
+ * A-07g Fixrunde 1 (F4): Seit A-07b (@FU-006) schreibt jede Turnier-Warteschlange unter dem
+ * Schlüssel ihres Kontos (`MutationQueue.ts#accountScopedKey`). Einzige Quelle für diese Namen in
+ * den E2E-Tests; die Konto-ID eines Testnutzers liefert `fetchUserIdByEmail` (engineHelpers.ts).
+ */
+export const LEGACY_QUEUE_KEYS = ['mutation_queue_v1', 'mutation_queue_failed_v1'] as const;
+
+export function queueKeys(userId: string): { queue: string; failed: string } {
+  return { queue: `mutation_queue_v1:${userId}`, failed: `mutation_queue_failed_v1:${userId}` };
+}
+
+/**
+ * Wache gegen einen erneuten Schlüsselwechsel: nach dem Neuladen ist der Altschlüssel (ohne Konto)
+ * leer, weil die Queue ihn übernommen hat. Ohne diese Wache bliebe ein Test, der den falschen
+ * Schlüssel liest, leise grün oder leise rot.
+ */
+export async function expectLegacyQueueKeysEmpty(page: Page): Promise<void> {
+  const values = await page.evaluate((keys) => keys.map((key) => window.localStorage.getItem(key)), [...LEGACY_QUEUE_KEYS]);
+  for (const value of values) {
+    expect(value === null || value === '[]').toBe(true);
+  }
+}
+
+/**
+ * Task A1 (Sofortschutz): liest die Dead-Letter-Liste (`queueKeys(userId).failed`) (Dead-Letter der
  * `MutationQueue`, siehe `MutationQueue.ts#failedStorageKey`) auf `page` und gibt die
  * `type`-Werte der darin enthaltenen Mutationen zurück (leeres Array, wenn der Schlüssel fehlt
  * oder leer ist). Gebraucht vom "Helfer beendet Spiel"-Test, um zu beweisen, dass nach einem
  * Spielende KEINE `SAVE_TOURNAMENT`-Mutation dort gelandet ist (vorher: RLS lehnt den vollen
  * Turnier-Save für einen Helfer ab → nach Retries Dead-Letter).
  */
-export async function fetchFailedMutationTypes(page: Page): Promise<string[]> {
-  const raw = await page.evaluate(() => window.localStorage.getItem('mutation_queue_failed_v1'));
+export async function fetchFailedMutationTypes(page: Page, userId: string): Promise<string[]> {
+  const { failed } = queueKeys(userId);
+  const raw = await page.evaluate((key) => window.localStorage.getItem(key), failed);
   if (!raw) { return []; }
   const parsed = JSON.parse(raw) as Array<{ type?: string }>;
   return parsed.map((item) => item.type).filter((type): type is string => typeof type === 'string');
@@ -174,11 +198,18 @@ export async function fetchFailedMutationTypes(page: Page): Promise<string[]> {
  * `SAVE_TOURNAMENT`-Mutation, die scheitert, aber noch nicht 5 Versuche hinter sich hat, tauchte
  * in `mutation_queue_failed_v1` gar nicht auf.
  */
-export async function fetchQueuedMutationTypes(page: Page): Promise<string[]> {
-  const raw = await page.evaluate(() => window.localStorage.getItem('mutation_queue_v1'));
+export async function fetchQueuedMutationTypes(page: Page, userId: string): Promise<string[]> {
+  const { queue } = queueKeys(userId);
+  const raw = await page.evaluate((key) => window.localStorage.getItem(key), queue);
   if (!raw) { return []; }
   const parsed = JSON.parse(raw) as Array<{ type?: string }>;
   return parsed.map((item) => item.type).filter((type): type is string => typeof type === 'string');
+}
+
+/** Zeitstrafe ohne Rückennummer: der Knopf am Team wählt Dauer und Team vor, es bleibt "Ohne Nr.". */
+export async function enterTimePenaltyWithoutNumber(page: Page, teamName: string): Promise<void> {
+  await page.getByRole('button', { name: `Zeitstrafe für ${teamName}` }).click();
+  await page.getByRole('button', { name: /Ohne Nr\./ }).click();
 }
 
 /**

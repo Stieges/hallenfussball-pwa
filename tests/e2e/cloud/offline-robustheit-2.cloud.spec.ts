@@ -25,7 +25,7 @@ import {
   openCockpit,
   type AppendAsRoleEvent,
 } from './engineHelpers';
-import { enterGoal } from './helpers';
+import { enterGoal, enterTimePenaltyWithoutNumber } from './helpers';
 import { engineCupIds } from './testData';
 
 const APPEND_RPC_PATTERN = '**/rest/v1/rpc/append_match_events';
@@ -60,12 +60,6 @@ async function openHelperCockpit(context: BrowserContext, tournamentId: string, 
 async function enterYellowCardWithoutDetails(page: Page, side: 'home' | 'away'): Promise<void> {
   await page.locator(`[data-testid="yellow-card-button-${side}"]`).click();
   await page.getByRole('button', { name: 'Ohne Details' }).click();
-}
-
-/** Zeitstrafe ohne Rückennummer: der Knopf am Team wählt Dauer und Team vor, es bleibt "Ohne Nr.". */
-async function enterTimePenaltyWithoutNumber(page: Page, teamName: string): Promise<void> {
-  await page.getByRole('button', { name: `Zeitstrafe für ${teamName}` }).click();
-  await page.getByRole('button', { name: /Ohne Nr\./ }).click();
 }
 
 test.describe('Offline-Robustheit des Ausgangs (2)', () => {
@@ -232,7 +226,7 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
     }
   });
 
-  test('@FU-002 @FU-011 Gegenbeispiel: ohne abgelehnte Karte werden alle drei Einträge übernommen', async ({ browser }) => {
+  test('@FU-011 Gegenbeispiel: ohne abgelehnte Karte werden alle drei Einträge übernommen', async ({ browser }) => {
     test.setTimeout(90_000);
     const ids = engineCupIds('ALLEDREI');
     const baseRows = await expectSeededEngineMatch(engineCupTarget('ALLEDREI'));

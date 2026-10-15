@@ -1100,13 +1100,13 @@ for assignment in "${GUARD_COLUMNS[@]}"; do
     GUARD_DETAIL+="[$assignment -> $res] "
   fi
 done
-check Spaltenschutz "Helfer: jede der 16 geschuetzten Spalten am Engine-Spiel -> 42501 mit Guard-Meldung ($GUARD_DETAIL)" \
+check Spaltenschutz "@FU-005 Helfer: jede der 16 geschuetzten Spalten am Engine-Spiel -> 42501 mit Guard-Meldung ($GUARD_DETAIL)" \
   ". == ${#GUARD_COLUMNS[@]}" "$GUARD_DENIED"
 res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$UPDATE public.matches SET score_a = 7, score_b = 7 WHERE id = '$(M cg-engine)'\$S\$);")"
-check Spaltenschutz "Eigentuemer: score_a am Engine-Spiel -> 42501 mit Guard-Meldung" \
+check Spaltenschutz "@FU-005 Eigentuemer: score_a am Engine-Spiel -> 42501 mit Guard-Meldung" \
   'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
 cache="$(cache_of "$(M cg-engine)")"
-check Spaltenschutz "Zwischenspeicher nach den abgelehnten Versuchen unveraendert (0:0, running, live_state engine)" \
+check Spaltenschutz "@FU-005 Zwischenspeicher nach den abgelehnten Versuchen unveraendert (0:0, running, live_state engine)" \
   '.score_a == 0 and .score_b == 0 and .match_status == "running" and .live_state.engine == true and .live_state.x == null' "$cache"
 res="$(q "SELECT public.__b3b_exec_msg('$U_HELPER', \$S\$UPDATE public.matches SET referee_number = 3, score_a = score_a WHERE id = '$(M cg-engine)'\$S\$);")"
 check Spaltenschutz "Helfer: freie Spalte (referee_number) am Engine-Spiel, geschuetzte unveraendert -> erlaubt" '. == "ok:1"' "$(jq -Rn --arg v "$res" '$v')"

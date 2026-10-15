@@ -15,17 +15,21 @@
  */
 
 import { test, expect } from './fixtures';
+import type { Page } from '@playwright/test';
 import {
   engineCupTarget,
   expectEngineMatchRunningUi,
   expectSeededEngineMatch,
   fetchEngineRows,
+  fetchUserIdByEmail,
   newRoleContext,
   openCockpit,
   runningEngineTarget,
 } from './engineHelpers';
 import {
   enterGoal,
+  enterTimePenaltyWithoutNumber,
+  expectLegacyQueueKeysEmpty,
   fetchFailedMutationTypes,
   fetchMatchRow,
   fetchQueuedMutationTypes,
@@ -35,6 +39,7 @@ import {
   setTeamName,
 } from './helpers';
 import {
+  E2E_USERS,
   E2E_PUBLIC_CUP_ID,
   E2E_PUBLIC_CUP_MONITOR_ID,
   engineCupIds,
@@ -96,11 +101,13 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     expect([row.match_status, row.score_a, row.score_b]).toEqual(['finished', 1, 0]);
 
     // Regressionsschutz Task A1: kein gescheiterter voller Turnier-Save im Ausgang des Helfers.
-    expect(await fetchFailedMutationTypes(helperPage)).not.toContain('SAVE_TOURNAMENT');
-    await expect.poll(() => fetchQueuedMutationTypes(helperPage), {
-      message: 'mutation_queue_v1 darf nach Spielende keine SAVE_TOURNAMENT-Mutation des Helfers enthalten',
+    const helperUserId = await fetchUserIdByEmail(E2E_USERS.helper.email);
+    expect(await fetchFailedMutationTypes(helperPage, helperUserId)).not.toContain('SAVE_TOURNAMENT');
+    await expect.poll(() => fetchQueuedMutationTypes(helperPage, helperUserId), {
+      message: 'mutation_queue_v1:<Konto> darf nach Spielende keine SAVE_TOURNAMENT-Mutation des Helfers enthalten',
       timeout: 2000,
     }).not.toContain('SAVE_TOURNAMENT');
+    await expectLegacyQueueKeysEmpty(helperPage);
     // Nach dem Abpfiff zeigt der Helfer-Kopf kein sync-status mehr (Spiel beendet, nur ein Spiel im
     // Turnier): geprüft wird, dass nichts abgelehnt wurde -- die Annahme der MATCH_END-Zeile steht oben.
     await expect(helperPage.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
@@ -289,7 +296,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     }
   });
 
-  test('@FU-002 Cup RECONNECT: helper offline, zwei Tore, wieder online - beide Geräte zeigen 3:0', async ({ asRole, browser }) => {
+  test('@FU-002 Cup RECONNECT: helper offline, zwei Tore und eine Zeitstrafe - "3 Einträge warten", weiter eintragen, wieder online - beide Geräte zeigen nach 10 s denselben Stand', async ({ asRole, browser }) => {
     const { ids, target } = cup('RECONNECT');
     await expectSeededEngineMatch(target);
     const ownerPage = await asRole('owner');
@@ -302,10 +309,28 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await context.setOffline(true);
       await enterGoal(helperPage, 'home');
       await enterGoal(helperPage, 'home');
+      await enterTimePenaltyWithoutNumber(helperPage, ids.awayTeamName);
+      const helperStatus = helperPage.locator('[data-testid="sync-status"]');
+      await expect(helperStatus).toHaveAttribute('data-pending', '3', { timeout: 5000 });
+      await expect(helperStatus).toHaveAttribute('aria-label', /^3 Einträge warten/);
+      // Das zweite Gerät sieht davon nichts, solange die Einträge warten.
+      const penaltyRow = (page: Page) => page.locator('span', { hasText: /^⏱ 2 Min / });
+      await expect(penaltyRow(ownerPage)).toHaveCount(0);
+      // Ohne Unterbrechung weiter eintragen: ein Gegentor.
+      await enterGoal(helperPage, 'away');
+      await expect(helperStatus).toHaveAttribute('data-pending', '4', { timeout: 5000 });
       await context.setOffline(false);
-      await expect(helperPage.locator('[data-testid="score-home"]')).toHaveText('3', { timeout: 15000 });
-      await expect(ownerPage.locator('[data-testid="score-home"]')).toHaveText('3', { timeout: 15000 });
-      await expect.poll(() => fetchMatchRow(ids.matchId).then((row) => row.score_a), { timeout: 5000 }).toBe(3);
+      // Höchstens 10 s nach der Rückkehr des Netzes: beide Geräte zeigen denselben Stand (3:1) mit der Strafe.
+      const deviceState = async (page: Page) => ({
+        home: await page.locator('[data-testid="score-home"]').textContent(),
+        away: await page.locator('[data-testid="score-away"]').textContent(),
+        penalties: await penaltyRow(page).count(),
+      });
+      await expect
+        .poll(async () => ({ helper: await deviceState(helperPage), owner: await deviceState(ownerPage) }), { timeout: 10000 })
+        .toEqual({ helper: { home: '3', away: '1', penalties: 1 }, owner: { home: '3', away: '1', penalties: 1 } });
+      await expect(helperStatus).toHaveAttribute('data-pending', '0', { timeout: 5000 });
+      await expect.poll(() => fetchMatchRow(ids.matchId).then((row) => [row.score_a, row.score_b]), { timeout: 5000 }).toEqual([3, 1]);
     } finally {
       await safeCleanup('Helfer-Context schließen (RECONNECT)', () => context.close());
     }
