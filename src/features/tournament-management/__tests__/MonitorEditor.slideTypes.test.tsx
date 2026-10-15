@@ -91,7 +91,7 @@ describe('MonitorEditor – angebotene Folien-Typen', () => {
 
   it('Nächste Spiele neu angelegt: Anzahl ist 3 (R-f5)', async () => {
     const user = userEvent.setup();
-    const { container } = renderEditor(tournament());
+    const { baseElement: container } = renderEditor(tournament());
     await openAddMenu(user);
     await user.click(screen.getByRole('button', { name: /Nächste Spiele/ }));
 
@@ -103,7 +103,7 @@ describe('MonitorEditor – angebotene Folien-Typen', () => {
   it('Live-Folie bearbeiten: keine Auswahl „Wenn kein Spiel läuft“, „Anhalten“ bleibt (@OB-001, @ZM-074)', async () => {
     const user = userEvent.setup();
     hoisted.monitor.slides = [{ id: 's-live', type: 'live', config: { fieldId: 'f1' }, duration: null, order: 0 }];
-    const { container } = renderEditor(tournament());
+    const { baseElement: container } = renderEditor(tournament());
     await user.click(screen.getByTitle(/slides\.edit$/));
     expect(container.querySelector('select[id$="-whenIdle"]')).toBeNull();
     expect(screen.queryByText(/whenIdleLabel/)).toBeNull();

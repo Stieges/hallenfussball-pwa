@@ -8,7 +8,7 @@
 
 import React, { useState, CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens'
-import { useFocusTrap } from '../../../hooks';
+import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { Button } from '../../../components/ui/Button';
 import type { TournamentRole } from '../types/auth.types';
 import { ROLE_LABELS } from '../types/auth.types';
@@ -36,11 +36,6 @@ export const InviteDialog: React.FC<InviteDialogProps> = ({
 }) => {
   const { createNewInvitation, isLoading, error, clearError } = useInvitation();
 
-  // WCAG 4.1.3: Focus trap for accessibility
-  const focusTrap = useFocusTrap({
-    isActive: true, // Always active when rendered
-    onEscape: onClose,
-  });
 
   const [selectedRole, setSelectedRole] = useState<TournamentRole>('collaborator');
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
@@ -72,133 +67,103 @@ export const InviteDialog: React.FC<InviteDialogProps> = ({
   };
 
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div
-        ref={focusTrap.containerRef}
-        data-testid="invite-dialog"
-        style={styles.dialog}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="invite-dialog-title"
-      >
-        <div style={styles.header}>
-          <h2 id="invite-dialog-title" style={styles.title}>Einladung erstellen</h2>
-          <button style={styles.closeButton} onClick={onClose}>
-            &times;
-          </button>
-        </div>
-
-        <div style={styles.content}>
-          {/* Rollen-Auswahl */}
-          <div style={styles.field}>
-            <label style={styles.label}>Rolle</label>
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value as TournamentRole)}
-              style={styles.select}
-            >
-              {INVITABLE_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {ROLE_LABELS[role].label} - {ROLE_LABELS[role].description}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Team-Auswahl für Trainer */}
-          {selectedRole === 'trainer' && availableTeams.length > 0 && (
-            <div style={styles.field}>
-              <label style={styles.label}>Teams zuordnen</label>
-              <div style={styles.teamList}>
-                {availableTeams.map((team) => (
-                  <label key={team.id} style={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={selectedTeamIds.includes(team.id)}
-                      onChange={() => handleTeamToggle(team.id)}
-                      style={styles.checkbox}
-                    />
-                    {team.name}
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Max Uses */}
-          <div style={styles.field}>
-            <label style={styles.label}>Maximale Nutzungen</label>
-            <select
-              value={maxUses}
-              onChange={(e) => setMaxUses(Number(e.target.value))}
-              style={styles.select}
-            >
-              <option value={1}>Einmalig</option>
-              <option value={5}>5 mal</option>
-              <option value={10}>10 mal</option>
-              <option value={0}>Unbegrenzt</option>
-            </select>
-          </div>
-
-          {/* Gültigkeit */}
-          <div style={styles.field}>
-            <label style={styles.label}>Gültig für</label>
-            <select
-              value={expiresInDays}
-              onChange={(e) => setExpiresInDays(Number(e.target.value))}
-              style={styles.select}
-            >
-              <option value={1}>1 Tag</option>
-              <option value={7}>7 Tage</option>
-              <option value={30}>30 Tage</option>
-              <option value={0}>Unbegrenzt</option>
-            </select>
-          </div>
-
-          {/* Error */}
-          {error && <p style={styles.error}>{error}</p>}
-        </div>
-
-        <div style={styles.footer}>
-          <Button variant="ghost" onClick={onClose}>
-            Abbrechen
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => void handleCreate()}
-            loading={isLoading}
-            disabled={selectedRole === 'trainer' && selectedTeamIds.length === 0 && availableTeams.length > 0}
-          >
-            Link erstellen
-          </Button>
-        </div>
+    <DialogSurface isOpen onClose={onClose} labelledBy="invite-dialog-title" testId="invite-dialog">
+      <div style={styles.header}>
+        <h2 id="invite-dialog-title" style={styles.title}>Einladung erstellen</h2>
+        <button style={styles.closeButton} onClick={onClose}>
+          &times;
+        </button>
       </div>
-    </div>
+
+      <div style={styles.content}>
+        {/* Rollen-Auswahl */}
+        <div style={styles.field}>
+          <label style={styles.label}>Rolle</label>
+          <select
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value as TournamentRole)}
+            style={styles.select}
+          >
+            {INVITABLE_ROLES.map((role) => (
+              <option key={role} value={role}>
+                {ROLE_LABELS[role].label} - {ROLE_LABELS[role].description}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Team-Auswahl für Trainer */}
+        {selectedRole === 'trainer' && availableTeams.length > 0 && (
+          <div style={styles.field}>
+            <label style={styles.label}>Teams zuordnen</label>
+            <div style={styles.teamList}>
+              {availableTeams.map((team) => (
+                <label key={team.id} style={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={selectedTeamIds.includes(team.id)}
+                    onChange={() => handleTeamToggle(team.id)}
+                    style={styles.checkbox}
+                  />
+                  {team.name}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Max Uses */}
+        <div style={styles.field}>
+          <label style={styles.label}>Maximale Nutzungen</label>
+          <select
+            value={maxUses}
+            onChange={(e) => setMaxUses(Number(e.target.value))}
+            style={styles.select}
+          >
+            <option value={1}>Einmalig</option>
+            <option value={5}>5 mal</option>
+            <option value={10}>10 mal</option>
+            <option value={0}>Unbegrenzt</option>
+          </select>
+        </div>
+
+        {/* Gültigkeit */}
+        <div style={styles.field}>
+          <label style={styles.label}>Gültig für</label>
+          <select
+            value={expiresInDays}
+            onChange={(e) => setExpiresInDays(Number(e.target.value))}
+            style={styles.select}
+          >
+            <option value={1}>1 Tag</option>
+            <option value={7}>7 Tage</option>
+            <option value={30}>30 Tage</option>
+            <option value={0}>Unbegrenzt</option>
+          </select>
+        </div>
+
+        {/* Error */}
+        {error && <p style={styles.error}>{error}</p>}
+      </div>
+
+      <div style={styles.footer}>
+        <Button variant="ghost" onClick={onClose}>
+          Abbrechen
+        </Button>
+        <Button
+          variant="primary"
+          onClick={() => void handleCreate()}
+          loading={isLoading}
+          disabled={selectedRole === 'trainer' && selectedTeamIds.length === 0 && availableTeams.length > 0}
+        >
+          Link erstellen
+        </Button>
+      </div>
+    </DialogSurface>
   );
 };
 
 const styles: Record<string, CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: cssVars.colors.overlay,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.md,
-  },
-  dialog: {
-    width: '100%',
-    maxWidth: '480px',
-    background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.lg,
-    overflow: 'hidden',
-  },
   header: {
     display: 'flex',
     justifyContent: 'space-between',

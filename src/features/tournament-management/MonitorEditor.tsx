@@ -26,6 +26,7 @@ import type {
 } from '../../types/monitor';
 import { SLIDE_TYPES } from '../../types/monitor';
 import { useMonitors, useSponsors } from '../../hooks';
+import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
 import { SlideConfigEditor } from './components/SlideConfigEditor';
 import { SlidePreview } from './components/SlidePreview';
 import { SlideReferenceWarning } from './components/SlideReferenceWarning';
@@ -333,23 +334,8 @@ export function MonitorEditor({
   // STYLES
   // ==========================================================================
 
-  const overlayStyle: CSSProperties = {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0, 0, 0, 0.6)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.lg,
-  };
-
   const editorStyle: CSSProperties = {
-    width: '100%',
-    maxWidth: '800px',
     maxHeight: '90vh',
-    background: cssVars.colors.background,
-    borderRadius: cssVars.borderRadius.lg,
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
@@ -517,7 +503,7 @@ export function MonitorEditor({
     borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textSecondary,
+    color: cssVars.colors.textPrimary,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -566,14 +552,8 @@ export function MonitorEditor({
 
   if (!monitor) {
     return (
-      <div
-        style={overlayStyle}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('monitorEditor.notFound')}
-      >
-        <div style={editorStyle} onClick={e => e.stopPropagation()}>
+      <DialogSurface isOpen onClose={onClose} maxWidth="800px" ariaLabel={t('monitorEditor.notFound')}>
+        <div style={editorStyle}>
           <div style={headerStyle}>
             <h2 style={titleStyle}>{t('monitorEditor.notFound')}</h2>
             <button style={closeButtonStyle} onClick={onClose} aria-label={t('monitorEditor.close')}>✕</button>
@@ -582,19 +562,13 @@ export function MonitorEditor({
             <p>{t('monitorEditor.notFoundMessage', { id: monitorId })}</p>
           </div>
         </div>
-      </div>
+      </DialogSurface>
     );
   }
 
   return (
-    <div
-      style={overlayStyle}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-    >
-      <div style={editorStyle} onClick={e => e.stopPropagation()}>
+    <DialogSurface isOpen onClose={onClose} maxWidth="800px" labelledBy={titleId}>
+      <div style={editorStyle}>
         {/* Header */}
         <div style={headerStyle}>
           <h2 id={titleId} style={titleStyle}>{monitor.name}</h2>
@@ -702,7 +676,7 @@ export function MonitorEditor({
                   display: 'flex',
                   justifyContent: 'space-between',
                   fontSize: cssVars.fontSizes.xs,
-                  color: cssVars.colors.textMuted,
+                  color: cssVars.colors.textSecondary,
                 }}>
                   <span>{t('monitorEditor.settings.noMargin')}</span>
                   <span>80px</span>
@@ -810,7 +784,7 @@ export function MonitorEditor({
                       <div style={{ fontSize: cssVars.fontSizes.xxl, marginBottom: '4px' }}>{st.icon}</div>
                       <div style={{ fontSize: cssVars.fontSizes.sm }}>{st.label}</div>
                       {st.type === 'qr-code' && !zuschauerQrMoeglich && (
-                        <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>
+                        <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
                           {t('monitorEditor.slides.qrHidden')}
                         </div>
                       )}
@@ -822,7 +796,7 @@ export function MonitorEditor({
           </div>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 }
 

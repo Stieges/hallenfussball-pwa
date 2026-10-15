@@ -56,7 +56,7 @@ function turnierOhneFields(fieldId: string): Tournament {
 describe('MonitorEditor – Feldliste wie bei der Übernahme (K4)', () => {
   it('Turnier ohne fields: Feld-3-Folie zeigt die Warnung; „Feld 1“ im Auswahlfeld löst sie auf', async () => {
     const onUpdate = vi.fn().mockResolvedValue(undefined);
-    const { rerender, container } = render(
+    const { rerender, baseElement: container } = render(
       <MonitorEditor tournament={turnierOhneFields('field-3')} monitorId="mon-1" onTournamentUpdate={onUpdate} onClose={vi.fn()} />
     );
     expect(screen.getByTestId('slide-reference-warning')).toBeInTheDocument();

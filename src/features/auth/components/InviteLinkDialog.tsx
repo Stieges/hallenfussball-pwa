@@ -8,7 +8,7 @@
 
 import React, { useState, CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens'
-import { useFocusTrap } from '../../../hooks';
+import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { Button } from '../../../components/ui/Button';
 
 interface InviteLinkDialogProps {
@@ -24,11 +24,6 @@ export const InviteLinkDialog: React.FC<InviteLinkDialogProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
 
-  // WCAG 4.1.3: Focus trap for accessibility
-  const focusTrap = useFocusTrap({
-    isActive: true, // Always active when rendered
-    onEscape: onClose,
-  });
 
   const handleCopy = () => {
     void navigator.clipboard.writeText(link)
@@ -65,93 +60,64 @@ export const InviteLinkDialog: React.FC<InviteLinkDialogProps> = ({
   };
 
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div
-        ref={focusTrap.containerRef}
-        style={styles.dialog}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="invite-link-dialog-title"
-      >
-        <div style={styles.header}>
-          <div style={styles.successIcon}>
-            <span>&#10003;</span>
-          </div>
-          <h2 id="invite-link-dialog-title" style={styles.title}>Einladung erstellt!</h2>
-          <p style={styles.subtitle}>
-            Teile diesen Link mit der Person, die du einladen möchtest.
-          </p>
+    <DialogSurface isOpen onClose={onClose} maxWidth="400px" labelledBy="invite-link-dialog-title">
+      <div style={styles.header}>
+        <div style={styles.successIcon}>
+          <span>&#10003;</span>
         </div>
-
-        <div style={styles.content}>
-          <div style={styles.linkBox}>
-            <input
-              type="text"
-              value={link}
-              readOnly
-              style={styles.linkInput}
-              onClick={(e) => (e.target as HTMLInputElement).select()}
-            />
-          </div>
-
-          <div style={styles.actions}>
-            <Button
-              variant="primary"
-              fullWidth
-              onClick={handleCopy}
-              style={styles.copyButton}
-            >
-              {copied ? 'Kopiert!' : 'Link kopieren'}
-            </Button>
-
-            {canShare && (
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={handleShare}
-              >
-                Teilen
-              </Button>
-            )}
-          </div>
-
-          <p style={styles.hint}>
-            Der Link ist 7 Tage gültig und kann einmalig verwendet werden.
-          </p>
-        </div>
-
-        <div style={styles.footer}>
-          <Button variant="ghost" onClick={onClose} fullWidth>
-            Fertig
-          </Button>
-        </div>
+        <h2 id="invite-link-dialog-title" style={styles.title}>Einladung erstellt!</h2>
+        <p style={styles.subtitle}>
+          Teile diesen Link mit der Person, die du einladen möchtest.
+        </p>
       </div>
-    </div>
+
+      <div style={styles.content}>
+        <div style={styles.linkBox}>
+          <input
+            type="text"
+            value={link}
+            readOnly
+            style={styles.linkInput}
+            onClick={(e) => (e.target as HTMLInputElement).select()}
+          />
+        </div>
+
+        <div style={styles.actions}>
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={handleCopy}
+            style={styles.copyButton}
+          >
+            {copied ? 'Kopiert!' : 'Link kopieren'}
+          </Button>
+
+          {canShare && (
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={handleShare}
+            >
+              Teilen
+            </Button>
+          )}
+        </div>
+
+        <p style={styles.hint}>
+          Der Link ist 7 Tage gültig und kann einmalig verwendet werden.
+        </p>
+      </div>
+
+      <div style={styles.footer}>
+        <Button variant="ghost" onClick={onClose} fullWidth>
+          Fertig
+        </Button>
+      </div>
+    </DialogSurface>
   );
 };
 
 const styles: Record<string, CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: cssVars.colors.overlay,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.md,
-  },
-  dialog: {
-    width: '100%',
-    maxWidth: '400px',
-    background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.lg,
-    overflow: 'hidden',
-  },
   header: {
     padding: cssVars.spacing.xl,
     textAlign: 'center',
@@ -211,7 +177,7 @@ const styles: Record<string, CSSProperties> = {
   hint: {
     margin: 0,
     fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textTertiary,
+    color: cssVars.colors.textSecondary,
     textAlign: 'center',
   },
   footer: {

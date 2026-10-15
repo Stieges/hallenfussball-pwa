@@ -46,6 +46,8 @@ export interface DialogSurfaceProps {
   suppressEnter?: boolean;
   /** Zusätzliche Klasse der Fläche (für Feinregeln der Aufrufer). */
   panelClassName?: string;
+  /** data-testid der Fläche (Standard: dialog-surface). */
+  testId?: string;
   children: ReactNode;
 }
 
@@ -63,6 +65,7 @@ export const DialogSurface = ({
   initialFocusRef,
   suppressEnter,
   panelClassName,
+  testId = 'dialog-surface',
   children,
 }: DialogSurfaceProps) => {
   const focusTrap = useFocusTrap({
@@ -134,7 +137,7 @@ export const DialogSurface = ({
         style={panelStyle}
         className={['dialog-surface-panel', panelClassName].filter(Boolean).join(' ')}
         data-placement={placement}
-        data-testid="dialog-surface"
+        data-testid={testId}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

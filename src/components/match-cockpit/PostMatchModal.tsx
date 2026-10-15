@@ -10,7 +10,7 @@
 import { CSSProperties, useCallback, useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { DialogSurface } from '../ui/molecules/DialogSurface';
 
 // =============================================================================
 // Types
@@ -137,12 +137,6 @@ export function PostMatchModal({
     onStay();
   }, [onStay]);
 
-  // Focus trap for accessibility (WCAG 4.1.3)
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: handleCancel,
-  });
-
   if (!isOpen) {
     return null;
   }
@@ -153,11 +147,16 @@ export function PostMatchModal({
     : 0;
 
   return (
-    <div style={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="post-match-title">
-      <div ref={focusTrap.containerRef} style={styles.modal}>
+    <DialogSurface
+      isOpen
+      onClose={handleCancel}
+      closeOnBackdropClick={false}
+      labelledBy="post-match-title"
+    >
+      <div style={styles.modal}>
         {/* Header */}
         <div style={styles.header}>
-          <div style={styles.matchLabel}>{matchLabel}</div>
+          <div id="post-match-title" style={styles.matchLabel}>{matchLabel}</div>
           {isFinalMatch && <div style={styles.finalBadge}>Finalspiel</div>}
         </div>
 
@@ -268,7 +267,7 @@ export function PostMatchModal({
           )}
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 }
 
@@ -277,27 +276,9 @@ export function PostMatchModal({
 // =============================================================================
 
 const styles: Record<string, CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'rgba(0, 0, 0, 0.85)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.lg,
-  },
   modal: {
-    width: '100%',
-    maxWidth: '480px',
-    background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.xl,
     padding: cssVars.spacing.xl,
     textAlign: 'center',
-    animation: 'modalSlideIn 0.3s ease-out',
   },
   header: {
     display: 'flex',
@@ -437,7 +418,7 @@ const styles: Record<string, CSSProperties> = {
     padding: cssVars.spacing.sm,
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.medium,
-    color: cssVars.colors.textSecondary,
+    color: cssVars.colors.textPrimary,
     background: cssVars.colors.surfaceLight,
     border: 'none',
     borderRadius: cssVars.borderRadius.md,

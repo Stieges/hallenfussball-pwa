@@ -45,7 +45,7 @@ function lookup(tree: unknown, path: string): unknown {
 
 describe('Monitor-Editor ohne Rohschlüssel', () => {
   it('die Auswahlfelder Übergang, Performance und Farbschema zeigen Texte statt „monitorEditor.settings…“', () => {
-    const { container } = render(<MonitorEditor tournament={tournament} monitorId="monitor-1" onTournamentUpdate={vi.fn()} onClose={vi.fn()} />);
+    const { baseElement: container } = render(<MonitorEditor tournament={tournament} monitorId="monitor-1" onTournamentUpdate={vi.fn()} onClose={vi.fn()} />);
     const optionTexts = Array.from(container.querySelectorAll('option')).map(o => o.textContent ?? '');
     expect(optionTexts.length).toBeGreaterThanOrEqual(9);
     for (const text of optionTexts) { expect(text).not.toMatch(/monitorEditor\./); }

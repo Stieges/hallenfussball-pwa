@@ -28,7 +28,7 @@ const roleColors: Record<
     text: cssVars.colors.onPrimary,
   },
   'co-admin': {
-    background: cssVars.colors.warning,
+    background: cssVars.colors.warningHover,
     text: cssVars.colors.onWarning,
   },
   trainer: {
@@ -37,12 +37,12 @@ const roleColors: Record<
   },
   collaborator: {
     background: cssVars.colors.surfaceLight,
-    text: cssVars.colors.textSecondary,
+    text: cssVars.colors.textPrimary,
     border: cssVars.colors.border,
   },
   viewer: {
     background: cssVars.colors.surface,
-    text: cssVars.colors.textTertiary,
+    text: cssVars.colors.textSecondary,
     border: cssVars.colors.border,
   },
 };
