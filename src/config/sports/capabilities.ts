@@ -14,8 +14,8 @@
  * "geplant, nicht verfügbar" zu markieren.
  *
  * NICHT löschen, wenn sich der Stand ändert — stattdessen den Eintrag entfernen, sobald das
- * Feld tatsächlich ausgewertet wird (siehe `rules.canDrawInGroupPhase`/`canDrawInFinals`, die
- * mit Task 6 aus dieser Kategorie herausgewandert sind, siehe core/match/tiebreakDecision.ts).
+ * Feld tatsächlich ausgewertet wird (siehe `rules.canDrawInGroupPhase`/`canDrawInFinals`: keine Produktivstelle
+ * wertet sie aus; die Engine entscheidet über `rules.tiebreak` und das Ereignis TIEBREAK_CHOICE).
  */
 
 import sportGlossary from '../../i18n/glossary.json';
@@ -159,16 +159,17 @@ export const UNIMPLEMENTED_CAPABILITIES: UnimplementedCapability[] = [
     requires: `Verfügbarkeit von ${sportGlossary.terms.penalty.de}/${sportGlossary.terms.penaltyShootout.de} als Tiebreaker-Option`,
     missing:
       'Wie hasOvertime: die tatsächlich angebotenen Tiebreaker-Optionen im Cockpit ' +
-      '(startOvertime/startGoldenGoal/startPenaltyShootout in der Engine) hängen nicht ' +
-      'von diesem Flag ab, sondern sind für jede Sportart gleich verfügbar.',
+      'Die Tiebreaker-Befehle startOvertime/startGoldenGoal/startPenaltyShootout gibt es auf dem ' +
+      'Engine-Weg nicht (Wiedereinschalten: B-09). Der Entscheidungsmodus läuft über rules.tiebreak ' +
+      'bzw. das Ereignis TIEBREAK_CHOICE; dieses Flag wird von keiner Produktivstelle gelesen.',
   },
   {
     field: 'defaults.allowDraw',
     requires: 'Kennzeichnung, ob Unentschieden grundsätzlich zum Sport passen',
     missing:
-      'Duplikat von rules.canDrawInGroupPhase (das seit Task 6 tatsächlich ausgewertet wird, ' +
-      'siehe core/match/tiebreakDecision.ts). defaults.allowDraw selbst ' +
-      'wird von keiner Stelle gelesen. Sollte langfristig entfernt oder auf rules.canDrawInGroupPhase ' +
-      'reduziert werden, statt zwei Wahrheiten für dieselbe Frage zu pflegen.',
+      'Duplikat von rules.canDrawInGroupPhase, das derzeit von keiner Produktivstelle ausgewertet ' +
+      'wird (die Engine entscheidet über rules.tiebreak). defaults.allowDraw selbst wird ebenfalls ' +
+      'von keiner Stelle gelesen. Offene Frage (Befund in BEFUNDE-HEUTIGER-CODE.md): entfernen oder ' +
+      'auf rules.canDrawInGroupPhase reduzieren, statt zwei Wahrheiten für dieselbe Frage zu pflegen.',
   },
 ];
