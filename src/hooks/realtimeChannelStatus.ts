@@ -32,6 +32,11 @@ export function clearRealtimeChannelStatus(tournamentId: string): void {
   notify();
 }
 
+/** A-08f-F: Schluessel des Turnier-Kanals `tournament-<id>` (getrennt vom Live-Kanal je Turnier-ID). */
+export function tournamentChannelStatusKey(tournamentId: string): string {
+  return `tournament-${tournamentId}`;
+}
+
 /**
  * Status-Melder eines Abonnenten. `onStatusChange` schreibt nur, solange der Abonnent aktiv ist;
  * `stop()` (Cleanup) deaktiviert ihn und loescht den Zustand, damit ein spaeter Rueckruf des alten

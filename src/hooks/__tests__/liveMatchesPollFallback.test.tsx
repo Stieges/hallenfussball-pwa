@@ -48,7 +48,7 @@ function latestOnStatusChange(): (status: RealtimeChannelStatus) => void {
   return handler;
 }
 
-function renderSchedulePage() {
+function renderLiveMatchesHook() {
   return renderHook(() => useLiveMatches(TOURNAMENT));
 }
 
@@ -63,7 +63,7 @@ describe('useLiveMatches -- Abfrage-Ausweichen bei unterbrochenem Kanal (@FU-087
   });
 
   it('@FU-087 Pflicht: Kanal CLOSED -> Spiel 7 zeigt 1:0 innerhalb von 10 s, ohne Hinweis', async () => {
-    const { result, unmount } = renderSchedulePage();
+    const { result, unmount } = renderLiveMatchesHook();
     await act(async () => { await Promise.resolve(); });
     expect(subscribe).toHaveBeenCalledWith(TOURNAMENT, expect.anything());
     expect(result.current.liveMatches.get('7')?.homeScore).toBe(0);
@@ -79,7 +79,7 @@ describe('useLiveMatches -- Abfrage-Ausweichen bei unterbrochenem Kanal (@FU-087
   });
 
   it('@FU-087 Gegenbeispiel: SUBSCRIBED -> keine Abfrage nach dem ersten Laden; nach CLOSED -> SUBSCRIBED endet sie', async () => {
-    const { unmount } = renderSchedulePage();
+    const { unmount } = renderLiveMatchesHook();
     await act(async () => { await Promise.resolve(); });
     expect(getAll).toHaveBeenCalledTimes(1);
 

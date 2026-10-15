@@ -93,4 +93,18 @@ describe('ScheduleTab -- laufende Spiele aus useLiveMatches (A-08f2, @FU-087)', 
     expect(getAll).toHaveBeenCalled();
     expect(container.innerHTML).not.toContain(cssVars.colors.statusLiveBg);
   });
+
+  it('@FU-087 PAUSED: Repo meldet das Spiel PAUSED (mit Zwischenstand) -> Live-Kennzeichen, nicht "beendet"', async () => {
+    const { tournament, schedule, firstId } = setup();
+    const withScore: Tournament = {
+      ...tournament,
+      matches: tournament.matches.map((m) => (m.id === firstId ? { ...m, scoreA: 1, scoreB: 0 } : m)),
+    };
+    repoMatches.set(firstId, coreMatch(firstId, 'PAUSED'));
+
+    const { container } = renderTab(withScore, schedule);
+    await act(async () => { await Promise.resolve(); });
+
+    await waitFor(() => expect(container.innerHTML).toContain(cssVars.colors.statusLiveBg));
+  });
 });

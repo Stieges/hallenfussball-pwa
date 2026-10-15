@@ -18,6 +18,15 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { realtimeService, type RealtimeConnectionStatus, type RealtimePayload } from '../core/realtime';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { trackRealtimeChannelStatus, tournamentChannelStatusKey } from './realtimeChannelStatus';
+import type { RealtimeChannelStatus } from '../core/repositories/SupabaseLiveMatchRepository';
+
+/** A-08f-F: Verbindungsstatus des Turnier-Kanals -> Kanal-Status (connecting/paused = unbekannt, nicht gemeldet). */
+const CHANNEL_STATUS_BY_CONNECTION: Partial<Record<RealtimeConnectionStatus, RealtimeChannelStatus>> = {
+  connected: 'SUBSCRIBED',
+  disconnected: 'CLOSED',
+  error: 'CHANNEL_ERROR',
+};
 
 export interface UseRealtimeTournamentOptions {
   /** Enable/disable the subscription (default: true) */
@@ -153,7 +162,10 @@ export function useRealtimeTournament(
       callbacksRef.current.onError?.(error);
     };
 
+    const tracker = trackRealtimeChannelStatus(tournamentChannelStatusKey(tournamentId));
     const handleStatusChange = (newStatus: RealtimeConnectionStatus) => {
+      const channelStatus = CHANNEL_STATUS_BY_CONNECTION[newStatus];
+      if (channelStatus) { tracker.onStatusChange(channelStatus); }
       setStatus(newStatus);
       if (newStatus !== 'error') {
         setLastError(null);
@@ -184,6 +196,7 @@ export function useRealtimeTournament(
         console.log('[useRealtimeTournament] Unsubscribing from:', tournamentId);
       }
       realtimeService.unsubscribeTournament(tournamentId);
+      tracker.stop();
     };
   }, [tournamentId, enabled]);
 

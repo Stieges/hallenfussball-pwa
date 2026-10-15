@@ -6,6 +6,8 @@ import { calculateStandings } from '../utils/calculations';
 import { Standing } from '../types/tournament';
 import { useRepositories } from '../core/contexts/RepositoryContext';
 import { useRealtimeTournament } from './useRealtimeTournament';
+import { useRealtimePollFallback } from './realtimePollFallback';
+import { tournamentChannelStatusKey } from './realtimeChannelStatus';
 import { useEngineOverlayForTournament, useEngineOverlaidMatchIds } from './useEngineOverlayForTournament';
 
 /**
@@ -120,6 +122,9 @@ export function useTournamentManager(tournamentId: string) {
             },
         }
     );
+
+    // A-08f-F (@FU-087): Turnier-Kanal unterbrochen -> Spielstand-Quelle alle 5 s nachladen, ohne Hinweis
+    useRealtimePollFallback(tournamentChannelStatusKey(tournamentId), isRealtimeEnabled, loadTournament);
 
     // I3: welche Spiele die Engine GERADE kontrolliert (Ref, synchron waehrend des Renderns
     // aktualisiert -- kein Effekt-/Render-Zyklus, s. useEngineOverlaidMatchIds).

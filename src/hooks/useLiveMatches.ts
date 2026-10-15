@@ -20,7 +20,7 @@ import type { LiveMatch as CoreLiveMatch } from '../core/models/LiveMatch';
 import { toRuntimeMatchEvents } from '../utils/matchEvents';
 import { cardKindOf } from '../utils/cardKind';
 import { trackRealtimeChannelStatus } from './realtimeChannelStatus';
-import { useLiveMatchesPollFallback } from './liveMatchesPollFallback';
+import { useRealtimePollFallback } from './realtimePollFallback';
 
 // Types - MatchEvent is re-exported from tournament.ts
 export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
@@ -413,7 +413,7 @@ export function useLiveMatches(tournamentId: string, options?: UseLiveMatchesOpt
   }, [readRepo, tournamentId, markAllEventsAsSeen, detectGoalEvent, detectCardEvent]);
 
   // A-08f1 (@FU-087): Realtime unterbrochen -> Abfrage alle 5 s, ohne Hinweis
-  useLiveMatchesPollFallback(tournamentId, realtimeRepo !== null, loadFromRepository);
+  useRealtimePollFallback(tournamentId, realtimeRepo !== null, loadFromRepository);
 
   // Realtime subscription handler
   const handleRealtimeChange = useCallback((matchId: string, match: CoreLiveMatch | null) => {
