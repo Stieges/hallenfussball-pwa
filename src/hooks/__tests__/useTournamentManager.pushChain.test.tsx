@@ -103,6 +103,7 @@ import { LocalStorageRepository } from '../../core/repositories/LocalStorageRepo
 import { createFakeCloud } from '../../test/fakeCloudRepository';
 import { useTournamentManager } from '../useTournamentManager';
 import { REALTIME_POLL_FALLBACK_INTERVAL_MS } from '../realtimePollFallback';
+import { PUSH_COALESCE_DEBOUNCE_MS, PUSH_COALESCE_MAX_WAIT_MS } from '../coalescePushes';
 
 const TID = testUuid(900);
 const teams = [1, 2, 3, 4].map((n) => ({ id: testUuid(n), name: `Team ${n}`, group: 'A' }));
@@ -158,10 +159,47 @@ describe('A-08f3b2 Push-Kette Kanal offen → Spielplan frisch (@FU-087)', () =>
 
     cloud.setState({ tournament: withScore(2), revisions: revisions(3) });
     act(() => server.write('matches', { id: FIRST.id, tournament_id: TID, score_a: 2 }));
-    await tick(0);
+    await tick(PUSH_COALESCE_DEBOUNCE_MS - 1);
+    expect(cloud.fake.getWithMatchRevisions.mock.calls.length).toBe(readsBefore); // A-08f3b2-F: erst nach dem Debounce
+    await tick(1);
 
     expect(view.getByTestId('score').textContent).toBe('2:0');
     expect(cloud.fake.getWithMatchRevisions.mock.calls.length).toBe(readsBefore + 1);
+  });
+
+  it('A-08f3b2-F (I-1): 38 Zeilen-Ereignisse in schneller Folge (ein volles Speichern) → höchstens 2 frische Lesungen', async () => {
+    const cloud = createFakeCloud({ tournament: withScore(1), revisions: revisions(2) });
+    const view = await mount(cloud);
+    act(() => server.join());
+    await tick(0);
+    const readsBefore = cloud.fake.getWithMatchRevisions.mock.calls.length;
+
+    cloud.setState({ tournament: withScore(2), revisions: revisions(3) });
+    for (let i = 0; i < 38; i++) {
+      act(() => server.write('matches', { id: FIRST.id, tournament_id: TID, score_a: 2 }));
+      await tick(10); // 38 × 10 ms = 380 ms, länger als der Debounce, kürzer als Max-Wait
+    }
+    await tick(PUSH_COALESCE_MAX_WAIT_MS);
+
+    const reads = cloud.fake.getWithMatchRevisions.mock.calls.length - readsBefore;
+    expect(reads).toBeGreaterThanOrEqual(1);
+    expect(reads).toBeLessThanOrEqual(2);
+    expect(view.getByTestId('score').textContent).toBe('2:0');
+  });
+
+  it('A-08f3b2-F Gegenbeispiel: Ereignisse mit Abstand > Max-Wait → je eine Lesung', async () => {
+    const cloud = createFakeCloud({ tournament: withScore(1), revisions: revisions(2) });
+    await mount(cloud);
+    act(() => server.join());
+    await tick(0);
+    const readsBefore = cloud.fake.getWithMatchRevisions.mock.calls.length;
+
+    for (let i = 0; i < 3; i++) {
+      act(() => server.write('matches', { id: FIRST.id, tournament_id: TID, score_a: 2 }));
+      await tick(PUSH_COALESCE_MAX_WAIT_MS + 100);
+    }
+
+    expect(cloud.fake.getWithMatchRevisions.mock.calls.length - readsBefore).toBe(3);
   });
 
   it('Kein Kanal-Abo auf eine Tabelle außerhalb der Publikation (sonst liefert der Server für den ganzen Kanal nichts)', async () => {

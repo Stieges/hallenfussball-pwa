@@ -70,6 +70,7 @@ import { createFakeCloud } from '../../../test/fakeCloudRepository';
 import { MatchEngineContext } from '../../match-engine/matchEngineContextInstance';
 import { ScheduleTab } from '../ScheduleTab';
 import { useTournamentManager } from '../../../hooks/useTournamentManager';
+import { PUSH_COALESCE_DEBOUNCE_MS } from '../../../hooks/coalescePushes';
 
 const teams: Team[] = ['A', 'B'].flatMap((group, g) =>
   [1, 2, 3, 4].map((n) => ({ id: testUuid(g * 10 + n), name: `Team ${group}${n}`, group })),
@@ -154,7 +155,7 @@ describe('A-08f3b Spielplan zeigt fremde Tore beim Turnierleiter (@FU-087, @FU-0
 
     cloud.setState({ tournament: withFirst(7, { scoreA: 1, scoreB: 0, matchStatus: 'running' }), revisions: revisions(3) });
     act(() => channel.push({} as RealtimePayload));
-    await tick(0);
+    await tick(PUSH_COALESCE_DEBOUNCE_MS); // A-08f3b2-F: Pushes werden gebündelt
 
     expect(firstCard(view.container)).toContain('1:0');
     expect(cloud.fake.getWithMatchRevisions).toHaveBeenCalledTimes(2);

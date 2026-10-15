@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { TournamentService } from '../core/services/TournamentService';
 import { Tournament } from '../core/models/types';
 import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
@@ -10,6 +10,7 @@ import { useRealtimePollFallback } from './realtimePollFallback';
 import { tournamentChannelStatusKey } from './realtimeChannelStatus';
 import { useEngineOverlayForTournament, useEngineOverlaidMatchIds } from './useEngineOverlayForTournament';
 import { useEngineCatchUpOnCloudChange } from './useEngineCatchUpOnCloudChange';
+import { createPushCoalescer } from './coalescePushes';
 
 const FRESH = { fresh: true } as const;
 
@@ -106,6 +107,11 @@ export function useTournamentManager(tournamentId: string) {
     // A-08f3b (@FU-087, @FU-001): Push und Abfrage-Ausweichen lesen frisch aus der Cloud
     const loadFresh = useCallback(() => loadTournament(FRESH), [loadTournament]);
     useEngineCatchUpOnCloudChange(tournamentId); // H-1: geladene Engine-Kopien nachladen
+    // A-08f3b2-F (I-1): Pushes eines Turniers bündeln (Debounce + Max-Wait), dann EIN frisches Lesen
+    const loadFreshRef = useRef(loadFresh);
+    loadFreshRef.current = loadFresh;
+    const pushCoalescer = useMemo(() => createPushCoalescer(() => { void loadFreshRef.current(); }), []); // ein Bündler je Hook, liest immer das aktuelle loadFresh
+    useEffect(() => () => { pushCoalescer.cancel(); }, [pushCoalescer]);
 
     // Realtime Subscription (only when authenticated with Supabase)
     const { isConnected: isRealtimeConnected, status: realtimeStatus } = useRealtimeTournament(
@@ -119,7 +125,7 @@ export function useTournamentManager(tournamentId: string) {
                     // eslint-disable-next-line no-console
                     console.log('[useTournamentManager] Realtime update received, refetching...');
                 }
-                void loadFresh();
+                pushCoalescer.trigger();
             },
             onError: (error) => {
                 if (import.meta.env.DEV) {
