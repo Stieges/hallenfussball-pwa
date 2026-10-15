@@ -192,12 +192,22 @@ describe('@DR-005 @BM-052 Pflichtfall: Tom um 15:07, Spiel 11 steht 2:1, Halbfin
 });
 
 describe('@DR-018 Sichtbarkeit gilt auch in der Fassung zum Ausfüllen', () => {
-  it('Gruppentabellen aus, Fassung „Spielplan“: besetztes Halbfinale 1 zeigt „noch offen“ statt des Teams', async () => {
+  it('@ZM-102 Gruppentabellen aus, Fassung „Spielplan“: besetztes Halbfinale 1 zeigt den Teamnamen „FC Nord“ ohne Herkunft; nur die offene Gegenseite ist „noch offen“', async () => {
     const { pages, nummer } = await seiten('plan', {}, hallencupTournament({ hideRankingsForPublic: true }));
     const texte = textsIn(zeileVon(pages, nummer)).map(t => t.str.trim());
 
-    expect(texte).toContain('noch offen');
-    expect(texte).not.toContain('FC Nord');
+    expect(texte).toContain('FC Nord');
+    expect(texte.filter(t => t === 'noch offen'), 'genau die offene Gegenseite').toHaveLength(1);
+    expect(texte.some(t => t.includes('Zweiter Gruppe A')), 'keine Herkunftszeile des besetzten Platzes').toBe(false);
+  });
+
+  it('@ZM-102 Gegenbeispiel: ein offener Platz bleibt „noch offen“ (nur Halbfinale 1 ist besetzt), Sieger-Herkunft bleibt', async () => {
+    const tournament = hallencupTournament({ hideRankingsForPublic: true });
+    const { pages } = await seiten('plan', {}, tournament);
+    const text = squash(pages.flatMap(p => p.texts.map(t => t.str)).join(' '));
+
+    expect(text).toContain(squash('noch offen'));
+    expect(text).toContain(squash('Sieger Halbfinale 1'));
   });
 
   it('Gruppentabellen aus: keine Tabelle, Gruppen-Herkunft „noch offen“ über der Linie', async () => {

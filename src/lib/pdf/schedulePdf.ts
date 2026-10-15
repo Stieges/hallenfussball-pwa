@@ -156,7 +156,7 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
       groupName: id => t.groupLabel(id, getGroupDisplayName(id, schedule.tournament)),
       hidePendingOrigin: content.hidePendingOrigin,
       originOnly: edition === 'blank',
-      ...(edition === 'blank' || content.hidePendingOrigin ? { structure: structuralOrigin(tournament, schedule), groupOf: name => schedule.teams.find(team => team.name === name)?.group } : {}),
+      ...(edition === 'blank' ? { structure: structuralOrigin(tournament, schedule), groupOf: name => schedule.teams.find(team => team.name === name)?.group } : {}),
     },
   };
 

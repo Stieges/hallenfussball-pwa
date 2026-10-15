@@ -13,11 +13,11 @@ import type { PdfTexts } from './translations';
 
 /** Kontext der Spielseiten. */
 export interface PdfSideContext {
-  /** Gruppen-Herkunft eines Finalplatzes wird „noch offen“ (Tabellen aus, B-28 C5); Sieger/Verlierer bleiben. */
+  /** Tabellen aus (B-28 C5, @ZM-102): offene Gruppen-Herkunft wird „noch offen“, Sieger/Verlierer bleiben; ein besetzter Platz zeigt den Teamnamen. */
   hidePendingOrigin?: boolean;
   /** Fassung zum Ausfüllen (B-28 C6): ein Finalplatz zeigt immer seine Herkunft, nie das feststehende Team. */
   originOnly?: boolean;
-  /** Herkunft aus der Turnierstruktur (`originStructure.ts`); nötig für besetzte Finalplätze bei `originOnly`/`hidePendingOrigin`. */
+  /** Herkunft aus der Turnierstruktur (`originStructure.ts`); nötig für besetzte Finalplätze bei `originOnly`. */
   structure?: StructuralOrigin;
   /** Gruppe des Teams mit diesem Namen: ein besetzter Platz zählt nur, wenn sie zur Gruppen-Herkunft passt. */
   groupOf?: (name: string) => string | undefined;
@@ -29,7 +29,7 @@ export interface PdfSideContext {
   groupName?: (id: string) => string;
 }
 
-/** Besetzter Finalplatz bei `originOnly` oder `hidePendingOrigin`: Herkunft aus der Struktur, nie der Teamname. */
+/** Besetzter Finalplatz bei `originOnly` (Fassung zum Ausfüllen): Herkunft aus der Struktur, nie der Teamname. */
 function occupiedFinalLabel(shown: string, key: string | undefined, ctx: PdfSideContext, t: PdfTexts): string {
   const group = key !== undefined && isGroupOrigin(key);
   // Gruppen-Herkunft nur, wenn das besetzte Team in der genannten Gruppe spielt; sonst ist die Zuordnung geraten
@@ -49,8 +49,9 @@ export function sideLabel(match: ScheduledMatch, side: 'A' | 'B', ctx: PdfSideCo
     return shown;
   }
   if (ctx.isTeam?.(shown) === true) {
-    const restricted = ctx.originOnly === true || ctx.hidePendingOrigin === true;
-    return restricted && match.phase !== 'groupStage' ? occupiedFinalLabel(shown, ctx.structure?.(match, side), ctx, ctx.t) : shown;
+    // Nur die Fassung zum Ausfüllen zeigt für einen besetzten Platz die Herkunft; bei ausgeschalteten Tabellen steht der
+    // Teamname ohne Herkunft (@ZM-102), „noch offen“ gilt nur für offene Plätze.
+    return ctx.originOnly === true && match.phase !== 'groupStage' ? occupiedFinalLabel(shown, ctx.structure?.(match, side), ctx, ctx.t) : shown;
   }
   if (ctx.hidePendingOrigin === true && (isGroupOrigin(raw) || isGroupOrigin(shown))) {
     return ctx.t.origin.undecided;
