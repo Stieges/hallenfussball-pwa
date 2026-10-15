@@ -17,11 +17,8 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import type { Tables } from '../../types/supabase';
 import {
   mapLiveMatchFromSupabase,
-  mapLiveMatchToSupabase,
   isMatchActive,
 } from './liveMatchMappers';
-import { toSupabaseEventId } from '../utils/id';
-import { captureFeatureError } from '../../lib/sentry';
 import {
   callAppendMatchEvents,
   callServerTime,
@@ -67,7 +64,6 @@ function isRealtimeChannelStatus(value: string): value is RealtimeChannelStatus 
 export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
   private subscriptions = new Map<string, RealtimeChannel>();
   private teamsCache = new Map<string, Map<string, TeamRow>>();
-  private eventIdsCache = new Map<string, Set<string>>();
 
   // ==========================================================================
   // ILiveMatchRepository Implementation
@@ -174,141 +170,10 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
         result.set(matchRow.id, liveMatch);
       }
 
-      // Update event ID cache
-      for (const event of allEvents ?? []) {
-        const cached = this.eventIdsCache.get(event.match_id) ?? new Set();
-        cached.add(event.id);
-        this.eventIdsCache.set(event.match_id, cached);
-      }
-
       return result;
     } catch (error) {
       console.error('[SupabaseLiveMatchRepository] getAll failed:', error);
       return new Map();
-    }
-  }
-
-  async save(_tournamentId: string, match: LiveMatch): Promise<void> {
-    if (!isSupabaseConfigured || !supabase) {
-      return;
-    }
-
-    try {
-      // Get existing event IDs
-      const existingEventIds = this.eventIdsCache.get(match.id) ?? new Set();
-
-      // Map to Supabase format
-      const { newEvents } = mapLiveMatchToSupabase(match, existingEventIds);
-
-      // Der Client schreibt die Ergebnis-/Status-/Uhrspalten seit C3a-2b nicht mehr (V4) —
-      // der Zeilen-Update samt CAS/Retry ist damit gegenstandslos; Spalten schreibt nur noch
-      // append_match_events (RPC). save() fügt nur noch Ereignisse ein, kein matches-UPDATE
-      // (auch kein updated_at-Touch, F6).
-      // Insert new events. upsert + onConflict/ignoreDuplicates (ON CONFLICT DO NOTHING)
-      // statt insert (Sofort-Fix C-EVID): eine Wiederholung (z. B. nach verlorener
-      // Erfolgsbestätigung) sendet dieselben Kennungen erneut — ein reines insert würde
-      // am doppelten Schlüssel scheitern und den GANZEN Stapel blockieren, inklusive
-      // Ereignisse, die noch nie ankamen. DO NOTHING braucht kein UPDATE-Recht, nur die
-      // bestehende Insert-Policy von match_events (belegt im Report per Cloud-E2E).
-      if (newEvents.length > 0) {
-        const { error: eventsError } = await supabase
-          .from('match_events')
-          .upsert(newEvents, { onConflict: 'id', ignoreDuplicates: true });
-
-        if (eventsError) {
-          console.error('[SupabaseLiveMatchRepository] events insert failed:', eventsError);
-          // Don't throw - the match row is not written here; only events are inserted.
-          // Don't cache the ids either - the insert never happened, so the
-          // next save() must retry these events instead of losing them forever.
-          captureFeatureError(eventsError, 'repository', 'eventsInsert', {
-            matchId: match.id,
-            count: newEvents.length,
-          });
-        } else {
-          // Update event ID cache mit der GEMAPPTEN (Supabase-)Kennung — `id` ist bei
-          // MatchEventInsertWithId immer gesetzt, im Gegensatz zum generierten
-          // MatchEventInsert-Typ, der es als optional führt.
-          for (const event of newEvents) {
-            existingEventIds.add(event.id);
-          }
-          this.eventIdsCache.set(match.id, existingEventIds);
-        }
-      }
-    } catch (error) {
-      console.error('[SupabaseLiveMatchRepository] save failed:', error);
-      throw error;
-    }
-  }
-
-  async saveAll(tournamentId: string, matches: Map<string, LiveMatch>): Promise<void> {
-    // Save each match individually (could be optimized with batch upsert)
-    const promises = Array.from(matches.values()).map((match) =>
-      this.save(tournamentId, match)
-    );
-    await Promise.all(promises);
-  }
-
-  async delete(_tournamentId: string, matchId: string): Promise<void> {
-    if (!isSupabaseConfigured || !supabase) {
-      return;
-    }
-
-    try {
-      // Clear live_state (don't delete the match, just clear live state)
-      const { error } = await supabase
-        .from('matches')
-        .update({ live_state: null })
-        .eq('id', matchId);
-
-      if (error) {
-        console.error('[SupabaseLiveMatchRepository] delete failed:', error);
-        throw error;
-      }
-
-      // Clear event cache
-      this.eventIdsCache.delete(matchId);
-    } catch (error) {
-      console.error('[SupabaseLiveMatchRepository] delete failed:', error);
-      throw error;
-    }
-  }
-
-  async deleteEvent(_tournamentId: string, _matchId: string, eventId: string): Promise<void> {
-    if (!isSupabaseConfigured || !supabase) { return; }
-    // Symmetrie mit dem Schreibpfad (Review-Fix Minor 5, Fixrunde 1): mapMatchEventToSupabase
-    // bildet eine lokale Alt-Kennung ohne UUID-Format deterministisch auf eine UUID ab, bevor
-    // sie in match_events.id landet — deleteEvent muss dieselbe Abbildung anwenden, sonst
-    // träfe .eq('id', eventId) bei einer Alt-Kennung nie die tatsächlich gespeicherte Zeile.
-    const { error } = await supabase
-      .from('match_events')
-      .update({ is_deleted: true })
-      .eq('id', toSupabaseEventId(eventId));
-    if (error) { console.error('[SupabaseLiveMatchRepository] deleteEvent failed:', error); throw error; }
-  }
-
-  async clear(tournamentId: string): Promise<void> {
-    if (!isSupabaseConfigured || !supabase) {
-      return;
-    }
-
-    try {
-      // Clear live_state for all tournament matches
-      const { error } = await supabase
-        .from('matches')
-        .update({ live_state: null })
-        .eq('tournament_id', tournamentId);
-
-      if (error) {
-        console.error('[SupabaseLiveMatchRepository] clear failed:', error);
-        throw error;
-      }
-
-      // Clear caches
-      this.teamsCache.delete(tournamentId);
-      // Clear all event caches for this tournament (would need match IDs)
-    } catch (error) {
-      console.error('[SupabaseLiveMatchRepository] clear failed:', error);
-      throw error;
     }
   }
 
