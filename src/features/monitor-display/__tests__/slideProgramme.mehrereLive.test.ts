@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import type { MonitorSlide } from '../../../types/monitor';
+import { DEFAULT_SLIDE_CONFIG } from '../../../types/monitor';
 import { nextSlide, type RuleMatch, type SlideProgram, type SlideshowState } from '../slideProgramme';
 
 const folie = (id: string, type: string, config: object = {}, duration: number | null = 15) =>
@@ -57,7 +58,8 @@ describe('Rotation mit zwei Live-Folien', () => {
 });
 
 describe('Live-Folie ohne Feld gilt als Feld 1 und hält an (B-44b-F, @ZM-074)', () => {
-  const OHNE = folie('live-ohne', 'live', {});
+  // T2: die echte Vorgabe des Editors (pauseRotationDuringMatch: true), kein leeres Objekt
+  const OHNE = folie('live-ohne', 'live', { ...DEFAULT_SLIDE_CONFIG });
 
   it('einzige Live-Folie ohne fieldId, Spiel läuft auf Feld 1: Folie hält über 120 s, kein Takt', () => {
     const p = programm([OHNE, TABELLE], [{ id: 'm1', field: 1, matchStatus: 'running' }]);
