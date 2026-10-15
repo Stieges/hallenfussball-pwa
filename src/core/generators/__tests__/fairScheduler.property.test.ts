@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
 import {
   generateGroupPhaseSchedule,
+  scheduleGroupPhaseVariant,
   analyzeScheduleFairness,
 } from '../../generators';
 import type { Team, Match } from '../../../types/tournament';
@@ -135,6 +136,66 @@ describe('FairScheduler — Pausen-Fairness-Invariante (property)', () => {
             }
             expect(stats.minRest).toBeGreaterThanOrEqual(1);
           }
+        },
+      ),
+      { numRuns: 15 },
+    );
+  });
+});
+
+/**
+ * B-42: laengste Einzelpause und Dauer (@W4-024). Zeitraster wie generate(): 10 min Spiel, 2 min Wechsel.
+ * Der Mittelwert allein verdeckt lange Einzelpausen; deshalb werden sie direkt geprueft.
+ */
+const MAX_LONGEST_PAUSE_MIN = 150; // Obergrenze knapp ueber dem Hoechstwert im Eingaberaum (146 min, 16 Teams / 1 Feld)
+
+function longestPauseMinutes(matches: Match[]): number {
+  const analysis = analyzeScheduleFairness(matches);
+  const longestGap = Math.max(0, ...analysis.teamStats.map((s) => s.maxRest));
+  return longestGap === 0 ? 0 : longestGap * 12 - 10;
+}
+
+function durationMinutes(matches: Match[]): number {
+  const lastSlot = Math.max(...matches.map((m) => m.slot ?? m.round - 1));
+  return lastSlot * 12 + 10;
+}
+
+describe('FairScheduler — laengste Einzelpause und Dauer (property)', () => {
+  it('no team waits longer than MAX_LONGEST_PAUSE_MIN between two own matches', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 4, max: 16 }),
+        fc.integer({ min: 1, max: 3 }),
+        (numTeams, numFields) => {
+          const matches = generate(numTeams, numFields);
+
+          expect(longestPauseMinutes(matches)).toBeLessThanOrEqual(MAX_LONGEST_PAUSE_MIN);
+        },
+      ),
+      { numRuns: 15 },
+    );
+  });
+
+  it('duration is never longer than the schedule of seed 0 (heute)', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 4, max: 16 }),
+        fc.integer({ min: 1, max: 3 }),
+        (numTeams, numFields) => {
+          const matches = generate(numTeams, numFields);
+          const heute = scheduleGroupPhaseVariant(
+            {
+              groups: new Map([['A', createTeams(numTeams)]]),
+              numberOfFields: numFields,
+              slotDurationMinutes: 10,
+              breakBetweenSlotsMinutes: 2,
+              minRestSlotsPerTeam: 1,
+              startTime: new Date('2024-01-01T09:00:00'),
+            },
+            0,
+          );
+
+          expect(durationMinutes(matches)).toBeLessThanOrEqual(durationMinutes(heute));
         },
       ),
       { numRuns: 15 },
