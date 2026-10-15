@@ -67,10 +67,12 @@ describe('Finalrunde gegen HEUTE (B-28a0 Fixrunde 1, @BM-009)', () => {
     for (const m of finals) {
       const zeile = rowFrom(text, m.matchNumber, m.time, FINAL_ZEILE);
       expect(zeile[2], `Feld Spiel ${m.matchNumber}`).toBe(String(m.field));
-      expect(zeile[3], `Heim Spiel ${m.matchNumber}`).toBe(sideName(m, 'A'));
-      expect(zeile[4], `Ergebniszelle Spiel ${m.matchNumber}`).toBe('');
-      expect(zeile[5], `Doppelpunkt Spiel ${m.matchNumber}`).toBe(':');
-      expect(zeile.indexOf(sideName(m, 'B')), `Gast Spiel ${m.matchNumber} nach dem Ergebnis`).toBeGreaterThan(5);
+      // Die Herkunft im Klartext („Verlierer Halbfinale 1“) bricht in der Zelle um: die Heim-Zeilen reichen bis zur leeren Ergebniszelle
+      const ergebnis = zeile.indexOf('', 3);
+      expect(zeile.slice(3, ergebnis).join(' ').replace(/\s+/g, ' '), `Heim Spiel ${m.matchNumber}`).toBe(sideName(m, 'A'));
+      expect(zeile[ergebnis], `Ergebniszelle Spiel ${m.matchNumber}`).toBe('');
+      expect(zeile[ergebnis + 1], `Doppelpunkt Spiel ${m.matchNumber}`).toBe(':');
+      expect(zeile.slice(ergebnis + 1).join(' ').replace(/\s+/g, ' '), `Gast Spiel ${m.matchNumber} nach dem Ergebnis`).toContain(sideName(m, 'B'));
     }
   });
 

@@ -9,12 +9,14 @@ import { printType } from '../../../design-tokens/print';
 import { pageGeometry } from '../layout';
 import { hallencupTournament } from './pdfFixture';
 import { bboxOf, expectedMatrix, headBottom, kopfPdf, overlaps, qrRects, textBox, titleLines, TOL } from './pdfKopfSupport';
-import { fixtureLogo, garbageLogo, truncatedPngLogo } from './pdfLogoFixture';
+import { brokenJpegLogo, fixtureLogo, garbageLogo, oversizedLogo, truncatedPngLogo } from './pdfLogoFixture';
 import { squash } from './pdfjsText';
 
 const geo = pageGeometry('a4', 'portrait');
 const SIXTY = 'Internationaler Hallenfussball Wintercup Nordheim Sued 2026';
 const SIDE_ASPECT = 2;
+/** @DR-003: Kante des QR auf Seite 1 mindestens 3 cm. */
+const MIN_QR_MM = 30;
 
 describe('@DR-023 @DR-024 zwei Grafiken links und rechts', () => {
   it('links am linken, rechts am rechten Rand des Satzspiegels, jede höchstens 20 mm hoch, Seitenverhältnis erhalten', async () => {
@@ -70,7 +72,7 @@ describe('@DR-023 @DR-024 zwei Grafiken links und rechts', () => {
       expect(t.x, `„${t.str}“ links`).toBeGreaterThanOrEqual(left.x + left.w - TOL);
       expect(t.x + t.w, `„${t.str}“ rechts`).toBeLessThanOrEqual(right.x + TOL);
     });
-    expect(bboxOf(qrRects(pages[0])).w).toBeGreaterThanOrEqual(printHeader.qrEdge);
+    expect(bboxOf(qrRects(pages[0])).w).toBeGreaterThanOrEqual(MIN_QR_MM);
     expect(qrRects(pages[0]).length).toBeGreaterThan(0);
     expectedMatrix('ABC123');
   });
@@ -112,10 +114,13 @@ describe('@DR-023 fehlt eine Grafik, entsteht keine Lücke', () => {
   });
 });
 
-describe('@DR-023 unbrauchbare Bilddaten: der Spielplan entsteht trotzdem, mit Hinweis', () => {
+describe('@DR-024 unbrauchbare Bilddaten: der Spielplan entsteht trotzdem, mit Hinweis', () => {
   it.each([
     ['kein Bildformat', garbageLogo()],
-    ['PNG-Kopf, Rest unbrauchbar', truncatedPngLogo()],
+    ['PNG-Kopf, Rest fehlt', truncatedPngLogo()],
+    ['JPEG-Kopf, Rest Müll', brokenJpegLogo()],
+    ['PNG-Daten, als JPEG angegeben', { ...fixtureLogo(2), format: 'JPEG' as const }],
+    ['gültiges PNG, aber über der Größengrenze', oversizedLogo()],
   ])('%s links: PDF mit Seite 1, kein Bild, Hinweis vor dem Speichern', async (_name, logo) => {
     const { pages, notes } = await kopfPdf({ logoLeft: logo });
 
@@ -124,12 +129,23 @@ describe('@DR-023 unbrauchbare Bilddaten: der Spielplan entsteht trotzdem, mit H
     expect(notes.some(n => n.toLowerCase().includes('grafik'))).toBe(true);
   });
 
-  it('Gegenbeispiel: beide gültig ergibt keinen Hinweis; Seitenverhältnis 0 ist unbrauchbar', async () => {
+  it('Gegenbeispiel: gültige Grafiken ergeben keinen Hinweis', async () => {
     const gut = await kopfPdf({ logoLeft: fixtureLogo(SIDE_ASPECT), logoRight: fixtureLogo(SIDE_ASPECT) });
-    const null_ = await kopfPdf({ logoRight: { ...fixtureLogo(SIDE_ASPECT), aspect: 0 } });
 
     expect(gut.notes.filter(n => n.toLowerCase().includes('grafik'))).toEqual([]);
-    expect(null_.pages[0].images).toHaveLength(0);
-    expect(null_.notes.some(n => n.toLowerCase().includes('grafik'))).toBe(true);
+  });
+
+  it('das Seitenverhältnis kommt aus den Bilddaten, nicht vom Aufrufer', async () => {
+    const lügt = { ...fixtureLogo(2), aspect: 0.5 };
+    const { pages } = await kopfPdf({ logoLeft: lügt });
+
+    expect(pages[0].images[0].w / pages[0].images[0].h).toBeCloseTo(2, 1);
+  });
+
+  it('Gegenbeispiel: ein unplausibles Seitenverhältnis (Streifen) ist unbrauchbar', async () => {
+    const { pages, notes } = await kopfPdf({ logoRight: fixtureLogo(20) });
+
+    expect(pages[0].images).toHaveLength(0);
+    expect(notes.some(n => n.toLowerCase().includes('grafik'))).toBe(true);
   });
 });

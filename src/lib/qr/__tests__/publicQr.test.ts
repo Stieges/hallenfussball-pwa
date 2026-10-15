@@ -15,6 +15,13 @@ describe('@BM-043 viewerUrl: nur die Zuschauer-Adresse', () => {
     expect(url).toContain('/live/ABC123');
   });
 
+  it('mit Ursprung: die volle Adresse https://…/#/live/CODE', () => {
+    const url = viewerUrl({ isPublic: true, shareCode: 'ABC123' }, 'https://hallenfussball.example');
+
+    expect(url).toBe('https://hallenfussball.example/#/live/ABC123');
+    expect(url?.startsWith('https://')).toBe(true);
+  });
+
   it.each([
     ['nicht geteilt', { isPublic: false, shareCode: 'ABC123' }],
     ['ohne Schalter', { shareCode: 'ABC123' }],

@@ -14,11 +14,15 @@ const LEGACY_SLOT = /^(?<kind>winner|loser)-(?<round>qf|sf)-(?<n>\d+)$/i;
 export type OriginRound = 'r16' | 'qf' | 'semi';
 export type OriginKind = 'winner' | 'loser';
 
-/** Klartext der Herkunft; ein Wert, der kein Rohschlüssel ist, kommt unverändert zurück. */
-export function originLabel(raw: string, t: PdfTexts): string {
+/**
+ * Klartext der Herkunft; ein Wert, der kein Rohschlüssel ist, kommt unverändert zurück. `groupName` liefert den
+ * Anzeigenamen einer Gruppe (eigene Namen des Turniers); ohne ihn gilt „Gruppe X“ in der Sprache des Dokuments.
+ */
+export function originLabel(raw: string, t: PdfTexts, groupName?: (id: string) => string): string {
   const group = GROUP_PLACE.exec(raw)?.groups;
   if (group) {
-    return t.origin.groupPlace(Number(group.place), group.group.toUpperCase());
+    const id = group.group.toUpperCase();
+    return t.origin.groupPlace(Number(group.place), groupName ? groupName(id) : t.groupLabel(id, `Gruppe ${id}`));
   }
   const slot = (ROUND_SLOT.exec(raw) ?? LEGACY_SLOT.exec(raw))?.groups;
   if (slot) {

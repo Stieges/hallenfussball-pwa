@@ -9,6 +9,9 @@ import type { Match, MatchStatus, Standing, Team, Tournament } from '../../../ty
 import { createMockTournament } from '../../../test/factories';
 import { generateFullSchedule } from '../../../core/generators';
 import type { GeneratedSchedule, ScheduledMatch } from '../../../core/generators';
+import { sideLabel } from '../matchSides';
+import { buildPdfTexts } from '../translations';
+import { translatorFor } from './pdfText';
 
 export const HALLENCUP_TEAMS: Team[] = [
   { id: 'team-nord', name: 'FC Nord', group: 'A' },
@@ -152,11 +155,11 @@ export function matchByNumber(schedule: GeneratedSchedule, matchNumber: number):
 }
 
 /**
- * Ein Builder für Spielseiten. Heute zeigt der Export `homeTeam`/`awayTeam` (Generator-Text).
- * B-35 stellt nur diese Funktion auf `slotLabel` um; Tests erwarten Seiten immer über sie.
+ * Ein Builder für Spielseiten: wie der Export (`sideLabel`, deutsch), also Teamname oder Herkunft im Klartext
+ * (B-28 C4). B-35 stellt nur diese Funktion auf `slotLabel` um; Tests erwarten Seiten immer über sie.
  */
 export function sideName(match: ScheduledMatch, side: 'A' | 'B'): string {
-  return side === 'A' ? match.homeTeam : match.awayTeam;
+  return sideLabel(match, side, { t: buildPdfTexts(translatorFor('de'), 'de'), isTeam: name => HALLENCUP_TEAMS.some(team => team.name === name) });
 }
 
 /** Spiele der Gruppenphase (Phase `groupStage`). */

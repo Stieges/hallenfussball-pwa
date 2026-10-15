@@ -15,6 +15,7 @@ import i18next from 'i18next';
 import jsPDF from 'jspdf';
 import type { GeneratedSchedule } from '../../core/generators';
 import type { Standing } from '../../types/tournament';
+import { getGroupDisplayName } from '../../utils/displayNames';
 import { getLocationName } from '../../utils/locationHelpers';
 import { qrModules, viewerUrl } from '../qr/publicQr';
 import { registerPdfFonts, fontOf } from './fonts';
@@ -37,7 +38,9 @@ import { placementState } from './placement';
 import { renderRanking } from './render/ranking';
 import { renderHeader } from './render/header';
 import { usableLogo } from './render/headerGraphics';
-import { drawShortHeads, shortHeadTitleLines } from './render/shortHeader';
+import { printHeader } from '../../design-tokens/print-header';
+import { qrSide } from './render/qrCode';
+import { drawShortHeads, shortHeadTitleLines, shortQrColumn } from './render/shortHeader';
 import { renderParticipants } from './render/participants';
 import { koLines, pdfRuleLines, pdfRulesFrom } from './rules';
 import { buildPdfTexts, resolvePdfLocale, type PdfLocale, type PdfTexts, type PdfTranslator } from './translations';
@@ -121,7 +124,7 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
     ...(options.logoRight && !logoRight ? [t.logoUnusable('right')] : []),
   ];
   // Zuschauer-QR nur bei online geteiltem Turnier (@ZM-064)
-  const url = viewerUrl(tournament);
+  const url = viewerUrl(tournament, options.viewerBaseUrl);
   const qr = url === null ? undefined : { modules: qrModules(url), caption: options.viewerResultsHidden ? t.qrCaption.plan : t.qrCaption.results };
 
   // Fußzeile und Kurzkopf vor dem Seitenmaß messen: sie bestimmen, wo der Satzspiegel endet bzw. Folgeseiten beginnen
@@ -132,19 +135,24 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
     line: (title, stand, page, total) => footerLine(title, stand, page, total, translate),
   };
   const contentWidth = pageGeometry('a4', orientation).contentWidth;
-  const shortHeadTitle = shortHeadTitleLines(doc, schedule.tournament.title, contentWidth);
-  const geo = pageGeometry('a4', orientation, shortHeadTitle.length, countFooterLines(doc, footer, contentWidth));
+  const shortHeadTitle = shortHeadTitleLines(doc, schedule.tournament.title, contentWidth - shortQrColumn(qr?.modules));
+  const geo = pageGeometry('a4', orientation, shortHeadTitle.length, countFooterLines(doc, footer, contentWidth), qr ? qrSide(qr.modules.length, printHeader.qrEdgeShort) : 0);
 
   // Abschnitte, die es in diesem Dokument gibt, in fester Reihenfolge; ihre Nummern zählen nur diese
   const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
   const finalPhases = schedule.phases.filter(p => p.name !== 'groupStage');
-  const hasTables = includeStandings && schedule.teams.some(team => team.group);
+  const placement = placementState({ edition, ranking, closed, teamCount: schedule.teams.length });
+  // Jeder gegen jeden in einer Gruppe ohne Finalrunde, abgeschlossen (@DR-009): die Tabelle heißt „Abschlusstabelle“ und
+  // ist die Platzierung, der Block „Platzierung“ entfällt. Vorher und in der Fassung zum Ausfüllen bleibt er.
+  const singleGroup = new Set(schedule.teams.map(team => team.group).filter(Boolean)).size <= 1;
+  const finalTable = includeStandings && placement === 'final' && finalPhases.length === 0 && singleGroup;
+  const hasTables = includeStandings && (finalTable || schedule.teams.some(team => team.group));
   const present: SectionKey[] = [
     'participants',
     ...(groupPhase ? (['groupStage'] as const) : []),
     ...(hasTables ? (['tables'] as const) : []),
     ...(finalPhases.length > 0 ? (['finals'] as const) : []),
-    'ranking',
+    ...(finalTable ? [] : (['ranking'] as const)),
   ];
   const sections = planSections(present, geo);
   // Jeder gegen jeden hat keine Gruppen: der Abschnitt heißt „Spiele“ (Controller, B-28a3-4)
@@ -172,6 +180,11 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
     geo,
     result: { edition, results: includeScores },
     refereeLabel: refereeLabelFor(schedule),
+    side: {
+      t,
+      isTeam: name => schedule.teams.some(team => team.name === name),
+      groupName: id => t.groupLabel(id, getGroupDisplayName(id, schedule.tournament)),
+    },
   };
 
   if (groupPhase) {
@@ -180,7 +193,7 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
 
   // Gruppentabellen, eigene Seite (nur wenn es Gruppen gibt und sie gewünscht sind)
   if (hasTables) {
-    yPos = renderGroupStandings(doc, schedule, standings, t, geo, startPage(doc, 'tables', geo), sections.handle('tables'));
+    yPos = renderGroupStandings(doc, schedule, standings, t, geo, startPage(doc, 'tables', geo), sections.handle('tables'), finalTable ? { title: t.finalTable, order: ranking } : undefined);
   }
 
   // Finalrunde mit K.-o.-Zeilen, eigene Seite. Die Platzierung steht am Ende: mit Finalrunde auf deren Seite, ohne
@@ -199,19 +212,16 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
       { section: sections.handle('finals'), tentativeNote: edition !== 'final' && closed !== true && groupPhase && groupPhaseOpen(groupPhase.matches) ? t.timesTentative : undefined }
     );
   }
-  renderRanking(
-    doc,
-    {
-      state: placementState({ edition, ranking, closed, teamCount: schedule.teams.length }),
-      teamCount: schedule.teams.length,
-      ranking,
-      hasFinalRound: finalPhases.length > 0,
-    },
-    t,
-    geo,
-    yPos,
-    sections.handle('ranking')
-  );
+  if (!finalTable) {
+    renderRanking(
+      doc,
+      { state: placement, teamCount: schedule.teams.length, ranking, hasFinalRound: finalPhases.length > 0 },
+      t,
+      geo,
+      yPos,
+      sections.handle('ranking')
+    );
+  }
 
   // Kurzkopf auf jeder Folgeseite (Altersklasse · Datum · Abschnitt oben auf der Seite), dann die Fußzeile über alle Seiten
   const sectionNames: Record<SectionKey, string> = {
@@ -223,6 +233,7 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
   };
   drawShortHeads(doc, geo, {
     titleLines: shortHeadTitle,
+    qr: qr?.modules,
     subtitleFor: page => {
       const key = sections.keyAtTop(page);
       return [schedule.tournament.ageClass, dayOf(schedule, t), key ? sectionNames[key] : ''].filter(part => part !== '').join(t.rules.join);

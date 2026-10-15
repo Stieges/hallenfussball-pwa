@@ -6,6 +6,7 @@ import type jsPDF from 'jspdf';
 import autoTable, { type CellInput, type RowInput, type UserOptions } from 'jspdf-autotable';
 import type { GeneratedSchedule } from '../../../core/generators';
 import type { Standing } from '../../../types/tournament';
+import type { RankEntry } from '../placement';
 import { printColors, printType, printMetrics, printGap, printStroke, printColumns, printLimits } from '../../../design-tokens/print';
 import { getGroupDisplayName } from '../../../utils/displayNames';
 import { ensureSpace, tableMargins, type PageGeometry } from '../layout';
@@ -101,7 +102,16 @@ function drawStandingsTable(
   return tableEndY(doc);
 }
 
-/** Gruppentabellen, eine je Gruppe. Ohne Gruppen nichts. */
+/**
+ * Tabelle nach dem Abschluss statt der Gruppentabellen (@DR-009): alle Teams in einer Tabelle, in der Reihenfolge des
+ * gespeicherten Endstands, mit dem Titel `title` („Abschlusstabelle“).
+ */
+export interface FinalTable {
+  title: string;
+  order: RankEntry[];
+}
+
+/** Gruppentabellen, eine je Gruppe. Ohne Gruppen nichts; mit `finalTable` eine Tabelle über alle Teams. */
 export function renderGroupStandings(
   doc: jsPDF,
   schedule: GeneratedSchedule,
@@ -109,11 +119,14 @@ export function renderGroupStandings(
   t: PdfTexts,
   geo: PageGeometry,
   yPos: number,
-  section: SectionHandle
+  section: SectionHandle,
+  finalTable?: FinalTable
 ): number {
-  // Gruppen des Plans, sortiert
-  const groups = Array.from(new Set(schedule.teams.map(team => team.group).filter((g): g is string => Boolean(g)))).sort();
+  // Gruppen des Plans, sortiert; die Abschlusstabelle ist eine Tabelle über alle Teams (Gruppe '')
+  const found = Array.from(new Set(schedule.teams.map(team => team.group).filter((g): g is string => Boolean(g)))).sort();
+  const groups = finalTable ? [''] : found;
   if (groups.length === 0) {return yPos;}
+  const placeOf = (standing: Standing): number => finalTable?.order.find(entry => entry.team.id === standing.team.id)?.place ?? Number.MAX_SAFE_INTEGER;
 
   const currentStandings = resolveStandings(schedule, standings);
 
@@ -124,15 +137,16 @@ export function renderGroupStandings(
     doc.setFontSize(printType.caption);
     doc.setTextColor(...printColors.ink);
     doc.setFont(fontOf(doc), 'bold');
-    doc.text(section.heading(doc, yPos, t.standingsOfGroup(t.groupLabel(group, getGroupDisplayName(group, schedule.tournament)))), geo.left, yPos);
+    const title = finalTable ? finalTable.title : t.standingsOfGroup(t.groupLabel(group, getGroupDisplayName(group, schedule.tournament)));
+    doc.text(section.heading(doc, yPos, title), geo.left, yPos);
     yPos += printMetrics.sectionTitleUnderline;
 
-    const groupTeams = schedule.teams.filter(team => team.group === group);
+    const groupTeams = finalTable ? schedule.teams : schedule.teams.filter(team => team.group === group);
     const groupStandings = currentStandings
       .filter(s => groupTeams.some(team => team.id === s.team.id))
-      .sort(compareRanking);
+      .sort(finalTable ? (a, b) => placeOf(a) - placeOf(b) : compareRanking);
 
-    const gespielt = groupStandings.some(standing => standing.played > 0);
+    const gespielt = finalTable !== undefined || groupStandings.some(standing => standing.played > 0);
     const end = drawStandingsTable(doc, geo, t, yPos, groupStandings, gespielt);
     yPos = end + printGap.sectionGap + printMetrics.standingsGroupAdvance;
   });

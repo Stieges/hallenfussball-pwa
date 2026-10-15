@@ -49,6 +49,8 @@ export interface PDFExportOptions {
   logoRight?: LogoImage;
   /** Zuschauer sehen keine Ergebnisse: die Beschriftung des QR lautet dann „Spielplan aufs Handy“ (@DR-010). Vorgabe: nein. */
   viewerResultsHidden?: boolean;
+  /** Ursprung der Zuschauer-Adresse im QR (`https://…`). Vorgabe: Ursprung der App; Tests ohne `window` setzen ihn. */
+  viewerBaseUrl?: string;
   /** Turnier für die Regelzeilen im Kopf und die K.-o.-Zeilen (B-28a3-3b, Fixrunde W6). Pflicht. */
   tournament: Tournament;
 }

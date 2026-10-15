@@ -10,7 +10,7 @@ import type { ScheduledMatch } from '../../../core/generators';
 import { printGap, printType } from '../../../design-tokens/print';
 import type { TiebreakerMode } from '../../../types/tournament';
 import { resultState, type ResultOptions } from '../matchResult';
-import { sideLabel } from '../matchSides';
+import { sideLabel, type PdfSideContext } from '../matchSides';
 import { tableEndY } from '../jspdfTypes';
 import type { PageGeometry } from '../layout';
 import type { ScoreSpec } from '../scoreLayout';
@@ -32,6 +32,8 @@ export interface MatchTableContext {
   result: ResultOptions;
   /** Anzeige in der Spalte „SR“; leer heißt: Schreibfeld. */
   refereeLabel: (match: ScheduledMatch) => string;
+  /** Kontext für die Anzeige der Spielseiten (Herkunft offener Plätze im Klartext, B-28 C4). */
+  side: PdfSideContext;
 }
 
 export interface MatchTableInput {
@@ -70,14 +72,14 @@ function buildColumns(input: MatchTableInput, ctx: MatchTableContext): Column[] 
     columns.push({ key: 'group', head: t.group, style: { halign: 'center', cellWidth: widths.group, fontStyle: 'bold' }, cell: r => groupCode(r.match) });
   }
   columns.push(
-    { key: 'home', head: t.home, style: { halign: 'right' }, cell: r => sideLabel(r.match, 'A', { t }) }, // Heim endet am Ergebnis
+    { key: 'home', head: t.home, style: { halign: 'right' }, cell: r => sideLabel(r.match, 'A', ctx.side) }, // Heim endet am Ergebnis
     {
       key: 'result',
       head: t.result,
       style: { halign: 'center', cellWidth: widths.result },
       cell: r => ({ content: '', styles: { minCellHeight: scoreCellMinHeight(r.spec, input.padV ?? printGap.bodyPadV) } }),
     },
-    { key: 'away', head: t.away, style: { halign: 'left' }, cell: r => sideLabel(r.match, 'B', { t }) },
+    { key: 'away', head: t.away, style: { halign: 'left' }, cell: r => sideLabel(r.match, 'B', ctx.side) },
     { key: 'referee', head: t.referee, style: { halign: 'center', cellWidth: widths.referee }, cell: r => r.referee },
   );
   return columns;

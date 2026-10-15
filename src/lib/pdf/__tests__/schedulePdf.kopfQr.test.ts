@@ -7,7 +7,10 @@ import { describe, expect, it } from 'vitest';
 import { printType } from '../../../design-tokens/print';
 import { pageGeometry } from '../layout';
 import { hallencupTournament } from './pdfFixture';
-import { bboxOf, drawnMatrix, expectedMatrix, headBottom, kopfPdf, qrRects, TOL, textBox } from './pdfKopfSupport';
+import QRCode from 'qrcode';
+import { BASE_URL, bboxOf, drawnMatrix, expectedMatrix, headBottom, kopfPdf, qrRects, TOL, textBox } from './pdfKopfSupport';
+import { generateLiveUrl, generateTournamentUrl } from '../../../utils/shareUtils';
+import { generateFullSchedule } from '../../../core/generators';
 import { squash } from './pdfjsText';
 
 const MIN_EDGE_MM = 30;
@@ -19,6 +22,20 @@ describe('@DR-003 @BM-009 @BM-043 geteiltes Turnier: der QR steht auf Seite 1', 
     const expected = expectedMatrix('ABC123');
 
     expect(drawnMatrix(pages[0], expected.length)).toEqual(expected);
+  });
+
+  it('@BM-043 der Inhalt ist die volle Adresse https://…/#/live/ABC123, nicht die relative und nicht die Verwaltungsadresse', async () => {
+    const { pages } = await kopfPdf();
+    const drawn = drawnMatrix(pages[0], expectedMatrix('ABC123').length);
+    const matrixOf = (url: string): boolean[][] => {
+      const { modules } = QRCode.create(url);
+      return Array.from({ length: modules.size }, (_, r) => Array.from({ length: modules.size }, (_, c) => Boolean(modules.get(r, c))));
+    };
+
+    expect(generateLiveUrl('ABC123', BASE_URL)).toMatch(/^https:\/\/.+\/#\/live\/ABC123$/);
+    expect(drawn).toEqual(matrixOf(generateLiveUrl('ABC123', BASE_URL)));
+    expect(drawn).not.toEqual(matrixOf('/#/live/ABC123'));
+    expect(drawn).not.toEqual(matrixOf(generateTournamentUrl('ABC123', BASE_URL)));
   });
 
   it('Kante mindestens 30 mm, quadratisch, nur schwarze Module auf dem Papier', async () => {
@@ -39,6 +56,8 @@ describe('@DR-003 @BM-009 @BM-043 geteiltes Turnier: der QR steht auf Seite 1', 
     const inside = (b: { x: number; y: number; w: number; h: number }): boolean =>
       b.x < quiet.x + quiet.w && b.x + b.w > quiet.x && b.y < quiet.y + quiet.h && b.y + b.h > quiet.y;
 
+    const fremdeModule = qrRects(pages[0]).filter(r => r.x < box.x - TOL || r.y < box.y - TOL || r.x + r.w > box.x + box.w + TOL || r.y + r.h > box.y + box.h + TOL);
+    expect(fremdeModule).toEqual([]);
     expect(pages[0].texts.filter(t => inside(textBox(t))).map(t => t.str)).toEqual([]);
     expect(pages[0].lines.filter(l => inside({ x: Math.min(l.x1, l.x2), y: Math.min(l.y1, l.y2), w: Math.abs(l.x2 - l.x1), h: Math.abs(l.y2 - l.y1) })).length).toBe(0);
   });
@@ -105,5 +124,49 @@ describe('@ZM-064 nicht geteilt: kein QR und keine leere Fläche', () => {
 
     expect(rechtsterRand(privat)).toBeGreaterThan(rechtsterRand(geteilt) + 10);
     expect(rechtsterRand(privat)).toBeLessThanOrEqual(geo.left + geo.contentWidth + TOL);
+  });
+});
+
+describe('@DR-003 Folgeseiten: QR mindestens 20 mm, gleiche Adresse', () => {
+  const GROSS = 'ABCDEFGH';
+  async function mehrSeiten() {
+    const teams = Array.from({ length: 16 }, (_, i) => ({ id: `t${i}`, name: `Verein ${i + 1}`, group: GROSS[Math.floor(i / 8)] }));
+    const tournament = hallencupTournament({ teams, numberOfTeams: 16, numberOfGroups: 2 });
+    return kopfPdf({}, tournament, generateFullSchedule(tournament, 'de'));
+  }
+
+  it('jede Folgeseite trägt den QR mit Kante ≥ 20 mm und derselben Matrix, rechts im Kurzkopf', async () => {
+    const { pages } = await mehrSeiten();
+    const expected = expectedMatrix('ABC123');
+    const geo = pageGeometry('a4', 'portrait');
+
+    expect(pages.length).toBeGreaterThanOrEqual(2);
+    for (const [i, page] of pages.slice(1).entries()) {
+      const rects = page.rects.filter(r => r.fill === '#000000' && r.y < geo.top + 40 && r.x > geo.left + geo.contentWidth / 2 && r.h < 5);
+      const box = bboxOf(rects);
+      expect(box.w, `Seite ${i + 2}`).toBeGreaterThanOrEqual(20);
+      expect(Math.abs(box.w - box.h)).toBeLessThanOrEqual(TOL);
+      expect(box.x + box.w).toBeLessThanOrEqual(geo.left + geo.contentWidth + TOL);
+      const module = box.w / expected.length;
+      const drawn = expected.map((row, r) => row.map((_, c) => rects.some(q => box.x + (c + 0.5) * module >= q.x && box.x + (c + 0.5) * module <= q.x + q.w && box.y + (r + 0.5) * module >= q.y && box.y + (r + 0.5) * module <= q.y + q.h)));
+      expect(drawn, `Matrix Seite ${i + 2}`).toEqual(expected);
+    }
+  });
+
+  it('Titel und Untertitel des Kurzkopfs laufen nicht in die QR-Spalte', async () => {
+    const { pages } = await mehrSeiten();
+    const geo = pageGeometry('a4', 'portrait');
+    const rects = pages[1].rects.filter(r => r.fill === '#000000' && r.y < geo.top + 40 && r.x > geo.left + geo.contentWidth / 2 && r.h < 5);
+    const box = bboxOf(rects);
+
+    pages[1].texts.filter(t => t.y < box.y + box.h && t.str.trim() !== '').forEach(t => expect(t.x + t.w, `„${t.str}“`).toBeLessThanOrEqual(box.x + TOL));
+  });
+
+  it('Gegenbeispiel @ZM-064: nicht geteilt, kein QR auf den Folgeseiten', async () => {
+    const teams = Array.from({ length: 16 }, (_, i) => ({ id: `t${i}`, name: `Verein ${i + 1}`, group: GROSS[Math.floor(i / 8)] }));
+    const tournament = hallencupTournament({ teams, numberOfTeams: 16, numberOfGroups: 2, isPublic: false });
+    const { pages } = await kopfPdf({}, tournament, generateFullSchedule(tournament, 'de'));
+
+    pages.slice(1).forEach(page => expect(page.rects.filter(r => r.fill === '#000000' && r.h < 5 && r.y < 50)).toEqual([]));
   });
 });

@@ -828,6 +828,7 @@
       },
       "winner": "Sieger {{round}} {{n}}",
       "loser": "Verlierer {{round}} {{n}}"
-    }
+    },
+    "finalTable": "Abschlusstabelle"
   }
 }

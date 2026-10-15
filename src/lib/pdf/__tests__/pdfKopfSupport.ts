@@ -14,6 +14,8 @@ import { readLayout } from './pdfjsLayout';
 import { translatorFor } from './pdfText';
 
 export const TOL = 0.05;
+/** Ursprung der App im Test: Node hat kein `window`, ohne ihn trüge der QR nur `/#/live/…` (Review C4). */
+export const BASE_URL = 'https://hallenfussball.example';
 
 export interface KopfPdf {
   pages: LayoutPage[];
@@ -30,7 +32,7 @@ export async function kopfPdf(
   const { doc, notes } = await buildSchedulePdf({
     schedule,
     standings: undefined,
-    options: { locale: 'de', translate: translatorFor('de'), tournament, ...options },
+    options: { locale: 'de', translate: translatorFor('de'), tournament, viewerBaseUrl: BASE_URL, ...options },
   });
   return { pages: await readLayout(new Uint8Array(doc.output('arraybuffer'))), notes, width: doc.internal.pageSize.getWidth() };
 }
@@ -70,7 +72,7 @@ export function drawnMatrix(page: LayoutPage, size: number): boolean[][] {
 
 /** Erwartete Matrix der Zuschauer-Adresse. */
 export function expectedMatrix(code: string): boolean[][] {
-  const { modules } = QRCode.create(generateLiveUrl(code));
+  const { modules } = QRCode.create(generateLiveUrl(code, BASE_URL));
   return Array.from({ length: modules.size }, (_, r) => Array.from({ length: modules.size }, (_, c) => Boolean(modules.get(r, c))));
 }
 

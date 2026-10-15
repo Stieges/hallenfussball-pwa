@@ -9,14 +9,14 @@ import { generateLiveUrl } from '../../utils/shareUtils';
 /**
  * Adresse der Zuschauer-Seite, nur wenn das Turnier online geteilt ist (Schalter an und Share-Code vorhanden).
  * Sonst `null`: dann gibt es keinen QR und keine Platzhalterfläche (@ZM-064). Nie eine andere Adresse als die des
- * Teilen-Links (`/live/<Code>`), nie `/join`, `/display/` oder `/tv`.
+ * Teilen-Links (`<Ursprung>/#/live/<Code>`; ohne `baseUrl` der Ursprung der App), nie `/join`, `/display/` oder `/tv`.
  */
-export function viewerUrl(tournament: Pick<Tournament, 'isPublic' | 'shareCode'>): string | null {
+export function viewerUrl(tournament: Pick<Tournament, 'isPublic' | 'shareCode'>, baseUrl?: string): string | null {
   const code = tournament.shareCode;
   if (tournament.isPublic !== true || code === undefined || code === '') {
     return null;
   }
-  return generateLiveUrl(code);
+  return generateLiveUrl(code, baseUrl);
 }
 
 /** Module des QR-Codes als Zeilen von Wahrheitswerten (`true` = dunkles Modul). */

@@ -82,7 +82,8 @@ describe('@DR-002 Folgeseite: 30 Spiele laufen über Seite 1 hinaus, Folgeseite 
     const { pages } = await layoutOf({}, schedule);
 
     // Die Zeilen sind mit den Kästchen höher (B-28 C1, 8 mm): 30 Spiele brauchen mehr Seiten; die zweispaltige Platzierung (C2) steht noch auf der Finalseite
-    expect(pages).toHaveLength(4);
+    // Mit geteiltem Turnier trägt jeder Kurzkopf den QR (@DR-003, C4-F): die Folgeseiten fassen weniger Zeilen, es sind 5 Seiten
+    expect(pages).toHaveLength(5);
     pages.forEach((page, i) => {
       expect(pageText(page), `Seite ${i + 1}`).toContain(`Seite ${i + 1} von ${pages.length}`);
     });

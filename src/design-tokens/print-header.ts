@@ -11,12 +11,16 @@ export const printHeader = {
   logoMaxWidth: 40,
   /** Abstand zwischen einer Grafik und dem Titel. */
   logoGap: 4,
+  /** Größengrenze der Bilddaten einer Grafik in Byte (2 MB): größere Dateien gelten als unbrauchbar (@DR-024). */
+  logoMaxBytes: 2_097_152,
   /** Titel: höchstens drei Zeilen (@BM-021). Passt er bei voller Schrift nicht, wird die Schrift in Schritten kleiner. */
   titleMaxLines: 3,
   titleMinPt: 18,
   titleStepPt: 2,
   /** Zuschauer-QR (@DR-003): Kante des Symbols (ohne Ruhezone), mindestens 30 mm, mit Reserve für die Rundung. */
   qrEdge: 31,
+  /** Folgeseiten (@DR-003): mindestens 20 mm, mit Reserve für die Rundung. */
+  qrEdgeShort: 21,
   /** Ruhezone um das Symbol in Modulen (Norm: 4). */
   qrQuietModules: 4,
   /** Beschriftung unter dem QR (@DR-010): Schriftgröße und Abstand zur Ruhezone. */

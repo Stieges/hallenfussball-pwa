@@ -8,6 +8,8 @@ import type { jsPDF } from 'jspdf';
 import { printColors, printGap, printMetrics, printStroke, printType } from '../../../design-tokens/print';
 import type { PageGeometry } from '../layout';
 import { fontOf } from '../fonts';
+import { printHeader } from '../../../design-tokens/print-header';
+import { drawQrSymbol, qrSide } from './qrCode';
 import { clipToWidth } from './textFit';
 
 /**
@@ -17,6 +19,13 @@ import { clipToWidth } from './textFit';
 export interface ShortHeadText {
   titleLines: string[];
   subtitleFor: (page: number) => string;
+  /** Zuschauer-QR rechts im Kurzkopf (@DR-003, mindestens 20 mm); Titel und Untertitel enden links davon. */
+  qr?: boolean[][];
+}
+
+/** Breite der QR-Spalte im Kurzkopf samt Abstand zum Text; 0 ohne QR. */
+export function shortQrColumn(modules: boolean[][] | undefined): number {
+  return modules ? qrSide(modules.length, printHeader.qrEdgeShort) + printHeader.qrColumnGap : 0;
 }
 
 /** Höchstens so viele Titelzeilen; mehr wird gekürzt. */
@@ -57,8 +66,14 @@ function drawShortHead(doc: jsPDF, head: ShortHeadText, geo: PageGeometry, subti
     doc.text(line, geo.left, geo.top + printGap.shortHeadTitleBaseline + index * printMetrics.shortTitleAdvance);
   });
   doc.setFontSize(printType.subtitle);
-  doc.text(clipToWidth(doc, subtitle, geo.contentWidth), geo.left, geo.top + printGap.shortHeadSubBaseline + extra);
+  doc.text(clipToWidth(doc, subtitle, geo.contentWidth - shortQrColumn(head.qr)), geo.left, geo.top + printGap.shortHeadSubBaseline + extra);
+  // Die Linie steht über dem Satzspiegel, auch wenn der QR den Kurzkopf höher macht
+  const rule = geo.top + geo.shortHeadHeight - (printGap.shortHeadHeight - printGap.shortHeadRule);
   doc.setDrawColor(...printColors.ink);
   doc.setLineWidth(printStroke.shortHead);
-  doc.line(geo.left, geo.top + printGap.shortHeadRule + extra, geo.left + geo.contentWidth, geo.top + printGap.shortHeadRule + extra);
+  doc.line(geo.left, rule, geo.left + geo.contentWidth, rule);
+  if (head.qr) {
+    const side = qrSide(head.qr.length, printHeader.qrEdgeShort);
+    drawQrSymbol(doc, head.qr, printHeader.qrEdgeShort, geo.left + geo.contentWidth - side, geo.top);
+  }
 }

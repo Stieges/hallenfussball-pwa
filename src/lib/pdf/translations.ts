@@ -73,6 +73,8 @@ export interface PdfTexts {
   /** Hinweis, wenn die eingebettete Schrift nicht lädt und die Standardschrift druckt (B6). */
   fontFallbackNote: string;
   noDate: string;
+  /** Titel der Gruppentabelle nach dem Abschluss bei Jeder gegen jeden in einer Gruppe ohne Finalrunde (@DR-009). */
+  finalTable: string;
   /** Beschriftung unter dem Zuschauer-QR (@DR-010): mit sichtbaren Ergebnissen „Live-Ergebnisse“, sonst „Spielplan aufs Handy“. */
   qrCaption: { results: string; plan: string };
   /** Hinweis, wenn eine Kopfgrafik nicht verwendet werden konnte (@DR-023). */
@@ -195,7 +197,6 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
   const clock = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const day = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
   const weekday = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' });
-  const groupName = (id: string): string => translate('pdf.groupName', { id });
 
   return {
     organizer: s('organizer'),
@@ -243,13 +244,14 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     contactLine: contact => translate('pdf.contactLine', { contact }),
     fontFallbackNote: s('fontFallbackNote'),
     noDate: s('noDate'),
+    finalTable: s('finalTable'),
     qrCaption: { results: s('qrCaption.results'), plan: s('qrCaption.plan') },
     logoUnusable: side => s(side === 'left' ? 'logoUnusableLeft' : 'logoUnusableRight'),
     origin: {
-      groupPlace: (place, id) => {
+      groupPlace: (place, group) => {
         const word = PLACE_WORDS[place - 1] as (typeof PLACE_WORDS)[number] | undefined;
         const ordinal = word === undefined ? translate('pdf.origin.placeNth', { n: place }) : s(`origin.place.${word}`);
-        return translate('pdf.origin.groupPlace', { place: ordinal, group: groupName(id) });
+        return translate('pdf.origin.groupPlace', { place: ordinal, group });
       },
       fromRound: (kind, round, n) => translate(`pdf.origin.${kind}`, { round: s(`origin.round.${round}`), n }),
     },

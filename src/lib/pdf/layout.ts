@@ -40,9 +40,10 @@ export interface PageGeometry {
  * Maße einer Seite. `shortTitleLines` ist die Zahl der Titelzeilen des Kurzkopfs (1 oder 2, `shortHeader.ts`); sie
  * verschiebt den Satzspiegel der Folgeseiten nach unten. `footerLines` ist die Zahl der Fußzeilen (`render/footer.ts`);
  * die Fußzeile steht samt Unterlänge der letzten Zeile oberhalb des unteren Rands (@DR-001, B5b), der Satzspiegel
- * endet über der Fußlinie.
+ * endet über der Fußlinie. `shortQrSide` ist die Kante des QR-Blocks im Kurzkopf (0 ohne QR, @DR-003): der Kurzkopf ist
+ * dann mindestens so hoch wie der Block.
  */
-export function pageGeometry(format: PdfFormat, orientation: PdfOrientation, shortTitleLines = 1, footerLines = 1): PageGeometry {
+export function pageGeometry(format: PdfFormat, orientation: PdfOrientation, shortTitleLines = 1, footerLines = 1, shortQrSide = 0): PageGeometry {
   const size = printPage[format][orientation];
   const margin = printPage.margin;
   const lastBaseline = size.height - margin.bottom - descentMm(printType.foot);
@@ -53,7 +54,10 @@ export function pageGeometry(format: PdfFormat, orientation: PdfOrientation, sho
     height: size.height,
     contentWidth: size.width - margin.left - margin.right,
     top: margin.top,
-    shortHeadHeight: printGap.shortHeadHeight + (shortTitleLines - 1) * printMetrics.shortTitleAdvance,
+    shortHeadHeight: Math.max(
+      printGap.shortHeadHeight + (shortTitleLines - 1) * printMetrics.shortTitleAdvance,
+      shortQrSide > 0 ? shortQrSide + printGap.shortHeadHeight - printGap.shortHeadRule : 0
+    ),
     bottom: footRuleY - printGap.footSpace,
     footRuleY,
     footerY,

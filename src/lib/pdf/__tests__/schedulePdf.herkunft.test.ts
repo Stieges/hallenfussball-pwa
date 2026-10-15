@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
 import type { Team } from '../../../types/tournament';
+import { sideLabel } from '../matchSides';
 import { originLabel } from '../origin';
 import { buildPdfTexts } from '../translations';
 import { hallencupSchedule, hallencupTournament } from './pdfFixture';
@@ -23,6 +24,8 @@ function mitRohschluesseln(schedule: GeneratedSchedule, keys: Array<[string, str
     const [home, away] = keys[i % keys.length];
     match.homeTeam = home;
     match.awayTeam = away;
+    match.originalTeamA = home;
+    match.originalTeamB = away;
   });
   return schedule;
 }
@@ -65,8 +68,8 @@ describe('originLabel (rein)', () => {
     });
   });
 
-  it('Gegenbeispiel: Teamnamen und bereits übersetzte Herkunft bleiben unverändert', () => {
-    for (const name of ['FC Nord', 'SV Süd 1921', 'Gruppe A - 2. Platz', 'Sieger HF 1', 'group-a', 'semi-winner-club']) {
+  it('Gegenbeispiel: Teamnamen und Nicht-Schlüssel bleiben unverändert', () => {
+    for (const name of ['FC Nord', 'SV Süd 1921', 'group-a', 'semi-winner-club']) {
       expect(originLabel(name, de), name).toBe(name);
     }
   });
@@ -107,5 +110,48 @@ describe('Herkunft im PDF', () => {
     const text = pages.flatMap(p => p.texts.map(t => t.str)).join(' ');
 
     expect(text).not.toMatch(/group-|-winner|-loser|\bsemi\d|\bqf\d|\br16-/i);
+  });
+});
+
+describe('@DR-022 @DR-001 echter Generator: Herkunft aus dem Rohschlüssel, in der Sprache des Dokuments', () => {
+  it('DE: „Erster Gruppe A“, „Sieger Halbfinale 1“; kein „Gruppe A - 2. Platz“, kein „HF“', async () => {
+    const tournament = hallencupTournament();
+    const { pages } = await kopfPdf({}, tournament, generateFullSchedule(tournament));
+    const text = pages.flatMap(p => p.texts.map(t => t.str)).join(' ');
+
+    expect(squash(text)).toContain(squash('Erster Gruppe A'));
+    expect(squash(text)).toContain(squash('Zweiter Gruppe B'));
+    expect(squash(text)).toContain(squash('Sieger Halbfinale 1'));
+    expect(squash(text)).toContain(squash('Verlierer Halbfinale 2'));
+    expect(text).not.toMatch(/Gruppe [A-Z] - \d\. Platz/);
+    expect(text).not.toMatch(/\bHF\b/);
+  });
+
+  it('EN: englische Herkunft, kein deutsches Wort, kein „HF“', async () => {
+    const tournament = hallencupTournament();
+    const { pages } = await kopfPdf({ locale: 'en', translate: translatorFor('en') }, tournament, generateFullSchedule(tournament));
+    const text = pages.flatMap(p => p.texts.map(t => t.str)).join(' ');
+
+    expect(squash(text)).toContain(squash('1st in Group A'));
+    expect(squash(text)).toContain(squash('Winner Semi-final 1'));
+    expect(text).not.toMatch(/Gruppe|Sieger|Verlierer|\bHF\b|Platz\b/);
+  });
+
+  it('eigene Gruppennamen bleiben erhalten: „Erster Löwen“', async () => {
+    const tournament = hallencupTournament({ groups: [{ id: 'A', customName: 'Löwen' }, { id: 'B', customName: 'Tiger' }] });
+    const { pages } = await kopfPdf({}, tournament, generateFullSchedule(tournament));
+    const text = squash(pages.flatMap(p => p.texts.map(t => t.str)).join(' '));
+
+    expect(text).toContain(squash('Erster Löwen'));
+    expect(text).toContain(squash('Zweiter Tiger'));
+  });
+
+  it('Gegenbeispiel: ein besetztes Spiel zeigt den Teamnamen, nicht die Herkunft', () => {
+    const match = hallencupSchedule().allMatches.find(m => m.originalTeamA === 'group-a-1st');
+    expect(match).toBeDefined();
+    const besetzt = { ...match!, homeTeam: 'FC Nord' };
+
+    expect(sideLabel(besetzt, 'A', { t: de, isTeam: name => name === 'FC Nord' })).toBe('FC Nord');
+    expect(sideLabel(match!, 'A', { t: de, isTeam: name => name === 'FC Nord' })).toBe('Erster Gruppe A');
   });
 });
