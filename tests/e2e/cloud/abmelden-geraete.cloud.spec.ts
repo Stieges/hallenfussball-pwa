@@ -30,7 +30,6 @@ import {
   fetchAuthUserStatus,
   loginAsRole,
   logoutOtherDevicesViaUi,
-  logoutViaUi,
   logoutViaUiConfirmingWarning,
   newFreshContext,
   readSessionAccessToken,
@@ -202,7 +201,11 @@ test.describe('Abmelden und andere Geräte', () => {
       await page.evaluate(() => window.dispatchEvent(new Event('online')));
       await expect(page.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
       expect((await fetchEngineRows(ids.matchId)).length).toBe(baseRows);
-      await logoutViaUi(page);
+      // Für B wartet nichts: kein „Eintrag noch nicht übertragen“ beim Abmelden (A's Eintrag gehört B nicht).
+      await page.locator('[data-testid="auth-avatar-button"]').click();
+      await page.locator('[data-testid="auth-logout-button"]').click();
+      await expect.poll(() => readSessionAccessToken(page), { timeout: 10000, message: 'B meldet sich ohne Warnung ab' }).toBeNull();
+      await expect(page.locator('[data-testid="logout-warning-dialog"]')).toHaveCount(0);
 
       // Konto A meldet sich wieder an: der Eintrag ist noch da und kommt jetzt in der DB an.
       await loginAsRole(page, 'abmelden');
