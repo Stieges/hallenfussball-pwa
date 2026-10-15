@@ -121,7 +121,7 @@ export function findGermanLiterals(source: string, optionen: ScanOptionen = {}):
 
   // `}` schließt einen {Ausdruck}; danach folgender Text (nur einzeilig, nur .tsx).
   if (tsx) {
-    const klammerRx = /\}([^<>{}\n]*)(?=<|\{)/g;
+    const klammerRx = /\}([^<>{}\n]*)(?=\s*(?:<|\{))/g;
     while ((jm = klammerRx.exec(stripped)) !== null) {
       pruefeJsx(jm[1], jm.index);
     }
@@ -187,6 +187,7 @@ describe('B-41 Quelltext-Scan: keine festen deutschen Texte auf Zuschauer-Seite 
     // Fixrunde 1 (Opus-M2/M2b): Text in derselben Zeile wie data-testid und Text nach {Ausdruck}
     expect(findGermanLiterals('<span data-testid="x">Zur Startseite</span>')).toHaveLength(1);
     expect(findGermanLiterals('<p>{n} Mannschaften gemeldet</p>')).toHaveLength(1);
+    expect(findGermanLiterals('<p>\n  {n} Mannschaften gemeldet\n</p>')).toHaveLength(1);
     expect(findGermanLiterals('<p>{n} Mannschaften gemeldet</p>', { tsx: false })).toHaveLength(0);
     expect(findGermanLiterals('<span aria-label="Zurück zur Übersicht">x</span>')).toHaveLength(1);
     // Mehrzeiliger JSX-Text (Text auf eigener Zeile, wie in der Mutationsprobe B-41 gefunden)
