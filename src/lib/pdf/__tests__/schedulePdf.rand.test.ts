@@ -7,7 +7,8 @@
  * Die Oberkante einer Zeile ist Grundlinie − Schriftgröße × Ascent der Schrift (`printFont`, `printUnit`).
  */
 import { describe, expect, it } from 'vitest';
-import { pageGeometry } from '../layout';
+import { pageGeometry, tableMargins } from '../layout';
+import { matchTableOptions } from '../render/matchTables';
 import { printColors, printFont, printLimits, printType, printUnit } from '../../../design-tokens/print';
 import { FIXTURES, layoutOf, zwanzigSchedule } from './pdfFixtureLayout';
 import { hallencupSchedule } from './pdfFixture';
@@ -121,6 +122,17 @@ describe.each(FIXTURES)('@DR-001 Rand: $name', ({ options, schedule }) => {
 
     expect(namen.length).toBeGreaterThan(0);
     namen.forEach(t => expect(t.size, `„${t.str}“`).toBeGreaterThanOrEqual(printLimits.teamPt - TOL));
+  });
+});
+
+describe('M1 Tabellen-Unterrand als Wert (autoTable-Vorgabe 14,1 mm reicht in die Zone unter geo.bottom)', () => {
+  it('Spieltabellen und Gruppentabellen setzen margin.bottom = Höhe − geo.bottom, oben die Vorgabe', () => {
+    const geo = pageGeometry('a4', 'portrait');
+    const unten = geo.height - geo.bottom;
+
+    expect(matchTableOptions(geo, 30, [], [], {}).margin).toEqual({ left: geo.left, right: geo.right, top: geo.top, bottom: unten });
+    expect(tableMargins(geo, 30).bottom).toBe(unten);
+    expect(tableMargins(geo, 30).top).toBe(30);
   });
 });
 
