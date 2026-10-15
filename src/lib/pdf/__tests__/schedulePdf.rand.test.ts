@@ -4,13 +4,15 @@
  * Nachweise: @DR-001 (Rand mindestens 12 mm, Raster mindestens 12 % Schwarz, nur Schwarz, Weiß und Raster, Mindestschrift),
  * Plan a3-2 (M1 Tabellen-Unterrand, M2 gleiche Teamgröße hoch und quer, K1 Schriftgrößen aus den Tokens).
  *
- * Die Oberkante einer Zeile ist Grundlinie − Schriftgröße × Ascent der Schrift (`printFont`, `printUnit`).
+ * Die Oberkante einer Zeile ist Grundlinie − Schriftgröße × Ascent der Schrift. Der Ascent wird aus der eingebetteten
+ * Schriftdatei gelesen (`pdfFontMetrics`), nicht aus dem Token; das Token `printFont.ascentEm` wird dagegen geprüft.
  */
 import { describe, expect, it } from 'vitest';
 import { pageGeometry, tableMargins } from '../layout';
 import { matchTableOptions } from '../render/matchTables';
 import { printColors, printFont, printLimits, printType, printUnit } from '../../../design-tokens/print';
 import { FIXTURES, layoutOf, zwanzigSchedule } from './pdfFixtureLayout';
+import { ASCENT_BOLD_EM, ASCENT_REGULAR_EM } from './pdfFontMetrics';
 import { hallencupSchedule } from './pdfFixture';
 import type { LayoutPage, LayoutText } from './pdfjsLayout';
 
@@ -22,7 +24,8 @@ const SCHWARZ = '#000000';
 const TOL_PROZENT = (printLimits.grayTolerance / printColors.paper[0]) * 100;
 
 /** Oberkante eines Textstücks in mm: Grundlinie minus Oberlänge. */
-const oberkante = (t: LayoutText): number => t.y - t.size * printFont.ascentEm * printUnit.mmPerPt;
+const oberkante = (t: LayoutText): number =>
+  t.y - t.size * (t.bold ? ASCENT_BOLD_EM : ASCENT_REGULAR_EM) * printUnit.mmPerPt;
 
 /** Schwarzanteil einer Graustufe in Prozent: 0 = Weiß, 100 = Schwarz. */
 function schwarzProzent(hex: string): number {
@@ -122,6 +125,13 @@ describe.each(FIXTURES)('@DR-001 Rand: $name', ({ options, schedule }) => {
 
     expect(namen.length).toBeGreaterThan(0);
     namen.forEach(t => expect(t.size, `„${t.str}“`).toBeGreaterThanOrEqual(printLimits.teamPt - TOL));
+  });
+});
+
+describe('Ascent-Token gegen die Schriftdatei (Gleichheit, nicht Zirkel)', () => {
+  it('printFont.ascentEm entspricht dem hhea-Ascender von Regular und Bold (Toleranz 0,001)', () => {
+    expect(Math.abs(printFont.ascentEm - ASCENT_REGULAR_EM)).toBeLessThanOrEqual(0.001);
+    expect(Math.abs(printFont.ascentEm - ASCENT_BOLD_EM)).toBeLessThanOrEqual(0.001);
   });
 });
 
