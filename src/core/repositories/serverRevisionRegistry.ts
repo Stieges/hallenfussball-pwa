@@ -42,16 +42,26 @@ export class ServerRevisionRegistry {
             if (revision > (previous.get(matchId) ?? 0)) { merged.set(matchId, revision); raised.add(matchId); }
         }
         if (raised.size === 0) { return; }
-        this.revisions.set(tournamentId, merged);
-        this.ledSets.set(tournamentId, new Set([...merged].filter(([, revision]) => revision > 1).map(([matchId]) => matchId)));
-        this.listeners.get(tournamentId)?.forEach((listener) => listener(raised));
+        this.store(tournamentId, merged, raised);
     }
 
-    /** Turnier gelöscht oder Spielplan neu erzeugt: Stand verwerfen. */
+    /** Turnier gelöscht: Stand verwerfen. */
     clear(tournamentId: string): void {
-        if (!this.revisions.delete(tournamentId)) { return; }
-        this.ledSets.delete(tournamentId);
-        this.listeners.get(tournamentId)?.forEach((listener) => listener(EMPTY));
+        this.retain(tournamentId, EMPTY);
+    }
+
+    /** Spielplan neu erzeugt: nur die Revisionen der noch vorhandenen Spiele behalten. */
+    retain(tournamentId: string, matchIds: ReadonlySet<string>): void {
+        const previous = this.get(tournamentId);
+        const kept = new Map([...previous].filter(([matchId]) => matchIds.has(matchId)));
+        if (kept.size === previous.size) { return; }
+        this.store(tournamentId, kept, EMPTY);
+    }
+
+    private store(tournamentId: string, revisions: ReadonlyMap<string, number>, raised: ReadonlySet<string>): void {
+        this.revisions.set(tournamentId, revisions);
+        this.ledSets.set(tournamentId, new Set([...revisions].filter(([, revision]) => revision > 1).map(([matchId]) => matchId)));
+        this.listeners.get(tournamentId)?.forEach((listener) => listener(raised));
     }
 
     serverLedMatchIds(tournamentId: string): ReadonlySet<string> {

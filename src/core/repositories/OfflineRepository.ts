@@ -8,7 +8,7 @@ import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
 import { captureFeatureError } from '../../lib/sentry';
 import { slotTeamId } from '../models/matchSlot';
 import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
-import { mergeServerLedFields } from './serverLedMatchFields';
+import { decideCloudAdoption } from './cloudAdoption';
 import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisionSource } from './serverRevisionRegistry';
 
 /**
@@ -127,6 +127,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     private _mutationQueue: MutationQueue;
     /** A-08f3a Monotonie (Regel S) + a2/b Benachrichtigung: zuletzt übernommene Server-Revision je Spiel, je Turnier. */
     private readonly serverRevisions = new ServerRevisionRegistry();
+    /** A-08f3b: laufender Cloud-Abruf je Turnier (ein Abruf je Turnier). */
+    private readonly cloudReads = new Map<string, Promise<Tournament | null>>();
 
     constructor(
         private localRepo: LocalStorageRepository,
@@ -170,27 +172,23 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
      * 2. If found: return immediately, trigger background cloud sync
      * 3. If not found locally: try cloud, cache result
      *
-     * This avoids blocking on auth/network issues after navigation.
+     * A-08f3b `fresh` (Push/Abfrage-Ausweichen, @FU-087/@FU-001): wartet auf den Cloud-Abruf, führt zusammen und
+     * liefert das Ergebnis, bei Fehler die lokale Kopie. Das erste Laden bleibt local-first.
      */
-    async get(id: string): Promise<Tournament | null> {
+    async get(id: string, options?: { fresh?: boolean }): Promise<Tournament | null> {
         // 1. LOCAL-FIRST: Try local storage immediately
         const localData = await this.localRepo.get(id);
 
         if (localData && (this.accountId === undefined || localData.ownerId === this.accountId)) { // A-07e: fremd/unmarkiert = nicht lokal
-            // Found locally - return immediately, sync in background
-            void this.refreshFromCloudInBackground(id);
-            return localData;
+            const refreshed = this.refreshFromCloudInBackground(id);
+            if (!options?.fresh) { return localData; }
+            await refreshed;
+            return (await this.localRepo.get(id)) ?? localData;
         }
 
-        // 2. Not found locally - try cloud
+        // 2. Not found locally - try cloud (A-08f3b: mit Revisionen; N-2: eine fremde lokale Kopie bleibt unangetastet)
         try {
-            const cloudData = await this.supabaseRepo.get(id);
-
-            if (cloudData) {
-                // Cache for next time (N-2: eine fremde lokale Kopie bleibt unangetastet)
-                if (!localData?.ownerId || localData.ownerId === this.accountId || this.accountId === undefined) { await this.localRepo.save(this.owned(cloudData)); }
-                return cloudData;
-            }
+            return await this.syncFromCloud(id, !localData?.ownerId || localData.ownerId === this.accountId || this.accountId === undefined);
         } catch (error) {
             if (!isAbortError(error)) {
                 console.warn('OfflineRepository: Cloud fetch failed.', error);
@@ -203,51 +201,34 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         return null;
     }
 
-    /**
-     * Background sync: Fetches latest from cloud and updates local if newer.
-     * Non-blocking, errors are silently ignored.
-     */
+    /** Background sync: Cloud lesen und zusammenführen (Versionsweg oder Feldweg). Fehler werden nur gemeldet. */
     private async refreshFromCloudInBackground(id: string): Promise<void> {
         try {
-            const cloudRead = await this.supabaseRepo.getWithMatchRevisions(id);
-            if (cloudRead) {
-                const cloudData = cloudRead.tournament;
-                // Only update if cloud version is newer
-                const localData = await this.localRepo.get(id);
-                const cloudVersion = cloudData.version ?? 0;
-                const localVersion = localData?.version ?? 0;
-
-                // Zweiter Grund neben einer neueren Version: Vor M1 hat der Mapper `isPublic`
-                // gar nicht gelesen, lokale Kopien tragen dort `undefined`. Bei gleichem
-                // Versionsstand griffe der Refresh sonst nie — und der nächste Voll-Save
-                // schriebe erneut `is_public: false` auf alle Team- und Spielzeilen.
-                // N3: Nur wenn die Cloud nicht ÄLTER ist. Sonst überschriebe eine offline
-                // vorgenommene Veröffentlichung (lokale Version voraus, Queue noch nicht
-                // abgespielt) sich selbst mit dem älteren Cloud-Stand.
-                const visibilityStale = localData !== null
-                    && localData.isPublic !== cloudData.isPublic
-                    && cloudVersion >= localVersion;
-
-                if (cloudVersion > localVersion || visibilityStale) {
-                    await this.localRepo.save(this.owned(cloudData));
-                    if (import.meta.env.DEV) {
-                        // eslint-disable-next-line no-console -- Debug logging for background sync updates
-                        console.log(`[OfflineRepository] Background sync: Updated tournament ${id} from v${localVersion} to v${cloudVersion}${visibilityStale ? ' (isPublic war veraltet)' : ''}`);
-                    }
-                } else if (localData) {
-                    // A-08f3a Feldweg (@FU-087, @FU-023): Tore erhöhen nur `matches.version`, nie die Turnier-Version.
-                    // Die Entscheidung fällt ohne `await` vor dem Schreiben, damit ein älterer Stand nicht nachrückt.
-                    const merged = mergeServerLedFields(localData, cloudData, cloudRead.matchRevisions, this.serverRevisions.get(id), 'stufe1');
-                    const applied = merged.changed ? this.localRepo.applyServerMatchFields(id, merged.patch) : undefined;
-                    this.serverRevisions.record(id, merged.adopted);
-                    await applied;
-                }
-            }
+            await this.syncFromCloud(id);
         } catch (error) {
             if (!isAbortError(error) && error instanceof Error) {
                 captureFeatureError(error, 'repository', 'backgroundSync', { tournamentId: id });
             }
         }
+    }
+
+    /**
+     * A-08f3b: ein Abruf je Turnier für alle Cloud-Lesewege (frisch und im Hintergrund). Entscheidung und Schreiben
+     * laufen in einem Kettenschritt des lokalen Speichers (`cloudAdoption.ts`); `firstCopy` = erster Cloud-Weg.
+     */
+    private syncFromCloud(id: string, firstCopy?: boolean): Promise<Tournament | null> {
+        const running = this.cloudReads.get(id);
+        if (running) { return running; }
+        const run = (async () => {
+            const read = await this.supabaseRepo.getWithMatchRevisions(id);
+            if (!read) { return null; }
+            const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined, owned: (t: Tournament) => this.owned(t) };
+            const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => decideCloudAdoption(local, read, stored, options));
+            this.serverRevisions.record(id, adoption.revisions);
+            return read.tournament;
+        })().finally(() => this.cloudReads.delete(id));
+        this.cloudReads.set(id, run);
+        return run;
     }
 
     async getByShareCode(code: string): Promise<Tournament | null> {
@@ -274,6 +255,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     async save(tournament: Tournament): Promise<void> {
         // 1. Save Local
         await this.localRepo.save(this.owned(tournament));
+        this.serverRevisions.retain(tournament.id, new Set(tournament.matches.map(m => m.id))); // A-08f3b: Neugenerieren
 
         // 2. Enqueue Cloud Persistence
         this.mutationQueue.enqueue('SAVE_TOURNAMENT', tournament);
@@ -297,6 +279,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
 
     async delete(id: string): Promise<void> {
         await this.localRepo.delete(id);
+        this.serverRevisions.clear(id); // A-08f3b: Ablage leeren
         this.mutationQueue.enqueue('DELETE_TOURNAMENT', id);
     }
 

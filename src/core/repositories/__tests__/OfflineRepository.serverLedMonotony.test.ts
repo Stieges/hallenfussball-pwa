@@ -107,22 +107,14 @@ describe('A-08f3a-F Feldweg: NULL aus der Cloud und Monotonie-Ablage', () => {
 
   it('F3 Monotonie: zwei veraltete Abrufe (Revision 5) nach Revision 6 → Endstand bleibt Revision 6', async () => {
     stores.raw.set('tournaments', [tournament({})]);
-    const cloud = createFakeCloud({ tournament: tournament({ scoreA: 1, scoreB: 0, matchStatus: 'running' }), revisions: revisions(5) });
+    const cloud = createFakeCloud({ tournament: tournament({ scoreA: 2, scoreB: 0, matchStatus: 'running' }), revisions: revisions(6) });
     repo = new OfflineRepository(new LocalStorageRepository(), cloud.fake as never, 'olli');
-    const staleA = cloud.holdNextRead();
-    const staleB = cloud.holdNextRead();
 
-    await repo.get('T'); // Abruf A: Revision 5, hängt
-    await repo.get('T'); // Abruf B: Revision 5, hängt
-    cloud.setState({ tournament: tournament({ scoreA: 2, scoreB: 0, matchStatus: 'running' }), revisions: revisions(6) });
-    await repo.get('T'); // Abruf C: Revision 6
-    await flush();
+    await repo.get('T', { fresh: true }); // Revision 6
     expect(storedM1()?.scoreA).toBe(2);
-
-    staleA.release(); // übernimmt nichts – darf die Ablage nicht leeren
-    await flush();
-    staleB.release();
-    await flush();
+    cloud.setState({ tournament: tournament({ scoreA: 1, scoreB: 0, matchStatus: 'running' }), revisions: revisions(5) });
+    await repo.get('T', { fresh: true }); // veraltet, übernimmt nichts – darf die Ablage nicht leeren
+    await repo.get('T', { fresh: true }); // noch einmal veraltet
 
     expect(cloud.fake.getWithMatchRevisions).toHaveBeenCalledTimes(3);
     expect(storedM1()).toMatchObject({ scoreA: 2, scoreB: 0 });

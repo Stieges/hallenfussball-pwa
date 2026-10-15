@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { OfflineRepository } from './OfflineRepository';
 import { SupabaseRepository } from './SupabaseRepository';
 import { readWithRevisions } from '../../test/fakeCloudRepository';
+import type { CloudAdoption } from './cloudAdoption';
 import { LocalStorageRepository } from './LocalStorageRepository';
 import { Tournament } from '../models/types';
 
@@ -45,6 +46,12 @@ describe('OfflineRepository - Granular Sync', () => {
 
         mockSupabase.get.mockResolvedValue(null);
         mockSupabase.getWithMatchRevisions.mockImplementation(readWithRevisions((id: string) => mockSupabase.get(id)));
+        // A-08f3b: Kettenschritt des lokalen Speichers nachgebildet (Entscheidung echt, Revisionen leer).
+        mockLocal.adoptCloudRead.mockImplementation(async (id: string, decide: (l: Tournament | null, r: Map<string, number>) => CloudAdoption) => {
+            const adoption = decide(await mockLocal.get(id) ?? null, new Map());
+            if (adoption.save) { await mockLocal.save(adoption.save); }
+            return adoption;
+        });
         mockSupabase.save.mockResolvedValue(undefined);
         mockSupabase.updateTournamentMetadata.mockResolvedValue(undefined);
         mockSupabase.updateMatches.mockResolvedValue(undefined);

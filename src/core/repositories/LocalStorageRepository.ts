@@ -9,6 +9,7 @@ import { captureFeatureError } from '../../lib/sentry';
 import { isLegacyTournamentShape } from '../models/legacyFormat';
 import { quarantineLegacyTournaments, LEGACY_TOURNAMENTS_NOTICE_EVENT } from '../storage/legacyTournamentStore';
 import { applyServerLedPatch, type ServerLedMatchPatch } from './serverLedMatchFields';
+import { readServerRevisions, writeServerRevisions, type CloudAdoption } from './cloudAdoption';
 
 /**
  * A2 Fixrunde 3 (N2, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md`):
@@ -45,11 +46,7 @@ export class LocalStorageRepository implements ITournamentRepository {
 
     constructor(private readonly options: LocalStorageRepositoryOptions = {}) {}
 
-    /**
-     * A-08f3a: Jede Schreibmethode liest, ändert und speichert die ganze Liste. Ohne Kette überschreiben sich
-     * zwei gleichzeitige Schreibvorgänge (Feldweg aus der Cloud und eigenes `updateMatches`). Wirkt je
-     * Instanz (`RepositoryContext` teilt eine Instanz zwischen Repository und Warteschlange).
-     */
+    /** A-08f3a: Schreibkette – jede Schreibmethode liest und speichert die ganze Liste; wirkt je Instanz. */
     private serialize<T>(write: () => Promise<T>): Promise<T> {
         const run = this.writeChain.then(write, write);
         this.writeChain = run.catch(() => undefined);
@@ -58,12 +55,25 @@ export class LocalStorageRepository implements ITournamentRepository {
 
     /** A-08f3a: server-geführte Spielfelder (Feldweg) übernehmen – ohne Änderung an version, updatedAt, ownerId. */
     applyServerMatchFields(id: string, patch: ReadonlyMap<string, ServerLedMatchPatch>): Promise<void> {
+        return this.serialize(() => this.patchNow(id, patch));
+    }
+
+    private async patchNow(id: string, patch: ReadonlyMap<string, ServerLedMatchPatch>): Promise<void> {
+        const list = await this.loadList();
+        const index = list.findIndex(t => t.id === id);
+        if (index === -1) { return; }
+        list[index] = { ...list[index], matches: applyServerLedPatch(list[index].matches, patch) };
+        await this.saveList(list);
+    }
+
+    /** A-08f3b: Cloud-Stand in einem Kettenschritt übernehmen; Revisionen je Spiel liegen in der lokalen Kopie (zwei Tabs). */
+    adoptCloudRead(id: string, decide: (local: Tournament | null, stored: ReadonlyMap<string, number>) => CloudAdoption): Promise<CloudAdoption> {
         return this.serialize(async () => {
-            const list = await this.loadList();
-            const index = list.findIndex(t => t.id === id);
-            if (index === -1) { return; }
-            list[index] = { ...list[index], matches: applyServerLedPatch(list[index].matches, patch) };
-            await this.saveList(list);
+            const storage = await createStorage();
+            const adoption = decide(await this.get(id), await readServerRevisions(storage, id));
+            if (adoption.save) { await this.saveNow(adoption.save); } else if (adoption.patch?.size) { await this.patchNow(id, adoption.patch); }
+            await writeServerRevisions(storage, id, adoption.revisions, adoption.save && new Set(adoption.save.matches.map(m => m.id)));
+            return adoption;
         });
     }
 
@@ -91,20 +101,26 @@ export class LocalStorageRepository implements ITournamentRepository {
     }
 
     save(tournament: Tournament): Promise<void> {
-        return this.serialize(async () => {
-            const list = await this.loadList();
-            const index = list.findIndex(t => t.id === tournament.id);
+        return this.serialize(() => this.saveNow(tournament));
+    }
 
-            if (index >= 0) {
-                const currentVersion = list[index].version ?? 0;
-                // A-07e: bestehender Konto-Marker bleibt, wenn der Aufrufer keinen setzt
-                list[index] = { ...tournament, ownerId: this.guestOr(tournament.ownerId ?? list[index].ownerId), version: currentVersion + 1, updatedAt: new Date().toISOString() };
-            } else {
-                list.push({ ...tournament, ownerId: this.guestOr(tournament.ownerId ?? GUEST_OWNER), version: 1, updatedAt: new Date().toISOString() });
-            }
+    private async saveNow(tournament: Tournament): Promise<void> {
+        const list = await this.loadList();
+        const index = list.findIndex(t => t.id === tournament.id);
 
-            await this.saveList(list);
-        });
+        if (index >= 0) {
+            const currentVersion = list[index].version ?? 0;
+            // A-07e: bestehender Konto-Marker bleibt, wenn der Aufrufer keinen setzt
+            list[index] = { ...tournament, ownerId: this.guestOr(tournament.ownerId ?? list[index].ownerId), version: currentVersion + 1, updatedAt: new Date().toISOString() };
+        } else {
+            list.push({ ...tournament, ownerId: this.guestOr(tournament.ownerId ?? GUEST_OWNER), version: 1, updatedAt: new Date().toISOString() });
+        }
+
+        await this.saveList(list);
+        // A-08f3b: Neugenerieren (neue Spiele) verwirft die Revisionen der alten Spiele.
+        const storage = await createStorage();
+        const stored = await readServerRevisions(storage, tournament.id);
+        if (stored.size > 0) { await writeServerRevisions(storage, tournament.id, stored, new Set(tournament.matches.map(m => m.id))); }
     }
 
     updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
@@ -167,6 +183,7 @@ export class LocalStorageRepository implements ITournamentRepository {
             const list = await this.loadList();
             const filtered = list.filter(t => !(t.id === id && this.visibleHere(t)));
             await this.saveList(filtered);
+            await writeServerRevisions(await createStorage(), id, new Map()); // A-08f3b: Ablage leeren
         });
     }
 

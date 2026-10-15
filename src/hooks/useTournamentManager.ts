@@ -9,6 +9,9 @@ import { useRealtimeTournament } from './useRealtimeTournament';
 import { useRealtimePollFallback } from './realtimePollFallback';
 import { tournamentChannelStatusKey } from './realtimeChannelStatus';
 import { useEngineOverlayForTournament, useEngineOverlaidMatchIds } from './useEngineOverlayForTournament';
+import { useEngineCatchUpOnCloudChange } from './useEngineCatchUpOnCloudChange';
+
+const FRESH = { fresh: true } as const;
 
 /**
  * I3 (C3a-2a Fixrunde 1, Review-Befund 4): `handleTournamentUpdate` bekommt von seinem Aufrufer
@@ -80,12 +83,12 @@ export function useTournamentManager(tournamentId: string) {
     const [error, setError] = useState<string | null>(null);
 
     // Load Tournament
-    const loadTournament = useCallback(async () => {
+    const loadTournament = useCallback(async (options?: { fresh?: boolean }) => {
         if (!tournamentId) {return;}
 
         try {
-            setIsLoading(true);
-            const data = await service.loadTournament(tournamentId);
+            if (!options?.fresh) { setIsLoading(true); } // A-08f3b: Laden-Anzeige nur beim ersten Laden
+            const data = await service.loadTournament(tournamentId, options);
             setTournament(data);
             setError(null);
         } catch (err) {
@@ -100,6 +103,9 @@ export function useTournamentManager(tournamentId: string) {
     useEffect(() => {
         void loadTournament();
     }, [loadTournament]);
+    // A-08f3b (@FU-087, @FU-001): Push und Abfrage-Ausweichen lesen frisch aus der Cloud
+    const loadFresh = useCallback(() => loadTournament(FRESH), [loadTournament]);
+    useEngineCatchUpOnCloudChange(tournamentId); // H-1: geladene Engine-Kopien nachladen
 
     // Realtime Subscription (only when authenticated with Supabase)
     const { isConnected: isRealtimeConnected, status: realtimeStatus } = useRealtimeTournament(
@@ -113,7 +119,7 @@ export function useTournamentManager(tournamentId: string) {
                     // eslint-disable-next-line no-console
                     console.log('[useTournamentManager] Realtime update received, refetching...');
                 }
-                void loadTournament();
+                void loadFresh();
             },
             onError: (error) => {
                 if (import.meta.env.DEV) {
@@ -124,7 +130,7 @@ export function useTournamentManager(tournamentId: string) {
     );
 
     // A-08f-F (@FU-087): Turnier-Kanal unterbrochen -> Spielstand-Quelle alle 5 s nachladen, ohne Hinweis
-    useRealtimePollFallback(tournamentChannelStatusKey(tournamentId), isRealtimeEnabled, loadTournament);
+    useRealtimePollFallback(tournamentChannelStatusKey(tournamentId), isRealtimeEnabled, loadFresh);
 
     // I3: welche Spiele die Engine GERADE kontrolliert (Ref, synchron waehrend des Renderns
     // aktualisiert -- kein Effekt-/Render-Zyklus, s. useEngineOverlaidMatchIds).

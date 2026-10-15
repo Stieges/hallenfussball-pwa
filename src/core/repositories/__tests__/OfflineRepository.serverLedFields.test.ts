@@ -180,16 +180,14 @@ describe('A-08f3a Feldweg: Spielstand aus der Cloud beim Eigentümer (@FU-087, @
   });
 
   it('Gegenbeispiel (v) Monotonie: Revision 5 wird nach Revision 6 ausgewertet → Endstand Revision 6', async () => {
-    const { cloud, repo: r } = setup({ tournament: cloudV7({ scoreA: 1, scoreB: 0, matchStatus: 'running' }), revisions: revisions(5) });
-    const slow = cloud.holdNextRead();
+    // A-08f3b: ein Abruf je Turnier – ein älterer Stand kommt nur noch nacheinander an (z. B. verzögerte Replik).
+    const { cloud, repo: r } = setup({ tournament: cloudV7({ scoreA: 2, scoreB: 0, matchStatus: 'running' }), revisions: revisions(6) });
 
-    await r.get('T'); // Abruf A: Revision 5, hängt
-    cloud.setState({ tournament: cloudV7({ scoreA: 2, scoreB: 0, matchStatus: 'running' }), revisions: revisions(6) });
-    await r.get('T'); // Abruf B: Revision 6, kommt zuerst an
+    await r.get('T');
     await flush();
     expect(storedMatch('m1').scoreA).toBe(2);
-
-    slow.release();
+    cloud.setState({ tournament: cloudV7({ scoreA: 1, scoreB: 0, matchStatus: 'running' }), revisions: revisions(5) });
+    await r.get('T');
     await flush();
 
     expect(cloud.fake.getWithMatchRevisions).toHaveBeenCalledTimes(2);
