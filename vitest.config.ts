@@ -1,5 +1,13 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { readFileSync } from 'node:fs'
+
+// Untergrenzen kommen aus coverage-floors.json (A-09). Die Bereiche prueft
+// scripts/coverage-report.mjs (Ratchet gegen den Hauptzweig); vitest selbst erzwingt
+// die globale Schwelle.
+const coverageFloors = JSON.parse(readFileSync(new URL('./coverage-floors.json', import.meta.url), 'utf8')) as {
+  bereiche: { global: { floors: { statements: number; branches: number; functions: number; lines: number } } }
+}
 
 // *.test.ts-Dateien (keine .tsx), die trotz der .ts-Endung window/document
 // brauchen (Hooks/Services, die direkt auf window.addEventListener,
@@ -108,26 +116,23 @@ export default defineConfig({
     ],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'json-summary', 'html'],
+      // A-09: alle Produktivdateien zaehlen, auch solche, die kein Test laedt (0 %, @TA-001).
+      include: ['src/**/*.{ts,tsx}'],
       exclude: [
         'node_modules/',
         'src/test/',
+        'src/test-data/',
+        '**/__tests__/**',
+        '**/*.{test,spec}.{ts,tsx}',
         '**/*.d.ts',
         '**/*.config.*',
         'src/main.tsx',
         'src/vite-env.d.ts',
+        'src/types/supabase.ts',
       ],
-      // Untergrenze aus gemessener Baseline (T7b, 2026-09-24, `npm run test:coverage`):
-      // Statements 42.89 %, Branches 35.36 %, Functions 35.53 %, Lines 43.79 %.
-      // Je Wert auf ganze Prozent abgerundet und 1 Punkt darunter, damit normales
-      // Messrauschen die CI nicht bricht. Absichtlich niedrig (keine Zielmarke) —
-      // schützt nur vor Regression unter das heute gemessene Niveau.
-      thresholds: {
-        statements: 41,
-        branches: 34,
-        functions: 34,
-        lines: 42,
-      },
+      // Globale Untergrenze aus coverage-floors.json (Nullpunkt A-09 minus 1 Punkt, danach Ratchet).
+      thresholds: coverageFloors.bereiche.global.floors,
     },
   },
 })

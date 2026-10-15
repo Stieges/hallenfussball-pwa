@@ -14,6 +14,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # A-09: der Ratchet vergleicht coverage-floors.json mit dem Hauptzweig (git show origin/main:...)
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -54,6 +57,19 @@ jobs:
         shell: bash
         run: npm run test:coverage -- --reporter=dot 2>&1 | tee coverage-summary.txt | tail -40
 
+      # A-09 (@TA-002..@TA-005): Untergrenzen je Bereich + Ratchet gegen den Hauptzweig.
+      # Wird rot, wenn ein Bereich unter seiner Untergrenze liegt oder eine Untergrenze
+      # gegenueber origin/main gesenkt wurde.
+      - name: Coverage-Untergrenzen je Bereich und Ratchet (blockierend)
+        shell: bash
+        run: node scripts/coverage-report.mjs --base origin/main
+
+      # A-09 (@TA-006..@TA-008): MVP-Kennungen ohne Test. Im MVP nur Bericht; rot nur bei
+      # Abweichung von der Soll-Zahl oder mehr als 15 Nachweisen aus der Generalprobe.
+      - name: Szenario-Bericht (nicht blockierend fuer fehlende Tests)
+        shell: bash
+        run: node scripts/scenario-tests.mjs | tee scenario-bericht.txt
+
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v7
@@ -62,6 +78,7 @@ jobs:
           path: |
             coverage/
             coverage-summary.txt
+            scenario-bericht.txt
           retention-days: 14
 
   e2e-tests:
