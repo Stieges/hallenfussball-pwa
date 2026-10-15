@@ -24,8 +24,8 @@ describe('matchSides – Ein-Stellen-Regel Wizard', () => {
   });
 
   it('sideLabel zeigt unbekannte Teams als ID', () => {
-    const unknown: Match = { ...match, teamA: 'x' };
-    expect(sideLabel(unknown, 'A', teams)).toBe('x');
+    const unknown: Match = { ...match, ...vs(testUuid(9), testUuid(2)) };
+    expect(sideLabel(unknown, 'A', teams)).toBe(testUuid(9));
   });
 
   it('replaceSides ersetzt nur die betroffene Seite', () => {

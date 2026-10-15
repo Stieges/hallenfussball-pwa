@@ -9,7 +9,7 @@
 import { CSSProperties, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Match, Team } from '../../../types/tournament';
-import { sideLabel } from '../utils/matchSides';
+import { sideLabel, sidePairingRef } from '../utils/matchSides';
 import type { ReplanPreviewResult } from '../utils/replan';
 import { formatReplanTime } from '../utils/replan';
 import { Dialog } from '../../../components/dialogs/Dialog';
@@ -61,7 +61,7 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
   // E3: nach Paarung und Phase zählen – der Generator vergibt neue IDs.
   const previousKeys = new Set(
     previousMatches.map((m) =>
-      pairingKey(m.teamA, m.teamB, m.phase ?? (m.isFinal ? 'final' : 'groupStage'))
+      pairingKey(sidePairingRef(m, 'A'), sidePairingRef(m, 'B'), m.phase ?? (m.isFinal ? 'final' : 'groupStage'))
     )
   );
   const generatedKeys = new Set(
@@ -84,7 +84,7 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
       ? previousMatches.filter(
           (m) =>
             !generatedKeys.has(
-              pairingKey(m.teamA, m.teamB, m.phase ?? (m.isFinal ? 'final' : 'groupStage'))
+              pairingKey(sidePairingRef(m, 'A'), sidePairingRef(m, 'B'), m.phase ?? (m.isFinal ? 'final' : 'groupStage'))
             )
         ).length
       : 0;

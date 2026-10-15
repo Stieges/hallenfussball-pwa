@@ -14,7 +14,7 @@ import {
   type MatchStartState,
 } from '../../../utils/matchStartState';
 import { matchHasEvents } from '../../../utils/teamHelpers';
-import { replaceSides } from './matchSides';
+import { replaceSides, sidePairingRef } from './matchSides';
 import { transitionalSides } from '../../../core/models/matchSlot';
 import { teamReplacedLabel } from '../../tournament-admin/constants/admin.constants';
 
@@ -110,7 +110,7 @@ export function buildReplanPreview(
         : (tournament.groupPhaseGameDuration ?? 0);
     const keptByPairing = keptMatches.map((m) => ({
       match: m,
-      pairing: [m.teamA, m.teamB].sort().join(':'),
+      pairing: [sidePairingRef(m, 'A'), sidePairingRef(m, 'B')].sort().join(':'),
       phase: m.phase ?? (m.isFinal ? 'final' : 'groupStage'),
     }));
     const usedGenerated = new Set<string>();
@@ -152,8 +152,8 @@ export function buildReplanPreview(
         endTime: new Date(
           keptStart.getTime() + durationFor(kept.phase ?? (kept.isFinal ? 'final' : 'groupStage')) * 60000
         ),
-        originalTeamA: kept.teamA,
-        originalTeamB: kept.teamB,
+        originalTeamA: sidePairingRef(kept, 'A'),
+        originalTeamB: sidePairingRef(kept, 'B'),
       };
     });
     // @W5-009 ohne Gegenstück: angehängt und im Panel als Konflikt gemeldet.
@@ -173,8 +173,8 @@ export function buildReplanPreview(
           endTime: new Date(
             keptStart.getTime() + durationFor(m.phase ?? (m.isFinal ? 'final' : 'groupStage')) * 60000
           ),
-          originalTeamA: m.teamA,
-          originalTeamB: m.teamB,
+          originalTeamA: sidePairingRef(m, 'A'),
+          originalTeamB: sidePairingRef(m, 'B'),
           phase: (m.phase ?? (m.isFinal ? 'final' : 'groupStage')) as (typeof schedule.allMatches)[number]['phase'],
           finalType: m.finalType,
           label: m.label,

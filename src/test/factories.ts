@@ -75,8 +75,9 @@ export function createMockTeams(count: number, groupCount = 2): Team[] {
 export function createMockMatch(overrides?: Partial<Match>): Match {
   // Die Seiten kommen aus den Slots; `teamA/teamB` als Override ist nur Kurzschreibweise für Fixture-Kurz-IDs
   // (`team-1`, keine UUIDs – deshalb ohne `teamSlot`, Testumgebung). Das Übergangsfeld folgt den Slots.
-  const slotA = overrides?.slotA ?? testTeamSlot(overrides?.teamA ?? testUuid(1))
-  const slotB = overrides?.slotB ?? testTeamSlot(overrides?.teamB ?? testUuid(2))
+  const { teamA: shortA, teamB: shortB } = overrides ?? {}
+  const slotA = overrides?.slotA ?? testTeamSlot(shortA ?? testUuid(1))
+  const slotB = overrides?.slotB ?? testTeamSlot(shortB ?? testUuid(2))
   return {
     id: `match-${Math.random().toString(36).substring(2, 11)}`,
     slotA,
