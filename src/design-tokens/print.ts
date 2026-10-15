@@ -221,10 +221,17 @@ export const printMetrics = {
   /** Abstand Abschnittstitel → erste Teilnehmerzeile */
   sectionTitleAdvance: 4,
 
-  /** Teilnehmer: Zeilenabstand bei 12 pt (× 1,2), Abstand zwischen Gruppenzeilen, Abstand Gruppenname → Namen */
+  /** Teilnehmer: Zeilenabstand bei 12 pt (× 1,2), Abstand Kennung → Name */
   participantAdvance: 5.1,
-  participantRowGap: 1.5,
   participantLabelGap: 3,
+  /** Teilnehmer als Blöcke (B-28a3-4b, Daniel 15.10.): Mindestbreite eines Kastens, Abstand zwischen Kästen nebeneinander und untereinander */
+  participantBoxMinWidth: 80,
+  participantBoxGap: 4,
+  participantBoxRowGap: 3,
+  /** Innenabstand des Kastens, Abstand Titel-Grundlinie → erste Namenszeile, Abstand letzte Grundlinie → Unterkante */
+  participantBoxInset: 2,
+  participantBoxTitleAdvance: 5.5,
+  participantBoxBottom: 2.5,
 
   /** K.-o.-Zeilen über der Finalrunde (10,5 pt) */
   koLineAdvance: 4.5,
