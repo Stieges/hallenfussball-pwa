@@ -5,7 +5,8 @@
  * @see docs/anforderungen/2026-10-03_monitor-einrichten.md
  */
 
-import type { Tournament } from '../../types/tournament';
+import type { Tournament, TournamentField } from '../../types/tournament';
+import { createDefaultFields } from '../../utils/displayNames';
 import type { MonitorConfigPayload, TransferSlide } from './monitorConfigTransfer';
 
 /** Ziel der Umstellung „Auf Feld 1 umstellen“ (@ME-061) */
@@ -19,11 +20,19 @@ export interface SlotTargets {
 
 type TournamentSlotSource = Partial<Pick<Tournament, 'fields' | 'numberOfFields' | 'groups' | 'numberOfGroups' | 'groupSystem'>>;
 
-/** Gleiche Regeln wie der Monitor-Editor: Felder aus `fields`, sonst aus der Anzahl; Gruppen wie dort */
+/**
+ * Felder des Turniers, wie der Monitor-Editor sie zeigt und die Übernahme-Prüfung sie kennt:
+ * `fields`, sonst field-1 … field-N aus der Anzahl (K4, gemeinsame Quelle).
+ */
+export function tournamentFieldList(tournament: Partial<Pick<Tournament, 'fields' | 'numberOfFields'>>): TournamentField[] {
+  return tournament.fields?.length
+    ? tournament.fields
+    : createDefaultFields(Math.max(1, tournament.numberOfFields ?? 1));
+}
+
+/** Gleiche Regeln wie der Monitor-Editor: Felder wie `tournamentFieldList`; Gruppen wie dort */
 export function tournamentSlotTargets(tournament: TournamentSlotSource): SlotTargets {
-  const fieldIds = tournament.fields?.length
-    ? tournament.fields.map(f => f.id)
-    : Array.from({ length: Math.max(1, tournament.numberOfFields ?? 1) }, (_, i) => `field-${i + 1}`);
+  const fieldIds = tournamentFieldList(tournament).map(f => f.id);
 
   let groupIds: string[];
   if (tournament.groupSystem === 'roundRobin') {
