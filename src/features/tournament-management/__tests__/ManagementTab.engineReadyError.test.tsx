@@ -12,6 +12,7 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import type { Tournament } from '../../../types/tournament';
 import type { LiveMatch } from '../../../core/models/LiveMatch';
 import type { GeneratedSchedule } from '../../../core/generators';
+import { MatchNotOnEngineError } from '../../../core/errors';
 
 const mockShowError = vi.fn();
 // C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
@@ -111,6 +112,21 @@ describe('ManagementTab — P7: ensureEngineMatchReady-Fehler', () => {
 
     await waitFor(() => expect(mockShowError).toHaveBeenCalled());
     expect(mockCaptureFeatureError).toHaveBeenCalledWith(rejectionError, 'tournament', 'ensureEngineMatchReady');
+  });
+
+  // A-08e W1: ein erwartbarer Fall (Fremd-Kandidat, Server hat noch nichts -> MatchNotOnEngineError 'other')
+  // zeigt die ruhige Anzeige "wird vorbereitet" -- kein Fehler-Toast, keine Sentry-Meldung.
+  // Gegenbeispiel: der echte Fehler (Test darueber) bleibt Toast + Sentry.
+  it('A-08e W1: MatchNotOnEngineError(other) zeigt "wird vorbereitet" ohne Toast und ohne Sentry', async () => {
+    mockGetLiveMatchData.mockRejectedValue(new MatchNotOnEngineError('other'));
+    render(
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
+    );
+
+    await waitFor(() => expect(screen.getByText('tournament:management.enginePreparing')).toBeInTheDocument());
+    expect(screen.getByTestId('engine-ready-retry')).toBeInTheDocument();
+    expect(mockShowError).not.toHaveBeenCalled();
+    expect(mockCaptureFeatureError).not.toHaveBeenCalled();
   });
 
   it('zeigt "Spiel wird vorbereitet" statt der irrefuehrenden "Keine Spiele auf diesem Feld"-Anzeige', async () => {

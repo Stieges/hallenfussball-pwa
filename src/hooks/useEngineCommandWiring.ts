@@ -119,7 +119,7 @@ export function useEngineCommandWiring(
       }
       // P3: engine-bestimmt, aber noch KEINE Engine-Ansicht -- ERST `ensureEngineMatchReady`, DANN
       // `commands.start`. Kein Engine-Weg (kein Engine-Spiel, `null` von `ensureEngineMatchReady`):
-      // Ablehnung mit Hinweis, kein Anpfiff. Eine Ablehnung von `ensureEngineMatchReady` (z. B.
+      // ruhige Ablehnung mit Hinweis (kein Sentry), kein Anpfiff. Eine Ablehnung von `ensureEngineMatchReady` (z. B.
       // E1: Server-Klaerung gescheitert) wird gemeldet (Toast + Sentry, P7-Weg).
       if (!commands || !isEngineDestinedMatchId(matchId)) {
         await reject();
@@ -130,7 +130,9 @@ export function useEngineCommandWiring(
         if (ready) {
           return startViaCommands(matchId);
         }
-        throw new Error(`Engine-Spiel ${matchId} ist noch nicht bereit.`);
+        // W1: `null` ist ein erwartbarer Fall (kein Engine-Spiel / Server noch ohne Ereignisse), kein Fehler.
+        await reject();
+        return false;
       } catch (error) {
         const normalizedError = error instanceof Error ? error : new Error(String(error));
         captureFeatureError(normalizedError, 'tournament', 'ensureEngineMatchReady');

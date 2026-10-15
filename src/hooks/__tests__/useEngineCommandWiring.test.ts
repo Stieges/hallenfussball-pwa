@@ -256,7 +256,10 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
     const started = await result.current.handleStart(RACE_MATCH_ID);
 
     expect(started).toBe(false);
-    expect(mockShowWarning.mock.calls.length + mockShowError.mock.calls.length).toBeGreaterThan(0);
+    // A-08e W1: erwartbarer Fall = ruhige Warnung mit Grund, KEIN Fehler-Toast, KEINE Sentry-Meldung
+    expect(mockShowWarning).toHaveBeenCalledTimes(1);
+    expect(mockShowError).not.toHaveBeenCalled();
+    expect(mockCaptureFeatureError).not.toHaveBeenCalled();
   });
 
   // E3 (Fixrunde 4, Important 2): eine ABLEHNUNG von ensureEngineMatchReady (z. B. E1: die
@@ -321,7 +324,9 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
     const started = await result.current.handleStart(RACE_MATCH_ID);
 
     expect(started).toBe(false);
-    expect(mockShowWarning.mock.calls.length + mockShowError.mock.calls.length).toBeGreaterThan(0);
+    expect(mockShowWarning).toHaveBeenCalledTimes(1);
+    expect(mockShowError).not.toHaveBeenCalled();
+    expect(mockCaptureFeatureError).not.toHaveBeenCalled();
     const copy = await engineContext.store.load(engineContext.accountId, RACE_MATCH_ID);
     expect(copy?.pending.some((e) => e.type === 'MATCH_START')).not.toBe(true);
   });

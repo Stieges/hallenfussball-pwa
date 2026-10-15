@@ -219,9 +219,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           setAwaitingTeams(true);
           return;
         }
-        // A-08a (@FU-069): nicht leitbar mit Grund -> Hinweis statt Fehlerzweig (kein Toast, kein Sentry)
-        if (error instanceof MatchNotOnEngineError && error.reason !== 'other') {
-          setNotOnEngineReason(error.reason);
+        // A-08a (@FU-069)/A-08e W1: nicht leitbar -> Hinweis bzw. "wird vorbereitet" statt Fehlerzweig (kein Toast, kein Sentry)
+        if (error instanceof MatchNotOnEngineError) {
+          if (error.reason === 'other') { setEngineReadyError(true); } else { setNotOnEngineReason(error.reason); }
           return;
         }
         // P7: Toast + Sentry statt stiller Leeranzeige; "Spiel wird vorbereitet" statt "Keine Spiele".
