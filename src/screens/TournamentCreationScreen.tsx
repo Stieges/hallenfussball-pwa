@@ -16,6 +16,7 @@ import { useTournaments } from '../hooks/useTournaments';
 import { useTournamentWizard } from '../hooks/useTournamentWizard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { generateFullSchedule } from '../core/generators';
+import { IncompleteScheduleError } from '../core/generators/incompleteScheduleError';
 import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { useToast } from '../components/ui/Toast';
 import { AuthSection } from '../components/layout/AuthSection';
@@ -324,9 +325,11 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       setGeneratedSchedule(schedule);
     } catch (error) {
       // Capture error and display to user
-      const errorMessage = error instanceof Error
-        ? error.message
-        : 'Unbekannter Fehler beim Erstellen des Spielplans';
+      const errorMessage = error instanceof IncompleteScheduleError
+        ? t('schedule.incomplete', { count: error.missingMatches })
+        : error instanceof Error
+          ? error.message
+          : 'Unbekannter Fehler beim Erstellen des Spielplans';
       setScheduleError(errorMessage);
       console.error('[TournamentCreationScreen] Schedule generation failed:', error);
     }

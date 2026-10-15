@@ -151,7 +151,8 @@ export const ReplanPanel: React.FC<ReplanPanelProps> = ({
         {preview.status !== 'preview' && (
           <div style={boxStyle} data-testid="replan-blocked">
             <p style={hintStyle} data-testid="replan-reason">
-              <strong>{t('replan.reason')}:</strong> {t(preview.reasonKey)}
+              <strong>{t('replan.reason')}:</strong>{' '}
+              {t(preview.reasonKey, 'reasonCount' in preview && preview.reasonCount !== undefined ? { count: preview.reasonCount } : undefined)}
               {'detail' in preview && preview.detail ? ` (${preview.detail})` : ''}
             </p>
             {'suggestionKey' in preview && (
