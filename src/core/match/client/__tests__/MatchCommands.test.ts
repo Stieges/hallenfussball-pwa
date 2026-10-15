@@ -246,3 +246,42 @@ describe('MatchCommands (C3a-2a, RC1)', () => {
     expect(event.payload.playersOut).toEqual([7]);
   });
 });
+
+// A-08b2 (@FU-070, R9/K8): ein zweites Spielende ist noop – kein Fehler, aber kein zweiter Eintrag.
+describe('MatchCommands – @FU-070 Spielende nur einmal', () => {
+  let store: LocalMatchStore;
+  const NOW = 1_790_000_000_000;
+
+  beforeEach(() => {
+    store = new LocalMatchStore();
+  });
+
+  it('Gegenbeispiel: erstes Spielende wird gespeichert und gesendet (genau ein MATCH_END, ein kick)', async () => {
+    const engine = await makeEngine(NOW, 'acc-end-once', store);
+    const kick = vi.fn(async () => undefined);
+    const commands = new MatchCommands({ engine, store, sender: { kick }, accountId: 'acc-end-once' });
+    await commands.start(ctx.matchId, ctx, 'leitung', RULES);
+    const kicksBefore = kick.mock.calls.length;
+
+    await commands.finish(ctx.matchId, ctx, 'leitung');
+
+    const copy = await store.load('acc-end-once', ctx.matchId);
+    expect(copy?.pending.map((e) => e.type)).toEqual(['MATCH_START', 'MATCH_END']);
+    expect(kick.mock.calls.length).toBe(kicksBefore + 1);
+  });
+
+  it('zweites Spielende: kein Wurf, kein Eintrag, kein Sendeauftrag', async () => {
+    const engine = await makeEngine(NOW, 'acc-end-twice', store);
+    const kick = vi.fn(async () => undefined);
+    const commands = new MatchCommands({ engine, store, sender: { kick }, accountId: 'acc-end-twice' });
+    await commands.start(ctx.matchId, ctx, 'leitung', RULES);
+    await commands.finish(ctx.matchId, ctx, 'leitung');
+    const kicksAfterFirst = kick.mock.calls.length;
+
+    await expect(commands.finish(ctx.matchId, ctx, 'leitung')).resolves.toBeUndefined();
+
+    const copy = await store.load('acc-end-twice', ctx.matchId);
+    expect(copy?.pending.map((e) => e.type)).toEqual(['MATCH_START', 'MATCH_END']);
+    expect(kick.mock.calls.length).toBe(kicksAfterFirst);
+  });
+});

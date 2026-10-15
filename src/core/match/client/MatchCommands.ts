@@ -211,6 +211,11 @@ export class MatchCommands {
     if (result.status === 'rejected') {
       throw new MatchCommandRejectedError(result.code, result.detail);
     }
+    // A-08b2 (@FU-070, R9/K8): noop ist kein Fehler, aber auch kein neuer Eintrag. Ein zweites
+    // Spielende wird weder gespeichert noch gesendet (Ausgang genau ein MATCH_END).
+    if (result.status === 'noop') {
+      return;
+    }
     // RC1: zuerst der Ausgang (Store), erst danach die Anzeige (notifyStoreChange) -- ein
     // Store-Fehler (z. B. `LocalStoreFullError`) darf hier durchlaufen, OHNE dass
     // notifyStoreChange/kick noch ausgefuehrt werden.

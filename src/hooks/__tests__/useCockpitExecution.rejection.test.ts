@@ -68,6 +68,22 @@ describe('useCockpitExecution — Ablehnung mit Grund (A-08b)', () => {
     engineCtx.current = await makeEngineContext();
   });
 
+  it('@FU-070: zweites Spielende -> Log genau [MATCH_START, MATCH_END], kein Wurf, kein Toast, kein Sendeauftrag', async () => {
+    const { result } = renderHook(() => useCockpitExecution(tournament()));
+    await result.current.handleStart(ENGINE_MATCH_ID);
+    await result.current.handleFinish(ENGINE_MATCH_ID);
+    const ctx = engineCtx.current;
+    if (!ctx) { throw new Error('Engine-Kontext fehlt'); }
+    const kicksAfterFirst = vi.mocked(ctx.sender.kick).mock.calls.length;
+    toast.showWarning.mockClear();
+
+    await expect(result.current.handleFinish(ENGINE_MATCH_ID)).resolves.toBeUndefined();
+
+    expect(await engineLogTypes(ENGINE_MATCH_ID)).toEqual(['MATCH_START', 'MATCH_END']);
+    expect(toast.showWarning).not.toHaveBeenCalled();
+    expect(vi.mocked(ctx.sender.kick).mock.calls.length).toBe(kicksAfterFirst);
+  });
+
   it('Pflicht: Tor (+1) nach Spielende -> kein GOAL im Log, Toast „Spiel ist beendet – Korrektur über die Turnierleitung“ (@FU-069)', async () => {
     const { result } = renderHook(() => useCockpitExecution(tournament()));
     await result.current.handleStart(ENGINE_MATCH_ID);
