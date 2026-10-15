@@ -106,14 +106,19 @@ describe('@OB-055 B-43b2 – Cockpit-Dialoge: deckende Fläche und Kontrast', ()
     expect(onEndAsDraw).not.toHaveBeenCalled();
   });
 
-  it('TiebreakerBanner: kein History-Eintrag, Fokus im Banner, Hintergrund gesperrt (inert), danach wieder frei', () => {
+  it('TiebreakerBanner: kein History-Eintrag, Fokus im Banner, Hintergrund gesperrt (inert), danach wieder frei', async () => {
+    // Aufgeschobene Rückbau-Timer früherer Dialoge ablaufen lassen (sonst übernähme der Banner deren Eintrag).
+    await new Promise((resolve) => setTimeout(resolve, 20));
     const outside = document.createElement('button');
     document.body.appendChild(outside);
     const push = vi.spyOn(window.history, 'pushState');
+    const replace = vi.spyOn(window.history, 'replaceState');
     const lengthBefore = window.history.length;
     const { unmount } = render(<TiebreakerBanner homeTeamName="A" awayTeamName="B" score={1} onEndAsDraw={noop} onStartPenaltyShootout={noop} />);
     expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
     expect(window.history.length).toBe(lengthBefore);
+    expect((window.history.state as { dialogId?: string } | null)?.dialogId).toBeUndefined();
     expect(screen.getByRole('alertdialog').contains(document.activeElement)).toBe(true);
     expect(outside.hasAttribute('inert')).toBe(true);
     expect(document.body.style.overflow).toBe('hidden');
@@ -121,6 +126,7 @@ describe('@OB-055 B-43b2 – Cockpit-Dialoge: deckende Fläche und Kontrast', ()
     expect(outside.hasAttribute('inert')).toBe(false);
     expect(document.body.style.overflow).toBe('');
     push.mockRestore();
+    replace.mockRestore();
     outside.remove();
   });
 });
