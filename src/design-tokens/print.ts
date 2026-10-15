@@ -3,7 +3,7 @@
  *
  * Quelle der Werte, soweit nicht anders vermerkt: Druckentwurf v7.2 (`druck-scratch/druck.css`, B-28a3-2).
  * Die Render-Dateien lesen nur diese Tokens, keine Literale für Farben, Maße oder Schriftgrößen (Token-Wächter).
- * Maße, die v7.2 nicht festlegt (Kopf, Meta-Box, Teilnehmerkästen), bleiben bis a3-3/a4 in `printMetrics`.
+ * Maße, die v7.2 nicht festlegt (Kopf, Regelzeilen, Teilnehmer, Abschnitte), stehen in `printMetrics`.
  * Bildschirm-Tokens stehen in den übrigen Dateien dieses Ordners.
  */
 
@@ -75,8 +75,6 @@ export const printType = {
   meta: 9.5,
   /** h2 */
   h2: 13,
-  /** .teams */
-  teams: 10.5,
   /** table.m thead th */
   head: 9,
   /** table.m td */
@@ -125,8 +123,6 @@ export const printStroke = {
   thead: 0.5,
   /** Zeilenlinie der Tabellen */
   row: 0.25,
-  /** Teilnehmerkästen und Meta-Box, Rahmen (Entwurf: 0,3; Bestand 0,5 bleibt bis a3-3) */
-  box: 0.3,
   /** Kurzkopf-Linie */
   shortHead: 0.5,
   /** .foot border-top */
@@ -150,6 +146,8 @@ export const printGap = {
   nrPad: 0.5,
   /** table.s thead th und td: Innenabstand (vertikal und horizontal gleich) */
   compactPad: 1.2,
+  /** Kopf Seite 1: Abstand Unterkante Text → Kopflinie (v7.2 .head padding-bottom 2,5 mm plus Unterlänge) */
+  headPadBottom: 3.2,
   /** Kurzkopf (Folgeseiten): Gesamthöhe bis zum Inhalt, Grundlinien von Titel und Untertitel, Linie */
   shortHeadHeight: 16,
   shortHeadTitleBaseline: 6,
@@ -168,7 +166,6 @@ export const printColumns = {
     field: 10,
     group: 9,
     result: 30,
-    referee: 15,
   },
   /** Finalrunde: Ergebnisspalte breiter */
   finals: {
@@ -176,7 +173,6 @@ export const printColumns = {
     time: 17,
     field: 10,
     result: 44,
-    referee: 15,
   },
   /** Gruppentabellen und Platzierung */
   standings: {
@@ -192,34 +188,27 @@ export const printColumns = {
 } as const;
 
 /**
- * Übrige Layout-Maße in mm, die v7.2 nicht festlegt. Sie bleiben bis zu a3-3 (Kopf) und a4 (Teilnehmer) unverändert.
+ * Übrige Layout-Maße in mm, die v7.2 nicht festlegt: Kopf (Kicker, Titel, Angaben, Regelzeilen, QR-Spalte),
+ * Teilnehmer als Zeilen, Abschnitte und K.-o.-Zeilen.
  */
 export const printMetrics = {
-  /** Mindestplatz für den Kopf */
-  headerMinSpace: 14,
-  /** Abstand Titel → Untertitel */
-  titleAdvance: 7,
-  /** Abstand Untertitel → Meta-Box (sectionGap + 2) */
-  subtitleAdvance: 8,
-
-  /** Meta-Box */
-  metaPadding: 4,
-  metaLineHeight: 5,
-  metaRowGap: 1,
-  metaColumnGap: 10,
-  /** Abstand Label → Wert */
-  metaLabelGap: 3,
-  /** Abstand Rahmen → erste Zeile */
-  metaTextOffset: 4,
-  /** Zusätzlicher Platz unter der Meta-Box */
-  metaExtraSpace: 4,
-  metaBorderWidth: 0.8,
-  /** Radius der abgerundeten Rahmen */
-  boxRadius: 2,
-
-  /** Hinweiszeile */
-  hintMinSpace: 6,
-  hintAdvance: 4,
+  /** Kopf: QR-Spalte rechts (v7.2 .head 32 mm) und Abstand zum Text (6 mm). Die Spalte bleibt bis zum QR-Code leer. */
+  qrColumnWidth: 32,
+  qrColumnGap: 6,
+  /** Kopf: Abstand Kicker → Titel (v7.2 margin 0,6 mm), Zeilenabstand umbrochener Titel (26 pt × 1,05) */
+  kickerToTitle: 0.6,
+  titleAdvance: 9.6,
+  /** Kopf: Abstand Titel → Altersklasse in derselben Zeile (v7.2 margin-left 3 mm), sonst Zeilenabstand darunter */
+  ageGap: 3,
+  ageLineAdvance: 6,
+  /** Kopf: Abstand Titel-Grundlinie → erste Angabe (Unterlänge des Titels plus Oberlänge der Angabe) */
+  headBlockGap: 6,
+  /** Kopf: Zeilenabstand der Angaben (9,5 pt) und Abstand Angaben → Regelzeilen */
+  factAdvance: 4.2,
+  factLabelGap: 3,
+  factsToRules: 1.5,
+  /** Kopf: Zeilenabstand der Regelzeilen (10,5 pt, v7.2 .rules-line) */
+  ruleAdvance: 4.5,
 
   /** Abschnittstitel */
   sectionTitleMinSpace: 10,
@@ -227,23 +216,16 @@ export const printMetrics = {
   sectionTableMinSpace: 12,
   /** Abstand Titel → Tabelle bei Gruppenphase und Platzierung */
   sectionTitleUnderline: 2,
-  /** Abstand Titel → Teilnehmerkasten */
+  /** Abstand Abschnittstitel → erste Teilnehmerzeile */
   sectionTitleAdvance: 4,
 
-  /** Teilnehmer-Kästen */
-  boxPadding: 3,
-  boxTitleHeight: 6,
-  /** Abstand Kastenoberkante → Gruppentitel bzw. erste Zeile */
-  boxTextOffset: 4,
-  /** Titel → erste Teamzeile (boxTitleHeight - 2) */
-  boxTitleAdvance: 4,
-  teamLineHeight: 4,
-  boxMinSpace: 4,
-  /** Abstand zwischen Kastenzeilen */
-  boxRowAdvance: 4,
-  /** Spaltenabstand zwischen den Gruppenkästen */
-  participantsColGap: 6,
+  /** Teilnehmer: Zeilenabstand bei 12 pt (× 1,2), Abstand zwischen Gruppenzeilen, Abstand Gruppenname → Namen */
+  participantAdvance: 5.1,
+  participantRowGap: 1.5,
+  participantLabelGap: 3,
 
+  /** K.-o.-Zeilen über der Finalrunde (10,5 pt) */
+  koLineAdvance: 4.5,
   /** Finalrunden-Untertitel */
   finalsSubtitleMinSpace: 8,
   finalsSubtitleAdvance: 4,

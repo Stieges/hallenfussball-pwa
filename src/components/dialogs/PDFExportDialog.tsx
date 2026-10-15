@@ -73,6 +73,8 @@ export const PDFExportDialog = ({
       const result = await exportScheduleToPDF(updatedSchedule, includeStandings ? standings : undefined, {
         includeScores,
         includeStandings,
+        // Regelzeilen und K.-o.-Zeilen im Kopf kommen aus dem Turnier (B-28a3-3b)
+        tournament,
         // Only pass organizerName if it has a value, otherwise let pdfExporter use the fallback
         ...(tournament.organizer?.trim() ? { organizerName: tournament.organizer } : {}),
         hallName: getLocationName(tournament),

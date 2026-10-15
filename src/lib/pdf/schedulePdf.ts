@@ -1,25 +1,26 @@
 /**
  * Spielplan-PDF: baut das Dokument (`buildSchedulePdf`) und speichert es (`exportScheduleToPDF`).
  *
- * Aufbau in fester Reihenfolge (B-28a3-2): Seite 1 mit Kopf, Meta-Box, Hinweis, Teilnehmer und Gruppenspielen
- * (Überlauf auf Folgeseiten), dann Gruppentabellen (neue Seite, optional), dann Finalrunde mit Platzierung (neue Seite).
- * Leere Abschnitte entfallen. A4 hoch, Vorgabe; quer über `orientation`. Die Geometrie kommt aus `layout.ts`,
- * Farben und Maße aus `design-tokens/print.ts`.
+ * Aufbau in fester Reihenfolge (B-28a3-2, B-28a3-3b): Seite 1 mit Kopf (Kicker, Titel, Angaben, Regelzeilen),
+ * Teilnehmer und Gruppenspielen (Überlauf auf Folgeseiten), dann Gruppentabellen (neue Seite, optional), dann
+ * Finalrunde mit K.-o.-Zeilen und Platzierung (neue Seite). Jede Folgeseite trägt den Kurzkopf. Leere Abschnitte
+ * entfallen. A4 hoch, Vorgabe; quer über `orientation`. Die Geometrie kommt aus `layout.ts`, Farben und Maße aus
+ * `design-tokens/print.ts`.
  */
 import i18next from 'i18next';
 import jsPDF from 'jspdf';
 import type { GeneratedSchedule } from '../../core/generators';
-import type { Standing } from '../../types/tournament';
-import { getLocationName } from '../../utils/locationHelpers';
+import type { Standing, Tournament } from '../../types/tournament';
+import { getLocationAddressLine, getLocationName } from '../../utils/locationHelpers';
 import { registerPdfFonts, PDF_FONT, unrenderableChars } from './fonts';
 import { drawPageNumbers, pageGeometry, startPage, type PdfOrientation } from './layout';
 import { renderGroupStage } from './render/matchTables';
 import { renderFinalsSection } from './render/finalsTables';
 import { renderGroupStandings, renderFinalRanking } from './render/standings';
-import { renderHeader } from './render/header';
-import { renderHints } from './render/hints';
-import { renderMetaBox } from './render/metaBox';
+import { renderHeader, type HeaderFact } from './render/header';
+import { drawShortHeads } from './render/shortHeader';
 import { renderParticipants } from './render/participants';
+import { koLines, pdfRuleLines, pdfRulesFrom } from './rules';
 import {
   buildPdfTexts,
   resolvePdfLocale,
@@ -39,6 +40,11 @@ export interface PDFExportOptions {
   hallName?: string;
   /** Ausrichtung des A4-Blatts. Vorgabe: hoch. */
   orientation?: PdfOrientation;
+  /**
+   * Turnier für die Regelzeilen im Kopf und die K.-o.-Zeilen (B-28a3-3b). Ohne Turnier entfallen beide; der Aufrufer
+   * (Dialog) übergibt es.
+   */
+  tournament?: Tournament;
 }
 
 /** Ergebnis des Exports: das PDF ist immer erzeugt, `notes` sind sichtbare Hinweise an den Nutzer. */
@@ -87,6 +93,22 @@ export function unrenderableNotes(
   return [...notes, ...teamNotes];
 }
 
+/** Angaben im Kopf: Veranstalter (nur wenn angegeben), Halle mit Adresse, Spieltag, Zeit. */
+function headerFacts(schedule: GeneratedSchedule, t: PdfTexts, organizerName: string, hallName: string): HeaderFact[] {
+  const facts: HeaderFact[] = [];
+  if (organizerName) {
+    facts.push({ label: t.organizer, value: organizerName });
+  }
+  const address = getLocationAddressLine(schedule.tournament);
+  facts.push({ label: t.hall, value: address ? `${hallName}, ${address}` : hallName });
+  // Datum als TT.MM.JJJJ: bereits so gespeichert unverändert, sonst über Intl in der Sprache des Dokuments
+  const date = schedule.tournament.date;
+  const gameday = !date ? t.noDate : date.includes('.') ? date : t.formatDate(date);
+  facts.push({ label: t.gameday, value: gameday });
+  facts.push({ label: t.time, value: `${t.formatClock(schedule.startTime)} - ${t.formatClock(schedule.endTime)}` });
+  return facts;
+}
+
 /** Baut das Spielplan-PDF, ohne es zu speichern. */
 export async function buildSchedulePdf({ schedule, standings, options = {} }: SchedulePdfInput): Promise<SchedulePdfBuild> {
   const {
@@ -97,12 +119,14 @@ export async function buildSchedulePdf({ schedule, standings, options = {} }: Sc
     organizerName = schedule.tournament.organizer ?? '',
     hallName = getLocationName(schedule.tournament),
     orientation = 'portrait',
+    tournament,
   } = options;
 
   const t = buildPdfTexts(translate, locale);
   const notes = unrenderableNotes(schedule, t, organizerName, hallName);
   const geo = pageGeometry('a4', orientation);
   const shortHead = { title: schedule.tournament.title, subtitle: schedule.tournament.ageClass };
+  const rules = tournament ? pdfRulesFrom(tournament, schedule) : undefined;
 
   const doc = new jsPDF({
     orientation,
@@ -114,13 +138,18 @@ export async function buildSchedulePdf({ schedule, standings, options = {} }: Sc
   doc.setLanguage(locale);
   doc.setFont(PDF_FONT.family);
 
-  // Seite 1: Kopf, Meta-Box, Hinweis, Teilnehmer, Gruppenspiele (Folgeseiten bei Platzmangel)
-  let yPos = startPage(doc, 'participantsAndGroups', geo);
-  yPos = renderHeader(doc, schedule, geo, yPos);
-  yPos = renderMetaBox(doc, schedule, t, organizerName, hallName, geo, yPos);
-  yPos = renderHints(doc, t, geo, yPos);
-
-  const hasGroups = schedule.teams.some(team => team.group);
+  // Seite 1: Kopf mit Regelzeilen, Teilnehmer, Gruppenspiele (Folgeseiten bei Platzmangel)
+  let yPos = renderHeader(
+    doc,
+    {
+      kicker: includeScores ? t.kicker.plan : t.kicker.blank,
+      title: schedule.tournament.title,
+      ageClass: schedule.tournament.ageClass,
+      facts: headerFacts(schedule, t, organizerName, hallName),
+      rules: rules ? pdfRuleLines(rules, t) : [],
+    },
+    geo
+  );
   yPos = renderParticipants(doc, schedule, t, geo, yPos);
 
   const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
@@ -129,23 +158,22 @@ export async function buildSchedulePdf({ schedule, standings, options = {} }: Sc
       doc,
       groupPhase.matches,
       t,
-      schedule.refereeConfig,
       schedule.numberOfFields,
       includeScores,
       geo,
       yPos,
-      schedule.tournament,
-      shortHead
+      schedule.tournament
     );
   }
 
   // Gruppentabellen, eigene Seite (nur wenn es Gruppen gibt und sie gewünscht sind)
+  const hasGroups = schedule.teams.some(team => team.group);
   if (hasGroups && includeStandings) {
     yPos = startPage(doc, 'tables', geo);
     renderGroupStandings(doc, schedule, standings, t, geo, yPos);
   }
 
-  // Finalrunde und Platzierung, eigene Seite. Die Platzierung steht immer am Ende.
+  // Finalrunde mit K.-o.-Zeilen, eigene Seite. Die Platzierung steht immer am Ende.
   const finalPhases = schedule.phases.filter(p => p.name !== 'groupStage');
   yPos = startPage(doc, 'finals', geo);
   if (finalPhases.length > 0) {
@@ -153,15 +181,17 @@ export async function buildSchedulePdf({ schedule, standings, options = {} }: Sc
       doc,
       finalPhases,
       t,
-      schedule.refereeConfig,
       schedule.numberOfFields,
       includeScores,
       geo,
-      yPos
+      yPos,
+      rules ? koLines(rules, t) : []
     );
   }
   renderFinalRanking(doc, schedule, standings, t, geo, yPos);
 
+  // Kurzkopf auf jeder Folgeseite, dann die Seitenzahlen über alle Seiten
+  drawShortHeads(doc, geo, shortHead);
   drawPageNumbers(doc, geo, t.pageOf);
 
   return { doc, notes };

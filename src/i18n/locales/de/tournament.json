@@ -711,8 +711,6 @@
     "home": "Heim",
     "result": "Ergebnis",
     "away": "Gast",
-    "referee": "SR",
-    "refereeNumber": "SR{{number}}",
     "pos": "Pl",
     "team": "Team",
     "played": "Sp",
@@ -725,9 +723,12 @@
     "thirdPlace": "Spiel um Platz 3",
     "fifthSixth": "Spiel um Platz 5",
     "seventhEighth": "Spiel um Platz 7",
-    "hintResults": "Ergebnisse bitte nach Spielende eintragen",
     "pageOf": "Seite {{page}} von {{total}}",
     "noDate": "Kein Datum",
+    "kicker": {
+      "plan": "Spielplan",
+      "blank": "Spielplan zum Ausfüllen"
+    },
     "durationMinutes": "{{minutes}} Min.",
     "modeGroupsAndFinals": "Gruppen + Finals",
     "modeRoundRobin": "Jeder gegen Jeden",

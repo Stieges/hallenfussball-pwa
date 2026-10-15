@@ -1,12 +1,12 @@
 /**
  * Tabellen: Gruppentabellen (nur bei `includeStandings`) und Gesamt-Platzierung (immer). Sortiert nach Punkten,
- * Tordifferenz, Toren. Nur Zeichnen.
+ * Tordifferenz, Toren. Teamnamen mindestens 12 pt (@DR-001), Umbruch innerhalb der Zelle. Nur Zeichnen.
  */
 import type jsPDF from 'jspdf';
 import autoTable, { type CellInput, type RowInput, type UserOptions } from 'jspdf-autotable';
 import type { GeneratedSchedule } from '../../../core/generators';
 import type { Standing } from '../../../types/tournament';
-import { printColors, printType, printMetrics, printGap, printStroke, printColumns } from '../../../design-tokens/print';
+import { printColors, printType, printMetrics, printGap, printStroke, printColumns, printLimits } from '../../../design-tokens/print';
 import { getGroupDisplayName } from '../../../utils/displayNames';
 import { ensureSpace, tableMargins, type PageGeometry } from '../layout';
 import { tableEndY } from '../jspdfTypes';
@@ -82,7 +82,7 @@ function drawStandingsTable(
     },
     columnStyles: {
       0: { halign: 'center', cellWidth: printColumns.standings.pos },
-      1: { halign: 'left' }, // Team: Rest der Breite
+      1: { halign: 'left', fontSize: printLimits.teamPt }, // Team: Rest der Breite, mindestens 12 pt
       2: { halign: 'center', cellWidth: printColumns.standings.played },
       3: { halign: 'center', cellWidth: printColumns.standings.won },
       4: { halign: 'center', cellWidth: printColumns.standings.drawn },

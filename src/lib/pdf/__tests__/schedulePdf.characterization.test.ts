@@ -14,6 +14,7 @@ import {
   finalsMatches,
   groupMatches,
   hallencupSchedule,
+  hallencupTournament,
   matchByNumber,
   sideName,
   withMatchResult,
@@ -27,7 +28,9 @@ vi.mock('jspdf', async (importOriginal) => {
   return { ...mod, default: capturingJsPdf(mod.default), jsPDF: capturingJsPdf(mod.jsPDF) };
 });
 
-const SCHEDULE_OPTIONS = { locale: 'de' as const };
+/** Regelzeilen im Kopf kommen aus dem Turnier (B-28a3-3b); der Bestand druckt sie mit dem Hallencup. */
+const SCHEDULE_OPTIONS = { locale: 'de' as const, tournament: hallencupTournament() };
+/** Der Hinweis „Ergebnisse bitte nach Spielende eintragen“ entfällt mit der Meta-Box (B-28a3-3b, v7.2). */
 const HINWEIS = 'Ergebnisse bitte nach Spielende eintragen';
 /** Ergebnis-Platzhalter ohne Spielstand (Exporter: '     :     '). */
 const PLATZHALTER = /^ +: +$/;
@@ -53,24 +56,24 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
   it('Angaben: Veranstalter, Halle, Spieltag, Zeit, Modus und Spielzeit', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, SCHEDULE_OPTIONS);
     const text = flatText(pdf);
+    const alles = text.join(' ');
 
     expect(text).toContain('Veranstalter:');
     expect(text).toContain('SV Nord 1921 e. V.');
     expect(text).toContain('Halle:');
-    expect(text).toContain('Sporthalle am Park');
+    expect(alles).toContain('Sporthalle am Park');
     expect(text).toContain('Spieltag:');
     expect(text).toContain('14.11.2026');
     expect(text).toContain('Zeit:');
     expect(text.some(t => /^13:00 - \d{2}:\d{2}$/.test(t))).toBe(true);
-    expect(text).toContain('Modus:');
-    expect(text).toContain('Gruppen + Finals');
-    expect(text).toContain('Spielzeit:');
-    expect(text).toContain('10 Min.');
+    expect(alles).toContain('Modus: Gruppen + Finals');
+    expect(alles).toContain('Spielzeit: 10 Min. · Zeitstrafe 2 Min.');
   });
 
   it('Teilnehmer: Gruppen A und B, Teams alphabetisch in jeder Gruppe, durchlaufend nummeriert 1–8', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, SCHEDULE_OPTIONS);
     const text = flatText(pdf);
+    const alles = text.join(' ');
 
     expect(text).toContain('Gruppe A');
     expect(text).toContain('Gruppe B');
@@ -85,7 +88,7 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
       '8. TSV West',
     ];
     for (const line of expected) {
-      expect(text).toContain(line);
+      expect(alles).toContain(line);
     }
   });
 
@@ -161,10 +164,10 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     }
   });
 
-  it('Hinweiszeile „Ergebnisse bitte nach Spielende eintragen“ steht auf Seite 1', async () => {
+  it('Die Hinweiszeile „Ergebnisse bitte nach Spielende eintragen“ entfällt (B-28a3-3b)', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, SCHEDULE_OPTIONS);
 
-    expect(pdf.pages[0]).toContain(HINWEIS);
+    expect(pdf.pages[0]).not.toContain(HINWEIS);
   });
 });
 

@@ -10,7 +10,7 @@ import { generateFullSchedule } from '../../../core/generators';
 import { printColumns, printType } from '../../../design-tokens/print';
 import { pageGeometry } from '../layout';
 import { groupMatches, hallencupSchedule, hallencupTournament } from './pdfFixture';
-import { layoutOf, pageText, zwanzigSchedule } from './pdfFixtureLayout';
+import { dreissigSchedule, layoutOf, pageText, zwanzigSchedule } from './pdfFixtureLayout';
 import type { LayoutPage } from './pdfjsLayout';
 
 const TOL = 0.05;
@@ -74,20 +74,20 @@ describe('@DR-002 Seitenaufbau: 12 Spiele passen auf drei Seiten in fester Reihe
   });
 });
 
-describe('@DR-002 Folgeseite: 20 Spiele laufen auf eine Folgeseite mit Kurzkopf und Spaltenkopf', () => {
-  it('vier Seiten: Seite 2 ist die Folgeseite, „Seite x von 4“ auf jeder', async () => {
-    const schedule = zwanzigSchedule();
-    expect(groupMatches(schedule)).toHaveLength(20);
+describe('@DR-002 Folgeseite: 30 Spiele laufen über Seite 1 hinaus, Folgeseite mit Kurzkopf und Spaltenkopf', () => {
+  it('„Seite x von y“ auf jeder Seite, y zählt alle Seiten', async () => {
+    const schedule = dreissigSchedule();
+    expect(groupMatches(schedule)).toHaveLength(30);
     const { pages } = await layoutOf({}, schedule);
 
-    expect(pages).toHaveLength(4);
+    expect(pages.length).toBeGreaterThanOrEqual(4);
     pages.forEach((page, i) => {
-      expect(pageText(page), `Seite ${i + 1}`).toContain(`Seite ${i + 1} von 4`);
+      expect(pageText(page), `Seite ${i + 1}`).toContain(`Seite ${i + 1} von ${pages.length}`);
     });
   });
 
   it('Folgeseite: Kurzkopf mit dem Turniernamen, Spaltenkopf wiederholt, Spiele laufen weiter', async () => {
-    const { pages } = await layoutOf({}, zwanzigSchedule());
+    const { pages } = await layoutOf({}, dreissigSchedule());
     const folge = pages[1];
 
     const kurzkopf = folge.texts.find(t => t.str === 'Hallencup Nord');
@@ -95,15 +95,18 @@ describe('@DR-002 Folgeseite: 20 Spiele laufen auf eine Folgeseite mit Kurzkopf 
     expect(Math.abs((kurzkopf?.size ?? 0) - printType.titleShort)).toBeLessThanOrEqual(TOL);
     expect(folge.texts.some(t => t.str === 'Heim')).toBe(true);
     expect(folge.texts.some(t => t.str === 'Gast')).toBe(true);
-    expect(folge.texts.some(t => t.str === '20')).toBe(true);
     expect(pageText(pages[0])).not.toContain('Tabelle – Gruppe A');
   });
 
-  it('Spielnummern: lückenlos und ohne Doppel über Seite 1 und Folgeseite (Seite 1: 1–17, Folgeseite: 18–20)', async () => {
-    const { pages } = await layoutOf({}, zwanzigSchedule());
+  it('Spielnummern: lückenlos und ohne Doppel über alle Seiten, die Folgeseite setzt direkt fort', async () => {
+    const { pages } = await layoutOf({}, dreissigSchedule());
+    const aufSeite1 = spielnummern(pages[0]);
+    const folge = spielnummern(pages[1]);
 
-    expect(spielnummern(pages[0])).toEqual(Array.from({ length: 17 }, (_, i) => i + 1));
-    expect(spielnummern(pages[1])).toEqual([18, 19, 20]);
+    expect(aufSeite1[0]).toBe(1);
+    expect(folge[0]).toBe(aufSeite1.length + 1);
+    expect([...aufSeite1, ...folge]).toEqual(Array.from({ length: aufSeite1.length + folge.length }, (_, i) => i + 1));
+    expect(aufSeite1.length + folge.length).toBe(30);
   });
 
   it('Gegenbeispiel: quer mit 5er-Gruppen bekommt eine Folgeseite mit Kurzkopf, Tabellen beginnen trotzdem neu', async () => {

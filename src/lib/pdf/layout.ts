@@ -1,11 +1,13 @@
 /**
- * Seitengeometrie und Seitenumbruch für das Spielplan-PDF (B-28a1, B-28a3-2). Rein, nur Maße aus den Druck-Tokens.
+ * Seitengeometrie und Seitenumbruch für das Spielplan-PDF (B-28a1, B-28a3-2, B-28a3-3b). Rein, nur Maße aus den
+ * Druck-Tokens.
  *
- * Feste Reihenfolge: Teilnehmer und Gruppenspiele (Seite 1, Überlauf auf Folgeseiten), Tabellen (neue Seite),
- * Finalrunde mit Platzierung (neue Seite). Leere Abschnitte entfallen; die Aufrufer prüfen das vorab.
+ * Feste Reihenfolge: Kopf, Teilnehmer und Gruppenspiele (Seite 1, Überlauf auf Folgeseiten), Tabellen (neue Seite),
+ * Finalrunde mit Platzierung (neue Seite). Leere Abschnitte entfallen; die Aufrufer prüfen das vorab. Jede Seite
+ * ab der zweiten beginnt unter dem Kurzkopf (`render/shortHeader.ts`).
  */
 import type { jsPDF } from 'jspdf';
-import { printColors, printFont, printGap, printPage, printStroke, printType, printUnit } from '../../design-tokens/print';
+import { printColors, printFont, printGap, printPage, printType, printUnit } from '../../design-tokens/print';
 import { PDF_FONT } from './fonts';
 
 export type PdfFormat = 'a4';
@@ -54,9 +56,9 @@ export function ascentMm(sizePt: number): number {
   return sizePt * printFont.ascentEm * printUnit.mmPerPt;
 }
 
-/** Grundlinie einer Zeile in `sizePt`, deren Oberkante auf `geo.top` liegt (@DR-001: oben mindestens 12 mm). */
-export function firstBaseline(geo: PageGeometry, sizePt: number): number {
-  return geo.top + ascentMm(sizePt);
+/** Grundlinie einer Zeile in `sizePt`, deren Oberkante auf `top` liegt (Vorgabe: `geo.top`, @DR-001 oben 12 mm). */
+export function firstBaseline(geo: PageGeometry, sizePt: number, top: number = geo.top): number {
+  return top + ascentMm(sizePt);
 }
 
 /** Schriftgröße der ersten Zeile eines Abschnitts. */
@@ -67,47 +69,36 @@ const FIRST_LINE_PT: Record<PdfSection, number> = {
 };
 
 /**
- * Beginn eines Abschnitts. Seite 1 ist beim Dokumentstart schon da; jeder spätere Abschnitt beginnt auf einer neuen Seite.
- * Rückgabe: Grundlinie der ersten Zeile (Oberkante auf `geo.top`).
+ * Beginn eines Abschnitts. Seite 1 ist beim Dokumentstart schon da; jeder spätere Abschnitt beginnt auf einer neuen Seite
+ * unter dem Kurzkopf. Rückgabe: Grundlinie der ersten Zeile.
  */
 export function startPage(doc: jsPDF, section: PdfSection, geo: PageGeometry): number {
-  if (section !== 'participantsAndGroups') {
-    doc.addPage();
+  if (section === 'participantsAndGroups') {
+    return firstBaseline(geo, FIRST_LINE_PT[section]);
   }
-  return firstBaseline(geo, FIRST_LINE_PT[section]);
+  doc.addPage();
+  return firstBaseline(geo, FIRST_LINE_PT[section], continuationTop(geo));
 }
 
 /**
- * Stellt sicher, dass `minSpace` mm ab `yPos` passen. Sonst neue Seite; Rückgabe ist die Grundlinie der ersten Zeile
- * dort. Gemessen mit h2, der größten Zeile, die nach einem Seitenumbruch steht (Gruppentitel, Phasentitel, Platzierung).
+ * Stellt sicher, dass `minSpace` mm ab `yPos` passen. Sonst neue Seite unter dem Kurzkopf; Rückgabe ist die Grundlinie
+ * der ersten Zeile dort. Gemessen mit h2, der größten Zeile, die nach einem Seitenumbruch steht (Gruppentitel,
+ * Phasentitel, Platzierung).
  */
 export function ensureSpace(doc: jsPDF, yPos: number, minSpace: number, geo: PageGeometry): number {
   if (yPos + minSpace > geo.bottom) {
     doc.addPage();
-    return firstBaseline(geo, printType.h2);
+    return firstBaseline(geo, printType.h2, continuationTop(geo));
   }
   return yPos;
 }
 
 /**
  * Seitenränder für autoTable: links und rechts der Satzspiegel, unten bis zur Satzspiegel-Unterkante (@DR-001, M1),
- * oben `top` (Vorgabe: Oberkante; Folgeseiten mit Kurzkopf übergeben die Unterkante des Kopfs).
+ * oben `top` (Vorgabe: Oberkante der Folgeseite unter dem Kurzkopf).
  */
-export function tableMargins(geo: PageGeometry, top: number = geo.top): { left: number; right: number; top: number; bottom: number } {
+export function tableMargins(geo: PageGeometry, top: number = continuationTop(geo)): { left: number; right: number; top: number; bottom: number } {
   return { left: geo.left, right: geo.right, top, bottom: geo.height - geo.bottom };
-}
-
-/** Kurzkopf einer Folgeseite: Turniername groß, Altersklasse darunter, dünne Linie. Gezeichnet über `willDrawPage`. */
-export function drawShortHead(doc: jsPDF, title: string, subtitle: string, geo: PageGeometry): void {
-  doc.setTextColor(...printColors.ink);
-  doc.setFont(PDF_FONT.family, 'bold');
-  doc.setFontSize(printType.titleShort);
-  doc.text(title, geo.left, geo.top + printGap.shortHeadTitleBaseline);
-  doc.setFontSize(printType.subtitle);
-  doc.text(subtitle, geo.left, geo.top + printGap.shortHeadSubBaseline);
-  doc.setDrawColor(...printColors.ink);
-  doc.setLineWidth(printStroke.shortHead);
-  doc.line(geo.left, geo.top + printGap.shortHeadRule, geo.left + geo.contentWidth, geo.top + printGap.shortHeadRule);
 }
 
 /**

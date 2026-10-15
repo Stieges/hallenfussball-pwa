@@ -19,6 +19,13 @@ export function zwanzigSchedule(): GeneratedSchedule {
   return generateFullSchedule(hallencupTournament({ teams: ZEHN_TEAMS, numberOfTeams: ZEHN_TEAMS.length }), 'de');
 }
 
+/** Zwölf Teams in zwei Gruppen à sechs: 30 Gruppenspiele. Sie laufen über mehr als eine Seite (B-28a3-3b, @DR-002). */
+export function dreissigSchedule(): GeneratedSchedule {
+  const names = ['FC Nord', 'SV Süd', 'DJK Berg', 'TuS Tal', 'SC Hügel', 'TSV West', 'SC Ost', 'FC Mitte', 'SV Hof', 'TuS Weit', 'SV Ahorn', 'FC Linde'];
+  const teams: Team[] = names.map((name, i) => ({ id: `team-${i}`, name, group: i < 6 ? 'A' : 'B' }));
+  return generateFullSchedule(hallencupTournament({ teams, numberOfTeams: teams.length }), 'de');
+}
+
 export interface PdfLesung {
   pages: LayoutPage[];
   width: number;

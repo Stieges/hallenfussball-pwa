@@ -8,7 +8,7 @@
  * Schriftdatei gelesen (`pdfFontMetrics`), nicht aus dem Token; das Token `printFont.ascentEm` wird dagegen geprüft.
  */
 import { describe, expect, it } from 'vitest';
-import { pageGeometry, tableMargins } from '../layout';
+import { continuationTop, pageGeometry, tableMargins } from '../layout';
 import { matchTableOptions } from '../render/matchTables';
 import { printColors, printFont, printLimits, printType, printUnit } from '../../../design-tokens/print';
 import { FIXTURES, layoutOf, zwanzigSchedule } from './pdfFixtureLayout';
@@ -140,9 +140,10 @@ describe('M1 Tabellen-Unterrand als Wert (autoTable-Vorgabe 14,1 mm reicht in di
     const geo = pageGeometry('a4', 'portrait');
     const unten = geo.height - geo.bottom;
 
-    expect(matchTableOptions(geo, 30, [], [], {}).margin).toEqual({ left: geo.left, right: geo.right, top: geo.top, bottom: unten });
+    // Oben: Folgeseiten beginnen unter dem Kurzkopf (B-28a3-3b, K3)
+    expect(matchTableOptions(geo, 30, [], [], {}).margin).toEqual({ left: geo.left, right: geo.right, top: continuationTop(geo), bottom: unten });
     expect(tableMargins(geo, 30).bottom).toBe(unten);
-    expect(tableMargins(geo, 30).top).toBe(30);
+    expect(tableMargins(geo, 30).top).toBe(continuationTop(geo));
   });
 });
 

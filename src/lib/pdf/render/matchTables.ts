@@ -2,16 +2,16 @@
  * Spieltabellen der Gruppenphase. Nur Zeichnen. Die Finalrunde steht in `finalsTables.ts`.
  * Spielseiten kommen ausschließlich über `sideLabel` (Ein-Stellen-Regel).
  *
- * Überlauf: Die Tabelle läuft auf Folgeseiten weiter, dort stehen der Kurzkopf (über `willDrawPage`) und der
- * Spaltenkopf (autoTable `showHead: 'everyPage'`).
+ * Überlauf: Die Tabelle läuft auf Folgeseiten weiter, dort steht der Spaltenkopf (autoTable `showHead: 'everyPage'`).
+ * Der Kurzkopf kommt für jede Folgeseite zentral aus `shortHeader.ts` (B-28a3-3b).
+ * Ohne Schiedsrichter-Spalte (B-28a3-3b: Schiedsrichter im PDF nach dem MVP).
  */
 import type jsPDF from 'jspdf';
 import autoTable, { type CellInput, type RowInput, type Styles, type UserOptions } from 'jspdf-autotable';
 import type { GeneratedSchedule, ScheduledMatch } from '../../../core/generators';
-import type { RefereeConfig } from '../../../types/tournament';
 import { printColors, printGap, printMetrics, printStroke, printType, printColumns } from '../../../design-tokens/print';
 import { getGroupShortCode } from '../../../utils/displayNames';
-import { continuationTop, drawShortHead, ensureSpace, tableMargins, type PageGeometry } from '../layout';
+import { ensureSpace, tableMargins, type PageGeometry } from '../layout';
 import { sideLabel } from '../matchSides';
 import { tableEndY } from '../jspdfTypes';
 import type { PdfTexts } from '../translations';
@@ -21,16 +21,6 @@ import { PDF_FONT } from '../fonts';
 const RESULT_PLACEHOLDER = '     :     ';
 
 type GeneratedTournament = GeneratedSchedule['tournament'];
-
-/** Kurzkopf der Folgeseiten: Turniername und Altersklasse. */
-export interface ShortHeadText {
-  title: string;
-  subtitle: string;
-}
-
-export function hasReferees(refereeConfig: RefereeConfig | undefined): boolean {
-  return Boolean(refereeConfig && refereeConfig.mode !== 'none');
-}
 
 export function resultCell(match: ScheduledMatch, includeScores: boolean): string {
   return includeScores && (match.scoreA !== undefined && match.scoreB !== undefined)
@@ -44,22 +34,21 @@ function pad(vertical: number, horizontal: number): { top: number; bottom: numbe
 }
 
 /**
- * Gemeinsame Tabellenoptionen für Spieltabellen. Nur die Spaltenstile unterscheiden sich. `newPageTop` ist die
- * Oberkante auf Folgeseiten (vorgabe: Oberkante des Satzspiegels; Gruppenphase: unter dem Kurzkopf).
+ * Gemeinsame Tabellenoptionen für Spieltabellen. Nur die Spaltenstile unterscheiden sich. Folgeseiten beginnen
+ * unter dem Kurzkopf (`tableMargins`).
  */
 export function matchTableOptions(
   geo: PageGeometry,
   startY: number,
   head: RowInput[],
   body: RowInput[],
-  columnStyles: Record<number, Partial<Styles>>,
-  newPageTop: number = geo.top
+  columnStyles: Record<number, Partial<Styles>>
 ): UserOptions {
   return {
     startY,
     head,
     body,
-    margin: tableMargins(geo, newPageTop),
+    margin: tableMargins(geo),
     showHead: 'everyPage',
     tableLineColor: [...printColors.ink],
     alternateRowStyles: { fillColor: [...printColors.paper], textColor: [...printColors.ink] },
@@ -97,19 +86,17 @@ export function sectionTitle(doc: jsPDF, text: string, geo: PageGeometry, yPos: 
 
 /**
  * Gruppenphase: eine Tabelle, Feld- und Gruppen-Spalte nur wenn nötig. Läuft sie über die Seite, kommt die
- * Folgeseite mit Kurzkopf und wiederholtem Spaltenkopf.
+ * Folgeseite mit wiederholtem Spaltenkopf (Kurzkopf: `shortHeader.ts`).
  */
 export function renderGroupStage(
   doc: jsPDF,
   matches: ScheduledMatch[],
   t: PdfTexts,
-  refereeConfig: RefereeConfig | undefined,
   numberOfFields: number,
   includeScores: boolean,
   geo: PageGeometry,
   yPos: number,
-  tournament: GeneratedTournament,
-  shortHead: ShortHeadText
+  tournament: GeneratedTournament
 ): number {
   yPos = ensureSpace(doc, yPos, printMetrics.sectionTitleMinSpace, geo);
 
@@ -121,16 +108,12 @@ export function renderGroupStage(
 
   // Feld-Spalte nur bei mehr als einem Feld
   const showFieldColumn = numberOfFields > 1;
-  const withReferee = hasReferees(refereeConfig);
 
   // Kopfzeile
   const headerRow: CellInput[] = [t.nr, t.timeHeader];
   if (showFieldColumn) {headerRow.push(t.field);}
   if (hasMultipleGroups) {headerRow.push(t.group);}
   headerRow.push(t.home, t.result, t.away);
-  if (withReferee) {
-    headerRow.push(t.referee);
-  }
   const headers: RowInput[] = [headerRow];
 
   // Zeilen
@@ -140,11 +123,6 @@ export function renderGroupStage(
     if (hasMultipleGroups) {row.push(match.group ? getGroupShortCode(match.group, tournament) : '-');}
 
     row.push(sideLabel(match, 'A'), resultCell(match, includeScores), sideLabel(match, 'B'));
-
-    if (withReferee) {
-      row.push(match.referee ? t.refereeNumber(match.referee) : '-');
-    }
-
     return row;
   });
 
@@ -159,23 +137,12 @@ export function renderGroupStage(
     if (hasMultipleGroups) {styles[colIndex++] = { halign: 'center', cellWidth: printColumns.match.group, fontStyle: 'bold' };}
     styles[colIndex++] = { halign: 'left' }; // Heim
     styles[colIndex++] = { halign: 'center', cellWidth: printColumns.match.result, fontSize: printType.result, fontStyle: 'bold' };
-    styles[colIndex++] = { halign: 'left' }; // Gast
-    if (withReferee) {
-      styles[colIndex] = { halign: 'center', cellWidth: printColumns.match.referee };
-    }
+    styles[colIndex] = { halign: 'left' }; // Gast
 
     return styles;
   })();
 
-  autoTable(doc, {
-    ...matchTableOptions(geo, yPos, headers, data, columnStyles, continuationTop(geo)),
-    willDrawPage: hook => {
-      // Der Aufruf kommt auch für die erste Seite der Tabelle; der Kurzkopf nur ab der Folgeseite.
-      if (hook.pageNumber > 1) {
-        drawShortHead(doc, shortHead.title, shortHead.subtitle, geo);
-      }
-    },
-  });
+  autoTable(doc, matchTableOptions(geo, yPos, headers, data, columnStyles));
 
   yPos = tableEndY(doc) + printGap.sectionGap;
   return yPos;

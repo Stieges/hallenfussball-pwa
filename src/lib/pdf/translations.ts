@@ -29,7 +29,6 @@ export interface PdfTexts {
   home: string;
   result: string;
   away: string;
-  referee: string;
   pos: string;
   team: string;
   played: string;
@@ -42,7 +41,8 @@ export interface PdfTexts {
   thirdPlace: string;
   fifthSixth: string;
   seventhEighth: string;
-  hintResults: string;
+  /** Kicker im Kopf: „Spielplan“ mit Ergebnissen, „Spielplan zum Ausfüllen“ ohne (@BM-052). */
+  kicker: { plan: string; blank: string };
   /** Seitenzahl „Seite x von y“ (Fußzeile). */
   pageOf: (page: number, total: number) => string;
   noDate: string;
@@ -50,7 +50,6 @@ export interface PdfTexts {
   modeRoundRobin: string;
   standingsOfGroup: (group: string) => string;
   durationMinutes: (minutes: number) => string;
-  refereeNumber: (number: number | string) => string;
   tournamentTitle: string;
   ageClass: string;
   unrenderableName: (name: string) => string;
@@ -168,7 +167,6 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     home: s('home'),
     result: s('result'),
     away: s('away'),
-    referee: s('referee'),
     pos: s('pos'),
     team: s('team'),
     played: s('played'),
@@ -181,14 +179,13 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     thirdPlace: s('thirdPlace'),
     fifthSixth: s('fifthSixth'),
     seventhEighth: s('seventhEighth'),
-    hintResults: s('hintResults'),
+    kicker: { plan: s('kicker.plan'), blank: s('kicker.blank') },
     pageOf: (page, total) => translate('pdf.pageOf', { page, total }),
     noDate: s('noDate'),
     modeGroupsAndFinals: s('modeGroupsAndFinals'),
     modeRoundRobin: s('modeRoundRobin'),
     standingsOfGroup: group => translate('pdf.standingsOfGroup', { group }),
     durationMinutes: minutes => translate('pdf.durationMinutes', { minutes }),
-    refereeNumber: number => translate('pdf.refereeNumber', { number }),
     tournamentTitle: s('tournamentTitle'),
     ageClass: s('ageClass'),
     unrenderableName: name => translate('pdf.unrenderableName', { name }),

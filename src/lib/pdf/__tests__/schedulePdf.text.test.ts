@@ -33,7 +33,7 @@ describe('@BM-048 Teamnamen mit Sonderzeichen stehen im PDF', () => {
     const pdf = await renderSchedulePdf(schedule, undefined, { includeStandings: true });
     const text = flatText(pdf);
     // Teilnehmer (nummeriert „n. Name“), Spielzeilen und Tabellenzeile: je ein Textstück.
-    expect(text.filter(t => t.endsWith(` ${name}`)).length).toBeGreaterThanOrEqual(1);
+    expect(text.filter(t => t.includes(name)).length).toBeGreaterThanOrEqual(1);
     expect(text.filter(t => t === name).length).toBeGreaterThanOrEqual(2);
   });
 

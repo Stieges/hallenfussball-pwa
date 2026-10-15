@@ -711,8 +711,6 @@
     "home": "Home",
     "result": "Result",
     "away": "Away",
-    "referee": "Ref",
-    "refereeNumber": "Ref {{number}}",
     "pos": "Pos",
     "team": "Team",
     "played": "P",
@@ -725,9 +723,12 @@
     "thirdPlace": "Match for 3rd place",
     "fifthSixth": "Match for 5th place",
     "seventhEighth": "Match for 7th place",
-    "hintResults": "Please enter results after each match ends",
     "pageOf": "Page {{page}} of {{total}}",
     "noDate": "No date",
+    "kicker": {
+      "plan": "Schedule",
+      "blank": "Schedule to fill in"
+    },
     "durationMinutes": "{{minutes}} min",
     "modeGroupsAndFinals": "Groups + finals",
     "modeRoundRobin": "Round robin",

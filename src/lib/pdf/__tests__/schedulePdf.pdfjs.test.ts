@@ -62,9 +62,9 @@ describe('@BM-048 aus dem PDF gelesen (pdfjs, ToUnicode)', () => {
     const bytes = await pdfBytes(scheduleWithNames([name, ...HALLENCUP_TEAMS.slice(1).map(t => t.name)]));
     const tokens = tokensOf((await extractPdfText(bytes)).pages);
     const key = squash(name);
-    // Teilnehmer: Stück „n. Name“ (Gruppe A ist der erste Kasten).
+    // Teilnehmer: Zeile je Gruppe mit „n. Name“ (B-28a3-3b, kompakt); der Name steht in einem Stück.
     const participants = section(tokens, 'Teilnehmer', 'Gruppenphase');
-    expect(participants.some(t => /^\d+\./.test(t) && t.endsWith(key))).toBe(true);
+    expect(participants.some(t => t.includes(key))).toBe(true);
     // Spiele: Zeile mit dem Namen als eigenes Stück in der Gruppenphase, vor der ersten Tabelle.
     const matches = section(tokens, 'Gruppenphase', 'Tabelle–GruppeA');
     expect(matches).toContain(key);

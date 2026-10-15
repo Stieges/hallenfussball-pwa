@@ -1,18 +1,18 @@
 /**
- * Finalrunde: Phasentitel, Platzierungsspiele mit Untertitel, je Phase und Finaltyp eine Tabelle. Nur Zeichnen.
- * Gemeinsame Tabellenoptionen und Zellen-Helfer kommen aus `matchTables.ts`. Spielseiten über `sideLabel`.
+ * Finalrunde: K.-o.-Zeilen über der Finalrunde (B-28a3-3b, @DR-015), Phasentitel, Platzierungsspiele mit Untertitel,
+ * je Phase und Finaltyp eine Tabelle. Nur Zeichnen. Gemeinsame Tabellenoptionen und Zellen-Helfer kommen aus
+ * `matchTables.ts`. Spielseiten über `sideLabel`. Ohne Schiedsrichter-Spalte.
  */
 import type jsPDF from 'jspdf';
 import autoTable, { type CellInput, type RowInput, type Styles } from 'jspdf-autotable';
 import type { ScheduledMatch } from '../../../core/generators';
-import type { RefereeConfig } from '../../../types/tournament';
 import { printColors, printType, printMetrics, printGap, printColumns } from '../../../design-tokens/print';
 import { ensureSpace, type PageGeometry } from '../layout';
 import { sideLabel } from '../matchSides';
 import { tableEndY } from '../jspdfTypes';
 import type { PdfTexts } from '../translations';
 import { PDF_FONT } from '../fonts';
-import { hasReferees, matchTableOptions, resultCell, sectionTitle } from './matchTables';
+import { matchTableOptions, resultCell, sectionTitle } from './matchTables';
 
 /** Untertitel einer Platzierungsrunde, sonst keiner. */
 function getSubtitleForFinalType(finalType: string | undefined, t: PdfTexts): string | undefined {
@@ -31,18 +31,42 @@ function getSubtitleForFinalType(finalType: string | undefined, t: PdfTexts): st
 }
 
 /**
- * Finalrunde: je Phase ein Titel, je Gruppe aufeinanderfolgender Spiele mit gleichem Finaltyp eine Tabelle.
+ * K.-o.-Zeilen über der Finalrunde, je Zeile umbrochen. Rückgabe: nächste freie Grundlinie.
+ */
+function drawKoLines(doc: jsPDF, lines: string[], geo: PageGeometry, yPos: number): number {
+  if (lines.length === 0) {
+    return yPos;
+  }
+  doc.setTextColor(...printColors.ink);
+  doc.setFont(PDF_FONT.family, 'normal');
+  doc.setFontSize(printType.note);
+  for (const line of lines) {
+    const wrapped = doc.splitTextToSize(line, geo.contentWidth) as string[];
+    const height = wrapped.length * printMetrics.koLineAdvance;
+    yPos = ensureSpace(doc, yPos, height, geo);
+    wrapped.forEach((part, index) => {
+      doc.text(part, geo.left, yPos + index * printMetrics.koLineAdvance);
+    });
+    yPos += height;
+  }
+  return yPos + printGap.sectionGap;
+}
+
+/**
+ * Finalrunde: K.-o.-Zeilen, dann je Phase ein Titel und je Gruppe aufeinanderfolgender Spiele mit gleichem Finaltyp
+ * eine Tabelle.
  */
 export function renderFinalsSection(
   doc: jsPDF,
   phases: Array<{ name: string; label: string; matches: ScheduledMatch[] }>,
   t: PdfTexts,
-  refereeConfig: RefereeConfig | undefined,
   numberOfFields: number,
   includeScores: boolean,
   geo: PageGeometry,
-  yPos: number
+  yPos: number,
+  koLines: string[]
 ): number {
+  yPos = drawKoLines(doc, koLines, geo, yPos);
   phases.forEach(phase => {
     yPos = ensureSpace(doc, yPos, printMetrics.sectionTitleMinSpace, geo);
 
@@ -83,7 +107,7 @@ export function renderFinalsSection(
 
     // Alle Gruppen zeichnen
     matchGroups.forEach(group => {
-      yPos = renderFinalsTable(doc, group.matches, t, refereeConfig, numberOfFields, includeScores, geo, yPos, group.subtitle);
+      yPos = renderFinalsTable(doc, group.matches, t, numberOfFields, includeScores, geo, yPos, group.subtitle);
     });
   });
 
@@ -95,7 +119,6 @@ function renderFinalsTable(
   doc: jsPDF,
   matches: ScheduledMatch[],
   t: PdfTexts,
-  refereeConfig: RefereeConfig | undefined,
   numberOfFields: number,
   includeScores: boolean,
   geo: PageGeometry,
@@ -103,7 +126,6 @@ function renderFinalsTable(
   subtitle?: string
 ): number {
   const showFieldColumn = numberOfFields > 1;
-  const withReferee = hasReferees(refereeConfig);
 
   // Untertitel für Platzierungsspiele
   if (subtitle) {
@@ -119,9 +141,6 @@ function renderFinalsTable(
   const headerRow: CellInput[] = [t.nr, t.timeHeader];
   if (showFieldColumn) {headerRow.push(t.field);}
   headerRow.push(t.home, t.result, t.away);
-  if (withReferee) {
-    headerRow.push(t.referee);
-  }
   const headers: RowInput[] = [headerRow];
 
   // Zeilen
@@ -130,11 +149,6 @@ function renderFinalsTable(
     if (showFieldColumn) {row.push(match.field.toString());}
 
     row.push(sideLabel(match, 'A'), resultCell(match, includeScores), sideLabel(match, 'B'));
-
-    if (withReferee) {
-      row.push(match.referee ? t.refereeNumber(match.referee) : '-');
-    }
-
     return row;
   });
 
@@ -155,9 +169,6 @@ function renderFinalsTable(
         3: { halign: 'center', cellWidth: printColumns.finals.result, fontSize: printType.result, fontStyle: 'bold' },
         4: { halign: 'left' },                                       // Gast
       };
-  if (withReferee) {
-    columnStyles[showFieldColumn ? 6 : 5] = { halign: 'center', cellWidth: printColumns.finals.referee };
-  }
 
   autoTable(doc, matchTableOptions(geo, yPos, headers, data, columnStyles));
 

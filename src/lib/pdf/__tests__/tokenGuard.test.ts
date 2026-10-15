@@ -58,9 +58,8 @@ interface Exception { file: string; pattern: RegExp; reason: string }
 
 /** Bestand heute. Jede Ausnahme nennt Datei, Muster in der Zeile und den Grund. */
 export const EXCEPTIONS: Exception[] = [
-  { file: 'render/finalsTables.ts', pattern: /^\d+: \{ halign|\? 6 : 5\]/, reason: 'Spaltenindizes der Finaltabelle (Feld- und Schiedsrichter-Spalte); ersetzt durch Spaltenschlüssel in a3-5' },
+  { file: 'render/finalsTables.ts', pattern: /^\d+: \{ halign/, reason: 'Spaltenindizes der Finaltabelle; ersetzt durch Spaltenschlüssel in a3-5' },
   { file: 'render/standings.ts', pattern: /^\d+: \{ halign/, reason: 'Spaltenindizes der Tabelle Gruppe (Sp, S, U, N, Tore, Diff, Pkt); ersetzt durch Spaltenschlüssel' },
-  { file: 'render/metaBox.ts', pattern: /DEFAULT_GROUP_DURATION_MIN = 10/, reason: 'Fachlicher Ersatzwert (10 Minuten) ohne Turnierwert; entfällt mit der Spielzeit aus dem Turnier (a3-3)' },
   { file: 'translations.ts', pattern: /ISO_DATE = |Number\(match\[/, reason: 'Regex-Quantoren und Teile des Datums JJJJ-MM-TT; kein Maß' },
 ];
 
