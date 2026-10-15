@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { Tournament } from '../../../../../types/tournament';
 import { MetadataCategory } from '../index';
 
@@ -46,13 +47,17 @@ describe('Admin-Center Meta-Daten — Regelwerk bei laufendem Turnier', () => {
     );
   });
 
-  it('@DR-016 mehr als 80 Zeichen: nur 80 werden übernommen', () => {
+  it('@DR-016 Einfügen von 81 Zeichen: nur 80 werden übernommen, Kürzungshinweis sichtbar', async () => {
+    const user = userEvent.setup();
     const { onTournamentUpdate, input } = renderMetadata(runningTournament());
 
-    expect(input).toHaveAttribute('maxlength', '80');
-    fireEvent.change(input, { target: { value: 'b'.repeat(81) } });
-    fireEvent.click(screen.getByRole('button', { name: 'admin:metadata.saveChanges' }));
+    await user.click(input);
+    await user.paste('b'.repeat(81));
 
+    expect(input).toHaveValue('b'.repeat(80));
+    expect(screen.getByRole('status')).toHaveTextContent('admin:metadata.rulebookTruncated');
+
+    fireEvent.click(screen.getByRole('button', { name: 'admin:metadata.saveChanges' }));
     expect(onTournamentUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ rulebook: 'b'.repeat(80) })
     );

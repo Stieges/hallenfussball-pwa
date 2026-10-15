@@ -157,22 +157,20 @@ const styles = {
 // COMPONENT
 // =============================================================================
 
+/** Formularstand aus dem Turnier – eine Stelle für Init, Sync und Reset. */
+const toFormData = (t: Tournament): Partial<Tournament> => ({
+  title: t.title, organizer: t.organizer, rulebook: t.rulebook, ageClass: t.ageClass,
+  location: t.location, contactInfo: t.contactInfo,
+  startDate: t.startDate ?? t.date, startTime: t.startTime ?? t.timeSlot,
+});
+
 export function MetadataCategory({
   tournament,
   onTournamentUpdate,
 }: MetadataCategoryProps) {
   const { t } = useTranslation('admin');
   // Local form state (copy of tournament data)
-  const [formData, setFormData] = useState<Partial<Tournament>>({
-    title: tournament.title,
-    organizer: tournament.organizer,
-    rulebook: tournament.rulebook,
-    ageClass: tournament.ageClass,
-    location: tournament.location,
-    contactInfo: tournament.contactInfo,
-    startDate: tournament.startDate ?? tournament.date,
-    startTime: tournament.startTime ?? tournament.timeSlot,
-  });
+  const [formData, setFormData] = useState<Partial<Tournament>>(() => toFormData(tournament));
 
   // Private notes (stored in tournament.adminNotes or similar)
   const [notes, setNotes] = useState(tournament.adminNotes ?? '');
@@ -180,16 +178,7 @@ export function MetadataCategory({
 
   // Sync formData when tournament changes (after save)
   useEffect(() => {
-    setFormData({
-      title: tournament.title,
-      organizer: tournament.organizer,
-      rulebook: tournament.rulebook,
-      ageClass: tournament.ageClass,
-      location: tournament.location,
-      contactInfo: tournament.contactInfo,
-      startDate: tournament.startDate ?? tournament.date,
-      startTime: tournament.startTime ?? tournament.timeSlot,
-    });
+    setFormData(toFormData(tournament));
     setNotes(tournament.adminNotes ?? '');
   }, [tournament]);
 
@@ -282,16 +271,7 @@ export function MetadataCategory({
       if (!confirmReset) {return;}
     }
 
-    setFormData({
-      title: tournament.title,
-      organizer: tournament.organizer,
-      rulebook: tournament.rulebook,
-      ageClass: tournament.ageClass,
-      location: tournament.location,
-      contactInfo: tournament.contactInfo,
-      startDate: tournament.startDate ?? tournament.date,
-      startTime: tournament.startTime ?? tournament.timeSlot,
-    });
+    setFormData(toFormData(tournament));
     setNotes(tournament.adminNotes ?? '');
   };
 

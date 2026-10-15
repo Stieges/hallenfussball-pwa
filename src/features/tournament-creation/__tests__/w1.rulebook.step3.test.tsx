@@ -3,9 +3,14 @@
  *
  * @DR-016 Höchstens 80 Zeichen; das Feld sagt es. Leer → kein Feld gespeichert.
  * @DR-006 Der Kopf zeigt das eingetragene Regelwerk (Datenquelle: Turnierkonfiguration).
+ *
+ * Die Kürzungs-Tests fügen über userEvent.paste ein (wie der Browser) und halten den Wert
+ * im Zustand (Harness), damit das kontrollierte Feld den gekürzten Wert wirklich anzeigt.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useState } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { Tournament } from '../../../types/tournament';
 import { Step3_Metadata } from '../Step3_Metadata';
 
@@ -19,6 +24,16 @@ function renderStep3(formData: Partial<Tournament>) {
   return { onUpdate, input: screen.getByTestId('wizard-rulebook') };
 }
 
+function StatefulStep3() {
+  const [form, setForm] = useState<Partial<Tournament>>({});
+  return (
+    <Step3_Metadata
+      formData={form}
+      onUpdate={(field, value) => setForm((prev) => ({ ...prev, [field]: value }))}
+    />
+  );
+}
+
 beforeEach(() => vi.clearAllMocks());
 
 describe('Wizard Schritt 3 — Regelwerk', () => {
@@ -30,20 +45,35 @@ describe('Wizard Schritt 3 — Regelwerk', () => {
     expect(onUpdate).toHaveBeenLastCalledWith('rulebook', 'BFV-Richtlinien für Futsal und private Hallenturniere');
   });
 
-  it('@DR-016 das Feld hat maxLength 80 und den Hinweis „höchstens 80 Zeichen“', () => {
-    const { input } = renderStep3({});
+  it('@DR-016 der Hinweis „Höchstens 80 Zeichen.“ hängt am Feld (aria-describedby)', () => {
+    renderStep3({});
 
-    expect(input).toHaveAttribute('maxlength', '80');
     expect(screen.getByText('wizard:step3.rulebookLimit')).toBeInTheDocument();
+    expect(screen.getByTestId('wizard-rulebook')).toHaveAccessibleDescription(/wizard:step3\.rulebookLimit/);
   });
 
-  it('@DR-016 81 Zeichen: nur 80 werden übernommen, der Kürzungs-Hinweis ist sichtbar', () => {
-    const { onUpdate, input } = renderStep3({});
+  it('@DR-016 Einfügen von 81 Zeichen: Feld zeigt 80 Zeichen, Kürzungshinweis sichtbar', async () => {
+    const user = userEvent.setup();
+    render(<StatefulStep3 />);
+    const input = screen.getByTestId('wizard-rulebook');
 
-    fireEvent.change(input, { target: { value: 'a'.repeat(81) } });
+    await user.click(input);
+    await user.paste('a'.repeat(81));
 
-    expect(onUpdate).toHaveBeenLastCalledWith('rulebook', 'a'.repeat(80));
+    expect(input).toHaveValue('a'.repeat(80));
     expect(screen.getByRole('status')).toHaveTextContent('wizard:step3.rulebookTruncated');
+  });
+
+  it('@DR-016 Gegenbeispiel: Einfügen von genau 80 Zeichen zeigt keinen Kürzungshinweis', async () => {
+    const user = userEvent.setup();
+    render(<StatefulStep3 />);
+    const input = screen.getByTestId('wizard-rulebook');
+
+    await user.click(input);
+    await user.paste('a'.repeat(80));
+
+    expect(input).toHaveValue('a'.repeat(80));
+    expect(screen.getByRole('status').textContent).toBe('');
   });
 
   it('Gegenbeispiel: leeres Feld speichert undefined, nicht ""', () => {

@@ -52,7 +52,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         value={formData.rulebook}
         onChange={(v) => onUpdate('rulebook', v)}
         testId="wizard-rulebook"
-        style={{ marginTop: '16px' }}
+        style={{ marginTop: cssVars.spacing.md }}
       />
 
       <Combobox
