@@ -1,13 +1,18 @@
 /**
- * Kopf von Seite 1 (B-28a3-3b, @DR-006, @BM-009, @BM-052; Punkt 5 nach v7.2, Daniel 15.10.): Kicker nur in der Fassung
- * „Spielplan zum Ausfüllen“, Turniertitel mittig über die volle Seitenbreite, darunter eine zweispaltige Angabentabelle
- * (Bezeichnungen fett, Werte normal, eine Schriftgröße, alle Werte in einer Spalte). Rechts bleibt die QR-Spalte frei,
- * bis der QR-Code kommt (@DR-003). Nur Zeichnen.
+ * Kopf von Seite 1 (B-28a3-3b, @DR-006, @BM-009, @BM-052; B-28 C4, @DR-003, @DR-023, @DR-024): Kicker nur in der Fassung
+ * „Spielplan zum Ausfüllen“. Oben Grafik links · Turniertitel mittig über die Restbreite · Grafik rechts (fehlt eine,
+ * bleibt der Titel dennoch mittig, ohne sichtbare Lücke). Darunter die zweispaltige Angabentabelle links (Bezeichnungen
+ * fett, Werte normal, eine Schriftgröße) und rechts der Zuschauer-QR, nur wenn die Adresse bekannt ist. Der Titel bricht
+ * um, wird nie gekürzt und hat höchstens drei Zeilen (bei Bedarf kleinere Schrift). Nur Zeichnen.
  */
 import type { jsPDF } from 'jspdf';
 import { printColors, printGap, printMetrics, printStroke, printType } from '../../../design-tokens/print';
+import { printHeader } from '../../../design-tokens/print-header';
 import { ascentMm, type PageGeometry } from '../layout';
 import { fontOf } from '../fonts';
+import { drawLogo, type PlacedLogo } from './headerGraphics';
+import { drawQr, measureQr, type HeaderQr } from './qrCode';
+import { wrapAtSeparators } from './textFit';
 
 /** Eine Zeile der Angabentabelle: Bezeichnung fett, Wert normal. */
 export interface HeaderFact {
@@ -22,11 +27,26 @@ export interface HeaderInput {
   title: string;
   /** Angaben in Tabellenreihenfolge: Veranstalter, Altersklasse, Halle, Termin, Modus, Platzierung, Spielzeit, Regelwerk. */
   facts: HeaderFact[];
+  /** Trenner, an dem ein langer Wert umbricht (G6), z. B. „ · “. */
+  separator: string;
+  /** Grafik links (Veranstalter) und rechts (z. B. Sponsor), bereits geprüft und bemessen (@DR-023). */
+  logoLeft?: PlacedLogo;
+  logoRight?: PlacedLogo;
+  /** Zuschauer-QR; nur bei online geteiltem Turnier (@ZM-064). */
+  qr?: HeaderQr;
 }
 
-/** Breite der Angabentabelle links von der QR-Spalte. */
-export function headerTextWidth(geo: PageGeometry): number {
-  return geo.contentWidth - printMetrics.qrColumnWidth - printMetrics.qrColumnGap;
+/** Titel in `width` umbrochen; passt er nicht in drei Zeilen, wird die Schrift schrittweise kleiner (nie gekürzt). */
+function fitTitle(doc: jsPDF, title: string, width: number): { lines: string[]; size: number } {
+  let size: number = printType.title;
+  for (;;) {
+    doc.setFontSize(size);
+    const lines = doc.splitTextToSize(title, width) as string[];
+    if (lines.length <= printHeader.titleMaxLines || size - printHeader.titleStepPt < printHeader.titleMinPt) {
+      return { lines, size };
+    }
+    size -= printHeader.titleStepPt;
+  }
 }
 
 /**
@@ -35,6 +55,11 @@ export function headerTextWidth(geo: PageGeometry): number {
  */
 export function renderHeader(doc: jsPDF, head: HeaderInput, geo: PageGeometry): number {
   const center = geo.left + geo.contentWidth / 2;
+  const right = geo.left + geo.contentWidth;
+
+  // Titelband: Restbreite zwischen den Grafiken, symmetrisch, damit der Titel mittig bleibt
+  const side = Math.max(head.logoLeft?.w ?? 0, head.logoRight?.w ?? 0);
+  const titleWidth = geo.contentWidth - (side > 0 ? 2 * (side + printHeader.logoGap) : 0);
 
   // Kicker (nur „Spielplan zum Ausfüllen“), mittig wie der Titel
   let baseline = geo.top;
@@ -47,33 +72,57 @@ export function renderHeader(doc: jsPDF, head: HeaderInput, geo: PageGeometry): 
     baseline += printMetrics.kickerToTitle;
   }
 
-  // Turniertitel, mittig über die volle Seitenbreite, ggf. umbrochen (bis drei Zeilen)
-  baseline += ascentMm(printType.title);
+  // Turniertitel, mittig über die Restbreite, umbrochen (bis drei Zeilen)
   doc.setTextColor(...printColors.ink);
   doc.setFont(fontOf(doc), 'bold');
-  doc.setFontSize(printType.title);
-  const titleLines = doc.splitTextToSize(head.title, geo.contentWidth) as string[];
-  titleLines.forEach((line, index) => {
+  const title = fitTitle(doc, head.title, titleWidth);
+  const advance = (printMetrics.titleAdvance * title.size) / printType.title;
+  baseline += ascentMm(title.size);
+  title.lines.forEach((line, index) => {
     if (index > 0) {
-      baseline += printMetrics.titleAdvance;
+      baseline += advance;
     }
     doc.text(line, center, baseline, { align: 'center' });
   });
 
+  // Grafiken: Oberkante des Satzspiegels, links und rechts bündig
+  if (head.logoLeft) {
+    drawLogo(doc, head.logoLeft, geo.left, geo.top);
+  }
+  if (head.logoRight) {
+    drawLogo(doc, head.logoRight, right - head.logoRight.w, geo.top);
+  }
+  const logoBottom = geo.top + Math.max(head.logoLeft?.h ?? 0, head.logoRight?.h ?? 0);
+
+  // Zeile unter dem Titelband: Angaben links, QR rechts. Beginnt unter der längeren von Titel und Grafik.
+  const firstFact = ascentMm(printType.meta);
+  let factsBaseline = baseline + printMetrics.headBlockGap;
+  if (logoBottom > geo.top) {
+    factsBaseline = Math.max(factsBaseline, logoBottom + printHeader.bandGap + firstFact);
+  }
+  const rowTop = factsBaseline - firstFact;
+  const block = head.qr ? measureQr(doc, head.qr) : undefined;
+  const qrLeft = block ? right - block.side : right;
+  if (head.qr && block) {
+    drawQr(doc, head.qr, block, qrLeft, rowTop);
+  }
+
   // Angabentabelle: Bezeichnungen fett, Werte normal, eine Schriftgröße; alle Werte beginnen in derselben Spalte
-  const width = headerTextWidth(geo);
+  const width = block ? qrLeft - printHeader.qrColumnGap - geo.left : geo.contentWidth;
   const left = geo.left;
-  baseline += printMetrics.headBlockGap;
+  baseline = factsBaseline;
+  doc.setTextColor(...printColors.ink);
   doc.setFontSize(printType.meta);
   doc.setFont(fontOf(doc), 'bold');
   const labelWidth = Math.max(0, ...head.facts.map(fact => doc.getTextWidth(fact.label)));
   const valueLeft = left + labelWidth + printMetrics.factLabelGap;
+  const room = Math.max(1, width - (valueLeft - left));
   for (const fact of head.facts) {
     doc.setFont(fontOf(doc), 'bold');
     doc.setFontSize(printType.meta);
     doc.text(fact.label, left, baseline);
     doc.setFont(fontOf(doc), 'normal');
-    const valueLines = doc.splitTextToSize(fact.value, Math.max(1, width - (valueLeft - left))) as string[];
+    const valueLines = wrapAtSeparators(text => doc.getTextWidth(text), fact.value, room, head.separator, (part, w) => doc.splitTextToSize(part, w) as string[]);
     valueLines.forEach((line, index) => {
       if (index > 0) {
         baseline += printMetrics.factAdvance;
@@ -84,8 +133,9 @@ export function renderHeader(doc: jsPDF, head: HeaderInput, geo: PageGeometry): 
   }
   baseline -= printMetrics.factAdvance;
 
-  // Kopflinie unter der letzten Textzeile
-  const ruleY = baseline + printGap.headPadBottom;
+  // Kopflinie unter der letzten Textzeile bzw. unter dem QR-Block, was tiefer liegt
+  const qrBottom = block ? rowTop + block.height + printHeader.bandGap : 0;
+  const ruleY = Math.max(baseline + printGap.headPadBottom, qrBottom);
   doc.setDrawColor(...printColors.ink);
   doc.setLineWidth(printStroke.head);
   doc.line(left, ruleY, left + geo.contentWidth, ruleY);

@@ -5,9 +5,11 @@
  */
 import { describe, expect, it } from 'vitest';
 import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
-import { printColumns, printLimits, printMetrics, printType } from '../../../design-tokens/print';
+import { printColumns, printLimits, printType } from '../../../design-tokens/print';
+import { printHeader } from '../../../design-tokens/print-header';
 import type { PlacementCriterion, Team, Tournament } from '../../../types/tournament';
 import { HALLENCUP_TEAMS, hallencupSchedule, hallencupTournament } from './pdfFixture';
+import { bboxOf, expectedMatrix, qrRects } from './pdfKopfSupport';
 import { layoutOf, ohneNummer } from './pdfFixtureLayout';
 import { pageGeometry } from '../layout';
 import type { LayoutPage, LayoutText } from './pdfjsLayout';
@@ -20,6 +22,8 @@ const LONG_50 = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
 const SIZE_TOL = 0.05;
 /** Kopfangaben (Bezeichnungen und Werte) in 10,5 pt (Daniel 15.10., bewusste Abweichung von v7.2 mit 9,5 pt). Literal, damit der Test den Wert festhält. */
 const KOPF_PT = 10.5;
+/** Beschriftung unter dem Zuschauer-QR (C4); sie gehört nicht zur Angabentabelle. */
+const QR_CAPTION = 'Live-Ergebnisse';
 
 const PLACEMENT: PlacementCriterion[] = [
   { id: 'points', enabled: true },
@@ -334,7 +338,7 @@ describe('Punkt 5 Kopf nach v7.2 (Daniel 15.10.)', () => {
       expect(Math.abs((t?.size ?? 0) - KOPF_PT)).toBeLessThanOrEqual(SIZE_TOL);
     });
     const unterkante = pages[0].texts.find(t => ohneNummer(t.str) === 'Teilnehmer')?.y ?? 90;
-    const werte = kopf.filter(t => t.x > 30 && t.y < unterkante && t.str.trim() !== '' && !fett.get(t) && t.y > (labels[0]?.y ?? 0));
+    const werte = kopf.filter(t => t.x > 30 && t.y < unterkante && t.str.trim() !== '' && !fett.get(t) && t.y > (labels[0]?.y ?? 0) && t.str.trim() !== QR_CAPTION);
     const linksKanten = new Set(werte.map(t => Math.round(t.x * 10)));
     expect(linksKanten.size, 'alle Werte beginnen in einer Spalte').toBe(1);
     werte.forEach(t => expect(Math.abs(t.size - KOPF_PT), `„${t.str}“`).toBeLessThanOrEqual(SIZE_TOL));
@@ -345,10 +349,11 @@ describe('Punkt 5 Kopf nach v7.2 (Daniel 15.10.)', () => {
     const langer = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921 e. V., Abteilung Hallenfußball mit Jugendmannschaften';
     const { pages } = await layoutOf({ tournament, organizerName: langer }, hallencupSchedule(tournament));
     expect(pages[0].texts.map(trimmed).filter(z => z.startsWith('Sportgemeinschaft') || z.includes('Jugendmannschaften')).length, 'Wert umbricht').toBeGreaterThanOrEqual(2);
-    const geo = pageGeometry('a4', 'portrait');
-    const grenze = geo.left + geo.contentWidth - printMetrics.qrColumnWidth - printMetrics.qrColumnGap;
+    // Die QR-Spalte ist seit C4 Symbol plus Ruhezone (4 Module); die Angaben enden einen Spaltenabstand davor
+    const qr = bboxOf(qrRects(pages[0]));
+    const grenze = qr.x - (qr.w / expectedMatrix('ABC123').length) * printHeader.qrQuietModules - printHeader.qrColumnGap;
     const fett = await fettMap(pages[0].texts);
-    const werte = pages[0].texts.filter(t => t.y > 25 && t.y < 90 && !fett.get(t) && t.str.trim() !== '' && t.size <= KOPF_PT + SIZE_TOL);
+    const werte = pages[0].texts.filter(t => t.y > 25 && t.y < 90 && !fett.get(t) && t.str.trim() !== '' && t.size <= KOPF_PT + SIZE_TOL && t.str.trim() !== QR_CAPTION);
 
     expect(werte.length).toBeGreaterThan(0);
     werte.forEach(t => expect(t.x + t.w, `„${t.str}“`).toBeLessThanOrEqual(grenze + SIZE_TOL));

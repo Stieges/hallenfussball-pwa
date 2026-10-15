@@ -805,6 +805,29 @@
     "offlineNote": "– offline, entries from other devices may be missing",
     "footer": "{{title}} · {{stand}} · Page {{page}} of {{total}}",
     "closedAt": "Final result – closed on {{date}} at {{time}}",
-    "matches": "Matches"
+    "matches": "Matches",
+    "qrCaption": {
+      "results": "Live results",
+      "plan": "Schedule on your phone"
+    },
+    "logoUnusableLeft": "The left header graphic could not be used and is missing from the PDF",
+    "logoUnusableRight": "The right header graphic could not be used and is missing from the PDF",
+    "origin": {
+      "place": {
+        "first": "1st",
+        "second": "2nd",
+        "third": "3rd",
+        "fourth": "4th"
+      },
+      "placeNth": "{{n}}th",
+      "groupPlace": "{{place}} in {{group}}",
+      "round": {
+        "r16": "Round of 16",
+        "qf": "Quarter-final",
+        "semi": "Semi-final"
+      },
+      "winner": "Winner {{round}} {{n}}",
+      "loser": "Loser {{round}} {{n}}"
+    }
   }
 }

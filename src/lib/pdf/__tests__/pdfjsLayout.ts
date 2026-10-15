@@ -20,7 +20,7 @@ export interface LayoutText {
 export interface LayoutRect { x: number; y: number; w: number; h: number; fill?: string; stroke?: string }
 export interface LayoutLine { x1: number; y1: number; x2: number; y2: number; width: number; color: string }
 /** Eine Seite: Text, Rechtecke, Linien und alle im Inhalt gesetzten Farben (hex, auch für Text). */
-export interface LayoutPage { texts: LayoutText[]; rects: LayoutRect[]; lines: LayoutLine[]; colors: string[] }
+export interface LayoutPage { texts: LayoutText[]; rects: LayoutRect[]; lines: LayoutLine[]; colors: string[]; /** Eingebettete Bilder als Rahmen in mm (B-28 C4). */ images: Box[] }
 export interface Box { x: number; y: number; w: number; h: number }
 
 type Matrix = [number, number, number, number, number, number];
@@ -77,6 +77,7 @@ async function readPage(page: pdfjs.PDFPageProxy): Promise<LayoutPage> {
   const ops = await page.getOperatorList();
   const rects: LayoutRect[] = [];
   const lines: LayoutLine[] = [];
+  const images: Box[] = [];
   const colors = new Set<string>();
   const stack: Array<{ ctm: Matrix; fill: string; stroke: string; lw: number }> = [];
   let ctm: Matrix = IDENTITY;
@@ -120,6 +121,16 @@ async function readPage(page: pdfjs.PDFPageProxy): Promise<LayoutPage> {
       case OPS.save: stack.push({ ctm, fill, stroke, lw }); break;
       case OPS.restore: { const s = stack.pop(); if (s) {({ ctm, fill, stroke, lw } = s);} break; }
       case OPS.transform: ctm = mul(args as Matrix, ctm); break;
+      case OPS.paintImageXObject: case OPS.paintInlineImageXObject: {
+        // Ein Bild füllt das Einheitsquadrat unter der aktuellen Matrix
+        const corners = ([[0, 0], [1, 0], [0, 1], [1, 1]] as const).map(([cx, cy]) => apply(cx, cy));
+        const xs = corners.map(q => q[0]);
+        const ys = corners.map(q => q[1]);
+        const a = toMm(Math.min(...xs), Math.max(...ys));
+        const b = toMm(Math.max(...xs), Math.min(...ys));
+        images.push({ x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y });
+        break;
+      }
       case OPS.setFillRGBColor: fill = colorOf(args); colors.add(fill); break;
       case OPS.setStrokeRGBColor: stroke = colorOf(args); colors.add(stroke); break;
       case OPS.setLineWidth: lw = args[0] as number; break;
@@ -146,7 +157,7 @@ async function readPage(page: pdfjs.PDFPageProxy): Promise<LayoutPage> {
     const name = (page.commonObjs.has(item.fontName) ? page.commonObjs.get(item.fontName)?.name : '') ?? '';
     texts.push({ str: item.str, x: p.x, y: p.y, size: Math.hypot(t[0], t[1]), bold: /bold/i.test(name), w: item.width * MM_PER_PT, font: item.fontName });
   }
-  return { texts, rects, lines, colors: [...colors].sort() };
+  return { texts, rects, lines, colors: [...colors].sort(), images };
 }
 
 /** Alle Seiten eines PDFs (Bytes). Die Bytes werden kopiert, pdfjs übergibt sie an den Worker. */

@@ -231,9 +231,7 @@ export const printColumns = {
  * Teilnehmer als Zeilen, Abschnitte und K.-o.-Zeilen.
  */
 export const printMetrics = {
-  /** Kopf: QR-Spalte rechts (v7.2 .head 32 mm) und Abstand zum Text (6 mm). Die Spalte bleibt bis zum QR-Code leer. */
-  qrColumnWidth: 32,
-  qrColumnGap: 6,
+  /** Kopf: QR-Spalte, Grafiken und Titelband stehen in `print-header.ts` (B-28 C4). */
   /** Kopf: Abstand Kicker → Titel (v7.2 margin 0,6 mm), Zeilenabstand umbrochener Titel (26 pt × 1,05) */
   kickerToTitle: 0.6,
   titleAdvance: 9.6,

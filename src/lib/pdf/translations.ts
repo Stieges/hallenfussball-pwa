@@ -6,6 +6,7 @@
  */
 
 import type { KoKey } from './koSlots';
+import type { OriginKind, OriginRound } from './origin';
 
 export type PdfLocale = 'de' | 'en';
 
@@ -72,6 +73,15 @@ export interface PdfTexts {
   /** Hinweis, wenn die eingebettete Schrift nicht lädt und die Standardschrift druckt (B6). */
   fontFallbackNote: string;
   noDate: string;
+  /** Beschriftung unter dem Zuschauer-QR (@DR-010): mit sichtbaren Ergebnissen „Live-Ergebnisse“, sonst „Spielplan aufs Handy“. */
+  qrCaption: { results: string; plan: string };
+  /** Hinweis, wenn eine Kopfgrafik nicht verwendet werden konnte (@DR-023). */
+  logoUnusable: (side: 'left' | 'right') => string;
+  /** Herkunft offener Plätze im Klartext (`origin.ts`): „Zweiter Gruppe A“, „Sieger Halbfinale 1“. */
+  origin: {
+    groupPlace: (place: number, group: string) => string;
+    fromRound: (kind: OriginKind, round: OriginRound, n: number) => string;
+  };
   modeGroupsAndFinals: string;
   modeRoundRobin: string;
   standingsOfGroup: (group: string) => string;
@@ -128,6 +138,7 @@ export interface PdfRuleTexts {
   shooters: (count: number) => string;
 }
 
+const PLACE_WORDS = ['first', 'second', 'third', 'fourth'] as const;
 const FINAL_PHASES = ['roundOf16', 'quarterfinal', 'semifinal', 'final'] as const;
 const PLACEMENT_CRITERIA = ['points', 'goalDifference', 'goalsFor', 'directComparison'] as const;
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -184,6 +195,7 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
   const clock = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const day = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
   const weekday = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' });
+  const groupName = (id: string): string => translate('pdf.groupName', { id });
 
   return {
     organizer: s('organizer'),
@@ -231,6 +243,16 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     contactLine: contact => translate('pdf.contactLine', { contact }),
     fontFallbackNote: s('fontFallbackNote'),
     noDate: s('noDate'),
+    qrCaption: { results: s('qrCaption.results'), plan: s('qrCaption.plan') },
+    logoUnusable: side => s(side === 'left' ? 'logoUnusableLeft' : 'logoUnusableRight'),
+    origin: {
+      groupPlace: (place, id) => {
+        const word = PLACE_WORDS[place - 1] as (typeof PLACE_WORDS)[number] | undefined;
+        const ordinal = word === undefined ? translate('pdf.origin.placeNth', { n: place }) : s(`origin.place.${word}`);
+        return translate('pdf.origin.groupPlace', { place: ordinal, group: groupName(id) });
+      },
+      fromRound: (kind, round, n) => translate(`pdf.origin.${kind}`, { round: s(`origin.round.${round}`), n }),
+    },
     modeGroupsAndFinals: s('modeGroupsAndFinals'),
     modeRoundRobin: s('modeRoundRobin'),
     standingsOfGroup: group => translate('pdf.standingsOfGroup', { group }),

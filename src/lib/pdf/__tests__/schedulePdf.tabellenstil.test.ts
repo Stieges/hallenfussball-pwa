@@ -159,7 +159,9 @@ describe('Kennungs-Schema: eine Gruppe', () => {
     const teams = teamsEinerGruppe().map(team => ({ ...team, group: undefined }));
     const tournament = hallencupTournament({ teams, numberOfTeams: 4, groupSystem: 'roundRobin' });
     const [seite1] = await lesen(generateFullSchedule(tournament, 'de'), tournament);
-    const texte = seite1.texts.map(t => t.str.trim());
+    // Die Platzierung steht seit C4 auf derselben Seite unter den Spielen; ihre Platznummern „1.“ zählen hier nicht
+    const platzierung = seite1.texts.filter(t => /^(\d+ )?Platzierung$/.test(t.str.trim())).at(-1);
+    const texte = seite1.texts.filter(t => !platzierung || t.y < platzierung.y).map(t => t.str.trim());
 
     expect(texte).toEqual(expect.arrayContaining(['A1', 'A2', 'A3', 'A4']));
     expect(texte).not.toContain('1.');

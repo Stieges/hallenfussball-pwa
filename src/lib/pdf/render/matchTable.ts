@@ -70,14 +70,14 @@ function buildColumns(input: MatchTableInput, ctx: MatchTableContext): Column[] 
     columns.push({ key: 'group', head: t.group, style: { halign: 'center', cellWidth: widths.group, fontStyle: 'bold' }, cell: r => groupCode(r.match) });
   }
   columns.push(
-    { key: 'home', head: t.home, style: { halign: 'right' }, cell: r => sideLabel(r.match, 'A') }, // Heim endet am Ergebnis
+    { key: 'home', head: t.home, style: { halign: 'right' }, cell: r => sideLabel(r.match, 'A', { t }) }, // Heim endet am Ergebnis
     {
       key: 'result',
       head: t.result,
       style: { halign: 'center', cellWidth: widths.result },
       cell: r => ({ content: '', styles: { minCellHeight: scoreCellMinHeight(r.spec, input.padV ?? printGap.bodyPadV) } }),
     },
-    { key: 'away', head: t.away, style: { halign: 'left' }, cell: r => sideLabel(r.match, 'B') },
+    { key: 'away', head: t.away, style: { halign: 'left' }, cell: r => sideLabel(r.match, 'B', { t }) },
     { key: 'referee', head: t.referee, style: { halign: 'center', cellWidth: widths.referee }, cell: r => r.referee },
   );
   return columns;

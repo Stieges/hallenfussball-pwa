@@ -14,10 +14,12 @@
 import i18next from 'i18next';
 import jsPDF from 'jspdf';
 import type { GeneratedSchedule } from '../../core/generators';
-import type { Standing, Tournament } from '../../types/tournament';
+import type { Standing } from '../../types/tournament';
 import { getLocationName } from '../../utils/locationHelpers';
+import { qrModules, viewerUrl } from '../qr/publicQr';
 import { registerPdfFonts, fontOf } from './fonts';
-import { pageGeometry, startPage, type PdfOrientation } from './layout';
+import { pageGeometry, startPage } from './layout';
+import type { PDFExportOptions } from './pdfOptions';
 import { dayOf, headerFacts, ruleFacts } from './headerFacts';
 import { schedulePdfFilename } from './filename';
 import { buildNotes } from './notes';
@@ -31,57 +33,16 @@ import type { MatchTableContext } from './render/matchTable';
 import { refereeLabelFor } from './refereeLabel';
 import { renderFinalsSection } from './render/finalsTables';
 import { renderGroupStandings } from './render/standings';
-import { placementState, type RankEntry } from './placement';
+import { placementState } from './placement';
 import { renderRanking } from './render/ranking';
 import { renderHeader } from './render/header';
+import { usableLogo } from './render/headerGraphics';
 import { drawShortHeads, shortHeadTitleLines } from './render/shortHeader';
 import { renderParticipants } from './render/participants';
 import { koLines, pdfRuleLines, pdfRulesFrom } from './rules';
-import {
-  buildPdfTexts,
-  resolvePdfLocale,
-  type PdfLocale,
-  type PdfTexts,
-  type PdfTranslator,
-} from './translations';
+import { buildPdfTexts, resolvePdfLocale, type PdfLocale, type PdfTexts, type PdfTranslator } from './translations';
 
-export interface PDFExportOptions {
-  /** Sprache des Dokuments. Vorgabe: Sprache der App. */
-  locale?: PdfLocale;
-  /** Übersetzer für `pdf.*`. Vorgabe: i18next der App; Tests reichen die Ressource durch. */
-  translate?: PdfTranslator;
-  includeStandings?: boolean;
-  includeScores?: boolean;
-  organizerName?: string;
-  hallName?: string;
-  /** Ausrichtung des A4-Blatts. Vorgabe: hoch. */
-  orientation?: PdfOrientation;
-  /**
-   * Fassung (B-28a3-3b, @BM-052): `plan` = „Spielplan“ (Vorgabe), `blank` = „Spielplan zum Ausfüllen“. Nur der Wunsch
-   * des Nutzers ergibt `blank`; ohne Ergebnisse allein bleibt es bei `plan`. `final` = Endstand (Anschluss C10): die
-   * Fußzeile trägt mit `closedAt` die Abschlusszeile statt des Stands.
-   */
-  edition?: 'plan' | 'blank' | 'final';
-  /**
-   * Gespeicherter Endstand (alle Teams in der Reihenfolge der Plätze) und Abschluss des Turniers (B-28 C2, @DR-009).
-   * Bis A-19/A-21a fehlen beide: die Platzierung bleibt offen. Die Fassung zum Ausfüllen zeigt nie einen Endstand.
-   */
-  ranking?: RankEntry[];
-  closed?: boolean;
-  /** Zeitpunkt des Stands in der Fußzeile und im Dateinamen. Vorgabe: jetzt. Tests reichen einen festen Zeitpunkt durch. */
-  now?: Date;
-  /** Hat das Gerät Netz? Vorgabe: ja. Ohne Netz trägt jede Fußzeile den Zusatz „– ohne Verbindung …“ (@BM-023). Lieferant: C8. */
-  online?: boolean;
-  /** Abschluss des Turniers für die Fassung `final` (Anschluss C10). */
-  closedAt?: Date;
-  /**
-   * Ansprechpartner als fertiger Text. Wird nur gedruckt, wenn der Aufrufer ihn übergibt; das tut er nur bei gesetztem
-   * Häkchen „Ansprechpartner öffentlich zeigen“ (@W1-031, @W1-032). Leer oder nur Leerraum: keine Zeile.
-   */
-  contact?: string;
-  /** Turnier für die Regelzeilen im Kopf und die K.-o.-Zeilen (B-28a3-3b, Fixrunde W6). Pflicht. */
-  tournament: Tournament;
-}
+export type { PDFExportOptions } from './pdfOptions';
 
 /** Ergebnis des Exports: das PDF ist immer erzeugt, `notes` sind sichtbare Hinweise an den Nutzer. */
 export interface SchedulePdfResult {
@@ -146,12 +107,22 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
   guardDocText(doc, mode.covers);
   doc.setLanguage(locale);
   doc.setFont(fontOf(doc));
-  const notes = buildNotes(
-    schedule,
-    t,
-    { organizer: organizerName, hall: hallName, rulebook: rules.rulebook ?? '', contact: contact?.trim() ?? '' },
-    mode
-  );
+  // Kopfgrafiken: nur was sich lesen und zeichnen lässt; sonst fehlt die Grafik und ein Hinweis entsteht (@DR-023)
+  const logoLeft = usableLogo(options.logoLeft);
+  const logoRight = usableLogo(options.logoRight);
+  const notes = [
+    ...buildNotes(
+      schedule,
+      t,
+      { organizer: organizerName, hall: hallName, rulebook: rules.rulebook ?? '', contact: contact?.trim() ?? '' },
+      mode
+    ),
+    ...(options.logoLeft && !logoLeft ? [t.logoUnusable('left')] : []),
+    ...(options.logoRight && !logoRight ? [t.logoUnusable('right')] : []),
+  ];
+  // Zuschauer-QR nur bei online geteiltem Turnier (@ZM-064)
+  const url = viewerUrl(tournament);
+  const qr = url === null ? undefined : { modules: qrModules(url), caption: options.viewerResultsHidden ? t.qrCaption.plan : t.qrCaption.results };
 
   // Fußzeile und Kurzkopf vor dem Seitenmaß messen: sie bestimmen, wo der Satzspiegel endet bzw. Folgeseiten beginnen
   const footer: FooterContent = {
@@ -186,6 +157,10 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
       kicker: edition === 'blank' ? t.kicker.blank : undefined,
       title: schedule.tournament.title,
       facts: [...headerFacts(schedule, t, organizerName, hallName), ...ruleFacts(pdfRuleLines(rules, t))],
+      separator: t.rules.join,
+      logoLeft,
+      logoRight,
+      qr,
     },
     geo
   );
@@ -200,17 +175,16 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
   };
 
   if (groupPhase) {
-    renderGroupStage(doc, groupPhase.matches, tableContext, schedule.numberOfFields, geo, yPos, schedule.tournament, groupStageName, sections.handle('groupStage'));
+    yPos = renderGroupStage(doc, groupPhase.matches, tableContext, schedule.numberOfFields, geo, yPos, schedule.tournament, groupStageName, sections.handle('groupStage'));
   }
 
   // Gruppentabellen, eigene Seite (nur wenn es Gruppen gibt und sie gewünscht sind)
   if (hasTables) {
-    yPos = startPage(doc, 'tables', geo);
-    renderGroupStandings(doc, schedule, standings, t, geo, yPos, sections.handle('tables'));
+    yPos = renderGroupStandings(doc, schedule, standings, t, geo, startPage(doc, 'tables', geo), sections.handle('tables'));
   }
 
-  // Finalrunde mit K.-o.-Zeilen, eigene Seite. Die Platzierung steht immer am Ende.
-  yPos = startPage(doc, 'finals', geo);
+  // Finalrunde mit K.-o.-Zeilen, eigene Seite. Die Platzierung steht am Ende: mit Finalrunde auf deren Seite, ohne
+  // Finalrunde (Jeder gegen jeden) direkt unter der Tabelle, wenn sie passt (Daniel 15.10.)
   if (finalPhases.length > 0) {
     yPos = renderFinalsSection(
       doc,
@@ -219,7 +193,7 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
       schedule.numberOfFields,
       rules.finalsConfig,
       geo,
-      yPos,
+      startPage(doc, 'finals', geo),
       koLines(rules, t),
       // Uhrzeiten der Finalrunde stehen unter Vorbehalt, solange die Gruppenphase läuft (W7)
       { section: sections.handle('finals'), tentativeNote: edition !== 'final' && closed !== true && groupPhase && groupPhaseOpen(groupPhase.matches) ? t.timesTentative : undefined }

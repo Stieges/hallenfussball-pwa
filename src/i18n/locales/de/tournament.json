@@ -805,6 +805,29 @@
     "offlineNote": "– ohne Verbindung, Einträge anderer Geräte können fehlen",
     "footer": "{{title}} · {{stand}} · Seite {{page}} von {{total}}",
     "closedAt": "Endstand – abgeschlossen am {{date}} um {{time}}",
-    "matches": "Spiele"
+    "matches": "Spiele",
+    "qrCaption": {
+      "results": "Live-Ergebnisse",
+      "plan": "Spielplan aufs Handy"
+    },
+    "logoUnusableLeft": "Die linke Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF",
+    "logoUnusableRight": "Die rechte Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF",
+    "origin": {
+      "place": {
+        "first": "Erster",
+        "second": "Zweiter",
+        "third": "Dritter",
+        "fourth": "Vierter"
+      },
+      "placeNth": "{{n}}.",
+      "groupPlace": "{{place}} {{group}}",
+      "round": {
+        "r16": "Achtelfinale",
+        "qf": "Viertelfinale",
+        "semi": "Halbfinale"
+      },
+      "winner": "Sieger {{round}} {{n}}",
+      "loser": "Verlierer {{round}} {{n}}"
+    }
   }
 }

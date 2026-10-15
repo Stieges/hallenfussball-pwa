@@ -56,7 +56,7 @@ describe('@DR-002 Seitenaufbau: 12 Spiele passen auf drei Seiten in fester Reihe
     });
   });
 
-  it('Turnier ohne Finalrunde: keine leere Seite, die Platzierung füllt die letzte Seite', async () => {
+  it('Turnier ohne Finalrunde: keine leere Seite, die Platzierung steht unter den Tabellen (C4, Daniel 15.10.)', async () => {
     const ohneFinale = generateFullSchedule(
       hallencupTournament({
         finalsConfig: { preset: 'none' },
@@ -66,11 +66,12 @@ describe('@DR-002 Seitenaufbau: 12 Spiele passen auf drei Seiten in fester Reihe
     );
     const { pages } = await layoutOf({}, ohneFinale);
 
-    expect(pages).toHaveLength(3);
+    expect(pages).toHaveLength(2);
     pages.forEach((page, i) => {
       expect(page.texts.filter(t => !SEITENZAHL.test(t.str)).length, `Seite ${i + 1}`).toBeGreaterThan(0);
     });
-    expect(pageText(pages[2])).toContain('Platzierung');
+    expect(pageText(pages[1])).toContain('Tabelle');
+    expect(pageText(pages[1])).toContain('Platzierung');
   });
 });
 
