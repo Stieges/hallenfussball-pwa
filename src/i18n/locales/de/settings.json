@@ -146,7 +146,7 @@
   },
   "consent": {
     "title": "Datenschutz-Einstellungen",
-    "description": "Wir nutzen anonymisiertes Error-Tracking, um die App zu verbessern. Optional können Sie Session-Replays aktivieren, um uns bei der Fehlerbehebung zu helfen.",
+    "description": "Wir nutzen anonymisiertes Error-Tracking, um die App zu verbessern. Optional kannst du Session-Replays aktivieren, um uns bei der Fehlerbehebung zu helfen.",
     "necessary": "Notwendig:",
     "necessaryDescription": "Anonymisierte Fehlerberichte (keine persönlichen Daten)",
     "optional": "Optional:",

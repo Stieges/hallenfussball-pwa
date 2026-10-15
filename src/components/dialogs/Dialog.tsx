@@ -1,8 +1,7 @@
-import { ReactNode, useEffect, CSSProperties, useId, type RefObject } from 'react';
-import { createPortal } from 'react-dom';
-import { cssVars, mediaQueries } from '../../design-tokens'
+import { ReactNode, CSSProperties, useId, type RefObject } from 'react';
+import { cssVars, mediaQueries } from '../../design-tokens';
 import { Icons } from '../ui/Icons';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { DialogSurface } from '../ui/molecules/DialogSurface';
 
 export interface DialogProps {
   isOpen: boolean;
@@ -27,66 +26,8 @@ export const Dialog = ({
   initialFocusRef,
   suppressEnter,
 }: DialogProps) => {
-  // Focus trap for accessibility
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: onClose,
-    initialFocusRef,
-    suppressEnter,
-  });
-
   // Stable unique ID for aria-labelledby (React 18+)
   const titleId = useId();
-
-  // Prevent body scroll when dialog is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
-  if (!isOpen) {return null;}
-
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (closeOnBackdropClick && e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  const overlayStyle: CSSProperties = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: cssVars.colors.overlayStrong,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: cssVars.zIndex.navigation,
-    padding: cssVars.spacing.lg,
-    overflowY: 'auto',
-  };
-
-  const modalStyle: CSSProperties = {
-    background: cssVars.gradients.card,
-    backdropFilter: 'blur(20px)',
-    border: `1px solid ${cssVars.colors.border}`,
-    borderRadius: cssVars.borderRadius.lg,
-    boxShadow: cssVars.shadows.lg,
-    width: '100%',
-    maxWidth: maxWidth,
-    maxHeight: '90vh',
-    overflowY: 'auto',
-    position: 'relative',
-    animation: 'dialogSlideIn 0.2s ease-out',
-  };
 
   const headerStyle: CSSProperties = {
     display: 'flex',
@@ -124,78 +65,43 @@ export const Dialog = ({
     padding: cssVars.spacing.xl,
   };
 
-  const dialog = (
-    <div style={overlayStyle} className="dialog-overlay" onClick={handleBackdropClick}>
-      <div
-        ref={focusTrap.containerRef}
-        style={modalStyle}
-        className="dialog-modal"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-      >
-        <div style={headerStyle}>
-          <h2 id={titleId} style={titleStyle}>{title}</h2>
-          <button
-            style={closeButtonStyle}
-            onClick={onClose}
-            aria-label="Schließen"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = cssVars.colors.surfaceHover;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-          >
-            <Icons.X size={20} />
-          </button>
-        </div>
-        <div style={contentStyle}>{children}</div>
+  return (
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      labelledBy={titleId}
+      maxWidth={maxWidth}
+      closeOnBackdropClick={closeOnBackdropClick}
+      initialFocusRef={initialFocusRef}
+      suppressEnter={suppressEnter}
+      panelClassName="dialog-modal"
+    >
+      <div style={headerStyle} className="dialog-header">
+        <h2 id={titleId} style={titleStyle}>{title}</h2>
+        <button
+          style={closeButtonStyle}
+          onClick={onClose}
+          aria-label="Schließen"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = cssVars.colors.surfaceHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          <Icons.X size={20} />
+        </button>
       </div>
+      <div style={contentStyle} className="dialog-content">{children}</div>
 
       <style>{`
-        @keyframes dialogSlideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
         ${mediaQueries.tabletDown} {
-          .dialog-overlay {
-            padding: 12px !important;
-            align-items: flex-start !important;
-            padding-top: 32px !important;
-          }
-
-          .dialog-modal {
-            max-width: 100% !important;
-            border-radius: 12px !important;
-          }
-
-          .dialog-modal > div:first-child {
-            padding: 16px !important;
-          }
-
-          .dialog-modal > div:last-child {
-            padding: 16px !important;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .dialog-overlay {
-            padding: 8px !important;
-            padding-top: 24px !important;
+          .dialog-modal .dialog-header,
+          .dialog-modal .dialog-content {
+            padding: ${cssVars.spacing.md} !important;
           }
         }
       `}</style>
-    </div>
+    </DialogSurface>
   );
-
-  return createPortal(dialog, document.body);
 };

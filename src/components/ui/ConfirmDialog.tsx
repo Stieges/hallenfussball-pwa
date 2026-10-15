@@ -3,13 +3,14 @@
  * ConfirmDialog - Styled modal for confirmations
  *
  * Replaces window.confirm with a consistent, accessible modal.
- * Supports warning and danger variants.
+ * Supports warning and danger variants. Fläche, Abdunkelung und Fokusfalle
+ * kommen aus dem gemeinsamen Baustein DialogSurface (B-43a, @OB-055).
  */
 
 import { CSSProperties, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, fontSizesMd3, shadowSemantics } from '../../design-tokens'
-import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { cssVars, fontSizesMd3 } from '../../design-tokens'
+import { DialogSurface } from './molecules/DialogSurface';
 export type ConfirmDialogVariant = 'warning' | 'danger' | 'info';
 
 /** Secondary action button configuration */
@@ -85,25 +86,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const isDanger = variant === 'danger';
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: effectiveOnCancel,
-    initialFocusRef: isDanger ? cancelButtonRef : undefined,
-    suppressEnter: isDanger,
-  });
 
-  // Body scroll prevention; bei Nicht-danger Fokus wie auf main auf „Bestätigen".
+  // Bei Nicht-danger Fokus wie auf main auf „Bestätigen" (nach 50 ms, über den Baustein hinweg).
   useEffect(() => {
-    if (isOpen) {
-      if (!isDanger) {
-        setTimeout(() => confirmButtonRef.current?.focus(), 50);
-      }
-      document.body.style.overflow = 'hidden';
+    if (isOpen && !isDanger) {
+      const timer = setTimeout(() => confirmButtonRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
     }
-
-    return () => {
-      document.body.style.overflow = '';
-    };
+    return undefined;
   }, [isOpen, isDanger]);
 
   if (!isOpen) {return null;}
@@ -130,32 +120,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   };
 
   const variantConfig = variantColors[variant];
-
-  const overlayStyle: CSSProperties = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: cssVars.colors.overlayStrong,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: cssVars.zIndex.critical,
-    padding: cssVars.spacing.lg,
-    animation: 'fadeIn 0.15s ease-out',
-  };
-
-  const dialogStyle: CSSProperties = {
-    backgroundColor: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.lg,
-    border: `2px solid ${variantConfig.accent}`,
-    boxShadow: `${shadowSemantics.dialog}, 0 0 15px ${variantConfig.accent}40`,
-    maxWidth: '480px',
-    width: '100%',
-    animation: 'slideIn 0.2s ease-out',
-    overflow: 'hidden',
-  };
 
   const headerStyle: CSSProperties = {
     display: 'flex',
@@ -219,10 +183,11 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     minHeight: '44px',
   };
 
+  // Knopfgrenze mindestens 3 : 1 zur Fläche (@OB-055): textSecondary statt des Haarlinien-Rahmens.
   const cancelButtonStyle: CSSProperties = {
     ...buttonBaseStyle,
     backgroundColor: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.textSecondary}`,
     color: cssVars.colors.textPrimary,
   };
 
@@ -233,113 +198,84 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     color: cssVars.colors.onWarning,
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      effectiveOnCancel();
-    }
-  };
-
   const handleSecondaryAction = () => {
     secondaryAction?.onClick();
     effectiveOnCancel();
   };
 
   return (
-    <>
-      <div
-        style={overlayStyle}
-        onClick={handleOverlayClick}
-      >
-        <div
-          ref={focusTrap.containerRef}
-          style={dialogStyle}
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="confirm-dialog-title"
-        >
-          <div style={headerStyle}>
-            <span style={iconStyle}>{variantConfig.icon}</span>
-            <h2 id="confirm-dialog-title" style={titleStyle}>{title}</h2>
-          </div>
-
-          <div style={bodyStyle}>
-            <p style={messageStyle}>{message}</p>
-            {details && <div style={detailsStyle}>{details}</div>}
-          </div>
-
-          <div style={footerStyle}>
-            <button
-              ref={cancelButtonRef}
-              style={cancelButtonStyle}
-              onClick={effectiveOnCancel}
-              data-testid="confirm-dialog-cancel"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = cssVars.colors.surfaceLight;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-            >
-              {effectiveCancelText}
-            </button>
-            {secondaryAction && (
-              <button
-                style={{
-                  ...cancelButtonStyle,
-                  ...(secondaryAction.variant === 'danger' && {
-                    borderColor: cssVars.colors.error,
-                    color: cssVars.colors.error,
-                  }),
-                }}
-                onClick={handleSecondaryAction}
-                data-testid="confirm-dialog-secondary"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = cssVars.colors.surfaceLight;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-              >
-                {secondaryAction.text}
-              </button>
-            )}
-            <button
-              ref={confirmButtonRef}
-              style={confirmButtonStyle}
-              onClick={onConfirm}
-              data-testid="confirm-dialog-confirm"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = variantConfig.confirmHover;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = variantConfig.confirmBg;
-              }}
-            >
-              {effectiveConfirmText}
-            </button>
-          </div>
-        </div>
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={effectiveOnCancel}
+      zIndex={cssVars.zIndex.critical}
+      maxWidth="480px"
+      accent={variantConfig.accent}
+      labelledBy="confirm-dialog-title"
+      initialFocusRef={isDanger ? cancelButtonRef : undefined}
+      suppressEnter={isDanger}
+    >
+      <div style={headerStyle}>
+        <span style={iconStyle}>{variantConfig.icon}</span>
+        <h2 id="confirm-dialog-title" style={titleStyle}>{title}</h2>
       </div>
 
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
+      <div style={bodyStyle}>
+        <p style={messageStyle}>{message}</p>
+        {details && <div style={detailsStyle}>{details}</div>}
+      </div>
 
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-20px) scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-      `}</style>
-    </>
+      <div style={footerStyle}>
+        <button
+          ref={cancelButtonRef}
+          style={cancelButtonStyle}
+          onClick={effectiveOnCancel}
+          data-testid="confirm-dialog-cancel"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = cssVars.colors.surfaceLight;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          {effectiveCancelText}
+        </button>
+        {secondaryAction && (
+          <button
+            style={{
+              ...cancelButtonStyle,
+              ...(secondaryAction.variant === 'danger' && {
+                borderColor: cssVars.colors.error,
+                color: cssVars.colors.error,
+              }),
+            }}
+            onClick={handleSecondaryAction}
+            data-testid="confirm-dialog-secondary"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = cssVars.colors.surfaceLight;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            {secondaryAction.text}
+          </button>
+        )}
+        <button
+          ref={confirmButtonRef}
+          style={confirmButtonStyle}
+          onClick={onConfirm}
+          data-testid="confirm-dialog-confirm"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = variantConfig.confirmHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = variantConfig.confirmBg;
+          }}
+        >
+          {effectiveConfirmText}
+        </button>
+      </div>
+    </DialogSurface>
   );
 };
 
