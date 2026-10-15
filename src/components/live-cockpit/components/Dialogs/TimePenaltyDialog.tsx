@@ -13,8 +13,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../../design-tokens'
-import { useDialogTimer, useFocusTrap } from '../../../../hooks';
+import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { DialogSurface } from '../../../ui/molecules/DialogSurface';
+import { useDialogTimer } from '../../../../hooks';
 import moduleStyles from '../../LiveCockpit.module.css';
 
 interface Team {
@@ -65,12 +66,6 @@ export function TimePenaltyDialog({
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [playerNumber, setPlayerNumber] = useState<string>('');
   const [step, setStep] = useState<1 | 2 | 3>(1);
-
-  // WCAG 4.1.3: Focus trap for accessibility
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: onClose,
-  });
 
   // BUG-006: Determine if we're in quick mode (preselected values)
   const isQuickMode = preselectedDurationSeconds !== undefined && preselectedTeamSide !== undefined;
@@ -305,15 +300,14 @@ export function TimePenaltyDialog({
   );
 
   return (
-    <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
-      <div
-        ref={focusTrap.containerRef}
-        style={styles.dialog}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="penalty-dialog-title"
-      >
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth={dialogWidths.sm}
+      labelledBy="penalty-dialog-title"
+      panelClassName={moduleStyles.dialogOverlay}
+    >
+      <div style={styles.dialog}>
         {/* BUG-006: Auto-dismiss progress bar in quick mode */}
         {isActive && isQuickMode && autoDismissSeconds > 0 && (
           <div style={styles.timerContainer}>
@@ -330,27 +324,13 @@ export function TimePenaltyDialog({
         {step === 2 && renderStep2Team()}
         {step === 3 && renderStep3Player()}
       </div>
-    </div>
+    </DialogSurface>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: cssVars.colors.overlayDialog,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.lg,
-  },
   dialog: {
-    backgroundColor: cssVars.colors.surfaceElevated,
-    borderRadius: cssVars.borderRadius.xl,
     padding: cssVars.spacing.xl,
-    maxWidth: '400px',
-    width: '100%',
     display: 'flex',
     flexDirection: 'column',
     gap: cssVars.spacing.lg,
@@ -364,7 +344,7 @@ const styles: Record<string, React.CSSProperties> = {
     right: 0,
     height: '4px',
     backgroundColor: cssVars.colors.surface,
-    borderRadius: `${cssVars.borderRadius.xl} ${cssVars.borderRadius.xl} 0 0`,
+    borderRadius: `${cssVars.borderRadius.lg} ${cssVars.borderRadius.lg} 0 0`,
     overflow: 'hidden',
   },
   timerProgress: {

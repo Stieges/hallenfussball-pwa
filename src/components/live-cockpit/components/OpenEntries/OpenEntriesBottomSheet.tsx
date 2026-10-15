@@ -8,13 +8,14 @@
  * Konzept-Referenz: docs/concepts/LIVE-COCKPIT-KONZEPT.md §4.2
  *
  * Features:
- * - Collapsible bottom sheet with swipe gesture
- * - Badge showing count of open entries
+ * - Immer sichtbare Leiste mit Zähler (kein Modal); Tippen oder Hochwischen öffnet die Liste
+ * - Die Liste liegt im zentralen BottomSheet (B-43b2: deckende Fläche, Fokusfalle, Esc/Zurück)
  * - Quick access to edit incomplete events
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { cssVars } from '../../../../design-tokens'
+import { cssVars } from '../../../../design-tokens';
+import { BottomSheet } from '../../../ui/BottomSheet';
 import type { MatchEvent } from '../../../../types/tournament';
 
 interface Team {
@@ -39,15 +40,12 @@ export function OpenEntriesBottomSheet({
   isVisible = true,
 }: OpenEntriesBottomSheetProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [dragOffset, setDragOffset] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const startYRef = useRef(0);
 
-  // Auto-expand when new open events are added
+  // Flash the badge when new open events are added
   useEffect(() => {
     if (openEvents.length > 0 && !isExpanded) {
-      // Flash the badge to draw attention
       const sheet = sheetRef.current;
       if (sheet) {
         sheet.classList.add('pulse');
@@ -79,83 +77,54 @@ export function OpenEntriesBottomSheet({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Touch handlers for swipe gesture
+  // Hochwischen auf der Leiste öffnet die Liste
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     startYRef.current = e.touches[0].clientY;
-    setIsDragging(true);
   }, []);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging) {return;}
-    const currentY = e.touches[0].clientY;
-    const diff = startYRef.current - currentY;
-
-    // Limit drag range
-    if (isExpanded) {
-      // When expanded, allow dragging down to collapse
-      setDragOffset(Math.max(0, Math.min(200, -diff)));
-    } else {
-      // When collapsed, allow dragging up to expand
-      setDragOffset(Math.max(0, Math.min(200, diff)));
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    const diff = startYRef.current - e.changedTouches[0].clientY;
+    if (diff > 50) {
+      setIsExpanded(true);
     }
-  }, [isDragging, isExpanded]);
-
-  const handleTouchEnd = useCallback(() => {
-    setIsDragging(false);
-
-    // Snap to expanded or collapsed based on drag distance
-    if (dragOffset > 50) {
-      setIsExpanded(!isExpanded);
-    }
-    setDragOffset(0);
-  }, [dragOffset, isExpanded]);
+  }, []);
 
   if (!isVisible || openEvents.length === 0) {
     return null;
   }
 
-  const sheetHeight = isExpanded ? Math.min(300, 80 + openEvents.length * 56) : 56;
-  const currentHeight = sheetHeight + (isExpanded ? -dragOffset : dragOffset);
-
   return (
-    <div
-      ref={sheetRef}
-      style={{
-        ...styles.container,
-        height: currentHeight,
-        transition: isDragging ? 'none' : 'height 0.3s ease-out',
-      }}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* Handle Bar */}
+    <>
       <div
-        style={styles.handleBar}
-        onClick={() => setIsExpanded(!isExpanded)}
-        role="button"
-        tabIndex={0}
-        aria-expanded={isExpanded}
-        aria-label={`${openEvents.length} offene Eingaben`}
+        ref={sheetRef}
+        style={styles.container}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
-        <div style={styles.handle} />
-      </div>
-
-      {/* Header */}
-      <div
-        style={styles.header}
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div style={styles.headerLeft}>
-          <span style={styles.warningIcon}>⚠️</span>
-          <span style={styles.headerTitle}>Offene Eingaben</span>
-          <span style={styles.badge}>{openEvents.length}</span>
+        {/* Handle Bar */}
+        <div
+          style={styles.handleBar}
+          onClick={() => setIsExpanded(true)}
+          role="button"
+          tabIndex={0}
+          aria-expanded={isExpanded}
+          aria-label={`${openEvents.length} offene Eingaben`}
+        >
+          <div style={styles.handle} />
         </div>
-        <span style={styles.chevron}>{isExpanded ? '▼' : '▲'}</span>
+
+        {/* Header */}
+        <div style={styles.header} onClick={() => setIsExpanded(true)}>
+          <div style={styles.headerLeft}>
+            <span style={styles.warningIcon}>⚠️</span>
+            <span style={styles.headerTitle}>Offene Eingaben</span>
+            <span style={styles.badge}>{openEvents.length}</span>
+          </div>
+          <span style={styles.chevron}>▲</span>
+        </div>
       </div>
 
-      {/* Event List (visible when expanded) */}
-      {isExpanded && (
+      <BottomSheet isOpen={isExpanded} onClose={() => setIsExpanded(false)} title="Offene Eingaben">
         <div style={styles.eventsList}>
           {openEvents.map((event) => (
             <button
@@ -173,8 +142,8 @@ export function OpenEntriesBottomSheet({
             </button>
           ))}
         </div>
-      )}
-    </div>
+      </BottomSheet>
+    </>
   );
 }
 
@@ -192,6 +161,7 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
+    minHeight: 56,
   },
   handleBar: {
     display: 'flex',
@@ -245,9 +215,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: cssVars.colors.textSecondary,
   },
   eventsList: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: `0 ${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     display: 'flex',
     flexDirection: 'column',
     gap: cssVars.spacing.xs,

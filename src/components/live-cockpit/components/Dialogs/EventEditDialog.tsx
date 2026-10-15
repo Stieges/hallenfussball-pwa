@@ -14,8 +14,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { cssVars } from '../../../../design-tokens'
-import { useFocusTrap } from '../../../../hooks';
+import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import type { EditableMatchEvent } from '../../../../types/tournament';
 import moduleStyles from '../../LiveCockpit.module.css';
 import sportGlossary from '../../../../i18n/glossary.json';
@@ -55,12 +55,6 @@ export function EventEditDialog({
 }: EventEditDialogProps) {
   const [playerNumber, setPlayerNumber] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  // WCAG 4.1.3: Focus trap for accessibility
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: onClose,
-  });
 
   // Reset state when dialog opens or event changes
   useEffect(() => {
@@ -143,15 +137,14 @@ export function EventEditDialog({
   }
 
   return (
-    <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
-      <div
-        ref={focusTrap.containerRef}
-        style={styles.dialog}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="event-edit-dialog-title"
-      >
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth={dialogWidths.sm}
+      labelledBy="event-edit-dialog-title"
+      panelClassName={moduleStyles.dialogOverlay}
+    >
+      <div style={styles.dialog}>
         {/* Header */}
         <div style={styles.header}>
           <span style={styles.eventIcon}>{getEventIcon(event.type)}</span>
@@ -242,27 +235,13 @@ export function EventEditDialog({
           </div>
         )}
       </div>
-    </div>
+    </DialogSurface>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: cssVars.colors.overlayDialog,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.lg,
-  },
   dialog: {
-    backgroundColor: cssVars.colors.surfaceElevated,
-    borderRadius: cssVars.borderRadius.xl,
     padding: cssVars.spacing.xl,
-    maxWidth: '400px',
-    width: '100%',
     display: 'flex',
     flexDirection: 'column',
     gap: cssVars.spacing.lg,
@@ -293,7 +272,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: cssVars.spacing.md,
     backgroundColor: cssVars.colors.warningBannerBg,
     borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.warning,
+    color: cssVars.colors.warningSolid,
     fontSize: cssVars.fontSizes.sm,
     fontWeight: 500,
   },

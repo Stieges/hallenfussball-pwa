@@ -13,9 +13,9 @@
 
 import { useState, useMemo, useCallback, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../../design-tokens'
+import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import { useIsMobile } from '../../../../hooks/useIsMobile';
-import { useFocusTrap } from '../../../../hooks/useFocusTrap';
 import moduleStyles from '../../LiveCockpit.module.css';
 
 // ---------------------------------------------------------------------------
@@ -113,15 +113,11 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   const penaltyShootoutTerm = t('events.penaltyShootout');
   const [shots, setShots] = useState<PenaltyShot[]>(initialShots);
 
-  // Focus trap for accessibility (WCAG 4.1.3)
+  // Esc und Zurück-Taste brechen ab (Fokusfalle und Scroll-Sperre kommen aus DialogSurface)
   const handleEscape = useCallback(() => {
     onCancel();
   }, [onCancel]);
 
-  const focusTrap = useFocusTrap({
-    isActive: true, // Always active when component is rendered
-    onEscape: handleEscape,
-  });
 
   // Computed values
   const homeScore = useMemo(() => calculateScore(shots, 'home'), [shots]);
@@ -155,16 +151,6 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   // Styles
   // ---------------------------------------------------------------------------
 
-  const overlayStyle: CSSProperties = {
-    position: 'fixed',
-    inset: 0,
-    background: cssVars.colors.background,
-    display: 'flex',
-    flexDirection: 'column',
-    zIndex: 1000,
-    overflow: 'auto',
-  };
-
   const headerStyle: CSSProperties = {
     padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
     borderBottom: `1px solid ${cssVars.colors.border}`,
@@ -189,8 +175,6 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
     flexDirection: 'column',
     alignItems: 'center',
     gap: cssVars.spacing.xl,
-    maxWidth: '600px',
-    margin: '0 auto',
     width: '100%',
   };
 
@@ -251,7 +235,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
 
   const roundLabelStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
+    color: cssVars.colors.textPrimary,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -271,7 +255,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
 
   const promptStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textSecondary,
+    color: cssVars.colors.textPrimary,
     textAlign: 'center',
     padding: cssVars.spacing.md,
     background: cssVars.colors.surfaceLight,
@@ -355,14 +339,14 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div
-      ref={focusTrap.containerRef}
-      style={overlayStyle}
-      className={moduleStyles.dialogOverlay}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="penalty-shootout-title"
-      data-testid="penalty-shootout-dialog"
+    <DialogSurface
+      isOpen
+      onClose={handleEscape}
+      closeOnBackdropClick={false}
+      maxWidth={dialogWidths.lg}
+      labelledBy="penalty-shootout-title"
+      panelClassName={moduleStyles.dialogOverlay}
+      testId="penalty-shootout-dialog"
     >
       {/* Header */}
       <header style={headerStyle}>
@@ -464,7 +448,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
           </button>
         )}
       </footer>
-    </div>
+    </DialogSurface>
   );
 };
 

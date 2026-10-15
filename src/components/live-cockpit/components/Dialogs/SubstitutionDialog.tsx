@@ -12,8 +12,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../../design-tokens'
-import { useDialogTimer, useFocusTrap } from '../../../../hooks';
+import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { DialogSurface } from '../../../ui/molecules/DialogSurface';
+import { useDialogTimer } from '../../../../hooks';
 import moduleStyles from '../../LiveCockpit.module.css';
 
 interface Team {
@@ -53,11 +54,6 @@ export function SubstitutionDialog({
   // Track which input field is active for quick-select
   const [activeField, setActiveField] = useState<{ type: 'out' | 'in'; index: number } | null>(null);
 
-  // Focus trap for accessibility (WCAG 4.1.3)
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: onClose,
-  });
 
   // Determine selected team from preselectedTeamSide
   const selectedTeam = preselectedTeamSide === 'home' ? homeTeam :
@@ -162,15 +158,14 @@ export function SubstitutionDialog({
   // If no team preselected, show team selection (fallback)
   if (!selectedTeam) {
     return (
-      <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
-        <div
-          ref={focusTrap.containerRef}
-          style={styles.dialog}
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="substitution-dialog-title"
-        >
+      <DialogSurface
+        isOpen={isOpen}
+        onClose={onClose}
+        maxWidth={dialogWidths.sm}
+        labelledBy="substitution-dialog-title"
+        panelClassName={moduleStyles.dialogOverlay}
+      >
+        <div style={styles.dialog}>
           <div style={styles.iconHeader}>
             <span style={styles.swapIcon}>🔄</span>
             <h2 id="substitution-dialog-title" style={styles.title}>{t('substitution.title')}</h2>
@@ -188,20 +183,19 @@ export function SubstitutionDialog({
             {t('substitution.cancel')}
           </button>
         </div>
-      </div>
+      </DialogSurface>
     );
   }
 
   return (
-    <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
-      <div
-        ref={focusTrap.containerRef}
-        style={styles.dialog}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="substitution-dialog-title"
-      >
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth={dialogWidths.sm}
+      labelledBy="substitution-dialog-title"
+      panelClassName={moduleStyles.dialogOverlay}
+    >
+      <div style={styles.dialog}>
         {/* Auto-dismiss progress bar */}
         {isActive && autoDismissSeconds > 0 && (
           <div style={styles.timerContainer}>
@@ -339,27 +333,14 @@ export function SubstitutionDialog({
           </button>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: cssVars.colors.overlayDialog,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.lg,
-  },
   dialog: {
-    backgroundColor: cssVars.colors.surfaceElevated,
-    borderRadius: cssVars.borderRadius.xl,
+    borderRadius: cssVars.borderRadius.lg,
     padding: cssVars.spacing.xl,
-    maxWidth: '400px',
-    width: '100%',
     display: 'flex',
     flexDirection: 'column',
     gap: cssVars.spacing.md,
@@ -386,7 +367,7 @@ const styles: Record<string, React.CSSProperties> = {
     right: cssVars.spacing.sm,
     top: 8,
     fontSize: cssVars.fontSizes.xs,
-    color: cssVars.colors.textMuted,
+    color: cssVars.colors.textSecondary,
   },
   iconHeader: {
     display: 'flex',
@@ -432,7 +413,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: cssVars.fontSizes.md,
   },
   inLabel: {
-    color: cssVars.colors.success,
+    color: cssVars.colors.primary,
     fontWeight: 600,
     fontSize: cssVars.fontSizes.md,
   },
@@ -469,7 +450,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   warningBanner: {
     backgroundColor: cssVars.colors.warningBannerBg,
-    color: cssVars.colors.warning,
+    color: cssVars.colors.warningSolid,
     padding: cssVars.spacing.sm,
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.sm,
@@ -535,8 +516,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: cssVars.spacing.md,
     fontSize: cssVars.fontSizes.md,
     fontWeight: 600,
-    backgroundColor: cssVars.colors.success,
-    color: cssVars.colors.onSuccess,
+    backgroundColor: cssVars.colors.successHover,
+    color: cssVars.colors.onPrimary,
     border: 'none',
     borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',

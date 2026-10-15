@@ -5,8 +5,8 @@
  * Shows current score that will be lost.
  */
 
-import { cssVars } from '../../../../design-tokens'
-import { useFocusTrap } from '../../../../hooks';
+import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import moduleStyles from '../../LiveCockpit.module.css';
 
 interface RestartConfirmDialogProps {
@@ -30,11 +30,6 @@ export function RestartConfirmDialog({
   awayScore,
   elapsedTime,
 }: RestartConfirmDialogProps) {
-  // WCAG 4.1.3: Focus trap for accessibility
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: onClose,
-  });
 
   if (!isOpen) {
     return null;
@@ -46,15 +41,14 @@ export function RestartConfirmDialog({
   };
 
   return (
-    <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
-      <div
-        ref={focusTrap.containerRef}
-        style={styles.dialog}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="restart-confirm-dialog-title"
-      >
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth={dialogWidths.sm}
+      labelledBy="restart-confirm-dialog-title"
+      panelClassName={moduleStyles.dialogOverlay}
+    >
+      <div style={styles.dialog}>
         {/* Warning Icon */}
         <div style={styles.iconContainer}>
           <svg
@@ -109,30 +103,13 @@ export function RestartConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: cssVars.colors.overlayDialog,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.lg,
-  },
   dialog: {
-    backgroundColor: cssVars.colors.surfaceElevated,
-    borderRadius: cssVars.borderRadius.xl,
     padding: cssVars.spacing.xl,
-    maxWidth: '400px',
-    width: '100%',
     textAlign: 'center',
   },
   iconContainer: {
@@ -186,7 +163,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   warningText: {
     fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.warning,
+    color: cssVars.colors.warningSolid,
     margin: 0,
     marginBottom: cssVars.spacing.xl,
     lineHeight: 1.5,
@@ -212,7 +189,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
     fontSize: cssVars.fontSizes.md,
     fontWeight: 600,
-    backgroundColor: cssVars.colors.warning,
+    backgroundColor: cssVars.colors.warningSolid,
     color: cssVars.colors.onWarning,
     border: 'none',
     borderRadius: cssVars.borderRadius.lg,
