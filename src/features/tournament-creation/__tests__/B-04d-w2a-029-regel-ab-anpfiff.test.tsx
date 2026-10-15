@@ -11,12 +11,10 @@
  * src/components/match-cockpit/MatchCockpitSettingsPanel.tsx, Zeile
  * `settings-time-penalty-duration`) → echte Speicherstrecke
  * (TournamentService.updateTournament → repository.save).
- * Cockpit-Seite auf dem Engine-Weg (A-08d1): Anpfiff = MATCH_START mit der Regel des
- * gespeicherten Turniers (`startEngineSpiel`), Zeitstrafe = `MatchCommands.timePenalty`;
+ * Cockpit-Seite auf dem Engine-Weg (A-08d1): Einrichten ohne Anpfiff, Anpfiff = MATCH_START mit
+ * `serverRulesFor` des jeweils gespeicherten Turniers, Zeitstrafe = `MatchCommands.timePenalty`;
  * gelesen wird die Dauer aus dem Engine-Stand (`state.penalties`).
  *
- * Gegenbeispiel: ein nicht angepfiffenes Spiel übernimmt die neue Regel sofort
- * (kein Festhalten am alten Stand bis zum Ende des laufenden Spiels).
  * Mutation: das laufende Spiel liest die Regel live aus dem Turnier → rot.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -30,7 +28,14 @@ import {
   type Tournament,
 } from '../../../types/tournament';
 import type { ITournamentRepository } from '../../../core/repositories/ITournamentRepository';
-import { startEngineSpiel, type EngineSpiel } from '../../../test/engineSpielFixture';
+import {
+  anpfiffEngineSpiel,
+  einrichtenEngineSpiel,
+  type EingerichtetesEngineSpiel,
+  type EngineSpiel,
+} from '../../../test/engineSpielFixture';
+
+const GRUPPENPHASE = { phase: 'groupStage' } as const;
 
 function turnier(): Tournament {
   return {
@@ -103,12 +108,12 @@ function setup() {
     });
   };
 
-  /** Anpfiff auf dem Engine-Weg mit der jeweils gespeicherten Turnierregel. */
-  const anpfiff = async (phase: string | null = 'groupStage'): Promise<EngineSpiel> =>
-    startEngineSpiel(await repository.get('t1'), phase);
+  /** Anpfiff auf dem Engine-Weg mit dem jeweils gespeicherten Turnier. */
+  const anpfiff = async (spiel: EingerichtetesEngineSpiel): Promise<EngineSpiel> =>
+    anpfiffEngineSpiel(spiel, await repository.get('t1'), GRUPPENPHASE);
 
   /** Zeitstrafe auf dem Engine-Weg; Dauer in Sekunden aus dem Engine-Stand. */
-  const zeitstrafeSekunden = async (spiel: EngineSpiel): Promise<number | undefined> => {
+  const zeitstrafeSekunden = async (spiel: EingerichtetesEngineSpiel): Promise<number | undefined> => {
     await spiel.commands.timePenalty(spiel.matchId, spiel.ctx, 'leitung', 'teama');
     const stand = spiel.value.engine.view(spiel.matchId)?.result.state;
     const letzte = stand?.penalties.at(-1);
@@ -119,48 +124,64 @@ function setup() {
 }
 
 describe('B-04d @W2A-029 – Spielregel-Änderung wirkt ab dem nächsten Anpfiff', () => {
-  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
-  // (Engine-Weg: die Zeitstrafen-Dauer der Startregel ist fest 120 s, matchCockpitSettings wird nicht übernommen.)
-  it.fails('Pflichttest: laufendes Spiel rechnet weiter mit 2 Minuten, danach angepfiffenes Spiel mit 1 Minute', async () => {
-    const { repository, rendereEinstellungen, aendereZeitstrafe, anpfiff, zeitstrafeSekunden } = setup();
+  it('(UI/Speicher) @W2A-029: die Zeitstrafe 1 Minute wird über die Einstellungen gespeichert und angezeigt', () => {
+    const { repository, rendereEinstellungen, aendereZeitstrafe } = setup();
 
-    // Spiel A angepfiffen, solange die Regel „Zeitstrafe 2 Minuten" gilt
-    const spielA = await anpfiff();
     rendereEinstellungen();
-
-    // Turnierleitung ändert die Regel auf 1 Minute (echter Speicherweg)
     aendereZeitstrafe(60);
+
     expect(repository.save).toHaveBeenCalled();
     expect(screen.getByTestId('settings-time-penalty-duration')).toHaveValue('60');
+  });
 
-    // Das laufende Spiel rechnet weiter mit 2 Minuten
+  it('@W2A-029: das laufende Spiel rechnet weiter mit 2 Minuten', async () => {
+    const { rendereEinstellungen, aendereZeitstrafe, anpfiff, zeitstrafeSekunden } = setup();
+
+    // Spiel A angepfiffen, solange die Regel „Zeitstrafe 2 Minuten" gilt
+    const spielA = await anpfiff(await einrichtenEngineSpiel());
+    rendereEinstellungen();
+    aendereZeitstrafe(60);
+
     expect(await zeitstrafeSekunden(spielA)).toBe(120);
+  });
 
-    // Ein danach angepfiffenes Spiel gilt 1 Minute
-    const spielB = await anpfiff();
+  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  // Engine-Weg: penaltySeconds der Startregel ist fest 120 s (serverRules.ts), matchCockpitSettings wird nicht übernommen.
+  // Nach ZA-1 muss der Wert 60 grün werden. Gegenbeispiele, die dann aussagekräftig sein müssen: das laufende Spiel
+  // (120 bleibt 120, heute gleichwertig mit dem festen Rückfall) und der Gegenbeispiel-Wert 120 (heute leer grün).
+  it.fails('Pflichttest @W2A-029: ein danach angepfiffenes Spiel gilt 1 Minute', async () => {
+    const { rendereEinstellungen, aendereZeitstrafe, anpfiff, zeitstrafeSekunden } = setup();
+
+    rendereEinstellungen();
+    aendereZeitstrafe(60);
+
+    const spielB = await anpfiff(await einrichtenEngineSpiel());
     expect(await zeitstrafeSekunden(spielB)).toBe(60);
   });
 
   // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
-  it.fails('Gegenbeispiel: ein nicht angepfiffenes Spiel übernimmt die neue Regel sofort', async () => {
+  // Aussagekräftig nach ZA-1: das eingerichtete, nicht angepfiffene Spiel (vor der Änderung eingerichtet, erst nach der
+  // Änderung angepfiffen) bekommt 60; heute bekommt es den festen Rückfall 120.
+  it.fails('Gegenbeispiel @W2A-029: ein eingerichtetes, nicht angepfiffenes Spiel übernimmt die neue Regel sofort', async () => {
     const { rendereEinstellungen, aendereZeitstrafe, anpfiff, zeitstrafeSekunden } = setup();
 
-    // Spiel C ist eingerichtet, aber noch nicht angepfiffen
+    // Spiel C ist vor der Änderung eingerichtet, aber noch nicht angepfiffen
+    const spielC = await einrichtenEngineSpiel();
     rendereEinstellungen();
     aendereZeitstrafe(60);
 
     // Beim Anpfiff gilt die neue Regel ohne Übergang
-    const spielC = await anpfiff();
-    expect(await zeitstrafeSekunden(spielC)).toBe(60);
+    expect(await zeitstrafeSekunden(await anpfiff(spielC))).toBe(60);
   });
 
-  it('Gegenbeispiel: ein gültiger Regelwert wird übernommen (2 Minuten bleiben 2 Minuten)', async () => {
+  it('Gegenbeispiel @W2A-029: ein gültiger Regelwert wird übernommen (2 Minuten bleiben 2 Minuten)', async () => {
+    // Heute leer grün: die Engine liefert immer 120 (fester Rückfall). Nach ZA-1 wird dieser Fall aussagekräftig,
+    // weil er einen Wert ungleich dem festen Rückfall prüft.
     const { rendereEinstellungen, aendereZeitstrafe, anpfiff, zeitstrafeSekunden } = setup();
 
     rendereEinstellungen();
     aendereZeitstrafe(120);
 
-    const spielD = await anpfiff();
-    expect(await zeitstrafeSekunden(spielD)).toBe(120);
+    expect(await zeitstrafeSekunden(await anpfiff(await einrichtenEngineSpiel()))).toBe(120);
   });
 });

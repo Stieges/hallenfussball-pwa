@@ -18,32 +18,17 @@ import {
   MatchCommandRejectedError,
   NotOnEngineYetError,
 } from '../core/match/client';
-import { serverRules, type MatchContext, type MatchRules } from '../core/match';
+import type { MatchContext } from '../core/match';
 import type { MatchEngineContextValue } from '../features/match-engine/matchEngineContextInstance';
 import { useToast } from '../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../lib/sentry';
 import { useActorRole } from './useActorRole';
+import { serverRulesFor } from './engineServerRules';
 import { buildValidMatches } from './useEngineMatches';
 import { mapCardTypeToEngine, type EngineCommandFallbackHandlers } from './engineCommandWiringTypes';
 import { createGuardedDelegates, rejectionMessageKey } from './engineCommandWiringHelpers';
 
 export type { EngineCommandFallbackHandlers } from './engineCommandWiringTypes';
-
-function serverRulesFor(tournament: Tournament, matchId: string): MatchRules {
-  const match = tournament.matches.find((m) => m.id === matchId);
-  return serverRules({
-    durationMinutes: null,
-    phase: match?.phase ?? null,
-    groupPhaseDuration: tournament.groupPhaseGameDuration,
-    finalRoundDuration: tournament.finalRoundGameDuration ?? null,
-    config: {
-      gamePeriods: tournament.gamePeriods,
-      halftimeBreak: tournament.halftimeBreak,
-      matchCockpitSettings: tournament.matchCockpitSettings,
-    },
-    finalsConfig: tournament.finalsConfig ?? null,
-  });
-}
 
 export function useEngineCommandWiring(
   tournament: Tournament,
@@ -138,7 +123,7 @@ export function useEngineCommandWiring(
         return false;
       }
       try {
-        await commands.start(matchId, ctx, actor, serverRulesFor(tournament, matchId));
+        await commands.start(matchId, ctx, actor, serverRulesFor(tournament, tournament.matches.find((m) => m.id === matchId)));
         return true;
       } catch (error) {
         handleEngineError(error);

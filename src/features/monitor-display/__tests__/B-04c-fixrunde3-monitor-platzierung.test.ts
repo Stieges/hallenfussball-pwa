@@ -1,16 +1,18 @@
 /**
  * B-04c Fixrunde 3 – Fix 2 (@W2A-009, @W2A-039): Monitor-Pfad für Platzierungsspiele.
  *
- * Pflichttest:
+ * Pflichttest (Monitor, grün):
  *   - finalsConfig { preset: 'top-4', tiebreakerByRound: { final: 'overtime-then-shootout',
- *     placement: 'shootout' } }, Platz-3-Spiel (finalType 'thirdPlace') → toLiveMatch
- *     liefert 'shootout' und ist gleich dem Ergebnis des Engine-Wegs (startEngineSpiel, A-08d1)
- *     für dasselbe Spiel.
- * Gegenbeispiele:
+ *     placement: 'goldenGoal' } }, Platz-3-Spiel (finalType 'thirdPlace') → toLiveMatch liefert 'goldenGoal'.
+ *     Der Wert ist bewusst NICHT der Engine-Rückfall ('shootout'), damit der Test nicht zufällig grün ist (F2).
+ * Pflichttest (Cockpit, it.fails, Engine-Weg, A-08d1 F2): Cockpit-Regel = Monitor-Regel für Platz 3.
+ *   Die Engine kennt nur finalsConfig.tiebreaker und die Phase; sie liefert 'shootout' statt 'goldenGoal'.
+ * Gegenbeispiele (grün, Monitor):
  *   - finalType 'final' → 'overtime-then-shootout'
  *   - ohne placement folgt Platz 3 dem Finale ('overtime-then-shootout')
  * Mutation:
- *   - match.finalType aus monitorMatch.ts entfernen → rot
+ *   - match.finalType aus monitorMatch.ts entfernen → rot (Monitor-Pflichttest)
+ *   - Rückfall in serverRules (shootout → goldenGoal) → Cockpit-Test wird rot (it.fails bestanden = rot, F2)
  */
 import { describe, it, expect } from 'vitest';
 import { toLiveMatch } from '../monitorMatch';
@@ -27,7 +29,7 @@ const teams: Team[] = [
 
 const finalsConfig: FinalsConfig = {
   preset: 'top-4',
-  tiebreakerByRound: { final: 'overtime-then-shootout', placement: 'shootout' },
+  tiebreakerByRound: { final: 'overtime-then-shootout', placement: 'goldenGoal' },
 };
 
 const turnier = { id: 't1', teams, finalsConfig } as unknown as Tournament;
@@ -45,28 +47,33 @@ function planMatch(finalType: FinalType | undefined): Match {
   };
 }
 
+function monitorRegel(finalType: FinalType | undefined) {
+  return toLiveMatch(planMatch(finalType), teams, turnier).tiebreakerMode;
+}
+
 /** Cockpit-Seite auf dem Engine-Weg (A-08d1); die Engine kennt kein finalType, nur die Phase. */
-async function cockpitRegel(tournament: Tournament) {
-  const spiel = await startEngineSpiel(tournament, 'final');
+async function cockpitRegel(tournament: Tournament, finalType: FinalType) {
+  const spiel = await startEngineSpiel(tournament, { phase: 'final', finalType });
   return spiel.tiebreakerMode;
 }
 
 describe('B-04c Fixrunde 3 – Monitor-Pfad für Platzierungsspiele (@W2A-009, @W2A-039)', () => {
-  it('Pflichttest: Platz 3 zeigt im Monitor die Platzierungsregel und gleicht dem Cockpit', async () => {
-    const monitor = toLiveMatch(planMatch('thirdPlace'), teams, turnier).tiebreakerMode;
-    const cockpit = await cockpitRegel(turnier);
-
-    expect(monitor).toBe('shootout');
-    expect(monitor).toBe(cockpit);
+  it('(Monitor) @W2A-039: Platz 3 zeigt im Monitor die Platzierungsregel', () => {
+    expect(monitorRegel('thirdPlace')).toBe('goldenGoal');
   });
 
-  it('Gegenbeispiel: das Finale behält seine eigene Regel', () => {
-    expect(toLiveMatch(planMatch('final'), teams, turnier).tiebreakerMode).toBe(
-      'overtime-then-shootout',
-    );
+  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  // Engine-Weg: Platz 3 bekommt den Rückfall 'shootout' statt der Platzierungsregel 'goldenGoal' (kein finalType, keine Runden-Regel).
+  // Nach A-27 grün; der Monitor-Test oben und das Finale-Gegenbeispiel bleiben dann als Gegenbeweis nötig.
+  it.fails('Pflichttest (Cockpit) @W2A-039: Platz 3 zeigt im Cockpit dieselbe Regel wie im Monitor', async () => {
+    expect(await cockpitRegel(turnier, 'thirdPlace')).toBe(monitorRegel('thirdPlace'));
   });
 
-  it('Gegenbeispiel: ohne Platzierungsregel folgt Platz 3 dem Finale', () => {
+  it('Gegenbeispiel (Monitor) @W2A-039: das Finale behält seine eigene Regel', () => {
+    expect(monitorRegel('final')).toBe('overtime-then-shootout');
+  });
+
+  it('Gegenbeispiel (Monitor) @W2A-039: ohne Platzierungsregel folgt Platz 3 dem Finale', () => {
     const ohnePlatzierung = {
       id: 't2',
       teams,

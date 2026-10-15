@@ -96,7 +96,7 @@ function entwurfPerUi(schritte: () => void): Tournament {
 
 /** Cockpit-Seite auf dem Engine-Weg (A-08d1): Regel und Überlaufzeit aus dem Engine-Stand. */
 async function cockpitLive(tournament: Tournament, phase: string) {
-  const spiel = await startEngineSpiel(tournament, phase);
+  const spiel = await startEngineSpiel(tournament, { phase });
   return { tiebreakerMode: spiel.tiebreakerMode, overtimeDurationSeconds: spiel.rules.overtimeSeconds };
 }
 

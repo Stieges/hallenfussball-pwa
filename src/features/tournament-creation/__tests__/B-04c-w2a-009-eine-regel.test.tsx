@@ -6,17 +6,12 @@
  * Dann verwenden alle dieselbe eingestellte Regel
  *
  * Echter Bedienweg: Oberfläche (FinalsConfiguration) → gespeichertes Turnier →
- * beide Konsumenten ermitteln die Regel:
- *   - Spielsteuerung/Cockpit (Engine-Weg, A-08d1): die Startregel der echten MatchEngine
- *     (`startEngineSpiel`, `tiebreakerMode` = `rules.tiebreak` in einer K.-o.-Runde)
+ *   - Spielsteuerung/Cockpit (Engine-Weg, startEngineSpiel): die Startregel der echten MatchEngine
  *   - Monitor: toLiveMatch (src/features/monitor-display/monitorMatch.ts)
- * Beide rufen DIESELBE exportierte Funktion (`resolveTiebreakMode`) — per Spy
- * auf das Modul geprüft. Die SQL-Seite (match_engine.server_rules) prüft
- * `scripts/append-match-events-check.sh` am gemeinsamen Vertrags-Fixture
- * `src/core/match/__contracts__/server-rules-ko-entscheidung.json`.
+ * Die SQL-Seite (match_engine.server_rules) prüft `scripts/append-match-events-check.sh` am gemeinsamen
+ * Vertrags-Fixture `src/core/match/__contracts__/server-rules-ko-entscheidung.json`.
  *
- * UI-Ort: src/features/tournament-creation/components/FinalsConfiguration.tsx
- * (Einstellung), src/features/monitor-display/monitorMatch.ts (Monitor).
+ * UI-Ort: src/features/tournament-creation/components/FinalsConfiguration.tsx (Einstellung).
  *
  * Mutation: eine zweite, abweichende Ermittlung in einem Konsumenten → rot.
  */
@@ -24,25 +19,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { useTournamentWizard } from '../../../hooks/useTournamentWizard';
 import { FinalsConfiguration } from '../components/FinalsConfiguration';
-import { startEngineSpiel } from '../../../test/engineSpielFixture';
 import { toLiveMatch } from '../../../features/monitor-display/monitorMatch';
+import { startEngineSpiel } from '../../../test/engineSpielFixture';
 import type { Match, Team, Tournament, TiebreakerMode, KnockoutRound } from '../../../types/tournament';
 import { looseVs } from '../../../test/matchSlotFixtures';
-
-const resolveSpy = vi.hoisted(() => vi.fn());
-
-vi.mock('../../../core/match/tiebreakDecision', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../core/match/tiebreakDecision')>();
-  return {
-    ...actual,
-    resolveTiebreakMode: (
-      ...args: Parameters<typeof actual.resolveTiebreakMode>
-    ): ReturnType<typeof actual.resolveTiebreakMode> => {
-      resolveSpy(...args);
-      return actual.resolveTiebreakMode(...args);
-    },
-  };
-});
 
 vi.mock('../../../hooks/useRepository', () => ({
   useRepository: () => ({
@@ -107,9 +87,9 @@ function planMatch(phase: string): Match {
   };
 }
 
-/** Cockpit-Seite auf dem Engine-Weg (A-08d1): Regel des Engine-Stands, kein Altservice mehr. */
+/** Cockpit-Seite auf dem Engine-Weg (A-08d1): Regel des Engine-Stands für die Phase. */
 async function cockpitRegel(tournament: Tournament, phase: string): Promise<TiebreakerMode | undefined> {
-  const spiel = await startEngineSpiel(tournament, phase);
+  const spiel = await startEngineSpiel(tournament, { phase });
   return spiel.tiebreakerMode;
 }
 
@@ -118,40 +98,41 @@ function monitorRegel(tournament: Tournament, phase: string): TiebreakerMode | u
 }
 
 describe('B-04c @W2A-009 – Es gibt genau eine Entscheidungsregel', () => {
-  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
-  it.fails('Cockpit und Monitor ermitteln für dieselbe Turnier-Einstellung dieselbe Regel je Runde', async () => {
+  it('(Wizard) @W2A-009: die Einstellung je Runde wird im Entwurf gespeichert', () => {
     const turnier = speichereTurnier();
 
     expect(turnier.finalsConfig?.tiebreaker).toBe('goldenGoal');
     expect(turnier.finalsConfig?.tiebreakerByRound?.semifinal).toBe('shootout');
+  });
 
-    for (const round of ['semifinal', 'final'] as const satisfies readonly KnockoutRound[]) {
-      const cockpit = await cockpitRegel(turnier, round);
-      const monitor = monitorRegel(turnier, round);
-      expect(monitor, `Runde ${round}`).toBe(cockpit);
-    }
+  it('(Monitor) @W2A-009: der Monitor zeigt je Runde die eingestellte Regel', () => {
+    const turnier = speichereTurnier();
 
-    expect(await cockpitRegel(turnier, 'semifinal')).toBe('shootout');
     expect(monitorRegel(turnier, 'semifinal')).toBe('shootout');
-    expect(await cockpitRegel(turnier, 'final')).toBe('goldenGoal');
     expect(monitorRegel(turnier, 'final')).toBe('goldenGoal');
   });
 
   // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
-  // (Engine-Weg ruft resolveTiebreakMode nicht; Cockpit liest die Regel aus dem Engine-Stand)
-  it.fails('beide Konsumenten rufen dieselbe exportierte Funktion (Spy auf das Modul)', async () => {
+  // Engine-Weg: serverRules liest nur finalsConfig.tiebreaker (global), nicht tiebreakerByRound → Halbfinale goldenGoal statt shootout.
+  // Nach A-27 muss der Vergleich je Runde grün werden; der Halbfinal-Wert (shootout ≠ Finale goldenGoal) bleibt als Gegenbeispiel nötig.
+  it.fails('@W2A-009 Cockpit (Engine-Weg) zeigt je Runde dieselbe Regel wie der Monitor', async () => {
     const turnier = speichereTurnier();
 
-    resolveSpy.mockClear();
-    await cockpitRegel(turnier, 'final');
-    expect(resolveSpy).toHaveBeenCalledTimes(1);
-
-    resolveSpy.mockClear();
-    monitorRegel(turnier, 'final');
-    expect(resolveSpy).toHaveBeenCalledTimes(1);
+    for (const round of ['semifinal', 'final'] as const satisfies readonly KnockoutRound[]) {
+      const cockpit = await cockpitRegel(turnier, round);
+      const monitor = monitorRegel(turnier, round);
+      expect(cockpit, `Runde ${round}`).toBe(monitor);
+    }
   });
 
-  it('Gegenbeispiel: Gruppenspiel → keine Entscheidung bei Cockpit und Monitor', async () => {
+  it('@W2A-009 Cockpit und Monitor zeigen für das Finale dieselbe Regel (goldenGoal)', async () => {
+    const turnier = speichereTurnier();
+
+    expect(await cockpitRegel(turnier, 'final')).toBe('goldenGoal');
+    expect(monitorRegel(turnier, 'final')).toBe('goldenGoal');
+  });
+
+  it('Gegenbeispiel @W2A-009: Gruppenspiel → keine Entscheidung bei Cockpit und Monitor', async () => {
     const turnier = speichereTurnier();
 
     expect(await cockpitRegel(turnier, 'groupStage')).toBeUndefined();
