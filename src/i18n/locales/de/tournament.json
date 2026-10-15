@@ -787,6 +787,7 @@
     "stand": "Stand {{date}} {{time}}",
     "offlineNote": "– ohne Verbindung",
     "footer": "{{title}} · {{stand}} · Seite {{page}} von {{total}}",
-    "closedAt": "abgeschlossen am {{date}} {{time}}"
+    "closedAt": "abgeschlossen am {{date}} {{time}}",
+    "matches": "Spiele"
   }
 }

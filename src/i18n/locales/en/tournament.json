@@ -787,6 +787,7 @@
     "stand": "As of {{date}} {{time}}",
     "offlineNote": "– offline",
     "footer": "{{title}} · {{stand}} · Page {{page}} of {{total}}",
-    "closedAt": "closed on {{date}} {{time}}"
+    "closedAt": "closed on {{date}} {{time}}",
+    "matches": "Matches"
   }
 }

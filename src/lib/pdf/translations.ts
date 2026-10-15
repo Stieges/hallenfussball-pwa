@@ -21,6 +21,8 @@ export interface PdfTexts {
   time: string;
   participants: string;
   groupStage: string;
+  /** Abschnitt der Spiele bei „Jeder gegen jeden“ (statt „Gruppenphase“). */
+  matches: string;
   finalRanking: string;
   nr: string;
   timeHeader: string;
@@ -159,6 +161,7 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     time: s('time'),
     participants: s('participants'),
     groupStage: s('groupStage'),
+    matches: s('matches'),
     finalRanking: s('finalRanking'),
     nr: s('nr'),
     timeHeader: s('timeHeader'),

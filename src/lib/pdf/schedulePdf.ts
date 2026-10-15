@@ -177,7 +177,9 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
       includeScores,
       geo,
       yPos,
-      schedule.tournament
+      schedule.tournament,
+      // Jeder gegen jeden hat keine Gruppen: der Abschnitt heißt „Spiele“ (Controller, B-28a3-4)
+      rules.groupSystem === 'roundRobin' ? t.matches : t.groupStage
     );
   }
 

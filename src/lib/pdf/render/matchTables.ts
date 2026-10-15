@@ -96,7 +96,8 @@ export function renderGroupStage(
   includeScores: boolean,
   geo: PageGeometry,
   yPos: number,
-  tournament: GeneratedTournament
+  tournament: GeneratedTournament,
+  sectionName: string
 ): number {
   yPos = ensureSpace(doc, yPos, printMetrics.sectionTitleMinSpace, geo);
 
@@ -104,7 +105,7 @@ export function renderGroupStage(
   const uniqueGroups = new Set(matches.map(m => m.group).filter(Boolean));
   const hasMultipleGroups = uniqueGroups.size > 1;
 
-  yPos = sectionTitle(doc, t.groupStage, geo, yPos, printType.h2);
+  yPos = sectionTitle(doc, sectionName, geo, yPos, printType.h2);
 
   // Feld-Spalte nur bei mehr als einem Feld
   const showFieldColumn = numberOfFields > 1;
