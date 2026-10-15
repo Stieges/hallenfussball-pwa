@@ -16,9 +16,19 @@ export type ResultState =
 /** Fassung: „Spielplan zum Ausfüllen“ (`blank`) hat keine Ergebnisse, auch nicht für beendete Spiele. */
 export type ResultEdition = 'plan' | 'blank';
 
+/**
+ * Eingang der Zustandsrechnung. `results` ist der Schalter „Ergebnisse zeigen“ des PDF-Dialogs (`includeScores`
+ * in `PDFExportOptions`): aus heißt leer, unabhängig vom Status (B-28a3-4F F4).
+ */
+export interface ResultOptions {
+  edition?: ResultEdition;
+  results?: boolean;
+}
+
 /** Zustand eines Spiels. `running` (auch pausiert, Verlängerung, Strafstoßschießen) ist `live`. */
-export function resultState(match: StatefulMatch, edition: ResultEdition = 'plan'): ResultState {
-  if (edition === 'blank') {
+export function resultState(match: StatefulMatch, options: ResultOptions = {}): ResultState {
+  const { edition = 'plan', results = true } = options;
+  if (edition === 'blank' || !results) {
     return { kind: 'empty' };
   }
   switch (match.matchStatus) {
