@@ -173,8 +173,8 @@ export class OfflineRepository implements ITournamentRepository {
             const cloudData = await this.supabaseRepo.get(id);
 
             if (cloudData) {
-                // Cache for next time
-                await this.localRepo.save(this.owned(cloudData));
+                // Cache for next time (N-2: eine fremde lokale Kopie bleibt unangetastet)
+                if (!localData?.ownerId || localData.ownerId === this.accountId || this.accountId === undefined) { await this.localRepo.save(this.owned(cloudData)); }
                 return cloudData;
             }
         } catch (error) {
