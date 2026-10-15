@@ -1,6 +1,7 @@
 /**
- * useEngineCommandWiring (C3a-2a): B4-Schreibpfad (Engine-Spiele -> MatchCommands statt Alt-
- * Handler) + W6 (kein Handler wirft; typisierte Fehler werden als Toast gezeigt).
+ * useEngineCommandWiring (C3a-2a, A-08d2b): Schreibpfad ausschliesslich ueber MatchCommands, kein
+ * Altweg; Aktionen ohne Engine-Weg werden mit Hinweis abgelehnt (@FU-069/@FU-070/@FU-071).
+ * W6: kein Handler wirft; typisierte Fehler werden als Toast gezeigt.
  */
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -24,40 +25,12 @@ vi.mock('../../features/auth/hooks/useMyTournamentRole', () => ({
   useMyTournamentRole: () => ({ role: mockRole.current, isLoading: false }),
 }));
 
-import { useEngineCommandWiring, type EngineCommandFallbackHandlers } from '../useEngineCommandWiring';
+import { useEngineCommandWiring } from '../useEngineCommandWiring';
 import { looseVs } from '../../test/matchSlotFixtures';
 import { makeEngineContext } from '../../test/engineContextFixture';
 
 const ENGINE_MATCH_ID = 'engine-1';
 const OLD_MATCH_ID = 'old-1';
-
-function makeFallback(): EngineCommandFallbackHandlers {
-  return {
-    handleStart: vi.fn().mockResolvedValue(true),
-    handlePause: vi.fn().mockResolvedValue(undefined),
-    handleResume: vi.fn().mockResolvedValue(undefined),
-    handleFinish: vi.fn().mockResolvedValue(undefined),
-    handleForceFinish: vi.fn().mockResolvedValue(undefined),
-    handleGoal: vi.fn().mockResolvedValue(undefined),
-    handleCard: vi.fn().mockResolvedValue(undefined),
-    handleTimePenalty: vi.fn().mockResolvedValue(undefined),
-    handleSubstitution: vi.fn().mockResolvedValue(undefined),
-    handleFoul: vi.fn().mockResolvedValue(undefined),
-    handleStartOvertime: vi.fn().mockResolvedValue(undefined),
-    handleStartGoldenGoal: vi.fn().mockResolvedValue(undefined),
-    handleStartPenaltyShootout: vi.fn().mockResolvedValue(undefined),
-    handleRecordPenaltyResult: vi.fn().mockResolvedValue(undefined),
-    handleCancelTiebreaker: vi.fn().mockResolvedValue(undefined),
-    handleAbortPenaltyShootout: vi.fn().mockResolvedValue(undefined),
-    handleManualEditResult: vi.fn().mockResolvedValue(undefined),
-    handleAdjustTime: vi.fn().mockResolvedValue(undefined),
-    handleSkipMatch: vi.fn().mockResolvedValue(undefined),
-    handleUnskipMatch: vi.fn().mockResolvedValue(undefined),
-    handleUndoLastEvent: vi.fn().mockResolvedValue(undefined),
-    handleUpdateEvent: vi.fn().mockResolvedValue(undefined),
-    handleDeleteEvent: vi.fn().mockResolvedValue(undefined),
-  };
-}
 
 function tournament(): Tournament {
   return {
@@ -84,72 +57,87 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
     mockRole.current = 'owner';
   });
 
-  it('Altspiel: handleStart delegiert unveraendert an den Alt-Handler', async () => {
-    const fallback = makeFallback();
-    const { result } = renderHook(() => useEngineCommandWiring(tournament(), null, engineLiveMatches, fallback));
+  it('A-08d2b (@FU-071): Altspiel ohne Engine-Weg -- handleStart lehnt ab, Toast, kein Anpfiff', async () => {
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), null, engineLiveMatches));
 
     const started = await result.current.handleStart(OLD_MATCH_ID);
 
-    expect(started).toBe(true);
-    expect(fallback.handleStart).toHaveBeenCalledWith(OLD_MATCH_ID);
+    expect(started).toBe(false);
+    expect(mockShowWarning).toHaveBeenCalledWith('cockpit:engine.invalid');
   });
 
-  it('B4: Engine-Spiel, MATCH_START -> ruft MatchCommands statt fallback.handleStart auf', async () => {
-    const fallback = makeFallback();
+  it('B4: Engine-Spiel, MATCH_START -> schreibt ueber MatchCommands', async () => {
     const engineContext = await makeEngineContext();
-    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback));
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
 
     const started = await result.current.handleStart(ENGINE_MATCH_ID);
 
     expect(started).toBe(true);
-    expect(fallback.handleStart).not.toHaveBeenCalled();
     const copy = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
     expect(copy?.pending.some((e) => e.type === 'MATCH_START')).toBe(true);
   });
 
   it('W6: ein lokal ungueltiges Ereignis (Tor vor Anpfiff) zeigt einen Toast, wirft NICHT', async () => {
-    const fallback = makeFallback();
     const engineContext = await makeEngineContext();
-    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback));
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
 
     await result.current.handleGoal(ENGINE_MATCH_ID, 'teama', 1);
 
     await waitFor(() => expect(mockShowWarning.mock.calls.length + mockShowError.mock.calls.length).toBeGreaterThan(0));
-    expect(fallback.handleGoal).not.toHaveBeenCalled();
     const copy = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
     expect(copy?.pending.some((e) => e.type === 'GOAL')).toBe(false);
   });
 
-  it('PC14: Tor mit delta -1 (Minus/Rueckgaengig) zeigt NotOnEngineYetError-Toast statt Ausfuehrung', async () => {
-    const fallback = makeFallback();
+  it('PC14/A-08d2b: Tor mit delta -1 (Minus) wird abgelehnt (engine.invalid), kein GOAL im Log', async () => {
     const engineContext = await makeEngineContext();
-    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback));
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
+    await result.current.handleStart(ENGINE_MATCH_ID);
 
     await result.current.handleGoal(ENGINE_MATCH_ID, 'teama', -1);
 
-    expect(mockShowWarning).toHaveBeenCalled();
-    expect(fallback.handleGoal).not.toHaveBeenCalled();
+    expect(mockShowWarning).toHaveBeenCalledWith('cockpit:engine.invalid');
+    const copy = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
+    expect(copy?.pending.some((e) => e.type === 'GOAL')).toBe(false);
   });
 
-  it('PC14: eine nicht umgestellte Aktion (handleUndoLastEvent) zeigt fuer ein Engine-Spiel den Toast, ruft den Alt-Handler NICHT', async () => {
-    const fallback = makeFallback();
+  // A-08d2b: Gegenbeispiel "Spiel-ID ohne Engine-Ansicht" -- jede Aktion wird abgelehnt, kein Schreibweg.
+  it('A-08d2b (@FU-071): Spiel ohne Engine-Ansicht -- handleStart false, handleGoal/handleFoul/handleFinish nur Toast', async () => {
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), null, engineLiveMatches));
+
+    expect(await result.current.handleStart(OLD_MATCH_ID)).toBe(false);
+    await result.current.handleGoal(OLD_MATCH_ID, 'teama', 1);
+    await result.current.handleFoul(OLD_MATCH_ID, 'teama');
+    await result.current.handleFinish(OLD_MATCH_ID);
+
+    expect(mockShowWarning).toHaveBeenCalledTimes(4);
+    expect(mockShowWarning).toHaveBeenCalledWith('cockpit:engine.invalid');
+  });
+
+  // A-08d2b Pflichttest (@FU-070): zweites Spielende wird nicht zweimal in den Log geschrieben.
+  it('A-08d2b (@FU-070): zweites handleFinish laesst den Log bei genau einem MATCH_END, wirft nicht', async () => {
     const engineContext = await makeEngineContext();
-    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback));
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
+    await result.current.handleStart(ENGINE_MATCH_ID);
+    await result.current.handleFinish(ENGINE_MATCH_ID);
 
-    await result.current.handleUndoLastEvent(ENGINE_MATCH_ID);
+    await expect(result.current.handleFinish(ENGINE_MATCH_ID)).resolves.toBeUndefined();
 
-    expect(mockShowWarning).toHaveBeenCalled();
-    expect(fallback.handleUndoLastEvent).not.toHaveBeenCalled();
+    const copy = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
+    expect(copy!.pending.filter((e) => e.type === 'MATCH_END')).toHaveLength(1);
   });
 
-  it('PC14: dieselbe nicht umgestellte Aktion ruft fuer ein Altspiel unveraendert den Alt-Handler auf', async () => {
-    const fallback = makeFallback();
-    const { result } = renderHook(() => useEngineCommandWiring(tournament(), null, engineLiveMatches, fallback));
+  // A-08d2b Pflichttest (@FU-069): ein Tor nach Spielende wird abgelehnt mit dem Grund-Hinweis.
+  it('A-08d2b (@FU-069): handleGoal(+1) nach Spielende -- kein GOAL, Toast mit Grund "Spiel beendet"', async () => {
+    const engineContext = await makeEngineContext();
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
+    await result.current.handleStart(ENGINE_MATCH_ID);
+    await result.current.handleFinish(ENGINE_MATCH_ID);
 
-    await result.current.handleUndoLastEvent(OLD_MATCH_ID);
+    await result.current.handleGoal(ENGINE_MATCH_ID, 'teama', 1);
 
-    expect(fallback.handleUndoLastEvent).toHaveBeenCalledWith(OLD_MATCH_ID);
-    expect(mockShowWarning).not.toHaveBeenCalled();
+    expect(mockShowWarning).toHaveBeenCalledWith('cockpit:engine.retract.hint.goalFinished');
+    const copy = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
+    expect(copy?.pending.some((e) => e.type === 'GOAL')).toBe(false);
   });
 
   // ---------------------------------------------------------------------------
@@ -158,9 +146,8 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
 
   it('M3: der Akteur kommt aus der echten Rolle (collaborator -> helper), nicht fest verdrahtet', async () => {
     mockRole.current = 'collaborator';
-    const fallback = makeFallback();
     const engineContext = await makeEngineContext();
-    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback));
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
 
     await result.current.handleStart(ENGINE_MATCH_ID);
 
@@ -171,9 +158,8 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
 
   it('M3b: der Akteur kommt aus der echten Rolle (owner -> leitung)', async () => {
     mockRole.current = 'owner';
-    const fallback = makeFallback();
     const engineContext = await makeEngineContext();
-    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback));
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
 
     await result.current.handleStart(ENGINE_MATCH_ID);
 
@@ -183,7 +169,6 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
   });
 
   it('M4: MATCH_START.payload.rules beruecksichtigt die Phase (Finalrunden-Dauer statt Gruppenphase)', async () => {
-    const fallback = makeFallback();
     const engineContext = await makeEngineContext();
     const t = {
       ...tournament(),
@@ -191,7 +176,7 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
       finalRoundGameDuration: 30,
       matches: tournament().matches.map((m) => (m.id === ENGINE_MATCH_ID ? { ...m, phase: 'final' } : m)),
     } as unknown as Tournament;
-    const { result } = renderHook(() => useEngineCommandWiring(t, engineContext, engineLiveMatches, fallback));
+    const { result } = renderHook(() => useEngineCommandWiring(t, engineContext, engineLiveMatches));
 
     await result.current.handleStart(ENGINE_MATCH_ID);
 
@@ -204,22 +189,18 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
   });
 
   it('M7: B4-Wache gilt auch fuer handleFinish (nicht nur handleStart)', async () => {
-    const fallback = makeFallback();
     const engineContext = await makeEngineContext();
-    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback));
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
     await result.current.handleStart(ENGINE_MATCH_ID);
 
     await result.current.handleFinish(ENGINE_MATCH_ID);
-
-    expect(fallback.handleFinish).not.toHaveBeenCalled();
     const copy = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
     expect(copy?.pending.some((e) => e.type === 'MATCH_END')).toBe(true);
   });
 
   it('M11: teamId beim Tor wird klein geschrieben, auch wenn der Aufrufer eine andere Schreibweise uebergibt', async () => {
-    const fallback = makeFallback();
     const engineContext = await makeEngineContext();
-    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback));
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
     await result.current.handleStart(ENGINE_MATCH_ID);
 
     await result.current.handleGoal(ENGINE_MATCH_ID, 'TEAMA', 1);
@@ -232,14 +213,13 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
   // ---------------------------------------------------------------------------
   // P3 (Fixrunde 3): Anpfiff-Fenster -- ein engine-bestimmtes Spiel, das die Engine noch KEINE
   // Ansicht hat (ensureMatch/Sammelabfrage noch nicht durchgelaufen, z. B. eine liegengebliebene
-  // NOT_STARTED-Altzeile), darf beim Anpfiff nicht auf `fallback.handleStart` (Altweg,
-  // `service.startMatch`) zurueckfallen -- erst `ensureEngineMatchReady`, DANN `commands.start`.
+  // NOT_STARTED-Altzeile), darf beim Anpfiff nicht ohne Engine-Weg starten -- erst
+  // `ensureEngineMatchReady`, DANN `commands.start`.
   // ---------------------------------------------------------------------------
 
   const RACE_MATCH_ID = 'race-1';
 
-  it('P3: Anpfiff auf einem engine-bestimmten Spiel OHNE Engine-Ansicht ruft ensureEngineMatchReady, dann commands.start -- NICHT fallback.handleStart', async () => {
-    const fallback = makeFallback();
+  it('P3: Anpfiff auf einem engine-bestimmten Spiel OHNE Engine-Ansicht ruft ensureEngineMatchReady, dann commands.start', async () => {
     const engineContext = await makeEngineContext();
     // RACE_MATCH_ID ist bewusst NICHT in `engineLiveMatches` (keine Ansicht) UND NICHT vorab
     // `ensureMatch`-t (anders als ENGINE_MATCH_ID in `makeEngineContext()`) -- genau die Race
@@ -254,31 +234,28 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
       matches: [...tournament().matches, { id: RACE_MATCH_ID, ...looseVs('teama', 'teamb'), round: 1, field: 3, matchNumber: 3 }],
     };
     const { result } = renderHook(() =>
-      useEngineCommandWiring(raceTournament, engineContext, engineLiveMatches, fallback, isEngineDestinedMatchId, ensureEngineMatchReady),
+      useEngineCommandWiring(raceTournament, engineContext, engineLiveMatches, isEngineDestinedMatchId, ensureEngineMatchReady),
     );
 
     const started = await result.current.handleStart(RACE_MATCH_ID);
 
     expect(ensureEngineMatchReady).toHaveBeenCalledWith(RACE_MATCH_ID);
     expect(started).toBe(true);
-    expect(fallback.handleStart).not.toHaveBeenCalled();
     const copy = await engineContext.store.load(engineContext.accountId, RACE_MATCH_ID);
     expect(copy?.pending.some((e) => e.type === 'MATCH_START')).toBe(true);
   });
 
-  it('P3/Minor 3 (Fixrunde 4): liefert ensureEngineMatchReady fuer den KLAREN B1-Fall keine Ansicht, zeigt handleStart einen Toast statt still false zurueckzugeben -- OHNE fallback.handleStart', async () => {
-    const fallback = makeFallback();
+  it('P3/Minor 3 (Fixrunde 4): liefert ensureEngineMatchReady fuer den KLAREN B1-Fall keine Ansicht, zeigt handleStart einen Toast statt still false zurueckzugeben ', async () => {
     const engineContext = await makeEngineContext();
     const ensureEngineMatchReady = vi.fn().mockResolvedValue(null);
     const isEngineDestinedMatchId = (matchId: string) => matchId === RACE_MATCH_ID;
     const { result } = renderHook(() =>
-      useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback, isEngineDestinedMatchId, ensureEngineMatchReady),
+      useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, isEngineDestinedMatchId, ensureEngineMatchReady),
     );
 
     const started = await result.current.handleStart(RACE_MATCH_ID);
 
     expect(started).toBe(false);
-    expect(fallback.handleStart).not.toHaveBeenCalled();
     expect(mockShowWarning.mock.calls.length + mockShowError.mock.calls.length).toBeGreaterThan(0);
   });
 
@@ -286,13 +263,12 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
   // Server-Klaerung ist gescheitert, das Spiel bleibt "unklar") wurde bisher NICHT gefangen --
   // eine unbehandelte Ablehnung ueber ManagementTab.tsx (`void hookHandleStart`).
   it('E3 (Fixrunde 4): eine Ablehnung von ensureEngineMatchReady wird gefangen -- Toast + Sentry (P7-Weg), KEINE unbehandelte Ablehnung, handleStart loest mit false auf', async () => {
-    const fallback = makeFallback();
     const engineContext = await makeEngineContext();
     const rejectionError = new Error('Engine-Spiel race-1: Server-Klaerung fehlgeschlagen (Netz weg).');
     const ensureEngineMatchReady = vi.fn().mockRejectedValue(rejectionError);
     const isEngineDestinedMatchId = (matchId: string) => matchId === RACE_MATCH_ID;
     const { result } = renderHook(() =>
-      useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback, isEngineDestinedMatchId, ensureEngineMatchReady),
+      useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, isEngineDestinedMatchId, ensureEngineMatchReady),
     );
 
     // Kein Wurf ueber die Grenze hinweg -- `handleStart` selbst loest auf (mit `false`), NICHT ab.
@@ -300,7 +276,6 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
 
     expect(mockCaptureFeatureError).toHaveBeenCalledWith(rejectionError, 'tournament', 'ensureEngineMatchReady');
     expect(mockShowWarning.mock.calls.length + mockShowError.mock.calls.length).toBeGreaterThan(0);
-    expect(fallback.handleStart).not.toHaveBeenCalled();
   });
 
   // ---------------------------------------------------------------------------
@@ -310,23 +285,19 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
   // ---------------------------------------------------------------------------
 
   it('F3b2: handleCard(..., "YELLOW_RED") schreibt YELLOW_RED_CARD ins Engine-Log (Gegenbeispiel: nicht RED_CARD)', async () => {
-    const fallback = makeFallback();
     const engineContext = await makeEngineContext();
-    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback));
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
     await result.current.handleStart(ENGINE_MATCH_ID);
 
     await result.current.handleCard(ENGINE_MATCH_ID, 'teama', 'YELLOW_RED', { playerNumber: 7 });
-
-    expect(fallback.handleCard).not.toHaveBeenCalled();
     const copy = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
     const cardEvent = copy!.pending.find((e) => e.type === 'YELLOW_RED_CARD' || e.type === 'RED_CARD');
     expect(cardEvent?.type).toBe('YELLOW_RED_CARD');
   });
 
   it('F3b2: handleCard(..., "YELLOW") schreibt weiterhin YELLOW_CARD, handleCard(..., "RED") weiterhin RED_CARD', async () => {
-    const fallback = makeFallback();
     const engineContext = await makeEngineContext();
-    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback));
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
     await result.current.handleStart(ENGINE_MATCH_ID);
 
     await result.current.handleCard(ENGINE_MATCH_ID, 'teama', 'YELLOW');
@@ -338,22 +309,20 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
     expect(afterRed!.pending.some((e) => e.type === 'RED_CARD')).toBe(true);
   });
 
-  it('P2/P3: liefert ensureEngineMatchReady fuer einen fremd-Kandidaten KEINE Ansicht (bestaetigtes Altspiel), faellt handleStart auf fallback.handleStart zurueck', async () => {
-    const fallback = makeFallback();
+  // A-08d2b (Neuschnitt-Punkt 1): der P2-Fall (`null` = bestaetigtes Altspiel) bekommt keinen Altweg mehr.
+  it('A-08d2b: ensureEngineMatchReady liefert null fuer ein engine-bestimmtes Spiel -> Ablehnung, KEIN Anpfiff, kein Altweg', async () => {
     const engineContext = await makeEngineContext();
     const ensureEngineMatchReady = vi.fn().mockResolvedValue(null);
     const isEngineDestinedMatchId = (matchId: string) => matchId === RACE_MATCH_ID;
-    const isForeignCandidateMatchId = (matchId: string) => matchId === RACE_MATCH_ID;
     const { result } = renderHook(() =>
-      useEngineCommandWiring(
-        tournament(), engineContext, engineLiveMatches, fallback,
-        isEngineDestinedMatchId, ensureEngineMatchReady, isForeignCandidateMatchId,
-      ),
+      useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, isEngineDestinedMatchId, ensureEngineMatchReady),
     );
 
     const started = await result.current.handleStart(RACE_MATCH_ID);
 
-    expect(started).toBe(true);
-    expect(fallback.handleStart).toHaveBeenCalledWith(RACE_MATCH_ID);
+    expect(started).toBe(false);
+    expect(mockShowWarning.mock.calls.length + mockShowError.mock.calls.length).toBeGreaterThan(0);
+    const copy = await engineContext.store.load(engineContext.accountId, RACE_MATCH_ID);
+    expect(copy?.pending.some((e) => e.type === 'MATCH_START')).not.toBe(true);
   });
 });

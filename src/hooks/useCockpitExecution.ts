@@ -7,11 +7,9 @@
  * offenen Seite), statt auf einen Altpfad auszuweichen.
  *
  * Realtime-Abo: nur `engine.catchUp` für Engine-Spiele plus Kanalstatus (@FU-025). Die
- * Schreibhandler kommen aus `useEngineCommandWiring`. Ohne Engine-Kontext oder ohne Teams gibt es
- * keinen Schreibzugriff: der vorläufige Ablehnungs-Fallback zeigt nur einen Hinweis (A-08b entfernt ihn).
+ * Schreibhandler kommen aus `useEngineCommandWiring`; ohne Engine-Weg lehnen sie mit Hinweis ab.
  */
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useCallback, useEffect, useRef } from 'react';
 import type { Tournament } from '../types/tournament';
 import type { ScheduledMatch } from '../core/generators';
 import type { LiveMatch } from '../core/models/LiveMatch';
@@ -22,14 +20,13 @@ import {
   type MatchNotOnEngineReason,
 } from '../core/errors';
 import { useRepositories } from '../core/contexts/RepositoryContext';
-import { useToast } from '../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../lib/sentry';
 import { useEngineExecutionBridge } from './useEngineExecutionBridge';
 import { useEngineCommandWiring } from './useEngineCommandWiring';
-import type { EngineCommandFallbackHandlers } from './engineCommandWiringTypes';
+import type { EngineCommandHandlers } from './engineCommandWiringTypes';
 import { trackRealtimeChannelStatus } from './realtimeChannelStatus';
 
-export type UseCockpitExecutionReturn = EngineCommandFallbackHandlers & {
+export type UseCockpitExecutionReturn = EngineCommandHandlers & {
   liveMatches: Map<string, LiveMatch>;
   /** Engine-Ansicht eines Spiels; wirft, wenn das Spiel nicht über die Engine leitbar ist. */
   getLiveMatchData: (matchData: ScheduledMatch) => Promise<LiveMatch>;
@@ -57,40 +54,6 @@ function openSidesOf(tournament: Tournament, matchId: string): ('A' | 'B')[] {
   return (['A', 'B'] as const).filter((side) => matchSideTeamId(source, side) === undefined);
 }
 
-/** Vorläufiger Ablehnungs-Fallback (A-08a): jede Aktion ohne Engine-Weg zeigt nur einen Hinweis. */
-function useRejectingFallback(): EngineCommandFallbackHandlers {
-  const { t } = useTranslation('cockpit');
-  const { showWarning } = useToast();
-  return useMemo(() => {
-    const reject = async (): Promise<void> => { showWarning(t('engine.invalid')); };
-    return {
-      handleStart: async () => { showWarning(t('engine.invalid')); return false; },
-      handlePause: reject,
-      handleResume: reject,
-      handleFinish: reject,
-      handleForceFinish: reject,
-      handleGoal: reject,
-      handleCard: reject,
-      handleTimePenalty: reject,
-      handleSubstitution: reject,
-      handleFoul: reject,
-      handleStartOvertime: reject,
-      handleStartGoldenGoal: reject,
-      handleStartPenaltyShootout: reject,
-      handleRecordPenaltyResult: reject,
-      handleCancelTiebreaker: reject,
-      handleAbortPenaltyShootout: reject,
-      handleManualEditResult: reject,
-      handleAdjustTime: reject,
-      handleSkipMatch: reject,
-      handleUnskipMatch: reject,
-      handleUndoLastEvent: reject,
-      handleUpdateEvent: reject,
-      handleDeleteEvent: reject,
-    };
-  }, [showWarning, t]);
-}
-
 export function useCockpitExecution(tournament: Tournament): UseCockpitExecutionReturn {
   // Nur die Realtime-Quelle; kein Live-Match-Repository, kein Schreibweg über den Repo.
   const { isRealtimeEnabled, supabaseLiveMatchRepo } = useRepositories();
@@ -101,18 +64,15 @@ export function useCockpitExecution(tournament: Tournament): UseCockpitExecution
 
   const {
     mergedLiveMatches, matchEngineContext, engineLiveMatches, isEngineMatchId,
-    isEngineDestinedMatchId, isForeignCandidateMatchId, ensureEngineMatchReady, resolveEngineLiveMatchData,
+    isEngineDestinedMatchId, ensureEngineMatchReady, resolveEngineLiveMatchData,
   } = useEngineExecutionBridge(tournament, isRealtimeEnabled, LEERE_MAP);
 
-  const fallback = useRejectingFallback();
   const handlers = useEngineCommandWiring(
     tournament,
     matchEngineContext,
     engineLiveMatches,
-    fallback,
     isEngineDestinedMatchId,
     ensureEngineMatchReady,
-    isForeignCandidateMatchId,
   );
 
   // Realtime: nur Engine-Spiele holen nach (catchUp); Kanalstatus für @FU-025.

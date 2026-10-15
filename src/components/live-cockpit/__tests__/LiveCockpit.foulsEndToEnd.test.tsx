@@ -19,7 +19,7 @@ import { LocalMatchStore, ClockSync, MatchEngine, MatchCommands } from '../../..
 import { serverRules } from '../../../core/match';
 import type { MatchEngineContextValue } from '../../../features/match-engine/matchEngineContextInstance';
 import { buildValidMatches, computeLiveMatches } from '../../../hooks/engineMatchModel';
-import { useEngineCommandWiring, type EngineCommandFallbackHandlers } from '../../../hooks/useEngineCommandWiring';
+import { useEngineCommandWiring } from '../../../hooks/useEngineCommandWiring';
 import { LiveCockpit } from '../LiveCockpit';
 
 vi.mock('react-i18next', async () => {
@@ -88,10 +88,6 @@ async function makeRunningEngine() {
   return { context, commands, ctx };
 }
 
-const fallback = new Proxy({}, {
-  get: () => () => Promise.reject(new Error('Altpfad darf in diesem Test nicht laufen')),
-}) as EngineCommandFallbackHandlers;
-
 // Referenzstabile Props (neue `[]`/`vi.fn()` je Render wuerden Effekte im Cockpit neu ausloesen).
 const STABLE_PROPS = {
   fieldName: 'Feld 1', tournamentName: 'Test-Turnier', tournamentId: tournament.id, upcomingMatches: [],
@@ -109,7 +105,7 @@ function Harness({ context }: { context: MatchEngineContextValue }) {
   const [liveMatches, setLiveMatches] = useState(compute);
   // Jede Engine-Aenderung berechnet die Ansicht neu (wie useEngineMatches).
   useEffect(() => context.engine.subscribe(() => setLiveMatches(compute())), [context, compute]);
-  const wiring = useEngineCommandWiring(tournament, context, liveMatches, fallback);
+  const wiring = useEngineCommandWiring(tournament, context, liveMatches);
   const match = liveMatches.get(MATCH_ID);
   if (!match) {
     return null;
