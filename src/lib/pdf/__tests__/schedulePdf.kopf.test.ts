@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
-import { printColumns, printLimits } from '../../../design-tokens/print';
+import { printColumns, printLimits, printType } from '../../../design-tokens/print';
 import type { PlacementCriterion, Team, Tournament } from '../../../types/tournament';
 import { HALLENCUP_TEAMS, hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { layoutOf } from './pdfFixtureLayout';
@@ -281,5 +281,55 @@ describe('@BM-052 Kicker', () => {
 
     expect(pages[0].texts.map(trimmed)).toContain('Spielplan');
     expect(pages[0].texts.map(trimmed)).not.toContain('Spielplan zum Ausfüllen');
+  });
+});
+
+/** Fixrunde B-28a3-3b, Punkt 3: genau 60 Zeichen (Qualitätsziel A5.1 „Druck“), dazu ein Titel weit über 110 Zeichen. */
+const TITEL_60 = 'Internationaler Hallenfußball-Wintercup der SG Nord-Süd 2026';
+const TITEL_LANG = `${TITEL_60} ${TITEL_60} ${TITEL_60}`;
+
+describe('K3 Fixrunde: Untertitel und Kurzkopf-Linie liegen unter der zweiten Titelzeile', () => {
+  it('@BM-052 Folgeseite mit zwei Titelzeilen: Untertitel ≥ 5,5 mm unter Zeile 2, Linie darunter, Inhalt darunter', async () => {
+    const tournament = hallencupMitRegelwerk({ title: LANGER_TITEL });
+    const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
+    const folge = pages[1];
+    const titelZeilen = folge.texts.filter(t => t.y < 30 && Math.abs(t.size - printType.titleShort) <= SIZE_TOL);
+    const untertitel = folge.texts.find(t => t.y < 36 && Math.abs(t.size - printType.subtitle) <= SIZE_TOL);
+    const linie = folge.lines.find(l => Math.abs(l.y1 - l.y2) < 0.01 && l.y1 < 36);
+    expect(new Set(titelZeilen.map(t => Math.round(t.y * 10))).size, 'zwei Titelzeilen').toBe(2);
+    expect(untertitel, 'Untertitel gefunden').toBeDefined();
+    expect(linie, 'Kurzkopf-Linie gefunden').toBeDefined();
+
+    const zeile2 = Math.max(...titelZeilen.map(t => t.y));
+    expect((untertitel?.y ?? 0) - zeile2).toBeGreaterThanOrEqual(5.5);
+    expect((linie?.y1 ?? 0) - (untertitel?.y ?? 0)).toBeGreaterThanOrEqual(2);
+    const inhalt = Math.min(...folge.texts.filter(t => t.y > (linie?.y1 ?? 0)).map(t => t.y));
+    expect(inhalt - (linie?.y1 ?? 0)).toBeGreaterThanOrEqual(1.5);
+  });
+});
+
+describe('K3 Fixrunde: Grenzen des Kurzkopf-Titels', () => {
+  it('@BM-052 ein Turniername mit genau 60 Zeichen steht vollständig auf der Folgeseite, ohne „…“', async () => {
+    expect(TITEL_60.length).toBe(60);
+    const tournament = hallencupMitRegelwerk({ title: TITEL_60 });
+    const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
+    const kopf = pages[1].texts
+      .filter(t => t.y < 30 && Math.abs(t.size - printType.titleShort) <= SIZE_TOL)
+      .map(t => t.str)
+      .join(' ');
+
+    expect(squash(kopf)).toBe(squash(TITEL_60));
+    expect(kopf).not.toContain('…');
+  });
+
+  it('@BM-052 ein Turniername weit über 110 Zeichen endet im Kurzkopf mit „…“', async () => {
+    const tournament = hallencupMitRegelwerk({ title: TITEL_LANG });
+    const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
+    const kopf = pages[1].texts
+      .filter(t => t.y < 30 && Math.abs(t.size - printType.titleShort) <= SIZE_TOL)
+      .map(t => t.str.trim());
+
+    expect(kopf.length).toBeLessThanOrEqual(2);
+    expect(kopf[kopf.length - 1].endsWith('…')).toBe(true);
   });
 });
