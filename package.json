@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "test:sw-precache": "rm -rf dist-swcheck && VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= vite build --outDir dist-swcheck && node scripts/check-sw-precache.mjs dist-swcheck",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "test": "vitest",
