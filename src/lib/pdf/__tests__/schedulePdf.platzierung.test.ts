@@ -5,7 +5,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { generateFullSchedule } from '../../../core/generators';
-import { printLimits } from '../../../design-tokens/print';
+import { printFont, printGap, printLimits, printMetrics, printUnit } from '../../../design-tokens/print';
+import { pageGeometry } from '../layout';
 import { buildSchedulePdf, type PDFExportOptions } from '../schedulePdf';
 import type { RankEntry } from '../placement';
 import { HALLENCUP_STANDINGS, HALLENCUP_TEAMS, hallencupSchedule, hallencupTournament } from './pdfFixture';
@@ -60,7 +61,9 @@ async function platzierung(
   const zeilen = darunter; // Reihenfolge des Dokuments (Seiten nacheinander)
   const sätze = zeilen.filter(t => t.str.trim().startsWith('Die Platzierung'));
   // pdfjs fasst Platznummer und Teamname einer Zeile zu einem Textstück zusammen („1. SC Ost“)
-  const platzZeilen = zeilen.filter(t => /^\d+\./.test(t.str.trim()));
+  // zweispaltig gezeichnet (Zeile für Zeile links, rechts): nach Platznummer ordnen
+  const platzNr = (t: { str: string }): number => Number(/^\d+/.exec(t.str.trim())?.[0]);
+  const platzZeilen = zeilen.filter(t => /^\d+\./.test(t.str.trim())).sort((a, b) => platzNr(a) - platzNr(b));
   const nummern = platzZeilen.map(t => /^\d+\./.exec(t.str.trim())?.[0] ?? '');
   const weitere = [
     ...platzZeilen.map(t => ({ str: t.str.trim().replace(/^\d+\.\s*/, ''), size: t.size })).filter(w => w.str !== ''),
@@ -185,17 +188,72 @@ describe('@DR-009 Platzierung nach dem Abschluss', () => {
   });
 });
 
-describe('@DR-009 Seitenumbruch der Platzierung', () => {
-  it('Liste bricht nur zwischen Zeilen: jede Nummer hat ihre Linie auf derselben Seite, 24 Teams', async () => {
-    const teams = Array.from({ length: 24 }, (_, i) => ({ id: `t${i}`, name: `Team ${i + 1}`, group: i < 12 ? 'A' : 'B' }));
-    const tournament = hallencupTournament({ teams, numberOfTeams: 24 });
-    const { pages } = await platzierung({}, undefined, generateFullSchedule(tournament, 'de'), tournament);
-    const nummern = pages.flatMap(p => p.texts.filter(t => /^\d+\.$/.test(t.str.trim())).map(t => ({ page: p, t })));
+describe('@DR-009 Platzierung zweispaltig', () => {
+  const nummernDer = (page: LayoutPage) =>
+    page.texts.filter(t => /^\d+\.$/.test(t.str.trim())).sort((a, b) => Number.parseInt(a.str, 10) - Number.parseInt(b.str, 10));
 
-    expect(nummern.length).toBeGreaterThanOrEqual(24);
-    for (const { page, t } of nummern.slice(-24)) {
+  it('Plätze 1–4 links, 5–8 rechts, gleiche Zeilen nebeneinander (x-Positionen)', async () => {
+    const { pages } = await platzierung();
+    const nr = nummernDer(pages[pages.length - 1]);
+    const [links, rechts] = [nr.slice(0, 4), nr.slice(4)];
+
+    expect(nr.map(t => t.str.trim())).toEqual(NUMMERN_8);
+    for (const t of links) {expect(t.x + t.w, t.str).toBeCloseTo(links[0].x + links[0].w, 0);}
+    for (const t of rechts) {expect(t.x + t.w, t.str).toBeCloseTo(rechts[0].x + rechts[0].w, 0);}
+    expect(rechts[0].x).toBeGreaterThan(links[0].x + pageGeometry('a4', 'portrait').contentWidth / 2 - printMetrics.placeNumberWidth);
+    links.forEach((t, i) => expect(rechts[i].y, `Zeile ${i + 1}`).toBeCloseTo(t.y, 1));
+  });
+
+  it('Zeilenhöhe mindestens der Token (und der Token mindestens 8 mm)', async () => {
+    const { pages } = await platzierung();
+    const links = nummernDer(pages[pages.length - 1]).slice(0, 4);
+
+    expect(printMetrics.placeRowHeight).toBeGreaterThanOrEqual(8);
+    for (let i = 1; i < links.length; i++) {
+      expect(links[i].y - links[i - 1].y).toBeGreaterThanOrEqual(printMetrics.placeRowHeight - SIZE_TOL);
+    }
+  });
+
+  it('final: zweispaltig mit Teamnamen, jede Spalte hält ihre Namen im eigenen Bereich', async () => {
+    const { pages } = await platzierung({ ranking: ENDSTAND, closed: true });
+    const seite = pages[pages.length - 1];
+    const geo = pageGeometry('a4', 'portrait');
+    const zeilen = seite.texts.filter(t => /^\d+\. /.test(t.str.trim()));
+
+    expect(zeilen).toHaveLength(8);
+    const mitte = geo.left + geo.contentWidth / 2;
+    expect(zeilen.filter(t => t.x < mitte)).toHaveLength(4);
+    for (const t of zeilen.filter(t => t.x < mitte)) {expect(t.x + t.w, t.str).toBeLessThan(mitte);}
+  });
+
+  it('liegt auf der Finalseite unter der Finaltabelle, ohne sie zu überlappen, und über dem Seitenende', async () => {
+    const { pages } = await platzierung();
+    const geo = pageGeometry('a4', 'portrait');
+    const seite = pages[pages.length - 1];
+    const titel = seite.texts.find(t => t.str.trim() === 'Platzierung');
+    if (!titel) {throw new Error('Überschrift fehlt');}
+    const darueber = [...seite.lines.map(l => l.y1), ...seite.rects.map(r => r.y + r.h)].filter(y => y < titel.y);
+    const unterkanteDarueber = Math.max(...darueber);
+
+    expect(seite.texts.some(t => t.str.trim() === 'Finale')).toBe(true);
+    expect(titel.y - titel.size * printUnit.mmPerPt * printFont.ascentEm).toBeGreaterThanOrEqual(unterkanteDarueber + printGap.sectionGap - SIZE_TOL);
+    for (const t of nummernDer(seite)) {expect(t.y).toBeLessThanOrEqual(geo.bottom);}
+  });
+
+  it('80 Teams (40 Zeilen) brechen nur zwischen Zeilen um: jede Nummer hat ihre Linie auf derselben Seite', async () => {
+    const teams = Array.from({ length: 80 }, (_, i) => ({ id: `t${i}`, name: `Team ${i + 1}`, group: `G${Math.floor(i / 10)}` }));
+    const tournament = hallencupTournament({ teams, numberOfTeams: 80, numberOfGroups: 8 });
+    const { pages } = await platzierung({}, undefined, generateFullSchedule(tournament, 'de'), tournament);
+    const geo = pageGeometry('a4', 'portrait');
+    const mitNummern = pages.filter(p => nummernDer(p).length > 0 && p.texts.some(t => t.str.trim() !== '' && /^\d+\.$/.test(t.str.trim())));
+    const nummern = mitNummern.flatMap(p => nummernDer(p).map(t => ({ page: p, t })));
+
+    expect(nummern.length).toBe(80);
+    expect(mitNummern.length).toBeGreaterThanOrEqual(2);
+    for (const { page, t } of nummern) {
       const hat = page.lines.some(l => Math.abs(l.y1 - l.y2) < FLAT_TOL && Math.abs(l.y1 - t.y) < 4 && Math.abs(l.x2 - l.x1) >= LINE_MIN_LENGTH);
       expect(hat, `Linie zu ${t.str}`).toBe(true);
+      expect(t.y).toBeLessThanOrEqual(geo.bottom);
     }
   });
 });

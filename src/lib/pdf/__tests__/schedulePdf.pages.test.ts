@@ -24,27 +24,26 @@ function spielnummern(page: LayoutPage): number[] {
     .map(t => Number(t.str));
 }
 
-describe('@DR-002 Seitenaufbau: 12 Spiele in fester Reihenfolge auf vier Seiten (Platzierung mit Schreiblinien als eigener Block)', () => {
-  it('Seite 1 Teilnehmer und Gruppenspiele, Seite 2 Tabellen, Seite 3 Finalrunde, Seite 4 Platzierung (@DR-009)', async () => {
+describe('@DR-002 Seitenaufbau: 12 Spiele passen auf drei Seiten in fester Reihenfolge', () => {
+  it('Seite 1 Teilnehmer und Gruppenspiele, Seite 2 Tabellen, Seite 3 Finalrunde und Platzierung (zweispaltig, @DR-009)', async () => {
     expect(groupMatches(hallencupSchedule())).toHaveLength(12);
     const { pages } = await layoutOf();
 
-    expect(pages).toHaveLength(4);
+    expect(pages).toHaveLength(3);
     expect(pageText(pages[0])).toContain('Teilnehmer');
     expect(pageText(pages[0])).toContain('Gruppenphase');
     expect(pageText(pages[0])).not.toContain('Tabelle – Gruppe A');
     expect(pageText(pages[1])).toContain('Tabelle – Gruppe A');
     expect(pageText(pages[1])).not.toContain('Platzierung');
     expect(pageText(pages[2])).toContain('Spiel um Platz 3');
-    expect(pageText(pages[2])).not.toContain('Platzierung');
-    expect(pageText(pages[3])).toContain('Platzierung');
+    expect(pageText(pages[2])).toContain('Platzierung');
   });
 
-  it('Gegenbeispiel: ohne Tabellen entfällt die Tabellenseite, die Platzierung steht auf Seite 3', async () => {
+  it('Gegenbeispiel: ohne Tabellen entfällt die Tabellenseite, die Platzierung bleibt auf Seite 2', async () => {
     const { pages } = await layoutOf({ includeStandings: false });
 
-    expect(pages).toHaveLength(3);
-    expect(pageText(pages[2])).toContain('Platzierung');
+    expect(pages).toHaveLength(2);
+    expect(pageText(pages[1])).toContain('Platzierung');
     expect(pages.flatMap(p => p.texts.map(t => t.str)).some(s => s.startsWith('Tabelle'))).toBe(false);
   });
 
@@ -81,8 +80,8 @@ describe('@DR-002 Folgeseite: 30 Spiele laufen über Seite 1 hinaus, Folgeseite 
     expect(groupMatches(schedule)).toHaveLength(30);
     const { pages } = await layoutOf({}, schedule);
 
-    // Die Zeilen sind mit den Kästchen höher (B-28 C1, 8 mm): 30 Spiele brauchen eine Seite mehr
-    expect(pages).toHaveLength(5);
+    // Die Zeilen sind mit den Kästchen höher (B-28 C1, 8 mm): 30 Spiele brauchen mehr Seiten; die zweispaltige Platzierung (C2) steht noch auf der Finalseite
+    expect(pages).toHaveLength(4);
     pages.forEach((page, i) => {
       expect(pageText(page), `Seite ${i + 1}`).toContain(`Seite ${i + 1} von ${pages.length}`);
     });
