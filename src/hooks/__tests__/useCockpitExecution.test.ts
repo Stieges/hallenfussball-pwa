@@ -126,6 +126,24 @@ describe('useCockpitExecution (A-08a, @FU-069)', () => {
     });
   });
 
+  // B6 (A-08d2b, früher useMatchExecution.test "handleFinish speichert das Turnier nicht"): der Hook hat
+  // keinen Turnier-Speicherweg; Abpfiff schreibt genau ein MATCH_END in den Engine-Log und fasst das
+  // Live-Repository (Altweg) nicht an.
+  it('B6 (A-08d2b): handleFinish schreibt genau ein MATCH_END in den Engine-Log, ohne Alt-Repo-Schreibzugriff', async () => {
+    const { result } = renderHook(() => useCockpitExecution(tournament()));
+    await result.current.handleStart(ENGINE_MATCH_ID);
+    await result.current.handleFinish(ENGINE_MATCH_ID);
+
+    const ctx = engineCtx.current;
+    if (!ctx) { throw new Error('Engine-Kontext fehlt'); }
+    await waitFor(async () => {
+      const copy = await ctx.store.load(ctx.accountId, ENGINE_MATCH_ID);
+      expect(copy?.pending.map((e) => e.type)).toEqual(['MATCH_START', 'MATCH_END']);
+    });
+    expect(mockLiveRepo.save).not.toHaveBeenCalled();
+    expect(mockLiveRepo.saveAll).not.toHaveBeenCalled();
+  });
+
   it('Gegenbeispiel: Ergebnis schon eingetragen -> MatchNotOnEngineError(resultEntered), kein Altweg', async () => {
     const { result } = renderHook(() => useCockpitExecution(tournament()));
 
