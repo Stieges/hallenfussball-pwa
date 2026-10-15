@@ -55,7 +55,14 @@ export interface DialogSurfaceProps {
   role?: 'dialog' | 'alertdialog';
   /** Form: zentriert (Standard) oder Blatt von unten. */
   placement?: 'center' | 'sheet';
-  /** Lesebreite der Fläche. Standard 480px. */
+  /**
+   * Größe: normal (Standard) oder Vollbild. Vollbild füllt auf jedem Gerät die ganze Fläche
+   * (kein Rand, keine Rundung); Kopf, Inhalt und Fußleiste ordnet der Aufrufer als direkte
+   * Kinder, der Inhalt (`main`) scrollt, die Fußleiste klebt unten. Für Eingabe-Bildschirme
+   * wie das Strafstoßschießen (B-43b2-F).
+   */
+  size?: 'default' | 'fullscreen';
+  /** Lesebreite der Fläche. Standard 480px (bei Vollbild ohne Wirkung). */
   maxWidth?: string;
   /** Stapelhöhe; Standard: Navigation. */
   zIndex?: number;
@@ -84,6 +91,7 @@ export const DialogSurface = ({
   onBackdropClick,
   role = 'dialog',
   placement = 'center',
+  size = 'default',
   maxWidth = dialogWidths.md,
   zIndex = cssVars.zIndex.navigation,
   accent,
@@ -113,6 +121,7 @@ export const DialogSurface = ({
   if (!isOpen) {return null;}
 
   const isSheet = placement === 'sheet';
+  const isFull = size === 'fullscreen';
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (dismissible && closeOnBackdropClick && e.target === e.currentTarget) {
@@ -132,22 +141,25 @@ export const DialogSurface = ({
     alignItems: isSheet ? 'stretch' : 'center',
     justifyContent: isSheet ? 'flex-end' : 'center',
     zIndex,
-    padding: isSheet ? 0 : cssVars.spacing.lg,
-    overflowY: 'auto',
+    padding: isSheet || isFull ? 0 : cssVars.spacing.lg,
+    overflowY: isFull ? 'hidden' : 'auto',
   };
 
   const panelStyle: CSSProperties = {
     background: cssVars.colors.surfaceElevated,
     color: cssVars.colors.textPrimary,
     border: accent ? `2px solid ${accent}` : `1px solid ${cssVars.colors.border}`,
-    borderRadius: isSheet
-      ? `${cssVars.borderRadius.lg} ${cssVars.borderRadius.lg} 0 0`
-      : cssVars.borderRadius.lg,
+    borderRadius: isFull
+      ? 0
+      : isSheet
+        ? `${cssVars.borderRadius.lg} ${cssVars.borderRadius.lg} 0 0`
+        : cssVars.borderRadius.lg,
     boxShadow: cssVars.shadows.lg,
     width: '100%',
-    maxWidth,
-    maxHeight: isSheet ? '80vh' : '90vh',
-    overflowY: 'auto',
+    maxWidth: isFull ? '100%' : maxWidth,
+    ...(isFull ? { height: '100%', display: 'flex', flexDirection: 'column' as const } : {}),
+    maxHeight: isFull ? '100%' : isSheet ? '80vh' : '90vh',
+    overflowY: isFull ? 'hidden' : 'auto',
     position: 'relative',
     paddingBottom: isSheet ? `env(safe-area-inset-bottom, ${cssVars.spacing.md})` : undefined,
     animation: isSheet
@@ -156,12 +168,13 @@ export const DialogSurface = ({
   };
 
   const dialog = (
-    <div style={scrimStyle} className="dialog-surface-scrim" data-placement={placement} onClick={handleBackdropClick}>
+    <div style={scrimStyle} className="dialog-surface-scrim" data-placement={placement} data-size={size} onClick={handleBackdropClick}>
       <div
         ref={focusTrap.containerRef}
         style={panelStyle}
         className={['dialog-surface-panel', panelClassName].filter(Boolean).join(' ')}
         data-placement={placement}
+        data-size={size}
         data-testid={testId}
         onClick={(e) => e.stopPropagation()}
         role={role}
@@ -182,12 +195,12 @@ export const DialogSurface = ({
           to { transform: translateY(0); }
         }
         ${mediaQueries.tabletDown} {
-          .dialog-surface-scrim[data-placement="center"] {
+          .dialog-surface-scrim[data-placement="center"]:not([data-size="fullscreen"]) {
             padding: ${cssVars.spacing.sm} !important;
             padding-top: ${cssVars.spacing.xl} !important;
             align-items: flex-start !important;
           }
-          .dialog-surface-panel[data-placement="center"] {
+          .dialog-surface-panel[data-placement="center"]:not([data-size="fullscreen"]) {
             max-width: 100% !important;
           }
         }

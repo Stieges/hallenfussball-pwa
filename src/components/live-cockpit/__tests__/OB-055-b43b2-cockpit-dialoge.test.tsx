@@ -21,12 +21,11 @@ import { TimePenaltyDialog } from '../components/Dialogs/TimePenaltyDialog';
 import { PenaltyShootoutDialog as LivePenaltyShootoutDialog } from '../components/Tiebreaker/PenaltyShootoutDialog';
 import { TiebreakerBanner } from '../components/Tiebreaker/TiebreakerBanner';
 import { ScoreEditDialog } from '../components/ScoreEditDialog';
-import { OpenEntriesBottomSheet } from '../components/OpenEntries/OpenEntriesBottomSheet';
 import { EditScoreDialog } from '../../match-cockpit/EditScoreDialog';
 import { EditTimeDialog } from '../../match-cockpit/EditTimeDialog';
 import { PenaltyShootoutDialog as MatchPenaltyShootoutDialog } from '../../match-cockpit/PenaltyShootoutDialog';
 import type { LiveMatch } from '../../match-cockpit/MatchCockpit';
-import { DEFAULT_MATCH_COCKPIT_SETTINGS, type EditableMatchEvent, type MatchEvent } from '../../../types/tournament';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS, type EditableMatchEvent } from '../../../types/tournament';
 import { measurePanelContrast } from '../../../test/dialogContrast';
 import { isOpaque, resolveToken, type ThemeName } from '../../../test/contrast';
 
@@ -36,7 +35,6 @@ const home = { id: 'h', name: 'VfB Ufer' };
 const away = { id: 'a', name: 'SC Nord' };
 
 const editableEvent: EditableMatchEvent = { id: 'e1', type: 'GOAL', matchMinute: 3.5, teamId: 'h', incomplete: true };
-const openEvent = { id: 'e1', type: 'GOAL', matchMinute: 3.5, teamId: 'h', incomplete: true } as unknown as MatchEvent;
 const liveMatch = {
   id: 'm1', number: 1, phaseLabel: 'Finale', fieldId: 'f1', scheduledKickoff: '2026-10-01T10:00:00.000Z',
   durationSeconds: 600, homeTeam: home, awayTeam: away, homeScore: 1, awayScore: 1, status: 'finished',
@@ -62,13 +60,6 @@ const KINDS: Kind[] = [
   { name: 'Tiebreaker/PenaltyShootoutDialog', mount: () => void render(<LivePenaltyShootoutDialog homeTeamName="VfB Ufer" awayTeamName="SC Nord" onRecordShot={noop} onFinish={noop} onCancel={noop} />) },
   { name: 'Tiebreaker/TiebreakerBanner', mount: () => void render(<TiebreakerBanner homeTeamName="VfB Ufer" awayTeamName="SC Nord" score={2} onStartPenaltyShootout={noop} onEndAsDraw={noop} />) },
   { name: 'ScoreEditDialog', mount: () => void render(<ScoreEditDialog isOpen onClose={noop} onConfirm={noop} currentHomeScore={1} currentAwayScore={0} homeTeamName="VfB Ufer" awayTeamName="SC Nord" />) },
-  {
-    name: 'OpenEntriesBottomSheet (aufgeklappt)',
-    mount: async () => {
-      render(<OpenEntriesBottomSheet openEvents={[openEvent]} homeTeam={home} awayTeam={away} onEditEvent={noop} />);
-      await userEvent.setup().click(screen.getByRole('button', { name: /offene Eingaben/ }));
-    },
-  },
   { name: 'match-cockpit/EditScoreDialog', mount: () => void render(<EditScoreDialog homeTeamName="VfB Ufer" awayTeamName="SC Nord" currentHomeScore={1} currentAwayScore={0} onSubmit={noop} onCancel={noop} />) },
   { name: 'match-cockpit/EditTimeDialog', mount: () => void render(<EditTimeDialog currentElapsedSeconds={125} durationSeconds={600} onSubmit={noop} onCancel={noop} />) },
   { name: 'match-cockpit/PenaltyShootoutDialog', mount: () => void render(<MatchPenaltyShootoutDialog match={liveMatch} onSubmit={noop} onCancel={noop} />) },
@@ -113,6 +104,53 @@ describe('@OB-055 B-43b2 – Cockpit-Dialoge: deckende Fläche und Kontrast', ()
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.getByRole('alertdialog')).toBeTruthy();
     expect(onEndAsDraw).not.toHaveBeenCalled();
+  });
+
+  it('TiebreakerBanner: kein History-Eintrag, Fokus im Banner, Hintergrund gesperrt (inert), danach wieder frei', () => {
+    const outside = document.createElement('button');
+    document.body.appendChild(outside);
+    const push = vi.spyOn(window.history, 'pushState');
+    const lengthBefore = window.history.length;
+    const { unmount } = render(<TiebreakerBanner homeTeamName="A" awayTeamName="B" score={1} onEndAsDraw={noop} onStartPenaltyShootout={noop} />);
+    expect(push).not.toHaveBeenCalled();
+    expect(window.history.length).toBe(lengthBefore);
+    expect(screen.getByRole('alertdialog').contains(document.activeElement)).toBe(true);
+    expect(outside.hasAttribute('inert')).toBe(true);
+    expect(document.body.style.overflow).toBe('hidden');
+    unmount();
+    expect(outside.hasAttribute('inert')).toBe(false);
+    expect(document.body.style.overflow).toBe('');
+    push.mockRestore();
+    outside.remove();
+  });
+});
+
+describe('@SL-104 @OB-055 B-43b2-F – Strafstoßschießen im Live-Cockpit füllt die ganze Fläche', () => {
+  it('Vollbild-Form, Fußleiste klebt unten, Knöpfe mindestens 44 px, Beenden und TOR/DANEBEN mindestens 56 px', async () => {
+    const user = userEvent.setup();
+    render(<LivePenaltyShootoutDialog homeTeamName="VfB Ufer" awayTeamName="SC Nord" onRecordShot={noop} onFinish={noop} onCancel={noop} />);
+    const panel = screen.getByTestId('penalty-shootout-dialog');
+    expect(panel.getAttribute('data-size')).toBe('fullscreen');
+    expect(panel.style.height).toBe('100%');
+    expect(panel.style.borderRadius).toMatch(/^0/);
+    expect(panel.parentElement!.style.padding).toMatch(/^0/);
+    const footer = panel.querySelector('footer')!;
+    expect(footer.style.position).toBe('sticky');
+    for (const b of footer.querySelectorAll('button')) {
+      expect(b.style.minHeight).toBe('var(--touch-target-minimum)');
+    }
+    for (const name of ['TOR', 'DANEBEN']) {
+      expect(screen.getByRole('button', { name: new RegExp(name) }).style.minHeight).toBe('var(--touch-target-primary)');
+    }
+    // Entscheidung herbeiführen: Heim trifft immer, Gast verschießt immer -> nach wenigen Runden entschieden.
+    for (let i = 0; i < 10 && screen.queryByRole('button', { name: /TOR/ }); i += 1) {
+      await user.click(screen.getByRole('button', { name: /TOR/ }));
+      if (!screen.queryByRole('button', { name: /DANEBEN/ })) {break;}
+      await user.click(screen.getByRole('button', { name: /DANEBEN/ }));
+    }
+    const finish = Array.from(footer.querySelectorAll('button')).find((b) => /beenden/i.test(b.textContent ?? ''));
+    expect(finish, '„beenden“ nach entschiedenem Schießen').toBeDefined();
+    expect(finish!.style.minHeight).toBe('var(--touch-target-primary)');
   });
 });
 

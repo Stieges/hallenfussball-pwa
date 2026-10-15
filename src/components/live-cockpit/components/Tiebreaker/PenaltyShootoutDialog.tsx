@@ -13,7 +13,7 @@
 
 import { useState, useMemo, useCallback, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens';
 import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import { useIsMobile } from '../../../../hooks/useIsMobile';
 import moduleStyles from '../../LiveCockpit.module.css';
@@ -152,6 +152,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   // ---------------------------------------------------------------------------
 
   const headerStyle: CSSProperties = {
+    flexShrink: 0,
     padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
     borderBottom: `1px solid ${cssVars.colors.border}`,
     display: 'flex',
@@ -170,11 +171,13 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
 
   const contentStyle: CSSProperties = {
     flex: 1,
+    minHeight: 0,
+    overflowY: 'auto',
     padding: isMobile ? cssVars.spacing.md : cssVars.spacing.xl,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: cssVars.spacing.xl,
+    gap: isMobile ? cssVars.spacing.md : cssVars.spacing.xl,
     width: '100%',
   };
 
@@ -271,7 +274,8 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
 
   const actionButtonStyle = (variant: 'goal' | 'miss'): CSSProperties => ({
     flex: 1,
-    padding: isMobile ? cssVars.spacing.lg : cssVars.spacing.md,
+    minHeight: cssVars.touchTargets.primary,
+    padding: cssVars.spacing.md,
     fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.semibold,
     color: variant === 'goal' ? cssVars.colors.onPrimary : cssVars.colors.textPrimary,
@@ -289,6 +293,10 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   });
 
   const footerStyle: CSSProperties = {
+    flexShrink: 0,
+    position: 'sticky',
+    bottom: 0,
+    background: cssVars.colors.surfaceElevated,
     padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
     borderTop: `1px solid ${cssVars.colors.border}`,
     display: 'flex',
@@ -298,6 +306,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
 
   const footerButtonStyle = (variant: 'primary' | 'secondary' | 'ghost'): CSSProperties => ({
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
+    minHeight: variant === 'primary' ? cssVars.touchTargets.primary : cssVars.touchTargets.minimum,
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.medium,
     color: variant === 'primary' ? cssVars.colors.onPrimary : cssVars.colors.textSecondary,
@@ -343,7 +352,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
       isOpen
       onClose={handleEscape}
       closeOnBackdropClick={false}
-      maxWidth={dialogWidths.lg}
+      size="fullscreen"
       labelledBy="penalty-shootout-title"
       panelClassName={moduleStyles.dialogOverlay}
       testId="penalty-shootout-dialog"

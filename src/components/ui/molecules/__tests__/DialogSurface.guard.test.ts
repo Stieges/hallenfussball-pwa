@@ -17,14 +17,23 @@ import { countDialogMarkers, countScrims } from '../../../../test/dialogGuard';
 const OBERGRENZE_MARKER = 16;
 const OBERGRENZE_SCRIMS = 6;
 
+type Zaehler = 'marker' | 'scrims';
+
 /**
- * Begründete Ausnahmen: Dateien, die kein Modal sind und deshalb nicht in den Zählern stehen.
- * Jede Ausnahme braucht einen Grund; die Datei muss existieren (sonst veraltet die Liste).
+ * Begründete Ausnahmen: Dateien, die kein Modal sind. Die Ausnahme gilt NUR für den genannten
+ * Zähler (B-43b2-F): ein Dialog-Marker (role=dialog, aria-modal, createPortal) im Menü würde
+ * weiter gezählt. Jede Ausnahme braucht einen Grund; die Datei muss existieren.
  */
-const AUSNAHMEN: Record<string, string> = {
-  'components/live-cockpit/components/OverflowMenu/index.tsx':
-    'Aufklappmenü (kein Modal, keine Fokusfalle): fixe Fläche und Klick-Fänger enthalten Overlay-Farbe, sind aber keine Abdunkelung eines Dialogs.',
+const AUSNAHMEN: Record<string, { zaehler: Zaehler; grund: string }> = {
+  'components/live-cockpit/components/OverflowMenu/index.tsx': {
+    zaehler: 'scrims',
+    grund: 'Aufklappmenü (kein Modal, keine Fokusfalle): fixe Fläche und Klick-Fänger enthalten Overlay-Farbe, sind aber keine Abdunkelung eines Dialogs.',
+  },
 };
+
+function ausgenommen(file: string, zaehler: Zaehler): boolean {
+  return Object.entries(AUSNAHMEN).some(([rel, a]) => a.zaehler === zaehler && file.endsWith(rel));
+}
 
 const SRC = resolve(process.cwd(), 'src');
 
@@ -42,12 +51,12 @@ function produktivDateien(dir: string): string[] {
   return out;
 }
 
-function zaehle(fn: (source: string) => number): { summe: number; treffer: string[] } {
+function zaehle(zaehler: Zaehler, fn: (source: string) => number): { summe: number; treffer: string[] } {
   let summe = 0;
   const treffer: string[] = [];
   for (const file of produktivDateien(SRC)) {
     if (file.endsWith('DialogSurface.tsx')) {continue;}
-    if (Object.keys(AUSNAHMEN).some((rel) => file.endsWith(rel))) {continue;}
+    if (ausgenommen(file, zaehler)) {continue;}
     const n = fn(readFileSync(file, 'utf8'));
     if (n > 0) {
       summe += n;
@@ -59,20 +68,30 @@ function zaehle(fn: (source: string) => number): { summe: number; treffer: strin
 
 describe('@OB-055 Architektur-Wächter DialogSurface', () => {
   it('Dialog-Marker (role, aria-modal ohne role, createPortal) außerhalb von DialogSurface nicht mehr als Obergrenze', () => {
-    const { summe, treffer } = zaehle(countDialogMarkers);
+    const { summe, treffer } = zaehle('marker', countDialogMarkers);
     expect(summe, treffer.join('\n')).toBeLessThanOrEqual(OBERGRENZE_MARKER);
   }, 60_000); // Dateibaum-Lauf unter Hook-Last (parallele Worker)
 
   it('Abdunkelungen über position: fixed mit Overlay-Farbe außerhalb von DialogSurface nicht mehr als Obergrenze', () => {
-    const { summe, treffer } = zaehle(countScrims);
+    const { summe, treffer } = zaehle('scrims', countScrims);
     expect(summe, treffer.join('\n')).toBeLessThanOrEqual(OBERGRENZE_SCRIMS);
   }, 60_000);
 });
 
 describe('@OB-055 Wächter – Ausnahmeliste', () => {
-  it.each(Object.entries(AUSNAHMEN))('%s: Datei existiert und der Grund ist begründet', (rel, grund) => {
+  it.each(Object.entries(AUSNAHMEN))('%s: Datei existiert und der Grund ist begründet', (rel, a) => {
     expect(statSync(join(SRC, rel)).isFile()).toBe(true);
-    expect(grund.length).toBeGreaterThan(30);
+    expect(a.grund.length).toBeGreaterThan(30);
+  });
+
+  it('Gegenbeispiel: das Menü ist nur vom Abdunkelungs-Zähler ausgenommen, nie vom Marker-Zähler', () => {
+    const menu = join(SRC, 'components/live-cockpit/components/OverflowMenu/index.tsx');
+    expect(ausgenommen(menu, 'scrims')).toBe(true);
+    expect(ausgenommen(menu, 'marker')).toBe(false);
+    // Ein Dialog-Marker im Menü würde gezählt (Mutation: role="dialog" aria-modal="true" im Menü).
+    expect(countDialogMarkers(`${readFileSync(menu, 'utf8')}\n<div role="dialog" aria-modal="true" />`)).toBeGreaterThan(
+      countDialogMarkers(readFileSync(menu, 'utf8')),
+    );
   });
 
   it('Gegenbeispiel: ohne die Ausnahme würde das Menü als Abdunkelung gezählt', () => {
@@ -159,7 +178,6 @@ describe('T1 Dialogbreiten kommen nur aus dialogWidths', () => {
     'components/live-cockpit/components/Tiebreaker/PenaltyShootoutDialog.tsx',
     'components/live-cockpit/components/Tiebreaker/TiebreakerBanner.tsx',
     'components/live-cockpit/components/ScoreEditDialog/index.tsx',
-    'components/live-cockpit/components/OpenEntries/OpenEntriesBottomSheet.tsx',
     'components/match-cockpit/EditScoreDialog.tsx',
     'components/match-cockpit/EditTimeDialog.tsx',
     'components/match-cockpit/PenaltyShootoutDialog.tsx',
