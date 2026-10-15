@@ -1,24 +1,62 @@
 /**
- * Finalrunde: K.-o.-Zeilen über der Finalrunde (B-28a3-3b, @DR-015), Phasentitel, Platzierungsspiele mit Untertitel,
- * je Phase und Finaltyp eine Tabelle. Nur Zeichnen. Gemeinsame Tabellenoptionen und Zellen-Helfer kommen aus
- * `matchTables.ts`. Spielseiten über `sideLabel`. Ohne Schiedsrichter-Spalte.
+ * Finalrunde: K.-o.-Zeilen über der Finalrunde (B-28a3-3b, @DR-015) und je Runde eine Überschrift und eine Tabelle
+ * (B-28a3-4b Punkt 4): Achtelfinale, Viertelfinale, Halbfinale, Spiel um Platz 3 bzw. 5/7, Finale. Runden in der
+ * Reihenfolge ihrer ersten Anstoßzeit, Spiele darin nach Anstoßzeit. Nur Zeichnen. Gemeinsame Tabellenoptionen und
+ * Zellen-Helfer kommen aus `matchTables.ts`. Spielseiten über `sideLabel`. Ohne Schiedsrichter-Spalte.
  */
 import type jsPDF from 'jspdf';
 import autoTable, { type CellInput, type RowInput, type Styles } from 'jspdf-autotable';
 import type { ScheduledMatch } from '../../../core/generators';
 import { printColors, printType, printMetrics, printGap, printColumns } from '../../../design-tokens/print';
+import type { KnockoutRound } from '../../../types/tournament';
 import { ensureSpace, type PageGeometry } from '../layout';
+import { bracketRoundPerMatch } from '../koSlots';
 import { sideLabel } from '../matchSides';
 import { tableEndY } from '../jspdfTypes';
 import type { PdfTexts } from '../translations';
 import { PDF_FONT } from '../fonts';
 import { matchTableOptions, resultCell, sectionTitle } from './matchTables';
 
-/** Untertitel einer Platzierungsrunde, sonst keiner. */
-function getSubtitleForFinalType(finalType: string | undefined, t: PdfTexts): string | undefined {
-  if (!finalType) {return undefined;}
+/** Überschrift einer Runde: eine Runde des Brackets oder ein Platzierungsspiel. */
+export type FinalRoundKey = KnockoutRound | 'thirdPlace' | 'fifthSixth' | 'seventhEighth';
 
-  switch (finalType) {
+export interface FinalRound {
+  key: FinalRoundKey;
+  /** Spiele der Runde, nach Anstoßzeit (bei gleicher Zeit nach Spielnummer). */
+  matches: ScheduledMatch[];
+}
+
+const PLACEMENT_KEYS: readonly FinalRoundKey[] = ['thirdPlace', 'fifthSixth', 'seventhEighth'];
+
+/** Zeitfolge: Anstoßzeit, dann Spielnummer. */
+function byKickoff(a: ScheduledMatch, b: ScheduledMatch): number {
+  return a.startTime.getTime() - b.startTime.getTime() || a.matchNumber - b.matchNumber;
+}
+
+/**
+ * Finalspiele in Runden gegliedert. Jede Runde kommt einmal vor, in der Reihenfolge ihrer ersten Anstoßzeit. Die
+ * Runde eines Bracket-Spiels kommt aus `bracketRoundPerMatch` (Phase oder Bracket-Größe).
+ */
+export function finalRounds(finals: readonly ScheduledMatch[]): FinalRound[] {
+  const bracket = finals.filter(m => m.finalType !== 'final' && !PLACEMENT_KEYS.includes(m.finalType as FinalRoundKey));
+  const rounds = bracketRoundPerMatch(bracket);
+  const bracketRound = new Map<ScheduledMatch, KnockoutRound>(bracket.map((match, index) => [match, rounds[index]]));
+
+  const groups = new Map<FinalRoundKey, ScheduledMatch[]>();
+  for (const match of finals) {
+    const key: FinalRoundKey = match.finalType === 'final'
+      ? 'final'
+      : (match.finalType as FinalRoundKey | undefined) ?? bracketRound.get(match) ?? 'roundOf16';
+    groups.set(key, [...(groups.get(key) ?? []), match]);
+  }
+
+  return Array.from(groups, ([key, matches]) => ({ key, matches: [...matches].sort(byKickoff) }))
+    .sort((a, b) => byKickoff(a.matches[0], b.matches[0]));
+}
+
+/** Überschrift einer Runde über die Übersetzungen. */
+function roundTitle(key: FinalRoundKey, t: PdfTexts): string {
+  switch (key) {
     case 'thirdPlace':
       return t.thirdPlace;
     case 'fifthSixth':
@@ -26,7 +64,7 @@ function getSubtitleForFinalType(finalType: string | undefined, t: PdfTexts): st
     case 'seventhEighth':
       return t.seventhEighth;
     default:
-      return undefined;
+      return t.phaseTitle(key, key);
   }
 }
 
@@ -53,12 +91,11 @@ function drawKoLines(doc: jsPDF, lines: string[], geo: PageGeometry, yPos: numbe
 }
 
 /**
- * Finalrunde: K.-o.-Zeilen, dann je Phase ein Titel und je Gruppe aufeinanderfolgender Spiele mit gleichem Finaltyp
- * eine Tabelle.
+ * Finalrunde: K.-o.-Zeilen, dann je Runde eine Überschrift (h2) und eine Tabelle.
  */
 export function renderFinalsSection(
   doc: jsPDF,
-  phases: Array<{ name: string; label: string; matches: ScheduledMatch[] }>,
+  finals: ScheduledMatch[],
   t: PdfTexts,
   numberOfFields: number,
   includeScores: boolean,
@@ -67,54 +104,15 @@ export function renderFinalsSection(
   koLines: string[]
 ): number {
   yPos = drawKoLines(doc, koLines, geo, yPos);
-  phases.forEach(phase => {
+  for (const round of finalRounds(finals)) {
     yPos = ensureSpace(doc, yPos, printMetrics.sectionTitleMinSpace, geo);
-
-    // Phasentitel
-    yPos = sectionTitle(doc, t.phaseTitle(phase.name, phase.label), geo, yPos, printType.h2);
-
-    // Nach Spielnummer, damit die Reihenfolge des Plans bleibt
-    const sortedMatches = [...phase.matches].sort((a, b) => a.matchNumber - b.matchNumber);
-
-    // Aufeinanderfolgende Spiele mit gleichem Finaltyp zusammenfassen
-    const matchGroups: Array<{ matches: ScheduledMatch[]; subtitle?: string }> = [];
-    let currentGroup: ScheduledMatch[] = [];
-    let currentFinalType: string | undefined = undefined;
-
-    sortedMatches.forEach((match, index) => {
-      if (match.finalType !== currentFinalType) {
-        // Neue Gruppe beginnen
-        if (currentGroup.length > 0) {
-          matchGroups.push({
-            matches: currentGroup,
-            subtitle: getSubtitleForFinalType(currentFinalType, t),
-          });
-        }
-        currentGroup = [match];
-        currentFinalType = match.finalType;
-      } else {
-        currentGroup.push(match);
-      }
-
-      // Letzte Gruppe abschließen
-      if (index === sortedMatches.length - 1 && currentGroup.length > 0) {
-        matchGroups.push({
-          matches: currentGroup,
-          subtitle: getSubtitleForFinalType(currentFinalType, t),
-        });
-      }
-    });
-
-    // Alle Gruppen zeichnen
-    matchGroups.forEach(group => {
-      yPos = renderFinalsTable(doc, group.matches, t, numberOfFields, includeScores, geo, yPos, group.subtitle);
-    });
-  });
-
+    yPos = sectionTitle(doc, roundTitle(round.key, t), geo, yPos, printType.h2);
+    yPos = renderFinalsTable(doc, round.matches, t, numberOfFields, includeScores, geo, yPos);
+  }
   return yPos;
 }
 
-/** Eine Finaltabelle, optional mit Untertitel. */
+/** Eine Finaltabelle einer Runde. */
 function renderFinalsTable(
   doc: jsPDF,
   matches: ScheduledMatch[],
@@ -122,20 +120,9 @@ function renderFinalsTable(
   numberOfFields: number,
   includeScores: boolean,
   geo: PageGeometry,
-  yPos: number,
-  subtitle?: string
+  yPos: number
 ): number {
   const showFieldColumn = numberOfFields > 1;
-
-  // Untertitel für Platzierungsspiele
-  if (subtitle) {
-    yPos = ensureSpace(doc, yPos, printMetrics.finalsSubtitleMinSpace, geo);
-    doc.setFontSize(printType.body);
-    doc.setTextColor(...printColors.ink);
-    doc.setFont(PDF_FONT.family, 'bold');
-    doc.text(subtitle, geo.left, yPos);
-    yPos += printMetrics.finalsSubtitleAdvance;
-  }
 
   // Kopfzeile
   const headerRow: CellInput[] = [t.nr, t.timeHeader];

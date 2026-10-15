@@ -737,7 +737,7 @@
       "roundOf16": "Achtelfinale",
       "quarterfinal": "Viertelfinale",
       "semifinal": "Halbfinale",
-      "final": "Finalspiele"
+      "final": "Finale"
     },
     "groupName": "Gruppe {{id}}",
     "unrenderableField": "{{field}} ‚{{text}}‘ enthält Zeichen, die im PDF nicht dargestellt werden können",

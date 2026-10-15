@@ -196,7 +196,7 @@ export async function buildSchedulePdf({ schedule, standings, options }: Schedul
   if (finalPhases.length > 0) {
     yPos = renderFinalsSection(
       doc,
-      finalPhases,
+      finalPhases.flatMap(phase => phase.matches),
       t,
       schedule.numberOfFields,
       includeScores,

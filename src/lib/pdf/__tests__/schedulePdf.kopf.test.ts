@@ -111,11 +111,11 @@ describe('@DR-015 K.-o.-Zeile über der Finalrunde', () => {
   it('Die Entscheidung im K.-o.-Spiel steht als eine Zeile auf der Finalseite, vor den Finalspielen', async () => {
     const tournament = hallencupMitRegelwerk({ finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' } });
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
-    const seite = findPage(pages, 'Finalspiele');
+    const seite = findPage(pages, 'Halbfinale');
     expect(seite, 'Finalseite').toBeGreaterThan(0);
 
     const ko = pages[seite].texts.find(t => trimmed(t) === 'K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen');
-    const titel = pages[seite].texts.find(t => trimmed(t) === 'Finalspiele');
+    const titel = pages[seite].texts.find(t => trimmed(t) === 'Halbfinale');
     expect(ko, 'K.-o.-Zeile auf der Finalseite').toBeDefined();
     expect(ko && titel ? ko.y : 0).toBeLessThan(titel?.y ?? 0);
   });

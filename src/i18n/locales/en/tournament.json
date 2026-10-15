@@ -737,7 +737,7 @@
       "roundOf16": "Round of 16",
       "quarterfinal": "Quarter-finals",
       "semifinal": "Semi-finals",
-      "final": "Finals"
+      "final": "Final"
     },
     "groupName": "Group {{id}}",
     "unrenderableField": "{{field}} ‘{{text}}’ contains characters that cannot be shown in the PDF",

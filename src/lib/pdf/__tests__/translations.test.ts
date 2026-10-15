@@ -21,7 +21,7 @@ describe('Phasentitel und Gruppennamen (F2)', () => {
     ['roundOf16', 'Achtelfinale', 'Round of 16'],
     ['quarterfinal', 'Viertelfinale', 'Quarter-finals'],
     ['semifinal', 'Halbfinale', 'Semi-finals'],
-    ['final', 'Finalspiele', 'Finals'],
+    ['final', 'Finale', 'Final'],
   ])('Phase %s: DE „%s“, EN „%s“', (name, german, english) => {
     expect(de.phaseTitle(name, 'Fallback')).toBe(german);
     expect(en.phaseTitle(name, 'Fallback')).toBe(english);

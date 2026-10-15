@@ -53,6 +53,32 @@ function bracketRounds(bracket: readonly ScheduledMatch[]): KnockoutRound[] {
 }
 
 /**
+ * Runde jedes Bracket-Spiels in der Reihenfolge der Eingabe (B-28a3-4b Punkt 4). Nennt jedes Spiel seine Runde über
+ * `phase`, gilt sie. Sonst zählt die Bracket-Größe: vom Finale aus rückwärts nach Anstoßzeit je 2, 4, 8 Spiele.
+ * Übrige Spiele (unvollständiger Plan) gehen in die früheste Runde, damit sie nicht verloren gehen.
+ */
+export function bracketRoundPerMatch(bracket: readonly ScheduledMatch[]): KnockoutRound[] {
+  const known = bracket.map(roundOfPhase);
+  if (known.length > 0 && known.every((round): round is KnockoutRound => round !== null)) {
+    return known;
+  }
+  const result: KnockoutRound[] = bracket.map(() => 'roundOf16');
+  const byTime = bracket.map((_, index) => index).sort((a, b) =>
+    bracket[a].startTime.getTime() - bracket[b].startTime.getTime() || bracket[a].matchNumber - bracket[b].matchNumber);
+  let end = bracket.length;
+  let size = 2;
+  for (const round of ROUNDS_BACKWARDS) {
+    const start = Math.max(0, end - size);
+    for (let k = start; k < end; k++) {
+      result[byTime[k]] = round;
+    }
+    end = start;
+    size *= 2;
+  }
+  return result;
+}
+
+/**
  * K.-o.-Schlüssel in Ablaufreihenfolge: Runden vor den Platzierungsspielen, das Finale zuletzt. Ohne Finalspiele
  * (z. B. jeder gegen jeden) leer.
  */
