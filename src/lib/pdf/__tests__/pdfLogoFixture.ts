@@ -110,7 +110,7 @@ export function oversizedLogo(): { data: Uint8Array; format: 'PNG' } {
   return { data: out, format: 'PNG' };
 }
 
-/** PNG mit 10000 × 10000 Bildpunkten im Kopf, aber nur wenigen Byte: der Kopf lügt nicht, das Bild ist nur riesig. */
+/** Gültiges PNG mit 10000 × 10000 Bildpunkten (1 Bit, einfarbig): wenige KB groß, beim Dekodieren aber riesig. */
 export function hugePixelLogo(): { data: Uint8Array; format: 'PNG' } {
   const header = new Uint8Array(13);
   const view = new DataView(header.buffer);
@@ -118,7 +118,7 @@ export function hugePixelLogo(): { data: Uint8Array; format: 'PNG' } {
   view.setUint32(4, 10000);
   header[8] = 1;
   header[9] = 0;
-  const parts = [PNG_SIGNATURE, chunk('IHDR', header), chunk('IDAT', deflateSync(new Uint8Array(8))), chunk('IEND', new Uint8Array())];
+  const parts = [PNG_SIGNATURE, chunk('IHDR', header), chunk('IDAT', deflateSync(new Uint8Array(10000 * 1251))), chunk('IEND', new Uint8Array())];
   const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
   let at = 0;
   for (const p of parts) {
