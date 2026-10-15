@@ -41,10 +41,14 @@ const LEERE_MAP = new Map<string, LiveMatch>();
 
 function notOnEngineReason(tournament: Tournament, matchId: string): MatchNotOnEngineReason {
   const source = tournament.matches.find((m) => m.id === matchId);
-  if (source?.matchStatus === 'skipped') { return 'skipped'; }
+  const status = source?.matchStatus;
+  if (status === 'skipped') { return 'skipped'; }
+  if (status === 'finished') { return 'resultEntered'; }
+  // A3: ein laufendes Spiel hat einen Projektionsstand (anderes Gerät), kein Altergebnis.
+  // (`MatchStatus` kennt kein 'paused'; Pausen laufen als 'running'.)
+  if (status === 'running') { return 'other'; }
   const hasResult = (source?.scoreA ?? 0) > 0 || (source?.scoreB ?? 0) > 0;
-  if (source?.matchStatus === 'finished' || hasResult) { return 'resultEntered'; }
-  return 'other';
+  return hasResult ? 'resultEntered' : 'other';
 }
 
 function openSidesOf(tournament: Tournament, matchId: string): ('A' | 'B')[] {
@@ -115,7 +119,10 @@ export function useCockpitExecution(tournament: Tournament): UseCockpitExecution
   const handleRealtimeChange = useCallback((matchId: string, match: LiveMatch | null) => {
     if (!match) { return; }
     if (isEngineMatchId(matchId)) {
-      matchEngineContext?.engine.catchUp(matchId).catch(() => undefined);
+      // A4 (Fehlerpolitik): ein fehlgeschlagenes catchUp wird gemeldet, nicht verschluckt.
+      matchEngineContext?.engine.catchUp(matchId).catch((error: unknown) => {
+        captureFeatureError(error instanceof Error ? error : new Error(String(error)), 'hooks', 'cockpitCatchUp', { matchId });
+      });
     }
   }, [matchEngineContext, isEngineMatchId]);
 

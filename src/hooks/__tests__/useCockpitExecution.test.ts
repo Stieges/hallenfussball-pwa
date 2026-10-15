@@ -8,8 +8,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { Tournament } from '../../types/tournament';
 import type { ScheduledMatch } from '../../core/generators';
-import { MatchNotOnEngineError } from '../../core/errors';
-import { looseVs } from '../../test/matchSlotFixtures';
+import { MatchAwaitingTeamsError, MatchNotOnEngineError } from '../../core/errors';
+import { groupRank, looseVs, slots, testTeamSlot } from '../../test/matchSlotFixtures';
 import { makeEngineContext, FIXTURE_ENGINE_MATCH_ID } from '../../test/engineContextFixture';
 import type { MatchEngineContextValue } from '../../features/match-engine/matchEngineContextInstance';
 
@@ -47,6 +47,8 @@ import { useCockpitExecution } from '../useCockpitExecution';
 
 const ENGINE_MATCH_ID = FIXTURE_ENGINE_MATCH_ID;
 const RESULT_MATCH_ID = 'old-1';
+const OPEN_SIDE_MATCH_ID = 'open-1';
+const FOREIGN_RUNNING_MATCH_ID = 'run-1';
 
 function tournament(): Tournament {
   return {
@@ -62,6 +64,25 @@ function tournament(): Tournament {
         matchStatus: 'finished',
         scoreA: 3,
         scoreB: 1,
+      },
+      // A1 (@TM-033): Seite B noch offen (Gruppenplatz, kein Team).
+      {
+        id: OPEN_SIDE_MATCH_ID,
+        ...slots(testTeamSlot('teama'), groupRank('A', 2)),
+        round: 2,
+        field: 1,
+        matchNumber: 3,
+      },
+      // A3: Fremd-Spiel läuft (anderes Gerät) mit Projektionsstand 1:0 – kein Ergebnis-Hinweis.
+      {
+        id: FOREIGN_RUNNING_MATCH_ID,
+        ...looseVs('teama', 'teamb'),
+        round: 3,
+        field: 2,
+        matchNumber: 4,
+        matchStatus: 'running',
+        scoreA: 1,
+        scoreB: 0,
       },
     ],
     teams: [
@@ -115,5 +136,26 @@ describe('useCockpitExecution (A-08a, @FU-069)', () => {
     expect(mockLiveRepo.save).not.toHaveBeenCalled();
     expect(mockLiveRepo.get).not.toHaveBeenCalled();
     expect(mockLiveRepo.getAll).not.toHaveBeenCalled();
+  });
+
+  it('@TM-033 Gegenbeispiel: Spiel mit offener Seite B -> MatchAwaitingTeamsError(openSides [B]), kein Altweg, Repo 0x', async () => {
+    const { result } = renderHook(() => useCockpitExecution(tournament()));
+
+    const attempt = result.current.getLiveMatchData(scheduled(OPEN_SIDE_MATCH_ID));
+
+    await expect(attempt).rejects.toBeInstanceOf(MatchAwaitingTeamsError);
+    await expect(attempt).rejects.toMatchObject({ matchId: OPEN_SIDE_MATCH_ID, openSides: ['B'] });
+    expect(mockLiveRepo.save).not.toHaveBeenCalled();
+    expect(mockLiveRepo.get).not.toHaveBeenCalled();
+    expect(mockLiveRepo.getAll).not.toHaveBeenCalled();
+  });
+
+  it('A3 (@FU-069): laufendes Fremd-Spiel mit Stand 1:0 -> reason other (Engine-Klärung), nicht resultEntered', async () => {
+    const { result } = renderHook(() => useCockpitExecution(tournament()));
+
+    const attempt = result.current.getLiveMatchData(scheduled(FOREIGN_RUNNING_MATCH_ID));
+
+    await expect(attempt).rejects.toBeInstanceOf(MatchNotOnEngineError);
+    await expect(attempt).rejects.toMatchObject({ reason: 'other' });
   });
 });

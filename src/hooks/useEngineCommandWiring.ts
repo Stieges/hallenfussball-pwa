@@ -16,7 +16,6 @@ import type { LiveMatch } from '../core/models/LiveMatch';
 import {
   MatchCommands,
   MatchCommandRejectedError,
-  LocalStoreFullError,
   NotOnEngineYetError,
 } from '../core/match/client';
 import { serverRules, type MatchContext, type MatchRules } from '../core/match';
@@ -26,7 +25,7 @@ import { captureFeatureError } from '../lib/sentry';
 import { useActorRole } from './useActorRole';
 import { buildValidMatches } from './useEngineMatches';
 import { mapCardTypeToEngine, type EngineCommandFallbackHandlers } from './engineCommandWiringTypes';
-import { createGuardedDelegates } from './engineCommandWiringHelpers';
+import { createGuardedDelegates, rejectionMessageKey } from './engineCommandWiringHelpers';
 
 export type { EngineCommandFallbackHandlers } from './engineCommandWiringTypes';
 
@@ -86,14 +85,12 @@ export function useEngineCommandWiring(
   /** W6: faengt die typisierten Fehler, zeigt einen Toast, wirft NICHT in die UI. */
   const handleEngineError = useCallback(
     (error: unknown) => {
-      if (error instanceof NotOnEngineYetError) {
-        showWarning(t('engine.notYet'));
-      } else if (error instanceof LocalStoreFullError) {
-        showError(t('engine.storeFull'));
-      } else if (error instanceof MatchCommandRejectedError) {
-        showWarning(t('engine.invalid'));
+      // A-08b: der Grund bestimmt den Text (`rejectionMessageKey`); Ablehnungen sind Warnungen.
+      const message = t(rejectionMessageKey(error));
+      if (error instanceof MatchCommandRejectedError || error instanceof NotOnEngineYetError) {
+        showWarning(message);
       } else {
-        showError(t('engine.invalid'));
+        showError(message);
       }
     },
     [showWarning, showError, t],
