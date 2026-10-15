@@ -1,6 +1,6 @@
 /**
  * A-06k (@FU-025): Zustand des Realtime-Kanals je Turnier, geteilt zwischen dem Abonnenten
- * (Cockpit `useMatchExecution`, Admin/Monitor `useLiveMatches`) und den Anzeigern (Engine-Ausweichen
+ * (Cockpit `useCockpitExecution`, Admin/Monitor `useLiveMatches`) und den Anzeigern (Engine-Ausweichen
  * `useEngineLiveFallback`, Hinweis im `SyncStatusIndicator`). Kein Status gemeldet = unbekannt,
  * und unbekannt loest weder Ausweichen noch Hinweis aus.
  */

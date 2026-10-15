@@ -6,7 +6,7 @@
  * Liefert das Ergebnis der GEMEINSAMEN Funktion `getMatchStartState`
  * (utils/matchStartState.ts) und speist sie mit dem Live-Stand ein, den die App
  * schon für das Cockpit liest: `ILiveMatchRepository.getAll` — derselbe Service,
- * den `useMatchExecution` (Cockpit) liest. Keine eigene Live-Engine.
+ * den das Cockpit (`useCockpitExecution`) liest. Keine eigene Live-Engine.
  *
  * Ohne RepositoryProvider im Baum (isolierte Komponenten-Tests, rein lokale
  * Nutzung ohne Cloud-Synchronisierung) gibt es keine Live-Quelle; dann entscheidet

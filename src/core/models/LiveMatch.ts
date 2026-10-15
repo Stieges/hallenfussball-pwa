@@ -124,7 +124,7 @@ export interface LiveMatch {
      * (rules.canDrawInGroupPhase / rules.canDrawInFinals, aufgelöst bei initializeMatch).
      * `undefined` bei älteren/mock-erzeugten Matches wird von needsTiebreaker() wie das
      * bisherige Default behandelt (Gruppenphase: Unentschieden erlaubt; Finale: über
-     * tiebreakerMode gesteuert) — siehe MatchExecutionService.needsTiebreaker.
+     * tiebreakerMode gesteuert) — siehe die Entscheidungsregel in `core/match/tiebreakDecision.ts`.
      */
     canEndInDraw?: boolean;
 

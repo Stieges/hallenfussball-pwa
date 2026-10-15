@@ -96,14 +96,14 @@ export type SportTiebreakerMode =
 export interface SportRules {
   /**
    * Can matches end in draw during group phase?
-   * Wirksam seit Task 6: siehe MatchExecutionService.needsTiebreaker/initializeMatch
+   * Wirksam seit Task 6: siehe `core/match/tiebreakDecision.ts` (LiveMatch.canEndInDraw)
    * (LiveMatch.canEndInDraw). Für Fußball immer `true` — unverändertes Verhalten.
    */
   canDrawInGroupPhase: boolean;
 
   /**
    * Can matches end in draw during finals?
-   * Wirksam seit Task 6: siehe MatchExecutionService.needsTiebreaker/initializeMatch
+   * Wirksam seit Task 6: siehe `core/match/tiebreakDecision.ts` (LiveMatch.canEndInDraw)
    * (LiveMatch.canEndInDraw). Für Fußball immer `false` — unverändertes Verhalten.
    */
   canDrawInFinals: boolean;

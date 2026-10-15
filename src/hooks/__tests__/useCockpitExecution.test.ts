@@ -126,7 +126,7 @@ describe('useCockpitExecution (A-08a, @FU-069)', () => {
     });
   });
 
-  // B6 (A-08d2b, früher useMatchExecution.test "handleFinish speichert das Turnier nicht"): der Hook hat
+  // B6 (A-08d2b, früher Altweg-Test "handleFinish speichert das Turnier nicht"): der Hook hat
   // keinen Turnier-Speicherweg; Abpfiff schreibt genau ein MATCH_END in den Engine-Log und fasst das
   // Live-Repository (Altweg) nicht an.
   it('B6 (A-08d2b): handleFinish schreibt genau ein MATCH_END in den Engine-Log, ohne Alt-Repo-Schreibzugriff', async () => {

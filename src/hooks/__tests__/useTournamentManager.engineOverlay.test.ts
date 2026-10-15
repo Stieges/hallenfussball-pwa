@@ -154,7 +154,7 @@ describe('useTournamentManager x useEngineOverlayForTournament (W7)', () => {
     // Aenderung an einem unbeteiligten Spiel ausgeloest) darf KEINE neue `matches`-Array-Referenz
     // erzeugen -- ohne den Fix wich die Projektion bei JEDER Neuberechnung von den STATISCHEN
     // Rohdaten ('scheduled'/0:0) ab und baute jedes Mal ein neues Array (Endlos-Renderzyklus mit
-    // dem Lade-Effekt in useMatchExecution.ts, dessen Abhaengigkeit `tournament.matches` ist).
+    // dem Cockpit-Lade-Effekt, dessen Abhaengigkeit `tournament.matches` ist).
     act(() => {
       listeners.forEach((listener) => listener());
     });

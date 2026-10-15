@@ -1,6 +1,5 @@
 /**
- * useCockpitExecution — Realtime (A-08b, A2/A4; Ports aus `useMatchExecution.realtime.test.ts` und
- * `useMatchExecution.engineGuards.test.ts`, B5/N2-m3). Echter Engine-Kontext, Realtime-Repo gemockt.
+ * useCockpitExecution — Realtime (A-08b, A2/A4; Ports aus den frueheren Altweg-Tests (realtime, engineGuards), B5/N2-m3). Echter Engine-Kontext, Realtime-Repo gemockt.
  *
  * - Abo-Lebenszyklus (Unmount, Turnierwechsel), Subscription-Fehler wird gemeldet (@FU-025 / Sentry).
  * - Kanal-Status reicht an den Store weiter (@FU-025).

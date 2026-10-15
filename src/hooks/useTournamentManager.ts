@@ -140,16 +140,16 @@ export function useTournamentManager(tournamentId: string) {
     }, [service, loadTournament, tournament, overlaidMatchIdsRef]);
 
     // Task A1 (Sofortschutz): Gegenstück zu handleTournamentUpdate OHNE Speicherpfad. Manche
-    // Aufrufer (z. B. useMatchExecution nach Spielende) wollen den lokalen Zustand nur mit dem
+    // Aufrufer (z. B. das Cockpit nach Spielende) wollen den lokalen Zustand nur mit dem
     // bereits über einen anderen Weg persistierten Server-Stand synchronisieren — nicht das ganze
     // Turnier erneut speichern. Für einen Helfer (Rolle collaborator, kein tournamentSettings-
     // Recht) schlägt ein voller Turnier-Save per RLS fehl (0 Zeilen → OptimisticLockError → nach
     // Retries Dead-Letter in der MutationQueue); der eigentliche Spielstand ist über
-    // MatchExecutionService.persistFinalResult (updateMatch, per writeMatchData erlaubt) längst
+    // der frühere Altweg persistFinalResult (updateMatch, per writeMatchData erlaubt) längst
     // in der DB.
     // I3 Fixrunde 2 (Re-Review-Befund): `applyRemote` übernahm das übergebene Turnier bisher
     // UNGESÄUBERT in den Roh-State (`tournament`) -- alle Aufrufer von `onLocalTournamentUpdate`
-    // (Schnelleingabe, ScheduleEditor, Korrekturmodus, DangerZone, `useMatchExecution`) übergeben
+    // (Schnelleingabe, ScheduleEditor, Korrekturmodus, DangerZone, Cockpit) übergeben
     // aber eine Kopie der ÜBERLAGERTEN Ausgabe. Der verschmutzte Roh-State landete dann beim
     // nächsten `handleTournamentUpdate` (Voll-Save) in `stripEngineOverlayFields` -- das stellt
     // nur die Felder wieder her, die im ROHEN `tournament` selbst schon sauber waren; war der

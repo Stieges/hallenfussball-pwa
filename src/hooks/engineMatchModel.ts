@@ -5,7 +5,7 @@
  *
  * `useEngineMatches.ts` re-exportiert diese Symbole weiterhin (Bestandsschutz fuer bestehende
  * Importe/Mocks, z. B. `useEngineCommandWiring.ts`); `useEngineMatchReadiness.ts`,
- * `useScheduleTabActions.ts` und `useMatchExecution.ts` importieren ab dieser Runde direkt von hier.
+ * `useScheduleTabActions.ts` und `useCockpitExecution.ts` importieren ab dieser Runde direkt von hier.
  */
 import type { Tournament, Team } from '../types/tournament';
 import type { LiveMatch } from '../core/models/LiveMatch';
@@ -18,7 +18,7 @@ export interface ValidMatchEntry {
   /** Kleingeschrieben -- Engine-interner Schluessel (Store/`engineMatchIds`, Server-Konvention). */
   matchId: string;
   /** N-m2: die AUSSEN sichtbare ID (Original-Schreibweise aus `tournament.matches[].id`) -- der
-   * Schluessel der zurueckgegebenen `liveMatches`-Map. So finden Aufrufer (`useMatchExecution`s
+   * Schluessel der zurueckgegebenen `liveMatches`-Map. So finden Aufrufer (`useCockpitExecution`s
    * B4/B5-Wachen, `getLiveMatchData`, `handleReopenMatch`, ...), die mit `match.id`/`matchData.id`
    * in Original-Schreibweise nachschlagen, den Eintrag auch dann, wenn eine Spiel-ID theoretisch
    * Grossbuchstaben enthaelt (heutige Generatoren liefern durchgehend kleine UUIDs, s. Report). */
@@ -132,7 +132,7 @@ export function isNewScheduledMatch(entry: ValidMatchEntry, localLiveMatches: Ma
  * hierher verschoben (aus `useEngineMatchReadiness.ts`), damit `scoreChangeHelpers.ts` (Schnell-
  * eingabe-Sperre) dieselbe Klassifizierung wiederverwenden kann statt sie zu duplizieren.
  * Fixrunde 5 (Regression aus dem Fixrunde-4-Review): `'skipped'` ist ein regulaerer, NICHT
- * Engine-bezogener Endzustand (manuelles Ueberspringen, s. `MatchExecutionService.ts:647`) -- ohne
+ * Engine-bezogener Endzustand (manuelles Ueberspringen) -- ohne
  * expliziten Ausschluss galt jedes uebersprungene Spiel ohne Ergebnis faelschlich als fremder
  * Engine-Kandidat und sperrte die Schnelleingabe mit dem irrefuehrenden `engine.notYet`-Toast.
  */

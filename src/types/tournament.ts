@@ -748,7 +748,7 @@ export interface RuntimeMatchEvent {
     cardType?: CardType;
 
     // -------------------------------------------------------------------------
-    // Draht-Format (wire shape) — so schreibt der MatchExecutionService in den
+    // Draht-Format (wire shape) — so schrieb der frühere Altweg in den
     // Speicher (`core/models/LiveMatch.ts#MatchEvent.payload`). Die UI liest
     // dagegen `teamId` / `teamName` / `direction` / `penaltyDuration` (oben).
     //

@@ -1,7 +1,7 @@
 /**
  * useTournamentManager.applyRemote — Task A1 (Sofortschutz), Fixrunde 1 (I2).
  *
- * Review-Befund I2: die bisherige Negativprüfung im useMatchExecution-Test
+ * Review-Befund I2: die bisherige Negativprüfung im frueheren Cockpit-Test
  * (`mockTournamentRepository.save).not.toHaveBeenCalled()`) prüfte nichts — der Hook hat
  * `tournamentRepository.save` auch VOR dem A1-Fix nie direkt aufgerufen, der Speicherweg lag in
  * `useTournamentManager.handleTournamentUpdate` (das seinerseits `service.updateTournament`
@@ -20,7 +20,7 @@ const mockUpdateTournament = vi.fn();
 vi.mock('../../core/services/TournamentService', () => {
   // Echte Klasse statt vi.fn().mockImplementation(() => ({...})) — arrow-function-Objekte sind
   // nicht `new`-fähig, `new TournamentService(...)` würde sonst werfen (gleiches Muster wie
-  // useMatchExecution.test.ts für MatchExecutionService).
+  // frueherer Altweg-Test).
   class MockTournamentService {
     loadTournament = mockLoadTournament;
     updateTournament = mockUpdateTournament;

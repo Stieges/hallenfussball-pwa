@@ -1,9 +1,9 @@
 /**
  * useEngineExecutionBridge (I5, C3a-1 Fixrunde 1): buendelt die Engine-Anbindung fuer
- * `useMatchExecution` -- Lesepfad-Map, ein Ref darauf (fuer Effekte/Callbacks, die NICHT bei jeder
- * Engine-Aenderung neu laufen duerfen, s. C1/`useMatchExecution.ts`), den optionalen
+ * `useCockpitExecution` -- Lesepfad-Map, ein Ref darauf (fuer Effekte/Callbacks, die NICHT bei jeder
+ * Engine-Aenderung neu laufen duerfen, s. C1/`useCockpitExecution.ts`), den optionalen
  * MatchEngine-Kontext und die gemergte Live-Match-Map (Engine-Spiele gewinnen ueber den Altpfad).
- * Eigene Datei, damit `useMatchExecution.ts` nicht waechst (W11).
+ * Eigene Datei, damit `useCockpitExecution.ts` nicht waechst (W11).
  */
 import { useCallback, useMemo, useRef, type RefObject } from 'react';
 import type { Tournament } from '../types/tournament';
@@ -31,7 +31,7 @@ export interface UseEngineExecutionBridgeResult {
    * Altzeile, kein Ergebnis) -- ein `null` von `ensureEngineMatchReady` bedeutet hier "bestaetigtes
    * Altspiel" (Aufrufer darf/soll auf den Altweg ausweichen), anders als beim klaren B1-Fall. */
   isForeignCandidateMatchId: (matchId: string) => boolean;
-  /** Fixrunde 2, Item 2: fuer den B4-Guard in `useMatchExecution.getLiveMatchData` -- erzwingt
+  /** Fixrunde 2, Item 2: fuer den B4-Guard in `useCockpitExecution.getLiveMatchData` -- erzwingt
    * `ensureMatch` fuer EIN Spiel, statt auf den naechsten Engine-Notify zu warten. */
   ensureEngineMatchReady: (externalMatchId: string) => Promise<LiveMatch | null>;
   /** P1 (Fixrunde 3, W11): kapselt `engineLiveMatches.get` + `isEngineDestinedMatchId` +

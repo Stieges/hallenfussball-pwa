@@ -1,6 +1,6 @@
 /**
  * Effektiver Spielstand = reguläre Tore + Verlängerungstore.
- * MatchExecutionService.recordGoal schreibt in overtime/goldenGoal ausschließlich overtimeScoreA/B
+ * Die Engine (`MatchCommands.goal`) schreibt in overtime/goldenGoal ausschließlich overtimeScoreA/B
  * und lässt homeScore/awayScore unangetastet. Jede Anzeige des AKTUELLEN Stands muss beides addieren.
  * Elfmeter zählen NICHT hinein: penaltyScoreA/B stehen als eigenes Ergebnis daneben (decidedBy).
  */

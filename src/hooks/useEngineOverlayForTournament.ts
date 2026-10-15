@@ -62,7 +62,7 @@ interface OverlayCache {
  * `matchStatus: 'running'`) wiche fuer immer vom rohen `'scheduled'` ab und erzeugte bei JEDER
  * Benachrichtigung ein NEUES `tournament`-Objekt (neue `matches`-Array-Referenz), obwohl sich die
  * Projektion seit der letzten Berechnung gar nicht geaendert hat -- ein Endlos-Renderzyklus mit dem
- * Lade-Effekt in `useMatchExecution.ts` (dessen Abhaengigkeit `tournament.matches` ist), reproduziert
+ * Lade-Effekt im Cockpit (dessen Abhaengigkeit `tournament.matches` ist), reproduziert
  * per E2E ("Maximum update depth exceeded"). Der Fix: solange die ROHEN Eingabedaten (`tournament`)
  * unveraendert sind, dient das VORHERIGE Ueberlagerungsergebnis als Vergleichsbasis -- nicht die
  * Rohdaten selbst.

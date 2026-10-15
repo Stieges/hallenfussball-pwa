@@ -5,7 +5,7 @@
  * diese Spiele eine `LiveMatch`-Ansicht aus der Engine (B1, C3a-1: OHNE die „scheduled“-Klausel --
  * ein Spiel ohne jedes Ereignis bleibt in diesem Schritt ein Altspiel).
  *
- * Eigene Datei statt in `useMatchExecution` (W11): die Datei ist bereits an der 300-Zeilen-Grenze.
+ * Eigene Datei statt im Cockpit-Hook (W11): die Datei ist bereits an der 300-Zeilen-Grenze.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Tournament } from '../types/tournament';
@@ -63,7 +63,7 @@ interface LiveMatchesCache {
  * mindestens eine stabile leere Map fuer ein reines Altturnier. Jede `engine.notify()` (z. B. durch
  * `ensureMatch` eines ALTSPIELS ohne jede Engine-Relevanz) darf sonst eine neue, aber inhaltlich
  * gleiche Map erzeugen; jeder Aufrufer, der diese Map in einer Abhaengigkeitsliste fuehrt (z. B. der
- * Lade-Effekt in `useMatchExecution`), haelt dann NIE an (Review C1).
+ * Lade-Effekt im Cockpit-Hook), haelt dann NIE an (Review C1).
  */
 function liveMatchEquals(a: LiveMatch, b: LiveMatch): boolean {
   return a === b || JSON.stringify(a) === JSON.stringify(b);

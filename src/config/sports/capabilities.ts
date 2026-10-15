@@ -15,7 +15,7 @@
  *
  * NICHT löschen, wenn sich der Stand ändert — stattdessen den Eintrag entfernen, sobald das
  * Feld tatsächlich ausgewertet wird (siehe `rules.canDrawInGroupPhase`/`canDrawInFinals`, die
- * mit Task 6 aus dieser Kategorie herausgewandert sind, siehe MatchExecutionService.needsTiebreaker).
+ * mit Task 6 aus dieser Kategorie herausgewandert sind, siehe core/match/tiebreakDecision.ts).
  */
 
 import sportGlossary from '../../i18n/glossary.json';
@@ -37,11 +37,11 @@ export const UNIMPLEMENTED_CAPABILITIES: UnimplementedCapability[] = [
     missing:
       'Keine Auswertung in Ergebniseingabe, Tabellenrechnung und Cockpit. ' +
       'LiveMatch kennt nur homeScore/awayScore (+ overtimeScoreA/B, penaltyScoreA/B) — keine ' +
-      'Satzliste. MatchExecutionService.recordGoal schreibt jeden Punkt direkt in den ' +
+      'Satzliste. Die Engine (MatchCommands.goal) schreibt jeden Punkt direkt in den ' +
       'Gesamtscore statt in einen laufenden Satz; es gibt keine Satz-Gewinn-Erkennung, die einen ' +
       'neuen Satz startet. Die Tabellenberechnung (Gruppentabelle) kennt nur Tordifferenz/Punkte, ' +
       'keine Satzbilanz. Würde gebaut: eigenes `sets: { home: number; away: number }[]`-Feld auf ' +
-      'LiveMatch, Satz-Abschluss-Logik in MatchExecutionService, Satzbilanz-Spalte in der Tabelle.',
+      'LiveMatch, Satz-Abschluss-Logik in der Engine, Satzbilanz-Spalte in der Tabelle.',
   },
   {
     field: 'features.isSetBased',
@@ -65,7 +65,7 @@ export const UNIMPLEMENTED_CAPABILITIES: UnimplementedCapability[] = [
     requires: 'Satzbasierte Wertung — Zielpunktzahl pro Satz',
     missing:
       'Setzt rules.isSetBased voraus. Kein Code beendet einen Satz automatisch, wenn diese ' +
-      'Punktzahl erreicht ist — es gibt schon keinen Satz-Begriff in LiveMatch/MatchExecutionService.',
+      'Punktzahl erreicht ist — es gibt schon keinen Satz-Begriff in LiveMatch/Engine.',
   },
   {
     field: 'rules.tiebreakPoints',
@@ -159,7 +159,7 @@ export const UNIMPLEMENTED_CAPABILITIES: UnimplementedCapability[] = [
     requires: `Verfügbarkeit von ${sportGlossary.terms.penalty.de}/${sportGlossary.terms.penaltyShootout.de} als Tiebreaker-Option`,
     missing:
       'Wie hasOvertime: die tatsächlich angebotenen Tiebreaker-Optionen im Cockpit ' +
-      '(startOvertime/startGoldenGoal/startPenaltyShootout in MatchExecutionService) hängen nicht ' +
+      '(startOvertime/startGoldenGoal/startPenaltyShootout in der Engine) hängen nicht ' +
       'von diesem Flag ab, sondern sind für jede Sportart gleich verfügbar.',
   },
   {
@@ -167,7 +167,7 @@ export const UNIMPLEMENTED_CAPABILITIES: UnimplementedCapability[] = [
     requires: 'Kennzeichnung, ob Unentschieden grundsätzlich zum Sport passen',
     missing:
       'Duplikat von rules.canDrawInGroupPhase (das seit Task 6 tatsächlich ausgewertet wird, ' +
-      'siehe MatchExecutionService.needsTiebreaker/initializeMatch). defaults.allowDraw selbst ' +
+      'siehe core/match/tiebreakDecision.ts). defaults.allowDraw selbst ' +
       'wird von keiner Stelle gelesen. Sollte langfristig entfernt oder auf rules.canDrawInGroupPhase ' +
       'reduziert werden, statt zwei Wahrheiten für dieselbe Frage zu pflegen.',
   },

@@ -5,7 +5,7 @@
  * `decidedBy`, `finishedAt`), die das W7-Overlay (`useEngineOverlayForTournament`) bei jeder
  * Stand-/Statusaenderung eines Engine-Spiels neu schreibt.
  *
- * Ohne diese Trennung haengen Lade-Effekte (`useMatchExecution.ts` Lade-Effekt,
+ * Ohne diese Trennung haengen Lade-Effekte (Lade-Effekt des Cockpits,
  * `useEngineMatches.ts` ensureMatch-Effekt) an `tournament.matches` selbst -- JEDE
  * Overlay-Aenderung erzeugt ein neues `matches`-Array und loest sie erneut aus (Netzaufruf
  * `liveMatchRepository.getAll`, IDB-Schreibzugriffe `ensureMatch` fuer ALLE Spiele, Sammelabfrage,

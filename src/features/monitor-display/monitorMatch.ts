@@ -3,7 +3,7 @@
  *
  * `toLiveMatch` ermittelt die Entscheidung bei Unentschieden über dieselbe
  * exportierte Funktion wie die Spielsteuerung/Cockpit
- * (MatchExecutionService.initializeMatch → `resolveTiebreakMode`) — eine Quelle,
+ * (Entscheidungsregel `resolveTiebreakMode`, dieselbe wie im Anpfiff) — eine Quelle,
  * keine zweite, abweichende Ermittlung.
  */
 import type { Tournament, Match, Team, TiebreakerMode } from '../../types/tournament';

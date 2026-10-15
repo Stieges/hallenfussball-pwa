@@ -6,7 +6,7 @@
  * `ensureMatch` fuer genau dieses Spiel zu erzwingen und danach dessen Engine-Ansicht zu lesen
  * (`ensureEngineMatchReady`).
  *
- * Fuer den B4-Guard in `useMatchExecution.getLiveMatchData`: der Altpfad (`service.initializeMatch`,
+ * Fuer den B4-Guard (frueher im Cockpit-Hook): der Altpfad (`service.initializeMatch`,
  * `liveMatchRepository.save`) darf fuer ein Engine-Spiel NIE laufen -- auch nicht in der kurzen Race
  * zwischen dem Mount (`ManagementTab`) und dem asynchronen `ensureMatch` (IndexedDB-Schreibzugriff),
  * die `engineLiveMatches` (aus `useEngineMatches`) erst danach fuellt. `isEngineDestinedMatch`

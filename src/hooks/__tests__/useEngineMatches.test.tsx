@@ -80,7 +80,7 @@ describe('useEngineMatches', () => {
     await waitFor(() => expect(mockFetchEngineMatchIds).toHaveBeenCalled());
     rerender();
 
-    // Aufrufer (useMatchExecution) schlagen mit der ORIGINAL-ID aus tournament.matches nach --
+    // Aufrufer (Cockpit) schlagen mit der ORIGINAL-ID aus tournament.matches nach --
     // nicht mit der intern kleingeschriebenen Engine-/Server-ID.
     await waitFor(() => expect(result.current.isEngineMatch(upperId)).toBe(true));
     expect(result.current.liveMatches.has(upperId)).toBe(true);

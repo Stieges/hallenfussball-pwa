@@ -9,7 +9,7 @@
  * `canDecrementHome`/`canDecrementAway`, LiveCockpit.tsx ~Zeile 661f. — richtete
  * sich vorher unabhängig von der Phase nach dem regulären Spielstand): ein Klick
  * rief `onGoal(..., -1)` auf und setzte (vor dem Floor-Fix in
- * MatchExecutionService.recordGoal) `overtimeScoreA` auf -1 — ein einzelner
+ * frueherer Altweg recordGoal) `overtimeScoreA` auf -1 — ein einzelner
  * Fehlklick ohne Löschung/Undo. Der Fix (Commit ef5833a) macht sowohl das
  * `disabled`-Attribut als auch den Klick-Handler selbst phasenbewusst: in der
  * Verlängerung zählt `overtimeScoreA`/`overtimeScoreB`, nicht `homeScore`/`awayScore`

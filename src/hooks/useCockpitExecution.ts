@@ -1,7 +1,7 @@
 /**
  * useCockpitExecution (A-08a, @FU-069/@FU-025): Cockpit-Hook NUR über Engine-Ereignisse.
  *
- * Ersetzt `useMatchExecution` für die Turnierleitung. Es gibt keinen Altweg mehr: kein
+ * Ersetzt den frueheren Altweg-Hook für die Turnierleitung. Es gibt keinen Altweg mehr: kein
  * `liveMatchRepository`, kein Altservice, kein lokaler `liveMatches`-State. Ein Spiel, das die
  * Engine nicht tragen kann, wirft `MatchNotOnEngineError` (bzw. `MatchAwaitingTeamsError` bei einer
  * offenen Seite), statt auf einen Altpfad auszuweichen.

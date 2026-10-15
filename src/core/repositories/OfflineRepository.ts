@@ -15,7 +15,7 @@ import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
  * `JSON.parse` (survives app restarts and dead-letter retries). `JSON.stringify` DROPS a
  * present-but-`undefined`-valued key entirely (`JSON.stringify({scoreA: undefined}) === '{}'`),
  * so an "explicit clear" (a caller sets `field: undefined` with the key present, e.g.
- * `MatchExecutionService#unskipMatch`) that made it into the queue as an in-memory object would
+ * `unskipMatch` des früheren Altwegs) that made it into the queue as an in-memory object would
  * survive the CURRENT session but silently lose the clear on reload/replay. Normalizing
  * `undefined` (key present) to `null` right before enqueueing makes every clear JSON-round-trip
  * safe -- `mapMatchUpdateToSupabase` treats a present `null` exactly like a present `undefined`

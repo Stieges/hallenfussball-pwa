@@ -1,7 +1,7 @@
 /**
  * useEngineExecutionBridge — P1 (C3a-2a Fixrunde 3, W11): `resolveEngineLiveMatchData` kapselt
  * `engineLiveMatches.get` + `isEngineDestinedMatchId` + `ensureEngineMatchReady` an EINER Stelle,
- * damit `useMatchExecution.getLiveMatchData` auf eine Zeile schrumpft (Datei bleibt <= 819 Zeilen).
+ * damit `useCockpitExecution.getLiveMatchData` auf eine Zeile schrumpft (Datei bleibt <= 819 Zeilen).
  *
  * `useEngineMatches`/`useEngineMatchReadiness` selbst sind bereits eigenstaendig getestet -- hier
  * geht es NUR um die Verdrahtung: Engine-Ansicht liefern, wirft bei unvorbereitetem Engine-Spiel,

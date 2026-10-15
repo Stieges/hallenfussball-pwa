@@ -3,7 +3,7 @@
  *
  * Für dasselbe Ereignis existieren zwei Schreibweisen:
  *
- *   Draht-Format (Speicher, `MatchExecutionService`):
+ *   Draht-Format (Speicher, früherer Altweg):
  *     `{ team: 'home' | 'away', delta: 1 | -1, durationSeconds: 300 }`
  *   UI-Format (Cockpit, `RuntimeMatchEvent`):
  *     `{ teamId, teamName, direction: 'INC' | 'DEC', penaltyDuration: 300 }`
