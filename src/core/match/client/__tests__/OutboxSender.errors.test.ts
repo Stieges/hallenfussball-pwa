@@ -66,7 +66,7 @@ describe('OutboxSender: Fehlerklassen', () => {
     expect(h.sender.getStatus().authRequired).toBe(false);
   });
 
-  it('9: CLIENT_OUTDATED haelt alles an, Eintraege bleiben pending bis start() neu', async () => {
+  it('@FU-005 9: CLIENT_OUTDATED haelt alles an, Eintraege bleiben pending bis start() neu', async () => {
     const h = makeHarness();
     await seed(h, 'acc', 'mC');
     h.api.mockResolvedValueOnce(clientOutdatedResult());

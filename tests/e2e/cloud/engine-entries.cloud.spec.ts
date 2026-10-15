@@ -77,7 +77,7 @@ test.describe('Engine-Einträge über Geräte', () => {
     }
   });
 
-  test('L85 Zurücknehmen ist dauerhaft: helper nimmt das Tor des Owners zurück, Owner lädt neu und sieht 0:0 mit durchgestrichenem Eintrag', async ({ asRole }) => {
+  test('@FU-003 L85 Zurücknehmen ist dauerhaft: helper nimmt das Tor des Owners zurück, Owner lädt neu und sieht 0:0 mit durchgestrichenem Eintrag', async ({ asRole }) => {
     const { ids, target } = cup('RETRACT');
     const seededRows = await expectSeededEngineMatch(target);
     const goalId = engineEventId('RETRACT', 'goal-home');

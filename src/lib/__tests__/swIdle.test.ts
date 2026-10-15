@@ -75,7 +75,7 @@ describe('isIdle', () => {
     await expect(isIdle(deps({ countWaiting: vi.fn(async () => 0) }))).resolves.toBe(true);
   });
 
-  it('Ausgang nicht leer → kein Reload; Ausgang leer → Reload', async () => {
+  it('@FU-019 Ausgang nicht leer → kein Reload; Ausgang leer → Reload', async () => {
     const wartet = {
       forAccount: vi.fn(async () => [copy('m1', { pending: [ev('e1')] })]),
     };

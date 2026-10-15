@@ -289,7 +289,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     }
   });
 
-  test('Cup RECONNECT: helper offline, zwei Tore, wieder online - beide Geräte zeigen 3:0', async ({ asRole, browser }) => {
+  test('@FU-002 Cup RECONNECT: helper offline, zwei Tore, wieder online - beide Geräte zeigen 3:0', async ({ asRole, browser }) => {
     const { ids, target } = cup('RECONNECT');
     await expectSeededEngineMatch(target);
     const ownerPage = await asRole('owner');

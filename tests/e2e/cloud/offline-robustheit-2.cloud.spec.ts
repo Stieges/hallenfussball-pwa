@@ -232,7 +232,7 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
     }
   });
 
-  test('@FU-011 Gegenbeispiel: ohne abgelehnte Karte werden alle drei Einträge übernommen', async ({ browser }) => {
+  test('@FU-002 @FU-011 Gegenbeispiel: ohne abgelehnte Karte werden alle drei Einträge übernommen', async ({ browser }) => {
     test.setTimeout(90_000);
     const ids = engineCupIds('ALLEDREI');
     const baseRows = await expectSeededEngineMatch(engineCupTarget('ALLEDREI'));

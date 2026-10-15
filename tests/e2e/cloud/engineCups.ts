@@ -82,6 +82,8 @@ export const E2E_ENGINE_CUPS = [
   runningCup('REALTIME'),
   runningCup('TABWECHSEL'),
   runningCup('TABSCHNELL'),
+  // A-07g: Neustart ohne Netz (@FU-007) -- die Einträge bleiben im Gerätespeicher, der Server wird nie erreicht.
+  runningCup('NEUSTART'),
   runningCup('QUEUE', false),
   runningCup('AMEND', true, [START, GOAL_HOME_NR7]),
   // Zusätzlich eine Gelbe Karte VOR dem Tor: das Protokoll zeigt Zurückgenommenes nur im Zeitfenster

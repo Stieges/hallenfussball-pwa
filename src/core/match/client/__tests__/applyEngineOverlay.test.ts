@@ -85,4 +85,19 @@ describe('applyEngineOverlay (C3a-2a, B3/W7)', () => {
     const tournament = { matches: [{ id: 'm1', scoreA: 0, scoreB: 0 }] };
     expect(applyEngineOverlay(tournament, new Map())).toBe(tournament);
   });
+
+  it('@FU-023 gespeichert 3:1, Eintraege ergeben 2:1: die Anzeige zeigt 2:1', () => {
+    const { state } = reduceMatch(
+      [start(), goal('g1', ctx.teamAId, 1000, 0), goal('g2', ctx.teamAId, 2000, 1000), goal('g3', ctx.teamBId, 3000, 2000)],
+      ctx,
+    );
+    const fields = engineOverlayFields(viewFromState(state), ctx);
+    const stored: OverlayableMatch = { id: ctx.matchId, scoreA: 3, scoreB: 1, matchStatus: 'running' };
+    const tournament = { matches: [stored] };
+
+    const result = applyEngineOverlay(tournament, new Map([[ctx.matchId, fields]]));
+
+    expect(result.matches[0]).toMatchObject({ id: ctx.matchId, scoreA: 2, scoreB: 1 });
+    expect(stored).toMatchObject({ scoreA: 3, scoreB: 1 });
+  });
 });
