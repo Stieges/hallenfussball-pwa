@@ -56,16 +56,24 @@ describe('Rotation mit zwei Live-Folien', () => {
   });
 });
 
-describe('Live-Folie ohne eigenes Feld (alle laufenden Spiele)', () => {
-  const ALLE = folie('live-alle', 'live', {});
+describe('Live-Folie ohne Feld gilt als Feld 1 und hält an (B-44b-F, @ZM-074)', () => {
+  const OHNE = folie('live-ohne', 'live', {});
 
-  it('wird übersprungen, solange auf keinem Feld gespielt wird', () => {
-    const p = programm([ALLE, TABELLE], [{ id: 'm9', field: 1, matchStatus: 'scheduled' }]);
-    expect(nextSlide(p, start(), 0)).toMatchObject({ index: 1 });
+  it('einzige Live-Folie ohne fieldId, Spiel läuft auf Feld 1: Folie hält über 120 s, kein Takt', () => {
+    const p = programm([OHNE, TABELLE], [{ id: 'm1', field: 1, matchStatus: 'running' }]);
+    let s = nextSlide(p, start(), 0);
+    for (let t = 1_000; t <= 120_000; t += 1_000) { s = nextSlide(p, s, t); expect(s).toMatchObject({ index: 0, pinnedMatchId: 'm1' }); }
   });
 
-  it('bleibt sichtbar, wenn irgendein Feld spielt (nicht übersprungen)', () => {
-    const p = programm([ALLE, TABELLE], [{ id: 'm2', field: 2, matchStatus: 'running' }]);
-    expect(nextSlide(p, start(), 0)).toMatchObject({ index: 0 });
+  it('Gegenbeispiel: läuft nur auf Feld 2 ein Spiel, wird die Folie übersprungen und die Rotation läuft weiter', () => {
+    const p = programm([OHNE, TABELLE], [{ id: 'm2', field: 2, matchStatus: 'running' }]);
+    const s = nextSlide(p, start(), 0);
+    expect(s).toMatchObject({ index: 1 });
+    expect(s.pinnedMatchId ?? null).toBeNull();
+  });
+
+  it('Gegenbeispiel: läuft kein Spiel, rotiert die Tabelle weiter (kein Pin)', () => {
+    const p = programm([OHNE, TABELLE], [{ id: 'm9', field: 1, matchStatus: 'scheduled' }]);
+    expect(nextSlide(p, start(), 0)).toMatchObject({ index: 1 });
   });
 });

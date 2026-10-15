@@ -66,7 +66,6 @@
     },
     "live": {
       "idleSkip": "Waiting for the next match...",
-      "allFields": "All fields",
       "nextMatch": "Next match",
       "noMatch": "No match scheduled",
       "kickoff": "Kickoff"

@@ -35,17 +35,6 @@ export const displayList = {
   headingIconSize: '1em',
   /** Abstand zwischen Überschrift-Symbol und Wort */
   headingIconGap: '1.2vh',
-  /** Live-Folie ohne eigenes Feld: mehrere laufende Spiele nebeneinander (B-44b, F2) */
-  multiField: {
-    maxCards: 4,
-    gap: '2vh',
-    padding: '2vh',
-    /** Feldname (mindestens 3 % der Bildhöhe) */
-    info: '3.4vh',
-    /** Teamnamen, bis zu zwei Zeilen */
-    name: '4.4vh',
-    nameLines: 2,
-    /** Spielstand */
-    score: '15vh',
-  },
+  /** Bezeichnung einer Zeile (Spielbezeichnung) höchstens so breit */
+  labelMaxWidth: '25%',
 } as const;

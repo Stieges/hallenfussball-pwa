@@ -98,7 +98,7 @@ export function MonitorMatchRow({ match, teams, tournament, theme, hidePendingOr
       </div>
       <div style={{ ...cell, flex: '1 1 0' }}>{sideLabel(match, 'B', ctx)}</div>
       {match.label && (
-        <div style={{ ...cell, color: colors.textMuted, flex: '0 1 auto', maxWidth: '25%' }}>{match.label}</div>
+        <div style={{ ...cell, color: colors.textMuted, flex: '0 1 auto', maxWidth: displayList.labelMaxWidth }}>{match.label}</div>
       )}
     </div>
   );

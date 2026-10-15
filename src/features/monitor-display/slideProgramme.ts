@@ -147,9 +147,9 @@ function isLiveSlide(slide: ProgramSlide): boolean {
   return slide.type === 'live' && 'config' in slide;
 }
 
-/** Feldnummer einer Live-Folie mit eigenem Feld; sonst null. B-44b (F2): ohne eigenes Feld zeigt die Folie alle laufenden Spiele. */
+/** Feldnummer einer Live-Folie; sonst null. Ohne fieldId gilt Feld 1 (wie LiveSlide, @ZM-074). */
 function liveFieldOf(slide: ProgramSlide): number | null {
-  if (!isLiveSlide(slide) || !('config' in slide) || !slide.config.fieldId) { return null; }
+  if (!isLiveSlide(slide) || !('config' in slide)) { return null; }
   return fieldIdToNumber(slide.config.fieldId);
 }
 
@@ -157,10 +157,10 @@ function runningOn(matches: readonly RuleMatch[], field: number): RuleMatch | un
   return matches.find(m => m.field === field && isMatchInProgress(m));
 }
 
-/** Laufendes Spiel der Live-Folie: auf ihrem Feld, ohne eigenes Feld auf irgendeinem Feld. */
+/** Laufendes Spiel der Live-Folie auf ihrem Feld. */
 function runningFor(slide: ProgramSlide, matches: readonly RuleMatch[]): RuleMatch | undefined {
   const field = liveFieldOf(slide);
-  return field === null ? matches.find(m => isMatchInProgress(m)) : runningOn(matches, field);
+  return field === null ? undefined : runningOn(matches, field);
 }
 
 /** @ZM-122: Live-Folie ohne laufendes Spiel auf ihrem Feld wird übersprungen. */
@@ -182,7 +182,7 @@ function firstVisible(program: SlideProgram, from: number, matches: readonly Rul
  * @ZM-074/075: Die erste Live-Folie (ab der aktuellen Folie gezählt), deren Feld ein laufendes Spiel hat
  * und die den Takt anhält (`pauseRotationDuringMatch !== false`). Null = kein Pinnen.
  * B-44b (F2): Die Vorbelegung hält nur bei genau einer Live-Folie; mehrere Live-Folien wechseln auch während
- * laufender Spiele. Live-Folien ohne eigenes Feld (alle Spiele nebeneinander) halten nie.
+ * laufender Spiele. Eine Live-Folie ohne fieldId gilt als Feld 1 und hält an.
  */
 function pinTarget(program: SlideProgram, state: SlideshowState, matches: readonly RuleMatch[]): { index: number; matchId: string } | null {
   const count = program.slides.length;
