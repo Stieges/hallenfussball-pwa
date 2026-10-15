@@ -42,12 +42,17 @@ export const displayFontSizes = {
 
   // Team Names (Stadium-Grade)
   // @ZM-125: Uhr deutlich größer als die Teamnamen (mindestens 1,5 ×)
-  clockXL: 'clamp(72px, 7.5vw, 120px)',
-  teamName: 'clamp(48px, 5vw, 72px)',   // Team-Name unter Score-Block
+  // B-44a3 (B2): Live-Folie ohne feste Pixel-Deckel, alles wächst mit der Bildhöhe (Auflösung egal, Anteil gleich)
+  clockXL: '11vh',
+  teamName: '6.2vh',   // Team-Name unter Score-Block
   // B-44a2 (@ZM-137, @ZM-125): Hinweistexte unter der Uhr, mindestens 3 % der Bildhöhe (lesbar aus 10 m)
   clockHint: '3.2vh',
   // B-44a2: Namen im Kindermodus stehen in der Kastenreihe und sind größer (kein Stand)
-  teamNameKids: 'clamp(64px, 7vw, 120px)',
+  teamNameKids: '11vh',
+  // B-44a3 (B2): Kopfzeile (Feld/Spiel, Gruppe), Statusmarke und Doppelpunkt, je mindestens 3 % der Bildhöhe
+  liveInfo: '3.4vh',
+  liveBadge: '3.2vh',
+  liveSeparator: '14vh',
 
   // Meta/Badge
   meta: '14px',          // Gruppe, Feld-Label
@@ -204,17 +209,13 @@ export const displayLayout = {
     badgeWidth: '11em',
     // B-44a2: Kindermodus: Namen oben bündig in der Kastenreihe, mit Abstand von oben
     kidsNamesOffset: '8vh',
-    score: '55%',
-    teamNames: '12%',
-    timer: '17%',
-    footer: '8%',
-    // H3 @ZM-125: Kasten = 66 % einer halben Spalte (zwei Spalten, je 50 % Bildbreite) = 33 % Bildbreite
-    blockWidth: '66%',
+    // H3 @ZM-125: Kasten = 70 % einer Spalte; zwei Spalten teilen die Breite abzüglich seitlichem Polster (paddingX) = ca. 33 % Bildbreite
+    blockWidth: '70%',
     blockGap: '0%',
     // B-17 Fixrunde: Teamnamen bekommen eine breitere Box, damit 50 Zeichen auf zwei Zeilen passen (@ZM-087)
-    // B-44a2: Namensspalte = Kastenbreite (66 % einer Spalte = 33 % Bildbreite), vorher 92 %
-    teamNameWidth: '66%',
-    teamNamesGap: '2%',
+    // B-44a2: Namensspalte = Kastenbreite, vorher 92 %
+    teamNameWidth: '70%',
+    teamNamesGap: '1vh',
     // @ZM-140 Raster: Mittelspalte zwischen den Kästen (Trenner, im Kindermodus leer)
     separatorWidth: '0%',
     // B-44a2 (@ZM-125): Kasten hoch, annähernd quadratisch (Breite 33 % der Bildbreite); der Stand ist das Größte
@@ -222,7 +223,8 @@ export const displayLayout = {
     // B-44a2: Namen höchstens so breit wie ihr Kasten (gleicher Wert wie blockWidth), bis zu zwei Zeilen
     nameLines: 2,
     // B-44a2: Platz unter den Namen für Uhr, Balken und Hinweise; bleibt in jedem Zustand reserviert (gleiche Lage)
-    lowerHeight: '25vh',
+    // B-44a3: fasst Uhr, Balken, Hinweiszeile und Schiedsrichter-Zeile
+    lowerHeight: '30vh',
     // B-44a2: Abstand zwischen Namen und Uhr (liegt innerhalb von lowerHeight)
     lowerPaddingTop: '2vh',
     // B-44a2: Abstand zwischen Uhr und Hinweisen sowie zwischen Hinweisen
@@ -230,6 +232,22 @@ export const displayLayout = {
     hintGapAbove: '1.6vh',
     // B-44a2: senkrechter Innenabstand der Folie (Höhe ist knapp, vorher clamp(24px, 3vw, 48px) auch senkrecht)
     paddingY: '1.5vh',
+    // B-44a3: seitliches Polster der Folie
+    paddingX: '3vw',
+    // B-44a3: Uhr und unterer Bereich (vorher Literale in MatchTimer)
+    progressHeight: '1.2vh',
+    clockGap: '1.2vh',
+    clockPadY: '0.8vh',
+    clockPadX: '2vh',
+    clockInnerGap: '1vh',
+    clockLineHeight: 1,
+    hintLineHeight: 1.2,
+    hintColumnGap: '3vh',
+    // B-44a3: Statusmarke (vorher feste Pixel)
+    badgePadY: '0.8vh',
+    badgePadX: '2vh',
+    badgeGap: '1vh',
+    badgeDot: '1.4vh',
     // B-44a2: Balkenbreite (vorher 700px fest)
     progressWidth: '36vw',
     // B-44a2: Rahmen der Kästen, einheitlich in beiden: dezent, bei Kontrast unter 3 : 1 kräftig
@@ -237,6 +255,19 @@ export const displayLayout = {
     frameWidthStrong: '4px',
     frameSubtleMix: '45%',
   },
+} as const;
+
+/**
+ * B-44a3: Anzeige ohne laufendes Spiel (NoMatchDisplay), vorher feste Werte im Bauteil.
+ * xl für den Monitor, lg für die Vorschau im Turnier-Management.
+ */
+export const displayNoMatch = {
+  xl: { icon: '10vh', title: '5vh', text: '2.6vh', padding: '6vh' },
+  lg: { icon: '72px', title: '28px', text: '18px', padding: '32px' },
+  minHeightXl: '50vh',
+  minHeightLg: '35vh',
+  maxWidth: '1200px',
+  borderWidth: '3px',
 } as const;
 
 // =============================================================================

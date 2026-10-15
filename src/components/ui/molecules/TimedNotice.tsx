@@ -1,5 +1,5 @@
 /**
- * TimedNotice – kleiner Hinweis in einer Ecke, der nach `durationMs` von selbst verschwindet.
+ * TimedNotice – kleiner Hinweis in der unteren rechten Ecke (verdeckt die Kopfzeile der Live-Folie nicht, @ME-006), der nach `durationMs` von selbst verschwindet.
  *
  * Einmal gezeigt, bleibt er für die Lebensdauer der Komponente ausgeblendet (Atomic Design: Molekül aus
  * Text und Verhalten, Farben und Maße aus den Tokens).
@@ -30,7 +30,7 @@ export function TimedNotice({ text, durationMs, onDone, testId }: TimedNoticePro
       data-testid={testId}
       style={{
         position: 'fixed',
-        top: cssVars.spacing.lg,
+        bottom: cssVars.spacing.lg,
         right: cssVars.spacing.lg,
         maxWidth: displayLayout.noticeMaxWidth,
         padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,

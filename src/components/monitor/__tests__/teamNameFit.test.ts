@@ -3,7 +3,7 @@
  * Gegenbeispiele: ein Name, der bei 3 % nicht passt, kommt nie unverkürzt; zuerst der volle Name, dann der Kurzname.
  */
 import { describe, it, expect } from 'vitest';
-import { waehleTeamNameSchrift } from '../teamNameFit';
+import { waehleTeamNameSchrift, gemeinsameNamenGroesse } from '../teamNameFit';
 
 const VOLL = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
 const MITTEL = 'SG Fußballfreunde Nordheim-Süd';
@@ -32,5 +32,19 @@ describe('waehleTeamNameSchrift (@ZM-087, @ZM-088)', () => {
   it('Gegenbeispiel: die kleinste Schrift wird nie unterschritten', () => {
     const wahl = waehleTeamNameSchrift([VOLL], () => false, 21, 64);
     expect(wahl).toEqual({ text: VOLL, px: 21 });
+  });
+});
+
+describe('B3 beide Teamnamen in derselben Größe', () => {
+  it('nimmt die kleinere der beiden passenden Größen', () => {
+    expect(gemeinsameNamenGroesse(72, 44)).toBe(44);
+    expect(gemeinsameNamenGroesse(40, 66)).toBe(40);
+  });
+  it('solange nur ein Name gemessen ist, keine Vorgabe (jeder passt sich selbst an)', () => {
+    expect(gemeinsameNamenGroesse(72, undefined)).toBeUndefined();
+    expect(gemeinsameNamenGroesse(undefined, 40)).toBeUndefined();
+  });
+  it('ungültige Messwerte (NaN) ergeben keine Vorgabe', () => {
+    expect(gemeinsameNamenGroesse(Number.NaN, 40)).toBeUndefined();
   });
 });

@@ -9,7 +9,7 @@
 
 import { CSSProperties, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayLayout, displaySpacing } from '../../design-tokens';
+import { cssVars, displayFontSizes, displayLayout } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
 import { MatchStatus } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
@@ -63,7 +63,7 @@ const sizeStyles: Record<string, { time: string; progress: string; gap: string }
   sm: { time: '18px', progress: '6px', gap: '6px' },
   md: { time: '28px', progress: '8px', gap: '10px' },
   lg: { time: '42px', progress: '12px', gap: '14px' },
-  xl: { time: displayFontSizes.clockXL, progress: '1.2vh', gap: '1.2vh' },
+  xl: { time: displayFontSizes.clockXL, progress: displayLayout.scoreArea.progressHeight, gap: displayLayout.scoreArea.clockGap },
 };
 
 export const MatchTimer: React.FC<MatchTimerProps> = ({
@@ -118,10 +118,12 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
   const timeContainerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'baseline',
-    gap: size === 'xl' ? '12px' : '8px',
+    gap: size === 'xl' ? displayLayout.scoreArea.clockInnerGap : '8px',
     // M2: neutrale Hervorhebung (Umkehrung der Textfarbe), keine Buntfarbe
     // B-44a2: Größe und Lage der Uhr sind in jeder Phase gleich, nur die Füllung wechselt
-    padding: `${size === 'xl' ? '0.8vh' : '4px'} ${size === 'xl' ? '2vh' : '12px'}`,
+    padding: size === 'xl'
+      ? `${displayLayout.scoreArea.clockPadY} ${displayLayout.scoreArea.clockPadX}`
+      : '4px 12px',
     borderRadius: '999px',
     backgroundColor: highlight ? themeColors.text : 'transparent',
   };
@@ -134,7 +136,7 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     color: highlight ? themeColors.background : themeColors.timerNormal,
     textShadow: highlight ? 'none' : themeColors.textShadowLight,
     letterSpacing: '0.02em',
-    lineHeight: 1,
+    lineHeight: displayLayout.scoreArea.clockLineHeight,
   };
 
   // H1: Hinweise stehen direkt auf dem Monitor-Hintergrund, Text in der Textfarbe (Kontrast ≥ 4,5 : 1)
@@ -152,11 +154,11 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     // B-44a2: immer dieselbe Zeile, feste Höhe auch ohne Hinweis (Lage ändert sich nie)
     flexWrap: 'nowrap',
     whiteSpace: 'nowrap',
-    minHeight: size === 'xl' ? `calc(${displayFontSizes.clockHint} * 1.2)` : undefined,
+    minHeight: size === 'xl' ? `calc(${displayFontSizes.clockHint} * ${displayLayout.scoreArea.hintLineHeight})` : undefined,
     justifyContent: 'center',
-    columnGap: displaySpacing.sectionMD,
+    columnGap: displayLayout.scoreArea.hintColumnGap,
     rowGap: displayLayout.scoreArea.hintGap,
-    lineHeight: 1.2,
+    lineHeight: displayLayout.scoreArea.hintLineHeight,
     marginTop: size === 'xl' ? displayLayout.scoreArea.hintGapAbove : undefined,
   };
 

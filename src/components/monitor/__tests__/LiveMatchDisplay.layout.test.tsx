@@ -6,6 +6,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { LiveMatchDisplay } from '../LiveMatchDisplay';
 import type { LiveMatch } from '../../../hooks/useLiveMatches';
+import { displayLayout } from '../../../design-tokens';
 import de from '../../../i18n/locales/de/monitor.json';
 
 vi.mock('../../../hooks', () => ({
@@ -87,7 +88,7 @@ describe('@ZM-140 Kasten-Rahmen und Gruppen-Text', () => {
 
   it('Gelber Kasten bekommt nur den dezenten Rahmen (B-44a2: einheitlich, schmaler als bei Schwarz)', () => {
     render(<LiveMatchDisplay match={createMatch()} colorScheme={{ preset: 'classic', homeColor: '#FDE047', awayColor: '#DC2626', useTeamColors: false }} />);
-    expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe('2px');
+    expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe(displayLayout.scoreArea.frameWidthSubtle);
   });
 
   it('Gruppe läuft über i18n', () => {
@@ -98,18 +99,16 @@ describe('@ZM-140 Kasten-Rahmen und Gruppen-Text', () => {
 });
 
 describe('H3 @ZM-125 Breiten: Kästen etwa 33 % Bildbreite, Namensspalte in Kastenbreite', () => {
-  it('Raster: zwei gleiche Spalten ohne Trennbreite, Kasten füllt 66 % seiner Spalte (= 33 % Bildbreite)', () => {
+  it('Raster: zwei gleiche Spalten ohne Trennbreite, Kasten füllt den Anteil seiner Spalte aus dem Token', () => {
     render(<LiveMatchDisplay match={createMatch()} />);
     expect(screen.getByTestId('live-grid').style.gridTemplateColumns).toMatch(/minmax\(0,\s?1fr\)\s0%\sminmax\(0,\s?1fr\)/);
-    expect(screen.getByTestId('live-block-home').style.width).toBe('66%');
-    expect(screen.getByTestId('live-block-away').style.width).toBe('66%');
-    // 66 % einer halben Spalte (50 % Bildbreite) ergeben 33 % der Bildbreite
-    expect(0.66 * 0.5).toBeCloseTo(0.33, 2);
+    expect(screen.getByTestId('live-block-home').style.width).toBe(displayLayout.scoreArea.blockWidth);
+    expect(screen.getByTestId('live-block-away').style.width).toBe(displayLayout.scoreArea.blockWidth);
   });
 
-  it('Namensspalte: so breit wie der Kasten (B-44a2: 66 % der Spalte = 33 % Bildbreite, vorher 92 %)', () => {
+  it('Namensspalte: so breit wie der Kasten (B-44a2, vorher 92 %)', () => {
     render(<LiveMatchDisplay match={createMatch()} />);
-    expect(screen.getByTestId('live-name-home').style.width).toBe('66%');
-    expect(screen.getByTestId('live-name-away').style.width).toBe('66%');
+    expect(screen.getByTestId('live-name-home').style.width).toBe(displayLayout.scoreArea.blockWidth);
+    expect(screen.getByTestId('live-name-away').style.width).toBe(displayLayout.scoreArea.blockWidth);
   });
 });

@@ -11,7 +11,7 @@
  * @see MONITOR-LIVE-SCORE-REDESIGN.md
  */
 
-import { CSSProperties } from 'react';
+import { CSSProperties, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, displayFontSizes, displayLayout } from '../../design-tokens';
 import type { MonitorTheme, LiveColorScheme } from '../../types/monitor';
@@ -19,7 +19,7 @@ import { DEFAULT_LIVE_COLOR_SCHEME } from '../../types/monitor';
 import { LiveMatch } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
 import { MatchTimer } from './MatchTimer';
-import { TEAM_NAME_ZEILENHOEHE } from './teamNameFit';
+import { TEAM_NAME_ZEILENHOEHE, gemeinsameNamenGroesse } from './teamNameFit';
 import type { ClockMode } from '../../core/match/clockDisplay';
 import { ScoreBlock } from './ScoreBlock';
 import { TeamNameDisplay } from './TeamNameDisplay';
@@ -92,6 +92,12 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
 
   const layout = displayLayout.scoreArea;
 
+  // B3: beide Teamnamen in derselben Größe (die kleinere der beiden passenden)
+  const [namePx, setNamePx] = useState<{ home?: number; away?: number }>({});
+  const onHomePx = useCallback((px: number) => setNamePx(p => (p.home === px ? p : { ...p, home: px })), []);
+  const onAwayPx = useCallback((px: number) => setNamePx(p => (p.away === px ? p : { ...p, away: px })), []);
+  const sharedNamePx = gemeinsameNamenGroesse(namePx.home, namePx.away);
+
   // --- Styles ---------------------------------------------------------------
 
   const containerStyle: CSSProperties = {
@@ -102,7 +108,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     width: '100%',
     height: fullscreen ? '100%' : 'auto',
     minHeight: fullscreen ? '100%' : size === 'xl' ? '70vh' : '50vh',
-    padding: fullscreen ? `${layout.paddingY} clamp(24px, 3vw, 48px)` : cssVars.spacing.xxl,
+    padding: fullscreen ? `${layout.paddingY} ${layout.paddingX}` : cssVars.spacing.xxl,
     background: themeColors.backgroundGradient,
     borderRadius: fullscreen ? 0 : cssVars.borderRadius.xl,
     border: fullscreen ? 'none' : `4px solid ${isRunning ? themeColors.borderActive : themeColors.border}`,
@@ -146,7 +152,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     justifySelf: 'center',
     alignSelf: 'center',
     width: 0,
-    fontSize: size === 'xl' ? 'clamp(80px, 10vw, 140px)' : '64px',
+    fontSize: size === 'xl' ? displayFontSizes.liveSeparator : '64px',
     fontWeight: 700,
     lineHeight: 1,
     color: themeColors.text,
@@ -192,23 +198,15 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     flexShrink: 0,
   };
 
-  const footerStyle: CSSProperties = {
-    height: layout.footer,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  };
-
   const badgeStyle: CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.xl}`,
+    gap: size === 'xl' ? layout.badgeGap : cssVars.spacing.sm,
+    padding: size === 'xl' ? `${layout.badgePadY} ${layout.badgePadX}` : `${cssVars.spacing.sm} ${cssVars.spacing.xl}`,
     borderRadius: cssVars.borderRadius.md,
     backgroundColor: statusInfo.bgColor,
     color: statusInfo.color,
-    fontSize: size === 'xl' ? '20px' : '16px',
+    fontSize: size === 'xl' ? displayFontSizes.liveBadge : '16px',
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
@@ -219,8 +217,8 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   };
 
   const liveDotStyle: CSSProperties = {
-    width: '14px',
-    height: '14px',
+    width: size === 'xl' ? layout.badgeDot : '14px',
+    height: size === 'xl' ? layout.badgeDot : '14px',
     borderRadius: '50%',
     backgroundColor: statusInfo.dotColor,
     boxShadow: isRunning ? `0 0 8px ${statusInfo.dotColor}` : undefined,
@@ -228,7 +226,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   };
 
   const infoStyle: CSSProperties = {
-    fontSize: size === 'xl' ? 'clamp(24px, 2.5vw, 36px)' : '20px',
+    fontSize: size === 'xl' ? displayFontSizes.liveInfo : '20px',
     fontWeight: 600,
     color: themeColors.textSecondary,
     textTransform: 'uppercase',
@@ -246,11 +244,10 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
             <span style={liveDotStyle} />
             {statusInfo.label}
           </div>
-          <div style={infoStyle}>
+          <div style={infoStyle} data-testid="live-info">
             Feld {match.field ?? 1} — Spiel {match.number}
           </div>
-          <div style={{ ...infoStyle, color: themeColors.text, justifySelf: 'end' }}>
-            { }
+          <div style={{ ...infoStyle, color: themeColors.text, justifySelf: 'end' }} data-testid="live-group">
             {(group || match.group) ? t('liveMatch.group', { group: group ?? match.group }) : null}
           </div>
         </div>
@@ -283,10 +280,10 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
             </div>
           )}
           <div style={nameCellStyle(1)} data-testid="live-name-home">
-            <TeamNameDisplay name={match.homeTeam.name} size={size} theme={theme} maxWidth="100%" fontSize={hideScore ? displayFontSizes.teamNameKids : undefined} />
+            <TeamNameDisplay name={match.homeTeam.name} size={size} theme={theme} maxWidth="100%" fontSize={hideScore ? displayFontSizes.teamNameKids : undefined} sizePx={sharedNamePx} onFitPx={onHomePx} />
           </div>
           <div style={nameCellStyle(3)} data-testid="live-name-away">
-            <TeamNameDisplay name={match.awayTeam.name} size={size} theme={theme} maxWidth="100%" fontSize={hideScore ? displayFontSizes.teamNameKids : undefined} />
+            <TeamNameDisplay name={match.awayTeam.name} size={size} theme={theme} maxWidth="100%" fontSize={hideScore ? displayFontSizes.teamNameKids : undefined} sizePx={sharedNamePx} onFitPx={onAwayPx} />
           </div>
           {/* Kindermodus (@W2A-031): lesbar in Textfarbe, in der Namenszeile (Kastenreihe zeigt die Namen) */}
           {hideScore && (
@@ -322,16 +319,23 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
               clockMode={clockMode}
             />
           )}
+          {/* B1: Schiedsrichter-Zeile im reservierten unteren Bereich, immer an derselben Stelle (unten) */}
+          {match.refereeName && (
+            <div
+              data-testid="live-referee"
+              style={{
+                marginTop: 'auto',
+                fontSize: displayFontSizes.clockHint,
+                lineHeight: layout.hintLineHeight,
+                color: themeColors.text,
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {t('liveMatch.referee', { name: match.refereeName })}
+            </div>
+          )}
         </div>
-
-        {/* Footer: Referee */}
-        {match.refereeName && (
-          <div style={footerStyle}>
-            <span style={{ ...infoStyle, fontWeight: 500, textTransform: 'none', letterSpacing: 'normal' }}>
-              Schiedsrichter: {match.refereeName}
-            </span>
-          </div>
-        )}
       </div>
 
       <style>{`

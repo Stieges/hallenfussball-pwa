@@ -114,6 +114,7 @@ export {
   displaySpacing,
   displayTransitions,
   displayLayout,
+  displayNoMatch,
   displayEffects,
   displayMonitor,
   displayColorSchemes,

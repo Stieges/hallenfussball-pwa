@@ -9,7 +9,7 @@
  * @see MONITOR-LIVE-SCORE-REDESIGN.md Section 15
  */
 
-import { CSSProperties, useRef } from 'react';
+import { CSSProperties, useEffect, useRef } from 'react';
 import { cssVars, displayFontSizes } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
 import { useMonitorTheme } from '../../hooks';
@@ -27,6 +27,10 @@ export interface TeamNameDisplayProps {
   maxWidth?: string;
   /** Schriftgröße (CSS) statt der Vorgabe der Größe, z. B. große Namen im Kindermodus (B-44a2) */
   fontSize?: string;
+  /** B3: gemeinsame Größe beider Namen (px), vom Elternteil aus beiden Messungen gewählt */
+  sizePx?: number;
+  /** B3: meldet die eigene passende Größe (px) an das Elternteil */
+  onFitPx?: (px: number) => void;
   /** Override: force a specific variant */
   variant?: 'full' | 'medium' | 'short';
 }
@@ -46,6 +50,8 @@ export const TeamNameDisplay: React.FC<TeamNameDisplayProps> = ({
   theme = 'dark',
   maxWidth = '100%',
   fontSize,
+  sizePx,
+  onFitPx,
   variant,
 }) => {
   const { themeColors } = useMonitorTheme(theme);
@@ -59,7 +65,12 @@ export const TeamNameDisplay: React.FC<TeamNameDisplayProps> = ({
     [displayNames.full, displayNames.medium, displayNames.short],
     passtAnpassen,
     config.fontSize,
+    sizePx,
   );
+  const eigenPx = wahl?.px;
+  useEffect(() => {
+    if (eigenPx !== undefined && Number.isFinite(eigenPx)) { onFitPx?.(eigenPx); }
+  }, [eigenPx, onFitPx]);
 
   let displayText: string;
   if (variant) {
@@ -98,7 +109,7 @@ export const TeamNameDisplay: React.FC<TeamNameDisplayProps> = ({
   };
 
   return (
-    <div ref={ref} style={nameStyle} title={name}>
+    <div ref={ref} style={nameStyle} title={name} data-fit-vorgabe={config.fontSize}>
       {displayText}
     </div>
   );

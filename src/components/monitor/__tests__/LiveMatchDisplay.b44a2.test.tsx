@@ -63,6 +63,14 @@ describe('Kasten hoch und Namen in Kastenbreite', () => {
   });
 });
 
+describe('Namen im Normalmodus', () => {
+  it('Vorgabe der Namensgröße ist das Token teamName, bei beiden gleich', () => {
+    render(<LiveMatchDisplay match={createMatch()} />);
+    expect(screen.getByTestId('live-name-home').firstElementChild).toHaveAttribute('data-fit-vorgabe', displayFontSizes.teamName);
+    expect(screen.getByTestId('live-name-away').firstElementChild).toHaveAttribute('data-fit-vorgabe', displayFontSizes.teamName);
+  });
+});
+
 describe('Namen im Kindermodus groß', () => {
   it('TeamNameDisplay nimmt die Schriftgröße aus dem Token', () => {
     render(<TeamNameDisplay name="TuS Holm" variant="full" fontSize={displayFontSizes.teamNameKids} />);
@@ -120,7 +128,9 @@ describe('Gleiche Lage in allen Zuständen', () => {
   it('Kindermodus: Namen groß in der Kastenreihe, gleiche Rasterhöhe', () => {
     render(<LiveMatchDisplay match={createMatch()} hideScore />);
     expect(screen.getByTestId('live-name-home').style.gridRow).toBe('1');
-    expect(parseFloat(displayFontSizes.teamNameKids.replace('clamp(', ''))).toBeGreaterThan(parseFloat(displayFontSizes.teamName.replace('clamp(', '')));
+    // B4: die Größe kommt im gerenderten Kindermodus wirklich beim Namen an (Vorgabe des Anpassens)
+    expect(screen.getByTestId('live-name-home').firstElementChild).toHaveAttribute('data-fit-vorgabe', displayFontSizes.teamNameKids);
+    expect(screen.getByTestId('live-name-away').firstElementChild).toHaveAttribute('data-fit-vorgabe', displayFontSizes.teamNameKids);
     expect(screen.getByTestId('live-name-home').style.alignSelf).toBe('start');
     expect(screen.getByTestId('live-name-away').style.alignSelf).toBe('start');
     expect(screen.getByTestId('live-name-home').style.marginTop).toBe(L.kidsNamesOffset);
@@ -165,6 +175,13 @@ describe('Hinweise unter der Uhr (@ZM-137)', () => {
     render(<MatchTimer elapsedSeconds={400} durationSeconds={360} status="RUNNING" timerStartTime={new Date().toISOString()} timerElapsedSeconds={400} size="xl" />);
     const group = screen.getByTestId('clock-hints');
     expect((group.children[0] as HTMLElement).style.fontSize).toBe(displayFontSizes.clockHint);
+  });
+
+  it('Hinweiszeile darf nie umbrechen (absolut, nicht nur im Vergleich der Zustände)', () => {
+    render(<MatchTimer {...props} />);
+    const group = screen.getByTestId('clock-hints');
+    expect(group.style.flexWrap).toBe('nowrap');
+    expect(group.style.whiteSpace).toBe('nowrap');
   });
 
   it('ohne Hinweis bleibt die Hinweiszeile als leere Zeile fester Höhe stehen (Lage ändert sich nie)', () => {
@@ -241,5 +258,37 @@ describe('Festes Raster: gleiche Lage in allen Zuständen', () => {
   it('Kopfzeile ist ein Raster mit drei Spalten, auch ohne Gruppe', () => {
     render(<LiveMatchDisplay match={createMatch({ group: undefined })} />);
     expect(screen.getByTestId('live-header').style.gridTemplateColumns).toBe('1fr auto 1fr');
+  });
+});
+
+describe('B2 Kopfzeile und Marke wachsen mit der Bildhöhe (keine festen Pixel)', () => {
+  it('Feld/Spiel, Gruppe und Marke in den Tokens liveInfo und liveBadge', () => {
+    render(<LiveMatchDisplay match={createMatch()} />);
+    expect(screen.getByTestId('live-info').style.fontSize).toBe(displayFontSizes.liveInfo);
+    expect(screen.getByTestId('live-group').style.fontSize).toBe(displayFontSizes.liveInfo);
+    expect(screen.getByTestId('live-badge').style.fontSize).toBe(displayFontSizes.liveBadge);
+    expect(screen.getByTestId('live-separator').style.fontSize).toBe(displayFontSizes.liveSeparator);
+  });
+});
+
+describe('B1 Schiedsrichter-Zeile im festen Raster', () => {
+  it('liegt im reservierten unteren Bereich, nicht als zusätzlicher Footer', () => {
+    render(<LiveMatchDisplay match={createMatch({ refereeName: 'SR1' })} />);
+    const ref = screen.getByTestId('live-referee');
+    expect(screen.getByTestId('live-lower')).toContainElement(ref);
+    expect(ref).toHaveTextContent('liveMatch.referee');
+    expect(ref.style.fontSize).toBe(displayFontSizes.clockHint);
+  });
+
+  it('Gegenbeispiel: ohne Schiedsrichter keine Zeile, die Lage bleibt (Höhe des unteren Bereichs fest)', () => {
+    render(<LiveMatchDisplay match={createMatch()} />);
+    expect(screen.queryByTestId('live-referee')).toBeNull();
+    expect(screen.getByTestId('live-lower').style.height).toBe(L.lowerHeight);
+  });
+
+  it('mit Schiedsrichter gleiche Rasterstile wie ohne', () => {
+    const a = signatur({}, false);
+    const b = signatur({ refereeName: 'SR1' }, false);
+    for (const id of [...LAGE_IDS, 'nameHome', 'clock', 'hints'] as const) { expect(b[id]).toBe(a[id]); }
   });
 });

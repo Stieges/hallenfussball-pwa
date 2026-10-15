@@ -49,6 +49,15 @@ export function waehleTeamNameSchrift(
 }
 
 /**
+ * B3 (@ZM-087, Ruhe): Beide Teamnamen stehen in derselben Größe, nämlich der kleineren der beiden passenden.
+ * Solange ein Name noch nicht (gültig) gemessen ist, gibt es keine Vorgabe und jeder passt sich selbst an.
+ */
+export function gemeinsameNamenGroesse(a: number | undefined, b: number | undefined): number | undefined {
+  if (a === undefined || b === undefined || !Number.isFinite(a) || !Number.isFinite(b)) { return undefined; }
+  return Math.min(a, b);
+}
+
+/**
  * Misst im Browser mit einem versteckten Messfeld derselben Breite und Schrift. Die größte Schrift ist der
  * berechnete Wert der CSS-Vorgabe (`vorgabe`, z. B. clamp(48px, 5vw, 72px)), gemessen am Messfeld, nicht am Inline-Stil
  * des Elements (B-17 Fixrunde 2: sonst erbt das Element 16 px und jeder Name wird auf die Untergrenze gedrückt).
@@ -59,6 +68,8 @@ export function useTeamNameFit(
   kandidaten: readonly string[],
   aktiv: boolean,
   vorgabe: string,
+  /** B3: gemeinsame Größe in px; ersetzt die eigene, wenn sie kleiner ist (der Text wird nicht neu gewählt). */
+  gemeinsamPx?: number,
 ): TeamNameWahl | null {
   const [wahl, setWahl] = useState<TeamNameWahl | null>(null);
   const [tick, setTick] = useState(0);
@@ -117,9 +128,9 @@ export function useTeamNameFit(
     const neu = waehleTeamNameSchrift(liste, passt, minPx, maxPx);
     messfeld.remove();
 
-    el.style.fontSize = `${neu.px}px`;
+    el.style.fontSize = `${gemeinsamPx !== undefined ? Math.min(gemeinsamPx, neu.px) : neu.px}px`;
     setWahl(prev => (prev?.text === neu.text && prev.px === neu.px ? prev : neu));
-  }, [ref, schluessel, aktiv, vorgabe, tick]);
+  }, [ref, schluessel, aktiv, vorgabe, tick, gemeinsamPx]);
 
   return aktiv ? wahl : null;
 }

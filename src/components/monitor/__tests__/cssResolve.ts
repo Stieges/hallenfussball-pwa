@@ -24,6 +24,8 @@ export function resolveCss(expr: string, ctx: CssContext): number {
     const a = splitTop(fn[2]).map(x => resolveCss(x, ctx));
     if (fn[1] === 'min') { return Math.min(...a); }
     if (fn[1] === 'max') { return Math.max(...a); }
+    // CSS: clamp(MIN, VAL, MAX) = max(MIN, min(VAL, MAX)); bei MIN > MAX gewinnt MIN. Hier als Fehler, weil es ein Token-Fehler wäre.
+    if (a[0] > a[2]) { throw new Error(`clamp mit min > max: ${expr}`); }
     return Math.min(Math.max(a[1], a[0]), a[2]);
   }
   const m = /^(-?[\d.]+)(px|vw|vh|cqw|cqh|%)$/.exec(e);
@@ -35,7 +37,9 @@ export function resolveCss(expr: string, ctx: CssContext): number {
     case 'vh': return (n / 100) * ctx.vh;
     case 'cqw': return (n / 100) * (ctx.cqw ?? ctx.vw);
     case 'cqh': return (n / 100) * (ctx.cqh ?? ctx.vh);
-    default: return (n / 100) * (ctx.percentOf ?? 0);
+    default:
+      if (ctx.percentOf === undefined) { throw new Error(`Prozentwert ohne Bezug: ${expr}`); }
+      return (n / 100) * ctx.percentOf;
   }
 }
 
