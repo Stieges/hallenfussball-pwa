@@ -33,10 +33,14 @@ export function isServerLed(revision: number | undefined, lastAdopted: number | 
     return revision >= (lastAdopted ?? 0);
 }
 
-/** Alle server-geführten Felder eines Spiels, auch leere (ein Feld kann am Server geleert sein). */
+/**
+ * Alle server-geführten Felder eines Spiels, auch leere (ein Feld kann am Server geleert sein).
+ * A-08f3a-F F1: NULL aus der Cloud (z. B. `decided_by`, Mapper liefert es ungefiltert) zählt wie leer, sonst
+ * meldet jeder Abruf eine Schein-Änderung und schreibt; lokal bleiben Felder `undefined`, nie `null`.
+ */
 export function serverLedFieldsOf(match: Match): ServerLedMatchPatch {
     const patch: Record<string, unknown> = {};
-    for (const field of SERVER_LED_MATCH_FIELDS) { patch[field] = match[field]; }
+    for (const field of SERVER_LED_MATCH_FIELDS) { patch[field] = match[field] ?? undefined; }
     return patch;
 }
 

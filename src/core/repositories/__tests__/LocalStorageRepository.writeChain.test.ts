@@ -72,4 +72,18 @@ describe('A-08f3a Schreibkette: alle Schreibmethoden des lokalen Speichers laufe
     expect(stored()).toMatchObject({ version: 7, updatedAt: UPDATED_AT, ownerId: 'olli' });
     expect(storedMatch('m1')).toMatchObject({ scoreA: 3, scoreB: 1, matchStatus: 'finished' });
   });
+
+  it('F2: ein Fehler in einem Glied blockiert die folgenden Schreibvorgänge nicht', async () => {
+    const local = new LocalStorageRepository();
+
+    const results = await Promise.allSettled([
+      local.updateMatches('fehlt', [{ id: 'm1', scheduledTime: new Date(KICKOFF_NEW) }]),
+      local.applyServerMatchFields('T', new Map([['m1', { scoreA: 2, scoreB: 2, matchStatus: 'finished' }]])),
+    ]);
+    await local.updateMatches('T', [{ id: 'm2', scheduledTime: new Date(KICKOFF_NEW) }]);
+
+    expect(results.map((r) => r.status)).toEqual(['rejected', 'fulfilled']);
+    expect(storedMatch('m1')).toMatchObject({ scoreA: 2, scoreB: 2, matchStatus: 'finished' });
+    expect(new Date(storedMatch('m2').scheduledTime ?? KICKOFF_OLD).toISOString()).toBe(KICKOFF_NEW);
+  });
 });
