@@ -15,7 +15,7 @@ import { useState, CSSProperties, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, Input, Button, TeamAvatar, ColorPicker, LogoUploadDialog } from '../../components/ui';
 import { Tournament, Team, TeamLogo } from '../../types/tournament';
-import { cssVars } from '../../design-tokens'
+import { cssVars, dialogWidths } from '../../design-tokens'
 import {
   analyzeTeamMatches,
   deleteTeamSafely,
@@ -654,7 +654,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
             isOpen
             onClose={closeDeleteDialog}
             closeOnBackdropClick={false}
-            maxWidth="500px"
+            maxWidth={dialogWidths.md}
             labelledBy="team-delete-dialog-title"
             testId="team-delete-dialog"
             initialFocusRef={deleteCancelRef}

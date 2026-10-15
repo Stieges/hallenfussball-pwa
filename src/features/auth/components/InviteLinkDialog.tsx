@@ -7,7 +7,7 @@
  */
 
 import React, { useState, CSSProperties } from 'react';
-import { cssVars } from '../../../design-tokens'
+import { cssVars, dialogWidths } from '../../../design-tokens'
 import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { Button } from '../../../components/ui/Button';
 
@@ -60,7 +60,7 @@ export const InviteLinkDialog: React.FC<InviteLinkDialogProps> = ({
   };
 
   return (
-    <DialogSurface isOpen onClose={onClose} maxWidth="400px" labelledBy="invite-link-dialog-title">
+    <DialogSurface isOpen onClose={onClose} maxWidth={dialogWidths.sm} labelledBy="invite-link-dialog-title">
       <div style={styles.header}>
         <div style={styles.successIcon}>
           <span>&#10003;</span>

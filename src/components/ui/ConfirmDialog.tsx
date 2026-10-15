@@ -9,7 +9,7 @@
 
 import { CSSProperties, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, fontSizesMd3 } from '../../design-tokens'
+import { cssVars, dialogWidths, fontSizesMd3 } from '../../design-tokens'
 import { DialogSurface } from './molecules/DialogSurface';
 export type ConfirmDialogVariant = 'warning' | 'danger' | 'info';
 
@@ -104,7 +104,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       accent: cssVars.colors.warning,
       headerBg: cssVars.colors.warningLight,
       // Weiß auf Warnfarbe wäre 3,19 : 1 (hell); der Hover-Ton hält 4,5 : 1 (@OB-055).
-      confirmBg: cssVars.colors.warningHover,
+      confirmBg: cssVars.colors.warningSolid,
       confirmHover: cssVars.colors.warningHover,
     },
     danger: {
@@ -213,7 +213,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       isOpen={isOpen}
       onClose={effectiveOnCancel}
       zIndex={cssVars.zIndex.critical}
-      maxWidth="480px"
+      maxWidth={dialogWidths.md}
       accent={variantConfig.accent}
       labelledBy="confirm-dialog-title"
       initialFocusRef={isDanger ? cancelButtonRef : undefined}

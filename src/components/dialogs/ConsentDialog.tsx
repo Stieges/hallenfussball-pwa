@@ -11,7 +11,7 @@
 
 import { useState, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, mediaQueries } from '../../design-tokens';
+import { cssVars, dialogWidths, mediaQueries } from '../../design-tokens';
 import { setConsentStatus, type ConsentStatus } from '../../lib/consent';
 import { DialogSurface } from '../ui/molecules/DialogSurface';
 
@@ -124,7 +124,7 @@ export const ConsentDialog = ({ isOpen, onConsent }: ConsentDialogProps) => {
       isOpen={isOpen}
       dismissible={false}
       labelledBy={titleId}
-      maxWidth="480px"
+      maxWidth={dialogWidths.md}
       zIndex={cssVars.zIndex.navigation}
       panelClassName="consent-dialog-modal"
     >

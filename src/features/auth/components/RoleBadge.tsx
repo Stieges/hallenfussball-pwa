@@ -28,7 +28,7 @@ const roleColors: Record<
     text: cssVars.colors.onPrimary,
   },
   'co-admin': {
-    background: cssVars.colors.warningHover,
+    background: cssVars.colors.warningSolid,
     text: cssVars.colors.onWarning,
   },
   trainer: {

@@ -14,7 +14,7 @@
 
 import { useState, useCallback, useMemo, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../design-tokens';
+import { cssVars, dialogWidths } from '../../design-tokens';
 import type { Tournament, TournamentGroup } from '../../types/tournament';
 import type {
   MonitorSlide,
@@ -529,7 +529,7 @@ export function MonitorEditor({
 
   if (!monitor) {
     return (
-      <DialogSurface isOpen onClose={onClose} maxWidth="800px" ariaLabel={t('monitorEditor.notFound')}>
+      <DialogSurface isOpen onClose={onClose} maxWidth={dialogWidths.lg} ariaLabel={t('monitorEditor.notFound')}>
         <div style={editorStyle}>
           <div style={headerStyle}>
             <h2 style={titleStyle}>{t('monitorEditor.notFound')}</h2>
@@ -544,7 +544,7 @@ export function MonitorEditor({
   }
 
   return (
-    <DialogSurface isOpen onClose={onClose} maxWidth="800px" labelledBy={titleId}>
+    <DialogSurface isOpen onClose={onClose} maxWidth={dialogWidths.lg} labelledBy={titleId}>
       <div style={editorStyle}>
         {/* Header */}
         <div style={headerStyle}>

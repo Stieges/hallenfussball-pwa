@@ -102,3 +102,24 @@ describe('@OB-055 Wächter – Gegenbeispiele (jede Schreibweise wird erkannt)',
     expect(countScrims("const s = {\n  position: 'absolute',\n  background: 'rgba(0, 0, 0, 0.3)',\n};")).toBe(0);
   });
 });
+
+describe('T1 Dialogbreiten kommen nur aus dialogWidths', () => {
+  const DATEIEN = [
+    'components/ui/molecules/DialogSurface.tsx',
+    'components/dialogs/Dialog.tsx',
+    'components/dialogs/ConsentDialog.tsx',
+    'components/ui/ConfirmDialog.tsx',
+    'features/auth/components/InviteDialog.tsx',
+    'features/auth/components/InviteLinkDialog.tsx',
+    'features/auth/components/RoleChangeDialog.tsx',
+    'features/auth/components/TransferOwnershipDialog.tsx',
+    'components/ui/LogoUploadDialog.tsx',
+    'components/match-cockpit/PostMatchModal.tsx',
+    'features/tournament-management/MonitorEditor.tsx',
+    'features/tournament-management/TeamsTab.tsx',
+  ];
+  it.each(DATEIEN)('%s: kein maxWidth-Literal in px', (datei) => {
+    const source = readFileSync(join(SRC, datei), 'utf8');
+    expect(source).not.toMatch(/maxWidth\s*=\s*\{?\s*['"]?\d+(px)?['"]?/);
+  });
+});

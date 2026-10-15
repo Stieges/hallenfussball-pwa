@@ -16,7 +16,7 @@
  */
 import { CSSProperties, ReactNode, RefObject, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
-import { cssVars, mediaQueries } from '../../../design-tokens';
+import { cssVars, dialogWidths, mediaQueries } from '../../../design-tokens';
 import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 export interface DialogSurfaceProps {
@@ -57,7 +57,7 @@ export const DialogSurface = ({
   dismissible = true,
   closeOnBackdropClick = true,
   placement = 'center',
-  maxWidth = '480px',
+  maxWidth = dialogWidths.md,
   zIndex = cssVars.zIndex.navigation,
   accent,
   labelledBy,

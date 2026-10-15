@@ -1,5 +1,5 @@
 import { ReactNode, CSSProperties, useId, type RefObject } from 'react';
-import { cssVars, mediaQueries } from '../../design-tokens';
+import { cssVars, dialogWidths, mediaQueries } from '../../design-tokens';
 import { Icons } from '../ui/Icons';
 import { DialogSurface } from '../ui/molecules/DialogSurface';
 
@@ -21,7 +21,7 @@ export const Dialog = ({
   onClose,
   title,
   children,
-  maxWidth = '500px',
+  maxWidth = dialogWidths.md,
   closeOnBackdropClick = true,
   initialFocusRef,
   suppressEnter,

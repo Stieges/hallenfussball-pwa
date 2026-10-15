@@ -96,6 +96,7 @@ export const semanticColorsLight = {
 
   warning: palette.amber[600],
   warningHover: palette.amber[700],
+  warningSolid: palette.amber[700],
   warningLight: 'rgba(217, 119, 6, 0.1)',
   warningSubtle: 'rgba(217, 119, 6, 0.05)',
   warningMedium: 'rgba(217, 119, 6, 0.15)',

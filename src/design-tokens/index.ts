@@ -136,6 +136,7 @@ export { displayList } from './displayList';
 
 export {
   touchTargets,
+  dialogWidths,
   touchTargetValues,
   iconSizes,
   iconSizeValues,
