@@ -25,7 +25,7 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style, page = 0 }
 
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
   const field = tournament.fields?.find(f => f.id === slide.config.fieldId);
-  const fieldName = field?.customName ?? field?.defaultName ?? t('slides.field', { number: fieldNumber });
+  const fieldName = field?.customName ?? field?.defaultName ?? t('fieldSelector.field', { field: fieldNumber });
 
   const schedule = fieldSchedule(tournament.matches, fieldNumber);
   const pages = pagesFor(schedule.length);

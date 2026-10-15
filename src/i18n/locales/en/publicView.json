@@ -5,8 +5,7 @@
   },
   "notFound": {
     "title": "Tournament not found",
-    "bodyBefore": "The code",
-    "bodyAfter": "is invalid or the tournament has not been shared.",
+    "body": "The code <strong>{{code}}</strong> is invalid or the tournament has not been shared.",
     "home": "Go to start page"
   },
   "error": {
@@ -30,22 +29,17 @@
   "teamSelector": {
     "title": "Choose my team",
     "hint": "Pick your team to highlight its matches.",
-    "none": "No team (show all)",
-    "group": "Group {{group}}"
+    "none": "No team (show all)"
   },
   "filter": {
     "group": "Group:",
     "phase": "Phase:",
     "status": "Status:",
     "all": "All",
-    "groupChip": "Group {{group}}",
-    "finalRound": "Final round",
-    "scheduled": "Scheduled",
-    "live": "🔴 Live",
-    "finished": "Finished"
+    "live": "🔴 Live"
   },
   "standings": {
-    "hidden": "🏆 Standings hidden",
+    "hidden": "🏆 Tables hidden",
     "bambini": "(Bambini mode enabled)"
   },
   "info": {
@@ -56,9 +50,9 @@
     "teams": "Teams:",
     "teamCount": "{{n}} teams",
     "shareCode": "Share code:",
-    "theme": "Display",
+    "theme": "Appearance",
     "bambiTitle": "🔒 Bambini mode active",
     "hiddenScores": "Scores are not shown. ",
-    "hiddenRankings": "Standings are not shown."
+    "hiddenRankings": "Tables are not shown."
   }
 }

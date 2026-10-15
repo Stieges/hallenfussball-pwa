@@ -46,6 +46,7 @@ export const TeamSelectorDialog: React.FC<TeamSelectorDialogProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation('publicView');
+  const { t: tSport } = useTranslation('sport');
   return (
   <div style={teamSelectorStyle} onClick={onClose} data-testid="team-selector-dialog">
     <div style={teamSelectorContentStyle} onClick={(e) => e.stopPropagation()}>
@@ -75,7 +76,7 @@ export const TeamSelectorDialog: React.FC<TeamSelectorDialogProps> = ({
             {team.name}
             {team.group && (
               <span style={{ marginLeft: 'auto', color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
-                {t('teamSelector.group', { group: team.group })}
+                {tSport('tournament.groupWithLetter', { letter: team.group })}
               </span>
             )}
           </Button>

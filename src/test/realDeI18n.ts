@@ -3,7 +3,7 @@
  *
  * Der globale Passthrough-Mock aus src/test/setup.ts liefert nur Schlüssel. Testdateien, die
  * Anzeigetexte prüfen, heben den Mock auf (`vi.unmock('i18next')`, `vi.unmock('react-i18next')`)
- * und rufen in `beforeAll` `initRealDeI18n()` auf. Muster: TabellenTab.placementLogic.test.tsx.
+ * und rufen `initRealDeI18n()` per Top-Level-await auf. Muster: TabellenTab.placementLogic.test.tsx.
  *
  * Bewusst ohne src/i18n/index.ts: dessen Modul-Init liest document/navigator und liefe in der
  * node-Testumgebung nicht.

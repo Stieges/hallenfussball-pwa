@@ -83,7 +83,7 @@ export const PublicFilterBar: React.FC<PublicFilterBarProps> = ({
               style={chipStyle(selectedGroup === group)}
               onClick={() => onGroupChange(group)}
             >
-              {t('filter.groupChip', { group })}
+              {tSport('tournament.groupWithLetter', { letter: group })}
             </button>
           ))}
         </div>
@@ -108,7 +108,7 @@ export const PublicFilterBar: React.FC<PublicFilterBarProps> = ({
           style={chipStyle(selectedPhase === 'final')}
           onClick={() => onPhaseChange('final')}
         >
-          {t('filter.finalRound')}
+          {tSport('tournament.finals')}
         </button>
       </div>
 
@@ -125,7 +125,7 @@ export const PublicFilterBar: React.FC<PublicFilterBarProps> = ({
           style={chipStyle(selectedStatus === 'scheduled')}
           onClick={() => onStatusChange('scheduled')}
         >
-          {t('filter.scheduled')}
+          {tSport('status.scheduled')}
         </button>
         <button
           style={chipStyle(selectedStatus === 'live')}
@@ -137,7 +137,7 @@ export const PublicFilterBar: React.FC<PublicFilterBarProps> = ({
           style={chipStyle(selectedStatus === 'finished')}
           onClick={() => onStatusChange('finished')}
         >
-          {t('filter.finished')}
+          {tSport('status.finished')}
         </button>
       </div>
     </div>

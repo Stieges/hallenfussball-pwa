@@ -46,7 +46,7 @@
     },
     "qr": {
       "headline": "Results on your phone",
-      "idleHint": "Watch the screen in the hall – the match is live here."
+      "idleHint": "Follow the match live on the screen in the hall."
     },
     "page": "Page {{page}} / {{pages}}",
     "allStandings": {
@@ -54,7 +54,6 @@
       "overall": "Overall standings",
       "none": "No tables yet"
     },
-    "field": "Field {{number}}",
     "schedule": {
       "title": "📋 Schedule {{field}}"
     },
@@ -77,13 +76,10 @@
     "notFound": "Configuration not found",
     "back": "← Back",
     "connection": "The tournament could not be loaded: connection to the server failed. The next attempt runs automatically.",
-    "tournamentNotFound": "Tournament not found: {{id}}. If this screen runs on a different device than the organiser laptop, the tournament must be set to \"Shareable by link\" in the visibility settings.",
+    "tournamentNotFound": "Tournament not found: {{id}}. If this screen runs on a different device than the organizer laptop, the tournament must be set to \"Shareable by link\" in the visibility settings.",
     "monitorNotFound": "Monitor not found: {{id}}",
     "fetchFailed": "Error while loading",
     "cloudTimeout": "Cloud request aborted after {{ms}} ms (timeout)"
-  },
-  "group": {
-    "label": "Group"
   },
   "standings": {
     "header": {

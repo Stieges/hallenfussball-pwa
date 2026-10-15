@@ -5,8 +5,7 @@
   },
   "notFound": {
     "title": "Turnier nicht gefunden",
-    "bodyBefore": "Der Code",
-    "bodyAfter": "ist ungültig oder das Turnier wurde nicht freigegeben.",
+    "body": "Der Code <strong>{{code}}</strong> ist ungültig oder das Turnier wurde nicht freigegeben.",
     "home": "Zur Startseite"
   },
   "error": {
@@ -30,19 +29,14 @@
   "teamSelector": {
     "title": "Mein Team wählen",
     "hint": "Wähle dein Team, um seine Spiele hervorzuheben.",
-    "none": "Kein Team (alle anzeigen)",
-    "group": "Gruppe {{group}}"
+    "none": "Kein Team (alle anzeigen)"
   },
   "filter": {
     "group": "Gruppe:",
     "phase": "Phase:",
     "status": "Status:",
     "all": "Alle",
-    "groupChip": "Gruppe {{group}}",
-    "finalRound": "Finalrunde",
-    "scheduled": "Geplant",
-    "live": "🔴 Live",
-    "finished": "Beendet"
+    "live": "🔴 Live"
   },
   "standings": {
     "hidden": "🏆 Tabellen ausgeblendet",

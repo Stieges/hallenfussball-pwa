@@ -52,9 +52,9 @@ export function fieldIdToNumber(fieldId: string | undefined): number {
 
 /** Get group display name */
 export function getGroupDisplayName(tournament: Tournament, groupId: string | undefined): string {
-  if (!groupId) {return anzeigeT('monitor:group.label');}
+  if (!groupId) {return anzeigeT('sport:tournament.group');}
   const group = tournament.groups?.find(g => g.id === groupId);
-  return group?.customName ?? anzeigeT('monitor:liveMatch.group', { group: groupId });
+  return group?.customName ?? anzeigeT('sport:tournament.groupWithLetter', { letter: groupId });
 }
 
 /**

@@ -54,7 +54,6 @@
       "overall": "Gesamttabelle",
       "none": "Noch keine Tabellen"
     },
-    "field": "Feld {{number}}",
     "schedule": {
       "title": "📋 Spielplan {{field}}"
     },
@@ -81,9 +80,6 @@
     "monitorNotFound": "Monitor nicht gefunden: {{id}}",
     "fetchFailed": "Fehler beim Laden",
     "cloudTimeout": "Cloud-Anfrage nach {{ms}}ms abgebrochen (Timeout)"
-  },
-  "group": {
-    "label": "Gruppe"
   },
   "standings": {
     "header": {

@@ -3,7 +3,7 @@
  * Texte und Aufbau wörtlich aus LiveViewScreen übernommen.
  */
 import { CSSProperties } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { publicPageContainerStyle, publicPageContentStyle } from '../publicPageStyles';
 import { Card } from '../../../components/ui/Card';
@@ -64,7 +64,7 @@ export const PublicNotFoundView: React.FC<{ shareCode: string }> = ({ shareCode 
             {t('notFound.title')}
           </h2>
           <p style={{ color: cssVars.colors.textMuted, marginBottom: cssVars.spacing.lg }}>
-            {t('notFound.bodyBefore')} <strong>{shareCode}</strong> {t('notFound.bodyAfter')}
+            <Trans i18nKey="notFound.body" ns="publicView" values={{ code: shareCode }} components={{ strong: <strong /> }} />
           </p>
           <Button
             variant="secondary"

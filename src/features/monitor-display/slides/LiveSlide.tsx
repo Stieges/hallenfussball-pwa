@@ -29,7 +29,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
 
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
   const field = tournament.fields?.find(f => f.id === slide.config.fieldId);
-  const fieldName = field?.customName ?? field?.defaultName ?? t('slides.field', { number: fieldNumber });
+  const fieldName = field?.customName ?? field?.defaultName ?? t('fieldSelector.field', { field: fieldNumber });
   const { matches, teams } = tournament;
 
   // Gepinntes Spiel (@ZM-075/077), sonst das laufende Spiel auf diesem Feld (Halbzeit zählt mit)
