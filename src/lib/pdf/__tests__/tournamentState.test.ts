@@ -77,3 +77,17 @@ describe('F1 withTournamentState mischt den Stand nur ein, wo das Turnier ihn ha
     expect(ohneStand.scoreA).toBeUndefined();
   });
 });
+
+describe('N6 withTournamentState mischt Verlängerung und Entscheidungsart ein', () => {
+  it('Spiel 12 trägt overtimeScoreA/B, penaltyScoreA/B und decidedBy aus dem Turnier', () => {
+    const plan = hallencupSchedule(hallencupTournament({ matches: [turnierspiel(12, {})] }));
+    const stand = hallencupTournament({
+      matches: [turnierspiel(12, {
+        matchStatus: 'finished', scoreA: 2, scoreB: 2, overtimeScoreA: 3, overtimeScoreB: 3, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty',
+      })],
+    });
+    const spiel = withTournamentState(plan, stand).allMatches.find(m => m.matchNumber === 12);
+
+    expect(spiel).toMatchObject({ overtimeScoreA: 3, overtimeScoreB: 3, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty' });
+  });
+});

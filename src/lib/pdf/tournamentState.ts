@@ -1,9 +1,9 @@
 /**
- * Mischt den Turnierstand in den Plan (B-28a3-4, Punkt 2): Ergebnis, Status, Korrekturhistorie und Strafstoß-Ergebnis
+ * Mischt den Turnierstand in den Plan (B-28a3-4, Punkt 2): Ergebnis, Status, Korrekturhistorie, Verlängerung und Strafstoß-Ergebnis
  * aus `tournament.matches`. Vorher stand das Einmischen im Dialog `PDFExportDialog.tsx`; hier ist es testbar.
  */
 import type { GeneratedSchedule, ScheduledMatch, SchedulePhase } from '../../core/generators';
-import type { CorrectionEntry, MatchStatus, Tournament } from '../../types/tournament';
+import type { CorrectionEntry, MatchDecidedBy, MatchStatus, Tournament } from '../../types/tournament';
 
 /** Plan-Spiel mit dem Turnierstand, den das PDF braucht. */
 export interface StatefulMatch extends ScheduledMatch {
@@ -11,6 +11,10 @@ export interface StatefulMatch extends ScheduledMatch {
   correctionHistory?: CorrectionEntry[];
   penaltyScoreA?: number;
   penaltyScoreB?: number;
+  /** Ergebnis nach Verlängerung und wie das Spiel entschieden wurde (a3-4-Review N6; @DR-019). */
+  overtimeScoreA?: number;
+  overtimeScoreB?: number;
+  decidedBy?: MatchDecidedBy;
 }
 
 export type StatefulSchedule = GeneratedSchedule & {
@@ -34,6 +38,9 @@ export function withTournamentState(schedule: GeneratedSchedule, tournament: Tou
       correctionHistory: tm.correctionHistory,
       penaltyScoreA: tm.penaltyScoreA,
       penaltyScoreB: tm.penaltyScoreB,
+      overtimeScoreA: tm.overtimeScoreA,
+      overtimeScoreB: tm.overtimeScoreB,
+      decidedBy: tm.decidedBy,
     };
   };
   return {

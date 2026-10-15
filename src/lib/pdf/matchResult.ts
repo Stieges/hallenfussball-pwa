@@ -5,13 +5,21 @@
  */
 import type { StatefulMatch } from './tournamentState';
 
-/** Markierung unter oder neben dem Ergebnis: korrigiert (mit Zeit der letzten Korrektur) oder übersprungen. */
-export type ResultMark = { kind: 'corrected'; at: Date } | { kind: 'skipped' };
+/** Markierung unter dem Ergebnis: korrigiert, mit Zeit der letzten Korrektur. */
+export interface ResultMark { kind: 'corrected'; at: Date }
 
+/** Zwei Tore-Zahlen eines Spielabschnitts (nach Verlängerung, Strafstoßschießen). */
+export interface ScorePair { a: number; b: number }
+
+/**
+ * `skipped` ist eine eigene Art (B-28 C1, a3-4-Review N5): ein ausgefallenes Spiel bekommt keine Schreibfelder, anders
+ * als `empty`. `overtime` und `penalty` tragen die Zahlen, soweit das Turnier sie hat (N6).
+ */
 export type ResultState =
-  | { kind: 'final'; scoreA: number; scoreB: number; mark?: ResultMark }
+  | { kind: 'final'; scoreA: number; scoreB: number; mark?: ResultMark; overtime?: ScorePair; penalty?: ScorePair }
   | { kind: 'live' }
-  | { kind: 'empty'; mark?: ResultMark };
+  | { kind: 'skipped' }
+  | { kind: 'empty' };
 
 /** Fassung: „Spielplan zum Ausfüllen“ (`blank`) hat keine Ergebnisse, auch nicht für beendete Spiele. */
 export type ResultEdition = 'plan' | 'blank';
@@ -39,13 +47,20 @@ export function resultState(match: StatefulMatch, options: ResultOptions = {}): 
         return { kind: 'empty' };
       }
       const korrigiert = match.correctionHistory?.at(-1);
-      const mark: ResultMark | undefined = korrigiert ? { kind: 'corrected', at: new Date(korrigiert.timestamp) } : undefined;
-      return mark
-        ? { kind: 'final', scoreA: match.scoreA, scoreB: match.scoreB, mark }
-        : { kind: 'final', scoreA: match.scoreA, scoreB: match.scoreB };
+      const state: ResultState = { kind: 'final', scoreA: match.scoreA, scoreB: match.scoreB };
+      if (korrigiert) {
+        state.mark = { kind: 'corrected', at: new Date(korrigiert.timestamp) };
+      }
+      if (match.overtimeScoreA !== undefined && match.overtimeScoreB !== undefined) {
+        state.overtime = { a: match.overtimeScoreA, b: match.overtimeScoreB };
+      }
+      if (match.penaltyScoreA !== undefined && match.penaltyScoreB !== undefined) {
+        state.penalty = { a: match.penaltyScoreA, b: match.penaltyScoreB };
+      }
+      return state;
     }
     case 'skipped':
-      return { kind: 'empty', mark: { kind: 'skipped' } };
+      return { kind: 'skipped' };
     default:
       // geplant oder wartend: wie geplant, ohne Ergebnis
       return { kind: 'empty' };

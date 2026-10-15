@@ -56,7 +56,7 @@ const ERWARTET: Record<MatchStatus, { overrides: Partial<Match>; zustand: Result
   waiting: { overrides: { matchStatus: 'waiting' }, zustand: { kind: 'empty' } },
   running: { overrides: { matchStatus: 'running', scoreA: 1, scoreB: 0 }, zustand: { kind: 'live' } },
   finished: { overrides: { matchStatus: 'finished', scoreA: 2, scoreB: 1 }, zustand: { kind: 'final', scoreA: 2, scoreB: 1 } },
-  skipped: { overrides: { matchStatus: 'skipped' }, zustand: { kind: 'empty', mark: { kind: 'skipped' } } },
+  skipped: { overrides: { matchStatus: 'skipped' }, zustand: { kind: 'skipped' } },
 };
 
 describe('@BM-011 @BM-012 @BM-045 Ergebniszustand je Status des Spiels', () => {
@@ -84,8 +84,23 @@ describe('@BM-011 @BM-012 @BM-045 Ergebniszustand je Status des Spiels', () => {
     expect(zustand).toEqual({ kind: 'final', scoreA: 2, scoreB: 0, mark: { kind: 'corrected', at: new Date(KORREKTUR_ZEIT) } });
   });
 
-  it('@BM-013 übersprungenes Spiel → Markierung „skipped“', () => {
-    expect(zustandVon({ matchStatus: 'skipped' })).toEqual({ kind: 'empty', mark: { kind: 'skipped' } });
+  it('N5 @DR-019 ausgefallenes Spiel ist eine eigene Art „skipped“ und nicht „empty“ (sonst bekäme es Schreibfelder)', () => {
+    const zustand = zustandVon({ matchStatus: 'skipped' });
+    expect(zustand).toEqual({ kind: 'skipped' });
+    expect(zustand.kind).not.toBe('empty');
+  });
+
+  it('N6 @DR-019 beendetes Spiel trägt Verlängerung und Strafstoßschießen, wenn das Turnier sie hat', () => {
+    const zustand = zustandVon({
+      matchStatus: 'finished', scoreA: 2, scoreB: 2, overtimeScoreA: 3, overtimeScoreB: 3, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty',
+    });
+    expect(zustand).toEqual({ kind: 'final', scoreA: 2, scoreB: 2, overtime: { a: 3, b: 3 }, penalty: { a: 4, b: 3 } });
+  });
+
+  it('N6 gegenbeispiel: nur das Strafstoßschießen ist eingetragen → keine Verlängerung im Zustand', () => {
+    const zustand = zustandVon({ matchStatus: 'finished', scoreA: 1, scoreB: 1, penaltyScoreA: 5, penaltyScoreB: 4 });
+    expect(zustand).toEqual({ kind: 'final', scoreA: 1, scoreB: 1, penalty: { a: 5, b: 4 } });
+    expect(zustand).not.toHaveProperty('overtime');
   });
 
   it('Fassung „blank“ (Spielplan zum Ausfüllen): alle Zustände sind leer, auch ein laufendes oder beendetes Spiel', () => {
