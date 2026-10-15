@@ -46,6 +46,18 @@ function teamTexts(pages: LayoutPage[], namen: string[]): LayoutText[] {
     });
 }
 
+describe('C1-F fett über die Schriftkennung', () => {
+  it('die Spaltenköpfe tragen die fette Kennung, Teamnamen eine andere; LayoutText.bold bleibt für die eingebettete Schrift falsch', async () => {
+    const { pages } = await layoutOf({}, hallencupSchedule());
+    const fett = fettKennung(pages);
+    const texte = pages.flatMap(page => page.texts);
+
+    expect(fett).toBeDefined();
+    expect(texte.find(t => t.str === 'FC Nord')?.font).not.toBe(fett);
+    expect(texte.filter(t => t.font === fett).some(t => t.bold)).toBe(false);
+  });
+});
+
 describe.each(FIXTURES)('@DR-001 Rand: $name', ({ options, schedule }) => {
   it('oben: jede Oberkante liegt auf oder unter geo.top, auf allen Seiten', async () => {
     const { pages } = await layoutOf(options, schedule());
