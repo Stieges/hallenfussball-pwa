@@ -19,6 +19,27 @@ import { createPortal } from 'react-dom';
 import { cssVars, dialogWidths, mediaQueries } from '../../../design-tokens';
 import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
+// B-43b2: Scroll-Sperre per Referenzzählung (wie inert in useFocusTrap). Verschachtelte
+// Dialoge sperren den Hintergrund gemeinsam; erst der letzte gibt ihn frei und stellt den
+// Wert wieder her, den er vor dem ersten Dialog hatte.
+let scrollLockCount = 0;
+let overflowBeforeLock = '';
+
+function acquireScrollLock(): void {
+  if (scrollLockCount === 0) {
+    overflowBeforeLock = document.body.style.overflow;
+  }
+  scrollLockCount += 1;
+  document.body.style.overflow = 'hidden';
+}
+
+function releaseScrollLock(): void {
+  scrollLockCount = Math.max(0, scrollLockCount - 1);
+  if (scrollLockCount === 0) {
+    document.body.style.overflow = overflowBeforeLock;
+  }
+}
+
 export interface DialogSurfaceProps {
   /** Ist der Dialog offen? Geschlossen rendert der Baustein nichts. */
   isOpen: boolean;
@@ -28,6 +49,10 @@ export interface DialogSurfaceProps {
   dismissible?: boolean;
   /** Klick auf die Abdunkelung schließt. Standard: true (nur wirksam, wenn dismissible). */
   closeOnBackdropClick?: boolean;
+  /** Eigene Aktion beim Klick auf die Abdunkelung statt onClose (Esc und Zurück bleiben onClose). */
+  onBackdropClick?: () => void;
+  /** ARIA-Rolle: dialog (Standard) oder alertdialog (Rückfrage, die eine Entscheidung verlangt). */
+  role?: 'dialog' | 'alertdialog';
   /** Form: zentriert (Standard) oder Blatt von unten. */
   placement?: 'center' | 'sheet';
   /** Lesebreite der Fläche. Standard 480px. */
@@ -56,6 +81,8 @@ export const DialogSurface = ({
   onClose,
   dismissible = true,
   closeOnBackdropClick = true,
+  onBackdropClick,
+  role = 'dialog',
   placement = 'center',
   maxWidth = dialogWidths.md,
   zIndex = cssVars.zIndex.navigation,
@@ -79,10 +106,8 @@ export const DialogSurface = ({
 
   useEffect(() => {
     if (!isOpen) {return undefined;}
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
+    acquireScrollLock();
+    return releaseScrollLock;
   }, [isOpen]);
 
   if (!isOpen) {return null;}
@@ -91,7 +116,7 @@ export const DialogSurface = ({
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (dismissible && closeOnBackdropClick && e.target === e.currentTarget) {
-      onClose?.();
+      (onBackdropClick ?? onClose)?.();
     }
   };
 
@@ -139,7 +164,7 @@ export const DialogSurface = ({
         data-placement={placement}
         data-testid={testId}
         onClick={(e) => e.stopPropagation()}
-        role="dialog"
+        role={role}
         aria-modal="true"
         aria-labelledby={labelledBy ?? (ariaLabel ? undefined : generatedId)}
         aria-label={ariaLabel}

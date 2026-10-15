@@ -90,3 +90,70 @@ describe('DialogSurface – Form am Handy und Lesebreite', () => {
     expect(panel.style.maxWidth).toBe('360px');
   });
 });
+
+describe('DialogSurface – Scroll-Sperre per Referenzzählung (B-43b2, @OB-055)', () => {
+  const surface = (id: string) => (
+    <DialogSurface isOpen labelledBy={id} onClose={vi.fn()}>
+      <p id={id}>{id}</p>
+    </DialogSurface>
+  );
+
+  it('verschachtelt: der innere Dialog gibt den Hintergrund nicht frei, erst der letzte', () => {
+    const outer = render(surface('a'));
+    const inner = render(surface('b'));
+    expect(document.body.style.overflow).toBe('hidden');
+    inner.unmount();
+    expect(document.body.style.overflow).toBe('hidden');
+    outer.unmount();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('verschachtelt, falsche Reihenfolge: der äußere schließt zuerst, der innere hält die Sperre', () => {
+    const outer = render(surface('a'));
+    const inner = render(surface('b'));
+    outer.unmount();
+    expect(document.body.style.overflow).toBe('hidden');
+    inner.unmount();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('stellt den Wert wieder her, den der Hintergrund vor dem ersten Dialog hatte', () => {
+    document.body.style.overflow = 'scroll';
+    const a = render(surface('a'));
+    const b = render(surface('b'));
+    b.unmount();
+    a.unmount();
+    expect(document.body.style.overflow).toBe('scroll');
+    document.body.style.overflow = '';
+  });
+});
+
+describe('DialogSurface – Rolle und Abdunkelungs-Klick (B-43b2)', () => {
+  it('role="alertdialog" ist wählbar, Standard bleibt dialog', () => {
+    const { unmount } = render(
+      <DialogSurface isOpen ariaLabel="x" role="alertdialog" testId="rueckfrage">
+        <p>x</p>
+      </DialogSurface>,
+    );
+    expect(screen.getByRole('alertdialog').getAttribute('data-testid')).toBe('rueckfrage');
+    unmount();
+    renderSurface();
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('onBackdropClick ersetzt das Schließen beim Klick auf die Abdunkelung (Esc bleibt onClose)', () => {
+    const onClose = vi.fn();
+    const onBackdropClick = vi.fn();
+    render(
+      <DialogSurface isOpen ariaLabel="x" onClose={onClose} onBackdropClick={onBackdropClick}>
+        <p>x</p>
+      </DialogSurface>,
+    );
+    fireEvent.click(screen.getByRole('dialog').parentElement!);
+    expect(onBackdropClick).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
