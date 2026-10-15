@@ -121,8 +121,9 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
         'node_modules/',
-        'src/test/',
-        'src/test-data/',
+        // vitest 5: Verzeichnis-Ausschluss nur als Glob wirksam. src/test-data/ bleibt in der
+        // Messung (mockTournament.ts ist Produktivcode, LocalTestScreen).
+        'src/test/**',
         '**/__tests__/**',
         '**/*.{test,spec}.{ts,tsx}',
         '**/*.d.ts',

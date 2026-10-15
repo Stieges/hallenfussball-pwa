@@ -30,7 +30,7 @@ const schreibe = (name: string, inhalt: unknown) => {
   return pfad
 }
 const lauf = (...args: string[]) =>
-  spawnSync('node', [SKRIPT, '--root', ordner, '--base', 'gibt-es-nicht', ...args], { encoding: 'utf8' })
+  spawnSync('node', [SKRIPT, '--root', ordner, '--ohne-ratchet', ...args], { encoding: 'utf8' })
 
 beforeEach(() => {
   ordner = mkdtempSync(join(tmpdir(), 'cov-report-'))
@@ -94,5 +94,58 @@ describe('coverage-report.mjs', () => {
     const s = schreibe('coverage/coverage-summary.json', { total: datei(0, 0), [join(ordner, 'src/core/a.ts')]: datei(80, 100) })
     const f = schreibe('coverage-floors.json', floors(75))
     expect(lauf('--summary', s, '--floors', f).status).toBe(0)
+  })
+
+  it('@TA-001 Bereichswert ist covered/total, nicht der Mittelwert der Prozente (10/10 und 0/90 ergeben 10 %)', () => {
+    const s = schreibe('coverage/coverage-summary.json', {
+      total: datei(0, 0),
+      [join(ordner, 'src/features/public-view/Klein.tsx')]: datei(10, 10),
+      [join(ordner, 'src/features/public-view/Gross.tsx')]: datei(0, 90),
+    })
+    const f = schreibe('coverage-floors.json', floors(0))
+    const r = lauf('--summary', s, '--floors', f, 'zuschauer')
+    expect(r.stdout).toMatch(/zuschauer\s+2\s+10\.00/)
+  })
+
+  it('@TA-002 eine unbekannte Base-Ref laesst den Ratchet scheitern (fail-closed)', () => {
+    const s = schreibe('coverage/coverage-summary.json', { total: datei(0, 0), [join(ordner, 'src/core/a.ts')]: datei(90, 100) })
+    const f = schreibe('coverage-floors.json', floors(75))
+    const r = spawnSync('node', [SKRIPT, '--root', ordner, '--summary', s, '--floors', f, '--base', 'origin/mian'], { encoding: 'utf8' })
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/Base-Ref "origin\/mian" existiert nicht/)
+  })
+
+  it('@TA-004 existiert die Ref, kennt die Datei aber noch nicht (erster Merge), geht es mit Hinweis durch', () => {
+    // GIT_*-Variablen (z. B. aus dem Pre-Commit-Hook) duerfen nicht auf das echte Repo zeigen.
+    const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')))
+    const git = (...a: string[]) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: ordner, encoding: 'utf8', env })
+    git('init', '-q')
+    writeFileSync(join(ordner, 'x.txt'), 'x')
+    git('add', 'x.txt')
+    git('commit', '-q', '-m', 'x')
+    const s = schreibe('coverage/coverage-summary.json', { total: datei(0, 0), [join(ordner, 'src/core/a.ts')]: datei(90, 100) })
+    const f = schreibe('coverage-floors.json', floors(75))
+    const r = spawnSync('node', [SKRIPT, '--root', ordner, '--summary', s, '--floors', f, '--base', 'HEAD'], { encoding: 'utf8', env })
+    expect(r.status).toBe(0)
+    expect(r.stdout).toMatch(/erster Merge/)
+  })
+
+  it('@TA-004 verengte Bereichspfade gegenueber dem Hauptzweig sind rot, erweiterte erlaubt', () => {
+    const s = schreibe('coverage/coverage-summary.json', {
+      total: datei(0, 0),
+      [join(ordner, 'src/core/match/a.ts')]: datei(95, 100),
+      [join(ordner, 'src/core/storage/b.ts')]: datei(10, 100),
+    })
+    const haupt = schreibe('haupt-floors.json', floors(0))
+    const lauf2 = (pfade: string[]) => {
+      const neu = floors(0)
+      neu.bereiche.kern.pfade = pfade
+      const f = schreibe('coverage-floors.json', neu)
+      return spawnSync('node', [SKRIPT, '--root', ordner, '--summary', s, '--floors', f, '--base-floors', haupt], { encoding: 'utf8' })
+    }
+    const eng = lauf2(['src/core/match/'])
+    expect(eng.status).toBe(1)
+    expect(eng.stderr).toMatch(/Pfad "src\/core\/" des Hauptzweigs ist nicht mehr im Bereich/)
+    expect(lauf2(['src/core/', 'src/extra/']).status).toBe(0)
   })
 })

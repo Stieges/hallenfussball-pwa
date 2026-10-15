@@ -2,7 +2,7 @@
 // A-09 (@TA-006, @TA-007, @TA-008): hat jede MVP-Kennung einen Test?
 //
 // Aufruf: node scripts/scenario-tests.mjs [--task <ID>] [--strict] [--root <ordner>]
-//   [--kennungen <pfad>] [--nachweis <pfad>] [--plan <bauplan.md>] [--scan src,tests,scripts]
+//   [--kennungen <pfad>] [--nachweis <pfad>] [--plan <bauplan.md> | Umgebungsvariable BAUPLAN_PFAD] [--scan src,tests,scripts]
 //
 // Rot (Exit 1) bei: Zahl der Kennungen != soll, doppelte oder fehlende Eintraege, mehr als `max`
 // Nachweise aus der Generalprobe, Nachweis-Kennung ausserhalb der MVP-Liste. Kennungen ohne Test
@@ -12,11 +12,13 @@
 // Gezaehlt wird eine Kennung nur, wenn sie in einem Testnamen (it/test/describe/step), im Titel
 // oder in der each-Tabelle eines Tests steht - nicht in Kommentaren und nicht in sonstigen Strings.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { join, resolve } from 'node:path'
 
 const KENNUNG = /(?<![A-Za-z0-9])[A-Z][A-Z0-9]{0,3}-\d{3}(?!\d)/g
 const TEST_DATEI = /\.(test|spec)\.(ts|tsx|mjs|js)$/
-const AUFRUF = /\b(?:it|test|describe)((?:\.(?:each|skip|only|todo|concurrent|fails|sequential|step|for))*)\s*(?=[(`])/g
+// Aufrufname nicht nach '.', Wortzeichen oder '$' (sonst zaehlt `/x/.test('...')`), Modifikatoren inkl. describe/step.
+const AUFRUF = /(?<![.\w$])(?:it|test|describe)((?:\.(?:each|skip|only|todo|concurrent|fails|sequential|step|for|describe))*)\s*(?=[(`])/g
 
 function parseArgs(argv) {
   const o = { strict: false }
@@ -109,13 +111,34 @@ function erstesStringLiteral(src, ab) {
   return ''
 }
 
+/** Ersetzt den Inhalt aller Strings durch Leerzeichen (gleiche Laenge, Zeilenumbrueche bleiben). */
+function stringsMaskieren(src) {
+  let out = ''
+  let i = 0
+  while (i < src.length) {
+    const c = src[i]
+    if (c === "'" || c === '"' || c === '`') {
+      const ende = stringEnde(src, i)
+      out += c + src.slice(i + 1, ende - 1).replace(/[^\n]/g, ' ') + (ende - 1 > i ? src[ende - 1] : '')
+      i = ende
+    } else {
+      out += c
+      i++
+    }
+  }
+  return out
+}
+
 /** Texte, in denen Kennungen als Test-Nachweis zaehlen: Testtitel und each-Tabellen. */
 function testTexte(quelltext) {
   const src = ohneKommentare(quelltext)
+  const maske = stringsMaskieren(src)
   const texte = []
   AUFRUF.lastIndex = 0
   let m
-  while ((m = AUFRUF.exec(src)) !== null) {
+  // Suche in der maskierten Kopie (Strings leer), Auslesen im Original gleicher Laenge:
+  // `const s = "it('X-001')"` ist kein Test.
+  while ((m = AUFRUF.exec(maske)) !== null) {
     const mods = m[1]
     const ab = AUFRUF.lastIndex
     if (mods.includes('.each') || mods.includes('.for')) {
@@ -146,6 +169,19 @@ function sammleTestDateien(root, scan) {
     if (existsSync(ordner)) gehe(ordner)
   }
   return dateien
+}
+
+/** Bauplan liegt in docs/ (gitignored) und fehlt in Worktrees: --plan, BAUPLAN_PFAD, Worktree, Hauptrepo. */
+function planPfad(opt, root) {
+  const rel = 'docs/superpowers/plans/2026-10-03-mvp-bauplan.md'
+  const kandidaten = [opt.plan, process.env.BAUPLAN_PFAD, resolve(root, rel)].filter(Boolean)
+  try {
+    const common = execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+    kandidaten.push(resolve(common, '..', rel))
+  } catch {
+    // kein Git-Repo: nur die anderen Kandidaten
+  }
+  return kandidaten.find((k) => existsSync(k)) ?? kandidaten[0]
 }
 
 function kennungenDerAufgabe(planPfad, task) {
@@ -196,7 +232,7 @@ function main() {
 
   let zuPruefen = [...recordVon.keys()]
   if (opt.task) {
-    const ids = kennungenDerAufgabe(opt.plan ?? resolve(root, 'docs/superpowers/plans/2026-10-03-mvp-bauplan.md'), opt.task)
+    const ids = kennungenDerAufgabe(planPfad(opt, root), opt.task)
     zuPruefen = zuPruefen.filter((k) => ids.has(k))
     for (const k of ids) if (!recordVon.has(k)) console.log(`HINWEIS: ${k} (Aufgabe ${opt.task}) ist keine MVP-Kennung der Liste`)
   }

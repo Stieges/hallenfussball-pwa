@@ -35,6 +35,7 @@ function parseArgs(argv) {
     else if (a === '--neu') opt.neu.push(...wert().split(',').filter(Boolean))
     else if (a === '--vorher') opt.vorher = wert()
     else if (a === '--base') opt.base = wert()
+    else if (a === '--ohne-ratchet') opt.ohneRatchet = true
     else if (a === '--summary') opt.summary = wert()
     else if (a === '--floors') opt.floors = wert()
     else if (a === '--base-floors') opt.baseFloors = wert()
@@ -92,7 +93,18 @@ function baseFloors(opt, root, fehler, hinweise) {
     }
     return lies(opt.baseFloors)
   }
+  if (opt.ohneRatchet) {
+    hinweise.push('Ratchet: --ohne-ratchet gesetzt - Vergleich mit dem Hauptzweig uebersprungen (nur fuer Tests, nie in der CI)')
+    return null
+  }
   const ref = opt.base ?? 'origin/main'
+  // Fail-closed: eine unbekannte Ref (Tippfehler, flacher Checkout) ist ein Fehler, kein Freibrief.
+  try {
+    execFileSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], { cwd: root, stdio: 'ignore' })
+  } catch {
+    fehler.push(`Ratchet: Base-Ref "${ref}" existiert nicht - Vergleich mit dem Hauptzweig nicht moeglich (Ref pruefen, fetch-depth)`)
+    return null
+  }
   try {
     const text = execFileSync('git', ['show', `${ref}:coverage-floors.json`], {
       cwd: root,
@@ -101,7 +113,8 @@ function baseFloors(opt, root, fehler, hinweise) {
     })
     return JSON.parse(text)
   } catch {
-    hinweise.push(`Ratchet: ${ref} kennt coverage-floors.json nicht (erste Einfuehrung oder Ref fehlt) - Vergleich uebersprungen`)
+    // Einzige Ausnahme: die Ref existiert, kennt die Datei aber noch nicht (erster Merge).
+    hinweise.push(`Ratchet: ${ref} kennt coverage-floors.json noch nicht (erster Merge) - Vergleich uebersprungen`)
     return null
   }
 }
@@ -149,6 +162,10 @@ function main() {
       if (!neu) {
         fehler.push(`${name}: Bereich im Hauptzweig vorhanden, hier entfernt (Untergrenze entfallen)`)
         continue
+      }
+      // Pfade sind geschuetzt: Verengen (Hauptzweig-Pfad nicht mehr abgedeckt) ist verboten, Erweitern erlaubt.
+      for (const alt of b.pfade) {
+        if (!neu.pfade.some((p) => alt.startsWith(p))) fehler.push(`${name}: Pfad "${alt}" des Hauptzweigs ist nicht mehr im Bereich (Verengen verboten)`)
       }
       if (gewaehlt.includes(name)) continue
       for (const m of METRIKEN) {

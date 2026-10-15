@@ -100,4 +100,29 @@ describe('scenario-tests.mjs', () => {
     nachweis(['ZM-999'])
     expect(lauf().status).toBe(1)
   })
+
+  it('@TA-007 ein auskommentierter Test mit Kennung zaehlt nicht', () => {
+    liste(['ZM-096', 'HE-001'], 2)
+    schreibe('src/e.test.ts', "// it('ZM-096 war mal ein Test', () => {})\n/* test('HE-001 auch', () => {}) */\n")
+    expect(lauf().stdout).toMatch(/mit Test: 0/)
+  })
+
+  it('@TA-007 `.test(...)` einer Regex und it(...) im String sind keine Tests', () => {
+    liste(['ZM-096', 'HE-001'], 2)
+    schreibe(
+      'src/f.test.ts',
+      ["expect(/x/.test('ZM-096 hier'))", 'const s = "it(\'HE-001 im String\')"', "it('echt ohne Kennung', () => {})"].join('\n'),
+    )
+    expect(lauf().stdout).toMatch(/mit Test: 0/)
+    schreibe('src/g.test.ts', "test.describe('ZM-096 echt', () => {})\n")
+    expect(lauf().stdout).toMatch(/mit Test: 1/)
+  })
+
+  it('@TA-007 --task findet den Bauplan ueber --plan und meldet nur dessen Kennungen', () => {
+    liste(['ZM-096', 'HE-001'], 2)
+    schreibe('plan.md', '**A-99 Beispiel**\n- **Szenarien:** @ZM-096.\n\n**A-98 Anderes**\n- **Szenarien:** @HE-001.\n')
+    const r = lauf('--task', 'A-99', '--plan', join(ordner, 'plan.md'))
+    expect(r.status).toBe(0)
+    expect(r.stdout).toMatch(/MVP-Kennungen: 1 \(Aufgabe A-99\)/)
+  })
 })
