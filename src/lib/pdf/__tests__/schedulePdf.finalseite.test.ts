@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
 import type { Team } from '../../../types/tournament';
 import { finalsMatches, hallencupSchedule, hallencupTournament } from './pdfFixture';
-import { layoutOf } from './pdfFixtureLayout';
+import { layoutOf, ohneNummer } from './pdfFixtureLayout';
 import type { LayoutPage, LayoutText } from './pdfjsLayout';
 
 const trimmed = (text: LayoutText): string => text.str.trim();
@@ -15,7 +15,7 @@ const trimmed = (text: LayoutText): string => text.str.trim();
 /** Position einer Überschrift im Dokument: Seite und Höhe, damit Seiten sich vergleichen lassen. */
 function position(pages: LayoutPage[], text: string): number {
   for (let i = 0; i < pages.length; i++) {
-    const treffer = pages[i].texts.find(t => trimmed(t) === text);
+    const treffer = pages[i].texts.find(t => ohneNummer(t.str) === text);
     if (treffer) {return i * 1000 + treffer.y;}
   }
   return -1;

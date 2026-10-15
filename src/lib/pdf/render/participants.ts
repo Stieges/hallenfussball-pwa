@@ -11,6 +11,7 @@ import { getGroupDisplayName } from '../../../utils/displayNames';
 import { ensureSpace, type PageGeometry } from '../layout';
 import type { PdfTexts } from '../translations';
 import { PDF_FONT } from '../fonts';
+import type { SectionHandle } from '../sections';
 
 type Team = GeneratedSchedule['teams'][number];
 
@@ -122,7 +123,8 @@ export function renderParticipants(
   schedule: GeneratedSchedule,
   t: PdfTexts,
   geo: PageGeometry,
-  yPos: number
+  yPos: number,
+  section: SectionHandle
 ): number {
   yPos = ensureSpace(doc, yPos, printMetrics.sectionTitleMinSpace, geo);
 
@@ -130,7 +132,7 @@ export function renderParticipants(
   doc.setFontSize(printType.h2);
   doc.setTextColor(...printColors.ink);
   doc.setFont(PDF_FONT.family, 'bold');
-  doc.text(t.participants, geo.left, yPos);
+  doc.text(section.heading(doc, yPos, t.participants), geo.left, yPos);
   const ruleY = yPos + printMetrics.sectionTitleUnderline;
   doc.setDrawColor(...printColors.ink);
   doc.setLineWidth(printStroke.thead);

@@ -735,7 +735,12 @@
     "thirdPlace": "Spiel um Platz 3",
     "fifthSixth": "Spiel um Platz 5",
     "seventhEighth": "Spiel um Platz 7",
-    "pageOf": "Seite {{page}} von {{total}}",
+    "sectionTables": "Tabellen",
+    "sectionFinals": "Finalrunde",
+    "timesTentative": "Uhrzeiten voraussichtlich",
+    "contact": "Ansprechpartner",
+    "contactLine": "Kontakt: {{contact}}",
+    "fontFallbackNote": "Die Schrift konnte nicht geladen werden. Das PDF nutzt eine Ersatzschrift, Sonderzeichen erscheinen evtl. als ?",
     "noDate": "Kein Datum",
     "kicker": {
       "plan": "Spielplan",

@@ -10,6 +10,7 @@ import { pageGeometry } from '../layout';
 import { buildSchedulePdf, type PDFExportOptions } from '../schedulePdf';
 import type { RankEntry } from '../placement';
 import { HALLENCUP_STANDINGS, HALLENCUP_TEAMS, hallencupSchedule, hallencupTournament } from './pdfFixture';
+import { ohneNummer } from './pdfFixtureLayout';
 import { readLayout, type LayoutPage } from './pdfjsLayout';
 import { translatorFor } from './pdfText';
 
@@ -48,9 +49,9 @@ async function platzierung(
   });
   const pages = await readLayout(new Uint8Array(doc.output('arraybuffer')));
   // Überschrift „Platzierung“ (nicht die Regelzeile im Kopf): letzte Seite mit dem Wort als eigenem Textstück
-  const index = pages.map(p => p.texts.some(t => t.str.trim() === 'Platzierung')).lastIndexOf(true);
+  const index = pages.map(p => p.texts.some(t => ohneNummer(t.str) === 'Platzierung')).lastIndexOf(true);
   const letzte = pages[index];
-  const titel = letzte?.texts.find(t => t.str.trim() === 'Platzierung');
+  const titel = letzte?.texts.find(t => ohneNummer(t.str) === 'Platzierung');
   if (!titel) {throw new Error('Überschrift „Platzierung“ fehlt');}
   const kurzkopf = [tournament.title, tournament.ageClass];
   const folgeseiten = pages.slice(index + 1);
@@ -58,7 +59,9 @@ async function platzierung(
     ...letzte.texts.filter(t => t.y > titel.y),
     ...folgeseiten.flatMap(p => p.texts),
   ].filter(t => t.str.trim() !== '' && !kurzkopf.includes(t.str.trim()));
-  const zeilen = darunter; // Reihenfolge des Dokuments (Seiten nacheinander)
+  // Die Fußzeile (Text und Linie unter `footRuleY`) gehört nicht zur Platzierung (B-28 C3)
+  const fuss = pageGeometry('a4', 'portrait').footRuleY;
+  const zeilen = darunter.filter(t => t.y < fuss); // Reihenfolge des Dokuments (Seiten nacheinander)
   const sätze = zeilen.filter(t => t.str.trim().startsWith('Die Platzierung'));
   // pdfjs fasst Platznummer und Teamname einer Zeile zu einem Textstück zusammen („1. SC Ost“)
   // zweispaltig gezeichnet (Zeile für Zeile links, rechts): nach Platznummer ordnen
@@ -74,7 +77,7 @@ async function platzierung(
   const linien = [
     ...letzte.lines.filter(l => l.y1 > titel.y),
     ...folgeseiten.flatMap(p => p.lines),
-  ].filter(l => Math.abs(l.y1 - l.y2) < FLAT_TOL && Math.abs(l.x2 - l.x1) >= LINE_MIN_LENGTH).length;
+  ].filter(l => Math.abs(l.y1 - l.y2) < FLAT_TOL && Math.abs(l.x2 - l.x1) >= LINE_MIN_LENGTH && l.y1 < fuss - FLAT_TOL).length;
   return {
     pages,
     aus: { satz: sätze.map(t => t.str.trim()), platzNummern: nummern, linien, weitere },
@@ -256,8 +259,8 @@ describe('@DR-009 Platzierung zweispaltig', () => {
     const seite = pages[pages.length - 1];
     const geo = pageGeometry('a4', 'portrait');
     const mitte = geo.left + geo.contentWidth / 2;
-    const titel = seite.texts.find(t => t.str.trim() === 'Platzierung');
-    const links = seite.texts.filter(t => titel && t.y > titel.y && t.x < mitte && !/^Seite \d/.test(t.str.trim()) && t.str.trim() !== '' && t.str.trim() !== 'Platzierung');
+    const titel = seite.texts.find(t => ohneNummer(t.str) === 'Platzierung');
+    const links = seite.texts.filter(t => titel && t.y > titel.y && t.x < mitte && !/^Seite \d/.test(t.str.trim()) && t.str.trim() !== '' && ohneNummer(t.str) !== 'Platzierung');
     const ersteZeile = links.filter(t => t.y < (links.find(x => /^\d+\./.test(x.str.trim()) && x.str.trim().startsWith("2."))?.y ?? Infinity) - SIZE_TOL);
     const gesamt = ersteZeile.map(t => t.str.trim()).join(' ');
 
@@ -281,7 +284,7 @@ describe('@DR-009 Platzierung zweispaltig', () => {
     const seite = pages[pages.length - 1];
     const geo = pageGeometry('a4', 'portrait');
     const mitte = geo.left + geo.contentWidth / 2;
-    const titel = seite.texts.find(t => t.str.trim() === 'Platzierung');
+    const titel = seite.texts.find(t => ohneNummer(t.str) === 'Platzierung');
     if (!titel) {throw new Error('Überschrift fehlt');}
     const liste = seite.texts.filter(t => t.y > titel.y && t.str.trim() !== '' && !/^Seite \d/.test(t.str.trim()));
     const platz = (n: number) => liste.find(t => new RegExp(`^${n}\\.`).test(t.str.trim()));
@@ -303,7 +306,7 @@ describe('@DR-009 Platzierung zweispaltig', () => {
     const { pages } = await platzierung();
     const geo = pageGeometry('a4', 'portrait');
     const seite = pages[pages.length - 1];
-    const titel = seite.texts.find(t => t.str.trim() === 'Platzierung');
+    const titel = seite.texts.find(t => ohneNummer(t.str) === 'Platzierung');
     if (!titel) {throw new Error('Überschrift fehlt');}
     const darueber = [...seite.lines.map(l => l.y1), ...seite.rects.map(r => r.y + r.h)].filter(y => y < titel.y);
     const unterkanteDarueber = Math.max(...darueber);

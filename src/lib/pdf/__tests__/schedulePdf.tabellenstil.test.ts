@@ -9,6 +9,7 @@ import { printBox, printStroke, printType } from '../../../design-tokens/print';
 import type { Team } from '../../../types/tournament';
 import { hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { kaestchen, lesen, senkrecht, SIZE_TOL, TOL, waagerecht, zeilenLinien } from './pdfScoreSupport';
+import { ohneNummer } from './pdfFixtureLayout';
 import type { LayoutPage } from './pdfjsLayout';
 
 const EIN_PAAR = ['FC Nord', 'SV Süd', 'DJK Berg', 'TuS Tal'];
@@ -16,7 +17,7 @@ const teamsEinerGruppe = (): Team[] => EIN_PAAR.map((name, i) => ({ id: `team-${
 
 /** Seite 1 ab der Überschrift „Gruppenphase“ (Spieltabelle) oder „Spiele“ (jeder gegen jeden). */
 function spielbereich(page: LayoutPage): { von: number } {
-  const titel = page.texts.find(t => ['Gruppenphase', 'Spiele'].includes(t.str.trim()));
+  const titel = page.texts.find(t => ['Gruppenphase', 'Spiele'].includes(ohneNummer(t.str)));
   if (!titel) {throw new Error('Überschrift der Spieltabelle fehlt');}
   return { von: titel.y };
 }
@@ -61,10 +62,10 @@ describe('C1-F S1 Zeilenlinien nicht übermalt', () => {
   it('Finalseite: ebenfalls keine weiße Füllung in den Tabellen', async () => {
     const tournament = hallencupTournament();
     const pages = await lesen(hallencupSchedule(tournament), tournament);
-    const finale = pages.find(page => page.texts.some(t => t.str.trim() === 'Halbfinale'));
-    const titel = finale?.texts.find(t => t.str.trim() === 'Halbfinale');
+    const finale = pages.find(page => page.texts.some(t => ohneNummer(t.str) === 'Halbfinale'));
+    const titel = finale?.texts.find(t => ohneNummer(t.str) === 'Halbfinale');
 
-    const platzierung = finale?.texts.find(t => t.str.trim() === 'Platzierung');
+    const platzierung = finale?.texts.find(t => ohneNummer(t.str) === 'Platzierung');
 
     // Die Platzierung darunter ist keine Spieltabelle und bleibt außer Betracht
     expect(finale?.rects.filter(r => r.fill === '#ffffff' && r.y > (titel?.y ?? 0) && r.y < (platzierung?.y ?? 0) && r.h > 1)).toEqual([]);

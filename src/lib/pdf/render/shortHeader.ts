@@ -8,11 +8,15 @@ import type { jsPDF } from 'jspdf';
 import { printColors, printGap, printMetrics, printStroke, printType } from '../../../design-tokens/print';
 import type { PageGeometry } from '../layout';
 import { PDF_FONT } from '../fonts';
+import { clipToWidth } from './textFit';
 
-/** Kurzkopf der Folgeseiten: Titelzeilen (umbrochen) und Altersklasse. */
+/**
+ * Kurzkopf der Folgeseiten: Titelzeilen (umbrochen) und Untertitel je Seite. Der Untertitel nennt Altersklasse, Datum
+ * und den Abschnitt, der oben auf der Seite steht (G8), und ist erst nach dem Satz bekannt.
+ */
 export interface ShortHeadText {
   titleLines: string[];
-  subtitle: string;
+  subtitleFor: (page: number) => string;
 }
 
 /** Höchstens so viele Titelzeilen; mehr wird gekürzt. */
@@ -40,11 +44,11 @@ export function drawShortHeads(doc: jsPDF, geo: PageGeometry, head: ShortHeadTex
   const total = doc.getNumberOfPages();
   for (let page = 2; page <= total; page++) {
     doc.setPage(page);
-    drawShortHead(doc, head, geo);
+    drawShortHead(doc, head, geo, head.subtitleFor(page));
   }
 }
 
-function drawShortHead(doc: jsPDF, head: ShortHeadText, geo: PageGeometry): void {
+function drawShortHead(doc: jsPDF, head: ShortHeadText, geo: PageGeometry, subtitle: string): void {
   const extra = (head.titleLines.length - 1) * printMetrics.shortTitleAdvance;
   doc.setTextColor(...printColors.ink);
   doc.setFont(PDF_FONT.family, 'bold');
@@ -53,7 +57,7 @@ function drawShortHead(doc: jsPDF, head: ShortHeadText, geo: PageGeometry): void
     doc.text(line, geo.left, geo.top + printGap.shortHeadTitleBaseline + index * printMetrics.shortTitleAdvance);
   });
   doc.setFontSize(printType.subtitle);
-  doc.text(head.subtitle, geo.left, geo.top + printGap.shortHeadSubBaseline + extra);
+  doc.text(clipToWidth(doc, subtitle, geo.contentWidth), geo.left, geo.top + printGap.shortHeadSubBaseline + extra);
   doc.setDrawColor(...printColors.ink);
   doc.setLineWidth(printStroke.shortHead);
   doc.line(geo.left, geo.top + printGap.shortHeadRule + extra, geo.left + geo.contentWidth, geo.top + printGap.shortHeadRule + extra);

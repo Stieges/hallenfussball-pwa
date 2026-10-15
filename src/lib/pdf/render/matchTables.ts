@@ -65,11 +65,18 @@ export function matchTableOptions(
   };
 }
 
-/** Abschnittstitel mit Unterstrich-Abstand (Gruppenphase, Finalrunde). */
-export function sectionTitle(doc: jsPDF, text: string, geo: PageGeometry, yPos: number, size: number): number {
+/** Abschnittstitel mit Unterstrich-Abstand (Gruppenphase, Finalrunde); `note` steht klein dahinter. */
+export function sectionTitle(doc: jsPDF, text: string, geo: PageGeometry, yPos: number, size: number, note?: string): number {
   doc.setFontSize(size);
   doc.setTextColor(...printColors.ink);
   doc.setFont(PDF_FONT.family, 'bold');
   doc.text(text, geo.left, yPos);
+  if (note !== undefined) {
+    // Hinweis hinter dem Titel auf derselben Grundlinie, normal und kleiner (Rundenhinweis, @DR-001 Ausnahmeliste)
+    const left = geo.left + doc.getTextWidth(text) + printMetrics.roundNoteGap;
+    doc.setFont(PDF_FONT.family, 'normal');
+    doc.setFontSize(printType.roundNote);
+    doc.text(note, left, yPos);
+  }
   return yPos + printMetrics.sectionTitleUnderline;
 }

@@ -18,7 +18,6 @@ import type { LayoutPage, LayoutText } from './pdfjsLayout';
 import { fettKennung } from './pdfScoreSupport';
 
 const TOL = 0.05;
-const SEITENZAHL = /^Seite \d+ von \d+$/;
 const WEISS = '#ffffff';
 const SCHWARZ = '#000000';
 /** Toleranz in Prozentpunkten, die `grayTolerance` Graustufen entsprechen. */
@@ -91,15 +90,18 @@ describe.each(FIXTURES)('@DR-001 Rand: $name', ({ options, schedule }) => {
     });
   });
 
-  it('M1 Tabellen: kein Tabelleninhalt unterhalb der Satzspiegel-Unterkante, nur die Seitenzahl darunter', async () => {
+  it('M1 Tabellen: kein Tabelleninhalt unterhalb der Satzspiegel-Unterkante, darunter nur die Fußzeile mit ihrer Linie', async () => {
     const { pages } = await layoutOf(options, schedule());
-    const { bottom } = pageGeometry('a4', options.orientation ?? 'portrait');
+    const { bottom, footRuleY } = pageGeometry('a4', options.orientation ?? 'portrait');
 
     pages.forEach((page, i) => {
-      page.texts.filter(t => !SEITENZAHL.test(t.str)).forEach(t =>
+      const fuss = page.texts.filter(t => t.y > footRuleY);
+      expect(fuss.map(t => t.str).join(' '), `Seite ${i + 1} Fußzeile`).toMatch(/Seite \d+ von \d+/);
+      page.texts.filter(t => !fuss.includes(t)).forEach(t =>
         expect(t.y, `Seite ${i + 1} „${t.str}“`).toBeLessThanOrEqual(bottom + TOL));
       page.rects.forEach(r => expect(r.y + r.h, `Seite ${i + 1} Füllung`).toBeLessThanOrEqual(bottom + TOL));
-      page.lines.forEach(l => expect(Math.max(l.y1, l.y2), `Seite ${i + 1} Linie`).toBeLessThanOrEqual(bottom + TOL));
+      page.lines.filter(l => Math.abs(l.y1 - footRuleY) > TOL).forEach(l =>
+        expect(Math.max(l.y1, l.y2), `Seite ${i + 1} Linie`).toBeLessThanOrEqual(bottom + TOL));
     });
   });
 

@@ -9,7 +9,7 @@ import { generateFullSchedule } from '../../../core/generators';
 import { printLimits } from '../../../design-tokens/print';
 import type { Team } from '../../../types/tournament';
 import { HALLENCUP_TEAMS, hallencupSchedule, hallencupTournament } from './pdfFixture';
-import { layoutOf } from './pdfFixtureLayout';
+import { layoutOf, ohneNummer } from './pdfFixtureLayout';
 import { textIn, type Box, type LayoutPage, type LayoutText } from './pdfjsLayout';
 import { squash } from './pdfjsText';
 import { fettMap } from './pdfSchnitt';
@@ -28,7 +28,7 @@ const hallencupMitRegelwerk = (): ReturnType<typeof hallencupTournament> => hall
 
 /** Kästen der Teilnehmer auf Seite 1: weiße Rechtecke zwischen dem Abschnittstitel und dem Spieltabellen-Kopf. */
 function kaesten(page: LayoutPage): Box[] {
-  const titel = page.texts.find(t => trimmed(t) === 'Teilnehmer');
+  const titel = page.texts.find(t => ohneNummer(t.str) === 'Teilnehmer');
   // Erste Spaltenüberschrift der Spieltabelle markiert das Ende der Teilnehmer
   const spiele = page.texts.find(t => trimmed(t) === 'Nr' && (titel?.y ?? 0) < t.y);
   expect(titel, 'Abschnittstitel „Teilnehmer“').toBeDefined();
@@ -52,7 +52,7 @@ describe('Punkt 8 Teilnehmer als Blöcke je Gruppe (Daniel 15.10.)', () => {
   it('die Kästen überlappen sich nicht und liegen unter dem Abschnittstitel (Oberkante ≥ Unterkante Titel)', async () => {
     const tournament = hallencupMitRegelwerk();
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
-    const titel = pages[0].texts.find(t => trimmed(t) === 'Teilnehmer');
+    const titel = pages[0].texts.find(t => ohneNummer(t.str) === 'Teilnehmer');
     const felder = kaesten(pages[0]);
 
     const unterkanteTitel = (titel?.y ?? 0) + DESCENT_EM * (titel?.size ?? 0) * MM_PER_PT;

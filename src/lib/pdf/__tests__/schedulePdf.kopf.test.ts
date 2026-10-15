@@ -8,7 +8,7 @@ import { generateFullSchedule, type GeneratedSchedule } from '../../../core/gene
 import { printColumns, printLimits, printMetrics, printType } from '../../../design-tokens/print';
 import type { PlacementCriterion, Team, Tournament } from '../../../types/tournament';
 import { HALLENCUP_TEAMS, hallencupSchedule, hallencupTournament } from './pdfFixture';
-import { layoutOf } from './pdfFixtureLayout';
+import { layoutOf, ohneNummer } from './pdfFixtureLayout';
 import { pageGeometry } from '../layout';
 import type { LayoutPage, LayoutText } from './pdfjsLayout';
 import { squash } from './pdfjsText';
@@ -54,7 +54,7 @@ function grossesTurnier(): { tournament: Tournament; schedule: GeneratedSchedule
 const trimmed = (text: LayoutText): string => text.str.trim();
 
 function findPage(pages: LayoutPage[], text: string): number {
-  return pages.findIndex(page => page.texts.some(t => trimmed(t) === text));
+  return pages.findIndex(page => page.texts.some(t => ohneNummer(t.str) === text));
 }
 
 const LANGER_TITEL = 'Internationaler Hallenfußball-Wintercup der Sportgemeinschaft Nordheim 2026';
@@ -117,7 +117,7 @@ describe('@DR-015 K.-o.-Zeile über der Finalrunde', () => {
     expect(seite, 'Finalseite').toBeGreaterThan(0);
 
     const ko = pages[seite].texts.find(t => trimmed(t) === 'K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen');
-    const titel = pages[seite].texts.find(t => trimmed(t) === 'Halbfinale');
+    const titel = pages[seite].texts.find(t => ohneNummer(t.str) === 'Halbfinale');
     expect(ko, 'K.-o.-Zeile auf der Finalseite').toBeDefined();
     expect(ko && titel ? ko.y : 0).toBeLessThan(titel?.y ?? 0);
   });
@@ -194,7 +194,7 @@ describe('@DR-001 Teamnamen mindestens 12 pt, überall', () => {
     const teams = HALLENCUP_TEAMS.map((team, i) => (i === 0 ? { ...team, name: LONG_50 } : team));
     const tournament = hallencupMitRegelwerk({ teams });
     const { pages } = await layoutOf({ tournament }, generateFullSchedule(tournament, 'de'));
-    const tabelle = pages.find(page => page.texts.some(t => trimmed(t) === 'Tabelle – Gruppe A'));
+    const tabelle = pages.find(page => page.texts.some(t => ohneNummer(t.str) === 'Tabelle – Gruppe A'));
     expect(tabelle, 'Seite mit Tabelle Gruppe A').toBeDefined();
 
     // Teamspalte: Rest der Breite zwischen Platz- und Zahlenspalten (Tokens, keine Zahl im Test)
@@ -333,7 +333,7 @@ describe('Punkt 5 Kopf nach v7.2 (Daniel 15.10.)', () => {
       expect(fett.get(t!), `„${bezeichnungen[i]}“ fett`).toBe(true);
       expect(Math.abs((t?.size ?? 0) - KOPF_PT)).toBeLessThanOrEqual(SIZE_TOL);
     });
-    const unterkante = pages[0].texts.find(t => trimmed(t) === 'Teilnehmer')?.y ?? 90;
+    const unterkante = pages[0].texts.find(t => ohneNummer(t.str) === 'Teilnehmer')?.y ?? 90;
     const werte = kopf.filter(t => t.x > 30 && t.y < unterkante && t.str.trim() !== '' && !fett.get(t) && t.y > (labels[0]?.y ?? 0));
     const linksKanten = new Set(werte.map(t => Math.round(t.x * 10)));
     expect(linksKanten.size, 'alle Werte beginnen in einer Spalte').toBe(1);

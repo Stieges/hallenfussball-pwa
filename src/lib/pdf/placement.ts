@@ -17,7 +17,7 @@ export type PlacementState = 'open' | 'final';
 
 export interface PlacementInput {
   /** Fassung: `blank` (zum Ausfüllen) zeigt nie einen Endstand. */
-  edition: 'plan' | 'blank';
+  edition: 'plan' | 'blank' | 'final';
   /** Gespeicherter Endstand in der Reihenfolge der Plätze. */
   ranking?: RankEntry[];
   /** Das Turnier ist abgeschlossen. */

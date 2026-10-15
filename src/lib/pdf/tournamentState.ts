@@ -49,3 +49,11 @@ export function withTournamentState(schedule: GeneratedSchedule, tournament: Tou
     phases: schedule.phases.map(phase => ({ ...phase, matches: phase.matches.map(merge) })),
   };
 }
+
+/**
+ * Läuft die Gruppenphase noch? Ja, solange ein Gruppenspiel weder beendet noch ausgefallen ist (laufende und
+ * wartende Spiele zählen als offen). Dann stehen die Uhrzeiten der Finalrunde unter Vorbehalt (W7, @DR-001).
+ */
+export function groupPhaseOpen(groupMatches: StatefulMatch[]): boolean {
+  return groupMatches.some(match => match.matchStatus !== 'finished' && match.matchStatus !== 'skipped');
+}

@@ -9,6 +9,7 @@ import type jsPDF from 'jspdf';
 import { printColors, printLimits, printMetrics, printStroke, printType } from '../../../design-tokens/print';
 import { ascentMm, continuationTop, ensureSpace, type PageGeometry } from '../layout';
 import { PDF_FONT } from '../fonts';
+import type { SectionHandle } from '../sections';
 import type { PlacementState, RankEntry } from '../placement';
 import type { PdfTexts } from '../translations';
 
@@ -68,7 +69,7 @@ function pairHeight(doc: jsPDF, width: number, pair: Array<Slot | undefined>): n
 }
 
 /** Platzierung zeichnen. Rückgabe: y unter der letzten Zeile. */
-export function renderRanking(doc: jsPDF, input: RankingInput, t: PdfTexts, geo: PageGeometry, yPos: number): number {
+export function renderRanking(doc: jsPDF, input: RankingInput, t: PdfTexts, geo: PageGeometry, yPos: number, section: SectionHandle): number {
   const { state, teamCount, ranking, hasFinalRound } = input;
   const pending = state === 'open';
 
@@ -87,7 +88,7 @@ export function renderRanking(doc: jsPDF, input: RankingInput, t: PdfTexts, geo:
   doc.setFontSize(printType.h2);
   doc.setTextColor(...printColors.ink);
   doc.setFont(PDF_FONT.family, 'bold');
-  doc.text(t.finalRanking, geo.left, yPos);
+  doc.text(section.heading(doc, yPos, t.finalRanking), geo.left, yPos);
   yPos += printMetrics.sectionTitleUnderline;
 
   if (pending) {

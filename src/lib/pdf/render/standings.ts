@@ -12,6 +12,7 @@ import { ensureSpace, tableMargins, type PageGeometry } from '../layout';
 import { tableEndY } from '../jspdfTypes';
 import type { PdfTexts } from '../translations';
 import { PDF_FONT } from '../fonts';
+import type { SectionHandle } from '../sections';
 
 /** Standings aus dem Aufruf, sonst die Startwerte des Plans. */
 function resolveStandings(schedule: GeneratedSchedule, standings: Standing[] | undefined): Standing[] {
@@ -107,7 +108,8 @@ export function renderGroupStandings(
   standings: Standing[] | undefined,
   t: PdfTexts,
   geo: PageGeometry,
-  yPos: number
+  yPos: number,
+  section: SectionHandle
 ): number {
   // Gruppen des Plans, sortiert
   const groups = Array.from(new Set(schedule.teams.map(team => team.group).filter((g): g is string => Boolean(g)))).sort();
@@ -122,7 +124,7 @@ export function renderGroupStandings(
     doc.setFontSize(printType.caption);
     doc.setTextColor(...printColors.ink);
     doc.setFont(PDF_FONT.family, 'bold');
-    doc.text(t.standingsOfGroup(t.groupLabel(group, getGroupDisplayName(group, schedule.tournament))), geo.left, yPos);
+    doc.text(section.heading(doc, yPos, t.standingsOfGroup(t.groupLabel(group, getGroupDisplayName(group, schedule.tournament)))), geo.left, yPos);
     yPos += printMetrics.sectionTitleUnderline;
 
     const groupTeams = schedule.teams.filter(team => team.group === group);

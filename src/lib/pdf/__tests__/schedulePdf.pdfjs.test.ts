@@ -63,13 +63,13 @@ describe('@BM-048 aus dem PDF gelesen (pdfjs, ToUnicode)', () => {
     const tokens = tokensOf((await extractPdfText(bytes)).pages);
     const key = squash(name);
     // Teilnehmer: Zeile je Gruppe mit „n. Name“ (B-28a3-3b, kompakt); der Name steht in einem Stück.
-    const participants = section(tokens, 'Teilnehmer', 'Gruppenphase');
+    const participants = section(tokens, '1Teilnehmer', '2Gruppenphase');
     expect(participants.some(t => t.includes(key))).toBe(true);
     // Spiele: Zeile mit dem Namen als eigenes Stück in der Gruppenphase, vor der ersten Tabelle.
-    const matches = section(tokens, 'Gruppenphase', 'Tabelle–GruppeA');
+    const matches = section(tokens, '2Gruppenphase', '3Tabelle–GruppeA');
     expect(matches).toContain(key);
     // Tabelle Gruppe A: Name als eigenes Stück zwischen Titel und Gruppe B.
-    const table = section(tokens, 'Tabelle–GruppeA', 'Tabelle–GruppeB');
+    const table = section(tokens, '3Tabelle–GruppeA', 'Tabelle–GruppeB');
     expect(table).toContain(key);
   });
 
@@ -84,11 +84,11 @@ describe('@DR-014 Kyrillisch und Griechisch aus dem PDF gelesen', () => {
     const bytes = await pdfBytes(scheduleWithNames([name, ...HALLENCUP_TEAMS.slice(1).map(t => t.name)]));
     const tokens = tokensOf((await extractPdfText(bytes)).pages);
     const key = squash(name);
-    const participants = section(tokens, 'Teilnehmer', 'Gruppenphase');
+    const participants = section(tokens, '1Teilnehmer', '2Gruppenphase');
     expect(participants.some(t => t.includes(key))).toBe(true);
-    const matches = section(tokens, 'Gruppenphase', 'Tabelle–GruppeA');
+    const matches = section(tokens, '2Gruppenphase', '3Tabelle–GruppeA');
     expect(matches).toContain(key);
-    const table = section(tokens, 'Tabelle–GruppeA', 'Tabelle–GruppeB');
+    const table = section(tokens, '3Tabelle–GruppeA', 'Tabelle–GruppeB');
     expect(table).toContain(key);
   });
 

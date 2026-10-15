@@ -57,6 +57,9 @@ export const FIXTURES: PdfFixture[] = [
   { name: '20 Spiele, quer', options: { orientation: 'landscape' }, schedule: zwanzigSchedule },
 ];
 
+/** Titeltext ohne die laufende Abschnittsnummer („4 Halbfinale“ → „Halbfinale“, B-28 C3). */
+export const ohneNummer = (text: string): string => text.trim().replace(/^\d+ /, '');
+
 /** Alle Textstücke einer Seite, durch Leerzeichen verbunden. */
 export function pageText(page: LayoutPage): string {
   return page.texts.map(t => t.str).join(' ');

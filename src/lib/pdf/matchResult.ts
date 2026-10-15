@@ -21,8 +21,11 @@ export type ResultState =
   | { kind: 'skipped' }
   | { kind: 'empty' };
 
-/** Fassung: „Spielplan zum Ausfüllen“ (`blank`) hat keine Ergebnisse, auch nicht für beendete Spiele. */
-export type ResultEdition = 'plan' | 'blank';
+/**
+ * Fassung: „Spielplan zum Ausfüllen“ (`blank`) hat keine Ergebnisse, auch nicht für beendete Spiele. `final` ist die
+ * Endstand-Fassung (C10) und zeigt Ergebnisse wie `plan`.
+ */
+export type ResultEdition = 'plan' | 'blank' | 'final';
 
 /**
  * Eingang der Zustandsrechnung. `results` ist der Schalter „Ergebnisse zeigen“ des PDF-Dialogs (`includeScores`

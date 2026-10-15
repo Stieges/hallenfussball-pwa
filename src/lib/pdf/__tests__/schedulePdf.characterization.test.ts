@@ -29,7 +29,9 @@ vi.mock('jspdf', async (importOriginal) => {
 });
 
 /** Regelzeilen im Kopf kommen aus dem Turnier (B-28a3-3b); der Bestand druckt sie mit dem Hallencup. */
-const SCHEDULE_OPTIONS = { locale: 'de' as const, tournament: hallencupTournament() };
+/** Fester Zeitpunkt für Stand und Dateiname: 14.11.2026 15:07 (B-28 C3). */
+const JETZT = new Date(2026, 10, 14, 15, 7);
+const SCHEDULE_OPTIONS = { locale: 'de' as const, tournament: hallencupTournament(), now: JETZT };
 /** Der Hinweis „Ergebnisse bitte nach Spielende eintragen“ entfällt mit der Meta-Box (B-28a3-3b, v7.2). */
 const HINWEIS = 'Ergebnisse bitte nach Spielende eintragen';
 /**
@@ -43,12 +45,12 @@ const beendetesSpiel11 = () =>
   mitStand(hallencupSchedule(), SCHEDULE_OPTIONS.tournament, { 11: { matchStatus: 'finished', scoreA: 2, scoreB: 1 } });
 
 describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
-  it('Pflichttest: A4 hoch (210 × 297) und Dateiname „Hallencup_Nord_Spielplan.pdf“', async () => {
+  it('Pflichttest: A4 hoch (210 × 297) und Dateiname mit Stand „spielplan-hallencup-nord-2026-11-14-1507.pdf“', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, SCHEDULE_OPTIONS);
 
     expect(pdf.pageWidth).toBeCloseTo(210, 1);
     expect(pdf.pageHeight).toBeCloseTo(297, 1);
-    expect(pdf.filename).toBe('Hallencup_Nord_Spielplan.pdf');
+    expect(pdf.filename).toBe('spielplan-hallencup-nord-2026-11-14-1507.pdf');
   });
 
   it('Kopf: Turniertitel und Altersklasse stehen auf Seite 1', async () => {
@@ -151,7 +153,7 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, { ...SCHEDULE_OPTIONS, includeStandings: true });
     const text = flatText(pdf);
 
-    expect(text).toContain('Tabelle – Gruppe A');
+    expect(text).toContain('3 Tabelle – Gruppe A');
     expect(text).toContain('Tabelle – Gruppe B');
   });
 
@@ -167,7 +169,7 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     const text = flatText(pdf);
     const finale = finalsMatches(schedule).find(m => m.finalType === 'final');
 
-    const platz = text.lastIndexOf('Platzierung');
+    const platz = text.lastIndexOf('5 Platzierung');
     expect(platz).toBeGreaterThan(-1);
     if (finale) {
       expect(platz).toBeGreaterThan(text.lastIndexOf(sideName(finale, 'B')));
@@ -200,17 +202,7 @@ describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als i
     expect(row[7]).toBe(sideName(matchByNumber(stand.schedule, 11), 'B'));
   });
 
-  it('@BM-010 Teilschritt B-28a3-2: jede Seite trägt „Seite x von y“; der Stand fehlt noch (Fußzeile in a3-6)', async () => {
-    const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, SCHEDULE_OPTIONS);
-    const text = flatText(pdf);
-
-    pdf.pages.forEach((page, i) => {
-      expect(page, `Seite ${i + 1}`).toContain(`Seite ${i + 1} von ${pdf.pages.length}`);
-    });
-    expect(text.some(t => t.includes('Stand '))).toBe(false);
-  });
-
-  it.fails('@BM-010 Ziel: jede Seite trägt „Hallencup Nord · Stand 14.11. 15:07 · Seite x von y“ (Muster)', async () => {
+  it('@BM-010 jede Seite trägt „Hallencup Nord · Stand 14.11. 15:07 · Seite x von y“ (gebaut in C3, Nachweis am PDF in schedulePdf.fusszeile.test.ts)', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, SCHEDULE_OPTIONS);
     const zeile = /^Hallencup Nord · Stand \d{2}\.\d{2}\. \d{2}:\d{2} · Seite (\d+) von (\d+)$/;
 

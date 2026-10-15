@@ -7,8 +7,7 @@
  * ab der zweiten beginnt unter dem Kurzkopf (`render/shortHeader.ts`).
  */
 import type { jsPDF } from 'jspdf';
-import { printColors, printFont, printGap, printMetrics, printPage, printType, printUnit } from '../../design-tokens/print';
-import { PDF_FONT } from './fonts';
+import { printFont, printGap, printMetrics, printPage, printType, printUnit } from '../../design-tokens/print';
 
 export type PdfFormat = 'a4';
 export type PdfOrientation = 'portrait' | 'landscape';
@@ -24,10 +23,14 @@ export interface PageGeometry {
   top: number;
   /** Höhe des Kurzkopfs bis zum Inhalt der Folgeseiten (wächst mit einer zweiten Titelzeile). */
   shortHeadHeight: number;
-  /** Unterkante des Satzspiegels (y-Koordinate), oberhalb der Seitenzahl. */
+  /** Unterkante des Satzspiegels (y-Koordinate), oberhalb der Fußlinie. */
   bottom: number;
-  /** Grundlinie der Seitenzahl (y-Koordinate), am unteren Seitenrand. */
+  /** Fußlinie (y-Koordinate): darunter steht die Fußzeile. */
+  footRuleY: number;
+  /** Grundlinie der ersten Fußzeile (y-Koordinate). Die letzte reservierte Zeile samt Unterlänge endet am Seitenrand. */
   footerY: number;
+  /** Zahl der reservierten Fußzeilen (Titel/Stand/Seite, dazu Netzhinweis oder Kontakt, falls nötig). */
+  footerLines: number;
   /** Seitenränder in mm (links, rechts) – Abstand, nicht Koordinate. */
   left: number;
   right: number;
@@ -35,19 +38,26 @@ export interface PageGeometry {
 
 /**
  * Maße einer Seite. `shortTitleLines` ist die Zahl der Titelzeilen des Kurzkopfs (1 oder 2, `shortHeader.ts`); sie
- * verschiebt den Satzspiegel der Folgeseiten nach unten.
+ * verschiebt den Satzspiegel der Folgeseiten nach unten. `footerLines` ist die Zahl der Fußzeilen (`render/footer.ts`);
+ * die Fußzeile steht samt Unterlänge der letzten Zeile oberhalb des unteren Rands (@DR-001, B5b), der Satzspiegel
+ * endet über der Fußlinie.
  */
-export function pageGeometry(format: PdfFormat, orientation: PdfOrientation, shortTitleLines = 1): PageGeometry {
+export function pageGeometry(format: PdfFormat, orientation: PdfOrientation, shortTitleLines = 1, footerLines = 1): PageGeometry {
   const size = printPage[format][orientation];
   const margin = printPage.margin;
+  const lastBaseline = size.height - margin.bottom - descentMm(printType.foot);
+  const footerY = lastBaseline - (footerLines - 1) * printMetrics.footAdvance;
+  const footRuleY = footerY - ascentMm(printType.foot) - printGap.footRuleGap;
   return {
     width: size.width,
     height: size.height,
     contentWidth: size.width - margin.left - margin.right,
     top: margin.top,
     shortHeadHeight: printGap.shortHeadHeight + (shortTitleLines - 1) * printMetrics.shortTitleAdvance,
-    bottom: size.height - margin.bottom - printGap.footSpace,
-    footerY: size.height - margin.bottom,
+    bottom: footRuleY - printGap.footSpace,
+    footRuleY,
+    footerY,
+    footerLines,
     left: margin.left,
     right: margin.right,
   };
@@ -61,6 +71,11 @@ export function continuationTop(geo: PageGeometry): number {
 /** Oberlänge einer Zeile über der Grundlinie in mm: Schriftgröße (pt) × Ascent der Schrift. */
 export function ascentMm(sizePt: number): number {
   return sizePt * printFont.ascentEm * printUnit.mmPerPt;
+}
+
+/** Unterlänge einer Zeile unter der Grundlinie in mm: Schriftgröße (pt) × Descent der Schrift. */
+export function descentMm(sizePt: number): number {
+  return sizePt * printFont.descentEm * printUnit.mmPerPt;
 }
 
 /** Grundlinie einer Zeile in `sizePt`, deren Oberkante auf `top` liegt (Vorgabe: `geo.top`, @DR-001 oben 12 mm). */
@@ -106,19 +121,4 @@ export function ensureSpace(doc: jsPDF, yPos: number, minSpace: number, geo: Pag
  */
 export function tableMargins(geo: PageGeometry, top: number = continuationTop(geo)): { left: number; right: number; top: number; bottom: number } {
   return { left: geo.left, right: geo.right, top, bottom: geo.height - geo.bottom };
-}
-
-/**
- * Seitenzahl „Seite x von y“ rechts unten auf jeder Seite. Die Fußzeile mit Turniername und Stand folgt in a3-6.
- * Zählt alle Seiten des fertigen Dokuments, also nach dem letzten Abschnitt.
- */
-export function drawPageNumbers(doc: jsPDF, geo: PageGeometry, label: (page: number, total: number) => string): void {
-  const total = doc.getNumberOfPages();
-  for (let page = 1; page <= total; page++) {
-    doc.setPage(page);
-    doc.setFont(PDF_FONT.family, 'normal');
-    doc.setFontSize(printType.foot);
-    doc.setTextColor(...printColors.ink);
-    doc.text(label(page, total), geo.left + geo.contentWidth, geo.footerY, { align: 'right' });
-  }
 }

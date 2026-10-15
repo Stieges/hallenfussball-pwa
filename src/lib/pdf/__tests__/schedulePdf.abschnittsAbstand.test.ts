@@ -8,12 +8,11 @@
 import { describe, expect, it } from 'vitest';
 import { printFont, printGap, printType, printUnit } from '../../../design-tokens/print';
 import { hallencupSchedule, hallencupTournament } from './pdfFixture';
-import { layoutOf } from './pdfFixtureLayout';
+import { layoutOf, ohneNummer } from './pdfFixtureLayout';
 import type { LayoutPage, LayoutText } from './pdfjsLayout';
 
 const SIZE_TOL = 0.05;
 const PAPIER = '#ffffff';
-const trimmed = (text: LayoutText): string => text.str.trim();
 
 /** Oberkante einer Zeile in mm: Grundlinie minus Oberlänge der Schrift (Ascent × Größe). */
 function oberkante(text: LayoutText): number {
@@ -39,7 +38,7 @@ function abstandZuDarueber(page: LayoutPage, titel: LayoutText): number | undefi
   return unten === undefined ? undefined : top - unten;
 }
 
-const finde = (page: LayoutPage, text: string): LayoutText | undefined => page.texts.find(t => trimmed(t) === text);
+const finde = (page: LayoutPage, text: string): LayoutText | undefined => page.texts.find(t => ohneNummer(t.str) === text);
 
 describe('F3 Abschnittstitel mit Abstand zum vorigen Block', () => {
   it('„Gruppenphase“ liegt mindestens den Abstands-Token unter den Teilnehmer-Kästen', async () => {
@@ -66,7 +65,7 @@ describe('F3 Abschnittstitel mit Abstand zum vorigen Block', () => {
 
     for (const page of pages) {
       for (const name of ueberschriften) {
-        const titel = page.texts.find(t => trimmed(t) === name && Math.abs(t.size - printType.h2) <= SIZE_TOL);
+        const titel = page.texts.find(t => ohneNummer(t.str) === name && Math.abs(t.size - printType.h2) <= SIZE_TOL);
         if (!titel) {continue;}
         const abstand = abstandZuDarueber(page, titel);
         if (abstand === undefined) {continue;}

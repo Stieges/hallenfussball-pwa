@@ -43,6 +43,8 @@ export const printFont = {
   capEm: 0.7275,
   /** Mitte des Doppelpunkts über der Grundlinie in em (Punkte von 0 bis x-Höhe 1118/2048 em): damit steht er mittig im Kasten. */
   colonMidEm: 0.28,
+  /** hhea-Descender von Inter 4.1: 494/2048 em, aufgerundet. Kein Glyph reicht tiefer unter die Grundlinie (Unterlängen der Fußzeile, B5b). */
+  descentEm: 0.2413,
 } as const;
 
 /** Umrechnung in mm. Die Render- und Maß-Dateien rechnen damit, keine eigene Zahl. */
@@ -185,8 +187,10 @@ export const printGap = {
   shortHeadTitleBaseline: 6,
   shortHeadSubBaseline: 11.5,
   shortHeadRule: 14,
-  /** Platz zwischen Satzspiegel und Seitenzahl */
-  footSpace: 4,
+  /** Platz zwischen Satzspiegel (Unterkante) und Fußlinie */
+  footSpace: 1.5,
+  /** Fußzeile: Abstand Fußlinie → Oberkante der ersten Fußzeile */
+  footRuleGap: 1,
 } as const;
 
 /** Spaltenbreiten in mm (`<colgroup>` in `gen.py`). Heim und Gast bekommen den Rest. */
@@ -277,6 +281,15 @@ export const printMetrics = {
   placeColumnGap: 8,
   placeNumberWidth: 10,
   placeNumberGap: 2,
+  /** Fußzeile (9 pt × 1,2): Zeilenabstand; Titel in der Fußzeile wird nie unter diese Zeichenzahl gekürzt; Seitenzahl für die Breitenmessung (größte erwartete) */
+  footAdvance: 3.8,
+  footTitleMin: 12,
+  footWorstPage: 99,
+  /** Hinweise an den Nutzer zeigen von einem langen Freitext (Regelwerk) höchstens diese Zeichen */
+  noteExcerptMax: 60,
+  /** Runden-Überschrift: Abstand Titel → Hinweis „Uhrzeiten voraussichtlich“ */
+  roundNoteGap: 3,
+
   /** Platzierung: Abstand Satz → erste Zeile, Abstand Schreiblinie → Grundlinie der Schrift darüber */
   placeSentenceAdvance: 6,
   placeTextLift: 1.5,

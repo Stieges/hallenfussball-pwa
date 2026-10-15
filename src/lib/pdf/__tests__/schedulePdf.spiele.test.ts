@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { generateFullSchedule } from '../../../core/generators';
 import { printType } from '../../../design-tokens/print';
 import { HALLENCUP_TEAMS, hallencupTournament } from './pdfFixture';
-import { layoutOf } from './pdfFixtureLayout';
+import { layoutOf, ohneNummer } from './pdfFixtureLayout';
 
 const SIZE_TOL = 0.05;
 
@@ -17,9 +17,10 @@ describe('Abschnittsname im Spielplan-PDF', () => {
     const { pages } = await layoutOf({ tournament }, generateFullSchedule(tournament, 'de'));
     const alle = pages.flatMap(page => page.texts.map(t => t.str.trim()));
 
-    expect(alle).toContain('Spiele');
+    expect(alle).toContain('2 Spiele');
     expect(alle).not.toContain('Gruppenphase');
-    const titel = pages[0].texts.find(t => t.str.trim() === 'Spiele');
+    expect(alle).not.toContain('2 Gruppenphase');
+    const titel = pages[0].texts.find(t => ohneNummer(t.str) === 'Spiele');
     expect(Math.abs((titel?.size ?? 0) - printType.h2)).toBeLessThanOrEqual(SIZE_TOL);
   });
 
@@ -28,7 +29,7 @@ describe('Abschnittsname im Spielplan-PDF', () => {
     const { pages } = await layoutOf({ tournament }, generateFullSchedule(tournament, 'de'));
     const alle = pages.flatMap(page => page.texts.map(t => t.str.trim()));
 
-    expect(alle).toContain('Gruppenphase');
-    expect(alle).not.toContain('Spiele');
+    expect(alle).toContain('2 Gruppenphase');
+    expect(alle).not.toContain('2 Spiele');
   });
 });

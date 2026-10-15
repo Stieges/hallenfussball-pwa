@@ -15,6 +15,7 @@ import type { PdfTexts } from '../translations';
 import { PDF_FONT } from '../fonts';
 import { renderMatchTable, type MatchTableContext } from './matchTable';
 import { sectionTitle } from './matchTables';
+import type { SectionHandle } from '../sections';
 
 /** Überschrift einer Runde: eine Runde des Brackets oder ein Platzierungsspiel. */
 export type FinalRoundKey = KnockoutRound | 'thirdPlace' | 'fifthSixth' | 'seventhEighth';
@@ -94,6 +95,13 @@ function koKeyOf(key: FinalRoundKey): KoKey {
   return key === 'fifthSixth' || key === 'seventhEighth' ? 'placement' : key;
 }
 
+/** Abschnitt und Hinweis der Finalrunde: Nummer im ersten Titel, „Uhrzeiten voraussichtlich“, solange die Gruppenphase läuft (W7). */
+export interface FinalsMarking {
+  section: SectionHandle;
+  /** Text des Hinweises hinter jeder Runden-Überschrift; `undefined`, wenn die Uhrzeiten feststehen. */
+  tentativeNote: string | undefined;
+}
+
 /**
  * Finalrunde: K.-o.-Zeilen, dann je Runde eine Überschrift (h2) und eine Tabelle.
  */
@@ -105,12 +113,15 @@ export function renderFinalsSection(
   finalsConfig: FinalsConfig | null | undefined,
   geo: PageGeometry,
   yPos: number,
-  koLines: string[]
+  koLines: string[],
+  marking: FinalsMarking
 ): number {
+  // Die Finalrunde beginnt oben auf ihrer Seite, vor den K.-o.-Zeilen
+  marking.section.begin(doc, yPos);
   yPos = drawKoLines(doc, koLines, geo, yPos);
   for (const round of finalRounds(finals)) {
     yPos = ensureSpace(doc, yPos, printMetrics.sectionTitleMinSpace, geo);
-    yPos = sectionTitle(doc, roundTitle(round.key, ctx.t), geo, yPos, printType.h2);
+    yPos = sectionTitle(doc, marking.section.heading(doc, yPos, roundTitle(round.key, ctx.t)), geo, yPos, printType.h2, marking.tentativeNote);
     const end = renderMatchTable(doc, {
       matches: round.matches,
       widths: printColumns.finals,

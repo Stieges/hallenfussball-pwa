@@ -11,6 +11,7 @@ import { ensureSpace, type PageGeometry } from '../layout';
 import type { StatefulMatch } from '../tournamentState';
 import { renderMatchTable, type MatchTableContext } from './matchTable';
 import { sectionTitle } from './matchTables';
+import type { SectionHandle } from '../sections';
 
 type GeneratedTournament = GeneratedSchedule['tournament'];
 
@@ -28,10 +29,11 @@ export function renderGroupStage(
   geo: PageGeometry,
   yPos: number,
   tournament: GeneratedTournament,
-  sectionName: string
+  sectionName: string,
+  section: SectionHandle
 ): number {
   yPos = ensureSpace(doc, yPos, printMetrics.sectionTitleMinSpace, geo);
-  yPos = sectionTitle(doc, sectionName, geo, yPos, printType.h2);
+  yPos = sectionTitle(doc, section.heading(doc, yPos, sectionName), geo, yPos, printType.h2);
 
   // Spalte „Gr“ nur, wenn es mehr als eine Gruppe gibt
   const hasMultipleGroups = new Set(matches.map(match => match.group).filter(Boolean)).size > 1;

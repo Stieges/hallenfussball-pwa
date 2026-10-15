@@ -61,8 +61,16 @@ export interface PdfTexts {
   seventhEighth: string;
   /** Kicker im Kopf: „Spielplan“ mit Ergebnissen, „Spielplan zum Ausfüllen“ ohne (@BM-052). */
   kicker: { plan: string; blank: string };
-  /** Seitenzahl „Seite x von y“ (Fußzeile). */
-  pageOf: (page: number, total: number) => string;
+  /** Abschnitte, die keinen eigenen Titel tragen, im Untertitel des Kurzkopfs (G8): „Tabellen“, „Finalrunde“. */
+  sectionTables: string;
+  sectionFinals: string;
+  /** Hinweis hinter den Runden-Überschriften der Finalrunde, solange die Gruppenphase läuft (W7). */
+  timesTentative: string;
+  /** Ansprechpartner: Feldname in Hinweisen und Zeile „Kontakt: …“ in der Fußzeile (nur mit Häkchen, @W1-031). */
+  contact: string;
+  contactLine: (contact: string) => string;
+  /** Hinweis, wenn die eingebettete Schrift nicht lädt und die Standardschrift druckt (B6). */
+  fontFallbackNote: string;
   noDate: string;
   modeGroupsAndFinals: string;
   modeRoundRobin: string;
@@ -216,7 +224,12 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     fifthSixth: s('fifthSixth'),
     seventhEighth: s('seventhEighth'),
     kicker: { plan: s('kicker.plan'), blank: s('kicker.blank') },
-    pageOf: (page, total) => translate('pdf.pageOf', { page, total }),
+    sectionTables: s('sectionTables'),
+    sectionFinals: s('sectionFinals'),
+    timesTentative: s('timesTentative'),
+    contact: s('contact'),
+    contactLine: contact => translate('pdf.contactLine', { contact }),
+    fontFallbackNote: s('fontFallbackNote'),
     noDate: s('noDate'),
     modeGroupsAndFinals: s('modeGroupsAndFinals'),
     modeRoundRobin: s('modeRoundRobin'),

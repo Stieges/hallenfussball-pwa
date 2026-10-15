@@ -735,7 +735,12 @@
     "thirdPlace": "Match for 3rd place",
     "fifthSixth": "Match for 5th place",
     "seventhEighth": "Match for 7th place",
-    "pageOf": "Page {{page}} of {{total}}",
+    "sectionTables": "Standings",
+    "sectionFinals": "Final round",
+    "timesTentative": "Times provisional",
+    "contact": "Contact person",
+    "contactLine": "Contact: {{contact}}",
+    "fontFallbackNote": "The font could not be loaded. The PDF uses a substitute font, special characters may appear as ?",
     "noDate": "No date",
     "kicker": {
       "plan": "Schedule",

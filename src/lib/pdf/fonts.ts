@@ -10,9 +10,20 @@ import type { jsPDF } from 'jspdf';
 /** Abdeckung als Codepunkt-Bereiche (inklusive). Muss zur eingebetteten Teilmenge passen. */
 type CodepointRange = readonly [from: number, to: number];
 
+/** Registrierter Name der eingebetteten Schrift in jsPDF und Name der Standardschrift für den Rückfall (B6). */
+const EMBEDDED_FAMILY = 'pdfSans';
+const FALLBACK_FAMILY = 'helvetica';
+/**
+ * Schrift des gerade gebauten Dokuments. `registerPdfFonts` setzt sie vor dem ersten Zeichnen; danach läuft der Bau
+ * synchron (kein `await`), also kann kein zweiter Bau dazwischenfunken.
+ */
+let activeFamily: string = EMBEDDED_FAMILY;
+
 export const PDF_FONT = {
-  /** Registrierter Schriftname in jsPDF. Nur hier. */
-  family: 'pdfSans',
+  /** Registrierter Schriftname in jsPDF: die eingebettete Schrift, im Rückfall `helvetica` (nur lesen, nie zwischenspeichern). */
+  get family(): string {
+    return activeFamily;
+  },
   /** Dateinamen im virtuellen Dateisystem von jsPDF, je Schnitt. */
   files: { normal: 'pdfSans-normal.ttf', bold: 'pdfSans-bold.ttf' },
   /** Lazy geladene Schriftdaten (base64), je Schnitt. Eigener Chunk, nicht im Haupt-Chunk. */
@@ -24,9 +35,7 @@ export const PDF_FONT = {
    * Abdeckung der eingebetteten Teilmenge: ASCII, Latin-1, Latin Extended-A/B, Griechisch (U+0370–03FF) und
    * Kyrillisch (U+0400–04FF), je nur die Codepunkte, die die Schrift trägt (Lücken ausgenommen). Ausgenommen sind
    * außerdem U+00AD (weiches Trennzeichen), U+0149 (ŉ) und U+01C4 (Ǆ), die Inter-Teilmenge trägt sie nicht.
-   * Steuerzeichen fehlen ebenfalls. Die Tests
-   * (`schedulePdf.text.test.ts`) prüfen nur drei dieser Lücken und die Steuerzeichen. Die Gleichheit mit der
-   * cmap der Schrift ist beim Kürzen geprüft (B-28a2-Fixrunde), nicht als Dauertest.
+   * Steuerzeichen fehlen ebenfalls. Die Gleichheit mit der cmap der Schrift prüft `fontCmap.test.ts` (B10e).
    */
   coverage: [
     [0x0020, 0x007e],
@@ -55,28 +64,66 @@ export const PDF_FONT = {
   ] satisfies readonly CodepointRange[],
 } as const;
 
+/** Prüft, ob die Schrift ein Zeichen trägt. */
+export type GlyphCheck = (char: string) => boolean;
+
 /** Trägt die eingebettete Schrift dieses Zeichen? */
 export function isPdfGlyph(char: string): boolean {
   const code = char.codePointAt(0) ?? 0;
   return PDF_FONT.coverage.some(([from, to]) => code >= from && code <= to);
 }
 
+/** Abdeckung der Standardschrift (WinAnsi): ASCII, Latin-1 und die Satzzeichen aus 0x2013 bis 0x20ac, die Windows-1252 trägt. */
+const STANDARD_COVERAGE: readonly CodepointRange[] = [
+  [0x0020, 0x007e],
+  [0x00a0, 0x00ff],
+  [0x2013, 0x2014],
+  [0x2018, 0x201a],
+  [0x201c, 0x201e],
+  [0x2022, 0x2022],
+  [0x2026, 0x2026],
+  [0x20ac, 0x20ac],
+];
+
+/** Trägt die Standardschrift (Rückfall) dieses Zeichen? */
+export function isStandardGlyph(char: string): boolean {
+  const code = char.codePointAt(0) ?? 0;
+  return STANDARD_COVERAGE.some(([from, to]) => code >= from && code <= to);
+}
+
 /** Zeichen eines Textes, die die Schrift nicht trägt (ohne Doppelte, in Reihenfolge). */
-export function unrenderableChars(text: string): string[] {
+export function unrenderableChars(text: string, covers: GlyphCheck = isPdfGlyph): string[] {
   const missing = new Set<string>();
   for (const char of text) {
-    if (!isPdfGlyph(char)) {
+    if (!covers(char)) {
       missing.add(char);
     }
   }
   return [...missing];
 }
 
-/** Lädt beide Schnitte und registriert sie unter `PDF_FONT.family`. Vor dem ersten `setFont` aufrufen. */
-export async function registerPdfFonts(doc: jsPDF): Promise<void> {
-  const [normal, bold] = await Promise.all([PDF_FONT.load.normal(), PDF_FONT.load.bold()]);
-  doc.addFileToVFS(PDF_FONT.files.normal, normal.default);
-  doc.addFont(PDF_FONT.files.normal, PDF_FONT.family, 'normal');
-  doc.addFileToVFS(PDF_FONT.files.bold, bold.default);
-  doc.addFont(PDF_FONT.files.bold, PDF_FONT.family, 'bold');
+/** Ergebnis der Schriftwahl: ob der Rückfall gilt und welche Zeichen die gewählte Schrift trägt. */
+export interface PdfFontMode {
+  fallback: boolean;
+  covers: GlyphCheck;
+}
+
+/**
+ * Lädt beide Schnitte und registriert sie unter `PDF_FONT.family`. Vor dem ersten `setFont` aufrufen.
+ * Scheitert das Laden (veralteter Service Worker, Chunk nicht im Cache, B6), gilt die Standardschrift: besser ein PDF
+ * mit evtl. „?“ als gar keins (@DR-013). Der Aufrufer meldet `fallback` an den Nutzer.
+ */
+export async function registerPdfFonts(doc: jsPDF): Promise<PdfFontMode> {
+  try {
+    const [normal, bold] = await Promise.all([PDF_FONT.load.normal(), PDF_FONT.load.bold()]);
+    doc.addFileToVFS(PDF_FONT.files.normal, normal.default);
+    doc.addFont(PDF_FONT.files.normal, EMBEDDED_FAMILY, 'normal');
+    doc.addFileToVFS(PDF_FONT.files.bold, bold.default);
+    doc.addFont(PDF_FONT.files.bold, EMBEDDED_FAMILY, 'bold');
+    activeFamily = EMBEDDED_FAMILY;
+    return { fallback: false, covers: isPdfGlyph };
+  } catch {
+    activeFamily = FALLBACK_FAMILY;
+    return { fallback: true, covers: isStandardGlyph };
+  }
 }
