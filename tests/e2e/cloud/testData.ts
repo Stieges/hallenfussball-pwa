@@ -92,8 +92,10 @@ export const E2E_USERS: Record<E2EUserKey, E2EUserSpec> = {
   logouttestMobile: { key: 'logouttestMobile', email: 'logouttest-mobile@test.local', displayName: 'Mona Logouttest' },
   // A-07d3: EIGENE Konten für `abmelden-geraete.cloud.spec.ts`, je Test eines. „Auf allen anderen
   // Geräten abmelden" (`admin.signOut(jwt, 'others')`) beendet jede andere Sitzung desselben Kontos.
-  // Teilten sich die Tests ein Konto, könnte der eine Test die Sitzung des anderen beenden (Banner
-  // „von einem anderen Gerät aus abgemeldet“ mitten im Test). Jedes Konto besitzt genau seinen Cup
+  // Isolation der Fälle: Jeder Fall hat sein Konto, damit „andere Geräte abmelden“ nie die Sitzung
+  // eines anderen Falls trifft. Der Banner-Fehler „von einem anderen Gerät aus abgemeldet“ mitten im
+  // Test hatte eine andere Ursache (C-ABMELDE-HINWEIS-WETTLAUF, App-Fix 0e60860a), nicht die
+  // Kontentrennung. Jedes Konto besitzt genau seinen Cup
   // (`E2E_ABMELDEN_OWNER` in `engineCups.ts`, die RPC prüft den Eigentümer). Kein storageState, der
   // Spec meldet sich selbst über die Oberfläche an.
   abmelden: { key: 'abmelden', email: 'abmelden@test.local', displayName: 'Anja Abmelden' },

@@ -3,9 +3,13 @@
  * useRemoteSessionCheck (C-ABMELDE-HINWEIS-WETTLAUF) – der Hinweis „von einem anderen Gerät abgemeldet“
  * erscheint nur, wenn dieses Gerät sich nicht selbst abgemeldet hat (@AN-023, @AN-024).
  * Echter supabase-js-Client mit Fake-fetch (wie remoteSignOut.test.ts), Hook im jsdom.
+ *
+ * Warum `jsdom` für eine `.ts`-Datei: Der Client braucht eine funktionierende localStorage-Ablage.
+ * Der localStorage-Mock in `setup.dom.ts` besteht nur aus `vi.fn()`-Stubs und speichert nichts. Die
+ * Umgebung wird deshalb per Docblock gesetzt, nicht über die Liste `DOM_ONLY_TS_TESTS`.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { safeLocalStorage, safeSessionStorage } from '../../../../core/utils/safeStorage';
 import { supabase } from '../../../../lib/supabase';
@@ -63,6 +67,13 @@ function requireClient() {
 }
 
 describe('useRemoteSessionCheck (C-ABMELDE-HINWEIS-WETTLAUF) – Hinweis nur bei fremdem Abmelden', () => {
+  // Ohne setup.dom.ts gibt es kein automatisches cleanup: Hooks werden hier in afterEach ausgehängt,
+  // auch wenn ein Test fehlschlägt, damit keine Listener übrig bleiben.
+  const mounted: Array<() => void> = [];
+  afterEach(() => {
+    for (const unmount of mounted.splice(0)) {unmount();}
+  });
+
   beforeEach(() => {
     net.calls.length = 0;
     safeLocalStorage.clear();
@@ -93,6 +104,7 @@ describe('useRemoteSessionCheck (C-ABMELDE-HINWEIS-WETTLAUF) – Hinweis nur bei
     const held = holdUserResponse();
     const signOutLocal = vi.fn(() => Promise.resolve());
     const { unmount } = renderHook(() => useRemoteSessionCheck(requireClient(), true, signOutLocal));
+    mounted.push(unmount);
     await waitFor(() => expect(net.calls.some((c) => c.url.includes('/auth/v1/user'))).toBe(true));
 
     // Eigenes Abmelden, während die Prüfung noch auf den Server wartet.
@@ -101,19 +113,18 @@ describe('useRemoteSessionCheck (C-ABMELDE-HINWEIS-WETTLAUF) – Hinweis nur bei
     await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(hasSignedOutElsewhere()).toBe(false);
-    unmount();
   });
 
   it('@AN-024 Gegenbeispiel: Abmeldung von einem anderen Gerät (kein eigenes Abmelden) → lokal abgemeldet und Hinweis', async () => {
     const held = holdUserResponse();
     const signOutLocal = vi.fn(() => Promise.resolve());
     const { unmount } = renderHook(() => useRemoteSessionCheck(requireClient(), true, signOutLocal));
+    mounted.push(unmount);
     await waitFor(() => expect(net.calls.some((c) => c.url.includes('/auth/v1/user'))).toBe(true));
 
     held.release(403, { code: 'session_not_found', message: 'gone' });
 
     await waitFor(() => expect(hasSignedOutElsewhere()).toBe(true));
     expect(signOutLocal).toHaveBeenCalledTimes(1);
-    unmount();
   });
 });

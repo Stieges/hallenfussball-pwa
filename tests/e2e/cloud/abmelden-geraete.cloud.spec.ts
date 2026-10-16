@@ -15,10 +15,9 @@
  * verbrauchter Cup braucht `npm run test:env:seed`. Wartezeiten nur über Ereignisse
  * (`expect`/`expect.poll`), kein `sleep`.
  *
- * CI-Retries: `playwright.config.ts` hat `retries` in der CI. Scheitert ein Fall dieser seriellen
- * Gruppe, wiederholt Playwright die ganze Gruppe, und die Wiederholung scheitert sicher an
- * „Seed verbraucht“ (ABMELDEN1/ABMELDEN3 haben Ereignisse bekommen). Ein einzelner Flake lässt sich
- * hier also nicht durch Wiederholung retten, sondern nur durch neuen Seed und neuen Lauf.
+ * Retries: Die serielle Gruppe setzt `retries: 0` (siehe `test.describe.configure` unten). Scheitert
+ * ein Fall, wird er nicht wiederholt, sondern der erste echte Fehler bleibt sichtbar. Eine Wiederholung
+ * der Gruppe scheitert ohnehin an „Seed verbraucht“. Neuer Lauf braucht neuen Seed.
  *
  * Abgrenzung (Lücken-Tabelle): Wartende Einträge beim Weg „von einem anderen Gerät abgemeldet“
  * (`remoteSignOut` meldet lokal ohne Warnung ab, der Ausgang bleibt) sind durch die Unit-Tests aus
