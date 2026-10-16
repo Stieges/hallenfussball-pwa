@@ -240,7 +240,7 @@ describe('A-02 mapMatchFromSupabase – Slot aus Team-ID und Herkunft, ohne Name
         slot_a_source: { kind: 'groupRank', group: 'A', rank: 1 },
         team_b_id: null,
         slot_b_source: { kind: 'matchResult', matchId: HF1, role: 'winner' },
-      } as Parameters<typeof createMatchRow>[0])
+      })
     );
 
     expect(m.slotA).toEqual({ kind: 'team', teamId: NORD, resolvedFrom: { kind: 'groupRank', group: 'A', rank: 1 } });
@@ -262,7 +262,7 @@ describe('A-02 mapMatchFromSupabase – Slot aus Team-ID und Herkunft, ohne Name
           team_a_id: NORD,
           team_b_id: SUED,
           slot_a_source: { kind: 'matchResult', matchId: 'semi1', role: 'winner' },
-        } as Parameters<typeof createMatchRow>[0])
+        })
       )
     ).toThrow(/Herkunft/);
   });
@@ -270,7 +270,7 @@ describe('A-02 mapMatchFromSupabase – Slot aus Team-ID und Herkunft, ohne Name
   it('Rundweg Lesen → Schreiben ist verlustfrei', () => {
     const source = { kind: 'matchResult', matchId: HF1, role: 'winner' } as const;
     const read = mapMatchFromSupabase(
-      createMatchRow({ id: testUuid(300), team_a_id: null, slot_a_source: source, team_b_id: SUED } as Parameters<typeof createMatchRow>[0])
+      createMatchRow({ id: testUuid(300), team_a_id: null, slot_a_source: source, team_b_id: SUED })
     );
     const row = mapMatchToSupabase(read, 'tournament-1');
 

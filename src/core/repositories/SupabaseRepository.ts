@@ -13,7 +13,6 @@ import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, isAbortError } from '../errors';
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
-import type { Database } from '../../types/supabase';
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
@@ -22,13 +21,6 @@ import {
   mapTeamToSupabase,
   type TournamentUpdate,
 } from './supabaseMappers';
-
-// A-02: `slot_a_source`/`slot_b_source` (20261003_001_match_slots.sql) fehlen in src/types/supabase.ts
-// bis zur Regeneration auf `main`. Die Mapper-Zeilen tragen sie; an der supabase-js-Grenze werden sie
-// auf den generierten Typ hochgecastet (Zuweisung, kein `as`), sonst meldet die Bibliothek sie als
-// überzählige Eigenschaften. Zur Laufzeit gehen die Spalten mit.
-type GeneratedMatchInsert = Database['public']['Tables']['matches']['Insert'];
-type GeneratedMatchUpdate = Database['public']['Tables']['matches']['Update'];
 
 /**
  * Gets the Supabase client or throws an error if not configured.
@@ -459,7 +451,7 @@ export class SupabaseRepository implements ITournamentRepository {
     );
 
     if (newMatchRows.length > 0) {
-      const insertRows: GeneratedMatchInsert[] = newMatchRows;
+      const insertRows = newMatchRows;
       const { error: insertError } = await getSupabase()
         .from('matches')
         // ON CONFLICT DO NOTHING: an insert must never overwrite an existing row with neutral initial values.
@@ -501,7 +493,7 @@ export class SupabaseRepository implements ITournamentRepository {
         existingMatchRows.map(async (row) => {
           // A-02 (C2, @TM-027): Cloud-Besetzung mitgeben -- eine lokal offene Seite setzt eine in
           // der Cloud bereits aufgelöste Seite nicht zurück.
-          const scheduleUpdate: GeneratedMatchUpdate = mapMatchToScheduleUpdate(row, matchTeamsByIdForUpdate.get(row.id));
+          const scheduleUpdate = mapMatchToScheduleUpdate(row, matchTeamsByIdForUpdate.get(row.id));
           const { data, error: updateError } = await getSupabase()
             .from('matches')
             .update(scheduleUpdate)
@@ -633,7 +625,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     for (const update of updates) {
       // A-02: Spielseiten aus dem Slot, keine Name→ID-Suche über die Teams-Tabelle.
-      const supabaseUpdate: GeneratedMatchUpdate = mapMatchUpdateToSupabase(update, remoteSides.get(update.id));
+      const supabaseUpdate = mapMatchUpdateToSupabase(update, remoteSides.get(update.id));
 
       // V4/F6: nur updated_at (reine Ergebnis-Änderung) → Zeile nicht touchen (syncDown
       // meldete sonst dauerhaft "remote is newer"), kein Zähler++, kein tournaments-Bump.

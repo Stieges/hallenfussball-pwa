@@ -1,27 +1,13 @@
 /**
  * Supabase Database Types
  *
- * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm)
- * Nachtrag C0b-Fixrunde 1: public.match_has_engine_events (20261001_001_amend_event.sql) von Hand
- * im Generator-Format ergänzt (Wegwerf-Container-Stand, noch nicht live).
- * Letzte Regeneration: 2026-09-28 (B3b, .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3b-brief.md:
- * append_match_events + server_time aus 20260928_003_append_match_events.sql; davor B3a -- Funktionen
- * der SQL-Rechenfunktion aus 20260928_002_match_engine.sql, Fixrunde 1/Ruling S12: nur die sechs
- * public-Funktionen, die internen Helfer liegen im nicht exponierten Schema match_engine; davor B2
- * Fixrunde 1, Ruling G4)
- * -- ausnahmsweise NICHT aus Produktion (B2: `--local`; B3a: `--db-url` gegen einen Wegwerf-Container
- * supabase/postgres mit Baseline + allen neueren Migrationen; nicht `--project-id`), weil
- * supabase/migrations/20260928_001_match_event_log.sql, 20260928_002_match_engine.sql und
- * 20260928_003_append_match_events.sql noch NICHT in Produktion eingespielt sind
- * (nur lokal/Container, siehe Kopfkommentar dieser Migration). Diese Datei ist damit bewusst der
- * Produktion voraus (match_event_authors/match_transitions/app_config + neue match_events-Spalten).
- * WICHTIG (I4, korrigiert): Der Typ-Drift-Check (.github/workflows/supabase-drift-check.yml, Job
- * "drift-check") vergleicht die per `--project-id` erzeugten Typen byteweise nach `strip_header`
- * -- er bleibt deshalb ROT, bis (1) diese Migration in Produktion angewendet UND (2) diese Datei
- * danach regulär mit `--project-id` (nicht `--local`) neu erzeugt wurde. Das ist erwartet, keine
- * Aussage über das Schema selbst (scripts/db-drift-check.sh prüft das Schema unabhängig davon).
- * Controller-Checkliste beim Live-Apply: (1) Migration anwenden, (2) diese Datei mit
- * --project-id neu erzeugen und committen.
+ * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm).
+ * Letzte Regeneration: 2026-10-16, nach I1 (PR #214: match_slots 20261003_001 mit slot_a_source/
+ * slot_b_source, amend_event, protect_deleted_at) -- aus Produktion per Supabase-MCP
+ * (generate_typescript_types), nicht aus einem Wegwerf-Container. Damit ist die Datei wieder
+ * deckungsgleich mit der Produktion; die frueheren Vorgriffs-Nachtraege (B2/B3a/B3b/C0b) sind
+ * aufgegangen. Hinweis: das MCP-Werkzeug liefert PostgrestVersion "14.1", die CLI "14.5"; hier
+ * bleibt "14.5" stehen, weil der Typ-Drift-Check (CLI) damit vergleicht.
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
@@ -40,7 +26,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -324,6 +310,8 @@ export type Database = {
           skipped_at: string | null
           skipped_reason: string | null
           slot: number | null
+          slot_a_source: Json | null
+          slot_b_source: Json | null
           team_a_id: string | null
           team_a_placeholder: string | null
           team_b_id: string | null
@@ -367,6 +355,8 @@ export type Database = {
           skipped_at?: string | null
           skipped_reason?: string | null
           slot?: number | null
+          slot_a_source?: Json | null
+          slot_b_source?: Json | null
           team_a_id?: string | null
           team_a_placeholder?: string | null
           team_b_id?: string | null
@@ -410,6 +400,8 @@ export type Database = {
           skipped_at?: string | null
           skipped_reason?: string | null
           slot?: number | null
+          slot_a_source?: Json | null
+          slot_b_source?: Json | null
           team_a_id?: string | null
           team_a_placeholder?: string | null
           team_b_id?: string | null
@@ -1206,6 +1198,10 @@ export type Database = {
         }[]
       }
       server_time: { Args: never; Returns: Json }
+      tournament_has_started: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
       tournament_limit_error_message: { Args: never; Returns: string }
       user_owns_tournament: {
         Args: { p_tournament_id: string }
