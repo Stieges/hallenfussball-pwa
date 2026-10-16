@@ -1,9 +1,10 @@
 /**
- * Aushang A4 hoch mit Zuschauer-QR (B-28 C7, @BM-001, @BM-006, @BM-007, @BM-008, @BM-043, @ZM-060, @DR-010, @DR-022):
- * oben die Grafiken (nur wenn es welche gibt), der Turniername (vollständig, höchstens zwei Zeilen, bei Bedarf kleinere
- * Schrift), der Zuschauer-QR als Vektor (Kante mindestens 120 mm), darunter die Kurzadresse zum Abtippen, Aufruf und
- * Anleitung. Die Sprache ist allein `PdfInput.locale` (@DR-022, einsprachig). Nur Schwarz auf
- * Papier, kein Sponsor-Text, kein Stand. Nicht geteilt: kein Aushang, sondern die Fehlerart `notShared`.
+ * Aushang A4 hoch mit Zuschauer-QR (B-28 C7/C8, @BM-001, @BM-006, @BM-007, @BM-008, @BM-043, @ZM-060, @DR-010, @DR-022):
+ * oben die Grafiken (nur wenn es welche gibt, eigene Zeile, G56), der Turniername (vollständig, höchstens zwei Zeilen,
+ * bei Bedarf kleinere Schrift), direkt darunter der Aufruf, dann der Zuschauer-QR als Vektor (Kante mindestens 120 mm),
+ * darunter die Schritte zum Scannen und zuletzt „Oder im Browser eintippen:“ mit der Adresse ohne `https://` in
+ * mindestens 20 pt (G54, G55). Die Sprache ist allein `PdfInput.locale` (@DR-022, einsprachig). Nur Schwarz auf Papier,
+ * kein Sponsor-Text, kein Stand. Nicht geteilt: kein Aushang, sondern die Fehlerart `notShared`.
  */
 import type jsPDF from 'jspdf';
 import { printColors, printUnit } from '../../design-tokens/print';
@@ -47,20 +48,30 @@ function titleFit(ctx: RenderContext, title: string, width: number): { lines: st
   }
 }
 
-/** Kurzadresse: eine Zeile in der größten Schrift, die in die Breite passt. */
-function addressFit(ctx: RenderContext, address: string, width: number): number {
+/**
+ * Adresse zum Abtippen in `addressPt` (mindestens 20 pt, nie kleiner, G55). Was nicht in eine Zeile passt, bricht nach
+ * einem „/“ oder „.“ um; jede Zeile bleibt in der Schrift und im Satzspiegel.
+ */
+function addressLines(ctx: RenderContext, address: string, width: number): string[] {
   ctx.doc.setFont(ctx.font, 'bold');
-  for (let pt: number = printNotice.addressPt; ; pt -= printNotice.titleStepPt) {
-    ctx.doc.setFontSize(pt);
-    if (ctx.doc.getTextWidth(address) <= width || pt - printNotice.titleStepPt < printNotice.addressMinPt) {
-      return pt;
+  ctx.doc.setFontSize(printNotice.addressPt);
+  const parts = address.match(/[^/.]+[/.]?|[/.]/g) ?? [address];
+  const lines: string[] = [];
+  let line = '';
+  for (const part of parts) {
+    if (line !== '' && ctx.doc.getTextWidth(line + part) > width) {
+      lines.push(line);
+      line = part;
+    } else {
+      line += part;
     }
   }
+  return line === '' ? lines : [...lines, line];
 }
 
-/** Aufruf und Anleitung, mittig in der Breite. Rückgabe: Unterkante. */
-function callAndSteps(ctx: RenderContext, texts: NoticeTexts, cx: number, width: number, top: number): number {
-  let y = centered(ctx, texts.call, cx, width, top, printNotice.callPt, 'bold') + printNotice.callGap;
+/** Die Schritte zum Scannen, mittig in der Breite. Rückgabe: Unterkante. */
+function stepsBlock(ctx: RenderContext, texts: NoticeTexts, cx: number, width: number, top: number): number {
+  let y = top;
   for (const step of texts.steps) {
     y = centered(ctx, step, cx, width, y, printNotice.stepPt, 'normal') + printNotice.stepGap;
   }
@@ -111,21 +122,22 @@ export async function buildNoticePdf(input: PdfInput): Promise<NoticeBuild> {
   fit.lines.forEach((line, i) => doc.text(line, center, y + ascentMm(fit.pt) + i * advanceOf(fit.pt, printNotice.titleLineEm), { align: 'center' }));
   y += ascentMm(fit.pt) + (fit.lines.length - 1) * advanceOf(fit.pt, printNotice.titleLineEm) + descentMm(fit.pt);
 
-  // QR: Vektor, mittig; die Ruhezone ist der Abstand zum Titel
+  // Aufruf direkt unter dem Titel (G54), in der Sprache des Eingangs (@DR-022)
+  const notice = buildNoticeTexts(input.translate, noticeShowsResults(input.tournament));
+  y = centered(ctx, notice.call, center, geo.contentWidth, y + printNotice.callGap, printNotice.callPt, 'bold');
+
+  // QR: Vektor, mittig; die Ruhezone ist Teil der Fläche und der Abstand zu Aufruf und Schritten
   const modules = qrModules(url);
   const side = qrSide(modules.length, printNotice.qrEdge);
   drawQrSymbol(doc, modules, printNotice.qrEdge, center - side / 2, y);
   y += side;
 
-  // Kurzadresse zum Abtippen (führt zur selben Adresse wie der QR)
-  const address = shortViewerAddress(url);
-  const notice = buildNoticeTexts(input.translate, noticeShowsResults(input.tournament));
+  // Schritte zum Scannen, zuletzt „Oder im Browser eintippen:“ mit der Adresse (führt zur selben Adresse wie der QR)
+  y = stepsBlock(ctx, notice, center, geo.contentWidth, y) + printNotice.stepsToAddress;
   y = centered(ctx, notice.addressLabel, center, geo.contentWidth, y, printNotice.addressLabelPt, 'normal');
-  const addressPt = addressFit(ctx, address, geo.contentWidth);
-  y = centered(ctx, address, center, geo.contentWidth, y, addressPt, 'bold') + printNotice.addressGap;
-
-  // Aufruf und Anleitung in der Sprache des Eingangs (@DR-022)
-  callAndSteps(ctx, notice, center, geo.contentWidth, y);
+  for (const line of addressLines(ctx, shortViewerAddress(url), geo.contentWidth)) {
+    y = centered(ctx, line, center, geo.contentWidth, y, printNotice.addressPt, 'bold');
+  }
 
   return { ok: true, doc, notes, filename: noticePdfFilename(title) };
 }

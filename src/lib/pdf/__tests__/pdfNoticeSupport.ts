@@ -81,6 +81,15 @@ export function noticeTextBox(t: LayoutText): Box {
 
 export const allText = (page: LayoutPage): string => page.texts.map(t => t.str).join(' ');
 
+/** Zeilen des Turniernamens: alles über dem Aufruf, der direkt unter dem Titel steht (G54). */
+export function titleLinesOf(page: LayoutPage): LayoutText[] {
+  const call = page.texts.find(t => /aufs Handy|on your phone/.test(t.str));
+  if (!call) {
+    throw new Error('Aufruf fehlt im Aushang');
+  }
+  return page.texts.filter(t => t.y < call.y);
+}
+
 /** Die Aushang-Fixtures für die gemeinsamen Rand- und Farbprüfungen (@DR-017). */
 export interface NoticeFixture {
   name: string;

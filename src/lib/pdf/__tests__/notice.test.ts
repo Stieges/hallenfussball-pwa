@@ -17,7 +17,7 @@ import { hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { fixtureLogo } from './pdfLogoFixture';
 import { pdfLanguage, squash } from './pdfjsText';
 import { translatorFor } from './pdfText';
-import { allText, drawnNoticeMatrix, noticePdf, noticeTextBox, NOTICE_BASE_URL, NOTICE_TOL, qrBox, BM007_NAME, SIXTY } from './pdfNoticeSupport';
+import { allText, drawnNoticeMatrix, noticePdf, noticeTextBox, NOTICE_BASE_URL, NOTICE_TOL, qrBox, titleLinesOf, BM007_NAME, SIXTY } from './pdfNoticeSupport';
 
 const matrixOf = (url: string): boolean[][] => {
   const { modules } = QRCode.create(url);
@@ -113,7 +113,7 @@ describe('@BM-007 Turniername vollständig, höchstens zwei Zeilen', () => {
   it('60 Zeichen: nicht gekürzt, höchstens zwei Zeilen, kein „…“, der QR bleibt mindestens 120 mm', async () => {
     const { page } = await noticePdf({ title: SIXTY });
     const box = qrBox(page);
-    const lines = page.texts.filter(t => t.size >= printNotice.titleMinPt && t.y < box.y);
+    const lines = titleLinesOf(page);
 
     expect(lines.length).toBeGreaterThanOrEqual(1);
     expect(lines.length).toBeLessThanOrEqual(printNotice.titleMaxLines);
@@ -125,7 +125,7 @@ describe('@BM-007 Turniername vollständig, höchstens zwei Zeilen', () => {
   it('F4 @BM-007 der Name aus dem Szenario, wörtlich: vollständig, höchstens zwei Zeilen, QR mindestens 120 mm', async () => {
     const { page } = await noticePdf({ title: BM007_NAME });
     const box = qrBox(page);
-    const lines = page.texts.filter(t => t.size >= printNotice.titleMinPt && t.y < box.y);
+    const lines = titleLinesOf(page);
 
     expect(lines.length).toBeLessThanOrEqual(printNotice.titleMaxLines);
     expect(squash(lines.map(l => l.str).join(' '))).toBe(squash(BM007_NAME));
@@ -138,8 +138,7 @@ describe('@BM-007 Turniername vollständig, höchstens zwei Zeilen', () => {
 
   it('F2 Titelzeilen überlappen nicht: Abstand der Grundlinien = Schrift × titleLineEm, mindestens die Zeilenhöhe', async () => {
     const { page } = await noticePdf({ title: SIXTY });
-    const box = qrBox(page);
-    const [first, second] = page.texts.filter(t => t.size >= printNotice.titleMinPt && t.y < box.y);
+    const [first, second] = titleLinesOf(page);
     const cap = first.size * printFont.ascentEm * printUnit.mmPerPt;
 
     expect(second).toBeDefined();
@@ -152,6 +151,104 @@ describe('@BM-007 Turniername vollständig, höchstens zwei Zeilen', () => {
     const title = page.texts.find(t => t.str.includes('Hallencup'));
 
     expect(title?.size).toBeCloseTo(printNotice.titlePt, 1);
+  });
+});
+
+describe('G54 @DR-010 Reihenfolge: Titel, Aufruf direkt darunter, QR, Schritte, zuletzt „Oder im Browser eintippen:“ mit Adresse', () => {
+  const CALL = 'Spielplan und Ergebnisse aufs Handy';
+  const STEPS = ['1. Kamera-App am Handy öffnen', '2. Die Kamera auf den QR-Code richten', '3. Link antippen – ohne Anmeldung, ohne App.'];
+
+  it('von oben nach unten: Titel → Aufruf → QR → Schritt 1, 2, 3 → „Oder im Browser eintippen:“ → Adresse', async () => {
+    const { page } = await noticePdf();
+    const box = qrBox(page);
+    const find = (text: string) => {
+      const hit = page.texts.find(t => squash(t.str) === squash(text));
+      expect(hit, `„${text}“ steht im Aushang`).toBeDefined();
+      return hit!;
+    };
+    const title = find('Hallencup Nord');
+    const call = find(CALL);
+    const steps = STEPS.map(find);
+    const label = find('Oder im Browser eintippen:');
+    const address = find(shortViewerAddress(LIVE));
+
+    expect(title.y).toBeLessThan(call.y);
+    expect(call.y, 'Aufruf über dem QR-Code').toBeLessThan(box.y);
+    expect(steps[0].y, 'Schritte unter dem QR-Code').toBeGreaterThan(box.y + box.h);
+    expect(steps[1].y).toBeGreaterThan(steps[0].y);
+    expect(steps[2].y).toBeGreaterThan(steps[1].y);
+    expect(label.y, '„Oder im Browser eintippen:“ zuletzt, nach den Schritten').toBeGreaterThan(steps[2].y);
+    expect(address.y).toBeGreaterThan(label.y);
+  });
+
+  it('der Aufruf steht direkt unter dem Titel: zwischen beiden steht kein anderer Text', async () => {
+    const { page } = await noticePdf({ title: SIXTY });
+    const call = page.texts.find(t => squash(t.str) === squash(CALL))!;
+    const titleLines = page.texts.filter(t => t.y < call.y);
+
+    expect(squash(titleLines.map(t => t.str).join(' '))).toBe(squash(SIXTY));
+  });
+
+  it('Gegenbeispiel Kindermodus: derselbe Aufbau mit „Spielplan aufs Handy“ über dem QR', async () => {
+    const { page } = await noticePdf({ isKidsTournament: true });
+    const call = page.texts.find(t => squash(t.str) === squash('Spielplan aufs Handy'));
+
+    expect(call, 'Aufruf Kindermodus').toBeDefined();
+    expect(call!.y).toBeLessThan(qrBox(page).y);
+  });
+});
+
+describe('G55 @DR-010 Adresse zum Abtippen: ohne „https://“, mit „#“, mindestens 20 pt', () => {
+  it('Schrift mindestens 20 pt, kein „https“, Raute vorhanden, Text gleich der Kurzadresse', async () => {
+    const { page } = await noticePdf();
+    const short = shortViewerAddress(LIVE);
+    const address = page.texts.find(t => squash(t.str) === squash(short));
+
+    expect(address, 'Kurzadresse').toBeDefined();
+    expect(address!.size).toBeGreaterThanOrEqual(20 - NOTICE_TOL);
+    expect(address!.str).toContain('#');
+    expect(allText(page)).not.toMatch(/https?:/);
+  });
+
+  it('lange Adresse: bricht nach einem „/“ oder „.“ um, jede Zeile bleibt mindestens 20 pt, innerhalb des Rands, zusammen die Kurzadresse', async () => {
+    const lang = 'https://hallenfussball-turnierverwaltung-nordheim.example.org';
+    const { page, width } = await noticePdf({}, { viewerBaseUrl: lang });
+    const short = shortViewerAddress(generateLiveUrl('ABC123', lang));
+    const unten = qrBox(page).y + qrBox(page).h;
+    const zeilen = page.texts.filter(t => t.y > unten && /[/.#]/.test(t.str) && !t.str.includes(' ') && t.str !== '–');
+
+    expect(zeilen.length, 'mehr als eine Zeile').toBeGreaterThan(1);
+    expect(squash(zeilen.map(t => t.str).join(''))).toBe(squash(short));
+    zeilen.forEach(t => {
+      expect(t.size).toBeGreaterThanOrEqual(20 - NOTICE_TOL);
+      const b = noticeTextBox(t);
+      expect(b.x).toBeGreaterThanOrEqual(printLimits.margin - NOTICE_TOL);
+      expect(b.x + b.w).toBeLessThanOrEqual(width - printLimits.margin + NOTICE_TOL);
+    });
+  });
+});
+
+describe('G75 @ZM-060 Schritt 2: „Die Kamera auf den QR-Code richten“', () => {
+  it.each([
+    ['de', '2. Die Kamera auf den QR-Code richten'],
+    ['en', '2. Point the camera at the QR code'],
+  ] as const)('%s', async (locale, text) => {
+    const { page } = await noticePdf({}, { locale });
+
+    expect(page.texts.some(t => squash(t.str) === squash(text)), text).toBe(true);
+  });
+});
+
+describe('G56 @DR-023 C1: Grafiken des Aushangs stehen in einer eigenen Zeile über dem Titel, links Veranstalter, rechts zweite Grafik', () => {
+  it('beide Grafiken liegen vollständig über dem Titel und über dem Aufruf, links und rechts am Rand', async () => {
+    const { page, width } = await noticePdf({}, { logoLeft: fixtureLogo(2), logoRight: fixtureLogo(1) });
+    const [left, right] = [...page.images].sort((a, b) => a.x - b.x);
+    const title = page.texts.find(t => t.str.includes('Hallencup'))!;
+
+    expect(page.images).toHaveLength(2);
+    expect(left.x).toBeLessThan(width / 2);
+    expect(right.x).toBeGreaterThan(width / 2);
+    page.images.forEach(image => expect(image.y + image.h, 'Unterkante der Grafik über der Titelzeile').toBeLessThanOrEqual(noticeTextBox(title).y + NOTICE_TOL));
   });
 });
 
