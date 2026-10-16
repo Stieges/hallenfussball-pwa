@@ -50,11 +50,14 @@ export interface ViewOptions {
   medium: ViewMedium;
   /** Pflicht: Zuschauer-Wahl, Monitor-Sprache, App-Sprache fürs PDF (@DR-022). */
   locale: ViewLocale;
-  /** Vorgabe 'plan'. */
+  /** Vorgabe 'plan'. 'blank' zeigt den Gruppenrang bei ausgeschalteten Tabellen nur der Leitung (@DR-018/@ZM-102). */
   edition?: ViewEdition;
   /** Nur viewer·print, Vorgabe 'planOnly'. */
   viewerPdf?: ViewerPdfChoice;
-  /** Für current/currentFor; vom Aufrufer per `toTournamentLocal` berechnet. */
+  /**
+   * Reserviert (Review A-36b K5): heute ungenutzt – `next` ergibt sich aus Status + Anstoß (@ZM-141), ein überfälliges
+   * geplantes Spiel bleibt „nächstes“. Vom Aufrufer per `toTournamentLocal` berechnet, wenn ein Paket es braucht.
+   */
   now?: LocalClock;
 }
 

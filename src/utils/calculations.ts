@@ -310,9 +310,9 @@ export const calculateFinalsPlacement = (
     };
   }
 
-  const completedFinals = finalsMatches.filter(
-    m => m.scoreA !== undefined && m.scoreB !== undefined
-  );
+  // A-36b Fixrunde (W1): abgeschlossen = entschieden (zentraler Endstand), nicht „hat einen Stand“ – ein laufendes
+  // Finale oder ein Remis ohne Entscheidung ist offen.
+  const completedFinals = finalsMatches.filter(m => getMatchWinner(m) !== null);
 
   const placements: FinalPlacement[] = [];
   const placedTeamIds = new Set<string>();
@@ -414,9 +414,16 @@ export const getMergedFinalRanking = (
     ? Math.max(...ranking.map(p => p.rank)) + 1
     : 1;
 
+  // A-36b Fixrunde (W1): Teams eines noch offenen Platzierungsspiels nicht über die Gruppentabelle hinter die
+  // entschiedenen Plätze einreihen, sobald die Finalrunde läuft.
+  const openFinalists = finalsResult.playoffStatus === 'not-started' ? [] : matches
+    .filter(m => m.isFinal && getMatchWinner(m) === null)
+    .flatMap(m => [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')]);
+  const skipped = new Set<string | undefined>(openFinalists);
+
   // Add remaining teams from group standings
   for (const standing of groupStandings) {
-    if (!placedTeamIds.has(standing.team.id)) {
+    if (!placedTeamIds.has(standing.team.id) && !skipped.has(standing.team.id)) {
       ranking.push({
         rank: nextRank,
         team: standing.team,

@@ -79,12 +79,14 @@ describe('@ZM-102 @BM-032 F-TAB: ausgeschaltete Tabellen verraten keinen Platz',
 });
 
 describe('@DR-005 @DR-018 Vorlage (Spielplan ohne Ergebnisse): Herkunft des Platzes, nie ein Teamname', () => {
-  const blankCases = (Object.keys(EXPECTED_BLANK) as Array<keyof typeof EXPECTED_BLANK>).flatMap((name) =>
+  const blankNames = ['F-HF', 'F-TAB', 'F-3G', 'F-NEU'] as const;
+  const blankCases = blankNames.flatMap((name) =>
     CELLS.flatMap(([audience, medium]) => LOCALES.map((locale) => [name, audience, medium, locale] as const)),
   );
-  it.each(blankCases)('@DR-005 @DR-018 %s %s·%s·%s', async (name, audience, medium, locale) => {
+  it.each(blankCases)('@DR-005 @DR-018 @ZM-102 %s %s·%s·%s', async (name, audience, medium, locale) => {
     const { v, cup } = await view(name, audience, medium, locale, 'blank');
-    for (const [key, expected] of Object.entries(EXPECTED_BLANK[name]) as Array<[keyof typeof SIDES, Text]>) {
+    const row = name === 'F-TAB' && audience !== 'organizer' ? EXPECTED_BLANK['F-TAB öffentlich'] : EXPECTED_BLANK[name];
+    for (const [key, expected] of Object.entries(row) as Array<[keyof typeof SIDES, Text]>) {
       expect(SIDES[key](v, cup)?.label).toBe(expected[locale]);
     }
   });

@@ -9,7 +9,10 @@ import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const SRC = join(__dirname, '..', '..', '..');
-const READER = /(overtimeScore|penaltyScore)[AB]/;
+/** camelCase-Felder und snake_case-Spalten (K3: ein Leser direkt an der Cloud-Zeile zählt mit). */
+const READER = /(overtimeScore|penaltyScore)[AB]|(overtime|penalty)_score_[ab]/;
+/** Klammerzugriff `m['penaltyScoreA']` – vor dem Entfernen der Strings gesondert geprüft (K3). */
+const BRACKET_READER = /\[\s*['"`]((overtime|penalty)Score[AB]|(overtime|penalty)_score_[ab])['"`]\s*\]/;
 
 /** Datei → Rolle. Jede Zeile ist begründet; neue Einträge nur mit Ruling. */
 const ALLOWED: Readonly<Record<string, string>> = {
@@ -17,6 +20,8 @@ const ALLOWED: Readonly<Record<string, string>> = {
   'utils/matchScore.ts': 'Re-Export getEffectiveScore (Eingangstyp), ÜBERGANG bis Cockpit 4.3',
   // Typen und Schemas (deklarieren die Felder)
   'types/tournament.ts': 'Typ Match',
+  'types/supabase.ts': 'erzeugte Datenbank-Typen (snake_case-Spalten)',
+  'core/match/client/cacheColumns.ts': 'Engine-Zustand → Cache-Spalten (schreibt, rechnet keinen Endstand)',
   'core/models/types.ts': 'Feldliste',
   'core/models/LiveMatch.ts': 'Typ LiveMatch',
   'core/models/schemas/TournamentSchema.ts': 'Zod-Schema',
@@ -48,15 +53,19 @@ function sourceFiles(dir: string): string[] {
 }
 
 /** Kommentare und Text in einfachen Anführungszeichen entfernen, damit Erwähnungen in Doku/Meldungen nicht zählen. */
+function withoutBlockAndLineComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+}
+
 function withoutComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:'"`])\/\/.*$/gm, '$1')
+  return withoutBlockAndLineComments(source)
     .replace(/'(?:[^'\\\n]|\\.)*'/g, "''");
 }
 
 function readersIn(files: ReadonlyArray<{ path: string; source: string }>): string[] {
-  return files.filter((f) => READER.test(withoutComments(f.source))).map((f) => f.path);
+  return files
+    .filter((f) => BRACKET_READER.test(withoutBlockAndLineComments(f.source)) || READER.test(withoutComments(f.source)))
+    .map((f) => f.path);
 }
 
 describe('A-36b Wächter: Endstand nur zentral (@ET-002, @ET-013)', () => {
@@ -76,6 +85,16 @@ describe('A-36b Wächter: Endstand nur zentral (@ET-002, @ET-013)', () => {
       { path: 'components/Doku.tsx', source: "// liest nie overtimeScoreA\n/* penaltyScoreB */ const y = 'penaltyScoreA';" },
     ];
     expect(readersIn(files)).toEqual(['components/Neu.tsx']);
+  });
+
+  it('Gegenbeispiel (K3): snake_case-Spalte und Klammerzugriff werden erkannt, Text in Meldungen nicht', () => {
+    const files = [
+      { path: 'features/public-view/rpc.ts', source: 'const x = row.penalty_score_a ?? 0;' },
+      { path: 'components/Klammer.tsx', source: "const y = match['overtimeScoreB'];" },
+      { path: 'components/Meldung.tsx', source: "const z = 'kennt penalty_score_a nicht';" },
+      { path: 'components/Kommentar.tsx', source: "// match['penaltyScoreA']\nconst w = 1;" },
+    ];
+    expect(readersIn(files)).toEqual(['features/public-view/rpc.ts', 'components/Klammer.tsx']);
   });
 
   it('jede erlaubte Datei existiert noch (die Liste veraltet nicht)', () => {

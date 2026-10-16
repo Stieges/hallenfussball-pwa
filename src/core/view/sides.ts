@@ -7,14 +7,16 @@
  *   wenn sie für DIESES Team wahr ist: automatisch besetzt, „Weiterkommen festlegen“ oder Ersatzteam (@W5-010) –
  *   nie nach „Neu besetzen“ (F1). Ohne Merkmal gilt „neu besetzt“ (keine Zusatzzeile, sicher).
  * - Spielplan ohne Ergebnisse (Vorlage): in der Finalrunde immer die Herkunft des PLATZES (`originA/B`), nie ein
- *   Teamname (@DR-005); die Paarung steht auch bei ausgeschalteten Tabellen (@DR-018, Korrektur Daniel 15.10.).
+ *   Teamname (@DR-005); für die Leitung steht die Paarung auch bei ausgeschalteten Tabellen (@DR-018, Korrektur Daniel
+ *   15.10.). Zuschauer/Monitor verraten auch in der Vorlage keinen Gruppenrang (@ZM-102, Review A-36b K4).
  */
 import type { Match } from '../../types/tournament';
 import type { MatchSlot, SlotSource } from '../models/schemas/MatchSlotSchema';
 import { describeOrigin, describeSlot, originText, type SlotLabelContext } from './originText';
-import type { SideView, ViewEdition, ViewLocale, ViewRules } from './types';
+import type { SideView, ViewAudience, ViewEdition, ViewLocale, ViewRules } from './types';
 
 export interface SideContext {
+  audience: ViewAudience;
   labels: SlotLabelContext;
   locale: ViewLocale;
   rules: Pick<ViewRules, 'groupOrigin'>;
@@ -41,7 +43,9 @@ function originTrueForTeam(slot: Extract<MatchSlot, { kind: 'team' }>): boolean 
 }
 
 function blankSide(origin: SlotSource | undefined, ctx: SideContext): SideView {
-  const label = origin === undefined ? originText(UNDECIDED, ctx.locale) : placeText(origin, ctx);
+  // @DR-018 gilt für die Leitung (Werkzeug zum Ausfüllen); öffentlich bleibt die Schalter-Regel (@ZM-102).
+  const shown = origin !== undefined && (ctx.audience === 'organizer' || originVisible(origin, ctx));
+  const label = shown ? placeText(origin, ctx) : originText(UNDECIDED, ctx.locale);
   return { pending: true, ...(origin === undefined ? {} : { origin }), label };
 }
 

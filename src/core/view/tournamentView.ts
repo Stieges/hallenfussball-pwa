@@ -102,7 +102,7 @@ export function buildTournamentView(input: TournamentViewInput, options: ViewOpt
     ...(input.groups === undefined ? {} : { groups: input.groups }),
     locale: options.locale,
   };
-  const sides: SideContext = { labels, locale: options.locale, rules, edition };
+  const sides: SideContext = { audience: options.audience, labels, locale: options.locale, rules, edition };
   const matches = input.matches.map((match) => matchView(match, input, options, rules, sides));
   return {
     rules,

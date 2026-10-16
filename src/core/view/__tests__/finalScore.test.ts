@@ -89,6 +89,18 @@ describe('@ET-002 Endstand: Verlängerung, Golden Goal, Gruppe, laufend', () => 
     expect(matchFinalScore(finished({ scoreA: 2, scoreB: 1 }))).toMatchObject({ decidedBy: 'regular', winner: 'a' });
   });
 
+  it('@ET-002 Altdaten ohne decidedBy, Verlängerung 1:0 nach 1:1 → decidedBy overtime, Heim gewinnt (K1)', () => {
+    expect(matchFinalScore(finished({ scoreA: 1, scoreB: 1, overtimeScoreA: 1, overtimeScoreB: 0 }))).toMatchObject({
+      a: 2, b: 1, decidedBy: 'overtime', winner: 'a',
+    });
+  });
+
+  it('@ET-002 Gegenbeispiel (K1): ohne decidedBy und Verlängerung 0:0 bleibt es regulär entschieden', () => {
+    expect(matchFinalScore(finished({ scoreA: 2, scoreB: 1, overtimeScoreA: 0, overtimeScoreB: 0 }))).toMatchObject({
+      decidedBy: 'regular', winner: 'a',
+    });
+  });
+
   it('@ET-002 Ergebnis ohne Status (Eintrag im Spielplan) gilt als entschieden', () => {
     expect(matchFinalScore({ scoreA: 3, scoreB: 2 })).toMatchObject({ decidedBy: 'regular', winner: 'a' });
   });

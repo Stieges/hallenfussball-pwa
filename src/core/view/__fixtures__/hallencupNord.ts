@@ -179,3 +179,21 @@ export async function fES(): Promise<Hallencup> {
 export async function fNUR(): Promise<Hallencup> {
   return results(await publishHallencup(), { [GAME[3]]: [2, 1] });
 }
+
+/** HF1 besetzt: FC Nord (Erster Gruppe A) gegen SV Süd (Zweiter Gruppe B). */
+export async function hf1Besetzt(): Promise<Hallencup> {
+  return resolveSide(resolveSide(await publishHallencup(), GAME.HF1, 'A', NORD), GAME.HF1, 'B', SUED);
+}
+
+/**
+ * Cloud-Zeile eines Spiels mit den Spalten `overlay` überschreiben und über den Mapper zurücklesen
+ * (Datenebene: so liefert die Cloud das Spiel, ohne dass ein Ereignis gelaufen ist).
+ */
+export function withCloudColumns(cup: Hallencup, index: number, overlay: Parameters<typeof createMatchRow>[0]): Hallencup {
+  return updateMatch(cup, index, (m) => roundTrip(m, cup.tournament.id, overlay));
+}
+
+/** Ergebnis nur eingetragen (RESULT_ENTRY über die Engine), z. B. für ein K.-o.-Spiel. */
+export function directEntry(cup: Hallencup, index: number, a: number, b: number): Hallencup {
+  return results(cup, { [index]: [a, b] });
+}

@@ -13,6 +13,7 @@ const WEST = '00000000-0000-4000-8000-000000000003';
 const GHOST = '00000000-0000-4000-8000-000000000099';
 const A1: SlotSource = { kind: 'groupRank', group: 'A', rank: 1 };
 const ctx = (groupOrigin: boolean): SideContext => ({
+  audience: 'organizer',
   labels: { teams: [{ id: WEST, name: 'TSV West' }], matches: [], locale: 'de' },
   locale: 'de',
   rules: { groupOrigin },
@@ -43,6 +44,15 @@ describe('@BM-014 Zusatzzeile „Erster Gruppe A“ unter dem Team', () => {
     const side = sideView(semi(teamSlot(GHOST)), 'A', ctx(true));
     expect(side.label).toBe('?');
     expect(side.teamName).toBeUndefined();
+  });
+
+  it('@ZM-102 @DR-018 Vorlage bei ausgeschalteten Tabellen: Leitung sieht den Gruppenrang, Zuschauer/Monitor nicht (K4)', () => {
+    const open = semi(pendingSlot(A1));
+    expect(sideView(open, 'A', { ...ctx(false), edition: 'blank' }).label).toBe('Erster Gruppe A');
+    for (const audience of ['viewer', 'screen'] as const) {
+      expect(sideView(open, 'A', { ...ctx(false), audience, edition: 'blank' }).label).toBe('noch offen');
+      expect(sideView(open, 'A', { ...ctx(true), audience, edition: 'blank' }).label).toBe('Erster Gruppe A');
+    }
   });
 
   it('@DR-005 Vorlage ohne gespeicherte Herkunft und mit besetzter Seite: „noch offen“, nie der Teamname', () => {

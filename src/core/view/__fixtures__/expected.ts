@@ -4,7 +4,7 @@
  *
  * Quellen: @TM-015, @ZM-102, @BM-032 („Sieger Halbfinale 1“, „noch offen“, englisch „to be decided“, Konsolidierung
  * G62 vom 16.10.), @BM-014 (Herkunft klein unter besetztem Platz), @DR-005/@DR-018 (Vorlage: Paarung als Herkunft,
- * auch bei ausgeschalteten Tabellen – Korrektur Daniel 15.10.), @ZM-104 („ausgefallen“), @ZM-111 (14:40),
+ * für die Leitung auch bei ausgeschalteten Tabellen – Korrektur Daniel 15.10.; öffentlich nie der Rang, K4), @ZM-104 („ausgefallen“), @ZM-111 (14:40),
  * @ET-002/@ET-013 (Endstand).
  */
 export type Text = { de: string; en: string };
@@ -54,6 +54,8 @@ export const EXPECTED_PLAN = {
 export const EXPECTED_BLANK = {
   'F-HF': { hf1Home: FIRST_A, hf1Away: SECOND_B, finalHome: WINNER_SF1 },
   'F-TAB': { hf1Home: FIRST_A, hf1Away: SECOND_B, finalHome: WINNER_SF1 },
+  /** Zuschauer/Monitor (viewer, screen): kein Gruppenrang auch in der Vorlage (@ZM-102, Review K4). */
+  'F-TAB öffentlich': { hf1Home: OPEN, hf1Away: OPEN, finalHome: WINNER_SF1 },
   'F-3G': { hf1Home: FIRST_A, hf1Away: SECOND_B, finalHome: WINNER_SF1 },
   'F-NEU': { hf2Home: FIRST_B },
 } as const satisfies Record<string, Record<string, Text>>;

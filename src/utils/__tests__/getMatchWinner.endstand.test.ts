@@ -4,7 +4,7 @@
  * `calculateStandings` bleibt bei der regulären Spielzeit (Gruppenspiele haben keine Verlängerung).
  */
 import { describe, expect, it } from 'vitest';
-import { calculateStandings, getMatchWinner } from '../calculations';
+import { calculateFinalsPlacement, calculateStandings, getMatchWinner, getMergedFinalRanking } from '../calculations';
 import type { Match, Team } from '../../types/tournament';
 import { vs, testUuid } from '../../test/matchSlotFixtures';
 import { createMockTournament } from '../../test/factories';
@@ -40,8 +40,10 @@ describe('@ET-002 getMatchWinner über den zentralen Endstand', () => {
   });
 });
 
-describe('@ET-013 calculateStandings bleibt bei der regulären Spielzeit (Gruppenspiele)', () => {
-  it('@ET-013 Verlängerungs- und Strafstoß-Felder an einem Gruppenspiel ändern Tore und Punkte nicht', () => {
+// K2 (Review A-36b): keine @ET-013-Kennung – @ET-013 verlangt für die Verlierer derselben K.-o.-Runde Tore inkl.
+// Verlängerung (matchFinalScore().a/b, Endstand-Paket); hier steht nur die Gruppenregel.
+describe('Auflage Tabelle (Brief A-36b): Gruppenspiele nur reguläre Zeit', () => {
+  it('Verlängerungs- und Strafstoß-Felder an einem Gruppenspiel ändern Tore und Punkte nicht', () => {
     const teams: Team[] = [{ id: BERG, name: 'DJK Berg', group: 'A' }, { id: SUED, name: 'SV Süd', group: 'A' }];
     const match: Match = {
       id: 'g1', round: 1, field: 1, ...vs(BERG, SUED), group: 'A', matchStatus: 'finished',
@@ -51,5 +53,49 @@ describe('@ET-013 calculateStandings bleibt bei der regulären Spielzeit (Gruppe
     const standings = calculateStandings(teams, [match], tournament, 'A');
     const berg = standings.find((s) => s.team.id === BERG);
     expect(berg).toMatchObject({ goalsFor: 1, goalsAgainst: 1, points: 1, drawn: 1 });
+  });
+});
+
+describe('@ET-002 Platzierung: abgeschlossen heißt entschieden (Fixrunde W1)', () => {
+  const [NORD, MITTE, WEST, OST] = [31, 32, 33, 34].map(testUuid);
+  const teams: Team[] = [
+    { id: NORD, name: 'FC Nord', group: 'A' }, { id: MITTE, name: 'SG Mitte', group: 'B' },
+    { id: BERG, name: 'DJK Berg', group: 'A' }, { id: SUED, name: 'SV Süd', group: 'B' },
+    { id: WEST, name: 'TSV West', group: 'A' }, { id: OST, name: 'SC Ost', group: 'B' },
+  ];
+  const finale = (extra: Partial<Match>): Match => ({
+    id: 'finale', round: 10, field: 1, ...vs(NORD, MITTE), isFinal: true, finalType: 'final', ...extra,
+  });
+  const platz3 = third({ scoreA: 2, scoreB: 0, decidedBy: 'regular' });
+  const tournament = createMockTournament({ teams });
+  const groupTable = (): ReturnType<typeof calculateStandings> =>
+    teams.map((team) => calculateStandings([team], [], tournament)[0]);
+
+  it('@ET-002 laufendes Finale mit Führung 2:0 ist nicht abgeschlossen', () => {
+    const result = calculateFinalsPlacement(teams, [finale({ matchStatus: 'running', scoreA: 2, scoreB: 0 }), platz3], []);
+    expect(result).toMatchObject({ playoffStatus: 'in-progress', allFinalsCompleted: false, completedFinalsCount: 1 });
+    expect(result.placements.map((p) => p.rank)).toEqual([3, 4]);
+  });
+
+  it('@ET-002 Finale 2:2 ohne Entscheidung ist nicht abgeschlossen', () => {
+    const result = calculateFinalsPlacement(teams, [finale({ matchStatus: 'finished', scoreA: 2, scoreB: 2 }), platz3], []);
+    expect(result).toMatchObject({ playoffStatus: 'in-progress', allFinalsCompleted: false });
+  });
+
+  it('@ET-002 Finalisten eines laufenden Finales werden nicht über die Gruppentabelle hinter Platz 4 eingereiht', () => {
+    const matches = [finale({ matchStatus: 'running', scoreA: 2, scoreB: 0 }), platz3];
+    const { ranking } = getMergedFinalRanking(teams, matches, groupTable(), tournament);
+    const ids = ranking.map((p) => p.team.id);
+    expect(ids).not.toContain(NORD);
+    expect(ids).not.toContain(MITTE);
+    expect(ranking.slice(0, 2).map((p) => [p.rank, p.team.id])).toEqual([[3, BERG], [4, SUED]]);
+  });
+
+  it('@ET-002 Gegenbeispiel: entschiedenes Finale ist abgeschlossen, Finalisten auf 1 und 2', () => {
+    const matches = [finale({ matchStatus: 'finished', scoreA: 2, scoreB: 0, decidedBy: 'regular' }), platz3];
+    const result = calculateFinalsPlacement(teams, matches, []);
+    expect(result).toMatchObject({ playoffStatus: 'completed', allFinalsCompleted: true });
+    const { ranking } = getMergedFinalRanking(teams, matches, groupTable(), tournament);
+    expect(ranking.slice(0, 4).map((p) => [p.rank, p.team.id])).toEqual([[1, NORD], [2, MITTE], [3, BERG], [4, SUED]]);
   });
 });
