@@ -4,7 +4,7 @@
 // das Gate vergleicht sie mit HEAD.
 import { execFileSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -43,7 +43,14 @@ export async function starteApp({ neuBauen = false, log = () => {} } = {}) {
   const stempelPfad = join(outDir, 'vm-build.json')
   const { build, preview } = await import(join(wurzel, 'node_modules', 'vite', 'dist', 'node', 'index.js'))
 
-  const vorhanden = existsSync(stempelPfad) && JSON.parse(readFileSync(stempelPfad, 'utf8')).sha === stand.sha
+  // Ohne existsSync-Vorpruefung lesen (kein Pruefen-dann-Nutzen-Wettlauf, CodeQL js/file-system-race):
+  // fehlt oder ist der Stempel kaputt, wird neu gebaut.
+  let vorhanden = false
+  try {
+    vorhanden = JSON.parse(readFileSync(stempelPfad, 'utf8')).sha === stand.sha
+  } catch {
+    vorhanden = false
+  }
   if (neuBauen || stand.veraendert || !vorhanden) {
     log(`Baue App-Stand ${stand.kurz}${stand.veraendert ? ' (Arbeitsbaum veraendert)' : ''} …`)
     const alt = process.env.VERCEL_GIT_COMMIT_SHA

@@ -329,8 +329,8 @@ export function messeSeite(opt) {
   const cx = cv.getContext('2d', { willReadFrequently: true })
   const farbe = (str) => {
     cx.clearRect(0, 0, 1, 1)
-    cx.fillStyle = 'rgba(0,0,0,0)'
-    cx.fillStyle = str
+    // Unbekannte Farbangaben ergeben transparent (statt die vorige Farbe zu behalten).
+    cx.fillStyle = CSS.supports('color', str) ? str : 'rgba(0,0,0,0)'
     cx.fillRect(0, 0, 1, 1)
     const d = cx.getImageData(0, 0, 1, 1).data
     return [d[0], d[1], d[2], d[3] / 255]

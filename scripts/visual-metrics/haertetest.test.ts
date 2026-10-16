@@ -8,7 +8,7 @@ import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { join, resolve } from 'node:path'
+import { basename, join, resolve } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 // @ts-expect-error -- ESM-Hilfsmodul ohne Typen
 import { sehwinkelAnteil } from './profile.mjs'
@@ -53,6 +53,8 @@ const SCHNELL = ['--themen', 'hell', '--sprachen', 'de', '--ohne-axe']
 const hart = (b: Bericht) => new Set(b.laeufe.flatMap((l) => l.befunde.filter((x) => x.typ === 'HART').map((x) => x.metrik)))
 const warn = (b: Bericht) => new Set(b.laeufe.flatMap((l) => l.befunde.filter((x) => x.typ === 'WARNUNG').map((x) => x.metrik)))
 const gruende = (b: Bericht) => b.gate.gruende.join(' | ')
+// Bei Fehlschlag steht die gebuendelte Befundliste im Log (CI-Befund 2026-10-16: nur "expected 1 to be 0" sichtbar).
+const gruen = (r: { code: number | null; out: string }) => { expect(r.code, r.out).toBe(0) }
 
 // Kleiner HTTP-Server fuer Gate-Faelle: liefert Fixtures, optional vm-build.json und eine Umleitung.
 let server: Server
@@ -68,11 +70,16 @@ beforeAll(async () => {
       return
     }
     if (u.pathname === '/alt') { res.writeHead(302, { location: '/attrappe-ohne-meta.html' }).end(); return }
+    // Nur Dateien direkt im Fixture-Ordner ausliefern (kein Pfad aus der Anfrage ausserhalb davon).
+    const datei = resolve(ORDNER, 'fixtures', basename(decodeURIComponent(u.pathname)))
+    let inhalt: Buffer
     try {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(readFileSync(FIX(u.pathname.slice(1))))
+      inhalt = readFileSync(datei)
     } catch {
       res.writeHead(404).end()
+      return
     }
+    res.writeHead(200, { 'content-type': datei.endsWith('.css') ? 'text/css' : 'text/html; charset=utf-8' }).end(inhalt)
   })
   await new Promise<void>((ok) => server.listen(0, '127.0.0.1', () => { ok() }))
   basis = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`
@@ -100,7 +107,7 @@ describe('Fehler 1 "Turnierver-/waltung" und Varianten', () => {
   })
   it('Gegenbeispiel: korrigierter Titel ist in der vollen App-Matrix gruen und VOLLMATRIX', async () => {
     const r = await messe('--ziel', FIX('titel-silbentrennung-korrigiert.html'), '--profil', 'app')
-    expect(r.code).toBe(0)
+    gruen(r)
     expect(r.b.status).toBe('GRUEN')
     expect(r.b.vollmatrix).toBe(true)
     expect(r.b.modus).toBe('MOCKUP')
@@ -108,7 +115,7 @@ describe('Fehler 1 "Turnierver-/waltung" und Varianten', () => {
   })
   it.each(['titel-span-hyphens-korrigiert.html', 'teamname-zelle-korrigiert.html'])('Gegenbeispiel %s ist gruen', async (datei) => {
     const r = await messe('--ziel', FIX(datei), '--profil', 'handy', ...SCHNELL)
-    expect(r.code).toBe(0)
+    gruen(r)
   })
 })
 
@@ -129,7 +136,7 @@ describe('Fehler 2 abgeschnittener Monitor-Kopf und Varianten', () => {
   it.each(['monitor-kopf-korrigiert.html', 'rand-hintergrundbild-korrigiert.html', 'rand-pseudo-korrigiert.html'])(
     'Gegenbeispiel %s ist mit Rand 0 und Standard-Rand gruen (Variante normal)', async (datei) => {
       const r = await messe('--ziel', FIX(datei), '--profil', 'monitor', '--varianten', 'normal')
-      expect(r.code).toBe(0)
+      gruen(r)
       expect(r.b.laeufe).toHaveLength(6 * 2 * 2)
     })
 })
@@ -198,11 +205,11 @@ describe('Fehler 3 Attrappe statt echter Stand: Gate', () => {
 describe('Fehlalarme aus dem Review sind weg', () => {
   it('B-04 normaler Absatz bleibt in der Langtext-Variante gruen', async () => {
     const r = await messe('--ziel', FIX('langtext-absatz.html'), '--profil', 'handy-360', '--varianten', 'normal,langtext', ...SCHNELL)
-    expect(r.code).toBe(0)
+    gruen(r)
   })
   it('B-05 offener Dialog: nur seine Schicht wird gemessen, keine Ueberlappung mit dem Seitentext', async () => {
     const r = await messe('--ziel', FIX('dialog-ueber-text.html'), '--profil', 'app', '--varianten', 'normal')
-    expect(r.code).toBe(0)
+    gruen(r)
     expect(r.b.zusammenfassung.zaehler['ueberlappung.text'] ?? 0).toBe(0)
   })
   it('B-14 Mockup im Geraete-Rahmen: BLOCKED (verkleinert bzw. Rahmen); ohne Rahmen gruen', async () => {
@@ -212,17 +219,17 @@ describe('Fehlalarme aus dem Review sind weg', () => {
     const tablet = await messe('--ziel', FIX('mockup-rahmen.html'), '--profil', 'tablet-hoch', ...SCHNELL)
     expect(gruende(tablet.b)).toMatch(/Geraete-Rahmen/)
     const ohne = await messe('--ziel', `${FIX('mockup-rahmen.html')}?rahmen=0`, '--profil', 'app', '--varianten', 'normal', '--ohne-axe')
-    expect(ohne.code).toBe(0)
+    gruen(ohne)
   })
   it('B-15 Verlauf: schlechteste Farbe zaehlt (HART); dunkler Verlauf und Emoji sind gruen', async () => {
     expect(hart((await messe('--ziel', FIX('kontrast-verlauf.html'), '--profil', 'handy-360', ...SCHNELL)).b).has('kontrast.text')).toBe(true)
-    expect((await messe('--ziel', FIX('kontrast-verlauf-korrigiert.html'), '--profil', 'handy-360', ...SCHNELL)).code).toBe(0)
-    expect((await messe('--ziel', FIX('kontrast-emoji.html'), '--profil', 'handy-360', ...SCHNELL)).code).toBe(0)
+    gruen(await messe('--ziel', FIX('kontrast-verlauf-korrigiert.html'), '--profil', 'handy-360', ...SCHNELL))
+    gruen(await messe('--ziel', FIX('kontrast-emoji.html'), '--profil', 'handy-360', ...SCHNELL))
   })
   it('B-08 SVG und absolut positionierter Text ueber dem Namen: HART; Symbol daneben gruen', async () => {
     expect(hart((await messe('--ziel', FIX('ueberlappung-svg.html'), '--profil', 'handy-360', ...SCHNELL)).b).has('ueberlappung.text')).toBe(true)
     expect(hart((await messe('--ziel', FIX('ueberlappung-absolut.html'), '--profil', 'handy-360', ...SCHNELL)).b).has('ueberlappung.text')).toBe(true)
-    expect((await messe('--ziel', FIX('ueberlappung-svg-korrigiert.html'), '--profil', 'handy-360', ...SCHNELL)).code).toBe(0)
+    gruen(await messe('--ziel', FIX('ueberlappung-svg-korrigiert.html'), '--profil', 'handy-360', ...SCHNELL))
   })
 })
 
@@ -235,7 +242,7 @@ describe('Gegen Schummeln', () => {
   })
   it('Teilmatrix ist nie VOLLMATRIX', async () => {
     const r = await messe('--ziel', FIX('titel-silbentrennung-korrigiert.html'), '--profil', 'handy-360', ...SCHNELL)
-    expect(r.code).toBe(0)
+    gruen(r)
     expect(r.b.vollmatrix).toBe(false)
   })
   it('eigene Grenzwerte ohne Begruendung: BLOCKED; mit Begruendung im Bericht und nie VOLLMATRIX', async () => {
