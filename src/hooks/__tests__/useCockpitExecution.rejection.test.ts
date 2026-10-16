@@ -77,7 +77,7 @@ describe('useCockpitExecution — Ablehnung mit Grund (A-08b)', () => {
     const kicksAfterFirst = vi.mocked(ctx.sender.kick).mock.calls.length;
     toast.showWarning.mockClear();
 
-    await expect(result.current.handleFinish(ENGINE_MATCH_ID)).resolves.toBeUndefined();
+    await expect(result.current.handleFinish(ENGINE_MATCH_ID)).resolves.toBeNull(); // B-07 (R4): noop -> null
 
     expect(await engineLogTypes(ENGINE_MATCH_ID)).toEqual(['MATCH_START', 'MATCH_END']);
     expect(toast.showWarning).not.toHaveBeenCalled();

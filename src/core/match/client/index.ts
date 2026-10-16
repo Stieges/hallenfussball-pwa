@@ -59,6 +59,10 @@ export {
   type TimePenaltyOptions,
   type FoulOptions,
   type SubstitutionOptions,
+  type CommandResult,
+  type CommandTiming,
+  type TeamScores,
+  type TiebreakChoice,
 } from './MatchCommands';
 export { NotOnEngineYetError } from './errors';
 export {

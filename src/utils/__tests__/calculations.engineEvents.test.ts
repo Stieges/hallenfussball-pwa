@@ -104,3 +104,34 @@ describe('Engine-Ereignisse für Torschützenliste/Fair-Play/Export (C3b-2b)', (
     expect(eventsForMatch(legacyMatch, new Map())).toHaveLength(1);
   });
 });
+
+describe('B-07 Fixrunde F1: Eigentor in der Torschützenliste (@SL-022)', () => {
+  it('@SL-022 ein Eigentor zählt bei keinem Schützen (weder beim begünstigten noch beim schießenden Team)', () => {
+    const log = [
+      start(),
+      ev({ id: 'og1', type: 'OWN_GOAL', at: 2000, teamId: 'teamB', clockMs: 340_000, payload: { playerNumber: 4 } }),
+    ];
+    const map = new Map([['m', engineEvents(log)]]);
+
+    expect(calculateScorers(tournamentWith([ENGINE_MATCH]), map)).toEqual([]);
+  });
+
+  it('Gegenbeispiel: ein normales Tor derselben Nummer zählt weiter, das Eigentor daneben nicht', () => {
+    const log = [
+      start(),
+      goal('g1', 'teamA', 2000, 30_000, { playerNumber: 4 }),
+      ev({ id: 'og1', type: 'OWN_GOAL', at: 3000, teamId: 'teamB', clockMs: 340_000, payload: { playerNumber: 4 } }),
+      goal('g2', 'teamB', 4000, 400_000, { playerNumber: 4 }),
+    ];
+    const map = new Map([['m', engineEvents(log)]]);
+
+    const scorers = calculateScorers(tournamentWith([ENGINE_MATCH]), map);
+    expect(scorers.map((s) => [s.teamName, s.playerName, s.goals])).toEqual(
+      expect.arrayContaining([
+        ['FC Alpha', '#4', 1],
+        ['SV Beta', '#4', 1],
+      ]),
+    );
+    expect(scorers).toHaveLength(2);
+  });
+});

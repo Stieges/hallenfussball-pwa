@@ -278,7 +278,7 @@ describe('MatchCommands – @FU-070 Spielende nur einmal', () => {
     await commands.finish(ctx.matchId, ctx, 'leitung');
     const kicksAfterFirst = kick.mock.calls.length;
 
-    await expect(commands.finish(ctx.matchId, ctx, 'leitung')).resolves.toBeUndefined();
+    await expect(commands.finish(ctx.matchId, ctx, 'leitung')).resolves.toBeNull(); // B-07 (R4): noop liefert null statt einer ID
 
     const copy = await store.load('acc-end-twice', ctx.matchId);
     expect(copy?.pending.map((e) => e.type)).toEqual(['MATCH_START', 'MATCH_END']);
