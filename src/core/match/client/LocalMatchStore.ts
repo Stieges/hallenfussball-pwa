@@ -256,7 +256,7 @@ export class LocalMatchStore {
   /** B-07a: Stapel im Gastmodus -- fortlaufende `seq`, eine Transaktion. */
   async addConfirmedLocalBatch(accountId: string, matchId: string, events: readonly EngineEvent[]): Promise<void> {
     if (accountId !== 'guest') {
-      throw new Error('addConfirmedLocal ist nur fuer den Gastmodus (guest) erlaubt');
+      throw new Error('addConfirmedLocal/addConfirmedLocalBatch sind nur fuer den Gastmodus (guest) erlaubt');
     }
     await this.update(this.key(accountId, matchId), (copy) => {
       for (const event of events) {

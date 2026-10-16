@@ -101,6 +101,6 @@ describe('Stapel unskip + enterResult ueber Ausgang und Sender (@FU-093)', () =>
     expect(rejected.map(([, code]) => code)).toEqual(['INVALID_TRANSITION', 'DEPENDS_ON_REJECTED']);
     expect(await idsIn(h, 'acc', ctx.matchId, 'pending')).toEqual([]);
     await engine.notifyStoreChange(ctx.matchId);
-    expect(engine.view(ctx.matchId)?.result.state.status).not.toBe('finished');
+    expect(engine.view(ctx.matchId)?.result.state.status).toBe('skipped');
   });
 });
