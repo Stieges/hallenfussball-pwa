@@ -31,6 +31,9 @@ async function seedLiveTournament(
   gast: string = MITTEL_NAME,
 ): Promise<void> {
   const now = new Date().toISOString();
+  // Merge I1: Team-IDs als UUID und Spielseiten als Slots (A-01/A-03) – der Monitor liest die Seiten aus dem Slot.
+  const heimId = '00000000-0000-4000-8000-0000000000b1';
+  const gastId = '00000000-0000-4000-8000-0000000000b2';
   const tournament = {
     id: 'dauer-turnier',
     title: 'Hallencup Nord',
@@ -52,20 +55,22 @@ async function seedLiveTournament(
     shareCode: 'ABC123',
     resultMode: 'standard',
     pointSystem: { win: 3, draw: 1, loss: 0 },
-    groups: [{ id: 'g1', name: 'Gruppe A', teamIds: ['t1', 't2'] }],
+    groups: [{ id: 'g1', name: 'Gruppe A', teamIds: [heimId, gastId] }],
     teams: [
-      { id: 't1', name: heim, color: '#DC2626' },
-      { id: 't2', name: gast, color: '#FACC15' },
+      { id: heimId, name: heim, color: '#DC2626' },
+      { id: gastId, name: gast, color: '#FACC15' },
     ],
     matches: [
       {
         id: 'm7',
         number: 7,
         round: 3,
-        teamA: 't1',
-        teamB: 't2',
-        homeTeamId: 't1',
-        awayTeamId: 't2',
+        teamA: heimId,
+        teamB: gastId,
+        slotA: { kind: 'team', teamId: heimId },
+        slotB: { kind: 'team', teamId: gastId },
+        homeTeamId: heimId,
+        awayTeamId: gastId,
         homeScore: 10,
         awayScore: 0,
         scoreA: 10,
