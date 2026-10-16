@@ -811,6 +811,16 @@
     "playoffPlace": "Match for place {{n}}",
     "awaitGroup": "Completion of {{group}}",
     "awaitMatch": "Completion of {{match}}",
-    "undecided": "open"
+    "undecided": "to be decided"
+  },
+  "view": {
+    "status": {
+      "scheduled": "scheduled",
+      "running": "live",
+      "paused": "live",
+      "finished": "finished",
+      "cancelled": "cancelled",
+      "awarded": "awarded"
+    }
   }
 }

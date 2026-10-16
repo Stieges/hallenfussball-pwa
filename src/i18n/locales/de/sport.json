@@ -62,7 +62,7 @@
     "running": "Läuft",
     "finished": "Beendet",
     "paused": "Pausiert",
-    "cancelled": "Abgesagt"
+    "cancelled": "Ausgefallen"
   },
   "terminology": {
     "field_one": "Feld",

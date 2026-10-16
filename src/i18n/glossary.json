@@ -67,6 +67,13 @@
       "forbidden_de": ["in Prüfung", "Review offen"],
       "reason": "Der Server nimmt den Eintrag vorerst an, die Turnierleitung entscheidet später darüber.",
       "i18nKey": "outbox.awaitingReview"
+    },
+    "cancelledMatch": {
+      "de": "Ausgefallen",
+      "en": "cancelled",
+      "forbidden_de": ["Abgesagt"],
+      "reason": "Record-Wortlaut für ein Spiel, das nicht stattfindet (@ZM-104, @DR-001, @DR-019); A-36b, Teilplan A-36 N5 (der Bauplan sagte noch „abgesetzt“).",
+      "i18nKey": "status.cancelled"
     }
   }
 }
