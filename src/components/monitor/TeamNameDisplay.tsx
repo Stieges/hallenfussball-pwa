@@ -1,10 +1,10 @@
 /**
  * TeamNameDisplay - Team name for stadium-grade monitor display
  *
- * Größe xl (Live-Folie, @ZM-087): der volle Name steht da, umbricht auf höchstens zwei Zeilen, und die
- * Schrift passt sich zwischen 3 % der Bildschirmhöhe und der Vorgabe an. Passt auch das nicht, kommt der
- * Kurzname, und nur zuletzt wird gekürzt (@ZM-088).
- * Größen md und lg: wie bisher, Kürzung über die Auswahl nach Zeichen (teamDisplayNames).
+ * Der Name kommt aus `monitorTeamName` (MS1, @ZM-087, @ZM-149): Vereinswörter nach fester Liste gekürzt, sonst
+ * der volle Name; nie Kürzel aus Anfangsbuchstaben, nie „…“. Er umbricht an Leerzeichen auf höchstens zwei Zeilen.
+ * Größe xl (Live-Folie): die Schrift passt sich zwischen 3 % der Bildschirmhöhe und der Vorgabe an
+ * (die Folien-Teilung bei Platzmangel kommt mit MS3).
  *
  * @see MONITOR-LIVE-SCORE-REDESIGN.md Section 15
  */
@@ -13,8 +13,8 @@ import { CSSProperties, useEffect, useRef } from 'react';
 import { cssVars, displayFontSizes } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
 import { useMonitorTheme } from '../../hooks';
-import { getDisplayNames, selectVariant } from '../../utils/teamDisplayNames';
-import { TEAM_NAME_MAX_ZEILEN, TEAM_NAME_ZEILENHOEHE, useTeamNameFit } from './teamNameFit';
+import { monitorTeamName } from '../../core/models/teamNameAbbrev';
+import { TEAM_NAME_ZEILENHOEHE, useTeamNameFit } from './teamNameFit';
 
 export interface TeamNameDisplayProps {
   /** Full team name */
@@ -31,12 +31,9 @@ export interface TeamNameDisplayProps {
   sizePx?: number;
   /** B3: meldet die eigene passende Größe (px) an das Elternteil */
   onFitPx?: (px: number) => void;
-  /** Override: force a specific variant */
-  variant?: 'full' | 'medium' | 'short';
+  /** Hinterlegter Kurzname (hat Vorrang vor der Kürzung nach Liste) */
+  shortName?: string | null;
 }
-
-/** Max characters that fit per size (md/lg; xl passt die Schrift an, siehe teamNameFit) */
-const MAX_CHARS_BY_SIZE = { md: 10, lg: 14 } as const;
 
 const sizeConfig = {
   md: { fontSize: '28px' },
@@ -52,34 +49,19 @@ export const TeamNameDisplay: React.FC<TeamNameDisplayProps> = ({
   fontSize,
   sizePx,
   onFitPx,
-  variant,
+  shortName,
 }) => {
   const { themeColors } = useMonitorTheme(theme);
   const config = { fontSize: fontSize ?? sizeConfig[size].fontSize };
   const ref = useRef<HTMLDivElement>(null);
 
-  const displayNames = getDisplayNames(name);
-  const passtAnpassen = size === 'xl' && !variant;
-  const wahl = useTeamNameFit(
-    ref,
-    [displayNames.full, displayNames.medium, displayNames.short],
-    passtAnpassen,
-    config.fontSize,
-    sizePx,
-  );
+  const displayText = monitorTeamName(name, shortName);
+  const passtAnpassen = size === 'xl';
+  const wahl = useTeamNameFit(ref, [displayText], passtAnpassen, config.fontSize, sizePx);
   const eigenPx = wahl?.px;
   useEffect(() => {
     if (eigenPx !== undefined && Number.isFinite(eigenPx)) { onFitPx?.(eigenPx); }
   }, [eigenPx, onFitPx]);
-
-  let displayText: string;
-  if (variant) {
-    displayText = displayNames[variant];
-  } else if (passtAnpassen) {
-    displayText = wahl?.text ?? displayNames.full;
-  } else {
-    displayText = selectVariant(displayNames, MAX_CHARS_BY_SIZE[size === 'md' ? 'md' : 'lg']);
-  }
 
   const nameStyle: CSSProperties = {
     fontSize: config.fontSize,
@@ -92,24 +74,12 @@ export const TeamNameDisplay: React.FC<TeamNameDisplayProps> = ({
     textShadow: themeColors.textShadow,
     letterSpacing: '-0.01em',
     lineHeight: TEAM_NAME_ZEILENHOEHE,
-    ...(passtAnpassen
-      ? {
-          display: '-webkit-box',
-          WebkitBoxOrient: 'vertical',
-          WebkitLineClamp: TEAM_NAME_MAX_ZEILEN,
-          overflow: 'hidden',
-          overflowWrap: 'normal',
-          whiteSpace: 'normal',
-        }
-      : {
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }),
+    overflowWrap: 'normal',
+    whiteSpace: 'normal',
   };
 
   return (
-    <div ref={ref} style={nameStyle} title={name} data-fit-vorgabe={config.fontSize}>
+    <div ref={ref} style={nameStyle} title={name} data-teamname data-fit-vorgabe={config.fontSize}>
       {displayText}
     </div>
   );

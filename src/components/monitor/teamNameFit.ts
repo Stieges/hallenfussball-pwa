@@ -1,9 +1,10 @@
 /**
  * Teamnamen auf der Live-Folie passend setzen (B-17 Fixrunde, @ZM-087, @ZM-088, @ZM-125).
  *
- * Ein Name steht vollständig da (bis 50 Zeichen, ohne „…“), umbricht auf höchstens zwei Zeilen und passt seine
- * Schrift zwischen 3 % der Bildschirmhöhe und der heutigen Größe an. Passt auch das nicht, kommt der Kurzname,
- * und nur zuletzt wird gekürzt.
+ * Der Anzeigetext kommt aus `monitorTeamName` (MS1, @ZM-149: Kurzname, sonst Vereinswörter nach Liste gekürzt).
+ * Der Text steht vollständig da, ohne „…“, und passt seine Schrift zwischen 3 % der Bildschirmhöhe und der heutigen
+ * Größe an. Passt auch die kleinste Schrift nicht, bleibt sie bei 3 % (nie kleiner); der Name umbricht dann weiter,
+ * die Folien-Teilung dafür kommt mit MS3. Am Monitor wird nie mit „…“ gekürzt.
  */
 import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
 
