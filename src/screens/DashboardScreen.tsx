@@ -191,6 +191,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     background: cssVars.gradients.primary,
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
+    // @OB-021: der Titel darf schrumpfen und umbrechen, sonst schiebt er die Kopfzeile bei 360–390 px über den Rand
+    minWidth: 0,
+    overflowWrap: 'break-word',
+    hyphens: 'auto',
   };
 
   const sectionStyle: CSSProperties = {

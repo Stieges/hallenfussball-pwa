@@ -21,6 +21,19 @@ test.describe('Smoke Tests', () => {
     expect(viewport).not.toContain('maximum-scale=1');
   });
 
+  // @OB-021: Die Startseite ist auf jedem Gerät der Geräteliste (ab 360 Bildpunkten Breite) ohne waagerechtes
+  // Scrollen bedienbar. Vorher schob die Kopfzeile (Titel + Offline-Marke + Konto-Knopf) die Seite bei 360 px auf 395 px.
+  test('Startseite ohne waagerechtes Scrollen (@OB-021)', async ({ page }) => {
+    await page.goto('/#/');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByTestId('dashboard-import-trigger')).toBeVisible();
+    const breiten = await page.evaluate(() => ({
+      inhalt: document.documentElement.scrollWidth,
+      sichtbar: document.documentElement.clientWidth,
+    }));
+    expect(breiten.inhalt, `Inhalt ${breiten.inhalt} px breiter als ${breiten.sichtbar} px`).toBeLessThanOrEqual(breiten.sichtbar);
+  });
+
   test('Keine JavaScript Errors', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
