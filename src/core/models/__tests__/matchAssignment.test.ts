@@ -21,7 +21,8 @@ const resolved = {
 describe('assignTeamToSide (K6)', () => {
   it('K6 Umbesetzen verwirft resolvedFrom: die Seite ist direkt besetzt', () => {
     const changed = assignTeamToSide(resolved, 'A', UFER);
-    expect(changed.slotA).toEqual(teamSlot(UFER));
+    // A-36b: Merkmal „Neu besetzen“ (lokal), die Herkunft des Platzes bleibt in originA.
+    expect(changed.slotA).toEqual({ ...teamSlot(UFER), assignedBy: 'reassigned' });
     expect(changed.slotA).not.toHaveProperty('resolvedFrom');
     expect('teamA' in changed).toBe(false); // A-36a: kein Übergangsfeld mehr
   });
@@ -45,8 +46,8 @@ describe('swapTeamsBetweenMatches (K6)', () => {
 
   it('K6 Tausch: beide Seiten tauschen das Team und tragen keine Herkunft mehr', () => {
     const [first, second] = swapTeamsBetweenMatches({ match: resolved, side: 'A' }, { match: other, side: 'A' });
-    expect(first.slotA).toEqual(teamSlot(UFER));
-    expect(second.slotA).toEqual(teamSlot(NORD));
+    expect(first.slotA).toEqual({ ...teamSlot(UFER), assignedBy: 'reassigned' });
+    expect(second.slotA).toEqual({ ...teamSlot(NORD), assignedBy: 'reassigned' });
     expect(first.slotA).not.toHaveProperty('resolvedFrom');
     expect(second.slotA).not.toHaveProperty('resolvedFrom');
   });

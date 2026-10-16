@@ -152,7 +152,8 @@ export function sourceLabel(source: TurniertagMatch['slot_a_source'], finals: re
   }
   if (source?.kind === 'matchResult') {
     const semifinal = finals.findIndex((match) => match.id === source.matchId) + 1;
-    return `${source.role === 'winner' ? 'Sieger' : 'Verlierer'} ${semifinal}. Halbfinale`;
+    // Record-Wortlaut „Sieger Halbfinale 1“ (@TM-015, @BM-032; A-36b W7).
+    return `${source.role === 'winner' ? 'Sieger' : 'Verlierer'} Halbfinale ${semifinal}`;
   }
   return '';
 }
@@ -191,7 +192,9 @@ export async function finalrundeLabelOf(
   finals: readonly TurniertagMatch[]
 ): Promise<string | undefined> {
   const expected = finalMatchLabel(match, finals);
-  const bezeichnung = match.label;
+  // Die Anzeige zeigt die Bezeichnung im Record-Wortlaut („Halbfinale 1“, A-36b W7); in der Cloud-Zeile steht
+  // weiter die Generator-Bezeichnung („1. Halbfinale“).
+  const bezeichnung = match.label?.replace(/^(\d+)\. Halbfinale$/, 'Halbfinale $1');
   let zeile: string | undefined;
   let karte: string | undefined;
   const collect = async (): Promise<void> => {

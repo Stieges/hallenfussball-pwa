@@ -53,7 +53,7 @@ describe('monitorSideName – offene Seiten zeigen die Herkunft', () => {
     expect(monitorSideName(match, 'B', tournament)).toBe('Zweiter Gruppe B');
   });
 
-  it('Sieger eines Vorgängerspiels → „Sieger 1. Halbfinale“', () => {
+  it('Sieger eines Vorgängerspiels → „Sieger Halbfinale 1“', () => {
     const previous = { ...openSemi(), id: testUuid(102), label: '1. Halbfinale' };
     const next: Match = {
       ...openSemi(),
@@ -62,7 +62,7 @@ describe('monitorSideName – offene Seiten zeigen die Herkunft', () => {
       slotB: teamSlot(NORD),
     };
     const tournament = buildTournament({ teams, matches: [previous, next] });
-    expect(monitorSideName(next, 'A', tournament)).toBe('Sieger 1. Halbfinale');
+    expect(monitorSideName(next, 'A', tournament)).toBe('Sieger Halbfinale 1');
   });
 
   it('Gegenbeispiel: besetzte Seite zeigt den Teamnamen, nie die Herkunft', () => {
