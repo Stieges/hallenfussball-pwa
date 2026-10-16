@@ -10,10 +10,10 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../design-tokens';
+import { cssVars, dialogWidths } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { registerStyles as styles } from './RegisterScreen.styles';
-import { useFocusTrap } from '../../../hooks/useFocusTrap';
+import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 
 // =============================================================================
 // Email Confirmation Dialog
@@ -31,21 +31,14 @@ export const RegisterEmailConfirmationDialog: React.FC<RegisterEmailConfirmation
   onClose,
 }) => {
   const { t } = useTranslation('auth');
-  const trap = useFocusTrap({
-    isActive: true,
-    onEscape: onClose,
-  });
-
   return (
-    <div style={styles.backdrop} onClick={onClose}>
-      <div
-        ref={trap.containerRef}
-        style={styles.card}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="email-confirm-title"
-      >
+    <DialogSurface
+      isOpen
+      onClose={onClose}
+      maxWidth={dialogWidths.sm}
+      labelledBy="email-confirm-title"
+    >
+      <div style={styles.dialogBody}>
         <button
           type="button"
           onClick={onClose}
@@ -71,7 +64,7 @@ export const RegisterEmailConfirmationDialog: React.FC<RegisterEmailConfirmation
           {t('registerDialogs.emailConfirmation.toLogin')}
         </Button>
       </div>
-    </div>
+    </DialogSurface>
   );
 };
 
@@ -89,21 +82,14 @@ export const RegisterSuccessDialog: React.FC<RegisterSuccessDialogProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation('auth');
-  const trap = useFocusTrap({
-    isActive: true,
-    onEscape: onClose,
-  });
-
   return (
-    <div style={styles.backdrop} onClick={onClose}>
-      <div
-        ref={trap.containerRef}
-        style={styles.card}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="success-title"
-      >
+    <DialogSurface
+      isOpen
+      onClose={onClose}
+      maxWidth={dialogWidths.sm}
+      labelledBy="success-title"
+    >
+      <div style={styles.dialogBody}>
         <button
           type="button"
           onClick={onClose}
@@ -129,6 +115,6 @@ export const RegisterSuccessDialog: React.FC<RegisterSuccessDialogProps> = ({
           {t('registerDialogs.success.continue')}
         </Button>
       </div>
-    </div>
+    </DialogSurface>
   );
 };

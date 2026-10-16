@@ -15,8 +15,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../../design-tokens'
-import { useDialogTimer, useFocusTrap } from '../../../../hooks';
+import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { DialogSurface } from '../../../ui/molecules/DialogSurface';
+import { useDialogTimer } from '../../../../hooks';
 import type { CardType } from '../../../../types/tournament';
 import moduleStyles from '../../LiveCockpit.module.css';
 
@@ -78,12 +79,6 @@ export function CardDialog({
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [playerNumber, setPlayerNumber] = useState<string>('');
   const [step, setStep] = useState<1 | 2 | 3>(1);
-
-  // Focus trap for accessibility (WCAG 4.1.3)
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: onClose,
-  });
 
   // BUG-007: Determine if we're in quick mode (both card type and team preselected)
   const isQuickMode = initialCardType !== undefined && preselectedTeamSide !== undefined;
@@ -381,15 +376,14 @@ export function CardDialog({
   );
 
   return (
-    <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
-      <div
-        ref={focusTrap.containerRef}
-        style={styles.dialog}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="card-dialog-title"
-      >
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth={dialogWidths.sm}
+      labelledBy="card-dialog-title"
+      panelClassName={moduleStyles.dialogOverlay}
+    >
+      <div style={styles.dialog}>
         {/* BUG-007: Timer progress bar (only visible in quick mode at step 3) */}
         {isQuickMode && isActive && step === 3 && (
           <div style={styles.timerContainer}>
@@ -417,28 +411,14 @@ export function CardDialog({
         {step === 3 && renderStep3Player()}
         <p style={styles.subtitle} data-testid="card-dialog-foul-hint">{t('foul.countsAsFoul')}</p>
       </div>
-    </div>
+    </DialogSurface>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: cssVars.colors.overlayDialog,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.lg,
-  },
   dialog: {
     position: 'relative', // BUG-007: Needed for timer progress bar
-    backgroundColor: cssVars.colors.surfaceElevated,
-    borderRadius: cssVars.borderRadius.xl,
     padding: cssVars.spacing.xl,
-    maxWidth: '400px',
-    width: '100%',
     display: 'flex',
     flexDirection: 'column',
     gap: cssVars.spacing.lg,
@@ -643,7 +623,7 @@ const styles: Record<string, React.CSSProperties> = {
     right: 0,
     height: '4px',
     backgroundColor: cssVars.colors.surface,
-    borderRadius: `${cssVars.borderRadius.xl} ${cssVars.borderRadius.xl} 0 0`,
+    borderRadius: `${cssVars.borderRadius.lg} ${cssVars.borderRadius.lg} 0 0`,
     overflow: 'hidden',
   },
   timerProgress: {

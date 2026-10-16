@@ -6,6 +6,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PublicFilterBar, type PublicFilterBarProps } from '../components/PublicFilterBar';
 
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
+
 function renderBar(overrides: Partial<PublicFilterBarProps> = {}) {
   const props: PublicFilterBarProps = {
     groups: ['A', 'B'],

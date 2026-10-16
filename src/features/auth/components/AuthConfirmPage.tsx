@@ -216,7 +216,7 @@ export const AuthConfirmPage: React.FC = () => {
   // Main confirmation UI
   return (
     <div style={styles.backdrop}>
-      <div style={styles.card} role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div style={styles.card} role="main" aria-labelledby="confirm-title">
         <div style={styles.iconWrapper}>
           <div style={styles.icon}>✉️</div>
         </div>

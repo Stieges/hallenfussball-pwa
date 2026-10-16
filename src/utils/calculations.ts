@@ -5,6 +5,20 @@ import { matchSideTeamId } from '../core/models/matchSlot';
 import type { TeamId } from '../core/models/schemas/MatchSlotSchema';
 
 /**
+ * Zählt ein Spiel für Tabelle, Weiterkommen und Finalrunden-Auflösung? (@TM-143)
+ *
+ * Nur abgepfiffene Spiele (`finished`): laufende oder unterbrochene Spiele tragen einen
+ * Zwischenstand, der nicht zählen darf. Ein nicht gesetzter Status (`undefined`) zählt nur, weil
+ * ältere lokale Turniere (Zod `optional`) und Testfixtures ohne Status existieren. Produktiv setzt
+ * der Mapper `null` auf 'scheduled' und der Wizard 'scheduled', ein `undefined` entsteht dort kaum.
+ *
+ * Eine gemeinsame Prüfung für alle Rechenwege (Tabelle, playoffResolver), damit "fertig" und
+ * "zählt" nie auseinanderlaufen.
+ */
+export const countsForStandings = (match: Match): boolean =>
+  match.matchStatus === undefined || match.matchStatus === 'finished';
+
+/**
  * Calculate standings for a group or all teams
  */
 export const calculateStandings = (
@@ -15,8 +29,12 @@ export const calculateStandings = (
 ): Standing[] => {
   // Filter matches for the specific group if provided
   const relevantMatches = group
-    ? matches.filter((m) => m.group === group && m.scoreA !== undefined && m.scoreB !== undefined)
-    : matches.filter((m) => m.scoreA !== undefined && m.scoreB !== undefined && !m.isFinal);
+    ? matches.filter(
+        (m) => m.group === group && m.scoreA !== undefined && m.scoreB !== undefined && countsForStandings(m)
+      )
+    : matches.filter(
+        (m) => m.scoreA !== undefined && m.scoreB !== undefined && !m.isFinal && countsForStandings(m)
+      );
 
   // Filter teams for the specific group
   const relevantTeams = group ? teams.filter((t) => t.group === group) : teams;

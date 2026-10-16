@@ -35,6 +35,9 @@ vi.mock('../../../hooks/useLiveMatches', () => ({ useLiveMatches: useLiveMatches
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
+
 const cloudTournament = {
   id: 'tour-1', title: 'Cloud-Turnier', teams: [], matches: [],
   monitors: [{

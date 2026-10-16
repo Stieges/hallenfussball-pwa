@@ -5,11 +5,12 @@
  * MF-004: Accessibility improvements (focus trap, Escape key, ARIA)
  */
 
-import { CSSProperties, useState, useEffect } from 'react';
+import { CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../design-tokens'
+import { cssVars, dialogWidths } from '../../design-tokens';
+import { DialogSurface } from '../ui/molecules/DialogSurface';
 import { Button } from '../ui';
-import { useIsMobile, useFocusTrap } from '../../hooks';
+import { useIsMobile } from '../../hooks';
 
 interface EditTimeDialogProps {
   currentElapsedSeconds: number;
@@ -33,19 +34,6 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
 
   const isMobile = useIsMobile();
 
-  // MF-004: Focus trap for accessibility (WCAG 4.1.3)
-  const focusTrap = useFocusTrap({
-    isActive: true, // Dialog is always active when rendered
-    onEscape: onCancel,
-  });
-
-  // Prevent body scroll while dialog is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
 
   const maxMinutes = Math.floor(durationSeconds / 60) + 5; // Allow some overtime
 
@@ -76,34 +64,14 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
   const newElapsedSeconds = minutes * 60 + seconds;
   const hasChanged = newElapsedSeconds !== currentElapsedSeconds;
 
-  const overlayStyle: CSSProperties = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: cssVars.colors.overlayStrong,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.md,
-  };
-
   const containerStyle: CSSProperties = {
-    width: '100%',
-    maxWidth: '400px',
     padding: isMobile ? cssVars.spacing.lg : cssVars.spacing.xl,
-    borderRadius: cssVars.borderRadius.lg,
-    border: `2px solid ${cssVars.colors.secondary}`,
-    background: 'linear-gradient(135deg, rgba(0, 176, 255, 0.15), rgba(0, 120, 200, 0.1))',
-    backgroundColor: cssVars.colors.background,
   };
 
   const titleStyle: CSSProperties = {
     fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.xl,
     fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.secondary,
+    color: cssVars.colors.textPrimary,
     marginBottom: cssVars.spacing.md,
     display: 'flex',
     alignItems: 'center',
@@ -200,16 +168,14 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
   const durationMinutes = Math.floor(durationSeconds / 60);
 
   return (
-    <div style={overlayStyle} onClick={onCancel}>
-      {/* MF-004: Modal mit korrekten ARIA-Attributen */}
-      <div
-        ref={focusTrap.containerRef}
-        style={containerStyle}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="edit-time-dialog-title"
-      >
+    <DialogSurface
+      isOpen
+      onClose={onCancel}
+      maxWidth={dialogWidths.sm}
+      accent={cssVars.colors.secondary}
+      labelledBy="edit-time-dialog-title"
+    >
+      <div style={containerStyle}>
         <div id="edit-time-dialog-title" style={titleStyle}>
           <span aria-hidden="true">⏱️</span>
           <span>{t('editTime.title')}</span>
@@ -316,6 +282,6 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
           </Button>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 };

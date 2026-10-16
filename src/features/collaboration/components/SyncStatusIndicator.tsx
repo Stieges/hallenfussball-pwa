@@ -110,6 +110,11 @@ export function SyncStatusIndicator({
             return;
         }
         const handler = (event: MouseEvent | TouchEvent) => {
+            // Ein Dialog aus dem Popover (Rückfrage „Verwerfen“) liegt im Portal von DialogSurface (B-43a) –
+            // ein Klick darin ist kein Klick außerhalb, sonst schließt die Liste vor dem Bestätigen.
+            if (event.target instanceof Element && event.target.closest('.dialog-surface-scrim')) {
+                return;
+            }
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 setShowFailedList(false);
                 setShowWaitDetails(false);

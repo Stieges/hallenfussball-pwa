@@ -10,9 +10,9 @@
  * Gemäß Mobile UX Konzept (docs/concepts/MOBILE-UX-CONCEPT.md)
  */
 
-import { CSSProperties, useEffect, useId } from 'react';
+import { CSSProperties, useId } from 'react';
 import { cssVars } from '../../design-tokens'
-import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { DialogSurface } from './molecules/DialogSurface';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -21,52 +21,15 @@ interface BottomSheetProps {
   title?: string;
 }
 
+/** Blatt von unten; Fläche, Abdunkelung, Fokusfalle und Scroll-Sperre kommen aus DialogSurface (B-43a). */
 export const BottomSheet: React.FC<BottomSheetProps> = ({
   isOpen,
   onClose,
   children,
   title,
 }) => {
-  // Focus trap for accessibility
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: onClose,
-  });
-
   // Stable unique ID for aria-labelledby (React 18+)
   const generatedId = useId();
-
-  useEffect(() => {
-    if (isOpen) {
-      // Prevent body scroll when open
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
-  if (!isOpen) {return null;}
-
-  const overlayStyle: CSSProperties = {
-    position: 'fixed',
-    inset: 0,
-    background: cssVars.colors.overlay,
-    zIndex: cssVars.zIndex.floating,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'flex-end',
-    animation: 'fadeIn 0.2s ease-out',
-  };
-
-  const sheetStyle: CSSProperties = {
-    background: cssVars.colors.surface,
-    borderRadius: '16px 16px 0 0',
-    maxHeight: '80vh',
-    overflow: 'auto',
-    paddingBottom: 'env(safe-area-inset-bottom, 16px)',
-    animation: 'slideUp 0.3s ease-out',
-  };
 
   const handleStyle: CSSProperties = {
     display: 'flex',
@@ -99,50 +62,28 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const titleId = title ? generatedId : undefined;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        style={overlayStyle}
-        onClick={onClose}
-        role="presentation"
-      >
-        {/* Sheet */}
-        <div
-          ref={focusTrap.containerRef}
-          style={sheetStyle}
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={titleId}
-          aria-label={titleId ? undefined : 'Bottom Sheet'}
-        >
-          {/* Drag Handle */}
-          <div style={handleStyle}>
-            <div style={handleBarStyle} />
-          </div>
-
-          {/* Title */}
-          {title && <h2 id={titleId} style={titleStyle}>{title}</h2>}
-
-          {/* Content */}
-          <div style={contentStyle}>
-            {children}
-          </div>
-        </div>
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      placement="sheet"
+      maxWidth="100%"
+      zIndex={cssVars.zIndex.floating}
+      labelledBy={titleId}
+      ariaLabel={titleId ? undefined : 'Bottom Sheet'}
+    >
+      {/* Drag Handle */}
+      <div style={handleStyle}>
+        <div style={handleBarStyle} />
       </div>
 
-      {/* Animations */}
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-      `}</style>
-    </>
+      {/* Title */}
+      {title && <h2 id={titleId} style={titleStyle}>{title}</h2>}
+
+      {/* Content */}
+      <div style={contentStyle}>
+        {children}
+      </div>
+    </DialogSurface>
   );
 };
 

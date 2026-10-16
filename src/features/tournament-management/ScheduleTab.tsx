@@ -245,6 +245,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     setPendingReferee,
     setPendingField,
     lockFinishedResults: appSettings.lockFinishedResults,
+    liveMatchIds: runningMatchIds,
   });
 
   // ==========================================================================

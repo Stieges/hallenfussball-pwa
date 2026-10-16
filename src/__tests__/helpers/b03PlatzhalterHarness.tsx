@@ -159,7 +159,7 @@ export const VERBOTENE_ANKUENDIGUNG =
 export const SRC_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const LOCALE_MARKER = join('i18n', 'locales');
 
-function walkFiles(dir: string, out: string[] = []): string[] {
+export function walkFiles(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
     if (name === '__tests__' || name === 'node_modules') { continue; }

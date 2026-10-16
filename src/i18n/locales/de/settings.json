@@ -132,8 +132,8 @@
       "label": "Einwilligung widerrufen",
       "description": "Alle Tracking-Einstellungen zurücksetzen",
       "action": "Widerrufen",
-      "confirmMessage": "Möchten Sie Ihre Datenschutz-Einwilligung widerrufen?\n\nDies deaktiviert Error-Tracking und Session-Replay. Beim nächsten App-Start werden Sie erneut nach Ihrer Einwilligung gefragt.",
-      "successMessage": "Ihre Einwilligung wurde widerrufen."
+      "confirmMessage": "Möchtest du deine Datenschutz-Einwilligung widerrufen?\n\nDies deaktiviert Error-Tracking und Session-Replay. Beim nächsten App-Start wirst du erneut nach deiner Einwilligung gefragt.",
+      "successMessage": "Deine Einwilligung wurde widerrufen."
     }
   },
   "legal": {
@@ -146,7 +146,7 @@
   },
   "consent": {
     "title": "Datenschutz-Einstellungen",
-    "description": "Wir nutzen anonymisiertes Error-Tracking, um die App zu verbessern. Optional können Sie Session-Replays aktivieren, um uns bei der Fehlerbehebung zu helfen.",
+    "description": "Wir nutzen anonymisiertes Error-Tracking, um die App zu verbessern. Optional kannst du Session-Replays aktivieren, um uns bei der Fehlerbehebung zu helfen.",
     "necessary": "Notwendig:",
     "necessaryDescription": "Anonymisierte Fehlerberichte (keine persönlichen Daten)",
     "optional": "Optional:",

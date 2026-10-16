@@ -176,6 +176,34 @@ describe('autoResolvePlayoffsIfReady', () => {
   });
 });
 
+// @TM-143 (B-40 Fixrunde 1, F2; beim Merge main → Spur B aus src/utils/__tests__/playoffResolver.test.ts
+// auf Slots übertragen): Finalrunde nur nach abgepfiffener Gruppe, mit der Tabelle, die die Anzeige zeigt.
+// Das letzte Gruppenspiel läuft mit Zwischenstand und darf nichts auslösen.
+describe('Weiterkommen zählt wie die Tabelle (@TM-143)', () => {
+  /** Gruppe A: A1 gewinnt 1:0, dann läuft A2 gegen A1 mit 2:0 für A2. Gruppe B: B1 gewinnt 3:0, abgepfiffen. */
+  const gruppenMatches = (letztesSpiel: Partial<Match>): Match[] => [
+    { ...groupMatch(testUuid(311), A1, A2, 'A', [1, 0]), matchStatus: 'finished' },
+    { ...groupMatch(testUuid(312), A2, A1, 'A', [2, 0]), round: 2, ...letztesSpiel },
+    { ...groupMatch(testUuid(313), B1, B2, 'B', [3, 0]), matchStatus: 'finished' },
+  ];
+
+  it('@TM-143 laufendes letztes Gruppenspiel mit Zwischenstand löst die Finalrunde nicht auf', () => {
+    const t = tournamentOf([...gruppenMatches({ matchStatus: 'running' }), ...semis()]);
+
+    expect(autoResolvePlayoffsIfReady(t)).toBeNull();
+    expect(byId(t, SEMI2)?.slotA?.kind).toBe('pending');
+  });
+
+  it('@TM-143 nach dem Abpfiff wird mit der Tabelle aufgelöst (A2 ist Gruppensieger)', () => {
+    const t = tournamentOf([...gruppenMatches({ matchStatus: 'finished' }), ...semis()]);
+
+    const result = autoResolvePlayoffsIfReady(t);
+
+    expect(result?.wasResolved).toBe(true);
+    expect(idOf(byId(t, SEMI2), 'A')).toBe(A2);
+  });
+});
+
 describe('resolveBracketAfterPlayoffMatch', () => {
   const playedSemis = (): Match[] => {
     const [s1, s2] = semis();

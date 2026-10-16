@@ -66,6 +66,25 @@ type PendingRemoval = {
 };
 let pendingRemoval: PendingRemoval | null = null;
 
+// B-43b1: inert per Referenzzählung. Mehrere (verschachtelte) Dialoge sperren dasselbe
+// Element; es wird erst freigegeben, wenn der letzte Dialog, der es sperrt, schließt.
+const inertCounts = new Map<Element, number>();
+
+function acquireInert(element: Element): void {
+  inertCounts.set(element, (inertCounts.get(element) ?? 0) + 1);
+  element.setAttribute('inert', '');
+}
+
+function releaseInert(element: Element): void {
+  const next = (inertCounts.get(element) ?? 1) - 1;
+  if (next > 0) {
+    inertCounts.set(element, next);
+    return;
+  }
+  inertCounts.delete(element);
+  element.removeAttribute('inert');
+}
+
 // Escape-Stapel: Auf Esc reagiert nur der oberste offene Dialog (Fixrunde 2).
 const escapeStack: string[] = [];
 let escapeTokenCounter = 0;
@@ -219,7 +238,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       // Mark as inert if element is NOT the container AND doesn't contain the container
       // (i.e., is not an ancestor of the container like an overlay wrapper)
       if (element !== container && !element.contains(container)) {
-        element.setAttribute('inert', '');
+        acquireInert(element);
         inertElements.push(element);
       }
     }
@@ -275,9 +294,9 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
         escapeStack.splice(escapeIndex, 1);
       }
 
-      // Remove inert from siblings
+      // Remove inert from siblings (Referenzzählung: erst der letzte sperrende Dialog gibt frei)
       for (const element of inertElements) {
-        element.removeAttribute('inert');
+        releaseInert(element);
       }
 
       // Restore focus

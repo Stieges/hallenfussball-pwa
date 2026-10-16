@@ -11,6 +11,7 @@ import { CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tournament, FinalsConfig } from '../../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../../core/generators';
+import { IncompleteScheduleError } from '../../core/generators/incompleteScheduleError';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 import { Button, Card } from '../../components/ui';
@@ -51,7 +52,9 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
       setScheduleError(null);
       return true;
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = err instanceof IncompleteScheduleError
+        ? t('schedule.incomplete', { count: err.missingMatches })
+        : err instanceof Error ? err.message : String(err);
       console.error('[TournamentPreview] Schedule generation failed:', err);
       setScheduleError(message);
       return false;
