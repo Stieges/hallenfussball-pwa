@@ -94,7 +94,7 @@ describe('A-36a Herkunft des Platzes bleibt nach dem Besetzen', () => {
     const hf2 = byId(hallencup(), SEMI2);
     const reassigned = assignTeamToSide(hf2, 'A', WEST);
 
-    expect(reassigned.slotA).toEqual({ kind: 'team', teamId: WEST });
+    expect(reassigned.slotA).toEqual({ kind: 'team', teamId: WEST, assignedBy: 'reassigned' }); // A-36b: Merkmal lokal
     expect(reassigned.originA).toEqual(groupRank('B', 1));
     expect(reassigned.originB).toEqual(groupRank('A', 2));
   });
