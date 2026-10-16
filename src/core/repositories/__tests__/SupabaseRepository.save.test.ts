@@ -34,7 +34,7 @@ function survivorMatchRow(id: string) {
     id,
     team_a_id: TEAM_SURVIVOR,
     slot_b_source: { kind: 'groupRank', group: 'A', rank: 1 },
-  } as Parameters<typeof createMatchRow>[0]);
+  });
 }
 
 // ============================================================================
@@ -602,7 +602,7 @@ describe('SupabaseRepository.save() — A-02: Reihenfolge und aufgelöste Seiten
       team_a_id: null,
       slot_a_source: { kind: 'matchResult', matchId: testUuid(500), role: 'winner' },
       team_b_id: TEAM_SURVIVOR,
-    } as Parameters<typeof createMatchRow>[0]);
+    });
     const staleLocal = mapTournamentFromSupabase(
       createTournamentRow({ version: null }),
       [createTeamRow({ id: TEAM_SURVIVOR, name: 'Survivor' })],
@@ -629,7 +629,7 @@ describe('SupabaseRepository.save() — A-02: Reihenfolge und aufgelöste Seiten
     const local = mapTournamentFromSupabase(
       createTournamentRow({ version: null }),
       [createTeamRow({ id: TEAM_SURVIVOR, name: 'Survivor' })],
-      [createMatchRow({ id: 'match-final', team_a_id: null, slot_a_source: source, team_b_id: TEAM_SURVIVOR } as Parameters<typeof createMatchRow>[0])]
+      [createMatchRow({ id: 'match-final', team_a_id: null, slot_a_source: source, team_b_id: TEAM_SURVIVOR })]
     );
     teamsSelectEqMock.mockResolvedValue({ data: [{ id: TEAM_SURVIVOR }], error: null });
     matchesSelectEqMock.mockResolvedValue({
