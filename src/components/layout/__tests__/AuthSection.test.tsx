@@ -28,6 +28,8 @@ vi.mock('../../../features/auth/hooks/useAuth', () => ({
 }));
 
 vi.mock('../../../hooks/useIsMobile', () => ({ useIsMobile: () => false }));
+const kopf = vi.hoisted(() => ({ kompakt: false }));
+vi.mock('../../../hooks/useCompactHeader', () => ({ useCompactHeader: () => kopf.kompakt }));
 
 // A-07c: der Abmelde-Hook liest die Konto-Queue ueber useRepositories(); hier ohne Queue.
 vi.mock('../../../core/contexts/RepositoryContext', async (importOriginal) => ({
@@ -159,5 +161,36 @@ describe('AuthSection — handleReconnect (A-06h)', () => {
 
     expect(reconnect).not.toHaveBeenCalled();
     expect(resyncNow).not.toHaveBeenCalled();
+  });
+});
+
+// @OB-021 (Daniel 16.10.): Unter 400 px ist die Offline-Marke nur ein Symbol, der Text steht im aria-label und Tooltip
+describe('AuthSection — Offline-Marke kompakt unter 400 px (@OB-021)', () => {
+  beforeEach(() => { authMock.connectionState = 'offline'; });
+
+  const zeige = () => renderWithResync(
+    <AuthSection
+      onNavigateToLogin={vi.fn()}
+      onNavigateToRegister={vi.fn()}
+      onNavigateToProfile={vi.fn()}
+      createMatchStore={() => fakeStore(0)}
+    />,
+  );
+
+  it('unter 400 px: nur Symbol, aria-label und Tooltip tragen den Text, Touch-Ziel ≥ 44 px', () => {
+    kopf.kompakt = true;
+    zeige();
+    const marke = screen.getByTestId('auth-offline-badge');
+    expect(marke).not.toHaveTextContent('authSection.offline');
+    expect(marke.getAttribute('aria-label')).toBeTruthy();
+    expect(marke.getAttribute('title')).toBeTruthy();
+    expect(marke.style.minWidth).toBe('var(--touch-target-minimum)');
+    expect(marke.style.minHeight).toBe('var(--touch-target-minimum)');
+  });
+
+  it('Gegenbeispiel ab 400 px: Marke zeigt weiter ihren Text', () => {
+    kopf.kompakt = false;
+    zeige();
+    expect(screen.getByTestId('auth-offline-badge')).toHaveTextContent('authSection.offline');
   });
 });

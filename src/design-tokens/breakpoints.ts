@@ -12,6 +12,9 @@
 // =============================================================================
 
 export const breakpoints = {
+  /** Unterhalb davon zeigt die Kopfzeile der Startseite Marken nur als Symbol (@OB-021, 360–390 px ohne Überlauf) */
+  compactHeader: '400px',
+
   /** Small phones and below */
   mobile: '480px',
 
@@ -36,6 +39,7 @@ export const breakpoints = {
 // =============================================================================
 
 export const breakpointValues = {
+  compactHeader: 400,
   mobile: 480,
   sheet: 600,
   tablet: 768,
