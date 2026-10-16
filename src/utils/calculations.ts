@@ -2,6 +2,7 @@ import { Match, Tournament, Standing, Team, PlacementCriterion, RuntimeMatchEven
 import { DEFAULT_FAIR_PLAY_PROFILE, type FairPlayProfile } from '../core/stats/fairPlayProfiles';
 import { cardKindOf } from './cardKind';
 import { matchSideTeamId } from '../core/models/matchSlot';
+import { matchFinalScore } from '../core/view/finalScore';
 import type { TeamId } from '../core/models/schemas/MatchSlotSchema';
 
 /**
@@ -267,42 +268,18 @@ export interface FinalsPlacementResult {
 }
 
 /**
- * Determine the winner of a finals match considering overtime and penalties.
- * Liefert Team-IDs aus den Slots; solange eine Seite offen ist (oder der Slot fehlt) gibt es keinen
- * Gewinner (`null`).
+ * Sieger/Verlierer eines Finalspiels aus dem zentralen Endstand (`matchFinalScore`, A-36b Auflage Tabelle):
+ * Verlängerung, Golden Goal und Strafstoßschießen entscheiden dort, nicht hier (@ET-002, @ET-013).
+ * Team-IDs aus den Slots; offene Seite, fehlender Stand, laufendes Spiel oder Unentschieden → `null`.
  */
 export const getMatchWinner = (match: Match): { winner: TeamId; loser: TeamId } | null => {
-  if (match.scoreA === undefined || match.scoreB === undefined) {
-    return null; // Match not finished
-  }
   const idA = matchSideTeamId(match, 'A');
   const idB = matchSideTeamId(match, 'B');
-  if (idA === undefined || idB === undefined) {
-    return null; // a side is still open
-  }
-
-  let sideAWins: boolean;
-
-  // Check if decided by penalties
-  if (match.decidedBy === 'penalty' && match.penaltyScoreA !== undefined && match.penaltyScoreB !== undefined) {
-    sideAWins = match.penaltyScoreA > match.penaltyScoreB;
-  }
-  // Check if decided by overtime/golden goal
-  else if ((match.decidedBy === 'overtime' || match.decidedBy === 'goldenGoal') &&
-    match.overtimeScoreA !== undefined && match.overtimeScoreB !== undefined) {
-    sideAWins = match.scoreA + match.overtimeScoreA > match.scoreB + match.overtimeScoreB;
-  }
-  // Regular time decision
-  else if (match.scoreA > match.scoreB) {
-    sideAWins = true;
-  } else if (match.scoreB > match.scoreA) {
-    sideAWins = false;
-  } else {
-    // Draw in finals without tiebreaker - shouldn't happen, but handle gracefully
+  const winner = matchFinalScore(match)?.winner ?? null;
+  if (idA === undefined || idB === undefined || winner === null) {
     return null;
   }
-
-  return sideAWins ? { winner: idA, loser: idB } : { winner: idB, loser: idA };
+  return winner === 'a' ? { winner: idA, loser: idB } : { winner: idB, loser: idA };
 };
 
 /**
