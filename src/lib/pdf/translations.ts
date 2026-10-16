@@ -187,15 +187,15 @@ export function resolvePdfLocale(language: string | undefined): PdfLocale {
   return language?.startsWith('en') ? 'en' : 'de';
 }
 
-/** Baut alle Texte über den Übersetzer. Schlüssel liegen unter `pdf.*`. */
-/** Datum `JJJJ-MM-TT` als UTC-Datum (zonenunabhängig). Anderes Format: `undefined`. */
 const zwei = (n: number): string => String(n).padStart(2, '0');
 
+/** Datum `JJJJ-MM-TT` als UTC-Datum (zonenunabhängig). Anderes Format: `undefined`. */
 function isoToUtc(isoDate: string): Date | undefined {
   const match = ISO_DATE.exec(isoDate);
   return match ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))) : undefined;
 }
 
+/** Baut alle Texte über den Übersetzer. Schlüssel liegen unter `pdf.*`. */
 export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfTexts {
   const s = (key: string): string => translate(`pdf.${key}`);
   const clock = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });

@@ -60,9 +60,26 @@ interface Column {
   cell: (row: Row) => CellInput;
 }
 
-function buildColumns(input: MatchTableInput, ctx: MatchTableContext): Column[] {
+/**
+ * Breite einer festen Spalte: der Token-Wert, mindestens aber das Kopfwort in der PDF-Schrift samt Innenabstand. Ein Kopfwort
+ * bricht nie um, in keiner Sprache (VISUAL-DESIGN § 2; „No.“ und „Pitch“ brachen im englischen Kopf).
+ */
+function fitHead(doc: jsPDF, head: string, base: number): number {
+  doc.setFont(fontOf(doc), 'bold');
+  doc.setFontSize(printType.head);
+  return Math.max(base, doc.getTextWidth(head) + 2 * printGap.headPadH + printGap.headFitReserve);
+}
+
+function buildColumns(doc: jsPDF, input: MatchTableInput, ctx: MatchTableContext): Column[] {
   const { t } = ctx;
-  const { widths } = input;
+  const widths = {
+    nr: fitHead(doc, t.nr, input.widths.nr),
+    time: fitHead(doc, t.timeHeader, input.widths.time),
+    field: fitHead(doc, t.field, input.widths.field),
+    group: input.widths.group === undefined ? undefined : fitHead(doc, t.group, input.widths.group),
+    result: input.widths.result,
+    referee: fitHead(doc, t.referee, input.widths.referee),
+  };
   const columns: Column[] = [
     { key: 'nr', head: t.nr, style: { halign: 'center', cellWidth: widths.nr, fontSize: printType.nr, cellPadding: pad(input.padV ?? printGap.bodyPadV, printGap.nrPad) }, cell: r => r.match.matchNumber.toString() },
     { key: 'time', head: t.timeHeader, style: { halign: 'center', cellWidth: widths.time, fontSize: printType.time, fontStyle: 'bold' }, cell: r => r.match.time },
@@ -90,7 +107,7 @@ function buildColumns(input: MatchTableInput, ctx: MatchTableContext): Column[] 
 
 /** Zeichnet die Tabelle ab `startY`; Rückgabe: Unterkante der Tabelle. */
 export function renderMatchTable(doc: jsPDF, input: MatchTableInput, ctx: MatchTableContext, startY: number): number {
-  const columns = buildColumns(input, ctx);
+  const columns = buildColumns(doc, input, ctx);
   const rows: Row[] = input.matches.map(match => ({
     match,
     spec: scoreSpecFor(resultState(match, ctx.result), input.mode, ctx.t),

@@ -179,6 +179,8 @@ export const printGap = {
   /** table.m thead th: Innenabstand vertikal / horizontal */
   headPadV: 1.3,
   headPadH: 1.5,
+  /** Reserve in mm zur gemessenen Breite eines Kopfworts, damit es nie an der Zellkante umbricht. */
+  headFitReserve: 0.6,
   /** table.m td: Innenabstand vertikal / horizontal */
   bodyPadV: 0.6,
   bodyPadH: 1.5,
