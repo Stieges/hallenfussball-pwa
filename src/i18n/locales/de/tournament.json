@@ -155,6 +155,7 @@
     "hints": {
       "title": "Vor dem Speichern",
       "notShared": "Der QR-Code erscheint, sobald das Turnier online geteilt ist.",
+      "shareOnline": "Online teilen",
       "changeVisibility": "Sichtbarkeit ändern",
       "viewerHidden": "Ergebnisse und Tabellen sind ausgeblendet – das PDF zeigt sie nicht.",
       "notice": "Der Aushang zeigt nur den QR-Code zur Zuschauer-Seite, keine Ergebnisse und Tabellen.",
@@ -174,8 +175,8 @@
       "proceed": "Das PDF wird trotzdem erzeugt.",
       "changeNames": "Die Namen kann die Turnierleitung im Turnier ändern.",
       "changeFields": "Die Angaben kann die Turnierleitung im Turnier ändern.",
-      "logoLeft": "Die linke Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF",
-      "logoRight": "Die rechte Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF"
+      "logoLeft": "Die linke Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF.",
+      "logoRight": "Die rechte Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF."
     },
     "offline": {
       "title": "Ohne Verbindung – Stand {{date}} {{time}}",

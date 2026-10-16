@@ -6,7 +6,7 @@
  */
 import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, letterSpacing } from '../../../design-tokens';
+import { cssVars, iconSizeValues, letterSpacing } from '../../../design-tokens';
 import { Icons } from '../../ui/Icons';
 import { ChoiceCard, InlineNotice } from '../../ui/molecules';
 import type { PdfChoice } from './buildChoice';
@@ -69,9 +69,11 @@ export const PdfFormStep = ({ viewer, choice, onChoice, shared, finalAvailable, 
     />
   );
   const visibilityKey = hideScores && hideTables ? 'resultsAndTables' : hideScores ? 'results' : hideTables ? 'tables' : undefined;
-  const visibilityLink = onOpenVisibility ? (
-    <button type="button" style={link} onClick={onOpenVisibility} data-testid="pdf-open-visibility">{t('pdfExport.hints.changeVisibility')}</button>
-  ) : null;
+  // Beide Wege führen zu den Schaltern der Verwaltung; die Beschriftung nennt, was dort geschieht (Mockup)
+  const wayLink = (label: string, testId: string) =>
+    onOpenVisibility ? (
+      <button type="button" style={link} onClick={onOpenVisibility} data-testid={testId}>{label}</button>
+    ) : null;
 
   return (
     <div style={stack}>
@@ -87,13 +89,13 @@ export const PdfFormStep = ({ viewer, choice, onChoice, shared, finalAvailable, 
         <div>
           <div style={groupLabel}>{t('pdfExport.groups.print')}</div>
           <div style={cards} role="radiogroup" aria-label={t('pdfExport.groups.print')}>
-            {card('schedule', <Icons.Calendar size={20} />, false)}
-            {card('blank', <Icons.Edit size={20} />, false)}
-            {card('final', <Icons.Trophy size={20} />, !finalAvailable, 'pdfExport.cards.final.reason')}
+            {card('schedule', <Icons.Calendar size={iconSizeValues.sm} />, false)}
+            {card('blank', <Icons.Edit size={iconSizeValues.sm} />, false)}
+            {card('final', <Icons.Trophy size={iconSizeValues.sm} />, !finalAvailable, 'pdfExport.cards.final.reason')}
           </div>
           <div style={groupLabel}>{t('pdfExport.groups.hang')}</div>
           <div style={cards} role="radiogroup" aria-label={t('pdfExport.groups.hang')}>
-            {card('notice', <Icons.Share size={20} />, !shared, 'pdfExport.cards.notice.reason')}
+            {card('notice', <Icons.QrCode size={iconSizeValues.sm} />, !shared, 'pdfExport.cards.notice.reason')}
           </div>
         </div>
       )}
@@ -101,21 +103,21 @@ export const PdfFormStep = ({ viewer, choice, onChoice, shared, finalAvailable, 
       {!viewer && !shared ? (
         <InlineNotice tone="warn" data-testid="pdf-hint-not-shared">
           <span>{t('pdfExport.hints.notShared')}</span>
-          {visibilityLink ? <span>{visibilityLink}</span> : null}
+          {onOpenVisibility ? <span>{wayLink(t('pdfExport.hints.shareOnline'), 'pdf-open-share')}</span> : null}
         </InlineNotice>
       ) : null}
       {!viewer && choice === 'notice' ? <InlineNotice tone="info" data-testid="pdf-hint-notice">{t('pdfExport.hints.notice')}</InlineNotice> : null}
       {!viewer && choice !== 'notice' && visibilityKey ? (
         <InlineNotice tone="info" data-testid="pdf-hint-visibility">
           <span>{t(`pdfExport.hints.visibility.${visibilityKey}`)}</span>
-          {visibilityLink ? <span>{visibilityLink}</span> : null}
+          {onOpenVisibility ? <span>{wayLink(t('pdfExport.hints.changeVisibility'), 'pdf-open-visibility')}</span> : null}
         </InlineNotice>
       ) : null}
 
       <p style={small}>{t('pdfExport.format')}</p>
 
       {offlineStamp ? (
-        <InlineNotice tone="warn" data-testid="pdf-hint-offline">
+        <InlineNotice tone="warn" icon={<Icons.WifiOff size={iconSizeValues.sm} />} data-testid="pdf-hint-offline">
           <span style={bold}>{t('pdfExport.offline.title', offlineStamp)}</span>
           <span>{t('pdfExport.offline.body')}</span>
         </InlineNotice>

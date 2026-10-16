@@ -3,7 +3,7 @@
  * Zeichen, die als „?“ gedruckt werden (Original und Gedrucktes untereinander), die Ersatzschrift und unbrauchbare Grafiken.
  * Das PDF entsteht trotzdem.
  */
-import type { CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { InlineNotice } from '../../ui/molecules';
@@ -25,6 +25,9 @@ const note: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.sm, color: 
 
 export const PdfHintStep = ({ hints }: { hints: PdfHints }) => {
   const { t } = useTranslation('tournament');
+  const ref = useRef<HTMLDivElement>(null);
+  // Der Fokus wandert in den Hinweis: Enter auf „Als PDF speichern“ druckt „?“ nie ungelesen (G45)
+  useEffect(() => ref.current?.focus(), []);
   const entry = (label: string, text: PrintedText, key: string) => (
     <li key={key} style={item} data-testid="pdf-hint-item">
       <span style={caption}>{label}</span>
@@ -36,7 +39,7 @@ export const PdfHintStep = ({ hints }: { hints: PdfHints }) => {
   const hasChars = hints.names.length > 0 || hints.fields.length > 0;
 
   return (
-    <div style={stack} data-testid="pdf-hint-step">
+    <div ref={ref} tabIndex={-1} role="status" aria-live="polite" style={{ ...stack, outline: 'none' }} data-testid="pdf-hint-step">
       {hints.fontFallback ? (
         <InlineNotice tone="warn" data-testid="pdf-hint-font">
           <span style={strong}>{t('pdfExport.hints.fontTitle')}</span>

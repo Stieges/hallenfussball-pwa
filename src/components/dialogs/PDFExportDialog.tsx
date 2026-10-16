@@ -4,6 +4,7 @@
  * zu melden gibt) → Speichern → „PDF gespeichert“. Der Dialog folgt den Sichtbarkeits-Schaltern des Turniers; die freie
  * Wahl „Mit Spielstand“ und „Tabellen einschließen“ gibt es nicht mehr. Nur A4 hoch.
  */
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from './Dialog';
 import { InlineNotice } from '../ui/molecules';
@@ -35,7 +36,14 @@ export const PDFExportDialog = ({ isOpen, onClose, tournament, schedule, standin
   const { t } = useTranslation('tournament');
   const { isOnline } = useOnlineStatus();
   const viewer = audience === 'viewer';
-  const { state, select, save, saveAnyway, reset } = usePdfExport({ tournament, schedule, standings, audience, online: isOnline });
+  const { state, now, select, save, saveAnyway, reset } = usePdfExport({ tournament, schedule, standings, audience, online: isOnline });
+
+  // Beim Öffnen beginnt jeder Dialog bei der Wahl, mit frischem Stand (ein während des Bauens geschlossener Lauf ist verworfen)
+  useEffect(() => {
+    if (isOpen) {
+      reset();
+    }
+  }, [isOpen, reset]);
 
   const close = () => {
     reset();
@@ -55,7 +63,7 @@ export const PDFExportDialog = ({ isOpen, onClose, tournament, schedule, standin
           finalAvailable={false}
           hideScores={tournament.hideScoresForPublic}
           hideTables={tournament.hideRankingsForPublic}
-          offlineStamp={isOnline ? undefined : stempel(new Date())}
+          offlineStamp={isOnline ? undefined : stempel(now)}
           failed={state.failed}
           notShared={state.notShared}
           onOpenVisibility={onOpenVisibility}

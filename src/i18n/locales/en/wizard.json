@@ -562,5 +562,9 @@
     "success": "Tournament successfully finalised.",
     "explanationPrivate": "The schedule becomes fixed. Afterwards the tournament is visible only to the signed-in tournament directors.",
     "explanationPublic": "The schedule becomes fixed. Afterwards anyone with the link can watch."
+  },
+  "preview": {
+    "hintLabel": "Note:",
+    "hintBody": "This is a preview of your tournament. As long as the tournament is not finalised, it does not appear in the overview. You can save the schedule as a PDF now or go back to editing."
   }
 }

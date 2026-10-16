@@ -562,5 +562,9 @@
     "success": "Turnier erfolgreich festgelegt.",
     "explanationPrivate": "Der Spielplan wird fest. Danach ist das Turnier nur für die eingeloggte Turnierleitung sichtbar.",
     "explanationPublic": "Der Spielplan wird fest. Danach kann jeder mit dem Link zuschauen."
+  },
+  "preview": {
+    "hintLabel": "Hinweis:",
+    "hintBody": "Dies ist eine Vorschau deines Turniers. Solange das Turnier nicht festgelegt ist, wird es nicht in der Übersicht angezeigt. Du kannst den Spielplan jetzt als PDF speichern oder zurück zur Bearbeitung gehen."
   }
 }

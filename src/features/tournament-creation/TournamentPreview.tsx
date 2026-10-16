@@ -14,9 +14,8 @@ import { GeneratedSchedule, generateFullSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 import { Button, Card } from '../../components/ui';
-import { useOptionalToast } from '../../components/ui/Toast';
 import { cssVars } from '../../design-tokens'
-import { exportScheduleToPDF } from '../../lib/pdfExporter';
+import { PreviewPdfButton } from '../../components/PreviewPdfButton';
 import { getLocationName, getLocationAddressLine } from '../../utils/locationHelpers';
 import { activeTeams } from './utils/replanTeams';
 import { visibilityAfterPublish } from '../../core/services/TournamentCreationService';
@@ -42,7 +41,6 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   const [currentTournament, setCurrentTournament] = useState(tournament);
   const [schedule, setSchedule] = useState(initialSchedule);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
-  const toast = useOptionalToast();
 
   // F-211: shared regeneration helper — keeps the previous schedule visible
   // on failure and surfaces the error in the UI without crashing the wizard.
@@ -140,18 +138,6 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
     if (onTournamentChange) {
       onTournamentChange(updatedTournament);
     }
-  };
-
-  const handleExportPDF = async () => {
-    const { notes } = await exportScheduleToPDF(schedule, schedule.initialStandings, {
-      includeStandings: true,
-      // Fixrunde B-28a3-3b (Controller-Freigabe, nur diese Zeile): Regelzeilen brauchen das Turnier
-      tournament: currentTournament,
-      // organizerName wird automatisch aus schedule.tournament.organizer gezogen
-      hallName: getLocationName(currentTournament),
-    });
-    // Hinweise (z. B. Zeichen, die das PDF nicht darstellt) bleiben stehen, bis der Nutzer sie schließt
-    notes.forEach(note => toast?.showWarning(note, { duration: 0 }));
   };
 
   const containerStyle: CSSProperties = {
@@ -437,9 +423,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           <Button variant="secondary" onClick={onEdit} data-testid="preview-edit">
             Bearbeiten
           </Button>
-          <Button variant="secondary" onClick={() => void handleExportPDF()} data-testid="preview-export-pdf">
-            PDF Exportieren
-          </Button>
+          <PreviewPdfButton tournament={currentTournament} schedule={schedule} />
           <p
             data-testid="publish-explanation"
             style={{
@@ -494,9 +478,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
             lineHeight: '1.6',
           }}
         >
-          <strong>Hinweis:</strong> Dies ist eine Vorschau deines Turniers. Solange das Turnier
-          nicht freigegeben ist, wird es nicht in der Übersicht angezeigt. Du kannst den Spielplan
-          jetzt als PDF exportieren oder zurück zur Bearbeitung gehen.
+          <strong>{t('preview.hintLabel')}</strong> {t('preview.hintBody')}
         </p>
       </div>
 

@@ -44,4 +44,15 @@ describe('ChoiceCard', () => {
 
     expect(screen.getByTestId('karte').style.minHeight).toBe('var(--touch-target-primary)');
   });
+
+  it('gewählt: innerer Schatten in Rahmenstärke aus Token, nicht gewählt und ausgegraut: keiner (VISUAL-DESIGN § 9)', () => {
+    const { rerender } = render(<ChoiceCard {...base} selected />);
+    expect(screen.getByTestId('karte').style.boxShadow).toContain('inset');
+
+    rerender(<ChoiceCard {...base} />);
+    expect(screen.getByTestId('karte').style.boxShadow).not.toContain('inset');
+
+    rerender(<ChoiceCard {...base} selected disabled />);
+    expect(screen.getByTestId('karte').style.boxShadow).not.toContain('inset');
+  });
 });

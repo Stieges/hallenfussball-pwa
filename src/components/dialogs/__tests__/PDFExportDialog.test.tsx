@@ -5,8 +5,8 @@
  * @BM-057.
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import deTournament from '../../../i18n/locales/de/tournament.json';
 import enTournament from '../../../i18n/locales/en/tournament.json';
 import { PDF_FONT } from '../../../lib/pdf/fonts';
@@ -378,5 +378,156 @@ describe('G63 englische App: Texte des Dialogs', () => {
     } finally {
       await i18next.changeLanguage('de');
     }
+  });
+});
+
+/* ---------------------------------------------------------------------------------------------------------------------
+ * C8-F: Fixliste aus dem Review (Befunde 1, 2, 5, 6, 11)
+ * ------------------------------------------------------------------------------------------------------------------ */
+const realBuild = (await vi.importActual<typeof import('../../../lib/pdf/schedulePdf')>('../../../lib/pdf/schedulePdf')).buildSchedulePdf;
+
+function LocationProbe() {
+  return <span data-testid="pfad">{useLocation().pathname}</span>;
+}
+function renderToolbarWithRoutes(tournament: Tournament) {
+  const noop = vi.fn();
+  return render(
+    <MemoryRouter initialEntries={['/start']}>
+      <Routes>
+        <Route
+          path="*"
+          element={
+            <>
+              <LocationProbe />
+              <ScheduleToolbar
+                isEditing={false} onStartEditing={noop} onSave={noop} onCancel={noop} hasUnsavedChanges={false}
+                onUndo={noop} onRedo={noop} canUndo={false} canRedo={false}
+                onRedistributeSR={noop} onRedistributeFields={noop} showSRButton={false} showFieldsButton={false}
+                viewMode="table" onViewModeChange={noop}
+                tournament={tournament} schedule={hallencupSchedule(tournament)} standings={[]}
+              />
+            </>
+          }
+        />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+describe('Befund 1: Schließen während „Wird erstellt …“ speichert nichts', () => {
+  it('Busy-Text im Knopf; X → kein save, kein „PDF gespeichert“, beim Öffnen die Wahl', async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let running: Promise<unknown> = Promise.resolve();
+    vi.mocked(schedulePdf.buildSchedulePdf).mockImplementationOnce(input => {
+      running = gate.then(() => realBuild(input));
+      return running as ReturnType<typeof realBuild>;
+    });
+    renderToolbar();
+    openDialog();
+    fireEvent.click(screen.getByTestId('pdf-save'));
+
+    expect(screen.getByTestId('pdf-save')).toHaveTextContent('Wird erstellt …');
+    expect(screen.getByTestId('pdf-save')).toBeDisabled();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Schließen' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    release();
+    await act(async () => {
+      await running;
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+    expect(lastCapture()).toBeUndefined();
+    openDialog();
+    expect(screen.getByTestId('pdf-choice-schedule')).toBeInTheDocument();
+    expect(screen.queryByTestId('pdf-done')).toBeNull();
+    expect(screen.getByTestId('pdf-save')).toHaveTextContent('Als PDF speichern');
+  });
+});
+
+describe('Befund 2: Fokus und Ansage beim Schrittwechsel', () => {
+  it('nach „Als PDF speichern“ liegt der Fokus im Hinweis (nie auf „Trotzdem speichern“), danach auf „Schließen“', async () => {
+    renderToolbar(withTeams([ARABISCH]));
+    openDialog();
+    fireEvent.click(screen.getByTestId('pdf-save'));
+    const step = await screen.findByTestId('pdf-hint-step', undefined, { timeout: 20000 });
+
+    await waitFor(() => expect(step).toHaveFocus());
+    expect(screen.getByTestId('pdf-save-anyway')).not.toHaveFocus();
+    expect(step).toHaveAttribute('role', 'status');
+    expect(step).toHaveAttribute('aria-live', 'polite');
+    fireEvent.click(screen.getByTestId('pdf-save-anyway'));
+    await waitFor(() => expect(screen.getByTestId('pdf-close')).toHaveFocus());
+  });
+});
+
+describe('Befund 5: Ränder des Dialogs', () => {
+  it('Hinweis zeigt Original vor „wird gedruckt als“ vor dem Gedruckten', async () => {
+    renderToolbar(withTeams([ARABISCH]));
+    openDialog();
+    fireEvent.click(screen.getByTestId('pdf-save'));
+    await screen.findByTestId('pdf-hint-step', undefined, { timeout: 20000 });
+    const item = screen.getByTestId('pdf-hint-item').textContent ?? '';
+
+    expect(item.indexOf(ARABISCH)).toBeGreaterThanOrEqual(0);
+    expect(item.indexOf(ARABISCH)).toBeLessThan(item.indexOf('wird gedruckt als'));
+    expect(item.indexOf('wird gedruckt als')).toBeLessThan(item.indexOf('??????'));
+  });
+
+  it('„Sichtbarkeit ändern“ und „Online teilen“ führen zur Route der Schalter', () => {
+    const { unmount } = renderToolbarWithRoutes(hallencupTournament({ ...SHARED, hideRankingsForPublic: true }));
+    openDialog();
+    fireEvent.click(screen.getByTestId('pdf-open-visibility'));
+    expect(screen.getByTestId('pfad')).toHaveTextContent('/tournament/tour-hallencup-nord/admin/visibility');
+    unmount();
+
+    renderToolbarWithRoutes(hallencupTournament({ isPublic: false, shareCode: 'ABC123' }));
+    openDialog();
+    expect(screen.getByTestId('pdf-open-share')).toHaveTextContent('Online teilen');
+    expect(screen.queryByTestId('pdf-open-visibility')).toBeNull();
+    fireEvent.click(screen.getByTestId('pdf-open-share'));
+    expect(screen.getByTestId('pfad')).toHaveTextContent('/tournament/tour-hallencup-nord/admin/visibility');
+  });
+
+  it('die Fehlermeldung ist ein Alarm (role alert)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.mocked(schedulePdf.buildSchedulePdf).mockRejectedValueOnce(new Error('boom'));
+    renderToolbar();
+    openDialog();
+    fireEvent.click(screen.getByTestId('pdf-save'));
+    await screen.findByTestId('pdf-error', undefined, { timeout: 20000 });
+
+    expect(screen.getByTestId('pdf-error')).toHaveAttribute('role', 'alert');
+  });
+
+  it('@DR-024 nur eine unbrauchbare Grafik: auch das ist ein Hinweis vor dem Speichern, nichts gespeichert', async () => {
+    vi.mocked(schedulePdf.buildSchedulePdf).mockImplementationOnce(async input => {
+      const built = await realBuild(input);
+      return { ...built, hints: { ...built.hints, logos: ['left'] } };
+    });
+    renderToolbar();
+    openDialog();
+    fireEvent.click(screen.getByTestId('pdf-save'));
+    await screen.findByTestId('pdf-hint-step', undefined, { timeout: 20000 });
+
+    expect(lastCapture()).toBeUndefined();
+    expect(screen.getByTestId('pdf-hint-logo')).toHaveTextContent('Die linke Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF.');
+  });
+});
+
+describe('Befund 11 G69: Dialog und PDF nennen denselben Stand', () => {
+  it('Hinweis „Stand 14.11. 15:07“ beim Öffnen; das PDF, zwei Minuten später gespeichert, trägt dieselbe Zeit', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    renderToolbar();
+    openDialog();
+    expect(screen.getByTestId('pdf-hint-offline')).toHaveTextContent('Stand 14.11. 15:07');
+
+    vi.setSystemTime(new Date(2026, 10, 14, 15, 9));
+    await save();
+
+    expect(text()).toContain('Stand 14.11. 15:07');
+    expect(text()).not.toContain('15:09');
   });
 });

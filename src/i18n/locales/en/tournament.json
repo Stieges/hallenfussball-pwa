@@ -126,7 +126,7 @@
     "open": "As PDF",
     "groups": {
       "print": "What should be printed?",
-      "hang": "For hanging up"
+      "hang": "To put up"
     },
     "cards": {
       "schedule": {
@@ -155,6 +155,7 @@
     "hints": {
       "title": "Before saving",
       "notShared": "The QR code appears once the tournament is shared online.",
+      "shareOnline": "Share online",
       "changeVisibility": "Change visibility",
       "viewerHidden": "Results and standings are hidden – the PDF does not show them.",
       "notice": "The poster only shows the QR code for the spectator page, no results and no standings.",
@@ -174,8 +175,8 @@
       "proceed": "The PDF is created anyway.",
       "changeNames": "The tournament organizer can change the names in the tournament.",
       "changeFields": "The tournament organizer can change the entries in the tournament.",
-      "logoLeft": "The left header graphic could not be used and is missing from the PDF",
-      "logoRight": "The right header graphic could not be used and is missing from the PDF"
+      "logoLeft": "The left header graphic could not be used and is missing from the PDF.",
+      "logoRight": "The right header graphic could not be used and is missing from the PDF."
     },
     "offline": {
       "title": "Offline – as of {{date}} {{time}}",
