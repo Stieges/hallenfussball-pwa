@@ -1,15 +1,14 @@
-// Messung im Browser. `messeSeite` wird per page.evaluate in die Seite gegeben und muss deshalb
-// in sich geschlossen sein (keine Importe, keine Variablen von aussen).
+// Messung im Browser. Die exportierten Funktionen werden per page.evaluate in die Seite gegeben und muessen
+// deshalb in sich geschlossen sein (keine Importe, keine Variablen von aussen).
 //
-// opt = {
+// messeSeite(opt), opt = {
 //   art: 'handy'|'tablet'|'desktop'|'monitor'|'reflow',
 //   g: { '<grenzwert-id>': zahl|string },   // nur die fuer diese Art geltenden Grenzwerte
-//   randPx: number,                          // Monitor: eingestellter TV-Rand des Profils
-//   monitorSchrift: { stand, lesetext, neben } // Anteil Bildhoehe (berechnet aus Sehwinkel)
-//   primarySelektor: string,
-//   maxJeMetrik: number,
+//   randPx: number,                          // Rand, den die Seite selbst freihalten soll (Profil)
+//   monitorSchrift: { stand, lesetext, nah } // Anteil Bildhoehe (Sehwinkel)
+//   primarySelektor, ausfuehrlich, extraInhalte: [{ left, top, right, bottom, art, selektor }]
 // }
-// Rueckgabe: { befunde: [{ metrik, selektor, ist, grenze, text }], info: {...} }
+// Rueckgabe: { befunde, zaehler, info, markierungen, ausnahmen }
 
 export function messeSeite(opt) {
   const g = opt.g
@@ -18,20 +17,12 @@ export function messeSeite(opt) {
   const H = window.innerHeight
   const befunde = []
   const zaehler = {}
-  const melde = (metrik, el, ist, grenze, extra) => {
-    zaehler[metrik] = (zaehler[metrik] || 0) + 1
-    if (zaehler[metrik] > opt.maxJeMetrik) return
-    befunde.push({
-      metrik,
-      selektor: el ? selektor(el) : 'document',
-      ist,
-      grenze,
-      text: el ? kurz(el.textContent) : '',
-      ...(extra || {}),
-    })
-  }
   const kurz = (t) => (t || '').replace(/\s+/g, ' ').trim().slice(0, 60)
   const r1 = (n) => Math.round(n * 10) / 10
+  const melde = (metrik, el, ist, grenze, extra) => {
+    zaehler[metrik] = (zaehler[metrik] || 0) + 1
+    befunde.push({ metrik, selektor: el ? selektor(el) : 'document', ist, grenze, text: el ? kurz(el.textContent) : '', ...(extra || {}) })
+  }
 
   function selektor(el) {
     if (!(el instanceof Element)) return '?'
@@ -42,8 +33,10 @@ export function messeSeite(opt) {
     let e = el
     for (let i = 0; e && e.nodeType === 1 && i < 4; i++) {
       if (e.id) { teile.unshift(`#${e.id}`); break }
+      const t = e.getAttribute('data-testid')
+      if (t) { teile.unshift(`[data-testid="${t}"]`); break }
       let s = e.tagName.toLowerCase()
-      const kl = [...e.classList].slice(0, 2).join('.')
+      const kl = [...e.classList].filter((k) => !/^\d/.test(k)).slice(0, 2).join('.')
       if (kl) s += `.${kl}`
       const p = e.parentElement
       if (p) {
@@ -56,18 +49,16 @@ export function messeSeite(opt) {
     return teile.join(' > ')
   }
 
-  const stil = (el) => getComputedStyle(el)
+  const stil = (el, pseudo) => getComputedStyle(el, pseudo)
   function sichtbar(el) {
     const s = stil(el)
     if (s.display === 'none' || s.visibility === 'hidden' || s.visibility === 'collapse') return false
-    if (parseFloat(s.opacity) === 0) return false
     const r = el.getBoundingClientRect()
     if (r.width <= 1 || r.height <= 1) return false
-    // sr-only / clip-Muster: unsichtbar gewollt
     for (let e = el; e && e !== document.documentElement; e = e.parentElement) {
       const se = stil(e)
       if (se.clip && se.clip !== 'auto') return false
-      if (se.clipPath && se.clipPath !== 'none') return false
+      if (se.clipPath && se.clipPath !== 'none' && se.clipPath.includes('inset(50%')) return false
       if (se.display === 'none' || parseFloat(se.opacity) === 0) return false
       const re = e.getBoundingClientRect()
       if (re.width <= 1 || re.height <= 1) return false
@@ -76,7 +67,15 @@ export function messeSeite(opt) {
   }
   const ausnahme = (el, attr) => !!el.closest(`[${attr}]`)
 
-  // ---------- Texttraeger: Elemente mit eigenem, nicht leerem Textknoten ----------
+  // ---------- Schicht: offener modaler Dialog → nur diese Schicht messen (Review B-05) ----------
+  const modale = [...document.querySelectorAll('[aria-modal="true"], dialog')].filter((d) => {
+    if (d.tagName === 'DIALOG' && !(d.open && d.matches(':modal'))) return false
+    return sichtbar(d)
+  })
+  const schicht = modale.length ? modale[modale.length - 1] : document.body
+  const inSchicht = (el) => schicht.contains(el)
+
+  // ---------- Texttraeger ----------
   const traeger = []
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
   const gesehen = new Set()
@@ -86,13 +85,15 @@ export function messeSeite(opt) {
     if (!el || gesehen.has(el)) continue
     if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'OPTION'].includes(el.tagName)) continue
     gesehen.add(el)
-    if (!sichtbar(el)) continue
+    if (!inSchicht(el) || !sichtbar(el)) continue
     const rects = []
-    // Range-Rechtecke umfassen den Inhaltsbereich der Schrift (Ober-/Unterlaengen-Reserve). Ist er hoeher
-    // als die Zeilenhoehe, wird er auf die Zeilenbox gekuerzt, sonst melden enge Zeilenhoehen Scheinbefunde.
+    // Range-Rechtecke umfassen den Inhaltsbereich der Schrift; ist er hoeher als die Zeilenhoehe,
+    // wird er auf die Zeilenbox gekuerzt (sonst melden enge Zeilenhoehen Scheinbefunde).
     const lh = parseFloat(stil(el).lineHeight)
+    let eigenerText = ''
     for (const k of el.childNodes) {
       if (k.nodeType !== 3 || !k.textContent.trim()) continue
+      eigenerText += k.textContent
       const rg = document.createRange()
       rg.selectNodeContents(k)
       for (const r of rg.getClientRects()) {
@@ -101,7 +102,8 @@ export function messeSeite(opt) {
         rects.push({ left: r.left, right: r.right, width: r.width, top: r.top + kuerzen, bottom: r.bottom - kuerzen, height: r.height - 2 * kuerzen })
       }
     }
-    if (rects.length) traeger.push({ el, rects })
+    // Nur Piktogramme (Emoji) oder nur Satz-/Trennzeichen (z. B. "•"): kein Textkontrast (Zierde, B-15).
+    if (rects.length) traeger.push({ el, rects, piktogramm: !/[\p{L}\p{N}]/u.test(eigenerText) })
   }
   const vereinige = (rects) => {
     let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity
@@ -109,9 +111,28 @@ export function messeSeite(opt) {
     return { left: l, top: t, right: r, bottom: b, width: r - l, height: b - t }
   }
 
-  // ---------- Bedienelemente ----------
+  // ---------- Bedienelemente, Bilder ----------
   const BEDIEN = 'button, a[href], input:not([type=hidden]), select, textarea, summary, [role=button], [role=tab], [role=link], [role=checkbox], [role=radio], [role=switch], [role=menuitem], [tabindex]:not([tabindex="-1"])'
-  const bedien = [...document.querySelectorAll(BEDIEN)].filter(sichtbar)
+  const bedien = [...document.querySelectorAll(BEDIEN)].filter((el) => inSchicht(el) && sichtbar(el))
+  const bilder = [...document.querySelectorAll('svg, img, canvas, video, [role=img]')]
+    .filter((el) => !(el.tagName.toLowerCase() !== 'svg' && el.closest('svg')) && !(el.parentElement && el.parentElement.closest('svg')))
+    .filter((el) => inSchicht(el) && sichtbar(el))
+
+  // ---------- Markierungen und Ausnahmen sichtbar zaehlen (Review B-07) ----------
+  const primaer = new Set(opt.primarySelektor ? [...document.querySelectorAll(opt.primarySelektor)].filter((el) => inSchicht(el) && sichtbar(el)) : [])
+  const markierungen = {
+    primaer: primaer.size,
+    teamname: document.querySelectorAll('[data-teamname]').length,
+    monitor: document.querySelectorAll('[data-monitor]').length,
+    titel: document.querySelectorAll('h1, [data-title]').length,
+  }
+  const ausnahmen = []
+  for (const attr of ['data-overflow-ok', 'data-truncate-ok', 'data-overlap-ok', 'data-touch-ok', 'data-overscan-ok']) {
+    for (const el of document.querySelectorAll(`[${attr}]`)) ausnahmen.push({ attr, selektor: selektor(el), begruendung: el.getAttribute(attr) || '' })
+  }
+  if (hat('ausnahme.attribut')) for (const a of ausnahmen) melde('ausnahme.attribut', null, `${a.attr}${a.begruendung ? ` (${a.begruendung})` : ' ohne Begruendung'}`, 'nur mit Begruendung', { selektor: a.selektor })
+  if (hat('markierung.primaer') && primaer.size === 0) melde('markierung.primaer', null, '0 Haupttasten markiert', 'data-primary an der Haupttaste')
+  if (hat('markierung.monitor') && markierungen.monitor === 0) melde('markierung.monitor', null, '0 data-monitor', 'Stand/Uhr/nah markiert')
 
   // ---------- M1 Ueberlauf ----------
   if (hat('ueberlauf.dokument')) {
@@ -127,24 +148,19 @@ export function messeSeite(opt) {
   }
   if (hat('ueberlauf.element')) {
     const tol = g['ueberlauf.element']
-    const gemeldet = []
-    for (const el of document.body.querySelectorAll('*')) {
-      if (gemeldet.some((p) => el.contains(p))) continue // Vorfahren gemeldeter Elemente nicht doppeln
+    const kandidaten = []
+    for (const el of schicht.querySelectorAll('*')) {
       const s = stil(el)
       if (s.display === 'inline' || s.display === 'contents' || s.position === 'fixed') continue
-      if (ausnahme(el, 'data-overflow-ok') || inScroller(el)) continue
-      if (!sichtbar(el)) continue
+      if (el.closest('svg') && el.tagName.toLowerCase() !== 'svg') continue
+      if (ausnahme(el, 'data-overflow-ok') || inScroller(el) || !sichtbar(el)) continue
       const r = el.getBoundingClientRect()
-      if (r.right > W + tol || r.left < -tol) {
-        melde('ueberlauf.element', el, `links ${r1(r.left)} / rechts ${r1(r.right)} px`, `0..${W} px`)
-        gemeldet.push(el)
-        continue
-      }
-      if (s.overflowX === 'visible' && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + tol) {
-        melde('ueberlauf.element', el, `Inhalt ${el.scrollWidth} px breit`, `<= ${el.clientWidth} px`)
-        gemeldet.push(el)
-      }
+      if (r.right > W + tol || r.left < -tol) kandidaten.push({ el, ist: `links ${r1(r.left)} / rechts ${r1(r.right)} px`, grenze: `0..${W} px` })
+      else if (s.overflowX === 'visible' && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + tol) kandidaten.push({ el, ist: `Inhalt ${el.scrollWidth} px breit`, grenze: `<= ${el.clientWidth} px` })
     }
+    // Nur das tiefste Element melden; die Vorfahren-Kette (#root, #root > div …) nur auf Wunsch (B-13).
+    const melden = opt.ausfuehrlich ? kandidaten : kandidaten.filter((k) => !kandidaten.some((a) => a !== k && k.el.contains(a.el)))
+    for (const k of melden) melde('ueberlauf.element', k.el, k.ist, k.grenze)
   }
 
   // ---------- M2 Abgeschnitten ----------
@@ -161,10 +177,14 @@ export function messeSeite(opt) {
       }
       if (!grund && (u.top < -tol || u.left < -tol)) grund = `ausserhalb Fenster (oben ${r1(u.top)}, links ${r1(u.left)})`
       if (!grund) {
+        // Liegt zwischen Text und clippendem Vorfahren ein Scroll-Container, ist der Text erreichbar (kein Befund).
+        let scrollX = false, scrollY = false
         for (let a = el; a && a !== document.documentElement; a = a.parentElement) {
           const sa = stil(a)
-          const clipX = sa.overflowX === 'hidden' || sa.overflowX === 'clip'
-          const clipY = sa.overflowY === 'hidden' || sa.overflowY === 'clip'
+          const clipX = !scrollX && (sa.overflowX === 'hidden' || sa.overflowX === 'clip')
+          const clipY = !scrollY && (sa.overflowY === 'hidden' || sa.overflowY === 'clip')
+          if (a !== el && /(auto|scroll)/.test(sa.overflowX)) scrollX = true
+          if (a !== el && /(auto|scroll)/.test(sa.overflowY)) scrollY = true
           if (!clipX && !clipY) continue
           const ra = a.getBoundingClientRect()
           const bl = parseFloat(sa.borderLeftWidth) || 0
@@ -178,16 +198,40 @@ export function messeSeite(opt) {
     }
   }
 
-  // ---------- M3 Ueberlappung ----------
+  // ---------- M3 Ueberlappung (Text, Bedienelemente, SVG/Bilder) ----------
   if (hat('ueberlappung.text')) {
     const min = g['ueberlappung.text']
     const items = []
-    for (const t of traeger) if (!ausnahme(t.el, 'data-overlap-ok')) items.push({ el: t.el, rects: t.rects })
-    for (const b of bedien) if (!ausnahme(b, 'data-overlap-ok')) items.push({ el: b, rects: [b.getBoundingClientRect()] })
-    const begrenzt = items.slice(0, 1500)
-    for (let i = 0; i < begrenzt.length; i++) {
-      for (let j = i + 1; j < begrenzt.length; j++) {
-        const A = begrenzt[i], B = begrenzt[j]
+    // Text zaehlt nur mit dem Teil, den seine Vorfahren zeigen: abgeschnitten (Ellipse, overflow:hidden) ist schon
+    // Befund text.abgeschnitten, in Scroll-Containern verborgen ist erreichbar (keine Doppel- und Scheinmeldung).
+    const sichtbarerTeil = (el, rects) => {
+      let out = rects
+      for (let a = el; a && a !== document.documentElement; a = a.parentElement) {
+        const sa = stil(a)
+        if (!/(hidden|clip|auto|scroll)/.test(sa.overflowX + sa.overflowY)) continue
+        const ra = a.getBoundingClientRect()
+        out = out.map((r) => {
+          const left = /(hidden|clip|auto|scroll)/.test(sa.overflowX) ? Math.max(r.left, ra.left) : r.left
+          const right = /(hidden|clip|auto|scroll)/.test(sa.overflowX) ? Math.min(r.right, ra.right) : r.right
+          const top = /(hidden|clip|auto|scroll)/.test(sa.overflowY) ? Math.max(r.top, ra.top) : r.top
+          const bottom = /(hidden|clip|auto|scroll)/.test(sa.overflowY) ? Math.min(r.bottom, ra.bottom) : r.bottom
+          return { left, right, top, bottom, width: right - left, height: bottom - top }
+        }).filter((r) => r.width > 0 && r.height > 0)
+      }
+      return out
+    }
+    for (const t of traeger) if (!ausnahme(t.el, 'data-overlap-ok')) items.push({ el: t.el, rects: sichtbarerTeil(t.el, t.rects), text: true })
+    for (const b of bedien) if (!ausnahme(b, 'data-overlap-ok')) items.push({ el: b, rects: [b.getBoundingClientRect()], text: false })
+    for (const b of bilder) if (!ausnahme(b, 'data-overlap-ok')) items.push({ el: b, rects: [b.getBoundingClientRect()], text: false })
+    // Feste/klebende Leisten ueber scrollbarem Inhalt sind kein Ueberlappungsbefund (Inhalt laesst sich
+    // darunter hervorscrollen); verdeckte Leisten-Inhalte prueft Regel P4 (nicht gemessen, Sichtkritik).
+    const fest = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const p = stil(e).position; if (p === 'fixed' || p === 'sticky') return e } return null }
+    for (const it of items) it.fest = fest(it.el)
+    for (let i = 0; i < items.length; i++) {
+      for (let j = i + 1; j < items.length; j++) {
+        const A = items[i], B = items[j]
+        if (!A.text && !B.text) continue // Bild ueber Taste o. ae. ist kein Lesebefund
+        if (A.fest !== B.fest && (A.fest === null || B.fest === null)) continue
         if (A.el === B.el || A.el.contains(B.el) || B.el.contains(A.el)) continue
         let treffer = null
         for (const a of A.rects) {
@@ -198,21 +242,25 @@ export function messeSeite(opt) {
           }
           if (treffer) break
         }
-        if (treffer) melde('ueberlappung.text', A.el, `schneidet ${selektor(B.el)} (${treffer})`, '0 Schnittflaeche', { mit: kurz(B.el.textContent) })
+        if (treffer) {
+          const T = A.text ? A : B, O = A.text ? B : A
+          melde('ueberlappung.text', T.el, `schneidet ${selektor(O.el)} (${treffer})`, '0 Schnittflaeche', { mit: kurz(O.el.textContent) || O.el.tagName.toLowerCase() })
+        }
       }
     }
   }
 
-  // ---------- M9 Titel: Zeilen, Wortbruch, hyphens ----------
+  // ---------- M9 Umbruch: Zeilen, Wortbruch, hyphens (Review B-08) ----------
   const zeilenTops = (rects) => {
     const tops = []
     for (const r of rects) if (!tops.some((t) => Math.abs(t - r.top) < Math.max(2, r.height / 2))) tops.push(r.top)
     return tops.length
   }
   const TITEL = 'h1, [data-title]'
-  const KEIN_BRUCH = 'h1, h2, h3, [data-title], button, [role=tab], [role=button]'
+  const KEIN_BRUCH = 'h1, h2, h3, h4, [data-title], [role=heading], header *, button, [role=tab], [role=button], [data-teamname]'
+  const FLIESSTEXT = 'p, li, dd, blockquote, [data-fliesstext]'
   if (hat('titel.zeilen')) {
-    for (const el of document.querySelectorAll(TITEL)) {
+    for (const el of schicht.querySelectorAll(TITEL)) {
       if (!sichtbar(el)) continue
       const rg = document.createRange()
       rg.selectNodeContents(el)
@@ -220,33 +268,62 @@ export function messeSeite(opt) {
       if (z > g['titel.zeilen']) melde('titel.zeilen', el, `${z} Zeilen`, `<= ${g['titel.zeilen']}`)
     }
   }
-  if (hat('titel.hyphens')) {
-    for (const el of document.querySelectorAll(KEIN_BRUCH)) {
-      if (!sichtbar(el)) continue
+  if (hat('text.hyphens')) {
+    for (const { el } of traeger) {
       const s = stil(el)
-      const h = s.hyphens || s.webkitHyphens
-      if (h === 'auto') melde('titel.hyphens', el, 'hyphens: auto', 'manual oder none')
+      if ((s.hyphens || s.webkitHyphens) === 'auto' && !el.closest(FLIESSTEXT)) melde('text.hyphens', el, 'hyphens: auto ausserhalb Fliesstext', 'manual oder none')
     }
   }
   if (hat('titel.wortbruch')) {
-    for (const el of document.querySelectorAll(KEIN_BRUCH)) {
+    const gepr = new Set()
+    for (const el of schicht.querySelectorAll(KEIN_BRUCH)) {
       if (!sichtbar(el)) continue
       const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
-      for (let n; (n = w.nextNode()); ) {
-        for (const m of n.textContent.matchAll(/[^\s]+/g)) {
+      // Woerter ueber mehrere Textknoten (Wort in zwei <span>) werden zusammen geprueft.
+      const knoten = []
+      for (let n; (n = w.nextNode()); ) if (!gepr.has(n)) { gepr.add(n); knoten.push(n) }
+      let wort = []
+      const pruefe = () => {
+        if (!wort.length) return
+        const rects = []
+        let txt = ''
+        for (const [n, a, b] of wort) {
           const rg = document.createRange()
-          rg.setStart(n, m.index)
-          rg.setEnd(n, m.index + m[0].length)
-          const rects = [...rg.getClientRects()].filter((r) => r.width > 0.5)
-          if (zeilenTops(rects) > 1) {
-            melde('titel.wortbruch', el, `Wort "${m[0].replace(/­/g, '')}" auf ${zeilenTops(rects)} Zeilen`, 'Wort auf einer Zeile')
-          }
+          rg.setStart(n, a)
+          rg.setEnd(n, b)
+          txt += n.textContent.slice(a, b)
+          for (const r of rg.getClientRects()) if (r.width > 0.5) rects.push(r)
+        }
+        const z = zeilenTops(rects)
+        if (z > 1) melde('titel.wortbruch', el, `Wort "${txt.replace(/­/g, '')}" auf ${z} Zeilen`, 'Wort auf einer Zeile')
+        wort = []
+      }
+      const blockVon = (n) => {
+        let e = n.parentElement
+        while (e && e !== el && /^(inline|contents)$/.test(stil(e).display)) e = e.parentElement
+        return e
+      }
+      let letzterBlock = null
+      for (const n of knoten) {
+        const b = blockVon(n)
+        if (b !== letzterBlock) pruefe()
+        letzterBlock = b
+        const t = n.textContent
+        let i = 0
+        while (i < t.length) {
+          if (/\s/.test(t[i])) { pruefe(); i++; continue }
+          let j = i
+          while (j < t.length && !/\s/.test(t[j])) j++
+          wort.push([n, i, j])
+          if (j < t.length) pruefe()
+          i = j
         }
       }
+      pruefe()
     }
   }
 
-  // ---------- M4 Kontrast ----------
+  // ---------- M4 Kontrast (Verlauf: schlechteste Endfarbe; Piktogramme ausgenommen, B-15) ----------
   const cv = document.createElement('canvas')
   cv.width = cv.height = 1
   const cx = cv.getContext('2d', { willReadFrequently: true })
@@ -266,46 +343,77 @@ export function messeSeite(opt) {
     const a = oben[3]
     return [oben[0] * a + unten[0] * (1 - a), oben[1] * a + unten[1] * (1 - a), oben[2] * a + unten[2] * (1 - a), 1]
   }
-  function hintergrund(el) {
+  // Liefert alle moeglichen Hintergruende (bei Verlauf je Farbstopp einen) oder null (Bild, unbestimmt).
+  function hintergruende(el) {
     const schichten = []
     for (let e = el; e; e = e.parentElement) {
       const s = stil(e)
-      if (s.backgroundImage && s.backgroundImage !== 'none') return null
       const c = farbe(s.backgroundColor)
-      if (c[3] > 0) schichten.push(c)
-      if (c[3] >= 0.999) break
-    }
-    let basis = [255, 255, 255, 1]
-    if (!schichten.length || schichten[schichten.length - 1][3] < 0.999) {
-      if (matchMedia('(prefers-color-scheme: dark)').matches) return null
-    }
-    for (let i = schichten.length - 1; i >= 0; i--) basis = mische(schichten[i], basis)
-    return basis
-  }
-  if (hat('kontrast.text')) {
-    for (const { el } of traeger) {
-      const s = stil(el)
-      const bg = hintergrund(el)
-      if (!bg) {
-        if (hat('kontrast.unsicher')) melde('kontrast.unsicher', el, 'Hintergrund Bild/Verlauf/unbestimmt', 'Sichtkritik')
+      const bi = s.backgroundImage
+      if (bi && bi !== 'none') {
+        if (/url\(/.test(bi) || !/gradient/.test(bi)) return null
+        const stopps = (bi.match(/rgba?\([^)]*\)|#[0-9a-f]{3,8}\b|\b(?:white|black|transparent)\b/gi) || []).map(farbe)
+        if (!stopps.length) return null
+        schichten.push({ verlauf: stopps, farbe: c })
+        if (stopps.every((x) => x[3] >= 0.999)) break
         continue
       }
-      const fgRoh = farbe(s.color)
-      const fg = mische(fgRoh, bg)
-      const l1 = lum(fg), l2 = lum(bg)
-      const k = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
+      if (c[3] > 0) schichten.push({ farbe: c })
+      if (c[3] >= 0.999) break
+    }
+    const unten = schichten[schichten.length - 1]
+    const deckend = unten && ((unten.verlauf && unten.verlauf.every((x) => x[3] >= 0.999)) || (!unten.verlauf && unten.farbe[3] >= 0.999))
+    if (!deckend && matchMedia('(prefers-color-scheme: dark)').matches) return null
+    let basen = [[255, 255, 255, 1]]
+    for (let i = schichten.length - 1; i >= 0; i--) {
+      const sc = schichten[i]
+      const neu = []
+      for (const b of basen) {
+        const mitFarbe = sc.farbe[3] > 0 ? mische(sc.farbe, b) : b
+        if (sc.verlauf) for (const v of sc.verlauf) neu.push(mische(v, mitFarbe))
+        else neu.push(mitFarbe)
+      }
+      basen = neu.slice(0, 16)
+    }
+    return basen
+  }
+  if (hat('kontrast.text')) {
+    for (const { el, piktogramm } of traeger) {
+      if (piktogramm) continue
+      const s = stil(el)
+      // Verlaufstext (background-clip: text) ist mit Farbwerten nicht messbar: Sichtkritik.
+      let clipText = false
+      for (let e = el; e && !clipText; e = e.parentElement) {
+        const se = stil(e)
+        clipText = se.backgroundClip === 'text' || se.webkitBackgroundClip === 'text'
+      }
+      if (clipText) {
+        if (hat('kontrast.unsicher')) melde('kontrast.unsicher', el, 'Verlaufstext (background-clip: text)', 'Sichtkritik')
+        continue
+      }
+      const bgs = hintergruende(el)
+      if (!bgs) {
+        if (hat('kontrast.unsicher')) melde('kontrast.unsicher', el, 'Hintergrund Bild oder unbestimmt', 'Sichtkritik')
+        continue
+      }
+      let k = Infinity
+      for (const bg of bgs) {
+        const fg = mische(farbe(s.color), bg)
+        const l1 = lum(fg), l2 = lum(bg)
+        k = Math.min(k, (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05))
+      }
       const px = parseFloat(s.fontSize)
       const gross = px >= 24 || (px >= 18.66 && parseInt(s.fontWeight, 10) >= 700)
       const soll = gross ? g['kontrast.text-gross'] : g['kontrast.text']
-      if (k < soll) melde(gross ? 'kontrast.text-gross' : 'kontrast.text', el, `${(Math.floor(k * 100) / 100).toFixed(2)}:1`, `>= ${soll}:1`)
-      else if (hat('kontrast.monitor') && k < g['kontrast.monitor']) melde('kontrast.monitor', el, `${(Math.floor(k * 100) / 100).toFixed(2)}:1`, `>= ${g['kontrast.monitor']}:1`)
+      const ist = `${(Math.floor(k * 100) / 100).toFixed(2)}:1${bgs.length > 1 ? ' (schlechteste Verlaufsfarbe)' : ''}`
+      if (k < soll) melde(gross ? 'kontrast.text-gross' : 'kontrast.text', el, ist, `>= ${soll}:1`)
+      else if (hat('kontrast.monitor') && k < g['kontrast.monitor']) melde('kontrast.monitor', el, ist, `>= ${g['kontrast.monitor']}:1`)
     }
   }
 
   // ---------- M5 Touch-Ziele, Haupttaste ----------
   const imFliesstext = (el) => {
-    if (el.tagName !== 'A') return false
-    if (stil(el).display !== 'inline') return false
+    if (el.tagName !== 'A' || stil(el).display !== 'inline') return false
     const p = el.parentElement
     return !!p && kurz(p.textContent).length > kurz(el.textContent).length + 3
   }
@@ -320,11 +428,10 @@ export function messeSeite(opt) {
     }
     return r
   }
-  const primaer = new Set(opt.primarySelektor ? [...document.querySelectorAll(opt.primarySelektor)].filter(sichtbar) : [])
   if (hat('touch.min')) {
     for (const el of bedien) {
       if (ausnahme(el, 'data-touch-ok') || imFliesstext(el)) continue
-      if (el.parentElement && el.parentElement.closest(BEDIEN) && !primaer.has(el)) continue // Kind eines Bedienelements
+      if (el.parentElement && el.parentElement.closest(BEDIEN) && !primaer.has(el)) continue
       const r = zielBox(el)
       if (r.width < g['touch.min'] || r.height < g['touch.min']) melde('touch.min', el, `${r1(r.width)}x${r1(r.height)} px`, `>= ${g['touch.min']}x${g['touch.min']} px`)
     }
@@ -338,15 +445,13 @@ export function messeSeite(opt) {
   if (hat('primaer.sichtbar')) {
     for (const el of primaer) {
       const r = el.getBoundingClientRect()
-      if (r.top < 0 || r.left < 0 || r.bottom > H + g['primaer.sichtbar'] || r.right > W) {
-        melde('primaer.sichtbar', el, `oben ${r1(r.top)} / unten ${r1(r.bottom)} px`, `im Fenster 0..${H} px ohne Scrollen`)
-      }
+      if (r.top < 0 || r.left < 0 || r.bottom > H + g['primaer.sichtbar'] || r.right > W) melde('primaer.sichtbar', el, `oben ${r1(r.top)} / unten ${r1(r.bottom)} px`, `im Fenster 0..${H} px ohne Scrollen`)
     }
   }
 
   // ---------- M6 Mindestschrift ----------
   if (hat('schrift.eingabe')) {
-    for (const el of document.querySelectorAll('input:not([type=hidden]):not([type=checkbox]):not([type=radio]), select, textarea')) {
+    for (const el of schicht.querySelectorAll('input:not([type=hidden]):not([type=checkbox]):not([type=radio]), select, textarea')) {
       if (!sichtbar(el)) continue
       const px = parseFloat(stil(el).fontSize)
       if (px < g['schrift.eingabe']) melde('schrift.eingabe', el, `${px} px`, `>= ${g['schrift.eingabe']} px`)
@@ -361,49 +466,73 @@ export function messeSeite(opt) {
   }
   if (opt.monitorSchrift) {
     for (const { el } of traeger) {
+      const px = parseFloat(stil(el).fontSize)
+      if (hat('monitor.schrift.record') && px / H + 1e-6 < g['monitor.schrift.record']) {
+        melde('monitor.schrift.record', el, `${px} px (${r1((px / H) * 100)} % Bildhoehe)`, `>= ${r1(g['monitor.schrift.record'] * 100)} % (Record @ZM-125)`)
+      }
       const stufeEl = el.closest('[data-monitor]')
-      const stufe = stufeEl ? stufeEl.getAttribute('data-monitor') : 'lesetext'
-      const key = stufe === 'stand' || stufe === 'uhr' ? 'stand' : stufe === 'neben' ? 'neben' : 'lesetext'
+      const stufe = stufeEl ? stufeEl.getAttribute('data-monitor') : ''
+      const key = stufe === 'stand' || stufe === 'uhr' ? 'stand' : stufe === 'nah' ? 'nah' : 'lesetext'
       const id = `monitor.schrift.${key}`
       if (!hat(id)) continue
-      const px = parseFloat(stil(el).fontSize)
       const soll = opt.monitorSchrift[key] * H
       if (px + 0.01 < soll) melde(id, el, `${px} px (${r1((px / H) * 100)} % Bildhoehe)`, `>= ${Math.ceil(soll)} px (${r1(opt.monitorSchrift[key] * 100)} %)`)
     }
   }
 
-  // ---------- M7 Overscan ----------
+  // ---------- M7 Overscan (Text, Bilder, Hintergrundbilder, Pseudo-Elemente; B-08) ----------
   if (hat('overscan.app-rand') || hat('overscan.ebu-grafik')) {
     const inhalte = traeger.map((t) => ({ el: t.el, r: vereinige(t.rects) }))
-    for (const el of document.querySelectorAll('img, svg, canvas, video, button, [data-monitor-inhalt]')) {
-      if (el.closest('svg') && el.tagName.toLowerCase() !== 'svg') continue
-      if (sichtbar(el)) inhalte.push({ el, r: el.getBoundingClientRect() })
+    for (const el of bilder) inhalte.push({ el, r: el.getBoundingClientRect() })
+    for (const el of bedien) inhalte.push({ el, r: el.getBoundingClientRect() })
+    for (const el of schicht.querySelectorAll('*')) {
+      const bi = stil(el).backgroundImage
+      if (!bi || bi === 'none' || !sichtbar(el)) continue
+      const r = el.getBoundingClientRect()
+      if (r.width * r.height >= 0.9 * W * H) continue // vollflaechiger Hintergrund darf bis an den Rand
+      inhalte.push({ el, r })
+    }
+    // Pseudo-Elemente (::before/::after) kommen per CDP als Rechteck mit Markierung am Elternelement.
+    const extra = []
+    for (const x of opt.extraInhalte || []) {
+      const el = document.querySelector(`[data-vm-pseudo-${x.art}="${x.vmPseudo}"]`)
+      if (!el || !inSchicht(el) || !sichtbar(el)) continue
+      const ps = stil(el, `::${x.art}`)
+      const mitText = /^["'].*[\p{L}\p{N}]/u.test(ps.content || '')
+      const mitBild = ps.backgroundImage && ps.backgroundImage !== 'none'
+      if (!mitText && !mitBild) continue
+      if (ausnahme(el, 'data-overscan-ok')) continue
+      extra.push({ el: null, r: x, sel: `${selektor(el)}::${x.art}`, art: `::${x.art}` })
     }
     const pruefe = (id, rx, ry) => {
-      for (const { el, r } of inhalte) {
-        if (ausnahme(el, 'data-overscan-ok')) continue
-        if (r.left < rx - 1 || r.top < ry - 1 || r.right > W - rx + 1 || r.bottom > H - ry + 1) { // 1 px Rundung (Schriftmetrik)
-          melde(id, el, `Box ${r1(r.left)},${r1(r.top)} bis ${r1(r.right)},${r1(r.bottom)}`, `innerhalb ${rx}/${ry} px Rand (${W}x${H})`)
+      for (const { el, r, sel, art } of [...inhalte, ...extra]) {
+        if (el && ausnahme(el, 'data-overscan-ok')) continue
+        if (r.width * r.height >= 0.9 * W * H) continue
+        if (r.left < rx - 1 || r.top < ry - 1 || r.right > W - rx + 1 || r.bottom > H - ry + 1) {
+          const ist = `${art ? `${art} ` : ''}Box ${r1(r.left)},${r1(r.top)} bis ${r1(r.right)},${r1(r.bottom)}`
+          if (el) melde(id, el, ist, `innerhalb ${rx}/${ry} px Rand (${W}x${H})`)
+          else melde(id, null, ist, `innerhalb ${rx}/${ry} px Rand (${W}x${H})`, { selektor: sel })
         }
       }
     }
     if (hat('overscan.app-rand')) pruefe('overscan.app-rand', opt.randPx, opt.randPx)
-    if (hat('overscan.ebu-grafik') && opt.randPx > 0) pruefe('overscan.ebu-grafik', Math.round(W * g['overscan.ebu-grafik']), Math.round(H * g['overscan.ebu-grafik']))
+    if (hat('overscan.ebu-grafik') && opt.ebuPruefen) pruefe('overscan.ebu-grafik', Math.round(W * g['overscan.ebu-grafik']), Math.round(H * g['overscan.ebu-grafik']))
   }
-  if (hat('monitor.bedienelemente') && bedien.length > 0) {
-    melde('monitor.bedienelemente', bedien[0], `${bedien.length} fokussierbare Elemente`, '0')
-  }
+  if (hat('monitor.bedienelemente') && bedien.length > 0) melde('monitor.bedienelemente', bedien[0], `${bedien.length} fokussierbare Elemente`, '0')
 
   return {
     befunde,
     zaehler,
-    info: { breite: W, hoehe: H, texttraeger: traeger.length, bedienelemente: bedien.length, haupttasten: primaer.size },
+    markierungen,
+    ausnahmen,
+    info: { breite: W, hoehe: H, schicht: schicht === document.body ? 'seite' : `modal ${selektor(schicht)}`, texttraeger: traeger.length, bedienelemente: bedien.length, bilder: bilder.length },
   }
 }
 
-// Gate-Pruefung im Browser: Schriften, Attrappe, Dev-Server.
-export function pruefeGate() {
+// Gate im Browser: Schriften, Attrappe, Dev-Server, Geraete-Rahmen (Mockup), Ersatzschrift.
+export function pruefeGate({ modus }) {
   const gruende = []
+  const warnungen = []
   const faces = [...document.fonts]
   const fehler = faces.filter((f) => f.status === 'error').map((f) => f.family)
   if (fehler.length) gruende.push(`Schrift nicht geladen: ${[...new Set(fehler)].join(', ')}`)
@@ -411,18 +540,62 @@ export function pruefeGate() {
   const quelle = document.querySelector('meta[name="visual-metrics:quelle"]')
   const q = quelle ? (quelle.getAttribute('content') || '').toLowerCase() : ''
   if (q === 'mock' || q === 'attrappe' || q === 'fixture') gruende.push(`Seite ist eine Attrappe (meta visual-metrics:quelle=${q}), nicht der echte Stand`)
-  if (document.querySelector('script[src*="/@vite/client"]')) gruende.push('Vite-Dev-Server erkannt: gegen gebautes Preview (npm run build && npm run preview) messen')
-  const build = document.querySelector('meta[name="build-hash"]')
-  return { gruende, build: build ? build.getAttribute('content') : null, lang: document.documentElement.lang || null }
+  if (document.querySelector('script[src*="/@vite/client"]')) gruende.push('Vite-Dev-Server erkannt: gegen gebautes Preview messen (--app)')
+
+  // Ersatzschrift: erste Schriftfamilie der Texte gegen monospace vermessen.
+  const familien = new Map()
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+  for (let n, i = 0; (n = w.nextNode()) && i < 400; i++) {
+    if (!n.textContent.trim() || !n.parentElement) continue
+    const f = getComputedStyle(n.parentElement).fontFamily.split(',')[0].trim().replace(/^["']|["']$/g, '')
+    familien.set(f, (familien.get(f) || 0) + 1)
+  }
+  const GENERISCH = /^(serif|sans-serif|monospace|cursive|fantasy|system-ui|ui-[a-z-]+|-apple-system|BlinkMacSystemFont|emoji|math)$/i
+  const cv = document.createElement('canvas').getContext('2d')
+  const breite = (font) => { cv.font = font; return cv.measureText('Turnierverwaltung 0123456789 Wg').width }
+  for (const [f] of familien) {
+    if (GENERISCH.test(f)) continue
+    if (breite(`20px "${f}", monospace`) === breite('20px monospace') && breite(`20px "${f}", serif`) === breite('20px serif')) warnungen.push(`Schrift "${f}" nicht verfuegbar, gemessen wird die Ersatzschrift`)
+  }
+
+  // Mockup: Geraete-Rahmen oder Verkleinerung (Review B-14). Mockups rendern ohne Rahmen im echten Viewport.
+  if (modus === 'MOCKUP') {
+    const W = window.innerWidth
+    const texte = [...document.body.querySelectorAll('*')].filter((e) => [...e.childNodes].some((k) => k.nodeType === 3 && k.textContent.trim()))
+    let skaliert = null
+    for (const t of texte.slice(0, 300)) {
+      for (let e = t; e && e !== document.documentElement; e = e.parentElement) {
+        const s = getComputedStyle(e)
+        const m = s.transform && s.transform !== 'none' ? s.transform.match(/matrix\(([^)]+)\)/) : null
+        const sc = m ? Math.hypot(...m[1].split(',').slice(0, 2).map(Number)) : 1
+        const zoom = parseFloat(s.zoom || '1')
+        if (Math.abs(sc - 1) > 0.01 || (Number.isFinite(zoom) && Math.abs(zoom - 1) > 0.01)) { skaliert = { e, sc: Math.abs(sc - 1) > 0.01 ? sc : zoom }; break }
+      }
+      if (skaliert) break
+    }
+    if (skaliert) gruende.push(`Mockup verkleinert (Faktor ${skaliert.sc.toFixed(3)} an ${skaliert.e.tagName.toLowerCase()}${skaliert.e.id ? `#${skaliert.e.id}` : ''}): ohne Geraete-Rahmen im echten Viewport rendern`)
+    const GERAETE = [320, 360, 375, 390, 412, 768, 820, 1024, 1280, 1440]
+    if (!document.querySelector('[data-vm-kein-rahmen]')) {
+      for (const e of document.body.querySelectorAll('*')) {
+        const s = getComputedStyle(e)
+        if (!/(hidden|clip)/.test(s.overflow)) continue
+        const r = e.getBoundingClientRect()
+        if (r.width >= W - 1 || !GERAETE.some((gw) => Math.abs(gw - r.width) <= 1)) continue
+        const drin = texte.filter((t) => e.contains(t)).length
+        if (texte.length && drin / texte.length >= 0.3) {
+          gruende.push(`Geraete-Rahmen erkannt (${e.tagName.toLowerCase()}${e.id ? `#${e.id}` : ''} ${Math.round(r.width)} px in ${W} px Fenster): Mockup ohne Rahmen im echten Viewport rendern`)
+          break
+        }
+      }
+    }
+  }
+  return { gruende, warnungen, lang: document.documentElement.lang || null }
 }
 
-// Langtext-Variante: Teamnamen auf 50 Zeichen, uebrige Texte +dehnung in Klammern.
+// Langtext: Teamnamen auf 50 Zeichen; uebrige Texte +dehnung als trennbare Fuellwoerter in Klammern (B-04).
 export function dehneTexte({ dehnung, teamname, teamSelektor }) {
   const team = new Set()
-  for (const el of document.querySelectorAll(teamSelektor)) {
-    el.textContent = teamname
-    team.add(el)
-  }
+  for (const el of document.querySelectorAll(teamSelektor)) { el.textContent = teamname; team.add(el) }
   const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
   const knoten = []
   for (let n; (n = w.nextNode()); ) {
@@ -435,8 +608,14 @@ export function dehneTexte({ dehnung, teamname, teamSelektor }) {
   for (const n of knoten) {
     const roh = n.textContent
     const t = roh.trim()
-    const zusatz = 'ä'.repeat(Math.max(1, Math.ceil(t.length * dehnung) - 1))
-    n.textContent = roh.replace(t, `[${t} ${zusatz}]`)
+    let rest = Math.max(2, Math.ceil(t.length * dehnung))
+    const fueller = []
+    for (let i = 0; rest > 0; i++) {
+      const l = Math.min(rest, i % 2 ? 3 : 2)
+      fueller.push('ä'.repeat(l))
+      rest -= l + 1
+    }
+    n.textContent = roh.replace(t, `[${t} ${fueller.join(' ')}]`)
   }
   return knoten.length
 }
