@@ -28,6 +28,8 @@
     "test:a11y": "playwright test tests/e2e/usability/accessibility.spec.ts",
     "test:visual": "bash scripts/visual-in-container.sh compare",
     "test:visual:update": "bash scripts/visual-in-container.sh update",
+    "visual:metrics": "node scripts/visual-metrics/messen.mjs",
+    "test:visual-metrics": "vitest run --config scripts/visual-metrics/vitest.config.mjs",
     "prepare": "husky",
     "analyze": "npm run build && open dist/stats.html",
     "tokens:check": "node scripts/check-design-token-sync.cjs",

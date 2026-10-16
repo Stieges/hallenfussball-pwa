@@ -1,0 +1,8 @@
+<!doctype html>
+<!-- B-14: Mockup zeigt das Geraet in einem 360-px-Rahmen (auf schmalen Fenstern verkleinert). Erwartung BLOCKED.
+     Mit ?rahmen=0 rendert es ohne Rahmen im echten Viewport: Erwartung gruen. -->
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>t</title><link rel="stylesheet" href="schrift.css"><style>*{box-sizing:border-box}body{margin:0;background:#fff;color:#0f172a;font-family:system-ui,sans-serif}@media (prefers-color-scheme: dark){body{background:#0b1220;color:#f1f5f9}} .stage{padding:16px}.dev{width:360px;height:640px;overflow:hidden;border:1px solid #64748b;transform-origin:0 0}.ohne .stage{padding:0}.ohne .dev{width:auto;height:100vh;border:0}header{display:flex;align-items:center;gap:8px;padding:8px 16px}h1{margin:0;font-size:20px}.ib{width:44px;height:44px;flex:none}main{padding:16px}p{font-size:16px;line-height:1.5;margin:0}</style></head><body><div class="stage"><div class="dev" id="dev"><header><button class="ib" aria-label="Zurück">&larr;</button><h1>Spielplan</h1></header><main><p>Spiel 1 · 10:00 · Feld 1</p></main></div></div>
+<script>
+if (new URLSearchParams(location.search).get('rahmen') === '0') document.documentElement.classList.add('ohne')
+else { const av = document.documentElement.clientWidth - 32; if (av < 360) document.getElementById('dev').style.transform = 'scale(' + (av / 360) + ')' }
+</script></body></html>
