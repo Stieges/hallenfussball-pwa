@@ -67,7 +67,7 @@ const MATCHES = [
     slot_b_source: { kind: 'matchResult', matchId: testUuid(51), role: 'winner' },
     is_final: true,
     match_number: 2,
-  } as Parameters<typeof createMatchRow>[0]),
+  }),
 ];
 
 beforeEach(() => {
