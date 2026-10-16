@@ -13,23 +13,13 @@
  */
 import { applyEvent } from '../applyEvent';
 import type { DetailField } from '../details';
-import { elapsedAt } from '../penalties';
 import { ERROR_CODES, type Actor, type EngineEvent, type ErrorCode, type MatchContext, type MatchRules } from '../types';
 import type { MatchEngineView } from './MatchEngine';
+import { CLOCK_OUT_OF_RANGE, definedFields, splitFirstTap, stampFor, timingClock } from './matchCommandStamp';
 import type {
   AmendFields,
   CardOptions,
-  ClockSource,
   CommandSpec,
-  FoulOptions,
-  GoalOptions,
-  SubstitutionOptions,
-  TimePenaltyOptions,
-} from './matchCommandTypes';
-
-export type {
-  AmendFields,
-  CardOptions,
   CommandTiming,
   FoulOptions,
   GoalOptions,
@@ -38,6 +28,9 @@ export type {
   TiebreakChoice,
   TimePenaltyOptions,
 } from './matchCommandTypes';
+
+export type { AmendFields, CardOptions, CommandTiming, FoulOptions, GoalOptions } from './matchCommandTypes';
+export type { SubstitutionOptions, TeamScores, TiebreakChoice, TimePenaltyOptions } from './matchCommandTypes';
 
 export interface MatchCommandsEngine {
   view(matchId: string): MatchEngineView | null;
@@ -74,33 +67,6 @@ export class MatchCommandRejectedError extends Error {
   }
 }
 
-function definedFields<T extends object>(fields: T): Partial<T> {
-  const result: Partial<T> = {};
-  for (const key of Object.keys(fields) as (keyof T)[]) {
-    if (fields[key] !== undefined) {
-      result[key] = fields[key];
-    }
-  }
-  return result;
-}
-
-/** L1: `clockMs` gehoert in den Umschlag, nicht in die Payload; fehlt sie, zaehlt das Senden. */
-function splitFirstTap<T extends { clockMs?: number }>(
-  options: T | undefined,
-): { payload: Record<string, unknown>; clock: ClockSource } {
-  const { clockMs, ...rest } = options ?? ({} as T);
-  return {
-    payload: definedFields(rest),
-    clock: clockMs === undefined ? { kind: 'now' } : { kind: 'firstTap', clockMs },
-  };
-}
-
-function isValidClockMs(clockMs: number): boolean {
-  return Number.isInteger(clockMs) && clockMs >= 0;
-}
-
-const CLOCK_OUT_OF_RANGE = { reason: 'CLOCK_OUT_OF_RANGE' } as const;
-
 /**
  * Befehle liefern die ID des gespeicherten Eintrags (S4/R4), `null`, wenn nichts gespeichert
  * wurde (noop). Eine Ablehnung wirft `MatchCommandRejectedError`.
@@ -125,8 +91,75 @@ export class MatchCommands {
     return this.submit(matchId, ctx, actor, { type: 'RESUME', teamId: null, payload: {} });
   }
 
-  finish(matchId: string, ctx: MatchContext, actor: Actor): CommandResult {
-    return this.submit(matchId, ctx, actor, { type: 'MATCH_END', teamId: null, payload: {} });
+  /** B-07: `timing` nur fuer das automatische Ende an der exakten Grenze (§ B-08b). */
+  finish(matchId: string, ctx: MatchContext, actor: Actor, timing?: CommandTiming): CommandResult {
+    return this.submit(matchId, ctx, actor, { type: 'MATCH_END', teamId: null, payload: {}, clock: timingClock(timing) });
+  }
+
+  /** B-07: Abschnittsende (nicht im letzten Abschnitt -> abgelehnt `{reason: 'LAST_SECTION'}`). */
+  endSection(matchId: string, ctx: MatchContext, actor: Actor, timing?: CommandTiming): CommandResult {
+    return this.submit(matchId, ctx, actor, { type: 'SECTION_END', teamId: null, payload: {}, clock: timingClock(timing) });
+  }
+
+  startSection(matchId: string, ctx: MatchContext, actor: Actor): CommandResult {
+    return this.submit(matchId, ctx, actor, { type: 'SECTION_START', teamId: null, payload: {} });
+  }
+
+  /** B-07: Uhr auf `clockMs` stellen; `previousClockMs` bleibt in der Roh-Payload (Muster `substitution`). */
+  adjustClock(matchId: string, ctx: MatchContext, actor: Actor, clockMs: number, previousClockMs: number): CommandResult {
+    return this.submit(matchId, ctx, actor, {
+      type: 'CLOCK_ADJUST',
+      teamId: null,
+      payload: { previousClockMs },
+      clock: { kind: 'set', clockMs },
+    });
+  }
+
+  chooseTiebreak(matchId: string, ctx: MatchContext, actor: Actor, choice: TiebreakChoice): CommandResult {
+    return this.submit(matchId, ctx, actor, { type: 'TIEBREAK_CHOICE', teamId: null, payload: { choice } });
+  }
+
+  recordShot(
+    matchId: string,
+    ctx: MatchContext,
+    actor: Actor,
+    teamId: string,
+    scored: boolean,
+    shooterNumber?: number,
+  ): CommandResult {
+    return this.submit(matchId, ctx, actor, {
+      type: 'SHOOTOUT_KICK',
+      teamId,
+      payload: definedFields({ scored, shooterNumber }),
+    });
+  }
+
+  endShootout(matchId: string, ctx: MatchContext, actor: Actor): CommandResult {
+    return this.submit(matchId, ctx, actor, { type: 'SHOOTOUT_END', teamId: null, payload: {} });
+  }
+
+  reopen(matchId: string, ctx: MatchContext, actor: Actor, timing?: CommandTiming): CommandResult {
+    return this.submit(matchId, ctx, actor, { type: 'REOPEN', teamId: null, payload: {}, clock: timingClock(timing) });
+  }
+
+  /** B-07 (@FU-080): Ergebnis direkt eintragen; auf laufendem Spiel abgelehnt (@FU-081). */
+  enterResult(matchId: string, ctx: MatchContext, actor: Actor, scores: TeamScores): CommandResult {
+    return this.submit(matchId, ctx, actor, { type: 'RESULT_ENTRY', teamId: null, payload: { scores: { ...scores } } });
+  }
+
+  correct(
+    matchId: string,
+    ctx: MatchContext,
+    actor: Actor,
+    scores: TeamScores,
+    reason: string,
+    basedOn: string | null,
+  ): CommandResult {
+    return this.submit(matchId, ctx, actor, {
+      type: 'CORRECTION',
+      teamId: null,
+      payload: { scores: { ...scores }, reason, basedOn },
+    });
   }
 
   /** PC14: nur `+1` (Rueckgaengig/Minus -> RETRACT, `retract`, C3b-1). `own`: Eigentor (OWN_GOAL, K5/K-Regeln). */
@@ -209,36 +242,16 @@ export class MatchCommands {
     return run;
   }
 
-  /**
-   * Zeitstempel und Spielzeit eines Eintrags. K4: MATCH_START steht immer am Anfang (clockMs 0).
-   * L1: die Spielzeit des ersten Tipps darf nicht hinter der aktuellen Spielzeit liegen.
-   */
-  private stampFor(spec: CommandSpec, view: MatchEngineView): { at: number; clockMs: number } {
-    const at = this.deps.engine.serverNow();
-    if (spec.type === 'MATCH_START') {
-      return { at, clockMs: 0 };
-    }
-    const nowMs = elapsedAt(view.result.state.clock, at);
-    const clock = spec.clock ?? { kind: 'now' };
-    switch (clock.kind) {
-      case 'now':
-        return { at, clockMs: nowMs };
-      case 'firstTap':
-        if (!isValidClockMs(clock.clockMs) || clock.clockMs > nowMs) {
-          throw new MatchCommandRejectedError(ERROR_CODES.INVALID_PAYLOAD, CLOCK_OUT_OF_RANGE);
-        }
-        return { at, clockMs: clock.clockMs };
-      default:
-        throw new MatchCommandRejectedError(ERROR_CODES.INVALID_PAYLOAD, CLOCK_OUT_OF_RANGE);
-    }
-  }
-
   private async submitNow(matchId: string, ctx: MatchContext, actor: Actor, spec: CommandSpec): CommandResult {
     const view = this.deps.engine.view(matchId);
     if (!view) {
       throw new Error(`MatchCommands: keine lokale Kopie fuer Spiel ${matchId}`);
     }
-    const { at, clockMs } = this.stampFor(spec, view);
+    const stamp = stampFor(spec, view, this.deps.engine.serverNow());
+    if (!stamp.ok) {
+      throw new MatchCommandRejectedError(ERROR_CODES.INVALID_PAYLOAD, CLOCK_OUT_OF_RANGE);
+    }
+    const { at, clockMs } = stamp;
     const event: EngineEvent = {
       id: crypto.randomUUID(),
       type: spec.type,
