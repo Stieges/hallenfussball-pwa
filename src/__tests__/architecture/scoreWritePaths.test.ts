@@ -328,7 +328,7 @@ describe('A-08e Architektur-Waechter: Schreibwege fuer den Spielstand', () => {
       }
     }
     expect(importers).toEqual([]);
-  });
+  }, 30_000); // parst den ganzen Quellbaum; unter Coverage-Last in der CI > 5 s (V3, wie B03)
 });
 
 describe('A-08e Waechter-Gegenbeispiele (Scanner erkennt, was er erkennen soll)', () => {
