@@ -32,7 +32,7 @@ describe('elapsedAt', () => {
   });
 });
 
-describe('Laufende Strafe übersteht Neuladen', () => {
+describe('@FU-075 Laufende Strafe übersteht Neuladen', () => {
   const fixture = JSON.parse(
     fs.readFileSync(path.join(__dirname, '..', '__fixtures__', '24-penalty-survives-reload.json'), 'utf-8'),
   ) as { ctx: MatchContext; events: EngineEvent[] };
