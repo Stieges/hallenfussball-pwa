@@ -719,7 +719,7 @@
     "away": "Away",
     "referee": "Ref.",
     "live": "live",
-    "skipped": "cancelled",
+    "skipped": "not played",
     "corrected": "corrected {{time}}",
     "afterOvertime": "after extra time",
     "shootout": "Penalty shootout",
@@ -737,19 +737,19 @@
     "seventhEighth": "Match for 7th place",
     "sectionTables": "Standings",
     "sectionFinals": "Final round",
-    "timesTentative": "Times provisional",
+    "timesTentative": "Times expected",
     "contact": "Contact person",
-    "contactLine": "Contact: {{contact}}",
-    "fontFallbackNote": "The font could not be loaded. The PDF uses a substitute font, special characters may appear as ?",
+    "contactLine": "Contact person: {{contact}}",
+    "fontFallbackNote": "Special characters may appear as ?. The font could not be loaded. The PDF is created with a substitute font, all content is included.",
     "noDate": "No date",
     "kicker": {
       "plan": "Schedule",
       "blank": "Schedule to fill in"
     },
     "durationMinutes": "{{minutes}} min",
-    "modeGroupsAndFinals": "Groups + Finals",
+    "modeGroupsAndFinals": "Groups + final round",
     "modeRoundRobin": "Round robin",
-    "unrenderableName": "Team name ‘{{name}}’ contains characters that cannot be shown in the PDF",
+    "unrenderableName": "Team name “{{name}}” contains characters that are printed as “?” in the PDF",
     "phase": {
       "roundOf16": "Round of 16",
       "quarterfinal": "Quarter-finals",
@@ -757,14 +757,14 @@
       "final": "Final"
     },
     "groupName": "Group {{id}}",
-    "unrenderableField": "{{field}} ‘{{text}}’ contains characters that cannot be shown in the PDF",
+    "unrenderableField": "{{field}} “{{text}}” contains characters that are printed as “?” in the PDF",
     "tournamentTitle": "Tournament name",
     "ageClass": "Age group",
     "rules": {
       "label": {
         "mode": "Mode",
-        "placement": "Placement",
-        "duration": "Game time",
+        "tiebreak": "Tiebreakers",
+        "duration": "Match time",
         "rulebook": "Rulebook",
         "ko": "Knockout"
       },
@@ -782,7 +782,7 @@
       "pointOne": "point",
       "pointMany": "points",
       "groupDuration": "Groups {{duration}}",
-      "finalDuration": "Finals {{duration}}",
+      "finalDuration": "Final round {{duration}}",
       "penalty": "Time penalty {{duration}}",
       "seconds": "{{seconds}} sec",
       "round": {
@@ -790,16 +790,16 @@
         "quarterfinal": "quarter-finals",
         "semifinal": "semi-finals",
         "final": "final",
-        "placement": "placement games",
-        "thirdPlace": "third-place match"
+        "placement": "placement matches",
+        "thirdPlace": "match for 3rd place"
       },
       "koAll": "{{label}}: if drawn, {{rule}}",
       "koRound": "{{round}}: if drawn, {{rule}}",
       "ruleShootout": "penalty shootout, {{shooters}}",
       "ruleOvertimeThenShootout": "extra time, then penalty shootout, {{shooters}}",
       "ruleGoldenGoal": "golden goal",
-      "shooters": "{{n}} shooters",
-      "shootersOne": "1 shooter"
+      "shooters": "{{n}} shooters per team",
+      "shootersOne": "1 shooter per team"
     },
     "stand": "As of {{date}} {{time}}",
     "offlineNote": "– offline, entries from other devices may be missing",
@@ -814,7 +814,7 @@
       "callPlan": "Schedule on your phone",
       "callResults": "Schedule and results on your phone",
       "step1": "1. Open the camera app on your phone",
-      "step2": "2. Point it at the QR code",
+      "step2": "2. Point the camera at the QR code",
       "step3": "3. Tap the link – no sign-up, no app.",
       "addressLabel": "Or type into your browser:"
     },
@@ -836,7 +836,7 @@
       },
       "winner": "Winner {{round}} {{n}}",
       "loser": "Loser {{round}} {{n}}",
-      "undecided": "open"
+      "undecided": "to be decided"
     },
     "finalTable": "Final standings"
   }

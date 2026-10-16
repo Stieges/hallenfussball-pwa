@@ -41,10 +41,10 @@ describe('Phasentitel und Gruppennamen (F2)', () => {
 describe('Feldnamen der Hinweise (F8)', () => {
   it('nennt das Feld, aus dem der Text stammt', () => {
     expect(de.unrenderableField(de.hall, 'Ярославль Halle')).toBe(
-      'Halle ‚Ярославль Halle‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
+      'Halle „Ярославль Halle“ enthält Zeichen, die im PDF als „?“ gedruckt werden',
     );
     expect(en.unrenderableField(en.tournamentTitle, 'Ярославль')).toBe(
-      'Tournament name ‘Ярославль’ contains characters that cannot be shown in the PDF',
+      'Tournament name “Ярославль” contains characters that are printed as “?” in the PDF',
     );
   });
 });

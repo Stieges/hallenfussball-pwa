@@ -45,12 +45,12 @@ const beendetesSpiel11 = () =>
   mitStand(hallencupSchedule(), SCHEDULE_OPTIONS.tournament, { 11: { matchStatus: 'finished', scoreA: 2, scoreB: 1 } });
 
 describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
-  it('Pflichttest: A4 hoch (210 × 297) und Dateiname mit Stand „spielplan-hallencup-nord-2026-11-14-1507.pdf“', async () => {
+  it('Pflichttest: A4 hoch (210 × 297) und Dateiname mit Stand „Hallencup_Nord_Spielplan_2026-11-14_1507.pdf“', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, SCHEDULE_OPTIONS);
 
     expect(pdf.pageWidth).toBeCloseTo(210, 1);
     expect(pdf.pageHeight).toBeCloseTo(297, 1);
-    expect(pdf.filename).toBe('spielplan-hallencup-nord-2026-11-14-1507.pdf');
+    expect(pdf.filename).toBe('Hallencup_Nord_Spielplan_2026-11-14_1507.pdf');
   });
 
   it('Kopf: Turniertitel und Altersklasse stehen auf Seite 1', async () => {
@@ -75,7 +75,7 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     expect(text).not.toContain('Spieltag');
     expect(alles).toMatch(/Samstag, 14\.11\.2026 · Beginn 13:00 · Ende voraussichtlich \d{2}:\d{2} · 2 Felder/);
     expect(text).toContain('Modus');
-    expect(text).toContain('Gruppen + Finale');
+    expect(text).toContain('Gruppen + Finalrunde');
     expect(text).toContain('Spielzeit');
     expect(text).toContain('10 Min. · Zeitstrafe 2 Min.');
   });
@@ -216,12 +216,13 @@ describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als i
   it('IST @BM-032: Platzierung bleibt auch bei ausgeschalteten Tabellen (Bestand)', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, { ...SCHEDULE_OPTIONS, includeStandings: false });
 
-    expect(flatText(pdf)).toContain('Platzierung');
+    // Überschrift des Blocks mit den Plätzen („5 Platzierung“); die Regelzeile heißt seit G72 „Wertung“
+    expect(flatText(pdf).some(t => /^\d+ Platzierung$/.test(t))).toBe(true);
   });
 
   it.fails('@BM-032 Ziel: ohne Tabellen keine Platzierung', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, { ...SCHEDULE_OPTIONS, includeStandings: false });
 
-    expect(flatText(pdf)).not.toContain('Platzierung');
+    expect(flatText(pdf).some(t => /^\d+ Platzierung$/.test(t))).toBe(false);
   });
 });

@@ -113,12 +113,12 @@ describe('@W1-031 @W1-032 Kontakt in der Fußzeile nur auf Übergabe', () => {
     for (const contact of ['', '   ']) {
       const { pages } = await layoutOf({ now: NOW, contact });
       pages.forEach((page, i) => {
-        expect(pageText(page)).not.toMatch(/Kontakt|Anna/);
+        expect(pageText(page)).not.toMatch(/Ansprechpartner|Anna/);
         // gleiche Fußzeile an gleicher Stelle wie ohne Eingang
         expect(fussbereich(page).linie).toBeCloseTo(fussbereich(ohne.pages[i]).linie, 2);
       });
     }
-    ohne.pages.forEach(page => expect(pageText(page)).not.toContain('Kontakt'));
+    ohne.pages.forEach(page => expect(pageText(page)).not.toContain('Ansprechpartner'));
   });
 });
 

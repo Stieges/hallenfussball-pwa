@@ -66,7 +66,7 @@ export function pdfRuleLines(rules: PdfRules, t: PdfTexts): string[] {
 /** Zeile „Platzierung: Punkte – Tordifferenz …“; leer, wenn kein Kriterium und kein Punkte-Zusatz gilt. */
 export function placementLine(rules: PdfRules, t: PdfTexts): string {
   const placement = placementText(rules, t);
-  return placement === '' ? '' : `${t.rules.label.placement}: ${placement}`;
+  return placement === '' ? '' : `${t.rules.label.tiebreak}: ${placement}`;
 }
 
 /**

@@ -108,7 +108,7 @@ describe('Gruppentabellen und Platzierung mit echten Standings (B-28a0 Fixrunde 
   it('@DR-009 Platzierung gesamt zeigt keine Rangfolge nach Punkten (C-RANK-FIN), auch mit gespielten Spielen', async () => {
     const text = flatText(await renderSchedulePdf(hallencupSchedule(), HALLENCUP_STANDINGS, OPTIONS));
 
-    expect(text).toContain('Platzierung');
+    expect(text.some(t => /^\d+ Platzierung$/.test(t)), 'Überschrift Platzierung').toBe(true);
     expect(containsSequence(text, PLATZIERUNG)).toBe(false);
   });
 
@@ -116,7 +116,7 @@ describe('Gruppentabellen und Platzierung mit echten Standings (B-28a0 Fixrunde 
     const text = flatText(await renderSchedulePdf(hallencupSchedule(), HALLENCUP_STANDINGS, { ...OPTIONS, includeStandings: false }));
 
     expect(text).not.toContain('Tabelle – Gruppe A');
-    expect(text).toContain('Platzierung');
+    expect(text.some(t => /^\d+ Platzierung$/.test(t)), 'Überschrift Platzierung').toBe(true);
     expect(containsSequence(text, PLATZIERUNG)).toBe(false);
   });
 });

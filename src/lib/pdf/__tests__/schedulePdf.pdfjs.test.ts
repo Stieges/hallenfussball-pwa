@@ -119,7 +119,7 @@ describe('Sprache: EN-Plan ohne deutsche Wörter', () => {
     for (const word of ['Finalspiele', 'Halbfinale', 'Viertelfinale', 'Gruppe ', 'Gruppenphase', 'Teilnehmer', 'Tabelle', 'Platzierung', 'Spiel um Platz', 'Kein Datum']) {
       expect(text, word).not.toContain(word);
     }
-    for (const word of ['Group stage', 'Group A', 'Teams', 'Standings', 'Final ranking', 'Finals']) {
+    for (const word of ['Group stage', 'Group A', 'Teams', 'Standings', 'Final ranking', 'Final round']) {
       expect(text, word).toContain(word);
     }
   });

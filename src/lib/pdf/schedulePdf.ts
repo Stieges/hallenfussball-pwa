@@ -54,13 +54,13 @@ export interface SchedulePdfResult {
 
 export interface SchedulePdfBuild extends SchedulePdfResult {
   doc: jsPDF;
-  /** Dateiname mit Stand, z. B. `spielplan-hallencup-nord-2026-11-14-1507.pdf`. */
+  /** Dateiname mit Stand, z. B. `Hallencup_Nord_Spielplan_2026-11-14_1507.pdf`. */
   filename: string;
 }
 
 export type { SchedulePdfInput } from './pdfInput';
 
-/** Zeile „Kontakt: …“ nur bei übergebenem, nicht leerem Kontakt. */
+/** Zeile „Ansprechpartner: …“ nur bei übergebenem, nicht leerem Kontakt. */
 function contactRow(contact: string | undefined, t: PdfTexts): string | undefined {
   const text = contact?.trim() ?? '';
   return text === '' ? undefined : t.contactLine(text);
@@ -132,7 +132,8 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
   let yPos = renderHeader(
     doc,
     {
-      kicker: edition === 'blank' ? t.kicker.blank : undefined,
+      // Kopfzeile nennt die Fassung (@BM-052, G57): „Spielplan“ bzw. „Spielplan zum Ausfüllen“; der Endstand trägt seine Zeile in der Fußzeile
+      kicker: edition === 'blank' ? t.kicker.blank : edition === 'plan' ? t.kicker.plan : undefined,
       title: schedule.tournament.title,
       facts: [...headerFacts(schedule, t, organizerName, hallName), ...ruleFacts(pdfRuleLines(rules, t))],
       separator: t.rules.join,

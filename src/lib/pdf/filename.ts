@@ -1,35 +1,28 @@
 /**
- * Dateiname des Spielplan-PDFs mit Stand (B-28 C3): `spielplan-<turnier-slug>-<JJJJ-MM-TT>-<HHmm>.pdf`. Der Stand
- * kommt aus dem übergebenen Zeitpunkt (Ortszeit), nie aus der Uhr: gleicher Eingang, gleicher Name.
+ * Dateinamen der PDFs (B-28 C3, C7, C8; @BM-027, Daniel 16.10. G59): `<Titel>_<Art>_<JJJJ-MM-TT>_<HHmm>.pdf`, etwa
+ * `Hallencup_Nord_Spielplan_2026-11-14_1507.pdf`. Leerraum und Zeichen, die in Dateinamen nicht erlaubt sind, werden „_“
+ * (mehrere hintereinander ein einziges), Umlaute bleiben. Der Stand kommt aus dem übergebenen Zeitpunkt (Ortszeit), nie
+ * aus der Uhr: gleicher Eingang, gleicher Name. Der Aushang trägt statt des Stands die Papiergröße.
  */
-const UMLAUTS: Record<string, string> = { ä: 'ae', ö: 'oe', ü: 'ue', ß: 'ss' };
-const FALLBACK_SLUG = 'turnier';
-const FALLBACK_NOTICE = 'Turnier';
+const FALLBACK_NAME = 'Turnier';
 
 const two = (n: number): string => String(n).padStart(2, '0');
 
-/** Kleinschreibung, nur a–z und 0–9, Rest wird ein Bindestrich; ohne verwertbares Zeichen „turnier“. */
-export function titleSlug(title: string): string {
-  const ascii = title
-    .toLowerCase()
-    .replace(/[äöüß]/g, char => UMLAUTS[char] ?? char)
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '');
-  const slug = ascii.replace(/[^a-z\d]+/g, '-').replace(/^-+|-+$/g, '');
-  return slug === '' ? FALLBACK_SLUG : slug;
+/** Titel als Teil eines Dateinamens: Leerraum, Steuerzeichen und `\ / : * ? " < > |` werden „_“; ohne Rest „Turnier“. */
+export function fileSafeTitle(title: string): string {
+  const name = title
+    .replace(/[\p{Cc}\s\\/:*?"<>|]+/gu, '_')
+    .replace(/^[_.]+|[_.]+$/g, '');
+  return name === '' ? FALLBACK_NAME : name;
 }
 
-/** `spielplan-hallencup-nord-2026-11-14-1507.pdf` */
+/** `Hallencup_Nord_Spielplan_2026-11-14_1507.pdf` */
 export function schedulePdfFilename(title: string, now: Date): string {
   const day = `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
-  return `spielplan-${titleSlug(title)}-${day}-${two(now.getHours())}${two(now.getMinutes())}.pdf`;
+  return `${fileSafeTitle(title)}_Spielplan_${day}_${two(now.getHours())}${two(now.getMinutes())}.pdf`;
 }
 
-/** `Hallencup_Nord_Aushang_A4.pdf`: Titel mit Unterstrichen statt Leerraum, ohne Zeichen, die Dateinamen sprengen (B-28 C7). */
+/** `Hallencup_Nord_Aushang_A4.pdf` (B-28 C7). */
 export function noticePdfFilename(title: string): string {
-  const name = title
-    .replace(/[\\/:*?"<>|]/g, '')
-    .trim()
-    .replace(/\s+/g, '_');
-  return `${name === '' ? FALLBACK_NOTICE : name}_Aushang_A4.pdf`;
+  return `${fileSafeTitle(title)}_Aushang_A4.pdf`;
 }

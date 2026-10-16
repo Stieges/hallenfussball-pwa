@@ -93,13 +93,13 @@ describe('@DR-005 @BM-052 Pflichtfall: Tom um 15:07, Spiel 11 steht 2:1, Halbfin
     expect(gefuellt.every(r => r.h < printBox.blankRow)).toBe(true);
   });
 
-  it('Zeile „Platzierung: …“ aus den Regeln steht unter den Tabellen', async () => {
+  it('Zeile „Wertung: …“ aus den Regeln steht unter den Tabellen (G72)', async () => {
     const { pages } = await seiten('blank');
     const seite = tabellenSeite(pages);
-    const zeile = seite.texts.find(t => t.str.trim().startsWith("Platzierung:"));
+    const zeile = seite.texts.find(t => t.str.trim().startsWith('Wertung:'));
     const letzteTabelle = Math.max(...seite.texts.filter(t => ['SV Hof', 'FC Mitte', 'SC Ost', 'TSV West'].includes(t.str.trim())).map(t => t.y));
 
-    expect(zeile, 'Zeile Platzierung').toBeDefined();
+    expect(zeile, 'Zeile Wertung').toBeDefined();
     expect(zeile?.y ?? 0).toBeGreaterThan(letzteTabelle);
   });
 

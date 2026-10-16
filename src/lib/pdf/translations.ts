@@ -67,7 +67,7 @@ export interface PdfTexts {
   sectionFinals: string;
   /** Hinweis hinter den Runden-Überschriften der Finalrunde, solange die Gruppenphase läuft (W7). */
   timesTentative: string;
-  /** Ansprechpartner: Feldname in Hinweisen und Zeile „Kontakt: …“ in der Fußzeile (nur mit Häkchen, @W1-031). */
+  /** Ansprechpartner: Feldname in Hinweisen und Zeile „Ansprechpartner: …“ in der Fußzeile (nur mit Häkchen, @W1-031). */
   contact: string;
   contactLine: (contact: string) => string;
   /** Hinweis, wenn die eingebettete Schrift nicht lädt und die Standardschrift druckt (B6). */
@@ -99,7 +99,7 @@ export interface PdfTexts {
   phaseTitle: (name: string, fallback: string) => string;
   /** Gruppenname. Der generische Name „Gruppe X“ wird übersetzt, ein eigener Name bleibt. */
   groupLabel: (id: string, displayName: string) => string;
-  /** Spieltag aus `JJJJ-MM-TT` in der Sprache des Dokuments; anderes Format bleibt unverändert. */
+  /** Spieltag aus `JJJJ-MM-TT` als `TT.MM.JJJJ` in jeder Sprache; anderes Format bleibt unverändert. */
   formatDate: (isoDate: string) => string;
   /** Wochentag aus `JJJJ-MM-TT` in der Sprache des Dokuments; anderes Format ergibt leer. */
   formatWeekday: (isoDate: string) => string;
@@ -112,7 +112,7 @@ export interface PdfTexts {
 /** Texte der Regelzeilen (`pdf.rules.*`). Die Kriterien tragen die Wortlaute aus @DR-020. */
 export interface PdfRuleTexts {
   /** Zeilenbeschriftungen vor dem Doppelpunkt. */
-  label: { mode: string; placement: string; duration: string; rulebook: string; ko: string };
+  label: { mode: string; tiebreak: string; duration: string; rulebook: string; ko: string };
   modeRoundRobin: string;
   /** Beschriftung eines Platzierungskriteriums; unbekannte IDs bleiben beim Rückfall. */
   criterion: (id: string, fallback: string) => string;
@@ -154,7 +154,7 @@ function buildRuleTexts(translate: PdfTranslator, s: (key: string) => string, lo
   return {
     label: {
       mode: r('label.mode'),
-      placement: r('label.placement'),
+      tiebreak: r('label.tiebreak'),
       duration: r('label.duration'),
       rulebook: r('label.rulebook'),
       ko: r('label.ko'),
@@ -189,6 +189,8 @@ export function resolvePdfLocale(language: string | undefined): PdfLocale {
 
 /** Baut alle Texte über den Übersetzer. Schlüssel liegen unter `pdf.*`. */
 /** Datum `JJJJ-MM-TT` als UTC-Datum (zonenunabhängig). Anderes Format: `undefined`. */
+const zwei = (n: number): string => String(n).padStart(2, '0');
+
 function isoToUtc(isoDate: string): Date | undefined {
   const match = ISO_DATE.exec(isoDate);
   return match ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))) : undefined;
@@ -197,7 +199,6 @@ function isoToUtc(isoDate: string): Date | undefined {
 export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfTexts {
   const s = (key: string): string => translate(`pdf.${key}`);
   const clock = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-  const day = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
   const weekday = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' });
 
   return {
@@ -270,9 +271,10 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
       (FINAL_PHASES as readonly string[]).includes(name) ? s(`phase.${name}`) : fallback,
     groupLabel: (id, displayName) =>
       displayName === `Gruppe ${id}` ? translate('pdf.groupName', { id }) : displayName,
+    // Datum in beiden Sprachen als TT.MM.JJJJ, wie in der Fußzeile und im Record (@DR-011, G70): nie 11/14/2026
     formatDate: isoDate => {
       const utc = isoToUtc(isoDate);
-      return utc ? day.format(utc) : isoDate;
+      return utc ? `${zwei(utc.getUTCDate())}.${zwei(utc.getUTCMonth() + 1)}.${utc.getUTCFullYear()}` : isoDate;
     },
     formatWeekday: isoDate => {
       const utc = isoToUtc(isoDate);

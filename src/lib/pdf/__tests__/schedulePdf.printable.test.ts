@@ -119,7 +119,7 @@ describe('@DR-012 der Hinweis liegt vor dem Speichern vor (Bauen und Speichern g
       options: { locale: 'de', translate: translatorFor('de'), tournament, now: NOW },
     });
 
-    expect(build.notes).toEqual([`Teamname ‚A ${ARABISCH} B‘ enthält Zeichen, die im PDF nicht dargestellt werden können`]);
+    expect(build.notes).toEqual([`Teamname „A ${ARABISCH} B“ enthält Zeichen, die im PDF als „?“ gedruckt werden`]);
     expect(lastCapture()).toBeUndefined();
     build.doc.save(build.filename);
     expect(lastCapture()?.filename).toBe(build.filename);
@@ -134,8 +134,8 @@ describe('@DR-012 der Hinweis liegt vor dem Speichern vor (Bauen und Speichern g
     });
 
     expect(notes).toEqual([
-      'Regelwerk ‚Hallenregeln ⚽‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
-      'Ansprechpartner ‚Anna ⚽‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
+      'Regelwerk „Hallenregeln ⚽“ enthält Zeichen, die im PDF als „?“ gedruckt werden',
+      'Ansprechpartner „Anna ⚽“ enthält Zeichen, die im PDF als „?“ gedruckt werden',
     ]);
   });
 
@@ -151,30 +151,30 @@ describe('@DR-012 der Hinweis liegt vor dem Speichern vor (Bauen und Speichern g
   });
 });
 
-describe('Dateiname mit Stand: spielplan-<turnier-slug>-<JJJJ-MM-TT>-<HHmm>.pdf', () => {
+describe('Dateiname mit Stand (G59, @BM-027): <Titel>_Spielplan_<JJJJ-MM-TT>_<HHmm>.pdf', () => {
   const nameFor = async (title: string, now: Date, schedule = hallencupSchedule(hallencupTournament({ title }))): Promise<string> => {
     const tournament = hallencupTournament({ title });
     return (await buildSchedulePdf({ schedule, standings: undefined, options: { locale: 'de', translate: translatorFor('de'), tournament, now } })).filename;
   };
 
   it('Hallencup Nord, 14.11.2026 15:07', async () => {
-    expect(await nameFor('Hallencup Nord', NOW)).toBe('spielplan-hallencup-nord-2026-11-14-1507.pdf');
+    expect(await nameFor('Hallencup Nord', NOW)).toBe('Hallencup_Nord_Spielplan_2026-11-14_1507.pdf');
   });
 
-  it('Umlaute und Sonderzeichen: ASCII-Slug ohne doppelte oder randständige Bindestriche', async () => {
-    expect(await nameFor('  Größe Cup – D/E-Junioren!  ', new Date(2026, 0, 5, 8, 3))).toBe('spielplan-groesse-cup-d-e-junioren-2026-01-05-0803.pdf');
+  it('Umlaute bleiben, Leerraum und unzulässige Zeichen werden „_“, ohne doppelte oder randständige Unterstriche', async () => {
+    expect(await nameFor('  Größe Cup – D/E-Junioren!  ', new Date(2026, 0, 5, 8, 3))).toBe('Größe_Cup_–_D_E-Junioren!_Spielplan_2026-01-05_0803.pdf');
   });
 
-  it('Gegenbeispiel: ein Titel ohne verwertbares Zeichen ergibt „turnier“, ein späterer Zeitpunkt einen anderen Namen', async () => {
-    expect(await nameFor('⚽⚽', NOW)).toBe('spielplan-turnier-2026-11-14-1507.pdf');
-    expect(await nameFor('Hallencup Nord', new Date(2026, 10, 14, 15, 8))).toBe('spielplan-hallencup-nord-2026-11-14-1508.pdf');
+  it('Gegenbeispiel: ein Titel nur aus unzulässigen Zeichen ergibt „Turnier“, ein späterer Zeitpunkt einen anderen Namen', async () => {
+    expect(await nameFor('?/:*', NOW)).toBe('Turnier_Spielplan_2026-11-14_1507.pdf');
+    expect(await nameFor('Hallencup Nord', new Date(2026, 10, 14, 15, 8))).toBe('Hallencup_Nord_Spielplan_2026-11-14_1508.pdf');
   });
 
   it('exportScheduleToPDF speichert unter diesem Namen', async () => {
     resetCapture();
     await exportScheduleToPDF(hallencupSchedule(), undefined, { translate: translatorFor('de'), tournament: hallencupTournament(), now: NOW });
 
-    expect(lastCapture()?.filename).toBe('spielplan-hallencup-nord-2026-11-14-1507.pdf');
+    expect(lastCapture()?.filename).toBe('Hallencup_Nord_Spielplan_2026-11-14_1507.pdf');
   });
 });
 
@@ -198,7 +198,7 @@ describe('B6 @DR-013 Rückfall: Schrift lädt nicht → PDF mit Standardschrift 
     const build = await fallbackBuild();
     const pdf = await extractPdfText(new Uint8Array(build.doc.output('arraybuffer')));
 
-    expect(build.notes).toEqual(['Die Schrift konnte nicht geladen werden. Das PDF nutzt eine Ersatzschrift, Sonderzeichen erscheinen evtl. als ?']);
+    expect(build.notes).toEqual(['Sonderzeichen können als ? erscheinen. Die Schrift konnte nicht geladen werden. Das PDF wird mit einer Ersatzschrift erstellt, alle Inhalte sind enthalten.']);
     expect(pdf.pages.length).toBeGreaterThanOrEqual(3);
     expect(pdf.pages.flat()).toContain('Hallencup Nord · Stand 14.11. 15:07 · Seite 1 von 3');
     expect(pdf.pages.flat()).toContain('FC Nord');

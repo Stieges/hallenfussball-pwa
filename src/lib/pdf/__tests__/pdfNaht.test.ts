@@ -25,12 +25,18 @@ export function layoutDigest(pages: LayoutPage[]): string {
   return createHash('sha1').update(JSON.stringify(flat)).digest('hex').slice(0, 12);
 }
 
-/** Prüfsummen, aufgenommen am Stand c1d6b429 (vor dem Umbau), je Pflicht-Fixture. */
+/**
+ * Prüfsummen je Pflicht-Fixture. Aufgenommen am Stand c1d6b429 (vor dem Umbau der Naht); die Naht hat sie nicht verändert.
+ * Neu aufgenommen am Stand C8 (16.10.), weil Daniels Wortlaut-Entscheidungen den gedruckten Text ändern: Kopfzeile
+ * „Spielplan“ (G57), „Gruppen + Finalrunde“ (G71), „Wertung“ (G72), „5 Schützen je Team“ (G74). Die Kopfzeile verschiebt
+ * alles darunter; Bilder (Grafiken) erfasst die Summe nicht. Die Maße der alten Stände: 1f942dff25ce, 8bd3acd911de,
+ * 2cff8b00a80b, a492098473fc (hoch 12, hoch 20, quer 12, quer 20).
+ */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': '1f942dff25ce',
-  '20 Spiele, hoch': '8bd3acd911de',
-  '12 Spiele, quer': '2cff8b00a80b',
-  '20 Spiele, quer': 'a492098473fc',
+  '12 Spiele, hoch': 'c7d6997a6c6d',
+  '20 Spiele, hoch': 'c2263d5409c3',
+  '12 Spiele, quer': 'a42071e7d8cb',
+  '20 Spiele, quer': '82c6e0bc524d',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {

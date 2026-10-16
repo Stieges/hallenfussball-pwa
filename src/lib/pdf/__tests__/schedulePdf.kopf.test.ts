@@ -93,15 +93,15 @@ describe('W1 Kurzkopf: langer Turniername bricht um und bleibt im Rand', () => {
 });
 
 describe('@DR-006 Kopf Seite 1: Regeln in der Angabentabelle unter den Turnierdaten', () => {
-  it('Modus, Platzierung, Spielzeit und Regelwerk stehen als Bezeichnungen in dieser Reihenfolge, untereinander', async () => {
+  it('Modus, Wertung, Spielzeit und Regelwerk stehen als Bezeichnungen in dieser Reihenfolge, untereinander', async () => {
     const tournament = hallencupMitRegelwerk();
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
-    const bezeichnungen = ['Modus', 'Platzierung', 'Spielzeit', 'Regelwerk'];
+    const bezeichnungen = ['Modus', 'Wertung', 'Spielzeit', 'Regelwerk'];
     const stellen = bezeichnungen.map(name => pages[0].texts.find(t => trimmed(t) === name));
     stellen.forEach((t, i) => expect(t, bezeichnungen[i]).toBeDefined());
     const ys = stellen.map(t => t?.y ?? 0);
     expect([...ys].sort((a, b) => a - b)).toEqual(ys);
-    expect(pages[0].texts.map(trimmed)).toEqual(expect.arrayContaining(['Gruppen + Finale', 'Spielzeit']));
+    expect(pages[0].texts.map(trimmed)).toEqual(expect.arrayContaining(['Gruppen + Finalrunde', 'Spielzeit']));
     expect(pages[0].texts.map(trimmed)).toContain(BFV);
   });
 
@@ -120,7 +120,7 @@ describe('@DR-015 K.-o.-Zeile über der Finalrunde', () => {
     const seite = findPage(pages, 'Halbfinale');
     expect(seite, 'Finalseite').toBeGreaterThan(0);
 
-    const ko = pages[seite].texts.find(t => trimmed(t) === 'K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen');
+    const ko = pages[seite].texts.find(t => trimmed(t) === 'K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen je Team');
     const titel = pages[seite].texts.find(t => ohneNummer(t.str) === 'Halbfinale');
     expect(ko, 'K.-o.-Zeile auf der Finalseite').toBeDefined();
     expect(ko && titel ? ko.y : 0).toBeLessThan(titel?.y ?? 0);
@@ -267,8 +267,8 @@ describe('Teilnehmer und Schiedsrichter', () => {
   });
 });
 
-describe('@BM-052 Kicker: nur in der Fassung „zum Ausfüllen“', () => {
-  it('ohne Ergebnisse steht „Spielplan zum Ausfüllen“ im Kopf, in der Fassung „plan“ kein Kicker „Spielplan“', async () => {
+describe('@BM-052 Kicker: „Spielplan“ bzw. „Spielplan zum Ausfüllen“ (G57)', () => {
+  it('Fassung „blank“ steht als „Spielplan zum Ausfüllen“ im Kopf, Fassung „plan“ als „Spielplan“, nie beides', async () => {
     const tournament = hallencupMitRegelwerk();
     const schedule = hallencupSchedule(tournament);
 
@@ -276,15 +276,16 @@ describe('@BM-052 Kicker: nur in der Fassung „zum Ausfüllen“', () => {
     expect(leer.pages[0].texts.map(trimmed)).toContain('Spielplan zum Ausfüllen');
 
     const mit = await layoutOf({ tournament, edition: 'plan' }, schedule);
-    expect(mit.pages[0].texts.map(trimmed)).not.toContain('Spielplan');
+    expect(mit.pages[0].texts.map(trimmed)).toContain('Spielplan');
     expect(mit.pages[0].texts.map(trimmed)).not.toContain('Spielplan zum Ausfüllen');
+    expect(leer.pages[0].texts.map(trimmed)).not.toContain('Spielplan');
   });
 
-  it('W3 ohne Wahl der Fassung und ohne Ergebnisse steht kein Kicker „Spielplan“ im Kopf', async () => {
+  it('W3 ohne Wahl der Fassung und ohne Ergebnisse bleibt es beim „Spielplan“, die Vorlage kommt nur auf ausdrückliche Wahl', async () => {
     const tournament = hallencupMitRegelwerk();
     const { pages } = await layoutOf({ tournament, includeScores: false }, hallencupSchedule(tournament));
 
-    expect(pages[0].texts.map(trimmed)).not.toContain('Spielplan');
+    expect(pages[0].texts.map(trimmed)).toContain('Spielplan');
     expect(pages[0].texts.map(trimmed)).not.toContain('Spielplan zum Ausfüllen');
   });
 });
@@ -293,7 +294,7 @@ describe('Punkt 5 Kopf nach v7.2 (Daniel 15.10.)', () => {
   it('Angabentabelle: Bezeichnungen und Werte stehen in 10,5 pt (B-28a3-4G Punkt 1)', async () => {
     const tournament = hallencupMitRegelwerk();
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
-    const bezeichnungen = ['Veranstalter', 'Altersklasse', 'Halle', 'Termin', 'Modus', 'Platzierung', 'Spielzeit', 'Regelwerk'];
+    const bezeichnungen = ['Veranstalter', 'Altersklasse', 'Halle', 'Termin', 'Modus', 'Wertung', 'Spielzeit', 'Regelwerk'];
     const kopf = pages[0].texts.filter(t => t.y < 90 && t.str.trim() !== '');
     const stellen = [...bezeichnungen, 'D-Junioren'].map(name => kopf.find(t => trimmed(t) === name));
     stellen.forEach((t, i) => expect(t, `Fundstelle ${i}`).toBeDefined());
@@ -328,7 +329,7 @@ describe('Punkt 5 Kopf nach v7.2 (Daniel 15.10.)', () => {
   it('Tabelle: Bezeichnungen fett, Werte normal, eine Schriftgröße, alle Werte in derselben Spalte', async () => {
     const tournament = hallencupMitRegelwerk();
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
-    const bezeichnungen = ['Veranstalter', 'Altersklasse', 'Halle', 'Termin', 'Modus', 'Platzierung', 'Spielzeit', 'Regelwerk'];
+    const bezeichnungen = ['Veranstalter', 'Altersklasse', 'Halle', 'Termin', 'Modus', 'Wertung', 'Spielzeit', 'Regelwerk'];
     const kopf = pages[0].texts.filter(t => t.y < 90);
     const fett = await fettMap(kopf);
     const labels = bezeichnungen.map(name => kopf.find(t => trimmed(t) === name));

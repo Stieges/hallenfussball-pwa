@@ -102,7 +102,7 @@ describe('Nicht darstellbare Zeichen: Hinweis, PDF entsteht trotzdem', () => {
       translate: translatorFor('de'),
       tournament: hallencupTournament(),
     });
-    expect(result.notes).toEqual(['Teamname ‚الأهلي‘ enthält Zeichen, die im PDF nicht dargestellt werden können']);
+    expect(result.notes).toEqual(['Teamname „الأهلي“ enthält Zeichen, die im PDF als „?“ gedruckt werden']);
     const captured = await renderSchedulePdf(schedule, undefined, {});
     expect(captured.pages.length).toBeGreaterThan(0);
   });
@@ -119,9 +119,9 @@ describe('Nicht darstellbare Zeichen: Hinweis, PDF entsteht trotzdem', () => {
       hallName: 'Halle Ł\u0301ódź الأهلي',
     });
     expect(result.notes).toEqual([
-      'Turniername ‚بطولة Nord‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
-      'Veranstalter ‚الأهلي e.V.‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
-      'Halle ‚Halle Ł\u0301ódź الأهلي‘ enthält Zeichen, die im PDF nicht dargestellt werden können',
+      'Turniername „بطولة Nord“ enthält Zeichen, die im PDF als „?“ gedruckt werden',
+      'Veranstalter „الأهلي e.V.“ enthält Zeichen, die im PDF als „?“ gedruckt werden',
+      'Halle „Halle Ł\u0301ódź الأهلي“ enthält Zeichen, die im PDF als „?“ gedruckt werden',
     ]);
   });
 

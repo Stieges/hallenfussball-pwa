@@ -52,10 +52,10 @@ describe('Adapter pdfRulesFrom (@DR-006)', () => {
 });
 
 describe('Pflichtzeilen Kopf (@DR-006): Hallencup mit BFV-Regelwerk', () => {
-  it('@DR-006 Modus, Platzierung, Spielzeit mit Zeitstrafe, Regelwerk in dieser Reihenfolge', () => {
+  it('@DR-006 Modus, Wertung, Spielzeit mit Zeitstrafe, Regelwerk in dieser Reihenfolge', () => {
     expect(pdfRuleLines(rulesOf({}, BFV), de)).toEqual([
-      'Modus: Gruppen + Finale',
-      'Platzierung: Punkte – Tordifferenz – Tore – direkter Vergleich',
+      'Modus: Gruppen + Finalrunde',
+      'Wertung: Punkte – Tordifferenz – Tore – direkter Vergleich',
       'Spielzeit: 10 Min. · Zeitstrafe 2 Min.',
       `Regelwerk: ${BFV}`,
     ]);
@@ -63,7 +63,7 @@ describe('Pflichtzeilen Kopf (@DR-006): Hallencup mit BFV-Regelwerk', () => {
 
   it('@DR-006 die K.-o.-Entscheidung steht als eine Zeile über der Finalrunde', () => {
     const rules = rulesOf({ finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' } }, BFV);
-    expect(koLines(rules, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen']);
+    expect(koLines(rules, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen je Team']);
   });
 });
 
@@ -82,7 +82,7 @@ describe('Regelzeilen folgen den Einstellungen (@DR-020)', () => {
     [
       'Sieg 2, Unentschieden 1',
       { pointSystem: { win: 2, draw: 1, loss: 0 } },
-      'Platzierung: Sieg 2, Unentschieden 1 Punkt · Punkte – Tordifferenz – Tore – direkter Vergleich',
+      'Wertung: Sieg 2, Unentschieden 1 Punkt · Punkte – Tordifferenz – Tore – direkter Vergleich',
     ],
     [
       'direkter Vergleich vor Tordifferenz',
@@ -94,7 +94,7 @@ describe('Regelzeilen folgen den Einstellungen (@DR-020)', () => {
           { id: 'goalsFor', enabled: true },
         ],
       },
-      'Platzierung: Punkte – direkter Vergleich – Tordifferenz – Tore',
+      'Wertung: Punkte – direkter Vergleich – Tordifferenz – Tore',
     ],
     [
       'jeder gegen jeden ohne Finalrunde',
@@ -111,9 +111,9 @@ describe('Regelzeilen folgen den Einstellungen (@DR-020)', () => {
     expect(koLines(rulesOf({ groupSystem: 'roundRobin', finalsConfig: { preset: 'none' } }), de)).toEqual([]);
   });
 
-  it('@DR-020 Gegenbeispiel 3/1/0: kein Punkte-Zusatz in der Platzierung', () => {
+  it('@DR-020 Gegenbeispiel 3/1/0: kein Punkte-Zusatz in der Wertung', () => {
     const lines = pdfRuleLines(rulesOf({ pointSystem: { win: 3, draw: 1, loss: 0 } }), de);
-    expect(lines).toContain('Platzierung: Punkte – Tordifferenz – Tore – direkter Vergleich');
+    expect(lines).toContain('Wertung: Punkte – Tordifferenz – Tore – direkter Vergleich');
   });
 });
 
@@ -139,7 +139,7 @@ describe('Regeln folgen dem erzeugten Plan, nicht der Voreinstellung (Fixliste 1
     const rules = rulesOf({ finalsConfig: { preset: 'top-4', tiebreakerByRound: { semifinal: 'goldenGoal' } } });
     expect(koLines(rules, de)).toEqual([
       'Halbfinale: bei Gleichstand Golden Goal',
-      'Spiel um Platz 3 und Finale: bei Gleichstand Strafstoßschießen, 5 Schützen',
+      'Spiel um Platz 3 und Finale: bei Gleichstand Strafstoßschießen, 5 Schützen je Team',
     ]);
   });
 
@@ -149,7 +149,7 @@ describe('Regeln folgen dem erzeugten Plan, nicht der Voreinstellung (Fixliste 1
     });
     expect(koLines(rules, de)).toEqual([
       'Halbfinale: bei Gleichstand Golden Goal',
-      'Platzierungsspiele und Finale: bei Gleichstand Strafstoßschießen, 5 Schützen',
+      'Platzierungsspiele und Finale: bei Gleichstand Strafstoßschießen, 5 Schützen je Team',
     ]);
   });
 
@@ -165,7 +165,7 @@ describe('Regeln folgen dem erzeugten Plan, nicht der Voreinstellung (Fixliste 1
     const rules = { ...pdfRulesFrom(tournament, hallencupSchedule(tournament)), rulebook: undefined };
     expect(koLines(rules, de)).toEqual([
       'Viertelfinale, Platzierungsspiele und Finale: bei Gleichstand Golden Goal',
-      'Halbfinale: bei Gleichstand Strafstoßschießen, 5 Schützen',
+      'Halbfinale: bei Gleichstand Strafstoßschießen, 5 Schützen je Team',
     ]);
   });
 });
@@ -179,8 +179,8 @@ describe('Platzierungsspiel-Benennung und Wortlaute der Zweige (Fixliste 2 und 5
       },
     });
     expect(koLines(rules, de)).toEqual([
-      'Halbfinale: bei Gleichstand Strafstoßschießen, 5 Schützen',
-      'Spiel um Platz 3 und Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 5 Schützen',
+      'Halbfinale: bei Gleichstand Strafstoßschießen, 5 Schützen je Team',
+      'Spiel um Platz 3 und Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 5 Schützen je Team',
     ]);
   });
 
@@ -192,14 +192,14 @@ describe('Platzierungsspiel-Benennung und Wortlaute der Zweige (Fixliste 2 und 5
       },
     });
     expect(koLines(rules, de)).toEqual([
-      'Halbfinale und Spiel um Platz 3: bei Gleichstand Strafstoßschießen, 5 Schützen',
-      'Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 5 Schützen',
+      'Halbfinale und Spiel um Platz 3: bei Gleichstand Strafstoßschießen, 5 Schützen je Team',
+      'Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 5 Schützen je Team',
     ]);
   });
 
   it('@DR-015 (c) gleiche Regel in allen Runden: genau eine Zeile ohne Rundennamen', () => {
     const rules = rulesOf({ finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' } });
-    expect(koLines(rules, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen']);
+    expect(koLines(rules, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen je Team']);
   });
 
   it('Golden Goal als einzige Regel: Wortlaut in der K.-o.-Zeile', () => {
@@ -217,7 +217,7 @@ describe('Platzierungsspiel-Benennung und Wortlaute der Zweige (Fixliste 2 und 5
   it('Niederlagenpunkte ungleich 0: Sieg 3, Unentschieden 2 Punkte, Niederlage 1 Punkt', () => {
     const rules = rulesOf({ pointSystem: { win: 3, draw: 2, loss: 1 } });
     expect(pdfRuleLines(rules, de)).toContain(
-      'Platzierung: Sieg 3, Unentschieden 2 Punkte, Niederlage 1 Punkt · Punkte – Tordifferenz – Tore – direkter Vergleich',
+      'Wertung: Sieg 3, Unentschieden 2 Punkte, Niederlage 1 Punkt · Punkte – Tordifferenz – Tore – direkter Vergleich',
     );
   });
 
@@ -226,7 +226,7 @@ describe('Platzierungsspiel-Benennung und Wortlaute der Zweige (Fixliste 2 und 5
       finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' },
       matchCockpitSettings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, penaltyShootersPerTeam: 1 },
     });
-    expect(koLines(rules, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 1 Schütze']);
+    expect(koLines(rules, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 1 Schütze je Team']);
   });
 });
 
@@ -236,7 +236,7 @@ describe('Schützenzahl folgt der Turnierkonfiguration (@DR-008)', () => {
       finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' },
       matchCockpitSettings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, penaltyShootersPerTeam: 3 },
     });
-    expect(koLines(rules, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 3 Schützen']);
+    expect(koLines(rules, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 3 Schützen je Team']);
   });
 });
 
@@ -255,12 +255,12 @@ describe('Englischer Wortlaut (@DR-022)', () => {
   it('@DR-022 EN: Zeilen und Knockout-Zeile in Englisch', () => {
     const rules = rulesOf({ finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' } }, BFV);
     expect(pdfRuleLines(rules, en)).toEqual([
-      'Mode: Groups + Finals',
-      'Placement: Points – Goal difference – Goals – head-to-head',
-      'Game time: 10 min · Time penalty 2 min',
+      'Mode: Groups + final round',
+      'Tiebreakers: Points – Goal difference – Goals – head-to-head',
+      'Match time: 10 min · Time penalty 2 min',
       `Rulebook: ${BFV}`,
     ]);
-    expect(koLines(rules, en)).toEqual(['Knockout: if drawn, penalty shootout, 5 shooters']);
+    expect(koLines(rules, en)).toEqual(['Knockout: if drawn, penalty shootout, 5 shooters per team']);
   });
 
   it('@DR-022 EN: Rundennamen klein in der Aufzählung, am Zeilenanfang groß', () => {
@@ -269,8 +269,24 @@ describe('Englischer Wortlaut (@DR-022)', () => {
     });
     expect(koLines(rules, en)).toEqual([
       'Semi-finals: if drawn, golden goal',
-      'Third-place match and final: if drawn, penalty shootout, 5 shooters',
+      'Match for 3rd place and final: if drawn, penalty shootout, 5 shooters per team',
     ]);
+  });
+
+  it('G73 @DR-015 EN: mehrere Platzierungsspiele heißen „placement matches“, ein einzelnes „match for 3rd place“', () => {
+    const rules = rulesOf({ finalsConfig: { preset: 'all-places', tiebreakerByRound: { semifinal: 'goldenGoal' } } });
+    expect(koLines(rules, en)).toEqual([
+      'Semi-finals: if drawn, golden goal',
+      'Placement matches and final: if drawn, penalty shootout, 5 shooters per team',
+    ]);
+  });
+
+  it('G74 EN: ein Schütze heißt „1 shooter per team“', () => {
+    const rules = rulesOf({
+      finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' },
+      matchCockpitSettings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, penaltyShootersPerTeam: 1 },
+    });
+    expect(koLines(rules, en)).toEqual(['Knockout: if drawn, penalty shootout, 1 shooter per team']);
   });
 });
 

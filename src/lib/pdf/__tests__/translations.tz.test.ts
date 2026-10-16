@@ -22,7 +22,7 @@ describe('Spieltag-Datum zonenunabhängig (R3)', () => {
   it('DE: 18.01.2027 bleibt am 18. (Mitternacht UTC wird nicht zum Vortag)', () => {
     expect(de.formatDate('2027-01-18')).toBe('18.01.2027');
   });
-  it('EN: 01/18/2027 bleibt am 18.', () => {
-    expect(en.formatDate('2027-01-18')).toBe('01/18/2027');
+  it('EN: 18.01.2027 bleibt am 18. (Datum im Kopf wie in der Fußzeile, @DR-011, G70)', () => {
+    expect(en.formatDate('2027-01-18')).toBe('18.01.2027');
   });
 });

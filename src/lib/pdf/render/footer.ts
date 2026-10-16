@@ -18,7 +18,7 @@ export interface FooterContent {
   title: string;
   /** „Stand 14.11. 15:07“ (mit Netzhinweis) oder die Abschlusszeile der Fassung Endstand. */
   stand: string;
-  /** Kontaktzeile („Kontakt: …“); `undefined` = keine Zeile. */
+  /** Zeile „Ansprechpartner: …“; `undefined` = keine Zeile. */
   contact: string | undefined;
   /** Zusammenbau „{Titel} · {Stand} · Seite x von y“ (`standText.footerLine`). */
   line: (title: string, stand: string, page: number, total: number) => string;

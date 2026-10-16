@@ -739,17 +739,17 @@
     "sectionFinals": "Finalrunde",
     "timesTentative": "Uhrzeiten voraussichtlich",
     "contact": "Ansprechpartner",
-    "contactLine": "Kontakt: {{contact}}",
-    "fontFallbackNote": "Die Schrift konnte nicht geladen werden. Das PDF nutzt eine Ersatzschrift, Sonderzeichen erscheinen evtl. als ?",
+    "contactLine": "Ansprechpartner: {{contact}}",
+    "fontFallbackNote": "Sonderzeichen können als ? erscheinen. Die Schrift konnte nicht geladen werden. Das PDF wird mit einer Ersatzschrift erstellt, alle Inhalte sind enthalten.",
     "noDate": "Kein Datum",
     "kicker": {
       "plan": "Spielplan",
       "blank": "Spielplan zum Ausfüllen"
     },
     "durationMinutes": "{{minutes}} Min.",
-    "modeGroupsAndFinals": "Gruppen + Finale",
+    "modeGroupsAndFinals": "Gruppen + Finalrunde",
     "modeRoundRobin": "Jeder gegen Jeden",
-    "unrenderableName": "Teamname ‚{{name}}‘ enthält Zeichen, die im PDF nicht dargestellt werden können",
+    "unrenderableName": "Teamname „{{name}}“ enthält Zeichen, die im PDF als „?“ gedruckt werden",
     "phase": {
       "roundOf16": "Achtelfinale",
       "quarterfinal": "Viertelfinale",
@@ -757,13 +757,13 @@
       "final": "Finale"
     },
     "groupName": "Gruppe {{id}}",
-    "unrenderableField": "{{field}} ‚{{text}}‘ enthält Zeichen, die im PDF nicht dargestellt werden können",
+    "unrenderableField": "{{field}} „{{text}}“ enthält Zeichen, die im PDF als „?“ gedruckt werden",
     "tournamentTitle": "Turniername",
     "ageClass": "Altersklasse",
     "rules": {
       "label": {
         "mode": "Modus",
-        "placement": "Platzierung",
+        "tiebreak": "Wertung",
         "duration": "Spielzeit",
         "rulebook": "Regelwerk",
         "ko": "K.-o."
@@ -798,8 +798,8 @@
       "ruleShootout": "Strafstoßschießen, {{shooters}}",
       "ruleOvertimeThenShootout": "Verlängerung, dann Strafstoßschießen, {{shooters}}",
       "ruleGoldenGoal": "Golden Goal",
-      "shooters": "{{n}} Schützen",
-      "shootersOne": "1 Schütze"
+      "shooters": "{{n}} Schützen je Team",
+      "shootersOne": "1 Schütze je Team"
     },
     "stand": "Stand {{date}} {{time}}",
     "offlineNote": "– ohne Verbindung, Einträge anderer Geräte können fehlen",
@@ -814,7 +814,7 @@
       "callPlan": "Spielplan aufs Handy",
       "callResults": "Spielplan und Ergebnisse aufs Handy",
       "step1": "1. Kamera-App am Handy öffnen",
-      "step2": "2. Auf den QR-Code richten",
+      "step2": "2. Die Kamera auf den QR-Code richten",
       "step3": "3. Link antippen – ohne Anmeldung, ohne App.",
       "addressLabel": "Oder im Browser eintippen:"
     },
