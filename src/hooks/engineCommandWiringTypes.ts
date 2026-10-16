@@ -11,13 +11,14 @@
  * (`null` bei Ablehnung oder noop). Kein Fallback mehr -- jede Aktion ohne Engine-Weg
  * wird in `useEngineCommandWiring` abgelehnt (mit Hinweis), nicht an einen Altweg weitergereicht.
  */
-/** B-07: Optionen von `handleGoal` -- `clockMs` = Spielzeit des ersten Tipps (L1, @SL-084). */
+/** B-07: Optionen von `handleGoal` -- `clockMs`/`section` = Spielzeit und Abschnitt des ersten Tipps (L1, F5). */
 export interface GoalHandlerOptions {
   own?: boolean;
   playerNumber?: number;
   assists?: number[];
   incomplete?: boolean;
   clockMs?: number;
+  section?: number;
 }
 
 export interface EngineCommandHandlers {
@@ -31,12 +32,12 @@ export interface EngineCommandHandlers {
     matchId: string,
     teamId: string,
     cardType: 'YELLOW' | 'YELLOW_RED' | 'RED',
-    options?: { playerNumber?: number; clockMs?: number },
+    options?: { playerNumber?: number; clockMs?: number; section?: number },
   ) => Promise<string | null>;
   handleTimePenalty: (
     matchId: string,
     teamId: string,
-    options?: { playerNumber?: number; durationSeconds?: number; clockMs?: number },
+    options?: { playerNumber?: number; durationSeconds?: number; clockMs?: number; section?: number },
   ) => Promise<string | null>;
   handleSubstitution: (
     matchId: string,

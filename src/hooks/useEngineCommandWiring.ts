@@ -189,7 +189,7 @@ export function useEngineCommandWiring(
   );
 
   const handleCard = useCallback(
-    (matchId: string, teamId: string, cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', options?: { playerNumber?: number; clockMs?: number }) =>
+    (matchId: string, teamId: string, cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', options?: { playerNumber?: number; clockMs?: number; section?: number }) =>
       runSimpleCommand(
         matchId,
         (cmd, ctx) => cmd.card(matchId, ctx, actor, teamId.toLowerCase(), mapCardTypeToEngine(cardType), options),
@@ -198,7 +198,7 @@ export function useEngineCommandWiring(
   );
 
   const handleTimePenalty = useCallback(
-    (matchId: string, teamId: string, options?: { playerNumber?: number; durationSeconds?: number; clockMs?: number }) =>
+    (matchId: string, teamId: string, options?: { playerNumber?: number; durationSeconds?: number; clockMs?: number; section?: number }) =>
       runSimpleCommand(matchId, (cmd, ctx) => cmd.timePenalty(matchId, ctx, actor, teamId.toLowerCase(), options)),
     [runSimpleCommand, actor],
   );

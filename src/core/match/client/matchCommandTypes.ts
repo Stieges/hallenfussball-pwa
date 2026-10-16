@@ -6,10 +6,13 @@ import type { EventType } from '../types';
 
 /**
  * L1 (@SL-084): Spielzeit des ersten Tipps. Fehlt sie, gilt die Spielzeit des Sendens
- * (`elapsedAt(clock, serverNow)`). Sie darf nicht hinter der aktuellen Spielzeit liegen.
+ * (`elapsedAt(clock, serverNow)`). Liegt sie nach der aktuellen Spielzeit (Offset-Korrektur, Uhr
+ * zurueckgestellt), wird sie auf die aktuelle geklemmt (Fixrunde F2). `section`: Abschnitt des
+ * ersten Tipps (F5), sonst der aktuelle.
  */
 interface FirstTapClock {
   clockMs?: number;
+  section?: number;
 }
 
 export interface GoalOptions extends FirstTapClock {
@@ -47,6 +50,8 @@ export interface SubstitutionOptions {
 export interface CommandTiming {
   clockMs: number;
   at: number;
+  /** Fixrunde F5: Abschnitt des Endes; fehlt er, gilt der aktuelle. */
+  section?: number;
 }
 
 /** B-07: Wahl der Entscheidung bei K.-o.-Remis ohne festen Modus (TIEBREAK_CHOICE). */
@@ -64,9 +69,9 @@ export type TeamScores = Record<string, number>;
  */
 export type ClockSource =
   | { kind: 'now' }
-  | { kind: 'firstTap'; clockMs: number }
-  | { kind: 'set'; clockMs: number }
-  | { kind: 'timing'; clockMs: number; at: number };
+  | { kind: 'firstTap'; clockMs: number; section?: number }
+  | { kind: 'set'; clockMs: number; previousClockMs: number }
+  | { kind: 'timing'; clockMs: number; at: number; section?: number };
 
 /** B-07: ein zu sendender Eintrag (Umschlag ohne `id`, `actor`, `at`, `section`). */
 export interface CommandSpec {

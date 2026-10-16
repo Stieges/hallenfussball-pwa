@@ -182,6 +182,14 @@ describe('MatchCommands – Gegenbeispiele (@FU-081)', () => {
     { name: 'adjustClock negativ', send: (c: MatchCommands) => c.adjustClock(ID, B07_CTX, 'helper', -1, 300_000) },
     { name: 'adjustClock keine ganze Zahl', send: (c: MatchCommands) => c.adjustClock(ID, B07_CTX, 'helper', 1.5, 300_000) },
     {
+      name: 'Fixrunde F6: adjustClock mit negativem previousClockMs',
+      send: (c: MatchCommands) => c.adjustClock(ID, B07_CTX, 'helper', 290_000, -1),
+    },
+    {
+      name: 'Fixrunde F6: adjustClock mit previousClockMs NaN',
+      send: (c: MatchCommands) => c.adjustClock(ID, B07_CTX, 'helper', 290_000, Number.NaN),
+    },
+    {
       name: 'timing mit negativer Spielzeit',
       send: (c: MatchCommands) => c.endSection(ID, B07_CTX, 'helper', { clockMs: -1, at: K + 300_000 }),
     },
@@ -238,6 +246,23 @@ describe('MatchCommands – timing fuer automatische Enden (§ B-08b)', () => {
 
     expect(harness.stored[0].at).toBe(K + 599_900);
     expect(harness.stored[0].clockMs).toBe(600_000);
+  });
+
+  it('Fixrunde F3: timing.at in der Zukunft -> auf die Serverzeit begrenzt (Server: least(at, now))', async () => {
+    const harness = makeHarness([kickoff()], K + 600_000);
+
+    await harness.commands.endSection(ID, B07_CTX, 'helper', { clockMs: 600_000, at: K + 600_900 });
+
+    expect(harness.stored[0].at).toBe(K + 600_000);
+    expect(harness.stored[0].clockMs).toBe(600_000);
+  });
+
+  it('Fixrunde F5: timing traegt den Abschnitt des Endes -> section daraus, nicht aus dem Zustand', async () => {
+    const harness = makeHarness(zweiteHalbzeit(), K + 1_262_000);
+
+    await harness.commands.finish(ID, B07_CTX, 'helper', { clockMs: 1_200_000, at: K + 1_260_000, section: 2 });
+
+    expect(harness.stored[0].section).toBe(2);
   });
 
   it('Gegenbeispiel: ohne timing gelten Spielzeit und Serverzeit des Sendens', async () => {

@@ -15,7 +15,7 @@ import { applyEvent } from '../applyEvent';
 import type { DetailField } from '../details';
 import { ERROR_CODES, type Actor, type EngineEvent, type ErrorCode, type MatchContext, type MatchRules } from '../types';
 import type { MatchEngineView } from './MatchEngine';
-import { CLOCK_OUT_OF_RANGE, definedFields, splitFirstTap, stampFor, timingClock } from './matchCommandStamp';
+import { definedFields, splitFirstTap, stampFor, timingClock } from './matchCommandStamp';
 import type {
   AmendFields,
   CardOptions,
@@ -111,7 +111,7 @@ export class MatchCommands {
       type: 'CLOCK_ADJUST',
       teamId: null,
       payload: { previousClockMs },
-      clock: { kind: 'set', clockMs },
+      clock: { kind: 'set', clockMs, previousClockMs },
     });
   }
 
@@ -249,15 +249,15 @@ export class MatchCommands {
     }
     const stamp = stampFor(spec, view, this.deps.engine.serverNow());
     if (!stamp.ok) {
-      throw new MatchCommandRejectedError(ERROR_CODES.INVALID_PAYLOAD, CLOCK_OUT_OF_RANGE);
+      throw new MatchCommandRejectedError(ERROR_CODES.INVALID_PAYLOAD, { reason: stamp.reason });
     }
-    const { at, clockMs } = stamp;
+    const { at, clockMs, section } = stamp;
     const event: EngineEvent = {
       id: crypto.randomUUID(),
       type: spec.type,
       actor,
       at,
-      section: spec.type === 'MATCH_START' ? 1 : view.result.state.section,
+      section,
       clockMs,
       teamId: spec.teamId,
       targetId: spec.targetId ?? null,
@@ -281,7 +281,9 @@ export class MatchCommands {
     } else {
       await this.deps.store.addPending(accountId, matchId, event);
     }
-    await this.deps.engine.notifyStoreChange(matchId);
+    // Fixrunde F4: der Eintrag ist gespeichert -- ein Fehler beim Aktualisieren der Anzeige darf den
+    // Vertrag „ID = gespeichert“ nicht brechen (die Anzeige liest beim naechsten Lauf nach).
+    await this.deps.engine.notifyStoreChange(matchId).catch(() => undefined);
     if (accountId !== 'guest') {
       // Minor (Review Fixrunde 1): `.catch` statt nacktem `void` -- ein Fehler hier (z. B. IDB-
       // Lesefehler in OutboxSender.refresh()) darf keine unbehandelte Ablehnung werden. Das

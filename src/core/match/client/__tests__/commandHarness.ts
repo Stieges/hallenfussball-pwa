@@ -37,7 +37,13 @@ export interface CommandHarness {
   setNow(at: number): void;
 }
 
-export function makeHarness(preLog: EngineEvent[], now: number, accountId = 'acc-b07'): CommandHarness {
+/** `notifyFails`: die Anzeige-Aktualisierung nach dem Speichern wirft (Fixrunde F4). */
+export function makeHarness(
+  preLog: EngineEvent[],
+  now: number,
+  accountId = 'acc-b07',
+  options: { notifyFails?: boolean } = {},
+): CommandHarness {
   const log: EngineEvent[] = [...preLog];
   const stored: EngineEvent[] = [];
   let serverNow = now;
@@ -54,7 +60,11 @@ export function makeHarness(preLog: EngineEvent[], now: number, accountId = 'acc
         confirmedCount: 0,
       }),
       serverNow: () => serverNow,
-      notifyStoreChange: async () => undefined,
+      notifyStoreChange: async () => {
+        if (options.notifyFails) {
+          throw new Error('IDB-Lesefehler beim Aktualisieren der Anzeige');
+        }
+      },
     },
     store: { addPending: save, addConfirmedLocal: save },
     sender: { kick },

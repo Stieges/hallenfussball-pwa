@@ -372,11 +372,15 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
     expect(await result.current.handleGoal(ENGINE_MATCH_ID, 'teama', 1)).toBeNull(); // vor Anpfiff
   });
 
+  // Fixrunde F2: eine Spielzeit nach jetzt wird geklemmt; abgelehnt wird nur ein ungueltiger Wert (-1)
+  // bzw. ein Abschnitt nach dem aktuellen (F5) -- beides beweist, dass die Werte MatchCommands erreichen.
   it.each([
-    { name: 'Tor', send: (h: ReturnType<typeof useEngineCommandWiring>) => h.handleGoal(ENGINE_MATCH_ID, 'teama', 1, { clockMs: 5_000 }) },
-    { name: 'Karte', send: (h: ReturnType<typeof useEngineCommandWiring>) => h.handleCard(ENGINE_MATCH_ID, 'teama', 'YELLOW', { clockMs: 5_000 }) },
-    { name: 'Zeitstrafe', send: (h: ReturnType<typeof useEngineCommandWiring>) => h.handleTimePenalty(ENGINE_MATCH_ID, 'teama', { clockMs: 5_000 }) },
-  ])('@SL-084 $name: clockMs erreicht MatchCommands (Spielzeit nach jetzt -> abgelehnt, kein Eintrag)', async ({ send }) => {
+    { name: 'Tor', send: (h: ReturnType<typeof useEngineCommandWiring>) => h.handleGoal(ENGINE_MATCH_ID, 'teama', 1, { clockMs: -1 }) },
+    { name: 'Karte', send: (h: ReturnType<typeof useEngineCommandWiring>) => h.handleCard(ENGINE_MATCH_ID, 'teama', 'YELLOW', { clockMs: -1 }) },
+    { name: 'Zeitstrafe', send: (h: ReturnType<typeof useEngineCommandWiring>) => h.handleTimePenalty(ENGINE_MATCH_ID, 'teama', { clockMs: -1 }) },
+    { name: 'Karte (Abschnitt)', send: (h: ReturnType<typeof useEngineCommandWiring>) => h.handleCard(ENGINE_MATCH_ID, 'teama', 'YELLOW', { clockMs: 0, section: 2 }) },
+    { name: 'Zeitstrafe (Abschnitt)', send: (h: ReturnType<typeof useEngineCommandWiring>) => h.handleTimePenalty(ENGINE_MATCH_ID, 'teama', { clockMs: 0, section: 2 }) },
+  ])('@SL-084 $name: clockMs/section erreichen MatchCommands (ungueltig -> abgelehnt, kein Eintrag)', async ({ send }) => {
     const engineContext = await makeEngineContext();
     const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
     await result.current.handleStart(ENGINE_MATCH_ID);
