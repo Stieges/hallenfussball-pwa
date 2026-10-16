@@ -28,7 +28,7 @@ import type {
 import type { MatchUpdate as DomainMatchUpdate } from '../models/types';
 import { RepositoryError } from '../errors';
 import { SlotSourceSchema, TeamIdSchema, type MatchSlot, type SlotSource } from '../models/schemas/MatchSlotSchema';
-import { pendingSlot, slotSource, slotTeamId, teamSlot, transitionalSides } from '../models/matchSlot';
+import { pendingSlot, slotSource, slotTeamId, teamSlot } from '../models/matchSlot';
 import { originFromRow, originToColumns, type MatchOriginColumns } from './matchOriginColumns';
 
 // Supabase Row Types
@@ -169,7 +169,6 @@ export function mapMatchFromSupabase(row: MatchRow): Match {
     slotA,
     slotB,
     ...originFromRow(row), // A-36a: Herkunft des Platzes
-    ...transitionalSides(slotA, slotB),
     scoreA: row.score_a ?? undefined,
     scoreB: row.score_b ?? undefined,
     group: row.group_letter ?? undefined,

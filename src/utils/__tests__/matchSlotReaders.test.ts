@@ -12,7 +12,7 @@ import { DEFAULT_FILTERS } from '../../types/scheduleFilters';
 import type { Match, Team, Tournament } from '../../types/tournament';
 import { createMockTournament } from '../../test/factories';
 import { teamSlot } from '../../core/models/matchSlot';
-import { vs, slots, groupRank, resultOf, testUuid } from '../../test/matchSlotFixtures';
+import { vs, slots, groupRank, resultOf, testUuid, withStaleSides } from '../../test/matchSlotFixtures';
 
 const [NORD, UFER, WALD, STEIN] = [1, 2, 3, 4].map(testUuid);
 const teams: Team[] = [
@@ -21,7 +21,7 @@ const teams: Team[] = [
   { id: WALD, name: 'SV Wald', group: 'B' },
   { id: STEIN, name: 'TuS Stein', group: 'B' },
 ];
-const m = (id: string, sides: Pick<Match, 'teamA' | 'teamB' | 'slotA' | 'slotB'>, extra: Partial<Match> = {}): Match => ({
+const m = (id: string, sides: Pick<Match, 'slotA' | 'slotB'>, extra: Partial<Match> = {}): Match => ({
   id, round: 1, field: 1, ...sides, ...extra,
 });
 const tournamentOf = (matches: Match[]): Tournament => createMockTournament({ teams, matches, groupSystem: 'groupsAndFinals' });
@@ -35,7 +35,7 @@ describe('filterMatches – Teamsuche über den Slot', () => {
   });
 
   it('A-03 Gegenbeispiel: ein Name im Übergangsfeld teamA ohne passenden Slot findet nichts', () => {
-    const decoy = m('a', { teamA: 'FC Nord', teamB: 'VfB Ufer', slotA: vs(WALD, STEIN).slotA, slotB: vs(WALD, STEIN).slotB });
+    const decoy = withStaleSides(m('a', { slotA: vs(WALD, STEIN).slotA, slotB: vs(WALD, STEIN).slotB }), 'FC Nord', 'VfB Ufer');
     expect(filterMatches([decoy], filters, teams)).toEqual([]);
   });
 
@@ -48,14 +48,14 @@ describe('filterMatches – Teamsuche über den Slot', () => {
 
 describe('teamHelpers – Spiele eines Teams über den Slot', () => {
   it('A-03 getTeamMatches findet besetzte und aufgelöste Seiten', () => {
-    const resolved = m('c', { teamA: NORD, teamB: WALD, slotA: vs(NORD, WALD).slotA, slotB: groupRank('B', 1) });
+    const resolved = withStaleSides(m('c', { slotA: vs(NORD, WALD).slotA, slotB: groupRank('B', 1) }), NORD, WALD);
     const matches = [m('a', vs(NORD, UFER)), m('b', vs(WALD, STEIN)), resolved];
     expect(getTeamMatches(matches, NORD).map((x) => x.id)).toEqual(['a', 'c']);
   });
 
   it('A-03 Gegenbeispiel: offene Seiten und der Teamname zählen nicht als Spiel des Teams', () => {
     const open = m('a', slots(groupRank('A', 1), groupRank('B', 1)));
-    const byName = m('b', { teamA: 'FC Nord', teamB: NORD, slotA: vs(WALD, STEIN).slotA, slotB: vs(WALD, STEIN).slotB });
+    const byName = withStaleSides(m('b', { slotA: vs(WALD, STEIN).slotA, slotB: vs(WALD, STEIN).slotB }), 'FC Nord', NORD);
     expect(getTeamMatches([open, byName], NORD)).toEqual([]);
   });
 
@@ -85,7 +85,7 @@ describe('scheduleFingerprint – Slots statt Übergangsfeld', () => {
 
   it('A-03 Gegenbeispiel: ein anderer Text im Übergangsfeld teamA ändert den Fingerprint nicht', () => {
     const a = tournamentOf([m('a', vs(NORD, UFER))]);
-    const b = tournamentOf([m('a', { ...vs(NORD, UFER), teamA: 'irgendein Text' })]);
+    const b = tournamentOf([withStaleSides(m('a', { ...vs(NORD, UFER) }), 'irgendein Text', UFER)]);
     expect(scheduleFingerprint(a)).toBe(scheduleFingerprint(b));
   });
 });

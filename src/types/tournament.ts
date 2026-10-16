@@ -270,10 +270,6 @@ export interface Match {
   round: number;
   field: number;
   slot?: number; // Time slot index for fair scheduling
-  /** DEPRECATED, nur Übergang (Löschen in A-36a): Team-ID bzw. `'TBD'`, geschrieben nur über `transitionalSides`. */
-  teamA: string;
-  /** DEPRECATED, siehe `teamA`. */
-  teamB: string;
   /** Heimseite als Slot: Team-ID oder strukturierte Herkunft (@TM-015). Pflicht – die einzige Quelle der Seiten. */
   slotA: MatchSlot;
   /** Gastseite als Slot, siehe `slotA`. */

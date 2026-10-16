@@ -4,7 +4,6 @@ import { generateTournamentId } from '../../utils/idGenerator';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../../config/sports';
 import { generateFullSchedule } from '../generators';
 import { generateShareCode } from '../../utils/shareCode';
-import { transitionalSides } from '../models/matchSlot';
 import { matchOrigins } from '../models/matchOrigin';
 import { diffMatchResultStatusUpdates } from './matchResultStatusDiff';
 
@@ -295,7 +294,6 @@ export class TournamentCreationService {
                 round: Math.floor(index / tournament.numberOfFields) + 1,
                 field: scheduledMatch.field,
                 slot: scheduledMatch.slot,
-                ...transitionalSides(scheduledMatch.slotA, scheduledMatch.slotB),
                 // A-02/A-36a: Slots und Herkunft des Platzes aus dem Generator durchreichen (Cloud-Mapper).
                 slotA: scheduledMatch.slotA, slotB: scheduledMatch.slotB, ...matchOrigins(scheduledMatch),
                 scoreA: scheduledMatch.scoreA,

@@ -15,7 +15,7 @@ import {
 } from '../../../utils/matchStartState';
 import { matchHasEvents } from '../../../utils/teamHelpers';
 import { replaceSides } from './matchSides';
-import { transitionalSides, transitionalTeamRef } from '../../../core/models/matchSlot';
+import { transitionalTeamRef } from '../../../core/models/matchSlot';
 import { matchOrigins } from '../../../core/models/matchOrigin';
 import { teamReplacedLabel } from '../../tournament-admin/constants/admin.constants';
 
@@ -264,7 +264,6 @@ export function applyReplan(
     round: Math.floor(index / preview.schedule.numberOfFields) + 1,
     field: m.field,
     slot: m.slot,
-    ...transitionalSides(m.slotA, m.slotB),
     slotA: m.slotA,
     slotB: m.slotB, ...matchOrigins(m),
     group: m.group,

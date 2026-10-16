@@ -23,7 +23,7 @@ export interface ScheduledMatch {
   /** Auswärts-Team Name (übersetzt für Anzeige) */
   awayTeam: string
   /**
-   * ÜBERGANG (zweites Übergangsfeld neben `teamA` am Spiel, Löschen in B-35): Team-ID oder `'TBD'` für eine offene Seite,
+   * ÜBERGANG (Übergangsfeld `teamA` am Spiel seit A-36a gelöscht): Team-ID oder `'TBD'` für eine offene Seite,
    * abgeleitet aus `slotA` (`transitionalTeamRef`). Gelesen nur von `LiveViewScreen` (Spur B); neue Leser nutzen `slotA`.
    */
   originalTeamA: string

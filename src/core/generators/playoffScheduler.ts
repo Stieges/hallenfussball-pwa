@@ -11,7 +11,7 @@
 import { Match, FinalsConfig } from '../../types/tournament';
 import { generatePlayoffMatches as generatePlayoffMatchesFromPreset, GroupSizeInfo } from './playoffGenerator';
 import { generateFinalsMatchId } from '../../utils/idGenerator';
-import { pendingSlot, transitionalSides } from '../models/matchSlot';
+import { pendingSlot } from '../models/matchSlot';
 import type { SlotSource } from '../models/schemas/MatchSlotSchema';
 
 /**
@@ -260,7 +260,6 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
       field,
       slot,
       slotA, slotB, originA, originB,
-      ...transitionalSides(slotA, slotB),
       isFinal: true,
       finalType: def.finalType,
       label: def.label,

@@ -20,7 +20,7 @@ const teams: Team[] = [
 ];
 
 const at = (time: string) => new Date(`2026-10-03T${time}:00`);
-const match = (id: string, sides: Pick<Match, 'teamA' | 'teamB' | 'slotA' | 'slotB'>, time: string, field = 1): Match => ({
+const match = (id: string, sides: Pick<Match, 'slotA' | 'slotB'>, time: string, field = 1): Match => ({
   id, round: 1, field, scheduledTime: at(time), matchStatus: 'scheduled', ...sides,
 });
 

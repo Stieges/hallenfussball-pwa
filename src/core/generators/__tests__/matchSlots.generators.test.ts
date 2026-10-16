@@ -82,11 +82,9 @@ describe('Gruppenphase (fairScheduler) – Slots mit Team-ID', () => {
     }
   });
 
-  it('Übergang bis A-04b: Heim/Gast-Tausch hält Slot und teamA/teamB gleich', () => {
+  it('A-36a Gegenbeispiel: Gruppenspiele tragen kein Übergangsfeld teamA/teamB mehr', () => {
     for (const m of matches) {
-      const [a, b] = slotsOf(m);
-      expect(a).toEqual({ kind: 'team', teamId: m.teamA });
-      expect(b).toEqual({ kind: 'team', teamId: m.teamB });
+      expect('teamA' in m || 'teamB' in m).toBe(false);
     }
   });
 

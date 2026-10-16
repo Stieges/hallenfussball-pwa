@@ -9,7 +9,7 @@ import {
   scheduleMatches,
 } from '../scheduleHelpers';
 import type { Match, Team } from '../../../types/tournament';
-import { testUuid, vs, slots, groupRank, resultOf } from '../../../test/matchSlotFixtures';
+import { testUuid, vs, slots, groupRank, resultOf, withStaleSides } from '../../../test/matchSlotFixtures';
 
 // =============================================================================
 // parseStartTime
@@ -302,7 +302,7 @@ describe('scheduleMatches', () => {
 
   it('@TM-033 Gegenbeispiel: ein Teamname im Übergangsfeld teamA wird nicht angezeigt', () => {
     const matches: Match[] = [
-      { id: 'm1', round: 1, field: 1, ...vs(T1, T2), teamA: 'Team B', teamB: 'Team A', slot: 0 },
+      withStaleSides({ id: 'm1', round: 1, field: 1, ...vs(T1, T2), slot: 0 }, 'Team B', 'Team A'),
     ];
 
     const result = scheduleMatches({ ...base, matches, numberOfFields: 1, gameDuration: 10, phase: 'groupStage' });

@@ -2,26 +2,25 @@
  * Test-Helfer für Spielseiten als Slot (A-03). Nur Testumgebung.
  *
  * `vs(a, b)` baut die beiden Seiten eines Spiels aus Team-IDs (UUIDs – Teamnamen und Kurz-IDs lehnt
- * `teamSlot` ab, wie im Produktivcode). Das Übergangsfeld `teamA/teamB` (Löschen in B-35) wird wie im
- * Produktivcode über `transitionalSides` aus den Slots abgeleitet.
+ * `teamSlot` ab, wie im Produktivcode). Die Seiten stehen nur im Slot (Übergangsfeld `teamA/teamB` seit A-36a gelöscht).
  */
 import type { Match } from '../types/tournament';
-import { teamSlot, pendingSlot, transitionalSides } from '../core/models/matchSlot';
+import { teamSlot, pendingSlot } from '../core/models/matchSlot';
 import type { MatchSlot, SlotSource, TeamId } from '../core/models/schemas/MatchSlotSchema';
 import { testUuid } from './testIds';
 
 export { testUuid };
 
-type Sides = Pick<Match, 'teamA' | 'teamB' | 'slotA' | 'slotB'>;
+type Sides = Pick<Match, 'slotA' | 'slotB'>;
 
 /** Zwei besetzte Seiten aus Team-IDs. */
 export function vs(teamIdA: string, teamIdB: string): Sides {
   return slots(teamSlot(teamIdA), teamSlot(teamIdB));
 }
 
-/** Zwei Seiten aus beliebigen Slots (Übergangsfeld `teamA/teamB` über `transitionalSides`). */
+/** Zwei Seiten aus beliebigen Slots. */
 export function slots(slotA: MatchSlot, slotB: MatchSlot): Sides {
-  return { ...transitionalSides(slotA, slotB), slotA, slotB };
+  return { slotA, slotB };
 }
 
 export function groupRank(group: string, rank: number): MatchSlot {
@@ -49,4 +48,12 @@ export function testTeamSlot(ref: string): MatchSlot {
 /** Wie `vs`, aber für Kurz-IDs (siehe `testTeamSlot`). */
 export function looseVs(refA: string, refB: string): Sides {
   return slots(testTeamSlot(refA), testTeamSlot(refB));
+}
+
+/**
+ * Köder für Gegenbeispiele: ein Spiel mit einem veralteten Feld `teamA/teamB` (Altdaten vor A-36a). Die Leser
+ * dürfen es nie auswerten – die Seiten stehen nur im Slot.
+ */
+export function withStaleSides<T extends object>(match: T, teamA: string, teamB: string): T {
+  return Object.assign({}, match, { teamA, teamB });
 }

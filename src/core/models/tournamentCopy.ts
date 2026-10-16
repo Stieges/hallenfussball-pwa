@@ -6,7 +6,7 @@
  * zeigen auf die neuen Spiel-IDs. Framework-frei.
  */
 import type { Match, Team, Tournament } from '../../types/tournament';
-import { copySlot, copySource, transitionalSides } from './matchSlot';
+import { copySlot, copySource } from './matchSlot';
 import { matchOrigins } from './matchOrigin';
 
 export interface CopiedContent {
@@ -40,7 +40,6 @@ export function copyTeamsAndMatches(
         originA: originA && copySource(originA, matchIdMap),
         originB: originB && copySource(originB, matchIdMap),
       }),
-      ...transitionalSides(slotA, slotB),
       matchStatus: 'scheduled',
       scoreA: 0,
       scoreB: 0,

@@ -5,11 +5,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { analyzeScheduleFairness, generateGroupPhaseSchedule } from '../fairScheduler';
 import type { Match, Team } from '../../../types/tournament';
-import { vs, slots, groupRank, testUuid } from '../../../test/matchSlotFixtures';
+import { vs, slots, groupRank, testUuid, withStaleSides } from '../../../test/matchSlotFixtures';
 import { teamSlot } from '../../models/matchSlot';
 
 const [A, B, C] = [1, 2, 3].map(testUuid);
-const m = (id: string, slot: number, sides: Pick<Match, 'teamA' | 'teamB' | 'slotA' | 'slotB'>): Match => ({
+const m = (id: string, slot: number, sides: Pick<Match, 'slotA' | 'slotB'>): Match => ({
   id, round: slot + 1, field: 1, slot, ...sides,
 });
 
@@ -31,11 +31,10 @@ describe('analyzeScheduleFairness über Slots', () => {
   });
 
   it('A-03 Gegenbeispiel: ein Name im Übergangsfeld teamA zählt nicht', () => {
-    const decoy: Match = {
+    const decoy: Match = withStaleSides({
       id: '1', round: 1, field: 1, slot: 0,
       ...slots(groupRank('A', 1), groupRank('A', 2)),
-      teamA: 'Team A', teamB: 'Team B',
-    };
+    }, 'Team A', 'Team B');
 
     expect(analyzeScheduleFairness([decoy]).teamStats).toEqual([]);
   });
@@ -54,7 +53,7 @@ describe('generateGroupPhaseSchedule – Gruppenspiele tragen Team-Slots (auch n
   it.each([
     ['A-03 Kreisverfahren', undefined],
     ['A-03 DFB-Schlüssel 1T04M', '1T04M'],
-  ])('%s: jede Paarung genau einmal, beide Seiten besetzt, Übergangsfeld gleich dem Slot', (_name, dfbPatternCode) => {
+  ])('%s: jede Paarung genau einmal, beide Seiten besetzt, ohne Übergangsfeld', (_name, dfbPatternCode) => {
     const matches = generateGroupPhaseSchedule({ ...options, dfbPatternCode });
 
     expect(matches).toHaveLength(6);
@@ -64,7 +63,7 @@ describe('generateGroupPhaseSchedule – Gruppenspiele tragen Team-Slots (auch n
       expect(match.slotB?.kind).toBe('team');
       const a = match.slotA?.kind === 'team' ? match.slotA.teamId : '';
       const b = match.slotB?.kind === 'team' ? match.slotB.teamId : '';
-      expect([match.teamA, match.teamB]).toEqual([a, b]);
+      expect('teamA' in match || 'teamB' in match).toBe(false); // A-36a: kein Übergangsfeld mehr
       pairs.add([a, b].sort().join('|'));
     }
     expect(pairs.size).toBe(6);
