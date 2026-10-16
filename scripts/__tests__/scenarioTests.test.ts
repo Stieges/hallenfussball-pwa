@@ -1,6 +1,6 @@
 // A-09: scenario-tests.mjs (Plattform-Record "Testabdeckung", @TA-006, @TA-007, @TA-008)
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -18,7 +18,11 @@ const liste = (ids: string[], soll: number) =>
 const nachweis = (kennungen: string[]) =>
   schreibe('tests/meta/nachweis-generalprobe.json', JSON.stringify({ max: 15, kennungen }))
 // Ohne GIT_*-Variablen: im pre-commit-Hook zeigen sie auf das echte Repo, die Test-Repos im Temp-Ordner wuerden dort committen.
-const sauberEnv = () => Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')))
+// GIT_CEILING_DIRECTORIES auf das Temp-Elternverzeichnis: schlaegt `git init` fehl, sucht Git nicht in ein umgebendes Repo hinein.
+const sauberEnv = (basis: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv => ({
+  ...Object.fromEntries(Object.entries(basis).filter(([k]) => !k.startsWith('GIT_'))),
+  GIT_CEILING_DIRECTORIES: dirname(ordner),
+})
 const lauf = (...args: string[]) => spawnSync('node', [SKRIPT, '--root', ordner, ...args], { encoding: 'utf8', env: sauberEnv() })
 
 beforeEach(() => {
@@ -225,8 +229,12 @@ describe('scenario-tests.mjs: reguläre Tests (TA-CI)', () => {
 })
 
 describe('scenario-tests.mjs: Ratchet gegen den gemessenen Stand (TA-CI)', () => {
-  const git = (...args: string[]) =>
-    spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], { cwd: ordner, encoding: 'utf8', env: sauberEnv() })
+  // Jeder Git-Aufruf: cwd im Temp-Ordner, ohne geerbte GIT_*; ein Fehler bricht den Test ab (kein stilles Weiterlaufen).
+  const git = (...args: string[]) => {
+    const r = spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], { cwd: ordner, encoding: 'utf8', env: sauberEnv() })
+    if (r.status !== 0) throw new Error(`git ${args.join(' ')} fehlgeschlagen: ${r.stderr}`)
+    return r
+  }
   const ids = Array.from({ length: 200 }, (_, i) => `ZM-${String(i + 1).padStart(3, '0')}`)
   const testsFuer = (liste_: string[]) => liste_.map((id) => `it('${id} Fall', () => {})`).join('\n') + '\n'
   /** Hauptzweig: 199 Kennungen (alle außer der 200.) mit regulärem Test, inkl. ZM-096; danach auf den Arbeitsstand wechseln. */
@@ -286,7 +294,7 @@ describe('scenario-tests.mjs: Ratchet gegen den gemessenen Stand (TA-CI)', () =>
     hauptMit199()
     schreibe('tests/meta/szenario-floor.json', JSON.stringify({ mitTest: 199, kennungen: [] }))
     git('add', '-A')
-    git('commit', '-q', '-m', 'floor')
+    git('commit', '-q', '--allow-empty', '-m', 'floor')
     schreibe('tests/meta/szenario-floor.json', JSON.stringify({ mitTest: 150, kennungen: [] }))
     const gesenkt = lauf('--base', 'HEAD')
     expect(gesenkt.status).toBe(1)
@@ -327,6 +335,40 @@ describe('scenario-tests.mjs: Ratchet gegen den gemessenen Stand (TA-CI)', () =>
     const md = readFileSync(summary, 'utf8')
     expect(md).toMatch(/und 169 weitere/)
     expect(md.match(/`ZM-\d{3}`/g)?.length).toBe(30)
+  })
+
+  it('@TA-010 Gegenbeispiel: mit gesetztem GIT_DIR/GIT_INDEX_FILE (pre-commit-Hook) bleibt ein fremdes Repo unveraendert', () => {
+    const fremd = mkdtempSync(join(tmpdir(), 'fremdes-repo-'))
+    try {
+      const fremdGit = (...a: string[]) => {
+        const r = spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: fremd, encoding: 'utf8', env: { ...sauberEnv(), GIT_CEILING_DIRECTORIES: dirname(fremd) } })
+        expect(r.status, a.join(' ')).toBe(0)
+        return r.stdout.trim()
+      }
+      fremdGit('init', '-q', '-b', 'main')
+      writeFileSync(join(fremd, 'x.txt'), 'x')
+      fremdGit('add', 'x.txt')
+      fremdGit('commit', '-q', '-m', 'x')
+      const zustand = () => [
+        fremdGit('rev-parse', 'HEAD'),
+        fremdGit('config', 'core.bare'),
+        readFileSync(join(fremd, '.git/index')).toString('hex'),
+        readFileSync(join(fremd, '.git/config'), 'utf8'),
+      ]
+      const vorher = zustand()
+      const hook = { ...process.env, GIT_DIR: join(fremd, '.git'), GIT_INDEX_FILE: join(fremd, '.git/index'), GIT_WORK_TREE: fremd }
+      // wie der Test-Helfer: Aufrufe mit sauberEnv(hook) duerfen das fremde Repo nicht beruehren
+      const imTemp = (...a: string[]) =>
+        spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: ordner, encoding: 'utf8', env: sauberEnv(hook) })
+      expect(imTemp('init', '-q', '-b', 'main').status).toBe(0)
+      schreibe('src/neu.test.ts', "it('ZM-096 x', () => {})\n")
+      expect(imTemp('add', '-A').status).toBe(0)
+      expect(imTemp('commit', '-q', '-m', 'im temp').status).toBe(0)
+      expect(zustand()).toEqual(vorher)
+      expect(existsSync(join(ordner, '.git'))).toBe(true)
+    } finally {
+      rmSync(fremd, { recursive: true, force: true })
+    }
   })
 })
 

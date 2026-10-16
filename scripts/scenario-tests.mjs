@@ -16,7 +16,8 @@
 // it.todo / skip / fixme am Aufruf, x-Praefix (xit, xdescribe), describe.skip und test.describe.skip/fixme
 // samt allen Tests und Schritten darin sowie eine UNBEDINGTE Markierung im Rumpf (test.fail(true, ..),
 // test.fixme(), test.skip(), ctx.skip()). BEDINGTE Markierungen (test.skip(!desktop, ..)) bleiben regulaer,
-// weil der Test in der CI auf einem Projekt laeuft. Nicht erkannt (zaehlt daher nicht): skipIf/runIf.
+// weil der Test in der CI auf einem Projekt laeuft - das gilt nur fuer die ARGUMENTFORM test.skip(cond, ..);
+// `if (mobile) test.skip()` zaehlt konservativ als unbedingt, also nicht regulaer. Nicht erkannt (zaehlt daher nicht): skipIf/runIf.
 // `@XX-nnn:teil` im Testnamen markiert Teilabdeckung: eigene Spalte "teilweise", kein "mit Test".
 // Ratchet (--base <ref>, in der CI origin/main; PRs gegen develop vergleichen ebenfalls mit main): der Stand
 // von <ref> wird GEMESSEN (git archive in ein Temp-Verzeichnis, gleiche Zaehlregel). Rot, wenn die Zahl
