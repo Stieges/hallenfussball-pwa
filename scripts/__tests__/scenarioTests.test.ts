@@ -17,7 +17,9 @@ const liste = (ids: string[], soll: number) =>
   schreibe('tests/meta/mvp-kennungen.json', JSON.stringify({ soll, records: { zuschauer: ids.slice(0, 1), helfer: ids.slice(1) } }))
 const nachweis = (kennungen: string[]) =>
   schreibe('tests/meta/nachweis-generalprobe.json', JSON.stringify({ max: 15, kennungen }))
-const lauf = (...args: string[]) => spawnSync('node', [SKRIPT, '--root', ordner, ...args], { encoding: 'utf8' })
+// Ohne GIT_*-Variablen: im pre-commit-Hook zeigen sie auf das echte Repo, die Test-Repos im Temp-Ordner wuerden dort committen.
+const sauberEnv = () => Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')))
+const lauf = (...args: string[]) => spawnSync('node', [SKRIPT, '--root', ordner, ...args], { encoding: 'utf8', env: sauberEnv() })
 
 beforeEach(() => {
   ordner = mkdtempSync(join(tmpdir(), 'scenario-tests-'))
@@ -127,17 +129,15 @@ describe('scenario-tests.mjs', () => {
   })
 })
 
-describe('scenario-tests.mjs: reguläre Tests und Ratchet (TA-CI)', () => {
-  const floor = (pfad: string, mitTest: number, kennungen: string[] = []) => schreibe(pfad, JSON.stringify({ mitTest, kennungen }))
-
+describe('scenario-tests.mjs: reguläre Tests (TA-CI)', () => {
   it('@TA-007 ein regulärer Test zählt als mit Test', () => {
     liste(['ZM-096', 'HE-001'], 2)
     schreibe('src/a.test.ts', "it('ZM-096 zeigt den Stand', () => {})\nit.only('HE-001 x', () => {})\n")
     expect(lauf().stdout).toMatch(/mit Test: 2, teilweise: 0/)
   })
 
-  it('@TA-007 it.fails, test.fail, it.todo, skip und describe.skip zählen nicht, ein regulärer Test daneben schon', () => {
-    liste(['ZM-096', 'HE-001', 'FU-081', 'AN-010', 'BM-001', 'ME-063'], 6)
+  it('@TA-010 it.fails, test.fail, it.todo, skip, xit und describe.skip/xdescribe zählen nicht, ein regulärer Test daneben schon', () => {
+    liste(['ZM-096', 'HE-001', 'FU-081', 'AN-010', 'BM-001', 'ME-063', 'ZM-097', 'ZM-098'], 8)
     schreibe(
       'src/b.test.ts',
       [
@@ -146,74 +146,187 @@ describe('scenario-tests.mjs: reguläre Tests und Ratchet (TA-CI)', () => {
         "it.todo('FU-081 offen')",
         "it.skip('AN-010 uebersprungen', () => {})",
         "describe.skip('Gruppe', () => { it('BM-001 im uebersprungenen describe', () => {}) })",
+        "xdescribe('Gruppe x', () => { it('ZM-097 im xdescribe', () => {}) })",
+        "xit('ZM-098 uebersprungen', () => {})",
         "it('ME-063 regulaer', () => {})",
       ].join('\n'),
     )
     const r = lauf()
-    expect(r.stdout).toMatch(/mit Test: 1, teilweise: 0, mit Nachweis Generalprobe: 0, ohne Test: 5/)
+    expect(r.stdout).toMatch(/mit Test: 1, teilweise: 0, mit Nachweis Generalprobe: 0, ohne Test: 7/)
     schreibe('src/c.test.ts', "it('ZM-096 jetzt auch regulaer', () => {})\n")
     expect(lauf().stdout).toMatch(/mit Test: 2,/)
   })
 
-  it('@TA-007 :teil zählt als teilweise, nicht als mit Test; ein voller Test daneben macht daraus mit Test', () => {
-    liste(['ZM-096', 'HE-001'], 2)
-    schreibe('src/d.test.ts', "it('ZM-096:teil nur der Hauptpfad', () => {})\nit('HE-001 voll', () => {})\n")
-    expect(lauf().stdout).toMatch(/mit Test: 1, teilweise: 1, mit Nachweis Generalprobe: 0, ohne Test: 0/)
+  it('@TA-010 Markierung im Rumpf: unbedingt (test.fail(true), fixme(), skip()) zählt nicht, bedingt bleibt regulär', () => {
+    liste(['FU-089', 'FU-090', 'FU-091', 'FU-092', 'FU-093'], 5)
+    schreibe(
+      'tests/e2e/x.spec.ts',
+      [
+        "test('@FU-089 erwartet rot', async ({ browser }) => {",
+        "  test.fail(true, 'Befund C-XYZ')",
+        '})',
+        "test('@FU-090 offen', async () => {",
+        '  test.fixme()',
+        '})',
+        "test('@FU-091 uebersprungen', async (ctx) => {",
+        '  ctx.skip()',
+        '})',
+        "test('@FU-092 nur auf dem Desktop', async ({ isMobile }) => {",
+        "  test.skip(isMobile, 'nur Desktop')",
+        '})',
+        "test.skip('@FU-093 Schritt im uebersprungenen Test', async () => {",
+        "  await test.step('Schritt FU-093', async () => {})",
+        '})',
+      ].join('\n'),
+    )
+    expect(lauf().stdout).toMatch(/mit Test: 1, teilweise: 0, mit Nachweis Generalprobe: 0, ohne Test: 4/)
+  })
+
+  it('@TA-010 test.describe.skip/fixme überspringt Tests und Schritte darin', () => {
+    liste(['FU-089', 'FU-090', 'FU-091'], 3)
+    schreibe(
+      'tests/e2e/y.spec.ts',
+      [
+        "test.describe.skip('Gruppe', () => { test('@FU-089 drin', async () => {}) })",
+        "test.describe.fixme('Gruppe', () => { test('@FU-090 drin', async () => { await test.step('FU-090', async () => {}) }) })",
+        "test.describe('Gruppe', () => { test('@FU-091 drin', async () => {}) })",
+      ].join('\n'),
+    )
+    expect(lauf().stdout).toMatch(/mit Test: 1,/)
+  })
+
+  it('@TA-010 Gegenbeispiel Bereichsgrenze: Regex-Literal/Apostroph im Rumpf lässt die Markierung des Nachbarn nicht rückwärts wirken', () => {
+    liste(['FU-002', 'FU-056', 'FU-089'], 3)
+    schreibe(
+      'tests/e2e/z.spec.ts',
+      [
+        "test('@FU-002 regulaer mit Regex', async () => {",
+        "  expect(text).toMatch(/a\\/b{2}/); const s = \"don't {\"",
+        '})',
+        "test('@FU-056 regulaer', async () => {",
+        '  const s = `x ${1}`',
+        '})',
+        "test('@FU-089 erwartet rot', async () => {",
+        '  test.fail(true, "Befund")',
+        '})',
+      ].join('\n'),
+    )
+    expect(lauf().stdout).toMatch(/mit Test: 2,/)
+  })
+
+  it('@TA-010 :teil zählt als teilweise, nicht als mit Test; ein voller Test daneben macht daraus mit Test; :teilweise ist keine Markierung', () => {
+    liste(['ZM-096', 'HE-001', 'FU-081'], 3)
+    schreibe('src/d.test.ts', "it('ZM-096:teil nur der Hauptpfad', () => {})\nit('HE-001 voll', () => {})\nit('FU-081:teilweise ist ein voller Test', () => {})\n")
+    expect(lauf().stdout).toMatch(/mit Test: 2, teilweise: 1, mit Nachweis Generalprobe: 0, ohne Test: 0/)
     expect(lauf('--strict').status).toBe(1)
     schreibe('src/e.test.ts', "it('ZM-096 der Rest', () => {})\n")
     expect(lauf('--strict').status).toBe(0)
   })
+})
 
-  it('@TA-003 die Zahl fällt um 1 unter den Stand des Hauptzweigs: rot, mit Nennung der verlorenen Kennung', () => {
+describe('scenario-tests.mjs: Ratchet gegen den gemessenen Stand (TA-CI)', () => {
+  const git = (...args: string[]) =>
+    spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...args], { cwd: ordner, encoding: 'utf8', env: sauberEnv() })
+  const ids = Array.from({ length: 200 }, (_, i) => `ZM-${String(i + 1).padStart(3, '0')}`)
+  const testsFuer = (liste_: string[]) => liste_.map((id) => `it('${id} Fall', () => {})`).join('\n') + '\n'
+  /** Hauptzweig: 199 Kennungen (alle außer der 200.) mit regulärem Test, inkl. ZM-096; danach auf den Arbeitsstand wechseln. */
+  const hauptMit199 = () => {
+    liste(ids, 200)
+    schreibe('src/alle.test.ts', testsFuer(ids.slice(0, 199)))
+    schreibe('tests/meta/szenario-floor.json', JSON.stringify({ mitTest: 199, kennungen: [] }))
+    git('init', '-q', '-b', 'main')
+    git('add', '-A')
+    git('commit', '-q', '-m', 'main')
+  }
+  const ohneZm096 = ids.slice(0, 199).filter((i) => i !== 'ZM-096')
+
+  it('@TA-010 @ZM-096 nur noch in it.fails/it.todo/it.skip: rot, ZM-096 wird als neu verloren genannt (main 199)', () => {
+    hauptMit199()
+    for (const markierung of ['it.fails', 'it.todo', 'it.skip']) {
+      schreibe('src/alle.test.ts', testsFuer(ohneZm096) + `${markierung}('ZM-096 jetzt markiert', () => {})\n`)
+      const r = lauf('--base', 'HEAD')
+      expect(r.status, markierung).toBe(1)
+      expect(r.stderr).toMatch(/198 Kennungen mit regulaerem Test < Hauptzweig 199/)
+      expect(r.stdout).toMatch(/neu verloren\): ZM-096/)
+    }
+  })
+
+  it('@TA-010 mit „@ZM-096:teil“ zählt die Kennung als teilweise, nicht als getestet (weiter rot)', () => {
+    hauptMit199()
+    schreibe('src/alle.test.ts', testsFuer(ohneZm096) + "it('@ZM-096:teil nur der Hauptpfad', () => {})\n")
+    const summary = join(ordner, 'summary.md')
+    const r = lauf('--base', 'HEAD', '--summary', summary)
+    expect(r.status).toBe(1)
+    expect(r.stdout).toMatch(/mit Test: 198, teilweise: 1,/)
+    expect(r.stdout).toMatch(/neu verloren\): ZM-096/)
+    expect(readFileSync(summary, 'utf8')).toMatch(/Neu ohne regulaeren Test: `ZM-096`/)
+  })
+
+  it('@TA-010 steigt die Zahl auf 200, ist die Prüfung grün; gleich bleibende Zahl ebenfalls', () => {
+    hauptMit199()
+    expect(lauf('--base', 'HEAD').status).toBe(0)
+    schreibe('src/alle.test.ts', testsFuer(ids))
+    const r = lauf('--base', 'HEAD')
+    expect(r.status).toBe(0)
+    expect(r.stdout).toMatch(/mit Test: 200,/)
+  })
+
+  it('@TA-010 der Stand von main wird gemessen, nicht aus der Datei gelesen: eine veraltete Untergrenze lässt keinen Verlust durch', () => {
+    hauptMit199()
+    schreibe('tests/meta/szenario-floor.json', JSON.stringify({ mitTest: 150, kennungen: [] }))
+    git('add', '-A')
+    git('commit', '-q', '-m', 'floor alt')
+    schreibe('src/alle.test.ts', testsFuer(ohneZm096))
+    const r = lauf('--base', 'HEAD')
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/< Hauptzweig 199 \(gemessen/)
+  })
+
+  it('@TA-010 die Untergrenze in der Datei darf nicht unter die Datei auf main sinken; defekte Datei auf main ist rot', () => {
+    hauptMit199()
+    schreibe('tests/meta/szenario-floor.json', JSON.stringify({ mitTest: 199, kennungen: [] }))
+    git('add', '-A')
+    git('commit', '-q', '-m', 'floor')
+    schreibe('tests/meta/szenario-floor.json', JSON.stringify({ mitTest: 150, kennungen: [] }))
+    const gesenkt = lauf('--base', 'HEAD')
+    expect(gesenkt.status).toBe(1)
+    expect(gesenkt.stderr).toMatch(/Untergrenze 150 < Untergrenze 199 auf HEAD \(Senken verboten\)/)
+    schreibe('tests/meta/szenario-floor.json', '{ kaputt')
+    git('add', '-A')
+    git('commit', '-q', '-m', 'kaputt')
+    schreibe('tests/meta/szenario-floor.json', JSON.stringify({ mitTest: 199, kennungen: [] }))
+    const defekt = lauf('--base', 'HEAD')
+    expect(defekt.status).toBe(1)
+    expect(defekt.stderr).toMatch(/kein gueltiges JSON/)
+  })
+
+  it('@TA-010 unbekannte Ref ist rot (fail-closed); --floor-schreiben schreibt die Untergrenze; Zahl unter der eigenen Untergrenze ist rot', () => {
     liste(['ZM-096', 'HE-001'], 2)
     schreibe('src/a.test.ts', "it('ZM-096 x', () => {})\n")
-    floor('floor-main.json', 2, ['HE-001', 'ZM-096'])
-    const r = lauf('--base-floor', join(ordner, 'floor-main.json'))
+    expect(lauf('--floor-schreiben').status).toBe(0)
+    expect(JSON.parse(readFileSync(join(ordner, 'tests/meta/szenario-floor.json'), 'utf8')).mitTest).toBe(1)
+    const r = lauf('--base', 'gibt-es-nicht')
     expect(r.status).toBe(1)
-    expect(r.stderr).toMatch(/1 Kennungen mit regulaerem Test < Hauptzweig 2/)
-    expect(r.stdout).toMatch(/ohne regulaeren Test: HE-001/)
-  })
-
-  it('@TA-003 Gegenbeispiel: gleiche Zahl bleibt grün, +1 ebenfalls, die Datei darf dann angehoben werden', () => {
-    liste(['ZM-096', 'HE-001'], 2)
-    schreibe('src/a.test.ts', "it('ZM-096 x', () => {})\nit('HE-001 y', () => {})\n")
-    floor('floor-main.json', 1, ['ZM-096'])
-    floor('tests/meta/szenario-floor.json', 1, ['ZM-096'])
-    const plus = lauf('--base-floor', join(ordner, 'floor-main.json'))
-    expect(plus.status).toBe(0)
-    expect(plus.stdout).toMatch(/angehoben werden: 2 > 1/)
-    floor('floor-main.json', 2, ['HE-001', 'ZM-096'])
-    floor('tests/meta/szenario-floor.json', 2, ['HE-001', 'ZM-096'])
-    expect(lauf('--base-floor', join(ordner, 'floor-main.json')).status).toBe(0)
-  })
-
-  it('@TA-003 eine gesenkte Untergrenze in der Datei und eine Zahl unter der eigenen Untergrenze sind rot', () => {
-    liste(['ZM-096', 'HE-001'], 2)
-    schreibe('src/a.test.ts', "it('ZM-096 x', () => {})\nit('HE-001 y', () => {})\n")
-    floor('floor-main.json', 2)
-    floor('tests/meta/szenario-floor.json', 1)
-    const gesenkt = lauf('--base-floor', join(ordner, 'floor-main.json'))
-    expect(gesenkt.status).toBe(1)
-    expect(gesenkt.stderr).toMatch(/Untergrenze 1 < Hauptzweig 2/)
-    floor('tests/meta/szenario-floor.json', 3)
+    expect(r.stderr).toMatch(/Base-Ref "gibt-es-nicht" existiert nicht/)
+    schreibe('tests/meta/szenario-floor.json', JSON.stringify({ mitTest: 3, kennungen: [] }))
     const darunter = lauf()
     expect(darunter.status).toBe(1)
     expect(darunter.stderr).toMatch(/< Untergrenze 3 in der Datei/)
   })
 
-  it('@TA-003 --base mit unbekannter Ref ist rot (fail-closed), --floor-schreiben und die Job-Summary funktionieren', () => {
-    liste(['ZM-096', 'HE-001'], 2)
-    schreibe('src/a.test.ts', "it('ZM-096 x', () => {})\n")
-    const schreiben = lauf('--floor-schreiben')
-    expect(schreiben.status).toBe(0)
-    expect(JSON.parse(readFileSync(join(ordner, 'tests/meta/szenario-floor.json'), 'utf8')).mitTest).toBe(1)
-    const r = lauf('--base', 'gibt-es-nicht')
-    expect(r.status).toBe(1)
-    expect(r.stderr).toMatch(/Base-Ref "gibt-es-nicht" existiert nicht/)
-    floor('floor-main.json', 1, ['HE-001', 'ZM-096'])
+  it('@TA-010 die Job-Summary nennt höchstens 30 verlorene Kennungen und zählt den Rest', () => {
+    liste(ids, 200)
+    schreibe('src/alle.test.ts', testsFuer(ids))
+    schreibe('tests/meta/szenario-floor.json', JSON.stringify({ mitTest: 0, kennungen: [] }))
+    git('init', '-q', '-b', 'main')
+    git('add', '-A')
+    git('commit', '-q', '-m', 'main')
+    schreibe('src/alle.test.ts', "it('ZM-001 bleibt', () => {})\n")
     const summary = join(ordner, 'summary.md')
-    lauf('--base-floor', join(ordner, 'floor-main.json'), '--summary', summary)
-    expect(readFileSync(summary, 'utf8')).toMatch(/Neu ohne regulaeren Test: `HE-001`/)
+    lauf('--base', 'HEAD', '--summary', summary)
+    const md = readFileSync(summary, 'utf8')
+    expect(md).toMatch(/und 169 weitere/)
+    expect(md.match(/`ZM-\d{3}`/g)?.length).toBe(30)
   })
 })
 

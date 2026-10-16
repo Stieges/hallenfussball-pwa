@@ -12,22 +12,28 @@
 // Gezaehlt wird eine Kennung nur, wenn sie in einem Testnamen (it/test/describe/step), im Titel
 // oder in der each-Tabelle eines Tests steht - nicht in Kommentaren und nicht in sonstigen Strings.
 //
-// TA-CI Schritt 1: "mit Test" heisst mindestens ein REGULAERER Test. it.fails / test.fail /
-// it.todo / skip / test.skip / fixme / describe.skip (samt allen Tests darin) zaehlen nicht.
+// TA-CI: "mit Test" heisst mindestens ein REGULAERER Test. Nicht regulaer sind: it.fails / test.fail /
+// it.todo / skip / fixme am Aufruf, x-Praefix (xit, xdescribe), describe.skip und test.describe.skip/fixme
+// samt allen Tests und Schritten darin sowie eine UNBEDINGTE Markierung im Rumpf (test.fail(true, ..),
+// test.fixme(), test.skip(), ctx.skip()). BEDINGTE Markierungen (test.skip(!desktop, ..)) bleiben regulaer,
+// weil der Test in der CI auf einem Projekt laeuft. Nicht erkannt (zaehlt daher nicht): skipIf/runIf.
 // `@XX-nnn:teil` im Testnamen markiert Teilabdeckung: eigene Spalte "teilweise", kein "mit Test".
-// Ratchet (--base <ref>): die Zahl "MVP-Kennung mit regulaerem Test" darf nicht unter den Wert
-// in tests/meta/szenario-floor.json des Hauptzweigs fallen; die Datei selbst darf nicht sinken.
-// --floor-schreiben schreibt die gemessene Zahl nach tests/meta/szenario-floor.json (danach committen).
-// Optionen dazu: [--base <git-ref>] [--base-floor <pfad>] [--floor <pfad>] [--summary <pfad>]
+// Ratchet (--base <ref>, in der CI origin/main; PRs gegen develop vergleichen ebenfalls mit main): der Stand
+// von <ref> wird GEMESSEN (git archive in ein Temp-Verzeichnis, gleiche Zaehlregel). Rot, wenn die Zahl
+// "MVP-Kennung mit regulaerem Test" darunter faellt; "neu verloren" nennt die Kennungen. Die Datei
+// tests/meta/szenario-floor.json ist nur die absolute Untergrenze (nie senken, auch nicht gegenueber <ref>).
+// --floor-schreiben schreibt die gemessene Zahl dorthin (danach committen).
+// Optionen dazu: [--base <git-ref>] [--floor <pfad>] [--summary <pfad>]
 // (Standard fuer --summary: Umgebungsvariable GITHUB_STEP_SUMMARY).
-import { appendFileSync, existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { join, resolve } from 'node:path'
 
 const KENNUNG = /(?<![A-Za-z0-9])[A-Z][A-Z0-9]{0,3}-\d{3}(?!\d)/g
 const TEST_DATEI = /\.(test|spec)\.(ts|tsx|mjs|js)$/
 // Aufrufname nicht nach '.', Wortzeichen oder '$' (sonst zaehlt `/x/.test('...')`), Modifikatoren inkl. describe/step.
-const AUFRUF = /(?<![.\w$])(?:it|test|describe)((?:\.(?:each|skip|only|todo|concurrent|fails|fail|fixme|sequential|step|for|describe))*)\s*(?=[(`])/g
+const AUFRUF = /(?<![.\w$])(x?)(it|test|describe)((?:\.(?:each|skip|only|todo|concurrent|fails|fail|fixme|sequential|step|for|describe))*)\s*(?=[(`])/g
 
 function parseArgs(argv) {
   const o = { strict: false }
@@ -46,7 +52,6 @@ function parseArgs(argv) {
     else if (a === '--plan') o.plan = wert()
     else if (a === '--scan') o.scan = wert().split(',')
     else if (a === '--base') o.base = wert()
-    else if (a === '--base-floor') o.baseFloor = wert()
     else if (a === '--floor') o.floor = wert()
     else if (a === '--summary') o.summary = wert()
     else if (a === '--floor-schreiben') o.floorSchreiben = true
@@ -145,46 +150,100 @@ function stringsMaskieren(src) {
 
 /** Modifikatoren, die einen Test nicht regulaer laufen lassen. */
 const NICHT_REGULAER = /\.(?:skip|todo|fails|fail|fixme)(?![A-Za-z])/
+/** Unbedingte Markierung im Rumpf: test.fail(true, ..), test.fixme(), test.skip(), ctx.skip(). Bedingte (test.skip(!desktop, ..)) bleiben regulaer. */
+const UNBEDINGT = /(?<![.\w$])(?:test|it|ctx|context|testInfo)\.(?:fail|fixme|skip)\(\s*(?:true\s*)?[,)]/
 
 /**
  * Texte, in denen Kennungen als Test-Nachweis zaehlen: Testtitel und each-Tabellen.
- * Liefert { text, regulaer }; regulaer ist false bei skip/todo/fails/fail/fixme am Aufruf
- * oder wenn der Test in einem describe.skip / describe.todo steht.
+ * Liefert { text, regulaer }; regulaer ist false bei skip/todo/fails/fail/fixme am Aufruf, bei x-Praefix
+ * (xit/xtest/xdescribe), bei unbedingter Markierung im Rumpf oder wenn der Eintrag in einem
+ * uebersprungenen Bereich (describe.skip, test.describe.fixme, test.skip mit Schritten darin) steht.
  */
 function testTexte(quelltext) {
   const src = ohneKommentare(quelltext)
   const maske = stringsMaskieren(src)
-  const texte = []
-  const uebersprungen = [] // [von, bis) Bereiche von describe.skip/todo
+  const aufrufe = []
   AUFRUF.lastIndex = 0
   let m
   // Suche in der maskierten Kopie (Strings leer), Auslesen im Original gleicher Laenge:
   // `const s = "it('X-001')"` ist kein Test.
   while ((m = AUFRUF.exec(maske)) !== null) {
-    const mods = m[1]
-    const start = m.index
-    const ab = AUFRUF.lastIndex
-    const istDescribe = m[0].startsWith('describe')
-    let regulaer = !NICHT_REGULAER.test(mods)
-    if (!regulaer && istDescribe) {
-      const ende = src[ab] === '`' ? stringEnde(src, ab) : klammerEnde(src, ab, '(', ')')
-      const tabelle = mods.includes('.each') || mods.includes('.for')
-      // describe.each(tabelle)('Titel', fn): Rumpf liegt hinter der Tabelle
-      uebersprungen.push([start, tabelle ? klammerEnde(src, ende, '(', ')') : ende])
-    }
-    if (mods.includes('.each') || mods.includes('.for')) {
-      // it.each([...])('Titel', fn) bzw. it.each`tabelle`('Titel', fn)
-      const tabelleEnde = src[ab] === '`' ? stringEnde(src, ab) : klammerEnde(src, ab, '(', ')')
-      texte.push({ text: src.slice(ab, tabelleEnde), regulaer, start })
-      texte.push({ text: erstesStringLiteral(src, tabelleEnde), regulaer, start })
-    } else {
-      texte.push({ text: erstesStringLiteral(src, ab), regulaer, start })
-    }
+    const mods = m[3]
+    aufrufe.push({ start: m.index, ab: AUFRUF.lastIndex, mods, x: m[1] === 'x', behaelter: m[2] === 'describe' || mods.includes('.describe'), schritt: mods.includes('.step'), titel: mods.includes('.each') || mods.includes('.for') || erstesStringLiteral(src, AUFRUF.lastIndex) !== '' })
   }
+  const texte = []
+  const uebersprungen = [] // [von, bis) Bereiche, deren Inhalt nicht regulaer ist
+  aufrufe.forEach((a, i) => {
+    const tabelle = a.mods.includes('.each') || a.mods.includes('.for')
+    const tabelleEnde = tabelle ? (src[a.ab] === '`' ? stringEnde(src, a.ab) : klammerEnde(src, a.ab, '(', ')')) : a.ab
+    let regulaer = !a.x && !NICHT_REGULAER.test(a.mods)
+    // Ende des Aufrufs. Ein Test kann keinen weiteren Test (nur Schritte) enthalten: die naechste Nicht-Schritt-
+    // Deklaration begrenzt den Rumpf, damit eine unausgewogene Klammer (Regex-Literal, Apostroph) nicht ueberlaeuft.
+    const rumpfEnde = () => {
+      const roh = tabelle ? klammerEnde(src, tabelleEnde, '(', ')') : klammerEnde(src, a.ab, '(', ')')
+      if (a.behaelter) return roh
+      // Markierungen im Rumpf (test.fail(true, ..)) haben keinen Titel und begrenzen nichts.
+      const naechste = aufrufe.slice(i + 1).find((n) => !n.schritt && n.titel)
+      return naechste ? Math.min(roh, naechste.start) : roh
+    }
+    if (!regulaer) {
+      uebersprungen.push([a.start, rumpfEnde()])
+    } else if (!a.behaelter && !a.schritt) {
+      const ende = rumpfEnde()
+      if (UNBEDINGT.test(maske.slice(tabelle ? tabelleEnde : a.ab + 1, ende))) {
+        regulaer = false
+        uebersprungen.push([a.start, ende])
+      }
+    }
+    if (tabelle) {
+      texte.push({ text: src.slice(a.ab, tabelleEnde), regulaer, start: a.start })
+      texte.push({ text: erstesStringLiteral(src, tabelleEnde), regulaer, start: a.start })
+    } else {
+      texte.push({ text: erstesStringLiteral(src, a.ab), regulaer, start: a.start })
+    }
+  })
   return texte.map((t) => ({
     text: t.text,
     regulaer: t.regulaer && !uebersprungen.some(([von, bis]) => t.start > von && t.start < bis),
   }))
+}
+
+/** Zaehlt Kennungen mit regulaerem Test (gefunden) bzw. nur :teil-Test (teilweise) unter root/scan. */
+function messe(root, scan, istKennung) {
+  const gefunden = new Set()
+  const teilweise = new Set()
+  const dateien = sammleTestDateien(root, scan)
+  for (const datei of dateien) {
+    for (const t of testTexte(readFileSync(datei, 'utf8'))) {
+      if (!t.regulaer) continue
+      for (const k of t.text.matchAll(KENNUNG)) {
+        if (!istKennung(k[0])) continue
+        // :teil mit Wortgrenze (":teilweise" ist keine Markierung)
+        if (/^:teil(?![\p{L}\d])/u.test(t.text.slice(k.index + k[0].length))) teilweise.add(k[0])
+        else gefunden.add(k[0])
+      }
+    }
+  }
+  return { gefunden, teilweise, dateien }
+}
+
+/** Entpackt den Stand von <ref> (git archive) nach tmp und misst dort; raeumt immer auf. */
+function messeRef(root, ref, scan, istKennung, fehler) {
+  const tmp = mkdtempSync(join(tmpdir(), 'szenario-base-'))
+  try {
+    const baum = execFileSync('git', ['ls-tree', '--name-only', ref], { cwd: root, encoding: 'utf8' }).split('\n')
+    const pfade = scan.filter((x) => baum.includes(x))
+    if (pfade.length > 0) {
+      const tar = execFileSync('git', ['archive', '--format=tar', ref, '--', ...pfade], { cwd: root, maxBuffer: 1024 * 1024 * 1024 })
+      execFileSync('tar', ['-x', '-C', tmp], { input: tar })
+    }
+    return messe(tmp, scan, istKennung)
+  } catch (e) {
+    fehler.push(`Ratchet: Stand von "${ref}" nicht messbar (${e instanceof Error ? e.message.split('\n')[0] : String(e)})`)
+    return null
+  } finally {
+    rmSync(tmp, { recursive: true, force: true })
+  }
 }
 
 function sammleTestDateien(root, scan) {
@@ -231,14 +290,20 @@ function kennungenDerAufgabe(planPfad, task) {
   return ids
 }
 
-/** Ratchet: Zahl "MVP-Kennung mit regulaerem Test" gegen Untergrenze und Hauptzweig. */
-function ratchet(opt, root, ids, zahlen, fehler) {
+/** Wie viele verlorene Kennungen die Job-Summary hoechstens nennt (stdout nennt alle). */
+const SUMMARY_MAX = 30
+
+/**
+ * Ratchet: Zahl "MVP-Kennung mit regulaerem Test" gegen den GEMESSENEN Stand von <base> (git archive,
+ * gleiche Zaehlregel) und gegen die absolute Untergrenze in szenario-floor.json (nie senken).
+ */
+function ratchet(opt, root, scan, istKennung, ids, zahlen, fehler) {
   const floorPfad = opt.floor ?? resolve(root, 'tests/meta/szenario-floor.json')
   const hinweise = []
   const aktuell = ids.length
   if (opt.floorSchreiben) {
     const inhalt = {
-      _hinweis: 'Untergrenze fuer "MVP-Kennung mit regulaerem Test" (TA-CI). Nur anheben, nie senken; erzeugt mit `node scripts/scenario-tests.mjs --floor-schreiben`.',
+      _hinweis: 'Absolute Untergrenze fuer "MVP-Kennung mit regulaerem Test" (TA-CI), nie senken; der Ratchet misst main zusaetzlich selbst. Erzeugt mit `node scripts/scenario-tests.mjs --floor-schreiben`.',
       mitTest: aktuell,
       kennungen: ids,
     }
@@ -248,12 +313,10 @@ function ratchet(opt, root, ids, zahlen, fehler) {
   }
   let eigener = null
   if (existsSync(floorPfad)) eigener = JSON.parse(readFileSync(floorPfad, 'utf8'))
-  else if (opt.base || opt.baseFloor) fehler.push(`Ratchet: ${floorPfad} fehlt`)
-  let haupt = null
-  if (opt.baseFloor) {
-    if (existsSync(opt.baseFloor)) haupt = JSON.parse(readFileSync(opt.baseFloor, 'utf8'))
-    else fehler.push(`--base-floor ${opt.baseFloor} nicht gefunden`)
-  } else if (opt.base) {
+  else if (opt.base) fehler.push(`Ratchet: ${floorPfad} fehlt`)
+
+  let haupt = null // { mitTest, kennungen } gemessen auf <base>
+  if (opt.base) {
     // Fail-closed: unbekannte Ref (Tippfehler, flacher Checkout) ist ein Fehler.
     let refDa = true
     try {
@@ -263,34 +326,46 @@ function ratchet(opt, root, ids, zahlen, fehler) {
       fehler.push(`Ratchet: Base-Ref "${opt.base}" existiert nicht - Vergleich mit dem Hauptzweig nicht moeglich (Ref pruefen, fetch-depth)`)
     }
     if (refDa) {
+      const m = messeRef(root, opt.base, scan, istKennung, fehler)
+      if (m) haupt = { mitTest: m.gefunden.size, kennungen: [...m.gefunden].sort() }
+      // Die Untergrenze des Hauptzweigs darf nicht gesenkt werden. Fehlende Datei: Hinweis, defekte Datei: rot.
+      let text = null
       try {
-        haupt = JSON.parse(execFileSync('git', ['show', `${opt.base}:tests/meta/szenario-floor.json`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }))
+        text = execFileSync('git', ['show', `${opt.base}:tests/meta/szenario-floor.json`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
       } catch {
-        hinweise.push(`${opt.base} kennt tests/meta/szenario-floor.json noch nicht (erster Merge) - Vergleich uebersprungen`)
+        hinweise.push(`${opt.base} kennt tests/meta/szenario-floor.json noch nicht (erster Merge) - Senken-Pruefung der Datei uebersprungen`)
+      }
+      if (text !== null) {
+        let hauptFloor = null
+        try {
+          hauptFloor = JSON.parse(text)
+        } catch {
+          fehler.push(`Ratchet: tests/meta/szenario-floor.json auf ${opt.base} ist kein gueltiges JSON`)
+        }
+        if (hauptFloor && eigener && eigener.mitTest < hauptFloor.mitTest) fehler.push(`Untergrenze ${eigener.mitTest} < Untergrenze ${hauptFloor.mitTest} auf ${opt.base} (Senken verboten)`)
       }
     }
   }
   if (eigener && aktuell < eigener.mitTest) fehler.push(`Szenario-Abdeckung: ${aktuell} Kennungen mit regulaerem Test < Untergrenze ${eigener.mitTest} in der Datei`)
-  if (haupt) {
-    if (aktuell < haupt.mitTest) fehler.push(`Szenario-Abdeckung: ${aktuell} Kennungen mit regulaerem Test < Hauptzweig ${haupt.mitTest} (Ratchet)`)
-    if (eigener && eigener.mitTest < haupt.mitTest) fehler.push(`Untergrenze ${eigener.mitTest} < Hauptzweig ${haupt.mitTest} (Senken verboten)`)
-  }
+  if (haupt && aktuell < haupt.mitTest) fehler.push(`Szenario-Abdeckung: ${aktuell} Kennungen mit regulaerem Test < Hauptzweig ${haupt.mitTest} (gemessen, Ratchet)`)
   if (eigener && aktuell > eigener.mitTest) hinweise.push(`Untergrenze kann angehoben werden: ${aktuell} > ${eigener.mitTest} (Datei per Commit anpassen)`)
-  const verloren = haupt?.kennungen ? haupt.kennungen.filter((k) => !ids.includes(k)) : []
+  const verloren = haupt ? haupt.kennungen.filter((k) => !ids.includes(k)) : []
   for (const h of hinweise) console.log(`\nHINWEIS: ${h}`)
-  if (verloren.length > 0) console.log(`\nGegenueber ${opt.baseFloor ?? opt.base} ohne regulaeren Test: ${verloren.join(', ')}`)
+  if (verloren.length > 0) console.log(`\nGegenueber ${opt.base} ohne regulaeren Test (neu verloren): ${verloren.join(', ')}`)
 
   const summaryPfad = opt.summary ?? process.env.GITHUB_STEP_SUMMARY
   if (summaryPfad) {
     const diff = haupt ? aktuell - haupt.mitTest : null
+    const genannt = verloren.slice(0, SUMMARY_MAX).map((k) => `\`${k}\``).join(', ')
+    const rest = verloren.length > SUMMARY_MAX ? ` ... und ${verloren.length - SUMMARY_MAX} weitere (siehe scenario-bericht.txt)` : ''
     const md = [
       '### Szenario-Abdeckung (MVP-Kennungen)',
       '',
-      '| mit Test | teilweise | ohne Test | Hauptzweig | Veraenderung | Untergrenze |',
+      '| mit Test | teilweise | ohne Test | Hauptzweig (gemessen) | Veraenderung | Untergrenze |',
       '|---:|---:|---:|---:|---:|---:|',
       `| ${aktuell} | ${zahlen.nurTeilweise.length} | ${zahlen.ganzOhne.length} | ${haupt ? haupt.mitTest : '-'} | ${diff === null ? '-' : diff > 0 ? `+${diff}` : diff} | ${eigener ? eigener.mitTest : '-'} |`,
       '',
-      verloren.length > 0 ? `Neu ohne regulaeren Test: ${verloren.map((k) => `\`${k}\``).join(', ')}` : 'Keine Kennung gegenueber dem Hauptzweig verloren.',
+      verloren.length > 0 ? `Neu ohne regulaeren Test: ${genannt}${rest}` : 'Keine Kennung gegenueber dem Hauptzweig verloren.',
       '',
     ].join('\n')
     appendFileSync(summaryPfad, md + '\n')
@@ -322,20 +397,8 @@ function main() {
   }
   for (const k of nachweis.kennungen) if (!recordVon.has(k)) fehler.push(`Nachweis ${k} ist keine MVP-Kennung`)
 
-  const gefunden = new Set() // mindestens ein regulaerer Test
-  const teilweise = new Set() // nur :teil-markierte regulaere Tests
-  const dateien = sammleTestDateien(root, opt.scan ?? ['src', 'tests', 'scripts'])
-  for (const datei of dateien) {
-    for (const t of testTexte(readFileSync(datei, 'utf8'))) {
-      if (!t.regulaer) continue
-      for (const k of t.text.matchAll(KENNUNG)) {
-        if (!recordVon.has(k[0])) continue
-        const teil = t.text.startsWith(':teil', k.index + k[0].length)
-        if (teil) teilweise.add(k[0])
-        else gefunden.add(k[0])
-      }
-    }
-  }
+  const scan = opt.scan ?? ['src', 'tests', 'scripts']
+  const { gefunden, teilweise, dateien } = messe(root, scan, (k) => recordVon.has(k))
 
   let zuPruefen = [...recordVon.keys()]
   if (opt.task) {
@@ -367,7 +430,7 @@ function main() {
   }
   if (opt.task) console.log(`\nOhne Test (Aufgabe ${opt.task}): ${ohneTest.join(', ') || '-'}`)
 
-  if (!opt.task) ratchet(opt, root, [...gefunden].filter((k) => recordVon.has(k)).sort(), { mitTest, nurTeilweise, ganzOhne }, fehler)
+  if (!opt.task) ratchet(opt, root, scan, (k) => recordVon.has(k), [...gefunden].sort(), { mitTest, nurTeilweise, ganzOhne }, fehler)
 
   if (opt.strict && ohneTest.length > 0) fehler.push(`${ohneTest.length} MVP-Kennungen ohne Test (--strict)`)
   if (fehler.length > 0) {
