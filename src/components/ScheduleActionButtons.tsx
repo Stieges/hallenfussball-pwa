@@ -1,4 +1,6 @@
 import { useState, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/Button';
 import { Icons } from './ui/Icons';
 import { ShareDialog } from './dialogs/ShareDialog';
@@ -20,6 +22,8 @@ export const ScheduleActionButtons = ({
   standings,
   variant = 'organizer',
 }: ScheduleActionButtonsProps) => {
+  const { t } = useTranslation('tournament');
+  const navigate = useNavigate();
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showPDFDialog, setShowPDFDialog] = useState(false);
 
@@ -41,6 +45,8 @@ export const ScheduleActionButtons = ({
   };
 
   const isMobile = variant === 'public'; // Public view uses FAB style on mobile
+  // Über die alte Zuschauer-Adresse gibt es kein PDF (@BM-057); das PDF der Zuschauer-Seite kommt über `PublicPdfButton`
+  const withPdf = variant === 'organizer';
 
   return (
     <>
@@ -55,17 +61,20 @@ export const ScheduleActionButtons = ({
           icon={<Icons.Share />}
           onClick={() => setShowShareDialog(true)}
         >
-          Teilen
+          {t('scheduleActions.share')}
         </Button>
 
-        <Button
-          variant="secondary"
-          size="md"
-          icon={<Icons.Download />}
-          onClick={() => setShowPDFDialog(true)}
-        >
-          Als PDF
-        </Button>
+        {withPdf ? (
+          <Button
+            variant="secondary"
+            size="md"
+            icon={<Icons.Download />}
+            onClick={() => setShowPDFDialog(true)}
+            data-testid="schedule-action-pdf"
+          >
+            {t('pdfExport.open')}
+          </Button>
+        ) : null}
       </div>
 
       {/* Share Dialog */}
@@ -78,14 +87,20 @@ export const ScheduleActionButtons = ({
         isPublic={tournament.isPublic}
       />
 
-      {/* PDF Export Dialog */}
-      <PDFExportDialog
-        isOpen={showPDFDialog}
-        onClose={() => setShowPDFDialog(false)}
-        tournament={tournament}
-        schedule={schedule}
-        standings={standings}
-      />
+      {/* PDF-Dialog (Veranstalter); die Wege „Online teilen“ und „Sichtbarkeit ändern“ führen zu den Schaltern der Verwaltung */}
+      {withPdf ? (
+        <PDFExportDialog
+          isOpen={showPDFDialog}
+          onClose={() => setShowPDFDialog(false)}
+          tournament={tournament}
+          schedule={schedule}
+          standings={standings}
+          onOpenVisibility={() => {
+            setShowPDFDialog(false);
+            void navigate(`/tournament/${tournament.id}/admin/visibility`);
+          }}
+        />
+      ) : null}
 
       {/* Responsive Styles */}
       <style>{`

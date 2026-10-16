@@ -121,10 +121,21 @@ const SCORE_ALLOWLIST: Record<string, { reason: string; count: number }> = {
     reason:
       'Lesende Abbildung für Anzeige/Export: baut nur ein Anzeige- bzw. Exportobjekt, speichert nichts',
   },
-  'components/dialogs/PDFExportDialog.tsx': {
-    count: 4,
+  // B-28 (Spur C): das Einmischen der Turnier-Spiele zog aus PDFExportDialog.tsx nach lib/pdf
+  'lib/pdf/tournamentState.ts': {
+    count: 2,
     reason:
-      'Lesende Abbildung für Anzeige/Export: baut nur ein Anzeige- bzw. Exportobjekt, speichert nichts',
+      'Lesende Abbildung für den PDF-Export: mischt den Stand der Turnier-Spiele in eine Kopie des Plans, speichert nichts',
+  },
+  'lib/pdf/matchResult.ts': {
+    count: 2,
+    reason:
+      'Lesende Abbildung für den PDF-Export: Ergebniszustand einer Zeile (ResultState) aus dem Spiel, speichert nichts',
+  },
+  'lib/pdf/render/scoreCell.ts': {
+    count: 2,
+    reason:
+      'Lesende Abbildung für den PDF-Export: Inhalt der Ergebniszelle aus dem Ergebniszustand, speichert nichts',
   },
   'components/schedule/CorrectionBanner.tsx': {
     count: 2,

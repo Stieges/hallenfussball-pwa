@@ -117,21 +117,84 @@
       "confirmSwitch": "Switch anyway"
     }
   },
+  "scheduleActions": {
+    "share": "Share"
+  },
   "pdfExport": {
-    "title": "Export as PDF",
-    "error": "Error exporting PDF. Please try again.",
+    "title": "As PDF",
+    "titleViewer": "Schedule as PDF",
+    "open": "As PDF",
+    "groups": {
+      "print": "What should be printed?",
+      "hang": "To put up"
+    },
+    "cards": {
+      "schedule": {
+        "title": "Schedule",
+        "description": "All matches with time, pitch and teams."
+      },
+      "blank": {
+        "title": "Schedule without results",
+        "description": "With empty fields for writing in by hand."
+      },
+      "final": {
+        "title": "Final result",
+        "description": "All places and the results, after the tournament is closed.",
+        "reason": "Only after the tournament is closed"
+      },
+      "notice": {
+        "title": "Poster with QR code",
+        "description": "Tournament name, QR code and short instructions for hanging up.",
+        "reason": "Only after sharing online"
+      }
+    },
+    "viewer": {
+      "description": "All matches with time, pitch and teams as a PDF to save or print."
+    },
+    "format": "Format: A4 portrait",
+    "hints": {
+      "title": "Before saving",
+      "notShared": "The QR code appears once the tournament is shared online.",
+      "shareOnline": "Share online",
+      "changeVisibility": "Change visibility",
+      "viewerHidden": "Results and standings are hidden – the PDF does not show them.",
+      "notice": "The poster only shows the QR code for the spectator page, no results and no standings.",
+      "visibility": {
+        "tables": "Standings are hidden from spectators – the PDF does not show them.",
+        "results": "Results are hidden from spectators – the PDF does not show them.",
+        "resultsAndTables": "Results and standings are hidden from spectators – the PDF does not show them."
+      },
+      "fontTitle": "Special characters may appear as ?",
+      "fontBody": "The font could not be loaded. The PDF is created with a substitute font, all content is included.",
+      "names_one": "One team name contains characters that are printed as “?”:",
+      "names_other": "{{count}} team names contain characters that are printed as “?”:",
+      "fields_one": "One entry contains characters that are printed as “?”:",
+      "fields_other": "{{count}} entries contain characters that are printed as “?”:",
+      "teamName": "Team name",
+      "printedAs": "is printed as",
+      "proceed": "The PDF is created anyway.",
+      "changeNames": "The tournament organizer can change the names in the tournament.",
+      "changeFields": "The tournament organizer can change the entries in the tournament.",
+      "logoLeft": "The left header graphic could not be used and is missing from the PDF.",
+      "logoRight": "The right header graphic could not be used and is missing from the PDF."
+    },
+    "offline": {
+      "title": "Offline – as of {{date}} {{time}}",
+      "body": "The PDF is created from the data on this device anyway."
+    },
+    "error": {
+      "title": "The PDF could not be created",
+      "body": "No file was saved. Please try again."
+    },
+    "done": {
+      "title": "PDF saved"
+    },
     "cancel": "Cancel",
-    "export": "Export",
-    "exporting": "Exporting...",
-    "options": {
-      "scoresLabel": "Scores",
-      "withScores": "With scores",
-      "withScoresDesc": "Shows current results in PDF",
-      "withoutScores": "Without scores",
-      "withoutScoresDesc": "Empty fields for manual entry",
-      "includeStandings": "Include tables",
-      "includeStandingsDesc": "Shows group tables in PDF"
-    }
+    "save": "Save as PDF",
+    "creating": "Creating …",
+    "saveAnyway": "Save anyway",
+    "retry": "Try again",
+    "close": "Close"
   },
   "teams": {
     "title": "Manage Teams",
@@ -823,5 +886,151 @@
       "cancelled": "cancelled",
       "awarded": "awarded"
     }
+  },
+  "pdf": {
+    "organizer": "Organizer",
+    "hall": "Hall",
+    "matchDuration": "Match duration",
+    "mode": "Format",
+    "appointment": "Date",
+    "appointmentLine": "{{day}} · Start {{start}} · Expected end {{end}} · {{fields}}",
+    "fieldOne": "1 field",
+    "fieldMany": "{{n}} fields",
+    "participants": "Teams",
+    "groupStage": "Group stage",
+    "standingsOfGroup": "Standings – {{group}}",
+    "finalRanking": "Final ranking",
+    "placementPending": {
+      "afterFinal": "The final ranking is decided after the final",
+      "afterLast": "The final ranking is decided after the last match"
+    },
+    "nr": "No.",
+    "timeHeader": "Time",
+    "field": "Pitch",
+    "group": "Grp",
+    "home": "Home",
+    "result": "Result",
+    "away": "Away",
+    "referee": "Ref.",
+    "live": "live",
+    "skipped": "not played",
+    "corrected": "corrected {{time}}",
+    "afterOvertime": "after extra time",
+    "shootout": "Penalty shootout",
+    "pos": "Pos",
+    "team": "Team",
+    "played": "P",
+    "won": "W",
+    "drawn": "D",
+    "lost": "L",
+    "goals": "Goals",
+    "diff": "Diff",
+    "points": "Pts",
+    "thirdPlace": "Match for 3rd place",
+    "fifthSixth": "Match for 5th place",
+    "seventhEighth": "Match for 7th place",
+    "sectionTables": "Standings",
+    "sectionFinals": "Final round",
+    "timesTentative": "Times expected",
+    "contact": "Contact person",
+    "contactLine": "Contact person: {{contact}}",
+    "fontFallbackNote": "Special characters may appear as ?. The font could not be loaded. The PDF is created with a substitute font, all content is included.",
+    "noDate": "No date",
+    "kicker": {
+      "plan": "Schedule"
+    },
+    "durationMinutes": "{{minutes}} min",
+    "modeGroupsAndFinals": "Groups + final round",
+    "modeRoundRobin": "Round robin",
+    "unrenderableName": "Team name “{{name}}” contains characters that are printed as “?” in the PDF",
+    "phase": {
+      "roundOf16": "Round of 16",
+      "quarterfinal": "Quarter-finals",
+      "semifinal": "Semi-finals",
+      "final": "Final"
+    },
+    "groupName": "Group {{id}}",
+    "unrenderableField": "{{field}} “{{text}}” contains characters that are printed as “?” in the PDF",
+    "tournamentTitle": "Tournament name",
+    "ageClass": "Age group",
+    "rules": {
+      "label": {
+        "mode": "Mode",
+        "tiebreak": "Tiebreakers",
+        "duration": "Match time",
+        "rulebook": "Rulebook",
+        "ko": "Knockout"
+      },
+      "modeRoundRobin": "Round robin",
+      "criterion": {
+        "points": "Points",
+        "goalDifference": "Goal difference",
+        "goalsFor": "Goals",
+        "directComparison": "head-to-head"
+      },
+      "criteriaJoin": " – ",
+      "join": " · ",
+      "pointsLine": "Win {{win}}, draw {{draw}} {{unit}}",
+      "pointsLoss": ", loss {{loss}} {{unit}}",
+      "pointOne": "point",
+      "pointMany": "points",
+      "groupDuration": "Groups {{duration}}",
+      "finalDuration": "Final round {{duration}}",
+      "penalty": "Time penalty {{duration}}",
+      "seconds": "{{seconds}} sec",
+      "round": {
+        "roundOf16": "round of 16",
+        "quarterfinal": "quarter-finals",
+        "semifinal": "semi-finals",
+        "final": "final",
+        "placement": "placement matches",
+        "thirdPlace": "match for 3rd place"
+      },
+      "koAll": "{{label}}: if drawn, {{rule}}",
+      "koRound": "{{round}}: if drawn, {{rule}}",
+      "ruleShootout": "penalty shootout, {{shooters}}",
+      "ruleOvertimeThenShootout": "extra time, then penalty shootout, {{shooters}}",
+      "ruleGoldenGoal": "golden goal",
+      "shooters": "{{n}} shooters per team",
+      "shootersOne": "1 shooter per team"
+    },
+    "stand": "As of {{date}} {{time}}",
+    "offlineNote": "– offline, entries from other devices may be missing",
+    "footer": "{{title}} · {{stand}} · Page {{page}} of {{total}}",
+    "closedAt": "Final result – closed on {{date}} at {{time}}",
+    "matches": "Matches",
+    "qrCaption": {
+      "results": "Live results",
+      "plan": "Schedule on your phone"
+    },
+    "notice": {
+      "callPlan": "Schedule on your phone",
+      "callResults": "Schedule and results on your phone",
+      "step1": "1. Open the camera app on your phone",
+      "step2": "2. Point the camera at the QR code",
+      "step3": "3. Tap the link – no sign-up, no app.",
+      "addressLabel": "Or type into your browser:"
+    },
+    "logoUnusableLeft": "The left header graphic could not be used and is missing from the PDF",
+    "logoUnusableRight": "The right header graphic could not be used and is missing from the PDF",
+    "origin": {
+      "place": {
+        "first": "1st",
+        "second": "2nd",
+        "third": "3rd",
+        "fourth": "4th"
+      },
+      "placeNth": "{{n}}th",
+      "groupPlace": "{{place}} in {{group}}",
+      "round": {
+        "r16": "Round of 16",
+        "qf": "Quarter-final",
+        "semi": "Semi-final"
+      },
+      "winner": "Winner {{round}} {{n}}",
+      "loser": "Loser {{round}} {{n}}",
+      "undecided": "to be decided"
+    },
+    "finalTable": "Final standings"
   }
 }

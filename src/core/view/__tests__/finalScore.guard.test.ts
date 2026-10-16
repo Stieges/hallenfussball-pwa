@@ -40,6 +40,9 @@ const ALLOWED: Readonly<Record<string, string>> = {
   'components/match-cockpit/PenaltyShootoutDialog.tsx': 'Cockpit, bis Cockpit 4.3',
   'components/match-cockpit/TiebreakerBanner.tsx': 'Cockpit, bis Cockpit 4.3',
   'hooks/engineEventEditingSupport.ts': 'Cockpit-Ereignisbearbeitung, bis Cockpit 4.3',
+  // PDF (Spur C, mit main gekommen): rechnet die Endstand-Darstellung selbst – ÜBERGANG bis A-36d (dann MatchView.score)
+  'lib/pdf/matchResult.ts': 'PDF liest Verlängerung/Strafstoß selbst, bis A-36d',
+  'lib/pdf/tournamentState.ts': 'PDF-Eingangstyp, transportiert, bis A-36d',
 };
 
 function sourceFiles(dir: string): string[] {

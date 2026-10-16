@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "postbuild": "node scripts/check-pdf-font-precache.cjs",
     "preview": "vite preview",
     "test:sw-precache": "rm -rf dist-swcheck && VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= vite build --outDir dist-swcheck && node scripts/check-sw-precache.mjs dist-swcheck",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
@@ -91,6 +92,7 @@
     "jsdom": "^30.1.0",
     "lint-staged": "^17.5.1",
     "node-localstorage": "^3.0.5",
+    "pdfjs-dist": "6.3.289",
     "rollup-plugin-visualizer": "^7.1.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.1",

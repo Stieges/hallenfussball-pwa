@@ -12,7 +12,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Tournament } from '../types/tournament';
 import type { LiveMatch } from '../core/models/LiveMatch';
-import { MatchCommands, MatchCommandRejectedError } from '../core/match/client';
+import { MatchCommands, MatchCommandRejectedError, type CommandResult } from '../core/match/client';
 import type { MatchContext } from '../core/match';
 import type { MatchEngineContextValue } from '../features/match-engine/matchEngineContextInstance';
 import { useToast } from '../components/ui/Toast/ToastContext';
@@ -20,7 +20,7 @@ import { captureFeatureError } from '../lib/sentry';
 import { useActorRole } from './useActorRole';
 import { serverRulesFor } from './engineServerRules';
 import { buildValidMatches } from './useEngineMatches';
-import { mapCardTypeToEngine, type EngineCommandHandlers } from './engineCommandWiringTypes';
+import { mapCardTypeToEngine, type EngineCommandHandlers, type GoalHandlerOptions } from './engineCommandWiringTypes';
 import { rejectionMessageKey } from './engineCommandWiringHelpers';
 
 export type { EngineCommandHandlers } from './engineCommandWiringTypes';
@@ -79,12 +79,14 @@ export function useEngineCommandWiring(
     showWarning(t('engine.invalid'));
   }, [showWarning, t]);
 
+  /** B-07: liefert das Ergebnis des Befehls (Ereignis-ID), `null` bei gefangenem Fehler. */
   const run = useCallback(
-    async (fn: () => Promise<void>): Promise<void> => {
+    async <T,>(fn: () => Promise<T>): Promise<T | null> => {
       try {
-        await fn();
+        return await fn();
       } catch (error) {
         handleEngineError(error);
+        return null;
       }
     },
     [handleEngineError],
@@ -146,10 +148,11 @@ export function useEngineCommandWiring(
   // W11 (Fixrunde 4): die uebrigen Handler teilen sich dieselbe Form (Engine-Wache, `ctx`-Nachschlag,
   // `run`). Ohne Engine-Weg: Ablehnung statt Ausfuehrung (A-08d2b).
   const runSimpleCommand = useCallback(
-    (matchId: string, commandFn: (cmd: MatchCommands, ctx: MatchContext) => Promise<void>): Promise<void> => {
+    async (matchId: string, commandFn: (cmd: MatchCommands, ctx: MatchContext) => CommandResult): Promise<string | null> => {
       const ctx = isEngineMatch(matchId) && commands ? ctxByExternalId.get(matchId) : undefined;
       if (!commands || !ctx) {
-        return reject();
+        await reject();
+        return null;
       }
       return run(() => commandFn(commands, ctx));
     },
@@ -172,23 +175,21 @@ export function useEngineCommandWiring(
   );
 
   const handleGoal = useCallback(
-    (
-      matchId: string,
-      teamId: string,
-      delta: 1 | -1,
-      options?: { playerNumber?: number; assists?: number[]; incomplete?: boolean },
-    ): Promise<void> => {
+    async (matchId: string, teamId: string, delta: 1 | -1, options?: GoalHandlerOptions): Promise<string | null> => {
       // PC14: nur +1 -- Minus/Rueckgaengig ist RETRACT (C3b, `useEngineEventEditing`).
       if (delta !== 1) {
-        return reject();
+        await reject();
+        return null;
       }
-      return runSimpleCommand(matchId, (cmd, ctx) => cmd.goal(matchId, ctx, actor, teamId.toLowerCase(), false, options));
+      // L2 (@SL-022): `own` waehlt OWN_GOAL; `teamId` ist dann das Team, das das Eigentor schoss.
+      const { own = false, ...goalOptions } = options ?? {};
+      return runSimpleCommand(matchId, (cmd, ctx) => cmd.goal(matchId, ctx, actor, teamId.toLowerCase(), own, goalOptions));
     },
     [actor, runSimpleCommand, reject],
   );
 
   const handleCard = useCallback(
-    (matchId: string, teamId: string, cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', options?: { playerNumber?: number }) =>
+    (matchId: string, teamId: string, cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', options?: { playerNumber?: number; clockMs?: number; section?: number }) =>
       runSimpleCommand(
         matchId,
         (cmd, ctx) => cmd.card(matchId, ctx, actor, teamId.toLowerCase(), mapCardTypeToEngine(cardType), options),
@@ -197,7 +198,7 @@ export function useEngineCommandWiring(
   );
 
   const handleTimePenalty = useCallback(
-    (matchId: string, teamId: string, options?: { playerNumber?: number; durationSeconds?: number }) =>
+    (matchId: string, teamId: string, options?: { playerNumber?: number; durationSeconds?: number; clockMs?: number; section?: number }) =>
       runSimpleCommand(matchId, (cmd, ctx) => cmd.timePenalty(matchId, ctx, actor, teamId.toLowerCase(), options)),
     [runSimpleCommand, actor],
   );

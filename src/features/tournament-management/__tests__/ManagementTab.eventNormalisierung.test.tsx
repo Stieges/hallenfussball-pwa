@@ -132,7 +132,7 @@ function ansichtUebergeben(aufbau: Aufbau): void {
 
 async function ereignis(
   spiel: EingerichtetesEngineSpiel,
-  aktion: (cmd: MatchCommands, ctx: MatchContext, matchId: string) => Promise<void>,
+  aktion: (cmd: MatchCommands, ctx: MatchContext, matchId: string) => Promise<unknown>,
 ): Promise<void> {
   await aktion(spiel.commands, spiel.ctx, spiel.matchId);
 }

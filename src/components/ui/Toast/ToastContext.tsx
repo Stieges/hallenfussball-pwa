@@ -136,6 +136,14 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
 };
 
 /**
+ * Wie `useToast`, liefert aber `null` ohne Provider. Für Komponenten, die auch ohne Provider rendern (Tests);
+ * in der App ist der `ToastProvider` immer vorhanden.
+ */
+export function useOptionalToast(): ToastContextValue | null {
+  return useContext(ToastContext);
+}
+
+/**
  * Hook to access toast functions
  *
  * @example
