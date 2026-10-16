@@ -13,12 +13,19 @@ import { useState, useCallback, useMemo, useEffect, type CSSProperties } from 'r
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
+import { useFoulCounts } from '../../hooks/useFoulCounts';
+import { useFoulThresholdWarning } from '../../hooks/useFoulThresholdWarning';
+import { useEngineEventEditing } from '../../hooks/useEngineEventEditing';
 import { SyncStatusIndicator } from '../../features/collaboration';
+import { OutboxNotice } from '../../features/collaboration/outbox/OutboxNotice';
+import { useOutboxStatus } from '../../features/collaboration/outbox/useOutboxStatus';
+import { useRejectedOutboxDialog } from '../../features/collaboration/outbox/useRejectedOutboxDialog';
+import { RejectedOutboxDialog } from '../../features/collaboration/outbox/RejectedOutboxDialog';
+import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
 import { getEffectiveScore } from '../../utils/matchScore';
 import type { LiveCockpitProps } from './types';
-import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
+import type { EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
-import sportGlossary from '../../i18n/glossary.json';
 
 // Sub-components
 import {
@@ -45,20 +52,11 @@ import { AudioActivationBanner } from '../match-cockpit/AudioActivationBanner';
 
 // Hooks
 import { useToast } from './hooks';
+import { useActivePenalties } from './hooks/useActivePenalties';
 
 // ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
-
-// BUG-010/L9: Shared event-type labels (was duplicated in handleEventUpdate + handleEventDelete)
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  GOAL: 'Tor',
-  YELLOW_CARD: 'Gelbe Karte',
-  RED_CARD: 'Rote Karte',
-  TIME_PENALTY: sportGlossary.terms.timePenalty.de,
-  SUBSTITUTION: 'Wechsel',
-  FOUL: 'Foul',
-};
 
 // Helper to get cockpit settings with defaults
 function getCockpitSettings(settings: MatchCockpitSettings | undefined): MatchCockpitSettings {
@@ -67,6 +65,11 @@ function getCockpitSettings(settings: MatchCockpitSettings | undefined): MatchCo
     ...settings,
   };
 }
+
+// F3b2: Toast-Schluessel je Kartentyp -- Modulebene statt useCallback-Abhaengigkeit (statisch).
+const CARD_TOAST_KEYS: Record<'YELLOW' | 'YELLOW_RED' | 'RED', 'toast.yellowCard' | 'toast.yellowRedCard' | 'toast.redCard'> = {
+  YELLOW: 'toast.yellowCard', YELLOW_RED: 'toast.yellowRedCard', RED: 'toast.redCard',
+};
 
 export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   fieldName,
@@ -105,6 +108,12 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 }) => {
   const { t } = useTranslation('cockpit');
 
+  // W1 (Nachtrag C3a-2a): nur einbinden -- OutboxNotice rendert selbst nichts, solange kein
+  // Ausgangs-Zustand vorliegt (kind === null).
+  const matchEngineContext = useMatchEngineContextOptional();
+  const outboxStatus = useOutboxStatus(matchEngineContext?.sender ?? null);
+  const handleOutboxReload = useCallback(() => window.location.reload(), []);
+
   // Get cockpit settings with defaults
   const cockpitSettings = useMemo(
     () => getCockpitSettings(cockpitSettingsProp),
@@ -131,7 +140,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // BUG-006: Track which team side triggered the penalty dialog
   const [pendingPenaltySide, setPendingPenaltySide] = useState<'home' | 'away' | null>(null);
   // BUG-007: Track which card type and team side triggered the card dialog
-  const [pendingCardType, setPendingCardType] = useState<'YELLOW' | 'RED' | null>(null);
+  const [pendingCardType, setPendingCardType] = useState<'YELLOW' | 'YELLOW_RED' | 'RED' | null>(null);
   const [pendingCardTeamSide, setPendingCardTeamSide] = useState<'home' | 'away' | null>(null);
   // BUG-009: Track which team side triggered the substitution dialog
   const [pendingSubstitutionSide, setPendingSubstitutionSide] = useState<'home' | 'away' | null>(null);
@@ -139,13 +148,13 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // M-1 FIX: Store only event ID, not the full object, to avoid stale data
   const [showEventEditDialog, setShowEventEditDialog] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
-  const [activePenalties, setActivePenalties] = useState<ActivePenalty[]>([]);
   // BUG-002: Event Log Bottom Sheet for Mobile
   const [showEventLogBottomSheet, setShowEventLogBottomSheet] = useState(false);
   // Overflow Menu (⋮ button in header)
 
-  const [homeFouls, setHomeFouls] = useState(0);
-  const [awayFouls, setAwayFouls] = useState(0);
+  // C3b-2b (G11): Foul-Zaehler aus den FOUL-Eintraegen in `events` -- ganzes Spiel, kein
+  // Halbzeit-Reset, kein lokales +1 (zurueckgenommenes zaehlt nicht, G6/RC13).
+  const { home: homeFouls, away: awayFouls } = useFoulCounts(currentMatch);
   // Seiten tauschen: Visuelle Darstellung der Teams vertauschen
   const [sidesSwapped, setSidesSwapped] = useState(false);
   // Settings Dialog
@@ -154,7 +163,29 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   const [showPenaltyDialog, setShowPenaltyDialog] = useState(false);
 
   // Toast notifications
-  const { toasts, showSuccess, showInfo, dismissToast } = useToast();
+  const { toasts, showSuccess, showInfo, showError: showToastError, dismissToast } = useToast();
+
+  // M7: 5-Fouls-Warnung als Effekt auf den Zaehler -- einmal je Team beim Erreichen von 5.
+  useFoulThresholdWarning(
+    { home: homeFouls, away: awayFouls },
+    { home: currentMatch?.homeTeam.name ?? '', away: currentMatch?.awayTeam.name ?? '' },
+    (teamName) => { showInfo(t('toast.foulWarning', { teamName })); },
+  );
+
+  // C3b-1: Minus/Rückgängig/Löschen/Bearbeiten (Engine-Spiele: RETRACT/AMEND) und Zeitstrafen-Countdown.
+  const editing = useEngineEventEditing({
+    tournamentId,
+    match: currentMatch,
+    readOnly,
+    legacy: { onGoal, onUndoLastEvent, onUpdateEvent, onDeleteEvent },
+    notify: { success: showSuccess, error: showToastError },
+  });
+  const penalties = useActivePenalties(currentMatch?.id, currentMatch?.status, currentMatch?.events);
+
+  // I4 (W1, Nachtrag Fixrunde 1): Helfer im Cockpit sahen Ablehnungen (D-C1) bisher nirgends, nur
+  // im AdminHeader -- dieselbe Verdrahtung wie dort (P8/Fixrunde 3: gemeinsamer Hook statt
+  // doppeltem Code).
+  const rejectedOutbox = useRejectedOutboxDialog(tournamentId, showToastError);
 
   // Next match info
   const nextMatch = useMemo(() => {
@@ -177,7 +208,13 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   );
 
   // C-2 FIX: Reset all dialog states when match changes to prevent stale data
-  // C-6 FIX: Initialize foul counts from match events for persistence across reload/tab-sync
+  // RC13/PC20 (C3a-2a, vorgezogen aus C3b): haengt NUR an `match.id` -- NICHT an
+  // `currentMatch?.events`. Grund (per Fixrunde 2 belegt, s. task-C3a-report.md "C3a-2a
+  // Fixrunde 2"): eine echte Engine-Aenderung AM SELBEN Spiel baut ein neues LiveMatch-Objekt
+  // inkl. neuem `events`-Array, obwohl sich am Spiel selbst nichts geaendert hat. Mit
+  // `currentMatch?.events` als Abhaengigkeit schloss dieser Effekt dabei ALLE offenen Dialoge --
+  // riss z. B. den gerade offenen GoalScorerDialog waehrend der Torschuetzen-Eingabe weg (C1).
+  // Regressionstest: `LiveCockpit.dialogReset.test.tsx`.
   const currentMatchId = currentMatch?.id;
   useEffect(() => {
     // Reset all dialog visibility states
@@ -197,27 +234,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     setPendingCardTeamSide(null);
     setPendingSubstitutionSide(null);
     setEditingEventId(null);
-
-    // Reset match-specific states
-    setActivePenalties([]);
-
-    // C-6 FIX: Initialize foul counts from persisted match events
-    // This ensures fouls are synced across page reloads and multi-tab scenarios
-    if (currentMatch?.events && currentMatch.homeTeam && currentMatch.awayTeam) {
-      const homeTeamId = currentMatch.homeTeam.id;
-      const awayTeamId = currentMatch.awayTeam.id;
-      const foulEvents = currentMatch.events.filter(e => e.type === 'FOUL');
-      const homeCount = foulEvents.filter(e => e.payload.teamId === homeTeamId).length;
-      const awayCount = foulEvents.filter(e => e.payload.teamId === awayTeamId).length;
-      setHomeFouls(homeCount);
-      setAwayFouls(awayCount);
-    } else {
-      setHomeFouls(0);
-      setAwayFouls(0);
-    }
-    // C-6 FIX: Intentionally use team IDs instead of full team objects to prevent unnecessary re-runs
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMatchId, currentMatch?.events, currentMatch?.homeTeam?.id, currentMatch?.awayTeam?.id]);
+  }, [currentMatchId]);
 
   // M-1 FIX: Derive editing event from current match events to always have fresh data
   // This prevents stale data when another tab modifies the event
@@ -236,32 +253,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       payload: event.payload,
     };
   }, [editingEventId, currentMatch?.events]);
-
-  // BUG-008 FIX: Update penalty countdowns every second when match is RUNNING
-  // Also removes expired penalties and pauses countdown when match is paused
-  // C-1 FIX: Only depend on status and penalty count to prevent multiple intervals
-  const matchStatus = currentMatch?.status;
-  const hasPenalties = activePenalties.length > 0;
-
-  useEffect(() => {
-    if (!hasPenalties || matchStatus !== 'RUNNING') {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setActivePenalties((prev) => {
-        // Decrement remaining seconds and filter out expired penalties
-        return prev
-          .map((penalty) => ({
-            ...penalty,
-            remainingSeconds: Math.max(0, penalty.remainingSeconds - 1),
-          }))
-          .filter((penalty) => penalty.remainingSeconds > 0);
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [matchStatus, hasPenalties]);
 
   // ---------------------------------------------------------------------------
   // Handler Adapters
@@ -317,23 +308,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     [currentMatch, pendingGoalSide, onGoal, showSuccess, showInfo, t]
   );
 
-  const handleMinusHome = useCallback(() => {
-    if (!currentMatch) { return; }
-    const isOvertime = currentMatch.playPhase === 'overtime' || currentMatch.playPhase === 'goldenGoal';
-    const relevantScore = isOvertime ? (currentMatch.overtimeScoreA ?? 0) : currentMatch.homeScore;
-    if (relevantScore <= 0) { return; }
-    onGoal(currentMatch.id, currentMatch.homeTeam.id, -1);
-    showInfo(t('toast.goalRemoved', { teamName: currentMatch.homeTeam.name }));
-  }, [currentMatch, onGoal, showInfo, t]);
-
-  const handleMinusAway = useCallback(() => {
-    if (!currentMatch) { return; }
-    const isOvertime = currentMatch.playPhase === 'overtime' || currentMatch.playPhase === 'goldenGoal';
-    const relevantScore = isOvertime ? (currentMatch.overtimeScoreB ?? 0) : currentMatch.awayScore;
-    if (relevantScore <= 0) { return; }
-    onGoal(currentMatch.id, currentMatch.awayTeam.id, -1);
-    showInfo(t('toast.goalRemoved', { teamName: currentMatch.awayTeam.name }));
-  }, [currentMatch, onGoal, showInfo, t]);
+  const handleMinusHome = useCallback(() => { void editing.minus('home'); }, [editing]);
+  const handleMinusAway = useCallback(() => { void editing.minus('away'); }, [editing]);
 
   const handleStart = useCallback(() => {
     if (!currentMatch) { return; }
@@ -357,9 +333,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
     onFinish(currentMatch.id);
     // BUG-008: Clear all active penalties when match ends
-    setActivePenalties([]);
+    penalties.clear();
     showInfo('Spiel beendet');
-  }, [currentMatch, onFinish, showInfo, cockpitSettings.soundEnabled, cockpitSettings.hapticEnabled, sound]);
+  }, [currentMatch, onFinish, showInfo, cockpitSettings.soundEnabled, cockpitSettings.hapticEnabled, sound, penalties]);
 
   // Auto-Finish Logic (Moved safely after handleFinish declaration)
   // R4/H3: readOnly darf auch automatisch nichts beenden — sonst beendet das Gerät eines
@@ -383,11 +359,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     handleFinish
   ]);
 
-  const handleUndo = useCallback(() => {
-    if (!currentMatch) { return; }
-    onUndoLastEvent(currentMatch.id);
-    showInfo('Letzte Aktion rückgängig gemacht');
-  }, [currentMatch, onUndoLastEvent, showInfo]);
+  const handleUndo = useCallback(() => { void editing.undo(); }, [editing]);
 
   const handlePauseResume = useCallback(() => {
     if (!currentMatch) { return; }
@@ -416,7 +388,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         // Actually, negative elapsed is possible if user sets > duration (not typical but possible logic)
       }
 
-      onAdjustTime(currentMatch.id, newElapsedSeconds);
+      onAdjustTime?.(currentMatch.id, newElapsedSeconds);
 
       const mins = Math.floor(newDisplaySeconds / 60);
       const secs = newDisplaySeconds % 60;
@@ -432,53 +404,45 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
   const handleFoulHome = useCallback(() => {
     if (!currentMatch) { return; }
-    const newFouls = homeFouls + 1;
-    setHomeFouls(newFouls);
-
-    // Call parent handler to create event
     onFoul?.(currentMatch.id, currentMatch.homeTeam.id);
-
-    showInfo(`Foul für ${currentMatch.homeTeam.name} (${newFouls})`);
-    if (newFouls === 5) {
-      showInfo(`⚠ ACHTUNG: ${currentMatch.homeTeam.name} hat 5 Fouls!`);
-    }
-  }, [currentMatch, homeFouls, onFoul, showInfo]);
+    showInfo(t('toast.foul', { teamName: currentMatch.homeTeam.name }));
+  }, [currentMatch, onFoul, showInfo, t]);
 
   const handleFoulAway = useCallback(() => {
     if (!currentMatch) { return; }
-    const newFouls = awayFouls + 1;
-    setAwayFouls(newFouls);
-
-    // Call parent handler to create event
     onFoul?.(currentMatch.id, currentMatch.awayTeam.id);
-
-    showInfo(`Foul für ${currentMatch.awayTeam.name} (${newFouls})`);
-    if (newFouls === 5) {
-      showInfo(`⚠ ACHTUNG: ${currentMatch.awayTeam.name} hat 5 Fouls!`);
-    }
-  }, [currentMatch, awayFouls, onFoul, showInfo]);
+    showInfo(t('toast.foul', { teamName: currentMatch.awayTeam.name }));
+  }, [currentMatch, onFoul, showInfo, t]);
 
   // Card/Penalty/Substitution handlers
+  // F3b2: ein Knopf je Kartentyp (Gelb/Gelb-Rot/Rot) ruft denselben Oeffner -- ersetzt zwei fast
+  // identische Closures je Team (TeamBlock) durch eine, spart Zeilen statt den dritten Knopf
+  // welche zu kosten (LiveCockpit.tsx darf nicht wachsen).
+  const openCardDialog = useCallback((type: 'YELLOW' | 'YELLOW_RED' | 'RED', side: 'home' | 'away') => {
+    setPendingCardType(type);
+    setPendingCardTeamSide(side);
+    setShowCardDialog(true);
+  }, []);
+
   const handleCardConfirm = useCallback(
-    (cardType: 'YELLOW' | 'RED', teamId: string, playerNumber?: number) => {
+    (cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', teamId: string, playerNumber?: number) => {
       if (!currentMatch) { return; }
 
       const teamName = currentMatch.homeTeam.id === teamId
         ? currentMatch.homeTeam.name
         : currentMatch.awayTeam.name;
       const playerInfo = playerNumber ? ` (#${playerNumber})` : '';
-      const cardName = cardType === 'YELLOW' ? 'Gelbe' : 'Rote';
 
       // Call parent handler to create event
       onCard?.(currentMatch.id, teamId, cardType, { playerNumber });
 
-      showInfo(`${cardName} Karte für ${teamName}${playerInfo}`);
+      showInfo(`${t(CARD_TOAST_KEYS[cardType], { teamName })}${playerInfo}`);
       setShowCardDialog(false);
       // BUG-007: Reset pending card state
       setPendingCardType(null);
       setPendingCardTeamSide(null);
     },
-    [currentMatch, onCard, showInfo]
+    [currentMatch, onCard, showInfo, t]
   );
 
   const handleTimePenaltyConfirm = useCallback(
@@ -496,24 +460,14 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         durationSeconds,
       });
 
-      showInfo(`${mins} Min ${sportGlossary.terms.timePenalty.de} für ${teamName}${playerInfo}`);
+      showInfo(`${t('toast.timePenalty', { minutes: mins, teamName })}${playerInfo}`);
 
       // Add to active penalties (local UI state for countdown)
-      const now = new Date();
-      const endsAt = new Date(now.getTime() + durationSeconds * 1000);
-      const newPenalty: ActivePenalty = {
-        eventId: `penalty-${Date.now()}`,
-        teamId,
-        playerNumber,
-        remainingSeconds: durationSeconds,
-        startedAt: now,
-        endsAt,
-      };
-      setActivePenalties((prev) => [...prev, newPenalty]);
+      penalties.add({ teamId, playerNumber, durationSeconds });
       setShowTimePenaltyDialog(false);
       setPendingPenaltySide(null);
     },
-    [currentMatch, onTimePenalty, showInfo]
+    [currentMatch, onTimePenalty, showInfo, penalties, t]
   );
 
   // BUG-009: Updated to handle multi-player substitutions
@@ -555,47 +509,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     [currentMatch]
   );
 
-  // BUG-010: Handler for updating event details
-  const handleEventUpdate = useCallback(
-    (eventId: string, updates: { playerNumber?: number; incomplete?: boolean }) => {
-      if (!currentMatch) { return; }
-      const event = currentMatch.events.find(e => e.id === eventId);
-      if (!event) { return; }
-
-      // Show success toast with event type
-      const label = EVENT_TYPE_LABELS[event.type] ?? event.type;
-      const playerInfo = updates.playerNumber ? ` (#${updates.playerNumber})` : '';
-
-      // Call parent handler to persist update
-      if (onUpdateEvent) {
-        onUpdateEvent(currentMatch.id, eventId, updates);
-        showSuccess(`✅ ${label}${playerInfo} aktualisiert`);
-      } else {
-        showInfo(`(Preview) ${label}${playerInfo} aktualisiert`);
-      }
-    },
-    [currentMatch, showSuccess, showInfo, onUpdateEvent]
-  );
-
-  // L9: Handler for deleting events — persistence + score correction now live in
-  // MatchExecutionService.deleteEvent. No onGoal(-1) here anymore: the service already
-  // corrects the score, so calling onGoal too would decrement it a second time.
-  const handleEventDelete = useCallback(
-    (eventId: string) => {
-      if (!currentMatch) { return; }
-      const event = currentMatch.events.find(e => e.id === eventId);
-      if (!event) { return; }
-      const label = EVENT_TYPE_LABELS[event.type] ?? event.type;
-      if (onDeleteEvent) {
-        // L9: Der Service entfernt das Event, korrigiert bei GOAL den Spielstand, setzt is_deleted.
-        onDeleteEvent(currentMatch.id, eventId);
-        showSuccess(`🗑️ ${label} gelöscht`);
-      } else {
-        showInfo(`(Vorschau) ${label} gelöscht — nicht gespeichert`);
-      }
-    },
-    [currentMatch, onDeleteEvent, showSuccess, showInfo]
-  );
+  // BUG-010 / C3b-1: Bearbeiten (AMEND) und Löschen (RETRACT) laufen im Hook.
+  const handleEventUpdate = editing.update;
+  const handleEventDelete = editing.remove;
 
   // L1: Tiebreaker-Handler — leiten die Entscheidung an den Parent weiter (matchId).
   const handleStartOvertime = useCallback(() => { if (!currentMatch) { return; } onStartOvertime?.(currentMatch.id); }, [currentMatch, onStartOvertime]);
@@ -658,15 +574,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // Status-Badge ("BEENDET").
   const isLocked = readOnly || isFinished;
   const isNotStarted = match.status === 'NOT_STARTED';
-  const canUndo = match.events.length > 0 && !isFinished;
-  // In der Verlängerung zählt die Verlängerungs-Trefferzahl, nicht der reguläre Spielstand.
-  // Sonst ist der "−1"-Knopf genau dann gesperrt, wenn man ihn braucht: Ein 0:0-Finale, das in
-  // die Verlängerung geht, hat homeScore 0 — ein dort irrtümlich erfasstes Tor liesse sich mit
-  // dem Knopf nie zurücknehmen. Umgekehrt stand er bei positivem Regulärstand offen, obwohl es
-  // kein Verlängerungstor zu entfernen gab.
-  const isOvertimePhase = match.playPhase === 'overtime' || match.playPhase === 'goldenGoal';
-  const canDecrementHome = (isOvertimePhase ? (match.overtimeScoreA ?? 0) : match.homeScore) > 0 && !isFinished;
-  const canDecrementAway = (isOvertimePhase ? (match.overtimeScoreB ?? 0) : match.awayScore) > 0 && !isFinished;
   const isDesktop = !isMobile && !isTablet;
 
   // ---------------------------------------------------------------------------
@@ -862,8 +769,17 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
             {/* A4 (C-SYNC): SyncStatusIndicator rendert selbst nichts außerhalb des Cloud-Modus
-                (isCloudSyncAvailable in useSyncStatus) -- kein zusätzlicher Auth-Check hier nötig. */}
-            <SyncStatusIndicator tournamentId={tournamentId} compact />
+                (isCloudSyncAvailable in useSyncStatus) -- kein zusätzlicher Auth-Check hier nötig.
+                I4 (W1, Nachtrag Fixrunde 1): rejectedCount/reviewCount jetzt aus dem echten Sender
+                (useEngineOutboxSummary), nicht mehr die bisherigen Default-Nullen. */}
+            <SyncStatusIndicator
+              tournamentId={tournamentId}
+              compact
+              rejectedCount={rejectedOutbox.rejectedCount}
+              reviewCount={rejectedOutbox.reviewCount}
+              onShowRejected={rejectedOutbox.show}
+              enginePendingCount={rejectedOutbox.pendingCount}
+            />
             <span style={statusBadgeStyle} data-testid="match-status-badge">{getStatusLabel()}</span>
             {/* ARIA-live region for screen readers to announce status changes */}
             <span
@@ -895,6 +811,19 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
             {t('readOnly.banner')}
           </div>
         )}
+
+        {/* W1 (Nachtrag C3a-2a): nur einbinden -- rendert selbst nichts, solange kein
+            Ausgangs-Zustand (clientOutdated/authRequired/notReady/review) vorliegt. */}
+        <OutboxNotice status={outboxStatus} matchId={match.id} onReload={handleOutboxReload} />
+
+        {/* I4 (W1, Nachtrag Fixrunde 1): nur einbinden -- Dialog zeigt die Ablehnungsliste dieses
+            Turniers, "Verstanden" ruft dismiss (store.dismissRejected + m7-Benachrichtigung). */}
+        <RejectedOutboxDialog
+          isOpen={rejectedOutbox.isOpen}
+          onClose={rejectedOutbox.close}
+          entries={rejectedOutbox.entries}
+          onDismiss={rejectedOutbox.handleDismiss}
+        />
 
         {/* Foul Bar - Mobile only */}
         {isMobile && (
@@ -931,7 +860,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
                 style={timerStyle}
                 onClick={() => {
                   // @OB-002 (Platzhalter Nr. 2): „Spielzeit anpassen“ für neue Spiele ausgeblendet
-                  if (!isLocked && match.status !== 'NOT_STARTED') {
+                  if (onAdjustTime && !isLocked && match.status !== 'NOT_STARTED') {
                     setShowTimeAdjustDialog(true);
                   }
                 }}
@@ -964,22 +893,15 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
                   setPendingPenaltySide(sidesSwapped ? 'away' : 'home');
                   setShowTimePenaltyDialog(true);
                 }}
-                onYellowCard={() => {
-                  setPendingCardType('YELLOW');
-                  setPendingCardTeamSide(sidesSwapped ? 'away' : 'home');
-                  setShowCardDialog(true);
-                }}
-                onRedCard={() => {
-                  setPendingCardType('RED');
-                  setPendingCardTeamSide(sidesSwapped ? 'away' : 'home');
-                  setShowCardDialog(true);
-                }}
+                onYellowCard={() => openCardDialog('YELLOW', sidesSwapped ? 'away' : 'home')}
+                onYellowRedCard={() => openCardDialog('YELLOW_RED', sidesSwapped ? 'away' : 'home')}
+                onRedCard={() => openCardDialog('RED', sidesSwapped ? 'away' : 'home')}
                 onSubstitution={() => {
                   setPendingSubstitutionSide(sidesSwapped ? 'away' : 'home');
                   setShowSubstitutionDialog(true);
                 }}
                 onFoul={sidesSwapped ? handleFoulAway : handleFoulHome}
-                canDecrement={sidesSwapped ? canDecrementAway : canDecrementHome}
+                {...editing.teamBlockProps(sidesSwapped ? 'away' : 'home')}
               />
 
               {/* Divider */}
@@ -1000,38 +922,33 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
                   setPendingPenaltySide(sidesSwapped ? 'home' : 'away');
                   setShowTimePenaltyDialog(true);
                 }}
-                onYellowCard={() => {
-                  setPendingCardType('YELLOW');
-                  setPendingCardTeamSide(sidesSwapped ? 'home' : 'away');
-                  setShowCardDialog(true);
-                }}
-                onRedCard={() => {
-                  setPendingCardType('RED');
-                  setPendingCardTeamSide(sidesSwapped ? 'home' : 'away');
-                  setShowCardDialog(true);
-                }}
+                onYellowCard={() => openCardDialog('YELLOW', sidesSwapped ? 'home' : 'away')}
+                onYellowRedCard={() => openCardDialog('YELLOW_RED', sidesSwapped ? 'home' : 'away')}
+                onRedCard={() => openCardDialog('RED', sidesSwapped ? 'home' : 'away')}
                 onSubstitution={() => {
                   setPendingSubstitutionSide(sidesSwapped ? 'home' : 'away');
                   setShowSubstitutionDialog(true);
                 }}
                 onFoul={sidesSwapped ? handleFoulHome : handleFoulAway}
-                canDecrement={sidesSwapped ? canDecrementHome : canDecrementAway}
+                {...editing.teamBlockProps(sidesSwapped ? 'home' : 'away')}
               />
             </div>
 
             {/* Game Controls */}
             <GameControls
               status={match.status}
-              onUndo={canUndo ? handleUndo : undefined}
+              onUndo={editing.undoVisible ? handleUndo : undefined}
               onStart={handleStart}
               onPauseResume={handlePauseResume}
-              onEditTime={() => setShowTimeAdjustDialog(true)}
+              onEditTime={onAdjustTime ? () => setShowTimeAdjustDialog(true) : undefined}
               onSwitchSides={handleSwitchSides}
               onFinish={handleFinish}
               onSettings={() => setShowSettingsDialog(true)}
               // BUG-002: Event Log for Mobile
               onEventLog={() => setShowEventLogBottomSheet(true)}
-              canUndo={canUndo}
+              canUndo={editing.canUndo}
+              undoLabel={editing.undoLabel}
+              undoHint={editing.undoHint}
               breakpoint={breakpoint}
               // Task R2: sperrt Rückgängig/Start-Pause/Zeit/Seiten/Beenden, wenn
               // readOnly/finished — unverändert gegenüber 235d947 (dort schon isFinished-gesperrt).
@@ -1046,8 +963,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
           {/* Sidebar - Desktop only */}
           {isDesktop && (
             <Sidebar
-              activePenalties={activePenalties}
+              activePenalties={penalties.penalties}
               events={match.events}
+              retractedEvents={match.retractedEvents}
               homeTeamName={match.homeTeam.name}
               awayTeamName={match.awayTeam.name}
               homeTeamId={match.homeTeam.id}
@@ -1150,6 +1068,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         awayTeam={match.awayTeam}
         onUpdate={handleEventUpdate}
         onDelete={handleEventDelete}
+        deleteBlocked={editingEventId ? editing.deleteBlock(editingEventId) : undefined}
+        amendLocked={editingEventId ? editing.amendLock(editingEventId) : undefined}
       />
 
       {/* BUG-002: Event Log Bottom Sheet for Mobile */}
@@ -1157,6 +1077,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         isOpen={showEventLogBottomSheet}
         onClose={() => setShowEventLogBottomSheet(false)}
         events={match.events}
+        retractedEvents={match.retractedEvents}
         homeTeamName={match.homeTeam.name}
         awayTeamName={match.awayTeam.name}
         homeTeamId={match.homeTeam.id}

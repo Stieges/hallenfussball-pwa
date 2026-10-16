@@ -9,18 +9,19 @@
  * Braucht einen laufenden lokalen Stack mit Seed-Daten (`npm run test:env:up`/`test:env:reset`
  * zuerst).
  *
- * Fixrunde 1 (C1, Ruling U): Der Logout-Test meldet NICHT `owner` ab -- `supabase.auth.signOut()`
- * läuft ohne `scope`-Option (`src/features/auth/context/authActions.ts:507`), Supabase-JS
- * Standard ist `scope: 'global'`. Das beendet ALLE Sessions dieses Kontos, auch die aus
- * `playwright/.auth/owner.json`, die sich jeder andere Owner-Test über `asRole('owner')` teilt --
- * das war die wahrscheinliche Ursache der "Owner-Flakiness" im Volllauf (siehe Report). Statt das
- * App-Verhalten zu ändern (Produktfrage, siehe Report), bekommt der Logout-Test einen EIGENEN
- * Seed-Nutzer (`logouttest`, `testData.ts`), den kein anderer Spec über `asRole()` verwendet.
+ * Fixrunde 1 (C1, Ruling U): Der Logout-Test meldet NICHT `owner` ab. Seit A-07a meldet die App
+ * mit `scope: 'local'` nur das eigene Gerät ab (`src/features/auth/context/logoutAction.ts`), das
+ * Risiko ist damit kleiner als früher (damals `global`, alle Sitzungen des Kontos). Der Test behält
+ * trotzdem einen EIGENEN Seed-Nutzer (`logouttest`, `testData.ts`), den kein anderer Spec über
+ * `asRole()` verwendet: ein Abmelden soll nie die gespeicherte Anmeldung eines geteilten Kontos
+ * berühren (Absicherung gegen eine Rückkehr zu `global`). „Auf allen anderen Geräten abmelden“
+ * (`scope: 'others'`) beendet dagegen wirklich jede andere Sitzung des Kontos; dafür gibt es das
+ * Konto `abmelden` in `abmelden-geraete.cloud.spec.ts` (A-07d3, @AN-023/@AN-024/@FU-006).
  *
  * Fixrunde 2 (N9): UND einen zweiten, eigenen Nutzer NUR für `cloud-mobile`
- * (`logouttestMobile`) -- derselbe Grund wie oben, nur zwischen den beiden PROJEKTEN
- * (`cloud-desktop`/`cloud-mobile`), die diesen Test `fullyParallel` gleichzeitig ausführen,
- * statt zwischen Dateien.
+ * (`logouttestMobile`) -- dieser Test läuft `fullyParallel` gleichzeitig auf `cloud-desktop` UND
+ * `cloud-mobile`; mit `local` ist die Kopplung zwischen den Projekten entschärft, die getrennten
+ * Konten bleiben als Schutz vor einer Rückkehr zu `global`.
  */
 
 import { test, expect } from './fixtures';
@@ -114,12 +115,9 @@ const RESET_PASSWORD_DIALOG_NAME = /E-Mail gesendet|Passwort zurücksetzen/i;
 
 test.describe('Cloud-Auth', () => {
   test('Anmelden und Abmelden mit Passwort', async ({ page }, testInfo) => {
-    // C1/Ruling U: eigener Seed-Nutzer, den kein anderer SPEC über asRole() teilt -- signOut()
-    // (scope: 'global', unverändert) darf hier niemand anderen betreffen.
-    // N9 (Fixrunde 2): UND ein je PROJEKT eigener Nutzer -- dieser Test läuft `fullyParallel`
-    // gleichzeitig auf cloud-desktop UND cloud-mobile; derselbe Nutzer in beiden Instanzen hätte
-    // dieselbe globale-signOut()-Kopplung, nur zwischen Projekten statt zwischen Dateien (siehe
-    // `testData.ts#logouttestMobile`-Kommentar).
+    // C1/Ruling U + N9: eigener Seed-Nutzer je Projekt (siehe Kopfkommentar). Seit A-07a meldet
+    // Abmelden nur dieses Gerät ab (`scope: 'local'`); die getrennten Konten schützen davor, dass
+    // eine spätere Rückkehr zu `global` fremde Specs oder das andere Projekt abmeldet.
     const userKey = testInfo.project.name.includes('mobile') ? 'logouttestMobile' : 'logouttest';
     await loginAsRole(page, userKey);
     await logoutViaUi(page);

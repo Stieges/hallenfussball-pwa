@@ -6,6 +6,7 @@ import {
   NetworkError,
   SyncError,
   OptimisticLockError,
+  GuestStoreReadError,
   isAbortError,
   isTransientMutationError,
 } from './errors';
@@ -184,6 +185,23 @@ describe('isTransientMutationError', () => {
 
   it('behandelt OptimisticLockError immer als dauerhaft', () => {
     expect(isTransientMutationError(new OptimisticLockError('match-1', 1, 2))).toBe(false);
+  });
+
+  it('I1: behandelt GuestStoreReadError immer als dauerhaft — GANZ OBEN, vor isAbortError/Netz-Mustern —, und behält cause', () => {
+    // Bewusst mit einer Nachricht, die OHNE den Klassen-Check als "transient" durchginge
+    // (isAbortError/TRANSIENT_NETWORK_MESSAGE_PATTERNS): so beweist der Test, dass die
+    // instanceof-Prüfung selbst die Klassifizierung entscheidet, nicht ein fehlender
+    // Musterzufall. Mutationsprobe (task-C3b2-F1-brief.md): den Klassen-Zweig in
+    // isTransientMutationError entfernen → dieser Test wird ROT.
+    const abortCause = Object.assign(new Error('The operation was aborted'), { name: 'AbortError' });
+    const abortWrapped = new GuestStoreReadError('The operation was aborted', { cause: abortCause });
+    expect(isTransientMutationError(abortWrapped)).toBe(false);
+    expect(abortWrapped.cause).toBe(abortCause);
+
+    const timeoutCause = new Error('Transaction timeout');
+    const timeoutWrapped = new GuestStoreReadError('Transaction timeout', { cause: timeoutCause });
+    expect(isTransientMutationError(timeoutWrapped)).toBe(false);
+    expect(timeoutWrapped.cause).toBe(timeoutCause);
   });
 
   it('behandelt sonstige Fehler ohne Netz-/Status-Signal als dauerhaft', () => {

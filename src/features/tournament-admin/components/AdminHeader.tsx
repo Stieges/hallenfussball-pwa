@@ -13,6 +13,9 @@ import { cssVars } from '../../../design-tokens';
 import type { AdminHeaderProps } from '../types/admin.types';
 import { ADMIN_LAYOUT } from '../constants/admin.constants';
 import { SyncStatusIndicator } from '../../collaboration';
+import { useRejectedOutboxDialog } from '../../collaboration/outbox/useRejectedOutboxDialog';
+import { RejectedOutboxDialog } from '../../collaboration/outbox/RejectedOutboxDialog';
+import { useToast } from '../../../components/ui/Toast/ToastContext';
 
 // =============================================================================
 // STYLES
@@ -125,8 +128,14 @@ export function AdminHeader({
   showSyncStatus = false,
 }: AdminHeaderProps) {
   const { t } = useTranslation('admin');
+  const { showError: showToastError } = useToast();
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // W1 (Nachtrag C3a-2a): rejectedCount/reviewCount aus dem echten Sender statt der bisherigen
+  // Default-Nullen -- "onShowRejected" oeffnet den Dialog mit der Liste, "Verstanden" nimmt einen
+  // Eintrag ueber `dismiss` (store.dismissRejected + m7-Benachrichtigung) heraus. P8/Fixrunde 3:
+  // gemeinsamer Hook statt doppeltem Code (s. LiveCockpit.tsx).
+  const rejectedOutbox = useRejectedOutboxDialog(tournamentId, showToastError);
 
   const handleSearchToggle = () => {
     if (isSearchExpanded && searchQuery) {
@@ -187,7 +196,22 @@ export function AdminHeader({
 
       {/* Sync Status */}
       {showSyncStatus && (
-        <SyncStatusIndicator tournamentId={tournamentId} compact />
+        <SyncStatusIndicator
+          tournamentId={tournamentId}
+          compact
+          rejectedCount={rejectedOutbox.rejectedCount}
+          reviewCount={rejectedOutbox.reviewCount}
+          onShowRejected={rejectedOutbox.show}
+          enginePendingCount={rejectedOutbox.pendingCount}
+        />
+      )}
+      {showSyncStatus && (
+        <RejectedOutboxDialog
+          isOpen={rejectedOutbox.isOpen}
+          onClose={rejectedOutbox.close}
+          entries={rejectedOutbox.entries}
+          onDismiss={rejectedOutbox.handleDismiss}
+        />
       )}
 
       {/* Search */}

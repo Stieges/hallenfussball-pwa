@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import type { Match, Tournament } from '../../../types/tournament';
+import { looseVs } from '../../../test/matchSlotFixtures';
 import {
   attachMonitor, buildTournament, FIXTURE_TEAMS, slide, withMonitor, withPlayoffs, withScheduledTimes,
 } from './monitorFixture';
@@ -85,7 +86,7 @@ const mitFinalrunde = (): Match[] => withPlayoffs().map(m => (m.id.startsWith('p
 /** 13 Spiele auf Feld 1, je 5 Minuten versetzt ab 14:00 (Uhrzeiten sind einmalig). */
 const dreizehnSpiele = (): Match[] => Array.from({ length: 13 }, (_, i) => ({
   id: `m${i + 1}`, matchNumber: i + 1, round: 1, field: 1, group: 'A',
-  teamA: 'team-nord', teamB: 'team-sued', matchStatus: 'scheduled' as const,
+  ...looseVs('team-nord', 'team-sued'), matchStatus: 'scheduled' as const,
   scheduledTime: new Date(2026, 9, 10, 14, i * 5),
 }));
 

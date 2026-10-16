@@ -27,6 +27,7 @@ import {
   CardAnimation,
   NextMatchPreview,
 } from '../../components/monitor'
+import { buildSideContext, sideName } from '../../components/schedule/matchSides'
 import { NextMatchCard, NextMatchInfo } from './components/NextMatchCard'
 import { StandingsDisplay } from './components/StandingsDisplay'
 
@@ -82,6 +83,11 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
     [runningMatches]
   )
 
+  const sides = useMemo(
+    () => buildSideContext({ teams: tournament.teams, groups: tournament.groups, matches: allMatches }),
+    [tournament.teams, tournament.groups, allMatches],
+  )
+
   // Find next match (first without result)
   const nextMatch = useMemo<NextMatchInfo | null>(() => {
     const upcoming = allMatches.find(
@@ -92,13 +98,14 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
     return {
       id: upcoming.id,
       number: upcoming.matchNumber,
-      homeTeam: upcoming.homeTeam,
-      awayTeam: upcoming.awayTeam,
+      // Namen über slotLabel mit den aktuellen Teams (@TM-015), nie der gespeicherte Anzeigetext
+      homeTeam: sideName(upcoming, 'A', sides),
+      awayTeam: sideName(upcoming, 'B', sides),
       field: upcoming.field,
       group: upcoming.group,
       scheduledTime: upcoming.time,
     }
-  }, [allMatches])
+  }, [allMatches, sides])
 
   // Calculate remaining seconds for current match
   const currentMatchRemainingSeconds = useMemo(() => {

@@ -19,10 +19,11 @@ import { describe, it, expect } from 'vitest';
 import { generateFullSchedule } from '../../generators';
 import { knockoutRoundOf, resolveTiebreakMode } from '../tiebreakDecision';
 import type { Team, Tournament } from '../../../types/tournament';
+import { testUuid } from '../../../test/testIds';
 
 const teams: Team[] = ['A', 'B'].flatMap((gruppe) =>
   [1, 2, 3, 4].map((nr) => ({
-    id: `team-${gruppe}-${nr}`,
+    id: testUuid((gruppe === 'A' ? 0 : 4) + nr),
     name: `Team ${gruppe}${nr}`,
     group: gruppe,
   })),

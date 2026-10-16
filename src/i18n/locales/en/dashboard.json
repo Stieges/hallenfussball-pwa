@@ -13,6 +13,11 @@
     "trash": "Trash"
   },
 
+  "legacyNotice": {
+    "message": "Tournaments in the old format were set aside, not deleted. They can no longer be opened in this version.",
+    "dismiss": "Dismiss notice"
+  },
+
   "buttons": {
     "import": "Import",
     "newTournament": "New Tournament",

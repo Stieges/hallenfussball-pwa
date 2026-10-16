@@ -2,7 +2,7 @@
  * core/utils/id — Kennungen für MatchEvent (C-EVID Sofort-Fix)
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { generateEventId, isUuidFormat, toDeterministicUuid, toSupabaseEventId } from '../id';
+import { generateEventId, isUuidFormat, toDeterministicUuid } from '../id';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -90,18 +90,5 @@ describe('toDeterministicUuid', () => {
     const inputs = Array.from({ length: 500 }, (_, i) => `match-${i % 20}-goal-${1700000000000 + i}-${i.toString(36)}`);
     const outputs = new Set(inputs.map(toDeterministicUuid));
     expect(outputs.size).toBe(inputs.length);
-  });
-});
-
-describe('toSupabaseEventId', () => {
-  it('lässt eine echte UUID unverändert', () => {
-    const realUuid = '550e8400-e29b-41d4-a716-446655440000';
-    expect(toSupabaseEventId(realUuid)).toBe(realUuid);
-  });
-
-  it('rechnet eine Alt-Text-Kennung deterministisch um', () => {
-    const legacyId = 'match-1-goal-1790284219635-zyqvd';
-    expect(toSupabaseEventId(legacyId)).toBe(toDeterministicUuid(legacyId));
-    expect(isUuidFormat(toSupabaseEventId(legacyId))).toBe(true);
   });
 });

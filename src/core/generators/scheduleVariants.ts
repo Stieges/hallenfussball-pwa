@@ -12,6 +12,7 @@
  */
 
 import type { Match } from '../../types/tournament';
+import { matchTeamIds } from '../models/matchSlot';
 
 export interface VariantMetrics {
   seed: number;
@@ -61,7 +62,7 @@ export function measureVariant(seed: number, matches: Match[]): VariantMetrics {
   for (const match of matches) {
     const slot = match.slot ?? match.round - 1;
     slotCount = Math.max(slotCount, slot + 1);
-    for (const teamId of [match.teamA, match.teamB]) {
+    for (const teamId of matchTeamIds(match)) {
       const slots = slotsByTeam.get(teamId) ?? [];
       slots.push(slot);
       slotsByTeam.set(teamId, slots);

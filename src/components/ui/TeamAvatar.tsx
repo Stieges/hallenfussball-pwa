@@ -23,6 +23,11 @@ interface TeamAvatarProps {
     name: string;
     logo?: TeamLogo;
     colors?: TeamColors;
+    /**
+     * Offene Spielseite (Herkunft statt Team, @TM-015): der Name ist dann eine Herkunft oder „noch offen“.
+     * Der Avatar zeigt dafür keine Initialen und keine Farbe, nur einen neutralen Platzhalter.
+     */
+    pending?: boolean;
   };
   /** Size variant */
   size?: AvatarSize;
@@ -96,7 +101,8 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
   const hasLogo = logo && logo.type !== 'initials' && !imageError;
   const logoUrl = hasLogo ? logo.value : null;
 
-  const initials = getInitials(team.name);
+  const pending = team.pending === true;
+  const initials = pending ? '' : getInitials(team.name);
   const bgColor = getBackgroundColor(team.name, team.logo?.backgroundColor ?? team.colors?.primary);
 
   const containerStyles: CSSProperties = {
@@ -115,16 +121,18 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: hasLogo && imageLoaded ? 'transparent' : bgColor,
+    backgroundColor: pending || (hasLogo && imageLoaded) ? 'transparent' : bgColor,
     color: '#FFFFFF',
     fontSize: `${fontSize}px`,
     fontWeight: cssVars.fontWeights.bold,
     fontFamily: cssVars.fontFamilies.body,
     textTransform: 'uppercase',
     userSelect: 'none',
-    border: showColorRing && team.colors?.primary
-      ? `${ringWidth}px solid ${team.colors.primary}`
-      : `1px solid ${cssVars.colors.border}`,
+    border: pending
+      ? `1px dashed ${cssVars.colors.textPlaceholder}`
+      : showColorRing && team.colors?.primary
+        ? `${ringWidth}px solid ${team.colors.primary}`
+        : `1px solid ${cssVars.colors.border}`,
     boxSizing: 'border-box',
   };
 
@@ -148,7 +156,7 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
 
   return (
     <div style={containerStyles} data-testid={testId}>
-      <div style={avatarStyles}>
+      <div style={avatarStyles} aria-hidden={pending ? 'true' : undefined}>
         {logoUrl && (
           <img
             src={logoUrl}

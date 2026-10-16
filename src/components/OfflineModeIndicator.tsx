@@ -15,6 +15,7 @@
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../features/auth/hooks/useAuth';
+import { useResyncNow } from '../features/match-engine/useResyncNow';
 import { Button } from './ui/Button';
 import { cssVars } from '../design-tokens';
 
@@ -27,6 +28,9 @@ export const OfflineModeIndicator: React.FC<OfflineModeIndicatorProps> = ({
   compact = false,
 }) => {
   const { connectionState, reconnect } = useAuth();
+  // A-06h (Brief A9): Verbinden stoesst zusaetzlich die Uebertragung an. Oben bei den
+  // anderen Hooks, vor jedem fruehen return (Rules of Hooks).
+  const resyncNow = useResyncNow();
   const { t } = useTranslation('common');
 
   // Only show when offline
@@ -81,6 +85,7 @@ export const OfflineModeIndicator: React.FC<OfflineModeIndicatorProps> = ({
 
   const handleReconnect = () => {
     void reconnect();
+    void resyncNow();
   };
 
   return (
@@ -103,6 +108,7 @@ export const OfflineModeIndicator: React.FC<OfflineModeIndicatorProps> = ({
         size={compact ? 'sm' : 'md'}
         onClick={handleReconnect}
         aria-label={t('offlineIndicator.reconnectAriaLabel')}
+        data-testid="offline-mode-connect"
       >
         {t('actions.connect')}
       </Button>

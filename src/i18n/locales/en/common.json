@@ -91,13 +91,24 @@
     "syncingLabel": "Syncing...",
     "pendingCountLabel": "{{count}} pending",
     "failedCountLabel": "{{count}} failed",
+    "waiting_one": "{{count}} entry waiting",
+    "waiting_other": "{{count}} entries waiting",
+    "waitingNoInternet_one": "{{count}} entry waiting – no internet",
+    "waitingNoInternet_other": "{{count}} entries waiting – no internet",
+    "waitingDisturbed_one": "{{count}} entry waiting – transmission disrupted",
+    "waitingDisturbed_other": "{{count}} entries waiting – transmission disrupted",
+    "waitingStorageFull_one": "{{count}} entry waiting – device storage full, entries are not saved permanently",
+    "waitingStorageFull_other": "{{count}} entries waiting – device storage full, entries are not saved permanently",
+    "waitingStorageBlocked_one": "{{count}} entry waiting – browser storage blocked, entries will be lost when closed",
+    "waitingStorageBlocked_other": "{{count}} entries waiting – browser storage blocked, entries will be lost when closed",
+    "realtimeInterrupted": "Live connection interrupted",
     "lastSyncNow": "Just now",
     "lastSyncMinutes": "{{count}} min ago",
     "lastSyncHours": "{{count}} h ago",
     "failedListTitle": "Failed transfers",
     "failedListEmpty": "No failed transfers.",
     "failedReasonUnknown": "Unknown error",
-    "matchProtectedHint": "Match {{matchLabel}} has entries and was not deleted.",
+    "matchProtectedHint": "Match {{matchLabel}} has entries – only the tournament director can remove it",
     "retry": "Try again",
     "retryAriaLabel": "Retry transfer",
     "discard": "Discard",
@@ -113,9 +124,90 @@
       "UPDATE_TOURNAMENT_METADATA": "Update tournament data"
     }
   },
+  "guestHidden": {
+    "hint": "{{title}}: only available in guest mode – can be transferred to your account"
+  },
   "progressBar": {
     "stepLabel": "Step {{step}}: {{label}}",
     "errorTooltip": "Error: {{errors}}",
     "errorBadge": "Error"
+  },
+  "outbox": {
+    "rejection": {
+      "INVALID_TRANSITION": "The entry does not match the current course of play.",
+      "FORBIDDEN_ACTOR": "Only tournament control may enter this.",
+      "UNKNOWN_TARGET": "The entry this refers to was not found.",
+      "ALREADY_RETRACTED": "The entry was already withdrawn.",
+      "STALE_BASE": "The score was changed on another device in the meantime.",
+      "INVALID_PAYLOAD": "The entry was incomplete or invalid.",
+      "MATCH_FINISHED": "The game had already ended at that point.",
+      "NO_WINNER": "The penalty shootout does not have a winner yet.",
+      "DEPENDS_ON_REJECTED": "A previous related entry was not accepted, so this one was not either.",
+      "ID_CONFLICT": "There is already a different entry with the same id. Please enter it again.",
+      "NOT_CONTROLLER": "Another device is currently controlling this game.",
+      "MATCH_FULL": "No further entries are possible for this game. Please inform tournament control.",
+      "MATCH_GONE": "The game was deleted.",
+      "unknown": "Unknown reason"
+    },
+    "eventType": {
+      "matchStart": "Kick-off",
+      "pause": "Break",
+      "resume": "Resumed",
+      "sectionEnd": "End of playing time",
+      "sectionStart": "New playing time",
+      "clockAdjust": "Clock corrected",
+      "matchEnd": "Full time",
+      "tiebreakChoice": "Tie-break mode chosen",
+      "shootoutKick": "$t(sport:events.penalty)",
+      "shootoutEnd": "$t(sport:events.penaltyShootout) ended",
+      "retract": "Withdrawal",
+      "correction": "Correction",
+      "reopen": "Game reopened",
+      "skip": "Game skipped",
+      "unskip": "Game included again",
+      "resultEntry": "Result noted",
+      "reviewAccept": "Approved by tournament control",
+      "reviewDiscard": "Discarded by tournament control",
+      "goal": "Goal",
+      "ownGoal": "Own goal",
+      "yellowCard": "Yellow card",
+      "yellowRedCard": "Yellow-red card",
+      "redCard": "Red card",
+      "timePenalty": "$t(sport:events.timePenalty)",
+      "substitution": "Substitution",
+      "foul": "Foul",
+      "amend": "Addendum",
+      "unknown": "Entry"
+    },
+    "eventLine": {
+      "teamAndMinute": "{{what}} team {{team}}, minute {{minute}}",
+      "team": "{{what}} team {{team}}",
+      "minute": "{{what}}, minute {{minute}}",
+      "plain": "{{what}}"
+    },
+    "rejected": {
+      "header_one": "1 entry not accepted",
+      "header_other": "{{count}} entries not accepted",
+      "dismissAll": "Dismiss all",
+      "unknownCodeHint": "Code: {{code}}",
+      "countLabel": "{{count}} not accepted",
+      "dialogTitle": "Entries not accepted",
+      "dismissFailed": "Dismiss failed — please try again"
+    },
+    "notice": {
+      "updateAvailable": "New app version available",
+      "clientOutdated": "Update the app",
+      "reloadNow": "Update now",
+      "authRequired": "Please sign in again",
+      "notReady": "Game not ready yet (teams open)",
+      "review": "$t(sport:outbox.awaitingReview) ({{count}})"
+    },
+    "logoutWarning": {
+      "title_one": "{{count}} entry not yet sent",
+      "title_other": "{{count}} entries not yet sent",
+      "message_one": "{{count}} entry is still waiting to be sent. It stays on this device and will be sent with this account after your next sign-in.",
+      "message_other": "{{count}} entries are still waiting to be sent. They stay on this device and will be sent with this account after your next sign-in.",
+      "confirm": "Sign out anyway"
+    }
   }
 }

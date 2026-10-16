@@ -17,6 +17,10 @@ import { LiveCockpit } from '../LiveCockpit';
 import type { LiveCockpitProps } from '../types';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../types/tournament';
 
+// Merge Spur A/B: LiveCockpit bindet seit C3b-1 useEngineEventEditing ein -> useActorRole (braucht
+// AuthProvider); hier nicht Gegenstand (Muster wie LiveCockpit.fouls.test.tsx).
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
+
 vi.mock('../../../hooks/useMatchSound', () => ({
   useMatchSound: () => ({ play: vi.fn(), stop: vi.fn(), testPlay: vi.fn(), activate: vi.fn(), isPlaying: false, isLoading: false, isReady: true, isActivated: true, error: null }),
 }));

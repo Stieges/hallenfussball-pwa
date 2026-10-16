@@ -2,21 +2,17 @@
  * Visual Regression: Live-Cockpit mit laufendem Spiel (Task T5)
  * Siehe dashboard.visual.spec.ts für die allgemeine Erklärung (Container-Pflicht, Ruling Y).
  *
- * Der "laufende"-Zustand wird NICHT durch einen echten Start-Klick erzeugt (das wäre am
- * Klick-Zeitpunkt gekoppelt und damit nicht deterministisch), sondern direkt in die
- * `liveMatches-<tournamentId>`-localStorage-Quelle geseedet, die das Live-Tab tatsächlich liest
- * (src/hooks/useLiveMatches.ts -- eine von der IndexedDB-Turnierdaten GETRENNTE Quelle, siehe
- * seedRunningLiveMatch() in ./helpers.ts). `timerStartTime` liegt exakt 320s vor der
- * eingefrorenen Uhr (FIXED_NOW), die Spieluhr zeigt deshalb bei jedem Lauf denselben Stand.
+ * Seit A-08 liest das Live-Tab nur noch die Spiel-Engine bzw. deren lokalen Ereignis-Speicher
+ * (kein `liveMatches-<id>`-localStorage-Altweg mehr). Der "laufende"-Zustand entsteht deshalb
+ * über die Oberfläche (Anpfiff, zwei Heim-Tore, ein Auswärts-Tor), analog zu
+ * tests/e2e/flows/live-cockpit.spec.ts. Determinismus: `freezeClock()` friert `Date.now()` ein,
+ * die Spieluhr (Differenz zu `Date.now()`) steht dadurch bei jedem Lauf auf demselben Stand.
  *
- * Route: /tournament/:id/live (TAB_PATHS.management, src/features/tournament-management/utils/
- * tournamentTabUtils.ts) -- direkter Deep-Link, kein Klick durch die Tabs nötig. ManagementTab
- * wählt das laufende Spiel automatisch (kein Match ohne Ergebnis mit höherer Priorität als ein
- * Live-Match, src/features/tournament-management/ManagementTab.tsx:199-212).
+ * Route: /tournament/:id/live (TAB_PATHS.management) -- direkter Deep-Link.
  */
 
 import { test, expect } from '../helpers/test-fixtures';
-import { freezeClock, commonMasks, buildVisualTournament, seedRunningLiveMatch, FIXED_NOW } from './helpers';
+import { freezeClock, commonMasks, buildVisualTournament, FIXED_NOW } from './helpers';
 
 const TOURNAMENT_ID = 'visual-cockpit-tournament';
 const MATCH_ID = 'visual-cockpit-running-match';
@@ -31,10 +27,10 @@ test('Live-Cockpit: laufendes Spiel', async ({ page, seedIndexedDB }) => {
       {
         id: MATCH_ID,
         round: 1,
-        teamA: 'team-1',
-        teamB: 'team-2',
+        teamA: '00000000-0000-4000-8000-0000000000a1',
+        teamB: '00000000-0000-4000-8000-0000000000a2',
         field: 1,
-        matchStatus: 'running',
+        matchStatus: 'scheduled',
         scheduledTime: '2026-03-14T09:20:00.000Z',
       },
     ],
@@ -42,25 +38,35 @@ test('Live-Cockpit: laufendes Spiel', async ({ page, seedIndexedDB }) => {
 
   await seedIndexedDB({ tournaments: [tournament] });
 
-  await seedRunningLiveMatch(page, TOURNAMENT_ID, {
-    id: MATCH_ID,
-    number: 2,
-    phaseLabel: 'Gruppe A',
-    fieldId: 'field-1',
-    field: 1,
-    scheduledKickoff: '2026-03-14T09:20:00.000Z',
-    durationSeconds: 600,
-    homeTeam: { id: 'team-1', name: 'FC Nordstadt' },
-    awayTeam: { id: 'team-2', name: 'SV Südpark' },
-    homeScore: 2,
-    awayScore: 1,
-    elapsedSeconds: 320,
-    // FIXED_NOW - 320s
-    timerStartTime: new Date(FIXED_NOW.getTime() - 320_000).toISOString(),
-  });
-
   await page.goto(`/#/tournament/${TOURNAMENT_ID}/live`);
   await page.waitForLoadState('networkidle');
+
+  await page.getByTestId('match-start-button').click({ timeout: 15000 });
+  await expect(page.getByTestId('match-pause-button')).toBeVisible({ timeout: 10000 });
+  for (const side of ['home', 'home', 'away'] as const) {
+    await page.getByTestId(`goal-button-${side}`).click();
+    const skip = page.getByTestId('dialog-skip-button');
+    if (await skip.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await skip.click();
+      await expect(skip).toBeHidden();
+    }
+  }
+
+  await expect(page.getByTestId('score-home')).toContainText('2');
+  await expect(page.getByTestId('score-away')).toContainText('1');
+  // Cockpit-Toasts (Spiel gestartet, Tor ...) schliessen sich bei laufender Spieluhr nicht von
+  // selbst (Timer wird bei jedem Uhr-Render neu gesetzt) -- per Schliessen-Knopf entfernen.
+  const closeButtons = page.getByRole('button', { name: '×', exact: true });
+  await expect(async () => {
+    while ((await closeButtons.count()) > 0) {
+      await closeButtons.first().click({ timeout: 2000 });
+    }
+    await expect(closeButtons).toHaveCount(0);
+  }).toPass({ timeout: 20000 });
+  // Uhr nach dem Anpfiff um feste 320 s vorrücken (Referenzstand 04:40 Restzeit bei 10:00 Spielzeit)
+  await page.clock.setFixedTime(new Date(FIXED_NOW.getTime() + 320_000));
+  await expect(page.getByTestId('match-timer-display')).toHaveText('04:40');
+  await expect(closeButtons).toHaveCount(0);
 
   await expect(page.getByTestId('match-timer-display')).toBeVisible({ timeout: 10000 });
   await expect(page.getByTestId('match-status-badge')).toContainText(/Läuft|RUNNING|LAUFEND/i);

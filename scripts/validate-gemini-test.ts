@@ -16,9 +16,10 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { assertLocalSupabaseTarget } from './lib/assertLocalSupabaseTarget';
 
 // Configuration
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://amtlqicosscsjnnthvzm.supabase.co';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || '';
 
 interface ValidationResult {
@@ -126,10 +127,15 @@ function parseArgs(): {
 
 // Initialize Supabase client
 function createSupabaseClient(): SupabaseClient {
+  if (!SUPABASE_URL) {
+    console.error('Error: VITE_SUPABASE_URL environment variable not set');
+    process.exit(1);
+  }
   if (!SUPABASE_ANON_KEY) {
     console.error('Error: VITE_SUPABASE_ANON_KEY environment variable not set');
     process.exit(1);
   }
+  assertLocalSupabaseTarget(SUPABASE_URL, SUPABASE_ANON_KEY);
   return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 

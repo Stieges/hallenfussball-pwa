@@ -4,6 +4,9 @@ import { generateUniqueId } from '../../utils/idGenerator';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { captureFeatureError } from '../../lib/sentry';
 import { isTransientMutationError } from '../errors';
+import { StorageError } from '../storage/StorageError';
+import { QueueInFlight, QueueRetryTimer, globalQueueTimers, HOLD_RETRY_MS, isAuthExpired, type QueueTimers } from './mutationQueueRetry';
+import { REQUEST_TIMEOUT_MS } from '../utils/syncRetryTiming';
 
 /**
  * Structural (not enum-restricted) validation for a queued mutation item.
@@ -81,22 +84,26 @@ export interface MutationQueueConfig<TType extends string> {
      * schema-invalid item (filtered out, same Sentry/logging path) — it
      * never enters the queue. This exists because an unrecognized type that
      * *does* enter the queue can sit at the head and head-of-line-block
-     * every mutation behind it for up to MAX_RETRIES processing cycles
-     * (process() intentionally `break`s, not `continue`s, on a non-final
-     * retry failure, to preserve ordering for genuine transient failures).
+     * every mutation behind it: transient failures retry via timer 1/2/5/5/5 s
+     * without counting, real ones count and pause 30 s (nudges via
+     * `processIfDue`, `enqueue` and `online` wait that out), from MAX_RETRIES on the head is
+     * dead-lettered (process() intentionally `break`s, not `continue`s).
      *
      * When omitted, every structurally-valid item is accepted (today's
      * default for a consumer that doesn't need this — e.g. a future
      * Tournament-Series queue that hasn't opted in yet).
      */
     isKnownType?: (type: string) => boolean;
+    /** Injizierbare Timer (Standard: globale Wrapper wie MatchEngineProvider.tsx:72-75). */
+    timers?: QueueTimers;
 }
 
 /**
  * Offline-first mutation queue machinery: persists to localStorage, retries
- * with exponential backoff via MAX_RETRIES, coalesces duplicate mutations,
- * dead-letters permanently failing items, validates on load with Zod, and
- * notifies subscribers of status changes.
+ * transient failures via timer 1/2/5/5/5 s without counting; real failures
+ * count and pause 30 s (nudges via `processIfDue`, `enqueue` and `online`
+ * wait that out); from MAX_RETRIES on the item is dead-lettered. Coalesces duplicate mutations,
+ * validates on load with Zod, and notifies subscribers of status changes.
  *
  * Tournament-specific behaviour (mutation types, executor, coalesce rules,
  * storage keys) is injected via MutationQueueConfig — see MutationQueue.ts
@@ -106,19 +113,25 @@ export class GenericMutationQueue<TType extends string> {
     private queue: GenericMutationItem<TType>[] = [];
     private failedQueue: FailedMutationItem<TType>[] = [];
     private isProcessing = false;
+    private disposed = false;
+    private retryTimer: QueueRetryTimer;
+    private inFlight: QueueInFlight;
+    private lastFailure: 'transient' | 'permanent' | 'storage' | 'storageBlocked' | null = null;
     private listeners: ((status: MutationQueueStatus) => void)[] = [];
+    private readonly storageReported = new Set<string>(); // A-07i Fixrunde 1: Sentry je Ursache nur einmal
 
     constructor(private config: MutationQueueConfig<TType>) {
+        const timers = config.timers ?? globalQueueTimers();
+        this.retryTimer = new QueueRetryTimer(timers, () => {
+            void this.process();
+        });
+        this.inFlight = new QueueInFlight(timers);
         this.load();
         this.loadFailed();
 
         // Auto-process on online
         if (typeof window !== 'undefined') {
-            window.addEventListener('online', () => {
-                // eslint-disable-next-line no-console
-                if (import.meta.env.DEV) { console.log('MutationQueue: Online detected, processing queue...'); }
-                void this.process();
-            });
+            window.addEventListener('online', this.handleOnline);
 
             // Try processing on start if online
             if (navigator.onLine) {
@@ -126,6 +139,13 @@ export class GenericMutationQueue<TType extends string> {
             }
         }
     }
+
+    private readonly handleOnline = (): void => {
+        if (this.retryTimer.inPause) { return; } // A-06d2: während der 30-s-Pause kein Versuch
+        // eslint-disable-next-line no-console
+        if (import.meta.env.DEV) { console.log('MutationQueue: Online detected, processing queue...'); }
+        void this.process();
+    };
 
     /**
      * Add a mutation to the queue and persist it.
@@ -139,9 +159,15 @@ export class GenericMutationQueue<TType extends string> {
         // Try to coalesce with existing mutation
         const coalesceKey = this.config.coalesceKey(type, payload);
         if (coalesceKey) {
-            const existingIndex = this.queue.findIndex(
-                item => this.config.coalesceKey(item.type, item.payload) === coalesceKey
-            );
+            // Kopf-Schutz (A-06e): solange ein Durchgang läuft oder ein Versuch
+            // gemerkt ist, ist Index 0 gesperrt; Zusammenfassen immer in den
+            // LETZTEN Treffer (Rückwärtsschleife, kein findLastIndex/ES2023).
+            const headLocked = this.isProcessing || this.inFlight.isActive;
+            let existingIndex = -1;
+            for (let i = this.queue.length - 1; i >= 0; i--) {
+                if (i === 0 && headLocked) { continue; }
+                if (this.config.coalesceKey(this.queue[i].type, this.queue[i].payload) === coalesceKey) { existingIndex = i; break; }
+            }
 
             if (existingIndex !== -1) {
                 // Replace existing mutation with newer payload
@@ -159,8 +185,8 @@ export class GenericMutationQueue<TType extends string> {
                     console.log(`MutationQueue: Coalesced ${type} for ${coalesceKey}`);
                 }
 
-                // Still trigger processing
-                if (navigator.onLine) {
+                // Still trigger processing (A-06d2: nicht während der 30-s-Pause)
+                if (navigator.onLine && !this.retryTimer.inPause) {
                     void this.process();
                 }
                 return;
@@ -180,8 +206,8 @@ export class GenericMutationQueue<TType extends string> {
         this.save();
         this.notifyListeners();
 
-        // Optimistic processing
-        if (navigator.onLine) {
+        // Optimistic processing (A-06d2: nicht während der 30-s-Pause)
+        if (navigator.onLine && !this.retryTimer.inPause) {
             void this.process();
         }
     }
@@ -204,6 +230,9 @@ export class GenericMutationQueue<TType extends string> {
             failedCount: this.failedQueue.length,
         };
     }
+
+    /** Letzter Fehlerabschluss (A-06e): 'transient' | 'permanent' | null nach Erfolg; 'storage' = Gerätespeicher voll (A-07i). */
+    public getLastFailure(): 'transient' | 'permanent' | 'storage' | 'storageBlocked' | null { return this.lastFailure; }
 
     public subscribe(listener: (status: MutationQueueStatus) => void): () => void {
         this.listeners.push(listener);
@@ -362,13 +391,17 @@ export class GenericMutationQueue<TType extends string> {
         }
     }
 
-    private save() {
-        try {
-            safeLocalStorage.setItem(this.config.storageKey, JSON.stringify(this.queue));
-        } catch (e) {
-            if (import.meta.env.DEV) { console.error('MutationQueue: Failed to save queue', e); }
-            if (e instanceof Error) { captureFeatureError(e, this.config.sentryFeature, 'saveQueue'); }
-        }
+    private save() { this.persist(this.config.storageKey, this.queue, 'saveQueue'); }
+
+    /** A-07i (@FU-004): nur ein im echten Speicher angekommener Stand gilt als gespeichert. */
+    private persist(key: string, value: unknown, action: string): void {
+        if (!safeLocalStorage.setItemPersisted(key, JSON.stringify(value))) { if (Array.isArray(value) && value.length === 0) { safeLocalStorage.removeItem(key); } this.reportStorageFailure(action); } // A-07i Fixrunde 1 (2): leerer Stand -> veralteten Schluessel entfernen (Doppelversand)
+    }
+
+    /** A-07i: Speichern fehlgeschlagen → Störungsanzeige „Gerätespeicher voll“ (lastFailure 'storage') + Sentry (1× je Ursache). */
+    protected reportStorageFailure(action: string): void {
+        this.lastFailure = safeLocalStorage.getIsAvailable() ? 'storage' : 'storageBlocked'; this.notifyListeners(); // 1b: gesperrt vs. voll
+        if (!this.storageReported.has(action)) { this.storageReported.add(action); captureFeatureError(new StorageError('Warteschlange nicht dauerhaft gespeichert'), this.config.sentryFeature, action); }
     }
 
     private loadFailed() {
@@ -402,45 +435,60 @@ export class GenericMutationQueue<TType extends string> {
         }
     }
 
-    private saveFailed() {
-        try {
-            safeLocalStorage.setItem(this.config.failedStorageKey, JSON.stringify(this.failedQueue));
-        } catch (e) {
-            if (import.meta.env.DEV) { console.error('MutationQueue: Failed to save failed queue', e); }
-            if (e instanceof Error) { captureFeatureError(e, this.config.sentryFeature, 'saveFailedQueue'); }
-        }
-    }
+    private saveFailed() { this.persist(this.config.failedStorageKey, this.failedQueue, 'saveFailedQueue'); }
 
     /**
      * Process the queue sequentially.
      * Stops on error (preserving order) unless max retries exceeded.
      */
     public async process(): Promise<void> {
-        if (this.isProcessing || this.queue.length === 0) { return; }
+        // A-06f: solange die Anmeldung abgelaufen ist, startet kein Lauf (auch nicht über Timer/online/enqueue).
+        if (this.isProcessing || this.queue.length === 0 || this.retryTimer.authHold) { return; }
+        // A-07b Fixrunde 1: eine entsorgte Instanz startet keinen Lauf mehr (Konto-/Token-Wechsel).
+        if (this.disposed) { return; }
         if (!(navigator.onLine)) { return; }
 
+        // Ein Lauf ersetzt einen anstehenden Wiederholungs-Zeitgeber.
+        this.retryTimer.clear();
         this.isProcessing = true;
+        let scheduleMs: number | null = null;
 
         try {
             // Process head of queue
             while (this.queue.length > 0) {
-                if (!(navigator.onLine)) { break; }
+                // A-07b Fixrunde 1: nach dispose() kein weiterer Versuch, kein Speichern durch die alte Instanz.
+                if (this.disposed || !(navigator.onLine)) { break; }
 
                 const item = this.queue[0]; // Peek
 
                 try {
-                    await this.config.execute(item);
+                    // A-06e: gemerkter Versuch + Race gegen REQUEST_TIMEOUT_MS; A-06f Fixrunde 2: Generation am Versuch
+                    await this.inFlight.attempt(item.id, () => this.config.execute(item), REQUEST_TIMEOUT_MS, this.retryTimer.authEpoch);
                 } catch (error) {
+                    // A-07b Fixrunde 1: entsorgte Instanz schreibt nach einem Fehler nichts mehr.
+                    if (this.disposed) { break; }
                     if (import.meta.env.DEV) { console.warn(`MutationQueue: Error processing ${item.type} (${item.id})`, error); }
 
-                    if (isTransientMutationError(error)) {
+                    const authFailure = isAuthExpired(error);
+                    if (authFailure && this.retryTimer.holdForAuth(this.inFlight.lastEpoch)) {
+                        // A-06f (@FU-009): Anmeldung abgelaufen – zählt nicht, kein Zeitgeber; nur resumeAfterAuth() hebt auf.
+                        this.lastFailure = 'permanent'; this.notifyListeners();
+                        break;
+                    }
+
+                    // Veralteter Anmeldefehler (Versuch vor resumeAfterAuth) läuft hier durch.
+                    if (authFailure || isTransientMutationError(error)) {
                         // Vorübergehender Fehler (z. B. kein echtes Internet trotz
                         // navigator.onLine — Hallen-WLAN-Anmeldeseite, Server-Überlastung):
                         // zählt nicht als Fehlversuch. Item bleibt unverändert an erster
                         // Stelle stehen und wird beim nächsten Anstoß erneut versucht.
+                        this.lastFailure = 'transient'; this.notifyListeners();
+                        this.retryTimer.hold = false;
+                        scheduleMs = this.retryTimer.takeBackoffMs();
                         break;
                     }
 
+                    this.lastFailure = 'permanent'; this.notifyListeners();
                     item.retryCount++;
 
                     if (item.retryCount >= MAX_RETRIES) {
@@ -456,17 +504,67 @@ export class GenericMutationQueue<TType extends string> {
                     } else {
                         // Keep in queue, stop processing for now (retry later)
                         this.save();
+                        // Echter Fehler: feste 30-s-Sperre, bis der Zeitgeber ruft.
+                        this.retryTimer.hold = true;
+                        scheduleMs = HOLD_RETRY_MS;
                         // break loop to retry later
                         break;
                     }
                 }
 
+                // A-07b Fixrunde 1: Versand ist während des Laufs durch dispose() entsorgt – Eintrag nicht entfernen, nicht speichern.
+                if (this.disposed) { break; }
+                this.lastFailure = null;
                 this.queue.shift(); // Remove handled item
+                this.retryTimer.reset();
+                this.retryTimer.hold = false;
                 this.save();
                 this.notifyListeners();
             }
         } finally {
             this.isProcessing = false;
         }
+
+        // Genau eine Planungsstelle (A-06d): kein Zeitgeber offline, disposed oder ohne Bedarf.
+        if (this.queue.length === 0) {
+            this.retryTimer.reset();
+            this.retryTimer.clear();
+            this.retryTimer.hold = false;
+            return;
+        }
+        if (scheduleMs !== null && navigator.onLine && !this.disposed) {
+            this.retryTimer.schedule(scheduleMs);
+        }
+    }
+
+    /**
+     * Anstoß von außen (resync, Sichtbarkeit) — während der 30-s-Sperre nach einem
+     * echten Fehler wird kein Versuch gezählt und nichts ausgelöst.
+     */
+    public async processIfDue(): Promise<void> {
+        if (this.retryTimer.hold) { return; }
+        return this.process();
+    }
+
+    /**
+     * A-06f (@FU-009): Nach erneuter Anmeldung aufrufen – hebt die Anmelde-Sperre
+     * (`authHold`) auf und sendet die Queue weiter. Aufrufer: Anmelde-Ereignis
+     * im Sync-Wiring (kommt mit A-06g; bis dahin bewusst ohne Aufrufer).
+     * A-06d2: läuft gerade die 30-s-Pause nach einem echten Fehler, startet hier
+     * nichts – der Zeitgeber sendet nach Ablauf.
+     */
+    public async resumeAfterAuth(): Promise<void> {
+        this.retryTimer.authEpoch += 1;
+        // A-06d2: während einer 30-s-Pause nur die Generation erhöhen (kein zählender Anstoß).
+        if (!this.retryTimer.releaseAuthHold()) { return; }
+        return this.process();
+    }
+
+    /** Zeitgeber/Sperre löschen, `online`-Listener abmelden; `process()`/`enqueue` arbeiten weiter. */
+    public dispose(): void {
+        this.disposed = true;
+        this.retryTimer.clear();
+        this.retryTimer.hold = false;
+        if (typeof window !== 'undefined') { window.removeEventListener('online', this.handleOnline); }
     }
 }

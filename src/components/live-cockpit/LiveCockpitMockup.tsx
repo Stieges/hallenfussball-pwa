@@ -112,7 +112,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   // BUG-006: Track which team side triggered the penalty dialog
   const [pendingPenaltySide, setPendingPenaltySide] = useState<'home' | 'away' | null>(null);
   // BUG-007: Track which card type and team side triggered the card dialog
-  const [pendingCardType, setPendingCardType] = useState<'YELLOW' | 'RED' | null>(null);
+  const [pendingCardType, setPendingCardType] = useState<'YELLOW' | 'YELLOW_RED' | 'RED' | null>(null);
   const [pendingCardTeamSide, setPendingCardTeamSide] = useState<'home' | 'away' | null>(null);
   // BUG-009: Track which team side triggered the substitution dialog
   const [pendingSubstitutionSide, setPendingSubstitutionSide] = useState<'home' | 'away' | null>(null);
@@ -294,7 +294,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
 
   const handleUndo = useCallback(() => {
     if (!currentMatch || readOnly) { return; }
-    onUndoLastEvent(currentMatch.id);
+    onUndoLastEvent?.(currentMatch.id);
     showInfo('Letzte Aktion rückgängig gemacht');
   }, [currentMatch, onUndoLastEvent, showInfo, readOnly]);
 
@@ -325,7 +325,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
         // Actually, negative elapsed is possible if user sets > duration (not typical but possible logic)
       }
 
-      onAdjustTime(currentMatch.id, newElapsedSeconds);
+      onAdjustTime?.(currentMatch.id, newElapsedSeconds);
 
       const mins = Math.floor(newDisplaySeconds / 60);
       const secs = newDisplaySeconds % 60;
@@ -369,7 +369,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
 
   // Card/Penalty/Substitution handlers
   const handleCardConfirm = useCallback(
-    (cardType: 'YELLOW' | 'RED', teamId: string, playerNumber?: number) => {
+    (cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', teamId: string, playerNumber?: number) => {
       if (!currentMatch || readOnly) { return; }
 
       const teamName = currentMatch.homeTeam.id === teamId
@@ -808,6 +808,11 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
                   setPendingCardTeamSide(sidesSwapped ? 'away' : 'home');
                   setShowCardDialog(true);
                 }}
+                onYellowRedCard={() => {
+                  setPendingCardType('YELLOW_RED');
+                  setPendingCardTeamSide(sidesSwapped ? 'away' : 'home');
+                  setShowCardDialog(true);
+                }}
                 onRedCard={() => {
                   setPendingCardType('RED');
                   setPendingCardTeamSide(sidesSwapped ? 'away' : 'home');
@@ -841,6 +846,11 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
                 }}
                 onYellowCard={() => {
                   setPendingCardType('YELLOW');
+                  setPendingCardTeamSide(sidesSwapped ? 'home' : 'away');
+                  setShowCardDialog(true);
+                }}
+                onYellowRedCard={() => {
+                  setPendingCardType('YELLOW_RED');
                   setPendingCardTeamSide(sidesSwapped ? 'home' : 'away');
                   setShowCardDialog(true);
                 }}

@@ -4,7 +4,12 @@ import { Tournament, MatchUpdate } from '../models/types';
 import { LocalStorageRepository } from './LocalStorageRepository';
 import { SupabaseRepository } from './SupabaseRepository';
 import { isAbortError, RepositoryError } from '../errors';
+import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
 import { captureFeatureError } from '../../lib/sentry';
+import { slotTeamId } from '../models/matchSlot';
+import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
+import { decideCloudAdoption, isCloudReadTimeout, withCloudReadTimeout } from './cloudAdoption';
+import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisionSource } from './serverRevisionRegistry';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -12,12 +17,12 @@ import { captureFeatureError } from '../../lib/sentry';
  * `JSON.parse` (survives app restarts and dead-letter retries). `JSON.stringify` DROPS a
  * present-but-`undefined`-valued key entirely (`JSON.stringify({scoreA: undefined}) === '{}'`),
  * so an "explicit clear" (a caller sets `field: undefined` with the key present, e.g.
- * `MatchExecutionService#unskipMatch`) that made it into the queue as an in-memory object would
+ * `unskipMatch` des früheren Altwegs) that made it into the queue as an in-memory object would
  * survive the CURRENT session but silently lose the clear on reload/replay. Normalizing
  * `undefined` (key present) to `null` right before enqueueing makes every clear JSON-round-trip
- * safe -- `mapMatchUpdateToSupabase` already treats a present `null` exactly like a present
- * `undefined` (writes the column's `NULL`/default), so this changes nothing for the immediate,
- * same-session path, only the persisted/replayed one.
+ * safe -- `mapMatchUpdateToSupabase` treats a present `null` exactly like a present `undefined`
+ * (result/status/skip columns are stripped since V4a, only schedule columns are written), so
+ * this changes nothing for the same-session path, only the persisted/replayed one.
  */
 function normalizeMatchUpdateForQueue(update: MatchUpdate): MatchUpdate {
     const normalized: Record<string, unknown> = {};
@@ -75,6 +80,18 @@ function stableKey(value: unknown): string {
 }
 
 /**
+ * A-02: lokal besetzte Seite mit anderer Team-ID als in der Cloud? (offen/fehlend → nein)
+ * A-03: eine lokal aufgelöste Seite (`resolvedFrom`) löst kein Voll-Speichern aus.
+ * Server-seitige Auflösung: A-13/A-14, Befund C-DELTA-LOKALE-AUFLOESUNG.
+ */
+function sideDiffers(local: MatchSlot | undefined, remote: MatchSlot | undefined): boolean {
+    if (local?.kind === 'team' && local.resolvedFrom !== undefined) {return false;}
+    const localId = local === undefined ? undefined : slotTeamId(local);
+    if (localId === undefined) {return false;}
+    return remote === undefined || slotTeamId(remote) !== localId;
+}
+
+/**
  * SQLSTATE, mit dem `make_tournament_public` eine noch nicht freigegebene (Entwurfs-)
  * Turnierfreigabe ablehnt — siehe supabase/migrations/20260918_002_make_public_refuses_drafts.sql.
  *
@@ -106,14 +123,41 @@ export function isReleaseRefusal(error: unknown): boolean {
     return error.message.includes(RELEASE_REFUSAL_MARKER);
 }
 
-export class OfflineRepository implements ITournamentRepository {
+export class OfflineRepository implements ITournamentRepository, ServerRevisionSource {
     private _mutationQueue: MutationQueue;
+    /** A-08f3a Monotonie (Regel S) + a2/b Benachrichtigung: zuletzt übernommene Server-Revision je Spiel, je Turnier. */
+    private readonly serverRevisions = new ServerRevisionRegistry();
+    /** A-08f3b: laufender Cloud-Abruf je Turnier (ein Abruf je Turnier). */
+    private readonly cloudReads = new Map<string, Promise<Tournament | null>>();
+    private readonly cloudReadRerun = new Set<string>();
 
     constructor(
         private localRepo: LocalStorageRepository,
-        private supabaseRepo: SupabaseRepository
+        private supabaseRepo: SupabaseRepository,
+        /** A-07b: Konto, dem die Warteschlange gehoert (@FU-006). Ohne Angabe: Altschluessel. */
+        private accountId?: string
     ) {
-        this._mutationQueue = new MutationQueue(supabaseRepo);
+        this._mutationQueue = new MutationQueue(supabaseRepo, localRepo, undefined, accountId);
+    }
+
+    /** A-07e: Kopie gehoert dem Konto dieses Repositorys (ohne Konto unveraendert). */
+    private owned(tournament: Tournament): Tournament {
+        return this.accountId === undefined ? tournament : { ...tournament, ownerId: this.accountId };
+    }
+
+    /** A-07e: lokale Kopien des Kontos; ohne Konto (nur Tests) wie bisher alle. */
+    private localListForAccount(): Promise<Tournament[]> {
+        return this.accountId === undefined ? this.localRepo.listForCurrentUser() : this.localRepo.listOwnedBy(this.accountId);
+    }
+
+    /** A-08f3a2: Spiele mit Server-Revision > 1 (Schnelleingabe gesperrt wie heute, Rückbau in e2). */
+    serverLedMatchIds(tournamentId: string): ReadonlySet<string> {
+        return this.serverRevisions.serverLedMatchIds(tournamentId);
+    }
+
+    /** A-08f3a2/b: meldet je Übernahme die Spiele mit gestiegener Revision. */
+    subscribeServerRevisions(tournamentId: string, listener: ServerRevisionListener): () => void {
+        return this.serverRevisions.subscribe(tournamentId, listener);
     }
 
     /**
@@ -129,27 +173,25 @@ export class OfflineRepository implements ITournamentRepository {
      * 2. If found: return immediately, trigger background cloud sync
      * 3. If not found locally: try cloud, cache result
      *
-     * This avoids blocking on auth/network issues after navigation.
+     * A-08f3b `fresh` (Push/Abfrage-Ausweichen, @FU-087/@FU-001): wartet auf den Cloud-Abruf, führt zusammen und
+     * liefert das Ergebnis, bei Fehler die lokale Kopie. Das erste Laden bleibt local-first.
      */
-    async get(id: string): Promise<Tournament | null> {
+    async get(id: string, options?: { fresh?: boolean }): Promise<Tournament | null> {
         // 1. LOCAL-FIRST: Try local storage immediately
         const localData = await this.localRepo.get(id);
 
-        if (localData) {
-            // Found locally - return immediately, sync in background
-            void this.refreshFromCloudInBackground(id);
-            return localData;
+        if (localData && (this.accountId === undefined || localData.ownerId === this.accountId)) { // A-07e: fremd/unmarkiert = nicht lokal
+            // A-08f3b-F F3: Sperre a2 auch nach Neuladen ohne Netz – Revisionen aus der lokalen Kopie
+            this.serverRevisions.record(id, await this.localRepo.readServerRevisions(id));
+            const refreshed = this.refreshFromCloudInBackground(id, options?.fresh);
+            if (!options?.fresh) { return localData; }
+            await refreshed;
+            return (await this.localRepo.get(id)) ?? localData;
         }
 
-        // 2. Not found locally - try cloud
+        // 2. Not found locally - try cloud (A-08f3b: mit Revisionen; N-2: eine fremde lokale Kopie bleibt unangetastet)
         try {
-            const cloudData = await this.supabaseRepo.get(id);
-
-            if (cloudData) {
-                // Cache for next time
-                await this.localRepo.save(cloudData);
-                return cloudData;
-            }
+            return await this.syncFromCloud(id, !localData?.ownerId || localData.ownerId === this.accountId || this.accountId === undefined);
         } catch (error) {
             if (!isAbortError(error)) {
                 console.warn('OfflineRepository: Cloud fetch failed.', error);
@@ -162,43 +204,45 @@ export class OfflineRepository implements ITournamentRepository {
         return null;
     }
 
-    /**
-     * Background sync: Fetches latest from cloud and updates local if newer.
-     * Non-blocking, errors are silently ignored.
-     */
-    private async refreshFromCloudInBackground(id: string): Promise<void> {
+    /** Background sync: Cloud lesen und zusammenführen (Versionsweg oder Feldweg). Fehler werden nur gemeldet. */
+    private async refreshFromCloudInBackground(id: string, fresh?: boolean): Promise<void> {
         try {
-            const cloudData = await this.supabaseRepo.get(id);
-            if (cloudData) {
-                // Only update if cloud version is newer
-                const localData = await this.localRepo.get(id);
-                const cloudVersion = cloudData.version ?? 0;
-                const localVersion = localData?.version ?? 0;
-
-                // Zweiter Grund neben einer neueren Version: Vor M1 hat der Mapper `isPublic`
-                // gar nicht gelesen, lokale Kopien tragen dort `undefined`. Bei gleichem
-                // Versionsstand griffe der Refresh sonst nie — und der nächste Voll-Save
-                // schriebe erneut `is_public: false` auf alle Team- und Spielzeilen.
-                // N3: Nur wenn die Cloud nicht ÄLTER ist. Sonst überschriebe eine offline
-                // vorgenommene Veröffentlichung (lokale Version voraus, Queue noch nicht
-                // abgespielt) sich selbst mit dem älteren Cloud-Stand.
-                const visibilityStale = localData !== null
-                    && localData.isPublic !== cloudData.isPublic
-                    && cloudVersion >= localVersion;
-
-                if (cloudVersion > localVersion || visibilityStale) {
-                    await this.localRepo.save(cloudData);
-                    if (import.meta.env.DEV) {
-                        // eslint-disable-next-line no-console -- Debug logging for background sync updates
-                        console.log(`[OfflineRepository] Background sync: Updated tournament ${id} from v${localVersion} to v${cloudVersion}${visibilityStale ? ' (isPublic war veraltet)' : ''}`);
-                    }
-                }
-            }
+            await this.syncFromCloud(id, undefined, fresh);
         } catch (error) {
-            if (!isAbortError(error) && error instanceof Error) {
+            if (!isAbortError(error) && !isCloudReadTimeout(error) && error instanceof Error) {
                 captureFeatureError(error, 'repository', 'backgroundSync', { tournamentId: id });
             }
         }
+    }
+
+    /**
+     * A-08f3b: ein Abruf je Turnier für alle Cloud-Lesewege (frisch und im Hintergrund). Entscheidung und Schreiben
+     * laufen in einem Kettenschritt des lokalen Speichers (`cloudAdoption.ts`); `firstCopy` = erster Cloud-Weg.
+     * A-08f3b-F: Ein `fresh` während eines laufenden Abrufs fordert genau einen Nachzügler an (F1, Muster
+     * `MatchEngine.catchUp`); jeder Abruf hat ein Zeitlimit, danach wird der Eintrag geräumt (F2).
+     */
+    private syncFromCloud(id: string, firstCopy?: boolean, fresh?: boolean): Promise<Tournament | null> {
+        const running = this.cloudReads.get(id);
+        if (running) {
+            if (fresh) { this.cloudReadRerun.add(id); }
+            return running;
+        }
+        const run = (async () => {
+            let result = await this.readAndAdopt(id, firstCopy);
+            while (this.cloudReadRerun.delete(id)) { result = await this.readAndAdopt(id, firstCopy); }
+            return result;
+        })().finally(() => { this.cloudReads.delete(id); this.cloudReadRerun.delete(id); });
+        this.cloudReads.set(id, run);
+        return run;
+    }
+
+    private async readAndAdopt(id: string, firstCopy?: boolean): Promise<Tournament | null> {
+        const read = await withCloudReadTimeout(this.supabaseRepo.getWithMatchRevisions(id));
+        if (!read) { return null; }
+        const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined, owned: (t: Tournament) => this.owned(t) };
+        const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => decideCloudAdoption(local, read, stored, options));
+        this.serverRevisions.record(id, adoption.revisions);
+        return read.tournament;
     }
 
     async getByShareCode(code: string): Promise<Tournament | null> {
@@ -224,7 +268,8 @@ export class OfflineRepository implements ITournamentRepository {
      */
     async save(tournament: Tournament): Promise<void> {
         // 1. Save Local
-        await this.localRepo.save(tournament);
+        await this.localRepo.save(this.owned(tournament));
+        this.serverRevisions.retain(tournament.id, new Set(tournament.matches.map(m => m.id))); // A-08f3b: Neugenerieren
 
         // 2. Enqueue Cloud Persistence
         this.mutationQueue.enqueue('SAVE_TOURNAMENT', tournament);
@@ -248,6 +293,7 @@ export class OfflineRepository implements ITournamentRepository {
 
     async delete(id: string): Promise<void> {
         await this.localRepo.delete(id);
+        this.serverRevisions.clear(id); // A-08f3b: Ablage leeren
         this.mutationQueue.enqueue('DELETE_TOURNAMENT', id);
     }
 
@@ -276,10 +322,10 @@ export class OfflineRepository implements ITournamentRepository {
                 this.supabaseRepo.listForCurrentUser(),
                 timeoutPromise
             ]);
-            const localList = await this.localRepo.listForCurrentUser();
-
             // Merge: Add local-only tournaments that haven't been synced yet
             const cloudIds = new Set(cloudList.map(t => t.id));
+            if (this.accountId !== undefined) { await this.localRepo.assignUnmarkedOwners(this.accountId, cloudIds); }
+            const localList = await this.localListForAccount();
             const localOnly = localList.filter(t => !cloudIds.has(t.id));
 
             // Return cloud list + unsynced local tournaments
@@ -294,7 +340,7 @@ export class OfflineRepository implements ITournamentRepository {
                 }
             }
             // Fallback to all local tournaments
-            return await this.localRepo.listForCurrentUser();
+            return await this.localListForAccount();
         }
     }
 
@@ -303,11 +349,17 @@ export class OfflineRepository implements ITournamentRepository {
      */
     async syncUp(): Promise<void> {
         try {
-            // Use public API to get local list
-            const localList = await this.localRepo.listForCurrentUser();
+            // A-07e: nur eigene Kopien des Kontos (Gast-Kopien nie hochladen)
+            const localList = await this.localListForAccount();
 
             for (const localT of localList) {
                 try {
+                    // G7: Turnier mit Engine-Einträgen im Gastkonto nie hochladen —
+                    // weder als Voll-Upload noch über syncTournamentDelta (dessen
+                    // save/update* unten würden die Einträge ins Konto abschneiden).
+                    if (await hasGuestEngineEntries(localT)) {
+                        continue;
+                    }
                     // Try to get from cloud to check existence/version
                     const cloudT = await this.supabaseRepo.get(localT.id);
 
@@ -395,15 +447,10 @@ export class OfflineRepository implements ITournamentRepository {
             baseVer++; // Version incremented after metadata update
         }
 
-        // 3. Check Matches
-        const matchUpdates = this.getMatchUpdates(local, remote);
-        if (matchUpdates.length > 0) {
-            await this.supabaseRepo.updateMatches(local.id, matchUpdates, baseVer);
-            baseVer++;
-        }
-
-        // 4. Update local version to match the new cloud version
+        // 3. Update local version to match the new cloud version
         // This prevents the "Local is newer" loop
+        // PC25: bei reinem Versionsvorsprung an die Cloud angleichen, sonst Lost Update fremder
+        // Struktur-Änderungen; lokale Altspiel-Ergebnisse werden ohnehin nicht gesendet.
         await this.localRepo.updateLocalVersion(local.id, baseVer);
     }
 
@@ -419,6 +466,17 @@ export class OfflineRepository implements ITournamentRepository {
         const localMatchIds = local.matches.map(m => m.id).sort().join(',');
         const remoteMatchIds = remote.matches.map(m => m.id).sort().join(',');
         if (localMatchIds !== remoteMatchIds) {return true;}
+
+        // A-02 (@TM-027): eine lokal BESETZTE Seite, die in der Cloud anders besetzt ist
+        // (Teamtausch/-ersatz durch die Leitung), braucht das Voll-Speichern – der Metadaten-Delta
+        // kennt keine Spielseiten. Eine lokal OFFENE Seite zählt nie: der lokale Stand ist dann nur
+        // veraltet (ein anderes Gerät hat aufgelöst) – kein Zurücksetzen (gleiche Regel wie
+        // mapMatchToScheduleUpdate).
+        const remoteById = new Map(remote.matches.map(m => [m.id, m]));
+        if (local.matches.some(m => {
+            const r = remoteById.get(m.id);
+            return r !== undefined && (sideDiffers(m.slotA, r.slotA) || sideDiffers(m.slotB, r.slotB));
+        })) {return true;}
 
         // Groups/Fields
         if (JSON.stringify(local.groups) !== JSON.stringify(remote.groups)) {return true;}
@@ -501,42 +559,6 @@ export class OfflineRepository implements ITournamentRepository {
     }
 
     /**
-     * A2 Fixrunde 3 (N2b, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
-     * task-A2-rereview.md`): only ever sets a field when the LOCAL copy actually has a value for
-     * it (`lMatch.<field> !== undefined`). Before A2 Fixrunde 1, `mapMatchUpdateToSupabase` skipped
-     * any field whose VALUE was `undefined`, so assigning `update.scoreA = lMatch.scoreA` here was
-     * harmless even when `lMatch.scoreA` was `undefined` -- it never reached the DB. Fixrunde 1
-     * changed that mapper to key-PRESENCE (`'field' in match`), which broke this call site
-     * silently: a local copy that simply doesn't know a helper's live score (e.g. right after
-     * `syncUp()` runs at app start / reconnect, `useSyncOnReconnect.ts`, whenever
-     * `localVer > cloudVer`) would set `update.scoreA = undefined` with the KEY PRESENT, which the
-     * new mapper writes as `score_a = NULL` -- deleting the helper's live score in the cloud. This
-     * guard restores the original "don't touch what I don't know" behaviour.
-     */
-    private getMatchUpdates(local: Tournament, remote: Tournament): MatchUpdate[] {
-        const updates: MatchUpdate[] = [];
-
-        for (const lMatch of local.matches) {
-            const rMatch = remote.matches.find(m => m.id === lMatch.id);
-            if (!rMatch) {continue;} // Should be caught by structural check
-
-            const update: MatchUpdate = { id: lMatch.id };
-            let updated = false;
-
-            if (lMatch.scoreA !== undefined && lMatch.scoreA !== rMatch.scoreA) { update.scoreA = lMatch.scoreA; updated = true; }
-            if (lMatch.scoreB !== undefined && lMatch.scoreB !== rMatch.scoreB) { update.scoreB = lMatch.scoreB; updated = true; }
-            if (lMatch.matchStatus !== undefined && lMatch.matchStatus !== rMatch.matchStatus) { update.matchStatus = lMatch.matchStatus; updated = true; }
-            if (lMatch.timerElapsedSeconds !== undefined && lMatch.timerElapsedSeconds !== rMatch.timerElapsedSeconds) { update.timerElapsedSeconds = lMatch.timerElapsedSeconds; updated = true; }
-            // Add other granular fields if needed
-
-            if (updated) {
-                updates.push(update);
-            }
-        }
-        return updates;
-    }
-
-    /**
      * Pull changes from cloud to local.
      * Strategy:
      * 1. Get remote version from Supabase
@@ -564,7 +586,7 @@ export class OfflineRepository implements ITournamentRepository {
 
             // Case: No local data - just save remote
             if (!localT) {
-                await this.localRepo.save(remoteT);
+                await this.localRepo.save(this.owned(remoteT));
                 return { status: 'updated', data: remoteT };
             }
 
@@ -588,7 +610,7 @@ export class OfflineRepository implements ITournamentRepository {
                 }
 
                 // No conflicts - safe to update local
-                await this.localRepo.save(remoteT);
+                await this.localRepo.save(this.owned(remoteT));
                 return { status: 'updated', data: remoteT };
             }
 
@@ -611,50 +633,16 @@ export class OfflineRepository implements ITournamentRepository {
     }
 
     /**
-     * Detects conflicts between local and remote match scores.
-     * Uses Last-Write-Wins (LWW) for automatic resolution where possible.
+     * Detects conflicts between local and remote tournaments.
+     *
+     * C3a-2b (F8): Score-Konflikte sind seit V4 nicht mehr client-seitig auflösbar — vor-bestehend
+     * seit A2: `resolveConflict('local')` kann Scores nicht pushen (mapMatchToScheduleUpdate
+     * schließt Ergebnis-Spalten aus). Die Score-Prüfung ist deshalb deaktiviert, sonst blockiert
+     * `syncDown` mit `status:'conflict'` den Auto-Pull für einen Konflikt, den keine Seite mehr
+     * auflösen kann. Signatur/Rückgabe bleibt für zukünftige Konflikttypen.
      */
-    private detectMatchConflicts(local: Tournament, remote: Tournament): SyncConflict[] {
-        const conflicts: SyncConflict[] = [];
-
-        for (const localMatch of local.matches) {
-            const remoteMatch = remote.matches.find(m => m.id === localMatch.id);
-
-            if (!remoteMatch) {
-                continue; // New local match, handled by syncUp
-            }
-
-            // Check for score conflicts
-            const localHasScore = localMatch.scoreA !== undefined && localMatch.scoreB !== undefined;
-            const remoteHasScore = remoteMatch.scoreA !== undefined && remoteMatch.scoreB !== undefined;
-
-            if (localHasScore && remoteHasScore) {
-                const scoresDiffer =
-                    localMatch.scoreA !== remoteMatch.scoreA ||
-                    localMatch.scoreB !== remoteMatch.scoreB;
-
-                if (scoresDiffer) {
-                    // Get team names for conflict display
-                    const homeTeam = local.teams.find(t => t.id === localMatch.teamA);
-                    const awayTeam = local.teams.find(t => t.id === localMatch.teamB);
-                    const matchName = `${homeTeam?.name ?? 'Team A'} vs ${awayTeam?.name ?? 'Team B'}`;
-
-                    conflicts.push({
-                        id: `${localMatch.id}-score`,
-                        entityType: 'match',
-                        entityId: localMatch.id,
-                        entityName: matchName,
-                        field: 'score',
-                        localValue: `${localMatch.scoreA}:${localMatch.scoreB}`,
-                        remoteValue: `${remoteMatch.scoreA}:${remoteMatch.scoreB}`,
-                        localTimestamp: local.updatedAt,
-                        remoteTimestamp: remote.updatedAt,
-                    });
-                }
-            }
-        }
-
-        return conflicts;
+    private detectMatchConflicts(_local: Tournament, _remote: Tournament): SyncConflict[] {
+        return [];
     }
 
     /**
@@ -669,6 +657,13 @@ export class OfflineRepository implements ITournamentRepository {
                 // Push local to cloud
                 const local = await this.localRepo.get(tournamentId);
                 if (local) {
+                    // G7: Turnier mit Engine-Einträgen im Gastkonto nie hochladen
+                    if (await hasGuestEngineEntries(local)) {
+                        return {
+                            status: 'error',
+                            error: 'Tournament with guest engine entries is not uploaded',
+                        };
+                    }
                     await this.supabaseRepo.save(local);
                     return { status: 'synced', data: local };
                 }
@@ -676,7 +671,7 @@ export class OfflineRepository implements ITournamentRepository {
                 // Pull remote to local
                 const remote = await this.supabaseRepo.get(tournamentId);
                 if (remote) {
-                    await this.localRepo.save(remote);
+                    await this.localRepo.save(this.owned(remote));
                     return { status: 'updated', data: remote };
                 }
             }
@@ -706,7 +701,9 @@ export class OfflineRepository implements ITournamentRepository {
         // Then, try to push local changes if needed
         try {
             const local = await this.localRepo.get(tournamentId);
-            if (local) {
+            // G7: Turnier mit Engine-Einträgen im Gastkonto nie pushen —
+            // der Pull oben bleibt unberührt, es wird nur nichts hochgeladen.
+            if (local && !(await hasGuestEngineEntries(local))) {
                 const remote = await this.supabaseRepo.get(tournamentId);
                 if (!remote || new Date(local.updatedAt) > new Date(remote.updatedAt)) {
                     await this.supabaseRepo.save(local);

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Match, Tournament } from '../../../types/tournament';
 import { getReplanAvailability, openReplan } from '../utils/replan';
+import { looseVs } from '../../../test/matchSlotFixtures';
 
 const baseTournament = (matches: Match[]): Pick<Tournament, 'id' | 'matches' | 'status' | 'publishedAt'> => ({
   id: 't1',
@@ -13,8 +14,7 @@ const match = (id: string, matchStatus: Match['matchStatus']): Match => ({
   id,
   round: 1,
   field: 1,
-  teamA: 'a',
-  teamB: 'b',
+  ...looseVs('a', 'b'),
   matchStatus,
 });
 

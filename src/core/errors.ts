@@ -77,6 +77,39 @@ export class SyncError extends AppError {
   }
 }
 
+/**
+ * A-07b Fixrunde 1 (@FU-006): `supabase.auth.getSession()` hat geworfen (lokaler Sitzungsspeicher
+ * nicht lesbar). Vorübergehend: die Mutation zählt nicht als Fehlversuch, sie bleibt stehen und
+ * der nächste Durchgang versucht es erneut. Klassifiziert in `isTransientMutationError`.
+ */
+export class SessionReadError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = 'SessionReadError';
+  }
+}
+
+/**
+ * I1 (task-C3b2-review.md, PC29-Fixrunde F1): thrown by the mutation-queue guest guard
+ * (`MutationQueue.ts` SAVE_TOURNAMENT/UPDATE_MATCH/UPDATE_MATCHES/
+ * UPDATE_TOURNAMENT_METADATA/DELETE_TOURNAMENT) when reading the local guest-engine
+ * store or the local tournament fails. MUST be classified as PERMANENT by
+ * `isTransientMutationError` (checked at the very top, before `isAbortError`) —
+ * otherwise a raw IndexedDB `AbortError`/`DOMException` reaching that check would be
+ * "transient" in a real browser (`DOMException instanceof Error` is `true` there,
+ * unlike vitest/jsdom, where it is `false` — see review I1 realm probe). A fixed
+ * message (never the wrapped error's own text) is the second line of defence: even if
+ * someone later reads `.message` instead of checking `instanceof`, it will not contain
+ * an "aborted"/"timeout"/"fetch" substring. `cause` is kept for diagnostics only, never
+ * read for classification.
+ */
+export class GuestStoreReadError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = 'GuestStoreReadError';
+  }
+}
+
 // =============================================================================
 // OptimisticLockError (existing, unchanged)
 // =============================================================================
@@ -187,6 +220,8 @@ const TRANSIENT_NETWORK_MESSAGE_PATTERNS = [
  * Transient: network failures (fetch/TypeError, "Failed to fetch",
  * "NetworkError when attempting to fetch resource" (Firefox), "Load failed"
  * (Safari/iOS)), timeouts/aborts, HTTP 408, 429, 5xx.
+ * A-06a (Brief A1): additionally `name === 'TimeoutError'` (e.g. from
+ * `createRequestTimeoutError`) and `code === 23` (numeric DOMException TIMEOUT_ERR).
  * Permanent (default — everything not positively recognised as transient):
  * RLS/403, other 4xx, Postgres error codes (23xxx, P0001, 22P02),
  * OptimisticLockError, etc. — exactly today's behaviour.
@@ -199,11 +234,33 @@ const TRANSIENT_NETWORK_MESSAGE_PATTERNS = [
  * caller sets explicitly (e.g. in tests, or a future caller).
  */
 export function isTransientMutationError(error: unknown): boolean {
+  // I1: must be the FIRST check — a GuestStoreReadError wraps an IndexedDB read
+  // failure that, in a real browser, IS `instanceof Error`/`DOMException` and can
+  // carry an "aborted"/"timeout" message; checking the class before any message-based
+  // pattern (`isAbortError`, TRANSIENT_NETWORK_MESSAGE_PATTERNS below) closes that gap.
+  if (error instanceof GuestStoreReadError) {
+    return false;
+  }
+  if (error instanceof SessionReadError) {
+    return true;
+  }
   if (error instanceof OptimisticLockError) {
+    return false;
+  }
+  if (error instanceof TeamStillReferencedError) {
     return false;
   }
   if (isAbortError(error)) {
     return true;
+  }
+  // A-06a (Brief A1): `name === 'TimeoutError'` (AbortSignal-Zeitlimit) bzw. `code === 23`
+  // (DOMException TIMEOUT_ERR, nur als Zahl — strikt, sonst zählte `code: '23505'` mit) sind
+  // vorübergehend. `isAbortError` bleibt unangetastet (auch zum Stummschalten bei Navigation).
+  if (error && typeof error === 'object') {
+    const timeoutLike = error as { name?: unknown; code?: unknown };
+    if (timeoutLike.name === 'TimeoutError' || timeoutLike.code === 23) {
+      return true;
+    }
   }
   if (Array.isArray(error)) {
     // SupabaseRepository.updateMatches wraps per-match failures as
@@ -273,4 +330,71 @@ export function isAbortError(error: unknown): boolean {
     e.code === '20' ||
     e.code === 20
   );
+}
+
+// =============================================================================
+// TeamStillReferencedError (A-05 Fixrunde 1, @FU-086)
+// =============================================================================
+
+/**
+ * `SupabaseRepository.save()`: Ein zu speicherndes Spiel zeigt noch auf ein Team, das mit demselben
+ * Speichern gelöscht würde. Nicht wiederholbar (nicht transient): der Fehler liegt im Stand, nicht im
+ * Netz. Wird vor dem ersten Schreiben geworfen, es bleibt also nichts halb geschrieben.
+ */
+export class TeamStillReferencedError extends Error {
+  public readonly matchId: string;
+
+  constructor(matchId: string) {
+    super(`Spiel ${matchId} zeigt noch auf ein Team, das gelöscht würde – Speichern abgebrochen, nichts geschrieben`);
+    this.name = 'TeamStillReferencedError';
+    this.matchId = matchId;
+  }
+}
+
+// =============================================================================
+// MatchAwaitingTeamsError (A-03, @TM-033)
+// =============================================================================
+
+/**
+ * Ein Spiel lässt sich nicht anpfeifen, solange eine Seite noch offen ist (Slot `pending`) oder
+ * der Slot fehlt. Trägt die offenen Seiten, damit die Anzeige den Wartegrund nennen kann
+ * (Herkunft über `slotLabel`).
+ */
+export class MatchAwaitingTeamsError extends Error {
+  public readonly matchId: string;
+  /** Seiten (`'A'` = Heim), die noch kein Team haben. */
+  public readonly openSides: readonly ('A' | 'B')[];
+
+  constructor(matchId: string, openSides: readonly ('A' | 'B')[]) {
+    super(`Spiel ${matchId}: Seite ${openSides.join(' und ')} ist noch nicht besetzt`);
+    this.name = 'MatchAwaitingTeamsError';
+    this.matchId = matchId;
+    this.openSides = openSides;
+  }
+}
+
+// =============================================================================
+// MatchNotOnEngineError (A-08a, @FU-069)
+// =============================================================================
+
+/**
+ * Grund, warum ein Spiel NICHT über die Engine geleitet werden kann:
+ * - `resultEntered`: Spielstand liegt schon vor (Schnelleingabe/Altbestand) -> Hinweis, keine Leitung
+ * - `skipped`: Spiel ist abgesetzt
+ * - `other`: sonstige Engine-Wartezeit (Anzeige wie "Spiel wird vorbereitet")
+ */
+export type MatchNotOnEngineReason = 'resultEntered' | 'skipped' | 'other';
+
+/**
+ * Das Cockpit hat für dieses Spiel keine Engine-Ansicht und es gibt keinen Altweg mehr (A-08a).
+ * Trägt nur den Grund, nie Spiel-IDs oder Teamnamen (Anzeige übersetzt den Grund).
+ */
+export class MatchNotOnEngineError extends Error {
+  public readonly reason: MatchNotOnEngineReason;
+
+  constructor(reason: MatchNotOnEngineReason) {
+    super(`Spiel ist nicht über die Engine leitbar (${reason})`);
+    this.name = 'MatchNotOnEngineError';
+    this.reason = reason;
+  }
 }

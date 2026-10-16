@@ -9,9 +9,10 @@ import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
-import { Tournament } from '../../types/tournament';
+import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
-import { getTeamForDisplay } from '../../utils/teamHelpers';
+import { matchLabelText } from '../../core/models/slotLabel';
+import { buildSideContext, sideDisplay, type SideContext } from './matchSides';
 import { MatchCardDesktop, type MatchCardStatus } from './MatchCard';
 
 // ---------------------------------------------------------------------------
@@ -26,7 +27,9 @@ export interface DesktopCardProps {
   /** Whether card is expanded */
   isExpanded: boolean;
   /** Tournament data for group name resolution */
-  tournament?: Tournament;
+  tournament?: ScheduleSource;
+  /** Kontext der Spielseiten-Anzeige (Teams, Vorgängerspiele); ohne Angabe aus `tournament` gebaut */
+  sideContext?: SideContext;
   /** Whether to show group label (hide for single-group tournaments) */
   showGroupLabel?: boolean;
   /** Callback when card body is clicked */
@@ -48,6 +51,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
   status,
   isExpanded,
   tournament,
+  sideContext,
   showGroupLabel = true,
   onCardClick,
   onCircleClick,
@@ -55,6 +59,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
   hasEvents = false,
 }) => {
   const { t } = useTranslation('tournament');
+  const sides = sideContext ?? buildSideContext(tournament, [match]);
 
   // ---------------------------------------------------------------------------
   // Styles
@@ -76,10 +81,10 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         scheduledTime={match.time}
         field={match.field}
         referee={match.referee ? t('matchCard.refereeSR', { referee: match.referee }) : undefined}
-        group={match.label ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined)}
+        group={(match.label === undefined ? undefined : matchLabelText(match.label)) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined)}
         showGroupLabel={showGroupLabel}
-        homeTeam={getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam)}
-        awayTeam={getTeamForDisplay(tournament?.teams, match.originalTeamB, match.awayTeam)}
+        homeTeam={sideDisplay(match, 'A', sides)}
+        awayTeam={sideDisplay(match, 'B', sides)}
         homeScore={match.scoreA ?? 0}
         awayScore={match.scoreB ?? 0}
         status={status}

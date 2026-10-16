@@ -42,6 +42,16 @@ elif [[ "${1:-}" == "--without-guard" ]]; then
   MODE="without-guard"
 fi
 
+# A-05: Seit 20261003_001 braucht jede Spielseite Team-ID oder Herkunft (matches_slot_*_present). Im Modus
+# --without-migration fehlt die Migration samt Spalten -> die Fixtures lassen die Slot-Spalten dann weg.
+if [[ "$MODE" == "without-migration" ]]; then
+  SLOT_COLS=""
+  SLOT_VALS=""
+else
+  SLOT_COLS=", slot_a_source, slot_b_source"
+  SLOT_VALS=", '{\"kind\":\"groupRank\",\"group\":\"A\",\"rank\":1}'::jsonb, '{\"kind\":\"groupRank\",\"group\":\"A\",\"rank\":2}'::jsonb"
+fi
+
 POSTGRES_IMAGE="supabase/postgres:17.6.1.063"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
@@ -60,6 +70,7 @@ fi
 
 FOUND_TARGET=0
 BEFORE_TARGET=()
+AFTER_TARGET=()
 TARGET_FILE=""
 for f in "${NEWER_MIGRATIONS[@]}"; do
   if [[ "$(basename "$f")" == "$TARGET_MIGRATION" ]]; then
@@ -67,6 +78,8 @@ for f in "${NEWER_MIGRATIONS[@]}"; do
     TARGET_FILE="$f"
   elif [[ "$FOUND_TARGET" -ne 1 ]]; then
     BEFORE_TARGET+=("$f")
+  else
+    AFTER_TARGET+=("$f")
   fi
 done
 if [[ "$FOUND_TARGET" -ne 1 ]]; then
@@ -125,6 +138,8 @@ TEAM_A="$(uuid_for team:a)"
 TEAM_B="$(uuid_for team:b)"
 T_BESTAND="$(uuid_for tournament:bestand)"
 M_BESTAND="$(uuid_for match:bestand)"
+TEAM_BESTAND_A="$(uuid_for team:bestand-a)"
+TEAM_BESTAND_B="$(uuid_for team:bestand-b)"
 EB1="$(uuid_for event:bestand-1)"
 EB2="$(uuid_for event:bestand-2)"
 EB3="$(uuid_for event:bestand-3)"
@@ -162,8 +177,12 @@ VALUES
 INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, config)
 VALUES ('$T_BESTAND', '$U_OWNER', 'Match-Event-Log — Bestand', '2026-09-28', 8, 15, '{}'::jsonb);
 
-INSERT INTO public.matches (id, tournament_id, round, field, match_status)
-VALUES ('$M_BESTAND', '$T_BESTAND', 1, 1, 'running');
+-- A-05: Bestandsspiele tragen je Seite ein Team (wie Prod nach dem Aufraeumen, Bauplan E-A5); sonst
+-- verweigert 20261003_001 absichtlich die Migration.
+INSERT INTO public.teams (id, tournament_id, name)
+VALUES ('$TEAM_BESTAND_A', '$T_BESTAND', 'Bestand A'), ('$TEAM_BESTAND_B', '$T_BESTAND', 'Bestand B');
+INSERT INTO public.matches (id, tournament_id, round, field, match_status, team_a_id, team_b_id)
+VALUES ('$M_BESTAND', '$T_BESTAND', 1, 1, 'running', '$TEAM_BESTAND_A', '$TEAM_BESTAND_B');
 
 INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away)
 VALUES
@@ -193,6 +212,17 @@ if [[ "$TO_APPLY_TARGET" -eq 1 ]]; then
     exit 1
   fi
   echo "OK    M1-Idempotenz: zweite Anwendung Exit 0, seq-Werte unveraendert." >&2
+
+  # C0b (.superpowers/sdd/2026-09-26-pr-c-ausgang/task-C0b-brief.md): die neueren Migrationen
+  # (20260928_002/_003, 20261001_001) ebenfalls einspielen -- 20261001_001 ergaenzt
+  # match_transitions und den Typ-CHECK um AMEND (Probe 7a/7c vergleichen gegen
+  # matchTransitions.json, die seit C0a AMEND enthaelt) und legt den Spalten-Schutz auf matches an.
+  # Sie bauen auf dieser Zielmigration auf (Fail-fast) und entfallen deshalb im Modus
+  # --without-migration.
+  for f in "${AFTER_TARGET[@]}"; do
+    echo "Neuere Migration einspielen: $(basename "$f")" >&2
+    psql_stdin < "$f"
+  done
 fi
 
 if [[ "$MODE" == "without-guard" ]]; then
@@ -499,7 +529,13 @@ if [[ "$MODE" != "without-migration" ]]; then
 
   run_sql "$U_OWNER" "DELETE FROM public.match_events WHERE id = '$E_DEFINER';"
   if [[ "$MODE" == "without-guard" ]]; then
-    check "4b(Gegenprobe B): DELETE auf Engine-Zeile (direkt) -> jetzt erlaubt" "ok" "$LAST_RESULT"
+    # Seit 20261004_101 (Spur B, @LZ-090/@SL-129) sperrt zusaetzlich die Beleg-Sperre
+    # match_events_protect_delete JEDES direkte Loeschen durch Client-Rollen. Ohne Guard muss die
+    # Ablehnung deshalb von DIESER Sperre kommen (nicht mehr vom Guard) -- das ist die Gegenprobe.
+    R4B_REASON="anders"
+    [[ "$LAST_RESULT" == "denied" ]] && grep -q "belegen den Anpfiff" <<<"$LAST_OUTPUT" \
+      && ! grep -qE 'append_match_events|Rechenfunktion' <<<"$LAST_OUTPUT" && R4B_REASON="beleg_sperre"
+    check "4b(Gegenprobe B): DELETE auf Engine-Zeile (direkt) -> ohne Guard nur noch von der Beleg-Sperre (20261004_101) abgelehnt" "beleg_sperre" "$R4B_REASON"
   else
     check "4b. DELETE auf Engine-Zeile (Eigentuemer, direkt) -> abgelehnt" "denied" "$LAST_RESULT"
     assert_guard_message "4b"
@@ -522,8 +558,36 @@ if [[ "$MODE" != "without-migration" ]]; then
   docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 >/dev/null <<SQL
 SELECT public.__test_insert_engine_event('$E_CASCADE', '$M_2', 'GOAL', 1, 0, '$TEAM_A');
 SQL
-  run_sql_committed "$U_OWNER" "DELETE FROM public.tournaments WHERE id = '$T_MAIN';"
-  check "4d. Turnier-Kaskade loescht Engine-Zeile MIT team_id gesetzt (pg_trigger_depth() > 1)" "ok" "$LAST_RESULT"
+  # 4d0 (@LZ-090, Migration 20261004_101): ein Turnier mit Ereignissen gilt als angepfiffen --
+  # der Eigentuemer (Client-Rolle) darf es NICHT hart loeschen. Vor dem Merge von Spur B lief 4d
+  # direkt als Eigentuemer; seit tournaments_protect_delete_started ist dieser Weg gewollt zu.
+  run_sql "$U_OWNER" "DELETE FROM public.tournaments WHERE id = '$T_MAIN';"
+  R4D0="anders"
+  [[ "$LAST_RESULT" == "denied" ]] && grep -q "tournament_started" <<<"$LAST_OUTPUT" && R4D0="tournament_started"
+  check "4d0. (@LZ-090) Eigentuemer loescht angepfiffenes Turnier hart -> abgelehnt von protect_tournament_delete_started" "tournament_started" "$R4D0"
+
+  # 4d: Kaskaden-Pfad der Ereignis-Guards isoliert pruefen -- als Client-Rolle, aber mit der
+  # @LZ-090-Sperre fuer DIESE Transaktion abgeschaltet (ALTER TABLE ist transaktional, der Trigger
+  # ist nach COMMIT wieder aktiv; 4d1 belegt das). So bleibt der Nachweis erhalten, dass
+  # match_events_guard_engine_rows und match_events_protect_delete die FK-Kaskade
+  # (pg_trigger_depth() > 1) durchlassen, waehrend direktes Loeschen (4b) verboten bleibt.
+  set +e
+  LAST_OUTPUT="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+ALTER TABLE public.tournaments DISABLE TRIGGER tournaments_protect_delete_started;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$U_OWNER';
+DELETE FROM public.tournaments WHERE id = '$T_MAIN';
+RESET ROLE;
+ALTER TABLE public.tournaments ENABLE TRIGGER tournaments_protect_delete_started;
+COMMIT;
+SQL
+)"
+  [[ $? -eq 0 ]] && LAST_RESULT="ok" || LAST_RESULT="denied"
+  set -e
+  check "4d. Turnier-Kaskade loescht Engine-Zeile MIT team_id gesetzt (pg_trigger_depth() > 1, @LZ-090-Sperre isoliert)" "ok" "$LAST_RESULT"
+  TRG_STATE="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT tgenabled FROM pg_trigger WHERE tgname = 'tournaments_protect_delete_started';")"
+  check "4d1. @LZ-090-Sperre nach der Probe wieder aktiv (tgenabled)" "O" "$TRG_STATE"
   REMAINING="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT count(*) FROM public.match_events WHERE id IN ('$E_CASCADE','$E_DEFINER');")"
   check "4e. Engine-Zeilen nach Turnier-Kaskade tatsaechlich weg" "0" "$REMAINING"
 else
@@ -541,8 +605,10 @@ INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, grou
 VALUES ('$T_TEAMDEL', '$U_OWNER', 'Match-Event-Log — Team-Delete', '2026-09-28', 8, 15, '{}'::jsonb);
 INSERT INTO public.teams (id, tournament_id, name)
 VALUES ('$TEAM_C', '$T_TEAMDEL', 'Team C'), ('$TEAM_D', '$T_TEAMDEL', 'Team D');
-INSERT INTO public.matches (id, tournament_id, round, field, match_status, team_a_id, team_b_id)
-VALUES ('$M_TEAMDEL', '$T_TEAMDEL', 1, 1, 'running', '$TEAM_C', '$TEAM_D');
+-- A-05: aufgeloeste Seiten behalten ihre Herkunft (slot_*_source); ohne sie verweigert
+-- matches_slot_*_present das ON DELETE SET NULL beim Team-Loeschen.
+INSERT INTO public.matches (id, tournament_id, round, field, match_status, team_a_id, team_b_id${SLOT_COLS})
+VALUES ('$M_TEAMDEL', '$T_TEAMDEL', 1, 1, 'running', '$TEAM_C', '$TEAM_D'${SLOT_VALS});
 COMMIT;
 SQL
   docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 >/dev/null <<SQL
@@ -602,8 +668,8 @@ INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, grou
 VALUES ('$T_MR1', '$U_OWNER', 'Match-Event-Log — MR1', '2026-09-28', 8, 15, '{"publishedAt":"2026-09-28T00:00:00.000Z"}'::jsonb, false);
 INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at)
 VALUES ('$(uuid_for membership:mr1-collab)', '$T_MR1', '$U_COLLAB', 'collaborator', now());
-INSERT INTO public.matches (id, tournament_id, round, field, match_status)
-VALUES ('$M_MR1', '$T_MR1', 1, 1, 'running');
+INSERT INTO public.matches (id, tournament_id, round, field, match_status${SLOT_COLS})
+VALUES ('$M_MR1', '$T_MR1', 1, 1, 'running'${SLOT_VALS});
 COMMIT;
 SQL
   docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 >/dev/null <<SQL
@@ -650,8 +716,8 @@ INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, grou
 VALUES ('$T_LEGACY', '$U_OWNER', 'Match-Event-Log — legacy', '2026-09-28', 8, 15, '{}'::jsonb);
 INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at)
 VALUES ('$(uuid_for membership:legacy-collab)', '$T_LEGACY', '$U_COLLAB', 'collaborator', now());
-INSERT INTO public.matches (id, tournament_id, round, field, match_status)
-VALUES ('$M_LEGACY', '$T_LEGACY', 1, 1, 'running');
+INSERT INTO public.matches (id, tournament_id, round, field, match_status${SLOT_COLS})
+VALUES ('$M_LEGACY', '$T_LEGACY', 1, 1, 'running'${SLOT_VALS});
 COMMIT;
 SQL
 
@@ -681,8 +747,8 @@ INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, a
   ('$(uuid_for membership:authors-collab)', '$T_AUTH', '$U_COLLAB', 'collaborator', now()),
   ('$(uuid_for membership:authors-trainer)', '$T_AUTH', '$U_TRAINER', 'trainer', now()),
   ('$(uuid_for membership:authors-viewer)', '$T_AUTH', '$U_VIEWER', 'viewer', now());
-INSERT INTO public.matches (id, tournament_id, round, field, match_status)
-VALUES ('$M_AUTH', '$T_AUTH', 1, 1, 'running');
+INSERT INTO public.matches (id, tournament_id, round, field, match_status${SLOT_COLS})
+VALUES ('$M_AUTH', '$T_AUTH', 1, 1, 'running'${SLOT_VALS});
 INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away)
 VALUES ('$E_AUTH', '$M_AUTH', 'GOAL', 10, 1, 0);
 INSERT INTO public.match_event_authors (event_id, tournament_id, user_id)
@@ -856,6 +922,27 @@ SQL
   fi
 else
   echo "SKIP  11. ohne Migration: match_event_authors existiert nicht -> kein sinnvoller Vergleich" >&2
+fi
+
+# --- Probe 12 (C0b): scripts/db_privilege_assertions.sql gegen den migrierten Container, unter
+# SET ROLE ci_schema_reader wie in match-engine-parity.sh/append-match-events-check.sh (Begruendung
+# dort, Abschluss-Fixrunde B, I2). Jede Zeile muss "|t" sein. Ohne Zielmigration fehlen die
+# Engine-Funktionen -- dann nicht sinnvoll.
+if [[ "$MODE" != "without-migration" ]]; then
+  set +e
+  PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } \
+    | docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 -q -tA 2>&1)"
+  PRIV_EC=$?
+  set -e
+  PRIV_FAILED="$(grep -v '|t$' <<<"$PRIV_OUT" || true)"
+  if [[ $PRIV_EC -eq 0 && -z "$PRIV_FAILED" && -n "$PRIV_OUT" ]]; then
+    echo "OK    12. Rechte-Assertion (ci_schema_reader): $(wc -l <<<"$PRIV_OUT" | tr -d ' ') Zeilen |t" >&2
+  else
+    echo "FAIL  12. Rechte-Assertion (ci_schema_reader): Exit $PRIV_EC, $(head -c 600 <<<"$PRIV_FAILED")" >&2
+    MISMATCHES=$((MISMATCHES + 1))
+  fi
+else
+  echo "SKIP  12. ohne Migration: Engine-Funktionen fehlen -> Rechte-Assertion nicht sinnvoll" >&2
 fi
 
 echo "" >&2

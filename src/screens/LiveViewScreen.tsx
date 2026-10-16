@@ -201,6 +201,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
             <Card>
               <ScheduleDisplay
                 schedule={filteredSchedule}
+                hidePendingOrigin={tournament.hideScoresForPublic}
                 currentStandings={filteredStandings}
                 showGroupTables={standingsTabAvailable(tournament)}
                 participantStandings={tournament.hideScoresForPublic ? schedule.initialStandings : undefined}

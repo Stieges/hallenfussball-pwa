@@ -23,6 +23,12 @@ import {
   getConflictTypeLabel,
 } from '../scheduleConflicts';
 import { Match, Team } from '../../../../types/tournament';
+import { vs, testUuid } from '../../../../test/matchSlotFixtures';
+
+const TEAM_A = testUuid(1);
+const TEAM_B = testUuid(2);
+const TEAM_C = testUuid(3);
+const TEAM_D = testUuid(4);
 
 // ============================================================================
 // Test Helpers
@@ -33,8 +39,7 @@ function createMatch(overrides: Partial<Match> = {}): Match {
     id: `match-${Math.random().toString(36).slice(2, 7)}`,
     round: 1,
     field: 1,
-    teamA: 'team-a',
-    teamB: 'team-b',
+    ...vs(TEAM_A, TEAM_B),
     scheduledTime: new Date('2024-01-15T10:00:00'),
     matchStatus: 'scheduled',
     ...overrides,
@@ -59,23 +64,21 @@ describe('detectTeamConflicts', () => {
 
   it('should detect no conflicts when teams have no overlapping matches', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
-      createTeam({ id: 'team-d', name: 'Team D' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
+      createTeam({ id: TEAM_D, name: 'Team D' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-c',
-        teamB: 'team-d',
+        ...vs(TEAM_C, TEAM_D),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];
@@ -86,22 +89,20 @@ describe('detectTeamConflicts', () => {
 
   it('should detect conflict when same team plays in two overlapping matches', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:05:00'), // Overlaps (within 10 min)
       }),
     ];
@@ -117,22 +118,20 @@ describe('detectTeamConflicts', () => {
 
   it('should not detect conflict when matches are sequential (no overlap)', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:10:00'), // Starts exactly when match-1 ends
       }),
     ];
@@ -143,23 +142,21 @@ describe('detectTeamConflicts', () => {
 
   it('should ignore finished matches', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
         matchStatus: 'finished',
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];
@@ -170,23 +167,21 @@ describe('detectTeamConflicts', () => {
 
   it('should ignore skipped matches', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
         matchStatus: 'skipped',
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];
@@ -197,21 +192,19 @@ describe('detectTeamConflicts', () => {
 
   it('should handle matches without scheduled time', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: undefined,
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];
@@ -222,29 +215,26 @@ describe('detectTeamConflicts', () => {
 
   it('should detect multiple conflicts when team is triple-booked', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
-      createTeam({ id: 'team-d', name: 'Team D' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
+      createTeam({ id: TEAM_D, name: 'Team D' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'match-3',
-        teamA: 'team-a',
-        teamB: 'team-d',
+        ...vs(TEAM_A, TEAM_D),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];
@@ -476,22 +466,20 @@ describe('detectBreakViolations', () => {
 
   it('should detect no violations when teams have sufficient break time', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:15:00'), // 5 min break after 10 min match
       }),
     ];
@@ -502,22 +490,20 @@ describe('detectBreakViolations', () => {
 
   it('should detect violation when team has insufficient break time', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:12:00'), // Only 2 min break
       }),
     ];
@@ -532,23 +518,21 @@ describe('detectBreakViolations', () => {
 
   it('should ignore finished and skipped matches', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
         matchStatus: 'finished',
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:12:00'),
         matchStatus: 'scheduled',
       }),
@@ -560,29 +544,26 @@ describe('detectBreakViolations', () => {
 
   it('should detect violations for multiple teams', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
-      createTeam({ id: 'team-d', name: 'Team D' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
+      createTeam({ id: TEAM_D, name: 'Team D' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:12:00'), // Violation for team-a
       }),
       createMatch({
         id: 'match-3',
-        teamA: 'team-b',
-        teamB: 'team-d',
+        ...vs(TEAM_B, TEAM_D),
         scheduledTime: new Date('2024-01-15T10:12:00'), // Violation for team-b
       }),
     ];
@@ -599,24 +580,22 @@ describe('detectBreakViolations', () => {
 describe('detectAllConflicts', () => {
   it('should detect all conflict types when present', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         field: 1,
         referee: 1,
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a', // Same team as match-1
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C), // Same team as match-1
         field: 1, // Same field as match-1
         referee: 1, // Same referee as match-1
         scheduledTime: new Date('2024-01-15T10:00:00'), // Same time
@@ -690,15 +669,13 @@ describe('validateMatchChange', () => {
       createMatch({
         id: 'match-1',
         field: 1,
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'match-2',
         field: 2,
-        teamA: 'team-c',
-        teamB: 'team-d',
+        ...vs(TEAM_C, TEAM_D),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];
@@ -814,22 +791,20 @@ describe('Edge Cases', () => {
 
   it('should handle matches at midnight boundary', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T23:55:00'),
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-16T00:00:00'), // Next day
       }),
     ];
@@ -841,22 +816,20 @@ describe('Edge Cases', () => {
 
   it('should handle ISO date strings', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: '2024-01-15T10:00:00.000Z' as unknown as Date,
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: '2024-01-15T10:05:00.000Z' as unknown as Date,
       }),
     ];
@@ -867,22 +840,20 @@ describe('Edge Cases', () => {
 
   it('should handle very long match duration', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'match-1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'match-2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T11:00:00'),
       }),
     ];

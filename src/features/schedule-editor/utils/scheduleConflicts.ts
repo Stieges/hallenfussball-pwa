@@ -8,6 +8,7 @@
  * - Break time violations
  */
 
+import { matchTeamIds, matchInvolvesTeam } from '../../../core/models/matchSlot';
 import { Match, Team } from '../../../types/tournament';
 import {
   ScheduleConflict,
@@ -100,9 +101,8 @@ export function detectTeamConflicts(
       if (!doTimesOverlap(time1, end1, time2, end2)) {continue;}
 
       // Check for shared teams
-      const sharedTeamIds = [match1.teamA, match1.teamB].filter(
-        id => id === match2.teamA || id === match2.teamB
-      );
+      // Offene Seiten (noch kein Team) gelten nie als Doppelbelegung (A-04a K8).
+      const sharedTeamIds = matchTeamIds(match1).filter(id => matchInvolvesTeam(match2, id));
 
       for (const teamId of sharedTeamIds) {
         const team = teamMap.get(teamId);
@@ -267,7 +267,7 @@ export function detectBreakViolations(
   for (const match of matches) {
     if (match.matchStatus === 'finished' || match.matchStatus === 'skipped') {continue;}
 
-    for (const teamId of [match.teamA, match.teamB]) {
+    for (const teamId of matchTeamIds(match)) {
       const existing = matchesByTeam.get(teamId) ?? [];
       existing.push(match);
       matchesByTeam.set(teamId, existing);

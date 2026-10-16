@@ -50,4 +50,22 @@ describe('assertLocalSupabaseTarget', () => {
       assertLocalSupabaseTarget('https://amtlqicosscsjnnthvzm.supabase.co', PRODUCTION_LIKE_JWT)
     ).toThrow(NotLocalSupabaseTargetError);
   });
+
+  it('akzeptiert 127.0.0.1 mit Port und Pfad (lokaler Stack)', () => {
+    expect(() => assertLocalSupabaseTarget('http://127.0.0.1:54321', LOCAL_JWT)).not.toThrow();
+    expect(() => assertLocalSupabaseTarget('http://localhost:54321/rest/v1', LOCAL_JWT)).not.toThrow();
+  });
+
+  it.each([
+    ['http://localhost.evil.example', 'Hostname mit fremder Domain als Suffix'],
+    ['http://localhost.evil.example:54321', 'Hostname mit fremder Domain als Suffix und Port'],
+    ['http://127.0.0.1.evil.example', '127.0.0.1 mit fremder Domain als Suffix'],
+    ['http://localhost@evil.example', 'Benutzerinfo-Trick: @ wechselt den Host'],
+    ['http://127.0.0.1@evil.example', 'Benutzerinfo-Trick mit 127.0.0.1 als Benutzername'],
+    ['http://user:pass@localhost:54321', 'Benutzername und Passwort im URL'],
+    ['https://localhost:54321', 'https statt http'],
+    ['https://x.supabase.co', 'Cloud-URL'],
+  ])('bricht ab bei getarnter URL: %s (%s)', (url) => {
+    expect(() => assertLocalSupabaseTarget(url, LOCAL_JWT)).toThrow(NotLocalSupabaseTargetError);
+  });
 });

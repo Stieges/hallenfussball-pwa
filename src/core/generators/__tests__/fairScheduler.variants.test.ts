@@ -6,6 +6,7 @@ import {
   type GroupPhaseScheduleOptions,
 } from '../fairScheduler';
 import type { Team, Match } from '../../../types/tournament';
+import { looseVs, testUuid } from '../../../test/matchSlotFixtures';
 import {
   isBetterVariant,
   isWithinBaseline,
@@ -22,9 +23,10 @@ import {
 const SLOT_MIN = 10;
 const BREAK_MIN = 5;
 
+// Merge I1: Team-IDs sind UUIDs (A-01, teamSlot lehnt Kurz-IDs ab); Nummernkreis je Präfix (Kennbuchstabe × 1000).
 function createTeams(n: number, group: string, prefix = 't'): Team[] {
   return Array.from({ length: n }, (_, i) => ({
-    id: `${prefix}${i}`,
+    id: testUuid(prefix.charCodeAt(0) * 1000 + i),
     name: `Team ${prefix}${i}`,
     group,
     players: [],
@@ -212,7 +214,7 @@ describe('F3: Untergrenze gegenueber Seed 0', () => {
 describe('F3: Kriterium Spreizung', () => {
   it('measureVariant misst die Spreizung der mittleren Pausen je Team', () => {
     const m = (id: string, a: string, b: string, slot: number): Match =>
-      ({ id, round: slot + 1, field: 1, slot, teamA: a, teamB: b, group: 'A' });
+      ({ id, round: slot + 1, field: 1, slot, ...looseVs(a, b), group: 'A' });
     // a: Slots 0,1,2 (mittel 1) · b: 0,4 (mittel 4) · c: 1,4 (mittel 3) · d: nur 2 (ohne Abstand)
     const matches = [m('1', 'a', 'b', 0), m('2', 'a', 'c', 1), m('3', 'a', 'd', 2), m('4', 'b', 'c', 4)];
 

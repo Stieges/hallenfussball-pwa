@@ -1,7 +1,7 @@
 // DOM-only test setup. Nur für das `dom`-Vitest-Projekt (environment: 'jsdom').
 // Ergänzt src/test/setup.ts (dort die umgebungsunabhängigen Mocks: i18n).
 import '@testing-library/jest-dom/vitest'
-import { afterEach, vi } from 'vitest'
+import { afterAll, afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
 // Cleanup after each test
@@ -44,11 +44,34 @@ class ResizeObserverMock {
 window.ResizeObserver = ResizeObserverMock
 
 // Mock requestAnimationFrame
+// Ausstehende Rahmen werden gemerkt und nach jedem Test (und am Dateiende) verworfen,
+// damit kein Rueckruf nach dem Abbau der Testumgebung mehr laeuft.
+let nextRafId = 1
+const pendingRafs = new Map<number, ReturnType<typeof setTimeout>>()
+
+function clearPendingRafs(): void {
+  pendingRafs.forEach((timer) => clearTimeout(timer))
+  pendingRafs.clear()
+}
+
 window.requestAnimationFrame = vi.fn((cb: FrameRequestCallback) => {
-  setTimeout(() => cb(performance.now()), 16)
-  return 1
+  const id = nextRafId++
+  const timer = setTimeout(() => {
+    pendingRafs.delete(id)
+    if (typeof globalThis.requestAnimationFrame === 'undefined') {return}
+    cb(performance.now())
+  }, 16)
+  pendingRafs.set(id, timer)
+  return id
 })
-window.cancelAnimationFrame = vi.fn()
+window.cancelAnimationFrame = vi.fn((id: number) => {
+  const timer = pendingRafs.get(id)
+  if (timer !== undefined) {clearTimeout(timer)}
+  pendingRafs.delete(id)
+})
+
+afterEach(clearPendingRafs)
+afterAll(clearPendingRafs)
 
 // Suppress console errors in tests (optional)
 // vi.spyOn(console, 'error').mockImplementation(() => {})

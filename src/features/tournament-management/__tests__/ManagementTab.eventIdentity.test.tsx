@@ -28,6 +28,9 @@ const liveMatches = new Map<string, LiveMatch>();
 /** Jede Übergabe an das Cockpit wird mitgeschrieben, damit Identitäten vergleichbar sind. */
 const seenEventArrays: unknown[] = [];
 
+// C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
+
 vi.mock('../../../components/live-cockpit', () => ({
   LiveCockpit: (props: { currentMatch?: { events?: unknown } | null }) => {
     seenEventArrays.push(props.currentMatch?.events);
@@ -40,6 +43,12 @@ vi.mock('../../../hooks/useMatchSound', () => ({
     play: vi.fn(), stop: vi.fn(), testPlay: vi.fn(), activate: vi.fn(),
     isPlaying: false, isLoading: false, isReady: true, isActivated: true, error: null,
   }),
+}));
+
+// P7 (Fixrunde 3): ManagementTab braucht jetzt den App-weiten `useToast` (Fehler-Toast bei einem
+// gescheiterten `getLiveMatchData`) -- der wirft ohne `<ToastProvider>`-Vorfahren.
+vi.mock('../../../components/ui/Toast/ToastContext', () => ({
+  useToast: () => ({ showError: vi.fn(), showSuccess: vi.fn(), showWarning: vi.fn(), showInfo: vi.fn() }),
 }));
 
 // B-04 Fixrunde 1 (@W2A-030): ManagementTab löst die Spielregel-Rolle über useEffectiveTournamentRole
@@ -55,8 +64,8 @@ vi.mock('../../auth/hooks/useTournamentMembers', () => ({
   }),
 }));
 
-vi.mock('../../../hooks/useMatchExecution', () => ({
-  useMatchExecution: () => ({
+vi.mock('../../../hooks/useCockpitExecution', () => ({
+  useCockpitExecution: () => ({
     // Bei JEDEM Aufruf eine neue Map — so verhält sich der echte Hook auch
     // (`setLiveMatches(prev => new Map(prev)...)`). Gäbe die Attrappe die modulweite Map
     // zurück, bliebe deren Identität konstant, `currentMatch` würde nie neu berechnet und
@@ -77,6 +86,7 @@ vi.mock('../../../hooks/useMatchExecution', () => ({
 }));
 
 import { ManagementTab } from '../ManagementTab';
+import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
 const MATCH_ID = 'match-1';
 const HOME = { id: 'team-a', name: 'FC Alpha' };
@@ -122,6 +132,7 @@ const schedule = {
     id: MATCH_ID, matchNumber: 1, time: '10:00', field: 1, slot: 1,
     homeTeam: HOME.name, awayTeam: AWAY.name,
     originalTeamA: HOME.id, originalTeamB: AWAY.id,
+    slotA: testTeamSlot(HOME.id), slotB: testTeamSlot(AWAY.id),
     phase: 'groupStage', label: 'Gruppenphase', duration: 10,
   }],
   phases: [],

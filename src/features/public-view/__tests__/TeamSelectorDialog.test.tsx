@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TeamSelectorDialog } from '../components/TeamSelectorDialog';
-import { buildLiveViewTournament } from '../../../screens/__tests__/liveViewFixture';
+import { buildLiveViewTournament, TEAM_IDS } from '../../../screens/__tests__/liveViewFixture';
 
 vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
 await (await import('../../../test/realDeI18n')).initRealDeI18n();
@@ -37,7 +37,7 @@ describe('TeamSelectorDialog (B-13d2)', () => {
   it('Auswahl eines Teams ruft den Handler mit der Team-ID auf', () => {
     const { onSelectTeam, onClose } = renderDialog();
     fireEvent.click(screen.getByRole('button', { name: /SV Süd/ }));
-    expect(onSelectTeam).toHaveBeenCalledWith('team-sued');
+    expect(onSelectTeam).toHaveBeenCalledWith(TEAM_IDS.sued);
     expect(onClose).not.toHaveBeenCalled();
   });
 

@@ -43,7 +43,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
   const nextMatch = !runningMatch
     ? upcomingMatches(matches, { count: 1, field: fieldNumber })[0]
     : undefined;
-  const labelCtx = { teams, hidePendingOrigin: !scoresPublic(tournament) };
+  const labelCtx = { teams, matches, groups: tournament.groups, hidePendingOrigin: !scoresPublic(tournament) };
 
   // Delegate to LiveMatchDisplay for running matches
   if (runningMatch) {

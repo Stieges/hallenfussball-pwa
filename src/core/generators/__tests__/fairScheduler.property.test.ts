@@ -6,6 +6,7 @@ import {
   analyzeScheduleFairness,
 } from '../../generators';
 import type { Team, Match } from '../../../types/tournament';
+import { testUuid } from '../../../test/testIds';
 
 /**
  * Property tests for FairScheduler (HP-5e).
@@ -32,7 +33,7 @@ const MAX_FAIRNESS_DELTA = 1.5;
 
 function createTeams(n: number, group = 'A'): Team[] {
   return Array.from({ length: n }, (_, i) => ({
-    id: `t${i}`,
+    id: testUuid(i),
     name: `Team ${i}`,
     group,
     players: [],
@@ -90,7 +91,7 @@ describe('FairScheduler — round-robin completeness (property)', () => {
           }
 
           for (let i = 0; i < numTeams; i++) {
-            expect(counts.get(`t${i}`)).toBe(numTeams - 1);
+            expect(counts.get(testUuid(i))).toBe(numTeams - 1);
           }
         },
       ),

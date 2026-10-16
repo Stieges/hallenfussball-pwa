@@ -30,6 +30,7 @@ import { OfflineBanner } from './OfflineBanner';
 import { ConnectingIndicator } from './ConnectingIndicator';
 import { clearCachesAndReload } from '../../../lib/cacheRecovery';
 import { useBrowserOnlineStatus } from '../hooks/useBrowserOnlineStatus';
+import { hasSignedOutElsewhere } from '../context/remoteSignOut';
 
 /** Soft threshold (ms) after which the subtle "connecting…" pill surfaces. */
 const CONNECTING_HINT_DELAY_MS = 3000;
@@ -96,6 +97,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [showSuccess, setShowSuccess] = useState(false);
   const [migratedCount, setMigratedCount] = useState(0);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  // Hinweis, wenn ein anderes Gerät dieses Gerät abgemeldet hat (A-07d2, @AN-024).
+  const [signedOutElsewhere] = useState(hasSignedOutElsewhere);
   const [resetPasswordSent, setResetPasswordSent] = useState(false);
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
@@ -311,6 +314,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             label={t('login.connectingHint')}
             data-testid="connecting-indicator"
           />
+        )}
+
+        {signedOutElsewhere && (
+          <p role="status" data-testid="signed-out-elsewhere" style={styles.signedOutHint}>
+            {t('login.signedOutElsewhere')}
+          </p>
         )}
 
         <p style={styles.subtitle}>

@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 
 // Types for dynamically imported modules
@@ -211,6 +211,10 @@ runIntegration('Integration: Cloud Sync Verification', () => {
         supabaseRepo = new SupabaseRepository(); // References mocked supabase
         offlineRepo = new OfflineRepository(localRepo, supabaseRepo);
         creationService = new TournamentCreationService(offlineRepo);
+    });
+
+    afterAll(() => {
+        offlineRepo?.mutationQueue.dispose();
     });
 
     it('should create a tournament and sync it to Supabase', async () => {

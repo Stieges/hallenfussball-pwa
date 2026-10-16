@@ -44,7 +44,8 @@
   },
   "cardAnimation": {
     "redCard": "RED CARD",
-    "yellowCard": "YELLOW CARD"
+    "yellowCard": "YELLOW CARD",
+    "yellowRedCard": "YELLOW-RED"
   },
   "slides": {
     "nextMatches": {

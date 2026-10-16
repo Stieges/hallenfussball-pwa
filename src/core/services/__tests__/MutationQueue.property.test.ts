@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fc from 'fast-check';
 import { MutationQueue, MAX_RETRIES } from '../MutationQueue';
 import type { MutationItem } from '../MutationQueue';
@@ -10,6 +10,7 @@ import type { MutationItem } from '../MutationQueue';
 const mockStorage = new Map<string, string>();
 vi.mock('../../utils/safeStorage', () => ({
   safeLocalStorage: {
+    setItemPersisted: vi.fn((key: string, value: string) => { mockStorage.set(key, value); return true; }),
     getItem: vi.fn((key: string) => mockStorage.get(key) ?? null),
     setItem: vi.fn((key: string, value: string) => { mockStorage.set(key, value); }),
     removeItem: vi.fn((key: string) => { mockStorage.delete(key); }),
@@ -40,12 +41,18 @@ function createMockRepo() {
 
 let mockRepo: ReturnType<typeof createMockRepo>;
 let onlineSpy: ReturnType<typeof vi.spyOn>;
+let created: MutationQueue[] = [];
 
 beforeEach(() => {
   mockStorage.clear();
   idCounter = 0;
+  created = [];
   mockRepo = createMockRepo();
   onlineSpy = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+});
+
+afterEach(() => {
+  created.forEach(q => q.dispose());
 });
 
 function createQueue(opts?: { online?: boolean; preloadQueue?: MutationItem[] }) {
@@ -56,7 +63,9 @@ function createQueue(opts?: { online?: boolean; preloadQueue?: MutationItem[] })
     mockStorage.set('mutation_queue_v1', JSON.stringify(opts.preloadQueue));
   }
 
-  return new MutationQueue(mockRepo as any);
+  const queue = new MutationQueue(mockRepo as any);
+  created.push(queue);
+  return queue;
 }
 
 // =============================================================================

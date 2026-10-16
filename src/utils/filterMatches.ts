@@ -9,6 +9,7 @@
 
 import { Match, Team } from '../types/tournament';
 import { ScheduleFilters } from '../types/scheduleFilters';
+import { matchSideTeamId } from '../core/models/matchSlot';
 
 /**
  * Filter matches based on ScheduleFilters
@@ -72,8 +73,10 @@ export function filterMatches(
     if (filters.teamSearch) {
       const searchLower = filters.teamSearch.toLowerCase().trim();
       if (searchLower.length >= 2) {
-        const teamA = teams.find((t) => t.id === match.teamA);
-        const teamB = teams.find((t) => t.id === match.teamB);
+        const idA = matchSideTeamId(match, 'A');
+        const idB = matchSideTeamId(match, 'B');
+        const teamA = idA === undefined ? undefined : teams.find((t) => t.id === idA);
+        const teamB = idB === undefined ? undefined : teams.find((t) => t.id === idB);
         /* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if either team matches */
         const matchesTeam =
           teamA?.name.toLowerCase().includes(searchLower) ||

@@ -34,5 +34,5 @@ export function runEndCheck(state: MatchState, event: EngineEvent, ctx: MatchCon
   if (state.phase === 'overtime') {
     return enterShootout(state);
   }
-  return enterDecision(state, state.tiebreakMode);
+  return enterDecision(state, state.tiebreakMode, event.at);
 }

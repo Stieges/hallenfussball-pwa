@@ -10,6 +10,7 @@
 import React, { useState, useCallback } from 'react';
 import { Match, Team, RefereeConfig } from '../../../types/tournament';
 import { cssVars } from '../../../design-tokens'
+import { matchTeamIds } from '../../../core/models/matchSlot';
 import { ScheduleConflict } from '../types';
 
 // ============================================================================
@@ -167,7 +168,7 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
       }
     } else if (refereeConfig.mode === 'teams') {
       // Teams as referees - find teams not playing in this match
-      const playingTeamIds = [match.teamA, match.teamB];
+      const playingTeamIds: readonly string[] = matchTeamIds(match);
       const eligibleTeams = teams.filter(
         t => !playingTeamIds.includes(t.id) && t.name !== 'Freilos'
       );

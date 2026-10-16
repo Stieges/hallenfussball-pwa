@@ -1,6 +1,7 @@
 /** B-16f1 – Auswahl-Funktionen für Folieninhalte: Reihenfolge, offene Spiele, Feldplan, Seiten (@ZM-129 Logik). */
 import { describe, it, expect } from 'vitest';
 import type { Match, MatchStatus } from '../../../types/tournament';
+import { looseVs } from '../../../test/matchSlotFixtures';
 import type { MonitorSlide } from '../../../types/monitor';
 import {
   MONITOR_ROWS_PER_PAGE,
@@ -20,8 +21,7 @@ function spiel(id: string, over: Partial<Match> = {}): Match {
     id,
     round: 1,
     field: 1,
-    teamA: 'A',
-    teamB: 'B',
+    ...looseVs('A', 'B'),
     matchNumber: 1,
     scheduledTime: um(14, 0),
     ...over,

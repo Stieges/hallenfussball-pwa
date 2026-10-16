@@ -11,9 +11,10 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cssVars, spacingSemantics } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
-import { Tournament } from '../../types/tournament';
+import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
-import { getTeamForDisplay } from '../../utils/teamHelpers';
+import { matchLabelText } from '../../core/models/slotLabel';
+import { buildSideContext, sideDisplay, type SideContext } from './matchSides';
 import { EditableMatchCard, type MatchCardStatus, type RefereeOption } from './MatchCard';
 import type { ScheduleConflict } from '../../features/schedule-editor/types';
 
@@ -48,7 +49,9 @@ export interface SortableMobileCardProps {
   /** Whether match swapping is enabled */
   canSwap: boolean;
   /** Tournament data for group name resolution */
-  tournament?: Tournament;
+  tournament?: ScheduleSource;
+  /** Kontext der Spielseiten-Anzeige (Teams, Vorgängerspiele); ohne Angabe aus `tournament` gebaut */
+  sideContext?: SideContext;
   /** Whether to show group label (hide for single-group tournaments) */
   showGroupLabel?: boolean;
   /** Show referee selector */
@@ -87,6 +90,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   editingSchedule,
   canSwap,
   tournament,
+  sideContext,
   showGroupLabel = true,
   showReferees,
   refereeOptions,
@@ -148,15 +152,16 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   // Card Props
   // ---------------------------------------------------------------------------
 
+  const sides = sideContext ?? buildSideContext(tournament, [match]);
   const cardProps = {
     matchId: match.id,
     matchNumber: match.matchNumber,
     scheduledTime: match.time,
     field: match.field,
-    group: match.label ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
+    group: (match.label === undefined ? undefined : matchLabelText(match.label)) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
     showGroupLabel,
-    homeTeam: getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam),
-    awayTeam: getTeamForDisplay(tournament?.teams, match.originalTeamB, match.awayTeam),
+    homeTeam: sideDisplay(match, 'A', sides),
+    awayTeam: sideDisplay(match, 'B', sides),
     homeScore: match.scoreA ?? 0,
     awayScore: match.scoreB ?? 0,
     status,

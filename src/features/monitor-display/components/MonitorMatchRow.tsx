@@ -41,7 +41,7 @@ function statusColor(match: Match, colors: MonitorColors): string {
 export function MonitorMatchRow({ match, teams, tournament, theme, hidePendingOrigin, showScore = false, showStatus = false }: MonitorMatchRowProps) {
   const colors = monitorThemes[resolveTheme(theme)];
   const running = showStatus && match.matchStatus === 'running';
-  const ctx = { teams, hidePendingOrigin };
+  const ctx = { teams, matches: tournament.matches, groups: tournament.groups, hidePendingOrigin };
   // B-44b (@ZM-125, @ZM-087): Schrift relativ zur Bildhöhe, Namen umbrechen statt zu kürzen
   const cell: CSSProperties = {
     fontSize: displayList.fontSizes.team,

@@ -11,7 +11,11 @@ import { test, expect } from './fixtures';
 import { fetchFinishedMatchRow, fetchMatchRow, getLocalServiceRoleClient, safeCleanup } from './helpers';
 import { E2E_LIVE_CUP_ID } from './testData';
 
-test('Owner korrigiert ein beendetes Live-Cup-Spiel: neuer Stand steht in der DB (A2 Fixrunde 1, C1)', async ({
+// Veraltet seit A-08e (b7b1eede, 5054091d): Daniel 15.10. Frage 1 = A -- "kein Korrektur-Knopf im
+// Spielplan bis B-24". Der Einstieg match-summary-edit-score -> correction-score-a existiert nicht
+// mehr; B-24 baut die Korrektur ueber den Ereignisweg neu (@FU-083, @FU-084). Wieder einschalten
+// bzw. auf den neuen Weg umschreiben, sobald B-24 auf diesem Stand ist.
+test.fixme('Owner korrigiert ein beendetes Live-Cup-Spiel: neuer Stand steht in der DB (A2 Fixrunde 1, C1)', async ({
   asRole,
 }, testInfo) => {
   // Der Ergebnis-Kreis (MatchCardScore) wird in der mobilen Kartenansicht anders/nicht klickbar

@@ -79,9 +79,10 @@ export interface LiveCockpitProps {
     assists?: number[];
     incomplete?: boolean;
   }): void;
-  onUndoLastEvent(matchId: string): void;
-  onManualEditResult(matchId: string, newHomeScore: number, newAwayScore: number): void;
-  onAdjustTime(matchId: string, newElapsedSeconds: number): void;
+  /** A-08c: ohne Handler blendet das Cockpit den zugehörigen Knopf aus (@FU-071). */
+  onUndoLastEvent?(matchId: string): void;
+  onManualEditResult?(matchId: string, newHomeScore: number, newAwayScore: number): void;
+  onAdjustTime?(matchId: string, newElapsedSeconds: number): void;
 
   /** Callback when an event is updated */
   onUpdateEvent?: (matchId: string, eventId: string, updates: { playerNumber?: number; incomplete?: boolean }) => void;
@@ -92,7 +93,7 @@ export interface LiveCockpitProps {
     playerNumber?: number;
     durationSeconds?: number;
   }): void;
-  onCard?(matchId: string, teamId: string, cardType: 'YELLOW' | 'RED', options?: {
+  onCard?(matchId: string, teamId: string, cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', options?: {
     playerNumber?: number;
   }): void;
   onSubstitution?(matchId: string, teamId: string, options?: {
@@ -102,7 +103,7 @@ export interface LiveCockpitProps {
   onFoul?(matchId: string, teamId: string): void;
 
   onLoadNextMatch(fieldId: string): void;
-  onReopenLastMatch(fieldId: string): void;
+  onReopenLastMatch?(fieldId: string): void;
 
   // Tiebreaker Handlers
   onStartOvertime?(matchId: string): void;

@@ -20,6 +20,9 @@ vi.mock('../../../hooks/useSyncStatus', () => ({
   }),
 }));
 
+// C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
+
 function makeMatch(overrides: Record<string, unknown> = {}) {
   return {
     id: 'match-1', number: 7, phaseLabel: 'Finale', fieldId: 'field-1',
@@ -90,7 +93,7 @@ describe('LiveCockpit — Tiebreaker (L1)', () => {
 describe('LiveCockpit — Strafstoßschießen (L1)', () => {
   beforeEach(() => vi.clearAllMocks());
   // Fixwave-Fix (Critical): pen() liefert jetzt onAbortPenaltyShootout statt des entfernten
-  // onCancelTiebreaker (das beendete das Spiel als Unentschieden — siehe MatchExecutionService.
+  // onCancelTiebreaker (das beendete das Spiel als Unentschieden — siehe frueherer Altweg
   // cancelTiebreaker). onForceFinish ist mit im Bundle, damit die Tests unten beweisen können,
   // dass Abbrechen/Escape es NICHT auslösen.
   const pen = () => ({ onRecordPenaltyResult: vi.fn(), onAbortPenaltyShootout: vi.fn(), onForceFinish: vi.fn() });

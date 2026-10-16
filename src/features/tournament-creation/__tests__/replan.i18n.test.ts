@@ -4,6 +4,7 @@ import type { Match, Tournament } from '../../../types/tournament';
 import { openReplan, formatReplanTime } from '../utils/replan';
 import deWizard from '../../../i18n/locales/de/wizard.json';
 import enWizard from '../../../i18n/locales/en/wizard.json';
+import { looseVs } from '../../../test/matchSlotFixtures';
 
 type I18nInstance = {
   t: (key: string, opts?: Record<string, unknown>) => string;
@@ -30,7 +31,7 @@ beforeAll(async () => {
 });
 
 const match = (id: string): Match =>
-  ({ id, round: 1, field: 1, teamA: 'a', teamB: 'b' });
+  ({ id, round: 1, field: 1, ...looseVs('a', 'b') });
 
 const tournament = (): Tournament =>
   ({

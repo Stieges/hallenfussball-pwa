@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { Match, Tournament } from '../../../types/tournament';
 import { generateFullSchedule } from '../../../core/generators';
 import { buildReplanPreview } from '../utils/replan';
+import { testUuid } from '../../../test/testIds';
 
 const baseTournament = (): Tournament =>
   ({
@@ -23,10 +24,10 @@ const baseTournament = (): Tournament =>
     groupPhaseBreakDuration: 2,
     placementLogic: [],
     teams: [
-      { id: '1', name: 'A' },
-      { id: '2', name: 'B' },
-      { id: '3', name: 'C' },
-      { id: '4', name: 'D' },
+      { id: testUuid(1), name: 'A' },
+      { id: testUuid(2), name: 'B' },
+      { id: testUuid(3), name: 'C' },
+      { id: testUuid(4), name: 'D' },
     ],
     matches: [],
     status: 'published',
@@ -52,6 +53,8 @@ describe('G2 – halb gesetztes Ergebnis schützt das Spiel', () => {
       field: all[0].field,
       teamA: all[0].originalTeamA,
       teamB: all[0].originalTeamB,
+      slotA: all[0].slotA,
+      slotB: all[0].slotB,
       scoreA: 2,
     };
     const withHalf: Tournament = {

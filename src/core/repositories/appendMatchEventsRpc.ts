@@ -34,6 +34,8 @@ export interface AppendOptions {
   clientFormat: number;
   /** Geräte-ID (uuid), landet in match_event_authors.device_id. */
   deviceId?: string;
+  /** Abbruchsignal (A3) — wird an `query.abortSignal` übergeben, ohne Signal kein Aufruf. */
+  signal?: AbortSignal;
 }
 
 // Ergebnisarten R10 -- `review` gibt es erst ab F, der Client kennt sie schon.
@@ -108,12 +110,13 @@ export async function callAppendMatchEvents(
 
   let data: unknown;
   try {
-    const response = await supabaseClient.rpc('append_match_events', {
+    const query = supabaseClient.rpc('append_match_events', {
       p_match_id: matchId,
       p_events: events as unknown as Json,
       p_client_format: options.clientFormat,
       ...(options.deviceId !== undefined ? { p_device_id: options.deviceId } : {}),
     });
+    const response = await (options.signal ? query.abortSignal(options.signal) : query);
     if (response.error) {
       throw new RepositoryError(operation, response.error.message, response.error);
     }

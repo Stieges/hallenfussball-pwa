@@ -24,6 +24,7 @@ vi.mock('../../hooks/useIsMobile', () => ({
 
 import { TournamentCreationService } from '../../core/services/TournamentCreationService';
 import { TournamentCard } from '../TournamentCard';
+import { testUuid } from '../../test/testIds';
 
 async function publishedTournament(): Promise<Tournament> {
   const repository = {
@@ -35,8 +36,8 @@ async function publishedTournament(): Promise<Tournament> {
     numberOfFields: 1,
     numberOfTeams: 2,
     teams: [
-      { id: 't1', name: 'A' },
-      { id: 't2', name: 'B' },
+      { id: testUuid(1), name: 'A' },
+      { id: testUuid(2), name: 'B' },
     ],
   });
 }

@@ -13,7 +13,7 @@
  * je einen echten Produktions-Key zu lesen oder zu kennen.
  */
 
-const LOCAL_URL_PREFIXES = ['http://127.0.0.1', 'http://localhost'];
+const LOCAL_HOSTNAMES = new Set(['127.0.0.1', 'localhost']);
 const LOCAL_JWT_ISSUER = 'supabase-demo';
 
 export class NotLocalSupabaseTargetError extends Error {
@@ -43,17 +43,38 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
 }
 
 /**
+ * Prüft die URL strikt per `new URL()`: nur `http:`, Hostname GENAU `localhost` oder
+ * `127.0.0.1`, kein Benutzername/Passwort im URL. Präfix-Vergleiche reichen nicht:
+ * `http://localhost.evil.example` und `http://localhost@evil.example` (Userinfo-Trick)
+ * beginnen wie eine lokale URL, zeigen aber auf einen fremden Host.
+ */
+function assertLocalUrl(url: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new NotLocalSupabaseTargetError(
+      `Produktions-Sperre: URL "${url}" ist keine gültige URL. ` +
+        'Abbruch, um die Produktion nie versehentlich zu berühren.'
+    );
+  }
+  const hasUserInfo = parsed.username !== '' || parsed.password !== '';
+  if (parsed.protocol !== 'http:' || !LOCAL_HOSTNAMES.has(parsed.hostname) || hasUserInfo) {
+    throw new NotLocalSupabaseTargetError(
+      `Produktions-Sperre: URL "${url}" zeigt nicht eindeutig auf den lokalen Supabase-Stack ` +
+        '(erlaubt: http://localhost… oder http://127.0.0.1…, ohne Benutzername/Passwort). ' +
+        'Abbruch, um die Produktion nie versehentlich zu berühren.'
+    );
+  }
+}
+
+/**
  * Wirft `NotLocalSupabaseTargetError`, wenn `url` und `key` nicht eindeutig den lokalen
  * Supabase-CLI-Stack identifizieren. Muss VOR jedem Schreibzugriff von `scripts/e2e-seed.ts`
  * aufgerufen werden.
  */
 export function assertLocalSupabaseTarget(url: string, key: string): void {
-  if (!LOCAL_URL_PREFIXES.some((prefix) => url.startsWith(prefix))) {
-    throw new NotLocalSupabaseTargetError(
-      `Produktions-Sperre: URL "${url}" beginnt nicht mit http://127.0.0.1 oder http://localhost. ` +
-        'Abbruch, um die Produktion nie versehentlich zu berühren.'
-    );
-  }
+  assertLocalUrl(url);
 
   const payload = decodeJwtPayload(key);
   if (payload.iss !== LOCAL_JWT_ISSUER) {

@@ -1,0 +1,31 @@
+{
+  "title": "Negative Werte werden auf 0 bzw. 1 Abschnitt geklemmt",
+  "input": {
+    "durationMinutes": -10,
+    "phase": null,
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": null,
+    "config": {
+      "gamePeriods": -2,
+      "halftimeBreak": -1,
+      "matchCockpitSettings": {
+        "penaltyShootersPerTeam": "-3",
+        "penaltySuddenDeathAfter": -0.5
+      }
+    },
+    "finalsConfig": {
+      "tiebreakerDuration": -5
+    }
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 0,
+    "breakSeconds": 0,
+    "knockout": false,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 0,
+    "shootersPerTeam": 0,
+    "suddenDeathAfter": 0,
+    "penaltySeconds": 120
+  }
+}

@@ -30,8 +30,8 @@ test('Monitor: laufendes Spiel', async ({ page, seedIndexedDB }) => {
       {
         id: 'visual-monitor-match',
         round: 1,
-        teamA: 'team-1',
-        teamB: 'team-2',
+        teamA: '00000000-0000-4000-8000-0000000000a1',
+        teamB: '00000000-0000-4000-8000-0000000000a2',
         field: 1,
         matchStatus: 'running',
         scoreA: 2,

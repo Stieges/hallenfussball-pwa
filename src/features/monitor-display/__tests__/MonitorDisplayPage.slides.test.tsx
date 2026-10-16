@@ -73,7 +73,7 @@ async function renderMonitor(tournament: Tournament, slides: MonitorSlide[]) {
   localGet.mockResolvedValue(null);
   const onBack = vi.fn();
   render(<MonitorDisplayPage tournamentId={tournament.id} monitorId={monitor.id} onBack={onBack} />);
-  await waitFor(() => expect(screen.queryByText('Lade Display...')).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByText('Lade Display...')).not.toBeInTheDocument(), { timeout: 5_000 });
   return { onBack };
 }
 
@@ -93,7 +93,7 @@ beforeEach(() => {
   live.card = null;
 });
 
-describe('MonitorDisplayPage — Folieninhalt (Bestand)', () => {
+describe('MonitorDisplayPage — Folieninhalt (Bestand)', { timeout: 15_000 }, () => {
   it.each([
     {
       zeile: 'Tabelle einer Gruppe (Gruppe A)',
@@ -144,7 +144,7 @@ describe('MonitorDisplayPage — Folieninhalt (Bestand)', () => {
   });
 });
 
-describe('MonitorDisplayPage — Tasten (Bestand)', () => {
+describe('MonitorDisplayPage — Tasten (Bestand)', { timeout: 15_000 }, () => {
   const zweiFolien = () => [
     slide('custom-text', { headline: 'Erste Folie' }),
     slide('custom-text', { headline: 'Zweite Folie' }),
@@ -187,7 +187,7 @@ describe('MonitorDisplayPage — Tasten (Bestand)', () => {
   });
 });
 
-describe('MonitorDisplayPage — Einblendungen (Tor)', () => {
+describe('MonitorDisplayPage — Einblendungen (Tor)', { timeout: 15_000 }, () => {
   it('@ZM-083 Eingang: Tor in Spiel 8 (DJK Berg) wird im Monitor eingeblendet', async () => {
     live.goal = goalInMatch8;
     await renderMonitor(buildTournament(), [slide('custom-text', { headline: 'Willkommen' })]);

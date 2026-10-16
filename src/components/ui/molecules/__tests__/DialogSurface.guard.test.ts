@@ -49,6 +49,18 @@ const AUSNAHMEN: Record<string, { zaehler: Zaehler; erlaubt: number; grund: stri
     erlaubt: 1,
     grund: 'Auswahl-Popover am Feld (kein Modal, keine Abdunkelung, kein Fokusfang).',
   },
+  // Merge main → Spur B (I1): Die beiden Service-Worker-Dateien aus Spur A rendern keinen Dialog, sie
+  // ERKENNEN einen offenen modalen Dialog (Update erst, wenn keiner offen ist).
+  'lib/swIdle.ts': {
+    zaehler: 'marker',
+    erlaubt: 4,
+    grund: 'Kein Dialog: Leerlauf-Prüfung des Service-Worker-Updates sucht per Selektor nach einem offenen modalen Dialog (role + aria-modal) in Kommentar und Abfrage.',
+  },
+  'lib/swRegistration.ts': {
+    zaehler: 'marker',
+    erlaubt: 1,
+    grund: 'Kein Dialog: der MutationObserver beobachtet die Attribute role/aria-modal, um nach dem Schließen eines Dialogs das Update nachzuholen.',
+  },
 };
 
 /** Treffer einer Datei, die nach Abzug der erlaubten Ausnahme übrig bleiben. */

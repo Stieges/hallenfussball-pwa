@@ -9,6 +9,9 @@
 import React, { CSSProperties, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { safeLocalStorage } from '../../../core/utils/safeStorage';
+import type { WaitingEntriesSource } from '../../collaboration/outbox/countWaitingEntries';
+import { useGuardedLogout } from '../../collaboration/outbox/useGuardedLogout';
+import { LogoutWarningDialog } from '../../collaboration/outbox/LogoutWarningDialog';
 import { useAuth } from '../hooks/useAuth';
 import { useUserTournaments } from '../hooks/useUserTournaments';
 import { useTheme } from '../../../hooks/useTheme';
@@ -19,6 +22,7 @@ import { styles } from './UserProfileScreen.styles';
 import { ProfileHeader, ProfileStats, ProfileActions } from './profile';
 import { ProfileSettings } from './profile/ProfileSettings';
 import { ProfileTournaments } from './profile/ProfileTournaments';
+import { LogoutOthersSection } from './LogoutOthersSection';
 
 interface UserProfileScreenProps {
   /** Zurück-Handler */
@@ -31,6 +35,8 @@ interface UserProfileScreenProps {
   onCreateTournament?: () => void;
   /** Handler für Registrierung (nur für Gäste) */
   onRegister?: () => void;
+  /** C2b: kleine Fabrik für die lokale Spielkopie (Standard: neue LocalMatchStore-Instanz) */
+  createMatchStore?: () => WaitingEntriesSource;
 }
 
 // =============================================================================
@@ -63,6 +69,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   onOpenTournament,
   onCreateTournament,
   onRegister,
+  createMatchStore,
 }) => {
   const { t } = useTranslation('auth');
   const { user, isGuest, logout, resetPassword } = useAuth();
@@ -73,6 +80,21 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
 
   // Password reset rate limiting state
   const [passwordResetCooldown, setPasswordResetCooldown] = useState(0);
+
+  // C2b (D-C2), Fixrunde 1 (Review I3/m4): Abmelde-Logik im gemeinsamen Hook, damit beide
+  // Abmeldewege (hier und AuthSection-Dropdown) dieselbe Warnung zeigen.
+  const {
+    waitingCount: logoutWaiting,
+    handleLogout,
+    cancel: cancelLogoutWarning,
+    confirm: confirmLogoutWarning,
+  } = useGuardedLogout({
+    isGuest,
+    accountId: user?.id ?? '',
+    logout,
+    createMatchStore,
+    onLoggedOut: onBack,
+  });
 
   // Check for existing cooldown on mount and handle countdown
   useEffect(() => {
@@ -140,11 +162,6 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
     return null;
   }
 
-  const handleLogout = () => {
-    void logout();
-    onBack?.();
-  };
-
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   return (
@@ -199,6 +216,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
               passwordResetCooldown={passwordResetCooldown}
               onLogout={handleLogout}
             />
+            <LogoutOthersSection />
           </Card>
 
           {isGuest && (
@@ -221,6 +239,13 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
           />
         </div>
       </div>
+
+      <LogoutWarningDialog
+        isOpen={logoutWaiting !== null}
+        count={logoutWaiting ?? 0}
+        onCancel={cancelLogoutWarning}
+        onConfirm={confirmLogoutWarning}
+      />
     </div>
   );
 };

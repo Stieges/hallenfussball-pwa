@@ -144,17 +144,17 @@ describe('@ZM-089 Kindermodus: offenes Halbfinale als nächstes Spiel', () => {
     matches: withPlayoffs().map(m => (m.id === 'match-8' || m.id === 'match-9' ? { ...m, matchStatus: 'finished' as const, scoreA: 1, scoreB: 0 } : m)),
   });
 
-  it('ohne Kindermodus: „1. Gruppe A“ und „2. Gruppe B“ stehen da', async () => {
+  it('ohne Kindermodus: „Erster Gruppe A“ und „Zweiter Gruppe B“ stehen da', async () => {
     await starte(monitorTurnier(spaeter(false), [slide('next-matches', { matchCount: 1 })]));
     expect(zeilen()).toHaveLength(1);
-    expect(screen.getByText('1. Gruppe A')).toBeInTheDocument();
-    expect(screen.getByText('2. Gruppe B')).toBeInTheDocument();
+    expect(screen.getByText('Erster Gruppe A')).toBeInTheDocument();
+    expect(screen.getByText('Zweiter Gruppe B')).toBeInTheDocument();
   });
 
   it('mit Kindermodus: tournament:slot.undecided statt Platzhalter, keine Ziffern eines Ergebnisses', async () => {
     await starte(monitorTurnier(spaeter(true), [slide('next-matches', { matchCount: 1 })]));
     expect(zeilen()).toHaveLength(1);
-    expect(screen.queryByText('1. Gruppe A')).toBeNull();
+    expect(screen.queryByText('Erster Gruppe A')).toBeNull();
     expect(within(zeilen()[0]).getAllByText('noch offen')).toHaveLength(2);
     expect(screen.queryByText('1:0')).toBeNull();
   });
@@ -179,13 +179,13 @@ describe('C-MON-NAECHSTES-UNSORTIERT: Live-Folie nimmt das früheste offene Spie
 });
 
 describe('@W2A-031 Kindermodus an der Live-Folie: offener Platz zeigt „noch offen“, nie einen Tabellenplatz', () => {
-  // Feld 1 ohne laufendes Spiel: Spiele 7 und 9 beendet, das früheste offene Spiel ist HF1 (group-a-1st).
+  // Feld 1 ohne laufendes Spiel: Spiele 7 und 9 beendet, das früheste offene Spiel ist HF1 (Erster Gruppe A).
   const feldEins = (hide: boolean) => buildTournament({
     hideScoresForPublic: hide,
     matches: withPlayoffs().map(m => (m.id === 'match-7' || m.id === 'match-9' ? { ...m, matchStatus: 'finished' as const, scoreA: 1, scoreB: 0 } : m)),
   });
 
-  it('ohne Kindermodus: „Nächstes Spiel“ nennt „1. Gruppe A“', () => {
+  it('ohne Kindermodus: „Nächstes Spiel“ nennt „Erster Gruppe A“', () => {
     render(
       <LiveSlide
         slide={slide('live', { fieldId: 'field-1' })}
@@ -196,10 +196,10 @@ describe('@W2A-031 Kindermodus an der Live-Folie: offener Platz zeigt „noch of
       />,
     );
     expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument();
-    expect(screen.getByText('1. Gruppe A')).toBeInTheDocument();
+    expect(screen.getByText('Erster Gruppe A')).toBeInTheDocument();
   });
 
-  it('mit Kindermodus: beide offenen Plätze zeigen tournament:slot.undecided, kein „1. Gruppe A“', () => {
+  it('mit Kindermodus: beide offenen Plätze zeigen tournament:slot.undecided, kein „Erster Gruppe A“', () => {
     render(
       <LiveSlide
         slide={slide('live', { fieldId: 'field-1' })}
@@ -210,13 +210,13 @@ describe('@W2A-031 Kindermodus an der Live-Folie: offener Platz zeigt „noch of
       />,
     );
     expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument();
-    expect(screen.queryByText('1. Gruppe A')).toBeNull();
+    expect(screen.queryByText('Erster Gruppe A')).toBeNull();
     expect(screen.getAllByText('noch offen')).toHaveLength(2);
   });
 });
 
 describe('@W2A-031 Kindermodus an der Spielplan-Folie: offener Platz zeigt „noch offen“, nie einen Tabellenplatz', () => {
-  // Feld 1: HF1 (group-a-1st) steht in der Liste; ohne Kindermodus die Herkunft, mit Kindermodus „noch offen“.
+  // Feld 1: HF1 (Erster Gruppe A) steht in der Liste; ohne Kindermodus die Herkunft, mit Kindermodus „noch offen“.
   const spielplan = (hide: boolean) => render(
     <ScheduleFieldSlide
       slide={slide('schedule-field', { fieldId: 'field-1' })}
@@ -226,14 +226,14 @@ describe('@W2A-031 Kindermodus an der Spielplan-Folie: offener Platz zeigt „no
     />,
   );
 
-  it('ohne Kindermodus: die Spielplan-Folie nennt „1. Gruppe A“', () => {
+  it('ohne Kindermodus: die Spielplan-Folie nennt „Erster Gruppe A“', () => {
     spielplan(false);
-    expect(screen.getByText('1. Gruppe A')).toBeInTheDocument();
+    expect(screen.getByText('Erster Gruppe A')).toBeInTheDocument();
   });
 
-  it('mit Kindermodus: offener Platz zeigt tournament:slot.undecided, kein „1. Gruppe A“', () => {
+  it('mit Kindermodus: offener Platz zeigt tournament:slot.undecided, kein „Erster Gruppe A“', () => {
     spielplan(true);
-    expect(screen.queryByText('1. Gruppe A')).toBeNull();
+    expect(screen.queryByText('Erster Gruppe A')).toBeNull();
     expect(screen.getAllByText('noch offen').length).toBeGreaterThanOrEqual(2);
   });
 });

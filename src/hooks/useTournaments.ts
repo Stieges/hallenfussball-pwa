@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Tournament, TRASH_RETENTION_DAYS } from '../types/tournament';
 import { useRepository } from '../hooks/useRepository';
+import { useAuth } from '../features/auth/hooks/useAuth';
+import { filterWithoutGuestEngineEntries } from '../core/match/client/guestEngineEntries';
 import { migrateLocationsToStructured } from '../utils/locationHelpers';
 import {
   getActiveTournaments,
@@ -16,8 +18,14 @@ import { createStatsSnapshot, buildFinishTournamentPatch } from '../utils/tourna
  */
 export const useTournaments = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [allActiveCount, setAllActiveCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const repository = useRepository();
+  const { isAuthenticated, isGuest } = useAuth();
+
+  // G7: ausgeblendet wird nur im Konto — im Gastmodus (nach Abmelden) bleibt
+  // alles sichtbar, inklusive der Ergebnisse in der lokalen Engine-Kopie.
+  const hideGuestTournaments = isAuthenticated && !isGuest;
 
   // Load tournaments function - extracted for reuse
   const loadTournaments = useCallback(async () => {
@@ -38,13 +46,20 @@ export const useTournaments = () => {
         await Promise.all(migrated.map(t => repository.save(t)));
       }
 
-      setTournaments(migrated);
+      // G7: Turnier-Limit zählt auch ausgeblendete Turniere weiter — daher der
+      // ungefilterte Zähler vor dem Ausblenden in der Anzeige.
+      setAllActiveCount(getActiveTournaments(migrated).length);
+      setTournaments(
+        hideGuestTournaments
+          ? await filterWithoutGuestEngineEntries(migrated)
+          : migrated
+      );
     } catch (error) {
       console.error('Failed to load tournaments:', error);
     } finally {
       setLoading(false);
     }
-  }, [repository]);
+  }, [repository, hideGuestTournaments]);
 
   // Load tournaments on mount and when repository changes
   useEffect(() => {
@@ -248,6 +263,9 @@ export const useTournaments = () => {
     saveTournament,
     deleteTournament,
     getTournament,
+
+    // G7: ungefilterte aktive Anzahl (für das Turnier-Limit)
+    allActiveCount,
 
     // Soft Delete / Papierkorb
     activeTournaments,

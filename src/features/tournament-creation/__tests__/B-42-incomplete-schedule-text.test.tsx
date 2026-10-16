@@ -13,6 +13,7 @@ import { initRealDeI18n } from '../../../test/realDeI18n';
 await initRealDeI18n();
 
 import type { Match, Tournament } from '../../../types/tournament';
+import { looseVs } from '../../../test/matchSlotFixtures';
 import type { GeneratedSchedule } from '../../../core/generators';
 import { IncompleteScheduleError } from '../../../core/generators/incompleteScheduleError';
 import type { ReplanPreviewResult } from '../utils/replan';
@@ -126,7 +127,7 @@ describe('B-42 F1 – Wizard (TournamentPreview): unvollstaendiger Spielplan', (
 });
 
 describe('B-42 F1 – Neuplanen (ReplanPanel): unvollstaendiger Spielplan', () => {
-  const previousMatches: Match[] = [{ id: 'm1', round: 1, field: 1, teamA: '1', teamB: '2' }];
+  const previousMatches: Match[] = [{ id: 'm1', round: 1, field: 1, ...looseVs('1', '2') }];
   const teams = [{ id: '1', name: 'Team A' }, { id: '2', name: 'Team B' }];
 
   function renderImpossible(reasonCount: number): void {

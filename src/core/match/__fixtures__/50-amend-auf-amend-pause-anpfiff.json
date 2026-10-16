@@ -1,0 +1,180 @@
+{
+  "title": "AMEND auf AMEND, PAUSE oder MATCH_START -> INVALID_PAYLOAD; AMEND im Status paused angenommen",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-50",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "prior": [
+    {
+      "id": "00000050-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "00000050-0000-4000-8000-000000000002",
+      "type": "GOAL",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 2000,
+      "section": 1,
+      "clockMs": 60000,
+      "teamId": "teamA",
+      "payload": {}
+    },
+    {
+      "id": "00000050-0000-4000-8000-000000000006",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3000,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000050-0000-4000-8000-000000000002",
+      "payload": {
+        "playerNumber": 5
+      }
+    },
+    {
+      "id": "00000050-0000-4000-8000-000000000007",
+      "type": "PAUSE",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 4000,
+      "section": 1,
+      "clockMs": 180000,
+      "payload": {}
+    }
+  ],
+  "events": [
+    {
+      "id": "00000050-0000-4000-8000-000000000010",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 4100,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000050-0000-4000-8000-000000000006",
+      "payload": {
+        "playerNumber": 6
+      }
+    },
+    {
+      "id": "00000050-0000-4000-8000-000000000011",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 4200,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000050-0000-4000-8000-000000000007",
+      "payload": {
+        "playerNumber": 6
+      }
+    },
+    {
+      "id": "00000050-0000-4000-8000-000000000012",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 4300,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000050-0000-4000-8000-000000000001",
+      "payload": {
+        "incomplete": true
+      }
+    },
+    {
+      "id": "00000050-0000-4000-8000-000000000013",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 4400,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000050-0000-4000-8000-000000000002",
+      "payload": {
+        "playerNumber": 6
+      }
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "00000050-0000-4000-8000-000000000010",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000050-0000-4000-8000-000000000011",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000050-0000-4000-8000-000000000012",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000050-0000-4000-8000-000000000013",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "paused",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 180000,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 1,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 1,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "00000050-0000-4000-8000-000000000002",
+      "decidedBy": null,
+      "finishedAt": null
+    },
+    "details": {
+      "00000050-0000-4000-8000-000000000002": {
+        "playerNumber": 6
+      }
+    }
+  }
+}

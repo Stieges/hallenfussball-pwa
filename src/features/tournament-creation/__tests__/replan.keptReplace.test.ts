@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import type { Match, Tournament } from '../../../types/tournament';
 import { generateFullSchedule } from '../../../core/generators';
 import { buildReplanPreview, applyReplan, openReplan } from '../utils/replan';
+import { looseVs } from '../../../test/matchSlotFixtures';
+import { testUuid } from '../../../test/testIds';
+import { matchSideTeamId } from '../../../core/models/matchSlot';
 
 const baseTournament = (): Tournament =>
   ({
@@ -26,10 +29,10 @@ const baseTournament = (): Tournament =>
     breakBetweenPhases: 0,
     placementLogic: [],
     teams: [
-      { id: '1', name: 'A' },
-      { id: '2', name: 'B' },
-      { id: '3', name: 'C' },
-      { id: '4', name: 'D' },
+      { id: testUuid(1), name: 'A' },
+      { id: testUuid(2), name: 'B' },
+      { id: testUuid(3), name: 'C' },
+      { id: testUuid(4), name: 'D' },
     ],
     matches: [],
     status: 'published',
@@ -52,6 +55,8 @@ const generatedMatches = (tournament: Tournament): Match[] =>
     field: m.field,
     teamA: m.originalTeamA,
     teamB: m.originalTeamB,
+    slotA: m.slotA,
+    slotB: m.slotB,
   }));
 
 const pairingOf = (m: Pick<Match, 'teamA' | 'teamB'>): string =>
@@ -69,7 +74,7 @@ describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
     const withPlayed: Tournament = {
       ...established,
       numberOfTeams: 5,
-      teams: [...established.teams, { id: '5', name: 'E' }],
+      teams: [...established.teams, { id: testUuid(5), name: 'E' }],
       matches: [played, ...generatedMatches(established).slice(1)],
     };
 
@@ -85,6 +90,22 @@ describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
     const kept = updated.matches.find((m) => m.id === played.id);
     expect(kept?.scoreA).toBe(2);
     expect(kept?.scoreB).toBe(1);
+    expect(kept?.slotA).toEqual(played.slotA);
+    expect(kept?.slotB).toEqual(played.slotB);
+    const slotPairingOf = (m: Match): string =>
+      [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')].map(String).sort().join(':');
+    expect(updated.matches.filter((m) => slotPairingOf(m) === slotPairingOf(played))).toHaveLength(1);
+  });
+
+  it('@W5-009 – Spiel mit nur halbem Ergebnis gilt als geschützt und bleibt in der Neuplanung', () => {
+    const established = baseTournament();
+    const half: Match = { ...generatedMatches(established)[0], scoreA: 2 };
+    const withHalf: Tournament = { ...established, matches: [half] };
+
+    const preview = buildReplanPreview(withHalf);
+    expect(preview.status).toBe('preview');
+    if (preview.status !== 'preview') { return; }
+    expect(preview.keptMatches.map((m) => m.id)).toContain(half.id);
   });
 
   it('@W5-009 – ohne Gegenstück wird das Spiel angehängt und als Konflikt gemeldet', () => {
@@ -94,8 +115,7 @@ describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
       id: 'kept-orphan',
       round: 1,
       field: 1,
-      teamA: '9',
-      teamB: '1',
+      ...looseVs(testUuid(9), testUuid(1)),
       scoreA: 4,
       scoreB: 4,
       matchStatus: 'finished',
@@ -113,6 +133,53 @@ describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
     expect(preview.conflictMatchIds).toContain(orphan.id);
   });
 
+  it('B3b – Vorschau: ersetztes Spiel trägt die Slots des behaltenen Spiels, nicht die des Generators', () => {
+    const established = baseTournament();
+    const g = generatedMatches(established)[0];
+    // Gleiche Paarung, aber Seiten getauscht: die Vorschau muss die Slots des behaltenen Spiels zeigen.
+    const played: Match = {
+      ...g,
+      teamA: g.teamB,
+      teamB: g.teamA,
+      slotA: g.slotB,
+      slotB: g.slotA,
+      scoreA: 2,
+      scoreB: 1,
+      matchStatus: 'finished',
+    };
+    const withPlayed: Tournament = {
+      ...established,
+      matches: [played, ...generatedMatches(established).slice(1)],
+    };
+
+    const preview = buildReplanPreview(withPlayed);
+    expect(preview.status).toBe('preview');
+    if (preview.status !== 'preview') { return; }
+    const item = preview.schedule.allMatches.find((m) => m.id === played.id);
+    expect(item?.slotA).toEqual(played.slotA);
+    expect(item?.slotB).toEqual(played.slotB);
+  });
+
+  it('B3b – Vorschau: angehängtes Konfliktspiel trägt seine eigenen Slots, nicht die von Spiel 0', () => {
+    const established = baseTournament();
+    const orphan: Match = {
+      id: 'kept-orphan-slots',
+      round: 1,
+      field: 1,
+      ...looseVs(testUuid(9), testUuid(1)),
+      scoreA: 4,
+      scoreB: 4,
+      matchStatus: 'finished',
+      phase: 'groupStage',
+    };
+    const preview = buildReplanPreview({ ...established, matches: [orphan] });
+    expect(preview.status).toBe('preview');
+    if (preview.status !== 'preview') { return; }
+    const item = preview.schedule.allMatches.find((m) => m.id === orphan.id);
+    expect(item?.slotA).toEqual(orphan.slotA);
+    expect(item?.slotB).toEqual(orphan.slotB);
+  });
+
   it('Controller-Ruling: Kollision von behaltenem Anstoß mit dem neuen Plan – @W5-008, nicht bestätigbar', () => {
     const established = baseTournament();
     const generated = generateFullSchedule(established).allMatches;
@@ -125,6 +192,8 @@ describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
       field: second.field,
       teamA: first.originalTeamA,
       teamB: first.originalTeamB,
+      slotA: first.slotA,
+      slotB: first.slotB,
       scoreA: 1,
       scoreB: 0,
       matchStatus: 'finished',
@@ -153,8 +222,7 @@ describe('Neuplanung – Kollision über alle behaltenen Spiele (W2, E1, E4)', (
       id: 'kept-orphan-collide',
       round: 1,
       field: target.field,
-      teamA: '9',
-      teamB: '8',
+      ...looseVs(testUuid(9), testUuid(8)),
       scoreA: 4,
       scoreB: 4,
       matchStatus: 'finished',
@@ -180,6 +248,8 @@ describe('Neuplanung – Kollision über alle behaltenen Spiele (W2, E1, E4)', (
       field: second.field,
       teamA: first.originalTeamA,
       teamB: first.originalTeamB,
+      slotA: first.slotA,
+      slotB: first.slotB,
       scoreA: 1,
       scoreB: 0,
       matchStatus: 'finished',
@@ -208,6 +278,8 @@ describe('Neuplanung – Kollision über alle behaltenen Spiele (W2, E1, E4)', (
       field: 2,
       teamA: generated[0].originalTeamA,
       teamB: generated[0].originalTeamB,
+      slotA: generated[0].slotA,
+      slotB: generated[0].slotB,
       scoreA: 2,
       scoreB: 1,
       matchStatus: 'finished',
@@ -238,6 +310,8 @@ describe('Neuplanung – Kollision über alle behaltenen Spiele (W2, E1, E4)', (
       field: second.field,
       teamA: first.originalTeamA,
       teamB: first.originalTeamB,
+      slotA: first.slotA,
+      slotB: first.slotB,
       scoreA: 1,
       scoreB: 0,
       matchStatus: 'finished',
