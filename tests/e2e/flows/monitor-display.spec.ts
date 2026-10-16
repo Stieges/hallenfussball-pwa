@@ -133,6 +133,11 @@ test.describe('Monitor Display', () => {
   });
 
   test.describe('MON-B02: Monitor ohne Slides', () => {
+    // Ein Monitor ist ein Bildschirm im Querformat; Hochformat wird nicht unterstützt
+    // (docs/anforderungen/2026-10-02_zuschauer-und-monitor.md, „Geparkt – Darstellung im Grenzfall“).
+    // Auf den Handy-Profilen (Hochformat) blendete die Spielplan-Folie die Teamnamen aus.
+    test.use({ viewport: { width: 1280, height: 720 } });
+
     // B-03 (F-04, @OB-011): Ein leeres Folienprogramm bleibt nie leer – statt des alten
     // Hinweises „Keine Slides konfiguriert" zeigt der Monitor eine immer darstellbare Folie
     // (hier: Spielplan, da das Turnier nicht öffentlich ist und keinen QR-Code erlaubt).
@@ -152,34 +157,27 @@ test.describe('Monitor Display', () => {
   });
 
   test.describe('MON-A10: Keyboard Navigation', () => {
-    test('Space pausiert/startet Diashow', async ({ page, seedIndexedDB }) => {
+    // @ME-022 (B-17, löst das alte MON-A10 „Space pausiert“ ab): Die Leertaste hält das Folienprogramm nicht an.
+    test('Leertaste hält die Diashow nicht an (@ME-022)', async ({ page, seedIndexedDB }) => {
+      // Zwei immer darstellbare Folien mit kurzer Dauer: Tabelle und Spielplan Feld 1
       await setupTournamentWithMonitor(seedIndexedDB, {
         slides: [
-          { id: 's1', type: 'live', config: { fieldId: 'field-1' }, duration: 10, order: 0 },
-          { id: 's2', type: 'standings', config: { groupId: 'A' }, duration: 10, order: 1 },
+          { id: 's1', type: 'standings', config: { groupId: 'A' }, duration: 3, order: 0 },
+          { id: 's2', type: 'schedule-field', config: { fieldId: 'field-1' }, duration: 3, order: 1 },
         ],
       });
 
       // HashRouter requires /#/ prefix for routes
       await page.goto('/#/display/test-tournament/monitor-1');
+      const tabelle = page.getByText('Gruppe A', { exact: true });
+      await expect(tabelle).toBeVisible({ timeout: 10000 });
 
-      // Wait for slide content to render (auto-wait doesn't help here as we need keyboard focus)
-      await page.waitForTimeout(1000);
-
-      // Click on page to ensure focus for keyboard events
-      await page.locator('body').click();
-
-      // Press space to pause
       await page.keyboard.press('Space');
 
-      // Use data-testid for reliable element selection (Best Practice)
-      await expect(page.getByTestId('monitor-pause-indicator')).toBeVisible({ timeout: 5000 });
-
-      // Press space again to resume
-      await page.keyboard.press('Space');
-
-      // Pause indicator should disappear
-      await expect(page.getByTestId('monitor-pause-indicator')).not.toBeVisible({ timeout: 5000 });
+      // Das Folienprogramm läuft weiter: die Tabellen-Folie wechselt zum Spielplan, kein Pause-Zustand
+      await expect(tabelle).toBeHidden({ timeout: 10000 });
+      await expect(page.getByTestId('monitor-pause-indicator')).toHaveCount(0);
+      await expect(page).toHaveURL(/\/display\/test-tournament\/monitor-1/);
     });
 
     test('Arrow keys navigieren zwischen Slides', async ({ page, seedIndexedDB }) => {
@@ -212,18 +210,22 @@ test.describe('Monitor Display', () => {
       await expect(page.locator('body')).toBeVisible();
     });
 
-    test('Escape navigiert zurück', async ({ page, seedIndexedDB }) => {
-      await setupTournamentWithMonitor(seedIndexedDB, {});
+    // @ME-022 (B-17, löst das alte MON-A10 „Escape navigiert zurück“ ab): Escape beendet höchstens das Vollbild,
+    // die Monitor-Seite bleibt offen und zeigt weiter das Folienprogramm.
+    test('Escape verlässt die Monitor-Seite nicht (@ME-022)', async ({ page, seedIndexedDB }) => {
+      await setupTournamentWithMonitor(seedIndexedDB, {
+        slides: [{ id: 's1', type: 'standings', config: { groupId: 'A' }, duration: 60, order: 0 }],
+      });
       await page.goto('/#/display/test-tournament/monitor-1');
+      const tabelle = page.getByText('Gruppe A', { exact: true });
+      await expect(tabelle).toBeVisible({ timeout: 10000 });
 
-      // Wait for page to load and focus
+      await page.keyboard.press('Escape');
+      // kurze Frist, in der eine Navigation (altes Verhalten) passiert wäre
       await page.waitForTimeout(1000);
 
-      // Press escape
-      await page.keyboard.press('Escape');
-
-      // Should navigate away from display (URL changes)
-      await expect(page).not.toHaveURL(/\/display\/test-tournament\/monitor-1/);
+      await expect(page).toHaveURL(/\/display\/test-tournament\/monitor-1/);
+      await expect(tabelle).toBeVisible();
     });
   });
 
