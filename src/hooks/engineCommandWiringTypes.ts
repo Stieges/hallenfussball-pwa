@@ -7,37 +7,43 @@
  * einzige Zeile mehr wachsen darf; der Kickoff nennt diese Datei explizit als Zielort.
  */
 /**
- * A-08d2b: die neun Engine-Handler des Cockpits. Kein Fallback mehr -- jede Aktion ohne Engine-Weg
+ * A-08d2b: die neun Engine-Handler des Cockpits. B-07 (S4/R4): Befehle liefern die Ereignis-ID
+ * (`null` bei Ablehnung oder noop). Kein Fallback mehr -- jede Aktion ohne Engine-Weg
  * wird in `useEngineCommandWiring` abgelehnt (mit Hinweis), nicht an einen Altweg weitergereicht.
  */
+/** B-07: Optionen von `handleGoal` -- `clockMs` = Spielzeit des ersten Tipps (L1, @SL-084). */
+export interface GoalHandlerOptions {
+  own?: boolean;
+  playerNumber?: number;
+  assists?: number[];
+  incomplete?: boolean;
+  clockMs?: number;
+}
+
 export interface EngineCommandHandlers {
   handleStart: (matchId: string) => Promise<boolean>;
-  handlePause: (matchId: string) => Promise<void>;
-  handleResume: (matchId: string) => Promise<void>;
-  handleFinish: (matchId: string) => Promise<void>;
-  handleGoal: (
-    matchId: string,
-    teamId: string,
-    delta: 1 | -1,
-    options?: { playerNumber?: number; assists?: number[]; incomplete?: boolean },
-  ) => Promise<void>;
+  handlePause: (matchId: string) => Promise<string | null>;
+  handleResume: (matchId: string) => Promise<string | null>;
+  handleFinish: (matchId: string) => Promise<string | null>;
+  /** B-07: liefert die ID des gespeicherten Tors (S4/R4), `null` bei Ablehnung; `own` = Eigentor (L2). */
+  handleGoal: (matchId: string, teamId: string, delta: 1 | -1, options?: GoalHandlerOptions) => Promise<string | null>;
   handleCard: (
     matchId: string,
     teamId: string,
     cardType: 'YELLOW' | 'YELLOW_RED' | 'RED',
-    options?: { playerNumber?: number },
-  ) => Promise<void>;
+    options?: { playerNumber?: number; clockMs?: number },
+  ) => Promise<string | null>;
   handleTimePenalty: (
     matchId: string,
     teamId: string,
-    options?: { playerNumber?: number; durationSeconds?: number },
-  ) => Promise<void>;
+    options?: { playerNumber?: number; durationSeconds?: number; clockMs?: number },
+  ) => Promise<string | null>;
   handleSubstitution: (
     matchId: string,
     teamId: string,
     options?: { playersIn?: number[]; playersOut?: number[] },
-  ) => Promise<void>;
-  handleFoul: (matchId: string, teamId: string, options?: { playerNumber?: number }) => Promise<void>;
+  ) => Promise<string | null>;
+  handleFoul: (matchId: string, teamId: string, options?: { playerNumber?: number }) => Promise<string | null>;
 }
 
 /**
