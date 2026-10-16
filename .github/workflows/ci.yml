@@ -115,6 +115,12 @@ jobs:
         env:
           CI_E2E_USE_PREVIEW: 'true'
 
+      # Haertetest der visuellen Messung (scripts/visual-metrics, Skill visuelle-pruefung): braucht
+      # Chromium und baut die App selbst (ohne .env); einmal je CI-Lauf genuegt (Review B-17).
+      - name: Haertetest visuelle Messung
+        if: matrix.project == 'desktop'
+        run: npm run test:visual-metrics
+
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7
         if: failure()
