@@ -5,7 +5,7 @@ import { matchSideTeamId } from '../core/models/matchSlot';
 import { matchFinalScore } from '../core/view/finalScore';
 import type { TeamId } from '../core/models/schemas/MatchSlotSchema';
 import { FINAL_TYPE_LABELS, FINAL_TYPE_RANKS, openPlacements } from './openPlacements';
-export { placementBadgeText, placementRankText } from './openPlacements';
+export { hasFinalRound, placementBadgeText, placementRankText } from './openPlacements';
 
 /**
  * Zählt ein Spiel für Tabelle, Weiterkommen und Finalrunden-Auflösung? (@TM-143)

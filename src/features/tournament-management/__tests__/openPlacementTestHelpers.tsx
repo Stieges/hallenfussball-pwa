@@ -3,6 +3,7 @@
  * i18next-Instanz (DE/EN, tournament + wizard) für RankingTab/TabellenTab.
  */
 import type { ReactNode } from 'react';
+import { screen, within } from '@testing-library/react';
 import deWizard from '../../../i18n/locales/de/wizard.json';
 import deTournament from '../../../i18n/locales/de/tournament.json';
 import enWizard from '../../../i18n/locales/en/wizard.json';
@@ -29,11 +30,24 @@ export function tournamentWithFinal(state: FinalState): Tournament {
   };
   return {
     ...MOCK_TOURNAMENT,
-    // Bestehender Schalter der Tabs: Finalrunden-Platzierung nur bei `finals.enabled`, das das Turniermodell nicht kennt.
-    // Der Cast verdeckt C-FINALS-ENABLED-FEHLT, bis das Freischalten entschieden ist (Daniel); er fällt mit dem Fix weg.
-    finals: { ...MOCK_TOURNAMENT.finals, enabled: true } as Tournament['finals'],
     matches: [...MOCK_TOURNAMENT.matches.filter((m) => m.isFinal !== true), third, finale],
   };
+}
+
+/** Nur Gruppenphase, ohne Finalrunde (Gegenbeispiel Nachzug F1). */
+export function tournamentGroupOnly(): Tournament {
+  return {
+    ...MOCK_TOURNAMENT,
+    finals: { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false },
+    finalsConfig: { ...MOCK_TOURNAMENT.finalsConfig, preset: 'none' },
+    matches: MOCK_TOURNAMENT.matches.filter((m) => m.isFinal !== true),
+  };
+}
+
+/** Platz-Zelle (erste Zelle) der Tabellenzeile, die den Teamnamen enthält – Desktop und mobil. */
+export function rankOfTeam(teamName: string): string | null {
+  const row = screen.getAllByRole('row').find((r) => r.textContent?.includes(teamName));
+  return row === undefined ? null : within(row).getAllByRole('cell')[0].textContent;
 }
 
 export function scheduleAndStandings(tournament: Tournament): { schedule: GeneratedSchedule; standings: Standing[] } {

@@ -7,7 +7,10 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RankingTab } from '../RankingTab';
 import { TabellenTab } from '../TabellenTab';
-import { openLabel, rankingTitle, realI18nWrapper, scheduleAndStandings, tournamentWithFinal } from './openPlacementTestHelpers';
+import { MOCK_TOURNAMENT } from '../../../test-data/mockTournament';
+import {
+  openLabel, rankingTitle, rankOfTeam, realI18nWrapper, scheduleAndStandings, tournamentGroupOnly, tournamentWithFinal,
+} from './openPlacementTestHelpers';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
@@ -40,5 +43,27 @@ describe('@ET-042 Mobil: offenes Finale mit Kennzeichen', () => {
     render(<Wrapper><RankingTab tournament={tournament} schedule={schedule} currentStandings={standings} /></Wrapper>);
     expect(screen.queryByText(/– open/)).toBeNull();
     expect(screen.getAllByText('Final').length).toBeGreaterThan(0);
+  });
+
+  it.each(['RankingTab', 'TabellenTab'] as const)('@ET-042 Nachzug F1 mobil %s: entschiedenes Finale → Sieger auf Platz 1', async (tab) => {
+    const tournament = tournamentWithFinal('decided');
+    const { schedule, standings } = scheduleAndStandings(tournament);
+    const Wrapper = await realI18nWrapper('de');
+    const props = { tournament, schedule, currentStandings: standings };
+    render(<Wrapper>{tab === 'RankingTab' ? <RankingTab {...props} /> : <TabellenTab {...props} />}</Wrapper>);
+    if (tab === 'TabellenTab') {
+      await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
+    }
+    expect(rankOfTeam(MOCK_TOURNAMENT.teams[0].name)).toBe('1');
+    expect(rankOfTeam(MOCK_TOURNAMENT.teams[4].name)).toBe('2');
+  });
+
+  it('@ET-042 Gegenbeispiel mobil: ohne Finalrunde nichts „offen“, keine „1–2“', async () => {
+    const tournament = tournamentGroupOnly();
+    const { schedule, standings } = scheduleAndStandings(tournament);
+    const Wrapper = await realI18nWrapper('de');
+    render(<Wrapper><RankingTab tournament={tournament} schedule={schedule} currentStandings={standings} /></Wrapper>);
+    expect(screen.queryByText(/– offen/)).toBeNull();
+    expect(screen.queryByText('1–2')).toBeNull();
   });
 });

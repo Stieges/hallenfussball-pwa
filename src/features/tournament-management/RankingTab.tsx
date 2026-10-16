@@ -17,7 +17,7 @@ import { Tournament, Standing } from '../../types/tournament';
 import { GeneratedSchedule } from '../../core/generators';
 import {
   calculateStandings,
-  getMergedFinalRanking, placementBadgeText, placementRankText,
+  getMergedFinalRanking, hasFinalRound, placementBadgeText, placementRankText,
 } from '../../utils/calculations';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { resolvePlacementCriterionLabel } from '../tournament-creation/components/placementLogicLabels';
@@ -39,11 +39,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
   const isMobile = useIsMobile();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const hasGroups = tournament.teams.some(t => t.group);
-  const hasPlayoffs: boolean = Boolean(
-    typeof tournament.finals === 'object' &&
-    'enabled' in tournament.finals &&
-    tournament.finals.enabled
-  );
+  const hasPlayoffs = hasFinalRound(tournament); // Nachzug F1 A-36b: aus dem Turniermodell, nicht finals.enabled
 
   // Calculate merged ranking with finals placements
   const { ranking: mergedRanking, finalsResult } = useMemo(() => {

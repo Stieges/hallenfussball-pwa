@@ -5,7 +5,7 @@
  * offenen Platzierungsspiels stehen auf den Plätzen DIESES Spiels (Finale → 1–2), gemeinsam und ohne Reihenfolge als
  * „offen“ – nie hinter den Gruppenplätzen.
  */
-import type { Match, Team } from '../types/tournament';
+import type { Match, Team, Tournament } from '../types/tournament';
 import { matchSideTeamId } from '../core/models/matchSlot';
 
 /** Plätze je Platzierungsspiel: [Sieger, Verlierer]. */
@@ -87,4 +87,14 @@ export function placementBadgeText(
     ? t(`finals.labels.${placement.finalType}`)
     : placement.matchLabel ?? t('ranking.playoff');
   return placement.decidedBy === 'open' ? t('ranking.open', { match }) : match;
+}
+
+/**
+ * Hat das Turnier eine Finalrunde? Aus dem echten Turniermodell (Nachzug F1, Daniel 16.10., @ET-042): es gibt
+ * Finalrunden-Spiele oder die Finals-Konfiguration sieht eine vor. Ersetzt das nie gesetzte `finals.enabled`
+ * (Befund C-FINALS-ENABLED-FEHLT / C-RANGLISTE-OHNE-FINALRUNDE).
+ */
+export function hasFinalRound(tournament: Pick<Tournament, 'matches' | 'finalsConfig'>): boolean {
+  return tournament.matches.some((match) => match.isFinal === true)
+    || (tournament.finalsConfig?.preset ?? 'none') !== 'none';
 }
