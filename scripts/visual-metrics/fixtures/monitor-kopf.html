@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- Haertetest Fehler 2 (Daniel 2026-10-16): Kopf am Monitor abgeschnitten, weil alle Pruefungen mit TV-Rand 0 liefen.
+     Nachgebaut: Folie zentriert ihren Inhalt (justify-content:center). Mit Rand 0 passt alles; mit dem Standard-Rand
+     (48 px) wird der Inhalt hoeher als die Flaeche und rutscht oben in den Rand, den der Fernseher wegschneidet.
+     --vm-overscan setzt das Messskript je Profil (Rand 0 / Standard); in der App ist es monitor.overscanPx. -->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hallenmonitor Feld 1</title>
+<style>
+  :root { --bg: #ffffff; --text: #0b1220; --muted: #1e293b; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0b1220; --text: #ffffff; --muted: #e2e8f0; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .folie { height: 100vh; padding: var(--vm-overscan, 0px); display: flex; flex-direction: column; justify-content: center; gap: 16.5vh; overflow: hidden; }
+  h1 { margin: 0; font-size: 10vh; line-height: 1.1; font-weight: 700; }
+  .zeile { display: flex; justify-content: space-between; align-items: baseline; gap: 4vh; }
+  .name { font-size: 10vh; line-height: 1.1; font-weight: 600; }
+  .tor { font-size: 12.5vh; line-height: 1.1; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .fuss { font-size: 7.5vh; line-height: 1.1; color: var(--muted); }
+</style>
+</head>
+<body>
+<main class="folie">
+  <h1 data-title>Hallencup Ost</h1>
+  <div class="zeile"><span class="name" data-teamname>FC Nord</span><span class="tor" data-monitor="stand">3</span></div>
+  <div class="zeile"><span class="name" data-teamname>SV Süd</span><span class="tor" data-monitor="stand">1</span></div>
+  <div class="fuss" data-monitor="neben">Feld 1 · Gruppe A</div>
+</main>
+</body>
+</html>
