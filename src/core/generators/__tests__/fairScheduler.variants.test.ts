@@ -7,6 +7,7 @@ import {
 } from '../fairScheduler';
 import type { Team, Match } from '../../../types/tournament';
 import { looseVs, testUuid } from '../../../test/matchSlotFixtures';
+import { transitionalTeamRef } from '../../models/matchSlot';
 import {
   isBetterVariant,
   isWithinBaseline,
@@ -62,7 +63,7 @@ function longestGapSlots(matches: Match[]): number {
   const slotsByTeam = new Map<string, number[]>();
   for (const m of matches) {
     const slot = m.slot ?? m.round - 1;
-    for (const id of [m.teamA, m.teamB]) {
+    for (const id of [transitionalTeamRef(m.slotA), transitionalTeamRef(m.slotB)]) {
       slotsByTeam.set(id, [...(slotsByTeam.get(id) ?? []), slot]);
     }
   }
@@ -84,7 +85,7 @@ function longestPauseMinutes(matches: Match[]): number {
 
 function signature(matches: Match[]): string {
   return matches
-    .map((m) => `${m.slot}:${m.field}:${m.teamA}-${m.teamB}:${m.group}`)
+    .map((m) => `${m.slot}:${m.field}:${transitionalTeamRef(m.slotA)}-${transitionalTeamRef(m.slotB)}:${m.group}`)
     .sort()
     .join('|');
 }

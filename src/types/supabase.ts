@@ -295,6 +295,8 @@ export type Database = {
           live_state: Json | null
           match_number: number | null
           match_status: string | null
+          origin_a: Json | null
+          origin_b: Json | null
           overtime_score_a: number | null
           overtime_score_b: number | null
           owner_id: string | null
@@ -340,6 +342,8 @@ export type Database = {
           live_state?: Json | null
           match_number?: number | null
           match_status?: string | null
+          origin_a?: Json | null
+          origin_b?: Json | null
           overtime_score_a?: number | null
           overtime_score_b?: number | null
           owner_id?: string | null
@@ -385,6 +389,8 @@ export type Database = {
           live_state?: Json | null
           match_number?: number | null
           match_status?: string | null
+          origin_a?: Json | null
+          origin_b?: Json | null
           overtime_score_a?: number | null
           overtime_score_b?: number | null
           owner_id?: string | null

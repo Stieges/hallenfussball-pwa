@@ -11,7 +11,7 @@
 import { Match, FinalsConfig } from '../../types/tournament';
 import { generatePlayoffMatches as generatePlayoffMatchesFromPreset, GroupSizeInfo } from './playoffGenerator';
 import { generateFinalsMatchId } from '../../utils/idGenerator';
-import { pendingSlot, transitionalSides } from '../models/matchSlot';
+import { pendingSlot } from '../models/matchSlot';
 import type { SlotSource } from '../models/schemas/MatchSlotSchema';
 
 /**
@@ -252,16 +252,14 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
   const defIdToMatchId = new Map(planned.map((p) => [p.definition.id, p.id]));
 
   return planned.map(({ definition: def, id, slot, field, scheduledTime }): Match => {
-    const slotA = pendingSlot(toSlotSource(def.teamASource, defIdToMatchId));
-    const slotB = pendingSlot(toSlotSource(def.teamBSource, defIdToMatchId));
+    const [originA, originB] = [toSlotSource(def.teamASource, defIdToMatchId), toSlotSource(def.teamBSource, defIdToMatchId)];
+    const [slotA, slotB] = [pendingSlot(originA), pendingSlot(originB)]; // A-36a: Platz-Herkunft unveränderlich, Slot offen
     return {
       id,
       round: slot + 1,
       field,
       slot,
-      slotA,
-      slotB,
-      ...transitionalSides(slotA, slotB),
+      slotA, slotB, originA, originB,
       isFinal: true,
       finalType: def.finalType,
       label: def.label,

@@ -21,7 +21,7 @@ import {
   type VariantMetrics,
 } from './scheduleVariants';
 import { IncompleteScheduleError } from './incompleteScheduleError';
-import { teamSlot, requireTeamId, matchSideTeamId, transitionalSides } from '../models/matchSlot';
+import { teamSlot, requireTeamId, matchSideTeamId } from '../models/matchSlot';
 
 /**
  * Represents a time slot in the schedule
@@ -579,7 +579,6 @@ function runGreedySchedule(
           slot: currentSlotIndex,
           slotA: sideA,
           slotB: sideB,
-          ...transitionalSides(sideA, sideB),
           group: groupId,
           scheduledTime: currentSlot.startTime,
         };
@@ -685,7 +684,6 @@ function balanceHomeAway(matches: Match[], teamStates: Map<string, TeamScheduleS
       const tempSlot = match.slotA;
       match.slotA = match.slotB;
       match.slotB = tempSlot;
-      Object.assign(match, transitionalSides(match.slotA, match.slotB));
 
       // Update balance counters
       balanceA.home--;

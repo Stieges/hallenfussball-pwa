@@ -51,8 +51,6 @@ describe('G2 – halb gesetztes Ergebnis schützt das Spiel', () => {
       id: all[0].id,
       round: 1,
       field: all[0].field,
-      teamA: all[0].originalTeamA,
-      teamB: all[0].originalTeamB,
       slotA: all[0].slotA,
       slotB: all[0].slotB,
       scoreA: 2,

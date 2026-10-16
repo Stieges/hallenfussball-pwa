@@ -44,20 +44,11 @@ export function slotTeamId(slot: MatchSlot): TeamId | undefined {
 }
 
 /**
- * ÜBERGANG bis B-35 (Löschen in B-35): Wert für das Übergangsfeld (`teamA`/`teamB` am Spiel) aus dem Slot (Team-ID,
- * offen → `'TBD'`, wie der Cloud-Mapper). Nur für Schreiber, die das Feld für die noch nicht umgestellten
- * Leser der Spur B (Monitor, Zuschauer, PDF) mitführen – nie zum Lesen.
+ * ÜBERGANG: Team-ID der Seite oder `'TBD'` (offen) für `ScheduledMatch.originalTeamA/B` und den Paarungs-Schlüssel
+ * der Neuplanung. Das Übergangsfeld `teamA/teamB` am Spiel ist seit A-36a gelöscht – nie zum Anzeigen lesen.
  */
 export function transitionalTeamRef(slot: MatchSlot): string {
   return slotTeamId(slot) ?? 'TBD';
-}
-
-/**
- * DIE EINE Schreibstelle für das Übergangsfeld (`teamA`/`teamB` am Spiel; ÜBERGANG, Löschen in B-35): leitet beide Felder aus den Slots
- * ab. Alle Erzeuger/Änderer von Spielen spreaden das Ergebnis, statt die Felder selbst zu setzen.
- */
-export function transitionalSides(slotA: MatchSlot, slotB: MatchSlot): { teamA: string; teamB: string } {
-  return { teamA: transitionalTeamRef(slotA), teamB: transitionalTeamRef(slotB) };
 }
 
 /** Herkunft der Seite: offen → `source`, aufgelöst → `resolvedFrom`, direkt besetzt → `undefined`. */
@@ -107,7 +98,8 @@ function mapId(map: ReadonlyMap<string, string>, id: string, what: string): stri
   return mapped;
 }
 
-function copySource(source: SlotSource, matchIdMap: ReadonlyMap<string, string>): SlotSource {
+/** Herkunft für eine Turnier-Kopie: Verweise auf Vorgängerspiele zeigen auf die neuen Spiel-IDs. */
+export function copySource(source: SlotSource, matchIdMap: ReadonlyMap<string, string>): SlotSource {
   return source.kind === 'matchResult'
     ? { ...source, matchId: mapId(matchIdMap, source.matchId, 'Spiel-ID') }
     : source;

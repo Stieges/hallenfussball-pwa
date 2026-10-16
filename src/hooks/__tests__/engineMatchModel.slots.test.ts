@@ -7,7 +7,7 @@ import { buildValidMatches } from '../engineMatchModel';
 import type { Match, Team, Tournament } from '../../types/tournament';
 import { createMockTournament } from '../../test/factories';
 import { teamSlot } from '../../core/models/matchSlot';
-import { vs, slots, groupRank, resultOf, testUuid } from '../../test/matchSlotFixtures';
+import { vs, slots, groupRank, resultOf, testUuid, withStaleSides } from '../../test/matchSlotFixtures';
 
 const [NORD, UFER, WALD] = [1, 2, 3].map(testUuid);
 const teams: Team[] = [
@@ -16,7 +16,7 @@ const teams: Team[] = [
   { id: WALD, name: 'SV Wald', group: 'B' },
 ];
 const HF1 = testUuid(201);
-const semi = (sides: Pick<Match, 'teamA' | 'teamB' | 'slotA' | 'slotB'>): Match => ({
+const semi = (sides: Pick<Match, 'slotA' | 'slotB'>): Match => ({
   id: HF1, round: 2, field: 1, matchNumber: 7, isFinal: true, label: '1. Halbfinale', ...sides,
 });
 const tournamentOf = (matches: Match[]): Tournament => createMockTournament({ teams, matches });
@@ -28,7 +28,7 @@ describe('buildValidMatches – nur besetzte Spiele sind anpfeifbar', () => {
   });
 
   it('@TM-033 Gegenbeispiel: offene Seite mit echter Team-ID im Übergangsfeld teamB (frühere Auflösung) ist kein Engine-Spiel', () => {
-    const m = semi({ teamA: NORD, teamB: UFER, slotA: teamSlot(NORD), slotB: groupRank('B', 2) });
+    const m = withStaleSides(semi({ slotA: teamSlot(NORD), slotB: groupRank('B', 2) }), NORD, UFER);
     expect(buildValidMatches(tournamentOf([m]))).toEqual([]);
   });
 
@@ -57,7 +57,7 @@ describe('buildValidMatches – nur besetzte Spiele sind anpfeifbar', () => {
 
   it('@TM-033 Gegenbeispiel: unbekannte Team-ID zeigt keinen Namen aus anderer Quelle – kein Engine-Spiel', () => {
     // Slot zeigt auf eine ID außerhalb der Teamliste; das Übergangsfeld trägt den Namen eines vorhandenen Teams
-    const unknown: Match = { ...semi(vs(NORD, UFER)), slotB: teamSlot(testUuid(99)), teamB: 'VfB Ufer' };
+    const unknown: Match = withStaleSides({ ...semi(vs(NORD, UFER)), slotB: teamSlot(testUuid(99)) }, NORD, 'VfB Ufer');
     expect(buildValidMatches(tournamentOf([unknown]))).toEqual([]);
   });
 

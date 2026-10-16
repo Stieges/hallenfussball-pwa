@@ -93,7 +93,7 @@ import {
 import { callServerTime } from '../src/core/repositories/appendMatchEventsRpc';
 import type { Database } from '../src/types/supabase';
 import { generateFullSchedule } from '../src/core/generators/scheduleGenerator';
-import { transitionalSides } from '../src/core/models/matchSlot';
+import { matchOrigins } from '../src/core/models/matchOrigin';
 import type { EngineSeedDeps } from './lib/engineSeedDb';
 import {
   buildScheduledTournament,
@@ -600,8 +600,8 @@ async function main(): Promise<void> {
     round: Math.floor(index / publicCup.numberOfFields) + 1,
     field: scheduledMatch.field,
     slot: scheduledMatch.slot,
-    // A-05: Spielseiten als Slot (Team-ID oder Herkunft); teamA/teamB nur ueber die eine Schreibstelle.
-    ...transitionalSides(scheduledMatch.slotA, scheduledMatch.slotB),
+    // A-05: Spielseiten als Slot (Team-ID oder Herkunft); A-36a: Herkunft des Platzes wie TournamentCreationService.
+    ...matchOrigins(scheduledMatch),
     slotA: scheduledMatch.slotA,
     slotB: scheduledMatch.slotB,
     scoreA: scheduledMatch.scoreA,

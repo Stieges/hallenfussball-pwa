@@ -6,7 +6,7 @@
  */
 
 import { Tournament, Team, Match, RuntimeMatchEvent } from '../types/tournament';
-import { teamSlot, pendingSlot, transitionalSides } from '../core/models/matchSlot';
+import { teamSlot, pendingSlot } from '../core/models/matchSlot';
 import type { MatchSlot } from '../core/models/schemas/MatchSlotSchema';
 
 // Keine Importe aus `src/test/*`: dieses Modul gehört über LocalTestScreen zum Produktionsbundle.
@@ -15,8 +15,8 @@ function testUuid(n: number): string {
   return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 }
 
-function slots(slotA: MatchSlot, slotB: MatchSlot): Pick<Match, 'teamA' | 'teamB' | 'slotA' | 'slotB'> {
-  return { ...transitionalSides(slotA, slotB), slotA, slotB };
+function slots(slotA: MatchSlot, slotB: MatchSlot): Pick<Match, 'slotA' | 'slotB'> {
+  return { slotA, slotB };
 }
 const vs = (teamIdA: string, teamIdB: string) => slots(teamSlot(teamIdA), teamSlot(teamIdB));
 const groupRank = (group: string, rank: number): MatchSlot => pendingSlot({ kind: 'groupRank', group, rank });

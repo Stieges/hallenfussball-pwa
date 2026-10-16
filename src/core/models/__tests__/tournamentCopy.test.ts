@@ -21,10 +21,10 @@ const teams = [
 
 const groupRank = { kind: 'groupRank', group: 'A', rank: 1 } as const;
 const matches = [
-  { id: M_GROUP, round: 1, field: 1, teamA: T1, teamB: T2, slotA: teamSlot(T1), slotB: teamSlot(T2), scoreA: 3, scoreB: 1, matchStatus: 'finished' },
+  { id: M_GROUP, round: 1, field: 1, slotA: teamSlot(T1), slotB: teamSlot(T2), scoreA: 3, scoreB: 1, matchStatus: 'finished' },
   // Seite wurde aus Gruppe A Rang 1 aufgelöst
-  { id: M_SEMI, round: 2, field: 1, teamA: T1, teamB: 'TBD', slotA: teamSlot(T1, groupRank), slotB: pendingSlot({ kind: 'groupRank', group: 'B', rank: 2 }) },
-  { id: M_FINAL, round: 3, field: 1, teamA: 'TBD', teamB: 'TBD', slotA: pendingSlot({ kind: 'matchResult', matchId: M_SEMI, role: 'winner' }), slotB: pendingSlot({ kind: 'matchResult', matchId: M_GROUP, role: 'loser' }) },
+  { id: M_SEMI, round: 2, field: 1, slotA: teamSlot(T1, groupRank), slotB: pendingSlot({ kind: 'groupRank', group: 'B', rank: 2 }) },
+  { id: M_FINAL, round: 3, field: 1, slotA: pendingSlot({ kind: 'matchResult', matchId: M_SEMI, role: 'winner' }), slotB: pendingSlot({ kind: 'matchResult', matchId: M_GROUP, role: 'loser' }) },
 ] as Match[];
 
 let counter = 1000;
@@ -60,8 +60,8 @@ describe('copyTeamsAndMatches (V14)', () => {
   });
 
   it('Kopie hat keine Ergebnisse; das Übergangsfeld folgt dem Slot', () => {
-    expect(gruppe).toMatchObject({ matchStatus: 'scheduled', scoreA: 0, scoreB: 0, events: [], teamA: newT1.id, teamB: newT2.id });
-    expect(semi).toMatchObject({ teamA: 'TBD', teamB: 'TBD' });
+    expect(gruppe).toMatchObject({ matchStatus: 'scheduled', scoreA: 0, scoreB: 0, events: [] });
+    expect('teamA' in semi || 'teamB' in semi).toBe(false); // A-36a: kein Übergangsfeld mehr
   });
 });
 

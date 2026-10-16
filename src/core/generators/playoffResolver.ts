@@ -8,13 +8,13 @@
  *
  * A-03 (MVP-Bauplan Spur A, Vorlage V-TEAM-Plan A5 d): arbeitet auf Slots, nicht auf Platzhalter-Texten.
  * Die Herkunft bleibt nach der Auflösung in `resolvedFrom` erhalten; bereits besetzte Seiten werden nie
- * angefasst. Das Übergangsfeld `teamA/teamB` wird mit der Team-ID parallel nachgezogen (`transitionalSides`, Löschen in B-35).
+ * angefasst. Die Herkunft des Platzes (`originA/originB`, A-36a) bleibt über das Spread unverändert.
  */
 
 import { Match, Tournament } from '../../types/tournament';
 import { calculateStandings, countsForStandings, getMatchWinner } from '../../utils/calculations';
 import sportGlossary from '../../i18n/glossary.json';
-import { isPendingSlot, resolveSlot, transitionalSides } from '../models/matchSlot';
+import { isPendingSlot, resolveSlot } from '../models/matchSlot';
 import type { MatchSlot, SlotSource } from '../models/schemas/MatchSlotSchema';
 
 /**
@@ -152,7 +152,6 @@ const resolveOpenSides = (tournament: Tournament, options: ResolveOptions): stri
       ...match,
       slotA,
       slotB,
-      ...transitionalSides(slotA, slotB),
     };
   });
 
