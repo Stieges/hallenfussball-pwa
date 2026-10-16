@@ -451,3 +451,30 @@ describe('useScheduleTabActions — laufend/pausiert bleibt laufend/pausiert (@F
     vi.mocked(localStorage.getItem).mockReturnValue(null);
   });
 });
+
+// @FU-080 (MVP): ein GEPLANTES Spiel mit echten Teams und ohne Ergebnis, auf Papier geleitet, bekommt im Spielplan
+// direkt 3:1 -> beendet mit 3:1, die Tabelle rechnet damit. Gesperrt nur, wenn ein anderes Gerät das Feld steuert (@FU-081).
+// Merge I1 (Fixrunde, Controller-Auftrag 4): ROT – die Schnelleingabe sperrt genau dieses Spiel als „Engine-Spiel“
+// (scoreChangeHelpers.isEngineControlledScoreChange -> isNewScheduledMatch). Eigenes Paket mit Spur-A-Anteil.
+describe('useScheduleTabActions — @FU-080 Direkteintrag in ein geplantes Spiel mit echten Teams', () => {
+  it.fails('@FU-080 geplantes Spiel ohne Ergebnis, Papierbetrieb: 3:1 im Spielplan -> beendet mit 3:1, Tabelle rechnet', () => {
+    const turnier = tabellenTurnier([
+      createMatch({ id: 'm1', group: 'A', ...looseVs('team-a', 'team-b'), matchStatus: 'scheduled' }),
+    ]);
+    const { result, onLocalTournamentUpdate, onMatchesUpdate, showWarning } = renderActions(turnier);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 3, 1);
+    });
+
+    expect(showWarning).not.toHaveBeenCalled();
+    const aktualisiert = onLocalTournamentUpdate.mock.calls[0][0] as Tournament;
+    expect(aktualisiert.matches[0]).toMatchObject({ scoreA: 3, scoreB: 1, matchStatus: 'finished' });
+    expect(onMatchesUpdate.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ id: 'm1', scoreA: 3, scoreB: 1, matchStatus: 'finished' }),
+    ]);
+    const punkte = calculateStandings(aktualisiert.teams, aktualisiert.matches, aktualisiert, 'A')
+      .find((st) => st.team.name === 'Team A')?.points;
+    expect(punkte).toBe(3);
+  });
+});
