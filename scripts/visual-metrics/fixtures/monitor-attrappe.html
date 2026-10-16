@@ -1,0 +1,36 @@
+<!doctype html>
+<!-- Haertetest Fehler 3 (Daniel 2026-10-16): Monitor-Tests liefen nie gegen den echten Stand.
+     Nachgebaut: eine Attrappe der Monitor-Folie (wie ein Test-Stub mit festen Daten). Inhaltlich identisch mit dem
+     Gegenbeispiel monitor-kopf-korrigiert.html; das Gate muss die Messung trotzdem sperren (BLOCKED, Exit 3). -->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hallenmonitor Feld 1</title><link rel="stylesheet" href="schrift.css">
+<meta name="visual-metrics:quelle" content="mock">
+<style>
+  :root { --bg: #ffffff; --text: #0b1220; --muted: #1e293b; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0b1220; --text: #ffffff; --muted: #e2e8f0; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .folie { height: 100vh; padding: var(--vm-overscan, 0px); display: flex; flex-direction: column; justify-content: flex-start; gap: 0; overflow: hidden; }
+  .luft { flex: 1 1 0; min-height: 0; max-height: 12vh; }
+  h1 { margin: 0; font-size: 10vh; line-height: 1.1; font-weight: 700; }
+  .zeile { display: flex; justify-content: space-between; align-items: baseline; gap: 4vh; }
+  .name { font-size: 10vh; line-height: 1.1; font-weight: 600; }
+  .tor { font-size: 12.5vh; line-height: 1.1; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .fuss { font-size: 9.6vh; line-height: 1.1; color: var(--muted); }
+</style>
+</head>
+<body>
+<main class="folie">
+  <h1 data-title>Hallencup Ost</h1>
+  <div class="luft"></div>
+  <div class="zeile"><span class="name" data-teamname>FC Nord</span><span class="tor" data-monitor="stand">3</span></div>
+  <div class="luft"></div>
+  <div class="zeile"><span class="name" data-teamname>SV Süd</span><span class="tor" data-monitor="stand">1</span></div>
+  <div class="luft"></div>
+  <div class="fuss">Feld 1 · Gruppe A</div>
+</main>
+</body>
+</html>

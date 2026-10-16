@@ -1,0 +1,605 @@
+{
+  "version": "2026-10-16b",
+  "hinweis": "Jede Zahl mit Begruendung, Quelle, Typ und Geltung. HART = Fehler (Exit 1), WARNUNG = Hypothese, Designziel oder Wert ohne Record-Deckung (nur Bericht). Gleiche Datei liegt als .claude/skills/visuelle-pruefung/grenzwerte.json; das Messskript warnt bei Abweichung. Grenzwerte werden nie zum Gruenwerden gelockert: eigene Grenzwerte oder Sehwinkel-Parameter nur mit --begruendung (sonst BLOCKED), der Lauf ist dann nie VOLLMATRIX.",
+  "arten": {
+    "handy": "Handy hoch 360x640, 390x844",
+    "tablet": "Tablet 768x1024, 1024x768",
+    "desktop": "Desktop 1440x900",
+    "monitor": "Fernseher 1920x1080, 1280x720, 960x540 bei Pixeldichte 2 (TV-Sticks, Review B-19); immer paarweise Rand 0 und Standard-Rand",
+    "reflow": "320x640, nur auf Anforderung (Profil reflow-320); alle Befunde WARNUNG, bis der Record Oberflaeche 320 px aufnimmt"
+  },
+  "sehwinkel": {
+    "begruendung": "Monitor-Mindestschrift folgt dem Sehwinkel der Versalhoehe, nicht festen Pixeln. Formel: Schrift / Bildhoehe = Abstand * tan(Winkel) / (Bildhoehe_m * Versalanteil); Bildhoehe_m = Diagonale_m * 9 / sqrt(16^2 + 9^2).",
+    "quelle": "Entscheidung Daniel 2026-10-16: vorerst 55 Zoll aus 10 m, endgueltig in der Generalprobe am echten Geraet. Winkel 20/16 Bogenminuten: ISO 9241-303 nur sekundaer (w3c-wai-ig 2023OctDec/0054), DIN 1450 als Primaerbeleg noch zu pruefen; Recherche 2026-10-16_ui-ux-grundprinzipien D2. Versalanteil 0,72: Annahme (Inter 0,727, Bebas Neue 0,70).",
+    "abstandM": 10,
+    "diagonaleZoll": 55,
+    "versalAnteil": 0.72,
+    "winkelBogenminuten": {
+      "stand": 20,
+      "lesetext": 16,
+      "nah": 12
+    },
+    "winkelBegruendung": {
+      "stand": "Spielstand und Uhr ([data-monitor=stand|uhr]): 20', passt zum Designziel 12 % Bildhoehe.",
+      "lesetext": "Alles Aufgabenwichtige, auch ohne Markierung: Teamnamen, Zeiten, Tabellenzeilen, Feld, Gruppe, naechstes Spiel: Minimum 16' (Controller-Entscheidung 2026-10-16 nach Review, Frage 2).",
+      "nah": "Nur Info, die man im Herangehen liest ([data-monitor=nah]): Sponsor-Zeile, QR-Beschriftung, App-Hinweis: 12' (entspricht 16' aus 7,5 m)."
+    },
+    "ergebnis_55zoll_10m": {
+      "stand": "11,80 % Bildhoehe = 128 px bei 1080, 85 px bei 720, 64 px bei 540",
+      "lesetext": "9,44 % = 102 px bei 1080, 68 px bei 720, 51 px bei 540",
+      "nah": "7,08 % = 77 px bei 1080, 51 px bei 720, 39 px bei 540",
+      "vergleich_3_prozent": "3 % Bildhoehe entsprechen aus 10 m nur ca. 5' (Lesen aus ca. 3 m)"
+    },
+    "anpassen": "Vor Ort per CLI: --abstand-m <m> --diagonale-zoll <z>; Werte hier nur nach Generalprobe aendern (mit Lern-Spur im Record).",
+    "status": "Die drei Sehwinkel-Stufen sind WARNUNG, bis Daniel das Token-Paket 'Monitor-Schriftstufen nach Sehwinkel' freigibt und der Record (@ZM-125/@ZM-129) nachgezogen ist (Review B-09/B-10, Controller-Entscheidung 2026-10-16). HART bleibt die Record-Untergrenze 3 % (monitor.schrift.record)."
+  },
+  "grenzwerte": [
+    {
+      "id": "gate.echter-stand",
+      "wert": true,
+      "einheit": "bool",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Gemessen wird nur der echte Stand: App per Build-Nachweis (gate.build-nachweis), Mockup als die Datei, die Daniel sieht (gate.mockup). Fehler 3 vom 16.10.: Monitor-Tests liefen nie gegen den echten Stand.",
+      "quelle": "Auftrag Daniel 2026-10-16; Recherche ui-skills 4.3",
+      "verstoss": "BLOCKED (Exit 3)"
+    },
+    {
+      "id": "gate.schriften",
+      "wert": true,
+      "einheit": "bool",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Vor dem Messen document.fonts.ready und networkidle; Ersatzschrift misst andere Breiten. Eine Schrift im Zustand error sperrt die Messung. Fehlt eine benannte Schriftfamilie ganz (Ersatzschrift), meldet das Gate eine Warnung.",
+      "quelle": "anthropics/skills webapp-testing (networkidle); Recherche ui-skills M1",
+      "verstoss": "BLOCKED (Exit 3)"
+    },
+    {
+      "id": "gate.build-nachweis",
+      "wert": true,
+      "einheit": "bool",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "App-Ziele nur mit Build-Nachweis: vm-build.json im ausgelieferten Build, Commit = HEAD, Lauf-Kennung (nonce) = dieser Lauf; --app baut HEAD selbst ohne .env und startet vite preview auf einem freien Port. Bundle-Hash (buildHash) muss HEAD sein.",
+      "quelle": "Review B-01/B-03; Fehler 3 vom 16.10. (Monitor-Tests nie gegen den echten Stand)",
+      "verstoss": "BLOCKED (Exit 3)"
+    },
+    {
+      "id": "gate.umleitung",
+      "wert": true,
+      "einheit": "bool",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "End-URL nach dem Laden = Ziel-URL; jede Umleitung (z. B. Monitor ohne Turnier auf die Startseite) sperrt.",
+      "quelle": "Review B-02",
+      "verstoss": "BLOCKED (Exit 3)"
+    },
+    {
+      "id": "gate.erwarte",
+      "wert": true,
+      "einheit": "bool",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "App-Ziele brauchen --erwarte <css>; das Element muss sichtbar sein, sonst wird nicht die erwartete Ansicht gemessen. Ausserdem sperrt eine Ansicht ohne sichtbaren Text (leer, nicht geladen). Ausserdem sperrt eine Ansicht ohne sichtbaren Text (leer, nicht geladen).",
+      "quelle": "Review B-02",
+      "verstoss": "BLOCKED (Exit 3)"
+    },
+    {
+      "id": "gate.produktion",
+      "wert": true,
+      "einheit": "bool",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Nur lokale Ziele (127.0.0.1, localhost); ein Bundle mit Supabase-Projekt-URL sperrt.",
+      "quelle": "Review B-20; Grenzen des Auftrags (keine Produktion)",
+      "verstoss": "BLOCKED (Exit 3)"
+    },
+    {
+      "id": "gate.mockup",
+      "wert": true,
+      "einheit": "bool",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Mockups laufen im Modus MOCKUP (Bericht und Kopfzeile gekennzeichnet; belegen nicht den App-Stand). Attrappen-Meta, Vite-Dev-Server, Verkleinerung (transform/zoom) und Geraete-Rahmen (overflow-Box in Geraetebreite mit >= 30 % der Texte) sperren: Mockups rendern ohne Rahmen im echten Viewport.",
+      "quelle": "Review B-03/B-14",
+      "verstoss": "BLOCKED (Exit 3)"
+    },
+    {
+      "id": "gate.abweichung",
+      "wert": true,
+      "einheit": "bool",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Eigene Grenzwerte, Sehwinkel-Parameter oder Markierungs-Selektoren nur mit --begruendung; der Lauf ist dann nie VOLLMATRIX.",
+      "quelle": "Review B-06",
+      "verstoss": "BLOCKED (Exit 3)"
+    },
+    {
+      "id": "ueberlauf.dokument",
+      "wert": 1,
+      "einheit": "px Toleranz",
+      "typ": "HART",
+      "typJeArt": {
+        "reflow": "WARNUNG"
+      },
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Seite scrollt nie waagerecht: documentElement.scrollWidth <= innerWidth + 1 (Rundung).",
+      "quelle": "WCAG 2.2 SC 1.4.10 Reflow; Record Oberflaeche C, @OB-021; 320 px als WARNUNG bis Record entscheidet"
+    },
+    {
+      "id": "ueberlauf.element",
+      "wert": 1,
+      "einheit": "px Toleranz",
+      "typ": "HART",
+      "typJeArt": {
+        "reflow": "WARNUNG"
+      },
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Kein Element ragt rechts/links aus dem Fenster und kein Block laeuft ueber seine Breite hinaus (overflow visible). Ausgenommen: Inhalte in overflow-x auto/scroll (Tabellen) und [data-overflow-ok].",
+      "quelle": "WCAG 1.4.10; Blog web-developpeur.com (scrollWidth > clientWidth); Recherche ui-skills M1"
+    },
+    {
+      "id": "text.abgeschnitten",
+      "wert": 1,
+      "einheit": "px Toleranz",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Kein Text wird von einem Vorfahren mit overflow hidden/clip, per Ellipse/line-clamp oder vom oberen/linken Fensterrand abgeschnitten. Ausnahme nur [data-truncate-ok] mit Volltext per title/aria-label.",
+      "quelle": "WCAG 1.4.4 Failure F69; Record @OB-025, @ZM-086, @ZM-087 (Namen ohne ...)"
+    },
+    {
+      "id": "ueberlappung.text",
+      "wert": 2,
+      "einheit": "px Mindestschnitt je Achse",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Textzeilen schneiden sich nicht mit anderem Text, Bedienelementen oder Bildern/SVG (Schnitt > 2 px je Achse, kein Vorfahre/Nachfahre). Ist ein modaler Dialog offen, wird nur seine Schicht gemessen. Gewollte Stapel: [data-overlap-ok] (wird im Bericht gezaehlt).",
+      "quelle": "Record @OB-021, @OB-025, @ZM-086 (kein Element ueberlappt); Review B-05/B-08"
+    },
+    {
+      "id": "titel.zeilen",
+      "wert": 2,
+      "einheit": "Zeilen hoechstens",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "h1 und [data-title] belegen hoechstens 2 Zeilen; mehr heisst: Schrift zu gross fuer die Flaeche.",
+      "quelle": "Recherche ui-skills M9 (Vorschlag), Grundprinzipien T3; Auftrag Daniel 2026-10-16 (Fehler 'Turnierver-/waltung')"
+    },
+    {
+      "id": "titel.wortbruch",
+      "wert": 0,
+      "einheit": "Woerter ueber zwei Zeilen",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "In h1-h4, [data-title], [role=heading], allem im header, Tasten, Reitern und [data-teamname] steht kein Wort auf zwei Zeilen (Silbentrennung, overflow-wrap, Wort ueber zwei span).",
+      "quelle": "Grundprinzipien T1/T3; MDN hyphens; Fehler 'Turnierver-/waltung' 2026-10-16; Review B-08"
+    },
+    {
+      "id": "text.hyphens",
+      "wert": "manual|none",
+      "einheit": "berechneter Wert",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Kein Text ausserhalb von Fliesstext (p, li, dd, blockquote, [data-fliesstext]) traegt hyphens: auto – also auch Titel als span, Tasten, Reiter, Tabellenzellen mit Teamnamen.",
+      "quelle": "Grundprinzipien T1 (MDN hyphens: auto trennt nur mit lang und Woerterbuch, je Browser verschieden); Review B-08"
+    },
+    {
+      "id": "kontrast.text",
+      "wert": 4.5,
+      "einheit": "Verhaeltnis",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Normaler Text >= 4,5:1, nicht gerundet (4,499 besteht nicht); hell und dunkel. Verlauf: schlechteste Farbstopp-Kombination zaehlt; reine Piktogramme (Emoji) und reine Trenn-/Satzzeichen (z. B. '•') sind als Zierde ausgenommen.",
+      "quelle": "WCAG 2.2 SC 1.4.3; Record C (Stufe AA); Review B-15"
+    },
+    {
+      "id": "kontrast.text-gross",
+      "wert": 3,
+      "einheit": "Verhaeltnis",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Grosser Text (>= 24 px oder >= 18,66 px ab Gewicht 700) >= 3:1.",
+      "quelle": "WCAG 2.2 SC 1.4.3"
+    },
+    {
+      "id": "kontrast.monitor",
+      "wert": 7,
+      "einheit": "Verhaeltnis",
+      "typ": "WARNUNG",
+      "geltung": [
+        "monitor"
+      ],
+      "begruendung": "Helle Halle: Monitor-Text >= 7:1. Anwendung auf die Halle ist HYPOTHESE.",
+      "quelle": "WCAG 1.4.6 (AAA, Normtext); Grundprinzipien D4"
+    },
+    {
+      "id": "kontrast.unsicher",
+      "wert": 0,
+      "einheit": "Anzahl",
+      "typ": "WARNUNG",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Text auf Bild (url), Verlaufstext (background-clip: text) oder ohne deckenden Hintergrund im dunklen Thema: Kontrast nicht berechenbar, Sichtkritik noetig. Farbverlaeufe als Hintergrund werden gemessen.",
+      "quelle": "axe-core 'incomplete'-Logik; Recherche ui-skills M4"
+    },
+    {
+      "id": "touch.min",
+      "wert": 44,
+      "einheit": "px Breite und Hoehe",
+      "typ": "HART",
+      "typJeArt": {
+        "desktop": "WARNUNG"
+      },
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "reflow"
+      ],
+      "begruendung": "Jedes Bedienelement >= 44x44 px (Links im Fliesstext ausgenommen, [data-touch-ok] fuer begruendete Ausnahmen). Desktop nur WARNUNG (Maus).",
+      "quelle": "Projektmuss .claude/CLAUDE.md; Record @OB-022; Apple HIG 44 pt; WCAG 2.5.8 (24 px) als absolute Untergrenze"
+    },
+    {
+      "id": "touch.primaer",
+      "wert": 56,
+      "einheit": "px Breite und Hoehe",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "reflow"
+      ],
+      "begruendung": "Haupttaste ([data-primary] oder [data-variant=primary]) >= 56 px.",
+      "quelle": "Projektmuss .claude/CLAUDE.md; Record @OB-022"
+    },
+    {
+      "id": "primaer.sichtbar",
+      "wert": 0,
+      "einheit": "px ausserhalb des Fensters bei scrollY 0",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop"
+      ],
+      "begruendung": "Markierte Haupttasten liegen ohne Scrollen vollstaendig im Fenster.",
+      "quelle": "Auftrag Daniel 2026-10-16; Grundprinzipien P3/FI1"
+    },
+    {
+      "id": "schrift.eingabe",
+      "wert": 16,
+      "einheit": "px",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "reflow"
+      ],
+      "begruendung": "Eingabefelder >= 16 px Schrift (sonst zoomt iOS beim Fokus).",
+      "quelle": "Projektmuss .claude/CLAUDE.md; Record @OB-022"
+    },
+    {
+      "id": "schrift.min",
+      "wert": 11,
+      "einheit": "px",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "reflow"
+      ],
+      "begruendung": "Kein sichtbarer Text unter 11 px. Gilt, bis ein eigenes Paket fontSizes.xs und labelSmall auf 12 px anhebt; dann schrift.min-ziel (12 px) als HART (Controller-Entscheidung 2026-10-16).",
+      "quelle": "Apple HIG Typography, iOS-Minimum 11 pt (abgerufen 2026-10-16)"
+    },
+    {
+      "id": "schrift.min-ziel",
+      "wert": 12,
+      "einheit": "px",
+      "typ": "WARNUNG",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "reflow"
+      ],
+      "begruendung": "Nebeninfo >= 12 px; WARNUNG bis zum Token-Paket fontSizes.xs/labelSmall = 12 px (heute 11 px, ca. 218 Verwendungen).",
+      "quelle": "Grundprinzipien T5 (Projektvorschlag)"
+    },
+    {
+      "id": "monitor.schrift.record",
+      "wert": 0.03,
+      "einheit": "Anteil Bildhoehe",
+      "typ": "HART",
+      "geltung": [
+        "monitor"
+      ],
+      "begruendung": "Jeder Monitor-Text >= 3 % der Bildhoehe (32,4 px bei 1080, 21,6 px bei 720). Muss im Record; die Sehwinkel-Stufen ersetzen ihn nach dem Record-Nachzug.",
+      "quelle": "Record Zuschauer und Monitor @ZM-125, @ZM-129; Record Oberflaeche C"
+    },
+    {
+      "id": "monitor.schrift.stand",
+      "wert": "sehwinkel.stand",
+      "einheit": "Anteil Bildhoehe (berechnet)",
+      "typ": "WARNUNG",
+      "geltung": [
+        "monitor"
+      ],
+      "begruendung": "Spielstand und Uhr ([data-monitor=stand|uhr]) >= 20' Versalhoehe; 55 Zoll / 10 m: 11,80 % Bildhoehe. WARNUNG bis Token-Paket und Record-Nachzug.",
+      "quelle": "Entscheidung Daniel 2026-10-16 (55 Zoll / 10 m); Controller-Entscheidung 2026-10-16 (WARNUNG bis display.ts-Token-Paket und Record @ZM-125/@ZM-129, Review B-09/B-10)"
+    },
+    {
+      "id": "monitor.schrift.lesetext",
+      "wert": "sehwinkel.lesetext",
+      "einheit": "Anteil Bildhoehe (berechnet)",
+      "typ": "WARNUNG",
+      "geltung": [
+        "monitor"
+      ],
+      "begruendung": "Jeder nicht als nah markierte Monitor-Text (Teamnamen, Zeiten, Tabellen, Feld, Gruppe, naechstes Spiel) >= 16'; 55 Zoll / 10 m: 9,44 % Bildhoehe. WARNUNG bis Token-Paket und Record-Nachzug.",
+      "quelle": "Entscheidung Daniel 2026-10-16 (55 Zoll / 10 m); Controller-Entscheidung 2026-10-16 (WARNUNG bis display.ts-Token-Paket und Record @ZM-125/@ZM-129, Review B-09/B-10)"
+    },
+    {
+      "id": "monitor.schrift.nah",
+      "wert": "sehwinkel.nah",
+      "einheit": "Anteil Bildhoehe (berechnet)",
+      "typ": "WARNUNG",
+      "geltung": [
+        "monitor"
+      ],
+      "begruendung": "Nur Sponsor-Zeile, QR-Beschriftung, App-Hinweis ([data-monitor=nah]) >= 12'; 55 Zoll / 10 m: 7,08 % Bildhoehe. WARNUNG bis Token-Paket und Record-Nachzug.",
+      "quelle": "Entscheidung Daniel 2026-10-16 (55 Zoll / 10 m); Controller-Entscheidung 2026-10-16 (WARNUNG bis display.ts-Token-Paket und Record @ZM-125/@ZM-129, Review B-09/B-10)"
+    },
+    {
+      "id": "overscan.app-rand",
+      "wert": "profil.randPx",
+      "einheit": "px je Seite",
+      "typ": "HART",
+      "geltung": [
+        "monitor"
+      ],
+      "begruendung": "Jeder Text, jedes Bild/SVG, jedes Element mit Hintergrundbild und jedes Pseudo-Element mit Text/Bild liegt innerhalb des Rands, den die Seite selbst freihaelt: Mockup = per --vm-overscan eingespielter Profil-Rand (Rand 0: im Fenster; Standard: overscan.standard). Die App liest den Profil-Rand noch nicht (Paket Rand-URL-Parameter): dort wird 'im Fenster' geprueft. Fehler 2 vom 16.10.: Folie lief mit Rand 48 aus ihrem eigenen Rand, geprueft wurde nur mit Rand 0.",
+      "quelle": "src/types/monitor.ts overscanPx; Auftrag Daniel 2026-10-16; Review B-08/B-12"
+    },
+    {
+      "id": "overscan.standard",
+      "wert": 48,
+      "einheit": "px",
+      "typ": "HART",
+      "geltung": [
+        "monitor"
+      ],
+      "begruendung": "Standard-Rand des Profils *-standard = heutiger App-Standard 48 px. Nach der Umstellung der App auf Prozent wird er 5 % je Seite (overscan.ebu-grafik) und HART.",
+      "quelle": "src/types/monitor.ts:322, src/design-tokens/display.ts displaySpacing.overscan"
+    },
+    {
+      "id": "overscan.ebu-grafik",
+      "wert": 0.05,
+      "einheit": "Anteil je Seite",
+      "typ": "WARNUNG",
+      "geltung": [
+        "monitor"
+      ],
+      "begruendung": "Vorbelegung kuenftig 5 % je Seite in Prozent (96/54 px bei 1080p, 64/36 bei 720p, 48/27 bei 540): sichere Seite, solange der Hallen-TV unbekannt ist (viele TVs beschneiden HDMI ab Werk um 2,5-5 %). WARNUNG bis die App auf Prozent umgestellt ist, dann HART.",
+      "quelle": "EBU R 95 (abgerufen); Record Oberflaeche E (Designziel 5 %); Controller-Entscheidung 2026-10-16 (Frage 1 nach Review)"
+    },
+    {
+      "id": "monitor.bedienelemente",
+      "wert": 0,
+      "einheit": "Anzahl fokussierbarer Elemente",
+      "typ": "WARNUNG",
+      "geltung": [
+        "monitor"
+      ],
+      "begruendung": "Monitor ist reine Anzeige, nichts wartet auf Eingabe.",
+      "quelle": "Record Oberflaeche C (Monitor als reine Anzeige), @OB-028"
+    },
+    {
+      "id": "markierung.primaer",
+      "wert": 1,
+      "einheit": "mindestens markierte Haupttasten",
+      "typ": "WARNUNG",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop"
+      ],
+      "begruendung": "Ohne data-primary prueft das Skript keine Haupttaste (56 px, ohne Scrollen sichtbar); das wird sichtbar gemeldet statt still uebergangen.",
+      "quelle": "Review B-07"
+    },
+    {
+      "id": "markierung.monitor",
+      "wert": 1,
+      "einheit": "mindestens data-monitor",
+      "typ": "WARNUNG",
+      "geltung": [
+        "monitor"
+      ],
+      "begruendung": "Ohne data-monitor gilt jeder Monitor-Text als Lesetext; Stand/Uhr werden nicht gesondert geprueft.",
+      "quelle": "Review B-07"
+    },
+    {
+      "id": "ausnahme.attribut",
+      "wert": 0,
+      "einheit": "Anzahl data-*-ok",
+      "typ": "WARNUNG",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Jede Ausnahme (data-overflow-ok, data-truncate-ok, data-overlap-ok, data-touch-ok, data-overscan-ok) steht mit Selektor und Begruendung (Attributwert) im Bericht.",
+      "quelle": "Review B-06/B-07"
+    },
+    {
+      "id": "axe.schwer",
+      "wert": 0,
+      "einheit": "Verstoesse mit Wirkung critical/serious",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "axe-core Tags wcag2a, wcag2aa, wcag21aa, wcag22aa: keine schweren Verstoesse.",
+      "quelle": "@axe-core/playwright (Dev-Abhaengigkeit vorhanden); Record C (WCAG 2.2 AA)"
+    },
+    {
+      "id": "axe.leicht",
+      "wert": 0,
+      "einheit": "Verstoesse moderate/minor + incomplete",
+      "typ": "WARNUNG",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Leichtere Verstoesse und 'incomplete' sichtbar machen, nicht sperren.",
+      "quelle": "axe-core README (incomplete nicht ignorieren)"
+    },
+    {
+      "id": "langtext.dehnung",
+      "wert": 0.3,
+      "einheit": "Anteil Textverlaengerung",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Variante Langtext: jeder Text +30 % in Klammern (Pseudo-Lokalisierung), dazu Teamnamen mit 50 Zeichen; alle HART-Metriken gelten weiter.",
+      "quelle": "Pseudo-Lokalisierung +30 % (simplelocalize, Android en-XA; Konvention); Record @OB-025 (50 Zeichen)"
+    },
+    {
+      "id": "langtext.teamname",
+      "wert": "Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921",
+      "einheit": "Text (50 Zeichen)",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Laengster zulaessiger Teamname; ersetzt in der Variante Langtext alle [data-teamname].",
+      "quelle": "Record @OB-025, @ZM-087"
+    }
+  ]
+}
