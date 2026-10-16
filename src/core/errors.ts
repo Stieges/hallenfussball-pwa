@@ -247,7 +247,7 @@ export function isTransientMutationError(error: unknown): boolean {
   if (error instanceof OptimisticLockError) {
     return false;
   }
-  if (error instanceof TeamStillReferencedError) {
+  if (error instanceof TeamStillReferencedError || isOriginImmutableError(error)) {
     return false;
   }
   if (isAbortError(error)) {
@@ -349,6 +349,44 @@ export class TeamStillReferencedError extends Error {
     this.name = 'TeamStillReferencedError';
     this.matchId = matchId;
   }
+}
+
+// =============================================================================
+// OriginImmutableError (A-36a, Fehlercode HF002)
+// =============================================================================
+
+/**
+ * Eigene Fehlercodes der Datenbank (SQLSTATE-Klasse `HF`, ausserhalb des PostgREST-Namensraums `PT`):
+ * - HF001 – Freigabe vor Veröffentlichung (`make_tournament_public`, `enforce_release_before_public`)
+ * - HF002 – Herkunft eines Platzes unveränderlich (Trigger `matches_keep_origin`, A-36a)
+ */
+export const ORIGIN_IMMUTABLE_CODE = 'HF002';
+
+/**
+ * Ein Schreiben wollte `origin_a/origin_b` eines Spiels ändern. Nicht transient: der Fehler liegt im Stand,
+ * die Warteschlange legt den Eintrag nach MAX_RETRIES im Dead-Letter ab, statt ihn endlos zu wiederholen.
+ */
+export class OriginImmutableError extends Error {
+  public readonly matchId: string;
+
+  constructor(matchId: string) {
+    super(`Spiel ${matchId}: Herkunft des Platzes ist unveränderlich (${ORIGIN_IMMUTABLE_CODE}), nichts geschrieben`);
+    this.name = 'OriginImmutableError';
+    this.matchId = matchId;
+  }
+}
+
+/** `OriginImmutableError` oder ein Postgrest-Fehler mit Code HF002. */
+export function isOriginImmutableError(error: unknown): boolean {
+  if (error instanceof OriginImmutableError) {
+    return true;
+  }
+  return !!error && typeof error === 'object' && (error as { code?: unknown }).code === ORIGIN_IMMUTABLE_CODE;
+}
+
+/** Postgrest-Fehler eines Spiels → `OriginImmutableError` bei HF002, sonst `undefined`. */
+export function toOriginImmutableError(matchId: string, error: unknown): OriginImmutableError | undefined {
+  return isOriginImmutableError(error) ? new OriginImmutableError(matchId) : undefined;
 }
 
 // =============================================================================

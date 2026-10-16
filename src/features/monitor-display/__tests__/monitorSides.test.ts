@@ -34,14 +34,12 @@ const teams: Team[] = [
   { id: testUuid(2), name: 'SV Ost' },
 ];
 
-/** Gruppen-Halbfinale: A-Erster gegen B-Zweiter, beide Seiten offen. Übergangsfeld steht auf 'TBD' (wie im Speicher). */
+/** Gruppen-Halbfinale: A-Erster gegen B-Zweiter, beide Seiten offen. */
 function openSemi(): Match {
   return {
     ...FIXTURE_MATCHES[0],
     id: SEMI1_ID,
     label: '1. Halbfinale',
-    teamA: 'TBD',
-    teamB: 'TBD',
     slotA: pendingSlot({ kind: 'groupRank', group: 'A', rank: 1 }),
     slotB: pendingSlot({ kind: 'groupRank', group: 'B', rank: 2 }),
   };
@@ -62,14 +60,13 @@ describe('monitorSideName – offene Seiten zeigen die Herkunft', () => {
       id: testUuid(103),
       slotA: pendingSlot({ kind: 'matchResult', matchId: previous.id, role: 'winner' }),
       slotB: teamSlot(NORD),
-      teamB: NORD,
     };
     const tournament = buildTournament({ teams, matches: [previous, next] });
     expect(monitorSideName(next, 'A', tournament)).toBe('Sieger 1. Halbfinale');
   });
 
   it('Gegenbeispiel: besetzte Seite zeigt den Teamnamen, nie die Herkunft', () => {
-    const match: Match = { ...openSemi(), slotA: teamSlot(NORD), teamA: NORD };
+    const match: Match = { ...openSemi(), slotA: teamSlot(NORD) };
     const tournament = buildTournament({ teams, matches: [match] });
     expect(monitorSideName(match, 'A', tournament)).toBe('FC Nord');
     expect(monitorSideTeam(match, 'A', teams)?.name).toBe('FC Nord');
@@ -86,7 +83,7 @@ describe('Kindermodus (hideScoresForPublic) – keine Herkunft mit Platz', () =>
   });
 
   it('besetzte Seite bleibt beim Teamnamen', () => {
-    const match: Match = { ...openSemi(), slotA: teamSlot(NORD), teamA: NORD };
+    const match: Match = { ...openSemi(), slotA: teamSlot(NORD) };
     const tournament = buildTournament({ teams, matches: [match], hideScoresForPublic: true });
     expect(monitorSideName(match, 'A', tournament)).toBe('FC Nord');
     expect(monitorSideName(match, 'B', tournament)).toBe('noch offen');
@@ -115,7 +112,7 @@ describe('Monitor-Live-Match (toLiveMatch)', () => {
   });
 
   it('besetzte Seite liefert das Team-Objekt (Logo/Farben bleiben erhalten)', () => {
-    const match: Match = { ...openSemi(), slotA: teamSlot(NORD), teamA: NORD };
+    const match: Match = { ...openSemi(), slotA: teamSlot(NORD) };
     const tournament = buildTournament({ teams, matches: [match] });
     const live = toLiveMatch(match, teams, tournament);
     expect(live.homeTeam).toEqual(teams[0]);

@@ -271,7 +271,7 @@ describe('TournamentCreationService', () => {
                 title: 'Published',
                 status: 'published',
                 matches: expect.arrayContaining([
-                    expect.objectContaining({ id: 'm1', teamA: T1 })
+                    expect.objectContaining({ id: 'm1', slotA: vs(T1, T2).slotA })
                 ])
             }));
         });

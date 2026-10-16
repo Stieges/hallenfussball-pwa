@@ -8,8 +8,7 @@ import { generateFullSchedule } from '..';
 import type { Match, Team, Tournament } from '../../../types/tournament';
 import { createMockTournament } from '../../../test/factories';
 import { testUuid } from '../../../test/testIds';
-import { vs } from '../../../test/matchSlotFixtures';
-import { transitionalSides } from '../../models/matchSlot';
+import { vs, withStaleSides } from '../../../test/matchSlotFixtures';
 
 const teams: Team[] = ['A', 'B'].flatMap((group, g) =>
   [1, 2, 3, 4].map((n) => ({ id: testUuid(g * 10 + n), name: `Team ${group}${n}`, group })),
@@ -51,7 +50,6 @@ describe('generateFullSchedule – Anzeige der Seiten', () => {
       slot: m.slot,
       slotA: m.slotA,
       slotB: m.slotB,
-      ...transitionalSides(m.slotA, m.slotB),
       group: m.group,
       isFinal: m.phase !== 'groupStage',
       phase: m.phase,
@@ -69,7 +67,7 @@ describe('generateFullSchedule – Anzeige der Seiten', () => {
 
   it('@TM-033 Gegenbeispiel: ein Name im Übergangsfeld teamB wird nicht angezeigt, der Slot gilt', () => {
     const persisted: Match[] = [
-      { id: 'm1', round: 1, field: 1, slot: 0, ...vs(teams[0].id, teams[1].id), teamB: 'Team B2', group: 'A' },
+      withStaleSides({ id: 'm1', round: 1, field: 1, slot: 0, ...vs(teams[0].id, teams[1].id), group: 'A' }, teams[0].id, 'Team B2'),
     ];
     const loaded = generateFullSchedule(tournamentOf({ matches: persisted, finalsConfig: { preset: 'none' } }));
 

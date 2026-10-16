@@ -379,4 +379,18 @@ SELECT 'match-has-engine-events-execute-only-anon-authenticated',
                         AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
                         AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.match_has_engine_events(uuid)')), false)
+-- A-36a (20261026_001_match_origin.sql): Herkunft des Platzes unveraenderlich. Trigger BEFORE UPDATE
+-- (ROW, BEFORE, UPDATE) aktiv, Trigger-Funktion in public ohne PUBLIC-EXECUTE. Die Zaehlung der
+-- match_engine-Funktionen (52) bleibt, die Funktion liegt in public. Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'matches-keep-origin-trigger-active',
+       EXISTS (SELECT 1 FROM pg_trigger t
+                WHERE t.tgrelid = to_regclass('public.matches') AND t.tgname = 'matches_keep_origin'
+                  AND NOT t.tgisinternal AND t.tgenabled = 'O'
+                  AND t.tgfoid = to_regprocedure('public.matches_keep_origin()')
+                  AND (t.tgtype & 1) = 1 AND (t.tgtype & 2) = 2 AND (t.tgtype & 16) = 16)
+UNION ALL
+SELECT 'matches-keep-origin-no-public-execute',
+       coalesce((SELECT p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_keep_origin()')), false)
 ;

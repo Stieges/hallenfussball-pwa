@@ -33,7 +33,8 @@ import type { ITournamentRepository } from '../../src/core/repositories/ITournam
 import type { Tournament, Team } from '../../src/core/models/types';
 import { mapMembershipInsertToSupabase } from '../../src/core/repositories/supabaseMappers';
 import { generateFullSchedule } from '../../src/core/generators/scheduleGenerator';
-import { matchSideTeamId, transitionalSides } from '../../src/core/models/matchSlot';
+import { matchSideTeamId } from '../../src/core/models/matchSlot';
+import { matchOrigins } from '../../src/core/models/matchOrigin';
 import {
   assertEngineAutoSelect,
   assertLegacyMatch,
@@ -62,8 +63,8 @@ export function buildScheduledTournament(
     round: Math.floor(index / tournament.numberOfFields) + 1,
     field: scheduledMatch.field,
     slot: scheduledMatch.slot,
-    // A-05: Spielseiten als Slot (Team-ID oder Herkunft); teamA/teamB nur ueber die eine Schreibstelle.
-    ...transitionalSides(scheduledMatch.slotA, scheduledMatch.slotB),
+    // A-05: Spielseiten als Slot (Team-ID oder Herkunft); A-36a: Herkunft des Platzes wie TournamentCreationService.
+    ...matchOrigins(scheduledMatch),
     slotA: scheduledMatch.slotA,
     slotB: scheduledMatch.slotB,
     scoreA: scheduledMatch.scoreA,

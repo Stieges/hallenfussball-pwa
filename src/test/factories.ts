@@ -1,6 +1,5 @@
 import { testTeamSlot } from './matchSlotFixtures'
 import { testUuid } from './testIds'
-import { transitionalSides } from '../core/models/matchSlot'
 import { Tournament, Team, Match, FinalsConfig, PointSystem, PlacementCriterion, LocationDetails, Finals } from '../types/tournament'
 
 /**
@@ -72,24 +71,23 @@ export function createMockTeams(count: number, groupCount = 2): Team[] {
 /**
  * Test Factory für Match-Objekte
  */
-export function createMockMatch(overrides?: Partial<Match>): Match {
+export function createMockMatch(overrides?: Partial<Match> & { teamA?: string; teamB?: string }): Match {
   // Die Seiten kommen aus den Slots; `teamA/teamB` als Override ist nur Kurzschreibweise für Fixture-Kurz-IDs
-  // (`team-1`, keine UUIDs – deshalb ohne `teamSlot`, Testumgebung). Das Übergangsfeld folgt den Slots.
-  const { teamA: shortA, teamB: shortB } = overrides ?? {}
-  const slotA = overrides?.slotA ?? testTeamSlot(shortA ?? testUuid(1))
-  const slotB = overrides?.slotB ?? testTeamSlot(shortB ?? testUuid(2))
+  // (`team-1`, keine UUIDs – deshalb ohne `teamSlot`, Testumgebung). Das Feld `teamA/teamB` gibt es am Spiel
+  // seit A-36a nicht mehr – die Kurzschreibweise landet nie im Ergebnis.
+  const { teamA: shortA, teamB: shortB, ...rest } = overrides ?? {}
+  const slotA = rest.slotA ?? testTeamSlot(shortA ?? testUuid(1))
+  const slotB = rest.slotB ?? testTeamSlot(shortB ?? testUuid(2))
   return {
     id: `match-${Math.random().toString(36).substring(2, 11)}`,
-    slotA,
-    slotB,
     scoreA: undefined,
     scoreB: undefined,
     group: 'A',
     round: 1,
     field: 1,
-    ...overrides,
-    // Das Übergangsfeld folgt IMMER den Slots: ein `teamA`-Override (auch ein Köder mit Namen) wird hier überschrieben.
-    ...transitionalSides(slotA, slotB),
+    ...rest,
+    slotA,
+    slotB,
   }
 }
 

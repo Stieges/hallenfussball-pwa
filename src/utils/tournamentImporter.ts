@@ -21,7 +21,7 @@ import {
   FinalsRefereeMode,
 } from '../types/tournament';
 import { generateUniqueId } from './idGenerator';
-import { teamSlot, matchSideTeamId, transitionalSides } from '../core/models/matchSlot';
+import { teamSlot, matchSideTeamId } from '../core/models/matchSlot';
 import {
   isTiebreakerMode,
   isTiebreakerRoundKey,
@@ -184,7 +184,6 @@ function parseJSONTournament(content: string): ImportValidationResult {
         slot: m.slot ? Number(m.slot) : undefined,
         slotA,
         slotB,
-        ...transitionalSides(slotA, slotB),
         scoreA: m.scoreA !== undefined ? Number(m.scoreA) : undefined,
         scoreB: m.scoreB !== undefined ? Number(m.scoreB) : undefined,
         group: m.group ? String(m.group) : undefined,

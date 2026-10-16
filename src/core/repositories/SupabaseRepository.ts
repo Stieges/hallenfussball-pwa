@@ -11,8 +11,9 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
-import { OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, isAbortError } from '../errors';
+import { OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, isAbortError, toOriginImmutableError } from '../errors';
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
+import type { Database } from '../../types/supabase';
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
@@ -432,10 +433,7 @@ export class SupabaseRepository implements ITournamentRepository {
       }
     }
 
-    // Insert new matches, update existing matches -- SEPARATELY (A2,
-    // .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md).
-    //
-    // Before this fix, a single `.upsert(matchRows)` wrote EVERY column of `mapMatchToSupabase`
+    // Insert new matches, update existing matches -- SEPARATELY (A2, task-A2-brief.md). Before this fix, a single `.upsert(matchRows)` wrote EVERY column of `mapMatchToSupabase`
     // for EVERY match, including a helper's live/result columns (score_a/b, match_status, timer,
     // overtime/penalty, decided_by, ...). If the tournament owner still had an older local
     // tournament state (e.g. after only renaming a team) and saved the whole tournament while a
@@ -451,7 +449,8 @@ export class SupabaseRepository implements ITournamentRepository {
     );
 
     if (newMatchRows.length > 0) {
-      const insertRows = newMatchRows;
+      // A-36a: origin_a/b (Migration 20261026_001) fehlen in supabase.ts bis zur Regeneration -- Hochcast per Zuweisung.
+      const insertRows: Database['public']['Tables']['matches']['Insert'][] = newMatchRows;
       const { error: insertError } = await getSupabase()
         .from('matches')
         // ON CONFLICT DO NOTHING: an insert must never overwrite an existing row with neutral initial values.
@@ -506,9 +505,9 @@ export class SupabaseRepository implements ITournamentRepository {
 
       const errors = results.filter((r) => r.error !== null || r.updatedCount === 0);
       if (errors.length > 0) {
-        for (const { id, error } of errors) {
-          console.error(`Failed to update match ${id}:`, error ?? '0 rows updated (RLS?), expected 1');
-        }
+        for (const { id, error } of errors) { console.error(`Failed to update match ${id}:`, error ?? '0 rows updated (RLS?), expected 1'); }
+        const immutable = errors.map((r) => toOriginImmutableError(r.id, r.error)).find((e) => e !== undefined);
+        if (immutable) { throw immutable; } // A-36a: HF002 nicht transient, Muster TeamStillReferencedError
         throw new RepositoryError(
           'saveMatches',
           `Failed to update ${errors.length} match(es): ${errors
@@ -644,7 +643,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
       if (error) {
         console.error(`Failed to update match ${update.id}:`, error);
-        errors.push(new Error(`Match ${update.id}: ${error.message}`));
+        errors.push(toOriginImmutableError(update.id, error) ?? new Error(`Match ${update.id}: ${error.message}`)); // A-36a: HF002
       } else if (!data || data.length === 0) {
         console.error(`Failed to update match ${update.id}: 0 rows updated (RLS or missing row), expected 1`);
         errors.push(new Error(`Match ${update.id}: 0 rows updated (RLS or missing row), expected 1`));

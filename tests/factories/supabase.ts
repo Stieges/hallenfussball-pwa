@@ -60,6 +60,8 @@ export function createMatchRow(
     slot: null,
     slot_a_source: null,
     slot_b_source: null,
+    origin_a: null,
+    origin_b: null,
     team_a_id: null,
     team_b_id: null,
     team_a_placeholder: null,

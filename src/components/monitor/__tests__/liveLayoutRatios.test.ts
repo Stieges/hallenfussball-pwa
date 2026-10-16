@@ -11,11 +11,12 @@ import { RESOLUTIONS, resolveCss } from './cssResolve';
 
 const L = displayLayout.scoreArea;
 
-function metrics(w: number, h: number) {
-  const ctx = { vw: w, vh: h };
+/** B-44a4 (@ME-020): Die Folie misst an ihrer Fläche innerhalb des Bildrands (Container-Einheiten). */
+function metrics(w: number, h: number, rand = 0) {
+  const ctx = { vw: w, vh: h, cqw: w - 2 * rand, cqh: h - 2 * rand };
   const paddingX = resolveCss(L.paddingX, ctx);
   // Raster: zwei gleiche Spalten ohne Trennbreite im Inneren der Folie (ohne seitliches Polster)
-  const column = (w - 2 * paddingX) / 2;
+  const column = (ctx.cqw - 2 * paddingX) / 2;
   const boxW = resolveCss(L.blockWidth, { ...ctx, percentOf: column });
   const boxH = resolveCss(L.blockHeight, ctx);
   const digit = resolveCss(scoreDigitFontSize(), { ...ctx, cqw: boxW, cqh: boxH });
@@ -26,13 +27,16 @@ function metrics(w: number, h: number) {
   return { ctx, boxW, boxH, digit, name, nameKids, clock, hint };
 }
 
-describe.each(RESOLUTIONS)('Verhältnisse bei $w x $h', ({ w, h }) => {
-  const m = metrics(w, h);
+describe.each(RESOLUTIONS.flatMap(r => [0, 48].map(rand => ({ ...r, rand }))))('Verhältnisse bei $w x $h, Bildrand $rand px', ({ w, h, rand }) => {
+  const m = metrics(w, h, rand);
+  const flaecheW = m.ctx.cqw;
+  const flaecheH = m.ctx.cqh;
 
-  it('Kasten ca. 33 % der Bildbreite (mit Seitenpolster gerechnet) und annähernd quadratisch', () => {
-    expect(m.boxW / w).toBeGreaterThanOrEqual(0.32);
-    expect(m.boxW / w).toBeLessThanOrEqual(0.34);
-    expect(m.boxH / m.boxW).toBeGreaterThanOrEqual(0.7);
+  it('Kasten ca. 33 % der Folienbreite (mit Seitenpolster gerechnet) und annähernd quadratisch', () => {
+    expect(m.boxW / flaecheW).toBeGreaterThanOrEqual(0.32);
+    expect(m.boxW / flaecheW).toBeLessThanOrEqual(0.34);
+    // Mit Bildrand ist die Fläche verhältnismäßig breiter (z. B. 1184×624 statt 1280×720), der Kasten wird etwas flacher (B-44a4)
+    expect(m.boxH / m.boxW).toBeGreaterThanOrEqual(rand === 0 ? 0.7 : 0.65);
     expect(m.boxH / m.boxW).toBeLessThanOrEqual(1.2);
   });
 
@@ -51,10 +55,14 @@ describe.each(RESOLUTIONS)('Verhältnisse bei $w x $h', ({ w, h }) => {
     expect((m.boxW - 2 * digitWidth) / 2).toBeGreaterThanOrEqual(0.5 * digitWidth);
   });
 
-  it('Kopfzeile, Marke, Namen und Hinweise mindestens 3 % der Bildhöhe (lesbar aus 10 m, auch bei 4K)', () => {
-    for (const token of [displayFontSizes.liveInfo, displayFontSizes.liveBadge, displayFontSizes.clockHint, displayFontSizes.teamName]) {
-      expect(resolveCss(token, m.ctx)).toBeGreaterThanOrEqual(0.03 * h);
+  it('Kopfzeile, Marke und Hinweise mindestens 3 % der Bildschirmhöhe, auch mit Bildrand (@ZM-125, Ruling B-44a4)', () => {
+    for (const token of [displayFontSizes.liveInfo, displayFontSizes.liveBadge, displayFontSizes.clockHint]) {
+      expect(resolveCss(token, m.ctx)).toBeGreaterThanOrEqual(0.03 * h - 0.01);
     }
+  });
+
+  it('Vorgabe der Teamnamen mindestens 3 % der Bildschirmhöhe (darunter bricht der Name um statt zu schrumpfen)', () => {
+    expect(m.name).toBeGreaterThanOrEqual(0.03 * h);
   });
 
   it('Namen im Kindermodus größer als sonst', () => {
@@ -64,17 +72,17 @@ describe.each(RESOLUTIONS)('Verhältnisse bei $w x $h', ({ w, h }) => {
   it('keine festen Pixel-Deckel: Schriftgrößen der Folie wachsen mit der Bildhöhe', () => {
     for (const token of [displayFontSizes.liveInfo, displayFontSizes.liveBadge, displayFontSizes.clockXL, displayFontSizes.teamName]) {
       const share = resolveCss(token, m.ctx) / h;
-      const small = resolveCss(token, { vw: 1280, vh: 720 }) / 720;
+      const small = resolveCss(token, { vw: 1280, vh: 720, cqw: 1280 - 2 * rand, cqh: 720 - 2 * rand }) / 720;
       expect(share).toBeCloseTo(small, 1);
     }
   });
 
-  it('gesamte Folie passt in die Bildhöhe: Kopf, Kasten, Namen (2 Zeilen), unterer Bereich samt Schiedsrichter-Zeile, Polster', () => {
+  it('gesamte Folie passt in die Folienfläche innerhalb des Bildrands (@ME-020): Kopf, Kasten, Namen (2 Zeilen), unterer Bereich, Polster', () => {
     const padding = resolveCss(L.paddingY, m.ctx);
-    const header = (parseFloat(L.header) / 100) * h + resolveCss(L.headerGap, m.ctx);
+    const header = (parseFloat(L.header) / 100) * flaecheH + resolveCss(L.headerGap, m.ctx);
     const names = L.nameLines * TEAM_NAME_ZEILENHOEHE * m.name + resolveCss(L.teamNamesGap, m.ctx);
     const lower = resolveCss(L.lowerHeight, m.ctx);
-    expect(header + m.boxH + names + lower + 2 * padding).toBeLessThanOrEqual(h);
+    expect(header + m.boxH + names + lower + 2 * padding).toBeLessThanOrEqual(flaecheH);
   });
 
   it('unterer Bereich fasst Uhr, Balken, Hinweiszeile und Schiedsrichter-Zeile', () => {
@@ -88,13 +96,23 @@ describe.each(RESOLUTIONS)('Verhältnisse bei $w x $h', ({ w, h }) => {
   });
 
   it('Abstand zwischen Namen und Uhr vorhanden', () => {
-    expect(resolveCss(L.lowerPaddingTop, m.ctx)).toBeGreaterThanOrEqual(0.015 * h);
+    expect(resolveCss(L.lowerPaddingTop, m.ctx)).toBeGreaterThanOrEqual(0.015 * flaecheH);
   });
 });
 
 describe('Namenbreite', () => {
-  it('Namensspalte höchstens so breit wie der Kasten (Gegenbeispiel: nicht 92 %)', () => {
-    expect(parseFloat(L.teamNameWidth)).toBeLessThanOrEqual(parseFloat(L.blockWidth));
+  // B-44a4 (Ruling 16.10., @ZM-087): wieder breiter als der Kasten (B-44a2 hatte Kastenbreite)
+  it('Namensspalte breiter als der Kasten', () => {
+    expect(parseFloat(L.teamNameWidth)).toBeGreaterThan(parseFloat(L.blockWidth));
+  });
+
+  it('Größen der Live-Folie hängen an der Folienfläche (Container-Einheiten), nicht am Fenster (@ME-020)', () => {
+    for (const [name, wert] of Object.entries(L)) {
+      if (typeof wert === 'string') { expect(wert, name).not.toMatch(/\d(vh|vw)$/); }
+    }
+    for (const token of [displayFontSizes.clockXL, displayFontSizes.teamName, displayFontSizes.teamNameKids, displayFontSizes.liveSeparator]) {
+      expect(token).toMatch(/cqh$/);
+    }
   });
   it('Umbruch bis zu 2 Zeilen', () => {
     expect(L.nameLines).toBe(2);

@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import i18next from 'i18next';
 import type { Match, Team } from '../../../../types/tournament';
-import { vs, slots, groupRank, resultOf, testUuid } from '../../../../test/matchSlotFixtures';
+import { vs, slots, groupRank, resultOf, testUuid, withStaleSides } from '../../../../test/matchSlotFixtures';
 import { DraggableMatch } from '../DraggableMatch';
 import { mapMatchFromSupabase } from '../../../../core/repositories/supabaseMappers';
 import { createMatchRow } from '../../../../../tests/factories/supabase';
@@ -43,7 +43,7 @@ const base = { id: SEMI1, round: 1, field: 1, matchStatus: 'scheduled' as const 
 
 describe('DraggableMatch – Seiten aus den Slots (A-04b)', () => {
   it('A-04b besetzte Seiten zeigen den aktuellen Teamnamen, nicht das Übergangsfeld', () => {
-    card({ ...base, ...vs(NORD, UFER), teamA: 'ALTER NAME HEIM', teamB: 'ALTER NAME GAST' });
+    card(withStaleSides({ ...base, ...vs(NORD, UFER) }, 'ALTER NAME HEIM', 'ALTER NAME GAST'));
 
     expect(screen.getByText('FC Nord')).toBeTruthy();
     expect(screen.getByText('VfB Ufer')).toBeTruthy();

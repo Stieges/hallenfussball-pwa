@@ -31,7 +31,7 @@ describe('Import: Spielseiten aus Team-IDs', () => {
     const match = tournament.matches[0];
     expect(matchSideTeamId(match, 'A')).toBe(alpha.id);
     expect(matchSideTeamId(match, 'B')).toBe(beta.id);
-    expect(match.teamA).toBe(alpha.id);
+    expect('teamA' in match).toBe(false); // A-36a: kein Übergangsfeld mehr
     expect(alpha.id).not.toBe('t1');
   });
 
@@ -83,7 +83,7 @@ describe('checkFairnessWarnings über Slots', () => {
     { id: T2, name: 'Zwei' },
     { id: T3, name: 'Drei' },
   ];
-  const m = (id: string, sides: Pick<Match, 'teamA' | 'teamB' | 'slotA' | 'slotB'>): Match => ({
+  const m = (id: string, sides: Pick<Match, 'slotA' | 'slotB'>): Match => ({
     id, round: 1, field: 1, ...sides,
   });
 

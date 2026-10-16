@@ -26,23 +26,22 @@ import { teamSlot, pendingSlot } from '../../models/matchSlot';
 import type { Match } from '../../models/types';
 import { createMatchRow, createTeamRow, createTournamentRow } from '../../../../tests/factories/supabase';
 import { testUuid } from '../../../test/testIds';
+import { withStaleSides } from '../../../test/matchSlotFixtures';
 
 const NORD = testUuid(1);
 const SUED = testUuid(2);
 const HF1 = testUuid(101);
 
-/** Übergangsfeld teamA/teamB (A-01) bewusst mit TEAMNAMEN befüllt – der Mapper darf es nie lesen. */
+/** Köder: veraltetes Feld teamA/teamB (Altdaten vor A-36a) mit TEAMNAMEN – der Mapper darf es nie lesen. */
 function match(overrides: Partial<Match> = {}): Match {
-  return {
+  return withStaleSides({
     id: testUuid(201),
     round: 1,
     field: 1,
-    teamA: 'FC Nord',
-    teamB: 'SV Süd',
     slotA: teamSlot(NORD),
     slotB: teamSlot(SUED),
     ...overrides,
-  };
+  }, 'FC Nord', 'SV Süd');
 }
 
 describe('A-02 mapMatchToSupabase – Spielseite aus dem Slot, nie über Namen', () => {
@@ -64,7 +63,7 @@ describe('A-02 mapMatchToSupabase – Spielseite aus dem Slot, nie über Namen',
       [createTeamRow({ id: NORD, name: 'FC Nord' }), createTeamRow({ id: SUED, name: 'SV Süd' })],
       []
     );
-    tournament.matches = [match({ teamA: 'FC Nord', teamB: 'SV Süd', slotA: teamSlot(SUED), slotB: teamSlot(NORD) })];
+    tournament.matches = [match({ slotA: teamSlot(SUED), slotB: teamSlot(NORD) })];
 
     const { matchRows } = mapTournamentToSupabase(tournament, 'user-1');
 
@@ -125,7 +124,7 @@ describe('A-02 mapMatchUpdateToSupabase – Slots nach Schlüssel-Regel', () => 
   });
 
   it('Gegenbeispiel: ein Update ohne Slot-Schlüssel lässt beide Team-Spalten unberührt', () => {
-    const update = mapMatchUpdateToSupabase({ id: 'm1', field: 2, teamA: 'SV Süd', teamB: 'FC Nord' });
+    const update = mapMatchUpdateToSupabase(withStaleSides({ id: 'm1', field: 2 }, 'SV Süd', 'FC Nord'));
 
     expect(update).not.toHaveProperty('team_a_id');
     expect(update).not.toHaveProperty('team_b_id');
@@ -224,13 +223,12 @@ describe('A-02 mapMatchToScheduleUpdate – Voll-Speichern setzt keine aufgelös
 });
 
 describe('A-02 mapMatchFromSupabase – Slot aus Team-ID und Herkunft, ohne Namens-Map', () => {
-  it('@TM-027 gesetzte Team-ID wird zum Team-Slot, Übergangsfeld teamA trägt die ID (nicht den Namen)', () => {
+  it('@TM-027 gesetzte Team-ID wird zum Team-Slot, kein Übergangsfeld teamA/teamB (A-36a)', () => {
     const m = mapMatchFromSupabase(createMatchRow({ team_a_id: NORD, team_b_id: SUED }));
 
     expect(m.slotA).toEqual({ kind: 'team', teamId: NORD });
     expect(m.slotB).toEqual({ kind: 'team', teamId: SUED });
-    expect(m.teamA).toBe(NORD);
-    expect(m.teamB).toBe(SUED);
+    expect('teamA' in m || 'teamB' in m).toBe(false);
   });
 
   it('@TM-027 Team-ID + Herkunft → aufgelöster Slot; nur Herkunft → offener Slot', () => {

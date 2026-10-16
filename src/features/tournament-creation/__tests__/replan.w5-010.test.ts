@@ -3,7 +3,7 @@ import type { Match, Tournament } from '../../../types/tournament';
 import { generateFullSchedule } from '../../../core/generators';
 import { replaceTeam } from '../utils/replan';
 import { testUuid } from '../../../test/testIds';
-import { matchInvolvesTeam, matchSideTeamId, transitionalSides } from '../../../core/models/matchSlot';
+import { matchInvolvesTeam, matchSideTeamId } from '../../../core/models/matchSlot';
 import { mapMatchFromSupabase, mapMatchUpdateToSupabase } from '../../../core/repositories/supabaseMappers';
 
 const baseTournament = (): Tournament =>
@@ -56,15 +56,13 @@ describe('Team ersetzen', () => {
         id: m.id,
         round: index + 1,
         field: m.field,
-        teamA: m.originalTeamA,
-        teamB: m.originalTeamB,
         slotA: m.slotA,
         slotB: m.slotB,
         scheduledTime: m.startTime,
       })),
     };
     const playedOfC: Match[] = established.matches
-      .filter((m) => m.teamA === testUuid(3) || m.teamB === testUuid(3))
+      .filter((m) => matchInvolvesTeam(m, testUuid(3)))
       .slice(0, 2)
       .map((m) => ({
         ...m,
@@ -95,13 +93,13 @@ describe('Team ersetzen', () => {
       const b = before.matches[i];
       expect(m.id).toBe(b.id);
       expect(m.scheduledTime).toEqual(b.scheduledTime);
-      const replaced = (id: string) => (id === testUuid(3) ? testUuid(9) : id);
-      expect(m.teamA).toBe(replaced(b.teamA));
-      expect(m.teamB).toBe(replaced(b.teamB));
+      const replaced = (id: string | undefined) => (id === testUuid(3) ? testUuid(9) : id);
+      expect(matchSideTeamId(m, 'A')).toBe(replaced(matchSideTeamId(b, 'A')));
+      expect(matchSideTeamId(m, 'B')).toBe(replaced(matchSideTeamId(b, 'B')));
     });
 
     const inherited = result.tournament.matches.filter(
-      (m) => (m.teamA === testUuid(9) || m.teamB === testUuid(9)) && m.scoreA !== undefined
+      (m) => matchInvolvesTeam(m, testUuid(9)) && m.scoreA !== undefined
     );
     expect(inherited.length).toBe(2);
     expect(inherited.every((m) => m.scoreA === 2 && m.scoreB === 0)).toBe(true);
@@ -123,7 +121,6 @@ describe('Team ersetzen', () => {
         field: m.field,
         slotA: m.slotA,
         slotB: m.slotB,
-        ...transitionalSides(m.slotA, m.slotB),
         scheduledTime: m.startTime,
       })),
     };
@@ -137,15 +134,10 @@ describe('Team ersetzen', () => {
     const replaced = result.tournament.matches.filter((m) => matchInvolvesTeam(m, testUuid(9)));
     expect(replaced.length).toBe(involvedC.length);
 
-    // Slot und abgeleitetes Übergangsfeld zeigen das neue Team.
+    // Der Slot zeigt das neue Team; ein Übergangsfeld gibt es seit A-36a nicht mehr.
     replaced.forEach((m) => {
-      expect(m.teamA === testUuid(9) || m.teamB === testUuid(9)).toBe(true);
-      if (matchSideTeamId(m, 'A') === testUuid(9)) {
-        expect(m.teamA).toBe(testUuid(9));
-      }
-      if (matchSideTeamId(m, 'B') === testUuid(9)) {
-        expect(m.teamB).toBe(testUuid(9));
-      }
+      expect(matchSideTeamId(m, 'A') === testUuid(9) || matchSideTeamId(m, 'B') === testUuid(9)).toBe(true);
+      expect('teamA' in m || 'teamB' in m).toBe(false);
     });
 
     // Cloud-Mapper schreibt die Slots, Rücklesen liefert das neue Team wieder.

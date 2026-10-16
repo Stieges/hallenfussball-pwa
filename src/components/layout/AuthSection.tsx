@@ -21,6 +21,7 @@ import { safeLocalStorage } from '../../core/utils/safeStorage';
 import { useAuth } from '../../features/auth/hooks/useAuth';
 import { useResyncNow } from '../../features/match-engine/useResyncNow';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useCompactHeader } from '../../hooks/useCompactHeader';
 import { MobileAuthBottomSheet } from '../../features/auth/components/MobileAuthBottomSheet';
 import type { WaitingEntriesSource } from '../../features/collaboration/outbox/countWaitingEntries';
 import { useGuardedLogout } from '../../features/collaboration/outbox/useGuardedLogout';
@@ -83,30 +84,38 @@ const VisuallyHidden: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 /**
  * HeaderOfflineBadge - Compact offline indicator for header placement
- * Shows when connectionState is 'offline' with a reconnect button
+ * Shows when connectionState is 'offline' with a reconnect button.
+ * @OB-021: Unter 400 px nur das Symbol (Touch-Ziel ≥ 44 px, Text als aria-label und Tooltip), damit die Kopfzeile
+ * bei 360–390 px ohne Überlauf und mit einzeiligem Titel passt.
  */
 const HeaderOfflineBadge: React.FC<{
   onReconnect: () => void;
 }> = ({ onReconnect }) => {
   const { t } = useTranslation('common');
+  const kompakt = useCompactHeader();
   return (
     <Button
       variant="secondary"
       size="sm"
       onClick={onReconnect}
       aria-label={t('authSection.offlineAriaLabel')}
+      title={t('authSection.offlineHint')}
       data-testid="auth-offline-badge"
       style={{
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: cssVars.spacing.xs,
         backgroundColor: cssVars.colors.correctionBg,
         borderColor: cssVars.colors.correctionBorder,
         color: cssVars.colors.correctionText,
+        ...(kompakt
+          ? { minWidth: cssVars.touchTargets.minimum, minHeight: cssVars.touchTargets.minimum, paddingLeft: 0, paddingRight: 0 }
+          : {}),
       }}
     >
       <span role="img" aria-hidden="true">📡</span>
-      <span>{t('authSection.offline')}</span>
+      {!kompakt && <span>{t('authSection.offline')}</span>}
     </Button>
   );
 };

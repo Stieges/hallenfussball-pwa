@@ -55,8 +55,6 @@ describe('Neuplanung – Struktur ändern vor dem ersten Anpfiff', () => {
         id: m.id,
         round: index + 1,
         field: m.field,
-        teamA: m.originalTeamA,
-        teamB: m.originalTeamB,
         slotA: m.slotA,
         slotB: m.slotB,
       })),
@@ -84,8 +82,6 @@ describe('Neuplanung – Struktur ändern vor dem ersten Anpfiff', () => {
 
     const updated = applyReplan(withNewTeam, preview);
     expect(updated.matches.length).toBe(preview.schedule.allMatches.length);
-    const updatedSides = updated.matches.flatMap((m) => [m.teamA, m.teamB]);
-    expect(updatedSides).toContain(testUuid(5));
     const updatedSlotSides = updated.matches.flatMap((m) => [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')]);
     expect(updatedSlotSides).toContain(testUuid(5));
     preview.schedule.allMatches.forEach((g, i) => {

@@ -28,7 +28,8 @@ import type {
 import type { MatchUpdate as DomainMatchUpdate } from '../models/types';
 import { RepositoryError } from '../errors';
 import { SlotSourceSchema, TeamIdSchema, type MatchSlot, type SlotSource } from '../models/schemas/MatchSlotSchema';
-import { pendingSlot, slotSource, slotTeamId, teamSlot, transitionalSides } from '../models/matchSlot';
+import { pendingSlot, slotSource, slotTeamId, teamSlot } from '../models/matchSlot';
+import { originFromRow, originToColumns, type MatchOriginColumns } from './matchOriginColumns';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -36,16 +37,10 @@ type TournamentInsert = Database['public']['Tables']['tournaments']['Insert'];
 type TournamentUpdate = Database['public']['Tables']['tournaments']['Update'];
 type TeamRow = Database['public']['Tables']['teams']['Row'];
 type TeamInsert = Database['public']['Tables']['teams']['Insert'];
-// A-02 (MVP-Bauplan Spur A): Herkunftsspalten aus `supabase/migrations/20261003_001_match_slots.sql`.
-// `src/types/supabase.ts` wird erst nach dem Merge auf `main` neu erzeugt (Skill supabase-types-regen) –
-// bis dahin hier von Hand ergänzt.
-interface MatchSlotColumns {
-  slot_a_source?: Json | null;
-  slot_b_source?: Json | null;
-}
-type MatchRow = Database['public']['Tables']['matches']['Row'] & MatchSlotColumns;
-type MatchInsert = Database['public']['Tables']['matches']['Insert'] & MatchSlotColumns;
-type MatchUpdate = Database['public']['Tables']['matches']['Update'] & MatchSlotColumns;
+// A-36a: `origin_a/origin_b` (20261026_001_match_origin.sql) bis zur Neuerzeugung von supabase.ts von Hand ergänzt.
+type MatchRow = Database['public']['Tables']['matches']['Row'] & MatchOriginColumns;
+type MatchInsert = Database['public']['Tables']['matches']['Insert'] & MatchOriginColumns;
+type MatchUpdate = Database['public']['Tables']['matches']['Update'];
 type CollaboratorInsert = Database['public']['Tables']['tournament_collaborators']['Insert'];
 type CollaboratorUpdate = Database['public']['Tables']['tournament_collaborators']['Update'];
 type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
@@ -159,10 +154,8 @@ function slotFromRow(matchId: string, side: Side, teamId: string | null, source:
 /**
  * Maps a Supabase match row to frontend Match type.
  *
- * A-02: `slotA/slotB` aus Team-ID bzw. Herkunft (siehe `slotFromRow`). Das Übergangsfeld
- * `teamA/teamB` (Übergangsfeld, Löschen in B-35) trägt die Team-ID – wie ein lokal erzeugtes Spiel –, NICHT
- * mehr den Namen: die Engine (`hooks/engineMatchModel.ts`) erwartet dort eine ID; mit Namen fiele jedes
- * Cloud-Spiel still aus `buildValidMatches`. Offene Seite → `'TBD'` (Anzeige folgt in A-03 über Slots).
+ * A-02: `slotA/slotB` aus Team-ID bzw. Herkunft (siehe `slotFromRow`); A-36a: `originA/originB` aus
+ * `origin_a/origin_b` (Herkunft des Platzes, `originFromRow`).
  */
 export function mapMatchFromSupabase(row: MatchRow): Match {
   const slotA = slotFromRow(row.id, 'A', row.team_a_id, row.slot_a_source);
@@ -175,7 +168,7 @@ export function mapMatchFromSupabase(row: MatchRow): Match {
     slot: row.slot ?? undefined,
     slotA,
     slotB,
-    ...transitionalSides(slotA, slotB),
+    ...originFromRow(row), // A-36a: Herkunft des Platzes
     scoreA: row.score_a ?? undefined,
     scoreB: row.score_b ?? undefined,
     group: row.group_letter ?? undefined,
@@ -271,6 +264,7 @@ export function mapMatchToSupabase(
     team_b_id: b.teamId,
     slot_a_source: a.source,
     slot_b_source: b.source,
+    ...originToColumns(match), // A-36a: nur beim Anlegen, Update-Wege senden sie nie
     team_a_placeholder: null,
     team_b_placeholder: null,
     score_a: null,

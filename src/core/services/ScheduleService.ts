@@ -1,5 +1,5 @@
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
-import { transitionalSides } from '../models/matchSlot';
+import { matchOrigins } from '../models/matchOrigin';
 import { Match, MatchUpdate } from '../models/types';
 import { generateFullSchedule } from '../../core/generators';
 
@@ -48,10 +48,10 @@ export class ScheduleService {
             round: 1, // simplified mapping, generator provides structure
             field: m.field,
             slot: m.slot, // Important: Generator assigns initial slots
-            ...transitionalSides(m.slotA, m.slotB),
             // A-02: Slots aus dem Generator durchreichen – der Cloud-Mapper schreibt nur sie.
             slotA: m.slotA,
             slotB: m.slotB,
+            ...matchOrigins(m), // A-36a: Herkunft des Platzes
             scheduledTime: m.startTime,
             group: m.group,
             isFinal: m.phase !== 'groupStage',

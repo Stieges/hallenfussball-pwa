@@ -48,8 +48,9 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
   // Delegate to LiveMatchDisplay for running matches
   if (runningMatch) {
     const liveMatch = toLiveMatch(runningMatch, teams, tournament);
+    // B-44a4 (@ME-020): Die Folie ist Größen-Container; die Live-Anzeige misst an ihrer Fläche innerhalb des Bildrands
     return (
-      <div style={style}>
+      <div style={{ ...style, containerType: 'size' }} data-testid="live-slide-area">
         <LiveMatchDisplay
           match={liveMatch}
           group={runningMatch.group}

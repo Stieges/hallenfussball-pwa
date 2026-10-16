@@ -106,9 +106,10 @@ describe('H3 @ZM-125 Breiten: Kästen etwa 33 % Bildbreite, Namensspalte in Kast
     expect(screen.getByTestId('live-block-away').style.width).toBe(displayLayout.scoreArea.blockWidth);
   });
 
-  it('Namensspalte: so breit wie der Kasten (B-44a2, vorher 92 %)', () => {
+  it('Namensspalte: breiter als der Kasten (B-44a4, Ruling 16.10., @ZM-087)', () => {
     render(<LiveMatchDisplay match={createMatch()} />);
-    expect(screen.getByTestId('live-name-home').style.width).toBe(displayLayout.scoreArea.blockWidth);
-    expect(screen.getByTestId('live-name-away').style.width).toBe(displayLayout.scoreArea.blockWidth);
+    expect(screen.getByTestId('live-name-home').style.width).toBe(displayLayout.scoreArea.teamNameWidth);
+    expect(screen.getByTestId('live-name-away').style.width).toBe(displayLayout.scoreArea.teamNameWidth);
+    expect(parseFloat(displayLayout.scoreArea.teamNameWidth)).toBeGreaterThan(parseFloat(displayLayout.scoreArea.blockWidth));
   });
 });
