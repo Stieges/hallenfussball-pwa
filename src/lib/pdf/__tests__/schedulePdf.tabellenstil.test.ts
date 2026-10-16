@@ -11,9 +11,10 @@ import { hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { kaestchen, lesen, senkrecht, SIZE_TOL, TOL, waagerecht, zeilenLinien } from './pdfScoreSupport';
 import { ohneNummer } from './pdfFixtureLayout';
 import type { LayoutPage } from './pdfjsLayout';
+import { testUuid } from '../../../test/testIds';
 
 const EIN_PAAR = ['FC Nord', 'SV Süd', 'DJK Berg', 'TuS Tal'];
-const teamsEinerGruppe = (): Team[] => EIN_PAAR.map((name, i) => ({ id: `team-${i}`, name, group: 'A' }));
+const teamsEinerGruppe = (): Team[] => EIN_PAAR.map((name, i) => ({ id: testUuid(i), name, group: 'A' }));
 
 /** Seite 1 ab der Überschrift „Gruppenphase“ (Spieltabelle) oder „Spiele“ (jeder gegen jeden). */
 function spielbereich(page: LayoutPage): { von: number } {
@@ -74,7 +75,7 @@ describe('C1-F S1 Zeilenlinien nicht übermalt', () => {
 
 describe('C1-F S3b Spiele nach Anstoßzeit, unabhängig von der Reihenfolge im Plan', () => {
   it('Jeder gegen jeden mit „Teams pfeifen“ und zwei Feldern: die Uhrzeiten laufen von oben nach unten nicht zurück', async () => {
-    const teams = teamsEinerGruppe().concat([{ id: 'x1', name: 'SC Ost', group: 'A' }, { id: 'x2', name: 'FC Mitte', group: 'A' }]).map(t => ({ ...t, group: undefined }));
+    const teams = teamsEinerGruppe().concat([{ id: testUuid(901), name: 'SC Ost', group: 'A' }, { id: testUuid(902), name: 'FC Mitte', group: 'A' }]).map(t => ({ ...t, group: undefined }));
     const tournament = hallencupTournament({ teams, numberOfTeams: 6, groupSystem: 'roundRobin', refereeConfig: { mode: 'teams' } });
     const pages = await lesen(generateFullSchedule(tournament, 'de'), tournament);
     const zeiten = pages.flatMap(page => page.texts
@@ -99,7 +100,7 @@ describe('W10 / @BM-022 keine Spielzeile über zwei Seiten', () => {
   /** Teams mit Namen, die auf drei Zeilen umbrechen: hohe Zeilen, die am Seitenende geteilt werden könnten. */
   const langesTurnier = (anzahl: number) => {
     const lang = (i: number) => `Sportverein Hallenfußball Nordstadt ${i} Jugend e. V. Abteilung Ost`;
-    const teams: Team[] = Array.from({ length: anzahl }, (_, i) => ({ id: `t${i}`, name: lang(i), group: i < anzahl / 2 ? 'A' : 'B' }));
+    const teams: Team[] = Array.from({ length: anzahl }, (_, i) => ({ id: testUuid(i), name: lang(i), group: i < anzahl / 2 ? 'A' : 'B' }));
     return hallencupTournament({ teams, numberOfTeams: teams.length });
   };
 

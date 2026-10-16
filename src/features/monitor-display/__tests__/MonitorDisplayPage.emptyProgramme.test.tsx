@@ -40,6 +40,9 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 import { selectDisplayableSlides, ZUSCHAUER_QR_SLIDE, SPIELPLAN_FALLBACK_SLIDE } from '../slideProgramme';
 
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
+
 function tournamentWithEmptyProgramme(overrides: Record<string, unknown>) {
   return {
     id: 'tour-1', title: 'Hallencup Ost', teams: [], matches: [],

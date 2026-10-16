@@ -9,7 +9,8 @@ interface MatchScoreCellProps {
   isFinished: boolean;
   inCorrectionMode: boolean;
   onScoreChange: (scoreA: number, scoreB: number) => void;
-  onStartCorrection: () => void;
+  /** Ohne Handler (bis B-24) gibt es keinen Korrigieren-Knopf. */
+  onStartCorrection?: () => void;
   // Note: Permission check is now handled in the parent component (ScheduleTab)
 }
 
@@ -88,18 +89,19 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
               : '___ : ___'
             }
           </span>
-          {/* Correction button always visible - permission check happens in handler */}
-          <button
-            style={buttonStyle}
-            onClick={(e) => {
-              e.stopPropagation();
-              onStartCorrection();
-            }}
-            className="correction-button"
-            data-testid={`correction-button-${matchId}`}
-          >
-            {t('scoreCell.correctResult')}
-          </button>
+          {onStartCorrection && (
+            <button
+              style={buttonStyle}
+              onClick={(e) => {
+                e.stopPropagation();
+                onStartCorrection();
+              }}
+              className="correction-button"
+              data-testid={`correction-button-${matchId}`}
+            >
+              {t('scoreCell.correctResult')}
+            </button>
+          )}
         </div>
 
         <style>{`

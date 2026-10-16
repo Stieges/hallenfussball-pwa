@@ -6,7 +6,7 @@
  * E-Mails/Passwort/Rollen) — keine Werte hier verstreut nochmal literal.
  */
 
-import type { Page } from '@playwright/test';
+import type { Browser, BrowserContext, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 import { E2E_USERS, E2E_TEST_PASSWORD, type E2EUserKey } from './testData';
 import { getLocalSupabaseStatus } from '../../../scripts/lib/localSupabaseStatus';
@@ -150,161 +150,39 @@ export async function waitForSync(page: Page, options: WaitForSyncOptions = {}):
 // =============================================================================
 
 /**
- * Stellt sicher, dass das aktuell im Cockpit gewählte Spiel läuft -- klickt
- * `match-start-button`, falls das Spiel noch nicht gestartet ist (`match-pause-button` noch
- * nicht sichtbar). Kein Effekt, wenn schon ein Spiel läuft. `page` muss bereits auf der
- * Live-Cockpit-Seite eines Turniers mit Schreibrecht sein (owner/coadmin/helper).
+ * A-07g Fixrunde 1 (F4): Seit A-07b (@FU-006) schreibt jede Turnier-Warteschlange unter dem
+ * Schlüssel ihres Kontos (`MutationQueue.ts#accountScopedKey`). Einzige Quelle für diese Namen in
+ * den E2E-Tests; die Konto-ID eines Testnutzers liefert `fetchUserIdByEmail` (engineHelpers.ts).
  */
-export async function ensureMatchRunning(page: Page): Promise<void> {
-  await expect(page.locator('[data-testid="match-status-badge"]')).toBeVisible({ timeout: 15000 });
-  const startButton = page.locator('[data-testid="match-start-button"]');
-  if (await startButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await startButton.click();
-  }
-  await expect(page.locator('[data-testid="match-pause-button"]')).toBeVisible({ timeout: 15000 });
+export const LEGACY_QUEUE_KEYS = ['mutation_queue_v1', 'mutation_queue_failed_v1'] as const;
+
+export function queueKeys(userId: string): { queue: string; failed: string } {
+  return { queue: `mutation_queue_v1:${userId}`, failed: `mutation_queue_failed_v1:${userId}` };
 }
 
 /**
- * Abschluss-Review (final-review.md, I2/Ruling AG): liest per Service-Role direkt aus
- * `public.matches`, welches Spiel eines Turniers der Seed NIE angerührt hat (DB-Default
- * `match_status='scheduled'`, kein Score, kein Timer) -- höchste `round`/`slot`-Kombination, rein
- * um deterministisch IMMER dasselbe (das "letzte") Spiel zu treffen, nicht das seed-`running`-Spiel.
- * Gebraucht vom C-NSTART-Test (`two-devices.cloud.spec.ts`): Direktnavigation mit `?matchId=`
- * (`TournamentManagementScreen.tsx#matchIdFromUrl`) statt einer Dropdown-Auswahl -- Letztere
- * triggert bei bereits laufendem Spiel einen Bestätigungsdialog (`ManagementTab.tsx#handleMatch
- * SelectionChange`), den `?matchId=` umgeht (der `initialMatchId`-Effekt dort beendet das laufende
- * Spiel automatisch, ohne Dialog -- siehe `forceMatchRunning()` unten für den Rückbau).
+ * Wache gegen einen erneuten Schlüsselwechsel: nach dem Neuladen ist der Altschlüssel (ohne Konto)
+ * leer, weil die Queue ihn übernommen hat. Ohne diese Wache bliebe ein Test, der den falschen
+ * Schlüssel liest, leise grün oder leise rot.
  */
-export async function fetchUntouchedMatchId(tournamentId: string): Promise<string> {
-  const { url, headers } = getLocalServiceRoleClient();
-  const res = await fetch(
-    `${url}/rest/v1/matches?tournament_id=eq.${tournamentId}&match_status=eq.scheduled&order=round.desc,slot.desc&limit=1&select=id`,
-    { headers }
-  );
-  if (!res.ok) {
-    throw new Error(`fetchUntouchedMatchId(${tournamentId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
-  }
-  const rows = (await res.json()) as Array<{ id: string }>;
-  const row = rows[0];
-  if (!row) {
-    throw new Error(`fetchUntouchedMatchId(${tournamentId}): kein Spiel mit match_status='scheduled' gefunden.`);
-  }
-  return row.id;
-}
-
-/**
- * Gegenstück zu `fetchUntouchedMatchId()`: liest die ID des aktuell laufenden Spiels eines
- * Turniers -- gebraucht vom C-NSTART-Test, um sich VOR der Direktnavigation zu merken, welches
- * Spiel `forceMatchRunning()` im `finally` wiederherstellen muss (die ID ist nicht deterministisch
- * ableitbar, `generateFullSchedule()` vergibt sie erst zur Seed-Laufzeit).
- */
-export async function fetchRunningMatchId(tournamentId: string): Promise<string> {
-  const { url, headers } = getLocalServiceRoleClient();
-  const res = await fetch(
-    `${url}/rest/v1/matches?tournament_id=eq.${tournamentId}&match_status=eq.running&limit=1&select=id`,
-    { headers }
-  );
-  if (!res.ok) {
-    throw new Error(`fetchRunningMatchId(${tournamentId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
-  }
-  const rows = (await res.json()) as Array<{ id: string }>;
-  const row = rows[0];
-  if (!row) {
-    throw new Error(`fetchRunningMatchId(${tournamentId}): kein laufendes Spiel gefunden.`);
-  }
-  return row.id;
-}
-
-/**
- * I6/N16-Gegenstück zu `resetRunningMatchScore()` für den C-NSTART-Test: setzt EIN Spiel per ID
- * zurück auf `running` + festen Score/Timer. Anders als `resetRunningMatchScore()` (Filter
- * `match_status=eq.running`, trifft also NICHTS mehr, sobald der Status bereits gewechselt hat)
- * greift dieser Rückbau per ID auch dann, wenn `ManagementTab`s `initialMatchId`-Effekt das Spiel
- * zwischenzeitlich automatisch beendet hat (siehe `fetchUntouchedMatchId()`-Kommentar oben).
- *
- * Fixrunde 1 (M4, Review `task-A1-review.md`): setzt zusätzlich `actual_end`, `decided_by`,
- * `timer_paused_at` und `live_state` zurück auf `null` -- den Baseline-Zustand des Seeds (der das
- * laufende Spiel per Service-Role-Bypass anlegt, NIE über `MatchExecutionService`, siehe
- * `scripts/e2e-seed.ts`). Ohne diese vier Felder hinterließ ein `finishMatch()`-Aufruf
- * (`MatchExecutionService.persistFinalResult` setzt sie) Reste, die kein bestehender Test
- * bemerkte, aber die Baseline-Annahme "wie frisch geseedet" verletzten -- z. B. bliebe
- * `decided_by` auf `'regular'` stehen, obwohl das Spiel wieder als laufend gilt.
- */
-export async function forceMatchRunning(matchId: string, homeScore: number, awayScore: number): Promise<void> {
-  const { url, headers } = getLocalServiceRoleClient();
-  const res = await fetch(`${url}/rest/v1/matches?id=eq.${matchId}`, {
-    method: 'PATCH',
-    headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-    body: JSON.stringify({
-      match_status: 'running',
-      score_a: homeScore,
-      score_b: awayScore,
-      timer_start_time: new Date().toISOString(),
-      timer_elapsed_seconds: 300,
-      timer_paused_at: null,
-      actual_end: null,
-      decided_by: null,
-      live_state: null,
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`forceMatchRunning(${matchId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+export async function expectLegacyQueueKeysEmpty(page: Page): Promise<void> {
+  const values = await page.evaluate((keys) => keys.map((key) => window.localStorage.getItem(key)), [...LEGACY_QUEUE_KEYS]);
+  for (const value of values) {
+    expect(value === null || value === '[]').toBe(true);
   }
 }
 
 /**
- * Task A1 (Sofortschutz): liest die (nicht gelöschten) `match_events`-IDs eines Spiels --
- * Baseline VOR einer Aktion, um danach per Diff genau die NEU entstandenen Events zu erkennen
- * und gezielt zurückzubauen (siehe `softDeleteMatchEvents()`). Ohne diesen Rückbau bleibt z. B.
- * das `STATUS_CHANGE`-Ereignis eines `finishMatch()`-Aufrufs mit einem hohen `timestamp_seconds`
- * dauerhaft in der Tabelle stehen -- ein späterer Test in derselben `serial`-Kette
- * (`two-devices.cloud.spec.ts`, "Ereignis löschen") ermittelt das "letzte" Ereignis für
- * `handleUndoLastEvent` und traf dabei fälschlich dieses alte, zeitlich spätere Ereignis statt
- * des gerade eingetragenen Tors -- beobachtet als hängengebliebener Score nach einem Rückgängig-
- * Klick.
- */
-export async function fetchMatchEventIds(matchId: string): Promise<string[]> {
-  const { url, headers } = getLocalServiceRoleClient();
-  const res = await fetch(
-    `${url}/rest/v1/match_events?match_id=eq.${matchId}&is_deleted=eq.false&select=id`,
-    { headers }
-  );
-  if (!res.ok) {
-    throw new Error(`fetchMatchEventIds(${matchId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
-  }
-  const rows = (await res.json()) as Array<{ id: string }>;
-  return rows.map((row) => row.id);
-}
-
-/**
- * Gegenstück zu `fetchMatchEventIds()`: markiert die übergebenen Event-IDs als gelöscht
- * (`is_deleted=true`, dieselbe Soft-Delete-Spalte wie `MatchExecutionService.deleteEvent()`) --
- * kein Effekt, wenn `ids` leer ist.
- */
-export async function softDeleteMatchEvents(ids: string[]): Promise<void> {
-  if (ids.length === 0) { return; }
-  const { url, headers } = getLocalServiceRoleClient();
-  const idList = ids.map((id) => `"${id}"`).join(',');
-  const res = await fetch(`${url}/rest/v1/match_events?id=in.(${idList})`, {
-    method: 'PATCH',
-    headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-    body: JSON.stringify({ is_deleted: true }),
-  });
-  if (!res.ok) {
-    throw new Error(`softDeleteMatchEvents(${ids.join(',')}) fehlgeschlagen: ${res.status} ${await res.text()}`);
-  }
-}
-
-/**
- * Task A1 (Sofortschutz): liest `localStorage['mutation_queue_failed_v1']` (Dead-Letter der
+ * Task A1 (Sofortschutz): liest die Dead-Letter-Liste (`queueKeys(userId).failed`) (Dead-Letter der
  * `MutationQueue`, siehe `MutationQueue.ts#failedStorageKey`) auf `page` und gibt die
  * `type`-Werte der darin enthaltenen Mutationen zurück (leeres Array, wenn der Schlüssel fehlt
  * oder leer ist). Gebraucht vom "Helfer beendet Spiel"-Test, um zu beweisen, dass nach einem
  * Spielende KEINE `SAVE_TOURNAMENT`-Mutation dort gelandet ist (vorher: RLS lehnt den vollen
  * Turnier-Save für einen Helfer ab → nach Retries Dead-Letter).
  */
-export async function fetchFailedMutationTypes(page: Page): Promise<string[]> {
-  const raw = await page.evaluate(() => window.localStorage.getItem('mutation_queue_failed_v1'));
+export async function fetchFailedMutationTypes(page: Page, userId: string): Promise<string[]> {
+  const { failed } = queueKeys(userId);
+  const raw = await page.evaluate((key) => window.localStorage.getItem(key), failed);
   if (!raw) { return []; }
   const parsed = JSON.parse(raw) as Array<{ type?: string }>;
   return parsed.map((item) => item.type).filter((type): type is string => typeof type === 'string');
@@ -320,11 +198,18 @@ export async function fetchFailedMutationTypes(page: Page): Promise<string[]> {
  * `SAVE_TOURNAMENT`-Mutation, die scheitert, aber noch nicht 5 Versuche hinter sich hat, tauchte
  * in `mutation_queue_failed_v1` gar nicht auf.
  */
-export async function fetchQueuedMutationTypes(page: Page): Promise<string[]> {
-  const raw = await page.evaluate(() => window.localStorage.getItem('mutation_queue_v1'));
+export async function fetchQueuedMutationTypes(page: Page, userId: string): Promise<string[]> {
+  const { queue } = queueKeys(userId);
+  const raw = await page.evaluate((key) => window.localStorage.getItem(key), queue);
   if (!raw) { return []; }
   const parsed = JSON.parse(raw) as Array<{ type?: string }>;
   return parsed.map((item) => item.type).filter((type): type is string => typeof type === 'string');
+}
+
+/** Zeitstrafe ohne Rückennummer: der Knopf am Team wählt Dauer und Team vor, es bleibt "Ohne Nr.". */
+export async function enterTimePenaltyWithoutNumber(page: Page, teamName: string): Promise<void> {
+  await page.getByRole('button', { name: `Zeitstrafe für ${teamName}` }).click();
+  await page.getByRole('button', { name: /Ohne Nr\./ }).click();
 }
 
 /**
@@ -337,35 +222,6 @@ export async function enterGoal(page: Page, side: 'home' | 'away'): Promise<void
   const skipButton = page.locator('[data-testid="dialog-skip-button"]');
   await expect(skipButton).toBeVisible({ timeout: 5000 });
   await skipButton.click();
-}
-
-/**
- * I6 (Fixrunde 1): Setzt den Spielstand des aktuell LAUFENDEN Spiels eines Turniers auf den
- * übergebenen Seed-Ausgangswert zurück -- gebraucht von allen vier Tests in
- * `two-devices.cloud.spec.ts` (Fixrunde 2/N4: darunter der ehemals eigenständige Offline-Test),
- * die alle dasselbe laufende Live-Cup-Spiel für ihren Echtzeit-Nachweis verwenden. Seit die
- * Realtime-Publikation lokal korrekt gesetzt ist (Ruling W), schreibt ein
- * Tor den `matches`-Zeilen-Score tatsächlich durch (nur der `match_events`-Insert scheitert
- * weiter an Fehler A) -- ohne Rückbau würden sich aufeinanderfolgende Testläufe im selben
- * `test:e2e:cloud`-Lauf gegenseitig verkoppeln (I6).
- */
-export async function resetRunningMatchScore(
-  tournamentId: string,
-  homeScore: number,
-  awayScore: number
-): Promise<void> {
-  const { url, headers } = getLocalServiceRoleClient();
-  const res = await fetch(
-    `${url}/rest/v1/matches?tournament_id=eq.${tournamentId}&match_status=eq.running`,
-    {
-      method: 'PATCH',
-      headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-      body: JSON.stringify({ score_a: homeScore, score_b: awayScore }),
-    }
-  );
-  if (!res.ok) {
-    throw new Error(`resetRunningMatchScore(${tournamentId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
-  }
 }
 
 /**
@@ -516,4 +372,126 @@ export function getLocalServiceRoleClient(): LocalServiceRoleClient {
     headers: { apikey: status.serviceRoleKey, Authorization: `Bearer ${status.serviceRoleKey}` },
   };
   return cachedServiceRoleClient;
+}
+
+// =============================================================================
+// A-07d3: ABMELDEN, ANDERE GERÄTE ABMELDEN, KONTO-TRENNUNG
+// =============================================================================
+
+/** Frischer Browser-Kontext OHNE gespeicherte Anmeldung (ein „Gerät“), mit Einwilligung gesetzt. */
+export async function newFreshContext(browser: Browser): Promise<{ context: BrowserContext; page: Page }> {
+  const context = await browser.newContext();
+  await context.addInitScript(() => {
+    window.localStorage.setItem('app:consent', JSON.stringify({ errorTracking: true, sessionReplay: false, timestamp: Date.now(), version: 1 }));
+  });
+  return { context, page: await context.newPage() };
+}
+
+/** Zugangsschlüssel der Sitzung dieses Geräts (`sb-*-auth-token` im localStorage) oder null. */
+export async function readSessionAccessToken(page: Page): Promise<string | null> {
+  return page.evaluate(() => {
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key?.startsWith('sb-') && key.endsWith('-auth-token')) {
+        const parsed = JSON.parse(window.localStorage.getItem(key) ?? 'null') as { access_token?: unknown } | null;
+        return typeof parsed?.access_token === 'string' ? parsed.access_token : null;
+      }
+    }
+    return null;
+  });
+}
+
+/** HTTP-Status von `GET /auth/v1/user` mit diesem Zugangsschlüssel: 200 = Sitzung gilt, 403 = Sitzung beendet. */
+export async function fetchAuthUserStatus(accessToken: string): Promise<number> {
+  const { url, anonKey } = getLocalServiceRoleClient();
+  const res = await fetch(`${url}/auth/v1/user`, { headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}` } });
+  return res.status;
+}
+
+/**
+ * Abmelden über die Oberfläche, wenn Einträge warten: die Abmelde-Warnung erscheint (mit der
+ * erwarteten Anzahl im Titel) und wird bestätigt. Danach ist das Gerät abgemeldet.
+ */
+export async function logoutViaUiConfirmingWarning(page: Page, waitingCount: number): Promise<void> {
+  await page.locator('[data-testid="auth-avatar-button"]').click();
+  await page.locator('[data-testid="auth-logout-button"]').click();
+  const dialog = page.locator('[data-testid="logout-warning-dialog"]');
+  await expect(dialog).toBeVisible({ timeout: 5000 });
+  // Wortlaut aus common.json (outbox.logoutWarning.title_one/_other), Anzahl als Parameter.
+  const expectedTitle = waitingCount === 1
+    ? '1 Eintrag noch nicht übertragen'
+    : `${waitingCount} Einträge noch nicht übertragen`;
+  await expect(page.getByRole('dialog')).toContainText(expectedTitle);
+  // Erst nach der Bestätigung wird abgemeldet: bis dahin besteht die Sitzung noch.
+  expect(await readSessionAccessToken(page)).not.toBeNull();
+  await page.locator('[data-testid="logout-warning-confirm"]').click();
+  // Auf der Cockpit-Seite zeigt das Gerät danach „Turnier nicht gefunden“ ohne Kopfzeile (kein
+  // Konto-Inhalt mehr), deshalb ist die gelöschte Sitzung das Merkmal, nicht ein Anmelde-Knopf.
+  await expect(dialog).toHaveCount(0, { timeout: 10000 });
+  await expect.poll(() => readSessionAccessToken(page), { timeout: 10000 }).toBeNull();
+  await expect(page.locator('[data-testid="auth-avatar-button"]')).toHaveCount(0);
+}
+
+/** Profil öffnen und „Auf allen anderen Geräten abmelden“ bestätigen; wartet auf die Erfolgsmeldung. */
+export async function logoutOtherDevicesViaUi(page: Page): Promise<void> {
+  await page.goto('/#/profile');
+  await page.locator('[data-testid="logout-others"]').click();
+  await page.locator('[data-testid="confirm-dialog-confirm"]').click();
+  await expect(page.getByText('Die anderen Geräte werden abgemeldet', { exact: false })).toBeVisible({ timeout: 10000 });
+}
+
+/**
+ * Legt im Gastmodus ein lokales Turnier an (IndexedDB `hallenfussball/cache`, Schlüssel
+ * `tournaments`, wie die Offline-Suite) und lädt neu. Die Seite muss vorher einmal geladen sein
+ * (die Datenbank entsteht beim Start). Rückgabe: die Turnier-ID.
+ */
+export async function seedGuestTournament(page: Page, title: string): Promise<string> {
+  const id = await page.evaluate(async (tournamentTitle) => {
+    // Entwurf mit den Standardwerten der App selbst (Vite-Dev-Server liefert die Quelle aus).
+    const modulePath = '/src/core/services/TournamentCreationService.ts';
+    const { TournamentCreationService } = (await import(/* @vite-ignore */ modulePath)) as {
+      TournamentCreationService: new (repository: object) => {
+        createDraft: (data: object) => { id: string };
+      };
+    };
+    const draft = new TournamentCreationService({}).createDraft({
+      title: tournamentTitle,
+      ageClass: 'U13',
+      date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      timeSlot: '09:00 - 16:00',
+      startTime: '09:00',
+      location: { name: 'Gast-Halle' },
+      numberOfTeams: 2,
+      teams: [
+        { id: 'guest-team-1', name: 'Gast Team 1' },
+        { id: 'guest-team-2', name: 'Gast Team 2' },
+      ],
+    });
+    const stored = { ...(JSON.parse(JSON.stringify(draft)) as object), ownerId: 'guest' };
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('hallenfussball', 1);
+      request.onerror = () => reject(new Error('IndexedDB nicht zu öffnen'));
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction('cache', 'readwrite');
+        transaction.objectStore('cache').put({ key: 'tournaments', value: [stored] });
+        transaction.oncomplete = () => { db.close(); resolve(); };
+        transaction.onerror = () => { db.close(); reject(new Error('Schreiben in IndexedDB fehlgeschlagen')); };
+      };
+    });
+    return draft.id;
+  }, title);
+  await page.reload();
+  await page.waitForLoadState('networkidle');
+  return id;
+}
+
+/** Anzahl Turniere in der Datenbank mit diesem Titel (Service-Rolle) -- Beleg „nicht hochgeladen“. */
+export async function countTournamentsByTitle(title: string): Promise<number> {
+  const { url, headers } = getLocalServiceRoleClient();
+  const res = await fetch(`${url}/rest/v1/tournaments?title=eq.${encodeURIComponent(title)}&select=id`, { headers });
+  if (!res.ok) {
+    throw new Error(`countTournamentsByTitle(${title}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+  }
+  return ((await res.json()) as unknown[]).length;
 }

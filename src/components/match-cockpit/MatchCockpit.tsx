@@ -59,6 +59,8 @@ export interface LiveMatch {
   status: MatchStatus;
   elapsedSeconds: number;
   events: MatchEvent[];
+  /** C3b-1 (G6): zurückgenommene Einträge eines Engine-Spiels, nur für die Protokoll-Anzeige. */
+  retractedEvents?: MatchEvent[];
 
   // DEF-005: Timer persistence fields
   timerStartTime?: string;

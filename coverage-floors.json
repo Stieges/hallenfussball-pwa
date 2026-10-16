@@ -1,0 +1,110 @@
+{
+  "_hinweis": "Untergrenzen je Bereich (A-09, @TA-002/@TA-003). Nur steigen: am Gruppenende max(alt, gemessen - 1); bei Merge je Schluessel das Maximum beider Spuren. Pruefung: node scripts/coverage-report.mjs. Fuer 'global' gilt dieselbe Zahl als vitest-Schwelle.",
+  "bereiche": {
+    "global": {
+      "pfade": [
+        "src/"
+      ],
+      "floors": {
+        "statements": 54,
+        "branches": 47,
+        "functions": 49,
+        "lines": 55
+      }
+    },
+    "core": {
+      "pfade": [
+        "src/core/"
+      ],
+      "floors": {
+        "statements": 87,
+        "branches": 81,
+        "functions": 92,
+        "lines": 88
+      }
+    },
+    "live-cockpit": {
+      "pfade": [
+        "src/components/live-cockpit/"
+      ],
+      "floors": {
+        "statements": 41,
+        "branches": 37,
+        "functions": 35,
+        "lines": 42
+      }
+    },
+    "monitor": {
+      "pfade": [
+        "src/features/monitor-display/",
+        "src/components/monitor/"
+      ],
+      "floors": {
+        "statements": 71,
+        "branches": 71,
+        "functions": 67,
+        "lines": 71
+      }
+    },
+    "zuschauer": {
+      "pfade": [
+        "src/screens/LiveViewScreen",
+        "src/screens/PublicLiveViewScreen",
+        "src/screens/PublicTournamentViewScreen",
+        "src/features/public-view/"
+      ],
+      "floors": {
+        "statements": 60,
+        "branches": 63,
+        "functions": 71,
+        "lines": 59
+      }
+    },
+    "auth": {
+      "pfade": [
+        "src/features/auth/"
+      ],
+      "floors": {
+        "statements": 50,
+        "branches": 41,
+        "functions": 44,
+        "lines": 50
+      }
+    },
+    "schedule": {
+      "pfade": [
+        "src/components/schedule/"
+      ],
+      "floors": {
+        "statements": 42,
+        "branches": 38,
+        "functions": 37,
+        "lines": 41
+      }
+    },
+    "pdf": {
+      "pfade": [
+        "src/lib/pdfExporter.ts",
+        "src/lib/pdfStatisticsExporter.ts",
+        "src/lib/scheduleRenderer.ts"
+      ],
+      "floors": {
+        "statements": 8,
+        "branches": 0,
+        "functions": 1,
+        "lines": 9
+      }
+    },
+    "hooks": {
+      "pfade": [
+        "src/hooks/"
+      ],
+      "floors": {
+        "statements": 49,
+        "branches": 48,
+        "functions": 47,
+        "lines": 50
+      }
+    }
+  }
+}

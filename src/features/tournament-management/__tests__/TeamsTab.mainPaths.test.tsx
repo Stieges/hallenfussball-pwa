@@ -7,11 +7,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { Tournament } from '../../../types/tournament';
+import type { Match, Tournament } from '../../../types/tournament';
+import { looseVs } from '../../../test/matchSlotFixtures';
 
 import { TeamsTab } from '../TeamsTab';
 
-function tournamentWith(teams: Array<{ id: string; name: string; isRemoved?: boolean; logo?: unknown; color?: string }>, matches: Array<{ id: string; teamA?: string; teamB?: string; scoreA?: number; scoreB?: number }> = []): Tournament {
+function tournamentWith(teams: Array<{ id: string; name: string; isRemoved?: boolean; logo?: unknown; color?: string }>, matches: Array<Partial<Match> & { id: string }> = []): Tournament {
   return {
     id: 't1', title: 'Wintercup', status: 'published',
     teams,
@@ -79,7 +80,7 @@ describe('TeamsTab — Hauptpfade (Abdeckung)', () => {
       <TeamsTab
         tournament={tournamentWith(
           [{ id: 'alt', name: 'Alt FC', isRemoved: true }, { id: 'ufer', name: 'VfB Ufer' }],
-          [{ id: 'm1', teamA: 'ufer', teamB: 'alt', scoreA: 2, scoreB: 1 }]
+          [{ id: 'm1', ...looseVs('ufer', 'alt'), scoreA: 2, scoreB: 1 }]
         )}
         onTournamentUpdate={onTournamentUpdate}
       />

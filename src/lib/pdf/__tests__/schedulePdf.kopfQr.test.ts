@@ -12,6 +12,7 @@ import { BASE_URL, bboxOf, drawnMatrix, expectedMatrix, headBottom, kopfPdf, qrR
 import { generateLiveUrl, generateTournamentUrl } from '../../../utils/shareUtils';
 import { generateFullSchedule } from '../../../core/generators';
 import { squash } from './pdfjsText';
+import { testUuid } from '../../../test/testIds';
 
 const MIN_EDGE_MM = 30;
 const CAPTION = 'Live-Ergebnisse';
@@ -130,7 +131,7 @@ describe('@ZM-064 nicht geteilt: kein QR und keine leere Fläche', () => {
 describe('@DR-003 Folgeseiten: QR mindestens 20 mm, gleiche Adresse', () => {
   const GROSS = 'ABCDEFGH';
   async function mehrSeiten() {
-    const teams = Array.from({ length: 16 }, (_, i) => ({ id: `t${i}`, name: `Verein ${i + 1}`, group: GROSS[Math.floor(i / 8)] }));
+    const teams = Array.from({ length: 16 }, (_, i) => ({ id: testUuid(i), name: `Verein ${i + 1}`, group: GROSS[Math.floor(i / 8)] }));
     const tournament = hallencupTournament({ teams, numberOfTeams: 16, numberOfGroups: 2 });
     return kopfPdf({}, tournament, generateFullSchedule(tournament, 'de'));
   }
@@ -163,7 +164,7 @@ describe('@DR-003 Folgeseiten: QR mindestens 20 mm, gleiche Adresse', () => {
   });
 
   it('Gegenbeispiel @ZM-064: nicht geteilt, kein QR auf den Folgeseiten', async () => {
-    const teams = Array.from({ length: 16 }, (_, i) => ({ id: `t${i}`, name: `Verein ${i + 1}`, group: GROSS[Math.floor(i / 8)] }));
+    const teams = Array.from({ length: 16 }, (_, i) => ({ id: testUuid(i), name: `Verein ${i + 1}`, group: GROSS[Math.floor(i / 8)] }));
     const tournament = hallencupTournament({ teams, numberOfTeams: 16, numberOfGroups: 2, isPublic: false });
     const { pages } = await kopfPdf({}, tournament, generateFullSchedule(tournament, 'de'));
 

@@ -144,8 +144,8 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     expect(finale).toBeDefined();
     expect(text).toContain('Spiel um Platz 3');
     if (finale) {
-      expect(text).toContain(sideName(finale, 'A'));
-      expect(text).toContain(sideName(finale, 'B'));
+      expect(text).toContain(sideName(finale, 'A', schedule.allMatches));
+      expect(text).toContain(sideName(finale, 'B', schedule.allMatches));
     }
   });
 
@@ -172,7 +172,7 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     const platz = text.lastIndexOf('5 Platzierung');
     expect(platz).toBeGreaterThan(-1);
     if (finale) {
-      expect(platz).toBeGreaterThan(text.lastIndexOf(sideName(finale, 'B')));
+      expect(platz).toBeGreaterThan(text.lastIndexOf(sideName(finale, 'B', schedule.allMatches)));
     }
   });
 

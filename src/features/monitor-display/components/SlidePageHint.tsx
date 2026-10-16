@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { displayFontSizes, displaySpacing } from '../../../design-tokens';
+import { displayList } from '../../../design-tokens';
 
 interface SlidePageHintProps {
   /** Aktuelle Seite, 0-basiert. */
@@ -16,9 +16,9 @@ export function SlidePageHint({ page, pages, color }: SlidePageHintProps) {
   const shown = Math.min(Math.max(page, 0), pages - 1) + 1;
   return (
     <div style={{
-      fontSize: displayFontSizes.bodySM,
+      fontSize: displayList.fontSizes.head,
       color,
-      marginTop: displaySpacing.contentMD,
+      marginTop: displayList.rowGap,
     }}>
       {t('slides.page', { page: shown, pages })}
     </div>

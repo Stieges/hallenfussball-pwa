@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { cssVars, displayEffects, displayFontSizes, displaySpacing, monitorThemes, displayMonitor } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
@@ -16,6 +17,7 @@ interface SponsorSlideProps {
 
 /** Sponsor-Folie: Logo oder Name, Stufen-Badge und QR-Code zur Zielseite. */
 export function SponsorSlide({ slide, tournament, performanceSettings, theme, style }: SponsorSlideProps) {
+  const { t } = useTranslation('monitor');
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
@@ -27,7 +29,7 @@ export function SponsorSlide({ slide, tournament, performanceSettings, theme, st
     return (
       <div style={style}>
         <div style={{ fontSize: displayFontSizes.headingMD, color: themeColors.textMuted }}>
-          Sponsor nicht gefunden
+          {t('slides.sponsor.notFound')}
         </div>
       </div>
     );
@@ -78,7 +80,7 @@ export function SponsorSlide({ slide, tournament, performanceSettings, theme, st
           marginBottom: displaySpacing.sectionMD,
           textTransform: 'capitalize',
         }}>
-          {sponsor.tier === 'gold' ? '🥇' : sponsor.tier === 'silver' ? '🥈' : '🥉'} {sponsor.tier} Sponsor
+          {sponsor.tier === 'gold' ? '🥇' : sponsor.tier === 'silver' ? '🥈' : '🥉'} {t('slides.sponsor.tier', { tier: sponsor.tier })}
         </div>
       )}
 
@@ -105,7 +107,7 @@ export function SponsorSlide({ slide, tournament, performanceSettings, theme, st
             color: themeColors.textMuted,
             marginTop: displaySpacing.contentSM,
           }}>
-            Scan für mehr Info
+            {t('slides.sponsor.scanMore')}
           </div>
         </div>
       )}

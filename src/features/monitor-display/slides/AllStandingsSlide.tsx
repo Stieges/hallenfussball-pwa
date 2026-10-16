@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayMonitor, displaySpacing, monitorThemes } from '../../../design-tokens';
+import { displayList, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorTheme } from '../../../types/monitor';
 import { calculateStandings } from '../../../utils/calculations';
@@ -10,6 +10,7 @@ import { finalRoundMatches, standingsSections, type StandingsSection } from '../
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { StandingsTable } from '../components/StandingsTable';
 import { SlidePageHint } from '../components/SlidePageHint';
+import { SlideHeading } from '../components/SlideHeading';
 
 interface AllStandingsSlideProps {
   tournament: Tournament;
@@ -26,17 +27,10 @@ export function AllStandingsSlide({ tournament, theme, style, page = 0 }: AllSta
   const sections = standingsSections(tournament);
   const index = Math.min(Math.max(page, 0), Math.max(sections.length - 1, 0));
   const section: StandingsSection | undefined = sections[index];
-  const headingStyle = {
-    fontSize: displayFontSizes.headingLG,
-    fontWeight: cssVars.fontWeights.semibold,
-    marginBottom: displaySpacing.sectionMD,
-    color: colors.text,
-  };
-
   if (!section) {
     return (
       <div style={style}>
-        <div style={{ fontSize: displayFontSizes.bodyLG, color: colors.textMuted }}>
+        <div style={{ fontSize: displayList.fontSizes.team, color: colors.textMuted }}>
           {t('slides.allStandings.none')}
         </div>
       </div>
@@ -52,7 +46,7 @@ export function AllStandingsSlide({ tournament, theme, style, page = 0 }: AllSta
       : t('slides.allStandings.overall');
     return (
       <div style={style}>
-        <div style={headingStyle}>📊 {name}</div>
+        <SlideHeading icon="standings" color={colors.text}>{name}</SlideHeading>
         <StandingsTable rows={standings} themeColors={colors} />
         <SlidePageHint page={index} pages={sections.length} color={colors.textMuted} />
       </div>
@@ -62,13 +56,12 @@ export function AllStandingsSlide({ tournament, theme, style, page = 0 }: AllSta
   const hidePendingOrigin = !scoresPublic(tournament);
   return (
     <div style={style}>
-      <div style={headingStyle}>{t('slides.allStandings.finals')}</div>
+      <SlideHeading icon="finals" color={colors.text}>{t('slides.allStandings.finals')}</SlideHeading>
       <div style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: displaySpacing.contentMD,
+        gap: displayList.rowGap,
         width: '100%',
-        maxWidth: displayMonitor.size.scheduleMaxWidth,
       }}>
         {finalRoundMatches(tournament.matches).map(match => (
           <MonitorMatchRow

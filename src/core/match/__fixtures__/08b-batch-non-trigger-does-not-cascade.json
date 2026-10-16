@@ -1,6 +1,6 @@
 {
-  "title": "Ein abgelehnter Eintrag hält die anderen nicht auf",
-  "szenario": "Ein abgelehnter Eintrag hält die anderen nicht auf",
+  "title": "Ein nicht übernommener Eintrag hält die anderen nicht auf",
+  "szenario": "Ein nicht übernommener Eintrag hält die anderen nicht auf",
   "ctx": {
     "matchId": "match-08b",
     "teamAId": "teamA",

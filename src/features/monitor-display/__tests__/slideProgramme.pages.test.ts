@@ -7,7 +7,7 @@ const folie = (id: string, duration: number | null = null) =>
   ({ id, type: 'custom-text', config: {}, duration, order: 0 }) as MonitorSlide;
 
 const zustand = (over: Partial<SlideshowState> = {}): SlideshowState => ({
-  index: 0, page: 0, startedAt: 0, paused: false, direction: 'next', ...over,
+  index: 0, page: 0, startedAt: 0, direction: 'next', ...over,
 });
 
 describe('@ZM-130 Zeile 3 (Logik): eine Folie mit drei Seiten blättert', () => {

@@ -101,6 +101,58 @@ describe('SupabaseLiveMatchRepository.appendMatchEvents (B3b)', () => {
     expect(result).toEqual({ results: [{ id: EVENT_ID, status: 'rejected', code: 'FORBIDDEN_ACTOR' }], state: null, serverTime: 5 });
   });
 
+  it('A3 T1 @FU-013 @FU-016: mit Signal ruft abortSignal genau einmal mit diesem Signal auf, Parameter unveraendert', async () => {
+    const abortSignal = vi.fn(() =>
+      Promise.resolve({
+        data: { results: [{ id: EVENT_ID, status: 'accepted', seq: 42 }], state: serverState, serverTime: 1 },
+        error: null,
+      }),
+    );
+    rpcMock.mockReturnValue({ abortSignal });
+    const repo = new SupabaseLiveMatchRepository();
+    const controller = new AbortController();
+
+    const result = await repo.appendMatchEvents(MATCH_ID, [goal], {
+      clientFormat: 1,
+      deviceId: TEAM_B,
+      signal: controller.signal,
+    });
+
+    expect(abortSignal).toHaveBeenCalledTimes(1);
+    expect(abortSignal).toHaveBeenCalledWith(controller.signal);
+    expect(rpcMock).toHaveBeenCalledWith('append_match_events', {
+      p_match_id: MATCH_ID,
+      p_events: [goal],
+      p_client_format: 1,
+      p_device_id: TEAM_B,
+    });
+    expect(isClientOutdated(result)).toBe(false);
+    if (isClientOutdated(result)) {
+      return;
+    }
+    expect(result.results).toEqual([{ id: EVENT_ID, status: 'accepted', seq: 42 }]);
+  });
+
+  it('A3 T1 Gegenbeispiel @FU-013 @FU-016: ohne Signal wird abortSignal nie aufgerufen', async () => {
+    const body = {
+      data: { results: [{ id: EVENT_ID, status: 'accepted', seq: 42 }], state: null, serverTime: 1 },
+      error: null,
+    };
+    const abortSignal = vi.fn(() => Promise.resolve(body));
+    rpcMock.mockReturnValue(Object.assign(Promise.resolve(body), { abortSignal }));
+    const repo = new SupabaseLiveMatchRepository();
+
+    const result = await repo.appendMatchEvents(MATCH_ID, [goal], { clientFormat: 1 });
+
+    expect(abortSignal).not.toHaveBeenCalled();
+    expect(rpcMock).toHaveBeenCalledWith('append_match_events', {
+      p_match_id: MATCH_ID,
+      p_events: [goal],
+      p_client_format: 1,
+    });
+    expect(result).toEqual(body.data);
+  });
+
   it('liefert CLIENT_OUTDATED als eigenes Ergebnis statt als Fehler', async () => {
     rpcMock.mockResolvedValue({
       data: { error: 'CLIENT_OUTDATED', minClientFormat: 2, serverTime: 7 },

@@ -3,7 +3,8 @@
  */
 
 import { useState, type CSSProperties } from 'react';
-import { cssVars } from '../../../../design-tokens'
+import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import moduleStyles from '../../LiveCockpit.module.css';
 
 // ---------------------------------------------------------------------------
@@ -50,26 +51,8 @@ export const ScoreEditDialog: React.FC<ScoreEditDialogProps> = ({
   // Styles
   // ---------------------------------------------------------------------------
 
-  const overlayStyle: CSSProperties = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: cssVars.colors.overlayStrong,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 100,
-    padding: cssVars.spacing.md,
-  };
-
   const dialogStyle: CSSProperties = {
-    background: cssVars.colors.surfaceSolid,
-    borderRadius: cssVars.borderRadius.lg,
     padding: cssVars.spacing.lg,
-    maxWidth: '350px',
-    width: '100%',
     display: 'flex',
     flexDirection: 'column',
     gap: cssVars.spacing.md,
@@ -147,9 +130,15 @@ export const ScoreEditDialog: React.FC<ScoreEditDialogProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div style={overlayStyle} className={moduleStyles.dialogOverlay} onClick={onClose}>
-      <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
-        <h2 style={titleStyle}>Ergebnis korrigieren</h2>
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth={dialogWidths.sm}
+      labelledBy="score-edit-dialog-title"
+      panelClassName={moduleStyles.dialogOverlay}
+    >
+      <div style={dialogStyle}>
+        <h2 id="score-edit-dialog-title" style={titleStyle}>Ergebnis korrigieren</h2>
 
         <div style={scoreContainerStyle}>
           <div style={teamScoreStyle}>
@@ -198,7 +187,7 @@ export const ScoreEditDialog: React.FC<ScoreEditDialogProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 };
 

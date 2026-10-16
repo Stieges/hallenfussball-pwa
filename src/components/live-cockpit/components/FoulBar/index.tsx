@@ -66,14 +66,25 @@ export const FoulBar: React.FC<FoulBarProps> = ({
   // Bar variant (mobile - separate row)
   // ---------------------------------------------------------------------------
 
+  const hintStyle: CSSProperties = {
+    color: cssVars.colors.textMuted,
+    fontSize: cssVars.fontSizes.xs,
+  };
+
   if (variant === 'bar') {
     const containerStyle: CSSProperties = {
       display: 'flex',
-      justifyContent: 'space-between',
+      flexDirection: 'column',
+      gap: cssVars.spacing.xs,
       padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
       background: cssVars.colors.surfaceSolid,
       borderBottom: `1px solid ${cssVars.colors.borderSolid}`,
       fontSize: cssVars.fontSizes.xs,
+    };
+
+    const rowStyle: CSSProperties = {
+      display: 'flex',
+      justifyContent: 'space-between',
     };
 
     const teamStyle: CSSProperties = {
@@ -90,15 +101,18 @@ export const FoulBar: React.FC<FoulBarProps> = ({
 
     return (
       <div style={containerStyle}>
-        <div style={teamStyle}>
-          <span>{homeTeamName}</span>
-          <span data-testid="foul-count-home" style={getFoulStyle(homeFouls)}>{homeFouls}</span>
+        <div style={rowStyle}>
+          <div style={teamStyle}>
+            <span>{homeTeamName}</span>
+            <span data-testid="foul-count-home" style={getFoulStyle(homeFouls)}>{homeFouls}</span>
+          </div>
+          <span style={labelStyle}>{t('foul.display')}</span>
+          <div style={teamStyle}>
+            <span data-testid="foul-count-away" style={getFoulStyle(awayFouls)}>{awayFouls}</span>
+            <span>{awayTeamName}</span>
+          </div>
         </div>
-        <span style={labelStyle}>{t('foul.display')}</span>
-        <div style={teamStyle}>
-          <span data-testid="foul-count-away" style={getFoulStyle(awayFouls)}>{awayFouls}</span>
-          <span>{awayTeamName}</span>
-        </div>
+        <span data-testid="foul-hint" style={hintStyle}>{t('foul.hint')}</span>
       </div>
     );
   }
@@ -121,6 +135,7 @@ export const FoulBar: React.FC<FoulBarProps> = ({
       <span data-testid="foul-count-home" style={getFoulStyle(homeFouls)}>{homeFouls}</span>
       <span style={{ color: cssVars.colors.textMuted }}>–</span>
       <span data-testid="foul-count-away" style={getFoulStyle(awayFouls)}>{awayFouls}</span>
+      <span data-testid="foul-hint" style={hintStyle}>{t('foul.hint')}</span>
     </div>
   );
 };

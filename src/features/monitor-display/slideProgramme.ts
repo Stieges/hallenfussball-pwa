@@ -114,7 +114,6 @@ export interface SlideshowState {
   index: number;
   page: number;
   startedAt: number;
-  paused: boolean;
   direction: 'next' | 'prev';
   /** Gepinntes Spiel: die Live-Folie hält, solange es läuft (kein Takt). */
   pinnedMatchId?: string | null;
@@ -143,9 +142,14 @@ function pagesOf(program: SlideProgram, slide: ProgramSlide): number {
   return Math.max(1, Math.floor(n) || 1);
 }
 
-/** Feldnummer einer Live-Folie; sonst null. Ohne fieldId gilt Feld 1 (wie LiveSlide). */
+/** Live-Folie? (Typ `live` mit Konfiguration) */
+function isLiveSlide(slide: ProgramSlide): boolean {
+  return slide.type === 'live' && 'config' in slide;
+}
+
+/** Feldnummer einer Live-Folie; sonst null. Ohne fieldId gilt Feld 1 (wie LiveSlide, @ZM-074). */
 function liveFieldOf(slide: ProgramSlide): number | null {
-  if (slide.type !== 'live' || !('config' in slide)) { return null; }
+  if (!isLiveSlide(slide) || !('config' in slide)) { return null; }
   return fieldIdToNumber(slide.config.fieldId);
 }
 
@@ -153,10 +157,15 @@ function runningOn(matches: readonly RuleMatch[], field: number): RuleMatch | un
   return matches.find(m => m.field === field && isMatchInProgress(m));
 }
 
+/** Laufendes Spiel der Live-Folie auf ihrem Feld. */
+function runningFor(slide: ProgramSlide, matches: readonly RuleMatch[]): RuleMatch | undefined {
+  const field = liveFieldOf(slide);
+  return field === null ? undefined : runningOn(matches, field);
+}
+
 /** @ZM-122: Live-Folie ohne laufendes Spiel auf ihrem Feld wird übersprungen. */
 function isSkipped(slide: ProgramSlide, matches: readonly RuleMatch[]): boolean {
-  const field = liveFieldOf(slide);
-  return field !== null && runningOn(matches, field) === undefined;
+  return isLiveSlide(slide) && runningFor(slide, matches) === undefined;
 }
 
 /** Erste nicht übersprungene Folie ab `from` (zyklisch); null, wenn alle übersprungen sind. */
@@ -172,9 +181,12 @@ function firstVisible(program: SlideProgram, from: number, matches: readonly Rul
 /**
  * @ZM-074/075: Die erste Live-Folie (ab der aktuellen Folie gezählt), deren Feld ein laufendes Spiel hat
  * und die den Takt anhält (`pauseRotationDuringMatch !== false`). Null = kein Pinnen.
+ * B-44b (F2): Die Vorbelegung hält nur bei genau einer Live-Folie; mehrere Live-Folien wechseln auch während
+ * laufender Spiele. Eine Live-Folie ohne fieldId gilt als Feld 1 und hält an.
  */
 function pinTarget(program: SlideProgram, state: SlideshowState, matches: readonly RuleMatch[]): { index: number; matchId: string } | null {
   const count = program.slides.length;
+  if (program.slides.filter(isLiveSlide).length !== 1) { return null; }
   for (let k = 0; k < count; k++) {
     const i = wrapIndex(state.index + k, count);
     const slide = program.slides[i];
@@ -211,7 +223,7 @@ function advance(program: SlideProgram, state: SlideshowState, now: number, matc
  */
 export function nextSlide(program: SlideProgram, state: SlideshowState, now: number): SlideshowState {
   const count = program.slides.length;
-  if (state.paused || count === 0) { return state; }
+  if (count === 0) { return state; }
   const matches = program.matches ?? [];
 
   const pin = pinTarget(program, state, matches);
@@ -255,26 +267,13 @@ export function nextSlide(program: SlideProgram, state: SlideshowState, now: num
   return advance(program, state, now, matches);
 }
 
-/** Taste: eine Folie vor (+1) oder zurück (−1), modulo, immer auf Seite 0 und mit neuem Takt. */
-export function stepSlide(program: SlideProgram, state: SlideshowState, delta: 1 | -1, now: number): SlideshowState {
-  const count = program.slides.length;
-  if (count === 0) { return state; }
-  return {
-    ...state,
-    index: wrapIndex(state.index + delta, count),
-    page: 0,
-    startedAt: now,
-    direction: delta > 0 ? 'next' : 'prev',
-  };
-}
-
 /**
  * Nächster Zeitpunkt (ms), zu dem `nextSlide` etwas ändert; null = nie (pausiert, keine Folienfolge,
  * oder gepinnt während des Spiels: dann wartet der Monitor auf neue Daten).
  */
 export function wakeAt(program: SlideProgram, state: SlideshowState): number | null {
   const count = program.slides.length;
-  if (state.paused || count === 0) { return null; }
+  if (count === 0) { return null; }
   if ((state.pinnedMatchId ?? null) !== null) { return state.finalUntil ?? null; }
   // B-16f1: Eine Folie mit mehreren Seiten hat einen Takt (Seitenwechsel), eine Folie mit einer Seite nie.
   if (count <= 1 && pagesOf(program, program.slides[0]) <= 1) { return null; }

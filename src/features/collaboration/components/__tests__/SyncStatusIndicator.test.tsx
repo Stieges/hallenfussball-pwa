@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { ReactElement } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SyncStatusIndicator } from '../SyncStatusIndicator';
 import type { FailedMutationItem } from '../../../../core/services/MutationQueue';
+import { ResyncNowContext } from '../../../../features/match-engine/resyncNowContext';
 
 // Task A4 (C-SYNC): Übertragungsstatus muss im Admin- und Cockpit-Kopf sichtbar sein — ruhig
 // bei "alles übertragen", "n Einträge warten" bei ausstehenden Einträgen, deutlich bei
@@ -27,6 +29,11 @@ const mockState: {
 const syncTournament = vi.fn();
 const retryFailedMutation = vi.fn();
 const discardFailedMutation = vi.fn();
+const resyncNow = vi.fn((): Promise<void> => Promise.resolve());
+
+function renderWithResync(ui: ReactElement) {
+  return render(<ResyncNowContext.Provider value={resyncNow}>{ui}</ResyncNowContext.Provider>);
+}
 
 vi.mock('../../../../hooks/useSyncStatus', () => ({
   useSyncStatus: () => ({
@@ -48,6 +55,7 @@ describe('SyncStatusIndicator', () => {
     syncTournament.mockClear();
     retryFailedMutation.mockClear();
     discardFailedMutation.mockClear();
+    resyncNow.mockClear();
   });
 
   it('renders the sync-status indicator quietly when everything is synced', () => {
@@ -61,6 +69,12 @@ describe('SyncStatusIndicator', () => {
     mockState.pendingChanges = 3;
     render(<SyncStatusIndicator tournamentId="t1" />);
     expect(screen.getByTestId('sync-status')).toHaveAttribute('data-pending', '3');
+  });
+
+  it('C3a-2a Fixrunde 2 (I4/W1): enginePendingCount wird zu pendingChanges ADDIERT (kein eigener UI-Umbau)', () => {
+    mockState.pendingChanges = 3;
+    render(<SyncStatusIndicator tournamentId="t1" enginePendingCount={2} />);
+    expect(screen.getByTestId('sync-status')).toHaveAttribute('data-pending', '5');
   });
 
   it('shows offline state', () => {
@@ -97,14 +111,81 @@ describe('SyncStatusIndicator', () => {
     expect(retryFailedMutation).toHaveBeenCalledWith('fail-1');
   });
 
-  it('triggers a manual sync when clicked while there are no failed mutations', () => {
-    mockState.pendingChanges = 2;
+  // Merge I1 (Cloud-E2E queue-failed): die Rückfrage „Verwerfen“ liegt seit B-43a im Portal (DialogSurface).
+  // Der Außenklick-Schutz der Liste darf sie beim mousedown nicht schließen, sonst wirkt „Verwerfen“ nie.
+  it('C-SYNC: Verwerfen über die Rückfrage im Portal wirkt (mousedown im Dialog schließt die Liste nicht)', () => {
+    mockState.failedChanges = 1;
+    mockState.failedMutations = [{
+      id: 'fail-1', type: 'UPDATE_MATCH', payload: {}, timestamp: 1, retryCount: 5,
+      failedAt: 2, lastError: 'RLS: keine Berechtigung',
+    }];
     render(<SyncStatusIndicator tournamentId="t1" />);
 
     fireEvent.click(screen.getByTestId('sync-status'));
+    fireEvent.click(screen.getByTestId('sync-discard-fail-1'));
+    const confirm = screen.getByTestId('confirm-dialog-confirm');
+    fireEvent.mouseDown(confirm);
+    fireEvent.click(confirm);
 
+    expect(discardFailedMutation).toHaveBeenCalledWith('fail-1');
+  });
+
+  it('Gegenbeispiel: ein mousedown wirklich außerhalb schließt die Liste weiterhin', () => {
+    mockState.failedChanges = 1;
+    mockState.failedMutations = [{
+      id: 'fail-1', type: 'UPDATE_MATCH', payload: {}, timestamp: 1, retryCount: 5,
+      failedAt: 2, lastError: 'RLS: keine Berechtigung',
+    }];
+    render(<SyncStatusIndicator tournamentId="t1" />);
+
+    fireEvent.click(screen.getByTestId('sync-status'));
+    fireEvent.mouseDown(document.body);
+
+    expect(screen.queryByTestId('sync-failed-list')).toBeNull();
+  });
+
+  it('triggers a manual sync when clicked while there are no failed mutations', () => {
+    mockState.pendingChanges = 0;
+    renderWithResync(<SyncStatusIndicator tournamentId="t1" />);
+
+    fireEvent.click(screen.getByTestId('sync-status'));
+
+    expect(resyncNow).toHaveBeenCalledTimes(1);
     expect(syncTournament).toHaveBeenCalledWith('t1');
     expect(screen.queryByTestId('sync-failed-list')).not.toBeInTheDocument();
+  });
+
+  it('A-06h @FU-013: Klick mit pendingChanges > 0 stoesst nur die Uebertragung an (kein syncTournament)', () => {
+    mockState.pendingChanges = 2;
+    renderWithResync(<SyncStatusIndicator tournamentId="t1" />);
+
+    fireEvent.click(screen.getByTestId('sync-status'));
+
+    expect(resyncNow).toHaveBeenCalledTimes(1);
+    expect(syncTournament).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('sync-failed-list')).not.toBeInTheDocument();
+  });
+
+  it('A-06h: Klick mit failedChanges > 0 oeffnet die Liste UND stoesst die Uebertragung an', () => {
+    mockState.failedChanges = 1;
+    mockState.failedMutations = [{
+      id: 'fail-1', type: 'UPDATE_MATCH', payload: {}, timestamp: 1, retryCount: 5,
+      failedAt: 2, lastError: 'RLS: keine Berechtigung',
+    }];
+    renderWithResync(<SyncStatusIndicator tournamentId="t1" />);
+
+    fireEvent.click(screen.getByTestId('sync-status'));
+
+    expect(resyncNow).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('sync-failed-list')).toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel: ohne Klick wird nichts angestossen', () => {
+    mockState.pendingChanges = 2;
+    renderWithResync(<SyncStatusIndicator tournamentId="t1" />);
+
+    expect(resyncNow).not.toHaveBeenCalled();
+    expect(syncTournament).not.toHaveBeenCalled();
   });
 
   it('renders nothing outside cloud mode (guest/local-only — no mutation queue)', () => {

@@ -129,6 +129,7 @@ export const cssColors = {
   // ---------------------------------------------------------------------------
   warning: 'var(--color-warning)',
   warningHover: 'var(--color-warning-hover)',
+  warningSolid: 'var(--color-warning-solid)',
   warningSubtle: 'var(--color-warning-subtle)',
   warningLight: 'var(--color-warning-light)',
   warningMedium: 'var(--color-warning-medium)',

@@ -240,7 +240,16 @@
       "title": "Delete team?",
       "confirmMessage": "Do you really want to delete \"{{name}}\"?",
       "markedAsRemoved": "The team will be marked as \"removed\". Results will be preserved for fairness to other teams.",
-      "markAsRemoved": "Mark as removed"
+      "markAsRemoved": "Mark as removed",
+      "warningUnprotected_one": "\"{{name}}\" has one planned match without result and without events. It will be removed from the schedule.",
+      "warningUnprotected_other": "\"{{name}}\" has {{count}} planned matches without result and without events. These will be removed from the schedule.",
+      "warningProtected_one": "\"{{name}}\" has one match with a result or events. The team will be marked as \"removed\", the match is kept.",
+      "warningProtected_other": "\"{{name}}\" has {{count}} matches with a result or events. The team will be marked as \"removed\", these matches are kept.",
+      "partKept_one": "{{count}} match with a result or events is kept",
+      "partKept_other": "{{count}} matches with a result or events are kept",
+      "partRemoved_one": "{{count}} match without result and events is removed",
+      "partRemoved_other": "{{count}} matches without result and events are removed",
+      "warningMixed": "\"{{name}}\":\n\n• {{kept}}.\n• {{removed}}.\n• The team will be marked as \"removed\"."
     }
   },
   "settings": {
@@ -344,6 +353,64 @@
       "deleteFailed": "Error deleting",
       "duplicateFailed": "Error duplicating",
       "copyFailed": "Could not copy URL"
+    },
+    "transfer": {
+      "openButton": "Take over monitors",
+      "exportButton": "Export settings",
+      "title": "Take over monitors",
+      "intro": "Takes over monitors, slides, order, duration and screen margin. Teams, matches and tables come from this tournament.",
+      "fromTournament": "From another tournament",
+      "loading": "Loading tournaments …",
+      "noSources": "No other tournament with monitors found.",
+      "sourceMeta_one": "{{count}} monitor",
+      "sourceMeta_other": "{{count}} monitors",
+      "fromTemplate": "Template",
+      "templateButton": "Template \"Hall standard\"",
+      "templateDescription": "One monitor with live match, next matches, tables and spectator QR code.",
+      "fromFile": "From file",
+      "chooseFile": "Choose file",
+      "fileChosen": "Chosen file: {{name}}",
+      "confirm": "Take over",
+      "cancel": "Cancel",
+      "close": "Close",
+      "done_one": "{{count}} monitor taken over.",
+      "done_other": "{{count}} monitors taken over.",
+      "skippedSponsor": "Sponsor \"{{name}}\" is missing in this tournament – slide not taken over",
+      "noScreenChange": "Running screens stay unchanged. The new monitors are not yet assigned to any screen.",
+      "errors": {
+        "tooLarge": "The file is too large (maximum {{limit}}). Nothing was changed.",
+        "notMonitorConfig": "This file contains no monitor settings",
+        "unsupportedVersion": "This version of the monitor file is not supported. Nothing was changed.",
+        "invalid": "The file is damaged or contains invalid settings. Nothing was changed.",
+        "readFailed": "The file could not be read. Nothing was changed.",
+        "saveFailed": "The monitors could not be taken over."
+      },
+      "templateMonitorName": "Hall standard",
+      "monitorsCount_one": "{{count}} monitor",
+      "monitorsCount_other": "{{count}} monitors",
+      "slidesCount_one": "{{count}} slide",
+      "slidesCount_other": "{{count}} slides",
+      "summary": "{{monitors}} with {{slides}}",
+      "renamed": "The imported monitor is now called ‘{{name}}’",
+      "customQrCheck": "Custom link from the file: “{{url}}” – please check that the address is right",
+      "customQrRemove": "Remove link",
+      "customQrRemoved": "Link will be removed – the QR slide points to the spectator page",
+      "customQrKeep": "Keep link",
+      "customQrInvalid": "Custom link with an invalid address was not taken over (only http or https) – the QR slide points to the spectator page",
+      "issues": {
+        "title": "Slides with a missing field or group",
+        "fieldMissing": "Slide ‘{{slide}}’ – this tournament has no {{field}}",
+        "groupMissing": "Slide ‘{{slide}}’ – this tournament has no {{group}}",
+        "slideLive": "Live: {{ref}}",
+        "slideSchedule": "Schedule: {{ref}}",
+        "slideTable": "Standings: {{ref}}",
+        "fieldName": "Field {{number}}",
+        "groupName": "Group {{letter}}",
+        "reassignField": "Move to field 1",
+        "allGroups": "Show all standings",
+        "removeSlide": "Remove slide",
+        "keepHint": "If you choose nothing, the slide stays and is marked in the monitor editor."
+      }
     }
   },
   "sponsor": {
@@ -434,7 +501,12 @@
     "selectMatch": "Select match (optional - next match is selected automatically):",
     "autoNextMatch": "Automatic (next match)",
     "matchLoading": "Loading match...",
-    "noMatchesOnField": "No matches on this field"
+    "noMatchesOnField": "No matches on this field",
+    "enginePreparing": "Match is being prepared …",
+    "engineReadyError": "Match could not be prepared — please try again",
+    "awaitingTitle": "Kick-off not possible yet",
+    "awaitingReason": "Waiting for: {{reason}}",
+    "awaitingOffline": "Your device has no network – your data may be out of date. The line-up may already be set on the server."
   },
   "tables": {
     "noGroups": "This tournament has no groups.",
@@ -491,7 +563,14 @@
       "recentEvents": "Recent Events",
       "noEvents": "No events yet",
       "close": "Close",
-      "gotoCockpit": "Go to Cockpit"
+      "gotoCockpit": "Go to Cockpit",
+      "eventYellowRedCard": "Yellow-red card {{team}}{{player}}",
+      "eventGoal": "GOAL {{team}}{{player}}",
+      "eventYellowCard": "Yellow card {{team}}{{player}}",
+      "eventRedCard": "Red card {{team}}{{player}}",
+      "eventTimePenalty": "Time penalty {{team}}{{player}}",
+      "eventSubstitution": "Substitution {{team}}",
+      "eventFoul": "Foul {{team}}"
     },
     "quickScore": {
       "goalScorers": "Goal Scorers",
@@ -523,6 +602,7 @@
       "goal": "GOAL {{team}}{{player}}",
       "assist": "Assist",
       "yellowCard": "Yellow card {{team}}{{player}}",
+      "yellowRedCard": "Yellow-red card {{team}}{{player}}",
       "redCard": "Red card {{team}}{{player}}",
       "timePenalty": "{{duration}} min time penalty {{team}}{{player}}",
       "substitutionDetail": "Substitution {{team}}: {{out}} → {{in}}",
@@ -618,7 +698,28 @@
       "performanceLabel": "Performance",
       "themeLabel": "Color Scheme",
       "overscan": "TV margin ({{px}}px)",
-      "noMargin": "No margin"
+      "noMargin": "No margin",
+      "transitions": {
+        "fade": "Fade",
+        "slide": "Slide",
+        "none": "Hard cut"
+      },
+      "performance": {
+        "auto": "Automatic",
+        "autoDesc": "The device decides whether animations run",
+        "high": "Full",
+        "highDesc": "All animations, for powerful devices",
+        "low": "Economy",
+        "lowDesc": "Fewer animations, for older TVs"
+      },
+      "themes": {
+        "dark": "Dark",
+        "darkDesc": "Light text on a dark background",
+        "light": "Light",
+        "lightDesc": "Dark text on a light background",
+        "auto": "Automatic",
+        "autoDesc": "Follows the device setting"
+      }
     },
     "slides": {
       "title": "Slides ({{count}})",
@@ -627,7 +728,9 @@
       "edit": "Edit",
       "remove": "Remove",
       "addSlide": "Add slide",
-      "qrHidden": "Without a public tournament this slide is skipped"
+      "qrHidden": "Without a public tournament this slide is skipped",
+      "referenceField": "Field is missing in this tournament – please adjust",
+      "referenceGroup": "Group is missing in this tournament – please adjust"
     }
   },
   "colorScheme": {
@@ -753,6 +856,24 @@
     "saving": "Saving..."
   },
   "slot": {
+    "groupRank": "{{rankWord}} {{group}}",
+    "winnerOf": "Winner of {{match}}",
+    "loserOf": "Loser of {{match}}",
+    "matchNumber": "Match {{number}}",
+    "unknown": "?",
+    "groupRankFallback": "#{{rank}} {{group}}",
+    "groupDefault": "Group {{id}}",
+    "rank1": "1st",
+    "rank2": "2nd",
+    "rank3": "3rd",
+    "rank4": "4th",
+    "playoffFinal": "Final",
+    "playoffSemifinal": "Semifinal {{n}}",
+    "playoffQuarterfinal": "Quarterfinal {{n}}",
+    "playoffRoundOf16": "Round of 16, match {{n}}",
+    "playoffPlace": "Match for place {{n}}",
+    "awaitGroup": "Completion of {{group}}",
+    "awaitMatch": "Completion of {{match}}",
     "undecided": "open"
   },
   "pdf": {

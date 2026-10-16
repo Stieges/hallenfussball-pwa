@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
-import { displayFontSizes, displaySpacing, monitorThemes, displayMonitor, cssVars } from '../../../design-tokens';
+import { useTranslation } from 'react-i18next';
+import { displayList, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
@@ -7,6 +8,7 @@ import { scoresPublic } from '../publicVisibility';
 import { fieldSchedule, pageOf, pagesFor } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
+import { SlideHeading } from '../components/SlideHeading';
 
 interface ScheduleFieldSlideProps {
   slide: MonitorSlide;
@@ -19,11 +21,12 @@ interface ScheduleFieldSlideProps {
 
 /** Spielplan eines Feldes (@ZM-071): alle Spiele in Anpfiff-Reihenfolge mit Uhrzeit, je Seite 6 Zeilen (@ZM-129). */
 export function ScheduleFieldSlide({ slide, tournament, theme, style, page = 0 }: ScheduleFieldSlideProps) {
+  const { t } = useTranslation('monitor');
   const themeColors = monitorThemes[resolveTheme(theme)];
 
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
   const field = tournament.fields?.find(f => f.id === slide.config.fieldId);
-  const fieldName = field?.customName ?? field?.defaultName ?? `Feld ${fieldNumber}`;
+  const fieldName = field?.customName ?? field?.defaultName ?? t('fieldSelector.field', { field: fieldNumber });
 
   const schedule = fieldSchedule(tournament.matches, fieldNumber);
   const pages = pagesFor(schedule.length);
@@ -34,23 +37,14 @@ export function ScheduleFieldSlide({ slide, tournament, theme, style, page = 0 }
 
   return (
     <div style={style}>
-      {/* Header */}
-      <div style={{
-        fontSize: displayFontSizes.headingLG,
-        fontWeight: cssVars.fontWeights.semibold,
-        marginBottom: displaySpacing.sectionMD,
-        color: themeColors.text,
-      }}>
-        📋 Spielplan {fieldName}
-      </div>
+      <SlideHeading icon="schedule" color={themeColors.text}>{t('slides.schedule.title', { field: fieldName })}</SlideHeading>
 
       {/* Match List */}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: displaySpacing.contentMD,
+        gap: displayList.rowGap,
         width: '100%',
-        maxWidth: displayMonitor.size.scheduleMaxWidth,
       }}>
         {rows.map(match => (
           <MonitorMatchRow

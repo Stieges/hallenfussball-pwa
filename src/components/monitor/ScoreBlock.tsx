@@ -8,7 +8,9 @@
  */
 
 import { CSSProperties } from 'react';
-import { cssVars, displayFontSizes, displayLayout, getScoreTextColor } from '../../design-tokens';
+import { cssVars, displayFontSizes, getScoreTextColor } from '../../design-tokens';
+import { scoreDigitFontSize } from './scoreDigitSize';
+import type { BlockFrame } from './liveBlockFrame';
 
 export interface ScoreBlockProps {
   /** Score number to display */
@@ -21,6 +23,8 @@ export interface ScoreBlockProps {
   size?: 'md' | 'lg' | 'xl';
   /** Kindermodus (B-16e2, @W2A-031): Stand verbergen, der farbige Block bleibt */
   hideScore?: boolean;
+  /** Rahmen (B-44a2): dezent, bei zu geringem Kontrast zum Hintergrund kräftig (@ZM-140) */
+  frame?: BlockFrame;
 }
 
 const sizeConfig = {
@@ -37,7 +41,8 @@ const sizeConfig = {
   xl: {
     fontSize: displayFontSizes.scoreXXL,
     borderRadius: '20px',
-    minHeight: '280px',
+    // B-17 Fixrunde: keine Mindesthöhe, der Stand passt sich der Flex-Fläche an (sonst überlagert er die Kopfzeile bei 600 px Höhe)
+    minHeight: '0px',
   },
 } as const;
 
@@ -47,6 +52,7 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
   position,
   size = 'xl',
   hideScore = false,
+  frame,
 }) => {
   const textColor = getScoreTextColor(backgroundColor);
   const config = sizeConfig[size];
@@ -55,20 +61,24 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: displayLayout.scoreArea.blockWidth,
+    width: '100%', // die Zelle im Raster bestimmt die Breite (displayLayout.scoreArea.blockWidth)
+    // Controller-Zusatz H3: Ziffern richten sich nach dem Kasten (nur Live-Monitor, size xl)
+    containerType: size === 'xl' ? 'size' : undefined,
     minHeight: config.minHeight,
     height: '100%',
     backgroundColor,
     borderRadius: config.borderRadius,
+    boxSizing: 'border-box',
+    border: frame ? `${frame.width} solid ${frame.color}` : undefined,
     position: 'relative',
     overflow: 'hidden',
   };
 
   const scoreStyle: CSSProperties = {
-    fontSize: config.fontSize,
+    fontSize: size === 'xl' ? scoreDigitFontSize() : config.fontSize,
     fontWeight: 700,
     color: textColor,
-    fontFamily: cssVars.fontFamilies.display,
+    fontFamily: cssVars.fontFamilies.body,
     lineHeight: 1,
     textShadow: `0 2px 8px rgba(0, 0, 0, 0.3)`,
     userSelect: 'none',

@@ -1,6 +1,6 @@
 /**
- * Pause über die Seite (B-16c Fixrunde 1, Spur B): Leertaste hält die Folie an, Fortsetzen startet
- * eine volle Anzeigedauer. Dazu die Seitenzuordnung der Spielplan-Zeile (B-16d1 Lücke: Seite A links,
+ * Leertaste ohne Wirkung (B-17 Fixrunde, @ME-022): die Folienfolge läuft unabhängig von der Taste weiter.
+ * Dazu die Seitenzuordnung der Spielplan-Zeile (B-16d1 Lücke: Seite A links,
  * Seite B rechts). Eigene Datei, damit die eingefrorenen a-Dateien unverändert bleiben.
  * Jeder Poll liefert einen strukturellen Klon (wie SupabaseRepository.get), die Zeit läuft in Schritten.
  */
@@ -72,8 +72,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('MonitorDisplayPage — Pause über die Leertaste (B-16c Fixrunde, Fake-Timer)', () => {
-  it('Leertaste bei 5 s hält Folie A an; Fortsetzen zeigt B genau nach einer vollen Dauer (15 s)', async () => {
+describe('MonitorDisplayPage — Leertaste ohne Wirkung (@ME-022, B-17 Fixrunde)', () => {
+  // Begründung: @ME-022 „die Leertaste … halten das Folienprogramm nicht an“ und Record monitor-einrichten
+  // Z. 175–177 „Leertaste und Pfeiltasten halten das Folienprogramm nicht mehr an und schalten nicht weiter“.
+  // Vorher: Leertaste hielt die Folie an (Befund C-MONITOR-DAUERBETRIEB, Gegenbeispiel zum Soll).
+  it('Leertaste bei 5 s hält Folie A nicht an: Folie B kommt nach den 15 s der Dauer, kein Pausen-Badge', async () => {
     liefere(monitorTurnier());
     localGet.mockResolvedValue(null);
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
@@ -82,15 +85,10 @@ describe('MonitorDisplayPage — Pause über die Leertaste (B-16c Fixrunde, Fake
 
     await vorspulenInSchritten(5_000);
     fireEvent.keyDown(window, { key: ' ' });
-    await vorspulenInSchritten(600_000);
+    expect(screen.queryByTestId('monitor-pause-indicator')).not.toBeInTheDocument();
+    await vorspulenInSchritten(9_000);
     expect(screen.getByText('Folie A')).toBeInTheDocument();
-
-    fireEvent.keyDown(window, { key: ' ' });
-    await vorspulenInSchritten(14_000);
-    expect(screen.getByText('Folie A')).toBeInTheDocument();
-    await vorspulen(999);
-    expect(screen.getByText('Folie A')).toBeInTheDocument();
-    await vorspulen(1);
+    await vorspulen(1_000);
     expect(screen.getByText('Folie B')).toBeInTheDocument();
   });
 

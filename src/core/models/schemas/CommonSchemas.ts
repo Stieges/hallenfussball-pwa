@@ -60,7 +60,7 @@ const RuntimeMatchEventPayloadSchema = z.object({
   penaltyDuration: z.number().optional(),
   playersOut: z.array(z.number()).optional(),
   playersIn: z.array(z.number()).optional(),
-  cardType: z.enum(['YELLOW', 'RED']).optional(),
+  cardType: z.enum(['YELLOW', 'YELLOW_RED', 'RED']).optional(),
 })
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- passthrough for forward-compatibility
   .passthrough();

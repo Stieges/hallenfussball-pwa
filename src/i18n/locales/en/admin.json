@@ -89,7 +89,6 @@
     "goals": "Goals",
     "goalsPerMatch": "avg {{avg}} per match",
     "runningMatches": "Running Matches ({{count}})",
-    "unknownTeam": "Unknown",
     "nextMatch": "Next Match",
     "upcoming": "Upcoming",
     "quickActions": "Quick Actions",
@@ -129,8 +128,7 @@
     "noEntries": "No entries found.",
     "tryDifferentFilters": "Try different filter settings.",
     "emptyLogHint": "The activity log will be filled once changes are made to the tournament.",
-    "loadMore": "Load more ({{count}} more)",
-    "unknown": "Unknown"
+    "loadMore": "Load more ({{count}} more)"
   },
   "exports": {
     "title": "Exports",
@@ -189,6 +187,7 @@
     "backupError": "Error creating backup",
     "eventGoal": "Goal",
     "eventYellowCard": "Yellow card",
+    "eventYellowRedCard": "Yellow-red card",
     "eventRedCard": "Red card",
     "eventTimePenalty": "Time penalty",
     "eventSubstitution": "Substitution"
@@ -313,6 +312,10 @@
     "reset": "Reset",
     "unsavedChangesWarning": "You have unsaved changes. Do you really want to leave the page?",
     "confirmReset": "Do you want to discard all changes and restore the original values?",
-    "changesSaved": "Changes saved"
+    "changesSaved": "Changes saved",
+    "rulebook": "Rulebook (optional)",
+    "rulebookPlaceholder": "e.g. BFV rules for futsal",
+    "rulebookLimit": "Up to 80 characters.",
+    "rulebookTruncated": "Cut to 80 characters."
   }
 }

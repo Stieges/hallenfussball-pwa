@@ -14,8 +14,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../../design-tokens'
-import { useDialogTimer, useFocusTrap } from '../../../../hooks';
+import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { DialogSurface } from '../../../ui/molecules/DialogSurface';
+import { useDialogTimer } from '../../../../hooks';
 import moduleStyles from '../../LiveCockpit.module.css';
 
 interface GoalScorerDialogProps {
@@ -50,14 +51,6 @@ export function GoalScorerDialog({
   const [assist1, setAssist1] = useState<string>('');
   const [assist2, setAssist2] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Focus trap for accessibility (WCAG 4.1.3)
-  // autoFocus: false because we have custom focus logic (inputRef)
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: onClose,
-    autoFocus: false,
-  });
 
   // Auto-dismiss callback (stable reference) - saves as incomplete
   // Also used when clicking outside the dialog
@@ -178,15 +171,16 @@ export function GoalScorerDialog({
   };
 
   return (
-    <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={handleOverlayClick}>
-      <div
-        ref={focusTrap.containerRef}
-        style={styles.dialog}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="goal-scorer-dialog-title"
-      >
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      onBackdropClick={handleOverlayClick}
+      maxWidth={dialogWidths.sm}
+      labelledBy="goal-scorer-dialog-title"
+      panelClassName={moduleStyles.dialogOverlay}
+      initialFocusRef={inputRef}
+    >
+      <div style={styles.dialog}>
         {/* Auto-dismiss progress bar */}
         {isActive && autoDismissSeconds > 0 && (
           <div style={styles.timerContainer}>
@@ -303,26 +297,13 @@ export function GoalScorerDialog({
           </button>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: cssVars.colors.overlayDialog,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.lg,
-  },
   dialog: {
-    backgroundColor: cssVars.colors.surfaceElevated,
-    borderRadius: cssVars.borderRadius.xl,
-    maxWidth: '360px',
-    width: '100%',
+    borderRadius: cssVars.borderRadius.lg,
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
@@ -335,7 +316,7 @@ const styles: Record<string, React.CSSProperties> = {
     right: 0,
     height: '4px',
     backgroundColor: cssVars.colors.surface,
-    borderRadius: `${cssVars.borderRadius.xl} ${cssVars.borderRadius.xl} 0 0`,
+    borderRadius: `${cssVars.borderRadius.lg} ${cssVars.borderRadius.lg} 0 0`,
     overflow: 'hidden',
   },
   timerProgress: {

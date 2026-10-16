@@ -9,7 +9,7 @@
  * Echter Bedienweg: Wizard-Schritt mit den Finalrunden-Regeln →
  * gespeichertes Turnier → die Regel, die das Cockpit für ein Halbfinale bzw.
  * Finale nach Unentschieden ermittelt (gleiche Funktion, die das Cockpit nutzt:
- * `resolveTiebreakMode`, verdrahtet in MatchExecutionService.initializeMatch).
+ * `resolveTiebreakMode`, verdrahtet im Anpfiff der Engine).
  *
  * UI-Ort: src/features/tournament-creation/components/FinalsConfiguration.tsx
  * (Block „Bei Unentschieden“, Selektoren `tiebreaker-round-semifinal` und

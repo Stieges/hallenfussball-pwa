@@ -11,6 +11,8 @@
 import { Match, FinalsConfig } from '../../types/tournament';
 import { generatePlayoffMatches as generatePlayoffMatchesFromPreset, GroupSizeInfo } from './playoffGenerator';
 import { generateFinalsMatchId } from '../../utils/idGenerator';
+import { pendingSlot } from '../models/matchSlot';
+import type { SlotSource } from '../models/schemas/MatchSlotSchema';
 
 /**
  * Playoff match definition before scheduling
@@ -41,13 +43,38 @@ export interface PlayoffScheduleOptions {
 }
 
 /**
- * Scheduled playoff match with slot information
+ * Geplantes Playoff-Spiel (Durchgang 1: Zeit, Feld, echte Spiel-ID; Slots folgen in Durchgang 2)
  */
-interface ScheduledPlayoffMatch {
+interface PlannedPlayoffMatch {
   definition: PlayoffMatchDefinition;
+  id: string;
   slot: number;
   field: number;
-  match: Match;
+  scheduledTime?: Date;
+}
+
+const GROUP_RANK_REF = /^group-([a-z])-([1-9][0-9]?)(?:st|nd|rd|th)$/;
+const MATCH_RESULT_REF = /^(.+)-(winner|loser)$/;
+
+/**
+ * Übersetzt eine Platzhalter-Referenz der Playoff-Definition in eine strukturierte Herkunft (@TM-015).
+ * `group-a-1st` → Gruppenrang; `<defId>-winner|loser` → Ergebnis des ECHTEN Spiels (UUID, nicht `'semi1'`).
+ * Unbekanntes Format oder nicht geplantes Vorgängerspiel → Error (Generator-Invariante).
+ */
+function toSlotSource(ref: string, defIdToMatchId: ReadonlyMap<string, string>): SlotSource {
+  const groupRank = GROUP_RANK_REF.exec(ref);
+  if (groupRank) {
+    return { kind: 'groupRank', group: groupRank[1].toUpperCase(), rank: Number(groupRank[2]) };
+  }
+  const matchResult = MATCH_RESULT_REF.exec(ref);
+  if (matchResult) {
+    const matchId = defIdToMatchId.get(matchResult[1]);
+    if (matchId === undefined) {
+      throw new Error(`Playoff-Herkunft „${ref}“ verweist auf kein geplantes Spiel`);
+    }
+    return { kind: 'matchResult', matchId, role: matchResult[2] === 'winner' ? 'winner' : 'loser' };
+  }
+  throw new Error(`Unbekanntes Format der Playoff-Herkunft: „${ref}“`);
 }
 
 /**
@@ -153,8 +180,8 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
     return [];
   }
 
-  const matches: Match[] = [];
-  const scheduledMatches: ScheduledPlayoffMatch[] = [];
+  // Durchgang 1: Zeit, Feld und echte Spiel-ID je Definition
+  const planned: PlannedPlayoffMatch[] = [];
 
   // Track which matches have been scheduled
   const completedMatchIds = new Set<string>();
@@ -165,7 +192,7 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
   let currentSlot = startSlot;
 
   // Schedule each wave of matches
-  while (scheduledMatches.length < sortedDefinitions.length) {
+  while (planned.length < sortedDefinitions.length) {
     // Find matches that can be scheduled now (dependencies met)
     const readyMatches = sortedDefinitions.filter(def => {
       if (completedMatchIds.has(def.id)) { return false; }
@@ -191,21 +218,7 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
       const field = 1; // Always use field 1 for sequential matches
       const scheduledTime = startTime ? new Date(startTime.getTime() + currentSlot * (slotDurationMinutes + breakBetweenSlotsMinutes) * 60000) : undefined;
 
-      const match: Match = {
-        id: generateFinalsMatchId(),
-        round: currentSlot + 1,
-        field,
-        slot: currentSlot,
-        teamA: def.teamASource,
-        teamB: def.teamBSource,
-        isFinal: true,
-        finalType: def.finalType,
-        label: def.label,
-        scheduledTime,
-      };
-
-      scheduledMatches.push({ definition: def, slot: currentSlot, field, match });
-      matches.push(match);
+      planned.push({ definition: def, id: generateFinalsMatchId(), slot: currentSlot, field, scheduledTime });
       completedMatchIds.add(def.id);
 
       currentSlot++; // Each sequential match gets its own slot
@@ -218,21 +231,7 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
       for (const def of parallelMatches) {
         const scheduledTime = startTime ? new Date(startTime.getTime() + currentSlot * (slotDurationMinutes + breakBetweenSlotsMinutes) * 60000) : undefined;
 
-        const match: Match = {
-          id: generateFinalsMatchId(),
-          round: currentSlot + 1,
-          field,
-          slot: currentSlot,
-          teamA: def.teamASource,
-          teamB: def.teamBSource,
-          isFinal: true,
-          finalType: def.finalType,
-          label: def.label,
-          scheduledTime,
-        };
-
-        scheduledMatches.push({ definition: def, slot: currentSlot, field, match });
-        matches.push(match);
+        planned.push({ definition: def, id: generateFinalsMatchId(), slot: currentSlot, field, scheduledTime });
         completedMatchIds.add(def.id);
 
         field++;
@@ -249,7 +248,24 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
     }
   }
 
-  return matches;
+  // Durchgang 2: Slots aus den Definitionen – Verweise zeigen auf die echten Spiel-IDs aus Durchgang 1
+  const defIdToMatchId = new Map(planned.map((p) => [p.definition.id, p.id]));
+
+  return planned.map(({ definition: def, id, slot, field, scheduledTime }): Match => {
+    const [originA, originB] = [toSlotSource(def.teamASource, defIdToMatchId), toSlotSource(def.teamBSource, defIdToMatchId)];
+    const [slotA, slotB] = [pendingSlot(originA), pendingSlot(originB)]; // A-36a: Platz-Herkunft unveränderlich, Slot offen
+    return {
+      id,
+      round: slot + 1,
+      field,
+      slot,
+      slotA, slotB, originA, originB,
+      isFinal: true,
+      finalType: def.finalType,
+      label: def.label,
+      scheduledTime,
+    };
+  });
 }
 
 /**

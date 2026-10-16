@@ -4,6 +4,7 @@
  * Regeln wörtlich aus MonitorDisplayPage.loadData (Lade-Regeln). Die Seite nutzt diese Bausteine
  * noch nicht; die Verdrahtung folgt in B-16b2.
  */
+import { anzeigeT } from '../../i18n/anzeigeSprache';
 import type { Tournament } from '../../types/tournament';
 import type { TournamentMonitor } from '../../types/monitor';
 import type { DisplayDelta, DisplayOrigin } from './monitorDataSource';
@@ -39,15 +40,12 @@ export interface DisplayContext {
   guardOrigin?: DisplayOrigin | null;
 }
 
-const CONNECTION_ERROR =
-  'Turnier konnte nicht geladen werden: Verbindung zum Server fehlgeschlagen. ' +
-  'Der nächste Versuch läuft automatisch.';
+function connectionError(): string {
+  return anzeigeT('monitor:error.connection');
+}
 
 function notFoundError(tournamentId: string): string {
-  return (
-    `Turnier nicht gefunden: ${tournamentId}. Läuft dieser Bildschirm auf einem anderen Gerät als der ` +
-    'Organisator-Laptop, muss das Turnier in den Sichtbarkeits-Einstellungen auf "Mit Link teilbar" stehen.'
-  );
+  return anzeigeT('monitor:error.tournamentNotFound', { id: tournamentId });
 }
 
 /**
@@ -68,7 +66,7 @@ export function applyDelta(
       return state;
     }
     if (delta.lookupFailed) {
-      return { ...state, error: CONNECTION_ERROR, loading: false };
+      return { ...state, error: connectionError(), loading: false };
     }
     // Sauber bestätigt weg – auch mit vorhandenen Daten sichtbar machen.
     return { ...state, error: notFoundError(ctx.tournamentId), loading: false };
@@ -83,7 +81,7 @@ export function applyDelta(
 
   if (!delta.monitor) {
     // Turnier-Abruf war erfolgreich; der Monitor existiert nicht mehr. Kein hasData-Schutz.
-    return { ...state, error: `Monitor nicht gefunden: ${ctx.monitorId}`, loading: false };
+    return { ...state, error: anzeigeT('monitor:error.monitorNotFound', { id: ctx.monitorId }), loading: false };
   }
 
   return {
@@ -107,7 +105,7 @@ export function applyFetchError(state: MonitorDisplayState, err: unknown): Monit
   }
   return {
     ...state,
-    error: err instanceof Error ? err.message : 'Fehler beim Laden',
+    error: err instanceof Error ? err.message : anzeigeT('monitor:error.fetchFailed'),
     loading: false,
   };
 }

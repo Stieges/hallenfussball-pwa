@@ -43,6 +43,7 @@ function createTestTournament() {
     id: 'spielplan-test-tournament',
     status: 'published',
     sport: 'football',
+    sportId: 'football-indoor', // Pflichtfeld im TournamentSchema
     tournamentType: 'classic',
     mode: 'classic',
     numberOfFields: 2,
@@ -68,12 +69,12 @@ function createTestTournament() {
     startTime: '10:00',
     location: { name: 'Test-Halle' },
     teams: [
-      { id: 'team-1', name: 'FC Bayern' },
-      { id: 'team-2', name: 'BVB Dortmund' },
-      { id: 'team-3', name: 'RB Leipzig' },
-      { id: 'team-4', name: 'VfB Stuttgart' },
-      { id: 'team-5', name: '1. FC Nürnberg' },
-      { id: 'team-6', name: 'SpVgg Fürth' },
+      { id: '00000000-0000-4000-8000-0000000000a1', name: 'FC Bayern' },
+      { id: '00000000-0000-4000-8000-0000000000a2', name: 'BVB Dortmund' },
+      { id: '00000000-0000-4000-8000-0000000000a3', name: 'RB Leipzig' },
+      { id: '00000000-0000-4000-8000-0000000000a4', name: 'VfB Stuttgart' },
+      { id: '00000000-0000-4000-8000-0000000000a5', name: '1. FC Nürnberg' },
+      { id: '00000000-0000-4000-8000-0000000000a6', name: 'SpVgg Fürth' },
     ],
     matches: [],
     createdAt: new Date().toISOString(),
@@ -910,10 +911,10 @@ test.describe('Spielplan 2.0 - Edge Cases', () => {
       id: 'long-names-tournament',
       title: 'Turnier mit langen Namen',
       teams: [
-        { id: 'team-1', name: 'FC Bayern München e.V. Jugendabteilung' },
-        { id: 'team-2', name: 'Borussia Dortmund Nachwuchsleistungszentrum' },
-        { id: 'team-3', name: 'RB Leipzig' },
-        { id: 'team-4', name: 'VfB Stuttgart' },
+        { id: '00000000-0000-4000-8000-0000000000a1', name: 'FC Bayern München e.V. Jugendabteilung' },
+        { id: '00000000-0000-4000-8000-0000000000a2', name: 'Borussia Dortmund Nachwuchsleistungszentrum' },
+        { id: '00000000-0000-4000-8000-0000000000a3', name: 'RB Leipzig' },
+        { id: '00000000-0000-4000-8000-0000000000a4', name: 'VfB Stuttgart' },
       ],
     };
 

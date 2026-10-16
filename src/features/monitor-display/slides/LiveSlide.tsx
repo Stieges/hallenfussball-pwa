@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars, displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
@@ -10,6 +11,7 @@ import { scoresPublic } from '../publicVisibility';
 import { toLiveMatch } from '../monitorMatch';
 import { sideLabel, sideTeam } from '../matchSides';
 import { upcomingMatches } from '../slideContent';
+import { formatTime } from '../../../core/generators/scheduleHelpers';
 
 interface LiveSlideProps {
   slide: MonitorSlide;
@@ -22,12 +24,13 @@ interface LiveSlideProps {
 }
 
 export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: LiveSlideProps) {
+  const { t } = useTranslation('monitor');
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
   const field = tournament.fields?.find(f => f.id === slide.config.fieldId);
-  const fieldName = field?.customName ?? field?.defaultName ?? `Feld ${fieldNumber}`;
+  const fieldName = field?.customName ?? field?.defaultName ?? t('fieldSelector.field', { field: fieldNumber });
   const { matches, teams } = tournament;
 
   // Gepinntes Spiel (@ZM-075/077), sonst das laufende Spiel auf diesem Feld (Halbzeit zählt mit)
@@ -40,13 +43,14 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
   const nextMatch = !runningMatch
     ? upcomingMatches(matches, { count: 1, field: fieldNumber })[0]
     : undefined;
-  const labelCtx = { teams, hidePendingOrigin: !scoresPublic(tournament) };
+  const labelCtx = { teams, matches, groups: tournament.groups, hidePendingOrigin: !scoresPublic(tournament) };
 
   // Delegate to LiveMatchDisplay for running matches
   if (runningMatch) {
     const liveMatch = toLiveMatch(runningMatch, teams, tournament);
+    // B-44a4 (@ME-020): Die Folie ist Größen-Container; die Live-Anzeige misst an ihrer Fläche innerhalb des Bildrands
     return (
-      <div style={style}>
+      <div style={{ ...style, containerType: 'size' }} data-testid="live-slide-area">
         <LiveMatchDisplay
           match={liveMatch}
           group={runningMatch.group}
@@ -69,7 +73,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
         color: themeColors.textSecondary,
         marginBottom: displaySpacing.sectionMD,
       }}>
-        ⚽ {fieldName}
+        {fieldName}
       </div>
 
       {whenIdleType === 'skip' ? (
@@ -77,7 +81,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
           fontSize: displayFontSizes.bodyLG,
           color: themeColors.textMuted,
         }}>
-          Warte auf nächstes Spiel...
+          {t('slides.live.idleSkip')}
         </div>
       ) : nextMatch ? (
         (() => {
@@ -90,7 +94,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
                 color: themeColors.textMuted,
                 marginBottom: displaySpacing.contentLG,
               }}>
-                Nächstes Spiel
+                {t('slides.live.nextMatch')}
               </div>
               <div style={{
                 display: 'flex',
@@ -132,6 +136,16 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
                   </div>
                 </div>
               </div>
+              {/* @ZM-138: Anstoßzeit des nächsten Spiels */}
+              {nextMatch.scheduledTime && (
+                <div style={{
+                  fontSize: displayFontSizes.bodyLG,
+                  color: themeColors.textSecondary,
+                  marginTop: displaySpacing.contentLG,
+                }}>
+                  {t('slides.live.kickoff')} {formatTime(nextMatch.scheduledTime)}
+                </div>
+              )}
             </>
           );
         })()
@@ -140,7 +154,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
           fontSize: displayFontSizes.bodyLG,
           color: themeColors.textMuted,
         }}>
-          Kein Spiel geplant
+          {t('slides.live.noMatch')}
         </div>
       )}
     </div>

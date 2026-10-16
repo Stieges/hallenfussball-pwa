@@ -5,7 +5,7 @@
  * This is separate from the persisted Match in tournament.matches[].
  */
 
-import { TeamLogo, TeamColors } from '../../types/tournament';
+import { TeamLogo, TeamColors, CardType } from '../../types/tournament';
 
 // ============================================================================
 // STATUS TYPES
@@ -51,7 +51,7 @@ export interface MatchEvent {
         delta?: number;
         playerNumber?: number;
         assists?: number[];
-        cardType?: 'YELLOW' | 'RED';
+        cardType?: CardType;
         toStatus?: MatchStatus;
         durationSeconds?: number;
         playersIn?: number[];
@@ -110,6 +110,11 @@ export interface LiveMatch {
 
     // Events
     events: MatchEvent[];
+    /**
+     * C3b-1 (G6): zurueckgenommene Eintraege eines Engine-Spiels -- NUR fuer die Protokoll-Anzeige
+     * (EventLog, Sidebar, EventLogBottomSheet). `events` bleibt ohne Zurueckgenommenes.
+     */
+    retractedEvents?: MatchEvent[];
 
     // Tournament Context
     tournamentPhase?: TournamentPhase;
@@ -119,7 +124,7 @@ export interface LiveMatch {
      * (rules.canDrawInGroupPhase / rules.canDrawInFinals, aufgelöst bei initializeMatch).
      * `undefined` bei älteren/mock-erzeugten Matches wird von needsTiebreaker() wie das
      * bisherige Default behandelt (Gruppenphase: Unentschieden erlaubt; Finale: über
-     * tiebreakerMode gesteuert) — siehe MatchExecutionService.needsTiebreaker.
+     * tiebreakerMode gesteuert) — siehe die Entscheidungsregel in `core/match/tiebreakDecision.ts`.
      */
     canEndInDraw?: boolean;
 

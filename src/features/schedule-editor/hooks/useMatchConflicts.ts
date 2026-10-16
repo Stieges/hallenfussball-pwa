@@ -192,11 +192,16 @@ export function useMatchConflicts(
 // Convenience Hook for Tournament Context
 // ============================================================================
 
+/** Was die Konflikterkennung von einem Turnier liest (ein `Tournament` passt, ein Stand-in ebenso). */
+export type ConflictSource = Partial<
+  Pick<Tournament, 'matches' | 'teams' | 'groupPhaseGameDuration' | 'gameDuration' | 'groupPhaseBreakDuration' | 'breakDuration' | 'refereeConfig'>
+>;
+
 /**
  * Hook that works directly with a Tournament object
  */
 export function useMatchConflictsFromTournament(
-  tournament: Tournament | null,
+  tournament: ConflictSource | null,
   enabled: boolean = true
 ): UseMatchConflictsReturn {
   const emptyResult: UseMatchConflictsReturn = {

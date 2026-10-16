@@ -16,7 +16,10 @@
 import { Tournament } from '../../../types/tournament';
 import { LocalStorageRepository } from '../../../core/repositories/LocalStorageRepository';
 import { SupabaseRepository } from '../../../core/repositories/SupabaseRepository';
+import { hasGuestEngineEntries } from '../../../core/match/client/guestEngineEntries';
+import { notifyGuestTournamentHidden } from '../../../core/services/guestTournamentNotices';
 import { isSupabaseConfigured } from '../../../lib/supabase';
+import { captureFeatureError } from '../../../lib/sentry';
 
 // =============================================================================
 // TYPES
@@ -33,6 +36,10 @@ export interface MigrationResult {
   errors: string[];
   /** Titles of successfully migrated tournaments */
   migratedTitles: string[];
+  /** G7: Number of tournaments skipped because they have guest engine entries */
+  skippedCount: number;
+  /** G7: Titles of the skipped tournaments */
+  skippedTitles: string[];
 }
 
 export interface MigrationProgress {
@@ -51,10 +58,11 @@ export type ProgressCallback = (progress: MigrationProgress) => void;
 // =============================================================================
 
 /**
- * Get all local tournaments that should be migrated
- * (tournaments that exist only in localStorage, not in Supabase)
+ * Get all local tournaments that are not yet in the cloud (raw migration candidates).
+ * G7 filter is NOT applied here — see `getLocalTournamentsToMigrate` and
+ * `migrateGuestTournaments` (skip + hint).
  */
-export async function getLocalTournamentsToMigrate(): Promise<Tournament[]> {
+async function getLocalCandidates(): Promise<Tournament[]> {
   if (!isSupabaseConfigured) {
     return [];
   }
@@ -81,6 +89,70 @@ export async function getLocalTournamentsToMigrate(): Promise<Tournament[]> {
 
   // Filter to tournaments that don't exist in cloud
   return localTournaments.filter((t) => !cloudTournamentIds.has(t.id));
+}
+
+/**
+ * M2 (task-C3b2-review.md): einzige Stelle, die Kandidaten in migrierbar/übersprungen/
+ * fehlgeschlagen einteilt — sowohl `getLocalTournamentsToMigrate` (Zähler-Aufrufer:
+ * `hasLocalTournamentsToMigrate`/`getLocalTournamentsMigrationCount`) als auch
+ * `migrateGuestTournaments` nutzen dieselbe Quelle (vorher: zwei duplizierte Schleifen,
+ * eine davon mit leerem `catch`, die bei einem Lesefehler zu wenig zählte). Ein
+ * Lesefehler zählt immer als fehlgeschlagen (nie stillschweigend übersprungen) und
+ * geht an Sentry — `captureFeatureError` ist hier erlaubt (diese Datei liegt unter
+ * `src/features/auth/services/`, nicht unter `src/core/`, das `lib/sentry` nicht
+ * importieren darf).
+ */
+interface LocalCandidateClassification {
+  migratable: Tournament[];
+  skipped: Tournament[];
+  failedCount: number;
+  errors: string[];
+}
+
+async function classifyLocalCandidates(
+  candidates: Tournament[]
+): Promise<LocalCandidateClassification> {
+  const migratable: Tournament[] = [];
+  const skipped: Tournament[] = [];
+  const errors: string[] = [];
+  let failedCount = 0;
+  for (const tournament of candidates) {
+    let hasEntries: boolean;
+    try {
+      hasEntries = await hasGuestEngineEntries(tournament);
+    } catch (error) {
+      // PC29: Lesefehler ist kein sicheres „nein" — das Turnier zaehlt als
+      // fehlgeschlagen (nicht migrierbar in dieser Runde), nie als leiser Erfolg.
+      failedCount++;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      errors.push(`"${tournament.title}": ${message}`);
+      captureFeatureError(
+        error instanceof Error ? error : new Error(message),
+        'guestMigration',
+        'classifyLocalCandidates',
+        { tournamentId: tournament.id }
+      );
+      continue;
+    }
+    if (hasEntries) {
+      skipped.push(tournament);
+    } else {
+      migratable.push(tournament);
+    }
+  }
+  return { migratable, skipped, failedCount, errors };
+}
+
+/**
+ * Get all local tournaments that should be migrated
+ * (tournaments that exist only in localStorage, not in Supabase).
+ * G7: Tournaments with guest engine entries are never migrated — they must stay
+ * local (and are not listed here, so counts stay truthful).
+ */
+export async function getLocalTournamentsToMigrate(): Promise<Tournament[]> {
+  const candidates = await getLocalCandidates();
+  const { migratable } = await classifyLocalCandidates(candidates);
+  return migratable;
 }
 
 /**
@@ -136,6 +208,8 @@ export async function migrateGuestTournaments(
     failedCount: 0,
     errors: [],
     migratedTitles: [],
+    skippedCount: 0,
+    skippedTitles: [],
   };
 
   // Check if Supabase is configured
@@ -144,8 +218,23 @@ export async function migrateGuestTournaments(
     return result;
   }
 
-  // Get tournaments to migrate
-  const tournamentsToMigrate = await getLocalTournamentsToMigrate();
+  // G7: tournaments with guest engine entries are never uploaded — skip them
+  // (the upload would strand the local engine entries outside the account).
+  // M2: dieselbe Klassifizierung wie getLocalTournamentsToMigrate (eine Quelle für
+  // beide Zähler) — ein Lesefehler zählt hier wie dort als fehlgeschlagen, nie als
+  // leerer catch.
+  const candidates = await getLocalCandidates();
+  const classification = await classifyLocalCandidates(candidates);
+  result.failedCount += classification.failedCount;
+  result.errors.push(...classification.errors);
+  for (const tournament of classification.skipped) {
+    result.skippedCount++;
+    result.skippedTitles.push(tournament.title);
+    // G7: einmaliger Hinweis „nur im Gastmodus nutzbar – kann ins Konto
+    // übernommen werden" (Kanal dedupliziert je Turnier-ID).
+    notifyGuestTournamentHidden({ tournamentId: tournament.id, title: tournament.title });
+  }
+  const tournamentsToMigrate: Tournament[] = classification.migratable;
 
   if (tournamentsToMigrate.length === 0) {
     return result;

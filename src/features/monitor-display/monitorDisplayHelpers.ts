@@ -2,6 +2,7 @@
  * Monitor-Hilfsfunktionen (B-16d1): Theme, Performance-Profil, Feldnummer, Gruppenname, URL-Prüfung.
  * Reine Verschiebung aus MonitorDisplayPage.tsx; Logik und Werte unverändert.
  */
+import { anzeigeT } from '../../i18n/anzeigeSprache';
 import type { Tournament } from '../../types/tournament';
 import { PERFORMANCE_PROFILES } from '../../types/monitor';
 import type { MonitorTheme, PerformanceSettings } from '../../types/monitor';
@@ -51,9 +52,9 @@ export function fieldIdToNumber(fieldId: string | undefined): number {
 
 /** Get group display name */
 export function getGroupDisplayName(tournament: Tournament, groupId: string | undefined): string {
-  if (!groupId) {return 'Gruppe';}
+  if (!groupId) {return anzeigeT('sport:tournament.group');}
   const group = tournament.groups?.find(g => g.id === groupId);
-  return group?.customName ?? `Gruppe ${groupId}`;
+  return group?.customName ?? anzeigeT('sport:tournament.groupWithLetter', { letter: groupId });
 }
 
 /**

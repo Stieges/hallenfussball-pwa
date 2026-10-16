@@ -3,28 +3,26 @@
  * vorbelegt wie die K.-o.-Spiele.
  *
  * Pflichttest (Szenario wörtlich):
- *   - Finale auf „Verlängerung, dann Strafstoßschießen“ → Zeile „Platzierungsspiele“
- *     sichtbar, vorbelegt mit „Verlängerung, dann Strafstoßschießen“ (Rückfall Finale-Regel)
- *   - Zeile umstellen auf „Strafstoßschießen“ → gespeichertes Turnier trägt placement
- *   - initializeMatch Spiel um Platz 3 (finalType 'thirdPlace') → 'shootout';
- *     Finale (finalType 'final') → 'overtime-then-shootout'
- * Gegenbeispiel:
- *   - Modus ohne Platzierungsspiele ('final-only') zeigt die Zeile nicht
- *   - Ohne eigene Änderung bleibt placement ungespeichert (Anzeige des Rückfalls)
- *   - Halbfinale unverändert
+ *   - Finale auf „Verlängerung, dann Strafstoßschießen" → Zeile „Platzierungsspiele"
+ *     sichtbar, vorbelegt mit „Verlängerung, dann Strafstoßschießen" (Rückfall Finale-Regel)
+ *   - Zeile umstellen auf „Strafstoßschießen" → gespeichertes Turnier trägt placement
+ *   - Engine-Weg (it.fails, A-08d1): initializeMatch Spiel um Platz 3 → 'shootout';
+ *     Finale → 'overtime-then-shootout'
+ * Gegenbeispiele:
+ *   - Modus ohne Platzierungsspiele ('final-only') zeigt die Zeile nicht (Wizard, grün)
+ *   - Ohne eigene Änderung bleibt placement ungespeichert, Anzeige zeigt den Rückfall (Wizard, grün);
+ *     Engine-Weg (it.fails): Platz 3 folgt dem Finale
+ *   - Halbfinale bleibt bei seiner Regel: Wizard und resolveTiebreakMode (grün); Engine-Weg (it.fails)
  * Mutation:
- *   - Wizard-Zeile speichert placement nicht → rot
- *   - Rückfall in der Zeilenvorbelegung auf die Finale-Regel entfernen → rot
+ *   - Wizard-Zeile speichert placement nicht → rot (grüner Wizard-Test)
+ *   - Rückfall in der Zeilenvorbelegung auf die Finale-Regel entfernen → rot (grüner Wizard-Test)
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { useTournamentWizard } from '../../../hooks/useTournamentWizard';
 import { FinalsConfiguration } from '../components/FinalsConfiguration';
-import { MatchExecutionService } from '../../../core/services/MatchExecutionService';
 import { resolveTiebreakMode } from '../../../core/match/tiebreakDecision';
-import type { ILiveMatchRepository } from '../../../core/repositories/ILiveMatchRepository';
-import type { ITournamentRepository } from '../../../core/repositories/ITournamentRepository';
-import type { ScheduledMatch } from '../../../core/generators';
+import { startEngineSpiel, type RegelSpiel } from '../../../test/engineSpielFixture';
 import type { Tournament, TiebreakerMode } from '../../../types/tournament';
 
 vi.mock('../../../hooks/useRepository', () => ({
@@ -68,71 +66,76 @@ function entwurfPerUi(schritte: () => void): Tournament {
   return entwurf;
 }
 
-function scheduledMatch(
-  phase: string,
-  finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth',
-): ScheduledMatch {
-  return {
-    id: `m-${phase}-${finalType ?? 'x'}`,
-    matchNumber: 1,
-    field: 1,
-    label: phase,
-    phase,
-    finalType,
-    homeTeam: 'Alpha',
-    awayTeam: 'Beta',
-    originalTeamA: 'teamA',
-    originalTeamB: 'teamB',
-    startTime: new Date('2026-10-05T10:00:00.000Z'),
-  } as unknown as ScheduledMatch;
-}
-
-async function cockpitLive(
-  tournament: Tournament,
-  phase: string,
-  finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth',
-) {
-  const liveMatchRepo = {
-    get: vi.fn(() => Promise.resolve(null)),
-    save: vi.fn((_tournamentId: string, match: unknown) => Promise.resolve(match)),
-  };
-  const tournamentRepo = {
-    get: vi.fn(() => Promise.resolve(tournament)),
-  };
-  const service = new MatchExecutionService(
-    liveMatchRepo as unknown as ILiveMatchRepository,
-    tournamentRepo as unknown as ITournamentRepository,
-  );
-  return service.initializeMatch('t1', scheduledMatch(phase, finalType));
+/** Cockpit-Seite auf dem Engine-Weg (A-08d1): Regel des Engine-Stands. */
+async function cockpitLive(tournament: Tournament, match: RegelSpiel): Promise<{ tiebreakerMode: TiebreakerMode | undefined }> {
+  const spiel = await startEngineSpiel(tournament, match);
+  return { tiebreakerMode: spiel.tiebreakerMode };
 }
 
 function wert(select: HTMLElement): string {
   return (select as HTMLSelectElement).value;
 }
 
-describe('B-04c Fixrunde 2 – @W2A-039 Platzierungsspiele eigene Entscheidungsregel (Wizard)', () => {
-  it('Pflichttest: Szenario – Zeile vorbelegt wie Finale, Umstellen wirkt nur auf Platz 3', async () => {
-    const entwurf = entwurfPerUi(() => {
-      fireEvent.click(screen.getByTestId('finals-preset-top-4'));
-      fireEvent.change(screen.getByTestId('tiebreaker-round-final'), {
-        target: { value: 'overtime-then-shootout' },
-      });
-      // Eigene Zeile „Platzierungsspiele“, vorbelegt mit der Finale-Regel
-      const zeile = screen.getByTestId('tiebreaker-round-placement');
-      expect(wert(zeile)).toBe('overtime-then-shootout');
-      fireEvent.change(zeile, { target: { value: 'shootout' } });
+/** Wizard: Finale „Verlängerung, dann Strafstoßschießen", Zeile Platzierungsspiele vorbelegt und umgestellt. */
+function entwurfPlatzierungUmgestellt(): Tournament {
+  return entwurfPerUi(() => {
+    fireEvent.click(screen.getByTestId('finals-preset-top-4'));
+    fireEvent.change(screen.getByTestId('tiebreaker-round-final'), {
+      target: { value: 'overtime-then-shootout' },
     });
+    // Eigene Zeile „Platzierungsspiele", vorbelegt mit der Finale-Regel
+    const zeile = screen.getByTestId('tiebreaker-round-placement');
+    expect(wert(zeile)).toBe('overtime-then-shootout');
+    fireEvent.change(zeile, { target: { value: 'shootout' } });
+  });
+}
+
+/** Wizard: Finale gesetzt, Platzierungszeile ohne eigene Änderung. */
+function entwurfOhneEigeneAenderung(): Tournament {
+  return entwurfPerUi(() => {
+    fireEvent.click(screen.getByTestId('finals-preset-top-4'));
+    fireEvent.change(screen.getByTestId('tiebreaker-round-final'), {
+      target: { value: 'overtime-then-shootout' },
+    });
+    expect(wert(screen.getByTestId('tiebreaker-round-placement'))).toBe('overtime-then-shootout');
+  });
+}
+
+/** Wizard: Halbfinale goldenGoal, Finale und Platzierung anders. */
+function entwurfHalbfinale(): Tournament {
+  return entwurfPerUi(() => {
+    fireEvent.click(screen.getByTestId('finals-preset-top-4'));
+    fireEvent.change(screen.getByTestId('tiebreaker-round-semifinal'), {
+      target: { value: 'goldenGoal' },
+    });
+    fireEvent.change(screen.getByTestId('tiebreaker-round-final'), {
+      target: { value: 'overtime-then-shootout' },
+    });
+    fireEvent.change(screen.getByTestId('tiebreaker-round-placement'), {
+      target: { value: 'shootout' },
+    });
+  });
+}
+
+describe('B-04c Fixrunde 2 – @W2A-039 Platzierungsspiele eigene Entscheidungsregel (Wizard)', () => {
+  it('(Wizard) @W2A-039: Zeile vorbelegt wie Finale, Umstellen wird als placement gespeichert, Finale bleibt', () => {
+    const entwurf = entwurfPlatzierungUmgestellt();
 
     expect(entwurf.finalsConfig?.tiebreakerByRound?.placement).toBe('shootout');
     expect(entwurf.finalsConfig?.tiebreakerByRound?.final).toBe('overtime-then-shootout');
-
-    const platz3 = await cockpitLive(entwurf, 'final', 'thirdPlace');
-    expect(platz3.tiebreakerMode).toBe('shootout');
-    const finale = await cockpitLive(entwurf, 'final', 'final');
-    expect(finale.tiebreakerMode).toBe('overtime-then-shootout');
   });
 
-  it('Gegenbeispiel: Modus ohne Platzierungsspiele zeigt die Zeile nicht', () => {
+  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  // Engine-Weg: serverRules kennt weder tiebreakerByRound noch finalType; Finale bekommt den globalen Rückfall 'shootout'.
+  // Aussagekräftig nach A-27: Platz 3 = 'shootout' UND Finale = 'overtime-then-shootout' (zwei verschiedene Werte).
+  it.fails('Pflichttest (Cockpit) @W2A-039: Platz 3 zeigt die Platzierungsregel, das Finale seine Finale-Regel', async () => {
+    const entwurf = entwurfPlatzierungUmgestellt();
+
+    expect((await cockpitLive(entwurf, { phase: 'final', finalType: 'thirdPlace' })).tiebreakerMode).toBe('shootout');
+    expect((await cockpitLive(entwurf, { phase: 'final', finalType: 'final' })).tiebreakerMode).toBe('overtime-then-shootout');
+  });
+
+  it('Gegenbeispiel (Wizard) @W2A-039: Modus ohne Platzierungsspiele zeigt die Zeile nicht', () => {
     entwurfPerUi(() => {
       fireEvent.click(screen.getByTestId('finals-advanced-options-toggle'));
       fireEvent.click(screen.getByTestId('finals-preset-final-only'));
@@ -143,39 +146,36 @@ describe('B-04c Fixrunde 2 – @W2A-039 Platzierungsspiele eigene Entscheidungsr
     });
   });
 
-  it('Gegenbeispiel: ohne eigene Änderung bleibt placement ungespeichert, Anzeige zeigt den Rückfall', async () => {
-    const entwurf = entwurfPerUi(() => {
-      fireEvent.click(screen.getByTestId('finals-preset-top-4'));
-      fireEvent.change(screen.getByTestId('tiebreaker-round-final'), {
-        target: { value: 'overtime-then-shootout' },
-      });
-      expect(wert(screen.getByTestId('tiebreaker-round-placement'))).toBe('overtime-then-shootout');
-    });
+  it('Gegenbeispiel (Wizard) @W2A-039: ohne eigene Änderung bleibt placement ungespeichert, Anzeige zeigt den Rückfall', () => {
+    const entwurf = entwurfOhneEigeneAenderung();
 
     expect(entwurf.finalsConfig?.tiebreakerByRound?.placement).toBeUndefined();
-    // Rückfall auf die Finale-Regel greift auch ohne gespeicherte Platzierungs-Regel:
-    const platz3 = await cockpitLive(entwurf, 'final', 'thirdPlace');
-    expect(platz3.tiebreakerMode).toBe('overtime-then-shootout');
   });
 
-  it('Gegenbeispiel: Halbfinale bleibt bei seiner Regel, wenn Platzierungsspiele umgestellt sind', async () => {
-    const entwurf = entwurfPerUi(() => {
-      fireEvent.click(screen.getByTestId('finals-preset-top-4'));
-      fireEvent.change(screen.getByTestId('tiebreaker-round-semifinal'), {
-        target: { value: 'goldenGoal' },
-      });
-      fireEvent.change(screen.getByTestId('tiebreaker-round-final'), {
-        target: { value: 'overtime-then-shootout' },
-      });
-      fireEvent.change(screen.getByTestId('tiebreaker-round-placement'), {
-        target: { value: 'shootout' },
-      });
-    });
+  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  // Engine-Weg: Platz 3 bekommt den globalen Rückfall, nicht die Finale-Regel des Entwurfs.
+  // Aussagekräftig nach A-27: Platz 3 ohne Platzierungsregel = Finale-Regel ('overtime-then-shootout' ≠ Rückfall 'shootout').
+  it.fails('Gegenbeispiel (Cockpit) @W2A-039: ohne Platzierungsregel folgt Platz 3 im Cockpit dem Finale', async () => {
+    const entwurf = entwurfOhneEigeneAenderung();
 
-    const halbfinale = await cockpitLive(entwurf, 'semifinal');
-    expect(halbfinale.tiebreakerMode).toBe('goldenGoal');
-    expect(
-      resolveTiebreakMode(entwurf.finalsConfig, 'semifinal') satisfies TiebreakerMode | undefined,
-    ).toBe('goldenGoal');
+    expect((await cockpitLive(entwurf, { phase: 'final', finalType: 'thirdPlace' })).tiebreakerMode).toBe(
+      'overtime-then-shootout',
+    );
+  });
+
+  it('Gegenbeispiel (Wizard + Entscheidungsfunktion) @W2A-039: das Halbfinale behält seine Regel', () => {
+    const entwurf = entwurfHalbfinale();
+
+    expect(entwurf.finalsConfig?.tiebreakerByRound?.semifinal).toBe('goldenGoal');
+    expect(resolveTiebreakMode(entwurf.finalsConfig, 'semifinal')).toBe('goldenGoal');
+  });
+
+  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  // Engine-Weg: das Halbfinale bekommt den globalen Rückfall 'shootout' statt goldenGoal.
+  // Aussagekräftig nach A-27: Halbfinale 'goldenGoal' ≠ Finale 'overtime-then-shootout' ≠ Platz 3 'shootout'.
+  it.fails('Gegenbeispiel (Cockpit) @W2A-039: das Halbfinale behält seine Regel im Cockpit', async () => {
+    const entwurf = entwurfHalbfinale();
+
+    expect((await cockpitLive(entwurf, { phase: 'semifinal' })).tiebreakerMode).toBe('goldenGoal');
   });
 });

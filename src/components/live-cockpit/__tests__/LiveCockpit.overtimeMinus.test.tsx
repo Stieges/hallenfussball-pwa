@@ -9,7 +9,7 @@
  * `canDecrementHome`/`canDecrementAway`, LiveCockpit.tsx ~Zeile 661f. — richtete
  * sich vorher unabhängig von der Phase nach dem regulären Spielstand): ein Klick
  * rief `onGoal(..., -1)` auf und setzte (vor dem Floor-Fix in
- * MatchExecutionService.recordGoal) `overtimeScoreA` auf -1 — ein einzelner
+ * frueherer Altweg recordGoal) `overtimeScoreA` auf -1 — ein einzelner
  * Fehlklick ohne Löschung/Undo. Der Fix (Commit ef5833a) macht sowohl das
  * `disabled`-Attribut als auch den Klick-Handler selbst phasenbewusst: in der
  * Verlängerung zählt `overtimeScoreA`/`overtimeScoreB`, nicht `homeScore`/`awayScore`
@@ -41,6 +41,9 @@ vi.mock('../../../hooks/useSyncStatus', () => ({
     isCloudSyncAvailable: false,
   }),
 }));
+
+// C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 
 function makeMatch(overrides: Record<string, unknown> = {}) {
   return {
@@ -83,53 +86,6 @@ describe('LiveCockpit — Minus-Button-Guard in der Verlängerung', () => {
     await user.click(minusHome);
 
     expect(onGoal).not.toHaveBeenCalled();
-  });
-
-  it('Regression: overtime, homeScore 1 / overtimeScoreA 2 — "−1" ruft onGoal weiterhin auf', async () => {
-    const onGoal = vi.fn();
-    const user = userEvent.setup();
-    render(
-      <LiveCockpit
-        {...baseProps(makeMatch({ playPhase: 'overtime', homeScore: 1, overtimeScoreA: 2 }), { onGoal })}
-      />
-    );
-
-    await user.click(screen.getByTestId('goal-minus-button-home'));
-
-    expect(onGoal).toHaveBeenCalledWith('match-1', 'team-a', -1);
-  });
-
-  it('Regression: reguläre Phase unverändert — homeScore 1 erlaubt "−1"', async () => {
-    const onGoal = vi.fn();
-    const user = userEvent.setup();
-    render(
-      <LiveCockpit
-        {...baseProps(makeMatch({ playPhase: 'regular', homeScore: 1 }), { onGoal })}
-      />
-    );
-
-    await user.click(screen.getByTestId('goal-minus-button-home'));
-
-    expect(onGoal).toHaveBeenCalledWith('match-1', 'team-a', -1);
-  });
-
-  it('PIN: 0:0-Finale in der Verlängerung — "−1" ist bedienbar, obwohl der reguläre Stand 0 ist', async () => {
-    // Der gefährlichere Zwilling des gemeldeten Fehlklicks: So entsteht eine Verlängerung
-    // überhaupt am häufigsten. Mit der alten Sperre (`homeScore > 0`) war der Knopf hier
-    // dauerhaft gesperrt — ein irrtümlich erfasstes Golden Goal war damit nicht zurücknehmbar.
-    const onGoal = vi.fn();
-    const user = userEvent.setup();
-    render(
-      <LiveCockpit
-        {...baseProps(makeMatch({ playPhase: 'goldenGoal', homeScore: 0, overtimeScoreA: 2 }), { onGoal })}
-      />
-    );
-
-    const minusHome = screen.getByTestId('goal-minus-button-home');
-    expect(minusHome).not.toBeDisabled();
-    await user.click(minusHome);
-
-    expect(onGoal).toHaveBeenCalledWith('match-1', 'team-a', -1);
   });
 
   it('Regression: reguläre Phase unverändert — homeScore 0 bleibt gesperrt (Button disabled, kein onGoal)', async () => {

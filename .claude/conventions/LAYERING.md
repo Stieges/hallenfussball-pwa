@@ -99,7 +99,6 @@ src/components/layout/AuthSection.tsx:23      → features/auth/components/Mobil
 
 ### hooks/ → features/, components/
 ```
-src/hooks/useInitialSync.ts:2                 → features/auth/hooks/useAuth
 src/hooks/useAuthTimeoutToast.ts:14           → components/ui/Toast/ToastContext
 src/hooks/useMatchExecution.ts:20             → components/ui/Toast/ToastContext
 ```

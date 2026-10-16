@@ -9,7 +9,8 @@
 
 import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../../design-tokens'
+import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import { useIsMobile } from '../../../../hooks/useIsMobile';
 
 // ---------------------------------------------------------------------------
@@ -66,24 +67,8 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   // Styles
   // ---------------------------------------------------------------------------
 
-  const overlayStyle: CSSProperties = {
-    position: 'fixed',
-    inset: 0,
-    background: cssVars.colors.overlayStrong,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: cssVars.spacing.lg,
-    zIndex: 1000,
-  };
-
   const bannerStyle: CSSProperties = {
-    width: '100%',
-    maxWidth: '500px',
-    background: `linear-gradient(135deg, ${cssVars.colors.panelGradientStart}, ${cssVars.colors.panelGradientEnd})`,
-    borderRadius: cssVars.borderRadius.xl,
-    border: `2px solid ${cssVars.colors.warning}`,
-    boxShadow: `0 8px 32px ${cssVars.colors.warning}30`,
+    borderRadius: cssVars.borderRadius.lg,
     overflow: 'hidden',
   };
 
@@ -188,7 +173,16 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div style={overlayStyle} role="alertdialog" aria-labelledby="tiebreaker-title" data-testid="tiebreaker-banner">
+    <DialogSurface
+      isOpen
+      role="alertdialog"
+      dismissible={false}
+      closeOnBackdropClick={false}
+      maxWidth={dialogWidths.md}
+      accent={cssVars.colors.warning}
+      labelledBy="tiebreaker-title"
+      testId="tiebreaker-banner"
+    >
       <div style={bannerStyle}>
         {/* Warning Header */}
         <div style={headerStyle}>
@@ -254,7 +248,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 };
 

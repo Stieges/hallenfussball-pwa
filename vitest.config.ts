@@ -1,5 +1,13 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { readFileSync } from 'node:fs'
+
+// Untergrenzen kommen aus coverage-floors.json (A-09). Die Bereiche prueft
+// scripts/coverage-report.mjs (Ratchet gegen den Hauptzweig); vitest selbst erzwingt
+// die globale Schwelle.
+const coverageFloors = JSON.parse(readFileSync(new URL('./coverage-floors.json', import.meta.url), 'utf8')) as {
+  bereiche: { global: { floors: { statements: number; branches: number; functions: number; lines: number } } }
+}
 
 // *.test.ts-Dateien (keine .tsx), die trotz der .ts-Endung window/document
 // brauchen (Hooks/Services, die direkt auf window.addEventListener,
@@ -11,24 +19,43 @@ const DOM_ONLY_TS_TESTS = [
   'src/core/services/TournamentCreationService.release.test.ts',
   'src/core/services/TournamentCreationService.test.ts',
   'src/core/services/__tests__/GenericMutationQueue.test.ts',
+  'src/core/services/__tests__/MutationQueue.guestGuard.test.ts',
   'src/core/services/__tests__/MutationQueue.property.test.ts',
   'src/core/services/__tests__/MutationQueue.test.ts',
   'src/core/storage/__tests__/StorageFactory.test.ts',
   'src/core/storage/__tests__/StorageFallback.test.ts',
   'src/features/auth/context/__tests__/authActions.test.ts',
   'src/features/auth/hooks/__tests__/useMyTournamentRole.test.ts',
+  'src/features/auth/hooks/__tests__/useTournamentLimit.guestHide.test.ts',
+  'src/features/auth/hooks/__tests__/useUserTournaments.guestHide.test.ts',
   'src/features/auth/hooks/__tests__/useRegisterForm.test.ts',
   'src/features/schedule-editor/hooks/__tests__/useMatchConflicts.test.ts',
   'src/features/schedule-editor/hooks/__tests__/useScheduleEditor.test.ts',
   'src/features/tournament-management/hooks/__tests__/useScheduleTabActions.test.ts',
+  'src/hooks/__tests__/useMatchExecution.c1Regression.test.ts',
+  'src/hooks/__tests__/useMatchExecution.engineGuards.test.ts',
   'src/hooks/__tests__/useMatchExecution.realtime.test.ts',
   'src/hooks/__tests__/useMatchExecution.test.ts',
+  'src/hooks/__tests__/useGuestTournamentNotices.test.ts',
+  'src/hooks/__tests__/useTournaments.guestHide.test.ts',
   'src/hooks/__tests__/useMatchTimer.test.ts',
+  'src/features/match-engine/__tests__/useEngineOutboxSummary.test.ts',
+  'src/hooks/__tests__/useActorRole.test.ts',
+  'src/hooks/__tests__/useDialogTimer.test.ts',
+  'src/hooks/__tests__/useEngineCommandWiring.test.ts',
+  'src/hooks/__tests__/useCockpitExecution.test.ts',
+  'src/hooks/__tests__/useCockpitExecution.realtime.test.ts',
+  'src/hooks/__tests__/useCockpitExecution.rejection.test.ts',
+  'src/hooks/__tests__/useEngineExecutionBridge.resolve.test.ts',
   'src/hooks/__tests__/useTournamentManager.applyRemote.test.ts',
+  'src/hooks/__tests__/useTournamentManager.engineOverlay.test.ts',
   'src/hooks/__tests__/useMonitorTheme.test.ts',
   'src/hooks/__tests__/useSyncStatus.test.ts',
   'src/lib/__tests__/lazyWithRetry.test.ts',
   'src/lib/__tests__/themeManager.test.ts',
+  'src/lib/__tests__/swIdle.test.ts',
+  'src/lib/__tests__/swRegistration.test.ts',
+  'src/hooks/__tests__/useSwAutoReload.test.ts',
 ]
 
 export default defineConfig({
@@ -89,26 +116,24 @@ export default defineConfig({
     ],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'json-summary', 'html'],
+      // A-09: alle Produktivdateien zaehlen, auch solche, die kein Test laedt (0 %, @TA-001).
+      include: ['src/**/*.{ts,tsx}'],
       exclude: [
         'node_modules/',
-        'src/test/',
+        // vitest 5: Verzeichnis-Ausschluss nur als Glob wirksam. src/test-data/ bleibt in der
+        // Messung (mockTournament.ts ist Produktivcode, LocalTestScreen).
+        'src/test/**',
+        '**/__tests__/**',
+        '**/*.{test,spec}.{ts,tsx}',
         '**/*.d.ts',
         '**/*.config.*',
         'src/main.tsx',
         'src/vite-env.d.ts',
+        'src/types/supabase.ts',
       ],
-      // Untergrenze aus gemessener Baseline (T7b, 2026-09-24, `npm run test:coverage`):
-      // Statements 42.89 %, Branches 35.36 %, Functions 35.53 %, Lines 43.79 %.
-      // Je Wert auf ganze Prozent abgerundet und 1 Punkt darunter, damit normales
-      // Messrauschen die CI nicht bricht. Absichtlich niedrig (keine Zielmarke) —
-      // schützt nur vor Regression unter das heute gemessene Niveau.
-      thresholds: {
-        statements: 41,
-        branches: 34,
-        functions: 34,
-        lines: 42,
-      },
+      // Globale Untergrenze aus coverage-floors.json (Nullpunkt A-09 minus 1 Punkt, danach Ratchet).
+      thresholds: coverageFloors.bereiche.global.floors,
     },
   },
 })

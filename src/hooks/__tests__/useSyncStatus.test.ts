@@ -22,6 +22,7 @@ function createFakeMutationQueue(initialFailed: FailedMutationItem[] = []) {
   return {
     getStatus: (): MutationQueueStatus => ({ pendingCount: 0, failedCount: failed.length }),
     getFailedMutations: (): FailedMutationItem[] => [...failed],
+    getLastFailure: (): null => null,
     subscribe: (listener: Listener) => {
       listeners.push(listener);
       return () => {
@@ -125,5 +126,55 @@ describe('useSyncStatus — gescheiterte Übertragungen (C-SYNC)', () => {
         result.current.discardFailedMutation('does-not-exist');
       });
     }).not.toThrow();
+  });
+});
+
+// A-06j (Brief A10): queueLastFailure kommt beim initialen Lesen UND im Listener aus der Queue.
+describe('useSyncStatus — queueLastFailure (A-06j)', () => {
+  type FailureKind = 'transient' | 'permanent' | null;
+
+  function createQueueWithFailure(initial: FailureKind) {
+    let lastFailure: FailureKind = initial;
+    const listeners: Listener[] = [];
+    return {
+      getStatus: (): MutationQueueStatus => ({ pendingCount: 1, failedCount: 0 }),
+      getFailedMutations: (): FailedMutationItem[] => [],
+      getLastFailure: (): FailureKind => lastFailure,
+      subscribe: (listener: Listener) => {
+        listeners.push(listener);
+        return () => {
+          const idx = listeners.indexOf(listener);
+          if (idx !== -1) { listeners.splice(idx, 1); }
+        };
+      },
+      retryFailedMutation: vi.fn(() => true),
+      clearFailedMutation: vi.fn(() => true),
+      setFailureAndNotify: (kind: FailureKind) => {
+        lastFailure = kind;
+        listeners.forEach((l) => l({ pendingCount: 1, failedCount: 0 }));
+      },
+    };
+  }
+
+  beforeEach(() => {
+    mockRepository.current = null;
+  });
+
+  it('liefert queueLastFailure beim initialen Lesen aus der Queue', () => {
+    mockRepository.current = { mutationQueue: createQueueWithFailure('permanent') };
+    const { result } = renderHook(() => useSyncStatus());
+    expect(result.current.queueLastFailure).toBe('permanent');
+  });
+
+  it('aktualisiert queueLastFailure im Listener, wenn die Queue benachrichtigt', () => {
+    const fakeQueue = createQueueWithFailure(null);
+    mockRepository.current = { mutationQueue: fakeQueue };
+    const { result } = renderHook(() => useSyncStatus());
+    expect(result.current.queueLastFailure).toBeNull();
+
+    act(() => {
+      fakeQueue.setFailureAndNotify('transient');
+    });
+    expect(result.current.queueLastFailure).toBe('transient');
   });
 });

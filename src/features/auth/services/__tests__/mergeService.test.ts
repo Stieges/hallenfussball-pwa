@@ -27,7 +27,7 @@ vi.mock('../../../../config', () => ({
 
 import { checkEmailExists } from '../mergeService';
 
-describe('checkEmailExists (RPC auth_provider_for_email)', () => {
+describe('Bestand (geparkt/zu entfernen, @AN-015): checkEmailExists (RPC auth_provider_for_email)', () => {
   beforeEach(() => {
     rpcMock.mockReset();
     isFeatureEnabledMock.mockReset();

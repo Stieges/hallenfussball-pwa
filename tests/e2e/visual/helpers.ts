@@ -115,18 +115,18 @@ export function buildVisualTournament(overrides: {
   extra?: Record<string, unknown>;
 }): Record<string, unknown> {
   const teams: VisualTeam[] = [
-    { id: 'team-1', name: 'FC Nordstadt' },
-    { id: 'team-2', name: 'SV Südpark' },
-    { id: 'team-3', name: 'TSV Westtal' },
-    { id: 'team-4', name: 'BSC Ostring' },
+    { id: '00000000-0000-4000-8000-0000000000a1', name: 'FC Nordstadt' },
+    { id: '00000000-0000-4000-8000-0000000000a2', name: 'SV Südpark' },
+    { id: '00000000-0000-4000-8000-0000000000a3', name: 'TSV Westtal' },
+    { id: '00000000-0000-4000-8000-0000000000a4', name: 'BSC Ostring' },
   ];
 
   const matches: VisualMatchOverride[] = overrides.matches ?? [
     {
       id: 'visual-match-1',
       round: 1,
-      teamA: 'team-1',
-      teamB: 'team-3',
+      teamA: '00000000-0000-4000-8000-0000000000a1',
+      teamB: '00000000-0000-4000-8000-0000000000a3',
       field: 1,
       matchStatus: 'finished',
       scoreA: 3,
@@ -136,8 +136,8 @@ export function buildVisualTournament(overrides: {
     {
       id: 'visual-match-2',
       round: 2,
-      teamA: 'team-2',
-      teamB: 'team-4',
+      teamA: '00000000-0000-4000-8000-0000000000a2',
+      teamB: '00000000-0000-4000-8000-0000000000a4',
       field: 1,
       matchStatus: 'running',
       scoreA: 2,
@@ -149,8 +149,8 @@ export function buildVisualTournament(overrides: {
     {
       id: 'visual-match-3',
       round: 3,
-      teamA: 'team-1',
-      teamB: 'team-4',
+      teamA: '00000000-0000-4000-8000-0000000000a1',
+      teamB: '00000000-0000-4000-8000-0000000000a4',
       field: 1,
       matchStatus: 'scheduled',
       scheduledTime: '2026-03-14T09:45:00.000Z',
@@ -162,7 +162,7 @@ export function buildVisualTournament(overrides: {
     title: overrides.title,
     status: 'published',
     sport: 'Hallenfußball',
-    sportId: 'indoor-soccer',
+    sportId: 'football-indoor',
     tournamentType: 'classic',
     mode: 'classic',
     date: FIXED_DATE,
@@ -193,6 +193,8 @@ export function buildVisualTournament(overrides: {
       round: m.round,
       teamA: m.teamA,
       teamB: m.teamB,
+      slotA: { kind: 'team', teamId: m.teamA },
+      slotB: { kind: 'team', teamId: m.teamB },
       field: m.field,
       matchStatus: m.matchStatus,
       status: m.matchStatus.toUpperCase(),
@@ -208,45 +210,4 @@ export function buildVisualTournament(overrides: {
     updatedAt: '2026-03-14T09:00:00.000Z',
     ...overrides.extra,
   };
-}
-
-/**
- * Seedet die `liveMatches-<tournamentId>`-localStorage-Quelle, die das Live-Cockpit-Tab
- * (`useLiveMatches`, src/hooks/useLiveMatches.ts) tatsächlich liest -- getrennt vom
- * IndexedDB-Turnier-Blob. Muss NACH der ersten Navigation (Storage existiert erst dann) und vor
- * dem Aufruf des `/live`-Tabs passieren.
- */
-export async function seedRunningLiveMatch(
-  page: Page,
-  tournamentId: string,
-  match: {
-    id: string;
-    number: number;
-    phaseLabel: string;
-    fieldId: string;
-    field: number;
-    scheduledKickoff: string;
-    durationSeconds: number;
-    homeTeam: VisualTeam;
-    awayTeam: VisualTeam;
-    homeScore: number;
-    awayScore: number;
-    elapsedSeconds: number;
-    timerStartTime: string;
-  }
-): Promise<void> {
-  await page.evaluate(
-    ({ key, liveMatch }) => {
-      const record = {
-        [liveMatch.id]: {
-          ...liveMatch,
-          status: 'RUNNING',
-          events: [],
-          timerElapsedSeconds: 0,
-        },
-      };
-      localStorage.setItem(key, JSON.stringify(record));
-    },
-    { key: `liveMatches-${tournamentId}`, liveMatch: match }
-  );
 }

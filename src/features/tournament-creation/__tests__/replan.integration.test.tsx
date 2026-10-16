@@ -46,6 +46,13 @@ vi.mock('../../../hooks/useTournamentStartState', () => ({
   }),
 }));
 
+// Merge Spur A/B: AuthSection meldet seit A-07c ueber useGuardedLogout ab, der useRepositories() liest
+// (Muster wie AuthSection.test.tsx); hier ohne Konto-Queue.
+vi.mock('../../../core/contexts/RepositoryContext', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../core/contexts/RepositoryContext')>()),
+  useRepositories: () => ({ tournamentRepository: {} }),
+}));
+
 vi.mock('../../../lib/pdfExporter', () => ({ exportScheduleToPDF: vi.fn() }));
 
 vi.mock('../../../components/ScheduleDisplay', () => ({
@@ -115,6 +122,7 @@ vi.mock('../../../hooks/useTournamentWizard', () => ({
 
 import { TournamentCreationScreen } from '../../../screens/TournamentCreationScreen';
 import { ToastProvider } from '../../../components/ui/Toast';
+import { testUuid } from '../../../test/testIds';
 
 const baseTournament = (): Tournament =>
   ({
@@ -139,10 +147,10 @@ const baseTournament = (): Tournament =>
     breakBetweenPhases: 0,
     placementLogic: [],
     teams: [
-      { id: '1', name: 'A' },
-      { id: '2', name: 'B' },
-      { id: '3', name: 'C' },
-      { id: '4', name: 'D' },
+      { id: testUuid(1), name: 'A' },
+      { id: testUuid(2), name: 'B' },
+      { id: testUuid(3), name: 'C' },
+      { id: testUuid(4), name: 'D' },
     ],
     matches: [],
     status: 'published',
@@ -169,6 +177,8 @@ const established = (): Tournament => {
       field: m.field,
       teamA: m.originalTeamA,
       teamB: m.originalTeamB,
+      slotA: m.slotA,
+      slotB: m.slotB,
       scheduledTime: m.startTime,
     })),
   };

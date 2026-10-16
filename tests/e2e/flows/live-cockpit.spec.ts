@@ -30,6 +30,7 @@ function createTestTournament() {
     id: 'e2e-test-tournament',
     status: 'published',
     sport: 'football',
+    sportId: 'football-indoor', // Pflichtfeld im TournamentSchema (A-08f3b2)
     tournamentType: 'classic',
     mode: 'classic',
     numberOfFields: 1,
@@ -54,11 +55,12 @@ function createTestTournament() {
     startDate: futureDate,
     startTime: '10:00',
     location: { name: 'Test-Halle' },
+    // Team-IDs als UUID (TeamIdSchema seit A-01)
     teams: [
-      { id: 'team-1', name: 'FC Test A' },
-      { id: 'team-2', name: 'FC Test B' },
-      { id: 'team-3', name: 'FC Test C' },
-      { id: 'team-4', name: 'FC Test D' },
+      { id: '00000000-0000-4000-8000-0000000000e1', name: 'FC Test A' },
+      { id: '00000000-0000-4000-8000-0000000000e2', name: 'FC Test B' },
+      { id: '00000000-0000-4000-8000-0000000000e3', name: 'FC Test C' },
+      { id: '00000000-0000-4000-8000-0000000000e4', name: 'FC Test D' },
     ],
     // Let the app generate matches from the schedule
     matches: [],
@@ -254,6 +256,7 @@ test.describe('Live Cockpit', () => {
     }).toPass({ timeout: 5000 });
   });
 
+  // C3b-1: Rueckgaengig (RETRACT) laeuft fuer Engine-Spiele ueber useEngineEventEditing.
   test('Can undo last event', async ({ page }) => {
     // GIVEN - Navigate to Live Cockpit, start match and score a goal
     await page.getByText('E2E Test Turnier').click();

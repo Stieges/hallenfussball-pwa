@@ -1,7 +1,7 @@
 /**
- * Folienfolge des Monitors (B-16c): Takt, Pause, Pfeil- und Leertaste, Übergang.
+ * Folienfolge des Monitors (B-16c): Takt und Übergang. Tasten wirken nicht (@ME-022, Befund C-MONITOR-DAUERBETRIEB).
  *
- * Die Regeln stehen in slideProgramme.ts (nextSlide / stepSlide / wakeAt). Dieser Hook plant genau
+ * Die Regeln stehen in slideProgramme.ts (nextSlide / wakeAt). Dieser Hook plant genau
  * einen Timer bis wakeAt. Der Takt hängt nur an Zahlen (wakeAt, Übergang, Tick), nie an Objekten
  * aus dem Repository: Jeder Poll liefert neue Objekte, sonst würde der Takt bei jedem Poll neu
  * starten (C-MON-TAKT-STEHT).
@@ -9,7 +9,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   nextSlide,
-  stepSlide,
   wakeAt,
   type SlideProgram,
   type SlideshowState,
@@ -27,7 +26,6 @@ export interface SlideView {
 
 export interface SlideshowControl {
   slideState: SlideView;
-  isPaused: boolean;
 }
 
 /** Index innerhalb der Folienliste halten, falls sie kürzer geworden ist. */
@@ -45,7 +43,6 @@ export function useSlideshow(program: SlideProgram, transitionMs: number | null)
     index: 0,
     page: 0,
     startedAt: Date.now(),
-    paused: false,
     direction: 'next',
     pinnedMatchId: null,
     finalUntil: null,
@@ -107,16 +104,6 @@ export function useSlideshow(program: SlideProgram, transitionMs: number | null)
     applyChange(next);
   }, [applyChange, currentState]);
 
-  const step = useCallback((delta: 1 | -1) => {
-    applyChange(stepSlide(programRef.current, currentState(), delta, Date.now()));
-  }, [applyChange, currentState]);
-
-  const togglePause = useCallback(() => {
-    const cur = currentState();
-    // Fortsetzen startet eine volle Anzeigedauer, wie bisher.
-    commit({ ...cur, paused: !cur.paused, startedAt: Date.now() });
-  }, [commit, currentState]);
-
   const view = useMemo(() => clampState(state, count), [state, count]);
   const wake = wakeAt(program, view);
 
@@ -139,28 +126,6 @@ export function useSlideshow(program: SlideProgram, transitionMs: number | null)
     return () => clearTimeout(timer);
   }, [wake, transitionDirection, tick, takt]);
 
-  // Tasten: Pfeile wechseln, Leertaste pausiert. Escape und c bleiben in der Seite.
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case 'ArrowRight':
-        case 'ArrowDown':
-          step(1);
-          break;
-        case 'ArrowLeft':
-        case 'ArrowUp':
-          step(-1);
-          break;
-        case ' ':
-          e.preventDefault();
-          togglePause();
-          break;
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [step, togglePause]);
-
   // Unmount mitten im Übergang: der Übergangs-Timer darf danach keinen Zustand mehr setzen.
   useEffect(() => () => {
     if (transitionTimerRef.current !== null) { clearTimeout(transitionTimerRef.current); }
@@ -174,5 +139,5 @@ export function useSlideshow(program: SlideProgram, transitionMs: number | null)
     pinnedMatchId: view.pinnedMatchId ?? null,
   }), [view, transitionDirection]);
 
-  return { slideState, isPaused: view.paused };
+  return { slideState };
 }

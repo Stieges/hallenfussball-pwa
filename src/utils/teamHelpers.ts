@@ -8,6 +8,7 @@
  */
 
 import { Match, Team, Tournament } from '../types/tournament';
+import { matchInvolvesTeam } from '../core/models/matchSlot';
 
 /**
  * Check if a match has a result (score entered)
@@ -20,10 +21,24 @@ export function matchHasResult(match: Match): boolean {
 }
 
 /**
+ * „Spiel mit Ereignissen" (@W5-009): Ergebnis (auch halb), Laufzeit-Events oder Status ungleich geplant.
+ * Ein geschütztes Spiel bleibt beim Entfernen eines Teams und bei der Neuplanung erhalten.
+ */
+export function matchHasEvents(match: Match): boolean {
+  return (
+    match.scoreA !== undefined ||
+    match.scoreB !== undefined ||
+    matchHasResult(match) ||
+    (match.events?.length ?? 0) > 0 ||
+    (match.matchStatus !== undefined && match.matchStatus !== 'scheduled')
+  );
+}
+
+/**
  * Get all matches involving a specific team
  */
 export function getTeamMatches(matches: Match[], teamId: string): Match[] {
-  return matches.filter(m => m.teamA === teamId || m.teamB === teamId);
+  return matches.filter(m => matchInvolvesTeam(m, teamId));
 }
 
 /**
@@ -37,6 +52,11 @@ export interface TeamMatchAnalysis {
   matchesWithoutResults: number;
   matchesWithResultsIds: string[];
   matchesWithoutResultsIds: string[];
+  /** @W5-009: geschützt = matchHasEvents (Ergebnis auch halb, Ereignisse oder Status ungleich geplant). */
+  matchesProtected: number;
+  matchesProtectedIds: string[];
+  matchesUnprotected: number;
+  matchesUnprotectedIds: string[];
 }
 
 export function analyzeTeamMatches(
@@ -47,6 +67,8 @@ export function analyzeTeamMatches(
 
   const withResults = teamMatches.filter(matchHasResult);
   const withoutResults = teamMatches.filter(m => !matchHasResult(m));
+  const protectedMatches = teamMatches.filter(matchHasEvents);
+  const unprotectedMatches = teamMatches.filter(m => !matchHasEvents(m));
 
   return {
     teamId: team.id,
@@ -56,6 +78,10 @@ export function analyzeTeamMatches(
     matchesWithoutResults: withoutResults.length,
     matchesWithResultsIds: withResults.map(m => m.id),
     matchesWithoutResultsIds: withoutResults.map(m => m.id),
+    matchesProtected: protectedMatches.length,
+    matchesProtectedIds: protectedMatches.map(m => m.id),
+    matchesUnprotected: unprotectedMatches.length,
+    matchesUnprotectedIds: unprotectedMatches.map(m => m.id),
   };
 }
 
@@ -86,7 +112,7 @@ export interface TeamDeletionResult {
  * - Matches WITH results: Keep in schedule, mark team as removed
  */
 export function deleteTeamSafely(
-  tournament: Tournament,
+  tournament: Pick<Tournament, 'teams' | 'matches'>,
   teamId: string
 ): TeamDeletionResult {
   const team = tournament.teams.find(t => t.id === teamId);
@@ -95,10 +121,13 @@ export function deleteTeamSafely(
     throw new Error(`Team with ID ${teamId} not found`);
   }
 
+  // @W5-009: dieselbe Aufteilung wie die Warnung im Dialog (analyzeTeamMatches, matchHasEvents).
   const analysis = analyzeTeamMatches(team, tournament.matches);
+  const protectedIds = analysis.matchesProtectedIds;
+  const unprotectedIds = analysis.matchesUnprotectedIds;
 
-  // If team has matches with results, mark as removed instead of deleting
-  if (analysis.matchesWithResults > 0) {
+  // If team has protected matches, mark as removed instead of deleting
+  if (protectedIds.length > 0) {
     // Mark team as removed
     const updatedTeams = tournament.teams.map(t =>
       t.id === teamId
@@ -106,62 +135,68 @@ export function deleteTeamSafely(
         : t
     );
 
-    // Remove only matches without results
+    // Remove only unprotected matches
     const updatedMatches = tournament.matches.filter(
-      m => !analysis.matchesWithoutResultsIds.includes(m.id)
+      m => !unprotectedIds.includes(m.id)
     );
 
     return {
       success: true,
       team,
-      matchesRemoved: analysis.matchesWithoutResults,
-      matchesPreserved: analysis.matchesWithResults,
+      matchesRemoved: unprotectedIds.length,
+      matchesPreserved: protectedIds.length,
       updatedTeams,
       updatedMatches,
-      removedMatchIds: analysis.matchesWithoutResultsIds,
+      removedMatchIds: unprotectedIds,
     };
   }
 
-  // Team has NO matches with results - fully delete
+  // Team has NO protected matches - fully delete
   const updatedTeams = tournament.teams.filter(t => t.id !== teamId);
   const updatedMatches = tournament.matches.filter(
-    m => m.teamA !== teamId && m.teamB !== teamId
+    m => !matchInvolvesTeam(m, teamId)
   );
 
   return {
     success: true,
     team,
-    matchesRemoved: analysis.matchesWithoutResults,
+    matchesRemoved: unprotectedIds.length,
     matchesPreserved: 0,
     updatedTeams,
     updatedMatches,
-    removedMatchIds: analysis.matchesWithoutResultsIds,
+    removedMatchIds: unprotectedIds,
   };
 }
 
+/** Übersetzungsfunktion für die Lösch-Warnung (i18next-kompatibel, Plural über `count`). */
+export type TranslateFn = (key: string, values?: Record<string, string | number>) => string;
+
 /**
- * Generate warning message for team deletion
+ * Warnung im Lösch-Dialog (Texte in tournament.json, teams.deleteDialog, Plural `_one`/`_other`).
+ * Die Aufteilung folgt deleteTeamSafely: geschützte Spiele bleiben, die übrigen fallen weg.
  */
-export function getTeamDeletionWarning(analysis: TeamMatchAnalysis): string | null {
-  if (analysis.matchesWithResults === 0 && analysis.matchesWithoutResults === 0) {
+export function getTeamDeletionWarning(analysis: TeamMatchAnalysis, t: TranslateFn): string | null {
+  const name = analysis.teamName;
+  const protectedCount = analysis.matchesProtected;
+  const unprotectedCount = analysis.matchesUnprotected;
+
+  if (protectedCount === 0 && unprotectedCount === 0) {
     return null; // No matches, no warning needed
   }
 
-  if (analysis.matchesWithResults === 0) {
-    // Only matches without results - simple deletion
-    return `"${analysis.teamName}" hat ${analysis.matchesWithoutResults} geplante Spiele ohne Ergebnisse. Diese werden aus dem Spielplan entfernt.`;
+  if (protectedCount === 0) {
+    return t('teams.deleteDialog.warningUnprotected', { name, count: unprotectedCount });
   }
 
-  if (analysis.matchesWithoutResults === 0) {
-    // Only matches with results - team will be marked as removed
-    return `"${analysis.teamName}" hat ${analysis.matchesWithResults} Spiele mit Ergebnissen. Das Team wird als "entfernt" markiert, die Ergebnisse bleiben erhalten.`;
+  if (unprotectedCount === 0) {
+    return t('teams.deleteDialog.warningProtected', { name, count: protectedCount });
   }
 
-  // Mixed case
-  return `"${analysis.teamName}" hat ${analysis.matchesWithResults} Spiele mit Ergebnissen und ${analysis.matchesWithoutResults} ohne Ergebnisse.\n\n` +
-    `• Die ${analysis.matchesWithoutResults} Spiele ohne Ergebnisse werden entfernt.\n` +
-    `• Die ${analysis.matchesWithResults} Spiele mit Ergebnissen bleiben erhalten.\n` +
-    `• Das Team wird als "entfernt" markiert.`;
+  return t('teams.deleteDialog.warningMixed', {
+    name,
+    kept: t('teams.deleteDialog.partKept', { count: protectedCount }),
+    removed: t('teams.deleteDialog.partRemoved', { count: unprotectedCount }),
+  });
 }
 
 /**
@@ -307,31 +342,5 @@ export function getTeamForDisplay(
   return {
     id: teamId,
     name: fallbackName,
-  };
-}
-
-/**
- * Find a team by name and return display-ready team object with logo and colors
- * Useful when only team name is available (e.g., from ScheduledMatch.homeTeam)
- */
-export function getTeamByNameForDisplay(
-  teams: Team[] | undefined,
-  teamName: string
-): TeamForDisplay {
-  const team = teams?.find(t => t.name === teamName);
-
-  if (team) {
-    return {
-      id: team.id,
-      name: team.name,
-      logo: team.logo,
-      colors: team.colors,
-    };
-  }
-
-  // Fallback: Create basic team object
-  return {
-    id: `temp-${teamName}`,
-    name: teamName,
   };
 }

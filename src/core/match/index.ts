@@ -18,3 +18,18 @@ export { toServerState, type ServerMatchState } from './serverState';
 export { activePenalties, elapsedAt, penaltyRemainingMs } from './penalties';
 export { shootoutWinner } from './handlers/shootout';
 export { transitions, findTransition, isActorAllowed, type TransitionRow } from './transitions';
+export {
+  AMENDABLE_EVENT_TYPES,
+  DETAIL_FIELDS,
+  allowedDetailFields,
+  type DetailField,
+  type EventDetails,
+} from './details';
+export { serverRules, type ServerRulesInput } from './client/serverRules';
+export {
+  cacheColumns,
+  type CacheColumns,
+  type CacheDecidedBy,
+  type CacheLiveState,
+  type CacheMatchStatus,
+} from './client/cacheColumns';

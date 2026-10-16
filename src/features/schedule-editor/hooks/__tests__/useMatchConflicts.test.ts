@@ -12,6 +12,12 @@ import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useMatchConflicts, useMatchConflictsFromTournament } from '../useMatchConflicts';
 import { Match, Team, Tournament } from '../../../../types/tournament';
+import { vs, testUuid } from '../../../../test/matchSlotFixtures';
+
+const TEAM_A = testUuid(1);
+const TEAM_B = testUuid(2);
+const TEAM_C = testUuid(3);
+const TEAM_D = testUuid(4);
 
 // ============================================================================
 // Test Helpers
@@ -22,8 +28,7 @@ function createMatch(overrides: Partial<Match> = {}): Match {
     id: `match-${Math.random().toString(36).slice(2, 7)}`,
     round: 1,
     field: 1,
-    teamA: 'team-a',
-    teamB: 'team-b',
+    ...vs(TEAM_A, TEAM_B),
     scheduledTime: new Date('2024-01-15T10:00:00'),
     matchStatus: 'scheduled',
     ...overrides,
@@ -78,22 +83,20 @@ describe('useMatchConflicts', () => {
 
   it('should detect team double booking conflicts', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'm1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'm2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];
@@ -113,28 +116,25 @@ describe('useMatchConflicts', () => {
 
   it('should provide O(1) lookup via conflictsByMatch', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'm1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'm2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'm3',
-        teamA: 'team-b',
-        teamB: 'team-c',
+        ...vs(TEAM_B, TEAM_C),
         scheduledTime: new Date('2024-01-15T11:00:00'),
       }),
     ];
@@ -156,22 +156,20 @@ describe('useMatchConflicts', () => {
 
   it('should provide getMatchConflicts helper', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'm1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'm2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];
@@ -193,28 +191,25 @@ describe('useMatchConflicts', () => {
 
   it('should provide matchHasConflicts helper', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'm1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'm2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'm3',
-        teamA: 'team-b',
-        teamB: 'team-c',
+        ...vs(TEAM_B, TEAM_C),
         scheduledTime: new Date('2024-01-15T11:00:00'),
       }),
     ];
@@ -234,23 +229,21 @@ describe('useMatchConflicts', () => {
 
   it('should provide matchHasErrors helper', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     // Team double booking is an error, break violation is a warning
     const matches = [
       createMatch({
         id: 'm1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'm2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];
@@ -273,15 +266,13 @@ describe('useMatchConflicts', () => {
       createMatch({
         id: 'm1',
         field: 1,
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'm2',
         field: 2,
-        teamA: 'team-c',
-        teamB: 'team-d',
+        ...vs(TEAM_C, TEAM_D),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];
@@ -312,22 +303,20 @@ describe('useMatchConflicts', () => {
 
   it('should respect enabled flag', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'm1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'm2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];
@@ -392,23 +381,21 @@ describe('useMatchConflicts', () => {
 
   it('should count errors and warnings separately', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     // Create scenario with both error (team double booking) and warning (break violation)
     const matches = [
       createMatch({
         id: 'm1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'm2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:00:00'), // Error: same time as m1 with same team
       }),
     ];
@@ -446,22 +433,20 @@ describe('useMatchConflictsFromTournament', () => {
 
   it('should work with tournament object', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'm1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'm2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];
@@ -483,22 +468,20 @@ describe('useMatchConflictsFromTournament', () => {
 
   it('should respect enabled flag', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     const matches = [
       createMatch({
         id: 'm1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'm2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];
@@ -517,23 +500,21 @@ describe('useMatchConflictsFromTournament', () => {
 
   it('should use tournament game duration settings', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
-      createTeam({ id: 'team-c', name: 'Team C' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
+      createTeam({ id: TEAM_C, name: 'Team C' }),
     ];
 
     // With 5 min duration, these matches don't overlap
     const matches = [
       createMatch({
         id: 'm1',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
       createMatch({
         id: 'm2',
-        teamA: 'team-a',
-        teamB: 'team-c',
+        ...vs(TEAM_A, TEAM_C),
         scheduledTime: new Date('2024-01-15T10:05:00'),
       }),
     ];
@@ -572,8 +553,8 @@ describe('useMatchConflictsFromTournament', () => {
 
 describe('Memoization', () => {
   it('should not recalculate conflicts when inputs are the same', () => {
-    const teams = [createTeam({ id: 'team-a', name: 'Team A' })];
-    const matches = [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-a' })];
+    const teams = [createTeam({ id: TEAM_A, name: 'Team A' })];
+    const matches = [createMatch({ id: 'm1', ...vs(TEAM_A, TEAM_A) })];
 
     const { result, rerender } = renderHook(() =>
       useMatchConflicts({
@@ -594,12 +575,12 @@ describe('Memoization', () => {
 
   it('should recalculate when matches change', () => {
     const teams = [
-      createTeam({ id: 'team-a', name: 'Team A' }),
-      createTeam({ id: 'team-b', name: 'Team B' }),
+      createTeam({ id: TEAM_A, name: 'Team A' }),
+      createTeam({ id: TEAM_B, name: 'Team B' }),
     ];
 
     let matches = [
-      createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b' }),
+      createMatch({ id: 'm1', ...vs(TEAM_A, TEAM_B) }),
     ];
 
     const { result, rerender } = renderHook(
@@ -619,8 +600,7 @@ describe('Memoization', () => {
       ...matches,
       createMatch({
         id: 'm2',
-        teamA: 'team-a',
-        teamB: 'team-b',
+        ...vs(TEAM_A, TEAM_B),
         scheduledTime: new Date('2024-01-15T10:00:00'),
       }),
     ];

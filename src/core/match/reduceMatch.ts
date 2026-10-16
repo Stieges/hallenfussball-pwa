@@ -55,10 +55,21 @@ function stripNullsAndSortKeys(value: unknown): unknown {
   return value;
 }
 
+/**
+ * C0a (V3): beim MATCH_START zählt `payload.rules` nicht mit -- der Server setzt die Regeln selbst
+ * (R4), wie `match_engine.dedupe_key` (003). Eine Wiederholung mit Geräte-Regeln ist dasselbe Ereignis.
+ */
+function comparablePayload(event: EngineEvent): Record<string, unknown> {
+  if (event.type !== 'MATCH_START') {
+    return event.payload;
+  }
+  return Object.fromEntries(Object.entries(event.payload).filter(([key]) => key !== 'rules'));
+}
+
 function canonicalComparableContent(event: EngineEvent): string {
   const normalized = {
     clockMs: event.clockMs,
-    payload: stripNullsAndSortKeys(event.payload),
+    payload: stripNullsAndSortKeys(comparablePayload(event)),
     section: event.section,
     targetId: event.targetId ?? null,
     teamId: event.teamId ?? null,

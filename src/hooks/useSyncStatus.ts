@@ -33,6 +33,8 @@ export interface SyncState {
     failedChanges: number;
     /** Failed mutations (dead-letter queue) with their reason (lastError), newest last */
     failedMutations: FailedMutationItem[];
+    /** A-06j: Fehlerklasse des letzten Queue-Versuchs (`getLastFailure()`); optional, damit Mocks gueltig bleiben */
+    queueLastFailure?: 'transient' | 'permanent' | 'storage' | 'storageBlocked' | null;
 }
 
 export interface UseSyncStatusReturn extends SyncState {
@@ -104,6 +106,7 @@ export function useSyncStatus(): UseSyncStatusReturn {
             pendingChanges: initialStatus.pendingCount,
             failedChanges: initialStatus.failedCount,
             failedMutations: mutationQueue.getFailedMutations(),
+            queueLastFailure: mutationQueue.getLastFailure(),
         }));
 
         // Subscribe to updates
@@ -114,6 +117,7 @@ export function useSyncStatus(): UseSyncStatusReturn {
                 pendingChanges: queueStatus.pendingCount,
                 failedChanges: queueStatus.failedCount,
                 failedMutations: mutationQueue.getFailedMutations(),
+                queueLastFailure: mutationQueue.getLastFailure(),
             }));
         });
 

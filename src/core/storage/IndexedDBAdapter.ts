@@ -44,11 +44,35 @@ export class IndexedDBAdapter implements IStorageAdapter {
   }
 
   private getStore(mode: IDBTransactionMode): IDBObjectStore {
+    return this.getTransaction(mode).objectStore(this.storeName);
+  }
+
+  private getTransaction(mode: IDBTransactionMode): IDBTransaction {
     if (!this.db) {
       throw new StorageError('IndexedDB not initialized. Call init() first.');
     }
-    const transaction = this.db.transaction(this.storeName, mode);
-    return transaction.objectStore(this.storeName);
+    return this.db.transaction(this.storeName, mode);
+  }
+
+  /**
+   * Erfolg erst nach Commit der Transaktion melden (@FU-004). Bricht die Transaktion
+   * danach ab (z. B. Speicher voll beim Commit), wird abgelehnt statt still verworfen.
+   */
+  private resolveOnCommit(
+    transaction: IDBTransaction,
+    resolve: () => void,
+    reject: (error: StorageError) => void,
+    message: string
+  ): void {
+    transaction.oncomplete = () => {
+      resolve();
+    };
+    transaction.onerror = () => {
+      reject(new StorageError(message, transaction.error));
+    };
+    transaction.onabort = () => {
+      reject(new StorageError(message, transaction.error));
+    };
   }
 
   async get<T>(key: string): Promise<T | null> {
@@ -76,15 +100,14 @@ export class IndexedDBAdapter implements IStorageAdapter {
     return new Promise((resolve, reject) => {
       try {
         // We store the object as { key: "...", value: ... } because keyPath is "key"
-        const request = this.getStore('readwrite').put({ key, value });
+        const transaction = this.getTransaction('readwrite');
+        const request = transaction.objectStore(this.storeName).put({ key, value });
 
         request.onerror = () => {
           reject(new StorageError(`Failed to set key '${key}' in IndexedDB`, request.error));
         };
 
-        request.onsuccess = () => {
-          resolve();
-        };
+        this.resolveOnCommit(transaction, resolve, reject, `Failed to set key '${key}' in IndexedDB`);
       } catch (error) {
         reject(new StorageError(`Unexpected error setting key '${key}'`, error));
       }
@@ -94,15 +117,14 @@ export class IndexedDBAdapter implements IStorageAdapter {
   async delete(key: string): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        const request = this.getStore('readwrite').delete(key);
+        const transaction = this.getTransaction('readwrite');
+        const request = transaction.objectStore(this.storeName).delete(key);
 
         request.onerror = () => {
           reject(new StorageError(`Failed to delete key '${key}' from IndexedDB`, request.error));
         };
 
-        request.onsuccess = () => {
-          resolve();
-        };
+        this.resolveOnCommit(transaction, resolve, reject, `Failed to delete key '${key}' from IndexedDB`);
       } catch (error) {
         reject(new StorageError(`Unexpected error deleting key '${key}'`, error));
       }
@@ -112,15 +134,14 @@ export class IndexedDBAdapter implements IStorageAdapter {
   async clear(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        const request = this.getStore('readwrite').clear();
+        const transaction = this.getTransaction('readwrite');
+        const request = transaction.objectStore(this.storeName).clear();
 
         request.onerror = () => {
           reject(new StorageError('Failed to clear IndexedDB', request.error));
         };
 
-        request.onsuccess = () => {
-          resolve();
-        };
+        this.resolveOnCommit(transaction, resolve, reject, 'Failed to clear IndexedDB');
       } catch (error) {
         reject(new StorageError('Unexpected error clearing IndexedDB', error));
       }

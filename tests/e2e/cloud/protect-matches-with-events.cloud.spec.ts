@@ -31,7 +31,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { test, expect } from './fixtures';
-import { getLocalServiceRoleClient, safeCleanup } from './helpers';
+import { expectLegacyQueueKeysEmpty, getLocalServiceRoleClient, queueKeys, safeCleanup } from './helpers';
 import { E2E_USERS } from './testData';
 import { mapTournamentFromSupabase } from '../../../src/core/repositories/supabaseMappers';
 import type { Database } from '../../../src/types/supabase';
@@ -56,7 +56,7 @@ async function fetchOwnerId(url: string, headers: Record<string, string>): Promi
   return ownerId;
 }
 
-test('Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Spiel + Ereignisse bleiben, Rest wird gespeichert, sichtbarer Hinweis (A6, Ruling AN)', async ({
+test('@FU-012 Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Spiel + Ereignisse bleiben, Rest wird gespeichert, sichtbarer Hinweis (A6, Ruling AN)', async ({
   asRole,
 }) => {
   const { url, headers } = getLocalServiceRoleClient();
@@ -184,12 +184,10 @@ test('Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Spiel + Er
 
     const mappedStalePayload = mapTournamentFromSupabase(tournamentRow, teamRows, staleMatchRows);
     // `version` bewusst entfernt: ohne sie nimmt `SupabaseRepository.save()` den
-    // Legacy/Fallback-Zweig (blindes Upsert statt Optimistic-Locking-Vergleich) -- robuster
-    // gegen einen möglichen Wettlauf mit `useInitialSync.ts#syncLocalToCloud`, das beim ALLERERSTEN
-    // Laden einer der App noch unbekannten Seite ebenfalls die Turnierzeile anfasst (beobachtet:
-    // ein `OptimisticLockError`, wenn `version` gesetzt blieb -- nicht Teil dessen, was A6 hier
-    // beweisen soll). A6 selbst betrifft ausschließlich die matches-Behandlung weiter unten in
-    // save(), nicht den Tournament-Zeilen-Schritt.
+    // Legacy/Fallback-Zweig (blindes Upsert statt Optimistic-Locking-Vergleich). Der frühere
+    // Wettlauf mit useInitialSync (A-07e, entfernt) ist damit erledigt; der Fallback bleibt
+    // für diesen Test als bewusste Vorgabe. A6 selbst betrifft ausschließlich die
+    // matches-Behandlung weiter unten in save(), nicht den Tournament-Zeilen-Schritt.
     const { version: _unusedVersion, ...stalePayload } = mappedStalePayload;
 
     // --- 3. Die veraltete SAVE_TOURNAMENT-Mutation VOR dem ersten Laden der Seite injizieren
@@ -201,7 +199,8 @@ test('Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Spiel + Er
     //        Die echte MutationQueue lädt `mutation_queue_v1` beim App-Start und verarbeitet es
     //        sofort (`if (navigator.onLine) { void this.process(); }`, GenericMutationQueue.ts). ---
     const ownerPage = await asRole('owner');
-    await ownerPage.addInitScript((payload) => {
+    const staleKeys = queueKeys(ownerId);
+    await ownerPage.addInitScript(({ payload, queueKey }) => {
       const item = {
         id: 'a6-e2e-stale-save',
         type: 'SAVE_TOURNAMENT',
@@ -209,8 +208,8 @@ test('Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Spiel + Er
         timestamp: Date.now(),
         retryCount: 0,
       };
-      window.localStorage.setItem('mutation_queue_v1', JSON.stringify([item]));
-    }, stalePayload);
+      window.localStorage.setItem(queueKey, JSON.stringify([item]));
+    }, { payload: stalePayload, queueKey: staleKeys.queue });
 
     // --- 4. Sichtbarer Hinweis (I2, Ruling AN) -- ein Toast (role="alert"), KEIN dauerhafter
     //        Fehler in der Warteschlange. ---
@@ -222,7 +221,7 @@ test('Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Spiel + Er
     // MINDESTENS ein sichtbarer, korrekt formulierter Hinweis -- nicht die exakte Anzahl.
     const toast = ownerPage.getByRole('alert').filter({ hasText: 'Spiel 2' }).first();
     await expect(toast).toBeVisible({ timeout: 20000 });
-    await expect(toast).toContainText('hat Einträge und wurde nicht gelöscht');
+    await expect(toast).toContainText('hat Einträge – nur die Turnierleitung kann es absetzen');
 
     // --- 5. Die Mutation gilt als ERFOLGREICH -- keine Dead-Letter-Anzeige (Ruling AN: das darf
     //        kein dauerhafter Fehler sein). Projekt-unabhängig über localStorage geprüft statt
@@ -230,12 +229,13 @@ test('Owner speichert einen Spielplan ohne ein Spiel mit Ereignissen: Spiel + Er
     //        hinter einer Spoke-Hub-Navigation auf `cloud-mobile`, die ohne einen zusätzlichen
     //        Klickpfad nicht erreichbar ist; der Toast (Schritt 4) und die DB-Zeilen (Schritt 6/7)
     //        sind der eigentliche, projektunabhängige Beleg. ---
-    const failedTypesAfter = await ownerPage.evaluate(() => {
-      const raw = window.localStorage.getItem('mutation_queue_failed_v1');
+    const failedTypesAfter = await ownerPage.evaluate((failedKey) => {
+      const raw = window.localStorage.getItem(failedKey);
       if (!raw) { return []; }
       const parsed = JSON.parse(raw) as Array<{ id?: string }>;
       return parsed.map((item) => item.id).filter((id): id is string => typeof id === 'string');
-    });
+    }, staleKeys.failed);
+    await expectLegacyQueueKeysEmpty(ownerPage);
     expect(failedTypesAfter).not.toContain('a6-e2e-stale-save');
 
     // --- 6. Spiel + Ereignis stehen unverändert in der DB (nicht still gelöscht) ---------------
@@ -308,6 +308,22 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen: wird abgelehnt (B-0
       throw new Error(`Turnier anlegen fehlgeschlagen: ${tournamentRes.status} ${await tournamentRes.text()}`);
     }
 
+    // A-23: Spiele tragen Pflicht-Slots (matches_slot_a_present/_b_present, A-02) -- ohne Teams
+    // lehnt die DB das Spiel ab.
+    const teamAId = randomUUID();
+    const teamBId = randomUUID();
+    const teamsRes = await fetch(`${url}/rest/v1/teams`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify([
+        { id: teamAId, tournament_id: tournamentId, name: 'A6 Kaskade Team A' },
+        { id: teamBId, tournament_id: tournamentId, name: 'A6 Kaskade Team B' },
+      ]),
+    });
+    if (!teamsRes.ok) {
+      throw new Error(`Teams anlegen fehlgeschlagen: ${teamsRes.status} ${await teamsRes.text()}`);
+    }
+
     const matchRes = await fetch(`${url}/rest/v1/matches`, {
       method: 'POST',
       headers: jsonHeaders,
@@ -317,6 +333,8 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen: wird abgelehnt (B-0
         round: 1,
         field: 1,
         match_number: 1,
+        team_a_id: teamAId,
+        team_b_id: teamBId,
         match_status: 'scheduled',
       }),
     });
@@ -367,7 +385,8 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen: wird abgelehnt (B-0
     await ownerPage.goto('/#/');
     await ownerPage.waitForLoadState('networkidle');
 
-    await ownerPage.evaluate((id) => {
+    const deleteKeys = queueKeys(ownerId);
+    await ownerPage.evaluate(({ id, queueKey }) => {
       const item = {
         id: 'a6-e2e-delete-tournament',
         type: 'DELETE_TOURNAMENT',
@@ -375,8 +394,8 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen: wird abgelehnt (B-0
         timestamp: Date.now(),
         retryCount: 0,
       };
-      window.localStorage.setItem('mutation_queue_v1', JSON.stringify([item]));
-    }, tournamentId);
+      window.localStorage.setItem(queueKey, JSON.stringify([item]));
+    }, { id: tournamentId, queueKey: deleteKeys.queue });
 
     await ownerPage.reload();
     await ownerPage.waitForLoadState('networkidle');
@@ -386,11 +405,11 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen: wird abgelehnt (B-0
     await expect
       .poll(
         async () =>
-          ownerPage.evaluate(() => {
-            const raw = window.localStorage.getItem('mutation_queue_v1');
+          ownerPage.evaluate((queueKey) => {
+            const raw = window.localStorage.getItem(queueKey);
             const items = raw ? (JSON.parse(raw) as Array<{ retryCount: number }>) : [];
             return items.reduce((max, item) => Math.max(max, item.retryCount), 0);
-          }),
+          }, deleteKeys.queue),
         {
           message:
             'DELETE_TOURNAMENT sollte als permanenter Fehler (nicht transient) in der Queue gezählt werden',
@@ -398,6 +417,7 @@ test('Owner löscht ein Turnier mit Spielen UND Ereignissen: wird abgelehnt (B-0
         }
       )
       .toBeGreaterThanOrEqual(1);
+    await expectLegacyQueueKeysEmpty(ownerPage);
 
     // 2. Die Ablehnung kam vom Server mit 'tournament_started' (ERRCODE P0001).
     await expect

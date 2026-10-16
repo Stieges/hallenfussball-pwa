@@ -36,12 +36,16 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * „Spielplan“ (G57), „Gruppen + Finalrunde“ (G71), „Wertung“ (G72), „5 Schützen je Team“ (G74). Die Kopfzeile verschiebt
  * alles darunter; Bilder (Grafiken) erfasst die Summe nicht. Die Maße der alten Stände: 1f942dff25ce, 8bd3acd911de,
  * 2cff8b00a80b, a492098473fc (hoch 12, hoch 20, quer 12, quer 20).
+ * Neu aufgenommen beim Merge von main in Spur C (16.10., I-C): der Generator auf main ändert den Plan, der PDF-Code nicht.
+ * Halbfinale über Kreuz 1A–2B / 1B–2A (W8, @TM-015; vorher 2A–1B / 1A–2B), dadurch Heim-/Gast-Spalten 1–2 mm anders breit;
+ * bei 20 Spielen neue Reihenfolge der Gruppenspiele, Ende 15:10 statt 15:30. Seitenzahl unverändert, Text-für-Text
+ * verglichen (Lauf vor/nach dem Merge). C8-F-Stände: 2ce4400a8222, 5290b179abed, 3da3988d5446, 4f32e0da30fc, EN a89e4efe5be4.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': '2ce4400a8222',
-  '20 Spiele, hoch': '5290b179abed',
-  '12 Spiele, quer': '3da3988d5446',
-  '20 Spiele, quer': '4f32e0da30fc',
+  '12 Spiele, hoch': 'bb3e0ca5e417',
+  '20 Spiele, hoch': '5bd69682be36',
+  '12 Spiele, quer': '783e5046a4f9',
+  '20 Spiele, quer': 'd652f84ac302',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -56,7 +60,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('a89e4efe5be4');
+    expect(layoutDigest(pages)).toBe('4b9bdb85b3f8');
   });
 });
 

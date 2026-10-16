@@ -9,7 +9,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { generateFullSchedule } from '../../core/generators';
 import type { ScheduledMatch } from '../../core/generators';
 import type { Tournament } from '../../types/tournament';
-import { buildLiveViewTournament, SHARE_CODE } from './liveViewFixture';
+import { buildLiveViewTournament, SHARE_CODE, TEAM_IDS } from './liveViewFixture';
 
 const { supabaseGet, localGet } = vi.hoisted(() => ({
   supabaseGet: vi.fn(),
@@ -30,6 +30,9 @@ vi.mock('../../core/repositories/LocalStorageRepository', () => ({
 
 import { LiveViewScreen } from '../LiveViewScreen';
 import { RepositoryProvider } from '../../core/contexts/RepositoryContext';
+
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../test/realDeI18n')).initRealDeI18n();
 
 const MY_TEAM_KEY = `live:${SHARE_CODE}:myTeam`;
 const GROUP_B_TEAMS = ['VfL Mitte', 'FC Hafen', 'SV Berg', 'TuS Tal'];
@@ -72,9 +75,6 @@ function matchOf(tournament: Tournament, matchNumber: number): ScheduledMatch {
   return found;
 }
 
-function countOccurrences(text: string, needle: string): number {
-  return text.split(needle).length - 1;
-}
 
 describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
   beforeEach(() => {
@@ -212,7 +212,11 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       expect(text).not.toContain('matchCard.live');
       // Spiel 1 und Spiel 7 haben beide einen Stand und gelten darum als beendet;
       // jede Karte steht zweimal im DOM (Desktop- und Mobil-Ansicht).
-      expect(countOccurrences(text, 'matchCard.finished')).toBe(4);
+      // Status-Beschriftung „Ende“ als eigenes Blatt-Element (B-41: deutscher Text statt Schlüssel).
+      const endeLabels = Array.from(container.querySelectorAll('*')).filter(
+        (el) => el.children.length === 0 && el.textContent === 'Ende'
+      );
+      expect(endeLabels).toHaveLength(4);
       // Je Spiel: der Status steht am Kreis (data-match-status), nicht nur im Zähler.
       const circles = container.querySelectorAll(`[data-testid="match-circle-${m7.id}"]`);
       expect(circles.length).toBeGreaterThan(0);
@@ -243,7 +247,7 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
     });
 
     it('Bestand: Mein Team (gespeichert + ?my=1) zeigt keine Spiele der anderen Gruppe', async () => {
-      vi.mocked(localStorage.getItem).mockImplementation((key: string) => (key === MY_TEAM_KEY ? 'team-nord' : null));
+      vi.mocked(localStorage.getItem).mockImplementation((key: string) => (key === MY_TEAM_KEY ? TEAM_IDS.nord : null));
       const t = buildLiveViewTournament({ hideRankingsForPublic: true });
       await renderWith(t, '?my=1');
       expect(screen.getAllByText('SV Süd').length).toBeGreaterThan(0);
@@ -258,7 +262,7 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Team wählen' }));
       const nord = screen.getAllByRole('button', { name: /FC Nord/ });
       fireEvent.click(nord[nord.length - 1]);
-      expect(localStorage.setItem).toHaveBeenCalledWith(MY_TEAM_KEY, 'team-nord');
+      expect(localStorage.setItem).toHaveBeenCalledWith(MY_TEAM_KEY, TEAM_IDS.nord);
       fireEvent.click(screen.getByRole('button', { name: /Nur meine/ }));
       expect(currentSearch().get('my')).toBe('1');
       for (const name of GROUP_B_TEAMS) {
@@ -283,7 +287,7 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       const t = buildLiveViewTournament();
       const { container } = await renderWith(t);
       expect(supabaseGet).toHaveBeenCalledTimes(1);
-      const root = container.firstElementChild as HTMLElement;
+      const root = container.querySelector('[lang="de"] > div')!;
       fireEvent.touchStart(root, { touches: [{ clientY: 0 }] });
       fireEvent.touchMove(root, { touches: [{ clientY: 200 }] });
       fireEvent.touchEnd(root);

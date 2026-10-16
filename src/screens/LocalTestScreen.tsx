@@ -11,6 +11,7 @@ import { useState, useEffect, CSSProperties, useCallback, useRef, TouchEvent, us
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cssVars, layoutHeights } from '../design-tokens';
+import { TeamSelectorDialog } from '../features/public-view/components/TeamSelectorDialog';
 import { Standing } from '../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
 import { calculateStandings, getMergedFinalRanking } from '../utils/calculations';
@@ -26,6 +27,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useHaptic } from '../hooks/useHaptic';
 import { BaseThemeSelector } from '../features/settings/components/BaseThemeSelector';
 import { Icons } from '../components/ui/Icons';
+import { matchTeamIds, matchInvolvesTeam } from '../core/models/matchSlot';
 import { ShareDialog } from '../components/dialogs/ShareDialog';
 
 // localStorage key for "Mein Team" selection
@@ -244,8 +246,7 @@ export const LocalTestScreen: React.FC = () => {
     tournament.matches
       .filter((m) => m.matchStatus === 'running')
       .forEach((m) => {
-        activeTeams.add(m.teamA);
-        activeTeams.add(m.teamB);
+        matchTeamIds(m).forEach((teamId) => activeTeams.add(teamId));
       });
     return activeTeams;
   }, [tournament.matches]);
@@ -273,7 +274,7 @@ export const LocalTestScreen: React.FC = () => {
     // Filter by "Nur meine Spiele"
     if (showOnlyMyTeam && myTeamId) {
       filteredMatches = filteredMatches.filter(
-        (m) => m.originalTeamA === myTeamId || m.originalTeamB === myTeamId
+        (m) => matchInvolvesTeam(m, myTeamId)
       );
     }
 
@@ -410,27 +411,6 @@ export const LocalTestScreen: React.FC = () => {
     marginBottom: cssVars.spacing.lg,
     gap: cssVars.spacing.md,
     flexWrap: 'wrap',
-  };
-
-  const teamSelectorStyle: CSSProperties = {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: cssVars.spacing.md,
-    zIndex: 1000,
-  };
-
-  const teamSelectorContentStyle: CSSProperties = {
-    background: cssVars.colors.background,
-    borderRadius: cssVars.borderRadius.xl,
-    padding: cssVars.spacing.lg,
-    maxWidth: '400px',
-    width: '100%',
-    maxHeight: '80vh',
-    overflow: 'auto',
   };
 
   const filterBarStyle: CSSProperties = {
@@ -708,42 +688,12 @@ export const LocalTestScreen: React.FC = () => {
 
         {/* Team Selector Modal */}
         {showTeamSelector && (
-          <div style={teamSelectorStyle} onClick={() => setShowTeamSelector(false)}>
-            <div style={teamSelectorContentStyle} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ marginBottom: cssVars.spacing.md, fontSize: cssVars.fontSizes.lg }}>
-                Mein Team wählen
-              </h3>
-              <p style={{ marginBottom: cssVars.spacing.md, color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
-                Wähle dein Team, um seine Spiele hervorzuheben.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm }}>
-                {/* "Kein Team" option */}
-                <Button
-                  variant={myTeamId === null ? 'primary' : 'secondary'}
-                  onClick={() => selectMyTeam(null)}
-                  style={{ justifyContent: 'flex-start' }}
-                >
-                  Kein Team (alle anzeigen)
-                </Button>
-                {/* Teams */}
-                {tournament.teams.map((team) => (
-                  <Button
-                    key={team.id}
-                    variant={myTeamId === team.id ? 'primary' : 'secondary'}
-                    onClick={() => selectMyTeam(team.id)}
-                    style={{ justifyContent: 'flex-start' }}
-                  >
-                    {team.name}
-                    {team.group && (
-                      <span style={{ marginLeft: 'auto', color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
-                        Gruppe {team.group}
-                      </span>
-                    )}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
+          <TeamSelectorDialog
+            teams={tournament.teams}
+            myTeamId={myTeamId}
+            onSelectTeam={selectMyTeam}
+            onClose={() => setShowTeamSelector(false)}
+          />
         )}
 
         {/* Tab Content */}

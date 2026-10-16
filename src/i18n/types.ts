@@ -8,6 +8,7 @@ import type deMonitor from './locales/de/monitor.json';
 import type deSettings from './locales/de/settings.json';
 import type deAdmin from './locales/de/admin.json';
 import type deSport from './locales/de/sport.json';
+import type dePublicView from './locales/de/publicView.json';
 
 /**
  * Module augmentation for type-safe i18next.
@@ -29,6 +30,7 @@ declare module 'i18next' {
       settings: typeof deSettings;
       admin: typeof deAdmin;
       sport: typeof deSport;
+      publicView: typeof dePublicView;
     };
   }
 }

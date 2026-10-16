@@ -5,18 +5,36 @@
 import { generateFullSchedule } from '../../core/generators';
 import { createMockTeam, createMockTournament } from '../../test/factories';
 import type { Match, Team, Tournament } from '../../types/tournament';
+import { groupRank, testUuid } from '../../test/matchSlotFixtures';
+import type { MatchSlot } from '../../core/models/schemas/MatchSlotSchema';
+
+// Merge Spur A/B: Spiele brauchen seit A-04b Slots. Fixture-Spiel-IDs sind keine UUIDs, daher ohne
+// Schema-Pruefung (resultOf verlangt eine UUID). Das Uebergangsfeld teamA/teamB bleibt wie bisher.
+const semiWinner = (matchId: string): MatchSlot => ({ kind: 'pending', source: { kind: 'matchResult', matchId, role: 'winner' } });
 
 export const SHARE_CODE = 'ABC123';
 
+/** Team-IDs sind seit A-01/A-04b UUIDs (Generator baut Slots ueber TeamIdSchema). */
+export const TEAM_IDS = {
+  nord: testUuid(101),
+  sued: testUuid(102),
+  west: testUuid(103),
+  ost: testUuid(104),
+  mitte: testUuid(105),
+  hafen: testUuid(106),
+  berg: testUuid(107),
+  tal: testUuid(108),
+} as const;
+
 const TEAMS: Team[] = [
-  createMockTeam({ id: 'team-nord', name: 'FC Nord', group: 'A' }),
-  createMockTeam({ id: 'team-sued', name: 'SV Süd', group: 'A' }),
-  createMockTeam({ id: 'team-west', name: 'TSV West', group: 'A' }),
-  createMockTeam({ id: 'team-ost', name: 'SC Ost', group: 'A' }),
-  createMockTeam({ id: 'team-mitte', name: 'VfL Mitte', group: 'B' }),
-  createMockTeam({ id: 'team-hafen', name: 'FC Hafen', group: 'B' }),
-  createMockTeam({ id: 'team-berg', name: 'SV Berg', group: 'B' }),
-  createMockTeam({ id: 'team-tal', name: 'TuS Tal', group: 'B' }),
+  createMockTeam({ id: TEAM_IDS.nord, name: 'FC Nord', group: 'A' }),
+  createMockTeam({ id: TEAM_IDS.sued, name: 'SV Süd', group: 'A' }),
+  createMockTeam({ id: TEAM_IDS.west, name: 'TSV West', group: 'A' }),
+  createMockTeam({ id: TEAM_IDS.ost, name: 'SC Ost', group: 'A' }),
+  createMockTeam({ id: TEAM_IDS.mitte, name: 'VfL Mitte', group: 'B' }),
+  createMockTeam({ id: TEAM_IDS.hafen, name: 'FC Hafen', group: 'B' }),
+  createMockTeam({ id: TEAM_IDS.berg, name: 'SV Berg', group: 'B' }),
+  createMockTeam({ id: TEAM_IDS.tal, name: 'TuS Tal', group: 'B' }),
 ];
 
 export interface FixtureOptions {
@@ -48,8 +66,8 @@ export function buildLiveViewTournament(opts: FixtureOptions = {}): Tournament {
     const slot = m.slot ?? 0;
     const match: Match = {
       id: m.id,
-      teamA: m.originalTeamA,
-      teamB: m.originalTeamB,
+      slotA: m.slotA,
+      slotB: m.slotB,
       group: m.group,
       round: slot + 1,
       field: m.field,
@@ -70,9 +88,9 @@ export function buildLiveViewTournament(opts: FixtureOptions = {}): Tournament {
   });
 
   const playoffMatches: Match[] = [
-    { id: 'po-semi-1', teamA: 'group-a-1st', teamB: 'group-b-2nd', round: 5, field: 1, slot: 4, phase: 'semifinal', label: '1. Halbfinale', isFinal: true, matchNumber: 13, matchStatus: 'scheduled' },
-    { id: 'po-semi-2', teamA: 'group-b-1st', teamB: 'group-a-2nd', round: 5, field: 2, slot: 4, phase: 'semifinal', label: '2. Halbfinale', isFinal: true, matchNumber: 14, matchStatus: 'scheduled' },
-    { id: 'po-final', teamA: 'winner-semi-1', teamB: 'winner-semi-2', round: 6, field: 1, slot: 5, phase: 'final', finalType: 'final', label: 'Finale', isFinal: true, matchNumber: 15, matchStatus: 'scheduled' },
+    { id: 'po-semi-1', slotA: groupRank('A', 1), slotB: groupRank('B', 2), round: 5, field: 1, slot: 4, phase: 'semifinal', label: '1. Halbfinale', isFinal: true, matchNumber: 13, matchStatus: 'scheduled' },
+    { id: 'po-semi-2', slotA: groupRank('B', 1), slotB: groupRank('A', 2), round: 5, field: 2, slot: 4, phase: 'semifinal', label: '2. Halbfinale', isFinal: true, matchNumber: 14, matchStatus: 'scheduled' },
+    { id: 'po-final', slotA: semiWinner('po-semi-1'), slotB: semiWinner('po-semi-2'), round: 6, field: 1, slot: 5, phase: 'final', finalType: 'final', label: 'Finale', isFinal: true, matchNumber: 15, matchStatus: 'scheduled' },
   ];
 
   return { ...base, matches: [...groupMatches, ...playoffMatches] };

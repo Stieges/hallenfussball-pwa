@@ -11,6 +11,7 @@
     "build": "tsc && vite build",
     "postbuild": "node scripts/check-pdf-font-precache.cjs",
     "preview": "vite preview",
+    "test:sw-precache": "rm -rf dist-swcheck && VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= vite build --outDir dist-swcheck && node scripts/check-sw-precache.mjs dist-swcheck",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "test": "vitest",
@@ -39,8 +40,8 @@
     "findings:validate-freshness": "PYTHONPATH=scripts python3 -m findings.validate_review_freshness",
     "test:env:up": "bash -c 'source scripts/lib/e2e-registration-code.sh && supabase start && bash scripts/local-db-apply.sh'",
     "test:env:down": "supabase stop",
-    "test:env:reset": "bash -c 'source scripts/lib/e2e-registration-code.sh && supabase db reset --local && bash scripts/local-db-apply.sh && npx tsx scripts/e2e-seed.ts'",
-    "test:env:seed": "bash -c 'source scripts/lib/e2e-registration-code.sh && npx tsx scripts/e2e-seed.ts'",
+    "test:env:reset": "bash scripts/require-local-stack.sh && bash -c 'source scripts/lib/e2e-registration-code.sh && supabase db reset --local && bash scripts/local-db-apply.sh && npx tsx scripts/e2e-seed.ts'",
+    "test:env:seed": "bash scripts/require-local-stack.sh && bash -c 'source scripts/lib/e2e-registration-code.sh && npx tsx scripts/e2e-seed.ts'",
     "test:env:status": "bash scripts/test-env-status.sh"
   },
   "dependencies": {
@@ -82,6 +83,7 @@
     "eslint": "^10.11.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
+    "fake-indexeddb": "^6.2.5",
     "fast-check": "^4.10.2",
     "globals": "^17.12.0",
     "husky": "^9.1.7",

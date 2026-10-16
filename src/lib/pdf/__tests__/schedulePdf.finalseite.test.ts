@@ -9,6 +9,7 @@ import type { Team } from '../../../types/tournament';
 import { finalsMatches, hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { layoutOf, ohneNummer } from './pdfFixtureLayout';
 import type { LayoutPage, LayoutText } from './pdfjsLayout';
+import { testUuid } from '../../../test/testIds';
 
 const trimmed = (text: LayoutText): string => text.str.trim();
 
@@ -66,7 +67,7 @@ describe('Punkt 4 Finalseite: Zwischenüberschrift je Runde', () => {
 
   it('Top 16: Achtelfinale, Viertelfinale, Halbfinale, Finale, Spiel um Platz 3 in Reihenfolge der Anstoßzeit', async () => {
     const teams: Team[] = Array.from({ length: 32 }, (_, i) => ({
-      id: `team-${i + 1}`,
+      id: testUuid(i + 1),
       name: `Verein ${String(i + 1).padStart(2, '0')}`,
       group: 'ABCDEFGH'[Math.floor(i / 4)],
     }));

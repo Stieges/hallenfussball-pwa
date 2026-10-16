@@ -105,14 +105,14 @@ describe('LiveMatchDisplay', () => {
       const match = createMockMatch({ group: 'A' });
       render(<LiveMatchDisplay match={match} group="A" />);
 
-      expect(screen.getByText(/Gruppe A/)).toBeInTheDocument();
+      expect(screen.getByText(/liveMatch\.group/)).toBeInTheDocument(); // Gruppe läuft über i18n (@ZM-140-Raster)
     });
 
     it('zeigt Schiedsrichter-Info wenn vorhanden', () => {
       const match = createMockMatch({ refereeName: 'Max Mustermann' });
       render(<LiveMatchDisplay match={match} />);
 
-      expect(screen.getByText(/Schiedsrichter: Max Mustermann/)).toBeInTheDocument();
+      expect(screen.getByText(/liveMatch\.referee/)).toBeInTheDocument(); // über i18n, Name als Parameter
     });
   });
 
@@ -233,13 +233,13 @@ describe('NoMatchDisplay', () => {
     it('zeigt Standard-Nachricht', () => {
       render(<NoMatchDisplay />);
 
-      expect(screen.getByText('Kein laufendes Spiel')).toBeInTheDocument();
+      expect(screen.getByText(/liveMatch\.noRunningMatch/)).toBeInTheDocument(); // über i18n
     });
 
     it('zeigt Hinweis auf Tabellen-Anzeige', () => {
       render(<NoMatchDisplay />);
 
-      expect(screen.getByText(/Tabellen werden angezeigt/i)).toBeInTheDocument();
+      expect(screen.getByText(/liveMatch\.tablesShownMessage/)).toBeInTheDocument(); // über i18n
     });
 
     it('zeigt custom Nachricht', () => {

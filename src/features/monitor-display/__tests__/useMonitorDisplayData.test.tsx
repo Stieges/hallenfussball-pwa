@@ -6,6 +6,9 @@ import type { TournamentMonitor } from '../../../types/monitor';
 import type { DisplayDelta, MonitorDataSource } from '../monitorDataSource';
 import { useMonitorDisplayData, type MonitorDisplayTarget } from '../useMonitorDisplayData';
 
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
+
 const tournament = { id: 'tour-1', title: 'Turnier', teams: [], matches: [] } as unknown as Tournament;
 const monitor = { id: 'mon-1', name: 'Haupthalle', performanceMode: 'low' } as unknown as TournamentMonitor;
 

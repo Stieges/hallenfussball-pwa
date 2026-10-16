@@ -18,9 +18,16 @@ import { DEFAULT_MATCH_COCKPIT_SETTINGS, type MatchCockpitSettings, type Tournam
 import type { GeneratedSchedule } from '../../../core/generators';
 import type { LiveMatch as CoreLiveMatch } from '../../../core/models/LiveMatch';
 import type { TournamentRole } from '../../auth/types/auth.types';
+import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
 vi.mock('../../auth/hooks/useAuth', () => ({
   useAuth: () => ({ isAuthenticated: true, user: { id: 'user-1' } }),
+}));
+
+// Merge Spur A/B: ManagementTab meldet seit C3a-2a P7 Fehler ueber den App-weiten useToast (wirft ohne
+// ToastProvider); hier nicht Gegenstand. LiveCockpit nutzt seinen eigenen Toast-Hook.
+vi.mock('../../../components/ui/Toast/ToastContext', () => ({
+  useToast: () => ({ showError: vi.fn(), showSuccess: vi.fn(), showWarning: vi.fn(), showInfo: vi.fn() }),
 }));
 
 vi.mock('../../../hooks/useMatchSound', () => ({
@@ -56,8 +63,8 @@ const HOME = { id: 'team-a', name: 'FC Alpha' };
 const AWAY = { id: 'team-b', name: 'SV Beta' };
 const liveMatches = new Map<string, CoreLiveMatch>();
 
-vi.mock('../../../hooks/useMatchExecution', () => ({
-  useMatchExecution: () => ({
+vi.mock('../../../hooks/useCockpitExecution', () => ({
+  useCockpitExecution: () => ({
     liveMatches,
     loadingStates: { goal: false, card: false, finish: false, undo: false, start: false },
     isAnyLoading: false,
@@ -89,6 +96,8 @@ const schedule = {
     {
       id: MATCH_RUNNING, matchNumber: 1, time: '10:00', field: 1, slot: 1,
       homeTeam: HOME.name, awayTeam: AWAY.name, originalTeamA: HOME.id, originalTeamB: AWAY.id,
+      // Merge Spur A/B: Spielseiten kommen seit A-04a/A-04b aus den Slots.
+      slotA: testTeamSlot(HOME.id), slotB: testTeamSlot(AWAY.id),
       phase: 'groupStage', label: 'Gruppenphase', duration: 10,
     },
   ],

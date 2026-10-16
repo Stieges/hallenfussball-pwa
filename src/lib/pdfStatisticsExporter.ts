@@ -2,7 +2,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Tournament } from '../types/tournament';
-import { calculateScorers, calculateFairPlay } from '../utils/calculations';
+import { calculateScorers, calculateFairPlay, type EngineEventsById } from '../utils/calculations';
 
 // Reuse styles from pdfExporter (simplified)
 const PDF_STYLE = {
@@ -23,7 +23,7 @@ const PDF_STYLE = {
     }
 };
 
-export async function exportStatisticsToPDF(tournament: Tournament): Promise<void> {
+export async function exportStatisticsToPDF(tournament: Tournament, engineEventsById?: EngineEventsById): Promise<void> {
     const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -47,7 +47,7 @@ export async function exportStatisticsToPDF(tournament: Tournament): Promise<voi
     yPos += PDF_STYLE.spacing.sectionGap;
 
     // 1. Torschützenliste
-    const scorers = calculateScorers(tournament);
+    const scorers = calculateScorers(tournament, engineEventsById);
 
     doc.setFontSize(PDF_STYLE.fonts.sectionTitle);
     doc.setFont('helvetica', 'bold');
@@ -80,7 +80,7 @@ export async function exportStatisticsToPDF(tournament: Tournament): Promise<voi
     }
 
     // 2. Fair-Play-Tabelle
-    const fairPlay = calculateFairPlay(tournament);
+    const fairPlay = calculateFairPlay(tournament, engineEventsById);
 
     // Check if we need new page
     if (yPos > 250) {
@@ -96,12 +96,15 @@ export async function exportStatisticsToPDF(tournament: Tournament): Promise<voi
 
     autoTable(doc, {
         startY: yPos,
-        head: [['Pl.', 'Team', 'Punkte', 'Gelb (1)', 'Zeit (3)', 'Rot (5)']],
+        // F3b1 (PO 30.09.): keine festen Punktwerte mehr in der Kopfzeile -- die haengen vom
+        // Fair-Play-Profil ab (calculateFairPlay nutzt ohne Parameter den Standard DFBNET).
+        head: [['Pl.', 'Team', 'Punkte', 'Gelb', 'Gelb-Rot', 'Zeit', 'Rot']],
         body: fairPlay.map((f, i) => [
             (i + 1).toString(),
             f.teamName,
             f.points.toString(),
             f.yellowCards.toString(),
+            f.yellowRedCards.toString(),
             f.timePenalties.toString(),
             f.redCards.toString()
         ]),

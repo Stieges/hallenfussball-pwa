@@ -2,11 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   mapTeamToLiveTeamInfo,
   mapMatchEventFromSupabase,
-  mapMatchEventToSupabase,
   mapLiveMatchFromSupabase,
-  mapLiveMatchToSupabase,
   isMatchActive,
-  clearLiveState,
 } from '../liveMatchMappers';
 import {
   createTeamRow,
@@ -15,7 +12,6 @@ import {
   type TeamRow,
   type MatchEventRow,
 } from '../../../../tests/factories/supabase';
-import { isUuidFormat, toDeterministicUuid } from '../../utils/id';
 
 // =============================================================================
 // TEAM INFO MAPPER
@@ -119,89 +115,6 @@ describe('mapMatchEventFromSupabase', () => {
     expect(event.payload.delta).toBeUndefined();
   });
 });
-
-describe('mapMatchEventToSupabase', () => {
-  it('maps event to DB row (legacy Text-Kennung -> deterministische UUID)', () => {
-    // 'event-1' ist eine Alt-Kennung wie sie vor dem C-EVID-Fix erzeugt wurde — kein
-    // UUID-Format. mapMatchEventToSupabase rechnet sie deterministisch um, damit der
-    // Insert nicht an der `uuid`-Spalte scheitert (Ruling: gleiche Eingabe -> gleiche UUID).
-    const event = {
-      id: 'event-1',
-      matchId: 'match-1',
-      timestampSeconds: 120,
-      type: 'GOAL' as const,
-      payload: { team: 'home' as const, delta: 1 },
-      scoreAfter: { home: 1, away: 0 },
-    };
-    const row = mapMatchEventToSupabase(event, 'match-1');
-
-    expect(row.id).toBe(toDeterministicUuid('event-1'));
-    expect(isUuidFormat(row.id)).toBe(true);
-    expect(row.match_id).toBe('match-1');
-    expect(row.timestamp_seconds).toBe(120);
-    expect(row.type).toBe('GOAL');
-    expect(row.score_home).toBe(1);
-    expect(row.score_away).toBe(0);
-    expect(row.team_id).toBeNull();
-    expect(row.player_id).toBeNull();
-    expect(row.period).toBeNull();
-    expect(row.incomplete).toBe(false);
-    expect(row.is_deleted).toBe(false);
-  });
-
-  it('rechnet dieselbe Text-Kennung zweimal auf dieselbe UUID um (deterministisch)', () => {
-    const event = {
-      id: 'match-1-goal-1790284219635-zyqvd',
-      matchId: 'match-1',
-      timestampSeconds: 30,
-      type: 'GOAL' as const,
-      payload: {},
-      scoreAfter: { home: 0, away: 0 },
-    };
-
-    const first = mapMatchEventToSupabase(event, 'match-1');
-    const second = mapMatchEventToSupabase(event, 'match-1');
-
-    expect(first.id).toBe(second.id);
-    expect(isUuidFormat(first.id)).toBe(true);
-  });
-
-  it('lässt eine echte UUID-Kennung unverändert', () => {
-    const realUuid = '550e8400-e29b-41d4-a716-446655440000';
-    const event = {
-      id: realUuid,
-      matchId: 'match-1',
-      timestampSeconds: 30,
-      type: 'GOAL' as const,
-      payload: {},
-      scoreAfter: { home: 0, away: 0 },
-    };
-
-    const row = mapMatchEventToSupabase(event, 'match-1');
-
-    expect(row.id).toBe(realUuid);
-  });
-
-  it('unterschiedliche Text-Kennungen ergeben unterschiedliche UUIDs', () => {
-    const makeEvent = (id: string) => ({
-      id,
-      matchId: 'match-1',
-      timestampSeconds: 30,
-      type: 'GOAL' as const,
-      payload: {},
-      scoreAfter: { home: 0, away: 0 },
-    });
-
-    const rowA = mapMatchEventToSupabase(makeEvent('match-1-goal-1-aaaaa'), 'match-1');
-    const rowB = mapMatchEventToSupabase(makeEvent('match-1-goal-2-bbbbb'), 'match-1');
-
-    expect(rowA.id).not.toBe(rowB.id);
-  });
-});
-
-// =============================================================================
-// LIVE MATCH MAPPERS
-// =============================================================================
 
 describe('mapLiveMatchFromSupabase', () => {
   it('maps minimal match', () => {
@@ -323,155 +236,6 @@ describe('mapLiveMatchFromSupabase', () => {
   });
 });
 
-describe('mapLiveMatchToSupabase', () => {
-  it('maps status to DB format', () => {
-    const liveMatch = mapLiveMatchFromSupabase(
-      createMatchRow({ match_status: 'running', score_a: 2, score_b: 1 }),
-      [],
-      new Map()
-    );
-    const { matchUpdate } = mapLiveMatchToSupabase(liveMatch);
-
-    expect(matchUpdate.match_status).toBe('running');
-    expect(matchUpdate.score_a).toBe(2);
-    expect(matchUpdate.score_b).toBe(1);
-    expect(matchUpdate.updated_at).toBeDefined();
-  });
-
-  // C-NSTART: 'not_started' verletzt matches_match_status_check (erlaubt sind nur
-  // scheduled/waiting/running/paused/finished/skipped). NOT_STARTED muss als 'scheduled'
-  // geschrieben werden.
-  it('maps NOT_STARTED to "scheduled" (C-NSTART) statt "not_started"', () => {
-    const liveMatch = mapLiveMatchFromSupabase(
-      createMatchRow({ match_status: 'scheduled' }),
-      [],
-      new Map()
-    );
-    const { matchUpdate } = mapLiveMatchToSupabase(liveMatch);
-
-    expect(matchUpdate.match_status).toBe('scheduled');
-    expect(matchUpdate.match_status).not.toBe('not_started');
-  });
-
-  it('clears live_state when FINISHED', () => {
-    const liveMatch = mapLiveMatchFromSupabase(
-      createMatchRow({ match_status: 'finished' }),
-      [],
-      new Map()
-    );
-    const { matchUpdate } = mapLiveMatchToSupabase(liveMatch);
-
-    expect(matchUpdate.live_state).toBeNull();
-  });
-
-  it('preserves live_state when not finished', () => {
-    const matchRow = createMatchRow({
-      match_status: 'running',
-      live_state: { elapsedSeconds: 120, durationSeconds: 600 },
-    });
-    const liveMatch = mapLiveMatchFromSupabase(matchRow, [], new Map());
-    const { matchUpdate } = mapLiveMatchToSupabase(liveMatch);
-
-    expect(matchUpdate.live_state).not.toBeNull();
-    expect(matchUpdate.live_state?.elapsedSeconds).toBe(120);
-    expect(matchUpdate.live_state?.durationSeconds).toBe(600);
-  });
-
-  it('filters new events not in existingEventIds', () => {
-    // 'old-event'/'new-event' sind Platzhalter-Strings der Factory, kein UUID-Format —
-    // existingEventIds muss darum die GEMAPPTE Kennung enthalten (Ruling R, s.u.), nicht
-    // die rohe MatchEvent.id.
-    const events = [
-      createEventRow({ id: 'old-event', timestamp_seconds: 60 }),
-      createEventRow({ id: 'new-event', timestamp_seconds: 120 }),
-    ];
-    const liveMatch = mapLiveMatchFromSupabase(
-      createMatchRow({ match_status: 'running' }),
-      events,
-      new Map()
-    );
-    const existingIds = new Set([toDeterministicUuid('old-event')]);
-    const { newEvents } = mapLiveMatchToSupabase(liveMatch, existingIds);
-
-    expect(newEvents).toHaveLength(1);
-    expect(newEvents[0].id).toBe(toDeterministicUuid('new-event'));
-  });
-
-  it('returns all events as new when no existingEventIds', () => {
-    const events = [
-      createEventRow({ id: 'e1', timestamp_seconds: 60 }),
-      createEventRow({ id: 'e2', timestamp_seconds: 120 }),
-    ];
-    const liveMatch = mapLiveMatchFromSupabase(
-      createMatchRow({ match_status: 'running' }),
-      events,
-      new Map()
-    );
-    const { newEvents } = mapLiveMatchToSupabase(liveMatch);
-
-    expect(newEvents).toHaveLength(2);
-  });
-
-  // Ruling R: der Abgleich "schon übertragen?" vergleicht die GEMAPPTE (Supabase-)
-  // Kennung, nicht die lokale MatchEvent.id. Alt-Ereignisse mit Text-Kennung landen sonst
-  // bei jedem save() erneut im Upload, weil ihre lokale ID nie im (aus DB-UUIDs gefüllten)
-  // eventIdsCache steht.
-  it('Ruling R: filtert ein Alt-Ereignis mit Text-Kennung, wenn seine GEMAPPTE UUID schon im Cache ist', () => {
-    const legacyLocalId = 'match-1-goal-1790284219635-zyqvd';
-    const legacyMappedId = toDeterministicUuid(legacyLocalId);
-
-    // Die Event-Row simuliert, wie sie lokal (mit alter Text-ID) vorliegt, bevor sie je
-    // erfolgreich übertragen wurde — mapMatchEventFromSupabase würde in Wahrheit nie eine
-    // Nicht-UUID-ID liefern (DB-Spalte ist uuid), darum bauen wir das LiveMatch hier direkt.
-    const liveMatch = {
-      ...mapLiveMatchFromSupabase(createMatchRow({ match_status: 'running' }), [], new Map()),
-      events: [
-        {
-          id: legacyLocalId,
-          matchId: 'match-1',
-          timestampSeconds: 30,
-          type: 'GOAL' as const,
-          payload: {},
-          scoreAfter: { home: 1, away: 0 },
-        },
-      ],
-    };
-
-    // existingEventIds enthält die gemappte UUID (so wie sie tatsächlich in der DB steht
-    // und von getAll()/save() in den eventIdsCache geschrieben wird) — NICHT die lokale ID.
-    const existingIds = new Set([legacyMappedId]);
-    const { newEvents } = mapLiveMatchToSupabase(liveMatch, existingIds);
-
-    expect(newEvents).toHaveLength(0);
-  });
-
-  it('Ruling R: ein noch nicht übertragenes Alt-Ereignis mit Text-Kennung wird als neu erkannt', () => {
-    const legacyLocalId = 'match-1-goal-1790284219635-zyqvd';
-    const liveMatch = {
-      ...mapLiveMatchFromSupabase(createMatchRow({ match_status: 'running' }), [], new Map()),
-      events: [
-        {
-          id: legacyLocalId,
-          matchId: 'match-1',
-          timestampSeconds: 30,
-          type: 'GOAL' as const,
-          payload: {},
-          scoreAfter: { home: 1, away: 0 },
-        },
-      ],
-    };
-
-    const { newEvents } = mapLiveMatchToSupabase(liveMatch, new Set());
-
-    expect(newEvents).toHaveLength(1);
-    expect(newEvents[0].id).toBe(toDeterministicUuid(legacyLocalId));
-  });
-});
-
-// =============================================================================
-// UTILITY FUNCTIONS
-// =============================================================================
-
 describe('isMatchActive', () => {
   it('returns true for running match', () => {
     expect(isMatchActive(createMatchRow({ match_status: 'running' }))).toBe(true);
@@ -495,11 +259,5 @@ describe('isMatchActive', () => {
       live_state: { elapsedSeconds: 0 },
     });
     expect(isMatchActive(row)).toBe(true);
-  });
-});
-
-describe('clearLiveState', () => {
-  it('returns object with null live_state', () => {
-    expect(clearLiveState()).toEqual({ live_state: null });
   });
 });

@@ -41,7 +41,21 @@ export const displayFontSizes = {
   bodySM: '16px',        // Kleine Infos, Labels
 
   // Team Names (Stadium-Grade)
-  teamName: 'clamp(48px, 5vw, 72px)',   // Team-Name unter Score-Block
+  // @ZM-125: Uhr deutlich größer als die Teamnamen (mindestens 1,5 ×)
+  // B-44a3 (B2): Live-Folie ohne feste Pixel-Deckel, alles wächst mit der Bildhöhe (Auflösung egal, Anteil gleich)
+  // B-44a4 (@ME-020): Größen der Live-Folie in Container-Einheiten der Folienfläche (innerhalb des Bildrands);
+  // außerhalb eines Containers rechnet der Browser cqh wie die Bildhöhe (svh)
+  clockXL: '11cqh',
+  teamName: '6.2cqh',   // Team-Name unter Score-Block
+  // B-44a2 (@ZM-137, @ZM-125): Hinweistexte unter der Uhr, mindestens 3 % der Bildhöhe (lesbar aus 10 m)
+  // B-44a4: an der Folienfläche, aber nie unter 3 % der Bildschirmhöhe (@ZM-125 gilt an der Bildschirmhöhe)
+  clockHint: 'max(3.2cqh, 3vh)',
+  // B-44a2: Namen im Kindermodus stehen in der Kastenreihe und sind größer (kein Stand)
+  teamNameKids: '11cqh',
+  // B-44a3 (B2): Kopfzeile (Feld/Spiel, Gruppe), Statusmarke und Doppelpunkt, je mindestens 3 % der Bildhöhe
+  liveInfo: 'max(3.4cqh, 3vh)',
+  liveBadge: 'max(3.2cqh, 3vh)',
+  liveSeparator: '14cqh',
 
   // Meta/Badge
   meta: '14px',          // Gruppe, Feld-Label
@@ -172,6 +186,9 @@ export const displayLayout = {
   // Max Content Width
   maxContentWidth: '1600px',
 
+  // Breite des kleinen Hinweises in der Ecke (B-17, @ME-006)
+  noticeMaxWidth: '40%',
+
   // Slide Aspect Ratios
   aspectRatio: {
     standard: '16 / 9',
@@ -188,14 +205,73 @@ export const displayLayout = {
 
   // Stadium-Grade Score Layout (prozentuale Bildschirmaufteilung)
   scoreArea: {
-    header: '8%',
-    score: '55%',
-    teamNames: '12%',
-    timer: '17%',
-    footer: '8%',
-    blockWidth: '35%',
-    blockGap: '10%',
+    header: '6%',
+    // B-44a2: Abstand zwischen Kopfzeile (LIVE, Feld, Gruppe) und Kästen
+    headerGap: '1.5cqh',
+    // B-44a2: Marke gleich breit für LIVE, PAUSE, BEENDET
+    badgeWidth: '11em',
+    // B-44a2: Kindermodus: Namen oben bündig in der Kastenreihe, mit Abstand von oben
+    kidsNamesOffset: '8cqh',
+    // H3 @ZM-125: Kasten = 70 % einer Spalte; zwei Spalten teilen die Breite abzüglich seitlichem Polster (paddingX) = ca. 33 % Bildbreite
+    blockWidth: '70%',
+    blockGap: '0%',
+    // B-17 Fixrunde: Teamnamen bekommen eine breitere Box, damit 50 Zeichen auf zwei Zeilen passen (@ZM-087)
+    // B-44a2: Namensspalte = Kastenbreite; B-44a4 (Ruling 16.10.): wieder breiter als der Kasten, damit 50 Zeichen bei
+    // 800×600 und 1024×768 voll und zweizeilig über 3 % der Bildschirmhöhe stehen (@ZM-087, @ZM-125)
+    teamNameWidth: '92%',
+    teamNamesGap: '1cqh',
+    // @ZM-140 Raster: Mittelspalte zwischen den Kästen (Trenner, im Kindermodus leer)
+    separatorWidth: '0%',
+    // B-44a2 (@ZM-125): Kasten hoch, annähernd quadratisch (Breite 33 % der Bildbreite); der Stand ist das Größte
+    blockHeight: '42cqh',
+    // B-44a2: Namen bis zu zwei Zeilen
+    nameLines: 2,
+    // B-44a2: Platz unter den Namen für Uhr, Balken und Hinweise; bleibt in jedem Zustand reserviert (gleiche Lage)
+    // B-44a3: fasst Uhr, Balken, Hinweiszeile und Schiedsrichter-Zeile
+    lowerHeight: '30cqh',
+    // B-44a2: Abstand zwischen Namen und Uhr (liegt innerhalb von lowerHeight)
+    lowerPaddingTop: '2cqh',
+    // B-44a2: Abstand zwischen Uhr und Hinweisen sowie zwischen Hinweisen
+    hintGap: '1cqh',
+    hintGapAbove: '1.6cqh',
+    // B-44a2: senkrechter Innenabstand der Folie (Höhe ist knapp, vorher clamp(24px, 3vw, 48px) auch senkrecht)
+    paddingY: '1.5cqh',
+    // B-44a3: seitliches Polster der Folie
+    paddingX: '3cqw',
+    // B-44a3: Uhr und unterer Bereich (vorher Literale in MatchTimer)
+    progressHeight: '1.2cqh',
+    clockGap: '1.2cqh',
+    clockPadY: '0.8cqh',
+    clockPadX: '2cqh',
+    clockInnerGap: '1cqh',
+    clockLineHeight: 1,
+    hintLineHeight: 1.2,
+    hintColumnGap: '3cqh',
+    // B-44a3: Statusmarke (vorher feste Pixel)
+    badgePadY: '0.8cqh',
+    badgePadX: '2cqh',
+    badgeGap: '1cqh',
+    badgeDot: '1.4cqh',
+    // B-44a2: Balkenbreite (vorher 700px fest)
+    progressWidth: '36cqw',
+    // B-44a2: Rahmen der Kästen, einheitlich in beiden: dezent, bei Kontrast unter 3 : 1 kräftig
+    frameWidthSubtle: '2px',
+    frameWidthStrong: '4px',
+    frameSubtleMix: '45%',
   },
+} as const;
+
+/**
+ * B-44a3: Anzeige ohne laufendes Spiel (NoMatchDisplay), vorher feste Werte im Bauteil.
+ * xl für den Monitor, lg für die Vorschau im Turnier-Management.
+ */
+export const displayNoMatch = {
+  xl: { icon: '10vh', title: '5vh', text: '2.6vh', padding: '6vh' },
+  lg: { icon: '72px', title: '28px', text: '18px', padding: '32px' },
+  minHeightXl: '50vh',
+  minHeightLg: '35vh',
+  maxWidth: '1200px',
+  borderWidth: '3px',
 } as const;
 
 // =============================================================================
@@ -257,8 +333,6 @@ export const displayMonitor = {
   marker: {
     /** Positions-Punkt unten und Cache-Status-Punkt */
     indicatorSize: '10px',
-    /** Status-Punkt je Spielzeile im Spielplan */
-    scheduleSize: '12px',
     /** Rahmen einer laufenden Spielzeile */
     liveBorderWidth: '2px',
   },
@@ -268,10 +342,6 @@ export const displayMonitor = {
     sponsorLogoMaxWidth: '400px',
     sponsorLogoMaxHeight: '300px',
     textMaxWidth: '800px',
-    standingsMaxWidth: '800px',
-    standingsColumns: '48px 1fr 48px 48px 48px 64px 64px',
-    scheduleMaxWidth: '900px',
-    scheduleMinColumnWidth: '100px',
   },
 } as const;
 
@@ -501,64 +571,44 @@ function calculateLuminance(hex: string): number {
  * Returns white text on dark backgrounds, dark text on light backgrounds.
  */
 export function getScoreTextColor(backgroundHex: string): string {
-  return calculateLuminance(backgroundHex) > 0.4 ? '#171717' : '#FFFFFF';
+  // @ZM-140: die Ziffernfarbe mit dem höheren Kontrast (mindestens 4,5 : 1 bei Schwarz oder Weiß)
+  return getContrastRatio(backgroundHex, '#171717') >= getContrastRatio(backgroundHex, '#FFFFFF')
+    ? '#171717'
+    : '#FFFFFF';
 }
+
+/** Kontrastverhältnis nach WCAG (1 bis 21) zweier Hex-Farben. */
+export function getContrastRatio(colorHex: string, otherHex: string): number {
+  const a = calculateLuminance(colorHex);
+  const b = calculateLuminance(otherHex);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+/**
+ * @ZM-140: Der Kasten braucht einen hellen Rahmen, wenn er sich mit weniger als 3 : 1 vom Hintergrund abhebt.
+ */
+export function needsContrastFrame(blockHex: string, backgroundHex: string): boolean {
+  return getContrastRatio(blockHex, backgroundHex) < 3;
+}
+
+/** Vorgabe-Farben des Live-Farbschemas ohne eingetragene Farbe (@ZM-140): Heim Blau, Gast Rot. */
+export const liveColorSchemeDefaults = {
+  homeColor: '#1E40AF',
+  awayColor: '#DC2626',
+} as const;
 
 // =============================================================================
 // CRITICAL PHASE (Last Minute Modus)
 // =============================================================================
 
 /**
- * Farben für die Last-Minute-Eskalation im Timer.
- *
- * Stufen: warning (< 5 min) → danger (< 2 min) → critical (< 60s)
- *       → final (< 30s, pulsierender Rahmen) → countdown (< 10s, Millisekunden)
+ * Hervorhebung der Uhr in der angehaltenen Schlussphase (@ZM-137).
+ * Keine Teamfarbe, keine Eskalation (keine Stufen, kein Pulsieren, keine Hundertstel).
  */
 export const criticalPhaseColors = {
-  warning: '#F97316',      // Orange (< 5 min)
-  danger: '#EF4444',       // Rot (< 2 min)
-  critical: '#FDE047',     // Signal-Gelb (< 60s)
+  critical: '#FDE047',     // Signal-Gelb: Hervorhebung der Uhr
   criticalText: '#171717', // Schwarz auf Signal-Gelb
-  pulseGlow: 'rgba(253, 224, 71, 0.6)',  // Gelber Glow für Rahmen-Pulse
 } as const;
-
-/**
- * Schwellenwerte in Sekunden für Eskalationsstufen.
- */
-export const criticalPhaseThresholds = {
-  warning: 300,   // 5 min — Progress-Bar orange
-  danger: 120,    // 2 min — Timer-Text orange
-  critical: 60,   // 1 min — Signal-Gelb Hintergrund
-  final: 30,      // 30s  — Pulsierender Rahmen
-  countdown: 10,  // 10s  — Millisekunden-Anzeige
-} as const;
-
-export type CriticalPhase = 'normal' | 'warning' | 'danger' | 'critical' | 'final' | 'countdown';
-
-/**
- * Determine the current escalation phase based on remaining seconds.
- */
-export function getCriticalPhase(remainingSeconds: number, isOvertime: boolean): CriticalPhase {
-  if (isOvertime || remainingSeconds <= 0) {
-    return 'normal';
-  }
-  if (remainingSeconds <= criticalPhaseThresholds.countdown) {
-    return 'countdown';
-  }
-  if (remainingSeconds <= criticalPhaseThresholds.final) {
-    return 'final';
-  }
-  if (remainingSeconds <= criticalPhaseThresholds.critical) {
-    return 'critical';
-  }
-  if (remainingSeconds <= criticalPhaseThresholds.danger) {
-    return 'danger';
-  }
-  if (remainingSeconds <= criticalPhaseThresholds.warning) {
-    return 'warning';
-  }
-  return 'normal';
-}
 
 // =============================================================================
 // COMBINED EXPORT
@@ -579,7 +629,7 @@ export const displayTokens = {
   themes: monitorThemes,
   monitorColorSchemes,
   criticalPhaseColors,
-  criticalPhaseThresholds,
+  liveColorSchemeDefaults,
 } as const;
 
 export type DisplayTokens = typeof displayTokens;

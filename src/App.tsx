@@ -3,19 +3,21 @@ import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ScrollToTop } from './components/ScrollToTop';
+import { SwUpdateNotice } from './components/SwUpdateNotice';
 import { useTournaments } from './hooks/useTournaments';
 import { Tournament, TournamentStatus } from './types/tournament';
 import { generateTournamentId, generateUniqueId } from './utils/idGenerator';
+import { buildCopiedTournament } from './core/models/tournamentCopy';
 import { cssVars } from './design-tokens';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import { ConfirmDialog, useConfirmDialog } from './components/ui/ConfirmDialog';
 import { StorageWarningBanner } from './components/StorageWarningBanner';
 import { OfflineBanner } from './components/OfflineBanner';
 import { useSyncOnReconnect } from './hooks/useSyncOnReconnect';
-import { useInitialSync } from './hooks/useInitialSync';
 import { useAuthTimeoutToast } from './hooks/useAuthTimeoutToast';
 import { useSwAutoReload } from './hooks/useSwAutoReload';
 import { useMatchProtectionNotices } from './hooks/useMatchProtectionNotices';
+import { useGuestTournamentNotices } from './hooks/useGuestTournamentNotices';
 import { useRouteMatch } from './hooks/useRouteMatch';
 import { matchRoute } from './core/routing';
 import { AuthProvider } from './features/auth/context/AuthContext';
@@ -141,15 +143,19 @@ function AppContent() {
   // QW-002: Show toast if auth initialization timed out
   useAuthTimeoutToast();
 
-  // Sub-Spec 1 C1: register the service worker with explicit "new version
-  // available → toast + hard reload" semantics so users never linger on a
-  // stale precached bundle (root cause of the 2026-05-24 login-bug).
-  useSwAutoReload();
+  // Sub-Spec 1 C1 + C3b-2d (G8): service worker with "new version available →
+  // persistenter Hinweis; automatisch nur im Leerlauf neu laden" semantics so
+  // users never linger on a stale precached bundle (root cause of the
+  // 2026-05-24 login-bug).
+  const { updateNow } = useSwAutoReload();
 
   // A6 (task-A6-review.md, I2/Ruling AN): toast when save() kept a protected match instead of
   // silently deleting it -- see core/services/matchProtectionNotices.ts for why this can't just
   // be a return value or thrown error.
   useMatchProtectionNotices();
+
+  // C3b-2c (G7): einmaliger Hinweis für im Konto ausgeblendete Gast-Turniere
+  useGuestTournamentNotices();
 
   // Central route match — replaces the individual location.pathname regex
   // matchers below (derivations only; render blocks stay untouched).
@@ -448,51 +454,12 @@ function AppContent() {
       const now = new Date().toISOString();
       const newId = generateTournamentId();
 
-      // Create a deep copy with new IDs
-      const copiedTournament: Tournament = {
-        ...tournament,
-        id: newId,
+      // Kopie mit neuen Team-/Spiel-IDs; Spielseiten über copySlot (V14), nie auf alten IDs
+      const copiedTournament = buildCopiedTournament(tournament, {
+        newId,
         title: `${tournament.title} ${t('tournament.copySuffix')}`,
-        status: 'draft',
-        createdAt: now,
-        updatedAt: now,
-        lastVisitedStep: 1, // Start at Step 1 so user can review
-        // Generate new IDs for teams
-        teams: tournament.teams.map(team => ({
-          ...team,
-          id: generateUniqueId(),
-        })),
-        // Generate new IDs for matches and update team references
-        matches: tournament.matches.map(match => {
-          const newMatchId = generateUniqueId();
-          return {
-            ...match,
-            id: newMatchId,
-            matchStatus: 'scheduled' as const,
-            scoreA: 0,
-            scoreB: 0,
-            events: [],
-          };
-        }),
-        // Reset soft-delete state
-        deletedAt: undefined,
-      };
-
-      // Update match team IDs to use new team IDs
-      const teamIdMap = new Map<string, string>();
-      tournament.teams.forEach((oldTeam, index) => {
-        teamIdMap.set(oldTeam.id, copiedTournament.teams[index]?.id ?? oldTeam.id);
-      });
-
-      copiedTournament.matches = copiedTournament.matches.map((match, index) => {
-        const originalMatch = tournament.matches[index];
-        const newTeamA = teamIdMap.get(originalMatch.teamA) ?? match.teamA;
-        const newTeamB = teamIdMap.get(originalMatch.teamB) ?? match.teamB;
-        return {
-          ...match,
-          teamA: newTeamA,
-          teamB: newTeamB,
-        };
+        now,
+        makeId: generateUniqueId,
       });
 
       await saveTournament(copiedTournament);
@@ -555,6 +522,9 @@ function AppContent() {
     >
       {/* Scroll to top on route changes */}
       <ScrollToTop />
+
+      {/* C3b-2d (G8): persistenter Update-Hinweis, bleibt bis zum Neuladen stehen */}
+      {updateNow && <SwUpdateNotice onUpdateNow={updateNow} />}
 
       {/* Guest Banner - shows registration prompt for guests */}
       {isGuest && isDashboardPath && (
@@ -810,6 +780,7 @@ function AppContent() {
 
 // Providers
 import { RepositoryProvider, useRepositories } from './core/contexts/RepositoryContext';
+import { MatchEngineProvider } from './features/match-engine/MatchEngineProvider';
 import { OfflineRepository } from './core/repositories/OfflineRepository';
 
 /**
@@ -820,17 +791,6 @@ import { OfflineRepository } from './core/repositories/OfflineRepository';
  */
 function SyncManager(): null {
   useSyncOnReconnect();
-  return null;
-}
-
-/**
- * InitialSyncManager - Syncs localStorage tournaments to Supabase on login
- * Triggers once per session when:
- * - User logs in (not as guest)
- * - There are local tournaments without an owner
- */
-function InitialSyncManager(): null {
-  useInitialSync();
   return null;
 }
 
@@ -880,7 +840,13 @@ function PendingChangesWarning(): null {
  */
 function AuthRepositoryBridge({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  return <RepositoryProvider user={user}>{children}</RepositoryProvider>;
+  return (
+    <RepositoryProvider user={user}>
+      {/* C3a-1 (1.2): unterhalb von Auth/Repository (braucht useAuth()/useRepositories()) --
+          Lesepfad in useEngineMatches/useMatchExecution, Schreibweg folgt in C3a-2a. */}
+      <MatchEngineProvider>{children}</MatchEngineProvider>
+    </RepositoryProvider>
+  );
 }
 
 function App() {
@@ -898,7 +864,6 @@ function App() {
       <AuthProvider>
         <AuthRepositoryBridge>
           <SyncManager />
-          <InitialSyncManager />
           <PendingChangesWarning />
           <ToastProvider>
             <ErrorBoundary onReset={() => { window.location.hash = '#/'; }}>

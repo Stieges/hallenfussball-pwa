@@ -15,8 +15,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../../design-tokens'
-import { useDialogTimer, useFocusTrap } from '../../../../hooks';
+import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { DialogSurface } from '../../../ui/molecules/DialogSurface';
+import { useDialogTimer } from '../../../../hooks';
 import type { CardType } from '../../../../types/tournament';
 import moduleStyles from '../../LiveCockpit.module.css';
 
@@ -46,9 +47,11 @@ interface CardDialogProps {
   autoDismissSeconds?: number;
 }
 
-// Card type colors
+// Card type colors (F3b2: Gelb-Rot fuehrt wie Rot zum Platzverweis -- gleiche Farbe, kein neuer
+// Design-Token noetig).
 const cardColors = {
   YELLOW: cssVars.colors.accent, // #FFD700
+  YELLOW_RED: cssVars.colors.error,
   RED: cssVars.colors.error,
 } as const;
 
@@ -63,16 +66,19 @@ export function CardDialog({
   autoDismissSeconds = 10,
 }: CardDialogProps) {
   const { t } = useTranslation('cockpit');
+  // F3b2: Titel-Schluessel je Kartentyp (Schritt 2+3) -- eine Stelle statt dreier Ternarys.
+  const cardTitleKeys: Record<CardType, 'cardDialog.yellowCard' | 'cardDialog.yellowRedCard' | 'cardDialog.redCard'> = {
+    YELLOW: 'cardDialog.yellowCard',
+    YELLOW_RED: 'cardDialog.yellowRedCard',
+    RED: 'cardDialog.redCard',
+  };
   const [cardType, setCardType] = useState<CardType | null>(initialCardType ?? null);
+  // F3b2: Badge-Farbe + Titel fuer Schritt 2/3 -- eine Stelle statt dreier Ternarys je Kartentyp.
+  const cardBadgeColor = cardType ? cardColors[cardType] : cardColors.YELLOW;
+  const cardTitle = cardType ? t(cardTitleKeys[cardType]) : '';
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [playerNumber, setPlayerNumber] = useState<string>('');
   const [step, setStep] = useState<1 | 2 | 3>(1);
-
-  // Focus trap for accessibility (WCAG 4.1.3)
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: onClose,
-  });
 
   // BUG-007: Determine if we're in quick mode (both card type and team preselected)
   const isQuickMode = initialCardType !== undefined && preselectedTeamSide !== undefined;
@@ -192,6 +198,31 @@ export function CardDialog({
         <button
           style={{
             ...styles.cardTypeButton,
+            backgroundColor: `${cardColors.YELLOW_RED}15`,
+            // Fixrunde Aufgabe 8: geteilter Rahmen (Gelb oben/links, Rot unten/rechts) -- optisch
+            // von Rot unterscheidbar, nur mit vorhandenen Farb-Tokens.
+            borderTopColor: cardColors.YELLOW,
+            borderLeftColor: cardColors.YELLOW,
+            borderRightColor: cardColors.YELLOW_RED,
+            borderBottomColor: cardColors.YELLOW_RED,
+          }}
+          onClick={() => handleCardTypeSelect('YELLOW_RED')}
+          data-testid="card-dialog-type-yellow-red"
+        >
+          <div
+            style={{
+              ...styles.cardIcon,
+              background: `linear-gradient(135deg, ${cardColors.YELLOW} 50%, ${cardColors.YELLOW_RED} 50%)`,
+            }}
+          />
+          <span style={{ ...styles.cardTypeLabel, color: cardColors.YELLOW_RED }}>
+            {t('cardDialog.yellowRed')}
+          </span>
+        </button>
+
+        <button
+          style={{
+            ...styles.cardTypeButton,
             backgroundColor: `${cardColors.RED}15`,
             borderColor: cardColors.RED,
           }}
@@ -225,11 +256,11 @@ export function CardDialog({
           <div
             style={{
               ...styles.cardBadge,
-              backgroundColor: cardType === 'YELLOW' ? cardColors.YELLOW : cardColors.RED,
+              backgroundColor: cardBadgeColor,
             }}
           />
           <h2 style={styles.title}>
-            {cardType === 'YELLOW' ? t('cardDialog.yellowCard') : t('cardDialog.redCard')}
+            {cardTitle}
           </h2>
         </div>
         <div style={{ width: 44 }} /> {/* Spacer for centering */}
@@ -269,12 +300,12 @@ export function CardDialog({
           <div
             style={{
               ...styles.cardBadge,
-              backgroundColor: cardType === 'YELLOW' ? cardColors.YELLOW : cardColors.RED,
+              backgroundColor: cardBadgeColor,
             }}
           />
           <div>
             <h2 style={styles.titleSmall}>
-              {cardType === 'YELLOW' ? t('cardDialog.yellowCard') : t('cardDialog.redCard')}
+              {cardTitle}
             </h2>
             <p style={styles.teamSubtitle}>{selectedTeam?.name}</p>
           </div>
@@ -332,8 +363,7 @@ export function CardDialog({
         <button
           style={{
             ...styles.confirmButton,
-            backgroundColor:
-              cardType === 'YELLOW' ? cardColors.YELLOW : cardColors.RED,
+            backgroundColor: cardBadgeColor,
             color: cardType === 'YELLOW' ? cssVars.colors.onWarning : cssVars.colors.onError,
           }}
           onClick={handleConfirm}
@@ -346,15 +376,14 @@ export function CardDialog({
   );
 
   return (
-    <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
-      <div
-        ref={focusTrap.containerRef}
-        style={styles.dialog}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="card-dialog-title"
-      >
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth={dialogWidths.sm}
+      labelledBy="card-dialog-title"
+      panelClassName={moduleStyles.dialogOverlay}
+    >
+      <div style={styles.dialog}>
         {/* BUG-007: Timer progress bar (only visible in quick mode at step 3) */}
         {isQuickMode && isActive && step === 3 && (
           <div style={styles.timerContainer}>
@@ -380,29 +409,16 @@ export function CardDialog({
         {step === 1 && renderStep1CardType()}
         {step === 2 && renderStep2Team()}
         {step === 3 && renderStep3Player()}
+        <p style={styles.subtitle} data-testid="card-dialog-foul-hint">{t('foul.countsAsFoul')}</p>
       </div>
-    </div>
+    </DialogSurface>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: cssVars.colors.overlayDialog,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.lg,
-  },
   dialog: {
     position: 'relative', // BUG-007: Needed for timer progress bar
-    backgroundColor: cssVars.colors.surfaceElevated,
-    borderRadius: cssVars.borderRadius.xl,
     padding: cssVars.spacing.xl,
-    maxWidth: '400px',
-    width: '100%',
     display: 'flex',
     flexDirection: 'column',
     gap: cssVars.spacing.lg,
@@ -474,16 +490,20 @@ const styles: Record<string, React.CSSProperties> = {
   },
   cardTypeGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: cssVars.spacing.md,
+    // F3b2: drei Karten (Gelb / Gelb-Rot / Rot) statt zwei.
+    gridTemplateColumns: '1fr 1fr 1fr',
+    gap: cssVars.spacing.sm,
   },
   cardTypeButton: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: cssVars.spacing.md,
-    padding: cssVars.spacing.xl,
+    // Fixrunde Aufgabe 8: drei Spalten bei 375 px -- kleineres Padding/Icon, damit Icon und Label
+    // nicht ueberlaufen (Touch-Ziel bleibt durch minHeight >= 44 px).
+    gap: cssVars.spacing.sm,
+    padding: cssVars.spacing.sm,
+    minWidth: 0,
     border: '2px solid',
     borderRadius: cssVars.borderRadius.xl,
     cursor: 'pointer',
@@ -491,14 +511,16 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'transform 0.15s ease',
   },
   cardIcon: {
-    width: 48,
-    height: 64,
-    borderRadius: 6,
+    width: cssVars.spacing.xl,
+    height: cssVars.spacing.xxl,
+    borderRadius: cssVars.borderRadius.sm,
     boxShadow: `0 4px 12px ${cssVars.colors.shadowMedium}`,
   },
   cardTypeLabel: {
-    fontSize: cssVars.fontSizes.lg,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 600,
+    textAlign: 'center',
+    overflowWrap: 'anywhere',
   },
   teamGrid: {
     display: 'flex',
@@ -601,7 +623,7 @@ const styles: Record<string, React.CSSProperties> = {
     right: 0,
     height: '4px',
     backgroundColor: cssVars.colors.surface,
-    borderRadius: `${cssVars.borderRadius.xl} ${cssVars.borderRadius.xl} 0 0`,
+    borderRadius: `${cssVars.borderRadius.lg} ${cssVars.borderRadius.lg} 0 0`,
     overflow: 'hidden',
   },
   timerProgress: {

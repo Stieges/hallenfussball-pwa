@@ -13,6 +13,7 @@ import { layoutOf, ohneNummer } from './pdfFixtureLayout';
 import { textIn, type Box, type LayoutPage, type LayoutText } from './pdfjsLayout';
 import { squash } from './pdfjsText';
 import { fettMap } from './pdfSchnitt';
+import { testUuid } from '../../../test/testIds';
 
 const LONG_50 = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
 const SIZE_TOL = 0.05;
@@ -122,7 +123,7 @@ describe('B-28a3-4G Punkt 2 Teamnamen bündig im Kasten', () => {
   const ZWOELF = Array.from({ length: 14 }, (_, i) => `Verein ${i + 1}`);
 
   it('Gruppe A mit zehn Teams (A1 und A10): alle Namen des Kastens beginnen auf derselben x-Position (± 0,2 mm)', async () => {
-    const teams: Team[] = ZWOELF.map((name, i) => ({ id: `team-${i}`, name, group: i < 10 ? 'A' : 'B' }));
+    const teams: Team[] = ZWOELF.map((name, i) => ({ id: testUuid(i), name, group: i < 10 ? 'A' : 'B' }));
     const tournament = hallencupTournament({ teams, numberOfTeams: teams.length });
     const { pages } = await layoutOf({ tournament }, generateFullSchedule(tournament, 'de'));
     const [gruppeA] = kaesten(pages[0]);
@@ -136,7 +137,7 @@ describe('B-28a3-4G Punkt 2 Teamnamen bündig im Kasten', () => {
   });
 
   it('ohne Gruppen (Jeder gegen jeden) mit Nummern 1. bis 14.: die Namen bündig, auch bei „1.“ und „10.“', async () => {
-    const teams: Team[] = ZWOELF.map((name, i) => ({ id: `team-${i}`, name, group: undefined }));
+    const teams: Team[] = ZWOELF.map((name, i) => ({ id: testUuid(i), name, group: undefined }));
     const tournament = hallencupTournament({ teams, numberOfTeams: teams.length, groupSystem: 'roundRobin' });
     const { pages } = await layoutOf({ tournament }, generateFullSchedule(tournament, 'de'));
     const [kasten] = kaesten(pages[0]);

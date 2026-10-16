@@ -9,6 +9,8 @@ import type { Match, Team, Tournament, TournamentField } from '../../../types/to
 import type { MonitorSlide, PerformanceMode, SlideConfig, SlideType, TournamentMonitor } from '../../../types/monitor';
 import type { Sponsor } from '../../../types/sponsor';
 import { createMockTournament } from '../../../test/factories';
+import { groupRank, looseVs, slots } from '../../../test/matchSlotFixtures';
+import type { MatchSlot } from '../../../core/models/schemas/MatchSlotSchema';
 
 const TIMESTAMP = '2026-10-10T09:00:00.000Z';
 
@@ -31,10 +33,10 @@ export const FIXTURE_FIELDS: TournamentField[] = [
 /** Spiel 8: Feld 2, DJK Berg – TuS Mitte (geplant). */
 /** Spiel 9: Feld 1, TuS Mitte – Kickers West (geplant, 14:40). */
 export const FIXTURE_MATCHES: Match[] = [
-  { id: 'match-1', matchNumber: 1, round: 1, field: 2, group: 'A', teamA: 'team-nord', teamB: 'team-ost', scoreA: 2, scoreB: 1, matchStatus: 'finished' },
-  { id: 'match-7', matchNumber: 7, round: 3, field: 1, group: 'A', teamA: 'team-nord', teamB: 'team-sued', scoreA: 1, scoreB: 0, matchStatus: 'running' },
-  { id: 'match-8', matchNumber: 8, round: 4, field: 2, group: 'B', teamA: 'team-berg', teamB: 'team-mitte', matchStatus: 'scheduled', scheduledTime: new Date('2026-10-10T14:20:00') },
-  { id: 'match-9', matchNumber: 9, round: 5, field: 1, group: 'B', teamA: 'team-mitte', teamB: 'team-west', matchStatus: 'scheduled', scheduledTime: new Date('2026-10-10T14:40:00') },
+  { id: 'match-1', matchNumber: 1, round: 1, field: 2, group: 'A', ...looseVs('team-nord', 'team-ost'), scoreA: 2, scoreB: 1, matchStatus: 'finished' },
+  { id: 'match-7', matchNumber: 7, round: 3, field: 1, group: 'A', ...looseVs('team-nord', 'team-sued'), scoreA: 1, scoreB: 0, matchStatus: 'running' },
+  { id: 'match-8', matchNumber: 8, round: 4, field: 2, group: 'B', ...looseVs('team-berg', 'team-mitte'), matchStatus: 'scheduled', scheduledTime: new Date('2026-10-10T14:20:00') },
+  { id: 'match-9', matchNumber: 9, round: 5, field: 1, group: 'B', ...looseVs('team-mitte', 'team-west'), matchStatus: 'scheduled', scheduledTime: new Date('2026-10-10T14:40:00') },
 ];
 
 /** Gibt die Spielliste zurück, in der genau das Spiel `id` mit `patch` überschrieben ist. */
@@ -115,19 +117,23 @@ export function withScheduledTimes(): Match[] {
 
 /**
  * Playoffs (B-16f2) vor den Gruppenspielen im Array; Anpfiffe nach den Gruppenspielen.
- * HF1 group-a-1st – group-b-2nd (Feld 1, 15:00), HF2 group-b-1st – group-a-2nd (Feld 2, 15:00),
- * Platz 3 semi1-loser – semi2-loser (Feld 1, 15:20), Finale semi1-winner – semi2-winner (Feld 2, 15:40).
+ * HF1 Erster A – Zweiter B (Feld 1, 15:00), HF2 Erster B – Zweiter A (Feld 2, 15:00),
+ * Platz 3 Verlierer HF1 – Verlierer HF2 (Feld 1, 15:20), Finale Sieger HF1 – Sieger HF2 (Feld 2, 15:40).
  */
 export function withPlayoffs(): Match[] {
-  const po = (id: string, matchNumber: number, field: number, teamA: string, teamB: string, label: string, stunde: number, min: number): Match => ({
-    id, matchNumber, round: matchNumber < 12 ? 6 : 7, field, teamA, teamB, label, matchStatus: 'scheduled',
+  // Merge I1: Seiten als Slots mit Herkunft (A-03). Die Spiel-IDs bleiben lesbar ('po-…'), darum wird die
+  // Herkunft „Sieger/Verlierer <Spiel>“ direkt als Slot gebaut (wie liveViewFixture), nicht über resultOf.
+  const ergebnis = (matchId: string, role: 'winner' | 'loser'): MatchSlot =>
+    ({ kind: 'pending', source: { kind: 'matchResult', matchId, role } });
+  const po = (id: string, matchNumber: number, field: number, slotA: MatchSlot, slotB: MatchSlot, label: string, stunde: number, min: number): Match => ({
+    id, matchNumber, round: matchNumber < 12 ? 6 : 7, field, ...slots(slotA, slotB), label, matchStatus: 'scheduled',
     scheduledTime: new Date(2026, 9, 10, stunde, min),
   });
   return [
-    po('po-hf1', 10, 1, 'group-a-1st', 'group-b-2nd', '1. Halbfinale', 15, 0),
-    po('po-hf2', 11, 2, 'group-b-1st', 'group-a-2nd', '2. Halbfinale', 15, 0),
-    po('po-p3', 12, 1, 'semi1-loser', 'semi2-loser', 'Spiel um Platz 3', 15, 20),
-    po('po-final', 13, 2, 'semi1-winner', 'semi2-winner', 'Finale', 15, 40),
+    po('po-hf1', 10, 1, groupRank('A', 1), groupRank('B', 2), '1. Halbfinale', 15, 0),
+    po('po-hf2', 11, 2, groupRank('B', 1), groupRank('A', 2), '2. Halbfinale', 15, 0),
+    po('po-p3', 12, 1, ergebnis('po-hf1', 'loser'), ergebnis('po-hf2', 'loser'), 'Spiel um Platz 3', 15, 20),
+    po('po-final', 13, 2, ergebnis('po-hf1', 'winner'), ergebnis('po-hf2', 'winner'), 'Finale', 15, 40),
     ...withScheduledTimes(),
   ];
 }

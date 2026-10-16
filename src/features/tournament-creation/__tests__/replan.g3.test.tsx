@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import type { Match, Team } from '../../../types/tournament';
 import type { ReplanPreviewResult } from '../utils/replan';
 import { ReplanPanel } from '../components/ReplanPanel';
+import { looseVs } from '../../../test/matchSlotFixtures';
 
 vi.mock('../../../components/dialogs/Dialog', () => ({
   Dialog: ({ isOpen, title, children }: { isOpen: boolean; title: string; children: React.ReactNode }) =>
@@ -28,14 +29,15 @@ const gen = (id: string, teamA: string, teamB: string) => ({
   endTime: new Date('2030-01-01T09:42:00Z'),
   originalTeamA: teamA,
   originalTeamB: teamB,
+  ...looseVs(teamA, teamB),
   phase: 'groupStage',
 });
 
 describe('G3 + E3 – Paarung je Hinweis, Zählung nach Paarung und Phase', () => {
   it('zählt neu/entfallen nach Paarung und Phase, nicht nach ID', () => {
     const previousMatches: Match[] = [
-      { id: 'alt-1', round: 1, field: 1, teamA: '1', teamB: '2', phase: 'groupStage' },
-      { id: 'alt-2', round: 1, field: 2, teamA: '3', teamB: '4', phase: 'groupStage' },
+      { id: 'alt-1', round: 1, field: 1, ...looseVs('1', '2'), phase: 'groupStage' },
+      { id: 'alt-2', round: 1, field: 2, ...looseVs('3', '4'), phase: 'groupStage' },
     ];
     const preview: Extract<ReplanPreviewResult, { status: 'preview' }> = {
       status: 'preview',
@@ -73,8 +75,7 @@ describe('G3 + E3 – Paarung je Hinweis, Zählung nach Paarung und Phase', () =
       id: 'k1',
       round: 1,
       field: 1,
-      teamA: '1',
-      teamB: '2',
+      ...looseVs('1', '2'),
       phase: 'groupStage',
       scoreA: 2,
       scoreB: 1,

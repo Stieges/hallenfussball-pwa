@@ -58,6 +58,9 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
+
 /** Punkte-Zelle (letzte Spalte) der Tabellenzeile eines Teams. */
 function pointsOf(teamName: string): string | null {
   return screen.getByText(teamName).parentElement?.lastElementChild?.textContent ?? null;
@@ -70,7 +73,7 @@ async function renderMonitor(tournament: Tournament, slides: MonitorSlide[]) {
   localGet.mockResolvedValue(null);
   const onBack = vi.fn();
   render(<MonitorDisplayPage tournamentId={tournament.id} monitorId={monitor.id} onBack={onBack} />);
-  await waitFor(() => expect(screen.queryByText('Lade Display...')).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByText('Lade Display...')).not.toBeInTheDocument(), { timeout: 5_000 });
   return { onBack };
 }
 
@@ -90,7 +93,7 @@ beforeEach(() => {
   live.card = null;
 });
 
-describe('MonitorDisplayPage — Folieninhalt (Bestand)', () => {
+describe('MonitorDisplayPage — Folieninhalt (Bestand)', { timeout: 15_000 }, () => {
   it.each([
     {
       zeile: 'Tabelle einer Gruppe (Gruppe A)',
@@ -126,42 +129,54 @@ describe('MonitorDisplayPage — Folieninhalt (Bestand)', () => {
     expect(screen.queryByText('1. Halbzeit')).not.toBeInTheDocument();
   });
 
-  it('Bestand: Tabelle zählt das laufende Spiel 7 mit seinem Zwischenstand (FC Nord 6 Punkte)', async () => {
+  // @TM-143 (B-40): Der Bestand „6 Punkte“ (laufendes Spiel 7 zählte mit Zwischenstand) ist bewusst umgedreht.
+  it('@TM-143 Tabelle zählt das laufende Spiel 7 nicht (FC Nord 3 Punkte, nur Spiel 1)', async () => {
     await renderMonitor(buildTournament(), [slide('standings', { groupId: 'A' })]);
+    expect(pointsOf('FC Nord')).toBe('3');
+  });
+
+  it('@TM-143 Tabelle zählt Spiel 7 nach dem Abpfiff (FC Nord 6 Punkte)', async () => {
+    await renderMonitor(
+      buildTournament({ matches: withMatch('match-7', { matchStatus: 'finished' }) }),
+      [slide('standings', { groupId: 'A' })],
+    );
     expect(pointsOf('FC Nord')).toBe('6');
   });
 });
 
-describe('MonitorDisplayPage — Tasten (Bestand)', () => {
+describe('MonitorDisplayPage — Tasten (Bestand)', { timeout: 15_000 }, () => {
   const zweiFolien = () => [
     slide('custom-text', { headline: 'Erste Folie' }),
     slide('custom-text', { headline: 'Zweite Folie' }),
     slide('custom-text', { headline: 'Dritte Folie' }),
   ];
 
-  it('Bestand: ArrowRight springt weiter, ArrowLeft geht zurück und am Anfang auf die letzte Folie', async () => {
+  // B-17 Fixrunde (@ME-022, Record monitor-einrichten Z. 175–177): Pfeiltasten schalten nicht weiter.
+  // Vorher: ArrowRight/ArrowLeft wechselten die Folie (Gegenbeispiel zum Soll).
+  it('B-17: Pfeiltasten schalten nicht weiter und nicht zurück', async () => {
     await renderMonitor(buildTournament(), zweiFolien());
     expect(screen.getByText('Erste Folie')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'ArrowRight' });
-    expect(screen.getByText('Zweite Folie')).toBeInTheDocument();
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
     expect(screen.getByText('Erste Folie')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    expect(screen.getByText('Dritte Folie')).toBeInTheDocument();
+    expect(screen.getByText('Erste Folie')).toBeInTheDocument();
   });
 
-  it('Bestand: Leertaste schaltet den Pausen-Indikator ein und wieder aus', async () => {
+  // B-17 Fixrunde (@ME-022, Record Z. 175–177): Leertaste hält nicht an, es gibt kein Pausen-Badge mehr.
+  // Vorher: Leertaste schaltete den Pausen-Indikator (Gegenbeispiel zum Soll).
+  it('B-17: Leertaste hat keine Wirkung, kein Pausen-Indikator', async () => {
     await renderMonitor(buildTournament(), zweiFolien());
     fireEvent.keyDown(window, { key: ' ' });
-    expect(screen.getByTestId('monitor-pause-indicator')).toBeInTheDocument();
-    fireEvent.keyDown(window, { key: ' ' });
     expect(screen.queryByTestId('monitor-pause-indicator')).not.toBeInTheDocument();
+    expect(screen.getByText('Erste Folie')).toBeInTheDocument();
   });
 
-  it('Bestand: Escape ruft onBack genau einmal auf', async () => {
+  // B-17 (@ME-022, Befund C-MONITOR-DAUERBETRIEB): Escape verlässt die Seite nicht mehr; das alte Verhalten
+  // (Rücksprung zur Startseite) war der Fehler. Vorher: onBack einmal aufgerufen.
+  it('B-17: Escape ruft onBack nicht auf, die Seite bleibt offen', async () => {
     const { onBack } = await renderMonitor(buildTournament(), zweiFolien());
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onBack).not.toHaveBeenCalled();
   });
 
   it('Bestand: Taste c blendet die Cache-Anzeige ein', async () => {
@@ -172,7 +187,7 @@ describe('MonitorDisplayPage — Tasten (Bestand)', () => {
   });
 });
 
-describe('MonitorDisplayPage — Einblendungen (Tor)', () => {
+describe('MonitorDisplayPage — Einblendungen (Tor)', { timeout: 15_000 }, () => {
   it('@ZM-083 Eingang: Tor in Spiel 8 (DJK Berg) wird im Monitor eingeblendet', async () => {
     live.goal = goalInMatch8;
     await renderMonitor(buildTournament(), [slide('custom-text', { headline: 'Willkommen' })]);

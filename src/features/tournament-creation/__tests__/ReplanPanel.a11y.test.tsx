@@ -12,9 +12,10 @@ import userEvent from '@testing-library/user-event';
 import type { Match } from '../../../types/tournament';
 import type { ReplanPreviewResult } from '../utils/replan';
 import { ReplanPanel } from '../components/ReplanPanel';
+import { looseVs } from '../../../test/matchSlotFixtures';
 
 const previousMatches: Match[] = [
-  { id: 'm1', round: 1, field: 1, teamA: '1', teamB: '2' },
+  { id: 'm1', round: 1, field: 1, ...looseVs('1', '2') },
 ];
 
 const previewResult: Extract<ReplanPreviewResult, { status: 'preview' }> = {
@@ -29,6 +30,7 @@ const previewResult: Extract<ReplanPreviewResult, { status: 'preview' }> = {
         endTime: new Date('2030-01-01T09:42:00Z'),
         originalTeamA: '1',
         originalTeamB: '2',
+        ...looseVs('1', '2'),
         phase: 'groupStage',
       },
     ],

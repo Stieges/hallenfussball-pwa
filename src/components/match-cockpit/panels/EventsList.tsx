@@ -5,11 +5,13 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { formatTime } from '../utils/matchPanelUtils';
 import sportGlossary from '../../../i18n/glossary.json';
+import { cardKindOf } from '../../../utils/cardKind';
 
 export interface MatchEvent {
   id: string;
@@ -33,8 +35,8 @@ export interface MatchEvent {
     playersOut?: number[];
     /** Eingewechselte Spieler */
     playersIn?: number[];
-    /** Kartentyp */
-    cardType?: 'YELLOW' | 'RED';
+    /** Kartentyp (F3b1: Gelb-Rot eigener Wert, kein RED mehr) */
+    cardType?: 'YELLOW' | 'YELLOW_RED' | 'RED';
   };
   scoreAfter: { home: number; away: number };
 }
@@ -46,6 +48,7 @@ export interface EventsListProps {
 }
 
 export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManualEdit }) => {
+  const { t } = useTranslation('cockpit');
   const isMobile = useIsMobile();
 
   const containerStyle: CSSProperties = {
@@ -181,7 +184,10 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
     } else if (event.type === 'YELLOW_CARD') {
       return `🟨 Gelbe Karte ${displayName}${playerInfo}`;
     } else if (event.type === 'RED_CARD') {
-      return `🟥 Rote Karte ${displayName}${playerInfo}`;
+      // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
+      return cardKindOf(event) === 'YELLOW_RED'
+        ? `🟨🟥 ${t('cardDialog.yellowRedCard')} ${displayName}${playerInfo}`
+        : `🟥 ${t('cardDialog.redCard')} ${displayName}${playerInfo}`;
     } else if (event.type === 'TIME_PENALTY') {
       const duration = penaltyDuration ? Math.floor(penaltyDuration / 60) : 2;
       return `⏱ ${duration} Min ${sportGlossary.terms.timePenalty.de} ${displayName}${playerInfo}`;

@@ -40,3 +40,7 @@ jobs:
 
       - name: Gegenprobe B (falsche Akteursermittlung muss Fixtures und Rechte ROT machen)
         run: bash scripts/append-match-events-check.sh --gegenprobe
+
+      - name: Gegenprobe C (ohne Spalten-Schutz-Trigger muss Spaltenschutz ROT sein)
+        # C0b (V4, Ruling PC2): DROP TRIGGER matches_guard_engine_columns nach dem Einspielen.
+        run: bash scripts/append-match-events-check.sh --without-column-guard

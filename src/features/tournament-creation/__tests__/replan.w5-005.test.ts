@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import type { Tournament } from '../../../types/tournament';
 import { generateFullSchedule } from '../../../core/generators';
 import { buildReplanPreview, applyReplan } from '../utils/replan';
+import { testUuid } from '../../../test/testIds';
+import { matchSideTeamId } from '../../../core/models/matchSlot';
 
 const baseTournament = (): Tournament =>
   ({
@@ -26,10 +28,10 @@ const baseTournament = (): Tournament =>
     breakBetweenPhases: 0,
     placementLogic: [],
     teams: [
-      { id: '1', name: 'A' },
-      { id: '2', name: 'B' },
-      { id: '3', name: 'C' },
-      { id: '4', name: 'D' },
+      { id: testUuid(1), name: 'A' },
+      { id: testUuid(2), name: 'B' },
+      { id: testUuid(3), name: 'C' },
+      { id: testUuid(4), name: 'D' },
     ],
     matches: [],
     status: 'published',
@@ -53,8 +55,8 @@ describe('Neuplanung – Struktur ändern vor dem ersten Anpfiff', () => {
         id: m.id,
         round: index + 1,
         field: m.field,
-        teamA: m.originalTeamA,
-        teamB: m.originalTeamB,
+        slotA: m.slotA,
+        slotB: m.slotB,
       })),
     };
 
@@ -63,7 +65,7 @@ describe('Neuplanung – Struktur ändern vor dem ersten Anpfiff', () => {
       numberOfTeams: 5,
       teams: [
         ...established.teams,
-        { id: '5', name: 'E' },
+        { id: testUuid(5), name: 'E' },
       ],
     };
 
@@ -76,11 +78,15 @@ describe('Neuplanung – Struktur ändern vor dem ersten Anpfiff', () => {
       m.originalTeamA,
       m.originalTeamB,
     ]);
-    expect(sides).toContain('5');
+    expect(sides).toContain(testUuid(5));
 
     const updated = applyReplan(withNewTeam, preview);
     expect(updated.matches.length).toBe(preview.schedule.allMatches.length);
-    const updatedSides = updated.matches.flatMap((m) => [m.teamA, m.teamB]);
-    expect(updatedSides).toContain('5');
+    const updatedSlotSides = updated.matches.flatMap((m) => [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')]);
+    expect(updatedSlotSides).toContain(testUuid(5));
+    preview.schedule.allMatches.forEach((g, i) => {
+      expect(updated.matches[i].slotA).toEqual(g.slotA);
+      expect(updated.matches[i].slotB).toEqual(g.slotB);
+    });
   });
 });

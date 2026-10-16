@@ -56,6 +56,9 @@ export interface UseMonitorsResult {
 
   /** Display-URL für einen Monitor generieren */
   getDisplayUrl: (monitorId: string) => string;
+
+  /** Fertige Monitore (z. B. übernommen, B-22) in einem Speichervorgang anhängen */
+  addMonitors: (newMonitors: TournamentMonitor[]) => Promise<void>;
 }
 
 export interface CreateMonitorOptions {
@@ -295,6 +298,28 @@ export function useMonitors(
     [tournament, monitors, saveTournament]
   );
 
+  // Fertige Monitore anhängen (Übernehmen, B-22) – ändert keine bestehenden Monitore
+  const addMonitors = useCallback(
+    async (newMonitors: TournamentMonitor[]): Promise<void> => {
+      if (!tournament) {
+        throw new Error('Kein Turnier ausgewählt');
+      }
+      if (newMonitors.length === 0) {
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const updatedTournament: Tournament = {
+        ...tournament,
+        monitors: [...monitors, ...newMonitors],
+        updatedAt: now,
+      };
+
+      await saveTournament(updatedTournament);
+    },
+    [tournament, monitors, saveTournament]
+  );
+
   // Slide zu Monitor hinzufügen
   const addSlide = useCallback(
     async (
@@ -511,6 +536,7 @@ export function useMonitors(
     removeSlide,
     reorderSlides,
     getDisplayUrl,
+    addMonitors,
   };
 }
 

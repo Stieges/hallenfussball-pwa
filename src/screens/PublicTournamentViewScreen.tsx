@@ -249,6 +249,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
         <Card>
           <ScheduleDisplay
             schedule={filteredSchedule}
+            hidePendingOrigin={tournament.hideScoresForPublic}
             currentStandings={filteredStandings}
             currentMatches={tournament.matches}
             tournamentTeams={tournament.teams}

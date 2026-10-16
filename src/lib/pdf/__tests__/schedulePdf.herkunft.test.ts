@@ -12,6 +12,7 @@ import { hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { kopfPdf } from './pdfKopfSupport';
 import { translatorFor } from './pdfText';
 import { squash } from './pdfjsText';
+import { testUuid } from '../../../test/testIds';
 
 const de = buildPdfTexts(translatorFor('de'), 'de');
 const en = buildPdfTexts(translatorFor('en'), 'en');
@@ -104,7 +105,7 @@ describe('Herkunft im PDF', () => {
     ['top-16', 32],
   ])('Muster %s: kein Rohschlüssel im ganzen Dokument', async (preset, teamCount) => {
     const groups = teamCount / 4;
-    const teams: Team[] = Array.from({ length: teamCount }, (_, i) => ({ id: `t${i}`, name: `Verein ${String(i + 1).padStart(2, '0')}`, group: 'ABCDEFGH'[Math.floor(i / 4)] }));
+    const teams: Team[] = Array.from({ length: teamCount }, (_, i) => ({ id: testUuid(i), name: `Verein ${String(i + 1).padStart(2, '0')}`, group: 'ABCDEFGH'[Math.floor(i / 4)] }));
     const tournament = hallencupTournament({ teams, numberOfTeams: teamCount, numberOfGroups: groups, finalsConfig: { preset, tiebreaker: 'shootout' } as never });
     const { pages } = await kopfPdf({}, tournament, generateFullSchedule(tournament, 'de'));
     const text = pages.flatMap(p => p.texts.map(t => t.str)).join(' ');
@@ -147,7 +148,7 @@ describe('@DR-022 @DR-001 echter Generator: Herkunft aus dem Rohschlüssel, in d
   });
 
   it('Gegenbeispiel: ein besetztes Spiel zeigt den Teamnamen, nicht die Herkunft', () => {
-    const match = hallencupSchedule().allMatches.find(m => m.originalTeamA === 'group-a-1st');
+    const match = hallencupSchedule().allMatches.find(m => m.originA?.kind === 'groupRank' && m.originA.group === 'A' && m.originA.rank === 1);
     expect(match).toBeDefined();
     const besetzt = { ...match!, homeTeam: 'FC Nord' };
 

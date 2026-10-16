@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import {
   PublicLoadingView,
@@ -7,6 +7,9 @@ import {
 } from '../components/PublicStatusViews';
 import { PublicStandingsTab } from '../components/PublicStandingsTab';
 import { buildLiveViewTournament, SHARE_CODE } from '../../../screens/__tests__/liveViewFixture';
+
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
 
 describe('PublicStatusViews (B-13d1)', () => {
   it('Laden zeigt den Code des Turniers', () => {

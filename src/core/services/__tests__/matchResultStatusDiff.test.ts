@@ -8,14 +8,14 @@
 import { describe, it, expect } from 'vitest';
 import { diffMatchResultStatusUpdates } from '../matchResultStatusDiff';
 import type { Match } from '../../models/types';
+import { vs, testUuid } from '../../../test/matchSlotFixtures';
 
 function makeMatch(overrides: Partial<Match> = {}): Match {
   return {
     id: 'match-1',
     round: 1,
     field: 1,
-    teamA: 'Team A',
-    teamB: 'Team B',
+    ...vs(testUuid(1), testUuid(2)),
     ...overrides,
   };
 }
@@ -28,8 +28,8 @@ describe('diffMatchResultStatusUpdates', () => {
   });
 
   it('returns no update when only a SCHEDULE field changed (round/field/team/label)', () => {
-    const oldMatch = makeMatch({ field: 1, teamA: 'Team A' });
-    const newMatch = makeMatch({ field: 2, teamA: 'Team A (umbenannt)' });
+    const oldMatch = makeMatch({ field: 1, label: 'Halbfinale' });
+    const newMatch = makeMatch({ field: 2, label: 'Halbfinale (umbenannt)' });
     const updates = diffMatchResultStatusUpdates([oldMatch], [newMatch]);
     expect(updates).toEqual([]);
   });

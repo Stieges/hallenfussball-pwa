@@ -30,6 +30,7 @@ import { useTournamentWizard } from '../../../hooks/useTournamentWizard';
 import { generateFullSchedule } from '../../../core/generators';
 import type { Team, Tournament } from '../../../types/tournament';
 import { Step4_Teams } from '../Step4_Teams';
+import { looseVs, testUuid } from '../../../test/matchSlotFixtures';
 
 vi.mock('../../../hooks/useRepository', () => ({
   useRepository: () => ({
@@ -41,7 +42,7 @@ vi.mock('../../../hooks/useRepository', () => ({
 }));
 
 const teams8 = (): Team[] =>
-  Array.from({ length: 8 }, (_, index) => ({ id: `t${index + 1}`, name: `Team ${index + 1}` }));
+  Array.from({ length: 8 }, (_, index) => ({ id: testUuid(index + 1), name: `Team ${index + 1}` }));
 
 const teams8WithGroups = (): Team[] =>
   teams8().map((team, index) => ({ ...team, group: index % 2 === 0 ? 'A' : 'B' }));
@@ -85,8 +86,7 @@ describe('B-04b @W1-014 – entfernte Teams und Gruppen, keine Sackgasse', () =>
             id: 'm1',
             round: 1,
             field: 1,
-            teamA: 't8',
-            teamB: 't1',
+            ...looseVs(testUuid(8), testUuid(1)),
             scoreA: 2,
             scoreB: 1,
           },
@@ -94,10 +94,10 @@ describe('B-04b @W1-014 – entfernte Teams und Gruppen, keine Sackgasse', () =>
       })
     );
 
-    fireEvent.click(screen.getByTestId('wizard-remove-team-t8'));
+    fireEvent.click(screen.getByTestId(`wizard-remove-team-${testUuid(8)}`));
     sync();
 
-    expect((wizard.result.current.formData.teams ?? []).find((team) => team.id === 't8')?.isRemoved).toBe(true);
+    expect((wizard.result.current.formData.teams ?? []).find((team) => team.id === testUuid(8))?.isRemoved).toBe(true);
     const mismatch = screen.getByTestId('wizard-team-count-mismatch');
     const adjust = screen.getByTestId('wizard-adjust-team-count');
     expect(mismatch).toContainElement(adjust);

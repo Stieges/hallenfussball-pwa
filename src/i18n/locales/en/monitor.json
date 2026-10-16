@@ -24,7 +24,14 @@
     "group": "Group {{group}}",
     "referee": "Referee: {{name}}",
     "noRunningMatch": "No running match",
-    "tablesShownMessage": "Tables will be shown until a match starts"
+    "tablesShownMessage": "Tables will be shown until a match starts",
+    "clock": {
+      "ended": "Playing time over – result to follow",
+      "holdsOnInterruption": "Clock stops on interruption",
+      "stopped": "stopped"
+    },
+    "withoutResult": "without result",
+    "finalScore": "Final score"
   },
   "timer": {
     "pause": "Pause",
@@ -37,7 +44,8 @@
   },
   "cardAnimation": {
     "redCard": "RED CARD",
-    "yellowCard": "YELLOW CARD"
+    "yellowCard": "YELLOW CARD",
+    "yellowRedCard": "YELLOW-RED"
   },
   "slides": {
     "nextMatches": {
@@ -45,13 +53,52 @@
       "none": "No more matches"
     },
     "qr": {
-      "headline": "Results on your phone"
+      "headline": "Results on your phone",
+      "idleHint": "Follow the match live on the screen in the hall."
     },
     "page": "Page {{page}} / {{pages}}",
     "allStandings": {
       "finals": "Final round",
       "overall": "Overall standings",
       "none": "No tables yet"
+    },
+    "schedule": {
+      "title": "Schedule {{field}}"
+    },
+    "live": {
+      "idleSkip": "Waiting for the next match...",
+      "nextMatch": "Next match",
+      "noMatch": "No match scheduled",
+      "kickoff": "Kickoff"
+    },
+    "sponsor": {
+      "notFound": "Sponsor not found",
+      "scanMore": "Scan for more info",
+      "tier": "{{tier}} sponsor"
+    }
+  },
+  "dauerbetrieb": {
+    "wakeLockHint": "The screen may switch off according to this device's power-saving setting."
+  },
+  "loading": "Loading display...",
+  "error": {
+    "notFound": "Configuration not found",
+    "back": "← Back",
+    "connection": "The tournament could not be loaded: connection to the server failed. The next attempt runs automatically.",
+    "tournamentNotFound": "Tournament not found: {{id}}. If this screen runs on a different device than the organizer laptop, the tournament must be set to \"Shareable by link\" in the visibility settings.",
+    "monitorNotFound": "Monitor not found: {{id}}",
+    "fetchFailed": "Error while loading",
+    "cloudTimeout": "Cloud request aborted after {{ms}} ms (timeout)"
+  },
+  "standings": {
+    "header": {
+      "rank": "#",
+      "team": "Team",
+      "won": "W",
+      "drawn": "D",
+      "lost": "L",
+      "goalDiff": "GD",
+      "points": "Pts"
     }
   }
 }

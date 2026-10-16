@@ -9,6 +9,7 @@ import { koLines, pdfRuleLines, pdfRulesFrom, type PdfRules } from '../rules';
 import { buildPdfTexts } from '../translations';
 import { hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { translatorFor } from './pdfText';
+import { testUuid } from '../../../test/testIds';
 
 const de = buildPdfTexts(translatorFor('de'), 'de');
 const en = buildPdfTexts(translatorFor('en'), 'en');
@@ -25,7 +26,7 @@ const PLACEMENT: PlacementCriterion[] = [
 
 /** 16 Teams in vier Gruppen für die Achtelfinal-Konstellation (Plan über den echten Generator). */
 const TEAMS_16: Team[] = Array.from({ length: 16 }, (_, i) => ({
-  id: `team-${i + 1}`,
+  id: testUuid(i + 1),
   name: `Team ${i + 1}`,
   group: 'ABCD'[i % 4],
 }));
@@ -124,8 +125,15 @@ describe('Regeln folgen dem erzeugten Plan, nicht der Voreinstellung (Fixliste 1
     expect(pdfRuleLines(rules, de)).toContain('Spielzeit: 10 Min. · Zeitstrafe 2 Min.');
   });
 
-  it('eine Gruppe mit top-4: keine K.-o.-Zeile, weil keine Finalrunde entsteht', () => {
-    expect(koLines(rulesOf({ numberOfGroups: 1, finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' } }), de)).toEqual([]);
+  it('eine Gruppe mit top-8: keine K.-o.-Zeile, weil keine Finalrunde entsteht', () => {
+    const teams = hallencupTournament().teams.map(team => ({ ...team, group: 'A' }));
+    expect(koLines(rulesOf({ numberOfGroups: 1, teams, finalsConfig: { preset: 'top-8', tiebreaker: 'shootout' } }), de)).toEqual([]);
+  });
+
+  it('@TM-142 Gegenbeispiel: eine Gruppe mit top-4 spielt Halbfinale (1.–4., 2.–3.) – die K.-o.-Zeile steht', () => {
+    const teams = hallencupTournament().teams.map(team => ({ ...team, group: 'A' }));
+    expect(koLines(rulesOf({ numberOfGroups: 1, teams, finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' } }), de))
+      .toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen je Team']);
   });
 
   it('top-8 mit zwei Gruppen und Viertelfinal-Regel: keine Zeile „Viertelfinale“', () => {

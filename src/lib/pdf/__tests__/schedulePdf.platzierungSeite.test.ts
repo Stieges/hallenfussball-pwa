@@ -12,12 +12,13 @@ import { printType } from '../../../design-tokens/print';
 import { kopfPdf } from './pdfKopfSupport';
 import type { LayoutPage } from './pdfjsLayout';
 import type { RankEntry } from '../placement';
+import { testUuid } from '../../../test/testIds';
 
 /** Seite der Überschrift (die letzte mit dem Wort als eigenem Textstück; „Platzierung“ steht auch als Bezeichnung im Kopf). */
 const pageOf = (pages: LayoutPage[], title: string): number => pages.map(p => p.texts.some(t => ohneNummer(t.str) === title)).lastIndexOf(true);
 
 function jederGegenJeden(count: number) {
-  const teams: Team[] = Array.from({ length: count }, (_, i) => ({ id: `t${i}`, name: `Team ${String.fromCharCode(65 + i)}`, group: undefined }));
+  const teams: Team[] = Array.from({ length: count }, (_, i) => ({ id: testUuid(i), name: `Team ${String.fromCharCode(65 + i)}`, group: undefined }));
   const tournament = hallencupTournament({ teams, numberOfTeams: count, groupSystem: 'roundRobin', numberOfGroups: 1 });
   return { tournament, schedule: generateFullSchedule(tournament, 'de') };
 }

@@ -10,7 +10,8 @@
 import { useState, useCallback } from 'react';
 import { CSSProperties } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { cssVars, fontSizesMd3 } from '../design-tokens'
+import { cssVars, fontSizesMd3 } from '../design-tokens';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { Tournament } from '../types/tournament';
 import { MatchUpdate } from '../core/models/types';
 import { useToast } from '../components/ui/Toast';
@@ -432,25 +433,15 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
       {/* TOUR-EDIT-META: Dirty-Warning Dialog */}
       {showDirtyWarning && (
-        <div style={overlayStyle}>
-          <div style={dialogStyle}>
-            <h3 style={{ margin: '0 0 16px 0', color: cssVars.colors.textPrimary }}>
-              Ungespeicherte Änderungen
-            </h3>
-            <p style={{ margin: '0 0 24px 0', color: cssVars.colors.textSecondary }}>
-              Du hast Änderungen an den Turnier-Einstellungen vorgenommen, die noch nicht gespeichert wurden.
-              Möchtest du die Änderungen verwerfen?
-            </p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={handleCancelTabChange} style={dialogButtonStyle('secondary')}>
-                Abbrechen
-              </button>
-              <button onClick={handleConfirmTabChange} style={dialogButtonStyle('danger')}>
-                Verwerfen
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          variant="danger"
+          title="Ungespeicherte Änderungen"
+          message="Du hast Änderungen an den Turnier-Einstellungen vorgenommen, die noch nicht gespeichert wurden. Möchtest du die Änderungen verwerfen?"
+          confirmText="Verwerfen"
+          cancelText="Abbrechen"
+          onConfirm={handleConfirmTabChange}
+          onCancel={handleCancelTabChange}
+        />
       )}
 
       {/* MOBILE BOTTOM NAVIGATION */}
@@ -567,36 +558,3 @@ const loadingTextStyle: CSSProperties = {
   color: cssVars.colors.textSecondary,
 };
 
-const overlayStyle: CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  background: 'rgba(0, 0, 0, 0.5)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 1000,
-};
-
-const dialogStyle: CSSProperties = {
-  background: cssVars.colors.surface,
-  borderRadius: cssVars.borderRadius.lg,
-  padding: cssVars.spacing.xl,
-  maxWidth: '400px',
-  width: '90%',
-  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-};
-
-const dialogButtonStyle = (variant: 'secondary' | 'danger'): CSSProperties => ({
-  padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
-  border: variant === 'secondary' ? `1px solid ${cssVars.colors.border}` : 'none',
-  borderRadius: cssVars.borderRadius.md,
-  fontSize: cssVars.fontSizes.md,
-  fontWeight: cssVars.fontWeights.semibold,
-  cursor: 'pointer',
-  background: variant === 'danger' ? cssVars.colors.error : 'transparent',
-  color: variant === 'danger' ? 'white' : cssVars.colors.textSecondary,
-  transition: 'all 0.2s ease',
-});

@@ -57,6 +57,7 @@
     "statusGuest": "Als Gast angemeldet. Registrierung empfohlen für volle Funktionen.",
     "statusUnauthenticated": "Nicht angemeldet. Anmelden oder Registrieren möglich.",
     "offlineAriaLabel": "Offline - Klicken zum erneut verbinden",
+    "offlineHint": "Offline – Änderungen werden gespeichert und später übertragen",
     "offline": "Offline",
     "profileAriaLabel": "Profil von {{name}} öffnen",
     "myProfile": "Mein Profil",
@@ -91,13 +92,24 @@
     "syncingLabel": "Synchronisiere...",
     "pendingCountLabel": "{{count}} ausstehend",
     "failedCountLabel": "{{count}} fehlgeschlagen",
+    "waiting_one": "{{count}} Eintrag wartet",
+    "waiting_other": "{{count}} Einträge warten",
+    "waitingNoInternet_one": "{{count}} Eintrag wartet – kein Internet",
+    "waitingNoInternet_other": "{{count}} Einträge warten – kein Internet",
+    "waitingDisturbed_one": "{{count}} Eintrag wartet – Übertragung gestört",
+    "waitingDisturbed_other": "{{count}} Einträge warten – Übertragung gestört",
+    "waitingStorageFull_one": "{{count}} Eintrag wartet – Gerätespeicher voll, Einträge werden nicht dauerhaft gespeichert",
+    "waitingStorageFull_other": "{{count}} Einträge warten – Gerätespeicher voll, Einträge werden nicht dauerhaft gespeichert",
+    "waitingStorageBlocked_one": "{{count}} Eintrag wartet – Speicher des Browsers gesperrt, Einträge gehen beim Schließen verloren",
+    "waitingStorageBlocked_other": "{{count}} Einträge warten – Speicher des Browsers gesperrt, Einträge gehen beim Schließen verloren",
+    "realtimeInterrupted": "Live-Verbindung unterbrochen",
     "lastSyncNow": "Gerade eben",
     "lastSyncMinutes": "vor {{count}} Min.",
     "lastSyncHours": "vor {{count}} Std.",
     "failedListTitle": "Gescheiterte Übertragungen",
     "failedListEmpty": "Keine gescheiterten Übertragungen.",
     "failedReasonUnknown": "Unbekannter Fehler",
-    "matchProtectedHint": "Spiel {{matchLabel}} hat Einträge und wurde nicht gelöscht.",
+    "matchProtectedHint": "Spiel {{matchLabel}} hat Einträge – nur die Turnierleitung kann es absetzen",
     "retry": "Erneut versuchen",
     "retryAriaLabel": "Übertragung erneut versuchen",
     "discard": "Verwerfen",
@@ -113,9 +125,90 @@
       "UPDATE_TOURNAMENT_METADATA": "Turnierdaten aktualisieren"
     }
   },
+  "guestHidden": {
+    "hint": "{{title}}: nur im Gastmodus nutzbar – kann ins Konto übernommen werden"
+  },
   "progressBar": {
     "stepLabel": "Schritt {{step}}: {{label}}",
     "errorTooltip": "Fehler: {{errors}}",
     "errorBadge": "Fehler"
+  },
+  "outbox": {
+    "rejection": {
+      "INVALID_TRANSITION": "Die Eingabe passt nicht zum aktuellen Spielablauf.",
+      "FORBIDDEN_ACTOR": "Das darf nur die Turnierleitung eingeben.",
+      "UNKNOWN_TARGET": "Die Eingabe, auf die sich das bezieht, wurde nicht gefunden.",
+      "ALREADY_RETRACTED": "Die Eingabe wurde schon zurückgenommen.",
+      "STALE_BASE": "Der Spielstand wurde inzwischen an einem anderen Gerät geändert.",
+      "INVALID_PAYLOAD": "Die Eingabe war unvollständig oder fehlerhaft.",
+      "MATCH_FINISHED": "Das Spiel war zu diesem Zeitpunkt schon beendet.",
+      "NO_WINNER": "Das Strafstoßschießen hat noch keinen Sieger.",
+      "DEPENDS_ON_REJECTED": "Eine vorherige Eingabe wurde nicht übernommen, daher auch diese nicht.",
+      "ID_CONFLICT": "Es gibt schon eine andere Eingabe mit derselben Kennung. Bitte neu eingeben.",
+      "NOT_CONTROLLER": "Ein anderes Gerät steuert dieses Spiel gerade.",
+      "MATCH_FULL": "Für dieses Spiel sind keine weiteren Eingaben möglich. Bitte die Turnierleitung informieren.",
+      "MATCH_GONE": "Das Spiel wurde gelöscht.",
+      "unknown": "Unbekannter Grund"
+    },
+    "eventType": {
+      "matchStart": "Spielbeginn",
+      "pause": "Unterbrechung",
+      "resume": "Spiel fortgesetzt",
+      "sectionEnd": "Ende der Spielzeit",
+      "sectionStart": "Neue Spielzeit",
+      "clockAdjust": "Uhr korrigiert",
+      "matchEnd": "Schluss",
+      "tiebreakChoice": "Entscheidungsmodus gewählt",
+      "shootoutKick": "$t(sport:events.penalty)",
+      "shootoutEnd": "$t(sport:events.penaltyShootout) beendet",
+      "retract": "Zurücknahme",
+      "correction": "Korrektur",
+      "reopen": "Spiel wieder geöffnet",
+      "skip": "Spiel übersprungen",
+      "unskip": "Spiel wieder dabei",
+      "resultEntry": "Ergebnis vorgemerkt",
+      "reviewAccept": "Durch Turnierleitung freigegeben",
+      "reviewDiscard": "Durch Turnierleitung verworfen",
+      "goal": "Tor",
+      "ownGoal": "Eigentor",
+      "yellowCard": "Gelbe Karte",
+      "yellowRedCard": "Gelb-Rote Karte",
+      "redCard": "Rote Karte",
+      "timePenalty": "$t(sport:events.timePenalty)",
+      "substitution": "Wechsel",
+      "foul": "Foul",
+      "amend": "Ergänzung",
+      "unknown": "Eintrag"
+    },
+    "eventLine": {
+      "teamAndMinute": "{{what}} Team {{team}}, {{minute}}. Minute",
+      "team": "{{what}} Team {{team}}",
+      "minute": "{{what}}, {{minute}}. Minute",
+      "plain": "{{what}}"
+    },
+    "rejected": {
+      "header_one": "1 Eintrag $t(sport:outbox.rejectedEntry)",
+      "header_other": "{{count}} Einträge $t(sport:outbox.rejectedEntry)",
+      "dismissAll": "Alle verstanden",
+      "unknownCodeHint": "Code: {{code}}",
+      "countLabel": "{{count}} $t(sport:outbox.rejectedEntry)",
+      "dialogTitle": "Nicht übernommene Einträge",
+      "dismissFailed": "Verstanden fehlgeschlagen — bitte erneut versuchen"
+    },
+    "notice": {
+      "updateAvailable": "Neue App-Version verfügbar",
+      "clientOutdated": "App aktualisieren",
+      "reloadNow": "Jetzt aktualisieren",
+      "authRequired": "Bitte neu anmelden",
+      "notReady": "Spiel noch nicht bereit (Teams offen)",
+      "review": "$t(sport:outbox.awaitingReview) ({{count}})"
+    },
+    "logoutWarning": {
+      "title_one": "{{count}} Eintrag noch nicht übertragen",
+      "title_other": "{{count}} Einträge noch nicht übertragen",
+      "message_one": "Es wartet noch {{count}} Eintrag auf Übertragung. Er bleibt auf diesem Gerät gespeichert und wird nach der nächsten Anmeldung mit diesem Konto gesendet.",
+      "message_other": "Es warten noch {{count}} Einträge auf Übertragung. Sie bleiben auf diesem Gerät gespeichert und werden nach der nächsten Anmeldung mit diesem Konto gesendet.",
+      "confirm": "Trotzdem abmelden"
+    }
   }
 }

@@ -6,16 +6,36 @@
  */
 
 import { Tournament, Team, Match, RuntimeMatchEvent } from '../types/tournament';
+import { teamSlot, pendingSlot } from '../core/models/matchSlot';
+import type { MatchSlot } from '../core/models/schemas/MatchSlotSchema';
+
+// Keine Importe aus `src/test/*`: dieses Modul gehört über LocalTestScreen zum Produktionsbundle.
+/** Deterministische UUID für Mock-Teams und -Spiele (Team-IDs sind UUIDs, siehe `TeamIdSchema`). */
+function testUuid(n: number): string {
+  return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+}
+
+function slots(slotA: MatchSlot, slotB: MatchSlot): Pick<Match, 'slotA' | 'slotB'> {
+  return { slotA, slotB };
+}
+const vs = (teamIdA: string, teamIdB: string) => slots(teamSlot(teamIdA), teamSlot(teamIdB));
+const groupRank = (group: string, rank: number): MatchSlot => pendingSlot({ kind: 'groupRank', group, rank });
+const resultOf = (matchId: string, role: 'winner' | 'loser'): MatchSlot =>
+  pendingSlot({ kind: 'matchResult', matchId, role });
+
+// Halbfinal-IDs (UUIDs: Finalseiten verweisen darauf)
+const HF1_ID = testUuid(101);
+const HF2_ID = testUuid(102);
 
 // 7 realistische deutsche Jugendvereine
 const MOCK_TEAMS: Team[] = [
-  { id: 'team-1', name: 'TSV Grünwald', group: 'A', colors: { primary: '#2E7D32' } },
-  { id: 'team-2', name: 'FC Bayern München II', group: 'A', colors: { primary: '#DC052D' } },
-  { id: 'team-3', name: 'SpVgg Unterhaching', group: 'A', colors: { primary: '#E53935' } },
-  { id: 'team-4', name: 'SV Heimstetten', group: 'A', colors: { primary: '#1565C0' } },
-  { id: 'team-5', name: 'TSV 1860 München II', group: 'B', colors: { primary: '#0D47A1' } },
-  { id: 'team-6', name: 'FC Deisenhofen', group: 'B', colors: { primary: '#FF6F00' } },
-  { id: 'team-7', name: 'SC Fürstenfeldbruck', group: 'B', colors: { primary: '#4A148C' } },
+  { id: testUuid(1), name: 'TSV Grünwald', group: 'A', colors: { primary: '#2E7D32' } },
+  { id: testUuid(2), name: 'FC Bayern München II', group: 'A', colors: { primary: '#DC052D' } },
+  { id: testUuid(3), name: 'SpVgg Unterhaching', group: 'A', colors: { primary: '#E53935' } },
+  { id: testUuid(4), name: 'SV Heimstetten', group: 'A', colors: { primary: '#1565C0' } },
+  { id: testUuid(5), name: 'TSV 1860 München II', group: 'B', colors: { primary: '#0D47A1' } },
+  { id: testUuid(6), name: 'FC Deisenhofen', group: 'B', colors: { primary: '#FF6F00' } },
+  { id: testUuid(7), name: 'SC Fürstenfeldbruck', group: 'B', colors: { primary: '#4A148C' } },
 ];
 
 // Event ID counter
@@ -55,8 +75,7 @@ function createMockMatches(): Match[] {
   matches.push({
     id: 'match-1',
     matchNumber: 1,
-    teamA: 'team-1',
-    teamB: 'team-2',
+    ...vs(testUuid(1), testUuid(2)),
     scoreA: 3,
     scoreB: 2,
     round: 1,
@@ -69,11 +88,11 @@ function createMockMatches(): Match[] {
     scheduledTime: match1Time,
     finishedAt: new Date(match1Time.getTime() + 12 * 60 * 1000).toISOString(),
     events: [
-      createGoalEvent('team-1', 'TSV Grünwald', 1, 0, 3, 10),
-      createGoalEvent('team-2', 'FC Bayern München II', 1, 1, 5, 7),
-      createGoalEvent('team-1', 'TSV Grünwald', 2, 1, 7, 9),
-      createGoalEvent('team-2', 'FC Bayern München II', 2, 2, 9, 11),
-      createGoalEvent('team-1', 'TSV Grünwald', 3, 2, 11, 10),
+      createGoalEvent(testUuid(1), 'TSV Grünwald', 1, 0, 3, 10),
+      createGoalEvent(testUuid(2), 'FC Bayern München II', 1, 1, 5, 7),
+      createGoalEvent(testUuid(1), 'TSV Grünwald', 2, 1, 7, 9),
+      createGoalEvent(testUuid(2), 'FC Bayern München II', 2, 2, 9, 11),
+      createGoalEvent(testUuid(1), 'TSV Grünwald', 3, 2, 11, 10),
     ],
   });
 
@@ -82,8 +101,7 @@ function createMockMatches(): Match[] {
   matches.push({
     id: 'match-2',
     matchNumber: 2,
-    teamA: 'team-3',
-    teamB: 'team-4',
+    ...vs(testUuid(3), testUuid(4)),
     scoreA: 1,
     scoreB: 1,
     round: 1,
@@ -96,8 +114,8 @@ function createMockMatches(): Match[] {
     scheduledTime: match2Time,
     finishedAt: new Date(match2Time.getTime() + 12 * 60 * 1000).toISOString(),
     events: [
-      createGoalEvent('team-3', 'SpVgg Unterhaching', 1, 0, 4, 8),
-      createGoalEvent('team-4', 'SV Heimstetten', 1, 1, 8, 5),
+      createGoalEvent(testUuid(3), 'SpVgg Unterhaching', 1, 0, 4, 8),
+      createGoalEvent(testUuid(4), 'SV Heimstetten', 1, 1, 8, 5),
     ],
   });
 
@@ -106,8 +124,7 @@ function createMockMatches(): Match[] {
   matches.push({
     id: 'match-3',
     matchNumber: 3,
-    teamA: 'team-1',
-    teamB: 'team-3',
+    ...vs(testUuid(1), testUuid(3)),
     scoreA: 2,
     scoreB: 1,
     round: 2,
@@ -121,9 +138,9 @@ function createMockMatches(): Match[] {
     timerStartTime: new Date().toISOString(),
     timerElapsedSeconds: 300,
     events: [
-      createGoalEvent('team-1', 'TSV Grünwald', 1, 0, 2, 10),
-      createGoalEvent('team-3', 'SpVgg Unterhaching', 1, 1, 3, 8),
-      createGoalEvent('team-1', 'TSV Grünwald', 2, 1, 5, 9),
+      createGoalEvent(testUuid(1), 'TSV Grünwald', 1, 0, 2, 10),
+      createGoalEvent(testUuid(3), 'SpVgg Unterhaching', 1, 1, 3, 8),
+      createGoalEvent(testUuid(1), 'TSV Grünwald', 2, 1, 5, 9),
     ],
   });
 
@@ -131,8 +148,7 @@ function createMockMatches(): Match[] {
   matches.push({
     id: 'match-4',
     matchNumber: 4,
-    teamA: 'team-2',
-    teamB: 'team-4',
+    ...vs(testUuid(2), testUuid(4)),
     scoreA: 0,
     scoreB: 0,
     round: 2,
@@ -153,8 +169,7 @@ function createMockMatches(): Match[] {
   matches.push({
     id: 'match-5',
     matchNumber: 5,
-    teamA: 'team-1',
-    teamB: 'team-4',
+    ...vs(testUuid(1), testUuid(4)),
     scoreA: undefined,
     scoreB: undefined,
     round: 3,
@@ -172,8 +187,7 @@ function createMockMatches(): Match[] {
   matches.push({
     id: 'match-6',
     matchNumber: 6,
-    teamA: 'team-2',
-    teamB: 'team-3',
+    ...vs(testUuid(2), testUuid(3)),
     scoreA: undefined,
     scoreB: undefined,
     round: 3,
@@ -193,8 +207,7 @@ function createMockMatches(): Match[] {
   matches.push({
     id: 'match-7',
     matchNumber: 7,
-    teamA: 'team-5',
-    teamB: 'team-6',
+    ...vs(testUuid(5), testUuid(6)),
     scoreA: 4,
     scoreB: 0,
     round: 1,
@@ -207,10 +220,10 @@ function createMockMatches(): Match[] {
     scheduledTime: match7Time,
     finishedAt: new Date(match7Time.getTime() + 12 * 60 * 1000).toISOString(),
     events: [
-      createGoalEvent('team-5', 'TSV 1860 München II', 1, 0, 2, 11),
-      createGoalEvent('team-5', 'TSV 1860 München II', 2, 0, 4, 7),
-      createGoalEvent('team-5', 'TSV 1860 München II', 3, 0, 7, 11),
-      createGoalEvent('team-5', 'TSV 1860 München II', 4, 0, 10, 9),
+      createGoalEvent(testUuid(5), 'TSV 1860 München II', 1, 0, 2, 11),
+      createGoalEvent(testUuid(5), 'TSV 1860 München II', 2, 0, 4, 7),
+      createGoalEvent(testUuid(5), 'TSV 1860 München II', 3, 0, 7, 11),
+      createGoalEvent(testUuid(5), 'TSV 1860 München II', 4, 0, 10, 9),
     ],
   });
 
@@ -219,8 +232,7 @@ function createMockMatches(): Match[] {
   matches.push({
     id: 'match-8',
     matchNumber: 8,
-    teamA: 'team-6',
-    teamB: 'team-7',
+    ...vs(testUuid(6), testUuid(7)),
     scoreA: 2,
     scoreB: 3,
     round: 2,
@@ -233,11 +245,11 @@ function createMockMatches(): Match[] {
     scheduledTime: match8Time,
     finishedAt: new Date(match8Time.getTime() + 12 * 60 * 1000).toISOString(),
     events: [
-      createGoalEvent('team-7', 'SC Fürstenfeldbruck', 0, 1, 3, 10),
-      createGoalEvent('team-6', 'FC Deisenhofen', 1, 1, 5, 8),
-      createGoalEvent('team-7', 'SC Fürstenfeldbruck', 1, 2, 7, 6),
-      createGoalEvent('team-6', 'FC Deisenhofen', 2, 2, 9, 8),
-      createGoalEvent('team-7', 'SC Fürstenfeldbruck', 2, 3, 11, 10),
+      createGoalEvent(testUuid(7), 'SC Fürstenfeldbruck', 0, 1, 3, 10),
+      createGoalEvent(testUuid(6), 'FC Deisenhofen', 1, 1, 5, 8),
+      createGoalEvent(testUuid(7), 'SC Fürstenfeldbruck', 1, 2, 7, 6),
+      createGoalEvent(testUuid(6), 'FC Deisenhofen', 2, 2, 9, 8),
+      createGoalEvent(testUuid(7), 'SC Fürstenfeldbruck', 2, 3, 11, 10),
     ],
   });
 
@@ -246,8 +258,7 @@ function createMockMatches(): Match[] {
   matches.push({
     id: 'match-9',
     matchNumber: 9,
-    teamA: 'team-5',
-    teamB: 'team-7',
+    ...vs(testUuid(5), testUuid(7)),
     scoreA: undefined,
     scoreB: undefined,
     round: 3,
@@ -264,10 +275,9 @@ function createMockMatches(): Match[] {
   // Halbfinale - SCHEDULED
   const hfTime = new Date(now.getTime() + 45 * 60 * 1000);
   matches.push({
-    id: 'match-hf1',
+    id: HF1_ID,
     matchNumber: 10,
-    teamA: 'group-A-1st',
-    teamB: 'group-B-2nd',
+    ...slots(groupRank('A', 1), groupRank('B', 2)),
     scoreA: undefined,
     scoreB: undefined,
     round: 4,
@@ -282,10 +292,9 @@ function createMockMatches(): Match[] {
   });
 
   matches.push({
-    id: 'match-hf2',
+    id: HF2_ID,
     matchNumber: 11,
-    teamA: 'group-B-1st',
-    teamB: 'group-A-2nd',
+    ...slots(groupRank('B', 1), groupRank('A', 2)),
     scoreA: undefined,
     scoreB: undefined,
     round: 4,
@@ -304,8 +313,7 @@ function createMockMatches(): Match[] {
   matches.push({
     id: 'match-final',
     matchNumber: 12,
-    teamA: 'Sieger HF1',
-    teamB: 'Sieger HF2',
+    ...slots(resultOf(HF1_ID, 'winner'), resultOf(HF2_ID, 'winner')),
     scoreA: undefined,
     scoreB: undefined,
     round: 5,
@@ -324,8 +332,7 @@ function createMockMatches(): Match[] {
   matches.push({
     id: 'match-3rd',
     matchNumber: 13,
-    teamA: 'Verlierer HF1',
-    teamB: 'Verlierer HF2',
+    ...slots(resultOf(HF1_ID, 'loser'), resultOf(HF2_ID, 'loser')),
     scoreA: undefined,
     scoreB: undefined,
     round: 5,

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { TeamTrainerSchema, TournamentGroupSchema, TournamentFieldSchema, RuntimeMatchEventSchema } from './CommonSchemas';
+import { RULEBOOK_MAX_LENGTH } from '../../../constants/rulebook';
+import { MatchSlotSchema, SlotSourceSchema } from './MatchSlotSchema';
 
 const TeamLogoSchema = z.object({
     type: z.enum(['url', 'base64', 'initials']),
@@ -30,8 +32,12 @@ export const MatchSchema = z.object({
     round: z.number(),
     field: z.number(),
     slot: z.number().optional(),
-    teamA: z.string(),
-    teamB: z.string(),
+    // Spielseiten nur als Slot (@TM-015); das Übergangsfeld teamA/teamB ist seit A-36a gelöscht.
+    slotA: MatchSlotSchema,
+    slotB: MatchSlotSchema,
+    // A-36a: Herkunft des Platzes (unveränderlich), nur Finalrunde.
+    originA: SlotSourceSchema.optional(),
+    originB: SlotSourceSchema.optional(),
     scoreA: z.number().min(0).optional(),
     scoreB: z.number().min(0).optional(),
     group: z.string().optional(),
@@ -86,6 +92,7 @@ export const TournamentSchema = z.object({
     sportId: z.string(),
     tournamentType: z.string(),
     mode: z.string(),
+    rulebook: z.string().max(RULEBOOK_MAX_LENGTH).optional(),
 
     // Stats/Meta
     createdAt: z.string(),

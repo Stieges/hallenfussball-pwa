@@ -55,8 +55,8 @@ describe('MonitorEditor – angebotene Folien-Typen', () => {
     vi.clearAllMocks();
     hoisted.monitor.slides = [];
     // Neue Folie ohne Config (wie ein Monitor ohne matchCount) – prüft die Vorbelegung im Editor
-    hoisted.addSlide.mockImplementation(async (_monitorId: string, type: MonitorSlide['type']) => {
-      const slide: MonitorSlide = { id: `s-${hoisted.monitor.slides.length}`, type, config: {}, duration: 15, order: hoisted.monitor.slides.length };
+    hoisted.addSlide.mockImplementation(async (_monitorId: string, type: MonitorSlide['type'], config?: MonitorSlide['config']) => {
+      const slide: MonitorSlide = { id: `s-${hoisted.monitor.slides.length}`, type, config: { ...config }, duration: 15, order: hoisted.monitor.slides.length };
       hoisted.monitor.slides.push(slide);
       return slide;
     });
@@ -91,7 +91,7 @@ describe('MonitorEditor – angebotene Folien-Typen', () => {
 
   it('Nächste Spiele neu angelegt: Anzahl ist 3 (R-f5)', async () => {
     const user = userEvent.setup();
-    const { container } = renderEditor(tournament());
+    const { baseElement: container } = renderEditor(tournament());
     await openAddMenu(user);
     await user.click(screen.getByRole('button', { name: /Nächste Spiele/ }));
 
@@ -103,10 +103,29 @@ describe('MonitorEditor – angebotene Folien-Typen', () => {
   it('Live-Folie bearbeiten: keine Auswahl „Wenn kein Spiel läuft“, „Anhalten“ bleibt (@OB-001, @ZM-074)', async () => {
     const user = userEvent.setup();
     hoisted.monitor.slides = [{ id: 's-live', type: 'live', config: { fieldId: 'f1' }, duration: null, order: 0 }];
-    const { container } = renderEditor(tournament());
+    const { baseElement: container } = renderEditor(tournament());
     await user.click(screen.getByTitle(/slides\.edit$/));
     expect(container.querySelector('select[id$="-whenIdle"]')).toBeNull();
     expect(screen.queryByText(/whenIdleLabel/)).toBeNull();
     expect(screen.getByText(/pauseRotation/)).toBeInTheDocument();
+  });
+
+  it('@ME-066 Neue Live-Spiel-Folie ist mit dem ersten Feld vorbelegt und gilt als eingerichtet', async () => {
+    const user = userEvent.setup();
+    renderEditor(tournament());
+    await openAddMenu(user);
+    await user.click(screen.getByRole('button', { name: /Live-Spiel/ }));
+    expect(hoisted.addSlide).toHaveBeenCalledWith('monitor-1', 'live', { fieldId: 'f1' });
+    expect(hoisted.monitor.slides[0].config.fieldId).toBe('f1');
+    expect(screen.queryByText(/notConfigured/)).toBeNull();
+  });
+
+  it('@ME-066 Gegenbeispiel: eine Folie ohne Feldbezug (Nächste Spiele) bekommt keine Feld-Vorbelegung', async () => {
+    const user = userEvent.setup();
+    renderEditor(tournament());
+    await openAddMenu(user);
+    await user.click(screen.getByRole('button', { name: /Nächste Spiele/ }));
+    expect(hoisted.addSlide).toHaveBeenCalledWith('monitor-1', 'next-matches', undefined);
+    expect(hoisted.monitor.slides[0].config.fieldId).toBeUndefined();
   });
 });

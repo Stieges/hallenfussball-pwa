@@ -12,6 +12,7 @@ import deMonitor from './locales/de/monitor.json';
 import deSettings from './locales/de/settings.json';
 import deAdmin from './locales/de/admin.json';
 import deSport from './locales/de/sport.json';
+import dePublicView from './locales/de/publicView.json';
 
 import enCommon from './locales/en/common.json';
 import enAuth from './locales/en/auth.json';
@@ -23,6 +24,7 @@ import enMonitor from './locales/en/monitor.json';
 import enSettings from './locales/en/settings.json';
 import enAdmin from './locales/en/admin.json';
 import enSport from './locales/en/sport.json';
+import enPublicView from './locales/en/publicView.json';
 
 // Import types for module augmentation side-effect
 import './types';
@@ -81,6 +83,7 @@ export const NAMESPACES = [
   'settings',
   'admin',
   'sport',
+  'publicView',
 ] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];
@@ -102,6 +105,7 @@ void i18n.use(initReactI18next).init({
       settings: deSettings,
       admin: deAdmin,
       sport: deSport,
+      publicView: dePublicView,
     },
     en: {
       common: enCommon,
@@ -114,6 +118,7 @@ void i18n.use(initReactI18next).init({
       settings: enSettings,
       admin: enAdmin,
       sport: enSport,
+      publicView: enPublicView,
     },
   },
 

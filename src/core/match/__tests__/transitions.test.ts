@@ -104,6 +104,15 @@ describe('matchTransitions.json', () => {
       { from: 'finished', type: 'RETRACT', actor: 'leitung', to: '=' },
 
       { from: 'skipped', type: 'UNSKIP', actor: 'leitung', to: 'scheduled' },
+
+      // C0a (D-C4, D-C6, V1): Angaben ergänzen -- Helfer in allen gespielten Zuständen, auch nach
+      // dem Abpfiff (die Nachtrag-Regel prüft handlers/amend.ts typspezifisch).
+      { from: 'running', type: 'AMEND', actor: 'helper', to: '=' },
+      { from: 'paused', type: 'AMEND', actor: 'helper', to: '=' },
+      { from: 'section_break', type: 'AMEND', actor: 'helper', to: '=' },
+      { from: 'decision_pending', type: 'AMEND', actor: 'helper', to: '=' },
+      { from: 'shootout', type: 'AMEND', actor: 'helper', to: '=' },
+      { from: 'finished', type: 'AMEND', actor: 'helper', to: '=' },
     ];
 
     const sortKey = (row: TransitionRow): string => `${row.from}::${row.type}`;

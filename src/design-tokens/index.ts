@@ -114,6 +114,7 @@ export {
   displaySpacing,
   displayTransitions,
   displayLayout,
+  displayNoMatch,
   displayEffects,
   displayMonitor,
   displayColorSchemes,
@@ -121,8 +122,7 @@ export {
   monitorColorSchemes,
   getScoreTextColor,
   criticalPhaseColors,
-  criticalPhaseThresholds,
-  getCriticalPhase,
+  liveColorSchemeDefaults,
   type DisplayTokens,
   type DisplayFontSizeKey,
   type DisplayColorKey,
@@ -131,11 +131,12 @@ export {
   type MonitorThemeKey,
   type MonitorThemeColors,
   type MonitorColorPresetKey,
-  type CriticalPhase,
 } from './display';
+export { displayList } from './displayList';
 
 export {
   touchTargets,
+  dialogWidths,
   touchTargetValues,
   iconSizes,
   iconSizeValues,

@@ -15,6 +15,7 @@ import { pageGeometry } from '../layout';
 import type { LayoutPage, LayoutText } from './pdfjsLayout';
 import { squash } from './pdfjsText';
 import { fettMap } from './pdfSchnitt';
+import { testUuid } from '../../../test/testIds';
 
 const BFV = 'BFV-Richtlinien für Futsal und private Hallenturniere';
 const LONG_50 = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
@@ -39,7 +40,7 @@ function hallencupMitRegelwerk(overrides: Partial<Tournament> = {}): Tournament 
 
 /** 32 Teams in acht Gruppen à vier: die Gruppentabellen laufen über eine Seite, die Finalrunde ebenfalls. */
 const GROSS_TEAMS: Team[] = Array.from({ length: 32 }, (_, i) => ({
-  id: `team-${i + 1}`,
+  id: testUuid(i + 1),
   name: `Verein ${String(i + 1).padStart(2, '0')}`,
   group: 'ABCDEFGH'[Math.floor(i / 4)],
 }));

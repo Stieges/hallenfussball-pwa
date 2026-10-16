@@ -21,12 +21,13 @@ import {
   loadStoredConfig,
   saveStoredConfig,
 } from '../utils/smartConfigCalculator';
+import { testUuid } from '../../../test/testIds';
 
 /** Turnier mit groupCount Gruppen (Teams i % groupCount → Gruppe A, B, …) für den echten Generator. */
 const gruppenTurnier = (teams: number, groupCount: number, preset: FinalsPreset): Tournament => {
   const labels = ['A', 'B', 'C', 'D'];
   const teamList: Team[] = Array.from({ length: teams }, (_, index) => ({
-    id: `t${index + 1}`,
+    id: testUuid(index + 1),
     name: `Team ${index + 1}`,
     group: labels[index % groupCount],
   }));

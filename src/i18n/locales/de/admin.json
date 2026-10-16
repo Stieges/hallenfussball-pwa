@@ -89,7 +89,6 @@
     "goals": "Tore",
     "goalsPerMatch": "Ø {{avg}} pro Spiel",
     "runningMatches": "Laufende Spiele ({{count}})",
-    "unknownTeam": "Unbekannt",
     "nextMatch": "Nächstes Spiel",
     "upcoming": "Anstehend",
     "quickActions": "Quick Actions",
@@ -129,8 +128,7 @@
     "noEntries": "Keine Einträge gefunden.",
     "tryDifferentFilters": "Versuche andere Filtereinstellungen.",
     "emptyLogHint": "Das Activity Log wird gefüllt, sobald Änderungen am Turnier vorgenommen werden.",
-    "loadMore": "Mehr laden ({{count}} weitere)",
-    "unknown": "Unbekannt"
+    "loadMore": "Mehr laden ({{count}} weitere)"
   },
   "exports": {
     "title": "Exporte",
@@ -189,6 +187,7 @@
     "backupError": "Fehler beim Erstellen des Backups",
     "eventGoal": "Tor",
     "eventYellowCard": "Gelbe Karte",
+    "eventYellowRedCard": "Gelb-Rote Karte",
     "eventRedCard": "Rote Karte",
     "eventTimePenalty": "Zeitstrafe",
     "eventSubstitution": "Wechsel"
@@ -313,6 +312,10 @@
     "reset": "Zurücksetzen",
     "unsavedChangesWarning": "Du hast ungespeicherte Änderungen. Möchtest du wirklich die Seite verlassen?",
     "confirmReset": "Möchtest du alle Änderungen verwerfen und die ursprünglichen Werte wiederherstellen?",
-    "changesSaved": "Änderungen wurden gespeichert"
+    "changesSaved": "Änderungen wurden gespeichert",
+    "rulebook": "Regelwerk (optional)",
+    "rulebookPlaceholder": "z. B. BFV-Richtlinien für Futsal",
+    "rulebookLimit": "Höchstens 80 Zeichen.",
+    "rulebookTruncated": "Auf 80 Zeichen gekürzt."
   }
 }

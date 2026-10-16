@@ -24,7 +24,14 @@
     "group": "Gruppe {{group}}",
     "referee": "Schiedsrichter: {{name}}",
     "noRunningMatch": "Kein laufendes Spiel",
-    "tablesShownMessage": "Die Tabellen werden angezeigt, bis ein Spiel gestartet wird"
+    "tablesShownMessage": "Die Tabellen werden angezeigt, bis ein Spiel gestartet wird",
+    "clock": {
+      "ended": "Spielzeit abgelaufen – Ergebnis folgt",
+      "holdsOnInterruption": "Uhr hält bei Unterbrechung",
+      "stopped": "angehalten"
+    },
+    "withoutResult": "ohne Ergebnis",
+    "finalScore": "Endstand"
   },
   "timer": {
     "pause": "Pause",
@@ -37,7 +44,8 @@
   },
   "cardAnimation": {
     "redCard": "ROTE KARTE",
-    "yellowCard": "GELBE KARTE"
+    "yellowCard": "GELBE KARTE",
+    "yellowRedCard": "GELB-ROT"
   },
   "slides": {
     "nextMatches": {
@@ -45,13 +53,52 @@
       "none": "Keine weiteren Spiele"
     },
     "qr": {
-      "headline": "Ergebnisse aufs Handy"
+      "headline": "Ergebnisse aufs Handy",
+      "idleHint": "Schau auf die Anzeige in der Halle – hier läuft das Spiel live mit."
     },
     "page": "Seite {{page}} / {{pages}}",
     "allStandings": {
       "finals": "Finalrunde",
       "overall": "Gesamttabelle",
       "none": "Noch keine Tabellen"
+    },
+    "schedule": {
+      "title": "Spielplan {{field}}"
+    },
+    "live": {
+      "idleSkip": "Warte auf nächstes Spiel...",
+      "nextMatch": "Nächstes Spiel",
+      "noMatch": "Kein Spiel geplant",
+      "kickoff": "Anstoß"
+    },
+    "sponsor": {
+      "notFound": "Sponsor nicht gefunden",
+      "scanMore": "Scan für mehr Info",
+      "tier": "{{tier}} Sponsor"
+    }
+  },
+  "dauerbetrieb": {
+    "wakeLockHint": "Der Bildschirm kann sich nach der Energiespar-Einstellung des Geräts abschalten."
+  },
+  "loading": "Lade Display...",
+  "error": {
+    "notFound": "Konfiguration nicht gefunden",
+    "back": "← Zurück",
+    "connection": "Turnier konnte nicht geladen werden: Verbindung zum Server fehlgeschlagen. Der nächste Versuch läuft automatisch.",
+    "tournamentNotFound": "Turnier nicht gefunden: {{id}}. Läuft dieser Bildschirm auf einem anderen Gerät als der Organisator-Laptop, muss das Turnier in den Sichtbarkeits-Einstellungen auf \"Mit Link teilbar\" stehen.",
+    "monitorNotFound": "Monitor nicht gefunden: {{id}}",
+    "fetchFailed": "Fehler beim Laden",
+    "cloudTimeout": "Cloud-Anfrage nach {{ms}}ms abgebrochen (Timeout)"
+  },
+  "standings": {
+    "header": {
+      "rank": "#",
+      "team": "Team",
+      "won": "S",
+      "drawn": "U",
+      "lost": "N",
+      "goalDiff": "Diff",
+      "points": "Pkt"
     }
   }
 }

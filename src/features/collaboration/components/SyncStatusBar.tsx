@@ -13,6 +13,15 @@ import { CSSProperties, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { SyncStatus } from '../../../core/repositories/OfflineRepository';
+import { SyncRejectedHint } from './SyncRejectedHint';
+import {
+    LABEL_KEY_BY_STATUS,
+    STATUS_CONFIG,
+    type StatusConfig,
+    type WaitReason,
+    WAITING_CONFIG,
+    WAITING_KEY_BY_REASON,
+} from './syncStatusDisplay';
 
 // =============================================================================
 // TYPES
@@ -35,56 +44,17 @@ export interface SyncStatusBarProps {
     pendingCount?: number;
     /** Number of failed mutations in dead-letter queue */
     failedCount?: number;
+    /** C2b: Eintraege, die der Server nicht uebernommen hat (nicht uebernommen) */
+    rejectedCount?: number;
+    /** C2b: Eintraege, die auf die Turnierleitung warten (wartet auf Turnierleitung) */
+    reviewCount?: number;
+    /** C2b: zeigt die Ablehnungsliste an (RejectedEntriesPanel) */
+    onShowRejected?: () => void;
+    /** A-06i: Wartegrund fuer noch wartende Eintraege (deriveWaitReason); null/undefined = neutral */
+    waitReason?: WaitReason | null;
+    /** A-06i: Detailtext (letzter Fehler) -- nur im Titel bei 'disturbed' */
+    waitDetail?: string;
 }
-
-// =============================================================================
-// STATUS CONFIG
-// =============================================================================
-
-// Fixrunde 1 (Review I2): nur Icon/Farbe sind statisch (React-Hook-frei, module-level) --
-// der Label-TEXT kommt jetzt aus i18n (siehe LABEL_KEY_BY_STATUS unten, im Component-Body
-// über useTranslation aufgelöst). Vorher stand hier "Synchronisiert"/"Fehler"/... hartkodiert.
-interface StatusConfig {
-    icon: string;
-    color: string;
-    bgColor: string;
-}
-
-const STATUS_CONFIG: Record<SyncStatus, StatusConfig> = {
-    synced: {
-        icon: '✓',
-        color: cssVars.colors.success,
-        bgColor: 'transparent',
-    },
-    updated: {
-        icon: '↓',
-        color: cssVars.colors.primary,
-        bgColor: 'transparent',
-    },
-    conflict: {
-        icon: '⚠',
-        color: cssVars.colors.warning,
-        bgColor: cssVars.colors.warningLight,
-    },
-    error: {
-        icon: '✕',
-        color: cssVars.colors.error,
-        bgColor: cssVars.colors.errorLight,
-    },
-    offline: {
-        icon: '○',
-        color: cssVars.colors.textMuted,
-        bgColor: cssVars.colors.surfaceElevated,
-    },
-};
-
-const LABEL_KEY_BY_STATUS: Record<SyncStatus, string> = {
-    synced: 'syncStatus.label.synced',
-    updated: 'syncStatus.label.updated',
-    conflict: 'syncStatus.label.conflict',
-    error: 'syncStatus.label.error',
-    offline: 'syncStatus.label.offline',
-};
 
 // =============================================================================
 // STYLES
@@ -157,6 +127,27 @@ const createStyles = (config: StatusConfig, compact: boolean) => ({
         fontWeight: cssVars.fontWeights.semibold,
         lineHeight: 1,
     } as CSSProperties,
+
+    // C2b: Hinweis auf nicht uebernommene Eintraege -- eigener Knopf NEBEN dem Statusfeld
+    // (kein verschachtelter Knopf), Touch-Ziel nach WCAG 2.5.5.
+    // Fixrunde 1 (Review I2): `onError` (weiss) auf `errorLight` (fast weiss/leicht transparent)
+    // war im hellen Theme praktisch unlesbar. `error` selbst ist ein satter Ton, der auf der
+    // blassen `errorLight`-Flaeche in BEIDEM Themes ausreichend Kontrast hat.
+    rejected: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: cssVars.spacing.xs,
+        minHeight: cssVars.touchTargets.minimum,
+        minWidth: cssVars.touchTargets.minimum,
+        padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+        border: `1px solid ${cssVars.colors.error}`,
+        borderRadius: cssVars.borderRadius.md,
+        background: cssVars.colors.errorLight,
+        color: cssVars.colors.error,
+        fontSize: cssVars.fontSizes.bodySm,
+        fontWeight: cssVars.fontWeights.semibold,
+        cursor: 'pointer',
+    } as CSSProperties,
 });
 
 // =============================================================================
@@ -172,10 +163,17 @@ export function SyncStatusBar({
     compact = false,
     pendingCount = 0,
     failedCount = 0,
+    rejectedCount = 0,
+    reviewCount = 0,
+    onShowRejected,
+    waitReason = null,
+    waitDetail,
 }: SyncStatusBarProps) {
     const { t } = useTranslation('common');
     const hasPending = pendingCount > 0;
     const hasFailed = failedCount > 0;
+    const hasReview = reviewCount > 0;
+    const hasRejected = rejectedCount > 0;
 
     // Fixrunde 1 (Review C1): `failedCount > 0` muss die DARSTELLUNG selbst umschalten (Symbol,
     // Farbe, Hintergrund), nicht nur `data-state` (siehe testState unten). Vorher blieb
@@ -183,8 +181,14 @@ export function SyncStatusBar({
     // 'error', wenn die MutationQueue passiv dead-lettert -- ein gescheiterter Eintrag zeigte
     // weiterhin ein grünes "✓".
     const effectiveStatus: SyncStatus = isSyncing ? 'synced' : hasFailed ? 'error' : status;
-    const config = STATUS_CONFIG[effectiveStatus];
-    const label = String(t(LABEL_KEY_BY_STATUS[effectiveStatus], { defaultValue: LABEL_KEY_BY_STATUS[effectiveStatus] }));
+    // A-06i (Vorrang laut Brief A10): isSyncing > hasFailed > conflict/error > WAITING > Status.
+    const isWaiting = hasPending && !isSyncing
+        && (effectiveStatus === 'synced' || effectiveStatus === 'updated' || effectiveStatus === 'offline');
+    const config = isWaiting ? WAITING_CONFIG : STATUS_CONFIG[effectiveStatus];
+    const waitingKey = waitReason ? WAITING_KEY_BY_REASON[waitReason] : 'syncStatus.waiting';
+    const label = isWaiting
+        ? String(t(waitingKey, { count: pendingCount }))
+        : String(t(LABEL_KEY_BY_STATUS[effectiveStatus], { defaultValue: LABEL_KEY_BY_STATUS[effectiveStatus] }));
     const styles = useMemo(() => createStyles(config, compact), [config, compact]);
 
     function formatLastSync(timestamp?: string): string | null {
@@ -256,14 +260,15 @@ export function SyncStatusBar({
         }
     };
 
-    const pendingSuffix = hasPending ? ` - ${String(t('syncStatus.pendingCountLabel', { count: pendingCount }))}` : '';
+    const pendingSuffix = hasPending && !isWaiting ? ` - ${String(t('syncStatus.pendingCountLabel', { count: pendingCount }))}` : '';
     const failedSuffix = hasFailed ? ` - ${String(t('syncStatus.failedCountLabel', { count: failedCount }))}` : '';
     const lastSyncSuffix = lastSyncText && !hasPending && !hasFailed ? ` - ${lastSyncText}` : '';
+    const waitDetailSuffix = isWaiting && waitReason === 'disturbed' && waitDetail ? ` – ${waitDetail}` : '';
 
     const ariaLabel = isSyncing ? t('syncStatus.syncingAriaLabel') : label;
     const title = isSyncing
         ? t('syncStatus.syncingAriaLabel')
-        : `${label}${pendingSuffix}${failedSuffix}${lastSyncSuffix}`;
+        : `${label}${pendingSuffix}${failedSuffix}${lastSyncSuffix}${waitDetailSuffix}`;
 
     return (
         <>
@@ -302,7 +307,7 @@ export function SyncStatusBar({
                 )}
 
                 {/* Show pending count if any */}
-                {!compact && hasPending && !isSyncing && (
+                {!compact && hasPending && !isSyncing && !isWaiting && (
                     <span style={{
                         ...styles.label,
                         color: cssVars.colors.warning,
@@ -320,6 +325,17 @@ export function SyncStatusBar({
                         fontSize: cssVars.fontSizes.xs,
                     }}>
                         ({t('syncStatus.failedCountLabel', { count: failedCount })})
+                    </span>
+                )}
+
+                {/* C2b: Eintraege, die auf die Turnierleitung warten */}
+                {!compact && hasReview && !isSyncing && (
+                    <span style={{
+                        ...styles.label,
+                        color: cssVars.colors.textMuted,
+                        fontSize: cssVars.fontSizes.xs,
+                    }}>
+                        {t('outbox.notice.review', { count: reviewCount })}
                     </span>
                 )}
 
@@ -343,7 +359,34 @@ export function SyncStatusBar({
                         {badgeCount}
                     </span>
                 )}
+
+                {/* Fixrunde 1 (Review m5): AdminHeader/LiveCockpit nutzen beide `compact` --
+                    ohne dieses Badge war "wartet auf Turnierleitung" dort nie sichtbar. Eigene
+                    Ecke (unten rechts), damit es sich nicht mit dem Pending/Failed-Badge oben
+                    rechts ueberlappt. */}
+                {compact && hasReview && !isSyncing && (
+                    <span
+                        data-testid="sync-status-review-badge"
+                        style={{
+                            ...styles.badge,
+                            top: 'auto',
+                            bottom: -4,
+                            background: cssVars.colors.info,
+                            color: cssVars.colors.onPrimary,
+                        }}
+                        aria-hidden="true"
+                        title={String(t('outbox.notice.review', { count: reviewCount }))}
+                    >
+                        {reviewCount}
+                    </span>
+                )}
             </button>
+
+            {/* C2b: Hinweis auf nicht uebernommene Eintraege (D-C1), Fixrunde 1 (Review m4):
+                als Unterkomponente ausgelagert, um SyncStatusBar zu verkleinern. */}
+            {hasRejected && (
+                <SyncRejectedHint count={rejectedCount} style={styles.rejected} onShowRejected={onShowRejected} />
+            )}
 
             {/* CSS Animation for spinning icon */}
             <style>{`

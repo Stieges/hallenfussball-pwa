@@ -13,6 +13,7 @@ import { HALLENCUP_STANDINGS, HALLENCUP_TEAMS, hallencupSchedule, hallencupTourn
 import { ohneNummer } from './pdfFixtureLayout';
 import { readLayout, type LayoutPage } from './pdfjsLayout';
 import { translatorFor } from './pdfText';
+import { testUuid } from '../../../test/testIds';
 
 const LINE_MIN_LENGTH = 40;
 const FLAT_TOL = 0.01;
@@ -317,7 +318,7 @@ describe('@DR-009 Platzierung zweispaltig', () => {
   });
 
   it('80 Teams (40 Zeilen) brechen nur zwischen Zeilen um: jede Nummer hat ihre Linie auf derselben Seite', async () => {
-    const teams = Array.from({ length: 80 }, (_, i) => ({ id: `t${i}`, name: `Team ${i + 1}`, group: `G${Math.floor(i / 10)}` }));
+    const teams = Array.from({ length: 80 }, (_, i) => ({ id: testUuid(i), name: `Team ${i + 1}`, group: `G${Math.floor(i / 10)}` }));
     const tournament = hallencupTournament({ teams, numberOfTeams: 80, numberOfGroups: 8 });
     const { pages } = await platzierung({}, undefined, generateFullSchedule(tournament, 'de'), tournament);
     const geo = pageGeometry('a4', 'portrait');

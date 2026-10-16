@@ -13,13 +13,13 @@ import { AUTH_ERRORS } from '../constants';
 import type { User, Session, LoginResult, RegisterResult, ConnectionState } from '../types/auth.types';
 import type { Session as SupabaseSession } from '@supabase/supabase-js';
 import { mapSupabaseUser, mapSupabaseSession, createLocalGuestUser, type ProfileData } from './authMapper';
-import { migrateGuestTournaments } from '../services/guestMigrationService';
 import { createAuthRetryService, isAbortError } from '../../../core/services';
-import { clearProfileCache, cacheUserProfile } from '../services/profileCacheService';
+import { cacheUserProfile } from '../services/profileCacheService';
 import { isFeatureEnabled } from '../../../config';
 import { mapProfileUpdateToSupabase } from '../../../core/repositories/supabaseMappers';
 import { executeWithTimeout } from '../../../core/utils/SingleFlight';
 import { captureFeatureError, setUserContext as setSentryUserContext } from '../../../lib/sentry';
+import { logout as logoutAction, type LogoutOptions, type LogoutResult } from './logoutAction';
 
 /**
  * Timeout for auth operations (login, register, etc.)
@@ -152,7 +152,7 @@ export async function register(
   const supabaseClient = supabase;
 
   try {
-    // Check if current user is a guest (for migration)
+    // Check if current user is a guest (Gastdaten entfernen nach Anmeldung)
     const { user, isGuest } = deps.getCurrentState();
     const wasGuest = isGuest && user?.globalRole === 'guest';
 
@@ -202,29 +202,15 @@ export async function register(
     const profileData = await deps.fetchProfile(data.user.id);
     const mappedUser = mapSupabaseUser(data.user, profileData);
 
-    // Migrate any local guest tournaments to the new account
-    let migrationResult = { migratedCount: 0 };
-    try {
-      migrationResult = await migrateGuestTournaments();
-      if (import.meta.env.DEV && migrationResult.migratedCount > 0) {
-        // eslint-disable-next-line no-console
-        console.log(`Migrated ${migrationResult.migratedCount} tournament(s) after registration`);
-      }
-    } catch (migrationError) {
-      if (import.meta.env.DEV) {
-        console.error('Migration after registration failed:', migrationError);
-      }
-      // Don't fail the registration if migration fails
-    }
-
+    // A-07e (Ü1.1): keine automatische Gast-Migration mehr; lokale Gast-Turniere bleiben lokal.
     deps.setConnectionState('connected');
 
     return {
       success: true,
       user: mappedUser ?? undefined,
       session: data.session ? mapSupabaseSession(data.session) ?? undefined : undefined,
-      wasMigrated: migrationResult.migratedCount > 0,
-      migratedCount: migrationResult.migratedCount,
+      wasMigrated: false,
+      migratedCount: 0,
     };
   } catch (err) {
     // Handle timeout specifically
@@ -321,31 +307,12 @@ export async function login(
 
     deps.setConnectionState('connected');
 
-    // Sub-Spec 1.5 F4: migrateGuestTournaments runs fire-and-forget so the
-    // login completes immediately. A slow migration (or a hung Supabase
-    // request inside it) used to block the success-screen handoff.
-    void migrateGuestTournaments()
-      .then((migrationResult) => {
-        if (import.meta.env.DEV && migrationResult.migratedCount > 0) {
-          // eslint-disable-next-line no-console
-          console.log(`Migrated ${migrationResult.migratedCount} tournament(s) after login`);
-        }
-      })
-      .catch((migrationError: unknown) => {
-        if (import.meta.env.DEV) {
-          console.error('Migration after login failed:', migrationError);
-        }
-        if (migrationError instanceof Error) {
-          captureFeatureError(migrationError, 'auth', 'migrateGuestTournaments');
-        }
-      });
+    // A-07e (Ü1.1): keine automatische Gast-Migration mehr (vorher fire-and-forget, Sub-Spec 1.5 F4).
 
     return {
       success: true,
       user: mappedUser ?? undefined,
       session: mapSupabaseSession(data.session) ?? undefined,
-      // Migration runs in the background now; the dashboard's tournament list
-      // refresh will surface migrated entries when it polls.
       wasMigrated: false,
       migratedCount: 0,
     };
@@ -480,43 +447,10 @@ export async function loginWithGoogle(): Promise<{ success: boolean; error?: str
 }
 
 /**
- * Logout
+ * Logout (dieses Gerät, oder `scope: 'others'` für alle anderen Geräte – siehe logoutAction.ts)
  */
-export async function logout(deps: AuthActionDeps): Promise<void> {
-  // Local cleanup that MUST run regardless of signOut success/failure
-  const cleanupLocal = () => {
-    safeLocalStorage.removeItem('auth:guestUser');
-    safeLocalStorage.removeItem('auth:cachedUser');
-    // Clear legacy keys (Fix 4)
-    clearLegacyAuthKeys();
-    // Clear offline mutation queue to prevent replaying with wrong user (Fix 5)
-    safeLocalStorage.removeItem('mutation_queue_v1');
-    safeLocalStorage.removeItem('mutation_queue_failed_v1');
-    void clearProfileCache();
-    setUserAndSentry(deps, null);
-    deps.setSession(null);
-    deps.setIsGuest(false);
-  };
-
-  if (!isSupabaseConfigured || !supabase) {
-    cleanupLocal();
-    return;
-  }
-
-  try {
-    await supabase.auth.signOut();
-  } catch (err) {
-    if (import.meta.env.DEV) {
-      console.error('Logout signOut error:', err);
-    }
-    if (err instanceof Error) {
-      captureFeatureError(err, 'auth', 'logout');
-    }
-    // Fallback: clear local tokens manually since signOut failed
-    await clearStaleAuthState();
-  } finally {
-    cleanupLocal();
-  }
+export async function logout(deps: AuthActionDeps, options?: LogoutOptions): Promise<LogoutResult> {
+  return logoutAction(deps, options);
 }
 
 /**

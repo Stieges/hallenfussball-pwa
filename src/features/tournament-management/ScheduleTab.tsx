@@ -10,8 +10,7 @@
  *
  * Refactored: Logic extracted to custom hooks for maintainability
  * - useScheduleHistory: Undo/Redo functionality
- * - useRunningMatches: Live match detection
- * - useCorrectionMode: Correction dialog flow
+ * - useRunningMatchIds: Live match detection (useLiveMatches)
  * - usePendingChanges: Edit mode state
  * - useScheduleTabActions: Action handlers
  */
@@ -25,20 +24,19 @@ import { Tournament, Standing, Match } from '../../types/tournament';
 import { MatchUpdate } from '../../core/models/types';
 import {
   useScheduleHistory,
-  useRunningMatches,
-  useCorrectionMode,
+  useRunningMatchIds,
   usePendingChanges,
   useScheduleTabActions,
   useScheduleFilters,
   getFilterOptions,
 } from './hooks';
-import { isMatchFinished, getTeamName } from './utils';
+import { isMatchFinished } from './utils';
+import { slotLabel, type SlotLabelContext } from '../../core/models/slotLabel';
 import { ScheduleToolbar, ScheduleViewMode, ScheduleConflictContent } from './components';
 import { GeneratedSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { ScheduleEditor } from '../schedule-editor';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
-import { CorrectionDialog } from '../../components/dialogs';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useAppSettings } from '../../hooks/useUserProfile';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -73,8 +71,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const { t } = useTranslation('tournament');
   // App settings for result lock behavior
   const appSettings = useAppSettings();
-  // Permission check for corrections and timer control
-  const { canCorrectResults, hasPermission } = usePermissions(tournament.id);
+  // Permission check for timer control
+  const { hasPermission } = usePermissions(tournament.id);
   const canControlTimer = hasPermission('control_timer');
   // Toast notifications
   const { showWarning, showSuccess } = useToast();
@@ -121,9 +119,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     });
 
   // Running matches (for live indicators)
-  const { runningMatchIds } = useRunningMatches({
-    tournamentId: tournament.id,
-  });
+  const runningMatchIds = useRunningMatchIds(tournament.id);
 
   // US-VIEWER-FILTERS: Schedule filtering
   const filterOptions = useMemo(() => getFilterOptions(tournament), [tournament]);
@@ -150,13 +146,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // Get filtered matches for display
   // FIX: Use schedule.allMatches as source ensuring we filter what is displayed (Preview/Generated),
   // rather than potentially stale tournament.matches (Persistence).
-  // Map ScheduledMatch to Match interface (originalTeamA -> teamA)
+  // ScheduledMatch trägt slotA/slotB unverändert; der Filter liest nur Slots (A-03)
   const sourceMatchesForFiltering = useMemo(() => {
-    return schedule.allMatches.map(sm => ({
-      ...sm,
-      teamA: sm.originalTeamA,
-      teamB: sm.originalTeamB,
-    })) as unknown as Match[];
+    return schedule.allMatches as unknown as Match[];
   }, [schedule.allMatches]);
 
   const filteredMatches = useMemo(
@@ -170,29 +162,16 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     [filteredMatches]
   );
 
-  // Correction mode state and handlers
-  const {
-    correctionState,
-    showCorrectionDialog,
-    handleStartCorrection,
-    handleCancelCorrection,
-    handleConfirmCorrection,
-  } = useCorrectionMode({
-    tournament,
-    onLocalTournamentUpdate,
-    onMatchesUpdate,
-    canCorrectResults,
-  });
-
   // Running match navigation dialog state
   const [pendingCockpitMatchId, setPendingCockpitMatchId] = useState<string | null>(null);
   const [showRunningMatchDialog, setShowRunningMatchDialog] = useState(false);
 
-  // Helper to get team name
-  const getTeamNameById = useCallback((teamId: string): string => {
-    const team = tournament.teams.find(t => t.id === teamId);
-    return team?.name ?? teamId;
-  }, [tournament.teams]);
+  // Spielseiten: Team über die Team-ID, offene Seite über ihre Herkunft (@TM-015) – nie über gespeicherte Namen
+  const slotContext = useMemo((): SlotLabelContext => ({
+    teams: tournament.teams,
+    matches: tournament.matches,
+    groups: tournament.groups,
+  }), [tournament.teams, tournament.matches, tournament.groups]);
 
   // Handler for navigating to cockpit with running match check
   const handleNavigateToCockpit = useCallback((matchId: string) => {
@@ -238,12 +217,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     if (!match) { return null; }
     return {
       id: runningMatchId,
-      teamA: getTeamNameById(match.teamA),
-      teamB: getTeamNameById(match.teamB),
+      homeName: slotLabel(match.slotA, slotContext),
+      awayName: slotLabel(match.slotB, slotContext),
       scoreA: match.scoreA,
       scoreB: match.scoreB,
     };
-  }, [runningMatchIds, tournament.matches, getTeamNameById]);
+  }, [runningMatchIds, tournament.matches, slotContext]);
 
   // Action handlers (extracted for maintainability)
   const {
@@ -266,6 +245,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     setPendingReferee,
     setPendingField,
     lockFinishedResults: appSettings.lockFinishedResults,
+    liveMatchIds: runningMatchIds,
   });
 
   // ==========================================================================
@@ -292,7 +272,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // The lockFinishedResults setting only controls whether editing is prevented
   const finishedMatchIds = new Set(
     tournament.matches
-      .filter(m => isMatchFinished(m.id, tournament.matches, tournament.id))
+      .filter(m => isMatchFinished(m))
       .map(m => m.id)
   );
 
@@ -376,8 +356,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 onFieldChange={handleFieldChange}
                 onMatchSwap={isEditing ? handleMatchSwap : undefined}
                 finishedMatches={finishedMatchIds}
-                correctionMatchId={correctionState?.matchId ?? null}
-                onStartCorrection={handleStartCorrection}
                 runningMatchIds={runningMatchIds}
                 onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
                 visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
@@ -424,25 +402,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         }
       />
 
-      {/* Correction Dialog */}
-      {correctionState && (() => {
-        const match = tournament.matches.find(m => m.id === correctionState.matchId);
-        if (!match) { return null; }
-
-        return (
-          <CorrectionDialog
-            isOpen={showCorrectionDialog}
-            onClose={handleCancelCorrection}
-            onConfirm={handleConfirmCorrection}
-            matchLabel={t('schedule.matchLabel', { round: match.round })}
-            teamA={getTeamName(match.teamA, tournament.teams)}
-            teamB={getTeamName(match.teamB, tournament.teams)}
-            originalScoreA={correctionState.originalScoreA}
-            originalScoreB={correctionState.originalScoreB}
-          />
-        );
-      })()}
-
       {/* Running Match Navigation Dialog */}
       {showRunningMatchDialog && runningMatchInfo && (
         <ConfirmDialog
@@ -450,7 +409,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           onClose={handleCancelCockpitNavigation}
           onConfirm={handleConfirmCockpitNavigation}
           title={t('schedule.runningMatch.title')}
-          message={t('schedule.runningMatch.message', { teamA: runningMatchInfo.teamA, teamB: runningMatchInfo.teamB, scoreA: runningMatchInfo.scoreA, scoreB: runningMatchInfo.scoreB })}
+          message={t('schedule.runningMatch.message', { teamA: runningMatchInfo.homeName, teamB: runningMatchInfo.awayName, scoreA: runningMatchInfo.scoreA, scoreB: runningMatchInfo.scoreB })}
           confirmText={t('schedule.runningMatch.confirmSwitch')}
           cancelText={t('common.cancel')}
           variant="warning"
