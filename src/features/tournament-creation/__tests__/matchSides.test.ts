@@ -45,7 +45,8 @@ describe('matchSides – Ein-Stellen-Regel Wizard', () => {
       ),
     };
     const replaced = replaceSides(resolvedMatch, testUuid(1), testUuid(9));
-    expect(replaced.slotA).toEqual({ kind: 'team', teamId: testUuid(9) });
+    // A-36b: Ersatzteam (@W5-010) trägt das lokale Merkmal 'replaced' – die Herkunft gilt für es weiter (F1).
+    expect(replaced.slotA).toEqual({ kind: 'team', teamId: testUuid(9), assignedBy: 'replaced' });
     expect(replaced.slotA).not.toHaveProperty('resolvedFrom');
 
     const update = mapMatchUpdateToSupabase(replaced);

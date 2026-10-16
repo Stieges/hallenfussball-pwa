@@ -225,7 +225,7 @@ describe('@TM-015 gerenderter Wortlaut (echte i18n-Instanz, DE und EN)', () => {
   });
 
   it.each([
-    ['de', 'Sieger 1. Halbfinale', 'Verlierer Spiel 8'],
+    ['de', 'Sieger Halbfinale 1', 'Verlierer Spiel 8'],
     ['en', 'Winner of Semifinal 1', 'Loser of Match 8'],
   ] as const)('@TM-015 Sieger/Verlierer eines Spiels in %s (inkl. verschachteltem Spielnummer-Text)', (locale, byLabel, byNumber) => {
     expect(slotLabel(pendingSlot({ kind: 'matchResult', matchId: SEMI1, role: 'winner' }), { ...ctx, locale })).toBe(byLabel);
@@ -241,7 +241,7 @@ describe('@TM-015 Playoff-Bezeichnungen als Schlüssel (K1-Rest): EN zeigt keine
   const hf1 = pendingSlot({ kind: 'matchResult', matchId: SEMI1, role: 'winner' });
 
   it.each([
-    ['de', 'Sieger 1. Halbfinale'],
+    ['de', 'Sieger Halbfinale 1'],
     ['en', 'Winner of Semifinal 1'],
   ] as const)('@TM-015 Sieger des 1. Halbfinales in %s: „%s“', (locale, expected) => {
     expect(slotLabel(hf1, { ...ctx, locale })).toBe(expected);
@@ -286,7 +286,7 @@ describe('@TM-033 Wartegrund einer offenen Seite', () => {
   });
 
   it.each([
-    ['de', 'Abschluss von 1. Halbfinale'],
+    ['de', 'Abschluss von Halbfinale 1'],
     ['en', 'Completion of Semifinal 1'],
   ] as const)('@TM-033 offene Seite aus einem Spielergebnis nennt den Abschluss des Spiels in %s', (locale, expected) => {
     expect(awaitingLabel(siegerHf1, { ...ctx, locale })).toBe(expected);

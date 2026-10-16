@@ -2,7 +2,10 @@ import { Match, Tournament, Standing, Team, PlacementCriterion, RuntimeMatchEven
 import { DEFAULT_FAIR_PLAY_PROFILE, type FairPlayProfile } from '../core/stats/fairPlayProfiles';
 import { cardKindOf } from './cardKind';
 import { matchSideTeamId } from '../core/models/matchSlot';
+import { matchFinalScore } from '../core/view/finalScore';
 import type { TeamId } from '../core/models/schemas/MatchSlotSchema';
+import { FINAL_TYPE_LABELS, FINAL_TYPE_RANKS, openPlacements } from './openPlacements';
+export { hasFinalRound, placementBadgeText, placementRankText } from './openPlacements';
 
 /**
  * Zählt ein Spiel für Tabelle, Weiterkommen und Finalrunden-Auflösung? (@TM-143)
@@ -253,8 +256,12 @@ export const getQualifiedTeams = (standings: Standing[], count: number): Team[] 
 
 export interface FinalPlacement {
   rank: number;
+  /** Nur bei `open`: letzter Platz des gemeinsamen Bereichs (A-36b Fixrunde 1b, @ET-042). */
+  rankTo?: number;
   team: Team;
-  decidedBy: 'playoff' | 'groupStage';
+  /** Platzierungsspiel (für die übersetzte Bezeichnung, `placementBadgeText`). */
+  finalType?: Match['finalType'];
+  decidedBy: 'playoff' | 'groupStage' | 'open';
   matchLabel?: string; // e.g., "Finale", "Spiel um Platz 3"
 }
 
@@ -267,42 +274,18 @@ export interface FinalsPlacementResult {
 }
 
 /**
- * Determine the winner of a finals match considering overtime and penalties.
- * Liefert Team-IDs aus den Slots; solange eine Seite offen ist (oder der Slot fehlt) gibt es keinen
- * Gewinner (`null`).
+ * Sieger/Verlierer eines Finalspiels aus dem zentralen Endstand (`matchFinalScore`, A-36b Auflage Tabelle):
+ * Verlängerung, Golden Goal und Strafstoßschießen entscheiden dort, nicht hier (@ET-002, @ET-013).
+ * Team-IDs aus den Slots; offene Seite, fehlender Stand, laufendes Spiel oder Unentschieden → `null`.
  */
 export const getMatchWinner = (match: Match): { winner: TeamId; loser: TeamId } | null => {
-  if (match.scoreA === undefined || match.scoreB === undefined) {
-    return null; // Match not finished
-  }
   const idA = matchSideTeamId(match, 'A');
   const idB = matchSideTeamId(match, 'B');
-  if (idA === undefined || idB === undefined) {
-    return null; // a side is still open
-  }
-
-  let sideAWins: boolean;
-
-  // Check if decided by penalties
-  if (match.decidedBy === 'penalty' && match.penaltyScoreA !== undefined && match.penaltyScoreB !== undefined) {
-    sideAWins = match.penaltyScoreA > match.penaltyScoreB;
-  }
-  // Check if decided by overtime/golden goal
-  else if ((match.decidedBy === 'overtime' || match.decidedBy === 'goldenGoal') &&
-    match.overtimeScoreA !== undefined && match.overtimeScoreB !== undefined) {
-    sideAWins = match.scoreA + match.overtimeScoreA > match.scoreB + match.overtimeScoreB;
-  }
-  // Regular time decision
-  else if (match.scoreA > match.scoreB) {
-    sideAWins = true;
-  } else if (match.scoreB > match.scoreA) {
-    sideAWins = false;
-  } else {
-    // Draw in finals without tiebreaker - shouldn't happen, but handle gracefully
+  const winner = matchFinalScore(match)?.winner ?? null;
+  if (idA === undefined || idB === undefined || winner === null) {
     return null;
   }
-
-  return sideAWins ? { winner: idA, loser: idB } : { winner: idB, loser: idA };
+  return winner === 'a' ? { winner: idA, loser: idB } : { winner: idB, loser: idA };
 };
 
 /**
@@ -333,9 +316,9 @@ export const calculateFinalsPlacement = (
     };
   }
 
-  const completedFinals = finalsMatches.filter(
-    m => m.scoreA !== undefined && m.scoreB !== undefined
-  );
+  // A-36b Fixrunde (W1): abgeschlossen = entschieden (zentraler Endstand), nicht „hat einen Stand“ – ein laufendes
+  // Finale oder ein Remis ohne Entscheidung ist offen.
+  const completedFinals = finalsMatches.filter(m => getMatchWinner(m) !== null);
 
   const placements: FinalPlacement[] = [];
   const placedTeamIds = new Set<string>();
@@ -345,20 +328,8 @@ export const calculateFinalsPlacement = (
     return teams.find(t => t.id === teamId);
   };
 
-  // Process finals matches by finalType priority
-  const finalTypeToRanks: Record<string, [number, number]> = {
-    'final': [1, 2],
-    'thirdPlace': [3, 4],
-    'fifthSixth': [5, 6],
-    'seventhEighth': [7, 8],
-  };
-
-  const finalTypeLabels: Record<string, string> = {
-    'final': 'Finale',
-    'thirdPlace': 'Spiel um Platz 3',
-    'fifthSixth': 'Spiel um Platz 5',
-    'seventhEighth': 'Spiel um Platz 7',
-  };
+  const finalTypeToRanks = FINAL_TYPE_RANKS;
+  const finalTypeLabels = FINAL_TYPE_LABELS;
 
   // Process each finalType
   for (const [finalType, [winnerRank, loserRank]] of Object.entries(finalTypeToRanks)) {
@@ -375,7 +346,7 @@ export const calculateFinalsPlacement = (
             rank: winnerRank,
             team: winnerTeam,
             decidedBy: 'playoff',
-            matchLabel: finalTypeLabels[finalType],
+            matchLabel: finalTypeLabels[finalType], finalType: finalType as Match['finalType'],
           });
           placedTeamIds.add(winnerTeam.id);
         }
@@ -385,7 +356,7 @@ export const calculateFinalsPlacement = (
             rank: loserRank,
             team: loserTeam,
             decidedBy: 'playoff',
-            matchLabel: finalTypeLabels[finalType],
+            matchLabel: finalTypeLabels[finalType], finalType: finalType as Match['finalType'],
           });
           placedTeamIds.add(loserTeam.id);
         }
@@ -416,6 +387,20 @@ export const calculateFinalsPlacement = (
 };
 
 /**
+ * F1-W1 (Review A-36b F1, Record Endstand Z. 62): in der Gruppe Ausgeschiedene zuerst nach Gruppenplatz (alle Dritten vor
+ * allen Vierten), bei gleichem Platz in der Reihenfolge der Gesamtwertung `standings` (stabile Sortierung). Ohne Gruppen
+ * (Jeder gegen jeden) bleibt die Ligatabelle.
+ */
+const byGroupPlace = (teams: Team[], matches: Match[], standings: Standing[], tournament: Tournament): Standing[] => {
+  const place = new Map<string, number>();
+  for (const group of new Set(teams.map(t => t.group).filter((g): g is string => g !== undefined && g !== ''))) {
+    calculateStandings(teams.filter(t => t.group === group), matches, tournament, group)
+      .forEach((standing, index) => place.set(standing.team.id, index + 1));
+  }
+  return [...standings].sort((a, b) => (place.get(a.team.id) ?? 0) - (place.get(b.team.id) ?? 0));
+};
+
+/**
  * Merge finals placements with group standings for complete ranking
  *
  * Returns a unified ranking where:
@@ -426,29 +411,30 @@ export const getMergedFinalRanking = (
   teams: Team[],
   matches: Match[],
   groupStandings: Standing[],
-  _tournament: Tournament
+  tournament: Tournament
 ): { ranking: FinalPlacement[]; finalsResult: FinalsPlacementResult } => {
   const finalsResult = calculateFinalsPlacement(teams, matches, groupStandings);
   const ranking: FinalPlacement[] = [...finalsResult.placements];
   const placedTeamIds = new Set(ranking.map(p => p.team.id));
 
-  // Find the next rank to assign
-  let nextRank = ranking.length > 0
-    ? Math.max(...ranking.map(p => p.rank)) + 1
-    : 1;
-
-  // Add remaining teams from group standings
-  for (const standing of groupStandings) {
+  // A-36b Fixrunde 1b (@ET-042): Teams eines offenen Platzierungsspiels stehen vorläufig auf dessen Plätzen, gemeinsam.
+  for (const open of openPlacements(teams, matches, (m) => getMatchWinner(m) !== null, placedTeamIds)) {
+    ranking.push(open);
+    placedTeamIds.add(open.team.id);
+  }
+  // N-W1 (Nachreview A-36b): übrige Teams auf die niedrigsten freien Plätze, belegte Bereiche rank…rankTo überspringen –
+  // keine Lücken, später Ausgeschiedene stehen vorn (Record Endstand Z. 61).
+  const taken = new Set(ranking.flatMap(p => Array.from({ length: (p.rankTo ?? p.rank) - p.rank + 1 }, (_, i) => p.rank + i)));
+  let nextRank = 1;
+  for (const standing of byGroupPlace(teams, matches, groupStandings, tournament)) {
     if (!placedTeamIds.has(standing.team.id)) {
-      ranking.push({
-        rank: nextRank,
-        team: standing.team,
-        decidedBy: 'groupStage',
-      });
+      while (taken.has(nextRank)) { nextRank++; }
+      ranking.push({ rank: nextRank, team: standing.team, decidedBy: 'groupStage' });
+      taken.add(nextRank);
       placedTeamIds.add(standing.team.id);
-      nextRank++;
     }
   }
+  ranking.sort((a, b) => a.rank - b.rank);
 
   return { ranking, finalsResult };
 };
