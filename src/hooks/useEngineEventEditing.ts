@@ -109,7 +109,7 @@ export function useEngineEventEditing({ tournamentId, match, readOnly, notify }:
 
   /** G4/W6: Erfolgs-Toast erst nach aufgeloestem submit, Fehler als Toast. */
   const run = useCallback(
-    async (job: () => Promise<void>, done: string): Promise<void> => {
+    async (job: () => Promise<unknown>, done: string): Promise<void> => {
       try {
         await job();
         notify.success(done);

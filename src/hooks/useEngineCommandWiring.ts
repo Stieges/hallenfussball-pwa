@@ -80,7 +80,7 @@ export function useEngineCommandWiring(
   }, [showWarning, t]);
 
   const run = useCallback(
-    async (fn: () => Promise<void>): Promise<void> => {
+    async (fn: () => Promise<unknown>): Promise<void> => {
       try {
         await fn();
       } catch (error) {
@@ -146,7 +146,7 @@ export function useEngineCommandWiring(
   // W11 (Fixrunde 4): die uebrigen Handler teilen sich dieselbe Form (Engine-Wache, `ctx`-Nachschlag,
   // `run`). Ohne Engine-Weg: Ablehnung statt Ausfuehrung (A-08d2b).
   const runSimpleCommand = useCallback(
-    (matchId: string, commandFn: (cmd: MatchCommands, ctx: MatchContext) => Promise<void>): Promise<void> => {
+    (matchId: string, commandFn: (cmd: MatchCommands, ctx: MatchContext) => Promise<unknown>): Promise<void> => {
       const ctx = isEngineMatch(matchId) && commands ? ctxByExternalId.get(matchId) : undefined;
       if (!commands || !ctx) {
         return reject();
