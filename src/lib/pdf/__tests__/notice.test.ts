@@ -219,6 +219,7 @@ describe('G55 @DR-010 Adresse zum Abtippen: ohne „https://“, mit „#“, mi
 
     expect(zeilen.length, 'mehr als eine Zeile').toBeGreaterThan(1);
     expect(squash(zeilen.map(t => t.str).join(''))).toBe(squash(short));
+    zeilen.slice(0, -1).forEach(t => expect(t.str.trim(), 'Umbruch nur nach „/“ oder „.“').toMatch(/[/.]$/));
     zeilen.forEach(t => {
       expect(t.size).toBeGreaterThanOrEqual(20 - NOTICE_TOL);
       const b = noticeTextBox(t);

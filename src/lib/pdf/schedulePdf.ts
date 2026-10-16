@@ -21,7 +21,7 @@ import type { PDFExportOptions } from './pdfOptions';
 import { openDocument, toPdfInput, type SchedulePdfInput } from './pdfInput';
 import { dayOf, headerFacts, ruleFacts } from './headerFacts';
 import { schedulePdfFilename } from './filename';
-import { buildNotes } from './notes';
+import { buildHints, hintNotes, type PdfHints } from './notes';
 import { planSections, type SectionKey } from './sections';
 import { closedLine, footerLine, standLine } from './standText';
 import { groupPhaseOpen } from './tournamentState';
@@ -54,6 +54,8 @@ export interface SchedulePdfResult {
 
 export interface SchedulePdfBuild extends SchedulePdfResult {
   doc: jsPDF;
+  /** Die Hinweise strukturiert (Original und Gedrucktes), für den Dialog vor dem Speichern (@DR-012, @DR-027). `notes` sind dieselben als Sätze. */
+  hints: PdfHints;
   /** Dateiname mit Stand, z. B. `Hallencup_Nord_Spielplan_2026-11-14_1507.pdf`. */
   filename: string;
 }
@@ -84,16 +86,20 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
   // Kopfgrafiken: nur was sich lesen und zeichnen lässt; sonst fehlt die Grafik und ein Hinweis entsteht (@DR-023)
   const logoLeft = usableLogo(options.logoLeft);
   const logoRight = usableLogo(options.logoRight);
-  const notes = [
-    ...buildNotes(
-      schedule,
-      t,
-      { organizer: organizerName, hall: hallName, rulebook: rules.rulebook ?? '', contact: contact?.trim() ?? '' },
-      mode
-    ),
-    ...(options.logoLeft && !logoLeft ? [t.logoUnusable('left')] : []),
-    ...(options.logoRight && !logoRight ? [t.logoUnusable('right')] : []),
-  ];
+  const hints = buildHints({
+    fields: [
+      [t.tournamentTitle, schedule.tournament.title],
+      [t.ageClass, schedule.tournament.ageClass],
+      [t.organizer, organizerName],
+      [t.hall, hallName],
+      [t.rules.label.rulebook, rules.rulebook ?? ''],
+      [t.contact, contact?.trim() ?? ''],
+    ],
+    teamNames: schedule.teams.map(team => team.name),
+    mode,
+    logoFailures: [...(options.logoLeft && !logoLeft ? (['left'] as const) : []), ...(options.logoRight && !logoRight ? (['right'] as const) : [])],
+  });
+  const notes = hintNotes(hints, t);
   // Zuschauer-QR nur bei online geteiltem Turnier (@ZM-064)
   const qr = content.qrUrl === null ? undefined : { modules: qrModules(content.qrUrl), caption: options.viewerResultsHidden === true || !content.results ? t.qrCaption.plan : t.qrCaption.results };
 
@@ -218,7 +224,7 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
   });
   drawFooters(doc, geo, footer);
 
-  return { doc, notes, filename: schedulePdfFilename(schedule.tournament.title, now) };
+  return { doc, notes, hints, filename: schedulePdfFilename(schedule.tournament.title, now) };
 }
 
 /** Baut das Spielplan-PDF und speichert es. Rückgabe: Hinweise für den Nutzer (leer, wenn keine). */

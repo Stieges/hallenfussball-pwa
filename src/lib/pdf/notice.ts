@@ -10,8 +10,8 @@ import type jsPDF from 'jspdf';
 import { printColors, printUnit } from '../../design-tokens/print';
 import { printNotice } from '../../design-tokens/print-notice';
 import { qrModules, shortViewerAddress, viewerUrl } from '../qr/publicQr';
-import { unrenderableChars } from './fonts';
 import { noticePdfFilename } from './filename';
+import { buildHints, hintNotes, type PdfHints } from './notes';
 import { ascentMm, descentMm, pageGeometry } from './layout';
 import { buildNoticeTexts, noticeShowsResults, type NoticeTexts } from './noticeTexts';
 import { openDocument, renderContext, type PdfInput, type RenderContext } from './pdfInput';
@@ -20,7 +20,7 @@ import { drawQrSymbol, qrSide } from './render/qrCode';
 
 /** Ergebnis: das fertige Dokument oder die Fehlerart. Nicht geteilt: kein Aushang (Hinweis im Dialog, C8). */
 export type NoticeBuild =
-  | { ok: true; doc: jsPDF; notes: string[]; filename: string }
+  | { ok: true; doc: jsPDF; notes: string[]; hints: PdfHints; filename: string }
   | { ok: false; reason: 'notShared' };
 
 /** Zeilenabstand einer Schrift in mm, `lineEm` als Vielfaches der Schrift. */
@@ -96,12 +96,13 @@ export async function buildNoticePdf(input: PdfInput): Promise<NoticeBuild> {
   // Hinweise vor dem Speichern: Grafik unbrauchbar, Zeichen, die als „?“ erscheinen (@DR-012, @DR-023)
   const logoLeft = usableLogo(input.graphics.left);
   const logoRight = usableLogo(input.graphics.right);
-  const notes = [
-    ...(opened.mode.fallback ? [t.fontFallbackNote] : []),
-    ...(unrenderableChars(title, opened.mode.covers).length > 0 ? [t.unrenderableField(t.tournamentTitle, title)] : []),
-    ...(input.graphics.left && !logoLeft ? [t.logoUnusable('left')] : []),
-    ...(input.graphics.right && !logoRight ? [t.logoUnusable('right')] : []),
-  ];
+  const hints = buildHints({
+    fields: [[t.tournamentTitle, title]],
+    teamNames: [],
+    mode: opened.mode,
+    logoFailures: [...(input.graphics.left && !logoLeft ? (['left'] as const) : []), ...(input.graphics.right && !logoRight ? (['right'] as const) : [])],
+  });
+  const notes = hintNotes(hints, t);
 
   // Grafiken: eine Zeile oben, nur wenn es eine gibt (keine Lücke); links und rechts bündig
   let y = geo.top;
@@ -139,5 +140,5 @@ export async function buildNoticePdf(input: PdfInput): Promise<NoticeBuild> {
     y = centered(ctx, line, center, geo.contentWidth, y, printNotice.addressPt, 'bold');
   }
 
-  return { ok: true, doc, notes, filename: noticePdfFilename(title) };
+  return { ok: true, doc, notes, hints, filename: noticePdfFilename(title) };
 }
