@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { cssVars, displayEffects, displayList, monitorThemes } from '../../../design-tokens';
 import { calculateStandings } from '../../../utils/calculations';
-import { monitorTeamName } from '../teamNameAbbrev';
+import { monitorTeamName } from '../../../core/models/teamNameAbbrev';
 
 export type MonitorColors = (typeof monitorThemes)[keyof typeof monitorThemes];
 export type StandingRows = ReturnType<typeof calculateStandings>;

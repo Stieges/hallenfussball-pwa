@@ -13,6 +13,23 @@ describe('monitorTeamName', () => {
     ['@ZM-149 Spielvereinigung', 'Spielvereinigung Fürth', 'SpVgg Fürth'],
     ['@ZM-149 Sportclub + Turnverein', 'Sportclub Turnverein', 'SC TV'],
     ['@ZM-149 Wort mitten im Namen', 'Nordheim Sportverein Süd', 'Nordheim SV Süd'],
+    ['@ZM-149 Verein für Leibesübungen', 'Verein für Leibesübungen Gießen', 'VfL Gießen'],
+    ['@ZM-149 Verein für Rasenspiele', 'Verein für Rasenspiele Mülheim', 'VfR Mülheim'],
+    ['@ZM-149 Ballspielverein', 'Ballspielverein Kirchheim', 'BV Kirchheim'],
+    ['@ZM-149 Ballsportverein', 'Ballsportverein Rhein', 'BSV Rhein'],
+    ['@ZM-149 Sportfreunde', 'Sportfreunde Lotte', 'SF Lotte'],
+    ['@ZM-149 Turngemeinde', 'Turngemeinde Ahlen', 'TG Ahlen'],
+    ['@ZM-149 Deutsche Jugendkraft', 'Deutsche Jugendkraft Berg', 'DJK Berg'],
+    ['@ZM-149 Eisenbahner-Sportverein', 'Eisenbahner-Sportverein Süd', 'ESV Süd'],
+    ['@ZM-149 Eisenbahnersportverein', 'Eisenbahnersportverein Süd', 'ESV Süd'],
+    ['@ZM-149 Turn- und Spielvereinigung', 'Turn- und Spielvereinigung Ost', 'TuS Ost'],
+    ['@ZM-149 „Turn und Sport“', 'Turn und Sport Ost', 'TuS Ost'],
+    ['@ZM-149 Schreibweise Sport-Club (wie Sportclub)', 'Sport-Club Nord', 'SC Nord'],
+    ['@ZM-149 Schreibweise Fußball-Club (wie Fußballclub)', 'Fußball-Club Nord', 'FC Nord'],
+    ['@ZM-149 Zusatz „e. V.“ entfällt', 'Sportgemeinschaft Nordheim e. V.', 'SG Nordheim'],
+    ['@ZM-149 Zusatz „e.V.“ entfällt', 'Sportverein Ost e.V.', 'SV Ost'],
+    ['@ZM-149 „Turn und Sportverein“ ist kein Listenwort: nur „Sportverein“ wird SV', 'Turn und Sportverein Ost', 'Turn und SV Ost'],
+    ['@ZM-149 Zusatz „e. V.“ mitten im Namen entfällt','Sportverein Ost e. V. Abteilung Hallenfußball', 'SV Ost Abteilung Hallenfußball'],
   ])('%s', (_titel, voll, erwartet) => {
     expect(monitorTeamName(voll)).toBe(erwartet);
   });
@@ -21,12 +38,22 @@ describe('monitorTeamName', () => {
     ['@ZM-149 ohne Listenwort', 'Eintracht Oberweiler-Niederstetten 1919'],
     ['@ZM-149 Listenwort nur Teil eines Worts (Sportvereinigung)', 'Sportvereinigung Nordheim'],
     ['@ZM-149 Listenwort nur Teil eines Worts (Sportvereinsheim)', 'Sportvereinsheim Ost'],
+    ['@ZM-149 Listenwort nur Teil eines Worts (Sportfreundeheim)', 'Sportfreundeheim Ost'],
+    ['@ZM-149 Listenwort nur Teil eines Worts (Sportclubhaus mit Bindestrich)', 'Sport-Clubhaus Ost'],
+    ['@ZM-149 Listenwort nur Teil eines Worts (Deutsche Jugendkraftwerk)', 'Deutsche Jugendkraftwerk Ost'],
+    ['@ZM-149 Kürzel ohne Listenwort bleibt (TuS Koblenz)', 'TuS Koblenz'],
+    ['@ZM-149 Bindestrich-Schreibweise nur mit Leerzeichen (Fußball Club, ohne Bindestrich)', 'Fußball Club Nord'],
+    ['@ZM-149 e.V. mitten in einem Wort bleibt', 'Ost e.V.Team'],
     ['@ZM-149 schon gekürzt', 'FC Nord'],
     ['@ZM-149 andere Schreibweise bleibt (Groß/klein wie Liste)', 'sportverein Nord'],
     ['@ZM-149 Bindestrich-Wort bleibt', 'Sportverein-Nord'],
     ['@ZM-087 kein Kürzel aus Anfangsbuchstaben', 'Größenwahn Übungsteam Füßen Ösen'],
   ])('%s: unverändert', (_titel, voll) => {
     expect(monitorTeamName(voll)).toBe(voll);
+  });
+
+  it('@ZM-149 nur der Zusatz „e. V.“ ergibt keinen leeren Namen, sondern bleibt', () => {
+    expect(monitorTeamName('e. V.')).toBe('e. V.');
   });
 
   it('@ZM-087 gekürzte Namen sind nie Initialen-Kürzel wie GÜFÖ oder SFNS', () => {

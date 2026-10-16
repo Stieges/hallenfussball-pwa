@@ -16,9 +16,9 @@ describe('TeamNameDisplay xl – voller Name (@ZM-087)', () => {
     expect(el.textContent).not.toContain('…');
   });
 
-  it('zeigt einen mittellangen Namen vollständig (kein Initialen-Kürzel)', () => {
+  it('@ZM-149 kürzt „Sportfreunde“ nach Liste zu „SF Lotte“ (kein Initialen-Kürzel)', () => {
     render(<TeamNameDisplay name="Sportfreunde Lotte" size="xl" />);
-    expect(screen.getByText('Sportfreunde Lotte')).toBeInTheDocument();
+    expect(screen.getByText('SF Lotte')).toBeInTheDocument();
   });
 });
 

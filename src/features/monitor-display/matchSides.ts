@@ -13,7 +13,7 @@ import { ANZEIGE_SPRACHE } from '../../i18n/anzeigeSprache';
 import { slotLabel } from '../../core/models/slotLabel';
 import type { Match, Team, TournamentGroup } from '../../types/tournament';
 import { monitorSideTeam } from './monitorSides';
-import { monitorTeamName } from './teamNameAbbrev';
+import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 
 export type MatchSide = 'A' | 'B';
 

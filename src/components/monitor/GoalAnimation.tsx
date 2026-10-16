@@ -16,7 +16,7 @@ import { cssVars, colors } from '../../design-tokens'
 import { GoalEventInfo } from '../../hooks/useLiveMatches';
 import { useSportTerms } from '../../hooks/useSportTerms';
 import { SportId } from '../../config/sports';
-import { monitorTeamName } from '../../features/monitor-display/teamNameAbbrev';
+import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 
 export interface GoalAnimationProps {
   /** Goal event info (null if no goal to show) */

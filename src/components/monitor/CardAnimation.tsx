@@ -15,7 +15,7 @@
 import { CSSProperties, useEffect, useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
-import { monitorTeamName } from '../../features/monitor-display/teamNameAbbrev';
+import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 
 export interface CardEventInfo {
   matchId: string;

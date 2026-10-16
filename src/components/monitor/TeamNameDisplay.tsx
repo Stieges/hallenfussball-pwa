@@ -13,7 +13,7 @@ import { CSSProperties, useEffect, useRef } from 'react';
 import { cssVars, displayFontSizes } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
 import { useMonitorTheme } from '../../hooks';
-import { monitorTeamName } from '../../features/monitor-display/teamNameAbbrev';
+import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 import { TEAM_NAME_ZEILENHOEHE, useTeamNameFit } from './teamNameFit';
 
 export interface TeamNameDisplayProps {
