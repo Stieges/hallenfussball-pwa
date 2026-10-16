@@ -168,7 +168,7 @@ describe('LiveCockpit — M7: Toasts i18n, Foul ohne Zahl, 5er-Warnung (F3a)', (
     expect(tCalls).toContain('toast.timePenalty');
   });
 
-  it('5-Fouls-Warnung bei der 5. Strafe – auch als Karte; 4. Strafe ohne Warnung', async () => {
+  it('@SL-035 5-Fouls-Warnung bei der 5. Strafe – auch als Karte; 4. Strafe ohne Warnung', async () => {
     const { rerender } = render(
       <LiveCockpit {...baseProps(makeMatch({ events: events(4) }))} />,
     );
