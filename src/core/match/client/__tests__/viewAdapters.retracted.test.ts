@@ -105,7 +105,7 @@ describe('zurueckgenommene Karte / Zeitstrafe zaehlt nicht mehr (Plan §2 C3b-1 
     expect(toRetractedEvents(state, log, ctx).map((e) => e.type)).toEqual(['RED_CARD']);
   });
 
-  it('Zeitstrafe: nach RETRACT keine aktive Strafe mehr', () => {
+  it('@SL-040 Zeitstrafe: nach RETRACT keine aktive Strafe mehr', () => {
     const log = [
       start(),
       ev({ id: 'p1', type: 'TIME_PENALTY', at: 2000, teamId: 'teamA', clockMs: 20_000, payload: { durationSeconds: 120 } }),
