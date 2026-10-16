@@ -117,21 +117,84 @@
       "confirmSwitch": "Trotzdem wechseln"
     }
   },
+  "scheduleActions": {
+    "share": "Teilen"
+  },
   "pdfExport": {
-    "title": "Als PDF exportieren",
-    "error": "Fehler beim Exportieren des PDFs. Bitte versuchen Sie es erneut.",
+    "title": "Als PDF",
+    "titleViewer": "Spielplan als PDF",
+    "open": "Als PDF",
+    "groups": {
+      "print": "Was soll gedruckt werden?",
+      "hang": "Zum Aufhängen"
+    },
+    "cards": {
+      "schedule": {
+        "title": "Spielplan",
+        "description": "Alle Spiele mit Zeit, Feld und Teams."
+      },
+      "blank": {
+        "title": "Spielplan ohne Ergebnisse",
+        "description": "Mit leeren Feldern zum Eintragen von Hand."
+      },
+      "final": {
+        "title": "Endstand",
+        "description": "Alle Plätze und die Ergebnisse, nach dem Abschluss des Turniers.",
+        "reason": "Erst nach Abschluss des Turniers"
+      },
+      "notice": {
+        "title": "Aushang mit QR-Code",
+        "description": "Turniername, QR-Code und kurze Anleitung zum Aufhängen.",
+        "reason": "Erst nach dem Online-Teilen"
+      }
+    },
+    "viewer": {
+      "description": "Alle Spiele mit Zeit, Feld und Teams als PDF zum Speichern oder Drucken."
+    },
+    "format": "Format: A4 hoch",
+    "hints": {
+      "title": "Vor dem Speichern",
+      "notShared": "Der QR-Code erscheint, sobald das Turnier online geteilt ist.",
+      "shareOnline": "Online teilen",
+      "changeVisibility": "Sichtbarkeit ändern",
+      "viewerHidden": "Ergebnisse und Tabellen sind ausgeblendet – das PDF zeigt sie nicht.",
+      "notice": "Der Aushang zeigt nur den QR-Code zur Zuschauer-Seite, keine Ergebnisse und Tabellen.",
+      "visibility": {
+        "tables": "Tabellen sind für Zuschauer ausgeblendet – das PDF zeigt sie nicht.",
+        "results": "Ergebnisse sind für Zuschauer ausgeblendet – das PDF zeigt sie nicht.",
+        "resultsAndTables": "Ergebnisse und Tabellen sind für Zuschauer ausgeblendet – das PDF zeigt sie nicht."
+      },
+      "fontTitle": "Sonderzeichen können als ? erscheinen",
+      "fontBody": "Die Schrift konnte nicht geladen werden. Das PDF wird mit einer Ersatzschrift erstellt, alle Inhalte sind enthalten.",
+      "names_one": "Ein Teamname enthält Zeichen, die als „?“ gedruckt werden:",
+      "names_other": "{{count}} Teamnamen enthalten Zeichen, die als „?“ gedruckt werden:",
+      "fields_one": "Eine Angabe enthält Zeichen, die als „?“ gedruckt werden:",
+      "fields_other": "{{count}} Angaben enthalten Zeichen, die als „?“ gedruckt werden:",
+      "teamName": "Teamname",
+      "printedAs": "wird gedruckt als",
+      "proceed": "Das PDF wird trotzdem erzeugt.",
+      "changeNames": "Die Namen kann die Turnierleitung im Turnier ändern.",
+      "changeFields": "Die Angaben kann die Turnierleitung im Turnier ändern.",
+      "logoLeft": "Die linke Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF.",
+      "logoRight": "Die rechte Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF."
+    },
+    "offline": {
+      "title": "Ohne Verbindung – Stand {{date}} {{time}}",
+      "body": "Das PDF entsteht trotzdem aus dem Stand auf diesem Gerät."
+    },
+    "error": {
+      "title": "PDF konnte nicht erstellt werden",
+      "body": "Es wurde keine Datei gespeichert. Bitte versuche es erneut."
+    },
+    "done": {
+      "title": "PDF gespeichert"
+    },
     "cancel": "Abbrechen",
-    "export": "Exportieren",
-    "exporting": "Wird exportiert...",
-    "options": {
-      "scoresLabel": "Spielstände",
-      "withScores": "Mit Spielstand",
-      "withScoresDesc": "Zeigt aktuelle Ergebnisse im PDF",
-      "withoutScores": "Ohne Spielstand",
-      "withoutScoresDesc": "Leere Felder zum manuellen Ausfüllen",
-      "includeStandings": "Tabellen einschließen",
-      "includeStandingsDesc": "Zeigt Gruppen-Tabellen im PDF"
-    }
+    "save": "Als PDF speichern",
+    "creating": "Wird erstellt …",
+    "saveAnyway": "Trotzdem speichern",
+    "retry": "Erneut versuchen",
+    "close": "Schließen"
   },
   "teams": {
     "title": "Teams verwalten",
@@ -812,5 +875,151 @@
     "awaitGroup": "Abschluss von {{group}}",
     "awaitMatch": "Abschluss von {{match}}",
     "undecided": "noch offen"
+  },
+  "pdf": {
+    "organizer": "Veranstalter",
+    "hall": "Halle",
+    "matchDuration": "Spielzeit",
+    "mode": "Modus",
+    "appointment": "Termin",
+    "appointmentLine": "{{day}} · Beginn {{start}} · Ende voraussichtlich {{end}} · {{fields}}",
+    "fieldOne": "1 Feld",
+    "fieldMany": "{{n}} Felder",
+    "participants": "Teilnehmer",
+    "groupStage": "Gruppenphase",
+    "standingsOfGroup": "Tabelle – {{group}}",
+    "finalRanking": "Platzierung",
+    "placementPending": {
+      "afterFinal": "Die Platzierung steht nach dem Finale fest",
+      "afterLast": "Die Platzierung steht nach dem letzten Spiel fest"
+    },
+    "nr": "Nr",
+    "timeHeader": "Zeit",
+    "field": "Feld",
+    "group": "Gr",
+    "home": "Heim",
+    "result": "Ergebnis",
+    "away": "Gast",
+    "referee": "SR",
+    "live": "läuft",
+    "skipped": "ausgefallen",
+    "corrected": "korrigiert {{time}}",
+    "afterOvertime": "nach Verlängerung",
+    "shootout": "Strafstoßschießen",
+    "pos": "Pl",
+    "team": "Team",
+    "played": "Sp",
+    "won": "S",
+    "drawn": "U",
+    "lost": "N",
+    "goals": "Tore",
+    "diff": "Diff",
+    "points": "Pkt",
+    "thirdPlace": "Spiel um Platz 3",
+    "fifthSixth": "Spiel um Platz 5",
+    "seventhEighth": "Spiel um Platz 7",
+    "sectionTables": "Tabellen",
+    "sectionFinals": "Finalrunde",
+    "timesTentative": "Uhrzeiten voraussichtlich",
+    "contact": "Ansprechpartner",
+    "contactLine": "Ansprechpartner: {{contact}}",
+    "fontFallbackNote": "Sonderzeichen können als ? erscheinen. Die Schrift konnte nicht geladen werden. Das PDF wird mit einer Ersatzschrift erstellt, alle Inhalte sind enthalten.",
+    "noDate": "Kein Datum",
+    "kicker": {
+      "plan": "Spielplan"
+    },
+    "durationMinutes": "{{minutes}} Min.",
+    "modeGroupsAndFinals": "Gruppen + Finalrunde",
+    "modeRoundRobin": "Jeder gegen Jeden",
+    "unrenderableName": "Teamname „{{name}}“ enthält Zeichen, die im PDF als „?“ gedruckt werden",
+    "phase": {
+      "roundOf16": "Achtelfinale",
+      "quarterfinal": "Viertelfinale",
+      "semifinal": "Halbfinale",
+      "final": "Finale"
+    },
+    "groupName": "Gruppe {{id}}",
+    "unrenderableField": "{{field}} „{{text}}“ enthält Zeichen, die im PDF als „?“ gedruckt werden",
+    "tournamentTitle": "Turniername",
+    "ageClass": "Altersklasse",
+    "rules": {
+      "label": {
+        "mode": "Modus",
+        "tiebreak": "Wertung",
+        "duration": "Spielzeit",
+        "rulebook": "Regelwerk",
+        "ko": "K.-o."
+      },
+      "modeRoundRobin": "Jeder gegen jeden",
+      "criterion": {
+        "points": "Punkte",
+        "goalDifference": "Tordifferenz",
+        "goalsFor": "Tore",
+        "directComparison": "direkter Vergleich"
+      },
+      "criteriaJoin": " – ",
+      "join": " · ",
+      "pointsLine": "Sieg {{win}}, Unentschieden {{draw}} {{unit}}",
+      "pointsLoss": ", Niederlage {{loss}} {{unit}}",
+      "pointOne": "Punkt",
+      "pointMany": "Punkte",
+      "groupDuration": "Gruppen {{duration}}",
+      "finalDuration": "Finalrunde {{duration}}",
+      "penalty": "Zeitstrafe {{duration}}",
+      "seconds": "{{seconds}} Sek.",
+      "round": {
+        "roundOf16": "Achtelfinale",
+        "quarterfinal": "Viertelfinale",
+        "semifinal": "Halbfinale",
+        "final": "Finale",
+        "placement": "Platzierungsspiele",
+        "thirdPlace": "Spiel um Platz 3"
+      },
+      "koAll": "{{label}}: bei Gleichstand {{rule}}",
+      "koRound": "{{round}}: bei Gleichstand {{rule}}",
+      "ruleShootout": "Strafstoßschießen, {{shooters}}",
+      "ruleOvertimeThenShootout": "Verlängerung, dann Strafstoßschießen, {{shooters}}",
+      "ruleGoldenGoal": "Golden Goal",
+      "shooters": "{{n}} Schützen je Team",
+      "shootersOne": "1 Schütze je Team"
+    },
+    "stand": "Stand {{date}} {{time}}",
+    "offlineNote": "– ohne Verbindung, Einträge anderer Geräte können fehlen",
+    "footer": "{{title}} · {{stand}} · Seite {{page}} von {{total}}",
+    "closedAt": "Endstand – abgeschlossen am {{date}} um {{time}}",
+    "matches": "Spiele",
+    "qrCaption": {
+      "results": "Live-Ergebnisse",
+      "plan": "Spielplan aufs Handy"
+    },
+    "notice": {
+      "callPlan": "Spielplan aufs Handy",
+      "callResults": "Spielplan und Ergebnisse aufs Handy",
+      "step1": "1. Kamera-App am Handy öffnen",
+      "step2": "2. Die Kamera auf den QR-Code richten",
+      "step3": "3. Link antippen – ohne Anmeldung, ohne App.",
+      "addressLabel": "Oder im Browser eintippen:"
+    },
+    "logoUnusableLeft": "Die linke Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF",
+    "logoUnusableRight": "Die rechte Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF",
+    "origin": {
+      "place": {
+        "first": "Erster",
+        "second": "Zweiter",
+        "third": "Dritter",
+        "fourth": "Vierter"
+      },
+      "placeNth": "{{n}}.",
+      "groupPlace": "{{place}} {{group}}",
+      "round": {
+        "r16": "Achtelfinale",
+        "qf": "Viertelfinale",
+        "semi": "Halbfinale"
+      },
+      "winner": "Sieger {{round}} {{n}}",
+      "loser": "Verlierer {{round}} {{n}}",
+      "undecided": "noch offen"
+    },
+    "finalTable": "Abschlusstabelle"
   }
 }

@@ -124,7 +124,7 @@ export function createMockPlacementLogic(): PlacementCriterion[] {
     { id: 'points', label: 'Punkte', enabled: true },
     { id: 'goalDifference', label: 'Tordifferenz', enabled: true },
     { id: 'goalsFor', label: 'Tore', enabled: true },
-    { id: 'headToHead', label: 'Direkter Vergleich', enabled: true },
+    { id: 'directComparison', label: 'Direkter Vergleich', enabled: true },
   ]
 }
 

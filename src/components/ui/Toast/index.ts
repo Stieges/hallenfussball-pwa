@@ -21,5 +21,5 @@ export type { ToastType, ToastProps } from './Toast';
 
 export { ToastContainer } from './ToastContainer';
 
-export { ToastProvider, useToast } from './ToastContext';
+export { ToastProvider, useToast, useOptionalToast } from './ToastContext';
 export type { ToastOptions } from './ToastContext';

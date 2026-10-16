@@ -569,6 +569,10 @@
     "explanationPrivate": "Der Spielplan wird fest. Danach ist das Turnier nur für die eingeloggte Turnierleitung sichtbar.",
     "explanationPublic": "Der Spielplan wird fest. Danach kann jeder mit dem Link zuschauen."
   },
+  "preview": {
+    "hintLabel": "Hinweis:",
+    "hintBody": "Dies ist eine Vorschau deines Turniers. Solange das Turnier nicht festgelegt ist, wird es nicht in der Übersicht angezeigt. Du kannst den Spielplan jetzt als PDF speichern oder zurück zur Bearbeitung gehen."
+  },
   "schedule": {
     "incomplete_one": "Der Spielplan lässt sich so nicht vollständig erstellen: {{count}} Spiel passt nicht hinein. Bitte ein weiteres Feld hinzufügen oder die Mindestpause verkürzen.",
     "incomplete_other": "Der Spielplan lässt sich so nicht vollständig erstellen: {{count}} Spiele passen nicht hinein. Bitte ein weiteres Feld hinzufügen oder die Mindestpause verkürzen."
