@@ -23,7 +23,7 @@ import { Tournament, Standing } from '../../types/tournament';
 import { GeneratedSchedule } from '../../core/generators';
 import {
   calculateStandings,
-  getMergedFinalRanking,
+  getMergedFinalRanking, placementRankText,
 } from '../../utils/calculations';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { resolvePlacementCriterionLabel } from '../tournament-creation/components/placementLogicLabels';
@@ -443,14 +443,14 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                 return (
                   <tr key={`${placement.team.id}-${placement.rank}`}>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      <div style={medalStyle(placement.rank)}>{placement.rank}</div>
+                      <div style={medalStyle(placement.rank)}>{placementRankText(placement)}</div>
                     </td>
                     <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
                       {placement.team.name}
                     </td>
                     {hasPlayoffs && (
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        {placement.decidedBy === 'playoff' ? (
+                        {placement.decidedBy !== 'groupStage' ? (
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -462,7 +462,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                             color: cssVars.colors.primary,
                             fontWeight: cssVars.fontWeights.semibold,
                           }}>
-                            {placement.matchLabel ?? t('ranking.playoff')}
+                            {placement.decidedBy === 'open' ? t('ranking.open', { match: placement.matchLabel ?? '' }) : placement.matchLabel ?? t('ranking.playoff')}
                           </span>
                         ) : (
                           <span style={{
@@ -549,11 +549,11 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                       style={{ cursor: 'pointer' }}
                     >
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        <div style={medalStyle(placement.rank)}>{placement.rank}</div>
+                        <div style={medalStyle(placement.rank)}>{placementRankText(placement)}</div>
                       </td>
                       <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
                         {placement.team.name}
-                        {placement.decidedBy === 'playoff' ? (
+                        {placement.decidedBy !== 'groupStage' ? (
                           <div style={{
                             fontSize: fontSizesMd3.statLabel,
                             color: cssVars.colors.primary,
@@ -562,7 +562,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                             alignItems: 'center',
                             gap: '2px',
                           }}>
-                            {placement.matchLabel ?? t('ranking.playoff')}
+                            {placement.decidedBy === 'open' ? t('ranking.open', { match: placement.matchLabel ?? '' }) : placement.matchLabel ?? t('ranking.playoff')}
                           </div>
                         ) : hasGroups && placement.team.group ? (
                           <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '2px' }}>

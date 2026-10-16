@@ -4,6 +4,8 @@ import { cardKindOf } from './cardKind';
 import { matchSideTeamId } from '../core/models/matchSlot';
 import { matchFinalScore } from '../core/view/finalScore';
 import type { TeamId } from '../core/models/schemas/MatchSlotSchema';
+import { FINAL_TYPE_LABELS, FINAL_TYPE_RANKS, openPlacements } from './openPlacements';
+export { placementRankText } from './openPlacements';
 
 /**
  * Zählt ein Spiel für Tabelle, Weiterkommen und Finalrunden-Auflösung? (@TM-143)
@@ -254,8 +256,10 @@ export const getQualifiedTeams = (standings: Standing[], count: number): Team[] 
 
 export interface FinalPlacement {
   rank: number;
+  /** Nur bei `open`: letzter Platz des gemeinsamen Bereichs (A-36b Fixrunde 1b, @ET-042). */
+  rankTo?: number;
   team: Team;
-  decidedBy: 'playoff' | 'groupStage';
+  decidedBy: 'playoff' | 'groupStage' | 'open';
   matchLabel?: string; // e.g., "Finale", "Spiel um Platz 3"
 }
 
@@ -322,20 +326,8 @@ export const calculateFinalsPlacement = (
     return teams.find(t => t.id === teamId);
   };
 
-  // Process finals matches by finalType priority
-  const finalTypeToRanks: Record<string, [number, number]> = {
-    'final': [1, 2],
-    'thirdPlace': [3, 4],
-    'fifthSixth': [5, 6],
-    'seventhEighth': [7, 8],
-  };
-
-  const finalTypeLabels: Record<string, string> = {
-    'final': 'Finale',
-    'thirdPlace': 'Spiel um Platz 3',
-    'fifthSixth': 'Spiel um Platz 5',
-    'seventhEighth': 'Spiel um Platz 7',
-  };
+  const finalTypeToRanks = FINAL_TYPE_RANKS;
+  const finalTypeLabels = FINAL_TYPE_LABELS;
 
   // Process each finalType
   for (const [finalType, [winnerRank, loserRank]] of Object.entries(finalTypeToRanks)) {
@@ -409,21 +401,21 @@ export const getMergedFinalRanking = (
   const ranking: FinalPlacement[] = [...finalsResult.placements];
   const placedTeamIds = new Set(ranking.map(p => p.team.id));
 
+  // A-36b Fixrunde 1b (@ET-042): Teams eines offenen Platzierungsspiels stehen vorläufig auf dessen Plätzen, gemeinsam.
+  for (const open of openPlacements(teams, matches, (m) => getMatchWinner(m) !== null, placedTeamIds)) {
+    ranking.push(open);
+    placedTeamIds.add(open.team.id);
+  }
+  ranking.sort((a, b) => a.rank - b.rank);
+
   // Find the next rank to assign
   let nextRank = ranking.length > 0
-    ? Math.max(...ranking.map(p => p.rank)) + 1
+    ? Math.max(...ranking.map(p => p.rankTo ?? p.rank)) + 1
     : 1;
-
-  // A-36b Fixrunde (W1): Teams eines noch offenen Platzierungsspiels nicht über die Gruppentabelle hinter die
-  // entschiedenen Plätze einreihen, sobald die Finalrunde läuft.
-  const openFinalists = finalsResult.playoffStatus === 'not-started' ? [] : matches
-    .filter(m => m.isFinal && getMatchWinner(m) === null)
-    .flatMap(m => [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')]);
-  const skipped = new Set<string | undefined>(openFinalists);
 
   // Add remaining teams from group standings
   for (const standing of groupStandings) {
-    if (!placedTeamIds.has(standing.team.id) && !skipped.has(standing.team.id)) {
+    if (!placedTeamIds.has(standing.team.id)) {
       ranking.push({
         rank: nextRank,
         team: standing.team,

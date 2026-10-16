@@ -397,6 +397,7 @@
     "fullscreen": "Fullscreen",
     "placementLogic": "Placement logic:",
     "playoff": "Playoff",
+    "open": "{{match}} – open",
     "groupStage": "Group stage",
     "noResults": "No results yet.",
     "noResultsInfo": "Rankings will be shown after the first matches.",

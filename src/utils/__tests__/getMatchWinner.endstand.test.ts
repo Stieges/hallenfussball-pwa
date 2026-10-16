@@ -4,7 +4,7 @@
  * `calculateStandings` bleibt bei der regulären Spielzeit (Gruppenspiele haben keine Verlängerung).
  */
 import { describe, expect, it } from 'vitest';
-import { calculateFinalsPlacement, calculateStandings, getMatchWinner, getMergedFinalRanking } from '../calculations';
+import { calculateFinalsPlacement, calculateStandings, getMatchWinner, getMergedFinalRanking, placementRankText } from '../calculations';
 import type { Match, Team } from '../../types/tournament';
 import { vs, testUuid } from '../../test/matchSlotFixtures';
 import { createMockTournament } from '../../test/factories';
@@ -82,20 +82,41 @@ describe('@ET-002 Platzierung: abgeschlossen heißt entschieden (Fixrunde W1)', 
     expect(result).toMatchObject({ playoffStatus: 'in-progress', allFinalsCompleted: false });
   });
 
-  it('@ET-002 Finalisten eines laufenden Finales werden nicht über die Gruppentabelle hinter Platz 4 eingereiht', () => {
-    const matches = [finale({ matchStatus: 'running', scoreA: 2, scoreB: 0 }), platz3];
-    const { ranking } = getMergedFinalRanking(teams, matches, groupTable(), tournament);
-    const ids = ranking.map((p) => p.team.id);
-    expect(ids).not.toContain(NORD);
-    expect(ids).not.toContain(MITTE);
-    expect(ranking.slice(0, 2).map((p) => [p.rank, p.team.id])).toEqual([[3, BERG], [4, SUED]]);
-  });
-
   it('@ET-002 Gegenbeispiel: entschiedenes Finale ist abgeschlossen, Finalisten auf 1 und 2', () => {
     const matches = [finale({ matchStatus: 'finished', scoreA: 2, scoreB: 0, decidedBy: 'regular' }), platz3];
     const result = calculateFinalsPlacement(teams, matches, []);
     expect(result).toMatchObject({ playoffStatus: 'completed', allFinalsCompleted: true });
     const { ranking } = getMergedFinalRanking(teams, matches, groupTable(), tournament);
     expect(ranking.slice(0, 4).map((p) => [p.rank, p.team.id])).toEqual([[1, NORD], [2, MITTE], [3, BERG], [4, SUED]]);
+  });
+
+  const rows = (ranking: ReturnType<typeof getMergedFinalRanking>['ranking']) =>
+    ranking.map((p) => [placementRankText(p), p.team.id, p.decidedBy]);
+
+  it('@ET-042 laufendes Finale 2:0: beide Finalisten vorläufig gemeinsam auf 1–2 „offen“, nie hinter den Gruppenplätzen', () => {
+    const matches = [finale({ matchStatus: 'running', scoreA: 2, scoreB: 0 }), platz3];
+    const { ranking } = getMergedFinalRanking(teams, matches, groupTable(), tournament);
+    expect(rows(ranking).slice(0, 4)).toEqual([
+      ['1–2', NORD, 'open'], ['1–2', MITTE, 'open'], ['3', BERG, 'playoff'], ['4', SUED, 'playoff'],
+    ]);
+    expect(rows(ranking).slice(4).map(([rank]) => rank)).toEqual(['5', '6']);
+  });
+
+  it('@ET-042 Gegenbeispiel: entschiedenes Finale → feste Plätze 1 und 2, nichts „offen“', () => {
+    const matches = [finale({ matchStatus: 'finished', scoreA: 2, scoreB: 0, decidedBy: 'regular' }), platz3];
+    const { ranking } = getMergedFinalRanking(teams, matches, groupTable(), tournament);
+    expect(rows(ranking).slice(0, 2)).toEqual([['1', NORD, 'playoff'], ['2', MITTE, 'playoff']]);
+    expect(ranking.some((p) => p.decidedBy === 'open')).toBe(false);
+  });
+
+  it('@ET-042 Spiel um Platz 3 offen, Finale entschieden → Plätze 3–4 gemeinsam „offen“', () => {
+    const matches = [
+      finale({ matchStatus: 'finished', scoreA: 1, scoreB: 0, decidedBy: 'regular' }),
+      third({ matchStatus: 'running', scoreA: 1, scoreB: 1 }),
+    ];
+    const { ranking } = getMergedFinalRanking(teams, matches, groupTable(), tournament);
+    expect(rows(ranking).slice(0, 4)).toEqual([
+      ['1', NORD, 'playoff'], ['2', MITTE, 'playoff'], ['3–4', BERG, 'open'], ['3–4', SUED, 'open'],
+    ]);
   });
 });
