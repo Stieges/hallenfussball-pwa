@@ -11,7 +11,7 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
-import { OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, isAbortError } from '../errors';
+import { OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, isAbortError, toOriginImmutableError } from '../errors';
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
 import type { Database } from '../../types/supabase';
 import {
@@ -505,9 +505,9 @@ export class SupabaseRepository implements ITournamentRepository {
 
       const errors = results.filter((r) => r.error !== null || r.updatedCount === 0);
       if (errors.length > 0) {
-        for (const { id, error } of errors) {
-          console.error(`Failed to update match ${id}:`, error ?? '0 rows updated (RLS?), expected 1');
-        }
+        for (const { id, error } of errors) { console.error(`Failed to update match ${id}:`, error ?? '0 rows updated (RLS?), expected 1'); }
+        const immutable = errors.map((r) => toOriginImmutableError(r.id, r.error)).find((e) => e !== undefined);
+        if (immutable) { throw immutable; } // A-36a: HF002 nicht transient, Muster TeamStillReferencedError
         throw new RepositoryError(
           'saveMatches',
           `Failed to update ${errors.length} match(es): ${errors
@@ -643,7 +643,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
       if (error) {
         console.error(`Failed to update match ${update.id}:`, error);
-        errors.push(new Error(`Match ${update.id}: ${error.message}`));
+        errors.push(toOriginImmutableError(update.id, error) ?? new Error(`Match ${update.id}: ${error.message}`)); // A-36a: HF002
       } else if (!data || data.length === 0) {
         console.error(`Failed to update match ${update.id}: 0 rows updated (RLS or missing row), expected 1`);
         errors.push(new Error(`Match ${update.id}: 0 rows updated (RLS or missing row), expected 1`));

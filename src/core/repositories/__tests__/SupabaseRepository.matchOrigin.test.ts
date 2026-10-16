@@ -57,6 +57,7 @@ vi.mock('../../../lib/supabase', () => ({ supabase: hoisted.supabase, isSupabase
 import { SupabaseRepository } from '../SupabaseRepository';
 import { TournamentCreationService } from '../../services/TournamentCreationService';
 import { ScheduleService } from '../../services/ScheduleService';
+import { OriginImmutableError, RepositoryError, isTransientMutationError } from '../../errors';
 
 function teams(): Team[] {
   return [
@@ -170,5 +171,43 @@ describe('A-36a Herkunft des Platzes bis in die Cloud (Insert-Zeilen)', () => {
     const [update] = hoisted.matchesUpdate.mock.calls[0];
     expect(update.team_a_id).toBe(teams()[0].id);
     expect(Object.keys(update).filter((k) => k.startsWith('origin_'))).toEqual([]);
+  });
+});
+
+describe('A-36a Fehlercode HF002 aus der Cloud (Trigger matches_keep_origin)', () => {
+  const hf002 = { message: 'Herkunft eines Platzes ist unveraenderlich (Spiel x, Seite A)', code: 'HF002' };
+
+  it('@FU-019 updateMatches: HF002 kommt als OriginImmutableError im RepositoryError an, nicht transient', async () => {
+    hoisted.updateResult.value = { data: [], error: hf002 };
+    const error = await new SupabaseRepository()
+      .updateMatches('t1', [{ id: 'm1', slotA: { kind: 'team', teamId: teams()[0].id } as Match['slotA'] }])
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(RepositoryError);
+    const inner = (error as RepositoryError).originalError as unknown[];
+    expect(inner[0]).toBeInstanceOf(OriginImmutableError);
+    expect(isTransientMutationError(error)).toBe(false);
+  });
+
+  it('@FU-019 Voll-Speichern: HF002 beim Update eines bestehenden Spiels wirft OriginImmutableError', async () => {
+    const tournament = await new TournamentCreationService(fakeRepository()).publish({ ...hallencup });
+    hoisted.existingMatches.rows = tournament.matches.map((m: Match) => ({
+      id: m.id, match_status: 'scheduled', match_number: m.matchNumber ?? null, team_a_id: null, team_b_id: null,
+    }));
+    hoisted.updateResult.value = { data: [], error: hf002 };
+
+    await expect(new SupabaseRepository().save(tournament)).rejects.toBeInstanceOf(OriginImmutableError);
+  });
+
+  it('Gegenbeispiel: ein anderer Update-Fehler bleibt RepositoryError', async () => {
+    const tournament = await new TournamentCreationService(fakeRepository()).publish({ ...hallencup });
+    hoisted.existingMatches.rows = tournament.matches.map((m: Match) => ({
+      id: m.id, match_status: 'scheduled', match_number: m.matchNumber ?? null, team_a_id: null, team_b_id: null,
+    }));
+    hoisted.updateResult.value = { data: [], error: { message: 'check violation', code: '23514' } };
+
+    const error = await new SupabaseRepository().save(tournament).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(RepositoryError);
+    expect(error).not.toBeInstanceOf(OriginImmutableError);
   });
 });
