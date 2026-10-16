@@ -268,5 +268,6 @@ describe('B6 @DR-013 Rückfall: Schrift lädt nicht → PDF mit Standardschrift 
     }
 
     expect(fehler).toEqual([]);
-  });
+    // 81 × 2 Bauten mit pdfjs-Auslesen: lokal 6–9 s, in der CI neben der vollen Suite über 5 s (Vorgabe) – eigenes Limit
+  }, 60_000);
 });
