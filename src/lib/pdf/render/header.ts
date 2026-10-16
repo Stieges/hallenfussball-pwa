@@ -1,6 +1,6 @@
 /**
  * Kopf von Seite 1 (B-28a3-3b, @DR-006, @BM-009, @BM-052; B-28 C4, @DR-003, @DR-023, @DR-024): Kicker nur in der Fassung
- * „Spielplan zum Ausfüllen“. Oben Grafik links · Turniertitel mittig über die Restbreite · Grafik rechts (fehlt eine,
+ * „Spielplan ohne Ergebnisse“. Oben Grafik links · Turniertitel mittig über die Restbreite · Grafik rechts (fehlt eine,
  * bleibt der Titel dennoch mittig, ohne sichtbare Lücke). Darunter die zweispaltige Angabentabelle links (Bezeichnungen
  * fett, Werte normal, eine Schriftgröße) und rechts der Zuschauer-QR, nur wenn die Adresse bekannt ist. Der Titel bricht
  * um, wird nie gekürzt und hat höchstens drei Zeilen (bei Bedarf kleinere Schrift). Nur Zeichnen.
@@ -22,7 +22,7 @@ export interface HeaderFact {
 
 /** Inhalt des Kopfs, fertig übersetzt. */
 export interface HeaderInput {
-  /** Kicker „Spielplan zum Ausfüllen“; in der normalen Fassung leer (Daniel 15.10.). */
+  /** Kicker „Spielplan“ (beide Fassungen, Daniel 16.10.); beim Endstand leer. */
   kicker?: string;
   title: string;
   /** Angaben in Tabellenreihenfolge: Veranstalter, Altersklasse, Halle, Termin, Modus, Platzierung, Spielzeit, Regelwerk. */
@@ -61,7 +61,7 @@ export function renderHeader(doc: jsPDF, head: HeaderInput, geo: PageGeometry): 
   const side = Math.max(head.logoLeft?.w ?? 0, head.logoRight?.w ?? 0);
   const titleWidth = geo.contentWidth - (side > 0 ? 2 * (side + printHeader.logoGap) : 0);
 
-  // Kicker (nur „Spielplan zum Ausfüllen“), mittig wie der Titel
+  // Kicker (nur „Spielplan ohne Ergebnisse“), mittig wie der Titel
   let baseline = geo.top;
   if (head.kicker !== undefined && head.kicker !== '') {
     baseline += ascentMm(printType.kicker);

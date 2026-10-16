@@ -137,8 +137,9 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
   let yPos = renderHeader(
     doc,
     {
-      // Kopfzeile nennt die Fassung (@BM-052, G57): „Spielplan“ bzw. „Spielplan zum Ausfüllen“; der Endstand trägt seine Zeile in der Fußzeile
-      kicker: edition === 'blank' ? t.kicker.blank : edition === 'plan' ? t.kicker.plan : undefined,
+      // Kopfzeile nennt den Inhalt (@BM-052, @DR-005, Daniel 16.10.): „Spielplan“ in beiden Fassungen, der Unterschied steht
+      // im Dateinamen; der Endstand trägt seine Zeile in der Fußzeile
+      kicker: edition === 'blank' || edition === 'plan' ? t.kicker.plan : undefined,
       title: schedule.tournament.title,
       facts: [...headerFacts(schedule, t, organizerName, hallName), ...ruleFacts(pdfRuleLines(rules, t))],
       separator: t.rules.join,
@@ -223,7 +224,7 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
   });
   drawFooters(doc, geo, footer);
 
-  return { doc, notes, hints, filename: schedulePdfFilename(schedule.tournament.title, now) };
+  return { doc, notes, hints, filename: schedulePdfFilename(schedule.tournament.title, now, edition) };
 }
 
 /** Baut das Spielplan-PDF und speichert es. Rückgabe: Hinweise für den Nutzer (leer, wenn keine). */

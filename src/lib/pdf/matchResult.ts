@@ -22,7 +22,7 @@ export type ResultState =
   | { kind: 'empty' };
 
 /**
- * Fassung: „Spielplan zum Ausfüllen“ (`blank`) hat keine Ergebnisse, auch nicht für beendete Spiele. `final` ist die
+ * Fassung: „Spielplan ohne Ergebnisse“ (`blank`) hat keine Ergebnisse, auch nicht für beendete Spiele. `final` ist die
  * Endstand-Fassung (C10) und zeigt Ergebnisse wie `plan`.
  */
 export type ResultEdition = 'plan' | 'blank' | 'final';

@@ -60,8 +60,8 @@ export interface PdfTexts {
   thirdPlace: string;
   fifthSixth: string;
   seventhEighth: string;
-  /** Kicker im Kopf: „Spielplan“ mit Ergebnissen, „Spielplan zum Ausfüllen“ ohne (@BM-052). */
-  kicker: { plan: string; blank: string };
+  /** Kicker im Kopf: „Spielplan“, in beiden Fassungen (@BM-052, Daniel 16.10.). */
+  kicker: { plan: string };
   /** Abschnitte, die keinen eigenen Titel tragen, im Untertitel des Kurzkopfs (G8): „Tabellen“, „Finalrunde“. */
   sectionTables: string;
   sectionFinals: string;
@@ -239,7 +239,7 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     thirdPlace: s('thirdPlace'),
     fifthSixth: s('fifthSixth'),
     seventhEighth: s('seventhEighth'),
-    kicker: { plan: s('kicker.plan'), blank: s('kicker.blank') },
+    kicker: { plan: s('kicker.plan') },
     sectionTables: s('sectionTables'),
     sectionFinals: s('sectionFinals'),
     timesTentative: s('timesTentative'),

@@ -134,8 +134,8 @@
         "description": "Alle Spiele mit Zeit, Feld und Teams."
       },
       "blank": {
-        "title": "Spielplan zum Ausfüllen",
-        "description": "Mit leeren Ergebnisfeldern zum Eintragen von Hand."
+        "title": "Spielplan ohne Ergebnisse",
+        "description": "Mit leeren Feldern zum Eintragen von Hand."
       },
       "final": {
         "title": "Endstand",
@@ -926,8 +926,7 @@
     "fontFallbackNote": "Sonderzeichen können als ? erscheinen. Die Schrift konnte nicht geladen werden. Das PDF wird mit einer Ersatzschrift erstellt, alle Inhalte sind enthalten.",
     "noDate": "Kein Datum",
     "kicker": {
-      "plan": "Spielplan",
-      "blank": "Spielplan zum Ausfüllen"
+      "plan": "Spielplan"
     },
     "durationMinutes": "{{minutes}} Min.",
     "modeGroupsAndFinals": "Gruppen + Finalrunde",

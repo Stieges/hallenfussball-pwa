@@ -28,7 +28,7 @@ export interface PDFExportOptions {
   /** Ausrichtung des A4-Blatts. Vorgabe: hoch. */
   orientation?: PdfOrientation;
   /**
-   * Fassung (B-28a3-3b, @BM-052): `plan` = „Spielplan“ (Vorgabe), `blank` = „Spielplan zum Ausfüllen“. Nur der Wunsch
+   * Fassung (B-28a3-3b, @BM-052): `plan` = „Spielplan“ (Vorgabe), `blank` = „Spielplan ohne Ergebnisse“. Nur der Wunsch
    * des Nutzers ergibt `blank`; ohne Ergebnisse allein bleibt es bei `plan`. `final` = Endstand (Anschluss C10): die
    * Fußzeile trägt mit `closedAt` die Abschlusszeile statt des Stands.
    */

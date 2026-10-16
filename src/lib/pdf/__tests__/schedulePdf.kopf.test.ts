@@ -268,18 +268,17 @@ describe('Teilnehmer und Schiedsrichter', () => {
   });
 });
 
-describe('@BM-052 Kicker: „Spielplan“ bzw. „Spielplan zum Ausfüllen“ (G57)', () => {
-  it('Fassung „blank“ steht als „Spielplan zum Ausfüllen“ im Kopf, Fassung „plan“ als „Spielplan“, nie beides', async () => {
+describe('@BM-052 Kicker: „Spielplan“ in beiden Fassungen (G57, Daniel 16.10.)', () => {
+  it('Fassung „blank“ (ohne Ergebnisse) und Fassung „plan“ tragen beide „Spielplan“ im Kopf, ohne Zusatz', async () => {
     const tournament = hallencupMitRegelwerk();
     const schedule = hallencupSchedule(tournament);
 
     const leer = await layoutOf({ tournament, edition: 'blank' }, schedule);
-    expect(leer.pages[0].texts.map(trimmed)).toContain('Spielplan zum Ausfüllen');
-
     const mit = await layoutOf({ tournament, edition: 'plan' }, schedule);
-    expect(mit.pages[0].texts.map(trimmed)).toContain('Spielplan');
-    expect(mit.pages[0].texts.map(trimmed)).not.toContain('Spielplan zum Ausfüllen');
-    expect(leer.pages[0].texts.map(trimmed)).not.toContain('Spielplan');
+    for (const { pages } of [leer, mit]) {
+      expect(pages[0].texts.map(trimmed)).toContain('Spielplan');
+      expect(pages[0].texts.map(trimmed).filter(s => /zum Ausfüllen|ohne Ergebnisse/.test(s))).toEqual([]);
+    }
   });
 
   it('W3 ohne Wahl der Fassung und ohne Ergebnisse bleibt es beim „Spielplan“, die Vorlage kommt nur auf ausdrückliche Wahl', async () => {
@@ -287,7 +286,7 @@ describe('@BM-052 Kicker: „Spielplan“ bzw. „Spielplan zum Ausfüllen“ (G
     const { pages } = await layoutOf({ tournament, includeScores: false }, hallencupSchedule(tournament));
 
     expect(pages[0].texts.map(trimmed)).toContain('Spielplan');
-    expect(pages[0].texts.map(trimmed)).not.toContain('Spielplan zum Ausfüllen');
+    expect(pages[0].texts.map(trimmed).filter(s => /zum Ausfüllen|ohne Ergebnisse/.test(s))).toEqual([]);
   });
 });
 

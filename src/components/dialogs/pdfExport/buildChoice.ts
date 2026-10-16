@@ -15,7 +15,7 @@ import { buildSchedulePdf } from '../../../lib/pdf/schedulePdf';
 import { withTournamentState } from '../../../lib/pdf/tournamentState';
 import type { PdfAudience } from '../../../lib/pdf/visibility';
 
-/** Was der Dialog anbietet: Spielplan, Spielplan zum Ausfüllen, Endstand (nach dem Abschluss), Aushang mit QR-Code. */
+/** Was der Dialog anbietet: Spielplan, Spielplan ohne Ergebnisse, Endstand (nach dem Abschluss), Aushang mit QR-Code. */
 export type PdfChoice = 'schedule' | 'blank' | 'final' | 'notice';
 
 export interface BuildContext {

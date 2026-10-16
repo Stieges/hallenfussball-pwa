@@ -25,11 +25,18 @@ describe('G57 @BM-052 Kopfzeile „Spielplan“ steht auf dem normalen Spielplan
     expect(kicker && titel ? kicker.y : 0).toBeLessThan(titel?.y ?? 0);
   });
 
-  it('Gegenbeispiel: die Fassung zum Ausfüllen heißt „Spielplan zum Ausfüllen“, nie zusätzlich „Spielplan“ allein', async () => {
+  it('@BM-052 @DR-005 der Spielplan ohne Ergebnisse trägt oben ebenfalls „Spielplan“, ohne Zusatz und ohne Aufforderung (Daniel 16.10.)', async () => {
     const { pages } = await layoutOf({ now: NOW, edition: 'blank' });
 
-    expect(strs(pages[0])).toContain('Spielplan zum Ausfüllen');
-    expect(strs(pages[0])).not.toContain('Spielplan');
+    expect(strs(pages[0])).toContain('Spielplan');
+    expect(strs(pages[0]).filter(s => /zum Ausfüllen|ohne Ergebnisse|eintragen/i.test(s))).toEqual([]);
+  });
+
+  it('EN: der Spielplan ohne Ergebnisse trägt oben „Schedule“, ohne Zusatz', async () => {
+    const { pages } = await layoutOf({ now: NOW, edition: 'blank', ...en });
+
+    expect(strs(pages[0])).toContain('Schedule');
+    expect(strs(pages[0]).filter(s => /fill in|without results/i.test(s))).toEqual([]);
   });
 
   it('Gegenbeispiel: nur die erste Seite trägt die Kopfzeile', async () => {
@@ -56,6 +63,14 @@ describe('G59 Dateiname wie im Record (@BM-027): <Titel>_Spielplan_<Datum>_<HHmm
 
   it('Gegenbeispiel: nur unzulässige Zeichen ergeben „Turnier“, kein leerer Name', () => {
     expect(schedulePdfFilename('?*', NOW)).toBe('Turnier_Spielplan_2026-11-14_1507.pdf');
+  });
+
+  it('@BM-052 @BM-027 Spielplan ohne Ergebnisse: Zusatz „ohne-Ergebnisse“ (Daniel 16.10.)', () => {
+    expect(schedulePdfFilename('Hallencup Nord', NOW, 'blank')).toBe('Hallencup_Nord_Spielplan_ohne-Ergebnisse_2026-11-14_1507.pdf');
+  });
+
+  it('Gegenbeispiel: der Spielplan mit Ergebnissen trägt keinen Zusatz', () => {
+    expect(schedulePdfFilename('Hallencup Nord', NOW, 'plan')).toBe('Hallencup_Nord_Spielplan_2026-11-14_1507.pdf');
   });
 });
 

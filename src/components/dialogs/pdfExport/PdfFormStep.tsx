@@ -1,5 +1,5 @@
 /**
- * Wahlschritt des PDF-Dialogs (B-28 C8, Mockup „PDF-Dialog“): Karten „Spielplan“, „Spielplan zum Ausfüllen“, „Endstand“
+ * Wahlschritt des PDF-Dialogs (B-28 C8, Mockup „PDF-Dialog“): Karten „Spielplan“, „Spielplan ohne Ergebnisse“, „Endstand“
  * (bis zum Abschluss ausgegraut, G44) und „Aushang mit QR-Code“ (ohne Online-Teilen ausgegraut, @ZM-064), darunter die
  * Hinweise zu Sichtbarkeit, Netz und Fehler und die Zeile „Format: A4 hoch“ (@DR-026, keine Wahl „quer“). Zuschauer
  * (`audience viewer`) sehen nur „Spielplan“ ohne Wahl (@BM-057, G47).

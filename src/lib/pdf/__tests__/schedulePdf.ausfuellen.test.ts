@@ -1,5 +1,5 @@
 /**
- * B-28 C6 – Fassung „Spielplan zum Ausfüllen“ im fertigen PDF (pdfjs): @DR-005 (Zeilen 1–3: keine Ergebnisse, keine
+ * B-28 C6 – Fassung „Spielplan ohne Ergebnisse“ im fertigen PDF (pdfjs): @DR-005 (Zeilen 1–3: keine Ergebnisse, keine
  * Tabellenwerte, keine feststehenden Finalteams), @BM-052 (Kicker), @DR-002 (gleiche Seitenaufteilung wie „Spielplan“),
  * @DR-018 (Sichtbarkeit), @DR-009 (eine Gruppe ohne Finalrunde: Block mit Schreiblinien).
  * Pflichtfall: Tom druckt um 15:07; Spiel 11 steht 2:1, das Halbfinale 1 ist besetzt.
@@ -54,10 +54,11 @@ const tabellenSeite = (pages: LayoutPage[]): LayoutPage => {
 };
 
 describe('@DR-005 @BM-052 Pflichtfall: Tom um 15:07, Spiel 11 steht 2:1, Halbfinale 1 besetzt', () => {
-  it('Kicker „Spielplan zum Ausfüllen“', async () => {
+  it('Kicker „Spielplan“, wie in der Fassung mit Ergebnissen (Daniel 16.10.)', async () => {
     const { pages } = await seiten('blank');
 
-    expect(pages[0].texts.some(t => t.str.trim().toLowerCase() === 'spielplan zum ausfüllen')).toBe(true);
+    expect(pages[0].texts.some(t => t.str.trim() === 'Spielplan')).toBe(true);
+    expect(pages[0].texts.some(t => /zum ausfüllen|ohne ergebnisse/i.test(t.str))).toBe(false);
   });
 
   it('Spiel 11: keine Ergebnisziffer in der Zeile', async () => {

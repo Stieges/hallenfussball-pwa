@@ -105,7 +105,7 @@ describe('@BM-011 @BM-012 @BM-045 Ergebniszustand je Status des Spiels', () => {
     expect(zustand).not.toHaveProperty('overtime');
   });
 
-  it('Fassung „blank“ (Spielplan zum Ausfüllen): alle Zustände sind leer, auch ein laufendes oder beendetes Spiel', () => {
+  it('Fassung „blank“ (Spielplan ohne Ergebnisse): alle Zustände sind leer, auch ein laufendes oder beendetes Spiel', () => {
     for (const { overrides } of Object.values(ERWARTET)) {
       expect(zustandVon(overrides, { edition: 'blank' })).toEqual({ kind: 'empty' });
     }

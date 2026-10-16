@@ -104,14 +104,25 @@ describe('@BM-051 @BM-028 Olli: Toolbar → „Als PDF“ → Wahl der Fassung',
     expect(screen.getByText('Format: A4 hoch')).toBeInTheDocument();
   });
 
-  it('Spielplan zum Ausfüllen: das PDF trägt die Kopfzeile „Spielplan zum Ausfüllen“ und heißt wie im Record', async () => {
+  it('@BM-051 Karte „Spielplan ohne Ergebnisse“ mit „Mit leeren Feldern zum Eintragen von Hand“ (Daniel 16.10.)', () => {
+    renderToolbar();
+    openDialog();
+
+    const karte = screen.getByTestId('pdf-choice-blank');
+    expect(karte).toHaveTextContent('Spielplan ohne Ergebnisse');
+    expect(karte).toHaveTextContent('Mit leeren Feldern zum Eintragen von Hand.');
+    expect(karte).not.toHaveTextContent('zum Ausfüllen');
+  });
+
+  it('@BM-052 Spielplan ohne Ergebnisse: das PDF trägt oben „Spielplan“ und heißt „…_Spielplan_ohne-Ergebnisse_…“', async () => {
     renderToolbar();
     openDialog();
     fireEvent.click(screen.getByTestId('pdf-choice-blank'));
     await save();
 
-    expect(text()).toContain('Spielplan zum Ausfüllen');
-    expect(lastCapture()?.filename).toBe('Hallencup_Nord_Spielplan_2026-11-14_1507.pdf');
+    expect(lastCapture()?.pages[0]).toContain('Spielplan');
+    expect(text()).not.toMatch(/zum Ausfüllen|ohne Ergebnisse/);
+    expect(lastCapture()?.filename).toBe('Hallencup_Nord_Spielplan_ohne-Ergebnisse_2026-11-14_1507.pdf');
   });
 
   it('Gegenbeispiel Vorbelegung: „Spielplan“ mit Kopfzeile „Spielplan“, hoch, nie „zum Ausfüllen“', async () => {
@@ -371,6 +382,8 @@ describe('G63 englische App: Texte des Dialogs', () => {
       expect(screen.getByTestId('schedule-action-pdf')).toHaveTextContent('As PDF');
       openDialog();
       expect(screen.getByTestId('pdf-save')).toHaveTextContent('Save as PDF');
+      expect(screen.getByTestId('pdf-choice-blank')).toHaveTextContent('Schedule without results');
+      expect(screen.getByTestId('pdf-choice-blank')).toHaveTextContent('With empty fields for writing in by hand.');
       fireEvent.click(screen.getByTestId('pdf-save'));
       await screen.findByTestId('pdf-error', undefined, { timeout: 20000 });
       expect(screen.getByTestId('pdf-save')).toHaveTextContent('Try again');

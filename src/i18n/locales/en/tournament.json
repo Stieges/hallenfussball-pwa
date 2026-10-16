@@ -134,8 +134,8 @@
         "description": "All matches with time, pitch and teams."
       },
       "blank": {
-        "title": "Schedule to fill in",
-        "description": "With empty result fields for writing in by hand."
+        "title": "Schedule without results",
+        "description": "With empty fields for writing in by hand."
       },
       "final": {
         "title": "Final result",
@@ -926,8 +926,7 @@
     "fontFallbackNote": "Special characters may appear as ?. The font could not be loaded. The PDF is created with a substitute font, all content is included.",
     "noDate": "No date",
     "kicker": {
-      "plan": "Schedule",
-      "blank": "Schedule to fill in"
+      "plan": "Schedule"
     },
     "durationMinutes": "{{minutes}} min",
     "modeGroupsAndFinals": "Groups + final round",
