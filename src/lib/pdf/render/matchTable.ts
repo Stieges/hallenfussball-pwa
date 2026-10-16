@@ -1,0 +1,163 @@
+/**
+ * Eine Spieltabelle (B-28 C1): Spalten Nr, Zeit, Feld, Gr, Heim, Ergebnis, Gast, SR. Gruppenphase und Finalrunde
+ * teilen sich diese Funktion; sie unterscheiden sich in den Spaltenbreiten, der Gruppen-Spalte und der Regel der Runde
+ * (kleine Felder). Spalten sind benannt, nicht nummeriert. Die Ergebniszelle bleibt leer und wird im
+ * `didDrawCell`-Hook gezeichnet (`scoreCell.ts`). Spielseiten nur über `sideLabel` (Ein-Stellen-Regel).
+ */
+import type jsPDF from 'jspdf';
+import autoTable, { type CellInput, type RowInput, type Styles } from 'jspdf-autotable';
+import type { ScheduledMatch } from '../../../core/generators';
+import { printGap, printType } from '../../../design-tokens/print';
+import type { TiebreakerMode } from '../../../types/tournament';
+import { resultState, type ResultOptions } from '../matchResult';
+import { sideLabel, type PdfSideContext } from '../matchSides';
+import { tableEndY } from '../jspdfTypes';
+import type { PageGeometry } from '../layout';
+import type { ScoreSpec } from '../scoreLayout';
+import type { StatefulMatch } from '../tournamentState';
+import type { PdfTexts } from '../translations';
+import { drawLiveBar, drawRefereeField, drawScoreCell, scoreCellMinHeight, scoreSpecFor } from './scoreCell';
+import { drawTeamCell, teamCellMinHeight } from './teamCell';
+import { fontOf } from '../fonts';
+import { matchTableOptions, pad } from './matchTables';
+
+type ColumnKey = 'nr' | 'time' | 'field' | 'group' | 'home' | 'result' | 'away' | 'referee';
+
+/** Breiten der festen Spalten in mm (Token `printColumns`). `group` fehlt in der Finalrunde. */
+export interface ColumnWidths { nr: number; time: number; field: number; group?: number; result: number; referee: number }
+
+/** Was die Tabelle von außen braucht: Texte, Seitenmaß, Ergebnisoptionen und die Anzeige des Schiedsrichters. */
+export interface MatchTableContext {
+  t: PdfTexts;
+  geo: PageGeometry;
+  result: ResultOptions;
+  /** Anzeige in der Spalte „SR“; leer heißt: Schreibfeld. */
+  refereeLabel: (match: ScheduledMatch) => string;
+  /** Kontext für die Anzeige der Spielseiten (Herkunft offener Plätze im Klartext, B-28 C4). */
+  side: PdfSideContext;
+}
+
+export interface MatchTableInput {
+  matches: StatefulMatch[];
+  widths: ColumnWidths;
+  showField: boolean;
+  /** Kurzzeichen der Gruppe eines Spiels; ohne diese Funktion keine Spalte „Gr“. */
+  groupCode?: (match: ScheduledMatch) => string;
+  /** Regel der Runde bei K.-o.-Spielen: bestimmt die kleinen Felder. */
+  mode?: TiebreakerMode;
+  /** Innenabstand oben und unten; Vorgabe `printGap.bodyPadV`, die Finalrunde nimmt `printGap.finalPadV`. */
+  padV?: number;
+  /** Fassung zum Ausfüllen (C6): Heim und Gast als Herkunft klein über einer Schreiblinie statt als Teamname. */
+  writeIn?: boolean;
+}
+
+interface Row { match: StatefulMatch; spec: ScoreSpec; referee: string; home: string; away: string }
+
+interface Column {
+  key: ColumnKey;
+  head: string;
+  style: Partial<Styles>;
+  cell: (row: Row) => CellInput;
+}
+
+/**
+ * Breite einer festen Spalte: der Token-Wert, mindestens aber das Kopfwort in der PDF-Schrift samt Innenabstand. Ein Kopfwort
+ * bricht nie um, in keiner Sprache (VISUAL-DESIGN § 2; „No.“ und „Pitch“ brachen im englischen Kopf).
+ */
+function fitHead(doc: jsPDF, head: string, base: number): number {
+  doc.setFont(fontOf(doc), 'bold');
+  doc.setFontSize(printType.head);
+  return Math.max(base, doc.getTextWidth(head) + 2 * printGap.headPadH + printGap.headFitReserve);
+}
+
+function buildColumns(doc: jsPDF, input: MatchTableInput, ctx: MatchTableContext): Column[] {
+  const { t } = ctx;
+  const widths = {
+    nr: fitHead(doc, t.nr, input.widths.nr),
+    time: fitHead(doc, t.timeHeader, input.widths.time),
+    field: fitHead(doc, t.field, input.widths.field),
+    group: input.widths.group === undefined ? undefined : fitHead(doc, t.group, input.widths.group),
+    result: input.widths.result,
+    referee: fitHead(doc, t.referee, input.widths.referee),
+  };
+  const columns: Column[] = [
+    { key: 'nr', head: t.nr, style: { halign: 'center', cellWidth: widths.nr, fontSize: printType.nr, cellPadding: pad(input.padV ?? printGap.bodyPadV, printGap.nrPad) }, cell: r => r.match.matchNumber.toString() },
+    { key: 'time', head: t.timeHeader, style: { halign: 'center', cellWidth: widths.time, fontSize: printType.time, fontStyle: 'bold' }, cell: r => r.match.time },
+  ];
+  if (input.showField) {
+    columns.push({ key: 'field', head: t.field, style: { halign: 'center', cellWidth: widths.field }, cell: r => r.match.field.toString() });
+  }
+  const { groupCode } = input;
+  if (groupCode && widths.group !== undefined) {
+    columns.push({ key: 'group', head: t.group, style: { halign: 'center', cellWidth: widths.group, fontStyle: 'bold' }, cell: r => groupCode(r.match) });
+  }
+  columns.push(
+    { key: 'home', head: t.home, style: { halign: 'right' }, cell: r => (input.writeIn ? '' : r.home) }, // Heim endet am Ergebnis
+    {
+      key: 'result',
+      head: t.result,
+      style: { halign: 'center', cellWidth: widths.result },
+      cell: r => ({ content: '', styles: { minCellHeight: Math.max(scoreCellMinHeight(r.spec, input.padV ?? printGap.bodyPadV), input.writeIn ? teamCellMinHeight(input.padV ?? printGap.bodyPadV) : 0) } }),
+    },
+    { key: 'away', head: t.away, style: { halign: 'left' }, cell: r => (input.writeIn ? '' : r.away) },
+    { key: 'referee', head: t.referee, style: { halign: 'center', cellWidth: widths.referee }, cell: r => r.referee },
+  );
+  return columns;
+}
+
+/** Zeichnet die Tabelle ab `startY`; Rückgabe: Unterkante der Tabelle. */
+export function renderMatchTable(doc: jsPDF, input: MatchTableInput, ctx: MatchTableContext, startY: number): number {
+  const columns = buildColumns(doc, input, ctx);
+  const rows: Row[] = input.matches.map(match => ({
+    match,
+    spec: scoreSpecFor(resultState(match, ctx.result), input.mode, ctx.t),
+    referee: ctx.refereeLabel(match),
+    home: sideLabel(match, 'A', ctx.side),
+    away: sideLabel(match, 'B', ctx.side),
+  }));
+  const head: RowInput[] = [columns.map(column => column.head)];
+  const body: RowInput[] = rows.map(row => columns.map(column => column.cell(row)));
+  const columnStyles: Record<number, Partial<Styles>> = {};
+  columns.forEach((column, index) => {
+    columnStyles[index] = column.style;
+  });
+
+  autoTable(doc, {
+    ...matchTableOptions(ctx.geo, startY, head, body, columnStyles, input.padV, fontOf(doc)),
+    didDrawCell: data => {
+      if (data.section !== 'body') {
+        return;
+      }
+      // Eine geteilte Restzeile (nur ohne `rowPageBreak: 'avoid'`, etwa bei einer Zeile höher als die Seite) hat keinen Eintrag
+      const row = rows.at(data.row.index);
+      if (!row) {
+        return;
+      }
+      const cell = { x: data.cell.x, y: data.cell.y, w: data.cell.width, h: data.cell.height };
+      switch (columns[data.column.index].key) {
+        case 'result':
+          drawScoreCell(doc, cell, row.spec);
+          break;
+        case 'nr':
+          if (row.spec.kind === 'live') {
+            drawLiveBar(doc, cell);
+          }
+          break;
+        case 'home':
+        case 'away':
+          if (input.writeIn) {
+            drawTeamCell(doc, cell, columns[data.column.index].key === 'home' ? 'home' : 'away', columns[data.column.index].key === 'home' ? row.home : row.away, { h: printGap.bodyPadH, v: input.padV ?? printGap.bodyPadV });
+          }
+          break;
+        case 'referee':
+          if (row.referee === '') {
+            drawRefereeField(doc, cell, printGap.bodyPadH);
+          }
+          break;
+        default:
+          break;
+      }
+    },
+  });
+  return tableEndY(doc);
+}

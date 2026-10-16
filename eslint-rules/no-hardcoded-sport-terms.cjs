@@ -43,9 +43,6 @@
  * - Mockup/Demo-Screens (LiveCockpitMockup, MatchCockpitDemoScreen) — nicht
  *   produktiv gerenderte Beispieldaten, vom Brief explizit als Beispiel für
  *   eine begründete Ausnahme genannt ("Demo-Bildschirmen").
- * - pdfExporter.ts — PDF-Layout-Konstanten, gleiche Begründung wie in
- *   no-hardcoded-font-styles.cjs (feste Display-Kontexte, kein t()-Zugriff
- *   im PDF-Renderer vorgesehen).
  */
 
 'use strict';
@@ -144,7 +141,6 @@ module.exports = {
       '__tests__',          // Testdateien
       'LiveCockpitMockup',  // Demo-Screen, nicht produktiv gerendert
       'MatchCockpitDemoScreen', // Demo-Screen, nicht produktiv gerendert
-      'pdfExporter.ts',     // PDF-Layout-Konstanten, wie in no-hardcoded-font-styles.cjs
     ];
     if (allowedPatterns.some((p) => normalized.includes(p))) {
       return {};

@@ -104,7 +104,7 @@ function mapStatus(state: MatchState): MatchStatus {
   }
 }
 
-/** Nur diese Engine-Typen zeigt die UI; OWN_GOAL wird als Tor des Gegners gefuehrt. */
+/** Nur diese Engine-Typen zeigt die UI; OWN_GOAL: Tor des Gegners, `ownGoal`/`ownGoalTeamId` (L2). */
 function mapEventType(type: EngineEvent['type']): RuntimeMatchEvent['type'] | null {
   switch (type) {
     case 'GOAL':
@@ -147,7 +147,7 @@ function buildPayload(state: MatchState, event: EngineEvent, ctx: MatchContext):
 
   const teamId = event.teamId ?? null;
   if (event.type === 'OWN_GOAL') {
-    payload.teamId = otherTeamId(ctx, teamId ?? '');
+    Object.assign(payload, { teamId: otherTeamId(ctx, teamId ?? ''), ownGoal: true, ownGoalTeamId: teamId ?? '' });
   } else if (teamId !== null) {
     payload.teamId = teamId;
   }

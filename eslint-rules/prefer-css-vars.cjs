@@ -15,7 +15,7 @@
  * Exceptions (allowed direct imports):
  * - colors.confettiColors (array type - not CSS var compatible)
  * - fontWeights, fontSizes for dynamic property access
- * - Internal token files (typography.ts, themeManager.ts, pdfExporter.ts)
+ * - Internal token files (typography.ts, themeManager.ts)
  */
 
 /** @type {import('eslint').Rule.RuleModule} */
@@ -42,7 +42,6 @@ module.exports = {
     const allowedFiles = [
       'typography.ts',
       'themeManager.ts',
-      'pdfExporter.ts',
       'theme.ts',
       'cssVars.ts',
       'colors.ts',
