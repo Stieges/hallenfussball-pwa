@@ -99,6 +99,7 @@ import {
   buildScheduledTournament,
   seedEngineCups,
   seedAbmeldenCups,
+  type AbmeldenOwnerSeed,
   seedLegacyCups,
   seedRunningEngineMatch,
   seedTurniertagCup,
@@ -794,10 +795,20 @@ async function main(): Promise<void> {
 
   await seedEngineCups(engineDeps, ownerRepo, service, userIds.helper);
   await seedLegacyCups(engineDeps, ownerRepo, service, userIds.helper);
-  // A-07d3: Cups des eigenen Kontos `abmelden` (eigene Anmeldung für Eigentümer-Prüfung der RPC).
-  const abmeldenRepo = new SeedRepository(admin, userIds.abmelden);
-  const abmeldenDeps: EngineSeedDeps = { ...engineDeps, ownerClient: asTypedUserClient(userIds.abmelden) };
-  await seedAbmeldenCups(abmeldenDeps, abmeldenRepo, new TournamentCreationService(abmeldenRepo));
+  // A-07d3: Jeder Abmelde-Cup gehört dem Konto seines Tests (eigene Anmeldung für die Eigentümer-Prüfung der RPC).
+  const abmeldenOwnerSeed = (key: E2EUserKey): AbmeldenOwnerSeed => {
+    const ownerRepo = new SeedRepository(admin, userIds[key]);
+    return {
+      deps: { ...engineDeps, ownerClient: asTypedUserClient(userIds[key]) },
+      ownerRepo,
+      service: new TournamentCreationService(ownerRepo),
+    };
+  };
+  await seedAbmeldenCups({
+    ABMELDEN1: abmeldenOwnerSeed('abmelden'),
+    ABMELDEN2: abmeldenOwnerSeed('abmeldenAn024'),
+    ABMELDEN3: abmeldenOwnerSeed('abmeldenFu006'),
+  });
   await seedTurniertagCup(engineDeps, ownerRepo, service);
   await seedZweitesTurnier(engineDeps, ownerRepo, service);
 

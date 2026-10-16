@@ -8,10 +8,12 @@
  *   @FU-006 Wartende Einträge unter fremdem Konto nicht übertragen
  *           (docs/anforderungen/plattform/2026-09-24_fundament-gemeinsamer-stand.md)
  *
- * Eigenes Konto `abmelden` (Eigentümer der Abmelde-Cups ABMELDEN1-3): „Auf allen anderen Geräten
- * abmelden“ beendet jede andere Sitzung des Kontos, auch die gespeicherte aus `playwright/.auth/`.
- * Die drei Fälle laufen nacheinander (serial), ein Cup je Fall. Ein verbrauchter Cup braucht
- * `npm run test:env:seed`. Wartezeiten nur über Ereignisse (`expect`/`expect.poll`), kein `sleep`.
+ * Je Fall ein EIGENES Konto (Eigentümer des Cups ABMELDEN1 / 2 / 3: `abmelden`, `abmeldenAn024`,
+ * `abmeldenFu006`, siehe `E2E_ABMELDEN_OWNER`). „Auf allen anderen Geräten abmelden“ beendet jede
+ * andere Sitzung desselben Kontos. Teilten sich die Fälle ein Konto, könnte der eine Fall die
+ * Sitzung des anderen beenden. Die Fälle laufen nacheinander (serial), ein Cup je Fall. Ein
+ * verbrauchter Cup braucht `npm run test:env:seed`. Wartezeiten nur über Ereignisse
+ * (`expect`/`expect.poll`), kein `sleep`.
  *
  * CI-Retries: `playwright.config.ts` hat `retries` in der CI. Scheitert ein Fall dieser seriellen
  * Gruppe, wiederholt Playwright die ganze Gruppe, und die Wiederholung scheitert sicher an
@@ -129,7 +131,7 @@ test.describe('Abmelden und andere Geräte', () => {
       const guestCard = laptop.page.locator(`[data-testid="tournament-card-${guestId}"]`);
       // Vorbedingung: das Probelauf-Turnier ist im Gastmodus wirklich da (sonst wäre „nicht hochgeladen“ leer).
       await expect(guestCard).toBeVisible({ timeout: 15000 });
-      await loginAsRole(laptop.page, 'abmelden');
+      await loginAsRole(laptop.page, 'abmeldenAn024');
       await laptop.page.goto('/#/');
       await laptop.page.waitForLoadState('networkidle');
       await expect(laptop.page.locator(`[data-testid="tournament-card-${ids.tournamentId}"]`)).toBeVisible({ timeout: 15000 });
@@ -144,7 +146,7 @@ test.describe('Abmelden und andere Geräte', () => {
       await expect(laptop.page.locator(`[data-testid="tournament-card-${ids.tournamentId}"]`)).toBeVisible({ timeout: 15000 });
 
       // Tablet: anmelden (zweites Gerät), Gegenbeispiel vorab: sieht seine Turniere.
-      await loginAsRole(tablet.page, 'abmelden');
+      await loginAsRole(tablet.page, 'abmeldenAn024');
       await tablet.page.goto('/#/');
       await expect(tablet.page.locator(`[data-testid="tournament-card-${ids.tournamentId}"]`)).toBeVisible({ timeout: 15000 });
 
@@ -211,7 +213,7 @@ test.describe('Abmelden und andere Geräte', () => {
     const baseRows = await expectSeededEngineMatch(engineCupTarget('ABMELDEN3'));
     const { context, page } = await newFreshContext(browser);
     try {
-      await loginAsRole(page, 'abmelden');
+      await loginAsRole(page, 'abmeldenFu006');
       await openCockpit(page, ids.tournamentId, ids.matchId);
       await expectEngineMatchRunningUi(page);
       await expectOutboxSettled(page);
@@ -240,7 +242,7 @@ test.describe('Abmelden und andere Geräte', () => {
       await expect(page.locator('[data-testid="logout-warning-dialog"]')).toHaveCount(0);
 
       // Konto A meldet sich wieder an: der Eintrag ist noch da und kommt jetzt in der DB an.
-      await loginAsRole(page, 'abmelden');
+      await loginAsRole(page, 'abmeldenFu006');
       await openCockpit(page, ids.tournamentId, ids.matchId);
       await expectEngineMatchRunningUi(page);
       await expect.poll(async () => (await fetchEngineRows(ids.matchId)).length, { timeout: 20000 }).toBe(baseRows + 1);
