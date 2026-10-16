@@ -57,8 +57,6 @@ const generatedMatches = (tournament: Tournament): Match[] =>
     id: m.id,
     round: index + 1,
     field: m.field,
-    teamA: m.originalTeamA,
-    teamB: m.originalTeamB,
     slotA: m.slotA,
     slotB: m.slotB,
   }));

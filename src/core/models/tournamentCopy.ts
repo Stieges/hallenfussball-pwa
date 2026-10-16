@@ -6,7 +6,8 @@
  * zeigen auf die neuen Spiel-IDs. Framework-frei.
  */
 import type { Match, Team, Tournament } from '../../types/tournament';
-import { copySlot, transitionalSides } from './matchSlot';
+import { copySlot, copySource } from './matchSlot';
+import { matchOrigins } from './matchOrigin';
 
 export interface CopiedContent {
   teams: Team[];
@@ -28,12 +29,17 @@ export function copyTeamsAndMatches(
   const matches = source.matches.map((match): Match => {
     const slotA = copySlot(match.slotA, teamIdMap, matchIdMap);
     const slotB = copySlot(match.slotB, teamIdMap, matchIdMap);
+    // A-36a: Herkunft des Platzes mit neuen Spiel-IDs (nie auf das Original zeigen).
+    const { originA, originB, ...rest } = match;
     return {
-      ...match,
+      ...rest,
       id: matchIdMap.get(match.id) ?? match.id,
       slotA,
       slotB,
-      ...transitionalSides(slotA, slotB),
+      ...matchOrigins({
+        originA: originA && copySource(originA, matchIdMap),
+        originB: originB && copySource(originB, matchIdMap),
+      }),
       matchStatus: 'scheduled',
       scoreA: 0,
       scoreB: 0,

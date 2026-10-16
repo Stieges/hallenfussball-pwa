@@ -24,6 +24,7 @@ import {
 import { teamSlot } from '../../models/matchSlot';
 import type { Match } from '../../models/types';
 import { testUuid } from '../../../test/testIds';
+import { withStaleSides } from '../../../test/matchSlotFixtures';
 
 // A-02: Team-IDs sind UUIDs, jede Spielseite trägt Team-ID oder Herkunft (Slot-Tests:
 // supabaseMappers.slots.test.ts). Bestandstests nutzen besetzte Seiten.
@@ -35,9 +36,9 @@ function matchRow(overrides: Parameters<typeof createMatchRow>[0] = {}) {
   return createMatchRow({ team_a_id: TEAM_1, team_b_id: TEAM_2, ...overrides });
 }
 
-/** Spiel mit zwei besetzten Seiten (Übergangsfeld teamA/teamB wie lokal: Team-ID). */
+/** Spiel mit zwei besetzten Seiten. */
 function slotMatch(overrides: Partial<Match> = {}): Match {
-  return { id: 'match-1', round: 1, field: 1, teamA: TEAM_1, teamB: TEAM_2, slotA: teamSlot(TEAM_1), slotB: teamSlot(TEAM_2), ...overrides };
+  return { id: 'match-1', round: 1, field: 1, slotA: teamSlot(TEAM_1), slotB: teamSlot(TEAM_2), ...overrides };
 }
 
 // =============================================================================
@@ -172,11 +173,11 @@ describe('mapTeamToSupabase', () => {
 describe('mapMatchFromSupabase', () => {
   // A-02: Namens-/Platzhalter-Auflösung entfällt – Ersatz in supabaseMappers.slots.test.ts
   // („@TM-027 gesetzte Team-ID wird zum Team-Slot …“, „Seite ohne Team-ID und ohne Herkunft scheitert laut“).
-  it('Übergangsfeld teamA/teamB trägt die Team-ID (Ersatz für "resolves team names via teamIdToName map")', () => {
+  it('A-36a: kein Übergangsfeld teamA/teamB, die Seiten stehen im Slot (Ersatz für "resolves team names via teamIdToName map")', () => {
     const match = mapMatchFromSupabase(matchRow());
 
-    expect(match.teamA).toBe(TEAM_1);
-    expect(match.teamB).toBe(TEAM_2);
+    expect('teamA' in match || 'teamB' in match).toBe(false);
+    expect(match.slotA).toEqual({ kind: 'team', teamId: TEAM_1 });
   });
 
   it('constructs Date from scheduled_start time string', () => {
@@ -299,8 +300,6 @@ describe('mapMatchToSupabase', () => {
         id: 'match-1',
         round: 1,
         field: 1,
-        teamA: TEAM_1,
-        teamB: TEAM_2,
         slotA: teamSlot(TEAM_1),
         slotB: teamSlot(TEAM_2),
         scoreA: 3,
@@ -362,8 +361,6 @@ describe('mapMatchToScheduleUpdate (A2: task-A2-brief.md)', () => {
         round: 2,
         field: 3,
         slot: 4,
-        teamA: TEAM_1,
-        teamB: TEAM_2,
         slotA: teamSlot(TEAM_1),
         slotB: teamSlot(TEAM_2),
         group: 'A',
@@ -404,8 +401,6 @@ describe('mapMatchToScheduleUpdate (A2: task-A2-brief.md)', () => {
         id: 'match-1',
         round: 1,
         field: 1,
-        teamA: TEAM_1,
-        teamB: TEAM_2,
         slotA: teamSlot(TEAM_1),
         slotB: teamSlot(TEAM_2),
         scoreA: 3,
@@ -521,7 +516,7 @@ describe('mapMatchUpdateToSupabase', () => {
   // A-02: Namens-Map entfällt – Ersatz in supabaseMappers.slots.test.ts („Teamtausch erreicht die Cloud …“,
   // „Gegenbeispiel: ein Update ohne Slot-Schlüssel lässt beide Team-Spalten unberührt“).
   it('teamA allein (Übergangsfeld) wird nicht gesendet (Ersatz für "does not map team changes without teamNameToId")', () => {
-    const update = mapMatchUpdateToSupabase({ teamA: 'FC Alpha' });
+    const update = mapMatchUpdateToSupabase(withStaleSides({}, 'FC Alpha', 'FC Beta'));
 
     expect(update.team_a_id).toBeUndefined();
     expect(update.team_a_placeholder).toBeUndefined();
@@ -592,9 +587,8 @@ describe('mapTournamentFromSupabase', () => {
 
     expect(tournament.teams).toHaveLength(2);
     expect(tournament.matches).toHaveLength(1);
-    // A-02: Übergangsfeld trägt die Team-ID (Name kommt aus tournament.teams), Slot ist führend.
-    expect(tournament.matches[0].teamA).toBe(TEAM_1);
-    expect(tournament.matches[0].teamB).toBe(TEAM_2);
+    // A-36a: kein Übergangsfeld mehr, die Seite steht nur im Slot (Name kommt aus tournament.teams).
+    expect('teamA' in tournament.matches[0]).toBe(false);
     expect(tournament.matches[0].slotA).toEqual({ kind: 'team', teamId: TEAM_1 });
   });
 

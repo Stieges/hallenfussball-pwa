@@ -53,14 +53,12 @@ const generatedMatches = (tournament: Tournament): Match[] =>
     id: m.id,
     round: index + 1,
     field: m.field,
-    teamA: m.originalTeamA,
-    teamB: m.originalTeamB,
     slotA: m.slotA,
     slotB: m.slotB,
   }));
 
-const pairingOf = (m: Pick<Match, 'teamA' | 'teamB'>): string =>
-  [m.teamA, m.teamB].sort().join(':');
+const pairingOf = (m: Pick<Match, 'slotA' | 'slotB'>): string =>
+  [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')].map(String).sort().join(':');
 
 describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
   it('@W5-009 – die Paarung des behaltenen Spiels kommt genau einmal vor (E1)', () => {
@@ -139,8 +137,6 @@ describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
     // Gleiche Paarung, aber Seiten getauscht: die Vorschau muss die Slots des behaltenen Spiels zeigen.
     const played: Match = {
       ...g,
-      teamA: g.teamB,
-      teamB: g.teamA,
       slotA: g.slotB,
       slotB: g.slotA,
       scoreA: 2,
@@ -190,8 +186,6 @@ describe('Neuplanung – behaltenes Spiel ersetzt generiertes Spiel', () => {
       id: 'kept-collide',
       round: 1,
       field: second.field,
-      teamA: first.originalTeamA,
-      teamB: first.originalTeamB,
       slotA: first.slotA,
       slotB: first.slotB,
       scoreA: 1,
@@ -246,8 +240,6 @@ describe('Neuplanung – Kollision über alle behaltenen Spiele (W2, E1, E4)', (
       id: 'kept-offset',
       round: 1,
       field: second.field,
-      teamA: first.originalTeamA,
-      teamB: first.originalTeamB,
       slotA: first.slotA,
       slotB: first.slotB,
       scoreA: 1,
@@ -276,8 +268,6 @@ describe('Neuplanung – Kollision über alle behaltenen Spiele (W2, E1, E4)', (
       id: 'kept-removed-field',
       round: 1,
       field: 2,
-      teamA: generated[0].originalTeamA,
-      teamB: generated[0].originalTeamB,
       slotA: generated[0].slotA,
       slotB: generated[0].slotB,
       scoreA: 2,
@@ -308,8 +298,6 @@ describe('Neuplanung – Kollision über alle behaltenen Spiele (W2, E1, E4)', (
       id: 'kept-clear',
       round: 1,
       field: second.field,
-      teamA: first.originalTeamA,
-      teamB: first.originalTeamB,
       slotA: first.slotA,
       slotB: first.slotB,
       scoreA: 1,

@@ -5,8 +5,8 @@
  * sie nicht traegt, stammt aus der Zeit vor der Team-Referenz und wird nicht gelesen, sondern
  * beiseitegelegt (`core/storage/legacyTournamentStore.ts`).
  *
- * Erkennungsmerkmal ist das FEHLEN der Slots – NICHT der Schluessel `teamA`: den tragen bis B-35
- * alle gueltigen Spiele als Uebergangsfeld (`transitionalSides` in `matchSlot.ts`).
+ * Erkennungsmerkmal ist das FEHLEN der Slots – NICHT der Schluessel `teamA`: den trugen bis A-36a
+ * auch gueltige Spiele als Uebergangsfeld (beim Lesen entfernt das Schema ihn).
  * Framework-frei.
  */
 import { MatchSlotSchema } from './schemas/MatchSlotSchema';

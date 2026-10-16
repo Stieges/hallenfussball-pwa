@@ -359,6 +359,8 @@ PRIVILEGE_ASSERTION_NAMES=(
   "matches-guard-engine-columns-no-public-execute"
   "match-has-engine-events-definer-search-path"
   "match-has-engine-events-execute-only-anon-authenticated"
+  "matches-keep-origin-trigger-active"
+  "matches-keep-origin-no-public-execute"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

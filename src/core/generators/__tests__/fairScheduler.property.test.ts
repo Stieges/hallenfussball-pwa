@@ -7,6 +7,7 @@ import {
 } from '../../generators';
 import type { Team, Match } from '../../../types/tournament';
 import { testUuid } from '../../../test/testIds';
+import { matchSideTeamId, matchTeamIds } from '../../models/matchSlot';
 
 /**
  * Property tests for FairScheduler (HP-5e).
@@ -71,7 +72,7 @@ describe('FairScheduler — round-robin completeness (property)', () => {
 
           const pairs = new Set<string>();
           for (const m of matches) {
-            const key = [m.teamA, m.teamB].sort().join('|');
+            const key = [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')].sort().join('|');
             expect(pairs.has(key)).toBe(false);
             pairs.add(key);
           }
@@ -92,8 +93,9 @@ describe('FairScheduler — round-robin completeness (property)', () => {
 
           const counts = new Map<string, number>();
           for (const m of matches) {
-            counts.set(m.teamA, (counts.get(m.teamA) ?? 0) + 1);
-            counts.set(m.teamB, (counts.get(m.teamB) ?? 0) + 1);
+            for (const id of matchTeamIds(m)) {
+              counts.set(id, (counts.get(id) ?? 0) + 1);
+            }
           }
 
           for (let i = 0; i < numTeams; i++) {

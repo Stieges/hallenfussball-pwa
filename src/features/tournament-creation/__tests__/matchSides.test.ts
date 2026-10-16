@@ -30,8 +30,8 @@ describe('matchSides – Ein-Stellen-Regel Wizard', () => {
 
   it('replaceSides ersetzt nur die betroffene Seite', () => {
     const replaced = replaceSides(match, testUuid(1), testUuid(9));
-    expect(replaced.teamA).toBe(testUuid(9));
-    expect(replaced.teamB).toBe(testUuid(2));
+    expect(matchSideTeamId(replaced, 'A')).toBe(testUuid(9));
+    expect(matchSideTeamId(replaced, 'B')).toBe(testUuid(2));
   });
 
   it('@W5-010 resolvedFrom: nach manuellem Wechsel ist die Herkunft weg und das neue Team bleibt nach Cloud-Abbildung', () => {

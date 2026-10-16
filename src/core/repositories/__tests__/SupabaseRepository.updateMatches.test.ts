@@ -85,6 +85,7 @@ vi.mock('../../../lib/supabase', () => ({
 }));
 
 import { SupabaseRepository } from '../SupabaseRepository';
+import { withStaleSides } from '../../../test/matchSlotFixtures';
 
 describe('SupabaseRepository.updateMatches — 0-Zeilen-Update (Risiko 4)', () => {
   beforeEach(() => {
@@ -186,7 +187,7 @@ describe('SupabaseRepository.updateMatches — 0-Zeilen-Update (Risiko 4)', () =
 
   it('Gegenbeispiel: ein Teamname im Übergangsfeld teamA erreicht die Cloud nicht', async () => {
     const repo = new SupabaseRepository();
-    await repo.updateMatches('tour-1', [{ id: 'match-1', teamA: 'FC Alpha' }]);
+    await repo.updateMatches('tour-1', [withStaleSides({ id: 'match-1' }, 'FC Alpha', 'FC Beta')]);
 
     expect(hoisted.matchesUpdateMock).not.toHaveBeenCalled();
   });

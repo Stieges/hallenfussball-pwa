@@ -16,7 +16,7 @@ import {
 import type { Match, Team, Tournament } from '../../../types/tournament';
 import { createMockTournament } from '../../../test/factories';
 import { teamSlot } from '../../models/matchSlot';
-import { vs, slots, groupRank, resultOf, testUuid } from '../../../test/matchSlotFixtures';
+import { vs, slots, groupRank, resultOf, testUuid, withStaleSides } from '../../../test/matchSlotFixtures';
 
 const [A1, A2, B1, B2] = [1, 2, 3, 4].map(testUuid);
 const SEMI1 = testUuid(201);
@@ -96,7 +96,7 @@ describe('needsPlayoffResolution', () => {
   });
 
   it('A-03 Gegenbeispiel: ein Platzhaltertext im Übergangsfeld macht eine besetzte Seite nicht offen', () => {
-    const occupied: Match = { id: FINAL, round: 2, field: 1, isFinal: true, ...vs(A1, B1), teamA: 'group-a-1st', teamB: 'TBD' };
+    const occupied: Match = withStaleSides({ id: FINAL, round: 2, field: 1, isFinal: true, ...vs(A1, B1) }, 'group-a-1st', 'TBD');
     expect(needsPlayoffResolution(tournamentOf([occupied]))).toBe(false);
   });
 });
@@ -128,9 +128,8 @@ describe('resolvePlayoffPairings', () => {
     expect(idOf(byId(t, SEMI2), 'A')).toBe(A1);
     expect(idOf(byId(t, SEMI2), 'B')).toBe(B2);
     expect(semi1?.slotA).toEqual({ kind: 'team', teamId: A2, resolvedFrom: { kind: 'groupRank', group: 'A', rank: 2 } });
-    // Übergangsfeld wird parallel nachgezogen
-    expect(semi1?.teamA).toBe(A2);
-    expect(semi1?.teamB).toBe(B1);
+    // A-36a: kein Übergangsfeld mehr, die Seite steht nur im Slot
+    expect(semi1 && 'teamA' in semi1).toBe(false);
   });
 
   it('@TM-034 resolves based on goal difference when points are equal', () => {

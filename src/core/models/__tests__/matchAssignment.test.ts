@@ -14,7 +14,7 @@ const UFER = testUuid(3);
 const source = { kind: 'groupRank', group: 'A', rank: 1 } as const;
 
 const resolved = {
-  id: testUuid(100), round: 1, field: 1, teamA: NORD, teamB: SUED,
+  id: testUuid(100), round: 1, field: 1,
   slotA: teamSlot(NORD, source), slotB: teamSlot(SUED),
 } as Match;
 
@@ -23,14 +23,13 @@ describe('assignTeamToSide (K6)', () => {
     const changed = assignTeamToSide(resolved, 'A', UFER);
     expect(changed.slotA).toEqual(teamSlot(UFER));
     expect(changed.slotA).not.toHaveProperty('resolvedFrom');
-    expect(changed.teamA).toBe(UFER);
+    expect('teamA' in changed).toBe(false); // A-36a: kein Übergangsfeld mehr
   });
 
   it('K6 Gegenbeispiel: die andere Seite bleibt unverändert, auch ihre Herkunft', () => {
     const withSourceB = { ...resolved, slotB: teamSlot(SUED, source) } as Match;
     const changed = assignTeamToSide(withSourceB, 'A', UFER);
     expect(changed.slotB).toEqual(teamSlot(SUED, source));
-    expect(changed.teamB).toBe(resolved.teamB);
   });
 
   it('Ein Teamname statt einer Team-ID wird abgelehnt', () => {
@@ -40,7 +39,7 @@ describe('assignTeamToSide (K6)', () => {
 
 describe('swapTeamsBetweenMatches (K6)', () => {
   const other = {
-    id: testUuid(101), round: 2, field: 1, teamA: UFER, teamB: NORD,
+    id: testUuid(101), round: 2, field: 1,
     slotA: teamSlot(UFER, source), slotB: teamSlot(NORD),
   } as Match;
 

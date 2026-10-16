@@ -28,8 +28,8 @@ describe('diffMatchResultStatusUpdates', () => {
   });
 
   it('returns no update when only a SCHEDULE field changed (round/field/team/label)', () => {
-    const oldMatch = makeMatch({ field: 1, teamA: 'Team A' });
-    const newMatch = makeMatch({ field: 2, teamA: 'Team A (umbenannt)' });
+    const oldMatch = makeMatch({ field: 1, label: 'Halbfinale' });
+    const newMatch = makeMatch({ field: 2, label: 'Halbfinale (umbenannt)' });
     const updates = diffMatchResultStatusUpdates([oldMatch], [newMatch]);
     expect(updates).toEqual([]);
   });
