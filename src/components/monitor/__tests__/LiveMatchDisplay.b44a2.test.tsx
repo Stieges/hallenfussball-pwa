@@ -75,7 +75,7 @@ describe('Namen im Normalmodus', () => {
 
 describe('Namen im Kindermodus groß', () => {
   it('TeamNameDisplay nimmt die Schriftgröße aus dem Token', () => {
-    render(<TeamNameDisplay name="TuS Holm" variant="full" fontSize={displayFontSizes.teamNameKids} />);
+    render(<TeamNameDisplay name="TuS Holm" size="md" fontSize={displayFontSizes.teamNameKids} />);
     expect(screen.getByText('TuS Holm').style.fontSize).toBe(displayFontSizes.teamNameKids);
   });
 });

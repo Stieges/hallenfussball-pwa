@@ -34,8 +34,8 @@ async function anlegen({ asRole }: StepContext): Promise<void> {
 
 /** Ansichten, in denen Halbfinale 1 seine Herkunft zeigt (Beispielzeilen von @TM-015). */
 const TM015_VIEWS = ['Spielplan der Turnierleitung', 'Toms Cockpit', 'Hallen-Monitor', 'Zuschaueransicht'] as const;
-/** Halbfinale 1 in der Spielplan-/Zuschauer-Tabelle: "1. Halbfinale  Erster Gruppe A  …  Zweiter Gruppe B". */
-const HF1_ROW = /1\. Halbfinale\s+Erster Gruppe A[\s\S]{0,20}Zweiter Gruppe B/;
+/** Halbfinale 1 in der Spielplan-/Zuschauer-Tabelle: "Halbfinale 1  Erster Gruppe A  …  Zweiter Gruppe B" (Record-Wortlaut, A-36b W7). */
+const HF1_ROW = /Halbfinale 1\s+Erster Gruppe A[\s\S]{0,20}Zweiter Gruppe B/;
 
 async function halbfinaleHerkunft(view: (typeof TM015_VIEWS)[number], { asRole, anonPage }: StepContext): Promise<void> {
   const { finals } = await fetchTurniertagBracket();

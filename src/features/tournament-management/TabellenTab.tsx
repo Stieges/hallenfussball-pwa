@@ -14,7 +14,7 @@
 
 import React, { CSSProperties, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, fontSizesMd3 } from '../../design-tokens'
+import { cssVars } from '../../design-tokens'
 import { Card } from '../../components/ui';
 import { GroupTables } from '../../components/schedule';
 import { HighlightedCell } from './components';
@@ -23,7 +23,7 @@ import { Tournament, Standing } from '../../types/tournament';
 import { GeneratedSchedule } from '../../core/generators';
 import {
   calculateStandings,
-  getMergedFinalRanking,
+  getMergedFinalRanking, hasFinalRound, placementBadgeText, placementRankText,
 } from '../../utils/calculations';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { resolvePlacementCriterionLabel } from '../tournament-creation/components/placementLogicLabels';
@@ -49,11 +49,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const hasGroups = tournament.teams.some(t => t.group);
-  const hasPlayoffs: boolean = Boolean(
-    typeof tournament.finals === 'object' &&
-    'enabled' in tournament.finals &&
-    tournament.finals.enabled
-  );
+  const hasPlayoffs = hasFinalRound(tournament); // Nachzug F1 A-36b: aus dem Turniermodell, nicht finals.enabled
 
   const containerStyle: CSSProperties = {
     maxWidth: '1400px',
@@ -402,7 +398,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
             <span style={{ fontSize: isMobile ? '16px' : '20px' }}>{playoffStatusInfo.icon}</span>
             <span style={{
               fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
-              color: playoffStatusInfo.color,
+              color: cssVars.colors.textPrimary, // F1-W3b: Kontrast ≥ 4,5:1, Farbe nur an Symbol und Rand
               fontWeight: cssVars.fontWeights.semibold,
             }}>
               {playoffStatusInfo.text}
@@ -443,14 +439,14 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                 return (
                   <tr key={`${placement.team.id}-${placement.rank}`}>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      <div style={medalStyle(placement.rank)}>{placement.rank}</div>
+                      <div style={medalStyle(placement.rank)}>{placementRankText(placement)}</div>
                     </td>
                     <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
                       {placement.team.name}
                     </td>
                     {hasPlayoffs && (
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        {placement.decidedBy === 'playoff' ? (
+                        {placement.decidedBy !== 'groupStage' ? (
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -462,7 +458,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                             color: cssVars.colors.primary,
                             fontWeight: cssVars.fontWeights.semibold,
                           }}>
-                            {placement.matchLabel ?? t('ranking.playoff')}
+                            {placementBadgeText(placement, t)}
                           </span>
                         ) : (
                           <span style={{
@@ -549,20 +545,20 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                       style={{ cursor: 'pointer' }}
                     >
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        <div style={medalStyle(placement.rank)}>{placement.rank}</div>
+                        <div style={medalStyle(placement.rank)}>{placementRankText(placement)}</div>
                       </td>
                       <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
                         {placement.team.name}
-                        {placement.decidedBy === 'playoff' ? (
+                        {placement.decidedBy !== 'groupStage' ? (
                           <div style={{
-                            fontSize: fontSizesMd3.statLabel,
+                            fontSize: cssVars.fontSizes.xs, // F1-W3a: ≥ 11 px (grenzwerte schrift.min)
                             color: cssVars.colors.primary,
                             marginTop: '2px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '2px',
                           }}>
-                            {placement.matchLabel ?? t('ranking.playoff')}
+                            {placementBadgeText(placement, t)}
                           </div>
                         ) : hasGroups && placement.team.group ? (
                           <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '2px' }}>

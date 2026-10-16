@@ -6,6 +6,15 @@ import { testUuid } from '../../../test/testIds';
 import { matchInvolvesTeam, matchSideTeamId } from '../../../core/models/matchSlot';
 import { mapMatchFromSupabase, mapMatchUpdateToSupabase } from '../../../core/repositories/supabaseMappers';
 
+/** Slot ohne das lokale Merkmal `assignedBy` (A-36b), so wie die Cloud ihn zurückgibt. */
+function withoutAssignment(slot: Match['slotA']): Match['slotA'] {
+  if (slot.kind !== 'team') {
+    return slot;
+  }
+  const { assignedBy: _local, ...cloud } = slot;
+  return cloud;
+}
+
 const baseTournament = (): Tournament =>
   ({
     id: 't1',
@@ -153,8 +162,9 @@ describe('Team ersetzen', () => {
         slot_b_source: update.slot_b_source ?? null,
       } as unknown as Parameters<typeof mapMatchFromSupabase>[0];
       const back = mapMatchFromSupabase(row);
-      expect(back.slotA).toEqual(m.slotA);
-      expect(back.slotB).toEqual(m.slotB);
+      // A-36b: `assignedBy` ist rein lokal (nicht in der Cloud, K6 unverändert) – Team und Herkunft kommen zurück.
+      expect(back.slotA).toEqual(withoutAssignment(m.slotA));
+      expect(back.slotB).toEqual(withoutAssignment(m.slotB));
     });
 
     // Die Seite bleibt gleich (A bleibt A, B bleibt B), nur das Team wird getauscht.

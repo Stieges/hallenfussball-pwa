@@ -6,11 +6,20 @@
  * Herkunft stehen, hielte der Delta-Sync sie für eine nur lokal aufgelöste Seite und verwürfe den Tausch.
  */
 import type { Match } from '../../types/tournament';
+import type { SlotAssignment } from './schemas/MatchSlotSchema';
 import { teamSlot } from './matchSlot';
 
-/** Setzt `side` (`'A'` = Heim) des Spiels auf das Team; eine vorhandene Herkunft wird verworfen. */
-export function assignTeamToSide(match: Match, side: 'A' | 'B', teamId: string): Match {
-  const slot = teamSlot(teamId);
+/**
+ * Setzt `side` (`'A'` = Heim) des Spiels auf das Team; eine vorhandene Herkunft wird verworfen.
+ * A-36b: `assignedBy` merkt, wie besetzt wurde (Vorgabe „Neu besetzen“); die Herkunft des Platzes bleibt in `originA/B`.
+ */
+export function assignTeamToSide(
+  match: Match,
+  side: 'A' | 'B',
+  teamId: string,
+  assignedBy: SlotAssignment = 'reassigned',
+): Match {
+  const slot = { ...teamSlot(teamId), assignedBy };
   return side === 'A'
     ? { ...match, slotA: slot }
     : { ...match, slotB: slot };
