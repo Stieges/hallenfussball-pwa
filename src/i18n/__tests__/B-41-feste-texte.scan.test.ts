@@ -166,6 +166,11 @@ function scanTargets(): string[] {
 /**
  * Ausnahmen (bewusst fest, begründet). Jede Zeile trifft einen Fund; sonst Fehler.
  */
+/** MS1: Die Kürzungsliste des Monitors (Record Zuschauer und Monitor, „Teamnamen am Monitor“) steht deutsch im Code. */
+const VEREINSWORT_GRUND =
+  'Datenabgleich, kein Anzeigetext: Das Vereinswort wird im (deutschen) Teamnamen aus den Turnierdaten gesucht ' +
+  'und durch sein Kürzel ersetzt (MS1, @ZM-087, @ZM-149). Übersetzen würde den Abgleich brechen.';
+
 const EXCEPTIONS: { file: string; text: string; reason: string }[] = [
   {
     file: 'features/monitor-display/monitorMatch.ts',
@@ -173,6 +178,30 @@ const EXCEPTIONS: { file: string; text: string; reason: string }[] = [
     reason:
       'Datenabgleich, kein Anzeigetext: Der Schiedsrichter-Name wird gegen den (deutschen) Teamnamen ' +
       'aus den Turnierdaten gesucht. Übersetzen würde den Abgleich in der EN-Oberfläche brechen.',
+  },  {
+    file: 'features/monitor-display/teamNameAbbrev.ts',
+    text: 'Verein für Bewegungsspiele',
+    reason: VEREINSWORT_GRUND,
+  },
+  {
+    file: 'features/monitor-display/teamNameAbbrev.ts',
+    text: 'Turn- und Sportverein',
+    reason: VEREINSWORT_GRUND,
+  },
+  {
+    file: 'features/monitor-display/teamNameAbbrev.ts',
+    text: 'Fußballsportverein',
+    reason: VEREINSWORT_GRUND,
+  },
+  {
+    file: 'features/monitor-display/teamNameAbbrev.ts',
+    text: 'Fußballfreunde',
+    reason: VEREINSWORT_GRUND,
+  },
+  {
+    file: 'features/monitor-display/teamNameAbbrev.ts',
+    text: 'Fußballclub',
+    reason: VEREINSWORT_GRUND,
   },
 ];
 

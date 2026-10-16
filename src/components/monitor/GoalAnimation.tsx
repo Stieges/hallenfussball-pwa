@@ -16,6 +16,7 @@ import { cssVars, colors } from '../../design-tokens'
 import { GoalEventInfo } from '../../hooks/useLiveMatches';
 import { useSportTerms } from '../../hooks/useSportTerms';
 import { SportId } from '../../config/sports';
+import { monitorTeamName } from '../../features/monitor-display/teamNameAbbrev';
 
 export interface GoalAnimationProps {
   /** Goal event info (null if no goal to show) */
@@ -193,7 +194,7 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
         >
           <div className="goal-icon" style={goalIconStyle}>⚽</div>
           <div style={goalTextStyle}>{term('terminology.goalAnimationText')}</div>
-          <div style={teamNameStyle}>{currentEvent.teamName}</div>
+          <div data-teamname style={teamNameStyle}>{monitorTeamName(currentEvent.teamName)}</div>
           <div style={scoreStyle}>
             {currentEvent.newScore.home} : {currentEvent.newScore.away}
           </div>

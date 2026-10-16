@@ -7,7 +7,7 @@ import { getFieldDisplayName } from '../../../utils/displayNames';
 import { resolveTheme } from '../monitorDisplayHelpers';
 
 type MonitorColors = (typeof monitorThemes)[keyof typeof monitorThemes];
-import { sideLabel } from '../matchSides';
+import { monitorSideLabel } from '../matchSides';
 
 interface MonitorMatchRowProps {
   match: Match;
@@ -83,7 +83,7 @@ export function MonitorMatchRow({ match, teams, tournament, theme, hidePendingOr
       <div style={{ ...cell, color: colors.textMuted, flex: `0 0 ${displayList.fieldWidth}` }}>
         {getFieldDisplayName(match.field, tournament)}
       </div>
-      <div style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}>{sideLabel(match, 'A', ctx)}</div>
+      <div data-teamname style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}>{monitorSideLabel(match, 'A', ctx)}</div>
       <div
         data-testid="monitor-match-separator"
         style={{
@@ -96,7 +96,7 @@ export function MonitorMatchRow({ match, teams, tournament, theme, hidePendingOr
       >
         {showScore ? score : '–'}
       </div>
-      <div style={{ ...cell, flex: '1 1 0' }}>{sideLabel(match, 'B', ctx)}</div>
+      <div data-teamname style={{ ...cell, flex: '1 1 0' }}>{monitorSideLabel(match, 'B', ctx)}</div>
       {match.label && (
         <div style={{ ...cell, color: colors.textMuted, flex: '0 1 auto', maxWidth: displayList.labelMaxWidth }}>{match.label}</div>
       )}

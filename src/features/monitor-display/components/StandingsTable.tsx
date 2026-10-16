@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { cssVars, displayEffects, displayList, monitorThemes } from '../../../design-tokens';
 import { calculateStandings } from '../../../utils/calculations';
+import { monitorTeamName } from '../teamNameAbbrev';
 
 export type MonitorColors = (typeof monitorThemes)[keyof typeof monitorThemes];
 export type StandingRows = ReturnType<typeof calculateStandings>;
@@ -63,8 +64,8 @@ export function StandingsTable({ rows, themeColors }: StandingsTableProps) {
           }}
         >
           <div style={{ fontWeight: cssVars.fontWeights.semibold }}>{idx + 1}</div>
-          <div style={{ fontSize: displayList.fontSizes.team, minWidth: 0, overflowWrap: 'break-word' }}>
-            {row.team.name}
+          <div data-teamname style={{ fontSize: displayList.fontSizes.team, minWidth: 0, overflowWrap: 'break-word' }}>
+            {monitorTeamName(row.team.name)}
           </div>
           <div data-testid="standings-won" style={{ ...number, color: themeColors.text }}>{row.won}</div>
           <div data-testid="standings-drawn" style={{ ...number, color: themeColors.text }}>{row.drawn}</div>

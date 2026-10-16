@@ -83,3 +83,57 @@ test('Monitor: laufendes Spiel', async ({ page, seedIndexedDB }) => {
     mask: commonMasks(page),
   });
 });
+
+/**
+ * MS1 (@ZM-087, @ZM-149): Folie „Nächste Spiele“ mit Vereinskürzeln bei 1280×720. Nur das Desktop-Profil
+ * (1280×720, Querformat); Handy und Tablet im Hochformat sind für Monitore geparkt. Das Referenzbild entsteht im
+ * CI-Lauf mit dem Label `visual-update` (Container), nicht lokal.
+ */
+test('Monitor: Nächste Spiele mit Vereinskürzeln', async ({ page, seedIndexedDB }) => {
+  test.skip(test.info().project.name !== 'visual-desktop', 'Monitor nur im Querformat (1280×720)');
+  await freezeClock(page);
+
+  const tournament = buildVisualTournament({
+    id: 'visual-monitor-kuerzel',
+    title: 'Nordstadt Hallencup',
+    matches: [
+      { id: 'vk-1', round: 1, teamA: '00000000-0000-4000-8000-0000000000a1', teamB: '00000000-0000-4000-8000-0000000000a2', field: 1, matchStatus: 'scheduled', scheduledTime: '2026-03-14T10:00:00.000Z' },
+      { id: 'vk-2', round: 1, teamA: '00000000-0000-4000-8000-0000000000a3', teamB: '00000000-0000-4000-8000-0000000000a4', field: 1, matchStatus: 'scheduled', scheduledTime: '2026-03-14T10:20:00.000Z' },
+    ],
+    extra: {
+      teams: [
+        { id: '00000000-0000-4000-8000-0000000000a1', name: 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921' },
+        { id: '00000000-0000-4000-8000-0000000000a2', name: 'Eintracht Oberweiler-Niederstetten 1919' },
+        { id: '00000000-0000-4000-8000-0000000000a3', name: 'Turn- und Sportverein Ost' },
+        { id: '00000000-0000-4000-8000-0000000000a4', name: 'Sportvereinigung Nordheim' },
+      ],
+    },
+    monitors: [
+      {
+        id: 'visual-monitor-kuerzel-1',
+        name: 'Eingang Monitor',
+        defaultSlideDuration: 15,
+        transition: 'none',
+        transitionDuration: 0,
+        theme: 'dark',
+        performanceMode: 'auto',
+        slides: [{ id: 'slide-next', type: 'next-matches', config: {}, duration: null, order: 0 }],
+        createdAt: '2026-03-01T08:00:00.000Z',
+        updatedAt: '2026-03-14T09:00:00.000Z',
+      },
+    ],
+  });
+
+  await seedIndexedDB({ tournaments: [tournament] });
+
+  await page.goto('/#/display/visual-monitor-kuerzel/visual-monitor-kuerzel-1');
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByTestId('monitor-error-state')).not.toBeVisible({ timeout: 5000 });
+  await expect(page.getByText('SG FF Nordheim-Süd 1921')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText('TSV Ost')).toBeVisible();
+
+  await expect(page).toHaveScreenshot('monitor-kuerzel.png', {
+    fullPage: true,
+    mask: commonMasks(page),
+  });
+});

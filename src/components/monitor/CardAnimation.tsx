@@ -15,6 +15,7 @@
 import { CSSProperties, useEffect, useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
+import { monitorTeamName } from '../../features/monitor-display/teamNameAbbrev';
 
 export interface CardEventInfo {
   matchId: string;
@@ -222,7 +223,7 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
                 gemeinsame RED_CARD_COLORS-Konstante, s.o.). */}
             {currentEvent.cardType === 'YELLOW_RED' ? t('cardAnimation.yellowRedCard') : isRed ? t('cardAnimation.redCard') : t('cardAnimation.yellowCard')}
           </div>
-          <div style={teamNameStyle}>{currentEvent.teamName}</div>
+          <div data-teamname style={teamNameStyle}>{monitorTeamName(currentEvent.teamName)}</div>
           {currentEvent.playerNumber && (
             <div style={playerNumberStyle}>#{currentEvent.playerNumber}</div>
           )}

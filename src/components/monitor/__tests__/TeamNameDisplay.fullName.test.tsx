@@ -1,7 +1,6 @@
 /**
- * TeamNameDisplay in Größe xl (B-17 Fixrunde, @ZM-087): der volle Name steht im angezeigten Text, ohne Kürzel
- * und ohne „…“. Gegenbeispiel: die Kürzel (SFNS, GÜFÖ) erscheinen nur, wenn der volle Name nicht passt
- * (das prüft die Playwright-Spec mit echter Messung).
+ * TeamNameDisplay in Größe xl (B-17 Fixrunde, @ZM-087; MS1): ein Name ohne Listenwort steht voll im Text, ohne
+ * „…“. Kürzel gibt es nur nach der Vereinswort-Liste (monitorTeamName), nie aus Anfangsbuchstaben (SFNS, GÜFÖ).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
