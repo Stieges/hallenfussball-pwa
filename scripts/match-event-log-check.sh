@@ -529,7 +529,13 @@ if [[ "$MODE" != "without-migration" ]]; then
 
   run_sql "$U_OWNER" "DELETE FROM public.match_events WHERE id = '$E_DEFINER';"
   if [[ "$MODE" == "without-guard" ]]; then
-    check "4b(Gegenprobe B): DELETE auf Engine-Zeile (direkt) -> jetzt erlaubt" "ok" "$LAST_RESULT"
+    # Seit 20261004_101 (Spur B, @LZ-090/@SL-129) sperrt zusaetzlich die Beleg-Sperre
+    # match_events_protect_delete JEDES direkte Loeschen durch Client-Rollen. Ohne Guard muss die
+    # Ablehnung deshalb von DIESER Sperre kommen (nicht mehr vom Guard) -- das ist die Gegenprobe.
+    R4B_REASON="anders"
+    [[ "$LAST_RESULT" == "denied" ]] && grep -q "belegen den Anpfiff" <<<"$LAST_OUTPUT" \
+      && ! grep -qE 'append_match_events|Rechenfunktion' <<<"$LAST_OUTPUT" && R4B_REASON="beleg_sperre"
+    check "4b(Gegenprobe B): DELETE auf Engine-Zeile (direkt) -> ohne Guard nur noch von der Beleg-Sperre (20261004_101) abgelehnt" "beleg_sperre" "$R4B_REASON"
   else
     check "4b. DELETE auf Engine-Zeile (Eigentuemer, direkt) -> abgelehnt" "denied" "$LAST_RESULT"
     assert_guard_message "4b"
@@ -552,8 +558,36 @@ if [[ "$MODE" != "without-migration" ]]; then
   docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 >/dev/null <<SQL
 SELECT public.__test_insert_engine_event('$E_CASCADE', '$M_2', 'GOAL', 1, 0, '$TEAM_A');
 SQL
-  run_sql_committed "$U_OWNER" "DELETE FROM public.tournaments WHERE id = '$T_MAIN';"
-  check "4d. Turnier-Kaskade loescht Engine-Zeile MIT team_id gesetzt (pg_trigger_depth() > 1)" "ok" "$LAST_RESULT"
+  # 4d0 (@LZ-090, Migration 20261004_101): ein Turnier mit Ereignissen gilt als angepfiffen --
+  # der Eigentuemer (Client-Rolle) darf es NICHT hart loeschen. Vor dem Merge von Spur B lief 4d
+  # direkt als Eigentuemer; seit tournaments_protect_delete_started ist dieser Weg gewollt zu.
+  run_sql "$U_OWNER" "DELETE FROM public.tournaments WHERE id = '$T_MAIN';"
+  R4D0="anders"
+  [[ "$LAST_RESULT" == "denied" ]] && grep -q "tournament_started" <<<"$LAST_OUTPUT" && R4D0="tournament_started"
+  check "4d0. (@LZ-090) Eigentuemer loescht angepfiffenes Turnier hart -> abgelehnt von protect_tournament_delete_started" "tournament_started" "$R4D0"
+
+  # 4d: Kaskaden-Pfad der Ereignis-Guards isoliert pruefen -- als Client-Rolle, aber mit der
+  # @LZ-090-Sperre fuer DIESE Transaktion abgeschaltet (ALTER TABLE ist transaktional, der Trigger
+  # ist nach COMMIT wieder aktiv; 4d1 belegt das). So bleibt der Nachweis erhalten, dass
+  # match_events_guard_engine_rows und match_events_protect_delete die FK-Kaskade
+  # (pg_trigger_depth() > 1) durchlassen, waehrend direktes Loeschen (4b) verboten bleibt.
+  set +e
+  LAST_OUTPUT="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+ALTER TABLE public.tournaments DISABLE TRIGGER tournaments_protect_delete_started;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$U_OWNER';
+DELETE FROM public.tournaments WHERE id = '$T_MAIN';
+RESET ROLE;
+ALTER TABLE public.tournaments ENABLE TRIGGER tournaments_protect_delete_started;
+COMMIT;
+SQL
+)"
+  [[ $? -eq 0 ]] && LAST_RESULT="ok" || LAST_RESULT="denied"
+  set -e
+  check "4d. Turnier-Kaskade loescht Engine-Zeile MIT team_id gesetzt (pg_trigger_depth() > 1, @LZ-090-Sperre isoliert)" "ok" "$LAST_RESULT"
+  TRG_STATE="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT tgenabled FROM pg_trigger WHERE tgname = 'tournaments_protect_delete_started';")"
+  check "4d1. @LZ-090-Sperre nach der Probe wieder aktiv (tgenabled)" "O" "$TRG_STATE"
   REMAINING="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT count(*) FROM public.match_events WHERE id IN ('$E_CASCADE','$E_DEFINER');")"
   check "4e. Engine-Zeilen nach Turnier-Kaskade tatsaechlich weg" "0" "$REMAINING"
 else
