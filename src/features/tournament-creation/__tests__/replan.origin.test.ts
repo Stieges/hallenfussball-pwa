@@ -118,4 +118,26 @@ describe('A-36a Neuplanung: Herkunft des Platzes', () => {
       expect('originB' in m).toBe(false);
     }
   });
+
+  it('@SA-011 angehängtes behaltenes Finale (besetzt, ohne Gegenstück im neuen Plan) behält originA/originB', () => {
+    const before = established();
+    const final = finalOf(before);
+    const played: Match = {
+      ...final,
+      slotA: { kind: 'team', teamId: before.teams[0].id } as Match['slotA'],
+      slotB: { kind: 'team', teamId: before.teams[4].id } as Match['slotB'],
+      scoreA: 2,
+      scoreB: 1,
+      matchStatus: 'finished',
+    };
+    const withPlayed: Tournament = { ...before, matches: before.matches.map((m) => (m.id === final.id ? played : m)) };
+
+    const preview = buildReplanPreview(withPlayed);
+    if (preview.status !== 'preview') { throw new Error('keine Vorschau'); }
+
+    expect(preview.conflictMatchIds).toContain(final.id);
+    const appended = preview.schedule.allMatches.find((m) => m.id === final.id);
+    expect(appended?.originA).toEqual(final.originA);
+    expect(appended?.originB).toEqual(final.originB);
+  });
 });

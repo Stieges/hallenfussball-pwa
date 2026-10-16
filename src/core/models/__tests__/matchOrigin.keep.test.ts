@@ -163,4 +163,15 @@ describe('A-36a Herkunft des Platzes in Ablage, Cloud-Zeile und Kopie', () => {
     expect(copy.matches[sourceIndex].originA).toEqual(groupRank('A', 1));
     expect('originA' in copy.matches[0]).toBe(false);
   });
+
+  it('@DR-005 Turnier-Kopie: auch originB zeigt auf die NEUE Spiel-ID (Finale Gast = Sieger HF2), HF1-Gast bleibt Zweiter B', () => {
+    const source = hallencup();
+    let n = 950;
+    const copy = copyTeamsAndMatches(source, () => testUuid(++n));
+    const at = (id: string) => copy.matches[source.matches.findIndex((m) => m.id === id)];
+
+    expect(at(SEMI2).id).not.toBe(SEMI2);
+    expect(at(FINAL).originB).toEqual(resultOf(at(SEMI2).id, 'winner'));
+    expect(at(SEMI1).originB).toEqual(groupRank('B', 2));
+  });
 });
