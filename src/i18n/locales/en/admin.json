@@ -312,6 +312,10 @@
     "reset": "Reset",
     "unsavedChangesWarning": "You have unsaved changes. Do you really want to leave the page?",
     "confirmReset": "Do you want to discard all changes and restore the original values?",
-    "changesSaved": "Changes saved"
+    "changesSaved": "Changes saved",
+    "rulebook": "Rulebook (optional)",
+    "rulebookPlaceholder": "e.g. BFV rules for futsal",
+    "rulebookLimit": "Up to 80 characters.",
+    "rulebookTruncated": "Cut to 80 characters."
   }
 }

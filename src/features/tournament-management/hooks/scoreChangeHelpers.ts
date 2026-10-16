@@ -4,7 +4,7 @@
  * die Engine-Sperre (Fixrunde 2 Item 6 / P4) und die automatische Playoff-/Bracket-Anschluss-
  * Aufloesung (A2 Fixrunde 1).
  */
-import type { Tournament } from '../../../types/tournament';
+import type { Match, Tournament } from '../../../types/tournament';
 import type { MatchUpdate } from '../../../core/models/types';
 import { diffMatchResultStatusUpdates } from '../../../core/services';
 import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../../core/generators';
@@ -41,6 +41,25 @@ export function isEngineControlledScoreChange(
   }
   const scoredMatch = tournament.matches.find((m) => m.id === matchId);
   return !(scoredMatch && isMatchRunning(scoredMatch)) && isNewScheduledMatch(engineEntry, new Map());
+}
+
+/**
+ * @FU-080 / @TM-143 (B-40 Fixrunde 1/2): Beide Ergebnisse direkt im Spielplan eingetragen = Spiel ist
+ * abgepfiffen (`finished`), sonst zählt es nicht in der Tabelle. Ein laufendes oder unterbrochenes Spiel
+ * behält seinen Status (der Helfer steuert ihn). „Laufend/unterbrochen“ kommt aus der Live-Quelle
+ * (`liveMatchIds` = useRunningMatchIds, auch lokale Pause/Halbzeit) oder dem gespeicherten Status
+ * (die DB kennt zusätzlich 'paused') – nie aus einem eigenen localStorage-Lesen (@FU-087, Merge I1).
+ */
+export function finishesOnScoreEntry(
+  match: Match,
+  scoreA: number | undefined,
+  scoreB: number | undefined,
+  liveMatchIds: ReadonlySet<string>,
+): boolean {
+  const enteredBothScores = typeof scoreA === 'number' && typeof scoreB === 'number';
+  const status = match.matchStatus as string | undefined;
+  const isLive = liveMatchIds.has(match.id) || status === 'running' || status === 'paused';
+  return enteredBothScores && !isLive;
 }
 
 /**

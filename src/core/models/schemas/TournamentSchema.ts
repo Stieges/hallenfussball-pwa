@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TeamTrainerSchema, TournamentGroupSchema, TournamentFieldSchema, RuntimeMatchEventSchema } from './CommonSchemas';
+import { RULEBOOK_MAX_LENGTH } from '../../../constants/rulebook';
 import { MatchSlotSchema, SlotSourceSchema } from './MatchSlotSchema';
 
 const TeamLogoSchema = z.object({
@@ -91,6 +92,7 @@ export const TournamentSchema = z.object({
     sportId: z.string(),
     tournamentType: z.string(),
     mode: z.string(),
+    rulebook: z.string().max(RULEBOOK_MAX_LENGTH).optional(),
 
     // Stats/Meta
     createdAt: z.string(),

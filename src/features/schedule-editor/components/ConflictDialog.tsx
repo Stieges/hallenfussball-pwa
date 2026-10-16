@@ -9,10 +9,11 @@
  * - "Save anyway" option for warnings
  */
 
-import React, { useMemo } from 'react';
+import React, { useId, useMemo } from 'react';
 import { ScheduleConflict, ConflictType } from '../types';
 import { Match } from '../../../types/tournament';
-import { cssVars } from '../../../design-tokens'
+import { cssVars, dialogWidths } from '../../../design-tokens';
+import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { Button } from '../../../components/ui';
 import { getConflictTypeLabel, groupConflictsByType } from '../utils/scheduleConflicts';
 
@@ -43,32 +44,6 @@ interface ConflictDialogProps {
 // Styles
 // ============================================================================
 
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: cssVars.colors.overlayStrong,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: cssVars.spacing.lg,
-  zIndex: 1000,
-};
-
-const dialogStyle: React.CSSProperties = {
-  backgroundColor: cssVars.colors.surface,
-  borderRadius: cssVars.borderRadius.lg,
-  boxShadow: cssVars.shadows.lg,
-  maxWidth: '600px',
-  width: '100%',
-  maxHeight: '80vh',
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-};
-
 const headerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
@@ -84,6 +59,7 @@ const titleStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: cssVars.spacing.sm,
+  margin: 0,
 };
 
 const closeButtonStyle: React.CSSProperties = {
@@ -133,7 +109,7 @@ const summaryItemStyle = (isError: boolean): React.CSSProperties => ({
   alignItems: 'center',
   gap: cssVars.spacing.xs,
   fontSize: cssVars.fontSizes.sm,
-  color: isError ? cssVars.colors.error : cssVars.colors.warning,
+  color: isError ? cssVars.colors.error : cssVars.colors.warningSolid,
   fontWeight: cssVars.fontWeights.medium,
 });
 
@@ -176,7 +152,7 @@ const conflictMessageStyle: React.CSSProperties = {
 
 const conflictSuggestionStyle: React.CSSProperties = {
   fontSize: cssVars.fontSizes.xs,
-  color: cssVars.colors.textSecondary,
+  color: cssVars.colors.textPrimary,
   fontStyle: 'italic',
 };
 
@@ -262,18 +238,23 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
   }, [conflicts]);
 
   const hasErrors = errorCount > 0;
-
-  if (!isOpen) {return null;}
+  const titleId = useId();
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={dialogStyle} onClick={e => e.stopPropagation()}>
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth={dialogWidths.lg}
+      labelledBy={titleId}
+      testId="conflict-dialog"
+    >
+      <div>
         {/* Header */}
         <div style={headerStyle}>
-          <div style={titleStyle}>
+          <h2 id={titleId} style={titleStyle}>
             <span>{hasErrors ? '⚠️' : '⚡'}</span>
             <span>{title}</span>
-          </div>
+          </h2>
           <button style={closeButtonStyle} onClick={onClose} aria-label="Schließen">
             ×
           </button>
@@ -375,7 +356,7 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
           </Button>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 };
 

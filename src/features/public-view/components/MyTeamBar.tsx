@@ -4,6 +4,7 @@
  * Texte wörtlich übernommen.
  */
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 
@@ -48,14 +49,16 @@ export const MyTeamBar: React.FC<MyTeamBarProps> = ({
   showOnlyMyTeam,
   onShowOnlyMyTeamChange,
   onOpenTeamSelector,
-}) => (
+}) => {
+  const { t } = useTranslation('publicView');
+  return (
   <div style={myTeamBarStyle} data-testid="my-team-bar">
     <div>
       <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
-        Mein Team:
+        {t('myTeam.label')}
       </span>{' '}
       <strong style={{ color: cssVars.colors.textPrimary }}>
-        {myTeamLabel ?? 'Nicht ausgewählt'}
+        {myTeamLabel ?? t('myTeam.none')}
       </strong>
     </div>
     <div style={{ display: 'flex', gap: cssVars.spacing.sm, alignItems: 'center' }}>
@@ -65,7 +68,7 @@ export const MyTeamBar: React.FC<MyTeamBarProps> = ({
           onClick={() => onShowOnlyMyTeamChange(!showOnlyMyTeam)}
         >
           <span>⭐</span>
-          <span>Nur meine</span>
+          <span>{t('myTeam.onlyMine')}</span>
         </button>
       )}
       <Button
@@ -73,8 +76,9 @@ export const MyTeamBar: React.FC<MyTeamBarProps> = ({
         size="sm"
         onClick={onOpenTeamSelector}
       >
-        {myTeamId ? 'Ändern' : 'Team wählen'}
+        {myTeamId ? t('myTeam.change') : t('myTeam.choose')}
       </Button>
     </div>
   </div>
-);
+  );
+};

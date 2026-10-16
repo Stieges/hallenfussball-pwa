@@ -290,6 +290,64 @@
       "deleteFailed": "Error deleting",
       "duplicateFailed": "Error duplicating",
       "copyFailed": "Could not copy URL"
+    },
+    "transfer": {
+      "openButton": "Take over monitors",
+      "exportButton": "Export settings",
+      "title": "Take over monitors",
+      "intro": "Takes over monitors, slides, order, duration and screen margin. Teams, matches and tables come from this tournament.",
+      "fromTournament": "From another tournament",
+      "loading": "Loading tournaments …",
+      "noSources": "No other tournament with monitors found.",
+      "sourceMeta_one": "{{count}} monitor",
+      "sourceMeta_other": "{{count}} monitors",
+      "fromTemplate": "Template",
+      "templateButton": "Template \"Hall standard\"",
+      "templateDescription": "One monitor with live match, next matches, tables and spectator QR code.",
+      "fromFile": "From file",
+      "chooseFile": "Choose file",
+      "fileChosen": "Chosen file: {{name}}",
+      "confirm": "Take over",
+      "cancel": "Cancel",
+      "close": "Close",
+      "done_one": "{{count}} monitor taken over.",
+      "done_other": "{{count}} monitors taken over.",
+      "skippedSponsor": "Sponsor \"{{name}}\" is missing in this tournament – slide not taken over",
+      "noScreenChange": "Running screens stay unchanged. The new monitors are not yet assigned to any screen.",
+      "errors": {
+        "tooLarge": "The file is too large (maximum {{limit}}). Nothing was changed.",
+        "notMonitorConfig": "This file contains no monitor settings",
+        "unsupportedVersion": "This version of the monitor file is not supported. Nothing was changed.",
+        "invalid": "The file is damaged or contains invalid settings. Nothing was changed.",
+        "readFailed": "The file could not be read. Nothing was changed.",
+        "saveFailed": "The monitors could not be taken over."
+      },
+      "templateMonitorName": "Hall standard",
+      "monitorsCount_one": "{{count}} monitor",
+      "monitorsCount_other": "{{count}} monitors",
+      "slidesCount_one": "{{count}} slide",
+      "slidesCount_other": "{{count}} slides",
+      "summary": "{{monitors}} with {{slides}}",
+      "renamed": "The imported monitor is now called ‘{{name}}’",
+      "customQrCheck": "Custom link from the file: “{{url}}” – please check that the address is right",
+      "customQrRemove": "Remove link",
+      "customQrRemoved": "Link will be removed – the QR slide points to the spectator page",
+      "customQrKeep": "Keep link",
+      "customQrInvalid": "Custom link with an invalid address was not taken over (only http or https) – the QR slide points to the spectator page",
+      "issues": {
+        "title": "Slides with a missing field or group",
+        "fieldMissing": "Slide ‘{{slide}}’ – this tournament has no {{field}}",
+        "groupMissing": "Slide ‘{{slide}}’ – this tournament has no {{group}}",
+        "slideLive": "Live: {{ref}}",
+        "slideSchedule": "Schedule: {{ref}}",
+        "slideTable": "Standings: {{ref}}",
+        "fieldName": "Field {{number}}",
+        "groupName": "Group {{letter}}",
+        "reassignField": "Move to field 1",
+        "allGroups": "Show all standings",
+        "removeSlide": "Remove slide",
+        "keepHint": "If you choose nothing, the slide stays and is marked in the monitor editor."
+      }
     }
   },
   "sponsor": {
@@ -577,7 +635,28 @@
       "performanceLabel": "Performance",
       "themeLabel": "Color Scheme",
       "overscan": "TV margin ({{px}}px)",
-      "noMargin": "No margin"
+      "noMargin": "No margin",
+      "transitions": {
+        "fade": "Fade",
+        "slide": "Slide",
+        "none": "Hard cut"
+      },
+      "performance": {
+        "auto": "Automatic",
+        "autoDesc": "The device decides whether animations run",
+        "high": "Full",
+        "highDesc": "All animations, for powerful devices",
+        "low": "Economy",
+        "lowDesc": "Fewer animations, for older TVs"
+      },
+      "themes": {
+        "dark": "Dark",
+        "darkDesc": "Light text on a dark background",
+        "light": "Light",
+        "lightDesc": "Dark text on a light background",
+        "auto": "Automatic",
+        "autoDesc": "Follows the device setting"
+      }
     },
     "slides": {
       "title": "Slides ({{count}})",
@@ -585,7 +664,10 @@
       "moveDown": "Move down",
       "edit": "Edit",
       "remove": "Remove",
-      "addSlide": "Add slide"
+      "addSlide": "Add slide",
+      "qrHidden": "Without a public tournament this slide is skipped",
+      "referenceField": "Field is missing in this tournament – please adjust",
+      "referenceGroup": "Group is missing in this tournament – please adjust"
     }
   },
   "colorScheme": {

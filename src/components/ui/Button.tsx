@@ -14,6 +14,8 @@ interface ButtonProps {
   style?: CSSProperties;
   /** Accessible label for screen readers (required for icon-only buttons) */
   'aria-label'?: string;
+  /** Tooltip (z. B. Klartext zu einem reinen Symbol-Knopf, @OB-021) */
+  title?: string;
   /** Button type attribute */
   type?: 'button' | 'submit' | 'reset';
   /** Enable press effect (scale down on press). Default: true */
@@ -53,6 +55,7 @@ export const Button: React.FC<ButtonProps> = ({
   fullWidth = false,
   style = {},
   'aria-label': ariaLabel,
+  title,
   type = 'button',
   pressEffect = true,
   loading = false,
@@ -173,6 +176,7 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={isDisabled}
       style={combinedStyles}
       aria-label={ariaLabel}
+      title={title}
       aria-disabled={isDisabled}
       aria-busy={loading}
       data-testid={testId}

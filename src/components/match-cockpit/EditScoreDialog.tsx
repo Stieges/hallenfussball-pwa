@@ -5,11 +5,12 @@
  * MF-004: Accessibility improvements (focus trap, Escape key, ARIA)
  */
 
-import { CSSProperties, useState, useEffect } from 'react';
+import { CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../design-tokens'
+import { cssVars, dialogWidths } from '../../design-tokens';
+import { DialogSurface } from '../ui/molecules/DialogSurface';
 import { Button } from '../ui';
-import { useIsMobile, useFocusTrap } from '../../hooks';
+import { useIsMobile } from '../../hooks';
 
 interface EditScoreDialogProps {
   homeTeamName: string;
@@ -34,19 +35,6 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
 
   const isMobile = useIsMobile();
 
-  // MF-004: Focus trap for accessibility (WCAG 4.1.3)
-  const focusTrap = useFocusTrap({
-    isActive: true,
-    onEscape: onCancel,
-  });
-
-  // Prevent body scroll while dialog is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
 
   const handleSubmit = () => {
     onSubmit(homeScore, awayScore);
@@ -54,34 +42,14 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
 
   const hasChanged = homeScore !== currentHomeScore || awayScore !== currentAwayScore;
 
-  const overlayStyle: CSSProperties = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: cssVars.colors.overlayStrong,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.md,
-  };
-
   const containerStyle: CSSProperties = {
-    width: '100%',
-    maxWidth: '500px',
     padding: isMobile ? cssVars.spacing.lg : cssVars.spacing.xl,
-    borderRadius: cssVars.borderRadius.lg,
-    border: `2px solid ${cssVars.colors.warning}`,
-    background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(200, 140, 20, 0.1))',
-    backgroundColor: cssVars.colors.background,
   };
 
   const titleStyle: CSSProperties = {
     fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.xl,
     fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.warning,
+    color: cssVars.colors.warningSolid,
     marginBottom: cssVars.spacing.md,
     display: 'flex',
     alignItems: 'center',
@@ -163,16 +131,14 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
   };
 
   return (
-    <div style={overlayStyle} onClick={onCancel}>
-      {/* MF-004: Modal mit korrekten ARIA-Attributen */}
-      <div
-        ref={focusTrap.containerRef}
-        style={containerStyle}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="edit-score-dialog-title"
-      >
+    <DialogSurface
+      isOpen
+      onClose={onCancel}
+      maxWidth={dialogWidths.md}
+      accent={cssVars.colors.warning}
+      labelledBy="edit-score-dialog-title"
+    >
+      <div style={containerStyle}>
         <div id="edit-score-dialog-title" style={titleStyle}>
           <span aria-hidden="true">✏️</span>
           <span>{t('editScore.title')}</span>
@@ -274,6 +240,6 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
           </Button>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 };

@@ -1,5 +1,5 @@
 /** B-16b1 – Zustandsregeln des Monitors (rein). Regeln aus MonitorDisplayPage.loadData. */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { Tournament } from '../../../types/tournament';
 import type { TournamentMonitor } from '../../../types/monitor';
 import type { DisplayDelta } from '../monitorDataSource';
@@ -9,6 +9,9 @@ import {
   initialDisplayState,
   type MonitorDisplayState,
 } from '../monitorDisplayState';
+
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
 
 const tournament = { id: 'tour-1', title: 'Turnier', teams: [], matches: [] } as unknown as Tournament;
 const monitor = { id: 'mon-1', name: 'Haupthalle' } as unknown as TournamentMonitor;
@@ -67,6 +70,13 @@ describe('applyDelta – Lade-Regeln', () => {
     expect(next).not.toBe(withData('local'));
     expect(next.origin).toBe('local');
     expect(next.lastFetch).toBe(4242);
+  });
+
+  it('(4) Gegenprobe N2: Cloud sauber leer (kein lookupFailed), lokale Kopie wird übernommen', () => {
+    const next = applyDelta(withData('cloud'), snapshot('local', false), ctx);
+    expect(next.origin).toBe('local');
+    expect(next.lastFetch).toBe(4242);
+    expect(next.error).toBeNull();
   });
 
   it('(5) monitor null → „Monitor nicht gefunden“, auch mit Daten', () => {

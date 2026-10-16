@@ -14,6 +14,8 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation, I18nextProvider } from 'react-i18next';
+import { ANZEIGE_SPRACHE, anzeigeI18n } from '../i18n/anzeigeSprache';
 import { cssVars } from '../design-tokens';
 import { ScheduleDisplay } from '../components/ScheduleDisplay';
 import { formatDateGerman } from '../utils/locationHelpers';
@@ -44,7 +46,8 @@ export interface LiveViewScreenProps {
   shareCode: string;
 }
 
-export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => {
+const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => {
+  const { t } = useTranslation('publicView');
   const { tournament, schedule, standings: currentStandings, loadingState, errorMessage, refresh } =
     usePublicTournament(shareCode);
 
@@ -140,7 +143,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
             fontSize: cssVars.fontSizes.sm,
             color: cssVars.colors.textMuted,
           }}>
-            Loslassen zum Aktualisieren
+            {t('liveView.pullRelease')}
           </span>
         )}
       </div>
@@ -153,7 +156,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
             {tournament.ageClass} • {formatDateGerman(tournament.date)}
           </p>
           <div style={shareCodeBadgeStyle}>
-            LIVE: {shareCode}
+            {t('liveView.badge', { code: shareCode })}
           </div>
         </div>
 
@@ -233,7 +236,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
             fontSize: cssVars.fontSizes.xs,
           }}
         >
-          <p>Erstellt mit Hallenfußball-App</p>
+          <p>{t('liveView.footer')}</p>
         </div>
       </div>
 
@@ -246,3 +249,12 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     </div>
   );
 };
+
+/** Zuschauer-Seite mit fester Anzeigesprache (B-41, src/i18n/anzeigeSprache.ts): eigene Instanz, globale Sprache bleibt unberührt. */
+export const LiveViewScreen: React.FC<LiveViewScreenProps> = (props) => (
+  <div lang={ANZEIGE_SPRACHE} style={{ display: 'contents' }}>
+    <I18nextProvider i18n={anzeigeI18n()}>
+      <LiveViewScreenContent {...props} />
+    </I18nextProvider>
+  </div>
+);

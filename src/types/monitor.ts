@@ -1,3 +1,4 @@
+import { liveColorSchemeDefaults } from '../design-tokens/display';
 /**
  * Monitor Types - Monitor-Konfigurator
  *
@@ -79,7 +80,8 @@ export type SlideType =
   | 'next-matches'       // Nächste X Spiele (Phase 2)
   | 'top-scorers'        // Torschützenliste (Phase 2)
   | 'sponsor'            // Sponsor mit QR-Code
-  | 'custom-text';       // Eigener Text / Ankündigung
+  | 'custom-text'        // Eigener Text / Ankündigung
+  | 'qr-code';           // Zuschauer-QR-Folie (B-16f4)
 
 /**
  * Slide-Type Metadaten für UI
@@ -103,6 +105,7 @@ export const SLIDE_TYPES: SlideTypeMetadata[] = [
   { type: 'schedule-field', label: 'Spielplan (Feld)', icon: '📋', category: 'schedule', phase: 1, description: 'Spielplan eines Feldes' },
   { type: 'sponsor', label: 'Sponsor', icon: '📢', category: 'other', phase: 1, description: 'Sponsor mit Logo und QR-Code' },
   { type: 'custom-text', label: 'Eigener Text', icon: '📝', category: 'other', phase: 1, description: 'Individuelle Ankündigung' },
+  { type: 'qr-code', label: 'Zuschauer-QR', icon: '📱', category: 'other', phase: 1, description: 'Zuschauer-QR-Code zur Zuschauer-Seite' },
 
   // Phase 2
   { type: 'all-standings', label: 'Alle Tabellen', icon: '📊📊', category: 'standings', phase: 2, description: 'Alle Gruppentabellen' },
@@ -190,8 +193,8 @@ export interface LiveColorScheme {
  */
 export const DEFAULT_LIVE_COLOR_SCHEME: LiveColorScheme = {
   preset: 'classic',
-  homeColor: '#1E40AF',
-  awayColor: '#DC2626',
+  homeColor: liveColorSchemeDefaults.homeColor,
+  awayColor: liveColorSchemeDefaults.awayColor,
   useTeamColors: false,
 };
 

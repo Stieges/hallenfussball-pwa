@@ -21,6 +21,42 @@ test.describe('Smoke Tests', () => {
     expect(viewport).not.toContain('maximum-scale=1');
   });
 
+  // @OB-021: Die Startseite ist auf jedem Gerät der Geräteliste (ab 360 Bildpunkten Breite) ohne waagerechtes
+  // Scrollen bedienbar. Vorher schob die Kopfzeile (Titel + Offline-Marke + Konto-Knopf) die Seite bei 360 px auf 395 px.
+  test('Startseite ohne waagerechtes Scrollen (@OB-021)', async ({ page }) => {
+    await page.goto('/#/');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByTestId('dashboard-import-trigger')).toBeVisible();
+    const breiten = await page.evaluate(() => ({
+      inhalt: document.documentElement.scrollWidth,
+      sichtbar: document.documentElement.clientWidth,
+    }));
+    expect(breiten.inhalt, `Inhalt ${breiten.inhalt} px breiter als ${breiten.sichtbar} px`).toBeLessThanOrEqual(breiten.sichtbar);
+
+    // Daniel 16.10.: Titel einzeilig und ohne Silbentrennung, vollständig sichtbar (Gegenbeispiel: hyphens:auto → zwei Zeilen)
+    const titel = await page.locator('h1').first().evaluate((h1) => {
+      const bereich = document.createRange();
+      bereich.selectNodeContents(h1);
+      const zeilen = new Set(Array.from(bereich.getClientRects()).map((r) => Math.round(r.top)));
+      const rechts = h1.getBoundingClientRect().right;
+      return {
+        zeilen: zeilen.size,
+        abgeschnitten: h1.scrollWidth > h1.clientWidth + 1,
+        rechts,
+        text: h1.textContent ?? '',
+      };
+    });
+    expect(titel.zeilen, `Titel „${titel.text}“ einzeilig`).toBe(1);
+    expect(titel.abgeschnitten, 'Titel nicht abgeschnitten').toBe(false);
+    const marke = page.getByTestId('auth-offline-badge');
+    if (await marke.isVisible()) {
+      const kasten = await marke.boundingBox();
+      expect(kasten?.width ?? 0, 'Offline-Marke ≥ 44 px').toBeGreaterThanOrEqual(44);
+      expect(kasten?.height ?? 0, 'Offline-Marke ≥ 44 px').toBeGreaterThanOrEqual(44);
+      expect(titel.rechts, 'Titel überlappt die Marke nicht').toBeLessThanOrEqual((kasten?.x ?? 0) + 0.5);
+    }
+  });
+
   test('Keine JavaScript Errors', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));

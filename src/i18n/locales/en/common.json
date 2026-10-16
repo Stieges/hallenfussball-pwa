@@ -57,6 +57,7 @@
     "statusGuest": "Signed in as guest. Registration recommended for full features.",
     "statusUnauthenticated": "Not signed in. Sign in or register available.",
     "offlineAriaLabel": "Offline - Click to reconnect",
+    "offlineHint": "Offline – changes are saved and sent later",
     "offline": "Offline",
     "profileAriaLabel": "Open profile of {{name}}",
     "myProfile": "My Profile",

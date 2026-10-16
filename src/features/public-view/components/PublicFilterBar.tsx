@@ -63,18 +63,19 @@ export const PublicFilterBar: React.FC<PublicFilterBarProps> = ({
   onStatusChange,
 }) => {
   const { t: tSport } = useTranslation('sport');
+  const { t } = useTranslation('publicView');
 
   return (
     <div style={filterBarStyle} data-testid="public-filter-bar">
       {/* Group Filter */}
       {groups.length > 1 && (
         <div style={filterRowStyle}>
-          <span style={filterLabelStyle}>Gruppe:</span>
+          <span style={filterLabelStyle}>{t('filter.group')}</span>
           <button
             style={chipStyle(selectedGroup === null)}
             onClick={() => onGroupChange(null)}
           >
-            Alle
+            {t('filter.all')}
           </button>
           {groups.map((group) => (
             <button
@@ -82,7 +83,7 @@ export const PublicFilterBar: React.FC<PublicFilterBarProps> = ({
               style={chipStyle(selectedGroup === group)}
               onClick={() => onGroupChange(group)}
             >
-              Gruppe {group}
+              {tSport('tournament.groupWithLetter', { letter: group })}
             </button>
           ))}
         </div>
@@ -90,12 +91,12 @@ export const PublicFilterBar: React.FC<PublicFilterBarProps> = ({
 
       {/* Phase Filter */}
       <div style={filterRowStyle}>
-        <span style={filterLabelStyle}>Phase:</span>
+        <span style={filterLabelStyle}>{t('filter.phase')}</span>
         <button
           style={chipStyle(selectedPhase === 'all')}
           onClick={() => onPhaseChange('all')}
         >
-          Alle
+          {t('filter.all')}
         </button>
         <button
           style={chipStyle(selectedPhase === 'groupStage')}
@@ -107,36 +108,36 @@ export const PublicFilterBar: React.FC<PublicFilterBarProps> = ({
           style={chipStyle(selectedPhase === 'final')}
           onClick={() => onPhaseChange('final')}
         >
-          Finalrunde
+          {tSport('tournament.finals')}
         </button>
       </div>
 
       {/* Status Filter */}
       <div style={filterRowStyle}>
-        <span style={filterLabelStyle}>Status:</span>
+        <span style={filterLabelStyle}>{t('filter.status')}</span>
         <button
           style={chipStyle(selectedStatus === 'all')}
           onClick={() => onStatusChange('all')}
         >
-          Alle
+          {t('filter.all')}
         </button>
         <button
           style={chipStyle(selectedStatus === 'scheduled')}
           onClick={() => onStatusChange('scheduled')}
         >
-          Geplant
+          {tSport('status.scheduled')}
         </button>
         <button
           style={chipStyle(selectedStatus === 'live')}
           onClick={() => onStatusChange('live')}
         >
-          🔴 Live
+          {t('filter.live')}
         </button>
         <button
           style={chipStyle(selectedStatus === 'finished')}
           onClick={() => onStatusChange('finished')}
         >
-          Beendet
+          {tSport('status.finished')}
         </button>
       </div>
     </div>

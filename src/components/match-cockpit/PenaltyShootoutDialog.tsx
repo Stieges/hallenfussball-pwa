@@ -6,10 +6,10 @@
 
 import { CSSProperties, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../design-tokens'
+import { cssVars, dialogWidths } from '../../design-tokens';
+import { DialogSurface } from '../ui/molecules/DialogSurface';
 import { Button } from '../ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { LiveMatch } from './MatchCockpit';
 
 interface PenaltyShootoutDialogProps {
@@ -35,11 +35,6 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
     onCancel(match.id);
   }, [onCancel, match.id]);
 
-  // Focus trap for accessibility (WCAG 4.1.3)
-  const focusTrap = useFocusTrap({
-    isActive: true, // Always active when component is rendered
-    onEscape: handleEscape,
-  });
 
   const handleSubmit = () => {
     if (homeScore === awayScore) {
@@ -51,17 +46,13 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   };
 
   const containerStyle: CSSProperties = {
-    marginTop: cssVars.spacing.md,
     padding: isMobile ? cssVars.spacing.lg : cssVars.spacing.md,
-    borderRadius: cssVars.borderRadius.lg,
-    border: `2px solid ${cssVars.colors.secondary}`,
-    background: 'linear-gradient(135deg, rgba(0, 176, 255, 0.15), rgba(0, 120, 200, 0.1))',
   };
 
   const titleStyle: CSSProperties = {
     fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.secondary,
+    color: cssVars.colors.textPrimary,
     marginBottom: cssVars.spacing.md,
     display: 'flex',
     alignItems: 'center',
@@ -154,89 +145,92 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   const totalAwayScore = match.awayScore + (match.overtimeScoreB ?? 0);
 
   return (
-    <div
-      ref={focusTrap.containerRef}
-      style={containerStyle}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="penalty-shootout-title"
+    <DialogSurface
+      isOpen
+      onClose={handleEscape}
+      closeOnBackdropClick={false}
+      maxWidth={dialogWidths.md}
+      accent={cssVars.colors.secondary}
+      labelledBy="penalty-shootout-title"
     >
-      <div style={titleStyle}>
-        <span id="penalty-shootout-title">{t('penaltyShootout.title')}</span>
-      </div>
+      <div style={containerStyle}>
+        <div style={titleStyle}>
+          <span id="penalty-shootout-title">{t('penaltyShootout.title')}</span>
+        </div>
 
-      <div style={regularScoreStyle}>
-        {t('penaltyShootout.scoreAfter', {
-          phase: match.playPhase === 'overtime' || match.playPhase === 'goldenGoal' ? t('penaltyShootout.phaseOvertime') : t('penaltyShootout.phaseRegular'),
-          home: totalHomeScore,
-          away: totalAwayScore
-        })}
-      </div>
+        <div style={regularScoreStyle}>
+          {t('penaltyShootout.scoreAfter', {
+            phase: match.playPhase === 'overtime' || match.playPhase === 'goldenGoal' ? t('penaltyShootout.phaseOvertime') : t('penaltyShootout.phaseRegular'),
+            home: totalHomeScore,
+            away: totalAwayScore
+          })}
+        </div>
 
-      <div style={scoreInputContainerStyle}>
-        <div style={teamScoreBlockStyle}>
-          <div style={teamNameStyle}>{match.homeTeam.name}</div>
-          <div style={scoreControlsStyle}>
-            <button
-              style={scoreButtonStyle}
-              onClick={() => setHomeScore(Math.max(0, homeScore - 1))}
-              disabled={homeScore === 0}
-            >
-              −
-            </button>
-            <div style={scoreDisplayStyle}>{homeScore}</div>
-            <button
-              style={scoreButtonStyle}
-              onClick={() => setHomeScore(homeScore + 1)}
-            >
-              +
-            </button>
+        <div style={scoreInputContainerStyle}>
+          <div style={teamScoreBlockStyle}>
+            <div style={teamNameStyle}>{match.homeTeam.name}</div>
+            <div style={scoreControlsStyle}>
+              <button
+                style={scoreButtonStyle}
+                onClick={() => setHomeScore(Math.max(0, homeScore - 1))}
+                disabled={homeScore === 0}
+              >
+                −
+              </button>
+              <div style={scoreDisplayStyle}>{homeScore}</div>
+              <button
+                style={scoreButtonStyle}
+                onClick={() => setHomeScore(homeScore + 1)}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div style={vsStyle}>:</div>
+
+          <div style={teamScoreBlockStyle}>
+            <div style={teamNameStyle}>{match.awayTeam.name}</div>
+            <div style={scoreControlsStyle}>
+              <button
+                style={scoreButtonStyle}
+                onClick={() => setAwayScore(Math.max(0, awayScore - 1))}
+                disabled={awayScore === 0}
+              >
+                −
+              </button>
+              <div style={scoreDisplayStyle}>{awayScore}</div>
+              <button
+                style={scoreButtonStyle}
+                onClick={() => setAwayScore(awayScore + 1)}
+              >
+                +
+              </button>
+            </div>
           </div>
         </div>
 
-        <div style={vsStyle}>:</div>
+        {error && <div style={errorStyle}>{error}</div>}
 
-        <div style={teamScoreBlockStyle}>
-          <div style={teamNameStyle}>{match.awayTeam.name}</div>
-          <div style={scoreControlsStyle}>
-            <button
-              style={scoreButtonStyle}
-              onClick={() => setAwayScore(Math.max(0, awayScore - 1))}
-              disabled={awayScore === 0}
-            >
-              −
-            </button>
-            <div style={scoreDisplayStyle}>{awayScore}</div>
-            <button
-              style={scoreButtonStyle}
-              onClick={() => setAwayScore(awayScore + 1)}
-            >
-              +
-            </button>
-          </div>
+        <div style={buttonsStyle}>
+          <Button
+            variant="primary"
+            size={isMobile ? 'md' : 'sm'}
+            onClick={handleSubmit}
+            style={{ flex: 1, minHeight: isMobile ? '48px' : 'auto' }}
+          >
+            {t('penaltyShootout.confirm')}
+          </Button>
+          <Button
+            variant="secondary"
+            size={isMobile ? 'md' : 'sm'}
+            onClick={() => onCancel(match.id)}
+            style={{ flex: 1, minHeight: isMobile ? '48px' : 'auto' }}
+          >
+            {t('penaltyShootout.back')}
+          </Button>
         </div>
       </div>
-
-      {error && <div style={errorStyle}>{error}</div>}
-
-      <div style={buttonsStyle}>
-        <Button
-          variant="primary"
-          size={isMobile ? 'md' : 'sm'}
-          onClick={handleSubmit}
-          style={{ flex: 1, minHeight: isMobile ? '48px' : 'auto' }}
-        >
-          {t('penaltyShootout.confirm')}
-        </Button>
-        <Button
-          variant="secondary"
-          size={isMobile ? 'md' : 'sm'}
-          onClick={() => onCancel(match.id)}
-          style={{ flex: 1, minHeight: isMobile ? '48px' : 'auto' }}
-        >
-          {t('penaltyShootout.back')}
-        </Button>
-      </div>
-    </div>
+    </DialogSurface>
   );
 };

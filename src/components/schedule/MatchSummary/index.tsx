@@ -7,11 +7,12 @@
  * @see docs/concepts/MATCH-SUMMARY-KONZEPT.md
  */
 
-import { type CSSProperties, useEffect, useCallback } from 'react';
+import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../design-tokens';
+import { cssVars, dialogWidths } from '../../../design-tokens';
 import { useBreakpoint } from '../../../hooks';
 import { BottomSheet } from '../../ui/BottomSheet';
+import { DialogSurface } from '../../ui/molecules/DialogSurface';
 import { ScoreHeader } from './ScoreHeader';
 import { EventList } from './EventList';
 import type { RuntimeMatchEvent } from '../../../types/tournament';
@@ -61,49 +62,6 @@ function MatchSummaryDialog({
   onEditEvent,
 }: MatchSummaryProps) {
   const { t } = useTranslation('tournament');
-
-  // Close on Escape
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  }, [onClose]);
-
-  useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-    };
-  }, [isOpen, handleKeyDown]);
-
-  if (!isOpen) {return null;}
-
-  const overlayStyle: CSSProperties = {
-    position: 'fixed',
-    inset: 0,
-    background: cssVars.colors.overlay,
-    zIndex: 1100,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: cssVars.spacing.lg,
-  };
-
-  const dialogStyle: CSSProperties = {
-    background: cssVars.colors.surfaceElevated,
-    borderRadius: cssVars.borderRadius.lg,
-    maxWidth: 520,
-    width: '100%',
-    maxHeight: '85vh',
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-  };
 
   const headerStyle: CSSProperties = {
     display: 'flex',
@@ -156,20 +114,16 @@ function MatchSummaryDialog({
   };
 
   return (
-    <div
-      style={overlayStyle}
-      onClick={onClose}
-      role="presentation"
-      data-testid="match-summary-backdrop"
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth={dialogWidths.md}
+      zIndex={cssVars.zIndex.floating}
+      ariaLabel={t('matchSummary.title')}
+      testId="match-summary-dialog"
+      scrimTestId="match-summary-backdrop"
     >
-      <div
-        style={dialogStyle}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('matchSummary.title')}
-        data-testid="match-summary-dialog"
-      >
+      <div>
         {/* Header */}
         <div style={headerStyle}>
           <h2 style={titleStyle}>{t('matchSummary.title')}</h2>
@@ -209,7 +163,7 @@ function MatchSummaryDialog({
           </div>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 }
 

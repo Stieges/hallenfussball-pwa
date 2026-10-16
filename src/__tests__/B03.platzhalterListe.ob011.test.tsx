@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { SRC_ROOT } from './helpers/b03PlatzhalterHarness';
+import { SRC_ROOT, walkFiles } from './helpers/b03PlatzhalterHarness';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -14,11 +14,12 @@ beforeEach(() => {
 
 describe('@OB-011 Eine Folie ohne Darstellung zeigt keinen Entwickler-Hinweis', () => {
   it('@OB-011 Keine Folie zeigt „wird in Phase 2 implementiert“, der Monitor fällt auf die Zuschauer-QR-Folie zurück', async () => {
-    const source = readFileSync(
-      join(SRC_ROOT, 'features', 'monitor-display', 'MonitorDisplayPage.tsx'),
-      'utf8'
-    );
-    expect(source).not.toMatch(/wird in Phase 2 implementiert/);
+    // B-16d2: Alle Quelldateien des Monitor-Ordners (Folien, Komponenten, Hooks), nicht nur die Seite.
+    const monitorDateien = walkFiles(join(SRC_ROOT, 'features', 'monitor-display')).filter((f) => /\.tsx?$/.test(f));
+    expect(monitorDateien.length).toBeGreaterThan(0);
+    for (const datei of monitorDateien) {
+      expect(readFileSync(datei, 'utf8')).not.toMatch(/wird in Phase 2 implementiert/);
+    }
     const { selectDisplayableSlides } = await import('../features/monitor-display/slideProgramme');
     const slides = selectDisplayableSlides([
       { id: 'a', type: 'unknown-type', duration: 10 },

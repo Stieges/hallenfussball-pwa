@@ -10,8 +10,8 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../../design-tokens'
-import { useFocusTrap } from '../../../../hooks';
+import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import moduleStyles from '../../LiveCockpit.module.css';
 
 interface TimeAdjustDialogProps {
@@ -32,12 +32,6 @@ export function TimeAdjustDialog({
   const { t } = useTranslation('cockpit');
   const [minutes, setMinutes] = useState(0);
   const [seconds, setSeconds] = useState(0);
-
-  // WCAG 4.1.3: Focus trap for accessibility
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: onClose,
-  });
 
   // Initialize with current time when dialog opens
   useEffect(() => {
@@ -92,15 +86,14 @@ export function TimeAdjustDialog({
   const hasChanged = currentFormatted !== newFormatted;
 
   return (
-    <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
-      <div
-        ref={focusTrap.containerRef}
-        style={styles.dialog}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="time-adjust-dialog-title"
-      >
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth={dialogWidths.sm}
+      labelledBy="time-adjust-dialog-title"
+      panelClassName={moduleStyles.dialogOverlay}
+    >
+      <div style={styles.dialog}>
         {/* Title */}
         <h2 id="time-adjust-dialog-title" style={styles.title}>{t('timeAdjust.title')}</h2>
 
@@ -247,30 +240,13 @@ export function TimeAdjustDialog({
           </button>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: cssVars.colors.overlayDialog,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.lg,
-  },
   dialog: {
-    backgroundColor: cssVars.colors.surfaceElevated,
-    borderRadius: cssVars.borderRadius.xl,
     padding: cssVars.spacing.xl,
-    maxWidth: '360px',
-    width: '100%',
     textAlign: 'center',
   },
   title: {
@@ -320,7 +296,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   pickerLabel: {
     fontSize: cssVars.fontSizes.xs,
-    color: cssVars.colors.textTertiary,
+    color: cssVars.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },

@@ -1,0 +1,58 @@
+{
+  "loading": {
+    "title": "Turnier wird geladen...",
+    "code": "Code: {{code}}"
+  },
+  "notFound": {
+    "title": "Turnier nicht gefunden",
+    "body": "Der Code <strong>{{code}}</strong> ist ungültig oder das Turnier wurde nicht freigegeben.",
+    "home": "Zur Startseite"
+  },
+  "error": {
+    "title": "Fehler beim Laden",
+    "unknown": "Ein unbekannter Fehler ist aufgetreten.",
+    "retry": "Erneut versuchen",
+    "loadFailed": "Fehler beim Laden des Turniers"
+  },
+  "liveView": {
+    "pullRelease": "Loslassen zum Aktualisieren",
+    "badge": "LIVE: {{code}}",
+    "footer": "Erstellt mit Hallenfußball-App"
+  },
+  "myTeam": {
+    "label": "Mein Team:",
+    "none": "Nicht ausgewählt",
+    "onlyMine": "Nur meine",
+    "change": "Ändern",
+    "choose": "Team wählen"
+  },
+  "teamSelector": {
+    "title": "Mein Team wählen",
+    "hint": "Wähle dein Team, um seine Spiele hervorzuheben.",
+    "none": "Kein Team (alle anzeigen)"
+  },
+  "filter": {
+    "group": "Gruppe:",
+    "phase": "Phase:",
+    "status": "Status:",
+    "all": "Alle",
+    "live": "🔴 Live"
+  },
+  "standings": {
+    "hidden": "🏆 Tabellen ausgeblendet",
+    "bambini": "(Bambini-Modus aktiviert)"
+  },
+  "info": {
+    "title": "Turnier-Info",
+    "name": "Name:",
+    "date": "Datum:",
+    "location": "Ort:",
+    "teams": "Teams:",
+    "teamCount": "{{n}} Teams",
+    "shareCode": "Share-Code:",
+    "theme": "Darstellung",
+    "bambiTitle": "🔒 Bambini-Modus aktiv",
+    "hiddenScores": "Spielstände werden nicht angezeigt. ",
+    "hiddenRankings": "Tabellen werden nicht angezeigt."
+  }
+}

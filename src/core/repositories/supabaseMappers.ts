@@ -433,6 +433,7 @@ interface TournamentConfig {
   tournamentType?: string;
   ageClass?: string;
   organizer?: string;
+  rulebook?: string;
 
   // Time settings
   gamePeriods?: number;
@@ -581,6 +582,7 @@ export function mapTournamentFromSupabase(
     startTime: row.start_time ?? undefined,
     location,
     organizer: config.organizer,
+    rulebook: config.rulebook,
     contactInfo: config.contactInfo as Tournament['contactInfo'],
     teams,
     matches,
@@ -673,6 +675,7 @@ export function mapTournamentToSupabase(
     fields: tournament.fields,
     ageClass: tournament.ageClass,
     organizer: tournament.organizer,
+    rulebook: tournament.rulebook,
     contactInfo: tournament.contactInfo,
     dashboardStatus: tournament.dashboardStatus,
     tournamentSystem: tournament.tournamentSystem,

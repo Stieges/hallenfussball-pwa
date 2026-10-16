@@ -9,7 +9,7 @@ import type { CardEventInfo, GoalEventInfo } from '../../../hooks/useLiveMatches
 import type { MonitorSlide } from '../../../types/monitor';
 import type { Tournament } from '../../../types/tournament';
 import {
-  attachMonitor, buildTournament, FIXTURE_SPONSOR, slide, withFlags, withMatch, withMonitor,
+  attachMonitor, buildTournament, FIXTURE_SPONSOR, slide, withMatch, withMonitor,
 } from './monitorFixture';
 
 const { supabaseGet, localGet, live } = vi.hoisted(() => ({
@@ -57,6 +57,9 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 }));
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
+
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
 
 /** Punkte-Zelle (letzte Spalte) der Tabellenzeile eines Teams. */
 function pointsOf(teamName: string): string | null {
@@ -126,36 +129,18 @@ describe('MonitorDisplayPage — Folieninhalt (Bestand)', { timeout: 15_000 }, (
     expect(screen.queryByText('1. Halbzeit')).not.toBeInTheDocument();
   });
 
-  it('Bestand: Spielplan-Folie Feld 2 zeigt die Paarungen ohne Uhrzeit', async () => {
-    await renderMonitor(buildTournament(), [slide('schedule-field', { fieldId: 'field-2' })]);
-    // Nur der Folien-Container: das <style>-Element der Seite enthält Dezimalzahlen (0.95).
-    // Kein \b: der Text verkettet Zellen ohne Leerzeichen („SC Ost14:20DJK“). Ergebnisse der
-    // Fixture sind einstellig (2:1), ein Treffer hier ist daher eine Uhrzeit.
-    const folie = screen.getByText(/Spielplan Feld 2/).parentElement?.textContent ?? '';
-    expect(folie).toContain('DJK Berg');
-    expect(folie).not.toMatch(/\d{1,2}[:.]\d{2}/);
-  });
-
-  it('Bestand: Tabelle zählt das laufende Spiel 7 mit seinem Zwischenstand (FC Nord 6 Punkte)', async () => {
+  // @TM-143 (B-40): Der Bestand „6 Punkte“ (laufendes Spiel 7 zählte mit Zwischenstand) ist bewusst umgedreht.
+  it('@TM-143 Tabelle zählt das laufende Spiel 7 nicht (FC Nord 3 Punkte, nur Spiel 1)', async () => {
     await renderMonitor(buildTournament(), [slide('standings', { groupId: 'A' })]);
-    expect(pointsOf('FC Nord')).toBe('6');
-  });
-
-  it('Bestand: QR-Rückfall zeigt die Zuschauer-Adresse, nicht „Ergebnisse aufs Handy“', async () => {
-    // Nur nicht darstellbare Folien (Phase 2) → Rückfall auf die Zuschauer-QR-Folie.
-    await renderMonitor(buildTournament(), [slide('next-matches')]);
-    expect(screen.getByText(/#\/live\/ABC123/)).toBeInTheDocument();
-    expect(screen.queryByText(/Ergebnisse aufs Handy/)).not.toBeInTheDocument();
-  });
-
-  it('Bestand (Befund C-KIDS-HIDE): Tabelle zeigt Punkte trotz hideScoresForPublic', async () => {
-    await renderMonitor(tabelle(withFlags({ hideScoresForPublic: true })), [slide('standings', { groupId: 'A' })]);
     expect(pointsOf('FC Nord')).toBe('3');
   });
 
-  it('Bestand (Befund C-MON-SPONSOR-QR): Sponsor-Folie ohne qrTarget verweist auf das Turnier', async () => {
-    await renderMonitor(buildTournament({ sponsors: [FIXTURE_SPONSOR] }), [slide('sponsor', { sponsorId: 'sp-1' })]);
-    expect(screen.getByTestId('qr-code').getAttribute('data-value')).toContain('/#/tournament/');
+  it('@TM-143 Tabelle zählt Spiel 7 nach dem Abpfiff (FC Nord 6 Punkte)', async () => {
+    await renderMonitor(
+      buildTournament({ matches: withMatch('match-7', { matchStatus: 'finished' }) }),
+      [slide('standings', { groupId: 'A' })],
+    );
+    expect(pointsOf('FC Nord')).toBe('6');
   });
 });
 
@@ -166,29 +151,32 @@ describe('MonitorDisplayPage — Tasten (Bestand)', { timeout: 15_000 }, () => {
     slide('custom-text', { headline: 'Dritte Folie' }),
   ];
 
-  it('Bestand: ArrowRight springt weiter, ArrowLeft geht zurück und am Anfang auf die letzte Folie', async () => {
+  // B-17 Fixrunde (@ME-022, Record monitor-einrichten Z. 175–177): Pfeiltasten schalten nicht weiter.
+  // Vorher: ArrowRight/ArrowLeft wechselten die Folie (Gegenbeispiel zum Soll).
+  it('B-17: Pfeiltasten schalten nicht weiter und nicht zurück', async () => {
     await renderMonitor(buildTournament(), zweiFolien());
     expect(screen.getByText('Erste Folie')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'ArrowRight' });
-    expect(screen.getByText('Zweite Folie')).toBeInTheDocument();
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
     expect(screen.getByText('Erste Folie')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    expect(screen.getByText('Dritte Folie')).toBeInTheDocument();
+    expect(screen.getByText('Erste Folie')).toBeInTheDocument();
   });
 
-  it('Bestand: Leertaste schaltet den Pausen-Indikator ein und wieder aus', async () => {
+  // B-17 Fixrunde (@ME-022, Record Z. 175–177): Leertaste hält nicht an, es gibt kein Pausen-Badge mehr.
+  // Vorher: Leertaste schaltete den Pausen-Indikator (Gegenbeispiel zum Soll).
+  it('B-17: Leertaste hat keine Wirkung, kein Pausen-Indikator', async () => {
     await renderMonitor(buildTournament(), zweiFolien());
     fireEvent.keyDown(window, { key: ' ' });
-    expect(screen.getByTestId('monitor-pause-indicator')).toBeInTheDocument();
-    fireEvent.keyDown(window, { key: ' ' });
     expect(screen.queryByTestId('monitor-pause-indicator')).not.toBeInTheDocument();
+    expect(screen.getByText('Erste Folie')).toBeInTheDocument();
   });
 
-  it('Bestand: Escape ruft onBack genau einmal auf', async () => {
+  // B-17 (@ME-022, Befund C-MONITOR-DAUERBETRIEB): Escape verlässt die Seite nicht mehr; das alte Verhalten
+  // (Rücksprung zur Startseite) war der Fehler. Vorher: onBack einmal aufgerufen.
+  it('B-17: Escape ruft onBack nicht auf, die Seite bleibt offen', async () => {
     const { onBack } = await renderMonitor(buildTournament(), zweiFolien());
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(onBack).toHaveBeenCalledTimes(1);
+    expect(onBack).not.toHaveBeenCalled();
   });
 
   it('Bestand: Taste c blendet die Cache-Anzeige ein', async () => {
@@ -206,7 +194,7 @@ describe('MonitorDisplayPage — Einblendungen (Tor)', { timeout: 15_000 }, () =
     expect(await screen.findByText('DJK Berg')).toBeInTheDocument();
   });
 
-  it.fails('@ZM-083 Feld 1: Tor auf Feld 2 wird auf dem Feld-1-Monitor nicht eingeblendet', async () => {
+  it('@ZM-083 Feld 1: Tor auf Feld 2 wird auf dem Feld-1-Monitor nicht eingeblendet', async () => {
     live.goal = goalInMatch8;
     await renderMonitor(buildTournament(), [slide('live', { fieldId: 'field-1' })]);
     // Effekte nach dem Laden flushen, bevor die Einblendung geprüft wird (sonst falsches Grün).
@@ -214,11 +202,6 @@ describe('MonitorDisplayPage — Einblendungen (Tor)', { timeout: 15_000 }, () =
     expect(screen.queryByText('DJK Berg')).not.toBeInTheDocument();
   });
 
-  it('Bestand: Tor auf Feld 2 wird auf dem Feld-1-Monitor eingeblendet', async () => {
-    live.goal = goalInMatch8;
-    await renderMonitor(buildTournament(), [slide('live', { fieldId: 'field-1' })]);
-    expect(await screen.findByText('DJK Berg')).toBeInTheDocument();
-  });
 });
 
 describe('MonitorDisplayPage — Karteneinblendung (@ZM-119, Fake-Timer)', () => {

@@ -88,7 +88,7 @@ describe('A-08f3a2 Schnelleingabe: fremdes Engine-Spiel nach dem Feldweg bleibt 
     const { result } = renderHook(() => useScheduleTabActions({
       tournament: current, onTournamentUpdate: vi.fn(), onLocalTournamentUpdate: vi.fn(), onMatchesUpdate,
       isEditing: false, saveToHistory: vi.fn(), showSuccess: vi.fn(), showWarning,
-      setPendingReferee: vi.fn(), setPendingField: vi.fn(), lockFinishedResults: false,
+      setPendingReferee: vi.fn(), setPendingField: vi.fn(), lockFinishedResults: false, liveMatchIds: new Set<string>(),
     }));
     act(() => result.current.handleScoreChange(matchId, 2, 0));
     return { current, onMatchesUpdate, showWarning };

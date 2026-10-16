@@ -32,6 +32,11 @@ vi.mock('../../../hooks', () => ({
   })),
 }));
 
+// Rechte: Turnierleitung (vorhandene Rechteprüfung, siehe SettingsTab)
+vi.mock('../../auth/hooks/useMyTournamentRole', () => ({
+  useMyTournamentRole: () => ({ role: 'owner' }),
+}));
+
 // Prevent useMonitorHeartbeats from opening a real Supabase Realtime
 // WebSocket during this test — Vitest 4 + the new undici upgrade
 // surfaces the post-test WebSocket cleanup as an unhandled error.

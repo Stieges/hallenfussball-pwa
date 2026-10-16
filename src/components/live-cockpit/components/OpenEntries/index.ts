@@ -5,4 +5,3 @@
  */
 
 export { OpenEntriesSection, OpenEntriesBadge } from './OpenEntriesSection';
-export { OpenEntriesBottomSheet } from './OpenEntriesBottomSheet';

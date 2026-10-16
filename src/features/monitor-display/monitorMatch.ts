@@ -10,7 +10,8 @@ import type { Tournament, Match, Team, TiebreakerMode } from '../../types/tourna
 import type { LiveMatch } from '../../hooks/useLiveMatches';
 import { resolveTiebreakMode, knockoutRoundOf } from '../../core/match/tiebreakDecision';
 import sportGlossary from '../../i18n/glossary.json';
-import { monitorSideName, monitorSideTeam } from './monitorSides';
+import { sideLabel, sideTeam, type MatchSide } from './matchSides';
+import { scoresPublic } from './publicVisibility';
 
 export type MonitorLiveMatch = LiveMatch & {
   /** Entscheidung bei Unentschieden (dieselbe Quelle wie im Cockpit) */
@@ -21,12 +22,20 @@ export type MonitorLiveMatch = LiveMatch & {
  * Convert Tournament Match + Team[] to LiveMatch format for LiveMatchDisplay.
  */
 export function toLiveMatch(match: Match, teams: Team[], tournament: Tournament): MonitorLiveMatch {
-  // Seiten über den Slot: besetzt → Team (Logo/Farben), offen → Herkunft bzw. „noch offen“ (Kindermodus).
-  const sideTeam = (side: 'A' | 'B') =>
-    monitorSideTeam(match, side, teams) ?? { id: `${match.id}:${side}`, name: monitorSideName(match, side, tournament) };
+  // Seiten über den Slot (Merge I1): besetzt → Team (Logo/Farben), offen → Herkunft bzw. „noch offen“ (Kindermodus).
+  const sideCtx = {
+    teams,
+    matches: tournament.matches,
+    groups: tournament.groups,
+    hidePendingOrigin: !scoresPublic(tournament),
+  };
+  const sideOf = (side: MatchSide) =>
+    sideTeam(match, side, teams) ?? { id: `${match.id}:${side}`, name: sideLabel(match, side, sideCtx) };
 
+  // `paused` (Halbzeit, C-MON-PAUSE) ist kein MatchStatus-Wert, kommt aber aus dem Speicher.
   const statusMap: Record<string, 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED'> = {
     running: 'RUNNING',
+    paused: 'PAUSED',
     finished: 'FINISHED',
     scheduled: 'NOT_STARTED',
     waiting: 'NOT_STARTED',
@@ -49,8 +58,8 @@ export function toLiveMatch(match: Match, teams: Team[], tournament: Tournament)
     scheduledKickoff: match.scheduledTime ? new Date(match.scheduledTime).toISOString() : '',
     durationSeconds: durationMinutes * 60,
     refereeName: refereeTeam?.name,
-    homeTeam: sideTeam('A'),
-    awayTeam: sideTeam('B'),
+    homeTeam: sideOf('A'),
+    awayTeam: sideOf('B'),
     homeScore: match.scoreA ?? 0,
     awayScore: match.scoreB ?? 0,
     status: statusMap[match.matchStatus ?? 'scheduled'] ?? 'NOT_STARTED',

@@ -28,21 +28,21 @@ const roleColors: Record<
     text: cssVars.colors.onPrimary,
   },
   'co-admin': {
-    background: cssVars.colors.warning,
+    background: cssVars.colors.warningSolid,
     text: cssVars.colors.onWarning,
   },
   trainer: {
-    background: cssVars.colors.info,
+    background: cssVars.colors.secondaryHover,
     text: cssVars.colors.onPrimary,
   },
   collaborator: {
     background: cssVars.colors.surfaceLight,
-    text: cssVars.colors.textSecondary,
+    text: cssVars.colors.textPrimary,
     border: cssVars.colors.border,
   },
   viewer: {
     background: cssVars.colors.surface,
-    text: cssVars.colors.textTertiary,
+    text: cssVars.colors.textSecondary,
     border: cssVars.colors.border,
   },
 };

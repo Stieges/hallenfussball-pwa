@@ -111,6 +111,39 @@ describe('SyncStatusIndicator', () => {
     expect(retryFailedMutation).toHaveBeenCalledWith('fail-1');
   });
 
+  // Merge I1 (Cloud-E2E queue-failed): die Rückfrage „Verwerfen“ liegt seit B-43a im Portal (DialogSurface).
+  // Der Außenklick-Schutz der Liste darf sie beim mousedown nicht schließen, sonst wirkt „Verwerfen“ nie.
+  it('C-SYNC: Verwerfen über die Rückfrage im Portal wirkt (mousedown im Dialog schließt die Liste nicht)', () => {
+    mockState.failedChanges = 1;
+    mockState.failedMutations = [{
+      id: 'fail-1', type: 'UPDATE_MATCH', payload: {}, timestamp: 1, retryCount: 5,
+      failedAt: 2, lastError: 'RLS: keine Berechtigung',
+    }];
+    render(<SyncStatusIndicator tournamentId="t1" />);
+
+    fireEvent.click(screen.getByTestId('sync-status'));
+    fireEvent.click(screen.getByTestId('sync-discard-fail-1'));
+    const confirm = screen.getByTestId('confirm-dialog-confirm');
+    fireEvent.mouseDown(confirm);
+    fireEvent.click(confirm);
+
+    expect(discardFailedMutation).toHaveBeenCalledWith('fail-1');
+  });
+
+  it('Gegenbeispiel: ein mousedown wirklich außerhalb schließt die Liste weiterhin', () => {
+    mockState.failedChanges = 1;
+    mockState.failedMutations = [{
+      id: 'fail-1', type: 'UPDATE_MATCH', payload: {}, timestamp: 1, retryCount: 5,
+      failedAt: 2, lastError: 'RLS: keine Berechtigung',
+    }];
+    render(<SyncStatusIndicator tournamentId="t1" />);
+
+    fireEvent.click(screen.getByTestId('sync-status'));
+    fireEvent.mouseDown(document.body);
+
+    expect(screen.queryByTestId('sync-failed-list')).toBeNull();
+  });
+
   it('triggers a manual sync when clicked while there are no failed mutations', () => {
     mockState.pendingChanges = 0;
     renderWithResync(<SyncStatusIndicator tournamentId="t1" />);

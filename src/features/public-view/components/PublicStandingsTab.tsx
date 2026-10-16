@@ -2,6 +2,7 @@
  * Tabellen-Tab der Zuschauer-Seite (B-13d1, aus LiveViewScreen ausgelagert).
  * Texte wörtlich übernommen.
  */
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { Card } from '../../../components/ui/Card';
 import { GroupTables } from '../../../components/schedule/GroupTables';
@@ -13,6 +14,7 @@ export interface PublicStandingsTabProps {
 }
 
 export const PublicStandingsTab: React.FC<PublicStandingsTabProps> = ({ tournament, standings }) => {
+  const { t } = useTranslation('publicView');
   if (tournament.hideRankingsForPublic) {
     return (
       <Card>
@@ -24,10 +26,10 @@ export const PublicStandingsTab: React.FC<PublicStandingsTabProps> = ({ tourname
           }}
         >
           <p style={{ fontSize: cssVars.fontSizes.lg, marginBottom: cssVars.spacing.sm }}>
-            🏆 Tabellen ausgeblendet
+            {t('standings.hidden')}
           </p>
           <p style={{ fontSize: cssVars.fontSizes.sm }}>
-            (Bambini-Modus aktiviert)
+            {t('standings.bambini')}
           </p>
         </div>
       </Card>
