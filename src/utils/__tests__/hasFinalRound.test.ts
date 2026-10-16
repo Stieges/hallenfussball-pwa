@@ -12,7 +12,11 @@ describe('@ET-042 hasFinalRound', () => {
     expect(hasFinalRound({ matches: [group, final], finalsConfig: { preset: 'none' } })).toBe(true);
   });
   it('@ET-042 Konfiguration sieht eine Finalrunde vor (Spielplan noch ohne Finalspiele) → ja', () => {
-    expect(hasFinalRound({ matches: [group], finalsConfig: { preset: 'top-4' } })).toBe(true);
+    expect(hasFinalRound({ matches: [group], groupSystem: 'groupsAndFinals', finalsConfig: { preset: 'top-4' } })).toBe(true);
+  });
+  it('@ET-042 Gegenbeispiel (F1-W2): Jeder gegen jeden mit stehengebliebenem Preset top-4 → nein', () => {
+    expect(hasFinalRound({ matches: [group], groupSystem: 'roundRobin', finalsConfig: { preset: 'top-4' } })).toBe(false);
+    expect(hasFinalRound({ matches: [group], finalsConfig: { preset: 'top-4' } })).toBe(false);
   });
   it('@ET-042 Gegenbeispiel: nur Gruppe, Preset none bzw. ohne Konfiguration → nein', () => {
     expect(hasFinalRound({ matches: [group], finalsConfig: { preset: 'none' } })).toBe(false);

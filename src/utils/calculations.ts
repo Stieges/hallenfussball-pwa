@@ -387,6 +387,20 @@ export const calculateFinalsPlacement = (
 };
 
 /**
+ * F1-W1 (Review A-36b F1, Record Endstand Z. 62): in der Gruppe Ausgeschiedene zuerst nach Gruppenplatz (alle Dritten vor
+ * allen Vierten), bei gleichem Platz in der Reihenfolge der Gesamtwertung `standings` (stabile Sortierung). Ohne Gruppen
+ * (Jeder gegen jeden) bleibt die Ligatabelle.
+ */
+const byGroupPlace = (teams: Team[], matches: Match[], standings: Standing[], tournament: Tournament): Standing[] => {
+  const place = new Map<string, number>();
+  for (const group of new Set(teams.map(t => t.group).filter((g): g is string => g !== undefined && g !== ''))) {
+    calculateStandings(teams.filter(t => t.group === group), matches, tournament, group)
+      .forEach((standing, index) => place.set(standing.team.id, index + 1));
+  }
+  return [...standings].sort((a, b) => (place.get(a.team.id) ?? 0) - (place.get(b.team.id) ?? 0));
+};
+
+/**
  * Merge finals placements with group standings for complete ranking
  *
  * Returns a unified ranking where:
@@ -397,7 +411,7 @@ export const getMergedFinalRanking = (
   teams: Team[],
   matches: Match[],
   groupStandings: Standing[],
-  _tournament: Tournament
+  tournament: Tournament
 ): { ranking: FinalPlacement[]; finalsResult: FinalsPlacementResult } => {
   const finalsResult = calculateFinalsPlacement(teams, matches, groupStandings);
   const ranking: FinalPlacement[] = [...finalsResult.placements];
@@ -412,7 +426,7 @@ export const getMergedFinalRanking = (
   // keine Lücken, später Ausgeschiedene stehen vorn (Record Endstand Z. 61).
   const taken = new Set(ranking.flatMap(p => Array.from({ length: (p.rankTo ?? p.rank) - p.rank + 1 }, (_, i) => p.rank + i)));
   let nextRank = 1;
-  for (const standing of groupStandings) {
+  for (const standing of byGroupPlace(teams, matches, groupStandings, tournament)) {
     if (!placedTeamIds.has(standing.team.id)) {
       while (taken.has(nextRank)) { nextRank++; }
       ranking.push({ rank: nextRank, team: standing.team, decidedBy: 'groupStage' });

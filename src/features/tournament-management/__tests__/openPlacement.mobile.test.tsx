@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { RankingTab } from '../RankingTab';
 import { TabellenTab } from '../TabellenTab';
 import { MOCK_TOURNAMENT } from '../../../test-data/mockTournament';
+import { cssVars } from '../../../design-tokens';
 import {
   openLabel, rankingTitle, rankOfTeam, realI18nWrapper, scheduleAndStandings, tournamentGroupOnly, tournamentWithFinal,
 } from './openPlacementTestHelpers';
@@ -56,6 +57,20 @@ describe('@ET-042 Mobil: offenes Finale mit Kennzeichen', () => {
     }
     expect(rankOfTeam(MOCK_TOURNAMENT.teams[0].name)).toBe('1');
     expect(rankOfTeam(MOCK_TOURNAMENT.teams[4].name)).toBe('2');
+  });
+
+  it.each(['RankingTab', 'TabellenTab'] as const)('@ET-042 F1-W3a mobil %s: Kennzeichen „– offen“ in fontSizes.xs (≥ 11 px)', async (tab) => {
+    const tournament = tournamentWithFinal('running');
+    const { schedule, standings } = scheduleAndStandings(tournament);
+    const Wrapper = await realI18nWrapper('de');
+    const props = { tournament, schedule, currentStandings: standings };
+    render(<Wrapper>{tab === 'RankingTab' ? <RankingTab {...props} /> : <TabellenTab {...props} />}</Wrapper>);
+    if (tab === 'TabellenTab') {
+      await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
+    }
+    for (const badge of screen.getAllByText(openLabel('de', 'final'))) {
+      expect(badge.style.fontSize).toBe(cssVars.fontSizes.xs);
+    }
   });
 
   it('@ET-042 Gegenbeispiel mobil: ohne Finalrunde nichts „offen“, keine „1–2“', async () => {

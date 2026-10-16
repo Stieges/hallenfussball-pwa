@@ -169,3 +169,51 @@ describe('@ET-042 Rangliste ohne Lücken bei Platzierungsspielen 5/7 (Nachreview
     expect(ranking).toHaveLength(teams.length);
   });
 });
+
+describe('@ET-042 F1-W1: Gruppen-Ausgeschiedene nach Gruppenplatz, Standings wie in der App (ohne Gruppe)', () => {
+  // Gruppe A: alles Remis (je 3 Pkt), Reihenfolge über die Tore; Gruppe B: b1 9, b2 4, b3 2, b4 1 → A4 (3) > B3 (2).
+  const ids = [61, 62, 63, 64, 65, 66, 67, 68].map(testUuid);
+  const [a1, a2, a3, a4, b1, b2, b3, b4] = ids;
+  const teams: Team[] = ids.map((id, i) => ({ id, name: `T${i + 1}`, group: i < 4 ? 'A' : 'B' }));
+  let n = 0;
+  const g = (group: string, x: string, y: string, sa: number, sb: number): Match => ({
+    id: `g${++n}`, round: n, field: 1, ...vs(x, y), group, matchStatus: 'finished', scoreA: sa, scoreB: sb,
+  });
+  const groupMatches = [
+    g('A', a1, a2, 3, 3), g('A', a1, a3, 3, 3), g('A', a1, a4, 2, 2), g('A', a2, a3, 2, 2), g('A', a2, a4, 2, 2), g('A', a3, a4, 1, 1),
+    g('B', b1, b2, 1, 0), g('B', b1, b3, 1, 0), g('B', b1, b4, 1, 0), g('B', b2, b3, 0, 0), g('B', b2, b4, 1, 0), g('B', b3, b4, 0, 0),
+  ];
+  const finals: Match[] = [
+    { id: 'f', round: 20, field: 1, ...vs(a1, b1), isFinal: true, finalType: 'final', matchStatus: 'finished', scoreA: 0, scoreB: 1, decidedBy: 'regular' },
+    { id: 'p3', round: 19, field: 1, ...vs(b2, a2), isFinal: true, finalType: 'thirdPlace', matchStatus: 'finished', scoreA: 1, scoreB: 0, decidedBy: 'regular' },
+  ];
+  const appStandings = (matches: Match[]) => {
+    const tournament = createMockTournament({ teams, matches, groupSystem: 'groupsAndFinals' });
+    return { tournament, standings: calculateStandings(teams, matches, tournament) };
+  };
+
+  it('@ET-042 Finale entschieden: Plätze 5–8 = A3, B3, A4, B4 (A4 hat mehr Punkte als B3, steht trotzdem dahinter)', () => {
+    const matches = [...groupMatches, ...finals];
+    const { tournament, standings } = appStandings(matches);
+    expect(standings.findIndex((s) => s.team.id === a4)).toBeLessThan(standings.findIndex((s) => s.team.id === b3)); // Ausgangslage
+    const { ranking } = getMergedFinalRanking(teams, matches, standings, tournament);
+    expect(ranking.map((p) => [p.rank, p.team.id])).toEqual([
+      [1, b1], [2, a1], [3, b2], [4, a2], [5, a3], [6, b3], [7, a4], [8, b4],
+    ]);
+  });
+
+  it('@ET-042 auch während der Gruppenphase: Erste, Zweite, Dritte, Vierte – A4 hinter B3', () => {
+    const { tournament, standings } = appStandings(groupMatches);
+    const { ranking } = getMergedFinalRanking(teams, groupMatches, standings, tournament);
+    expect(ranking.map((p) => p.team.id)).toEqual([b1, a1, b2, a2, a3, b3, a4, b4]);
+  });
+
+  it('Gegenbeispiel Liga (ohne Gruppen): Reihenfolge der Ligatabelle bleibt', () => {
+    const liga = teams.map((t) => ({ ...t, group: undefined }));
+    const matches = groupMatches.map((m) => ({ ...m, group: undefined }));
+    const tournament = createMockTournament({ teams: liga, matches, groupSystem: 'roundRobin' });
+    const standings = calculateStandings(liga, matches, tournament);
+    const { ranking } = getMergedFinalRanking(liga, matches, standings, tournament);
+    expect(ranking.map((p) => p.team.id)).toEqual(standings.map((s) => s.team.id));
+  });
+});

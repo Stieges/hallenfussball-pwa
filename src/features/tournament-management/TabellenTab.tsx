@@ -14,7 +14,7 @@
 
 import React, { CSSProperties, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, fontSizesMd3 } from '../../design-tokens'
+import { cssVars } from '../../design-tokens'
 import { Card } from '../../components/ui';
 import { GroupTables } from '../../components/schedule';
 import { HighlightedCell } from './components';
@@ -398,7 +398,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
             <span style={{ fontSize: isMobile ? '16px' : '20px' }}>{playoffStatusInfo.icon}</span>
             <span style={{
               fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
-              color: playoffStatusInfo.color,
+              color: cssVars.colors.textPrimary, // F1-W3b: Kontrast ≥ 4,5:1, Farbe nur an Symbol und Rand
               fontWeight: cssVars.fontWeights.semibold,
             }}>
               {playoffStatusInfo.text}
@@ -551,7 +551,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                         {placement.team.name}
                         {placement.decidedBy !== 'groupStage' ? (
                           <div style={{
-                            fontSize: fontSizesMd3.statLabel,
+                            fontSize: cssVars.fontSizes.xs, // F1-W3a: ≥ 11 px (grenzwerte schrift.min)
                             color: cssVars.colors.primary,
                             marginTop: '2px',
                             display: 'flex',

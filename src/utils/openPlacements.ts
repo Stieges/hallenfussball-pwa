@@ -94,7 +94,9 @@ export function placementBadgeText(
  * Finalrunden-Spiele oder die Finals-Konfiguration sieht eine vor. Ersetzt das nie gesetzte `finals.enabled`
  * (Befund C-FINALS-ENABLED-FEHLT / C-RANGLISTE-OHNE-FINALRUNDE).
  */
-export function hasFinalRound(tournament: Pick<Tournament, 'matches' | 'finalsConfig'>): boolean {
+export function hasFinalRound(tournament: Pick<Tournament, 'matches' | 'finalsConfig' | 'groupSystem'>): boolean {
+  // F1-W2: dieselbe Regel wie der Generator – ein Preset zählt nur bei „Gruppen + Finalrunde“ (ein vom Wizard
+  // stehengebliebenes Preset bei Jeder gegen jeden erzeugt keine Finalspiele).
   return tournament.matches.some((match) => match.isFinal === true)
-    || (tournament.finalsConfig?.preset ?? 'none') !== 'none';
+    || (tournament.groupSystem === 'groupsAndFinals' && (tournament.finalsConfig?.preset ?? 'none') !== 'none');
 }

@@ -50,12 +50,19 @@ export function rankOfTeam(teamName: string): string | null {
   return row === undefined ? null : within(row).getAllByRole('cell')[0].textContent;
 }
 
+/** Standings wie in der App: eine Tabelle über alle Teams OHNE Gruppe (`useTournamentManager` → `calculateStandings`). */
 export function scheduleAndStandings(tournament: Tournament): { schedule: GeneratedSchedule; standings: Standing[] } {
-  const groups = Array.from(new Set(tournament.teams.map((t) => t.group).filter(Boolean))) as string[];
-  const standings = groups.flatMap((group) =>
-    calculateStandings(tournament.teams.filter((t) => t.group === group), tournament.matches, tournament, group),
-  );
+  const standings = calculateStandings(tournament.teams, tournament.matches, tournament);
   return { schedule: generateFullSchedule(tournament), standings };
+}
+
+/** Erwartete Gruppenplätze (je Gruppe gerechnet) – für die Prüfung „alle Dritten vor allen Vierten“ (F1-W1). */
+export function teamsAtGroupPlace(tournament: Tournament, place: number): string[] {
+  const groups = Array.from(new Set(tournament.teams.map((t) => t.group).filter(Boolean))) as string[];
+  return groups.flatMap((group) => {
+    const standings = calculateStandings(tournament.teams.filter((t) => t.group === group), tournament.matches, tournament, group);
+    return standings[place - 1] === undefined ? [] : [standings[place - 1].team.name];
+  });
 }
 
 export async function realI18nWrapper(lng: 'de' | 'en'): Promise<({ children }: { children: ReactNode }) => ReactNode> {
