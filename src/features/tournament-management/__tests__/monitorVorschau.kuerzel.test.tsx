@@ -73,8 +73,10 @@ describe('@ZM-087 Verwaltungs-Reiter „Monitor“: Vorschau-Banner (NextMatchPr
   });
 });
 
-describe('W3 Größe lg (Verwaltungs-Reiter) – 50-Zeichen-Name bleibt vollständig, ohne „…“', () => {
-  it('TeamNameDisplay size="lg" zeigt den Namen vollständig', () => {
+// Prüft nur den Text (vollständig, ohne „…“). Ob die Namenszeile in Größe lg überläuft, misst jsdom nicht; das ist
+// Befund C-MONITOR-NAMENSZEILE-LG (BEFUNDE-HEUTIGER-CODE.md), nicht Teil dieses Tests.
+describe('W3 Größe lg (Verwaltungs-Reiter) – 50-Zeichen-Name als Text vollständig, ohne „…“', () => {
+  it('TeamNameDisplay size="lg": der Text ist vollständig (kein Überlauf geprüft, siehe Befund C-MONITOR-NAMENSZEILE-LG)', () => {
     expect(LANG_50).toHaveLength(50);
     render(<TeamNameDisplay name={LANG_50} size="lg" />);
     const el = screen.getByText(LANG_50);

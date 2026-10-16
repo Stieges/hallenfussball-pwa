@@ -28,7 +28,11 @@ describe('monitorTeamName', () => {
     ['@ZM-149 Schreibweise Fußball-Club (wie Fußballclub)', 'Fußball-Club Nord', 'FC Nord'],
     ['@ZM-149 Zusatz „e. V.“ entfällt', 'Sportgemeinschaft Nordheim e. V.', 'SG Nordheim'],
     ['@ZM-149 Zusatz „e.V.“ entfällt', 'Sportverein Ost e.V.', 'SV Ost'],
-    ['@ZM-149 „Turn und Sportverein“ ist kein Listenwort: nur „Sportverein“ wird SV', 'Turn und Sportverein Ost', 'Turn und SV Ost'],
+    ['@ZM-149 „Turn und Sportverein“ ohne Bindestrich wie „Turn- und Sportverein“', 'Turn und Sportverein Ost', 'TSV Ost'],
+    ['@ZM-149 Bindestrich an Wortfuge: Sport-Verein', 'Sport-Verein Nord', 'SV Nord'],
+    ['@ZM-149 Bindestrich an Wortfuge: Turn-Verein', 'Turn-Verein Nord', 'TV Nord'],
+    ['@ZM-149 Bindestrich an Wortfuge: Sport-Gemeinschaft', 'Sport-Gemeinschaft Ost', 'SG Ost'],
+    ['@ZM-149 Bindestrich an Wortfuge: Fußball-Freunde', 'Fußball-Freunde Ost', 'FF Ost'],
     ['@ZM-149 Zusatz „e. V.“ mitten im Namen entfällt','Sportverein Ost e. V. Abteilung Hallenfußball', 'SV Ost Abteilung Hallenfußball'],
   ])('%s', (_titel, voll, erwartet) => {
     expect(monitorTeamName(voll)).toBe(erwartet);
@@ -47,6 +51,8 @@ describe('monitorTeamName', () => {
     ['@ZM-149 schon gekürzt', 'FC Nord'],
     ['@ZM-149 andere Schreibweise bleibt (Groß/klein wie Liste)', 'sportverein Nord'],
     ['@ZM-149 Bindestrich-Wort bleibt', 'Sportverein-Nord'],
+    ['@ZM-149 Bindestrich-Ortsname bleibt (Nordheim-Süd)', 'Nordheim-Süd 1921'],
+    ['@ZM-149 Bindestrich-Schreibweise mit kleinem Anfangsbuchstaben bleibt (wie Liste)', 'sport-verein Nord'],
     ['@ZM-087 kein Kürzel aus Anfangsbuchstaben', 'Größenwahn Übungsteam Füßen Ösen'],
   ])('%s: unverändert', (_titel, voll) => {
     expect(monitorTeamName(voll)).toBe(voll);
