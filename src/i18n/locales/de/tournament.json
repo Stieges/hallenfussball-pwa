@@ -117,21 +117,82 @@
       "confirmSwitch": "Trotzdem wechseln"
     }
   },
+  "scheduleActions": {
+    "share": "Teilen"
+  },
   "pdfExport": {
-    "title": "Als PDF exportieren",
-    "error": "Fehler beim Exportieren des PDFs. Bitte versuchen Sie es erneut.",
-    "cancel": "Abbrechen",
-    "export": "Exportieren",
-    "exporting": "Wird exportiert...",
-    "options": {
-      "scoresLabel": "Spielstände",
-      "withScores": "Mit Spielstand",
-      "withScoresDesc": "Zeigt aktuelle Ergebnisse im PDF",
-      "withoutScores": "Ohne Spielstand",
-      "withoutScoresDesc": "Leere Felder zum manuellen Ausfüllen",
-      "includeStandings": "Tabellen einschließen",
-      "includeStandingsDesc": "Zeigt Gruppen-Tabellen im PDF"
+    "title": "Als PDF",
+    "titleViewer": "Spielplan als PDF",
+    "open": "Als PDF",
+    "groups": {
+      "print": "Was soll gedruckt werden?",
+      "hang": "Zum Aufhängen"
     },
+    "cards": {
+      "schedule": {
+        "title": "Spielplan",
+        "description": "Alle Spiele mit Zeit, Feld und Teams."
+      },
+      "blank": {
+        "title": "Spielplan zum Ausfüllen",
+        "description": "Mit leeren Ergebnisfeldern zum Eintragen von Hand."
+      },
+      "final": {
+        "title": "Endstand",
+        "description": "Alle Plätze und die Ergebnisse, nach dem Abschluss des Turniers.",
+        "reason": "Erst nach Abschluss des Turniers"
+      },
+      "notice": {
+        "title": "Aushang mit QR-Code",
+        "description": "Turniername, QR-Code und kurze Anleitung zum Aufhängen.",
+        "reason": "Erst nach dem Online-Teilen"
+      }
+    },
+    "viewer": {
+      "description": "Alle Spiele mit Zeit, Feld und Teams als PDF zum Speichern oder Drucken."
+    },
+    "format": "Format: A4 hoch",
+    "hints": {
+      "title": "Vor dem Speichern",
+      "notShared": "Der QR-Code erscheint, sobald das Turnier online geteilt ist.",
+      "changeVisibility": "Sichtbarkeit ändern",
+      "viewerHidden": "Ergebnisse und Tabellen sind ausgeblendet – das PDF zeigt sie nicht.",
+      "notice": "Der Aushang zeigt nur den QR-Code zur Zuschauer-Seite, keine Ergebnisse und Tabellen.",
+      "visibility": {
+        "tables": "Tabellen sind für Zuschauer ausgeblendet – das PDF zeigt sie nicht.",
+        "results": "Ergebnisse sind für Zuschauer ausgeblendet – das PDF zeigt sie nicht.",
+        "resultsAndTables": "Ergebnisse und Tabellen sind für Zuschauer ausgeblendet – das PDF zeigt sie nicht."
+      },
+      "fontTitle": "Sonderzeichen können als ? erscheinen",
+      "fontBody": "Die Schrift konnte nicht geladen werden. Das PDF wird mit einer Ersatzschrift erstellt, alle Inhalte sind enthalten.",
+      "names_one": "Ein Teamname enthält Zeichen, die als „?“ gedruckt werden:",
+      "names_other": "{{count}} Teamnamen enthalten Zeichen, die als „?“ gedruckt werden:",
+      "fields_one": "Eine Angabe enthält Zeichen, die als „?“ gedruckt werden:",
+      "fields_other": "{{count}} Angaben enthalten Zeichen, die als „?“ gedruckt werden:",
+      "teamName": "Teamname",
+      "printedAs": "wird gedruckt als",
+      "proceed": "Das PDF wird trotzdem erzeugt.",
+      "changeNames": "Die Namen kann die Turnierleitung im Turnier ändern.",
+      "changeFields": "Die Angaben kann die Turnierleitung im Turnier ändern.",
+      "logoLeft": "Die linke Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF",
+      "logoRight": "Die rechte Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF"
+    },
+    "offline": {
+      "title": "Ohne Verbindung – Stand {{date}} {{time}}",
+      "body": "Das PDF entsteht trotzdem aus dem Stand auf diesem Gerät."
+    },
+    "error": {
+      "title": "PDF konnte nicht erstellt werden",
+      "body": "Es wurde keine Datei gespeichert. Bitte versuche es erneut."
+    },
+    "done": {
+      "title": "PDF gespeichert"
+    },
+    "cancel": "Abbrechen",
+    "save": "Als PDF speichern",
+    "creating": "Wird erstellt …",
+    "saveAnyway": "Trotzdem speichern",
+    "retry": "Erneut versuchen",
     "close": "Schließen"
   },
   "teams": {

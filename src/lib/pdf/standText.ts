@@ -7,8 +7,8 @@ import type { PdfTranslator } from './translations';
 
 const zwei = (n: number): string => String(n).padStart(2, '0');
 
-/** Datum „TT.MM.“ und Uhrzeit „HH:mm“ in der Ortszeit. */
-function stempel(zeit: Date): { date: string; time: string } {
+/** Datum „TT.MM.“ und Uhrzeit „HH:mm“ in der Ortszeit (auch für den Hinweis „Ohne Verbindung – Stand …“ im Dialog, G69). */
+export function stempel(zeit: Date): { date: string; time: string } {
   return {
     date: `${zwei(zeit.getDate())}.${zwei(zeit.getMonth() + 1)}.`,
     time: `${zwei(zeit.getHours())}:${zwei(zeit.getMinutes())}`,
