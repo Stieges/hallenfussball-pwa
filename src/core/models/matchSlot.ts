@@ -107,7 +107,8 @@ function mapId(map: ReadonlyMap<string, string>, id: string, what: string): stri
   return mapped;
 }
 
-function copySource(source: SlotSource, matchIdMap: ReadonlyMap<string, string>): SlotSource {
+/** Herkunft für eine Turnier-Kopie: Verweise auf Vorgängerspiele zeigen auf die neuen Spiel-IDs. */
+export function copySource(source: SlotSource, matchIdMap: ReadonlyMap<string, string>): SlotSource {
   return source.kind === 'matchResult'
     ? { ...source, matchId: mapId(matchIdMap, source.matchId, 'Spiel-ID') }
     : source;

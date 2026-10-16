@@ -154,4 +154,21 @@ describe('A-36a Herkunft des Platzes bis in die Cloud (Insert-Zeilen)', () => {
       expect(Object.keys(update).filter((k) => k.startsWith('origin_'))).toEqual([]);
     }
   });
+
+  it('Gegenbeispiel: updateMatches sendet keine origin_*-Spalte, auch wenn das Update originA trägt', async () => {
+    const tournament = await new TournamentCreationService(fakeRepository()).publish({ ...hallencup });
+    const final = tournament.matches.find((m) => m.finalType === 'final');
+    if (!final?.originA) {
+      throw new Error('Finale mit Herkunft fehlt');
+    }
+
+    await new SupabaseRepository().updateMatches(tournament.id, [
+      { id: final.id, slotA: { kind: 'team', teamId: teams()[0].id } as Match['slotA'], originA: final.originA, originB: final.originB },
+    ]);
+
+    expect(hoisted.matchesUpdate).toHaveBeenCalledTimes(1);
+    const [update] = hoisted.matchesUpdate.mock.calls[0];
+    expect(update.team_a_id).toBe(teams()[0].id);
+    expect(Object.keys(update).filter((k) => k.startsWith('origin_'))).toEqual([]);
+  });
 });

@@ -29,7 +29,7 @@ import type { MatchUpdate as DomainMatchUpdate } from '../models/types';
 import { RepositoryError } from '../errors';
 import { SlotSourceSchema, TeamIdSchema, type MatchSlot, type SlotSource } from '../models/schemas/MatchSlotSchema';
 import { pendingSlot, slotSource, slotTeamId, teamSlot, transitionalSides } from '../models/matchSlot';
-import { originToColumns, type MatchOriginColumns } from './matchOriginColumns';
+import { originFromRow, originToColumns, type MatchOriginColumns } from './matchOriginColumns';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -154,10 +154,8 @@ function slotFromRow(matchId: string, side: Side, teamId: string | null, source:
 /**
  * Maps a Supabase match row to frontend Match type.
  *
- * A-02: `slotA/slotB` aus Team-ID bzw. Herkunft (siehe `slotFromRow`). Das Übergangsfeld
- * `teamA/teamB` (Übergangsfeld, Löschen in B-35) trägt die Team-ID – wie ein lokal erzeugtes Spiel –, NICHT
- * mehr den Namen: die Engine (`hooks/engineMatchModel.ts`) erwartet dort eine ID; mit Namen fiele jedes
- * Cloud-Spiel still aus `buildValidMatches`. Offene Seite → `'TBD'` (Anzeige folgt in A-03 über Slots).
+ * A-02: `slotA/slotB` aus Team-ID bzw. Herkunft (siehe `slotFromRow`); A-36a: `originA/originB` aus
+ * `origin_a/origin_b` (Herkunft des Platzes, `originFromRow`).
  */
 export function mapMatchFromSupabase(row: MatchRow): Match {
   const slotA = slotFromRow(row.id, 'A', row.team_a_id, row.slot_a_source);
@@ -170,6 +168,7 @@ export function mapMatchFromSupabase(row: MatchRow): Match {
     slot: row.slot ?? undefined,
     slotA,
     slotB,
+    ...originFromRow(row), // A-36a: Herkunft des Platzes
     ...transitionalSides(slotA, slotB),
     scoreA: row.score_a ?? undefined,
     scoreB: row.score_b ?? undefined,

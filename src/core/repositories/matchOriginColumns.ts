@@ -6,7 +6,9 @@
  * `mapMatchUpdateToSupabase`) senden die Spalten nie.
  */
 import type { Json } from '../../types/supabase';
-import type { MatchOrigins } from '../models/matchOrigin';
+import { matchOrigins, type MatchOrigins } from '../models/matchOrigin';
+import { SlotSourceSchema, type SlotSource } from '../models/schemas/MatchSlotSchema';
+import { captureFeatureError } from '../../lib/sentry';
 
 /**
  * Von Hand ergänzt: `src/types/supabase.ts` wird erst nach dem Einspielen der Migration neu erzeugt
@@ -23,4 +25,27 @@ export function originToColumns(match: MatchOrigins): MatchOriginColumns {
     ...(match.originA !== undefined && { origin_a: match.originA }),
     ...(match.originB !== undefined && { origin_b: match.originB }),
   };
+}
+
+/**
+ * Lesen aus der Cloud-Zeile. Fehlerpolitik (Brief A-36a Schritt 3): ungültige Form → Herkunft fehlt,
+ * Meldung über `captureFeatureError` (Bereich sync); das Spiel bleibt stehen, kein Ablehnen des Turniers.
+ */
+export function originFromRow(row: { id: string } & MatchOriginColumns): MatchOrigins {
+  return matchOrigins({ originA: parseOrigin(row.id, 'A', row.origin_a), originB: parseOrigin(row.id, 'B', row.origin_b) });
+}
+
+function parseOrigin(matchId: string, side: 'A' | 'B', raw: Json | null | undefined): SlotSource | undefined {
+  if (raw === null || raw === undefined) {
+    return undefined;
+  }
+  const parsed = SlotSourceSchema.safeParse(raw);
+  if (parsed.success) {
+    return parsed.data;
+  }
+  captureFeatureError(new Error(`Spiel ${matchId}, Seite ${side}: Herkunft des Platzes ungültig`), 'sync', 'mapMatchOrigin', {
+    matchId,
+    side,
+  });
+  return undefined;
 }
