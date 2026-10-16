@@ -120,7 +120,7 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
     await result.current.handleStart(ENGINE_MATCH_ID);
     await result.current.handleFinish(ENGINE_MATCH_ID);
 
-    await expect(result.current.handleFinish(ENGINE_MATCH_ID)).resolves.toBeUndefined();
+    await expect(result.current.handleFinish(ENGINE_MATCH_ID)).resolves.toBeNull(); // B-07 (R4): noop -> null
 
     const copy = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
     expect(copy!.pending.filter((e) => e.type === 'MATCH_END')).toHaveLength(1);
@@ -329,5 +329,66 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
     expect(mockCaptureFeatureError).not.toHaveBeenCalled();
     const copy = await engineContext.store.load(engineContext.accountId, RACE_MATCH_ID);
     expect(copy?.pending.some((e) => e.type === 'MATCH_START')).not.toBe(true);
+  });
+  // ---------------------------------------------------------------------------
+  // B-07 / L2 (@SL-022) + S4/R4: `own` wird durchgereicht, `handleGoal` liefert die Ereignis-ID;
+  // L1 (@SL-084): `clockMs` erreicht MatchCommands (Tor, Karte, Zeitstrafe).
+  // ---------------------------------------------------------------------------
+
+  it('@SL-022 handleGoal mit own: true schreibt OWN_GOAL des schiessenden Teams und liefert dessen ID', async () => {
+    const engineContext = await makeEngineContext();
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
+    await result.current.handleStart(ENGINE_MATCH_ID);
+
+    const id = await result.current.handleGoal(ENGINE_MATCH_ID, 'TEAMB', 1, { own: true, playerNumber: 4 });
+
+    const copy = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
+    const ownGoal = copy!.pending.find((e) => e.type === 'OWN_GOAL')!;
+    expect(ownGoal.teamId).toBe('teamb');
+    expect(ownGoal.payload).toEqual({ playerNumber: 4 });
+    expect(id).toBe(ownGoal.id);
+    expect(copy!.pending.some((e) => e.type === 'GOAL')).toBe(false);
+  });
+
+  it('Gegenbeispiel: handleGoal ohne own schreibt GOAL (kein Eigentor) und liefert dessen ID', async () => {
+    const engineContext = await makeEngineContext();
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
+    await result.current.handleStart(ENGINE_MATCH_ID);
+
+    const id = await result.current.handleGoal(ENGINE_MATCH_ID, 'teama', 1, { own: false });
+
+    const copy = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
+    const goal = copy!.pending.find((e) => e.type === 'GOAL')!;
+    expect(id).toBe(goal.id);
+    expect(copy!.pending.some((e) => e.type === 'OWN_GOAL')).toBe(false);
+  });
+
+  it('handleGoal liefert null bei Ablehnung (Minus, kein Engine-Spiel, lokale Vorpruefung)', async () => {
+    const engineContext = await makeEngineContext();
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
+
+    expect(await result.current.handleGoal(ENGINE_MATCH_ID, 'teama', -1)).toBeNull();
+    expect(await result.current.handleGoal(OLD_MATCH_ID, 'teama', 1)).toBeNull();
+    expect(await result.current.handleGoal(ENGINE_MATCH_ID, 'teama', 1)).toBeNull(); // vor Anpfiff
+  });
+
+  // Fixrunde F2: eine Spielzeit nach jetzt wird geklemmt; abgelehnt wird nur ein ungueltiger Wert (-1)
+  // bzw. ein Abschnitt nach dem aktuellen (F5) -- beides beweist, dass die Werte MatchCommands erreichen.
+  it.each([
+    { name: 'Tor', send: (h: ReturnType<typeof useEngineCommandWiring>) => h.handleGoal(ENGINE_MATCH_ID, 'teama', 1, { clockMs: -1 }) },
+    { name: 'Karte', send: (h: ReturnType<typeof useEngineCommandWiring>) => h.handleCard(ENGINE_MATCH_ID, 'teama', 'YELLOW', { clockMs: -1 }) },
+    { name: 'Zeitstrafe', send: (h: ReturnType<typeof useEngineCommandWiring>) => h.handleTimePenalty(ENGINE_MATCH_ID, 'teama', { clockMs: -1 }) },
+    { name: 'Karte (Abschnitt)', send: (h: ReturnType<typeof useEngineCommandWiring>) => h.handleCard(ENGINE_MATCH_ID, 'teama', 'YELLOW', { clockMs: 0, section: 2 }) },
+    { name: 'Zeitstrafe (Abschnitt)', send: (h: ReturnType<typeof useEngineCommandWiring>) => h.handleTimePenalty(ENGINE_MATCH_ID, 'teama', { clockMs: 0, section: 2 }) },
+  ])('@SL-084 $name: clockMs/section erreichen MatchCommands (ungueltig -> abgelehnt, kein Eintrag)', async ({ send }) => {
+    const engineContext = await makeEngineContext();
+    const { result } = renderHook(() => useEngineCommandWiring(tournament(), engineContext, engineLiveMatches));
+    await result.current.handleStart(ENGINE_MATCH_ID);
+
+    await send(result.current);
+
+    expect(mockShowWarning).toHaveBeenCalledWith('cockpit:engine.invalid');
+    const copy = await engineContext.store.load(engineContext.accountId, ENGINE_MATCH_ID);
+    expect(copy!.pending.map((e) => e.type)).toEqual(['MATCH_START']);
   });
 });

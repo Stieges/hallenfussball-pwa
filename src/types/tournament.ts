@@ -735,6 +735,9 @@ export interface RuntimeMatchEvent {
     playerNumber?: number;
     /** Rückennummern der Vorlagengeber (max 2) */
     assists?: number[];
+    /** L2 (@SL-022): Eigentor -- `teamId` ist das begünstigte Team, `ownGoalTeamId` das schießende */
+    ownGoal?: boolean;
+    ownGoalTeamId?: string;
     /** Dauer der Zeitstrafe in Sekunden (default: 120) */
     penaltyDuration?: number;
     /** Rückennummern der ausgewechselten Spieler */

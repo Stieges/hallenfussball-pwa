@@ -486,7 +486,7 @@ export const calculateScorers = (tournament: Tournament, engineEventsById?: Engi
 
   tournament.matches.forEach(match => {
       eventsForMatch(match, engineEventsById).forEach(event => {
-        if (event.type === 'GOAL') {
+        if (event.type === 'GOAL' && event.payload.ownGoal !== true) { // B-07 F1 (@SL-022): Eigentor ohne Schützen
           const teamId = event.payload.teamId;
           const playerNum = event.payload.playerNumber;
 
