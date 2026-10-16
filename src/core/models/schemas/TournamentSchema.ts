@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TeamTrainerSchema, TournamentGroupSchema, TournamentFieldSchema, RuntimeMatchEventSchema } from './CommonSchemas';
-import { MatchSlotSchema } from './MatchSlotSchema';
+import { MatchSlotSchema, SlotSourceSchema } from './MatchSlotSchema';
 
 const TeamLogoSchema = z.object({
     type: z.enum(['url', 'base64', 'initials']),
@@ -36,6 +36,9 @@ export const MatchSchema = z.object({
     teamB: z.string(),
     slotA: MatchSlotSchema,
     slotB: MatchSlotSchema,
+    // A-36a: Herkunft des Platzes (unveränderlich), nur Finalrunde.
+    originA: SlotSourceSchema.optional(),
+    originB: SlotSourceSchema.optional(),
     scoreA: z.number().min(0).optional(),
     scoreB: z.number().min(0).optional(),
     group: z.string().optional(),

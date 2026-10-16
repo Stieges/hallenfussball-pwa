@@ -1,5 +1,5 @@
 import { SportId } from '../config/sports/types';
-import type { MatchSlot } from '../core/models/schemas/MatchSlotSchema';
+import type { MatchSlot, SlotSource } from '../core/models/schemas/MatchSlotSchema';
 
 // Core Tournament Types
 export type Sport = 'football' | 'other';
@@ -270,12 +270,7 @@ export interface Match {
   round: number;
   field: number;
   slot?: number; // Time slot index for fair scheduling
-  /**
-   * DEPRECATED, nur Übergang (Löschen in B-35): Team-ID bzw. `'TBD'` für noch nicht umgestellte Leser der
-   * Spur B (Monitor, Zuschauer, PDF). Gelesen wird `slotA`; geschrieben wird nur über `transitionalSides`
-   * (`core/models/matchSlot.ts`). (Kein `@deprecated`-Tag: `@typescript-eslint/no-deprecated` + `--max-warnings 0`
-   * würde jeden Spur-B-Leser als Lint-Fehler melden.)
-   */
+  /** DEPRECATED, nur Übergang (Löschen in A-36a): Team-ID bzw. `'TBD'`, geschrieben nur über `transitionalSides`. */
   teamA: string;
   /** DEPRECATED, siehe `teamA`. */
   teamB: string;
@@ -283,6 +278,10 @@ export interface Match {
   slotA: MatchSlot;
   /** Gastseite als Slot, siehe `slotA`. */
   slotB: MatchSlot;
+  /** A-36a: Herkunft des Heim-PLATZES, beim Anlegen gesetzt, danach unveränderlich (@DR-005, @SA-011); Gruppenspiel: fehlt. */
+  originA?: SlotSource;
+  /** A-36a: Herkunft des Gast-Platzes, siehe `originA`. */
+  originB?: SlotSource;
   scoreA?: number;
   scoreB?: number;
   group?: string;

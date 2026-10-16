@@ -252,15 +252,14 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
   const defIdToMatchId = new Map(planned.map((p) => [p.definition.id, p.id]));
 
   return planned.map(({ definition: def, id, slot, field, scheduledTime }): Match => {
-    const slotA = pendingSlot(toSlotSource(def.teamASource, defIdToMatchId));
-    const slotB = pendingSlot(toSlotSource(def.teamBSource, defIdToMatchId));
+    const [originA, originB] = [toSlotSource(def.teamASource, defIdToMatchId), toSlotSource(def.teamBSource, defIdToMatchId)];
+    const [slotA, slotB] = [pendingSlot(originA), pendingSlot(originB)]; // A-36a: Platz-Herkunft unveränderlich, Slot offen
     return {
       id,
       round: slot + 1,
       field,
       slot,
-      slotA,
-      slotB,
+      slotA, slotB, originA, originB,
       ...transitionalSides(slotA, slotB),
       isFinal: true,
       finalType: def.finalType,

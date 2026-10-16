@@ -3,7 +3,7 @@
  */
 
 import { RefereeConfig, LocationDetails, ContactInfo, Standing, TournamentGroup, TournamentField, RuntimeMatchEvent } from '../../types/tournament'
-import type { MatchSlot } from '../models/schemas/MatchSlotSchema'
+import type { MatchSlot, SlotSource } from '../models/schemas/MatchSlotSchema'
 
 // ============================================================================
 // SCHEDULED MATCH
@@ -33,6 +33,10 @@ export interface ScheduledMatch {
   slotA: MatchSlot
   /** Spielseite Gast als Slot (A-01), unverändert vom Spiel durchgereicht (A-02) */
   slotB: MatchSlot
+  /** A-36a: Herkunft des Heim-Platzes, unverändert vom Spiel durchgereicht (nur Finalrunde) */
+  originA?: SlotSource
+  /** A-36a: Herkunft des Gast-Platzes, siehe `originA` */
+  originB?: SlotSource
   /** Gruppe oder undefined für Finalspiele */
   group?: string
   /** Phase: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final' */
