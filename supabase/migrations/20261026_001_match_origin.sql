@@ -10,7 +10,7 @@
 -- Bestand: origin := slot_x_source (offen bzw. automatisch besetzt). Von Hand besetzte Altzeilen bleiben NULL;
 -- die Anzeige zeigt dort „noch offen“ statt einer geratenen Herkunft.
 -- Fehlercode HF002 (Liste: HF001 make_tournament_public, HF002 Herkunft unveraenderlich).
--- Voraussetzung: 20261003_001_match_slots.sql. Idempotent. NUR lokal/Container; Live nach Daniels Freigabe (F2).
+-- Voraussetzung: 20261003_001_match_slots.sql. Idempotent. NUR lokal/Container; Live nach Daniels Freigabe (F1).
 --
 -- RUECKBAU (Reihenfolge: ZUERST die App auf den Stand ohne origin_* zurueck, DANN die Datenbank – sonst scheitert
 -- jedes Insert/Upsert der neuen App an der fehlenden Spalte origin_a):
@@ -24,6 +24,10 @@
 --   Danach Drift-Check-Zahlen und db_privilege_assertions.sql auf den Stand davor.
 
 BEGIN;
+
+-- Fixrunde A-36a (Review Nr. 10, Muster 20261001_001): Sperren auf matches begrenzen. Innerhalb des
+-- bestehenden Transaktionsblocks, kein zusaetzliches BEGIN -- SET LOCAL gilt nur bis COMMIT.
+SET LOCAL lock_timeout = '5s';
 
 DO $$
 BEGIN
