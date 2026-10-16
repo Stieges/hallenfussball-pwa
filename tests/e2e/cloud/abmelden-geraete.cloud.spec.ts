@@ -52,13 +52,15 @@ import { E2E_STRANGER_CUP_ID, engineCupIds } from './testData';
 const SIGNED_OUT_ELSEWHERE_TEXT = 'Du wurdest von einem anderen Gerät aus abgemeldet';
 const GUEST_TOURNAMENT_TITLE = 'Probelauf';
 
-test.describe.configure({ mode: 'serial' });
+// Keine Wiederholung: Die Cups sind nach einem Lauf verbraucht (Seed-Stand). Eine Wiederholung scheitert
+// sicher an „Seed verbraucht“ und verdeckt nur den ersten, echten Fehler.
+test.describe.configure({ mode: 'serial', retries: 0 });
 
 test.describe('Abmelden und andere Geräte', () => {
   // Playwright verlangt syntaktisch ein Destrukturierungs-Muster als erstes Argument.
   // eslint-disable-next-line no-empty-pattern
   test.beforeEach(async ({}, testInfo) => {
-    test.skip(!testInfo.project.name.includes('desktop'), 'Abmelde-Cups nur auf cloud-desktop (ein Konto, serielle Fälle).');
+    test.skip(!testInfo.project.name.includes('desktop'), 'Abmelde-Cups nur auf cloud-desktop (je Fall ein Konto und ein Cup, serielle Fälle).');
   });
 
   test('@AN-023 Handy meldet ab, Tablet bleibt angemeldet und trägt weiter ein', async ({ browser }) => {
@@ -171,9 +173,8 @@ test.describe('Abmelden und andere Geräte', () => {
       await expect(laptop.page.locator('[data-testid="auth-avatar-button"]')).toHaveCount(0);
 
       // Keine Konto-Inhalte mehr: Turnierliste ohne die Abmelde-Cups, direkter Aufruf zeigt nichts davon.
-      for (const slug of ['ABMELDEN1', 'ABMELDEN2', 'ABMELDEN3'] as const) {
-        await expect(laptop.page.locator(`[data-testid="tournament-card-${engineCupIds(slug).tournamentId}"]`)).toHaveCount(0);
-      }
+      // Nur der Cup dieses Kontos (ABMELDEN2) war vorher sichtbar; die Cups anderer Konten waren es nie.
+      await expect(laptop.page.locator(`[data-testid="tournament-card-${ids.tournamentId}"]`)).toHaveCount(0);
       await laptop.page.goto(`/#/tournament/${ids.tournamentId}`);
       // Erst auf den Endzustand warten (das Laden aus dem lokalen Speicher erzeugt keinen Netzverkehr,
       // `networkidle` reicht nicht): „Lade Turnier…“ weg und „Turnier nicht gefunden“ da.
@@ -218,11 +219,13 @@ test.describe('Abmelden und andere Geräte', () => {
       await expectEngineMatchRunningUi(page);
       await expectOutboxSettled(page);
 
-      // Offline ein Tor eintragen (wartet), offline abmelden.
+      // Offline drei Tore eintragen (3 Einträge warten, @FU-006), offline abmelden: Warnung „3 Einträge noch nicht übertragen“.
       await context.setOffline(true);
-      await enterGoal(page, 'home');
-      await expect(page.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '1', { timeout: 5000 });
-      await logoutViaUiConfirmingWarning(page, 1);
+      for (let i = 0; i < 3; i++) {
+        await enterGoal(page, 'home');
+      }
+      await expect(page.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '3', { timeout: 5000 });
+      await logoutViaUiConfirmingWarning(page, 3);
       await context.setOffline(false);
 
       // Konto B meldet sich auf demselben Gerät an: der Eintrag von A geht nicht raus.
@@ -241,11 +244,11 @@ test.describe('Abmelden und andere Geräte', () => {
       await expect.poll(() => readSessionAccessToken(page), { timeout: 10000, message: 'B meldet sich ohne Warnung ab' }).toBeNull();
       await expect(page.locator('[data-testid="logout-warning-dialog"]')).toHaveCount(0);
 
-      // Konto A meldet sich wieder an: der Eintrag ist noch da und kommt jetzt in der DB an.
+      // Konto A meldet sich wieder an: die 3 Einträge sind noch da und kommen jetzt in der DB an.
       await loginAsRole(page, 'abmeldenFu006');
       await openCockpit(page, ids.tournamentId, ids.matchId);
       await expectEngineMatchRunningUi(page);
-      await expect.poll(async () => (await fetchEngineRows(ids.matchId)).length, { timeout: 20000 }).toBe(baseRows + 1);
+      await expect.poll(async () => (await fetchEngineRows(ids.matchId)).length, { timeout: 20000 }).toBe(baseRows + 3);
       await expectOutboxSettled(page);
     } finally {
       await context.close();

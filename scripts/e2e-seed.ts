@@ -74,6 +74,9 @@ import {
   E2E_LIVE_CUP_COLLABORATORS,
   E2E_ENGINE_CUPS,
   E2E_ABMELDEN_CUPS,
+  E2E_ABMELDEN_CUP_SLUGS,
+  E2E_ABMELDEN_OWNER,
+  type AbmeldenCupSlug,
   type EngineCupSlug,
   E2E_TURNIERTAG_CUP_ID,
   E2E_LEGACY_CUPS,
@@ -804,11 +807,12 @@ async function main(): Promise<void> {
       service: new TournamentCreationService(ownerRepo),
     };
   };
-  await seedAbmeldenCups({
-    ABMELDEN1: abmeldenOwnerSeed('abmelden'),
-    ABMELDEN2: abmeldenOwnerSeed('abmeldenAn024'),
-    ABMELDEN3: abmeldenOwnerSeed('abmeldenFu006'),
-  });
+  // Zuordnung Cup -> Konto aus einer Quelle (`E2E_ABMELDEN_OWNER`).
+  const abmeldenOwners = {} as Record<AbmeldenCupSlug, AbmeldenOwnerSeed>;
+  for (const slug of E2E_ABMELDEN_CUP_SLUGS) {
+    abmeldenOwners[slug] = abmeldenOwnerSeed(E2E_ABMELDEN_OWNER[slug]);
+  }
+  await seedAbmeldenCups(abmeldenOwners);
   await seedTurniertagCup(engineDeps, ownerRepo, service);
   await seedZweitesTurnier(engineDeps, ownerRepo, service);
 
