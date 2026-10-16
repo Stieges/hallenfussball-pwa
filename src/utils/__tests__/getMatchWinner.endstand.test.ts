@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { calculateFinalsPlacement, calculateStandings, getMatchWinner, getMergedFinalRanking, placementRankText } from '../calculations';
 import type { Match, Team } from '../../types/tournament';
-import { vs, testUuid } from '../../test/matchSlotFixtures';
+import { resultOf, vs, testUuid } from '../../test/matchSlotFixtures';
 import { createMockTournament } from '../../test/factories';
 
 const [BERG, SUED] = [21, 22].map(testUuid);
@@ -118,5 +118,54 @@ describe('@ET-002 Platzierung: abgeschlossen heißt entschieden (Fixrunde W1)', 
     expect(rows(ranking).slice(0, 4)).toEqual([
       ['1', NORD, 'playoff'], ['2', MITTE, 'playoff'], ['3–4', BERG, 'open'], ['3–4', SUED, 'open'],
     ]);
+    expect(rows(ranking).slice(4).map(([rank]) => rank)).toEqual(['5', '6']); // N-W1: keine Lücke hinter 3–4
+  });
+});
+
+describe('@ET-042 Rangliste ohne Lücken bei Platzierungsspielen 5/7 (Nachreview N-W1, N-K3)', () => {
+  // all-places: Halbfinals laufen, Spiele um Platz 5 und 7 sind schon besetzt (Gruppendritte/-vierte).
+  const ids = [41, 42, 43, 44, 45, 46, 47, 48].map(testUuid);
+  const [a1, a2, a3, a4, b1, b2, b3, b4] = ids;
+  const teams: Team[] = ids.map((id, i) => ({ id, name: `Team ${i + 1}`, group: i < 4 ? 'A' : 'B' }));
+  const tournament = createMockTournament({ teams });
+  const groupTable = (): ReturnType<typeof calculateStandings> => teams.map((team) => calculateStandings([team], [], tournament)[0]);
+  const ko = (id: string, extra: Partial<Match>): Match => ({ id, round: 9, field: 1, isFinal: true, ...vs(a1, b2), ...extra });
+  const [HF1, HF2] = [testUuid(901), testUuid(902)];
+  const halbfinals = [
+    ko(HF1, { ...vs(a1, b2), matchStatus: 'running', scoreA: 1, scoreB: 0 }),
+    ko(HF2, { ...vs(b1, a2), matchStatus: 'running', scoreA: 0, scoreB: 0 }),
+  ];
+  const finals = (decided: boolean): Match[] => [
+    ko('f', { finalType: 'final', ...(decided ? { ...vs(a1, b1), matchStatus: 'finished', scoreA: 2, scoreB: 1, decidedBy: 'regular' } : { slotA: resultOf(HF1, 'winner'), slotB: resultOf(HF2, 'winner') }) }),
+    ko('p3', { finalType: 'thirdPlace', ...(decided ? { ...vs(b2, a2), matchStatus: 'finished', scoreA: 1, scoreB: 0, decidedBy: 'regular' } : { slotA: resultOf(HF1, 'loser'), slotB: resultOf(HF2, 'loser') }) }),
+    ko('p5', { finalType: 'fifthSixth', ...vs(a3, b3), ...(decided ? { matchStatus: 'finished', scoreA: 3, scoreB: 0, decidedBy: 'regular' } : {}) }),
+    ko('p7', { finalType: 'seventhEighth', ...vs(a4, b4), ...(decided ? { matchStatus: 'finished', scoreA: 0, scoreB: 1, decidedBy: 'regular' } : {}) }),
+  ];
+  const rows = (ranking: ReturnType<typeof getMergedFinalRanking>['ranking']) =>
+    ranking.map((p) => [placementRankText(p), p.team.id, p.decidedBy]);
+
+  it('@ET-042 Halbfinals laufen, 5–6 und 7–8 offen → Halbfinalisten vorläufig auf 1–4, dann 5–6, 7–8, keine Plätze 9–12', () => {
+    const { ranking } = getMergedFinalRanking(teams, [...halbfinals, ...finals(false)], groupTable(), tournament);
+    expect(rows(ranking).slice(0, 4).map(([rank]) => rank)).toEqual(['1', '2', '3', '4']);
+    expect(new Set(ranking.slice(0, 4).map((p) => p.team.id))).toEqual(new Set([a1, a2, b1, b2]));
+    expect(rows(ranking).slice(4)).toEqual([
+      ['5–6', a3, 'open'], ['5–6', b3, 'open'], ['7–8', a4, 'open'], ['7–8', b4, 'open'],
+    ]);
+    expect(Math.max(...ranking.map((p) => p.rankTo ?? p.rank))).toBe(8);
+  });
+
+  it('@ET-042 Gegenbeispiel: alles entschieden → Plätze 1 bis 8 lückenlos', () => {
+    const { ranking } = getMergedFinalRanking(teams, [...halbfinals, ...finals(true)], groupTable(), tournament);
+    expect(rows(ranking)).toEqual([
+      ['1', a1, 'playoff'], ['2', b1, 'playoff'], ['3', b2, 'playoff'], ['4', a2, 'playoff'],
+      ['5', a3, 'playoff'], ['6', b3, 'playoff'], ['7', b4, 'playoff'], ['8', a4, 'playoff'],
+    ]);
+  });
+
+  it('@ET-042 N-K3: ein Team in zwei offenen Spielen (Datenfehler) erscheint nur einmal', () => {
+    const doppelt = [ko('p5', { finalType: 'fifthSixth', ...vs(a3, b3) }), ko('p7', { finalType: 'seventhEighth', ...vs(a3, b4) })];
+    const { ranking } = getMergedFinalRanking(teams, doppelt, groupTable(), tournament);
+    expect(ranking.filter((p) => p.team.id === a3)).toHaveLength(1);
+    expect(ranking).toHaveLength(teams.length);
   });
 });

@@ -34,7 +34,7 @@ describe('@ET-042 TabellenTab: offenes Finale vorläufig auf 1–2', () => {
     expect(screen.getAllByText('1–2')).toHaveLength(2);
     expect(rankOf(MOCK_TOURNAMENT.teams[0].name)).toBe('1–2');
     expect(rankOf(MOCK_TOURNAMENT.teams[4].name)).toBe('1–2');
-    expect(screen.getAllByText(openLabel(lng, 'Finale'))).toHaveLength(2);
+    expect(screen.getAllByText(openLabel(lng, 'final'))).toHaveLength(2);
   });
 
   it('@ET-042 Gegenbeispiel: entschiedenes Finale → feste Plätze 1 und 2, kein „offen“', async () => {

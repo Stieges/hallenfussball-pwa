@@ -30,6 +30,7 @@ export interface OpenPlacement {
   team: Team;
   decidedBy: 'open';
   matchLabel?: string;
+  finalType: NonNullable<Match['finalType']>;
 }
 
 /**
@@ -42,23 +43,48 @@ export function openPlacements(
   isDecided: (match: Match) => boolean,
   placed: ReadonlySet<string>,
 ): OpenPlacement[] {
+  const seen = new Set<string>(placed); // N-K3: ein Team in zwei offenen Spielen (Datenfehler) erscheint nur einmal
   return matches.flatMap((match) => {
-    const ranks = match.isFinal === true && match.finalType !== undefined ? FINAL_TYPE_RANKS[match.finalType] : undefined;
-    if (ranks === undefined || isDecided(match)) {
+    const finalType = match.isFinal === true ? match.finalType : undefined;
+    const ranks = finalType === undefined ? undefined : FINAL_TYPE_RANKS[finalType];
+    if (finalType === undefined || ranks === undefined || isDecided(match)) {
       return [];
     }
-    const sides = [matchSideTeamId(match, 'A'), matchSideTeamId(match, 'B')];
-    const found = sides.map((id) => teams.find((team) => team.id === id));
-    if (found.some((team) => team === undefined || placed.has(team.id))) {
+    const found = [matchSideTeamId(match, 'A'), matchSideTeamId(match, 'B')].map((id) => teams.find((team) => team.id === id));
+    if (found.some((team) => team === undefined || seen.has(team.id))) {
       return [];
     }
-    return found.flatMap((team) => (team === undefined ? [] : [{
-      rank: ranks[0], rankTo: ranks[1], team, decidedBy: 'open' as const, matchLabel: FINAL_TYPE_LABELS[match.finalType ?? ''],
-    }]));
+    return found.flatMap((team) => {
+      if (team === undefined) {
+        return [];
+      }
+      seen.add(team.id);
+      return [{ rank: ranks[0], rankTo: ranks[1], team, decidedBy: 'open' as const, matchLabel: FINAL_TYPE_LABELS[finalType], finalType }];
+    });
   });
 }
 
 /** Anzeige des Platzes: „1“ bzw. „1–2“ für einen gemeinsamen offenen Bereich. */
 export function placementRankText(placement: { rank: number; rankTo?: number }): string {
   return placement.rankTo === undefined ? String(placement.rank) : `${placement.rank}–${placement.rankTo}`;
+}
+
+type BadgeKey =
+  | 'ranking.playoff'
+  | 'ranking.open'
+  | `finals.labels.${NonNullable<Match['finalType']>}`;
+type Translate = (key: BadgeKey, options?: { match: string }) => string;
+
+/**
+ * Kennzeichen „Entschieden durch“ (Rangliste/Tabellen): übersetzte Bezeichnung des Platzierungsspiels
+ * (`tournament:finals.labels.*`, statt des deutschen `matchLabel`), bei offenen Plätzen mit `tournament:ranking.open`.
+ */
+export function placementBadgeText(
+  placement: { decidedBy: string; finalType?: Match['finalType']; matchLabel?: string },
+  t: Translate,
+): string {
+  const match = placement.finalType !== undefined
+    ? t(`finals.labels.${placement.finalType}`)
+    : placement.matchLabel ?? t('ranking.playoff');
+  return placement.decidedBy === 'open' ? t('ranking.open', { match }) : match;
 }

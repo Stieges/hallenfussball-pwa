@@ -23,7 +23,7 @@ import { Tournament, Standing } from '../../types/tournament';
 import { GeneratedSchedule } from '../../core/generators';
 import {
   calculateStandings,
-  getMergedFinalRanking, placementRankText,
+  getMergedFinalRanking, placementBadgeText, placementRankText,
 } from '../../utils/calculations';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { resolvePlacementCriterionLabel } from '../tournament-creation/components/placementLogicLabels';
@@ -462,7 +462,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                             color: cssVars.colors.primary,
                             fontWeight: cssVars.fontWeights.semibold,
                           }}>
-                            {placement.decidedBy === 'open' ? t('ranking.open', { match: placement.matchLabel ?? '' }) : placement.matchLabel ?? t('ranking.playoff')}
+                            {placementBadgeText(placement, t)}
                           </span>
                         ) : (
                           <span style={{
@@ -562,7 +562,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                             alignItems: 'center',
                             gap: '2px',
                           }}>
-                            {placement.decidedBy === 'open' ? t('ranking.open', { match: placement.matchLabel ?? '' }) : placement.matchLabel ?? t('ranking.playoff')}
+                            {placementBadgeText(placement, t)}
                           </div>
                         ) : hasGroups && placement.team.group ? (
                           <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '2px' }}>

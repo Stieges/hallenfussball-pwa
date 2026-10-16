@@ -5,7 +5,7 @@ import { matchSideTeamId } from '../core/models/matchSlot';
 import { matchFinalScore } from '../core/view/finalScore';
 import type { TeamId } from '../core/models/schemas/MatchSlotSchema';
 import { FINAL_TYPE_LABELS, FINAL_TYPE_RANKS, openPlacements } from './openPlacements';
-export { placementRankText } from './openPlacements';
+export { placementBadgeText, placementRankText } from './openPlacements';
 
 /**
  * Zählt ein Spiel für Tabelle, Weiterkommen und Finalrunden-Auflösung? (@TM-143)
@@ -259,6 +259,8 @@ export interface FinalPlacement {
   /** Nur bei `open`: letzter Platz des gemeinsamen Bereichs (A-36b Fixrunde 1b, @ET-042). */
   rankTo?: number;
   team: Team;
+  /** Platzierungsspiel (für die übersetzte Bezeichnung, `placementBadgeText`). */
+  finalType?: Match['finalType'];
   decidedBy: 'playoff' | 'groupStage' | 'open';
   matchLabel?: string; // e.g., "Finale", "Spiel um Platz 3"
 }
@@ -344,7 +346,7 @@ export const calculateFinalsPlacement = (
             rank: winnerRank,
             team: winnerTeam,
             decidedBy: 'playoff',
-            matchLabel: finalTypeLabels[finalType],
+            matchLabel: finalTypeLabels[finalType], finalType: finalType as Match['finalType'],
           });
           placedTeamIds.add(winnerTeam.id);
         }
@@ -354,7 +356,7 @@ export const calculateFinalsPlacement = (
             rank: loserRank,
             team: loserTeam,
             decidedBy: 'playoff',
-            matchLabel: finalTypeLabels[finalType],
+            matchLabel: finalTypeLabels[finalType], finalType: finalType as Match['finalType'],
           });
           placedTeamIds.add(loserTeam.id);
         }
@@ -406,25 +408,19 @@ export const getMergedFinalRanking = (
     ranking.push(open);
     placedTeamIds.add(open.team.id);
   }
-  ranking.sort((a, b) => a.rank - b.rank);
-
-  // Find the next rank to assign
-  let nextRank = ranking.length > 0
-    ? Math.max(...ranking.map(p => p.rankTo ?? p.rank)) + 1
-    : 1;
-
-  // Add remaining teams from group standings
+  // N-W1 (Nachreview A-36b): übrige Teams auf die niedrigsten freien Plätze, belegte Bereiche rank…rankTo überspringen –
+  // keine Lücken, später Ausgeschiedene stehen vorn (Record Endstand Z. 61).
+  const taken = new Set(ranking.flatMap(p => Array.from({ length: (p.rankTo ?? p.rank) - p.rank + 1 }, (_, i) => p.rank + i)));
+  let nextRank = 1;
   for (const standing of groupStandings) {
     if (!placedTeamIds.has(standing.team.id)) {
-      ranking.push({
-        rank: nextRank,
-        team: standing.team,
-        decidedBy: 'groupStage',
-      });
+      while (taken.has(nextRank)) { nextRank++; }
+      ranking.push({ rank: nextRank, team: standing.team, decidedBy: 'groupStage' });
+      taken.add(nextRank);
       placedTeamIds.add(standing.team.id);
-      nextRank++;
     }
   }
+  ranking.sort((a, b) => a.rank - b.rank);
 
   return { ranking, finalsResult };
 };

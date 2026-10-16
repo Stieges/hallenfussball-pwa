@@ -29,7 +29,8 @@ export function tournamentWithFinal(state: FinalState): Tournament {
   };
   return {
     ...MOCK_TOURNAMENT,
-    // Bestehender Schalter der Tabs: Spalte „Entschieden durch“ nur bei `finals.enabled`.
+    // Bestehender Schalter der Tabs: Finalrunden-Platzierung nur bei `finals.enabled`, das das Turniermodell nicht kennt.
+    // Der Cast verdeckt C-FINALS-ENABLED-FEHLT, bis das Freischalten entschieden ist (Daniel); er fällt mit dem Fix weg.
     finals: { ...MOCK_TOURNAMENT.finals, enabled: true } as Tournament['finals'],
     matches: [...MOCK_TOURNAMENT.matches.filter((m) => m.isFinal !== true), third, finale],
   };
@@ -62,10 +63,10 @@ export async function realI18nWrapper(lng: 'de' | 'en'): Promise<({ children }: 
   return ({ children }: { children: ReactNode }) => <I18nextProvider i18n={instance}>{children}</I18nextProvider>;
 }
 
-/** Erwarteter Kennzeichen-Text aus der Sprachdatei (kein fester Text im Test). */
-export function openLabel(lng: 'de' | 'en', match: string): string {
+/** Erwarteter Kennzeichen-Text aus der Sprachdatei (kein fester Text im Test): „Finale – offen“ / „Final – open“. */
+export function openLabel(lng: 'de' | 'en', finalType: 'final' | 'thirdPlace'): string {
   const source = lng === 'de' ? deTournament : enTournament;
-  return source.ranking.open.replace('{{match}}', match);
+  return source.ranking.open.replace('{{match}}', source.finals.labels[finalType]);
 }
 
 export function rankingTitle(lng: 'de' | 'en'): string {
