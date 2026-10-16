@@ -30,7 +30,7 @@ async function halbfinaleElfmeter({ anonPage }: StepContext): Promise<void> {
   // Soll-Wirkung sichtbar (B-15/B-21): die Zuschauer-Seite zeigt das Halbfinale 1 als im
   // Strafstoßschießen entschieden (Ergebnis 1:1 plus Strafstoß-Vermerk in derselben Zeile).
   await anonPage.goto(`/#/live/${E2E_TURNIERTAG_SHARE_CODE}`);
-  const zeile = anonPage.locator('tr', { hasText: '1. Halbfinale' }).first();
+  const zeile = anonPage.locator('tr', { hasText: 'Halbfinale 1' }).first();
   await expect(zeile, 'Zeile von Halbfinale 1 auf der Zuschauer-Seite').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
   await expect(zeile).toHaveText(/1\s*:\s*1/, { timeout: SOLL_TIMEOUT_MS });
   await expect(zeile, 'Strafstoß-Vermerk (i. E. / Elfmeterschießen)').toHaveText(/i\.\s?E\.|n\.\s?E\.|Elfmeter|Strafstoß/i, { timeout: SOLL_TIMEOUT_MS });
