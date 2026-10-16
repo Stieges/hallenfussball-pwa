@@ -40,6 +40,12 @@ function createTeams(n: number, group = 'A'): Team[] {
   }));
 }
 
+/**
+ * Eigenes Zeitlimit je Property-Test (kein globales testTimeout, wie V3/B03): Seit B-42 sucht der Generator unter bis
+ * zu 50 Gleichstands-Varianten (@W4-023); 15–20 Läufe dauern lokal 1–2 s, unter CI-Coverage über 5 s.
+ */
+const PROPERTY_TIMEOUT_MS = 30_000;
+
 function generate(numTeams: number, numFields: number): Match[] {
   return generateGroupPhaseSchedule({
     groups: new Map([['A', createTeams(numTeams)]]),
@@ -74,7 +80,7 @@ describe('FairScheduler — round-robin completeness (property)', () => {
       ),
       { numRuns: 20 },
     );
-  });
+  }, PROPERTY_TIMEOUT_MS);
 
   it('every team plays exactly n-1 matches', () => {
     fc.assert(
@@ -97,7 +103,7 @@ describe('FairScheduler — round-robin completeness (property)', () => {
       ),
       { numRuns: 15 },
     );
-  });
+  }, PROPERTY_TIMEOUT_MS);
 });
 
 describe('FairScheduler — Pausen-Fairness-Invariante (property)', () => {
@@ -120,7 +126,7 @@ describe('FairScheduler — Pausen-Fairness-Invariante (property)', () => {
       ),
       { numRuns: 15 },
     );
-  });
+  }, PROPERTY_TIMEOUT_MS);
 
   it('no team has back-to-back matches when minRestSlotsPerTeam=1', () => {
     fc.assert(
@@ -141,7 +147,7 @@ describe('FairScheduler — Pausen-Fairness-Invariante (property)', () => {
       ),
       { numRuns: 15 },
     );
-  });
+  }, PROPERTY_TIMEOUT_MS);
 });
 
 /**
@@ -189,7 +195,7 @@ describe('FairScheduler — laengste Einzelpause und Dauer (property)', () => {
       ),
       { numRuns: 15 },
     );
-  });
+  }, PROPERTY_TIMEOUT_MS);
 
   it('duration is never longer than the schedule of seed 0 (heute)', () => {
     fc.assert(
@@ -205,5 +211,5 @@ describe('FairScheduler — laengste Einzelpause und Dauer (property)', () => {
       ),
       { numRuns: 15 },
     );
-  });
+  }, PROPERTY_TIMEOUT_MS);
 });
