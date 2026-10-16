@@ -1,0 +1,312 @@
+{
+  "version": "2026-10-16",
+  "hinweis": "Jede Zahl mit Begruendung, Quelle, Typ und Geltung. HART = Fehler (Exit 1), WARNUNG = Hypothese bzw. Designziel (nur Bericht). Gleiche Datei liegt als .claude/skills/visuelle-pruefung/grenzwerte.json; das Messskript warnt bei Abweichung. Grenzwerte werden nie zum Gruenwerden gelockert (Skill: BLOCKED + Meldung).",
+  "arten": {
+    "handy": "Handy hoch 360x640, 390x844",
+    "tablet": "Tablet 768x1024, 1024x768",
+    "desktop": "Desktop 1440x900",
+    "monitor": "Fernseher 1920x1080, 1280x720 (Rand 0 und Standard-Rand)",
+    "reflow": "320x640, nur auf Anforderung (Profil reflow-320); alle Befunde WARNUNG, bis der Record Oberflaeche 320 px aufnimmt"
+  },
+  "sehwinkel": {
+    "begruendung": "Monitor-Mindestschrift folgt dem Sehwinkel der Versalhoehe, nicht festen Pixeln. Formel: Schrift / Bildhoehe = Abstand * tan(Winkel) / (Bildhoehe_m * Versalanteil); Bildhoehe_m = Diagonale_m * 9 / sqrt(16^2 + 9^2).",
+    "quelle": "Entscheidung Daniel 2026-10-16: vorerst 55 Zoll aus 10 m, endgueltig in der Generalprobe am echten Geraet. Winkel 20/16 Bogenminuten: ISO 9241-303 nur sekundaer (w3c-wai-ig 2023OctDec/0054), Recherche 2026-10-16_ui-ux-grundprinzipien D2. Versalanteil 0,72: Annahme, schriftabhaengig.",
+    "abstandM": 10,
+    "diagonaleZoll": 55,
+    "versalAnteil": 0.72,
+    "winkelBogenminuten": {
+      "stand": 20,
+      "lesetext": 16,
+      "neben": 12
+    },
+    "winkelBegruendung": {
+      "stand": "Spielstand und Uhr: oberer Faustwert fuer gut lesbaren Text (20-22'), passt zum Designziel 12 % Bildhoehe.",
+      "lesetext": "Teamnamen, Tabellenzeilen, Uhrzeiten: Minimum 16' (ISO 9241-303 sekundaer).",
+      "neben": "Nebeninfo (Gruppe, Feld, Fusszeile): 12' ist ANNAHME unter dem ISO-Minimum, nur fuer Info, die zur Aufgabe nicht noetig ist; Daniel bestaetigt in der Generalprobe."
+    },
+    "ergebnis_55zoll_10m": {
+      "stand": "11,80 % Bildhoehe = 128 px bei 1080, 85 px bei 720",
+      "lesetext": "9,44 % = 102 px bei 1080, 68 px bei 720",
+      "neben": "7,08 % = 77 px bei 1080, 51 px bei 720",
+      "vergleich_3_prozent": "3 % Bildhoehe entsprechen aus 10 m nur ca. 5' (Lesen aus ca. 3 m)"
+    },
+    "anpassen": "Vor Ort per CLI: --abstand-m <m> --diagonale-zoll <z>; Werte hier nur nach Generalprobe aendern (mit Lern-Spur im Record)."
+  },
+  "grenzwerte": [
+    {
+      "id": "gate.echter-stand",
+      "wert": true,
+      "einheit": "bool",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "Gemessen wird nur der echte Stand: gebautes Preview (kein Vite-Dev-Server) oder Mockup-Datei, keine Attrappe (meta visual-metrics:quelle=mock). Fehler 3 vom 16.10.: Monitor-Tests liefen nie gegen den echten Stand.",
+      "quelle": "Auftrag Daniel 2026-10-16; Recherche ui-skills 4.3",
+      "verstoss": "BLOCKED (Exit 3)"
+    },
+    {
+      "id": "gate.schriften",
+      "wert": true,
+      "einheit": "bool",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "Vor dem Messen document.fonts.ready und networkidle; Ersatzschrift misst andere Breiten. Eine Schrift im Zustand error sperrt die Messung.",
+      "quelle": "anthropics/skills webapp-testing (networkidle); Recherche ui-skills M1",
+      "verstoss": "BLOCKED (Exit 3)"
+    },
+    {
+      "id": "ueberlauf.dokument",
+      "wert": 1,
+      "einheit": "px Toleranz",
+      "typ": "HART",
+      "typJeArt": { "reflow": "WARNUNG" },
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "Seite scrollt nie waagerecht: documentElement.scrollWidth <= innerWidth + 1 (Rundung).",
+      "quelle": "WCAG 2.2 SC 1.4.10 Reflow; Record Oberflaeche C, @OB-021; 320 px als WARNUNG bis Record entscheidet"
+    },
+    {
+      "id": "ueberlauf.element",
+      "wert": 1,
+      "einheit": "px Toleranz",
+      "typ": "HART",
+      "typJeArt": { "reflow": "WARNUNG" },
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "Kein Element ragt rechts/links aus dem Fenster und kein Block laeuft ueber seine Breite hinaus (overflow visible). Ausgenommen: Inhalte in overflow-x auto/scroll (Tabellen) und [data-overflow-ok].",
+      "quelle": "WCAG 1.4.10; Blog web-developpeur.com (scrollWidth > clientWidth); Recherche ui-skills M1"
+    },
+    {
+      "id": "text.abgeschnitten",
+      "wert": 1,
+      "einheit": "px Toleranz",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "Kein Text wird von einem Vorfahren mit overflow hidden/clip, per Ellipse/line-clamp oder vom oberen/linken Fensterrand abgeschnitten. Ausnahme nur [data-truncate-ok] mit Volltext per title/aria-label.",
+      "quelle": "WCAG 1.4.4 Failure F69; Record @OB-025, @ZM-086, @ZM-087 (Namen ohne ...)"
+    },
+    {
+      "id": "ueberlappung.text",
+      "wert": 2,
+      "einheit": "px Mindestschnitt je Achse",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "Textzeilen und Bedienelemente schneiden sich nicht (Schnitt > 2 px in beiden Achsen, kein Vorfahre/Nachfahre). Gewollte Stapel: [data-overlap-ok].",
+      "quelle": "Record @OB-021, @OB-025, @ZM-086 (kein Element ueberlappt)"
+    },
+    {
+      "id": "titel.zeilen",
+      "wert": 2,
+      "einheit": "Zeilen hoechstens",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "h1 und [data-title] belegen hoechstens 2 Zeilen; mehr heisst: Schrift zu gross fuer die Flaeche.",
+      "quelle": "Recherche ui-skills M9 (Vorschlag), Grundprinzipien T3; Auftrag Daniel 2026-10-16 (Fehler 'Turnierver-/waltung')"
+    },
+    {
+      "id": "titel.wortbruch",
+      "wert": 0,
+      "einheit": "Woerter ueber zwei Zeilen",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "In h1-h3, [data-title], Tasten und Reitern steht kein Wort auf zwei Zeilen (weder Silbentrennung noch overflow-wrap-Bruch).",
+      "quelle": "Grundprinzipien T1/T3; MDN hyphens; Fehler 'Turnierver-/waltung' 2026-10-16"
+    },
+    {
+      "id": "titel.hyphens",
+      "wert": "manual|none",
+      "einheit": "berechneter Wert",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "Ueberschriften, Tasten und Reiter trennen nie automatisch: getComputedStyle(el).hyphens ist manual oder none. Faengt das Risiko auch dort, wo heute zufaellig nichts bricht.",
+      "quelle": "Grundprinzipien T1 (MDN hyphens: auto trennt nur mit lang und Woerterbuch, je Browser verschieden)"
+    },
+    {
+      "id": "kontrast.text",
+      "wert": 4.5,
+      "einheit": "Verhaeltnis",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "Normaler Text >= 4,5:1, nicht gerundet (4,499 besteht nicht); hell und dunkel.",
+      "quelle": "WCAG 2.2 SC 1.4.3; Record C (Stufe AA)"
+    },
+    {
+      "id": "kontrast.text-gross",
+      "wert": 3,
+      "einheit": "Verhaeltnis",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "Grosser Text (>= 24 px oder >= 18,66 px ab Gewicht 700) >= 3:1.",
+      "quelle": "WCAG 2.2 SC 1.4.3"
+    },
+    {
+      "id": "kontrast.monitor",
+      "wert": 7,
+      "einheit": "Verhaeltnis",
+      "typ": "WARNUNG",
+      "geltung": ["monitor"],
+      "begruendung": "Helle Halle: Monitor-Text >= 7:1. Anwendung auf die Halle ist HYPOTHESE.",
+      "quelle": "WCAG 1.4.6 (AAA, Normtext); Grundprinzipien D4"
+    },
+    {
+      "id": "kontrast.unsicher",
+      "wert": 0,
+      "einheit": "Anzahl",
+      "typ": "WARNUNG",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "Text auf Bild/Verlauf oder ohne deckenden Hintergrund: Kontrast nicht berechenbar, Sichtkritik noetig.",
+      "quelle": "axe-core 'incomplete'-Logik; Recherche ui-skills M4"
+    },
+    {
+      "id": "touch.min",
+      "wert": 44,
+      "einheit": "px Breite und Hoehe",
+      "typ": "HART",
+      "typJeArt": { "desktop": "WARNUNG" },
+      "geltung": ["handy", "tablet", "desktop", "reflow"],
+      "begruendung": "Jedes Bedienelement >= 44x44 px (Links im Fliesstext ausgenommen, [data-touch-ok] fuer begruendete Ausnahmen). Desktop nur WARNUNG (Maus).",
+      "quelle": "Projektmuss .claude/CLAUDE.md; Record @OB-022; Apple HIG 44 pt; WCAG 2.5.8 (24 px) als absolute Untergrenze"
+    },
+    {
+      "id": "touch.primaer",
+      "wert": 56,
+      "einheit": "px Breite und Hoehe",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "reflow"],
+      "begruendung": "Haupttaste ([data-primary] oder [data-variant=primary]) >= 56 px.",
+      "quelle": "Projektmuss .claude/CLAUDE.md; Record @OB-022"
+    },
+    {
+      "id": "primaer.sichtbar",
+      "wert": 0,
+      "einheit": "px ausserhalb des Fensters bei scrollY 0",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop"],
+      "begruendung": "Markierte Haupttasten liegen ohne Scrollen vollstaendig im Fenster.",
+      "quelle": "Auftrag Daniel 2026-10-16; Grundprinzipien P3/FI1"
+    },
+    {
+      "id": "schrift.eingabe",
+      "wert": 16,
+      "einheit": "px",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "reflow"],
+      "begruendung": "Eingabefelder >= 16 px Schrift (sonst zoomt iOS beim Fokus).",
+      "quelle": "Projektmuss .claude/CLAUDE.md; Record @OB-022"
+    },
+    {
+      "id": "schrift.min",
+      "wert": 11,
+      "einheit": "px",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "reflow"],
+      "begruendung": "Kein sichtbarer Text unter 11 px.",
+      "quelle": "Apple HIG Typography, iOS-Minimum 11 pt (abgerufen 2026-10-16)"
+    },
+    {
+      "id": "schrift.min-ziel",
+      "wert": 12,
+      "einheit": "px",
+      "typ": "WARNUNG",
+      "geltung": ["handy", "tablet", "desktop", "reflow"],
+      "begruendung": "Nebeninfo >= 12 px (Projektvorschlag, nicht entschieden).",
+      "quelle": "Grundprinzipien T5 (Projektvorschlag)"
+    },
+    {
+      "id": "monitor.schrift.stand",
+      "wert": "sehwinkel.stand",
+      "einheit": "Anteil Bildhoehe (berechnet)",
+      "typ": "HART",
+      "geltung": ["monitor"],
+      "begruendung": "Spielstand und Uhr ([data-monitor=stand|uhr]) >= 20' Versalhoehe; 55 Zoll / 10 m: 11,80 % Bildhoehe.",
+      "quelle": "Entscheidung Daniel 2026-10-16 (55 Zoll / 10 m, HART); Winkel sekundaer (ISO 9241-303), siehe sehwinkel"
+    },
+    {
+      "id": "monitor.schrift.lesetext",
+      "wert": "sehwinkel.lesetext",
+      "einheit": "Anteil Bildhoehe (berechnet)",
+      "typ": "HART",
+      "geltung": ["monitor"],
+      "begruendung": "Jeder nicht markierte Monitor-Text (Teamnamen, Zeiten, Tabellen) >= 16'; 55 Zoll / 10 m: 9,44 % Bildhoehe. Ersetzt die 3 % als Messgrenze (3 % bleibt Untergrenze im Record).",
+      "quelle": "Entscheidung Daniel 2026-10-16; Record @ZM-125 (3 %) als schwaechere Untergrenze"
+    },
+    {
+      "id": "monitor.schrift.neben",
+      "wert": "sehwinkel.neben",
+      "einheit": "Anteil Bildhoehe (berechnet)",
+      "typ": "HART",
+      "geltung": ["monitor"],
+      "begruendung": "Nebeninfo ([data-monitor=neben]) >= 12'; 55 Zoll / 10 m: 7,08 % Bildhoehe. Winkel 12' ist Annahme.",
+      "quelle": "Entscheidung Daniel 2026-10-16 (HART); Winkel 12' Annahme, Bestaetigung Generalprobe"
+    },
+    {
+      "id": "overscan.app-rand",
+      "wert": "profil.randPx",
+      "einheit": "px je Seite",
+      "typ": "HART",
+      "geltung": ["monitor"],
+      "begruendung": "Jeder Text und jedes Bild/Symbol liegt innerhalb des eingestellten TV-Rands (Rand 0: im Fenster; Standard-Rand: innerhalb 48 px). Fehler 2 vom 16.10.: Kopf am Monitor abgeschnitten, weil alle Pruefungen mit Rand 0 liefen.",
+      "quelle": "src/types/monitor.ts overscanPx Default 48; Auftrag Daniel 2026-10-16"
+    },
+    {
+      "id": "overscan.standard-px",
+      "wert": 48,
+      "einheit": "px",
+      "typ": "HART",
+      "geltung": ["monitor"],
+      "begruendung": "Standard-Rand des Profils *-standard = heutiger App-Standard. Aenderung nur zusammen mit src/types/monitor.ts.",
+      "quelle": "src/types/monitor.ts:322, src/design-tokens/display.ts displaySpacing.overscan"
+    },
+    {
+      "id": "overscan.ebu-grafik",
+      "wert": 0.05,
+      "einheit": "Anteil je Seite",
+      "typ": "WARNUNG",
+      "geltung": ["monitor"],
+      "begruendung": "Text und Grafik in der Graphics Safe Area (5 % je Seite = 96/54 px bei 1080p, 64/36 bei 720p). Record nennt 5 % als Designziel; heutiger Standard 48 px ist seitlich schmaler. WARNUNG bis Daniel entscheidet.",
+      "quelle": "EBU R 95 (abgerufen); Record Oberflaeche E (Designziel 5 %); Apple tvOS 80/60 pt"
+    },
+    {
+      "id": "monitor.bedienelemente",
+      "wert": 0,
+      "einheit": "Anzahl fokussierbarer Elemente",
+      "typ": "WARNUNG",
+      "geltung": ["monitor"],
+      "begruendung": "Monitor ist reine Anzeige, nichts wartet auf Eingabe.",
+      "quelle": "Record Oberflaeche C (Monitor als reine Anzeige), @OB-028"
+    },
+    {
+      "id": "axe.schwer",
+      "wert": 0,
+      "einheit": "Verstoesse mit Wirkung critical/serious",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "axe-core Tags wcag2a, wcag2aa, wcag21aa, wcag22aa: keine schweren Verstoesse.",
+      "quelle": "@axe-core/playwright (Dev-Abhaengigkeit vorhanden); Record C (WCAG 2.2 AA)"
+    },
+    {
+      "id": "axe.leicht",
+      "wert": 0,
+      "einheit": "Verstoesse moderate/minor + incomplete",
+      "typ": "WARNUNG",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "Leichtere Verstoesse und 'incomplete' sichtbar machen, nicht sperren.",
+      "quelle": "axe-core README (incomplete nicht ignorieren)"
+    },
+    {
+      "id": "langtext.dehnung",
+      "wert": 0.3,
+      "einheit": "Anteil Textverlaengerung",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "Variante Langtext: jeder Text +30 % in Klammern (Pseudo-Lokalisierung), dazu Teamnamen mit 50 Zeichen; alle HART-Metriken gelten weiter.",
+      "quelle": "Pseudo-Lokalisierung +30 % (simplelocalize, Android en-XA; Konvention); Record @OB-025 (50 Zeichen)"
+    },
+    {
+      "id": "langtext.teamname",
+      "wert": "Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921",
+      "einheit": "Text (50 Zeichen)",
+      "typ": "HART",
+      "geltung": ["handy", "tablet", "desktop", "monitor", "reflow"],
+      "begruendung": "Laengster zulaessiger Teamname; ersetzt in der Variante Langtext alle [data-teamname].",
+      "quelle": "Record @OB-025, @ZM-087"
+    }
+  ]
+}
