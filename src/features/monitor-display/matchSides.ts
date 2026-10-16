@@ -13,6 +13,7 @@ import { ANZEIGE_SPRACHE } from '../../i18n/anzeigeSprache';
 import { slotLabel } from '../../core/models/slotLabel';
 import type { Match, Team, TournamentGroup } from '../../types/tournament';
 import { monitorSideTeam } from './monitorSides';
+import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 
 export type MatchSide = 'A' | 'B';
 
@@ -44,4 +45,13 @@ export function sideLabel(match: Match, side: MatchSide, ctx: SideContext): stri
     hidePendingOrigin: ctx.hidePendingOrigin,
     locale: ANZEIGE_SPRACHE,
   });
+}
+
+/**
+ * Anzeigename der Seite am Monitor (MS1, @ZM-087): besetzt → Teamname mit Vereinskürzeln nach Liste
+ * (`monitorTeamName`), offen → Herkunft bzw. „noch offen“ wie `sideLabel`.
+ */
+export function monitorSideLabel(match: Match, side: MatchSide, ctx: SideContext): string {
+  const team = sideTeam(match, side, ctx.teams);
+  return team ? monitorTeamName(team.name) : sideLabel(match, side, ctx);
 }

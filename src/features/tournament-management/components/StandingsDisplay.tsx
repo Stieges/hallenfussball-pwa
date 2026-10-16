@@ -1,5 +1,6 @@
 /**
- * StandingsDisplay - Zeigt Tabellen für Gruppen oder Gesamtturnier
+ * StandingsDisplay - Zeigt Tabellen für Gruppen oder Gesamtturnier.
+ * Nur im Verwaltungs-Reiter „Monitor“ (Monitor-Vorschau): Teamnamen nach der Vereinswort-Liste gekürzt (MS1, @ZM-087).
  */
 import { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -7,6 +8,7 @@ import { cssVars } from '../../../design-tokens'
 import { Tournament, Standing } from '../../../types/tournament'
 import { getGroupDisplayName } from '../../../utils/displayNames'
 import { TeamAvatar } from '../../../components/ui/TeamAvatar'
+import { monitorTeamName } from '../../../core/models/teamNameAbbrev'
 
 interface StandingsDisplayProps {
   standings: Standing[]
@@ -123,7 +125,7 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title
               <td style={tdStyle}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
                   <TeamAvatar team={standing.team} size="xs" />
-                  {standing.team.name}
+                  {monitorTeamName(standing.team.name)}
                 </div>
               </td>
               <td style={{ ...tdStyle, textAlign: 'center' }}>{standing.played || 0}</td>

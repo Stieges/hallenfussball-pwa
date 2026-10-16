@@ -5,8 +5,39 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { GoalAnimation, GoalFlash } from '../GoalAnimation';
+import type { GoalEventInfo } from '../../../hooks/useLiveMatches';
+
+const VOLL = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
+
+function goalEvent(teamName: string): GoalEventInfo {
+  return {
+    matchId: 'm1',
+    teamId: 'teamA',
+    teamName,
+    side: 'home',
+    timestamp: Date.now(),
+    newScore: { home: 1, away: 0 },
+  };
+}
+
+// =============================================================================
+// @ZM-087 Tor-Einblendung zeigt das Vereinskürzel nach Liste (MS1)
+// =============================================================================
+describe('@ZM-087 Tor-Einblendung am Monitor', () => {
+  it('Listenwort wird gekürzt: „SG FF Nordheim-Süd 1921“ und kein voller Name', async () => {
+    const { container } = render(<GoalAnimation goalEvent={goalEvent(VOLL)} onAnimationComplete={vi.fn()} />);
+    expect(await screen.findByText('SG FF Nordheim-Süd 1921')).toBeInTheDocument();
+    expect(container.textContent).not.toContain(VOLL);
+    expect(container.textContent).not.toContain('…');
+  });
+
+  it('Gegenbeispiel: ohne Listenwort bleibt der volle Name („Eintracht Oberweiler-Niederstetten 1919“)', async () => {
+    render(<GoalAnimation goalEvent={goalEvent('Eintracht Oberweiler-Niederstetten 1919')} onAnimationComplete={vi.fn()} />);
+    expect(await screen.findByText('Eintracht Oberweiler-Niederstetten 1919')).toBeInTheDocument();
+  });
+});
 
 describe('GoalAnimation', () => {
   // ==========================================================================
