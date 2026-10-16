@@ -101,7 +101,10 @@ export const semanticColorsDark = {
   errorBorder: 'rgba(255, 82, 82, 0.3)',
 
   warning: palette.orange[400],
-  warningHover: palette.orange[500],
+  /** Hover der Warn-Knöpfe: heller als warningSolid (B-43b3), schwarze Schrift hält ≥ 4,5 : 1 */
+  warningHover: palette.orange[400],
+  /** Füllfarbe für Warn-Flächen (Rückfrage-Knopf, Abzeichen) */
+  warningSolid: palette.orange[500],
   warningLight: 'rgba(255, 145, 0, 0.15)',
   warningSubtle: 'rgba(255, 145, 0, 0.08)',
   warningMedium: 'rgba(255, 145, 0, 0.1)',

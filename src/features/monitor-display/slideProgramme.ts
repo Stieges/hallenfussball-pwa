@@ -3,11 +3,12 @@
  *
  * Eine Folie ohne Darstellung (ältere Einstellungen, Folien-Typ ohne
  * Umsetzung) darf den Monitor nicht aufhalten: Sie wird übersprungen. Bleibt
- * keine darstellbare Folie übrig, gilt die Zuschauer-QR-Folie. Ein
- * Entwickler-Hinweis wie „wird in Phase 2 implementiert“ ist nirgends erlaubt.
+ * keine darstellbare Folie übrig, gilt die Zuschauer-QR-Folie. Entwickler-Hinweise
+ * dieser Art (Platzhalter-Texte für Folien) sind nirgends erlaubt.
  */
 
 import type { MonitorSlide } from '../../types/monitor';
+import { fieldIdToNumber } from './monitorDisplayHelpers';
 
 export interface MonitorSlideLike {
   id: string;
@@ -33,6 +34,9 @@ export const DISPLAYABLE_SLIDE_TYPES: ReadonlySet<string> = new Set([
   'schedule-field',
   'sponsor',
   'custom-text',
+  'next-matches',
+  'all-standings',
+  'qr-code',
 ]);
 
 /** Rückfall, wenn keine Folie des Programms darstellbar ist: die Zuschauer-QR-Folie. */
@@ -57,18 +61,221 @@ export const SPIELPLAN_FALLBACK_SLIDE: MonitorSlide = {
 
 export function selectDisplayableSlides<T extends MonitorSlideLike>(
   slides: T[],
-  options?: { qrMoeglich?: boolean },
+  options?: { qrMoeglich?: boolean; isShowable?: (slide: T) => boolean },
 ): Array<T | MonitorSlide | QrRueckfallFolie> {
-  const displayable = slides.filter((slide) => DISPLAYABLE_SLIDE_TYPES.has(slide.type));
+  // B-16e2 (@ZM-090): Folien, die bei ausgeblendeten Ergebnissen nicht zeigbar sind, fallen weg.
+  // B-16f4: Eine Zuschauer-QR-Folie entfällt ohne öffentliches Turnier mit Share-Code (kein leerer QR).
+  const displayable = slides.filter((slide) =>
+    DISPLAYABLE_SLIDE_TYPES.has(slide.type)
+    && (slide.type !== 'qr-code' || options?.qrMoeglich === true)
+    && (options?.isShowable?.(slide) ?? true));
   if (displayable.length > 0) {
     return displayable;
   }
   // F-04/F11: Das Programm bleibt nie leer — ist nichts Darstellbares übrig und kein QR
   // möglich (nicht öffentlich/ohne Share-Code), nimmt der Monitor die nächste immer
-  // darstellbare Folie (Spielplan). Eine qr-code-Folie im Programm selbst zeigt ohne QR
-  // Turniername und einen neutralen Satz (F-03/QrSlide).
+  // darstellbare Folie (Spielplan). Eine qr-code-Folie im Programm entfällt oben schon
+  // ohne möglichen QR (B-16f4); der Rückfall QrSlide zeigt dann nur den neutralen Satz (F-03).
   if (displayable.length === 0 && options?.qrMoeglich === false) {
     return [SPIELPLAN_FALLBACK_SLIDE];
   }
   return [ZUSCHAUER_QR_SLIDE];
+}
+
+
+// =============================================================================
+// Folienfolge (B-16c, B-16e1): reine Funktionen mit `now`. Keine Timer, kein React –
+// der Hook `useSlideshow` plant den einen Timer, die Seite steuert nur Tasten.
+// =============================================================================
+
+export type ProgramSlide = MonitorSlide | QrRueckfallFolie;
+
+/** Haltezeit des Endergebnisses nach Abpfiff, bevor der Takt weiterläuft (@ZM-077). */
+export const FINAL_RESULT_HOLD_MS = 30_000;
+
+/** Die Felder der Spielregeln; ein Repository-Objekt erfüllt sie strukturell. */
+export interface RuleMatch {
+  id: string;
+  field: number;
+  matchStatus?: string | null;
+}
+
+export interface SlideProgram {
+  slides: ProgramSlide[];
+  /** Monitor-Standard in Sekunden, wenn die Folie keine eigene Dauer hat. */
+  defaultDurationSec: number;
+  /** Seitenzahl einer Folie; fehlt die Funktion, gilt 1 (B-17 misst die Seitenzahl). */
+  pageCount?: (slide: ProgramSlide) => number;
+  /** Spiele für die Anhalte- und Feldregeln (B-16e1); fehlt die Liste, gilt keine Spielregel. */
+  matches?: readonly RuleMatch[];
+}
+
+export interface SlideshowState {
+  index: number;
+  page: number;
+  startedAt: number;
+  direction: 'next' | 'prev';
+  /** Gepinntes Spiel: die Live-Folie hält, solange es läuft (kein Takt). */
+  pinnedMatchId?: string | null;
+  /** Ende der Haltezeit nach Abpfiff in ms; danach läuft der Takt ab der folgenden Folie. */
+  finalUntil?: number | null;
+}
+
+/** Anzeigedauer einer Seite in ms: eigene Dauer, sonst Monitor-Standard (@ZM-130). */
+export function slideDurationMs(slide: ProgramSlide, defaultDurationSec: number): number {
+  return (slide.duration ?? defaultDurationSec) * 1000;
+}
+
+/** Spiel „im Lauf“: laufend oder in der Halbzeit (`paused`, C-MON-PAUSE; der Typ bleibt Spur A). */
+export function isMatchInProgress(match: { matchStatus?: string | null }): boolean {
+  const status = String(match.matchStatus);
+  return status === 'running' || status === 'paused';
+}
+
+function wrapIndex(index: number, length: number): number {
+  return ((index % length) + length) % length;
+}
+
+/** Seitenzahl einer Folie, mindestens 1 (0, negativ oder unlesbar klemmt auf 1 – kein Dauer-Neustart). */
+function pagesOf(program: SlideProgram, slide: ProgramSlide): number {
+  const n = program.pageCount ? program.pageCount(slide) : 1;
+  return Math.max(1, Math.floor(n) || 1);
+}
+
+/** Live-Folie? (Typ `live` mit Konfiguration) */
+function isLiveSlide(slide: ProgramSlide): boolean {
+  return slide.type === 'live' && 'config' in slide;
+}
+
+/** Feldnummer einer Live-Folie; sonst null. Ohne fieldId gilt Feld 1 (wie LiveSlide, @ZM-074). */
+function liveFieldOf(slide: ProgramSlide): number | null {
+  if (!isLiveSlide(slide) || !('config' in slide)) { return null; }
+  return fieldIdToNumber(slide.config.fieldId);
+}
+
+function runningOn(matches: readonly RuleMatch[], field: number): RuleMatch | undefined {
+  return matches.find(m => m.field === field && isMatchInProgress(m));
+}
+
+/** Laufendes Spiel der Live-Folie auf ihrem Feld. */
+function runningFor(slide: ProgramSlide, matches: readonly RuleMatch[]): RuleMatch | undefined {
+  const field = liveFieldOf(slide);
+  return field === null ? undefined : runningOn(matches, field);
+}
+
+/** @ZM-122: Live-Folie ohne laufendes Spiel auf ihrem Feld wird übersprungen. */
+function isSkipped(slide: ProgramSlide, matches: readonly RuleMatch[]): boolean {
+  return isLiveSlide(slide) && runningFor(slide, matches) === undefined;
+}
+
+/** Erste nicht übersprungene Folie ab `from` (zyklisch); null, wenn alle übersprungen sind. */
+function firstVisible(program: SlideProgram, from: number, matches: readonly RuleMatch[]): number | null {
+  const count = program.slides.length;
+  for (let k = 0; k < count; k++) {
+    const j = wrapIndex(from + k, count);
+    if (!isSkipped(program.slides[j], matches)) { return j; }
+  }
+  return null;
+}
+
+/**
+ * @ZM-074/075: Die erste Live-Folie (ab der aktuellen Folie gezählt), deren Feld ein laufendes Spiel hat
+ * und die den Takt anhält (`pauseRotationDuringMatch !== false`). Null = kein Pinnen.
+ * B-44b (F2): Die Vorbelegung hält nur bei genau einer Live-Folie; mehrere Live-Folien wechseln auch während
+ * laufender Spiele. Eine Live-Folie ohne fieldId gilt als Feld 1 und hält an.
+ */
+function pinTarget(program: SlideProgram, state: SlideshowState, matches: readonly RuleMatch[]): { index: number; matchId: string } | null {
+  const count = program.slides.length;
+  if (program.slides.filter(isLiveSlide).length !== 1) { return null; }
+  for (let k = 0; k < count; k++) {
+    const i = wrapIndex(state.index + k, count);
+    const slide = program.slides[i];
+    const field = liveFieldOf(slide);
+    if (field === null || !('config' in slide) || slide.config.pauseRotationDuringMatch === false) { continue; }
+    const match = runningOn(matches, field);
+    if (match) { return { index: i, matchId: match.id }; }
+  }
+  return null;
+}
+
+/**
+ * @ZM-122 + Controller-Ruling (B-16e1): Sind alle Folien der Liste übersprungen (Live-Folien ohne Spiel auf
+ * ihrem Feld), zeigt die Seite den Rückfall (QR, ohne QR der Spielplan). Die Liste selbst bleibt unverändert,
+ * damit Pin und Haltezeit (@ZM-077) nicht abreißen.
+ */
+export function alleUebersprungen(slides: readonly ProgramSlide[], matches: readonly RuleMatch[]): boolean {
+  return slides.length > 0 && slides.every(slide => isSkipped(slide, matches));
+}
+
+/** Ein Schritt des Takts zur nächsten sichtbaren Folie; bleibt nichts übrig, bleibt die Folie stehen. */
+function advance(program: SlideProgram, state: SlideshowState, now: number, matches: readonly RuleMatch[]): SlideshowState {
+  const target = firstVisible(program, state.index + 1, matches) ?? state.index;
+  return { ...state, index: target, page: 0, startedAt: now, direction: 'next' };
+}
+
+/**
+ * Takt und Spielregeln (B-16c, B-16e1). Liefert dasselbe Objekt zurück, wenn sich nichts ändert.
+ * - Pausiert (Taste) → unverändert.
+ * - Laufendes Spiel auf dem Feld einer Live-Folie → Folie pinnen, kein Takt (@ZM-074, @ZM-075).
+ * - Gepinntes Spiel beendet → Endergebnis 30 s halten, danach die folgende Folie (@ZM-077).
+ * - Live-Folie ohne laufendes Spiel auf ihrem Feld → überspringen (@ZM-122).
+ * - Sonst Takt: Anzeigedauer der Seite abgelaufen → nächste Seite bzw. nächste Folie.
+ */
+export function nextSlide(program: SlideProgram, state: SlideshowState, now: number): SlideshowState {
+  const count = program.slides.length;
+  if (count === 0) { return state; }
+  const matches = program.matches ?? [];
+
+  const pin = pinTarget(program, state, matches);
+  if (pin) {
+    if (pin.index === state.index && pin.matchId === (state.pinnedMatchId ?? null) && (state.finalUntil ?? null) === null) {
+      return state;
+    }
+    return { ...state, index: pin.index, page: 0, startedAt: now, pinnedMatchId: pin.matchId, finalUntil: null };
+  }
+
+  if ((state.pinnedMatchId ?? null) !== null) {
+    const pinned = matches.find(m => m.id === state.pinnedMatchId);
+    if (pinned && isMatchInProgress(pinned)) {
+      // @ZM-079: Der Pin ist nicht mehr erlaubt (Anhalten aus, Live-Folie entfernt): der Takt läuft ab jetzt.
+      return { ...state, pinnedMatchId: null, finalUntil: null, startedAt: now };
+    }
+    if ((state.finalUntil ?? null) === null) {
+      return { ...state, finalUntil: now + FINAL_RESULT_HOLD_MS };
+    }
+    if (now < (state.finalUntil ?? 0)) { return state; }
+    return advance(program, { ...state, pinnedMatchId: null, finalUntil: null }, now, matches);
+  }
+
+  if (isSkipped(program.slides[wrapIndex(state.index, count)], matches)) {
+    const target = firstVisible(program, state.index, matches);
+    if (target !== null && target !== state.index) {
+      return { ...state, index: target, page: 0, startedAt: now };
+    }
+  }
+
+  const slide = program.slides[wrapIndex(state.index, count)];
+  const pages = pagesOf(program, slide);
+  // Seiten-Klemme (B-16f1): Seite außerhalb der Folie (Seitenzahl gesunken) → Seite 0 mit neuem Takt.
+  if (state.page >= pages) { return { ...state, page: 0, startedAt: now }; }
+  // B-16f1: Stillstand nur ohne Folienwechsel UND ohne Seitenwechsel (c-Bedenken 2).
+  if (count <= 1 && pages <= 1) { return state; }
+  if (now - state.startedAt < slideDurationMs(slide, program.defaultDurationSec)) { return state; }
+  if (state.page + 1 < pages) {
+    return { ...state, page: state.page + 1, startedAt: now, direction: 'next' };
+  }
+  return advance(program, state, now, matches);
+}
+
+/**
+ * Nächster Zeitpunkt (ms), zu dem `nextSlide` etwas ändert; null = nie (pausiert, keine Folienfolge,
+ * oder gepinnt während des Spiels: dann wartet der Monitor auf neue Daten).
+ */
+export function wakeAt(program: SlideProgram, state: SlideshowState): number | null {
+  const count = program.slides.length;
+  if (count === 0) { return null; }
+  if ((state.pinnedMatchId ?? null) !== null) { return state.finalUntil ?? null; }
+  // B-16f1: Eine Folie mit mehreren Seiten hat einen Takt (Seitenwechsel), eine Folie mit einer Seite nie.
+  if (count <= 1 && pagesOf(program, program.slides[0]) <= 1) { return null; }
+  return state.startedAt + slideDurationMs(program.slides[wrapIndex(state.index, count)], program.defaultDurationSec);
 }

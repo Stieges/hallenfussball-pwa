@@ -145,6 +145,22 @@ transitions.buttonPress // transform 100ms
 transitions.fadeIn      // opacity 150ms
 ```
 
+### Monitor-Folien (`displayMonitor`)
+
+Feste Werte der Monitor-Folien (B-16d2), benannt nach Verwendung. Theme-abhängige Farben bleiben in `monitorThemes`.
+
+```typescript
+displayMonitor.overlay              // 'rgba(0, 0, 0, 0.7)' (Pause-Badge, Cache-Anzeige, theme-unabhängig)
+displayMonitor.qr.foreground        // '#000000' (QR-Vordergrund, SVG-Attribut)
+displayMonitor.qr.background        // '#ffffff' (QR-Hintergrund, SVG-Attribut)
+displayMonitor.qr.sizeLarge         // 220 (QR-Folie)
+displayMonitor.qr.sizeSmall         // 150 (Sponsor-Folie)
+displayMonitor.overscanDefaultPx    // 48
+displayMonitor.radius.card          // '12px'
+displayMonitor.marker.indicatorSize // '10px'
+displayMonitor.size.*               // Logo-, Text-, Tabellen- und Spielplan-Maße
+```
+
 ### Breakpoints
 
 ```typescript

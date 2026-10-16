@@ -2,6 +2,7 @@
  * Info-Tab der Zuschauer-Seite (B-13d1, aus LiveViewScreen ausgelagert):
  * Turnier-Details, Darstellung (Theme) und Bambini-Hinweis. Texte wörtlich übernommen.
  */
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { Card } from '../../../components/ui/Card';
 import { BaseThemeSelector } from '../../settings/components/BaseThemeSelector';
@@ -23,24 +24,26 @@ export const PublicInfoTab: React.FC<PublicInfoTabProps> = ({
   theme,
   setTheme,
   resolvedTheme,
-}) => (
+}) => {
+  const { t } = useTranslation('publicView');
+  return (
   <>
     <Card>
       <div style={{ padding: cssVars.spacing.lg }}>
         <h2 style={{ fontSize: cssVars.fontSizes.xl, marginBottom: cssVars.spacing.lg, color: cssVars.colors.textPrimary }}>
-          Turnier-Info
+          {t('info.title')}
         </h2>
 
         {/* Tournament Details */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.md }}>
           <div>
-            <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>Name:</span>
+            <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>{t('info.name')}</span>
             <p style={{ fontSize: cssVars.fontSizes.lg, color: cssVars.colors.textPrimary }}>{tournament.title}</p>
           </div>
 
           {tournament.date && (
             <div>
-              <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>Datum:</span>
+              <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>{t('info.date')}</span>
               <p style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textPrimary }}>
                 {formatDateGerman(tournament.date)}
               </p>
@@ -49,7 +52,7 @@ export const PublicInfoTab: React.FC<PublicInfoTabProps> = ({
 
           {tournament.location.name && (
             <div>
-              <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>Ort:</span>
+              <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>{t('info.location')}</span>
               <p style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textPrimary }}>
                 {tournament.location.name}
                 {tournament.location.city && `, ${tournament.location.city}`}
@@ -58,14 +61,14 @@ export const PublicInfoTab: React.FC<PublicInfoTabProps> = ({
           )}
 
           <div>
-            <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>Teams:</span>
+            <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>{t('info.teams')}</span>
             <p style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textPrimary }}>
-              {tournament.teams.length} Teams
+              {t('info.teamCount', { n: tournament.teams.length })}
             </p>
           </div>
 
           <div>
-            <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>Share-Code:</span>
+            <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>{t('info.shareCode')}</span>
             <p style={{
               fontSize: cssVars.fontSizes.xl,
               fontWeight: cssVars.fontWeights.bold,
@@ -87,7 +90,7 @@ export const PublicInfoTab: React.FC<PublicInfoTabProps> = ({
           marginBottom: cssVars.spacing.md,
           color: cssVars.colors.textPrimary,
         }}>
-          Darstellung
+          {t('info.theme')}
         </h3>
         <BaseThemeSelector
           value={theme}
@@ -108,14 +111,15 @@ export const PublicInfoTab: React.FC<PublicInfoTabProps> = ({
           }}
         >
           <p style={{ color: cssVars.colors.warning, fontWeight: cssVars.fontWeights.medium }}>
-            🔒 Bambini-Modus aktiv
+            {t('info.bambiTitle')}
           </p>
           <p style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm, marginTop: cssVars.spacing.xs }}>
-            {tournament.hideScoresForPublic && 'Spielstände werden nicht angezeigt. '}
-            {tournament.hideRankingsForPublic && 'Tabellen werden nicht angezeigt.'}
+            {tournament.hideScoresForPublic && t('info.hiddenScores')}
+            {tournament.hideRankingsForPublic && t('info.hiddenRankings')}
           </p>
         </div>
       </Card>
     )}
   </>
-);
+  );
+};

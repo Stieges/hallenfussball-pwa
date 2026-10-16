@@ -8,6 +8,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { TeamSelectorDialog } from '../components/TeamSelectorDialog';
 import { buildLiveViewTournament, TEAM_IDS } from '../../../screens/__tests__/liveViewFixture';
 
+vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
+await (await import('../../../test/realDeI18n')).initRealDeI18n();
+
 function renderDialog() {
   const teams = buildLiveViewTournament().teams;
   const onSelectTeam = vi.fn();
@@ -27,7 +30,7 @@ describe('TeamSelectorDialog (B-13d2)', () => {
 
   it('Klick auf den Hintergrund schließt den Dialog', () => {
     const { onClose } = renderDialog();
-    fireEvent.click(screen.getByTestId('team-selector-dialog'));
+    fireEvent.click(screen.getByTestId('team-selector-backdrop'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

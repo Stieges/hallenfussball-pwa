@@ -8,13 +8,13 @@
 
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tournament } from '../../../types/tournament';
+import { Match, Tournament } from '../../../types/tournament';
 import { MatchUpdate } from '../../../core/models/types';
 import { diffMatchResultStatusUpdates } from '../../../core/services';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
 import { isMatchFinished, isMatchRunning } from '../utils';
 import { useLockedScoreMatchIds } from './useLockedScoreMatchIds';
-import { isEngineControlledScoreChange, applyAutoResolutionsAfterScoreChange } from './scoreChangeHelpers';
+import { isEngineControlledScoreChange, applyAutoResolutionsAfterScoreChange, finishesOnScoreEntry } from './scoreChangeHelpers';
 
 interface UseScheduleTabActionsProps {
   tournament: Tournament;
@@ -40,6 +40,8 @@ interface UseScheduleTabActionsProps {
   setPendingReferee: (matchId: string, referee: number | null) => void;
   setPendingField: (matchId: string, field: number) => void;
   lockFinishedResults: boolean;
+  /** @TM-143: laufende/unterbrochene Spiele laut useRunningMatchIds (s. finishesOnScoreEntry). */
+  liveMatchIds: ReadonlySet<string>;
 }
 
 interface UseScheduleTabActionsResult {
@@ -64,6 +66,7 @@ export function useScheduleTabActions({
   setPendingReferee,
   setPendingField,
   lockFinishedResults,
+  liveMatchIds,
 }: UseScheduleTabActionsProps): UseScheduleTabActionsResult {
   const { t } = useTranslation('tournament');
   // Fixrunde 2/6: dieselbe Uebersetzung wie useEngineCommandWiring.ts (NotOnEngineYetError).
@@ -180,10 +183,8 @@ export function useScheduleTabActions({
     // Save to history BEFORE making changes (for Undo)
     saveToHistory();
 
-    // Update tournament matches
-    const updatedMatches = tournament.matches.map((match) =>
-      match.id === matchId ? { ...match, scoreA, scoreB } : match
-    );
+    const finish = (m: Match) => (finishesOnScoreEntry(m, scoreA, scoreB, liveMatchIds) ? { matchStatus: 'finished' as const } : {});
+    const updatedMatches = tournament.matches.map((m) => (m.id === matchId ? { ...m, scoreA, scoreB, ...finish(m) } : m));
 
     const updatedTournament = {
       ...tournament,
@@ -216,7 +217,7 @@ export function useScheduleTabActions({
     overlaidMatchIdsRef,
     onLocalTournamentUpdate,
     onMatchesUpdate,
-    lockFinishedResults,
+    lockFinishedResults, liveMatchIds,
     tCockpit,
     showWarning,
     saveToHistory,

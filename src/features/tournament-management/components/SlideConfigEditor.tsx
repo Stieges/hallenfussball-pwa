@@ -1,7 +1,7 @@
 import { CSSProperties, useMemo, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
-import { MonitorSlide, SlideConfig, WhenIdleType, QrTargetType, ColorScheme, DEFAULT_LIVE_COLOR_SCHEME } from '../../../types/monitor';
+import { MonitorSlide, SlideConfig, QrTargetType, ColorScheme, DEFAULT_LIVE_COLOR_SCHEME, DEFAULT_SLIDE_CONFIG } from '../../../types/monitor';
 import type { LiveColorScheme } from '../../../types/monitor';
 import { TournamentField, TournamentGroup } from '../../../types/tournament';
 import { validateSlideConfig } from '../../../core/models/schemas/SlideConfigSchema';
@@ -10,13 +10,6 @@ import { ColorSchemeEditor } from './ColorSchemeEditor';
 // =============================================================================
 // CONSTANTS
 // =============================================================================
-
-const WHEN_IDLE_OPTIONS: { value: WhenIdleType; labelKey: string; descriptionKey: string }[] = [
-    { value: 'next-match', labelKey: 'slideEditor.whenIdle.nextMatch', descriptionKey: 'slideEditor.whenIdle.nextMatchDesc' },
-    { value: 'last-result', labelKey: 'slideEditor.whenIdle.lastResult', descriptionKey: 'slideEditor.whenIdle.lastResultDesc' },
-    { value: 'sponsor', labelKey: 'slideEditor.whenIdle.sponsor', descriptionKey: 'slideEditor.whenIdle.sponsorDesc' },
-    { value: 'skip', labelKey: 'slideEditor.whenIdle.skip', descriptionKey: 'slideEditor.whenIdle.skipDesc' },
-];
 
 const QR_TARGET_OPTIONS: { value: QrTargetType; labelKey: string; descriptionKey: string }[] = [
     { value: 'tournament', labelKey: 'slideEditor.qrTarget.tournament', descriptionKey: 'slideEditor.qrTarget.tournamentDesc' },
@@ -173,31 +166,9 @@ export function SlideConfigEditor({
                 </div>
             )}
 
-            {/* === When Idle - nur für Live-Slides === */}
+            {/* === Live-Slides: Rotation pausieren, Score-Farben. „Wenn kein Spiel läuft“ entfällt (@OB-002: wirkt nicht, @ZM-122) === */}
             {type === 'live' && (
                 <>
-                    <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-                        <label style={styles.labelStyle} htmlFor={`${idPrefix}-whenIdle`}>
-                            {t('slideEditor.whenIdleLabel')}
-                        </label>
-                        <select
-                            id={`${idPrefix}-whenIdle`}
-                            style={accessibleSelectStyle}
-                            value={config.whenIdle?.type ?? 'next-match'}
-                            onChange={(e) => handleConfigChange('whenIdle', {
-                                type: e.target.value as WhenIdleType,
-                                timeoutSeconds: config.whenIdle?.timeoutSeconds ?? 60,
-                            })}
-                        >
-                            {WHEN_IDLE_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
-                            ))}
-                        </select>
-                        <span style={descriptionStyle}>
-                            {t((WHEN_IDLE_OPTIONS.find(o => o.value === (config.whenIdle?.type ?? 'next-match'))?.descriptionKey ?? '') as never)}
-                        </span>
-                    </div>
-
                     <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
                         <label style={checkboxLabelStyle}>
                             <input
@@ -257,7 +228,7 @@ export function SlideConfigEditor({
                     <select
                         id={`${idPrefix}-matchCount`}
                         style={accessibleSelectStyle}
-                        value={config.matchCount ?? 5}
+                        value={config.matchCount ?? DEFAULT_SLIDE_CONFIG.matchCount}
                         onChange={(e) => handleConfigChange('matchCount', Number(e.target.value))}
                     >
                         {[3, 4, 5, 6, 7, 8, 9, 10].map(n => (

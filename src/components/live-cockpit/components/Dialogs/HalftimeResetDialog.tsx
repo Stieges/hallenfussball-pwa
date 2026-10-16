@@ -14,8 +14,8 @@
  */
 
 import { useState, useCallback } from 'react';
-import { cssVars } from '../../../../design-tokens'
-import { useFocusTrap } from '../../../../hooks';
+import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import { triggerHaptic } from '../../../../utils/haptics';
 import moduleStyles from '../../LiveCockpit.module.css';
 
@@ -54,12 +54,6 @@ export function HalftimeResetDialog({
   const [resetFouls, setResetFouls] = useState(true);
   const [resetTimer, setResetTimer] = useState(true);
 
-  // WCAG 4.1.3: Focus trap for accessibility
-  const focusTrap = useFocusTrap({
-    isActive: isOpen,
-    onEscape: onClose,
-  });
-
   const handleConfirm = useCallback(() => {
     triggerHaptic('success');
     onConfirm(resetFouls, resetTimer);
@@ -73,15 +67,14 @@ export function HalftimeResetDialog({
   const nextHalf = currentHalf === 1 ? 2 : 1;
 
   return (
-    <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
-      <div
-        ref={focusTrap.containerRef}
-        style={styles.dialog}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="halftime-dialog-title"
-      >
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth={dialogWidths.sm}
+      labelledBy="halftime-dialog-title"
+      panelClassName={moduleStyles.dialogOverlay}
+    >
+      <div style={styles.dialog}>
         {/* Header */}
         <div style={styles.header}>
           <span style={styles.icon}>⏸️</span>
@@ -103,7 +96,7 @@ export function HalftimeResetDialog({
               <span style={styles.foulTeamName}>{homeTeam.name}</span>
               <span style={{
                 ...styles.foulCount,
-                color: homeFouls >= 5 ? cssVars.colors.error : cssVars.colors.warning,
+                color: homeFouls >= 5 ? cssVars.colors.error : cssVars.colors.warningSolid,
               }}>
                 {homeFouls}
               </span>
@@ -113,7 +106,7 @@ export function HalftimeResetDialog({
               <span style={styles.foulTeamName}>{awayTeam.name}</span>
               <span style={{
                 ...styles.foulCount,
-                color: awayFouls >= 5 ? cssVars.colors.error : cssVars.colors.warning,
+                color: awayFouls >= 5 ? cssVars.colors.error : cssVars.colors.warningSolid,
               }}>
                 {awayFouls}
               </span>
@@ -175,27 +168,13 @@ export function HalftimeResetDialog({
           </button>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: cssVars.colors.overlayDialog,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.lg,
-  },
   dialog: {
-    backgroundColor: cssVars.colors.surfaceElevated,
-    borderRadius: cssVars.borderRadius.xl,
     padding: cssVars.spacing.xl,
-    maxWidth: '400px',
-    width: '100%',
     display: 'flex',
     flexDirection: 'column',
     gap: cssVars.spacing.lg,
@@ -259,7 +238,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   foulDivider: {
     fontSize: cssVars.fontSizes.xl,
-    color: cssVars.colors.textMuted,
+    color: cssVars.colors.textSecondary,
   },
   optionsSection: {
     display: 'flex',
@@ -304,7 +283,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: cssVars.spacing.md,
     backgroundColor: cssVars.colors.warningBannerBg,
     borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.warning,
+    color: cssVars.colors.warningSolid,
     fontSize: cssVars.fontSizes.sm,
   },
   actions: {

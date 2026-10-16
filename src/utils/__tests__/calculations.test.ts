@@ -435,6 +435,71 @@ describe('calculateStandings', () => {
   });
 });
 
+describe('@TM-143 Nur abgepfiffene Spiele zählen für die Tabelle', () => {
+  const teams = createTeams(2, 'A');
+  const spiel7 = (matchStatus: Match['matchStatus']): Match => ({
+    id: 'm7',
+    round: 3,
+    field: 1,
+    group: 'A',
+    ...vs(testUuid(1), testUuid(2)),
+    scoreA: 1,
+    scoreB: 0,
+    matchStatus,
+  });
+
+  it('Pflicht: Spiel 7 läuft 1:0 → nicht gezählt (0 Punkte, 0 gespielt)', () => {
+    const matches = [spiel7('running')];
+    const tournament = createTournament({ teams, matches });
+
+    const standings = calculateStandings(teams, matches, tournament);
+
+    expect(standings[0].points).toBe(0);
+    expect(standings[0].played).toBe(0);
+    expect(standings[1].played).toBe(0);
+  });
+
+  it('Pflicht: Spiel 7 abgepfiffen 1:0 → +3 Punkte', () => {
+    const matches = [spiel7('finished')];
+    const tournament = createTournament({ teams, matches });
+
+    const standings = calculateStandings(teams, matches, tournament);
+
+    expect(standings[0].points).toBe(3);
+    expect(standings[0].won).toBe(1);
+    expect(standings[1].lost).toBe(1);
+  });
+
+  it('Gegenbeispiel: unterbrochenes Spiel (paused) zählt nicht', () => {
+    // Die DB kennt 'paused' (matches_match_status_check), der TS-Typ MatchStatus noch nicht.
+    const matches = [spiel7('paused' as unknown as Match['matchStatus'])];
+    const tournament = createTournament({ teams, matches });
+
+    const standings = calculateStandings(teams, matches, tournament);
+
+    expect(standings[0].points).toBe(0);
+    expect(standings[0].played).toBe(0);
+  });
+
+  it('Gegenbeispiel: laufendes Spiel fällt auch bei der Gruppenabfrage heraus', () => {
+    const matches = [spiel7('running')];
+    const tournament = createTournament({ teams, matches });
+
+    const standings = calculateStandings(teams, matches, tournament, 'A');
+
+    expect(standings.every((s) => s.played === 0 && s.points === 0)).toBe(true);
+  });
+
+  it('Gegenbeispiel: Spiel ohne gesetzten Status zählt wie bisher', () => {
+    const matches = [spiel7(undefined)];
+    const tournament = createTournament({ teams, matches });
+
+    const standings = calculateStandings(teams, matches, tournament, 'A');
+
+    expect(standings[0].points).toBe(3);
+  });
+});
+
 describe('getQualifiedTeams', () => {
   it('returns top N teams from standings', () => {
     const standings: Standing[] = [

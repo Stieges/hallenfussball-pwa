@@ -34,7 +34,7 @@ const styles = {
         maxWidth: '90vw',
         maxHeight: 360,
         overflowY: 'auto',
-        background: cssVars.colors.surface,
+        background: cssVars.colors.surfaceElevated,
         border: `1px solid ${cssVars.colors.border}`,
         borderRadius: cssVars.borderRadius.md,
         boxShadow: cssVars.shadows.lg,

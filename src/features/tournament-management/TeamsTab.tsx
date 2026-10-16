@@ -15,7 +15,7 @@ import { useState, CSSProperties, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, Input, Button, TeamAvatar, ColorPicker, LogoUploadDialog } from '../../components/ui';
 import { Tournament, Team, TeamLogo } from '../../types/tournament';
-import { cssVars } from '../../design-tokens'
+import { cssVars, dialogWidths } from '../../design-tokens'
 import {
   analyzeTeamMatches,
   deleteTeamSafely,
@@ -27,8 +27,7 @@ import {
   TeamMatchAnalysis,
 } from '../../utils/teamHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
-import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { createPortal } from 'react-dom';
+import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
 
 interface TeamsTabProps {
   tournament: Tournament;
@@ -61,12 +60,6 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   // G2: explizites Start-Ziel statt DOM-Reihenfolge.
   const closeDeleteDialog = useCallback(() => setDeleteConfirmTeam(null), []);
   const deleteCancelRef = useRef<HTMLButtonElement>(null);
-  const deleteDialogTrap = useFocusTrap({
-    isActive: deleteConfirmTeam !== null,
-    onEscape: closeDeleteDialog,
-    initialFocusRef: deleteCancelRef,
-    suppressEnter: true,
-  });
 
   // Aktive und entfernte Teams
   const activeTeams = getActiveTeams(tournament.teams);
@@ -662,15 +655,17 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       {/* Delete Confirmation Dialog */}
       {
         deleteConfirmTeam && (
-          <div style={overlayStyle}>
-            <div
-              ref={deleteDialogTrap.containerRef}
-              style={dialogStyle}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="team-delete-dialog-title"
-              data-testid="team-delete-dialog"
-            >
+          <DialogSurface
+            isOpen
+            onClose={closeDeleteDialog}
+            closeOnBackdropClick={false}
+            maxWidth={dialogWidths.md}
+            labelledBy="team-delete-dialog-title"
+            testId="team-delete-dialog"
+            initialFocusRef={deleteCancelRef}
+            suppressEnter
+          >
+            <div style={dialogStyle}>
               <h3 id="team-delete-dialog-title" style={{ margin: '0 0 16px 0', color: cssVars.colors.textPrimary }}>
                 {t('teams.deleteDialog.title')}
               </h3>
@@ -709,13 +704,13 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                 </Button>
               </div>
             </div>
-          </div>
+          </DialogSurface>
         )
       }
 
-      {/* Logo Upload Dialog */}
+      {/* Logo Upload Dialog (DialogSurface bringt das Portal selbst mit) */}
       {
-        logoUploadTeam && createPortal(
+        logoUploadTeam && (
           <LogoUploadDialog
             teamName={logoUploadTeam.name}
             currentLogo={logoUploadTeam.logo}
@@ -725,8 +720,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
               handleLogoRemove(logoUploadTeam.id);
               setLogoUploadTeamId(null);
             } : undefined}
-          />,
-          document.body
+          />
         )
       }
     </div >
@@ -737,24 +731,6 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 // DIALOG STYLES
 // ============================================================================
 
-const overlayStyle: CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  background: cssVars.colors.overlay,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 1000,
-};
-
 const dialogStyle: CSSProperties = {
-  background: cssVars.colors.surface,
-  borderRadius: cssVars.borderRadius.lg,
   padding: cssVars.spacing.xl,
-  maxWidth: '500px',
-  width: '90%',
-  boxShadow: cssVars.shadows.xl,
 };

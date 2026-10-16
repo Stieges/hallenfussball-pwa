@@ -12,6 +12,15 @@ import { Team, Match } from '../../types/tournament';
 import { FairnessCalculator } from '../../utils/FairnessCalculator';
 import { generateGroupStageMatchId } from '../../utils/idGenerator';
 import { parseDFBMatches, getDFBPattern } from '../../constants/dfbMatchPatterns';
+import {
+  createTieBreakKeys,
+  isBetterVariant,
+  isWithinBaseline,
+  measureVariant,
+  variantCountFor,
+  type VariantMetrics,
+} from './scheduleVariants';
+import { IncompleteScheduleError } from './incompleteScheduleError';
 import { teamSlot, requireTeamId, matchSideTeamId, transitionalSides } from '../models/matchSlot';
 
 /**
@@ -335,10 +344,108 @@ function validateSchedulingConstraints(
   return null; // ✅ Valid
 }
 
+interface PairingEntry {
+  groupId: string;
+  pairing: TeamPairing;
+}
+
+interface RankedPairing extends PairingEntry {
+  tieKey: number;
+}
+
 /**
- * Generate fair group phase schedule
+ * Alle Paarungen aller Gruppen in fester Reihenfolge.
+ */
+function buildAllPairings(groups: Map<string, Team[]>, dfbPatternCode?: string): PairingEntry[] {
+  const allPairings: PairingEntry[] = [];
+  groups.forEach((teams, groupId) => {
+    // DFB pattern when specified (official DFB order), otherwise Circle Method
+    const pairings = dfbPatternCode
+      ? generateDFBPairings(teams, dfbPatternCode)
+      : generateRoundRobinPairings(teams);
+    for (const pairing of pairings) {
+      allPairings.push({ groupId, pairing });
+    }
+  });
+  return allPairings;
+}
+
+/**
+ * Fehler fuer einen Spielplan, der nicht alle Spiele unterbringt (@W4-025).
+ * Wird nie still zurueckgegeben.
+ */
+function incompleteScheduleError(missingMatches: number): IncompleteScheduleError {
+  return new IncompleteScheduleError(missingMatches);
+}
+
+/**
+ * Erzeugt genau einen Plan fuer einen Gleichstands-Seed, ohne Auswahl.
+ * Seed 0 entspricht dem bisherigen Verhalten. Wirft, wenn Spiele fehlen.
+ *
+ * @internal Nur fuer Tests und Vergleiche; die App nutzt generateGroupPhaseSchedule.
+ */
+export function scheduleGroupPhaseVariant(options: GroupPhaseScheduleOptions, seed: number): Match[] {
+  const validationError = validateSchedulingConstraints(options);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+  return runGreedySchedule(options, buildAllPairings(options.groups, options.dfbPatternCode), seed);
+}
+
+/**
+ * Generiert den Gruppenspielplan. Rechnet variantCountFor(...) Varianten (max. 50)
+ * und nimmt die beste (siehe scheduleVariants.ts). Deterministisch: gleiche Eingabe,
+ * gleicher Plan. Wirft, wenn keine Variante alle Spiele unterbringt.
  */
 export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): Match[] {
+  const validationError = validateSchedulingConstraints(options);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
+  const allPairings = buildAllPairings(options.groups, options.dfbPatternCode);
+  const teamCount = [...options.groups.values()].reduce((sum, teams) => sum + teams.length, 0);
+  const variantCount = variantCountFor(allPairings.length, teamCount, options.numberOfFields);
+
+  let best: { matches: Match[]; metrics: VariantMetrics } | null = null;
+  let firstError: Error | null = null;
+  let baseline: VariantMetrics | null = null;
+
+  for (let seed = 0; seed < variantCount; seed++) {
+    let matches: Match[];
+    try {
+      matches = runGreedySchedule(options, allPairings, seed);
+    } catch (error) {
+      // Unvollstaendige Variante ist kein Plan; Fehler von Seed 0 ist die Referenz.
+      firstError ??= error instanceof Error ? error : new Error(String(error));
+      continue;
+    }
+    const metrics = measureVariant(seed, matches);
+    if (seed === 0) {
+      baseline = metrics;
+    } else if (baseline && !isWithinBaseline(metrics, baseline)) {
+      continue;
+    }
+    if (!best || isBetterVariant(metrics, best.metrics)) {
+      best = { matches, metrics };
+    }
+  }
+
+  if (!best) {
+    throw firstError ?? incompleteScheduleError(allPairings.length);
+  }
+  return best.matches;
+}
+
+/**
+ * Greedy-Lauf fuer einen Gleichstands-Seed. Wirft bei Deadlock oder bei
+ * Erreichen der Sicherheitsgrenze, solange noch Spiele offen sind.
+ */
+function runGreedySchedule(
+  options: GroupPhaseScheduleOptions,
+  allPairings: PairingEntry[],
+  tieBreakSeed: number
+): Match[] {
   const {
     groups,
     numberOfFields,
@@ -346,14 +453,7 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
     breakBetweenSlotsMinutes,
     minRestSlotsPerTeam,
     startTime,
-    dfbPatternCode,
   } = options;
-
-  // Pre-validation: Check constraints before attempting to schedule
-  const validationError = validateSchedulingConstraints(options);
-  if (validationError) {
-    throw new Error(validationError);
-  }
 
   const matches: Match[] = [];
   const timeSlots: TimeSlot[] = [];
@@ -368,29 +468,12 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
   const fairnessCalculator = new FairnessCalculator();
   fairnessCalculator.bindTeamStates(teamStates);
 
-  // Generate round-robin pairings for each group
-  // Use DFB patterns when specified, otherwise use Circle Method
-  const groupPairings = new Map<string, TeamPairing[]>();
-  groups.forEach((teams, groupId) => {
-    if (dfbPatternCode) {
-      // Use DFB pattern for scheduling (maintains official DFB order)
-      groupPairings.set(groupId, generateDFBPairings(teams, dfbPatternCode));
-    } else {
-      // Use standard Circle Method
-      groupPairings.set(groupId, generateRoundRobinPairings(teams));
-    }
-  });
-
-  // Flatten all pairings with group info
-  const allPairings: Array<{ groupId: string; pairing: TeamPairing }> = [];
-  groupPairings.forEach((pairings, groupId) => {
-    pairings.forEach((pairing) => {
-      allPairings.push({ groupId, pairing });
-    });
-  });
-
-  // Schedule matches using greedy algorithm with fairness heuristic
-  const remainingPairings = [...allPairings];
+  // Gleichstands-Schluessel je Paarung (Seed 0 = Paarungs-Reihenfolge)
+  const tieKeys = createTieBreakKeys(allPairings.length, tieBreakSeed);
+  const remainingPairings: RankedPairing[] = allPairings.map((entry, index) => ({
+    ...entry,
+    tieKey: tieKeys[index],
+  }));
 
   // Track consecutive empty slots for smarter deadlock detection
   let consecutiveEmptySlots = 0;
@@ -424,13 +507,13 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
       // Strategy: Prioritize matches with teams that have had longest rest
       let bestPairingIndex = -1;
       let bestScore = Infinity;
-      const candidates: Array<{ index: number; score: number; longestRestSinceLastMatch: number }> = [];
+      const candidates: Array<{ index: number; score: number; longestRestSinceLastMatch: number; tieKey: number }> = [];
 
       for (let i = 0; i < remainingPairings.length; i++) {
         const { pairing } = remainingPairings[i];
 
         // NOTE: pairing.away is guaranteed non-null here because BYE-pairings
-        // are filtered out in generateRoundRobinPairings() at line 105
+        // are filtered out in generateRoundRobinPairings()
         if (!pairing.away) { continue; } // Type guard for safety
 
         const score = calculateFairnessScore(
@@ -451,19 +534,23 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
           const restB = currentSlotIndex - teamBState.lastSlot;
           const minRest = Math.min(restA, restB);
 
-          candidates.push({ index: i, score, longestRestSinceLastMatch: minRest });
+          candidates.push({ index: i, score, longestRestSinceLastMatch: minRest, tieKey: remainingPairings[i].tieKey });
         }
       }
 
-      // Sort candidates: prefer those with longest rest (to spread matches out)
-      // Then by fairness score
+      // Sort candidates: prefer those with longest rest (to spread matches out),
+      // then by fairness score, then by the tie-break key of the variant
       candidates.sort((a, b) => {
         // First priority: choose matches where BOTH teams have had longer rest
         if (a.longestRestSinceLastMatch !== b.longestRestSinceLastMatch) {
           return b.longestRestSinceLastMatch - a.longestRestSinceLastMatch; // Descending
         }
         // Second priority: fairness score
-        return a.score - b.score;
+        if (a.score !== b.score) {
+          return a.score - b.score;
+        }
+        // Tie: key of the variant (Seed 0 = pairing order)
+        return a.tieKey - b.tieKey;
       });
 
       if (candidates.length > 0) {
@@ -481,11 +568,6 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
         const stateA = teamStates.get(pairing.home.id);
         const stateB = teamStates.get(pairing.away.id);
         if (!stateA || !stateB) { continue; } // Skip if states not found
-
-        // Debug logging (disabled for performance with large tournaments)
-        // const restA = currentSlotIndex - stateA.lastSlot;
-        // const restB = currentSlotIndex - stateB.lastSlot;
-        // console.log(`[FairScheduler] Slot ${currentSlotIndex}, Field ${field}: Scheduled ${pairing.home.name} vs ${pairing.away.name} (Group ${groupId}), Score: ${bestScore.toFixed(2)}, Rest: ${restA}/${restB} slots`);
 
         // @TM-015: Gruppenspiele tragen Team-IDs als Slot (wirft, wenn die ID keine UUID ist).
         const sideA = teamSlot(pairing.home.id);
@@ -533,16 +615,7 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
       // Only throw if we've had too many consecutive empty slots
       // This indicates a true deadlock, not just normal rest periods
       if (consecutiveEmptySlots > maxConsecutiveEmptySlots) {
-        console.error(
-          `[FairScheduler] DEADLOCK: No match could be placed for ${consecutiveEmptySlots} consecutive slots.`,
-          `Remaining: ${remainingPairings.length} matches`
-        );
-
-        throw new Error(
-          `Spielplan konnte nicht vollständig erstellt werden. ` +
-          `${remainingPairings.length} Matches fehlen. ` +
-          `Bitte mehr Felder hinzufügen oder minRestSlotsPerTeam reduzieren.`
-        );
+        throw incompleteScheduleError(remainingPairings.length);
       }
     } else {
       // Reset counter when we make progress
@@ -552,10 +625,9 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
     // Move to next slot
     currentSlotIndex++;
 
-    // Safety check to prevent infinite loop
-    if (currentSlotIndex > allPairings.length * 2) {
-      console.error('Fair scheduler: Could not schedule all matches with given constraints');
-      break;
+    // Safety limit: running past it with matches still open is an error, never a partial plan (@W4-025)
+    if (remainingPairings.length > 0 && currentSlotIndex > allPairings.length * 2) {
+      throw incompleteScheduleError(remainingPairings.length);
     }
   }
 

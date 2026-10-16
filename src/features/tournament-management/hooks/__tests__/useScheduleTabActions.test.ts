@@ -7,9 +7,10 @@
  * proves Fixrunde 1's "nur einen Weg" requirement: handleScoreChange now goes through the SAME
  * `diffMatchResultStatusUpdates` helper as every other result/status-changing caller.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { Tournament, Match } from '../../../../types/tournament';
+import { calculateStandings } from '../../../../utils/calculations';
 import { looseVs } from '../../../../test/matchSlotFixtures';
 
 // P4 (Fixrunde 3): kontrollierbarer Ref-Inhalt fuer `useEngineOverlaidMatchIds` -- steuert, ob ein
@@ -75,6 +76,7 @@ function renderActions(tournament: Tournament, overrides: Partial<Parameters<typ
       setPendingReferee,
       setPendingField,
       lockFinishedResults: false,
+      liveMatchIds: new Set<string>(),
       ...overrides,
     })
   );
@@ -341,5 +343,138 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
 
     expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
     expect(showWarning).not.toHaveBeenCalled();
+  });
+});
+
+// Turnier mit zwei Teams in Gruppe A, damit die Tabelle (calculateStandings) rechnen kann.
+const tabellenTurnier = (matches: Match[]): Tournament => (({
+  ...createTournament(matches),
+  teams: [
+    { id: 'team-a', name: 'Team A', group: 'A' },
+    { id: 'team-b', name: 'Team B', group: 'A' },
+  ],
+  placementLogic: [{ id: 'points', label: 'Punkte', enabled: true }],
+}));
+
+// Merge I1: ein Spiel mit echten Teams, aber OHNE Ergebnis, ist seit Spur A ein Engine-Spiel und wird für die
+// Schnelleingabe gesperrt (Fixrunde 2 Item 6). Die B-40-Fälle gelten für Altspiele mit bereits eingetragenem
+// Ergebnis (Korrektur im Spielplan) – deshalb startet das Spiel hier mit 1:0 (0:0 gilt der Engine-Einstufung als „kein Ergebnis“).
+const tabellenSpiel = (overrides: Partial<Match> = {}): Match =>
+  createMatch({ id: 'm1', group: 'A', ...looseVs('team-a', 'team-b'), scoreA: 1, scoreB: 0, ...overrides });
+
+// @FU-080 / @TM-143 (B-40 Fixrunde 1): Ergebnis direkt im Spielplan eingetragen -> die Tabelle zählt es.
+describe('useScheduleTabActions — Ergebnis im Spielplan zählt in der Tabelle (@FU-080, @TM-143)', () => {
+  const punkteVon = (turnier: Tournament, name: string) =>
+    calculateStandings(turnier.teams, turnier.matches, turnier, 'A').find((s) => s.team.name === name)?.points;
+
+  it('beide Ergebnisse eingetragen: Status finished (lokal und im Payload), Tabelle rechnet mit 3:1', () => {
+    const turnier = tabellenTurnier([tabellenSpiel({ matchStatus: 'scheduled' })]);
+    const { result, onLocalTournamentUpdate, onMatchesUpdate } = renderActions(turnier);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 3, 1);
+    });
+
+    const aktualisiert = onLocalTournamentUpdate.mock.calls[0][0] as Tournament;
+    expect(aktualisiert.matches[0].matchStatus).toBe('finished');
+    expect(onMatchesUpdate.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ id: 'm1', scoreA: 3, scoreB: 1, matchStatus: 'finished' }),
+    ]);
+    expect(punkteVon(aktualisiert, 'Team A')).toBe(3);
+    expect(punkteVon(aktualisiert, 'Team B')).toBe(0);
+  });
+
+  it('Gegenbeispiel: nur ein ANDERES Spiel läuft laut Live-Quelle -> dieses wird trotzdem finished', () => {
+    const turnier = tabellenTurnier([tabellenSpiel({ matchStatus: 'scheduled' })]);
+    const { result, onMatchesUpdate } = renderActions(turnier, { liveMatchIds: new Set(['m2']) });
+
+    act(() => {
+      result.current.handleScoreChange('m1', 3, 1);
+    });
+
+    expect(onMatchesUpdate.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ id: 'm1', matchStatus: 'finished' }),
+    ]);
+  });
+});
+
+// B-40 Fixrunde 2 (W2/H1): echte Schutzklauseln über den Hook. Laufend oder pausiert darf durch einen
+// Spielplan-Eintrag nicht zu `finished` werden; der Status bleibt stehen.
+// Merge I1: „laufend/pausiert“ kommt aus der Live-Quelle (`liveMatchIds` = useRunningMatchIds/useLiveMatches)
+// oder dem Turnierstatus, nicht mehr aus einem eigenen localStorage-Lesen (@FU-087).
+describe('useScheduleTabActions — laufend/pausiert bleibt laufend/pausiert (@FU-080, @TM-143)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('gespeicherter Status paused bleibt paused, Payload ohne matchStatus', () => {
+    const turnier = tabellenTurnier([
+      // Die DB kennt 'paused' (matches_match_status_check), der TS-Typ MatchStatus noch nicht.
+      tabellenSpiel({ matchStatus: 'paused' as unknown as Match['matchStatus'] }),
+    ]);
+    const { result, onLocalTournamentUpdate, onMatchesUpdate } = renderActions(turnier);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 3, 1);
+    });
+
+    const aktualisiert = onLocalTournamentUpdate.mock.calls[0][0] as Tournament;
+    expect(aktualisiert.matches[0].matchStatus).toBe('paused');
+    expect(onMatchesUpdate.mock.calls[0][0][0]).not.toHaveProperty('matchStatus');
+  });
+
+  it('Live-Quelle meldet das Spiel (lokale Halbzeit/Pause) bei Status scheduled -> nicht finished', () => {
+    const turnier = tabellenTurnier([tabellenSpiel({ matchStatus: 'scheduled' })]);
+    const { result, onLocalTournamentUpdate, onMatchesUpdate } = renderActions(turnier, { liveMatchIds: new Set(['m1']) });
+
+    act(() => {
+      result.current.handleScoreChange('m1', 3, 1);
+    });
+
+    const aktualisiert = onLocalTournamentUpdate.mock.calls[0][0] as Tournament;
+    expect(aktualisiert.matches[0].matchStatus).toBe('scheduled');
+    expect(onMatchesUpdate.mock.calls[0][0][0]).not.toHaveProperty('matchStatus');
+  });
+
+  it('@FU-087 Gegenbeispiel: ein localStorage-Eintrag RUNNING allein schützt den Status nicht (Live-Quelle leer)', () => {
+    vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify({ m1: { status: 'RUNNING' } }));
+    const turnier = tabellenTurnier([tabellenSpiel({ matchStatus: 'scheduled' })]);
+    const { result, onMatchesUpdate } = renderActions(turnier);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 3, 1);
+    });
+
+    expect(onMatchesUpdate.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ id: 'm1', matchStatus: 'finished' }),
+    ]);
+    vi.mocked(localStorage.getItem).mockReturnValue(null);
+  });
+});
+
+// @FU-080 (MVP): ein GEPLANTES Spiel mit echten Teams und ohne Ergebnis, auf Papier geleitet, bekommt im Spielplan
+// direkt 3:1 -> beendet mit 3:1, die Tabelle rechnet damit. Gesperrt nur, wenn ein anderes Gerät das Feld steuert (@FU-081).
+// Merge I1 (Fixrunde, Controller-Auftrag 4): ROT – die Schnelleingabe sperrt genau dieses Spiel als „Engine-Spiel“
+// (scoreChangeHelpers.isEngineControlledScoreChange -> isNewScheduledMatch). Eigenes Paket mit Spur-A-Anteil.
+describe('useScheduleTabActions — @FU-080 Direkteintrag in ein geplantes Spiel mit echten Teams', () => {
+  it.fails('@FU-080 geplantes Spiel ohne Ergebnis, Papierbetrieb: 3:1 im Spielplan -> beendet mit 3:1, Tabelle rechnet', () => {
+    const turnier = tabellenTurnier([
+      createMatch({ id: 'm1', group: 'A', ...looseVs('team-a', 'team-b'), matchStatus: 'scheduled' }),
+    ]);
+    const { result, onLocalTournamentUpdate, onMatchesUpdate, showWarning } = renderActions(turnier);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 3, 1);
+    });
+
+    expect(showWarning).not.toHaveBeenCalled();
+    const aktualisiert = onLocalTournamentUpdate.mock.calls[0][0] as Tournament;
+    expect(aktualisiert.matches[0]).toMatchObject({ scoreA: 3, scoreB: 1, matchStatus: 'finished' });
+    expect(onMatchesUpdate.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ id: 'm1', scoreA: 3, scoreB: 1, matchStatus: 'finished' }),
+    ]);
+    const punkte = calculateStandings(aktualisiert.teams, aktualisiert.matches, aktualisiert, 'A')
+      .find((st) => st.team.name === 'Team A')?.points;
+    expect(punkte).toBe(3);
   });
 });

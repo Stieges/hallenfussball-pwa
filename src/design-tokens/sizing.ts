@@ -16,6 +16,13 @@ export const touchTargets = {
   primary: '56px',
 } as const;
 
+/** Lesebreiten von Dialogen (nur diese drei verwenden) */
+export const dialogWidths = {
+  sm: '400px',
+  md: '480px',
+  lg: '800px',
+} as const;
+
 export const touchTargetValues = {
   minimum: 44,
   comfortable: 48,

@@ -17,6 +17,7 @@ const SlideTypeSchema = z.enum([
     'schedule-group',
     'next-matches',
     'top-scorers',
+    'qr-code',
 ]);
 
 const WhenIdleTypeSchema = z.enum([

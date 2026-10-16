@@ -81,7 +81,11 @@
     "startDate": "Start Date",
     "startDatePastError": "Start date cannot be in the past",
     "startTime": "Start Time",
-    "startTimePlaceholder": "09:00"
+    "startTimePlaceholder": "09:00",
+    "rulebook": "Rulebook (optional)",
+    "rulebookPlaceholder": "e.g. BFV rules for futsal",
+    "rulebookLimit": "Up to 80 characters.",
+    "rulebookTruncated": "Cut to 80 characters."
   },
   "location": {
     "label": "Venue",
@@ -554,7 +558,9 @@
     "reasonRefusedUnknown": "The tournament start status cannot be determined – rescheduling is therefore not possible.",
     "suggestionCollision": "Lower the minimum rest period, add a field, or move the retained match before rescheduling.",
     "suggestionMinRestOrAddField": "Lower the minimum rest period or add a field.",
-    "suggestionRestoreTeam": "Restore the team or create a new one."
+    "suggestionRestoreTeam": "Restore the team or create a new one.",
+    "reasonScheduleIncomplete_one": "The schedule cannot be completed as it is: {{count}} match does not fit.",
+    "reasonScheduleIncomplete_other": "The schedule cannot be completed as it is: {{count}} matches do not fit."
   },
   "publish": {
     "button": "Finalise",
@@ -562,5 +568,9 @@
     "success": "Tournament successfully finalised.",
     "explanationPrivate": "The schedule becomes fixed. Afterwards the tournament is visible only to the signed-in tournament directors.",
     "explanationPublic": "The schedule becomes fixed. Afterwards anyone with the link can watch."
+  },
+  "schedule": {
+    "incomplete_one": "The schedule cannot be completed as it is: {{count}} match does not fit. Please add another field or shorten the minimum break.",
+    "incomplete_other": "The schedule cannot be completed as it is: {{count}} matches do not fit. Please add another field or shorten the minimum break."
   }
 }

@@ -5,6 +5,7 @@
  * (src/utils/matchStartState.ts, @LZ-003 / B-01a) – keine Kopie.
  */
 import type { Match, Team, Tournament } from '../../../types/tournament';
+import { IncompleteScheduleError } from '../../../core/generators/incompleteScheduleError';
 import {
   generateFullSchedule,
   type GeneratedSchedule,
@@ -25,6 +26,7 @@ export type ReplanTextKey =
   | 'replan.reasonFieldRemoved'
   | 'replan.reasonOverlap'
   | 'replan.reasonGeneratorFailed'
+  | 'replan.reasonScheduleIncomplete'
   | 'replan.reasonRefusedKickoff'
   | 'replan.reasonRefusedUnknown';
 
@@ -56,6 +58,8 @@ export type ReplanPreviewResult =
       reasonKey: ReplanTextKey;
       suggestionKey: ReplanSuggestionKey;
       detail?: string;
+      /** B-42 (@W4-025): Zahl fehlender Spiele für den Grund-Text (Plural). */
+      reasonCount?: number;
     }
   /** @W5-008: Nach dem Anpfiff ist keine Neuplanung möglich (fail-closed). */
   | { status: 'refused'; reasonKey: ReplanTextKey; detail?: string };
@@ -225,6 +229,15 @@ export function buildReplanPreview(
       conflictMatchIds,
     };
   } catch (err) {
+    // B-42 (@W4-025): Der Grund steht als Text im Schluessel; der Rohtext wird nicht angezeigt.
+    if (err instanceof IncompleteScheduleError) {
+      return {
+        status: 'impossible',
+        reasonKey: 'replan.reasonScheduleIncomplete',
+        reasonCount: err.missingMatches,
+        suggestionKey: 'replan.suggestionMinRestOrAddField',
+      };
+    }
     const detail = err instanceof Error ? err.message : String(err);
     return {
       status: 'impossible',

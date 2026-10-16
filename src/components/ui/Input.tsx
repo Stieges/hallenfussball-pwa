@@ -8,6 +8,10 @@ interface InputProps {
   /** Wird beim Verlassen des Feldes ausgelöst (z. B. Regelwert-Prüfung, @W2A-034) */
   onBlur?: () => void;
   placeholder?: string;
+  /** Höchstlänge der Eingabe (nativ über maxLength am input) */
+  maxLength?: number;
+  /** ID(s) von Hinweisen am Feld, werden als aria-describedby gesetzt (ohne errorMessage) */
+  describedBy?: string;
   min?: string | number;
   max?: string | number;
   step?: string | number;
@@ -30,6 +34,8 @@ export const Input: React.FC<InputProps> = ({
   onChange,
   onBlur,
   placeholder,
+  maxLength,
+  describedBy,
   min,
   max,
   step,
@@ -93,6 +99,7 @@ export const Input: React.FC<InputProps> = ({
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
+        maxLength={maxLength}
         min={min}
         max={max}
         step={step}
@@ -102,7 +109,7 @@ export const Input: React.FC<InputProps> = ({
         style={inputStyles}
         data-testid={testId}
         aria-invalid={hasError || undefined}
-        aria-describedby={errorId}
+        aria-describedby={errorId ?? describedBy}
         onFocus={(e) => {
           e.target.style.borderColor = hasError ? cssVars.colors.error : cssVars.colors.primary;
           e.target.style.boxShadow = `0 0 0 3px ${hasError ? cssVars.colors.errorGlow : cssVars.colors.focusRing}`;

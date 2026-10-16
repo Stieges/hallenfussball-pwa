@@ -17,7 +17,7 @@ import {
   openCockpit,
   type AppendAsRoleEvent,
 } from './engineHelpers';
-import { enterGoal } from './helpers';
+import { enterGoal, fetchMatchRow } from './helpers';
 import { restAsRole, serviceRest } from './restAsRole';
 import { E2E_LIVE_CUP_ID, engineCupIds, type EngineCupSlug } from './testData';
 
@@ -51,8 +51,10 @@ test.describe('Spielplan liest fremde Tore', () => {
     test.skip(!testInfo.project.name.includes('desktop'), 'Engine-Cups nur auf cloud-desktop.');
   });
 
-  test('@FU-087 Eigentümer, Kanal zu: Helfer-Tor erscheint in Spielplan und Tabelle nach höchstens 10 s, ohne Hinweis', async ({ browser }) => {
-    test.setTimeout(90_000);
+  // Merge I1 (Controller-Ruling 16.10., Variante A): @FU-087 verlangt Spielplan und Monitor, nichts zur Tabelle.
+  // Die Tabelle zählt das laufende Spiel nach @TM-143 (Daniel 10.10.) NICHT, erst nach dem Abpfiff.
+  test('@FU-087 @TM-143 Eigentümer, Kanal zu: Helfer-Tor erscheint in Spielplan und Monitor nach höchstens 10 s, ohne Hinweis; die Tabelle zählt erst nach dem Abpfiff', async ({ browser }) => {
+    test.setTimeout(120_000);
     const ids = engineCupIds('SPIELPLANOWNER');
     await expectSeededEngineMatch(engineCupTarget('SPIELPLANOWNER'));
     const owner = await newRoleContext(browser, 'owner');
@@ -68,9 +70,22 @@ test.describe('Spielplan liest fremde Tore', () => {
       await expect(owner.page.locator(`[data-testid="match-circle-${ids.matchId}"]`)).toContainText('2:0', { timeout: 10000 });
       await expect(owner.page.locator('[data-testid="realtime-interrupted-hint"]')).toHaveCount(0);
 
+      // @FU-087: auch der Monitor zeigt 2:0, solange das Spiel läuft, ohne Hinweis.
+      await owner.page.locator('[data-testid="desktop-tab-monitor"]').click();
+      await expect(owner.page.locator('[data-testid="live-block-home"]')).toContainText('2', { timeout: 10000 });
+      await expect(owner.page.locator('[data-testid="live-block-away"]')).toContainText('0');
+      await expect(owner.page.locator('[data-testid="realtime-interrupted-hint"]')).toHaveCount(0);
+
+      // @TM-143 Gegenbeispiel: während das Spiel läuft, zählt es in der Tabelle nicht (0 Tore, kein 2:0).
       await owner.page.locator('[data-testid="desktop-tab-tabellen"]').click();
       await owner.page.getByText('Gesamtplatzierung').first().click();
       const homeRow = owner.page.getByRole('row').filter({ hasText: ids.homeTeamName });
+      await expect(homeRow).toContainText('0:0', { timeout: 10000 });
+      await expect(homeRow).not.toContainText('2:0');
+
+      // @TM-143: nach dem Abpfiff zählt es (2:0 in der Tabelle des Eigentümers, Kanal weiter zu).
+      await helper.page.locator('[data-testid="match-finish-button"]').click();
+      await expect.poll(() => fetchMatchRow(ids.matchId).then((row) => row.match_status), { timeout: 10000 }).toBe('finished');
       await expect(homeRow).toContainText('2:0', { timeout: 10000 });
       await expect(owner.page.locator('[data-testid="realtime-interrupted-hint"]')).toHaveCount(0);
     } finally {
