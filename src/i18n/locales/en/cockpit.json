@@ -16,7 +16,14 @@
     "ended": "Match ended",
     "undone": "Last action undone",
     "goalScored": "Goal for {{teamName}}",
-    "goalRemoved": "Goal removed for {{teamName}}"
+    "goalRemoved": "Goal removed for {{teamName}}",
+    "foul": "Foul for {{teamName}}",
+    "foulWarning": "⚠ WARNING: {{teamName}} has 5 fouls!",
+    "halftime": "Halftime",
+    "yellowCard": "Yellow card for {{teamName}}",
+    "yellowRedCard": "Yellow-red card for {{teamName}}",
+    "redCard": "Red card for {{teamName}}",
+    "timePenalty": "{{minutes}} min time penalty for {{teamName}}"
   },
   "ariaLive": {
     "running": "Match running",
@@ -74,13 +81,19 @@
   },
   "foul": {
     "label": "Fouls:",
-    "display": "FOULS"
+    "display": "FOULS",
+    "hint": "Fouls count for the whole game – cards and time penalties count as a foul",
+    "countsAsFoul": "counts as a foul"
+  },
+  "eventEditDialog": {
+    "title": "Edit {{label}}"
   },
   "cardDialog": {
     "title": "Issue Card",
     "whichCard": "Which card?",
     "forWhichTeam": "For which team?",
     "yellow": "Yellow",
+    "yellowRed": "Yellow-Red",
     "red": "Red",
     "cancel": "Cancel",
     "withoutDetails": "Without Details",
@@ -88,8 +101,14 @@
     "back": "Back",
     "jerseyNumber": "Jersey number (optional)",
     "yellowCard": "Yellow Card",
+    "yellowRedCard": "Yellow-Red Card",
     "redCard": "Red Card",
     "close": "Close"
+  },
+  "cardButtons": {
+    "yellowAria": "Yellow card for {{teamName}}",
+    "yellowRedAria": "Yellow-red card for {{teamName}}",
+    "redAria": "Red card for {{teamName}}"
   },
   "timeAdjust": {
     "title": "Adjust Match Time",
@@ -152,6 +171,7 @@
     "noEvents": "No events yet",
     "goalEvent": "GOAL {{teamName}}",
     "yellowEvent": "Yellow {{teamName}}",
+    "yellowRedEvent": "Yellow-red {{teamName}}",
     "redEvent": "Red {{teamName}}",
     "penaltyEvent": "{{duration}} Min {{teamName}}",
     "substitutionEvent": "Sub {{teamName}}",
@@ -161,7 +181,9 @@
     "matchEnded": "Match ended",
     "assistFormat": "Assist: {{assists}}",
     "editAria": "Edit {{description}}",
-    "edit": "Edit"
+    "edit": "Edit",
+    "retractedMark": "retracted",
+    "retractedAria": "{{description}} – retracted"
   },
   "matchCockpit": {
     "title": "Referee Cockpit",
@@ -317,5 +339,42 @@
     "substitution": "Sub",
     "eventLogAria": "Show event log",
     "events": "Events"
+  },
+  "engine": {
+    "notYet": "This action will be available in a later step.",
+    "invalid": "This action isn't possible right now.",
+    "storeFull": "Device storage is full. Please free up space.",
+    "retract": {
+      "hint": {
+        "finishedHelper": "Corrections only by the tournament director",
+        "finishedLeitung": "Not directly reversible after the final whistle – correction to follow",
+        "decisionPending": "Make the decision first",
+        "staleBase": "Before the last correction – can no longer be reversed",
+        "regularGoal": "Goal from regular time – can no longer be reversed",
+        "shootout": "During the $t(sport:events.penaltyShootout), reverse the shots via the log",
+        "notAllowed": "Cannot be reversed right now",
+        "goalFinished": "Match is over – corrections via the tournament director"
+      },
+      "kind": {
+        "goal": "Goal",
+        "ownGoal": "Own goal",
+        "yellowCard": "Yellow card",
+        "yellowRedCard": "Second yellow card",
+        "redCard": "Red card",
+        "timePenalty": "$t(sport:events.timePenalty)",
+        "foul": "Foul",
+        "substitution": "Substitution",
+        "shootoutKick": "$t(sport:events.penalty)"
+      },
+      "target": "{{kind}}",
+      "targetNumbered": "{{kind}} no. {{number}}",
+      "undoLabel": "Reverse {{target}}",
+      "minusAria": "Reverse {{target}} for {{teamName}}",
+      "done": "{{target}} reversed"
+    },
+    "amend": {
+      "locked": "Corrections only by the tournament director",
+      "done": "{{target}} updated"
+    }
   }
 }

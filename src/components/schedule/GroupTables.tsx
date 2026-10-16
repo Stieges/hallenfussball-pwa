@@ -7,7 +7,8 @@
 import { CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
-import { Standing, Tournament, TeamLogo, TeamColors } from '../../types/tournament';
+import { Standing, TeamLogo, TeamColors } from '../../types/tournament';
+import type { ScheduleSource } from './scheduleSource';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import { TeamAvatar } from '../ui/TeamAvatar';
 import styles from './GroupTables.module.css';
@@ -15,7 +16,7 @@ import styles from './GroupTables.module.css';
 interface GroupTablesProps {
   standings: Standing[];
   teams: Array<{ id: string; name: string; group?: string; logo?: TeamLogo; colors?: TeamColors }>;
-  tournament?: Tournament;
+  tournament?: ScheduleSource;
   /** Set of team IDs currently involved in a running match */
   activeMatchTeamIds?: Set<string>;
 }
@@ -88,7 +89,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
 interface StandingsTableProps {
   standings: Standing[];
   title: string;
-  tournament?: Tournament;
+  tournament?: ScheduleSource;
   activeMatchTeamIds?: Set<string>;
 }
 

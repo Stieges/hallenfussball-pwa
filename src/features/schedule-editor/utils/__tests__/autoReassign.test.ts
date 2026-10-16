@@ -17,6 +17,10 @@ import {
   getRefereeStats,
 } from '../autoReassign';
 import { Match, RefereeConfig } from '../../../../types/tournament';
+import { vs, testUuid } from '../../../../test/matchSlotFixtures';
+
+const TEAM_A = testUuid(1);
+const TEAM_B = testUuid(2);
 
 // ============================================================================
 // Test Helpers
@@ -27,8 +31,7 @@ function createMatch(overrides: Partial<Match> = {}): Match {
     id: `match-${Math.random().toString(36).slice(2, 7)}`,
     round: 1,
     field: 1,
-    teamA: 'team-a',
-    teamB: 'team-b',
+    ...vs(TEAM_A, TEAM_B),
     scheduledTime: new Date('2024-01-15T10:00:00'),
     matchStatus: 'scheduled',
     ...overrides,

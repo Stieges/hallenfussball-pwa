@@ -17,7 +17,9 @@ import {
 } from './playoffScheduler'
 import { getUniqueGroups } from '../../utils/groupHelpers'
 import { assignReferees } from './refereeAssigner'
+import { transitionalTeamRef } from '../models/matchSlot'
 import { GroupSizeInfo } from './playoffGenerator'
+import { slotLabel } from '../models/slotLabel'
 import sportGlossary from '../../i18n/glossary.json'
 
 // Re-export types for backwards compatibility
@@ -50,12 +52,6 @@ export function generateFullSchedule(
   // Parse Start-Zeit
   const startTime = parseStartTime(tournament.date, tournament.timeSlot)
 
-  // Team-Lookup erstellen
-  const teamMap = new Map<string, string>()
-  tournament.teams.forEach((team) => {
-    teamMap.set(team.id, team.name)
-  })
-
   let allMatches: ScheduledMatch[]
   let groupStageMatches: Match[]
   let finalMatches: Match[]
@@ -64,8 +60,6 @@ export function generateFullSchedule(
   // to avoid inheritance conflicts with different property types
   interface ExtendedMatchInput {
     id: string;
-    teamA: string;
-    teamB: string;
     phase?: string;
     isFinal?: boolean;
     scheduledTime?: Date | string;
@@ -109,6 +103,9 @@ export function generateFullSchedule(
       matchTimeMap.set(m.id, { startTime: currentSlotStartTime, endTime: matchEnd });
     }
 
+    // Anzeigetexte der Seiten: eine Funktion (slotLabel), Namen nur über die Team-ID
+    const labelContext = { teams: tournament.teams, matches: tournament.matches, groups: tournament.groups, locale }
+
     // First, map all existing matches to ScheduledMatch format
     const mappedMatches = tournament.matches.map((m, index) => {
       const extMatch = m as unknown as ExtendedMatchInput;
@@ -133,12 +130,12 @@ export function generateFullSchedule(
         endTime: matchEnd,
         // Properties required by ScheduledMatch interface
         time: formatTime(matchStart),
-        originalTeamA: m.teamA,
-        originalTeamB: m.teamB,
+        originalTeamA: transitionalTeamRef(m.slotA),
+        originalTeamB: transitionalTeamRef(m.slotB),
         duration: gameDuration,
 
-        homeTeam: teamMap.get(m.teamA) ?? m.teamA,
-        awayTeam: teamMap.get(m.teamB) ?? m.teamB,
+        homeTeam: slotLabel(m.slotA, labelContext),
+        awayTeam: slotLabel(m.slotB, labelContext),
         phase: phase as ScheduledMatch['phase'],
         isFinal: !!m.isFinal || !!extMatch.isFinal,
         // Ensure scores are preserved
@@ -180,7 +177,6 @@ export function generateFullSchedule(
         mappedMatches.filter(m => !m.isFinal && m.phase === 'groupStage'),
         startTime,
         tournament,
-        teamMap,
         locale
       )
 
@@ -208,7 +204,7 @@ export function generateFullSchedule(
       gamePeriods: tournament.gamePeriods ?? 1,
       halftimeBreak: tournament.halftimeBreak ?? 0,
       phase: 'groupStage',
-      teamMap,
+      teams: tournament.teams,
       locale,
       startMatchNumber: 1,
       groups: tournament.groups,
@@ -220,7 +216,6 @@ export function generateFullSchedule(
       scheduledGroupStage,
       startTime,
       tournament,
-      teamMap,
       locale
     )
 
@@ -380,7 +375,6 @@ function scheduleFinalMatches(
   scheduledGroupStage: ScheduledMatch[],
   startTime: Date,
   tournament: Tournament,
-  teamMap: Map<string, string>,
   locale: 'de' | 'en'
 ): ScheduledMatch[] {
   if (finalMatches.length === 0) {
@@ -405,7 +399,7 @@ function scheduleFinalMatches(
     gamePeriods: tournament.gamePeriods ?? 1,
     halftimeBreak: tournament.halftimeBreak ?? 0,
     phase: 'final',
-    teamMap,
+    teams: tournament.teams,
     locale,
     startMatchNumber,
     groups: tournament.groups,

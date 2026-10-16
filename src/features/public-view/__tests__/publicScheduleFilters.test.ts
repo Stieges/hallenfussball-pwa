@@ -14,7 +14,7 @@ import {
   uniqueGroups,
   myTeamName,
 } from '../publicScheduleFilters';
-import { buildLiveViewTournament } from '../../../screens/__tests__/liveViewFixture';
+import { buildLiveViewTournament, TEAM_IDS } from '../../../screens/__tests__/liveViewFixture';
 
 const NO_FILTER: ViewFilters = {
   showOnlyMyTeam: false,
@@ -83,10 +83,10 @@ describe('applyViewFilters', () => {
 
   it('„Nur meine“ mit Team nord zeigt nur Spiele, an denen FC Nord beteiligt ist', () => {
     const { t, schedule } = scheduleOf();
-    const result = applyViewFilters(schedule, t, { ...NO_FILTER, showOnlyMyTeam: true, myTeamId: 'team-nord' });
+    const result = applyViewFilters(schedule, t, { ...NO_FILTER, showOnlyMyTeam: true, myTeamId: TEAM_IDS.nord });
     expect(result.allMatches.length).toBeGreaterThan(0);
     for (const m of result.allMatches) {
-      expect([m.originalTeamA, m.originalTeamB]).toContain('team-nord');
+      expect([m.originalTeamA, m.originalTeamB]).toContain(TEAM_IDS.nord);
     }
   });
 
@@ -152,7 +152,7 @@ describe('publicMatches', () => {
 });
 
 describe('visibleStandings', () => {
-  const standings = [{ teamId: 'team-nord', points: 3 }] as unknown as Parameters<typeof visibleStandings>[1];
+  const standings = [{ teamId: TEAM_IDS.nord, points: 3 }] as unknown as Parameters<typeof visibleStandings>[1];
 
   it('hideRankingsForPublic liefert keine Tabelle', () => {
     const t = buildLiveViewTournament({ hideRankingsForPublic: true });
@@ -171,7 +171,7 @@ describe('uniqueGroups / myTeamName', () => {
   });
 
   it('myTeamName liefert den Namen des gewählten Teams', () => {
-    expect(myTeamName(buildLiveViewTournament(), 'team-sued')).toBe('SV Süd');
+    expect(myTeamName(buildLiveViewTournament(), TEAM_IDS.sued)).toBe('SV Süd');
   });
 
   it('myTeamName ohne Auswahl oder unbekanntes Team ist null', () => {

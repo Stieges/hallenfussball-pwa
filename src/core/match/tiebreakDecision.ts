@@ -2,7 +2,7 @@
  * K.-o.-Entscheidung bei Unentschieden (B-04c, @W2A-007/@W2A-009/@W2A-039).
  *
  * GENAU EINE Ermittlung der Entscheidungsregel — Konsumennten sind die
- * Spielsteuerung/Cockpit (MatchExecutionService.initializeMatch schreibt das
+ * Spielsteuerung/Cockpit (der Anpfiff über die Engine-Regeln schreibt das
  * Ergebnis als `tiebreakerMode` auf das Match, das Cockpit zeigt es nach dem
  * Unentschieden an) und der Monitor (monitorTiebreakerMode). Keine zweite,
  * abweichende Ermittlung irgendwo im Code.

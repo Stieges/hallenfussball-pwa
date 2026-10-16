@@ -2,6 +2,8 @@
  * Supabase Database Types
  *
  * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm)
+ * Nachtrag C0b-Fixrunde 1: public.match_has_engine_events (20261001_001_amend_event.sql) von Hand
+ * im Generator-Format ergänzt (Wegwerf-Container-Stand, noch nicht live).
  * Letzte Regeneration: 2026-09-28 (B3b, .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3b-brief.md:
  * append_match_events + server_time aus 20260928_003_append_match_events.sql; davor B3a -- Funktionen
  * der SQL-Rechenfunktion aus 20260928_002_match_engine.sql, Fixrunde 1/Ruling S12: nur die sechs
@@ -1167,6 +1169,10 @@ export type Database = {
           transitions: Json
         }
         Returns: Json
+      }
+      match_has_engine_events: {
+        Args: { p_match_id: string }
+        Returns: boolean
       }
       match_initial_state: { Args: { ctx: Json }; Returns: Json }
       match_reduce: {

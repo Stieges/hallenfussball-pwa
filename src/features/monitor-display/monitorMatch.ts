@@ -3,13 +3,14 @@
  *
  * `toLiveMatch` ermittelt die Entscheidung bei Unentschieden über dieselbe
  * exportierte Funktion wie die Spielsteuerung/Cockpit
- * (MatchExecutionService.initializeMatch → `resolveTiebreakMode`) — eine Quelle,
+ * (Entscheidungsregel `resolveTiebreakMode`, dieselbe wie im Anpfiff) — eine Quelle,
  * keine zweite, abweichende Ermittlung.
  */
 import type { Tournament, Match, Team, TiebreakerMode } from '../../types/tournament';
 import type { LiveMatch } from '../../hooks/useLiveMatches';
 import { resolveTiebreakMode, knockoutRoundOf } from '../../core/match/tiebreakDecision';
 import sportGlossary from '../../i18n/glossary.json';
+import { monitorSideName, monitorSideTeam } from './monitorSides';
 
 export type MonitorLiveMatch = LiveMatch & {
   /** Entscheidung bei Unentschieden (dieselbe Quelle wie im Cockpit) */
@@ -20,8 +21,9 @@ export type MonitorLiveMatch = LiveMatch & {
  * Convert Tournament Match + Team[] to LiveMatch format for LiveMatchDisplay.
  */
 export function toLiveMatch(match: Match, teams: Team[], tournament: Tournament): MonitorLiveMatch {
-  const findTeam = (id: string) =>
-    teams.find(t => t.id === id || t.name === id) ?? { id, name: id };
+  // Seiten über den Slot: besetzt → Team (Logo/Farben), offen → Herkunft bzw. „noch offen“ (Kindermodus).
+  const sideTeam = (side: 'A' | 'B') =>
+    monitorSideTeam(match, side, teams) ?? { id: `${match.id}:${side}`, name: monitorSideName(match, side, tournament) };
 
   const statusMap: Record<string, 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED'> = {
     running: 'RUNNING',
@@ -47,8 +49,8 @@ export function toLiveMatch(match: Match, teams: Team[], tournament: Tournament)
     scheduledKickoff: match.scheduledTime ? new Date(match.scheduledTime).toISOString() : '',
     durationSeconds: durationMinutes * 60,
     refereeName: refereeTeam?.name,
-    homeTeam: findTeam(match.teamA),
-    awayTeam: findTeam(match.teamB),
+    homeTeam: sideTeam('A'),
+    awayTeam: sideTeam('B'),
     homeScore: match.scoreA ?? 0,
     awayScore: match.scoreB ?? 0,
     status: statusMap[match.matchStatus ?? 'scheduled'] ?? 'NOT_STARTED',

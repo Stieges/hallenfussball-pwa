@@ -11,15 +11,21 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import sportGlossary from '../../../../i18n/glossary.json';
 import type { RuntimeMatchEvent } from '../../../../types/tournament';
+import { mergeProtocol } from '../protocolEntries';
+import { ProtocolRow } from '../ProtocolRow';
+import { cardKindOf } from '../../../../utils/cardKind';
 
 interface EventLogBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
   events: RuntimeMatchEvent[];
+  /** C3b-1 (G6): zurückgenommene Einträge, nur zur Anzeige (durchgestrichen, ohne Bearbeiten). */
+  retractedEvents?: RuntimeMatchEvent[];
   homeTeamName: string;
   awayTeamName: string;
   homeTeamId: string;
@@ -34,25 +40,6 @@ interface EventLogBottomSheetProps {
 // Helper Functions
 // ---------------------------------------------------------------------------
 
-const formatTime = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
-
-const getEventIcon = (type: string): string => {
-  switch (type) {
-    case 'GOAL': return '⚽';
-    case 'YELLOW_CARD': return '🟨';
-    case 'RED_CARD': return '🟥';
-    case 'TIME_PENALTY': return '⏱';
-    case 'SUBSTITUTION': return '🔄';
-    case 'FOUL': return '⚠';
-    case 'STATUS_CHANGE': return '▶️';
-    default: return '•';
-  }
-};
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -61,12 +48,14 @@ export function EventLogBottomSheet({
   isOpen,
   onClose,
   events,
+  retractedEvents,
   homeTeamName,
   awayTeamName,
   homeTeamId,
   awayTeamId,
   onEventEdit,
 }: EventLogBottomSheetProps) {
+  const { t } = useTranslation('cockpit');
   const getTeamName = (teamId?: string): string => {
     if (teamId === homeTeamId) {return homeTeamName;}
     if (teamId === awayTeamId) {return awayTeamName;}
@@ -93,7 +82,10 @@ export function EventLogBottomSheet({
       case 'YELLOW_CARD':
         return `Gelbe Karte ${teamName}${playerInfo}`;
       case 'RED_CARD':
-        return `Rote Karte ${teamName}${playerInfo}`;
+        // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
+        return cardKindOf(event) === 'YELLOW_RED'
+          ? `${t('cardDialog.yellowRedCard')} ${teamName}${playerInfo}`
+          : `${t('cardDialog.redCard')} ${teamName}${playerInfo}`;
       case 'TIME_PENALTY': {
         const duration = event.payload.penaltyDuration
           ? Math.floor(event.payload.penaltyDuration / 60)
@@ -127,7 +119,7 @@ export function EventLogBottomSheet({
   };
 
   // Show most recent events first
-  const sortedEvents = [...events].reverse();
+  const sortedEvents = mergeProtocol(events, retractedEvents).reverse();
 
   // Check if event is editable (not status changes)
   const isEditable = (event: RuntimeMatchEvent): boolean => {
@@ -141,68 +133,6 @@ export function EventLogBottomSheet({
     gap: cssVars.spacing.xs,
     maxHeight: '60vh',
     overflowY: 'auto',
-  };
-
-  const eventRowStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: cssVars.spacing.md,
-    backgroundColor: cssVars.colors.surfaceElevated,
-    border: `1px solid ${cssVars.colors.border}`,
-    borderRadius: cssVars.borderRadius.md,
-    minHeight: 56,
-  };
-
-  const eventInfoStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    flex: 1,
-    overflow: 'hidden',
-  };
-
-  const iconStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
-    flexShrink: 0,
-  };
-
-  const timeStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.semibold,
-    fontVariantNumeric: 'tabular-nums',
-    color: cssVars.colors.textSecondary,
-    flexShrink: 0,
-    minWidth: 50,
-  };
-
-  const descStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textPrimary,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  };
-
-  const incompleteStyle: CSSProperties = {
-    color: cssVars.colors.warning,
-    marginLeft: cssVars.spacing.xs,
-  };
-
-  const editButtonStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: cssVars.spacing.sm,
-    backgroundColor: cssVars.colors.primary,
-    color: cssVars.colors.onPrimary,
-    border: 'none',
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.medium,
-    cursor: 'pointer',
-    minWidth: 80,
-    minHeight: 44,
   };
 
   const emptyStyle: CSSProperties = {
@@ -224,26 +154,15 @@ export function EventLogBottomSheet({
         </div>
       ) : (
         <div style={listStyle}>
-          {sortedEvents.map((event) => (
-            <div key={event.id} style={eventRowStyle}>
-              <div style={eventInfoStyle}>
-                <span style={iconStyle}>{getEventIcon(event.type)}</span>
-                <span style={timeStyle}>{formatTime(event.timestampSeconds)}</span>
-                <span style={descStyle}>
-                  {getEventDescription(event)}
-                  {event.incomplete && <span style={incompleteStyle}>⚠️</span>}
-                </span>
-              </div>
-              {isEditable(event) && onEventEdit && (
-                <button
-                  style={editButtonStyle}
-                  onClick={() => onEventEdit(event)}
-                  aria-label={`${getEventDescription(event)} bearbeiten`}
-                >
-                  ✏️ Bearbeiten
-                </button>
-              )}
-            </div>
+          {sortedEvents.map((entry) => (
+            <ProtocolRow
+              key={entry.event.id}
+              entry={entry}
+              description={getEventDescription(entry.event)}
+              variant="sheet"
+              editable={isEditable(entry.event)}
+              onEventEdit={onEventEdit}
+            />
           ))}
         </div>
       )}

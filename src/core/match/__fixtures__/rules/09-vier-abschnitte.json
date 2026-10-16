@@ -1,0 +1,25 @@
+{
+  "title": "4 Abschnitte, Rest wird abgerundet (7 min / 4 = 105 s)",
+  "input": {
+    "durationMinutes": null,
+    "phase": null,
+    "groupPhaseDuration": 7,
+    "finalRoundDuration": null,
+    "config": {
+      "gamePeriods": 4,
+      "halftimeBreak": 0
+    },
+    "finalsConfig": {}
+  },
+  "expect": {
+    "sections": 4,
+    "sectionSeconds": 105,
+    "breakSeconds": 0,
+    "knockout": false,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

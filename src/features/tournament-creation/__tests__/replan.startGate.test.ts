@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import type { Match, Tournament } from '../../../types/tournament';
 import { generateFullSchedule } from '../../../core/generators';
 import { getReplanAvailability, openReplan } from '../utils/replan';
+import { looseVs } from '../../../test/matchSlotFixtures';
+import { testUuid } from '../../../test/testIds';
 
 const baseTournament = (): Tournament =>
   ({
@@ -26,10 +28,10 @@ const baseTournament = (): Tournament =>
     breakBetweenPhases: 0,
     placementLogic: [],
     teams: [
-      { id: '1', name: 'A' },
-      { id: '2', name: 'B' },
-      { id: '3', name: 'C' },
-      { id: '4', name: 'D' },
+      { id: testUuid(1), name: 'A' },
+      { id: testUuid(2), name: 'B' },
+      { id: testUuid(3), name: 'C' },
+      { id: testUuid(4), name: 'D' },
     ],
     matches: [],
     status: 'published',
@@ -57,6 +59,8 @@ const generatedMatches = (tournament: Tournament): Match[] =>
     field: m.field,
     teamA: m.originalTeamA,
     teamB: m.originalTeamB,
+    slotA: m.slotA,
+    slotB: m.slotB,
   }));
 
 describe('Neuplanung – Anpfiff-Sperre in openReplan (startState)', () => {
@@ -98,14 +102,14 @@ describe('Neuplanung – Anpfiff-Sperre in openReplan (startState)', () => {
 
   it('getReplanAvailability kennt drei Zustände: offered / refused-after-kickoff / unknown', () => {
     const started = establishedWith([
-      { id: 'm1', round: 1, field: 1, teamA: '1', teamB: '2', matchStatus: 'running' },
+      { id: 'm1', round: 1, field: 1, ...looseVs(testUuid(1), testUuid(2)), matchStatus: 'running' },
     ]);
     const planned = establishedWith([
-      { id: 'm1', round: 1, field: 1, teamA: '1', teamB: '2', matchStatus: 'scheduled' },
-      { id: 'm2', round: 1, field: 2, teamA: '3', teamB: '4', matchStatus: 'scheduled' },
+      { id: 'm1', round: 1, field: 1, ...looseVs(testUuid(1), testUuid(2)), matchStatus: 'scheduled' },
+      { id: 'm2', round: 1, field: 2, ...looseVs(testUuid(3), testUuid(4)), matchStatus: 'scheduled' },
     ]);
     const unknownStatus = establishedWith([
-      { id: 'm1', round: 1, field: 1, teamA: '1', teamB: '2', matchStatus: 'snapped' as Match['matchStatus'] },
+      { id: 'm1', round: 1, field: 1, ...looseVs(testUuid(1), testUuid(2)), matchStatus: 'snapped' as Match['matchStatus'] },
     ]);
 
     expect(getReplanAvailability(started)).toBe('refused-after-kickoff');

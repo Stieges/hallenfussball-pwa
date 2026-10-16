@@ -23,6 +23,7 @@ vi.mock('../../../../auth/hooks/useTournamentMembers', () => ({
 
 import { TournamentCreationService } from '../../../../../core/services/TournamentCreationService';
 import { DangerZoneCategory } from '../index';
+import { testUuid } from '../../../../../test/testIds';
 
 describe('DangerZoneCategory — frisch festgelegtes Turnier (@LZ-003, K1 Fixrunde 1)', () => {
   it('bietet „Turnier löschen" an (echtes publish(), Spiele ohne matchStatus)', async () => {
@@ -37,8 +38,8 @@ describe('DangerZoneCategory — frisch festgelegtes Turnier (@LZ-003, K1 Fixrun
       numberOfFields: 1,
       numberOfTeams: 2,
       teams: [
-        { id: 't1', name: 'A' },
-        { id: 't2', name: 'B' },
+        { id: testUuid(1), name: 'A' },
+        { id: testUuid(2), name: 'B' },
       ],
     });
 

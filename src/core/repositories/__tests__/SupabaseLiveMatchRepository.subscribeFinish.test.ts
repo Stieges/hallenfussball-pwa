@@ -7,7 +7,7 @@
  * 'FINISHED'` (siehe `liveMatchMappers.ts#mapLiveMatchToSupabaseUpdate`). `isMatchActive()`
  * liest ausschließlich `match_status`/`live_state` und hält eine solche Zeile deshalb für
  * INAKTIV — der Realtime-Handler unten behandelte das bisher wie eine Löschung
- * (`onMatchChange(id, null, 'DELETE')`). `useMatchExecution.ts#handleRealtimeChange` ignoriert
+ * (`onMatchChange(id, null, 'DELETE')`). `useCockpitExecution.ts#handleRealtimeChange` ignoriert
  * eine solche Löschung ABSICHTLICH (Kommentar dort: "Cockpit braucht beendete Spiele weiterhin").
  * Zusammen bedeutete das: ein zweites, bereits geöffnetes Cockpit (z. B. der Owner, während ein
  * Helfer das Spiel beendet) erfuhr NIE per Realtime, dass das Spiel beendet wurde — nur ein

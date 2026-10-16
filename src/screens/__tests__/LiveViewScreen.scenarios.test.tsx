@@ -9,7 +9,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { generateFullSchedule } from '../../core/generators';
 import type { ScheduledMatch } from '../../core/generators';
 import type { Tournament } from '../../types/tournament';
-import { buildLiveViewTournament, SHARE_CODE } from './liveViewFixture';
+import { buildLiveViewTournament, SHARE_CODE, TEAM_IDS } from './liveViewFixture';
 
 const { supabaseGet, localGet } = vi.hoisted(() => ({
   supabaseGet: vi.fn(),
@@ -243,7 +243,7 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
     });
 
     it('Bestand: Mein Team (gespeichert + ?my=1) zeigt keine Spiele der anderen Gruppe', async () => {
-      vi.mocked(localStorage.getItem).mockImplementation((key: string) => (key === MY_TEAM_KEY ? 'team-nord' : null));
+      vi.mocked(localStorage.getItem).mockImplementation((key: string) => (key === MY_TEAM_KEY ? TEAM_IDS.nord : null));
       const t = buildLiveViewTournament({ hideRankingsForPublic: true });
       await renderWith(t, '?my=1');
       expect(screen.getAllByText('SV Süd').length).toBeGreaterThan(0);
@@ -258,7 +258,7 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Team wählen' }));
       const nord = screen.getAllByRole('button', { name: /FC Nord/ });
       fireEvent.click(nord[nord.length - 1]);
-      expect(localStorage.setItem).toHaveBeenCalledWith(MY_TEAM_KEY, 'team-nord');
+      expect(localStorage.setItem).toHaveBeenCalledWith(MY_TEAM_KEY, TEAM_IDS.nord);
       fireEvent.click(screen.getByRole('button', { name: /Nur meine/ }));
       expect(currentSearch().get('my')).toBe('1');
       for (const name of GROUP_B_TEAMS) {

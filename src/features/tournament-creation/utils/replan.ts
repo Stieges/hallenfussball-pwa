@@ -13,20 +13,10 @@ import {
   getMatchStartState,
   type MatchStartState,
 } from '../../../utils/matchStartState';
-import { matchHasResult } from '../../../utils/teamHelpers';
+import { matchHasEvents } from '../../../utils/teamHelpers';
 import { replaceSides } from './matchSides';
+import { transitionalSides, transitionalTeamRef } from '../../../core/models/matchSlot';
 import { teamReplacedLabel } from '../../tournament-admin/constants/admin.constants';
-
-/** „Spiel mit Ereignissen" (@W5-009): Ergebnis, Laufzeit-Events oder Status ungleich geplant. */
-function matchHasEvents(match: Match): boolean {
-  return (
-    match.scoreA !== undefined ||
-    match.scoreB !== undefined ||
-    matchHasResult(match) ||
-    (match.events?.length ?? 0) > 0 ||
-    (match.matchStatus !== undefined && match.matchStatus !== 'scheduled')
-  );
-}
 
 export type ReplanAvailability = 'offered' | 'refused-after-kickoff' | 'unknown';
 
@@ -120,7 +110,7 @@ export function buildReplanPreview(
         : (tournament.groupPhaseGameDuration ?? 0);
     const keptByPairing = keptMatches.map((m) => ({
       match: m,
-      pairing: [m.teamA, m.teamB].sort().join(':'),
+      pairing: [transitionalTeamRef(m.slotA), transitionalTeamRef(m.slotB)].sort().join(':'),
       phase: m.phase ?? (m.isFinal ? 'final' : 'groupStage'),
     }));
     const usedGenerated = new Set<string>();
@@ -130,7 +120,7 @@ export function buildReplanPreview(
       const counterpart = schedule.allMatches.find(
         (g) =>
           !usedGenerated.has(g.id) &&
-          [g.originalTeamA, g.originalTeamB].sort().join(':') === kept.pairing &&
+          [transitionalTeamRef(g.slotA), transitionalTeamRef(g.slotB)].sort().join(':') === kept.pairing &&
           g.phase === kept.phase
       );
       if (counterpart) {
@@ -154,13 +144,16 @@ export function buildReplanPreview(
       return {
         ...g,
         id: kept.id,
+        // B3b: Seiten des behaltenen Spiels (nicht des Generators), sonst zeigt die Vorschau andere Slots.
+        slotA: kept.slotA,
+        slotB: kept.slotB,
         field: pinned ? kept.field : g.field,
         startTime: keptStart,
         endTime: new Date(
           keptStart.getTime() + durationFor(kept.phase ?? (kept.isFinal ? 'final' : 'groupStage')) * 60000
         ),
-        originalTeamA: kept.teamA,
-        originalTeamB: kept.teamB,
+        originalTeamA: transitionalTeamRef(kept.slotA),
+        originalTeamB: transitionalTeamRef(kept.slotB),
       };
     });
     // @W5-009 ohne Gegenstück: angehängt und im Panel als Konflikt gemeldet.
@@ -171,14 +164,17 @@ export function buildReplanPreview(
         return {
           ...schedule.allMatches[0],
           id: m.id,
+          // B3b: Slots des angehängten Spiels selbst, nicht die des Generator-Spiels 0.
+          slotA: m.slotA,
+          slotB: m.slotB,
           field: m.field,
           slot: schedule.allMatches.length,
           startTime: keptStart,
           endTime: new Date(
             keptStart.getTime() + durationFor(m.phase ?? (m.isFinal ? 'final' : 'groupStage')) * 60000
           ),
-          originalTeamA: m.teamA,
-          originalTeamB: m.teamB,
+          originalTeamA: transitionalTeamRef(m.slotA),
+          originalTeamB: transitionalTeamRef(m.slotB),
           phase: (m.phase ?? (m.isFinal ? 'final' : 'groupStage')) as (typeof schedule.allMatches)[number]['phase'],
           finalType: m.finalType,
           label: m.label,
@@ -269,8 +265,9 @@ export function applyReplan(
     round: Math.floor(index / preview.schedule.numberOfFields) + 1,
     field: m.field,
     slot: m.slot,
-    teamA: m.originalTeamA,
-    teamB: m.originalTeamB,
+    ...transitionalSides(m.slotA, m.slotB),
+    slotA: m.slotA,
+    slotB: m.slotB,
     group: m.group,
     isFinal: m.phase !== 'groupStage',
     phase: m.phase,

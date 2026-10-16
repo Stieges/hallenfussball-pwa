@@ -329,10 +329,10 @@ PRIVILEGE_ASSERTION_NAMES=(
   "compute-match-state-security-invoker"
   "compute-match-state-stable"
   "match-apply-event-immutable"
-  "match-engine-function-count-47"
-  "match-engine-immutable-count-46"
+  "match-engine-function-count-52"
+  "match-engine-immutable-count-51"
   "match-engine-no-security-definer"
-  "match-engine-search-path-all-47"
+  "match-engine-search-path-all-52"
   "match-engine-functions-no-public-execute"
   "match-engine-schema-no-public-usage"
   "no-match-helpers-in-public"
@@ -351,6 +351,14 @@ PRIVILEGE_ASSERTION_NAMES=(
   "positive-authenticated-execute-append-match-events"
   "positive-anon-execute-server-time"
   "positive-authenticated-execute-server-time"
+  "no-enter-decision-without-at"
+  "match-engine-non-b3b-executable-anon-authenticated"
+  "positive-anon-execute-match-engine-apply-amend"
+  "matches-guard-engine-columns-trigger-active"
+  "matches-guard-engine-columns-invoker-search-path"
+  "matches-guard-engine-columns-no-public-execute"
+  "match-has-engine-events-definer-search-path"
+  "match-has-engine-events-execute-only-anon-authenticated"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

@@ -9,7 +9,8 @@ export interface ITournamentRepository {
      * Loads a tournament by ID.
      * Returns null if not found.
      */
-    get(id: string): Promise<Tournament | null>;
+    /** A-08f3b: `fresh` = auf den Cloud-Stand warten (nur `OfflineRepository`, sonst ohne Wirkung). */
+    get(id: string, options?: { fresh?: boolean }): Promise<Tournament | null>;
     getByShareCode(code: string): Promise<Tournament | null>;
 
     /**

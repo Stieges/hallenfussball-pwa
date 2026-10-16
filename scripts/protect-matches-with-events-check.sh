@@ -160,14 +160,18 @@ INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, a
 VALUES
   ('$(uuid_for membership:coadmin-main)', '$T_MAIN', '$U_COADMIN', 'co-admin', now());
 
-INSERT INTO public.matches (id, tournament_id, round, field, match_status)
-VALUES
+-- A-02 (20261003_001_match_slots.sql): jede Seite braucht Team-ID oder Herkunft -- diese Proben
+-- brauchen keine Teams, die Spiele sind deshalb offen mit Herkunft (Gruppe A, Platz 1/2).
+INSERT INTO public.matches (id, tournament_id, round, field, match_status, slot_a_source, slot_b_source)
+SELECT v.id::uuid, v.tournament_id::uuid, v.round, v.field, v.match_status,
+       '{"kind":"groupRank","group":"A","rank":1}'::jsonb, '{"kind":"groupRank","group":"A","rank":2}'::jsonb
+FROM (VALUES
   ('$M_WITH_EVENT', '$T_MAIN', 1, 1, 'scheduled'),
   ('$M_NO_EVENT', '$T_MAIN', 1, 2, 'scheduled'),
   ('$M_COADMIN_WITH_EVENT', '$T_MAIN', 1, 3, 'scheduled'),
   ('$M_COADMIN_NO_EVENT', '$T_MAIN', 1, 4, 'scheduled'),
   ('$M_CASCADE_1', '$T_CASCADE', 1, 1, 'scheduled'),
-  ('$M_CASCADE_2', '$T_CASCADE', 1, 2, 'scheduled');
+  ('$M_CASCADE_2', '$T_CASCADE', 1, 2, 'scheduled')) AS v(id, tournament_id, round, field, match_status);
 
 INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away)
 VALUES

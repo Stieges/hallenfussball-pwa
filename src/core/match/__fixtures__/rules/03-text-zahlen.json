@@ -1,0 +1,31 @@
+{
+  "title": "Zahlen als Text (mit Leerzeichen)",
+  "input": {
+    "durationMinutes": null,
+    "phase": null,
+    "groupPhaseDuration": 12,
+    "finalRoundDuration": null,
+    "config": {
+      "gamePeriods": "2",
+      "halftimeBreak": " 1.5 ",
+      "matchCockpitSettings": {
+        "penaltyShootersPerTeam": "3",
+        "penaltySuddenDeathAfter": "4"
+      }
+    },
+    "finalsConfig": {
+      "tiebreakerDuration": "2"
+    }
+  },
+  "expect": {
+    "sections": 2,
+    "sectionSeconds": 360,
+    "breakSeconds": 90,
+    "knockout": false,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 120,
+    "shootersPerTeam": 3,
+    "suddenDeathAfter": 4,
+    "penaltySeconds": 120
+  }
+}

@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Tournament } from '../../../../../types/tournament';
+import { vs, testUuid } from '../../../../../test/matchSlotFixtures';
 import { ExportsCategory } from '../index';
 
 const tournament = {
@@ -25,7 +26,7 @@ const tournament = {
   placementLogic: [],
   teams: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
   matches: [
-    { id: 'm1', round: 1, field: 1, teamA: 'A', teamB: 'B', scoreA: 1, scoreB: 0, matchStatus: 'finished' },
+    { id: 'm1', round: 1, field: 1, ...vs(testUuid(1), testUuid(2)), scoreA: 1, scoreB: 0, matchStatus: 'finished' },
   ],
 } as unknown as Tournament;
 
@@ -35,7 +36,7 @@ const backup = {
   tournament: {
     ...tournament,
     matches: [
-      { id: 'm1', round: 1, field: 1, teamA: 'A', teamB: 'B', scoreA: 3, scoreB: 3, matchStatus: 'finished' },
+      { id: 'm1', round: 1, field: 1, ...vs(testUuid(1), testUuid(2)), scoreA: 3, scoreB: 3, matchStatus: 'finished' },
     ],
   },
 };

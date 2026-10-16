@@ -177,7 +177,16 @@
       "title": "Team löschen?",
       "confirmMessage": "Möchtest du \"{{name}}\" wirklich löschen?",
       "markedAsRemoved": "Das Team wird als \"entfernt\" markiert. Die Ergebnisse bleiben für die Fairness der anderen Teams erhalten.",
-      "markAsRemoved": "Als entfernt markieren"
+      "markAsRemoved": "Als entfernt markieren",
+      "warningUnprotected_one": "\"{{name}}\" hat ein geplantes Spiel ohne Ergebnis und ohne Ereignisse. Es wird aus dem Spielplan entfernt.",
+      "warningUnprotected_other": "\"{{name}}\" hat {{count}} geplante Spiele ohne Ergebnis und ohne Ereignisse. Diese werden aus dem Spielplan entfernt.",
+      "warningProtected_one": "\"{{name}}\" hat ein Spiel mit Ergebnis oder Ereignissen. Das Team wird als \"entfernt\" markiert, das Spiel bleibt erhalten.",
+      "warningProtected_other": "\"{{name}}\" hat {{count}} Spiele mit Ergebnis oder Ereignissen. Das Team wird als \"entfernt\" markiert, diese Spiele bleiben erhalten.",
+      "partKept_one": "{{count}} Spiel mit Ergebnis oder Ereignissen bleibt erhalten",
+      "partKept_other": "{{count}} Spiele mit Ergebnis oder Ereignissen bleiben erhalten",
+      "partRemoved_one": "{{count}} Spiel ohne Ergebnis und ohne Ereignisse wird entfernt",
+      "partRemoved_other": "{{count}} Spiele ohne Ergebnis und ohne Ereignisse werden entfernt",
+      "warningMixed": "\"{{name}}\":\n\n• {{kept}}.\n• {{removed}}.\n• Das Team wird als \"entfernt\" markiert."
     }
   },
   "settings": {
@@ -371,7 +380,12 @@
     "selectMatch": "Spiel auswählen (optional - automatisch wird das nächste ausgewählt):",
     "autoNextMatch": "Automatisch (nächstes Spiel)",
     "matchLoading": "Spiel wird geladen...",
-    "noMatchesOnField": "Keine Spiele auf diesem Feld vorhanden"
+    "noMatchesOnField": "Keine Spiele auf diesem Feld vorhanden",
+    "enginePreparing": "Spiel wird vorbereitet …",
+    "engineReadyError": "Spiel konnte nicht vorbereitet werden — bitte erneut versuchen",
+    "awaitingTitle": "Anpfiff noch nicht möglich",
+    "awaitingReason": "Wartegrund: {{reason}}",
+    "awaitingOffline": "Dein Gerät hat kein Netz – dein Stand kann veraltet sein. Die Besetzung steht am Server vielleicht schon fest."
   },
   "tables": {
     "noGroups": "Dieses Turnier hat keine Gruppen.",
@@ -428,7 +442,14 @@
       "recentEvents": "Letzte Ereignisse",
       "noEvents": "Noch keine Ereignisse",
       "close": "Schließen",
-      "gotoCockpit": "Zum Cockpit"
+      "gotoCockpit": "Zum Cockpit",
+      "eventYellowRedCard": "Gelb-Rote Karte {{team}}{{player}}",
+      "eventGoal": "TOR {{team}}{{player}}",
+      "eventYellowCard": "Gelbe Karte {{team}}{{player}}",
+      "eventRedCard": "Rote Karte {{team}}{{player}}",
+      "eventTimePenalty": "Zeitstrafe {{team}}{{player}}",
+      "eventSubstitution": "Wechsel {{team}}",
+      "eventFoul": "Foul {{team}}"
     },
     "quickScore": {
       "goalScorers": "Torschützen",
@@ -460,6 +481,7 @@
       "goal": "TOR {{team}}{{player}}",
       "assist": "Assist",
       "yellowCard": "Gelbe Karte {{team}}{{player}}",
+      "yellowRedCard": "Gelb-Rote Karte {{team}}{{player}}",
       "redCard": "Rote Karte {{team}}{{player}}",
       "timePenalty": "{{duration}} Min Zeitstrafe {{team}}{{player}}",
       "substitutionDetail": "Wechsel {{team}}: {{out}} → {{in}}",
@@ -687,5 +709,26 @@
     "cancel": "Abbrechen",
     "save": "Speichern",
     "saving": "Speichern..."
+  },
+  "slot": {
+    "groupRank": "{{rankWord}} {{group}}",
+    "winnerOf": "Sieger {{match}}",
+    "loserOf": "Verlierer {{match}}",
+    "matchNumber": "Spiel {{number}}",
+    "unknown": "?",
+    "groupRankFallback": "{{rank}}. {{group}}",
+    "groupDefault": "Gruppe {{id}}",
+    "rank1": "Erster",
+    "rank2": "Zweiter",
+    "rank3": "Dritter",
+    "rank4": "Vierter",
+    "playoffFinal": "Finale",
+    "playoffSemifinal": "{{n}}. Halbfinale",
+    "playoffQuarterfinal": "Viertelfinale {{n}}",
+    "playoffRoundOf16": "Achtelfinale {{n}}",
+    "playoffPlace": "Spiel um Platz {{n}}",
+    "awaitGroup": "Abschluss von {{group}}",
+    "awaitMatch": "Abschluss von {{match}}",
+    "undecided": "noch offen"
   }
 }

@@ -17,13 +17,17 @@ export class TournamentService {
     /**
      * Loads a tournament and initializes its schedule if needed.
      */
-    async loadTournament(id: string): Promise<Tournament | null> {
-        const tournament = await this.repository.get(id);
+    async loadTournament(id: string, options?: { fresh?: boolean }): Promise<Tournament | null> {
+        // A-08f3b: `fresh` (Push/Abfrage-Ausweichen) wartet auf den zusammengeführten Cloud-Stand.
+        const tournament = await this.repository.get(id, options);
 
         if (!tournament) {return null;}
 
-        // Ensure schedule is initialized (handles empty matches)
-        const matches = await this.scheduleService.initializeSchedule(id);
+        // Ensure schedule is initialized (handles empty matches). A-08f-F2: vorhandene Spiele direkt
+        // verwenden -- kein zweiter repository.get (halbiert die Last beim Abfrage-Ausweichen).
+        const matches = tournament.matches.length > 0
+            ? tournament.matches
+            : await this.scheduleService.initializeSchedule(id);
 
         // Return tournament with potentially updated matches
         return {

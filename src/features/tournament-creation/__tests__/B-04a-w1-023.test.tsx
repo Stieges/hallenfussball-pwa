@@ -48,6 +48,13 @@ vi.mock('../../../hooks/useTournamentStartState', () => ({
   }),
 }));
 
+// Merge Spur A/B: AuthSection meldet seit A-07c ueber useGuardedLogout ab, der useRepositories() liest
+// (Muster wie AuthSection.test.tsx); hier ohne Konto-Queue.
+vi.mock('../../../core/contexts/RepositoryContext', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../core/contexts/RepositoryContext')>()),
+  useRepositories: () => ({ tournamentRepository: {} }),
+}));
+
 vi.mock('../../../lib/pdfExporter', () => ({ exportScheduleToPDF: vi.fn() }));
 
 vi.mock('../../../core/generators', () => ({

@@ -27,12 +27,14 @@ import type { AuthActionDeps } from './authActions';
 import { isInvalidRefreshTokenError, clearStaleAuthState } from './authActions';
 import {
   cacheUserProfile,
-  clearProfileCache,
   restoreUserFromCache,
 } from '../services/profileCacheService';
 import { isFeatureEnabled } from '../../../config';
 import { captureFeatureError } from '../../../lib/sentry';
 import { executeWithTimeout } from '../../../core/utils/SingleFlight';
+import { useRemoteSessionCheck } from './remoteSignOut';
+import { applyAuthEventEffects, reportAuthCallbackError } from './authEventEffects';
+import { SignedOutElsewhereNotice } from '../components/SignedOutElsewhereNotice';
 
 // Re-export the context for consumers
 export { AuthContext } from './authContextInstance';
@@ -104,6 +106,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
+  // Jüngster updateAuthState-Aufruf: ein älteres Ergebnis darf einen neueren Zustand nicht überschreiben (A-07d2).
+  const authSeqRef = useRef(0);
 
   /**
    * Fetches profile data from profiles table
@@ -154,6 +158,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Updates auth state from Supabase session
    */
   const updateAuthState = useCallback(async (supabaseSession: SupabaseSession | null) => {
+    const seq = ++authSeqRef.current;
     if (!supabaseSession?.user) {
       // Check if we have a guest user stored
       const storedGuest = safeLocalStorage.getItem('auth:guestUser');
@@ -181,6 +186,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Fetch profile data (pass metadata for self-healing)
     const profileData = await fetchProfile(supabaseSession.user.id);
+    if (seq !== authSeqRef.current) { return; }
 
     // Map to our types
     const mappedUser = mapSupabaseUser(supabaseSession.user, profileData);
@@ -391,38 +397,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (isSupabaseConfigured && supabase) {
       try {
         const { data } = supabase.auth.onAuthStateChange(
-          async (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
-            if (import.meta.env.DEV) {
-              // eslint-disable-next-line no-console -- Useful for auth debugging
-              console.log('Auth state change:', event);
-            }
-
-            if (mounted) {
-              // Handle password recovery - set flag with TTL for AuthCallback to redirect
-              if (event === 'PASSWORD_RECOVERY' && newSession) {
-                const recoveryData = JSON.stringify({
-                  pending: true,
-                  expiresAt: Date.now() + 10 * 60 * 1000  // 10 minutes TTL
-                });
-                safeSessionStorage.setItem('auth:passwordRecovery', recoveryData);
+          (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
+            // Synchron bleiben (A-07d2, C-AUTH-CALLBACK-ASYNC): die Arbeit läuft danach.
+            setTimeout(() => {
+              if (import.meta.env.DEV) {
+                // eslint-disable-next-line no-console -- Useful for auth debugging
+                console.log('Auth state change:', event);
               }
 
-              // Clear guest state on real login
-              if (event === 'SIGNED_IN' && newSession) {
-                safeLocalStorage.removeItem('auth:guestUser');
-                setIsGuest(false);
+              if (mounted) {
+                // Fehlerfang (N2): sonst wäre die Ablehnung ein unbehandeltes Promise.
+                void (async () => {
+                  applyAuthEventEffects(event, newSession, setIsGuest);
+                  await updateAuthState(newSession);
+                })().catch(reportAuthCallbackError);
               }
-
-              // On sign out (including server-side token revocation),
-              // always clear local caches to prevent stale data restoration
-              if (event === 'SIGNED_OUT') {
-                safeLocalStorage.removeItem('auth:cachedUser');
-                safeLocalStorage.removeItem('auth:guestUser');
-                void clearProfileCache();
-              }
-
-              await updateAuthState(newSession);
-            }
+            }, 0);
           }
         );
         subscription = data.subscription;
@@ -633,6 +623,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     getCurrentState: () => stateRef.current,
   }), [fetchProfile, updateAuthState]);
 
+  // Anderes Gerät hat abgemeldet: Sitzung beim Start, bei online und bei Sichtbarkeit prüfen (A-07d2).
+  useRemoteSessionCheck(supabase, isAuthenticated, () => authActions.logout(actionDeps, { scope: 'local' }));
+
   // ============================================
   // AUTH ACTIONS (delegating to authActions module)
   // ============================================
@@ -660,7 +653,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
 
   const logout = useCallback(
-    () => authActions.logout(actionDeps),
+    (options?: { scope?: 'local' | 'others' }) => authActions.logout(actionDeps, options),
     [actionDeps]
   );
 
@@ -717,5 +710,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     updatePassword,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  // Globaler Hinweis „abgemeldet durch anderes Gerät“ (B2): auf /login zeigt ihn die Anmeldeseite selbst.
+  return <AuthContext.Provider value={value}>{children}<SignedOutElsewhereNotice /></AuthContext.Provider>;
 }

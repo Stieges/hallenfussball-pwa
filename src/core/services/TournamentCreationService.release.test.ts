@@ -10,6 +10,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { TournamentCreationService } from './TournamentCreationService';
 import type { ITournamentRepository } from '../repositories/ITournamentRepository';
 import type { Tournament } from '../models/types';
+import { testUuid } from '../../test/testIds';
 
 function createService() {
     const save = vi.fn((_tournament: Tournament) => Promise.resolve());
@@ -23,8 +24,8 @@ const publishable: Partial<Tournament> = {
     numberOfFields: 1,
     numberOfTeams: 2,
     teams: [
-        { id: 't1', name: 'Team A' },
-        { id: 't2', name: 'Team B' },
+        { id: testUuid(1), name: 'Team A' },
+        { id: testUuid(2), name: 'Team B' },
     ],
 };
 

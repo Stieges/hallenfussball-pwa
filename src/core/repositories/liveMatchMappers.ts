@@ -5,7 +5,7 @@
  * Used by SupabaseLiveMatchRepository for real-time match state sync.
  */
 
-import type { Json, Tables, TablesInsert } from '../../types/supabase';
+import type { Tables } from '../../types/supabase';
 import type {
   LiveMatch,
   LiveTeamInfo,
@@ -17,7 +17,6 @@ import type {
   TiebreakerMode,
 } from '../models/LiveMatch';
 import type { TeamLogo, TeamColors } from '../../types/tournament';
-import { toSupabaseEventId } from '../utils/id';
 
 // ============================================================================
 // TYPE ALIASES
@@ -25,12 +24,8 @@ import { toSupabaseEventId } from '../utils/id';
 
 type MatchRow = Tables<'matches'>;
 type MatchEventRow = Tables<'match_events'>;
-type MatchEventInsert = TablesInsert<'match_events'>;
 type TeamRow = Tables<'teams'>;
 
-/** MatchEventInsert, mit `id` als garantiert gesetztem string — mapMatchEventToSupabase
- *  setzt ihn immer, auch wenn der generierte Supabase-Typ ihn als optional führt. */
-type MatchEventInsertWithId = MatchEventInsert & { id: string };
 
 // ============================================================================
 // STATUS MAPPING
@@ -47,13 +42,6 @@ const STATUS_TO_FRONTEND: Record<string, MatchStatus> = {
   running: 'RUNNING',
   paused: 'PAUSED',
   finished: 'FINISHED',
-};
-
-const STATUS_TO_DB: Record<MatchStatus, string> = {
-  NOT_STARTED: 'scheduled',
-  RUNNING: 'running',
-  PAUSED: 'paused',
-  FINISHED: 'finished',
 };
 
 const PHASE_TO_FRONTEND: Record<string, TournamentPhase> = {
@@ -123,7 +111,7 @@ export function mapMatchEventFromSupabase(row: MatchEventRow): MatchEvent {
       delta: payload?.delta as number | undefined,
       playerNumber: payload?.playerNumber as number | undefined,
       assists: payload?.assists as number[] | undefined,
-      cardType: payload?.cardType as 'YELLOW' | 'RED' | undefined,
+      cardType: payload?.cardType as 'YELLOW' | 'YELLOW_RED' | 'RED' | undefined,
       toStatus: payload?.toStatus as MatchStatus | undefined,
       durationSeconds: payload?.durationSeconds as number | undefined,
       playersIn: payload?.playersIn as number[] | undefined,
@@ -133,36 +121,6 @@ export function mapMatchEventFromSupabase(row: MatchEventRow): MatchEvent {
       home: row.score_home,
       away: row.score_away,
     },
-  };
-}
-
-/**
- * Maps a MatchEvent to Supabase match_events insert format.
- *
- * C-EVID (Sofort-Fix 2026-09-25): `match_events.id` ist eine Postgres-`uuid`-Spalte. Neue
- * Ereignisse haben bereits eine UUID als lokale Kennung (s. `core/utils/id.ts`), Alt-
- * Ereignisse mit Text-Kennung (`${matchId}-goal-${Date.now()}-${zufall}` u.ä.) werden hier
- * deterministisch in eine UUID umgerechnet — `toSupabaseEventId` lässt echte UUIDs
- * unverändert. Die lokale Kennung (`MatchEvent.id`) bleibt unverändert, nur der an
- * Supabase gesendete Wert ändert sich.
- */
-export function mapMatchEventToSupabase(
-  event: MatchEvent,
-  matchId: string
-): MatchEventInsertWithId {
-  return {
-    id: toSupabaseEventId(event.id),
-    match_id: matchId,
-    timestamp_seconds: event.timestampSeconds,
-    type: event.type,
-    payload: event.payload,
-    score_home: event.scoreAfter.home,
-    score_away: event.scoreAfter.away,
-    team_id: null, // Could be mapped if we track team_id in payload
-    player_id: null, // Could be mapped if we track player_id
-    period: null,
-    incomplete: false,
-    is_deleted: false,
   };
 }
 
@@ -271,57 +229,6 @@ export function mapLiveMatchFromSupabase(
 }
 
 /**
- * Maps a LiveMatch to Supabase match update format
- *
- * Returns both the match update and new events to insert
- */
-export function mapLiveMatchToSupabase(
-  liveMatch: LiveMatch,
-  existingEventIds: Set<string> = new Set<string>()
-): {
-  matchUpdate: Partial<MatchRow> & { live_state: LiveStateJson | null };
-  newEvents: MatchEventInsertWithId[];
-} {
-  // Build live_state JSONB
-  const liveState: LiveStateJson = {
-    elapsedSeconds: liveMatch.elapsedSeconds,
-    durationSeconds: liveMatch.durationSeconds,
-    playPhase: liveMatch.playPhase,
-    tiebreakerMode: liveMatch.tiebreakerMode,
-    overtimeDurationSeconds: liveMatch.overtimeDurationSeconds,
-    overtimeElapsedSeconds: liveMatch.overtimeElapsedSeconds,
-    awaitingTiebreakerChoice: liveMatch.awaitingTiebreakerChoice,
-    refereeName: liveMatch.refereeName,
-  };
-
-  // Match update
-  const matchUpdate: Partial<MatchRow> & { live_state: LiveStateJson | null } = {
-    match_status: STATUS_TO_DB[liveMatch.status],
-    score_a: liveMatch.homeScore,
-    score_b: liveMatch.awayScore,
-    timer_start_time: liveMatch.timerStartTime ?? null,
-    timer_paused_at: liveMatch.timerPausedAt ?? null,
-    timer_elapsed_seconds: liveMatch.timerElapsedSeconds ?? null,
-    overtime_score_a: liveMatch.overtimeScoreA ?? null,
-    overtime_score_b: liveMatch.overtimeScoreB ?? null,
-    penalty_score_a: liveMatch.penaltyScoreA ?? null,
-    penalty_score_b: liveMatch.penaltyScoreB ?? null,
-    live_state: (liveMatch.status === 'FINISHED' ? null : liveState) as Json | null,
-    updated_at: new Date().toISOString(),
-  };
-
-  // Find new events (not yet in DB). Ruling R: der Abgleich "schon übertragen?" vergleicht
-  // die GEMAPPTE (Supabase-)Kennung, nicht die lokale MatchEvent.id — sonst würden
-  // Alt-Ereignisse mit Text-Kennung bei jedem save() erneut gesendet, weil ihre lokale ID
-  // nie im (aus DB-UUIDs gefüllten) existingEventIds-Cache steht.
-  const newEvents = liveMatch.events
-    .map((event) => mapMatchEventToSupabase(event, liveMatch.id))
-    .filter((mapped) => !existingEventIds.has(mapped.id));
-
-  return { matchUpdate, newEvents };
-}
-
-/**
  * Checks if a match is "active" (has live state).
  * Includes running, paused, AND initialized NOT_STARTED matches
  * that have live_state set (created by initializeMatch but not yet started).
@@ -338,9 +245,3 @@ export function isMatchActive(matchRow: MatchRow): boolean {
   return liveState !== null && liveState !== undefined;
 }
 
-/**
- * Clears live state when match finishes
- */
-export function clearLiveState(): { live_state: null } {
-  return { live_state: null };
-}

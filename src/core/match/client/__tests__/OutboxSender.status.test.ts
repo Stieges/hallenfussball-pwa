@@ -1,0 +1,284 @@
+/**
+ * Task C2a, Aufgabe 3 (15, 17) und PC8: Status-API, Konten-Trennung (D-C2),
+ * `stop()` loescht nichts, Persistenz-Anfrage.
+ */
+import 'fake-indexeddb/auto';
+import { IDBFactory } from 'fake-indexeddb';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { OutboxStatus } from '../outboxTypes';
+import { REQUEST_TIMEOUT_MS, createRequestTimeoutError } from '../../../utils/syncRetryTiming';
+import { ctx, ev } from './fixtures';
+import { acceptAll, makeHarness, networkError, rpcError, sentIds, sentMatches, type Harness } from './outboxHarness';
+
+async function seed(h: Harness, accountId: string, matchId: string, tournamentId?: string): Promise<void> {
+  await h.store.create(accountId, matchId, ctx, tournamentId);
+}
+
+describe('OutboxSender: Status und Konten', () => {
+  beforeEach(() => {
+    // Eigene IndexedDB je Test -- dieselben Schluessel duerfen nicht erben.
+    vi.stubGlobal('indexedDB', new IDBFactory());
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('15: Konten-Trennung -- Konto B sendet nur eigene Eintraege, stop() loescht nichts', async () => {
+    const h = makeHarness();
+    await seed(h, 'accA', 'mA');
+    await seed(h, 'accB', 'mB');
+    await h.store.addPending('accA', 'mA', ev({ id: 'a1', type: 'GOAL', at: 1 }));
+    await h.store.addPending('accB', 'mB', ev({ id: 'b1', type: 'GOAL', at: 1 }));
+
+    await h.sender.start('accB');
+
+    expect(sentIds(h.api)).toEqual([['b1']]);
+    expect(sentMatches(h.api)).toEqual(['mB']);
+    expect(h.sender.getStatus().pendingByMatch).toEqual({ mB: 0 });
+
+    h.sender.stop();
+
+    const copiesA = await h.store.forAccount('accA');
+    expect(copiesA.map((copy) => copy.matchId)).toEqual(['mA']);
+    expect(copiesA[0]?.pending.map((event) => event.id)).toEqual(['a1']);
+    const copiesB = await h.store.forAccount('accB');
+    expect(copiesB[0]?.acked.map((event) => event.id)).toEqual(['b1']);
+    expect(copiesB[0]?.pending).toEqual([]);
+
+    // Wechsel zurueck auf A: jetzt werden As Eintraege gesendet, B bleibt wie es ist
+    h.api.mockImplementation(async (_matchId, events) => acceptAll(events));
+    await h.sender.start('accA');
+    expect(sentMatches(h.api)[sentMatches(h.api).length - 1]).toBe('mA');
+    const afterA = await h.store.load('accB', 'mB');
+    expect(afterA?.acked.map((event) => event.id)).toEqual(['b1']);
+  });
+
+  it('N-3: pausedMatches zeigt nur Pausen des AKTUELLEN Kontos (Konto-Filter in refresh)', async () => {
+    const h = makeHarness();
+    await seed(h, 'accA', 'mA');
+    await h.store.addPending('accA', 'mA', ev({ id: 'a1', type: 'GOAL', at: 1 }));
+    await seed(h, 'accB', 'mB');
+    await h.store.addPending('accB', 'mB', ev({ id: 'b1', type: 'GOAL', at: 1 }));
+
+    let releaseA: () => void = () => undefined;
+    const gateA = new Promise<void>((resolve) => {
+      releaseA = resolve;
+    });
+    h.api.mockImplementation(async (matchId, events) => {
+      if (matchId === 'mA') {
+        await gateA;
+        throw networkError(); // -> transient, Backoff-Pause
+      }
+      return acceptAll(events);
+    });
+
+    const first = h.sender.start('accA');
+    for (let i = 0; i < 10; i += 1) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+    await h.sender.start('accB'); // Kontowechsel, WAEHREND A's Aufruf noch haengt
+    expect(await h.store.load('accB', 'mB').then((copy) => copy?.acked.map((e) => e.id))).toEqual(['b1']);
+
+    releaseA(); // As (veralteter) Aufruf scheitert JETZT -- schedultRetry setzt queue.pause,
+    // aber (N-1) OHNE dass dafuer ein refresh() fuer das jetzt aktive Konto B laeuft.
+    await first;
+    await h.settle();
+
+    // Ein spaeterer, eigener refresh() von B (z. B. durch kick()) darf As Pause NICHT zeigen.
+    await h.store.addPending('accB', 'mB', ev({ id: 'b2', type: 'GOAL', at: 2 }));
+    await h.sender.kick('mB');
+
+    expect(h.sender.getStatus().pausedMatches).toEqual({});
+  });
+
+  it('17: pendingByTournament stimmt nach Einfuegen und Senden, jeder Listener wird gerufen', async () => {
+    const h = makeHarness();
+    const seen: OutboxStatus[] = [];
+    const unsubscribe = h.sender.subscribe((status) => seen.push(status));
+    await seed(h, 'acc', 'm1', 't1');
+    await seed(h, 'acc', 'm2');
+
+    await h.sender.start('acc');
+    expect(h.sender.getStatus().pendingByTournament).toEqual({ t1: 0, '': 0 });
+
+    await h.store.addPending('acc', 'm1', ev({ id: 'p1', type: 'GOAL', at: 1 }));
+    await h.store.addPending('acc', 'm1', ev({ id: 'p2', type: 'GOAL', at: 2 }));
+    await h.sender.kick('m1');
+
+    const counts = seen.map((status) => status.pendingByTournament['t1'] ?? 0);
+    expect(counts).toContain(2);
+    expect(counts[counts.length - 1]).toBe(0);
+    expect(seen.length).toBeGreaterThanOrEqual(3);
+    expect(h.sender.getStatus().pendingByTournament).toEqual({ t1: 0, '': 0 });
+    expect(h.sender.getStatus().pendingByMatch).toEqual({ m1: 0, m2: 0 });
+
+    unsubscribe();
+    await h.store.addPending('acc', 'm1', ev({ id: 'p3', type: 'GOAL', at: 3 }));
+    await h.sender.kick('m1');
+    expect(seen).toHaveLength(counts.length);
+  });
+
+  it('Status meldet rejected/review je Spiel und leere Listen bei leerem Konto', async () => {
+    const h = makeHarness();
+    await h.sender.start('leer');
+    const empty = h.sender.getStatus();
+    expect(empty.pendingByTournament).toEqual({});
+    expect(empty.pendingByMatch).toEqual({});
+    expect(empty.rejectedByMatch).toEqual({});
+    expect(empty.reviewByMatch).toEqual({});
+    expect(empty.pausedMatches).toEqual({});
+    expect(empty.authRequired).toBe(false);
+    expect(empty.clientOutdated).toBe(false);
+    expect(empty.lastError).toBeNull();
+    expect(empty.lastFailureKind).toBeNull();
+  });
+
+  it('storagePersisted zeigt das Ergebnis von navigator.storage.persist', async () => {
+    const h = makeHarness();
+    expect(h.sender.getStatus().storagePersisted).toBeNull();
+    await h.sender.start('acc');
+    expect(h.persist).toHaveBeenCalledTimes(1);
+    expect(h.sender.getStatus().storagePersisted).toBe(true);
+    await h.sender.start('acc');
+    expect(h.persist).toHaveBeenCalledTimes(1);
+  });
+
+  it('fehlende Persistenz-API ist kein Fehler (storagePersisted bleibt null)', async () => {
+    const h = makeHarness();
+    vi.stubGlobal('navigator', {});
+    await h.sender.start('acc');
+    expect(h.persist).not.toHaveBeenCalled();
+    expect(h.sender.getStatus().storagePersisted).toBeNull();
+  });
+
+  it('@FU-004 @FU-013: lastFailureKind – Netzwerkfehler transient, fremder Fehler permanent im ersten Versuch, Erfolg null', async () => {
+    const h = makeHarness();
+    await seed(h, 'acc', 'm1');
+    await h.store.addPending('acc', 'm1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+    h.api.mockImplementation(async () => {
+      throw networkError();
+    });
+
+    await h.sender.start('acc');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBe('transient');
+
+    h.api.mockImplementation(async () => {
+      throw rpcError('XX000', 'Unerwartete Antwort von append_match_events');
+    });
+    await h.store.addPending('acc', 'm1', ev({ id: 'e2', type: 'GOAL', at: 2 }));
+    await h.sender.kick('m1');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBe('permanent');
+
+    h.api.mockImplementation(async (_matchId, events) => acceptAll(events));
+    await h.sender.kick('m1');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBeNull();
+  });
+
+  it('@FU-004 @FU-013: Gegenbeispiel – kick() ohne Erfolg setzt lastFailureKind nicht zurueck', async () => {
+    const h = makeHarness();
+    await seed(h, 'acc', 'm1');
+    await h.store.addPending('acc', 'm1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+    h.api.mockImplementation(async () => {
+      throw networkError();
+    });
+
+    await h.sender.start('acc');
+    await h.settle();
+    expect(h.sender.getStatus().lastFailureKind).toBe('transient');
+
+    await h.sender.kick('m2');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBe('transient');
+  });
+
+  it('@FU-004 @FU-013: Abbruchfehler (AbortError: …) wird als transient gefuehrt', async () => {
+    const h = makeHarness();
+    await seed(h, 'acc', 'm1');
+    await h.store.addPending('acc', 'm1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+    h.api.mockImplementation(async () => {
+      throw rpcError('', 'AbortError: The operation was aborted');
+    });
+
+    await h.sender.start('acc');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBe('transient');
+  });
+
+  it('@FU-004 @FU-013: Zeitlimitfehler (TimeoutError) wird als transient gefuehrt', async () => {
+    const h = makeHarness();
+    await seed(h, 'acc', 'm1');
+    await h.store.addPending('acc', 'm1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+    h.api.mockImplementation(async () => {
+      throw createRequestTimeoutError(REQUEST_TIMEOUT_MS);
+    });
+
+    await h.sender.start('acc');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBe('transient');
+  });
+
+  it('@FU-004 @FU-013: Zwischenklassen auth/notReady/matchFull/matchGone setzen lastFailureKind auf permanent', async () => {
+    // E1 (Review A-06c): Die vier Zwischenklassen duerfen NICHT auf 'transient' fallen --
+    // sonst stuende in A-06i „kein Internet" statt „Uebertragung gestoert" (Brief A10, § 6.3).
+    const cases: readonly { code: string; message: string }[] = [
+      { code: '22023', message: 'append_match_events: Spiel m1 hat noch keine zwei Teams' },
+      { code: '42501', message: 'permission denied for function append_match_events' },
+      { code: '54000', message: 'append_match_events: Spiel m1 ist voll' },
+      { code: '55000', message: 'append_match_events: Spiel m1 nicht mehr beschreibbar' },
+    ];
+    for (const { code, message } of cases) {
+      // Eigene IndexedDB je Fall -- dieselben Schluessel duerfen nicht erben.
+      vi.stubGlobal('indexedDB', new IDBFactory());
+      const h = makeHarness();
+      await seed(h, 'acc', 'm1');
+      await h.store.addPending('acc', 'm1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+      h.api.mockImplementation(async () => {
+        throw rpcError(code, message);
+      });
+
+      await h.sender.start('acc');
+      await h.settle();
+
+      expect(h.sender.getStatus().lastFailureKind, `SQLSTATE ${code}`).toBe('permanent');
+    }
+  });
+
+  it('@FU-004 @FU-013: Rueckfall-catch meldet permanent, wenn handleFailure selbst scheitert', async () => {
+    const h = makeHarness();
+    await seed(h, 'acc', 'm1');
+    await h.store.addPending('acc', 'm1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+    // E2 (Review A-06c): Ursprung muss TRANSIENT sein -- bei 54000 haette handleFailure
+    // den Wert schon auf 'permanent' gesetzt und der Rueckfall (:227) wuerde nicht bewiesen.
+    // Erst der Nachlauf (refresh -> store.forAccount) in handleFailure scheitert einmalig.
+    let failNextForAccount = false;
+    const realForAccount = h.store.forAccount.bind(h.store);
+    vi.spyOn(h.store, 'forAccount').mockImplementation(async (accountId: string) => {
+      if (failNextForAccount) {
+        failNextForAccount = false;
+        throw new Error('Speicher defekt');
+      }
+      return realForAccount(accountId);
+    });
+    h.api.mockImplementation(async () => {
+      failNextForAccount = true;
+      throw networkError();
+    });
+
+    await h.sender.start('acc');
+    await h.settle();
+
+    expect(h.sender.getStatus().lastFailureKind).toBe('permanent');
+  });
+});

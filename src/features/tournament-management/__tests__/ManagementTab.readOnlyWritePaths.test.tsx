@@ -29,6 +29,10 @@ import type { Tournament } from '../../../types/tournament';
 import type { GeneratedSchedule } from '../../../core/generators';
 import type { LiveMatch as CoreLiveMatch } from '../../../core/models/LiveMatch';
 import type { TournamentRole } from '../../auth/types/auth.types';
+import { testTeamSlot } from '../../../test/matchSlotFixtures';
+
+// C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 
 vi.mock('../../../components/live-cockpit', () => ({
   LiveCockpit: () => <div data-testid="cockpit-stub" />,
@@ -39,6 +43,12 @@ vi.mock('../../../hooks/useMatchSound', () => ({
     play: vi.fn(), stop: vi.fn(), testPlay: vi.fn(), activate: vi.fn(),
     isPlaying: false, isLoading: false, isReady: true, isActivated: true, error: null,
   }),
+}));
+
+// P7 (Fixrunde 3): ManagementTab braucht jetzt den App-weiten `useToast` (Fehler-Toast bei einem
+// gescheiterten `getLiveMatchData`) -- der wirft ohne `<ToastProvider>`-Vorfahren.
+vi.mock('../../../components/ui/Toast/ToastContext', () => ({
+  useToast: () => ({ showError: vi.fn(), showSuccess: vi.fn(), showWarning: vi.fn(), showInfo: vi.fn() }),
 }));
 
 // Mutable Rolle des angemeldeten Nutzers — echte canEditResults()-Logik (aus permissions.ts)
@@ -78,8 +88,8 @@ function makeLiveMatch(id: string, number: number, status: CoreLiveMatch['status
   };
 }
 
-vi.mock('../../../hooks/useMatchExecution', () => ({
-  useMatchExecution: () => ({
+vi.mock('../../../hooks/useCockpitExecution', () => ({
+  useCockpitExecution: () => ({
     liveMatches,
     loadingStates: { goal: false, card: false, finish: false, undo: false, start: false },
     isAnyLoading: false,
@@ -106,11 +116,13 @@ const schedule = {
     {
       id: MATCH_RUNNING, matchNumber: 1, time: '10:00', field: 1, slot: 1,
       homeTeam: HOME.name, awayTeam: AWAY.name, originalTeamA: HOME.id, originalTeamB: AWAY.id,
+    slotA: testTeamSlot(HOME.id), slotB: testTeamSlot(AWAY.id),
       phase: 'groupStage', label: 'Gruppenphase', duration: 10,
     },
     {
       id: MATCH_TARGET, matchNumber: 2, time: '10:15', field: 1, slot: 2,
       homeTeam: HOME.name, awayTeam: AWAY.name, originalTeamA: HOME.id, originalTeamB: AWAY.id,
+    slotA: testTeamSlot(HOME.id), slotB: testTeamSlot(AWAY.id),
       phase: 'groupStage', label: 'Gruppenphase', duration: 10,
     },
   ],

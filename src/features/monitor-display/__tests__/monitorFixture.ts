@@ -9,6 +9,7 @@ import type { Match, Team, Tournament, TournamentField } from '../../../types/to
 import type { MonitorSlide, PerformanceMode, SlideConfig, SlideType, TournamentMonitor } from '../../../types/monitor';
 import type { Sponsor } from '../../../types/sponsor';
 import { createMockTournament } from '../../../test/factories';
+import { looseVs } from '../../../test/matchSlotFixtures';
 
 const TIMESTAMP = '2026-10-10T09:00:00.000Z';
 
@@ -31,10 +32,10 @@ export const FIXTURE_FIELDS: TournamentField[] = [
 /** Spiel 8: Feld 2, DJK Berg – TuS Mitte (geplant). */
 /** Spiel 9: Feld 1, TuS Mitte – Kickers West (geplant, 14:40). */
 export const FIXTURE_MATCHES: Match[] = [
-  { id: 'match-1', matchNumber: 1, round: 1, field: 2, group: 'A', teamA: 'team-nord', teamB: 'team-ost', scoreA: 2, scoreB: 1, matchStatus: 'finished' },
-  { id: 'match-7', matchNumber: 7, round: 3, field: 1, group: 'A', teamA: 'team-nord', teamB: 'team-sued', scoreA: 1, scoreB: 0, matchStatus: 'running' },
-  { id: 'match-8', matchNumber: 8, round: 4, field: 2, group: 'B', teamA: 'team-berg', teamB: 'team-mitte', matchStatus: 'scheduled', scheduledTime: new Date('2026-10-10T14:20:00') },
-  { id: 'match-9', matchNumber: 9, round: 5, field: 1, group: 'B', teamA: 'team-mitte', teamB: 'team-west', matchStatus: 'scheduled', scheduledTime: new Date('2026-10-10T14:40:00') },
+  { id: 'match-1', matchNumber: 1, round: 1, field: 2, group: 'A', ...looseVs('team-nord', 'team-ost'), scoreA: 2, scoreB: 1, matchStatus: 'finished' },
+  { id: 'match-7', matchNumber: 7, round: 3, field: 1, group: 'A', ...looseVs('team-nord', 'team-sued'), scoreA: 1, scoreB: 0, matchStatus: 'running' },
+  { id: 'match-8', matchNumber: 8, round: 4, field: 2, group: 'B', ...looseVs('team-berg', 'team-mitte'), matchStatus: 'scheduled', scheduledTime: new Date('2026-10-10T14:20:00') },
+  { id: 'match-9', matchNumber: 9, round: 5, field: 1, group: 'B', ...looseVs('team-mitte', 'team-west'), matchStatus: 'scheduled', scheduledTime: new Date('2026-10-10T14:40:00') },
 ];
 
 /** Gibt die Spielliste zurück, in der genau das Spiel `id` mit `patch` überschrieben ist. */

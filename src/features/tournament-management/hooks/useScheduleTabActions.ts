@@ -13,7 +13,8 @@ import { MatchUpdate } from '../../../core/models/types';
 import { diffMatchResultStatusUpdates } from '../../../core/services';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
 import { isMatchFinished, isMatchRunning } from '../utils';
-import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../../core/generators';
+import { useLockedScoreMatchIds } from './useLockedScoreMatchIds';
+import { isEngineControlledScoreChange, applyAutoResolutionsAfterScoreChange } from './scoreChangeHelpers';
 
 interface UseScheduleTabActionsProps {
   tournament: Tournament;
@@ -65,73 +66,56 @@ export function useScheduleTabActions({
   lockFinishedResults,
 }: UseScheduleTabActionsProps): UseScheduleTabActionsResult {
   const { t } = useTranslation('tournament');
+  // Fixrunde 2/6: dieselbe Uebersetzung wie useEngineCommandWiring.ts (NotOnEngineYetError).
+  const { t: tCockpit } = useTranslation('cockpit');
+  // P4: dieselbe Menge, die useTournamentManager vor Overlay-Lecks schuetzt (I3) -- s. scoreChangeHelpers.ts.
+  const overlaidMatchIdsRef = useLockedScoreMatchIds(tournament); // A-08f3a2: + server-gefuehrte Spiele
+
+  // W11: `handleRedistributeSR`/`handleRedistributeFields` teilen sich dieselbe Form (Aenderungen
+  // berechnen, Matches damit patchen, Turnier speichern) -- ein gemeinsamer Helfer statt zweier
+  // fast identischer Bloecke.
+  const applyRedistribution = useCallback(
+    (
+      compute: () => { changes: { matchId: string; newValue: unknown }[]; message: string },
+      field: 'referee' | 'field',
+      alreadyOptimalKey: 'actions.refereesAlreadyOptimal' | 'actions.fieldsAlreadyOptimal',
+    ) => {
+      if (!isEditing) { return; }
+      saveToHistory();
+      const result = compute();
+      if (result.changes.length === 0) {
+        showSuccess(t(alreadyOptimalKey));
+        return;
+      }
+      const updatedMatches = tournament.matches.map((m) => {
+        const change = result.changes.find((c) => c.matchId === m.id);
+        return change ? { ...m, [field]: change.newValue as number } : m;
+      });
+      onTournamentUpdate({ ...tournament, matches: updatedMatches, updatedAt: new Date().toISOString() }, false);
+      showSuccess(result.message);
+    },
+    [isEditing, tournament, onTournamentUpdate, saveToHistory, showSuccess, t],
+  );
 
   // Handle redistribution of SR (keeps times fixed)
-  const handleRedistributeSR = useCallback(() => {
-    if (!isEditing) { return; }
-
-    saveToHistory();
-
-    const result = autoReassignReferees(
-      tournament.matches,
-      tournament.refereeConfig,
-      { target: 'all', optimizeForFairness: true }
-    );
-
-    if (result.changes.length === 0) {
-      showSuccess(t('actions.refereesAlreadyOptimal'));
-      return;
-    }
-
-    const updatedMatches = tournament.matches.map(m => {
-      const change = result.changes.find(c => c.matchId === m.id);
-      if (change) {
-        return { ...m, referee: change.newValue as number };
-      }
-      return m;
-    });
-
-    onTournamentUpdate({
-      ...tournament,
-      matches: updatedMatches,
-      updatedAt: new Date().toISOString(),
-    }, false);
-
-    showSuccess(result.message);
-  }, [isEditing, tournament, onTournamentUpdate, saveToHistory, showSuccess, t]);
+  const handleRedistributeSR = useCallback(
+    () => applyRedistribution(
+      () => autoReassignReferees(tournament.matches, tournament.refereeConfig, { target: 'all', optimizeForFairness: true }),
+      'referee',
+      'actions.refereesAlreadyOptimal',
+    ),
+    [applyRedistribution, tournament],
+  );
 
   // Handle redistribution of fields (keeps times fixed)
-  const handleRedistributeFields = useCallback(() => {
-    if (!isEditing) { return; }
-
-    saveToHistory();
-
-    const result = redistributeFields(
-      tournament.matches,
-      tournament.numberOfFields
-    );
-
-    if (result.changes.length === 0) {
-      showSuccess(t('actions.fieldsAlreadyOptimal'));
-      return;
-    }
-
-    const updatedMatches = tournament.matches.map(m => {
-      const change = result.changes.find(c => c.matchId === m.id);
-      if (change) {
-        return { ...m, field: change.newValue as number };
-      }
-      return m;
-    });
-
-    onTournamentUpdate({
-      ...tournament,
-      matches: updatedMatches,
-      updatedAt: new Date().toISOString(),
-    }, false);
-
-    showSuccess(result.message);
-  }, [isEditing, tournament, onTournamentUpdate, saveToHistory, showSuccess, t]);
+  const handleRedistributeFields = useCallback(
+    () => applyRedistribution(
+      () => redistributeFields(tournament.matches, tournament.numberOfFields),
+      'field',
+      'actions.fieldsAlreadyOptimal',
+    ),
+    [applyRedistribution, tournament],
+  );
 
   // Handle match swap via DnD (apply immediately for view sync)
   // Swaps scheduledTime AND field between two matches for complete slot swap
@@ -173,16 +157,23 @@ export function useScheduleTabActions({
 
   // Handle score change with live match warning
   const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number) => {
+    // Fixrunde 2 Item 6 / P4 (Fixrunde 3): siehe `scoreChangeHelpers.ts` fuer die Begruendung
+    // (Engine-Spiel darf nicht ueber die Schnelleingabe an MatchCommands/der RPC vorbei laufen).
+    if (isEngineControlledScoreChange(tournament, matchId, overlaidMatchIdsRef.current)) {
+      showWarning(tCockpit('engine.notYet'));
+      return;
+    }
+
+    const scoredMatch = tournament.matches.find((m) => m.id === matchId);
     // Block editing finished matches (if lock is enabled)
-    if (lockFinishedResults && isMatchFinished(matchId, tournament.matches, tournament.id)) {
+    if (lockFinishedResults && scoredMatch && isMatchFinished(scoredMatch)) {
       showWarning(t('actions.matchAlreadyFinished'));
       return;
     }
 
     // Check if match is currently live
-    if (isMatchRunning(matchId, tournament.id)) {
+    if (scoredMatch && isMatchRunning(scoredMatch)) {
       const confirmEdit = window.confirm(t('actions.liveMatchWarning'));
-
       if (!confirmEdit) { return; }
     }
 
@@ -214,41 +205,7 @@ export function useScheduleTabActions({
       pendingUpdates.set(matchId, scoreUpdate);
     }
 
-    // Auto-resolve playoff pairings after group match completion. This can also clear a
-    // (regenerated) playoff match's score if its teams changed -- a RESULT field -- alongside the
-    // teamA/teamB SCHEDULE fields, so the result diff of THAT match is folded into the same
-    // targeted update object (mapMatchUpdateToSupabase writes both kinds of columns in one call).
-    const playoffResolution = autoResolvePlayoffsIfReady(updatedTournament);
-    if (playoffResolution?.wasResolved) {
-      for (const id of playoffResolution.updatedMatchIds) {
-        const before = tournament.matches.find((m) => m.id === id);
-        const resolved = updatedTournament.matches.find((m) => m.id === id);
-        if (before && resolved) {
-          const [resultUpdate] = diffMatchResultStatusUpdates([before], [resolved]);
-          pendingUpdates.set(id, {
-            ...(resultUpdate ?? { id }),
-            teamA: resolved.teamA,
-            teamB: resolved.teamB,
-          });
-        }
-      }
-    }
-
-    // Also resolve bracket placeholders after playoff matches
-    const bracketResolution = resolveBracketAfterPlayoffMatch(updatedTournament);
-    if (bracketResolution?.wasResolved) {
-      for (const id of bracketResolution.updatedMatchIds) {
-        const resolved = updatedTournament.matches.find((m) => m.id === id);
-        if (resolved) {
-          pendingUpdates.set(id, {
-            ...pendingUpdates.get(id),
-            id,
-            teamA: resolved.teamA,
-            teamB: resolved.teamB,
-          });
-        }
-      }
-    }
+    applyAutoResolutionsAfterScoreChange(tournament, updatedTournament, pendingUpdates);
 
     // Sync local UI state once, without saving the whole tournament ...
     onLocalTournamentUpdate(updatedTournament);
@@ -256,9 +213,11 @@ export function useScheduleTabActions({
     onMatchesUpdate(Array.from(pendingUpdates.values()));
   }, [
     tournament,
+    overlaidMatchIdsRef,
     onLocalTournamentUpdate,
     onMatchesUpdate,
     lockFinishedResults,
+    tCockpit,
     showWarning,
     saveToHistory,
     t,

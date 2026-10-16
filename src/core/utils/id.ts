@@ -89,12 +89,3 @@ export function toDeterministicUuid(localId: string): string {
   return `${timeLow}-${timeMid}-${timeHiAndVersion}-${clockSeq}-${node}`;
 }
 
-/**
- * Kennung, die tatsächlich in `match_events.id` (Postgres `uuid`) geschrieben wird: eine
- * echte UUID bleibt unverändert, alles andere wird deterministisch umgerechnet. Die lokale
- * Kennung (`MatchEvent.id`) selbst bleibt in beiden Fällen unverändert — nur der an
- * Supabase gesendete Wert ändert sich.
- */
-export function toSupabaseEventId(localId: string): string {
-  return isUuidFormat(localId) ? localId : toDeterministicUuid(localId);
-}

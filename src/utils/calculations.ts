@@ -1,4 +1,8 @@
-import { Match, Tournament, Standing, Team, PlacementCriterion } from '../types/tournament';
+import { Match, Tournament, Standing, Team, PlacementCriterion, RuntimeMatchEvent } from '../types/tournament';
+import { DEFAULT_FAIR_PLAY_PROFILE, type FairPlayProfile } from '../core/stats/fairPlayProfiles';
+import { cardKindOf } from './cardKind';
+import { matchSideTeamId } from '../core/models/matchSlot';
+import type { TeamId } from '../core/models/schemas/MatchSlotSchema';
 
 /**
  * Calculate standings for a group or all teams
@@ -32,16 +36,12 @@ export const calculateStandings = (
 
   // Calculate stats from matches
   relevantMatches.forEach((match) => {
-    // Match by team name OR ID (match.teamA/teamB can be either depending on context)
-    // - In tournament.matches: usually team names (from schedule display)
-    // - In ScheduledMatch: also team names (homeTeam/awayTeam resolved)
-    // - In some edge cases: team IDs
-    const teamAStanding = standings.find(
-      (s) => s.team.name === match.teamA || s.team.id === match.teamA
-    );
-    const teamBStanding = standings.find(
-      (s) => s.team.name === match.teamB || s.team.id === match.teamB
-    );
+    // A-03: Die Zuordnung läuft NUR über die Team-ID aus dem Slot – ein Name zählt nie.
+    // Offene Seiten und fehlende Slots haben keine Team-ID und gehen in keine Tabelle ein.
+    const idA = matchSideTeamId(match, 'A');
+    const idB = matchSideTeamId(match, 'B');
+    const teamAStanding = idA === undefined ? undefined : standings.find((s) => s.team.id === idA);
+    const teamBStanding = idB === undefined ? undefined : standings.find((s) => s.team.id === idB);
 
     if (!teamAStanding || !teamBStanding || match.scoreA === undefined || match.scoreB === undefined) {
       return;
@@ -144,16 +144,16 @@ const compareDirectMatches = (
   b: Standing,
   matches: Match[]
 ): number => {
-  // Helper to check if match team reference matches a standing's team (by ID or name)
-  const matchesTeam = (matchTeam: string, standing: Standing) =>
-    matchTeam === standing.team.id || matchTeam === standing.team.name;
+  // Seite des Spiels gehört zu diesem Team? Nur über die Team-ID aus dem Slot (A-03).
+  const matchesTeam = (side: 'A' | 'B', m: Match, standing: Standing) =>
+    matchSideTeamId(m, side) === standing.team.id;
 
   // Find all direct matches between these two teams
   const directMatches = matches.filter(
     (m) =>
       (m.scoreA !== undefined && m.scoreB !== undefined) &&
-      ((matchesTeam(m.teamA, a) && matchesTeam(m.teamB, b)) ||
-        (matchesTeam(m.teamA, b) && matchesTeam(m.teamB, a)))
+      ((matchesTeam('A', m, a) && matchesTeam('B', m, b)) ||
+        (matchesTeam('A', m, b) && matchesTeam('B', m, a)))
   );
 
   if (directMatches.length === 0) {
@@ -175,7 +175,7 @@ const compareDirectMatches = (
     if (match.scoreA === undefined || match.scoreB === undefined) { return; }
     const scoreA = match.scoreA;
     const scoreB = match.scoreB;
-    const isAHome = matchesTeam(match.teamA, a);
+    const isAHome = matchesTeam('A', match, a);
 
     const aScore = isAHome ? scoreA : scoreB;
     const bScore = isAHome ? scoreB : scoreA;
@@ -249,52 +249,42 @@ export interface FinalsPlacementResult {
 }
 
 /**
- * Determine the winner of a finals match considering overtime and penalties
+ * Determine the winner of a finals match considering overtime and penalties.
+ * Liefert Team-IDs aus den Slots; solange eine Seite offen ist (oder der Slot fehlt) gibt es keinen
+ * Gewinner (`null`).
  */
-const getMatchWinner = (match: Match): { winner: string; loser: string } | null => {
+export const getMatchWinner = (match: Match): { winner: TeamId; loser: TeamId } | null => {
   if (match.scoreA === undefined || match.scoreB === undefined) {
     return null; // Match not finished
   }
+  const idA = matchSideTeamId(match, 'A');
+  const idB = matchSideTeamId(match, 'B');
+  if (idA === undefined || idB === undefined) {
+    return null; // a side is still open
+  }
 
-  let winnerTeam: string;
-  let loserTeam: string;
+  let sideAWins: boolean;
 
   // Check if decided by penalties
   if (match.decidedBy === 'penalty' && match.penaltyScoreA !== undefined && match.penaltyScoreB !== undefined) {
-    if (match.penaltyScoreA > match.penaltyScoreB) {
-      winnerTeam = match.teamA;
-      loserTeam = match.teamB;
-    } else {
-      winnerTeam = match.teamB;
-      loserTeam = match.teamA;
-    }
+    sideAWins = match.penaltyScoreA > match.penaltyScoreB;
   }
   // Check if decided by overtime/golden goal
   else if ((match.decidedBy === 'overtime' || match.decidedBy === 'goldenGoal') &&
     match.overtimeScoreA !== undefined && match.overtimeScoreB !== undefined) {
-    const totalA = match.scoreA + match.overtimeScoreA;
-    const totalB = match.scoreB + match.overtimeScoreB;
-    if (totalA > totalB) {
-      winnerTeam = match.teamA;
-      loserTeam = match.teamB;
-    } else {
-      winnerTeam = match.teamB;
-      loserTeam = match.teamA;
-    }
+    sideAWins = match.scoreA + match.overtimeScoreA > match.scoreB + match.overtimeScoreB;
   }
   // Regular time decision
   else if (match.scoreA > match.scoreB) {
-    winnerTeam = match.teamA;
-    loserTeam = match.teamB;
+    sideAWins = true;
   } else if (match.scoreB > match.scoreA) {
-    winnerTeam = match.teamB;
-    loserTeam = match.teamA;
+    sideAWins = false;
   } else {
     // Draw in finals without tiebreaker - shouldn't happen, but handle gracefully
     return null;
   }
 
-  return { winner: winnerTeam, loser: loserTeam };
+  return sideAWins ? { winner: idA, loser: idB } : { winner: idB, loser: idA };
 };
 
 /**
@@ -332,9 +322,9 @@ export const calculateFinalsPlacement = (
   const placements: FinalPlacement[] = [];
   const placedTeamIds = new Set<string>();
 
-  // Helper to find team by name or ID
-  const findTeam = (nameOrId: string): Team | undefined => {
-    return teams.find(t => t.name === nameOrId || t.id === nameOrId);
+  // Team nur über die Team-ID (A-03) – ein Name findet keins
+  const findTeam = (teamId: string): Team | undefined => {
+    return teams.find(t => t.id === teamId);
   };
 
   // Process finals matches by finalType priority
@@ -456,7 +446,20 @@ export interface Scorer {
   assists: number;
 }
 
-export const calculateScorers = (tournament: Tournament): Scorer[] => {
+/** Engine-Ereignisse je Spiel (aus `toRuntimeEvents`, ohne Zurückgenommenes) -- §8 Nr. 12. */
+export type EngineEventsById = ReadonlyMap<string, RuntimeMatchEvent[]>;
+
+/**
+ * C3b-2b (§8 Nr. 12): Ereignisse eines Spiels für die Leser (Torschützenliste, Fair-Play,
+ * Export). Engine-Spiele haben in `match.events` nichts (die App schreibt dort nicht, kein
+ * syncUp) -- für sie zählt die Map aus dem Adapter; sonst `match.events`.
+ */
+export const eventsForMatch = (
+  match: Match,
+  engineEventsById?: EngineEventsById,
+): RuntimeMatchEvent[] => engineEventsById?.get(match.id) ?? match.events ?? [];
+
+export const calculateScorers = (tournament: Tournament, engineEventsById?: EngineEventsById): Scorer[] => {
   const scorerMap = new Map<string, Scorer>();
 
   const getKey = (teamId: string, playerNum?: number) => `${teamId}-${playerNum ?? 'unknown'}`;
@@ -464,8 +467,7 @@ export const calculateScorers = (tournament: Tournament): Scorer[] => {
   const getTeamName = (id: string) => tournament.teams.find(t => t.id === id)?.name || 'Unbekannt';
 
   tournament.matches.forEach(match => {
-    if (match.events) {
-      match.events.forEach(event => {
+      eventsForMatch(match, engineEventsById).forEach(event => {
         if (event.type === 'GOAL') {
           const teamId = event.payload.teamId;
           const playerNum = event.payload.playerNumber;
@@ -507,7 +509,6 @@ export const calculateScorers = (tournament: Tournament): Scorer[] => {
           }
         }
       });
-    }
   });
 
   return Array.from(scorerMap.values()).sort((a, b) => b.goals - a.goals || b.assists - a.assists);
@@ -517,11 +518,54 @@ export interface FairPlayEntry {
   teamName: string;
   points: number;
   yellowCards: number;
+  /** Gelb-Rot (F3b1): eigener Zaehler, nicht in redCards enthalten. */
+  yellowRedCards: number;
   redCards: number;
   timePenalties: number;
 }
 
-export const calculateFairPlay = (tournament: Tournament): FairPlayEntry[] => {
+/**
+ * Punkte einer einzelnen Spieler-Kombination (Team + Rueckennummer, je Spiel) nach Profil.
+ * `secondYellowReplacesFirst`: eine Gelbe und eine Gelb-Rot desselben Spielers im selben Spiel ersetzen
+ * sich unabhaengig von der Reihenfolge im Log (zaehlt nur einmal als Gelb-Rot). `yellowPlusRed`: Gelb + direktes Rot desselben Spielers
+ * (kein Ersetzen, eigener Kombi-Wert: fest oder Summe).
+ */
+function scorePlayerCards(yellow: number, yellowRed: number, red: number, profile: FairPlayProfile): number {
+  let points = 0;
+  let yellowsLeft = yellow;
+  let yellowRedsLeft = yellowRed;
+  let redsLeft = red;
+
+  if (profile.secondYellowReplacesFirst && yellowsLeft > 0 && yellowRedsLeft > 0) {
+    points += profile.yellowRed;
+    yellowsLeft -= 1;
+    yellowRedsLeft -= 1;
+  }
+  points += yellowRedsLeft * profile.yellowRed;
+
+  if (yellowsLeft > 0 && redsLeft > 0) {
+    points += profile.yellowPlusRed === 'SUM' ? profile.yellow + profile.red : profile.yellowPlusRed;
+    yellowsLeft -= 1;
+    redsLeft -= 1;
+  }
+  points += yellowsLeft * profile.yellow;
+  points += redsLeft * profile.red;
+  return points;
+}
+
+/**
+ * Fair-Play-Punkte je Team nach austauschbarem Profil (DFBNET/UEFA/FIFA, Standard DFBNET).
+ * Die Reihenfolge von Gelb und Gelb-Rot im Ereignis-Log ist dabei egal: `playerTally` summiert
+ * zuerst alle Karten eines Spielers im Spiel auf (unabhaengig von der Zeile im Log) und
+ * `scorePlayerCards` kombiniert erst danach -- eine Gelb-Rot ersetzt die Gelbe desselben Spielers
+ * im selben Spiel egal ob die Gelbe vor oder (durch Nacherfassung/Korrektur) nach der Gelb-Rot
+ * im Log steht.
+ */
+export const calculateFairPlay = (
+  tournament: Tournament,
+  engineEventsById?: EngineEventsById,
+  profile: FairPlayProfile = DEFAULT_FAIR_PLAY_PROFILE,
+): FairPlayEntry[] => {
   const map = new Map<string, FairPlayEntry>();
 
   // Initialize all teams
@@ -530,31 +574,58 @@ export const calculateFairPlay = (tournament: Tournament): FairPlayEntry[] => {
       teamName: t.name,
       points: 0,
       yellowCards: 0,
+      yellowRedCards: 0,
       redCards: 0,
       timePenalties: 0
     });
   });
 
   tournament.matches.forEach(match => {
-    if (match.events) {
-      match.events.forEach(event => {
+      // Kombinationen (Gelb + Gelb-Rot/Rot desselben Spielers, Reihenfolge egal) gelten nur je Spiel --
+      // transienter Schluessel Team + Rueckennummer; ohne Rueckennummer keine Zusammenfuehrung.
+      const playerTally = new Map<string, { teamId: string; yellow: number; yellowRed: number; red: number }>();
+      let anonCounter = 0;
+
+      eventsForMatch(match, engineEventsById).forEach(event => {
         const teamId = event.payload.teamId;
         if (!teamId) { return; }
         const entry = map.get(teamId);
         if (!entry) { return; }
 
-        if (event.type === 'YELLOW_CARD') {
-          entry.yellowCards++;
-          entry.points += 1;
-        } else if (event.type === 'TIME_PENALTY') {
+        if (event.type === 'TIME_PENALTY') {
           entry.timePenalties++;
-          entry.points += 3; // 3 points for time penalty
-        } else if (event.type === 'RED_CARD') {
-          entry.redCards++;
-          entry.points += 5; // 5 points for red card
+          entry.points += profile.timePenalty;
+          return;
         }
+        const kind = cardKindOf(event);
+        if (kind === null) { return; }
+
+        const playerNumber = event.payload.playerNumber;
+        // Fixrunde Aufgabe 3: nur eine echte Zahl bildet den gemeinsamen Spieler-Schluessel.
+        // Altspiele koennen `playerNumber: null` persistiert haben (Legacy-Daten) -- `!== undefined`
+        // liess das durch und fuehrte verschiedene Spieler faelschlich unter demselben Schluessel
+        // `${teamId}#null` zusammen (secondYellowReplacesFirst griff dann faelschlich).
+        const key = typeof playerNumber === 'number' ? `${teamId}#${playerNumber}` : `${teamId}#anon-${anonCounter++}`;
+        const tally = playerTally.get(key) ?? { teamId, yellow: 0, yellowRed: 0, red: 0 };
+
+        if (kind === 'YELLOW') {
+          entry.yellowCards++;
+          tally.yellow++;
+        } else if (kind === 'YELLOW_RED') {
+          entry.yellowRedCards++;
+          tally.yellowRed++;
+        } else {
+          entry.redCards++;
+          tally.red++;
+        }
+        playerTally.set(key, tally);
       });
-    }
+
+      playerTally.forEach(({ teamId, yellow, yellowRed, red }) => {
+        const entry = map.get(teamId);
+        if (!entry) { return; }
+        entry.points += scorePlayerCards(yellow, yellowRed, red, profile);
+      });
   });
 
   return Array.from(map.values()).sort((a, b) => a.points - b.points); // Lower points is better

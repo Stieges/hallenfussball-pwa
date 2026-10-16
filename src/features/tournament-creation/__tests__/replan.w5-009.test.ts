@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { Match, Tournament } from '../../../types/tournament';
 import { generateFullSchedule } from '../../../core/generators';
 import { openReplan } from '../utils/replan';
+import { testUuid } from '../../../test/testIds';
 
 const baseTournament = (): Tournament =>
   ({
@@ -26,10 +27,10 @@ const baseTournament = (): Tournament =>
     breakBetweenPhases: 0,
     placementLogic: [],
     teams: [
-      { id: '1', name: 'A' },
-      { id: '2', name: 'B' },
-      { id: '3', name: 'C' },
-      { id: '4', name: 'D' },
+      { id: testUuid(1), name: 'A' },
+      { id: testUuid(2), name: 'B' },
+      { id: testUuid(3), name: 'C' },
+      { id: testUuid(4), name: 'D' },
     ],
     matches: [],
     status: 'published',
@@ -55,6 +56,8 @@ describe('Neuplanung – Gespieltes bleibt erhalten', () => {
         field: m.field,
         teamA: m.originalTeamA,
         teamB: m.originalTeamB,
+        slotA: m.slotA,
+        slotB: m.slotB,
       })),
     };
     const played: Match = {
@@ -66,7 +69,7 @@ describe('Neuplanung – Gespieltes bleibt erhalten', () => {
     const withPlayed: Tournament = {
       ...established,
       numberOfTeams: 5,
-      teams: [...established.teams, { id: '5', name: 'E' }],
+      teams: [...established.teams, { id: testUuid(5), name: 'E' }],
       matches: [played, ...established.matches.slice(1)],
     };
 

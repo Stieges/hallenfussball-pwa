@@ -189,6 +189,19 @@ AUTH_TRIGGER_FILE="$(find_migration 20260925_001)"
 # prüft dieser Lauf 20260928_001 also GAR NICHT -- die Gleichlauf-Prüfungen unten
 # (role_permissions/match_transitions vs. JSON) sind entsprechend ebenfalls an WITH_R5 gebunden.
 MATCH_EVENT_LOG_FILE="$(find_migration 20260928_001)"
+# C0b (.superpowers/sdd/2026-09-26-pr-c-ausgang/task-C0b-brief.md): 20261001_001 ergaenzt
+# public.match_transitions um die AMEND-Zeilen aus matchTransitions.json -- ohne sie weicht der
+# Gleichlauf-Check 7c4 unten seit C0a ab. Sie setzt die SQL-Rechenfunktion und den Schreibweg
+# voraus (Fail-fast), deshalb die ganze Kette 002 -> 003 -> 20261001, an WITH_R5 gebunden wie
+# MATCH_EVENT_LOG_FILE (dieselbe Abhaengigkeit ueber 20260928_001).
+MATCH_ENGINE_CHAIN_FILES=(
+  "$(find_migration 20260928_002)"
+  "$(find_migration 20260928_003)"
+  "$(find_migration 20261001_001)"
+  # A-05 (M2, Controller-Zusatz aus dem A-02-Review): Spielseiten als Slot. Ab hier braucht jedes eingefuegte
+  # Spiel je Seite Team-ID oder Herkunft (matches_slot_*_present) -- die Sonde matches_insert traegt sie.
+  "$(find_migration 20261003_001)"
+)
 MATCH_TRANSITIONS_FILE="$REPO_ROOT/src/core/match/matchTransitions.json"
 ROLE_PERMISSIONS_FILE="$REPO_ROOT/src/features/auth/permissions/rolePermissions.json"
 CONTAINER_NAME="rls-role-matrix-$$"
@@ -242,6 +255,17 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# A-05: Mit WITH_R5 ist 20261003_001 eingespielt -- jedes Spiel braucht dann je Seite Team-ID oder Herkunft
+# (matches_slot_*_present). Alle Fixture-/Sonden-Spiele tragen deshalb slot_a/b_source; ohne die Migration
+# fehlen die Spalten.
+if [[ "$WITH_R5" -eq 1 ]]; then
+  SLOT_COLS=",slot_a_source,slot_b_source"
+  SLOT_VALS=",'{\"kind\":\"groupRank\",\"group\":\"A\",\"rank\":1}'::jsonb,'{\"kind\":\"groupRank\",\"group\":\"A\",\"rank\":2}'::jsonb"
+else
+  SLOT_COLS=""
+  SLOT_VALS=""
+fi
+
 command -v jq >/dev/null 2>&1 || { echo "::error::jq wird benötigt." >&2; exit 1; }
 [[ -f "$ROLE_PERMISSIONS_FILE" ]] || { echo "::error::Rechtetabelle fehlt: $ROLE_PERMISSIONS_FILE" >&2; exit 1; }
 [[ -f "$BASELINE_FILE" ]] || { echo "::error::Baseline fehlt: $BASELINE_FILE" >&2; exit 1; }
@@ -256,6 +280,9 @@ done
 [[ -f "$DECLINED_EXPIRED_FILE" ]] || { echo "::error::Migration fehlt: $DECLINED_EXPIRED_FILE" >&2; exit 1; }
 [[ -f "$AUTH_TRIGGER_FILE" ]] || { echo "::error::Migration fehlt: $AUTH_TRIGGER_FILE" >&2; exit 1; }
 [[ -f "$MATCH_EVENT_LOG_FILE" ]] || { echo "::error::Migration fehlt: $MATCH_EVENT_LOG_FILE" >&2; exit 1; }
+for f in "${MATCH_ENGINE_CHAIN_FILES[@]}"; do
+  [[ -f "$f" ]] || { echo "::error::Migration fehlt: $f" >&2; exit 1; }
+done
 [[ -f "$MATCH_TRANSITIONS_FILE" ]] || { echo "::error::Übergangstabelle fehlt: $MATCH_TRANSITIONS_FILE" >&2; exit 1; }
 
 cleanup() { docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true; }
@@ -387,6 +414,10 @@ fi
 if [[ "$WITH_R5" -eq 1 ]]; then
   echo "Migration einspielen: $(basename "$MATCH_EVENT_LOG_FILE")" >&2
   psql_stdin < "$MATCH_EVENT_LOG_FILE"
+  for f in "${MATCH_ENGINE_CHAIN_FILES[@]}"; do
+    echo "Migration einspielen: $(basename "$f")" >&2
+    psql_stdin < "$f"
+  done
 fi
 
 if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 ]]; then
@@ -622,11 +653,11 @@ INSERT INTO public.tournament_collaborators
 VALUES
   ('$C_EXPIRED_INVITE', '$T_MAIN', NULL, 'RLSEXPIREDCODE', '$EXPIRED_INVITEE_EMAIL', 'viewer', '$U_OWNER', NULL, now() - interval '7 days', 0, 5);
 
-INSERT INTO public.matches (id, tournament_id, round, field)
+INSERT INTO public.matches (id, tournament_id, round, field${SLOT_COLS})
 VALUES
-  ('$M_MAIN', '$T_MAIN', 1, 1),
-  ('$M_ANON', '$T_ANON', 1, 1),
-  ('$M_PUBLIC', '$T_PUBLIC', 1, 1);
+  ('$M_MAIN', '$T_MAIN', 1, 1${SLOT_VALS}),
+  ('$M_ANON', '$T_ANON', 1, 1${SLOT_VALS}),
+  ('$M_PUBLIC', '$T_PUBLIC', 1, 1${SLOT_VALS});
 
 -- Fixrunde 3 (K3/H5-Beweise, 20260923_001): ein Team im Haupt-Turnier, damit der
 -- Eigentuemer-Upsert-Regressionscheck und der H5-Team-Angriff eine echte Zeile zum Umhaengen
@@ -905,7 +936,9 @@ op_sql() {
     teams_delete)
       echo "DELETE FROM public.teams WHERE id='$team_id';" ;;
     matches_insert)
-      echo "INSERT INTO public.matches (id,tournament_id,round,field) VALUES ('$ins_match','$tournament_id',9,9);" ;;
+      # A-05: mit WITH_R5 traegt das Spiel je Seite eine Herkunft (slot_a/b_source), wie es die App schreibt
+      # (mapMatchToSupabase); SLOT_COLS/SLOT_VALS sind ohne die Migration leer.
+      echo "INSERT INTO public.matches (id,tournament_id,round,field${SLOT_COLS}) VALUES ('$ins_match','$tournament_id',9,9${SLOT_VALS});" ;;
     matches_update)
       echo "UPDATE public.matches SET score_a = score_a + 1 WHERE id='$match_id';" ;;
     matches_delete)
@@ -976,6 +1009,45 @@ for id in "${MATRIX_IDS[@]}"; do
 done
 
 echo "Vollmatrix: $((${#MATRIX_IDS[@]} * ${#OPERATIONS[@]})) Zellen geprüft (9 Identitäten × 15 Operationen), $VOLLMATRIX_MISMATCHES Abweichung(en) — nur abweichende Zellen werden einzeln aufgelistet (siehe oben), der Rest ist grün."
+
+# --- 6b. A-05 (M2): Spiel mit slot_source einfuegen (Turnierleitung) --------------------------
+# Eigene, klar beschriftete Zeilen (die Vollmatrix-Zelle matches_insert traegt dasselbe, geht aber in
+# einer Sammelzahl unter). Nur mit WITH_R5 (dann ist 20261003_001 eingespielt).
+if [[ "$WITH_R5" -eq 1 ]]; then
+  echo ""
+  echo "=== A-05 (M2): Spiel mit slot_source einfuegen — $MODE_LABEL ==="
+  SLOT_SQL_PREFIX="INSERT INTO public.matches (id,tournament_id,round,field"
+  SLOT_SRC_A="'{\"kind\":\"groupRank\",\"group\":\"A\",\"rank\":1}'::jsonb"
+  SLOT_SRC_B="'{\"kind\":\"groupRank\",\"group\":\"A\",\"rank\":2}'::jsonb"
+  m2_owner_with="$(run_write "$U_OWNER" "$SLOT_SQL_PREFIX,slot_a_source,slot_b_source) VALUES ('$(uuid_for m2:owner-with)','$T_MAIN',8,8,$SLOT_SRC_A,$SLOT_SRC_B);")"
+  m2_coadmin_with="$(run_write "$U_COADMIN" "$SLOT_SQL_PREFIX,slot_a_source,slot_b_source) VALUES ('$(uuid_for m2:coadmin-with)','$T_MAIN',8,8,$SLOT_SRC_A,$SLOT_SRC_B);")"
+  m2_nonmember_with="$(run_write "$U_NONMEMBER" "$SLOT_SQL_PREFIX,slot_a_source,slot_b_source) VALUES ('$(uuid_for m2:nonmember-with)','$T_MAIN',8,8,$SLOT_SRC_A,$SLOT_SRC_B);")"
+  # Gegenbeispiel: die Turnierleitung DARF, aber ohne Herkunft/Team lehnt die Datenbank ab -- und zwar
+  # an der Pruefregel matches_slot_a_present, nicht an RLS.
+  m2_owner_without_out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 <<SQL 2>&1 || true
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$U_OWNER';
+INSERT INTO public.matches (id,tournament_id,round,field) VALUES ('$(uuid_for m2:owner-without)','$T_MAIN',8,8);
+SQL
+)"
+  m2_owner_without="rls-oder-anderer-fehler"
+  if grep -q 'matches_slot_a_present' <<<"$m2_owner_without_out"; then m2_owner_without="pruefregel"; fi
+  for check in \
+    "m2-turnierleitung-owner-fuegt-spiel-mit-slot-source-ein:$m2_owner_with:allowed" \
+    "m2-turnierleitung-coadmin-fuegt-spiel-mit-slot-source-ein:$m2_coadmin_with:allowed" \
+    "m2-konto-ohne-rolle-fuegt-spiel-mit-slot-source-ein:$m2_nonmember_with:denied" \
+    "m2-gegenbeispiel-owner-ohne-slot-source-scheitert-an-pruefregel:$m2_owner_without:pruefregel"; do
+    label="${check%%:*}"; rest="${check#*:}"; got="${rest%%:*}"; exp="${rest#*:}"
+    TOTAL=$((TOTAL + 1))
+    if [[ "$got" == "$exp" ]]; then
+      echo "$label: $got"
+    else
+      echo "$label: ${got}!=${exp}"
+      MISMATCHES=$((MISMATCHES + 1))
+    fi
+  done
+fi
 
 # --- 7. Dedizierte Regressionsprüfung: Eigentümer bearbeitet/löscht ein Ereignis ------
 # Unabhängig vom Rollen-Loop oben (dort in "correctEvents" für die Zeile "owner" mit
@@ -1174,7 +1246,7 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
   # P3a/P3b) und Eigentümer ändert eine Mitarbeiter-Rolle müssen in BEIDEN Modi weiter gelingen.
   owner_upsert="$(run_write "$U_OWNER" "
     INSERT INTO public.teams (id,tournament_id,name,owner_id) VALUES ('$TEAM_MAIN','$T_MAIN','RLS Matrix Team (upsert)','$U_OWNER') ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name;
-    INSERT INTO public.matches (id,tournament_id,round,field,owner_id) VALUES ('$M_MAIN','$T_MAIN',1,2,'$U_OWNER') ON CONFLICT (id) DO UPDATE SET field=EXCLUDED.field;
+    INSERT INTO public.matches (id,tournament_id,round,field,owner_id${SLOT_COLS}) VALUES ('$M_MAIN','$T_MAIN',1,2,'$U_OWNER'${SLOT_VALS}) ON CONFLICT (id) DO UPDATE SET field=EXCLUDED.field;
   ")"
   owner_role_change="$(run_write "$U_OWNER" "UPDATE public.tournament_collaborators SET role='trainer' WHERE tournament_id='$T_MAIN' AND user_id='$U_VIEWER';")"
 
@@ -1260,7 +1332,7 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" 
   h4_team_upsert="$(run_write "$U_COADMIN" \
     "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$TEAM_MAIN','$T_MAIN','RLS Matrix Team (coadmin upsert)') ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;")"
   h4_match_upsert="$(run_write "$U_COADMIN" \
-    "INSERT INTO public.matches (id,tournament_id,round,field) VALUES ('$M_MAIN','$T_MAIN',1,1) ON CONFLICT (id) DO UPDATE SET field = EXCLUDED.field;")"
+    "INSERT INTO public.matches (id,tournament_id,round,field${SLOT_COLS}) VALUES ('$M_MAIN','$T_MAIN',1,1${SLOT_VALS}) ON CONFLICT (id) DO UPDATE SET field = EXCLUDED.field;")"
 
   # H4-3: Co-Admin legt ein NEUES Team an (reiner INSERT-Zweig, TEAM_NEW existiert vorher nicht)
   # und der tatsächlich gespeicherte owner_id-Wert wird gelesen — teams_select_v3 hat einen

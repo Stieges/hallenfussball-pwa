@@ -1,26 +1,22 @@
 /**
- * useCorrectionMode.test.ts — A2 Fixrunde 1 (Ruling AJ, C1/I2:
- * .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-review.md).
- *
- * C1 (Critical): the correction dialog used to persist a corrected result ONLY via a full
- * `onTournamentUpdate()` save, which (since A2) skips result columns for EXISTING matches --
- * the correction landed in local state/IndexedDB, never in the cloud. Fixed by switching to
- * `onLocalTournamentUpdate` (local sync) + `onMatchesUpdate` (targeted UPDATE_MATCH).
+ * useCorrectionMode -- A-08e (Frage 1 = A, Daniel 15.10.): der Hook behaelt nur Zustand und
+ * Start/Abbruch (B-24 baut den Ereignisweg in dieselbe Datei). Es gibt KEINE Bestaetigung mehr, die
+ * Spielstaende schreibt (frueher: `onMatchesUpdate`/`onLocalTournamentUpdate`, @FU-084).
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { useCorrectionMode } from '../useCorrectionMode';
 import { ToastProvider } from '../../../../components/ui/Toast';
 import type { Tournament, Match } from '../../../../types/tournament';
+import { vs, testUuid } from '../../../../test/matchSlotFixtures';
 
 function createMatch(overrides: Partial<Match> = {}): Match {
   return {
     id: 'm1',
     round: 1,
     field: 1,
-    teamA: 'Team A',
-    teamB: 'Team B',
+    ...vs(testUuid(1), testUuid(2)),
     scoreA: 3,
     scoreB: 1,
     matchStatus: 'finished',
@@ -53,84 +49,33 @@ function wrapper({ children }: { children: ReactNode }) {
   return <ToastProvider>{children}</ToastProvider>;
 }
 
-describe('useCorrectionMode — handleConfirmCorrection', () => {
-  it('persists the corrected result via onMatchesUpdate (UPDATE_MATCH), NOT a full save', () => {
-    const tournament = createTournament([createMatch({ scoreA: 3, scoreB: 1 })]);
-    const onLocalTournamentUpdate = vi.fn();
-    const onMatchesUpdate = vi.fn();
+describe('useCorrectionMode (Zustand + Start/Abbruch fuer B-24)', () => {
+  const render_ = (canCorrectResults: boolean, tournament = createTournament([createMatch({ scoreA: 3, scoreB: 1 })])) =>
+    renderHook(() => useCorrectionMode({ tournament, canCorrectResults }), { wrapper });
 
-    const { result } = renderHook(
-      () =>
-        useCorrectionMode({
-          tournament,
-          onLocalTournamentUpdate,
-          onMatchesUpdate,
-          canCorrectResults: true,
-        }),
-      { wrapper }
-    );
-
-    act(() => {
-      result.current.handleStartCorrection('m1');
-    });
-    expect(result.current.correctionState).toEqual(
-      expect.objectContaining({ matchId: 'm1', originalScoreA: 3, originalScoreB: 1 })
-    );
-
-    act(() => {
-      result.current.handleConfirmCorrection(4, 1, 'referee_decision', 'Schiedsrichter-Korrektur');
-    });
-
-    // Local UI state (standings etc.) still syncs immediately ...
-    expect(onLocalTournamentUpdate).toHaveBeenCalledTimes(1);
-    // ... but the RESULT persists via a targeted update, not a full tournament save.
-    expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
-    const updates = onMatchesUpdate.mock.calls[0][0];
-    // A2 Fixrunde 3 (N1a): only the field that ACTUALLY changed goes out -- scoreB stayed 1,
-    // so it must NOT appear in the update (Fixrunde 1 would have included it, sourced from the
-    // caller's local state, even though it didn't change).
-    // A-Final-Fix 1: `correctionHistory` must ALSO be part of the targeted update -- otherwise
-    // it only ever lands in React state (`onLocalTournamentUpdate`) and is lost on reload (in
-    // guest mode, permanently; LocalStorageRepository#updateMatches merges exactly the keys the
-    // update carries, see `mergeMatchUpdate`).
-    expect(updates).toEqual([{
-      id: 'm1',
-      scoreA: 4,
-      correctionHistory: [
-        expect.objectContaining({
-          previousScoreA: 3,
-          previousScoreB: 1,
-          newScoreA: 4,
-          newScoreB: 1,
-          reasonType: 'referee_decision',
-          note: 'Schiedsrichter-Korrektur',
-        }),
-      ],
-    }]);
+  it('Start merkt Spiel und Ausgangsstand und oeffnet den Dialogzustand; Abbruch setzt zurueck', () => {
+    const { result } = render_(true);
+    act(() => { result.current.handleStartCorrection('m1'); });
+    expect(result.current.correctionState).toEqual({ matchId: 'm1', originalScoreA: 3, originalScoreB: 1 });
+    expect(result.current.showCorrectionDialog).toBe(true);
+    act(() => { result.current.handleCancelCorrection(); });
+    expect(result.current.correctionState).toBeNull();
+    expect(result.current.showCorrectionDialog).toBe(false);
   });
 
-  it('does NOT call onMatchesUpdate when there is no active correction', () => {
-    const tournament = createTournament([createMatch()]);
-    const onLocalTournamentUpdate = vi.fn();
-    const onMatchesUpdate = vi.fn();
+  it('Gegenbeispiel: ohne Berechtigung oder ohne Ergebnis startet keine Korrektur', () => {
+    const denied = render_(false);
+    act(() => { denied.result.current.handleStartCorrection('m1'); });
+    expect(denied.result.current.correctionState).toBeNull();
+    const noResult = render_(true, createTournament([createMatch({ scoreA: undefined, scoreB: undefined })]));
+    act(() => { noResult.result.current.handleStartCorrection('m1'); });
+    expect(noResult.result.current.correctionState).toBeNull();
+  });
 
-    const { result } = renderHook(
-      () =>
-        useCorrectionMode({
-          tournament,
-          onLocalTournamentUpdate,
-          onMatchesUpdate,
-          canCorrectResults: true,
-        }),
-      { wrapper }
+  it('A-08e: der Hook schreibt keinen Spielstand mehr (keine Bestaetigung, keine Schreib-Callbacks)', () => {
+    const { result } = render_(true);
+    expect(Object.keys(result.current).sort()).toEqual(
+      ['correctionState', 'handleCancelCorrection', 'handleStartCorrection', 'showCorrectionDialog'],
     );
-
-    act(() => {
-      // No handleStartCorrection() call first -- correctionState is null.
-      result.current.handleConfirmCorrection(4, 1, 'input_error');
-    });
-
-    expect(onLocalTournamentUpdate).not.toHaveBeenCalled();
-    expect(onMatchesUpdate).not.toHaveBeenCalled();
   });
 });

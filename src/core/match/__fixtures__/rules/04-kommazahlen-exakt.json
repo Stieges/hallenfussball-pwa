@@ -1,0 +1,31 @@
+{
+  "title": "Kommazahlen exakt dezimal wie numeric (2.05*60 = 123, nicht 122; 2.9 Abschnitte -> 2)",
+  "input": {
+    "durationMinutes": null,
+    "phase": null,
+    "groupPhaseDuration": 7,
+    "finalRoundDuration": null,
+    "config": {
+      "gamePeriods": 2.9,
+      "halftimeBreak": 2.05,
+      "matchCockpitSettings": {
+        "penaltyShootersPerTeam": 4.99,
+        "penaltySuddenDeathAfter": "8.20"
+      }
+    },
+    "finalsConfig": {
+      "tiebreakerDuration": "16.15"
+    }
+  },
+  "expect": {
+    "sections": 2,
+    "sectionSeconds": 210,
+    "breakSeconds": 123,
+    "knockout": false,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 969,
+    "shootersPerTeam": 4,
+    "suddenDeathAfter": 8,
+    "penaltySeconds": 120
+  }
+}

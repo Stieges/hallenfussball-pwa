@@ -1,5 +1,6 @@
-import React, { CSSProperties } from 'react';
+import React from 'react';
 import { cssVars } from '../../../../design-tokens';
+import { profileActionStyles as styles } from './profileActionStyles';
 
 interface ProfileActionsProps {
   /** Current 2FA state */
@@ -44,32 +45,6 @@ export const ProfileActions: React.FC<ProfileActionsProps> = ({
       </button>
     </>
   );
-};
-
-const styles: Record<string, CSSProperties> = {
-  actionButton: {
-    width: '100%',
-    textAlign: 'left',
-    padding: `${cssVars.spacing.sm} 0`,
-    background: 'none',
-    border: 'none',
-    fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textPrimary,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-  },
-  actionButtonDisabled: {
-    color: cssVars.colors.textMuted,
-    cursor: 'not-allowed',
-    opacity: 0.6,
-  },
-  divider: {
-    height: '1px',
-    background: cssVars.colors.border,
-    margin: `${cssVars.spacing.xs} 0`,
-  },
 };
 
 export default ProfileActions;

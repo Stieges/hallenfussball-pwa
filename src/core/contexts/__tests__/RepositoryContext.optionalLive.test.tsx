@@ -29,7 +29,7 @@ import {
 const wrapperWithUser = (globalRole: string | null) =>
   function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <RepositoryProvider user={globalRole ? { globalRole } : null}>
+      <RepositoryProvider user={globalRole ? { globalRole, id: 'test-user' } : null}>
         {children}
       </RepositoryProvider>
     );

@@ -1,4 +1,5 @@
 import { SportId } from '../config/sports/types';
+import type { MatchSlot } from '../core/models/schemas/MatchSlotSchema';
 
 // Core Tournament Types
 export type Sport = 'football' | 'other';
@@ -269,8 +270,19 @@ export interface Match {
   round: number;
   field: number;
   slot?: number; // Time slot index for fair scheduling
+  /**
+   * DEPRECATED, nur Übergang (Löschen in B-35): Team-ID bzw. `'TBD'` für noch nicht umgestellte Leser der
+   * Spur B (Monitor, Zuschauer, PDF). Gelesen wird `slotA`; geschrieben wird nur über `transitionalSides`
+   * (`core/models/matchSlot.ts`). (Kein `@deprecated`-Tag: `@typescript-eslint/no-deprecated` + `--max-warnings 0`
+   * würde jeden Spur-B-Leser als Lint-Fehler melden.)
+   */
   teamA: string;
+  /** DEPRECATED, siehe `teamA`. */
   teamB: string;
+  /** Heimseite als Slot: Team-ID oder strukturierte Herkunft (@TM-015). Pflicht – die einzige Quelle der Seiten. */
+  slotA: MatchSlot;
+  /** Gastseite als Slot, siehe `slotA`. */
+  slotB: MatchSlot;
   scoreA?: number;
   scoreB?: number;
   group?: string;
@@ -658,9 +670,11 @@ export type MatchEventType =
   | 'MATCH_END';
 
 /**
- * Card type for YELLOW_CARD and RED_CARD events
+ * Card type for YELLOW_CARD and RED_CARD events. 'YELLOW_RED' (Gelb-Rot, F3b1 30.09.) is its
+ * own value, nicht mit 'RED' zusammengefasst -- der Ereignistyp bleibt dafuer RED_CARD (gleiche
+ * Behandlung/Icon), nur payload.cardType unterscheidet sie.
  */
-export type CardType = 'YELLOW' | 'RED';
+export type CardType = 'YELLOW' | 'YELLOW_RED' | 'RED';
 
 /**
  * Match Event - represents a single event during a match
@@ -686,7 +700,7 @@ export interface MatchEvent {
   playersIn?: number[];
 
   // Card type (for YELLOW_CARD and RED_CARD events)
-  cardType?: 'YELLOW' | 'RED';
+  cardType?: CardType;
 
   /**
    * Incomplete entry tracking
@@ -731,10 +745,10 @@ export interface RuntimeMatchEvent {
     playersOut?: number[];
     /** Rückennummern der eingewechselten Spieler */
     playersIn?: number[];
-    cardType?: 'YELLOW' | 'RED';
+    cardType?: CardType;
 
     // -------------------------------------------------------------------------
-    // Draht-Format (wire shape) — so schreibt der MatchExecutionService in den
+    // Draht-Format (wire shape) — so schrieb der frühere Altweg in den
     // Speicher (`core/models/LiveMatch.ts#MatchEvent.payload`). Die UI liest
     // dagegen `teamId` / `teamName` / `direction` / `penaltyDuration` (oben).
     //
@@ -783,6 +797,8 @@ export interface EditableMatchEvent {
     teamId?: string;
     teamName?: string;
     playerNumber?: number;
+    /** F3b2 (Ruling PC30): 'YELLOW_RED' unterscheidet Gelb-Rot (Ereignistyp RED_CARD) von Rot. */
+    cardType?: CardType;
   };
 }
 

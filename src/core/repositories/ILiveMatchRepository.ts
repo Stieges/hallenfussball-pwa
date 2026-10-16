@@ -5,6 +5,9 @@ import { LiveMatch } from '../models/LiveMatch';
  * 
  * Manages the transient state of matches during live execution.
  * Separate from ITournamentRepository which handles persistent data.
+ *
+ * Nur lesend (A-08d2a, @FU-084): Schreibwege laufen ueber den Server (`append_match_events`),
+ * nicht ueber dieses Interface.
  */
 export interface ILiveMatchRepository {
     /**
@@ -16,29 +19,4 @@ export interface ILiveMatchRepository {
      * Get all live matches for a tournament
      */
     getAll(tournamentId: string): Promise<Map<string, LiveMatch>>;
-
-    /**
-     * Save/update a live match
-     */
-    save(tournamentId: string, match: LiveMatch): Promise<void>;
-
-    /**
-     * Save multiple live matches at once
-     */
-    saveAll(tournamentId: string, matches: Map<string, LiveMatch>): Promise<void>;
-
-    /**
-     * Delete a single live match
-     */
-    delete(tournamentId: string, matchId: string): Promise<void>;
-
-    /** Soft-Delete eines Match-Events. Kein Hard-Delete: match_events.is_deleted existiert und wird von getAll/get
-     *  bereits gefiltert. Ein Entfernen aus LiveMatch.events allein genügt nicht — SupabaseLiveMatchRepository.save
-     *  macht für Events nur INSERTs und ließe das Event beim nächsten Laden wiederauferstehen. */
-    deleteEvent(tournamentId: string, matchId: string, eventId: string): Promise<void>;
-
-    /**
-     * Clear all live matches for a tournament
-     */
-    clear(tournamentId: string): Promise<void>;
 }

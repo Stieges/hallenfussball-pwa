@@ -177,7 +177,16 @@
       "title": "Delete team?",
       "confirmMessage": "Do you really want to delete \"{{name}}\"?",
       "markedAsRemoved": "The team will be marked as \"removed\". Results will be preserved for fairness to other teams.",
-      "markAsRemoved": "Mark as removed"
+      "markAsRemoved": "Mark as removed",
+      "warningUnprotected_one": "\"{{name}}\" has one planned match without result and without events. It will be removed from the schedule.",
+      "warningUnprotected_other": "\"{{name}}\" has {{count}} planned matches without result and without events. These will be removed from the schedule.",
+      "warningProtected_one": "\"{{name}}\" has one match with a result or events. The team will be marked as \"removed\", the match is kept.",
+      "warningProtected_other": "\"{{name}}\" has {{count}} matches with a result or events. The team will be marked as \"removed\", these matches are kept.",
+      "partKept_one": "{{count}} match with a result or events is kept",
+      "partKept_other": "{{count}} matches with a result or events are kept",
+      "partRemoved_one": "{{count}} match without result and events is removed",
+      "partRemoved_other": "{{count}} matches without result and events are removed",
+      "warningMixed": "\"{{name}}\":\n\n• {{kept}}.\n• {{removed}}.\n• The team will be marked as \"removed\"."
     }
   },
   "settings": {
@@ -371,7 +380,12 @@
     "selectMatch": "Select match (optional - next match is selected automatically):",
     "autoNextMatch": "Automatic (next match)",
     "matchLoading": "Loading match...",
-    "noMatchesOnField": "No matches on this field"
+    "noMatchesOnField": "No matches on this field",
+    "enginePreparing": "Match is being prepared …",
+    "engineReadyError": "Match could not be prepared — please try again",
+    "awaitingTitle": "Kick-off not possible yet",
+    "awaitingReason": "Waiting for: {{reason}}",
+    "awaitingOffline": "Your device has no network – your data may be out of date. The line-up may already be set on the server."
   },
   "tables": {
     "noGroups": "This tournament has no groups.",
@@ -428,7 +442,14 @@
       "recentEvents": "Recent Events",
       "noEvents": "No events yet",
       "close": "Close",
-      "gotoCockpit": "Go to Cockpit"
+      "gotoCockpit": "Go to Cockpit",
+      "eventYellowRedCard": "Yellow-red card {{team}}{{player}}",
+      "eventGoal": "GOAL {{team}}{{player}}",
+      "eventYellowCard": "Yellow card {{team}}{{player}}",
+      "eventRedCard": "Red card {{team}}{{player}}",
+      "eventTimePenalty": "Time penalty {{team}}{{player}}",
+      "eventSubstitution": "Substitution {{team}}",
+      "eventFoul": "Foul {{team}}"
     },
     "quickScore": {
       "goalScorers": "Goal Scorers",
@@ -460,6 +481,7 @@
       "goal": "GOAL {{team}}{{player}}",
       "assist": "Assist",
       "yellowCard": "Yellow card {{team}}{{player}}",
+      "yellowRedCard": "Yellow-red card {{team}}{{player}}",
       "redCard": "Red card {{team}}{{player}}",
       "timePenalty": "{{duration}} min time penalty {{team}}{{player}}",
       "substitutionDetail": "Substitution {{team}}: {{out}} → {{in}}",
@@ -687,5 +709,26 @@
     "cancel": "Cancel",
     "save": "Save",
     "saving": "Saving..."
+  },
+  "slot": {
+    "groupRank": "{{rankWord}} {{group}}",
+    "winnerOf": "Winner of {{match}}",
+    "loserOf": "Loser of {{match}}",
+    "matchNumber": "Match {{number}}",
+    "unknown": "?",
+    "groupRankFallback": "#{{rank}} {{group}}",
+    "groupDefault": "Group {{id}}",
+    "rank1": "1st",
+    "rank2": "2nd",
+    "rank3": "3rd",
+    "rank4": "4th",
+    "playoffFinal": "Final",
+    "playoffSemifinal": "Semifinal {{n}}",
+    "playoffQuarterfinal": "Quarterfinal {{n}}",
+    "playoffRoundOf16": "Round of 16, match {{n}}",
+    "playoffPlace": "Match for place {{n}}",
+    "awaitGroup": "Completion of {{group}}",
+    "awaitMatch": "Completion of {{match}}",
+    "undecided": "open"
   }
 }

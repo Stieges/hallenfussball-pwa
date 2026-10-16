@@ -1,0 +1,22 @@
+{
+  "title": "Standardwerte: leere Konfiguration, keine Dauer",
+  "input": {
+    "durationMinutes": null,
+    "phase": null,
+    "groupPhaseDuration": null,
+    "finalRoundDuration": null,
+    "config": {},
+    "finalsConfig": {}
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 0,
+    "breakSeconds": 60,
+    "knockout": false,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

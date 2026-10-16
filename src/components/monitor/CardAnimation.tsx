@@ -13,6 +13,7 @@
  */
 
 import { CSSProperties, useEffect, useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 
 export interface CardEventInfo {
@@ -20,7 +21,7 @@ export interface CardEventInfo {
   teamId: string;
   teamName: string;
   side: 'home' | 'away';
-  cardType: 'YELLOW' | 'RED';
+  cardType: 'YELLOW' | 'YELLOW_RED' | 'RED';
   playerNumber?: number;
   timestamp: number;
 }
@@ -35,6 +36,14 @@ export interface CardAnimationProps {
 }
 
 // Card-specific colors
+const RED_CARD_COLORS = {
+  primary: '#F44336',
+  secondary: '#D32F2F',
+  text: '#FFFFFF',
+  glow: 'rgba(244, 67, 54, 0.6)',
+  shadow: 'rgba(211, 47, 47, 0.5)',
+};
+
 const CARD_COLORS = {
   YELLOW: {
     primary: '#FFEB3B',
@@ -43,13 +52,11 @@ const CARD_COLORS = {
     glow: 'rgba(255, 235, 59, 0.6)',
     shadow: 'rgba(255, 193, 7, 0.5)',
   },
-  RED: {
-    primary: '#F44336',
-    secondary: '#D32F2F',
-    text: '#FFFFFF',
-    glow: 'rgba(244, 67, 54, 0.6)',
-    shadow: 'rgba(211, 47, 47, 0.5)',
-  },
+  RED: RED_CARD_COLORS,
+  // Fixrunde Aufgabe 7 (Hard Rule): kein kopierter Hex-Wert -- Gelb-Rot referenziert dieselbe
+  // RED_CARD_COLORS-Konstante (F3b1: Gelb-Rot fuehrt wie Rot zum Platzverweis, gleiche Farben,
+  // bis F3b2 eine eigene "Gelb-Rot"-Anzeige verdrahtet).
+  YELLOW_RED: RED_CARD_COLORS,
 };
 
 export const CardAnimation: React.FC<CardAnimationProps> = ({
@@ -57,6 +64,7 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
   onAnimationComplete,
   animationDuration = 3000,
 }) => {
+  const { t } = useTranslation('monitor');
   const [isVisible, setIsVisible] = useState(false);
   const [currentEvent, setCurrentEvent] = useState<CardEventInfo | null>(null);
   const [animationKey, setAnimationKey] = useState(0);
@@ -131,7 +139,7 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
 
   const isHomeSide = currentEvent.side === 'home';
   const colors = CARD_COLORS[currentEvent.cardType];
-  const isRed = currentEvent.cardType === 'RED';
+  const isRed = currentEvent.cardType === 'RED' || currentEvent.cardType === 'YELLOW_RED';
 
   const overlayStyle: CSSProperties = {
     position: 'fixed',
@@ -210,7 +218,9 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
         >
           <div className="card-icon" style={cardIconStyle} />
           <div style={cardTextStyle}>
-            {isRed ? 'ROTE KARTE' : 'GELBE KARTE'}
+            {/* F3b2: Gelb-Rot zeigt "GELB-ROT" statt "ROTE KARTE" (Farben weiter ueber die
+                gemeinsame RED_CARD_COLORS-Konstante, s.o.). */}
+            {currentEvent.cardType === 'YELLOW_RED' ? t('cardAnimation.yellowRedCard') : isRed ? t('cardAnimation.redCard') : t('cardAnimation.yellowCard')}
           </div>
           <div style={teamNameStyle}>{currentEvent.teamName}</div>
           {currentEvent.playerNumber && (
@@ -386,14 +396,14 @@ export interface CardFlashProps {
   /** Which side received the card */
   side: 'home' | 'away';
   /** Card type */
-  cardType: 'YELLOW' | 'RED';
+  cardType: 'YELLOW' | 'YELLOW_RED' | 'RED';
 }
 
 export const CardFlash: React.FC<CardFlashProps> = ({ show, side, cardType }) => {
   if (!show) {return null;}
 
   const isHome = side === 'home';
-  const isRed = cardType === 'RED';
+  const isRed = cardType === 'RED' || cardType === 'YELLOW_RED';
 
   const flashStyle: CSSProperties = {
     position: 'fixed',
