@@ -46,12 +46,14 @@ describe('Kasten hoch und Namen in Kastenbreite', () => {
     expect(screen.getByTestId('live-block-away').style.height).toBe(L.blockHeight);
   });
 
-  it('Namenszelle genau so breit wie die Kastenzelle, oben bündig, beide gleich', () => {
+  // B-44a4 (Ruling 16.10., @ZM-087): Namenszelle wieder breiter als der Kasten, beide gleich
+  it('Namenszelle breiter als die Kastenzelle, oben bündig, beide gleich', () => {
     render(<LiveMatchDisplay match={createMatch()} />);
     const home = screen.getByTestId('live-name-home');
     const away = screen.getByTestId('live-name-away');
-    expect(home.style.width).toBe(screen.getByTestId('live-block-home').style.width);
-    expect(away.style.width).toBe(screen.getByTestId('live-block-away').style.width);
+    expect(home.style.width).toBe(L.teamNameWidth);
+    expect(away.style.width).toBe(L.teamNameWidth);
+    expect(parseFloat(home.style.width)).toBeGreaterThan(parseFloat(screen.getByTestId('live-block-home').style.width));
     expect(home.style.alignSelf).toBe('start');
     expect(away.style.alignSelf).toBe('start');
   });

@@ -29,6 +29,8 @@ async function seedLiveTournament(
   seedIndexedDB: TestOptions['seedIndexedDB'],
   heim: string = LANGER_NAME,
   gast: string = MITTEL_NAME,
+  /** Bildrand des Monitors in px (@ME-020); ohne Angabe gilt die Vorgabe (48 px). */
+  overscanPx?: number,
 ): Promise<void> {
   const now = new Date().toISOString();
   // Merge I1: Team-IDs als UUID und Spielseiten als Slots (A-01/A-03) – der Monitor liest die Seiten aus dem Slot.
@@ -80,6 +82,7 @@ async function seedLiveTournament(
         field: 1,
         fieldNumber: 1,
         groupId: 'g1',
+        group: 'A',
         scheduledTime: now,
         durationSeconds: 600,
         elapsedSeconds: 320,
@@ -96,6 +99,7 @@ async function seedLiveTournament(
         transitionDuration: 0,
         theme: 'dark',
         performanceMode: 'auto',
+        ...(overscanPx === undefined ? {} : { overscanPx }),
         slides: [{ id: 's1', type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 }],
         createdAt: now,
         updatedAt: now,
@@ -114,8 +118,9 @@ async function oeffneMonitor(
   seedIndexedDB: TestOptions['seedIndexedDB'],
   heim: string = LANGER_NAME,
   gast: string = MITTEL_NAME,
+  overscanPx?: number,
 ): Promise<void> {
-  await seedLiveTournament(seedIndexedDB, heim, gast);
+  await seedLiveTournament(seedIndexedDB, heim, gast, overscanPx);
   await page.goto('/#/display/dauer-turnier/mon-1');
   await expect(page.locator(`[title="${heim}"]`)).toBeVisible({ timeout: 15_000 });
   await page.evaluate(() => document.fonts.ready);
@@ -166,10 +171,14 @@ async function messeLiveFolie(page: Page, namen: string[], vorgabe: string) {
     }));
 
     const bloecke: Box[] = [];
-    const kopf = leaf(/^LIVE$/);
-    if (kopf) { bloecke.push(box(kopf, 'LIVE-Kennzeichen')); }
-    const feld = leaf(/^Feld 1/);
-    if (feld) { bloecke.push(box(feld, 'Feld/Spiel')); }
+    // B-44a4: Kopf über die Kennungen (die Marke hat den Punkt als Kind und war als „Blatt“ nie gefunden)
+    const kopfTeile: Array<[string, string]> = [['live-badge', 'LIVE-Kennzeichen'], ['live-info', 'Feld/Spiel'], ['live-group', 'Gruppe']];
+    const fehlenderKopf: string[] = [];
+    for (const [id, name] of kopfTeile) {
+      const el = document.querySelector(`[data-testid="${id}"]`);
+      if (!el || (el.textContent ?? '').trim() === '') { fehlenderKopf.push(name); continue; }
+      bloecke.push(box(el, name));
+    }
     document.querySelectorAll('[data-position]').forEach((el) => {
       bloecke.push(box(el, `Stand ${el.getAttribute('data-position')}`));
     });
@@ -188,14 +197,24 @@ async function messeLiveFolie(page: Page, namen: string[], vorgabe: string) {
       }
     }
 
+    // @ME-020: Die Folie ist um den Bildrand kleiner; nichts darf an ihrer Fläche abgeschnitten werden
+    const flaeche = document.querySelector('[data-testid="live-header"]')?.parentElement?.getBoundingClientRect();
+    // Der Energiespar-Hinweis ist eine kurze Einblendung der Seite (B-17), kein Teil der Folie
+    const abgeschnittenAnDerFlaeche = flaeche
+      ? bloecke.filter((b) => b.name !== 'Hinweis').filter((b) => b.top < flaeche.top - 0.5 || b.bottom > flaeche.bottom + 0.5 || b.left < flaeche.left - 0.5 || b.right > flaeche.right + 0.5).map((b) => b.name)
+      : ['Live-Folie nicht gefunden'];
+
     const doc = document.documentElement;
     const ausserhalb = bloecke.filter((b) => b.left < -0.5 || b.top < -0.5 || b.right > window.innerWidth + 0.5 || b.bottom > window.innerHeight + 0.5).map((b) => b.name);
 
     // Vorgabegröße aus dem Token, berechnet im Browser (clamp am Viewport)
+    // B-44a4: im Namensfeld gemessen, damit Container-Einheiten an der Folienfläche aufgelöst werden (@ME-020)
     const vorgabeMessfeld = document.createElement('span');
     vorgabeMessfeld.style.fontSize = vorgabe;
+    vorgabeMessfeld.style.position = 'absolute';
+    vorgabeMessfeld.style.visibility = 'hidden';
     vorgabeMessfeld.textContent = 'x';
-    document.body.appendChild(vorgabeMessfeld);
+    (teams[0].el.parentElement ?? document.body).appendChild(vorgabeMessfeld);
     const vorgabePx = parseFloat(getComputedStyle(vorgabeMessfeld).fontSize);
     vorgabeMessfeld.remove();
 
@@ -216,6 +235,8 @@ async function messeLiveFolie(page: Page, namen: string[], vorgabe: string) {
       })),
       ueberlappungen,
       ausserhalb,
+      abgeschnittenAnDerFlaeche,
+      fehlenderKopf,
     };
   }, { namen, vorgabe });
 }
@@ -246,6 +267,8 @@ for (const groesse of GROESSEN) {
       expect(m.scrollY, 'vertikaler Scrollbalken').toBeLessThanOrEqual(0);
       expect(m.scrollX, 'horizontaler Scrollbalken').toBeLessThanOrEqual(0);
       expect(m.ausserhalb, 'Element außerhalb des Bildes').toEqual([]);
+      expect(m.abgeschnittenAnDerFlaeche, 'an der Folienfläche abgeschnitten (@ME-020)').toEqual([]);
+      expect(m.fehlenderKopf, 'Kopf vollständig').toEqual([]);
       expect(m.ueberlappungen, 'überlappende Elemente').toEqual([]);
 
       for (const t of m.teams) {
@@ -290,6 +313,29 @@ for (const [breite, hoehe, lotteEinzeilig] of [[1280, 720, false], [1920, 1080, 
       expect(m.ueberlappungen).toEqual([]);
     });
   });
+}
+
+// B-44a4 (@ME-020): Die Live-Folie misst an ihrer Fläche innerhalb des Bildrands. Mit Rand 0 und mit der Vorgabe 48 px
+// ist nichts abgeschnitten, der Kopf (LIVE, Feld/Spiel, Gruppe) steht vollständig da.
+for (const rand of [0, 48] as const) {
+  for (const [breite, hoehe] of [[1920, 1080], [800, 600]] as const) {
+    test.describe(`Bildrand ${rand} px bei ${breite}×${hoehe} (@ME-020, @ZM-086)`, () => {
+      test.use({ viewport: { width: breite, height: hoehe } });
+
+      test('Kopf vollständig, nichts an der Folienfläche abgeschnitten, Teamnamen voll', async ({ page, seedIndexedDB }) => {
+        await oeffneMonitor(page, seedIndexedDB, LANGER_NAME, MITTEL_NAME, rand);
+        const m = await messeLiveFolie(page, [LANGER_NAME, MITTEL_NAME], displayFontSizes.teamName);
+        expect(m.fehlenderKopf, 'Kopf vollständig').toEqual([]);
+        expect(m.abgeschnittenAnDerFlaeche, 'an der Folienfläche abgeschnitten').toEqual([]);
+        expect(m.ausserhalb, 'außerhalb des Bildes').toEqual([]);
+        expect(m.ueberlappungen, 'überlappende Elemente').toEqual([]);
+        for (const t of m.teams) {
+          expect(t.text, `${t.name}: voller Name`).toBe(t.name);
+          expect(t.schriftPx, `${t.name}: nicht unter 3 % der Bildschirmhöhe`).toBeGreaterThanOrEqual(m.hoehe * 0.03 - 0.5);
+        }
+      });
+    });
+  }
 }
 
 test.describe('Tasten ohne Wirkung (@ME-022, @ME-003)', () => {

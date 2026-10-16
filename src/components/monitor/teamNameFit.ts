@@ -49,6 +49,15 @@ export function waehleTeamNameSchrift(
 }
 
 /**
+ * Berechnete Schriftgröße in px. Der Browser liefert immer px; eine Umgebung ohne Container-Abfragen (jsdom) lässt
+ * `cqh` stehen – dann gilt wie im Browser ohne Größen-Container die Bildhöhe als Bezug (B-44a4).
+ */
+export function schriftPx(berechnet: string): number {
+  const cq = /^([\d.]+)cqh$/.exec(berechnet.trim());
+  return cq ? (parseFloat(cq[1]) / 100) * window.innerHeight : parseFloat(berechnet);
+}
+
+/**
  * B3 (@ZM-087, Ruhe): Beide Teamnamen stehen in derselben Größe, nämlich der kleineren der beiden passenden.
  * Solange ein Name noch nicht (gültig) gemessen ist, gibt es keine Vorgabe und jeder passt sich selbst an.
  */
@@ -110,11 +119,12 @@ export function useTeamNameFit(
       overflowWrap: 'normal',
       overflow: 'hidden',
     });
-    document.body.appendChild(messfeld);
+    // B-44a4: im Elternteil messen, damit Container-Einheiten (cqh) an der Folienfläche aufgelöst werden (@ME-020)
+    (el.parentElement ?? document.body).appendChild(messfeld);
 
     // Obergrenze: berechneter Wert der Vorgabe (clamp wird am Viewport aufgelöst)
     messfeld.style.fontSize = vorgabe;
-    const maxPx = parseFloat(getComputedStyle(messfeld).fontSize);
+    const maxPx = schriftPx(getComputedStyle(messfeld).fontSize);
 
     const passt = (text: string, px: number): boolean => {
       messfeld.style.fontSize = `${px}px`;

@@ -21,6 +21,9 @@ import { freezeClock, commonMasks, buildVisualTournament, FIXED_NOW } from './he
 const TOURNAMENT_ID = 'visual-monitor-tournament';
 
 test('Monitor: laufendes Spiel', async ({ page, seedIndexedDB }) => {
+  // Ein Monitor ist ein Bildschirm im Querformat; Hochformat wird nicht unterstützt (zuschauer-und-monitor,
+  // „Geparkt – Darstellung im Grenzfall“; wie MON-B02). Deshalb ohne das Handy-Profil (Hochformat).
+  test.skip(test.info().project.name === 'visual-mobile', 'Monitor im Hochformat ist geparkt');
   await freezeClock(page);
 
   const tournament = buildVisualTournament({
