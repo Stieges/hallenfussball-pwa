@@ -29,6 +29,7 @@ import type { MatchUpdate as DomainMatchUpdate } from '../models/types';
 import { RepositoryError } from '../errors';
 import { SlotSourceSchema, TeamIdSchema, type MatchSlot, type SlotSource } from '../models/schemas/MatchSlotSchema';
 import { pendingSlot, slotSource, slotTeamId, teamSlot, transitionalSides } from '../models/matchSlot';
+import { originToColumns, type MatchOriginColumns } from './matchOriginColumns';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -36,16 +37,10 @@ type TournamentInsert = Database['public']['Tables']['tournaments']['Insert'];
 type TournamentUpdate = Database['public']['Tables']['tournaments']['Update'];
 type TeamRow = Database['public']['Tables']['teams']['Row'];
 type TeamInsert = Database['public']['Tables']['teams']['Insert'];
-// A-02 (MVP-Bauplan Spur A): Herkunftsspalten aus `supabase/migrations/20261003_001_match_slots.sql`.
-// `src/types/supabase.ts` wird erst nach dem Merge auf `main` neu erzeugt (Skill supabase-types-regen) –
-// bis dahin hier von Hand ergänzt.
-interface MatchSlotColumns {
-  slot_a_source?: Json | null;
-  slot_b_source?: Json | null;
-}
-type MatchRow = Database['public']['Tables']['matches']['Row'] & MatchSlotColumns;
-type MatchInsert = Database['public']['Tables']['matches']['Insert'] & MatchSlotColumns;
-type MatchUpdate = Database['public']['Tables']['matches']['Update'] & MatchSlotColumns;
+// A-36a: `origin_a/origin_b` (20261026_001_match_origin.sql) bis zur Neuerzeugung von supabase.ts von Hand ergänzt.
+type MatchRow = Database['public']['Tables']['matches']['Row'] & MatchOriginColumns;
+type MatchInsert = Database['public']['Tables']['matches']['Insert'] & MatchOriginColumns;
+type MatchUpdate = Database['public']['Tables']['matches']['Update'];
 type CollaboratorInsert = Database['public']['Tables']['tournament_collaborators']['Insert'];
 type CollaboratorUpdate = Database['public']['Tables']['tournament_collaborators']['Update'];
 type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
@@ -271,6 +266,7 @@ export function mapMatchToSupabase(
     team_b_id: b.teamId,
     slot_a_source: a.source,
     slot_b_source: b.source,
+    ...originToColumns(match), // A-36a: nur beim Anlegen, Update-Wege senden sie nie
     team_a_placeholder: null,
     team_b_placeholder: null,
     score_a: null,

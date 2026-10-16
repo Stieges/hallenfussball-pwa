@@ -16,6 +16,7 @@ import {
 import { matchHasEvents } from '../../../utils/teamHelpers';
 import { replaceSides } from './matchSides';
 import { transitionalSides, transitionalTeamRef } from '../../../core/models/matchSlot';
+import { matchOrigins } from '../../../core/models/matchOrigin';
 import { teamReplacedLabel } from '../../tournament-admin/constants/admin.constants';
 
 export type ReplanAvailability = 'offered' | 'refused-after-kickoff' | 'unknown';
@@ -144,9 +145,8 @@ export function buildReplanPreview(
       return {
         ...g,
         id: kept.id,
-        // B3b: Seiten des behaltenen Spiels (nicht des Generators), sonst zeigt die Vorschau andere Slots.
-        slotA: kept.slotA,
-        slotB: kept.slotB,
+        // B3b/A-36a: Seiten und Herkunft des Platzes des behaltenen Spiels (nicht des Generators).
+        slotA: kept.slotA, slotB: kept.slotB, originA: kept.originA, originB: kept.originB,
         field: pinned ? kept.field : g.field,
         startTime: keptStart,
         endTime: new Date(
@@ -164,9 +164,8 @@ export function buildReplanPreview(
         return {
           ...schedule.allMatches[0],
           id: m.id,
-          // B3b: Slots des angehängten Spiels selbst, nicht die des Generator-Spiels 0.
-          slotA: m.slotA,
-          slotB: m.slotB,
+          // B3b/A-36a: Slots und Herkunft des angehängten Spiels selbst, nicht die des Generator-Spiels 0.
+          slotA: m.slotA, slotB: m.slotB, originA: m.originA, originB: m.originB,
           field: m.field,
           slot: schedule.allMatches.length,
           startTime: keptStart,
@@ -267,7 +266,7 @@ export function applyReplan(
     slot: m.slot,
     ...transitionalSides(m.slotA, m.slotB),
     slotA: m.slotA,
-    slotB: m.slotB,
+    slotB: m.slotB, ...matchOrigins(m),
     group: m.group,
     isFinal: m.phase !== 'groupStage',
     phase: m.phase,

@@ -13,6 +13,7 @@ import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, isAbortError } from '../errors';
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
+import type { Database } from '../../types/supabase';
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
@@ -432,10 +433,7 @@ export class SupabaseRepository implements ITournamentRepository {
       }
     }
 
-    // Insert new matches, update existing matches -- SEPARATELY (A2,
-    // .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md).
-    //
-    // Before this fix, a single `.upsert(matchRows)` wrote EVERY column of `mapMatchToSupabase`
+    // Insert new matches, update existing matches -- SEPARATELY (A2, task-A2-brief.md). Before this fix, a single `.upsert(matchRows)` wrote EVERY column of `mapMatchToSupabase`
     // for EVERY match, including a helper's live/result columns (score_a/b, match_status, timer,
     // overtime/penalty, decided_by, ...). If the tournament owner still had an older local
     // tournament state (e.g. after only renaming a team) and saved the whole tournament while a
@@ -451,7 +449,8 @@ export class SupabaseRepository implements ITournamentRepository {
     );
 
     if (newMatchRows.length > 0) {
-      const insertRows = newMatchRows;
+      // A-36a: origin_a/b (Migration 20261026_001) fehlen in supabase.ts bis zur Regeneration -- Hochcast per Zuweisung.
+      const insertRows: Database['public']['Tables']['matches']['Insert'][] = newMatchRows;
       const { error: insertError } = await getSupabase()
         .from('matches')
         // ON CONFLICT DO NOTHING: an insert must never overwrite an existing row with neutral initial values.

@@ -4,6 +4,7 @@
 
 import { Match, Team, Standing, TournamentGroup } from '../../types/tournament'
 import { transitionalTeamRef } from '../models/matchSlot'
+import { matchOrigins } from '../models/matchOrigin'
 import { slotLabel } from '../models/slotLabel'
 import { ScheduledMatch, SchedulePhaseType } from './scheduleTypes'
 
@@ -201,6 +202,7 @@ export function scheduleMatches(options: ScheduleMatchesOptions): ScheduledMatch
         originalTeamB: transitionalTeamRef(match.slotB),
         slotA: match.slotA,
         slotB: match.slotB,
+        ...matchOrigins(match), // A-36a: Herkunft des Platzes durchreichen
         group: match.group,
         phase: match.isFinal ? determineFinalPhase(match) : 'groupStage',
         finalType: match.finalType,
