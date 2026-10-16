@@ -62,7 +62,8 @@ export const ChoiceCard = ({ title, description, icon, selected, disabled = fals
     justifyContent: 'center',
   };
   const titleStyle: CSSProperties = { display: 'block', fontWeight: cssVars.fontWeights.bold, fontSize: cssVars.fontSizes.md, overflowWrap: 'break-word' };
-  const descStyle: CSSProperties = { display: 'block', marginTop: cssVars.spacing.xs, fontSize: cssVars.fontSizes.sm, color: disabled ? cssVars.colors.textDisabled : cssVars.colors.textSecondary };
+  // gewählt: textSecondary auf primaryLight erreicht hell nur 4,08 : 1 (Messung nach B-43), daher textPrimary
+  const descStyle: CSSProperties = { display: 'block', marginTop: cssVars.spacing.xs, fontSize: cssVars.fontSizes.sm, color: disabled ? cssVars.colors.textDisabled : active ? cssVars.colors.textPrimary : cssVars.colors.textSecondary };
   const reasonStyle: CSSProperties = { display: 'block', marginTop: cssVars.spacing.xs, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textSecondary };
 
   return (

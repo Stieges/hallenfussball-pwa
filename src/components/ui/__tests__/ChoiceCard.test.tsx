@@ -33,6 +33,18 @@ describe('ChoiceCard', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
+  it('Kontrast (Messung nach dem Merge mit B-43, hell 4,08 : 1): gewählt steht die Beschreibung in textPrimary auf primaryLight', () => {
+    render(<ChoiceCard {...base} selected />);
+
+    expect(screen.getByText('Alle Spiele.')).toHaveStyle({ color: 'var(--color-text-primary)' });
+  });
+
+  it('Gegenbeispiel nicht gewählt: die Beschreibung bleibt textSecondary auf background', () => {
+    render(<ChoiceCard {...base} />);
+
+    expect(screen.getByText('Alle Spiele.')).toHaveStyle({ color: 'var(--color-text-secondary)' });
+  });
+
   it('Gegenbeispiel nicht ausgegraut: der Grund erscheint nicht', () => {
     render(<ChoiceCard {...base} reason="Erst nach dem Abschluss" />);
 
