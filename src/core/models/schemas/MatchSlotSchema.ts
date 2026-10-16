@@ -43,6 +43,13 @@ const TeamSlotSchema = z.strictObject({
   teamId: TeamIdSchema,
   /** Herkunft, aus der das Team aufgelöst wurde (bleibt nach der Auflösung erhalten). */
   resolvedFrom: SlotSourceSchema.optional(),
+  /**
+   * A-36b (M6/F1): wie die Leitung die Seite von Hand besetzt hat – „Neu besetzen“ (`reassigned`),
+   * „Weiterkommen festlegen“ (`decided`) oder Ersatzteam @W5-010 (`replaced`). Rein lokal-fachlich (nicht in der
+   * Cloud, der Delta-Sync prüft weiter nur `resolvedFrom`, K6). Die Ansicht zeigt die Herkunft klein unter dem Team
+   * nur bei `decided`/`replaced` bzw. automatisch besetzt; fehlt das Merkmal, gilt `reassigned`.
+   */
+  assignedBy: z.enum(['reassigned', 'decided', 'replaced']).optional(),
 });
 
 const PendingSlotSchema = z.strictObject({
@@ -55,3 +62,4 @@ export const MatchSlotSchema = z.discriminatedUnion('kind', [TeamSlotSchema, Pen
 export type MatchSlot = z.infer<typeof MatchSlotSchema>;
 export type TeamSlot = z.infer<typeof TeamSlotSchema>;
 export type PendingSlot = z.infer<typeof PendingSlotSchema>;
+export type SlotAssignment = NonNullable<TeamSlot['assignedBy']>;

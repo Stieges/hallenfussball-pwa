@@ -127,8 +127,8 @@ describe('@ZM-071 Alle Tabellen / Finalrunde: Seite 0 Gruppe A, Seite 1 Gruppe B
     await vorspulenInSchritten(15_000);
     expect(screen.getByText('Finalrunde')).toBeInTheDocument();
     expect(screen.getByText('Finale')).toBeInTheDocument();
-    expect(screen.getByText('Sieger 1. Halbfinale')).toBeInTheDocument();
-    expect(screen.getByText('Sieger 2. Halbfinale')).toBeInTheDocument();
+    expect(screen.getByText('Sieger Halbfinale 1')).toBeInTheDocument();
+    expect(screen.getByText('Sieger Halbfinale 2')).toBeInTheDocument();
     expect(screen.queryByText('DJK Berg')).toBeNull();
   });
 });
