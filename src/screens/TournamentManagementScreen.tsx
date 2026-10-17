@@ -340,8 +340,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           {!isMobile && <span>Admin Center</span>}
         </button>
 
-        {/* A-08f3e3 (M-1): wartende und nicht übernommene Einträge, für alle Tabs */}
-        <EngineOutboxHeaderStatus tournamentId={tournamentId} />
+        {/* A-08f3e3 (M-1): wartende/nicht übernommene Einträge; im Live-Tab zeigt sie das Cockpit selbst */}
+        {activeTab !== 'management' && <EngineOutboxHeaderStatus tournamentId={tournamentId} />}
         {/* Right: Auth Section */}
         <AuthSection
           onNavigateToLogin={onNavigateToLogin}

@@ -10,12 +10,6 @@ import { act, fireEvent, render, within } from '@testing-library/react';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
-vi.mock('../../../../hooks/useSyncStatus', () => ({
-  useSyncStatus: () => ({
-    status: 'synced', isSyncing: false, lastSyncedAt: undefined, pendingChanges: 0, failedChanges: 0, failedMutations: [],
-    syncTournament: vi.fn(), retryFailedMutation: vi.fn(), discardFailedMutation: vi.fn(), isCloudSyncAvailable: true, queueLastFailure: null,
-  }),
-}));
 
 import { initRealDeI18n } from '../../../../test/realDeI18n';
 import { ToastProvider } from '../../../../components/ui/Toast';
@@ -24,6 +18,7 @@ import type { AppendableEvent, AppendResult } from '../../../../core/repositorie
 import { MatchEngineContext } from '../../../match-engine/matchEngineContextInstance';
 import { RULES } from '../../../../core/match/client/__tests__/fixtures';
 import { FC_NORD, NOW, SPIEL_9, SV_SUED, makeScheduleEngine, settle, type ScheduleEngine } from '../../../../test/scheduleEngineHarness';
+import { clearRealtimeChannelStatus, setRealtimeChannelStatus } from '../../../../hooks/realtimeChannelStatus';
 import { EngineOutboxHeaderStatus } from '../EngineOutboxHeaderStatus';
 
 await initRealDeI18n();
@@ -67,7 +62,7 @@ describe('A-08f3e3 Hinweis im Kopf der Turnierverwaltung', () => {
     const view = mount(h);
     await act(async () => { await settle(); });
 
-    expect(view.getByTestId('sync-status').getAttribute('aria-label')).toMatch(/^1 Eintrag wartet/);
+    expect(view.getByTestId('engine-outbox-waiting').textContent).toBe('1 Eintrag wartet');
   });
 
   it('M-1/@FU-004: Offline-Eintrag, inzwischen hat ein Helfer angepfiffen → beim Senden abgelehnt, Hinweis mit Grund, Spiel zeigt den Server-Stand', async () => {
@@ -109,10 +104,22 @@ describe('A-08f3e3 Hinweis im Kopf der Turnierverwaltung', () => {
     expect(items[1].textContent).toContain('Eine vorherige Eingabe wurde nicht übernommen, daher auch diese nicht.');
   });
 
-  it('Gegenbeispiel: nichts wartet, nichts abgelehnt → kein Ablehnungs-Hinweis', async () => {
+  it('Gegenbeispiel: nichts wartet, nichts abgelehnt → kein Hinweis', async () => {
     const view = mount(h);
     await act(async () => { await settle(); });
 
+    expect(view.queryByTestId('engine-outbox-waiting')).toBeNull();
     expect(view.queryByTestId('sync-status-rejected')).toBeNull();
+  });
+
+  it('Gegenbeispiel @FU-087: Realtime-Kanal unterbrochen → im Kopf der Turnierverwaltung kein Verbindungs-Hinweis', async () => {
+    setRealtimeChannelStatus('T', 'CLOSED');
+    try {
+      const view = mount(h);
+      await act(async () => { await settle(); });
+      expect(view.queryByTestId('realtime-interrupted-hint')).toBeNull();
+    } finally {
+      clearRealtimeChannelStatus('T');
+    }
   });
 });
