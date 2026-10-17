@@ -355,7 +355,7 @@ export function MonitorsConfigTab({
         ? cssVars.colors.error
         : 'transparent',
     color: variant === 'primary' || variant === 'danger' ? 'white' : cssVars.colors.textSecondary,
-    border: variant === 'secondary' ? `1px solid ${cssVars.colors.border}` : 'none',
+    border: variant === 'secondary' ? `1px solid ${cssVars.colors.borderControl}` : 'none',
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.medium,
     cursor: 'pointer',
@@ -376,7 +376,7 @@ export function MonitorsConfigTab({
     width: '100%',
     padding: cssVars.spacing.md,
     borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     background: cssVars.colors.background,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.md,

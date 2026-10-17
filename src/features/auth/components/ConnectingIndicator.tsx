@@ -52,7 +52,7 @@ const styles = {
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
     minHeight: '32px',
     background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.sm,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.xs,

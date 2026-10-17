@@ -155,7 +155,7 @@ export const ShareDialog = ({
     width: '100%',
     padding: cssVars.spacing.md,
     borderRadius: cssVars.borderRadius.sm,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     background: cssVars.colors.surface,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.sm,

@@ -240,7 +240,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   const backButtonStyle: CSSProperties = {
     padding: cssVars.spacing.sm,
     background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: fontSizesMd3.headlineMedium,

@@ -105,13 +105,13 @@ export const cssColors = {
   // Border Colors
   // ---------------------------------------------------------------------------
   border: 'var(--color-border)',
-  borderLight: 'var(--color-border-light)',
   borderMedium: 'var(--color-border-medium)',
   borderActive: 'var(--color-border-active)',
   borderSolid: 'var(--color-border-solid)',
   borderSubtle: 'var(--color-border-subtle)',
   borderDefault: 'var(--color-border-default)',
-  borderStrong: 'var(--color-border-strong)',
+  borderControl: 'var(--color-border-control)',
+  borderControlRaised: 'var(--color-border-control-raised)',
 
   // ---------------------------------------------------------------------------
   // Semantic: Error

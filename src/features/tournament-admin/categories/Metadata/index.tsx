@@ -65,7 +65,7 @@ const styles = {
   resetButton: {
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
     background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textSecondary,
     fontSize: cssVars.fontSizes.bodyMd,
@@ -130,7 +130,7 @@ const styles = {
   textarea: {
     padding: cssVars.spacing.md,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.bodyMd,

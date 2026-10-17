@@ -48,7 +48,7 @@ export const Select: React.FC<SelectProps> = ({
     height: cssVars.touchTargets.minimum,
     padding: `0 ${cssVars.spacing.xl} 0 ${cssVars.spacing.md}`,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${error ? cssVars.colors.error : cssVars.colors.border}`,
+    border: `1px solid ${error ? cssVars.colors.error : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     // Minimum 16px (fontSizes.lg) required to prevent iOS auto-zoom on focus
@@ -86,7 +86,7 @@ export const Select: React.FC<SelectProps> = ({
           e.target.style.boxShadow = `0 0 0 3px ${error ? cssVars.colors.errorGlow : cssVars.colors.focusRing}`;
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = error ? cssVars.colors.error : cssVars.colors.border;
+          e.target.style.borderColor = error ? cssVars.colors.error : cssVars.colors.borderControl;
           e.target.style.boxShadow = 'none';
         }}
       >

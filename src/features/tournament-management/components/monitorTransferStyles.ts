@@ -35,7 +35,7 @@ export const optionStyle = (active: boolean): CSSProperties => ({
   minHeight: cssVars.touchTargets.minimum,
   padding: cssVars.spacing.md,
   borderRadius: cssVars.borderRadius.md,
-  border: `${cssVars.borderWidth.thin} solid ${active ? cssVars.colors.primary : cssVars.colors.border}`,
+  border: `${cssVars.borderWidth.thin} solid ${active ? cssVars.colors.primary : cssVars.colors.borderControl}`,
   background: active ? cssVars.colors.surfaceLight : cssVars.colors.surface,
   color: cssVars.colors.textPrimary,
   fontSize: cssVars.fontSizes.md,
