@@ -12,6 +12,8 @@ import deMonitor from '../../../i18n/locales/de/monitor.json';
 import enMonitor from '../../../i18n/locales/en/monitor.json';
 import { attachMonitor, buildTournament, slide, withMonitor } from './monitorFixture';
 import { SlideRenderer } from '../slides/SlideRenderer';
+import { monitorThemes } from '../../../design-tokens';
+import { getContrastRatio } from '../../../design-tokens/display';
 
 const { supabaseGet, localGet } = vi.hoisted(() => ({
   supabaseGet: vi.fn(),
@@ -373,6 +375,36 @@ describe('Bildschirm bleibt an, Hinweis nur im normalen Browser (@ME-005, @ME-00
     await vorspulen(0);
     expect(request).toHaveBeenCalledTimes(2);
     expect(hinweis()).not.toBeInTheDocument();
+  });
+
+  /** Hex-Farbe so, wie jsdom sie im Stil ausgibt (rgb). */
+  const alsRgb = (hex: string): string => {
+    const el = document.createElement('span');
+    el.style.color = hex;
+    return el.style.color;
+  };
+
+  it.each(['dark', 'light'] as const)('@ME-006 Thema „%s“: die Ecke trägt Farben und Rahmen dieses Themas, das Symbol hält 3 : 1', async (thema) => {
+    wakeLockAbgelehnt();
+    localGet.mockResolvedValue(attachMonitor(buildTournament(), withMonitor({ theme: thema, slides: [slide('qr-code', {}, 30)] })));
+    seite();
+    await vorspulen(0);
+    const farben = monitorThemes[thema];
+    expect(hinweis()?.getAttribute('data-variant')).toBe('corner');
+    expect(hinweis()?.style.color).toBe(alsRgb(farben.text));
+    const symbol = hinweis()?.querySelector('svg') as SVGElement;
+    const symbolHex = [farben.timerWarning, farben.text].find((c) => symbol.style.color === alsRgb(c));
+    expect(symbolHex, 'Symbolfarbe aus dem Thema').toBeDefined();
+    expect(getContrastRatio(symbolHex!, farben.background), 'Symbol mindestens 3 : 1').toBeGreaterThanOrEqual(3);
+  });
+
+  it('@ME-006: die Ecke rückt rechts um mindestens 5 % der Breite ein (eigenes Token), oben um 5 % der Höhe', async () => {
+    wakeLockAbgelehnt();
+    localGet.mockResolvedValue(attachMonitor(buildTournament(), withMonitor({ slides: [slide('qr-code', {}, 30)] })));
+    seite();
+    await vorspulen(0);
+    expect(hinweis()?.style.right).toContain('5vw');
+    expect(hinweis()?.style.top).toContain('5vh');
   });
 
   it('ohne Wake Lock (Schnittstelle fehlt) erscheint der Hinweis und verschwindet nach 10 Sekunden', async () => {

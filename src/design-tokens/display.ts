@@ -59,7 +59,7 @@ export const displayFontSizes = {
 
   // B-48a: Hinweis oben rechts, nie unter 3 % der Bildhöhe (@ZM-125, HART)
   notice: '3vh',
-  noticeIcon: '2.4vh',
+  noticeIcon: '3vh',
 
   // Meta/Badge
   meta: '14px',          // Gruppe, Feld-Label
@@ -193,6 +193,7 @@ export const displayLayout = {
 
   // Hinweis als Ecke oben rechts auf Folien ohne Kopfzeile (B-48a): mindestens 5 % der Seite vom Rand (@ME-067)
   noticeCornerMin: '5vh',
+  noticeCornerMinX: '5vw',
   noticeCornerMaxWidth: '40%',
 
   // Slide Aspect Ratios

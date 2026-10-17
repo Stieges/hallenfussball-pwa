@@ -20,7 +20,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { displayColors, displayMonitor } from '../../design-tokens';
+import { displayMonitor, monitorThemes } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
 import { useTranslation, I18nextProvider } from 'react-i18next';
@@ -41,7 +41,7 @@ import { isSlideShowable } from './publicVisibility';
 import { monitorPageCount } from './slideContent';
 import { useSlideshow } from './useSlideshow';
 import { boundFieldNumbers, visibleGoal } from './monitorGoalFilter';
-import { getPerformanceSettings } from './monitorDisplayHelpers';
+import { getPerformanceSettings, resolveTheme } from './monitorDisplayHelpers';
 import { createLegacyMonitorSource } from './monitorDataSource';
 import { useMonitorDisplayData } from './useMonitorDisplayData';
 import { useMonitorEvents } from './useMonitorEvents';
@@ -256,9 +256,7 @@ function MonitorDisplayPageContent({
         <LiveHeaderNotice
           variant="corner"
           text={t('dauerbetrieb.wakeLockHint')}
-          color={displayColors.textPrimary}
-          borderColor={displayColors.textMuted}
-          background={displayColors.surface}
+          themeColors={monitorThemes[resolveTheme(monitor.theme)]}
           overscanPx={overscanPx}
         />
       )}

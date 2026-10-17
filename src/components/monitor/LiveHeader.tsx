@@ -90,9 +90,7 @@ export function LiveHeader({ status, field, matchNumber, group, size, themeColor
         <LiveHeaderNotice
           variant="header"
           text={notice}
-          color={themeColors.text}
-          borderColor={themeColors.border}
-          background={themeColors.backgroundGradient}
+          themeColors={themeColors}
         />
       ) : (
         <>
