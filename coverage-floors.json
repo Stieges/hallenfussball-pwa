@@ -49,6 +49,7 @@
     "zuschauer": {
       "pfade": [
         "src/screens/LiveViewScreen",
+        "src/screens/PublicLiveViewScreen",
         "src/screens/PublicTournamentViewScreen",
         "src/features/public-view/"
       ],

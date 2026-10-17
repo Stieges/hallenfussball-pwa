@@ -2,14 +2,16 @@
  * B-06 – Abgrenzung im Record „Monitor einrichten“ (Daniel 10.10.): Die alte Groß-Anzeige der Turnierverwaltung
  * (Reiter „Monitor“, MonitorTab) entfällt; einziger Weg für Hallenbildschirme ist der Monitor-Konfigurator,
  * dessen Reiter jetzt „Monitor“ heißt (vorher „Monitore“). Eine alte Adresse (/monitor, /monitors) landet im Konfigurator.
- * Eine Kennung für diese Abgrenzung gibt es im Record nicht (Abgrenzung, kein Szenario).
+ * Kennung @ME-068 (Szenariogrundriss im Record, drei Beispielzeilen: Laptop-Reiter, Handy-„Mehr“, Adresse „/monitors“).
  */
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { TournamentManagementScreen } from '../TournamentManagementScreen';
 import { ToastProvider } from '../../components/ui/Toast';
 import { getTabFromPath } from '../../features/tournament-management/utils/tournamentTabUtils';
+
+const geraet = vi.hoisted(() => ({ mobil: false }));
 
 vi.mock('../../hooks/useTournamentManager', () => ({
   useTournamentManager: () => ({
@@ -18,8 +20,11 @@ vi.mock('../../hooks/useTournamentManager', () => ({
     handleTournamentUpdate: vi.fn(), applyRemote: vi.fn(), scheduleService: {},
   }),
 }));
-vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }));
+vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => geraet.mobil }));
 vi.mock('../../components/layout/AuthSection', () => ({ AuthSection: () => null }));
+vi.mock('../../features/tournament-management/ScheduleTab', () => ({
+  ScheduleTab: () => <p>Spielplan</p>,
+}));
 vi.mock('../../features/tournament-management/MonitorsConfigTab', () => ({
   MonitorsConfigTab: () => <p data-testid="monitor-konfigurator">Konfigurator</p>,
 }));
@@ -36,19 +41,39 @@ function mount(pfad: string) {
   );
 }
 
-describe('B-06 Reiter „Monitor“ in der Turnierverwaltung', () => {
-  it('Pflichttest: genau ein Reiter „Monitor“, kein Reiter „Monitore“', () => {
-    mount('/tournament/t1/monitor');
+afterEach(() => {
+  geraet.mobil = false;
+});
+
+describe('B-06 @ME-068 Reiter „Monitor“ in der Turnierverwaltung', () => {
+  it('Pflichttest @ME-068 (Laptop): genau ein Reiter „Monitor“, kein Reiter „Monitore“; der Reiter öffnet den Konfigurator', () => {
+    mount('/tournament/t1/schedule');
     expect(screen.getAllByRole('button', { name: 'Monitor' })).toHaveLength(1);
     expect(screen.queryByRole('button', { name: 'Monitore' })).toBeNull();
-  });
 
-  it.each(['monitor', 'monitors'])('Pflichttest: die Adresse …/%s zeigt den Konfigurator', (segment) => {
-    mount(`/tournament/t1/${segment}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Monitor' }));
     expect(screen.getByTestId('monitor-konfigurator')).toBeInTheDocument();
   });
 
-  it('Gegenbeispiel: eine unbekannte Adresse fällt auf den Spielplan, nicht auf den Konfigurator', () => {
+  it('Pflichttest @ME-068 (Handy): im Menü „Mehr“ den Eintrag „Monitor“ wählen öffnet den Konfigurator', () => {
+    geraet.mobil = true;
+    mount('/tournament/t1/schedule');
+    fireEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Monitor/ }));
+    expect(screen.getByTestId('monitor-konfigurator')).toBeInTheDocument();
+  });
+
+  it('Pflichttest @ME-068 (Adresse „/monitors“): die alte Adresse zeigt den Konfigurator', () => {
+    mount('/tournament/t1/monitors');
+    expect(screen.getByTestId('monitor-konfigurator')).toBeInTheDocument();
+  });
+
+  it('Pflichttest @ME-068: die Adresse …/monitor zeigt den Konfigurator', () => {
+    mount('/tournament/t1/monitor');
+    expect(screen.getByTestId('monitor-konfigurator')).toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel @ME-068: eine unbekannte Adresse fällt auf den Spielplan, nicht auf den Konfigurator', () => {
     expect(getTabFromPath('monitor-alt')).toBe('schedule');
     expect(getTabFromPath('monitor')).toBe('monitor');
   });
