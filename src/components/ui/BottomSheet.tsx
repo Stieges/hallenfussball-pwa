@@ -19,6 +19,11 @@ interface BottomSheetProps {
   onClose: () => void;
   children: React.ReactNode;
   title?: string;
+  /**
+   * Tasten-Fuß (z. B. `DialogActions`): Mit Fuß bleiben Griff, Titel und Fuß stehen, nur der Inhalt scrollt
+   * (DA-2a, @OB-062). Ohne Fuß bleibt das Blatt wie bisher.
+   */
+  footer?: React.ReactNode;
 }
 
 /** Blatt von unten; Fläche, Abdunkelung, Fokusfalle und Scroll-Sperre kommen aus DialogSurface (B-43a). */
@@ -27,6 +32,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   onClose,
   children,
   title,
+  footer,
 }) => {
   // Stable unique ID for aria-labelledby (React 18+)
   const generatedId = useId();
@@ -61,6 +67,18 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   // Use stable ID for aria-labelledby when title exists
   const titleId = title ? generatedId : undefined;
 
+  const handleAndTitle = (
+    <>
+      {/* Drag Handle */}
+      <div style={handleStyle}>
+        <div style={handleBarStyle} />
+      </div>
+
+      {/* Title */}
+      {title && <h2 id={titleId} style={titleStyle}>{title}</h2>}
+    </>
+  );
+
   return (
     <DialogSurface
       isOpen={isOpen}
@@ -70,14 +88,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       zIndex={cssVars.zIndex.floating}
       labelledBy={titleId}
       ariaLabel={titleId ? undefined : 'Bottom Sheet'}
+      header={footer ? handleAndTitle : undefined}
+      footer={footer}
     >
-      {/* Drag Handle */}
-      <div style={handleStyle}>
-        <div style={handleBarStyle} />
-      </div>
-
-      {/* Title */}
-      {title && <h2 id={titleId} style={titleStyle}>{title}</h2>}
+      {!footer && handleAndTitle}
 
       {/* Content */}
       <div style={contentStyle}>

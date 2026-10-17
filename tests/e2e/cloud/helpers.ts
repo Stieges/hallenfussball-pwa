@@ -422,6 +422,18 @@ export async function logoutViaUiConfirmingWarning(page: Page, waitingCount: num
     ? '1 Eintrag noch nicht übertragen'
     : `${waitingCount} Einträge noch nicht übertragen`;
   await expect(page.getByRole('dialog')).toContainText(expectedTitle);
+  // DA-2a (@OB-061/@OB-062) am echten Weg: Titel im festen Kopf, beide Tasten im festen Fuß, Haupttaste „Trotzdem abmelden“
+  // zuletzt und ohne Scrollen vollständig im Fenster
+  await expect(page.locator('[data-testid="dialog-surface-header"]')).toContainText(expectedTitle);
+  const fuss = page.locator('[data-testid="dialog-surface-footer"]');
+  await expect(fuss.locator('[data-testid="logout-warning-cancel"]')).toBeVisible();
+  const haupt = await fuss.locator('[data-testid="logout-warning-confirm"]').boundingBox();
+  const fenster = page.viewportSize();
+  expect(haupt, 'Haupttaste hat eine Box').not.toBeNull();
+  if (haupt && fenster) {
+    expect(haupt.y).toBeGreaterThanOrEqual(0);
+    expect(haupt.y + haupt.height).toBeLessThanOrEqual(fenster.height);
+  }
   // Erst nach der Bestätigung wird abgemeldet: bis dahin besteht die Sitzung noch.
   expect(await readSessionAccessToken(page)).not.toBeNull();
   await page.locator('[data-testid="logout-warning-confirm"]').click();
