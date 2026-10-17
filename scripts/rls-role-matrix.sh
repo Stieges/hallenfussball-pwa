@@ -201,6 +201,9 @@ MATCH_ENGINE_CHAIN_FILES=(
   # A-05 (M2, Controller-Zusatz aus dem A-02-Review): Spielseiten als Slot. Ab hier braucht jedes eingefuegte
   # Spiel je Seite Team-ID oder Herkunft (matches_slot_*_present) -- die Sonde matches_insert traegt sie.
   "$(find_migration 20261003_001)"
+  # ZA-3 (brief-ZA-0-3.md): ergaenzt match_transitions (paused + GOAL/OWN_GOAL/FOUL, section_break +
+  # TIME_PENALTY, finished/REOPEN helper) -- ohne sie weicht der Gleichlauf-Check 7c4 ab.
+  "$(find_migration 20261028_001)"
 )
 MATCH_TRANSITIONS_FILE="$REPO_ROOT/src/core/match/matchTransitions.json"
 ROLE_PERMISSIONS_FILE="$REPO_ROOT/src/features/auth/permissions/rolePermissions.json"
@@ -436,6 +439,17 @@ else
   MODE_LABEL="vorher/R1-Gegenprobe (nur Baseline)"
 fi
 
+# A-08h (20261028_002, Befund C-MATCH-EVENTS-DIREKTWEG, @FU-084/@FU-085): nur im Modus "nachher"
+# (alle Migrationen). Entfernt die drei Client-Schreib-Policies auf match_events und entzieht
+# anon/authenticated INSERT/UPDATE/DELETE/TRUNCATE. Danach schreiben Clients die Tabelle nie mehr.
+A08H_FILE="$REPO_ROOT/supabase/migrations/20261028_002_match_events_only_rpc.sql"
+WITH_A08H=0
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 ]]; then
+  WITH_A08H=1
+  echo "Migration einspielen: $(basename "$A08H_FILE")" >&2
+  psql_stdin < "$A08H_FILE"
+fi
+
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,
 #        nur wenn WITH_R5=1 -- die neue Tabelle existiert sonst nicht) ------------------------
 EXPECTED_POLICY_COUNT=44
@@ -451,6 +465,10 @@ if [[ "$WITH_R5" -eq 1 ]]; then
   # app_config (2 Policies: app_config_select, app_config_select_ci_schema_reader).
   EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 5))
   EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 3))
+fi
+# A-08h entfernt drei Policies auf match_events (INSERT/UPDATE/DELETE v3/v2).
+if [[ "$WITH_A08H" -eq 1 ]]; then
+  EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT - 3))
 fi
 POLICY_COUNT="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM pg_policies WHERE schemaname = 'public';")"
@@ -989,6 +1007,10 @@ for id in "${MATRIX_IDS[@]}"; do
     else
       exp="$(perm_expected "$role" "$right")"
     fi
+    # A-08h: Clients schreiben match_events nie direkt -- auch der Eigentuemer nicht.
+    if [[ "$WITH_A08H" -eq 1 && "$op" == match_events_* ]]; then
+      exp="false"
+    fi
 
     ins_team="$(uuid_for "vollmatrix-team:$id:$op")"
     ins_match="$(uuid_for "vollmatrix-match:$id:$op")"
@@ -1070,6 +1092,8 @@ echo "=== Dedizierte Prüfung — $MODE_LABEL ==="
 for check in "owner-events-soft-delete-app-pfad:$owner_event_update" "owner-events-hard-delete-rls-ungenutzt-von-app:$owner_event_delete"; do
   label="${check%%:*}"; got="${check#*:}"
   exp="allowed"
+  # A-08h: Eigentuemer-Schreibweg auf match_events ist zu (42501/0 Zeilen -> denied).
+  [[ "$WITH_A08H" -eq 1 ]] && exp="denied"
   TOTAL=$((TOTAL + 1))
   if [[ "$got" == "$exp" ]]; then
     echo "$label: $got"
@@ -1254,6 +1278,8 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
   echo "=== Fixrunde 3 — K3/H5/L5 — $MODE_LABEL ==="
   k1k2_mark_value "k3-eigentuemer-haengt-eigene-zeile-auf-fremdes-turnier   " "$k3_hijack" "$exp_k3_hijack"
   k1k2_mark_value "k3-folge-update-tournaments-nach-hijack                 " "$k3_followup" "$exp_k3_followup"
+  # A-08h: der Eigentuemer-UPDATE auf eine Ereigniszeile ist abgelehnt (Tabellenrecht entzogen).
+  [[ "$WITH_A08H" -eq 1 ]] && exp_h5_event="denied"
   k1k2_mark_value "h5-eigentuemer-haengt-eigenes-match-um                  " "$h5_match" "$exp_h5_match"
   k1k2_mark_value "h5-eigentuemer-haengt-eigenes-team-um                   " "$h5_team" "$exp_h5_team"
   k1k2_mark_value "h5-eigentuemer-haengt-eigenes-ereignis-um               " "$h5_event" "$exp_h5_event"

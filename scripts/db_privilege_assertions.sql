@@ -312,7 +312,7 @@ SELECT 'b3b-helpers-no-execute-anon-authenticated-service-role',
          SELECT 1
            FROM unnest(ARRAY['match_engine.normalize_uuid(jsonb)', 'match_engine.cfg_num(jsonb)',
                              'match_engine.envelope(jsonb,text,text)', 'match_engine.dedupe_key(jsonb)',
-                             'match_engine.server_rules(integer,text,integer,integer,jsonb,jsonb)',
+                             'match_engine.server_rules(integer,text,integer,integer,jsonb,jsonb,text)',
                              'match_engine.cache_columns(jsonb,jsonb)']) AS f(sig)
           CROSS JOIN unnest(ARRAY['anon', 'authenticated', 'service_role']) AS r(role)
           WHERE has_function_privilege(r.role, f.sig, 'EXECUTE'))
@@ -393,4 +393,68 @@ UNION ALL
 SELECT 'matches-keep-origin-no-public-execute',
        coalesce((SELECT p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_keep_origin()')), false)
+-- A-30a (20261028_004_match_kit_colors.sql): getragene Farben. Trigger AFTER INSERT ROW auf match_events (nur
+-- MATCH_START, WHEN-Bedingung) und BEFORE INSERT OR UPDATE ROW auf matches aktiv; beide Funktionen in public ohne
+-- EXECUTE fuer PUBLIC, anon, authenticated; die Projektion ist SECURITY DEFINER, der Schutz SECURITY INVOKER
+-- (current_user-Unterscheidung), beide mit festem search_path. Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'match-events-kit-from-match-start-trigger-active',
+       EXISTS (SELECT 1 FROM pg_trigger t
+                WHERE t.tgrelid = to_regclass('public.match_events') AND t.tgname = 'match_events_kit_from_match_start'
+                  AND NOT t.tgisinternal AND t.tgenabled = 'O'
+                  AND t.tgfoid = to_regprocedure('public.matches_kit_from_match_start()')
+                  AND (t.tgtype & 1) = 1 AND (t.tgtype & 2) = 0 AND (t.tgtype & 4) = 4 AND (t.tgtype & 16) = 0
+                  AND pg_get_triggerdef(t.oid) LIKE '%WHEN ((new.type = ''MATCH_START''::text))%')
+UNION ALL
+SELECT 'matches-guard-kit-columns-trigger-active',
+       EXISTS (SELECT 1 FROM pg_trigger t
+                WHERE t.tgrelid = to_regclass('public.matches') AND t.tgname = 'matches_guard_kit_columns'
+                  AND NOT t.tgisinternal AND t.tgenabled = 'O'
+                  AND t.tgfoid = to_regprocedure('public.matches_guard_kit_columns()')
+                  AND (t.tgtype & 1) = 1 AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4 AND (t.tgtype & 16) = 16)
+UNION ALL
+SELECT 'matches-kit-from-match-start-definer-no-client-execute',
+       coalesce((SELECT p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                        AND p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_kit_from_match_start()')), false)
+UNION ALL
+SELECT 'matches-guard-kit-columns-invoker-no-client-execute',
+       coalesce((SELECT NOT p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                        AND p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_guard_kit_columns()')), false)
+UNION ALL
+-- A-08h (Befund C-MATCH-EVENTS-DIREKTWEG, @FU-084, @FU-085): Clients schreiben match_events nur noch
+-- über append_match_events (SECURITY DEFINER). anon und authenticated haben KEIN INSERT/UPDATE/DELETE
+-- auf der Tabelle; SELECT bleibt (Gegenbeispiel unten). Ohne Tabellenrecht kommt ein eindeutiges 42501.
+SELECT 'anon-no-insert-match-events',
+       NOT has_table_privilege('anon', 'public.match_events', 'INSERT')
+UNION ALL
+SELECT 'anon-no-update-match-events',
+       NOT has_table_privilege('anon', 'public.match_events', 'UPDATE')
+UNION ALL
+SELECT 'anon-no-delete-match-events',
+       NOT has_table_privilege('anon', 'public.match_events', 'DELETE')
+UNION ALL
+SELECT 'authenticated-no-insert-match-events',
+       NOT has_table_privilege('authenticated', 'public.match_events', 'INSERT')
+UNION ALL
+SELECT 'authenticated-no-update-match-events',
+       NOT has_table_privilege('authenticated', 'public.match_events', 'UPDATE')
+UNION ALL
+SELECT 'authenticated-no-delete-match-events',
+       NOT has_table_privilege('authenticated', 'public.match_events', 'DELETE')
+UNION ALL
+-- Gegenbeispiel: Lesen bleibt (Zuschauer, Monitor, Realtime; match_events_select_v3).
+SELECT 'authenticated-select-match-events',
+       has_table_privilege('authenticated', 'public.match_events', 'SELECT')
+UNION ALL
+-- Policy-Ebene: has_table_privilege sieht RLS nicht. Auf match_events gibt es daher keine Policy
+-- ausser SELECT (kein INSERT/UPDATE/DELETE/ALL, egal fuer welche Rolle).
+SELECT 'match-events-only-select-policy',
+       NOT EXISTS (SELECT 1 FROM pg_policies
+                    WHERE schemaname = 'public' AND tablename = 'match_events' AND cmd <> 'SELECT')
 ;

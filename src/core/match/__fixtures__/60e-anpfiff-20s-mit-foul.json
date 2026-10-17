@@ -1,0 +1,139 @@
+{
+  "title": "@SL-067 Anpfiff vor 20 Sekunden mit Foul: Rückgängig nimmt das Foul zurück, nicht den Anpfiff",
+  "szenario": "@SL-067 Nach 30 Sekunden oder einem Eintrag nimmt Rückgängig den Anpfiff nicht mehr zurück",
+  "ctx": {
+    "matchId": "match-0000060e",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000060e-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 360,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 300,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 6,
+          "penaltySeconds": 120
+        }
+      },
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000060e-0000-4000-8000-000000000002",
+      "type": "FOUL",
+      "actor": "helper",
+      "at": 16000,
+      "section": 1,
+      "clockMs": 15000,
+      "teamId": "teamB",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000060e-0000-4000-8000-000000000003",
+      "type": "RETRACT",
+      "actor": "helper",
+      "at": 21000,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "0000060e-0000-4000-8000-000000000001",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000060e-0000-4000-8000-000000000004",
+      "type": "RETRACT",
+      "actor": "helper",
+      "at": 21500,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "0000060e-0000-4000-8000-000000000002",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000060e-0000-4000-8000-000000000005",
+      "type": "RETRACT",
+      "actor": "helper",
+      "at": 22000,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "0000060e-0000-4000-8000-000000000001",
+      "payload": {},
+      "actorUser": "helper"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000060e-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000060e-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000060e-0000-4000-8000-000000000003",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "0000060e-0000-4000-8000-000000000004",
+        "status": "accepted"
+      },
+      {
+        "id": "0000060e-0000-4000-8000-000000000005",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      }
+    ],
+    "serverState": {
+      "status": "running",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": true,
+        "elapsedMs": 0,
+        "anchorAt": 1000
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": null,
+      "finishedAt": null
+    },
+    "state": {
+      "retracted": [
+        "0000060e-0000-4000-8000-000000000002"
+      ]
+    }
+  }
+}

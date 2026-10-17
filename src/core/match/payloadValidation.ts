@@ -32,7 +32,8 @@ const CorrectionPayloadSchema = z.object({
   reason: z.string().min(1),
   basedOn: z.string().nullable(),
 });
-const ResultEntryPayloadSchema = z.object({ scores: TeamScoresSchema });
+/** A-25a (@FU-094): optional das Strafstoßergebnis eines nur eingetragenen K.-o.-Unentschiedens. */
+const ResultEntryPayloadSchema = z.object({ scores: TeamScoresSchema, shootout: TeamScoresSchema.optional() });
 const SkipPayloadSchema = z.object({ reason: z.string().optional() });
 const ClockAdjustPayloadSchema = z.object({});
 const TiebreakChoicePayloadSchema = z.object({ choice: z.enum(['overtime', 'goldenGoal', 'shootout']) });
@@ -109,8 +110,13 @@ export const TEAM_REQUIRED_EVENT_TYPES: ReadonlySet<EventType> = new Set([
 /** Ereignistypen, deren Payload `scores` für GENAU beide Teams tragen muss. */
 export const TEAM_SCORES_EVENT_TYPES: ReadonlySet<EventType> = new Set(['CORRECTION', 'RESULT_ENTRY']);
 
-/** Ziel-Ereignistypen, die per RETRACT zurückgenommen werden dürfen (Brief Abschnitt 3). */
+/**
+ * Ziel-Ereignistypen, die per RETRACT zurückgenommen werden dürfen (Brief Abschnitt 3). ZA-3:
+ * CLOCK_ADJUST (@SL-109) und MATCH_START (@SL-066, nur ≤ 30 s ohne Eintrag, handlers/retract.ts).
+ */
 export const RETRACTABLE_EVENT_TYPES: ReadonlySet<EventType> = new Set([
+  'MATCH_START',
+  'CLOCK_ADJUST',
   'GOAL',
   'OWN_GOAL',
   'YELLOW_CARD',
@@ -154,12 +160,24 @@ export function isPayloadValid(event: EngineEvent, ctx: MatchContext): boolean {
   }
 
   if (TEAM_SCORES_EVENT_TYPES.has(event.type)) {
-    const scores = (parsed.data as { scores: Record<string, number> }).scores;
-    const keys = Object.keys(scores);
-    if (keys.length !== 2 || !keys.includes(ctx.teamAId) || !keys.includes(ctx.teamBId)) {
+    const { scores, shootout } = parsed.data as { scores: Record<string, number>; shootout?: Record<string, number> };
+    if (!coversBothTeams(scores, ctx)) {
       return false;
+    }
+    // A-25a (@FU-094): ein Strafstoßergebnis nur bei Gleichstand und nur, wenn es entscheidet.
+    if (shootout !== undefined) {
+      const { teamAId: a, teamBId: b } = ctx;
+      if (!coversBothTeams(shootout, ctx) || scores[a] !== scores[b] || shootout[a] === shootout[b]) {
+        return false;
+      }
     }
   }
 
   return true;
+}
+
+/** Genau die zwei Team-IDs des Spiels als Schlüssel. */
+function coversBothTeams(values: Record<string, number>, ctx: MatchContext): boolean {
+  const keys = Object.keys(values);
+  return keys.length === 2 && keys.includes(ctx.teamAId) && keys.includes(ctx.teamBId);
 }

@@ -1,5 +1,5 @@
 {
-  "title": "Vertrag K.o.-Entscheidung je Runde -> Server-Regeln (B-04c, @W2A-009)",
+  "title": "Vertrag K.o.-Entscheidung je Runde -> Server-Regeln (B-04c, @W2A-009; ZA-3 D1: Server liest je Runde, ohne bekannte Abweichung)",
   "cases": [
     {
       "name": "K.-o.-Entscheidung je Runde",
@@ -36,13 +36,6 @@
         "shootersPerTeam": 5,
         "suddenDeathAfter": 6,
         "penaltySeconds": 120
-      },
-      "bekannteAbweichung": {
-        "befund": "C-KO-RUNDENREGEL-SERVER",
-        "uebergabe": "A-27 (Spur A)",
-        "serverHeute": {
-          "tiebreak": "goldenGoal"
-        }
       }
     },
     {
@@ -114,17 +107,10 @@
         "shootersPerTeam": 5,
         "suddenDeathAfter": 6,
         "penaltySeconds": 120
-      },
-      "bekannteAbweichung": {
-        "befund": "C-KO-RUNDENREGEL-SERVER",
-        "uebergabe": "A-27 (Spur A)",
-        "serverHeute": {
-          "tiebreak": "overtime-then-shootout"
-        }
       }
     },
     {
-      "name": "K.-o.-Spiel ohne Regel (Rückfall shootout)",
+      "name": "K.-o.-Spiel ohne Regel (Rückfall Verlängerung, dann Strafstoßschießen, @SL-145)",
       "input": {
         "durationMinutes": null,
         "phase": "final",
@@ -147,7 +133,7 @@
         "sectionSeconds": 720,
         "breakSeconds": 60,
         "knockout": true,
-        "tiebreak": "shootout",
+        "tiebreak": "overtime-then-shootout",
         "overtimeSeconds": 300,
         "shootersPerTeam": 5,
         "suddenDeathAfter": 6,

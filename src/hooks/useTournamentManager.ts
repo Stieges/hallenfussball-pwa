@@ -56,6 +56,7 @@ function stripEngineOverlayFields(
             matchStatus: rawMatch.matchStatus,
             decidedBy: rawMatch.decidedBy,
             finishedAt: rawMatch.finishedAt,
+            kit: rawMatch.kit, // A-30a: getragene Farben kommen nur vom Server, nie aus der Ueberlagerung
         };
         if (JSON.stringify(restored) !== JSON.stringify(match)) {
             changed = true;

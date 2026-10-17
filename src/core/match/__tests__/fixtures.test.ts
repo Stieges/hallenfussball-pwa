@@ -13,7 +13,8 @@
  * Eingangszustand mutiert -- das deckt praktisch alle Handler ab, nicht nur MATCH_START.
  *
  * C0a (PC4): optional `expect.details` (exakt) und `expect.liveState` (`null` exakt, sonst
- * Teilvergleich gegen `cacheColumns(state, ctx).live_state`).
+ * Teilvergleich gegen `cacheColumns(state, ctx).live_state`). A-25a: optional `expect.cacheColumns`
+ * (Teilvergleich gegen `cacheColumns(state, ctx)`).
  *
  * Derselbe Fixture-Satz wird in B3a von der SQL-Zwillingsfunktion konsumiert
  * (Ruling P2/P3) -- das Format hier ist deshalb bindend für beide Seiten.
@@ -63,6 +64,8 @@ interface Fixture {
     details?: Record<string, unknown>;
     /** C0a (V2, PC4): `cacheColumns(state).live_state` -- `null` exakt, sonst Teilvergleich. */
     liveState?: Record<string, unknown> | null;
+    /** A-25a (@FU-094): Teilvergleich gegen `cacheColumns(state, ctx)` (ohne live_state). */
+    cacheColumns?: Record<string, unknown>;
   };
 }
 
@@ -139,6 +142,10 @@ describe('Match-Engine Fixtures', () => {
         } else {
           expect(liveState).toMatchObject(fixture.expect.liveState);
         }
+      }
+
+      if (fixture.expect.cacheColumns !== undefined) {
+        expect(cacheColumns(outcome.state, fixture.ctx)).toMatchObject(fixture.expect.cacheColumns);
       }
 
       for (const check of fixture.expect.penaltyChecks ?? []) {

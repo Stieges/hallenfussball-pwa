@@ -7,7 +7,7 @@
  * Platzierungsspiele (`finalType`) stehen vor dem Finale und zählen nie zum Bracket.
  */
 import type { ScheduledMatch } from '../../core/generators';
-import { isPlacementFinal, knockoutRoundOf, resolveTiebreakMode } from '../../core/match/tiebreakDecision';
+import { TIEBREAK_FALLBACK_MODE, isPlacementFinal, knockoutRoundOf, resolveTiebreakMode } from '../../core/match/tiebreakDecision';
 import type { FinalsConfig, KnockoutRound, TiebreakerMode } from '../../types/tournament';
 
 /** Eine Zeile der K.-o.-Regeln: K.-o.-Runde, Platzierungsspiele insgesamt oder nur „Spiel um Platz 3“. */
@@ -101,11 +101,11 @@ export function koSlotsFrom(finals: readonly ScheduledMatch[]): KoKey[] {
 
 /**
  * Entscheidungsregel eines K.-o.-Schlüssels. Platzierungsspiele folgen ihrer Regel, dann dem Finale (@W2A-039).
- * `shootout` ist der Rückfall des Servers (S14), falls keine Regel gespeichert ist.
+ * Ohne gespeicherte Regel gilt der Rückfall des Servers „Verlängerung, dann Strafstoßschießen“ (ZA-3, E1, @SL-145).
  */
 export function koModeFor(key: KoKey, finalsConfig: FinalsConfig | null | undefined): TiebreakerMode {
   const mode = key === 'placement' || key === 'thirdPlace'
     ? resolveTiebreakMode(finalsConfig, null, 'thirdPlace')
     : resolveTiebreakMode(finalsConfig, key);
-  return mode ?? 'shootout';
+  return mode ?? TIEBREAK_FALLBACK_MODE;
 }

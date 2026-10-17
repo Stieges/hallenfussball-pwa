@@ -487,6 +487,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         // lokale Version herunter und die Änderung erreicht die Cloud nie.
         if (stableKey(local.monitors) !== stableKey(remote.monitors)) {return true;}
         if (stableKey(local.sponsors) !== stableKey(remote.sponsors)) {return true;}
+        if ((local.bibColor ?? '').toUpperCase() !== (remote.bibColor ?? '').toUpperCase()) {return true;} // A-30a @W3-029: Leibchenfarbe nur im config-JSONB
 
         // Fix 3 (Review 2026-09-18): publishedAt liegt ebenfalls nur im config-JSONB (siehe
         // supabase/migrations/20260918_002_make_public_refuses_drafts.sql) und hat — anders

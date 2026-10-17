@@ -1,5 +1,5 @@
 {
-  "title": "tiebreaker ungültig (unbekannter Text, Zahl) -> shootout",
+  "title": "tiebreaker ungültig (unbekannter Text, Zahl) -> overtime-then-shootout (Rückfall @SL-145)",
   "input": {
     "durationMinutes": null,
     "phase": "final",
@@ -15,7 +15,7 @@
     "sectionSeconds": 0,
     "breakSeconds": 60,
     "knockout": true,
-    "tiebreak": "shootout",
+    "tiebreak": "overtime-then-shootout",
     "overtimeSeconds": 300,
     "shootersPerTeam": 5,
     "suddenDeathAfter": 6,

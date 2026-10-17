@@ -15,6 +15,7 @@ import type { CockpitDialogState, CockpitOverlayHandlers } from '../areas/Cockpi
 import type { LegacyPlayAreaProps, TeamSideHandlers } from '../areas/LegacyPlayArea';
 import { EINTRAG_ZEITSTRAFE, type CardKind, type EntryKind, type Side } from '../model/cockpitTypes';
 import type { LiveCockpitProps } from '../types';
+import type { UseCockpitNoticesReturn } from './useCockpitNotices';
 import { useActivePenalties } from './useActivePenalties';
 import { useClockControls } from './useClockControls';
 import type { UseEntryFlowsReturn } from './useEntryFlows';
@@ -32,7 +33,8 @@ export interface CockpitCommandsArgs {
   sound: Pick<ReturnType<typeof useMatchSound>, 'play' | 'activate' | 'isActivated'>;
   flows: UseEntryFlowsReturn;
   sides: UseSideOrderReturn;
-  toast: { showSuccess: (message: string) => void; showInfo: (message: string) => void; showError: (message: string) => void };
+  /** Meldezeile (Stufe 3 = Bestätigung, Stufe 2 = Fehler). */
+  melde: UseCockpitNoticesReturn['melde'];
   /** Spielzeit (auch Verlängerung) abgelaufen – Quelle: `useMatchTimerExtended`. */
   isOvertime: boolean;
 }
@@ -50,11 +52,14 @@ export interface CockpitCommands {
   onSidebarEventEdit?: LegacyPlayAreaProps['sidebar']['onEventEdit'];
 }
 
-export function useCockpitCommands({ props, settings, sound, flows, sides, toast, isOvertime }: CockpitCommandsArgs): CockpitCommands {
+export function useCockpitCommands({ props, settings, sound, flows, sides, melde, isOvertime }: CockpitCommandsArgs): CockpitCommands {
   const { t } = useTranslation('cockpit');
   const { currentMatch: match, onStart, onPause, onResume, onFinish, onGoal, onAdjustTime, onTimePenalty, onCard, onSubstitution, onFoul, onUpdateSettings } = props;
   const readOnly = props.readOnly ?? false;
-  const { showSuccess, showInfo, showError } = toast;
+  // Bestätigungen sind Stufe 3, Fehler Stufe 2 (Spec § 7); `melde` ist stabil.
+  const showSuccess = useCallback((message: string) => { melde(3, message); }, [melde]);
+  const showInfo = showSuccess;
+  const showError = useCallback((message: string) => { melde(2, message); }, [melde]);
 
   const [showTimeAdjust, setShowTimeAdjust] = useState(false);
   const [showEventLog, setShowEventLog] = useState(false);
@@ -83,10 +88,10 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, toast
   const clock = useClockControls({
     match, kannSteuern: !readOnly, autoFinishEnabled: settings.autoFinishEnabled, zeitAbgelaufen: isOvertime,
     sound: { enabled: settings.soundEnabled, play: () => { void sound.play(); } }, hapticEnabled: settings.hapticEnabled,
-    onStart: (id) => { onStart(id); showSuccess('Spiel gestartet!'); },
-    onPause: (id) => { onPause(id); showInfo('Spiel pausiert'); },
-    onResume: (id) => { onResume(id); showSuccess('Spiel fortgesetzt'); },
-    onFinish: (id) => { onFinish(id); penalties.clear(); showInfo('Spiel beendet'); },
+    onStart: (id) => { onStart(id); showSuccess(t('meldung.angepfiffen')); },
+    onPause: (id) => { onPause(id); showInfo(t('meldung.pausiert')); },
+    onResume: (id) => { onResume(id); showSuccess(t('meldung.fortgesetzt')); },
+    onFinish: (id) => { onFinish(id); penalties.clear(); showInfo(t('meldung.abgepfiffen')); },
   });
 
   const teamNameOf = useCallback(
@@ -116,14 +121,14 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, toast
         incomplete: incomplete ?? false,
       });
       if (incomplete) {
-        showInfo(`⚽ ${t('toast.goalScored', { teamName: team.name })} (ohne Nr.)`);
+        showInfo(`${t('toast.goalScored', { teamName: team.name })} (ohne Nr.)`);
       } else if (jerseyNumber !== null) {
         const assistText = validAssists.length > 0
           ? ` (${t('sidebar.assistFormat', { assists: validAssists.map((a) => `#${a}`).join(', ') })})`
           : '';
-        showSuccess(`⚽ ${t('toast.goalScored', { teamName: team.name })} (#${jerseyNumber})${assistText}`);
+        showSuccess(`${t('toast.goalScored', { teamName: team.name })} (#${jerseyNumber})${assistText}`);
       } else {
-        showSuccess(`⚽ ${t('toast.goalScored', { teamName: team.name })}!`);
+        showSuccess(`${t('toast.goalScored', { teamName: team.name })}!`);
       }
       flows.schliesse();
     },
@@ -160,7 +165,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, toast
       playersIn: playersIn.length > 0 ? playersIn : undefined,
     });
     const nummern = (liste: number[]): string => (liste.length > 0 ? liste.map((n) => `#${n}`).join(',') : '?');
-    showInfo(`🔄 Wechsel ${teamNameOf(teamId)}: ${nummern(playersOut)} → ${nummern(playersIn)}`);
+    showInfo(`Wechsel ${teamNameOf(teamId)}: ${nummern(playersOut)} → ${nummern(playersIn)}`);
     flows.schliesse();
   }, [match, onSubstitution, flows, showInfo, teamNameOf]);
 
@@ -169,8 +174,8 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, toast
     // Im Countdown stellt der Nutzer die Restzeit ein: verstrichen = Dauer - Rest.
     const elapsed = settings.timerDirection === 'countdown' ? match.durationSeconds - newDisplaySeconds : newDisplaySeconds;
     onAdjustTime?.(match.id, elapsed);
-    showInfo(`Zeit auf ${Math.floor(newDisplaySeconds / 60)}:${(newDisplaySeconds % 60).toString().padStart(2, '0')} gesetzt`);
-  }, [match, onAdjustTime, showInfo, settings.timerDirection]);
+    showInfo(t('meldung.zeitGesetzt', { zeit: `${Math.floor(newDisplaySeconds / 60)}:${(newDisplaySeconds % 60).toString().padStart(2, '0')}` }));
+  }, [match, onAdjustTime, showInfo, settings.timerDirection, t]);
 
   const open = (art: EntryKind, side: Side) => () => flows.oeffne({ art, seite: side });
   const sideHandlers = (side: Side): TeamSideHandlers => ({
@@ -226,7 +231,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, toast
       onStart: clock.starte,
       onPauseResume: clock.pauseOderWeiter,
       onEditTime: openTimeAdjust,
-      onSwitchSides: () => { sides.tausche(); showInfo('Seiten getauscht'); },
+      onSwitchSides: () => { sides.tausche(); showInfo(t('meldung.seitenGetauscht')); },
       onFinish: clock.pfeifeAb,
       onSettings: () => setShowSettings(true),
       // BUG-002: Event Log for Mobile

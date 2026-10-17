@@ -1,0 +1,29 @@
+{
+  "title": "@W2A-039 Gegenbeispiel: Finale mit derselben Einstellung bleibt bei overtime-then-shootout",
+  "input": {
+    "durationMinutes": null,
+    "phase": "final",
+    "finalType": "final",
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": 12,
+    "config": {},
+    "finalsConfig": {
+      "preset": "top-4",
+      "tiebreakerByRound": {
+        "final": "overtime-then-shootout",
+        "placement": "shootout"
+      }
+    }
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 720,
+    "breakSeconds": 60,
+    "knockout": true,
+    "tiebreak": "overtime-then-shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

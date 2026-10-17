@@ -7,7 +7,7 @@
  * Importe/Mocks, z. B. `useEngineCommandWiring.ts`); `useEngineMatchReadiness.ts`,
  * `useScheduleTabActions.ts` und `useCockpitExecution.ts` importieren ab dieser Runde direkt von hier.
  */
-import type { Tournament, Team } from '../types/tournament';
+import type { Match, Tournament, Team } from '../types/tournament';
 import type { LiveMatch } from '../core/models/LiveMatch';
 import { matchSideTeamId } from '../core/models/matchSlot';
 import { serverRules, type MatchContext } from '../core/match';
@@ -28,6 +28,8 @@ export interface ValidMatchEntry {
   /** I6/K3/W5: Phase (`groupStage`/Finalrunde) fuer `serverRules` -- eine Finalrunde hat eine andere
    * Dauer als die Gruppenphase, `undefined` waere immer "Gruppenphase". */
   phase: string | undefined;
+  /** ZA-3 (D1, @W2A-039): Platzierungsspiel-Kennung für die Entscheidungsart je Spiel. */
+  finalType: Match['finalType'] | undefined;
   /** B1 (C3a-2a): Turnierkopie-Status (`match.matchStatus`), fehlend zaehlt als `'scheduled'`. */
   matchStatus: string | undefined;
   /** I1/K7 (Fixrunde 1): ein bereits eingetragenes Ergebnis (z. B. Spielplan-Schnelleingabe,
@@ -84,6 +86,7 @@ export function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
       ctx,
       meta,
       phase: match.phase,
+      finalType: match.finalType,
       matchStatus: match.matchStatus,
       hasExistingResult: (match.scoreA ?? 0) > 0 || (match.scoreB ?? 0) > 0,
       homeVisual: { logo: homeTeam.logo, colors: homeTeam.colors },
@@ -94,10 +97,11 @@ export function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
 }
 
 /** K3: exakte serverRules-Eingabe wie supabaseMappers.ts:616-652. */
-function rulesFor(tournament: Tournament, matchPhase: string | undefined) {
+function rulesFor(tournament: Tournament, entry: Pick<ValidMatchEntry, 'phase' | 'finalType'>) {
   return serverRules({
     durationMinutes: null,
-    phase: matchPhase ?? null,
+    phase: entry.phase ?? null,
+    finalType: entry.finalType ?? null,
     groupPhaseDuration: tournament.groupPhaseGameDuration,
     finalRoundDuration: tournament.finalRoundGameDuration ?? null,
     config: {
@@ -167,7 +171,7 @@ export function computeLiveMatches(
     if (!isEngineByServer && !isNewScheduledMatch(entry, localLiveMatches)) {
       continue; // B1: bleibt Altspiel.
     }
-    const rules = view.result.state.rules ?? rulesFor(tournament, entry.phase);
+    const rules = view.result.state.rules ?? rulesFor(tournament, entry);
     const viewClock = { serverNow: engine.serverNow(), offsetMs: clock.offsetMs };
     const meta: LiveMatchMeta = { ...entry.meta, version: view.confirmedCount };
     const state = view.result.state.rules ? view.result.state : { ...view.result.state, rules };

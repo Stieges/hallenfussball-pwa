@@ -22,6 +22,7 @@ import { serverRulesFor } from './engineServerRules';
 import { buildValidMatches } from './useEngineMatches';
 import { mapCardTypeToEngine, type EngineCommandHandlers, type GoalHandlerOptions } from './engineCommandWiringTypes';
 import { rejectionMessageKey } from './engineCommandWiringHelpers';
+import { defaultKit } from '../core/models/kit';
 
 export type { EngineCommandHandlers } from './engineCommandWiringTypes';
 
@@ -104,7 +105,9 @@ export function useEngineCommandWiring(
         return false;
       }
       try {
-        await commands.start(matchId, ctx, actor, serverRulesFor(tournament, tournament.matches.find((m) => m.id === matchId)));
+        const match = tournament.matches.find((m) => m.id === matchId);
+        // A-30a (F1): kit geht bei jedem Anpfiff mit – bis zur Leibchen-Wahl (Cockpit-Scheibe 3) die Vorbelegung.
+        await commands.start(matchId, ctx, actor, serverRulesFor(tournament, match), match && defaultKit(match, tournament.teams, tournament));
         return true;
       } catch (error) {
         handleEngineError(error);

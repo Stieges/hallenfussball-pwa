@@ -1,0 +1,29 @@
+{
+  "title": "@W2A-039 Platz 3 ohne eigene Regel folgt dem Finale (vor der alten globalen Regel)",
+  "input": {
+    "durationMinutes": null,
+    "phase": "final",
+    "finalType": "thirdPlace",
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": 12,
+    "config": {},
+    "finalsConfig": {
+      "preset": "top-4",
+      "tiebreaker": "shootout",
+      "tiebreakerByRound": {
+        "final": "overtime-then-shootout"
+      }
+    }
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 720,
+    "breakSeconds": 60,
+    "knockout": true,
+    "tiebreak": "overtime-then-shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

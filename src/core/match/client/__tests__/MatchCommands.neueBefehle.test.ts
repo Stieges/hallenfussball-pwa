@@ -116,7 +116,7 @@ const FAELLE: Fall[] = [
     name: '@FU-080 enterResult -> RESULT_ENTRY 3:1 (Spiel 9 beendet)',
     pre: () => [],
     now: K,
-    send: (c) => c.enterResult(ID, B07_CTX, 'leitung', { 'fc-nord': 3, 'sv-sued': 1 }),
+    send: (c) => c.enterResult(ID, B07_CTX, 'leitung', { 'fc-nord': 3, 'sv-sued': 1 }, undefined, false),
     type: 'RESULT_ENTRY', teamId: null, targetId: null, payload: { scores: { 'fc-nord': 3, 'sv-sued': 1 } }, clockMs: 0,
     statusAfter: 'finished',
   },
@@ -159,7 +159,7 @@ describe('MatchCommands – Gegenbeispiele (@FU-081)', () => {
   it('@FU-081 enterResult auf laufendem Spiel -> INVALID_TRANSITION, Store unveraendert, kein kick', async () => {
     const harness = makeHarness([kickoff()], K + 300_000);
 
-    const sending = harness.commands.enterResult(ID, B07_CTX, 'leitung', { 'fc-nord': 3, 'sv-sued': 1 });
+    const sending = harness.commands.enterResult(ID, B07_CTX, 'leitung', { 'fc-nord': 3, 'sv-sued': 1 }, undefined, false);
 
     await expect(sending).rejects.toBeInstanceOf(MatchCommandRejectedError);
     await expect(sending).rejects.toMatchObject({ code: ERROR_CODES.INVALID_TRANSITION });
