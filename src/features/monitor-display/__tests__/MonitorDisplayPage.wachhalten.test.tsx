@@ -214,3 +214,16 @@ describe('Live-Folie mit laufendem Spiel (@ME-006, Kopfzeile)', () => {
     expect(hinweis()).not.toBeInTheDocument();
   });
 });
+
+describe('Bildschirm bleibt an im normalen Browser (@ME-005)', () => {
+  it('fordert den Bildschirm-Wachhalter an, sobald der Monitor geladen ist, und zeigt dabei keinen Hinweis', async () => {
+    const sentinel = { release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() };
+    const request = vi.fn().mockResolvedValue(sentinel);
+    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+    seite();
+    await vorspulen(0);
+    expect(request).toHaveBeenCalledWith('screen');
+    await vorspulen(30_000);
+    expect(hinweis()).not.toBeInTheDocument();
+  });
+});
