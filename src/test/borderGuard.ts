@@ -68,3 +68,22 @@ export function findLiteralControlBorders(source: string): BorderHit[] {
   });
   return hits;
 }
+
+/** Klassen in CSS-Modulen, die ein Bedienelement beschreiben. */
+const CONTROL_CLASS = /\.[\w-]*(input|select|textarea|button|btn|chip|toggle|option|segment|swatch|trigger|radio|stepper)[\w-]*/i;
+
+/** CSS-Module: Bedien-Klasse mit Trennlinie (`var(--color-border)`, -default, -medium, -solid, -subtle) als Rand. */
+export function findControlDividerCss(source: string): BorderHit[] {
+  const hits: BorderHit[] = [];
+  const re = /([^{}]+)\{([^{}]*)\}/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(source)) !== null) {
+    const selector = m[1].trim();
+    if (!CONTROL_CLASS.test(selector)) {continue;}
+    if (/border(?:-color)?\s*:[^;]*var\(--color-border(?:-default|-medium|-solid|-subtle)?\)/.test(m[2])) {
+      const line = source.slice(0, m.index + m[1].length).split('\n').length;
+      hits.push({ line, head: selector.slice(-60), text: 'border mit Trennlinie' });
+    }
+  }
+  return hits;
+}

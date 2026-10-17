@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { findControlDividerBorders, findLiteralControlBorders } from '../../test/borderGuard';
+import { findControlDividerBorders, findControlDividerCss, findLiteralControlBorders } from '../../test/borderGuard';
 import { readThemeTokens } from '../../test/contrast';
 import { palette } from '../../design-tokens/colors/palette';
 
@@ -28,6 +28,17 @@ function dateien(dir: string, out: string[] = []): string[] {
   return out;
 }
 
+function cssModule(dir: string, out: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    const pfad = join(dir, name);
+    if (statSync(pfad).isDirectory()) {cssModule(pfad, out);}
+    else if (name.endsWith('.module.css')) {out.push(pfad);}
+  }
+  return out;
+}
+
+const cssQuellen = cssModule(SRC).map((pfad) => ({ rel: pfad.slice(SRC.length + 1), text: readFileSync(pfad, 'utf8') }));
+
 const quellen = dateien(SRC).map((pfad) => ({ rel: pfad.slice(SRC.length + 1), text: readFileSync(pfad, 'utf8') }));
 
 /**
@@ -39,7 +50,7 @@ const COCKPIT: Record<string, number> = {
   'components/live-cockpit/components/Dialogs/EventEditDialog.tsx': 1,
   'components/live-cockpit/components/Dialogs/EventNumberField.tsx': 1,
   'components/live-cockpit/components/Dialogs/GoalScorerDialog.tsx': 4,
-  'components/live-cockpit/components/Dialogs/SubstitutionDialog.tsx': 5,
+  'components/live-cockpit/components/Dialogs/SubstitutionDialog.tsx': 4,
   'components/live-cockpit/components/Dialogs/TimeAdjustDialog.tsx': 1,
   'components/live-cockpit/components/Dialogs/TimePenaltyDialog.tsx': 4,
   'components/live-cockpit/components/GameControls/index.tsx': 1,
@@ -81,6 +92,11 @@ describe('@OB-055 @OB-057 Wächter: Bedienelemente nutzen borderControl', () => 
         verstoesse.push(`${q.rel}: ${treffer.length} > ${erlaubt} (${treffer.map((t) => t.line).join(', ')})`);
       }
     }
+    expect(verstoesse).toEqual([]);
+  });
+
+  it('CSS-Module: keine Bedien-Klasse mit Trennlinie als Rand', () => {
+    const verstoesse = cssQuellen.flatMap((q) => findControlDividerCss(q.text).map((h) => `${q.rel}:${h.line} ${h.head}`));
     expect(verstoesse).toEqual([]);
   });
 
@@ -132,6 +148,11 @@ describe('Wächter: Erkennung mit Gegenbeispielen', () => {
   it('Gegenbeispiel: borderControl am Eingabefeld ist erlaubt', () => {
     const text = ['const inputStyle: CSSProperties = {', '  border: `1px solid ${cssVars.colors.borderControl}`,', '};'].join('\n');
     expect(findControlDividerBorders(text)).toHaveLength(0);
+  });
+  it('CSS-Modul: erkennt .groupSelect mit var(--color-border), Karte bleibt erlaubt', () => {
+    expect(findControlDividerCss('.groupSelect {\n  border: 1px solid var(--color-border);\n}')).toHaveLength(1);
+    expect(findControlDividerCss('.card {\n  border: 1px solid var(--color-border);\n}')).toHaveLength(0);
+    expect(findControlDividerCss('.groupSelect {\n  border: 1px solid var(--color-border-control);\n}')).toHaveLength(0);
   });
   it('erkennt einen festen Farbwert im Rand eines Knopfs', () => {
     const text = ['const buttonStyle: CSSProperties = {', "  border: '1px solid #64748B',", '};'].join('\n');

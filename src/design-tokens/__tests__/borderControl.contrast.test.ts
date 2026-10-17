@@ -87,7 +87,7 @@ describe('Regel "Kontrast und Fokus": Text mindestens 4,5 : 1 (Token-Paare, die 
     '--color-error',
     '--color-primary',
   ];
-  /** Offen (Befund, nicht B-51): `--color-error` als Text auf `--color-surface-light` hell 4,41 : 1, dunkel 4,34 : 1. */
+  /** Offen (Befund B-51b, `it.fails` unten): `--color-error` als Text auf `--color-surface-light` hell 4,41 : 1, dunkel 4,34 : 1. */
   const SKIP = new Set(['light|--color-error|--color-surface-light', 'dark|--color-error|--color-surface-light']);
   const TEXT_SURFACES = ['--color-background', '--color-surface', '--color-surface-elevated', '--color-surface-light'];
 
@@ -134,5 +134,24 @@ describe('Offen (Befund): weitere Text-Paare unter 4,5 : 1', () => {
   });
   it.fails('dunkel: --color-on-success auf --color-success', () => {
     expect(ratio('dark', '--color-on-success', '--color-success')).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+  // Fixrunde 1 (Review T-1, T-2): bisher still übersprungen bzw. nicht erfasst, jetzt sichtbar als Befund B-51b.
+  it.fails('hell: --color-error (Text) auf --color-surface-light (4,41)', () => {
+    expect(ratio('light', '--color-error', '--color-surface-light')).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+  it.fails('dunkel: --color-error (Text) auf --color-surface-light (4,34)', () => {
+    expect(ratio('dark', '--color-error', '--color-surface-light')).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+  it.fails('hell: --color-text-placeholder auf --color-background (2,54)', () => {
+    expect(ratio('light', '--color-text-placeholder', '--color-background')).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+  it.fails('hell: --color-text-tertiary auf --color-background (2,54)', () => {
+    expect(ratio('light', '--color-text-tertiary', '--color-background')).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+  it.fails('hell: --color-secondary (Text) auf --color-background (3,23)', () => {
+    expect(ratio('light', '--color-secondary', '--color-background')).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+  it.fails('hell: --color-info (Text) auf --color-background (3,23)', () => {
+    expect(ratio('light', '--color-info', '--color-background')).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
   });
 });
