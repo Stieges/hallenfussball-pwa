@@ -26,11 +26,6 @@ const WRITE_METHODS = new Set(['insert', 'upsert', 'update', 'delete']);
  * Schreibstelle in einer erlaubten Datei aendert die Anzahl und macht den Test rot. Gruppen aus Plan A-08 § 1.2.
  */
 const SCORE_ALLOWLIST: Record<string, { reason: string; count: number }> = {
-  'features/tournament-management/hooks/useScheduleTabActions.ts': {
-    count: 2,
-    reason:
-      'Schnelleingabe/Rückgängig (§ 1.2): einzige erlaubte Ausnahme für Spiele, die die Engine nicht trägt (Seiten offen, abgesetzt, Altbestand); bleibt bis B-07/B-12b',
-  },
   'core/generators/scheduleGenerator.ts': {
     count: 2,
     reason:

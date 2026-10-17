@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { TournamentService } from '../core/services/TournamentService';
-import { Tournament } from '../core/models/types';
+import { Tournament, type MatchUpdate } from '../core/models/types';
 import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
 import { calculateStandings } from '../utils/calculations';
 import { Standing } from '../types/tournament';
@@ -9,6 +9,8 @@ import { useRealtimeTournament } from './useRealtimeTournament';
 import { useRealtimePollFallback } from './realtimePollFallback';
 import { tournamentChannelStatusKey } from './realtimeChannelStatus';
 import { useEngineOverlayForTournament, useEngineOverlaidMatchIds } from './useEngineOverlayForTournament';
+import { useKoResolutionAfterAck } from './useKoResolutionAfterAck';
+import { applySlotUpdates } from './koSlotResolution';
 import { useEngineCatchUpOnCloudChange } from './useEngineCatchUpOnCloudChange';
 import { createPushCoalescer } from './coalescePushes';
 
@@ -181,6 +183,12 @@ export function useTournamentManager(tournamentId: string) {
     // Wahrheit fuer handleTournamentUpdate/applyRemote; nur die nach AUSSEN gegebene Form ist
     // ueberlagert.
     const overlaidTournament = useEngineOverlayForTournament(tournament);
+    // A-08f3e2 Fixrunde 1 (I-1): K.-o.-Plätze nach Server-Bestätigung besetzen, auch ohne offenen Spielplan-Tab
+    const applyKoSlots = useCallback((updates: MatchUpdate[]) => {
+        setTournament((current) => (current ? applySlotUpdates(current, updates) : current));
+        service.schedule.updateMatches(tournamentId, updates).catch(() => { setError('Speichern fehlgeschlagen'); });
+    }, [service, tournamentId]);
+    useKoResolutionAfterAck(overlaidTournament, applyKoSlots);
 
     // =========================================================================
     // BACKWARD COMPATIBILITY: Schedule View and Standings

@@ -33,6 +33,7 @@ import { MonitorEditor } from '../features/tournament-management/MonitorEditor';
 
 // Auth
 import { AuthSection } from '../components/layout/AuthSection';
+import { EngineOutboxHeaderStatus } from '../features/tournament-management/components/EngineOutboxHeaderStatus';
 
 interface TournamentManagementScreenProps {
   tournamentId: string;
@@ -338,6 +339,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           {!isMobile && <span>Admin Center</span>}
         </button>
 
+        {/* A-08f3e3 (M-1): wartende/nicht übernommene Einträge; im Live-Tab zeigt sie das Cockpit selbst */}
+        {activeTab !== 'management' && <EngineOutboxHeaderStatus tournament={tournament} />}
         {/* Right: Auth Section */}
         <AuthSection
           onNavigateToLogin={onNavigateToLogin}
