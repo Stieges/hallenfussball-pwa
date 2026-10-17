@@ -393,4 +393,37 @@ UNION ALL
 SELECT 'matches-keep-origin-no-public-execute',
        coalesce((SELECT p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_keep_origin()')), false)
+-- A-30a (20261028_004_match_kit_colors.sql): getragene Farben. Trigger AFTER INSERT ROW auf match_events (nur
+-- MATCH_START, WHEN-Bedingung) und BEFORE INSERT OR UPDATE ROW auf matches aktiv; beide Funktionen in public ohne
+-- EXECUTE fuer PUBLIC, anon, authenticated; die Projektion ist SECURITY DEFINER, der Schutz SECURITY INVOKER
+-- (current_user-Unterscheidung), beide mit festem search_path. Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'match-events-kit-from-match-start-trigger-active',
+       EXISTS (SELECT 1 FROM pg_trigger t
+                WHERE t.tgrelid = to_regclass('public.match_events') AND t.tgname = 'match_events_kit_from_match_start'
+                  AND NOT t.tgisinternal AND t.tgenabled = 'O'
+                  AND t.tgfoid = to_regprocedure('public.matches_kit_from_match_start()')
+                  AND (t.tgtype & 1) = 1 AND (t.tgtype & 2) = 0 AND (t.tgtype & 4) = 4 AND (t.tgtype & 16) = 0
+                  AND pg_get_triggerdef(t.oid) LIKE '%WHEN ((new.type = ''MATCH_START''::text))%')
+UNION ALL
+SELECT 'matches-guard-kit-columns-trigger-active',
+       EXISTS (SELECT 1 FROM pg_trigger t
+                WHERE t.tgrelid = to_regclass('public.matches') AND t.tgname = 'matches_guard_kit_columns'
+                  AND NOT t.tgisinternal AND t.tgenabled = 'O'
+                  AND t.tgfoid = to_regprocedure('public.matches_guard_kit_columns()')
+                  AND (t.tgtype & 1) = 1 AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4 AND (t.tgtype & 16) = 16)
+UNION ALL
+SELECT 'matches-kit-from-match-start-definer-no-client-execute',
+       coalesce((SELECT p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                        AND p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_kit_from_match_start()')), false)
+UNION ALL
+SELECT 'matches-guard-kit-columns-invoker-no-client-execute',
+       coalesce((SELECT NOT p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                        AND p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_guard_kit_columns()')), false)
 ;
