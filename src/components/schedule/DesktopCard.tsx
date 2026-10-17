@@ -13,6 +13,7 @@ import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { matchLabelText } from '../../core/models/slotLabel';
 import { buildSideContext, sideDisplay, type SideContext } from './matchSides';
+import { resultFigures } from './matchResult';
 import { MatchCardDesktop, type MatchCardStatus } from './MatchCard';
 
 // ---------------------------------------------------------------------------
@@ -85,10 +86,8 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         showGroupLabel={showGroupLabel}
         homeTeam={sideDisplay(match, 'A', sides)}
         awayTeam={sideDisplay(match, 'B', sides)}
-        homeScore={match.scoreA ?? 0}
-        awayScore={match.scoreB ?? 0}
+        result={resultFigures(match, status)}
         status={status}
-        progress={0}
         onRowClick={() => onCardClick(match.id)}
         onCircleClick={() => onCircleClick(match.id)}
         isExpanded={isExpanded}

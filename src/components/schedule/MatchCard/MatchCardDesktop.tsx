@@ -7,10 +7,10 @@
  * └──────────────────────────────────────────────────────────────────────┘
  *
  * Features:
- * - Hover states for row and score circle
+ * - Hover states for row and result
  * - Click on row → Expand for editing
- * - Click on circle → Status-specific action
- * - Progress ring for live matches
+ * - Click on result → Status-specific action
+ * - Ergebnis waagerecht: "2:2 (4:3 i. E.)", "3:2 n. V." (@OB-064), Sieger fett
  */
 
 import { type CSSProperties, useState, useCallback } from 'react';
@@ -19,6 +19,7 @@ import { cssVars } from '../../../design-tokens'
 import { MatchCardScore, type MatchCardStatus } from './MatchCardScore';
 import { formatTime } from './utils';
 import { TeamAvatar } from '../../ui/TeamAvatar';
+import type { ResultFigures } from '../matchResult';
 import type { TeamLogo, TeamColors } from '../../../types/tournament';
 
 // ---------------------------------------------------------------------------
@@ -51,14 +52,10 @@ export interface MatchCardDesktopProps {
   homeTeam: Team;
   /** Away team */
   awayTeam: Team;
-  /** Home score */
-  homeScore: number;
-  /** Away score */
-  awayScore: number;
+  /** Tore, Strafstoß und Sieger (`resultFigures`); `null` für ein geplantes Spiel */
+  result?: ResultFigures | null;
   /** Match status */
   status: MatchCardStatus;
-  /** Progress 0-1 for live matches */
-  progress?: number;
   /** Formatted elapsed time */
   elapsedFormatted?: string;
   /** Callback when row is clicked */
@@ -89,10 +86,8 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   showGroupLabel = true,
   homeTeam,
   awayTeam,
-  homeScore,
-  awayScore,
+  result = null,
   status,
-  progress = 0,
   elapsedFormatted,
   onRowClick,
   onCircleClick,
@@ -180,13 +175,18 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   });
 
 
-  const teamNameStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
-    fontWeight: 800,
-    color: cssVars.colors.textPrimary,
-    // MOBILE-UX: No truncation - team names must be fully visible
-    wordBreak: 'break-word',
-    overflowWrap: 'break-word',
+  const decided = result?.winner !== undefined && result.winner !== null;
+  const teamNameStyle = (side: 'a' | 'b'): CSSProperties => {
+    const isWinner = decided && result?.winner === side;
+    const isLoser = decided && result?.winner !== side;
+    return {
+      fontSize: cssVars.fontSizes.lg,
+      fontWeight: isWinner ? cssVars.fontWeights.bold : isLoser || status === 'finished' ? cssVars.fontWeights.medium : cssVars.fontWeights.semibold,
+      color: isLoser ? cssVars.colors.textSecondary : cssVars.colors.textPrimary,
+      // MOBILE-UX: No truncation - team names must be fully visible
+      wordBreak: 'break-word',
+      overflowWrap: 'break-word',
+    };
   };
 
   const groupStyle: CSSProperties = {
@@ -266,19 +266,16 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
 
         {/* Home Team (right-aligned) */}
         <div style={teamStyle('right')}>
-          <span style={teamNameStyle}>{homeTeam.name}</span>
+          <span style={teamNameStyle('a')} data-winner={decided && result?.winner === 'a' ? 'true' : undefined}>{homeTeam.name}</span>
           <TeamAvatar team={homeTeam} size="sm" />
         </div>
 
         {/* Score Circle + Events Indicator */}
         <div data-score-circle style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.xs }}>
           <MatchCardScore
-            homeScore={homeScore}
-            awayScore={awayScore}
+            result={result}
             status={status}
-            progress={progress}
             elapsedFormatted={elapsedFormatted}
-            size={52}
             onClick={handleCircleClick}
             disabled={disabled}
             matchId={matchId}
@@ -302,7 +299,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         {/* Away Team (left-aligned) */}
         <div style={teamStyle('left')}>
           <TeamAvatar team={awayTeam} size="sm" />
-          <span style={teamNameStyle}>{awayTeam.name}</span>
+          <span style={teamNameStyle('b')} data-winner={decided && result?.winner === 'b' ? 'true' : undefined}>{awayTeam.name}</span>
         </div>
 
         {/* Group */}

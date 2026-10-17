@@ -130,6 +130,7 @@ export const palette = {
   // Info/Accent - Purple
   // ---------------------------------------------------------------------------
   purple: {
+    300: '#C4B5FD', // Schlussphase Tafel + Monitor (Mockup v8)
     400: '#A78BFA',
     500: '#8B5CF6',
     600: '#7C3AED',

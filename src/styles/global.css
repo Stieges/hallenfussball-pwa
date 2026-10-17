@@ -136,6 +136,24 @@
   /* Bedien-Rand auf erhöhter Fläche (surface-light, surface-variant): neutral 300, dort reicht neutral 500 nicht (1,6 : 1) */
   --color-border-control-raised: #CBD5E1;
 
+  /* Tafel Live-Cockpit (Spec § 8.2, Mockup-Freigabe 16.10.): dunkel = eine Stufe dunkler als die Seite */
+  --color-scoreboard-bg: #050E1F;
+  --color-scoreboard-text: #FFFFFF;
+  --color-scoreboard-text-muted: #A3B8D4;
+  --color-scoreboard-live: #DC2626;
+  --color-scoreboard-highlight: #FF9100;
+  --color-scoreboard-final-phase: #C4B5FD;
+  --color-scoreboard-border: #A3B8D4;
+  --color-scoreboard-surface: rgba(255, 255, 255, 0.08);
+  --color-scoreboard-divider: rgba(255, 255, 255, 0.22);
+  --color-scoreboard-on-live: #FFFFFF;
+  --color-scoreboard-on-highlight: #000000;
+  --color-scoreboard-ok: #00E676;
+  --color-scoreboard-info: #00B0FF;
+  --color-scoreboard-neutral: #64748B;
+  --color-notice-line-bg: var(--color-scoreboard-surface);
+  --color-notice-line-text: var(--color-scoreboard-text);
+
   /* ===========================================
      Colors - Error
      =========================================== */
@@ -369,6 +387,10 @@
   --sizing-sidebar-width: 300px;
   --sizing-empty-state-min-height: 300px;
   --sizing-hairline: 1px;
+  /* Tafel Live-Cockpit (Mockup, fest): Uhr und Stand über Schrift-Tokens, Meldezeile reine Anzeige */
+  --sizing-team-stripe-width: var(--spacing-xs);
+  --sizing-notice-line-height-compact: 24px;
+  --sizing-notice-line-height-regular: 32px;
 
   /* Layout Heights */
   --layout-height-bottom-nav: 56px;
@@ -435,6 +457,7 @@
      Used for match scores, must stay readable
      on sports fields regardless of preferences.
      =========================================== */
+  --font-size-score-xs: 32px;
   --font-size-score-sm: 40px;
   --font-size-score-md: 56px;
   --font-size-score-lg: 72px;
@@ -649,6 +672,24 @@ html[data-font-size="x-large"] {
   --color-border-default: #E2E8F0;
   --color-border-control: #64748B;
   --color-border-control-raised: #64748B;
+
+  /* Tafel Live-Cockpit (Spec § 8.2): hell = dunkel, eigene Fläche */
+  --color-scoreboard-bg: #0F1B33;
+  --color-scoreboard-text: #FFFFFF;
+  --color-scoreboard-text-muted: #A3B8D4;
+  --color-scoreboard-live: #DC2626;
+  --color-scoreboard-highlight: #FF9100;
+  --color-scoreboard-final-phase: #C4B5FD;
+  --color-scoreboard-border: #A3B8D4;
+  --color-scoreboard-surface: rgba(255, 255, 255, 0.08);
+  --color-scoreboard-divider: rgba(255, 255, 255, 0.22);
+  --color-scoreboard-on-live: #FFFFFF;
+  --color-scoreboard-on-highlight: #000000;
+  --color-scoreboard-ok: #00E676;
+  --color-scoreboard-info: #00B0FF;
+  --color-scoreboard-neutral: #64748B;
+  --color-notice-line-bg: var(--color-scoreboard-surface);
+  --color-notice-line-text: var(--color-scoreboard-text);
 
   /* ===========================================
      Colors - Error
@@ -939,6 +980,24 @@ html[data-font-size="x-large"] {
   --color-border-default: rgba(255, 255, 255, 0.25);
   --color-border-control: #AAAAAA;
   --color-border-control-raised: #AAAAAA;
+
+  /* Tafel Live-Cockpit, hoher Kontrast: Platzhalter, nicht MVP (Werte schwarz/gelb/weiß, nur vorläufig) */
+  --color-scoreboard-bg: #000000;
+  --color-scoreboard-text: #FFFFFF;
+  --color-scoreboard-text-muted: #FFFF00;
+  --color-scoreboard-live: #DC2626;
+  --color-scoreboard-highlight: #FF9100;
+  --color-scoreboard-final-phase: #C4B5FD;
+  --color-scoreboard-border: #FFFFFF;
+  --color-scoreboard-surface: rgba(255, 255, 255, 0.12);
+  --color-scoreboard-divider: #FFFFFF;
+  --color-scoreboard-on-live: #FFFFFF;
+  --color-scoreboard-on-highlight: #000000;
+  --color-scoreboard-ok: #00E676;
+  --color-scoreboard-info: #00B0FF;
+  --color-scoreboard-neutral: #64748B;
+  --color-notice-line-bg: var(--color-scoreboard-surface);
+  --color-notice-line-text: var(--color-scoreboard-text);
 
   /* ===========================================
      Colors - Primary (Brighter Green)
