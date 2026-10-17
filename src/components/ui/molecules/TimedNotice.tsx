@@ -1,11 +1,12 @@
 /**
- * TimedNotice – kleiner Hinweis in der unteren rechten Ecke (verdeckt die Kopfzeile der Live-Folie nicht, @ME-006), der nach `durationMs` von selbst verschwindet.
+ * TimedNotice – kleiner Hinweis oben rechts (Stil „corner“, Monitor-Mockup v8; steht in der Höhe der Kopfzeile und
+ * verdeckt weder Stand noch Schiedsrichter-Zeile, @ME-006), der nach `durationMs` von selbst verschwindet.
  *
  * Einmal gezeigt, bleibt er für die Lebensdauer der Komponente ausgeblendet (Atomic Design: Molekül aus
  * Text und Verhalten, Farben und Maße aus den Tokens).
  */
 import { useEffect } from 'react';
-import { cssVars, displayLayout } from '../../../design-tokens';
+import { cssVars, displayFontSizes, displayLayout } from '../../../design-tokens';
 
 export interface TimedNoticeProps {
   /** Text des Hinweises (übersetzt vom Aufrufer). */
@@ -30,14 +31,17 @@ export function TimedNotice({ text, durationMs, onDone, testId }: TimedNoticePro
       data-testid={testId}
       style={{
         position: 'fixed',
-        bottom: cssVars.spacing.lg,
-        right: cssVars.spacing.lg,
+        top: displayLayout.noticeTop,
+        right: displayLayout.noticeRight,
         maxWidth: displayLayout.noticeMaxWidth,
-        padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+        padding: `${displayLayout.noticePadY} ${displayLayout.noticePadX}`,
         background: cssVars.colors.surfaceDarkMedium,
         color: cssVars.colors.textPrimary,
-        borderRadius: cssVars.borderRadius.md,
-        fontSize: cssVars.fontSizes.sm,
+        border: `${displayLayout.noticeBorderWidth} solid ${cssVars.colors.borderStrong}`,
+        borderRadius: displayLayout.noticeRadius,
+        fontSize: displayFontSizes.notice,
+        fontWeight: cssVars.fontWeights.semibold,
+        lineHeight: displayLayout.noticeLineHeight,
         zIndex: cssVars.zIndex.sticky,
       }}
     >

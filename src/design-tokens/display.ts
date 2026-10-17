@@ -57,6 +57,9 @@ export const displayFontSizes = {
   liveBadge: 'max(3.2cqh, 3vh)',
   liveSeparator: '14cqh',
 
+  // B-48a: Hinweis oben rechts, nie unter 3 % der Bildhöhe (@ZM-125, HART)
+  notice: '3vh',
+
   // Meta/Badge
   meta: '14px',          // Gruppe, Feld-Label
   badge: '12px',         // Status-Badges
@@ -186,8 +189,16 @@ export const displayLayout = {
   // Max Content Width
   maxContentWidth: '1600px',
 
-  // Breite des kleinen Hinweises in der Ecke (B-17, @ME-006)
-  noticeMaxWidth: '40%',
+  // Kleiner Hinweis oben rechts (B-17, B-48a, @ME-006), Stil „corner“ aus dem Monitor-Mockup v8.
+  // Lage: in der Höhe der Kopfzeile, rechts bündig mit dem Folienpolster; verdeckt weder Stand noch Schiedsrichter-Zeile.
+  noticeMaxWidth: '34%',
+  noticeTop: '0.8cqh',
+  noticeRight: '3cqw',
+  noticePadY: '0.4cqh',
+  noticeLineHeight: 1.2,
+  noticePadX: '1.4cqh',
+  noticeBorderWidth: '0.3cqh',
+  noticeRadius: '1cqh',
 
   // Slide Aspect Ratios
   aspectRatio: {

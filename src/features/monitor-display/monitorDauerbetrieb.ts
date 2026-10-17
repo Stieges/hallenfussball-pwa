@@ -6,6 +6,8 @@
  * @see docs/anforderungen/2026-10-03_monitor-einrichten.md (@ME-002, @ME-003, @ME-005, @ME-006, @ME-022)
  */
 
+import type { WakeLockStatus } from '../../hooks/useWakeLock';
+
 /** Der Mauszeiger verschwindet nach so vielen Millisekunden ohne Bewegung (@ME-002: „nach wenigen Sekunden“). */
 export const MAUSZEIGER_RUHE_MS = 3_000;
 
@@ -14,6 +16,14 @@ export const VOLLBILD_TASTE = 'f';
 
 /** Der Hinweis zur Energiespar-Einstellung bleibt so lange in der Ecke, dann verschwindet er (@ME-006). */
 export const WAKE_LOCK_HINWEIS_MS = 10_000;
+
+/**
+ * Braucht der Zustand der Zusage den Hinweis? Ja bei Ablehnung, fehlender Schnittstelle und 5 s ohne Antwort
+ * (@ME-006). Eine später zurückgenommene Zusage (`released`) zeigt am Monitor nichts, das sieht nur die Verwaltung.
+ */
+export function wakeLockHinweisNoetig(status: WakeLockStatus): boolean {
+  return status === 'denied' || status === 'unsupported' || status === 'noAnswer';
+}
 
 /**
  * Tasten, die die Monitor-Seite nie verlassen oder ungewollt anhalten (@ME-003, @ME-022).

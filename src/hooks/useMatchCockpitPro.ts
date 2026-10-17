@@ -263,7 +263,7 @@ export function useMatchCockpitPro({
     triggerHaptic,
 
     // Wake Lock
-    isWakeLockActive: wakeLock.isLocked,
+    isWakeLockActive: wakeLock.status === 'granted',
 
     // Effective Settings
     effectiveSettings,

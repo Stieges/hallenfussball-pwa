@@ -213,7 +213,87 @@ describe('Taste „c“: Cache-Anzeige (@ME-021)', () => {
   });
 });
 
+/** Die Anfrage zum Anlassen bleibt unbeantwortet (LG webOS). */
+function wakeLockHaengt(): void {
+  const request = vi.fn().mockReturnValue(new Promise(() => undefined));
+  Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+}
+
+function wakeLockAbgelehnt(): void {
+  const request = vi.fn().mockRejectedValue(Object.assign(new Error('nicht erlaubt'), { name: 'NotAllowedError' }));
+  Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+}
+
+/**
+ * @ME-006, Beispielzeilen wörtlich: „der Browser lässt das Anlassen des Bildschirms nicht zu“ und „der Browser
+ * beantwortet die Anfrage zum Anlassen des Bildschirms 5 Sekunden lang weder mit Ja noch mit Nein“.
+ */
+const LAGEN: ReadonlyArray<readonly [string, () => void, number]> = [
+  ['der Browser lässt das Anlassen des Bildschirms nicht zu', wakeLockAbgelehnt, 0],
+  ['der Browser beantwortet die Anfrage 5 Sekunden lang weder mit Ja noch mit Nein', wakeLockHaengt, 5_000],
+];
+
 describe('Bildschirm bleibt an, Hinweis nur im normalen Browser (@ME-005, @ME-006)', () => {
+  it.each(LAGEN)('@ME-006 Lage „%s“: Hinweis oben rechts, nach 10 Sekunden von selbst weg, Folienprogramm läuft', async (_lage, einrichten, wartezeit) => {
+    einrichten();
+    seite();
+    // Die 5 Sekunden laufen ab der Anfrage; die Anfrage stellt die Seite, sobald der Monitor geladen ist.
+    await vorspulen(0);
+    await vorspulen(wartezeit);
+    const hinweis = screen.getByTestId('monitor-wakelock-hint');
+    expect(hinweis).toHaveTextContent(HINWEIS);
+    // Lage aus dem aufgelösten Stil: oben und rechts, nicht unten (unten steht die Schiedsrichter-Zeile)
+    expect(hinweis.style.top).not.toBe('');
+    expect(hinweis.style.right).not.toBe('');
+    expect(hinweis.style.bottom).toBe('');
+    await vorspulen(10_000 - 1);
+    expect(screen.getByTestId('monitor-wakelock-hint')).toBeInTheDocument();
+    await vorspulen(1);
+    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+    expect(screen.getByText('Folie B')).toBeInTheDocument();
+  });
+
+  it('@ME-006 Gegenbeispiel: vor Ablauf der 5 Sekunden ohne Antwort erscheint noch kein Hinweis', async () => {
+    wakeLockHaengt();
+    seite();
+    await vorspulen(0);
+    await vorspulen(4_999);
+    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+  });
+
+  it('@ME-006 Gegenbeispiel: antwortet der Browser nach 4,9 Sekunden mit Ja, erscheint nie ein Hinweis', async () => {
+    let zusagen: (s: unknown) => void = () => undefined;
+    const request = vi.fn().mockReturnValue(new Promise((res) => { zusagen = res; }));
+    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+    seite();
+    await vorspulen(0);
+    await vorspulen(4_900);
+    zusagen({ release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() });
+    await vorspulen(10_000);
+    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+  });
+
+  it('@ME-006: nimmt der Browser eine Zusage später zurück (release), zeigt der Monitor keinen Hinweis', async () => {
+    const sentinel = { release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() };
+    const request = vi.fn().mockResolvedValue(sentinel);
+    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+    seite();
+    await vorspulen(0);
+    const freigabe = sentinel.addEventListener.mock.calls.find(([name]) => name === 'release')?.[1] as () => void;
+    act(() => { freigabe(); });
+    await vorspulen(1_000);
+    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+  });
+
+  it('@ME-006 Gegenbeispiel: in der Browser-Quelle (/tv) erscheint auch nach 5 Sekunden ohne Antwort kein Hinweis', async () => {
+    wakeLockHaengt();
+    window.history.replaceState(null, '', '/#/tv');
+    seite();
+    await vorspulen(0);
+    await vorspulen(6_000);
+    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+  });
+
   it('ohne Wake Lock erscheint der Hinweis und verschwindet nach 10 Sekunden', async () => {
     wakeLockFehlt();
     seite();

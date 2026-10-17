@@ -31,7 +31,7 @@ import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { vollbildUmschalten } from './vollbild';
 import {
-  istBrowserQuelle, istCacheTaste, istEingabeZiel, istVollbildTaste, WAKE_LOCK_HINWEIS_MS,
+  istBrowserQuelle, istCacheTaste, istEingabeZiel, istVollbildTaste, wakeLockHinweisNoetig, WAKE_LOCK_HINWEIS_MS,
 } from './monitorDauerbetrieb';
 import { useIdleCursor, useTastenAbfang, useWakeLockNachEingabe } from './useMonitorDauerbetrieb';
 import {
@@ -105,10 +105,10 @@ function MonitorDisplayPageContent({
   // die Permission-Anfrage sinnlos. Kein Destructuring: noUnusedLocals ist aktiv.
   const wakeLock = useWakeLock(monitor !== null);
   // B-17 Fixrunde 2: schlägt die erste Anfrage fehl (Safari), fordert die erste Eingabe sie erneut an.
-  useWakeLockNachEingabe(wakeLock.error, wakeLock.request);
+  useWakeLockNachEingabe(wakeLock.status, wakeLock.request);
   // B-17 (@ME-006): Kann das Gerät den Bildschirm nicht anlassen, zeigt die Seite das einmal klein in einer
   // Ecke. In der Browser-Quelle nie, dort steuert der Rechner den Bildschirm.
-  const wakeLockHinweis = wakeLock.error !== null
+  const wakeLockHinweis = wakeLockHinweisNoetig(wakeLock.status)
     && !istBrowserQuelle(window.location.hash, navigator.userAgent);
   // W4: „einmal“ ist ein Zustand der Seite. Gezeigt wird der Hinweis höchstens einmal je Seiten-Instanz, auch wenn
   // die Seite zwischendurch in den Lade- oder Fehlerzustand geht und zurückkehrt.

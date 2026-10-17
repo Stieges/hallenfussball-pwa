@@ -71,15 +71,32 @@ describe('useTastenAbfang (@ME-003, @ME-022)', () => {
 describe('useWakeLockNachEingabe (B-17 Fixrunde 2)', () => {
   it('fordert nach der ersten Eingabe einmal erneut an, wenn die Anfrage fehlgeschlagen ist', () => {
     const anfordern = vi.fn().mockResolvedValue(undefined);
-    renderHook(() => useWakeLockNachEingabe('Wake Lock konnte nicht aktiviert werden', anfordern));
+    renderHook(() => useWakeLockNachEingabe('denied', anfordern));
     act(() => { window.dispatchEvent(new Event('pointerdown')); });
     act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f' })); });
     expect(anfordern).toHaveBeenCalledTimes(1);
   });
 
+  it('fordert auch nach 5 Sekunden ohne Antwort („noAnswer“) bei der ersten Eingabe erneut an', () => {
+    const anfordern = vi.fn().mockResolvedValue(undefined);
+    renderHook(() => useWakeLockNachEingabe('noAnswer', anfordern));
+    act(() => { window.dispatchEvent(new Event('pointerdown')); });
+    expect(anfordern).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['idle', 'pending', 'granted', 'released', 'unsupported'] as const)(
+    'Gegenbeispiel: im Zustand „%s“ wird bei Eingaben nichts angefordert',
+    (status) => {
+      const anfordern = vi.fn().mockResolvedValue(undefined);
+      renderHook(() => useWakeLockNachEingabe(status, anfordern));
+      act(() => { window.dispatchEvent(new Event('pointerdown')); });
+      expect(anfordern).not.toHaveBeenCalled();
+    },
+  );
+
   it('Gegenbeispiel: ohne Fehler wird bei Eingaben nichts angefordert', () => {
     const anfordern = vi.fn().mockResolvedValue(undefined);
-    renderHook(() => useWakeLockNachEingabe(null, anfordern));
+    renderHook(() => useWakeLockNachEingabe('granted', anfordern));
     act(() => { window.dispatchEvent(new Event('pointerdown')); });
     expect(anfordern).not.toHaveBeenCalled();
   });

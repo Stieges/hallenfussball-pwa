@@ -1,28 +1,42 @@
 /**
  * useWakeLock Hook
  *
- * Manages Screen Wake Lock API to prevent screen from dimming during matches.
- * Automatically re-acquires lock on visibility change.
+ * Verwaltet die Zusage des Geräts, den Bildschirm anzulassen (Screen Wake Lock API), und liefert ihren Zustand
+ * (B-48a, @ME-006, @ME-064, @SL-122). Fordert nach der Rückkehr in den Vordergrund neu an.
+ *
+ * Kein Zustand blockiert die Seite: Ausnahmen der Schnittstelle werden gefangen und als `denied` gewertet.
  *
  * @see docs/concepts/MATCH-COCKPIT-PRO-KONZEPT.md Section 3.5
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { captureFeatureError } from '../lib/sentry';
+
+/** So lange darf die Anfrage unbeantwortet bleiben, bevor der Zustand `noAnswer` gilt (LG webOS, @ME-006 Lage 2). */
+export const WAKE_LOCK_ANSWER_TIMEOUT_MS = 5000;
 
 /**
- * Return type for useWakeLock
+ * Zustand der Zusage.
+ * - `idle`: nicht angefordert
+ * - `pending`: Anfrage läuft, noch keine Antwort
+ * - `granted`: zugesagt
+ * - `denied`: abgelehnt (oder Ausnahme der Schnittstelle)
+ * - `unsupported`: die Schnittstelle fehlt
+ * - `noAnswer`: 5 s weder Ja noch Nein; eine spätere Antwort wechselt auf `granted`/`denied`
+ * - `released`: nach einer Zusage wieder freigegeben (Tab im Hintergrund, Akku)
  */
+export type WakeLockStatus = 'idle' | 'pending' | 'granted' | 'denied' | 'unsupported' | 'noAnswer' | 'released';
+
+/** Return type for useWakeLock */
 export interface UseWakeLockReturn {
-  /** Whether wake lock is currently active */
-  isLocked: boolean;
+  /** Zustand der Zusage */
+  status: WakeLockStatus;
   /** Whether the browser supports Wake Lock API */
   isSupported: boolean;
   /** Request wake lock */
   request: () => Promise<void>;
   /** Release wake lock */
   release: () => Promise<void>;
-  /** Error message if wake lock failed */
-  error: string | null;
 }
 
 /**
@@ -31,16 +45,17 @@ export interface UseWakeLockReturn {
  * @param enabled - Whether wake lock should be active
  */
 export function useWakeLock(enabled: boolean): UseWakeLockReturn {
-  const [isLocked, setIsLocked] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<WakeLockStatus>('idle');
 
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const releaseHandlerRef = useRef<(() => void) | null>(null);
+  const aktiv = useRef(true);
+  const anfrageNr = useRef(0);
+  const laeuft = useRef(false);
+  const fehlerGemeldet = useRef(false);
 
-  // Check if Wake Lock API is supported
   const isSupported = 'wakeLock' in navigator;
 
-  // Clean up event listener helper
   const cleanupEventListener = useCallback(() => {
     if (wakeLockRef.current && releaseHandlerRef.current) {
       wakeLockRef.current.removeEventListener('release', releaseHandlerRef.current);
@@ -48,97 +63,94 @@ export function useWakeLock(enabled: boolean): UseWakeLockReturn {
     }
   }, []);
 
-  // Request wake lock
   const request = useCallback(async () => {
     if (!isSupported) {
-      setError('Wake Lock API nicht unterstützt');
+      setStatus('unsupported');
       return;
     }
+    const nr = ++anfrageNr.current;
+    laeuft.current = true;
+    setStatus('pending');
+    const timer = setTimeout(() => {
+      if (aktiv.current && nr === anfrageNr.current) { setStatus('noAnswer'); }
+    }, WAKE_LOCK_ANSWER_TIMEOUT_MS);
 
     try {
-      // Clean up any existing listener before requesting new lock
       cleanupEventListener();
-
-      wakeLockRef.current = await navigator.wakeLock.request('screen');
-      setIsLocked(true);
-      setError(null);
-
-      // Listen for release event (e.g., when tab becomes hidden)
+      const lock = await navigator.wakeLock.request('screen');
+      clearTimeout(timer);
+      if (!aktiv.current || nr !== anfrageNr.current) {
+        void lock.release().catch(() => undefined);
+        return;
+      }
+      laeuft.current = false;
+      wakeLockRef.current = lock;
       releaseHandlerRef.current = () => {
-        setIsLocked(false);
-        // Ohne dieses Zurücksetzen bleibt die Referenz auf ein freigegebenes Lock stehen,
-        // der visibilitychange-Handler hält es für aktiv und fordert nie neu an.
+        // Ohne dieses Zurücksetzen hielte der visibilitychange-Handler das freigegebene Lock für aktiv.
         wakeLockRef.current = null;
+        if (aktiv.current) { setStatus('released'); }
       };
-      wakeLockRef.current.addEventListener('release', releaseHandlerRef.current);
+      lock.addEventListener('release', releaseHandlerRef.current);
+      setStatus('granted');
     } catch (err) {
-      console.error('[useWakeLock] Failed to acquire wake lock:', err);
-      setError('Wake Lock konnte nicht aktiviert werden');
-      setIsLocked(false);
+      clearTimeout(timer);
+      if (!aktiv.current || nr !== anfrageNr.current) { return; }
+      laeuft.current = false;
+      setStatus('denied');
+      if (!fehlerGemeldet.current) {
+        fehlerGemeldet.current = true;
+        captureFeatureError(err instanceof Error ? err : new Error('wake lock denied'), 'wakeLock', 'request');
+      }
     }
   }, [isSupported, cleanupEventListener]);
 
-  // Release wake lock
   const release = useCallback(async () => {
-    if (wakeLockRef.current) {
-      try {
-        cleanupEventListener();
-        await wakeLockRef.current.release();
-        wakeLockRef.current = null;
-        setIsLocked(false);
-      } catch (err) {
-        console.error('[useWakeLock] Failed to release wake lock:', err);
-      }
+    anfrageNr.current++;
+    laeuft.current = false;
+    const lock = wakeLockRef.current;
+    if (!lock) { return; }
+    cleanupEventListener();
+    wakeLockRef.current = null;
+    try {
+      await lock.release();
+    } catch {
+      // Eine fehlgeschlagene Freigabe ändert nichts: das Gerät hat die Zusage dann schon verloren.
     }
   }, [cleanupEventListener]);
 
-  // Auto-acquire/release based on enabled prop
+  // Anfordern, solange `enabled`; bei Rücknahme freigeben
   useEffect(() => {
-    if (enabled && !isLocked) {
-      void request();
-    } else if (!enabled && isLocked) {
+    if (enabled) {
+      if (status === 'idle') { void request(); }
+    } else if (status !== 'idle') {
       void release();
+      setStatus('idle');
     }
-  }, [enabled, isLocked, request, release]);
+  }, [enabled, status, request, release]);
 
-  // Re-acquire wake lock when page becomes visible again
+  // Rückkehr in den Vordergrund: neue Anfrage, wenn keine Zusage steht und keine Anfrage läuft
   useEffect(() => {
-    if (!enabled || !isSupported) {
-      return;
-    }
-
+    if (!enabled || !isSupported) { return undefined; }
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && !wakeLockRef.current) {
+      if (document.visibilityState === 'visible' && !wakeLockRef.current && !laeuft.current) {
         void request();
       }
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [enabled, isSupported, request]);
 
-  // Cleanup on unmount
+  // Aufräumen beim Abbau
   useEffect(() => {
+    aktiv.current = true;
     return () => {
-      // Clean up event listener first
+      aktiv.current = false;
       if (wakeLockRef.current && releaseHandlerRef.current) {
         wakeLockRef.current.removeEventListener('release', releaseHandlerRef.current);
       }
-      // Then release the wake lock
-      if (wakeLockRef.current) {
-        void wakeLockRef.current.release();
-      }
+      if (wakeLockRef.current) { void wakeLockRef.current.release().catch(() => undefined); }
     };
   }, []);
 
-  return {
-    isLocked,
-    isSupported,
-    request,
-    release,
-    error,
-  };
+  return { status, isSupported, request, release };
 }
