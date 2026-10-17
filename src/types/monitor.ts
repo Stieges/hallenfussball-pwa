@@ -315,6 +315,9 @@ export interface TournamentMonitor {
 
 /** Default Monitor-Konfiguration; `MONITOR_OVERSCAN` = Grenzen und Vorbelegung des Bildrands in % (@ME-067) */
 export const MONITOR_OVERSCAN = displayMonitor.overscan;
+/** Ist `value` ein gültiger Bildrand in Prozent (Zahl, 0 bis 10)? */
+export const istGueltigerRand = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= MONITOR_OVERSCAN.minPercent && value <= MONITOR_OVERSCAN.maxPercent;
 export const DEFAULT_MONITOR: Omit<TournamentMonitor, 'id' | 'name' | 'createdAt' | 'updatedAt'> = {
   defaultSlideDuration: 15,
   transition: 'fade',

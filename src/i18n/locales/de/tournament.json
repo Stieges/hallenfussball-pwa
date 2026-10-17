@@ -729,8 +729,9 @@
       "transition": "Übergang",
       "performanceLabel": "Performance",
       "themeLabel": "Farbschema",
-      "overscan": "Bildrand ({{prozent}} %)",
-      "overscanHint": "Vorbelegung 5 % passt für die meisten Fernseher",
+      "overscan": "Bildrand ({{prozent}})",
+      "overscanValue": "{{prozent}} %",
+      "overscanHint": "Vorbelegung {{prozent}} % passt für die meisten Fernseher",
       "noMargin": "Kein Rand",
       "transitions": {
         "fade": "Überblenden",

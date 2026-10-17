@@ -7,13 +7,10 @@
  */
 import { displayMonitor } from '../../design-tokens';
 import type { CSSProperties } from 'react';
+import { istGueltigerRand } from '../../types/monitor';
 
-const { defaultPercent, minPercent, maxPercent, urlParam } = displayMonitor.overscan;
+const { defaultPercent, urlParam } = displayMonitor.overscan;
 
-/** Ist `value` ein gültiger Bildrand in Prozent (Zahl, 0 bis 10)? */
-export function istGueltigerRand(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= minPercent && value <= maxPercent;
-}
 
 /** Liest `?rand=` aus dem Hash (HashRouter) oder, als Rückfall, aus der Adresse davor. `null` = kein gültiger Wert. */
 export function randAusAdresse(hash: string, search: string): number | null {

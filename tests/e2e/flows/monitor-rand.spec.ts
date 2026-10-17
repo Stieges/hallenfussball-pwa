@@ -46,11 +46,17 @@ async function seed(seedIndexedDB: TestOptions['seedIndexedDB'], overscanPercent
         match('m2', ID(3), ID(4), 20), match('m3', ID(1), ID(3), 40), match('m4', ID(2), ID(4), 59),
       ],
       sponsors: [{ id: 'sp-1', name: 'Bäckerei Maier', tier: 'gold', createdAt: STAMP, updatedAt: STAMP }],
-      monitors: FOLIEN.map(f => ({
+      monitors: [...FOLIEN.map(f => ({
         id: `mon-${f.id}`, name: `Monitor ${f.id}`, defaultSlideDuration: 60, transition: 'none', transitionDuration: 0, theme: 'dark',
         performanceMode: 'auto', ...(overscanPercent === undefined ? {} : { overscanPercent }),
         slides: [{ id: 's1', type: f.id, config: f.config, duration: null, order: 0 }], createdAt: STAMP, updatedAt: STAMP,
-      })),
+      })), {
+        // Normalfall: Programm mit mehreren Folien, also mit Positionspunkten (@ME-067 „jedes Symbol“)
+        id: 'mon-zwei', name: 'Monitor zwei', defaultSlideDuration: 60, transition: 'none', transitionDuration: 0, theme: 'dark',
+        performanceMode: 'auto', ...(overscanPercent === undefined ? {} : { overscanPercent }),
+        slides: [0, 1].map(i => ({ id: `z${i}`, type: 'custom-text', config: { headline: `Folie ${i + 1}` }, duration: null, order: i })),
+        createdAt: STAMP, updatedAt: STAMP,
+      }],
       fields: [{ id: 'field-1', defaultName: 'Feld 1' }], createdAt: STAMP, updatedAt: STAMP,
     }],
   });
@@ -131,6 +137,30 @@ for (const [breite, hoehe, seitlich, oben] of [[1920, 1080, 96, 54], [1280, 720,
         expect(m.aussen, 'Inhalt außerhalb des Bildes').toEqual([]);
       });
     }
+
+    test(`@ME-067 Mehr-Folien-Monitor: Positionspunkte und alle Symbole liegen im sicheren Bereich (${seitlich}/${oben} Bildpunkte)`, async ({ page, seedIndexedDB }) => {
+      await seed(seedIndexedDB);
+      await oeffne(page, 'zwei');
+      const punkte = page.getByTestId('monitor-slide-dots');
+      await expect(punkte).toBeVisible();
+      const r = (await punkte.boundingBox())!;
+      expect(r.x).toBeGreaterThanOrEqual(seitlich - 0.5);
+      expect(r.y).toBeGreaterThanOrEqual(oben - 0.5);
+      expect(r.x + r.width).toBeLessThanOrEqual(breite - seitlich + 0.5);
+      expect(r.y + r.height).toBeLessThanOrEqual(hoehe - oben + 0.5);
+      expect((await messe(page, seitlich, oben)).aussen).toEqual([]);
+    });
+
+    test('@ME-067 Gegenbeispiel Mehr-Folien-Monitor: Rand 0 % – Positionspunkte im Bild, nichts abgeschnitten', async ({ page, seedIndexedDB }) => {
+      await seed(seedIndexedDB, 0);
+      await oeffne(page, 'zwei');
+      const r = (await page.getByTestId('monitor-slide-dots').boundingBox())!;
+      expect(r.y + r.height).toBeLessThanOrEqual(hoehe + 0.5);
+      expect(r.x).toBeGreaterThanOrEqual(0);
+      const m = await messe(page, 0, 0);
+      expect(m.abgeschnitten).toBe(false);
+      expect(m.aussen).toEqual([]);
+    });
   });
 }
 
@@ -153,6 +183,31 @@ test.describe('Adressparameter ?rand= (R-MS-3)', () => {
       expect([m.oben, m.unten]).toEqual([720 * erwartet / 100, 720 * erwartet / 100]);
     });
   }
+
+  test('@ME-067 ?rand= gilt nur für diese Sitzung: danach wieder der gespeicherte Wert, nichts wird gemerkt', async ({ page, seedIndexedDB }) => {
+    await seed(seedIndexedDB, 8);
+    await oeffne(page, 'custom-text', '?rand=0');
+    expect((await messe(page, 0, 0)).links).toBe(0);
+    // dieselbe Adresse ohne Parameter, neu geladen
+    await oeffne(page, 'custom-text');
+    await page.reload();
+    await page.locator('[data-testid="monitor-slide"]').waitFor();
+    expect((await messe(page, 0, 0)).links).toBe(102.4);
+    const speicher = await page.evaluate(async () => {
+      const ablage = (s: Storage) => Object.keys(s).map(k => `${k}=${s.getItem(k) ?? ''}`);
+      const idb = await new Promise<string>((res) => {
+        const r = indexedDB.open('hallenfussball', 1);
+        r.onsuccess = () => {
+          const g = r.result.transaction('cache').objectStore('cache').get('tournaments');
+          g.onsuccess = () => { res(JSON.stringify(g.result)); r.result.close(); };
+        };
+      });
+      return { eintraege: [...ablage(localStorage), ...ablage(sessionStorage)], idb };
+    });
+    for (const e of speicher.eintraege) { expect(e, 'kein Rand im Browser-Speicher').not.toMatch(/rand|overscan/i); }
+    expect(speicher.idb).not.toContain('"overscanPercent":0');
+    expect(speicher.idb).toContain('"overscanPercent":8');
+  });
 });
 
 test.describe('Bildrand im Monitor-Editor (@ME-020, @ME-067)', () => {
@@ -182,6 +237,9 @@ test.describe('Bildrand im Monitor-Editor (@ME-020, @ME-067)', () => {
     await expect.poll(async () => (await messe(monitor, 0, 0)).links, { timeout: 10_000, intervals: [500] }).toBe(102.4);
     const m = await messe(monitor, 0, 0);
     expect([m.oben, m.unten]).toEqual([57.6, 57.6]);
+    const sicher = await messe(monitor, 102.4, 57.6);
+    expect(sicher.abgeschnitten, 'Folie schneidet Inhalt ab').toBe(false);
+    expect(sicher.aussen, 'Inhalt im Bildrand').toEqual([]);
   });
 
   test('@ME-020 Gegenbeispiel: ohne Änderung im Editor bleibt der Monitor-Rand bei 5 %', async ({ page, seedIndexedDB }) => {

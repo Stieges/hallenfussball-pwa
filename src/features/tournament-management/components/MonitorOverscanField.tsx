@@ -6,8 +6,7 @@
 import { useTranslation } from 'react-i18next';
 import type { CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens';
-import { MONITOR_OVERSCAN } from '../../../types/monitor';
-import { istGueltigerRand } from '../../monitor-display/overscan';
+import { MONITOR_OVERSCAN, istGueltigerRand } from '../../../types/monitor';
 
 interface MonitorOverscanFieldProps {
   /** Gespeicherter Rand in Prozent; ohne Angabe gilt die Vorbelegung. */
@@ -32,7 +31,7 @@ export function MonitorOverscanField({ value, onChange }: MonitorOverscanFieldPr
   return (
     <div style={groupStyle}>
       <label htmlFor="monitor-overscan-input" style={labelStyle}>
-        {t('monitorEditor.settings.overscan', { prozent })}
+        {t('monitorEditor.settings.overscan', { prozent: t('monitorEditor.settings.overscanValue', { prozent }) })}
       </label>
       <input
         id="monitor-overscan-input"
@@ -48,9 +47,9 @@ export function MonitorOverscanField({ value, onChange }: MonitorOverscanFieldPr
       />
       <div style={rangeLabelsStyle}>
         <span>{t('monitorEditor.settings.noMargin')}</span>
-        <span>{MONITOR_OVERSCAN.maxPercent} %</span>
+        <span>{t('monitorEditor.settings.overscanValue', { prozent: MONITOR_OVERSCAN.maxPercent })}</span>
       </div>
-      <div id={hinweisId} style={rangeLabelsStyle}>{t('monitorEditor.settings.overscanHint')}</div>
+      <div id={hinweisId} style={rangeLabelsStyle}>{t('monitorEditor.settings.overscanHint', { prozent: MONITOR_OVERSCAN.defaultPercent })}</div>
     </div>
   );
 }

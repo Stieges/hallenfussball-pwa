@@ -217,7 +217,7 @@ function MonitorDisplayPageContent({
   }
 
   return (
-    <div style={{ ...containerStyle, cursor: cursorRuht ? 'none' : undefined }}>
+    <div style={{ ...containerStyle, containerType: 'size', cursor: cursorRuht ? 'none' : undefined }}>
       {/* Slide Container — pixelShift for OLED anti-burn-in */}
       <div style={{
         position: 'relative',
@@ -248,26 +248,15 @@ function MonitorDisplayPageContent({
         )}
       </div>
 
-      {/* Slide Indicator */}
-      {slides.length > 1 && (
-        <SlideDots
-          count={slides.length}
-          currentIndex={slideState.currentIndex}
-          enableTransitions={performanceSettings.enableTransitions}
-        />
-      )}
-
-      {/* Hinweis: Bildschirm kann sich abschalten (nur im normalen Browser, einmal, B-17) */}
-      {hinweisPhase === 'zeigt' && (
-        <div style={sichererBereich}>
-          <TimedNotice
-            text={t('dauerbetrieb.wakeLockHint')}
-            durationMs={WAKE_LOCK_HINWEIS_MS}
-            onDone={hinweisAbgelaufen}
-            testId="monitor-wakelock-hint"
-          />
-        </div>
-      )}
+      {/* Positionspunkte und Hinweis (nur im normalen Browser, einmal, B-17) liegen im sicheren Bereich (@ME-067) */}
+      <div style={sichererBereich}>
+        {slides.length > 1 && (
+          <SlideDots count={slides.length} currentIndex={slideState.currentIndex} enableTransitions={performanceSettings.enableTransitions} />
+        )}
+        {hinweisPhase === 'zeigt' && (
+          <TimedNotice text={t('dauerbetrieb.wakeLockHint')} durationMs={WAKE_LOCK_HINWEIS_MS} onDone={hinweisAbgelaufen} testId="monitor-wakelock-hint" />
+        )}
+      </div>
 
       {/* Cache Indicator (Admin only) */}
       <CacheIndicator cacheStatus={cacheStatus} visible={showCacheIndicator} />
