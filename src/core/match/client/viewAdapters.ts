@@ -17,6 +17,7 @@ import {
 import type { LiveMatch, MatchStatus, TournamentPhase } from '../../models/LiveMatch';
 import type { RuntimeMatchEvent } from '../../../types/tournament';
 import type { MatchEventTeamRef } from '../../../utils/matchEvents';
+import { viewDurationSeconds } from './viewDuration';
 
 export interface LiveMatchMeta {
   id: string;
@@ -47,7 +48,6 @@ export function toLiveMatchView(
 ): LiveMatch {
   const ctx: MatchContext = { matchId: meta.id, teamAId: meta.homeTeam.id, teamBId: meta.awayTeam.id };
   const columns = cacheColumns(state, ctx);
-  const rules = state.rules;
 
   return {
     id: meta.id,
@@ -63,7 +63,7 @@ export function toLiveMatchView(
     awayScore: columns.score_b ?? 0,
     status: mapStatus(state),
     elapsedSeconds: Math.floor(elapsedAt(state.clock, clock.serverNow) / 1000),
-    durationSeconds: rules ? rules.sections * rules.sectionSeconds : 0,
+    durationSeconds: viewDurationSeconds(state), // Verlängerung: Regelzeit + Verlängerung (C-VERLAENGERUNG-ENDET-SOFORT)
     // timerStartTime in Geraetezeit: useMatchTimerExtended rechnet mit Date.now() (I1).
     // N6: der Millisekunden-Rest von elapsedMs wird mit abgezogen, damit
     // timerElapsedSeconds + Geraetelaufzeit nicht doppelt abrundet.

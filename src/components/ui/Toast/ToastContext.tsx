@@ -6,7 +6,7 @@
  * Provides methods to show/dismiss toasts from anywhere in the app.
  */
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { ToastContainer } from './ToastContainer';
 import { ToastType, ToastProps } from './Toast';
 
@@ -39,12 +39,18 @@ type ToastData = Omit<ToastProps, 'onDismiss'>
 
 interface ToastProviderProps {
   children: ReactNode;
+  /** Kiosk-Route (@ME-003): keine Toasts, Meldungen entfallen still. */
+  suppressed?: boolean;
 }
 
-export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
+export const ToastProvider: React.FC<ToastProviderProps> = ({ children, suppressed = false }) => {
   const [toasts, setToasts] = useState<ToastData[]>([]);
+  // Ref statt Abhängigkeit: die Funktionen bleiben stabil, auch wenn die Route wechselt.
+  const suppressedRef = useRef(suppressed);
+  suppressedRef.current = suppressed;
 
   const addToast = useCallback((type: ToastType, message: string, options?: ToastOptions): string => {
+    if (suppressedRef.current) { return ''; }
     const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
     const toast: ToastData = {

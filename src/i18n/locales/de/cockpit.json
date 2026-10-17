@@ -326,6 +326,9 @@
   "readOnly": {
     "banner": "Nur Ansicht — du hast keine Berechtigung, dieses Spiel zu bedienen."
   },
+  "leer": {
+    "keinSpielGewaehlt": "Kein Spiel ausgewählt"
+  },
   "extended": {
     "editScoreAria": "Ergebnis korrigieren",
     "score": "Ergebnis",

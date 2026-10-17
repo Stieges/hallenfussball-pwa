@@ -207,6 +207,11 @@ export function alleUebersprungen(slides: readonly ProgramSlide[], matches: read
   return slides.length > 0 && slides.every(slide => isSkipped(slide, matches));
 }
 
+/** B-48a (@ME-006): Läuft auf dem Feld einer Live-Folie dieser Liste gerade ein Spiel? Dann gibt es keinen Hinweis. */
+export function liveSpielLaeuft(slides: readonly ProgramSlide[], matches: readonly RuleMatch[]): boolean {
+  return slides.some(slide => runningFor(slide, matches) !== undefined);
+}
+
 /** Ein Schritt des Takts zur nächsten sichtbaren Folie; bleibt nichts übrig, bleibt die Folie stehen. */
 function advance(program: SlideProgram, state: SlideshowState, now: number, matches: readonly RuleMatch[]): SlideshowState {
   const target = firstVisible(program, state.index + 1, matches) ?? state.index;

@@ -97,7 +97,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     paddingLeft: '40px', // Space for icon
     background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.md,
@@ -140,7 +140,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
     fontWeight: cssVars.fontWeights.medium,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    border: `1px solid ${isActive ? chip.color : cssVars.colors.border}`,
+    border: `1px solid ${isActive ? chip.color : cssVars.colors.borderControl}`,
     background: isActive ? `${chip.color}15` : 'transparent',
     color: isActive ? chip.color : cssVars.colors.textSecondary,
     whiteSpace: 'nowrap',
@@ -163,7 +163,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
             e.target.style.borderColor = cssVars.colors.primary;
           }}
           onBlur={(e) => {
-            e.target.style.borderColor = cssVars.colors.border;
+            e.target.style.borderColor = cssVars.colors.borderControl;
           }}
           data-testid="search-input"
         />

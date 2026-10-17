@@ -15,12 +15,11 @@
  *   - Rückfall TIEBREAK_FALLBACK_MODE in tiebreakSource wieder 'shootout' → rot
  */
 import { describe, it, expect, vi } from 'vitest';
-import type { ComponentProps } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { useTournamentWizard } from '../../../hooks/useTournamentWizard';
 import { FinalsConfiguration } from '../components/FinalsConfiguration';
 import { startEngineSpiel } from '../../../test/engineSpielFixture';
-import { TiebreakerBanner } from '../../../components/match-cockpit/TiebreakerBanner';
+import { TiebreakerBanner } from '../../../components/live-cockpit/components/Tiebreaker';
 import { validateAndParseTournamentImport } from '../../../utils/tournamentImporter';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../../../config/sports';
 import type { Tournament, FinalsPreset } from '../../../types/tournament';
@@ -35,7 +34,6 @@ vi.mock('../../../hooks/useRepository', () => ({
 }));
 
 type WizardApi = ReturnType<typeof useTournamentWizard>;
-type BannerMatch = ComponentProps<typeof TiebreakerBanner>['match'];
 
 function Harness({ onDraft }: { onDraft: (t: Tournament) => void }) {
   const api: WizardApi = useTournamentWizard();
@@ -148,34 +146,27 @@ describe('B-04c Fixrunde 1 – Regel geht nicht verloren, Rückfall wie der Serv
     const onStartOvertime = vi.fn();
     const onStartGoldenGoal = vi.fn();
     const onStartPenaltyShootout = vi.fn();
-    const onForceFinish = vi.fn();
-    const banner = render(
+    const onEndAsDraw = vi.fn();
+    render(
       <TiebreakerBanner
-        match={
-          {
-            id: 'm-final',
-            homeTeam: { name: 'Alpha' },
-            awayTeam: { name: 'Beta' },
-            homeScore: 2,
-            awayScore: 2,
-            overtimeScoreA: 0,
-            overtimeScoreB: 0,
-            tiebreakerMode: live.tiebreakerMode,
-            overtimeDurationSeconds: live.overtimeDurationSeconds,
-          } as unknown as BannerMatch
-        }
+        homeTeamName="Alpha"
+        awayTeamName="Beta"
+        score={2}
+        tiebreakerMode={live.tiebreakerMode}
+        overtimeMinutes={Math.round((live.overtimeDurationSeconds ?? 300) / 60)}
         onStartOvertime={onStartOvertime}
         onStartGoldenGoal={onStartGoldenGoal}
         onStartPenaltyShootout={onStartPenaltyShootout}
-        onForceFinish={onForceFinish}
+        onEndAsDraw={onEndAsDraw}
       />,
     );
 
-    const knoepfe = within(banner.container).getAllByRole('button');
+    const knoepfe = within(screen.getByTestId('tiebreaker-banner')).getAllByRole('button');
     expect(knoepfe).toHaveLength(3);
     fireEvent.click(knoepfe[0]);
-    expect(onStartOvertime).toHaveBeenCalledWith('m-final');
+    expect(onStartOvertime).toHaveBeenCalledTimes(1);
     expect(onStartPenaltyShootout).not.toHaveBeenCalled();
+    expect(onEndAsDraw).not.toHaveBeenCalled();
     expect(onStartGoldenGoal).not.toHaveBeenCalled();
   });
 

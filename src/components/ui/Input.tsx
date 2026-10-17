@@ -69,7 +69,7 @@ export const Input: React.FC<InputProps> = ({
   const inputStyles: CSSProperties = {
     padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${hasError ? cssVars.colors.error : cssVars.colors.border}`,
+    border: `1px solid ${hasError ? cssVars.colors.error : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     // Minimum 16px (fontSizes.lg) required to prevent iOS auto-zoom on focus
@@ -115,7 +115,7 @@ export const Input: React.FC<InputProps> = ({
           e.target.style.boxShadow = `0 0 0 3px ${hasError ? cssVars.colors.errorGlow : cssVars.colors.focusRing}`;
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = hasError ? cssVars.colors.error : cssVars.colors.border;
+          e.target.style.borderColor = hasError ? cssVars.colors.error : cssVars.colors.borderControl;
           e.target.style.boxShadow = 'none';
           onBlur?.();
         }}

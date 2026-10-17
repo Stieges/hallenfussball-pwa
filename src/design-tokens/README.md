@@ -83,6 +83,18 @@ colors.warning      // #FF9100
 colors.success      // #4CAF50
 ```
 
+#### Rand-Rollen: Bedien-Rand oder Trennlinie
+
+| Rolle | Token | Wann | Kontrast |
+|---|---|---|---|
+| Bedien-Rand | `colors.borderControl` | Rand von Knopf, Eingabefeld, Auswahl, Chip, Schalter, Radio, Stepper, Farbwähler-Auslöser | mindestens 3 : 1 gegen die Fläche (WCAG 1.4.11, @OB-055, @OB-057) |
+| Bedien-Rand auf erhöhter Fläche | `colors.borderControlRaised` | Bedienelement auf `surfaceLight` (im dunklen Thema heller als `borderControl`) | mindestens 3 : 1 gegen `surfaceLight` |
+| Trennlinie / Kartenrand | `colors.border` (auch `borderDefault`, `borderMedium`, `borderSolid`, `borderSubtle`) | dekorativ: Karten, Kopf-/Fußlinien, Trenner, Tabellenlinien | bewusst unter 3 : 1 |
+| Zustand | `colors.borderActive`, `primary`, `error` | gewählt, Fehler, live | eigene Farbe |
+
+`borderLight` und `borderStrong` gibt es nicht mehr (B-51). Ein neuer Rand eines Bedienelements nimmt `borderControl`, nie `border`.
+Die Prüfung `src/design-tokens/__tests__/borderControl.contrast.test.ts` rechnet beide Themen und den hohen Kontrast gegen die Flächen.
+
 ### Spacing (8pt Grid)
 
 ```typescript
@@ -155,7 +167,7 @@ displayMonitor.qr.foreground        // '#000000' (QR-Vordergrund, SVG-Attribut)
 displayMonitor.qr.background        // '#ffffff' (QR-Hintergrund, SVG-Attribut)
 displayMonitor.qr.sizeLarge         // 220 (QR-Folie)
 displayMonitor.qr.sizeSmall         // 150 (Sponsor-Folie)
-displayMonitor.overscanDefaultPx    // 48
+displayMonitor.overscan            // { defaultPercent: 5, minPercent: 0, maxPercent: 10, stepPercent: 0.5, urlParam: 'rand' } (Bildrand in % je Seite)
 displayMonitor.radius.card          // '12px'
 displayMonitor.marker.indicatorSize // '10px'
 displayMonitor.size.*               // Logo-, Text-, Tabellen- und Spielplan-Maße

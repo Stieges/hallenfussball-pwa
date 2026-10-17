@@ -135,7 +135,7 @@ export const ScoreStepper: React.FC<ScoreStepperProps> = ({
     fontWeight: cssVars.fontWeights.semibold,
     color: isDisabled ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
     backgroundColor: isDisabled ? cssVars.colors.surfaceDark : cssVars.colors.surfaceElevated,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     cursor: isDisabled ? 'not-allowed' : 'pointer',
     opacity: isDisabled ? 0.5 : 1,

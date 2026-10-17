@@ -23,7 +23,7 @@ export function QrSlide({ tournament, style }: QrSlideProps) {
       </div>
       {qrUrl && (
         <>
-          <div style={{ fontSize: displayFontSizes.headingLG, fontWeight: cssVars.fontWeights.semibold }}>
+          <div data-monitor="nah" style={{ fontSize: displayFontSizes.headingLG, fontWeight: cssVars.fontWeights.semibold }}>
             {t('slides.qr.headline')}
           </div>
           <QRCodeSVG
@@ -33,7 +33,7 @@ export function QrSlide({ tournament, style }: QrSlideProps) {
             fgColor={displayMonitor.qr.foreground}
             level="M"
           />
-          <div style={{ fontSize: displayFontSizes.bodyMD }}>
+          <div data-monitor="nah" style={{ fontSize: displayFontSizes.bodyMD }}>
             {qrUrl}
           </div>
         </>

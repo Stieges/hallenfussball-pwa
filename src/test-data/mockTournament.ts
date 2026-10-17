@@ -9,7 +9,7 @@ import { Tournament, Team, Match, RuntimeMatchEvent } from '../types/tournament'
 import { teamSlot, pendingSlot } from '../core/models/matchSlot';
 import type { MatchSlot } from '../core/models/schemas/MatchSlotSchema';
 
-// Keine Importe aus `src/test/*`: dieses Modul gehört über LocalTestScreen zum Produktionsbundle.
+// Keine Importe aus `src/test/*`. B-06: nach dem Löschen des LocalTestScreen nur noch von Tests genutzt (Umzug nach src/test/ offen).
 /** Deterministische UUID für Mock-Teams und -Spiele (Team-IDs sind UUIDs, siehe `TeamIdSchema`). */
 function testUuid(n: number): string {
   return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;

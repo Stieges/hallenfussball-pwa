@@ -7,11 +7,11 @@
 
 import { useCallback } from 'react';
 import { CategoryPage } from '../shared';
-import { MatchCockpitSettingsPanel } from '../../../../components/match-cockpit/MatchCockpitSettingsPanel';
+import { MatchCockpitSettingsPanel } from '../../../../components/match-settings/MatchCockpitSettingsPanel';
 import { useMatchSound } from '../../../../hooks';
 import { useMyTournamentRole } from '../../../auth/hooks/useMyTournamentRole';
 import { canManageTournament } from '../../../auth/utils/permissions';
-import { RulesLockProvider } from '../../../../components/match-cockpit/RulesLockContext';
+import { RulesLockProvider } from '../../../../components/match-settings/RulesLockContext';
 import type { Tournament, MatchCockpitSettings } from '../../../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../../types/tournament';
 

@@ -6,7 +6,7 @@
  */
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../../components/ui/Button';
+import { DialogActions } from '../../../components/ui/molecules/DialogActions';
 import { Dialog } from '../../../components/dialogs/Dialog';
 import { cssVars } from '../../../design-tokens';
 
@@ -17,13 +17,6 @@ export interface LogoutWarningDialogProps {
   onConfirm: () => void;
 }
 
-const actionsStyle: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: cssVars.spacing.sm,
-  marginTop: cssVars.spacing.md,
-};
-
 const messageStyle: CSSProperties = {
   margin: 0,
   fontSize: cssVars.fontSizes.bodySm,
@@ -32,18 +25,19 @@ const messageStyle: CSSProperties = {
 
 export function LogoutWarningDialog({ isOpen, count, onCancel, onConfirm }: LogoutWarningDialogProps) {
   const { t } = useTranslation('common');
+  // Tasten im festen Fuß (DA-2a, @OB-061/@OB-062): Abbrechen davor, die Haupttaste „Trotzdem abmelden“ zuletzt
+  const footer = (
+    <DialogActions
+      secondary={[{ label: t('actions.cancel'), onClick: onCancel, 'data-testid': 'logout-warning-cancel' }]}
+      primary={{ label: t('outbox.logoutWarning.confirm'), onClick: onConfirm, 'data-testid': 'logout-warning-confirm' }}
+      primaryVariant="danger"
+      data-testid="logout-warning-actions"
+    />
+  );
   return (
-    <Dialog isOpen={isOpen} onClose={onCancel} title={String(t('outbox.logoutWarning.title', { count }))}>
+    <Dialog isOpen={isOpen} onClose={onCancel} title={String(t('outbox.logoutWarning.title', { count }))} footer={footer}>
       <div data-testid="logout-warning-dialog">
         <p style={messageStyle}>{t('outbox.logoutWarning.message', { count })}</p>
-        <div style={actionsStyle}>
-          <Button data-testid="logout-warning-cancel" variant="ghost" onClick={onCancel}>
-            {t('actions.cancel')}
-          </Button>
-          <Button data-testid="logout-warning-confirm" variant="danger" onClick={onConfirm}>
-            {t('outbox.logoutWarning.confirm')}
-          </Button>
-        </div>
       </div>
     </Dialog>
   );

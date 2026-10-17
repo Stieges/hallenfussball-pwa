@@ -44,7 +44,7 @@ const styles: Record<string, CSSProperties> = {
     selectInput: {
         padding: '4px 8px',
         borderRadius: cssVars.borderRadius.md,
-        border: `1px solid ${cssVars.colors.border}`,
+        border: `1px solid ${cssVars.colors.borderControl}`,
         background: cssVars.colors.background,
         color: cssVars.colors.textPrimary,
         fontSize: cssVars.fontSizes.sm,
