@@ -148,7 +148,8 @@ CONSTRAINTS_BEFORE="$(q "SELECT count(*) FROM pg_constraint WHERE conrelid = 'pu
 
 echo "Migration einspielen..." >&2
 psql_stdin < "$TARGET_FILE"
-for f in ${AFTER[@]+"${AFTER[@]}"}; do psql_stdin < "$f"; done
+# Spaetere Migrationen (AFTER) werden erst ganz am Ende eingespielt (A5, Review 17.10.): vorher
+# wuerden sie S4 (Katalog-Delta) und X (Rueckbau-Vergleich) mitmessen, z. B. -3 Policies durch 20261028_002.
 
 origin_of() { q "SELECT coalesce($2::text, 'NULL') FROM public.matches WHERE id = '$1';"; }
 
@@ -219,7 +220,9 @@ check "I2 gueltige Herkunft -> ok" "ok" "$(insert_with_origin "$A1")"
 
 # --- R: Rechte-Assertion (alle Zeilen |t, inkl. der zwei neuen) ---------------------------------------
 PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || PRIV_OUT="nicht ausfuehrbar: $PRIV_OUT"
-check "R Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$PRIV_OUT" || true)"
+# A5: Zeilen aus SPAETEREN Migrationen (20261028_002, Rechte auf match_events) sind in diesem Stand
+# erwartungsgemaess f -- sie gehoeren nicht zum Ziel. Alles andere muss |t sein.
+check "R Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migration 20261028_002)" "" "$(grep -v '|t$' <<<"$PRIV_OUT" | grep -v 'match-events' || true)"
 check "R neue Zeilen vorhanden und |t" "matches-keep-origin-no-public-execute|t,matches-keep-origin-trigger-active|t" \
   "$(grep '^matches-keep-origin' <<<"$PRIV_OUT" | sort | paste -sd, -)"
 check "R Engine-Zaehlung bleibt 52" "match-engine-function-count-52|t" "$(grep '^match-engine-function-count-52|' <<<"$PRIV_OUT" || true)"
@@ -245,6 +248,13 @@ check "X nach Rueckbau: Schema public = vor der Migration (pg_dump identisch)" "
 if [[ "$DUMP_ROLLED_BACK" != "$DUMP_BEFORE" ]]; then
   diff <(echo "$DUMP_BEFORE") <(echo "$DUMP_ROLLED_BACK") | head -40 || true
 fi
+
+# A5: spaetere Migrationen auf dem Zustand NACH dem Rueckbau einspielen -- nur als Lauffaehigkeits-
+# Nachweis (psql_stdin bricht bei einem Fehler ab). Die Messungen oben sind davon unabhaengig.
+for f in ${AFTER[@]+"${AFTER[@]}"}; do
+  psql_stdin < "$f"
+  echo "OK    A5 spaetere Migration laeuft nach dem Rueckbau: $(basename "$f")" >&2
+done
 
 echo
 echo "Ergebnis: $OK OK, $DEV Abweichung(en)."

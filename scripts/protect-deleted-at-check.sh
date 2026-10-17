@@ -29,8 +29,9 @@
 #   (g) deleted_at wieder auf NULL setzen (Wiederherstellen, eigene Fixture mit
 #       vorbelegtem deleted_at)                                        -> muss ERLAUBT bleiben.
 #   (h) Besitzer loescht DIREKT eine match_events-Alt-Zeile            -> muss ABGELEHNT werden
-#       (E2/VR2: die Ereignisse belegen den Anpfiff, @SL-129 -- die Ablehnung muss vom
-#        Trigger "Ereignis" kommen, nicht von einer RLS-Ablehnung).
+#       (seit A-08h mit 42501 "permission denied for table match_events" vom Tabellenrecht;
+#        Beleg-Sperre separat in (h-Beleg): mit im Harness gesetztem DELETE-Recht muss der
+#        Trigger "Ereignis" allein ablehnen, E2/VR2, @SL-129).
 #   (h2) danach Status-Reset plus Soft-Delete von T_EVENTS in einer Transaktion
 #       (Spiel wieder auf 'scheduled', dann deleted_at setzen)          -> muss WEITER
 #       ABGELEHNT werden (Meldung tournament_started): das Ereignis ist der dauerhafte
@@ -381,19 +382,38 @@ if [[ "$G_RESULT" == "allowed" ]]; then
 fi
 check "(g) deleted_at wieder auf NULL setzen (Wiederherstellen, eigene Fixture) erlaubt @LZ-090 „Und ein Turnier im Papierkorb lässt sich weiterhin wiederherstellen“" "allowed" "$G_RESULT"
 
-# (h) Besitzer loescht DIREKT eine match_events-Alt-Zeile: abgelehnt. Die Ablehnung muss vom
-# TRIGGER kommen (Fehlertext "Ereignis"), nicht von einer RLS-Ablehnung — die delete-Policy
-# match_events_delete_v2 erlaubt dem Eigentuemer (owner_id) das Loeschen, ohne den Trigger
-# waere das hier "allowed" (rot). Ohne COMMIT.
+# (h) Besitzer loescht DIREKT eine match_events-Alt-Zeile: abgelehnt. Seit A-08h (20261028_002)
+# entzieht das Tabellenrecht dem Client das DELETE vor jeder Policy und vor der Beleg-Sperre: die
+# Ablehnung kommt mit 42501 "permission denied for table match_events". Die Ablehnung muss von
+# diesem Recht kommen, nicht von einer RLS-Ablehnung.
 run_write "$U_OWNER" "DELETE FROM public.match_events WHERE id = '$E_EVENTS';" 0
 H_RESULT="$LAST_WRITE_RESULT"
-if [[ "$H_RESULT" == "denied" ]]; then
-  H_REASON="fail"
-  grep -q "Ereignis" <<<"$LAST_WRITE_OUTPUT" && H_REASON="trigger"
-  check "(h) Besitzer loescht match_events-Alt-Zeile direkt: abgelehnt (Meldung Ereignis) @LZ-090 „Olli hat den Spielplan zurückgesetzt, die Ereignisse sind erhalten“" "trigger" "$H_REASON"
-else
-  check "(h) Besitzer loescht match_events-Alt-Zeile direkt: abgelehnt @LZ-090 „Olli hat den Spielplan zurückgesetzt, die Ereignisse sind erhalten“" "denied" "$H_RESULT"
-fi
+H_REASON="anders"
+grep -q "permission denied for table match_events" <<<"$LAST_WRITE_OUTPUT" && H_REASON="tabellenrecht"
+check "(h) Besitzer loescht match_events-Alt-Zeile direkt: abgelehnt (42501, A-08h) @LZ-090 „Olli hat den Spielplan zurückgesetzt, die Ereignisse sind erhalten“" "tabellenrecht" "$H_REASON"
+check "(h) Besitzer DELETE match_events-Alt-Zeile: Ergebnis denied" "denied" "$H_RESULT"
+
+# (h-Beleg) Die Beleg-Sperre (20261004_101) muss die Ablehnung auch allein tragen koennen. Nur in
+# diesem Harness, in derselben, zurueckgerollten Transaktion: DELETE-Recht fuer authenticated und
+# eine permissive DELETE-Policy setzen (seit A-08h gibt es keine mehr). Dann darf nur noch der
+# Trigger "Ereignis" ablehnen.
+set +e
+BELEG_OUT="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+GRANT DELETE ON public.match_events TO authenticated;
+CREATE POLICY h_beleg_delete ON public.match_events FOR DELETE TO authenticated USING (true);
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$U_OWNER';
+DELETE FROM public.match_events WHERE id = '$E_EVENTS';
+ROLLBACK;
+SQL
+)"
+BELEG_EC=$?
+set -e
+BELEG_REASON="anders"
+if [[ $BELEG_EC -ne 0 ]] && grep -q "Ereignis" <<<"$BELEG_OUT"; then BELEG_REASON="trigger"; fi
+check "(h-Beleg) Beleg-Sperre lehnt allein ab (Recht im Harness gesetzt, Meldung Ereignis)" "trigger" "$BELEG_REASON"
+[[ "$BELEG_REASON" == "trigger" ]] || echo "    belegausgabe (ec=$BELEG_EC): $(head -c 600 <<<"$BELEG_OUT")" >&2
 
 # (h2) Status-Reset plus Soft-Delete von T_EVENTS in einer Transaktion: weiter abgelehnt.
 # Das Ereignis aus (h) ist geblieben (die Probe war abgelehnt) und belegt den Anpfiff auch
