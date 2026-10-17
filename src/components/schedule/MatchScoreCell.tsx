@@ -1,6 +1,7 @@
 import { useState, useEffect, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, mediaQueries } from '../../design-tokens'
+import { formatTableResult, type ResultFigures } from './matchResult';
 interface MatchScoreCellProps {
   matchId: string;
   scoreA: number | undefined;
@@ -8,6 +9,8 @@ interface MatchScoreCellProps {
   editable: boolean;
   isFinished: boolean;
   inCorrectionMode: boolean;
+  /** Tore, Strafstoß und Sieger (`resultFigures`): zeigt „2:2 (4:3 i. E.)“ bzw. „3:2 n. V.“ statt `scoreA : scoreB` (@OB-064) */
+  result?: ResultFigures | null;
   onScoreChange: (scoreA: number, scoreB: number) => void;
   /** Ohne Handler (bis B-24) gibt es keinen Korrigieren-Knopf. */
   onStartCorrection?: () => void;
@@ -21,6 +24,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   editable,
   isFinished,
   inCorrectionMode,
+  result,
   onScoreChange,
   onStartCorrection,
 }) => {
@@ -52,6 +56,10 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
       onScoreChange(parseInt(localScoreA), parseInt(value));
     }
   };
+  const shownResult = result === undefined || result === null
+    ? (scoreA !== undefined && scoreB !== undefined ? `${scoreA} : ${scoreB}` : '___ : ___')
+    : formatTableResult(result, t);
+
   // State 1: Finished match - ALWAYS read-only with correction button
   // BUG FIX: Beendete Spiele dürfen nicht direkt bearbeitet werden, auch wenn editable=true
   // Der CorrectionDialog muss verwendet werden, um Ergebnisse zu korrigieren
@@ -84,10 +92,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
       <>
         <div style={containerStyle} className="match-score-cell-finished">
           <span style={scoreStyle}>
-            {scoreA !== undefined && scoreB !== undefined
-              ? `${scoreA} : ${scoreB}`
-              : '___ : ___'
-            }
+            {shownResult}
           </span>
           {onStartCorrection && (
             <button
@@ -138,13 +143,15 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
     };
 
     const inputStyle: CSSProperties = {
-      width: '40px',
+      width: cssVars.touchTargets.minimum,
+      height: cssVars.touchTargets.minimum,
       padding: cssVars.spacing.xs,
       border: inCorrectionMode
         ? `2px solid ${cssVars.colors.warning}`
         : `1px solid ${cssVars.colors.borderControl}`,
       borderRadius: cssVars.borderRadius.sm,
-      fontSize: cssVars.fontSizes.sm,
+      // Eingabefelder mindestens 16 px und 44 px hoch (Touch-Ziel)
+      fontSize: cssVars.fontSizes.lg,
       fontWeight: cssVars.fontWeights.bold,
       textAlign: 'center' as const,
       backgroundColor: inCorrectionMode
@@ -189,10 +196,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   // Fallback: Display only
   return (
     <span>
-      {scoreA !== undefined && scoreB !== undefined
-        ? `${scoreA} : ${scoreB}`
-        : '___ : ___'
-      }
+      {shownResult}
     </span>
   );
 };
