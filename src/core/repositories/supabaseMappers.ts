@@ -32,6 +32,7 @@ import { SlotSourceSchema, TeamIdSchema, type MatchSlot, type SlotSource } from 
 import { pendingSlot, slotSource, slotTeamId, teamSlot } from '../models/matchSlot';
 import { originFromRow, originToColumns, type MatchOriginColumns } from './matchOriginColumns';
 import { kitFromRow } from './matchKitRow';
+import { bibColorFromConfig, bibColorToConfig } from './tournamentBibColor';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -584,7 +585,7 @@ export function mapTournamentFromSupabase(
     startTime: row.start_time ?? undefined,
     location,
     organizer: config.organizer,
-    rulebook: config.rulebook,
+    rulebook: config.rulebook, ...bibColorFromConfig(config), // A-30a: Leibchenfarbe (@W3-029)
     contactInfo: config.contactInfo as Tournament['contactInfo'],
     teams,
     matches,
@@ -676,7 +677,7 @@ export function mapTournamentToSupabase(
     fields: tournament.fields,
     ageClass: tournament.ageClass,
     organizer: tournament.organizer,
-    rulebook: tournament.rulebook,
+    rulebook: tournament.rulebook, ...bibColorToConfig(tournament), // A-30a: Leibchenfarbe (@W3-029)
     contactInfo: tournament.contactInfo,
     dashboardStatus: tournament.dashboardStatus,
     tournamentSystem: tournament.tournamentSystem,

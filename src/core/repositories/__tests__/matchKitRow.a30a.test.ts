@@ -18,6 +18,7 @@ import {
 import { KIT_COLUMNS_SERVER_ONLY_CODE, RepositoryError, isTransientMutationError } from '../../errors';
 import { teamSlot } from '../../models/matchSlot';
 import { MatchSchema } from '../../models/schemas/TournamentSchema';
+import { wornColors } from '../../models/kit';
 import type { Match } from '../../models/types';
 import { createMatchRow } from '../../../../tests/factories/supabase';
 import { testUuid } from '../../../test/testIds';
@@ -66,6 +67,14 @@ describe('A-30a Mapper liest die getragenen Farben', () => {
     const mapped = mapMatchFromSupabase(createMatchRow({ id: testUuid(301), team_a_id: NORD, team_b_id: SUED }));
     expect(mapped).not.toHaveProperty('kit');
     expect(captureFeatureError).not.toHaveBeenCalled();
+  });
+});
+
+describe('A-30a Fixrunde 1 (Review B1): Spiel in der Halbzeit aus der Cloud', () => {
+  it('@W3-028 ein Spiel in der Halbzeit (Cloud paused) behält die Farbe, mit der es angepfiffen wurde', () => {
+    const mapped = mapMatchFromSupabase(row({ match_status: 'paused', kit_color_a: '#000000', kit_color_b: '#FFFFFF', bib_side: null }));
+    const rot = [{ id: NORD, name: 'FC Nord', colors: { primary: '#C62828' } }, { id: SUED, name: 'SV Süd', colors: { primary: '#C62828' } }];
+    expect(wornColors(mapped, rot)).toEqual({ a: '#000000', b: '#FFFFFF' });
   });
 });
 

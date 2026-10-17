@@ -182,6 +182,26 @@ describe('A-30a @W3-028 Trikotfarbe am Turniertag', () => {
     expect(wornColors(gespielt, mitSchwarz)).toEqual({ a: undefined, b: undefined });
   });
 
+  it('@W3-028 ein beendetes Spiel ohne gespeicherte Farbe behält „keine Farbe“, nie die neue Teamfarbe', () => {
+    const beendet = spiel('spiel-6', SV_SUED, FC_NORD, { matchStatus: 'finished' });
+    expect(wornColors(beendet, mitSchwarz)).toEqual({ a: undefined, b: undefined });
+  });
+
+  // Fixrunde 1 (Review B1): jeder Zustand nach dem Anpfiff zählt – auch der Cloud-Status `paused`
+  // (Halbzeit, Pause, offene Entscheidung, Strafstoßschießen), den der Mapper ungeprüft durchreicht.
+  it.each([
+    { status: 'running', angepfiffen: true },
+    { status: 'waiting', angepfiffen: true },
+    { status: 'paused', angepfiffen: true },
+    { status: 'finished', angepfiffen: true },
+    { status: 'scheduled', angepfiffen: false },
+    { status: 'skipped', angepfiffen: false },
+    { status: undefined, angepfiffen: false },
+  ])('@W3-028 Status $status: angepfiffen $angepfiffen', ({ status, angepfiffen }) => {
+    const gespielt = { ...spiel('spiel-5', SV_SUED, FC_NORD), matchStatus: status as Match['matchStatus'], kit: { a: WEISS } };
+    expect(wornColors(gespielt, mitSchwarz)).toEqual(angepfiffen ? { a: WEISS, b: undefined } : { a: SCHWARZ, b: WEISS });
+  });
+
   it('@W3-028 Gegenbeispiel: abgesetztes Spiel ist nicht angepfiffen und folgt der Teamfarbe', () => {
     const abgesetzt = spiel('spiel-8', SV_SUED, FC_NORD, { matchStatus: 'skipped' });
     expect(wornColors(abgesetzt, mitSchwarz)).toEqual({ a: SCHWARZ, b: WEISS });

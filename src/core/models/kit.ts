@@ -133,9 +133,15 @@ export function defaultKit(match: KitMatch, teams: readonly KitTeam[], tournamen
   return kitWithBib(match, teams, tournament, 'a');
 }
 
-/** Angepfiffen: läuft (auch Pause/Halbzeit) oder beendet. Geplant und abgesetzt sind nicht angepfiffen. */
+/**
+ * Zustände VOR dem Anpfiff (Negativliste aus dem Status-Modell `MatchStatus`): fehlt, geplant, abgesetzt.
+ * Jeder andere Zustand ist angepfiffen – auch der Cloud-Status `paused` (Halbzeit, Pause, Entscheidung,
+ * Strafstoßschießen), den der Mapper ungeprüft durchreicht (Review A-30a B1).
+ */
+const NOT_KICKED_OFF: ReadonlySet<Match['matchStatus']> = new Set<Match['matchStatus']>([undefined, 'scheduled', 'skipped']);
+
 function isKickedOff(match: Pick<Match, 'matchStatus'>): boolean {
-  return match.matchStatus === 'running' || match.matchStatus === 'waiting' || match.matchStatus === 'finished';
+  return !NOT_KICKED_OFF.has(match.matchStatus);
 }
 
 /** @W3-028/@ZM-140: getragene Farbe je Seite; `undefined` = keine Farbe (Anzeige: Vorgabe). */
