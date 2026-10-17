@@ -18,7 +18,7 @@ import { LiveSlide } from '../../../features/monitor-display/slides/LiveSlide';
 import { buildMonitorView } from '../../../features/monitor-display/monitorView';
 import { liveMatchOf, withView } from '../../../features/monitor-display/__tests__/monitorViewHelper';
 import { slide } from '../../../features/monitor-display/__tests__/monitorFixture';
-import { GAME, hf1Besetzt, withCloudColumns, type Hallencup } from '../../../core/view/__fixtures__/hallencupNord';
+import { GAME, hf1Besetzt, NORD, withCloudColumns, type Hallencup } from '../../../core/view/__fixtures__/hallencupNord';
 
 vi.mock('../../../hooks/useLiveMatches', () => ({
   useLiveMatches: () => ({ liveMatches: new Map(), lastGoalEvent: null, lastCardEvent: null }),
@@ -47,6 +47,18 @@ describe('@ZM-147 Monitor: Endstand ohne Verlauf nach dem Strafstoßschießen', 
     expect(screen.getByLabelText('Gast: 2')).toBeInTheDocument();
     expect(screen.getByTestId('live-penalty').textContent).toBe('Strafstoßschießen 4 : 3');
     expect(screen.getByTestId('live-winner').textContent).toBe('FC Nord gewinnt');
+  });
+
+  it('@ZM-087 @ZM-147 Siegerzeile in der Monitor-Form: der 50-Zeichen-Sieger steht wie in der Namenszeile als „SG FF Nordheim-Süd 1921“, ohne „…“', async () => {
+    const cup = await nurErgebnis();
+    const lang = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
+    const teams = cup.tournament.teams.map((t) => (t.id === NORD ? { ...t, name: lang } : t));
+    const tournament = { ...cup.tournament, teams };
+    const match = tournament.matches[GAME.HF1];
+    render(<LiveMatchDisplay match={liveMatchOf(match, tournament)} finalScore={buildMonitorView(tournament).byId.get(match.id)?.score} />);
+    expect(screen.getByTestId('live-winner').textContent).toBe('SG FF Nordheim-Süd 1921 gewinnt');
+    expect(screen.getByTestId('live-winner').textContent).not.toContain(lang);
+    expect(screen.getByTestId('live-winner').textContent).not.toContain('…');
   });
 
   it('@ZM-147 ohne Schützen-Punktreihen und ohne leere Platzhalter, statt Verlauf nur der Endstand', async () => {

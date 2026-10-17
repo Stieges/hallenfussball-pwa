@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes } from '../../design-tokens';
+import { cssVars, displayFontSizes, displayLayout } from '../../design-tokens';
+import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 import type { FinalScore } from '../../core/view';
 
 export interface LiveFinalScoreProps {
   color: string;
   /** Endstand der Ansicht: nach einem Strafstoßschießen (@ZM-147) steht „Strafstoßschießen 4 : 3“ statt „Endstand“ */
   finalScore?: FinalScore;
-  /** Namen der Mannschaften (Heim, Gast) für die Siegerzeile */
+  /** Namen der Mannschaften (Heim, Gast); die Siegerzeile nennt den Namen in der Monitor-Form (Vereinskürzel, @ZM-087) */
   names: { home: string; away: string };
 }
 
@@ -26,13 +27,13 @@ export function LiveFinalScore({ color, finalScore, names }: LiveFinalScoreProps
     );
   }
   return (
-    <div data-testid="live-endstand" data-monitor="uhr" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: cssVars.spacing.xs, maxWidth: '92%', color, textAlign: 'center' }}>
-      <div data-testid="live-penalty" style={{ fontSize: displayFontSizes.teamName, fontWeight: cssVars.fontWeights.bold, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
+    <div data-testid="live-endstand" data-monitor="uhr" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: cssVars.spacing.xs, maxWidth: displayLayout.scoreArea.teamNameWidth, color, textAlign: 'center' }}>
+      <div data-testid="live-penalty" style={{ fontSize: displayFontSizes.teamName, fontWeight: cssVars.fontWeights.bold, lineHeight: displayLayout.scoreArea.hintLineHeight, fontVariantNumeric: 'tabular-nums' }}>
         {t('liveMatch.penaltyScore', { home: penalty.a, away: penalty.b })}
       </div>
       {finalScore?.winner !== undefined && finalScore.winner !== null && (
-        <div data-testid="live-winner" style={{ fontSize: displayFontSizes.liveInfo, fontWeight: cssVars.fontWeights.semibold, lineHeight: 1.25, overflowWrap: 'anywhere' }}>
-          {t('liveMatch.winnerLine', { name: finalScore.winner === 'a' ? names.home : names.away })}
+        <div data-testid="live-winner" style={{ fontSize: displayFontSizes.liveInfo, fontWeight: cssVars.fontWeights.semibold, lineHeight: displayLayout.scoreArea.hintLineHeight, overflowWrap: 'anywhere' }}>
+          {t('liveMatch.winnerLine', { name: monitorTeamName(finalScore.winner === 'a' ? names.home : names.away) })}
         </div>
       )}
     </div>

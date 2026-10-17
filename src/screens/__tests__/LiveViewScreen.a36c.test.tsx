@@ -238,7 +238,8 @@ describe('@ZM-111 F-ZEIT: Uhrzeiten in der Ortszeit des Turniers', () => {
     const c = await zeige(cup.tournament);
     const karte = screen.getByTestId(`match-goals-${idOf(cup, GAME[9])}-home`).closest<HTMLElement>('[data-match-card]')!;
     expect(karte.textContent).toContain(EXPECTED_TIME.spiel9Kickoff.time);
-    expect(text(c)).not.toContain('19:40'); // die Gerätezeit der Zeitzone verschiebt die Anzeige nicht
+    // Gegenbeispiel: die falsche Umrechnung in die Gerätezeit (New York liegt 6 Stunden hinter Berlin) ergäbe 08:40
+    expect(text(c)).not.toContain('08:40');
     await waitFor(() => expect(text(c)).toContain(EXPECTED_TIME.spiel9Kickoff.time));
   });
 });

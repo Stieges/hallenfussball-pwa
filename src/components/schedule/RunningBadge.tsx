@@ -30,7 +30,7 @@ const badgeStyle: CSSProperties = {
 const dotStyle: CSSProperties = {
   width: cssVars.spacing.sm,
   height: cssVars.spacing.sm,
-  borderRadius: '50%',
+  borderRadius: cssVars.borderRadius.full,
   backgroundColor: cssVars.colors.statusLive,
   animation: 'pulse 2s ease-in-out infinite',
 };

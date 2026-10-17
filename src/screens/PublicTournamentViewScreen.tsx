@@ -13,7 +13,7 @@ import { useState, useEffect, CSSProperties } from 'react';
 import { cssVars } from '../design-tokens'
 import { Tournament, Standing } from '../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
-import { applyScoreVisibility, publicMatches } from '../features/public-view/publicScheduleFilters';
+import { applyScoreVisibility, publicMatches, visibleStandings } from '../features/public-view/publicScheduleFilters';
 import { usePublicView } from '../features/public-view/usePublicView';
 import { calculateStandings } from '../utils/calculations';
 import { ScheduleDisplay } from '../components/ScheduleDisplay';
@@ -131,11 +131,8 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
   const getFilteredSchedule = (): GeneratedSchedule | null =>
     schedule && view ? applyScoreVisibility(schedule, view.rules) : null;
 
-  // Filter standings if hideRankingsForPublic is enabled
-  const getFilteredStandings = (): Standing[] => {
-    if (!tournament) { return []; }
-    return tournament.hideRankingsForPublic ? [] : currentStandings;
-  };
+  // Tabellen nur, wenn die Regeln der Ansicht sie zeigen (Kindermodus und „Gruppentabellen aus“, @ZM-005)
+  const getFilteredStandings = (): Standing[] => (view ? visibleStandings(view.rules, currentStandings) : []);
 
   const containerStyle: CSSProperties = {
     minHeight: 'var(--min-h-screen)',
@@ -232,6 +229,8 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
             schedule={filteredSchedule}
             view={view ?? undefined}
             currentStandings={filteredStandings}
+            showGroupTables={view?.rules.tables === true}
+            participantStandings={view?.rules.tables === true ? undefined : schedule?.initialStandings}
             currentMatches={publicMatches(tournament, view?.rules ?? { results: false })}
             tournamentTeams={tournament.teams}
             editable={false}

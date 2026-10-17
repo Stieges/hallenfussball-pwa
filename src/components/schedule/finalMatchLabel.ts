@@ -5,8 +5,10 @@
 import type { ScheduledMatch } from '../../core/generators';
 import { matchHeading, type SideContext } from './matchSides';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Translation function type simplified for standalone helper
-export function finalMatchLabel(match: ScheduledMatch, sides: SideContext, t: (key: any) => string): string {
+/** Schlüssel der Rundennamen (`tournament:finals.labels.*`) */
+type FinalsLabelKey = `finals.labels.${'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth' | 'semifinal' | 'quarterfinal' | 'finalMatch'}`;
+
+export function finalMatchLabel(match: ScheduledMatch, sides: SideContext, t: (key: FinalsLabelKey) => string): string {
   const heading = matchHeading(match, sides);
   if (heading !== undefined) { return heading; }
   if (match.finalType === 'final') { return t('finals.labels.final'); }
