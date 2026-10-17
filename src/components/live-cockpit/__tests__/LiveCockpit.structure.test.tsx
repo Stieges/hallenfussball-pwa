@@ -43,6 +43,10 @@ describe('Cockpit-Hülle – Struktur (Scheibe 1, ohne Sichtänderung)', () => {
     expect(screen.getByTestId('match-timer-display')).toBeInTheDocument();
   });
 
+  it('LiveCockpit.tsx hat höchstens 300 Zeilen (Spec § 1 Nr. 4)', () => {
+    expect(lines('LiveCockpit.tsx')).toBeLessThanOrEqual(300);
+  });
+
   it('Gegenbeispiel: ohne Spiel steht weiter der Leerhinweis und kein Tor-Knopf', () => {
     render(<LiveCockpit {...makeProps(null)} />);
     expect(screen.queryByTestId('goal-button-home')).toBeNull();
