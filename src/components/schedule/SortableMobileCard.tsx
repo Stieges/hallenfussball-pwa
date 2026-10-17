@@ -135,7 +135,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   const mobileSelectStyle: CSSProperties = {
     height: spacingSemantics.touchTarget, // 44px accessible touch target
     padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.xs,
     fontWeight: cssVars.fontWeights.semibold,
@@ -220,7 +220,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
               style={{
                 ...mobileSelectStyle,
                 width: '100%',
-                border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.border}`,
+                border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.borderControl}`,
               }}
             >
               {fieldOptions.map((opt) => (

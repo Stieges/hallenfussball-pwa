@@ -104,7 +104,7 @@ export const ScheduleFilterBarDesktop: React.FC<ScheduleFilterBarDesktopProps> =
     gap: cssVars.spacing.xs,
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     background: activeFilterCount > 0 ? `${cssVars.colors.error}15` : 'transparent',
-    border: `1px solid ${activeFilterCount > 0 ? cssVars.colors.error : cssVars.colors.border}`,
+    border: `1px solid ${activeFilterCount > 0 ? cssVars.colors.error : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: activeFilterCount > 0 ? cssVars.colors.error : cssVars.colors.textSecondary,
     fontSize: cssVars.fontSizes.sm,

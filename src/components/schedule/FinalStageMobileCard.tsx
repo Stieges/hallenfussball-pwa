@@ -185,7 +185,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
             fontSize: cssVars.fontSizes.xs,
             color: cssVars.colors.textSecondary,
             backgroundColor: 'transparent',
-            border: `1px solid ${cssVars.colors.border}`,
+            border: `1px solid ${cssVars.colors.borderControl}`,
             borderRadius: cssVars.borderRadius.sm,
             cursor: 'pointer',
             width: '100%',
@@ -204,7 +204,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
               <select
                 value={displayedRef ?? ''}
                 onChange={(e) => onRefereeChange(match.id, e.target.value ? parseInt(e.target.value, 10) : null)}
-                style={{ ...selectStyle, border: `1px solid ${hasPendingRef ? cssVars.colors.primary : cssVars.colors.border}` }}
+                style={{ ...selectStyle, border: `1px solid ${hasPendingRef ? cssVars.colors.primary : cssVars.colors.borderControl}` }}
               >
                 <option value="">-</option>
                 {refereeOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -217,7 +217,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
               <select
                 value={displayedField ?? 1}
                 onChange={(e) => onFieldChange(match.id, parseInt(e.target.value, 10))}
-                style={{ ...selectStyle, border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.border}` }}
+                style={{ ...selectStyle, border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.borderControl}` }}
               >
                 {fieldOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>

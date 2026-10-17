@@ -57,7 +57,7 @@ const inputStyle: CSSProperties = {
   width: cssVars.touchTargets.minimum,
   height: cssVars.touchTargets.minimum,
   padding: cssVars.spacing.xs,
-  border: `1px solid ${cssVars.colors.border}`,
+  border: `1px solid ${cssVars.colors.borderControl}`,
   borderRadius: cssVars.borderRadius.sm,
   // Eingabefelder mindestens 16 px, sonst zoomt iOS beim Fokus
   fontSize: cssVars.fontSizes.lg,

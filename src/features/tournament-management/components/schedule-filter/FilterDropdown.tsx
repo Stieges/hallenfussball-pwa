@@ -54,7 +54,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
     height: cssVars.touchTargets.minimum,
     padding: `0 ${cssVars.spacing.xl} 0 ${cssVars.spacing.md}`,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${value !== null ? cssVars.colors.primary : cssVars.colors.border}`,
+    border: `1px solid ${value !== null ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.md, // 16px for iOS zoom prevention
@@ -94,7 +94,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
           e.target.style.borderColor = cssVars.colors.primary;
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = value !== null ? cssVars.colors.primary : cssVars.colors.border;
+          e.target.style.borderColor = value !== null ? cssVars.colors.primary : cssVars.colors.borderControl;
         }}
       >
         {options.map((option) => (

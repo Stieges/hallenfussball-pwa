@@ -83,6 +83,18 @@ colors.warning      // #FF9100
 colors.success      // #4CAF50
 ```
 
+#### Rand-Rollen: Bedien-Rand oder Trennlinie
+
+| Rolle | Token | Wann | Kontrast |
+|---|---|---|---|
+| Bedien-Rand | `colors.borderControl` | Rand von Knopf, Eingabefeld, Auswahl, Chip, Schalter, Radio, Stepper, Farbwähler-Auslöser | mindestens 3 : 1 gegen die Fläche (WCAG 1.4.11, @OB-055, @OB-057) |
+| Bedien-Rand auf erhöhter Fläche | `colors.borderControlRaised` | Bedienelement auf `surfaceLight` (im dunklen Thema heller als `borderControl`) | mindestens 3 : 1 gegen `surfaceLight` |
+| Trennlinie / Kartenrand | `colors.border` (auch `borderDefault`, `borderMedium`, `borderSolid`, `borderSubtle`) | dekorativ: Karten, Kopf-/Fußlinien, Trenner, Tabellenlinien | bewusst unter 3 : 1 |
+| Zustand | `colors.borderActive`, `primary`, `error` | gewählt, Fehler, live | eigene Farbe |
+
+`borderLight` und `borderStrong` gibt es nicht mehr (B-51). Ein neuer Rand eines Bedienelements nimmt `borderControl`, nie `border`.
+Die Prüfung `src/design-tokens/__tests__/borderControl.contrast.test.ts` rechnet beide Themen und den hohen Kontrast gegen die Flächen.
+
 ### Spacing (8pt Grid)
 
 ```typescript

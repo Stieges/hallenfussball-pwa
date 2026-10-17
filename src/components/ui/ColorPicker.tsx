@@ -105,7 +105,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     gap: cssVars.spacing.sm,
     padding: cssVars.spacing.sm,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.5 : 1,
@@ -117,7 +117,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     height: 24,
     borderRadius: cssVars.borderRadius.sm,
     backgroundColor: value,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     flexShrink: 0,
   };
 
@@ -156,7 +156,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     backgroundColor: color,
     border: isSelected
       ? `2px solid ${cssVars.colors.primary}`
-      : `1px solid ${cssVars.colors.border}`,
+      : `1px solid ${cssVars.colors.borderControl}`,
     cursor: 'pointer',
     transition: 'transform 0.1s ease, border-color 0.1s ease',
     boxShadow: color === '#FFFFFF' ? `inset 0 0 0 1px ${cssVars.colors.border}` : 'none',

@@ -358,7 +358,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     return (
                       <td style={{ ...tdStyle, textAlign: 'center', padding: editingSchedule ? cssVars.spacing.xs : cssVars.spacing.sm, backgroundColor: isPendingChange ? cssVars.colors.editorDragActiveBg : undefined }}>
                         {editingSchedule && onRefereeChange ? (
-                          <select value={displayedRef ?? ''} onChange={(e) => onRefereeChange(match.id, e.target.value ? parseInt(e.target.value) : null)} style={{ width: '100%', padding: cssVars.spacing.xs, border: `1px solid ${isPendingChange ? cssVars.colors.primary : cssVars.colors.border}`, borderRadius: cssVars.borderRadius.sm, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: cssVars.colors.background, color: cssVars.colors.textPrimary }}>
+                          <select value={displayedRef ?? ''} onChange={(e) => onRefereeChange(match.id, e.target.value ? parseInt(e.target.value) : null)} style={{ width: '100%', padding: cssVars.spacing.xs, border: `1px solid ${isPendingChange ? cssVars.colors.primary : cssVars.colors.borderControl}`, borderRadius: cssVars.borderRadius.sm, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: cssVars.colors.background, color: cssVars.colors.textPrimary }}>
                             <option value="">-</option>
                             {refereeOptions.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
                           </select>
@@ -408,7 +408,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     return (
                       <td style={{ ...tdStyle, textAlign: 'center', padding: editingSchedule ? cssVars.spacing.xs : cssVars.spacing.sm, backgroundColor: isPendingChange ? cssVars.colors.editorDragActiveBg : undefined }}>
                         {editingSchedule && onFieldChange ? (
-                          <select value={displayedField || 1} onChange={(e) => { const fieldNum = parseInt(e.target.value); onFieldChange(match.id, fieldNum); }} style={{ width: '100%', padding: cssVars.spacing.xs, border: `1px solid ${isPendingChange ? cssVars.colors.primary : cssVars.colors.border}`, borderRadius: cssVars.borderRadius.sm, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: cssVars.colors.background, color: cssVars.colors.textPrimary }}>
+                          <select value={displayedField || 1} onChange={(e) => { const fieldNum = parseInt(e.target.value); onFieldChange(match.id, fieldNum); }} style={{ width: '100%', padding: cssVars.spacing.xs, border: `1px solid ${isPendingChange ? cssVars.colors.primary : cssVars.colors.borderControl}`, borderRadius: cssVars.borderRadius.sm, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: cssVars.colors.background, color: cssVars.colors.textPrimary }}>
                             {fieldOptions.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
                           </select>
                         ) : (<span style={{ fontWeight: cssVars.fontWeights.semibold }}>{displayedField || '-'}</span>)}
