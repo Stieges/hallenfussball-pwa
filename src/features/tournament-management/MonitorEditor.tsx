@@ -405,7 +405,7 @@ export function MonitorEditor({
   const inputStyle: CSSProperties = {
     padding: cssVars.spacing.sm,
     borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     background: cssVars.colors.surface,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.md,
@@ -467,7 +467,7 @@ export function MonitorEditor({
     minHeight: '36px',
     padding: cssVars.spacing.xs,
     background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.sm,
     cursor: 'pointer',
     fontSize: cssVars.fontSizes.md,
@@ -477,7 +477,7 @@ export function MonitorEditor({
     width: '100%',
     padding: cssVars.spacing.md,
     background: cssVars.colors.surfaceLight,
-    border: `2px dashed ${cssVars.colors.border}`,
+    border: `2px dashed ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     fontSize: cssVars.fontSizes.md,
@@ -496,13 +496,13 @@ export function MonitorEditor({
     padding: cssVars.spacing.md,
     background: cssVars.colors.surface,
     borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
   };
 
   const slideTypeButtonStyle: CSSProperties = {
     padding: cssVars.spacing.md,
     background: cssVars.colors.surfaceLight,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     textAlign: 'center',

@@ -314,7 +314,7 @@ export function SponsorManagement({
     padding: cssVars.spacing.sm,
     borderRadius: cssVars.borderRadius.md,
     background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     cursor: 'pointer',
     fontSize: cssVars.fontSizes.lg,
   };
@@ -330,7 +330,7 @@ export function SponsorManagement({
     width: '100px',
     height: '100px',
     borderRadius: cssVars.borderRadius.md,
-    border: `2px dashed ${cssVars.colors.border}`,
+    border: `2px dashed ${cssVars.colors.borderControl}`,
     background: cssVars.colors.surfaceLight,
     display: 'flex',
     flexDirection: 'column',
@@ -352,7 +352,7 @@ export function SponsorManagement({
     minHeight: '44px',
     padding: cssVars.spacing.sm,
     borderRadius: cssVars.borderRadius.md,
-    border: `2px solid ${isSelected ? TIER_CONFIG[tier].color : cssVars.colors.border}`,
+    border: `2px solid ${isSelected ? TIER_CONFIG[tier].color : cssVars.colors.borderControl}`,
     background: isSelected ? `${TIER_CONFIG[tier].color}22` : 'transparent',
     cursor: 'pointer',
     display: 'flex',
@@ -377,7 +377,7 @@ export function SponsorManagement({
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
     borderRadius: cssVars.borderRadius.md,
     background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     color: cssVars.colors.textSecondary,
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.medium,
@@ -476,7 +476,7 @@ export function SponsorManagement({
                           height: '24px',
                           borderRadius: '50%',
                           background: cssVars.colors.error,
-                          color: 'white',
+                          color: cssVars.colors.onError,
                           border: 'none',
                           cursor: 'pointer',
                           fontSize: cssVars.fontSizes.xs,
@@ -613,7 +613,7 @@ export function SponsorManagement({
                       <button
                         style={{
                           ...actionButtonStyle,
-                          borderColor: isDeleting ? cssVars.colors.error : cssVars.colors.border,
+                          borderColor: isDeleting ? cssVars.colors.error : cssVars.colors.borderControl,
                         }}
                         onClick={() => void handleDelete(sponsor.id)}
                         aria-label={t('sponsor.deleteAria', { name: sponsor.name })}
@@ -635,7 +635,7 @@ export function SponsorManagement({
                           style={{
                             ...actionButtonStyle,
                             background: cssVars.colors.error,
-                            color: 'white',
+                            color: cssVars.colors.onError,
                             border: 'none',
                             fontSize: cssVars.fontSizes.sm,
                             padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,

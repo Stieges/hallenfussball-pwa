@@ -45,7 +45,7 @@ export const StorageWarningBanner: React.FC = () => {
     right: 0,
     padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
     background: cssVars.colors.error,
-    color: 'white',
+    color: cssVars.colors.onError,
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',

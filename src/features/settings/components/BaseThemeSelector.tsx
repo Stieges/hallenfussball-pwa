@@ -143,7 +143,7 @@ const styles: Record<string, CSSProperties> = {
     width: '20px',
     height: '20px',
     borderRadius: cssVars.borderRadius.full,
-    border: `2px solid ${cssVars.colors.border}`,
+    border: `2px solid ${cssVars.colors.borderControl}`,
     flexShrink: 0,
   },
   radioInner: {

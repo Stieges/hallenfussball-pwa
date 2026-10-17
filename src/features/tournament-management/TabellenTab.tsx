@@ -72,7 +72,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
     background: cssVars.colors.surface,
     borderRadius: cssVars.borderRadius.lg,
     padding: '4px',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
   };
 
   const getSegmentButtonStyle = (isActive: boolean): CSSProperties => ({
