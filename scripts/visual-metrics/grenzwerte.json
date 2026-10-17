@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-16b",
+  "version": "2026-10-17",
   "hinweis": "Jede Zahl mit Begruendung, Quelle, Typ und Geltung. HART = Fehler (Exit 1), WARNUNG = Hypothese, Designziel oder Wert ohne Record-Deckung (nur Bericht). Gleiche Datei liegt als .claude/skills/visuelle-pruefung/grenzwerte.json; das Messskript warnt bei Abweichung. Grenzwerte werden nie zum Gruenwerden gelockert: eigene Grenzwerte oder Sehwinkel-Parameter nur mit --begruendung (sonst BLOCKED), der Lauf ist dann nie VOLLMATRIX.",
   "arten": {
     "handy": "Handy hoch 360x640, 390x844",
@@ -514,6 +514,19 @@
       ],
       "begruendung": "Ohne data-primary prueft das Skript keine Haupttaste (56 px, ohne Scrollen sichtbar); das wird sichtbar gemeldet statt still uebergangen.",
       "quelle": "Review B-07"
+    },
+    {
+      "id": "dialogfuss.taste-zeilen",
+      "wert": 1,
+      "einheit": "hoechstens Zeilen je Taste im Dialog-Fuss",
+      "typ": "WARNUNG",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop"
+      ],
+      "begruendung": "Eine Taste im Dialog-Fuss ([data-dialog-actions], Baustein DialogActions) zeigt ihre Beschriftung in einer Zeile; passt sie nicht, stehen die Tasten untereinander in voller Breite. Zwei Zeilen in einer Taste sind kein HART-Fehler, weil der Umbruch an einem Leerzeichen sonst erlaubt ist (Regel Silbentrennung und Umbruch); die Regel 'Tasten im Dialog-Fuss' gilt aber erst mit dem Baustein, daher WARNUNG bis alle Dialoge umgestellt sind.",
+      "quelle": "Record 2026-10-02_oberflaeche, Regel 'Tasten im Dialog-Fuss und unter Formularen' (Daniel 2026-10-17), @OB-061"
     },
     {
       "id": "markierung.monitor",

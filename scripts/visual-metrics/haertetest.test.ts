@@ -272,6 +272,13 @@ describe('Gegen Schummeln', () => {
     const m = await messe('--ziel', FIX('haupttaste-unter-falz.html'), '--profil', 'handy-360', ...SCHNELL)
     expect([...hart(m.b)]).toEqual(expect.arrayContaining(['primaer.sichtbar', 'touch.primaer']))
   })
+  it('@OB-061 Taste mit zwei Zeilen im Dialog-Fuss: WARNUNG (kein HART); Gegenbeispiel einzeilig ohne Warnung', async () => {
+    const zwei = await messe('--ziel', FIX('dialogfuss-zweizeilig.html'), '--profil', 'handy-360', ...SCHNELL)
+    expect(warn(zwei.b).has('dialogfuss.taste-zeilen')).toBe(true)
+    expect(hart(zwei.b).size).toBe(0)
+    const ein = await messe('--ziel', FIX('dialogfuss-einzeilig.html'), '--profil', 'handy-360', ...SCHNELL)
+    expect(warn(ein.b).has('dialogfuss.taste-zeilen')).toBe(false)
+  })
   it('B-16 kein stilles Abschneiden: 40 zu kleine Tasten = 40 gebuendelte Befunde', async () => {
     const r = await messe('--ziel', FIX('viele-befunde.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(r.b.zusammenfassung.zaehler['touch.min']).toBe(40)
