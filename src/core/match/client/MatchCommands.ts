@@ -16,6 +16,7 @@ import type { Actor, EngineEvent, ErrorCode, MatchContext, MatchRules } from '..
 import type { MatchEngineView } from './MatchEngine';
 import { definedFields, splitFirstTap, timingClock } from './matchCommandStamp';
 import { buildEvents, resultEntrySpec, skipSpec, storeEvents, UNSKIP_SPEC } from './matchCommandsSkip';
+import { resultEntryCommand } from '../resultEntryShootout';
 import type {
   AmendFields,
   CardOptions,
@@ -145,9 +146,10 @@ export class MatchCommands {
     return this.submit(matchId, ctx, actor, { type: 'REOPEN', teamId: null, payload: {}, clock: timingClock(timing) });
   }
 
-  /** B-07 (@FU-080): Ergebnis direkt eintragen; auf laufendem Spiel abgelehnt (@FU-081). */
-  enterResult(matchId: string, ctx: MatchContext, actor: Actor, scores: TeamScores): CommandResult {
-    return this.submit(matchId, ctx, actor, resultEntrySpec(scores));
+  /** B-07 (@FU-080): Ergebnis direkt eintragen; auf laufendem Spiel abgelehnt (@FU-081). A-25a (@FU-094): Strafstoß, K.-o.-Regel wie am Server. */
+  enterResult(matchId: string, ctx: MatchContext, actor: Actor, scores: TeamScores, shootout?: TeamScores, knockout = false): CommandResult {
+    const built = resultEntryCommand(knockout, scores, shootout);
+    return built.ok ? this.submit(matchId, ctx, actor, built.spec) : Promise.reject(new MatchCommandRejectedError(built.code, built.detail));
   }
 
   /** B-07a (@FU-089): Spiel absetzen/ueberspringen -- nur Leitung, nur im Zustand `scheduled`. */
