@@ -7,7 +7,7 @@
  * Die Meldungen (Toasts) fallen mit der Meldezeile (Aufgabe 2.3) weg.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, type MatchCockpitSettings } from '../../../../types/tournament';
 import { makeLiveMatch, makeProps } from '../../__tests__/cockpitFixtures';
 import type { LiveCockpitProps } from '../../types';
@@ -27,10 +27,11 @@ function setup(options: { offen?: OffenerEintrag | null; props?: Partial<LiveCoc
   const sides = { getauscht: false, links: 'home' as const, rechts: 'away' as const, tausche: vi.fn() };
   const toast = { showSuccess: vi.fn(), showInfo: vi.fn(), showError: vi.fn() };
   const sound = { play: vi.fn(), activate: vi.fn().mockResolvedValue(undefined), isActivated: true };
+  const state = { isOvertime: false };
   const hook = renderHook(() =>
-    useCockpitCommands({ props, settings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...options.settings }, sound, flows, sides, toast, isOvertime: false }),
+    useCockpitCommands({ props, settings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...options.settings }, sound, flows, sides, toast, isOvertime: state.isOvertime }),
   );
-  return { hook, props, flows, sides, toast };
+  return { hook, props, flows, sides, toast, state };
 }
 
 describe('useCockpitCommands – Tor', () => {
@@ -188,5 +189,36 @@ describe('useCockpitCommands – Ereignisse, Sperre, Entscheidung', () => {
     expect(mit.hook.result.current.overlayHandlers.startOvertime).toBeDefined();
     expect(mit.hook.result.current.overlayHandlers.endAsDraw).toBeDefined();
     expect(ohne.hook.result.current.dialogs.showPenaltyShootout).toBe(false);
+  });
+});
+
+// BUG-008 (Zeitstrafe verschwindet nicht nach Spielende) und @FU-074: Mit dem Abpfiff endet jede
+// laufende Zeitstrafe – von Hand wie automatisch. Spiel 11, FC Nord, Nr. 4, 2 Minuten.
+describe('useCockpitCommands – BUG-008 Zeitstrafen nach dem Abpfiff', () => {
+  const mitStrafe = () => {
+    const ctx = setup({ props: { onTimePenalty: vi.fn() } });
+    act(() => ctx.hook.result.current.overlayHandlers.confirmTimePenalty(120, 'fc-nord', 4));
+    expect(ctx.hook.result.current.activePenalties).toHaveLength(1);
+    return ctx;
+  };
+
+  it('Abpfiff von Hand: die Liste der laufenden Zeitstrafen ist danach leer', () => {
+    const { hook } = mitStrafe();
+    act(() => hook.result.current.controls.onFinish());
+    expect(hook.result.current.activePenalties).toEqual([]);
+  });
+
+  it('automatischer Abpfiff bei abgelaufener Zeit: die Liste ist danach ebenfalls leer', () => {
+    const { hook, props, state } = mitStrafe();
+    state.isOvertime = true;
+    hook.rerender();
+    expect(props.onFinish).toHaveBeenCalledWith('match-11');
+    expect(hook.result.current.activePenalties).toEqual([]);
+  });
+
+  it('Gegenbeispiel: ohne Abpfiff bleibt die Zeitstrafe in der Liste', () => {
+    const { hook } = mitStrafe();
+    act(() => hook.result.current.controls.onPauseResume());
+    expect(hook.result.current.activePenalties).toHaveLength(1);
   });
 });
