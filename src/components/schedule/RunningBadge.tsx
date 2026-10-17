@@ -18,8 +18,9 @@ const badgeStyle: CSSProperties = {
   alignItems: 'center',
   gap: cssVars.spacing.xs,
   backgroundColor: cssVars.colors.statusLiveBg,
-  color: cssVars.colors.statusLive,
-  fontSize: cssVars.fontSizes.xs,
+  // Text in Textfarbe (Kontrast ≥ 4,5:1 auf dem Live-Grund); die Farbe „live“ trägt der Punkt (Farbe nie allein, VISUAL-DESIGN)
+  color: cssVars.colors.textPrimary,
+  fontSize: cssVars.fontSizes.sm,
   fontWeight: cssVars.fontWeights.bold,
   padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
   borderRadius: cssVars.borderRadius.sm,

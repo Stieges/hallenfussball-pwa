@@ -32,7 +32,7 @@ import { finalMatchLabel } from './finalMatchLabel';
 import { MatchScoreCell } from './MatchScoreCell';
 import { FinalStageMobileCard } from './FinalStageMobileCard';
 import { cardStatusOf, formatElapsed, resultFigures, type ResultFigures } from './matchResult';
-import { LiveBadge } from './LiveBadge';
+import { RunningBadge } from './RunningBadge';
 
 // Pending changes during edit mode
 interface PendingChanges {
@@ -349,7 +349,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
                       <span>{match.matchNumber}</span>
-                      {isRunning && <LiveBadge compact />}
+                      {isRunning && <RunningBadge testId={`final-row-live-${match.id}`} />}
                     </div>
                   </td>
                   {showReferees && (() => {
