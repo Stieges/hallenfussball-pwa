@@ -18,6 +18,7 @@ import { teamSlot } from '../../../core/models/matchSlot';
 import { testUuid } from '../../../test/testIds';
 import { cssVars } from '../../../design-tokens';
 import { FinalStageSchedule } from '../FinalStageSchedule';
+import { matchOf, viewOf, type Cache } from './scheduleViewFixture';
 
 vi.mock('../../../hooks/useLiveMatches', () => ({ useLiveMatches: () => ({ liveMatches: new Map() }) }));
 
@@ -25,6 +26,9 @@ const NORD = testUuid(1);
 const MITTE = testUuid(2);
 const HF1 = testUuid(101);
 const teams = [{ id: NORD, name: 'FC Nord' }, { id: MITTE, name: 'SG Mitte' }];
+
+/** Die Ansicht der Leitung mit dem Zwischenspeicher des Halbfinales (Status, Stand, Entscheidung). */
+const ansicht = (cache: Cache) => ({ teams, view: viewOf([matchOf(halbfinale(), cache)], teams) });
 
 function halbfinale(partial: Partial<ScheduledMatch> = {}): ScheduledMatch {
   const start = new Date('2026-11-14T14:20:00');
@@ -72,8 +76,8 @@ describe('C-FINALRUNDE-MOBIL-EINGABE: offenes Finalrunden-Spiel am Handy eintrag
 
   it('Gegenbeispiel: ein beendetes Spiel bleibt gesperrt (Korrigieren statt Eingabe)', () => {
     render(
-      <FinalStageSchedule matches={[halbfinale({ scoreA: 1, scoreB: 0 })]} tournament={{ teams }} editable onScoreChange={vi.fn()}
-        finishedMatches={new Set([HF1])} onStartCorrection={vi.fn()} />,
+      <FinalStageSchedule matches={[halbfinale({ scoreA: 1, scoreB: 0 })]} tournament={ansicht({ matchStatus: 'finished', scoreA: 1, scoreB: 0 })} editable onScoreChange={vi.fn()}
+        onStartCorrection={vi.fn()} />,
     );
     expect(screen.queryByTestId(`final-score-input-${HF1}-home`)).toBeNull();
   });
@@ -116,20 +120,21 @@ describe('@OB-064 Schriftstärke: nur der Sieger eines beendeten Spiels ist fett
   });
 
   it('Gegenbeispiel beendet: nur der Sieger ist fett, der Verlierer normal', () => {
-    const { container } = render(<FinalStageSchedule matches={[halbfinale({ scoreA: 1, scoreB: 0 })]} tournament={{ teams }} finishedMatches={new Set([HF1])} />);
+    const { container } = render(<FinalStageSchedule matches={[halbfinale({ scoreA: 1, scoreB: 0 })]} tournament={ansicht({ matchStatus: 'finished', scoreA: 1, scoreB: 0 })} />);
     expect(gewichtVon(zelle(container, 'FC Nord'))).toBe(cssVars.fontWeights.bold);
     expect(gewichtVon(zelle(container, 'SG Mitte'))).not.toBe(cssVars.fontWeights.bold);
   });
 });
 
-const AUSGANG = {
-  strafstoss: { scoreA: 2, scoreB: 2, finalSource: { scoreA: 2, scoreB: 2, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty' as const } },
-  verlaengerung: { scoreA: 2, scoreB: 2, finalSource: { scoreA: 2, scoreB: 2, overtimeScoreA: 1, overtimeScoreB: 0, decidedBy: 'overtime' as const } },
-  regulaer: { scoreA: 1, scoreB: 0 },
+/** Ergebnis wie am Spiel gespeichert (Zwischenspeicher): `scoreA/B` regulär, Verlängerung und Strafstoß getrennt. */
+const AUSGANG: Record<'strafstoss' | 'verlaengerung' | 'regulaer', Cache> = {
+  strafstoss: { matchStatus: 'finished', scoreA: 2, scoreB: 2, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty' },
+  verlaengerung: { matchStatus: 'finished', scoreA: 2, scoreB: 2, overtimeScoreA: 1, overtimeScoreB: 0, decidedBy: 'overtime' },
+  regulaer: { matchStatus: 'finished', scoreA: 1, scoreB: 0 },
 };
 
-function beendet(ausgang: Partial<ScheduledMatch>) {
-  return render(<FinalStageSchedule matches={[halbfinale(ausgang)]} tournament={{ teams }} finishedMatches={new Set([HF1])} />);
+function beendet(ausgang: Cache) {
+  return render(<FinalStageSchedule matches={[halbfinale()]} tournament={ansicht(ausgang)} />);
 }
 
 describe('@OB-064 Finalrunde: Karte (Handy) und Tabelle (Desktop)', () => {

@@ -2,7 +2,8 @@
  * MatchCardHeader - Kopfzeile der Spielkarte (@OB-064, Mockup Variante D)
  *
  * Links die Anpfiffzeit, rechts Feld, Gruppe/Runde, SR und der Status:
- * - läuft: Kennzeichen „läuft 07:30“ (ohne bekannte Zeit „läuft“)
+ * - läuft (auch unterbrochen): Kennzeichen „läuft 07:30“ (ohne bekannte Zeit „läuft“)
+ * - ausgefallen / gewertet: Kennzeichen nach dem Wortlaut der Ansicht (@ZM-104)
  * - beendet nach Strafstoßschießen: „beendet i. E.“
  * - nach Verlängerung entschieden: „n. V.“
  * - regulär beendet oder geplant: kein Zusatz
@@ -10,9 +11,11 @@
 import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
+import type { ViewMatchStatus } from '../../../core/view';
 import type { ResultFigures } from '../matchResult';
 import type { MatchCardStatus } from './MatchCardScore';
 import { formatTime } from './utils';
+import { RunningBadge } from '../RunningBadge';
 
 export interface MatchCardHeaderProps {
   scheduledTime?: string;
@@ -24,6 +27,8 @@ export interface MatchCardHeaderProps {
   result: ResultFigures | null;
   /** Spielzeit eines laufenden Spiels, z. B. „07:30“ */
   elapsedFormatted?: string;
+  /** Fachlicher Status der Ansicht: „ausgefallen“ und „gewertet“ stehen in der Kopfzeile (@ZM-104) */
+  viewStatus?: ViewMatchStatus;
 }
 
 const headerStyle: CSSProperties = {
@@ -46,26 +51,16 @@ const metaStyle: CSSProperties = {
   color: cssVars.colors.textSecondary,
 };
 
-const liveBadgeStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: cssVars.spacing.xs,
-  backgroundColor: cssVars.colors.statusLiveBg,
-  color: cssVars.colors.statusLive,
-  fontSize: cssVars.fontSizes.xs,
-  fontWeight: cssVars.fontWeights.bold,
-  padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-  borderRadius: cssVars.borderRadius.sm,
-};
-
 export const MatchCardHeader: React.FC<MatchCardHeaderProps> = ({
-  scheduledTime, field, group, showGroupLabel, referee, status, result, elapsedFormatted,
+  scheduledTime, field, group, showGroupLabel, referee, status, result, elapsedFormatted, viewStatus,
 }) => {
   const { t } = useTranslation('tournament');
   const isLive = status === 'running';
   const finishedNote = status === 'finished'
     ? result?.decision === 'penalty' ? t('matchResult.finishedPenalty') : result?.decision === 'overtime' ? t('matchResult.overtimeShort') : undefined
     : undefined;
+
+  const statusNote = viewStatus === 'cancelled' || viewStatus === 'awarded' ? t(`view.status.${viewStatus}`) : undefined;
 
   return (
     <div style={headerStyle}>
@@ -81,26 +76,9 @@ export const MatchCardHeader: React.FC<MatchCardHeaderProps> = ({
         {field !== undefined && <span>{t('matchCard.field', { field })}</span>}
         {showGroupLabel && group && group !== 'all' && <span>{t('matchCard.groupPrefix', { group })}</span>}
         {referee && <span>{t('matchCard.refereePrefix', { referee })}</span>}
-        {isLive && (
-          <>
-            <span style={liveBadgeStyle} data-testid="match-card-live">
-              <span style={{
-                width: cssVars.spacing.sm,
-                height: cssVars.spacing.sm,
-                borderRadius: '50%',
-                backgroundColor: cssVars.colors.statusLive,
-                animation: 'pulse 2s ease-in-out infinite',
-              }} />
-              {elapsedFormatted ? t('matchResult.runningElapsed', { elapsed: elapsedFormatted }) : t('matchResult.running')}
-            </span>
-            <style>{`
-              @keyframes pulse {
-                0% { opacity: 1; transform: scale(1); }
-                50% { opacity: 0.6; transform: scale(1.2); }
-                100% { opacity: 1; transform: scale(1); }
-              }
-            `}</style>
-          </>
+        {isLive && <RunningBadge elapsedFormatted={elapsedFormatted} />}
+        {statusNote && (
+          <span style={{ fontWeight: cssVars.fontWeights.bold }} data-testid="match-card-status-note">{statusNote}</span>
         )}
         {finishedNote && (
           <span style={{ fontWeight: cssVars.fontWeights.bold }} data-testid="match-card-decision">{finishedNote}</span>

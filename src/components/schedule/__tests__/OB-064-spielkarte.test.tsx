@@ -17,7 +17,13 @@ await initRealDeI18n();
 
 import { cssVars } from '../../../design-tokens';
 import { MatchCard, MatchCardDesktop } from '../MatchCard';
-import { resultFigures, type ResultSource, type ResultStatus } from '../matchResult';
+import { matchFinalScore, type FinalScoreSource } from '../../../core/view/finalScore';
+import { resultFigures as figuresOf, type ResultStatus } from '../matchResult';
+
+/** Ergebnis wie am Spiel gespeichert → Endstand der Ansicht (`matchFinalScore`) → Darstellung. */
+type ResultSource = FinalScoreSource;
+const resultFigures = (source: ResultSource, status: ResultStatus) =>
+  figuresOf(matchFinalScore({ ...source, matchStatus: status === 'running' ? 'running' : 'finished' }) ?? undefined, status);
 
 const NORD = { id: 'nord', name: 'FC Nord' };
 const MITTE = { id: 'mitte', name: 'SG Mitte' };

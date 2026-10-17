@@ -27,11 +27,11 @@ import { CSS } from '@dnd-kit/utilities';
 import { cssVars, shadowSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import { RefereeConfig } from '../../types/tournament';
-import { matchLabelText } from '../../core/models/slotLabel';
-import { buildSideContext, sideDisplay, sideName, type SideSource } from './matchSides';
+import { buildSideContext, matchViewOf, sideDisplay, sideName, type SideSource } from './matchSides';
+import { finalMatchLabel } from './finalMatchLabel';
 import { MatchScoreCell } from './MatchScoreCell';
 import { FinalStageMobileCard } from './FinalStageMobileCard';
-import { resultFigures, scheduleStatusOf, type ResultFigures } from './matchResult';
+import { cardStatusOf, formatElapsed, resultFigures, type ResultFigures } from './matchResult';
 import { LiveBadge } from './LiveBadge';
 
 // Pending changes during edit mode
@@ -52,16 +52,15 @@ interface FinalStageScheduleProps {
   editingSchedule?: boolean;
   /** Pending changes during edit mode (not yet saved) */
   pendingChanges?: PendingChanges;
-  finishedMatches?: Set<string>;
   correctionMatchId?: string | null;
   onStartCorrection?: (matchId: string) => void;
-  /** MON-LIVE-INDICATOR-01: IDs of matches that are currently running */
-  runningMatchIds?: Set<string>;
+  /** Gespielte Sekunden eines laufenden Spiels (Kopfzeile der Karte, @OB-064); ohne Angabe steht nur „läuft“ */
+  elapsedSeconds?: (matchId: string) => number | undefined;
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
   onMatchSwap?: (matchId1: string, matchId2: string) => void;
   /** Whether to show the section title (default: true) */
   showTitle?: boolean;
-  /** Teams, Gruppen und Spiele für die Anzeige der Spielseiten (@TM-015) */
+  /** Teams, Gruppen, Spiele und die gemeinsame Ansicht (Status, Seiten, Endstand) */
   tournament?: SideSource;
   // Note: Permission check is now handled in ScheduleTab
 }
@@ -76,17 +75,18 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   editable = false,
   editingSchedule = false,
   pendingChanges,
-  finishedMatches,
   correctionMatchId,
   onStartCorrection,
-  runningMatchIds,
+  elapsedSeconds,
   onMatchSwap,
   showTitle = true,
   tournament,
 }) => {
   const { t } = useTranslation('tournament');
-  // Spielseiten: Namen immer über slotLabel mit den aktuellen Teams, nie aus gespeichertem Anzeigetext
+  // Spielseiten: Namen immer aus der Ansicht (Slots, aktuelle Teams), nie aus gespeichertem Anzeigetext
   const sides = useMemo(() => buildSideContext(tournament, matches), [tournament, matches]);
+  // Eine Statusquelle: die Ansicht (läuft ∨ unterbrochen = läuft; ohne Ansicht gilt jedes Spiel als geplant)
+  const statusOf = (match: ScheduledMatch) => cardStatusOf(matchViewOf(sides, match.id));
   // DnD State
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -168,8 +168,8 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     match: ScheduledMatch;
     children: (props: SortableRowRenderProps) => React.ReactNode;
   }> = ({ match, children }) => {
-    const isRunning = runningMatchIds?.has(match.id);
-    const isFinished = finishedMatches?.has(match.id);
+    const isRunning = statusOf(match) === 'running';
+    const isFinished = statusOf(match) === 'finished';
     const canDrag = !!(editingSchedule && onMatchSwap && !isRunning && !isFinished);
 
     const {
@@ -323,8 +323,9 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
       </thead>
       <tbody>
         {sortedMatches.map((match) => {
-          const isRunning = runningMatchIds?.has(match.id);
-          const result = resultFigures(match, scheduleStatusOf(match, runningMatchIds, finishedMatches));
+          const status = statusOf(match);
+          const isRunning = status === 'running';
+          const result = resultFigures(matchViewOf(sides, match.id)?.score, status);
 
           return (
             <SortableRow key={match.id} match={match}>
@@ -373,7 +374,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   }}>
                     {isDragging ? '↕️' : match.time}
                   </td>
-                  <td style={{ ...tdStyle, ...matchLabelCellStyle }}>{getFinalMatchLabel(match, t)}</td>
+                  <td style={{ ...tdStyle, ...matchLabelCellStyle }}>{finalMatchLabel(match, sides, t)}</td>
                   <td style={{
                     ...teamCellStyle,
                     ...winnerCellStyle(result, 'a'),
@@ -387,8 +388,9 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                       scoreA={match.scoreA}
                       scoreB={match.scoreB}
                       editable={editable && onScoreChange !== undefined}
-                      isFinished={finishedMatches?.has(match.id) ?? false}
+                      isFinished={status === 'finished'}
                       result={result}
+                      viewStatus={matchViewOf(sides, match.id)?.status}
                       inCorrectionMode={correctionMatchId === match.id}
                       onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
                       onStartCorrection={onStartCorrection ? () => onStartCorrection(match.id) : undefined}
@@ -504,7 +506,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     fontSize: cssVars.fontSizes.xs,
                     fontWeight: cssVars.fontWeights.semibold,
                   }}>
-                    {getFinalMatchLabel(activeMatch, t)}
+                    {finalMatchLabel(activeMatch, sides, t)}
                   </span>
                   <span style={{ color: cssVars.colors.textSecondary }}>{activeMatch.time}</span>
                   <span style={{ fontWeight: cssVars.fontWeights.semibold, flex: 1 }}>
@@ -522,8 +524,10 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
       {/* Mobile Card View: Tore je Zeile (@OB-064), Eingabe je Feld (C-FINALRUNDE-MOBIL-EINGABE) */}
       <div className="mobile-view">
         {sortedMatches.map((match) => {
-          const isFinished = finishedMatches?.has(match.id) ?? false;
-          const status = scheduleStatusOf(match, runningMatchIds, finishedMatches);
+          const status = statusOf(match);
+          const isFinished = status === 'finished';
+          const matchView = matchViewOf(sides, match.id);
+          const elapsed = status === 'running' ? elapsedSeconds?.(match.id) : undefined;
           const home = sideDisplay(match, 'A', sides);
           const away = sideDisplay(match, 'B', sides);
           const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
@@ -533,13 +537,15 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
             <FinalStageMobileCard
               key={match.id}
               match={match}
-              label={getFinalMatchLabel(match, t)}
+              label={finalMatchLabel(match, sides, t)}
               homeName={home.name}
               awayName={away.name}
               homePending={home.pending}
               awayPending={away.pending}
-              result={resultFigures(match, status)}
-              isRunning={runningMatchIds?.has(match.id) ?? false}
+              result={resultFigures(matchView?.score, status)}
+              isRunning={status === 'running'}
+              elapsedFormatted={elapsed === undefined ? undefined : formatElapsed(elapsed)}
+              viewStatus={matchView?.status}
               isFinished={isFinished}
               canEditScore={editable && onScoreChange !== undefined && !isFinished}
               inCorrectionMode={correctionMatchId === match.id}
@@ -595,16 +601,4 @@ function winnerCellStyle(result: ResultFigures | null, side: 'a' | 'b'): CSSProp
   return result.winner === side
     ? { fontWeight: cssVars.fontWeights.bold }
     : { color: cssVars.colors.textSecondary };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Translation function type simplified for standalone helper
-function getFinalMatchLabel(match: ScheduledMatch, t: (key: any) => string): string {
-  if (match.finalType === 'final') { return t('finals.labels.final'); }
-  if (match.finalType === 'thirdPlace') { return t('finals.labels.thirdPlace'); }
-  if (match.finalType === 'fifthSixth') { return t('finals.labels.fifthSixth'); }
-  if (match.finalType === 'seventhEighth') { return t('finals.labels.seventhEighth'); }
-  if (match.phase === 'semifinal') { return t('finals.labels.semifinal'); }
-  if (match.phase === 'quarterfinal') { return t('finals.labels.quarterfinal'); }
-  if (match.label?.includes('Halbfinale')) { return matchLabelText(match.label); }
-  return t('finals.labels.finalMatch');
 }

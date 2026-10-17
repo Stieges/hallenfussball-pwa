@@ -21,6 +21,7 @@ import { cssVars } from '../../../design-tokens'
 import type { MatchCardStatus } from './MatchCardScore';
 import { MatchCardHeader } from './MatchCardHeader';
 import { TeamScoreRows } from './TeamScoreRows';
+import type { ViewMatchStatus } from '../../../core/view';
 import type { ResultFigures } from '../matchResult';
 import type { TeamLogo, TeamColors } from '../../../types/tournament';
 
@@ -60,6 +61,8 @@ export interface MatchCardProps {
   status: MatchCardStatus;
   /** Spielzeit eines laufenden Spiels (z. B. "07:30") für die Kopfzeile */
   elapsedFormatted?: string;
+  /** Fachlicher Status der Ansicht: „ausgefallen“ / „gewertet“ in der Kopfzeile (@ZM-104) */
+  viewStatus?: ViewMatchStatus;
   /** Callback when card body is clicked */
   onCardClick?: () => void;
   /** Callback when score circle is clicked */
@@ -91,6 +94,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   result = null,
   status,
   elapsedFormatted,
+  viewStatus,
   onCardClick,
   onCircleClick,
   isExpanded = false,
@@ -186,6 +190,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         status={status}
         result={result}
         elapsedFormatted={elapsedFormatted}
+        viewStatus={viewStatus}
       />
 
       {/* Body: Teams, Tore je Zeile + Events Indicator */}

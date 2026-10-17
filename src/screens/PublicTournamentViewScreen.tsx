@@ -13,6 +13,8 @@ import { useState, useEffect, CSSProperties } from 'react';
 import { cssVars } from '../design-tokens'
 import { Tournament, Standing } from '../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
+import { applyScoreVisibility, publicMatches } from '../features/public-view/publicScheduleFilters';
+import { usePublicView } from '../features/public-view/usePublicView';
 import { calculateStandings } from '../utils/calculations';
 import { ScheduleDisplay } from '../components/ScheduleDisplay';
 import { formatDateGerman } from '../utils/locationHelpers';
@@ -123,32 +125,11 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
     void loadTournament();
   }, [tournamentId]);
 
-  // Apply privacy filters
-  const getFilteredSchedule = (): GeneratedSchedule | null => {
-    if (!schedule || !tournament) { return null; }
+  const view = usePublicView(tournament, schedule); // gemeinsame Ansicht (A-36c)
 
-    // Filter scores if hideScoresForPublic is enabled
-    if (tournament.hideScoresForPublic) {
-      return {
-        ...schedule,
-        allMatches: schedule.allMatches.map((match) => ({
-          ...match,
-          scoreA: undefined,
-          scoreB: undefined,
-        })),
-        phases: schedule.phases.map((phase) => ({
-          ...phase,
-          matches: phase.matches.map((match) => ({
-            ...match,
-            scoreA: undefined,
-            scoreB: undefined,
-          })),
-        })),
-      };
-    }
-
-    return schedule;
-  };
+  // Datenschutz: ohne Stände, wenn die Regeln der Ansicht Ergebnisse verbergen
+  const getFilteredSchedule = (): GeneratedSchedule | null =>
+    schedule && view ? applyScoreVisibility(schedule, view.rules) : null;
 
   // Filter standings if hideRankingsForPublic is enabled
   const getFilteredStandings = (): Standing[] => {
@@ -249,9 +230,9 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
         <Card>
           <ScheduleDisplay
             schedule={filteredSchedule}
-            hidePendingOrigin={tournament.hideScoresForPublic}
+            view={view ?? undefined}
             currentStandings={filteredStandings}
-            currentMatches={tournament.matches}
+            currentMatches={publicMatches(tournament, view?.rules ?? { results: false })}
             tournamentTeams={tournament.teams}
             editable={false}
           />
