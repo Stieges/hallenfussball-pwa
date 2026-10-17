@@ -143,6 +143,14 @@ export class LocalMatchStore {
     });
   }
 
+  /** B-07a: mehrere Eintraege in EINER Transaktion (Stapel, R12) -- alle oder keiner. */
+  async addPendingBatch(accountId: string, matchId: string, events: readonly EngineEvent[]): Promise<void> {
+    await this.update(this.key(accountId, matchId), (copy) => {
+      copy.pending.push(...events);
+      copy.updatedAt = Date.now();
+    });
+  }
+
   async markAcked(accountId: string, matchId: string, ids: string[]): Promise<void> {
     const marked = new Set(ids);
     await this.update(this.key(accountId, matchId), (copy) => {
@@ -242,14 +250,21 @@ export class LocalMatchStore {
 
   /** Gastmodus (V14): Eintrag geht direkt nach `confirmed`, die `seq` wird intern vergeben. */
   async addConfirmedLocal(accountId: string, matchId: string, event: EngineEvent): Promise<void> {
+    await this.addConfirmedLocalBatch(accountId, matchId, [event]);
+  }
+
+  /** B-07a: Stapel im Gastmodus -- fortlaufende `seq`, eine Transaktion. */
+  async addConfirmedLocalBatch(accountId: string, matchId: string, events: readonly EngineEvent[]): Promise<void> {
     if (accountId !== 'guest') {
-      throw new Error('addConfirmedLocal ist nur fuer den Gastmodus (guest) erlaubt');
+      throw new Error('addConfirmedLocal/addConfirmedLocalBatch sind nur fuer den Gastmodus (guest) erlaubt');
     }
     await this.update(this.key(accountId, matchId), (copy) => {
-      const maxSeq = copy.confirmed.reduce((max, entry) => Math.max(max, entry.seq), 0);
-      const stored: EngineEventWithSeq = { ...event, seq: maxSeq + 1 };
-      copy.confirmed.push(stored);
-      copy.watermarkSeq = Math.max(copy.watermarkSeq, stored.seq);
+      for (const event of events) {
+        const maxSeq = copy.confirmed.reduce((max, entry) => Math.max(max, entry.seq), 0);
+        const stored: EngineEventWithSeq = { ...event, seq: maxSeq + 1 };
+        copy.confirmed.push(stored);
+        copy.watermarkSeq = Math.max(copy.watermarkSeq, stored.seq);
+      }
       copy.updatedAt = Date.now();
     });
   }

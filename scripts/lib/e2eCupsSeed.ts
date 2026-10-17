@@ -11,6 +11,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   E2E_ABMELDEN_CUPS,
   E2E_ENGINE_CUPS,
+  type AbmeldenCupSlug,
   type EngineCupSlug,
   type EngineCupSpec,
   E2E_LEGACY_CUPS,
@@ -210,18 +211,22 @@ export async function seedEngineCups(
   }
 }
 
+/** Eigentümer-Kontext eines Abmelde-Cups: `deps.ownerClient` und `ownerRepo` gehören zu diesem Konto. */
+export interface AbmeldenOwnerSeed {
+  deps: EngineSeedDeps;
+  ownerRepo: ITournamentRepository;
+  service: TournamentCreationService;
+}
+
 /**
- * A-07d3: Engine-Cups des Kontos `abmelden` (nicht `owner`). `deps.ownerClient` und `ownerRepo`
- * gehören zu diesem Konto -- die RPC `append_match_events` prüft den Eigentümer.
+ * A-07d3: Engine-Cups der Abmelde-Tests, je Cup beim EIGENEN Konto (`owners`, siehe
+ * `E2E_ABMELDEN_OWNER`). Die RPC `append_match_events` prüft den Eigentümer.
  */
-export async function seedAbmeldenCups(
-  deps: EngineSeedDeps,
-  ownerRepo: ITournamentRepository,
-  service: TournamentCreationService
-): Promise<void> {
-  deps.log(`Lege ${E2E_ABMELDEN_CUPS.length} Abmelde-Cups an…`);
+export async function seedAbmeldenCups(owners: Record<AbmeldenCupSlug, AbmeldenOwnerSeed>): Promise<void> {
   for (const cup of E2E_ABMELDEN_CUPS) {
-    await seedOneEngineCup(deps, ownerRepo, service, cup, null);
+    const owner = owners[cup.slug as AbmeldenCupSlug];
+    owner.deps.log(`Lege Abmelde-Cup ${cup.slug} an…`);
+    await seedOneEngineCup(owner.deps, owner.ownerRepo, owner.service, cup, null);
   }
 }
 

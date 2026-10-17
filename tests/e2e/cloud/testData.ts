@@ -47,7 +47,9 @@ export type E2EUserKey =
   | 'google'
   | 'logouttest'
   | 'logouttestMobile'
-  | 'abmelden';
+  | 'abmelden'
+  | 'abmeldenAn024'
+  | 'abmeldenFu006';
 
 export interface E2EUserSpec {
   key: E2EUserKey;
@@ -88,12 +90,17 @@ export const E2E_USERS: Record<E2EUserKey, E2EUserSpec> = {
   // Logout-Test selbst prüft genau das UI-Verhalten von signOut(), also die einzige Prüfung, bei
   // der das tatsächlich etwas kaputt machen könnte.
   logouttestMobile: { key: 'logouttestMobile', email: 'logouttest-mobile@test.local', displayName: 'Mona Logouttest' },
-  // A-07d3: EIGENES Konto für `abmelden-geraete.cloud.spec.ts`. „Auf allen anderen Geräten abmelden"
-  // (`scope: 'others'`) beendet jede andere Sitzung des Kontos, auch die gespeicherte aus
-  // `playwright/.auth/` -- deshalb teilt sich dieses Konto kein anderer Spec. Es besitzt nur die
-  // Abmelde-Cups (`E2E_ABMELDEN_CUPS` in `engineCups.ts`). Kein storageState, der Spec meldet sich
-  // selbst über die Oberfläche an.
+  // A-07d3: EIGENE Konten für `abmelden-geraete.cloud.spec.ts`, je Test eines. „Auf allen anderen
+  // Geräten abmelden" (`admin.signOut(jwt, 'others')`) beendet jede andere Sitzung desselben Kontos.
+  // Isolation der Fälle: Jeder Fall hat sein Konto, damit „andere Geräte abmelden“ nie die Sitzung
+  // eines anderen Falls trifft. Der Banner-Fehler „von einem anderen Gerät aus abgemeldet“ mitten im
+  // Test hatte eine andere Ursache (C-ABMELDE-HINWEIS-WETTLAUF, App-Fix 0e60860a), nicht die
+  // Kontentrennung. Jedes Konto besitzt genau seinen Cup
+  // (`E2E_ABMELDEN_OWNER` in `engineCups.ts`, die RPC prüft den Eigentümer). Kein storageState, der
+  // Spec meldet sich selbst über die Oberfläche an.
   abmelden: { key: 'abmelden', email: 'abmelden@test.local', displayName: 'Anja Abmelden' },
+  abmeldenAn024: { key: 'abmeldenAn024', email: 'abmelden-an024@test.local', displayName: 'Anton Abmelden' },
+  abmeldenFu006: { key: 'abmeldenFu006', email: 'abmelden-fu006@test.local', displayName: 'Frieda Abmelden' },
 };
 
 /** Adressen für offene/abgelaufene/widerrufene Einladungen OHNE eigenes Konto. */
