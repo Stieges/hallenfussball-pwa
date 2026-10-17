@@ -981,7 +981,7 @@ html[data-font-size="x-large"] {
   --color-border-control: #AAAAAA;
   --color-border-control-raised: #AAAAAA;
 
-  /* Tafel Live-Cockpit (Spec § 8.2): ohne eigene Mockup-Fassung für hohen Kontrast, dunkle Werte übernommen */
+  /* Tafel Live-Cockpit, hoher Kontrast: Platzhalter, nicht MVP (Werte schwarz/gelb/weiß, nur vorläufig) */
   --color-scoreboard-bg: #000000;
   --color-scoreboard-text: #FFFFFF;
   --color-scoreboard-text-muted: #FFFF00;

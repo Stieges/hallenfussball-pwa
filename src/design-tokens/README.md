@@ -97,7 +97,7 @@ Die Prüfung `src/design-tokens/__tests__/borderControl.contrast.test.ts` rechne
 
 #### Tafel (Live-Cockpit)
 
-Die Tafel (Spielstand, Uhr, Meldezeile) hat eigene Tokens, nie `surface`. Hell und dunkel: dunkle Tafel (Mockup-Freigabe 16.10.). Hoher Kontrast: schwarze Fläche, gelbe Zweitschrift, weißer Rand.
+Die Tafel (Spielstand, Uhr, Meldezeile) hat eigene Tokens, nie `surface`. Hell und dunkel: dunkle Tafel (Mockup-Freigabe 16.10.). Hoher Kontrast ist nicht MVP: schwarze Fläche, gelbe Zweitschrift, weißer Rand sind nur Platzhalter.
 
 | Rolle | Token | Kontrast |
 |---|---|---|

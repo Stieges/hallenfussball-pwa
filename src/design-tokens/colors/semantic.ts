@@ -291,7 +291,7 @@ export const semanticColorsDark = {
 
   // ---------------------------------------------------------------------------
   // Tafel Live-Cockpit (Spec § 8.2, Mockup-Freigabe 16.10.). Eigene Tokens, nie `surface`.
-  // Hoher Kontrast: Mockup ohne eigene Fassung, deshalb dunkle Werte (siehe global.css).
+  // Hoher Kontrast: nicht MVP, Werte nur Platzhalter (eigene Fassung in global.css).
   // ---------------------------------------------------------------------------
   scoreboardBg: '#050E1F',
   scoreboardText: palette.neutral[0],

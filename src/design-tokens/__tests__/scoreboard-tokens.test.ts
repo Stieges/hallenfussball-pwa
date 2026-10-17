@@ -4,9 +4,9 @@ import { cssVars } from '../cssVars';
 
 const THEMES: ThemeName[] = ['dark', 'light', 'high-contrast'];
 
-/** Meldezeile liegt auf `--tf-surface` über der Tafel (Mockup `.msg`), also gemischt, nicht die nackte Tafel. */
+/** Die Meldezeile liegt über der Tafel. Gemessen wird der Token `--color-notice-line-bg` (N1), gemischt über die Tafelfläche. */
 function meldezeileFlaeche(theme: ThemeName): string {
-  return over(resolveToken(theme, 'var(--color-scoreboard-surface)'), resolveToken(theme, 'var(--color-scoreboard-bg)'));
+  return over(resolveToken(theme, 'var(--color-notice-line-bg)'), resolveToken(theme, 'var(--color-scoreboard-bg)'));
 }
 
 describe('Tafel-Tokens (Spec § 8.2, Entscheidung 2)', () => {
@@ -51,7 +51,7 @@ describe('Tafel-Tokens (Spec § 8.2, Entscheidung 2)', () => {
       .toBeGreaterThanOrEqual(MIN_UI_CONTRAST);
   });
 
-  it('hoher Kontrast: schwarze Fläche, gelbe Zweitschrift, weißer Rand (Entscheidung Fixrunde)', () => {
+  it('hoher Kontrast (Platzhalter, nicht MVP): schwarze Fläche, gelbe Zweitschrift, weißer Rand', () => {
     expect(resolveToken('high-contrast', 'var(--color-scoreboard-bg)')).toBe('#000000');
     expect(resolveToken('high-contrast', 'var(--color-scoreboard-text-muted)')).toBe('#FFFF00');
     expect(resolveToken('high-contrast', 'var(--color-scoreboard-border)')).toBe('#FFFFFF');
