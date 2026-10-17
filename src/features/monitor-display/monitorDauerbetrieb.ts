@@ -18,6 +18,16 @@ export const VOLLBILD_TASTE = 'f';
 export const WAKE_LOCK_HINWEIS_MS = 10_000;
 
 /**
+ * Folien, auf denen der Hinweis stehen darf (@ME-006): die Einrichtungs-Folie (eigener Text bzw. Ankündigung) und die
+ * Zuschauer-QR-Folie. Auf Spielplan-, Tabellen-, Sponsor- und Live-Folien nie.
+ */
+const HINWEIS_FOLIENTYPEN: ReadonlySet<string> = new Set(['custom-text', 'qr-code']);
+
+export function istHinweisFolie(folie: { type: string } | null): boolean {
+  return folie !== null && HINWEIS_FOLIENTYPEN.has(folie.type);
+}
+
+/**
  * Braucht der Zustand der Zusage den Hinweis? Ja bei Ablehnung, fehlender Schnittstelle und 5 s ohne Antwort
  * (@ME-006). Eine später zurückgenommene Zusage (`released`) zeigt am Monitor nichts, das sieht nur die Verwaltung.
  */

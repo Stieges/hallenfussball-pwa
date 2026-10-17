@@ -1,6 +1,6 @@
 /**
  * Hinweis-Ecke des Monitors (B-48a, @ME-006): Batterie-Symbol in Warnfarbe plus Text, oben rechts innerhalb des
- * Bildrands. Steht nur auf Folien ohne laufendes Spiel, 10 Sekunden lang (Regeln in useWakeLockHinweis).
+ * Bildrands (Ecke des sicheren Bereichs). Steht nur auf Einrichtungs- und QR-Folien ohne laufendes Spiel, 10 Sekunden lang (Regeln in useWakeLockHinweis).
  * Schrift nie unter 3 % der Bildhöhe, Maße aus den Display-Tokens.
  */
 import type { CSSProperties } from 'react';
@@ -12,8 +12,6 @@ export interface WakeLockNoticeProps {
   text: string;
   /** Farben des Monitor-Themas (hell/dunkel), wie die Folien sie nutzen */
   themeColors: MonitorThemeColors;
-  /** Bildrand des Monitors in px: der Kasten bleibt innerhalb, mindestens 5 % der Seite. */
-  overscanPx?: number;
 }
 
 function BatterySymbol({ color }: { color: string }) {
@@ -37,12 +35,16 @@ function BatterySymbol({ color }: { color: string }) {
   );
 }
 
-export function WakeLockNotice({ text, themeColors, overscanPx = 0 }: WakeLockNoticeProps) {
+export function WakeLockNotice({ text, themeColors }: WakeLockNoticeProps) {
   const style: CSSProperties = {
-    position: 'fixed',
-    top: `max(${overscanPx}px, ${displayLayout.noticeCornerMin})`,
-    right: `max(${overscanPx}px, ${displayLayout.noticeCornerMinX})`,
-    maxWidth: displayLayout.noticeCornerMaxWidth,
+    // Die Ecke des sicheren Bereichs (innerhalb des Bildrands, @ME-067): kein zweiter Rand
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    // Eine Zeile mit fester Höhe: die Folie rückt um genau diese Höhe nach unten (@ME-006)
+    height: displayLayout.noticeHeight,
+    maxWidth: '100%',
+    whiteSpace: 'nowrap',
     zIndex: cssVars.zIndex.sticky,
     display: 'flex',
     alignItems: 'center',

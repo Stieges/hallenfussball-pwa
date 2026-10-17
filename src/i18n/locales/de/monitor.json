@@ -78,7 +78,7 @@
     }
   },
   "dauerbetrieb": {
-    "wakeLockHint": "Der Bildschirm kann sich nach der Energiespar-Einstellung des Geräts abschalten."
+    "wakeLockHint": "Bildschirm kann ausgehen – Energiesparen prüfen"
   },
   "loading": "Lade Display...",
   "error": {

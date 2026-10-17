@@ -1,6 +1,5 @@
 /**
- * Wachhalten-Hinweis der Monitor-Seite (B-48a, Variante B): „Der Bildschirm kann sich nach der Energiespar-Einstellung
- * des Geräts abschalten.“ @ME-006, Gegenbeispiele @ME-006 und @ME-064 (Verwaltung, nicht hier).
+ * Wachhalten-Hinweis der Monitor-Seite (B-48a, Variante B): „Bildschirm kann ausgehen – Energiesparen prüfen“ @ME-006, Gegenbeispiele @ME-006 und @ME-064 (Verwaltung, nicht hier).
  * Der Hinweis erscheint nur beim Start auf Folien ohne laufendes Spiel, 10 Sekunden lang, als Ecke oben rechts; startet
  * während der 10 Sekunden ein Spiel, verschwindet er sofort. Nie auf der Live-Folie mit Spiel, nie in der Browser-Quelle,
  * nie nach einer Zusage.
@@ -105,15 +104,6 @@ describe('Browser-Quelle und Zusage: nie ein Hinweis (@ME-006)', () => {
     expect(symbolHex, 'Symbolfarbe aus dem Thema').toBeDefined();
     expect(getContrastRatio(symbolHex!, farben.background), 'Symbol mindestens 3 : 1').toBeGreaterThanOrEqual(3);
   });
-
-  it('die Ecke rückt rechts um mindestens 5 % der Breite ein (eigenes Token), oben um 5 % der Höhe', async () => {
-    wakeLockAbgelehnt();
-    localGet.mockResolvedValue(attachMonitor(buildTournament(), withMonitor({ slides: [slide('qr-code', {}, 30)] })));
-    seite();
-    await vorspulen(0);
-    expect(hinweis()?.style.right).toContain('5vw');
-    expect(hinweis()?.style.top).toContain('5vh');
-  });
 });
 
 describe('Wake Lock nach der ersten Eingabe (B-17 Fixrunde 2)', () => {
@@ -161,12 +151,13 @@ describe('W4 und Wortlaut (@ME-006, i18n)', () => {
     expect(hinweis()).not.toBeInTheDocument();
   });
 
-  it('@ME-006 Wortlaut: der deutsche Hinweis ist der Satz des Szenarios', () => {
-    expect(deMonitor.dauerbetrieb.wakeLockHint).toBe('Der Bildschirm kann sich nach der Energiespar-Einstellung des Geräts abschalten.');
+  it('@ME-006 Wortlaut: der deutsche Hinweis ist der Text des Szenarios, eine Zeile', () => {
+    expect(deMonitor.dauerbetrieb.wakeLockHint).toBe('Bildschirm kann ausgehen – Energiesparen prüfen');
+    expect(deMonitor.dauerbetrieb.wakeLockHint).not.toMatch(/\n/);
   });
 
-  it('DE und EN haben den Schlüssel dauerbetrieb.wakeLockHint mit Text', () => {
-    expect(deMonitor.dauerbetrieb.wakeLockHint).toMatch(/Energiespar/);
-    expect(enMonitor.dauerbetrieb.wakeLockHint).toMatch(/power-saving/);
+  it('DE und EN haben den Schlüssel dauerbetrieb.wakeLockHint mit Text, EN sinngemäß', () => {
+    expect(deMonitor.dauerbetrieb.wakeLockHint).toMatch(/Energiesparen/);
+    expect(enMonitor.dauerbetrieb.wakeLockHint).toBe('Screen may turn off – check power saving');
   });
 });

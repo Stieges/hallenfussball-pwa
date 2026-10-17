@@ -1,6 +1,5 @@
 /**
- * Wachhalten-Hinweis der Monitor-Seite (B-48a, Variante B): „Der Bildschirm kann sich nach der Energiespar-Einstellung
- * des Geräts abschalten.“ @ME-006, Gegenbeispiele @ME-006 und @ME-064 (Verwaltung, nicht hier).
+ * Wachhalten-Hinweis der Monitor-Seite (B-48a, Variante B): „Bildschirm kann ausgehen – Energiesparen prüfen“ @ME-006, Gegenbeispiele @ME-006 und @ME-064 (Verwaltung, nicht hier).
  * Der Hinweis erscheint nur beim Start auf Folien ohne laufendes Spiel, 10 Sekunden lang, als Ecke oben rechts; startet
  * während der 10 Sekunden ein Spiel, verschwindet er sofort. Nie auf der Live-Folie mit Spiel, nie in der Browser-Quelle,
  * nie nach einer Zusage.
@@ -78,9 +77,9 @@ describe('Hinweis auf Folien ohne laufendes Spiel (@ME-006)', () => {
     await vorspulen(wartezeit);
     expect(hinweis()).toHaveTextContent(HINWEIS);
     expect(kopfzeile()).not.toBeInTheDocument();
-    expect(hinweis()?.style.position).toBe('fixed');
-    expect(hinweis()?.style.top).toContain('48px');
-    expect(hinweis()?.style.right).toContain('48px');
+    expect(hinweis()?.style.position).toBe('absolute');
+    expect(hinweis()?.style.top).toBe('0px');
+    expect(hinweis()?.style.right).toBe('0px');
     expect(hinweis()?.style.bottom).toBe('');
     await vorspulen(10_000 - 1);
     expect(hinweis()).toBeInTheDocument();
@@ -89,10 +88,9 @@ describe('Hinweis auf Folien ohne laufendes Spiel (@ME-006)', () => {
   });
 
   it.each([
-    ['Live-Folie ohne laufendes Spiel (Feld 2)', [slide('live', { fieldId: 'field-2' }, 30)]],
-    ['Tabelle', [slide('standings', { groupId: 'A' }, 30)]],
+    ['Live-Folie ohne laufendes Spiel (Feld 2, Rückfall auf QR)', [slide('live', { fieldId: 'field-2' }, 30)]],
     ['Zuschauer-QR', [slide('qr-code', {}, 30)]],
-    ['Textfolie', [slide('custom-text', { headline: 'Folie A' }, 30)]],
+    ['Einrichtung / Textfolie', [slide('custom-text', { headline: 'Folie A' }, 30)]],
   ] as const)('Startfolie „%s“: der Hinweis steht 10 Sekunden', async (_name, folien) => {
     wakeLockAbgelehnt();
     localGet.mockResolvedValue(monitorTurnier([...folien]));
@@ -169,7 +167,8 @@ describe('Hinweis auf Folien ohne laufendes Spiel (@ME-006)', () => {
   });
 
   it.each([
-    ['Tabelle', [slide('standings', { groupId: 'A' }, 30)]],
+    ['Spielplan', [slide('schedule-field', { fieldId: 'field-1' }, 30)]],
+    ['Zuschauer-QR', [slide('qr-code', {}, 30)]],
     ['Textfolie', [slide('custom-text', { headline: 'Folie A' }, 30)]],
   ] as const)('Gegenbeispiel: bei Zusage des Browsers erscheint auf „%s“ kein Hinweis', async (_name, folien) => {
     localGet.mockResolvedValue(monitorTurnier([...folien]));
@@ -186,7 +185,30 @@ describe('Live-Folie mit laufendem Spiel (@ME-006, Kopfzeile)', () => {
     localGet.mockResolvedValue(liveTurnier());
     seite();
     await vorspulen(0);
-    await vorspulen(wartezeit + 11_000);
+    // A1: sofort prüfen, nicht erst nach Ablauf der 10 Sekunden (sonst wäre ein Hinweis längst wieder weg)
+    expect(hinweis()).not.toBeInTheDocument();
+    await vorspulen(wartezeit);
+    expect(hinweis()).not.toBeInTheDocument();
+    for (let s = 1; s <= 11; s += 1) {
+      await vorspulen(1_000);
+      expect(hinweis(), `${wartezeit / 1_000 + s} s nach dem Start`).not.toBeInTheDocument();
+    }
+  });
+
+  it.each(LAGEN)('Gegenbeispiel, Lage „%s“: läuft ein Spiel, zeigt auch eine vorangehende Text- oder QR-Folie keinen Hinweis', async (_lage, einrichten, wartezeit) => {
+    einrichten();
+    // auf demselben Turnier läuft Spiel 7 auf Feld 1 (liveTurnier)
+    localGet.mockResolvedValue({ ...liveTurnier(), monitors: monitorTurnier([
+      slide('qr-code', {}, 30),
+      slide('custom-text', { headline: 'Folie A' }, 30),
+      slide('live', { fieldId: 'field-1' }, 30),
+    ]).monitors });
+    seite();
+    await vorspulen(0);
+    expect(hinweis()).not.toBeInTheDocument();
+    await vorspulen(wartezeit);
+    expect(hinweis()).not.toBeInTheDocument();
+    await vorspulen(11_000);
     expect(hinweis()).not.toBeInTheDocument();
   });
 
@@ -216,14 +238,18 @@ describe('Live-Folie mit laufendem Spiel (@ME-006, Kopfzeile)', () => {
 });
 
 describe('Bildschirm bleibt an im normalen Browser (@ME-005)', () => {
-  it('fordert den Bildschirm-Wachhalter an, sobald der Monitor geladen ist, und zeigt dabei keinen Hinweis', async () => {
+  it('Gherkin: nach 30 Minuten ohne Eingabe ist die Zusage zum Anlassen noch gehalten und das Folienprogramm läuft', async () => {
     const sentinel = { release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() };
     const request = vi.fn().mockResolvedValue(sentinel);
     Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
     seite();
     await vorspulen(0);
     expect(request).toHaveBeenCalledWith('screen');
-    await vorspulen(30_000);
+    // 30 Minuten ohne Eingabe, simulierte Zeit
+    await vorspulen(30 * 60 * 1_000);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(sentinel.release).not.toHaveBeenCalled();
+    expect(screen.getByTestId('monitor-slide')).toHaveTextContent(/Folie [AB]/);
     expect(hinweis()).not.toBeInTheDocument();
   });
 });

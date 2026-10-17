@@ -4,7 +4,7 @@
  */
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayLayout, type MonitorThemeColors } from '../../design-tokens';
+import { cssVars, displayFontSizes, displayLayout, displaySpacing, type MonitorThemeColors } from '../../design-tokens';
 import type { MatchStatus } from '../../hooks/useLiveMatches';
 import { getStatusInfo } from './liveStatus';
 
@@ -44,8 +44,8 @@ export function LiveHeader({ status, field, matchNumber, group, size, themeColor
     borderRadius: cssVars.borderRadius.md,
     backgroundColor: statusInfo.bgColor,
     color: statusInfo.color,
-    fontSize: xl ? displayFontSizes.liveBadge : '16px',
-    fontWeight: 700,
+    fontSize: xl ? displayFontSizes.liveBadge : displayFontSizes.bodySM,
+    fontWeight: cssVars.fontWeights.bold,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     // B-44a2: eine Marken-Gestaltung für alle Zustände, feste Mindestbreite
@@ -55,16 +55,16 @@ export function LiveHeader({ status, field, matchNumber, group, size, themeColor
     animation: isRunning ? 'livePulse 1.5s ease-in-out infinite' : undefined,
   };
   const liveDotStyle: CSSProperties = {
-    width: xl ? layout.badgeDot : '14px',
-    height: xl ? layout.badgeDot : '14px',
+    width: xl ? layout.badgeDot : layout.badgeDotCompact,
+    height: xl ? layout.badgeDot : layout.badgeDotCompact,
     borderRadius: '50%',
     backgroundColor: statusInfo.dotColor,
-    boxShadow: isRunning ? `0 0 8px ${statusInfo.dotColor}` : undefined,
+    boxShadow: isRunning ? `0 0 ${displaySpacing.inlineSM} ${statusInfo.dotColor}` : undefined,
     animation: isRunning ? 'liveDotPulse 1s ease-in-out infinite' : undefined,
   };
   const infoStyle: CSSProperties = {
-    fontSize: xl ? displayFontSizes.liveInfo : '20px',
-    fontWeight: 600,
+    fontSize: xl ? displayFontSizes.liveInfo : displayFontSizes.bodyMD,
+    fontWeight: cssVars.fontWeights.semibold,
     color: themeColors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',

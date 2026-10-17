@@ -20,17 +20,17 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { displayMonitor, monitorThemes } from '../../design-tokens';
+import { displayLayout, monitorThemes } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
 import { useTranslation, I18nextProvider } from 'react-i18next';
 import { ANZEIGE_SPRACHE, anzeigeI18n } from '../../i18n/anzeigeSprache';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
 import { WakeLockNotice } from '../../components/monitor/WakeLockNotice';
-import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { vollbildUmschalten } from './vollbild';
-import { istCacheTaste, istEingabeZiel, istVollbildTaste } from './monitorDauerbetrieb';
+import { useBildrand } from './useBildrand';
+import { istCacheTaste, istEingabeZiel, istHinweisFolie, istVollbildTaste } from './monitorDauerbetrieb';
 import { useWakeLockHinweis } from './useWakeLockHinweis';
 import { useIdleCursor, useTastenAbfang, useWakeLockNachEingabe } from './useMonitorDauerbetrieb';
 import {
@@ -117,11 +117,8 @@ function MonitorDisplayPageContent({
     [lastFetch]
   );
 
-  // Anti-burn-in pixel shift for OLED/Plasma displays
-  // Scale shift amount with overscan — no shift when overscan is 0 (would clip content)
-  const overscanPx = monitor?.overscanPx ?? displayMonitor.overscanDefaultPx;
-  const maxPixelShift = Math.min(2, Math.floor(overscanPx / 4));
-  const pixelShift = usePixelShift(60_000, maxPixelShift, performanceSettings.enableAnimations);
+  // Bildrand in Prozent (@ME-067, @ME-020, `?rand=`) und Anti-Burn-in-Verschiebung für OLED/Plasma
+  const { overscanPercent, pixelShift, sichererBereich } = useBildrand(monitor, performanceSettings);
 
   // Darstellbare Folien (@OB-011): Folien ohne Darstellung werden übersprungen,
   // bleibt keine übrig (auch beim leeren Programm), gilt die Zuschauer-QR-Folie.
@@ -157,10 +154,6 @@ function MonitorDisplayPageContent({
     : null;
   const { slideState } = useSlideshow(slideProgram, transitionMs);
 
-  // B-17 (@ME-006, Variante B): 10-s-Hinweis als Ecke, nur ohne laufendes Spiel auf dem Feld (Regeln in useWakeLockHinweis)
-  const spielLaeuft = liveSpielLaeuft(slides, tournament?.matches ?? []);
-  const hinweisZeigt = useWakeLockHinweis(wakeLock.status, ansichtBereit, spielLaeuft);
-
   // Tor-Einblendung nach Feld der Live-Folien (B-16e1, @ZM-083)
   const boundFields = useMemo(() => boundFieldNumbers(monitor?.slides ?? []), [monitor]);
 
@@ -170,6 +163,12 @@ function MonitorDisplayPageContent({
       && alleUebersprungen(slides, tournament?.matches ?? []);
     return rueckfallAktiv ? rueckfallFolie : slides[slideState.currentIndex] ?? null;
   }, [slides, slideState.currentIndex, slideState.pinnedMatchId, rueckfallFolie, tournament]);
+
+  // B-17 (@ME-006): 10-s-Hinweis als Ecke, nur ohne laufendes Spiel auf dem Feld (Regeln in useWakeLockHinweis)
+  // und nur, solange die Einrichtungs- oder QR-Folie zu sehen ist
+  const spielLaeuft = liveSpielLaeuft(slides, tournament?.matches ?? []);
+  const hinweisPhase = useWakeLockHinweis(wakeLock.status, ansichtBereit, spielLaeuft);
+  const hinweisZeigt = hinweisPhase && istHinweisFolie(currentSlide);
 
   // Heartbeat alle 30 s (Takt und Deps in useMonitorHeartbeat)
   useMonitorHeartbeat(monitor?.id ?? null, tournament?.id ?? null, slideState.currentIndex, cacheStatus.status);
@@ -208,13 +207,15 @@ function MonitorDisplayPageContent({
   }
 
   return (
-    <div style={{ ...containerStyle, cursor: cursorRuht ? 'none' : undefined }}>
+    <div style={{ ...containerStyle, containerType: 'size', cursor: cursorRuht ? 'none' : undefined }}>
       {/* Slide Container — pixelShift for OLED anti-burn-in */}
       <div style={{
         position: 'relative',
         width: '100%',
         height: '100%',
         overflow: 'hidden',
+        // Größen-Container: der Bildrand in cqh/cqw bezieht sich auf die Folienfläche
+        containerType: 'size',
         ...pixelShift,
       }}>
         {currentSlide && (
@@ -229,7 +230,8 @@ function MonitorDisplayPageContent({
               tournament={tournament}
               performanceSettings={performanceSettings}
               theme={monitor.theme}
-              overscanPx={monitor.overscanPx}
+              overscanPercent={overscanPercent}
+              hinweisHoehe={hinweisZeigt ? displayLayout.noticeHeight : undefined}
               pinnedMatchId={slideState.pinnedMatchId}
               page={slideState.page}
             />
@@ -237,22 +239,15 @@ function MonitorDisplayPageContent({
         )}
       </div>
 
-      {/* Slide Indicator */}
-      {slides.length > 1 && (
-        <SlideDots
-          count={slides.length}
-          currentIndex={slideState.currentIndex}
-          enableTransitions={performanceSettings.enableTransitions}
-        />
-      )}
-
-      {hinweisZeigt && (
-        <WakeLockNotice
-          text={t('dauerbetrieb.wakeLockHint')}
-          themeColors={monitorThemes[resolveTheme(monitor.theme)]}
-          overscanPx={overscanPx}
-        />
-      )}
+      {/* Positionspunkte und Hinweis (nur im normalen Browser, einmal, B-17) liegen im sicheren Bereich (@ME-067) */}
+      <div style={sichererBereich}>
+        {slides.length > 1 && (
+          <SlideDots count={slides.length} currentIndex={slideState.currentIndex} enableTransitions={performanceSettings.enableTransitions} />
+        )}
+        {hinweisZeigt && (
+          <WakeLockNotice text={t('dauerbetrieb.wakeLockHint')} themeColors={monitorThemes[resolveTheme(monitor.theme)]} />
+        )}
+      </div>
 
       {/* Cache Indicator (Admin only) */}
       <CacheIndicator cacheStatus={cacheStatus} visible={showCacheIndicator} />

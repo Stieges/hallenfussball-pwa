@@ -116,9 +116,6 @@ export type DisplayColorKey = keyof typeof displayColors;
  * TVs können an den Rändern abschneiden
  */
 export const displaySpacing = {
-  // Overscan-Safe Area (für alte TVs)
-  overscan: '48px',
-
   // Section Spacing
   sectionXL: '64px',
   sectionLG: '48px',
@@ -183,6 +180,11 @@ export const displayTransitions = {
 // DISPLAY LAYOUT
 // =============================================================================
 
+/** Maße der Hinweis-Ecke (B-48a); die Höhe daraus ist ein Token, damit die Folie genau so weit nach unten rückt. */
+const NOTICE_PAD_Y = '0.4cqh';
+const NOTICE_BORDER = '0.3cqh';
+const NOTICE_LINE_HEIGHT = 1.2;
+
 /**
  * Display-Layout Konfigurationen
  */
@@ -191,10 +193,9 @@ export const displayLayout = {
   maxContentWidth: '1600px',
 
 
-  // Hinweis als Ecke oben rechts auf Folien ohne Kopfzeile (B-48a): mindestens 5 % der Seite vom Rand (@ME-067)
-  noticeCornerMin: '5vh',
-  noticeCornerMinX: '5vw',
-  noticeCornerMaxWidth: '40%',
+  // Hinweis als Ecke oben rechts im sicheren Bereich (B-48a, @ME-006): eine Zeile, feste Höhe.
+  // Die Folie rückt um genau diese Höhe nach unten, solange der Hinweis steht (er verdeckt nichts).
+  noticeHeight: `calc(${displayFontSizes.notice} * ${NOTICE_LINE_HEIGHT} + 2 * (${NOTICE_PAD_Y} + ${NOTICE_BORDER}))`,
 
   // Slide Aspect Ratios
   aspectRatio: {
@@ -246,11 +247,11 @@ export const displayLayout = {
     // B-44a3: seitliches Polster der Folie
     paddingX: '3cqw',
     // B-48a (@ME-006): Hinweis-Ecke oben rechts auf dem Feld ohne laufendes Spiel (Mockup v8)
-    noticePadY: '0.4cqh',
+    noticePadY: NOTICE_PAD_Y,
     noticePadX: '0.8cqh',
-    noticeBorderWidth: '0.3cqh',
+    noticeBorderWidth: NOTICE_BORDER,
     noticeRadius: '1cqh',
-    noticeLineHeight: 1.2,
+    noticeLineHeight: NOTICE_LINE_HEIGHT,
     noticeGap: '0.6cqh',
     // B-44a3: Uhr und unterer Bereich (vorher Literale in MatchTimer)
     progressHeight: '1.2cqh',
@@ -266,6 +267,8 @@ export const displayLayout = {
     badgePadX: '2cqh',
     badgeGap: '1cqh',
     badgeDot: '1.4cqh',
+    // Kompakte Kopfzeile (Größe nicht xl): Punkt der Statusmarke
+    badgeDotCompact: '14px',
     // B-44a2: Balkenbreite (vorher 700px fest)
     progressWidth: '36cqw',
     // B-44a2: Rahmen der Kästen, einheitlich in beiden: dezent, bei Kontrast unter 3 : 1 kräftig
@@ -335,8 +338,8 @@ export const displayMonitor = {
     lineHeight: 1.5,
   },
 
-  /** Rand der Folie, wenn die Monitor-Konfiguration keinen Overscan hat */
-  overscanDefaultPx: 48,
+  /** Bildrand in % je Seite (@ME-067): links/rechts von der Breite, oben/unten von der Höhe der Folie; `?rand=` gilt je Sitzung */
+  overscan: { defaultPercent: 5, minPercent: 0, maxPercent: 10, stepPercent: 0.5, urlParam: 'rand' },
 
   /** Ecken */
   radius: {

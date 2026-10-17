@@ -1,6 +1,7 @@
 /**
- * Monitor wachhalten (B-48a, Variante B): Hinweis „Der Bildschirm kann sich abschalten“ als Ecke oben rechts, nur auf
- * Folien ohne laufendes Spiel und 10 Sekunden lang. Szenario @ME-006 (beide Beispielzeilen), Gegenbeispiele:
+ * Monitor wachhalten (B-48a, Variante B): Hinweis „Bildschirm kann ausgehen – Energiesparen prüfen“ als Ecke oben rechts, nur auf
+ * Einrichtungs- und QR-Folien ohne laufendes Spiel, 10 Sekunden lang, eine Zeile. Überdeckung aller Folientypen:
+ * monitor-wachhalten-ueberdeckung.spec.ts. Szenario @ME-006 (beide Beispielzeilen), Gegenbeispiele:
  * Live-Folie mit Spiel, Spielstart während der 10 Sekunden, Zusage, Browser-Quelle (OBS-Kennung).
  *
  * Gemessen wird am echten Layout bei 1920×1080, 1280×720 und 3840×2160, hell und dunkel. Die Wake-Lock-Schnittstelle
@@ -33,9 +34,7 @@ type Folie = { id: string; type: string; config: Record<string, unknown>; durati
 const LIVE_FOLIE: Folie = { id: 's1', type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 };
 const QR_FOLIE: Folie = { id: 's1', type: 'qr-code', config: {}, duration: null, order: 0 };
 /** Der Satz aus dem Szenario @ME-006, wörtlich. */
-const GHERKIN_HINWEIS = 'Der Bildschirm kann sich nach der Energiespar-Einstellung des Geräts abschalten.';
-/** Bildrand des Monitors (Standard, @ME-020). */
-const RAND_PX = 48;
+const GHERKIN_HINWEIS = 'Bildschirm kann ausgehen – Energiesparen prüfen';
 /** IndexedDB-Ziel der Saat (src/core/storage/IndexedDBAdapter.ts, wie in den Test-Fixtures). */
 const DB = { dbName: 'hallenfussball', storeName: 'cache', version: 1 };
 
@@ -137,7 +136,7 @@ for (const [breite, hoehe] of [[1920, 1080], [1280, 720], [3840, 2160]] as const
       ['der Browser lässt das Anlassen des Bildschirms nicht zu', 'abgelehnt', 0],
       ['der Browser beantwortet die Anfrage 5 Sekunden lang weder mit Ja noch mit Nein', 'haengt', 5_000],
     ] as const) {
-      test(`Lage „${lage}“ auf der Zuschauer-QR-Folie: Ecke oben rechts im Bildrand, verschwindet nach 10 s`, async ({ page, seedIndexedDB }) => {
+      test(`Lage „${lage}“ auf der Zuschauer-QR-Folie: Ecke oben rechts am Bildrand, verschwindet nach 10 s`, async ({ page, seedIndexedDB }) => {
         await wakeLockMocken(page, modus);
         await oeffneMonitor(page, seedIndexedDB, [QR_FOLIE], theme, 'geplant');
         if (vorlauf > 0) {
@@ -154,11 +153,10 @@ for (const [breite, hoehe] of [[1920, 1080], [1280, 720], [3840, 2160]] as const
         expect(m, 'Hinweis gemessen').not.toBeNull();
         const h = m!;
         expect(h.schrift, 'Schrift mindestens 3 % der Bildhöhe').toBeGreaterThanOrEqual(h.hoehe * 0.03 - 0.5);
-        // im eigenen Bildrand (48 px, mindestens 5 %), rechts oben, Kastenkante höchstens bei 95 % (@ME-067)
-        expect(h.top, 'Oberkante im Bildrand').toBeGreaterThanOrEqual(RAND_PX - 0.5);
-        expect(h.top, 'Oberkante mindestens 5 % der Höhe').toBeGreaterThanOrEqual(h.hoehe * 0.05 - 0.5);
-        expect(h.right, 'Rechtskante im Bildrand').toBeLessThanOrEqual(h.breite - RAND_PX + 0.5);
-        expect(h.right, 'Kastenkante höchstens bei 95 % der Breite').toBeLessThanOrEqual(h.breite * 0.95 + 0.5);
+        // in der Ecke des sicheren Bereichs: Rand 5 % je Seite, kein zweiter Rand (@ME-067), eine Zeile (@ME-006)
+        expect(h.top, 'Oberkante genau am Bildrand (5 % der Höhe)').toBeCloseTo(h.hoehe * 0.05, 0);
+        expect(h.right, 'Rechtskante genau am Bildrand (95 % der Breite)').toBeCloseTo(h.breite * 0.95, 0);
+        expect(h.bottom - h.top, 'eine Zeile').toBeLessThan(h.schrift * 2);
         expect(h.left, 'rechte Bildhälfte').toBeGreaterThan(h.breite * 0.4);
         expect(h.bottom, 'innerhalb des Bildes').toBeLessThanOrEqual(h.hoehe);
 

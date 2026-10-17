@@ -1,15 +1,14 @@
 /**
- * Monitor-Seite im Dauerbetrieb (B-17): Mauszeiger, Vollbild-Taste, Tasten, Bildrand, Vollbild-Rückfall.
- * Szenarien: @ME-002, @ME-003, @ME-020, @ME-021, @ME-022, @ZM-130.
+ * Monitor-Seite im Dauerbetrieb (B-17): Mauszeiger, Vollbild-Taste, Tasten, Vollbild-Rückfall.
+ * (Bildrand: overscan.ms2.test.tsx.)
+ * Szenarien: @ME-002, @ME-003, @ME-021, @ME-022, @ZM-130.
  * Gegenbeispiele: Leertaste und Pfeile wirken nicht (@ME-022); Escape verlässt die Seite nicht.
  * Der Wachhalten-Hinweis (@ME-006) steht in MonitorDisplayPage.wachhalten.test.tsx.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import type { Tournament } from '../../../types/tournament';
-import { PERFORMANCE_PROFILES } from '../../../types/monitor';
 import { attachMonitor, buildTournament, slide, withMonitor } from './monitorFixture';
-import { SlideRenderer } from '../slides/SlideRenderer';
 
 const { supabaseGet, localGet } = vi.hoisted(() => ({
   supabaseGet: vi.fn(),
@@ -42,11 +41,11 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 
-function monitorTurnier(overscanPx?: number, folien = [
+function monitorTurnier(overscanPercent?: number, folien = [
   slide('custom-text', { headline: 'Folie A' }, 4),
   slide('custom-text', { headline: 'Folie B' }),
 ]): Tournament {
-  return attachMonitor(buildTournament(), withMonitor({ slides: folien, ...(overscanPx !== undefined ? { overscanPx } : {}) }));
+  return attachMonitor(buildTournament(), withMonitor({ slides: folien, ...(overscanPercent !== undefined ? { overscanPercent } : {}) }));
 }
 
 function wakeLockUnterstuetzt(): void {
@@ -208,29 +207,6 @@ describe('Taste „c“: Cache-Anzeige (@ME-021)', () => {
   });
 });
 
-
-describe('Bildrand je Monitor (@ME-020)', () => {
-  const folie = () => slide('custom-text', { headline: 'Rand' });
-  const rendere = (overscanPx: number) => render(
-    <SlideRenderer
-      slide={folie()}
-      tournament={buildTournament()}
-      performanceSettings={PERFORMANCE_PROFILES.high}
-      theme="dark"
-      overscanPx={overscanPx}
-    />,
-  );
-
-  it('ein gesetzter Bildrand wirkt als Innenabstand der Folie', () => {
-    const { container } = rendere(60);
-    expect((container.firstElementChild as HTMLElement).style.padding).toBe('60px');
-  });
-
-  it('Gegenbeispiel: Bildrand 0 lässt keinen Rand stehen', () => {
-    const { container } = rendere(0);
-    expect((container.firstElementChild as HTMLElement).style.padding).toBe('0px');
-  });
-});
 
 describe('Vollbild ohne Standard-API und Mac-Navigation (B-17 Fixrunde 2)', () => {
   it('„f“ wirft ohne Vollbild-API nichts', async () => {
