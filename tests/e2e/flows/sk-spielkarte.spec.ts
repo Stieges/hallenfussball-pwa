@@ -211,3 +211,65 @@ test.describe('@OB-064 Spielplan der Verwaltung, Laptop 1280×800: Tabellenzeile
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
   });
 });
+
+/**
+ * Fixrunde 2 – schwebende Tasten „Teilen“ / „Als PDF“ (@OB-022 Bedienelemente erreichbar, @OB-021 nichts Bedienbares wird
+ * verdeckt). Ganz nach unten scrollen: an der Mitte jedes sichtbaren Eingabefelds und jeder Torfläche der letzten Karten
+ * liefert `elementFromPoint` das Element selbst oder ein Kind davon, nicht die schwebende Leiste.
+ */
+const LETZTE_KARTEN = 4;
+const KARTEN_SELEKTOR = '[data-testid^="final-card-"], [data-match-card]';
+const ZIEL_SELEKTOR = 'input:not([type="hidden"]), [data-score-circle], [data-testid^="final-goals-"]';
+const SCHWEBE_LEISTE = '.schedule-action-buttons';
+
+async function scrolleGanzNachUnten(page: Page) {
+  await page.evaluate(() => {
+    const scrollt = (el: Element) => /(auto|scroll)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight;
+    document.scrollingElement?.scrollTo(0, document.scrollingElement.scrollHeight);
+    document.querySelectorAll<HTMLElement>('*').forEach((el) => { if (scrollt(el)) { el.scrollTop = el.scrollHeight; } });
+  });
+}
+
+async function pruefeLetzteKarten(page: Page, anzahlKarten: number) {
+  return page.evaluate(([karten, ziele, leiste, anzahl]) => {
+    const sichtbar = (el: Element) => {
+      const r = el.getBoundingClientRect();
+      return (el as HTMLElement).offsetParent !== null && r.width > 0 && r.height > 0;
+    };
+    const letzte = Array.from(document.querySelectorAll<HTMLElement>(karten)).filter(sichtbar).slice(-anzahl);
+    const befunde: { name: string; treffer: string; ok: boolean }[] = [];
+    for (const karte of letzte) {
+      for (const el of Array.from(karte.querySelectorAll<HTMLElement>(ziele)).filter(sichtbar)) {
+        const r = el.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        // Nur Ziele, die im sichtbaren Ausschnitt liegen: ganz nach unten gescrollt sind die übrigen nicht sichtbar
+        if (cy < 0 || cy > window.innerHeight) { continue; }
+        const oben = document.elementFromPoint(cx, cy);
+        const ok = !!oben && (oben === el || el.contains(oben));
+        const treffer = !oben ? 'nichts' : oben.closest(leiste) ? 'schwebende Leiste' : (oben.getAttribute('data-testid') ?? oben.tagName.toLowerCase());
+        befunde.push({ name: el.dataset.testid ?? el.tagName.toLowerCase(), treffer, ok });
+      }
+    }
+    return befunde;
+  }, [KARTEN_SELEKTOR, ZIEL_SELEKTOR, SCHWEBE_LEISTE, anzahlKarten] as const);
+}
+
+for (const [name, groesse, datei] of [
+  ['Handy 360×640', HANDY, 'handy-360'],
+  ['Tablet hochkant 768×1024', TABLET_HOCH, 'tablet-768'],
+] as const) {
+  test.describe(`Fixrunde 2 schwebende Tasten: ${name}`, () => {
+    test('ganz unten: jedes Eingabefeld und jede Torfläche der letzten Karten ist nicht von der Leiste verdeckt', async ({ page }) => {
+      await oeffneSpielplan(page, groesse);
+      await scrolleGanzNachUnten(page);
+      const befunde = await pruefeLetzteKarten(page, LETZTE_KARTEN);
+      if (BILDER) {
+        mkdirSync(BILDER, { recursive: true });
+        await page.screenshot({ path: join(BILDER, `fr2-${datei}-platz-3-offen.png`) });
+      }
+      expect(befunde.length, 'Ziele in den letzten Karten gefunden').toBeGreaterThan(0);
+      expect(befunde.filter((b) => !b.ok).map((b) => `${b.name} → verdeckt von ${b.treffer}`)).toEqual([]);
+    });
+  });
+}
