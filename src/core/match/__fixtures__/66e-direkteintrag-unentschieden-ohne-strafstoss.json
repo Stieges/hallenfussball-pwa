@@ -1,0 +1,73 @@
+{
+  "title": "@FU-094 Gegenbeispiel: Gruppenspiel 2:2 ohne Strafstoßergebnis bleibt wie bisher (regulär, kein Strafstoß-Stand)",
+  "szenario": "Ein Unentschieden im K.o.-Spiel fragt beim Direkteintrag das Strafstoßschießen mit ab",
+  "ctx": {
+    "matchId": "match-0000066e",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000066e-0000-4000-8000-000000000001",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 1000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 2,
+          "teamB": 2
+        }
+      },
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000066e-0000-4000-8000-000000000001",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 2,
+        "teamB": 2
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000066e-0000-4000-8000-000000000001",
+      "decidedBy": "direct",
+      "finishedAt": 1000
+    },
+    "cacheColumns": {
+      "score_a": 2,
+      "score_b": 2,
+      "penalty_score_a": null,
+      "penalty_score_b": null,
+      "match_status": "finished",
+      "decided_by": "regular"
+    }
+  }
+}
