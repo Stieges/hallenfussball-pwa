@@ -4,6 +4,10 @@
  * mit „…“ versehen und nie umbrochen. Der Wechsel folgt dem Platz im Behälter, nicht der Gerätebreite: Die Tasten sitzen in
  * einer umbrechenden Flex-Zeile (`nowrap` je Taste, `flex-grow` füllt die Zeile). Passt die nächste Taste nicht mehr in die
  * Zeile, rutscht sie in die nächste und füllt dort die ganze Breite; die Haupttaste steht zuletzt im Dokument, also unten.
+ * Grenzen: (1) Ist eine einzelne Beschriftung allein breiter als der Behälter, läuft sie über; der Baustein kürzt sie nie.
+ * Dann ist der Text zu kürzen (Übersetzung), die Überlauf-Messung (`ueberlauf.element`) fängt das. (2) Bei drei oder mehr Tasten
+ * entsteht je nach Platz eine Mischform (z. B. zwei Nebentasten nebeneinander, die Haupttaste allein darunter); die Haupttaste
+ * steht immer zuletzt, also unten bzw. rechts. Ob Mischform oder „alle oder keine“ gilt, ist als Regelfrage offen (@OB-061 nennt zwei Tasten).
  * Haupttaste mindestens `touchTargets.primary` (@OB-022), Nebentasten mindestens `touchTargets.minimum`.
  */
 import type { CSSProperties, ReactNode, Ref } from 'react';

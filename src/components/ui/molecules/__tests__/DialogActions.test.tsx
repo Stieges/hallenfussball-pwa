@@ -50,6 +50,8 @@ describe('DialogActions', () => {
       expect(taste.style.whiteSpace).toBe('nowrap');
       expect(taste.style.flexGrow).toBe('1');
       expect(taste.style.flexShrink).toBe('1');
+      // Flex-Basis auto: Mindestbreite = einzeilige Beschriftung (sonst stapelt die Zeile immer)
+      expect(taste.style.flexBasis).toBe('auto');
     }
   });
 

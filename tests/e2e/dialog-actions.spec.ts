@@ -12,7 +12,7 @@ import { buildVisualTournament } from './visual/helpers';
 
 const ID = 'dialog-actions-tournament';
 const GERAETE = [
-  { name: 'laptop-1440x900', width: 1440, height: 900, untereinander: null },
+  { name: 'laptop-1440x900', width: 1440, height: 900, untereinander: false },
   { name: 'handy-360x640', width: 360, height: 640, untereinander: true },
 ] as const;
 
@@ -28,9 +28,22 @@ async function oeffneDialog(page: Page, seed: (d: Record<string, unknown>) => Pr
   await page.goto(`/#/tournament/${ID}/schedule`);
   await page.getByTestId('schedule-action-pdf').click();
   await expect(page.getByTestId('pdf-save')).toBeVisible();
-  // Dialog-Einblendung abwarten, Fuß ins Bild holen (auf dem Handy scrollt der Dialog)
+  // Dialog-Einblendung abwarten (Öffnungszustand)
   await page.waitForTimeout(600);
-  await page.getByTestId('pdf-save').scrollIntoViewIfNeeded();
+}
+
+/** Bild im Öffnungszustand, dann das scrollende Panel ganz nach unten und ein zweites Bild. */
+async function bilder(page: Page, ordner: string, name: string) {
+  mkdirSync(ordner, { recursive: true });
+  await page.screenshot({ path: join(ordner, `${name}-geoeffnet.png`) });
+  await page.evaluate(() => {
+    for (let e = document.querySelector<HTMLElement>('[data-dialog-actions]'); e; e = e.parentElement) {
+      if (e.scrollHeight > e.clientHeight && /auto|scroll/.test(getComputedStyle(e).overflowY)) {
+        e.scrollTop = e.scrollHeight;
+      }
+    }
+  });
+  await page.screenshot({ path: join(ordner, `${name}-ganz-unten.png`) });
 }
 
 const messe = (page: Page): Promise<Messung> =>
@@ -46,8 +59,12 @@ const messe = (page: Page): Promise<Messung> =>
     };
     const fuss = document.querySelector<HTMLElement>('[data-dialog-actions]');
     if (!fuss) {throw new Error('data-dialog-actions fehlt');}
+    // Eigene Breite jeder Taste einzeln messen: `flex: none` nimmt die Wachstumsbreite weg (sonst ist die Summe im Stapel immer zu groß)
     const kinder = [...fuss.children] as HTMLElement[];
-    const einzeil = kinder.reduce((s, k) => s + k.scrollWidth, 0) + parseFloat(getComputedStyle(fuss).columnGap) * (kinder.length - 1);
+    const alt = kinder.map((k) => k.style.flex);
+    kinder.forEach((k) => { k.style.flex = 'none'; });
+    const einzeil = kinder.reduce((s, k) => s + k.getBoundingClientRect().width, 0) + parseFloat(getComputedStyle(fuss).columnGap) * (kinder.length - 1);
+    kinder.forEach((k, i) => { k.style.flex = alt[i]; });
     return { cancel: kennzahlen('pdf-cancel'), save: kennzahlen('pdf-save'), fuss: { width: fuss.getBoundingClientRect().width }, einzeilBreite: einzeil };
   });
 
@@ -91,8 +108,7 @@ test.describe('@OB-061 Dialog-Fuß des PDF-Dialogs', () => {
         const m = await messe(page);
         pruefe(m, g.untereinander);
         const ordner = process.env.DIALOG_ACTIONS_SCR ?? testInfo.outputDir;
-        mkdirSync(ordner, { recursive: true });
-        await page.screenshot({ path: join(ordner, `pdf-dialog-${g.name}-${thema}.png`) });
+        await bilder(page, ordner, `pdf-dialog-${g.name}-${thema}`);
       });
     }
   }
@@ -108,7 +124,6 @@ test.describe('@OB-061 Dialog-Fuß des PDF-Dialogs', () => {
     expect(m.fuss.width).toBeLessThan(m.einzeilBreite);
     pruefe(m, true);
     const ordner = process.env.DIALOG_ACTIONS_SCR ?? testInfo.outputDir;
-    mkdirSync(ordner, { recursive: true });
-    await page.screenshot({ path: join(ordner, 'pdf-dialog-laptop-1440x900-schmaler-behaelter.png') });
+    await bilder(page, ordner, 'pdf-dialog-laptop-1440x900-schmaler-behaelter');
   });
 });
