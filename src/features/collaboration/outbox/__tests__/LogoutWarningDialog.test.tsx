@@ -9,10 +9,11 @@ import { LogoutWarningDialog } from '../LogoutWarningDialog';
 describe('LogoutWarningDialog (D-C2)', () => {
   it('zeigt den Warntext mit der Anzahl der wartenden Eintraege', () => {
     render(<LogoutWarningDialog isOpen count={3} onCancel={vi.fn()} onConfirm={vi.fn()} />);
-    const dialog = screen.getByTestId('logout-warning-dialog');
-    expect(dialog).toHaveTextContent('common:outbox.logoutWarning.message');
-    expect(dialog).toHaveTextContent('common:actions.cancel');
-    expect(dialog).toHaveTextContent('common:outbox.logoutWarning.confirm');
+    // DA-2a: Tasten stehen im festen Fuß des Dialogs (nicht mehr im Inhalt)
+    expect(screen.getByTestId('logout-warning-dialog')).toHaveTextContent('common:outbox.logoutWarning.message');
+    const tasten = screen.getByTestId('logout-warning-actions');
+    expect(tasten).toHaveTextContent('common:actions.cancel');
+    expect(tasten).toHaveTextContent('common:outbox.logoutWarning.confirm');
   });
 
   it('Abbrechen ruft onCancel und bestaetigt nicht', () => {
