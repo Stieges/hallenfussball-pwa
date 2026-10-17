@@ -14,6 +14,8 @@ import { PROFILE, loeseProfile, istVolleGruppe, sehwinkelAnteil } from './profil
 import { starteApp, gitStand } from './app-server.mjs'
 import { pseudoRechtecke } from './pseudo.mjs'
 import { buendle, textBericht } from './ausgabe.mjs'
+import { leseSaat, installiereSaat } from './saat/lader.mjs'
+import { fuehreAnsichtenAus } from './ansichten.mjs'
 
 const HIER = dirname(fileURLToPath(import.meta.url))
 const STANDARD_GW = join(HIER, 'grenzwerte.json')
@@ -28,6 +30,12 @@ const HILFE = `Aufruf:
   --app <pfad>              App-Ansicht, z. B. /login; Build ohne .env, Stand = HEAD
   --ziel <url|datei>        Mockup-Datei (Geraet = Viewport, ohne Rahmen) oder lokales Preview
   --erwarte <css>           Pflicht fuer App: Element der erwarteten Ansicht (sonst BLOCKED)
+  --saat <name>             feste Testdaten (scripts/visual-metrics/saat/<name>.json) vor dem ersten Laden in
+                            IndexedDB/localStorage ablegen und die Einwilligung setzen (z. B. hallencup-messlauf)
+  --ansichten <gruppe>      alle Pflicht-Ansichten aus ansichten.json nacheinander messen (Gruppe: pflicht);
+                            weitere Optionen (--themen, --sprachen, --varianten, --ohne-axe, --screenshots, --aus) gelten fuer jede
+                            Ansicht; --profil <p> ersetzt das Profil der App-Ansichten, --monitor-profil <p> das der Monitor-Folien;
+                            --nur <id,id> misst nur diese Ansichten
   --klick <selektor>        Vorbedingung, mehrfach (z. B. Datenschutz-Abfrage: 'role=button[name=/notwendig/i]')
   --profil <liste>          app (Standard) | monitor | handy | tablet | desktop | reflow | Profilname(n)
                             Profile: ${Object.keys(PROFILE).join(', ')}
@@ -60,6 +68,10 @@ function parseArgs(argv) {
       case '--app': o.app = wert(); break
       case '--erwarte': o.erwarte = wert(); break
       case '--klick': o.klick.push(wert()); break
+      case '--saat': o.saat = wert(); break
+      case '--ansichten': o.ansichten = wert(); break
+      case '--nur': o.nur = wert(); break
+      case '--monitor-profil': o.monitorProfil = wert(); break
       case '--profil': o.profil = wert(); break
       case '--themen': o.themen = wert(); break
       case '--sprachen': o.sprachen = wert(); break
@@ -156,11 +168,22 @@ async function main() {
     return 2
   }
   if (o.hilfe) { process.stdout.write(`${HILFE}\n`); return 0 }
+  if (o.ansichten) return fuehreAnsichtenAus(o, process.argv.slice(2), HIER)
   if (!o.ziel === !o.app) { process.stderr.write(`Genau eines von --ziel oder --app angeben.\n\n${HILFE}\n`); return 2 }
   const istHttp = !!o.ziel && /^https?:\/\//i.test(o.ziel)
   const modus = o.app || istHttp ? 'APP' : 'MOCKUP'
   if (modus === 'APP' && !o.erwarte) { process.stderr.write('--erwarte <css> ist fuer App-Ziele Pflicht (belegt die erwartete Ansicht).\n'); return 2 }
 
+  let saat = null
+  if (o.saat) {
+    if (!o.app) { process.stderr.write('--saat gilt nur fuer --app (die App liest die Daten aus ihrem Speicher).\n'); return 2 }
+    try {
+      saat = leseSaat(o.saat)
+    } catch (e) {
+      process.stderr.write(`${e.message}\n`)
+      return 2
+    }
+  }
   let profilAuswahl, themen, sprachen, varianten
   try {
     profilAuswahl = loeseProfile(o.profil)
@@ -203,7 +226,7 @@ async function main() {
     berichtPfad,
     quelle: {},
     grenzwerte: { datei: gwPfad, version: gw.version, sehwinkel: { abstandM: o.abstandM ?? gw.sehwinkel.abstandM, diagonaleZoll: o.diagonaleZoll ?? gw.sehwinkel.diagonaleZoll } },
-    matrix: { profile, ergaenzt: profilAuswahl.ergaenzt, themen, sprachen, varianten, axe: o.axe, erwarte: o.erwarte ?? null, klick: o.klick },
+    matrix: { profile, ergaenzt: profilAuswahl.ergaenzt, themen, sprachen, varianten, axe: o.axe, erwarte: o.erwarte ?? null, klick: o.klick, saat: o.saat ?? null },
     vollmatrix,
     abweichungen,
     begruendung: o.begruendung ?? null,
@@ -298,6 +321,7 @@ async function main() {
               reducedMotion: 'reduce',
               serviceWorkers: 'block',
             })
+            if (saat) await installiereSaat(ctx, saat)
             await ctx.addInitScript((px) => {
               const setze = () => {
                 for (const v of ['--vm-overscan', '--vm-overscan-x', '--vm-overscan-y']) document.documentElement.style.setProperty(v, `${px}px`)

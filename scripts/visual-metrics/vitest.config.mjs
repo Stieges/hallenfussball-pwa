@@ -9,7 +9,7 @@ export default defineConfig({
   test: {
     name: 'visual-metrics',
     environment: 'node',
-    include: ['scripts/visual-metrics/**/*.test.ts'],
+    include: ['scripts/visual-metrics/haertetest.test.ts'],
     testTimeout: 300_000,
     hookTimeout: 300_000,
     fileParallelism: false,

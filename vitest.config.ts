@@ -103,8 +103,9 @@ export default defineConfig({
             'tests/e2e/cloud/__tests__/**/*.{test,spec}.ts',
           ],
           // Haertetest der visuellen Messung braucht Chromium und baut die App: eigener Lauf
-          // `npm run test:visual-metrics` im E2E-Job (Review B-17), nicht im Unit-Job.
-          exclude: [...DOM_ONLY_TS_TESTS, 'scripts/visual-metrics/**'],
+          // `npm run test:visual-metrics` im E2E-Job (Review B-17), nicht im Unit-Job. Die Saat-Pruefung
+          // (scripts/visual-metrics/saat/__tests__) braucht keinen Browser und laeuft im Unit-Job (SM, @TA-011).
+          exclude: [...DOM_ONLY_TS_TESTS, 'scripts/visual-metrics/*.test.ts'],
         },
       },
       {
