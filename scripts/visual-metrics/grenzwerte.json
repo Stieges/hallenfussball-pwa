@@ -249,13 +249,6 @@
           "begruendung": "Der schwebende Hinweis \"Sound für Spielende aktivieren?\" liegt im Cockpit auf Bedienelementen (Fuss-Links am Seitenende, am Handy auch die Karten-Knoepfe beim Hineinscrollen). Befund in BEFUNDE-HEUTIGER-CODE.md; Ziel Cockpit-Scheibe 2/3 (Meldezeile statt schwebendem Hinweis)."
         },
         {
-          "befund": "C-SPIELPLAN-SCHWEBETASTEN",
-          "selektor": "mobile-view",
-          "verdecktVon": "schedule-action-buttons",
-          "app": "/schedule",
-          "begruendung": "Bei 360 px und 390 px liegen die schwebenden Tasten \"Teilen\"/\"Als PDF\" auf der Tor-Eingabe der letzten Spielzeile. Behebung in Paket SK (Branch feat/mvp-sk-spielkarte, noch nicht auf main); Eintrag entfaellt mit dem Merge."
-        },
-        {
           "befund": "C-FUSS-LINKS-UNTER-LEISTE",
           "selektor": "footer-",
           "verdecktVon": "nav-tab-",
@@ -268,6 +261,21 @@
           "begruendung": "Wie oben, in den Turnier-Ansichten (Verwaltung, Cockpit) unter der festen unteren Navigation. NEU, Kennung vorgeschlagen; Eintrag in BEFUNDE-HEUTIGER-CODE.md steht aus."
         }
       ]
+    },
+    {
+      "id": "verdeckt.schwebend",
+      "wert": true,
+      "einheit": "bool",
+      "typ": "WARNUNG",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Gleiche Messung wie verdeckt.bedienelement (Scrollen in Schritten, elementFromPoint an der Mitte). Liegt ein schwebendes Element (position fixed oder sticky, also Leiste oder Hinweis) in einer Scroll-Stellung auf der Mitte eines Bedienelements, das in einer anderen Stellung frei wird, ist das nur eine Warnung: erreichbar, aber beim Hineinscrollen verdeckt. Was in keiner Stellung frei wird, ist HART (verdeckt.bedienelement). Offene Dialoge sind wie dort ausgenommen, ebenso feste Navigation (nav, role=navigation): sie begrenzt jede Seite, ihr Verdecken ganz unten meldet die HART-Regel.",
+      "quelle": "Record plattform 2026-10-03_testabdeckung-und-szenario-tests @TA-012 (Praezisierung 2026-10-17); Befund C-COCKPIT-SOUNDHINWEIS-VERDECKT"
     },
     {
       "id": "titel.zeilen",

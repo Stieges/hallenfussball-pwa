@@ -540,7 +540,7 @@ export function messeSeite(opt) {
   // frei war (was nur unter einer Leiste hindurchrollt oder ueber den Rand ragt und beim Scrollen frei wird, zaehlt nicht).
   // Ausnahme: liegt ein offener Dialog (aria-modal, role=dialog/alertdialog, <dialog open>) darueber, der das Element
   // nicht enthaelt, ist das Verdecken gewollt.
-  if (hat('verdeckt.bedienelement')) {
+  if (hat('verdeckt.bedienelement') || hat('verdeckt.schwebend')) {
     const VBEDIEN = 'button, a[href], input:not([type=hidden]), select, textarea, [role=button], [tabindex]'
     const kandidaten = [...document.querySelectorAll(VBEDIEN)].filter((el) => {
       if (el.hasAttribute('tabindex') && !el.matches('button, a[href], input, select, textarea, [role=button]') && Number(el.getAttribute('tabindex')) < 0) return false
@@ -580,7 +580,7 @@ export function messeSeite(opt) {
       return hit.contains(el) || (el.labels && [...el.labels].includes(hit))
     }
     // Stand je Element: wie oft im Fenster, wie oft frei, wer hat verdeckt.
-    const stand = new Map(kandidaten.map((el) => [el, { gesehen: 0, frei: 0, hits: new Map(), gewollt: 0 }]))
+    const stand = new Map(kandidaten.map((el) => [el, { gesehen: 0, frei: 0, hits: new Map(), schweb: new Map(), gewollt: 0 }]))
     const pruefeSchritt = () => {
       const modale = modale2()
       for (const el of kandidaten) {
@@ -592,6 +592,11 @@ export function messeSeite(opt) {
         if (!hit || hit === el || el.contains(hit) || labelOk(el, hit)) { s.frei++; continue }
         if (modale.some((m) => !m.contains(el) && (m.contains(hit) || hit.contains(m)))) { s.gewollt++; continue }
         s.hits.set(hit, (s.hits.get(hit) || 0) + 1)
+        // Feste Navigation (<nav>, role=navigation) gehoert zum Rahmen der Seite; ihr Verdecken ganz unten ist HART, beim Hineinscrollen normal.
+        if (!hit.closest('nav, [role=navigation]')) for (let e = hit; e && e !== document.body; e = e.parentElement) {
+          const ps = stil(e).position
+          if (ps === 'fixed' || ps === 'sticky') { s.schweb.set(hit, (s.schweb.get(hit) || 0) + 1); break }
+        }
       }
     }
     const scroller = () => {
@@ -633,8 +638,10 @@ export function messeSeite(opt) {
     }
     for (const [e, y] of alt) setze(e, y)
     const verstoesse = []
+    const schwebend = []
     for (const [el, s] of stand) {
-      if (s.gesehen === 0 || s.frei > 0 || s.hits.size === 0) continue
+      if (s.gesehen === 0 || s.hits.size === 0) continue
+      if (s.frei > 0) { if (hat('verdeckt.schwebend') && s.schweb.size) schwebend.push({ el, hit: [...s.schweb.entries()].sort((a, b) => b[1] - a[1])[0][0] }); continue }
       const hit = [...s.hits.entries()].sort((a, b) => b[1] - a[1])[0][0]
       verstoesse.push({ el, hit })
     }
@@ -645,7 +652,12 @@ export function messeSeite(opt) {
       const t = kurz(e.textContent)
       return `${selektor(e)}${t ? ` "${t}"` : ''}`
     }
-    for (const v of verstoesse.filter((a) => !verstoesse.some((b) => b !== a && a.el.contains(b.el)))) {
+    for (const v of schwebend.filter((a) => !schwebend.some((b) => b !== a && a.el.contains(b.el)))) {
+      const von = beschreibe(v.hit)
+      const name = kurz(v.el.textContent) || v.el.getAttribute('aria-label') || v.el.getAttribute('title') || v.el.getAttribute('placeholder') || ''
+      melde('verdeckt.schwebend', v.el, `von schwebendem ${von} verdeckt, erst durch Weiterscrollen frei`, 'nie von schwebenden Elementen verdeckt', { verdecktVon: von, text: name })
+    }
+    if (hat('verdeckt.bedienelement')) for (const v of verstoesse.filter((a) => !verstoesse.some((b) => b !== a && a.el.contains(b.el)))) {
       const von = beschreibe(v.hit)
       const name = kurz(v.el.textContent) || v.el.getAttribute('aria-label') || v.el.getAttribute('title') || v.el.getAttribute('placeholder') || ''
       melde('verdeckt.bedienelement', v.el, `von ${von} verdeckt`, 'Mitte frei, auch ganz unten gescrollt', { verdecktVon: von, text: name })
