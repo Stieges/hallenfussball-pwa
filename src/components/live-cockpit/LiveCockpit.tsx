@@ -9,9 +9,8 @@
  * - Mobile: Stacked layout with bottom footer
  */
 
-import { useState, useCallback, useMemo, useEffect, type CSSProperties } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../design-tokens'
 import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
 import { useFoulCounts } from '../../hooks/useFoulCounts';
 import { useFoulThresholdWarning } from '../../hooks/useFoulThresholdWarning';
@@ -20,7 +19,6 @@ import { SyncStatusIndicator } from '../../features/collaboration';
 import { OutboxNotice } from '../../features/collaboration/outbox/OutboxNotice';
 import { useOutboxStatus } from '../../features/collaboration/outbox/useOutboxStatus';
 import { useRejectedOutboxDialog } from '../../features/collaboration/outbox/useRejectedOutboxDialog';
-import { RejectedOutboxDialog } from '../../features/collaboration/outbox/RejectedOutboxDialog';
 import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
 import { getEffectiveScore } from '../../utils/matchScore';
 import { isAutoFinishDue } from '../../core/match/client/viewDuration';
@@ -29,27 +27,11 @@ import type { EditableMatchEvent, MatchCockpitSettings } from '../../types/tourn
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 
 // Sub-components
-import {
-  TeamBlock,
-  FoulBar,
-  Sidebar,
-  GameControls,
-  TimeAdjustDialog,
-  ToastContainer,
-  CardDialog,
-  TimePenaltyDialog,
-  SubstitutionDialog,
-  GoalScorerDialog,
-  EventEditDialog,
-  // BUG-002: Event Log Bottom Sheet for Mobile
-  EventLogBottomSheet,
-  // Overflow Menu for quick actions + settings link
-
-  SettingsDialog,
-  TiebreakerBanner,
-  PenaltyShootoutDialog,
-} from './components';
-import { AudioActivationBanner } from './areas/AudioActivationBanner';
+import { LegacyMatchHeader } from './areas/LegacyMatchHeader';
+import { LegacyPlayArea, type TeamSideHandlers } from './areas/LegacyPlayArea';
+import { CockpitOverlays, type CockpitDialogState, type CockpitOverlayHandlers } from './areas/CockpitOverlays';
+import type { Side } from './model/cockpitTypes';
+import shell from './LiveCockpitShell.module.css';
 
 // Hooks
 import { useToast } from './hooks';
@@ -555,220 +537,86 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
   if (!currentMatch) {
     return (
-      <div style={noMatchStyle}>
-        <p style={noMatchTextStyle}>Kein Spiel ausgewählt</p>
+      <div className={shell.empty}>
+        <p className={shell.emptyText}>{t('leer.keinSpielGewaehlt')}</p>
       </div>
     );
   }
 
   const match = currentMatch;
-  const effectiveScore = getEffectiveScore(match);
-  const isFinished = match.status === 'FINISHED';
   // Task R2: readOnly kommt aus einer echten Berechtigungsprüfung (ManagementTab.checkCanEditMatch
   // → canEditResults), isFinished ist die bestehende "Spiel ist vorbei"-Sperre. Beide führen zum
-  // selben Ergebnis (keine Bedienung), aber nur `readOnly` zeigt das Berechtigungs-Banner unten —
+  // selben Ergebnis (keine Bedienung), aber nur `readOnly` zeigt das Berechtigungs-Banner —
   // ein beendetes Spiel braucht keine "du hast keine Berechtigung"-Erklärung, das sagt schon der
   // Status-Badge ("BEENDET").
-  const isLocked = readOnly || isFinished;
-  const isNotStarted = match.status === 'NOT_STARTED';
+  const isLocked = readOnly || match.status === 'FINISHED';
   const isDesktop = !isMobile && !isTablet;
+  const openTimeAdjust = onAdjustTime ? () => setShowTimeAdjustDialog(true) : undefined;
 
-  // ---------------------------------------------------------------------------
-  // Styles based on mockup
-  // ---------------------------------------------------------------------------
+  // Die acht Aktionen eines Team-Blocks je Seite.
+  const sideHandlers = (side: Side): TeamSideHandlers => ({
+    onGoal: side === 'home' ? handleGoalHome : handleGoalAway,
+    onMinus: side === 'home' ? handleMinusHome : handleMinusAway,
+    onPenalty: () => { setPendingPenaltySide(side); setShowTimePenaltyDialog(true); },
+    onYellowCard: () => openCardDialog('YELLOW', side),
+    onYellowRedCard: () => openCardDialog('YELLOW_RED', side),
+    onRedCard: () => openCardDialog('RED', side),
+    onSubstitution: () => { setPendingSubstitutionSide(side); setShowSubstitutionDialog(true); },
+    onFoul: side === 'home' ? handleFoulHome : handleFoulAway,
+  });
 
-  const containerStyle: CSSProperties = {
-    background: cssVars.colors.background,
-    color: cssVars.colors.textPrimary,
-    minHeight: 'var(--min-h-screen)',
-    display: 'flex',
-    flexDirection: 'column',
+  const dialogs: CockpitDialogState = {
+    showTimeAdjust: showTimeAdjustDialog, showCard: showCardDialog, showTimePenalty: showTimePenaltyDialog,
+    showSubstitution: showSubstitutionDialog, showGoal: showGoalDialog, showEventEdit: showEventEditDialog,
+    showEventLog: showEventLogBottomSheet, showSettings: showSettingsDialog,
+    // Task R2 Fixrunde 2 (H1): unter readOnly gar nicht, und nur mit beiden Strafstoß-Handlern.
+    showPenaltyShootout: showPenaltyDialog && !readOnly && !!onRecordPenaltyResult && !!onAbortPenaltyShootout,
+    pendingGoalSide, pendingPenaltySide, pendingCardType, pendingCardTeamSide, pendingSubstitutionSide, editingEventId,
   };
 
-  const contentStyle: CSSProperties = {
-    padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.lg,
-    flex: 1,
+  const overlayHandlers: CockpitOverlayHandlers = {
+    closeTimeAdjust: () => setShowTimeAdjustDialog(false),
+    confirmTimeAdjust: handleTimeAdjust,
+    closeCard: () => { setShowCardDialog(false); setPendingCardType(null); setPendingCardTeamSide(null); },
+    confirmCard: handleCardConfirm,
+    closeTimePenalty: () => { setShowTimePenaltyDialog(false); setPendingPenaltySide(null); },
+    confirmTimePenalty: handleTimePenaltyConfirm,
+    closeSubstitution: () => { setShowSubstitutionDialog(false); setPendingSubstitutionSide(null); },
+    confirmSubstitution: handleSubstitutionConfirm,
+    closeGoal: () => { setShowGoalDialog(false); setPendingGoalSide(null); },
+    confirmGoal: handleGoalConfirm,
+    closeEventEdit: () => { setShowEventEditDialog(false); setEditingEventId(null); },
+    updateEvent: handleEventUpdate,
+    deleteEvent: handleEventDelete,
+    closeEventLog: () => setShowEventLogBottomSheet(false),
+    // M-1 FIX: nur die Ereignis-ID merken, das Ereignis wird frisch nachgeschlagen
+    editEventFromLog: (event) => { setShowEventLogBottomSheet(false); setEditingEventId(event.id); setShowEventEditDialog(true); },
+    closeSettings: () => setShowSettingsDialog(false),
+    changeSettings: (newSettings) => { if (onUpdateSettings) { onUpdateSettings(newSettings); } },
+    testSound: () => void sound.play(),
+    startOvertime: onStartOvertime ? handleStartOvertime : undefined,
+    startGoldenGoal: onStartGoldenGoal ? handleStartGoldenGoal : undefined,
+    startPenaltyShootout: onStartPenaltyShootout ? handleStartPenaltyShootout : undefined,
+    endAsDraw: onForceFinish ? handleEndAsDraw : undefined,
+    finishPenaltyShootout: handlePenaltyFinish,
+    cancelPenaltyShootout: handlePenaltyCancel,
   };
 
-  // Match Header
-  const matchHeaderStyle: CSSProperties = {
-    background: cssVars.colors.surfaceSolid,
-    borderRadius: cssVars.borderRadius.lg,
-    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: cssVars.spacing.md,
-  };
-
-  const matchInfoStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.md,
-  };
-
-  const matchNumberStyle: CSSProperties = {
-    fontWeight: cssVars.fontWeights.bold,
-    fontSize: cssVars.fontSizes.md,
-  };
-
-  const matchFieldStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
-  };
-
-  const statusBadgeStyle: CSSProperties = {
-    background: match.status === 'RUNNING'
-      ? cssVars.colors.primaryLight
-      : cssVars.colors.surfaceElevated,
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.xs,
-    fontWeight: cssVars.fontWeights.semibold,
-    textTransform: 'uppercase',
-    color: match.status === 'RUNNING' ? cssVars.colors.primary : cssVars.colors.textPrimary,
-  };
-
-
-
-  // Task R2: Read-Only-Banner — sichtbar, wenn readOnly (Berechtigungssperre), nicht bei
-  // isFinished allein (dafür steht schon der Status-Badge "BEENDET").
-  const readOnlyBannerStyle: CSSProperties = {
-    background: cssVars.colors.warningBannerBg,
-    border: `1px solid ${cssVars.colors.warningBannerBorder}`,
-    borderRadius: cssVars.borderRadius.sm,
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textPrimary,
-    fontWeight: cssVars.fontWeights.semibold,
-  };
-
-  // Next Banner
-  const nextBannerStyle: CSSProperties = {
-    background: `linear-gradient(90deg, ${cssVars.colors.dangerGradientStart} 0%, ${cssVars.colors.dangerGradientEnd} 100%)`,
-    border: `1px solid ${cssVars.colors.dangerBorder}`,
-    borderRadius: cssVars.borderRadius.sm,
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    fontSize: cssVars.fontSizes.sm,
-    display: 'flex',
-    gap: cssVars.spacing.sm,
-  };
-
-  // Main Grid
-  const mainGridStyle: CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: isDesktop ? '1fr 300px' : '1fr',
-    gap: cssVars.spacing.lg,
-  };
-
-  // Scoreboard
-  const scoreboardStyle: CSSProperties = {
-    background: cssVars.colors.surfaceSolid,
-    borderRadius: cssVars.borderRadius.lg,
-    padding: isMobile ? cssVars.spacing.md : cssVars.spacing.xl,
-  };
-
-  // Timer Row
-  const timerRowStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-    gap: cssVars.spacing.md,
-    marginBottom: cssVars.spacing.lg,
-  };
-
-  const timerLabelStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: '1px',
-  };
-
-  const timerStyle: CSSProperties = {
-    fontSize: isMobile ? '48px' : '64px',
-    fontWeight: cssVars.fontWeights.bold,
-    fontVariantNumeric: 'tabular-nums',
-    cursor: !isLocked ? 'pointer' : 'default',
-    color: timerState === 'netto-warning'
-      ? cssVars.colors.warning
-      : timerState === 'overtime' || timerState === 'zero'
-        ? cssVars.colors.error
-        : cssVars.colors.textPrimary,
-    transition: 'color 0.3s ease',
-  };
-
-  const timerTotalStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
-    color: cssVars.colors.textSecondary,
-  };
-
-  // Score Row
-  const scoreRowStyle: CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: '1fr auto 1fr',
-    gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.lg,
-    alignItems: 'start',
-  };
-
-  const scoreDividerStyle: CSSProperties = {
-    fontSize: '48px',
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.textMuted,
-    alignSelf: 'center',
-    paddingTop: '60px',
-  };
-
-  // Format time
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const getStatusLabel = (): string => {
-    switch (match.status) {
-      case 'RUNNING': return 'LÄUFT';
-      case 'PAUSED': return 'PAUSIERT';
-      case 'FINISHED': return 'BEENDET';
-      default: return 'NICHT GESTARTET';
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
+  const effectiveScore = getEffectiveScore(match);
 
   return (
-    <div style={containerStyle}>
-      {/* Content */}
-      <main style={contentStyle}>
-        {/* Match Header */}
-        <div style={matchHeaderStyle}>
-          <div style={matchInfoStyle}>
-            <span style={matchNumberStyle}>Spiel {match.number}</span>
-            <span style={matchFieldStyle}>{fieldName}</span>
-          </div>
-
-          {/* Foul Counter - Desktop inline, Mobile separate */}
-          {!isMobile && (
-            <FoulBar
-              homeTeamName={match.homeTeam.name}
-              awayTeamName={match.awayTeam.name}
-              homeFouls={homeFouls}
-              awayFouls={awayFouls}
-              variant="inline"
-            />
-          )}
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
-            {/* A4 (C-SYNC): SyncStatusIndicator rendert selbst nichts außerhalb des Cloud-Modus
-                (isCloudSyncAvailable in useSyncStatus) -- kein zusätzlicher Auth-Check hier nötig.
-                I4 (W1, Nachtrag Fixrunde 1): rejectedCount/reviewCount jetzt aus dem echten Sender
-                (useEngineOutboxSummary), nicht mehr die bisherigen Default-Nullen. */}
+    <div className={shell.container}>
+      <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>
+        <LegacyMatchHeader
+          match={match}
+          fieldName={fieldName}
+          isMobile={isMobile}
+          homeFouls={homeFouls}
+          awayFouls={awayFouls}
+          readOnly={readOnly}
+          // A4 (C-SYNC): rendert selbst nichts außerhalb des Cloud-Modus. I4 (W1, Nachtrag
+          // Fixrunde 1): rejectedCount/reviewCount aus dem echten Sender (useEngineOutboxSummary).
+          sync={
             <SyncStatusIndicator
               tournamentId={tournamentId}
               compact
@@ -777,406 +625,69 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               onShowRejected={rejectedOutbox.show}
               enginePendingCount={rejectedOutbox.pendingCount}
             />
-            <span style={statusBadgeStyle} data-testid="match-status-badge">{getStatusLabel()}</span>
-            {/* ARIA-live region for screen readers to announce status changes */}
-            <span
-              aria-live="polite"
-              aria-atomic="true"
-              style={{
-                position: 'absolute',
-                left: -9999,
-                width: 1,
-                height: 1,
-                overflow: 'hidden',
-              }}
-            >
-              {match.status === 'RUNNING'
-                ? 'Spiel läuft'
-                : match.status === 'PAUSED'
-                  ? 'Spiel pausiert'
-                  : match.status === 'FINISHED'
-                    ? 'Spiel beendet'
-                    : 'Spiel noch nicht gestartet'}
-            </span>
-          </div>
-        </div>
+          }
+        />
 
-        {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung (readOnly), nicht bei
-            beendetem Spiel allein. */}
-        {readOnly && (
-          <div style={readOnlyBannerStyle} data-testid="cockpit-readonly-banner" role="status">
-            {t('readOnly.banner')}
-          </div>
-        )}
-
-        {/* W1 (Nachtrag C3a-2a): nur einbinden -- rendert selbst nichts, solange kein
-            Ausgangs-Zustand (clientOutdated/authRequired/notReady/review) vorliegt. */}
+        {/* W1 (Nachtrag C3a-2a): rendert selbst nichts, solange kein Ausgangs-Zustand
+            (clientOutdated/authRequired/notReady/review) vorliegt. */}
         <OutboxNotice status={outboxStatus} matchId={match.id} onReload={handleOutboxReload} />
 
-        {/* I4 (W1, Nachtrag Fixrunde 1): nur einbinden -- Dialog zeigt die Ablehnungsliste dieses
-            Turniers, "Verstanden" ruft dismiss (store.dismissRejected + m7-Benachrichtigung). */}
-        <RejectedOutboxDialog
-          isOpen={rejectedOutbox.isOpen}
-          onClose={rejectedOutbox.close}
-          entries={rejectedOutbox.entries}
-          onDismiss={rejectedOutbox.handleDismiss}
+        <LegacyPlayArea
+          match={match}
+          nextMatch={nextMatch}
+          breakpoint={breakpoint}
+          isMobile={isMobile}
+          isDesktop={isDesktop}
+          isLocked={isLocked}
+          displaySeconds={displaySeconds}
+          timerState={timerState}
+          homeFouls={homeFouls}
+          awayFouls={awayFouls}
+          effectiveScore={effectiveScore}
+          sidesSwapped={sidesSwapped}
+          onTimerClick={openTimeAdjust}
+          teams={{ handlers: { home: sideHandlers('home'), away: sideHandlers('away') }, extraProps: editing.teamBlockProps }}
+          controls={{
+            onUndo: editing.undoVisible ? handleUndo : undefined,
+            onStart: handleStart,
+            onPauseResume: handlePauseResume,
+            onEditTime: openTimeAdjust,
+            onSwitchSides: handleSwitchSides,
+            onFinish: handleFinish,
+            onSettings: () => setShowSettingsDialog(true),
+            // BUG-002: Event Log for Mobile
+            onEventLog: () => setShowEventLogBottomSheet(true),
+            canUndo: editing.canUndo,
+            undoLabel: editing.undoLabel,
+            undoHint: editing.undoHint,
+          }}
+          sidebar={{
+            activePenalties: penalties.penalties,
+            // Task R2 Fixrunde 2 (M2/Rule 1): gesperrt NUR bei echter readOnly-Sperre.
+            onEventEdit: readOnly ? undefined : handleEventEdit,
+          }}
         />
-
-        {/* Foul Bar - Mobile only */}
-        {isMobile && (
-          <FoulBar
-            homeTeamName={match.homeTeam.name}
-            awayTeamName={match.awayTeam.name}
-            homeFouls={homeFouls}
-            awayFouls={awayFouls}
-            variant="bar"
-          />
-        )}
-
-        {/* Next Banner */}
-        {nextMatch && (
-          <div style={nextBannerStyle}>
-            <span style={{ color: cssVars.colors.error, fontWeight: cssVars.fontWeights.semibold }}>
-              Nächstes →
-            </span>
-            <span>
-              {nextMatch.homeTeam.name} vs {nextMatch.awayTeam.name}
-              {nextMatch.scheduledKickoff && ` (${nextMatch.scheduledKickoff})`}
-            </span>
-          </div>
-        )}
-
-        {/* Main Grid */}
-        <div style={mainGridStyle}>
-          {/* Scoreboard */}
-          <div style={scoreboardStyle}>
-            {/* Timer Row */}
-            <div style={timerRowStyle}>
-              <span style={timerLabelStyle}>Spielzeit</span>
-              <span
-                style={timerStyle}
-                onClick={() => {
-                  // @OB-002 (Platzhalter Nr. 2): „Spielzeit anpassen“ für neue Spiele ausgeblendet
-                  if (onAdjustTime && !isLocked && match.status !== 'NOT_STARTED') {
-                    setShowTimeAdjustDialog(true);
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                aria-disabled={isLocked}
-                data-testid="match-timer-display"
-              >
-                {formatTime(displaySeconds)}
-              </span>
-              <span style={timerTotalStyle}>
-                / {formatTime(match.durationSeconds)}
-              </span>
-            </div>
-
-            {/* Score Row - Teams können mit "Seiten tauschen" vertauscht werden */}
-            <div style={scoreRowStyle}>
-              {/* Linkes Team (Home oder Away je nach sidesSwapped) */}
-              <TeamBlock
-                teamName={sidesSwapped ? match.awayTeam.name : match.homeTeam.name}
-                teamLabel={sidesSwapped ? 'Gast' : 'Heim'}
-                score={sidesSwapped ? effectiveScore.away : effectiveScore.home}
-                fouls={sidesSwapped ? awayFouls : homeFouls}
-                disabled={isLocked || isNotStarted}
-                breakpoint={breakpoint}
-                side={sidesSwapped ? 'away' : 'home'}
-                onGoal={sidesSwapped ? handleGoalAway : handleGoalHome}
-                onMinus={sidesSwapped ? handleMinusAway : handleMinusHome}
-                onPenalty={() => {
-                  setPendingPenaltySide(sidesSwapped ? 'away' : 'home');
-                  setShowTimePenaltyDialog(true);
-                }}
-                onYellowCard={() => openCardDialog('YELLOW', sidesSwapped ? 'away' : 'home')}
-                onYellowRedCard={() => openCardDialog('YELLOW_RED', sidesSwapped ? 'away' : 'home')}
-                onRedCard={() => openCardDialog('RED', sidesSwapped ? 'away' : 'home')}
-                onSubstitution={() => {
-                  setPendingSubstitutionSide(sidesSwapped ? 'away' : 'home');
-                  setShowSubstitutionDialog(true);
-                }}
-                onFoul={sidesSwapped ? handleFoulAway : handleFoulHome}
-                {...editing.teamBlockProps(sidesSwapped ? 'away' : 'home')}
-              />
-
-              {/* Divider */}
-              <span style={scoreDividerStyle}>:</span>
-
-              {/* Rechtes Team (Away oder Home je nach sidesSwapped) */}
-              <TeamBlock
-                teamName={sidesSwapped ? match.homeTeam.name : match.awayTeam.name}
-                teamLabel={sidesSwapped ? 'Heim' : 'Gast'}
-                score={sidesSwapped ? effectiveScore.home : effectiveScore.away}
-                fouls={sidesSwapped ? homeFouls : awayFouls}
-                disabled={isLocked || isNotStarted}
-                breakpoint={breakpoint}
-                side={sidesSwapped ? 'home' : 'away'}
-                onGoal={sidesSwapped ? handleGoalHome : handleGoalAway}
-                onMinus={sidesSwapped ? handleMinusHome : handleMinusAway}
-                onPenalty={() => {
-                  setPendingPenaltySide(sidesSwapped ? 'home' : 'away');
-                  setShowTimePenaltyDialog(true);
-                }}
-                onYellowCard={() => openCardDialog('YELLOW', sidesSwapped ? 'home' : 'away')}
-                onYellowRedCard={() => openCardDialog('YELLOW_RED', sidesSwapped ? 'home' : 'away')}
-                onRedCard={() => openCardDialog('RED', sidesSwapped ? 'home' : 'away')}
-                onSubstitution={() => {
-                  setPendingSubstitutionSide(sidesSwapped ? 'home' : 'away');
-                  setShowSubstitutionDialog(true);
-                }}
-                onFoul={sidesSwapped ? handleFoulHome : handleFoulAway}
-                {...editing.teamBlockProps(sidesSwapped ? 'home' : 'away')}
-              />
-            </div>
-
-            {/* Game Controls */}
-            <GameControls
-              status={match.status}
-              onUndo={editing.undoVisible ? handleUndo : undefined}
-              onStart={handleStart}
-              onPauseResume={handlePauseResume}
-              onEditTime={onAdjustTime ? () => setShowTimeAdjustDialog(true) : undefined}
-              onSwitchSides={handleSwitchSides}
-              onFinish={handleFinish}
-              onSettings={() => setShowSettingsDialog(true)}
-              // BUG-002: Event Log for Mobile
-              onEventLog={() => setShowEventLogBottomSheet(true)}
-              canUndo={editing.canUndo}
-              undoLabel={editing.undoLabel}
-              undoHint={editing.undoHint}
-              breakpoint={breakpoint}
-              // Task R2: sperrt Rückgängig/Start-Pause/Zeit/Seiten/Beenden, wenn
-              // readOnly/finished — unverändert gegenüber 235d947 (dort schon isFinished-gesperrt).
-              // Settings/Event-Log sind davon NICHT betroffen (GameControls sperrt sie nie über
-              // `disabled` — siehe dort). Fixrunde 3 (Review-Befund M): der Settings-Button öffnet
-              // sich deshalb jetzt auch unter readOnly immer, `SettingsDialog` sperrt stattdessen
-              // die Eingaben selbst (siehe `readOnly`-Prop dort unten).
-              disabled={isLocked}
-            />
-          </div>
-
-          {/* Sidebar - Desktop only */}
-          {isDesktop && (
-            <Sidebar
-              activePenalties={penalties.penalties}
-              events={match.events}
-              retractedEvents={match.retractedEvents}
-              homeTeamName={match.homeTeam.name}
-              awayTeamName={match.awayTeam.name}
-              homeTeamId={match.homeTeam.id}
-              awayTeamId={match.awayTeam.id}
-              // BUG-010: Enable event editing — Task R2 Fixrunde 2 (M2/Rule 1): gesperrt NUR bei
-              // echter readOnly-Sperre, nicht bei isFinished allein. Vor R2 (235d947) war dieser
-              // Button nie durch isFinished gesperrt (Bearbeiten nach Spielende war immer
-              // möglich) — `isLocked` hätte das für readOnly=false+isFinished neu gesperrt, eine
-              // Regression gegen Rule 1. `undefined` blendet den Bearbeiten-Button in Sidebar
-              // komplett aus, siehe Sidebar/index.tsx canEdit.
-              onEventEdit={readOnly ? undefined : handleEventEdit}
-            />
-          )}
-        </div>
       </main>
 
-      {/* Dialogs */}
-      <TimeAdjustDialog
-        isOpen={showTimeAdjustDialog}
-        onClose={() => setShowTimeAdjustDialog(false)}
-        onConfirm={handleTimeAdjust}
-        currentTimeSeconds={displaySeconds}
-        matchDurationMinutes={Math.floor(match.durationSeconds / 60)}
-      />
-
-      <CardDialog
-        isOpen={showCardDialog}
-        onClose={() => {
-          setShowCardDialog(false);
-          // BUG-007: Reset pending card state
-          setPendingCardType(null);
-          setPendingCardTeamSide(null);
-        }}
-        onConfirm={handleCardConfirm}
-        homeTeam={match.homeTeam}
-        awayTeam={match.awayTeam}
-        // BUG-007: Pre-select card type and team based on button clicked
-        initialCardType={pendingCardType ?? undefined}
-        preselectedTeamSide={pendingCardTeamSide ?? undefined}
-        autoDismissSeconds={10}
-      />
-
-      <TimePenaltyDialog
-        isOpen={showTimePenaltyDialog}
-        onClose={() => {
-          setShowTimePenaltyDialog(false);
-          setPendingPenaltySide(null);
-        }}
-        onConfirm={handleTimePenaltyConfirm}
-        homeTeam={match.homeTeam}
-        awayTeam={match.awayTeam}
-        // BUG-006: Pre-select 2 minutes and team based on button clicked
-        preselectedDurationSeconds={match.timePenaltyDurationSeconds ?? cockpitSettings.timePenaltyDurationSeconds}
-        preselectedTeamSide={pendingPenaltySide ?? undefined}
-        autoDismissSeconds={10}
-      />
-
-      <SubstitutionDialog
-        isOpen={showSubstitutionDialog}
-        onClose={() => {
-          setShowSubstitutionDialog(false);
-          setPendingSubstitutionSide(null);
-        }}
-        onConfirm={handleSubstitutionConfirm}
-        homeTeam={match.homeTeam}
-        awayTeam={match.awayTeam}
-        // BUG-009: Pre-select team based on button clicked
-        preselectedTeamSide={pendingSubstitutionSide ?? undefined}
-        autoDismissSeconds={10}
-      />
-
-      {/* GoalScorerDialog - BUG-002: Torschütze + Assist erfassen */}
-      <GoalScorerDialog
-        isOpen={showGoalDialog}
-        onClose={() => {
-          setShowGoalDialog(false);
-          setPendingGoalSide(null);
-        }}
-        onConfirm={handleGoalConfirm}
-        teamName={
-          pendingGoalSide === 'home'
-            ? match.homeTeam.name
-            : pendingGoalSide === 'away'
-              ? match.awayTeam.name
-              : ''
-        }
-        teamColor={cssVars.colors.primary}
-        autoDismissSeconds={10}
-      />
-
-      {/* BUG-010: EventEditDialog for editing/deleting events */}
-      <EventEditDialog
-        isOpen={showEventEditDialog}
-        onClose={() => {
-          setShowEventEditDialog(false);
-          setEditingEventId(null);
-        }}
-        event={editingEvent}
-        homeTeam={match.homeTeam}
-        awayTeam={match.awayTeam}
-        onUpdate={handleEventUpdate}
-        onDelete={handleEventDelete}
-        deleteBlocked={editingEventId ? editing.deleteBlock(editingEventId) : undefined}
-        amendLocked={editingEventId ? editing.amendLock(editingEventId) : undefined}
-      />
-
-      {/* BUG-002: Event Log Bottom Sheet for Mobile */}
-      <EventLogBottomSheet
-        isOpen={showEventLogBottomSheet}
-        onClose={() => setShowEventLogBottomSheet(false)}
-        events={match.events}
-        retractedEvents={match.retractedEvents}
-        homeTeamName={match.homeTeam.name}
-        awayTeamName={match.awayTeam.name}
-        homeTeamId={match.homeTeam.id}
-        awayTeamId={match.awayTeam.id}
-        // Task R2 Fixrunde 2 (H1b/Rule 2): gesperrt NUR bei readOnly, nicht bei isFinished allein
-        // (dasselbe Rule-1-Argument wie bei Sidebar.onEventEdit oben — vor R2 war dieser Handler
-        // gar nicht gegen isFinished/isLocked gesperrt). Öffnen und Lesen des Sheets bleibt über
-        // den "Ereignisprotokoll"-Knopf in GameControls immer erlaubt (siehe dort); nur das
-        // Bearbeiten selbst ist ein Schreib-Callback und wird unter readOnly zu `undefined`
-        // (EventLogBottomSheet blendet den "Bearbeiten"-Knopf dann komplett aus).
-        onEventEdit={readOnly ? undefined : (event) => {
-          setShowEventLogBottomSheet(false);
-          // M-1 FIX: Store only event ID for fresh data lookup
-          setEditingEventId(event.id);
-          setShowEventEditDialog(true);
-        }}
-      />
-
-
-
-      <SettingsDialog
-        isOpen={showSettingsDialog}
-        onClose={() => setShowSettingsDialog(false)}
-        settings={cockpitSettings}
-        onChange={(newSettings) => {
-          if (onUpdateSettings) {
-            onUpdateSettings(newSettings);
-          }
-        }}
+      <CockpitOverlays
+        match={match}
         tournamentId={tournamentId}
-        onTestSound={() => void sound.play()}
-        // Task R2 Fixrunde 3 (Review-Befund M): `readOnly` (nicht `isLocked`) — Settings zeigen
-        // echte, synchronisierte Werte (Regel 2: "ansehen bleibt erlaubt"), der Dialog bleibt also
-        // auch bei bloß beendetem Spiel (Rule 1, readOnly=false) voll bedienbar. Nur bei echter
-        // readOnly-Sperre werden die Eingaben deaktiviert (SettingsDialog → MatchCockpitSettingsPanel).
         readOnly={readOnly}
+        isLocked={isLocked}
+        settings={cockpitSettings}
+        displaySeconds={displaySeconds}
+        effectiveScore={effectiveScore}
+        dialogs={dialogs}
+        editingEvent={editingEvent}
+        editing={editing}
+        handlers={overlayHandlers}
+        sound={sound}
+        rejectedOutbox={rejectedOutbox}
+        toasts={toasts}
+        onDismissToast={dismissToast}
       />
-
-      {/* Audio Activation Banner - required for browser autoplay policy */}
-      {cockpitSettings.soundEnabled && !sound.isActivated && (
-        <AudioActivationBanner
-          show={true}
-          onActivate={sound.activate}
-        />
-      )}
-
-      {/* L1: Tiebreaker-Banner — MatchExecutionService.finishMatch setzt awaitingTiebreakerChoice,
-          useMatchExecution.handleFinish lädt das Match neu, der Zustand kommt hier an. */}
-      {match.awaitingTiebreakerChoice && (
-        <TiebreakerBanner
-          homeTeamName={match.homeTeam.name} awayTeamName={match.awayTeam.name}
-          score={effectiveScore.home} tiebreakerMode={match.tiebreakerMode}
-          overtimeMinutes={Math.round((match.overtimeDurationSeconds ?? 300) / 60)}
-          // Task R2: die vier Tiebreaker-Handler — bei isLocked (readOnly/finished) undefined,
-          // damit TiebreakerBanner die zugehörigen Knöpfe gar nicht erst anzeigt.
-          onStartOvertime={onStartOvertime && !isLocked ? handleStartOvertime : undefined}
-          onStartGoldenGoal={onStartGoldenGoal && !isLocked ? handleStartGoldenGoal : undefined}
-          onStartPenaltyShootout={onStartPenaltyShootout && !isLocked ? handleStartPenaltyShootout : undefined}
-          onEndAsDraw={onForceFinish && !isLocked ? handleEndAsDraw : undefined}
-        />
-      )}
-
-      {/* L1: Strafstoßschießen. onRecordShot ist vom Dialog gefordert, Einzelschüsse werden derzeit nicht
-          persistiert — der Service kennt nur das Endergebnis. Bewusst No-op statt Scheinpersistenz.
-          Task R2 Fixrunde 2 (H1): `!readOnly` — der Dialog öffnet sich automatisch per Effekt
-          (oben, an `playPhase === 'penalty'` gekoppelt), auch wenn playPhase über Realtime von
-          einem anderen Gerät kommt. Unter readOnly wird er GAR NICHT gerendert (statt rein
-          lesend): sein Schuss-Stand ist reiner Lokalzustand (`useState` im Dialog selbst, siehe
-          PenaltyShootoutDialog.tsx `initialShots`/`shots`), nicht mit anderen Geräten
-          synchronisiert — eine "Lese"-Ansicht würde einem readOnly-Betrachter einen leeren,
-          irreführenden Schuss-Stand zeigen statt des echten (der nur auf dem bedienenden Gerät
-          existiert), und jede Aktion im Dialog (TOR/DANEBEN/Korrigieren/Beenden/Abbrechen) ist
-          ein Schreib-Callback — Regel 2 erlaubt, einen ausschließlich schreibenden Dialog unter
-          readOnly gesperrt zu lassen. Siehe Report für die volle Begründung. */}
-      {showPenaltyDialog && !readOnly && onRecordPenaltyResult && onAbortPenaltyShootout && (
-        <PenaltyShootoutDialog
-          homeTeamName={match.homeTeam.name} awayTeamName={match.awayTeam.name}
-          onRecordShot={() => { /* Einzelschüsse werden nicht persistiert (Follow-up, Task 22) */ }}
-          onFinish={handlePenaltyFinish} onCancel={handlePenaltyCancel}
-        />
-      )}
-
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
-};
-
-// ---------------------------------------------------------------------------
-// Fallback Styles
-// ---------------------------------------------------------------------------
-
-const noMatchStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: '300px',
-  background: cssVars.colors.background,
-};
-
-const noMatchTextStyle: CSSProperties = {
-  color: cssVars.colors.textSecondary,
-  fontSize: '1.125rem',
 };
 
 export default LiveCockpit;

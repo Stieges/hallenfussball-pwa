@@ -56,6 +56,8 @@ export const displaySizes = {
   md: '36px',
   /** 48px - Large display headlines */
   lg: '48px',
+  /** 64px - Extra large display (Spieluhr im Live-Cockpit, Scheibe 1) */
+  xl: '64px',
 } as const;
 
 // =============================================================================
