@@ -45,7 +45,7 @@ function monitor(overrides: Partial<TournamentMonitor> = {}): TournamentMonitor 
     transitionDuration: 500,
     theme: 'dark',
     performanceMode: 'auto',
-    overscanPx: 64,
+    overscanPercent: 7.5,
     slides: [
       { id: 'sl-1', type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 },
       { id: 'sl-2', type: 'standings', config: {}, duration: null, order: 1 },
@@ -123,7 +123,7 @@ describe('Monitore übernehmen (B-22)', () => {
     const [created] = savedMonitors(onUpdate);
     expect(created.name).toBe('Hallenmonitor Halle');
     expect(created.id).not.toBe('mon-nord');
-    expect(created.overscanPx).toBe(64);
+    expect(created.overscanPercent).toBe(7.5);
     expect(created.slides.map(s => s.type)).toEqual(['live', 'standings', 'sponsor']);
     expect(created.slides[2].duration).toBe(20);
     expect(created.slides[2].config.sponsorId).toBe('sp-sued');
@@ -203,7 +203,7 @@ describe('Monitore übernehmen (B-22)', () => {
       version: 1,
       monitors: [{
         name: 'Datei-Monitor', defaultSlideDuration: 10, transition: 'none', transitionDuration: 0,
-        theme: 'light', performanceMode: 'low', overscanPx: 10,
+        theme: 'light', performanceMode: 'low', overscanPercent: 10,
         slides: [{ type: 'qr-code', config: {}, duration: null }],
       }],
     };

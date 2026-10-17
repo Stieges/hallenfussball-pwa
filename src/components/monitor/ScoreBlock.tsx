@@ -100,7 +100,7 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
       aria-label={hideScore ? (position === 'home' ? 'Heim' : 'Gast') : `${position === 'home' ? 'Heim' : 'Gast'}: ${score}`}
     >
       <div style={glowStyle} />
-      {!hideScore && <span style={scoreStyle}>{score}</span>}
+      {!hideScore && <span style={scoreStyle} data-monitor="stand">{score}</span>}
     </div>
   );
 };

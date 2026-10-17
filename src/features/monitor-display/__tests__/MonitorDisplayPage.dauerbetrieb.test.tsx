@@ -1,17 +1,16 @@
 /**
- * Monitor-Seite im Dauerbetrieb (B-17 + Fixrunde 1): Mauszeiger, Vollbild-Taste, Tasten, Hinweis, Bildrand.
- * Szenarien: @ME-002, @ME-003, @ME-005, @ME-006, @ME-019, @ME-020, @ME-021, @ME-022, @ZM-130.
+ * Monitor-Seite im Dauerbetrieb (B-17 + Fixrunde 1): Mauszeiger, Vollbild-Taste, Tasten, Hinweis.
+ * (Bildrand: overscan.ms2.test.tsx.)
+ * Szenarien: @ME-002, @ME-003, @ME-005, @ME-006, @ME-019, @ME-021, @ME-022, @ZM-130.
  * Gegenbeispiele: Leertaste und Pfeile wirken nicht (@ME-022); Escape verlässt die Seite nicht; der Hinweis erscheint
  * nie in der Browser-Quelle und höchstens einmal je Seite.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import type { Tournament } from '../../../types/tournament';
-import { PERFORMANCE_PROFILES } from '../../../types/monitor';
 import deMonitor from '../../../i18n/locales/de/monitor.json';
 import enMonitor from '../../../i18n/locales/en/monitor.json';
 import { attachMonitor, buildTournament, slide, withMonitor } from './monitorFixture';
-import { SlideRenderer } from '../slides/SlideRenderer';
 
 const { supabaseGet, localGet } = vi.hoisted(() => ({
   supabaseGet: vi.fn(),
@@ -47,11 +46,11 @@ import { MonitorDisplayPage } from '../MonitorDisplayPage';
 /** Die Test-Umgebung liefert den Schlüssel als Text (src/test/setup.ts); der DE/EN-Wortlaut steht im JSON-Test unten. */
 const HINWEIS = 'monitor:dauerbetrieb.wakeLockHint';
 
-function monitorTurnier(overscanPx?: number, folien = [
+function monitorTurnier(overscanPercent?: number, folien = [
   slide('custom-text', { headline: 'Folie A' }, 4),
   slide('custom-text', { headline: 'Folie B' }),
 ]): Tournament {
-  return attachMonitor(buildTournament(), withMonitor({ slides: folien, ...(overscanPx !== undefined ? { overscanPx } : {}) }));
+  return attachMonitor(buildTournament(), withMonitor({ slides: folien, ...(overscanPercent !== undefined ? { overscanPercent } : {}) }));
 }
 
 function wakeLockUnterstuetzt(): void {
@@ -263,29 +262,6 @@ describe('Bildschirm bleibt an, Hinweis nur im normalen Browser (@ME-005, @ME-00
     await vorspulen(30_000);
     expect(screen.getByText('Folie A')).toBeInTheDocument();
     expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
-  });
-});
-
-describe('Bildrand je Monitor (@ME-020)', () => {
-  const folie = () => slide('custom-text', { headline: 'Rand' });
-  const rendere = (overscanPx: number) => render(
-    <SlideRenderer
-      slide={folie()}
-      tournament={buildTournament()}
-      performanceSettings={PERFORMANCE_PROFILES.high}
-      theme="dark"
-      overscanPx={overscanPx}
-    />,
-  );
-
-  it('ein gesetzter Bildrand wirkt als Innenabstand der Folie', () => {
-    const { container } = rendere(60);
-    expect((container.firstElementChild as HTMLElement).style.padding).toBe('60px');
-  });
-
-  it('Gegenbeispiel: Bildrand 0 lässt keinen Rand stehen', () => {
-    const { container } = rendere(0);
-    expect((container.firstElementChild as HTMLElement).style.padding).toBe('0px');
   });
 });
 

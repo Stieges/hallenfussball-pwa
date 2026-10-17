@@ -155,7 +155,7 @@ displayMonitor.qr.foreground        // '#000000' (QR-Vordergrund, SVG-Attribut)
 displayMonitor.qr.background        // '#ffffff' (QR-Hintergrund, SVG-Attribut)
 displayMonitor.qr.sizeLarge         // 220 (QR-Folie)
 displayMonitor.qr.sizeSmall         // 150 (Sponsor-Folie)
-displayMonitor.overscanDefaultPx    // 48
+displayMonitor.overscan            // { defaultPercent: 5, minPercent: 0, maxPercent: 10, stepPercent: 0.5, urlParam: 'rand' } (Bildrand in % je Seite)
 displayMonitor.radius.card          // '12px'
 displayMonitor.marker.indicatorSize // '10px'
 displayMonitor.size.*               // Logo-, Text-, Tabellen- und Spielplan-Maße

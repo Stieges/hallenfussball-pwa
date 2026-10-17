@@ -195,7 +195,7 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     <>
       <div style={containerStyle}>
         <div style={timeContainerStyle} data-testid="monitor-clock" data-phase={clock.phase}>
-          <span style={timeStyle}>{formatTime(clock.restSekunden)}</span>
+          <span style={timeStyle} data-monitor="uhr">{formatTime(clock.restSekunden)}</span>
         </div>
 
         {showProgress && (
