@@ -1,9 +1,8 @@
 /**
  * Typen der reinen Spiel-Rechenfunktion (B1a).
  *
- * SQL-Zwilling in B3a (Ruling R1). Zustände, Ereignistypen, Fehlercodes und der Zustandstyp
- * `MatchState`. Payload-Zod-Schemas + Validierung stehen wegen der 300-Zeilen-Grenze in
- * `payloadValidation.ts`.
+ * SQL-Zwilling in B3a (Ruling R1). Zustände, Ereignistypen, Fehlercodes und `MatchState`.
+ * Payload-Zod-Schemas + Validierung: `payloadValidation.ts` (300-Zeilen-Grenze).
  *
  * @see .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B1a-brief.md
  * @see .superpowers/sdd/2026-09-25-pr-b-schreibweg/rulings.md (R1-R19)
@@ -203,13 +202,14 @@ export interface ShootoutKickRecord {
  * "Überschreibungen" (nicht zurückgenommene, in Log-Reihenfolge). Jede Überschreibung
  * speichert `snapshot` = der aus Toren berechnete Stand zum Zeitpunkt ihrer Annahme. Der
  * effektive Stand ist dann die letzte Überschreibung plus die seitdem gefallenen Tore
- * (`effectiveScoreFor`). Damit zählen Tore nach REOPEN weiter, ohne dass eine Korrektur
- * verloren geht.
+ * (`effectiveScoreFor`). Damit zählen Tore nach REOPEN weiter, ohne Korrektur-Verlust.
  */
 export interface OverrideRecord {
   id: string;
   kind: 'correction' | 'direct';
   scores: Record<string, number>;
+  /** A-25a (@FU-094): Strafstoßergebnis eines Direkteintrags (nur `direct`, nur wenn eingetragen). */
+  shootout?: Record<string, number>;
   snapshot: Record<string, number>;
   reason?: string;
   basedOn?: string | null;

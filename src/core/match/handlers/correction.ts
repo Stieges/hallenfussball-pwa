@@ -71,11 +71,13 @@ export function applyCorrection(state: MatchState, event: EngineEvent, ctx: Matc
 
 /** RESULT_ENTRY: Direkteintrag, beendet das Spiel sofort mit dem eingegebenen Stand (K1: als Überschreibung). */
 export function applyResultEntry(state: MatchState, event: EngineEvent, ctx: MatchContext): MatchState {
-  const payload = event.payload as { scores: Record<string, number> };
+  const payload = event.payload as { scores: Record<string, number>; shootout?: Record<string, number> };
   const override: OverrideRecord = {
     id: event.id,
     kind: 'direct',
     scores: payload.scores,
+    // A-25a (@FU-094): Strafstoßergebnis nur übernehmen, wenn eingetragen (kein leerer Schlüssel, wie SQL).
+    ...(payload.shootout !== undefined ? { shootout: payload.shootout } : {}),
     snapshot: snapshotFor(state, ctx),
     basedOn: null,
     at: event.at,

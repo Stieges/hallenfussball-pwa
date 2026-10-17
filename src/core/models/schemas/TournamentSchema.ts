@@ -74,6 +74,7 @@ export const MatchSchema = z.object({
     // C-SCHEMA-VERWIRFT-FELDER: ohne diese drei Felder ging beim lokalen Laden die Spielnummer verloren
     // (aus „Spiel 11“ wurde „Spiel 1“) und ein Komplett-Speichern schrieb `match_number = NULL` in die Cloud.
     matchNumber: z.number().optional(),
+    // auch A-25a (C-PHASE-LOKAL-VERLOREN): ohne phase galt ein K.-o.-Spiel lokal als Gruppenspiel.
     phase: z.string().optional(),
     correctionHistory: z.array(CorrectionEntrySchema).optional(),
     referee: z.number().optional(),

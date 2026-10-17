@@ -2,7 +2,7 @@
  * A-08f3e2 – Schnelleingabe im Spielplan über Server-Einträge (Plan A-08f3 v4 § 3, Brief A-08f3e2e3).
  * Echter Weg: echter `LocalMatchStore` + `MatchEngine` + `OutboxSender` (Server-RPC gemockt), echte DE-Texte.
  * Werte aus den Gherkin-Szenarien (`plattform/2026-09-24_fundament-gemeinsamer-stand.md`):
- * @FU-080, @FU-081, @FU-082, @FU-093, @FU-094 (Teil), @FU-069; Grundpflicht @EK-004 (`2026-10-02_ergebnisse-korrigieren.md:317`).
+ * @FU-080, @FU-081, @FU-082, @FU-093, @FU-094 (A-25a: Strafstoß-Abfrage), @FU-069; Grundpflicht @EK-004 (`2026-10-02_ergebnisse-korrigieren.md:317`).
  */
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
@@ -21,8 +21,9 @@ import { MatchCommands, rowToEngineEvent, type EngineEventWithSeq } from '../../
 import { effectiveScoreFor, type EngineEvent } from '../../../../core/match';
 import { RULES } from '../../../../core/match/client/__tests__/fixtures';
 import {
-  FC_NORD, HALBFINALE_1, NOW, SPIEL_7, SPIEL_9, SV_SUED, makeScheduleEngine, scheduleTournament, settle, type ScheduleEngine,
+  FC_NORD, GAST, HALBFINALE_1, HEIM, NOW, SPIEL_7, SPIEL_9, SV_SUED, makeScheduleEngine, scheduleTournament, settle, type ScheduleEngine,
 } from '../../../../test/scheduleEngineHarness';
+import { cacheColumns } from '../../../../core/match/client/cacheColumns';
 import { useScheduleResultEntry } from '../useScheduleResultEntry';
 
 await initRealDeI18n();
@@ -262,35 +263,91 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
     });
   });
 
-  describe('@FU-094 K.-o.-Unentschieden im Direkteintrag', () => {
-    it('@FU-094 ohne Strafstoßergebnis speichert die App das Unentschieden nicht (Halbfinale 1, 2:2)', async () => {
-      const { enter, showWarning } = render(h);
-      await enter(HALBFINALE_1, 2, 2);
+  describe('@FU-094 K.-o.-Unentschieden im Direkteintrag (A-25a)', () => {
+    /** Olli trägt 2:2 für das Halbfinale 1 ein (Turnierregel K.-o.: Strafstoßschießen) und wartet auf die Abfrage. */
+    async function halbfinale22() {
+      const view = render(h);
+      const done = view.enter(HALBFINALE_1, 2, 2);
+      await act(async () => { await settle(); });
+      return { ...view, done };
+    }
+
+    it('@FU-094 fragt zusätzlich nach dem Ergebnis des Strafstoßschießens (Halbfinale 1, 2:2)', async () => {
+      const { hook, answer, done } = await halbfinale22();
+      expect(hook.result.current.prompt).toEqual({
+        kind: 'shootout', matchNumber: 11, score: '2:2', homeName: 'Heimteam', awayName: 'Auswärtsteam',
+      });
+      expect(h.api).not.toHaveBeenCalled();
+      await answer(null);
+      await done;
+    });
+
+    it('@FU-094 ohne Angabe des Strafstoßergebnisses speichert die App das Unentschieden nicht', async () => {
+      const { answer, done, showWarning } = await halbfinale22();
+      await answer(null);
+      await done;
       await settle();
 
-      expect(lastWarning(showWarning)).toBe(
-        'Unentschieden im K.-o.-Spiel – das Ergebnis mit Strafstoßschießen bitte im Cockpit eintragen. Nichts gespeichert.',
-      );
-      expect(await outbox(h, HALBFINALE_1)).toBeNull();
+      expect((await outbox(h, HALBFINALE_1))?.pending ?? []).toEqual([]);
       expect(h.api).not.toHaveBeenCalled();
+      expect(status(h, HALBFINALE_1)).toBe('scheduled');
+      expect(showWarning).not.toHaveBeenCalled();
+    });
+
+    it('@FU-094 nach „4:3 für das Heimteam“ ist das Halbfinale beendet mit 2:2 und Sieger Heimteam', async () => {
+      const { answer, done } = await halbfinale22();
+      await answer('4:3');
+      await done;
+      await settle();
+
+      expect(sentTypes(h)).toEqual([['RESULT_ENTRY']]);
+      expect(h.api.mock.calls[0][1][0].payload).toEqual({ scores: { [HEIM]: 2, [GAST]: 2 }, shootout: { [HEIM]: 4, [GAST]: 3 } });
+      expect(status(h, HALBFINALE_1)).toBe('finished');
+      const state = h.engine.view(HALBFINALE_1)?.result.state;
+      expect(state && cacheColumns(state, { matchId: HALBFINALE_1, teamAId: HEIM, teamBId: GAST })).toMatchObject({
+        score_a: 2, score_b: 2, penalty_score_a: 4, penalty_score_b: 3, decided_by: 'penalty',
+      });
+    });
+
+    it('@FU-094 Fehlerfall: der Server lehnt den Eintrag ab → Eintrag in der Ablehnungsliste, Halbfinale bleibt geplant', async () => {
+      h.api.mockImplementationOnce(async (_matchId, events) => ({
+        results: [{ id: events[0].id, status: 'rejected', code: 'INVALID_PAYLOAD', detail: { reason: 'SHOOTOUT_REQUIRED' } }],
+        state: null,
+        serverTime: 1,
+      }));
+      const { hook, answer, done } = await halbfinale22();
+      // Vorbedingung (Review A-25a K1): die Abfrage erschien, und gesendet wurde der Eintrag MIT Strafstoßergebnis.
+      expect(hook.result.current.prompt?.kind).toBe('shootout');
+      await answer('4:3');
+      await done;
+      await settle();
+      expect(h.api).toHaveBeenCalledTimes(1);
+      expect(h.api.mock.calls[0][1][0].payload).toEqual({ scores: { [HEIM]: 2, [GAST]: 2 }, shootout: { [HEIM]: 4, [GAST]: 3 } });
+
+      const copy = await outbox(h, HALBFINALE_1);
+      expect(copy?.rejected.map((entry) => [entry.event.type, entry.code])).toEqual([['RESULT_ENTRY', 'INVALID_PAYLOAD']]);
+      expect(status(h, HALBFINALE_1)).toBe('scheduled');
     });
 
     it('@FU-094 Gegenbeispiel: Gruppenspiel 7 mit 2:2 wird ohne Abfrage gespeichert', async () => {
-      const { enter, showWarning } = render(h);
+      const { hook, enter, showWarning } = render(h);
       await enter(SPIEL_7, 2, 2);
       await settle();
 
+      expect(hook.result.current.prompt).toBeNull();
       expect(showWarning).not.toHaveBeenCalled();
       expect(sentTypes(h)).toEqual([['RESULT_ENTRY']]);
+      expect(h.api.mock.calls[0][1][0].payload).toEqual({ scores: { [FC_NORD]: 2, [SV_SUED]: 2 } });
       expect(scoreOf(h, SPIEL_7, FC_NORD, SV_SUED)).toBe('2:2');
     });
 
-    // Befund C-DIREKTEINTRAG-OHNE-STRAFSTOSS: `RESULT_ENTRY` kennt kein Strafstoßergebnis -> Paket A-25a (F2, 28.10.).
-    it.fails('@FU-094 die App fragt zusätzlich nach dem Ergebnis des Strafstoßschießens (4:3 → Sieger Heimteam)', async () => {
+    it('@FU-094 Gegenbeispiel: Halbfinale 1 mit 3:2 wird ohne Abfrage gespeichert', async () => {
       const { hook, enter } = render(h);
-      void enter(HALBFINALE_1, 2, 2);
-      await act(async () => { await settle(); });
-      expect(hook.result.current.prompt?.kind).toBe('shootout');
+      await enter(HALBFINALE_1, 3, 2);
+      await settle();
+
+      expect(hook.result.current.prompt).toBeNull();
+      expect(sentTypes(h)).toEqual([['RESULT_ENTRY']]);
     });
   });
 
