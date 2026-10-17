@@ -1070,7 +1070,7 @@ out="$(call authenticated "$U_OWNER" "$(M a1)" "$(arr "$(ev AMEND "$(E a1-am7)" 
 check Nachtrag "AMEND mit fremdem teamId / Nicht-UUID-targetId / ohne targetId -> INVALID_PAYLOAD" '[.results[].code] == ["INVALID_PAYLOAD","INVALID_PAYLOAD","INVALID_PAYLOAD"]' "$out"
 out="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away, payload) VALUES ('$(E a1-direct)', '$(M a1)', 'AMEND', 1, 0, 0, '{\"playerNumber\":1}')\$S\$);")"
 check Nachtrag "Direktweg: Client-INSERT eines AMEND (neuer Typ) -> abgelehnt mit 42501 (A-08h: kein Tabellenrecht auf match_events)" \
-  'startswith("error:42501:")' "$(jq -Rn --arg v "$out" '$v')"
+  'startswith("error:42501:") and contains("permission denied for table match_events")' "$(jq -Rn --arg v "$out" '$v')"
 
 # --- 9d. C0b: Spalten-Schutz auf matches (V4, Ruling PC2) ------------------------------------
 echo "Spaltenschutz..." >&2
@@ -1235,8 +1235,8 @@ a8_exec() {
     q "SELECT public.__b3b_exec_msg('$uid', \$S\$$sql\$S\$, 'authenticated');"
   fi
 }
-# a8_denied <Name> <Ausgabe>: 42501 muss die Ablehnung sein (Tabellenrecht entzogen).
-a8_denied() { check A-08h "$1" 'startswith("error:42501:")' "$(jq -Rn --arg v "$2" '$v')"; }
+# a8_denied <Name> <Ausgabe>: 42501 MIT der Meldung des entzogenen Tabellenrechts (nicht RLS, nicht Guard).
+a8_denied() { check A-08h "$1" 'startswith("error:42501:") and contains("permission denied for table match_events")' "$(jq -Rn --arg v "$2" '$v')"; }
 # a8_eq <Name> <vorher> <nachher>
 a8_eq() { local v=false; [[ "$2" == "$3" ]] && v=true; check A-08h "$1" '. == true' "$v"; }
 a8_snap() {
