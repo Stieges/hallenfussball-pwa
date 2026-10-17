@@ -17,7 +17,7 @@ import { MatchCommands } from '../../../../core/match/client';
 import type { AppendableEvent, AppendResult } from '../../../../core/repositories/appendMatchEventsRpc';
 import { MatchEngineContext } from '../../../match-engine/matchEngineContextInstance';
 import { RULES } from '../../../../core/match/client/__tests__/fixtures';
-import { FC_NORD, NOW, SPIEL_9, SV_SUED, makeScheduleEngine, settle, type ScheduleEngine } from '../../../../test/scheduleEngineHarness';
+import { FC_NORD, NOW, SPIEL_9, SV_SUED, makeScheduleEngine, scheduleTournament, settle, type ScheduleEngine } from '../../../../test/scheduleEngineHarness';
 import { clearRealtimeChannelStatus, setRealtimeChannelStatus } from '../../../../hooks/realtimeChannelStatus';
 import { EngineOutboxHeaderStatus } from '../EngineOutboxHeaderStatus';
 
@@ -31,7 +31,7 @@ function commandsOf(h: ScheduleEngine) {
 
 function mount(h: ScheduleEngine) {
   return render(
-    <ToastProvider><MatchEngineContext.Provider value={h.value}><EngineOutboxHeaderStatus tournamentId="T" /></MatchEngineContext.Provider></ToastProvider>,
+    <ToastProvider><MatchEngineContext.Provider value={h.value}><EngineOutboxHeaderStatus tournament={scheduleTournament()} /></MatchEngineContext.Provider></ToastProvider>,
   );
 }
 
@@ -81,7 +81,9 @@ describe('A-08f3e3 Hinweis im Kopf der Turnierverwaltung', () => {
     expect(badge.textContent).toBe('1 nicht übernommen');
     act(() => { fireEvent.click(badge); });
     const item = within(view.getByTestId('outbox-rejected-panel')).getByTestId('outbox-rejected-item');
-    expect(item.textContent).toContain('Ergebnis eingetragen');
+    // M-4: Spiel und Teams statt einer Spielminute (@FU-004 „mit Details“).
+    expect(item.textContent).toContain('Ergebnis eingetragen · Spiel 9 · SV Süd – FC Nord 3:1');
+    expect(item.textContent).not.toContain('Minute');
     expect(item.textContent).toContain('Die Eingabe passt nicht zum aktuellen Spielablauf.');
     expect(h.engine.view(SPIEL_9)?.result.state.status).toBe('running');
   });
@@ -98,10 +100,30 @@ describe('A-08f3e3 Hinweis im Kopf der Turnierverwaltung', () => {
     act(() => { fireEvent.click(view.getByTestId('sync-status-rejected')); });
     const items = within(view.getByTestId('outbox-rejected-panel')).getAllByTestId('outbox-rejected-item');
     expect(items.map((item) => item.textContent ?? '')).toEqual([
-      expect.stringContaining('Ergebnis eingetragen'),
-      expect.stringContaining('Korrektur'),
+      expect.stringContaining('Ergebnis eingetragen · Spiel 9 · SV Süd – FC Nord 3:1'),
+      expect.stringContaining('Korrektur · Spiel 9 · SV Süd – FC Nord 3:2'),
     ]);
     expect(items[1].textContent).toContain('Eine vorherige Eingabe wurde nicht übernommen, daher auch diese nicht.');
+  });
+
+  it('I-4 unter 400 px: nur Symbol mit Zahl (Text als Beschriftung), Liste per 44-px-Taste', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('max-width'), media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    await commandsOf(h).enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 });
+    const view = mount(h);
+    await act(async () => { await settle(); });
+
+    const waiting = view.getByTestId('engine-outbox-waiting');
+    expect(waiting.getAttribute('aria-label')).toBe('1 Eintrag wartet');
+    expect(waiting.textContent).toBe('⏳1');
+  });
+
+  it('I-4 ab 400 px: voller Text „1 Eintrag wartet“', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    await commandsOf(h).enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 });
+    const view = mount(h);
+    await act(async () => { await settle(); });
+
+    expect(view.getByTestId('engine-outbox-waiting').textContent).toBe('1 Eintrag wartet');
   });
 
   it('Gegenbeispiel: nichts wartet, nichts abgelehnt → kein Hinweis', async () => {

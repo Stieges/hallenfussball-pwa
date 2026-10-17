@@ -10,6 +10,7 @@ vi.unmock('react-i18next');
 
 import { initRealDeI18n } from '../../../../test/realDeI18n';
 import { ScheduleResultEntryPrompt } from '../ScheduleResultEntryPrompt';
+import { cssVars } from '../../../../design-tokens';
 
 await initRealDeI18n();
 
@@ -66,6 +67,16 @@ describe('ScheduleResultEntryPrompt', () => {
     fireEvent.change(view.getByTestId('result-entry-note'), { target: { value: 'Spielbericht nachgereicht' } });
     fireEvent.click(view.getByText('Speichern'));
     expect(answer).toHaveBeenCalledWith('other: Spielbericht nachgereicht');
+  });
+
+  it('I-3 Grund-Auswahl und Freitext nutzen die Bausteine Select/Input (Schrift ≥ 16 px = fontSizes.lg), Freitext sichtbar beschriftet', () => {
+    const view = render(<ScheduleResultEntryPrompt prompt={reasonPrompt} answerPrompt={vi.fn()} />);
+    const select = view.getByTestId('result-entry-reason');
+    expect(select.style.fontSize).toBe(cssVars.fontSizes.lg);
+    expect(view.getByText('Grund')).toBeTruthy();
+    fireEvent.change(select, { target: { value: 'other' } });
+    expect(view.getByTestId('result-entry-note').style.fontSize).toBe(cssVars.fontSizes.lg);
+    expect(view.getByText('Grund beschreiben')).toBeTruthy();
   });
 
   it('Abbrechen → Abbruch (null)', () => {

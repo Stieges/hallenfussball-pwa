@@ -18,7 +18,7 @@ vi.mock('../../hooks/useTournamentManager', () => ({
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }));
 vi.mock('../../components/layout/AuthSection', () => ({ AuthSection: () => null }));
 vi.mock('../../features/tournament-management/components/EngineOutboxHeaderStatus', () => ({
-  EngineOutboxHeaderStatus: ({ tournamentId }: { tournamentId: string }) => <span data-testid="engine-outbox-kopf">{tournamentId}</span>,
+  EngineOutboxHeaderStatus: ({ tournament }: { tournament: { id: string } }) => <span data-testid="engine-outbox-kopf">{tournament.id}</span>,
 }));
 vi.mock('../../features/tournament-management/ScheduleTab', () => ({ ScheduleTab: () => <p>Spielplan-Tab</p> }));
 vi.mock('../../features/tournament-management/TeamsTab', () => ({ TeamsTab: () => <p>Teams-Tab</p> }));
