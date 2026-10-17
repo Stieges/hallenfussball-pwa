@@ -7,6 +7,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { MATCH_COPY_FORMAT_VERSION, matchCopyKey, normalizeCopy, type LegacyMatchCopy } from '../../../../src/core/match/client/matchCopy'
 import { TournamentSchema } from '../../../../src/core/models/schemas/TournamentSchema'
 import { erzeugeSaat, SAAT_NAME, SAAT_ZEIT, type SaatDatei } from '../erzeuge-saat'
 import { vergleicheSaat } from '../saat-vergleich'
@@ -96,6 +97,27 @@ describe('Saat Hallencup Messlauf (@TA-011)', () => {
       }
       const code = /^\/#\/live\/([A-Za-z0-9]+)/.exec(a.app)?.[1]
       if (code !== undefined) { expect(turniere.map((t) => t.shareCode), a.id).toContain(code) }
+    }
+  })
+
+  it('Engine-Kopien: Format, Schlüssel und Datenbank entsprechen der App (normalizeCopy, matchCopyKey, Konstanten aus der Quelle)', () => {
+    const db = lies().datenbanken[1]
+    const quelle = (pfad: string) => readFileSync(join(__dirname, '..', '..', '..', '..', pfad), 'utf8')
+    // Name und Store der Datenbanken stehen privat in der App: aus der Quelldatei lesen, nicht festschreiben.
+    const store = /new StoreDb\('([^']+)', '([^']+)', MATCH_COPY_FORMAT_VERSION/.exec(quelle('src/core/match/client/LocalMatchStore.ts'))
+    expect(store, 'LocalMatchStore: StoreDb(...) nicht mehr gefunden – Test anpassen').not.toBeNull()
+    expect([db.name, db.store]).toEqual([store?.[1], store?.[2]])
+    expect(db.version).toBe(MATCH_COPY_FORMAT_VERSION)
+    const cache = quelle('src/core/storage/IndexedDBAdapter.ts')
+    const haupt = lies().datenbanken[0]
+    expect(haupt.name).toBe(/dbName = '([^']+)'/.exec(cache)?.[1])
+    expect(haupt.store).toBe(/storeName = '([^']+)'/.exec(cache)?.[1])
+    expect(haupt.version).toBe(Number(/version = (\d+)/.exec(cache)?.[1]))
+    const kopien = Object.entries(db.eintraege) as [string, LegacyMatchCopy & { accountId: string; matchId: string }][]
+    expect(kopien.length).toBeGreaterThan(0)
+    for (const [key, kopie] of kopien) {
+      expect(key).toBe(matchCopyKey(kopie.accountId, kopie.matchId))
+      expect(normalizeCopy(kopie), key).toEqual(kopie)
     }
   })
 })

@@ -14,6 +14,7 @@ import { TournamentCreationService } from '../../../src/core/services/Tournament
 import { resolveBracketAfterPlayoffMatch, resolvePlayoffPairings } from '../../../src/core/generators';
 import { cacheColumns, reduceMatch, serverRules } from '../../../src/core/match';
 import type { EngineEvent, MatchContext, MatchRules } from '../../../src/core/match';
+import { MATCH_COPY_FORMAT_VERSION, matchCopyKey } from '../../../src/core/match/client/matchCopy';
 import type { ITournamentRepository } from '../../../src/core/repositories/ITournamentRepository';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, type Match, type Team, type Tournament } from '../../../src/types/tournament';
 import type { Sponsor } from '../../../src/types/sponsor';
@@ -195,7 +196,7 @@ function wendeEngineAn(t: Tournament, match: Match, teamA: string, teamB: string
     ...(live ? { timerStartTime: `@jetzt-${String(Math.round((jetzt - start) / 1000))}s`, timerElapsedSeconds: 0 } : {}),
   } as Match
   const kopie: EngineKopie = {
-    formatVersion: 2, accountId: 'guest', matchId: match.id.toLowerCase(), tournamentId: t.id, ctx,
+    formatVersion: MATCH_COPY_FORMAT_VERSION, accountId: 'guest', matchId: match.id.toLowerCase(), tournamentId: t.id, ctx,
     confirmed: ereignisse.map((ev, i) => ({ ...ev, at: zeit(ev.at), seq: i + 1 })),
     watermarkSeq: ereignisse.length, acked: [], pending: [], rejected: [], review: [],
     updatedAt: zeit(letztes),
@@ -414,7 +415,7 @@ export async function erzeugeSaat(): Promise<SaatDatei> {
     beschreibung: 'Hallencup Messlauf: Hauptturnier (2 Gruppen à 4 Teams, Halbfinale 1 mit Verlängerung, Halbfinale 2 mit Strafstoßschießen, Finale läuft), je ein Phasen-Turnier (Halbzeitpause, Verlängerung läuft, Strafstoßschießen läuft), Entwurf für den Assistenten; Monitor je Folientyp, Sponsor.',
     datenbanken: [
       { name: 'hallenfussball', version: 1, store: 'cache', eintraege: { tournaments: turniere } },
-      { name: 'hallenfussball-matches', version: 2, store: 'matches', eintraege: Object.fromEntries(kopien.map((k) => [`guest|${k.matchId}`, k])) },
+      { name: 'hallenfussball-matches', version: MATCH_COPY_FORMAT_VERSION, store: 'matches', eintraege: Object.fromEntries(kopien.map((k) => [matchCopyKey(k.accountId, k.matchId), k])) },
     ],
     localStorage: { 'app:consent': { errorTracking: false, sessionReplay: false, timestamp: Date.parse(SAAT_ZEIT), version: 1 } },
     kennzahlen: {
