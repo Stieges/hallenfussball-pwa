@@ -55,6 +55,7 @@ const DOM_ONLY_TS_TESTS = [
   'src/lib/__tests__/themeManager.test.ts',
   'src/lib/__tests__/swIdle.test.ts',
   'src/lib/__tests__/swRegistration.test.ts',
+  'src/lib/__tests__/swReloadGate.test.ts',
   'src/hooks/__tests__/useSwAutoReload.test.ts',
 ]
 
