@@ -283,14 +283,21 @@ export const semanticColorsLight = {
   // Tafel Live-Cockpit (Spec § 8.2, Mockup-Freigabe 16.10.): hell = dunkel, eigene Fläche.
   // ---------------------------------------------------------------------------
   scoreboardBg: '#0F1B33',
-  scoreboardText: '#FFFFFF',
+  scoreboardText: palette.neutral[0],
   scoreboardTextMuted: '#A3B8D4',
-  scoreboardLive: '#DC2626',
-  scoreboardHighlight: '#FF9100',
-  scoreboardFinalPhase: palette.purple[400],
+  scoreboardLive: palette.special.live,
+  scoreboardHighlight: palette.orange[400],
+  scoreboardFinalPhase: palette.purple[300],
   scoreboardBorder: '#A3B8D4',
-  noticeLineBg: '#0F1B33',
-  noticeLineText: '#FFFFFF',
+  scoreboardSurface: 'rgba(255, 255, 255, 0.08)',
+  scoreboardDivider: 'rgba(255, 255, 255, 0.22)',
+  scoreboardOnLive: palette.neutral[0],
+  scoreboardOnHighlight: '#000000',
+  scoreboardOk: palette.green[400],
+  scoreboardInfo: '#00B0FF',
+  scoreboardNeutral: palette.neutral[500],
+  noticeLineBg: 'rgba(255, 255, 255, 0.08)',
+  noticeLineText: palette.neutral[0],
 } as const;
 
 export type SemanticColorToken = keyof typeof semanticColorsLight;

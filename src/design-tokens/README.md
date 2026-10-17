@@ -97,18 +97,22 @@ Die Prüfung `src/design-tokens/__tests__/borderControl.contrast.test.ts` rechne
 
 #### Tafel (Live-Cockpit)
 
-Die Tafel (Spielstand, Uhr, Meldezeile) hat eigene Tokens, nie `surface`. Die Tafel ist in Hell und Dunkel dunkel (Mockup-Freigabe 16.10.).
+Die Tafel (Spielstand, Uhr, Meldezeile) hat eigene Tokens, nie `surface`. Hell und dunkel: dunkle Tafel (Mockup-Freigabe 16.10.). Hoher Kontrast: schwarze Fläche, gelbe Zweitschrift, weißer Rand.
 
 | Rolle | Token | Kontrast |
 |---|---|---|
 | Fläche | `colors.scoreboardBg` | deckend |
-| Schrift / gedämpft | `colors.scoreboardText` / `scoreboardTextMuted` | mindestens 4,5 : 1 |
+| Schrift / gedämpft (Zweitschrift) | `colors.scoreboardText` / `scoreboardTextMuted` | mindestens 4,5 : 1 |
 | Live / Hervorhebung | `colors.scoreboardLive` / `scoreboardHighlight` | mindestens 3 : 1 |
-| Schlussphase der Uhr (Violett) | `colors.scoreboardFinalPhase` | mindestens 4,5 : 1, nie Live-Rot |
-| Rand | `colors.scoreboardBorder` | Rand der Stand-Kästen |
-| Meldezeile | `colors.noticeLineBg` / `noticeLineText` | wie Tafel |
+| Schrift auf Live / auf Hervorhebung | `colors.scoreboardOnLive` / `scoreboardOnHighlight` | mindestens 4,5 : 1 |
+| Schlussphase der Uhr (Violett #C4B5FD) | `colors.scoreboardFinalPhase` | mindestens 4,5 : 1, nie Live-Rot |
+| Rand / Trennlinie | `colors.scoreboardBorder` / `scoreboardDivider` | Rand der Stand-Kästen |
+| Meldezeile | `colors.noticeLineBg` (Fläche `scoreboardSurface`) / `noticeLineText` | mindestens 4,5 : 1 |
+| Abzeichen | `colors.scoreboardOk`, `scoreboardInfo`, `scoreboardNeutral` | Füllung, Schrift über `scoreboardOnHighlight` oder Fläche |
 
-Größen: `cssVars.sizing.scoreboardClockCompact` / `scoreboardClockRegular` (Uhr), `scoreboardScoreCompact` / `scoreboardScoreRegular` (Stand), `noticeLineHeight`, `teamStripeWidth`. Prüfung: `src/design-tokens/__tests__/scoreboard-tokens.test.ts`.
+**Regel:** Live-Rot (`scoreboardLive`, #DC2626) ist nur Fläche. Schrift darauf ist `scoreboardOnLive` (weiß, 4,83 : 1). Live-Rot als Schrift auf der Tafel ist verboten (hell nur 3,55 : 1).
+
+Größen (`cssVars.sizing`, fest in px wie die Score-Regel): `scoreboardClockCompact` 32 px (Handy), `scoreboardClockRegular` 64 px (Tablet), `scoreboardClockWide` 56 px (ab 1024), `scoreboardScoreCompact` 40 px, `scoreboardScoreRegular` 64 px, `noticeLineHeightCompact` 24 px, `noticeLineHeightRegular` 32 px (reine Anzeige; nur das Kreuz hat 44 px). Prüfung: `src/design-tokens/__tests__/scoreboard-tokens.test.ts`.
 
 ### Spacing (8pt Grid)
 

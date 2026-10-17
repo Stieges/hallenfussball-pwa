@@ -121,6 +121,13 @@ export const cssColors = {
   scoreboardHighlight: 'var(--color-scoreboard-highlight)',
   scoreboardFinalPhase: 'var(--color-scoreboard-final-phase)',
   scoreboardBorder: 'var(--color-scoreboard-border)',
+  scoreboardSurface: 'var(--color-scoreboard-surface)',
+  scoreboardDivider: 'var(--color-scoreboard-divider)',
+  scoreboardOnLive: 'var(--color-scoreboard-on-live)',
+  scoreboardOnHighlight: 'var(--color-scoreboard-on-highlight)',
+  scoreboardOk: 'var(--color-scoreboard-ok)',
+  scoreboardInfo: 'var(--color-scoreboard-info)',
+  scoreboardNeutral: 'var(--color-scoreboard-neutral)',
   noticeLineBg: 'var(--color-notice-line-bg)',
   noticeLineText: 'var(--color-notice-line-text)',
 
@@ -438,6 +445,7 @@ export const cssFontSizes = {
 // =============================================================================
 
 export const cssScoreSizes = {
+  xs: 'var(--font-size-score-xs)',
   sm: 'var(--font-size-score-sm)',
   md: 'var(--font-size-score-md)',
   lg: 'var(--font-size-score-lg)',
@@ -530,11 +538,13 @@ export const cssSizing = {
   emptyStateMinHeight: 'var(--sizing-empty-state-min-height)',
   hairline: 'var(--sizing-hairline)',
   // Tafel Live-Cockpit (Spec § 8.2)
-  scoreboardClockCompact: 'var(--sizing-scoreboard-clock-compact)',
-  scoreboardClockRegular: 'var(--sizing-scoreboard-clock-regular)',
-  scoreboardScoreCompact: 'var(--sizing-scoreboard-score-compact)',
-  scoreboardScoreRegular: 'var(--sizing-scoreboard-score-regular)',
-  noticeLineHeight: 'var(--sizing-notice-line-height)',
+  scoreboardClockCompact: 'var(--font-size-score-xs)',
+  scoreboardClockRegular: 'var(--font-size-display-xl)',
+  scoreboardClockWide: 'var(--font-size-score-md)',
+  scoreboardScoreCompact: 'var(--font-size-score-sm)',
+  scoreboardScoreRegular: 'var(--font-size-display-xl)',
+  noticeLineHeightCompact: 'var(--sizing-notice-line-height-compact)',
+  noticeLineHeightRegular: 'var(--sizing-notice-line-height-regular)',
   teamStripeWidth: 'var(--sizing-team-stripe-width)',
 } as const;
 

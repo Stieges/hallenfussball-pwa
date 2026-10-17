@@ -294,14 +294,21 @@ export const semanticColorsDark = {
   // Hoher Kontrast: Mockup ohne eigene Fassung, deshalb dunkle Werte (siehe global.css).
   // ---------------------------------------------------------------------------
   scoreboardBg: '#050E1F',
-  scoreboardText: '#FFFFFF',
+  scoreboardText: palette.neutral[0],
   scoreboardTextMuted: '#A3B8D4',
-  scoreboardLive: '#DC2626',
-  scoreboardHighlight: '#FF9100',
-  scoreboardFinalPhase: palette.purple[400],
+  scoreboardLive: palette.special.live,
+  scoreboardHighlight: palette.orange[400],
+  scoreboardFinalPhase: palette.purple[300],
   scoreboardBorder: '#A3B8D4',
-  noticeLineBg: '#050E1F',
-  noticeLineText: '#FFFFFF',
+  scoreboardSurface: 'rgba(255, 255, 255, 0.08)',
+  scoreboardDivider: 'rgba(255, 255, 255, 0.22)',
+  scoreboardOnLive: palette.neutral[0],
+  scoreboardOnHighlight: '#000000',
+  scoreboardOk: palette.green[400],
+  scoreboardInfo: '#00B0FF',
+  scoreboardNeutral: palette.neutral[500],
+  noticeLineBg: 'rgba(255, 255, 255, 0.08)',
+  noticeLineText: palette.neutral[0],
 } as const;
 
 export type SemanticColorToken = keyof typeof semanticColorsDark;
