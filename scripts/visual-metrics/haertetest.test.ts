@@ -244,6 +244,54 @@ describe('Saat fuer die App-Messung (SM, @TA-011)', () => {
   })
 })
 
+describe('@TA-012 Verdeckte Bedienelemente', () => {
+  const verdeckt = (b: Bericht) => b.laeufe.flatMap((l) => l.befunde.filter((x) => x.metrik === 'verdeckt.bedienelement'))
+  it('Beispiel 1 Spielplan vor dem Fix (360): Tor-Eingabe Gast von Spiel 16 vom "Teilen"-Balken verdeckt, HART; die Zeilen davor sind beim Scrollen frei', async () => {
+    const r = await messe('--ziel', FIX('verdeckt-leiste.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(r.code, r.out).toBe(1)
+    const v = verdeckt(r.b)
+    expect(v.map((x) => `${x.typ} ${x.selektor}`)).toEqual(['HART [data-testid="tor-gast-16"]'])
+    expect(JSON.stringify(v)).toContain('teilen')
+  })
+  it('Beispiel 2 Cockpit laufendes Spiel (360): Gelb- und Rot-Knopf vom Sound-Hinweis verdeckt, HART', async () => {
+    const r = await messe('--ziel', FIX('verdeckt-hinweis.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(r.code, r.out).toBe(1)
+    const v = verdeckt(r.b)
+    expect(v.map((x) => x.selektor).sort()).toEqual(['[data-testid="karte-gelb"]', '[data-testid="karte-rot"]'])
+    expect(v.every((x) => x.typ === 'HART' && JSON.stringify(x).includes('sound-hinweis'))).toBe(true)
+  })
+  it.each(['verdeckt-leiste-korrigiert.html', 'verdeckt-hinweis-korrigiert.html', 'verdeckt-dialog.html'])(
+    'Beispiel 3 / Gegenbeispiel %s: keine Meldung (frei, Eltern-Label, Rollbereich, offener Dialog)', async (datei) => {
+      const r = await messe('--ziel', FIX(datei), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+      gruen(r)
+      expect(verdeckt(r.b)).toHaveLength(0)
+      expect(r.b.zusammenfassung.zaehler['verdeckt.bedienelement'] ?? 0).toBe(0)
+    })
+  it('Ausnahmeliste: jeder Eintrag nennt Befund-Kennung, Begruendung und mindestens Element oder Verdecker', () => {
+    const gw = JSON.parse(readFileSync(join(ORDNER, 'grenzwerte.json'), 'utf8')) as { grenzwerte: { id: string; typ: string; ausnahmeliste?: { befund: string; selektor?: string; verdecktVon?: string; begruendung: string }[] }[] }
+    const regel = gw.grenzwerte.find((e) => e.id === 'verdeckt.bedienelement')
+    expect(regel?.typ).toBe('HART')
+    expect(regel?.ausnahmeliste?.length).toBeGreaterThan(0)
+    for (const a of regel?.ausnahmeliste ?? []) {
+      expect(a.befund).toMatch(/^C-[A-Z0-9-]+$/)
+      expect((a.selektor ?? '').length + (a.verdecktVon ?? '').length).toBeGreaterThan(3)
+      expect(a.begruendung.length).toBeGreaterThan(10)
+    }
+  })
+  it('Ausnahmeliste greift: Fuss-Links unter der Tab-Leiste und unter dem Sound-Hinweis sind WARNUNG mit Befund-Kennung, nicht HART', async () => {
+    const start = await messe('--app', '/#/archiv', '--erwarte', '[data-testid="footer-impressum-link"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(start.b.status, start.out).not.toBe('BLOCKED')
+    const a = verdeckt(start.b)
+    expect(a.length).toBeGreaterThan(0)
+    expect(a.every((x) => x.typ === 'WARNUNG' && JSON.stringify(x).includes('C-FUSS-LINKS-UNTER-LEISTE'))).toBe(true)
+    const cockpit = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015', '--erwarte', '[data-testid="match-timer-display"]', '--saat', 'hallencup-messlauf', '--profil', 'desktop-1440', '--varianten', 'normal', ...SCHNELL)
+    const c = verdeckt(cockpit.b)
+    expect(c.length).toBeGreaterThan(0)
+    expect(c.some((x) => JSON.stringify(x).includes('C-COCKPIT-SOUNDHINWEIS-VERDECKT'))).toBe(true)
+    expect(c.filter((x) => x.typ === 'HART')).toHaveLength(0)
+  })
+})
+
 describe('Fehlalarme aus dem Review sind weg', () => {
   it('B-04 normaler Absatz bleibt in der Langtext-Variante gruen', async () => {
     const r = await messe('--ziel', FIX('langtext-absatz.html'), '--profil', 'handy-360', '--varianten', 'normal,langtext', ...SCHNELL)

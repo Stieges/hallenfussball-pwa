@@ -532,6 +532,126 @@ export function messeSeite(opt) {
   }
   if (hat('monitor.bedienelemente') && bedien.length > 0) melde('monitor.bedienelemente', bedien[0], `${bedien.length} fokussierbare Elemente`, '0')
 
+  // ---------- M10 Verdeckte Bedienelemente (@TA-012) ----------
+  // Die Ansicht wird von oben bis ganz unten in Schritten gescrollt (Fenster, dazu jeder sichtbare Rollbereich).
+  // Bei jedem Schritt prueft document.elementFromPoint die Mitte jedes Bedienelements, das mit seiner Mitte im Fenster
+  // und in allen Rollbereichen/Beschnitten seiner Vorfahren liegt. Liefert es weder das Element, eines seiner Kinder
+  // noch das zugehoerige Label, ist es in diesem Schritt verdeckt. Verstoss ist ein Element, das in keinem Schritt
+  // frei war (was nur unter einer Leiste hindurchrollt oder ueber den Rand ragt und beim Scrollen frei wird, zaehlt nicht).
+  // Ausnahme: liegt ein offener Dialog (aria-modal, role=dialog/alertdialog, <dialog open>) darueber, der das Element
+  // nicht enthaelt, ist das Verdecken gewollt.
+  if (hat('verdeckt.bedienelement')) {
+    const VBEDIEN = 'button, a[href], input:not([type=hidden]), select, textarea, [role=button], [tabindex]'
+    const kandidaten = [...document.querySelectorAll(VBEDIEN)].filter((el) => {
+      if (el.hasAttribute('tabindex') && !el.matches('button, a[href], input, select, textarea, [role=button]') && Number(el.getAttribute('tabindex')) < 0) return false
+      if (stil(el).pointerEvents === 'none') return false
+      return sichtbar(el)
+    })
+    const MODAL = '[aria-modal="true"], [role=dialog], [role=alertdialog], dialog[open]'
+    // Ein Dialog zaehlt, sobald er im Dokument steht und nicht verborgen ist (auch waehrend er einblendet: Deckkraft 0 ist kein Grund,
+    // den Hintergrund zu melden).
+    const modale2 = () => [...document.querySelectorAll(MODAL)].filter((d) => { const sd = stil(d); return sd.display !== 'none' && sd.visibility !== 'hidden' })
+    const mitte = (el) => {
+      const rs = [...el.getClientRects()].filter((r) => r.width > 0 && r.height > 0)
+      const r = stil(el).display === 'inline' && rs.length ? rs[0] : el.getBoundingClientRect()
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+    }
+    // Liegt der Punkt im Fenster und in jedem beschneidenden Vorfahren (overflow ausser visible)? Fixierte Elemente
+    // entkommen den Beschnitten ihrer Vorfahren.
+    const imSichtbaren = (el, p) => {
+      if (p.x < 0 || p.y < 0 || p.x >= W || p.y >= H) return false
+      let fest = stil(el).position === 'fixed'
+      for (let a = el.parentElement; a && a !== document.documentElement && !fest; a = a.parentElement) {
+        const sa = stil(a)
+        if (sa.position === 'fixed') fest = true
+        if (sa.overflowX === 'visible' && sa.overflowY === 'visible') continue
+        if (a === document.body) continue
+        const ra = a.getBoundingClientRect()
+        const bl = parseFloat(sa.borderLeftWidth) || 0
+        const bt = parseFloat(sa.borderTopWidth) || 0
+        const innen = { left: ra.left + bl, top: ra.top + bt, right: ra.left + bl + a.clientWidth, bottom: ra.top + bt + a.clientHeight }
+        if (sa.overflowX !== 'visible' && (p.x < innen.left || p.x >= innen.right)) return false
+        if (sa.overflowY !== 'visible' && (p.y < innen.top || p.y >= innen.bottom)) return false
+      }
+      return true
+    }
+    const labelOk = (el, hit) => {
+      if (hit.tagName !== 'LABEL') return false
+      return hit.contains(el) || (el.labels && [...el.labels].includes(hit))
+    }
+    // Stand je Element: wie oft im Fenster, wie oft frei, wer hat verdeckt.
+    const stand = new Map(kandidaten.map((el) => [el, { gesehen: 0, frei: 0, hits: new Map(), gewollt: 0 }]))
+    const pruefeSchritt = () => {
+      const modale = modale2()
+      for (const el of kandidaten) {
+        const p = mitte(el)
+        if (!imSichtbaren(el, p)) continue
+        const s = stand.get(el)
+        s.gesehen++
+        const hit = document.elementFromPoint(p.x, p.y)
+        if (!hit || hit === el || el.contains(hit) || labelOk(el, hit)) { s.frei++; continue }
+        if (modale.some((m) => !m.contains(el) && (m.contains(hit) || hit.contains(m)))) { s.gewollt++; continue }
+        s.hits.set(hit, (s.hits.get(hit) || 0) + 1)
+      }
+    }
+    const scroller = () => {
+      const liste = []
+      for (const el of document.body.querySelectorAll('*')) {
+        const s = stil(el)
+        if (!/(auto|scroll|overlay)/.test(s.overflowY) || el.scrollHeight <= el.clientHeight + 1) continue
+        if (!sichtbar(el)) continue
+        liste.push(el)
+      }
+      return liste
+    }
+    const root = document.scrollingElement || document.documentElement
+    const inner = scroller()
+    const alt = [[root, root.scrollTop], ...inner.map((e) => [e, e.scrollTop])]
+    const setze = (e, y) => { e.scrollTo({ top: y, left: e.scrollLeft, behavior: 'instant' }) }
+    const positionen = (e) => {
+      const max = e.scrollHeight - e.clientHeight
+      const schritt = Math.max(24, Math.floor((e === root ? H : e.clientHeight) / 4))
+      const l = []
+      for (let y = 0; y < max; y += schritt) l.push(y)
+      l.push(max)
+      return l
+    }
+    for (const [e] of alt) setze(e, 0)
+    for (const y of positionen(root)) {
+      setze(root, y)
+      pruefeSchritt()
+      for (const e of inner) {
+        const r = e.getBoundingClientRect()
+        if (r.bottom <= 0 || r.top >= H) continue
+        for (const yi of positionen(e)) {
+          if (yi === 0) continue // Stand 0 wurde mit dem Fenster-Schritt geprueft
+          setze(e, yi)
+          pruefeSchritt()
+        }
+        setze(e, 0)
+      }
+    }
+    for (const [e, y] of alt) setze(e, y)
+    const verstoesse = []
+    for (const [el, s] of stand) {
+      if (s.gesehen === 0 || s.frei > 0 || s.hits.size === 0) continue
+      const hit = [...s.hits.entries()].sort((a, b) => b[1] - a[1])[0][0]
+      verstoesse.push({ el, hit })
+    }
+    // Nur das innerste Element melden, wenn ein Bedienelement ein anderes enthaelt (Karte mit Knopf darin).
+    // Das verdeckende Element wird als Hinweis (role=alert/status), sonst als Bedienelement bzw. Testkennung beschrieben (nicht als Symbol-Pfad darin).
+    const beschreibe = (hit) => {
+      const e = hit.closest('[role=alert], [role=status]') || hit.closest('button, a[href], [role=button], [data-testid]') || hit
+      const t = kurz(e.textContent)
+      return `${selektor(e)}${t ? ` "${t}"` : ''}`
+    }
+    for (const v of verstoesse.filter((a) => !verstoesse.some((b) => b !== a && a.el.contains(b.el)))) {
+      const von = beschreibe(v.hit)
+      const name = kurz(v.el.textContent) || v.el.getAttribute('aria-label') || v.el.getAttribute('title') || v.el.getAttribute('placeholder') || ''
+      melde('verdeckt.bedienelement', v.el, `von ${von} verdeckt`, 'Mitte frei, auch ganz unten gescrollt', { verdecktVon: von, text: name })
+    }
+  }
+
   return {
     befunde,
     zaehler,
