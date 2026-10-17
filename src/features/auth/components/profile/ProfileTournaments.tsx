@@ -100,7 +100,7 @@ const styles: Record<string, CSSProperties> = {
     sortSelect: {
         padding: cssVars.spacing.xs,
         borderRadius: cssVars.borderRadius.md,
-        border: `1px solid ${cssVars.colors.border}`,
+        border: `1px solid ${cssVars.colors.borderControl}`,
         background: cssVars.colors.surface,
         color: cssVars.colors.textPrimary,
     },

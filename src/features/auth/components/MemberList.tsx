@@ -383,7 +383,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textPrimary,
     background: cssVars.colors.surfaceLight,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.sm,
     cursor: 'pointer',
   },

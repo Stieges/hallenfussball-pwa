@@ -164,7 +164,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
             style={{
               padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
               background: isLazyImportError ? cssVars.colors.primary : cssVars.colors.surfaceElevated,
-              border: isLazyImportError ? 'none' : `1px solid ${cssVars.colors.border}`,
+              border: isLazyImportError ? 'none' : `1px solid ${cssVars.colors.borderControl}`,
               borderRadius: cssVars.borderRadius.sm,
               color: isLazyImportError ? cssVars.colors.onPrimary : cssVars.colors.textPrimary,
               fontSize: cssVars.fontSizes.md,
