@@ -143,7 +143,9 @@
         "protest_accepted": "Protest decision",
         "technical_error": "Technical error",
         "other": "Other"
-      }
+      },
+      "leadOnly": "tournament management only",
+      "correctionLeadOnly": "Correction by the tournament management only"
     }
   },
   "scheduleActions": {

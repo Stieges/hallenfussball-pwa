@@ -53,6 +53,8 @@ interface OverlayCache {
   context: MatchEngineContextValue | null;
   dirty: boolean;
   result: Tournament;
+  /** externalIds, die im `result` überlagert sind (I-2: Rückfall auf den Rohstand, wenn eines herausfällt). */
+  overlaidIds: ReadonlySet<string>;
 }
 
 /**
@@ -71,10 +73,10 @@ interface OverlayCache {
 function computeOverlaidTournament(
   tournament: Tournament,
   context: MatchEngineContextValue | null,
-  previousResult: Tournament | undefined,
-): Tournament {
+  previous: { result: Tournament; overlaidIds: ReadonlySet<string> } | undefined,
+): { result: Tournament; overlaidIds: ReadonlySet<string> } {
   if (!context) {
-    return tournament;
+    return { result: tournament, overlaidIds: new Set() };
   }
   const overlays = new Map<string, EngineOverlayFields>();
   for (const entry of buildValidMatches(tournament)) {
@@ -86,7 +88,11 @@ function computeOverlaidTournament(
       overlays.set(entry.externalId, engineOverlayFields(view, entry.ctx));
     }
   }
-  return applyEngineOverlay(previousResult ?? tournament, overlays);
+  // A-08f3e2 Fixrunde 1 (I-2): fällt ein Spiel aus der Überlagerung (z. B. sein einziger Eintrag wurde
+  // abgelehnt), gilt wieder der Rohstand -- sonst bliebe das abgelehnte Ergebnis in Zeile und Tabelle stehen.
+  const shrunk = previous !== undefined && [...previous.overlaidIds].some((id) => !overlays.has(id));
+  const base = previous === undefined || shrunk ? tournament : previous.result;
+  return { result: applyEngineOverlay(base, overlays), overlaidIds: new Set(overlays.keys()) };
 }
 
 export function useEngineOverlayForTournament(tournament: Tournament | null): Tournament | null {
@@ -105,9 +111,9 @@ export function useEngineOverlayForTournament(tournament: Tournament | null): To
     // Vergleichsbasis nur wiederverwenden, wenn die ROHEN Eingabedaten UND das Konto (Kontext)
     // unveraendert sind (Minor aus dem Review: sonst blieben nach einem Kontowechsel, solange das
     // Roh-Turnier zufaellig dieselbe Referenz behaelt, Werte des ALTEN Kontos stehen).
-    const previousResult = cache?.tournament === tournament && cache.context === context ? cache.result : undefined;
-    const result = computeOverlaidTournament(tournament, context, previousResult);
-    cacheRef.current = { tournament, context, dirty: false, result };
+    const previous = cache?.tournament === tournament && cache.context === context ? cache : undefined;
+    const { result, overlaidIds } = computeOverlaidTournament(tournament, context, previous);
+    cacheRef.current = { tournament, context, dirty: false, result, overlaidIds };
     return result;
   }, [tournament, context]);
 

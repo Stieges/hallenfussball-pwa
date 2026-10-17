@@ -9,15 +9,12 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tournament } from '../../../types/tournament';
-import { MatchUpdate } from '../../../core/models/types';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
 import { useScheduleResultEntry, type ScheduleResultEntry } from './useScheduleResultEntry';
 
 interface UseScheduleTabActionsProps {
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
-  /** A-08f3e2 (H-2): nur Slot-Updates der K.-o.-Auflösung nach Bestätigung durch den Server, nie ein Spielstand. */
-  onMatchesUpdate: (updates: MatchUpdate[]) => void;
   isEditing: boolean;
   saveToHistory: () => void;
   showSuccess: (message: string) => void;
@@ -42,7 +39,6 @@ interface UseScheduleTabActionsResult {
 export function useScheduleTabActions({
   tournament,
   onTournamentUpdate,
-  onMatchesUpdate,
   isEditing,
   saveToHistory,
   showSuccess,
@@ -138,7 +134,7 @@ export function useScheduleTabActions({
   }, [tournament, onTournamentUpdate, showSuccess, saveToHistory, t]);
 
   // A-08f3e2: die Schnelleingabe schreibt nur noch Server-Einträge (useScheduleResultEntry), nie den Spielstand selbst.
-  const resultEntry = useScheduleResultEntry({ tournament, onMatchesUpdate, showWarning, lockFinishedResults });
+  const resultEntry = useScheduleResultEntry({ tournament, showWarning, lockFinishedResults });
   const { enterScore } = resultEntry;
   const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number) => {
     void enterScore(matchId, scoreA, scoreB);

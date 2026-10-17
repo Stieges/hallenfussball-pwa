@@ -79,6 +79,42 @@ describe('A-08f3e3 Sichtbar nach dem Neuladen', () => {
     expect((await neu.store.load('olli-e3', SPIEL_9))?.pending.map((event) => event.type)).toEqual(['RESULT_ENTRY']);
   });
 
+  it('Plan e3 Punkt 1 (Konto: pending ODER rejected): Kopie mit nur abgelehnten Einträgen wird beim Laden geladen', async () => {
+    const vorher = await engine('olli-abgelehnt');
+    vorher.api.mockImplementation(async (_matchId, events) => ({
+      results: events.map((event) => ({ id: event.id, status: 'rejected' as const, code: 'FORBIDDEN_ACTOR' })), state: null, serverTime: 1,
+    }));
+    await eintragen(vorher, 3, 1);
+    const kopie = await vorher.store.load('olli-abgelehnt', SPIEL_9);
+    expect([kopie?.pending.length, kopie?.rejected.length]).toEqual([0, 1]);
+    vorher.engine.stop();
+
+    const neu = await engine('olli-abgelehnt');
+    const ensure = vi.spyOn(neu.engine, 'ensureMatch');
+    mountOverlay(neu, scheduleTournament());
+    await act(async () => { await settle(); });
+
+    expect(ensure).toHaveBeenCalledWith(SPIEL_9, CTX_9, 'T');
+  });
+
+  it('I-2 @FU-004: Direkteintrag ohne Server-Ereignisse wird abgelehnt → Zeile wieder geplant ohne Ergebnis, Tabelle ohne das Ergebnis, ohne Neuladen', async () => {
+    const h = await engine('olli-i2');
+    let reject: () => void = () => undefined;
+    h.api.mockImplementationOnce((_matchId, events) => new Promise((resolve) => {
+      reject = () => resolve({ results: events.map((event) => ({ id: event.id, status: 'rejected' as const, code: 'FORBIDDEN_ACTOR' })), state: null, serverTime: 1 });
+    }));
+    const tournament = scheduleTournament();
+    const { result } = mountOverlay(h, tournament);
+    await act(async () => { await eintragen(h, 3, 1); });
+    expect(spiel9(result.current)).toMatchObject({ scoreA: 3, scoreB: 1, matchStatus: 'finished' });
+    expect(punkte(result.current, SV_SUED)).toBe(3);
+
+    await act(async () => { reject(); await settle(); });
+
+    expect(spiel9(result.current)).toMatchObject({ scoreA: undefined, scoreB: undefined, matchStatus: 'scheduled' });
+    expect(punkte(result.current, SV_SUED)).toBe(0);
+  });
+
   it('Gegenbeispiel: Konto ohne lokale Kopien → kein ensureMatch', async () => {
     const h = await engine('olli-leer');
     const ensure = vi.spyOn(h.engine, 'ensureMatch');

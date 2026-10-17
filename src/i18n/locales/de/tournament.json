@@ -143,7 +143,9 @@
         "protest_accepted": "Protestentscheidung",
         "technical_error": "Technischer Fehler",
         "other": "Sonstiges"
-      }
+      },
+      "leadOnly": "nur Turnierleitung",
+      "correctionLeadOnly": "Korrektur nur durch die Turnierleitung"
     }
   },
   "scheduleActions": {

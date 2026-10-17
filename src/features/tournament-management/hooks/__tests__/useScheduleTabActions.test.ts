@@ -19,19 +19,17 @@ import { MatchEngineContext } from '../../../match-engine/matchEngineContextInst
 import { buildValidMatches } from '../../../../hooks/engineMatchModel';
 import { RULES } from '../../../../core/match/client/__tests__/fixtures';
 import { FC_NORD, NOW, SPIEL_9, SV_SUED, makeScheduleEngine, scheduleTournament, settle, type ScheduleEngine } from '../../../../test/scheduleEngineHarness';
-import { withEngineResult } from '../scoreChangeHelpers';
+import { withEngineResult } from '../../../../hooks/koSlotResolution';
 import { useScheduleTabActions } from '../useScheduleTabActions';
 
 function renderActions(h: ScheduleEngine, tournament: Tournament) {
   const onTournamentUpdate = vi.fn();
-  const onMatchesUpdate = vi.fn();
   const showWarning = vi.fn();
   const confirmSpy = vi.spyOn(window, 'confirm');
   const wrapper = ({ children }: { children: ReactNode }) => createElement(MatchEngineContext.Provider, { value: h.value }, children);
   const { result } = renderHook(() => useScheduleTabActions({
     tournament,
     onTournamentUpdate,
-    onMatchesUpdate,
     isEditing: false,
     saveToHistory: vi.fn(),
     showSuccess: vi.fn(),
@@ -43,7 +41,7 @@ function renderActions(h: ScheduleEngine, tournament: Tournament) {
   const scoreChange = async (matchId: string, a: number, b: number) => {
     await act(async () => { result.current.handleScoreChange(matchId, a, b); await settle(); });
   };
-  return { scoreChange, onTournamentUpdate, onMatchesUpdate, showWarning, confirmSpy };
+  return { scoreChange, onTournamentUpdate, showWarning, confirmSpy };
 }
 
 /** Wie `useTournamentManager`: das Turnier mit der Engine-Überlagerung von Spiel 9. */
@@ -69,7 +67,7 @@ describe('useScheduleTabActions — Schnelleingabe über Server-Einträge (@FU-0
 
   it('@FU-080 Direkteintrag in ein geplantes Spiel mit echten Teams: 3:1 → beendet mit 3:1, Tabelle rechnet', async () => {
     const tournament = scheduleTournament();
-    const { scoreChange, showWarning, onMatchesUpdate, onTournamentUpdate } = renderActions(h, tournament);
+    const { scoreChange, showWarning, onTournamentUpdate } = renderActions(h, tournament);
     await scoreChange(SPIEL_9, 3, 1);
 
     expect(showWarning).not.toHaveBeenCalled();
@@ -77,8 +75,7 @@ describe('useScheduleTabActions — Schnelleingabe über Server-Einträge (@FU-0
     expect(after).toMatchObject({ scoreA: 3, scoreB: 1, matchStatus: 'finished' });
     expect(punkte(overlaid(h, tournament), FC_NORD)).toBe(0);
     expect(punkte(overlaid(h, tournament), SV_SUED)).toBe(3);
-    // Kein Spielstand am Engine-Weg vorbei (Wächter scoreWritePaths).
-    expect(onMatchesUpdate).not.toHaveBeenCalled();
+    // Kein Spielstand am Engine-Weg vorbei (Wächter scoreWritePaths): kein Voll-Speichern.
     expect(onTournamentUpdate).not.toHaveBeenCalled();
   });
 

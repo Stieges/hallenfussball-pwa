@@ -238,7 +238,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   } = useScheduleTabActions({
     tournament,
     onTournamentUpdate,
-    onMatchesUpdate,
     isEditing,
     saveToHistory,
     showSuccess,

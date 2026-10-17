@@ -12,7 +12,8 @@ import { act, renderHook } from '@testing-library/react';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
-vi.mock('../../../../hooks/useActorRole', () => ({ useActorRole: () => 'leitung' }));
+const role = vi.hoisted(() => ({ actor: 'leitung' }));
+vi.mock('../../../../hooks/useActorRole', () => ({ useActorRole: () => role.actor }));
 
 import { initRealDeI18n } from '../../../../test/realDeI18n';
 import { MatchEngineContext } from '../../../match-engine/matchEngineContextInstance';
@@ -35,13 +36,12 @@ const anpfiff: EngineEvent = { id: 'start', type: 'MATCH_START', actor: 'helper'
 const seq = (event: EngineEvent, n: number): EngineEventWithSeq => ({ ...event, seq: n });
 
 function render(h: ScheduleEngine, options: { lockFinishedResults?: boolean; matches?: Parameters<typeof scheduleTournament>[0] } = {}) {
-  const onMatchesUpdate = vi.fn();
   const showWarning = vi.fn();
   const wrapper = ({ children }: { children: ReactNode }) => (
     <MatchEngineContext.Provider value={h.value}>{children}</MatchEngineContext.Provider>
   );
   const hook = renderHook(
-    () => useScheduleResultEntry({ tournament: scheduleTournament(options.matches), onMatchesUpdate, showWarning, lockFinishedResults: options.lockFinishedResults ?? false }),
+    () => useScheduleResultEntry({ tournament: scheduleTournament(options.matches), showWarning, lockFinishedResults: options.lockFinishedResults ?? false }),
     { wrapper },
   );
   /** Startet die Eingabe; Rückfragen beantwortet der Test selbst. */
@@ -53,7 +53,7 @@ function render(h: ScheduleEngine, options: { lockFinishedResults?: boolean; mat
   const answer = async (value: string | null) => {
     await act(async () => { hook.result.current.answerPrompt(value); await settle(); });
   };
-  return { hook, enter, answer, onMatchesUpdate, showWarning };
+  return { hook, enter, answer, showWarning };
 }
 
 const sentTypes = (h: ScheduleEngine): string[][] => h.api.mock.calls.map(([, events]) => events.map((event) => event.type));
@@ -115,22 +115,44 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
     expect(lastWarning(showWarning)).toBe('Spiel läuft – Feld 2 wird von Tom gesteuert');
   });
 
-  it('N-4: lokal geplant, Engine nach catchUp beendet → correct (mit Grund), nicht enterResult', async () => {
+  // Fixrunde 1 (M-1): Die Turnierleitung kannte das 2:1 nicht -- statt einer Grund-Rückfrage, die sicher scheitert,
+  // sofort der aktuelle Stand (@FU-082: „Spiel … wurde inzwischen … geändert (jetzt …)“), nie stilles Überschreiben.
+  it('N-4: lokal geplant, Engine nach catchUp beendet 2:1 → kein enterResult, keine Rückfrage, sofort „inzwischen geändert (jetzt 2:1)“', async () => {
     const enterSpy = vi.spyOn(MatchCommands.prototype, 'enterResult');
-    const correctSpy = vi.spyOn(MatchCommands.prototype, 'correct');
     h.fetchConfirmed.mockResolvedValueOnce({ events: [seq(resultEntry('e1', { [SV_SUED]: 2, [FC_NORD]: 1 }), 1)], newWatermark: 1 });
-    const { hook, enter, answer, showWarning } = render(h);
-    const done = enter(SPIEL_9, 3, 1);
-    await act(async () => { await settle(); });
+    const { hook, enter, showWarning } = render(h);
+    await enter(SPIEL_9, 3, 1);
 
-    expect(hook.result.current.prompt).toMatchObject({ kind: 'reason', matchNumber: 9, before: '2:1', after: '3:1' });
-    await answer('input_error');
-    await done;
-
+    expect(hook.result.current.prompt).toBeNull();
     expect(enterSpy).not.toHaveBeenCalled();
-    expect(correctSpy).toHaveBeenCalledTimes(1);
-    // Die Turnierleitung kannte das 2:1 nicht -- STALE_BASE statt stillem Überschreiben.
     expect(lastWarning(showWarning)).toBe('Spiel 9 wurde inzwischen geändert (jetzt 2:1)');
+    expect((await outbox(h, SPIEL_9))?.pending).toEqual([]);
+    expect(h.api).not.toHaveBeenCalled();
+  });
+
+  describe('@HE-042 Helfer dürfen den Spielbetrieb, sonst nichts (Direkteintrag/Korrektur nur Turnierleitung)', () => {
+    afterEach(() => { role.actor = 'leitung'; });
+
+    it('@HE-042 Helfer trägt im Spielplan 3:1 für das geplante Spiel 9 ein → „nur Turnierleitung“, nichts gespeichert', async () => {
+      role.actor = 'helper';
+      const { enter, showWarning } = render(h);
+      await enter(SPIEL_9, 3, 1);
+
+      expect(lastWarning(showWarning)).toBe('nur Turnierleitung');
+      expect((await outbox(h, SPIEL_9))?.pending).toEqual([]);
+      expect(h.api).not.toHaveBeenCalled();
+    });
+
+    it('@HE-042 Helfer will das beendete Spiel 7 korrigieren → „Korrektur nur durch die Turnierleitung“, keine Grund-Rückfrage', async () => {
+      role.actor = 'helper';
+      h.fetchConfirmed.mockResolvedValueOnce({ events: [seq(resultEntry('e1', { [FC_NORD]: 2, [SV_SUED]: 1 }), 1)], newWatermark: 1 });
+      const { hook, enter, showWarning } = render(h);
+      await enter(SPIEL_7, 2, 2);
+
+      expect(hook.result.current.prompt).toBeNull();
+      expect(lastWarning(showWarning)).toBe('Korrektur nur durch die Turnierleitung');
+      expect(h.api).not.toHaveBeenCalled();
+    });
   });
 
   describe('@FU-082 Zwei Korrekturen vom selben Stand', () => {
@@ -144,12 +166,10 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
     it('@FU-082 Olli korrigiert auf 2:2, danach Maria auf 3:1 → abgelehnt mit aktuellem Stand 2:2', async () => {
       await mariaSieht21();
       h.fetchConfirmed.mockResolvedValueOnce({ events: [seq(correction('e2', { [FC_NORD]: 2, [SV_SUED]: 2 }, 'e1'), 2)], newWatermark: 2 });
-      const { enter, answer, showWarning } = render(h);
-      const done = enter(SPIEL_7, 3, 1);
-      await act(async () => { await settle(); });
-      await answer('input_error');
-      await done;
+      const { hook, enter, showWarning } = render(h);
+      await enter(SPIEL_7, 3, 1);
 
+      expect(hook.result.current.prompt).toBeNull();
       expect(lastWarning(showWarning)).toBe('Spiel 7 wurde inzwischen geändert (jetzt 2:2)');
       expect((await outbox(h, SPIEL_7))?.pending).toEqual([]);
       expect(scoreOf(h, SPIEL_7, FC_NORD, SV_SUED)).toBe('2:2');
@@ -160,11 +180,8 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
       await mariaSieht21();
       const row = { id: 'e2', type: 'CORRECTION', client_time: null, recorded_at: new Date(NOW).toISOString(), section: null, clock_ms: null, team_id: null, target_event_id: null, payload: { scores: { [FC_NORD]: 2, [SV_SUED]: 2 }, reason: 'input_error', basedOn: 'e1' }, seq: 2, event_format: 1, review_state: null };
       h.fetchConfirmed.mockResolvedValueOnce({ events: [rowToEngineEvent(row)], newWatermark: 2 });
-      const { enter, answer, showWarning } = render(h);
-      const done = enter(SPIEL_7, 3, 1);
-      await act(async () => { await settle(); });
-      await answer('input_error');
-      await done;
+      const { enter, showWarning } = render(h);
+      await enter(SPIEL_7, 3, 1);
       expect(lastWarning(showWarning)).toBe('Spiel 7 wurde inzwischen von Olli geändert (jetzt 2:2)');
     });
 

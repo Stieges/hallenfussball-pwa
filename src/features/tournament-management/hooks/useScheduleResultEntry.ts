@@ -4,12 +4,13 @@
  * geplant → `enterResult`; beendet → Grund-Auswahl → `correct` (Grundpflicht); abgesetzt → Rückfrage →
  * `unskipAndEnterResult` (ein Stapel); laufend → Hinweis. K.-o.-Unentschieden → Hinweis, nichts gespeichert
  * (Strafstoßergebnis im Direkteintrag kommt mit A-25a, Befund C-DIREKTEINTRAG-OHNE-STRAFSTOSS).
- * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094 (Teil), @FU-069, @EK-004.
+ * Fixrunde 1: Rückfragen nur, wenn der Eintrag zulässig ist -- veralteter Stand (M-1) und fehlende Rolle
+ * (M-2, Wortlaut @HE-042) melden sofort. K.-o.-Auflösung über `useResultEntryAck` → `useKoResolutionAfterAck`.
+ * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094 (Teil), @FU-069, @EK-004, @HE-042.
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Tournament } from '../../../types/tournament';
-import type { MatchUpdate } from '../../../core/models/types';
 import { ERROR_CODES, effectiveScoreFor } from '../../../core/match';
 import { MatchCommands, MatchCommandRejectedError } from '../../../core/match/client';
 import { useMatchEngineContextOptional } from '../../match-engine/useMatchEngineContext';
@@ -33,7 +34,6 @@ export interface ScheduleResultEntry {
 
 export interface UseScheduleResultEntryOptions {
   tournament: Tournament;
-  onMatchesUpdate: (updates: MatchUpdate[]) => void;
   showWarning: (message: string) => void;
   lockFinishedResults: boolean;
 }
@@ -41,7 +41,7 @@ export interface UseScheduleResultEntryOptions {
 const score = (a: number, b: number): string => `${a}:${b}`;
 
 export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): ScheduleResultEntry {
-  const { tournament, onMatchesUpdate, showWarning, lockFinishedResults } = options;
+  const { tournament, showWarning, lockFinishedResults } = options;
   const { t } = useTranslation('tournament');
   const { t: tCockpit } = useTranslation('cockpit');
   const context = useMatchEngineContextOptional();
@@ -54,7 +54,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     [context],
   );
   const onKoAfterSend = useCallback(() => showWarning(t('schedule.koAfterSend')), [showWarning, t]);
-  const trackAck = useResultEntryAck({ context, tournament, onMatchesUpdate, onKoAfterSend });
+  const trackAck = useResultEntryAck({ context, tournament, onKoAfterSend });
 
   const ask = useCallback((next: ResultEntryPrompt) => new Promise<string | null>((resolve) => {
     resolverRef.current?.(null);
@@ -69,19 +69,25 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     resolve?.(answer);
   }, []);
 
+  /** „Spiel 7 wurde inzwischen (von …) geändert (jetzt 2:2)“ -- Urheber kennt der Server nicht (C-EREIGNIS-OHNE-URHEBER). */
+  const staleText = useCallback((entry: ValidMatchEntry, now: string): string => {
+    const state = context?.engine.view(entry.matchId)?.result.state;
+    const author = state?.lastScoreEventId ? state.accepted[state.lastScoreEventId]?.actorUser : undefined;
+    return author
+      ? t('schedule.resultEntry.stale', { number: entry.meta.number, name: author, score: now })
+      : t('schedule.resultEntry.staleNoName', { number: entry.meta.number, score: now });
+  }, [context, t]);
+
   const rejectionText = useCallback((error: unknown, entry: ValidMatchEntry): string => {
     if (error instanceof MatchCommandRejectedError && error.code === ERROR_CODES.STALE_BASE) {
       const current = (error.detail as { currentScores?: Record<string, number> } | undefined)?.currentScores ?? {};
-      const now = score(current[entry.ctx.teamAId] ?? 0, current[entry.ctx.teamBId] ?? 0);
-      // Urheber je Ereignis kennt der Server nicht (Befund C-EREIGNIS-OHNE-URHEBER) -- Text ohne Namen.
-      const state = context?.engine.view(entry.matchId)?.result.state;
-      const author = state?.lastScoreEventId ? state.accepted[state.lastScoreEventId]?.actorUser : undefined;
-      return author
-        ? t('schedule.resultEntry.stale', { number: entry.meta.number, name: author, score: now })
-        : t('schedule.resultEntry.staleNoName', { number: entry.meta.number, score: now });
+      return staleText(entry, score(current[entry.ctx.teamAId] ?? 0, current[entry.ctx.teamBId] ?? 0));
+    }
+    if (error instanceof MatchCommandRejectedError && error.code === ERROR_CODES.FORBIDDEN_ACTOR) {
+      return t('schedule.resultEntry.leadOnly');
     }
     return tCockpit(rejectionMessageKey(error));
-  }, [context, t, tCockpit]);
+  }, [staleText, t, tCockpit]);
 
   const enterScore = useCallback(async (matchId: string, scoreA: number, scoreB: number) => {
     const entry = buildValidMatches(tournament).find((candidate) => candidate.externalId === matchId);
@@ -117,6 +123,10 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
         showWarning(t('schedule.resultEntry.running'));
         return;
       }
+      if (actor !== 'leitung') {
+        showWarning(t(route === 'correct' ? 'schedule.resultEntry.correctionLeadOnly' : 'schedule.resultEntry.leadOnly'));
+        return;
+      }
       if (route === 'enter') {
         eventId = await commands.enterResult(id, entry.ctx, actor, scores);
       } else if (route === 'unskip') {
@@ -130,6 +140,10 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
           return;
         }
         const before = score(effectiveScoreFor(state, entry.ctx.teamAId), effectiveScoreFor(state, entry.ctx.teamBId));
+        if (basedOn !== state.lastScoreEventId) {
+          showWarning(staleText(entry, before)); // M-1: inzwischen geändert -- keine Rückfrage
+          return;
+        }
         const reason = await ask({ kind: 'reason', matchNumber: entry.meta.number, before, after: score(scoreA, scoreB) });
         if (!reason) {
           return;
@@ -142,7 +156,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     } catch (error) {
       showWarning(rejectionText(error, entry));
     }
-  }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText]);
+  }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText]);
 
   return { enterScore, prompt, answerPrompt };
 }
