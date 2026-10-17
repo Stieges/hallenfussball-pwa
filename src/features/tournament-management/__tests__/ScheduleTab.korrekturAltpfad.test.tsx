@@ -13,6 +13,8 @@ import { createMockTournament } from '../../../test/factories';
 import { testUuid } from '../../../test/testIds';
 import { ToastProvider } from '../../../components/ui/Toast';
 
+// A-08f3e2: die Schnelleingabe fragt die Akteursrolle ab (useActorRole braucht sonst den AuthProvider).
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'leitung' }));
 vi.mock('../../../hooks/usePermissions', () => ({
   usePermissions: () => ({ canCorrectResults: true, hasPermission: () => true }),
 }));
