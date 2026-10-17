@@ -77,8 +77,9 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
       fontSize: cssVars.fontSizes.md,
       fontWeight: isWinner ? cssVars.fontWeights.bold : isLoser || status === 'finished' ? cssVars.fontWeights.medium : cssVars.fontWeights.semibold,
       color: isLoser ? cssVars.colors.textSecondary : cssVars.colors.textPrimary,
-      // MOBILE-UX: Mannschaftsnamen werden nie abgeschnitten
+      // MOBILE-UX: Mannschaftsnamen werden nie abgeschnitten; minWidth 0 lässt den Namen schrumpfen statt über die Torfläche zu laufen
       overflowWrap: 'break-word',
+      minWidth: 0,
     };
     const first = side === 'a';
     // Feste Zelle je Element: ohne Strafstoß-Spalte würde die automatische Platzierung die nächste Zeile in die freie Zelle ziehen

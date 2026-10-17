@@ -97,6 +97,24 @@ test.describe('@OB-064 Spielplan der Verwaltung, Handy 360×640 hoch', () => {
     }
   });
 
+  test('Name und Torfläche überlappen nicht (Bounding-Box, Gruppen- und Finalkarte)', async ({ page }) => {
+    const paare = await page.evaluate(() => {
+      const liste: { art: string; nameRechts: number; toreLinks: number; name: string }[] = [];
+      for (const el of document.querySelectorAll<HTMLElement>('.mobile-view [data-testid^="match-name-"]')) {
+        const id = el.dataset.testid?.replace('match-name-', '') ?? '';
+        const tore = document.querySelector<HTMLElement>(`[data-testid="match-goals-${id}"]`);
+        if (el.offsetParent !== null && tore) { liste.push({ art: 'gruppe', nameRechts: el.getBoundingClientRect().right, toreLinks: tore.getBoundingClientRect().left, name: el.textContent ?? '' }); }
+      }
+      for (const el of document.querySelectorAll<HTMLElement>('[data-testid^="final-name-"]')) {
+        const tore = el.nextElementSibling;
+        if (el.offsetParent !== null && tore) { liste.push({ art: 'final', nameRechts: el.getBoundingClientRect().right, toreLinks: tore.getBoundingClientRect().left, name: el.textContent ?? '' }); }
+      }
+      return liste;
+    });
+    expect(paare.length).toBeGreaterThan(8);
+    for (const p of paare) { expect(p.nameRechts, `${p.art}: ${p.name}`).toBeLessThanOrEqual(p.toreLinks + 0.5); }
+  });
+
   test('Gruppenspiel: Spielkarte mit Tore je Zeile, Torzahl-Fläche ≥ 44 px, kein Fortschrittsring', async ({ page }) => {
     const erste = page.locator('[data-match-card] [data-testid^="match-goals-"]').first();
     await erste.scrollIntoViewIfNeeded();
