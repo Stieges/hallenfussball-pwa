@@ -365,6 +365,11 @@
   --input-height-md: 44px;
   --input-height-lg: 56px;
 
+  /* Component Sizes (px - FIXED) */
+  --sizing-sidebar-width: 300px;
+  --sizing-empty-state-min-height: 300px;
+  --sizing-hairline: 1px;
+
   /* Layout Heights */
   --layout-height-bottom-nav: 56px;
   --layout-height-bottom-action-bar: 56px;
@@ -393,6 +398,7 @@
   --font-size-display-lg: 48px;
   --font-size-display-md: 36px;
   --font-size-display-sm: 28px;
+  --font-size-display-xl: 64px;
 
   --font-size-headline-lg: 24px;
   --font-size-headline-md: 20px;
@@ -451,6 +457,9 @@
   --line-height-body-md: 20px;
   --line-height-body-sm: 16px;
   --line-height-label: 16px;
+
+  /* Letter Spacing (px - FIXED) */
+  --letter-spacing-wider: 1px;
 
   /* Font Weights */
   --font-weight-normal: 400;
