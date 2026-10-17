@@ -335,7 +335,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                       minHeight: 44,
                       padding: 0,
                       background: cssVars.colors.surface,
-                      border: `1px solid ${cssVars.colors.border}`,
+                      border: `1px solid ${cssVars.colors.borderControl}`,
                       borderRadius: cssVars.borderRadius.md,
                       color: cssVars.colors.textSecondary,
                       cursor: 'pointer',

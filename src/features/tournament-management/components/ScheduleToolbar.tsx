@@ -103,7 +103,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
     backgroundColor: cssVars.colors.background,
     borderRadius: cssVars.borderRadius.md,
     padding: cssVars.spacing.xs,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     marginLeft: isEditing ? cssVars.spacing.md : 0,
     gap: cssVars.spacing.xs,
   };
