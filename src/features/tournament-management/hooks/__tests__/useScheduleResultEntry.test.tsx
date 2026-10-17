@@ -315,10 +315,14 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
         state: null,
         serverTime: 1,
       }));
-      const { answer, done } = await halbfinale22();
+      const { hook, answer, done } = await halbfinale22();
+      // Vorbedingung (Review A-25a K1): die Abfrage erschien, und gesendet wurde der Eintrag MIT Strafstoßergebnis.
+      expect(hook.result.current.prompt?.kind).toBe('shootout');
       await answer('4:3');
       await done;
       await settle();
+      expect(h.api).toHaveBeenCalledTimes(1);
+      expect(h.api.mock.calls[0][1][0].payload).toEqual({ scores: { [HEIM]: 2, [GAST]: 2 }, shootout: { [HEIM]: 4, [GAST]: 3 } });
 
       const copy = await outbox(h, HALBFINALE_1);
       expect(copy?.rejected.map((entry) => [entry.event.type, entry.code])).toEqual([['RESULT_ENTRY', 'INVALID_PAYLOAD']]);

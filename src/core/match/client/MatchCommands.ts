@@ -147,7 +147,7 @@ export class MatchCommands {
   }
 
   /** B-07 (@FU-080): Ergebnis direkt eintragen; auf laufendem Spiel abgelehnt (@FU-081). A-25a (@FU-094): Strafstoß, K.-o.-Regel wie am Server. */
-  enterResult(matchId: string, ctx: MatchContext, actor: Actor, scores: TeamScores, shootout?: TeamScores, knockout = false): CommandResult {
+  enterResult(matchId: string, ctx: MatchContext, actor: Actor, scores: TeamScores, shootout: TeamScores | undefined, knockout: boolean): CommandResult {
     const built = resultEntryCommand(knockout, scores, shootout);
     return built.ok ? this.submit(matchId, ctx, actor, built.spec) : Promise.reject(new MatchCommandRejectedError(built.code, built.detail));
   }

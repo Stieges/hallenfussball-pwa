@@ -67,11 +67,12 @@ const ZWEI_ZWEI = /2\s?:\s?2/;
 test.describe('@FU-094 Spielplan: K.-o.-Unentschieden mit Strafstoßschießen eintragen (offline)', () => {
   // C-PHASE-LOKAL-VERLOREN behoben (A-25a): `MatchSchema.phase` -- das lokal geladene Halbfinale bleibt ein K.-o.-Spiel.
 
-  test.beforeEach(async ({ seedIndexedDB }, testInfo) => {
-    // Handy/Tablet: Befund-Vorschlag C-FINALRUNDE-MOBIL-EINGABE -- die mobile Karte der Finalrunde
-    // (components/schedule/FinalStageSchedule.tsx, onChange der beiden Felder) meldet ein Ergebnis nur, wenn die andere
-    // Seite schon einen Spielstand im Spiel hat; ein offenes Spiel lässt sich dort gar nicht eintragen (vorbestehend).
-    test.skip(testInfo.project.name !== 'desktop', 'C-FINALRUNDE-MOBIL-EINGABE: mobile Finalrunden-Eingabe meldet kein Ergebnis');
+  // Bis 768 px zeigt der Spielplan die Finalrunde als Karten (FinalStageSchedule, `max-width: 768px`). Befund
+  // C-FINALRUNDE-MOBIL-EINGABE (vorbestehend): die Karte meldet ein Ergebnis nur, wenn die andere Seite schon einen Stand hat –
+  // ein offenes Spiel lässt sich dort nicht eintragen. Bis zum Fix erwartet fehlgeschlagen; ab 1024 px (Tabelle) regulär.
+  test.fail(({ viewport }) => (viewport?.width ?? 0) <= 768, 'C-FINALRUNDE-MOBIL-EINGABE: Karten-Ansicht meldet kein Ergebnis');
+
+  test.beforeEach(async ({ seedIndexedDB }) => {
     await seedIndexedDB({ tournaments: [strafstossTurnier()] });
   });
 

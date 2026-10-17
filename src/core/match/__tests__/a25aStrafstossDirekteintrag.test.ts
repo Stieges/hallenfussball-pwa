@@ -95,6 +95,25 @@ describe('@FU-094 Engine und Zwischenspeicher', () => {
   });
 });
 
+describe('@FU-094 Strafstoß nach Wiedereröffnen (Review A-25a W1, Befund C-STRAFSTOSS-NACH-WIEDERERÖFFNEN)', () => {
+  const eintrag = direkteintrag({ scores: zweiZwei, shootout: vierDrei });
+  const wieder: EngineEvent = { id: '0000a25a-0000-4000-8000-000000000002', type: 'REOPEN', actor: 'leitung', at: 2000, section: null, clockMs: null, payload: {} };
+
+  it('@FU-094 nach dem Wiedereröffnen läuft das Spiel ohne Strafstoß-Stand und ohne Entscheid', () => {
+    const { state } = reduceMatch([eintrag, wieder], ctx);
+    expect(cacheColumns(state, ctx)).toMatchObject({ match_status: 'running', penalty_score_a: null, penalty_score_b: null, decided_by: null });
+  });
+
+  // Befund C-STRAFSTOSS-NACH-WIEDERERÖFFNEN (Ziel B-24): Endet das wiedereröffnete Spiel 2:3, trägt die letzte
+  // Überschreibung weiter den alten Strafstoß 4:3 – Zwischenspeicher `decided_by penalty`, Sieger Heim trotz 2:3.
+  it.fails('@FU-094 wiedereröffnet und 2:3 beendet: der alte Strafstoß 4:3 entscheidet nicht mehr', () => {
+    const tor: EngineEvent = { id: '0000a25a-0000-4000-8000-000000000003', type: 'GOAL', actor: 'leitung', at: 3000, section: 1, clockMs: 0, teamId: GAST, payload: {} };
+    const ende: EngineEvent = { id: '0000a25a-0000-4000-8000-000000000004', type: 'MATCH_END', actor: 'leitung', at: 4000, section: 1, clockMs: 0, payload: {} };
+    const { state } = reduceMatch([eintrag, wieder, tor, ende], ctx);
+    expect(cacheColumns(state, ctx)).toMatchObject({ match_status: 'finished', score_a: 2, score_b: 3, penalty_score_a: null, penalty_score_b: null, decided_by: 'regular' });
+  });
+});
+
 describe('@FU-094 Regel „K.-o.-Unentschieden braucht ein Strafstoßergebnis“ (Zwilling der Server-Prüfung)', () => {
   it('@FU-094 K.-o. 2:2 ohne Strafstoß → SHOOTOUT_REQUIRED (ohne Angabe speichert die App das Unentschieden nicht)', () => {
     expect(shootoutRuleViolation(true, { scores: zweiZwei })).toBe('SHOOTOUT_REQUIRED');

@@ -58,7 +58,7 @@ describe('A-08f3e3 Hinweis im Kopf der Turnierverwaltung', () => {
   });
 
   it('@FU-002 Eigentümer offline 3:1 → Kopf zeigt „1 Eintrag wartet“', async () => {
-    await commandsOf(h).enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 });
+    await commandsOf(h).enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 }, undefined, false);
     const view = mount(h);
     await act(async () => { await settle(); });
 
@@ -66,7 +66,7 @@ describe('A-08f3e3 Hinweis im Kopf der Turnierverwaltung', () => {
   });
 
   it('M-1/@FU-004: Offline-Eintrag, inzwischen hat ein Helfer angepfiffen → beim Senden abgelehnt, Hinweis mit Grund, Spiel zeigt den Server-Stand', async () => {
-    await commandsOf(h).enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 });
+    await commandsOf(h).enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 }, undefined, false);
     const view = mount(h);
     await act(async () => { await settle(); });
 
@@ -89,7 +89,7 @@ describe('A-08f3e3 Hinweis im Kopf der Turnierverwaltung', () => {
   });
 
   it('Kette offline: RESULT_ENTRY E1 + CORRECTION (basedOn E1); E1 abgelehnt → Korrektur ebenfalls, beide im Hinweis', async () => {
-    const e1 = await commandsOf(h).enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 });
+    const e1 = await commandsOf(h).enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 }, undefined, false);
     await commandsOf(h).correct(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 2 }, 'input_error', e1);
     const view = mount(h);
     await act(async () => { await settle(); });
@@ -108,7 +108,7 @@ describe('A-08f3e3 Hinweis im Kopf der Turnierverwaltung', () => {
 
   it('I-4 unter 400 px: nur Symbol mit Zahl (Text als Beschriftung), Liste per 44-px-Taste', async () => {
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('max-width'), media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
-    await commandsOf(h).enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 });
+    await commandsOf(h).enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 }, undefined, false);
     const view = mount(h);
     await act(async () => { await settle(); });
 
@@ -119,7 +119,7 @@ describe('A-08f3e3 Hinweis im Kopf der Turnierverwaltung', () => {
 
   it('I-4 ab 400 px: voller Text „1 Eintrag wartet“', async () => {
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
-    await commandsOf(h).enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 });
+    await commandsOf(h).enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 }, undefined, false);
     const view = mount(h);
     await act(async () => { await settle(); });
 
