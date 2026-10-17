@@ -14,6 +14,8 @@ export interface DialogProps {
   initialFocusRef?: RefObject<HTMLElement | null>;
   /** @OB-014: Enter löst in gefährlichen Rückfragen nichts aus */
   suppressEnter?: boolean;
+  /** Tasten-Fuß (z. B. `DialogActions`): bleibt unten stehen, nur der Inhalt scrollt (S1, @OB-062). */
+  footer?: ReactNode;
 }
 
 export const Dialog = ({
@@ -25,6 +27,7 @@ export const Dialog = ({
   closeOnBackdropClick = true,
   initialFocusRef,
   suppressEnter,
+  footer,
 }: DialogProps) => {
   // Stable unique ID for aria-labelledby (React 18+)
   const titleId = useId();
@@ -65,6 +68,26 @@ export const Dialog = ({
     padding: cssVars.spacing.xl,
   };
 
+  // Kopf (Titel, Schließen) steht im festen Kopf-Slot des Bausteins, der Inhalt scrollt allein (S1, @OB-062)
+  const header = (
+    <div style={headerStyle} className="dialog-header">
+      <h2 id={titleId} style={titleStyle}>{title}</h2>
+      <button
+        style={closeButtonStyle}
+        onClick={onClose}
+        aria-label="Schließen"
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = cssVars.colors.surfaceHover;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }}
+      >
+        <Icons.X size={20} />
+      </button>
+    </div>
+  );
+
   return (
     <DialogSurface
       isOpen={isOpen}
@@ -75,23 +98,9 @@ export const Dialog = ({
       initialFocusRef={initialFocusRef}
       suppressEnter={suppressEnter}
       panelClassName="dialog-modal"
+      header={header}
+      footer={footer}
     >
-      <div style={headerStyle} className="dialog-header">
-        <h2 id={titleId} style={titleStyle}>{title}</h2>
-        <button
-          style={closeButtonStyle}
-          onClick={onClose}
-          aria-label="Schließen"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = cssVars.colors.surfaceHover;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          <Icons.X size={20} />
-        </button>
-      </div>
       <div style={contentStyle} className="dialog-content">{children}</div>
 
       <style>{`

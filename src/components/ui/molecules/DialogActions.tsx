@@ -8,6 +8,7 @@
  * Dann ist der Text zu kürzen (Übersetzung), die Überlauf-Messung (`ueberlauf.element`) fängt das. (2) Bei drei oder mehr Tasten
  * entsteht je nach Platz eine Mischform (z. B. zwei Nebentasten nebeneinander, die Haupttaste allein darunter); die Haupttaste
  * steht immer zuletzt, also unten bzw. rechts. Ob Mischform oder „alle oder keine“ gilt, ist als Regelfrage offen (@OB-061 nennt zwei Tasten).
+ * Der Baustein setzt keinen Außenabstand: Im Dialog steht er im Fuß-Slot von `DialogSurface`/`Dialog` (S1, @OB-062), der den Abstand trägt.
  * Haupttaste mindestens `touchTargets.primary` (@OB-022), Nebentasten mindestens `touchTargets.minimum`.
  */
 import type { CSSProperties, ReactNode, Ref } from 'react';
@@ -37,7 +38,6 @@ const row: CSSProperties = {
   display: 'flex',
   flexWrap: 'wrap',
   gap: cssVars.spacing.sm,
-  marginTop: cssVars.spacing.lg,
 };
 
 // `flex: 1 1 auto` mit `nowrap`: die Mindestbreite einer Taste ist ihre einzeilige Beschriftung
