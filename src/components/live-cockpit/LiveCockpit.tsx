@@ -23,6 +23,7 @@ import { useRejectedOutboxDialog } from '../../features/collaboration/outbox/use
 import { RejectedOutboxDialog } from '../../features/collaboration/outbox/RejectedOutboxDialog';
 import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
 import { getEffectiveScore } from '../../utils/matchScore';
+import { isAutoFinishDue } from '../../core/match/client/viewDuration';
 import type { LiveCockpitProps } from './types';
 import type { EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
@@ -342,19 +343,15 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // Viewers/Trainers das Spiel selbst, die DB lehnt ab, der Eintrag landet in der
   // Dead-Letter-Queue und der lokale Stand weicht ab (final-review.md H3).
   useEffect(() => {
-    if (
-      !readOnly &&
-      cockpitSettings.autoFinishEnabled &&
-      currentMatch?.status === 'RUNNING' &&
-      isOvertime
-    ) {
+    // C-VERLAENGERUNG-ENDET-SOFORT: nur bei wirklich abgelaufener Spielzeit, nie im Golden Goal (@SL-082)
+    if (!readOnly && cockpitSettings.autoFinishEnabled && isAutoFinishDue(currentMatch, isOvertime)) {
       // console.log('⏰ Auto-Finish triggered');
       handleFinish();
     }
   }, [
     readOnly,
     cockpitSettings.autoFinishEnabled,
-    currentMatch?.status,
+    currentMatch,
     isOvertime,
     handleFinish
   ]);
