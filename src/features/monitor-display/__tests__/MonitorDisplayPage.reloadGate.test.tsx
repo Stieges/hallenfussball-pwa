@@ -153,6 +153,18 @@ describe('MonitorDisplayPage — Neulade-Tor (B-19b, @ZM-124, @ZM-128, @ME-012, 
     expect(updateSWMock).toHaveBeenCalledWith(true);
   });
 
+  // W3 (@ZM-124 Zeile 2, @ME-012): Die neue Version kommt, während die Tabelle steht. Schon vorher gab es
+  // Wechsel (15 s, 30 s). Der Zähler gehört zur Version: erst der nächste Wechsel zur QR-Folie (45 s) lädt neu.
+  it('@ZM-124 Zeile 2 / @ME-012: Version kommt auf der Tabelle; neu erst beim nächsten Wechsel (45 s), vorher nie', async () => {
+    await starte(monitorTurnier(undefined, [slide('standings', { groupId: 'A' }), slide('qr-code', {})]));
+    await vorspulen(35_000);
+    act(() => { __fireNeedRefresh(); });
+    await vorspulen(9_000);
+    expect(updateSWMock).not.toHaveBeenCalled();
+    await vorspulen(4_000);
+    expect(updateSWMock).toHaveBeenCalledTimes(1);
+  });
+
   it('@ME-012 Versions-Check: 30-min-Check während laufendem Spiel → 0 Neuladen; visibilitychange → 0; erst Wechsel → 1', async () => {
     await starte(monitorTurnier(undefined, programmLive(true)));
     const update = vi.fn(async () => { __fireNeedRefresh(); });

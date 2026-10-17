@@ -48,7 +48,8 @@ export class RepositoryError extends AppError {
  */
 export class UnreadableResponseError extends RepositoryError {
   constructor(operation: string, originalError?: unknown) {
-    super(operation, 'Antwort nicht lesbar', originalError);
+    const original = originalError instanceof Error ? originalError.message : String(originalError);
+    super(operation, `Antwort nicht lesbar: ${original}`, originalError);
     this.name = 'UnreadableResponseError';
   }
 }
