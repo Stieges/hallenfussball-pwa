@@ -223,6 +223,37 @@ describe('useRedCardSuspensions (L6)', () => {
     expect(fetchConfirmed).toHaveBeenCalledWith(SPIEL_4, 0);
   });
 
+  it('Spiel-ID unabhängig von der Groß-/Kleinschreibung: „SPIEL-11“ findet Spiel 11 (Hook-Zusage „Engine-Spiel-ID oder Original-Schreibweise“)', async () => {
+    const value = engineCtx.current;
+    if (!value) {
+      throw new Error('Engine-Kontext fehlt');
+    }
+    const commands = commandsFor(value);
+    await commands.start(SPIEL_4, CTX_4, 'helper', RULES);
+    await commands.card(SPIEL_4, CTX_4, 'helper', 'fc-nord', 'RED_CARD', { playerNumber: 7 });
+
+    const { result } = renderHook(() => useRedCardSuspensions(turnier(), SPIEL_11.toUpperCase()));
+
+    await waitFor(() => {
+      expect(result.current).toEqual([{ teamId: 'fc-nord', playerNumber: 7, ausSpielNummer: 4 }]);
+    });
+  });
+
+  it('Gegenbeispiel: andere Spiel-ID „SPIEL-99“ findet kein Spiel → [] (Rote in Spiel 4 liegt vor)', async () => {
+    const value = engineCtx.current;
+    if (!value) {
+      throw new Error('Engine-Kontext fehlt');
+    }
+    const commands = commandsFor(value);
+    await commands.start(SPIEL_4, CTX_4, 'helper', RULES);
+    await commands.card(SPIEL_4, CTX_4, 'helper', 'fc-nord', 'RED_CARD', { playerNumber: 7 });
+    expect(value.engine.view(SPIEL_4)?.result.state.cards).toHaveLength(1);
+
+    const { result } = renderHook(() => useRedCardSuspensions(turnier(), 'SPIEL-99'));
+
+    expect(result.current).toEqual([]);
+  });
+
   it('ohne Engine-Kontext (Gast ohne Provider) → []', () => {
     engineCtx.current = null;
     const { result } = renderHook(() => useRedCardSuspensions(turnier(), SPIEL_11));

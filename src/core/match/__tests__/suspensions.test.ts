@@ -349,6 +349,35 @@ describe('redCardSuspensions – Gegenbeispiele (fast richtig)', () => {
   });
 });
 
+describe('redCardSuspensions – frühestes Spiel mit Rot bei unsortierter Liste (Brief § 5)', () => {
+  // `buildValidMatches` liefert `tournament.matches` in Anlage-Reihenfolge – nach Bearbeitung des
+  // Spielplans nicht nach `matchNumber` sortiert. Die Regel „ausSpielNummer = das früheste Spiel mit
+  // Rot“ (Brief § 5 Schritt 1) darf deshalb nicht „erstes Listenelement gewinnt“ sein.
+  const s1 = spiel('spiel-1', 1, 'fc-nord', 'sv-sued');
+  const s3 = spiel('spiel-3', 3, 'fc-nord', 'sv-sued');
+  const s5 = spiel('spiel-5', 5, 'fc-nord', 'sv-sued');
+  const logsBeideRot = {
+    'spiel-1': [anpfiff('start-1'), rot('k1', 'fc-nord', 7)],
+    'spiel-3': [anpfiff('start-3'), rot('k3', 'fc-nord', 7)],
+    'spiel-5': [anpfiff('start-5')],
+  };
+  const seitenGleich = {
+    'spiel-1': ['fc-nord', 'sv-sued'],
+    'spiel-3': ['fc-nord', 'sv-sued'],
+    'spiel-5': ['fc-nord', 'sv-sued'],
+  } as Record<string, [string, string]>;
+
+  it('Brief § 5: Nummer 7 von FC Nord sah in Spiel 3 und in Spiel 1 Rot – Liste [3, 1] liefert ausSpielNummer 1', () => {
+    const hinweise = redCardSuspensions([s3, s1, s5], zustandVon(logsBeideRot, seitenGleich), 'spiel-5');
+    expect(hinweise).toEqual([{ teamId: 'fc-nord', playerNumber: 7, ausSpielNummer: 1 }]);
+  });
+
+  it('Gegenbeispiel: dieselbe Lage in der Reihenfolge [1, 3] liefert ebenfalls ausSpielNummer 1 – die Listenreihenfolge ändert nichts', () => {
+    const hinweise = redCardSuspensions([s1, s3, s5], zustandVon(logsBeideRot, seitenGleich), 'spiel-5');
+    expect(hinweise).toEqual([{ teamId: 'fc-nord', playerNumber: 7, ausSpielNummer: 1 }]);
+  });
+});
+
 describe('Barrel-Export (Schritt 3)', () => {
   it('src/core/match/index.ts exportiert redCardSuspensions und SperrHinweis', async () => {
     const kern = await import('..');
