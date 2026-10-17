@@ -75,6 +75,9 @@ BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
 ENGINE_MIGRATION="20260928_002_match_engine.sql"
 APPEND_MIGRATION="20260928_003_append_match_events.sql"
 AMEND_MIGRATION="20261001_001_amend_event.sql"
+# ZA-3: ersetzt apply_effect/apply_retract/retract_target_admissible/server_rules/append_match_events --
+# muss nach JEDEM erneuten Einspielen von 002/003/20261001 ebenfalls erneut laufen.
+ZA3_MIGRATION="20261028_001_transitions_za3.sql"
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 RULES_DIR="$FIXTURES_DIR/rules"
 CONTAINER_NAME="match-engine-parity-$$"
@@ -100,6 +103,7 @@ NEWER_MIGRATIONS=()
 ENGINE_FILE=""
 APPEND_FILE=""
 AMEND_FILE=""
+ZA3_FILE=""
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   NEWER_MIGRATIONS+=("$line")
@@ -107,10 +111,11 @@ while IFS= read -r line; do
     "$ENGINE_MIGRATION") ENGINE_FILE="$line" ;;
     "$APPEND_MIGRATION") APPEND_FILE="$line" ;;
     "$AMEND_MIGRATION") AMEND_FILE="$line" ;;
+    "$ZA3_MIGRATION") ZA3_FILE="$line" ;;
   esac
 done <<< "$NEWER_MIGRATIONS_RAW"
-if [[ -z "$ENGINE_FILE" || -z "$APPEND_FILE" || -z "$AMEND_FILE" ]]; then
-  echo "::error::$ENGINE_MIGRATION, $APPEND_MIGRATION oder $AMEND_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
+if [[ -z "$ENGINE_FILE" || -z "$APPEND_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" ]]; then
+  echo "::error::$ENGINE_MIGRATION, $APPEND_MIGRATION, $AMEND_MIGRATION oder $ZA3_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
   exit 1
 fi
 
@@ -167,10 +172,11 @@ for f in "${NEWER_MIGRATIONS[@]}"; do
 done
 # C0b: 002 allein erneut einzuspielen ersetzte die in 20261001 geaenderten Funktionen durch den
 # PR-B-Stand -- die Idempotenz wird deshalb fuer die ganze Kette 002 -> 003 -> 20261001 belegt.
-echo "Idempotenz: $ENGINE_MIGRATION, $APPEND_MIGRATION, $AMEND_MIGRATION ein zweites Mal einspielen..." >&2
+echo "Idempotenz: $ENGINE_MIGRATION, $APPEND_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION ein zweites Mal einspielen..." >&2
 psql_stdin < "$ENGINE_FILE"
 psql_stdin < "$APPEND_FILE"
 psql_stdin < "$AMEND_FILE"
+psql_stdin < "$ZA3_FILE"
 
 # C0b-Gegenprobe Phase A: je Kategorie genau eine gezielte Mutation in 20261001 (grep belegt je
 # Muster genau einen Treffer). (4) wirkt auf state.details (und damit auch auf die Nachtrag-Regel,
@@ -209,6 +215,9 @@ s = sys.stdin.read()
 for k in os.environ["MUT_KEYS"].split():
     s = s.replace(os.environ[k], os.environ[k + "_TO"])
 sys.stdout.write(s)' < "$AMEND_FILE" | psql_stdin
+  # ZA-3: die Fassungen aus 20261028 wieder herstellen (die Mutationen liegen in Funktionen, die
+  # ZA-3 nicht ersetzt: details_from_payload, cache_columns, cfg_num, apply_amend).
+  psql_stdin < "$ZA3_FILE"
 }
 
 if [[ "$MODE" == "gegenprobe" ]]; then
@@ -278,7 +287,7 @@ LANGUAGE plpgsql AS $fn$
 BEGIN
   RETURN jsonb_build_object('rules', match_engine.server_rules(
     (p_in->>'durationMinutes')::integer, p_in->>'phase', (p_in->>'groupPhaseDuration')::integer,
-    (p_in->>'finalRoundDuration')::integer, p_in->'config', p_in->'finalsConfig'));
+    (p_in->>'finalRoundDuration')::integer, p_in->'config', p_in->'finalsConfig', p_in->>'finalType'));
 EXCEPTION WHEN OTHERS THEN
   RETURN jsonb_build_object('error', SQLSTATE || ': ' || SQLERRM);
 END;
@@ -461,6 +470,7 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   sed 's/^     AND e.review_state IS NULL;$/     ;/' "$ENGINE_FILE" | psql_stdin
   psql_stdin < "$APPEND_FILE"
   psql_stdin < "$AMEND_FILE"
+  psql_stdin < "$ZA3_FILE"
   psql_stdin <<'SQL'
 UPDATE public.match_transitions SET actor = 'leitung' WHERE from_status = 'running' AND event_type = 'GOAL';
 GRANT EXECUTE ON FUNCTION match_engine.num(jsonb) TO PUBLIC;
