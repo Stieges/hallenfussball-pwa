@@ -45,10 +45,9 @@ describe('phaseViewOf (B-08a)', () => {
   it('@SL-013 Die Uhr läuft weiter, während das Gerät gesperrt ist: 3:30, Strafe Rest 0:30', async () => {
     const spiel = await spielAnlegen();
     await spiel.a.commands.start(spiel.matchId, spiel.ctx, 'leitung', REGEL_2X6);
-    zu(90_000);
-    // Strafe seit 1:30; die Gherkin-Zahlen (3:30, Rest 0:30) ergeben bei dieser Startzeit eine Dauer von 2:30.
-    await spiel.a.commands.timePenalty(spiel.matchId, spiel.ctx, 'leitung', 'teamb', { durationSeconds: 150 });
     zu(120_000);
+    // Strafe seit 2:00, Standard-Dauer 2 Minuten (Record @SL-013 korrigiert).
+    await spiel.a.commands.timePenalty(spiel.matchId, spiel.ctx, 'leitung', 'teamb');
     zu(210_000); // 90 Sekunden gesperrt, nichts gerendert
     const phase = sichtAuf(spiel.a, spiel);
     expect(phase.sectionElapsedMs).toBe(210_000);
