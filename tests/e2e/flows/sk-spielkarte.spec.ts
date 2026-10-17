@@ -139,7 +139,10 @@ test.describe('@OB-064 Spielplan der Verwaltung, Handy 360×640 hoch', () => {
     const toreGast = await kasten2('match-goals-');
     expect(gast.y).toBeGreaterThan(heim.y + heim.height - 1);
     expect(Math.abs(gast.x - heim.x)).toBeLessThan(2);
-    expect(heim.width).toBeGreaterThan(80);
+    // Nicht in eine schmale Spalte gequetscht: gemessen an der Zelle der Mannschaft (Avatar + Name), nicht an der Textbreite –
+    // die Textbreite eines kurzen Namens hängt von der Schriftmetrik ab (Linux in der CI: genau 80 px).
+    const heimZelle = await karte.locator('[data-testid^="match-name-"]').first().locator('xpath=..').boundingBox();
+    expect(heimZelle?.width ?? 0).toBeGreaterThan(120);
     expect(Math.abs(toreGast.x - toreHeim.x)).toBeLessThan(2);
     expect(toreHeim.x).toBeGreaterThan(heim.x + heim.width - 1);
     expect(toreGast.y).toBeGreaterThan(toreHeim.y);
