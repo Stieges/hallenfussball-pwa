@@ -118,20 +118,35 @@ describe('@OB-064 Tabellenzeile am Desktop: Ergebnis waagerecht', () => {
 describe('Regel: laufendes Spiel zeigt seine Spielzeit in der Kopfzeile, Tore je Zeile', () => {
   it('läuft 07:30 in der Kopfzeile, Tore 1 und 0, noch kein Sieger', () => {
     karte({ scoreA: 1, scoreB: 0 }, 'running', { elapsedFormatted: '07:30' });
-    expect(screen.getByTestId('match-card-elapsed').textContent).toBe('07:30');
-    expect(screen.getByText('LIVE')).toBeInTheDocument();
+    // Mockup Variante D: „läuft 07:30“ (i18n `matchResult.runningElapsed`), nicht das feste Wort „LIVE“
+    expect(screen.getByTestId('match-card-live').textContent).toBe('läuft 07:30');
+    expect(screen.queryByText('LIVE')).toBeNull();
     expect(tore('home')).toBe('1');
     expect(tore('away')).toBe('0');
     expect(istFett('FC Nord')).toBe(false);
   });
 
-  it('Gegenbeispiel: ein geplantes Spiel zeigt weder Spielzeit noch Tore noch LIVE', () => {
+  it('läuft ohne bekannte Spielzeit: nur „läuft“, keine leere Zeit', () => {
+    karte({ scoreA: 0, scoreB: 0 }, 'running');
+    expect(screen.getByTestId('match-card-live').textContent).toBe('läuft');
+  });
+
+  it('Gegenbeispiel: ein geplantes Spiel zeigt weder Spielzeit noch Tore noch „läuft“', () => {
     const { container } = karte({}, 'scheduled');
     expect(screen.queryByTestId('match-card-elapsed')).toBeNull();
-    expect(screen.queryByText('LIVE')).toBeNull();
+    expect(screen.queryByTestId('match-card-live')).toBeNull();
     expect(tore('home')).toBe('–');
     expect(tore('away')).toBe('–');
     expect(container.querySelector('[data-testid^="match-penalty"]')).toBeNull();
+  });
+});
+
+describe('Golden Goal ist eine Form der Verlängerung (Z.2 sinngemäß)', () => {
+  it('Spiel durch Golden Goal: Kopfzeile „n. V.“, Tabelle „n. V.“', () => {
+    const golden = { scoreA: 1, scoreB: 1, overtimeScoreA: 1, overtimeScoreB: 0, decidedBy: 'goldenGoal' } as const;
+    karte(golden, 'finished');
+    expect(screen.getByTestId('match-card-decision').textContent).toBe('n. V.');
+    expect(tore('home')).toBe('2');
   });
 });
 

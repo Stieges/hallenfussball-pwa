@@ -46,7 +46,7 @@ export interface FinalStageMobileCardProps {
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
 }
 
-const nameStyle: CSSProperties = { wordBreak: 'break-word', overflowWrap: 'break-word' };
+const nameStyle: CSSProperties = { overflowWrap: 'break-word' };
 
 const selectStyle: CSSProperties = {
   width: '100%',

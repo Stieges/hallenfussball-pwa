@@ -152,8 +152,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   const bodyStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    gap: cssVars.spacing.md,
+    padding: cssVars.spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const expandStyle: CSSProperties = {

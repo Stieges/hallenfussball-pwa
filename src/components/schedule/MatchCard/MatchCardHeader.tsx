@@ -2,7 +2,7 @@
  * MatchCardHeader - Kopfzeile der Spielkarte (@OB-064, Mockup Variante D)
  *
  * Links die Anpfiffzeit, rechts Feld, Gruppe/Runde, SR und der Status:
- * - läuft: LIVE-Kennzeichen und Spielzeit
+ * - läuft: Kennzeichen „läuft 07:30“ (ohne bekannte Zeit „läuft“)
  * - beendet nach Strafstoßschießen: „beendet i. E.“
  * - nach Verlängerung entschieden: „n. V.“
  * - regulär beendet oder geplant: kein Zusatz
@@ -83,7 +83,7 @@ export const MatchCardHeader: React.FC<MatchCardHeaderProps> = ({
         {referee && <span>{t('matchCard.refereePrefix', { referee })}</span>}
         {isLive && (
           <>
-            <span style={liveBadgeStyle}>
+            <span style={liveBadgeStyle} data-testid="match-card-live">
               <span style={{
                 width: cssVars.spacing.sm,
                 height: cssVars.spacing.sm,
@@ -91,16 +91,8 @@ export const MatchCardHeader: React.FC<MatchCardHeaderProps> = ({
                 backgroundColor: cssVars.colors.statusLive,
                 animation: 'pulse 2s ease-in-out infinite',
               }} />
-              LIVE
+              {elapsedFormatted ? t('matchResult.runningElapsed', { elapsed: elapsedFormatted }) : t('matchResult.running')}
             </span>
-            {elapsedFormatted && (
-              <span
-                style={{ fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.primary, fontVariantNumeric: 'tabular-nums' }}
-                data-testid="match-card-elapsed"
-              >
-                {elapsedFormatted}
-              </span>
-            )}
             <style>{`
               @keyframes pulse {
                 0% { opacity: 1; transform: scale(1); }

@@ -36,12 +36,12 @@ const gridStyle: CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'minmax(0, 1fr) auto auto',
   alignItems: 'center',
-  columnGap: cssVars.spacing.sm,
+  columnGap: cssVars.spacing.xs,
   rowGap: cssVars.spacing.xs,
   minWidth: 0,
 };
 
-const teamStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, minWidth: 0 };
+const teamStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: cssVars.spacing.xs, minWidth: 0 };
 
 const goalsStyle: CSSProperties = {
   minWidth: cssVars.touchTargets.minimum,
@@ -74,11 +74,10 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
     const goals = result === null ? undefined : side === 'a' ? result.goalsA : result.goalsB;
     const penalty = side === 'a' ? result?.penaltyA : result?.penaltyB;
     const nameStyle: CSSProperties = {
-      fontSize: cssVars.fontSizes.lg,
+      fontSize: cssVars.fontSizes.md,
       fontWeight: isWinner ? cssVars.fontWeights.bold : isLoser || status === 'finished' ? cssVars.fontWeights.medium : cssVars.fontWeights.semibold,
       color: isLoser ? cssVars.colors.textSecondary : cssVars.colors.textPrimary,
       // MOBILE-UX: Mannschaftsnamen werden nie abgeschnitten
-      wordBreak: 'break-word',
       overflowWrap: 'break-word',
     };
     const first = side === 'a';
@@ -87,7 +86,7 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
     return (
       <Fragment key={side}>
         <div style={{ ...teamStyle, gridColumn: 1, gridRow: row }}>
-          <TeamAvatar team={team} size="md" />
+          <TeamAvatar team={team} size="sm" />
           <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`match-name-${matchId}-${side === 'a' ? 'home' : 'away'}`}>{team.name}</span>
         </div>
         <button

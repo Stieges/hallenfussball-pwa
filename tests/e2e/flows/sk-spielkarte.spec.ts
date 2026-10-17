@@ -38,6 +38,23 @@ async function bild(page: Page, name: string, ziel?: ReturnType<Page['locator']>
   if (ziel) { await ziel.screenshot({ path: pfad }); } else { await page.screenshot({ path: pfad, fullPage: false }); }
 }
 
+
+/**
+ * @OB-025 (Lange Teamnamen) in der Karte: der Name bricht nur an Leerzeichen bzw. an der Fuge (Bindestrich), nie mitten im Wort.
+ * Gemessen: das breiteste Wortstück jedes Namens passt in die Breite des Namens-Elements.
+ */
+const breitestesWortstueck = (page: Page, selektor: string) =>
+  page.evaluate((sel) => Array.from(document.querySelectorAll<HTMLElement>(sel)).filter((el) => el.offsetParent !== null).map((el) => {
+    const stil = getComputedStyle(el);
+    const probe = document.createElement('span');
+    probe.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font:${stil.font};font-variant-numeric:${stil.fontVariantNumeric}`;
+    document.body.appendChild(probe);
+    let breit = 0;
+    for (const stueck of (el.textContent ?? '').split(/(?<=-)|\s+/)) { probe.textContent = stueck; breit = Math.max(breit, probe.getBoundingClientRect().width); }
+    probe.remove();
+    return { name: el.textContent ?? '', wort: Math.ceil(breit), breite: Math.floor(el.getBoundingClientRect().width) };
+  }), selektor);
+
 const finalKarte = (page: Page, nr: number) => page.locator('[data-testid^="final-card-"]').nth(nr);
 const gewicht = (el: ReturnType<Page['locator']>) => el.evaluate((n) => Number(getComputedStyle(n).fontWeight));
 
@@ -69,6 +86,15 @@ test.describe('@OB-064 Spielplan der Verwaltung, Handy 360×640 hoch', () => {
     expect(await gewicht(karte.locator('[data-testid^="final-name-"]').nth(0))).toBeGreaterThanOrEqual(700);
     expect(await gewicht(karte.locator('[data-testid^="final-name-"]').nth(1))).toBeLessThan(700);
     await bild(page, 'handy-360-halbfinale-2-strafstoss', karte);
+  });
+
+  test('Langer Teamname (50 Zeichen) bricht in Gruppen- und Finalkarte nur an Leerzeichen, nie im Wort', async ({ page }) => {
+    for (const selektor of ['.mobile-view [data-testid^="match-name-"]', '[data-testid^="final-name-"]']) {
+      const namen = await breitestesWortstueck(page, selektor);
+      const lang = namen.filter((n) => n.name.length >= 50);
+      expect(lang.length, selektor).toBeGreaterThan(0);
+      for (const n of namen) { expect(n.wort, `${n.name} (${selektor})`).toBeLessThanOrEqual(n.breite); }
+    }
   });
 
   test('Gruppenspiel: Spielkarte mit Tore je Zeile, Torzahl-Fläche ≥ 44 px, kein Fortschrittsring', async ({ page }) => {
