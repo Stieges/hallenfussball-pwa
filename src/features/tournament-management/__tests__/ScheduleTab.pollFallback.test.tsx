@@ -33,6 +33,8 @@ const REPOS = {
   publicLiveMatchRepo: null as unknown,
 };
 vi.mock('../../../core/contexts/RepositoryContext', () => ({ useRepositories: () => REPOS }));
+// A-08f3e2: die Schnelleingabe fragt die Akteursrolle ab (useActorRole braucht sonst den AuthProvider).
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'leitung' }));
 vi.mock('../../../hooks/usePermissions', () => ({
   usePermissions: () => ({ canCorrectResults: true, hasPermission: () => true }),
 }));
