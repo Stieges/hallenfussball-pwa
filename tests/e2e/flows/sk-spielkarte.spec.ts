@@ -260,13 +260,30 @@ for (const [name, groesse, datei] of [
   ['Tablet hochkant 768×1024', TABLET_HOCH, 'tablet-768'],
 ] as const) {
   test.describe(`Fixrunde 2 schwebende Tasten: ${name}`, () => {
-    test('ganz unten: jedes Eingabefeld und jede Torfläche der letzten Karten ist nicht von der Leiste verdeckt', async ({ page }) => {
+    test('offen, ganz unten: jedes Eingabefeld und jede Torfläche der letzten Karten ist nicht von der Leiste verdeckt', async ({ page }) => {
       await oeffneSpielplan(page, groesse);
       await scrolleGanzNachUnten(page);
       const befunde = await pruefeLetzteKarten(page, LETZTE_KARTEN);
       if (BILDER) {
         mkdirSync(BILDER, { recursive: true });
         await page.screenshot({ path: join(BILDER, `fr2-${datei}-platz-3-offen.png`) });
+      }
+      expect(befunde.length, 'Ziele in den letzten Karten gefunden').toBeGreaterThan(0);
+      expect(befunde.filter((b) => !b.ok).map((b) => `${b.name} → verdeckt von ${b.treffer}`)).toEqual([]);
+    });
+
+    test('eingetragen, ganz unten: Torzahlen der Gastzeile und jede Torfläche der letzten Karten sind nicht von der Leiste verdeckt', async ({ page }) => {
+      await oeffneSpielplan(page, groesse);
+      const karte = finalKarte(page, 3);
+      await karte.scrollIntoViewIfNeeded();
+      await karte.locator('input[data-testid$="-home"]').fill('2');
+      await karte.locator('input[data-testid$="-away"]').fill('1');
+      await expect(karte.locator('[data-testid^="final-goals-"]').nth(1)).toHaveText('1', { timeout: 15000 });
+      await scrolleGanzNachUnten(page);
+      const befunde = await pruefeLetzteKarten(page, LETZTE_KARTEN);
+      if (BILDER) {
+        mkdirSync(BILDER, { recursive: true });
+        await page.screenshot({ path: join(BILDER, `fr2-${datei}-platz-3-eingetragen.png`) });
       }
       expect(befunde.length, 'Ziele in den letzten Karten gefunden').toBeGreaterThan(0);
       expect(befunde.filter((b) => !b.ok).map((b) => `${b.name} → verdeckt von ${b.treffer}`)).toEqual([]);
