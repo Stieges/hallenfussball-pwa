@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 const SKRIPT = resolve(__dirname, '..', 'coverage-report.mjs')
@@ -117,8 +117,12 @@ describe('coverage-report.mjs', () => {
 
   it('@TA-004 existiert die Ref, kennt die Datei aber noch nicht (erster Merge), geht es mit Hinweis durch', () => {
     // GIT_*-Variablen (z. B. aus dem Pre-Commit-Hook) duerfen nicht auf das echte Repo zeigen.
-    const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')))
-    const git = (...a: string[]) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: ordner, encoding: 'utf8', env })
+    // GIT_CEILING_DIRECTORIES: schlaegt `git init` fehl, sucht Git nicht in ein umgebendes Repo hinein.
+    const env = { ...Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_'))), GIT_CEILING_DIRECTORIES: dirname(ordner) }
+    const git = (...a: string[]) => {
+      const g = spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: ordner, encoding: 'utf8', env })
+      if (g.status !== 0) throw new Error(`git ${a.join(' ')} fehlgeschlagen: ${g.stderr}`)
+    }
     git('init', '-q')
     writeFileSync(join(ordner, 'x.txt'), 'x')
     git('add', 'x.txt')
