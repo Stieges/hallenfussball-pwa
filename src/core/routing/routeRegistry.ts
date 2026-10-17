@@ -45,6 +45,11 @@ interface RouteDef {
    * auf einem einzelnen Segment.
    */
   guard?: (pathname: string) => boolean;
+  /**
+   * Kiosk-Route (@ME-003, @OB-028): ohne globale Einblendungen (Offline-Hinweis, Speicherwarnung,
+   * Einwilligung, Update-Hinweis, Toasts). Ohne Merkmal bleibt eine Route wie bisher.
+   */
+  kiosk?: true;
 }
 
 /**
@@ -97,7 +102,7 @@ const ROUTES: readonly RouteDef[] = [
   // useEffect-Matcher — Task-Brief schreibt Zeile 164 als kanonisch vor)
   { name: 'publicLive', pattern: /^\/live\/([A-Za-z0-9]+)$/, paramNames: ['shareCode'] },
   // App.tsx:168/279 — /^\/display\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9-]+)$/
-  { name: 'monitorDisplay', pattern: /^\/display\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9-]+)$/, paramNames: ['tournamentId', 'monitorId'] },
+  { name: 'monitorDisplay', pattern: /^\/display\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9-]+)$/, paramNames: ['tournamentId', 'monitorId'], kiosk: true },
   // App.tsx:275 — /^\/public\/([a-zA-Z0-9-]+)$/
   { name: 'public', pattern: /^\/public\/([a-zA-Z0-9-]+)$/, paramNames: ['tournamentId'] },
 
@@ -127,17 +132,30 @@ const ROUTES: readonly RouteDef[] = [
   { name: 'datenschutz', pattern: /^\/datenschutz$/, paramNames: [] },
 ];
 
-export function matchRoute(pathname: string): RouteMatch | null {
+/** Erste passende Route (FIRST-MATCH-WINS) mit ihrem Regex-Treffer. */
+function findRoute(pathname: string): { route: RouteDef; m: RegExpExecArray } | null {
   for (const route of ROUTES) {
     const m = route.pattern.exec(pathname);
     if (m && (!route.guard || route.guard(pathname))) {
-      const params: Record<string, string> = {};
-      route.paramNames.forEach((key, i) => {
-        const value = m[i + 1];
-        if (value !== undefined) { params[key] = value; }
-      });
-      return { name: route.name, params };
+      return { route, m };
     }
   }
   return null;
+}
+
+export function matchRoute(pathname: string): RouteMatch | null {
+  const found = findRoute(pathname);
+  if (found === null) { return null; }
+  const { route, m } = found;
+  const params: Record<string, string> = {};
+  route.paramNames.forEach((key, i) => {
+    const value = m[i + 1];
+    if (value !== undefined) { params[key] = value; }
+  });
+  return { name: route.name, params };
+}
+
+/** true auf Kiosk-Routen (@ME-003): keine globalen Einblendungen. Unbekannte Adressen sind keine Kiosk-Route. */
+export function isKioskRoute(pathname: string): boolean {
+  return findRoute(pathname)?.route.kiosk === true;
 }

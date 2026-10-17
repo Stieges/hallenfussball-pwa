@@ -9,6 +9,7 @@
  * - Mobile-optimierte Ansicht
  */
 
+import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 
 function getFutureDate(): string {
@@ -91,6 +92,26 @@ function createPublicTournament() {
   };
 }
 
+
+/**
+ * @OB-064: Handy – Teams untereinander, die Torzahl steht in der Zeile der Mannschaft (heim/gast getrennt);
+ * Desktop-Tabelle – Heim und Gast nebeneinander, das Ergebnis steht waagerecht („3:1“).
+ */
+async function expectSichtbaresErgebnis(page: Page, heim: number, gast: number) {
+  await expect(async () => {
+    const waagerecht = page.getByText(`${heim}:${gast}`, { exact: true });
+    for (let i = 0; i < await waagerecht.count(); i++) {
+      if (await waagerecht.nth(i).isVisible()) { return; }
+    }
+    const tore = page.locator('[data-testid^="match-goals-"]');
+    const texte = await tore.allTextContents();
+    for (let i = 0; i + 1 < texte.length; i++) {
+      if (texte[i] === String(heim) && texte[i + 1] === String(gast) && await tore.nth(i).isVisible()) { return; }
+    }
+    throw new Error(`Kein sichtbares Ergebnis ${heim}:${gast} gefunden`);
+  }).toPass({ timeout: 5000 });
+}
+
 test.describe('Public Tournament View', () => {
 
   test.beforeEach(async ({ page: _page, seedIndexedDB }) => {
@@ -159,18 +180,8 @@ test.describe('Public Tournament View', () => {
     // Wait for tournament to be loaded first (async IndexedDB read)
     await expect(page.getByRole('heading', { name: /Öffentliches Test-Turnier/i }).first()).toBeVisible({ timeout: 10000 });
 
-    // THEN - Scores sind sichtbar (finished match: 3:1)
-    // Note: Score appears in both desktop-view (hidden on mobile) and mobile-view
-    await expect(async () => {
-      const scores = page.getByText('3:1');
-      const count = await scores.count();
-      for (let i = 0; i < count; i++) {
-        if (await scores.nth(i).isVisible()) {
-          return;
-        }
-      }
-      throw new Error('No visible score 3:1 found');
-    }).toPass({ timeout: 5000 });
+    // THEN - Scores sind sichtbar (finished match: 3:1) – waagerecht in der Tabelle, je Zeile auf der Karte (@OB-064)
+    await expectSichtbaresErgebnis(page, 3, 1);
   });
 
   test('Public View zeigt Tabelle (wenn nicht ausgeblendet)', async ({ page }) => {
@@ -315,17 +326,8 @@ test.describe('Public Tournament View', () => {
       throw new Error('No visible match card with FC Alpha found');
     }).toPass({ timeout: 5000 });
 
-    // Score 1:2 wird angezeigt
-    await expect(async () => {
-      const scores = page.getByText('1:2');
-      const count = await scores.count();
-      for (let i = 0; i < count; i++) {
-        if (await scores.nth(i).isVisible()) {
-          return;
-        }
-      }
-      throw new Error('No visible score 1:2 found');
-    }).toPass({ timeout: 5000 });
+    // Score 1:2 wird angezeigt (Tabelle waagerecht, Karte je Zeile; @OB-064)
+    await expectSichtbaresErgebnis(page, 1, 2);
   });
 
   test('Auto-Refresh bei Live-Matches (Polling)', async ({ page, seedIndexedDB }) => {

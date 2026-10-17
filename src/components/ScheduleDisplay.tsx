@@ -125,11 +125,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     return groupPhase.matches.map(sm => {
       const currentMatch = currentMatches.find(m => m.id === sm.id);
       if (currentMatch) {
-        return {
-          ...sm,
-          scoreA: currentMatch.scoreA,
-          scoreB: currentMatch.scoreB,
-        };
+        return { ...sm, scoreA: currentMatch.scoreA, scoreB: currentMatch.scoreB, finalSource: currentMatch };
       }
       return sm;
     });
@@ -141,7 +137,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     if (!currentMatches) { return finalMatches; }
     return finalMatches.map(sm => {
       const currentMatch = currentMatches.find(m => m.id === sm.id);
-      return currentMatch ? { ...sm, scoreA: currentMatch.scoreA, scoreB: currentMatch.scoreB } : sm;
+      return currentMatch ? { ...sm, scoreA: currentMatch.scoreA, scoreB: currentMatch.scoreB, finalSource: currentMatch } : sm;
     });
   }, [finalMatches, currentMatches]);
 

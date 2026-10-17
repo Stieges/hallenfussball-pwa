@@ -1,1 +1,1 @@
-export { matchRoute, type RouteMatch, type RouteName } from './routeRegistry';
+export { isKioskRoute, matchRoute, type RouteMatch, type RouteName } from './routeRegistry';
