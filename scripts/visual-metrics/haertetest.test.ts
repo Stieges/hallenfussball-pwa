@@ -295,16 +295,21 @@ describe('@TA-012 Verdeckte Bedienelemente', () => {
     expect(verdeckt(r.b).map((x) => `${x.typ} ${x.selektor}`)).toEqual(['HART [data-testid="tor-gast-16"]'])
     expect(schwebend(r.b)).toHaveLength(0)
   })
-  it('Fixrunde 1 echter Stand: Spielplan nach dem SK-Fix meldet nichts Schwebendes; das Cockpit meldet den Sound-Hinweis als WARNUNG', async () => {
+  it('Fixrunde 1 echter Stand: Spielplan nach dem SK-Fix meldet nichts Schwebendes; das Cockpit hat kein HART, jede Verdeckungs-Meldung ist bekannt oder eine Warnung (kein bestimmter Fehler erwartet)', async () => {
     const plan = await messe('--app', '/#/tournament/hallencup-messlauf/schedule', '--erwarte', '[data-testid="schedule-view-table"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(plan.b.status, plan.out).not.toBe('BLOCKED')
     expect(schwebend(plan.b)).toHaveLength(0)
     expect(verdeckt(plan.b).filter((x) => x.typ === 'HART')).toHaveLength(0)
     const c = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015', '--erwarte', '[data-testid="match-timer-display"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
-    const w = schwebend(c.b)
-    expect(w.length).toBeGreaterThan(0)
-    expect(w.every((x) => x.typ === 'WARNUNG')).toBe(true)
-    expect(JSON.stringify(w)).toContain('Sound für Spielende')
+    expect(c.b.status, c.out).not.toBe('BLOCKED')
+    // @TA-012 verlangt nicht, dass die App einen bestimmten Fehler hat: kein HART; jede Meldung traegt eine Befund-Kennung
+    // der Ausnahmeliste oder ist eine Warnung verdeckt.schwebend. Der positive Fall (Warnung entsteht) liegt in den Fixtures
+    // verdeckt-hinweis-lang.html und verdeckt-schwebend.html.
+    const alle = c.b.laeufe.flatMap((l) => l.befunde.filter((x) => x.metrik.startsWith('verdeckt.')))
+    expect(alle.filter((x) => x.typ === 'HART')).toHaveLength(0)
+    for (const x of alle) {
+      expect(x.metrik === 'verdeckt.schwebend' ? x.typ === 'WARNUNG' : /\[bekannt: C-[A-Z0-9-]+\]/.test(JSON.stringify(x)), JSON.stringify(x)).toBe(true)
+    }
   })
   it('Ausnahmeliste: jeder Eintrag nennt Befund-Kennung, Begruendung und mindestens Element oder Verdecker', () => {
     const gw = JSON.parse(readFileSync(join(ORDNER, 'grenzwerte.json'), 'utf8')) as { grenzwerte: { id: string; typ: string; ausnahmeliste?: { befund: string; selektor?: string; verdecktVon?: string; begruendung: string }[] }[] }
