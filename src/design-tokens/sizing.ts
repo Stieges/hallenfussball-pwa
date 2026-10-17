@@ -95,6 +95,18 @@ export const layoutHeightValues = {
   header: 56,
 } as const;
 
+/**
+ * Component sizes - feste Maße einzelner Bereiche (px, skalieren nicht mit der Schriftgröße).
+ */
+export const componentSizes = {
+  /** Breite der Ereignis-Spalte neben der Spielfläche (Live-Cockpit, ab Desktop) */
+  sidebarWidth: '300px',
+  /** Mindesthöhe eines Leerzustands (z. B. „Kein Spiel ausgewählt“) */
+  emptyStateMinHeight: '300px',
+  /** Haarlinie: 1 px, z. B. für unsichtbare, aber vorlesbare Bereiche */
+  hairline: '1px',
+} as const;
+
 export type TouchTargetKey = keyof typeof touchTargets;
 export type IconSizeKey = keyof typeof iconSizes;
 export type InputHeightKey = keyof typeof inputHeights;

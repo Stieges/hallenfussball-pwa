@@ -16,7 +16,6 @@ import { DEFAULT_MATCH_COCKPIT_SETTINGS, Tournament } from '../../types/tourname
 import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
 import { LiveCockpit } from '../../components/live-cockpit';
 import type { MatchSummary } from '../../components/live-cockpit/types';
-import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useCockpitExecution } from '../../hooks/useCockpitExecution';
 import { useTournamentMembers } from '../auth/hooks/useTournamentMembers';
 import { useEffectiveTournamentRole } from '../auth/hooks/useMyTournamentRole';
@@ -84,7 +83,6 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handleCard,
     handleSubstitution,
     handleFoul,
-    hasRunningMatch,
   } = useCockpitExecution(tournament);
 
   // Permission check: Get current user's role in this tournament
@@ -104,35 +102,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     return canEditResults(myMembership.role, userTeamIds, matchTeamIds);
   }, [myMembership, userTeamIds]);
 
-  // Confirm dialogs
-  const switchMatchDialog = useConfirmDialog({
-    title: t('management.runningMatch'),
-    message: '',
-    variant: 'warning',
-    confirmText: t('management.switch'),
-    cancelText: t('common.cancel'),
-  });
-
-  // Handle initial match ID from navigation (e.g., from ScheduleTab "Zum Cockpit")
-  // BUG-FIX: When navigating from ScheduleTab with a running match, we need to
-  // end the running match first. The user already confirmed in ScheduleTab.
+  // Handle initial match ID from navigation (e.g., from ScheduleTab "Zum Cockpit", URL `?matchId=`).
+  // C-COCKPIT-MATCHID-BEENDET: Öffnen beendet nie ein anderes Spiel (@SL-010, ein Gerät je Feld) –
+  // laufende Spiele bleiben laufen, das Cockpit zeigt nur das gewählte.
   useEffect(() => {
     if (initialMatchId) {
-      // Check if there's a running match that needs to be ended
-      const runningMatch = hasRunningMatch();
-      // R4/H3: initialMatchId kommt aus dem URL-Query-Parameter `matchId` (ungeprüfter Input) —
-      // dieser automatische handleFinish() darf nur laufen, wenn der Nutzer das LAUFENDE Spiel
-      // bearbeiten darf. "User already confirmed in ScheduleTab" gilt nur für den Normalfall über
-      // die UI; per direktem URL-Aufruf ist das nicht garantiert.
-      if (
-        runningMatch &&
-        runningMatch.id !== initialMatchId &&
-        checkCanEditMatch([runningMatch.homeTeam.id, runningMatch.awayTeam.id])
-      ) {
-        // End the running match first - user already confirmed in ScheduleTab
-        void handleFinish(runningMatch.id);
-      }
-
       // Find the match to get its field number
       const match = schedule.allMatches.find(m => m.id === initialMatchId);
       if (match) {
@@ -143,7 +117,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       // Consume the initial match ID
       onInitialMatchConsumed?.();
     }
-  }, [initialMatchId, schedule.allMatches, onInitialMatchConsumed, hasRunningMatch, handleFinish, checkCanEditMatch]);
+  }, [initialMatchId, schedule.allMatches, onInitialMatchConsumed]);
 
   // Spielseiten: Team über die Team-ID, offene Seite über ihre Herkunft (@TM-015) – nie über gespeicherte Namen
   const sides = useMemo(
@@ -197,6 +171,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     setEngineReadyError(false);
     setAwaitingTeams(false);
     setNotOnEngineReason(null);
+    // @FU-004 (C-COCKPIT-LAEDT-NACH-ABPFIFF): auch "wird geladen" vor jedem frühen Ausstieg zurücksetzen --
+    // ein abgebrochener Lauf (cancelled) setzt es nicht mehr zurück und ließe den Ladehinweis stehen.
+    setIsInitializingMatch(false);
     if (!currentMatchData) {
       return;
     }
@@ -279,31 +256,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       : fieldMatches.map(toMatchSummary);
   }, [fieldMatches, currentMatchData, toMatchSummary]);
 
-  // Handler: Match selection change with warning for running match
-  const handleMatchSelectionChange = useCallback(async (newMatchId: string | null) => {
-    const runningMatch = hasRunningMatch();
-
-    if (runningMatch && runningMatch.id !== newMatchId) {
-      // R4/H3: Die Berechtigung gilt für das LAUFENDE Spiel, nicht für das neu gewählte — darf
-      // der Nutzer das laufende Spiel nicht bearbeiten, gibt es weder Dialog noch handleFinish,
-      // nur den Wechsel der Auswahl.
-      if (!checkCanEditMatch([runningMatch.homeTeam.id, runningMatch.awayTeam.id])) {
-        setSelectedMatchId(newMatchId);
-        return;
-      }
-
-      const confirmed = await switchMatchDialog.confirm({
-        message: t('management.switchMatchMessage', { number: runningMatch.number, home: runningMatch.homeTeam.name, away: runningMatch.awayTeam.name, homeScore: runningMatch.homeScore, awayScore: runningMatch.awayScore }),
-        confirmText: t('management.endAndSwitch'),
-      });
-
-      if (!confirmed) { return; }
-
-      void handleFinish(runningMatch.id);
-    }
-
+  // Handler: Match selection change – C-COCKPIT-MATCHID-BEENDET: beendet kein laufendes Spiel (@SL-010)
+  const handleMatchSelectionChange = useCallback((newMatchId: string | null) => {
     setSelectedMatchId(newMatchId);
-  }, [hasRunningMatch, handleFinish, switchMatchDialog, t, checkCanEditMatch]);
+  }, []);
 
   // Handler: Load next match on current field
   // BUG-FIX: Improved logic - find next unplayed match on current field
@@ -397,7 +353,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         <select
           className={styles.matchSelect}
           value={selectedMatchId ?? ''}
-          onChange={(e) => { void handleMatchSelectionChange(e.target.value || null); }}
+          onChange={(e) => { handleMatchSelectionChange(e.target.value || null); }}
         >
           <option value="">{t('management.autoNextMatch')}</option>
           {fieldMatches.map(match => (
@@ -466,7 +422,6 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       )}
 
       {/* CONFIRM DIALOGS */}
-      <ConfirmDialog {...switchMatchDialog.dialogProps} />
     </div>
   );
 };
