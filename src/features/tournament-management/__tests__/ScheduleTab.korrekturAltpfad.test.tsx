@@ -53,6 +53,7 @@ describe('ScheduleTab ohne Korrektur-Altpfad (A-08e, Frage 1 = A)', () => {
     expect(queryByTestId('correction-confirm-button')).toBeNull();
     expect(onMatchesUpdate).not.toHaveBeenCalled();
     // Gegenprobe: der Spielplan ist wirklich gerendert (beendete Ergebnisse stehen da)
-    expect(container.textContent).toContain('2 : 1');
+    // @OB-064: das Ergebnis steht waagerecht ohne Leerzeichen („2:1“)
+    expect(container.textContent).toContain('2:1');
   });
 });

@@ -1,48 +1,28 @@
 /**
- * MatchCardScore - Score circle with Progress Ring
+ * MatchCardScore - waagerechtes Ergebnis der Tabellenzeile (@OB-064, Paket SK)
  *
- * Displays match score in a circular container:
- * - Scheduled: "VS" text
- * - Running: Progress-Ring + Score + Timer
- * - Finished: Score only
+ * Heim und Gast stehen in der Tabelle nebeneinander, deshalb steht das Ergebnis waagerecht:
+ * - geplant: "VS"
+ * - läuft: "1:0" mit Spielzeit darunter
+ * - beendet: "1:0", "3:2 n. V." oder "2:2 (4:3 i. E.)"
  *
- * @example
- * ```tsx
- * <MatchCardScore
- *   homeScore={2}
- *   awayScore={1}
- *   status="running"
- *   progress={0.75}
- *   elapsedFormatted="07:30"
- *   onClick={() => handleCircleClick()}
- * />
- * ```
+ * Der Knopf ist das Klickziel ins Cockpit (≥ 44 px hoch). Der frühere Kreis mit Fortschrittsring entfällt.
  */
 
 import { type CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
-import { ProgressRing } from '../../ui/ProgressRing';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import { formatTableResult, type ResultFigures } from '../matchResult';
 
 export type MatchCardStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
 
 export interface MatchCardScoreProps {
-  /** Home team score */
-  homeScore: number;
-  /** Away team score */
-  awayScore: number;
+  /** Tore, Strafstoß und Sieger; `null` für ein geplantes Spiel */
+  result: ResultFigures | null;
   /** Current match status */
   status: MatchCardStatus;
-  /** Progress value 0-1 (for running matches) */
-  progress?: number;
   /** Formatted elapsed time (e.g., "07:30") */
   elapsedFormatted?: string;
-  /** Circle size in pixels (default: 56) */
-  size?: number;
   /** Click handler */
   onClick?: () => void;
   /** Disable interaction */
@@ -51,17 +31,10 @@ export interface MatchCardScoreProps {
   matchId?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
-  homeScore,
-  awayScore,
+  result,
   status,
-  progress = 0,
   elapsedFormatted,
-  size = 56,
   onClick,
   disabled = false,
   matchId,
@@ -70,162 +43,56 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
   const [isHovered, setIsHovered] = useState(false);
 
   const isLive = status === 'running';
-  const isScheduled = status === 'scheduled' || status === 'waiting';
-  const isFinished = status === 'finished';
+  const showsResult = result !== null && status !== 'scheduled' && status !== 'waiting';
 
-  // ---------------------------------------------------------------------------
-  // Styles
-  // ---------------------------------------------------------------------------
-
-  const containerStyle: CSSProperties = {
-    position: 'relative',
-    width: size,
-    height: size,
-    cursor: disabled ? 'default' : 'pointer',
-    transition: 'transform 0.15s ease',
-    transform: isHovered && !disabled ? 'scale(1.05)' : 'scale(1)',
-  };
-
-  const circleStyle: CSSProperties = {
-    width: size,
-    height: size,
-    borderRadius: '50%',
+  const buttonStyle: CSSProperties = {
+    minWidth: cssVars.touchTargets.minimum,
+    minHeight: cssVars.touchTargets.minimum,
+    padding: `0 ${cssVars.spacing.md}`,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: cssVars.colors.surfaceDark,
-    border: `2px solid ${isLive ? cssVars.colors.primary : isHovered ? cssVars.colors.primary : cssVars.colors.border}`,
+    background: 'transparent',
+    border: `1px solid ${isLive || (isHovered && !disabled) ? cssVars.colors.primary : 'transparent'}`,
+    borderRadius: cssVars.borderRadius.md,
+    cursor: disabled ? 'default' : 'pointer',
+    color: showsResult ? cssVars.colors.textPrimary : cssVars.colors.textSecondary,
+    fontFamily: 'inherit',
+    fontSize: showsResult ? cssVars.fontSizes.lg : cssVars.fontSizes.sm,
+    fontWeight: showsResult ? cssVars.fontWeights.bold : cssVars.fontWeights.semibold,
+    fontVariantNumeric: 'tabular-nums',
+    whiteSpace: 'nowrap',
     transition: 'border-color 0.15s ease',
   };
 
-  const vsStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.textSecondary,
-  };
+  const label = (() => {
+    if (!showsResult) { return t('matchCard.startMatch'); }
+    const values = { homeScore: result.goalsA, awayScore: result.goalsB, homePenalty: result.penaltyA, awayPenalty: result.penaltyB };
+    if (isLive) { return t('matchCard.scoreAriaLive', { ...values, elapsed: elapsedFormatted ?? t('matchCard.live') }); }
+    if (result.decision === 'penalty') { return t('matchResult.scoreAriaPenalty', values); }
+    if (result.decision === 'overtime') { return t('matchResult.scoreAriaOvertime', values); }
+    return t('matchCard.scoreAriaFinal', values);
+  })();
 
-  const scoreStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: 900,
-    color: cssVars.colors.textPrimary,
-    lineHeight: 1,
-  };
-
-  const timerStyle: CSSProperties = {
-    fontSize: '9px',
-    fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.primary,
-    lineHeight: 1,
-    marginTop: '2px',
-    fontVariantNumeric: 'tabular-nums',
-  };
-
-  // ---------------------------------------------------------------------------
-  // Event Handlers
-  // ---------------------------------------------------------------------------
-
-  const handleClick = (e: React.MouseEvent) => {
-    // Stop propagation to prevent card click handler from interfering
-    e.stopPropagation();
-    if (!disabled && onClick) {
-      onClick();
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.key === 'Enter' || e.key === ' ') && !disabled && onClick) {
-      e.preventDefault();
-      onClick();
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-
-  // Live match: Progress Ring
-  if (isLive) {
-    return (
-      <div
-        style={containerStyle}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        role={onClick ? 'button' : undefined}
-        tabIndex={onClick && !disabled ? 0 : undefined}
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty elapsedFormatted should show 'Live'
-        aria-label={t('matchCard.scoreAriaLive', { homeScore, awayScore, elapsed: elapsedFormatted || t('matchCard.live') })}
-        data-testid={matchId ? `match-circle-${matchId}` : 'match-circle'}
-        data-match-status="running"
-      >
-        <ProgressRing
-          progress={progress}
-          size={size}
-          strokeWidth={3}
-          color={cssVars.colors.primary}
-          backgroundColor={cssVars.colors.border}
-          animated={true}
-        >
-          <span style={scoreStyle}>
-            {homeScore}:{awayScore}
-          </span>
-          {elapsedFormatted && (
-            <span style={timerStyle}>{elapsedFormatted}</span>
-          )}
-        </ProgressRing>
-      </div>
-    );
-  }
-
-  // Scheduled match: "VS"
-  if (isScheduled) {
-    return (
-      <div
-        style={containerStyle}
-        onClick={handleClick}
-        onKeyDown={handleKeyDown}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        role={onClick ? 'button' : undefined}
-        tabIndex={onClick && !disabled ? 0 : undefined}
-        aria-label={t('matchCard.startMatch')}
-        data-testid={matchId ? `match-circle-${matchId}` : 'match-circle'}
-        data-match-status="scheduled"
-      >
-        <div style={circleStyle}>
-          <span style={vsStyle}>VS</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Finished match: Score only
   return (
-    <div
-      style={containerStyle}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
+    <button
+      type="button"
+      style={buttonStyle}
+      onClick={(e) => { e.stopPropagation(); if (!disabled && onClick) { onClick(); } }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick && !disabled ? 0 : undefined}
-      aria-label={t('matchCard.scoreAriaFinal', { homeScore, awayScore })}
+      aria-label={label}
       data-testid={matchId ? `match-circle-${matchId}` : 'match-circle'}
-      data-match-status="finished"
+      data-match-status={isLive ? 'running' : showsResult ? 'finished' : 'scheduled'}
     >
-      <div style={circleStyle}>
-        <span style={scoreStyle}>
-          {homeScore}:{awayScore}
+      {showsResult ? <span>{formatTableResult(result, t)}</span> : <span>VS</span>}
+      {isLive && elapsedFormatted && (
+        <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.primary, fontWeight: cssVars.fontWeights.semibold }}>
+          {elapsedFormatted}
         </span>
-        {isFinished && (
-          <span style={{ ...timerStyle, color: cssVars.colors.textSecondary }}>
-            {t('matchCard.finished')}
-          </span>
-        )}
-      </div>
-    </div>
+      )}
+    </button>
   );
 };
 

@@ -19,7 +19,7 @@ import { useCallback, CSSProperties, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
-import { cssVars, mediaQueries } from '../../design-tokens'
+import { cssVars, mediaQueries, layoutHeights } from '../../design-tokens'
 import { Tournament, Standing, Match } from '../../types/tournament';
 import { MatchUpdate } from '../../core/models/types';
 import {
@@ -288,7 +288,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   return (
     <>
       <div style={containerStyle} className="schedule-tab-container">
-        <Card style={editModeCardStyle}>
+        <Card style={editModeCardStyle} className="schedule-tab-card">
           {/* Action Buttons Header */}
           <ScheduleToolbar
             isEditing={isEditing}
@@ -435,6 +435,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           .schedule-tab-container .card {
             border-radius: 8px;
             padding: 12px;
+          }
+
+          /* Die schwebende Leiste sitzt im Karten-Container (backdrop-filter macht ihn zum Bezug von position: fixed):
+             die Karte reserviert Leistenhöhe plus den Abstand der Leiste zum Kartenrand, damit die letzte Zeile darüber liegt */
+          .schedule-tab-card {
+            padding-bottom: calc(var(--schedule-action-bar-h, 0px) + ${layoutHeights.bottomNav} + ${cssVars.spacing.lg} + env(safe-area-inset-bottom, 0px)) !important;
           }
         }
       `}</style>

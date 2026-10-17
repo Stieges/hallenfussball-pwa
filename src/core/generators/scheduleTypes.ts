@@ -4,6 +4,7 @@
 
 import { RefereeConfig, LocationDetails, ContactInfo, Standing, TournamentGroup, TournamentField, RuntimeMatchEvent } from '../../types/tournament'
 import type { MatchSlot, SlotSource } from '../models/schemas/MatchSlotSchema'
+import type { FinalScoreSource } from '../view/finalScore'
 
 // ============================================================================
 // SCHEDULED MATCH
@@ -61,6 +62,8 @@ export interface ScheduledMatch {
   scoreA?: number
   /** Score Auswärts-Team (optional, wird bei Ergebniseingabe gesetzt) */
   scoreB?: number
+  /** Das aktuelle Spiel mit Verlängerung, Strafstoß und Entscheidung, nur für die Anzeige (@OB-064); Endstand: `matchFinalScore` */
+  finalSource?: FinalScoreSource
 
   // DB-PERSISTENCE: Events for detailed match summary (scorers, cards)
   events?: RuntimeMatchEvent[]
