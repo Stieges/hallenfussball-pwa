@@ -30,7 +30,7 @@ export function useResultEntryAck({ context, tournament, onKoAfterSend }: UseRes
       if (offline && slotUpdatesAfterResult(withEngineResult(current, entry, context.engine.view(entry.matchId))).length > 0) {
         onKoAfterSend();
       }
-      enqueueKo(current.id, { eventId, matchId: entry.matchId });
+      enqueueKo(context.accountId, current.id, { eventId, matchId: entry.matchId });
     },
     [context, onKoAfterSend],
   );

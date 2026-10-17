@@ -42,7 +42,7 @@ export function useKoResolutionAfterAck(tournament: Tournament | null, onSlotUpd
     const done = new Set<string>();
     let resolved = current;
     let accepted = false;
-    for (const awaited of readKoQueue(current.id)) {
+    for (const awaited of readKoQueue(context.accountId, current.id)) {
       const state = await entryState(context, awaited);
       if (state === 'pending') {
         continue;
@@ -62,7 +62,7 @@ export function useKoResolutionAfterAck(tournament: Tournament | null, onSlotUpd
       }
     }
     if (done.size > 0) {
-      removeFromKoQueue(current.id, done);
+      removeFromKoQueue(context.accountId, current.id, done);
     }
     const updates = accepted ? slotUpdatesAfterResult(resolved) : [];
     if (updates.length > 0) {

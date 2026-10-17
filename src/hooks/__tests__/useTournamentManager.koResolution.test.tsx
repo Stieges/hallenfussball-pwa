@@ -63,7 +63,7 @@ describe('useTournamentManager: K.-o.-Auflösung nach Bestätigung (I-1)', () =>
       await h.engine.ensureMatch(SPIEL_9, CTX_9, 'T');
       const commands = new MatchCommands({ engine: h.engine, store: h.store, sender: h.sender, accountId: h.value.accountId });
       const eventId = await commands.enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 });
-      if (eventId) { enqueueKo('T', { eventId, matchId: SPIEL_9 }); }
+      if (eventId) { enqueueKo(h.value.accountId, 'T', { eventId, matchId: SPIEL_9 }); }
       await settle();
     });
 

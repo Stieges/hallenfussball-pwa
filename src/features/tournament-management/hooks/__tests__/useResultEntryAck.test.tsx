@@ -12,10 +12,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
 const kv = vi.hoisted(() => new Map<string, string>());
+// A-2: `lose` = Gerätespeicher voll -- safeLocalStorage schreibt dann in seinen Ersatzspeicher, liest aber weiter
+// aus localStorage, der Eintrag ist dort also nicht lesbar.
+const storage = vi.hoisted(() => ({ lose: false }));
 vi.mock('../../../../core/utils/safeStorage', () => ({
   safeLocalStorage: {
     getItem: (key: string) => kv.get(key) ?? null,
-    setItem: (key: string, value: string) => { kv.set(key, value); },
+    setItem: (key: string, value: string) => { if (!storage.lose) { kv.set(key, value); } },
     removeItem: (key: string) => { kv.delete(key); },
     getIsAvailable: () => true,
   },
@@ -129,6 +132,44 @@ describe('A-08f3e2 H-2: K.-o.-Auflösung erst nach Bestätigung durch den Server
       nurSlots(onSlots);
     } finally {
       neu.engine.stop();
+    }
+  });
+
+  it('A-1 Kontowechsel: Konto A trägt offline ein, Konto B öffnet dasselbe Turnier, später wird der Eintrag von A angenommen → Plätze besetzt', async () => {
+    const kontoA = await makeScheduleEngine('konto-a', { offline: true });
+    await mountSpielplan(kontoA).enter(SPIEL_9, 3, 1);
+    kontoA.engine.stop();
+
+    const kontoB = await makeScheduleEngine('konto-b');
+    const b = mountManager(kontoB);
+    await act(async () => { await kontoB.engine.notifyStoreChange(SPIEL_9); await settle(); });
+    expect(b.onSlots).not.toHaveBeenCalled();
+    b.hook.unmount();
+    kontoB.engine.stop();
+
+    const wiederA = await makeScheduleEngine('konto-a'); // wieder Netz, A angemeldet
+    try {
+      const { onSlots } = mountManager(wiederA);
+      await act(async () => { await wiederA.sender.kick(); await settle(); });
+      expect(onSlots).toHaveBeenCalledTimes(1);
+      nurSlots(onSlots);
+    } finally {
+      wiederA.engine.stop();
+    }
+  });
+
+  it('A-2 Gerätespeicher voll: der vorgemerkte Eintrag bleibt in dieser Sitzung lesbar → Plätze nach der Bestätigung besetzt', async () => {
+    storage.lose = true;
+    try {
+      const server = deferredServer(h);
+      const { onSlots } = mountManager(h);
+      await mountSpielplan(h).enter(SPIEL_9, 3, 1);
+      expect(kv.size).toBe(0);
+      await server(accepted);
+
+      expect(onSlots).toHaveBeenCalledTimes(1);
+    } finally {
+      storage.lose = false;
     }
   });
 

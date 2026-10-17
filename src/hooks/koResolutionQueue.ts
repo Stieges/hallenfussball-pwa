@@ -1,6 +1,9 @@
 /**
  * koResolutionQueue (A-08f3e2 Fixrunde 1, I-1): Spielplan-Einträge, nach deren Bestätigung durch den Server
- * die K.-o.-Plätze besetzt werden. Liegt im Gerätespeicher (übersteht Tab-Wechsel und Neuladen), je Turnier.
+ * die K.-o.-Plätze besetzt werden. Liegt im Gerätespeicher (übersteht Tab-Wechsel und Neuladen), je Konto und
+ * Turnier (Fixrunde 2, A-1: ein Kontowechsel auf demselben Gerät verwirft den Eintrag eines anderen Kontos nicht).
+ * A-2: Zusätzlich eine Kopie im Arbeitsspeicher; gelesen wird die Vereinigung beider Quellen, damit ein
+ * Speicherfehler (Gerätespeicher voll) den Eintrag in dieser Sitzung nicht still verschwinden lässt.
  * Benachrichtigt Abonnenten im selben Tab, wenn ein Eintrag dazukommt.
  */
 import { safeLocalStorage } from '../core/utils/safeStorage';
@@ -12,9 +15,12 @@ export interface KoAwaitedEntry {
 }
 
 const listeners = new Set<(tournamentId: string) => void>();
+const memory = new Map<string, KoAwaitedEntry[]>();
+/** Erledigte Einträge dieser Sitzung -- ein nicht gelöschter Rest im Gerätespeicher kommt nicht zurück. */
+const done = new Set<string>();
 
-function key(tournamentId: string): string {
-  return `ko-resolution-awaited:${tournamentId}`;
+function key(accountId: string, tournamentId: string): string {
+  return `ko-resolution-awaited:${accountId}:${tournamentId}`;
 }
 
 function isAwaited(value: unknown): value is KoAwaitedEntry {
@@ -22,32 +28,50 @@ function isAwaited(value: unknown): value is KoAwaitedEntry {
     && typeof (value as KoAwaitedEntry).eventId === 'string' && typeof (value as KoAwaitedEntry).matchId === 'string';
 }
 
-export function readKoQueue(tournamentId: string): KoAwaitedEntry[] {
+function readStorage(storageKey: string): KoAwaitedEntry[] {
   try {
-    const parsed: unknown = JSON.parse(safeLocalStorage.getItem(key(tournamentId)) ?? '[]');
+    const parsed: unknown = JSON.parse(safeLocalStorage.getItem(storageKey) ?? '[]');
     return Array.isArray(parsed) ? parsed.filter(isAwaited) : [];
   } catch {
     return [];
   }
 }
 
-function write(tournamentId: string, entries: KoAwaitedEntry[]): void {
-  if (entries.length === 0) {
-    safeLocalStorage.removeItem(key(tournamentId));
-  } else {
-    safeLocalStorage.setItem(key(tournamentId), JSON.stringify(entries));
+export function readKoQueue(accountId: string, tournamentId: string): KoAwaitedEntry[] {
+  const storageKey = key(accountId, tournamentId);
+  const byId = new Map<string, KoAwaitedEntry>();
+  for (const entry of [...readStorage(storageKey), ...(memory.get(storageKey) ?? [])]) {
+    if (!done.has(entry.eventId)) {
+      byId.set(entry.eventId, entry);
+    }
+  }
+  return [...byId.values()];
+}
+
+function write(storageKey: string, entries: KoAwaitedEntry[]): void {
+  memory.set(storageKey, entries);
+  try {
+    if (entries.length === 0) {
+      safeLocalStorage.removeItem(storageKey);
+    } else {
+      safeLocalStorage.setItem(storageKey, JSON.stringify(entries));
+    }
+  } catch {
+    // A-2: die Kopie im Arbeitsspeicher trägt diese Sitzung weiter.
   }
 }
 
-export function enqueueKo(tournamentId: string, entry: KoAwaitedEntry): void {
-  const current = readKoQueue(tournamentId).filter((existing) => existing.eventId !== entry.eventId);
-  write(tournamentId, [...current, entry]);
+export function enqueueKo(accountId: string, tournamentId: string, entry: KoAwaitedEntry): void {
+  done.delete(entry.eventId);
+  const current = readKoQueue(accountId, tournamentId).filter((existing) => existing.eventId !== entry.eventId);
+  write(key(accountId, tournamentId), [...current, entry]);
   listeners.forEach((listener) => listener(tournamentId));
 }
 
 /** Entfernt nur die erledigten Einträge -- ein gleichzeitig hinzugekommener bleibt erhalten. */
-export function removeFromKoQueue(tournamentId: string, eventIds: ReadonlySet<string>): void {
-  write(tournamentId, readKoQueue(tournamentId).filter((entry) => !eventIds.has(entry.eventId)));
+export function removeFromKoQueue(accountId: string, tournamentId: string, eventIds: ReadonlySet<string>): void {
+  eventIds.forEach((eventId) => done.add(eventId));
+  write(key(accountId, tournamentId), readKoQueue(accountId, tournamentId));
 }
 
 export function subscribeKoQueue(listener: (tournamentId: string) => void): () => void {
