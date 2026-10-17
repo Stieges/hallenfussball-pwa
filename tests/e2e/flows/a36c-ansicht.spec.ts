@@ -1,0 +1,167 @@
+/**
+ * Paket A-36c – Zuschauer-Seite, Verwaltungs-Spielplan und Monitor lesen die gemeinsame Ansicht (T2-UI (b)).
+ *
+ * Saat `hallencup-messlauf` (scripts/visual-metrics/saat): Halbfinale 1 nach Verlängerung (reguläre Zeit 1:1, Verlängerung 1:0),
+ * Halbfinale 2 nach Strafstoßschießen (0:0, 4:3), Finale läuft (2:1, Anpfiff vor 320 s), Spiel um Platz 3 offen.
+ * Werte und Wortlaut stammen aus dem Gherkin: @OB-064 (laufendes Spiel zeigt Status UND Spielzeit in der Kopfzeile, auch in der
+ * Finalrunden-Karte), @ZM-039/@ZM-041 (läuft = nicht beendet, nie „nächstes Spiel“), @ZM-147 (nur Ergebnis → Endstand).
+ * Zuschauer-Seite 360×640, Monitor 1280×720, Verwaltung 360×640. Bilder: Ordner aus A36C_BILDER, Vorsatz aus A36C_PHASE.
+ * Läuft nur im Projekt `desktop` (setzt das Fenster selbst). F-ZEIT (Gerätezeitzone) steht im Cloud-Spec `a36c-zeit.cloud.spec.ts`:
+ * lokal gespeicherte Spiele tragen ihre Uhrzeit als Zeitpunkt, nur die Cloud-Zeile als Wanduhr.
+ */
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import type { Page } from '@playwright/test';
+import { test, expect } from '../helpers/test-fixtures';
+// @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
+import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/lader.mjs';
+
+const BILDER = process.env.A36C_BILDER;
+const PHASE = process.env.A36C_PHASE ?? 'nachher';
+const HANDY = { width: 360, height: 640 };
+const MONITOR = { width: 1280, height: 720 };
+
+const FINALE = '00000003-0000-4000-8000-000000000015';
+const HALBFINALE_1 = '00000003-0000-4000-8000-000000000013';
+const HALBFINALE_2 = '00000003-0000-4000-8000-000000000014';
+const PLATZ_3 = '00000003-0000-4000-8000-000000000016';
+
+async function bild(page: Page, name: string) {
+  if (!BILDER) { return; }
+  mkdirSync(BILDER, { recursive: true });
+  await page.screenshot({ path: join(BILDER, `${PHASE}-${name}.png`), fullPage: false });
+}
+
+async function oeffne(page: Page, groesse: { width: number; height: number }, route: string, erwarte: string) {
+  await page.setViewportSize(groesse);
+  await installiereSaat(page.context(), leseSaat('hallencup-messlauf'));
+  await page.goto(route);
+  await expect(page.locator(erwarte).first()).toBeAttached({ timeout: 25000 });
+}
+
+const karte = (page: Page, id: string) => page.locator(`[data-testid="final-card-${id}"]`);
+
+test.describe('A-36c Zuschauer-Seite 360×640 (/live/MESS26)', () => {
+  test.beforeEach(async ({ page }) => {
+    await oeffne(page, HANDY, '/#/live/MESS26', '[data-testid^="final-card-"]');
+  });
+
+  test('@OB-064 @ZM-039 Finale läuft: „läuft 05:2x“ in der Kopfzeile der Finalrunden-Karte (Status UND Spielzeit), Stand 2:1, noch kein Sieger fett', async ({ page }) => {
+    const finale = karte(page, FINALE);
+    await finale.scrollIntoViewIfNeeded();
+    await expect(finale.locator(`[data-testid="final-live-${FINALE}"]`)).toHaveText(/^läuft 0[5-6]:\d\d$/);
+    await expect(finale.locator('[data-testid^="final-goals-"]').nth(0)).toHaveText('2');
+    await expect(finale.locator('[data-testid^="final-goals-"]').nth(1)).toHaveText('1');
+    await expect(finale.locator('[data-winner="true"]')).toHaveCount(0);
+    await expect(finale.locator('[data-testid^="final-decision-"]')).toHaveCount(0);
+    await bild(page, 'zuschauer-360-finale-laeuft');
+  });
+
+  test('Gegenbeispiel: nur das Finale läuft, die beendeten Halbfinals tragen kein Live-Kennzeichen', async ({ page }) => {
+    await expect(page.locator('[data-testid^="final-live-"]')).toHaveCount(1);
+    await expect(karte(page, HALBFINALE_1).locator('[data-testid^="final-live-"]')).toHaveCount(0);
+    await expect(karte(page, HALBFINALE_2).locator('[data-testid^="final-live-"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="match-card-live"]')).toHaveCount(0);
+  });
+
+  test('@OB-064 Endstände bleiben: Halbfinale 1 „n. V.“ (2:1), Halbfinale 2 „beendet i. E.“ mit (4)/(3)', async ({ page }) => {
+    await expect(karte(page, HALBFINALE_1).locator('[data-testid^="final-decision-"]')).toHaveText('n. V.');
+    await expect(karte(page, HALBFINALE_1).locator('[data-testid^="final-goals-"]').nth(0)).toHaveText('2');
+    await expect(karte(page, HALBFINALE_2).locator('[data-testid^="final-decision-"]')).toHaveText('beendet i. E.');
+    await expect(karte(page, HALBFINALE_2).locator('[data-testid^="final-penalty-"]').nth(0)).toHaveText('(4)');
+    await expect(karte(page, HALBFINALE_2).locator('[data-testid^="final-penalty-"]').nth(1)).toHaveText('(3)');
+  });
+
+  test('@ZM-039 Filter „Live“: nur das Finale; „Beendet“ enthält das Finale nicht', async ({ page }) => {
+    await page.goto('/#/live/MESS26?s=live');
+    await page.reload();
+    await expect(karte(page, FINALE)).toBeAttached();
+    await expect(page.locator('[data-testid^="final-card-"]')).toHaveCount(1);
+    await expect(page.locator('[data-match-card]')).toHaveCount(0);
+    await page.goto('/#/live/MESS26?s=finished');
+    await page.reload();
+    await expect(karte(page, HALBFINALE_1)).toBeAttached();
+    await expect(karte(page, FINALE)).toHaveCount(0);
+  });
+
+  test('@ZM-041 Spiel um Platz 3 (geplant): ohne Live-Kennzeichen, ohne Stand, kein Rohschlüssel', async ({ page }) => {
+    const platz3 = karte(page, PLATZ_3);
+    await expect(platz3.locator('[data-testid^="final-live-"]')).toHaveCount(0);
+    await expect(platz3.locator('[data-testid^="final-goals-"]').nth(0)).toHaveText('–');
+    expect(await platz3.innerText()).not.toMatch(/group-|TBD|tournament:/);
+  });
+});
+
+test.describe('A-36c Verwaltung 360×640 (Spielplan)', () => {
+  test('@OB-064 Finale läuft: auch im Spielplan der Verwaltung „läuft 05:2x“ statt „beendet“ (C-SPIELPLAN-LAUFEND-ENGINE-QUELLE)', async ({ page }) => {
+    await oeffne(page, HANDY, '/#/tournament/hallencup-messlauf/schedule', '[data-testid^="final-card-"]');
+    const finale = karte(page, FINALE);
+    await finale.scrollIntoViewIfNeeded();
+    await expect(finale.locator(`[data-testid="final-live-${FINALE}"]`)).toHaveText(/^läuft 0[5-6]:\d\d$/);
+    // Gegenbeispiel: ein laufendes Spiel mit Stand 2:1 ist kein beendetes Spiel (kein Sieger fett, kein Korrigieren-Knopf)
+    await expect(finale.locator('[data-winner="true"]')).toHaveCount(0);
+    await expect(finale.locator('.correction-btn-mobile')).toHaveCount(0);
+    await bild(page, 'verwaltung-360-finale-laeuft');
+  });
+});
+
+test.describe('A-36c Monitor 1280×720', () => {
+  test('@ZM-039 Spielplan Feld 1: das Finale trägt Statuspunkt „live“, die Halbfinals ihre Endstände', async ({ page }) => {
+    await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-plan-feld', '[data-testid="monitor-match-row"]');
+    const finale = page.locator(`[data-testid="monitor-match-row"][data-match-id="${FINALE}"]`);
+    // Finale ist das letzte Spiel auf Feld 1 vor Platz 3: eventuell auf Seite 2 (6 Zeilen je Seite)
+    for (let versuch = 0; versuch < 4 && (await finale.count()) === 0; versuch += 1) {
+      await page.waitForTimeout(16000);
+    }
+    await expect(finale).toHaveAttribute('data-status', 'running');
+    await bild(page, 'monitor-1280-spielplan-feld');
+  });
+
+  test('@ZM-041 „Nächste Spiele“: nur das Spiel um Platz 3, das laufende Finale steht nicht darin', async ({ page }) => {
+    await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-naechste', '[data-testid="monitor-match-row"]');
+    const ids = await page.locator('[data-testid="monitor-match-row"]').evaluateAll((rows) => rows.map((r) => r.getAttribute('data-match-id')));
+    expect(ids).toEqual([PLATZ_3]);
+    await bild(page, 'monitor-1280-naechste-spiele');
+  });
+
+  test('@ZM-039 Live-Folie Feld 1: das laufende Finale steht als Live-Anzeige da (Stand 2:1)', async ({ page }) => {
+    await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-live', '[data-testid="live-slide-area"]');
+    await expect(page.getByLabel('Heim: 2')).toBeVisible();
+    await expect(page.getByLabel('Gast: 1')).toBeVisible();
+    await bild(page, 'monitor-1280-live-laeuft');
+  });
+
+  test('@ZM-147 nur Ergebnis: nach Abpfiff mit 2:2 und Strafstoßschießen 4:3 zeigt die Live-Folie „Strafstoßschießen 4 : 3“ und den Sieger', async ({ page }) => {
+    await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-live', '[data-testid="live-slide-area"]');
+    // Das Finale wird beendet, ohne einzelne Tore oder Schüsse: nur das Ergebnis steht im Turnier (wie nach Papier-Leitung).
+    await page.evaluate(({ id }) => new Promise<void>((fertig, fehler) => {
+      const auf = indexedDB.open('hallenfussball', 1);
+      auf.onerror = () => fehler(new Error('IndexedDB'));
+      auf.onsuccess = () => {
+        const tx = auf.result.transaction('cache', 'readwrite');
+        const speicher = tx.objectStore('cache');
+        const lesen = speicher.get('tournaments');
+        lesen.onsuccess = () => {
+          const eintrag = lesen.result as { key: string; value: Array<{ id: string; matches: Array<Record<string, unknown>> }> };
+          const turnier = eintrag.value.find((t) => t.id === 'hallencup-messlauf');
+          const spiel = turnier?.matches.find((m) => m.id === id);
+          if (!spiel) { fehler(new Error('Finale fehlt')); return; }
+          Object.assign(spiel, {
+            matchStatus: 'finished', scoreA: 2, scoreB: 2, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty',
+            timerStartTime: undefined, timerElapsedSeconds: 600,
+          });
+          speicher.put(eintrag);
+        };
+        tx.oncomplete = () => fertig();
+        tx.onerror = () => fehler(new Error('Schreiben'));
+      };
+    }), { id: FINALE });
+    // Abruf-Takt des Monitors (Vorbelegung 5 s): die Live-Folie hält das Endergebnis 30 s (@ZM-077)
+    await expect(page.getByTestId('live-penalty')).toHaveText('Strafstoßschießen 4 : 3', { timeout: 20000 });
+    await expect(page.getByTestId('live-winner')).toContainText('gewinnt');
+    await expect(page.getByLabel('Heim: 2')).toBeVisible();
+    await expect(page.getByLabel('Gast: 2')).toBeVisible();
+    await expect(page.locator('[data-testid*="shootout"], [data-testid*="dots"]')).toHaveCount(0);
+    await bild(page, 'monitor-1280-live-ende-strafstoss');
+  });
+});
