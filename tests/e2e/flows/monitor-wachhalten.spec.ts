@@ -33,6 +33,8 @@ async function wakeLockMocken(page: Page, modus: WakeLockModus): Promise<void> {
 type Folie = { id: string; type: string; config: Record<string, unknown>; duration: number | null; order: number };
 const LIVE_FOLIE: Folie = { id: 's1', type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 };
 const QR_FOLIE: Folie = { id: 's1', type: 'qr-code', config: {}, duration: null, order: 0 };
+/** Programm: QR zuerst (Live ohne Spiel wird übersprungen), dann Live auf Feld 1. */
+const QR_UND_LIVE: Folie[] = [QR_FOLIE, { ...LIVE_FOLIE, id: 's2', order: 1 }];
 /** Der Satz aus dem Szenario @ME-006, wörtlich. */
 const GHERKIN_HINWEIS = 'Bildschirm kann ausgehen – Energiesparen prüfen';
 /** IndexedDB-Ziel der Saat (src/core/storage/IndexedDBAdapter.ts, wie in den Test-Fixtures). */
@@ -182,10 +184,10 @@ for (const [breite, hoehe] of [[1920, 1080], [1280, 720], [3840, 2160]] as const
     // Gegenbeispiel: Startet das Spiel während der 10 Sekunden, verschwindet der Hinweis sofort.
     test('Spiel startet während der 10 Sekunden: der Hinweis verschwindet, das Folienprogramm läuft weiter', async ({ page, seedIndexedDB }) => {
       await wakeLockMocken(page, 'abgelehnt');
-      await oeffneMonitor(page, seedIndexedDB, [LIVE_FOLIE], theme, 'geplant');
+      await oeffneMonitor(page, seedIndexedDB, QR_UND_LIVE, theme, 'geplant');
       const hinweis = page.getByTestId('monitor-wakelock-hint');
       await expect(hinweis).toBeVisible();
-      await spielStartetJetzt(page, [LIVE_FOLIE], theme);
+      await spielStartetJetzt(page, QR_UND_LIVE, theme);
       // Der Monitor fragt alle 5 Sekunden ab. Im Sekundentakt prüfen, bis der Hinweis weg ist (vor Ablauf der 10 s).
       let vergangen = 0;
       while (vergangen < 9_000 && (await hinweis.count()) > 0) {
