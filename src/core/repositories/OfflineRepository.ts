@@ -364,8 +364,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     const cloudT = await this.supabaseRepo.get(localT.id);
 
                     if (!cloudT) {
-                        // Not in cloud -> Full Upload
+                        // Not in cloud -> Full Upload (A-08f3c1: die Cloud legt mit Version 1 an)
                         await this.supabaseRepo.save(localT);
+                        await this.localRepo.updateLocalVersion(localT.id, 1);
                         continue;
                     }
 
@@ -585,10 +586,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                 return { status: 'error', error: 'Tournament not found' };
             }
 
-            // Case: No local data - just save remote
+            // Case: No local data - übernehmen (A-08f3c1/M4: Cloud-Version, gleiche Regel wie der Abruf)
             if (!localT) {
-                await this.localRepo.save(this.owned(remoteT));
-                return { status: 'updated', data: remoteT };
+                return { status: 'updated', data: (await this.readAndAdopt(tournamentId, true)) ?? remoteT };
             }
 
             // 2. Compare timestamps
@@ -610,9 +610,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     return { status: 'conflict', data: remoteT, conflicts };
                 }
 
-                // No conflicts - safe to update local
-                await this.localRepo.save(this.owned(remoteT));
-                return { status: 'updated', data: remoteT };
+                // No conflicts - A-08f3c1/M4: ganze Kopie über dieselbe Regel wie der Abruf (cacheCloudCopy, Q)
+                return { status: 'updated', data: (await this.readAndAdopt(tournamentId, true)) ?? remoteT };
             }
 
             // Case: Local is newer - nothing to do for syncDown
@@ -666,13 +665,13 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                         };
                     }
                     await this.supabaseRepo.save(local);
+                    await this.localRepo.updateLocalVersion(tournamentId, (local.version ?? 0) + 1); // A-08f3c1: wie die Cloud
                     return { status: 'synced', data: local };
                 }
             } else {
-                // Pull remote to local
-                const remote = await this.supabaseRepo.get(tournamentId);
+                // Pull remote to local (A-08f3c1/M4: Cloud-Version, gleiche Regel wie der Abruf)
+                const remote = await this.readAndAdopt(tournamentId, true);
                 if (remote) {
-                    await this.localRepo.save(this.owned(remote));
                     return { status: 'updated', data: remote };
                 }
             }
@@ -708,6 +707,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                 const remote = await this.supabaseRepo.get(tournamentId);
                 if (!remote || new Date(local.updatedAt) > new Date(remote.updatedAt)) {
                     await this.supabaseRepo.save(local);
+                    await this.localRepo.updateLocalVersion(tournamentId, remote ? (local.version ?? 0) + 1 : 1); // A-08f3c1
                 }
             }
             return { status: 'synced', data: local ?? downResult.data };
@@ -733,13 +733,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             if (result) {
                 // Update local cache
                 const tournament = await this.localRepo.get(tournamentId);
-                if (tournament) {
-                    await this.localRepo.save({
-                        ...tournament,
-                        isPublic: true,
-                        shareCode: result.shareCode,
-                        shareCodeCreatedAt: result.createdAt,
-                    });
+                if (tournament) { // A-08f3c1: die Cloud zählt hier nicht -- lokal auch nicht
+                    await this.localRepo.cacheCloudCopy({ ...tournament, isPublic: true, shareCode: result.shareCode, shareCodeCreatedAt: result.createdAt });
                 }
                 return result;
             }
@@ -803,12 +798,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             if (result) {
                 // Update local cache
                 const tournament = await this.localRepo.get(tournamentId);
-                if (tournament) {
-                    await this.localRepo.save({
-                        ...tournament,
-                        shareCode: result.shareCode,
-                        shareCodeCreatedAt: result.createdAt,
-                    });
+                if (tournament) { // A-08f3c1: ohne +1 (wie die Cloud)
+                    await this.localRepo.cacheCloudCopy({ ...tournament, shareCode: result.shareCode, shareCodeCreatedAt: result.createdAt });
                 }
                 return result;
             }

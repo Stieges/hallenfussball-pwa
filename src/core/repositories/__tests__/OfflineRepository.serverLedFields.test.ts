@@ -155,18 +155,19 @@ describe('A-08f3a Feldweg: Spielstand aus der Cloud beim Eigentümer (@FU-087, @
     expect(storedMatch('m3')).toMatchObject({ matchStatus: 'skipped', skippedReason: 'Team fehlt' });
   });
 
-  it('Gegenbeispiel (ii): wartende eigene Änderung der Anstoßzeit bleibt, Version 8', async () => {
+  // A-08f3c1: umgeschrieben nach Baustein Regel 3 -- `updateMatches` zählt die lokale Version nicht mehr (Cloud zählt auch nicht).
+  it('Gegenbeispiel (ii): wartende eigene Änderung der Anstoßzeit bleibt, Version 7 wie in der Cloud', async () => {
     const { repo: r } = setup();
     net.online = false;
     await r.updateMatches('T', [{ id: 'm1', scheduledTime: new Date(KICKOFF_NEW) }]);
-    expect(stored().version).toBe(8);
+    expect(stored().version).toBe(7);
 
     await r.get('T');
     await flush();
 
     expect(storedMatch('m1')).toMatchObject({ scoreA: 1, scoreB: 0, matchStatus: 'running' });
     expect(new Date(storedMatch('m1').scheduledTime ?? KICKOFF_OLD).toISOString()).toBe(KICKOFF_NEW);
-    expect(stored().version).toBe(8);
+    expect(stored().version).toBe(7);
   });
 
   it('Gegenbeispiel (iii): Uhrfelder der lokalen Kopie bleiben (die Uhr gehört der Engine)', async () => {
