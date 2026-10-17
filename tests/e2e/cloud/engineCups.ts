@@ -11,6 +11,7 @@
 
 import type { EventType } from '../../../src/core/match';
 import { e2eUuid } from './e2eUuid';
+import type { E2EUserKey } from './testData';
 
 export type EngineCupForm = 'running' | 'finished' | 'untouched';
 
@@ -164,12 +165,19 @@ export const E2E_ENGINE_CUPS = [
 
 /**
  * A-07d3: je ein laufendes Engine-Spiel für die drei Fälle von `abmelden-geraete.cloud.spec.ts`.
- * Eigentümer ist das Konto `abmelden` (nicht `owner`), siehe `testData.ts`. `scripts/e2e-seed.ts`
- * legt sie mit dessen Anmeldung an; `E2E_ENGINE_CUPS` (Eigentümer `owner`) bleibt unverändert.
+ * Jeder Fall hat sein EIGENES Konto als Eigentümer (siehe `E2E_ABMELDEN_OWNER`, `testData.ts`),
+ * damit kein Fall die Sitzung eines anderen beendet. `E2E_ENGINE_CUPS` (Eigentümer `owner`) bleibt
+ * unverändert.
  */
 export const E2E_ABMELDEN_CUP_SLUGS = ['ABMELDEN1', 'ABMELDEN2', 'ABMELDEN3'] as const;
 export type AbmeldenCupSlug = (typeof E2E_ABMELDEN_CUP_SLUGS)[number];
 export const E2E_ABMELDEN_CUPS: readonly EngineCupSpec[] = E2E_ABMELDEN_CUP_SLUGS.map((slug) => runningCup(slug, false));
+/** Eigentümer-Konto je Abmelde-Cup: ABMELDEN1 = AN-023, ABMELDEN2 = AN-024, ABMELDEN3 = FU-006. */
+export const E2E_ABMELDEN_OWNER: Record<AbmeldenCupSlug, E2EUserKey> = {
+  ABMELDEN1: 'abmelden',
+  ABMELDEN2: 'abmeldenAn024',
+  ABMELDEN3: 'abmeldenFu006',
+};
 
 export type EngineCupSlug = (typeof E2E_ENGINE_CUPS)[number]['slug'] | AbmeldenCupSlug;
 

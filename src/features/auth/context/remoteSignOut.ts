@@ -46,7 +46,7 @@ export function markOwnSignOut(): void {
 
 /** Hat dieses Gerät (oder ein anderer Tab) sich seit dem letzten SIGNED_IN selbst abgemeldet? */
 export function isOwnSignOut(): boolean {
-  return safeLocalStorage.getItem(OWN_SIGN_OUT_KEY) !== null;
+  return safeLocalStorage.getItem(OWN_SIGN_OUT_KEY) === '1';
 }
 
 /** Merker löschen: ein neues SIGNED_IN beginnt eine neue Sitzung. */
@@ -130,8 +130,14 @@ export function useRemoteSessionCheck(
       void verifySessionOnServer(client)
         .then(async (outcome) => {
           if (outcome === 'rejected') {
+            // Wettlauf: meldet sich dieses Gerät selbst ab, während die Prüfung noch läuft, kommt die
+            // Ablehnung verspätet. Sie stammt dann vom eigenen Abmelden, nicht von einem anderen Gerät.
+            // Vor dem lokalen Abmelden lesen: `logout` setzt den Merker selbst (logoutAction).
+            const ownSignOut = isOwnSignOut();
             await signOutRef.current();
-            setSignedOutElsewhere();
+            if (!ownSignOut) {
+              setSignedOutElsewhere();
+            }
           }
         })
         .catch((err: unknown) => {
