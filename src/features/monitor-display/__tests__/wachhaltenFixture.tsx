@@ -11,9 +11,9 @@ import { MonitorDisplayPage } from '../MonitorDisplayPage';
 /** Die Test-Umgebung liefert den Schlüssel als Text (src/test/setup.ts); der DE/EN-Wortlaut steht im JSON-Test unten. */
 export const HINWEIS = 'monitor:dauerbetrieb.wakeLockHint';
 
-/** Zwei Folien ohne Live-Folie: auf ihnen läuft nie ein Spiel, der Hinweis ist also beim Start fällig. */
+/** Zuerst eine QR-Folie (dort ist der Hinweis beim Start fällig, @ME-006), dann eine Textfolie. */
 export function monitorTurnier(folien = [
-  slide('custom-text', { headline: 'Folie A' }, 4),
+  slide('qr-code', {}, 4),
   slide('custom-text', { headline: 'Folie B' }),
 ]): Tournament {
   return attachMonitor(buildTournament(), withMonitor({ slides: folien }));

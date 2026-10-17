@@ -7,6 +7,7 @@
  */
 
 import type { WakeLockStatus } from '../../hooks/useWakeLock';
+import { SPIELPLAN_FALLBACK_SLIDE } from './slideProgramme';
 
 /** Der Mauszeiger verschwindet nach so vielen Millisekunden ohne Bewegung (@ME-002: „nach wenigen Sekunden“). */
 export const MAUSZEIGER_RUHE_MS = 3_000;
@@ -18,13 +19,14 @@ export const VOLLBILD_TASTE = 'f';
 export const WAKE_LOCK_HINWEIS_MS = 10_000;
 
 /**
- * Folien, auf denen der Hinweis stehen darf (@ME-006): die Einrichtungs-Folie (eigener Text bzw. Ankündigung) und die
- * Zuschauer-QR-Folie. Auf Spielplan-, Tabellen-, Sponsor- und Live-Folien nie.
+ * Folien, auf denen der Hinweis stehen darf (@ME-006): die Ersatzfolien, solange kein Folienprogramm eingerichtet ist
+ * (Zuschauer-QR bei öffentlichem Turnier, sonst Spielplan), und eine QR-Folie aus dem Programm. Nicht auf Text-, Spielplan-,
+ * Tabellen-, Sponsor- und Live-Folien des Programms. `programm` sind die darstellbaren Folien des Monitors: nur was zu ihnen
+ * gehört, zählt (der Rückfall einer Live-Folie ohne Spiel gehört nicht dazu, dort ist ein Programm eingerichtet).
  */
-const HINWEIS_FOLIENTYPEN: ReadonlySet<string> = new Set(['custom-text', 'qr-code']);
-
-export function istHinweisFolie(folie: { type: string } | null): boolean {
-  return folie !== null && HINWEIS_FOLIENTYPEN.has(folie.type);
+export function istHinweisFolie(folie: { type: string } | null, programm: readonly unknown[]): boolean {
+  if (folie === null || !programm.includes(folie)) { return false; }
+  return folie.type === 'qr-code' || folie === SPIELPLAN_FALLBACK_SLIDE;
 }
 
 /**

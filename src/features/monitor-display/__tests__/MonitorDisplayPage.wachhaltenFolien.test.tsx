@@ -2,10 +2,12 @@
  * Wachhalten-Hinweis nach Folientyp und Verschiebung der Folie (B-48a Fixrunde 4, @ME-006).
  * Gherkin: Der Hinweis steht nur auf der Einrichtungs- und der QR-Folie, wenn auf dem Feld kein Spiel läuft. Auf Spielplan-,
  * Tabellen- und Live-Folien nie. Solange er steht, rückt der Inhalt der Folie um seine Höhe nach unten (verdeckt nichts).
- * „Einrichtungs-Folie“ ist am Monitor die Text-Folie (eigener Text / Ankündigung), siehe Report.
+ * Fassung 17.10. (Fixrunde 5): Hinweis auf den Ersatzfolien bei leerem Programm (öffentlich QR, sonst Spielplan) und auf einer QR-Folie
+ * des Programms; nicht auf Text-, Spielplan-, Tabellen-, Sponsor-, Live-Folien des Programms.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen } from '@testing-library/react';
+import type { Tournament } from '../../../types/tournament';
 import { attachMonitor, buildTournament, FIXTURE_SPONSOR, slide, withMonitor } from './monitorFixture';
 import { displayLayout } from '../../../design-tokens';
 import {
@@ -42,24 +44,31 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 }));
 
 type Folie = ReturnType<typeof slide>;
-const turnier = (folien: Folie[], overscanPercent?: number) => attachMonitor(
-  buildTournament({ sponsors: [FIXTURE_SPONSOR] }),
+const turnier = (folien: Folie[], overscanPercent?: number, flags: Partial<Tournament> = {}) => attachMonitor(
+  buildTournament({ sponsors: [FIXTURE_SPONSOR], ...flags }),
   withMonitor({ slides: folien, ...(overscanPercent !== undefined ? { overscanPercent } : {}) }),
 );
 
-const MIT_HINWEIS: ReadonlyArray<readonly [string, Folie]> = [
-  ['Zuschauer-QR', slide('qr-code', {}, 60)],
-  ['Einrichtung / Text', slide('custom-text', { headline: 'Willkommen' }, 60)],
-  // Live-Folie ohne Spiel auf ihrem Feld wird übersprungen (@ZM-122): der Monitor zeigt den QR-Rückfall
-  ['Live ohne Spiel (Rückfall QR)', slide('live', { fieldId: 'field-2' }, 60)],
+type Fall = readonly [string, Folie[], Partial<Tournament>?];
+const voll = (faelle: ReadonlyArray<Fall>): Array<[string, Folie[], Partial<Tournament>]> => faelle.map(([n, f, fl]) => [n, f, fl ?? {}]);
+// @ME-006: Ersatzfolien, solange kein Folienprogramm eingerichtet ist (öffentlich: QR, sonst Spielplan), und QR aus dem Programm
+const MIT_HINWEIS: ReadonlyArray<Fall> = [
+  ['Ersatz-Spielplan (leeres Programm, nicht öffentlich)', [], { isPublic: false }],
+  ['Ersatz-Spielplan (leeres Programm, ohne Share-Code)', [], { shareCode: undefined }],
+  ['Ersatz-QR (leeres Programm, öffentlich)', []],
+  ['QR aus dem Programm', [slide('qr-code', {}, 60)]],
 ];
-const OHNE_HINWEIS: ReadonlyArray<readonly [string, Folie]> = [
-  ['Tabelle', slide('standings', { groupId: 'A' }, 60)],
-  ['Alle Tabellen', slide('all-standings', {}, 60)],
-  ['Spielplan Feld', slide('schedule-field', { fieldId: 'field-1' }, 60)],
-  ['Nächste Spiele', slide('next-matches', { matchCount: 3 }, 60)],
-  ['Sponsor', slide('sponsor', { sponsorId: 'sp-1', showQrCode: true }, 60)],
-  ['Live mit Spiel (Feld 1)', slide('live', { fieldId: 'field-1' }, 60)],
+const OHNE_HINWEIS: ReadonlyArray<Fall> = [
+  ['Textfolie (Ankündigung)', [slide('custom-text', { headline: 'Willkommen' }, 60)]],
+  ['Spielplan aus dem Programm', [slide('schedule-field', { fieldId: 'field-1' }, 60)], { isPublic: false }],
+  ['Spielplan Feld', [slide('schedule-field', { fieldId: 'field-1' }, 60)]],
+  ['Tabelle', [slide('standings', { groupId: 'A' }, 60)]],
+  ['Alle Tabellen', [slide('all-standings', {}, 60)]],
+  ['Nächste Spiele', [slide('next-matches', { matchCount: 3 }, 60)]],
+  ['Sponsor', [slide('sponsor', { sponsorId: 'sp-1', showQrCode: true }, 60)]],
+  // Live-Folie ohne Spiel zeigt den Rückfall, aber ein Programm ist eingerichtet
+  ['Live ohne Spiel (Feld 2, Programm eingerichtet)', [slide('live', { fieldId: 'field-2' }, 60)]],
+  ['Live mit Spiel (Feld 1)', [slide('live', { fieldId: 'field-1' }, 60)]],
 ];
 
 /** Wurzel der Folie: das Element, das den Bildrand als Innenabstand trägt. */
@@ -78,9 +87,9 @@ afterEach(() => {
   wakeLockFehlt();
 });
 
-describe('Hinweis nur auf Einrichtungs- und QR-Folie (@ME-006)', () => {
-  it.each(MIT_HINWEIS)('Folie „%s“: der Hinweis steht 10 Sekunden in einer Zeile', async (_name, folie) => {
-    localGet.mockResolvedValue(turnier([folie]));
+describe('Hinweis nur auf Ersatz- und QR-Folie (@ME-006)', () => {
+  it.each(voll(MIT_HINWEIS))('Folie „%s“: der Hinweis steht 10 Sekunden in einer Zeile', async (_name, folien, flags) => {
+    localGet.mockResolvedValue(turnier([...folien], undefined, flags));
     seite();
     await vorspulen(0);
     expect(hinweis()).toHaveTextContent(HINWEIS);
@@ -91,8 +100,8 @@ describe('Hinweis nur auf Einrichtungs- und QR-Folie (@ME-006)', () => {
     expect(hinweis()).not.toBeInTheDocument();
   });
 
-  it.each(OHNE_HINWEIS)('Gegenbeispiel, Folie „%s“: kein Hinweis, von Sekunde 0 bis nach Ablauf der 10 Sekunden', async (_name, folie) => {
-    localGet.mockResolvedValue(turnier([folie]));
+  it.each(voll(OHNE_HINWEIS))('Gegenbeispiel, Folie „%s“: kein Hinweis, von Sekunde 0 bis nach Ablauf der 10 Sekunden', async (_name, folien, flags) => {
+    localGet.mockResolvedValue(turnier([...folien], undefined, flags));
     seite();
     await vorspulen(0);
     expect(hinweis()).not.toBeInTheDocument();
@@ -134,8 +143,8 @@ describe('Folie rückt um die Höhe des Hinweises nach unten (@ME-006)', () => {
   const hoehe = alsStil('height', displayLayout.noticeHeight);
   const oben = (rand: number) => alsStil('paddingTop', `calc(${rand}cqh + ${displayLayout.noticeHeight})`);
 
-  it.each(MIT_HINWEIS)('Folie „%s“: solange der Hinweis steht, beginnt der Inhalt um seine Höhe tiefer, danach wieder am Rand', async (_name, folie) => {
-    localGet.mockResolvedValue(turnier([folie]));
+  it.each(voll(MIT_HINWEIS))('Folie „%s“: solange der Hinweis steht, beginnt der Inhalt um seine Höhe tiefer, danach wieder am Rand', async (_name, folien, flags) => {
+    localGet.mockResolvedValue(turnier([...folien], undefined, flags));
     seite();
     await vorspulen(0);
     expect(hinweis()?.style.height).toBe(hoehe);
@@ -145,21 +154,21 @@ describe('Folie rückt um die Höhe des Hinweises nach unten (@ME-006)', () => {
   });
 
   it('mit Bildrand 0 % beginnt der Inhalt genau unter dem Hinweis', async () => {
-    localGet.mockResolvedValue(turnier([slide('qr-code', {}, 60)], 0));
+    localGet.mockResolvedValue(turnier([], 0));
     seite();
     await vorspulen(0);
     expect(folienWurzel().style.paddingTop).toBe(oben(0));
   });
 
-  it.each(OHNE_HINWEIS)('Gegenbeispiel, Folie „%s“: keine Verschiebung', async (_name, folie) => {
-    localGet.mockResolvedValue(turnier([folie]));
+  it.each(voll(OHNE_HINWEIS))('Gegenbeispiel, Folie „%s“: keine Verschiebung', async (_name, folien, flags) => {
+    localGet.mockResolvedValue(turnier([...folien], undefined, flags));
     seite();
     await vorspulen(0);
     expect(folienWurzel().style.paddingTop).toBe('5cqh');
   });
 
   it('der Hinweis sitzt oben rechts im sicheren Bereich, ohne eigenen zweiten Rand', async () => {
-    localGet.mockResolvedValue(turnier([slide('qr-code', {}, 60)]));
+    localGet.mockResolvedValue(turnier([]));
     seite();
     await vorspulen(0);
     expect(hinweis()?.style.position).toBe('absolute');

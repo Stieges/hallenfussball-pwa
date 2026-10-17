@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useWakeLockHinweis } from '../useWakeLockHinweis';
 import { istHinweisFolie } from '../monitorDauerbetrieb';
+import { SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE } from '../slideProgramme';
 
 beforeEach(() => {
   window.history.replaceState(null, '', '/#/display/t/m');
@@ -55,15 +56,30 @@ describe('useWakeLockHinweis (@ME-006)', () => {
 });
 
 describe('istHinweisFolie (@ME-006)', () => {
-  it.each(['custom-text', 'qr-code'])('„%s“ ist eine Einrichtungs- oder QR-Folie', (type) => {
-    expect(istHinweisFolie({ type })).toBe(true);
+  const qrProgramm = { id: 'q', type: 'qr-code' };
+  const textProgramm = { id: 't', type: 'custom-text' };
+
+  it('QR-Folie aus dem Programm: ja', () => {
+    expect(istHinweisFolie(qrProgramm, [qrProgramm, textProgramm])).toBe(true);
   });
 
-  it.each(['live', 'standings', 'all-standings', 'schedule-field', 'next-matches', 'sponsor'])('Gegenbeispiel: „%s“ nie', (type) => {
-    expect(istHinweisFolie({ type })).toBe(false);
+  it('Ersatzfolien eines leeren Programms (QR-Rückfall, Spielplan-Rückfall): ja', () => {
+    expect(istHinweisFolie(ZUSCHAUER_QR_SLIDE, [ZUSCHAUER_QR_SLIDE])).toBe(true);
+    expect(istHinweisFolie(SPIELPLAN_FALLBACK_SLIDE, [SPIELPLAN_FALLBACK_SLIDE])).toBe(true);
+  });
+
+  it.each(['live', 'standings', 'all-standings', 'schedule-field', 'next-matches', 'sponsor', 'custom-text'])('Gegenbeispiel: „%s“ aus dem Programm nie', (type) => {
+    const folie = { id: 'x', type };
+    expect(istHinweisFolie(folie, [folie])).toBe(false);
+  });
+
+  it('Gegenbeispiel: ein Rückfall, der nicht zum Programm gehört (Live ohne Spiel), nie', () => {
+    const live = { id: 'l', type: 'live' };
+    expect(istHinweisFolie(ZUSCHAUER_QR_SLIDE, [live])).toBe(false);
+    expect(istHinweisFolie(SPIELPLAN_FALLBACK_SLIDE, [live])).toBe(false);
   });
 
   it('ohne Folie kein Hinweis', () => {
-    expect(istHinweisFolie(null)).toBe(false);
+    expect(istHinweisFolie(null, [])).toBe(false);
   });
 });

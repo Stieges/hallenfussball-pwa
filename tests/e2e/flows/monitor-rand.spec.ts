@@ -132,8 +132,8 @@ for (const [breite, hoehe, seitlich, oben] of [[1920, 1080, 96, 54], [1280, 720,
         expect(m.aussen, 'Inhalt im Bildrand').toEqual([]);
       });
 
-      // @ME-006: der Hinweis steht nur auf Einrichtungs- (Text) und QR-Folien; dort liegt er in der Ecke des sicheren Bereichs
-      if (f.id === 'qr-code' || f.id === 'custom-text') {
+      // @ME-006: der Hinweis steht nur auf Ersatzfolien (leeres Programm) und QR-Folien des Programms; dort liegt er in der Ecke des sicheren Bereichs
+      if (f.id === 'qr-code') {
         test(`@ME-067 ${f.id}: der Hinweis in der Ecke (Energiesparen) liegt im sicheren Bereich, der Inhalt rückt nach unten`, async ({ page, seedIndexedDB }) => {
           await wakeLockMocken(page, 'abgelehnt');
           await seed(seedIndexedDB);

@@ -71,6 +71,7 @@ afterEach(() => {
 describe('Hinweis auf Folien ohne laufendes Spiel (@ME-006)', () => {
   it.each(LAGEN)('Lage „%s“: der Hinweis steht 10 Sekunden als Ecke oben rechts', async (_lage, einrichten, wartezeit) => {
     einrichten();
+    localGet.mockResolvedValue(monitorTurnier([slide('qr-code', {}, 60)]));
     seite();
     // Die 5 Sekunden laufen ab der Anfrage; die Anfrage stellt die Seite, sobald der Monitor geladen ist.
     await vorspulen(0);
@@ -88,9 +89,8 @@ describe('Hinweis auf Folien ohne laufendes Spiel (@ME-006)', () => {
   });
 
   it.each([
-    ['Live-Folie ohne laufendes Spiel (Feld 2, Rückfall auf QR)', [slide('live', { fieldId: 'field-2' }, 30)]],
-    ['Zuschauer-QR', [slide('qr-code', {}, 30)]],
-    ['Einrichtung / Textfolie', [slide('custom-text', { headline: 'Folie A' }, 30)]],
+    ['leeres Programm (Ersatz-QR)', []],
+    ['Zuschauer-QR aus dem Programm', [slide('qr-code', {}, 30)]],
   ] as const)('Startfolie „%s“: der Hinweis steht 10 Sekunden', async (_name, folien) => {
     wakeLockAbgelehnt();
     localGet.mockResolvedValue(monitorTurnier([...folien]));
@@ -101,14 +101,14 @@ describe('Hinweis auf Folien ohne laufendes Spiel (@ME-006)', () => {
     expect(hinweis()).not.toBeInTheDocument();
   });
 
-  it('das Folienprogramm läuft weiter, während der Hinweis ansteht', async () => {
+  it('das Folienprogramm läuft weiter, während der Hinweis ansteht; auf der Textfolie steht er nicht', async () => {
     wakeLockAbgelehnt();
     seite();
     await vorspulen(0);
-    expect(screen.getByText('Folie A')).toBeInTheDocument();
+    expect(hinweis()).toBeInTheDocument();
     await vorspulen(4_000);
     expect(screen.getByText('Folie B')).toBeInTheDocument();
-    expect(hinweis()).toBeInTheDocument();
+    expect(hinweis()).not.toBeInTheDocument();
   });
 
   it('ohne Wake Lock (Schnittstelle fehlt) erscheint der Hinweis und verschwindet nach 10 Sekunden', async () => {
@@ -224,12 +224,13 @@ describe('Live-Folie mit laufendem Spiel (@ME-006, Kopfzeile)', () => {
 
   it('Spiel startet während der 10 Sekunden: der Hinweis verschwindet sofort, das Folienprogramm läuft weiter', async () => {
     wakeLockAbgelehnt();
-    localGet.mockResolvedValue(liveTurnierOhneSpiel());
+    // Programm: QR zuerst (Live ohne Spiel wird übersprungen), dann Live auf Feld 1
+    localGet.mockResolvedValue({ ...liveTurnierOhneSpiel(), monitors: monitorTurnier([slide('qr-code', {}, 30), slide('live', { fieldId: 'field-1' }, 30)]).monitors });
     seite();
     await vorspulen(0);
     expect(hinweis()).toBeInTheDocument();
     // Der Monitor fragt alle 5 Sekunden ab; danach läuft das Spiel auf Feld 1.
-    localGet.mockResolvedValue(liveTurnier());
+    localGet.mockResolvedValue({ ...liveTurnier(), monitors: monitorTurnier([slide('qr-code', {}, 30), slide('live', { fieldId: 'field-1' }, 30)]).monitors });
     await vorspulen(5_000);
     expect(hinweis()).not.toBeInTheDocument();
     await vorspulen(10_000);
@@ -242,6 +243,7 @@ describe('Bildschirm bleibt an im normalen Browser (@ME-005)', () => {
     const sentinel = { release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() };
     const request = vi.fn().mockResolvedValue(sentinel);
     Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+    localGet.mockResolvedValue(monitorTurnier([slide('custom-text', { headline: 'Folie A' }, 4), slide('custom-text', { headline: 'Folie B' })]));
     seite();
     await vorspulen(0);
     expect(request).toHaveBeenCalledWith('screen');
