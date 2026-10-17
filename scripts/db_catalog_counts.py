@@ -16,6 +16,9 @@ Die Zähl-Patterns sind keine Vermutung — sie wurden gegen die Baseline-Datei 
 (supabase/migrations/00000000000000_baseline_live_schema.sql) und treffen dort exakt die vom
 Controller unabhängig über pg_catalog gemessenen Werte (Stand 2026-09-21):
   13 Tabellen, 233 Spalten, 44 Policies, 28 Funktionen, 23 Trigger, 57 Indizes, 13 RLS-Tabellen.
+Nach A-08h (20261028_002, Befund C-MATCH-EVENTS-DIREKTWEG) hat die Live-Datenbank 41 Policies: die
+drei Client-Schreib-Policies auf match_events sind entfernt. Die Baseline-Zaehlung (44) bleibt, weil
+die Baseline-Datei unveraendert ist.
 
 Wichtig zu Triggern: pg_dump exportiert NIE interne/System-Trigger (z.B. für Fremdschlüssel-
 Constraints) — jedes "CREATE TRIGGER"/"CREATE OR REPLACE TRIGGER" im Dump-Text ist bereits ein

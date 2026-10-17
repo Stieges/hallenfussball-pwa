@@ -21,6 +21,10 @@
 #                                                   Exit 0 trotzdem). Beweist NUR den Alt-Trigger/
 #                                                   Typ-CHECK, NICHT den Guard (siehe Review I3) --
 #                                                   dafuer --without-guard.
+#   Hinweis A-08h (20261028_002): Clients lehnt seit A-08h das Tabellenrecht (42501) VOR dem Guard
+#   ab. Die Client-Proben pruefen daher das Ergebnis (abgelehnt, Spielstand unveraendert), nicht
+#   mehr den Guard allein. Der Guard bleibt in der Datenbank; die Proben 3 und 4d pruefen, dass der
+#   SECURITY-DEFINER-Weg (append_match_events) ihn nicht blockiert.
 #   ./scripts/match-event-log-check.sh --without-guard
 #                                                   Gegenprobe B (Ruling G3): Migration vollstaendig
 #                                                   einspielen, danach
@@ -408,8 +412,10 @@ assert_guard_message() {
   if [[ "$MODE" != "with-migration" ]]; then
     return 0
   fi
-  if grep -qE 'append_match_events|Rechenfunktion' <<<"$LAST_OUTPUT"; then
-    echo "OK    $label -> Guard-Meldung vorhanden" >&2
+  # Seit A-08h lehnt meist das entzogene Tabellenrecht zuerst ab (permission denied for table
+  # match_events); der Guard bleibt fuer den SECURITY-DEFINER-Weg (append_match_events) zustaendig.
+  if grep -qE 'append_match_events|Rechenfunktion|permission denied for table match_events' <<<"$LAST_OUTPUT"; then
+    echo "OK    $label -> Ablehnung durch Guard oder Tabellenrecht belegt" >&2
   else
     echo "FAIL  $label -> Guard-Meldung FEHLT in der Fehlerausgabe (moeglicherweise ein anderer Mechanismus)" >&2
     MISMATCHES=$((MISMATCHES + 1))
@@ -419,43 +425,24 @@ assert_guard_message() {
 echo "" >&2
 echo "=== Proben ($MODE) ===" >&2
 
-# --- Probe 1: Tor-INSERT mit team_id (alter Typ GOAL, event_format NULL, als Helfer/Collaborator)
-# -> matches.score_a UNVERAENDERT (Alt-Trigger sync_match_score_from_event ist weg, R19). In
-# "without-migration" bleibt der Alt-Trigger aktiv -> score_a wird HOCHGEZAEHLT -> Probe ROT
-# (erwarteter Fehlschlag der Gegenprobe A).
+# --- Probe 1 (A-08h, @FU-084): Tor-INSERT im Altformat (GOAL, event_format NULL) als Helfer ->
+# abgelehnt (42501, Tabellenrecht entzogen) und der Spielstand bleibt unveraendert. Ohne Migration
+# schreibt der Client die Zeile; der Alt-Trigger zaehlt score_a hoch -> ROT.
 SCORE_BEFORE="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT COALESCE(score_a,0) FROM public.matches WHERE id = '$M_1';")"
-run_sql_committed "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, team_id, timestamp_seconds, score_home, score_away) VALUES ('$(uuid_for event:probe1)', '$M_1', 'GOAL', '$TEAM_A', 10, 1, 0);"
+run_sql "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, team_id, timestamp_seconds, score_home, score_away) VALUES ('$(uuid_for event:probe1)', '$M_1', 'GOAL', '$TEAM_A', 10, 1, 0);"
 SCORE_AFTER="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT COALESCE(score_a,0) FROM public.matches WHERE id = '$M_1';")"
-if [[ "$MODE" != "without-migration" ]]; then
-  check "1. Tor-INSERT altes Format -> matches.score_a unveraendert (Alt-Trigger weg)" "$SCORE_BEFORE" "$SCORE_AFTER"
-else
-  if [[ "$SCORE_BEFORE" == "$SCORE_AFTER" ]]; then
-    echo "FAIL(erwartet-rot)  1. ohne Migration haette score_a sich aendern muessen (Alt-Trigger) -> ist aber gleich geblieben" >&2
-    MISMATCHES=$((MISMATCHES + 1))
-  else
-    echo "ROT(erwartet)  1. ohne Migration: score_a $SCORE_BEFORE -> $SCORE_AFTER (Alt-Trigger aktiv, wie erwartet ohne 20260928_001)" >&2
-  fi
-fi
+check "1. Helfer-INSERT Tor im Altformat -> abgelehnt (A-08h, @FU-084)" "denied" "$LAST_RESULT"
+check "1b. Spielstand nach dem abgelehnten Direktweg-INSERT unveraendert (score_a)" "$SCORE_BEFORE" "$SCORE_AFTER"
 
 # --- Probe 2a/2b: Ruling G2(a) — Client-INSERT: neuer Typ bzw. event_format gesetzt -> abgelehnt.
 run_sql "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away) VALUES ('$(uuid_for event:probe2a)', '$M_1', 'CORRECTION', 10, 1, 0);"
-if [[ "$MODE" == "without-migration" ]]; then
-  check "2a(ohne Migration, erwartet ROT weil Typ-CHECK den neuen Typ nicht kennt, NICHT der Guard)" "denied" "$LAST_RESULT"
-elif [[ "$MODE" == "without-guard" ]]; then
-  check "2a(Gegenprobe B, Guard weg): INSERT type=CORRECTION -> jetzt erlaubt" "ok" "$LAST_RESULT"
-else
-  check "2a. Helfer-INSERT type=CORRECTION (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
-  assert_guard_message "2a"
-fi
+check "2a. Helfer-INSERT type=CORRECTION (authenticated) -> abgelehnt (A-08h: kein Tabellenrecht)" "denied" "$LAST_RESULT"
+assert_guard_message "2a"
 
 if [[ "$MODE" != "without-migration" ]]; then
   run_sql "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away, event_format) VALUES ('$(uuid_for event:probe2b)', '$M_1', 'GOAL', 10, 1, 0, 1);"
-  if [[ "$MODE" == "without-guard" ]]; then
-    check "2b(Gegenprobe B, Guard weg): INSERT event_format=1 mit altem Typ -> jetzt erlaubt" "ok" "$LAST_RESULT"
-  else
-    check "2b. Helfer-INSERT event_format=1 mit altem Typ (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
-    assert_guard_message "2b"
-  fi
+  check "2b. Helfer-INSERT event_format=1 mit altem Typ (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
+  assert_guard_message "2b"
 else
   echo "SKIP  2b. ohne Migration: Spalte event_format existiert nicht -> kein sinnvoller Vergleich" >&2
 fi
@@ -464,31 +451,19 @@ fi
 # einer Engine-Zeile per Client-Rolle -> abgelehnt. Das war GENAU der C1-Umgehungsweg.
 if [[ "$MODE" != "without-migration" ]]; then
   run_sql "$U_OWNER" "UPDATE public.match_events SET event_format = 1 WHERE id = '$EB1';"
-  if [[ "$MODE" == "without-guard" ]]; then
-    check "2c(Gegenprobe B, C1): UPDATE Alt-Zeile event_format=1 -> jetzt erlaubt" "ok" "$LAST_RESULT"
-  else
-    check "2c. (C1-Fix) UPDATE Alt-Zeile auf event_format=1 (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
-    assert_guard_message "2c"
-  fi
+  check "2c. (C1-Fix) UPDATE Alt-Zeile auf event_format=1 (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
+  assert_guard_message "2c"
 
   run_sql "$U_OWNER" "UPDATE public.match_events SET type = 'CORRECTION' WHERE id = '$EB2';"
-  if [[ "$MODE" == "without-guard" ]]; then
-    check "2d(Gegenprobe B, C1): UPDATE Alt-Zeile type=CORRECTION -> jetzt erlaubt" "ok" "$LAST_RESULT"
-  else
-    check "2d. (C1-Fix) UPDATE Alt-Zeile auf type=CORRECTION (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
-    assert_guard_message "2d"
-  fi
+  check "2d. (C1-Fix) UPDATE Alt-Zeile auf type=CORRECTION (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
+  assert_guard_message "2d"
 
   # --- Probe 2e: I1-Fix (Ruling G2a) — Client-INSERT eines ALTEN Typs mit target_event_id gesetzt
   # (Wert ist eine tatsaechlich existierende Zeile -- EB3 -- die FK allein wuerde das durchlassen)
   # -> abgelehnt, weil ALLE Engine-Spalten NULL sein muessen.
   run_sql "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away, target_event_id) VALUES ('$(uuid_for event:probe2e)', '$M_1', 'NOTE', 10, 0, 0, '$EB3');"
-  if [[ "$MODE" == "without-guard" ]]; then
-    check "2e(Gegenprobe B, I1): INSERT Alt-Typ mit target_event_id -> jetzt erlaubt" "ok" "$LAST_RESULT"
-  else
-    check "2e. (I1-Fix) INSERT Alt-Typ mit target_event_id gesetzt (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
-    assert_guard_message "2e"
-  fi
+  check "2e. (I1-Fix) INSERT Alt-Typ mit target_event_id gesetzt (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
+  assert_guard_message "2e"
 else
   echo "SKIP  2c-2e. ohne Migration: Spalten/Guard existieren nicht -> kein sinnvoller Vergleich" >&2
 fi
@@ -520,26 +495,12 @@ fi
 # (ausser den in Ruling G2c erlaubten Spalten, hier NICHT betroffen: score_home ist keine davon).
 if [[ "$MODE" != "without-migration" ]]; then
   run_sql "$U_OWNER" "UPDATE public.match_events SET score_home = 9 WHERE id = '$E_DEFINER';"
-  if [[ "$MODE" == "without-guard" ]]; then
-    check "4a(Gegenprobe B): UPDATE auf Engine-Zeile -> jetzt erlaubt" "ok" "$LAST_RESULT"
-  else
-    check "4a. UPDATE auf Engine-Zeile (Eigentuemer, unerlaubte Spalte score_home) -> abgelehnt" "denied" "$LAST_RESULT"
-    assert_guard_message "4a"
-  fi
+  check "4a. UPDATE auf Engine-Zeile (Eigentuemer, unerlaubte Spalte score_home) -> abgelehnt" "denied" "$LAST_RESULT"
+  assert_guard_message "4a"
 
   run_sql "$U_OWNER" "DELETE FROM public.match_events WHERE id = '$E_DEFINER';"
-  if [[ "$MODE" == "without-guard" ]]; then
-    # Seit 20261004_101 (Spur B, @LZ-090/@SL-129) sperrt zusaetzlich die Beleg-Sperre
-    # match_events_protect_delete JEDES direkte Loeschen durch Client-Rollen. Ohne Guard muss die
-    # Ablehnung deshalb von DIESER Sperre kommen (nicht mehr vom Guard) -- das ist die Gegenprobe.
-    R4B_REASON="anders"
-    [[ "$LAST_RESULT" == "denied" ]] && grep -q "belegen den Anpfiff" <<<"$LAST_OUTPUT" \
-      && ! grep -qE 'append_match_events|Rechenfunktion' <<<"$LAST_OUTPUT" && R4B_REASON="beleg_sperre"
-    check "4b(Gegenprobe B): DELETE auf Engine-Zeile (direkt) -> ohne Guard nur noch von der Beleg-Sperre (20261004_101) abgelehnt" "beleg_sperre" "$R4B_REASON"
-  else
-    check "4b. DELETE auf Engine-Zeile (Eigentuemer, direkt) -> abgelehnt" "denied" "$LAST_RESULT"
-    assert_guard_message "4b"
-  fi
+  check "4b. DELETE auf Engine-Zeile (Eigentuemer, direkt) -> abgelehnt" "denied" "$LAST_RESULT"
+  assert_guard_message "4b"
 
   # 4c: direktes DELETE FROM matches ist wegen protect_matches_with_events (20260925_002) bereits
   # blockiert, BEVOR der neue Guard ueberhaupt zum Zug kaeme (Spiel hat match_events) -- dieses
@@ -627,12 +588,8 @@ SQL
 SELECT public.__test_insert_engine_event('$E_TEAMDEL_DIRECT', '$M_TEAMDEL', 'GOAL', 1, 0, '$TEAM_D');
 SQL
   run_sql "$U_OWNER" "UPDATE public.match_events SET team_id = NULL WHERE id = '$E_TEAMDEL_DIRECT';"
-  if [[ "$MODE" == "without-guard" ]]; then
-    check "4f3(Gegenprobe B): direktes team_id=NULL auf Engine-Zeile -> jetzt erlaubt" "ok" "$LAST_RESULT"
-  else
-    check "4f3. Direktes team_id=NULL auf Engine-Zeile (Tiefe 1, kein FK) -> abgelehnt" "denied" "$LAST_RESULT"
-    assert_guard_message "4f3"
-  fi
+  check "4f3. Direktes team_id=NULL auf Engine-Zeile (Tiefe 1, kein FK) -> abgelehnt" "denied" "$LAST_RESULT"
+  assert_guard_message "4f3"
 
   # --- Probe 4g: I2-Fix (Ruling G2c) — owner_id einer Engine-Zeile aendern (Proxy fuer
   # merge_user_data, siehe Kommentar an __test_update_engine_event_owner oben) -> erlaubt, TROTZ
@@ -679,18 +636,10 @@ SQL
   # FAELSCHLICH erlaubte Probe MUSS committen, sonst zeigt die Nachprobe 4h2 (separate Abfrage)
   # immer den Ausgangswert -- unabhaengig davon, ob der Guard tatsaechlich blockiert hat.
   run_sql_committed "$U_COLLAB" "UPDATE public.match_events SET is_public = true WHERE id = '$E_MR1';"
-  if [[ "$MODE" == "without-guard" ]]; then
-    check "4h(Gegenprobe B, MR1/G5): Collaborator UPDATE is_public auf Engine-Zeile -> jetzt erlaubt" "ok" "$LAST_RESULT"
-  else
-    check "4h. (MR1-Fix, Ruling G5) Collaborator UPDATE is_public direkt auf Engine-Zeile -> abgelehnt" "denied" "$LAST_RESULT"
-    assert_guard_message "4h"
-  fi
+  check "4h. (MR1-Fix, Ruling G5) Collaborator UPDATE is_public direkt auf Engine-Zeile -> abgelehnt" "denied" "$LAST_RESULT"
+  assert_guard_message "4h"
   IS_PUBLIC_AFTER_4H="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT is_public FROM public.match_events WHERE id = '$E_MR1';")"
-  if [[ "$MODE" == "without-guard" ]]; then
-    check "4h2. is_public tatsaechlich auf true gesetzt (ohne Guard)" "t" "$IS_PUBLIC_AFTER_4H"
-  else
-    check "4h2. is_public unveraendert (Guard hat abgelehnt)" "f" "$IS_PUBLIC_AFTER_4H"
-  fi
+  check "4h2. is_public unveraendert (abgelehnt, A-08h/MR1)" "f" "$IS_PUBLIC_AFTER_4H"
 
   # --- Probe 4i: Regression -- die Sichtbarkeits-Kaskade (cascade_tournament_visibility,
   # SECURITY DEFINER, current_user NICHT authenticated/anon) muss Engine-Zeilen WEITERHIN
@@ -723,11 +672,16 @@ SQL
 
 E_LEGACY="$(uuid_for event:legacy)"
 run_sql_committed "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away) VALUES ('$E_LEGACY', '$M_LEGACY', 'GOAL', 10, 1, 0);"
-check "5a. Helfer/Collaborator-INSERT alter Typ ohne event_format -> erlaubt" "ok" "$LAST_RESULT"
+check "5a. Helfer-INSERT alter Typ ohne event_format -> abgelehnt (A-08h, @FU-084)" "denied" "$LAST_RESULT"
+# Testzeile fuer 5b und 9 legt der Superuser an (Client-Schreibweg ist seit A-08h zu).
+docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 -q >/dev/null <<SQL
+INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away)
+VALUES ('$E_LEGACY', '$M_LEGACY', 'GOAL', 10, 1, 0) ON CONFLICT (id) DO NOTHING;
+SQL
 
 if [[ "$MODE" != "without-migration" ]]; then
   run_sql "$U_COLLAB" "UPDATE public.match_events SET score_home = 2 WHERE id = '$E_LEGACY';"
-  check "5b. correctEvents-UPDATE auf alte Zeile (event_format NULL, keine Engine-Spalte geaendert) -> erlaubt" "ok" "$LAST_RESULT"
+  check "5b. correctEvents-UPDATE auf alte Zeile -> abgelehnt (A-08h, @FU-085)" "denied" "$LAST_RESULT"
 else
   echo "SKIP  5b. ohne Migration: kein sinnvoller Unterschied (Alt-Pfad war nie betroffen)" >&2
 fi
@@ -839,8 +793,11 @@ if [[ "$MODE" != "without-migration" ]]; then
   check "9a2. Bestandszeilen EB1-EB3 haben KEIN seq IS NULL" "0" "$BESTAND_NULL_SEQ"
 
   E9A="$(uuid_for event:probe9a)"; E9B="$(uuid_for event:probe9b)"
-  run_sql_committed "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away) VALUES ('$E9A', '$M_LEGACY', 'FOUL', 20, 1, 0);"
-  run_sql_committed "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away) VALUES ('$E9B', '$M_LEGACY', 'FOUL', 21, 1, 0);"
+  # Testzeilen als Superuser (Client-INSERT ist seit A-08h abgelehnt, siehe 1/5a); geprueft wird seq.
+  docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 -q >/dev/null <<SQL
+INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away) VALUES ('$E9A', '$M_LEGACY', 'FOUL', 20, 1, 0);
+INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away) VALUES ('$E9B', '$M_LEGACY', 'FOUL', 21, 1, 0);
+SQL
   SEQ_A="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT seq FROM public.match_events WHERE id = '$E9A';")"
   SEQ_B="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT seq FROM public.match_events WHERE id = '$E9B';")"
   if [[ "$SEQ_B" -gt "$SEQ_A" ]]; then
