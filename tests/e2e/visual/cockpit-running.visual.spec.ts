@@ -54,15 +54,10 @@ test('Live-Cockpit: laufendes Spiel', async ({ page, seedIndexedDB }) => {
 
   await expect(page.getByTestId('score-home')).toContainText('2');
   await expect(page.getByTestId('score-away')).toContainText('1');
-  // Cockpit-Toasts (Spiel gestartet, Tor ...) schliessen sich bei laufender Spieluhr nicht von
-  // selbst (Timer wird bei jedem Uhr-Render neu gesetzt) -- per Schliessen-Knopf entfernen.
+  // Seit Aufgabe 2.3 gibt es im Cockpit keinen Toast-Stapel mehr: Bestätigungen stehen in der Meldezeile
+  // (`notice-line`, feste Höhe, im Fluss) und verschwinden nach 3 s von selbst, auch bei laufender Uhr.
   const closeButtons = page.getByRole('button', { name: '×', exact: true });
-  await expect(async () => {
-    while ((await closeButtons.count()) > 0) {
-      await closeButtons.first().click({ timeout: 2000 });
-    }
-    await expect(closeButtons).toHaveCount(0);
-  }).toPass({ timeout: 20000 });
+  await expect(closeButtons).toHaveCount(0);
   // Uhr nach dem Anpfiff um feste 320 s vorrücken (Referenzstand 04:40 Restzeit bei 10:00 Spielzeit)
   await page.clock.setFixedTime(new Date(FIXED_NOW.getTime() + 320_000));
   await expect(page.getByTestId('match-timer-display')).toHaveText('04:40');
