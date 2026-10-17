@@ -18,7 +18,7 @@ import {
   ValidationWarnings,
   SmartConfig,
 } from './components';
-import { MatchCockpitSettingsPanel } from '../../components/match-cockpit/MatchCockpitSettingsPanel';
+import { MatchCockpitSettingsPanel } from '../../components/match-settings/MatchCockpitSettingsPanel';
 
 interface Step2Props {
   formData: Partial<Tournament>;

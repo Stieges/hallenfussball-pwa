@@ -4,7 +4,7 @@
  * Tab-Navigation für Veranstalter:
  * 1. Spielplan - Editable Spielplan mit Ergebniseingabe
  * 2. Turnierleitung - Match Cockpit (Kampfgericht)
- * 3. Monitor - Große Zuschauer-Ansicht
+ * 3. Monitor - Konfigurator für die Hallenbildschirme
  */
 
 import { useState, useCallback } from 'react';
@@ -26,7 +26,6 @@ import { getTabFromPath, buildTournamentTabPath, TournamentTab } from '../featur
 import { ScheduleTab } from '../features/tournament-management/ScheduleTab';
 import { TabellenTab } from '../features/tournament-management/TabellenTab';
 import { ManagementTab } from '../features/tournament-management/ManagementTab';
-import { MonitorTab } from '../features/tournament-management/MonitorTab';
 import { SettingsTab } from '../features/tournament-management/SettingsTab';
 import { TeamsTab } from '../features/tournament-management/TeamsTab';
 import { MonitorsConfigTab } from '../features/tournament-management/MonitorsConfigTab';
@@ -358,7 +357,6 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           <TabButton label="Tabellen" isActive={activeTab === 'tabellen'} onClick={() => handleTabChange('tabellen')} />
           <TabButton label="Live" isActive={activeTab === 'management'} onClick={() => handleTabChange('management')} />
           <TabButton label="Monitor" isActive={activeTab === 'monitor'} onClick={() => handleTabChange('monitor')} />
-          <TabButton label="Monitore" isActive={activeTab === 'monitors'} onClick={() => handleTabChange('monitors')} />
           <TabButton label="Teams" isActive={activeTab === 'teams'} onClick={() => handleTabChange('teams')} />
           <TabButton label="Einstellungen" isActive={activeTab === 'settings'} onClick={() => handleTabChange('settings')} isDirty={isSettingsDirty} />
         </nav>
@@ -394,13 +392,6 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             onInitialMatchConsumed={() => setInitialMatchId(null)}
           />
         )}
-        {activeTab === 'monitor' && (
-          <MonitorTab
-            tournament={tournament}
-            schedule={schedule}
-            currentStandings={currentStandings}
-          />
-        )}
         {activeTab === 'teams' && (
           <TeamsTab
             tournament={tournament}
@@ -415,7 +406,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             onEditInWizard={onEditInWizard}
           />
         )}
-        {activeTab === 'monitors' && (
+        {activeTab === 'monitor' && (
           <MonitorsConfigTab
             tournament={tournament}
             onTournamentUpdate={handleAsyncTournamentUpdate}
@@ -478,16 +469,9 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         <BottomSheetItem
           icon={<Icons.Monitor size={20} color="currentColor" />}
           label="Monitor"
-          description="Großbildschirm-Ansicht"
+          description="Display-Konfiguration"
           onClick={() => handleMoreMenuSelect('monitor')}
           isActive={activeTab === 'monitor'}
-        />
-        <BottomSheetItem
-          icon={<Icons.Monitor size={20} color="currentColor" />}
-          label="Monitore"
-          description="Display-Konfiguration"
-          onClick={() => handleMoreMenuSelect('monitors')}
-          isActive={activeTab === 'monitors'}
         />
       </BottomSheet>
     </div>

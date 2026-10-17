@@ -8,9 +8,6 @@
 export { LiveCockpit } from './LiveCockpit';
 export { default } from './LiveCockpit';
 
-// Backwards compatibility alias (deprecated - use LiveCockpit instead)
-export { LiveCockpit as LiveCockpitMockup } from './LiveCockpit';
-
 // Export types
 export type {
   LiveCockpitProps,

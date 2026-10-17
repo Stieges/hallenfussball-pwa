@@ -29,11 +29,6 @@ type Zaehler = 'marker' | 'scrims';
  * Abdunkelung in der Datei wird gezählt. Jede Ausnahme braucht einen Grund; die Datei muss existieren.
  */
 const AUSNAHMEN: Record<string, { zaehler: Zaehler; erlaubt: number; grund: string }> = {
-  'components/live-cockpit/components/OverflowMenu/index.tsx': {
-    zaehler: 'scrims',
-    erlaubt: 2,
-    grund: 'Aufklappmenü (kein Modal, keine Fokusfalle): fixe Fläche und Klick-Fänger enthalten Overlay-Farbe, sind aber keine Abdunkelung eines Dialogs.',
-  },
   'features/auth/components/SetPasswordScreen.tsx': {
     zaehler: 'scrims',
     erlaubt: 1,
@@ -118,23 +113,10 @@ describe('@OB-055 Wächter – Ausnahmeliste', () => {
   });
 
   it('Gegenbeispiel: eine Ausnahme gilt nur für ihren Zähler und nur bis zur erlaubten Zahl', () => {
-    const menu = join(SRC, 'components/live-cockpit/components/OverflowMenu/index.tsx');
-    expect(abzugAusnahme(menu, 'scrims', 2)).toBe(0);
-    expect(abzugAusnahme(menu, 'scrims', 3)).toBe(1);
-    expect(abzugAusnahme(menu, 'marker', 1)).toBe(1);
     const popover = join(SRC, 'features/collaboration/components/SyncFailedList.tsx');
     expect(abzugAusnahme(popover, 'marker', 1)).toBe(0);
     expect(abzugAusnahme(popover, 'marker', 2)).toBe(1);
     expect(abzugAusnahme(popover, 'scrims', 1)).toBe(1);
-    // Ein Dialog-Marker im Menü würde gezählt (Mutation: role="dialog" aria-modal="true" im Menü).
-    expect(countDialogMarkers(`${readFileSync(menu, 'utf8')}\n<div role="dialog" aria-modal="true" />`)).toBeGreaterThan(
-      countDialogMarkers(readFileSync(menu, 'utf8')),
-    );
-  });
-
-  it('Gegenbeispiel: ohne die Ausnahme würde das Menü als Abdunkelung gezählt', () => {
-    const menu = readFileSync(join(SRC, 'components/live-cockpit/components/OverflowMenu/index.tsx'), 'utf8');
-    expect(countScrims(menu)).toBeGreaterThan(0);
   });
 
   it('Die erlaubten Marker der Ausnahmedateien stimmen mit dem Stand überein (nicht mehr, nicht weniger)', () => {
@@ -208,25 +190,18 @@ describe('T1 Dialogbreiten kommen nur aus dialogWidths', () => {
     'features/auth/components/RoleChangeDialog.tsx',
     'features/auth/components/TransferOwnershipDialog.tsx',
     'components/ui/LogoUploadDialog.tsx',
-    'components/match-cockpit/PostMatchModal.tsx',
     'features/tournament-management/MonitorEditor.tsx',
     'features/tournament-management/TeamsTab.tsx',
     // B-43b2: Cockpit- und Match-Cockpit-Dialoge
     'components/live-cockpit/components/Dialogs/CardDialog.tsx',
     'components/live-cockpit/components/Dialogs/EventEditDialog.tsx',
     'components/live-cockpit/components/Dialogs/GoalScorerDialog.tsx',
-    'components/live-cockpit/components/Dialogs/HalftimeResetDialog.tsx',
-    'components/live-cockpit/components/Dialogs/RestartConfirmDialog.tsx',
     'components/live-cockpit/components/Dialogs/SettingsDialog.tsx',
     'components/live-cockpit/components/Dialogs/SubstitutionDialog.tsx',
     'components/live-cockpit/components/Dialogs/TimeAdjustDialog.tsx',
     'components/live-cockpit/components/Dialogs/TimePenaltyDialog.tsx',
     'components/live-cockpit/components/Tiebreaker/PenaltyShootoutDialog.tsx',
     'components/live-cockpit/components/Tiebreaker/TiebreakerBanner.tsx',
-    'components/live-cockpit/components/ScoreEditDialog/index.tsx',
-    'components/match-cockpit/EditScoreDialog.tsx',
-    'components/match-cockpit/EditTimeDialog.tsx',
-    'components/match-cockpit/PenaltyShootoutDialog.tsx',
     // B-43b3: Anmeldung, Spielbericht, Zuschauer, Schedule-Editor
     'features/auth/components/LoginDialogs.tsx',
     'features/auth/components/LoginScreen.tsx',

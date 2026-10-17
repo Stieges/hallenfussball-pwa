@@ -12,19 +12,12 @@ import userEvent from '@testing-library/user-event';
 import { CardDialog } from '../components/Dialogs/CardDialog';
 import { EventEditDialog } from '../components/Dialogs/EventEditDialog';
 import { GoalScorerDialog } from '../components/Dialogs/GoalScorerDialog';
-import { HalftimeResetDialog } from '../components/Dialogs/HalftimeResetDialog';
-import { RestartConfirmDialog } from '../components/Dialogs/RestartConfirmDialog';
 import { SettingsDialog } from '../components/Dialogs/SettingsDialog';
 import { SubstitutionDialog } from '../components/Dialogs/SubstitutionDialog';
 import { TimeAdjustDialog } from '../components/Dialogs/TimeAdjustDialog';
 import { TimePenaltyDialog } from '../components/Dialogs/TimePenaltyDialog';
 import { PenaltyShootoutDialog as LivePenaltyShootoutDialog } from '../components/Tiebreaker/PenaltyShootoutDialog';
 import { TiebreakerBanner } from '../components/Tiebreaker/TiebreakerBanner';
-import { ScoreEditDialog } from '../components/ScoreEditDialog';
-import { EditScoreDialog } from '../../match-cockpit/EditScoreDialog';
-import { EditTimeDialog } from '../../match-cockpit/EditTimeDialog';
-import { PenaltyShootoutDialog as MatchPenaltyShootoutDialog } from '../../match-cockpit/PenaltyShootoutDialog';
-import type { LiveMatch } from '../../match-cockpit/MatchCockpit';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, type EditableMatchEvent } from '../../../types/tournament';
 import { measurePanelContrast } from '../../../test/dialogContrast';
 import { isOpaque, resolveToken, type ThemeName } from '../../../test/contrast';
@@ -35,12 +28,6 @@ const home = { id: 'h', name: 'VfB Ufer' };
 const away = { id: 'a', name: 'SC Nord' };
 
 const editableEvent: EditableMatchEvent = { id: 'e1', type: 'GOAL', matchMinute: 3.5, teamId: 'h', incomplete: true };
-const liveMatch = {
-  id: 'm1', number: 1, phaseLabel: 'Finale', fieldId: 'f1', scheduledKickoff: '2026-10-01T10:00:00.000Z',
-  durationSeconds: 600, homeTeam: home, awayTeam: away, homeScore: 1, awayScore: 1, status: 'finished',
-  elapsedSeconds: 600, events: [], penaltyScoreA: 0, penaltyScoreB: 0,
-} as unknown as LiveMatch;
-
 interface Kind {
   name: string;
   mount: () => Promise<void> | void;
@@ -50,8 +37,6 @@ const KINDS: Kind[] = [
   { name: 'CardDialog', mount: () => void render(<CardDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
   { name: 'EventEditDialog', mount: () => void render(<EventEditDialog isOpen onClose={noop} event={editableEvent} homeTeam={home} awayTeam={away} onUpdate={noop} onDelete={noop} />) },
   { name: 'GoalScorerDialog', mount: () => void render(<GoalScorerDialog isOpen onClose={noop} onConfirm={noop} teamName="VfB Ufer" />) },
-  { name: 'HalftimeResetDialog', mount: () => void render(<HalftimeResetDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} homeFouls={2} awayFouls={3} currentHalf={1} />) },
-  { name: 'RestartConfirmDialog', mount: () => void render(<RestartConfirmDialog isOpen onClose={noop} onConfirm={noop} homeTeam="VfB Ufer" awayTeam="SC Nord" homeScore={1} awayScore={0} elapsedTime="04:12" />) },
   { name: 'SettingsDialog', mount: () => void render(<SettingsDialog isOpen onClose={noop} settings={DEFAULT_MATCH_COCKPIT_SETTINGS} onChange={noop} tournamentId="t1" />) },
   { name: 'SubstitutionDialog', mount: () => void render(<SubstitutionDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
   { name: 'SubstitutionDialog (Team gewählt)', mount: () => void render(<SubstitutionDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} preselectedTeamSide="home" />) },
@@ -59,10 +44,6 @@ const KINDS: Kind[] = [
   { name: 'TimePenaltyDialog', mount: () => void render(<TimePenaltyDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
   { name: 'Tiebreaker/PenaltyShootoutDialog', mount: () => void render(<LivePenaltyShootoutDialog homeTeamName="VfB Ufer" awayTeamName="SC Nord" onRecordShot={noop} onFinish={noop} onCancel={noop} />) },
   { name: 'Tiebreaker/TiebreakerBanner', mount: () => void render(<TiebreakerBanner homeTeamName="VfB Ufer" awayTeamName="SC Nord" score={2} onStartPenaltyShootout={noop} onEndAsDraw={noop} />) },
-  { name: 'ScoreEditDialog', mount: () => void render(<ScoreEditDialog isOpen onClose={noop} onConfirm={noop} currentHomeScore={1} currentAwayScore={0} homeTeamName="VfB Ufer" awayTeamName="SC Nord" />) },
-  { name: 'match-cockpit/EditScoreDialog', mount: () => void render(<EditScoreDialog homeTeamName="VfB Ufer" awayTeamName="SC Nord" currentHomeScore={1} currentAwayScore={0} onSubmit={noop} onCancel={noop} />) },
-  { name: 'match-cockpit/EditTimeDialog', mount: () => void render(<EditTimeDialog currentElapsedSeconds={125} durationSeconds={600} onSubmit={noop} onCancel={noop} />) },
-  { name: 'match-cockpit/PenaltyShootoutDialog', mount: () => void render(<MatchPenaltyShootoutDialog match={liveMatch} onSubmit={noop} onCancel={noop} />) },
 ];
 
 function panelOf(): HTMLElement {
@@ -218,26 +199,16 @@ describe('@OB-055 B-43b2 – Verhalten wie vor der Umstellung', () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
-  it('EditScoreDialog: Esc ruft onCancel genau einmal auf, Fokus im Dialog, Abdunkelung bricht ab', () => {
-    const onCancel = vi.fn();
-    render(<EditScoreDialog homeTeamName="A" awayTeamName="B" currentHomeScore={1} currentAwayScore={0} onSubmit={noop} onCancel={onCancel} />);
-    expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true);
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(onCancel).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole('dialog').parentElement!);
-    expect(onCancel).toHaveBeenCalledTimes(2);
-  });
-
   it('Gegenbeispiel: nach dem Schließen sperrt kein Dialog mehr den Hintergrund', () => {
-    const { unmount } = render(<EditScoreDialog homeTeamName="A" awayTeamName="B" currentHomeScore={1} currentAwayScore={0} onSubmit={noop} onCancel={noop} />);
+    const { unmount } = render(<TimePenaltyDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />);
     expect(document.body.style.overflow).toBe('hidden');
     unmount();
     expect(document.body.style.overflow).toBe('');
   });
 
   it('verschachtelt: ein Cockpit-Dialog über einem zweiten lässt den Hintergrund gesperrt, bis der letzte schließt', () => {
-    const a = render(<EditScoreDialog homeTeamName="A" awayTeamName="B" currentHomeScore={1} currentAwayScore={0} onSubmit={noop} onCancel={noop} />);
-    const b = render(<EditTimeDialog currentElapsedSeconds={5} durationSeconds={600} onSubmit={noop} onCancel={noop} />);
+    const a = render(<TimePenaltyDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />);
+    const b = render(<TimeAdjustDialog isOpen onClose={noop} onConfirm={noop} currentTimeSeconds={5} matchDurationMinutes={10} />);
     b.unmount();
     expect(document.body.style.overflow).toBe('hidden');
     a.unmount();

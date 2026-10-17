@@ -8,7 +8,7 @@
  */
 
 import React, { type CSSProperties, useCallback, useState } from 'react';
-import { cssVars } from '../../design-tokens';
+import { cssVars } from '../../../design-tokens';
 
 export interface AudioActivationBannerProps {
   /** Whether to show the banner */

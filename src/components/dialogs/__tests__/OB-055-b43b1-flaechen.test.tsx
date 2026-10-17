@@ -14,7 +14,6 @@ import { RoleChangeDialog } from '../../../features/auth/components/RoleChangeDi
 import { TransferOwnershipDialog } from '../../../features/auth/components/TransferOwnershipDialog';
 import { SyncFailedList } from '../../../features/collaboration/components/SyncFailedList';
 import { LogoUploadDialog } from '../../ui/LogoUploadDialog';
-import { PostMatchModal } from '../../match-cockpit/PostMatchModal';
 import { MonitorEditor } from '../../../features/tournament-management/MonitorEditor';
 import { TeamsTab } from '../../../features/tournament-management/TeamsTab';
 import type { Tournament } from '../../../types/tournament';
@@ -120,17 +119,6 @@ const KINDS: Kind[] = [
       ),
   },
   { name: 'LogoUploadDialog', mount: () => void render(<LogoUploadDialog teamName="VfB Ufer" onSave={noop} onCancel={noop} />) },
-  {
-    name: 'PostMatchModal',
-    mount: () =>
-      void render(
-        <PostMatchModal
-          isOpen homeTeamName="VfB Ufer" awayTeamName="SC Nord" homeScore={2} awayScore={1} matchLabel="Spiel 4"
-          autoAdvanceEnabled={false} autoAdvanceSeconds={10} hasNextMatch
-          onLoadNextMatch={noop} onStay={noop} onEditScore={noop} onReopenMatch={noop}
-        />,
-      ),
-  },
   {
     name: 'MonitorEditor',
     mount: () => void render(<MonitorEditor tournament={tournament} monitorId="monitor-1" onTournamentUpdate={noop} onClose={noop} />),
