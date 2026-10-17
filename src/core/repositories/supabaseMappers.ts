@@ -31,6 +31,7 @@ import { RepositoryError } from '../errors';
 import { SlotSourceSchema, TeamIdSchema, type MatchSlot, type SlotSource } from '../models/schemas/MatchSlotSchema';
 import { pendingSlot, slotSource, slotTeamId, teamSlot } from '../models/matchSlot';
 import { originFromRow, originToColumns, type MatchOriginColumns } from './matchOriginColumns';
+import { kitFromRow } from './matchKitRow';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -169,7 +170,7 @@ export function mapMatchFromSupabase(row: MatchRow): Match {
     slot: row.slot ?? undefined,
     slotA,
     slotB,
-    ...originFromRow(row), // A-36a: Herkunft des Platzes
+    ...originFromRow(row), ...kitFromRow(row), // A-36a: Herkunft des Platzes; A-30a: getragene Farben (nur lesen)
     scoreA: row.score_a ?? undefined,
     scoreB: row.score_b ?? undefined,
     group: row.group_letter ?? undefined,
