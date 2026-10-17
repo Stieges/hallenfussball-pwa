@@ -13,7 +13,10 @@ describe('cockpitPhaseOf – Zustands-Matrix (Spec § 6)', () => {
     ['@SL-082 Golden Goal läuft', { status: 'running', phase: 'overtime', tiebreakMode: 'goldenGoal' }, 'laeuft', 'goldenGoal'],
     ['@SL-082 Golden Goal nach dem Tor: abgepfiffen', { status: 'finished', phase: 'overtime', tiebreakMode: 'goldenGoal' }, 'abgepfiffen', 'goldenGoal'],
     ['@SL-053 Strafstoß eingestellt, 1:1 bei Abpfiff: Strafstoßschießen beginnt', { status: 'shootout', phase: 'shootout' }, 'strafstoss', 'regulaer'],
-    ['@SL-145 keine Art eingestellt: Entscheidung offen', { status: 'decision_pending' }, 'entscheidung', 'regulaer'],
+    ['@SL-145 keine Art eingestellt, 1:1 bei Abpfiff: Verlängerung beginnt', { status: 'running', phase: 'overtime', tiebreakMode: null }, 'laeuft', 'verlaengerung'],
+    ['@SL-104 Strafstoß, FC Nord führt nach je 4 Schüssen 4:2: kein Angebot durch den Zustand (Schussangebot in 3.6)', { status: 'shootout', phase: 'shootout', shootout: { kicks: { 'fc-nord': 4, 'sv-sued': 4 }, goals: { 'fc-nord': 4, 'sv-sued': 2 }, winner: 'fc-nord', nextTeam: null } }, 'strafstoss', 'regulaer'],
+    ['Engine-Status decision_pending (Spec § 6, ohne Kennung): Entscheidung offen', { status: 'decision_pending' }, 'entscheidung', 'regulaer'],
+    ['ausgelassenes Spiel (Matrix-Lücke, Spec § 6 ohne Zeile): wie abgepfiffen', { status: 'skipped' }, 'abgepfiffen', 'regulaer'],
     ['Abgepfiffen', { status: 'finished' }, 'abgepfiffen', 'regulaer'],
   ])('%s', (_name, view, zustand, art) => {
     const phase = cockpitPhaseOf({ view: makePhaseView(view), matchStatus: 'RUNNING', leer: null });
