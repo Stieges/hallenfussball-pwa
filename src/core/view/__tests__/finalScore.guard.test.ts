@@ -36,6 +36,7 @@ const ALLOWED: Readonly<Record<string, string>> = {
   'hooks/useTournamentManager.ts': 'Rohdaten → Match',
   // Cockpit: bis Cockpit 4.3 (Neubau), danach nur noch matchFinalScore
   'components/live-cockpit/LiveCockpit.tsx': 'Cockpit, bis Cockpit 4.3',
+  'components/live-cockpit/types.ts': 'Typ LiveMatch (Cockpit-Form, deklariert nur; B-06 aus match-cockpit/MatchCockpit.tsx umgezogen), bis Cockpit 4.3',
   'components/match-cockpit/MatchCockpit.tsx': 'Cockpit, bis Cockpit 4.3',
   'components/match-cockpit/PenaltyShootoutDialog.tsx': 'Cockpit, bis Cockpit 4.3',
   'components/match-cockpit/TiebreakerBanner.tsx': 'Cockpit, bis Cockpit 4.3',

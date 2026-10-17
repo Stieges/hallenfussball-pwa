@@ -8,7 +8,7 @@
  *
  * Echter Bedienweg: Oberfläche → Logik → Speichern. Die Turnierleitung ändert
  * die Regel in den Einstellungen (UI-Ort:
- * src/components/match-cockpit/MatchCockpitSettingsPanel.tsx, Zeile
+ * src/components/match-settings/MatchCockpitSettingsPanel.tsx, Zeile
  * `settings-time-penalty-duration`) → echte Speicherstrecke
  * (TournamentService.updateTournament → repository.save).
  * Cockpit-Seite auf dem Engine-Weg (A-08d1): Einrichten ohne Anpfiff, Anpfiff = MATCH_START mit
@@ -20,7 +20,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { useState } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { MatchCockpitSettingsPanel } from '../../../components/match-cockpit/MatchCockpitSettingsPanel';
+import { MatchCockpitSettingsPanel } from '../../../components/match-settings/MatchCockpitSettingsPanel';
 import { TournamentService } from '../../../core/services/TournamentService';
 import {
   DEFAULT_MATCH_COCKPIT_SETTINGS,

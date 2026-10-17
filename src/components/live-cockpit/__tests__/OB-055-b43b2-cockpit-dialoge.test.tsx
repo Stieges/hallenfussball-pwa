@@ -24,7 +24,7 @@ import { ScoreEditDialog } from '../components/ScoreEditDialog';
 import { EditScoreDialog } from '../../match-cockpit/EditScoreDialog';
 import { EditTimeDialog } from '../../match-cockpit/EditTimeDialog';
 import { PenaltyShootoutDialog as MatchPenaltyShootoutDialog } from '../../match-cockpit/PenaltyShootoutDialog';
-import type { LiveMatch } from '../../match-cockpit/MatchCockpit';
+import type { LiveMatch } from '../types';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, type EditableMatchEvent } from '../../../types/tournament';
 import { measurePanelContrast } from '../../../test/dialogContrast';
 import { isOpaque, resolveToken, type ThemeName } from '../../../test/contrast';

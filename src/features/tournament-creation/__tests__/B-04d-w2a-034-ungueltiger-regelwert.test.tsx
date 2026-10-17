@@ -10,7 +10,7 @@
  * UI-Orte:
  *  - src/features/tournament-creation/components/PointSystemPicker.tsx
  *    (Punkteschema, Felder `point-system-win/-draw/-loss`)
- *  - src/components/match-cockpit/MatchCockpitSettingsPanel.tsx
+ *  - src/components/match-settings/MatchCockpitSettingsPanel.tsx
  *    (Schützenzahl, Feld `settings-penalty-shooters`)
  * Beim Verlassen des Feldes (onBlur) prüft die App den Wert: ungültig →
  * Hinweis mit dem gültigen Bereich am Feld (i18n DE/EN), der Wert wird nicht
@@ -22,7 +22,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { useState } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PointSystemPicker } from '../components/PointSystemPicker';
-import { MatchCockpitSettingsPanel } from '../../../components/match-cockpit/MatchCockpitSettingsPanel';
+import { MatchCockpitSettingsPanel } from '../../../components/match-settings/MatchCockpitSettingsPanel';
 import {
   DEFAULT_MATCH_COCKPIT_SETTINGS,
   type MatchCockpitSettings,

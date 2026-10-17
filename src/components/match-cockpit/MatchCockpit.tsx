@@ -14,91 +14,13 @@ import { cssVars } from '../../design-tokens'
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { CurrentMatchPanel } from './CurrentMatchPanel';
 import { UpcomingMatchesSidebar } from './UpcomingMatchesSidebar';
-import type { RuntimeMatchEvent } from '../../types/tournament';
+import type { MatchStatus, Team, MatchEvent, MatchPlayPhase, LiveMatch, MatchSummary } from '../live-cockpit/types';
 
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
 
-export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
-
-export interface Team {
-  id: string;
-  name: string;
-  logo?: {
-    type: 'url' | 'base64' | 'initials';
-    value: string;
-    backgroundColor?: string;
-    uploadedAt?: string;
-    uploadedBy?: 'organizer' | 'trainer';
-  };
-  colors?: {
-    primary: string;
-    secondary?: string;
-  };
-}
-
-// Re-export RuntimeMatchEvent as MatchEvent for backwards compatibility
-export type MatchEvent = RuntimeMatchEvent;
-
-/** Current phase of play within a match */
-export type MatchPlayPhase = 'regular' | 'overtime' | 'goldenGoal' | 'penalty';
-
-export interface LiveMatch {
-  id: string;
-  number: number;
-  phaseLabel: string;
-  fieldId: string;
-  scheduledKickoff: string;
-  durationSeconds: number;
-  refereeName?: string;
-  homeTeam: Team;
-  awayTeam: Team;
-  homeScore: number;
-  awayScore: number;
-  status: MatchStatus;
-  elapsedSeconds: number;
-  events: MatchEvent[];
-  /** C3b-1 (G6): zurückgenommene Einträge eines Engine-Spiels, nur für die Protokoll-Anzeige. */
-  retractedEvents?: MatchEvent[];
-
-  // DEF-005: Timer persistence fields
-  timerStartTime?: string;
-  timerPausedAt?: string;
-  timerElapsedSeconds?: number;
-
-  // Tournament phase (groupStage, semifinal, final, etc.)
-  tournamentPhase?: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final';
-
-  // Tiebreaker fields for finals matches
-  playPhase?: MatchPlayPhase;           // Current phase: regular, overtime, goldenGoal, penalty
-  overtimeScoreA?: number;              // Goals in overtime (home)
-  overtimeScoreB?: number;              // Goals in overtime (away)
-  overtimeDurationSeconds?: number;     // Duration of overtime in seconds
-  overtimeElapsedSeconds?: number;      // Elapsed time in overtime
-  penaltyScoreA?: number;               // Penalty score (home)
-  penaltyScoreB?: number;               // Penalty score (away)
-  tiebreakerMode?: 'shootout' | 'overtime-then-shootout' | 'goldenGoal'; // From tournament config
-  awaitingTiebreakerChoice?: boolean;   // True when match ended in draw, waiting for tiebreaker
-
-  // Zeitstrafe-Dauer in Sekunden, beim Anpfiff aus der Spielregel übernommen (@W2A-029)
-  timePenaltyDurationSeconds?: number;
-
-  // Match Cockpit Pro: Per-match setting overrides
-  cockpitOverrides?: import('../../types/tournament').MatchCockpitOverrides;
-}
-
-export interface MatchSummary {
-  id: string;
-  number: number;
-  phaseLabel: string;
-  scheduledKickoff: string;
-  fieldId: string;
-  homeTeam: Team;
-  awayTeam: Team;
-  /** Tournament phase for detecting phase changes (group → finals) */
-  tournamentPhase?: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final';
-}
+export type { MatchStatus, Team, MatchEvent, MatchPlayPhase, LiveMatch, MatchSummary };
 
 export interface MatchCockpitProps {
   fieldName: string;

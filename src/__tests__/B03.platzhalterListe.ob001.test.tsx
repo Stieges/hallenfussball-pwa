@@ -163,7 +163,7 @@ const OB001: PlatzhalterFall[] = [
     ort: 'das Admin Center, Match Cockpit',
     platzhalter: 'den Schalter „Netto-Zeit-Warnung“ und die Auswahl „Verzögerung“',
     pruefen: async () => {
-      const { MatchCockpitSettingsPanel } = await import('../components/match-cockpit/MatchCockpitSettingsPanel');
+      const { MatchCockpitSettingsPanel } = await import('../components/match-settings/MatchCockpitSettingsPanel');
       const { container } = render(
         <MatchCockpitSettingsPanel
           settings={{} as ComponentProps<typeof MatchCockpitSettingsPanel>['settings']}
@@ -181,7 +181,7 @@ const OB001: PlatzhalterFall[] = [
     ort: 'den zweiten Schritt beim Anlegen',
     platzhalter: 'den Schalter „Netto-Zeit-Warnung“ und die Auswahl „Verzögerung“',
     pruefen: async () => {
-      const { MatchCockpitSettingsPanel } = await import('../components/match-cockpit/MatchCockpitSettingsPanel');
+      const { MatchCockpitSettingsPanel } = await import('../components/match-settings/MatchCockpitSettingsPanel');
       const { container } = render(
         <MatchCockpitSettingsPanel
           settings={{} as ComponentProps<typeof MatchCockpitSettingsPanel>['settings']}
