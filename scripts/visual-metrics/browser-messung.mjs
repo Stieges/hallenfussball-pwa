@@ -274,6 +274,16 @@ export function messeSeite(opt) {
       if ((s.hyphens || s.webkitHyphens) === 'auto' && !el.closest(FLIESSTEXT)) melde('text.hyphens', el, 'hyphens: auto ausserhalb Fliesstext', 'manual oder none')
     }
   }
+  if (hat('dialogfuss.taste-zeilen')) {
+    // Tasten im Dialog-Fuss (Baustein DialogActions, Markierung data-dialog-actions): hoechstens eine Zeile je Beschriftung
+    for (const el of schicht.querySelectorAll('[data-dialog-actions] button, [data-dialog-actions] a, [data-dialog-actions] [role=button]')) {
+      if (!sichtbar(el)) continue
+      const rg = document.createRange()
+      rg.selectNodeContents(el)
+      const z = zeilenTops([...rg.getClientRects()].filter((r) => r.width > 0.5))
+      if (z > g['dialogfuss.taste-zeilen']) melde('dialogfuss.taste-zeilen', el, `${z} Zeilen`, `<= ${g['dialogfuss.taste-zeilen']} Zeile`)
+    }
+  }
   if (hat('titel.wortbruch')) {
     const gepr = new Set()
     for (const el of schicht.querySelectorAll(KEIN_BRUCH)) {

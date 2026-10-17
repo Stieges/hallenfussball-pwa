@@ -1,11 +1,10 @@
 /**
- * Knopfleiste des PDF-Dialogs (B-28 C8): je Schritt „Abbrechen“ und der Hauptknopf (≥ 56 px). Wahl: „Als PDF speichern“,
+ * Tasten des PDF-Dialogs (B-28 C8, @OB-061): je Schritt „Abbrechen“ und die Haupttaste; Anordnung und Größe kommen vom Baustein `DialogActions`. Wahl: „Als PDF speichern“,
  * beim Bauen „Wird erstellt …“, nach einem Fehler „Erneut versuchen“; Hinweis: „Trotzdem speichern“; danach „Schließen“.
  */
-import { useEffect, useRef, type CSSProperties } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../design-tokens';
-import { Button } from '../../ui/Button';
+import { DialogActions } from '../../ui/molecules';
 import type { PdfStep } from './usePdfExport';
 
 export interface ExportDialogActionsProps {
@@ -21,8 +20,6 @@ export interface ExportDialogActionsProps {
   onClose: () => void;
 }
 
-const row: CSSProperties = { display: 'flex', gap: cssVars.spacing.sm, marginTop: cssVars.spacing.lg };
-
 export const ExportDialogActions = ({ step, busy, failed, onCancel, onSave, onBack, onSaveAnyway, onClose }: ExportDialogActionsProps) => {
   const { t } = useTranslation('tournament');
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -33,26 +30,20 @@ export const ExportDialogActions = ({ step, busy, failed, onCancel, onSave, onBa
     }
   }, [step]);
   if (step === 'done') {
-    return (
-      <div style={row}>
-        <Button ref={closeRef} variant="primary" size="lg" fullWidth onClick={onClose} data-testid="pdf-close">{t('pdfExport.close')}</Button>
-      </div>
-    );
+    return <DialogActions primary={{ label: t('pdfExport.close'), onClick: onClose, buttonRef: closeRef, 'data-testid': 'pdf-close' }} />;
   }
   if (step === 'hint') {
     return (
-      <div style={row}>
-        <Button variant="secondary" size="lg" fullWidth onClick={onBack} data-testid="pdf-back">{t('pdfExport.cancel')}</Button>
-        <Button variant="primary" size="lg" fullWidth onClick={onSaveAnyway} data-testid="pdf-save-anyway">{t('pdfExport.saveAnyway')}</Button>
-      </div>
+      <DialogActions
+        secondary={[{ label: t('pdfExport.cancel'), onClick: onBack, 'data-testid': 'pdf-back' }]}
+        primary={{ label: t('pdfExport.saveAnyway'), onClick: onSaveAnyway, 'data-testid': 'pdf-save-anyway' }}
+      />
     );
   }
   return (
-    <div style={row}>
-      <Button variant="secondary" size="lg" fullWidth onClick={onCancel} disabled={busy} data-testid="pdf-cancel">{t('pdfExport.cancel')}</Button>
-      <Button variant="primary" size="lg" fullWidth onClick={onSave} disabled={busy} data-testid="pdf-save">
-        {busy ? t('pdfExport.creating') : failed ? t('pdfExport.retry') : t('pdfExport.save')}
-      </Button>
-    </div>
+    <DialogActions
+      secondary={[{ label: t('pdfExport.cancel'), onClick: onCancel, disabled: busy, 'data-testid': 'pdf-cancel' }]}
+      primary={{ label: busy ? t('pdfExport.creating') : failed ? t('pdfExport.retry') : t('pdfExport.save'), onClick: onSave, disabled: busy, 'data-testid': 'pdf-save' }}
+    />
   );
 };
