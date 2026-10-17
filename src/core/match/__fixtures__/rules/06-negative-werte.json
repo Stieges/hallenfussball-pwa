@@ -22,7 +22,7 @@
     "sectionSeconds": 0,
     "breakSeconds": 0,
     "knockout": false,
-    "tiebreak": "shootout",
+    "tiebreak": "overtime-then-shootout",
     "overtimeSeconds": 0,
     "shootersPerTeam": 0,
     "suddenDeathAfter": 0,

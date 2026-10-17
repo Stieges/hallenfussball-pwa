@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getClockDisplay,
   DEFAULT_CLOCK_MODE,
-  SCHLUSSPHASE_SEKUNDEN,
+  DEFAULT_FINAL_PHASE_MINUTES,
   type ClockMode,
 } from '../clockDisplay';
 
@@ -60,7 +60,7 @@ describe('@ZM-137 Uhr-Art × Zeitpunkte (Tabelle)', () => {
   });
 
   it('Schlussphase ist vorbelegt eine Minute (@SL-003 / Uhr-Art-Vorgabe)', () => {
-    expect(SCHLUSSPHASE_SEKUNDEN).toBe(60);
+    expect(DEFAULT_FINAL_PHASE_MINUTES).toBe(1);
     expect(DEFAULT_CLOCK_MODE).toBe('durchlaufend-letzte-minute-angehalten');
   });
 
@@ -85,8 +85,8 @@ describe('M1 Abschnitte, Verlängerung, Schlussphase-Länge (@SL-069, @SL-136, @
   });
 
   it('@SL-136: Schlussphase 2 Minuten, Abschnitt 6 Minuten: 3:59 kein Hinweis, 4:00 Hervorhebung', () => {
-    const vor = getClockDisplay({ gespielt: 239, abschnittSekunden: 360, uhrArt: 'durchlaufend-letzte-minute-angehalten', angehalten: false, schlussphaseSekunden: 120, abschnitt: 2, abschnitteGesamt: 2 });
-    const ab = getClockDisplay({ gespielt: 240, abschnittSekunden: 360, uhrArt: 'durchlaufend-letzte-minute-angehalten', angehalten: false, schlussphaseSekunden: 120, abschnitt: 2, abschnitteGesamt: 2 });
+    const vor = getClockDisplay({ gespielt: 239, abschnittSekunden: 360, uhrArt: 'durchlaufend-letzte-minute-angehalten', angehalten: false, schlussphaseMinuten: 2, abschnitt: 2, abschnitteGesamt: 2 });
+    const ab = getClockDisplay({ gespielt: 240, abschnittSekunden: 360, uhrArt: 'durchlaufend-letzte-minute-angehalten', angehalten: false, schlussphaseMinuten: 2, abschnitt: 2, abschnitteGesamt: 2 });
     expect(vor.hinweisUhrHaelt).toBe(false);
     expect(ab.hervorhebung).toBe(true);
   });

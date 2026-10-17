@@ -12,7 +12,8 @@
  */
 import { findTransition, isActorAllowed } from './transitions';
 import { applyCorrection, applyResultEntry } from './handlers/correction';
-import { adjustClock, resumeClock, startClock, stopClock } from './handlers/clock';
+import { EMPTY_UNDO_INFO, applyClockAdjust, resumeClock, startClock, stopClock } from './handlers/clock';
+import { applyReopen } from './handlers/reopen';
 import { applyAmend } from './handlers/amend';
 import { AMENDABLE_EVENT_TYPES, detailsFromPayload } from './details';
 import { applyCard, applyFoul, applyGoal, applySubstitution, applyTimePenalty } from './handlers/records';
@@ -74,6 +75,7 @@ export function initialState(ctx: MatchContext): MatchState {
     details: {},
     sectionStartMs: 0,
     breakStartedAt: null,
+    undo: EMPTY_UNDO_INFO,
   };
 }
 
@@ -113,6 +115,8 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
           // C0a (V2): Abschnittsuhr beginnt beim Uhrstand des Anpfiffs.
           sectionStartMs: clock.elapsedMs,
           breakStartedAt: null,
+          // ZA-3 (@SL-066): was vor dem Anpfiff schon im Log stand; Korrekturen gelten je Anpfiff.
+          undo: { acceptedBeforeStart: Object.keys(state.accepted).length, clockAdjusts: [] },
         },
       };
     }
@@ -122,20 +126,9 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
     case 'RESUME':
       return { status: 'ok', state: { ...state, clock: resumeClock(state.clock, event) } };
     case 'REOPEN':
-      // Ruling B-U11: nur nach Spielende in phase regular/overtime; nach Strafstoßschießen korrigiert
-      // die Turnierleitung per CORRECTION.
-      if (state.phase === 'shootout') {
-        return { status: 'rejected', code: ERROR_CODES.INVALID_TRANSITION, detail: { reason: 'SHOOTOUT_FINISHED' } };
-      }
-      // Ruling K1: baseDecidedBy zurücksetzen, nicht decidedBy direkt -- eine noch aktive
-      // Überschreibung (Korrektur/Direkteintrag) bleibt bestehen und bestimmt weiter decidedBy.
-      return {
-        status: 'ok',
-        // C0a (V2): sectionStartMs bleibt, eine Pause ist nach REOPEN nicht offen.
-        state: { ...state, clock: resumeClock(state.clock, event), finishedAt: null, baseDecidedBy: null, breakStartedAt: null },
-      };
+      return applyReopen(state, event);
     case 'CLOCK_ADJUST':
-      return { status: 'ok', state: { ...state, clock: adjustClock(state.clock, event) } };
+      return { status: 'ok', state: applyClockAdjust(state, event) };
     case 'GOAL':
     case 'OWN_GOAL':
       return { status: 'ok', state: applyGoalEvent(state, event, ctx) };

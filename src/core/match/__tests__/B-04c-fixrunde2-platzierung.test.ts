@@ -69,8 +69,8 @@ describe('B-04c Fixrunde 2 – @W2A-039 Platzierungsspiele eigene Entscheidungsr
     expect(resolveTiebreakMode(config, null, undefined)).toBeUndefined();
   });
 
-  it('Gegenbeispiel: Platzierungsspiel ohne jede Regel folgt der Kette bis shootout', () => {
-    expect(resolveTiebreakMode({ preset: 'top-4' }, 'final', 'thirdPlace')).toBe('shootout');
+  it('@SL-145 Gegenbeispiel: Platzierungsspiel ohne jede Regel folgt der Kette bis zum Rückfall Verlängerung, dann Strafstoßschießen', () => {
+    expect(resolveTiebreakMode({ preset: 'top-4' }, 'final', 'thirdPlace')).toBe('overtime-then-shootout');
     expect(
       resolveTiebreakMode({ preset: 'top-4', tiebreaker: 'goldenGoal' }, 'final', 'thirdPlace'),
     ).toBe('goldenGoal');

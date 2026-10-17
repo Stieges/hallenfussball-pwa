@@ -1,0 +1,173 @@
+{
+  "title": "@SL-074 Von selbst beendet bei 2:1, 1 Minute nach dem Abpfiff fortgesetzt mit Restzeit 0:40 -> Spielzeit 5:20 im zweiten Abschnitt",
+  "szenario": "@SL-074 Ein zu früh von selbst beendetes Spiel setzt Tom einmal fort",
+  "ctx": {
+    "matchId": "match-0000062a",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000062a-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 360,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 300,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 6,
+          "penaltySeconds": 120
+        }
+      },
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000062a-0000-4000-8000-000000000002",
+      "type": "GOAL",
+      "actor": "helper",
+      "at": 61000,
+      "section": 1,
+      "clockMs": 60000,
+      "teamId": "teamA",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000062a-0000-4000-8000-000000000003",
+      "type": "GOAL",
+      "actor": "helper",
+      "at": 121000,
+      "section": 1,
+      "clockMs": 120000,
+      "teamId": "teamA",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000062a-0000-4000-8000-000000000004",
+      "type": "GOAL",
+      "actor": "helper",
+      "at": 181000,
+      "section": 1,
+      "clockMs": 180000,
+      "teamId": "teamB",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000062a-0000-4000-8000-000000000005",
+      "type": "SECTION_END",
+      "actor": "helper",
+      "at": 361000,
+      "section": 1,
+      "clockMs": 360000,
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000062a-0000-4000-8000-000000000006",
+      "type": "SECTION_START",
+      "actor": "helper",
+      "at": 421000,
+      "section": 2,
+      "clockMs": 360000,
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000062a-0000-4000-8000-000000000007",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "at": 721000,
+      "section": 2,
+      "clockMs": 720000,
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000062a-0000-4000-8000-000000000008",
+      "type": "REOPEN",
+      "actor": "helper",
+      "at": 781000,
+      "section": 2,
+      "clockMs": 680000,
+      "payload": {},
+      "actorUser": "helper"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000062a-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000062a-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000062a-0000-4000-8000-000000000003",
+        "status": "accepted"
+      },
+      {
+        "id": "0000062a-0000-4000-8000-000000000004",
+        "status": "accepted"
+      },
+      {
+        "id": "0000062a-0000-4000-8000-000000000005",
+        "status": "accepted"
+      },
+      {
+        "id": "0000062a-0000-4000-8000-000000000006",
+        "status": "accepted"
+      },
+      {
+        "id": "0000062a-0000-4000-8000-000000000007",
+        "status": "accepted"
+      },
+      {
+        "id": "0000062a-0000-4000-8000-000000000008",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "running",
+      "phase": "regular",
+      "section": 2,
+      "clock": {
+        "running": true,
+        "elapsedMs": 680000,
+        "anchorAt": 781000
+      },
+      "scores": {
+        "teamA": {
+          "regular": 2,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 1,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 2,
+        "teamB": 1
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000062a-0000-4000-8000-000000000004",
+      "decidedBy": null,
+      "finishedAt": null
+    }
+  }
+}

@@ -57,7 +57,9 @@ export function hallencupTournament(overrides: Partial<Tournament> = {}): Tourna
     matches: [],
     finalsConfig: {
       preset: 'top-4',
-      tiebreakerByRound: { final: 'overtime-then-shootout', placement: 'shootout' },
+      // ZA-3 (E1): Halbfinale ausdrücklich eingestellt – ohne Eintrag gälte der Rückfall „Verlängerung, dann
+      // Strafstoßschießen“ (@SL-145); das Muster prüft das Layout, nicht den Rückfall.
+      tiebreakerByRound: { semifinal: 'shootout', final: 'overtime-then-shootout', placement: 'shootout' },
     },
     finals: { final: true, thirdPlace: true, fifthSixth: false, seventhEighth: false },
     isPublic: true,

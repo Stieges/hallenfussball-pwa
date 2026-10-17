@@ -112,10 +112,10 @@ describe('B-04c @W2A-009 – Es gibt genau eine Entscheidungsregel', () => {
     expect(monitorRegel(turnier, 'final')).toBe('goldenGoal');
   });
 
-  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  // ZA-3 (D1): Befund C-KO-RUNDENREGEL-SERVER behoben – Engine-Regeln lesen Runde und finalType, Markierung entfernt
   // Engine-Weg: serverRules liest nur finalsConfig.tiebreaker (global), nicht tiebreakerByRound → Halbfinale goldenGoal statt shootout.
   // Nach A-27 muss der Vergleich je Runde grün werden; der Halbfinal-Wert (shootout ≠ Finale goldenGoal) bleibt als Gegenbeispiel nötig.
-  it.fails('@W2A-009 Cockpit (Engine-Weg) zeigt je Runde dieselbe Regel wie der Monitor', async () => {
+  it('@W2A-009 Cockpit (Engine-Weg) zeigt je Runde dieselbe Regel wie der Monitor', async () => {
     const turnier = speichereTurnier();
 
     for (const round of ['semifinal', 'final'] as const satisfies readonly KnockoutRound[]) {

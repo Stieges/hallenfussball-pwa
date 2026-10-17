@@ -1,0 +1,24 @@
+{
+  "title": "@SL-145 Halbfinale ohne Entscheidungsart (weder je Runde noch alt) -> Rückfall overtime-then-shootout",
+  "input": {
+    "durationMinutes": null,
+    "phase": "semifinal",
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": 12,
+    "config": {},
+    "finalsConfig": {
+      "preset": "top-4"
+    }
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 720,
+    "breakSeconds": 60,
+    "knockout": true,
+    "tiebreak": "overtime-then-shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}
