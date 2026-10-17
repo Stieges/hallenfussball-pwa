@@ -15,7 +15,7 @@
  *   - Rückfall in serverRules (shootout → goldenGoal) → Cockpit-Test wird rot (it.fails bestanden = rot, F2)
  */
 import { describe, it, expect } from 'vitest';
-import { toLiveMatch } from '../monitorMatch';
+import { liveMatchOf } from './monitorViewHelper';
 import { startEngineSpiel } from '../../../test/engineSpielFixture';
 import type { FinalsConfig, Match, Team, Tournament } from '../../../types/tournament';
 import { looseVs } from '../../../test/matchSlotFixtures';
@@ -48,7 +48,7 @@ function planMatch(finalType: FinalType | undefined): Match {
 }
 
 function monitorRegel(finalType: FinalType | undefined) {
-  return toLiveMatch(planMatch(finalType), teams, turnier).tiebreakerMode;
+  return liveMatchOf(planMatch(finalType), turnier).tiebreakerMode;
 }
 
 /** Cockpit-Seite auf dem Engine-Weg (A-08d1); die Engine kennt kein finalType, nur die Phase. */
@@ -83,7 +83,7 @@ describe('B-04c Fixrunde 3 – Monitor-Pfad für Platzierungsspiele (@W2A-009, @
       },
     } as unknown as Tournament;
 
-    expect(toLiveMatch(planMatch('thirdPlace'), teams, ohnePlatzierung).tiebreakerMode).toBe(
+    expect(liveMatchOf(planMatch('thirdPlace'), ohnePlatzierung).tiebreakerMode).toBe(
       'overtime-then-shootout',
     );
   });

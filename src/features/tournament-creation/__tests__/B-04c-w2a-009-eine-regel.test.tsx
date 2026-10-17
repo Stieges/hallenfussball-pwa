@@ -20,6 +20,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { useTournamentWizard } from '../../../hooks/useTournamentWizard';
 import { FinalsConfiguration } from '../components/FinalsConfiguration';
 import { toLiveMatch } from '../../../features/monitor-display/monitorMatch';
+import { buildMonitorView } from '../../../features/monitor-display/monitorView';
 import { startEngineSpiel } from '../../../test/engineSpielFixture';
 import type { Match, Team, Tournament, TiebreakerMode, KnockoutRound } from '../../../types/tournament';
 import { looseVs } from '../../../test/matchSlotFixtures';
@@ -94,7 +95,12 @@ async function cockpitRegel(tournament: Tournament, phase: string): Promise<Tieb
 }
 
 function monitorRegel(tournament: Tournament, phase: string): TiebreakerMode | undefined {
-  return toLiveMatch(planMatch(phase), teams, tournament).tiebreakerMode;
+  const match = planMatch(phase);
+  const shown = buildMonitorView({ ...tournament, teams, matches: [match] }).byId.get(match.id);
+  if (!shown) {
+    throw new Error('Spiel fehlt in der Ansicht');
+  }
+  return toLiveMatch(shown, match, teams, tournament).tiebreakerMode;
 }
 
 describe('B-04c @W2A-009 – Es gibt genau eine Entscheidungsregel', () => {

@@ -38,6 +38,7 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 }));
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
+import { withView } from './monitorViewHelper';
 
 const FOLIEN: ReadonlyArray<{ typ: SlideType; config: Parameters<typeof slide>[1] }> = [
   { typ: 'live', config: { fieldId: 'field-1' } },
@@ -57,7 +58,7 @@ function rendereFolie(typ: SlideType, config: Parameters<typeof slide>[1], overs
   const { container } = render(
     <SlideRenderer
       slide={slide(typ, config)}
-      tournament={turnier()}
+      {...withView(turnier())}
       performanceSettings={PERFORMANCE_PROFILES.high}
       theme="dark"
       overscanPercent={overscanPercent}

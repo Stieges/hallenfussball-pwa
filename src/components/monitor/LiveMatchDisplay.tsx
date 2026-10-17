@@ -21,7 +21,7 @@ import { TEAM_NAME_ZEILENHOEHE, gemeinsameNamenGroesse } from './teamNameFit';
 import type { ClockMode } from '../../core/match/clockDisplay';
 import { ScoreBlock } from './ScoreBlock';
 import { TeamNameDisplay } from './TeamNameDisplay';
-import { LiveFinalScore } from './LiveFinalScore';
+import { LiveFinalScore, type LiveFinalScoreProps } from './LiveFinalScore';
 import { getBlockFrames, resolveColor } from './liveBlockFrame';
 import { LiveHeader } from './LiveHeader';
 
@@ -45,6 +45,7 @@ export interface LiveMatchDisplayProps {
   hideScore?: boolean;
   /** Uhr-Art des Turniers (@ZM-137) */
   clockMode?: ClockMode;
+  finalScore?: LiveFinalScoreProps['finalScore']; // Endstand der Ansicht (A-36c, @ZM-147)
 }
 
 // ---------------------------------------------------------------------------
@@ -60,6 +61,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   colorScheme,
   hideScore = false,
   clockMode,
+  finalScore,
 }) => {
   const { t } = useTranslation('monitor');
   const { themeColors } = useMonitorTheme(theme);
@@ -78,8 +80,6 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   const onHomePx = useCallback((px: number) => setNamePx(p => (p.home === px ? p : { ...p, home: px })), []);
   const onAwayPx = useCallback((px: number) => setNamePx(p => (p.away === px ? p : { ...p, away: px })), []);
   const sharedNamePx = gemeinsameNamenGroesse(namePx.home, namePx.away);
-
-  // --- Styles ---------------------------------------------------------------
 
   const containerStyle: CSSProperties = {
     display: 'flex',
@@ -236,7 +236,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
 
         {/* Unterer Bereich: feste Höhe in jedem Zustand (B-44a2); H2: nach dem Abpfiff keine Uhr, nur das Endergebnis */}
         <div style={timerAreaStyle} data-testid="live-lower">
-          {match.status === 'FINISHED' && <LiveFinalScore color={themeColors.text} />}
+          {match.status === 'FINISHED' && <LiveFinalScore color={themeColors.text} finalScore={hideScore ? undefined : finalScore} names={{ home: match.homeTeam.name, away: match.awayTeam.name }} />}
           {(isRunning || isPaused) && (
             <MatchTimer
               elapsedSeconds={match.elapsedSeconds}

@@ -3,30 +3,35 @@
  * Reine Sichtbarkeitsregeln des Monitors (B-16e2, @W2A-031, @ZM-090). Ohne React.
  */
 import { describe, it, expect } from 'vitest';
+import { viewRules } from '../../../core/view';
 import type { MonitorSlide } from '../../../types/monitor';
-import { scoresPublic, isSlideShowable, zuschauerUrl } from '../publicVisibility';
+import { isSlideShowable, zuschauerUrl } from '../publicVisibility';
 import { selectDisplayableSlides } from '../slideProgramme';
 
-const AUSGEBLENDET = { hideScoresForPublic: true };
-const OEFFENTLICH = { hideScoresForPublic: false };
+/** Regeln des Monitors (Zielgruppe `screen`) aus den Schaltern des Turniers – eine Quelle, `viewRules`. */
+const regeln = (hideScoresForPublic: boolean, hideRankingsForPublic: boolean) =>
+  viewRules({ hideScoresForPublic, hideRankingsForPublic }, 'screen', 'app');
+
+const AUSGEBLENDET = regeln(true, false);
+const OEFFENTLICH = regeln(false, false);
+const TABELLEN_AUS = regeln(false, true);
 
 function folie(type: MonitorSlide['type'], id: string = type): MonitorSlide {
   return { id, type, config: {}, duration: null, order: 0 };
 }
 
-describe('scoresPublic', () => {
-  it.each([
-    { fall: 'Schalter aus', turnier: OEFFENTLICH, erwartet: true },
-    { fall: 'Schalter an', turnier: AUSGEBLENDET, erwartet: false },
-    { fall: 'kein Turnier geladen', turnier: null, erwartet: true },
-  ])('$fall → $erwartet', ({ turnier, erwartet }) => {
-    expect(scoresPublic(turnier)).toBe(erwartet);
-  });
-});
-
 describe('isSlideShowable', () => {
   it('Tabelle ist bei ausgeblendeten Ergebnissen nicht zeigbar (@ZM-090)', () => {
     expect(isSlideShowable(folie('standings'), AUSGEBLENDET)).toBe(false);
+  });
+
+  it('@ZM-005 Tabelle ist bei ausgeschalteten Gruppentabellen nicht zeigbar, auch ohne Kindermodus (W10)', () => {
+    expect(isSlideShowable(folie('standings'), TABELLEN_AUS)).toBe(false);
+    expect(isSlideShowable(folie('all-standings'), TABELLEN_AUS)).toBe(false);
+  });
+
+  it('@ZM-005 Gegenbeispiel: „Nächste Spiele“ bleibt bei ausgeschalteten Tabellen zeigbar', () => {
+    expect(isSlideShowable(folie('next-matches'), TABELLEN_AUS)).toBe(true);
   });
 
   it('Tabelle bleibt bei öffentlichen Ergebnissen zeigbar', () => {

@@ -31,7 +31,9 @@
       "stopped": "angehalten"
     },
     "withoutResult": "ohne Ergebnis",
-    "finalScore": "Endstand"
+    "finalScore": "Endstand",
+    "penaltyScore": "$t(sport:events.penaltyShootout) {{home}} : {{away}}",
+    "winnerLine": "{{name}} gewinnt"
   },
   "timer": {
     "pause": "Pause",
