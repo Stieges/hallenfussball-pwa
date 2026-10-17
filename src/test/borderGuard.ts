@@ -45,7 +45,7 @@ export function findControlDividerBorders(source: string): BorderHit[] {
     const head = lines[start].trim();
     const near = lines.slice(Math.max(0, start - 8), i + 1).join('\n');
     const sameLineTag = CONTROL_TAG.test(text);
-    const inlineStyle = /^(?:<\w+\s+)?style=\{\{|onBlur|onMouse|onFocus/.test(head) || /^<\w+\s+style=\{\{/.test(head);
+    const inlineStyle = /^(?:<\w+\s+)?style=\{\{/.test(head) || /onBlur|onMouse|onFocus/.test(head);
     const byName = !inlineStyle && CONTROL_NAME.test(head);
     const byTag = (inlineStyle || sameLineTag) && CONTROL_TAG.test(near);
     if (byName || byTag || sameLineTag) {hits.push({ line: i + 1, head: head.slice(0, 60), text: text.trim().slice(0, 100) });}
