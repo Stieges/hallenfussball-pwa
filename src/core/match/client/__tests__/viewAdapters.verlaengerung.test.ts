@@ -72,18 +72,43 @@ describe('Verlängerung in der Ansicht (C-VERLAENGERUNG-ENDET-SOFORT)', () => {
     expect([view.homeScore + (view.overtimeScoreA ?? 0), view.awayScore + (view.overtimeScoreB ?? 0)]).toEqual([2, 1]);
   });
 
-  it('@SL-082: im Golden Goal endet das Spiel nicht mit der Zeit, sondern mit dem Tor', () => {
+  it('@SL-082: im Golden Goal beendet das Tor das Spiel sofort', () => {
     const log = overtimeRunningLog('goldenGoal');
-    const longAfter = OT_KICKOFF_AT + (OVERTIME_S + 30) * 1000;
-    const running = viewAt(log, longAfter);
-    expect(running.status).toBe('RUNNING');
-    expect(running.playPhase).toBe('goldenGoal');
-
+    expect(viewAt(log, OT_KICKOFF_AT + 50_000).playPhase).toBe('goldenGoal');
     const withGoal = [...log, hfEvent('GOAL', OT_KICKOFF_AT + 50_000, 3, 650_000, { teamId: NORD })];
     const state = stateOf(withGoal);
     expect(state.status).toBe('finished');
     expect(state.decidedBy).toBe('goldenGoal');
     expect(viewAt(withGoal, OT_KICKOFF_AT + 50_000).status).toBe('FINISHED');
+  });
+
+  it('@DR-019 @TM-052: fällt im Golden Goal kein Tor, ist die Zeit nach 3 Minuten abgelaufen und das Ende führt ins Strafstoßschießen', () => {
+    const log = overtimeRunningLog('goldenGoal');
+    const justBefore = OT_KICKOFF_AT + OVERTIME_S * 1000;
+    expect(clockOf(viewAt(log, justBefore), justBefore).expired).toBe(false);
+    const after = OT_KICKOFF_AT + (OVERTIME_S + 1) * 1000;
+    expect(clockOf(viewAt(log, after), after).expired).toBe(true);
+
+    const ended = stateOf([...log, hfEvent('MATCH_END', after, 3, null)]);
+    expect(ended.status).toBe('shootout');
+  });
+
+  it('@SL-081: in der Pause vor der Verlängerung steht ihre volle Dauer von 3 Minuten bereit', () => {
+    const log = regularTimeDrawLog('overtime-then-shootout', 45_000);
+    const view = viewAt(log, OT_KICKOFF_AT);
+    expect(view.status).toBe('PAUSED');
+    expect(clockOf(view, OT_KICKOFF_AT).remaining).toBe(180);
+  });
+
+  it('@SL-081: wurde die reguläre Zeit erst bei 10:45 abgepfiffen, dauert die Verlängerung trotzdem volle 3 Minuten', () => {
+    const overrunMs = 45_000;
+    const log = overtimeRunningLog('overtime-then-shootout', overrunMs);
+    const kickoff = OT_KICKOFF_AT + overrunMs;
+    expect(clockOf(viewAt(log, kickoff), kickoff).remaining).toBe(180);
+    const justBefore = kickoff + OVERTIME_S * 1000;
+    expect(clockOf(viewAt(log, justBefore), justBefore).expired).toBe(false);
+    const after = kickoff + (OVERTIME_S + 1) * 1000;
+    expect(clockOf(viewAt(log, after), after).expired).toBe(true);
   });
 
   it('@FU-074: eine 30 Sekunden vor Ende der regulären Spielzeit begonnene 2-Minuten-Strafe zeigt nach dem Anpfiff der Verlängerung noch 1:30', () => {

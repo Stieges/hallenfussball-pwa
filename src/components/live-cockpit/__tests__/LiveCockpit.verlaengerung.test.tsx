@@ -2,7 +2,7 @@
  * C-VERLAENGERUNG-ENDET-SOFORT (Komponente): Das Cockpit bekommt die Ansicht des echten Adapters
  * (Engine-Log → `toLiveMatchView`) und darf die Verlängerung nicht beim Anpfiff selbst beenden.
  * Auto-Ende (Vorgabe an, DEFAULT_MATCH_COCKPIT_SETTINGS) greift erst, wenn die Spielzeit wirklich
- * abgelaufen ist – in der Verlängerung nach deren Ende, im Golden Goal nie (@SL-082).
+ * abgelaufen ist – in der Verlängerung und im Golden Goal nach deren Ende (@DR-019); ein Golden-Goal-Tor beendet vorher (@SL-082).
  * Werte aus dem Gherkin: Halbfinale 1 FC Nord – DJK Berg 1:1, Verlängerung 3 Minuten.
  *
  * Harness wie in LiveCockpit.readOnly.test.tsx: `onFinish` setzt das Spiel auf FINISHED, sonst
@@ -100,13 +100,19 @@ describe('LiveCockpit: Verlängerung endet nicht beim Anpfiff (C-VERLAENGERUNG-E
     expect(onFinish).toHaveBeenCalledWith('hf1');
   });
 
-  it('@SL-082: im Golden Goal beendet das Cockpit das Spiel nie von selbst, auch nicht nach Ablauf der Zeit', async () => {
-    const now = OT_KICKOFF_AT + (OVERTIME_S + 30) * 1000;
+  it('@SL-082 @DR-019: im Golden Goal endet das Spiel vor Ablauf nicht von selbst (nur ein Tor beendet es)', async () => {
+    const now = OT_KICKOFF_AT + 120_000;
     const onFinish = renderAt(viewAt(overtimeRunningLog('goldenGoal'), now), now);
-    expect(onFinish).not.toHaveBeenCalled();
     await letClockTick();
-    expect(screen.getByTestId('match-timer-display')).toHaveTextContent('00:00');
     expect(onFinish).not.toHaveBeenCalled();
+    expect(screen.getByTestId('match-timer-display')).toHaveTextContent('01:00');
+  });
+
+  it('@DR-019 @TM-052: fällt im Golden Goal kein Tor, beendet das Auto-Ende das Spiel nach Ablauf der 3 Minuten genau einmal', async () => {
+    const now = OT_KICKOFF_AT + (OVERTIME_S + 1) * 1000;
+    const onFinish = renderAt(viewAt(overtimeRunningLog('goldenGoal'), now), now);
+    await waitFor(() => expect(onFinish).toHaveBeenCalledTimes(1));
+    expect(onFinish).toHaveBeenCalledWith('hf1');
   });
 
   it('Gegenbeispiel: in der regulären Spielzeit endet das Spiel nach Ablauf weiter automatisch', async () => {

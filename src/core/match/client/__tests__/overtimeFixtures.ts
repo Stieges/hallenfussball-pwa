@@ -68,21 +68,24 @@ export function hfEvent(
   };
 }
 
-/** Halbfinale 1 bis zum Ablauf der regulären Spielzeit bei 1:1 (Abpfiff = automatisches Ende der Regelzeit). */
-export function regularTimeDrawLog(tiebreak: TiebreakMode): EngineEvent[] {
+/**
+ * Halbfinale 1 bis zum Ablauf der regulären Spielzeit bei 1:1 (Abpfiff = automatisches Ende der Regelzeit).
+ * `overrunMs`: Abpfiff von Hand erst so viele ms nach Ablauf (Auto-Ende aus).
+ */
+export function regularTimeDrawLog(tiebreak: TiebreakMode, overrunMs = 0): EngineEvent[] {
   return [
     hfEvent('MATCH_START', T0, 1, null, { payload: { rules: hfRules(tiebreak) } }),
     hfEvent('GOAL', T0 + 100_000, 1, 100_000, { teamId: NORD }),
     hfEvent('SECTION_END', T0 + 300_000, 1, 300_000),
     hfEvent('SECTION_START', T0 + 360_000, 2, 300_000),
     hfEvent('GOAL', T0 + 500_000, 2, 440_000, { teamId: BERG }),
-    hfEvent('MATCH_END', T0 + 660_000, 2, 600_000),
+    hfEvent('MATCH_END', T0 + 660_000 + overrunMs, 2, 600_000 + overrunMs),
   ];
 }
 
 /** … und die Verlängerung ist angepfiffen. */
-export function overtimeRunningLog(tiebreak: TiebreakMode): EngineEvent[] {
-  return [...regularTimeDrawLog(tiebreak), hfEvent('SECTION_START', OT_KICKOFF_AT, 3, null)];
+export function overtimeRunningLog(tiebreak: TiebreakMode, overrunMs = 0): EngineEvent[] {
+  return [...regularTimeDrawLog(tiebreak, overrunMs), hfEvent('SECTION_START', OT_KICKOFF_AT + overrunMs, 3, null)];
 }
 
 export function stateOf(log: EngineEvent[]): MatchState {

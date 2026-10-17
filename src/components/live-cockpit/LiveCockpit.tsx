@@ -343,7 +343,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // Viewers/Trainers das Spiel selbst, die DB lehnt ab, der Eintrag landet in der
   // Dead-Letter-Queue und der lokale Stand weicht ab (final-review.md H3).
   useEffect(() => {
-    // C-VERLAENGERUNG-ENDET-SOFORT: nur bei wirklich abgelaufener Spielzeit, nie im Golden Goal (@SL-082)
+    // C-VERLAENGERUNG-ENDET-SOFORT: nur bei wirklich abgelaufener Spielzeit (auch Verlängerung/Golden Goal)
     if (!readOnly && cockpitSettings.autoFinishEnabled && isAutoFinishDue(currentMatch, isOvertime)) {
       // console.log('⏰ Auto-Finish triggered');
       handleFinish();
