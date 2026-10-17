@@ -165,10 +165,10 @@ function MonitorDisplayPageContent({
   }, [slides, slideState.currentIndex, slideState.pinnedMatchId, rueckfallFolie, tournament]);
 
   // B-17 (@ME-006): 10-s-Hinweis als Ecke, nur ohne laufendes Spiel auf dem Feld (Regeln in useWakeLockHinweis)
-  // und nur auf den Ersatzfolien eines leeren Programms bzw. einer QR-Folie des Programms
+  // und nur auf den Ersatzfolien, solange gar kein Programm eingerichtet ist (monitor.slides leer), bzw. einer QR-Folie des Programms
   const spielLaeuft = liveSpielLaeuft(slides, tournament?.matches ?? []);
   const hinweisPhase = useWakeLockHinweis(wakeLock.status, ansichtBereit, spielLaeuft);
-  const hinweisZeigt = hinweisPhase && istHinweisFolie(currentSlide, slides);
+  const hinweisZeigt = hinweisPhase && istHinweisFolie(currentSlide, monitor?.slides.length === 0 ? slides : monitor?.slides ?? []);
 
   // Heartbeat alle 30 s (Takt und Deps in useMonitorHeartbeat)
   useMonitorHeartbeat(monitor?.id ?? null, tournament?.id ?? null, slideState.currentIndex, cacheStatus.status);

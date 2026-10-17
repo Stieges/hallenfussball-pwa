@@ -66,6 +66,9 @@ const OHNE_HINWEIS: ReadonlyArray<Fall> = [
   ['Alle Tabellen', [slide('all-standings', {}, 60)]],
   ['Nächste Spiele', [slide('next-matches', { matchCount: 3 }, 60)]],
   ['Sponsor', [slide('sponsor', { sponsorId: 'sp-1', showQrCode: true }, 60)]],
+  // Programm eingerichtet, aber nichts darstellbar: die Ersatzfolie ist kein „leeres Programm“ (@ME-006)
+  ['Ersatz-QR, Programm nur mit Tabelle bei ausgeblendeten Ergebnissen', [slide('standings', { groupId: 'A' }, 60)], { hideScoresForPublic: true }],
+  ['Ersatz-Spielplan, Programm nur mit QR im nicht öffentlichen Turnier', [slide('qr-code', {}, 60)], { isPublic: false }],
   // Live-Folie ohne Spiel zeigt den Rückfall, aber ein Programm ist eingerichtet
   ['Live ohne Spiel (Feld 2, Programm eingerichtet)', [slide('live', { fieldId: 'field-2' }, 60)]],
   ['Live mit Spiel (Feld 1)', [slide('live', { fieldId: 'field-1' }, 60)]],
