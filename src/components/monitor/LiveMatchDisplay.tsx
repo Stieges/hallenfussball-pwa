@@ -24,6 +24,8 @@ import { TeamNameDisplay } from './TeamNameDisplay';
 import { getStatusInfo } from './liveStatus';
 import { LiveFinalScore } from './LiveFinalScore';
 import { getBlockFrames } from './liveBlockFrame';
+import { useHeaderNotice } from './HeaderNoticeContext';
+import { LiveHeaderNotice } from './LiveHeaderNotice';
 
 export { NoMatchDisplay } from './NoMatchDisplay';
 export type { NoMatchDisplayProps } from './NoMatchDisplay';
@@ -90,6 +92,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   const awayColor = resolveColor('away', scheme, match.awayTeam);
 
   const layout = displayLayout.scoreArea;
+  const headerNotice = useHeaderNotice();
   const frames = getBlockFrames(homeColor, awayColor, themeColors.background, themeColors.text);
 
   // B3: beide Teamnamen in derselben Größe (die kleinere der beiden passenden)
@@ -125,6 +128,8 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     alignItems: 'center',
     width: '100%',
     height: layout.header,
+    // eine Zeile in Kopfhöhe: ein höherer Hinweis (B-48a) schiebt nichts, er ragt nach oben aus der Zeile
+    gridTemplateRows: 'minmax(0, 1fr)',
     marginBottom: layout.headerGap,
     flexShrink: 0,
   };
@@ -243,12 +248,24 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
             <span style={liveDotStyle} />
             {statusInfo.label}
           </div>
-          <div style={infoStyle} data-testid="live-info">
-            Feld {match.field ?? 1} — Spiel {match.number}
-          </div>
-          <div style={{ ...infoStyle, color: themeColors.text, justifySelf: 'end' }} data-testid="live-group">
-            {(group || match.group) ? t('liveMatch.group', { group: group ?? match.group }) : null}
-          </div>
+          {/* B-48a: Solange der Hinweis steht, gehört die Breite daneben ihm (zweizeilig statt dreizeilig, passt in die Kopfzeile) */}
+          {headerNotice === null && (
+            <div style={infoStyle} data-testid="live-info">
+              Feld {match.field ?? 1} — Spiel {match.number}
+            </div>
+          )}
+          {headerNotice !== null ? (
+            <LiveHeaderNotice
+              text={headerNotice}
+              color={themeColors.text}
+              borderColor={themeColors.border}
+              background={themeColors.backgroundGradient}
+            />
+          ) : (
+            <div style={{ ...infoStyle, color: themeColors.text, justifySelf: 'end' }} data-testid="live-group">
+              {(group || match.group) ? t('liveMatch.group', { group: group ?? match.group }) : null}
+            </div>
+          )}
         </div>
 
         {/* Raster: Kästen, Trenner, Namen mittig unter ihrem Kasten (@ZM-140); Kindermodus ohne Kästen */}

@@ -189,16 +189,6 @@ export const displayLayout = {
   // Max Content Width
   maxContentWidth: '1600px',
 
-  // Kleiner Hinweis oben rechts (B-17, B-48a, @ME-006), Stil „corner“ aus dem Monitor-Mockup v8.
-  // Lage: in der Höhe der Kopfzeile, rechts bündig mit dem Folienpolster; verdeckt weder Stand noch Schiedsrichter-Zeile.
-  noticeMaxWidth: '34%',
-  noticeTop: '0.8cqh',
-  noticeRight: '3cqw',
-  noticePadY: '0.4cqh',
-  noticeLineHeight: 1.2,
-  noticePadX: '1.4cqh',
-  noticeBorderWidth: '0.3cqh',
-  noticeRadius: '1cqh',
 
   // Slide Aspect Ratios
   aspectRatio: {
@@ -249,6 +239,12 @@ export const displayLayout = {
     paddingY: '1.5cqh',
     // B-44a3: seitliches Polster der Folie
     paddingX: '3cqw',
+    // B-48a (@ME-006): Hinweis anstelle der Gruppen-Angabe in der Kopfzeile, Stil „corner“ (Mockup v8)
+    noticePadY: '0.4cqh',
+    noticePadX: '1.4cqh',
+    noticeBorderWidth: '0.3cqh',
+    noticeRadius: '1cqh',
+    noticeLineHeight: 1.2,
     // B-44a3: Uhr und unterer Bereich (vorher Literale in MatchTimer)
     progressHeight: '1.2cqh',
     clockGap: '1.2cqh',

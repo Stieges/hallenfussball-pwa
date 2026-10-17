@@ -1,5 +1,5 @@
 /**
- * Monitor wachhalten (B-48a): Hinweis oben rechts, wenn der Browser das Anlassen des Bildschirms ablehnt oder 5 Sekunden
+ * Monitor wachhalten (B-48a): Hinweis in der Kopfzeile anstelle der Gruppen-Angabe, wenn der Browser das Anlassen des Bildschirms ablehnt oder 5 Sekunden
  * nicht antwortet. Szenario @ME-006 (beide Beispielzeilen), Gegenbeispiele: Zusage, Browser-Quelle.
  *
  * Gemessen wird am echten Layout bei 1920×1080 und 1280×720: Der Hinweis verdeckt weder Schiedsrichter-Zeile noch Stand,
@@ -85,7 +85,7 @@ async function messe(page: Page) {
       a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
     const hinweis = rect('[data-testid="monitor-wakelock-hint"]');
     const geschuetzt = [rect('[data-testid="live-referee"]', true), rect('[data-testid="live-block-home"]'),
-      rect('[data-testid="live-block-away"]'), rect('[data-testid="live-info"]', true), rect('[data-testid="live-badge"]', true),
+      rect('[data-testid="live-block-away"]'), rect('[data-testid="live-badge"]', true),
       rect('[data-testid="live-name-home"]', true), rect('[data-testid="live-name-away"]', true)]
       .filter((r): r is NonNullable<typeof r> => r !== null);
     return {
@@ -106,11 +106,7 @@ for (const [breite, hoehe] of [[1920, 1080], [1280, 720], [3840, 2160]] as const
       ['der Browser lässt das Anlassen des Bildschirms nicht zu', 'abgelehnt', 0],
       ['der Browser beantwortet die Anfrage 5 Sekunden lang weder mit Ja noch mit Nein', 'haengt', 5_000],
     ] as const) {
-      test(`Lage „${lage}“: oben rechts, verdeckt weder Schiedsrichter-Zeile noch Stand, verschwindet nach 10 s`, async ({ page, seedIndexedDB }) => {
-        // BEFUND B-48a-4K: Bei 3840×2160 ragt der dreizeilige Hinweis rund 1,3 % der Bildhöhe in den Kasten des Auswärts-
-        // Stands, weil die Kopfzeile der Live-Folie dort proportional niedriger ist. Erwartet rot, bis Kopfzeile oder Hinweis
-        // angepasst sind (Controller trägt in BEFUNDE-HEUTIGER-CODE.md ein). Verlangt sind 1280×720 und 1920×1080.
-        test.fail(breite === 3840, 'Befund B-48a-4K: Hinweis überdeckt bei 4K den Stand-Kasten');
+      test(`Lage „${lage}“: in der Kopfzeile, verdeckt weder Schiedsrichter-Zeile noch Stand, verschwindet nach 10 s`, async ({ page, seedIndexedDB }) => {
         await wakeLockMocken(page, modus);
         await oeffneMonitor(page, seedIndexedDB);
         if (vorlauf > 0) {
@@ -128,15 +124,21 @@ for (const [breite, hoehe] of [[1920, 1080], [1280, 720], [3840, 2160]] as const
           '[data-testid="live-referee"]', '[data-testid="live-block-home"]', '[data-testid="live-block-away"]']));
         expect(m.hinweis, 'Hinweis gemessen').not.toBeNull();
         const h = m.hinweis!;
-        // oben rechts: obere Bildhälfte (Kopfzeile), rechte Bildhälfte, vollständig im Bild
+        // anstelle der Gruppen-Angabe in der Kopfzeile: rechts oben, im Kopf der Live-Folie, Gruppe so lange weg
+        await expect(page.locator('[data-testid="live-header"] [data-testid="monitor-wakelock-hint"]')).toHaveCount(1);
+        await expect(page.getByTestId('live-group')).toHaveCount(0);
+        const schriftPx = await hinweis.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+        expect(schriftPx, 'Schrift mindestens 3 % der Bildhöhe').toBeGreaterThanOrEqual(m.hoehe * 0.03 - 0.5);
         expect(h.top, 'oben').toBeLessThan(m.hoehe * 0.2);
-        expect(h.left, 'rechts').toBeGreaterThan(m.breite * 0.5);
+        expect(h.left, 'rechts').toBeGreaterThanOrEqual(m.breite * 0.5 - 1);
         expect(h.right).toBeLessThanOrEqual(m.breite);
         expect(h.bottom).toBeLessThanOrEqual(m.hoehe);
         expect(m.verdeckt, 'verdeckte Bereiche').toEqual([]);
 
         await page.clock.runFor(10_000);
         await expect(hinweis).toHaveCount(0);
+        // nach 10 s steht wieder die Gruppe
+        await expect(page.getByTestId('live-group')).toContainText('A');
         await expect(page.getByText('SV Süd', { exact: true }).first()).toBeVisible();
       });
     }

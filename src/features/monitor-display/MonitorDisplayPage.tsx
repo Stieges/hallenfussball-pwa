@@ -19,20 +19,19 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-10 bis P1-12
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { displayMonitor } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
 import { useTranslation, I18nextProvider } from 'react-i18next';
 import { ANZEIGE_SPRACHE, anzeigeI18n } from '../../i18n/anzeigeSprache';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
-import { TimedNotice } from '../../components/ui/molecules/TimedNotice';
+import { HeaderNoticeContext } from '../../components/monitor/HeaderNoticeContext';
 import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { vollbildUmschalten } from './vollbild';
-import {
-  istBrowserQuelle, istCacheTaste, istEingabeZiel, istVollbildTaste, wakeLockHinweisNoetig, WAKE_LOCK_HINWEIS_MS,
-} from './monitorDauerbetrieb';
+import { istCacheTaste, istEingabeZiel, istVollbildTaste } from './monitorDauerbetrieb';
+import { useWakeLockHinweis } from './useWakeLockHinweis';
 import { useIdleCursor, useTastenAbfang, useWakeLockNachEingabe } from './useMonitorDauerbetrieb';
 import {
   alleUebersprungen, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
@@ -106,22 +105,10 @@ function MonitorDisplayPageContent({
   const wakeLock = useWakeLock(monitor !== null);
   // B-17 Fixrunde 2: schlägt die erste Anfrage fehl (Safari), fordert die erste Eingabe sie erneut an.
   useWakeLockNachEingabe(wakeLock.status, wakeLock.request);
-  // B-17 (@ME-006): Kann das Gerät den Bildschirm nicht anlassen, zeigt die Seite das einmal klein in einer
-  // Ecke. In der Browser-Quelle nie, dort steuert der Rechner den Bildschirm.
-  const wakeLockHinweis = wakeLockHinweisNoetig(wakeLock.status)
-    && !istBrowserQuelle(window.location.hash, navigator.userAgent);
-  // W4: „einmal“ ist ein Zustand der Seite. Gezeigt wird der Hinweis höchstens einmal je Seiten-Instanz, auch wenn
-  // die Seite zwischendurch in den Lade- oder Fehlerzustand geht und zurückkehrt.
-  const [hinweisPhase, setHinweisPhase] = useState<'bereit' | 'zeigt' | 'erledigt'>('bereit');
+  // B-17 (@ME-006): Kann das Gerät den Bildschirm nicht anlassen, steht in der Kopfzeile der Live-Folie anstelle der
+  // Gruppe 10 s lang ein Hinweis (einmal, nur im normalen Browser, Regeln in useWakeLockHinweis).
   const ansichtBereit = !loading && !error && tournament !== null && monitor !== null;
-  useEffect(() => {
-    if (hinweisPhase === 'bereit' && ansichtBereit && wakeLockHinweis) {
-      setHinweisPhase('zeigt');
-    } else if (hinweisPhase === 'zeigt' && (!ansichtBereit || !wakeLockHinweis)) {
-      setHinweisPhase('erledigt');
-    }
-  }, [hinweisPhase, ansichtBereit, wakeLockHinweis]);
-  const hinweisAbgelaufen = useCallback(() => setHinweisPhase('erledigt'), []);
+  const hinweisZeigt = useWakeLockHinweis(wakeLock.status, ansichtBereit);
 
   // Derived state
   const performanceSettings = useMemo(
@@ -221,6 +208,7 @@ function MonitorDisplayPageContent({
   }
 
   return (
+    <HeaderNoticeContext.Provider value={hinweisZeigt ? t('dauerbetrieb.wakeLockHint') : null}>
     <div style={{ ...containerStyle, cursor: cursorRuht ? 'none' : undefined }}>
       {/* Slide Container — pixelShift for OLED anti-burn-in */}
       <div style={{
@@ -259,16 +247,6 @@ function MonitorDisplayPageContent({
         />
       )}
 
-      {/* Hinweis: Bildschirm kann sich abschalten (nur im normalen Browser, einmal, B-17) */}
-      {hinweisPhase === 'zeigt' && (
-        <TimedNotice
-          text={t('dauerbetrieb.wakeLockHint')}
-          durationMs={WAKE_LOCK_HINWEIS_MS}
-          onDone={hinweisAbgelaufen}
-          testId="monitor-wakelock-hint"
-        />
-      )}
-
       {/* Cache Indicator (Admin only) */}
       <CacheIndicator cacheStatus={cacheStatus} visible={showCacheIndicator} />
 
@@ -287,6 +265,7 @@ function MonitorDisplayPageContent({
 
       <MonitorKeyframes />
     </div>
+    </HeaderNoticeContext.Provider>
   );
 }
 

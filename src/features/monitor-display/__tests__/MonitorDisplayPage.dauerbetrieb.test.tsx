@@ -233,32 +233,55 @@ const LAGEN: ReadonlyArray<readonly [string, () => void, number]> = [
   ['der Browser beantwortet die Anfrage 5 Sekunden lang weder mit Ja noch mit Nein', wakeLockHaengt, 5_000],
 ];
 
+/** Live-Folie auf Feld 1 (Spiel 7 läuft, Gruppe A), danach eine Textfolie: Der Hinweis steht in der Kopfzeile der Live-Folie. */
+function liveTurnier(): Tournament {
+  return monitorTurnier(undefined, [
+    slide('live', { fieldId: 'field-1' }, 30),
+    slide('custom-text', { headline: 'Folie B' }),
+  ]);
+}
+
+const hinweis = () => screen.queryByTestId('monitor-wakelock-hint');
+const gruppe = () => screen.queryByTestId('live-group');
+
 describe('Bildschirm bleibt an, Hinweis nur im normalen Browser (@ME-005, @ME-006)', () => {
-  it.each(LAGEN)('@ME-006 Lage „%s“: Hinweis oben rechts, nach 10 Sekunden von selbst weg, Folienprogramm läuft', async (_lage, einrichten, wartezeit) => {
+  beforeEach(() => { localGet.mockResolvedValue(liveTurnier()); });
+
+  it.each(LAGEN)('@ME-006 Lage „%s“: der Hinweis steht 10 Sekunden anstelle der Gruppen-Angabe in der Kopfzeile', async (_lage, einrichten, wartezeit) => {
     einrichten();
     seite();
     // Die 5 Sekunden laufen ab der Anfrage; die Anfrage stellt die Seite, sobald der Monitor geladen ist.
     await vorspulen(0);
     await vorspulen(wartezeit);
-    const hinweis = screen.getByTestId('monitor-wakelock-hint');
-    expect(hinweis).toHaveTextContent(HINWEIS);
-    // Lage aus dem aufgelösten Stil: oben und rechts, nicht unten (unten steht die Schiedsrichter-Zeile)
-    expect(hinweis.style.top).not.toBe('');
-    expect(hinweis.style.right).not.toBe('');
-    expect(hinweis.style.bottom).toBe('');
+    expect(hinweis()).toHaveTextContent(HINWEIS);
+    expect(hinweis()?.closest('[data-testid="live-header"]')).not.toBeNull();
+    expect(gruppe()).not.toBeInTheDocument();
+    // kein Overlay: nichts ist fest an den Bildrand gesetzt
+    expect(hinweis()?.style.position).toBe('');
     await vorspulen(10_000 - 1);
-    expect(screen.getByTestId('monitor-wakelock-hint')).toBeInTheDocument();
+    expect(hinweis()).toBeInTheDocument();
     await vorspulen(1);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+    expect(hinweis()).not.toBeInTheDocument();
+    expect(gruppe()).toBeInTheDocument();
+  });
+
+  it('@ME-006: das Folienprogramm läuft weiter, auch solange der Hinweis ansteht', async () => {
+    wakeLockAbgelehnt();
+    localGet.mockResolvedValue(monitorTurnier());
+    seite();
+    await vorspulen(0);
+    expect(screen.getByText('Folie A')).toBeInTheDocument();
+    await vorspulen(4_000);
     expect(screen.getByText('Folie B')).toBeInTheDocument();
   });
 
-  it('@ME-006 Gegenbeispiel: vor Ablauf der 5 Sekunden ohne Antwort erscheint noch kein Hinweis', async () => {
+  it('@ME-006 Gegenbeispiel: vor Ablauf der 5 Sekunden ohne Antwort steht noch die Gruppe', async () => {
     wakeLockHaengt();
     seite();
     await vorspulen(0);
     await vorspulen(4_999);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+    expect(hinweis()).not.toBeInTheDocument();
+    expect(gruppe()).toBeInTheDocument();
   });
 
   it('@ME-006 Gegenbeispiel: antwortet der Browser nach 4,9 Sekunden mit Ja, erscheint nie ein Hinweis', async () => {
@@ -270,7 +293,8 @@ describe('Bildschirm bleibt an, Hinweis nur im normalen Browser (@ME-005, @ME-00
     await vorspulen(4_900);
     zusagen({ release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() });
     await vorspulen(10_000);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+    expect(hinweis()).not.toBeInTheDocument();
+    expect(gruppe()).toBeInTheDocument();
   });
 
   it('@ME-006: nimmt der Browser eine Zusage später zurück (release), zeigt der Monitor keinen Hinweis', async () => {
@@ -282,7 +306,7 @@ describe('Bildschirm bleibt an, Hinweis nur im normalen Browser (@ME-005, @ME-00
     const freigabe = sentinel.addEventListener.mock.calls.find(([name]) => name === 'release')?.[1] as () => void;
     act(() => { freigabe(); });
     await vorspulen(1_000);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+    expect(hinweis()).not.toBeInTheDocument();
   });
 
   it('@ME-006 Gegenbeispiel: in der Browser-Quelle (/tv) erscheint auch nach 5 Sekunden ohne Antwort kein Hinweis', async () => {
@@ -291,41 +315,23 @@ describe('Bildschirm bleibt an, Hinweis nur im normalen Browser (@ME-005, @ME-00
     seite();
     await vorspulen(0);
     await vorspulen(6_000);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+    expect(hinweis()).not.toBeInTheDocument();
+    expect(gruppe()).toBeInTheDocument();
   });
 
-  it('ohne Wake Lock erscheint der Hinweis und verschwindet nach 10 Sekunden', async () => {
+  it('ohne Wake Lock (Schnittstelle fehlt) erscheint der Hinweis und verschwindet nach 10 Sekunden', async () => {
     wakeLockFehlt();
     seite();
     await vorspulen(0);
-    expect(screen.getByTestId('monitor-wakelock-hint')).toHaveTextContent(HINWEIS);
+    expect(hinweis()).toHaveTextContent(HINWEIS);
     await vorspulen(10_000);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+    expect(hinweis()).not.toBeInTheDocument();
   });
 
   it('Gegenbeispiel: mit Wake Lock erscheint kein Hinweis', async () => {
     seite();
     await vorspulen(0);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
-  });
-
-  it('Gegenbeispiel: in der Browser-Quelle (/tv) erscheint der Hinweis nie', async () => {
-    wakeLockFehlt();
-    window.history.replaceState(null, '', '/#/tv');
-    seite();
-    await vorspulen(0);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
-    expect(screen.getByText('Folie A')).toBeInTheDocument();
-  });
-
-  it('der Hinweis blockiert nicht: Folie B kommt bei sichtbarem Hinweis', async () => {
-    wakeLockFehlt();
-    seite();
-    await vorspulen(0);
-    expect(screen.getByText('Folie A')).toBeInTheDocument();
-    await vorspulen(4_000);
-    expect(screen.getByText('Folie B')).toBeInTheDocument();
-    expect(screen.getByTestId('monitor-wakelock-hint')).toBeInTheDocument();
+    expect(hinweis()).not.toBeInTheDocument();
   });
 
   it('W4: der Hinweis erscheint nach Ablauf nie wieder, auch nicht nach Lade- oder Fehlerzustand', async () => {
@@ -333,16 +339,15 @@ describe('Bildschirm bleibt an, Hinweis nur im normalen Browser (@ME-005, @ME-00
     seite();
     await vorspulen(0);
     await vorspulen(10_000);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+    expect(hinweis()).not.toBeInTheDocument();
 
     localGet.mockResolvedValue(null);
     await vorspulen(30_000);
     expect(screen.getByTestId('monitor-error-state')).toBeInTheDocument();
 
-    localGet.mockResolvedValue(monitorTurnier());
+    localGet.mockResolvedValue(liveTurnier());
     await vorspulen(30_000);
-    expect(screen.getByText('Folie A')).toBeInTheDocument();
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
+    expect(hinweis()).not.toBeInTheDocument();
   });
 });
 
@@ -400,6 +405,8 @@ describe('Vollbild ohne Standard-API und Mac-Navigation (B-17 Fixrunde 2)', () =
 });
 
 describe('Wake Lock nach der ersten Eingabe (B-17 Fixrunde 2)', () => {
+  beforeEach(() => { localGet.mockResolvedValue(liveTurnier()); });
+
   it('schlägt die erste Anfrage fehl, fordert die erste Eingabe sie erneut an und der Hinweis verschwindet', async () => {
     const request = vi.fn()
       .mockRejectedValueOnce(new Error('NotAllowedError'))
