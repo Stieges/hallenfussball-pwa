@@ -48,7 +48,7 @@ import {
   TiebreakerBanner,
   PenaltyShootoutDialog,
 } from './components';
-import { AudioActivationBanner } from '../match-cockpit/AudioActivationBanner';
+import { AudioActivationBanner } from './areas/AudioActivationBanner';
 
 // Hooks
 import { useToast } from './hooks';
