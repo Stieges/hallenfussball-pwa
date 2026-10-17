@@ -12,7 +12,7 @@ import { cssVars } from '../../../design-tokens';
 import type { UseRejectedOutboxDialogResult } from '../../../features/collaboration/outbox/useRejectedOutboxDialog';
 import { RejectedOutboxDialog } from '../../../features/collaboration/outbox/RejectedOutboxDialog';
 import type { useEngineEventEditing } from '../../../hooks/useEngineEventEditing';
-import type { Side, CardKind } from '../model/cockpitTypes';
+import { EINTRAG_ZEITSTRAFE, type CardKind, type OffenerEintrag } from '../model/cockpitTypes';
 import {
   TimeAdjustDialog, CardDialog, TimePenaltyDialog, SubstitutionDialog, GoalScorerDialog,
   EventEditDialog, EventLogBottomSheet, SettingsDialog, TiebreakerBanner, PenaltyShootoutDialog,
@@ -22,38 +22,25 @@ import { AudioActivationBanner } from './AudioActivationBanner';
 
 type EngineEventEditing = ReturnType<typeof useEngineEventEditing>;
 
-/** Welche Overlays offen sind und was sie vorbelegen (Quelle: `useEntryFlows` und Hülle). */
+/** Welche Overlays offen sind: die Eintrags-Auswahl aus `useEntryFlows` plus die übrigen Blätter. */
 export interface CockpitDialogState {
+  offen: OffenerEintrag | null;
   showTimeAdjust: boolean;
-  showCard: boolean;
-  showTimePenalty: boolean;
-  showSubstitution: boolean;
-  showGoal: boolean;
-  showEventEdit: boolean;
   showEventLog: boolean;
   showSettings: boolean;
   showPenaltyShootout: boolean;
-  pendingGoalSide: Side | null;
-  pendingPenaltySide: Side | null;
-  pendingCardType: CardKind | null;
-  pendingCardTeamSide: Side | null;
-  pendingSubstitutionSide: Side | null;
-  editingEventId: string | null;
 }
 
 /** Alle `on…`-Rückrufe der Overlays. Tiebreak-Handler sind `undefined`, wenn der Aufrufer sie nicht liefert. */
 export interface CockpitOverlayHandlers {
   closeTimeAdjust: () => void;
   confirmTimeAdjust: (newDisplaySeconds: number) => void;
-  closeCard: () => void;
+  /** Schließt die offene Eintrags-Auswahl (Tor, Karte, Zeitstrafe, Wechsel, Nummer ändern). */
+  closeEntry: () => void;
   confirmCard: (cardType: CardKind, teamId: string, playerNumber?: number) => void;
-  closeTimePenalty: () => void;
   confirmTimePenalty: (durationSeconds: number, teamId: string, playerNumber?: number) => void;
-  closeSubstitution: () => void;
   confirmSubstitution: (teamId: string, playersOut: number[], playersIn: number[]) => void;
-  closeGoal: () => void;
   confirmGoal: (jerseyNumber: number | null, assists?: (number | null)[], incomplete?: boolean) => void;
-  closeEventEdit: () => void;
   updateEvent: EngineEventEditing['update'];
   deleteEvent: EngineEventEditing['remove'];
   closeEventLog: () => void;
@@ -89,9 +76,12 @@ export interface CockpitOverlaysProps {
 
 export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
   const { match, tournamentId, readOnly, isLocked, settings, displaySeconds, effectiveScore, dialogs, editingEvent, editing, handlers, sound, rejectedOutbox } = props;
-  const goalTeamName = dialogs.pendingGoalSide === 'home'
-    ? match.homeTeam.name
-    : dialogs.pendingGoalSide === 'away' ? match.awayTeam.name : '';
+  const offen = dialogs.offen;
+  const editingEventId = offen?.art === 'nummer' ? offen.eventId ?? null : null;
+  const seite = offen?.seite ?? null;
+  const goalTeamName = offen?.art === 'tor'
+    ? (seite === 'home' ? match.homeTeam.name : seite === 'away' ? match.awayTeam.name : '')
+    : '';
 
   return (
     <>
@@ -112,44 +102,44 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
       />
 
       <CardDialog
-        isOpen={dialogs.showCard}
-        onClose={handlers.closeCard}
+        isOpen={offen?.art === 'karte'}
+        onClose={handlers.closeEntry}
         onConfirm={handlers.confirmCard}
         homeTeam={match.homeTeam}
         awayTeam={match.awayTeam}
         // BUG-007: Pre-select card type and team based on button clicked
-        initialCardType={dialogs.pendingCardType ?? undefined}
-        preselectedTeamSide={dialogs.pendingCardTeamSide ?? undefined}
+        initialCardType={offen?.art === 'karte' ? offen.kartenArt : undefined}
+        preselectedTeamSide={offen?.art === 'karte' ? seite ?? undefined : undefined}
         autoDismissSeconds={10}
       />
 
       <TimePenaltyDialog
-        isOpen={dialogs.showTimePenalty}
-        onClose={handlers.closeTimePenalty}
+        isOpen={offen?.art === EINTRAG_ZEITSTRAFE}
+        onClose={handlers.closeEntry}
         onConfirm={handlers.confirmTimePenalty}
         homeTeam={match.homeTeam}
         awayTeam={match.awayTeam}
         // BUG-006: Pre-select 2 minutes and team based on button clicked
         preselectedDurationSeconds={match.timePenaltyDurationSeconds ?? settings.timePenaltyDurationSeconds}
-        preselectedTeamSide={dialogs.pendingPenaltySide ?? undefined}
+        preselectedTeamSide={offen?.art === EINTRAG_ZEITSTRAFE ? seite ?? undefined : undefined}
         autoDismissSeconds={10}
       />
 
       <SubstitutionDialog
-        isOpen={dialogs.showSubstitution}
-        onClose={handlers.closeSubstitution}
+        isOpen={offen?.art === 'wechsel'}
+        onClose={handlers.closeEntry}
         onConfirm={handlers.confirmSubstitution}
         homeTeam={match.homeTeam}
         awayTeam={match.awayTeam}
         // BUG-009: Pre-select team based on button clicked
-        preselectedTeamSide={dialogs.pendingSubstitutionSide ?? undefined}
+        preselectedTeamSide={offen?.art === 'wechsel' ? seite ?? undefined : undefined}
         autoDismissSeconds={10}
       />
 
       {/* GoalScorerDialog - BUG-002: Torschütze + Assist erfassen */}
       <GoalScorerDialog
-        isOpen={dialogs.showGoal}
-        onClose={handlers.closeGoal}
+        isOpen={offen?.art === 'tor'}
+        onClose={handlers.closeEntry}
         onConfirm={handlers.confirmGoal}
         teamName={goalTeamName}
         teamColor={cssVars.colors.primary}
@@ -158,15 +148,15 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
 
       {/* BUG-010: EventEditDialog for editing/deleting events */}
       <EventEditDialog
-        isOpen={dialogs.showEventEdit}
-        onClose={handlers.closeEventEdit}
+        isOpen={offen?.art === 'nummer'}
+        onClose={handlers.closeEntry}
         event={editingEvent}
         homeTeam={match.homeTeam}
         awayTeam={match.awayTeam}
         onUpdate={handlers.updateEvent}
         onDelete={handlers.deleteEvent}
-        deleteBlocked={dialogs.editingEventId ? editing.deleteBlock(dialogs.editingEventId) : undefined}
-        amendLocked={dialogs.editingEventId ? editing.amendLock(dialogs.editingEventId) : undefined}
+        deleteBlocked={editingEventId ? editing.deleteBlock(editingEventId) : undefined}
+        amendLocked={editingEventId ? editing.amendLock(editingEventId) : undefined}
       />
 
       {/* BUG-002: Event Log Bottom Sheet for Mobile. Task R2 Fixrunde 2 (H1b/Rule 2): Bearbeiten

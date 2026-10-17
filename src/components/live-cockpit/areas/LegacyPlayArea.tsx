@@ -34,7 +34,8 @@ export interface LegacyPlayAreaProps {
   homeFouls: number;
   awayFouls: number;
   effectiveScore: { home: number; away: number };
-  sidesSwapped: boolean;
+  /** Anzeige-Reihenfolge der Seiten (`useSideOrder`): wer links, wer rechts steht. */
+  order: { links: Side; rechts: Side };
   /** Klick auf die Spieluhr; `undefined`, wenn das Cockpit die Zeit nicht anpassen darf. */
   onTimerClick?: () => void;
   teams: {
@@ -58,7 +59,7 @@ function formatTime(seconds: number): string {
 const cls = (...names: Array<string | false>): string => names.filter(Boolean).join(' ');
 
 export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
-  const { match, nextMatch, breakpoint, isMobile, isDesktop, isLocked, displaySeconds, timerState, homeFouls, awayFouls, effectiveScore, sidesSwapped, onTimerClick, teams, controls, sidebar } = props;
+  const { match, nextMatch, breakpoint, isMobile, isDesktop, isLocked, displaySeconds, timerState, homeFouls, awayFouls, effectiveScore, order, onTimerClick, teams, controls, sidebar } = props;
   const isNotStarted = match.status === 'NOT_STARTED';
   const foulsOf = (side: Side): number => (side === 'home' ? homeFouls : awayFouls);
 
@@ -126,9 +127,9 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
 
           {/* Score Row - Teams können mit "Seiten tauschen" vertauscht werden */}
           <div className={cls(styles.scoreRow, isMobile && styles.scoreRowMobile)}>
-            {renderTeam(sidesSwapped ? 'away' : 'home')}
+            {renderTeam(order.links)}
             <span className={styles.scoreDivider}>:</span>
-            {renderTeam(sidesSwapped ? 'home' : 'away')}
+            {renderTeam(order.rechts)}
           </div>
 
           {/* Task R2: `disabled` sperrt Rückgängig/Start-Pause/Zeit/Seiten/Beenden bei

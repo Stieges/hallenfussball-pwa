@@ -30,11 +30,11 @@ import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 import { LegacyMatchHeader } from './areas/LegacyMatchHeader';
 import { LegacyPlayArea, type TeamSideHandlers } from './areas/LegacyPlayArea';
 import { CockpitOverlays, type CockpitDialogState, type CockpitOverlayHandlers } from './areas/CockpitOverlays';
-import type { Side } from './model/cockpitTypes';
+import { EINTRAG_ZEITSTRAFE, type CardKind, type Side } from './model/cockpitTypes';
 import shell from './LiveCockpitShell.module.css';
 
 // Hooks
-import { useToast } from './hooks';
+import { useToast, useEntryFlows, useSideOrder } from './hooks';
 import { useActivePenalties } from './hooks/useActivePenalties';
 
 // ---------------------------------------------------------------------------
@@ -113,24 +113,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // Responsive breakpoint detection
   const { breakpoint, isMobile, isTablet } = useBreakpoint();
 
-  // State
+  // State: offene Eintrags-Auswahl (Tor, Karte, Zeitstrafe, Wechsel, Nummer ändern) in useEntryFlows
+  const flows = useEntryFlows(currentMatch?.id);
   const [showTimeAdjustDialog, setShowTimeAdjustDialog] = useState(false);
-  const [showCardDialog, setShowCardDialog] = useState(false);
-  const [showTimePenaltyDialog, setShowTimePenaltyDialog] = useState(false);
-  const [showSubstitutionDialog, setShowSubstitutionDialog] = useState(false);
-  const [showGoalDialog, setShowGoalDialog] = useState(false);
-  const [pendingGoalSide, setPendingGoalSide] = useState<'home' | 'away' | null>(null);
-  // BUG-006: Track which team side triggered the penalty dialog
-  const [pendingPenaltySide, setPendingPenaltySide] = useState<'home' | 'away' | null>(null);
-  // BUG-007: Track which card type and team side triggered the card dialog
-  const [pendingCardType, setPendingCardType] = useState<'YELLOW' | 'YELLOW_RED' | 'RED' | null>(null);
-  const [pendingCardTeamSide, setPendingCardTeamSide] = useState<'home' | 'away' | null>(null);
-  // BUG-009: Track which team side triggered the substitution dialog
-  const [pendingSubstitutionSide, setPendingSubstitutionSide] = useState<'home' | 'away' | null>(null);
-  // BUG-010: Event editing state
-  // M-1 FIX: Store only event ID, not the full object, to avoid stale data
-  const [showEventEditDialog, setShowEventEditDialog] = useState(false);
-  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   // BUG-002: Event Log Bottom Sheet for Mobile
   const [showEventLogBottomSheet, setShowEventLogBottomSheet] = useState(false);
   // Overflow Menu (⋮ button in header)
@@ -138,8 +123,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // C3b-2b (G11): Foul-Zaehler aus den FOUL-Eintraegen in `events` -- ganzes Spiel, kein
   // Halbzeit-Reset, kein lokales +1 (zurueckgenommenes zaehlt nicht, G6/RC13).
   const { home: homeFouls, away: awayFouls } = useFoulCounts(currentMatch);
-  // Seiten tauschen: Visuelle Darstellung der Teams vertauschen
-  const [sidesSwapped, setSidesSwapped] = useState(false);
+  // Seiten tauschen: Visuelle Darstellung der Teams vertauschen (nur dieses Gerät, @SL-065)
+  const sides = useSideOrder(currentMatch);
   // Settings Dialog
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   // L1: Strafstoßschießen-Dialog (Task 11)
@@ -190,34 +175,21 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     cockpitSettings.nettoWarningSeconds
   );
 
-  // C-2 FIX: Reset all dialog states when match changes to prevent stale data
-  // RC13/PC20 (C3a-2a, vorgezogen aus C3b): haengt NUR an `match.id` -- NICHT an
-  // `currentMatch?.events`. Grund (per Fixrunde 2 belegt, s. task-C3a-report.md "C3a-2a
-  // Fixrunde 2"): eine echte Engine-Aenderung AM SELBEN Spiel baut ein neues LiveMatch-Objekt
-  // inkl. neuem `events`-Array, obwohl sich am Spiel selbst nichts geaendert hat. Mit
-  // `currentMatch?.events` als Abhaengigkeit schloss dieser Effekt dabei ALLE offenen Dialoge --
-  // riss z. B. den gerade offenen GoalScorerDialog waehrend der Torschuetzen-Eingabe weg (C1).
+  // C-2 FIX: Dialoge schließen, wenn das Spiel wechselt. Die Eintrags-Auswahl (Tor, Karte, ...)
+  // schließt `useEntryFlows` selbst – RC13/PC20 (C3a-2a, vorgezogen aus C3b): nur an `match.id`,
+  // NICHT an `currentMatch?.events` (eine echte Engine-Änderung AM SELBEN Spiel baut ein neues
+  // `events`-Array und darf einen offenen Dialog nicht wegreißen, C1).
   // Regressionstest: `LiveCockpit.dialogReset.test.tsx`.
   const currentMatchId = currentMatch?.id;
   useEffect(() => {
-    // Reset all dialog visibility states
     setShowTimeAdjustDialog(false);
-    setShowCardDialog(false);
-    setShowTimePenaltyDialog(false);
-    setShowSubstitutionDialog(false);
-    setShowGoalDialog(false);
-    setShowEventEditDialog(false);
     setShowEventLogBottomSheet(false);
     setShowSettingsDialog(false);
-
-    // Reset pending action states
-    setPendingGoalSide(null);
-    setPendingPenaltySide(null);
-    setPendingCardType(null);
-    setPendingCardTeamSide(null);
-    setPendingSubstitutionSide(null);
-    setEditingEventId(null);
   }, [currentMatchId]);
+
+  // M-1 FIX: die ID des bearbeiteten Ereignisses kommt aus der offenen Auswahl
+  const editingEventId = flows.offen?.art === 'nummer' ? flows.offen.eventId ?? null : null;
+  const goalSide = flows.offen?.art === 'tor' ? flows.offen.seite : null;
 
   // M-1 FIX: Derive editing event from current match events to always have fresh data
   // This prevents stale data when another tab modifies the event
@@ -244,23 +216,21 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // Open GoalScorerDialog instead of direct goal
   const handleGoalHome = useCallback(() => {
     if (!currentMatch) { return; }
-    setPendingGoalSide('home');
-    setShowGoalDialog(true);
-  }, [currentMatch]);
+    flows.oeffne({ art: 'tor', seite: 'home' });
+  }, [currentMatch, flows]);
 
   const handleGoalAway = useCallback(() => {
     if (!currentMatch) { return; }
-    setPendingGoalSide('away');
-    setShowGoalDialog(true);
-  }, [currentMatch]);
+    flows.oeffne({ art: 'tor', seite: 'away' });
+  }, [currentMatch, flows]);
 
   // Callback when GoalScorerDialog confirms
   const handleGoalConfirm = useCallback(
     (jerseyNumber: number | null, assists?: (number | null)[], incomplete?: boolean) => {
-      if (!currentMatch || !pendingGoalSide) { return; }
+      if (!currentMatch || !goalSide) { return; }
 
-      const teamId = pendingGoalSide === 'home' ? currentMatch.homeTeam.id : currentMatch.awayTeam.id;
-      const teamName = pendingGoalSide === 'home' ? currentMatch.homeTeam.name : currentMatch.awayTeam.name;
+      const teamId = goalSide === 'home' ? currentMatch.homeTeam.id : currentMatch.awayTeam.id;
+      const teamName = goalSide === 'home' ? currentMatch.homeTeam.name : currentMatch.awayTeam.name;
 
       // Filter out null assists and convert to number array
       const validAssists = assists?.filter((a): a is number => a !== null) ?? [];
@@ -284,11 +254,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         showSuccess(`⚽ ${t('toast.goalScored', { teamName })}!`);
       }
 
-      // Reset state
-      setPendingGoalSide(null);
-      setShowGoalDialog(false);
+      flows.schliesse();
     },
-    [currentMatch, pendingGoalSide, onGoal, showSuccess, showInfo, t]
+    [currentMatch, goalSide, flows, onGoal, showSuccess, showInfo, t]
   );
 
   const handleMinusHome = useCallback(() => { void editing.minus('home'); }, [editing]);
@@ -377,9 +345,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   );
 
   const handleSwitchSides = useCallback(() => {
-    setSidesSwapped(prev => !prev);
+    sides.tausche();
     showInfo('Seiten getauscht');
-  }, [showInfo]);
+  }, [sides, showInfo]);
 
   const handleFoulHome = useCallback(() => {
     if (!currentMatch) { return; }
@@ -397,11 +365,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // F3b2: ein Knopf je Kartentyp (Gelb/Gelb-Rot/Rot) ruft denselben Oeffner -- ersetzt zwei fast
   // identische Closures je Team (TeamBlock) durch eine, spart Zeilen statt den dritten Knopf
   // welche zu kosten (LiveCockpit.tsx darf nicht wachsen).
-  const openCardDialog = useCallback((type: 'YELLOW' | 'YELLOW_RED' | 'RED', side: 'home' | 'away') => {
-    setPendingCardType(type);
-    setPendingCardTeamSide(side);
-    setShowCardDialog(true);
-  }, []);
+  const openCardDialog = useCallback((type: CardKind, side: Side) => {
+    flows.oeffne({ art: 'karte', seite: side, kartenArt: type });
+  }, [flows]);
 
   const handleCardConfirm = useCallback(
     (cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', teamId: string, playerNumber?: number) => {
@@ -416,12 +382,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       onCard?.(currentMatch.id, teamId, cardType, { playerNumber });
 
       showInfo(`${t(CARD_TOAST_KEYS[cardType], { teamName })}${playerInfo}`);
-      setShowCardDialog(false);
-      // BUG-007: Reset pending card state
-      setPendingCardType(null);
-      setPendingCardTeamSide(null);
+      flows.schliesse();
     },
-    [currentMatch, onCard, showInfo, t]
+    [currentMatch, onCard, flows, showInfo, t]
   );
 
   const handleTimePenaltyConfirm = useCallback(
@@ -443,10 +406,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
       // Add to active penalties (local UI state for countdown)
       penalties.add({ teamId, playerNumber, durationSeconds });
-      setShowTimePenaltyDialog(false);
-      setPendingPenaltySide(null);
+      flows.schliesse();
     },
-    [currentMatch, onTimePenalty, showInfo, penalties, t]
+    [currentMatch, onTimePenalty, flows, showInfo, penalties, t]
   );
 
   // BUG-009: Updated to handle multi-player substitutions
@@ -467,10 +429,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       const outInfo = playersOut.length > 0 ? playersOut.map(n => `#${n}`).join(',') : '?';
       const inInfo = playersIn.length > 0 ? playersIn.map(n => `#${n}`).join(',') : '?';
       showInfo(`🔄 Wechsel ${teamName}: ${outInfo} → ${inInfo}`);
-      setShowSubstitutionDialog(false);
-      setPendingSubstitutionSide(null);
+      flows.schliesse();
     },
-    [currentMatch, onSubstitution, showInfo]
+    [currentMatch, onSubstitution, flows, showInfo]
   );
 
   // BUG-010: Handler for editing events from the sidebar
@@ -481,11 +442,10 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       // Verify event exists in match (defensive check)
       const exists = currentMatch.events.some(e => e.id === event.id);
       if (exists) {
-        setEditingEventId(event.id);
-        setShowEventEditDialog(true);
+        flows.oeffne({ art: 'nummer', seite: null, eventId: event.id });
       }
     },
-    [currentMatch]
+    [currentMatch, flows]
   );
 
   // BUG-010 / C3b-1: Bearbeiten (AMEND) und Löschen (RETRACT) laufen im Hook.
@@ -557,40 +517,34 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   const sideHandlers = (side: Side): TeamSideHandlers => ({
     onGoal: side === 'home' ? handleGoalHome : handleGoalAway,
     onMinus: side === 'home' ? handleMinusHome : handleMinusAway,
-    onPenalty: () => { setPendingPenaltySide(side); setShowTimePenaltyDialog(true); },
+    onPenalty: () => flows.oeffne({ art: EINTRAG_ZEITSTRAFE, seite: side }),
     onYellowCard: () => openCardDialog('YELLOW', side),
     onYellowRedCard: () => openCardDialog('YELLOW_RED', side),
     onRedCard: () => openCardDialog('RED', side),
-    onSubstitution: () => { setPendingSubstitutionSide(side); setShowSubstitutionDialog(true); },
+    onSubstitution: () => flows.oeffne({ art: 'wechsel', seite: side }),
     onFoul: side === 'home' ? handleFoulHome : handleFoulAway,
   });
 
   const dialogs: CockpitDialogState = {
-    showTimeAdjust: showTimeAdjustDialog, showCard: showCardDialog, showTimePenalty: showTimePenaltyDialog,
-    showSubstitution: showSubstitutionDialog, showGoal: showGoalDialog, showEventEdit: showEventEditDialog,
-    showEventLog: showEventLogBottomSheet, showSettings: showSettingsDialog,
+    offen: flows.offen,
+    showTimeAdjust: showTimeAdjustDialog, showEventLog: showEventLogBottomSheet, showSettings: showSettingsDialog,
     // Task R2 Fixrunde 2 (H1): unter readOnly gar nicht, und nur mit beiden Strafstoß-Handlern.
     showPenaltyShootout: showPenaltyDialog && !readOnly && !!onRecordPenaltyResult && !!onAbortPenaltyShootout,
-    pendingGoalSide, pendingPenaltySide, pendingCardType, pendingCardTeamSide, pendingSubstitutionSide, editingEventId,
   };
 
   const overlayHandlers: CockpitOverlayHandlers = {
     closeTimeAdjust: () => setShowTimeAdjustDialog(false),
     confirmTimeAdjust: handleTimeAdjust,
-    closeCard: () => { setShowCardDialog(false); setPendingCardType(null); setPendingCardTeamSide(null); },
+    closeEntry: flows.schliesse,
     confirmCard: handleCardConfirm,
-    closeTimePenalty: () => { setShowTimePenaltyDialog(false); setPendingPenaltySide(null); },
     confirmTimePenalty: handleTimePenaltyConfirm,
-    closeSubstitution: () => { setShowSubstitutionDialog(false); setPendingSubstitutionSide(null); },
     confirmSubstitution: handleSubstitutionConfirm,
-    closeGoal: () => { setShowGoalDialog(false); setPendingGoalSide(null); },
     confirmGoal: handleGoalConfirm,
-    closeEventEdit: () => { setShowEventEditDialog(false); setEditingEventId(null); },
     updateEvent: handleEventUpdate,
     deleteEvent: handleEventDelete,
     closeEventLog: () => setShowEventLogBottomSheet(false),
     // M-1 FIX: nur die Ereignis-ID merken, das Ereignis wird frisch nachgeschlagen
-    editEventFromLog: (event) => { setShowEventLogBottomSheet(false); setEditingEventId(event.id); setShowEventEditDialog(true); },
+    editEventFromLog: (event) => { setShowEventLogBottomSheet(false); flows.oeffne({ art: 'nummer', seite: null, eventId: event.id }); },
     closeSettings: () => setShowSettingsDialog(false),
     changeSettings: (newSettings) => { if (onUpdateSettings) { onUpdateSettings(newSettings); } },
     testSound: () => void sound.play(),
@@ -644,7 +598,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
           homeFouls={homeFouls}
           awayFouls={awayFouls}
           effectiveScore={effectiveScore}
-          sidesSwapped={sidesSwapped}
+          order={{ links: sides.links, rechts: sides.rechts }}
           onTimerClick={openTimeAdjust}
           teams={{ handlers: { home: sideHandlers('home'), away: sideHandlers('away') }, extraProps: editing.teamBlockProps }}
           controls={{
