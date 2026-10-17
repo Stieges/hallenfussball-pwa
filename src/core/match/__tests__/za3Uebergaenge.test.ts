@@ -243,6 +243,26 @@ describe('@SL-146 Ohne Ende durch Ablauf setzt Toms Gerät das Spiel nicht fort 
     expect(weiter.state.phase).toBe('overtime');
   });
 
+  it.each([
+    { lage: 'zwei Abschnitte, im 2. Abschnitt bei 7:00 von Hand abgepfiffen', datei: '65a-zwei-abschnitte-abpfiff-von-hand.json' },
+    { lage: 'Verlängerung bei 1:40 von Hand abgepfiffen, Stand 2:1', datei: '65d-verlaengerung-abpfiff-von-hand.json' },
+  ])('@SL-146 $lage: lehnt die Datenbank ab, Spiel 11 bleibt beendet', ({ datei }) => {
+    const l = lauf(datei);
+    const r = ergebnisVon(l, 'REOPEN');
+    expect(r.code).toBe('FORBIDDEN_ACTOR');
+    expect(r.detail).toEqual({ reason: 'NOT_ENDED_BY_CLOCK' });
+    expect(l.state.status).toBe('finished');
+  });
+
+  it.each([
+    { lage: 'zwei Abschnitte, Ende durch Ablauf des 2. Abschnitts', datei: '65b-zwei-abschnitte-ende-durch-ablauf.json' },
+    { lage: 'Verlängerung endet durch Ablauf, Stand 2:1', datei: '65c-verlaengerung-ende-durch-ablauf.json' },
+  ])('@SL-074 $lage: Tom setzt 1 Minute nach dem Abpfiff fort', ({ datei }) => {
+    const l = lauf(datei);
+    expect(ergebnisVon(l, 'REOPEN').status).toBe('accepted');
+    expect(l.state.status).toBe('running');
+  });
+
   it('@SL-074 Gegenstück: mit Ablauf der Spielzeit von selbst beendet, Tom setzt 1 Minute nach dem Abpfiff fort', () => {
     expect(ergebnisVon(lauf('64b-fortsetzen-nach-ablauf.json'), 'REOPEN').status).toBe('accepted');
   });
