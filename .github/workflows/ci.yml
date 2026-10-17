@@ -64,11 +64,14 @@ jobs:
         shell: bash
         run: node scripts/coverage-report.mjs --base origin/main
 
-      # A-09 (@TA-006..@TA-008): MVP-Kennungen ohne Test. Im MVP nur Bericht; rot nur bei
-      # Abweichung von der Soll-Zahl oder mehr als 15 Nachweisen aus der Generalprobe.
-      - name: Szenario-Bericht (nicht blockierend fuer fehlende Tests)
+      # A-09 (@TA-006..@TA-008) + TA-CI (@TA-010): Szenario-Abdeckung blockierend. Rot bei Abweichung von der
+      # Soll-Zahl, mehr als 15 Nachweisen aus der Generalprobe oder wenn die Zahl der MVP-Kennungen mit
+      # regulaerem Test (kein skip/todo/fails, `:teil` zaehlt nicht) unter den GEMESSENEN Stand von origin/main
+      # oder unter tests/meta/szenario-floor.json faellt. PRs gegen develop vergleichen ebenfalls mit main.
+      # Job-Summary ueber $GITHUB_STEP_SUMMARY (setzt das Skript selbst).
+      - name: Szenario-Abdeckung (blockierend, Ratchet gegen origin/main)
         shell: bash
-        run: node scripts/scenario-tests.mjs | tee scenario-bericht.txt
+        run: npm run test:scenarios -- --base origin/main 2>&1 | tee scenario-bericht.txt
 
       - name: Upload coverage artifact
         if: always()

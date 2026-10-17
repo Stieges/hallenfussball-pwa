@@ -17,6 +17,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
+    "test:scenarios": "node scripts/scenario-tests.mjs",
     "test:e2e": "playwright test --project=mobile-sm --project=mobile-md --project=mobile-lg --project=tablet-portrait --project=tablet-landscape --project=desktop --project=mobile-slow-3g --project=iPhone-16 --project=Pixel-9",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
