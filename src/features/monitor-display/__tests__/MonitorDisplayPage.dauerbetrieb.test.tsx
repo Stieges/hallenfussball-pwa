@@ -1,17 +1,14 @@
 /**
- * Monitor-Seite im Dauerbetrieb (B-17 + Fixrunde 1): Mauszeiger, Vollbild-Taste, Tasten, Hinweis, Bildrand.
- * Szenarien: @ME-002, @ME-003, @ME-005, @ME-006, @ME-019, @ME-020, @ME-021, @ME-022, @ZM-130.
- * Gegenbeispiele: Leertaste und Pfeile wirken nicht (@ME-022); Escape verlässt die Seite nicht; der Hinweis erscheint
- * nie in der Browser-Quelle und höchstens einmal je Seite.
+ * Monitor-Seite im Dauerbetrieb (B-17): Mauszeiger, Vollbild-Taste, Tasten, Vollbild-Rückfall.
+ * (Bildrand: overscan.ms2.test.tsx.)
+ * Szenarien: @ME-002, @ME-003, @ME-021, @ME-022, @ZM-130.
+ * Gegenbeispiele: Leertaste und Pfeile wirken nicht (@ME-022); Escape verlässt die Seite nicht.
+ * Der Wachhalten-Hinweis (@ME-006) steht in MonitorDisplayPage.wachhalten.test.tsx.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import type { Tournament } from '../../../types/tournament';
-import { PERFORMANCE_PROFILES } from '../../../types/monitor';
-import deMonitor from '../../../i18n/locales/de/monitor.json';
-import enMonitor from '../../../i18n/locales/en/monitor.json';
 import { attachMonitor, buildTournament, slide, withMonitor } from './monitorFixture';
-import { SlideRenderer } from '../slides/SlideRenderer';
 
 const { supabaseGet, localGet } = vi.hoisted(() => ({
   supabaseGet: vi.fn(),
@@ -44,14 +41,11 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 
-/** Die Test-Umgebung liefert den Schlüssel als Text (src/test/setup.ts); der DE/EN-Wortlaut steht im JSON-Test unten. */
-const HINWEIS = 'monitor:dauerbetrieb.wakeLockHint';
-
-function monitorTurnier(overscanPx?: number, folien = [
+function monitorTurnier(overscanPercent?: number, folien = [
   slide('custom-text', { headline: 'Folie A' }, 4),
   slide('custom-text', { headline: 'Folie B' }),
 ]): Tournament {
-  return attachMonitor(buildTournament(), withMonitor({ slides: folien, ...(overscanPx !== undefined ? { overscanPx } : {}) }));
+  return attachMonitor(buildTournament(), withMonitor({ slides: folien, ...(overscanPercent !== undefined ? { overscanPercent } : {}) }));
 }
 
 function wakeLockUnterstuetzt(): void {
@@ -213,81 +207,6 @@ describe('Taste „c“: Cache-Anzeige (@ME-021)', () => {
   });
 });
 
-describe('Bildschirm bleibt an, Hinweis nur im normalen Browser (@ME-005, @ME-006)', () => {
-  it('ohne Wake Lock erscheint der Hinweis und verschwindet nach 10 Sekunden', async () => {
-    wakeLockFehlt();
-    seite();
-    await vorspulen(0);
-    expect(screen.getByTestId('monitor-wakelock-hint')).toHaveTextContent(HINWEIS);
-    await vorspulen(10_000);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
-  });
-
-  it('Gegenbeispiel: mit Wake Lock erscheint kein Hinweis', async () => {
-    seite();
-    await vorspulen(0);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
-  });
-
-  it('Gegenbeispiel: in der Browser-Quelle (/tv) erscheint der Hinweis nie', async () => {
-    wakeLockFehlt();
-    window.history.replaceState(null, '', '/#/tv');
-    seite();
-    await vorspulen(0);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
-    expect(screen.getByText('Folie A')).toBeInTheDocument();
-  });
-
-  it('der Hinweis blockiert nicht: Folie B kommt bei sichtbarem Hinweis', async () => {
-    wakeLockFehlt();
-    seite();
-    await vorspulen(0);
-    expect(screen.getByText('Folie A')).toBeInTheDocument();
-    await vorspulen(4_000);
-    expect(screen.getByText('Folie B')).toBeInTheDocument();
-    expect(screen.getByTestId('monitor-wakelock-hint')).toBeInTheDocument();
-  });
-
-  it('W4: der Hinweis erscheint nach Ablauf nie wieder, auch nicht nach Lade- oder Fehlerzustand', async () => {
-    wakeLockFehlt();
-    seite();
-    await vorspulen(0);
-    await vorspulen(10_000);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
-
-    localGet.mockResolvedValue(null);
-    await vorspulen(30_000);
-    expect(screen.getByTestId('monitor-error-state')).toBeInTheDocument();
-
-    localGet.mockResolvedValue(monitorTurnier());
-    await vorspulen(30_000);
-    expect(screen.getByText('Folie A')).toBeInTheDocument();
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
-  });
-});
-
-describe('Bildrand je Monitor (@ME-020)', () => {
-  const folie = () => slide('custom-text', { headline: 'Rand' });
-  const rendere = (overscanPx: number) => render(
-    <SlideRenderer
-      slide={folie()}
-      tournament={buildTournament()}
-      performanceSettings={PERFORMANCE_PROFILES.high}
-      theme="dark"
-      overscanPx={overscanPx}
-    />,
-  );
-
-  it('ein gesetzter Bildrand wirkt als Innenabstand der Folie', () => {
-    const { container } = rendere(60);
-    expect((container.firstElementChild as HTMLElement).style.padding).toBe('60px');
-  });
-
-  it('Gegenbeispiel: Bildrand 0 lässt keinen Rand stehen', () => {
-    const { container } = rendere(0);
-    expect((container.firstElementChild as HTMLElement).style.padding).toBe('0px');
-  });
-});
 
 describe('Vollbild ohne Standard-API und Mac-Navigation (B-17 Fixrunde 2)', () => {
   it('„f“ wirft ohne Vollbild-API nichts', async () => {
@@ -316,40 +235,5 @@ describe('Vollbild ohne Standard-API und Mac-Navigation (B-17 Fixrunde 2)', () =
     act(() => { window.dispatchEvent(e); });
     expect(e.defaultPrevented).toBe(true);
     expect(onBack).not.toHaveBeenCalled();
-  });
-});
-
-describe('Wake Lock nach der ersten Eingabe (B-17 Fixrunde 2)', () => {
-  it('schlägt die erste Anfrage fehl, fordert die erste Eingabe sie erneut an und der Hinweis verschwindet', async () => {
-    const request = vi.fn()
-      .mockRejectedValueOnce(new Error('NotAllowedError'))
-      .mockResolvedValue({ release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() });
-    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
-    seite();
-    await vorspulen(0);
-    expect(request).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('monitor-wakelock-hint')).toBeInTheDocument();
-
-    act(() => { window.dispatchEvent(new Event('pointerdown')); });
-    await vorspulen(0);
-    expect(request).toHaveBeenCalledTimes(2);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
-  });
-
-  it('Gegenbeispiel: gelingt die erste Anfrage, gibt es keine zweite', async () => {
-    const request = vi.fn().mockResolvedValue({ release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() });
-    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
-    seite();
-    await vorspulen(0);
-    act(() => { window.dispatchEvent(new Event('pointerdown')); });
-    await vorspulen(0);
-    expect(request).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('Hinweis-Text in beiden Sprachen (@ME-006, i18n)', () => {
-  it('DE und EN haben den Schlüssel dauerbetrieb.wakeLockHint mit Text', () => {
-    expect(deMonitor.dauerbetrieb.wakeLockHint).toMatch(/Energiespar/);
-    expect(enMonitor.dauerbetrieb.wakeLockHint).toMatch(/power-saving/);
   });
 });

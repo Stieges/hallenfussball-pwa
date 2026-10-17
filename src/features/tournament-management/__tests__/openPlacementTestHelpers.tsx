@@ -1,6 +1,6 @@
 /**
  * Test-Helfer A-36b Fixrunde 1c (@ET-042, Regel T2-UI): Turnier mit Finale + Spiel um Platz 3 und echte
- * i18next-Instanz (DE/EN, tournament + wizard) für RankingTab/TabellenTab.
+ * i18next-Instanz (DE/EN, tournament + wizard) für TabellenTab.
  */
 import type { ReactNode } from 'react';
 import { screen, within } from '@testing-library/react';

@@ -78,7 +78,7 @@
     }
   },
   "dauerbetrieb": {
-    "wakeLockHint": "The screen may switch off according to this device's power-saving setting."
+    "wakeLockHint": "Screen may turn off – check power saving"
   },
   "loading": "Loading display...",
   "error": {

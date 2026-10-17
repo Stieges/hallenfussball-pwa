@@ -186,7 +186,7 @@ const styles = {
   confirmInput: {
     width: '100%',
     padding: cssVars.spacing.sm,
-    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     background: cssVars.colors.surface,
     color: cssVars.colors.textPrimary,
@@ -203,7 +203,7 @@ const styles = {
 
   cancelButton: {
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
-    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     background: 'transparent',
     color: cssVars.colors.textPrimary,

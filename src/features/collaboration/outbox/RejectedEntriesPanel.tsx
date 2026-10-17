@@ -12,13 +12,19 @@ import {
   describeEvent,
   isUnknownReason,
   rejectionReasonKey,
+  type EventMatch,
   type EventTeams,
 } from './rejectionText';
 
+/** Eintrag der Liste; `matchId` (Engine-Schluessel) erlaubt Spiel und Teams in der Zeile (M-4). */
+export type RejectedListEntry = RejectedEntry & { matchId?: string };
+
 export interface RejectedEntriesPanelProps {
-  entries: RejectedEntry[];
+  entries: RejectedListEntry[];
   onDismiss: (ids: string[]) => void;
   teams?: EventTeams;
+  /** A-08f3e2 Fixrunde 1 (M-4): Spiel zu einem Eintrag (Nummer, Teams) -- fehlt es, bleibt die Zeile wie bisher. */
+  matchFor?: (matchId: string) => EventMatch | undefined;
 }
 
 const styles = {
@@ -38,15 +44,17 @@ const styles = {
 function RejectedEntryRow({
   entry,
   teams,
+  match,
   onDismiss,
 }: {
   entry: RejectedEntry;
   teams?: EventTeams;
+  match?: EventMatch;
   onDismiss: (ids: string[]) => void;
 }) {
   const { t } = useTranslation('common');
   const handleDismiss = useCallback(() => onDismiss([entry.event.id]), [onDismiss, entry.event.id]);
-  const desc = describeEvent(entry, teams);
+  const desc = describeEvent(entry, teams, match);
   const reasonKey = rejectionReasonKey(entry.code);
   return (
     <li data-testid="outbox-rejected-item" style={styles.item}>
@@ -56,6 +64,10 @@ function RejectedEntryRow({
           what: t(desc.values.typeKey, { defaultValue: desc.values.typeKey }),
           team: desc.values.team,
           minute: desc.values.minute,
+          number: desc.values.number,
+          home: desc.values.home,
+          away: desc.values.away,
+          score: desc.values.score,
         })}
       </span>
       <span style={styles.reason}>
@@ -69,7 +81,7 @@ function RejectedEntryRow({
   );
 }
 
-export function RejectedEntriesPanel({ entries, onDismiss, teams }: RejectedEntriesPanelProps) {
+export function RejectedEntriesPanel({ entries, onDismiss, teams, matchFor }: RejectedEntriesPanelProps) {
   const { t } = useTranslation('common');
   const dismissAll = useCallback(() => onDismiss(entries.map((entry) => entry.event.id)), [onDismiss, entries]);
   if (entries.length === 0) {
@@ -80,7 +92,13 @@ export function RejectedEntriesPanel({ entries, onDismiss, teams }: RejectedEntr
       <h3 style={styles.header}>{t('outbox.rejected.header', { count: entries.length })}</h3>
       <ul style={styles.list}>
         {entries.map((entry) => (
-          <RejectedEntryRow key={entry.event.id} entry={entry} teams={teams} onDismiss={onDismiss} />
+          <RejectedEntryRow
+            key={entry.event.id}
+            entry={entry}
+            teams={teams}
+            match={entry.matchId !== undefined ? matchFor?.(entry.matchId) : undefined}
+            onDismiss={onDismiss}
+          />
         ))}
       </ul>
       {/* Fixrunde 1 (Review m7): bei genau einem Eintrag ist "Alle verstanden" ein doppelter,

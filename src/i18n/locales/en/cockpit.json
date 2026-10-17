@@ -326,6 +326,9 @@
   "readOnly": {
     "banner": "View only — you don't have permission to control this match."
   },
+  "leer": {
+    "keinSpielGewaehlt": "No match selected"
+  },
   "extended": {
     "editScoreAria": "Correct score",
     "score": "Score",

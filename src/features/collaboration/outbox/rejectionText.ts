@@ -8,16 +8,32 @@ import type { EventType, MatchContext } from '../../../core/match/types';
 /** Team-Zuordnung fuer „Tor Team A/B“ (optional, ohne bleibt Team unbestimmt). */
 export type EventTeams = Pick<MatchContext, 'teamAId' | 'teamBId'>;
 
+/** A-08f3e2 Fixrunde 1 (M-4): Spiel eines Eintrags fuer die Ablehnungsliste (Nummer, Teams). */
+export interface EventMatch {
+  number: number;
+  home: string;
+  away: string;
+  teamAId: string;
+  teamBId: string;
+}
+
 export interface EventDescription {
   /** i18n-Schluessel der Zeile: `outbox.eventLine.*`, je nach verfuegbaren Werten. */
   key: string;
-  /** Werte fuer die Zeile (`what` = Schluessel des Typs, Team A/B, Spielminute). */
+  /** Werte fuer die Zeile (`what` = Schluessel des Typs, Team A/B, Spielminute; bei Spiel-Eintraegen Spiel/Teams/Stand). */
   values: {
     typeKey: string;
     team: 'A' | 'B' | null;
     minute: number | null;
+    number?: number;
+    home?: string;
+    away?: string;
+    score?: string;
   };
 }
+
+/** Eintraege, die das ganze Spiel betreffen (Direkteintrag, Korrektur, Absetzen): keine Spielminute. */
+const MATCH_LEVEL_TYPES: ReadonlySet<EventType> = new Set(['RESULT_ENTRY', 'CORRECTION', 'SKIP', 'UNSKIP']);
 
 const REASON_KEYS: Record<string, string> = {
   INVALID_TRANSITION: 'outbox.rejection.INVALID_TRANSITION',
@@ -92,11 +108,27 @@ function sideOf(teamId: string | null | undefined, teams: EventTeams | undefined
   return teamId === teams.teamBId ? 'B' : null;
 }
 
-/** Kurzbeschreibung „was es war“ (Typ, Team A/B, Minute aus `clockMs`). */
-export function describeEvent(entry: RejectedEntry, teams?: EventTeams): EventDescription {
+function matchLevelDescription(entry: RejectedEntry, typeKey: string, match: EventMatch | undefined): EventDescription {
+  const base = { typeKey, team: null, minute: null };
+  if (!match) {
+    return { key: 'outbox.eventLine.plain', values: base };
+  }
+  const scores = entry.event.payload.scores as Record<string, number> | undefined;
+  const values = { ...base, number: match.number, home: match.home, away: match.away };
+  if (scores && typeof scores[match.teamAId] === 'number' && typeof scores[match.teamBId] === 'number') {
+    return { key: 'outbox.eventLine.matchScore', values: { ...values, score: `${scores[match.teamAId]}:${scores[match.teamBId]}` } };
+  }
+  return { key: 'outbox.eventLine.match', values };
+}
+
+/** Kurzbeschreibung „was es war“ (Typ, Team A/B, Minute aus `clockMs`; Spiel-Eintraege mit Spiel und Teams). */
+export function describeEvent(entry: RejectedEntry, teams?: EventTeams, match?: EventMatch): EventDescription {
+  const typeKey = TYPE_KEYS[entry.event.type] ?? UNKNOWN_TYPE_KEY;
+  if (MATCH_LEVEL_TYPES.has(entry.event.type)) {
+    return matchLevelDescription(entry, typeKey, match);
+  }
   const team = sideOf(entry.event.teamId, teams);
   const minute = minuteFromClock(entry.event.clockMs);
-  const typeKey = TYPE_KEYS[entry.event.type] ?? UNKNOWN_TYPE_KEY;
   if (team !== null && minute !== null) {
     return { key: 'outbox.eventLine.teamAndMinute', values: { typeKey, team, minute } };
   }

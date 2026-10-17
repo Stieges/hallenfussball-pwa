@@ -108,7 +108,7 @@ export const GroupFieldMatrix: React.FC<GroupFieldMatrixProps> = ({
                         backgroundColor: isAllowed
                           ? cssVars.colors.primary
                           : cssVars.colors.surface,
-                        border: `2px solid ${isAllowed ? cssVars.colors.primary : cssVars.colors.borderMedium}`,
+                        border: `2px solid ${isAllowed ? cssVars.colors.primary : cssVars.colors.borderControl}`,
                         cursor: isOnlyOne ? 'not-allowed' : 'pointer',
                         opacity: isOnlyOne ? 0.5 : 1,
                         transition: 'all 0.2s ease',

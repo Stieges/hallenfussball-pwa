@@ -24,6 +24,8 @@ interface ButtonProps {
   loading?: boolean;
   /** Test ID for E2E testing */
   'data-testid'?: string;
+  /** Markiert die Haupttaste einer Ansicht für die visuelle Prüfung (Skill visuelle-pruefung) */
+  'data-primary'?: boolean;
   /** Ref auf das nativ gerenderte Button-Element (z. B. Fokus-Ziele, G2) */
   ref?: React.Ref<HTMLButtonElement>;
 }
@@ -60,6 +62,7 @@ export const Button: React.FC<ButtonProps> = ({
   pressEffect = true,
   loading = false,
   'data-testid': testId,
+  'data-primary': isPrimaryMarker,
   ref,
 }) => {
   const [isPressed, setIsPressed] = useState(false);
@@ -149,7 +152,7 @@ export const Button: React.FC<ButtonProps> = ({
     secondary: {
       background: cssVars.colors.surface,
       color: cssVars.colors.textPrimary,
-      border: `1px solid ${cssVars.colors.border}`,
+      border: `1px solid ${cssVars.colors.borderControl}`,
     },
     ghost: {
       background: 'transparent',
@@ -157,7 +160,7 @@ export const Button: React.FC<ButtonProps> = ({
     },
     danger: {
       background: cssVars.colors.error,
-      color: cssVars.colors.textPrimary,
+      color: cssVars.colors.onError, // C-DANGER-KONTRAST: >= 4,5 : 1 in jeder Darstellung
     },
   };
 
@@ -180,6 +183,7 @@ export const Button: React.FC<ButtonProps> = ({
       aria-disabled={isDisabled}
       aria-busy={loading}
       data-testid={testId}
+      data-primary={isPrimaryMarker ? '' : undefined}
       onMouseDown={handlePressStart}
       onMouseUp={handlePressEnd}
       onMouseLeave={handlePressEnd}

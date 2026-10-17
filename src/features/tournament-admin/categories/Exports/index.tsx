@@ -64,7 +64,7 @@ const styles = {
   select: {
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.bodyMd,
@@ -106,7 +106,7 @@ const styles = {
 
   dropZone: {
     padding: cssVars.spacing.xl,
-    border: `2px dashed ${cssVars.colors.border}`,
+    border: `2px dashed ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.lg,
     textAlign: 'center',
     color: cssVars.colors.textMuted,
@@ -426,7 +426,7 @@ export function ExportsCategory({
               </button>
               <button
                 type="button"
-                style={{ ...styles.badge, background: cssVars.colors.background, border: `1px solid ${cssVars.colors.border}`, cursor: 'pointer', fontSize: cssVars.fontSizes.labelSm }}
+                style={{ ...styles.badge, background: cssVars.colors.background, border: `1px solid ${cssVars.colors.borderControl}`, cursor: 'pointer', fontSize: cssVars.fontSizes.labelSm }}
                 onClick={() => setSelectedEventTypes([])}
               >
                 {t('exports.none')}
@@ -473,7 +473,7 @@ export function ExportsCategory({
               </button>
               <button
                 type="button"
-                style={{ ...styles.badge, background: cssVars.colors.background, border: `1px solid ${cssVars.colors.border}`, cursor: 'pointer', fontSize: cssVars.fontSizes.labelSm }}
+                style={{ ...styles.badge, background: cssVars.colors.background, border: `1px solid ${cssVars.colors.borderControl}`, cursor: 'pointer', fontSize: cssVars.fontSizes.labelSm }}
                 onClick={() => setSelectedTeamIds([])}
               >
                 {t('exports.none')}

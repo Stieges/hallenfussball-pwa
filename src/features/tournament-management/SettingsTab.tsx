@@ -267,7 +267,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       variant === 'primary' || variant === 'danger'
         ? 'white'
         : cssVars.colors.textSecondary,
-    border: variant === 'secondary' ? `1px solid ${cssVars.colors.border}` : 'none',
+    border: variant === 'secondary' ? `1px solid ${cssVars.colors.borderControl}` : 'none',
   });
 
   const dirtyIndicatorStyle: CSSProperties = {

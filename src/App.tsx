@@ -3,16 +3,13 @@ import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ScrollToTop } from './components/ScrollToTop';
-import { SwUpdateNotice } from './components/SwUpdateNotice';
 import { useTournaments } from './hooks/useTournaments';
 import { Tournament, TournamentStatus } from './types/tournament';
 import { generateTournamentId, generateUniqueId } from './utils/idGenerator';
 import { buildCopiedTournament } from './core/models/tournamentCopy';
 import { cssVars } from './design-tokens';
-import { ToastProvider, useToast } from './components/ui/Toast';
+import { useToast } from './components/ui/Toast';
 import { ConfirmDialog, useConfirmDialog } from './components/ui/ConfirmDialog';
-import { StorageWarningBanner } from './components/StorageWarningBanner';
-import { OfflineBanner } from './components/OfflineBanner';
 import { useSyncOnReconnect } from './hooks/useSyncOnReconnect';
 import { useAuthTimeoutToast } from './hooks/useAuthTimeoutToast';
 import { useSwAutoReload } from './hooks/useSwAutoReload';
@@ -35,10 +32,8 @@ import {
   AuthGuard,
 } from './features/auth/components';
 import { Footer } from './components/layout';
-import { ConsentDialog } from './components/dialogs/ConsentDialog';
-import { hasConsent } from './lib/consent';
-import { reinitializeSentry, captureFeatureError } from './lib/sentry';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { captureFeatureError } from './lib/sentry';
+import { AppChrome, SwUpdateNoticeSlot } from './components/AppChrome';
 import { lazyWithRetry } from './lib/lazyWithRetry';
 
 // Lazy load screens for better initial load performance
@@ -62,7 +57,6 @@ const LiveViewScreen = lazyWithRetry(
   () => import('./screens/LiveViewScreen').then(m => ({ default: m.LiveViewScreen })),
   'LiveViewScreen'
 );
-// NOTE: PublicLiveViewScreen removed - LiveViewScreen handles /live/:code
 const ImpressumScreen = lazyWithRetry(
   () => import('./screens/ImpressumScreen').then(m => ({ default: m.ImpressumScreen })),
   'ImpressumScreen'
@@ -74,12 +68,6 @@ const DatenschutzScreen = lazyWithRetry(
 const SettingsScreen = lazyWithRetry(
   () => import('./screens/SettingsScreen').then(m => ({ default: m.SettingsScreen })),
   'SettingsScreen'
-);
-
-// Local Test Screen (DEV only)
-const LocalTestScreen = lazyWithRetry(
-  () => import('./screens/LocalTestScreen').then(m => ({ default: m.LocalTestScreen })),
-  'LocalTestScreen'
 );
 
 // MON-KONF-01: Monitor Display für TVs/Beamer
@@ -131,7 +119,7 @@ const ScreenLoader = () => {
   );
 };
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'local-test' | 'not-found';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'not-found';
 
 function AppContent() {
   const { t } = useTranslation('common');
@@ -346,9 +334,6 @@ function AppContent() {
     } else if (matchedRoute?.name === 'authConfirm') {
       // Handle email confirmation with button click (defeats email scanners)
       setScreen('auth-confirm');
-    } else if (matchedRoute?.name === 'localTest') {
-      // Local test screen (DEV only)
-      setScreen('local-test');
     } else if (matchedRoute?.name === 'settings') {
       setScreen('settings');
     } else if (matchedRoute?.name === 'profile') {
@@ -524,7 +509,7 @@ function AppContent() {
       <ScrollToTop />
 
       {/* C3b-2d (G8): persistenter Update-Hinweis, bleibt bis zum Neuladen stehen */}
-      {updateNow && <SwUpdateNotice onUpdateNow={updateNow} />}
+      <SwUpdateNoticeSlot updateNow={updateNow} />
 
       {/* Guest Banner - shows registration prompt for guests */}
       {isGuest && isDashboardPath && (
@@ -679,9 +664,6 @@ function AppContent() {
           />
         )}
 
-        {/* NOTE: Public Live View removed - LiveViewScreen handles /live/:code
-            PublicLiveViewScreen was causing duplicate rendering with LiveViewScreen */}
-
         {screen === 'public' && publicTournamentId && (
           <PublicTournamentViewScreen tournamentId={publicTournamentId} />
         )}
@@ -689,11 +671,6 @@ function AppContent() {
         {/* Live View via Share Code (e.g., /live/ABC123) */}
         {screen === 'live' && liveShareCode && (
           <LiveViewScreen shareCode={liveShareCode} />
-        )}
-
-        {/* Local Test Screen (DEV only) */}
-        {screen === 'local-test' && (
-          <LocalTestScreen />
         )}
 
         {/* MON-KONF-01: Monitor Display (fullscreen for TVs/Beamer) */}
@@ -850,30 +827,15 @@ function AuthRepositoryBridge({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  // DSGVO Consent Dialog - shows on first visit
-  const [showConsentDialog, setShowConsentDialog] = useState(() => !hasConsent());
-
-  const handleConsent = useCallback(() => {
-    setShowConsentDialog(false);
-    // Re-initialize Sentry with new consent status
-    void reinitializeSentry();
-  }, []);
-
   return (
     <ThemeProvider defaultTheme="system">
       <AuthProvider>
         <AuthRepositoryBridge>
           <SyncManager />
           <PendingChangesWarning />
-          <ToastProvider>
-            <ErrorBoundary onReset={() => { window.location.hash = '#/'; }}>
-              <StorageWarningBanner />
-              <OfflineBanner />
-              <AppContent />
-            </ErrorBoundary>
-            {/* DSGVO Consent Dialog - OUTSIDE ErrorBoundary for crash recovery */}
-            <ConsentDialog isOpen={showConsentDialog} onConsent={handleConsent} />
-          </ToastProvider>
+          <AppChrome>
+            <AppContent />
+          </AppChrome>
         </AuthRepositoryBridge>
       </AuthProvider>
     </ThemeProvider>

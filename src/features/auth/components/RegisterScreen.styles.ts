@@ -90,7 +90,7 @@ export const registerStyles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.lg,
     color: cssVars.colors.textPrimary,
     background: cssVars.colors.surfaceSolid,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     boxSizing: 'border-box',
     transition: 'border-color 0.2s ease',

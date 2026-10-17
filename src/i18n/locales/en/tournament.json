@@ -115,6 +115,37 @@
       "title": "Running Match",
       "message": "{{teamA}} vs {{teamB}} ({{scoreA}}:{{scoreB}}) is currently playing.",
       "confirmSwitch": "Switch anyway"
+    },
+    "koAfterSend": "Knockout places will be filled after sending",
+    "resultEntry": {
+      "running": "Match in progress – enter the result after the final whistle",
+      "teamsMissing": "Enter a result once both teams are known",
+      "unavailable": "Entering a result is not possible right now",
+      "knockoutDraw": "Draw in a knockout match – please enter the result including the $t(sport:events.penaltyShootout) in the cockpit. Nothing saved.",
+      "stale": "Match {{number}} was changed by {{name}} in the meantime (now {{score}})",
+      "staleNoName": "Match {{number}} was changed in the meantime (now {{score}})",
+      "skippedTitle": "Match {{number}} called off",
+      "skippedQuestion": "This match was called off – enter a result anyway?",
+      "yes": "Yes",
+      "no": "No",
+      "reasonTitle": "Change result of match {{number}}",
+      "beforeAfter": "before {{before}} – new {{after}}",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Choose a reason",
+      "reasonRequired": "Please choose a reason from the list",
+      "noteLabel": "Describe the reason",
+      "noteRequired": "Please describe the reason",
+      "save": "Save",
+      "cancel": "Cancel",
+      "reasons": {
+        "input_error": "Input error",
+        "referee_decision": "Referee decision",
+        "protest_accepted": "Protest decision",
+        "technical_error": "Technical error",
+        "other": "Other"
+      },
+      "leadOnly": "tournament management only",
+      "correctionLeadOnly": "Correction by the tournament management only"
     }
   },
   "scheduleActions": {
@@ -698,7 +729,9 @@
       "transition": "Transition",
       "performanceLabel": "Performance",
       "themeLabel": "Color Scheme",
-      "overscan": "TV margin ({{px}}px)",
+      "overscan": "Screen margin ({{prozent}})",
+      "overscanValue": "{{prozent}}%",
+      "overscanHint": "The preset of {{prozent}}% suits most TVs",
       "noMargin": "No margin",
       "transitions": {
         "fade": "Fade",

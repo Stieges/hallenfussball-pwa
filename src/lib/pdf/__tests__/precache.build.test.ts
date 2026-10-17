@@ -90,10 +90,12 @@ describe('B6 echter dist des Projekts', () => {
   const frisch = existsSync(sw)
     && statSync(sw).mtimeMs > Math.max(statSync(join(FONT_DIR, 'regular.ts')).mtimeMs, statSync(join(FONT_DIR, 'bold.ts')).mtimeMs);
 
+  // Zeitlimit nur für diesen Test: Er liest alle Chunks von dist/assets (ca. 3,3 MB, Dateisystem-Arbeit). Einzeln ca. 0,3 s,
+  // unter voller Vitest-Last bis 3,6 s gemessen. Der Prüfinhalt ist unverändert.
   it.skipIf(!frisch)('beide Schrift-Chunks stehen in dist/sw.js (übersprungen ohne frischen Build)', () => {
     const result = checkPdfFontPrecache(ROOT);
 
     expect(result.problems).toEqual([]);
     expect(result.chunks).toHaveLength(2);
-  });
+  }, 15_000);
 });

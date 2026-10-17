@@ -55,5 +55,3 @@ export { ConnectionStatusBar } from './ConnectionStatusBar';
 export type { ConnectionStatusBarProps, ConnectionStatus } from './ConnectionStatusBar';
 
 // B-17: Monitor-Dauerbetrieb
-export { TimedNotice } from './molecules/TimedNotice';
-export type { TimedNoticeProps } from './molecules/TimedNotice';

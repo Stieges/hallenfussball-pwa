@@ -158,7 +158,7 @@ const recentSwatchStyle: CSSProperties = {
   width: '28px',
   height: '28px',
   borderRadius: cssVars.borderRadius.sm,
-  border: `1px solid ${cssVars.colors.border}`,
+  border: `1px solid ${cssVars.colors.borderControl}`,
   cursor: 'pointer',
   padding: 0,
 };
@@ -166,7 +166,7 @@ const recentSwatchStyle: CSSProperties = {
 const hexInputStyle: CSSProperties = {
   width: '100%',
   padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-  border: `1px solid ${cssVars.colors.border}`,
+  border: `1px solid ${cssVars.colors.borderControl}`,
   borderRadius: cssVars.borderRadius.sm,
   fontSize: cssVars.fontSizes.sm,
   fontFamily: cssVars.fontFamilies.mono,
@@ -207,7 +207,7 @@ function ColorPresetButton({
         gap: cssVars.spacing.xs,
         padding: cssVars.spacing.sm,
         borderRadius: cssVars.borderRadius.md,
-        border: `2px solid ${isActive ? cssVars.colors.primary : cssVars.colors.border}`,
+        border: `2px solid ${isActive ? cssVars.colors.primary : cssVars.colors.borderControl}`,
         background: isActive ? cssVars.colors.primaryLight : 'transparent',
         cursor: 'pointer',
         minWidth: '72px',
@@ -278,7 +278,7 @@ function ColorPickerField({
           style={{
             ...swatchBtnBase,
             backgroundColor: color,
-            border: `2px solid ${cssVars.colors.border}`,
+            border: `2px solid ${cssVars.colors.borderControl}`,
             width: '100%',
             height: '40px',
           }}
@@ -317,7 +317,7 @@ function ColorPickerField({
               style={{
                 padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
                 borderRadius: cssVars.borderRadius.sm,
-                border: `1px solid ${cssVars.colors.border}`,
+                border: `1px solid ${cssVars.colors.borderControl}`,
                 background: cssVars.colors.surface,
                 cursor: 'pointer',
                 fontSize: cssVars.fontSizes.sm,

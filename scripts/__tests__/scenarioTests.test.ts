@@ -228,6 +228,11 @@ describe('scenario-tests.mjs: reguläre Tests (TA-CI)', () => {
   })
 })
 
+// Zeitlimit nur für die Ratchet-Tests, die git-Repos anlegen oder mit --base laufen. Jeder solche Test startet 20 bis 30
+// Prozesse (git, tar, node). Gemessen einzeln 1,4 bis 2,6 s; unter voller Vitest-Last wurde der 5-s-Standard gerissen.
+// Der Prüfinhalt ist unverändert.
+const RATCHET_ZEITLIMIT = 20_000
+
 describe('scenario-tests.mjs: Ratchet gegen den gemessenen Stand (TA-CI)', () => {
   // Jeder Git-Aufruf: cwd im Temp-Ordner, ohne geerbte GIT_*; ein Fehler bricht den Test ab (kein stilles Weiterlaufen).
   const git = (...args: string[]) => {
@@ -257,7 +262,7 @@ describe('scenario-tests.mjs: Ratchet gegen den gemessenen Stand (TA-CI)', () =>
       expect(r.stderr).toMatch(/198 Kennungen mit regulaerem Test < Hauptzweig 199/)
       expect(r.stdout).toMatch(/neu verloren\): ZM-096/)
     }
-  })
+  }, RATCHET_ZEITLIMIT)
 
   it('@TA-010 mit „@ZM-096:teil“ zählt die Kennung als teilweise, nicht als getestet (weiter rot)', () => {
     hauptMit199()
@@ -268,7 +273,7 @@ describe('scenario-tests.mjs: Ratchet gegen den gemessenen Stand (TA-CI)', () =>
     expect(r.stdout).toMatch(/mit Test: 198, teilweise: 1,/)
     expect(r.stdout).toMatch(/neu verloren\): ZM-096/)
     expect(readFileSync(summary, 'utf8')).toMatch(/Neu ohne regulaeren Test: `ZM-096`/)
-  })
+  }, RATCHET_ZEITLIMIT)
 
   it('@TA-010 steigt die Zahl auf 200, ist die Prüfung grün; gleich bleibende Zahl ebenfalls', () => {
     hauptMit199()
@@ -277,7 +282,7 @@ describe('scenario-tests.mjs: Ratchet gegen den gemessenen Stand (TA-CI)', () =>
     const r = lauf('--base', 'HEAD')
     expect(r.status).toBe(0)
     expect(r.stdout).toMatch(/mit Test: 200,/)
-  })
+  }, RATCHET_ZEITLIMIT)
 
   it('@TA-010 der Stand von main wird gemessen, nicht aus der Datei gelesen: eine veraltete Untergrenze lässt keinen Verlust durch', () => {
     hauptMit199()
@@ -288,7 +293,7 @@ describe('scenario-tests.mjs: Ratchet gegen den gemessenen Stand (TA-CI)', () =>
     const r = lauf('--base', 'HEAD')
     expect(r.status).toBe(1)
     expect(r.stderr).toMatch(/< Hauptzweig 199 \(gemessen/)
-  })
+  }, RATCHET_ZEITLIMIT)
 
   it('@TA-010 die Untergrenze in der Datei darf nicht unter die Datei auf main sinken; defekte Datei auf main ist rot', () => {
     hauptMit199()
@@ -306,7 +311,7 @@ describe('scenario-tests.mjs: Ratchet gegen den gemessenen Stand (TA-CI)', () =>
     const defekt = lauf('--base', 'HEAD')
     expect(defekt.status).toBe(1)
     expect(defekt.stderr).toMatch(/kein gueltiges JSON/)
-  })
+  }, RATCHET_ZEITLIMIT)
 
   it('@TA-010 unbekannte Ref ist rot (fail-closed); --floor-schreiben schreibt die Untergrenze; Zahl unter der eigenen Untergrenze ist rot', () => {
     liste(['ZM-096', 'HE-001'], 2)
@@ -335,7 +340,7 @@ describe('scenario-tests.mjs: Ratchet gegen den gemessenen Stand (TA-CI)', () =>
     const md = readFileSync(summary, 'utf8')
     expect(md).toMatch(/und 169 weitere/)
     expect(md.match(/`ZM-\d{3}`/g)?.length).toBe(30)
-  })
+  }, RATCHET_ZEITLIMIT)
 
   it('@TA-010 Gegenbeispiel: mit gesetztem GIT_DIR/GIT_INDEX_FILE (pre-commit-Hook) bleibt ein fremdes Repo unveraendert', () => {
     const fremd = mkdtempSync(join(tmpdir(), 'fremdes-repo-'))
@@ -369,7 +374,7 @@ describe('scenario-tests.mjs: Ratchet gegen den gemessenen Stand (TA-CI)', () =>
     } finally {
       rmSync(fremd, { recursive: true, force: true })
     }
-  })
+  }, RATCHET_ZEITLIMIT)
 })
 
 describe('mvp-kennungen-erzeugen.mjs', () => {

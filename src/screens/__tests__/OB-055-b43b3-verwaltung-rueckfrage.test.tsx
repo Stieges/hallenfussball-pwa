@@ -18,6 +18,8 @@ vi.mock('../../hooks/useTournamentManager', () => ({
 }));
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }));
 vi.mock('../../components/layout/AuthSection', () => ({ AuthSection: () => null }));
+// A-08f3e3: Übertragungsstatus im Kopf braucht Repository-Kontext; hier nicht Gegenstand.
+vi.mock('../../features/tournament-management/components/EngineOutboxHeaderStatus', () => ({ EngineOutboxHeaderStatus: () => null }));
 vi.mock('../../features/tournament-management/TeamsTab', () => ({ TeamsTab: () => <p>Teams-Tab</p> }));
 vi.mock('../../features/tournament-management/SettingsTab', () => ({
   SettingsTab: ({ onDirtyChange }: { onDirtyChange: (d: boolean) => void }) => (
