@@ -34,7 +34,7 @@ export function NoticeLine({ text, onClose, closeLabel, testId, size = 'compact'
     borderRadius: cssVars.borderRadius.md,
     background: text ? cssVars.colors.noticeLineBg : 'transparent',
     color: cssVars.colors.noticeLineText,
-    fontSize: cssVars.fontSizes.sm,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.semibold,
   };
   const textStil: CSSProperties = { flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };

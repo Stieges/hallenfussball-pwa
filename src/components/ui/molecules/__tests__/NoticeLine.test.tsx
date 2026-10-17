@@ -65,4 +65,10 @@ describe('NoticeLine', () => {
     render(<NoticeLine text={null} onClose={vi.fn()} closeLabel="Hinweis schließen" testId="notice-line" />);
     expect(screen.queryByRole('button')).toBeNull();
   });
+
+  it('Schrift 14 px (Token md, Mockup „body“), mit Symbol vor dem Text, das für den Bildschirmleser verborgen ist', () => {
+    render(<NoticeLine text="Tor für FC Nord" icon={<svg data-testid="sym" />} closeLabel="Schließen" testId="notice-line" />);
+    expect(screen.getByTestId('notice-line').style.fontSize).toBe('var(--font-size-md)');
+    expect(screen.getByTestId('sym').parentElement).toHaveAttribute('aria-hidden', 'true');
+  });
 });

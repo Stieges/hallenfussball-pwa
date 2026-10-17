@@ -8,6 +8,7 @@ import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LiveCockpit } from '../LiveCockpit';
 import type { LiveCockpitProps } from '../types';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../types/tournament';
 
 
 vi.mock('react-i18next', async () => {
@@ -126,9 +127,59 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
     expect(screen.getByTestId('foul-count-home')).toHaveTextContent('4');
   });
 
-  // Befund: Das Cockpit liest die eingestellte Foul-Grenze (`foulLimit`) und den Halbzeit-Zähler erst mit
-  // B-11a (ZA-0 liefert nur das Feld). Bis dahin gilt fest 5 für das ganze Spiel.
-  it.todo('@SL-034 Grenze 3: das 3. Foul meldet „SV Süd: 3. Foul in dieser Halbzeit“ (wartet auf B-11a)');
+  // Befund (Ziel-Record Spiel leiten, Paket B-11a): Das Cockpit liest `cockpitSettings.foulLimit` nicht,
+  // die Grenze gilt fest 5. Rot nach dem Gherkin, deshalb `it.fails` (Baustein „Tests gegen die Anforderung“).
+  it.fails('@SL-034 Grenze 3: das 3. Foul meldet „FC Alpha: 3. Foul in dieser Halbzeit“ (Befund: foulLimit wird nicht gelesen, B-11a)', () => {
+    const settings = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: 3 };
+    const { rerender } = render(<LiveCockpit {...baseProps(matchMit(2), { cockpitSettings: settings })} />);
+    rerender(<LiveCockpit {...baseProps(matchMit(3), { cockpitSettings: settings })} />);
+    expect(screen.getByTestId(MELDUNG)).toHaveTextContent('FC Alpha: 3. Foul in dieser Halbzeit');
+  });
+
+  it.fails('@SL-102 ist die Foul-Grenze ausgeschaltet, gibt es beim 5. Foul keinen Hinweis (Befund: foulLimit wird nicht gelesen, B-11a)', () => {
+    const settings = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: null };
+    const { rerender } = render(<LiveCockpit {...baseProps(matchMit(4), { cockpitSettings: settings })} />);
+    rerender(<LiveCockpit {...baseProps(matchMit(5), { cockpitSettings: settings })} />);
+    expect(screen.getByTestId(MELDUNG)).toBeEmptyDOMElement();
+  });
+
+  // Zähler je Abschnitt braucht den Abschnitt aus `PhaseView` (B-11a); bis dahin zählt das ganze Spiel.
+  it.todo('@SL-036 in der zweiten Halbzeit beginnt der Foul-Zähler für die Grenze bei 0, das Spiel zählt weiter 4 (wartet auf B-11a)');
+  it.todo('@SL-100 Zählung je Abschnitt: Verlängerung zählt zum letzten Abschnitt (wartet auf B-11a)');
+
+  it('@SL-098 Gegenbeispiel: Wechsel auf ein anderes Spiel mit 5 Fouls meldet nichts (kein „6. Foul“ beim Öffnen)', () => {
+    const { rerender } = render(<LiveCockpit {...baseProps(matchMit(2))} />);
+    rerender(<LiveCockpit {...baseProps(matchMit(5, { id: 'match-2' }))} />);
+    expect(screen.getByTestId(MELDUNG)).toBeEmptyDOMElement();
+    rerender(<LiveCockpit {...baseProps(matchMit(6, { id: 'match-2' }))} />);
+    expect(screen.getByTestId(MELDUNG)).toHaveTextContent('FC Alpha: 6. Foul in dieser Halbzeit');
+  });
+
+  it('@SL-034 „deutlich“: die Foul-Grenze (Stufe 2) trägt ein Warn-Symbol, eine Bestätigung (Stufe 3) ein Häkchen', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<LiveCockpit {...baseProps(matchMit(4), { onFoul: vi.fn() })} />);
+    await user.click(screen.getByRole('button', { name: 'Foul für FC Alpha' }));
+    expect(screen.getByTestId('notice-icon-3')).toBeInTheDocument();
+    expect(screen.queryByTestId('notice-icon-2')).toBeNull();
+    rerender(<LiveCockpit {...baseProps(matchMit(5), { onFoul: vi.fn() })} />);
+    expect(screen.getByTestId('notice-icon-2')).toBeInTheDocument();
+    expect(screen.queryByTestId('notice-icon-3')).toBeNull();
+  });
+
+  it('@SL-064 die Zeile ist am Handy (360 px) 24 px, ab Tablet (768 px) 32 px hoch', () => {
+    const alt = window.innerWidth;
+    try {
+      window.innerWidth = 360;
+      const mobil = render(<LiveCockpit {...baseProps(matchMit(0))} />);
+      expect(screen.getByTestId(MELDUNG).style.height).toBe('var(--sizing-notice-line-height-compact)');
+      mobil.unmount();
+      window.innerWidth = 1280;
+      render(<LiveCockpit {...baseProps(matchMit(0))} />);
+      expect(screen.getByTestId(MELDUNG).style.height).toBe('var(--sizing-notice-line-height-regular)');
+    } finally {
+      window.innerWidth = alt;
+    }
+  });
 
   it('@SL-064 Gegenbeispiel: die Meldung hält die Uhr nicht an und der Spielstatus bleibt unberührt', () => {
     const onPause = vi.fn();

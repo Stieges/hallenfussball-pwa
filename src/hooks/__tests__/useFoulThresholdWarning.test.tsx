@@ -64,4 +64,18 @@ describe('useFoulThresholdWarning (M7)', () => {
     renderHook(() => useFoulThresholdWarning({ home: 5, away: 6 }, names, warn));
     expect(warn).not.toHaveBeenCalled();
   });
+
+  it('@SL-098 Gegenbeispiel: Wechsel auf ein anderes Spiel mit 5 Fouls meldet nichts, erst ein neues Foul dort meldet', () => {
+    const warn = vi.fn();
+    const { rerender } = renderHook(
+      ({ counts, matchId }: { counts: { home: number; away: number }; matchId: string }) =>
+        useFoulThresholdWarning(counts, names, warn, matchId),
+      { initialProps: { counts: { home: 2, away: 0 }, matchId: 'spiel-8' } },
+    );
+    rerender({ counts: { home: 5, away: 0 }, matchId: 'spiel-9' });
+    expect(warn).not.toHaveBeenCalled();
+    rerender({ counts: { home: 6, away: 0 }, matchId: 'spiel-9' });
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith('FC Alpha', 6);
+  });
 });

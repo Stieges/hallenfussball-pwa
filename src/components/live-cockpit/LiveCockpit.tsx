@@ -60,7 +60,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   useFoulThresholdWarning(
     { home: homeFouls, away: awayFouls },
     { home: currentMatch?.homeTeam.name ?? '', away: currentMatch?.awayTeam.name ?? '' },
-    (teamName, count) => { notices.melde(2, t('meldung.foulGrenze', { teamName, count })); },
+    (teamName, count) => { notices.melde(2, t('meldung.foulGrenze', { teamName, count })); }, currentMatch?.id,
   );
 
   // I4 (W1, Nachtrag Fixrunde 1): Ablehnungen (D-C1) auch für Helfer im Cockpit sichtbar.
