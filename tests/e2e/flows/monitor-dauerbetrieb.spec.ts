@@ -17,6 +17,21 @@ const LANGER_NAME = 'Größenwahn Übungsteam Füßen Ösen Äpfel Ölkrug Ähre
 const MITTEL_NAME = 'Sportfreunde Lotte';
 /** Ein kurzer Name (Review Fixrunde 2: muss in Vorgabegröße einzeilig stehen). */
 const KURZ_NAME = 'SV Süd';
+/**
+ * Erwartete Anzeige am Monitor je Teamname, wörtlich aus dem Record (Zone 1 „Teamnamen am Monitor“, @ZM-087, @ZM-149):
+ * „Sportfreunde“ steht auf der Liste → „SF Lotte“. Ohne Listenwort bleibt der Name voll.
+ */
+const ANZEIGE: Record<string, string> = {
+  [LANGER_NAME]: LANGER_NAME,
+  [MITTEL_NAME]: 'SF Lotte',
+  [KURZ_NAME]: 'SV Süd',
+};
+
+function erwarteteAnzeige(name: string): string {
+  const anzeige = ANZEIGE[name];
+  if (anzeige === undefined) { throw new Error(`keine erwartete Anzeige für „${name}“ hinterlegt`); }
+  return anzeige;
+}
 
 /** Projekte, in denen diese Spec läuft: Chromium (desktop) und WebKit (desktop-webkit, Safari). */
 const PROJEKTE = ['desktop', 'desktop-webkit'];
@@ -272,7 +287,7 @@ for (const groesse of GROESSEN) {
       expect(m.ueberlappungen, 'überlappende Elemente').toEqual([]);
 
       for (const t of m.teams) {
-        expect(t.text, `${t.name}: voller Name, kein Kürzel`).toBe(t.name);
+        expect(t.text, `${t.name}: Anzeige nach Vereinswort-Liste (@ZM-149)`).toBe(erwarteteAnzeige(t.name));
         expect(t.text, `${t.name}: keine Kürzung`).not.toContain('…');
         expect(t.abgeschnitten, `${t.name}: abgeschnitten`).toBe(false);
         expect(t.zeilen, `${t.name}: höchstens zwei Zeilen`).toBeLessThanOrEqual(2);
@@ -291,25 +306,23 @@ for (const groesse of GROESSEN) {
 
 // Review Fixrunde 2 (K2-Regression): kurze und mittellange Namen bleiben in der Vorgabegröße, einzeilig.
 // Die Vorgabe ist die Obergrenze: Ein Name bleibt in der Vorgabegröße, solange er höchstens zwei Zeilen braucht.
-// „SV Süd“ ist bei 720p und 1080p einzeilig; „Sportfreunde Lotte“ ist bei 720p zweizeilig (64 px passt nicht in eine
-// Zeile der 46-%-Box), bei 1080p einzeilig. Einzeilig bei 720p wäre nur unterhalb der Vorgabe möglich (Bedenken im Report).
-for (const [breite, hoehe, lotteEinzeilig] of [[1280, 720, false], [1920, 1080, true]] as const) {
+// „SV Süd“ und „SF Lotte“ (Anzeige von „Sportfreunde Lotte“) sind bei 720p und 1080p einzeilig (gemessen in
+// Fixrunde 2). Der kürzere Anzeigetext ist bei 720p einzeilig; der volle Name war dort zweizeilig.
+for (const [breite, hoehe] of [[1280, 720], [1920, 1080]] as const) {
   test.describe(`Kurze Namen ${breite}×${hoehe} bleiben in Vorgabegröße (@ZM-125, @ZM-087)`, () => {
     test.use({ viewport: { width: breite, height: hoehe } });
 
-    test('„SV Süd“ und „Sportfreunde Lotte“ stehen in der Vorgabegröße des Tokens, ohne Kürzung', async ({ page, seedIndexedDB }) => {
+    test('„SV Süd“ und „SF Lotte“ (aus „Sportfreunde Lotte“) stehen in der Vorgabegröße des Tokens', async ({ page, seedIndexedDB }) => {
       await oeffneMonitor(page, seedIndexedDB, KURZ_NAME, MITTEL_NAME);
       const m = await messeLiveFolie(page, [KURZ_NAME, MITTEL_NAME], displayFontSizes.teamName);
       for (const t of m.teams) {
-        expect(t.text, t.name).toBe(t.name);
+        expect(t.text, t.name).toBe(erwarteteAnzeige(t.name));
         expect(t.abgeschnitten, `${t.name}: abgeschnitten`).toBe(false);
         expect(t.schriftPx, `${t.name}: Vorgabegröße ${m.vorgabePx} px`).toBeGreaterThanOrEqual(m.vorgabePx - 0.5);
         expect(t.zeilen, `${t.name}: höchstens zwei Zeilen`).toBeLessThanOrEqual(2);
       }
       expect(m.teams.find((t) => t.name === KURZ_NAME)?.zeilen, 'SV Süd einzeilig').toBe(1);
-      if (lotteEinzeilig) {
-        expect(m.teams.find((t) => t.name === MITTEL_NAME)?.zeilen, 'Sportfreunde Lotte einzeilig').toBe(1);
-      }
+      expect(m.teams.find((t) => t.name === MITTEL_NAME)?.zeilen, 'SF Lotte einzeilig').toBe(1);
       expect(m.ueberlappungen).toEqual([]);
     });
   });
@@ -330,7 +343,7 @@ for (const rand of [0, 48] as const) {
         expect(m.ausserhalb, 'außerhalb des Bildes').toEqual([]);
         expect(m.ueberlappungen, 'überlappende Elemente').toEqual([]);
         for (const t of m.teams) {
-          expect(t.text, `${t.name}: voller Name`).toBe(t.name);
+          expect(t.text, `${t.name}: Anzeige nach Vereinswort-Liste (@ZM-149)`).toBe(erwarteteAnzeige(t.name));
           expect(t.schriftPx, `${t.name}: nicht unter 3 % der Bildschirmhöhe`).toBeGreaterThanOrEqual(m.hoehe * 0.03 - 0.5);
         }
       });

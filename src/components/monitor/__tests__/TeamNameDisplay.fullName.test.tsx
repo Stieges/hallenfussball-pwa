@@ -1,7 +1,6 @@
 /**
- * TeamNameDisplay in Größe xl (B-17 Fixrunde, @ZM-087): der volle Name steht im angezeigten Text, ohne Kürzel
- * und ohne „…“. Gegenbeispiel: die Kürzel (SFNS, GÜFÖ) erscheinen nur, wenn der volle Name nicht passt
- * (das prüft die Playwright-Spec mit echter Messung).
+ * TeamNameDisplay in Größe xl (B-17 Fixrunde, @ZM-087; MS1): ein Name ohne Listenwort steht voll im Text, ohne
+ * „…“. Kürzel gibt es nur nach der Vereinswort-Liste (monitorTeamName), nie aus Anfangsbuchstaben (SFNS, GÜFÖ).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -17,9 +16,9 @@ describe('TeamNameDisplay xl – voller Name (@ZM-087)', () => {
     expect(el.textContent).not.toContain('…');
   });
 
-  it('zeigt einen mittellangen Namen vollständig (kein Initialen-Kürzel)', () => {
+  it('@ZM-149 kürzt „Sportfreunde“ nach Liste zu „SF Lotte“ (kein Initialen-Kürzel)', () => {
     render(<TeamNameDisplay name="Sportfreunde Lotte" size="xl" />);
-    expect(screen.getByText('Sportfreunde Lotte')).toBeInTheDocument();
+    expect(screen.getByText('SF Lotte')).toBeInTheDocument();
   });
 });
 

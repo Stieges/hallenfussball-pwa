@@ -460,6 +460,7 @@
     "fullscreen": "Vollbild",
     "placementLogic": "Platzierungslogik:",
     "playoff": "Playoff",
+    "open": "{{match}} – offen",
     "groupStage": "Gruppenphase",
     "noResults": "Noch keine Ergebnisse vorhanden.",
     "noResultsInfo": "Die Platzierung wird nach den ersten Spielen angezeigt.",
@@ -868,13 +869,23 @@
     "rank3": "Dritter",
     "rank4": "Vierter",
     "playoffFinal": "Finale",
-    "playoffSemifinal": "{{n}}. Halbfinale",
+    "playoffSemifinal": "Halbfinale {{n}}",
     "playoffQuarterfinal": "Viertelfinale {{n}}",
     "playoffRoundOf16": "Achtelfinale {{n}}",
     "playoffPlace": "Spiel um Platz {{n}}",
     "awaitGroup": "Abschluss von {{group}}",
     "awaitMatch": "Abschluss von {{match}}",
     "undecided": "noch offen"
+  },
+  "view": {
+    "status": {
+      "scheduled": "geplant",
+      "running": "läuft",
+      "paused": "läuft",
+      "finished": "beendet",
+      "cancelled": "ausgefallen",
+      "awarded": "gewertet"
+    }
   },
   "pdf": {
     "organizer": "Veranstalter",

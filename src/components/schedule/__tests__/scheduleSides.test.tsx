@@ -107,8 +107,8 @@ describe('Spielplan (Finalrunde) zeigt Spielseiten über slotLabel', () => {
 
   it('@TM-015 Pflichttest: offene Finalseite zeigt den Sieger des Halbfinales (Wortlaut aus der i18n-Datei)', () => {
     render(<FinalStageSchedule matches={shown} tournament={{ teams }} />);
-    expect(screen.getAllByText('Sieger 1. Halbfinale').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Sieger 2. Halbfinale').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Sieger Halbfinale 1').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Sieger Halbfinale 2').length).toBeGreaterThan(0);
   });
 
   it('@TM-015 Pflichttest in EN: kein deutscher Text in der Herkunft', async () => {
@@ -210,7 +210,7 @@ describe('matchSides (Helfer)', () => {
 
   it('A-04a Vorgängerspiel nur im Turnier gespeichert: wird gefunden', () => {
     const fromStore = buildSideContext({ teams, matches: [{ id: SEMI1, label: '1. Halbfinale' }] }, [finale]);
-    expect(sideName(finale, 'A', fromStore)).toBe('Sieger 1. Halbfinale');
+    expect(sideName(finale, 'A', fromStore)).toBe('Sieger Halbfinale 1');
   });
 });
 
@@ -270,6 +270,6 @@ describe('Spielplan – Gruppenphase und Karten (weitere Ansichten)', () => {
       endTime: new Date('2026-10-03T12:00:00'),
     } as unknown as GeneratedSchedule;
     render(<ScheduleDisplay schedule={schedule} visibleMatchIds={new Set([FINAL])} />);
-    expect(screen.getAllByText('Sieger 1. Halbfinale').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Sieger Halbfinale 1').length).toBeGreaterThan(0);
   });
 });

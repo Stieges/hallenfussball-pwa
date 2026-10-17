@@ -32,7 +32,7 @@ describe('A-36a Seiten nur im Slot', () => {
 
     const assigned = assignTeamToSide(match, 'A', NORD);
 
-    expect(assigned.slotA).toEqual(teamSlot(NORD));
+    expect(assigned.slotA).toEqual({ ...teamSlot(NORD), assignedBy: 'reassigned' }); // A-36b: Merkmal lokal
     expect('teamA' in assigned || 'teamB' in assigned).toBe(false);
   });
 

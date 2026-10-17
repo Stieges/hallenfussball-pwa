@@ -11,11 +11,11 @@
  *
  * @see .superpowers/sdd/2026-09-26-pr-c-ausgang/task-C3a-brief.md (v2 Nachtrag, 2.1)
  */
-import { applyEvent } from '../applyEvent';
 import type { DetailField } from '../details';
-import { ERROR_CODES, type Actor, type EngineEvent, type ErrorCode, type MatchContext, type MatchRules } from '../types';
+import type { Actor, EngineEvent, ErrorCode, MatchContext, MatchRules } from '../types';
 import type { MatchEngineView } from './MatchEngine';
-import { definedFields, splitFirstTap, stampFor, timingClock } from './matchCommandStamp';
+import { definedFields, splitFirstTap, timingClock } from './matchCommandStamp';
+import { buildEvents, resultEntrySpec, skipSpec, storeEvents, UNSKIP_SPEC } from './matchCommandsSkip';
 import type {
   AmendFields,
   CardOptions,
@@ -42,6 +42,9 @@ export interface MatchCommandsEngine {
 export interface MatchCommandsStore {
   addPending(accountId: string, matchId: string, event: EngineEvent): Promise<void>;
   addConfirmedLocal(accountId: string, matchId: string, event: EngineEvent): Promise<void>;
+  /** B-07a: Stapel (>= 2 Eintraege) in EINER Transaktion -- nie ein halber Stapel (R12). */
+  addPendingBatch(accountId: string, matchId: string, events: readonly EngineEvent[]): Promise<void>;
+  addConfirmedLocalBatch(accountId: string, matchId: string, events: readonly EngineEvent[]): Promise<void>;
 }
 
 export interface MatchCommandsSender {
@@ -144,7 +147,22 @@ export class MatchCommands {
 
   /** B-07 (@FU-080): Ergebnis direkt eintragen; auf laufendem Spiel abgelehnt (@FU-081). */
   enterResult(matchId: string, ctx: MatchContext, actor: Actor, scores: TeamScores): CommandResult {
-    return this.submit(matchId, ctx, actor, { type: 'RESULT_ENTRY', teamId: null, payload: { scores: { ...scores } } });
+    return this.submit(matchId, ctx, actor, resultEntrySpec(scores));
+  }
+
+  /** B-07a (@FU-089): Spiel absetzen/ueberspringen -- nur Leitung, nur im Zustand `scheduled`. */
+  skip(matchId: string, ctx: MatchContext, actor: Actor, reason?: string): CommandResult {
+    return this.submit(matchId, ctx, actor, skipSpec(reason));
+  }
+
+  /** B-07a (@FU-071): wieder einplanen -- nur Leitung. */
+  unskip(matchId: string, ctx: MatchContext, actor: Actor): CommandResult {
+    return this.submit(matchId, ctx, actor, UNSKIP_SPEC);
+  }
+
+  /** B-07a (@FU-093): abgesetztes Spiel wieder einplanen UND Ergebnis eintragen -- ein Stapel (R12). */
+  unskipAndEnterResult(matchId: string, ctx: MatchContext, actor: Actor, scores: TeamScores): CommandResult {
+    return this.submit(matchId, ctx, actor, UNSKIP_SPEC, resultEntrySpec(scores));
   }
 
   correct(
@@ -226,9 +244,9 @@ export class MatchCommands {
    * Moment ergeben so genau ein `MATCH_END`. Ein Fehler eines Eintrags wird an DESSEN Aufrufer
    * geworfen, die Kette laeuft mit dem naechsten Eintrag weiter.
    */
-  private submit(matchId: string, ctx: MatchContext, actor: Actor, spec: CommandSpec): CommandResult {
+  private submit(matchId: string, ctx: MatchContext, actor: Actor, ...specs: CommandSpec[]): CommandResult {
     const previous = this.chains.get(matchId) ?? Promise.resolve();
-    const run = previous.then(() => this.submitNow(matchId, ctx, actor, spec));
+    const run = previous.then(() => this.submitNow(matchId, ctx, actor, specs));
     const tail = run.then(
       () => undefined,
       () => undefined,
@@ -242,45 +260,27 @@ export class MatchCommands {
     return run;
   }
 
-  private async submitNow(matchId: string, ctx: MatchContext, actor: Actor, spec: CommandSpec): CommandResult {
+  private async submitNow(matchId: string, ctx: MatchContext, actor: Actor, specs: readonly CommandSpec[]): CommandResult {
     const view = this.deps.engine.view(matchId);
     if (!view) {
       throw new Error(`MatchCommands: keine lokale Kopie fuer Spiel ${matchId}`);
     }
-    const stamp = stampFor(spec, view, this.deps.engine.serverNow());
-    if (!stamp.ok) {
-      throw new MatchCommandRejectedError(ERROR_CODES.INVALID_PAYLOAD, { reason: stamp.reason });
+    const built = buildEvents(view, this.deps.engine.serverNow(), ctx, actor, specs);
+    if (!built.ok) {
+      throw new MatchCommandRejectedError(built.code, built.detail);
     }
-    const { at, clockMs, section } = stamp;
-    const event: EngineEvent = {
-      id: crypto.randomUUID(),
-      type: spec.type,
-      actor,
-      at,
-      section,
-      clockMs,
-      teamId: spec.teamId,
-      targetId: spec.targetId ?? null,
-      payload: spec.payload,
-    };
-    const result = applyEvent(view.result.state, event, ctx);
-    if (result.status === 'rejected') {
-      throw new MatchCommandRejectedError(result.code, result.detail);
-    }
+    const events = built.events;
     // A-08b2 (@FU-070, R9/K8): noop ist kein Fehler, aber auch kein neuer Eintrag. Ein zweites
     // Spielende wird weder gespeichert noch gesendet (Ausgang genau ein MATCH_END).
-    if (result.status === 'noop') {
+    if (events.length === 0) {
       return null;
     }
     // RC1: zuerst der Ausgang (Store), erst danach die Anzeige (notifyStoreChange) -- ein
     // Store-Fehler (z. B. `LocalStoreFullError`) darf hier durchlaufen, OHNE dass
-    // notifyStoreChange/kick noch ausgefuehrt werden.
+    // notifyStoreChange/kick noch ausgefuehrt werden. B-07a: ein Stapel wird in EINER Transaktion
+    // gespeichert und mit EINEM kick gesendet (R12: ein abgelehnter Anfang nimmt den Rest mit).
     const accountId = this.deps.accountId;
-    if (accountId === 'guest') {
-      await this.deps.store.addConfirmedLocal(accountId, matchId, event);
-    } else {
-      await this.deps.store.addPending(accountId, matchId, event);
-    }
+    await storeEvents(this.deps.store, accountId, matchId, events);
     // Fixrunde F4: der Eintrag ist gespeichert -- ein Fehler beim Aktualisieren der Anzeige darf den
     // Vertrag „ID = gespeichert“ nicht brechen (die Anzeige liest beim naechsten Lauf nach).
     await this.deps.engine.notifyStoreChange(matchId).catch(() => undefined);
@@ -291,6 +291,6 @@ export class MatchCommands {
       // `kick()`/`start()` sendet es nach.
       this.deps.sender.kick(matchId).catch(() => undefined);
     }
-    return event.id;
+    return events[events.length - 1].id;
   }
 }

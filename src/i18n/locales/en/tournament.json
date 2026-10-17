@@ -460,6 +460,7 @@
     "fullscreen": "Fullscreen",
     "placementLogic": "Placement logic:",
     "playoff": "Playoff",
+    "open": "{{match}} – open",
     "groupStage": "Group stage",
     "noResults": "No results yet.",
     "noResultsInfo": "Rankings will be shown after the first matches.",
@@ -874,7 +875,17 @@
     "playoffPlace": "Match for place {{n}}",
     "awaitGroup": "Completion of {{group}}",
     "awaitMatch": "Completion of {{match}}",
-    "undecided": "open"
+    "undecided": "to be decided"
+  },
+  "view": {
+    "status": {
+      "scheduled": "scheduled",
+      "running": "live",
+      "paused": "live",
+      "finished": "finished",
+      "cancelled": "cancelled",
+      "awarded": "awarded"
+    }
   },
   "pdf": {
     "organizer": "Organizer",

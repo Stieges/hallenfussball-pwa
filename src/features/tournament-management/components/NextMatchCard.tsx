@@ -1,11 +1,13 @@
 /**
- * NextMatchCard - Zeigt das nächste anstehende Spiel
+ * NextMatchCard - Zeigt das nächste anstehende Spiel.
+ * Nur im Verwaltungs-Reiter „Monitor“ (Monitor-Vorschau): dort gilt die Kürzung nach der Vereinswort-Liste (MS1, @ZM-087).
  */
 import { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cssVars } from '../../../design-tokens'
 import { Tournament } from '../../../types/tournament'
 import { getGroupDisplayName } from '../../../utils/displayNames'
+import { monitorTeamName } from '../../../core/models/teamNameAbbrev'
 
 export interface NextMatchInfo {
   id: string
@@ -55,7 +57,7 @@ export const NextMatchCard: React.FC<NextMatchCardProps> = ({ match, tournament 
     <div style={cardStyle}>
       {match.scheduledTime && <div style={timeStyle}>{match.scheduledTime}</div>}
       <div style={teamsStyle}>
-        {match.homeTeam} vs. {match.awayTeam}
+        {monitorTeamName(match.homeTeam)} vs. {monitorTeamName(match.awayTeam)}
       </div>
       <div style={metaStyle}>
         {t('nextMatch.matchNumber', { number: match.number })}

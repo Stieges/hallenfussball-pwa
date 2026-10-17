@@ -9,7 +9,7 @@ import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
 import { isMatchInProgress } from '../slideProgramme';
 import { scoresPublic } from '../publicVisibility';
 import { toLiveMatch } from '../monitorMatch';
-import { sideLabel, sideTeam } from '../matchSides';
+import { monitorSideLabel, sideTeam } from '../matchSides';
 import { upcomingMatches } from '../slideContent';
 import { formatTime } from '../../../core/generators/scheduleHelpers';
 
@@ -106,12 +106,12 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
                   {nextTeamA && (
                     <TeamAvatar team={nextTeamA} size="xxl" showColorRing />
                   )}
-                  <div style={{
+                  <div data-teamname style={{
                     fontSize: displayFontSizes.headingMD,
                     color: themeColors.text,
                     marginTop: cssVars.spacing.md,
                   }}>
-                    {sideLabel(nextMatch, 'A', labelCtx)}
+                    {monitorSideLabel(nextMatch, 'A', labelCtx)}
                   </div>
                 </div>
 
@@ -127,12 +127,12 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
                   {nextTeamB && (
                     <TeamAvatar team={nextTeamB} size="xxl" showColorRing />
                   )}
-                  <div style={{
+                  <div data-teamname style={{
                     fontSize: displayFontSizes.headingMD,
                     color: themeColors.text,
                     marginTop: cssVars.spacing.md,
                   }}>
-                    {sideLabel(nextMatch, 'B', labelCtx)}
+                    {monitorSideLabel(nextMatch, 'B', labelCtx)}
                   </div>
                 </div>
               </div>

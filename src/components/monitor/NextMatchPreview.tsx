@@ -15,6 +15,7 @@ import { cssVars } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
 import { useMonitorTheme } from '../../hooks';
 import { MatchStatus } from '../../hooks/useLiveMatches';
+import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 
 export interface NextMatch {
   id: string;
@@ -201,9 +202,9 @@ export const NextMatchPreview: React.FC<NextMatchPreviewProps> = ({
           </div>
 
           <div style={matchupStyle}>
-            <span style={teamNameStyle}>{nextMatch.homeTeam}</span>
+            <span style={teamNameStyle}>{monitorTeamName(nextMatch.homeTeam)}</span>
             <span style={vsStyle}>vs</span>
-            <span style={teamNameStyle}>{nextMatch.awayTeam}</span>
+            <span style={teamNameStyle}>{monitorTeamName(nextMatch.awayTeam)}</span>
           </div>
 
           <div style={metaStyle}>
