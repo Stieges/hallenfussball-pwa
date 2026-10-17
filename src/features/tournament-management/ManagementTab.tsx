@@ -171,6 +171,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     setEngineReadyError(false);
     setAwaitingTeams(false);
     setNotOnEngineReason(null);
+    // @FU-004 (C-COCKPIT-LAEDT-NACH-ABPFIFF): auch "wird geladen" vor jedem frühen Ausstieg zurücksetzen --
+    // ein abgebrochener Lauf (cancelled) setzt es nicht mehr zurück und ließe den Ladehinweis stehen.
+    setIsInitializingMatch(false);
     if (!currentMatchData) {
       return;
     }

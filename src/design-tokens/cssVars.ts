@@ -386,6 +386,7 @@ export const cssFontSizes = {
   displayLg: 'var(--font-size-display-lg)',
   displayMd: 'var(--font-size-display-md)',
   displaySm: 'var(--font-size-display-sm)',
+  displayXl: 'var(--font-size-display-xl)',
 
   // Headlines
   headlineLg: 'var(--font-size-headline-lg)',
@@ -510,6 +511,20 @@ export const cssLayoutHeights = {
 } as const;
 
 // =============================================================================
+// Component Sizes & Letter Spacing
+// =============================================================================
+
+export const cssSizing = {
+  sidebarWidth: 'var(--sizing-sidebar-width)',
+  emptyStateMinHeight: 'var(--sizing-empty-state-min-height)',
+  hairline: 'var(--sizing-hairline)',
+} as const;
+
+export const cssLetterSpacing = {
+  wider: 'var(--letter-spacing-wider)',
+} as const;
+
+// =============================================================================
 // Theme Variables (Corporate Colors)
 // =============================================================================
 
@@ -558,6 +573,8 @@ export const cssVars = {
   iconSizes: cssIconSizes,
   inputHeights: cssInputHeights,
   layoutHeights: cssLayoutHeights,
+  sizing: cssSizing,
+  letterSpacing: cssLetterSpacing,
   theme: cssTheme,
   zIndex: cssZIndex,
 } as const;

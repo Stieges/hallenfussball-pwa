@@ -144,6 +144,7 @@ export {
   buttonHeights,
   layoutHeights,
   layoutHeightValues,
+  componentSizes,
   type TouchTargetKey,
   type IconSizeKey,
   type InputHeightKey,
