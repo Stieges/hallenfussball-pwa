@@ -201,6 +201,9 @@ MATCH_ENGINE_CHAIN_FILES=(
   # A-05 (M2, Controller-Zusatz aus dem A-02-Review): Spielseiten als Slot. Ab hier braucht jedes eingefuegte
   # Spiel je Seite Team-ID oder Herkunft (matches_slot_*_present) -- die Sonde matches_insert traegt sie.
   "$(find_migration 20261003_001)"
+  # ZA-3 (brief-ZA-0-3.md): ergaenzt match_transitions (paused + GOAL/OWN_GOAL/FOUL, section_break +
+  # TIME_PENALTY, finished/REOPEN helper) -- ohne sie weicht der Gleichlauf-Check 7c4 ab.
+  "$(find_migration 20261028_001)"
 )
 MATCH_TRANSITIONS_FILE="$REPO_ROOT/src/core/match/matchTransitions.json"
 ROLE_PERMISSIONS_FILE="$REPO_ROOT/src/features/auth/permissions/rolePermissions.json"

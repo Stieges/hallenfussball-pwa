@@ -312,7 +312,7 @@ SELECT 'b3b-helpers-no-execute-anon-authenticated-service-role',
          SELECT 1
            FROM unnest(ARRAY['match_engine.normalize_uuid(jsonb)', 'match_engine.cfg_num(jsonb)',
                              'match_engine.envelope(jsonb,text,text)', 'match_engine.dedupe_key(jsonb)',
-                             'match_engine.server_rules(integer,text,integer,integer,jsonb,jsonb)',
+                             'match_engine.server_rules(integer,text,integer,integer,jsonb,jsonb,text)',
                              'match_engine.cache_columns(jsonb,jsonb)']) AS f(sig)
           CROSS JOIN unnest(ARRAY['anon', 'authenticated', 'service_role']) AS r(role)
           WHERE has_function_privilege(r.role, f.sig, 'EXECUTE'))

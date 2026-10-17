@@ -1,0 +1,28 @@
+{
+  "title": "@W2A-007 dieselbe Einstellung -> Finale overtime-then-shootout (je Spiel verschieden)",
+  "input": {
+    "durationMinutes": null,
+    "phase": "final",
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": 12,
+    "config": {},
+    "finalsConfig": {
+      "preset": "top-4",
+      "tiebreakerByRound": {
+        "semifinal": "shootout",
+        "final": "overtime-then-shootout"
+      }
+    }
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 720,
+    "breakSeconds": 60,
+    "knockout": true,
+    "tiebreak": "overtime-then-shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

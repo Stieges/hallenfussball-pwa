@@ -77,6 +77,10 @@ describe('matchTransitions.json', () => {
       { from: 'running', type: 'MATCH_END', actor: 'helper', to: '@endcheck' },
 
       { from: 'paused', type: 'RESUME', actor: 'helper', to: 'running' },
+      // ZA-3 (@SL-085): bei angehaltener Uhr auch Tor, Eigentor, Foul.
+      { from: 'paused', type: 'GOAL', actor: 'helper', to: '=' },
+      { from: 'paused', type: 'OWN_GOAL', actor: 'helper', to: '=' },
+      { from: 'paused', type: 'FOUL', actor: 'helper', to: '=' },
       { from: 'paused', type: 'YELLOW_CARD', actor: 'helper', to: '=' },
       { from: 'paused', type: 'YELLOW_RED_CARD', actor: 'helper', to: '=' },
       { from: 'paused', type: 'RED_CARD', actor: 'helper', to: '=' },
@@ -90,6 +94,8 @@ describe('matchTransitions.json', () => {
       { from: 'section_break', type: 'YELLOW_CARD', actor: 'helper', to: '=' },
       { from: 'section_break', type: 'YELLOW_RED_CARD', actor: 'helper', to: '=' },
       { from: 'section_break', type: 'RED_CARD', actor: 'helper', to: '=' },
+      // ZA-3 (@SL-087): Zeitstrafe in der Abschnittspause.
+      { from: 'section_break', type: 'TIME_PENALTY', actor: 'helper', to: '=' },
       { from: 'section_break', type: 'SUBSTITUTION', actor: 'helper', to: '=' },
       { from: 'section_break', type: 'RETRACT', actor: 'helper', to: '=' },
 
@@ -100,7 +106,8 @@ describe('matchTransitions.json', () => {
       { from: 'shootout', type: 'SHOOTOUT_END', actor: 'helper', to: 'finished' },
 
       { from: 'finished', type: 'CORRECTION', actor: 'leitung', to: '=' },
-      { from: 'finished', type: 'REOPEN', actor: 'leitung', to: 'running' },
+      // ZA-3 (@SL-074/@SL-075): Helfer-Zeile; Frist/„einmal“/Strafstoß prüft handlers/reopen.ts.
+      { from: 'finished', type: 'REOPEN', actor: 'helper', to: 'running' },
       { from: 'finished', type: 'RETRACT', actor: 'leitung', to: '=' },
 
       { from: 'skipped', type: 'UNSKIP', actor: 'leitung', to: 'scheduled' },
