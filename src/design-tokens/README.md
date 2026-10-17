@@ -95,6 +95,21 @@ colors.success      // #4CAF50
 `borderLight` und `borderStrong` gibt es nicht mehr (B-51). Ein neuer Rand eines Bedienelements nimmt `borderControl`, nie `border`.
 Die Prüfung `src/design-tokens/__tests__/borderControl.contrast.test.ts` rechnet beide Themen und den hohen Kontrast gegen die Flächen.
 
+#### Tafel (Live-Cockpit)
+
+Die Tafel (Spielstand, Uhr, Meldezeile) hat eigene Tokens, nie `surface`. Die Tafel ist in Hell und Dunkel dunkel (Mockup-Freigabe 16.10.).
+
+| Rolle | Token | Kontrast |
+|---|---|---|
+| Fläche | `colors.scoreboardBg` | deckend |
+| Schrift / gedämpft | `colors.scoreboardText` / `scoreboardTextMuted` | mindestens 4,5 : 1 |
+| Live / Hervorhebung | `colors.scoreboardLive` / `scoreboardHighlight` | mindestens 3 : 1 |
+| Schlussphase der Uhr (Violett) | `colors.scoreboardFinalPhase` | mindestens 4,5 : 1, nie Live-Rot |
+| Rand | `colors.scoreboardBorder` | Rand der Stand-Kästen |
+| Meldezeile | `colors.noticeLineBg` / `noticeLineText` | wie Tafel |
+
+Größen: `cssVars.sizing.scoreboardClockCompact` / `scoreboardClockRegular` (Uhr), `scoreboardScoreCompact` / `scoreboardScoreRegular` (Stand), `noticeLineHeight`, `teamStripeWidth`. Prüfung: `src/design-tokens/__tests__/scoreboard-tokens.test.ts`.
+
 ### Spacing (8pt Grid)
 
 ```typescript

@@ -278,6 +278,19 @@ export const semanticColorsLight = {
   eventEditBorder: 'rgba(245, 158, 11, 0.2)',
 
   gradientNextMatch: 'linear-gradient(135deg, rgba(5, 150, 105, 0.06), rgba(37, 99, 235, 0.06))',
+
+  // ---------------------------------------------------------------------------
+  // Tafel Live-Cockpit (Spec § 8.2, Mockup-Freigabe 16.10.): hell = dunkel, eigene Fläche.
+  // ---------------------------------------------------------------------------
+  scoreboardBg: '#0F1B33',
+  scoreboardText: '#FFFFFF',
+  scoreboardTextMuted: '#A3B8D4',
+  scoreboardLive: '#DC2626',
+  scoreboardHighlight: '#FF9100',
+  scoreboardFinalPhase: palette.purple[400],
+  scoreboardBorder: '#A3B8D4',
+  noticeLineBg: '#0F1B33',
+  noticeLineText: '#FFFFFF',
 } as const;
 
 export type SemanticColorToken = keyof typeof semanticColorsLight;

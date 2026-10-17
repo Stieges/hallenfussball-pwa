@@ -136,6 +136,17 @@
   /* Bedien-Rand auf erhöhter Fläche (surface-light, surface-variant): neutral 300, dort reicht neutral 500 nicht (1,6 : 1) */
   --color-border-control-raised: #CBD5E1;
 
+  /* Tafel Live-Cockpit (Spec § 8.2, Mockup-Freigabe 16.10.): dunkel = eine Stufe dunkler als die Seite */
+  --color-scoreboard-bg: #050E1F;
+  --color-scoreboard-text: #FFFFFF;
+  --color-scoreboard-text-muted: #A3B8D4;
+  --color-scoreboard-live: #DC2626;
+  --color-scoreboard-highlight: #FF9100;
+  --color-scoreboard-final-phase: #A78BFA;
+  --color-scoreboard-border: #A3B8D4;
+  --color-notice-line-bg: var(--color-scoreboard-bg);
+  --color-notice-line-text: var(--color-scoreboard-text);
+
   /* ===========================================
      Colors - Error
      =========================================== */
@@ -369,6 +380,13 @@
   --sizing-sidebar-width: 300px;
   --sizing-empty-state-min-height: 300px;
   --sizing-hairline: 1px;
+  /* Tafel Live-Cockpit: Zahlen als Schrift-Tokens (skalieren mit der Schrift), Spielstand 40/64 px aus dem Mockup */
+  --sizing-scoreboard-clock-compact: var(--font-size-display-md);
+  --sizing-scoreboard-clock-regular: var(--font-size-display-lg);
+  --sizing-scoreboard-score-compact: 2.5rem;
+  --sizing-scoreboard-score-regular: 4rem;
+  --sizing-notice-line-height: var(--touch-target-minimum);
+  --sizing-team-stripe-width: var(--spacing-xs);
 
   /* Layout Heights */
   --layout-height-bottom-nav: 56px;
@@ -649,6 +667,17 @@ html[data-font-size="x-large"] {
   --color-border-default: #E2E8F0;
   --color-border-control: #64748B;
   --color-border-control-raised: #64748B;
+
+  /* Tafel Live-Cockpit (Spec § 8.2): hell = dunkel, eigene Fläche */
+  --color-scoreboard-bg: #0F1B33;
+  --color-scoreboard-text: #FFFFFF;
+  --color-scoreboard-text-muted: #A3B8D4;
+  --color-scoreboard-live: #DC2626;
+  --color-scoreboard-highlight: #FF9100;
+  --color-scoreboard-final-phase: #A78BFA;
+  --color-scoreboard-border: #A3B8D4;
+  --color-notice-line-bg: var(--color-scoreboard-bg);
+  --color-notice-line-text: var(--color-scoreboard-text);
 
   /* ===========================================
      Colors - Error
@@ -939,6 +968,17 @@ html[data-font-size="x-large"] {
   --color-border-default: rgba(255, 255, 255, 0.25);
   --color-border-control: #AAAAAA;
   --color-border-control-raised: #AAAAAA;
+
+  /* Tafel Live-Cockpit (Spec § 8.2): ohne eigene Mockup-Fassung für hohen Kontrast, dunkle Werte übernommen */
+  --color-scoreboard-bg: #050E1F;
+  --color-scoreboard-text: #FFFFFF;
+  --color-scoreboard-text-muted: #A3B8D4;
+  --color-scoreboard-live: #DC2626;
+  --color-scoreboard-highlight: #FF9100;
+  --color-scoreboard-final-phase: #A78BFA;
+  --color-scoreboard-border: #A3B8D4;
+  --color-notice-line-bg: var(--color-scoreboard-bg);
+  --color-notice-line-text: var(--color-scoreboard-text);
 
   /* ===========================================
      Colors - Primary (Brighter Green)
