@@ -60,6 +60,8 @@ export function messeSeite(opt) {
       if (se.clip && se.clip !== 'auto') return false
       if (se.clipPath && se.clipPath !== 'none' && se.clipPath.includes('inset(50%')) return false
       if (se.display === 'none' || parseFloat(se.opacity) === 0) return false
+      // C-VM-DISPLAY-CONTENTS: ein Huellelement mit display:contents hat keine eigene Box (0x0), seine Kinder sehr wohl.
+      if (se.display === 'contents') continue
       const re = e.getBoundingClientRect()
       if (re.width <= 1 || re.height <= 1) return false
     }

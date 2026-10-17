@@ -202,6 +202,48 @@ describe('Fehler 3 Attrappe statt echter Stand: Gate', () => {
   })
 })
 
+describe('C-VM-DISPLAY-CONTENTS (SM): Huellelement mit display:contents', () => {
+  it('Inhalt in einem display:contents-Huellelement wird gemessen, nicht als "Ansicht leer" geblockt', async () => {
+    const r = await messe('--ziel', FIX('display-contents.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(gruende(r.b)).not.toMatch(/Ansicht leer/)
+    expect(r.b.status).not.toBe('BLOCKED')
+    expect(r.b.laeufe).toHaveLength(1)
+  })
+  it('Gegenbeispiel: display:contents macht nichts sichtbar, was verborgen ist (BLOCKED "Ansicht leer")', async () => {
+    const r = await messe('--ziel', FIX('display-contents-versteckt.html'), '--profil', 'handy-360', ...SCHNELL)
+    expect(r.code).toBe(3)
+    expect(gruende(r.b)).toMatch(/Ansicht leer/)
+  })
+})
+
+describe('Saat fuer die App-Messung (SM, @TA-011)', () => {
+  const LISTE = '[data-testid="tournament-card-hallencup-messlauf"]'
+  it('mit --saat zeigt die Startseite das Turnier "Hallencup Messlauf": nicht BLOCKED, Saat im Bericht', async () => {
+    const r = await messe('--app', '/#/', '--erwarte', LISTE, '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(r.b.status, r.out).not.toBe('BLOCKED')
+    expect(r.b.matrix).toMatchObject({ saat: 'hallencup-messlauf' })
+    expect(r.b.laeufe).toHaveLength(1)
+  })
+  it('ohne --saat bleibt das Verhalten: dieselbe Ansicht ist nicht erreichbar, BLOCKED "Erwartete Ansicht fehlt"', async () => {
+    const r = await messe('--app', '/#/', '--erwarte', LISTE, '--klick', 'role=button[name=/notwendig|necessary/i]', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(r.code).toBe(3)
+    expect(gruende(r.b)).toMatch(/Erwartete Ansicht fehlt/)
+  })
+  it('Turnier-Cockpit mit laufendem Spiel (Engine-Kopie der Saat) und Monitor-Folie sind messbar', async () => {
+    const cockpit = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015', '--erwarte', '[data-testid="match-timer-display"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(cockpit.b.status, cockpit.out).not.toBe('BLOCKED')
+    const monitor = await messe('--app', '/#/display/hallencup-messlauf/mon-live', '--erwarte', '[data-testid="monitor-slide"]', '--saat', 'hallencup-messlauf', '--profil', 'monitor-1080-rand0', '--varianten', 'normal', ...SCHNELL)
+    expect(monitor.b.status, monitor.out).not.toBe('BLOCKED')
+  })
+  it('--saat gilt nur fuer App-Ziele (Mockup: Exit 2); unbekannte Saat: Exit 2', () => {
+    const mock = spawnSync('node', [join(ORDNER, 'messen.mjs'), '--ziel', FIX('leer.html'), '--saat', 'hallencup-messlauf'], { encoding: 'utf8' })
+    expect(mock.status).toBe(2)
+    const falsch = spawnSync('node', [join(ORDNER, 'messen.mjs'), '--app', '/', '--erwarte', 'main', '--saat', 'gibt-es-nicht'], { encoding: 'utf8' })
+    expect(falsch.status).toBe(2)
+    expect(falsch.stderr).toMatch(/Saat "gibt-es-nicht" fehlt/)
+  })
+})
+
 describe('Fehlalarme aus dem Review sind weg', () => {
   it('B-04 normaler Absatz bleibt in der Langtext-Variante gruen', async () => {
     const r = await messe('--ziel', FIX('langtext-absatz.html'), '--profil', 'handy-360', '--varianten', 'normal,langtext', ...SCHNELL)
