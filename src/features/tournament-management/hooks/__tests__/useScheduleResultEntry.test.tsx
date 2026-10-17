@@ -195,6 +195,7 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
 
     it('@FU-093 Rückfrage, nach „Ja“ beendet mit 3:1 (ein Stapel UNSKIP + RESULT_ENTRY)', async () => {
       await spiel9Abgesetzt();
+      const batch = vi.spyOn(h.store, 'addPendingBatch');
       const { hook, enter, answer } = render(h);
       const done = enter(SPIEL_9, 3, 1);
       await act(async () => { await settle(); });
@@ -204,6 +205,9 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
       await done;
       await settle();
       expect(sentTypes(h)).toEqual([['UNSKIP', 'RESULT_ENTRY']]);
+      // R12: ein Stapel in EINER Speicher-Transaktion -- ein abgelehntes UNSKIP nimmt den Eintrag mit.
+      expect(batch).toHaveBeenCalledTimes(1);
+      expect(batch.mock.calls[0][2].map((event) => event.type)).toEqual(['UNSKIP', 'RESULT_ENTRY']);
       expect(status(h, SPIEL_9)).toBe('finished');
       expect(scoreOf(h, SPIEL_9, SV_SUED, FC_NORD)).toBe('3:1');
     });

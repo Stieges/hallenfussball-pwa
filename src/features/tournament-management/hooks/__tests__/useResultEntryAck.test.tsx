@@ -16,7 +16,7 @@ vi.mock('../../../../hooks/useActorRole', () => ({ useActorRole: () => 'leitung'
 import { initRealDeI18n } from '../../../../test/realDeI18n';
 import { MatchEngineContext } from '../../../match-engine/matchEngineContextInstance';
 import type { AppendResult } from '../../../../core/repositories/appendMatchEventsRpc';
-import { FINALE, SPIEL_7, SPIEL_9, finaleAusGruppeA, makeScheduleEngine, scheduleTournament, settle, type ScheduleEngine } from '../../../../test/scheduleEngineHarness';
+import { FC_NORD, FINALE, SPIEL_7, SPIEL_9, SV_SUED, finaleAusGruppeA, makeScheduleEngine, scheduleTournament, settle, type ScheduleEngine } from '../../../../test/scheduleEngineHarness';
 import { useScheduleResultEntry } from '../useScheduleResultEntry';
 
 await initRealDeI18n();
@@ -33,7 +33,7 @@ function render(h: ScheduleEngine) {
   const enter = async (matchId: string, a: number, b: number) => {
     await act(async () => { await hook.result.current.enterScore(matchId, a, b); await settle(); });
   };
-  return { enter, onMatchesUpdate, showWarning };
+  return { hook, enter, onMatchesUpdate, showWarning };
 }
 
 function deferredServer(h: ScheduleEngine) {
@@ -80,6 +80,26 @@ describe('A-08f3e2 H-2: K.-o.-Auflösung erst nach Bestätigung durch den Server
     await enter(SPIEL_9, 3, 1);
     await server(rejected);
 
+    expect(onMatchesUpdate).not.toHaveBeenCalled();
+  });
+
+  it('H-2 Gegenbeispiel: Korrektur am beendeten Spiel 9 vom Server abgelehnt → Spiel bleibt beendet, trotzdem keine Auflösung', async () => {
+    // Spiel 9 endete 2:1 an einem anderen Gerät (fremde Ergebnisse lösen bei Olli nicht aus, Plan § 5.1 R3).
+    h.fetchConfirmed.mockResolvedValueOnce({
+      events: [{ id: 'e1', type: 'RESULT_ENTRY', actor: 'leitung', at: 1, section: null, clockMs: null, teamId: null, payload: { scores: { [SV_SUED]: 2, [FC_NORD]: 1 } }, seq: 1 }],
+      newWatermark: 1,
+    });
+    await h.engine.ensureMatch(SPIEL_9, { matchId: SPIEL_9, teamAId: SV_SUED, teamBId: FC_NORD }, 'T');
+    await h.engine.catchUp(SPIEL_9);
+    const server = deferredServer(h);
+    const { hook, onMatchesUpdate } = render(h);
+    let done: Promise<void> = Promise.resolve();
+    act(() => { done = hook.result.current.enterScore(SPIEL_9, 3, 1); });
+    await act(async () => { await settle(); });
+    await act(async () => { hook.result.current.answerPrompt('input_error'); await done; await settle(); });
+    await server(rejected);
+
+    expect(h.engine.view(SPIEL_9)?.result.state.status).toBe('finished');
     expect(onMatchesUpdate).not.toHaveBeenCalled();
   });
 
