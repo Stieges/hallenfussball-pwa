@@ -317,6 +317,7 @@ export interface Match {
   // US-SCHEDULE-EDITOR: Skipped match support
   skippedReason?: string;        // Grund für Überspringen (z.B. "Team zurückgezogen")
   skippedAt?: string;            // ISO timestamp when match was skipped
+  kit?: import('../core/models/kit').MatchKit; // A-30a: beim Anpfiff getragene Farben (nur Server schreibt, @W3-028)
 
   // DB-PERSISTENCE: Events for detailed match summary (scorers, cards)
   events?: RuntimeMatchEvent[]; // Full event history persisted with the match
@@ -435,6 +436,7 @@ export interface Tournament {
   location: LocationDetails;
   organizer?: string; // Veranstalter-Name (optional)
   rulebook?: string; // Regelwerk-Text für den Ausdruck, höchstens 80 Zeichen (@DR-016)
+  bibColor?: string; // A-30a @W3-029: Leibchenfarbe des Turniers (#RRGGBB), ohne Einstellung Gelb
   contactInfo?: ContactInfo; // Kontaktinformationen (optional)
 
   // Step 4: Teams

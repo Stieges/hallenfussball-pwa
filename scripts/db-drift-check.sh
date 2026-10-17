@@ -361,6 +361,11 @@ PRIVILEGE_ASSERTION_NAMES=(
   "match-has-engine-events-execute-only-anon-authenticated"
   "matches-keep-origin-trigger-active"
   "matches-keep-origin-no-public-execute"
+  # A-30a (20261028_004, @W3-028/@SL-137): getragene Farben schreibt nur der Anpfiff-Trigger (HF003).
+  "match-events-kit-from-match-start-trigger-active"
+  "matches-guard-kit-columns-trigger-active"
+  "matches-kit-from-match-start-definer-no-client-execute"
+  "matches-guard-kit-columns-invoker-no-client-execute"
   # A-08h (20261028_002, @FU-084/@FU-085): Client-Schreibrechte auf match_events entzogen, nur SELECT.
   "anon-no-insert-match-events"
   "anon-no-update-match-events"

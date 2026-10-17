@@ -15,6 +15,8 @@
  * (W4: Platzhalter-Teams -> keine Kopie, IDs klein) und liefert `view`s aus `engine.view(matchId)`.
  */
 import { cacheColumns, type CacheDecidedBy, type CacheMatchStatus } from './cacheColumns';
+import { kitFromEvents } from './matchKitFromEvents';
+import type { MatchKit } from '../../models/kit';
 import type { MatchContext } from '../types';
 import type { MatchEngineView } from './MatchEngine';
 
@@ -27,6 +29,8 @@ export interface EngineOverlayFields {
   penaltyScoreB: number | undefined;
   matchStatus: 'scheduled' | 'running' | 'finished' | 'skipped';
   decidedBy: CacheDecidedBy | undefined;
+  /** A-30a: getragene Farben aus dem eigenen MATCH_START (TS-Gegenstück zum Server-Trigger, `kitFromEvents`). */
+  kit: MatchKit | undefined;
 }
 
 function nullToUndefined<T>(value: T | null): T | undefined {
@@ -49,6 +53,7 @@ export function engineOverlayFields(view: MatchEngineView, ctx: MatchContext): E
     penaltyScoreB: nullToUndefined(columns.penalty_score_b),
     matchStatus: mapMatchStatus(columns.match_status),
     decidedBy: nullToUndefined(columns.decided_by),
+    kit: kitFromEvents(view.log),
   };
 }
 
@@ -64,10 +69,16 @@ export interface OverlayableMatch {
   penaltyScoreB?: number;
   matchStatus?: string;
   decidedBy?: string;
+  kit?: MatchKit;
 }
 
 export interface OverlayableTournament<TMatch extends OverlayableMatch> {
   matches: TMatch[];
+}
+
+/** A-30a: Farben je Wert vergleichen (neues Objekt je Lauf darf die Referenzstabilitaet nicht brechen, W7). */
+function kitEqual(left: MatchKit | undefined, right: MatchKit | undefined): boolean {
+  return left?.a === right?.a && left?.b === right?.b && left?.bibSide === right?.bibSide && (left === undefined) === (right === undefined);
 }
 
 function fieldsEqual(match: OverlayableMatch, fields: EngineOverlayFields): boolean {
@@ -79,7 +90,8 @@ function fieldsEqual(match: OverlayableMatch, fields: EngineOverlayFields): bool
     match.penaltyScoreA === fields.penaltyScoreA &&
     match.penaltyScoreB === fields.penaltyScoreB &&
     match.matchStatus === fields.matchStatus &&
-    match.decidedBy === fields.decidedBy
+    match.decidedBy === fields.decidedBy &&
+    kitEqual(match.kit, fields.kit)
   );
 }
 

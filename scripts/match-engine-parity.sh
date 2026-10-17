@@ -81,6 +81,9 @@ ZA3_MIGRATION="20261028_001_transitions_za3.sql"
 # A-25a: ersetzt payload_valid/apply_result_entry/cache_columns/append_match_events (stapelt auf ZA-3) --
 # muss nach JEDEM erneuten Einspielen von 002/003/20261001/ZA-3 ebenfalls erneut laufen.
 A25A_MIGRATION="20261028_003_result_entry_shootout.sql"
+# A-30a: additiv (Spalten, zwei Trigger, keine Engine-Funktion) -- laeuft in der Kette mit und wird fuer die
+# Idempotenz am Ende der Kette ein zweites Mal eingespielt.
+A30A_MIGRATION="20261028_004_match_kit_colors.sql"
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 RULES_DIR="$FIXTURES_DIR/rules"
 CONTAINER_NAME="match-engine-parity-$$"
@@ -108,6 +111,7 @@ APPEND_FILE=""
 AMEND_FILE=""
 ZA3_FILE=""
 A25A_FILE=""
+A30A_FILE=""
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   NEWER_MIGRATIONS+=("$line")
@@ -117,10 +121,11 @@ while IFS= read -r line; do
     "$AMEND_MIGRATION") AMEND_FILE="$line" ;;
     "$ZA3_MIGRATION") ZA3_FILE="$line" ;;
     "$A25A_MIGRATION") A25A_FILE="$line" ;;
+    "$A30A_MIGRATION") A30A_FILE="$line" ;;
   esac
 done <<< "$NEWER_MIGRATIONS_RAW"
-if [[ -z "$ENGINE_FILE" || -z "$APPEND_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" ]]; then
-  echo "::error::$ENGINE_MIGRATION, $APPEND_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION oder $A25A_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
+if [[ -z "$ENGINE_FILE" || -z "$APPEND_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" || -z "$A30A_FILE" ]]; then
+  echo "::error::$ENGINE_MIGRATION, $APPEND_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION oder $A30A_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
   exit 1
 fi
 
@@ -177,12 +182,13 @@ for f in "${NEWER_MIGRATIONS[@]}"; do
 done
 # C0b: 002 allein erneut einzuspielen ersetzte die in 20261001 geaenderten Funktionen durch den
 # PR-B-Stand -- die Idempotenz wird deshalb fuer die ganze Kette 002 -> 003 -> 20261001 belegt.
-echo "Idempotenz: $ENGINE_MIGRATION, $APPEND_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION ein zweites Mal einspielen..." >&2
+echo "Idempotenz: $ENGINE_MIGRATION, $APPEND_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION, $A30A_MIGRATION ein zweites Mal einspielen..." >&2
 psql_stdin < "$ENGINE_FILE"
 psql_stdin < "$APPEND_FILE"
 psql_stdin < "$AMEND_FILE"
 psql_stdin < "$ZA3_FILE"
 psql_stdin < "$A25A_FILE"
+psql_stdin < "$A30A_FILE"
 
 # C0b-Gegenprobe Phase A: je Kategorie genau eine gezielte Mutation in 20261001 (grep belegt je
 # Muster genau einen Treffer). (4) wirkt auf state.details (und damit auch auf die Nachtrag-Regel,

@@ -3,6 +3,7 @@ import { TeamTrainerSchema, TournamentGroupSchema, TournamentFieldSchema, Runtim
 import { RULEBOOK_MAX_LENGTH } from '../../../constants/rulebook';
 import { MatchSlotSchema, SlotSourceSchema } from './MatchSlotSchema';
 import { CLOCK_MODES, FINAL_PHASE_MINUTES_MAX, FINAL_PHASE_MINUTES_MIN } from '../../match/clockDisplay';
+import { MatchKitSchema } from '../kit';
 
 const TeamLogoSchema = z.object({
     type: z.enum(['url', 'base64', 'initials']),
@@ -92,6 +93,7 @@ export const MatchSchema = z.object({
     skippedReason: z.string().optional(),
     skippedAt: z.string().optional(),
     events: z.array(RuntimeMatchEventSchema).optional(),
+    kit: MatchKitSchema.optional(), // A-30a: getragene Farben beim Anpfiff (@W3-028), übersteht das lokale Laden
 });
 
 // scheduledTime uses z.preprocess to handle both Date objects and ISO strings from JSON/localStorage
