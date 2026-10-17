@@ -21,6 +21,7 @@ import type {
   MatchDecidedBy,
   TournamentStatus,
 } from '../../types/tournament';
+import { completeMatchCockpitSettings } from '../../types/tournament';
 // Renamed on import: this file already has its own `MatchUpdate` (the Supabase table's Update
 // shape, below) -- `DomainMatchUpdate` is the frontend/domain DTO (`core/models/types.ts`), which
 // (since A2 Fixrunde 3, N2) allows `null` on result/status fields to survive the offline mutation
@@ -598,8 +599,7 @@ export function mapTournamentFromSupabase(
     cancelledReason: config.cancelledReason,
     cancelledAt: config.cancelledAt,
     adminNotes: config.adminNotes,
-    matchCockpitSettings:
-      config.matchCockpitSettings as Tournament['matchCockpitSettings'],
+    matchCockpitSettings: completeMatchCockpitSettings(config.matchCockpitSettings),
     isExternal: config.isExternal,
     externalSource: config.externalSource,
     useDFBKeys: config.useDFBKeys,
