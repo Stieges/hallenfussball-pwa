@@ -190,7 +190,6 @@ describe('T1 Dialogbreiten kommen nur aus dialogWidths', () => {
     'features/auth/components/RoleChangeDialog.tsx',
     'features/auth/components/TransferOwnershipDialog.tsx',
     'components/ui/LogoUploadDialog.tsx',
-    'components/match-cockpit/PostMatchModal.tsx',
     'features/tournament-management/MonitorEditor.tsx',
     'features/tournament-management/TeamsTab.tsx',
     // B-43b2: Cockpit- und Match-Cockpit-Dialoge
@@ -203,9 +202,6 @@ describe('T1 Dialogbreiten kommen nur aus dialogWidths', () => {
     'components/live-cockpit/components/Dialogs/TimePenaltyDialog.tsx',
     'components/live-cockpit/components/Tiebreaker/PenaltyShootoutDialog.tsx',
     'components/live-cockpit/components/Tiebreaker/TiebreakerBanner.tsx',
-    'components/match-cockpit/EditScoreDialog.tsx',
-    'components/match-cockpit/EditTimeDialog.tsx',
-    'components/match-cockpit/PenaltyShootoutDialog.tsx',
     // B-43b3: Anmeldung, Spielbericht, Zuschauer, Schedule-Editor
     'features/auth/components/LoginDialogs.tsx',
     'features/auth/components/LoginScreen.tsx',

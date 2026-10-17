@@ -62,7 +62,6 @@ const LiveViewScreen = lazyWithRetry(
   () => import('./screens/LiveViewScreen').then(m => ({ default: m.LiveViewScreen })),
   'LiveViewScreen'
 );
-// NOTE: PublicLiveViewScreen removed - LiveViewScreen handles /live/:code
 const ImpressumScreen = lazyWithRetry(
   () => import('./screens/ImpressumScreen').then(m => ({ default: m.ImpressumScreen })),
   'ImpressumScreen'
@@ -74,12 +73,6 @@ const DatenschutzScreen = lazyWithRetry(
 const SettingsScreen = lazyWithRetry(
   () => import('./screens/SettingsScreen').then(m => ({ default: m.SettingsScreen })),
   'SettingsScreen'
-);
-
-// Local Test Screen (DEV only)
-const LocalTestScreen = lazyWithRetry(
-  () => import('./screens/LocalTestScreen').then(m => ({ default: m.LocalTestScreen })),
-  'LocalTestScreen'
 );
 
 // MON-KONF-01: Monitor Display für TVs/Beamer
@@ -131,7 +124,7 @@ const ScreenLoader = () => {
   );
 };
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'local-test' | 'not-found';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'not-found';
 
 function AppContent() {
   const { t } = useTranslation('common');
@@ -346,9 +339,6 @@ function AppContent() {
     } else if (matchedRoute?.name === 'authConfirm') {
       // Handle email confirmation with button click (defeats email scanners)
       setScreen('auth-confirm');
-    } else if (matchedRoute?.name === 'localTest') {
-      // Local test screen (DEV only)
-      setScreen('local-test');
     } else if (matchedRoute?.name === 'settings') {
       setScreen('settings');
     } else if (matchedRoute?.name === 'profile') {
@@ -679,9 +669,6 @@ function AppContent() {
           />
         )}
 
-        {/* NOTE: Public Live View removed - LiveViewScreen handles /live/:code
-            PublicLiveViewScreen was causing duplicate rendering with LiveViewScreen */}
-
         {screen === 'public' && publicTournamentId && (
           <PublicTournamentViewScreen tournamentId={publicTournamentId} />
         )}
@@ -689,11 +676,6 @@ function AppContent() {
         {/* Live View via Share Code (e.g., /live/ABC123) */}
         {screen === 'live' && liveShareCode && (
           <LiveViewScreen shareCode={liveShareCode} />
-        )}
-
-        {/* Local Test Screen (DEV only) */}
-        {screen === 'local-test' && (
-          <LocalTestScreen />
         )}
 
         {/* MON-KONF-01: Monitor Display (fullscreen for TVs/Beamer) */}

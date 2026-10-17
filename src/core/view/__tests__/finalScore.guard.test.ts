@@ -37,9 +37,6 @@ const ALLOWED: Readonly<Record<string, string>> = {
   // Cockpit: bis Cockpit 4.3 (Neubau), danach nur noch matchFinalScore
   'components/live-cockpit/LiveCockpit.tsx': 'Cockpit, bis Cockpit 4.3',
   'components/live-cockpit/types.ts': 'Typ LiveMatch (Cockpit-Form, deklariert nur; B-06 aus match-cockpit/MatchCockpit.tsx umgezogen), bis Cockpit 4.3',
-  'components/match-cockpit/MatchCockpit.tsx': 'Cockpit, bis Cockpit 4.3',
-  'components/match-cockpit/PenaltyShootoutDialog.tsx': 'Cockpit, bis Cockpit 4.3',
-  'components/match-cockpit/TiebreakerBanner.tsx': 'Cockpit, bis Cockpit 4.3',
   'hooks/engineEventEditingSupport.ts': 'Cockpit-Ereignisbearbeitung, bis Cockpit 4.3',
   // PDF (Spur C, mit main gekommen): rechnet die Endstand-Darstellung selbst – ÜBERGANG bis A-36d (dann MatchView.score)
   'lib/pdf/matchResult.ts': 'PDF liest Verlängerung/Strafstoß selbst, bis A-36d',
