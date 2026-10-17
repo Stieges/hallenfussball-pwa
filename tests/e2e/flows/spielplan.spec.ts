@@ -746,21 +746,18 @@ test.describe('Spielplan 2.0 - Design Tokens', () => {
     }
   });
 
-  test('Score-Circle hat korrekte Größe (56×56px laut Konzept)', async ({ page }) => {
+  test('Ergebnis-Fläche ist ein Touch-Ziel von mindestens 44×44 px (@OB-064: der Kreis entfällt)', async ({ page }) => {
     // GIVEN - Navigate to Spielplan
     await navigateToSpielplan(page);
 
-    // THEN - Score circle should be 56×56px (or close to it)
+    // THEN - Das Klickziel ins Cockpit (Torzahl bzw. Ergebnis) bleibt mindestens 44×44 px groß; 56×56 px galt dem Kreis (Variante D)
     const scoreCircle = page.locator('[data-score-circle]').first();
     if (await scoreCircle.isVisible()) {
       const boundingBox = await scoreCircle.boundingBox();
       expect(boundingBox).not.toBeNull();
       if (boundingBox) {
-        // Allow some tolerance for borders
-        expect(boundingBox.width).toBeGreaterThanOrEqual(52);
-        expect(boundingBox.width).toBeLessThanOrEqual(64);
-        expect(boundingBox.height).toBeGreaterThanOrEqual(52);
-        expect(boundingBox.height).toBeLessThanOrEqual(64);
+        expect(boundingBox.width).toBeGreaterThanOrEqual(44);
+        expect(boundingBox.height).toBeGreaterThanOrEqual(44);
       }
     }
   });

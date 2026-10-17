@@ -29,6 +29,19 @@ export const TeamSchema = z.object({
     trainers: z.array(TeamTrainerSchema).optional(),
 });
 
+/** Eintrag der Korrekturhistorie eines Spiels (`CorrectionEntry`); `reasonType` bleibt Text wie `matchStatus` (alte Einträge). */
+const CorrectionEntrySchema = z.looseObject({
+    timestamp: z.string(),
+    previousScoreA: z.number(),
+    previousScoreB: z.number(),
+    newScoreA: z.number(),
+    newScoreB: z.number(),
+    reasonType: z.string().optional(),
+    reason: z.string().optional(),
+    note: z.string().optional(),
+    userName: z.string().optional(),
+});
+
 export const MatchSchema = z.object({
     id: z.string(),
     round: z.number(),
@@ -43,8 +56,6 @@ export const MatchSchema = z.object({
     scoreA: z.number().min(0).optional(),
     scoreB: z.number().min(0).optional(),
     group: z.string().optional(),
-    // A-25a (C-PHASE-LOKAL-VERLOREN): Phase des Spiels ('groupStage', 'semifinal', …) wie im Match-Typ.
-    phase: z.string().optional(),
     isFinal: z.boolean().optional(),
     // finalType kommt aus einer nullable DB-Spalte (final_type) – null wird wie "nicht gesetzt" behandelt (C-ZOD-DEC).
     finalType: z.string().nullable().optional().transform((v) => v ?? undefined),
@@ -61,6 +72,12 @@ export const MatchSchema = z.object({
       },
       z.date().optional()
     ),
+    // C-SCHEMA-VERWIRFT-FELDER: ohne diese drei Felder ging beim lokalen Laden die Spielnummer verloren
+    // (aus „Spiel 11“ wurde „Spiel 1“) und ein Komplett-Speichern schrieb `match_number = NULL` in die Cloud.
+    matchNumber: z.number().optional(),
+    // auch A-25a (C-PHASE-LOKAL-VERLOREN): ohne phase galt ein K.-o.-Spiel lokal als Gruppenspiel.
+    phase: z.string().optional(),
+    correctionHistory: z.array(CorrectionEntrySchema).optional(),
     referee: z.number().optional(),
     matchStatus: z.string().optional(), // 'scheduled' | ...
     finishedAt: z.string().optional(),

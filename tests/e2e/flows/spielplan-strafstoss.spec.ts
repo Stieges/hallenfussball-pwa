@@ -67,10 +67,10 @@ const ZWEI_ZWEI = /2\s?:\s?2/;
 test.describe('@FU-094 Spielplan: K.-o.-Unentschieden mit Strafstoßschießen eintragen (offline)', () => {
   // C-PHASE-LOKAL-VERLOREN behoben (A-25a): `MatchSchema.phase` -- das lokal geladene Halbfinale bleibt ein K.-o.-Spiel.
 
-  // Bis 768 px zeigt der Spielplan die Finalrunde als Karten (FinalStageSchedule, `max-width: 768px`). Befund
-  // C-FINALRUNDE-MOBIL-EINGABE (vorbestehend): die Karte meldet ein Ergebnis nur, wenn die andere Seite schon einen Stand hat –
-  // ein offenes Spiel lässt sich dort nicht eintragen. Bis zum Fix erwartet fehlgeschlagen; ab 1024 px (Tabelle) regulär.
-  test.fail(({ viewport }) => (viewport?.width ?? 0) <= 768, 'C-FINALRUNDE-MOBIL-EINGABE: Karten-Ansicht meldet kein Ergebnis');
+  // Bis 768 px zeigt der Spielplan die Finalrunde als Karten (FinalStageSchedule, `max-width: 768px`). Seit SK (#250,
+  // C-FINALRUNDE-MOBIL-EINGABE behoben) ist die Karte eintragbar und zeigt die Tore je Mannschaftszeile (@OB-064 Z.1):
+  // „FC Nord 2 (4)“ / „SV Süd 2 (3)“ statt „2 : 2“. Ab 1024 px (Tabelle) steht der Stand als „2 : 2“.
+  const istKarte = (page: Page) => (page.viewportSize()?.width ?? 0) <= 768;
 
   test.beforeEach(async ({ seedIndexedDB }) => {
     await seedIndexedDB({ tournaments: [strafstossTurnier()] });
@@ -105,7 +105,17 @@ test.describe('@FU-094 Spielplan: K.-o.-Unentschieden mit Strafstoßschießen ei
     await save.click();
 
     await expect(dialog).toHaveCount(0);
-    await expect(page.getByText(ZWEI_ZWEI).filter({ visible: true }).first()).toBeVisible({ timeout: 10_000 });
+    if (istKarte(page)) {
+      // @OB-064 Z.1: je Zeile die Tore, der Strafstoßstand in Klammern, der Sieger fett
+      await expect(page.getByTestId(`final-goals-${HF1}-home`)).toHaveText('2', { timeout: 10_000 });
+      await expect(page.getByTestId(`final-goals-${HF1}-away`)).toHaveText('2');
+      await expect(page.getByTestId(`final-penalty-${HF1}-home`)).toHaveText('(4)');
+      await expect(page.getByTestId(`final-penalty-${HF1}-away`)).toHaveText('(3)');
+      await expect(page.getByTestId(`final-name-${HF1}-home`)).toHaveAttribute('data-winner', 'true');
+      await expect(page.getByTestId(`final-name-${HF1}-away`)).not.toHaveAttribute('data-winner', 'true');
+    } else {
+      await expect(page.getByText(ZWEI_ZWEI).filter({ visible: true }).first()).toBeVisible({ timeout: 10_000 });
+    }
     await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(2); // Halbfinale beendet: nur noch das Finale hat Felder
     // Finale mit FC Nord: belegt in src/hooks/__tests__/koSlotResolution.a25aStrafstoss.test.ts (die Hand-Saat hier
     // trifft den Resolver nicht wie ein veröffentlichtes Turnier -- Saat-Paket).
@@ -123,5 +133,7 @@ test.describe('@FU-094 Spielplan: K.-o.-Unentschieden mit Strafstoßschießen ei
     await expect(page.getByText('Sieger Halbfinale 1').filter({ visible: true }).first()).toBeVisible();
     await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(4); // Halbfinale weiter offen
     await expect(page.getByText(ZWEI_ZWEI).filter({ visible: true })).toHaveCount(0);
+    // Karten-Ansicht: kein gespeicherter Stand, also keine Torzahl je Zeile (Gegenstück zu @OB-064 Z.1)
+    await expect(page.getByTestId(`final-goals-${HF1}-home`)).toHaveCount(0);
   });
 });

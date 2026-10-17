@@ -107,12 +107,14 @@ describe('Feste Anzeigesprache (B-41 Fixrunde 1)', () => {
     expect(i18n.language).toBe('en');
   });
 
-  it('Zuschauer-Seite: Spielplan zeigt „Mein Team:“ und den geteilten Baustein „Ende“', async () => {
+  it('Zuschauer-Seite: Spielplan zeigt „Mein Team:“ und den geteilten Baustein „Endstand“ (Ergebnis-Beschriftung)', async () => {
     const tournament = buildLiveViewTournament({ hideRankingsForPublic: true });
     liveViewMit(tournament);
     await screen.findAllByRole('heading', { level: 1, name: tournament.title });
     expect(screen.getByText('Mein Team:')).toBeInTheDocument();
-    expect(screen.getAllByText('Ende').length).toBeGreaterThan(0);
+    // @OB-064: der Kreis mit „Ende“ entfällt; der geteilte Baustein ist die Beschriftung des Ergebnisses der Tabellenzeile
+    expect(screen.getAllByLabelText(/^Endstand \d+:\d+/).length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText(/^Final score/)).toBeNull();
   });
 
   it('Zuschauer-Seite (c): Ladefehler zeigt „Fehler beim Laden des Turniers“ (nicht englisch)', async () => {

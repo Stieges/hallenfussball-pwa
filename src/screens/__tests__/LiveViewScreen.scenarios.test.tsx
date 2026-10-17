@@ -210,14 +210,14 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       expect(screen.getAllByText('1:0').length).toBeGreaterThan(0);
       const text = container.textContent ?? '';
       expect(text).not.toContain('matchCard.live');
-      // Spiel 1 und Spiel 7 haben beide einen Stand und gelten darum als beendet;
-      // jede Karte steht zweimal im DOM (Desktop- und Mobil-Ansicht).
-      // Status-Beschriftung „Ende“ als eigenes Blatt-Element (B-41: deutscher Text statt Schlüssel).
-      const endeLabels = Array.from(container.querySelectorAll('*')).filter(
-        (el) => el.children.length === 0 && el.textContent === 'Ende'
+      // Spiel 1 und Spiel 7 haben beide einen Stand und gelten darum als beendet. Seit @OB-064 (Tore je Zeile, Ergebnis
+      // waagerecht) trägt eine regulär beendete Karte keinen Zusatz mehr: weder „Ende“ unter dem Ergebnis noch
+      // „n. V.“ / „beendet i. E.“ in der Kopfzeile.
+      const zusatz = Array.from(container.querySelectorAll('*')).filter(
+        (el) => el.children.length === 0 && ['Ende', 'n. V.', 'beendet i. E.'].includes(el.textContent ?? '')
       );
-      expect(endeLabels).toHaveLength(4);
-      // Je Spiel: der Status steht am Kreis (data-match-status), nicht nur im Zähler.
+      expect(zusatz).toHaveLength(0);
+      // Je Spiel: der Status steht am Ergebnis der Tabellenzeile (data-match-status), nicht nur im Zähler.
       const circles = container.querySelectorAll(`[data-testid="match-circle-${m7.id}"]`);
       expect(circles.length).toBeGreaterThan(0);
       for (const circle of circles) {

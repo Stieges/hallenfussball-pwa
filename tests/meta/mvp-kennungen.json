@@ -1,7 +1,7 @@
 {
  "_hinweis": "Erzeugt von scripts/mvp-kennungen-erzeugen.mjs aus `anf.py mvp --json` (Klasse am Szenario). Nicht von Hand pflegen; soll aendert sich nur mit einer Entscheidung ueber den MVP-Schnitt.",
  "quelle": "anf.py mvp --json",
- "soll": 835,
+ "soll": 837,
  "records": {
   "helfer-am-turniertag": [
    "HE-001",
@@ -348,6 +348,7 @@
    "OB-061",
    "OB-062",
    "OB-063",
+   "OB-064",
    "OB-029",
    "OB-030",
    "OB-031",
@@ -884,7 +885,8 @@
    "TA-007",
    "TA-008",
    "TA-009",
-   "TA-010"
+   "TA-010",
+   "TA-011"
   ]
  }
 }
