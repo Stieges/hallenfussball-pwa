@@ -16,7 +16,6 @@ import { EINTRAG_ZEITSTRAFE, type CardKind, type OffenerEintrag } from '../model
 import {
   TimeAdjustDialog, CardDialog, TimePenaltyDialog, SubstitutionDialog, GoalScorerDialog,
   EventEditDialog, EventLogBottomSheet, SettingsDialog, TiebreakerBanner, PenaltyShootoutDialog,
-  ToastContainer, type ToastData,
 } from '../components';
 import { AudioActivationBanner } from './AudioActivationBanner';
 
@@ -70,8 +69,6 @@ export interface CockpitOverlaysProps {
   handlers: CockpitOverlayHandlers;
   sound: { activate: () => Promise<void>; isActivated: boolean };
   rejectedOutbox: UseRejectedOutboxDialogResult;
-  toasts: ToastData[];
-  onDismissToast: (id: string) => void;
 }
 
 export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
@@ -214,7 +211,6 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
         />
       )}
 
-      <ToastContainer toasts={props.toasts} onDismiss={props.onDismissToast} />
     </>
   );
 }
