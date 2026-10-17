@@ -19,6 +19,7 @@ import { canDeleteTournament } from '../../../auth/utils/permissions';
 import type { Tournament } from '../../../../types/tournament';
 import type { MatchUpdate } from '../../../../core/models/types';
 import { diffMatchResultStatusUpdates } from '../../../../core/services';
+import { useMatchEntryGuard } from '../../../../hooks/useMatchEntryGuard';
 import type { DangerAction, DangerActionConfig } from '../../types/admin.types';
 
 // =============================================================================
@@ -29,12 +30,7 @@ interface DangerZoneCategoryProps {
   tournamentId: string;
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament) => void | Promise<void>;
-  /**
-   * A2 Fixrunde 1 (Ruling AJ, I1: `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
-   * task-A2-review.md`): "Ergebnisse zurücksetzen"/"Spielplan zurücksetzen" reset RESULT/STATUS
-   * columns (Score, Status, Timer) on existing matches -- a full `save()` skips those for
-   * existing matches (A2), so this local-state sync + targeted update pair persists the reset.
-   */
+  /** A2 Fixrunde 1: Zurücksetzen ohne Einträge lokal + gezielt; mit Einträgen gesperrt (A-08f3e4, @FU-090). */
   onLocalTournamentUpdate: (tournament: Tournament) => void;
   onMatchesUpdate: (updates: MatchUpdate[]) => void;
 }
@@ -243,6 +239,7 @@ export function DangerZoneCategory({
   const [pendingAction, setPendingAction] = useState<DangerActionConfig | null>(null);
   const [confirmationInput, setConfirmationInput] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
+  const entryGuard = useMatchEntryGuard(); // A-08f3e4 (@FU-090)
 
   // R7: Das Löschen des Turniers hatte keine Rollensperre in der UI -- die DB lässt seit
   // R5b (protect_deleted_at → has_tournament_permission(..., 'deleteTournament')) nur den
@@ -292,7 +289,7 @@ export function DangerZoneCategory({
 
       switch (pendingAction.action) {
         case 'reset_schedule': {
-          // Reset ALL matches to initial scheduled state
+          if (await entryGuard.blocks(tournament)) { break; } // @FU-090: mit Einträgen nicht ausführen
           const resetMatches = tournament.matches.map(match => ({
             ...match,
             matchStatus: 'scheduled' as const,
@@ -337,7 +334,7 @@ export function DangerZoneCategory({
     } finally {
       setIsExecuting(false);
     }
-  }, [pendingAction, confirmationInput, tournament, onTournamentUpdate, onLocalTournamentUpdate, onMatchesUpdate]);
+  }, [pendingAction, confirmationInput, tournament, onTournamentUpdate, onLocalTournamentUpdate, onMatchesUpdate, entryGuard]);
 
   const isConfirmEnabled = confirmationInput === pendingAction?.confirmText;
 

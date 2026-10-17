@@ -117,6 +117,16 @@
       "confirmSwitch": "Switch anyway"
     },
     "koAfterSend": "Knockout places will be filled after sending",
+    "skip": {
+      "teamsMissing": "A match can only be called off once both teams are known",
+      "unavailable": "Calling off the match is not possible right now"
+    },
+    "entriesGuard": {
+      "blocked": "Match {{number}} has entries – only via resetting the schedule to the start",
+      "unreadable": "Entries could not be checked – nothing changed",
+      "restoreKept_one": "For {{count}} match with entries the result was not restored",
+      "restoreKept_other": "For {{count}} matches with entries the results were not restored"
+    },
     "resultEntry": {
       "running": "Match in progress – enter the result after the final whistle",
       "teamsMissing": "Enter a result once both teams are known",

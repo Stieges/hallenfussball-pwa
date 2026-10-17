@@ -22,7 +22,8 @@ import type { Match, Tournament } from '../../../../types/tournament';
 import { slotLabel } from '../../../../core/models/slotLabel';
 import { matchInvolvesTeam, matchSideTeamId } from '../../../../core/models/matchSlot';
 import type { MatchUpdate } from '../../../../core/models/types';
-import { diffMatchResultStatusUpdates } from '../../../../core/services';
+import { useMatchEntryGuard } from '../../../../hooks/useMatchEntryGuard';
+import { keepResultsOnRestore } from './restoreKeepingResults';
 import { exportStatisticsToPDF } from '../../../../lib/pdfStatisticsExporter';
 
 // =============================================================================
@@ -33,14 +34,8 @@ interface ExportsCategoryProps {
   tournamentId: string;
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament) => void | Promise<void>;
-  /**
-   * A2 Fixrunde 1 (Ruling AJ, I1: `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
-   * task-A2-review.md`): a restored backup can change EXISTING matches' results/status, which a
-   * full `save()` (via `onTournamentUpdate` above, still needed for teams/settings/schedule and
-   * any brand-new match) intentionally skips for existing matches since A2. This targeted update
-   * backfills exactly those columns.
-   */
-  onMatchesUpdate: (updates: MatchUpdate[]) => void;
+  /** A-08f3e4: ungenutzt -- Wiederherstellen schreibt keine Ergebnisse mehr gezielt (@FU-091, F2); Weiterleitung entfällt mit dem Aufräumen. */
+  onMatchesUpdate?: (updates: MatchUpdate[]) => void;
 }
 
 // =============================================================================
@@ -168,15 +163,16 @@ const styles = {
 export function ExportsCategory({
   tournament,
   onTournamentUpdate,
-  onMatchesUpdate,
 }: ExportsCategoryProps) {
   const { t } = useTranslation('admin');
   const { t: tSport } = useTranslation('sport');
+  const { t: tTournament } = useTranslation('tournament');
   // F3b2 (M8/U1): EIN Lauf beim Klick auf "Exportieren" statt eines Dauer-Abos -- s.
   // loadEngineEventsForExport. Kein eigener State: jeder Export-Knopf laedt sich seine eigene
   // frische Karte, damit ein Export direkt nach App-Start (Cockpit nie geoeffnet) nicht still
   // ohne Engine-Ereignisse liefert.
   const matchEngineContext = useMatchEngineContextOptional();
+  const entryGuard = useMatchEntryGuard(); // A-08f3e4 (@FU-091)
   // State
   const [showPDFDialog, setShowPDFDialog] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -279,24 +275,12 @@ export function ExportsCategory({
         document.body.removeChild(preRestoreLink);
         URL.revokeObjectURL(preRestoreUrl);
 
-        // Apply restored data (keep the current tournament ID)
-        const restoredTournament: Tournament = {
-          ...data.tournament,
-          id: tournament.id, // Keep current ID to not create a new tournament
-          updatedAt: new Date().toISOString(),
-        };
-
-        // A2 Fixrunde 3 (N3, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
-        // task-A2-rereview.md`): AWAIT the full save before the targeted update -- both are
-        // read-modify-write against the SAME local tournament list (`LocalStorageRepository`),
-        // without a lock. Firing them "in parallel" (no await on the first call) raced two
-        // writers against the same record; whichever finished last won, silently discarding the
-        // other's changes locally (a lost update). Sequencing makes the second write's
-        // read see the first write's result.
-        await onTournamentUpdate(restoredTournament);
-        // The full save above intentionally skips result/status columns for EXISTING matches
-        // (A2) -- backfill exactly those from the restored backup.
-        onMatchesUpdate(diffMatchResultStatusUpdates(tournament.matches, restoredTournament.matches));
+        // Apply restored data (keep the current tournament ID). A-08f3e4 (@FU-091): Ergebnisse von Spielen mit Einträgen
+        // bleiben (F2: bei Konto-Turnieren alle), Hinweis mit Anzahl; Spielplan-/Turnierdaten wie bisher über das Speichern.
+        const { restored, keptCount } = keepResultsOnRestore(tournament, { ...data.tournament, id: tournament.id, updatedAt: new Date().toISOString() },
+          await entryGuard.read(tournament), entryGuard.isGuest);
+        await onTournamentUpdate(restored);
+        if (keptCount > 0) { entryGuard.notify(tTournament('schedule.entriesGuard.restoreKept', { count: keptCount })); }
         setExportSuccess(t('exports.restoreSuccess'));
         setTimeout(() => setExportSuccess(null), 3000);
       } catch (error) {
@@ -310,7 +294,7 @@ export function ExportsCategory({
         setIsExporting(false);
       }
     },
-    [tournament, onTournamentUpdate, onMatchesUpdate, t]
+    [tournament, onTournamentUpdate, entryGuard, t, tTournament]
   );
 
   // File input change handler

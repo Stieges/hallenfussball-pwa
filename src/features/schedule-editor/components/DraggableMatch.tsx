@@ -34,7 +34,7 @@ interface DraggableMatchProps {
   /** Click handler for selection */
   onSelect?: () => void;
   /** Callback to unskip */
-  onUnskip?: () => void;
+  onUnskip?: () => Promise<string | null>;
   /** Whether the match can be dragged */
   draggable?: boolean;
   /** Compact display mode */

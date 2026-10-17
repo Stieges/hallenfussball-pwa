@@ -26,6 +26,11 @@ vi.mock('../../../../auth/hooks/useTournamentMembers', () => ({
   }),
 }));
 
+// A-08f3e4: Turnier ohne Einträge (@FU-090 Gegenbeispiel „läuft wie heute“) -- ohne Spiel-Engine sperrte der Wächter.
+vi.mock('../../../../../hooks/useMatchEntryGuard', () => ({
+  useMatchEntryGuard: () => ({ blocks: async () => false, read: async () => ({ matches: [], unreadable: false }), notify: () => undefined, isGuest: false }),
+}));
+
 import { DangerZoneCategory } from '../index';
 
 const torEvent: RuntimeMatchEvent = {

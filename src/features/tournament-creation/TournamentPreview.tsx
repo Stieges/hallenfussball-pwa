@@ -20,6 +20,7 @@ import { PreviewPdfButton } from '../../components/PreviewPdfButton';
 import { getLocationName, getLocationAddressLine } from '../../utils/locationHelpers';
 import { activeTeams } from './utils/replanTeams';
 import { visibilityAfterPublish } from '../../core/services/TournamentCreationService';
+import { useMatchEntryGuard } from '../../hooks/useMatchEntryGuard';
 
 interface TournamentPreviewProps {
   tournament: Tournament;
@@ -42,6 +43,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   const [currentTournament, setCurrentTournament] = useState(tournament);
   const [schedule, setSchedule] = useState(initialSchedule);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const entryGuard = useMatchEntryGuard();
 
   // F-211: shared regeneration helper — keeps the previous schedule visible
   // on failure and surfaces the error in the UI without crashing the wizard.
@@ -61,16 +63,15 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
     }
   };
 
+  // A-08f3e4 (@FU-090): jede Änderung erzeugt den Spielplan neu -- hat ein Spiel Einträge, nicht ausführen (Hinweis).
+  const applyChange = (updatedTournament: Tournament): void => {
+    const apply = () => { setCurrentTournament(updatedTournament); regenerateSchedule(updatedTournament); onTournamentChange?.(updatedTournament); };
+    if (updatedTournament.matches.length === 0) { apply(); return; }
+    void entryGuard.blocks(updatedTournament).then((blocked) => { if (!blocked) { apply(); } });
+  };
+
   const handleFinalsConfigChange = (config: FinalsConfig) => {
-    const updatedTournament = { ...currentTournament, finalsConfig: config };
-    setCurrentTournament(updatedTournament);
-
-    regenerateSchedule(updatedTournament);
-
-    // Notify parent if callback provided
-    if (onTournamentChange) {
-      onTournamentChange(updatedTournament);
-    }
+    applyChange({ ...currentTournament, finalsConfig: config });
   };
 
   const handleRefereeAssignment = (matchId: string, refereeNumber: number | null) => {
@@ -94,15 +95,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
       ...updatedTournament.refereeConfig,
       manualAssignments,
     };
-
-    setCurrentTournament(updatedTournament);
-
-    regenerateSchedule(updatedTournament);
-
-    // Notify parent if callback provided
-    if (onTournamentChange) {
-      onTournamentChange(updatedTournament);
-    }
+    applyChange(updatedTournament);
   };
 
   const handleResetRefereeAssignments = () => {
@@ -113,34 +106,12 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
         ...updatedTournament.refereeConfig,
         manualAssignments: {},
       };
-
-      setCurrentTournament(updatedTournament);
-
-      regenerateSchedule(updatedTournament);
-
-      // Notify parent if callback provided
-      if (onTournamentChange) {
-        onTournamentChange(updatedTournament);
-      }
+      applyChange(updatedTournament);
     }
   };
 
   const handleFieldChange = (matchId: string, fieldNumber: number) => {
-    const updatedTournament = { ...currentTournament };
-
-    // Update field assignments
-    updatedTournament.fieldAssignments ??= {};
-
-    updatedTournament.fieldAssignments[matchId] = fieldNumber;
-
-    setCurrentTournament(updatedTournament);
-
-    regenerateSchedule(updatedTournament);
-
-    // Notify parent if callback provided
-    if (onTournamentChange) {
-      onTournamentChange(updatedTournament);
-    }
+    applyChange({ ...currentTournament, fieldAssignments: { ...(currentTournament.fieldAssignments ?? {}), [matchId]: fieldNumber } });
   };
 
   const containerStyle: CSSProperties = {
