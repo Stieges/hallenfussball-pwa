@@ -1,7 +1,7 @@
 /**
  * HighlightedCell - Wiederverwendbare Zelle mit bedingtem Highlight
  *
- * Verwendet in RankingTab für Statistik-Spalten (Punkte, Tore, Diff, etc.)
+ * Verwendet in TabellenTab für Statistik-Spalten (Punkte, Tore, Diff, etc.)
  * Zeigt grünen Hintergrund wenn das Kriterium für die Platzierung relevant ist.
  *
  * NOTE: Uses direct fontWeights/fontSizes imports because dynamic property access

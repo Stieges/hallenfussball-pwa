@@ -114,7 +114,7 @@ const OB002: FunktionFall[] = [
     funktion: 'der Schalter „Bildschirm an lassen“',
     ort: 'das Admin Center, Match Cockpit',
     pruefen: async () => {
-      const { MatchCockpitSettingsPanel } = await import('../components/match-cockpit/MatchCockpitSettingsPanel');
+      const { MatchCockpitSettingsPanel } = await import('../components/match-settings/MatchCockpitSettingsPanel');
       const { container } = render(
         <MatchCockpitSettingsPanel
           settings={{} as ComponentProps<typeof MatchCockpitSettingsPanel>['settings']}
@@ -132,7 +132,7 @@ const OB002: FunktionFall[] = [
     funktion: 'der Schalter „Bildschirm an lassen“',
     ort: 'den zweiten Schritt beim Anlegen',
     pruefen: async () => {
-      const { MatchCockpitSettingsPanel } = await import('../components/match-cockpit/MatchCockpitSettingsPanel');
+      const { MatchCockpitSettingsPanel } = await import('../components/match-settings/MatchCockpitSettingsPanel');
       const { container } = render(
         <MatchCockpitSettingsPanel
           settings={{} as ComponentProps<typeof MatchCockpitSettingsPanel>['settings']}

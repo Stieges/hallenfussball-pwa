@@ -47,6 +47,8 @@ vi.mock('../../../lib/supabase', () => ({
   supabase: { auth: { getSession: vi.fn(async () => ({ data: { session: null }, error: null })) } },
 }));
 vi.mock('../../../core/contexts/RepositoryContext', () => ({ useRepositories: () => REPOS }));
+// A-08f3e2: die Schnelleingabe fragt die Akteursrolle ab (useActorRole braucht sonst den AuthProvider).
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'leitung' }));
 vi.mock('../../../hooks/usePermissions', () => ({
   usePermissions: () => ({ canCorrectResults: true, hasPermission: () => true }),
 }));

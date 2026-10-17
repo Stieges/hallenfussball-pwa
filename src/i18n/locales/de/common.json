@@ -166,7 +166,7 @@
       "reopen": "Spiel wieder geöffnet",
       "skip": "Spiel übersprungen",
       "unskip": "Spiel wieder dabei",
-      "resultEntry": "Ergebnis vorgemerkt",
+      "resultEntry": "Ergebnis eingetragen",
       "reviewAccept": "Durch Turnierleitung freigegeben",
       "reviewDiscard": "Durch Turnierleitung verworfen",
       "goal": "Tor",
@@ -184,7 +184,9 @@
       "teamAndMinute": "{{what}} Team {{team}}, {{minute}}. Minute",
       "team": "{{what}} Team {{team}}",
       "minute": "{{what}}, {{minute}}. Minute",
-      "plain": "{{what}}"
+      "plain": "{{what}}",
+      "match": "{{what}} · Spiel {{number}} · {{home}} – {{away}}",
+      "matchScore": "{{what}} · Spiel {{number}} · {{home}} – {{away}} {{score}}"
     },
     "rejected": {
       "header_one": "1 Eintrag $t(sport:outbox.rejectedEntry)",

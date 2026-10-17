@@ -138,6 +138,24 @@ export const E2E_ENGINE_CUPS = [
     helper: true,
   },
   {
+    // A-08f3e2 (@FU-080): geplantes Spiel mit zwei Teams, auf Papier geleitet -- Direkteintrag im Spielplan.
+    slug: 'DIREKTEINTRAG',
+    title: 'Engine-Cup DIREKTEINTRAG',
+    form: 'untouched',
+    events: [],
+    expected: { status: 'scheduled', scoreA: 0, scoreB: 0 },
+    helper: false,
+  },
+  {
+    // A-08f3e3 Fixrunde 1 (I-4): Kopf-Hinweis bei 360 px; der Server bekommt nie einen Eintrag (abgefangen/abgelehnt).
+    slug: 'KOPFHINWEIS',
+    title: 'Engine-Cup KOPFHINWEIS',
+    form: 'untouched',
+    events: [],
+    expected: { status: 'scheduled', scoreA: 0, scoreB: 0 },
+    helper: false,
+  },
+  {
     slug: 'NSTART',
     title: 'Engine-Cup NSTART',
     form: 'untouched',

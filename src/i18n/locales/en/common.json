@@ -166,7 +166,7 @@
       "reopen": "Game reopened",
       "skip": "Game skipped",
       "unskip": "Game included again",
-      "resultEntry": "Result noted",
+      "resultEntry": "Result entered",
       "reviewAccept": "Approved by tournament control",
       "reviewDiscard": "Discarded by tournament control",
       "goal": "Goal",
@@ -184,7 +184,9 @@
       "teamAndMinute": "{{what}} team {{team}}, minute {{minute}}",
       "team": "{{what}} team {{team}}",
       "minute": "{{what}}, minute {{minute}}",
-      "plain": "{{what}}"
+      "plain": "{{what}}",
+      "match": "{{what}} · Match {{number}} · {{home}} – {{away}}",
+      "matchScore": "{{what}} · Match {{number}} · {{home}} – {{away}} {{score}}"
     },
     "rejected": {
       "header_one": "1 entry not accepted",

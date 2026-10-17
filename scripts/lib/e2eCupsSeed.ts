@@ -21,6 +21,7 @@ import {
   E2E_TURNIERTAG_MATCH_COUNT,
   E2E_TURNIERTAG_SHARE_CODE,
   E2E_TURNIERTAG_MONITOR_ID,
+  E2E_SPIELPLANOWNER_MONITOR_ID,
   E2E_ZWEITES_TURNIER_ID,
   E2E_ZWEITES_TURNIER_TITLE,
   ENGINE_CUP_SEED_NOW_START_OFFSET_MS,
@@ -179,6 +180,26 @@ async function seedOneEngineCup(
   const ids = engineCupIds(cup.slug as EngineCupSlug);
   const tournament = buildSingleMatchCup(service, ids, cup.title);
   tournament.matches[0].id = ids.matchId;
+  if (cup.slug === 'SPIELPLANOWNER') {
+    // B-06: Monitor-Seite statt des entfallenen Verwaltungs-Reiters (spielplan-lesen.cloud.spec.ts, @FU-087).
+    const nowIso = new Date().toISOString();
+    tournament.monitors = [
+      {
+        id: E2E_SPIELPLANOWNER_MONITOR_ID,
+        name: 'Haupthalle',
+        defaultSlideDuration: 15,
+        transition: 'fade',
+        transitionDuration: 500,
+        theme: 'dark',
+        performanceMode: 'auto',
+        slides: [
+          { id: e2eUuid('monitor:engine-cup:SPIELPLANOWNER:1:slide:live-field-1'), type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 },
+        ],
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+    ];
+  }
   await ownerRepo.save(tournament);
   if (cup.helper) {
     if (!helperId) {
