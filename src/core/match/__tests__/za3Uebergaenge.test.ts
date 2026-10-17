@@ -216,7 +216,7 @@ describe('@SL-146 Ohne Ende durch Ablauf setzt Toms Gerät das Spiel nicht fort 
     expect([l.state.scores.teamA.regular, l.state.scores.teamB.regular]).toEqual([2, 1]);
   });
 
-  it('@SL-146 bei 3:00 von Hand abgepfiffen: wieder öffnen kann Spiel 11 die Turnierleitung', () => {
+  it('@SL-146 bei 3:00 von Hand abgepfiffen: wieder öffnen kann Spiel 11 nur die Turnierleitung', () => {
     const l = lauf('64d-wiedereroeffnen-leitung-nach-abpfiff-von-hand.json');
     expect(ergebnisVon(l, 'REOPEN').status).toBe('accepted');
     expect(l.state.status).toBe('running');
@@ -229,14 +229,18 @@ describe('@SL-146 Ohne Ende durch Ablauf setzt Toms Gerät das Spiel nicht fort 
     expect(l.state.phase).toBe('overtime');
   });
 
-  // Befund ZA3-SL146-LEITUNG: Daniel 17.10. „kein neuer Übergang, die Leitung korrigiert“ – in der Pause vor der
-  // Verlängerung gibt es für niemanden REOPEN (und CORRECTION erst nach Spielende). Das Gherkin verlangt für diese Zeile
-  // „wieder öffnen kann Spiel 11 nur die Turnierleitung“ → Record/Plan klären.
-  it.fails('@SL-146 Halbfinale 11 in der Pause vor der Verlängerung: wieder öffnen kann Spiel 11 die Turnierleitung', () => {
+  it('@SL-146 Halbfinale 11 in der Pause vor der Verlängerung: das Spiel geht mit der Verlängerung weiter', () => {
     const l = lauf('64c-ko-gleichstand-kein-fortsetzen.json');
-    const leitung: EngineEvent = { ...ergebnisVon(l, 'REOPEN').event, id: 'leitung-reopen', actor: 'leitung', at: 662_000 };
+    expect(ergebnisVon(l, 'REOPEN').status).toBe('rejected');
+    const anpfiff: EngineEvent = {
+      id: '0000064c-0000-4000-8000-0000000000aa', type: 'SECTION_START', actor: 'helper', at: 662_000,
+      section: 2, clockMs: 600_000, teamId: null, payload: {},
+    };
     const ctx: MatchContext = { matchId: 'match-0000064c', teamAId: 'teamA', teamBId: 'teamB' };
-    expect(continueLog(l.state, [leitung], ctx).results[0].status).toBe('accepted');
+    const weiter = continueLog(l.state, [anpfiff], ctx);
+    expect(weiter.results[0].status).toBe('accepted');
+    expect(weiter.state.status).toBe('running');
+    expect(weiter.state.phase).toBe('overtime');
   });
 
   it('@SL-074 Gegenstück: mit Ablauf der Spielzeit von selbst beendet, Tom setzt 1 Minute nach dem Abpfiff fort', () => {
