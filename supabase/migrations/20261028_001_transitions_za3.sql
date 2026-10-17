@@ -19,7 +19,9 @@
 --      ueber final_type (placement -> final), alte globale Regel nur fuer Altdaten, Rueckfall
 --      'overtime-then-shootout' (E1, @SL-145, @W2A-007, @W2A-039; Befund C-KO-RUNDENREGEL-SERVER).
 --   5. append_match_events: ruft server_rules mit matches.final_type; actual_start wird NULL, wenn das
---      Spiel nach einem zurueckgenommenen Anpfiff wieder "geplant" ist.
+--      Spiel nach einem zurueckgenommenen Anpfiff wieder "geplant" ist. Fixrunde 1 (W1, @SL-147): Helfer-REOPEN
+--      und RETRACT des Anpfiffs zusaetzlich an der Serveruhr (recorded_at des Abpfiffs/Anpfiffs) mit 10 min
+--      Nachsende-Spielraum. apply_effect: Helfer-REOPEN nur nach Ende durch Ablauf (W2, @SL-146).
 --   6. Rechte wie bisher (Engine-Teilfunktionen: anon/authenticated/service_role; server_rules
 --      definer-only; append_match_events nur authenticated).
 --
@@ -40,8 +42,12 @@
 --   BEGIN; SET LOCAL lock_timeout = '5s';
 --   -- a) Uebergaenge zurueck (nur, solange keine solche Zeile in match_events steht -- sonst rechnet
 --   --    compute_match_state alte Spiele anders; vorher pruefen:
---   --    SELECT count(*) FROM match_events WHERE event_format IS NOT NULL AND type IN ('GOAL','OWN_GOAL','FOUL','TIME_PENALTY','REOPEN');
---   --    und Fall fuer Fall ansehen):
+--   --    SELECT count(*) FROM public.match_events e
+--   --      LEFT JOIN public.match_events t ON t.id = e.target_event_id
+--   --     WHERE e.event_format IS NOT NULL
+--   --       AND (e.type IN ('GOAL','OWN_GOAL','FOUL','TIME_PENALTY','REOPEN')
+--   --            OR (e.type = 'RETRACT' AND t.type IN ('MATCH_START','CLOCK_ADJUST')));
+--   --    und Fall fuer Fall ansehen; RETRACT auf Anpfiff/Uhr-Korrektur rechnet die alte Engine als INVALID_PAYLOAD):
 --   DELETE FROM public.match_transitions WHERE (from_status, event_type) IN
 --     (('paused','GOAL'), ('paused','OWN_GOAL'), ('paused','FOUL'), ('section_break','TIME_PENALTY'));
 --   UPDATE public.match_transitions SET actor = 'leitung' WHERE from_status = 'finished' AND event_type = 'REOPEN';
@@ -276,6 +282,7 @@ DECLARE
   v_clock jsonb;
   v_undo jsonb := coalesce(p_state -> 'undo', '{"acceptedBeforeStart": 0, "clockAdjusts": []}'::jsonb);
   v_before numeric;
+  c_continue_window_ms constant bigint := 120000;
 BEGIN
   CASE p_event ->> 'type'
     WHEN 'MATCH_START' THEN
@@ -307,15 +314,22 @@ BEGIN
       -- Spielende-Pruefung, einmal je Spiel, hoechstens 120 s nach dem Abpfiff (handlers/reopen.ts).
       -- Die Turnierleitung oeffnet ohne Frist wieder. `at` ist am Server die geklemmte Serverzeit (S11).
       IF p_event -> 'actor' IS DISTINCT FROM '"leitung"'::jsonb THEN
+        -- Fixrunde 1 (W2, @SL-146): Ende durch Ablauf = Uhr beim Spielende >= Ende des Abschnitts
+        -- (sectionStartMs + sectionSeconds*1000, in der Verlaengerung overtimeSeconds); Abpfiff von Hand nicht.
         IF jsonb_typeof(p_state -> 'baseDecidedBy') IS DISTINCT FROM 'string'
-           OR jsonb_typeof(p_state -> 'finishedAt') IS DISTINCT FROM 'number' THEN
+           OR jsonb_typeof(p_state -> 'finishedAt') IS DISTINCT FROM 'number'
+           OR jsonb_typeof(p_state -> 'rules') IS DISTINCT FROM 'object'
+           OR match_engine.num(p_state -> 'clock' -> 'elapsedMs')
+              < match_engine.num(p_state -> 'sectionStartMs')
+                + 1000 * match_engine.num(p_state -> 'rules' -> (CASE WHEN p_state ->> 'phase' = 'overtime'
+                                                                      THEN 'overtimeSeconds' ELSE 'sectionSeconds' END)) THEN
           RETURN match_engine.reject('FORBIDDEN_ACTOR', '{"reason": "NOT_ENDED_BY_CLOCK"}'::jsonb);
         END IF;
         IF EXISTS (SELECT 1 FROM jsonb_each(coalesce(p_state -> 'accepted', '{}'::jsonb)) AS a(k, v)
                     WHERE a.v ->> 'type' = 'REOPEN') THEN
           RETURN match_engine.reject('FORBIDDEN_ACTOR', '{"reason": "ALREADY_CONTINUED"}'::jsonb);
         END IF;
-        IF match_engine.num(p_event -> 'at') - match_engine.num(p_state -> 'finishedAt') > 120000 THEN
+        IF match_engine.num(p_event -> 'at') - match_engine.num(p_state -> 'finishedAt') > c_continue_window_ms THEN
           RETURN match_engine.reject('FORBIDDEN_ACTOR', '{"reason": "CONTINUE_WINDOW_EXPIRED"}'::jsonb);
         END IF;
       END IF;
@@ -488,6 +502,14 @@ DECLARE
   v_started_now boolean := false;
   v_cache jsonb;
   v_stored_count integer;
+  -- ZA-3 Fixrunde 1 (W1, @SL-147): Fristen zusaetzlich an der Serveruhr, mit Nachsende-Spielraum.
+  -- Gleiche Werte in TS: handlers/reopen.ts (CONTINUE_WINDOW_MS, SERVER_CLOCK_TOLERANCE_MS),
+  -- handlers/retract.ts (MATCH_START_UNDO_MS).
+  c_continue_window_ms constant bigint := 120000;
+  c_match_start_undo_ms constant bigint := 30000;
+  c_server_clock_tolerance_ms constant bigint := 600000;
+  v_server_reject jsonb;
+  v_server_mark timestamptz;
 BEGIN
   -- 1. Aufrufer, Eingabe, Client-Format.
   IF v_uid IS NULL THEN
@@ -625,6 +647,32 @@ BEGIN
         v_at_eval := floor(extract(epoch FROM to_timestamp(v_at_server / 1000.0)) * 1000)::bigint;
         v_event := v_event || jsonb_build_object('at', v_at_eval, 'actor', v_actor);
 
+        -- c2. ZA-3 Fixrunde 1 (W1, @SL-147): `at` ist nur nach oben geklemmt -- ein zurueckdatiertes `at`
+        -- hielte die Fristen sonst kuenstlich offen. Gemessen wird zusaetzlich die Serverzeit seit dem
+        -- Eintreffen des Abpfiffs (Helfer-REOPEN) bzw. des Anpfiffs (RETRACT des Anpfiffs), mit Spielraum
+        -- fuer das Nachsenden ohne Netz. Die Rechenfunktion kennt keine Serverzeit; die Pruefung gilt nur hier.
+        v_server_reject := NULL;
+        IF v_event ->> 'type' = 'REOPEN' AND v_actor = 'helper' THEN
+          SELECT max(e.recorded_at) INTO v_server_mark FROM public.match_events e
+           WHERE e.match_id = p_match_id AND e.event_format IS NOT NULL AND e.review_state IS NULL AND e.type = 'MATCH_END';
+          IF v_server_mark IS NOT NULL
+             AND v_now_ms - floor(extract(epoch FROM v_server_mark) * 1000)::bigint > c_continue_window_ms + c_server_clock_tolerance_ms THEN
+            v_server_reject := jsonb_build_object('id', v_event -> 'id', 'status', 'rejected', 'code', 'FORBIDDEN_ACTOR',
+                                                  'detail', '{"reason": "CONTINUE_WINDOW_EXPIRED"}'::jsonb);
+          END IF;
+        ELSIF v_event ->> 'type' = 'RETRACT'
+              AND v_state -> 'accepted' -> (v_event ->> 'targetId') ->> 'type' = 'MATCH_START' THEN
+          SELECT max(e.recorded_at) INTO v_server_mark FROM public.match_events e
+           WHERE e.match_id = p_match_id AND e.event_format IS NOT NULL AND e.review_state IS NULL AND e.type = 'MATCH_START';
+          IF v_server_mark IS NOT NULL
+             AND v_now_ms - floor(extract(epoch FROM v_server_mark) * 1000)::bigint > c_match_start_undo_ms + c_server_clock_tolerance_ms THEN
+            v_server_reject := jsonb_build_object('id', v_event -> 'id', 'status', 'rejected', 'code', 'INVALID_PAYLOAD');
+          END IF;
+        END IF;
+
+        IF v_server_reject IS NOT NULL THEN
+          v_result := v_server_reject;
+        ELSE
         -- d. Regeln setzt der Server (R4/R4b).
         IF v_event ->> 'type' = 'MATCH_START' THEN
           v_event := jsonb_set(v_event, '{payload,rules}', match_engine.server_rules(
@@ -676,6 +724,7 @@ BEGIN
           -- g. noop wird nie gespeichert (K7).
           v_state := v_step -> 'state';
         END IF;
+        END IF;  -- c2 (Serveruhr)
       END IF;
     END IF;
 

@@ -12,6 +12,8 @@ import { describe, expect, it } from 'vitest';
 import { applyBatch, continueLog, type EventResult } from '../reduceMatch';
 import { initialState } from '../applyEvent';
 import type { EngineEvent, MatchContext, MatchState } from '../types';
+import { CONTINUE_WINDOW_MS, SERVER_CLOCK_TOLERANCE_MS } from '../handlers/reopen';
+import { MATCH_START_UNDO_MS } from '../handlers/retract';
 
 interface FixtureDoc {
   ctx: MatchContext;
@@ -184,7 +186,7 @@ describe('@SL-074 / @SL-075 / @HE-042 Spiel fortsetzen', () => {
     expect(l.state.status).toBe('running');
   });
 
-  it('@HE-042 ein beendetes Spiel wiedereröffnen: die Turnierleitung darf es auch nach 5 Minuten', () => {
+  it('@HE-042 Gegenstück: die Turnierleitung öffnet ohne Frist wieder (5 Minuten nach dem Abpfiff)', () => {
     expect(ergebnisVon(lauf('62e-wiedereroeffnen-leitung-300s.json'), 'REOPEN').status).toBe('accepted');
   });
 
@@ -201,5 +203,56 @@ describe('@SL-074 / @SL-075 / @HE-042 Spiel fortsetzen', () => {
       ['rejected', 'INVALID_TRANSITION'],
       ['rejected', 'INVALID_TRANSITION'],
     ]);
+  });
+});
+
+describe('@SL-146 Ohne Ende durch Ablauf setzt Toms Gerät das Spiel nicht fort (Fixrunde 1, W2/W4)', () => {
+  it('@SL-146 bei 3:00 von Hand abgepfiffen, Stand 2:1: lehnt die Datenbank ab, Spiel 11 bleibt beendet 2:1', () => {
+    const l = lauf('64a-fortsetzen-nach-abpfiff-von-hand.json');
+    const r = ergebnisVon(l, 'REOPEN');
+    expect(r.code).toBe('FORBIDDEN_ACTOR');
+    expect(r.detail).toEqual({ reason: 'NOT_ENDED_BY_CLOCK' });
+    expect(l.state.status).toBe('finished');
+    expect([l.state.scores.teamA.regular, l.state.scores.teamB.regular]).toEqual([2, 1]);
+  });
+
+  it('@SL-146 bei 3:00 von Hand abgepfiffen: wieder öffnen kann Spiel 11 die Turnierleitung', () => {
+    const l = lauf('64d-wiedereroeffnen-leitung-nach-abpfiff-von-hand.json');
+    expect(ergebnisVon(l, 'REOPEN').status).toBe('accepted');
+    expect(l.state.status).toBe('running');
+  });
+
+  it('@SL-146 Halbfinale 11 mit Ablauf bei 0:0 in der Pause vor der Verlängerung: lehnt die Datenbank ab, Spiel 11 bleibt in der Pause', () => {
+    const l = lauf('64c-ko-gleichstand-kein-fortsetzen.json');
+    expect(ergebnisVon(l, 'REOPEN').status).toBe('rejected');
+    expect(l.state.status).toBe('section_break');
+    expect(l.state.phase).toBe('overtime');
+  });
+
+  // Befund ZA3-SL146-LEITUNG: Daniel 17.10. „kein neuer Übergang, die Leitung korrigiert“ – in der Pause vor der
+  // Verlängerung gibt es für niemanden REOPEN (und CORRECTION erst nach Spielende). Das Gherkin verlangt für diese Zeile
+  // „wieder öffnen kann Spiel 11 nur die Turnierleitung“ → Record/Plan klären.
+  it.fails('@SL-146 Halbfinale 11 in der Pause vor der Verlängerung: wieder öffnen kann Spiel 11 die Turnierleitung', () => {
+    const l = lauf('64c-ko-gleichstand-kein-fortsetzen.json');
+    const leitung: EngineEvent = { ...ergebnisVon(l, 'REOPEN').event, id: 'leitung-reopen', actor: 'leitung', at: 662_000 };
+    const ctx: MatchContext = { matchId: 'match-0000064c', teamAId: 'teamA', teamBId: 'teamB' };
+    expect(continueLog(l.state, [leitung], ctx).results[0].status).toBe('accepted');
+  });
+
+  it('@SL-074 Gegenstück: mit Ablauf der Spielzeit von selbst beendet, Tom setzt 1 Minute nach dem Abpfiff fort', () => {
+    expect(ergebnisVon(lauf('64b-fortsetzen-nach-ablauf.json'), 'REOPEN').status).toBe('accepted');
+  });
+});
+
+describe('@SL-147 Frist an der Uhr der Datenbank (Fixrunde 1, W1) – Verhalten im Schreibweg-Harness', () => {
+  it('@SL-147:teil 2-Minuten-Frist, 30-s-Anpfiff-Frist und 10 Minuten Nachsende-Spielraum stehen gleich in TS und SQL', () => {
+    const sql = fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', '..', 'supabase', 'migrations', '20261028_001_transitions_za3.sql'),
+      'utf-8',
+    );
+    expect(SERVER_CLOCK_TOLERANCE_MS).toBe(10 * 60_000);
+    expect(sql).toContain(`c_server_clock_tolerance_ms constant bigint := ${SERVER_CLOCK_TOLERANCE_MS};`);
+    expect(sql).toContain(`c_continue_window_ms constant bigint := ${CONTINUE_WINDOW_MS};`);
+    expect(sql).toContain(`c_match_start_undo_ms constant bigint := ${MATCH_START_UNDO_MS};`);
   });
 });

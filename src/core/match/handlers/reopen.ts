@@ -4,8 +4,10 @@
  * Reihenfolge (verbindlich, auch für den SQL-Zwilling match_engine.apply_effect):
  * 1. Ruling B-U11: nach Strafstoßschießen nie (INVALID_TRANSITION `SHOOTOUT_FINISHED`, für alle).
  * 2. Helfer (@SL-074/@SL-075, @HE-042), sonst FORBIDDEN_ACTOR mit Grund:
- *    a. Ende durch die Spielende-Prüfung (`baseDecidedBy` gesetzt), nicht durch Direkteintrag
- *       -> `NOT_ENDED_BY_CLOCK`;
+ *    a. Ende durch Ablauf der Spielzeit: Spielende-Prüfung (`baseDecidedBy` gesetzt, kein
+ *       Direkteintrag) UND Uhr beim Spielende ≥ Ende des Abschnitts (`sectionStartMs +
+ *       sectionSeconds·1000`, in der Verlängerung `overtimeSeconds`) -- ein Abpfiff von Hand vor
+ *       Ablauf zählt nicht (Fixrunde 1, W2) -> `NOT_ENDED_BY_CLOCK`;
  *    b. noch kein REOPEN in diesem Spiel („einmal“) -> `ALREADY_CONTINUED`;
  *    c. `at − finishedAt ≤ 120 000` („höchstens 2 Minuten“) -> `CONTINUE_WINDOW_EXPIRED`.
  * 3. Wirkung: Uhr läuft ab `clockMs` (Restzeit, die das Gerät gestellt hat) bzw. weiter.
@@ -16,6 +18,23 @@ import { resumeClock } from './clock';
 /** „Spiel fortsetzen“ höchstens 2 Minuten nach dem Abpfiff (@SL-075). */
 export const CONTINUE_WINDOW_MS = 120_000;
 
+/**
+ * Fixrunde 1 (W1): Toleranz für das Nachsenden ohne Netz, wenn der Server die Fristen
+ * (Fortsetzen 120 s, Anpfiff zurücknehmen 30 s) zusätzlich an SEINER Uhr misst
+ * (`append_match_events`, Konstante `c_server_clock_tolerance_ms`). Die Rechenfunktion selbst
+ * kennt keine Serverzeit -- diese Prüfung gilt nur am Server.
+ */
+export const SERVER_CLOCK_TOLERANCE_MS = 600_000;
+
+/** Uhr beim Spielende hat das Ende des Abschnitts erreicht (Ende durch Ablauf, nicht von Hand). */
+function endedByClock(state: MatchState): boolean {
+  if (state.rules === null) {
+    return false;
+  }
+  const seconds = state.phase === 'overtime' ? state.rules.overtimeSeconds : state.rules.sectionSeconds;
+  return state.clock.elapsedMs >= state.sectionStartMs + seconds * 1000;
+}
+
 export type ContinueBlockReason = 'NOT_ENDED_BY_CLOCK' | 'ALREADY_CONTINUED' | 'CONTINUE_WINDOW_EXPIRED';
 
 export type ReopenOutcome =
@@ -23,7 +42,7 @@ export type ReopenOutcome =
   | { status: 'rejected'; code: ErrorCode; detail: { reason: 'SHOOTOUT_FINISHED' | ContinueBlockReason } };
 
 function helperContinueBlock(state: MatchState, event: EngineEvent): ContinueBlockReason | null {
-  if (state.baseDecidedBy === null || state.finishedAt === null) {
+  if (state.baseDecidedBy === null || state.finishedAt === null || !endedByClock(state)) {
     return 'NOT_ENDED_BY_CLOCK';
   }
   if (Object.values(state.accepted).some((accepted) => accepted.type === 'REOPEN')) {

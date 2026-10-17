@@ -1,0 +1,100 @@
+{
+  "title": "@SL-146 nach Abpfiff von Hand bei 3:00 öffnet die Turnierleitung Spiel 11 wieder",
+  "szenario": "@SL-146 Ohne Ende durch Ablauf setzt Toms Gerät das Spiel nicht fort – auch nicht über die Datenbank",
+  "ctx": {
+    "matchId": "match-0000064d",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000064d-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 1,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 300,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 6,
+          "penaltySeconds": 120
+        }
+      },
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000064d-0000-4000-8000-000000000002",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "at": 181000,
+      "section": 1,
+      "clockMs": 180000,
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000064d-0000-4000-8000-000000000003",
+      "type": "REOPEN",
+      "actor": "leitung",
+      "at": 241000,
+      "section": 1,
+      "clockMs": 180000,
+      "payload": {},
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000064d-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000064d-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000064d-0000-4000-8000-000000000003",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "running",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": true,
+        "elapsedMs": 180000,
+        "anchorAt": 241000
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": null,
+      "finishedAt": null
+    }
+  }
+}

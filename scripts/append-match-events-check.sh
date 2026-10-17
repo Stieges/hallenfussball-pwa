@@ -631,7 +631,7 @@ TB="$(uuid_for team:b)"
 {
   tournament_sql "$T_P" '{}' 'null' 10
   echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$TA', '$T_P', 'A'), ('$TB', '$T_P', 'B');"
-  for name in r1 r2 r3 r4 i1 i2 c1 c2 k1 k2 s10 s11 g1 perf o1 e1 m4 m1 a1 sk1 sk2 z1; do
+  for name in r1 r2 r3 r4 i1 i2 c1 c2 k1 k2 s10 s11 g1 perf o1 e1 m4 m1 a1 sk1 sk2 z1 w1a w1b w1c w1d w1e w1f; do
     echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, score_a, score_b) VALUES ('$(uuid_for "match:$name")', '$T_P', 1, 1, '$TA', '$TB', NULL, NULL);"
   done
 } | psql_stdin
@@ -1189,6 +1189,45 @@ check Sonstiges "@SL-066: Zwischenspeicher nach zurueckgenommenem Anpfiff: sched
 out="$(call authenticated "$U_HELPER" "$(M z1)" "$(arr "$(ev MATCH_START "$(E z1-start2)" '{"at":20000,"clockMs":null}')")")"
 cache="$(cache_of "$(M z1)")"
 check Sonstiges "@SL-066: neuer Anpfiff danach angenommen, actual_start wieder gesetzt" '.match_status == "running" and .actual_start != null' "$cache"
+
+# --- 9g. ZA-3 Fixrunde 1 (W1, @SL-147): Fristen an der Serveruhr -----------------------------------
+# Das Eintreffen des Abpfiffs/Anpfiffs (recorded_at) wird im Wegwerf-Container zurueckgestellt -- so
+# "kommt" die Fortsetzung bzw. das Rueckgaengig N Minuten nach dem Abpfiff an. Das `at` der Meldung
+# bleibt rechtzeitig (1 Minute bzw. 10 s nach dem Abpfiff/Anpfiff).
+echo "ZA-3 Fixrunde 1 (Serveruhr)..." >&2
+w1_end() { # $1 Spiel, $2 Minuten seit dem Eintreffen des Abpfiffs (Dezimal)
+  call authenticated "$U_HELPER" "$(M "$1")" "$(arr "$(ev MATCH_START "$(E "$1-start")" '{"at":1000,"clockMs":null}')" "$(ev MATCH_END "$(E "$1-end")" '{"at":601000,"clockMs":600000}')")" >/dev/null
+  # Der B2-Guard haelt Engine-Zeilen unveraenderlich -- nur hier im Wegwerf-Container kurz aus (eine Transaktion).
+  psql_stdin <<<"BEGIN; ALTER TABLE public.match_events DISABLE TRIGGER match_events_guard_engine_rows; UPDATE public.match_events SET recorded_at = now() - interval '$2 minutes' WHERE id = '$(E "$1-end")'; ALTER TABLE public.match_events ENABLE TRIGGER match_events_guard_engine_rows; COMMIT;"
+}
+w1_end w1a 5
+out="$(call authenticated "$U_HELPER" "$(M w1a)" "$(arr "$(ev REOPEN "$(E w1a-reopen)" '{"at":661000,"clockMs":590000}')")")"
+check Sonstiges "@SL-147: 1 Minute nach dem Abpfiff ohne Netz gewaehlt, nach 5 Minuten angekommen -> Spiel 11 laeuft weiter" \
+  '.results[0].status == "accepted" and .state.status == "running"' "$out"
+w1_end w1b 15
+out="$(call authenticated "$U_HELPER" "$(M w1b)" "$(arr "$(ev REOPEN "$(E w1b-reopen)" '{"at":661000,"clockMs":590000}')")")"
+check Sonstiges "@SL-147: Geraetezeit zurueckgestellt, nach 15 Minuten angekommen -> Datenbank lehnt ab, Spiel bleibt beendet" \
+  '.results[0].code == "FORBIDDEN_ACTOR" and .results[0].detail.reason == "CONTINUE_WINDOW_EXPIRED" and .state.status == "finished"' "$out"
+out="$(call authenticated "$U_OWNER" "$(M w1b)" "$(arr "$(ev REOPEN "$(E w1b-reopen-o)" '{"at":662000,"clockMs":590000}')")")"
+check Sonstiges "@SL-147 Gegenstueck: die Turnierleitung oeffnet auch nach 15 Minuten wieder" '.results[0].status == "accepted"' "$out"
+w1_end w1c 11.6
+out="$(call authenticated "$U_HELPER" "$(M w1c)" "$(arr "$(ev REOPEN "$(E w1c-reopen)" '{"at":661000,"clockMs":590000}')")")"
+check Sonstiges "@SL-147 Grenze: 2 min + 10 min Spielraum, nach 11:36 angekommen -> angenommen" '.results[0].status == "accepted"' "$out"
+w1_end w1d 12.4
+out="$(call authenticated "$U_HELPER" "$(M w1d)" "$(arr "$(ev REOPEN "$(E w1d-reopen)" '{"at":661000,"clockMs":590000}')")")"
+check Sonstiges "@SL-147 Grenze: nach 12:24 angekommen -> abgelehnt" '.results[0].code == "FORBIDDEN_ACTOR"' "$out"
+# Anpfiff zuruecknehmen (@SL-067 an der Serveruhr): 30 s + 10 min Spielraum.
+w1_start() { # $1 Spiel, $2 Minuten seit dem Eintreffen des Anpfiffs
+  call authenticated "$U_HELPER" "$(M "$1")" "$(arr "$(ev MATCH_START "$(E "$1-start")" '{"at":1000,"clockMs":null}')")" >/dev/null
+  # Der B2-Guard haelt Engine-Zeilen unveraenderlich -- nur hier im Wegwerf-Container kurz aus (eine Transaktion).
+  psql_stdin <<<"BEGIN; ALTER TABLE public.match_events DISABLE TRIGGER match_events_guard_engine_rows; UPDATE public.match_events SET recorded_at = now() - interval '$2 minutes' WHERE id = '$(E "$1-start")'; ALTER TABLE public.match_events ENABLE TRIGGER match_events_guard_engine_rows; COMMIT;"
+}
+w1_start w1e 10.2
+out="$(call authenticated "$U_HELPER" "$(M w1e)" "$(arr "$(ev RETRACT "$(E w1e-undo)" '{"at":11000,"clockMs":null,"targetId":"@E:w1e-start@"}')")")"
+check Sonstiges "@SL-067 Serveruhr: Anpfiff vor 10 s gewaehlt, nach 10:12 angekommen -> zurueckgenommen" '.results[0].status == "accepted" and .state.status == "scheduled"' "$out"
+w1_start w1f 10.8
+out="$(call authenticated "$U_HELPER" "$(M w1f)" "$(arr "$(ev RETRACT "$(E w1f-undo)" '{"at":11000,"clockMs":null,"targetId":"@E:w1f-start@"}')")")"
+check Sonstiges "@SL-067 Serveruhr: zurueckdatiert, nach 10:48 angekommen -> abgelehnt, Spiel laeuft weiter" '.results[0].code == "INVALID_PAYLOAD" and .state.status == "running"' "$out"
 
 # --- 10. Laufzeit: 1 Ereignis bei 100 gespeicherten (nur Ausgabe) -----------------------------
 if [[ "$MODE" == "normal" ]]; then
