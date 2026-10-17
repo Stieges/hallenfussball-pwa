@@ -279,9 +279,8 @@ describe('phaseViewOf (B-08a)', () => {
     ]);
   });
 
-  // Befund (Spur A, ZA-3): CLOCK_ADJUST ist nicht rücknehmbar (RETRACTABLE_EVENT_TYPES, @SL-109).
-  // Der Test bleibt rot, bis die Engine die Rücknahme kann; er wird nicht an den Code angepasst.
-  it.fails('@SL-109 zurückgenommene Uhr-Korrektur fällt aus clockAdjustments (Befund ZA-3)', async () => {
+  // Befund (Spur A, ZA-3) erledigt: seit ZA-3 ist die letzte Uhr-Korrektur rücknehmbar (@SL-109).
+  it('@SL-109 zurückgenommene Uhr-Korrektur fällt aus clockAdjustments', async () => {
     const spiel = await spielAnlegen();
     await spiel.a.commands.start(spiel.matchId, spiel.ctx, 'leitung', REGEL_2X10);
     zu(200_000);

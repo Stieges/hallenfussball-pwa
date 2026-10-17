@@ -6,13 +6,13 @@
  *   - Finale auf „Verlängerung, dann Strafstoßschießen" → Zeile „Platzierungsspiele"
  *     sichtbar, vorbelegt mit „Verlängerung, dann Strafstoßschießen" (Rückfall Finale-Regel)
  *   - Zeile umstellen auf „Strafstoßschießen" → gespeichertes Turnier trägt placement
- *   - Engine-Weg (it.fails, A-08d1): initializeMatch Spiel um Platz 3 → 'shootout';
+ *   - Engine-Weg (seit ZA-3 regulär, A-08d1): initializeMatch Spiel um Platz 3 → 'shootout';
  *     Finale → 'overtime-then-shootout'
  * Gegenbeispiele:
  *   - Modus ohne Platzierungsspiele ('final-only') zeigt die Zeile nicht (Wizard, grün)
  *   - Ohne eigene Änderung bleibt placement ungespeichert, Anzeige zeigt den Rückfall (Wizard, grün);
- *     Engine-Weg (it.fails): Platz 3 folgt dem Finale
- *   - Halbfinale bleibt bei seiner Regel: Wizard und resolveTiebreakMode (grün); Engine-Weg (it.fails)
+ *     Engine-Weg (seit ZA-3 regulär): Platz 3 folgt dem Finale
+ *   - Halbfinale bleibt bei seiner Regel: Wizard und resolveTiebreakMode (grün); Engine-Weg (seit ZA-3 regulär)
  * Mutation:
  *   - Wizard-Zeile speichert placement nicht → rot (grüner Wizard-Test)
  *   - Rückfall in der Zeilenvorbelegung auf die Finale-Regel entfernen → rot (grüner Wizard-Test)
@@ -125,10 +125,10 @@ describe('B-04c Fixrunde 2 – @W2A-039 Platzierungsspiele eigene Entscheidungsr
     expect(entwurf.finalsConfig?.tiebreakerByRound?.final).toBe('overtime-then-shootout');
   });
 
-  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  // ZA-3 (D1): Befund C-KO-RUNDENREGEL-SERVER behoben – Engine-Regeln lesen Runde und finalType, Markierung entfernt
   // Engine-Weg: serverRules kennt weder tiebreakerByRound noch finalType; Finale bekommt den globalen Rückfall 'shootout'.
   // Aussagekräftig nach A-27: Platz 3 = 'shootout' UND Finale = 'overtime-then-shootout' (zwei verschiedene Werte).
-  it.fails('Pflichttest (Cockpit) @W2A-039: Platz 3 zeigt die Platzierungsregel, das Finale seine Finale-Regel', async () => {
+  it('Pflichttest (Cockpit) @W2A-039: Platz 3 zeigt die Platzierungsregel, das Finale seine Finale-Regel', async () => {
     const entwurf = entwurfPlatzierungUmgestellt();
 
     expect((await cockpitLive(entwurf, { phase: 'final', finalType: 'thirdPlace' })).tiebreakerMode).toBe('shootout');
@@ -152,10 +152,10 @@ describe('B-04c Fixrunde 2 – @W2A-039 Platzierungsspiele eigene Entscheidungsr
     expect(entwurf.finalsConfig?.tiebreakerByRound?.placement).toBeUndefined();
   });
 
-  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  // ZA-3 (D1): Befund C-KO-RUNDENREGEL-SERVER behoben – Engine-Regeln lesen Runde und finalType, Markierung entfernt
   // Engine-Weg: Platz 3 bekommt den globalen Rückfall, nicht die Finale-Regel des Entwurfs.
   // Aussagekräftig nach A-27: Platz 3 ohne Platzierungsregel = Finale-Regel ('overtime-then-shootout' ≠ Rückfall 'shootout').
-  it.fails('Gegenbeispiel (Cockpit) @W2A-039: ohne Platzierungsregel folgt Platz 3 im Cockpit dem Finale', async () => {
+  it('Gegenbeispiel (Cockpit) @W2A-039: ohne Platzierungsregel folgt Platz 3 im Cockpit dem Finale', async () => {
     const entwurf = entwurfOhneEigeneAenderung();
 
     expect((await cockpitLive(entwurf, { phase: 'final', finalType: 'thirdPlace' })).tiebreakerMode).toBe(
@@ -170,10 +170,10 @@ describe('B-04c Fixrunde 2 – @W2A-039 Platzierungsspiele eigene Entscheidungsr
     expect(resolveTiebreakMode(entwurf.finalsConfig, 'semifinal')).toBe('goldenGoal');
   });
 
-  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  // ZA-3 (D1): Befund C-KO-RUNDENREGEL-SERVER behoben – Engine-Regeln lesen Runde und finalType, Markierung entfernt
   // Engine-Weg: das Halbfinale bekommt den globalen Rückfall 'shootout' statt goldenGoal.
   // Aussagekräftig nach A-27: Halbfinale 'goldenGoal' ≠ Finale 'overtime-then-shootout' ≠ Platz 3 'shootout'.
-  it.fails('Gegenbeispiel (Cockpit) @W2A-039: das Halbfinale behält seine Regel im Cockpit', async () => {
+  it('Gegenbeispiel (Cockpit) @W2A-039: das Halbfinale behält seine Regel im Cockpit', async () => {
     const entwurf = entwurfHalbfinale();
 
     expect((await cockpitLive(entwurf, { phase: 'semifinal' })).tiebreakerMode).toBe('goldenGoal');

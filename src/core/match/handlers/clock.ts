@@ -3,7 +3,29 @@
  * liest nur `state.clock` und das eingehende Ereignis, mutiert nichts und
  * liefert einen neuen `ClockState`.
  */
-import type { ClockState, EngineEvent } from '../types';
+import { elapsedAt } from '../penalties';
+import type { ClockState, EngineEvent, MatchState, Phase } from '../types';
+
+/** ZA-3: eine Uhr-Korrektur mit ihrer Wirkung auf die Spielzeit (`deltaMs` = neu − vorher). */
+export interface ClockAdjustRecord {
+  id: string;
+  deltaMs: number;
+  section: number;
+  phase: Phase;
+}
+
+/**
+ * ZA-3: Grundlage für das Zurücknehmen von Anpfiff (@SL-066/@SL-067) und Uhr-Korrektur (@SL-109).
+ * `acceptedBeforeStart` = Zahl der angenommenen Ereignisse vor dem letzten Anpfiff -- ist danach
+ * nichts dazugekommen, steht nur der Anpfiff selbst im Log (SQL zählt dieselben Schlüssel).
+ */
+export interface UndoInfo {
+  acceptedBeforeStart: number;
+  clockAdjusts: ClockAdjustRecord[];
+}
+
+export const EMPTY_UNDO_INFO: UndoInfo = { acceptedBeforeStart: 0, clockAdjusts: [] };
+
 
 /** MATCH_START: Uhr startet, `elapsedMs` aus `clockMs` (Offline-Fall) oder 0. */
 export function startClock(event: EngineEvent): ClockState {
@@ -37,4 +59,21 @@ export function adjustClock(clock: ClockState, event: EngineEvent): ClockState {
     return { running: true, elapsedMs, anchorAt: event.at };
   }
   return { ...clock, elapsedMs };
+}
+
+/** CLOCK_ADJUST mit Merker (ZA-3, @SL-109): Uhr wie `adjustClock`, die Wirkung wird für RETRACT gemerkt. */
+export function applyClockAdjust(state: MatchState, event: EngineEvent): MatchState {
+  const clock = adjustClock(state.clock, event);
+  const record: ClockAdjustRecord = {
+    id: event.id,
+    deltaMs: clock.elapsedMs - elapsedAt(state.clock, event.at),
+    section: state.section,
+    phase: state.phase,
+  };
+  return { ...state, clock, undo: { ...state.undo, clockAdjusts: [...state.undo.clockAdjusts, record] } };
+}
+
+/** RETRACT einer Uhr-Korrektur: Spielzeit ohne die Korrektur (Anker bleibt), Merker bleibt in der Liste. */
+export function reverseClockAdjust(state: MatchState, record: ClockAdjustRecord): MatchState {
+  return { ...state, clock: { ...state.clock, elapsedMs: state.clock.elapsedMs - record.deltaMs } };
 }

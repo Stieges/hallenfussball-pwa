@@ -53,7 +53,8 @@ describe('B-04c Fixrunde 3 – F3-1 Import prüft Regelwerte und Rundenschlüsse
     if (!cfg) {
       throw new Error('finalsConfig fehlt');
     }
-    expect(resolveTiebreakMode(cfg, 'semifinal')).toBe('shootout');
+    // ZA-3 (E1, @SL-145): verworfene Halbfinal-Regel -> Rückfall „Verlängerung, dann Strafstoßschießen“.
+    expect(resolveTiebreakMode(cfg, 'semifinal')).toBe('overtime-then-shootout');
     expect(resolveTiebreakMode(cfg, 'final', 'thirdPlace')).toBe('shootout');
   });
 

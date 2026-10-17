@@ -2,7 +2,7 @@
  * `serverRules` -- TS-Zwilling von `match_engine.server_rules` (supabase/migrations/
  * 20260928_003_append_match_events.sql, RC2/V6). Das Gerät rechnet damit beim Anpfiff offline die
  * Regeln, die der Server beim MATCH_START ohnehin selbst setzt (R4). Gleichlauf-Fixtures unter
- * `__fixtures__/rules/*.json`.
+ * `__fixtures__/rules/*.json`. ZA-3 (D1): Entscheidungsart je Runde mit Rückfall (20261028_001).
  *
  * Genauigkeit: SQL rechnet mit `numeric` (exakt dezimal). Damit z. B. `2.05 * 60` hier ebenfalls
  * 123 ergibt (Gleitkomma: 122.99…), rechnet diese Datei mit Dezimalbrüchen auf BigInt-Basis.
@@ -16,6 +16,8 @@ export interface ServerRulesInput {
   durationMinutes: number | null;
   /** `matches.phase`; `null` zählt als Gruppenphase. */
   phase: string | null;
+  /** `matches.final_type`; thirdPlace/fifthSixth/seventhEighth = Platzierungsspiel (@W2A-039). Fehlt = `null`. */
+  finalType?: string | null;
   /** `tournaments.group_phase_duration` */
   groupPhaseDuration: number | null;
   /** `tournaments.final_round_duration` */
@@ -28,6 +30,10 @@ export interface ServerRulesInput {
 
 const INT4_MAX = 2147483647n;
 const TIEBREAK_VALUES = new Set(['shootout', 'overtime-then-shootout', 'goldenGoal']);
+/** E1 / @SL-145: ohne gültige Einstellung gilt „Verlängerung, dann Strafstoßschießen“ (Vorbelegung W2a). */
+export const TIEBREAK_FALLBACK = 'overtime-then-shootout' as const;
+const ROUND_KEYS = new Set(['roundOf16', 'quarterfinal', 'semifinal', 'final']);
+const PLACEMENT_FINAL_TYPES = new Set(['thirdPlace', 'fifthSixth', 'seventhEighth']);
 
 /** Exakter Dezimalwert `n / d` (d > 0). */
 interface Decimal {
@@ -97,6 +103,21 @@ function wholeNumber(value: Decimal): number {
   return clamp(floorDiv(value.n, value.d), 0n, INT4_MAX);
 }
 
+/**
+ * D1 (E1, Befund C-KO-RUNDENREGEL-SERVER): Entscheidungsart je Spiel. Platzierungsspiel ->
+ * `tiebreakerByRound.placement` -> `.final`; sonst `tiebreakerByRound[<Runde aus phase>]`; danach die
+ * alte globale Regel `tiebreaker` (nur Altdaten); erste GÜLTIGE Stufe gilt, sonst der Rückfall.
+ */
+function tiebreakFor(finals: Record<string, unknown> | null, phase: string | null, finalType: string | null): NonNullable<MatchRules['tiebreak']> {
+  const byRound = field(finals, 'tiebreakerByRound');
+  const keys = finalType !== null && PLACEMENT_FINAL_TYPES.has(finalType)
+    ? ['placement', 'final']
+    : phase !== null && ROUND_KEYS.has(phase) ? [phase] : [];
+  const found = [...keys.map((key) => field(byRound, key)), field(finals, 'tiebreaker')]
+    .find((candidate) => typeof candidate === 'string' && TIEBREAK_VALUES.has(candidate));
+  return typeof found === 'string' ? (found as NonNullable<MatchRules['tiebreak']>) : TIEBREAK_FALLBACK;
+}
+
 export function serverRules(input: ServerRulesInput): MatchRules {
   const isGroup = (input.phase ?? 'groupStage') === 'groupStage';
   const settings = field(input.config, 'matchCockpitSettings');
@@ -109,14 +130,13 @@ export function serverRules(input: ServerRulesInput): MatchRules {
   const rawTotal = decimalFromNumber(input.durationMinutes) ?? decimalFromNumber(tournamentMinutes) ?? { n: 0n, d: 1n };
   const total = rawTotal.n < 0n ? { n: 0n, d: 1n } : rawTotal;
 
-  const tiebreaker = field(finals, 'tiebreaker');
 
   return {
     sections,
     sectionSeconds: clamp(floorDiv(total.n * 60n, total.d * BigInt(sections)), 0n, INT4_MAX),
     breakSeconds: minutesToSeconds(cfgNum(field(input.config, 'halftimeBreak')) ?? { n: 1n, d: 1n }),
     knockout: !isGroup,
-    tiebreak: typeof tiebreaker === 'string' && TIEBREAK_VALUES.has(tiebreaker) ? (tiebreaker as MatchRules['tiebreak']) : 'shootout',
+    tiebreak: tiebreakFor(finals, input.phase, typeof input.finalType === 'string' ? input.finalType : null),
     overtimeSeconds: minutesToSeconds(cfgNum(field(finals, 'tiebreakerDuration')) ?? { n: 5n, d: 1n }),
     shootersPerTeam: wholeNumber(cfgNum(field(settings, 'penaltyShootersPerTeam')) ?? { n: 5n, d: 1n }),
     suddenDeathAfter: wholeNumber(cfgNum(field(settings, 'penaltySuddenDeathAfter')) ?? { n: 6n, d: 1n }),

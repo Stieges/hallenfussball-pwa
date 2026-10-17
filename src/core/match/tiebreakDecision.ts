@@ -95,33 +95,48 @@ export function presetHasPlacementGames(preset: FinalsPreset): boolean {
   return PRESETS_WITH_PLACEMENT_GAMES.some((modus) => modus === preset);
 }
 
+/** E1 / @SL-145: Rückfall ohne Einstellung „Verlängerung, dann Strafstoßschießen“ (wie der Server). */
+export const TIEBREAK_FALLBACK_MODE: TiebreakerMode = 'overtime-then-shootout';
+
+/** Ermittelte Entscheidungsart; `fallback` = keine gültige Einstellung gefunden (Hinweis im Cockpit, 3.6). */
+export interface TiebreakSource {
+  mode: TiebreakerMode;
+  fallback: boolean;
+}
+
 /**
- * Entscheidung bei Unentschieden für eine K.-o.-Runde des gespeicherten Turniers.
+ * Entscheidung bei Unentschieden für ein K.-o.-Spiel des gespeicherten Turniers (ZA-3 D1, E1).
  *
- * `undefined` = keine Entscheidung (z. B. Gruppenspiel). Die Runden-Regel
- * `finalsConfig.tiebreakerByRound[round]` überschreibt die Vorgabe
- * `finalsConfig.tiebreaker` (@W2A-007). Ohne jede gespeicherte Regel gilt in einer
- * K.-o.-Runde derselbe Rückfall wie beim Server: `'shootout'` (S14).
- *
- * Platzierungsspiele (`finalType` thirdPlace/fifthSixth/seventhEighth) folgen der
- * eigenen Regel `tiebreakerByRound.placement`, dann der Regel des Finales
- * (`tiebreakerByRound.final`), dann der bisherigen Kette (@W2A-039).
+ * `undefined` = keine Entscheidung (Gruppenspiel). Die Runden-Regel
+ * `finalsConfig.tiebreakerByRound[round]` gilt vor der alten globalen Regel
+ * `finalsConfig.tiebreaker` (nur Altdaten, @W2A-007). Platzierungsspiele (`finalType`
+ * thirdPlace/fifthSixth/seventhEighth) folgen `tiebreakerByRound.placement`, dann der Regel des
+ * Finales (@W2A-039). Ungültige Werte zählen nicht. Ohne gültige Stufe gilt derselbe Rückfall wie
+ * beim Server (`match_engine.server_rules`): „Verlängerung, dann Strafstoßschießen“, `fallback: true`.
  */
+export function tiebreakSource(
+  finalsConfig: FinalsConfig | null | undefined,
+  round: KnockoutRound | null | undefined,
+  finalType?: Match['finalType'] | null,
+): TiebreakSource | undefined {
+  const byRound = finalsConfig?.tiebreakerByRound;
+  let stages: unknown[];
+  if (isPlacementFinal(finalType)) {
+    stages = [byRound?.placement, byRound?.final];
+  } else if (round) {
+    stages = [byRound?.[round]];
+  } else {
+    return undefined;
+  }
+  const mode = [...stages, finalsConfig?.tiebreaker].find(isTiebreakerMode);
+  return mode === undefined ? { mode: TIEBREAK_FALLBACK_MODE, fallback: true } : { mode, fallback: false };
+}
+
+/** Nur die Entscheidungsart (Anzeige, PDF, Monitor) -- dieselbe Ermittlung wie `tiebreakSource`. */
 export function resolveTiebreakMode(
   finalsConfig: FinalsConfig | null | undefined,
   round: KnockoutRound | null | undefined,
   finalType?: Match['finalType'] | null,
 ): TiebreakerMode | undefined {
-  if (isPlacementFinal(finalType)) {
-    return (
-      finalsConfig?.tiebreakerByRound?.placement ??
-      finalsConfig?.tiebreakerByRound?.final ??
-      finalsConfig?.tiebreaker ??
-      'shootout'
-    );
-  }
-  if (!round) {
-    return undefined;
-  }
-  return finalsConfig?.tiebreakerByRound?.[round] ?? finalsConfig?.tiebreaker ?? 'shootout';
+  return tiebreakSource(finalsConfig, round, finalType)?.mode;
 }

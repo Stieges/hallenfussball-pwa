@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { TeamTrainerSchema, TournamentGroupSchema, TournamentFieldSchema, RuntimeMatchEventSchema } from './CommonSchemas';
 import { RULEBOOK_MAX_LENGTH } from '../../../constants/rulebook';
 import { MatchSlotSchema, SlotSourceSchema } from './MatchSlotSchema';
-import { CLOCK_MODES } from '../../match/clockDisplay';
+import { CLOCK_MODES, FINAL_PHASE_MINUTES_MAX, FINAL_PHASE_MINUTES_MIN } from '../../match/clockDisplay';
 
 const TeamLogoSchema = z.object({
     type: z.enum(['url', 'base64', 'initials']),
@@ -95,7 +95,7 @@ export const MatchSchema = z.object({
 
 // scheduledTime uses z.preprocess to handle both Date objects and ISO strings from JSON/localStorage
 
-/** Spielregeln „Spiel leiten“ (@SL-002, @SL-024, @SL-101, @W2A-013, @W2A-017, @W2A-035, @W2A-037). */
+/** Spielregeln „Spiel leiten“ (@SL-002, @SL-024, @SL-101, @W2A-013, @W2A-017, @W2A-035, @W2A-037, @W2A-040). */
 const MatchCockpitRulesSchema = z.looseObject({
     clockMode: z.enum(CLOCK_MODES).optional(),
     foulLimit: z.number().int().min(1).nullable().optional(),
@@ -107,6 +107,8 @@ const MatchCockpitRulesSchema = z.looseObject({
     }).optional(),
     penaltyEndsOnGoal: z.boolean().optional(),
     shortHandedSeconds: z.number().int().min(0).optional(),
+    // @W2A-040: Länge der angehaltenen Schlussphase, ganzzahlig 1–5 Minuten.
+    finalPhaseMinutes: z.number().int().min(FINAL_PHASE_MINUTES_MIN).max(FINAL_PHASE_MINUTES_MAX).optional(),
 });
 
 export const TournamentSchema = z.object({
