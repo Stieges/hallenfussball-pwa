@@ -12,7 +12,7 @@
 import React, { useId, useMemo } from 'react';
 import { ScheduleConflict, ConflictType } from '../types';
 import { Match } from '../../../types/tournament';
-import { cssVars, dialogWidths } from '../../../design-tokens';
+import { cssVars, dialogWidths, mediaQueries } from '../../../design-tokens';
 import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { DialogActions, type DialogAction } from '../../../components/ui/molecules/DialogActions';
 import { getConflictTypeLabel, groupConflictsByType } from '../utils/scheduleConflicts';
@@ -48,7 +48,7 @@ const headerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: cssVars.spacing.lg,
+  padding: cssVars.spacing.xl,
   borderBottom: `1px solid ${cssVars.colors.border}`,
 };
 
@@ -82,7 +82,7 @@ const closeButtonStyle: React.CSSProperties = {
 
 // Der Inhalt scrollt im festen Rahmen des Bausteins (DialogSurface-Inhalt), nicht selbst (DA-2a, @OB-062)
 const contentStyle: React.CSSProperties = {
-  padding: cssVars.spacing.lg,
+  padding: cssVars.spacing.xl,
 };
 
 const summaryStyle: React.CSSProperties = {
@@ -240,7 +240,7 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
   }
 
   const header = (
-    <div style={headerStyle}>
+    <div style={headerStyle} className="conflict-dialog-header">
       <h2 id={titleId} style={titleStyle}>
         <span>{hasErrors ? '⚠️' : '⚡'}</span>
         <span>{title}</span>
@@ -269,7 +269,7 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
       header={header}
       footer={footer}
     >
-      <div style={contentStyle}>
+      <div style={contentStyle} className="conflict-dialog-content">
         {conflicts.length === 0 ? (
           <div style={emptyStateStyle}>
             <span style={{ fontSize: '48px', marginBottom: cssVars.spacing.md }}>✅</span>
@@ -344,6 +344,17 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
           </>
         )}
       </div>
+
+      {/* Kopf und Inhalt fluchten mit dem Fuß des Bausteins: xl, am Handy md (wie DialogSurface-Fuß) */}
+      <style>{`
+        ${mediaQueries.tabletDown} {
+          .conflict-dialog-header,
+          .conflict-dialog-content {
+            padding-left: ${cssVars.spacing.md} !important;
+            padding-right: ${cssVars.spacing.md} !important;
+          }
+        }
+      `}</style>
     </DialogSurface>
   );
 };

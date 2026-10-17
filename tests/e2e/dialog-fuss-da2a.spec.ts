@@ -48,6 +48,8 @@ interface Fall {
   tasten: string[];
   hatKreuz: boolean;
   oeffne: (page: Page, seed: Seed) => Promise<void>;
+  /** Der Fall braucht den Prüfstand (nur am Dev-Server erreichbar, nicht im gebauten Stand `vite preview`). */
+  nurDevServer?: boolean;
   geraete: { name: string; width: number; height: number; art: 'desktop' | 'handy'; scrollt: boolean }[];
 }
 
@@ -93,6 +95,7 @@ const FAELLE: Fall[] = [
     titel: '3 Einträge noch nicht übertragen',
     tasten: ['Abbrechen', 'Trotzdem abmelden'],
     hatKreuz: true,
+    nurDevServer: true,
     oeffne: async (page) => {
       await page.goto('/tests/e2e/harness/logout-warning.html?count=3');
       await expect(page.getByRole('dialog')).toBeVisible();
@@ -181,10 +184,17 @@ test.describe('DA-2a @OB-061/@OB-062 Turniertag-Dialoge: Tasten im festen Fuß, 
     test.skip(testInfo.project.name !== 'desktop' || browserName !== 'chromium', 'setzt Fenstergröße selbst');
   });
 
+  // CI fährt gegen `vite preview` (CI_E2E_USE_PREVIEW): dort fehlt der Prüfstand (er gehört nicht in den Build) und die SPA-Rückfallseite
+  // antwortet. Die Abmelde-Fälle laufen deshalb nur am Dev-Server; am echten Weg prüft der Cloud-Test `abmelden-geraete`
+  // (Helfer `logoutViaUiConfirmingWarning`) Kopf, Fuß und Haupttaste.
+  const imGebautenStand = !!process.env.CI_E2E_USE_PREVIEW;
+  const SKIP_GRUND = 'Prüfstand nur am Dev-Server (im gebauten Stand nicht vorhanden); echter Weg: tests/e2e/cloud abmelden-geraete';
+
   for (const fall of FAELLE) {
     for (const g of fall.geraete) {
       for (const thema of ['light', 'dark'] as const) {
         test(`${fall.name}, ${g.name}, ${thema}: Titel${fall.hatKreuz ? ', Kreuz' : ''} und Haupttaste „${fall.tasten.at(-1)}“ sichtbar, Haupttaste zuletzt, beim Scrollen bewegt sich nur der Inhalt`, async ({ page, seedIndexedDB }, testInfo) => {
+          test.skip(!!fall.nurDevServer && imGebautenStand, SKIP_GRUND);
           await page.setViewportSize({ width: g.width, height: g.height });
           await page.emulateMedia({ colorScheme: thema });
           await fall.oeffne(page, seedIndexedDB);
@@ -229,6 +239,7 @@ test.describe('DA-2a @OB-061/@OB-062 Turniertag-Dialoge: Tasten im festen Fuß, 
       }
 
       test(`${fall.name}, ${g.name}: visual:metrics-Messung primaer.sichtbar und touch.primaer am geöffneten Dialog (HART = 0 Befunde)`, async ({ page, seedIndexedDB }) => {
+        test.skip(!!fall.nurDevServer && imGebautenStand, SKIP_GRUND);
         await page.setViewportSize({ width: g.width, height: g.height });
         await fall.oeffne(page, seedIndexedDB);
         const m: { befunde: { metrik: string; ist: string }[] } = await page.evaluate(messeSeite, {
@@ -244,6 +255,7 @@ test.describe('DA-2a @OB-061/@OB-062 Turniertag-Dialoge: Tasten im festen Fuß, 
   }
 
   test('Abmelden: „Abbrechen“ meldet nur Abbrechen, „Trotzdem abmelden“ nur Bestätigen (Gegenbeispiel Abbrechen schließt ohne Aktion)', async ({ page }) => {
+    test.skip(imGebautenStand, SKIP_GRUND);
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/tests/e2e/harness/logout-warning.html?count=3');
     await page.getByRole('button', { name: 'Abbrechen' }).click();
