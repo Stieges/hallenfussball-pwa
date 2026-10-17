@@ -42,6 +42,8 @@ export const MatchSchema = z.object({
     scoreA: z.number().min(0).optional(),
     scoreB: z.number().min(0).optional(),
     group: z.string().optional(),
+    // A-25a (C-PHASE-LOKAL-VERLOREN): Phase des Spiels ('groupStage', 'semifinal', …) wie im Match-Typ.
+    phase: z.string().optional(),
     isFinal: z.boolean().optional(),
     // finalType kommt aus einer nullable DB-Spalte (final_type) – null wird wie "nicht gesetzt" behandelt (C-ZOD-DEC).
     finalType: z.string().nullable().optional().transform((v) => v ?? undefined),

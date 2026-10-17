@@ -51,36 +51,34 @@ function strafstossTurnier(): Record<string, unknown> {
   };
 }
 
-/** Halbfinale-Zeile der Tabelle „Finalrunde“: Olli trägt Heim und Gast ein (die Schnelleingabe startet mit dem zweiten Feld). */
-async function trageEin(page: Page, heim: string, gast: string): Promise<void> {
-  const row = page.getByRole('row').filter({ hasText: 'FC Nord' }).filter({ hasText: 'SV Süd' }).first();
-  await expect(row).toBeVisible();
-  const [feldHeim, feldGast] = [row.getByRole('spinbutton').nth(0), row.getByRole('spinbutton').nth(1)];
-  await feldHeim.fill(heim);
-  await feldGast.fill(gast);
+/**
+ * Das Turnier hat nur die Finalrunde (Halbfinale 1, dann Finale): Desktop als Tabelle, Handy/Tablet als Karten ohne Rolle
+ * und Test-ID. In beiden Layouts gehören die ersten zwei Eingabefelder zum Halbfinale 1, die nächsten zwei zum Finale.
+ */
+async function trageEin(page: Page, heim: number, gast: number): Promise<void> {
+  // Erst eintragen, wenn das Turnier geladen ist (sonst setzt das Nachladen die Felder zurück).
+  await expect(page.getByText('Sieger Halbfinale 1').filter({ visible: true }).first()).toBeVisible();
+  await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(4);
+  await page.getByRole('spinbutton').filter({ visible: true }).nth(0).fill(String(heim));
+  await page.getByRole('spinbutton').filter({ visible: true }).nth(1).fill(String(gast));
 }
-
-const finaleZeile = (page: Page) => page.getByRole('row').filter({ hasText: 'TSV West' }).first();
-const halbfinaleZeile = (page: Page) => page.getByRole('row').filter({ hasText: 'FC Nord' }).filter({ hasText: 'SV Süd' }).first();
+const ZWEI_ZWEI = /2\s?:\s?2/;
 
 test.describe('@FU-094 Spielplan: K.-o.-Unentschieden mit Strafstoßschießen eintragen (offline)', () => {
-  // Befund-Vorschlag C-PHASE-LOKAL-VERLOREN: `MatchSchema` (core/models/schemas/TournamentSchema.ts) kennt kein Feld `phase`;
-  // `LocalStorageRepository.loadList` entfernt es beim Laden. Ein lokal gespeichertes Halbfinale gilt dann als Gruppenspiel,
-  // die Abfrage erscheint nicht. Probe mit `phase` im Schema: beide Tests grün (A25a-T2-e2e-probe-phase.log).
-  test.fail(true, 'C-PHASE-LOKAL-VERLOREN: lokal geladenes Turnier verliert match.phase');
+  // C-PHASE-LOKAL-VERLOREN behoben (A-25a): `MatchSchema.phase` -- das lokal geladene Halbfinale bleibt ein K.-o.-Spiel.
 
   test.beforeEach(async ({ seedIndexedDB }, testInfo) => {
-    // Handy/Tablet zeigen die von Hand gesäte Finalrunde als Karten mit Preset-Platzhaltern (Saat-Problem, kein
-    // Funktionsfehler); bis zum Saat-Paket nur Desktop (Tabelle „Finalrunde“). Messung 360/768: BLOCKED (Report).
-    test.skip(testInfo.project.name !== 'desktop', 'Saat-Paket fehlt für Handy/Tablet');
+    // Handy/Tablet: Befund-Vorschlag C-FINALRUNDE-MOBIL-EINGABE -- die mobile Karte der Finalrunde
+    // (components/schedule/FinalStageSchedule.tsx, onChange der beiden Felder) meldet ein Ergebnis nur, wenn die andere
+    // Seite schon einen Spielstand im Spiel hat; ein offenes Spiel lässt sich dort gar nicht eintragen (vorbestehend).
+    test.skip(testInfo.project.name !== 'desktop', 'C-FINALRUNDE-MOBIL-EINGABE: mobile Finalrunden-Eingabe meldet kein Ergebnis');
     await seedIndexedDB({ tournaments: [strafstossTurnier()] });
   });
 
   test('@FU-094 2:2 im Halbfinale 1 → Abfrage → 4:3 Heimteam → beendet 2:2', async ({ page }) => {
     await page.goto(`/#/tournament/${TOURNAMENT}/schedule`);
     await page.waitForLoadState('networkidle');
-    await expect(finaleZeile(page)).toContainText('Sieger Halbfinale 1');
-    await trageEin(page, '2', '2');
+    await trageEin(page, 2, 2);
 
     // Abfrage: „Ergebnis des Strafstoßschießens“, ohne Angabe gesperrt
     const dialog = page.getByTestId('result-entry-shootout-dialog');
@@ -106,7 +104,8 @@ test.describe('@FU-094 Spielplan: K.-o.-Unentschieden mit Strafstoßschießen ei
     await save.click();
 
     await expect(dialog).toHaveCount(0);
-    await expect(halbfinaleZeile(page)).toContainText('2 : 2', { timeout: 10_000 });
+    await expect(page.getByText(ZWEI_ZWEI).filter({ visible: true }).first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(2); // Halbfinale beendet: nur noch das Finale hat Felder
     // Finale mit FC Nord: belegt in src/hooks/__tests__/koSlotResolution.a25aStrafstoss.test.ts (die Hand-Saat hier
     // trifft den Resolver nicht wie ein veröffentlichtes Turnier -- Saat-Paket).
   });
@@ -114,13 +113,14 @@ test.describe('@FU-094 Spielplan: K.-o.-Unentschieden mit Strafstoßschießen ei
   test('@FU-094 Gegenbeispiel: ohne Angabe (Abbrechen) speichert die App das Unentschieden nicht', async ({ page }) => {
     await page.goto(`/#/tournament/${TOURNAMENT}/schedule`);
     await page.waitForLoadState('networkidle');
-    await trageEin(page, '2', '2');
+    await trageEin(page, 2, 2);
     await page.getByTestId('result-entry-shootout-cancel').click({ timeout: 5_000 });
 
     await expect(page.getByTestId('result-entry-shootout-dialog')).toHaveCount(0);
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await expect(halbfinaleZeile(page)).not.toContainText('2 : 2');
-    await expect(finaleZeile(page)).toContainText('Sieger Halbfinale 1');
+    await expect(page.getByText('Sieger Halbfinale 1').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(4); // Halbfinale weiter offen
+    await expect(page.getByText(ZWEI_ZWEI).filter({ visible: true })).toHaveCount(0);
   });
 });
