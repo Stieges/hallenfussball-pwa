@@ -252,13 +252,13 @@
           "befund": "C-FUSS-LINKS-UNTER-LEISTE",
           "selektor": "footer-",
           "verdecktVon": "nav-tab-",
-          "begruendung": "Am Handy liegen die Fuss-Links Impressum und Datenschutz ganz unten gescrollt unter der festen Tab-Leiste der Turnierliste (Startseite, Archiv, Papierkorb). NEU, Kennung vorgeschlagen; Eintrag in BEFUNDE-HEUTIGER-CODE.md steht aus."
+          "begruendung": "Am Handy liegen die Fuss-Links Impressum und Datenschutz ganz unten gescrollt unter der festen Tab-Leiste der Turnierliste (Startseite, Archiv, Papierkorb). Befund steht in BEFUNDE-HEUTIGER-CODE.md (C-FUSS-LINKS-UNTER-LEISTE)."
         },
         {
           "befund": "C-FUSS-LINKS-UNTER-LEISTE",
           "selektor": "footer-",
           "verdecktVon": "bottom-nav-",
-          "begruendung": "Wie oben, in den Turnier-Ansichten (Verwaltung, Cockpit) unter der festen unteren Navigation. NEU, Kennung vorgeschlagen; Eintrag in BEFUNDE-HEUTIGER-CODE.md steht aus."
+          "begruendung": "Wie oben, in den Turnier-Ansichten (Verwaltung, Cockpit) unter der festen unteren Navigation. Befund steht in BEFUNDE-HEUTIGER-CODE.md (C-FUSS-LINKS-UNTER-LEISTE)."
         }
       ]
     },

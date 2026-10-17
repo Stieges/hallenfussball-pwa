@@ -540,6 +540,10 @@ export function messeSeite(opt) {
   // frei war (was nur unter einer Leiste hindurchrollt oder ueber den Rand ragt und beim Scrollen frei wird, zaehlt nicht).
   // Ausnahme: liegt ein offener Dialog (aria-modal, role=dialog/alertdialog, <dialog open>) darueber, der das Element
   // nicht enthaelt, ist das Verdecken gewollt.
+  // Warnregel verdeckt.schwebend: war das Element in mindestens einem Schritt von einem schwebenden Element (position fixed/sticky,
+  // Leiste oder Hinweis) verdeckt, wurde aber in einem anderen frei, ist das eine WARNUNG (erreichbar, beim Hineinscrollen verdeckt).
+  // Feste Navigation (nav, role=navigation) zaehlt dafuer nicht als Verdecker; bleibt ein Element ganz unten unter ihr verdeckt,
+  // meldet verdeckt.bedienelement es als HART.
   if (hat('verdeckt.bedienelement') || hat('verdeckt.schwebend')) {
     const VBEDIEN = 'button, a[href], input:not([type=hidden]), select, textarea, [role=button], [tabindex]'
     const kandidaten = [...document.querySelectorAll(VBEDIEN)].filter((el) => {

@@ -253,7 +253,7 @@ describe('@TA-012 Verdeckte Bedienelemente', () => {
     expect(v.map((x) => `${x.typ} ${x.selektor}`)).toEqual(['HART [data-testid="tor-gast-16"]'])
     expect(JSON.stringify(v)).toContain('teilen')
   })
-  it('Beispiel 2 Cockpit laufendes Spiel (360): Gelb- und Rot-Knopf vom Sound-Hinweis verdeckt, HART', async () => {
+  it('Beispiel 2 Cockpit, Variante ohne Weiterscrollen (360): Gelb- und Rot-Knopf vom Sound-Hinweis dauerhaft verdeckt, HART (mit Weiterscrollen: Warnung, siehe Fixrunde 1)', async () => {
     const r = await messe('--ziel', FIX('verdeckt-hinweis.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(r.code, r.out).toBe(1)
     const v = verdeckt(r.b)
@@ -287,6 +287,12 @@ describe('@TA-012 Verdeckte Bedienelemente', () => {
     const r = await messe('--ziel', FIX(datei), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     gruen(r)
     expect(verdeckt(r.b)).toHaveLength(0)
+    expect(schwebend(r.b)).toHaveLength(0)
+  })
+  it('Fixrunde 2 A2: feste Navigation ohne Abstand unten: HART nur fuer das unterste Element (tor-gast-16), keine Warnung fuer die uebrigen Zeilen', async () => {
+    const r = await messe('--ziel', FIX('verdeckt-nav-unten.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(r.code, r.out).toBe(1)
+    expect(verdeckt(r.b).map((x) => `${x.typ} ${x.selektor}`)).toEqual(['HART [data-testid="tor-gast-16"]'])
     expect(schwebend(r.b)).toHaveLength(0)
   })
   it('Fixrunde 1 echter Stand: Spielplan nach dem SK-Fix meldet nichts Schwebendes; das Cockpit meldet den Sound-Hinweis als WARNUNG', async () => {
