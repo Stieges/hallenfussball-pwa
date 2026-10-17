@@ -1,4 +1,4 @@
-import { useState, CSSProperties } from 'react';
+import { useEffect, useRef, useState, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/Button';
@@ -26,6 +26,20 @@ export const ScheduleActionButtons = ({
   const navigate = useNavigate();
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showPDFDialog, setShowPDFDialog] = useState(false);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // Die Höhe der Leiste steht als CSS-Variable bereit; die Spielplan-Karte reserviert damit den Platz unten (ScheduleTab)
+  useEffect(() => {
+    const leiste = barRef.current;
+    if (variant !== 'organizer' || !leiste || typeof ResizeObserver === 'undefined') { return; }
+    const wurzel = document.documentElement;
+    const beobachter = new ResizeObserver(() => wurzel.style.setProperty('--schedule-action-bar-h', `${leiste.offsetHeight}px`));
+    beobachter.observe(leiste);
+    return () => {
+      beobachter.disconnect();
+      wurzel.style.removeProperty('--schedule-action-bar-h');
+    };
+  }, [variant]);
 
   const containerStyle: CSSProperties = {
     display: 'flex',
@@ -52,6 +66,7 @@ export const ScheduleActionButtons = ({
     <>
       {/* Action Buttons */}
       <div
+        ref={barRef}
         style={isMobile ? fabContainerStyle : containerStyle}
         className="schedule-action-buttons"
       >

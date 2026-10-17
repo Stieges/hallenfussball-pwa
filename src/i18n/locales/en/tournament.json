@@ -566,6 +566,15 @@
     "selectReferee": "Select referee",
     "chooseReferee": "Choose referee"
   },
+  "matchResult": {
+    "penaltyShort": "pens",
+    "overtimeShort": "a.e.t.",
+    "finishedPenalty": "ended on pens",
+    "running": "live",
+    "runningElapsed": "live {{elapsed}}",
+    "scoreAriaPenalty": "Final score {{homeScore}}:{{awayScore}}, $t(sport:events.penaltyShootout) {{homePenalty}}:{{awayPenalty}}",
+    "scoreAriaOvertime": "Final score {{homeScore}}:{{awayScore}} after extra time"
+  },
   "conflict": {
     "teamDoubleBooking": "Team double booking",
     "refereeDoubleBooking": "Referee double booking",
