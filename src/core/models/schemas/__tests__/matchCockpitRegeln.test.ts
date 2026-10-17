@@ -14,6 +14,7 @@ import {
   completeMatchCockpitSettings,
 } from '../../../../types/tournament';
 import type { ClockMode } from '../../../match/clockDisplay';
+import { serverRules } from '../../../match/client/serverRules';
 
 const service = new TournamentCreationService({} as ITournamentRepository);
 
@@ -132,9 +133,37 @@ describe('@W2A-017 Unterzahl nach Gelb-Rot oder Rot', () => {
   });
 });
 
-describe('@W2A-038 Abpfiff-Ton als Vorbelegung', () => {
-  it('@W2A-038 neue Turniere haben den Abpfiff-Ton eingeschaltet', () => {
+describe('@W2A-038 Abpfiff-Ton und Vibration als Vorbelegung', () => {
+  it('@W2A-038 neue Turniere haben Abpfiff-Ton und Vibration eingeschaltet', () => {
     expect(neuesTurnier().matchCockpitSettings?.soundEnabled).toBe(true);
+    expect(neuesTurnier().matchCockpitSettings?.hapticEnabled).toBe(true);
+  });
+});
+
+describe('Fixrunde A2: unbekannte Schlüssel in enabledCards bleiben', () => {
+  it('ein Zusatzschlüssel in enabledCards geht beim Parsen nicht verloren', () => {
+    const ergebnis = TournamentSchema.parse(turnierMit({ enabledCards: { red: false, zukunft: 'x' } }));
+    expect(ergebnis.matchCockpitSettings).toHaveProperty('enabledCards.zukunft', 'x');
+    expect(ergebnis.matchCockpitSettings).toHaveProperty('enabledCards.red', false);
+  });
+});
+
+describe('Fixrunde A4a: Client-Vorgabe = SQL-Rückfall für Schützen und Sudden Death', () => {
+  const eingabe = (config: unknown) => ({
+    durationMinutes: null,
+    phase: 'final',
+    groupPhaseDuration: 10,
+    finalRoundDuration: 10,
+    config,
+    finalsConfig: null,
+  });
+
+  it('ergänzte Vorgaben ergeben dieselben Regeln wie ein Turnier ohne Cockpit-Konfiguration (5 / 6)', () => {
+    const ohneKonfig = serverRules(eingabe({}));
+    const mitVorgaben = serverRules(eingabe({ matchCockpitSettings: completeMatchCockpitSettings({}) }));
+    expect(mitVorgaben).toEqual(ohneKonfig);
+    expect(ohneKonfig.shootersPerTeam).toBe(5);
+    expect(ohneKonfig.suddenDeathAfter).toBe(6);
   });
 });
 

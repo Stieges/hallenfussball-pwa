@@ -81,7 +81,7 @@ export const MatchSchema = z.object({
 const MatchCockpitRulesSchema = z.looseObject({
     clockMode: z.enum(CLOCK_MODES).optional(),
     foulLimit: z.number().int().min(1).nullable().optional(),
-    enabledCards: z.object({
+    enabledCards: z.looseObject({
         yellow: z.boolean().optional(),
         yellowRed: z.boolean().optional(),
         red: z.boolean().optional(),

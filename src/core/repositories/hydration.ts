@@ -10,6 +10,7 @@
  */
 
 import type { Tournament, Match } from '../models/types';
+import { completeMatchCockpitSettings } from '../../types/tournament';
 
 /**
  * Hydrates a single Match object by converting date strings to Date objects.
@@ -52,9 +53,13 @@ export function hydrateTournament(raw: unknown): Tournament {
   const rawMatches = tournament.matches as unknown[] | undefined;
   const hydratedMatches = rawMatches?.map(hydrateMatch) ?? [];
 
+  // Spielregeln „Spiel leiten“: fehlende Felder alter Konfigurationen bekommen die Vorgaben
+  // (lokal gespeicherte, Gast- und per JSON wiederhergestellte Turniere; der Cloud-Pfad
+  // ergänzt im Mapper).
   return {
     ...tournament,
     matches: hydratedMatches,
+    matchCockpitSettings: completeMatchCockpitSettings(tournament.matchCockpitSettings),
   } as Tournament;
 }
 

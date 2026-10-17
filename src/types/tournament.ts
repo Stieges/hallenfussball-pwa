@@ -1,6 +1,6 @@
 import { SportId } from '../config/sports/types';
 import type { MatchSlot, SlotSource } from '../core/models/schemas/MatchSlotSchema';
-import type { ClockMode } from '../core/match/clockDisplay';
+import { DEFAULT_CLOCK_MODE, type ClockMode } from '../core/match/clockDisplay';
 
 // Core Tournament Types
 export type Sport = 'football' | 'other';
@@ -623,7 +623,7 @@ export const DEFAULT_MATCH_COCKPIT_SETTINGS: MatchCockpitSettings = {
   timePenaltyDurationSeconds: 120,
 
   // Spielregeln „Spiel leiten“ (Vorgaben aus den Gherkin-Szenarien)
-  clockMode: 'durchlaufend-letzte-minute-angehalten',
+  clockMode: DEFAULT_CLOCK_MODE,
   foulLimit: 5,
   enabledCards: { yellow: true, yellowRed: true, red: true, timePenalty: true },
   penaltyEndsOnGoal: true,
