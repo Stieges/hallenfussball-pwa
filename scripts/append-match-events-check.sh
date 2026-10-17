@@ -107,6 +107,8 @@ TARGET_MIGRATION="20260928_003_append_match_events.sql"
 AMEND_MIGRATION="20261001_001_amend_event.sql"
 # ZA-3: juengste Fassung von append_match_events/apply_effect/apply_retract/server_rules.
 ZA3_MIGRATION="20261028_001_transitions_za3.sql"
+# A-25a: juengste Fassung von append_match_events/payload_valid/apply_result_entry/cache_columns (stapelt auf ZA-3).
+A25A_MIGRATION="20261028_003_result_entry_shootout.sql"
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 CONTAINER_NAME="append-match-events-check-$$"
 WORKDIR="$(mktemp -d)"
@@ -124,6 +126,7 @@ NEWER_MIGRATIONS=()
 TARGET_FILE=""
 AMEND_FILE=""
 ZA3_FILE=""
+A25A_FILE=""
 AFTER_TARGET=0
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
@@ -138,10 +141,11 @@ while IFS= read -r line; do
   fi
   [[ "$(basename "$line")" == "$AMEND_MIGRATION" ]] && AMEND_FILE="$line"
   [[ "$(basename "$line")" == "$ZA3_MIGRATION" ]] && ZA3_FILE="$line"
+  [[ "$(basename "$line")" == "$A25A_MIGRATION" ]] && A25A_FILE="$line"
   NEWER_MIGRATIONS+=("$line")
 done <<< "$NEWER_MIGRATIONS_RAW"
-if [[ "$MODE" != "without-migration" && ( -z "$TARGET_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" ) ]]; then
-  echo "::error::$TARGET_MIGRATION, $AMEND_MIGRATION oder $ZA3_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
+if [[ "$MODE" != "without-migration" && ( -z "$TARGET_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" ) ]]; then
+  echo "::error::$TARGET_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION oder $A25A_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
   exit 1
 fi
 
@@ -179,23 +183,26 @@ if [[ "$MODE" != "without-migration" ]]; then
   # C0b: 003 allein erneut einzuspielen ersetzte die in 20261001 geaenderten Helfer (cfg_num,
   # envelope, cache_columns) durch den PR-B-Stand -- deshalb die Kette 003 -> 20261001.
   # ZA-3: 20261028 ersetzt Teile davon erneut -- Kette 003 -> 20261001 -> 20261028.
-  echo "Idempotenz: $TARGET_MIGRATION, $AMEND_MIGRATION und $ZA3_MIGRATION ein zweites Mal einspielen..." >&2
+  # A-25a: 20261028_003 ersetzt payload_valid/cache_columns/append_match_events erneut -- ans Ende der Kette.
+  echo "Idempotenz: $TARGET_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION und $A25A_MIGRATION ein zweites Mal einspielen..." >&2
   psql_stdin < "$TARGET_FILE"
   psql_stdin < "$AMEND_FILE"
   psql_stdin < "$ZA3_FILE"
+  psql_stdin < "$A25A_FILE"
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.
   # C0b-Fixrunde 1: 20261001 definiert append_match_events neu (skipped_at/-reason) -- die
   # juengste Fassung steht dort, deshalb wird DIESE Datei mutiert (und nach 003 eingespielt).
   # ZA-3: seit 20261028 steht die juengste Fassung dort -- diese Datei wird mutiert.
-  HITS="$(grep -c "has_tournament_permission(v_tournament_id, 'leadMatches')" "$ZA3_FILE" || true)"
+  # A-25a: seit 20261028_003 steht die juengste Fassung dort -- diese Datei wird mutiert.
+  HITS="$(grep -c "has_tournament_permission(v_tournament_id, 'leadMatches')" "$A25A_FILE" || true)"
   if [[ "$HITS" -ne 1 ]]; then
     echo "::error::Gegenprobe: Akteurszeile nicht genau einmal gefunden ($HITS)." >&2
     exit 1
   fi
   echo "GEGENPROBE: Akteursermittlung leadMatches -> writeMatchData" >&2
-  sed "s/has_tournament_permission(v_tournament_id, 'leadMatches')/has_tournament_permission(v_tournament_id, 'writeMatchData')/" "$ZA3_FILE" | psql_stdin
+  sed "s/has_tournament_permission(v_tournament_id, 'leadMatches')/has_tournament_permission(v_tournament_id, 'writeMatchData')/" "$A25A_FILE" | psql_stdin
 fi
 if [[ "$MODE" == "without-column-guard" ]]; then
   echo "GEGENPROBE C: DROP TRIGGER matches_guard_engine_columns" >&2
@@ -490,7 +497,10 @@ for f in "$FIXTURES_DIR"/*.json; do
                                          penaltySuddenDeathAfter: $r.suddenDeathAfter}} end),
         finals: (if $r == null then null else ({tiebreakerDuration: ($r.overtimeSeconds / 60)}
                   + (if $r.tiebreak != null then {tiebreaker: $r.tiebreak} else {} end)) end),
-        phase: (if $r != null and $r.knockout then "final" else "groupStage" end),
+        # A-25a: ein Direkteintrag kennt keine Regeln -- `knockout: true` auf Fixture-Ebene legt ein K.-o.-Spiel an.
+        phase: (if ($r != null and $r.knockout) or $f.knockout == true then "final" else "groupStage" end),
+        # A-25a: expect.cacheColumns (falls vorhanden) ersetzt die Ableitung von penalty_score_*/decided_by.
+        expected_cache: ($mf.expect.cacheColumns // null),
         duration: (if $r == null then 10 else ($r.sections * $r.sectionSeconds / 60) end),
         calls: ([($mf.prior // [])[] | {kind: "prior", user: $u.users.owner, events: [.]}]
                 + (if $f.mode == "log"
@@ -580,11 +590,14 @@ while IFS= read -r plan; do
                       $cache.penalty_score_a, $cache.penalty_score_b] | all(. == null))
                else (($cache.score_a + ($cache.overtime_score_a // 0) == $state.effectiveScores[$plan.team_a])
                  and ($cache.score_b + ($cache.overtime_score_b // 0) == $state.effectiveScores[$plan.team_b])
-                 and (($cache.penalty_score_a // 0) == $state.scores[$plan.team_a].shootout)
-                 and (($cache.penalty_score_b // 0) == $state.scores[$plan.team_b].shootout)) end)
-          and ($cache.decided_by == (if $st == "finished"
+                 and ($plan.expected_cache != null
+                      or ((($cache.penalty_score_a // 0) == $state.scores[$plan.team_a].shootout)
+                          and (($cache.penalty_score_b // 0) == $state.scores[$plan.team_b].shootout)))) end)
+          and (if $plan.expected_cache != null
+               then ([$plan.expected_cache | to_entries[] | $cache[.key] == .value] | all)
+               else ($cache.decided_by == (if $st == "finished"
                  then ({"shootout": "penalty", "correction": "regular", "direct": "regular"}[$state.decidedBy // ""] // $state.decidedBy)
-                 else null end))
+                 else null end)) end)
           and ($cache.timer_elapsed_seconds == ($state.clock.elapsedMs / 1000 | floor))
           and ($cache.timer_start_ms == (if $state.clock.running then $state.clock.anchorAt else null end))
           and (if ($st == "scheduled" or $st == "skipped" or $st == "finished") then $cache.live_state == null
@@ -1228,6 +1241,66 @@ check Sonstiges "@SL-067 Serveruhr: Anpfiff vor 10 s gewaehlt, nach 10:12 angeko
 w1_start w1f 10.8
 out="$(call authenticated "$U_HELPER" "$(M w1f)" "$(arr "$(ev RETRACT "$(E w1f-undo)" '{"at":11000,"clockMs":null,"targetId":"@E:w1f-start@"}')")")"
 check Sonstiges "@SL-067 Serveruhr: zurueckdatiert, nach 10:48 angekommen -> abgelehnt, Spiel laeuft weiter" '.results[0].code == "INVALID_PAYLOAD" and .state.status == "running"' "$out"
+
+# --- 9h. A-25a (@FU-094, R-A25a-1): Direkteintrag mit Strafstossergebnis, K.-o.-Regel am Server ----
+# Turnierregel fuer K.o.-Spiele "Strafstossschiessen"; Halbfinale 1 (semifinal) und ein Gruppenspiel.
+echo "A-25a (Direkteintrag mit Strafstoss)..." >&2
+T_HF="$(uuid_for tournament:a25a)"
+{
+  tournament_sql "$T_HF" '{}' '{"tiebreaker":"shootout"}' 10
+  echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$(uuid_for team:a25a-nord)', '$T_HF', 'FC Nord'), ('$(uuid_for team:a25a-sued)', '$T_HF', 'SV Sued');"
+  for name in a25a-hf1 a25a-hf2 a25a-hf3 a25a-hf4 a25a-hf5; do
+    echo "INSERT INTO public.matches (id, tournament_id, round, field, phase, team_a_id, team_b_id) VALUES ('$(M "$name")', '$T_HF', 1, 1, 'semifinal', '$(uuid_for team:a25a-nord)', '$(uuid_for team:a25a-sued)');"
+  done
+  for name in a25a-g1 a25a-g2; do
+    echo "INSERT INTO public.matches (id, tournament_id, round, field, phase, team_a_id, team_b_id) VALUES ('$(M "$name")', '$T_HF', 1, 1, 'groupStage', '$(uuid_for team:a25a-nord)', '$(uuid_for team:a25a-sued)');"
+  done
+} | psql_stdin
+a25a_entry() { # $1 Ereignis-Schluessel, $2 Payload-JSON (Platzhalter erlaubt)
+  ev RESULT_ENTRY "$(E "$1")" "{\"at\":1000,\"section\":null,\"clockMs\":null,\"payload\":$2}"
+}
+A25A_22='{"scores":{"@T:a25a-nord@":2,"@T:a25a-sued@":2}}'
+A25A_22_43='{"scores":{"@T:a25a-nord@":2,"@T:a25a-sued@":2},"shootout":{"@T:a25a-nord@":4,"@T:a25a-sued@":3}}'
+rows_of() { q "SELECT count(*) FROM public.match_events WHERE match_id = '$1';"; }
+A25A_HF1_BEFORE="$(cache_of "$(M a25a-hf1)")"
+out="$(call authenticated "$U_OWNER" "$(M a25a-hf1)" "$(arr "$(a25a_entry a25a-hf1 "$A25A_22")")")"
+check Sonstiges "@FU-094 K.-o. 2:2 ohne Strafstoss -> abgelehnt (SHOOTOUT_REQUIRED), Spiel bleibt geplant" \
+  '.results[0].status == "rejected" and .results[0].code == "INVALID_PAYLOAD" and .results[0].detail.reason == "SHOOTOUT_REQUIRED" and .state.status == "scheduled"' "$out"
+check Sonstiges "@FU-094 K.-o. 2:2 ohne Strafstoss: keine Zeile gespeichert" '. == 0' "$(rows_of "$(M a25a-hf1)")"
+check Sonstiges "@FU-094 K.-o. 2:2 ohne Strafstoss: Spielzeile unveraendert (geplant, kein Strafstoss, version gleich)" \
+  '.same and .b.match_status == "scheduled" and .b.penalty_score_a == null and .b.decided_by == null' \
+  "$(jq -cn --argjson a "$A25A_HF1_BEFORE" --argjson b "$(cache_of "$(M a25a-hf1)")" '{same: ($a == $b), b: $b}')"
+out="$(call authenticated "$U_OWNER" "$(M a25a-hf2)" "$(arr "$(a25a_entry a25a-hf2 "$A25A_22_43")")")"
+check Sonstiges "@FU-094 K.-o. 2:2 + Strafstoss 4:3 fuer das Heimteam -> angenommen, beendet" \
+  '.results[0].status == "accepted" and .state.status == "finished" and .state.effectiveScores == {"'"$(uuid_for team:a25a-nord)"'": 2, "'"$(uuid_for team:a25a-sued)"'": 2}' "$out"
+check Sonstiges "@FU-094 K.-o. 2:2 + 4:3: matches score 2/2, penalty 4/3, decided_by penalty, finished" \
+  '.match_status == "finished" and .score_a == 2 and .score_b == 2 and .penalty_score_a == 4 and .penalty_score_b == 3 and .decided_by == "penalty" and .overtime_score_a == null' "$(cache_of "$(M a25a-hf2)")"
+out="$(call authenticated "$U_OWNER" "$(M a25a-hf2)" "$(arr "$(a25a_entry a25a-hf2 "$A25A_22_43")")")"
+check Sonstiges "@FU-094 K.-o. 2:2 + 4:3 erneut gesendet -> duplicate (Payload unveraendert gespeichert, dedupe_key)" \
+  '.results[0].status == "duplicate"' "$out"
+check Sonstiges "@FU-094 K.-o. 2:2 + 4:3: genau eine Zeile, Payload mit shootout" '. == 1' \
+  "$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M a25a-hf2)' AND payload ? 'shootout';")"
+out="$(call authenticated "$U_OWNER" "$(M a25a-hf3)" "$(arr "$(a25a_entry a25a-hf3 '{"scores":{"@T:a25a-nord@":3,"@T:a25a-sued@":2}}')")")"
+check Sonstiges "@FU-094 Gegenbeispiel: K.-o. 3:2 ohne Strafstoss -> angenommen, decided_by regular" \
+  '.results[0].status == "accepted" and .state.status == "finished"' "$out"
+check Sonstiges "@FU-094 Gegenbeispiel: K.-o. 3:2 Zwischenspeicher regular ohne Strafstoss" \
+  '.decided_by == "regular" and .penalty_score_a == null and .score_a == 3' "$(cache_of "$(M a25a-hf3)")"
+out="$(call authenticated "$U_HELPER" "$(M a25a-hf4)" "$(arr "$(a25a_entry a25a-hf4 "$A25A_22")")")"
+check Sonstiges "@FU-094 Vorrang: Helfer-Direkteintrag K.-o. 2:2 ohne Strafstoss -> FORBIDDEN_ACTOR (Rechte vor der Strafstoss-Regel)" \
+  '.results[0].code == "FORBIDDEN_ACTOR" and .state.status == "scheduled"' "$out"
+out="$(call authenticated "$U_OWNER" "$(M a25a-hf5)" "$(arr "$(a25a_entry a25a-hf5 '{"scores":{"@T:a25a-nord@":2,"@T:a25a-sued@":2},"shootout":{"@T:a25a-nord@":3,"@T:a25a-sued@":3}}')")")"
+check Sonstiges "@FU-094 Gegenbeispiel: K.-o. 2:2 + Strafstoss 3:3 -> INVALID_PAYLOAD (Form), nichts gespeichert" \
+  '.results[0].code == "INVALID_PAYLOAD" and .state.status == "scheduled"' "$out"
+check Sonstiges "@FU-094 K.-o. 2:2 + 3:3: keine Zeile gespeichert" '. == 0' "$(rows_of "$(M a25a-hf5)")"
+out="$(call authenticated "$U_OWNER" "$(M a25a-g1)" "$(arr "$(a25a_entry a25a-g1 "$A25A_22")")")"
+check Sonstiges "@FU-094 Gegenbeispiel: Gruppenspiel 2:2 ohne Strafstoss -> angenommen, decided_by regular" \
+  '.results[0].status == "accepted" and .state.status == "finished"' "$out"
+check Sonstiges "@FU-094 Gegenbeispiel: Gruppenspiel 2:2 Zwischenspeicher regular, kein Strafstoss-Stand" \
+  '.decided_by == "regular" and .penalty_score_a == null and .penalty_score_b == null and .score_a == 2 and .score_b == 2' "$(cache_of "$(M a25a-g1)")"
+out="$(call authenticated "$U_OWNER" "$(M a25a-g2)" "$(arr "$(a25a_entry a25a-g2 "$A25A_22_43")")")"
+check Sonstiges "@FU-094 Gegenbeispiel: Gruppenspiel 2:2 mit Strafstoss -> abgelehnt (SHOOTOUT_NOT_ALLOWED), Spiel bleibt geplant" \
+  '.results[0].status == "rejected" and .results[0].code == "INVALID_PAYLOAD" and .results[0].detail.reason == "SHOOTOUT_NOT_ALLOWED" and .state.status == "scheduled"' "$out"
+check Sonstiges "@FU-094 Gruppenspiel 2:2 mit Strafstoss: keine Zeile gespeichert" '. == 0' "$(rows_of "$(M a25a-g2)")"
 
 # --- 10. Laufzeit: 1 Ereignis bei 100 gespeicherten (nur Ausgabe) -----------------------------
 if [[ "$MODE" == "normal" ]]; then

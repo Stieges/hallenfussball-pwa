@@ -58,11 +58,20 @@ function cacheStatus(status: MatchStatus): CacheMatchStatus {
   return status === 'section_break' || status === 'decision_pending' || status === 'shootout' ? 'paused' : status;
 }
 
+/**
+ * A-25a (@FU-094, @ZM-147): Strafstoßergebnis eines nur eingetragenen Ergebnisses -- aus der LETZTEN
+ * Überschreibung, nur im beendeten Spiel. Eine spätere Korrektur ohne Strafstoß verdrängt es.
+ */
+function enteredShootout(state: MatchState): Record<string, number> | null {
+  const lastOverride = state.overrides[state.overrides.length - 1];
+  return state.status === 'finished' && lastOverride?.shootout !== undefined ? lastOverride.shootout : null;
+}
+
 function cacheDecidedBy(state: MatchState): CacheDecidedBy | null {
   if (state.status !== 'finished' || state.decidedBy === null) {
     return null;
   }
-  if (state.decidedBy === 'shootout') {
+  if (state.decidedBy === 'shootout' || enteredShootout(state) !== null) {
     return 'penalty';
   }
   return state.decidedBy === 'correction' || state.decidedBy === 'direct' ? 'regular' : state.decidedBy;
@@ -132,6 +141,13 @@ export function cacheColumns(state: MatchState, ctx: MatchContext): CacheColumns
     state.baseDecidedBy === 'overtime' ||
     state.baseDecidedBy === 'goldenGoal';
   const inShootout = state.phase === 'shootout' && !unplayed;
+  const entered = enteredShootout(state);
+  const penaltyScore = (teamId: string, breakdown: MatchState['scores'][string]): number | null => {
+    if (inShootout) {
+      return breakdown.shootout;
+    }
+    return entered ? entered[teamId] : null;
+  };
   const skip = activeSkip(state);
 
   const regularScore = (teamId: string, breakdown: MatchState['scores'][string]): number | null => {
@@ -152,8 +168,8 @@ export function cacheColumns(state: MatchState, ctx: MatchContext): CacheColumns
     score_b: regularScore(teamBId, scoreB),
     overtime_score_a: overtimeScore(scoreA),
     overtime_score_b: overtimeScore(scoreB),
-    penalty_score_a: inShootout ? scoreA.shootout : null,
-    penalty_score_b: inShootout ? scoreB.shootout : null,
+    penalty_score_a: penaltyScore(teamAId, scoreA),
+    penalty_score_b: penaltyScore(teamBId, scoreB),
     match_status: cacheStatus(state.status),
     decided_by: cacheDecidedBy(state),
     running: state.clock.running,

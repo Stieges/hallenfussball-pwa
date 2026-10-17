@@ -21,7 +21,7 @@ const CTX_9 = { matchId: SPIEL_9, teamAId: SV_SUED, teamBId: FC_NORD };
 async function eintragen(h: ScheduleEngine, a: number, b: number): Promise<void> {
   await h.engine.ensureMatch(SPIEL_9, CTX_9, 'T');
   const commands = new MatchCommands({ engine: h.engine, store: h.store, sender: h.sender, accountId: h.value.accountId });
-  await commands.enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: a, [FC_NORD]: b });
+  await commands.enterResult(SPIEL_9, CTX_9, 'leitung', { [SV_SUED]: a, [FC_NORD]: b }, undefined, false);
   await settle();
 }
 

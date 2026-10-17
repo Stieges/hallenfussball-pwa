@@ -32,7 +32,8 @@ const CorrectionPayloadSchema = z.object({
   reason: z.string().min(1),
   basedOn: z.string().nullable(),
 });
-const ResultEntryPayloadSchema = z.object({ scores: TeamScoresSchema });
+/** A-25a (@FU-094): optional das Strafstoßergebnis eines nur eingetragenen K.-o.-Unentschiedens. */
+const ResultEntryPayloadSchema = z.object({ scores: TeamScoresSchema, shootout: TeamScoresSchema.optional() });
 const SkipPayloadSchema = z.object({ reason: z.string().optional() });
 const ClockAdjustPayloadSchema = z.object({});
 const TiebreakChoicePayloadSchema = z.object({ choice: z.enum(['overtime', 'goldenGoal', 'shootout']) });
@@ -159,12 +160,24 @@ export function isPayloadValid(event: EngineEvent, ctx: MatchContext): boolean {
   }
 
   if (TEAM_SCORES_EVENT_TYPES.has(event.type)) {
-    const scores = (parsed.data as { scores: Record<string, number> }).scores;
-    const keys = Object.keys(scores);
-    if (keys.length !== 2 || !keys.includes(ctx.teamAId) || !keys.includes(ctx.teamBId)) {
+    const { scores, shootout } = parsed.data as { scores: Record<string, number>; shootout?: Record<string, number> };
+    if (!coversBothTeams(scores, ctx)) {
       return false;
+    }
+    // A-25a (@FU-094): ein Strafstoßergebnis nur bei Gleichstand und nur, wenn es entscheidet.
+    if (shootout !== undefined) {
+      const { teamAId: a, teamBId: b } = ctx;
+      if (!coversBothTeams(shootout, ctx) || scores[a] !== scores[b] || shootout[a] === shootout[b]) {
+        return false;
+      }
     }
   }
 
   return true;
+}
+
+/** Genau die zwei Team-IDs des Spiels als Schlüssel. */
+function coversBothTeams(values: Record<string, number>, ctx: MatchContext): boolean {
+  const keys = Object.keys(values);
+  return keys.length === 2 && keys.includes(ctx.teamAId) && keys.includes(ctx.teamBId);
 }

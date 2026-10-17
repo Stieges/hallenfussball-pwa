@@ -4,6 +4,7 @@
  * - beendet (Grundpflicht @EK-004, @EK-037): Grund aus der Grundliste (`CorrectionReason`), ohne Vorauswahl;
  *   „Sonstiges“ nur mit Freitext. Abbruch speichert nichts. Fixrunde 1 (I-3): Bausteine `Select`/`Input`
  *   (Schrift ≥ 16 px, sichtbare Beschriftung), Fläche `DialogSurface`.
+ * - K.-o.-Unentschieden (A-25a, @FU-094): Ergebnis des Strafstoßschießens (`ScheduleShootoutPrompt`).
  */
 import { useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +16,7 @@ import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { cssVars, dialogWidths } from '../../../design-tokens';
 import { CORRECTION_REASONS, type CorrectionReason } from '../../../types/userProfile';
 import type { ResultEntryPrompt } from '../hooks/useScheduleResultEntry';
+import { ScheduleShootoutPrompt } from './ScheduleShootoutPrompt';
 
 export interface ScheduleResultEntryPromptProps {
   prompt: ResultEntryPrompt | null;
@@ -90,6 +92,9 @@ export function ScheduleResultEntryPrompt({ prompt, answerPrompt }: ScheduleResu
   }
   if (prompt.kind === 'reason') {
     return <ReasonPrompt key={`${prompt.matchNumber}-${prompt.after}`} prompt={prompt} answerPrompt={answerPrompt} />;
+  }
+  if (prompt.kind === 'shootout') {
+    return <ScheduleShootoutPrompt key={`${prompt.matchNumber}-${prompt.score}`} prompt={prompt} answerPrompt={answerPrompt} />;
   }
   return (
     <ConfirmDialog
