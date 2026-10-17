@@ -288,6 +288,27 @@ export const semanticColorsDark = {
   eventEditBorder: 'rgba(251, 191, 36, 0.3)',
 
   gradientNextMatch: 'linear-gradient(135deg, rgba(0, 230, 118, 0.1), rgba(0, 176, 255, 0.1))',
+
+  // ---------------------------------------------------------------------------
+  // Tafel Live-Cockpit (Spec § 8.2, Mockup-Freigabe 16.10.). Eigene Tokens, nie `surface`.
+  // Hoher Kontrast: nicht MVP, Werte nur Platzhalter (eigene Fassung in global.css).
+  // ---------------------------------------------------------------------------
+  scoreboardBg: '#050E1F',
+  scoreboardText: palette.neutral[0],
+  scoreboardTextMuted: '#A3B8D4',
+  scoreboardLive: palette.special.live,
+  scoreboardHighlight: palette.orange[400],
+  scoreboardFinalPhase: palette.purple[300],
+  scoreboardBorder: '#A3B8D4',
+  scoreboardSurface: 'rgba(255, 255, 255, 0.08)',
+  scoreboardDivider: 'rgba(255, 255, 255, 0.22)',
+  scoreboardOnLive: palette.neutral[0],
+  scoreboardOnHighlight: '#000000',
+  scoreboardOk: palette.green[400],
+  scoreboardInfo: '#00B0FF',
+  scoreboardNeutral: palette.neutral[500],
+  noticeLineBg: 'rgba(255, 255, 255, 0.08)',
+  noticeLineText: palette.neutral[0],
 } as const;
 
 export type SemanticColorToken = keyof typeof semanticColorsDark;

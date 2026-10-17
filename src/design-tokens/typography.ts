@@ -67,6 +67,8 @@ export const displaySizes = {
 // =============================================================================
 
 export const scoreSizes = {
+  /** 32px - Uhr im Handy-Kopf (Tafel, Mockup) */
+  xs: '32px',
   /** 40px - Small scores (compact views) */
   sm: '40px',
   /** 56px - Medium scores (standard match cards) */

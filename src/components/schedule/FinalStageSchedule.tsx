@@ -30,6 +30,8 @@ import { RefereeConfig } from '../../types/tournament';
 import { matchLabelText } from '../../core/models/slotLabel';
 import { buildSideContext, sideDisplay, sideName, type SideSource } from './matchSides';
 import { MatchScoreCell } from './MatchScoreCell';
+import { FinalStageMobileCard } from './FinalStageMobileCard';
+import { resultFigures, scheduleStatusOf, type ResultFigures } from './matchResult';
 import { LiveBadge } from './LiveBadge';
 
 // Pending changes during edit mode
@@ -303,121 +305,6 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     fontWeight: cssVars.fontWeights.medium,
   };
 
-  // Mobile Card Styles - Compact Design (matching GroupStageSchedule)
-  const mobileCardStyle: CSSProperties = {
-    backgroundColor: cssVars.colors.background,
-    border: `2px solid ${cssVars.colors.accent}`,
-    borderRadius: cssVars.borderRadius.md,
-    padding: `10px ${cssVars.spacing.sm}`,
-    marginBottom: cssVars.spacing.sm,
-  };
-
-  const mobileCardHeaderStyle: CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: cssVars.spacing.xs,
-    fontSize: cssVars.fontSizes.sm,
-  };
-
-  const mobileMatchInfoStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    color: cssVars.colors.textSecondary,
-  };
-
-  const mobileMatchNumberStyle: CSSProperties = {
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.accent,
-  };
-
-  const mobileLabelStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.accent,
-    marginBottom: cssVars.spacing.xs,
-    textAlign: 'center' as const,
-    backgroundColor: `${cssVars.colors.accent}20`,
-    padding: '2px 8px',
-    borderRadius: cssVars.borderRadius.sm,
-  };
-
-  const mobileMetaCompactStyle: CSSProperties = {
-    display: 'flex',
-    gap: cssVars.spacing.sm,
-    color: cssVars.colors.textMuted,
-    fontSize: cssVars.fontSizes.xs,
-  };
-
-  // Team row with inline score - compact layout
-  const getMobileTeamRowStyle = (isWinner: boolean, isLoser: boolean, hasResult: boolean, isPlaceholder: boolean): CSSProperties => ({
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '4px 0',
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: isWinner ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
-    color: isPlaceholder
-      ? cssVars.colors.textPlaceholder
-      : hasResult
-        ? (isLoser ? cssVars.colors.textMuted : cssVars.colors.textPrimary)
-        : cssVars.colors.textPrimary,
-    fontStyle: isPlaceholder ? 'italic' : 'normal',
-  });
-
-  const mobileTeamNameStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    flex: 1,
-    minWidth: 0,
-    overflow: 'hidden',
-  };
-
-  const mobileScoreStyle = (isWinner: boolean): CSSProperties => ({
-    fontWeight: cssVars.fontWeights.bold,
-    fontSize: cssVars.fontSizes.lg,
-    minWidth: '24px',
-    textAlign: 'right' as const,
-    color: isWinner ? cssVars.colors.success : cssVars.colors.textPrimary,
-  });
-
-  const mobileWinnerIconStyle: CSSProperties = {
-    color: cssVars.colors.success,
-    fontSize: cssVars.fontSizes.sm,
-    flexShrink: 0,
-  };
-
-  const mobileScoreInputStyle: CSSProperties = {
-    width: '36px',
-    padding: cssVars.spacing.xs,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: cssVars.fontWeights.bold,
-    textAlign: 'center' as const,
-    backgroundColor: cssVars.colors.background,
-    color: cssVars.colors.textPrimary,
-  };
-
-  const mobileSelectStyle: CSSProperties = {
-    height: '32px',
-    padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.semibold,
-    cursor: 'pointer',
-    backgroundColor: cssVars.colors.background,
-    color: cssVars.colors.textPrimary,
-    // Fix: Prevent all options from rendering at once
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    lineHeight: '32px',
-  };
-
   // Render table content
   const renderTableContent = () => (
     <table style={tableStyle}>
@@ -437,6 +324,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
       <tbody>
         {sortedMatches.map((match) => {
           const isRunning = runningMatchIds?.has(match.id);
+          const result = resultFigures(match, scheduleStatusOf(match, runningMatchIds, finishedMatches));
 
           return (
             <SortableRow key={match.id} match={match}>
@@ -488,6 +376,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   <td style={{ ...tdStyle, ...matchLabelCellStyle }}>{getFinalMatchLabel(match, t)}</td>
                   <td style={{
                     ...teamCellStyle,
+                    ...winnerCellStyle(result, 'a'),
                     ...(sideDisplay(match, 'A', sides).pending ? { color: cssVars.colors.textPlaceholder, fontStyle: 'italic' } : {})
                   }}>
                     {sideName(match, 'A', sides)}
@@ -499,6 +388,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                       scoreB={match.scoreB}
                       editable={editable && onScoreChange !== undefined}
                       isFinished={finishedMatches?.has(match.id) ?? false}
+                      result={result}
                       inCorrectionMode={correctionMatchId === match.id}
                       onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
                       onStartCorrection={onStartCorrection ? () => onStartCorrection(match.id) : undefined}
@@ -506,6 +396,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   </td>
                   <td style={{
                     ...teamCellStyle,
+                    ...winnerCellStyle(result, 'b'),
                     ...(sideDisplay(match, 'B', sides).pending ? { color: cssVars.colors.textPlaceholder, fontStyle: 'italic' } : {})
                   }}>
                     {sideName(match, 'B', sides)}
@@ -628,224 +519,44 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
         )}
       </div>
 
-      {/* Mobile Card View - Compact Design */}
+      {/* Mobile Card View: Tore je Zeile (@OB-064), Eingabe je Feld (C-FINALRUNDE-MOBIL-EINGABE) */}
       <div className="mobile-view">
         {sortedMatches.map((match) => {
-          const isRunning = runningMatchIds?.has(match.id);
           const isFinished = finishedMatches?.has(match.id) ?? false;
-          const hasResult = match.scoreA !== undefined && match.scoreB !== undefined;
-          const homeIsPlaceholder = sideDisplay(match, 'A', sides).pending;
-          const awayIsPlaceholder = sideDisplay(match, 'B', sides).pending;
-
-          // Determine winner/loser
-          const homeWins = hasResult && (match.scoreA ?? 0) > (match.scoreB ?? 0);
-          const awayWins = hasResult && (match.scoreB ?? 0) > (match.scoreA ?? 0);
-          const isDraw = hasResult && match.scoreA === match.scoreB;
-
-          // Get pending changes
+          const status = scheduleStatusOf(match, runningMatchIds, finishedMatches);
+          const home = sideDisplay(match, 'A', sides);
+          const away = sideDisplay(match, 'B', sides);
           const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
-          const displayedRef = hasPendingRef
-            ? pendingChanges.refereeAssignments[match.id]
-            : match.referee;
           const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
-          const displayedField = hasPendingField
-            ? pendingChanges.fieldAssignments[match.id]
-            : match.field;
-
-          // Is this match editable for score input?
-          const canEditScore = editable && onScoreChange !== undefined && !isFinished;
-          const inCorrectionMode = correctionMatchId === match.id;
 
           return (
-            <div
+            <FinalStageMobileCard
               key={match.id}
-              style={{
-                ...mobileCardStyle,
-                ...(isRunning ? {
-                  borderColor: cssVars.colors.statusLive,
-                  backgroundColor: cssVars.colors.statusLiveRowBg,
-                } : {}),
-              }}
-            >
-              {/* Compact Header: #Nr • Zeit | Meta Info */}
-              <div style={mobileCardHeaderStyle}>
-                <div style={mobileMatchInfoStyle}>
-                  <span style={mobileMatchNumberStyle}>#{match.matchNumber}</span>
-                  <span>•</span>
-                  <span>{match.time}</span>
-                  {isRunning && <LiveBadge compact />}
-                </div>
-                <div style={mobileMetaCompactStyle}>
-                  {showReferees && displayedRef && (
-                    <span style={hasPendingRef ? { color: cssVars.colors.primary } : undefined}>
-                      SR:{displayedRef}
-                    </span>
-                  )}
-                  {showFields && displayedField && displayedField > 1 && (
-                    <span style={hasPendingField ? { color: cssVars.colors.primary } : undefined}>
-                      F:{displayedField}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Final Match Label */}
-              <div style={mobileLabelStyle}>{getFinalMatchLabel(match, t)}</div>
-
-              {/* Team Row: Home Team with Score */}
-              <div style={getMobileTeamRowStyle(homeWins, awayWins && !isDraw, hasResult, homeIsPlaceholder)}>
-                <div style={mobileTeamNameStyle}>
-                  {homeWins && <span style={mobileWinnerIconStyle}>✓</span>}
-                  <span style={{
-                    // MOBILE-UX: No truncation - team names must be fully visible
-                    wordBreak: 'break-word' as const,
-                    overflowWrap: 'break-word' as const
-                  }}>
-                    {sideName(match, 'A', sides)}
-                  </span>
-                </div>
-                {canEditScore || inCorrectionMode ? (
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={match.scoreA ?? ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val !== '' && match.scoreB !== undefined) {
-                        onScoreChange?.(match.id, parseInt(val), match.scoreB);
-                      }
-                    }}
-                    placeholder="–"
-                    style={{
-                      ...mobileScoreInputStyle,
-                      ...(inCorrectionMode ? {
-                        borderColor: cssVars.colors.warning,
-                        backgroundColor: cssVars.colors.warningLight,
-                      } : {}),
-                    }}
-                  />
-                ) : (
-                  <span style={mobileScoreStyle(homeWins)}>
-                    {match.scoreA ?? '–'}
-                  </span>
-                )}
-              </div>
-
-              {/* Team Row: Away Team with Score */}
-              <div style={getMobileTeamRowStyle(awayWins, homeWins && !isDraw, hasResult, awayIsPlaceholder)}>
-                <div style={mobileTeamNameStyle}>
-                  {awayWins && <span style={mobileWinnerIconStyle}>✓</span>}
-                  <span style={{
-                    // MOBILE-UX: No truncation - team names must be fully visible
-                    wordBreak: 'break-word' as const,
-                    overflowWrap: 'break-word' as const
-                  }}>
-                    {sideName(match, 'B', sides)}
-                  </span>
-                </div>
-                {canEditScore || inCorrectionMode ? (
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={match.scoreB ?? ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (match.scoreA !== undefined && val !== '') {
-                        onScoreChange?.(match.id, match.scoreA, parseInt(val));
-                      }
-                    }}
-                    placeholder="–"
-                    style={{
-                      ...mobileScoreInputStyle,
-                      ...(inCorrectionMode ? {
-                        borderColor: cssVars.colors.warning,
-                        backgroundColor: cssVars.colors.warningLight,
-                      } : {}),
-                    }}
-                  />
-                ) : (
-                  <span style={mobileScoreStyle(awayWins)}>
-                    {match.scoreB ?? '–'}
-                  </span>
-                )}
-              </div>
-
-              {/* Correction button for finished matches */}
-              {isFinished && !inCorrectionMode && onStartCorrection && (
-                <button
-                  onClick={() => onStartCorrection(match.id)}
-                  style={{
-                    marginTop: cssVars.spacing.xs,
-                    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-                    fontSize: cssVars.fontSizes.xs,
-                    color: cssVars.colors.textSecondary,
-                    backgroundColor: 'transparent',
-                    border: `1px solid ${cssVars.colors.borderControl}`,
-                    borderRadius: cssVars.borderRadius.sm,
-                    cursor: 'pointer',
-                    width: '100%',
-                  }}
-                  className="correction-btn-mobile"
-                >
-                  {t('finals.correct')}
-                </button>
-              )}
-
-              {/* Edit mode: Referee & Field selectors */}
-              {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show if either is enabled */}
-              {editingSchedule && (showReferees || showFields) && (
-                <div style={{
-                  display: 'flex',
-                  gap: cssVars.spacing.sm,
-                  marginTop: cssVars.spacing.xs,
-                  paddingTop: cssVars.spacing.xs,
-                  borderTop: `1px solid ${cssVars.colors.border}`,
-                }}>
-                  {showReferees && onRefereeChange && (
-                    <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>SR</label>
-                      <select
-                        value={displayedRef ?? ''}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          onRefereeChange(match.id, value ? parseInt(value) : null);
-                        }}
-                        style={{
-                          ...mobileSelectStyle,
-                          width: '100%',
-                          border: `1px solid ${hasPendingRef ? cssVars.colors.primary : cssVars.colors.borderControl}`,
-                        }}
-                      >
-                        <option value="">-</option>
-                        {refereeOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  {showFields && onFieldChange && (
-                    <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('finals.field')}</label>
-                      <select
-                        value={displayedField || 1}
-                        onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
-                        style={{
-                          ...mobileSelectStyle,
-                          width: '100%',
-                          border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.borderControl}`,
-                        }}
-                      >
-                        {fieldOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+              match={match}
+              label={getFinalMatchLabel(match, t)}
+              homeName={home.name}
+              awayName={away.name}
+              homePending={home.pending}
+              awayPending={away.pending}
+              result={resultFigures(match, status)}
+              isRunning={runningMatchIds?.has(match.id) ?? false}
+              isFinished={isFinished}
+              canEditScore={editable && onScoreChange !== undefined && !isFinished}
+              inCorrectionMode={correctionMatchId === match.id}
+              onScoreChange={onScoreChange}
+              onStartCorrection={onStartCorrection}
+              showReferees={!!showReferees}
+              showFields={showFields}
+              editingSchedule={editingSchedule}
+              displayedRef={hasPendingRef ? pendingChanges.refereeAssignments[match.id] : match.referee}
+              displayedField={hasPendingField ? pendingChanges.fieldAssignments[match.id] : match.field}
+              hasPendingRef={hasPendingRef}
+              hasPendingField={hasPendingField}
+              refereeOptions={refereeOptions}
+              fieldOptions={fieldOptions}
+              onRefereeChange={onRefereeChange}
+              onFieldChange={onFieldChange}
+            />
           );
         })}
       </div>
@@ -877,6 +588,14 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     </div>
   );
 };
+
+/** Sieger fett, Verlierer gedämpft (@OB-064); ohne Entscheidung unverändert. */
+function winnerCellStyle(result: ResultFigures | null, side: 'a' | 'b'): CSSProperties {
+  if (result?.winner === undefined || result.winner === null) { return {}; }
+  return result.winner === side
+    ? { fontWeight: cssVars.fontWeights.bold }
+    : { color: cssVars.colors.textSecondary };
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Translation function type simplified for standalone helper
 function getFinalMatchLabel(match: ScheduledMatch, t: (key: any) => string): string {

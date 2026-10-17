@@ -29,6 +29,7 @@ import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { matchLabelText } from '../../core/models/slotLabel';
 import { buildSideContext, sideDisplay, sideName } from './matchSides';
+import { formatElapsed, resultFigures } from './matchResult';
 import {
   MatchCard,
   type MatchCardStatus,
@@ -843,10 +844,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               showGroupLabel,
               homeTeam: sideDisplay(match, 'A', sides),
               awayTeam: sideDisplay(match, 'B', sides),
-              homeScore: match.scoreA ?? 0,
-              awayScore: match.scoreB ?? 0,
+              result: resultFigures(match, status),
               status: status,
-              progress: 0,
+              elapsedFormatted: status === 'running' && liveMatch ? formatElapsed(liveMatch.elapsedSeconds) : undefined,
             };
 
             return (
