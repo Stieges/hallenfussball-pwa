@@ -140,7 +140,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
     height: cssVars.touchTargets.minimum,
     padding: `0 ${cssVars.spacing.xl} 0 ${cssVars.spacing.md}`,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${error ? cssVars.colors.error : isOpen ? cssVars.colors.primary : cssVars.colors.border}`,
+    border: `1px solid ${error ? cssVars.colors.error : isOpen ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     // Minimum 16px (fontSizes.lg) required to prevent iOS auto-zoom on focus

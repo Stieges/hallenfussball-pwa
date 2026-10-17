@@ -4,7 +4,7 @@
  *
  * TournamentCreationService/tournamentImporter setzen bei neuen bzw.
  * importierten Turnieren nur noch `{ id, enabled }` — kein `label` mehr.
- * TabellenTab und RankingTab müssen die Beschriftung trotzdem über
+ * TabellenTab muss die Beschriftung trotzdem über
  * `resolvePlacementCriterionLabel` (wizard.json) auflösen, mit Rückfall
  * auf ein evtl. noch gespeichertes `label` für Altdaten/Importe ohne
  * passenden Schlüssel.

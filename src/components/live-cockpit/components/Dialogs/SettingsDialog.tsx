@@ -1,7 +1,7 @@
 import { CSSProperties } from 'react';
 import { cssVars, dialogWidths } from '../../../../design-tokens';
 import { DialogSurface } from '../../../ui/molecules/DialogSurface';
-import { MatchCockpitSettingsPanel } from '../../../match-cockpit/MatchCockpitSettingsPanel';
+import { MatchCockpitSettingsPanel } from '../../../match-settings/MatchCockpitSettingsPanel';
 import type { MatchCockpitSettings } from '../../../../types/tournament';
 
 interface SettingsDialogProps {

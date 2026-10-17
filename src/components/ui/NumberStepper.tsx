@@ -83,7 +83,7 @@ export const NumberStepper: React.FC<NumberStepperProps> = ({
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     background: cssVars.colors.surface,
     borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     minWidth: '80px',
   };
 

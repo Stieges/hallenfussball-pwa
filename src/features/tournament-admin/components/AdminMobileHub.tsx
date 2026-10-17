@@ -215,7 +215,7 @@ const styles = {
     width: '100%',
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     fontSize: cssVars.fontSizes.bodyMd,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     background: cssVars.colors.background,
     color: cssVars.colors.textPrimary,

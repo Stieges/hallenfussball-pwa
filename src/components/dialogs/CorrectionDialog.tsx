@@ -146,7 +146,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
     width: '100%',
     height: cssVars.touchTargets.minimum,
     padding: `0 ${cssVars.spacing.xl} 0 ${cssVars.spacing.md}`,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     fontSize: cssVars.fontSizes.md,
     backgroundColor: cssVars.colors.background,
@@ -162,7 +162,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
   const textareaStyle: CSSProperties = {
     width: '100%',
     padding: cssVars.spacing.md,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     fontSize: cssVars.fontSizes.md,
     backgroundColor: cssVars.colors.background,

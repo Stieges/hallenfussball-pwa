@@ -1,13 +1,12 @@
 /**
  * @OB-055 (B-43b1-F) — Verhalten der umgestellten Dialoge bleibt wie vor der Umstellung:
- * Esc schließt den Monitor-Editor genau einmal, die Abdunkelung schließt die
- * Nach-Spiel-Meldung nicht, nach „Weiter“ liegt der Fokus auf „Zurück“.
+ * Esc schließt den Monitor-Editor genau einmal, nach „Weiter“ liegt der Fokus auf „Zurück“.
+ * (B-06: die Fälle der Nach-Spiel-Meldung entfallen mit dem gelöschten PostMatchModal.)
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MonitorEditor } from '../../../features/tournament-management/MonitorEditor';
-import { PostMatchModal } from '../../match-cockpit/PostMatchModal';
 import { TransferOwnershipDialog } from '../../../features/auth/components/TransferOwnershipDialog';
 import type { Tournament } from '../../../types/tournament';
 import type { TournamentMembership, User } from '../../../features/auth/types/auth.types';
@@ -41,29 +40,6 @@ describe('@OB-055 B-43b1-F Verhalten', () => {
     render(<MonitorEditor tournament={tournament} monitorId="monitor-1" onTournamentUpdate={vi.fn()} onClose={onClose} />);
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  const postMatch = (onStay: () => void) =>
-    render(
-      <PostMatchModal
-        isOpen homeTeamName="A" awayTeamName="B" homeScore={1} awayScore={0} matchLabel="Spiel 1"
-        autoAdvanceEnabled={false} autoAdvanceSeconds={10} hasNextMatch
-        onLoadNextMatch={vi.fn()} onStay={onStay} onEditScore={vi.fn()} onReopenMatch={vi.fn()}
-      />,
-    );
-
-  it('Nach-Spiel-Meldung: Klick auf die Abdunkelung schließt nicht (wie vor B-43b1)', () => {
-    const onStay = vi.fn();
-    postMatch(onStay);
-    fireEvent.click(screen.getByRole('dialog').parentElement!);
-    expect(onStay).not.toHaveBeenCalled();
-  });
-
-  it('Nach-Spiel-Meldung: Esc schließt weiterhin (onStay einmal)', () => {
-    const onStay = vi.fn();
-    postMatch(onStay);
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(onStay).toHaveBeenCalledTimes(1);
   });
 
   it('Eigentum übertragen: nach „Weiter“ liegt der Fokus auf „Zurück“, nicht auf „Übertragen“', async () => {

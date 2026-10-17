@@ -11,7 +11,7 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
-import { OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, isAbortError, toOriginImmutableError } from '../errors';
+import { OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, toOriginImmutableError } from '../errors';
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
 import type { Database } from '../../types/supabase';
 import {
@@ -114,11 +114,16 @@ export class SupabaseRepository implements ITournamentRepository {
       throw new RepositoryError('get', matchesError.message, matchesError);
     }
 
-    // Convert to frontend types
-    return {
-      tournament: mapTournamentFromSupabase(tournamentRow, teamRows, matchRows),
-      matchRevisions: new Map(matchRows.map((row) => [row.id, row.version ?? 1])),
-    };
+    // Convert to frontend types. B-19b (@ME-032): lässt sich die empfangene Antwort nicht abbilden, ist sie
+    // „unlesbar“ (kein Netzfehler); der Monitor lädt dann neu.
+    try {
+      return {
+        tournament: mapTournamentFromSupabase(tournamentRow, teamRows, matchRows),
+        matchRevisions: new Map(matchRows.map((row) => [row.id, row.version ?? 1])),
+      };
+    } catch (err) {
+      throw new UnreadableResponseError('get', err);
+    }
   }
 
   /**

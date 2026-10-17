@@ -190,7 +190,7 @@ export const LogoUploadDialog: React.FC<LogoUploadDialogProps> = ({
   };
 
   const dropZoneStyles: CSSProperties = {
-    border: `2px dashed ${isDragging ? cssVars.colors.primary : cssVars.colors.border}`,
+    border: `2px dashed ${isDragging ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     padding: cssVars.spacing.xl,
     textAlign: 'center',
@@ -326,7 +326,7 @@ export const LogoUploadDialog: React.FC<LogoUploadDialogProps> = ({
                 height: 160,
                 borderRadius: cssVars.borderRadius.lg,
                 backgroundColor: cssVars.colors.inputBg,
-                border: `1px solid ${cssVars.colors.border}`,
+                border: `1px solid ${cssVars.colors.borderControl}`,
                 overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
@@ -352,7 +352,7 @@ export const LogoUploadDialog: React.FC<LogoUploadDialogProps> = ({
                 onClick={() => setCropArea(prev => ({ ...prev, scale: Math.max(0.5, prev.scale - 0.1) }))}
                 style={{
                   background: 'none',
-                  border: `1px solid ${cssVars.colors.border}`,
+                  border: `1px solid ${cssVars.colors.borderControl}`,
                   borderRadius: cssVars.borderRadius.sm,
                   width: 32,
                   height: 32,
@@ -377,7 +377,7 @@ export const LogoUploadDialog: React.FC<LogoUploadDialogProps> = ({
                 onClick={() => setCropArea(prev => ({ ...prev, scale: Math.min(2, prev.scale + 0.1) }))}
                 style={{
                   background: 'none',
-                  border: `1px solid ${cssVars.colors.border}`,
+                  border: `1px solid ${cssVars.colors.borderControl}`,
                   borderRadius: cssVars.borderRadius.sm,
                   width: 32,
                   height: 32,

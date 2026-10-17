@@ -10,7 +10,10 @@ interface TransitionWrapperProps {
   enableTransitions: boolean;
 }
 
-/** Hüllt die aktuelle Folie und animiert Fade oder Slide beim Wechsel (none = harter Schnitt). */
+/**
+ * Hüllt die aktuelle Folie und animiert Fade oder Slide beim Wechsel (none = harter Schnitt).
+ * Die Hülle ist die Folienfläche (`monitor-slide`): die Folie darin hält den Bildrand selbst frei.
+ */
 export function TransitionWrapper({
   children,
   slideState,
@@ -45,7 +48,7 @@ export function TransitionWrapper({
   };
 
   return (
-    <div style={{
+    <div data-testid="monitor-slide" style={{
       position: 'absolute',
       inset: 0,
       ...getTransitionStyle(),

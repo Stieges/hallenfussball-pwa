@@ -1,0 +1,40 @@
+/**
+ * LiveCockpit – Hülle (Scheibe 1, ohne Sichtänderung)
+ *
+ * Ersetzt die Inline-Stilobjekte der Hülle 1 : 1; nur Design-Tokens, keine Farb-/Maß-Literale.
+ * Der Gerätetyp kommt weiter aus `useBreakpoint` (Modifikator-Klassen), nicht aus Media-Queries.
+ */
+
+.container {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  min-height: var(--min-h-screen);
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  flex: 1;
+}
+
+.contentMobile {
+  padding: var(--spacing-md);
+}
+
+/* Leerzustand: kein Spiel ausgewählt */
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--sizing-empty-state-min-height);
+  background: var(--color-background);
+}
+
+.emptyText {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xl);
+}

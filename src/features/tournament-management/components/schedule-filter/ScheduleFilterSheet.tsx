@@ -17,6 +17,7 @@ import { MatchStatus } from '../../../../types/tournament';
 import { cssVars } from '../../../../design-tokens';
 import { Icons } from '../../../../components/ui/Icons';
 import { BottomSheet } from '../../../../components/ui/BottomSheet';
+import { DialogActions } from '../../../../components/ui/molecules/DialogActions';
 import { FilterDropdown, FilterOption } from './FilterDropdown';
 import { StatusMultiSelect } from './StatusMultiSelect';
 import { TeamSearchInput } from './TeamSearchInput';
@@ -92,46 +93,12 @@ export const ScheduleFilterSheet: React.FC<ScheduleFilterSheetProps> = ({
     marginBottom: cssVars.spacing.lg,
   };
 
-  const buttonContainerStyle: CSSProperties = {
-    display: 'flex',
-    gap: cssVars.spacing.md,
-    marginTop: cssVars.spacing.xl,
-    paddingTop: cssVars.spacing.md,
-    borderTop: `1px solid ${cssVars.colors.border}`,
-  };
-
-  const resetButtonStyle: CSSProperties = {
-    flex: 1,
-    display: 'flex',
+  // Beschriftung mit Symbol, einzeilig (die Taste selbst kommt aus DialogActions)
+  const labelWithIconStyle: CSSProperties = {
+    display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: cssVars.spacing.sm,
-    padding: cssVars.spacing.md,
-    background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.textSecondary,
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: cssVars.fontWeights.medium,
-    cursor: 'pointer',
-    minHeight: '48px',
-  };
-
-  const applyButtonStyle: CSSProperties = {
-    flex: 2,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: cssVars.spacing.sm,
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.primary,
-    border: 'none',
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.onPrimary,
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: cssVars.fontWeights.semibold,
-    cursor: 'pointer',
-    minHeight: '48px',
   };
 
   const matchCountStyle: CSSProperties = {
@@ -151,6 +118,21 @@ export const ScheduleFilterSheet: React.FC<ScheduleFilterSheetProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={t('filter.filter')}
+      footer={(
+        <DialogActions
+          secondary={[{
+            label: <span style={labelWithIconStyle}><Icons.X size={18} />{t('filter.reset')}</span>,
+            onClick: onReset,
+            'data-testid': 'filter-sheet-reset',
+          }]}
+          primary={{
+            label: <span style={labelWithIconStyle}><Icons.Check size={18} />{t('filter.apply', { count: matchCount })}</span>,
+            onClick: onApply,
+            'data-testid': 'filter-sheet-apply',
+          }}
+          data-testid="filter-sheet-actions"
+        />
+      )}
     >
       <div data-testid={testId}>
         {/* Match Count Preview */}
@@ -220,28 +202,6 @@ export const ScheduleFilterSheet: React.FC<ScheduleFilterSheetProps> = ({
             debounceMs={0}
             data-testid="filter-sheet-team-search"
           />
-        </div>
-
-        {/* Action Buttons */}
-        <div style={buttonContainerStyle}>
-          <button
-            style={resetButtonStyle}
-            onClick={onReset}
-            type="button"
-            data-testid="filter-sheet-reset"
-          >
-            <Icons.X size={18} />
-            {t('filter.reset')}
-          </button>
-          <button
-            style={applyButtonStyle}
-            onClick={onApply}
-            type="button"
-            data-testid="filter-sheet-apply"
-          >
-            <Icons.Check size={18} />
-            {t('filter.apply', { count: matchCount })}
-          </button>
         </div>
       </div>
     </BottomSheet>

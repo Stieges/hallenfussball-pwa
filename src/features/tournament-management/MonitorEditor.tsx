@@ -29,6 +29,7 @@ import { useMonitors, useSponsors } from '../../hooks';
 import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
 import { SlideConfigEditor } from './components/SlideConfigEditor';
 import { SlidePreview } from './components/SlidePreview';
+import { MonitorOverscanField } from './components/MonitorOverscanField';
 import { SlideReferenceWarning } from './components/SlideReferenceWarning';
 import { useSlotFields } from './hooks/useSlotFields';
 
@@ -182,7 +183,7 @@ export function MonitorEditor({
     transitionDuration?: number;
     performanceMode?: PerformanceMode;
     theme?: MonitorTheme;
-    overscanPx?: number;
+    overscanPercent?: number;
   }) => {
     if (!monitor) {return;}
 
@@ -404,7 +405,7 @@ export function MonitorEditor({
   const inputStyle: CSSProperties = {
     padding: cssVars.spacing.sm,
     borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     background: cssVars.colors.surface,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.md,
@@ -466,7 +467,7 @@ export function MonitorEditor({
     minHeight: '36px',
     padding: cssVars.spacing.xs,
     background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.sm,
     cursor: 'pointer',
     fontSize: cssVars.fontSizes.md,
@@ -476,7 +477,7 @@ export function MonitorEditor({
     width: '100%',
     padding: cssVars.spacing.md,
     background: cssVars.colors.surfaceLight,
-    border: `2px dashed ${cssVars.colors.border}`,
+    border: `2px dashed ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     fontSize: cssVars.fontSizes.md,
@@ -495,13 +496,13 @@ export function MonitorEditor({
     padding: cssVars.spacing.md,
     background: cssVars.colors.surface,
     borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
   };
 
   const slideTypeButtonStyle: CSSProperties = {
     padding: cssVars.spacing.md,
     background: cssVars.colors.surfaceLight,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     textAlign: 'center',
@@ -635,30 +636,11 @@ export function MonitorEditor({
                 </select>
               </div>
 
-              {/* Overscan */}
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>
-                  {t('monitorEditor.settings.overscan', { px: monitor.overscanPx ?? 48 })}
-                </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={80}
-                  step={4}
-                  value={monitor.overscanPx ?? 48}
-                  onChange={(e) => void handleUpdateSettings({ overscanPx: Number(e.target.value) })}
-                  style={{ width: '100%', accentColor: cssVars.colors.primary }}
-                />
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: cssVars.fontSizes.xs,
-                  color: cssVars.colors.textSecondary,
-                }}>
-                  <span>{t('monitorEditor.settings.noMargin')}</span>
-                  <span>80px</span>
-                </div>
-              </div>
+              {/* Bildrand in Prozent (@ME-067) */}
+              <MonitorOverscanField
+                value={monitor.overscanPercent}
+                onChange={(overscanPercent) => void handleUpdateSettings({ overscanPercent })}
+              />
             </div>
           </div>
 

@@ -70,7 +70,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
 
     const buttonStyle: CSSProperties = {
       background: 'transparent',
-      border: `1px solid ${cssVars.colors.border}`,
+      border: `1px solid ${cssVars.colors.borderControl}`,
       borderRadius: cssVars.borderRadius.sm,
       color: cssVars.colors.textSecondary,
       fontSize: cssVars.fontSizes.xs,
@@ -142,7 +142,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
       padding: cssVars.spacing.xs,
       border: inCorrectionMode
         ? `2px solid ${cssVars.colors.warning}`
-        : `1px solid ${cssVars.colors.border}`,
+        : `1px solid ${cssVars.colors.borderControl}`,
       borderRadius: cssVars.borderRadius.sm,
       fontSize: cssVars.fontSizes.sm,
       fontWeight: cssVars.fontWeights.bold,

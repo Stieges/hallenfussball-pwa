@@ -12,9 +12,9 @@
  * Input. Ein Nutzer ohne Bearbeitungsrecht für das laufende Spiel, der per direktem Link einsteigt,
  * hätte es trotzdem automatisch beendet.
  *
- * Fix: In beiden Pfaden wird jetzt `checkCanEditMatch` für das LAUFENDE Spiel geprüft, bevor
- * `handleFinish` aufgerufen wird. Ohne Berechtigung: kein Dialog, kein `handleFinish`, nur der
- * Wechsel der Auswahl (bzw. Konsum des URL-Parameters).
+ * Fix (R4): In beiden Pfaden wurde `checkCanEditMatch` für das LAUFENDE Spiel geprüft, bevor
+ * `handleFinish` aufgerufen wurde. Seit C-COCKPIT-MATCHID-BEENDET beenden beide Pfade gar kein Spiel
+ * mehr (auch nicht mit Berechtigung) – siehe ManagementTab.matchIdOeffnen.test.tsx.
  *
  * LiveCockpit wird hier bewusst durch einen Stub ersetzt (wie in
  * ManagementTab.eventIdentity.test.tsx) — dieser Test prüft die Verdrahtung in ManagementTab
@@ -151,7 +151,9 @@ describe('ManagementTab — "Beenden und wechseln" prüft die Berechtigung für 
     await waitFor(() => expect(select).toHaveValue(MATCH_TARGET));
   });
 
-  it('mit Berechtigung (owner): Dialog erscheint, nach Bestätigen ruft es handleFinish für das laufende Spiel auf — wie bisher', async () => {
+  // C-COCKPIT-MATCHID-BEENDET (pflicht-testanpassung): pinnte vorher „Dialog + handleFinish“ – die
+  // Spielauswahl beendet kein laufendes Spiel, auch nicht mit Berechtigung (@SL-010).
+  it('@SL-010 mit Berechtigung (owner): kein Beenden-Dialog, kein handleFinish — Auswahl wechselt, das laufende Spiel läuft weiter', async () => {
     currentRole = 'owner';
     const user = userEvent.setup();
     render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
@@ -159,11 +161,9 @@ describe('ManagementTab — "Beenden und wechseln" prüft die Berechtigung für 
     const select = screen.getByRole('combobox');
     await user.selectOptions(select, MATCH_TARGET);
 
-    const confirmButton = await screen.findByTestId('confirm-dialog-confirm');
-    await user.click(confirmButton);
-
-    expect(handleFinish).toHaveBeenCalledWith(MATCH_RUNNING);
     await waitFor(() => expect(select).toHaveValue(MATCH_TARGET));
+    expect(screen.queryByTestId('confirm-dialog-confirm')).not.toBeInTheDocument();
+    expect(handleFinish).not.toHaveBeenCalled();
   });
 });
 
@@ -200,12 +200,14 @@ describe('ManagementTab — initialMatchId (URL-Parameter) prüft die Berechtigu
     expect(handleFinish).not.toHaveBeenCalled();
   });
 
-  it('mit Berechtigung (owner) für das laufende Spiel: handleFinish wird aufgerufen — Verhalten wie bisher', async () => {
+  // C-COCKPIT-MATCHID-BEENDET (pflicht-testanpassung): pinnte vorher „handleFinish für das laufende
+  // Spiel“ – das Öffnen per ?matchId= beendet nie ein anderes Spiel (@SL-010).
+  it('@SL-010 mit Berechtigung (owner) für das laufende Spiel: kein handleFinish — Auswahl wechselt zum Ziel-Spiel', async () => {
     currentRole = 'owner';
     render(<UrlEntryWrapper initialMatchId={MATCH_TARGET} />);
 
-    await waitFor(() => expect(handleFinish).toHaveBeenCalledWith(MATCH_RUNNING));
     const select = await screen.findByRole('combobox');
     await waitFor(() => expect(select).toHaveValue(MATCH_TARGET));
+    expect(handleFinish).not.toHaveBeenCalled();
   });
 });
