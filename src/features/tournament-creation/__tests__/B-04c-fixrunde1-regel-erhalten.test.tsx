@@ -5,14 +5,14 @@
  *   - UI-Weg: Golden Goal einstellen → Gruppensystem roundRobin → groupsAndFinals
  *     → Entwurf behält tiebreaker === 'goldenGoal' (kein Zurücksetzen beim Wechsel)
  *   - Import eines JSON mit tiebreakerByRound.semifinal = 'shootout' → gespeichert
- *   - K.-o.-Spiel ohne Regel → Cockpit-Banner mit Strafstoßschießen (Rückfall wie der Server, S14)
+ *   - K.-o.-Spiel ohne Regel → Cockpit-Banner mit Verlängerung (Rückfall wie der Server, ZA-3 E1/@SL-145)
  * Gegenbeispiel:
  *   - Erstwechsel auf groupsAndFinals ohne vorherige Regel → Sport-Vorgabe wird gesetzt
  *   - Gruppenspiel ohne Regel → undefined (keine Entscheidung, kein Banner)
  * Mutation:
  *   - Reset-Zeile in useTournamentWizard (tiebreaker/tiebreakerDuration beim Wechsel
  *     auf groupsAndFinals wieder überschreiben) wieder rein → rot
- *   - Rückfall ?? 'shootout' in resolveTiebreakMode entfernen → rot
+ *   - Rückfall TIEBREAK_FALLBACK_MODE in tiebreakSource wieder 'shootout' → rot
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { ComponentProps } from 'react';
@@ -133,7 +133,7 @@ describe('B-04c Fixrunde 1 – Regel geht nicht verloren, Rückfall wie der Serv
     expect(ergebnis.tournament?.finalsConfig?.tiebreakerByRound?.semifinal).toBe('shootout');
   });
 
-  it('Pflichttest: K.-o.-Spiel ohne Regel zeigt im Cockpit den Banner mit Strafstoßschießen', async () => {
+  it('@SL-145 Pflichttest: K.-o.-Spiel ohne Regel zeigt im Cockpit den Banner mit Verlängerung, dann Strafstoßschießen', async () => {
     const entwurf = entwurfPerUi(() => {
       fireEvent.click(screen.getByTestId('finals-preset-top-4'));
     });
@@ -143,7 +143,7 @@ describe('B-04c Fixrunde 1 – Regel geht nicht verloren, Rückfall wie der Serv
     };
 
     const live = await cockpitLive(turnier, 'final');
-    expect(live.tiebreakerMode).toBe('shootout');
+    expect(live.tiebreakerMode).toBe('overtime-then-shootout');
 
     const onStartOvertime = vi.fn();
     const onStartGoldenGoal = vi.fn();
@@ -172,12 +172,10 @@ describe('B-04c Fixrunde 1 – Regel geht nicht verloren, Rückfall wie der Serv
     );
 
     const knoepfe = within(banner.container).getAllByRole('button');
-    expect(knoepfe).toHaveLength(2);
+    expect(knoepfe).toHaveLength(3);
     fireEvent.click(knoepfe[0]);
-    expect(onStartPenaltyShootout).toHaveBeenCalledWith('m-final');
-    fireEvent.click(knoepfe[1]);
-    expect(onForceFinish).toHaveBeenCalledWith('m-final');
-    expect(onStartOvertime).not.toHaveBeenCalled();
+    expect(onStartOvertime).toHaveBeenCalledWith('m-final');
+    expect(onStartPenaltyShootout).not.toHaveBeenCalled();
     expect(onStartGoldenGoal).not.toHaveBeenCalled();
   });
 

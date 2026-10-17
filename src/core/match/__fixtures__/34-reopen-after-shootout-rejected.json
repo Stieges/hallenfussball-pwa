@@ -1,5 +1,5 @@
 {
-  "title": "REOPEN nach Strafstoßschießen -> INVALID_TRANSITION SHOOTOUT_FINISHED (B-U11), Leitung korrigiert per CORRECTION",
+  "title": "REOPEN nach Strafstoßschießen -> INVALID_TRANSITION SHOOTOUT_FINISHED für Helfer und Turnierleitung (B-U11, ZA-3: Prüfung vor der Fortsetzen-Regel), Leitung korrigiert per CORRECTION",
   "szenario": null,
   "ctx": {
     "matchId": "match-34-",
@@ -121,7 +121,10 @@
       {
         "id": "00000034-0000-4000-8000-000000000001",
         "status": "rejected",
-        "code": "FORBIDDEN_ACTOR"
+        "code": "INVALID_TRANSITION",
+        "detail": {
+          "reason": "SHOOTOUT_FINISHED"
+        }
       },
       {
         "id": "00000034-0000-4000-8000-000000000002",

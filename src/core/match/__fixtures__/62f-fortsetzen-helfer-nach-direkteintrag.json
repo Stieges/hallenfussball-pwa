@@ -1,0 +1,83 @@
+{
+  "title": "Direkteintrag der Turnierleitung ist kein Ende durch Ablauf: Helfer setzt nicht fort",
+  "szenario": "@HE-042 Helfer dürfen den Spielbetrieb, sonst nichts",
+  "ctx": {
+    "matchId": "match-0000062f",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000062f-0000-4000-8000-000000000001",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 1000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 2,
+          "teamB": 1
+        }
+      },
+      "actorUser": "owner"
+    },
+    {
+      "id": "0000062f-0000-4000-8000-000000000002",
+      "type": "REOPEN",
+      "actor": "helper",
+      "at": 2000,
+      "section": null,
+      "clockMs": null,
+      "payload": {},
+      "actorUser": "helper"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000062f-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000062f-0000-4000-8000-000000000002",
+        "status": "rejected",
+        "code": "FORBIDDEN_ACTOR",
+        "detail": {
+          "reason": "NOT_ENDED_BY_CLOCK"
+        }
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 2,
+        "teamB": 1
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000062f-0000-4000-8000-000000000001",
+      "decidedBy": "direct",
+      "finishedAt": 1000
+    }
+  }
+}

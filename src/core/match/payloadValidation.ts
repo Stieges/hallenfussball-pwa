@@ -109,8 +109,13 @@ export const TEAM_REQUIRED_EVENT_TYPES: ReadonlySet<EventType> = new Set([
 /** Ereignistypen, deren Payload `scores` für GENAU beide Teams tragen muss. */
 export const TEAM_SCORES_EVENT_TYPES: ReadonlySet<EventType> = new Set(['CORRECTION', 'RESULT_ENTRY']);
 
-/** Ziel-Ereignistypen, die per RETRACT zurückgenommen werden dürfen (Brief Abschnitt 3). */
+/**
+ * Ziel-Ereignistypen, die per RETRACT zurückgenommen werden dürfen (Brief Abschnitt 3). ZA-3:
+ * CLOCK_ADJUST (@SL-109) und MATCH_START (@SL-066, nur ≤ 30 s ohne Eintrag, handlers/retract.ts).
+ */
 export const RETRACTABLE_EVENT_TYPES: ReadonlySet<EventType> = new Set([
+  'MATCH_START',
+  'CLOCK_ADJUST',
   'GOAL',
   'OWN_GOAL',
   'YELLOW_CARD',
