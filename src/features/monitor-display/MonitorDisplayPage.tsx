@@ -39,6 +39,7 @@ import {
 import { isSlideShowable } from './publicVisibility';
 import { monitorPageCount } from './slideContent';
 import { useSlideshow } from './useSlideshow';
+import { useReloadGate } from './useReloadGate';
 import { boundFieldNumbers, visibleGoal } from './monitorGoalFilter';
 import { getPerformanceSettings, resolveTheme } from './monitorDisplayHelpers';
 import { createLegacyMonitorSource } from './monitorDataSource';
@@ -153,6 +154,8 @@ function MonitorDisplayPageContent({
     ? (monitor?.transitionDuration ?? 0)
     : null;
   const { slideState } = useSlideshow(slideProgram, transitionMs);
+  // Neue App-Version nur zwischen Spielen (B-19b, @ZM-124, @ME-012): das Neulade-Tor der Kiosk-Seite.
+  useReloadGate(slideProgram.slides, slideProgram.matches, slideState.currentIndex);
 
   // Tor-Einblendung nach Feld der Live-Folien (B-16e1, @ZM-083)
   const boundFields = useMemo(() => boundFieldNumbers(monitor?.slides ?? []), [monitor]);
