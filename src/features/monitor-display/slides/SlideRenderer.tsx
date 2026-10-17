@@ -21,6 +21,8 @@ interface SlideRendererProps {
   theme: MonitorTheme;
   /** Bildrand in Prozent je Seite (@ME-067); ohne Angabe die Vorbelegung 5 %. */
   overscanPercent?: number;
+  /** Höhe des Wachhalten-Hinweises (@ME-006): solange er steht, rückt der Inhalt der Folie um sie nach unten. */
+  hinweisHoehe?: string;
   /** Gepinntes Spiel der Live-Folie (B-16e1): die Folie zeigt es auch nach Abpfiff. */
   pinnedMatchId?: string | null;
   /** Seite der Folie (B-16f1, ausgewertet ab f3). */
@@ -28,7 +30,7 @@ interface SlideRendererProps {
 }
 
 /** Wählt die Folien-Komponente nach Typ; unbekannte Typen fallen auf die Zuschauer-QR-Folie. */
-export function SlideRenderer({ slide, tournament, performanceSettings, theme, overscanPercent, pinnedMatchId, page = 0 }: SlideRendererProps) {
+export function SlideRenderer({ slide, tournament, performanceSettings, theme, overscanPercent, hinweisHoehe, pinnedMatchId, page = 0 }: SlideRendererProps) {
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
@@ -40,7 +42,7 @@ export function SlideRenderer({ slide, tournament, performanceSettings, theme, o
     alignItems: 'center',
     // safe: wird der Inhalt höher als die Fläche, läuft er nach unten statt oben in den Bildrand (VISUAL-DESIGN § 3)
     justifyContent: 'safe center',
-    ...randPadding(wirksamerRand(overscanPercent, null)),
+    ...randPadding(wirksamerRand(overscanPercent, null), hinweisHoehe),
     boxSizing: 'border-box',
     background: themeColors.backgroundGradient,
     color: themeColors.text,

@@ -19,28 +19,28 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-10 bis P1-12
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { displayLayout, monitorThemes } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
 import { useTranslation, I18nextProvider } from 'react-i18next';
 import { ANZEIGE_SPRACHE, anzeigeI18n } from '../../i18n/anzeigeSprache';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
-import { TimedNotice } from '../../components/ui/molecules/TimedNotice';
+import { WakeLockNotice } from '../../components/monitor/WakeLockNotice';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { vollbildUmschalten } from './vollbild';
 import { useBildrand } from './useBildrand';
-import {
-  istBrowserQuelle, istCacheTaste, istEingabeZiel, istVollbildTaste, WAKE_LOCK_HINWEIS_MS,
-} from './monitorDauerbetrieb';
+import { istCacheTaste, istEingabeZiel, istHinweisFolie, istVollbildTaste } from './monitorDauerbetrieb';
+import { useWakeLockHinweis } from './useWakeLockHinweis';
 import { useIdleCursor, useTastenAbfang, useWakeLockNachEingabe } from './useMonitorDauerbetrieb';
 import {
-  alleUebersprungen, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
+  alleUebersprungen, liveSpielLaeuft, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
 } from './slideProgramme';
 import { isSlideShowable } from './publicVisibility';
 import { monitorPageCount } from './slideContent';
 import { useSlideshow } from './useSlideshow';
 import { boundFieldNumbers, visibleGoal } from './monitorGoalFilter';
-import { getPerformanceSettings } from './monitorDisplayHelpers';
+import { getPerformanceSettings, resolveTheme } from './monitorDisplayHelpers';
 import { createLegacyMonitorSource } from './monitorDataSource';
 import { useMonitorDisplayData } from './useMonitorDisplayData';
 import { useMonitorEvents } from './useMonitorEvents';
@@ -99,28 +99,12 @@ function MonitorDisplayPageContent({
     ergebnisseAusgeblendet
   );
 
-  // L7: Hallen-Monitore laufen stundenlang unbeaufsichtigt; ohne Wake Lock dimmen Smart-TVs und
-  // Beamer-Laptops ab. Erst aktivieren, wenn ein Monitor geladen ist — auf der Fehlerseite wäre
-  // die Permission-Anfrage sinnlos. Kein Destructuring: noUnusedLocals ist aktiv.
+  // L7: Hallen-Monitore laufen stundenlang unbeaufsichtigt; ohne Wake Lock dimmen Smart-TVs und Beamer-Laptops ab.
+  // Erst aktivieren, wenn ein Monitor geladen ist (auf der Fehlerseite wäre die Anfrage sinnlos).
   const wakeLock = useWakeLock(monitor !== null);
   // B-17 Fixrunde 2: schlägt die erste Anfrage fehl (Safari), fordert die erste Eingabe sie erneut an.
-  useWakeLockNachEingabe(wakeLock.error, wakeLock.request);
-  // B-17 (@ME-006): Kann das Gerät den Bildschirm nicht anlassen, zeigt die Seite das einmal klein in einer
-  // Ecke. In der Browser-Quelle nie, dort steuert der Rechner den Bildschirm.
-  const wakeLockHinweis = wakeLock.error !== null
-    && !istBrowserQuelle(window.location.hash, navigator.userAgent);
-  // W4: „einmal“ ist ein Zustand der Seite. Gezeigt wird der Hinweis höchstens einmal je Seiten-Instanz, auch wenn
-  // die Seite zwischendurch in den Lade- oder Fehlerzustand geht und zurückkehrt.
-  const [hinweisPhase, setHinweisPhase] = useState<'bereit' | 'zeigt' | 'erledigt'>('bereit');
+  useWakeLockNachEingabe(wakeLock.status, wakeLock.request);
   const ansichtBereit = !loading && !error && tournament !== null && monitor !== null;
-  useEffect(() => {
-    if (hinweisPhase === 'bereit' && ansichtBereit && wakeLockHinweis) {
-      setHinweisPhase('zeigt');
-    } else if (hinweisPhase === 'zeigt' && (!ansichtBereit || !wakeLockHinweis)) {
-      setHinweisPhase('erledigt');
-    }
-  }, [hinweisPhase, ansichtBereit, wakeLockHinweis]);
-  const hinweisAbgelaufen = useCallback(() => setHinweisPhase('erledigt'), []);
 
   // Derived state
   const performanceSettings = useMemo(
@@ -179,6 +163,12 @@ function MonitorDisplayPageContent({
       && alleUebersprungen(slides, tournament?.matches ?? []);
     return rueckfallAktiv ? rueckfallFolie : slides[slideState.currentIndex] ?? null;
   }, [slides, slideState.currentIndex, slideState.pinnedMatchId, rueckfallFolie, tournament]);
+
+  // B-17 (@ME-006): 10-s-Hinweis als Ecke, nur ohne laufendes Spiel auf dem Feld (Regeln in useWakeLockHinweis)
+  // und nur auf den Ersatzfolien, solange gar kein Programm eingerichtet ist (monitor.slides leer), bzw. einer QR-Folie des Programms
+  const spielLaeuft = liveSpielLaeuft(slides, tournament?.matches ?? []);
+  const hinweisPhase = useWakeLockHinweis(wakeLock.status, ansichtBereit, spielLaeuft);
+  const hinweisZeigt = hinweisPhase && istHinweisFolie(currentSlide, monitor?.slides.length === 0 ? slides : monitor?.slides ?? []);
 
   // Heartbeat alle 30 s (Takt und Deps in useMonitorHeartbeat)
   useMonitorHeartbeat(monitor?.id ?? null, tournament?.id ?? null, slideState.currentIndex, cacheStatus.status);
@@ -241,6 +231,7 @@ function MonitorDisplayPageContent({
               performanceSettings={performanceSettings}
               theme={monitor.theme}
               overscanPercent={overscanPercent}
+              hinweisHoehe={hinweisZeigt ? displayLayout.noticeHeight : undefined}
               pinnedMatchId={slideState.pinnedMatchId}
               page={slideState.page}
             />
@@ -253,8 +244,8 @@ function MonitorDisplayPageContent({
         {slides.length > 1 && (
           <SlideDots count={slides.length} currentIndex={slideState.currentIndex} enableTransitions={performanceSettings.enableTransitions} />
         )}
-        {hinweisPhase === 'zeigt' && (
-          <TimedNotice text={t('dauerbetrieb.wakeLockHint')} durationMs={WAKE_LOCK_HINWEIS_MS} onDone={hinweisAbgelaufen} testId="monitor-wakelock-hint" />
+        {hinweisZeigt && (
+          <WakeLockNotice text={t('dauerbetrieb.wakeLockHint')} themeColors={monitorThemes[resolveTheme(monitor.theme)]} />
         )}
       </div>
 
