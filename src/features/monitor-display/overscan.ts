@@ -31,14 +31,15 @@ export function wirksamerRand(gespeichert: number | undefined, adressRand: numbe
 }
 
 /**
- * Innenabstand der Folie: oben/unten in Prozent der Folienhöhe, links/rechts in Prozent der Folienbreite.
+ * Innenabstand der Folie (oben optional um `zusatzOben` tiefer): oben/unten in Prozent der Folienhöhe, links/rechts in Prozent der Folienbreite.
  * `cqh`/`cqw` beziehen sich auf den Größen-Container um die Folie (Monitor-Seite); ohne Container gelten
  * Viewport-Einheiten, auf der Monitor-Seite (Vollfläche) dieselbe Fläche.
  */
-export function randPadding(prozent: number): Pick<CSSProperties, 'paddingTop' | 'paddingBottom' | 'paddingLeft' | 'paddingRight'> {
+export function randPadding(prozent: number, zusatzOben?: string): Pick<CSSProperties, 'paddingTop' | 'paddingBottom' | 'paddingLeft' | 'paddingRight'> {
   const hoch = `${prozent}cqh`;
   const breit = `${prozent}cqw`;
-  return { paddingTop: hoch, paddingBottom: hoch, paddingLeft: breit, paddingRight: breit };
+  // zusatzOben: Höhe des Hinweises (@ME-006), um die der Inhalt nach unten rückt
+  return { paddingTop: zusatzOben ? `calc(${hoch} + ${zusatzOben})` : hoch, paddingBottom: hoch, paddingLeft: breit, paddingRight: breit };
 }
 
 /** Rand in Bildpunkten für den Pixel-Shift (Einbrennschutz): höchstens 2, ohne Rand keine Verschiebung (@ME-019). */

@@ -127,8 +127,15 @@ describe('Bildrand wirkt nach dem Abruf (@ME-020)', () => {
     supabaseGet.mockResolvedValue(null);
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
     window.history.replaceState(null, '', '/#/display/tour-1/mon-1');
+    // Das Gerät sagt das Anlassen des Bildschirms zu: kein Wachhalten-Hinweis, der die Folie nach unten rückt (@ME-006)
+    const sentinel = { release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() };
+    Object.defineProperty(navigator, 'wakeLock', { value: { request: vi.fn().mockResolvedValue(sentinel) }, configurable: true });
   });
-  afterEach(() => { vi.useRealTimers(); window.history.replaceState(null, '', '/'); });
+  afterEach(() => {
+    vi.useRealTimers();
+    Reflect.deleteProperty(navigator, 'wakeLock');
+    window.history.replaceState(null, '', '/');
+  });
 
   const monitorMit = (overscanPercent?: number) => attachMonitor(turnier(), withMonitor({
     slides: [slide('custom-text', { headline: 'Rand' })],
