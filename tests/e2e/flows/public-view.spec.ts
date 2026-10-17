@@ -67,6 +67,7 @@ function createPublicTournament() {
         slot: 0,
         matchNumber: 1,
         status: 'scheduled',
+        matchStatus: 'scheduled',
         time: '10:00',
         scoreA: 0,
         scoreB: 0,
@@ -82,6 +83,7 @@ function createPublicTournament() {
         slot: 1,
         matchNumber: 2,
         status: 'finished',
+        matchStatus: 'finished',
         time: '10:15',
         scoreA: 3,
         scoreB: 1,
@@ -302,6 +304,7 @@ test.describe('Public Tournament View', () => {
     // GIVEN - Turnier mit Live-Match
     const tournament = createPublicTournament();
     tournament.matches[0].status = 'live';
+    tournament.matches[0].matchStatus = 'running';
     tournament.matches[0].scoreA = 1;
     tournament.matches[0].scoreB = 2;
 
@@ -334,6 +337,7 @@ test.describe('Public Tournament View', () => {
     // GIVEN - Live-Match
     const tournament = createPublicTournament();
     tournament.matches[0].status = 'live';
+    tournament.matches[0].matchStatus = 'running';
     tournament.matches[0].scoreA = 0;
     tournament.matches[0].scoreB = 0;
 
