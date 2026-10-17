@@ -143,13 +143,15 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
     };
 
     const inputStyle: CSSProperties = {
-      width: '40px',
+      width: cssVars.touchTargets.minimum,
+      height: cssVars.touchTargets.minimum,
       padding: cssVars.spacing.xs,
       border: inCorrectionMode
         ? `2px solid ${cssVars.colors.warning}`
         : `1px solid ${cssVars.colors.border}`,
       borderRadius: cssVars.borderRadius.sm,
-      fontSize: cssVars.fontSizes.sm,
+      // Eingabefelder mindestens 16 px und 44 px hoch (Touch-Ziel)
+      fontSize: cssVars.fontSizes.lg,
       fontWeight: cssVars.fontWeights.bold,
       textAlign: 'center' as const,
       backgroundColor: inCorrectionMode

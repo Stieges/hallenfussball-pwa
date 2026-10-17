@@ -85,6 +85,19 @@ describe('C-FINALRUNDE-MOBIL-EINGABE: offenes Finalrunden-Spiel am Handy eintrag
   });
 });
 
+describe('Eingabefelder der Tabelle (Laptop/Tablet quer) erfüllen Touch-Ziel und 16 px', () => {
+  it('Tore-Felder in der Tabellenzeile: 44 px hoch und breit, Schrift 16 px (Token)', () => {
+    const { container } = render(<FinalStageSchedule matches={[halbfinale()]} tournament={{ teams }} editable onScoreChange={vi.fn()} />);
+    const felder = Array.from(container.querySelectorAll<HTMLInputElement>('.desktop-view table input'));
+    expect(felder).toHaveLength(2);
+    for (const feld of felder) {
+      expect(feld.style.height).toBe(cssVars.touchTargets.minimum);
+      expect(feld.style.width).toBe(cssVars.touchTargets.minimum);
+      expect(feld.style.fontSize).toBe(cssVars.fontSizes.lg);
+    }
+  });
+});
+
 const AUSGANG = {
   strafstoss: { scoreA: 2, scoreB: 2, finalSource: { scoreA: 2, scoreB: 2, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty' as const } },
   verlaengerung: { scoreA: 2, scoreB: 2, finalSource: { scoreA: 2, scoreB: 2, overtimeScoreA: 1, overtimeScoreB: 0, decidedBy: 'overtime' as const } },
