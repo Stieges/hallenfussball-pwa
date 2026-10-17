@@ -44,8 +44,8 @@ async function seedLiveTournament(
   seedIndexedDB: TestOptions['seedIndexedDB'],
   heim: string = LANGER_NAME,
   gast: string = MITTEL_NAME,
-  /** Bildrand des Monitors in px (@ME-020); ohne Angabe gilt die Vorgabe (48 px). */
-  overscanPx?: number,
+  /** Bildrand des Monitors in Prozent je Seite (@ME-020, @ME-067); ohne Angabe gilt die Vorgabe (5 %). */
+  overscanPercent?: number,
 ): Promise<void> {
   const now = new Date().toISOString();
   // Merge I1: Team-IDs als UUID und Spielseiten als Slots (A-01/A-03) – der Monitor liest die Seiten aus dem Slot.
@@ -114,7 +114,7 @@ async function seedLiveTournament(
         transitionDuration: 0,
         theme: 'dark',
         performanceMode: 'auto',
-        ...(overscanPx === undefined ? {} : { overscanPx }),
+        ...(overscanPercent === undefined ? {} : { overscanPercent }),
         slides: [{ id: 's1', type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 }],
         createdAt: now,
         updatedAt: now,
@@ -133,9 +133,9 @@ async function oeffneMonitor(
   seedIndexedDB: TestOptions['seedIndexedDB'],
   heim: string = LANGER_NAME,
   gast: string = MITTEL_NAME,
-  overscanPx?: number,
+  overscanPercent?: number,
 ): Promise<void> {
-  await seedLiveTournament(seedIndexedDB, heim, gast, overscanPx);
+  await seedLiveTournament(seedIndexedDB, heim, gast, overscanPercent);
   await page.goto('/#/display/dauer-turnier/mon-1');
   await expect(page.locator(`[title="${heim}"]`)).toBeVisible({ timeout: 15_000 });
   await page.evaluate(() => document.fonts.ready);
@@ -328,11 +328,11 @@ for (const [breite, hoehe] of [[1280, 720], [1920, 1080]] as const) {
   });
 }
 
-// B-44a4 (@ME-020): Die Live-Folie misst an ihrer Fläche innerhalb des Bildrands. Mit Rand 0 und mit der Vorgabe 48 px
+// B-44a4 (@ME-020): Die Live-Folie misst an ihrer Fläche innerhalb des Bildrands. Mit Rand 0 % und mit der Vorgabe 5 %
 // ist nichts abgeschnitten, der Kopf (LIVE, Feld/Spiel, Gruppe) steht vollständig da.
-for (const rand of [0, 48] as const) {
+for (const rand of [0, 5] as const) {
   for (const [breite, hoehe] of [[1920, 1080], [800, 600]] as const) {
-    test.describe(`Bildrand ${rand} px bei ${breite}×${hoehe} (@ME-020, @ZM-086)`, () => {
+    test.describe(`Bildrand ${rand} % bei ${breite}×${hoehe} (@ME-020, @ZM-086)`, () => {
       test.use({ viewport: { width: breite, height: hoehe } });
 
       test('Kopf vollständig, nichts an der Folienfläche abgeschnitten, Teamnamen voll', async ({ page, seedIndexedDB }) => {

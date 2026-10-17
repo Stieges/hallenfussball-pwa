@@ -1,9 +1,10 @@
 import type { CSSProperties } from 'react';
-import { monitorThemes, displayMonitor, cssVars } from '../../../design-tokens';
+import { monitorThemes, cssVars } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
 import type { QrRueckfallFolie } from '../slideProgramme';
 import { resolveTheme } from '../monitorDisplayHelpers';
+import { randPadding, wirksamerRand } from '../overscan';
 import { LiveSlide } from './LiveSlide';
 import { StandingsSlide } from './StandingsSlide';
 import { ScheduleFieldSlide } from './ScheduleFieldSlide';
@@ -18,7 +19,8 @@ interface SlideRendererProps {
   tournament: Tournament;
   performanceSettings: PerformanceSettings;
   theme: MonitorTheme;
-  overscanPx?: number;
+  /** Bildrand in Prozent je Seite (@ME-067); ohne Angabe die Vorbelegung 5 %. */
+  overscanPercent?: number;
   /** Gepinntes Spiel der Live-Folie (B-16e1): die Folie zeigt es auch nach Abpfiff. */
   pinnedMatchId?: string | null;
   /** Seite der Folie (B-16f1, ausgewertet ab f3). */
@@ -26,7 +28,7 @@ interface SlideRendererProps {
 }
 
 /** Wählt die Folien-Komponente nach Typ; unbekannte Typen fallen auf die Zuschauer-QR-Folie. */
-export function SlideRenderer({ slide, tournament, performanceSettings, theme, overscanPx, pinnedMatchId, page = 0 }: SlideRendererProps) {
+export function SlideRenderer({ slide, tournament, performanceSettings, theme, overscanPercent, pinnedMatchId, page = 0 }: SlideRendererProps) {
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
@@ -36,8 +38,9 @@ export function SlideRenderer({ slide, tournament, performanceSettings, theme, o
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: `${overscanPx ?? displayMonitor.overscanDefaultPx}px`,
+    // safe: wird der Inhalt höher als die Fläche, läuft er nach unten statt oben in den Bildrand (VISUAL-DESIGN § 3)
+    justifyContent: 'safe center',
+    ...randPadding(wirksamerRand(overscanPercent, null)),
     boxSizing: 'border-box',
     background: themeColors.backgroundGradient,
     color: themeColors.text,

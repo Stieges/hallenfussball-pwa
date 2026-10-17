@@ -36,7 +36,7 @@ function monitor(overrides: Partial<TournamentMonitor> = {}): TournamentMonitor 
     transitionDuration: 500,
     theme: 'dark',
     performanceMode: 'auto',
-    overscanPx: 64,
+    overscanPercent: 7.5,
     slides: [
       slide({ id: 's-live', type: 'live', config: { fieldId: 'field-1' }, order: 0 }),
       slide({ id: 's-table', type: 'standings', config: { groupId: 'A' }, duration: 20, order: 1 }),
@@ -75,7 +75,7 @@ describe('exportMonitorConfig', () => {
 
     expect(exported.defaultSlideDuration).toBe(15);
     expect(exported.transition).toBe('fade');
-    expect(exported.overscanPx).toBe(64);
+    expect(exported.overscanPercent).toBe(7.5);
     expect(exported.slides.map(s => s.type)).toEqual(['live', 'standings', 'sponsor']);
     expect(exported.slides[1].duration).toBe(20);
     expect(exported.slides[2].config).toEqual({ sponsorName: 'Bäckerei Krume' });
@@ -182,7 +182,7 @@ describe('instantiateMonitorConfig', () => {
     expect(target.id).toBe('mon-new-1');
     expect(target.id).not.toBe('mon-src');
     expect(target.name).toBe('Hallenmonitor Halle');
-    expect(target.overscanPx).toBe(64);
+    expect(target.overscanPercent).toBe(7.5);
     expect(target.slides.map(s => s.id)).toEqual(['slide-new-2', 'slide-new-3', 'slide-new-4']);
     expect(target.slides.map(s => s.order)).toEqual([0, 1, 2]);
     expect(target.slides[2].config.sponsorId).toBe('sp-sued');
@@ -240,14 +240,14 @@ describe('instantiateMonitorConfig', () => {
   });
 
   it('nutzt den Standard-Bildrand, wenn die Datei keinen angibt', () => {
-    const payload = exportMonitorConfig([monitor({ overscanPx: undefined })], []);
+    const payload = exportMonitorConfig([monitor({ overscanPercent: undefined })], []);
     const { monitors } = instantiateMonitorConfig(payload, {
       sponsors: [],
       existingNames: [],
       generateId: idGenerator(),
       now: NOW,
     });
-    expect(monitors[0].overscanPx).toBe(48);
+    expect(monitors[0].overscanPercent).toBe(5);
   });
 });
 
@@ -299,7 +299,7 @@ describe('Treue von Export und Übernahme (Fixrunde F4, F6)', () => {
   it('Rundweg Export → Datei → Import → Übernehmen erhält Folien, Felder, Gruppen und Farben bis auf IDs', () => {
     const colors = { preset: 'modern' as const, homeColor: '#111111', awayColor: '#222222', useTeamColors: false };
     const source = monitor({
-      overscanPx: 12,
+      overscanPercent: 8,
       slides: [
         slide({ id: 'l', type: 'live', config: { fieldId: 'field-2', liveColorScheme: colors, whenIdle: { type: 'next-match', timeoutSeconds: 30 } }, order: 0 }),
         slide({ id: 'n', type: 'next-matches', config: { matchCount: 4 }, duration: 25, order: 1 }),
@@ -318,7 +318,7 @@ describe('Treue von Export und Übernahme (Fixrunde F4, F6)', () => {
       now: NOW,
     });
     const [target] = monitors;
-    expect(target.overscanPx).toBe(12);
+    expect(target.overscanPercent).toBe(8);
     expect(target.slides.map(({ type, duration, order, config }) => ({ type, duration, order, config }))).toEqual([
       { type: 'live', duration: null, order: 0, config: { fieldId: 'field-2', liveColorScheme: colors, whenIdle: { type: 'next-match', timeoutSeconds: 30 } } },
       { type: 'next-matches', duration: 25, order: 1, config: { matchCount: 4 } },
@@ -345,5 +345,38 @@ describe('Treue von Export und Übernahme (Fixrunde F4, F6)', () => {
     if (config.liveColorScheme) {config.liveColorScheme.homeColor = '#000000';}
 
     expect(source).toEqual(before);
+  });
+});
+
+describe('Bildrand in Prozent (@ME-067, R-MS-2)', () => {
+  const datei = (feld: Record<string, unknown>) => JSON.stringify({
+    kind: 'monitor-config', version: 1,
+    monitors: [{
+      name: 'M', defaultSlideDuration: 10, transition: 'none', transitionDuration: 0,
+      theme: 'dark', performanceMode: 'auto', slides: [{ type: 'qr-code', config: {}, duration: null }], ...feld,
+    }],
+  });
+  const uebernehme = (text: string) => {
+    const r = importMonitorConfig(text);
+    if (!r.ok) { return r; }
+    return instantiateMonitorConfig(r.payload, { sponsors: [], existingNames: [], generateId: () => 'x', now: NOW }).monitors[0];
+  };
+
+  it.each([0, 0.5, 5, 7.5, 10])('@ME-067 Rand %s % wird übernommen', (prozent) => {
+    expect(uebernehme(datei({ overscanPercent: prozent }))).toMatchObject({ overscanPercent: prozent });
+  });
+
+  it.each([-0.5, 10.5, 50, 5.3])('@ME-067 Gegenbeispiel: Rand %s % liegt außerhalb 0–10 oder nicht im Schritt 0,5 und wird abgelehnt', (prozent) => {
+    expect(importMonitorConfig(datei({ overscanPercent: prozent }))).toEqual({ ok: false, error: 'invalid' });
+  });
+
+  it('@ME-067 Gegenbeispiel: das alte Feld overscanPx wird nicht übernommen, es gilt die Vorgabe 5 %', () => {
+    const monitor = uebernehme(datei({ overscanPx: 48 }));
+    expect(monitor).toMatchObject({ overscanPercent: 5 });
+    expect(monitor).not.toHaveProperty('overscanPx');
+  });
+
+  it('@ME-067 die Vorlage „Hallen-Standard“ hat 5 %', () => {
+    expect(HALLEN_STANDARD.monitors[0].overscanPercent).toBe(5);
   });
 });

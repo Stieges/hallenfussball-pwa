@@ -1,4 +1,4 @@
-import { liveColorSchemeDefaults } from '../design-tokens/display';
+import { displayMonitor, liveColorSchemeDefaults } from '../design-tokens/display';
 /**
  * Monitor Types - Monitor-Konfigurator
  *
@@ -303,7 +303,7 @@ export interface TournamentMonitor {
   performanceMode: PerformanceMode;       // 'auto' | 'high' | 'low'
 
   // TV-Kalibrierung
-  overscanPx?: number;                    // 0-80, Default: 48
+  overscanPercent?: number;               // 0-10 % je Seite, Schritt 0,5, Default: 5 (@ME-067)
 
   // Slides
   slides: MonitorSlide[];
@@ -313,16 +313,15 @@ export interface TournamentMonitor {
   updatedAt: string;
 }
 
-/**
- * Default Monitor-Konfiguration
- */
+/** Default Monitor-Konfiguration; `MONITOR_OVERSCAN` = Grenzen und Vorbelegung des Bildrands in % (@ME-067) */
+export const MONITOR_OVERSCAN = displayMonitor.overscan;
 export const DEFAULT_MONITOR: Omit<TournamentMonitor, 'id' | 'name' | 'createdAt' | 'updatedAt'> = {
   defaultSlideDuration: 15,
   transition: 'fade',
   transitionDuration: 500,
   theme: 'dark',
   performanceMode: 'auto',
-  overscanPx: 48,
+  overscanPercent: MONITOR_OVERSCAN.defaultPercent,
   slides: [],
 };
 

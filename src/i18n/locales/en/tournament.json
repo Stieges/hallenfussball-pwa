@@ -729,7 +729,8 @@
       "transition": "Transition",
       "performanceLabel": "Performance",
       "themeLabel": "Color Scheme",
-      "overscan": "TV margin ({{px}}px)",
+      "overscan": "Screen margin ({{prozent}} %)",
+      "overscanHint": "The preset of 5 % suits most TVs",
       "noMargin": "No margin",
       "transitions": {
         "fade": "Fade",
