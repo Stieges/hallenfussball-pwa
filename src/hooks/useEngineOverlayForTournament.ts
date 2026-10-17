@@ -14,6 +14,7 @@ import { applyEngineOverlay, engineOverlayFields, type EngineOverlayFields } fro
 import { useMatchEngineContextOptional } from '../features/match-engine/useMatchEngineContext';
 import type { MatchEngineContextValue } from '../features/match-engine/matchEngineContextInstance';
 import { buildValidMatches } from './useEngineMatches';
+import { useEnsureLocalEngineMatches } from '../features/match-engine/useEnsureLocalEngineMatches';
 
 /** externalId (Original-Schreibweise) -> Engine-Ansicht hat TATSAECHLICHEN Inhalt (`log.length > 0`,
  * dasselbe Kriterium wie `computeOverlaidTournament`). Wiederverwendet fuer die Schreibpfad-
@@ -90,6 +91,7 @@ function computeOverlaidTournament(
 
 export function useEngineOverlayForTournament(tournament: Tournament | null): Tournament | null {
   const context = useMatchEngineContextOptional();
+  useEnsureLocalEngineMatches(tournament, context); // A-08f3e3: lokale Kopien mit Einträgen nach dem Neuladen
   const cacheRef = useRef<OverlayCache | null>(null);
 
   const getSnapshot = useCallback((): Tournament | null => {
