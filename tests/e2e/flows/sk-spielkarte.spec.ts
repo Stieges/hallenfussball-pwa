@@ -166,6 +166,21 @@ test.describe('@OB-064 Spielplan der Verwaltung, Laptop 1280×800: Tabellenzeile
     await bild(page, 'desktop-1280-tabelle-gruppenphase', page.locator('.desktop-view').first());
   });
 
+  test('offenes Spiel (Platz 3): Heim und Gast haben dieselbe Schriftstärke, nur Sieger beendeter Spiele sind fett', async ({ page }) => {
+    const zeile = page.locator('.final-stage-schedule table tbody tr').nth(3);
+    const namen = zeile.locator('td:nth-child(4), td:nth-child(6)');
+    const gewichte = await namen.evaluateAll((tds) => tds.map((t) => getComputedStyle(t).fontWeight));
+    expect(gewichte).toHaveLength(2);
+    expect(gewichte[0]).toBe(gewichte[1]);
+    expect(Number(gewichte[0])).toBeLessThan(700);
+    // Gegenbeispiel beendet (Halbfinale 1): Sieger fett, Verlierer nicht
+    const hf1 = await page.locator('.final-stage-schedule table tbody tr').nth(0).locator('td:nth-child(4), td:nth-child(6)')
+      .evaluateAll((tds) => tds.map((t) => Number(getComputedStyle(t).fontWeight)));
+    expect(hf1[0]).toBeGreaterThanOrEqual(700);
+    expect(hf1[1]).toBeLessThan(700);
+    await bild(page, 'desktop-1280-tabelle-zeile-16-platz-3', page.locator('.final-stage-schedule table'));
+  });
+
   test('Gegenbeispiel: ein regulär beendetes Gruppenspiel trägt keinen Zusatz', async ({ page }) => {
     const gruppe = page.locator('[data-testid^="match-circle-"]');
     const texte = await gruppe.allTextContents();

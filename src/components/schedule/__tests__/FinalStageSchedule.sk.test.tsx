@@ -98,6 +98,30 @@ describe('Eingabefelder der Tabelle (Laptop/Tablet quer) erfüllen Touch-Ziel un
   });
 });
 
+describe('@OB-064 Schriftstärke: nur der Sieger eines beendeten Spiels ist fett', () => {
+  const zelle = (container: HTMLElement, name: string) => within(container.querySelector<HTMLElement>('.desktop-view table')!).getByText(name).closest('td')!;
+  const gewichtVon = (el: HTMLElement) => el.style.fontWeight || getComputedStyle(el).fontWeight;
+
+  it('offenes Spiel: Heim und Gast der Tabelle haben dieselbe Schriftstärke', () => {
+    const { container } = render(<FinalStageSchedule matches={[halbfinale()]} tournament={{ teams }} editable onScoreChange={vi.fn()} />);
+    expect(gewichtVon(zelle(container, 'FC Nord'))).toBe(gewichtVon(zelle(container, 'SG Mitte')));
+    expect(gewichtVon(zelle(container, 'SG Mitte'))).not.toBe(cssVars.fontWeights.bold);
+  });
+
+  it('offenes Spiel: Heim und Gast der Handy-Karte haben dieselbe Schriftstärke', () => {
+    const { container } = render(<FinalStageSchedule matches={[halbfinale()]} tournament={{ teams }} editable onScoreChange={vi.fn()} />);
+    const karte = within(container.querySelector<HTMLElement>('.mobile-view')!);
+    expect(karte.getByText('FC Nord').parentElement?.style.fontWeight).toBe(karte.getByText('SG Mitte').parentElement?.style.fontWeight);
+    expect(karte.getByText('FC Nord').parentElement?.style.fontWeight).not.toBe(cssVars.fontWeights.bold);
+  });
+
+  it('Gegenbeispiel beendet: nur der Sieger ist fett, der Verlierer normal', () => {
+    const { container } = render(<FinalStageSchedule matches={[halbfinale({ scoreA: 1, scoreB: 0 })]} tournament={{ teams }} finishedMatches={new Set([HF1])} />);
+    expect(gewichtVon(zelle(container, 'FC Nord'))).toBe(cssVars.fontWeights.bold);
+    expect(gewichtVon(zelle(container, 'SG Mitte'))).not.toBe(cssVars.fontWeights.bold);
+  });
+});
+
 const AUSGANG = {
   strafstoss: { scoreA: 2, scoreB: 2, finalSource: { scoreA: 2, scoreB: 2, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty' as const } },
   verlaengerung: { scoreA: 2, scoreB: 2, finalSource: { scoreA: 2, scoreB: 2, overtimeScoreA: 1, overtimeScoreB: 0, decidedBy: 'overtime' as const } },
