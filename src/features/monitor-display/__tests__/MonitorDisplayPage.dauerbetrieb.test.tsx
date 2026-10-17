@@ -1,19 +1,15 @@
 /**
- * Monitor-Seite im Dauerbetrieb (B-17 + Fixrunde 1): Mauszeiger, Vollbild-Taste, Tasten, Hinweis, Bildrand.
- * Szenarien: @ME-002, @ME-003, @ME-005, @ME-006, @ME-019, @ME-020, @ME-021, @ME-022, @ZM-130.
- * Gegenbeispiele: Leertaste und Pfeile wirken nicht (@ME-022); Escape verlässt die Seite nicht; der Hinweis erscheint
- * nie in der Browser-Quelle und höchstens einmal je Seite.
+ * Monitor-Seite im Dauerbetrieb (B-17): Mauszeiger, Vollbild-Taste, Tasten, Bildrand, Vollbild-Rückfall.
+ * Szenarien: @ME-002, @ME-003, @ME-020, @ME-021, @ME-022, @ZM-130.
+ * Gegenbeispiele: Leertaste und Pfeile wirken nicht (@ME-022); Escape verlässt die Seite nicht.
+ * Der Wachhalten-Hinweis (@ME-006) steht in MonitorDisplayPage.wachhalten.test.tsx.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import type { Tournament } from '../../../types/tournament';
 import { PERFORMANCE_PROFILES } from '../../../types/monitor';
-import deMonitor from '../../../i18n/locales/de/monitor.json';
-import enMonitor from '../../../i18n/locales/en/monitor.json';
 import { attachMonitor, buildTournament, slide, withMonitor } from './monitorFixture';
 import { SlideRenderer } from '../slides/SlideRenderer';
-import { monitorThemes } from '../../../design-tokens';
-import { getContrastRatio } from '../../../design-tokens/display';
 
 const { supabaseGet, localGet } = vi.hoisted(() => ({
   supabaseGet: vi.fn(),
@@ -45,9 +41,6 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 }));
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
-
-/** Die Test-Umgebung liefert den Schlüssel als Text (src/test/setup.ts); der DE/EN-Wortlaut steht im JSON-Test unten. */
-const HINWEIS = 'monitor:dauerbetrieb.wakeLockHint';
 
 function monitorTurnier(overscanPx?: number, folien = [
   slide('custom-text', { headline: 'Folie A' }, 4),
@@ -215,229 +208,6 @@ describe('Taste „c“: Cache-Anzeige (@ME-021)', () => {
   });
 });
 
-/** Die Anfrage zum Anlassen bleibt unbeantwortet (LG webOS). */
-function wakeLockHaengt(): void {
-  const request = vi.fn().mockReturnValue(new Promise(() => undefined));
-  Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
-}
-
-function wakeLockAbgelehnt(): void {
-  const request = vi.fn().mockRejectedValue(Object.assign(new Error('nicht erlaubt'), { name: 'NotAllowedError' }));
-  Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
-}
-
-/**
- * @ME-006, Beispielzeilen wörtlich: „der Browser lässt das Anlassen des Bildschirms nicht zu“ und „der Browser
- * beantwortet die Anfrage zum Anlassen des Bildschirms 5 Sekunden lang weder mit Ja noch mit Nein“.
- */
-const LAGEN: ReadonlyArray<readonly [string, () => void, number]> = [
-  ['der Browser lässt das Anlassen des Bildschirms nicht zu', wakeLockAbgelehnt, 0],
-  ['der Browser beantwortet die Anfrage 5 Sekunden lang weder mit Ja noch mit Nein', wakeLockHaengt, 5_000],
-];
-
-/** Live-Folie auf Feld 1 (Spiel 7 läuft, Gruppe A), danach eine Textfolie: Der Hinweis steht in der Kopfzeile der Live-Folie. */
-function liveTurnier(): Tournament {
-  return monitorTurnier(undefined, [
-    slide('live', { fieldId: 'field-1' }, 30),
-    slide('custom-text', { headline: 'Folie B' }),
-  ]);
-}
-
-/** Turnier, in dem auf Feld 2 kein Spiel läuft (Live-Folie fällt zurück) und Spiel 7 auf Feld 1 läuft. */
-function withMatchesIdle(folien: readonly ReturnType<typeof slide>[]): Tournament {
-  return monitorTurnier(undefined, [...folien]);
-}
-
-const hinweis = () => screen.queryByTestId('monitor-wakelock-hint');
-const gruppe = () => screen.queryByTestId('live-group');
-
-describe('Bildschirm bleibt an, Hinweis nur im normalen Browser (@ME-005, @ME-006)', () => {
-  beforeEach(() => { localGet.mockResolvedValue(liveTurnier()); });
-
-  it.each(LAGEN)('@ME-006 Lage „%s“: der Hinweis steht 10 Sekunden anstelle der Gruppen-Angabe in der Kopfzeile', async (_lage, einrichten, wartezeit) => {
-    einrichten();
-    seite();
-    // Die 5 Sekunden laufen ab der Anfrage; die Anfrage stellt die Seite, sobald der Monitor geladen ist.
-    await vorspulen(0);
-    await vorspulen(wartezeit);
-    expect(hinweis()).toHaveTextContent(HINWEIS);
-    expect(hinweis()?.closest('[data-testid="live-header"]')).not.toBeNull();
-    expect(gruppe()).not.toBeInTheDocument();
-    // kein Overlay: nichts ist fest an den Bildrand gesetzt
-    expect(hinweis()?.style.position).toBe('');
-    await vorspulen(10_000 - 1);
-    expect(hinweis()).toBeInTheDocument();
-    await vorspulen(1);
-    expect(hinweis()).not.toBeInTheDocument();
-    expect(gruppe()).toBeInTheDocument();
-  });
-
-  it('@ME-006: das Folienprogramm läuft weiter, auch solange der Hinweis ansteht', async () => {
-    wakeLockAbgelehnt();
-    localGet.mockResolvedValue(monitorTurnier());
-    seite();
-    await vorspulen(0);
-    expect(screen.getByText('Folie A')).toBeInTheDocument();
-    await vorspulen(4_000);
-    expect(screen.getByText('Folie B')).toBeInTheDocument();
-  });
-
-  it('@ME-006 Gegenbeispiel: vor Ablauf der 5 Sekunden ohne Antwort steht noch die Gruppe', async () => {
-    wakeLockHaengt();
-    seite();
-    await vorspulen(0);
-    await vorspulen(4_999);
-    expect(hinweis()).not.toBeInTheDocument();
-    expect(gruppe()).toBeInTheDocument();
-  });
-
-  it('@ME-006 Gegenbeispiel: antwortet der Browser nach 4,9 Sekunden mit Ja, erscheint nie ein Hinweis', async () => {
-    let zusagen: (s: unknown) => void = () => undefined;
-    const request = vi.fn().mockReturnValue(new Promise((res) => { zusagen = res; }));
-    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
-    seite();
-    await vorspulen(0);
-    await vorspulen(4_900);
-    zusagen({ release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() });
-    await vorspulen(10_000);
-    expect(hinweis()).not.toBeInTheDocument();
-    expect(gruppe()).toBeInTheDocument();
-  });
-
-  it('@ME-006: nimmt der Browser eine Zusage später zurück (release), zeigt der Monitor keinen Hinweis', async () => {
-    const sentinel = { release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() };
-    const request = vi.fn().mockResolvedValue(sentinel);
-    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
-    seite();
-    await vorspulen(0);
-    const freigabe = sentinel.addEventListener.mock.calls.find(([name]) => name === 'release')?.[1] as () => void;
-    act(() => { freigabe(); });
-    await vorspulen(1_000);
-    expect(hinweis()).not.toBeInTheDocument();
-  });
-
-  it('@ME-006 Gegenbeispiel: in der Browser-Quelle (/tv) erscheint auch nach 5 Sekunden ohne Antwort kein Hinweis', async () => {
-    wakeLockHaengt();
-    window.history.replaceState(null, '', '/#/tv');
-    seite();
-    await vorspulen(0);
-    await vorspulen(6_000);
-    expect(hinweis()).not.toBeInTheDocument();
-    expect(gruppe()).toBeInTheDocument();
-  });
-
-  /** @ME-006 „Wenn der Monitor startet“: Der Hinweis erscheint in jeder Startlage, auch ohne Kopfzeile in der Ecke. */
-  it.each([
-    ['Live-Folie mit laufendem Spiel', 'header', [slide('live', { fieldId: 'field-1' }, 30)]],
-    ['Live-Folie ohne laufendes Spiel (Feld 2)', 'corner', [slide('live', { fieldId: 'field-2' }, 30)]],
-    ['Tabelle', 'corner', [slide('standings', { groupId: 'A' }, 30)]],
-    ['Zuschauer-QR', 'corner', [slide('qr-code', {}, 30)]],
-    ['Textfolie', 'corner', [slide('custom-text', { headline: 'Folie A' }, 30)]],
-  ] as const)('@ME-006 Startfolie „%s“: der Hinweis steht 10 Sekunden (Lage: %s)', async (_name, lage, folien) => {
-    wakeLockAbgelehnt();
-    localGet.mockResolvedValue(withMatchesIdle(folien));
-    seite();
-    await vorspulen(0);
-    expect(hinweis()).toHaveTextContent(HINWEIS);
-    expect(hinweis()?.getAttribute('data-variant')).toBe(lage);
-    if (lage === 'corner') {
-      // Ecke oben rechts, im Bildrand (Standard 48 px, mindestens 5 %), nie unten
-      expect(hinweis()?.style.position).toBe('fixed');
-      expect(hinweis()?.style.top).toContain('48px');
-      expect(hinweis()?.style.right).toContain('48px');
-      expect(hinweis()?.style.bottom).toBe('');
-    }
-    await vorspulen(10_000);
-    expect(hinweis()).not.toBeInTheDocument();
-  });
-
-  it.each([
-    ['Live-Folie mit Spiel', [slide('live', { fieldId: 'field-1' }, 30)]],
-    ['Tabelle', [slide('standings', { groupId: 'A' }, 30)]],
-    ['Textfolie', [slide('custom-text', { headline: 'Folie A' }, 30)]],
-  ] as const)('@ME-006 Gegenbeispiel: bei Zusage des Browsers erscheint auf „%s“ nirgends ein Hinweis', async (_name, folien) => {
-    localGet.mockResolvedValue(withMatchesIdle(folien));
-    seite();
-    await vorspulen(0);
-    await vorspulen(11_000);
-    expect(hinweis()).not.toBeInTheDocument();
-  });
-
-  it('@ME-006: war der Bildschirm schon zugesagt, erscheint später nach Entzug und Ablehnung kein Hinweis mitten im Betrieb', async () => {
-    const sentinel = { release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() };
-    const request = vi.fn().mockResolvedValueOnce(sentinel).mockRejectedValue(new Error('Energiesparmodus'));
-    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
-    seite();
-    await vorspulen(0);
-    const freigabe = sentinel.addEventListener.mock.calls.find(([name]) => name === 'release')?.[1] as () => void;
-    act(() => { freigabe(); });
-    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
-    await vorspulen(0);
-    expect(request).toHaveBeenCalledTimes(2);
-    expect(hinweis()).not.toBeInTheDocument();
-  });
-
-  /** Hex-Farbe so, wie jsdom sie im Stil ausgibt (rgb). */
-  const alsRgb = (hex: string): string => {
-    const el = document.createElement('span');
-    el.style.color = hex;
-    return el.style.color;
-  };
-
-  it.each(['dark', 'light'] as const)('@ME-006 Thema „%s“: die Ecke trägt Farben und Rahmen dieses Themas, das Symbol hält 3 : 1', async (thema) => {
-    wakeLockAbgelehnt();
-    localGet.mockResolvedValue(attachMonitor(buildTournament(), withMonitor({ theme: thema, slides: [slide('qr-code', {}, 30)] })));
-    seite();
-    await vorspulen(0);
-    const farben = monitorThemes[thema];
-    expect(hinweis()?.getAttribute('data-variant')).toBe('corner');
-    expect(hinweis()?.style.color).toBe(alsRgb(farben.text));
-    const symbol = hinweis()?.querySelector('svg') as SVGElement;
-    const symbolHex = [farben.timerWarning, farben.text].find((c) => symbol.style.color === alsRgb(c));
-    expect(symbolHex, 'Symbolfarbe aus dem Thema').toBeDefined();
-    expect(getContrastRatio(symbolHex!, farben.background), 'Symbol mindestens 3 : 1').toBeGreaterThanOrEqual(3);
-  });
-
-  it('@ME-006: die Ecke rückt rechts um mindestens 5 % der Breite ein (eigenes Token), oben um 5 % der Höhe', async () => {
-    wakeLockAbgelehnt();
-    localGet.mockResolvedValue(attachMonitor(buildTournament(), withMonitor({ slides: [slide('qr-code', {}, 30)] })));
-    seite();
-    await vorspulen(0);
-    expect(hinweis()?.style.right).toContain('5vw');
-    expect(hinweis()?.style.top).toContain('5vh');
-  });
-
-  it('ohne Wake Lock (Schnittstelle fehlt) erscheint der Hinweis und verschwindet nach 10 Sekunden', async () => {
-    wakeLockFehlt();
-    seite();
-    await vorspulen(0);
-    expect(hinweis()).toHaveTextContent(HINWEIS);
-    await vorspulen(10_000);
-    expect(hinweis()).not.toBeInTheDocument();
-  });
-
-  it('Gegenbeispiel: mit Wake Lock erscheint kein Hinweis', async () => {
-    seite();
-    await vorspulen(0);
-    expect(hinweis()).not.toBeInTheDocument();
-  });
-
-  it('W4: der Hinweis erscheint nach Ablauf nie wieder, auch nicht nach Lade- oder Fehlerzustand', async () => {
-    wakeLockFehlt();
-    seite();
-    await vorspulen(0);
-    await vorspulen(10_000);
-    expect(hinweis()).not.toBeInTheDocument();
-
-    localGet.mockResolvedValue(null);
-    await vorspulen(30_000);
-    expect(screen.getByTestId('monitor-error-state')).toBeInTheDocument();
-
-    localGet.mockResolvedValue(liveTurnier());
-    await vorspulen(30_000);
-    expect(hinweis()).not.toBeInTheDocument();
-  });
-});
 
 describe('Bildrand je Monitor (@ME-020)', () => {
   const folie = () => slide('custom-text', { headline: 'Rand' });
@@ -489,46 +259,5 @@ describe('Vollbild ohne Standard-API und Mac-Navigation (B-17 Fixrunde 2)', () =
     act(() => { window.dispatchEvent(e); });
     expect(e.defaultPrevented).toBe(true);
     expect(onBack).not.toHaveBeenCalled();
-  });
-});
-
-describe('Wake Lock nach der ersten Eingabe (B-17 Fixrunde 2)', () => {
-  beforeEach(() => { localGet.mockResolvedValue(liveTurnier()); });
-
-  it('schlägt die erste Anfrage fehl, fordert die erste Eingabe sie erneut an und der Hinweis verschwindet', async () => {
-    const request = vi.fn()
-      .mockRejectedValueOnce(new Error('NotAllowedError'))
-      .mockResolvedValue({ release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() });
-    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
-    seite();
-    await vorspulen(0);
-    expect(request).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('monitor-wakelock-hint')).toBeInTheDocument();
-
-    act(() => { window.dispatchEvent(new Event('pointerdown')); });
-    await vorspulen(0);
-    expect(request).toHaveBeenCalledTimes(2);
-    expect(screen.queryByTestId('monitor-wakelock-hint')).not.toBeInTheDocument();
-  });
-
-  it('Gegenbeispiel: gelingt die erste Anfrage, gibt es keine zweite', async () => {
-    const request = vi.fn().mockResolvedValue({ release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() });
-    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
-    seite();
-    await vorspulen(0);
-    act(() => { window.dispatchEvent(new Event('pointerdown')); });
-    await vorspulen(0);
-    expect(request).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('Hinweis-Text in beiden Sprachen (@ME-006, i18n)', () => {
-  it('@ME-006 Wortlaut: der deutsche Hinweis ist der Satz des Szenarios', () => {
-    expect(deMonitor.dauerbetrieb.wakeLockHint).toBe('Der Bildschirm kann sich nach der Energiespar-Einstellung des Geräts abschalten.');
-  });
-
-  it('DE und EN haben den Schlüssel dauerbetrieb.wakeLockHint mit Text', () => {
-    expect(deMonitor.dauerbetrieb.wakeLockHint).toMatch(/Energiespar/);
-    expect(enMonitor.dauerbetrieb.wakeLockHint).toMatch(/power-saving/);
   });
 });

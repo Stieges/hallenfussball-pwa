@@ -26,8 +26,7 @@ import { PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor'
 import { useTranslation, I18nextProvider } from 'react-i18next';
 import { ANZEIGE_SPRACHE, anzeigeI18n } from '../../i18n/anzeigeSprache';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
-import { HeaderNoticeContext } from '../../components/monitor/HeaderNoticeContext';
-import { LiveHeaderNotice } from '../../components/monitor/LiveHeaderNotice';
+import { WakeLockNotice } from '../../components/monitor/WakeLockNotice';
 import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { vollbildUmschalten } from './vollbild';
@@ -35,7 +34,7 @@ import { istCacheTaste, istEingabeZiel, istVollbildTaste } from './monitorDauerb
 import { useWakeLockHinweis } from './useWakeLockHinweis';
 import { useIdleCursor, useTastenAbfang, useWakeLockNachEingabe } from './useMonitorDauerbetrieb';
 import {
-  alleUebersprungen, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
+  alleUebersprungen, liveSpielLaeuft, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
 } from './slideProgramme';
 import { isSlideShowable } from './publicVisibility';
 import { monitorPageCount } from './slideContent';
@@ -105,15 +104,7 @@ function MonitorDisplayPageContent({
   const wakeLock = useWakeLock(monitor !== null);
   // B-17 Fixrunde 2: schlägt die erste Anfrage fehl (Safari), fordert die erste Eingabe sie erneut an.
   useWakeLockNachEingabe(wakeLock.status, wakeLock.request);
-  // B-17 (@ME-006): 10-s-Hinweis, wenn das Gerät den Bildschirm nicht anlassen kann (Regeln in useWakeLockHinweis).
   const ansichtBereit = !loading && !error && tournament !== null && monitor !== null;
-  const hinweisZeigt = useWakeLockHinweis(wakeLock.status, ansichtBereit);
-  // Ohne Kopfzeile (andere Folien) steht der Hinweis als Ecke oben rechts, die Live-Kopfzeile übernimmt ihn.
-  const [kopfzeileDa, setKopfzeileDa] = useState(false);
-  const hinweisWert = useMemo(
-    () => ({ text: hinweisZeigt ? t('dauerbetrieb.wakeLockHint') : null, setHeaderPresent: setKopfzeileDa }),
-    [hinweisZeigt, t]
-  );
 
   // Derived state
   const performanceSettings = useMemo(
@@ -166,6 +157,10 @@ function MonitorDisplayPageContent({
     : null;
   const { slideState } = useSlideshow(slideProgram, transitionMs);
 
+  // B-17 (@ME-006, Variante B): 10-s-Hinweis als Ecke, nur ohne laufendes Spiel auf dem Feld (Regeln in useWakeLockHinweis)
+  const spielLaeuft = liveSpielLaeuft(slides, tournament?.matches ?? []);
+  const hinweisZeigt = useWakeLockHinweis(wakeLock.status, ansichtBereit, spielLaeuft);
+
   // Tor-Einblendung nach Feld der Live-Folien (B-16e1, @ZM-083)
   const boundFields = useMemo(() => boundFieldNumbers(monitor?.slides ?? []), [monitor]);
 
@@ -213,7 +208,6 @@ function MonitorDisplayPageContent({
   }
 
   return (
-    <HeaderNoticeContext.Provider value={hinweisWert}>
     <div style={{ ...containerStyle, cursor: cursorRuht ? 'none' : undefined }}>
       {/* Slide Container — pixelShift for OLED anti-burn-in */}
       <div style={{
@@ -252,9 +246,8 @@ function MonitorDisplayPageContent({
         />
       )}
 
-      {hinweisZeigt && !kopfzeileDa && (
-        <LiveHeaderNotice
-          variant="corner"
+      {hinweisZeigt && (
+        <WakeLockNotice
           text={t('dauerbetrieb.wakeLockHint')}
           themeColors={monitorThemes[resolveTheme(monitor.theme)]}
           overscanPx={overscanPx}
@@ -279,7 +272,6 @@ function MonitorDisplayPageContent({
 
       <MonitorKeyframes />
     </div>
-    </HeaderNoticeContext.Provider>
   );
 }
 

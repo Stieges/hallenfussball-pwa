@@ -217,8 +217,6 @@ export const displayLayout = {
     headerGap: '1.5cqh',
     // B-44a2: Marke gleich breit für LIVE, PAUSE, BEENDET
     badgeWidth: '11em',
-    // B-48a: schmalere Marke, solange der Hinweis neben ihr steht (der Satz soll in eine Zeile passen, auch bei 1280×720)
-    badgeWidthCompact: '7em',
     // B-44a2: Kindermodus: Namen oben bündig in der Kastenreihe, mit Abstand von oben
     kidsNamesOffset: '8cqh',
     // H3 @ZM-125: Kasten = 70 % einer Spalte; zwei Spalten teilen die Breite abzüglich seitlichem Polster (paddingX) = ca. 33 % Bildbreite
@@ -247,7 +245,7 @@ export const displayLayout = {
     paddingY: '1.5cqh',
     // B-44a3: seitliches Polster der Folie
     paddingX: '3cqw',
-    // B-48a (@ME-006): Hinweis anstelle der Gruppen-Angabe in der Kopfzeile, Stil „corner“ (Mockup v8)
+    // B-48a (@ME-006): Hinweis-Ecke oben rechts auf dem Feld ohne laufendes Spiel (Mockup v8)
     noticePadY: '0.4cqh',
     noticePadX: '0.8cqh',
     noticeBorderWidth: '0.3cqh',
@@ -392,6 +390,8 @@ export const monitorThemes = {
     timerOvertime: '#ff5252',
     timerWarning: '#ffb300',
     timerPaused: '#fbbf24',
+    // B-48a (@ME-006): Warnsymbol des Wachhalten-Hinweises, Kontrast mindestens 3 : 1 zum Thema
+    warningSymbol: '#ffb300',
 
     // Status Badges
     liveBadgeBg: 'rgba(0, 230, 118, 0.2)',
@@ -461,6 +461,8 @@ export const monitorThemes = {
     timerOvertime: '#dc2626',
     timerWarning: '#d97706',
     timerPaused: '#d97706',
+    // B-48a (@ME-006): Warnsymbol des Wachhalten-Hinweises, Kontrast mindestens 3 : 1 zum Thema (Freigabe Daniel)
+    warningSymbol: '#B45309',
 
     // Status Badges
     liveBadgeBg: 'rgba(4, 120, 87, 0.15)',
