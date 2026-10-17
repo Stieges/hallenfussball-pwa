@@ -1,108 +1,58 @@
 /**
- * scoreChangeHelpers (C3a-2a Fixrunde 3, P4/W11): aus `useScheduleTabActions.ts` ausgelagert,
- * damit die Datei < 300 Zeilen bleibt. Reine Funktionen (kein React) fuer `handleScoreChange`:
- * die Engine-Sperre (Fixrunde 2 Item 6 / P4) und die automatische Playoff-/Bracket-Anschluss-
- * Aufloesung (A2 Fixrunde 1).
+ * scoreChangeHelpers (A-08f3e2): reine Funktionen der Schnelleingabe im Spielplan.
+ * - `routeForStatus`: Weiche nach dem Status der Engine-Ansicht NACH `catchUp` (Plan § 1.3 Nr. 3, N-4).
+ * - `slotUpdatesAfterResult`: K.-o.-Auflösung (H-2) -- nur Slots, nie ein Spielstand.
+ * - `withEngineResult`: das Turnier mit dem gerade eingetragenen Engine-Stand eines Spiels.
  */
-import type { Match, Tournament } from '../../../types/tournament';
+import type { Tournament } from '../../../types/tournament';
 import type { MatchUpdate } from '../../../core/models/types';
-import { diffMatchResultStatusUpdates } from '../../../core/services';
+import type { MatchStatus } from '../../../core/match';
+import { applyEngineOverlay, engineOverlayFields, type MatchEngineView } from '../../../core/match/client';
 import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../../core/generators';
-import { buildValidMatches, isNewScheduledMatch, isForeignCandidate } from '../../../hooks/engineMatchModel';
-import { isMatchRunning } from '../utils';
+import type { ValidMatchEntry } from '../../../hooks/engineMatchModel';
 
-/**
- * Fixrunde 2/P4 (Fixrunde 3)/Minor 5 (Fixrunde 4): ein Engine-Spiel darf NICHT mehr ueber die
- * Schnelleingabe direkt scoreA/scoreB geschrieben bekommen -- das umginge MatchCommands/die RPC
- * komplett (kein Ereignis, keine Projektion, kein Sync). Drei Faelle zaehlen als Engine-Spiel:
- * (1) bereits laufend/beendet MIT echtem Engine-Inhalt (`overlaidMatchIds`, P4-Fix -- die reine
- * B1-Klausel allein sah nur NEUE Spiele, ein RUNNING/FINISHED Engine-Spiel rutschte durch);
- * (2) B1-neu (scheduled, kein Ergebnis) UND NICHT bereits ueber den Altweg (Legacy-
- * `isMatchRunning`, localStorage) in Betrieb -- sonst wuerde ein laufendes 0:0-Altspiel
- * faelschlich geblockt (Gegenprobe P4); (3) ein fremd laufendes Engine-Spiel, dessen Kopie auf
- * DIESEM Geraet noch nicht geladen ist (`isForeignCandidate`, Minor 5) -- steht (noch) NICHT in
- * `overlaidMatchIds`, ist aber dieselbe E1/P2-"unklar"-Einstufung: vorlaeufig sperren statt am
- * RPC vorbeizuschreiben.
- */
-export function isEngineControlledScoreChange(
-  tournament: Tournament,
-  matchId: string,
-  overlaidMatchIds: ReadonlySet<string>,
-): boolean {
-  if (overlaidMatchIds.has(matchId)) {
-    return true;
+/** enter = `RESULT_ENTRY`, correct = `CORRECTION` mit Grund, unskip = Rückfrage + Stapel, running = Ablehnung. */
+export type ResultEntryRoute = 'enter' | 'correct' | 'unskip' | 'running';
+
+export function routeForStatus(status: MatchStatus): ResultEntryRoute {
+  switch (status) {
+    case 'scheduled':
+      return 'enter';
+    case 'finished':
+      return 'correct';
+    case 'skipped':
+      return 'unskip';
+    default:
+      return 'running';
   }
-  const engineEntry = buildValidMatches(tournament).find((candidate) => candidate.externalId === matchId);
-  if (!engineEntry) {
-    return false;
+}
+
+/** Turnier mit der aktuellen Engine-Ansicht EINES Spiels überlagert (React hat evtl. noch nicht neu gerendert). */
+export function withEngineResult(tournament: Tournament, entry: ValidMatchEntry, view: MatchEngineView | null): Tournament {
+  if (!view) {
+    return tournament;
   }
-  if (isForeignCandidate(engineEntry, new Map())) {
-    return true;
-  }
-  const scoredMatch = tournament.matches.find((m) => m.id === matchId);
-  return !(scoredMatch && isMatchRunning(scoredMatch)) && isNewScheduledMatch(engineEntry, new Map());
+  return applyEngineOverlay(tournament, new Map([[entry.externalId, engineOverlayFields(view, entry.ctx)]]));
 }
 
 /**
- * @FU-080 / @TM-143 (B-40 Fixrunde 1/2): Beide Ergebnisse direkt im Spielplan eingetragen = Spiel ist
- * abgepfiffen (`finished`), sonst zählt es nicht in der Tabelle. Ein laufendes oder unterbrochenes Spiel
- * behält seinen Status (der Helfer steuert ihn). „Laufend/unterbrochen“ kommt aus der Live-Quelle
- * (`liveMatchIds` = useRunningMatchIds, auch lokale Pause/Halbzeit) oder dem gespeicherten Status
- * (die DB kennt zusätzlich 'paused') – nie aus einem eigenen localStorage-Lesen (@FU-087, Merge I1).
+ * H-2 (Plan A-08f3 v4): Playoff-Anschluss und Bracket-Platzhalter nach einem Ergebnis. Grundlage ist das
+ * überlagerte Turnier; zurück kommen NUR Slot-Updates (die Cloud übernimmt Seiten nur aus den Slots, A-02/A-03).
+ * Die Resolver schreiben `tournament.matches` neu -- deshalb auf einer flachen Kopie.
  */
-export function finishesOnScoreEntry(
-  match: Match,
-  scoreA: number | undefined,
-  scoreB: number | undefined,
-  liveMatchIds: ReadonlySet<string>,
-): boolean {
-  const enteredBothScores = typeof scoreA === 'number' && typeof scoreB === 'number';
-  const status = match.matchStatus as string | undefined;
-  const isLive = liveMatchIds.has(match.id) || status === 'running' || status === 'paused';
-  return enteredBothScores && !isLive;
-}
-
-/**
- * A2 Fixrunde 1 (Ruling AJ, "nur einen Weg"): Playoff-Anschluss (`autoResolvePlayoffsIfReady`)
- * und Bracket-Platzhalter (`resolveBracketAfterPlayoffMatch`) nach einem Ergebnis -- ergaenzt
- * `pendingUpdates` (IN PLACE) um jedes davon betroffene Spiel (Team-Zuweisungen, ggf. per
- * `diffMatchResultStatusUpdates` auch ein Ergebnis-Reset, falls sich die Teams geaendert haben).
- */
-export function applyAutoResolutionsAfterScoreChange(
-  tournament: Tournament,
-  updatedTournament: Tournament,
-  pendingUpdates: Map<string, MatchUpdate>,
-): void {
-  const playoffResolution = autoResolvePlayoffsIfReady(updatedTournament);
-  if (playoffResolution?.wasResolved) {
-    for (const id of playoffResolution.updatedMatchIds) {
-      const before = tournament.matches.find((m) => m.id === id);
-      const resolved = updatedTournament.matches.find((m) => m.id === id);
-      if (before && resolved) {
-        const [resultUpdate] = diffMatchResultStatusUpdates([before], [resolved]);
-        pendingUpdates.set(id, {
-          ...(resultUpdate ?? { id }),
-          // A-03: die Cloud übernimmt Seiten nur aus den Slots (A-02) – ohne sie ginge die Auflösung verloren.
-          slotA: resolved.slotA,
-          slotB: resolved.slotB,
-        });
-      }
-    }
+export function slotUpdatesAfterResult(tournament: Tournament): MatchUpdate[] {
+  const working: Tournament = { ...tournament };
+  const ids = new Set<string>();
+  const playoff = autoResolvePlayoffsIfReady(working);
+  if (playoff?.wasResolved) {
+    playoff.updatedMatchIds.forEach((id) => ids.add(id));
   }
-
-  const bracketResolution = resolveBracketAfterPlayoffMatch(updatedTournament);
-  if (bracketResolution?.wasResolved) {
-    for (const id of bracketResolution.updatedMatchIds) {
-      const resolved = updatedTournament.matches.find((m) => m.id === id);
-      if (resolved) {
-        pendingUpdates.set(id, {
-          ...pendingUpdates.get(id),
-          id,
-          // A-03: die Cloud übernimmt Seiten nur aus den Slots (A-02) – ohne sie ginge die Auflösung verloren.
-          slotA: resolved.slotA,
-          slotB: resolved.slotB,
-        });
-      }
-    }
+  const bracket = resolveBracketAfterPlayoffMatch(working);
+  if (bracket?.wasResolved) {
+    bracket.updatedMatchIds.forEach((id) => ids.add(id));
   }
+  return [...ids].flatMap((id) => {
+    const resolved = working.matches.find((m) => m.id === id);
+    return resolved ? [{ id, slotA: resolved.slotA, slotB: resolved.slotB }] : [];
+  });
 }

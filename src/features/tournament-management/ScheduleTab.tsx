@@ -33,6 +33,7 @@ import {
 import { isMatchFinished } from './utils';
 import { slotLabel, type SlotLabelContext } from '../../core/models/slotLabel';
 import { ScheduleToolbar, ScheduleViewMode, ScheduleConflictContent } from './components';
+import { ScheduleResultEntryPrompt } from './components/ScheduleResultEntryPrompt';
 import { GeneratedSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { ScheduleEditor } from '../schedule-editor';
@@ -233,10 +234,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     handleRefereeAssignment,
     handleResetRefereeAssignments,
     handleFieldChange,
+    resultEntry,
   } = useScheduleTabActions({
     tournament,
     onTournamentUpdate,
-    onLocalTournamentUpdate,
     onMatchesUpdate,
     isEditing,
     saveToHistory,
@@ -245,7 +246,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     setPendingReferee,
     setPendingField,
     lockFinishedResults: appSettings.lockFinishedResults,
-    liveMatchIds: runningMatchIds,
   });
 
   // ==========================================================================
@@ -384,6 +384,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           )}
         </Card>
       </div>
+
+      <ScheduleResultEntryPrompt prompt={resultEntry.prompt} answerPrompt={resultEntry.answerPrompt} />
 
       {/* Conflict Warning Dialog */}
       <ConfirmDialog
