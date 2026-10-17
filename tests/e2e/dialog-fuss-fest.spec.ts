@@ -139,6 +139,48 @@ test.describe('@OB-062 Kopf und Tasten-Fuß bleiben stehen', () => {
     });
   }
 
+  test('Gegenbeispiel sehr wenig Höhe (320×256, 400 % Zoom): alle Bedienelemente bleiben durch Scrollen erreichbar, Haupttaste vollständig', async ({ page, seedIndexedDB }, testInfo) => {
+    await page.setViewportSize({ width: 320, height: 256 });
+    await oeffnePdfDialog(page, seedIndexedDB);
+    await bild(page, testInfo, 'pdf-dialog-320x256-geoeffnet');
+    // „erreichbar“ = nach Scrollen mit dem Mausrad (nur echte Scrollbereiche) liegt das Element vollständig im Fenster und in jedem Vorfahren, der es beschneidet
+    const sichtbarGanz = (testid: string) =>
+      page.evaluate((id) => {
+        const el = document.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+        if (!el) {throw new Error(id);}
+        const r = el.getBoundingClientRect();
+        let top = 0, bottom = window.innerHeight;
+        for (let a = el.parentElement; a; a = a.parentElement) {
+          if (getComputedStyle(a).overflowY !== 'visible') {
+            const ar = a.getBoundingClientRect();
+            top = Math.max(top, ar.top);
+            bottom = Math.min(bottom, ar.bottom);
+          }
+        }
+        return { top: r.top, bottom: r.bottom, klipp: { top, bottom }, ganz: r.top >= top - 0.5 && r.bottom <= bottom + 0.5 };
+      }, testid);
+    await page.mouse.move(160, 128);
+    // Nutzerverhalten: weiter scrollen, bis sich nichts mehr bewegt (erst der Inhalt, dann die ganze Fläche)
+    for (let i = 0; i < 6; i++) {
+      await page.mouse.wheel(0, 3000);
+      await page.waitForTimeout(150);
+    }
+    const taste = await sichtbarGanz('pdf-save');
+    expect(taste.ganz, `Haupttaste nach Scrollen ganz sichtbar: ${JSON.stringify(taste)}`).toBe(true);
+    await bild(page, testInfo, 'pdf-dialog-320x256-ganz-unten');
+    for (let i = 0; i < 6; i++) {
+      await page.mouse.wheel(0, -3000);
+      await page.waitForTimeout(150);
+    }
+    // erste Auswahl der Fassung („Spielplan“) ist erreichbar
+    const karte = page.getByText('Alle Spiele mit Zeit, Feld und Teams.');
+    await karte.scrollIntoViewIfNeeded();
+    const box = await karte.boundingBox();
+    expect(box && box.height > 0 && box.y >= 0 && box.y + box.height <= 256, `Fassungswahl sichtbar: ${JSON.stringify(box)}`).toBe(true);
+    const inhalt = await page.evaluate(() => document.querySelector<HTMLElement>('[data-testid="dialog-surface-body"]')?.clientHeight ?? -1);
+    expect(inhalt, 'der Inhalt ist nicht auf 0 geschrumpft').toBeGreaterThan(0);
+  });
+
   test('Gegenbeispiel Blatt: am Handy sitzt der Fuß an der Unterkante, die Haupttaste hat den Abstand der Safe-Area-Regel', async ({ page, seedIndexedDB }) => {
     await page.setViewportSize({ width: 360, height: 640 });
     await oeffnePdfDialog(page, seedIndexedDB);

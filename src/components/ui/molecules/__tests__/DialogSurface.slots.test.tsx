@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { DialogSurface } from '../DialogSurface';
+import { cssVars } from '../../../../design-tokens';
 
 const originalWidth = window.innerWidth;
 afterEach(() => {
@@ -29,18 +30,17 @@ function mount(props: Partial<Parameters<typeof DialogSurface>[0]> = {}) {
 }
 
 describe('@OB-062 DialogSurface – Kopf und Fuß stehen, nur der Inhalt scrollt', () => {
-  it('Fläche ist eine Spalte ohne eigenen Scroll; Reihenfolge Kopf, Inhalt, Fuß', () => {
+  it('Fläche ist eine Spalte; Reihenfolge Kopf, Inhalt, Fuß', () => {
     const { panel, header, body, footer } = mount();
     expect(panel.style.display).toBe('flex');
     expect(panel.style.flexDirection).toBe('column');
-    expect(panel.style.overflowY).toBe('hidden');
     expect([...panel.children]).toEqual([header, body, footer]);
   });
 
-  it('der Inhalt scrollt allein und darf schrumpfen (min-height: 0), Kopf und Fuß schrumpfen nie', () => {
+  it('der Inhalt scrollt allein und schrumpft nur bis zur Mindesthöhe (Token), Kopf und Fuß schrumpfen nie', () => {
     const { header, body, footer } = mount();
     expect(body!.style.overflowY).toBe('auto');
-    expect(body!.style.minHeight).toBe('0px');
+    expect(body!.style.minHeight).toBe(cssVars.touchTargets.primary);
     expect(body!.style.flexShrink).toBe('1');
     expect(header!.style.flexShrink).toBe('0');
     expect(footer!.style.flexShrink).toBe('0');
@@ -89,6 +89,14 @@ describe('@OB-062 DialogSurface – Kopf und Fuß stehen, nur der Inhalt scrollt
   });
 });
 
+describe('@OB-060/WCAG 1.4.10 DialogSurface – bei sehr wenig Höhe bleibt alles erreichbar', () => {
+  it('der Inhalt hat eine Mindesthöhe und die Fläche scrollt als Ganzes, wenn nicht einmal die passt (kein overflow hidden)', () => {
+    const { panel, body } = mount();
+    expect(body!.style.minHeight).toBe(cssVars.touchTargets.primary);
+    expect(panel.style.overflowY).toBe('auto');
+  });
+});
+
 describe('@OB-063 DialogSurface – ein kurzer Dialog wird nicht gestreckt', () => {
   it('die Fläche hat keine feste oder Mindesthöhe, nur eine Obergrenze', () => {
     const { panel, body } = mount();
@@ -96,11 +104,24 @@ describe('@OB-063 DialogSurface – ein kurzer Dialog wird nicht gestreckt', () 
     expect(panel.style.minHeight).toBe('');
     expect(panel.style.maxHeight).toBe('90vh');
     expect(body!.style.height).toBe('');
-    expect(body!.style.minHeight).toBe('0px');
   });
 });
 
 describe('@OB-021/@OB-062 DialogSurface – Safe-Area am Fuß des Blatts', () => {
+  it('360 px, nur Kopf (kein Fuß): die Fläche trägt den Safe-Area-Abstand, Tasten im Inhalt liegen nicht im Bereich des Home-Indikators', () => {
+    setWidth(360);
+    const { panel } = mount({ footer: undefined });
+    expect(panel.getAttribute('data-layout')).toBe('sheet');
+    expect(panel.style.paddingBottom).toContain('safe-area-inset-bottom');
+  });
+
+  it('Gegenbeispiel 360 px mit Fuß: Safe-Area am Fuß, nicht doppelt an der Fläche', () => {
+    setWidth(360);
+    const { panel, footer } = mount();
+    expect(footer!.style.paddingBottom).toContain('safe-area-inset-bottom');
+    expect(panel.style.paddingBottom).toBe('');
+  });
+
   it('360 px (Blatt): der Fuß trägt den Safe-Area-Abstand, die Fläche selbst nicht mehr', () => {
     setWidth(360);
     const { panel, footer } = mount();

@@ -14,7 +14,8 @@
  *
  * Kopf und Fuß (S1, @OB-062/@OB-063): Mit den Slots `header` und/oder `footer` bleiben Kopf (Titel,
  * Schließen) und Tasten-Fuß stehen; nur der Inhalt (`children`) dazwischen scrollt. Die Fläche ist dann
- * eine Spalte (`overflow: hidden`), der Inhalt `flex: 1 1 auto` mit `min-height: 0` und eigenem Scroll.
+ * eine Spalte, der Inhalt `flex: 1 1 auto` mit eigenem Scroll und Mindesthöhe `touchTargets.primary`; unter dieser Höhe (400 % Zoom)
+ * scrollt die ganze Fläche, damit alles erreichbar bleibt (WCAG 1.4.10).
  * Ein kurzer Inhalt wird nicht gestreckt (die Fläche ist so hoch wie ihr Inhalt, höchstens `maxHeight`).
  * Am Blatt trägt der Fuß den Safe-Area-Abstand. Ohne Slots bleibt alles wie zuvor (Fläche scrollt als Ganzes).
  *
@@ -62,10 +63,12 @@ function useBelowSheetWidth(): boolean {
 
 // Kopf und Fuß schrumpfen nie; der Inhalt nimmt den Rest und scrollt allein (min-height: 0 lässt ihn unter die Höhe seines Inhalts schrumpfen).
 const slotFixed: CSSProperties = { flex: 'none' };
-const bodyStyle: CSSProperties = { flex: '1 1 auto', minHeight: 0, overflowY: 'auto' };
+// Mindesthöhe des Inhalts: ein Bedienelement der Haupttasten-Größe. Reicht der Platz nicht einmal dafür (z. B. 400 % Zoom, 320×256),
+// scrollt die ganze Fläche (WCAG 1.4.10): dann sind Kopf, Inhalt und Fuß erreichbar, statt dass der Inhalt auf 0 schrumpft.
+const bodyStyle: CSSProperties = { flex: '1 1 auto', minHeight: cssVars.touchTargets.primary, overflowY: 'auto' };
 const footerStyle = (isSheet: boolean): CSSProperties => ({
   flex: 'none',
-  borderTop: `1px solid ${cssVars.colors.border}`,
+  borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
   paddingTop: cssVars.spacing.md,
   paddingLeft: cssVars.spacing.xl,
   paddingRight: cssVars.spacing.xl,
@@ -217,9 +220,11 @@ export const DialogSurface = ({
     maxHeight: isFull ? '100%' : isSheet ? undefined : '90vh',
     marginTop: isSheet ? 'auto' : undefined,
     ...(hasSlots ? { display: 'flex', flexDirection: 'column' as const } : {}),
-    overflowY: isFull || hasSlots ? 'hidden' : 'auto',
+    // Mit Slots schrumpft der Inhalt vor der Fläche; die Fläche scrollt nur, wenn selbst die Mindesthöhe des Inhalts nicht mehr passt
+    overflowY: isFull ? 'hidden' : 'auto',
     position: 'relative',
-    paddingBottom: isSheet && !hasSlots ? `env(safe-area-inset-bottom, ${cssVars.spacing.md})` : undefined,
+    // Safe-Area: trägt der Fuß (hasFooter), sonst die Fläche (ohne Slots und mit Kopf allein)
+    paddingBottom: isSheet && !hasFooter ? `env(safe-area-inset-bottom, ${cssVars.spacing.md})` : undefined,
     animation: isSheet
       ? 'dialogSurfaceSlideUp 0.3s ease-out'
       : 'dialogSurfaceSlideIn 0.2s ease-out',
