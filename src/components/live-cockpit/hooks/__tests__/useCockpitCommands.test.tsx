@@ -4,7 +4,7 @@
  * Charakterisierung des bisherigen Verhaltens beim Zerlegen von `LiveCockpit.tsx`: Welche
  * `on…`-Rückrufe der Aufrufer bekommt, welche Meldung erscheint und dass die Auswahl danach
  * schließt. Testwerte: Spiel 11, FC Nord (Heim) gegen SV Süd (Gast), Nr. 7 (Gherkin „Spiel leiten“).
- * Die Meldungen (Toasts) fallen mit der Meldezeile (Aufgabe 2.3) weg.
+ * Die Meldungen laufen seit Aufgabe 2.3 über die Meldezeile (`melde(stufe, text)`, Bestätigung = Stufe 3).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
@@ -25,35 +25,35 @@ function setup(options: { offen?: OffenerEintrag | null; props?: Partial<LiveCoc
   const props = makeProps(match, options.props);
   const flows = { offen: options.offen ?? null, oeffne: vi.fn(), schliesse: vi.fn() };
   const sides = { getauscht: false, links: 'home' as const, rechts: 'away' as const, tausche: vi.fn() };
-  const toast = { showSuccess: vi.fn(), showInfo: vi.fn(), showError: vi.fn() };
+  const melde = vi.fn();
   const sound = { play: vi.fn(), activate: vi.fn().mockResolvedValue(undefined), isActivated: true };
   const state = { isOvertime: false };
   const hook = renderHook(() =>
-    useCockpitCommands({ props, settings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...options.settings }, sound, flows, sides, toast, isOvertime: state.isOvertime }),
+    useCockpitCommands({ props, settings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...options.settings }, sound, flows, sides, melde, isOvertime: state.isOvertime }),
   );
-  return { hook, props, flows, sides, toast, state };
+  return { hook, props, flows, sides, melde, state };
 }
 
 describe('useCockpitCommands – Tor', () => {
   it('Tor FC Nord, Nr. 7, Vorlage Nr. 3: onGoal mit Nummer und Vorlage, Erfolgsmeldung, Auswahl schließt', () => {
-    const { hook, props, flows, toast } = setup({ offen: { art: 'tor', seite: 'home' } });
+    const { hook, props, flows, melde } = setup({ offen: { art: 'tor', seite: 'home' } });
     hook.result.current.overlayHandlers.confirmGoal(7, [3, null], false);
     expect(props.onGoal).toHaveBeenCalledWith('match-11', 'fc-nord', 1, { playerNumber: 7, assists: [3], incomplete: false });
-    expect(toast.showSuccess).toHaveBeenCalledWith(expect.stringContaining('Tor für FC Nord (#7)'));
+    expect(melde).toHaveBeenCalledWith(3, expect.stringContaining('Tor für FC Nord (#7)'));
     expect(flows.schliesse).toHaveBeenCalledTimes(1);
   });
 
   it('Tor ohne Nummer („ohne Nr.“): onGoal ohne Nummer, Hinweismeldung', () => {
-    const { hook, props, toast } = setup({ offen: { art: 'tor', seite: 'away' } });
+    const { hook, props, melde } = setup({ offen: { art: 'tor', seite: 'away' } });
     hook.result.current.overlayHandlers.confirmGoal(null, undefined, true);
     expect(props.onGoal).toHaveBeenCalledWith('match-11', 'sv-sued', 1, { playerNumber: undefined, assists: undefined, incomplete: true });
-    expect(toast.showInfo).toHaveBeenCalledWith(expect.stringContaining('Tor für SV Süd (ohne Nr.)'));
+    expect(melde).toHaveBeenCalledWith(3, expect.stringContaining('Tor für SV Süd (ohne Nr.)'));
   });
 
   it('Tor ohne Angaben (Nummer übersprungen): einfache Erfolgsmeldung', () => {
-    const { hook, toast } = setup({ offen: { art: 'tor', seite: 'home' } });
+    const { hook, melde } = setup({ offen: { art: 'tor', seite: 'home' } });
     hook.result.current.overlayHandlers.confirmGoal(null);
-    expect(toast.showSuccess).toHaveBeenCalledWith('⚽ Tor für FC Nord!');
+    expect(melde).toHaveBeenCalledWith(3, 'Tor für FC Nord!');
   });
 
   it('Gegenbeispiel: ohne offene Tor-Auswahl zählt kein Tor', () => {
@@ -66,9 +66,9 @@ describe('useCockpitCommands – Tor', () => {
 
 describe('useCockpitCommands – Karte, Zeitstrafe, Wechsel, Foul', () => {
   it('Gelbe Karte für SV Süd, Nr. 7: onCard, Meldung mit Nummer, Auswahl schließt', () => {
-    const { hook, flows, toast } = setup(); // ohne Karten-Rückruf: nichts wird gesendet, nichts bricht
+    const { hook, flows, melde } = setup(); // ohne Karten-Rückruf: nichts wird gesendet, nichts bricht
     hook.result.current.overlayHandlers.confirmCard('YELLOW', 'sv-sued', 7);
-    expect(toast.showInfo).toHaveBeenCalledWith('Gelbe Karte für SV Süd (#7)');
+    expect(melde).toHaveBeenCalledWith(3, 'Gelbe Karte für SV Süd (#7)');
     expect(flows.schliesse).toHaveBeenCalledTimes(1);
   });
 
@@ -81,30 +81,30 @@ describe('useCockpitCommands – Karte, Zeitstrafe, Wechsel, Foul', () => {
 
   it('Zeitstrafe 2 Minuten für FC Nord, Nr. 4: onTimePenalty mit Dauer, Meldung, Auswahl schließt', () => {
     const onTimePenalty = vi.fn();
-    const { hook, flows, toast } = setup({ props: { onTimePenalty } });
+    const { hook, flows, melde } = setup({ props: { onTimePenalty } });
     hook.result.current.overlayHandlers.confirmTimePenalty(120, 'fc-nord', 4);
     expect(onTimePenalty).toHaveBeenCalledWith('match-11', 'fc-nord', { playerNumber: 4, durationSeconds: 120 });
-    expect(toast.showInfo).toHaveBeenCalledWith('2 Min Zeitstrafe für FC Nord (#4)');
+    expect(melde).toHaveBeenCalledWith(3, '2 Min Zeitstrafe für FC Nord (#4)');
     expect(flows.schliesse).toHaveBeenCalledTimes(1);
   });
 
   it('Wechsel bei FC Nord: Nr. 4 raus, Nr. 9 rein; leere Listen zeigen „?“', () => {
     const onSubstitution = vi.fn();
-    const { hook, toast } = setup({ props: { onSubstitution } });
+    const { hook, melde } = setup({ props: { onSubstitution } });
     hook.result.current.overlayHandlers.confirmSubstitution('fc-nord', [4], [9]);
     expect(onSubstitution).toHaveBeenCalledWith('match-11', 'fc-nord', { playersOut: [4], playersIn: [9] });
-    expect(toast.showInfo).toHaveBeenCalledWith('🔄 Wechsel FC Nord: #4 → #9');
+    expect(melde).toHaveBeenCalledWith(3, 'Wechsel FC Nord: #4 → #9');
     hook.result.current.overlayHandlers.confirmSubstitution('sv-sued', [], []);
     expect(onSubstitution).toHaveBeenLastCalledWith('match-11', 'sv-sued', { playersOut: undefined, playersIn: undefined });
-    expect(toast.showInfo).toHaveBeenLastCalledWith('🔄 Wechsel SV Süd: ? → ?');
+    expect(melde).toHaveBeenLastCalledWith(3, 'Wechsel SV Süd: ? → ?');
   });
 
   it('Foul für FC Nord: onFoul mit Team und Meldung', () => {
     const onFoul = vi.fn();
-    const { hook, toast } = setup({ props: { onFoul } });
+    const { hook, melde } = setup({ props: { onFoul } });
     hook.result.current.teamHandlers.home.onFoul();
     expect(onFoul).toHaveBeenCalledWith('match-11', 'fc-nord');
-    expect(toast.showInfo).toHaveBeenCalledWith('Foul für FC Nord');
+    expect(melde).toHaveBeenCalledWith(3, 'Foul für FC Nord');
   });
 
   it('die Knöpfe je Seite öffnen die passende Auswahl (Tor, Gelb-Rot, Wechsel)', () => {
@@ -121,10 +121,10 @@ describe('useCockpitCommands – Karte, Zeitstrafe, Wechsel, Foul', () => {
 describe('useCockpitCommands – Uhr und Bedienung', () => {
   it('Zeit anpassen im Countdown: Restzeit 4:00 bei 10 Minuten Spielzeit ergibt 360 s verstrichen', () => {
     const onAdjustTime = vi.fn();
-    const { hook, toast } = setup({ props: { onAdjustTime }, settings: { timerDirection: 'countdown' } });
+    const { hook, melde } = setup({ props: { onAdjustTime }, settings: { timerDirection: 'countdown' } });
     hook.result.current.overlayHandlers.confirmTimeAdjust(240);
     expect(onAdjustTime).toHaveBeenCalledWith('match-11', 360);
-    expect(toast.showInfo).toHaveBeenCalledWith('Zeit auf 4:00 gesetzt');
+    expect(melde).toHaveBeenCalledWith(3, 'Zeit auf 4:00 gesetzt');
   });
 
   it('Gegenbeispiel: bei aufwärts zählender Uhr gilt die eingegebene Zeit als verstrichen', () => {
@@ -135,25 +135,25 @@ describe('useCockpitCommands – Uhr und Bedienung', () => {
   });
 
   it('Anpfiff und Seiten tauschen melden sich; ohne Zeit-Rückruf gibt es keinen Zeit-Knopf', () => {
-    const { hook, props, sides, toast } = setup();
+    const { hook, props, sides, melde } = setup();
     hook.result.current.controls.onSwitchSides();
     expect(sides.tausche).toHaveBeenCalledTimes(1);
-    expect(toast.showInfo).toHaveBeenCalledWith('Seiten getauscht');
+    expect(melde).toHaveBeenCalledWith(3, 'Seiten getauscht');
     hook.result.current.controls.onStart();
     expect(props.onStart).toHaveBeenCalledWith('match-11');
-    expect(toast.showSuccess).toHaveBeenCalledWith('Spiel gestartet!');
+    expect(melde).toHaveBeenCalledWith(3, 'Spiel angepfiffen');
     expect(hook.result.current.controls.onEditTime).toBeUndefined();
     expect(hook.result.current.onTimerClick).toBeUndefined();
   });
 
-  it('Pause meldet „Spiel pausiert“, ein beendetes Spiel meldet beim Abpfiff „Spiel beendet“', () => {
-    const { hook, props, toast } = setup();
+  it('Pause meldet „Spiel pausiert“, der Abpfiff meldet „Spiel abgepfiffen“', () => {
+    const { hook, props, melde } = setup();
     hook.result.current.controls.onPauseResume();
     expect(props.onPause).toHaveBeenCalledWith('match-11');
-    expect(toast.showInfo).toHaveBeenCalledWith('Spiel pausiert');
+    expect(melde).toHaveBeenCalledWith(3, 'Spiel pausiert');
     hook.result.current.controls.onFinish();
     expect(props.onFinish).toHaveBeenCalledWith('match-11');
-    expect(toast.showInfo).toHaveBeenCalledWith('Spiel beendet');
+    expect(melde).toHaveBeenCalledWith(3, 'Spiel abgepfiffen');
   });
 });
 
