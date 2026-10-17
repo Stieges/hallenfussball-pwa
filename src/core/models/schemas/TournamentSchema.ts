@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { TeamTrainerSchema, TournamentGroupSchema, TournamentFieldSchema, RuntimeMatchEventSchema } from './CommonSchemas';
 import { RULEBOOK_MAX_LENGTH } from '../../../constants/rulebook';
 import { MatchSlotSchema, SlotSourceSchema } from './MatchSlotSchema';
+import { CLOCK_MODES } from '../../match/clockDisplay';
 
 const TeamLogoSchema = z.object({
     type: z.enum(['url', 'base64', 'initials']),
@@ -76,6 +77,20 @@ export const MatchSchema = z.object({
 
 // scheduledTime uses z.preprocess to handle both Date objects and ISO strings from JSON/localStorage
 
+/** Spielregeln „Spiel leiten“ (@SL-002, @SL-024, @SL-101, @W2A-013, @W2A-017, @W2A-035, @W2A-037). */
+const MatchCockpitRulesSchema = z.looseObject({
+    clockMode: z.enum(CLOCK_MODES).optional(),
+    foulLimit: z.number().int().min(1).nullable().optional(),
+    enabledCards: z.object({
+        yellow: z.boolean().optional(),
+        yellowRed: z.boolean().optional(),
+        red: z.boolean().optional(),
+        timePenalty: z.boolean().optional(),
+    }).optional(),
+    penaltyEndsOnGoal: z.boolean().optional(),
+    shortHandedSeconds: z.number().int().min(0).optional(),
+});
+
 export const TournamentSchema = z.object({
     id: z.string(),
     title: z.string(),
@@ -93,6 +108,7 @@ export const TournamentSchema = z.object({
     tournamentType: z.string(),
     mode: z.string(),
     rulebook: z.string().max(RULEBOOK_MAX_LENGTH).optional(),
+    matchCockpitSettings: MatchCockpitRulesSchema.nullish(),
 
     // Stats/Meta
     createdAt: z.string(),

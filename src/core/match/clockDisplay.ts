@@ -4,8 +4,10 @@
  * Gespielte Zeit = Spielzeit im aktuellen Abschnitt. Die Uhr zählt herunter.
  */
 
-/** Uhr-Art je Turnier (Vorbelegung: durchlaufend, letzte Minute angehalten). */
-export type ClockMode = 'durchlaufend-letzte-minute-angehalten' | 'immer-durchlaufend' | 'immer-angehalten';
+/** Uhr-Arten je Turnier – eine Quelle für Typ und Zod-Schema (kein zweites Enum). */
+export const CLOCK_MODES = ['durchlaufend-letzte-minute-angehalten', 'immer-durchlaufend', 'immer-angehalten'] as const;
+
+export type ClockMode = (typeof CLOCK_MODES)[number];
 
 export const DEFAULT_CLOCK_MODE: ClockMode = 'durchlaufend-letzte-minute-angehalten';
 

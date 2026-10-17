@@ -1,5 +1,6 @@
 import { SportId } from '../config/sports/types';
 import type { MatchSlot, SlotSource } from '../core/models/schemas/MatchSlotSchema';
+import type { ClockMode } from '../core/match/clockDisplay';
 
 // Core Tournament Types
 export type Sport = 'football' | 'other';
@@ -522,6 +523,14 @@ export type TimerDirection = 'countdown' | 'elapsed';
  */
 export type FinalDeciderType = 'penalty' | 'goldenGoal';
 
+/** Kartenarten, die das Cockpit je Turnier anbietet (@SL-024). */
+export interface EnabledCards {
+  yellow: boolean;
+  yellowRed: boolean;
+  red: boolean;
+  timePenalty: boolean;
+}
+
 /**
  * Match Cockpit Settings - Tournament-wide defaults for live match management
  *
@@ -562,8 +571,20 @@ export interface MatchCockpitSettings {
    */
   timePenaltyDurationSeconds: number;
 
+  // Spielregeln „Spiel leiten“ (@SL-002, @SL-024, @SL-101, @W2A-013, @W2A-017, @W2A-035, @W2A-037)
+  /** Uhr-Art. Default: 'durchlaufend-letzte-minute-angehalten' */
+  clockMode: ClockMode;
+  /** Foul-Grenze je Halbzeit (5. Foul = Grenze). null = ausgeschaltet. Default: 5 */
+  foulLimit: number | null;
+  /** Welche Kartenarten das Cockpit anbietet. Default: alle an */
+  enabledCards: EnabledCards;
+  /** Zeitstrafe endet bei Gegentor (bzw. Eigentor des bestraften Teams). Default: true */
+  penaltyEndsOnGoal: boolean;
+  /** Unterzahl-Dauer nach Gelb-Rot oder Rot in Sekunden. Default: 120 */
+  shortHandedSeconds: number;
+
   // Sound Settings
-  /** Enable end-of-match horn sound. Default: false */
+  /** Enable end-of-match horn sound. Default: true (@W2A-038, Vorbelegung des Turniers) */
   soundEnabled: boolean;
   /** Sound preset ID or 'custom' for uploaded sound. Default: 'horn-1' */
   soundId: MatchSoundPreset | null;
@@ -601,8 +622,15 @@ export const DEFAULT_MATCH_COCKPIT_SETTINGS: MatchCockpitSettings = {
   // Spielregel Zeitstrafe (@W2A-029)
   timePenaltyDurationSeconds: 120,
 
+  // Spielregeln „Spiel leiten“ (Vorgaben aus den Gherkin-Szenarien)
+  clockMode: 'durchlaufend-letzte-minute-angehalten',
+  foulLimit: 5,
+  enabledCards: { yellow: true, yellowRed: true, red: true, timePenalty: true },
+  penaltyEndsOnGoal: true,
+  shortHandedSeconds: 120,
+
   // Sound
-  soundEnabled: false,
+  soundEnabled: true,
   soundId: 'horn-1',
   soundVolume: 80,
   hasCustomSound: false,
@@ -611,6 +639,23 @@ export const DEFAULT_MATCH_COCKPIT_SETTINGS: MatchCockpitSettings = {
   hapticEnabled: true,
   wakeLockEnabled: true,
 };
+
+/**
+ * Ergänzt eine gespeicherte Cockpit-Konfiguration um die Vorgaben für fehlende Felder
+ * (alte Turniere ohne Spielregel-Felder). Fehlt die Konfiguration oder ist sie kein
+ * Objekt, bleibt sie `undefined`; die Verbraucher nehmen dann die Vorgaben selbst.
+ */
+export function completeMatchCockpitSettings(value: unknown): MatchCockpitSettings | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const gespeichert = value as Partial<MatchCockpitSettings>;
+  return {
+    ...DEFAULT_MATCH_COCKPIT_SETTINGS,
+    ...gespeichert,
+    enabledCards: { ...DEFAULT_MATCH_COCKPIT_SETTINGS.enabledCards, ...gespeichert.enabledCards },
+  };
+}
 
 /**
  * Per-match overrides for cockpit settings
