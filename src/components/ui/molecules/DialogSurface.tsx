@@ -12,6 +12,12 @@
  * size="fullscreen" bleibt Vollbild. `data-layout` zeigt die wirksame Form
  * (center | sheet | fullscreen), `data-placement` die angeforderte.
  *
+ * Kopf und Fuß (S1, @OB-062/@OB-063): Mit den Slots `header` und/oder `footer` bleiben Kopf (Titel,
+ * Schließen) und Tasten-Fuß stehen; nur der Inhalt (`children`) dazwischen scrollt. Die Fläche ist dann
+ * eine Spalte (`overflow: hidden`), der Inhalt `flex: 1 1 auto` mit `min-height: 0` und eigenem Scroll.
+ * Ein kurzer Inhalt wird nicht gestreckt (die Fläche ist so hoch wie ihr Inhalt, höchstens `maxHeight`).
+ * Am Blatt trägt der Fuß den Safe-Area-Abstand. Ohne Slots bleibt alles wie zuvor (Fläche scrollt als Ganzes).
+ *
  * Verbindliche Vorgaben: @OB-055 (deckende Fläche, Kontrast), @OB-056 (Einwilligung
  * – Schließen-Verhalten über `dismissible`).
  */
@@ -54,6 +60,19 @@ function useBelowSheetWidth(): boolean {
   return below;
 }
 
+// Kopf und Fuß schrumpfen nie; der Inhalt nimmt den Rest und scrollt allein (min-height: 0 lässt ihn unter die Höhe seines Inhalts schrumpfen).
+const slotFixed: CSSProperties = { flex: 'none' };
+const bodyStyle: CSSProperties = { flex: '1 1 auto', minHeight: 0, overflowY: 'auto' };
+const footerStyle = (isSheet: boolean): CSSProperties => ({
+  flex: 'none',
+  borderTop: `1px solid ${cssVars.colors.border}`,
+  paddingTop: cssVars.spacing.md,
+  paddingLeft: cssVars.spacing.xl,
+  paddingRight: cssVars.spacing.xl,
+  // Blatt: Abstand zur Unterkante plus Safe-Area (Notch, Home-Indikator), @OB-021
+  paddingBottom: isSheet ? `calc(${cssVars.spacing.md} + env(safe-area-inset-bottom, 0px))` : cssVars.spacing.md,
+});
+
 export interface DialogSurfaceProps {
   /** Ist der Dialog offen? Geschlossen rendert der Baustein nichts. */
   isOpen: boolean;
@@ -92,6 +111,10 @@ export interface DialogSurfaceProps {
   closeOnBack?: boolean;
   /** @OB-014: Enter löst in gefährlichen Rückfragen nichts aus. */
   suppressEnter?: boolean;
+  /** Kopf (Titel, Schließen): bleibt oben stehen, scrollt nicht mit (S1, @OB-062). */
+  header?: ReactNode;
+  /** Tasten-Fuß: bleibt unten stehen, scrollt nicht mit; trägt am Blatt den Safe-Area-Abstand (S1, @OB-062). */
+  footer?: ReactNode;
   /** Zusätzliche Klasse der Fläche (für Feinregeln der Aufrufer). */
   panelClassName?: string;
   /** data-testid der Fläche (Standard: dialog-surface). */
@@ -119,6 +142,8 @@ export const DialogSurface = ({
   suppressEnter,
   closeOnBack,
   panelClassName,
+  header,
+  footer,
   testId = 'dialog-surface',
   scrimTestId,
   children,
@@ -145,6 +170,10 @@ export const DialogSurface = ({
   // Zentrierte Dialoge werden am Handy zum Blatt; Vollbild bleibt Vollbild.
   const isSheet = !isFull && (placement === 'sheet' || belowSheetWidth);
   const layout = isFull ? 'fullscreen' : isSheet ? 'sheet' : 'center';
+  // Slots wirken nur in der normalen Größe; Vollbild ordnet der Aufrufer selbst (B-43b2-F)
+  const hasHeader = Boolean(header);
+  const hasFooter = Boolean(footer);
+  const hasSlots = !isFull && (hasHeader || hasFooter);
   const sheetHeight = placement === 'sheet' ? '80' : '90';
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -187,9 +216,10 @@ export const DialogSurface = ({
     // Blatt: Höhe über CSS (dvh mit vh-Rückfall, siehe Style-Block), sonst 90vh
     maxHeight: isFull ? '100%' : isSheet ? undefined : '90vh',
     marginTop: isSheet ? 'auto' : undefined,
-    overflowY: isFull ? 'hidden' : 'auto',
+    ...(hasSlots ? { display: 'flex', flexDirection: 'column' as const } : {}),
+    overflowY: isFull || hasSlots ? 'hidden' : 'auto',
     position: 'relative',
-    paddingBottom: isSheet ? `env(safe-area-inset-bottom, ${cssVars.spacing.md})` : undefined,
+    paddingBottom: isSheet && !hasSlots ? `env(safe-area-inset-bottom, ${cssVars.spacing.md})` : undefined,
     animation: isSheet
       ? 'dialogSurfaceSlideUp 0.3s ease-out'
       : 'dialogSurfaceSlideIn 0.2s ease-out',
@@ -211,7 +241,19 @@ export const DialogSurface = ({
         aria-labelledby={labelledBy ?? (ariaLabel ? undefined : generatedId)}
         aria-label={ariaLabel}
       >
-        {children}
+        {hasSlots ? (
+          <>
+            {hasHeader && <div style={slotFixed} data-testid="dialog-surface-header">{header}</div>}
+            <div style={bodyStyle} data-testid="dialog-surface-body">{children}</div>
+            {hasFooter && <div style={footerStyle(isSheet)} className="dialog-surface-footer" data-testid="dialog-surface-footer">{footer}</div>}
+          </>
+        ) : (
+          <>
+            {header}
+            {children}
+            {footer}
+          </>
+        )}
       </div>
 
       <style>{`
@@ -235,6 +277,10 @@ export const DialogSurface = ({
           }
           .dialog-surface-panel[data-layout="center"] {
             max-width: 100% !important;
+          }
+          .dialog-surface-footer {
+            padding-left: ${cssVars.spacing.md} !important;
+            padding-right: ${cssVars.spacing.md} !important;
           }
         }
       `}</style>

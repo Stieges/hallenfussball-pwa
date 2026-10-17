@@ -145,8 +145,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     margin: 0,
   };
 
+  // Unten nur spacing.md: zusammen mit dem Polster des Fußes (spacing.md) bleiben Satz und Tasten höchstens spacing.xl auseinander (@OB-063)
   const bodyStyle: CSSProperties = {
-    padding: cssVars.spacing.lg,
+    padding: `${cssVars.spacing.lg} ${cssVars.spacing.lg} ${cssVars.spacing.md}`,
   };
 
   const messageStyle: CSSProperties = {
@@ -168,13 +169,11 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     fontFamily: cssVars.fontFamilies.mono,
   };
 
+  // Rand, Polster und Safe-Area trägt der Fuß-Slot des Bausteins (S1, @OB-062); hier nur die Anordnung der Tasten
   const footerStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'flex-end',
     gap: cssVars.spacing.md,
-    padding: cssVars.spacing.lg,
-    borderTop: `1px solid ${cssVars.colors.border}`,
-    backgroundColor: cssVars.colors.surfaceDarkLight,
   };
 
   const buttonBaseStyle: CSSProperties = {
@@ -218,43 +217,19 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       labelledBy="confirm-dialog-title"
       initialFocusRef={isDanger ? cancelButtonRef : undefined}
       suppressEnter={isDanger}
-    >
-      <div style={headerStyle}>
-        <span style={iconStyle}>{variantConfig.icon}</span>
-        <h2 id="confirm-dialog-title" style={titleStyle}>{title}</h2>
-      </div>
-
-      <div style={bodyStyle}>
-        <p style={messageStyle}>{message}</p>
-        {details && <div style={detailsStyle}>{details}</div>}
-      </div>
-
-      <div style={footerStyle}>
-        <button
-          ref={cancelButtonRef}
-          style={cancelButtonStyle}
-          onClick={effectiveOnCancel}
-          data-testid="confirm-dialog-cancel"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = cssVars.colors.surfaceLight;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          {effectiveCancelText}
-        </button>
-        {secondaryAction && (
+      header={
+        <div style={headerStyle}>
+          <span style={iconStyle}>{variantConfig.icon}</span>
+          <h2 id="confirm-dialog-title" style={titleStyle}>{title}</h2>
+        </div>
+      }
+      footer={
+        <div style={footerStyle}>
           <button
-            style={{
-              ...cancelButtonStyle,
-              ...(secondaryAction.variant === 'danger' && {
-                borderColor: cssVars.colors.error,
-                color: cssVars.colors.error,
-              }),
-            }}
-            onClick={handleSecondaryAction}
-            data-testid="confirm-dialog-secondary"
+            ref={cancelButtonRef}
+            style={cancelButtonStyle}
+            onClick={effectiveOnCancel}
+            data-testid="confirm-dialog-cancel"
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = cssVars.colors.surfaceLight;
             }}
@@ -262,23 +237,49 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
-            {secondaryAction.text}
+            {effectiveCancelText}
           </button>
-        )}
-        <button
-          ref={confirmButtonRef}
-          style={confirmButtonStyle}
-          onClick={onConfirm}
-          data-testid="confirm-dialog-confirm"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = variantConfig.confirmHover;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = variantConfig.confirmBg;
-          }}
-        >
-          {effectiveConfirmText}
-        </button>
+          {secondaryAction && (
+            <button
+              style={{
+                ...cancelButtonStyle,
+                ...(secondaryAction.variant === 'danger' && {
+                  borderColor: cssVars.colors.error,
+                  color: cssVars.colors.error,
+                }),
+              }}
+              onClick={handleSecondaryAction}
+              data-testid="confirm-dialog-secondary"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = cssVars.colors.surfaceLight;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              {secondaryAction.text}
+            </button>
+          )}
+          <button
+            ref={confirmButtonRef}
+            style={confirmButtonStyle}
+            onClick={onConfirm}
+            data-testid="confirm-dialog-confirm"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = variantConfig.confirmHover;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = variantConfig.confirmBg;
+            }}
+          >
+            {effectiveConfirmText}
+          </button>
+        </div>
+      }
+    >
+      <div style={bodyStyle}>
+        <p style={messageStyle}>{message}</p>
+        {details && <div style={detailsStyle}>{details}</div>}
       </div>
     </DialogSurface>
   );

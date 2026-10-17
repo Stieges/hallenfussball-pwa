@@ -52,7 +52,23 @@ export const PDFExportDialog = ({ isOpen, onClose, tournament, schedule, standin
   const title = state.step === 'hint' ? t('pdfExport.hints.title') : viewer ? t('pdfExport.titleViewer') : t('pdfExport.title');
 
   return (
-    <Dialog isOpen={isOpen} onClose={close} title={title}>
+    <Dialog
+      isOpen={isOpen}
+      onClose={close}
+      title={title}
+      footer={
+        <ExportDialogActions
+          step={state.step}
+          busy={state.busy}
+          failed={state.failed}
+          onCancel={close}
+          onSave={() => void save()}
+          onBack={reset}
+          onSaveAnyway={saveAnyway}
+          onClose={close}
+        />
+      }
+    >
       {state.step === 'form' ? (
         <PdfFormStep
           viewer={viewer}
@@ -76,16 +92,6 @@ export const PDFExportDialog = ({ isOpen, onClose, tournament, schedule, standin
           <span style={{ overflowWrap: 'anywhere', fontWeight: cssVars.fontWeights.semibold }}>{state.savedName}</span>
         </InlineNotice>
       ) : null}
-      <ExportDialogActions
-        step={state.step}
-        busy={state.busy}
-        failed={state.failed}
-        onCancel={close}
-        onSave={() => void save()}
-        onBack={reset}
-        onSaveAnyway={saveAnyway}
-        onClose={close}
-      />
     </Dialog>
   );
 };
