@@ -12,15 +12,12 @@ import userEvent from '@testing-library/user-event';
 import { CardDialog } from '../components/Dialogs/CardDialog';
 import { EventEditDialog } from '../components/Dialogs/EventEditDialog';
 import { GoalScorerDialog } from '../components/Dialogs/GoalScorerDialog';
-import { HalftimeResetDialog } from '../components/Dialogs/HalftimeResetDialog';
-import { RestartConfirmDialog } from '../components/Dialogs/RestartConfirmDialog';
 import { SettingsDialog } from '../components/Dialogs/SettingsDialog';
 import { SubstitutionDialog } from '../components/Dialogs/SubstitutionDialog';
 import { TimeAdjustDialog } from '../components/Dialogs/TimeAdjustDialog';
 import { TimePenaltyDialog } from '../components/Dialogs/TimePenaltyDialog';
 import { PenaltyShootoutDialog as LivePenaltyShootoutDialog } from '../components/Tiebreaker/PenaltyShootoutDialog';
 import { TiebreakerBanner } from '../components/Tiebreaker/TiebreakerBanner';
-import { ScoreEditDialog } from '../components/ScoreEditDialog';
 import { EditScoreDialog } from '../../match-cockpit/EditScoreDialog';
 import { EditTimeDialog } from '../../match-cockpit/EditTimeDialog';
 import { PenaltyShootoutDialog as MatchPenaltyShootoutDialog } from '../../match-cockpit/PenaltyShootoutDialog';
@@ -50,8 +47,6 @@ const KINDS: Kind[] = [
   { name: 'CardDialog', mount: () => void render(<CardDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
   { name: 'EventEditDialog', mount: () => void render(<EventEditDialog isOpen onClose={noop} event={editableEvent} homeTeam={home} awayTeam={away} onUpdate={noop} onDelete={noop} />) },
   { name: 'GoalScorerDialog', mount: () => void render(<GoalScorerDialog isOpen onClose={noop} onConfirm={noop} teamName="VfB Ufer" />) },
-  { name: 'HalftimeResetDialog', mount: () => void render(<HalftimeResetDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} homeFouls={2} awayFouls={3} currentHalf={1} />) },
-  { name: 'RestartConfirmDialog', mount: () => void render(<RestartConfirmDialog isOpen onClose={noop} onConfirm={noop} homeTeam="VfB Ufer" awayTeam="SC Nord" homeScore={1} awayScore={0} elapsedTime="04:12" />) },
   { name: 'SettingsDialog', mount: () => void render(<SettingsDialog isOpen onClose={noop} settings={DEFAULT_MATCH_COCKPIT_SETTINGS} onChange={noop} tournamentId="t1" />) },
   { name: 'SubstitutionDialog', mount: () => void render(<SubstitutionDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
   { name: 'SubstitutionDialog (Team gewählt)', mount: () => void render(<SubstitutionDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} preselectedTeamSide="home" />) },
@@ -59,7 +54,6 @@ const KINDS: Kind[] = [
   { name: 'TimePenaltyDialog', mount: () => void render(<TimePenaltyDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
   { name: 'Tiebreaker/PenaltyShootoutDialog', mount: () => void render(<LivePenaltyShootoutDialog homeTeamName="VfB Ufer" awayTeamName="SC Nord" onRecordShot={noop} onFinish={noop} onCancel={noop} />) },
   { name: 'Tiebreaker/TiebreakerBanner', mount: () => void render(<TiebreakerBanner homeTeamName="VfB Ufer" awayTeamName="SC Nord" score={2} onStartPenaltyShootout={noop} onEndAsDraw={noop} />) },
-  { name: 'ScoreEditDialog', mount: () => void render(<ScoreEditDialog isOpen onClose={noop} onConfirm={noop} currentHomeScore={1} currentAwayScore={0} homeTeamName="VfB Ufer" awayTeamName="SC Nord" />) },
   { name: 'match-cockpit/EditScoreDialog', mount: () => void render(<EditScoreDialog homeTeamName="VfB Ufer" awayTeamName="SC Nord" currentHomeScore={1} currentAwayScore={0} onSubmit={noop} onCancel={noop} />) },
   { name: 'match-cockpit/EditTimeDialog', mount: () => void render(<EditTimeDialog currentElapsedSeconds={125} durationSeconds={600} onSubmit={noop} onCancel={noop} />) },
   { name: 'match-cockpit/PenaltyShootoutDialog', mount: () => void render(<MatchPenaltyShootoutDialog match={liveMatch} onSubmit={noop} onCancel={noop} />) },
