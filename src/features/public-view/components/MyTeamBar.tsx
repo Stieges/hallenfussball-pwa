@@ -38,7 +38,7 @@ const toggleStyle = (active: boolean): CSSProperties => ({
   fontSize: cssVars.fontSizes.sm,
   background: active ? cssVars.colors.primarySubtle : 'transparent',
   color: active ? cssVars.colors.primary : cssVars.colors.textMuted,
-  border: `1px solid ${active ? cssVars.colors.primary : cssVars.colors.border}`,
+  border: `1px solid ${active ? cssVars.colors.primary : cssVars.colors.borderControl}`,
   cursor: 'pointer',
   transition: 'all 0.15s ease',
 });

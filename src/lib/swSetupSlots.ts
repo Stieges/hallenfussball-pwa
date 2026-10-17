@@ -56,6 +56,32 @@ export interface SwAutoReloadHandle {
   onMaybeIdle: () => Promise<void>;
   /** Removes listeners, intervals and the dialog observer (hook cleanup). */
   dispose: () => void;
+  /** Ein Neulade-Tor wurde gesetzt oder gelöst: Zustand neu bewerten (B-19b). */
+  onGateChanged: () => void;
+  /** Unlesbare Antwort (B-19b, @ME-032): sofort neu laden, sobald eine neue Version da ist. */
+  reloadNow: () => void;
+}
+
+/**
+ * Einsteckbares Neulade-Tor (B-19b, @ZM-124, @ZM-128, @ME-012). Ist ein Tor gesetzt, entscheidet es statt der
+ * Leerlauf-Prüfung, ob neu geladen werden darf; zusätzlich entfallen Toast und Update-Hinweis. Ohne Tor bleibt
+ * alles wie bisher.
+ */
+export interface ReloadGate {
+  /** true = jetzt darf neu geladen werden. Ein Wurf zählt als false. */
+  allowsReload: () => boolean;
+  /** Eine neue Version wartet (einmal je Version; auch wenn das Tor erst danach gesetzt wird). */
+  onUpdateWaiting?: () => void;
+}
+
+let reloadGate: ReloadGate | null = null;
+
+export function getReloadGate(): ReloadGate | null {
+  return reloadGate;
+}
+
+export function setReloadGateSlot(gate: ReloadGate | null): void {
+  reloadGate = gate;
 }
 
 /** Ersetzbare Options-Slots: werden bei Folgeaufrufen getauscht. */
@@ -92,4 +118,5 @@ export function replaceSwSetupSlots(slots: SwOptionSlots): void {
 export function __resetSwForTests(): void {
   instance?.handle.dispose();
   instance = undefined;
+  reloadGate = null;
 }

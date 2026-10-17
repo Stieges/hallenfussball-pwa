@@ -59,7 +59,7 @@ const styles = {
   select: {
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.bodySm,
@@ -182,7 +182,7 @@ const styles = {
     width: '100%',
     padding: cssVars.spacing.sm,
     background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.primary,
     fontSize: cssVars.fontSizes.bodySm,

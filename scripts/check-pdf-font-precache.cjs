@@ -35,6 +35,14 @@ function checkPdfFontPrecache(root) {
   const manifest = fs.readFileSync(sw, 'utf8');
   const assets = path.join(root, 'dist', 'assets');
   const chunks = fs.existsSync(assets) ? fs.readdirSync(assets).filter(name => name.endsWith('.js')) : [];
+  // Jeder Chunk wird genau einmal gelesen (nicht je Schrift): das Lesen der Dateien ist der teure Teil.
+  const contents = new Map();
+  const contentOf = name => {
+    if (!contents.has(name)) {
+      contents.set(name, fs.readFileSync(path.join(assets, name), 'utf8'));
+    }
+    return contents.get(name);
+  };
   const problems = [];
   const found = [];
   for (const source of FONT_SOURCES) {
@@ -43,7 +51,7 @@ function checkPdfFontPrecache(root) {
       problems.push(`${source}: keine base64-Schrift in der Quelldatei gefunden`);
       continue;
     }
-    const hits = chunks.filter(name => fs.readFileSync(path.join(assets, name), 'utf8').includes(probe));
+    const hits = chunks.filter(name => contentOf(name).includes(probe));
     if (hits.length !== 1) {
       problems.push(`${source}: ${hits.length} Chunks in dist/assets enthalten die Schrift (erwartet: genau 1)`);
       continue;

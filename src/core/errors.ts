@@ -42,6 +42,19 @@ export class RepositoryError extends AppError {
 }
 
 /**
+ * Eine empfangene Antwort lässt sich nicht in die Turnierform abbilden (B-19b, @ME-032). Unterklasse von
+ * RepositoryError (Vertrag: fehlerhafte Zeile scheitert als RepositoryError), wird nur beim Abbilden geworfen –
+ * nicht bei Netz- oder Abfragefehlern.
+ */
+export class UnreadableResponseError extends RepositoryError {
+  constructor(operation: string, originalError?: unknown) {
+    const original = originalError instanceof Error ? originalError.message : String(originalError);
+    super(operation, `Antwort nicht lesbar: ${original}`, originalError);
+    this.name = 'UnreadableResponseError';
+  }
+}
+
+/**
  * Error for authentication failures.
  */
 export class AuthenticationError extends AppError {

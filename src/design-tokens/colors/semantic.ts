@@ -82,13 +82,15 @@ export const semanticColorsDark = {
   // Border Colors
   // ---------------------------------------------------------------------------
   border: 'rgba(255, 255, 255, 0.1)',
-  borderLight: palette.neutral[600],
   borderMedium: 'rgba(255, 255, 255, 0.2)', // For medium-strength light borders
   borderActive: 'rgba(0, 230, 118, 0.3)',
   borderSolid: palette.neutral[700],
   borderSubtle: 'rgba(255, 255, 255, 0.06)',
   borderDefault: 'rgba(255, 255, 255, 0.12)',
-  borderStrong: palette.neutral[500],
+  /** Bedien-Rand (Knopf, Eingabefeld, Auswahl) >= 3:1 gegen Fläche – @OB-055, @OB-057 */
+  borderControl: palette.neutral[500],
+  /** Bedien-Rand auf erhöhter Fläche (surfaceLight) */
+  borderControlRaised: palette.neutral[300],
 
   // ---------------------------------------------------------------------------
   // Semantic/Status Colors
@@ -126,7 +128,8 @@ export const semanticColorsDark = {
   // ---------------------------------------------------------------------------
   onPrimary: '#0A1628',
   onSecondary: '#0A1628',
-  onError: palette.neutral[0],
+  /** C-DANGER-KONTRAST: dunkle Schrift auf #FF5252 = 5,7 : 1 (weiß hatte 3,2 : 1) */
+  onError: '#0A1628',
   onWarning: '#000000',
   onSuccess: palette.neutral[0],
 

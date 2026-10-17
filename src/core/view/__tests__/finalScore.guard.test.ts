@@ -5,6 +5,7 @@
  * Cockpit bis zu seinem Neubau. Eine neue Datei, die selbst einen Endstand rechnet, macht diesen Test rot.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -25,6 +26,7 @@ const ALLOWED: Readonly<Record<string, string>> = {
   'core/models/types.ts': 'Feldliste',
   'core/models/LiveMatch.ts': 'Typ LiveMatch',
   'core/models/schemas/TournamentSchema.ts': 'Zod-Schema',
+  'components/live-cockpit/types.ts': 'Typ LiveMatch (Cockpit-Form, deklariert nur; B-06 aus match-cockpit/MatchCockpit.tsx umgezogen)',
   // Transport: Spalten lesen/schreiben, keinen Endstand rechnen
   'core/repositories/supabaseMappers.ts': 'Mapper Cloud ↔ Match',
   'core/repositories/liveMatchMappers.ts': 'Mapper LiveMatch',
@@ -36,9 +38,6 @@ const ALLOWED: Readonly<Record<string, string>> = {
   'hooks/useTournamentManager.ts': 'Rohdaten → Match',
   // Cockpit: bis Cockpit 4.3 (Neubau), danach nur noch matchFinalScore
   'components/live-cockpit/LiveCockpit.tsx': 'Cockpit, bis Cockpit 4.3',
-  'components/match-cockpit/MatchCockpit.tsx': 'Cockpit, bis Cockpit 4.3',
-  'components/match-cockpit/PenaltyShootoutDialog.tsx': 'Cockpit, bis Cockpit 4.3',
-  'components/match-cockpit/TiebreakerBanner.tsx': 'Cockpit, bis Cockpit 4.3',
   'hooks/engineEventEditingSupport.ts': 'Cockpit-Ereignisbearbeitung, bis Cockpit 4.3',
   // PDF (Spur C, mit main gekommen): rechnet die Endstand-Darstellung selbst – ÜBERGANG bis A-36d (dann MatchView.score)
   'lib/pdf/matchResult.ts': 'PDF liest Verlängerung/Strafstoß selbst, bis A-36d',
@@ -72,11 +71,17 @@ function readersIn(files: ReadonlyArray<{ path: string; source: string }>): stri
 }
 
 describe('A-36b Wächter: Endstand nur zentral (@ET-002, @ET-013)', () => {
-  it('@ET-013 kein Leser von Verlängerung/Strafstoß außerhalb der namentlichen Liste', () => {
-    const files = sourceFiles(SRC).map((path) => ({ path: relative(SRC, path).split('\\').join('/'), source: readFileSync(path, 'utf8') }));
+  // Die ~860 Quelldateien werden parallel gelesen: Der Lesevorgang wartet auf das Dateisystem, nicht auf die CPU.
+  // Zeitlimit nur für diesen Test: Der Wächter muss alle Quelldateien lesen (Dateisystem-Arbeit). Messung einzeln ca. 1,3–2,1 s,
+  // unter voller Vitest-Last bis 16 s (Daniel, vorher). Der Prüfinhalt ist unverändert.
+  it('@ET-013 kein Leser von Verlängerung/Strafstoß außerhalb der namentlichen Liste', async () => {
+    const files = await Promise.all(sourceFiles(SRC).map(async (path) => ({
+      path: relative(SRC, path).split('\\').join('/'),
+      source: await readFile(path, 'utf8'),
+    })));
     const unexpected = readersIn(files).filter((path) => !(path in ALLOWED));
     expect(unexpected).toEqual([]);
-  });
+  }, 15_000);
 
   it('@ET-013 die Tabelle (calculations.ts) liest Verlängerung/Strafstoß nicht selbst (Auflage Tabelle)', () => {
     expect(READER.test(withoutComments(readFileSync(join(SRC, 'utils/calculations.ts'), 'utf8')))).toBe(false);

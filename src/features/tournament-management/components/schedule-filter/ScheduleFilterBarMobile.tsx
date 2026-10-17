@@ -61,7 +61,7 @@ export const ScheduleFilterBarMobile: React.FC<ScheduleFilterBarMobileProps> = (
     gap: cssVars.spacing.xs,
     padding: cssVars.spacing.sm,
     background: activeFilterCount > 0 ? `${cssVars.colors.primary}15` : cssVars.colors.surfaceLight,
-    border: `1px solid ${activeFilterCount > 0 ? cssVars.colors.primary : cssVars.colors.border}`,
+    border: `1px solid ${activeFilterCount > 0 ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: activeFilterCount > 0 ? cssVars.colors.primary : cssVars.colors.textSecondary,
     fontSize: cssVars.fontSizes.sm,

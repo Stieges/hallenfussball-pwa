@@ -60,7 +60,7 @@ export const BottomActionBar: React.FC<BottomActionBarProps> = ({
 
   const secondaryButtonStyle: CSSProperties = {
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     backgroundColor: 'transparent',
     color: cssVars.colors.textPrimary,

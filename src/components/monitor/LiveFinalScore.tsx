@@ -5,7 +5,7 @@ import { cssVars, displayFontSizes } from '../../design-tokens';
 export function LiveFinalScore({ color }: { color: string }) {
   const { t } = useTranslation('monitor');
   return (
-    <div data-testid="live-endstand" style={{ fontSize: displayFontSizes.clockXL, fontWeight: cssVars.fontWeights.bold, lineHeight: 1, color, textAlign: 'center' }}>
+    <div data-testid="live-endstand" data-monitor="uhr" style={{ fontSize: displayFontSizes.clockXL, fontWeight: cssVars.fontWeights.bold, lineHeight: 1, color, textAlign: 'center' }}>
       {t('liveMatch.finalScore')}
     </div>
   );

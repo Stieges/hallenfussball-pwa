@@ -71,7 +71,7 @@ export function LegalPageLayout({
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     marginBottom: cssVars.spacing.lg,
     background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textSecondary,
     fontSize: cssVars.fontSizes.sm,

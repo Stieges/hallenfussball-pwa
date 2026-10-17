@@ -96,7 +96,7 @@ const styles = {
         flex: 1,
         minHeight: 44,
         borderRadius: cssVars.borderRadius.sm,
-        border: `1px solid ${cssVars.colors.border}`,
+        border: `1px solid ${cssVars.colors.borderControl}`,
         fontSize: cssVars.fontSizes.bodySm,
         fontWeight: cssVars.fontWeights.medium,
         cursor: 'pointer',

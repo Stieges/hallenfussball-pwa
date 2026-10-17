@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TournamentMonitor } from '../../types/monitor';
 import type { DisplayOrigin, MonitorDataSource } from './monitorDataSource';
+import { requestUrgentReload } from '../../lib/swRegistration';
 import {
   applyDelta,
   applyFetchError,
@@ -69,6 +70,8 @@ export function useMonitorDisplayData(
     isFetchingRef.current = true;
     try {
       const delta = await source.fetch(versionRef.current);
+      // B-19b (@ME-032): eine unlesbare Antwort ist eine neue, inkompatible Version → sofort neu laden.
+      if (delta.kind === 'unreadable') { requestUrgentReload(); }
       if (delta.kind === 'snapshot') { versionRef.current = delta.version; }
       const prev = stateRef.current;
       const next = applyDelta(prev, delta, {

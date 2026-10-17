@@ -142,7 +142,7 @@ const styles = {
     gap: cssVars.spacing.sm,
     padding: cssVars.spacing.md,
     background: cssVars.colors.surface,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.bodySm,

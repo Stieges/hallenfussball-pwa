@@ -4,7 +4,7 @@
  * Helper functions for URL-based tournament tab navigation.
  */
 
-export type TournamentTab = 'schedule' | 'tabellen' | 'management' | 'monitor' | 'monitors' | 'teams' | 'settings';
+export type TournamentTab = 'schedule' | 'tabellen' | 'management' | 'monitor' | 'teams' | 'settings';
 
 /** Map tab IDs to URL path segments */
 export const TAB_PATHS: Record<TournamentTab, string> = {
@@ -12,7 +12,6 @@ export const TAB_PATHS: Record<TournamentTab, string> = {
   tabellen: 'standings',
   management: 'live',
   monitor: 'monitor',
-  monitors: 'monitors',
   teams: 'teams',
   settings: 'settings',
 };
@@ -23,7 +22,8 @@ const PATH_TO_TAB: Record<string, TournamentTab> = {
   standings: 'tabellen',
   live: 'management',
   monitor: 'monitor',
-  monitors: 'monitors',
+  // B-06: alte Adresse der Konfigurator-Seite (vorher „Monitore“) landet im Monitor-Reiter (Konfigurator)
+  monitors: 'monitor',
   teams: 'teams',
   settings: 'settings',
 };

@@ -272,7 +272,7 @@ const styles: Record<string, CSSProperties> = {
     gap: cssVars.spacing.md,
     padding: cssVars.spacing.md,
     background: cssVars.colors.surfaceLight,
-    border: `2px solid ${cssVars.colors.border}`,
+    border: `2px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     textAlign: 'left',

@@ -151,6 +151,13 @@ export const E2E_PUBLIC_CUP_SHARE_CODE = 'E2EPUB';
 export const E2E_PUBLIC_CUP_MONITOR_ID = e2eUuid('monitor:public-cup:1');
 
 /**
+ * B-06: Monitor des Engine-Cups SPIELPLANOWNER mit einem `live`-Slide auf Feld 1. Ersetzt den entfallenen
+ * Verwaltungs-Reiter „Monitor“ (alte Groß-Anzeige, Daniel 10.10.) als Weg, auf dem `spielplan-lesen.cloud.spec.ts`
+ * (@FU-087) den Monitor des Eigentümers prüft: die Monitor-Seite `/display/:tournamentId/:monitorId`.
+ */
+export const E2E_SPIELPLANOWNER_MONITOR_ID = e2eUuid('monitor:engine-cup:SPIELPLANOWNER:1');
+
+/**
  * Fixrunde 2 (N3, Ruling AA; vorher Fixrunde 1/I2/Ruling V, damals noch am Entwurf-Cup):
  * Sponsor + Monitor des Freigabe-Cup, für den Nachweis "Sponsor und Monitor folgen" in
  * `publish-coadmin.cloud.spec.ts` -- der Monitor zeigt EINEN `sponsor`-Slide auf genau diesen

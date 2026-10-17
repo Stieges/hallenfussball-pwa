@@ -6,6 +6,9 @@
  * @see docs/anforderungen/2026-10-03_monitor-einrichten.md (@ME-002, @ME-003, @ME-005, @ME-006, @ME-022)
  */
 
+import type { WakeLockStatus } from '../../hooks/useWakeLock';
+import { SPIELPLAN_FALLBACK_SLIDE } from './slideProgramme';
+
 /** Der Mauszeiger verschwindet nach so vielen Millisekunden ohne Bewegung (@ME-002: „nach wenigen Sekunden“). */
 export const MAUSZEIGER_RUHE_MS = 3_000;
 
@@ -14,6 +17,25 @@ export const VOLLBILD_TASTE = 'f';
 
 /** Der Hinweis zur Energiespar-Einstellung bleibt so lange in der Ecke, dann verschwindet er (@ME-006). */
 export const WAKE_LOCK_HINWEIS_MS = 10_000;
+
+/**
+ * Folien, auf denen der Hinweis stehen darf (@ME-006): die Ersatzfolien, solange kein Folienprogramm eingerichtet ist
+ * (Zuschauer-QR bei öffentlichem Turnier, sonst Spielplan), und eine QR-Folie aus dem Programm. Nicht auf Text-, Spielplan-,
+ * Tabellen-, Sponsor- und Live-Folien des Programms. `programm` sind die darstellbaren Folien des Monitors: nur was zu ihnen
+ * gehört, zählt (der Rückfall einer Live-Folie ohne Spiel gehört nicht dazu, dort ist ein Programm eingerichtet).
+ */
+export function istHinweisFolie(folie: { type: string } | null, programm: readonly unknown[]): boolean {
+  if (folie === null || !programm.includes(folie)) { return false; }
+  return folie.type === 'qr-code' || folie === SPIELPLAN_FALLBACK_SLIDE;
+}
+
+/**
+ * Braucht der Zustand der Zusage den Hinweis? Ja bei Ablehnung, fehlender Schnittstelle und 5 s ohne Antwort
+ * (@ME-006). Eine später zurückgenommene Zusage (`released`) zeigt am Monitor nichts, das sieht nur die Verwaltung.
+ */
+export function wakeLockHinweisNoetig(status: WakeLockStatus): boolean {
+  return status === 'denied' || status === 'unsupported' || status === 'noAnswer';
+}
 
 /**
  * Tasten, die die Monitor-Seite nie verlassen oder ungewollt anhalten (@ME-003, @ME-022).

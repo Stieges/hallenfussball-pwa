@@ -2,6 +2,7 @@
  * Hooks für den Monitor-Dauerbetrieb (B-17): Mauszeiger nach Ruhe ausblenden, Tasten abfangen.
  */
 import { useEffect, useState } from 'react';
+import type { WakeLockStatus } from '../../hooks/useWakeLock';
 import { MAUSZEIGER_RUHE_MS, istAbgefangenerTastendruck, istEingabeZiel } from './monitorDauerbetrieb';
 
 /**
@@ -49,12 +50,19 @@ export function useTastenAbfang(): void {
 }
 
 /**
- * Fordert den Wake Lock nach der ersten Eingabe erneut an, wenn die erste Anfrage fehlgeschlagen ist (B-17
- * Fixrunde 2). Safari verlangt dafür manchmal eine Nutzergeste. Nur einmal je Fehlerfall.
+ * Zustände, in denen die erste Eingabe die Anfrage erneut stellt (Safari verlangt manchmal eine Nutzergeste).
+ * Nicht bei `noAnswer`: Eine hängende Anfrage (LG webOS) läuft weiter, eine neue würde ihre späte Zusage verwerfen.
  */
-export function useWakeLockNachEingabe(fehler: string | null, anfordern: () => Promise<void>): void {
+const ERNEUT_NACH_EINGABE: ReadonlySet<WakeLockStatus> = new Set<WakeLockStatus>(['denied']);
+
+/**
+ * Fordert den Wake Lock nach der ersten Eingabe erneut an, wenn die erste Anfrage abgelehnt wurde
+ * (B-17 Fixrunde 2, B-48a). Nur einmal je Zustandswechsel.
+ */
+export function useWakeLockNachEingabe(status: WakeLockStatus, anfordern: () => Promise<void>): void {
+  const erneut = ERNEUT_NACH_EINGABE.has(status);
   useEffect(() => {
-    if (fehler === null) { return undefined; }
+    if (!erneut) { return undefined; }
     const nochmal = (): void => {
       window.removeEventListener('pointerdown', nochmal);
       window.removeEventListener('keydown', nochmal);
@@ -66,5 +74,5 @@ export function useWakeLockNachEingabe(fehler: string | null, anfordern: () => P
       window.removeEventListener('pointerdown', nochmal);
       window.removeEventListener('keydown', nochmal);
     };
-  }, [fehler, anfordern]);
+  }, [erneut, anfordern]);
 }
