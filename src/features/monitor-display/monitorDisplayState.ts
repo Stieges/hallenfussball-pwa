@@ -60,6 +60,11 @@ export function applyDelta(
     return state;
   }
 
+  // B-19b (@ME-032): unlesbare Antwort – das letzte Bild bleibt, ohne Fehlertext (die Seite lädt neu).
+  if (delta.kind === 'unreadable') {
+    return state;
+  }
+
   if (delta.kind === 'missing') {
     // Nur ein echter Fehlschlag rechtfertigt es, einen bestehenden Stand zu halten.
     if (state.hasData && delta.lookupFailed) {

@@ -42,15 +42,19 @@ import {
   UPDATE_POLL_MS,
 } from './swIdle';
 import {
+  getReloadGate,
   getSwSetup,
   registerSwSetup,
   replaceSwSetupSlots,
+  setReloadGateSlot,
+  type ReloadGate,
   type SetupOptions,
   type SwAutoReloadHandle,
 } from './swSetupSlots';
 
 export {
   __resetSwForTests,
+  type ReloadGate,
   type RegisterSWFn,
   type RegisterSWOptions,
   type SetupOptions,
@@ -59,6 +63,11 @@ export {
 
 /** Default delay between toast and idle reload (≈ time to read the message). */
 export const DEFAULT_RELOAD_DELAY_MS = 2000;
+
+/** Eilpfad (B-19b, @ME-032): nach einer unlesbaren Antwort gilt das Neuladen zwei Minuten lang sofort. */
+const URGENT_RELOAD_WINDOW_MS = 2 * 60_000;
+/** Mindestabstand der `registration.update()`-Prüfung auf dem Eilpfad (kein Dauer-Abruf von sw.js). */
+const URGENT_CHECK_MS = 60_000;
 
 export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
   const existing = getSwSetup();
@@ -71,6 +80,9 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
   let updateWaiting = false;
   let idleCleanup: (() => void) | undefined;
   let pollCleanup: (() => void) | undefined;
+  let knownRegistration: ServiceWorkerRegistration | undefined;
+  let urgentUntil = 0;
+  let lastUrgentCheck = Number.NEGATIVE_INFINITY;
 
   const reload =
     options.reload ??
@@ -113,7 +125,7 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
     void (async () => {
       let idle: boolean;
       try {
-        idle = await options.isIdle();
+        idle = await allowedNow();
       } catch {
         idle = false;
       }
@@ -130,6 +142,15 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
     })();
   };
 
+  /** Ist ein Neulade-Tor gesetzt (B-19b), entscheidet es; sonst die Leerlauf-Prüfung wie bisher. */
+  const allowedNow = async (): Promise<boolean> => {
+    const gate = getReloadGate();
+    if (gate !== null) {
+      return gate.allowsReload();
+    }
+    return options.isIdle();
+  };
+
   /**
    * Erneute Leerlauf-Pruefung (wiederholbar). Das Neuladen selbst wird
    * hoechstens einmal ausgeloest (`hasFiredReload`), die Pruefung beliebig oft.
@@ -140,7 +161,7 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
     }
     let idle: boolean;
     try {
-      idle = await options.isIdle();
+      idle = await allowedNow();
     } catch {
       idle = false;
     }
@@ -151,15 +172,40 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
     addBreadcrumb('sw', 'New SW detected — idle, toast + scheduled reload', {
       delayMs: delay,
     });
-    try {
-      options.showToast(options.updatingMessage());
-    } catch (err) {
-      // Toast surface must never block the reload
-      if (err instanceof Error) {
-        captureFeatureError(err, 'sw', 'showToast');
+    // Auf Kiosk-Routen (Tor gesetzt) gibt es keinen Toast (B-19a/b).
+    if (getReloadGate() === null) {
+      try {
+        options.showToast(options.updatingMessage());
+      } catch (err) {
+        // Toast surface must never block the reload
+        if (err instanceof Error) {
+          captureFeatureError(err, 'sw', 'showToast');
+        }
       }
     }
     scheduleReload(fireReload, delay);
+  };
+
+  /** Eilpfad (B-19b, @ME-032): sofort neu laden, einmal. */
+  const fireUrgent = (): void => {
+    if (hasFiredReload) {
+      return;
+    }
+    hasFiredReload = true;
+    idleCleanup?.();
+    updateSWAndReload();
+  };
+
+  /** Das Tor erfährt, dass eine neue Version wartet (einmal je Version). */
+  const notifyGateWaiting = (): void => {
+    try {
+      getReloadGate()?.onUpdateWaiting?.();
+    } catch (err) {
+      // Ein Tor darf das Neuladen nicht blockieren (Regel 5).
+      if (err instanceof Error) {
+        captureFeatureError(err, 'sw', 'reloadGate');
+      }
+    }
   };
 
   /** Ausloeser, solange ein Update wartet (Start onNeedRefresh, Ende Feuerung/dispose). */
@@ -251,19 +297,52 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
     };
   };
 
+  /** Unlesbare Antwort (B-19b, @ME-032): sofort neu laden, sobald eine neue Version da ist. */
+  const reloadNow = (): void => {
+    const now = Date.now();
+    urgentUntil = now + URGENT_RELOAD_WINDOW_MS;
+    if (updateWaiting) {
+      fireUrgent();
+      return;
+    }
+    if (knownRegistration !== undefined && now - lastUrgentCheck >= URGENT_CHECK_MS) {
+      lastUrgentCheck = now;
+      void safeUpdate(knownRegistration);
+    }
+  };
+
+  /** Ein Tor wurde gesetzt oder gelöst: Zustand neu bewerten. */
+  const onGateChanged = (): void => {
+    if (updateWaiting) {
+      notifyGateWaiting();
+    }
+    void onMaybeIdle();
+  };
+
   const updateSW = options.registerSW({
     immediate: true,
     onNeedRefresh: () => {
+      const wasWaiting = updateWaiting;
       updateWaiting = true;
-      // Hinweis bleibt stehen (kein Auto-Ausblenden); sein Knopf feuert sofort.
-      try {
-        options.showUpdateNotice(fireUpdateNow);
-      } catch (err) {
-        if (err instanceof Error) {
-          captureFeatureError(err, 'sw', 'showUpdateNotice');
+      if (!wasWaiting) {
+        notifyGateWaiting();
+      }
+      // Hinweis bleibt stehen (kein Auto-Ausblenden); sein Knopf feuert sofort. Auf Kiosk-Routen
+      // (Tor gesetzt) gibt es keinen Hinweis und keinen Knopf (B-19a/b).
+      if (getReloadGate() === null) {
+        try {
+          options.showUpdateNotice(fireUpdateNow);
+        } catch (err) {
+          if (err instanceof Error) {
+            captureFeatureError(err, 'sw', 'showUpdateNotice');
+          }
         }
       }
       startIdleWatchers();
+      if (Date.now() < urgentUntil) {
+        fireUrgent();
+        return;
+      }
       void onMaybeIdle();
     },
     onRegisterError: (error) => {
@@ -273,6 +352,7 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
     },
     onRegisteredSW: (_swUrl, registration) => {
       if (registration) {
+        knownRegistration = registration;
         installUpdatePolling(registration);
       }
     },
@@ -285,7 +365,25 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
       idleCleanup?.();
       pollCleanup?.();
     },
+    onGateChanged,
+    reloadNow,
   };
   registerSwSetup({ handle, options });
   return handle;
+}
+
+/** Setzt (oder löst mit `null`) das Neulade-Tor und bewertet den Zustand neu (B-19b, @ZM-124, @ME-012). */
+export function attachReloadGate(gate: ReloadGate | null): void {
+  setReloadGateSlot(gate);
+  getSwSetup()?.handle.onGateChanged();
+}
+
+/** Bewertet das Tor neu, z. B. nach einem Folienwechsel. Ohne wartende Version geschieht nichts. */
+export function notifyReloadGate(): void {
+  void getSwSetup()?.handle.onMaybeIdle();
+}
+
+/** Unlesbare Antwort (B-19b, @ME-032): sofort neu laden, sobald eine neue Version wartet. */
+export function requestUrgentReload(): void {
+  getSwSetup()?.handle.reloadNow();
 }
