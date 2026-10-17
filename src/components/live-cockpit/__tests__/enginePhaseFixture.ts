@@ -79,9 +79,34 @@ export async function spielAnlegen(): Promise<EngineSpiel> {
   return { matchId, ctx, store, accountId, a };
 }
 
-/** Gerät B: zweite Engine auf demselben Log, neu geladen (kein Ereignis-Schreiben). */
+/**
+ * Bestätigt alle offenen Ereignisse von Gerät A (wie der Server nach dem Senden): danach ist kein
+ * Pending-Eintrag mehr im Store, der Log steht unter `confirmed`.
+ */
+export async function bestaetigen(spiel: EngineSpiel): Promise<void> {
+  const copy = await spiel.store.load(spiel.accountId, spiel.matchId);
+  if (!copy) {
+    throw new Error('keine Kopie im Store');
+  }
+  const offen = [...copy.acked, ...copy.pending];
+  const mitSeq = offen.map((event, index) => ({ ...event, seq: copy.confirmed.length + index + 1 }));
+  await spiel.store.applyConfirmed(spiel.accountId, spiel.matchId, mitSeq, copy.confirmed.length + mitSeq.length);
+  const nachher = await spiel.store.load(spiel.accountId, spiel.matchId);
+  if (nachher?.pending.length !== 0) {
+    throw new Error('Bestätigung hat Pending-Einträge hinterlassen');
+  }
+}
+
+/** Gerät B: zweite Engine auf demselben Store, Log bestätigt und neu geladen (kein Ereignis-Schreiben). */
 export async function geraetBNeuLaden(spiel: EngineSpiel): Promise<Geraet> {
+  await bestaetigen(spiel);
   const b = await geraetAuf(spiel.store, spiel.accountId);
   await b.engine.notifyStoreChange(spiel.matchId);
   return b;
+}
+
+/** Gerät B nach einer Änderung auf Gerät A: erst bestätigen, dann neu laden. */
+export async function aktualisiereB(spiel: EngineSpiel, b: Geraet): Promise<void> {
+  await bestaetigen(spiel);
+  await b.engine.notifyStoreChange(spiel.matchId);
 }

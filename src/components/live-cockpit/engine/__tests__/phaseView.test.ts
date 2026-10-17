@@ -4,11 +4,13 @@
  * (docs/anforderungen/2026-10-02_spiel-leiten.md, Fundament @FU-073/074/075); der Code ist nur der Ansatzpunkt.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { effectiveScoreFor } from '../../../../core/match';
 import { viewDurationSeconds } from '../../../../core/match/client/viewDuration';
 import { phaseViewOf, type PhaseView } from '../phaseView';
 import {
   REGEL_2X6,
   REGEL_2X10,
+  aktualisiereB,
   geraetBNeuLaden,
   spielAnlegen,
   zu,
@@ -55,7 +57,7 @@ describe('phaseViewOf (B-08a)', () => {
     expect(phase.penalties[0].remainingMs).toBe(30_000);
   });
 
-  it('@FU-075 @SL-014 Gerät B neu geladen bei 6:00 zeigt Strafe Rest 1:00; angehalten bleibt sie stehen', async () => {
+  it('@FU-075 Gerät B neu geladen bei 6:00 zeigt Strafe Rest 1:00; angehalten bleibt sie stehen', async () => {
     const spiel = await spielAnlegen();
     await spiel.a.commands.start(spiel.matchId, spiel.ctx, 'leitung', REGEL_2X6);
     zu(300_000);
@@ -67,11 +69,11 @@ describe('phaseViewOf (B-08a)', () => {
     expect(beiB.penalties[0].remainingMs).toBe(60_000);
 
     await spiel.a.commands.pause(spiel.matchId, spiel.ctx, 'leitung');
-    await b.engine.notifyStoreChange(spiel.matchId);
+    await aktualisiereB(spiel, b);
     zu(420_000);
     expect(sichtAuf(b, spiel).penalties[0].remainingMs).toBe(60_000);
     await spiel.a.commands.resume(spiel.matchId, spiel.ctx, 'leitung');
-    await b.engine.notifyStoreChange(spiel.matchId);
+    await aktualisiereB(spiel, b);
     zu(450_000);
     expect(sichtAuf(b, spiel).penalties[0].remainingMs).toBe(30_000);
   });
@@ -154,7 +156,7 @@ describe('phaseViewOf (B-08a)', () => {
     expect(viewDurationSeconds(state) * 1000).toBe(825_000);
   });
 
-  it('Verlängerung mit Bruchteil-Anpfiff (10:45,5): Grenze folgt viewDuration auf die volle Sekunde', async () => {
+  it('B1 Verlängerung mit Bruchteil-Anpfiff (10:45,5): Grenze 3:00, Tafel-Sekunde gleich Monitor (viewDuration)', async () => {
     const spiel = await spielAnlegen();
     const ko = { ...REGEL_2X6, sections: 1 as const, sectionSeconds: 600, knockout: true, tiebreak: 'overtime-then-shootout' as const };
     await spiel.a.commands.start(spiel.matchId, spiel.ctx, 'leitung', ko);
@@ -166,22 +168,35 @@ describe('phaseViewOf (B-08a)', () => {
       throw new Error('kein Zustand');
     }
     const phase = sichtAuf(spiel.a, spiel);
-    expect(phase.sectionLimitMs).toBe(179_500);
-    expect(phase.sectionLimitMs + state.sectionStartMs).toBe(viewDurationSeconds(state) * 1000);
+    expect(phase.sectionLimitMs).toBe(180_000);
+    expect(Math.floor(state.sectionStartMs / 1000) * 1000 + phase.sectionLimitMs).toBe(viewDurationSeconds(state) * 1000);
+    // Tafel (Restsekunde aus Grenze und Abschnittszeit) gegen Monitor (viewDuration − floor(Spielzeit)),
+    // je einmal knapp nach dem Anpfiff, nahe der Sekundengrenze und kurz davor.
+    for (const elapsedMs of [645_500, 646_200, 646_700]) {
+      zu(elapsedMs);
+      const beiZeit = sichtAuf(spiel.a, spiel);
+      const tafelRest = beiZeit.sectionLimitMs / 1000 - Math.floor(beiZeit.sectionElapsedMs / 1000);
+      const monitorRest = viewDurationSeconds(state) - Math.floor(elapsedMs / 1000);
+      expect(tafelRest).toBe(monitorRest);
+    }
   });
 
-  it('@SL-097 Abpfiff bei 6:00 beendet die laufende Strafe: keine Strafe mehr, obwohl Rest 1:00 wäre', async () => {
+  it('@SL-097 Abpfiff bei 6:00 im zweiten Abschnitt beendet die Strafe von 5:00: keine Strafe mehr', async () => {
     const spiel = await spielAnlegen();
     await spiel.a.commands.start(spiel.matchId, spiel.ctx, 'leitung', REGEL_2X10);
-    zu(300_000);
+    zu(600_000);
+    await spiel.a.commands.endSection(spiel.matchId, spiel.ctx, 'leitung');
+    zu(660_000);
+    await spiel.a.commands.startSection(spiel.matchId, spiel.ctx, 'leitung');
+    zu(960_000); // 5:00 im zweiten Abschnitt
     await spiel.a.commands.timePenalty(spiel.matchId, spiel.ctx, 'leitung', 'teamb');
-    zu(360_000);
+    zu(1_020_000); // 6:00 im zweiten Abschnitt
     await spiel.a.commands.finish(spiel.matchId, spiel.ctx, 'leitung');
     const phase = sichtAuf(spiel.a, spiel);
     expect(phase.status).toBe('finished');
+    expect(phase.sectionElapsedMs).toBe(360_000);
     expect(phase.penalties).toEqual([]);
   });
-
   it('Gegenbeispiel: zurückgenommene Strafe erscheint nicht, auch nicht auf Gerät B', async () => {
     const spiel = await spielAnlegen();
     await spiel.a.commands.start(spiel.matchId, spiel.ctx, 'leitung', REGEL_2X10);
@@ -204,13 +219,21 @@ describe('phaseViewOf (B-08a)', () => {
     expect(phase.tiebreakMode).toBeNull();
   });
 
-  it('@SL-053 K.-o.-Remis mit Strafstoßschießen: Entscheidungsart shootout, Schütze A beginnt', async () => {
+  it('@SL-053 Unentschieden 1:1 bei Ablauf: Strafstoßschießen beginnt, Entscheidungsart shootout', async () => {
     const spiel = await spielAnlegen();
     const ko = { ...REGEL_2X6, knockout: true, tiebreak: 'shootout' as const, shootersPerTeam: 1 };
     await spiel.a.commands.start(spiel.matchId, spiel.ctx, 'leitung', ko);
+    zu(100_000);
+    await spiel.a.commands.goal(spiel.matchId, spiel.ctx, 'leitung', 'teama', false);
+    zu(200_000);
+    await spiel.a.commands.goal(spiel.matchId, spiel.ctx, 'leitung', 'teamb', false);
     zu(720_000);
     await spiel.a.commands.finish(spiel.matchId, spiel.ctx, 'leitung');
+    const state = spiel.a.engine.view(spiel.matchId)?.result.state;
+    expect(state && effectiveScoreFor(state, 'teama')).toBe(1);
+    expect(state && effectiveScoreFor(state, 'teamb')).toBe(1);
     const phase = sichtAuf(spiel.a, spiel);
+    expect(phase.status).toBe('shootout');
     expect(phase.tiebreakMode).toBe('shootout');
     expect(phase.shootout).toEqual({
       kicks: { teama: 0, teamb: 0 },
@@ -219,7 +242,6 @@ describe('phaseViewOf (B-08a)', () => {
       nextTeam: 'teama',
     });
   });
-
   it('Strafstoßschießen: Sieger nach einem Treffer gegen einen Fehlschuss, dann kein nächster Schütze', async () => {
     const spiel = await spielAnlegen();
     const ko = { ...REGEL_2X6, knockout: true, tiebreak: 'shootout' as const, shootersPerTeam: 1 };
@@ -266,6 +288,32 @@ describe('phaseViewOf (B-08a)', () => {
     await spiel.a.commands.adjustClock(spiel.matchId, spiel.ctx, 'leitung', 110_000, 200_000);
     await spiel.a.commands.retract(spiel.matchId, spiel.ctx, 'leitung', ereignisId(spiel.a, spiel, 'CLOCK_ADJUST'));
     expect(sichtAuf(spiel.a, spiel).clockAdjustments).toEqual([]);
+  });
+
+  it('@SL-014 Neustart bei 4:00: Anzeige 4:00, Stand 1:0, das Tor steht im bestätigten Log', async () => {
+    const spiel = await spielAnlegen();
+    await spiel.a.commands.start(spiel.matchId, spiel.ctx, 'leitung', REGEL_2X10);
+    zu(130_000);
+    await spiel.a.commands.goal(spiel.matchId, spiel.ctx, 'leitung', 'teama', false);
+    zu(180_000); // Tablet geht bei 3:00 aus, es wird nichts geschrieben
+    zu(240_000); // Neustart bei 4:00
+    const neu = await geraetBNeuLaden(spiel);
+    expect(sichtAuf(neu, spiel).sectionElapsedMs).toBe(240_000);
+    const state = neu.engine.view(spiel.matchId)?.result.state;
+    expect(state && effectiveScoreFor(state, 'teama')).toBe(1);
+    expect(state && effectiveScoreFor(state, 'teamb')).toBe(0);
+    expect(state?.goals).toHaveLength(1);
+  });
+
+  it('Gegenbeispiel: zurückgenommenes Tor bestimmt earliestAdjustMs nicht mehr', async () => {
+    const spiel = await spielAnlegen();
+    await spiel.a.commands.start(spiel.matchId, spiel.ctx, 'leitung', REGEL_2X10);
+    zu(120_000);
+    await spiel.a.commands.goal(spiel.matchId, spiel.ctx, 'leitung', 'teama', false);
+    zu(200_000);
+    expect(sichtAuf(spiel.a, spiel).earliestAdjustMs).toBe(120_000);
+    await spiel.a.commands.retract(spiel.matchId, spiel.ctx, 'leitung', ereignisId(spiel.a, spiel, 'GOAL'));
+    expect(sichtAuf(spiel.a, spiel).earliestAdjustMs).toBe(0);
   });
 
   it('Abschnittsfelder: letzter regulärer Abschnitt und Abschnittszahl', async () => {

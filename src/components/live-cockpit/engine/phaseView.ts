@@ -14,7 +14,6 @@ import {
   type Phase,
   type TiebreakMode,
 } from '../../../core/match';
-import { viewDurationSeconds } from '../../../core/match/client/viewDuration';
 
 export interface PhasePenalty {
   id: string;
@@ -74,7 +73,7 @@ export function phaseViewOf(state: MatchState, ctx: MatchContext, serverNow: num
     phase: state.phase,
     section: state.section,
     sections,
-    sectionElapsedMs: Math.max(0, elapsedMs - state.sectionStartMs),
+    sectionElapsedMs: Math.max(0, elapsedMs - sectionBasisOf(state)),
     sectionLimitMs: sectionLimitOf(state),
     isLastRegularSection: state.section >= sections,
     breakRemainingMs,
@@ -87,22 +86,24 @@ export function phaseViewOf(state: MatchState, ctx: MatchContext, serverNow: num
 }
 
 /**
- * Grenze des Abschnitts in ms, gezählt ab `sectionStartMs`. Die Verlängerung rechnet wie
- * `viewDurationSeconds` (Auto-Ende, #244), damit beide dasselbe Ende haben; in der Pause vor der
- * Verlängerung gilt die volle Verlängerungsdauer.
+ * Nullpunkt der Abschnittszeit in ms. In der laufenden Verlängerung ist es die volle Sekunde des
+ * Anpfiffs (`floor`), damit Tafel und Monitor die Sekunden im Gleichtakt zählen: `Basis + Grenze`
+ * ist dann `viewDurationSeconds·1000` (Auto-Ende, #244). Sonst gilt `sectionStartMs`.
  */
+function sectionBasisOf(state: MatchState): number {
+  if (state.phase === 'overtime' && state.status !== 'section_break') {
+    return Math.floor(state.sectionStartMs / 1000) * 1000;
+  }
+  return state.sectionStartMs;
+}
+
+/** Grenze des Abschnitts in ms, ab `sectionBasisOf` gezählt. */
 function sectionLimitOf(state: MatchState): number {
   const rules = state.rules;
   if (!rules) {
     return 0;
   }
-  if (state.phase !== 'overtime') {
-    return rules.sectionSeconds * 1000;
-  }
-  if (state.status === 'section_break') {
-    return rules.overtimeSeconds * 1000;
-  }
-  return viewDurationSeconds(state) * 1000 - state.sectionStartMs;
+  return state.phase === 'overtime' ? rules.overtimeSeconds * 1000 : rules.sectionSeconds * 1000;
 }
 
 /** Spätester Uhrstand eines wirksamen Eintrags im aktuellen Abschnitt, relativ zum Abschnittsbeginn, mind. 0. */
@@ -119,7 +120,7 @@ function earliestAdjustOf(state: MatchState): number {
     }
     latest = latest === null ? event.clockMs : Math.max(latest, event.clockMs);
   }
-  return latest === null ? 0 : Math.max(0, latest - state.sectionStartMs);
+  return latest === null ? 0 : Math.max(0, latest - sectionBasisOf(state));
 }
 
 /** Laufende Strafen; bei beendetem Spiel keine (@SL-097). */
