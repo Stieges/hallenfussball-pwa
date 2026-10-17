@@ -16,6 +16,7 @@ import { OfflineBanner } from './components/OfflineBanner';
 import { useSyncOnReconnect } from './hooks/useSyncOnReconnect';
 import { useAuthTimeoutToast } from './hooks/useAuthTimeoutToast';
 import { useSwAutoReload } from './hooks/useSwAutoReload';
+import { useKioskRoute } from './hooks/useKioskRoute';
 import { useMatchProtectionNotices } from './hooks/useMatchProtectionNotices';
 import { useGuestTournamentNotices } from './hooks/useGuestTournamentNotices';
 import { useRouteMatch } from './hooks/useRouteMatch';
@@ -141,6 +142,8 @@ function AppContent() {
   // users never linger on a stale precached bundle (root cause of the
   // 2026-05-24 login-bug).
   const { updateNow } = useSwAutoReload();
+  // Kiosk-Route (@ME-003): kein Update-Hinweis, keine Einblendungen
+  const kiosk = useKioskRoute();
 
   // A6 (task-A6-review.md, I2/Ruling AN): toast when save() kept a protected match instead of
   // silently deleting it -- see core/services/matchProtectionNotices.ts for why this can't just
@@ -514,7 +517,7 @@ function AppContent() {
       <ScrollToTop />
 
       {/* C3b-2d (G8): persistenter Update-Hinweis, bleibt bis zum Neuladen stehen */}
-      {updateNow && <SwUpdateNotice onUpdateNow={updateNow} />}
+      {updateNow && !kiosk && <SwUpdateNotice onUpdateNow={updateNow} />}
 
       {/* Guest Banner - shows registration prompt for guests */}
       {isGuest && isDashboardPath && (
@@ -834,6 +837,8 @@ function AuthRepositoryBridge({ children }: { children: React.ReactNode }) {
 function App() {
   // DSGVO Consent Dialog - shows on first visit
   const [showConsentDialog, setShowConsentDialog] = useState(() => !hasConsent());
+  // Kiosk-Route (@ME-003, @OB-028): ohne Einwilligung, Banner und Toasts; nichts wartet auf eine Eingabe
+  const kiosk = useKioskRoute();
 
   const handleConsent = useCallback(() => {
     setShowConsentDialog(false);
@@ -847,14 +852,14 @@ function App() {
         <AuthRepositoryBridge>
           <SyncManager />
           <PendingChangesWarning />
-          <ToastProvider>
+          <ToastProvider suppressed={kiosk}>
             <ErrorBoundary onReset={() => { window.location.hash = '#/'; }}>
-              <StorageWarningBanner />
-              <OfflineBanner />
+              {!kiosk && <StorageWarningBanner />}
+              {!kiosk && <OfflineBanner />}
               <AppContent />
             </ErrorBoundary>
-            {/* DSGVO Consent Dialog - OUTSIDE ErrorBoundary for crash recovery */}
-            <ConsentDialog isOpen={showConsentDialog} onConsent={handleConsent} />
+            {/* DSGVO Consent Dialog - OUTSIDE ErrorBoundary for crash recovery; auf Kiosk-Routen nicht (@ME-003) */}
+            {!kiosk && <ConsentDialog isOpen={showConsentDialog} onConsent={handleConsent} />}
           </ToastProvider>
         </AuthRepositoryBridge>
       </AuthProvider>
