@@ -1,21 +1,95 @@
 /**
  * Live Cockpit Types
  *
- * Re-exports existing types from match-cockpit and adds new types
- * specific to the redesigned Live Cockpit.
+ * Spiel-Typen (LiveMatch, MatchSummary, ...) und die Typen des Live-Cockpits.
  *
- * Props interface matches MatchCockpit for drop-in replacement.
  */
 
-// Re-export existing types for backwards compatibility
-export type {
-  LiveMatch,
-  MatchEvent,
-  MatchStatus,
-  MatchPlayPhase,
-  Team,
-  MatchSummary,
-} from '../match-cockpit/MatchCockpit';
+import type { RuntimeMatchEvent } from '../../types/tournament';
+
+// ---------------------------------------------------------------------------
+// Spiel-Typen (B-06: aus dem gelöschten match-cockpit/MatchCockpit.tsx hierher umgezogen)
+// ---------------------------------------------------------------------------
+
+export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
+
+export interface Team {
+  id: string;
+  name: string;
+  logo?: {
+    type: 'url' | 'base64' | 'initials';
+    value: string;
+    backgroundColor?: string;
+    uploadedAt?: string;
+    uploadedBy?: 'organizer' | 'trainer';
+  };
+  colors?: {
+    primary: string;
+    secondary?: string;
+  };
+}
+
+// Re-export RuntimeMatchEvent as MatchEvent for backwards compatibility
+export type MatchEvent = RuntimeMatchEvent;
+
+/** Current phase of play within a match */
+export type MatchPlayPhase = 'regular' | 'overtime' | 'goldenGoal' | 'penalty';
+
+export interface LiveMatch {
+  id: string;
+  number: number;
+  phaseLabel: string;
+  fieldId: string;
+  scheduledKickoff: string;
+  durationSeconds: number;
+  refereeName?: string;
+  homeTeam: Team;
+  awayTeam: Team;
+  homeScore: number;
+  awayScore: number;
+  status: MatchStatus;
+  elapsedSeconds: number;
+  events: MatchEvent[];
+  /** C3b-1 (G6): zurückgenommene Einträge eines Engine-Spiels, nur für die Protokoll-Anzeige. */
+  retractedEvents?: MatchEvent[];
+
+  // DEF-005: Timer persistence fields
+  timerStartTime?: string;
+  timerPausedAt?: string;
+  timerElapsedSeconds?: number;
+
+  // Tournament phase (groupStage, semifinal, final, etc.)
+  tournamentPhase?: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final';
+
+  // Tiebreaker fields for finals matches
+  playPhase?: MatchPlayPhase;           // Current phase: regular, overtime, goldenGoal, penalty
+  overtimeScoreA?: number;              // Goals in overtime (home)
+  overtimeScoreB?: number;              // Goals in overtime (away)
+  overtimeDurationSeconds?: number;     // Duration of overtime in seconds
+  overtimeElapsedSeconds?: number;      // Elapsed time in overtime
+  penaltyScoreA?: number;               // Penalty score (home)
+  penaltyScoreB?: number;               // Penalty score (away)
+  tiebreakerMode?: 'shootout' | 'overtime-then-shootout' | 'goldenGoal'; // From tournament config
+  awaitingTiebreakerChoice?: boolean;   // True when match ended in draw, waiting for tiebreaker
+
+  // Zeitstrafe-Dauer in Sekunden, beim Anpfiff aus der Spielregel übernommen (@W2A-029)
+  timePenaltyDurationSeconds?: number;
+
+  // Match Cockpit Pro: Per-match setting overrides
+  cockpitOverrides?: import('../../types/tournament').MatchCockpitOverrides;
+}
+
+export interface MatchSummary {
+  id: string;
+  number: number;
+  phaseLabel: string;
+  scheduledKickoff: string;
+  fieldId: string;
+  homeTeam: Team;
+  awayTeam: Team;
+  /** Tournament phase for detecting phase changes (group → finals) */
+  tournamentPhase?: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final';
+}
 
 // ---------------------------------------------------------------------------
 // Mode System Types
@@ -57,15 +131,15 @@ export interface LiveCockpitProps {
   readOnly?: boolean;
 
   /** The current match being played */
-  currentMatch: import('../match-cockpit/MatchCockpit').LiveMatch | null;
+  currentMatch: LiveMatch | null;
   /** Last finished match for reopening */
   lastFinishedMatch?: {
-    match: import('../match-cockpit/MatchCockpit').MatchSummary;
+    match: MatchSummary;
     homeScore: number;
     awayScore: number;
   } | null;
   /** Upcoming matches for proactive hints */
-  upcomingMatches: import('../match-cockpit/MatchCockpit').MatchSummary[];
+  upcomingMatches: MatchSummary[];
   /** Minutes before next match to show warning */
   highlightNextMatchMinutesBefore?: number;
 
@@ -126,16 +200,16 @@ export interface LiveCockpitProps {
 
 export interface InternalLiveCockpitProps {
   /** The current match being played */
-  match: import('../match-cockpit/MatchCockpit').LiveMatch;
+  match: LiveMatch;
   /** Name of the field/court */
   fieldName?: string;
   /** Tournament name for display */
   tournamentName?: string;
   /** Upcoming matches for proactive hints */
-  upcomingMatches?: import('../match-cockpit/MatchCockpit').MatchSummary[];
+  upcomingMatches?: MatchSummary[];
   /** Last finished match for reopening */
   lastFinishedMatch?: {
-    match: import('../match-cockpit/MatchCockpit').MatchSummary;
+    match: MatchSummary;
     homeScore: number;
     awayScore: number;
   } | null;
@@ -187,8 +261,8 @@ export interface LiveCockpitState {
 export interface TimerDisplayProps {
   elapsedSeconds: number;
   durationSeconds: number;
-  status: import('../match-cockpit/MatchCockpit').MatchStatus;
-  playPhase?: import('../match-cockpit/MatchCockpit').MatchPlayPhase;
+  status: MatchStatus;
+  playPhase?: MatchPlayPhase;
   /** Show countdown instead of elapsed */
   countdown?: boolean;
 }

@@ -26,11 +26,6 @@ const WRITE_METHODS = new Set(['insert', 'upsert', 'update', 'delete']);
  * Schreibstelle in einer erlaubten Datei aendert die Anzahl und macht den Test rot. Gruppen aus Plan A-08 § 1.2.
  */
 const SCORE_ALLOWLIST: Record<string, { reason: string; count: number }> = {
-  'features/tournament-management/hooks/useScheduleTabActions.ts': {
-    count: 2,
-    reason:
-      'Schnelleingabe/Rückgängig (§ 1.2): einzige erlaubte Ausnahme für Spiele, die die Engine nicht trägt (Seiten offen, abgesetzt, Altbestand); bleibt bis B-07/B-12b',
-  },
   'core/generators/scheduleGenerator.ts': {
     count: 2,
     reason:
@@ -60,11 +55,6 @@ const SCORE_ALLOWLIST: Record<string, { reason: string; count: number }> = {
     count: 2,
     reason:
       'Anlage/Import/Zurücksetzen: setzt oder übernimmt Ergebnisse beim Erzeugen/Kopieren/Importieren/Zurücksetzen, kein Spielverlauf (Wizard-Daten zurücksetzen)',
-  },
-  'screens/LocalTestScreen.tsx': {
-    count: 4,
-    reason:
-      'Lesende Abbildung für Anzeige/Export: baut nur ein Anzeige- bzw. Exportobjekt, speichert nichts (Testbildschirm blendet Stände aus)',
   },
   'components/dialogs/ImportTemplates.ts': {
     count: 4,
@@ -100,11 +90,6 @@ const SCORE_ALLOWLIST: Record<string, { reason: string; count: number }> = {
     count: 2,
     reason:
       'Persistenz-Schutz: stripEngineOverlayFields setzt vor dem Speichern den Rohstand zurück, damit die Engine-Überlagerung nicht gespeichert wird; schreibt kein Ergebnis aus eigener Quelle',
-  },
-  'screens/PublicLiveViewScreen.tsx': {
-    count: 4,
-    reason:
-      'Lesende Abbildung für Anzeige/Export: baut nur ein Anzeige- bzw. Exportobjekt, speichert nichts (versteckt Stände für die Öffentlichkeit)',
   },
   'screens/PublicTournamentViewScreen.tsx': {
     count: 4,

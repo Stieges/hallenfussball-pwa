@@ -8,31 +8,13 @@
 
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Match, Tournament } from '../../../types/tournament';
-import { MatchUpdate } from '../../../core/models/types';
-import { diffMatchResultStatusUpdates } from '../../../core/services';
+import { Tournament } from '../../../types/tournament';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
-import { isMatchFinished, isMatchRunning } from '../utils';
-import { useLockedScoreMatchIds } from './useLockedScoreMatchIds';
-import { isEngineControlledScoreChange, applyAutoResolutionsAfterScoreChange, finishesOnScoreEntry } from './scoreChangeHelpers';
+import { useScheduleResultEntry, type ScheduleResultEntry } from './useScheduleResultEntry';
 
 interface UseScheduleTabActionsProps {
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
-  /**
-   * A2 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md): applies the given
-   * tournament to LOCAL state only, WITHOUT persisting it. handleScoreChange uses this for the
-   * optimistic UI update, so entering a result never triggers a full `save()` (which would
-   * overwrite a helper's live match with the owner's possibly-stale local state -- see A1's
-   * `applyRemote` for the same reasoning on the cockpit side).
-   */
-  onLocalTournamentUpdate: (tournament: Tournament) => void;
-  /**
-   * A2: persists ONLY the given matches via a targeted update (`tournamentRepo.updateMatch(es)`),
-   * never a full tournament save. Used by handleScoreChange for the result itself and for any
-   * playoff/bracket matches that got auto-resolved as a consequence.
-   */
-  onMatchesUpdate: (updates: MatchUpdate[]) => void;
   isEditing: boolean;
   saveToHistory: () => void;
   showSuccess: (message: string) => void;
@@ -40,8 +22,6 @@ interface UseScheduleTabActionsProps {
   setPendingReferee: (matchId: string, referee: number | null) => void;
   setPendingField: (matchId: string, field: number) => void;
   lockFinishedResults: boolean;
-  /** @TM-143: laufende/unterbrochene Spiele laut useRunningMatchIds (s. finishesOnScoreEntry). */
-  liveMatchIds: ReadonlySet<string>;
 }
 
 interface UseScheduleTabActionsResult {
@@ -52,13 +32,13 @@ interface UseScheduleTabActionsResult {
   handleRefereeAssignment: (matchId: string, refereeNumber: number | null) => void;
   handleResetRefereeAssignments: () => void;
   handleFieldChange: (matchId: string, fieldNumber: number) => void;
+  /** A-08f3e2: Rückfrage (Grund bzw. abgesetzt) der Schnelleingabe -- ScheduleTab zeigt sie an. */
+  resultEntry: Pick<ScheduleResultEntry, 'prompt' | 'answerPrompt'>;
 }
 
 export function useScheduleTabActions({
   tournament,
   onTournamentUpdate,
-  onLocalTournamentUpdate,
-  onMatchesUpdate,
   isEditing,
   saveToHistory,
   showSuccess,
@@ -66,13 +46,8 @@ export function useScheduleTabActions({
   setPendingReferee,
   setPendingField,
   lockFinishedResults,
-  liveMatchIds,
 }: UseScheduleTabActionsProps): UseScheduleTabActionsResult {
   const { t } = useTranslation('tournament');
-  // Fixrunde 2/6: dieselbe Uebersetzung wie useEngineCommandWiring.ts (NotOnEngineYetError).
-  const { t: tCockpit } = useTranslation('cockpit');
-  // P4: dieselbe Menge, die useTournamentManager vor Overlay-Lecks schuetzt (I3) -- s. scoreChangeHelpers.ts.
-  const overlaidMatchIdsRef = useLockedScoreMatchIds(tournament); // A-08f3a2: + server-gefuehrte Spiele
 
   // W11: `handleRedistributeSR`/`handleRedistributeFields` teilen sich dieselbe Form (Aenderungen
   // berechnen, Matches damit patchen, Turnier speichern) -- ein gemeinsamer Helfer statt zweier
@@ -158,71 +133,12 @@ export function useScheduleTabActions({
     showSuccess(t('actions.matchesSwapped', { match1: match1.round, match2: match2.round }));
   }, [tournament, onTournamentUpdate, showSuccess, saveToHistory, t]);
 
-  // Handle score change with live match warning
+  // A-08f3e2: die Schnelleingabe schreibt nur noch Server-Einträge (useScheduleResultEntry), nie den Spielstand selbst.
+  const resultEntry = useScheduleResultEntry({ tournament, showWarning, lockFinishedResults });
+  const { enterScore } = resultEntry;
   const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number) => {
-    // Fixrunde 2 Item 6 / P4 (Fixrunde 3): siehe `scoreChangeHelpers.ts` fuer die Begruendung
-    // (Engine-Spiel darf nicht ueber die Schnelleingabe an MatchCommands/der RPC vorbei laufen).
-    if (isEngineControlledScoreChange(tournament, matchId, overlaidMatchIdsRef.current)) {
-      showWarning(tCockpit('engine.notYet'));
-      return;
-    }
-
-    const scoredMatch = tournament.matches.find((m) => m.id === matchId);
-    // Block editing finished matches (if lock is enabled)
-    if (lockFinishedResults && scoredMatch && isMatchFinished(scoredMatch)) {
-      showWarning(t('actions.matchAlreadyFinished'));
-      return;
-    }
-
-    // Check if match is currently live
-    if (scoredMatch && isMatchRunning(scoredMatch)) {
-      const confirmEdit = window.confirm(t('actions.liveMatchWarning'));
-      if (!confirmEdit) { return; }
-    }
-
-    // Save to history BEFORE making changes (for Undo)
-    saveToHistory();
-
-    const finish = (m: Match) => (finishesOnScoreEntry(m, scoreA, scoreB, liveMatchIds) ? { matchStatus: 'finished' as const } : {});
-    const updatedMatches = tournament.matches.map((m) => (m.id === matchId ? { ...m, scoreA, scoreB, ...finish(m) } : m));
-
-    const updatedTournament = {
-      ...tournament,
-      matches: updatedMatches,
-      updatedAt: new Date().toISOString(),
-    };
-
-    // A2 Fixrunde 1 (Ruling AJ, "nur einen Weg"): track ONLY the matches touched by this result
-    // entry (the match itself, plus whatever playoff/bracket resolution changes as a
-    // consequence), so we can persist them via a targeted `updateMatch(es)` instead of a full
-    // tournament save. The scored match itself goes through the SAME shared helper every other
-    // result/status-changing action now uses (`diffMatchResultStatusUpdates`).
-    const pendingUpdates = new Map<string, MatchUpdate>();
-    const [scoreUpdate] = diffMatchResultStatusUpdates(
-      tournament.matches,
-      updatedTournament.matches
-    );
-    if (scoreUpdate) {
-      pendingUpdates.set(matchId, scoreUpdate);
-    }
-
-    applyAutoResolutionsAfterScoreChange(tournament, updatedTournament, pendingUpdates);
-
-    // Sync local UI state once, without saving the whole tournament ...
-    onLocalTournamentUpdate(updatedTournament);
-    // ... then persist only the touched matches.
-    onMatchesUpdate(Array.from(pendingUpdates.values()));
-  }, [
-    tournament,
-    overlaidMatchIdsRef,
-    onLocalTournamentUpdate,
-    onMatchesUpdate,
-    lockFinishedResults, liveMatchIds,
-    tCockpit,
-    showWarning,
-    saveToHistory,
-    t,
-  ]);
+    void enterScore(matchId, scoreA, scoreB);
+  }, [enterScore]);
 
   // Handle referee assignment (pending in edit mode, direct otherwise)
   const handleRefereeAssignment = useCallback((matchId: string, refereeNumber: number | null) => {
@@ -296,5 +212,6 @@ export function useScheduleTabActions({
     handleRefereeAssignment,
     handleResetRefereeAssignments,
     handleFieldChange,
+    resultEntry: { prompt: resultEntry.prompt, answerPrompt: resultEntry.answerPrompt },
   };
 }

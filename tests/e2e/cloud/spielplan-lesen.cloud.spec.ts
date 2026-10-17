@@ -19,7 +19,7 @@ import {
 } from './engineHelpers';
 import { enterGoal, fetchMatchRow } from './helpers';
 import { restAsRole, serviceRest } from './restAsRole';
-import { E2E_LIVE_CUP_ID, engineCupIds, type EngineCupSlug } from './testData';
+import { E2E_LIVE_CUP_ID, E2E_SPIELPLANOWNER_MONITOR_ID, engineCupIds, type EngineCupSlug } from './testData';
 
 /** Schließt alle Realtime-Kanäle der App (derselbe Client wie in der App, Vite-Dev-Modul). */
 async function closeRealtimeChannels(page: Page): Promise<void> {
@@ -71,10 +71,14 @@ test.describe('Spielplan liest fremde Tore', () => {
       await expect(owner.page.locator('[data-testid="realtime-interrupted-hint"]')).toHaveCount(0);
 
       // @FU-087: auch der Monitor zeigt 2:0, solange das Spiel läuft, ohne Hinweis.
-      await owner.page.locator('[data-testid="desktop-tab-monitor"]').click();
-      await expect(owner.page.locator('[data-testid="live-block-home"]')).toContainText('2', { timeout: 10000 });
-      await expect(owner.page.locator('[data-testid="live-block-away"]')).toContainText('0');
-      await expect(owner.page.locator('[data-testid="realtime-interrupted-hint"]')).toHaveCount(0);
+      // B-06: der Verwaltungs-Reiter „Monitor“ (alte Groß-Anzeige) entfiel (Daniel 10.10.); gleichwertig ist die
+      // Monitor-Seite des Turniers, die der Eigentümer im selben Browser öffnet.
+      const monitorPage = await owner.context.newPage();
+      await monitorPage.goto(`/#/display/${ids.tournamentId}/${E2E_SPIELPLANOWNER_MONITOR_ID}`);
+      await expect(monitorPage.locator('[data-testid="live-block-home"]')).toContainText('2', { timeout: 10000 });
+      await expect(monitorPage.locator('[data-testid="live-block-away"]')).toContainText('0');
+      await expect(monitorPage.locator('[data-testid="realtime-interrupted-hint"]')).toHaveCount(0);
+      await monitorPage.close();
 
       // @TM-143 Gegenbeispiel: während das Spiel läuft, zählt es in der Tabelle nicht (0 Tore, kein 2:0).
       await owner.page.locator('[data-testid="desktop-tab-tabellen"]').click();

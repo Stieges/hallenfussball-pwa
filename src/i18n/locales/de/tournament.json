@@ -115,6 +115,37 @@
       "title": "Laufendes Spiel",
       "message": "{{teamA}} vs {{teamB}} ({{scoreA}}:{{scoreB}}) läuft gerade.",
       "confirmSwitch": "Trotzdem wechseln"
+    },
+    "koAfterSend": "K.-o.-Plätze werden nach dem Senden besetzt",
+    "resultEntry": {
+      "running": "Spiel läuft – Ergebnis erst nach dem Abpfiff",
+      "teamsMissing": "Ergebnis erst, wenn beide Teams feststehen",
+      "unavailable": "Ergebnis eintragen ist gerade nicht möglich",
+      "knockoutDraw": "Unentschieden im K.-o.-Spiel – das Ergebnis mit $t(sport:events.penaltyShootout) bitte im Cockpit eintragen. Nichts gespeichert.",
+      "stale": "Spiel {{number}} wurde inzwischen von {{name}} geändert (jetzt {{score}})",
+      "staleNoName": "Spiel {{number}} wurde inzwischen geändert (jetzt {{score}})",
+      "skippedTitle": "Spiel {{number}} abgesetzt",
+      "skippedQuestion": "Spiel war abgesetzt – trotzdem Ergebnis eintragen?",
+      "yes": "Ja",
+      "no": "Nein",
+      "reasonTitle": "Ergebnis von Spiel {{number}} ändern",
+      "beforeAfter": "bisher {{before}} – neu {{after}}",
+      "reasonLabel": "Grund",
+      "reasonPlaceholder": "Grund wählen",
+      "reasonRequired": "Bitte einen Grund aus der Auswahl wählen",
+      "noteLabel": "Grund beschreiben",
+      "noteRequired": "Bitte den Grund beschreiben",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "reasons": {
+        "input_error": "Eingabefehler",
+        "referee_decision": "Schiedsrichter-Entscheidung",
+        "protest_accepted": "Protestentscheidung",
+        "technical_error": "Technischer Fehler",
+        "other": "Sonstiges"
+      },
+      "leadOnly": "nur Turnierleitung",
+      "correctionLeadOnly": "Korrektur nur durch die Turnierleitung"
     }
   },
   "scheduleActions": {
