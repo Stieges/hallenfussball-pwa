@@ -29,7 +29,8 @@ import { LegacyMatchHeader } from './areas/LegacyMatchHeader';
 import { LegacyPlayArea } from './areas/LegacyPlayArea';
 import { CockpitOverlays } from './areas/CockpitOverlays';
 import shell from './LiveCockpitShell.module.css';
-import { useToast, useEntryFlows, useSideOrder } from './hooks';
+import { useEntryFlows, useSideOrder } from './hooks';
+import { useCockpitNotices } from './hooks/useCockpitNotices';
 import { useCockpitCommands } from './hooks/useCockpitCommands';
 
 export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
@@ -50,7 +51,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const flows = useEntryFlows(currentMatch?.id);
   // Seiten tauschen: nur die Anzeige dieses Geräts (@SL-065)
   const sides = useSideOrder(currentMatch);
-  const { toasts, showSuccess, showInfo, showError, dismissToast } = useToast();
+  const notices = useCockpitNotices(); // Meldezeile statt Toast (Spec § 7)
 
   // C3b-2b (G11): Foul-Zaehler aus den FOUL-Eintraegen in `events` -- ganzes Spiel, kein
   // Halbzeit-Reset, kein lokales +1 (zurueckgenommenes zaehlt nicht, G6/RC13).
@@ -59,11 +60,11 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   useFoulThresholdWarning(
     { home: homeFouls, away: awayFouls },
     { home: currentMatch?.homeTeam.name ?? '', away: currentMatch?.awayTeam.name ?? '' },
-    (teamName) => { showInfo(t('toast.foulWarning', { teamName })); },
+    (teamName, count) => { notices.melde(2, t('meldung.foulGrenze', { teamName, count })); },
   );
 
   // I4 (W1, Nachtrag Fixrunde 1): Ablehnungen (D-C1) auch für Helfer im Cockpit sichtbar.
-  const rejectedOutbox = useRejectedOutboxDialog(tournamentId, showError);
+  const rejectedOutbox = useRejectedOutboxDialog(tournamentId, notices.fehler);
 
   // BUG-004 FIX: Echtzeit-Uhr (Countdown, Netto-Warnung, Zustand der Uhr)
   const { displaySeconds, isOvertime, timerState } = useMatchTimerExtended(
@@ -76,7 +77,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   );
 
   const cmd = useCockpitCommands({
-    props, settings: cockpitSettings, sound, flows, sides, toast: { showSuccess, showInfo, showError }, isOvertime,
+    props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, isOvertime,
   });
 
   if (!currentMatch) {
@@ -104,6 +105,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
           homeFouls={homeFouls}
           awayFouls={awayFouls}
           readOnly={readOnly}
+          notices={notices}
           // A4 (C-SYNC): rendert selbst nichts außerhalb des Cloud-Modus. I4 (W1, Nachtrag
           // Fixrunde 1): rejectedCount/reviewCount aus dem echten Sender (useEngineOutboxSummary).
           sync={
@@ -156,8 +158,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         handlers={cmd.overlayHandlers}
         sound={sound}
         rejectedOutbox={rejectedOutbox}
-        toasts={toasts}
-        onDismissToast={dismissToast}
       />
     </div>
   );

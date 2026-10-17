@@ -111,7 +111,7 @@ describe('LiveCockpit — Fouls für das ganze Spiel (C3b-2, G11)', () => {
   });
 });
 
-describe('LiveCockpit — M7: Toasts i18n, Foul ohne Zahl, 5er-Warnung (F3a)', () => {
+describe('LiveCockpit — M7: Meldungen i18n, Foul ohne Zahl, 5er-Warnung (F3a)', () => {
   beforeEach(() => vi.clearAllMocks());
 
   function events(count: number, extra: Record<string, unknown>[] = []) {
@@ -124,7 +124,7 @@ describe('LiveCockpit — M7: Toasts i18n, Foul ohne Zahl, 5er-Warnung (F3a)', (
     ];
   }
 
-  it('Foul-Toast ohne Zahl: „Foul für FC Alpha“, kein (n)', async () => {
+  it('Foul-Meldung ohne Zahl: „Foul für FC Alpha“, kein (n)', async () => {
     const onFoul = vi.fn();
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch(), { onFoul })} />);
@@ -150,7 +150,7 @@ describe('LiveCockpit — M7: Toasts i18n, Foul ohne Zahl, 5er-Warnung (F3a)', (
   });
 
   // Merge Spur A/B: Halbzeit-Teil entfaellt mit dem Halbzeit-Knopf (B-03 Fixrunde 1, bis B-08).
-  it('Karten- und Zeitstrafen-Toast kommen aus i18n', async () => {
+  it('Karten- und Zeitstrafen-Meldungen kommen aus i18n', async () => {
     const onCard = vi.fn();
     const onTimePenalty = vi.fn();
     const user = userEvent.setup();
@@ -168,11 +168,11 @@ describe('LiveCockpit — M7: Toasts i18n, Foul ohne Zahl, 5er-Warnung (F3a)', (
     expect(tCalls).toContain('toast.timePenalty');
   });
 
-  it('@SL-035 5-Fouls-Warnung bei der 5. Strafe – auch als Karte; 4. Strafe ohne Warnung', async () => {
+  it('@SL-034 Hinweis in der Meldezeile bei der 5. Strafe – auch als Karte; @SL-035 Gegenbeispiel: 4. Strafe ohne Hinweis', async () => {
     const { rerender } = render(
       <LiveCockpit {...baseProps(makeMatch({ events: events(4) }))} />,
     );
-    expect(screen.queryByText('⚠ ACHTUNG: FC Alpha hat 5 Fouls!')).toBeNull();
+    expect(screen.queryByText('FC Alpha: 5. Foul in dieser Halbzeit')).toBeNull();
 
     const fifthIsCard = {
       id: 'k1', matchId: 'match-1', type: 'YELLOW_CARD', timestampSeconds: 40,
@@ -180,7 +180,7 @@ describe('LiveCockpit — M7: Toasts i18n, Foul ohne Zahl, 5er-Warnung (F3a)', (
     };
     rerender(<LiveCockpit {...baseProps(makeMatch({ events: events(4, [fifthIsCard]) }))} />);
 
-    expect(await screen.findByText('⚠ ACHTUNG: FC Alpha hat 5 Fouls!')).toBeInTheDocument();
+    expect(await screen.findByText('FC Alpha: 5. Foul in dieser Halbzeit')).toBeInTheDocument();
   });
 });
 
@@ -199,7 +199,7 @@ describe('LiveCockpit — Gelb-Rot im Cockpit (C3b-2 F3b2, PO 30.09.)', () => {
     expect(onCard).toHaveBeenCalledWith('match-1', 'team-a', 'YELLOW_RED', { playerNumber: undefined });
   });
 
-  it('Toast nach Gelb-Rot kommt aus i18n ("Gelb-Rote Karte für ...")', async () => {
+  it('Meldung nach Gelb-Rot kommt aus i18n ("Gelb-Rote Karte für ...")', async () => {
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch())} />);
 

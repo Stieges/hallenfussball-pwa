@@ -7,7 +7,10 @@
 import type { ReactElement, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LiveMatch } from '../types';
+import { NoticeLine } from '../../ui';
+import { cssVars } from '../../../design-tokens';
 import { FoulBar } from '../components';
+import type { UseCockpitNoticesReturn } from '../hooks/useCockpitNotices';
 import styles from './LegacyAreas.module.css';
 
 export interface LegacyMatchHeaderProps {
@@ -19,6 +22,8 @@ export interface LegacyMatchHeaderProps {
   /** Sync-Anzeige (rendert selbst nichts außerhalb des Cloud-Modus). */
   sync: ReactNode;
   readOnly: boolean;
+  /** Meldezeile (Aufgabe 2.3); wandert mit der Tafel in `Scoreboard` (Aufgabe 2.4). */
+  notices: Pick<UseCockpitNoticesReturn, 'aktuell' | 'schliesse'>;
 }
 
 function statusLabel(status: LiveMatch['status']): string {
@@ -39,7 +44,7 @@ function liveRegionText(status: LiveMatch['status']): string {
   }
 }
 
-export function LegacyMatchHeader({ match, fieldName, isMobile, homeFouls, awayFouls, sync, readOnly }: LegacyMatchHeaderProps): ReactElement {
+export function LegacyMatchHeader({ match, fieldName, isMobile, homeFouls, awayFouls, sync, readOnly, notices }: LegacyMatchHeaderProps): ReactElement {
   const { t } = useTranslation('cockpit');
   return (
     <>
@@ -68,6 +73,12 @@ export function LegacyMatchHeader({ match, fieldName, isMobile, homeFouls, awayF
             {liveRegionText(match.status)}
           </span>
         </div>
+      </div>
+
+      {/* Meldezeile (Spec § 7): im Fluss, feste Höhe, leer behält sie ihre Höhe. Bis zur Tafel (2.4) liegt
+          sie auf einem dunklen Band, weil ihre Fläche für die dunkle Tafel gemacht ist. */}
+      <div style={{ background: notices.aktuell ? cssVars.colors.scoreboardBg : 'transparent', borderRadius: cssVars.borderRadius.md }}>
+        <NoticeLine text={notices.aktuell?.text ?? null} onClose={notices.aktuell?.stufe === 1 ? notices.schliesse : undefined} closeLabel={t('meldung.schliessen')} size={isMobile ? 'compact' : 'regular'} testId="notice-line" />
       </div>
 
       {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung (readOnly), nicht bei
