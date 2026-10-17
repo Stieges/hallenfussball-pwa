@@ -4,8 +4,8 @@
  * (Nachtrag), RPC und direkte REST-Aufrufe mit dem Schlüssel von Tom (Helfer) bzw. Olli (Eigentümer),
  * Gegenprobe per Service-Role.
  *
- * Direktweg-INSERT (Befund C-MATCH-EVENTS-DIREKTWEG): ein Alt-Format-Eintrag (event_format leer) wird heute
- * gespeichert; der Fall steht als `test.fail` bis A-08h die Client-Policies auf match_events entfernt.
+ * Direktweg-INSERT (Befund C-MATCH-EVENTS-DIREKTWEG, geschlossen mit A-08h): ein Alt-Format-Eintrag wird von
+ * der Datenbank abgelehnt, weil anon/authenticated kein Tabellenrecht auf match_events mehr haben (42501).
  * Nur cloud-desktop (je Test ein eigener Engine-Cup, Seed wird verbraucht).
  */
 import { randomUUID } from 'node:crypto';
@@ -89,14 +89,16 @@ test.describe('Schreibweg nur über Ereignisse', () => {
     }
   });
 
-  test('@FU-084 Direktweg-INSERT einer Alt-Format-GOAL-Zeile wird abgelehnt und nicht gespeichert (C-MATCH-EVENTS-DIREKTWEG, bis A-08h)', async () => {
-    test.fail(true, 'C-MATCH-EVENTS-DIREKTWEG: match_events_insert_v3 lässt Alt-Zeilen zu; geschlossen mit A-08h.');
+  test('@FU-084 Direktweg-INSERT einer Alt-Format-GOAL-Zeile wird abgelehnt und nicht gespeichert', async () => {
+    const ids = engineCupIds('SCHREIBWEG');
     await expectSeededEngineMatch(engineCupTarget('SCHREIBWEG'));
     const { rowId, status } = await insertLegacyGoalAsHelper('SCHREIBWEG');
     const stored = await legacyRowCount(rowId);
     await serviceRest('DELETE', `match_events?id=eq.${rowId}`);
     expect(status).toBeGreaterThanOrEqual(400);
     expect(stored).toBe(0);
+    // Gherkin @FU-084: „Und der Spielstand bleibt unverändert“.
+    await expectScore(ids.matchId, 1, 1, 'finished');
   });
 
   test('@FU-085 Eine Engine-Zeile lässt sich per UPDATE und DELETE nicht ändern (Eigentümer und Helfer)', async () => {
@@ -111,9 +113,10 @@ test.describe('Schreibweg nur über Ereignisse', () => {
     const ownerDelete = await restAsRole('owner', 'DELETE', target);
     expect(ownerDelete.status, ownerDelete.text).toBeGreaterThanOrEqual(400);
     expect(ownerDelete.text).toContain('42501');
-    // Helfer: die Zeilen-Richtlinie oder der Wächter lassen nichts durch (kein Treffer oder Fehler).
+    // Helfer (A-08h): ebenfalls hart 42501, das Tabellenrecht ist für alle Client-Rollen entzogen.
     for (const res of [await restAsRole('helper', 'PATCH', target, { payload: { playerNumber: 98 } }), await restAsRole('helper', 'DELETE', target)]) {
-      expect(res.status >= 400 || (Array.isArray(res.json) && res.json.length === 0), res.text).toBe(true);
+      expect(res.status, res.text).toBeGreaterThanOrEqual(400);
+      expect(res.text).toContain('42501');
     }
 
     const rows = await fetchEngineRows(ids.matchId);

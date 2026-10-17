@@ -361,6 +361,15 @@ PRIVILEGE_ASSERTION_NAMES=(
   "match-has-engine-events-execute-only-anon-authenticated"
   "matches-keep-origin-trigger-active"
   "matches-keep-origin-no-public-execute"
+  # A-08h (20261028_002, @FU-084/@FU-085): Client-Schreibrechte auf match_events entzogen, nur SELECT.
+  "anon-no-insert-match-events"
+  "anon-no-update-match-events"
+  "anon-no-delete-match-events"
+  "authenticated-no-insert-match-events"
+  "authenticated-no-update-match-events"
+  "authenticated-no-delete-match-events"
+  "authenticated-select-match-events"
+  "match-events-only-select-policy"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

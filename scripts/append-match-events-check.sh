@@ -346,10 +346,10 @@ SQL
 }
 
 # Zaehler je Kategorie (indexierte Arrays -- macOS liefert bash 3.2 ohne assoziative Arrays).
-CATS=(Fixtures Rechte Idempotenz Kaskade Nebenlaeufig Sonstiges Nachtrag Spaltenschutz Rechte-Assertion)
-DEV=(0 0 0 0 0 0 0 0 0)
-OKS=(0 0 0 0 0 0 0 0 0)
-KNOWN=(0 0 0 0 0 0 0 0 0)
+CATS=(Fixtures Rechte Idempotenz Kaskade Nebenlaeufig Sonstiges Nachtrag Spaltenschutz Rechte-Assertion A-08h)
+DEV=(0 0 0 0 0 0 0 0 0 0)
+OKS=(0 0 0 0 0 0 0 0 0 0)
+KNOWN=(0 0 0 0 0 0 0 0 0 0)
 KNOWN_LINES=()
 cat_index() {
   local i
@@ -1081,8 +1081,8 @@ out="$(call authenticated "$U_OWNER" "$(M a1)" "$(arr "$(ev AMEND "$(E a1-am7)" 
   "$(ev AMEND "$(E a1-am9)" '{"at":4700,"payload":{"playerNumber":1}}')")")"
 check Nachtrag "AMEND mit fremdem teamId / Nicht-UUID-targetId / ohne targetId -> INVALID_PAYLOAD" '[.results[].code] == ["INVALID_PAYLOAD","INVALID_PAYLOAD","INVALID_PAYLOAD"]' "$out"
 out="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away, payload) VALUES ('$(E a1-direct)', '$(M a1)', 'AMEND', 1, 0, 0, '{\"playerNumber\":1}')\$S\$);")"
-check Nachtrag "Direktweg: Client-INSERT eines AMEND (neuer Typ) -> abgelehnt vom Guard (B2, legacy_types unveraendert)" \
-  'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$out" '$v')"
+check Nachtrag "Direktweg: Client-INSERT eines AMEND (neuer Typ) -> abgelehnt mit 42501 (A-08h: kein Tabellenrecht auf match_events)" \
+  'startswith("error:42501:") and contains("permission denied for table match_events")' "$(jq -Rn --arg v "$out" '$v')"
 
 # --- 9d. C0b: Spalten-Schutz auf matches (V4, Ruling PC2) ------------------------------------
 echo "Spaltenschutz..." >&2
@@ -1273,6 +1273,98 @@ if [[ -n "$PRIV_OUT" ]]; then
   fi
 fi
 
+# --- 11. A-08h (Befund C-MATCH-EVENTS-DIREKTWEG; @FU-084, @FU-085) ----------------------------
+# Direktweg in match_events geschlossen: anon und authenticated haben kein INSERT/UPDATE/DELETE
+# mehr auf der Tabelle (Policies entfernt, Tabellenrecht entzogen) -> 42501. Schreiben laeuft nur
+# ueber append_match_events. Gegenbeispiele: RPC-Schreiben, Ruecknahme per RETRACT, Lesen (Rechte-
+# Assertion), Turnier-Kaskade.
+echo "A-08h Direktweg..." >&2
+T_A8="$(uuid_for tournament:a08h)"
+T_A8D="$(uuid_for tournament:a08h-delete)"
+{
+  tournament_sql "$T_A8" '{}' 'null' 10
+  tournament_sql "$T_A8D" '{}' 'null' 10
+  echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$(uuid_for team:a8-a)', '$T_A8', 'A'), ('$(uuid_for team:a8-b)', '$T_A8', 'B'), ('$(uuid_for team:a8-da)', '$T_A8D', 'A'), ('$(uuid_for team:a8-db)', '$T_A8D', 'B');"
+  echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, match_status, score_a, score_b) VALUES ('$(M a8-fin)', '$T_A8', 1, 1, '$(uuid_for team:a8-a)', '$(uuid_for team:a8-b)', 'finished', 2, 1), ('$(M a8-del)', '$T_A8D', 1, 1, '$(uuid_for team:a8-da)', '$(uuid_for team:a8-db)', 'finished', 2, 1);"
+  echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, score_a, score_b) VALUES ('$(M a8-run)', '$T_A8', 1, 2, '$(uuid_for team:a8-a)', '$(uuid_for team:a8-b)', NULL, NULL);"
+  echo "INSERT INTO public.match_events (id, match_id, type, team_id, timestamp_seconds, score_home, score_away) VALUES ('$(E a8-legacy)', '$(M a8-fin)', 'GOAL', '$(uuid_for team:a8-a)', 10, 2, 1), ('$(E a8-del-legacy)', '$(M a8-del)', 'GOAL', '$(uuid_for team:a8-da)', 10, 2, 1);"
+} | psql_stdin
+
+# a8_exec <anon|auth> <Nutzer-ID> <SQL> -> 'ok:<Zeilen>' bzw. 'error:<SQLSTATE>:<Meldung>'
+a8_exec() {
+  local role="$1" uid="$2" sql="$3"
+  if [[ "$role" == "anon" ]]; then
+    q "SELECT public.__b3b_exec_msg(NULL, \$S\$$sql\$S\$, 'anon');"
+  else
+    q "SELECT public.__b3b_exec_msg('$uid', \$S\$$sql\$S\$, 'authenticated');"
+  fi
+}
+# a8_denied <Name> <Ausgabe>: 42501 MIT der Meldung des entzogenen Tabellenrechts (nicht RLS, nicht Guard).
+a8_denied() { check A-08h "$1" 'startswith("error:42501:") and contains("permission denied for table match_events")' "$(jq -Rn --arg v "$2" '$v')"; }
+# a8_eq <Name> <vorher> <nachher>
+a8_eq() { local v=false; [[ "$2" == "$3" ]] && v=true; check A-08h "$1" '. == true' "$v"; }
+a8_snap() {
+  q "SELECT coalesce((SELECT jsonb_agg(jsonb_build_array(id, type, payload, score_home, score_away) ORDER BY id) FROM public.match_events WHERE match_id = '$(M a8-fin)'), '[]'::jsonb)::text || '|' || (SELECT jsonb_build_array(score_a, score_b, match_status)::text FROM public.matches WHERE id = '$(M a8-fin)');"
+}
+
+SNAP_VORHER="$(a8_snap)"
+A8_LEG="$(E a8-legacy)"
+for who in anon owner coadmin helper; do
+  case "$who" in
+    anon)    role=anon; uid="" ;;
+    owner)   role=auth; uid="$U_OWNER" ;;
+    coadmin) role=auth; uid="$U_COADMIN" ;;
+    helper)  role=auth; uid="$U_HELPER" ;;
+  esac
+  out="$(a8_exec "$role" "$uid" "INSERT INTO public.match_events (id, match_id, type, team_id, timestamp_seconds, score_home, score_away) VALUES ('$(uuid_for "a8-insert:$who")', '$(M a8-fin)', 'GOAL', '$(uuid_for team:a8-a)', 60, 3, 1)")"
+  a8_denied "@FU-084 $who: Direktweg-INSERT eines Altformat-Tors auf das beendete Spiel -> 42501" "$out"
+done
+for who in anon owner; do
+  role=auth; uid="$U_OWNER"; [[ "$who" == "anon" ]] && { role=anon; uid=""; }
+  out="$(a8_exec "$role" "$uid" "UPDATE public.match_events SET payload = '{\"x\":1}'::jsonb WHERE id = '$A8_LEG'")"
+  a8_denied "@FU-085 $who: UPDATE (payload) einer Altformat-Zeile -> 42501" "$out"
+  out="$(a8_exec "$role" "$uid" "DELETE FROM public.match_events WHERE id = '$A8_LEG'")"
+  a8_denied "@FU-085 $who: DELETE einer Altformat-Zeile -> 42501" "$out"
+done
+a8_eq "@FU-084/@FU-085: nach allen abgelehnten Direktweg-Versuchen Ereignisse und Spielstand unverändert" "$SNAP_VORHER" "$(a8_snap)"
+# Gegenbeispiel Lesen: der Eigentuemer sieht die Zeile weiter (RLS-SELECT, match_events_select_v3).
+# Verhaltensprobe statt has_table_privilege, weil dieses die RLS-Policy nicht sieht.
+out="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$DO \$\$BEGIN IF NOT EXISTS (SELECT 1 FROM public.match_events WHERE id = '$A8_LEG') THEN RAISE EXCEPTION 'unsichtbar'; END IF; END\$\$ \$S\$);")"
+check A-08h "Gegenbeispiel Lesen: Eigentümer sieht die Ereigniszeile weiter (SELECT über RLS)" 'startswith("ok:")' "$(jq -Rn --arg v "$out" '$v')"
+
+# Gegenbeispiele ueber append_match_events (RPC bleibt Schreibweg).
+out="$(call authenticated "$U_OWNER" "$(M a8-run)" "$(arr "$(ev MATCH_START "$(E a8-start)")")")"
+check A-08h "Vorbereitung: laufendes Spiel über die RPC angepfiffen" '.results[0].status == "accepted"' "$out"
+out="$(call authenticated "$U_OWNER" "$(M a8-run)" "$(arr "$(ev GOAL "$(E a8-goal)" '{"at":2000,"teamId":"@T:a8-a@"}')")")"
+check A-08h "@FU-084 Gegenbeispiel: append_match_events nimmt ein Tor im laufenden Spiel an" '.results[0].status == "accepted"' "$out"
+out="$(call authenticated "$U_OWNER" "$(M a8-run)" "$(arr "$(ev RETRACT "$(E a8-retract)" '{"at":5000,"targetId":"@E:a8-goal@"}')")")"
+check A-08h "@FU-085 Gegenbeispiel: Rücknahme als neuer Eintrag (RETRACT) über append_match_events angenommen" '.results[0].status == "accepted"' "$out"
+
+# Engine-Zeile (per RPC angelegt) ist auch fuer den Eigentuemer nicht aenderbar/loeschbar.
+A8_ENG="$(E a8-start)"
+ENG_VORHER="$(q "SELECT count(*) || '|' || coalesce(max(payload::text), '') FROM public.match_events WHERE id = '$A8_ENG';")"
+out="$(a8_exec auth "$U_OWNER" "UPDATE public.match_events SET payload = '{\"x\":1}'::jsonb WHERE id = '$A8_ENG'")"
+a8_denied "@FU-085 owner: UPDATE einer Engine-Zeile (RPC) -> 42501" "$out"
+out="$(a8_exec auth "$U_OWNER" "DELETE FROM public.match_events WHERE id = '$A8_ENG'")"
+a8_denied "@FU-085 owner: DELETE einer Engine-Zeile (RPC) -> 42501" "$out"
+a8_eq "@FU-085: Engine-Zeile nach Direktweg-Versuchen unverändert" "$ENG_VORHER" "$(q "SELECT count(*) || '|' || coalesce(max(payload::text), '') FROM public.match_events WHERE id = '$A8_ENG';")"
+
+# Gegenbeispiel L3 (Kaskade): ein Turnier mit Ereignissen gilt als gestartet (protect_tournament_delete_started,
+# @LZ-003) -- der Eigentuemer kann es nicht hart loeschen. Die Kaskade auf match_events laeuft ueber die
+# Fremdschluessel (RI-Trigger: ohne RLS, ohne Tabellenrecht) und wird nur von der Wartungsrolle
+# (current_user nicht authenticated/anon) ausgeloest.
+out="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$DELETE FROM public.tournaments WHERE id = '$T_A8D'\$S\$);")"
+check A-08h "L3: Eigentümer kann das gestartete Turnier nicht hart löschen (bestehende Sperre, P0001)" 'startswith("error:P0001:tournament_started")' "$(jq -Rn --arg v "$out" '$v')"
+out="$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M a8-del)';")"
+check A-08h "L3: vor der Wartungslöschung noch 1 Ereignis da (Vorbedingung)" '. == 1' "$out"
+q "DELETE FROM public.tournaments WHERE id = '$T_A8D';" >/dev/null
+out="$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M a8-del)';")"
+check A-08h "L3 Gegenbeispiel: Wartungslöschung des Turniers entfernt seine Ereignisse (Kaskade bleibt)" '. == 0' "$out"
+
+# Schritt 0 (Katalog): jede Funktion, die match_events schreibt, ist SECURITY DEFINER.
+out="$(q "SELECT count(*) FROM pg_proc p WHERE p.pronamespace IN ('public'::regnamespace, 'match_engine'::regnamespace) AND NOT p.prosecdef AND p.prosrc ~* '(insert[[:space:]]+into|update|delete[[:space:]]+from)[[:space:]]+[^;]{0,30}match_events';")"
+check A-08h "Schritt 0: keine SECURITY-INVOKER-Funktion schreibt match_events (erwartet 0)" '. == 0' "$out"
+
 # --- 12. Ergebnis -----------------------------------------------------------------------------
 echo ""
 TOTAL_DEV=0
@@ -1303,7 +1395,7 @@ red_required() {
   exit 1
 }
 case "$MODE" in
-  without-migration) red_required Fixtures Rechte Idempotenz Kaskade Nebenlaeufig Sonstiges Nachtrag Spaltenschutz Rechte-Assertion ;;
+  without-migration) red_required Fixtures Rechte Idempotenz Kaskade Nebenlaeufig Sonstiges Nachtrag Spaltenschutz Rechte-Assertion A-08h ;;
   gegenprobe) red_required Fixtures Rechte ;;
   without-column-guard) red_required Spaltenschutz ;;
 esac

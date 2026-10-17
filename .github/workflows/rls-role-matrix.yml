@@ -74,6 +74,9 @@ jobs:
         # statt des Guards die tatsächliche Ursache der Ablehnung. Lief bisher nur lokal
         # (final-review-B.md, M5: docs/TESTUMGEBUNG.md nannte den Modus, die CI führte ihn nicht
         # aus).
+        # Seit A-08h (20261028_002) wird in DIESEM Modus die Migration NICHT eingespielt: der Zustand
+        # entspricht dem nach einem Rückbau, und allein der Guard muss die Client-Schreibzugriffe sperren.
+        # Die Gegenprobe ist scharf (Mutation: DROP TRIGGER auskommentiert -> exit 1, siehe task-A-08h-report.md).
         run: bash scripts/match-event-log-check.sh --without-guard
 
       - name: Node.js einrichten (Fixture des Slot-Beweises)
