@@ -6,7 +6,7 @@
  * Monitor-Editor auf Tablet und Desktop: der eingestellte Rand erreicht den Monitor nach dem nächsten Abruf.
  * Läuft offline (Monitor liest aus IndexedDB).
  */
-import type { Page } from '@playwright/test';
+import type { BrowserContext, Page } from '@playwright/test';
 import { test, expect, type TestOptions } from '../helpers/test-fixtures';
 
 const TID = 'ms2-turnier';
@@ -63,16 +63,23 @@ async function seed(seedIndexedDB: TestOptions['seedIndexedDB'], overscanPercent
 }
 
 /**
- * Öffnet den Monitor. Das Gerät sagt das Anlassen des Bildschirms zu (kein Wachhalten-Hinweis, der die Folie nach
- * unten rückt, @ME-006), außer ein Test fragt die Ablehnung ausdrücklich an.
+ * Mockt navigator.wakeLock VOR dem ersten Laden der Seite (die Saat öffnet sie schon, der Monitor-Aufruf ist danach nur
+ * ein Hash-Wechsel). Standard: Das Gerät sagt das Anlassen des Bildschirms zu, es gibt keinen Wachhalten-Hinweis, der die
+ * Folie nach unten rückt (@ME-006). Ein Test fragt die Ablehnung ausdrücklich an und ruft das vor `seed` auf.
  */
-async function oeffne(page: Page, folie: string, abfrage = '', wakeLock: 'zugesagt' | 'abgelehnt' = 'zugesagt'): Promise<void> {
-  await page.addInitScript((modus) => {
-    const request = (): Promise<unknown> => (modus === 'abgelehnt'
+async function wakeLockMocken(ziel: Page | BrowserContext, modus: 'zugesagt' | 'abgelehnt'): Promise<void> {
+  await ziel.addInitScript((m) => {
+    const request = (): Promise<unknown> => (m === 'abgelehnt'
       ? Promise.reject(new DOMException('nicht erlaubt', 'NotAllowedError'))
       : Promise.resolve({ release: () => Promise.resolve(), addEventListener: () => undefined, removeEventListener: () => undefined }));
     Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
-  }, wakeLock);
+  }, modus);
+}
+
+// im Kontext, damit auch das zweite Fenster der Editor-Tests (context.newPage) den Mock hat
+test.beforeEach(async ({ context }) => { await wakeLockMocken(context, 'zugesagt'); });
+
+async function oeffne(page: Page, folie: string, abfrage = ''): Promise<void> {
   await page.goto(`/#/display/${TID}/mon-${folie}${abfrage}`);
   await page.locator('[data-testid="monitor-slide"]').waitFor({ timeout: 15_000 });
   await page.evaluate(() => document.fonts.ready);
@@ -128,8 +135,9 @@ for (const [breite, hoehe, seitlich, oben] of [[1920, 1080, 96, 54], [1280, 720,
       // @ME-006: der Hinweis steht nur auf Einrichtungs- (Text) und QR-Folien; dort liegt er in der Ecke des sicheren Bereichs
       if (f.id === 'qr-code' || f.id === 'custom-text') {
         test(`@ME-067 ${f.id}: der Hinweis in der Ecke (Energiesparen) liegt im sicheren Bereich, der Inhalt rückt nach unten`, async ({ page, seedIndexedDB }) => {
+          await wakeLockMocken(page, 'abgelehnt');
           await seed(seedIndexedDB);
-          await oeffne(page, f.id, '', 'abgelehnt');
+          await oeffne(page, f.id);
           const hinweis = page.getByTestId('monitor-wakelock-hint');
           await expect(hinweis).toBeVisible({ timeout: 5_000 });
           const r = (await hinweis.boundingBox())!;
@@ -144,8 +152,9 @@ for (const [breite, hoehe, seitlich, oben] of [[1920, 1080, 96, 54], [1280, 720,
         });
       } else {
         test(`@ME-067 Gegenbeispiel ${f.id}: auf dieser Folie erscheint kein Hinweis (@ME-006), auch bei abgelehntem Anlassen`, async ({ page, seedIndexedDB }) => {
+          await wakeLockMocken(page, 'abgelehnt');
           await seed(seedIndexedDB);
-          await oeffne(page, f.id, '', 'abgelehnt');
+          await oeffne(page, f.id);
           await page.waitForTimeout(1_500);
           await expect(page.getByTestId('monitor-wakelock-hint')).toHaveCount(0);
           expect((await messe(page, seitlich, oben)).oben).toBe(oben);
