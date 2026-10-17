@@ -1167,9 +1167,11 @@ psql_stdin <<<'DROP POLICY "__c0b_hide_events" ON public.match_events;'
 
 # A-36a (20261026_001_match_origin.sql): matches_keep_origin feuert nach dem Guard und fasst nur
 # origin_a/origin_b an (keine der geschuetzten Engine-Spalten) -- der Guard bleibt der erste Trigger.
+# A-30a (20261028_004_match_kit_colors.sql): matches_guard_kit_columns prueft nur kit_color_a/kit_color_b/bib_side
+# und aendert keine Engine-Spalte -- die Reihenfolge bleibt fuer das Ergebnis unerheblich.
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 16) = 16;")"
 check Spaltenschutz "BEFORE-UPDATE-Trigger auf matches (Feuerreihenfolge = Name): $out" \
-  '. == "matches_guard_engine_columns,matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at"' "$(jq -Rn --arg v "$out" '$v')"
+  '. == "matches_guard_engine_columns,matches_guard_kit_columns,matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at"' "$(jq -Rn --arg v "$out" '$v')"
 
 # --- 9e. C0b-Fixrunde 1 (Review M2, Ruling PC6): SKIP/UNSKIP pflegen skipped_at/skipped_reason --
 echo "Absetzen (skipped_at/skipped_reason)..." >&2
