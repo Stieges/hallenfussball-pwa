@@ -28,6 +28,19 @@ export const TeamSchema = z.object({
     trainers: z.array(TeamTrainerSchema).optional(),
 });
 
+/** Eintrag der Korrekturhistorie eines Spiels (`CorrectionEntry`); `reasonType` bleibt Text wie `matchStatus` (alte Einträge). */
+const CorrectionEntrySchema = z.looseObject({
+    timestamp: z.string(),
+    previousScoreA: z.number(),
+    previousScoreB: z.number(),
+    newScoreA: z.number(),
+    newScoreB: z.number(),
+    reasonType: z.string().optional(),
+    reason: z.string().optional(),
+    note: z.string().optional(),
+    userName: z.string().optional(),
+});
+
 export const MatchSchema = z.object({
     id: z.string(),
     round: z.number(),
@@ -58,6 +71,11 @@ export const MatchSchema = z.object({
       },
       z.date().optional()
     ),
+    // C-SCHEMA-VERWIRFT-FELDER: ohne diese drei Felder ging beim lokalen Laden die Spielnummer verloren
+    // (aus „Spiel 11“ wurde „Spiel 1“) und ein Komplett-Speichern schrieb `match_number = NULL` in die Cloud.
+    matchNumber: z.number().optional(),
+    phase: z.string().optional(),
+    correctionHistory: z.array(CorrectionEntrySchema).optional(),
     referee: z.number().optional(),
     matchStatus: z.string().optional(), // 'scheduled' | ...
     finishedAt: z.string().optional(),

@@ -43,6 +43,7 @@ const DOM_ONLY_TS_TESTS = [
   'src/hooks/__tests__/useActorRole.test.ts',
   'src/hooks/__tests__/useDialogTimer.test.ts',
   'src/hooks/__tests__/useEngineCommandWiring.test.ts',
+  'src/hooks/__tests__/useRedCardSuspensions.test.ts',
   'src/hooks/__tests__/useCockpitExecution.test.ts',
   'src/hooks/__tests__/useCockpitExecution.realtime.test.ts',
   'src/hooks/__tests__/useCockpitExecution.rejection.test.ts',
@@ -55,6 +56,7 @@ const DOM_ONLY_TS_TESTS = [
   'src/lib/__tests__/themeManager.test.ts',
   'src/lib/__tests__/swIdle.test.ts',
   'src/lib/__tests__/swRegistration.test.ts',
+  'src/lib/__tests__/swReloadGate.test.ts',
   'src/hooks/__tests__/useSwAutoReload.test.ts',
 ]
 
