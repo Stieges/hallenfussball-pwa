@@ -15,6 +15,7 @@ import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { matchLabelText } from '../../core/models/slotLabel';
 import { buildSideContext, sideDisplay, type SideContext } from './matchSides';
+import { resultFigures } from './matchResult';
 import { EditableMatchCard, type MatchCardStatus, type RefereeOption } from './MatchCard';
 import type { ScheduleConflict } from '../../features/schedule-editor/types';
 
@@ -162,10 +163,8 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
     showGroupLabel,
     homeTeam: sideDisplay(match, 'A', sides),
     awayTeam: sideDisplay(match, 'B', sides),
-    homeScore: match.scoreA ?? 0,
-    awayScore: match.scoreB ?? 0,
+    result: resultFigures(match, status),
     status,
-    progress: 0,
   };
 
   // ---------------------------------------------------------------------------

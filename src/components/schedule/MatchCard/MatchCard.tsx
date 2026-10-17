@@ -1,27 +1,27 @@
 /**
- * MatchCard - Mobile match card for schedule view
+ * MatchCard - Mobile match card for schedule view (@OB-064, Mockup Variante D "Tore je Zeile")
  *
- * Card-based layout for mobile devices:
  * ┌────────────────────────────────────┐
- * │ 09:00 Uhr          Feld 1 • Gr. A │
+ * │ 14:20            Feld 1 • beendet  │
  * ├────────────────────────────────────┤
- * │ [AVA] Team Name A                  │
- * │ [AVA] Team Name B           ┌────┐ │
+ * │ [AVA] Team Name A               2  │
+ * │ [AVA] Team Name B               1  │
  * └────────────────────────────────────┘
  *
  * Features:
  * - Tap on card → Expand for score editing
- * - Tap on circle → Status-specific action
- * - Live badge for running matches
- * - Progress ring for live matches
+ * - Tap on goals → Status-specific action (Start, Live-Info, Zusammenfassung)
+ * - Tore je Zeile, Strafstoß kleiner daneben, Sieger fett (TeamScoreRows)
+ * - Kopfzeile: Live-Kennzeichen mit Spielzeit, „beendet i. E.“ / „n. V.“ (MatchCardHeader)
  */
 
 import { type CSSProperties, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
-import { MatchCardScore, type MatchCardStatus } from './MatchCardScore';
-import { formatTime } from './utils';
-import { TeamAvatar } from '../../ui/TeamAvatar';
+import type { MatchCardStatus } from './MatchCardScore';
+import { MatchCardHeader } from './MatchCardHeader';
+import { TeamScoreRows } from './TeamScoreRows';
+import type { ResultFigures } from '../matchResult';
 import type { TeamLogo, TeamColors } from '../../../types/tournament';
 
 // ---------------------------------------------------------------------------
@@ -54,15 +54,11 @@ export interface MatchCardProps {
   homeTeam: Team;
   /** Away team */
   awayTeam: Team;
-  /** Home score */
-  homeScore: number;
-  /** Away score */
-  awayScore: number;
+  /** Tore, Strafstoß und Sieger (`resultFigures`); `null` für ein geplantes Spiel */
+  result?: ResultFigures | null;
   /** Match status */
   status: MatchCardStatus;
-  /** Progress 0-1 for live matches */
-  progress?: number;
-  /** Formatted elapsed time */
+  /** Spielzeit eines laufenden Spiels (z. B. "07:30") für die Kopfzeile */
   elapsedFormatted?: string;
   /** Callback when card body is clicked */
   onCardClick?: () => void;
@@ -83,7 +79,7 @@ export interface MatchCardProps {
 // ---------------------------------------------------------------------------
 
 export const MatchCard: React.FC<MatchCardProps> = ({
-  matchId: _matchId,
+  matchId,
   matchNumber,
   scheduledTime,
   field,
@@ -92,10 +88,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   showGroupLabel = true,
   homeTeam,
   awayTeam,
-  homeScore,
-  awayScore,
+  result = null,
   status,
-  progress = 0,
   elapsedFormatted,
   onCardClick,
   onCircleClick,
@@ -155,61 +149,12 @@ export const MatchCard: React.FC<MatchCardProps> = ({
       : 'none',
   };
 
-  const headerStyle: CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
-    borderBottom: `1px solid ${cssVars.colors.border}`,
-    backgroundColor: cssVars.colors.surfaceDark,
-  };
-
-  const timeStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.medium,
-    color: isLive ? cssVars.colors.primary : cssVars.colors.textSecondary,
-    fontVariantNumeric: 'tabular-nums',
-  };
-
-  const metaStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    fontSize: cssVars.fontSizes.xs,
-    color: cssVars.colors.textSecondary,
-  };
-
   const bodyStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    padding: cssVars.spacing.md,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     gap: cssVars.spacing.md,
   };
-
-  const teamsContainerStyle: CSSProperties = {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.sm,
-  };
-
-  const teamRowStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-  };
-
-
-  const teamNameStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
-    fontWeight: 800,
-    color: cssVars.colors.textPrimary,
-    // MOBILE-UX: No truncation - team names must be fully visible
-    wordBreak: 'break-word',
-    overflowWrap: 'break-word',
-  };
-
-
 
   const expandStyle: CSSProperties = {
     borderTop: `1px solid ${cssVars.colors.border}`,
@@ -232,91 +177,43 @@ export const MatchCard: React.FC<MatchCardProps> = ({
       aria-label={t('matchCard.ariaLabel', { matchNumber: matchNumber || '', homeTeam: homeTeam.name, awayTeam: awayTeam.name })}
       data-match-card
     >
-      {/* Header: Time, Field, Group, Live Badge */}
-      <div style={headerStyle}>
-        <span style={timeStyle}>
-          {formatTime(scheduledTime)}
-        </span>
-        <div style={metaStyle}>
-          {field !== undefined && <span>{t('matchCard.field', { field })}</span>}
-          {showGroupLabel && group && group !== 'all' && <span>{t('matchCard.groupPrefix', { group })}</span>}
-          {referee && <span>{t('matchCard.refereePrefix', { referee })}</span>}
-          {isLive && (
-            <>
-              <span style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: cssVars.spacing.xs,
-                backgroundColor: cssVars.colors.statusLiveBg,
-                color: cssVars.colors.statusLive,
-                fontSize: cssVars.fontSizes.xs,
-                fontWeight: cssVars.fontWeights.bold,
-                padding: `3px ${cssVars.spacing.sm}`,
-                borderRadius: cssVars.borderRadius.sm,
-              }}>
-                <span style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  backgroundColor: cssVars.colors.statusLive,
-                  animation: 'pulse 2s ease-in-out infinite',
-                }} />
-                LIVE
-              </span>
-              <style>{`
-                @keyframes pulse {
-                  0% { opacity: 1; transform: scale(1); }
-                  50% { opacity: 0.6; transform: scale(1.2); }
-                  100% { opacity: 1; transform: scale(1); }
-                }
-              `}</style>
-            </>
-          )}
-        </div>
-      </div>
+      <MatchCardHeader
+        scheduledTime={scheduledTime}
+        field={field}
+        group={group}
+        showGroupLabel={showGroupLabel}
+        referee={referee}
+        status={status}
+        result={result}
+        elapsedFormatted={elapsedFormatted}
+      />
 
-      {/* Body: Teams + Score Circle */}
+      {/* Body: Teams, Tore je Zeile + Events Indicator */}
       <div style={bodyStyle}>
-        {/* Teams */}
-        <div style={teamsContainerStyle}>
-          {/* Home Team */}
-          <div style={teamRowStyle}>
-            <TeamAvatar team={homeTeam} size="md" />
-            <span style={teamNameStyle}>{homeTeam.name}</span>
-          </div>
-          {/* Away Team */}
-          <div style={teamRowStyle}>
-            <TeamAvatar team={awayTeam} size="md" />
-            <span style={teamNameStyle}>{awayTeam.name}</span>
-          </div>
-        </div>
+        <TeamScoreRows
+          matchId={matchId}
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
+          result={result}
+          status={status}
+          onScoreClick={handleCircleClick}
+          disabled={disabled}
+        />
 
-        {/* Score Circle + Events Indicator */}
-        <div data-score-circle style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: cssVars.spacing.xs }}>
-          <MatchCardScore
-            homeScore={homeScore}
-            awayScore={awayScore}
-            status={status}
-            progress={progress}
-            elapsedFormatted={elapsedFormatted}
-            onClick={handleCircleClick}
-            disabled={disabled}
-          />
-          {/* Chevron indicator for matches with events (shows expandability) */}
-          {hasEvents && !isLive && (
-            <span
-              style={{
-                color: cssVars.colors.textMuted,
-                fontSize: cssVars.fontSizes.sm,
-                transition: 'transform 0.2s ease',
-                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-              }}
-              aria-hidden="true"
-            >
-              ▼
-            </span>
-          )}
-        </div>
+        {/* Chevron indicator for matches with events (shows expandability) */}
+        {hasEvents && !isLive && (
+          <span
+            style={{
+              color: cssVars.colors.textMuted,
+              fontSize: cssVars.fontSizes.sm,
+              transition: 'transform 0.2s ease',
+              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}
+            aria-hidden="true"
+          >
+            ▼
+          </span>
+        )}
       </div>
 
       {/* Expand Content */}
