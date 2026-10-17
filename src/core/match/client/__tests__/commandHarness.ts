@@ -33,6 +33,8 @@ export interface CommandHarness {
   log: EngineEvent[];
   /** nur die von `MatchCommands` neu gespeicherten Eintraege */
   stored: EngineEvent[];
+  /** B-07a: Aufrufe des Stores -- `addPending`/`addConfirmedLocal` (je Eintrag) bzw. die Stapel-Methoden */
+  storeCalls: string[];
   kick: ReturnType<typeof vi.fn>;
   setNow(at: number): void;
 }
@@ -47,10 +49,16 @@ export function makeHarness(
   const log: EngineEvent[] = [...preLog];
   const stored: EngineEvent[] = [];
   let serverNow = now;
+  const storeCalls: string[] = [];
   const kick = vi.fn(async () => undefined);
-  const save = async (_account: string, _matchId: string, event: EngineEvent): Promise<void> => {
-    log.push(event);
-    stored.push(event);
+  const saveAll = (events: readonly EngineEvent[]): void => {
+    log.push(...events);
+    stored.push(...events);
+  };
+  const named = (name: string, events: readonly EngineEvent[]): Promise<void> => {
+    storeCalls.push(`${name}:${events.map((event) => event.type).join('+')}`);
+    saveAll(events);
+    return Promise.resolve();
   };
   const commands = new MatchCommands({
     engine: {
@@ -66,7 +74,12 @@ export function makeHarness(
         }
       },
     },
-    store: { addPending: save, addConfirmedLocal: save },
+    store: {
+      addPending: (_a, _m, event) => named('pending', [event]),
+      addConfirmedLocal: (_a, _m, event) => named('confirmed', [event]),
+      addPendingBatch: (_a, _m, events) => named('pendingBatch', events),
+      addConfirmedLocalBatch: (_a, _m, events) => named('confirmedBatch', events),
+    },
     sender: { kick },
     accountId,
   });
@@ -74,6 +87,7 @@ export function makeHarness(
     commands,
     log,
     stored,
+    storeCalls,
     kick,
     setNow: (at: number) => {
       serverNow = at;
