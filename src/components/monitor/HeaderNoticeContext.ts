@@ -1,11 +1,21 @@
 /**
- * Hinweis in der Kopfzeile der Live-Folie (B-48a, @ME-006): Der rechte Kopfbereich zeigt statt der Gruppen-Angabe diesen
- * Text, solange er gesetzt ist. Die Monitor-Seite setzt ihn für 10 Sekunden; ohne Anbieter bleibt die Gruppe stehen.
+ * Hinweis „Bildschirm kann sich abschalten“ (B-48a, @ME-006). Die Monitor-Seite setzt den Text für 10 Sekunden.
+ * Hat die gezeigte Folie eine Kopfzeile (Live-Folie), steht der Hinweis dort neben der LIVE-Marke anstelle von
+ * Feld/Spiel und Gruppe; sonst zeigt die Seite ihn als Ecke oben rechts. Die Kopfzeile meldet dafür ihr Dasein.
  */
 import { createContext, useContext } from 'react';
 
-export const HeaderNoticeContext = createContext<string | null>(null);
+export interface HeaderNoticeValue {
+  /** Text des Hinweises, solange er stehen soll. */
+  text: string | null;
+  /** Die Kopfzeile meldet sich an (true) und ab (false). */
+  setHeaderPresent: (present: boolean) => void;
+}
 
-export function useHeaderNotice(): string | null {
+const KEIN_ANBIETER: HeaderNoticeValue = { text: null, setHeaderPresent: () => undefined };
+
+export const HeaderNoticeContext = createContext<HeaderNoticeValue>(KEIN_ANBIETER);
+
+export function useHeaderNotice(): HeaderNoticeValue {
   return useContext(HeaderNoticeContext);
 }

@@ -59,6 +59,7 @@ export const displayFontSizes = {
 
   // B-48a: Hinweis oben rechts, nie unter 3 % der Bildhöhe (@ZM-125, HART)
   notice: '3vh',
+  noticeIcon: '2.4vh',
 
   // Meta/Badge
   meta: '14px',          // Gruppe, Feld-Label
@@ -190,6 +191,10 @@ export const displayLayout = {
   maxContentWidth: '1600px',
 
 
+  // Hinweis als Ecke oben rechts auf Folien ohne Kopfzeile (B-48a): mindestens 5 % der Seite vom Rand (@ME-067)
+  noticeCornerMin: '5vh',
+  noticeCornerMaxWidth: '40%',
+
   // Slide Aspect Ratios
   aspectRatio: {
     standard: '16 / 9',
@@ -211,6 +216,8 @@ export const displayLayout = {
     headerGap: '1.5cqh',
     // B-44a2: Marke gleich breit für LIVE, PAUSE, BEENDET
     badgeWidth: '11em',
+    // B-48a: schmalere Marke, solange der Hinweis neben ihr steht (der Satz soll in eine Zeile passen, auch bei 1280×720)
+    badgeWidthCompact: '7em',
     // B-44a2: Kindermodus: Namen oben bündig in der Kastenreihe, mit Abstand von oben
     kidsNamesOffset: '8cqh',
     // H3 @ZM-125: Kasten = 70 % einer Spalte; zwei Spalten teilen die Breite abzüglich seitlichem Polster (paddingX) = ca. 33 % Bildbreite
@@ -241,10 +248,11 @@ export const displayLayout = {
     paddingX: '3cqw',
     // B-48a (@ME-006): Hinweis anstelle der Gruppen-Angabe in der Kopfzeile, Stil „corner“ (Mockup v8)
     noticePadY: '0.4cqh',
-    noticePadX: '1.4cqh',
+    noticePadX: '0.8cqh',
     noticeBorderWidth: '0.3cqh',
     noticeRadius: '1cqh',
     noticeLineHeight: 1.2,
+    noticeGap: '0.6cqh',
     // B-44a3: Uhr und unterer Bereich (vorher Literale in MatchTimer)
     progressHeight: '1.2cqh',
     clockGap: '1.2cqh',

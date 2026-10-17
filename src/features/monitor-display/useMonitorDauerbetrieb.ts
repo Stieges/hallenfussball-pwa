@@ -49,12 +49,15 @@ export function useTastenAbfang(): void {
   }, []);
 }
 
-/** Zustände, in denen die erste Eingabe die Anfrage erneut stellt (Safari verlangt manchmal eine Nutzergeste). */
-const ERNEUT_NACH_EINGABE: ReadonlySet<WakeLockStatus> = new Set<WakeLockStatus>(['denied', 'noAnswer']);
+/**
+ * Zustände, in denen die erste Eingabe die Anfrage erneut stellt (Safari verlangt manchmal eine Nutzergeste).
+ * Nicht bei `noAnswer`: Eine hängende Anfrage (LG webOS) läuft weiter, eine neue würde ihre späte Zusage verwerfen.
+ */
+const ERNEUT_NACH_EINGABE: ReadonlySet<WakeLockStatus> = new Set<WakeLockStatus>(['denied']);
 
 /**
- * Fordert den Wake Lock nach der ersten Eingabe erneut an, wenn die erste Anfrage abgelehnt wurde oder 5 s ohne
- * Antwort blieb (B-17 Fixrunde 2, B-48a). Nur einmal je Zustandswechsel.
+ * Fordert den Wake Lock nach der ersten Eingabe erneut an, wenn die erste Anfrage abgelehnt wurde
+ * (B-17 Fixrunde 2, B-48a). Nur einmal je Zustandswechsel.
  */
 export function useWakeLockNachEingabe(status: WakeLockStatus, anfordern: () => Promise<void>): void {
   const erneut = ERNEUT_NACH_EINGABE.has(status);

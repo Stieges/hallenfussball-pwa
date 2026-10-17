@@ -200,4 +200,30 @@ describe('useWakeLock Zustand (@ME-006, @ME-064, @SL-122)', () => {
     await vorspulen(WAKE_LOCK_ANSWER_TIMEOUT_MS);
     expect(captureFeatureError).not.toHaveBeenCalled();
   });
+
+  it('@SL-060: eine Zusage, die erst nach dem Abbau eintrifft, wird sofort freigegeben (Gerätesperre gilt wieder)', async () => {
+    const anfrage = offeneAnfrage();
+    const { unmount } = renderHook(() => useWakeLock(true));
+    await vorspulen(1_000);
+    unmount();
+    const s = sentinel();
+    anfrage.zusagen(s);
+    await vorspulen(0);
+    expect(s.release).toHaveBeenCalledTimes(1);
+  });
+
+  it('@SL-060: wird die Anforderung zurückgenommen, während die Anfrage hängt, wird die spätere Zusage freigegeben, der Zustand bleibt „idle“', async () => {
+    const anfrage = offeneAnfrage();
+    const { result, rerender } = renderHook(({ an }) => useWakeLock(an), { initialProps: { an: true } });
+    await vorspulen(WAKE_LOCK_ANSWER_TIMEOUT_MS + 1_000);
+    expect(result.current.status).toBe('noAnswer');
+    rerender({ an: false });
+    await vorspulen(0);
+    expect(result.current.status).toBe('idle');
+    const s = sentinel();
+    anfrage.zusagen(s);
+    await vorspulen(0);
+    expect(s.release).toHaveBeenCalledTimes(1);
+    expect(result.current.status).toBe('idle');
+  });
 });

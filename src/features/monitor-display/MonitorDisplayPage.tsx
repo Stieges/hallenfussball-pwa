@@ -20,13 +20,14 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { displayMonitor } from '../../design-tokens';
+import { displayColors, displayMonitor } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
 import { useTranslation, I18nextProvider } from 'react-i18next';
 import { ANZEIGE_SPRACHE, anzeigeI18n } from '../../i18n/anzeigeSprache';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
 import { HeaderNoticeContext } from '../../components/monitor/HeaderNoticeContext';
+import { LiveHeaderNotice } from '../../components/monitor/LiveHeaderNotice';
 import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { vollbildUmschalten } from './vollbild';
@@ -99,16 +100,20 @@ function MonitorDisplayPageContent({
     ergebnisseAusgeblendet
   );
 
-  // L7: Hallen-Monitore laufen stundenlang unbeaufsichtigt; ohne Wake Lock dimmen Smart-TVs und
-  // Beamer-Laptops ab. Erst aktivieren, wenn ein Monitor geladen ist — auf der Fehlerseite wäre
-  // die Permission-Anfrage sinnlos. Kein Destructuring: noUnusedLocals ist aktiv.
+  // L7: Hallen-Monitore laufen stundenlang unbeaufsichtigt; ohne Wake Lock dimmen Smart-TVs und Beamer-Laptops ab.
+  // Erst aktivieren, wenn ein Monitor geladen ist (auf der Fehlerseite wäre die Anfrage sinnlos).
   const wakeLock = useWakeLock(monitor !== null);
   // B-17 Fixrunde 2: schlägt die erste Anfrage fehl (Safari), fordert die erste Eingabe sie erneut an.
   useWakeLockNachEingabe(wakeLock.status, wakeLock.request);
-  // B-17 (@ME-006): Kann das Gerät den Bildschirm nicht anlassen, steht in der Kopfzeile der Live-Folie anstelle der
-  // Gruppe 10 s lang ein Hinweis (einmal, nur im normalen Browser, Regeln in useWakeLockHinweis).
+  // B-17 (@ME-006): 10-s-Hinweis, wenn das Gerät den Bildschirm nicht anlassen kann (Regeln in useWakeLockHinweis).
   const ansichtBereit = !loading && !error && tournament !== null && monitor !== null;
   const hinweisZeigt = useWakeLockHinweis(wakeLock.status, ansichtBereit);
+  // Ohne Kopfzeile (andere Folien) steht der Hinweis als Ecke oben rechts, die Live-Kopfzeile übernimmt ihn.
+  const [kopfzeileDa, setKopfzeileDa] = useState(false);
+  const hinweisWert = useMemo(
+    () => ({ text: hinweisZeigt ? t('dauerbetrieb.wakeLockHint') : null, setHeaderPresent: setKopfzeileDa }),
+    [hinweisZeigt, t]
+  );
 
   // Derived state
   const performanceSettings = useMemo(
@@ -208,7 +213,7 @@ function MonitorDisplayPageContent({
   }
 
   return (
-    <HeaderNoticeContext.Provider value={hinweisZeigt ? t('dauerbetrieb.wakeLockHint') : null}>
+    <HeaderNoticeContext.Provider value={hinweisWert}>
     <div style={{ ...containerStyle, cursor: cursorRuht ? 'none' : undefined }}>
       {/* Slide Container — pixelShift for OLED anti-burn-in */}
       <div style={{
@@ -244,6 +249,17 @@ function MonitorDisplayPageContent({
           count={slides.length}
           currentIndex={slideState.currentIndex}
           enableTransitions={performanceSettings.enableTransitions}
+        />
+      )}
+
+      {hinweisZeigt && !kopfzeileDa && (
+        <LiveHeaderNotice
+          variant="corner"
+          text={t('dauerbetrieb.wakeLockHint')}
+          color={displayColors.textPrimary}
+          borderColor={displayColors.textMuted}
+          background={displayColors.surface}
+          overscanPx={overscanPx}
         />
       )}
 

@@ -21,11 +21,9 @@ import { TEAM_NAME_ZEILENHOEHE, gemeinsameNamenGroesse } from './teamNameFit';
 import type { ClockMode } from '../../core/match/clockDisplay';
 import { ScoreBlock } from './ScoreBlock';
 import { TeamNameDisplay } from './TeamNameDisplay';
-import { getStatusInfo } from './liveStatus';
 import { LiveFinalScore } from './LiveFinalScore';
-import { getBlockFrames } from './liveBlockFrame';
-import { useHeaderNotice } from './HeaderNoticeContext';
-import { LiveHeaderNotice } from './LiveHeaderNotice';
+import { getBlockFrames, resolveColor } from './liveBlockFrame';
+import { LiveHeader } from './LiveHeader';
 
 export { NoMatchDisplay } from './NoMatchDisplay';
 export type { NoMatchDisplayProps } from './NoMatchDisplay';
@@ -50,24 +48,6 @@ export interface LiveMatchDisplayProps {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Resolve team color: team color (if enabled + available) → scheme color
- */
-function resolveColor(
-  position: 'home' | 'away',
-  scheme: LiveColorScheme,
-  team?: { colors?: { primary?: string } },
-): string {
-  if (scheme.useTeamColors && team?.colors?.primary) {
-    return team.colors.primary;
-  }
-  return position === 'home' ? scheme.homeColor : scheme.awayColor;
-}
-
-// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -84,7 +64,6 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   const { t } = useTranslation('monitor');
   const { themeColors } = useMonitorTheme(theme);
   const scheme = colorScheme ?? DEFAULT_LIVE_COLOR_SCHEME;
-  const statusInfo = getStatusInfo(match.status, themeColors);
   const isRunning = match.status === 'RUNNING';
   const isPaused = match.status === 'PAUSED';
 
@@ -92,7 +71,6 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   const awayColor = resolveColor('away', scheme, match.awayTeam);
 
   const layout = displayLayout.scoreArea;
-  const headerNotice = useHeaderNotice();
   const frames = getBlockFrames(homeColor, awayColor, themeColors.background, themeColors.text);
 
   // B3: beide Teamnamen in derselben Größe (die kleinere der beiden passenden)
@@ -119,19 +97,6 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     animation: isRunning && !fullscreen ? 'matchGlow 3s ease-in-out infinite' : undefined,
     position: 'relative',
     overflow: 'hidden',
-  };
-
-  // B-44a2: feste drei Spalten (Marke links, Feld/Spiel Mitte, Gruppe rechts), auch wenn eine Gruppe fehlt
-  const headerStyle: CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: '1fr auto 1fr',
-    alignItems: 'center',
-    width: '100%',
-    height: layout.header,
-    // eine Zeile in Kopfhöhe: ein höherer Hinweis (B-48a) schiebt nichts, er ragt nach oben aus der Zeile
-    gridTemplateRows: 'minmax(0, 1fr)',
-    marginBottom: layout.headerGap,
-    flexShrink: 0,
   };
 
   // @ZM-140 Raster: Kasten (Zeile 1) und Namen (Zeile 2) teilen sich ein Raster, Spalten 1 | 2 | 3
@@ -203,70 +168,19 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     flexShrink: 0,
   };
 
-  const badgeStyle: CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: size === 'xl' ? layout.badgeGap : cssVars.spacing.sm,
-    padding: size === 'xl' ? `${layout.badgePadY} ${layout.badgePadX}` : `${cssVars.spacing.sm} ${cssVars.spacing.xl}`,
-    borderRadius: cssVars.borderRadius.md,
-    backgroundColor: statusInfo.bgColor,
-    color: statusInfo.color,
-    fontSize: size === 'xl' ? displayFontSizes.liveBadge : '16px',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-    // B-44a2: eine Marken-Gestaltung für alle Zustände, feste Mindestbreite
-    width: layout.badgeWidth,
-    justifyContent: 'center',
-    animation: isRunning ? 'livePulse 1.5s ease-in-out infinite' : undefined,
-  };
-
-  const liveDotStyle: CSSProperties = {
-    width: size === 'xl' ? layout.badgeDot : '14px',
-    height: size === 'xl' ? layout.badgeDot : '14px',
-    borderRadius: '50%',
-    backgroundColor: statusInfo.dotColor,
-    boxShadow: isRunning ? `0 0 8px ${statusInfo.dotColor}` : undefined,
-    animation: isRunning ? 'liveDotPulse 1s ease-in-out infinite' : undefined,
-  };
-
-  const infoStyle: CSSProperties = {
-    fontSize: size === 'xl' ? displayFontSizes.liveInfo : '20px',
-    fontWeight: 600,
-    color: themeColors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-  };
-
   // --- Render ---------------------------------------------------------------
 
   return (
     <>
       <div style={containerStyle}>
-        <div style={headerStyle} data-testid="live-header">
-          <div style={{ ...badgeStyle, justifySelf: 'start' }} data-testid="live-badge">
-            <span style={liveDotStyle} />
-            {statusInfo.label}
-          </div>
-          {/* B-48a: Solange der Hinweis steht, gehört die Breite daneben ihm (zweizeilig statt dreizeilig, passt in die Kopfzeile) */}
-          {headerNotice === null && (
-            <div style={infoStyle} data-testid="live-info">
-              Feld {match.field ?? 1} — Spiel {match.number}
-            </div>
-          )}
-          {headerNotice !== null ? (
-            <LiveHeaderNotice
-              text={headerNotice}
-              color={themeColors.text}
-              borderColor={themeColors.border}
-              background={themeColors.backgroundGradient}
-            />
-          ) : (
-            <div style={{ ...infoStyle, color: themeColors.text, justifySelf: 'end' }} data-testid="live-group">
-              {(group || match.group) ? t('liveMatch.group', { group: group ?? match.group }) : null}
-            </div>
-          )}
-        </div>
+        <LiveHeader
+          status={match.status}
+          field={match.field ?? 1}
+          matchNumber={match.number}
+          group={group ?? match.group}
+          size={size}
+          themeColors={themeColors}
+        />
 
         {/* Raster: Kästen, Trenner, Namen mittig unter ihrem Kasten (@ZM-140); Kindermodus ohne Kästen */}
         <div style={gridStyle} data-testid="live-grid">

@@ -77,15 +77,8 @@ describe('useWakeLockNachEingabe (B-17 Fixrunde 2)', () => {
     expect(anfordern).toHaveBeenCalledTimes(1);
   });
 
-  it('fordert auch nach 5 Sekunden ohne Antwort („noAnswer“) bei der ersten Eingabe erneut an', () => {
-    const anfordern = vi.fn().mockResolvedValue(undefined);
-    renderHook(() => useWakeLockNachEingabe('noAnswer', anfordern));
-    act(() => { window.dispatchEvent(new Event('pointerdown')); });
-    expect(anfordern).toHaveBeenCalledTimes(1);
-  });
-
-  it.each(['idle', 'pending', 'granted', 'released', 'unsupported'] as const)(
-    'Gegenbeispiel: im Zustand „%s“ wird bei Eingaben nichts angefordert',
+  it.each(['idle', 'pending', 'noAnswer', 'granted', 'released', 'unsupported'] as const)(
+    'Gegenbeispiel: im Zustand „%s“ wird bei Eingaben nichts angefordert (bei „noAnswer“ läuft die hängende Anfrage weiter)',
     (status) => {
       const anfordern = vi.fn().mockResolvedValue(undefined);
       renderHook(() => useWakeLockNachEingabe(status, anfordern));

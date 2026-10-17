@@ -17,12 +17,15 @@ export function useWakeLockHinweis(status: WakeLockStatus, ansichtBereit: boolea
   const [phase, setPhase] = useState<Phase>('bereit');
 
   useEffect(() => {
-    if (phase === 'bereit' && ansichtBereit && noetig) {
+    // Der Hinweis gilt nur für den Start: Wer einmal zugesagt hat, bekommt später mitten im Betrieb keinen (@ME-006).
+    if (status === 'granted' && phase === 'bereit') {
+      setPhase('erledigt');
+    } else if (phase === 'bereit' && ansichtBereit && noetig) {
       setPhase('zeigt');
     } else if (phase === 'zeigt' && (!ansichtBereit || !noetig)) {
       setPhase('erledigt');
     }
-  }, [phase, ansichtBereit, noetig]);
+  }, [phase, ansichtBereit, noetig, status]);
 
   useEffect(() => {
     if (phase !== 'zeigt') { return undefined; }

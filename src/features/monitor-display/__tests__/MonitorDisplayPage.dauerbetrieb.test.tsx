@@ -241,6 +241,11 @@ function liveTurnier(): Tournament {
   ]);
 }
 
+/** Turnier, in dem auf Feld 2 kein Spiel läuft (Live-Folie fällt zurück) und Spiel 7 auf Feld 1 läuft. */
+function withMatchesIdle(folien: readonly ReturnType<typeof slide>[]): Tournament {
+  return monitorTurnier(undefined, [...folien]);
+}
+
 const hinweis = () => screen.queryByTestId('monitor-wakelock-hint');
 const gruppe = () => screen.queryByTestId('live-group');
 
@@ -317,6 +322,57 @@ describe('Bildschirm bleibt an, Hinweis nur im normalen Browser (@ME-005, @ME-00
     await vorspulen(6_000);
     expect(hinweis()).not.toBeInTheDocument();
     expect(gruppe()).toBeInTheDocument();
+  });
+
+  /** @ME-006 „Wenn der Monitor startet“: Der Hinweis erscheint in jeder Startlage, auch ohne Kopfzeile in der Ecke. */
+  it.each([
+    ['Live-Folie mit laufendem Spiel', 'header', [slide('live', { fieldId: 'field-1' }, 30)]],
+    ['Live-Folie ohne laufendes Spiel (Feld 2)', 'corner', [slide('live', { fieldId: 'field-2' }, 30)]],
+    ['Tabelle', 'corner', [slide('standings', { groupId: 'A' }, 30)]],
+    ['Zuschauer-QR', 'corner', [slide('qr-code', {}, 30)]],
+    ['Textfolie', 'corner', [slide('custom-text', { headline: 'Folie A' }, 30)]],
+  ] as const)('@ME-006 Startfolie „%s“: der Hinweis steht 10 Sekunden (Lage: %s)', async (_name, lage, folien) => {
+    wakeLockAbgelehnt();
+    localGet.mockResolvedValue(withMatchesIdle(folien));
+    seite();
+    await vorspulen(0);
+    expect(hinweis()).toHaveTextContent(HINWEIS);
+    expect(hinweis()?.getAttribute('data-variant')).toBe(lage);
+    if (lage === 'corner') {
+      // Ecke oben rechts, im Bildrand (Standard 48 px, mindestens 5 %), nie unten
+      expect(hinweis()?.style.position).toBe('fixed');
+      expect(hinweis()?.style.top).toContain('48px');
+      expect(hinweis()?.style.right).toContain('48px');
+      expect(hinweis()?.style.bottom).toBe('');
+    }
+    await vorspulen(10_000);
+    expect(hinweis()).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['Live-Folie mit Spiel', [slide('live', { fieldId: 'field-1' }, 30)]],
+    ['Tabelle', [slide('standings', { groupId: 'A' }, 30)]],
+    ['Textfolie', [slide('custom-text', { headline: 'Folie A' }, 30)]],
+  ] as const)('@ME-006 Gegenbeispiel: bei Zusage des Browsers erscheint auf „%s“ nirgends ein Hinweis', async (_name, folien) => {
+    localGet.mockResolvedValue(withMatchesIdle(folien));
+    seite();
+    await vorspulen(0);
+    await vorspulen(11_000);
+    expect(hinweis()).not.toBeInTheDocument();
+  });
+
+  it('@ME-006: war der Bildschirm schon zugesagt, erscheint später nach Entzug und Ablehnung kein Hinweis mitten im Betrieb', async () => {
+    const sentinel = { release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() };
+    const request = vi.fn().mockResolvedValueOnce(sentinel).mockRejectedValue(new Error('Energiesparmodus'));
+    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+    seite();
+    await vorspulen(0);
+    const freigabe = sentinel.addEventListener.mock.calls.find(([name]) => name === 'release')?.[1] as () => void;
+    act(() => { freigabe(); });
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    await vorspulen(0);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(hinweis()).not.toBeInTheDocument();
   });
 
   it('ohne Wake Lock (Schnittstelle fehlt) erscheint der Hinweis und verschwindet nach 10 Sekunden', async () => {
@@ -435,6 +491,10 @@ describe('Wake Lock nach der ersten Eingabe (B-17 Fixrunde 2)', () => {
 });
 
 describe('Hinweis-Text in beiden Sprachen (@ME-006, i18n)', () => {
+  it('@ME-006 Wortlaut: der deutsche Hinweis ist der Satz des Szenarios', () => {
+    expect(deMonitor.dauerbetrieb.wakeLockHint).toBe('Der Bildschirm kann sich nach der Energiespar-Einstellung des Geräts abschalten.');
+  });
+
   it('DE und EN haben den Schlüssel dauerbetrieb.wakeLockHint mit Text', () => {
     expect(deMonitor.dauerbetrieb.wakeLockHint).toMatch(/Energiespar/);
     expect(enMonitor.dauerbetrieb.wakeLockHint).toMatch(/power-saving/);

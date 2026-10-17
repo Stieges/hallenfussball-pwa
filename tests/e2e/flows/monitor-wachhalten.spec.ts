@@ -28,7 +28,15 @@ async function wakeLockMocken(page: Page, modus: WakeLockModus): Promise<void> {
   }, modus);
 }
 
-async function turnierSaeen(seedIndexedDB: TestOptions['seedIndexedDB']): Promise<void> {
+type Folie = { id: string; type: string; config: Record<string, unknown>; duration: number | null; order: number };
+const LIVE_FOLIE: Folie = { id: 's1', type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 };
+const QR_FOLIE: Folie = { id: 's1', type: 'qr-code', config: {}, duration: null, order: 0 };
+/** Der Satz aus dem Szenario @ME-006, wörtlich. */
+const GHERKIN_HINWEIS = 'Der Bildschirm kann sich nach der Energiespar-Einstellung des Geräts abschalten.';
+/** Bildrand des Monitors (Standard, @ME-020). */
+const RAND_PX = 48;
+
+async function turnierSaeen(seedIndexedDB: TestOptions['seedIndexedDB'], slides: Folie[] = [LIVE_FOLIE]): Promise<void> {
   const now = new Date().toISOString();
   const heim = '00000000-0000-4000-8000-0000000000c1';
   const gast = '00000000-0000-4000-8000-0000000000c2';
@@ -52,7 +60,7 @@ async function turnierSaeen(seedIndexedDB: TestOptions['seedIndexedDB']): Promis
       monitors: [{
         id: 'mon-1', name: 'Hallenmonitor Halle', defaultSlideDuration: 15, transition: 'none', transitionDuration: 0,
         theme: 'dark', performanceMode: 'auto',
-        slides: [{ id: 's1', type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 }],
+        slides,
         createdAt: now, updatedAt: now,
       }],
       fields: [{ id: 'field-1', defaultName: 'Feld 1' }], createdAt: now, updatedAt: now,
@@ -61,11 +69,17 @@ async function turnierSaeen(seedIndexedDB: TestOptions['seedIndexedDB']): Promis
 }
 
 /** Öffnet den Monitor mit Fake-Uhr des Browsers, damit die 5 und 10 Sekunden ohne echtes Warten ablaufen. */
-async function oeffneMonitor(page: Page, seedIndexedDB: TestOptions['seedIndexedDB'], hash = '#/display/wach-turnier/mon-1'): Promise<void> {
-  await turnierSaeen(seedIndexedDB);
+async function oeffneMonitor(
+  page: Page, seedIndexedDB: TestOptions['seedIndexedDB'], slides: Folie[] = [LIVE_FOLIE], hash = '#/display/wach-turnier/mon-1',
+): Promise<void> {
+  await turnierSaeen(seedIndexedDB, slides);
   await page.clock.install();
   await page.goto(`/${hash}`);
-  await expect(page.getByText('SV Süd', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
+  if (slides[0].type === 'live') {
+    await expect(page.getByText('SV Süd', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
+  } else {
+    await page.waitForTimeout(1_000);
+  }
   await page.evaluate(() => document.fonts.ready);
 }
 
@@ -116,7 +130,7 @@ for (const [breite, hoehe] of [[1920, 1080], [1280, 720], [3840, 2160]] as const
         }
         const hinweis = page.getByTestId('monitor-wakelock-hint');
         await expect(hinweis).toBeVisible();
-        await expect(hinweis).toContainText('Energiespar');
+        await expect(hinweis).toHaveText(GHERKIN_HINWEIS);
         await page.screenshot({ path: `${process.env.B48A_SCR ?? 'test-results'}/hinweis-${modus}-${breite}x${hoehe}.png` });
 
         const m = await messe(page);
@@ -130,7 +144,11 @@ for (const [breite, hoehe] of [[1920, 1080], [1280, 720], [3840, 2160]] as const
         const schriftPx = await hinweis.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
         expect(schriftPx, 'Schrift mindestens 3 % der Bildhöhe').toBeGreaterThanOrEqual(m.hoehe * 0.03 - 0.5);
         expect(h.top, 'oben').toBeLessThan(m.hoehe * 0.2);
-        expect(h.left, 'rechts').toBeGreaterThanOrEqual(m.breite * 0.5 - 1);
+        // K2: ganz innerhalb des eigenen Bildrands, Rahmen vollständig (nicht abgeschnitten), eine Zeile
+        expect(h.top, 'Oberkante im Bildrand').toBeGreaterThanOrEqual(RAND_PX - 0.5);
+        expect(h.right, 'Rechtskante im Bildrand').toBeLessThanOrEqual(m.breite - RAND_PX + 0.5);
+        expect(h.bottom - h.top, 'eine Zeile').toBeLessThan(schriftPx * 2.4);
+        expect(h.right, 'rechtsbündig').toBeGreaterThan(m.breite * 0.9);
         expect(h.right).toBeLessThanOrEqual(m.breite);
         expect(h.bottom).toBeLessThanOrEqual(m.hoehe);
         expect(m.verdeckt, 'verdeckte Bereiche').toEqual([]);
@@ -150,13 +168,36 @@ for (const [breite, hoehe] of [[1920, 1080], [1280, 720], [3840, 2160]] as const
       await expect(page.getByTestId('monitor-wakelock-hint')).toHaveCount(0);
     });
 
-    test('Gegenbeispiel: in der Browser-Quelle (/tv) erscheint auch ohne Antwort nie ein Hinweis', async ({ page, seedIndexedDB }) => {
-      await wakeLockMocken(page, 'haengt');
-      await turnierSaeen(seedIndexedDB);
-      await page.clock.install();
-      await page.goto('/#/tv');
-      await page.clock.runFor(7_000);
-      await expect(page.getByTestId('monitor-wakelock-hint')).toHaveCount(0);
+    test('K1: Startfolie Zuschauer-QR (ohne Kopfzeile): Hinweis als Ecke oben rechts im Bildrand, 10 s', async ({ page, seedIndexedDB }) => {
+      await wakeLockMocken(page, 'abgelehnt');
+      await oeffneMonitor(page, seedIndexedDB, [QR_FOLIE]);
+      const hinweis = page.getByTestId('monitor-wakelock-hint');
+      await expect(hinweis).toBeVisible();
+      await expect(hinweis).toHaveText(GHERKIN_HINWEIS);
+      await expect(hinweis).toHaveAttribute('data-variant', 'corner');
+      await page.screenshot({ path: `${process.env.B48A_SCR ?? 'test-results'}/hinweis-qr-startfolie-${breite}x${hoehe}.png` });
+      const m = await messe(page);
+      const h = m.hinweis!;
+      const schriftPx = await hinweis.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+      expect(schriftPx, 'Schrift mindestens 3 % der Bildhöhe').toBeGreaterThanOrEqual(m.hoehe * 0.03 - 0.5);
+      expect(h.top, 'oben im Bildrand').toBeGreaterThanOrEqual(RAND_PX - 0.5);
+      expect(h.top, 'oben im Bildrand (5 %)').toBeGreaterThanOrEqual(m.hoehe * 0.05 - 0.5);
+      expect(h.right, 'rechts im Bildrand').toBeLessThanOrEqual(m.breite - RAND_PX + 0.5);
+      expect(h.left, 'rechte Bildhälfte').toBeGreaterThan(m.breite * 0.4);
+      await page.clock.runFor(10_000);
+      await expect(hinweis).toHaveCount(0);
     });
   });
 }
+
+test.describe('Browser-Quelle: OBS-Kennung im User-Agent (@ME-006)', () => {
+  test.use({ viewport: { width: 1920, height: 1080 }, userAgent: 'Mozilla/5.0 (Macintosh) AppleWebKit/537.36 Chrome/130.0 Safari/537.36 OBS/30.0' });
+
+  test('Gegenbeispiel: auch ohne Antwort des Browsers erscheint nie ein Hinweis, die Gruppe bleibt stehen', async ({ page, seedIndexedDB }) => {
+    await wakeLockMocken(page, 'haengt');
+    await oeffneMonitor(page, seedIndexedDB);
+    await page.clock.runFor(7_000);
+    await expect(page.getByTestId('monitor-wakelock-hint')).toHaveCount(0);
+    await expect(page.getByTestId('live-group')).toContainText('A');
+  });
+});
