@@ -112,9 +112,6 @@ export type DisplayColorKey = keyof typeof displayColors;
  * TVs können an den Rändern abschneiden
  */
 export const displaySpacing = {
-  // Overscan-Safe Area (für alte TVs)
-  overscan: '48px',
-
   // Section Spacing
   sectionXL: '64px',
   sectionLG: '48px',
@@ -321,8 +318,8 @@ export const displayMonitor = {
     lineHeight: 1.5,
   },
 
-  /** Rand der Folie, wenn die Monitor-Konfiguration keinen Overscan hat */
-  overscanDefaultPx: 48,
+  /** Bildrand in % je Seite (@ME-067): links/rechts von der Breite, oben/unten von der Höhe der Folie; `?rand=` gilt je Sitzung */
+  overscan: { defaultPercent: 5, minPercent: 0, maxPercent: 10, stepPercent: 0.5, urlParam: 'rand' },
 
   /** Ecken */
   radius: {

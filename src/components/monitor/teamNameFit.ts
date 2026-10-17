@@ -111,7 +111,8 @@ export function useTeamNameFit(
       visibility: 'hidden',
       top: '-10000px',
       left: '0',
-      width: `${el.clientWidth}px`,
+      // Bruchteil der Breite zählt: clientWidth rundet auf, dann passt der Name im Messfeld, bricht im Feld aber um eine Zeile mehr (CI Linux, 1366×768)
+      width: `${el.getBoundingClientRect().width}px`,
       fontFamily: stil.fontFamily,
       fontWeight: stil.fontWeight,
       letterSpacing: stil.letterSpacing,

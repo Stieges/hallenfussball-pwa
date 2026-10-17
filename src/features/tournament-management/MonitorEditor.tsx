@@ -29,6 +29,7 @@ import { useMonitors, useSponsors } from '../../hooks';
 import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
 import { SlideConfigEditor } from './components/SlideConfigEditor';
 import { SlidePreview } from './components/SlidePreview';
+import { MonitorOverscanField } from './components/MonitorOverscanField';
 import { SlideReferenceWarning } from './components/SlideReferenceWarning';
 import { useSlotFields } from './hooks/useSlotFields';
 
@@ -182,7 +183,7 @@ export function MonitorEditor({
     transitionDuration?: number;
     performanceMode?: PerformanceMode;
     theme?: MonitorTheme;
-    overscanPx?: number;
+    overscanPercent?: number;
   }) => {
     if (!monitor) {return;}
 
@@ -635,30 +636,11 @@ export function MonitorEditor({
                 </select>
               </div>
 
-              {/* Overscan */}
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>
-                  {t('monitorEditor.settings.overscan', { px: monitor.overscanPx ?? 48 })}
-                </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={80}
-                  step={4}
-                  value={monitor.overscanPx ?? 48}
-                  onChange={(e) => void handleUpdateSettings({ overscanPx: Number(e.target.value) })}
-                  style={{ width: '100%', accentColor: cssVars.colors.primary }}
-                />
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: cssVars.fontSizes.xs,
-                  color: cssVars.colors.textSecondary,
-                }}>
-                  <span>{t('monitorEditor.settings.noMargin')}</span>
-                  <span>80px</span>
-                </div>
-              </div>
+              {/* Bildrand in Prozent (@ME-067) */}
+              <MonitorOverscanField
+                value={monitor.overscanPercent}
+                onChange={(overscanPercent) => void handleUpdateSettings({ overscanPercent })}
+              />
             </div>
           </div>
 

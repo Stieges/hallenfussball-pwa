@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 import type { MonitorSlide, SlideConfig, TournamentMonitor } from '../../types/monitor';
-import { DEFAULT_MONITOR } from '../../types/monitor';
+import { DEFAULT_MONITOR, MONITOR_OVERSCAN } from '../../types/monitor';
 import type { Sponsor } from '../../types/sponsor';
 
 // --- KONSTANTEN ---
@@ -64,7 +64,7 @@ const transferMonitorSchema = z.object({
   transitionDuration: z.number().int().min(0).max(5000),
   theme: z.enum(['light', 'dark', 'auto']),
   performanceMode: z.enum(['auto', 'high', 'low']),
-  overscanPx: z.number().int().min(0).max(80).optional(),
+  overscanPercent: z.number().min(MONITOR_OVERSCAN.minPercent).max(MONITOR_OVERSCAN.maxPercent).multipleOf(MONITOR_OVERSCAN.stepPercent).optional(), // % je Seite (@ME-067); altes overscanPx wird nicht übernommen
   slides: z.array(transferSlideSchema).max(MAX_SLIDES_PER_MONITOR),
 });
 
@@ -96,7 +96,7 @@ export const HALLEN_STANDARD: MonitorConfigPayload = {
       transitionDuration: 500,
       theme: 'dark',
       performanceMode: 'auto',
-      overscanPx: 48,
+      overscanPercent: MONITOR_OVERSCAN.defaultPercent,
       slides: [
         { type: 'live', config: { fieldId: 'field-1' }, duration: null },
         { type: 'next-matches', config: { matchCount: 3 }, duration: null },
@@ -151,7 +151,7 @@ export function exportMonitorConfig(
       transitionDuration: monitor.transitionDuration,
       theme: monitor.theme,
       performanceMode: monitor.performanceMode,
-      overscanPx: monitor.overscanPx,
+      overscanPercent: monitor.overscanPercent,
       slides: [...monitor.slides]
         .sort((a, b) => a.order - b.order)
         .map(exportSlide)
@@ -288,7 +288,7 @@ export function instantiateMonitorConfig(
       transitionDuration: entry.transitionDuration,
       theme: entry.theme,
       performanceMode: entry.performanceMode,
-      overscanPx: entry.overscanPx ?? DEFAULT_MONITOR.overscanPx,
+      overscanPercent: entry.overscanPercent ?? DEFAULT_MONITOR.overscanPercent,
       slides,
       createdAt: options.now,
       updatedAt: options.now,

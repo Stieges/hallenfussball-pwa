@@ -9,7 +9,7 @@ interface SlideDotsProps {
 /** Positionsanzeige unten: ein Punkt je Folie, die aktuelle hervorgehoben. */
 export function SlideDots({ count, currentIndex, enableTransitions }: SlideDotsProps) {
   return (
-    <div style={{
+    <div data-testid="monitor-slide-dots" style={{
       position: 'fixed',
       bottom: displaySpacing.contentLG,
       left: '50%',

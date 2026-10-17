@@ -137,3 +137,46 @@ test('Monitor: Nächste Spiele mit Vereinskürzeln', async ({ page, seedIndexedD
     mask: commonMasks(page),
   });
 });
+
+/**
+ * MS2 (@ME-067): Bildrand 5 % je Seite (Vorbelegung) und, als Paar dazu, Rand 0 % über `?rand=0` – Folie „Alle Tabellen“
+ * bei 1280×720 (64/36 Bildpunkte Rand). Das Referenzbild entsteht im Container (scripts/visual-in-container.sh).
+ */
+for (const [abfrage, bild] of [['', 'monitor-rand.png'], ['?rand=0', 'monitor-rand0.png']] as const) {
+  test(`Monitor: Bildrand ${abfrage === '' ? '5 % (Vorbelegung)' : '0 % (?rand=0)'}`, async ({ page, seedIndexedDB }) => {
+    test.skip(test.info().project.name !== 'visual-desktop', 'Monitor nur im Querformat (1280×720)');
+    await freezeClock(page);
+
+    const tournament = buildVisualTournament({
+      id: 'visual-monitor-rand',
+      title: 'Nordstadt Hallencup',
+      monitors: [
+        {
+          id: 'visual-monitor-rand-1',
+          name: 'Halle Monitor',
+          defaultSlideDuration: 15,
+          transition: 'none',
+          transitionDuration: 0,
+          theme: 'dark',
+          performanceMode: 'auto',
+          slides: [{ id: 'slide-tabellen', type: 'all-standings', config: {}, duration: null, order: 0 }],
+          createdAt: '2026-03-01T08:00:00.000Z',
+          updatedAt: '2026-03-14T09:00:00.000Z',
+        },
+      ],
+    });
+
+    await seedIndexedDB({ tournaments: [tournament] });
+
+    await page.goto(`/#/display/visual-monitor-rand/visual-monitor-rand-1${abfrage}`);
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByTestId('monitor-error-state')).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('monitor-slide')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('FC Nordstadt').first()).toBeVisible({ timeout: 10000 });
+
+    await expect(page).toHaveScreenshot(bild, {
+      fullPage: true,
+      mask: commonMasks(page),
+    });
+  });
+}

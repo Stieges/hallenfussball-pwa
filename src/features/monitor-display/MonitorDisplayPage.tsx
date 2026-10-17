@@ -20,16 +20,15 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { displayMonitor } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
 import { useTranslation, I18nextProvider } from 'react-i18next';
 import { ANZEIGE_SPRACHE, anzeigeI18n } from '../../i18n/anzeigeSprache';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
 import { TimedNotice } from '../../components/ui/molecules/TimedNotice';
-import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { vollbildUmschalten } from './vollbild';
+import { useBildrand } from './useBildrand';
 import {
   istBrowserQuelle, istCacheTaste, istEingabeZiel, istVollbildTaste, WAKE_LOCK_HINWEIS_MS,
 } from './monitorDauerbetrieb';
@@ -134,11 +133,8 @@ function MonitorDisplayPageContent({
     [lastFetch]
   );
 
-  // Anti-burn-in pixel shift for OLED/Plasma displays
-  // Scale shift amount with overscan — no shift when overscan is 0 (would clip content)
-  const overscanPx = monitor?.overscanPx ?? displayMonitor.overscanDefaultPx;
-  const maxPixelShift = Math.min(2, Math.floor(overscanPx / 4));
-  const pixelShift = usePixelShift(60_000, maxPixelShift, performanceSettings.enableAnimations);
+  // Bildrand in Prozent (@ME-067, @ME-020, `?rand=`) und Anti-Burn-in-Verschiebung für OLED/Plasma
+  const { overscanPercent, pixelShift, sichererBereich } = useBildrand(monitor, performanceSettings);
 
   // Darstellbare Folien (@OB-011): Folien ohne Darstellung werden übersprungen,
   // bleibt keine übrig (auch beim leeren Programm), gilt die Zuschauer-QR-Folie.
@@ -221,13 +217,15 @@ function MonitorDisplayPageContent({
   }
 
   return (
-    <div style={{ ...containerStyle, cursor: cursorRuht ? 'none' : undefined }}>
+    <div style={{ ...containerStyle, containerType: 'size', cursor: cursorRuht ? 'none' : undefined }}>
       {/* Slide Container — pixelShift for OLED anti-burn-in */}
       <div style={{
         position: 'relative',
         width: '100%',
         height: '100%',
         overflow: 'hidden',
+        // Größen-Container: der Bildrand in cqh/cqw bezieht sich auf die Folienfläche
+        containerType: 'size',
         ...pixelShift,
       }}>
         {currentSlide && (
@@ -242,7 +240,7 @@ function MonitorDisplayPageContent({
               tournament={tournament}
               performanceSettings={performanceSettings}
               theme={monitor.theme}
-              overscanPx={monitor.overscanPx}
+              overscanPercent={overscanPercent}
               pinnedMatchId={slideState.pinnedMatchId}
               page={slideState.page}
             />
@@ -250,24 +248,15 @@ function MonitorDisplayPageContent({
         )}
       </div>
 
-      {/* Slide Indicator */}
-      {slides.length > 1 && (
-        <SlideDots
-          count={slides.length}
-          currentIndex={slideState.currentIndex}
-          enableTransitions={performanceSettings.enableTransitions}
-        />
-      )}
-
-      {/* Hinweis: Bildschirm kann sich abschalten (nur im normalen Browser, einmal, B-17) */}
-      {hinweisPhase === 'zeigt' && (
-        <TimedNotice
-          text={t('dauerbetrieb.wakeLockHint')}
-          durationMs={WAKE_LOCK_HINWEIS_MS}
-          onDone={hinweisAbgelaufen}
-          testId="monitor-wakelock-hint"
-        />
-      )}
+      {/* Positionspunkte und Hinweis (nur im normalen Browser, einmal, B-17) liegen im sicheren Bereich (@ME-067) */}
+      <div style={sichererBereich}>
+        {slides.length > 1 && (
+          <SlideDots count={slides.length} currentIndex={slideState.currentIndex} enableTransitions={performanceSettings.enableTransitions} />
+        )}
+        {hinweisPhase === 'zeigt' && (
+          <TimedNotice text={t('dauerbetrieb.wakeLockHint')} durationMs={WAKE_LOCK_HINWEIS_MS} onDone={hinweisAbgelaufen} testId="monitor-wakelock-hint" />
+        )}
+      </div>
 
       {/* Cache Indicator (Admin only) */}
       <CacheIndicator cacheStatus={cacheStatus} visible={showCacheIndicator} />

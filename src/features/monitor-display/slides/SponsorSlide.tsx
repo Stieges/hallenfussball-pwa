@@ -102,7 +102,7 @@ export function SponsorSlide({ slide, tournament, performanceSettings, theme, st
               borderRadius: displayMonitor.radius.card,
             }}
           />
-          <div style={{
+          <div data-monitor="nah" style={{
             fontSize: displayFontSizes.bodySM,
             color: themeColors.textMuted,
             marginTop: displaySpacing.contentSM,
