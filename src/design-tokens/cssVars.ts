@@ -105,13 +105,31 @@ export const cssColors = {
   // Border Colors
   // ---------------------------------------------------------------------------
   border: 'var(--color-border)',
-  borderLight: 'var(--color-border-light)',
   borderMedium: 'var(--color-border-medium)',
   borderActive: 'var(--color-border-active)',
   borderSolid: 'var(--color-border-solid)',
   borderSubtle: 'var(--color-border-subtle)',
   borderDefault: 'var(--color-border-default)',
-  borderStrong: 'var(--color-border-strong)',
+  borderControl: 'var(--color-border-control)',
+  borderControlRaised: 'var(--color-border-control-raised)',
+
+  // Tafel Live-Cockpit (Spec § 8.2)
+  scoreboardBg: 'var(--color-scoreboard-bg)',
+  scoreboardText: 'var(--color-scoreboard-text)',
+  scoreboardTextMuted: 'var(--color-scoreboard-text-muted)',
+  scoreboardLive: 'var(--color-scoreboard-live)',
+  scoreboardHighlight: 'var(--color-scoreboard-highlight)',
+  scoreboardFinalPhase: 'var(--color-scoreboard-final-phase)',
+  scoreboardBorder: 'var(--color-scoreboard-border)',
+  scoreboardSurface: 'var(--color-scoreboard-surface)',
+  scoreboardDivider: 'var(--color-scoreboard-divider)',
+  scoreboardOnLive: 'var(--color-scoreboard-on-live)',
+  scoreboardOnHighlight: 'var(--color-scoreboard-on-highlight)',
+  scoreboardOk: 'var(--color-scoreboard-ok)',
+  scoreboardInfo: 'var(--color-scoreboard-info)',
+  scoreboardNeutral: 'var(--color-scoreboard-neutral)',
+  noticeLineBg: 'var(--color-notice-line-bg)',
+  noticeLineText: 'var(--color-notice-line-text)',
 
   // ---------------------------------------------------------------------------
   // Semantic: Error
@@ -427,6 +445,7 @@ export const cssFontSizes = {
 // =============================================================================
 
 export const cssScoreSizes = {
+  xs: 'var(--font-size-score-xs)',
   sm: 'var(--font-size-score-sm)',
   md: 'var(--font-size-score-md)',
   lg: 'var(--font-size-score-lg)',
@@ -518,6 +537,15 @@ export const cssSizing = {
   sidebarWidth: 'var(--sizing-sidebar-width)',
   emptyStateMinHeight: 'var(--sizing-empty-state-min-height)',
   hairline: 'var(--sizing-hairline)',
+  // Tafel Live-Cockpit (Spec § 8.2)
+  scoreboardClockCompact: 'var(--font-size-score-xs)',
+  scoreboardClockRegular: 'var(--font-size-display-xl)',
+  scoreboardClockWide: 'var(--font-size-score-md)',
+  scoreboardScoreCompact: 'var(--font-size-score-sm)',
+  scoreboardScoreRegular: 'var(--font-size-display-xl)',
+  noticeLineHeightCompact: 'var(--sizing-notice-line-height-compact)',
+  noticeLineHeightRegular: 'var(--sizing-notice-line-height-regular)',
+  teamStripeWidth: 'var(--sizing-team-stripe-width)',
 } as const;
 
 export const cssLetterSpacing = {

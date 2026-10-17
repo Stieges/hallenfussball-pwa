@@ -636,7 +636,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                       padding: '6px 12px',
                       fontSize: cssVars.fontSizes.sm,
                       borderRadius: cssVars.borderRadius.sm,
-                      border: `1px solid ${cssVars.colors.border}`,
+                      border: `1px solid ${cssVars.colors.borderControl}`,
                       cursor: 'pointer',
                       background: 'transparent',
                       color: cssVars.colors.textSecondary,

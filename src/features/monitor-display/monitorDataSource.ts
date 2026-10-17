@@ -8,6 +8,7 @@ import { anzeigeT } from '../../i18n/anzeigeSprache';
 import { SupabaseRepository } from '../../core/repositories/SupabaseRepository';
 import { LocalStorageRepository } from '../../core/repositories/LocalStorageRepository';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { UnreadableResponseError } from '../../core/errors';
 import type { Tournament } from '../../types/tournament';
 import type { TournamentMonitor } from '../../types/monitor';
 
@@ -23,7 +24,9 @@ export type DisplayDelta =
       origin: DisplayOrigin;
       lookupFailed: boolean;
     }
-  | { kind: 'missing'; lookupFailed: boolean };
+  | { kind: 'missing'; lookupFailed: boolean }
+  /** Antwort, die der Monitor nicht lesen kann (B-19b, @ME-032): Bild bleibt, sofort neu laden. */
+  | { kind: 'unreadable' };
 
 export interface MonitorDataSource {
   fetch(sinceVersion: string | null): Promise<DisplayDelta>;
@@ -68,6 +71,11 @@ export function createLegacyMonitorSource(tournamentId: string, monitorId: strin
           found = await withTimeout(new SupabaseRepository().get(tournamentId), CLOUD_TIMEOUT_MS);
           if (found) { origin = 'cloud'; }
         } catch (err) {
+          // B-19b (@ME-032): nur eine nicht abbildbare Antwort ist „unlesbar“. Netz- und Abfragefehler
+          // bleiben der Rückfall auf die lokale Kopie.
+          if (err instanceof UnreadableResponseError) {
+            return { kind: 'unreadable' };
+          }
           lookupFailed = true;
           console.warn('[MonitorDisplay] Supabase-Lookup fehlgeschlagen, versuche lokal:', err);
         }

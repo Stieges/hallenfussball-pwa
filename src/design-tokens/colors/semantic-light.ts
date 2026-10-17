@@ -36,7 +36,7 @@ export const semanticColorsLight = {
   secondaryBorderActive: 'rgba(0, 150, 230, 0.25)',
   secondaryBorderStrong: 'rgba(0, 150, 230, 0.4)',
 
-  accent: palette.amber[600],
+  accent: palette.amber[700], // B-51: 5,0 : 1 auf Weiß (amber[600] hatte 3,2 : 1)
   accentLight: 'rgba(217, 119, 6, 0.15)',
   accentMedium: 'rgba(217, 119, 6, 0.08)',
   accentSubtle: 'rgba(217, 119, 6, 0.05)',
@@ -65,8 +65,8 @@ export const semanticColorsLight = {
   // Text Colors (WCAG AA validated for light backgrounds)
   // ---------------------------------------------------------------------------
   textPrimary: '#1A1A2E', // Near black - 15:1 on white
-  textSecondary: '#6B7280', // Medium gray - 5.8:1 on white
-  textMuted: 'rgba(0, 0, 0, 0.5)',
+  textSecondary: '#4B5563', // B-51: 7,6 : 1 auf Weiß, 6,9 : 1 auf surfaceLight
+  textMuted: 'rgba(0, 0, 0, 0.6)', // B-51: 5,7 : 1 auf Weiß
   textPlaceholder: '#9CA3AF', // Light gray - 4.6:1 on white
   textDisabled: palette.neutral[500], // WCAG fix: war neutral[400] (#94A3B8, 2.6:1) → jetzt 4.7:1 auf weiß
   textTertiary: '#9CA3AF',
@@ -76,13 +76,13 @@ export const semanticColorsLight = {
   // Border Colors
   // ---------------------------------------------------------------------------
   border: palette.neutral[200],
-  borderLight: palette.neutral[200],
   borderMedium: palette.neutral[300], // For medium-strength borders
   borderActive: 'rgba(5, 150, 105, 0.4)',
   borderSolid: palette.neutral[300],
   borderSubtle: palette.neutral[100],
   borderDefault: palette.neutral[200],
-  borderStrong: palette.neutral[400],
+  borderControl: palette.neutral[500],
+  borderControlRaised: palette.neutral[500],
 
   // ---------------------------------------------------------------------------
   // Semantic/Status Colors (adjusted for light bg)
@@ -94,7 +94,7 @@ export const semanticColorsLight = {
   errorMedium: 'rgba(220, 38, 38, 0.15)',
   errorBorder: 'rgba(220, 38, 38, 0.25)',
 
-  warning: palette.amber[600],
+  warning: palette.amber[700], // B-51: 5,0 : 1 auf Weiß
   /** Hover der Warn-Knöpfe: dunkler als warningSolid (B-43b3), weiße Schrift hält ≥ 4,5 : 1 */
   warningHover: palette.amber[800],
   warningSolid: palette.amber[700],
@@ -278,6 +278,26 @@ export const semanticColorsLight = {
   eventEditBorder: 'rgba(245, 158, 11, 0.2)',
 
   gradientNextMatch: 'linear-gradient(135deg, rgba(5, 150, 105, 0.06), rgba(37, 99, 235, 0.06))',
+
+  // ---------------------------------------------------------------------------
+  // Tafel Live-Cockpit (Spec § 8.2, Mockup-Freigabe 16.10.): hell = dunkel, eigene Fläche.
+  // ---------------------------------------------------------------------------
+  scoreboardBg: '#0F1B33',
+  scoreboardText: palette.neutral[0],
+  scoreboardTextMuted: '#A3B8D4',
+  scoreboardLive: palette.special.live,
+  scoreboardHighlight: palette.orange[400],
+  scoreboardFinalPhase: palette.purple[300],
+  scoreboardBorder: '#A3B8D4',
+  scoreboardSurface: 'rgba(255, 255, 255, 0.08)',
+  scoreboardDivider: 'rgba(255, 255, 255, 0.22)',
+  scoreboardOnLive: palette.neutral[0],
+  scoreboardOnHighlight: '#000000',
+  scoreboardOk: palette.green[400],
+  scoreboardInfo: '#00B0FF',
+  scoreboardNeutral: palette.neutral[500],
+  noticeLineBg: 'rgba(255, 255, 255, 0.08)',
+  noticeLineText: palette.neutral[0],
 } as const;
 
 export type SemanticColorToken = keyof typeof semanticColorsLight;

@@ -15,6 +15,7 @@ import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { matchLabelText } from '../../core/models/slotLabel';
 import { buildSideContext, sideDisplay, type SideContext } from './matchSides';
+import { resultFigures } from './matchResult';
 import { EditableMatchCard, type MatchCardStatus, type RefereeOption } from './MatchCard';
 import type { ScheduleConflict } from '../../features/schedule-editor/types';
 
@@ -134,7 +135,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   const mobileSelectStyle: CSSProperties = {
     height: spacingSemantics.touchTarget, // 44px accessible touch target
     padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.xs,
     fontWeight: cssVars.fontWeights.semibold,
@@ -162,10 +163,8 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
     showGroupLabel,
     homeTeam: sideDisplay(match, 'A', sides),
     awayTeam: sideDisplay(match, 'B', sides),
-    homeScore: match.scoreA ?? 0,
-    awayScore: match.scoreB ?? 0,
+    result: resultFigures(match, status),
     status,
-    progress: 0,
   };
 
   // ---------------------------------------------------------------------------
@@ -221,7 +220,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
               style={{
                 ...mobileSelectStyle,
                 width: '100%',
-                border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.border}`,
+                border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.borderControl}`,
               }}
             >
               {fieldOptions.map((opt) => (

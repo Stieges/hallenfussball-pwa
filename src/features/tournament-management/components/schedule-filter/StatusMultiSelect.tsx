@@ -95,7 +95,7 @@ export const StatusMultiSelect: React.FC<StatusMultiSelectProps> = ({
     fontWeight: cssVars.fontWeights.medium,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    border: `1px solid ${isActive ? config.color : cssVars.colors.border}`,
+    border: `1px solid ${isActive ? config.color : cssVars.colors.borderControl}`,
     background: isActive ? `${config.color}15` : 'transparent',
     color: isActive ? config.color : cssVars.colors.textSecondary,
     whiteSpace: 'nowrap',

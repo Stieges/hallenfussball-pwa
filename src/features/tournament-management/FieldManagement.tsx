@@ -182,7 +182,7 @@ export function FieldManagement({
     padding: cssVars.spacing.sm,
     borderRadius: cssVars.borderRadius.md,
     background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     cursor: 'pointer',
     fontSize: cssVars.fontSizes.lg,
   };
@@ -214,7 +214,7 @@ export function FieldManagement({
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     borderRadius: cssVars.borderRadius.md,
     background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     color: cssVars.colors.textSecondary,
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.medium,

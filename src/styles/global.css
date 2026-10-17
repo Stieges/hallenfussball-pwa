@@ -118,7 +118,7 @@
      =========================================== */
   --color-on-primary: #0A1628;
   --color-on-secondary: #0A1628;
-  --color-on-error: #FFFFFF;
+  --color-on-error: #0A1628;
   --color-on-warning: #000000;
   --color-on-success: #FFFFFF;
 
@@ -126,13 +126,33 @@
      Colors - Borders
      =========================================== */
   --color-border: rgba(255, 255, 255, 0.1);
-  --color-border-light: #64748B;
   --color-border-medium: rgba(255, 255, 255, 0.2);
   --color-border-active: rgba(0, 230, 118, 0.3);
   --color-border-solid: #334155;
   --color-border-subtle: rgba(255, 255, 255, 0.06);
   --color-border-default: rgba(255, 255, 255, 0.12);
-  --color-border-strong: #64748B;
+  /* Bedien-Rand (Knopf, Eingabefeld, Auswahl): >= 3:1 gegen die Fläche (WCAG 1.4.11, @OB-055, @OB-057). */
+  --color-border-control: #64748B;
+  /* Bedien-Rand auf erhöhter Fläche (surface-light, surface-variant): neutral 300, dort reicht neutral 500 nicht (1,6 : 1) */
+  --color-border-control-raised: #CBD5E1;
+
+  /* Tafel Live-Cockpit (Spec § 8.2, Mockup-Freigabe 16.10.): dunkel = eine Stufe dunkler als die Seite */
+  --color-scoreboard-bg: #050E1F;
+  --color-scoreboard-text: #FFFFFF;
+  --color-scoreboard-text-muted: #A3B8D4;
+  --color-scoreboard-live: #DC2626;
+  --color-scoreboard-highlight: #FF9100;
+  --color-scoreboard-final-phase: #C4B5FD;
+  --color-scoreboard-border: #A3B8D4;
+  --color-scoreboard-surface: rgba(255, 255, 255, 0.08);
+  --color-scoreboard-divider: rgba(255, 255, 255, 0.22);
+  --color-scoreboard-on-live: #FFFFFF;
+  --color-scoreboard-on-highlight: #000000;
+  --color-scoreboard-ok: #00E676;
+  --color-scoreboard-info: #00B0FF;
+  --color-scoreboard-neutral: #64748B;
+  --color-notice-line-bg: var(--color-scoreboard-surface);
+  --color-notice-line-text: var(--color-scoreboard-text);
 
   /* ===========================================
      Colors - Error
@@ -367,6 +387,10 @@
   --sizing-sidebar-width: 300px;
   --sizing-empty-state-min-height: 300px;
   --sizing-hairline: 1px;
+  /* Tafel Live-Cockpit (Mockup, fest): Uhr und Stand über Schrift-Tokens, Meldezeile reine Anzeige */
+  --sizing-team-stripe-width: var(--spacing-xs);
+  --sizing-notice-line-height-compact: 24px;
+  --sizing-notice-line-height-regular: 32px;
 
   /* Layout Heights */
   --layout-height-bottom-nav: 56px;
@@ -433,6 +457,7 @@
      Used for match scores, must stay readable
      on sports fields regardless of preferences.
      =========================================== */
+  --font-size-score-xs: 32px;
   --font-size-score-sm: 40px;
   --font-size-score-md: 56px;
   --font-size-score-lg: 72px;
@@ -588,7 +613,7 @@ html[data-font-size="x-large"] {
   /* ===========================================
      Colors - Accent
      =========================================== */
-  --color-accent: #D97706;
+  --color-accent: #B45309;
   --color-accent-light: rgba(217, 119, 6, 0.15);
   --color-accent-medium: rgba(217, 119, 6, 0.08);
   --color-accent-subtle: rgba(217, 119, 6, 0.05);
@@ -620,8 +645,8 @@ html[data-font-size="x-large"] {
      Colors - Text
      =========================================== */
   --color-text-primary: #1A1A2E;
-  --color-text-secondary: #6B7280;
-  --color-text-muted: rgba(0, 0, 0, 0.5);
+  --color-text-secondary: #4B5563;
+  --color-text-muted: rgba(0, 0, 0, 0.6);
   --color-text-placeholder: #9CA3AF;
   --color-text-disabled: #9CA3AF;
   --color-text-tertiary: #9CA3AF;
@@ -640,13 +665,31 @@ html[data-font-size="x-large"] {
      Colors - Borders
      =========================================== */
   --color-border: #E2E8F0;
-  --color-border-light: #E2E8F0;
   --color-border-medium: #CBD5E1;
   --color-border-active: rgba(5, 150, 105, 0.4);
   --color-border-solid: #CBD5E1;
   --color-border-subtle: #F1F5F9;
   --color-border-default: #E2E8F0;
-  --color-border-strong: #94A3B8;
+  --color-border-control: #64748B;
+  --color-border-control-raised: #64748B;
+
+  /* Tafel Live-Cockpit (Spec § 8.2): hell = dunkel, eigene Fläche */
+  --color-scoreboard-bg: #0F1B33;
+  --color-scoreboard-text: #FFFFFF;
+  --color-scoreboard-text-muted: #A3B8D4;
+  --color-scoreboard-live: #DC2626;
+  --color-scoreboard-highlight: #FF9100;
+  --color-scoreboard-final-phase: #C4B5FD;
+  --color-scoreboard-border: #A3B8D4;
+  --color-scoreboard-surface: rgba(255, 255, 255, 0.08);
+  --color-scoreboard-divider: rgba(255, 255, 255, 0.22);
+  --color-scoreboard-on-live: #FFFFFF;
+  --color-scoreboard-on-highlight: #000000;
+  --color-scoreboard-ok: #00E676;
+  --color-scoreboard-info: #00B0FF;
+  --color-scoreboard-neutral: #64748B;
+  --color-notice-line-bg: var(--color-scoreboard-surface);
+  --color-notice-line-text: var(--color-scoreboard-text);
 
   /* ===========================================
      Colors - Error
@@ -662,7 +705,7 @@ html[data-font-size="x-large"] {
   /* ===========================================
      Colors - Warning
      =========================================== */
-  --color-warning: #D97706;
+  --color-warning: #B45309;
   --color-warning-hover: #92400E;
   --color-warning-solid: #B45309;
   --color-warning-subtle: rgba(217, 119, 6, 0.05);
@@ -932,11 +975,29 @@ html[data-font-size="x-large"] {
      Colors - Borders (Stronger)
      =========================================== */
   --color-border: rgba(255, 255, 255, 0.3);
-  --color-border-light: #888888;
   --color-border-solid: #666666;
   --color-border-subtle: rgba(255, 255, 255, 0.15);
   --color-border-default: rgba(255, 255, 255, 0.25);
-  --color-border-strong: #AAAAAA;
+  --color-border-control: #AAAAAA;
+  --color-border-control-raised: #AAAAAA;
+
+  /* Tafel Live-Cockpit, hoher Kontrast: Platzhalter, nicht MVP (Werte schwarz/gelb/weiß, nur vorläufig) */
+  --color-scoreboard-bg: #000000;
+  --color-scoreboard-text: #FFFFFF;
+  --color-scoreboard-text-muted: #FFFF00;
+  --color-scoreboard-live: #DC2626;
+  --color-scoreboard-highlight: #FF9100;
+  --color-scoreboard-final-phase: #C4B5FD;
+  --color-scoreboard-border: #FFFFFF;
+  --color-scoreboard-surface: rgba(255, 255, 255, 0.12);
+  --color-scoreboard-divider: #FFFFFF;
+  --color-scoreboard-on-live: #FFFFFF;
+  --color-scoreboard-on-highlight: #000000;
+  --color-scoreboard-ok: #00E676;
+  --color-scoreboard-info: #00B0FF;
+  --color-scoreboard-neutral: #64748B;
+  --color-notice-line-bg: var(--color-scoreboard-surface);
+  --color-notice-line-text: var(--color-scoreboard-text);
 
   /* ===========================================
      Colors - Primary (Brighter Green)

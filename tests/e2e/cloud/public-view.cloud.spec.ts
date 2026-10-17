@@ -3,6 +3,7 @@
  * task-T4-brief.md`), Spec 5.
  */
 
+import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { getLocalServiceRoleClient, safeCleanup } from './helpers';
 import {
@@ -149,6 +150,34 @@ async function setMatchScoreA(matchId: string, scoreA: number): Promise<void> {
   }
 }
 
+/**
+ * @OB-064: Desktop-Tabelle – Ergebnis waagerecht („2:0“); Handy-Karte – die Torzahl steht in der
+ * Zeile der jeweiligen Mannschaft (`match-goals-<id>-home` / `-away` desselben Spiels).
+ */
+async function expectSichtbaresErgebnis(page: Page, heim: number, gast: number): Promise<void> {
+  await expect(async () => {
+    const waagerecht = page.getByText(`${heim}:${gast}`, { exact: true });
+    for (let i = 0; i < (await waagerecht.count()); i++) {
+      if (await waagerecht.nth(i).isVisible()) {
+        return;
+      }
+    }
+    const heimTore = page.locator('[data-testid^="match-goals-"][data-testid$="-home"]');
+    for (let i = 0; i < (await heimTore.count()); i++) {
+      const heimZelle = heimTore.nth(i);
+      const testId = await heimZelle.getAttribute('data-testid');
+      if (!testId || !(await heimZelle.isVisible()) || (await heimZelle.textContent()) !== String(heim)) {
+        continue;
+      }
+      const gastZelle = page.getByTestId(testId.replace(/-home$/, '-away'));
+      if ((await gastZelle.isVisible()) && (await gastZelle.textContent()) === String(gast)) {
+        return;
+      }
+    }
+    throw new Error(`Kein sichtbares Ergebnis ${heim}:${gast} gefunden`);
+  }).toPass({ timeout: 15000 });
+}
+
 // =============================================================================
 // TESTS
 // =============================================================================
@@ -170,9 +199,9 @@ test.describe('Public-View', () => {
     // Teilstring-Treffer wie "12:00". Dieser Test bleibt bewusst frei-textlich und auf beiden
     // Projekten -- er behauptet nur "irgendein Ergebnis ist sichtbar", ändert selbst nichts, und
     // ist deshalb von der Race-Problematik aus Test 3 nicht betroffen (siehe Kopfkommentar).
-    await expect(page.getByText('2:0', { exact: true }).filter({ visible: true }).first()).toBeVisible({
-      timeout: 15000,
-    });
+    // @OB-064: Nur die Desktop-Tabelle zeigt das Ergebnis waagerecht ("2:0"); auf dem Handy steht
+    // die Torzahl in der Zeile jeder Mannschaft (Heim 2, Gast 0) -- beide Formen gelten als sichtbar.
+    await expectSichtbaresErgebnis(page, 2, 0);
   });
 
   test('Entwurf-Cup und Live-Cup (privat) sind per Direktlink nicht erreichbar', async ({ page }) => {

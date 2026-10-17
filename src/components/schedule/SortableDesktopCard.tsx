@@ -205,7 +205,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
   const srSelectStyle: CSSProperties = {
     height: spacingSemantics.touchTarget, // 44px touch target
     padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
-    border: `1px solid ${hasPendingRef ? cssVars.colors.primary : cssVars.colors.border}`,
+    border: `1px solid ${hasPendingRef ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.semibold,
@@ -223,7 +223,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
   const fieldSelectStyle: CSSProperties = {
     height: spacingSemantics.touchTarget, // 44px touch target
     padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
-    border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.border}`,
+    border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.semibold,
