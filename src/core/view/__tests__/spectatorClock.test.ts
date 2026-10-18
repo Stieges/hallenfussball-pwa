@@ -104,6 +104,12 @@ describe('Feinstatus (Engine bzw. live_state hat Vorrang)', () => {
     expect(spectatorClockOf({ totalElapsedSec: 600, sectionSec: 600, sections: 2, stopped: false, engine })).toMatchObject({ remaining: '0:00', expired: false });
   });
 
+  it('@OB-066 Gegenbeispiel: im letzten Abschnitt bei 0:00 angehaltene Uhr (Feinstatus paused) ist nicht „Spielzeit abgelaufen – Ergebnis folgt“', () => {
+    const engine = E('paused', 'regular', 2, 2, { sectionSeconds: 600, sectionElapsedSec: 600, running: false });
+    const clock = spectatorClockOf({ totalElapsedSec: 1200, sectionSec: 600, sections: 2, stopped: true, engine });
+    expect(clock).toMatchObject({ remaining: '0:00', expired: false, stopped: true });
+  });
+
   it('@OB-066 Pause nach dem 1. von 4 Abschnitten: Phase „Pause nach dem 1. von 4 Abschnitten“ (nicht Halbzeit)', () => {
     const pause = E('section_break', 'regular', 1, 4, { breakRemainingSec: 45 });
     expect(spectatorClockOf({ totalElapsedSec: 300, sectionSec: 300, sections: 4, stopped: true, engine: pause })).toMatchObject({ remaining: '0:45', sectionKey: 'sectionBreak', section: 1, sections: 4 });
@@ -137,6 +143,16 @@ describe('spectatorClockForMatch (Spiel der Ansicht)', () => {
 
   it('@ZM-162 laufendes Spiel 11 aus dem Zwischenspeicher (gespielt 10:10): 1:50', () => {
     expect(spectatorClockForMatch(ansicht({}), 610, 0)?.remaining).toBe('1:50');
+  });
+
+  it('@ZM-040 ein unterbrochenes Spiel der Ansicht (status paused) hat eine stehende Uhr: zählt nicht weiter, stopped', () => {
+    const engine = E('paused', 'regular', 1, 2, { sectionSeconds: 360, sectionElapsedSec: 220, running: true, asOfMs: 1_000_000 });
+    const gleich = spectatorClockForMatch(ansicht({ status: 'paused', engine }), 220, 1_000_000);
+    const spaeter = spectatorClockForMatch(ansicht({ status: 'paused', engine }), 220, 1_030_000);
+    expect(spaeter?.remaining).toBe(gleich?.remaining);
+    expect(spaeter).toMatchObject({ remaining: '2:20', stopped: true });
+    // Gegenbeispiel: dasselbe Spiel läuft (status running) und zählt in 30 s weiter
+    expect(spectatorClockForMatch(ansicht({ status: 'running', engine }), 220, 1_030_000)).toMatchObject({ remaining: '1:50', stopped: false });
   });
 
   it('@ZM-162 Gegenbeispiel: ein geplantes oder beendetes Spiel trägt keine Uhr', () => {
