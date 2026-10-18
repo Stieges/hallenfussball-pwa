@@ -130,10 +130,11 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
           frame={home ? frames.home : frames.away}
           outcome={outcomeOf(side)}
           ringColor={themeColors.progressBar}
+          dimColor={themeColors.background}
         />
         {winner === side && (
           <span style={cupStyle} role="img" aria-label={t('liveMatch.winnerAria')} data-testid={`live-cup-${home ? 'home' : 'away'}`}>
-            <Icons.Trophy size="1em" />
+            <Icons.TrophyCup size="1em" />
           </span>
         )}
       </div>

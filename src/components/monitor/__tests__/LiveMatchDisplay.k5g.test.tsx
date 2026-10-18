@@ -13,7 +13,7 @@ vi.unmock('i18next'); vi.unmock('react-i18next');
 import { initRealDeI18n } from '../../../test/realDeI18n';
 await initRealDeI18n();
 
-import { displayLayout, displayFontSizes } from '../../../design-tokens';
+import { displayLayout, displayFontSizes, displayMonitor } from '../../../design-tokens';
 import { LiveMatchDisplay } from '../LiveMatchDisplay';
 import { buildMonitorView } from '../../../features/monitor-display/monitorView';
 import { liveMatchOf } from '../../../features/monitor-display/__tests__/monitorViewHelper';
@@ -45,9 +45,16 @@ describe('@ZM-147 @ZM-049 K5g4: Ergebnis nur eingetragen (ohne Schüsse)', () =>
     expect(kasten('home').dataset.outcome).toBe('winner');
     expect(kasten('home').style.outline).toContain(displayLayout.scoreArea.frameWidthStrong);
     expect(screen.getByTestId('live-cup-home')).toBeInTheDocument();
+    // Fixrunde 4: Pokal-Symbol (Mockup: Lucide „trophy“), Beschriftung „Pokal“
+    expect(screen.getByTestId('live-cup-home').querySelector('[data-icon="trophy-cup"]')).not.toBeNull();
+    expect(screen.getByRole('img', { name: 'Pokal' })).toBe(screen.getByTestId('live-cup-home'));
     expect(screen.getByTestId('live-cup-home').style.width).toBe(displayLayout.scoreArea.monitorCup);
     expect(kasten('away').dataset.outcome).toBe('loser');
     expect(kasten('away').style.backgroundImage).toContain('linear-gradient');
+    // Fixrunde 4: nur ein dezenter Schleier (Teamfarbe bleibt erkennbar), nicht der 70-%-Scrim
+    expect(kasten('away').style.backgroundImage).toContain(`${displayLayout.scoreArea.loserDimShare}`);
+    expect(kasten('away').style.backgroundImage).not.toContain(displayMonitor.overlay);
+    expect(parseFloat(displayLayout.scoreArea.loserDimShare)).toBeLessThanOrEqual(35);
     expect(kasten('away').style.outline).toBe('');
     expect(screen.queryByTestId('live-cup-away')).toBeNull();
   });
@@ -77,7 +84,12 @@ describe('@ZM-147 @ZM-049 K5g4: Ergebnis nur eingetragen (ohne Schüsse)', () =>
     await ende(NUR_ERGEBNIS);
     const sieger = screen.getByTestId('live-winner');
     expect(sieger.textContent).toBe('FC Nord gewinnt');
-    expect(sieger.querySelector('svg')).not.toBeNull();
+    expect(sieger.querySelector('[data-icon="trophy-cup"]')).not.toBeNull();
+    // Fixrunde 4: Teamname fett (800), „gewinnt“ normal (Mockup `.fin b`)
+    const fett = screen.getByTestId('live-winner-name');
+    expect(fett.textContent).toBe('FC Nord');
+    expect(fett.style.fontWeight).toBe('800');
+    expect(sieger.textContent?.replace(fett.textContent ?? '', '').trim()).toBe('gewinnt');
     expect(sieger.style.fontSize).toBe(displayFontSizes.monitorWinner);
     const ziffer = (p: string) => parseFloat(p);
     expect(ziffer(displayFontSizes.monitorWinner)).toBeLessThan(ziffer(displayFontSizes.teamName)); // 4,3 < 6,2 cqh

@@ -34,9 +34,9 @@
     "finalScore": "Endstand",
     "penaltyLabel": "$t(sport:events.penaltyShootout)",
     "penaltyNumbers": "{{home}} : {{away}}",
-    "winnerAria": "Sieger",
+    "winnerAria": "Pokal",
     "afterOvertime": "nach Verlängerung",
-    "winnerLine": "{{name}} gewinnt"
+    "winnerLine": "<name>{{name}}</name> gewinnt"
   },
   "timer": {
     "pause": "Pause",
