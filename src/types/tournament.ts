@@ -299,6 +299,7 @@ export interface Match {
 
   // TL-RESULT-LOCK-01: Match Status & Correction Mode
   matchStatus?: MatchStatus;           // Current match status (default: 'scheduled')
+  liveState?: unknown;                 // matches.live_state (Feinstatus für Abzeichen, R-SA8); nur lesen, Form: badgeDetailFromLiveState
   finishedAt?: string;                 // ISO timestamp when match was finished
   correctionHistory?: CorrectionEntry[]; // History of result corrections
 

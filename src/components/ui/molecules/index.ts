@@ -8,3 +8,6 @@ export { NoticeLine } from './NoticeLine';
 export type { NoticeLineProps } from './NoticeLine';
 export { Scoreboard } from './Scoreboard';
 export type { ScoreboardProps, ScoreboardModel, ScoreboardSeite, ScoreboardUhr, ScoreboardTon, ScoreboardAbzeichenKnopf } from './Scoreboard';
+export { MatchStatusBadge } from './MatchStatusBadge';
+export type { MatchStatusBadgeProps } from './MatchStatusBadge';
+export type { MatchStatusBadgeSize, MatchStatusBadgeTone } from './matchStatusBadgeStyle';

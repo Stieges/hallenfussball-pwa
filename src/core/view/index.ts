@@ -4,6 +4,15 @@
 export type * from './types';
 export { buildTournamentView, currentOf } from './tournamentView';
 export { viewRules } from './visibility';
+export {
+  matchBadgeModel,
+  badgeDetailFromLiveState,
+  MATCH_BADGE_WORD_KEY,
+  type MatchBadgeModel,
+  type MatchBadgeState,
+  type MatchBadgeInput,
+  type MatchBadgeEngineDetail,
+} from './badge';
 export { viewStatus, viewStatusText, isLive, isUpcoming } from './status';
 export { sideView } from './sides';
 export { placementView, groupPhaseOpen } from './placement';

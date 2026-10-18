@@ -185,6 +185,7 @@ export function mapMatchFromSupabase(row: MatchRow): Match {
     phase: row.phase ?? undefined,
     referee: row.referee_number ?? undefined,
     matchStatus: (row.match_status as MatchStatus | null) ?? 'scheduled',
+    liveState: row.live_state ?? undefined,
     finishedAt: row.actual_end ?? undefined,
     timerStartTime: row.timer_start_time ?? undefined,
     timerPausedAt: row.timer_paused_at ?? undefined,

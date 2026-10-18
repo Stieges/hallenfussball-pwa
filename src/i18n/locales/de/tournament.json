@@ -934,12 +934,18 @@
   "view": {
     "status": {
       "scheduled": "geplant",
-      "running": "läuft",
-      "paused": "läuft",
-      "finished": "beendet",
       "cancelled": "ausgefallen",
       "awarded": "gewertet"
     }
+  },
+  "matchBadge": {
+    "live": "Live",
+    "pause": "Pause",
+    "halftime": "Halbzeit",
+    "overtime": "Verlängerung",
+    "shootout": "Strafstoßschießen",
+    "ended": "Ende",
+    "cancelled": "ausgefallen"
   },
   "pdf": {
     "organizer": "Veranstalter",

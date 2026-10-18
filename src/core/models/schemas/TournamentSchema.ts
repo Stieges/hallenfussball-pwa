@@ -92,6 +92,7 @@ export const MatchSchema = z.object({
     decidedBy: z.string().nullable().optional().transform((v) => v ?? undefined),
     skippedReason: z.string().optional(),
     skippedAt: z.string().optional(),
+    liveState: z.unknown().optional(), // matches.live_state (Feinstatus für das Abzeichen, R-SA8); die Form prüft `badgeDetailFromLiveState`
     events: z.array(RuntimeMatchEventSchema).optional(),
     kit: MatchKitSchema.optional(), // A-30a: getragene Farben beim Anpfiff (@W3-028), übersteht das lokale Laden
 });

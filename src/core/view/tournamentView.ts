@@ -3,6 +3,7 @@
  * PDF und Verwaltung. Status, Seitentexte, Uhrzeit, Endstand und Sichtbarkeit kommen nur von hier.
  */
 import type { Match } from '../../types/tournament';
+import { matchBadgeModel } from './badge';
 import { matchFinalScore } from './finalScore';
 import { matchLabelText, type SlotLabelContext } from './originText';
 import { placementView } from './placement';
@@ -69,7 +70,8 @@ function correctedAtFor(match: Match, input: TournamentViewInput, options: ViewO
 function matchView(match: Match, input: TournamentViewInput, options: ViewOptions, rules: ViewRules, sides: SideContext): MatchView {
   const blank = sides.edition === 'blank';
   // Vorlage: keine Ergebnisse, keine Zustände – jedes Spiel hat seine Felder zum Eintragen (@DR-005, @DR-019).
-  const status = blank ? 'scheduled' : audienceStatus(viewStatus(match, input.engineStatus?.(match.id)), rules);
+  const detail = blank ? undefined : input.engineDetail?.(match.id);
+  const status = blank ? 'scheduled' : audienceStatus(viewStatus(match, detail?.status ?? input.engineStatus?.(match.id)), rules);
   const kickoff = kickoffLocal(input.date, match.scheduledTime);
   const score = blank ? undefined : scoreFor(match, status, rules);
   const correctedAt = blank ? undefined : correctedAtFor(match, input, options, rules);
@@ -88,6 +90,8 @@ function matchView(match: Match, input: TournamentViewInput, options: ViewOption
     isUpcoming: isUpcoming(status),
     ...(score === undefined ? {} : { score }),
     ...(correctedAt === undefined ? {} : { correctedAt }),
+    badge: matchBadgeModel({ status, ...(detail === undefined ? {} : { engine: detail }), ...(kickoff === undefined ? {} : { kickoff }) }),
+    ...(detail === undefined ? {} : { engine: detail }),
     home: sideView(match, 'A', sides),
     away: sideView(match, 'B', sides),
   };
