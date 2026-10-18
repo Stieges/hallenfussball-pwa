@@ -104,9 +104,9 @@ describe('@FU-094 Strafstoß nach Wiedereröffnen (Review A-25a W1, Befund C-STR
     expect(cacheColumns(state, ctx)).toMatchObject({ match_status: 'running', penalty_score_a: null, penalty_score_b: null, decided_by: null });
   });
 
-  // Befund C-STRAFSTOSS-NACH-WIEDERERÖFFNEN (Ziel B-24): Endet das wiedereröffnete Spiel 2:3, trägt die letzte
-  // Überschreibung weiter den alten Strafstoß 4:3 – Zwischenspeicher `decided_by penalty`, Sieger Heim trotz 2:3.
-  it.fails('@FU-094 wiedereröffnet und 2:3 beendet: der alte Strafstoß 4:3 entscheidet nicht mehr', () => {
+  // Befund C-STRAFSTOSS-NACH-WIEDERERÖFFNEN, behoben mit SW (@EK-062): Endet das wiedereröffnete Spiel 2:3, zählt
+  // der alte Strafstoß 4:3 nicht mehr (nur bei Gleichstand) – Zwischenspeicher `decided_by regular`, Sieger Gast.
+  it('@FU-094 wiedereröffnet und 2:3 beendet: der alte Strafstoß 4:3 entscheidet nicht mehr', () => {
     const tor: EngineEvent = { id: '0000a25a-0000-4000-8000-000000000003', type: 'GOAL', actor: 'leitung', at: 3000, section: 1, clockMs: 0, teamId: GAST, payload: {} };
     const ende: EngineEvent = { id: '0000a25a-0000-4000-8000-000000000004', type: 'MATCH_END', actor: 'leitung', at: 4000, section: 1, clockMs: 0, payload: {} };
     const { state } = reduceMatch([eintrag, wieder, tor, ende], ctx);
