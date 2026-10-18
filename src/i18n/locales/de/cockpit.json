@@ -32,7 +32,69 @@
     "seitenGetauscht": "Seiten getauscht",
     "zeitGesetzt": "Zeit auf {{zeit}} gesetzt",
     "foulGrenze": "{{teamName}}: {{count}}. Foul in dieser Halbzeit",
-    "schliessen": "Hinweis schließen"
+    "schliessen": "Hinweis schließen",
+    "zurueckgesetzt": "Spiel {{nummer}} von der Turnierleitung zurückgesetzt"
+  },
+  "tafel": {
+    "zustand": {
+      "vorAnpfiff": "Vor Anpfiff",
+      "live": "Live",
+      "halbzeit": "Halbzeit",
+      "verlaengerungFolgt": "Verlängerung folgt",
+      "entscheidung": "Entscheidung",
+      "strafstoss": "$t(sport:events.penaltyShootout)",
+      "abgepfiffen": "Abgepfiffen",
+      "wartet": "Wartet auf Teams",
+      "keinSpiel": "Kein Spiel"
+    },
+    "uhr": {
+      "restzeit": "Restzeit",
+      "steht": "Uhr steht",
+      "pause": "Pause",
+      "pauseVorbei": "Pause vorbei",
+      "endstand": "Endstand",
+      "schuesse": "Schüsse",
+      "anstoss": "Anstoß",
+      "spielzeit": "Spielzeit",
+      "strafstoss": "$t(sport:events.penaltyShootout)"
+    },
+    "unterzeile": {
+      "spielzeit": "Spielzeit {{zeit}}",
+      "bisWiederanpfiff": "bis Wiederanpfiff",
+      "bisVerlaengerung": "bis Verlängerung",
+      "wiederanpfiff": "Wiederanpfiff",
+      "anpfiffVerlaengerung": "Anpfiff Verlängerung",
+      "amSchuss": "am Schuss: {{team}}"
+    },
+    "uhrHaelt": "Uhr hält bei Unterbrechung",
+    "entscheidungOffen": "Unentschieden – die Entscheidung folgt",
+    "abschnitt": {
+      "halbzeit": "{{nummer}}. Halbzeit",
+      "vonN": "Abschnitt {{nummer}} von {{gesamt}}",
+      "verlaengerung": "Verlängerung",
+      "goldenGoal": "Golden Goal"
+    },
+    "keinWeiteresSpiel": "Kein weiteres Spiel",
+    "uebernahmePruefen": "Spielzeit beruht auf {{name}}s Gerät – bitte prüfen",
+    "vor": {
+      "spielFeld": "Spiel {{nummer}} · {{feld}}",
+      "mindestpause": "{{teamName}} hätte nur {{minuten}} statt {{mindestMinuten}} Minuten Pause",
+      "ueberfaellig": "seit {{minuten}} Minuten überfällig",
+      "gesperrt": "{{team}}: Nr. {{nummer}} ist für dieses Turnier gesperrt",
+      "reihenfolgeNurLeitung": "Nur die Turnierleitung ändert die Reihenfolge",
+      "keinSpielMehr": "Auf {{feld}} folgt kein Spiel mehr",
+      "wartetOffline": "Dein Gerät hat kein Netz – dein Stand kann veraltet sein. Die Besetzung steht am Server vielleicht schon fest.",
+      "wartetAuf": "Wartet auf: {{grund}}"
+    },
+    "wachhaltenSymbol": "Bildschirm kann sich sperren – antippen zum Ausblenden",
+    "tonAus": "Ton aus",
+    "tonAusAntippen": "Ton für das Spielende ist aus – antippen zum Einschalten",
+    "eintraegeWarten_one": "1 Eintrag wartet",
+    "eintraegeWarten_other": "{{count}} Einträge warten",
+    "helferAnfragen_one": "1 Helfer-Anfrage",
+    "helferAnfragen_other": "{{count}} Helfer-Anfragen",
+    "ariaStand": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}",
+    "ariaStandStrafstoss": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}, $t(sport:events.penaltyShootout) {{linksStrafstoss}}:{{rechtsStrafstoss}}"
   },
   "ariaLive": {
     "running": "Spiel läuft",

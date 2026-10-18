@@ -49,10 +49,6 @@ const TournamentManagementScreen = lazyWithRetry(
   () => import('./screens/TournamentManagementScreen').then(m => ({ default: m.TournamentManagementScreen })),
   'TournamentManagementScreen'
 );
-const PublicTournamentViewScreen = lazyWithRetry(
-  () => import('./screens/PublicTournamentViewScreen').then(m => ({ default: m.PublicTournamentViewScreen })),
-  'PublicTournamentViewScreen'
-);
 const LiveViewScreen = lazyWithRetry(
   () => import('./screens/LiveViewScreen').then(m => ({ default: m.LiveViewScreen })),
   'LiveViewScreen'
@@ -119,7 +115,7 @@ const ScreenLoader = () => {
   );
 };
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'not-found';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'not-found';
 
 function AppContent() {
   const { t } = useTranslation('common');
@@ -275,7 +271,6 @@ function AppContent() {
   }, [permanentDeleteDialog, permanentDeleteTournament, showError, t]);
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
-  const [publicTournamentId, setPublicTournamentId] = useState<string | null>(null);
   const [liveShareCode, setLiveShareCode] = useState<string | null>(null);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
@@ -314,13 +309,6 @@ function AppContent() {
       // Live View via share code (e.g., /live/ABC123)
       setLiveShareCode(liveMatch[1].toUpperCase());
       setScreen('live');
-    } else if (matchedRoute?.name === 'public') {
-      // public's tournamentId capture group is mandatory, so this is always
-      // defined for a real match; `?? null` only satisfies setPublicTournamentId's
-      // `string | null` type honestly (RouteMatch.params is now Partial) and
-      // never actually changes what gets set.
-      setPublicTournamentId(matchedRoute.params.tournamentId ?? null);
-      setScreen('public');
     } else if (matchedRoute?.name === 'invite') {
       const params = new URLSearchParams(search);
       const token = params.get('token');
@@ -367,7 +355,7 @@ function AppContent() {
   // Don't block public/display screens with global loading state
   // These screens have their own data loading logic
   // IMPORTANT: Use URL-based detection (defined above) to avoid timing issues with state
-  const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || location.pathname.startsWith('/public/') || location.pathname === '/test-live';
+  const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || location.pathname === '/test-live';
 
   // Auth screens should not be blocked by tournament loading
   const isAuthScreen = ['login', 'register', 'auth-callback', 'auth-confirm', 'set-password'].includes(screen);
@@ -662,10 +650,6 @@ function AppContent() {
             onNavigateToProfile={() => void navigate('/profile')}
             onNavigateToSettings={() => void navigate('/settings')}
           />
-        )}
-
-        {screen === 'public' && publicTournamentId && (
-          <PublicTournamentViewScreen tournamentId={publicTournamentId} />
         )}
 
         {/* Live View via Share Code (e.g., /live/ABC123) */}

@@ -48,7 +48,7 @@ function turnierDaten(slides: Folie[], theme: string, spiel: Spiel) {
   const sr = '00000000-0000-4000-8000-0000000000c3';
   const laeuft = spiel === 'laeuft';
   return {
-    id: 'wach-turnier', title: 'Hallencup Nord', name: 'Hallencup Nord', status: 'published', sport: 'hallenfussball',
+    id: 'wach-turnier', title: 'Hallencup Nord', name: 'Hallencup Nord', date: '2026-11-28', status: 'published', sport: 'hallenfussball',
     sportId: 'football-indoor', tournamentType: 'classic', mode: 'classic', numberOfFields: 1, numberOfTeams: 3,
     groupPhaseGameDuration: 10, placementLogic: ['points', 'goalDiff', 'goalsFor'], finals: { enabled: false },
     isKidsTournament: false, hideScoresForPublic: false, hideRankingsForPublic: false, isPublic: true,

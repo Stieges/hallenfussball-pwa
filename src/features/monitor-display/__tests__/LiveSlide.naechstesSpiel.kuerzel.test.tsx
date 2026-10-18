@@ -7,6 +7,7 @@ import { render, screen } from '@testing-library/react';
 import { LiveSlide } from '../slides/LiveSlide';
 import type { PerformanceSettings } from '../../../types/monitor';
 import { buildTournament, slide } from './monitorFixture';
+import { withView } from './monitorViewHelper';
 
 const performanceSettings = {} as PerformanceSettings;
 const VOLL = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
@@ -27,7 +28,7 @@ describe('@ZM-087 Live-Folie, nächstes Spiel (kein laufendes Spiel auf Feld 2)'
     const { container } = render(
       <LiveSlide
         slide={slide('live', { fieldId: 'field-2' })}
-        tournament={tournament}
+        {...withView(tournament)}
         performanceSettings={performanceSettings}
         theme="dark"
         style={{}}
@@ -47,7 +48,7 @@ describe('@ZM-087 Live-Folie, nächstes Spiel (kein laufendes Spiel auf Feld 2)'
     render(
       <LiveSlide
         slide={slide('live', { fieldId: 'field-2' })}
-        tournament={tournament}
+        {...withView(tournament)}
         performanceSettings={performanceSettings}
         theme="dark"
         style={{}}

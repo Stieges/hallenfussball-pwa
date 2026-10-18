@@ -38,3 +38,14 @@
   color: var(--color-text-secondary);
   font-size: var(--font-size-xl);
 }
+
+/* Task R2: Nur-Lesen-Hinweis (Berechtigungssperre, nicht bei beendetem Spiel allein) */
+.readOnlyBanner {
+  background: var(--color-warning-banner-bg);
+  border: var(--sizing-hairline) solid var(--color-warning-banner-border);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}

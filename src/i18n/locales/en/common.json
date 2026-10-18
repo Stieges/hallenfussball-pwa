@@ -1,4 +1,7 @@
 {
+  "toast": {
+    "dismissAriaLabel": "Dismiss notice"
+  },
   "loading": {
     "generic": "Loading...",
     "tournaments": "Loading tournaments..."

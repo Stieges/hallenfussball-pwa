@@ -17,6 +17,7 @@ import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
 import { LiveCockpit } from '../../components/live-cockpit';
 import type { MatchSummary } from '../../components/live-cockpit/types';
 import { useCockpitExecution } from '../../hooks/useCockpitExecution';
+import { useCockpitLeerGrund } from './hooks/useCockpitLeerGrund';
 import { useTournamentMembers } from '../auth/hooks/useTournamentMembers';
 import { useEffectiveTournamentRole } from '../auth/hooks/useMyTournamentRole';
 import { canEditResults, canManageTournament } from '../auth/utils/permissions';
@@ -24,10 +25,9 @@ import { RulesLockProvider } from '../../components/match-settings/RulesLockCont
 import { useToast } from '../../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../../lib/sentry';
 import { MatchAwaitingTeamsError, MatchNotOnEngineError, type MatchNotOnEngineReason } from '../../core/errors';
-import { awaitingLabel, matchLabelText } from '../../core/models/slotLabel';
+import { matchLabelText } from '../../core/models/slotLabel';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { buildSideContext, sideDisplay, sideName } from '../../components/schedule/matchSides';
-import { AwaitingTeamsNotice } from './components/AwaitingTeamsNotice';
 import styles from './ManagementTab.module.css';
 
 interface ManagementTabProps {
@@ -316,14 +316,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // A-08d2b (B1): Ereignisse kommen vom Engine-Weg bereits im Laufzeitformat (teamId) -- keine
   // Umrechnung mehr an der Prop-Grenze. Das Cockpit bekommt das Match unveraendert.
 
-  // @TM-033: Wartegründe der offenen Seiten des gewählten Spiels
-  const awaitingReasons = useMemo(() => {
-    if (!currentMatchData) { return []; }
-    const ctx = { teams: tournament.teams, matches: schedule.allMatches, groups: tournament.groups };
-    const reasons = [awaitingLabel(currentMatchData.slotA, ctx), awaitingLabel(currentMatchData.slotB, ctx)]
-      .filter((reason): reason is string => reason !== undefined);
-    return Array.from(new Set(reasons));
-  }, [currentMatchData, tournament.teams, tournament.groups, schedule.allMatches]);
+  // Kein Spiel im Cockpit: die Tafel nennt den Grund (@SL-052, @SL-054); Sperr-Hinweise nach Rot (@SL-089)
+  const { leer, sperrHinweise, leerProps } = useCockpitLeerGrund({
+    tournament, allMatches: schedule.allMatches, currentMatchData, awaitingTeams, isOnline, sides, selectedFieldNumber,
+    upcomingMatches, onLoadNextMatch: handleLoadNextMatch,
+  });
 
   return (
     <div className={styles.container}>
@@ -333,6 +330,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           {Array.from({ length: tournament.numberOfFields }, (_, i) => i + 1).map((fieldNum) => (
             <button
               key={fieldNum}
+              data-testid={`field-button-${fieldNum}`}
               className={`${styles.fieldButton} ${fieldNum === selectedFieldNumber ? styles.fieldButtonActive : ''}`}
               onClick={() => {
                 setSelectedFieldNumber(fieldNum);
@@ -375,6 +373,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             cockpitSettings={tournament.matchCockpitSettings}
             readOnly={!checkCanEditMatch([currentMatch.homeTeam.id, currentMatch.awayTeam.id])}
             currentMatch={currentMatch}
+            sperrHinweise={sperrHinweise}
             lastFinishedMatch={lastFinishedMatch}
             upcomingMatches={upcomingMatches}
             highlightNextMatchMinutesBefore={5}
@@ -395,11 +394,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             onUpdateSettings={(settings) => { void handleUpdateSettings(settings); }}
           />
         </RulesLockProvider>
-      ) : awaitingTeams && currentMatchData ? (
-        <AwaitingTeamsNotice
-          reasons={awaitingReasons}
-          offline={!isOnline}
-        />
+      ) : leer?.art === 'wartetAufHerkunft' ? (
+        <LiveCockpit {...leerProps} />
       ) : isInitializingMatch ? (
         <div className={styles.noMatches}>
           {t('management.matchLoading')}
@@ -415,6 +411,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           {t('management.enginePreparing')}
           <div><button type="button" className={styles.retryButton} data-testid="engine-ready-retry" onClick={handleRetryEngineReady}>{tCommon('actions.retry')}</button></div>
         </div>
+      ) : leer?.art === 'keinSpiel' ? (
+        <LiveCockpit {...leerProps} />
       ) : (
         <div className={styles.noMatches}>
           {t('management.noMatchesOnField')}

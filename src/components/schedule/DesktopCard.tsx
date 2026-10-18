@@ -11,8 +11,7 @@ import { cssVars } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
-import { matchLabelText } from '../../core/models/slotLabel';
-import { buildSideContext, sideDisplay, type SideContext } from './matchSides';
+import { buildSideContext, matchHeading, matchViewOf, sideDisplay, type SideContext } from './matchSides';
 import { resultFigures } from './matchResult';
 import { MatchCardDesktop, type MatchCardStatus } from './MatchCard';
 
@@ -41,6 +40,8 @@ export interface DesktopCardProps {
   renderExpandContent: (match: ScheduledMatch) => React.ReactNode;
   /** Whether the match has events (goals, cards, etc.) - shows chevron indicator */
   hasEvents?: boolean;
+  /** Spielzeit eines laufenden Spiels, z. B. „07:30“ */
+  elapsedFormatted?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -58,9 +59,11 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
   onCircleClick,
   renderExpandContent,
   hasEvents = false,
+  elapsedFormatted,
 }) => {
   const { t } = useTranslation('tournament');
   const sides = sideContext ?? buildSideContext(tournament, [match]);
+  const matchView = matchViewOf(sides, match.id);
 
   // ---------------------------------------------------------------------------
   // Styles
@@ -82,12 +85,14 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         scheduledTime={match.time}
         field={match.field}
         referee={match.referee ? t('matchCard.refereeSR', { referee: match.referee }) : undefined}
-        group={(match.label === undefined ? undefined : matchLabelText(match.label)) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined)}
+        group={matchHeading(match, sides) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined)}
         showGroupLabel={showGroupLabel}
         homeTeam={sideDisplay(match, 'A', sides)}
         awayTeam={sideDisplay(match, 'B', sides)}
-        result={resultFigures(match, status)}
+        result={resultFigures(matchView?.score, status)}
         status={status}
+        elapsedFormatted={elapsedFormatted}
+        viewStatus={matchView?.status}
         onRowClick={() => onCardClick(match.id)}
         onCircleClick={() => onCircleClick(match.id)}
         isExpanded={isExpanded}

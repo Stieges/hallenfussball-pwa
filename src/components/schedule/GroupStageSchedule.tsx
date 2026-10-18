@@ -27,9 +27,8 @@ import { ScheduledMatch } from '../../core/generators';
 import { RefereeConfig, RuntimeMatchEvent } from '../../types/tournament';
 import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
-import { matchLabelText } from '../../core/models/slotLabel';
-import { buildSideContext, sideDisplay, sideName } from './matchSides';
-import { formatElapsed, resultFigures } from './matchResult';
+import { buildSideContext, matchHeading, matchViewOf, sideDisplay, sideName } from './matchSides';
+import { cardStatusOf, formatElapsed, resultFigures } from './matchResult';
 import {
   MatchCard,
   type MatchCardStatus,
@@ -62,12 +61,11 @@ interface GroupStageScheduleProps {
   editingSchedule?: boolean;
   /** Pending changes during edit mode (not yet saved) */
   pendingChanges?: PendingChanges;
-  finishedMatches?: Set<string>;
   correctionMatchId?: string | null;
   onStartCorrection?: (matchId: string) => void;
-  /** MON-LIVE-INDICATOR-01: IDs of matches that are currently running */
-  runningMatchIds?: Set<string>;
-  /** Tournament data for group name resolution */
+  /** Gespielte Sekunden eines laufenden Spiels (Kopfzeile der Karte, @OB-064); ohne Angabe steht nur „läuft“ */
+  elapsedSeconds?: (matchId: string) => number | undefined;
+  /** Teams, Gruppen, Spiele und die gemeinsame Ansicht (Status, Seiten, Endstand) */
   tournament?: ScheduleSource;
   /**
    * Turnierdaten für die Konflikterkennung im Bearbeitungsmodus. Ohne Angabe gibt es keine Konflikt-Markierung
@@ -94,10 +92,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   editable: _editable = false,
   editingSchedule = false,
   pendingChanges,
-  finishedMatches,
   correctionMatchId: _correctionMatchId,
   onStartCorrection: _onStartCorrection,
-  runningMatchIds,
+  elapsedSeconds,
   tournament,
   conflictSource,
   onMatchSwap,
@@ -231,19 +228,17 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   /**
    * Convert match state to MatchCardStatus
    */
-  const getMatchStatus = (match: ScheduledMatch): MatchCardStatus => {
-    if (runningMatchIds?.has(match.id)) {
-      return 'running';
-    }
-    if (finishedMatches?.has(match.id)) {
-      return 'finished';
-    }
-    // Check if match has a score (started but paused would still show as finished)
-    if (match.scoreA !== undefined && match.scoreB !== undefined) {
-      return 'finished';
-    }
-    return 'scheduled';
-  };
+  const view = tournament?.view;
+  const getMatchStatus = useCallback(
+    (match: ScheduledMatch): MatchCardStatus => cardStatusOf(view?.byId.get(match.id)),
+    [view],
+  );
+
+  /** Spielzeit „07:30“ eines laufenden Spiels (@OB-064); fehlt die Quelle, steht in der Kopfzeile nur „läuft“. */
+  const elapsedTextOf = useCallback((match: ScheduledMatch): string | undefined => {
+    const seconds = getMatchStatus(match) === 'running' ? elapsedSeconds?.(match.id) : undefined;
+    return seconds === undefined ? undefined : formatElapsed(seconds);
+  }, [getMatchStatus, elapsedSeconds]);
 
   /*
    * Handle card body click - opens QuickScore expand for non-live matches
@@ -322,11 +317,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         setExpandType('summary');
         break;
       default:
-        // Fallback: If match has scores, treat as finished and show summary
-        if (match.scoreA !== undefined && match.scoreB !== undefined) {
-          setExpandedMatchId(matchId);
-          setExpandType('summary');
-        }
+        // Ausgefallen: kein Ergebnis, nichts zu öffnen
         break;
     }
   };
@@ -339,8 +330,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     const match = matches.find(m => m.id === matchId);
     if (!match) { return; }
 
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: finished if in Set OR has scores
-    const isFinished = finishedMatches?.has(matchId) || (match.scoreA !== undefined && match.scoreB !== undefined);
+    const isFinished = getMatchStatus(match) === 'finished';
 
     if (isFinished) {
       // If finished, redirect to correction flow logic
@@ -367,7 +357,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     }
     setExpandedMatchId(null);
     setExpandType(null);
-  }, [matches, finishedMatches, onScoreChange, _onStartCorrection]);
+  }, [matches, getMatchStatus, onScoreChange, _onStartCorrection]);
 
   /**
    * Handle expand cancel/close
@@ -390,7 +380,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     onNavigateToCockpit?.(matchId);
   }, [onNavigateToCockpit]);
 
-  // Spielseiten: Namen immer über slotLabel mit den aktuellen Teams (@TM-015), nie aus gespeichertem Anzeigetext
+  // Spielseiten: Namen immer aus der Ansicht (Slots, aktuelle Teams; @TM-015), nie aus gespeichertem Anzeigetext
   const sides = useMemo(() => buildSideContext(tournament, matches), [tournament, matches]);
 
   /**
@@ -434,7 +424,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             awayTeam={awayTeam}
             homeScore={match.scoreA ?? 0}
             awayScore={match.scoreB ?? 0}
-            elapsedFormatted={match.time || '00:00'}
+            elapsedFormatted={elapsedTextOf(match) ?? '–'}
             events={events}
             onNavigateToCockpit={_editable ? () => handleNavigateToCockpit(match.id) : undefined}
             onClose={handleExpandClose}
@@ -499,7 +489,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       default:
         return null;
     }
-  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, _onStartCorrection, _editable]);
+  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, elapsedTextOf, _onStartCorrection, _editable]);
 
   // Sort matches by displayOrder for rendering
   const sortedMatches = useMemo(() => {
@@ -606,6 +596,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             onCircleClick={handleCircleClick}
             renderExpandContent={renderExpandContent}
             hasEvents={hasEvents}
+            elapsedFormatted={elapsedTextOf(match)}
           />
         );
       })}
@@ -840,13 +831,14 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               matchNumber: match.matchNumber,
               scheduledTime: match.time,
               field: match.field,
-              group: (match.label === undefined ? undefined : matchLabelText(match.label)) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
+              group: matchHeading(match, sides) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
               showGroupLabel,
               homeTeam: sideDisplay(match, 'A', sides),
               awayTeam: sideDisplay(match, 'B', sides),
-              result: resultFigures(match, status),
+              result: resultFigures(matchViewOf(sides, match.id)?.score, status),
               status: status,
-              elapsedFormatted: status === 'running' && liveMatch ? formatElapsed(liveMatch.elapsedSeconds) : undefined,
+              viewStatus: matchViewOf(sides, match.id)?.status,
+              elapsedFormatted: elapsedTextOf(match),
             };
 
             return (

@@ -6,6 +6,8 @@
  */
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Icons } from '../Icons';
 import styles from './Toast.module.css';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -37,6 +39,7 @@ export const Toast: React.FC<ToastProps> = ({
   duration = 4000,
   action,
 }) => {
+  const { t } = useTranslation('common');
   const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
@@ -82,10 +85,10 @@ export const Toast: React.FC<ToastProps> = ({
       <button
         className={styles.dismissButton}
         onClick={handleDismiss}
-        aria-label="Schließen"
+        aria-label={t('toast.dismissAriaLabel')}
         type="button"
       >
-        \u00D7
+        <Icons.X size={16} />
       </button>
     </div>
   );

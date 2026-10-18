@@ -2,20 +2,19 @@ import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
+import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
 import { TeamAvatar } from '../../../components/ui/TeamAvatar';
 import { LiveMatchDisplay } from '../../../components/monitor';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
-import { isMatchInProgress } from '../slideProgramme';
-import { scoresPublic } from '../publicVisibility';
 import { toLiveMatch } from '../monitorMatch';
 import { monitorSideLabel, sideTeam } from '../matchSides';
-import { upcomingMatches } from '../slideContent';
-import { formatTime } from '../../../core/generators/scheduleHelpers';
 
 interface LiveSlideProps {
   slide: MonitorSlide;
   tournament: Tournament;
+  /** Die gemeinsame Ansicht des Monitors (A-36c) */
+  view: TournamentView;
   performanceSettings: PerformanceSettings;
   theme: MonitorTheme;
   style: CSSProperties;
@@ -23,31 +22,28 @@ interface LiveSlideProps {
   pinnedMatchId?: string | null;
 }
 
-export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: LiveSlideProps) {
+export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId }: LiveSlideProps) {
   const { t } = useTranslation('monitor');
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
-  const field = tournament.fields?.find(f => f.id === slide.config.fieldId);
-  const fieldName = field?.customName ?? field?.defaultName ?? t('fieldSelector.field', { field: fieldNumber });
+  const fieldConfig = tournament.fields?.find(f => f.id === slide.config.fieldId);
+  const fieldName = fieldConfig?.customName ?? fieldConfig?.defaultName ?? t('fieldSelector.field', { field: fieldNumber });
   const { matches, teams } = tournament;
 
-  // Gepinntes Spiel (@ZM-075/077), sonst das laufende Spiel auf diesem Feld (Halbzeit zählt mit)
-  const pinnedMatch = pinnedMatchId ? matches.find(m => m.id === pinnedMatchId) : undefined;
-  const runningMatch = pinnedMatch ?? matches.find(
-    m => m.field === fieldNumber && isMatchInProgress(m)
-  );
+  // Gepinntes Spiel (@ZM-075/077), sonst das laufende Spiel auf diesem Feld (Halbzeit zählt mit): `isLive` der Ansicht
+  const field = view.currentFor(fieldNumber);
+  const shown = (pinnedMatchId ? view.byId.get(pinnedMatchId) : undefined) ?? field.live[0];
+  const runningMatch = shown === undefined ? undefined : matches.find(m => m.id === shown.id);
 
-  // Nächstes offenes Spiel dieses Feldes, in Anpfiff-Reihenfolge (B-16f2, C-MON-NAECHSTES-UNSORTIERT)
-  const nextMatch = !runningMatch
-    ? upcomingMatches(matches, { count: 1, field: fieldNumber })[0]
-    : undefined;
-  const labelCtx = { teams, matches, groups: tournament.groups, hidePendingOrigin: !scoresPublic(tournament) };
+  // Nächstes offenes Spiel dieses Feldes, in Anpfiff-Reihenfolge (B-16f2, C-MON-NAECHSTES-UNSORTIERT); nie ein
+  // laufendes oder unterbrochenes Spiel (@ZM-041)
+  const nextMatch = !runningMatch ? field.next : undefined;
 
   // Delegate to LiveMatchDisplay for running matches
-  if (runningMatch) {
-    const liveMatch = toLiveMatch(runningMatch, teams, tournament);
+  if (runningMatch && shown) {
+    const liveMatch = toLiveMatch(shown, runningMatch, teams, tournament);
     // B-44a4 (@ME-020): Die Folie ist Größen-Container; die Live-Anzeige misst an ihrer Fläche innerhalb des Bildrands
     return (
       <div style={{ ...style, containerType: 'size' }} data-testid="live-slide-area">
@@ -57,7 +53,9 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
           fullscreen
           theme={theme}
           colorScheme={slide.config.liveColorScheme}
-          hideScore={!scoresPublic(tournament)}
+          hideScore={!view.rules.results}
+          finalScore={shown.score}
+          finalRound={shown.phase === 'final'}
         />
       </div>
     );
@@ -85,8 +83,8 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
         </div>
       ) : nextMatch ? (
         (() => {
-          const nextTeamA = sideTeam(nextMatch, 'A', teams);
-          const nextTeamB = sideTeam(nextMatch, 'B', teams);
+          const nextTeamA = sideTeam(nextMatch.home, teams);
+          const nextTeamB = sideTeam(nextMatch.away, teams);
           return (
             <>
               <div style={{
@@ -111,7 +109,7 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
                     color: themeColors.text,
                     marginTop: cssVars.spacing.md,
                   }}>
-                    {monitorSideLabel(nextMatch, 'A', labelCtx)}
+                    {monitorSideLabel(nextMatch.home)}
                   </div>
                 </div>
 
@@ -132,18 +130,18 @@ export function LiveSlide({ slide, tournament, theme, style, pinnedMatchId }: Li
                     color: themeColors.text,
                     marginTop: cssVars.spacing.md,
                   }}>
-                    {monitorSideLabel(nextMatch, 'B', labelCtx)}
+                    {monitorSideLabel(nextMatch.away)}
                   </div>
                 </div>
               </div>
               {/* @ZM-138: Anstoßzeit des nächsten Spiels */}
-              {nextMatch.scheduledTime && (
+              {nextMatch.kickoff && (
                 <div style={{
                   fontSize: displayFontSizes.bodyLG,
                   color: themeColors.textSecondary,
                   marginTop: displaySpacing.contentLG,
                 }}>
-                  {t('slides.live.kickoff')} {formatTime(nextMatch.scheduledTime)}
+                  {t('slides.live.kickoff')} {nextMatch.kickoff.time}
                 </div>
               )}
             </>

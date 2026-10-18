@@ -132,7 +132,7 @@ test.describe('Schreibweg nur über Ereignisse', () => {
     const goalAwayId = engineEventId('NACHTRAG', 'goal-away');
     const helperPage = await asRole('helper');
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);
-    await expect(helperPage.locator('[data-testid="match-status-badge"]')).toHaveText('BEENDET', { timeout: 15000 });
+    await expect(helperPage.locator('[data-testid="scoreboard-state"]')).toHaveText('Abgepfiffen', { timeout: 15000 });
 
     // Gegenbeispiel: die schon gesetzte Nummer 7 ist gesperrt, es entsteht kein Eintrag.
     await helperPage.getByRole('button', { name: `TOR ${ids.homeTeamName} #7 bearbeiten` }).click();

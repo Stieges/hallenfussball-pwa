@@ -17,7 +17,6 @@ describe('Kiosk-Routen (B-19a, @ME-003, @OB-028)', () => {
     ['/tournament/abc-123/admin'],
     ['/tournament/abc-123/edit'],
     ['/live/ABC123'],
-    ['/public/tour-1'],
     ['/login'],
   ])('Gegenbeispiel: %s ist keine Kiosk-Route (Einblendungen bleiben)', (path) => {
     expect(isKioskRoute(path)).toBe(false);

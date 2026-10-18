@@ -118,7 +118,7 @@ describe('ManagementTab — Knöpfe ohne Engine-Weg ausblenden (A-08c, @FU-071)'
 
     render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
 
-    const timer = await screen.findByTestId('match-timer-display');
+    const timer = await screen.findByTestId('scoreboard-clock');
     expect(screen.queryByTestId('match-edit-time-button')).toBeNull();
 
     await user.click(timer);

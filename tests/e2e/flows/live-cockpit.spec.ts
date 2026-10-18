@@ -113,7 +113,7 @@ test.describe('Live Cockpit', () => {
     await page.getByText('Live').click({ force: true });
 
     // THEN - Should see the Live Cockpit with timer and team names
-    await expect(page.getByTestId('match-timer-display')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('team-name-home')).toBeVisible();
     await expect(page.getByTestId('team-name-away')).toBeVisible();
   });
@@ -137,7 +137,7 @@ test.describe('Live Cockpit', () => {
     // THEN - Status should change to RUNNING and timer should start
     // The button should now show Pause
     await expect(page.getByTestId('match-pause-button')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByTestId('match-status-badge')).toContainText(/Läuft|RUNNING/i);
+    await expect(page.getByTestId('scoreboard-state')).toContainText(/Live/i);
   });
 
   test('Can score a goal', async ({ page }) => {
@@ -179,14 +179,16 @@ test.describe('Live Cockpit', () => {
 
     // THEN - Should show Start button again and status should be PAUSED
     await expect(page.getByTestId('match-start-button')).toBeVisible();
-    await expect(page.getByTestId('match-status-badge')).toContainText(/Pause|PAUSED|PAUSIERT/i);
+    // Pause: Zustand bleibt „Live“ (Matrix § 6), die Uhr steht und ist markiert
+    await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'true');
 
     // WHEN - Click start to resume
     await page.getByTestId('match-start-button').click();
 
     // THEN - Should show Pause button and status RUNNING
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
-    await expect(page.getByTestId('match-status-badge')).toContainText(/Läuft|RUNNING|LAUFEND/i);
+    await expect(page.getByTestId('scoreboard-state')).toContainText(/Live/i);
+    await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'false');
   });
 
   test('Can finish a match', async ({ page }) => {
@@ -225,9 +227,9 @@ test.describe('Live Cockpit', () => {
     // Use robust expect polling instead of hard timeout
     await expect(async () => {
       const homeTeamAfter = await page.getByTestId('team-name-home').textContent();
-      const statusBadge = await page.getByTestId('match-status-badge').textContent();
+      const statusBadge = await page.getByTestId('scoreboard-state').textContent();
 
-      const isFinished = Boolean(statusBadge?.match(/Beendet|FINISHED|ABGESCHLOSSEN/i));
+      const isFinished = Boolean(statusBadge?.match(/Abgepfiffen|FINISHED|ABGESCHLOSSEN/i));
       const hasNavigated = homeTeamAfter !== homeTeamBefore;
 
       expect(isFinished || hasNavigated).toBeTruthy();
@@ -243,7 +245,7 @@ test.describe('Live Cockpit', () => {
     await page.getByTestId('match-start-button').click();
 
     // Get initial timer value
-    const timerElement = page.getByTestId('match-timer-display');
+    const timerElement = page.getByTestId('scoreboard-clock-rest');
     const initialTime = await timerElement.textContent();
 
     // WHEN - Wait for 2 seconds

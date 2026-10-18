@@ -285,6 +285,7 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
             disabled={disabled}
             type="button"
             aria-label={`Foul für ${teamName}`}
+            data-testid={`foul-button-${teamSide}`}
           >
             ⚠ Foul
           </button>

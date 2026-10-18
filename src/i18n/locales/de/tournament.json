@@ -552,10 +552,7 @@
     "matchLoading": "Spiel wird geladen...",
     "noMatchesOnField": "Keine Spiele auf diesem Feld vorhanden",
     "enginePreparing": "Spiel wird vorbereitet …",
-    "engineReadyError": "Spiel konnte nicht vorbereitet werden — bitte erneut versuchen",
-    "awaitingTitle": "Anpfiff noch nicht möglich",
-    "awaitingReason": "Wartegrund: {{reason}}",
-    "awaitingOffline": "Dein Gerät hat kein Netz – dein Stand kann veraltet sein. Die Besetzung steht am Server vielleicht schon fest."
+    "engineReadyError": "Spiel konnte nicht vorbereitet werden — bitte erneut versuchen"
   },
   "tables": {
     "noGroups": "Dieses Turnier hat keine Gruppen.",
@@ -898,7 +895,7 @@
       "waiting": "Wartend",
       "running": "Laufend",
       "finished": "Beendet",
-      "skipped": "Übersprungen",
+      "skipped": "Ausgefallen",
       "active": "(aktiv)"
     }
   },

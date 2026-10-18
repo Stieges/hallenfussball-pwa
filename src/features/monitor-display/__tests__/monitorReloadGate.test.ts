@@ -1,7 +1,7 @@
 /**
  * B-19b (@ZM-124 drei Zeilen, @ZM-128, @ME-012): reine Neulade-Regel des Monitors. Neu geladen wird erst beim
  * Folienwechsel zu einer Folie ohne laufendes Spiel; bei nur einer Folie, sobald auf keinem Feld ein Spiel läuft.
- * „Laufend“ = running ODER paused (ein unterbrochenes Spiel ist nicht vorbei).
+ * „Laufend“ = `isLive` der Ansicht: läuft ODER unterbrochen (ein unterbrochenes Spiel ist nicht vorbei).
  */
 import { describe, expect, it } from 'vitest';
 import type { RuleMatch } from '../slideProgramme';
@@ -12,9 +12,9 @@ const liveFeld1 = slide('live', { fieldId: 'field-1' });
 const tabelle = slide('standings', { groupId: 'A' });
 const liveFeld2 = slide('live', { fieldId: 'field-2' });
 
-const spiel7 = (matchStatus: string): RuleMatch => ({ id: 'match-7', field: 1, matchStatus });
-const beendet: RuleMatch = { id: 'match-7', field: 1, matchStatus: 'finished' };
-const keinSpiel: RuleMatch[] = [{ id: 'match-7', field: 1, matchStatus: 'scheduled' }];
+const spiel7 = (status: 'running' | 'paused'): RuleMatch => ({ id: 'match-7', field: 1, isLive: status === 'running' || status === 'paused' });
+const beendet: RuleMatch = { id: 'match-7', field: 1, isLive: false };
+const keinSpiel: RuleMatch[] = [{ id: 'match-7', field: 1, isLive: false }];
 
 describe('Neulade-Regel des Monitors (B-19b, @ZM-124, @ZM-128, @ME-012)', () => {
   it('@ME-012: Live-Folie mit laufendem Spiel 7 → kein Neuladen, auch nach vielen Wechseln', () => {
@@ -50,7 +50,7 @@ describe('Neulade-Regel des Monitors (B-19b, @ZM-124, @ZM-128, @ME-012)', () => 
   });
 
   it('@ZM-124 Zeile 3: nur eine Live-Folie, Spiel auf Feld 2 läuft (kein Spiel auf Feld 1 der Folie) → kein Neuladen', () => {
-    const aufFeld2: RuleMatch[] = [{ id: 'match-8', field: 2, matchStatus: 'running' }];
+    const aufFeld2: RuleMatch[] = [{ id: 'match-8', field: 2, isLive: true }];
     expect(neuladenErlaubt({ slides: [liveFeld1], matches: aufFeld2, index: 0, wechselSeitUpdate: 0 })).toBe(false);
   });
 

@@ -46,6 +46,7 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 }));
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
+import { withView } from './monitorViewHelper';
 
 vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
 await (await import('../../../test/realDeI18n')).initRealDeI18n();
@@ -166,7 +167,7 @@ describe('C-MON-NAECHSTES-UNSORTIERT: Live-Folie nimmt das früheste offene Spie
     render(
       <LiveSlide
         slide={slide('live', { fieldId: 'field-1' })}
-        tournament={buildTournament({ matches: beendet })}
+        {...withView(buildTournament({ matches: beendet }))}
         performanceSettings={PERFORMANCE_PROFILES.high}
         theme="dark"
         style={{}}
@@ -189,7 +190,7 @@ describe('@W2A-031 Kindermodus an der Live-Folie: offener Platz zeigt „noch of
     render(
       <LiveSlide
         slide={slide('live', { fieldId: 'field-1' })}
-        tournament={feldEins(false)}
+        {...withView(feldEins(false))}
         performanceSettings={PERFORMANCE_PROFILES.high}
         theme="dark"
         style={{}}
@@ -203,7 +204,7 @@ describe('@W2A-031 Kindermodus an der Live-Folie: offener Platz zeigt „noch of
     render(
       <LiveSlide
         slide={slide('live', { fieldId: 'field-1' })}
-        tournament={feldEins(true)}
+        {...withView(feldEins(true))}
         performanceSettings={PERFORMANCE_PROFILES.high}
         theme="dark"
         style={{}}
@@ -220,7 +221,7 @@ describe('@W2A-031 Kindermodus an der Spielplan-Folie: offener Platz zeigt „no
   const spielplan = (hide: boolean) => render(
     <ScheduleFieldSlide
       slide={slide('schedule-field', { fieldId: 'field-1' })}
-      tournament={buildTournament({ hideScoresForPublic: hide, matches: withPlayoffs() })}
+      {...withView(buildTournament({ hideScoresForPublic: hide, matches: withPlayoffs() }))}
       theme="dark"
       style={{}}
     />,

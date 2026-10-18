@@ -134,6 +134,8 @@ export const fontWeights = {
   medium: 500,
   semibold: 600,
   bold: 700,
+  /** Hervorhebung auf der Anzeige (Monitor: Sieger-Name, Daniel 18.10.) */
+  extrabold: 800,
 } as const;
 
 // =============================================================================

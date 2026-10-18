@@ -54,6 +54,7 @@ async function seedLiveTournament(
   const tournament = {
     id: 'dauer-turnier',
     title: 'Hallencup Nord',
+    date: '2026-11-28', // Pflichtfeld des Turniers; die gemeinsame Ansicht (A-36c) liest daraus den Anstoß
     name: 'Hallencup Nord',
     status: 'published',
     sport: 'hallenfussball',

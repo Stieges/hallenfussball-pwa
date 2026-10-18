@@ -2,9 +2,9 @@ import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { displayList, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
+import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { resolveTheme } from '../monitorDisplayHelpers';
-import { scoresPublic } from '../publicVisibility';
 import { nextMatchList, pageOf, pagesFor } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
@@ -13,6 +13,8 @@ import { SlideHeading } from '../components/SlideHeading';
 interface NextMatchesSlideProps {
   slide: MonitorSlide;
   tournament: Tournament;
+  /** Die gemeinsame Ansicht des Monitors (A-36c) */
+  view: TournamentView;
   theme: MonitorTheme;
   style: CSSProperties;
   /** Seite der Folie (B-16f3), 0-basiert; ab 7 Zeilen blättert die Folie (@ZM-129). */
@@ -20,13 +22,12 @@ interface NextMatchesSlideProps {
 }
 
 /** Folie „Nächste Spiele“ (@ZM-071, @ZM-078): die nächsten offenen Spiele über alle Felder, nie ein Ergebnis. */
-export function NextMatchesSlide({ slide, tournament, theme, style, page = 0 }: NextMatchesSlideProps) {
+export function NextMatchesSlide({ slide, tournament, view, theme, style, page = 0 }: NextMatchesSlideProps) {
   const { t } = useTranslation('monitor');
   const colors = monitorThemes[resolveTheme(theme)];
-  const list = nextMatchList(tournament.matches, slide.config.matchCount);
+  const list = nextMatchList(view, slide.config.matchCount);
   const rows = pageOf(list, page);
   const pages = pagesFor(list.length);
-  const hidePendingOrigin = !scoresPublic(tournament);
 
   return (
     <div style={style}>
@@ -47,10 +48,8 @@ export function NextMatchesSlide({ slide, tournament, theme, style, page = 0 }: 
             <MonitorMatchRow
               key={match.id}
               match={match}
-              teams={tournament.teams}
               tournament={tournament}
               theme={theme}
-              hidePendingOrigin={hidePendingOrigin}
             />
           ))}
         </div>

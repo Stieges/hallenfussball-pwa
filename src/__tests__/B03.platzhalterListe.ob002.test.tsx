@@ -58,7 +58,7 @@ const OB002: FunktionFall[] = [
     ort: 'das Cockpit von Spiel 9',
     pruefen: async () => {
       // F-06 (Fixrunde 1): geprüft wird am ECHTEN Ort — GameControls mit Status NOT_STARTED
-      // (ohne „Zeit bearbeiten“) und das Antippen der Uhr in LiveCockpit (öffnet den
+      // (ohne „Zeit bearbeiten“) und das Antippen der Uhr der Tafel in LiveCockpit (öffnet den
       // Zeit-Dialog bei einem neuen Spiel nicht). Vorher renderte der Fall das ungenutzte
       // OverflowMenu, das nirgends eingebunden ist.
       const { GameControls } = await import('../components/live-cockpit/components/GameControls');
@@ -104,7 +104,9 @@ const OB002: FunktionFall[] = [
           onReopenLastMatch={vi.fn()}
         />
       );
-      fireEvent.click(screen.getByTestId('match-timer-display'));
+      // Die Uhr der Tafel ist reine Anzeige; auch „Zeit bearbeiten“ fehlt bei einem neuen Spiel
+      fireEvent.click(screen.getByTestId('scoreboard-clock'));
+      expect(screen.queryByTestId('match-edit-time-button')).not.toBeInTheDocument();
       expect(screen.queryByRole('dialog', { name: 'cockpit:timeAdjust.title' })).not.toBeInTheDocument();
     },
   },
