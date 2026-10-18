@@ -288,11 +288,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     }
   }, [fieldMatches, currentMatchData, schedule.allMatches, selectedFieldNumber]);
 
-  const handleFinishAndReset = useCallback(async (matchId: string): Promise<string | null> => {
-    const eventId = await handleFinish(matchId);
+  const handleFinishAndReset = useCallback((matchId: string): Promise<string | null> => handleFinish(matchId).then((eventId) => {
     setTimeout(() => { setSelectedMatchId(null); }, 0);
     return eventId;
-  }, [handleFinish]);
+  }), [handleFinish]);
 
   const handleUpdateSettings = useCallback(async (settings: import('../../types/tournament').MatchCockpitSettings) => {
     // @W2A-030: Regelfelder speichert nur die Turnierleitung. Alle anderen behalten den
