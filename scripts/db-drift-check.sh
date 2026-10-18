@@ -375,6 +375,15 @@ PRIVILEGE_ASSERTION_NAMES=(
   "authenticated-no-delete-match-events"
   "authenticated-select-match-events"
   "match-events-only-select-policy"
+  # A-10 (20261028_005, @EK-060/@FU-090/@TM-027): Spalten-Schutz fuer alle Spiele, reset_match_results, change_revision.
+  "matches-guard-engine-columns-insert-and-update"
+  "matches-guard-engine-columns-unconditional"
+  "reset-match-results-definer-search-path"
+  "reset-match-results-execute-only-authenticated"
+  "matches-bump-change-revision-trigger-active"
+  "matches-bump-change-revision-definer-no-client-execute"
+  "tournaments-guard-change-revision-trigger-active"
+  "tournaments-guard-change-revision-invoker-no-client-execute"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
