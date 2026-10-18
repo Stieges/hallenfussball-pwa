@@ -427,6 +427,11 @@ run_probes() {
   check B "@FU-090 alles oder nichts: Spiel 3 bleibt 3:1" "3|1|finished" "$(score_of "$S3")"
   check B "@FU-090 Spiel 7 behaelt alle 5 Eintraege und 2:1" "2|1|finished|5" "$(score_of "$S7")|$(events_of "$S7")"
   check B "@FU-090 abgelehnt -> change_revision unveraendert" "$before" "$(cr)"
+  # Zwilling Z4: TS liest "hat Eintraege" an der Server-Revision (matches.version > 1, useMatchEntryGuard); dieselben
+  # Spiele haben hier Engine-Ereignisse. Altbestand ohne Ereignisse steht auf Revision 1.
+  res="$(q "SELECT (SELECT version FROM public.matches WHERE id = '$S10') || '|' || (SELECT version FROM public.matches WHERE id = '$S11') || '|' || (SELECT version FROM public.matches WHERE id = '$S12') || '|' || (SELECT version FROM public.matches WHERE id = '$S3');")"
+  check B "Z4: Revision > 1 bei nur SKIP / nur zurueckgenommenem Tor / Direkteintrag, Altbestand Spiel 3 = 1 ($res)" "true" \
+    "$(awk -F'|' '{print ($1 > 1 && $2 > 1 && $3 > 1 && $4 == 1) ? "true" : "false"}' <<<"$res")"
   out="$(reset "$U_OLLI" "$T" "$S10")"
   check B "Z4: Spiel nur mit SKIP gilt als 'hat Eintraege' -> HAS_ENTRIES" "HAS_ENTRIES" "$(jq -r '.code // .exception' <<<"$out")"
   out="$(reset "$U_OLLI" "$T" "$S11")"
