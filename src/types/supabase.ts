@@ -281,6 +281,7 @@ export type Database = {
         Row: {
           actual_end: string | null
           actual_start: string | null
+          bib_side: string | null
           created_at: string | null
           decided_by: string | null
           duration_minutes: number | null
@@ -290,6 +291,8 @@ export type Database = {
           id: string
           is_final: boolean | null
           is_public: boolean | null
+          kit_color_a: string | null
+          kit_color_b: string | null
           label: string | null
           last_modified_by: string | null
           live_state: Json | null
@@ -328,6 +331,7 @@ export type Database = {
         Insert: {
           actual_end?: string | null
           actual_start?: string | null
+          bib_side?: string | null
           created_at?: string | null
           decided_by?: string | null
           duration_minutes?: number | null
@@ -337,6 +341,8 @@ export type Database = {
           id?: string
           is_final?: boolean | null
           is_public?: boolean | null
+          kit_color_a?: string | null
+          kit_color_b?: string | null
           label?: string | null
           last_modified_by?: string | null
           live_state?: Json | null
@@ -375,6 +381,7 @@ export type Database = {
         Update: {
           actual_end?: string | null
           actual_start?: string | null
+          bib_side?: string | null
           created_at?: string | null
           decided_by?: string | null
           duration_minutes?: number | null
@@ -384,6 +391,8 @@ export type Database = {
           id?: string
           is_final?: boolean | null
           is_public?: boolean | null
+          kit_color_a?: string | null
+          kit_color_b?: string | null
           label?: string | null
           last_modified_by?: string | null
           live_state?: Json | null
