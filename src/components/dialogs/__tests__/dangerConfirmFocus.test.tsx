@@ -51,21 +51,19 @@ function renderDangerZone(opener: RegExp): OpenedRueckfrage & { button: HTMLElem
   useTournamentMembersMock.mockReturnValue({ myMembership: null, isLoading: false });
   const onTournamentUpdate = vi.fn();
   const onLocalTournamentUpdate = vi.fn();
-  const onMatchesUpdate = vi.fn();
   render(
     <DangerZoneCategory
       tournamentId="t1"
       tournament={dangerTournament([{ id: 'm1', matchStatus: 'scheduled' }])}
       onTournamentUpdate={onTournamentUpdate}
       onLocalTournamentUpdate={onLocalTournamentUpdate}
-      onMatchesUpdate={onMatchesUpdate}
     />
   );
   return {
     cancelName: 'admin:dangerZone.cancel',
     spies: opener.source.includes('löschen')
       ? [onTournamentUpdate]
-      : [onLocalTournamentUpdate, onMatchesUpdate],
+      : [onLocalTournamentUpdate],
     button: screen.getByRole('button', { name: opener }),
   };
 }

@@ -27,7 +27,18 @@ function clone(state: FakeCloudState): CloudReadWithRevisions {
   };
 }
 
-export function createFakeCloud(initial: FakeCloudState) {
+/**
+ * A-10 (Teil C, @TM-027): Spielplan-Felder, deren Änderung der Server in `tournaments.change_revision` zählt
+ * (Trigger `matches_bump_change_revision`, Spaltenliste = `mapMatchToScheduleUpdate`).
+ */
+const SCHEDULE_FIELDS = ['slotA', 'slotB', 'round', 'field', 'slot', 'group', 'isFinal', 'finalType', 'label', 'scheduledTime', 'matchNumber', 'phase', 'referee'] as const;
+
+export interface FakeCloudOptions {
+  /** A-10: `updateMatches` zählt `changeRevision` je Spiel mit geänderter Spielplan-Spalte (wie der Server nach F2b). */
+  countsChangeRevision?: boolean;
+}
+
+export function createFakeCloud(initial: FakeCloudState, options: FakeCloudOptions = {}) {
   let state: FakeCloudState = { tournament: structuredClone(initial.tournament), revisions: new Map(initial.revisions) };
   const held: Array<(snapshot: CloudReadWithRevisions) => Promise<void>> = [];
 
@@ -49,10 +60,17 @@ export function createFakeCloud(initial: FakeCloudState) {
     }),
     updateMatches: vi.fn(async (_id: string, updates: MatchUpdate[]) => {
       const byId = new Map(updates.map((u) => [u.id, u]));
+      const bumps = options.countsChangeRevision
+        ? state.tournament.matches.filter((m) => {
+          const u = byId.get(m.id) as Record<string, unknown> | undefined;
+          return u !== undefined && SCHEDULE_FIELDS.some((f) => f in u && JSON.stringify(u[f]) !== JSON.stringify(m[f]));
+        }).length
+        : 0;
       state = {
         ...state,
         tournament: {
           ...state.tournament,
+          ...(bumps > 0 ? { changeRevision: (state.tournament.changeRevision ?? 0) + bumps } : {}),
           matches: state.tournament.matches.map((m) => ({ ...m, ...(byId.get(m.id) ?? {}) }) as typeof m),
         },
       };

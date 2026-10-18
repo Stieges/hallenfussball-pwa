@@ -33,6 +33,7 @@ import { pendingSlot, slotSource, slotTeamId, teamSlot } from '../models/matchSl
 import { originFromRow, originToColumns, type MatchOriginColumns } from './matchOriginColumns';
 import { kitFromRow } from './matchKitRow';
 import { bibColorFromConfig, bibColorToConfig } from './tournamentBibColor';
+import { changeRevisionFromRow } from './tournamentChangeRevisionRow';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -608,7 +609,7 @@ export function mapTournamentFromSupabase(
     dfbKeyPattern: config.dfbKeyPattern,
     monitors: config.monitors as Tournament['monitors'],
     sponsors: config.sponsors as Tournament['sponsors'],
-    version: row.version ?? undefined,
+    version: row.version ?? undefined, ...changeRevisionFromRow(row), // A-10: Änderungszählung (@TM-027)
     // K2: is_public/share_code müssen rundreisen — sonst sieht mapTournamentToSupabase
     // immer `undefined`, denormalisiert `false` auf alle Team-/Match-Zeilen (K1), und
     // OfflineRepository.getMetadataChanges meldet bei jedem Delta-Sync eine Phantom-Änderung.

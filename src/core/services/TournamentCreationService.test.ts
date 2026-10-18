@@ -4,7 +4,6 @@ import { TournamentCreationService } from './TournamentCreationService';
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
 import { Tournament } from '../models/types';
 import { generateFullSchedule } from '../generators';
-import { mapMatchUpdateToSupabase } from '../repositories/supabaseMappers';
 import { vs, testUuid } from '../../test/matchSlotFixtures';
 
 const T1 = testUuid(1);
@@ -206,24 +205,22 @@ describe('TournamentCreationService', () => {
             }));
         });
 
-        // A2 Fixrunde 1 (Ruling AJ, I1: .superpowers/sdd/2026-09-25-oktober-fundament-helfer/
-        // task-A2-review.md): editing an EXISTING published tournament in the Wizard (e.g.
-        // "Turnier zurücksetzen") can change match results/status -- repository.save() skips
-        // those columns for existing matches (A2), so saveDraft must ALSO persist them via a
-        // targeted updateMatches().
-        it('persists a result/status change via updateMatches when editing an existing tournament', async () => {
+        // A-10 (brief-A-10.md § 8 Fall 14, Baustein Regel 3 – umgeschrieben): vorher „persists a result/status change via
+        // updateMatches“. Ergebnis-/Status-Spalten schreibt seit A-10 nur der Server (append_match_events,
+        // reset_match_results); der Nachtrag per updateMatches war in der Cloud ohne Wirkung und ist entfallen.
+        it('A-10 Fall 14: Ergebnis-Änderung beim Speichern → kein updateMatches; die Spielplan-Änderung geht weiter über save', async () => {
             const existingMatch = { id: 'm1', round: 1, field: 1, ...vs(T1, T2), scoreA: 3, scoreB: 1, matchStatus: 'finished' as const };
             mockRepo.get.mockResolvedValue({ id: 'tour-1', matches: [existingMatch] });
 
-            const resetMatch = { ...existingMatch, scoreA: undefined, scoreB: undefined, matchStatus: 'scheduled' as const };
+            const resetMatch = { ...existingMatch, scoreA: undefined, scoreB: undefined, matchStatus: 'scheduled' as const, field: 2 };
             const data = { id: 'tour-1', title: 'Draft', matches: [resetMatch] };
 
             await service.saveDraft(data);
 
-            expect(mockRepo.updateMatches).toHaveBeenCalledWith(
-                'tour-1',
-                expect.arrayContaining([expect.objectContaining({ id: 'm1', matchStatus: 'scheduled' })])
-            );
+            expect(mockRepo.updateMatches).not.toHaveBeenCalled();
+            expect(mockRepo.save).toHaveBeenCalledWith(expect.objectContaining({
+                matches: [expect.objectContaining({ id: 'm1', field: 2 })],
+            }));
         });
 
         it('does NOT call updateMatches when nothing about the result/status changed', async () => {
@@ -386,16 +383,10 @@ describe('TournamentCreationService', () => {
             expect(savedMatch?.matchStatus).toBe('scheduled');
             expect(savedMatch?.finishedAt ?? null).toBeNull();
 
-            expect(mockRepo.updateMatches).toHaveBeenCalledTimes(1);
-            const [, updates] = mockRepo.updateMatches.mock.calls[0];
-            const update = updates.find((u: { id: string }) => u.id === 'm1');
-            expect(update).toMatchObject({ matchStatus: 'scheduled', finishedAt: null });
-
-            const cloudRow = mapMatchUpdateToSupabase(update);
-            expect(cloudRow).not.toHaveProperty('match_status');
-            expect(cloudRow).not.toHaveProperty('actual_end');
-            expect(cloudRow).not.toHaveProperty('score_a');
-            expect(cloudRow).not.toHaveProperty('score_b');
+            // A-10 Fall 14 (umgeschrieben, vorher 1× updateMatches ohne Wirkung in der Cloud): kein Ergebnis-Nachtrag mehr;
+            // das Zurücksetzen in der Cloud macht der Assistent vorher über reset_match_results (useResultsReset).
+            expect(mockRepo.updateMatches).not.toHaveBeenCalled();
+            expect(mockRepo.save).toHaveBeenCalledTimes(1);
         });
     });
 });

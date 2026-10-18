@@ -450,6 +450,16 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" 
   psql_stdin < "$A08H_FILE"
 fi
 
+# A-10 (20261028_005, @EK-060, C-RECHTE-ERGEBNIS-DIREKT): Spalten-Schutz fuer alle Spiele, nur im Modus "nachher".
+# Setzt 20261001_001 (Spalten-Schutz, Engine-Kette) voraus -- die steckt in MATCH_ENGINE_CHAIN_FILES (WITH_R5).
+A10_FILE="$REPO_ROOT/supabase/migrations/20261028_005_guard_all_matches.sql"
+WITH_A10=0
+if [[ "$WITH_A08H" -eq 1 ]]; then
+  WITH_A10=1
+  echo "Migration einspielen: $(basename "$A10_FILE")" >&2
+  psql_stdin < "$A10_FILE"
+fi
+
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,
 #        nur wenn WITH_R5=1 -- die neue Tabelle existiert sonst nicht) ------------------------
 EXPECTED_POLICY_COUNT=44
@@ -958,7 +968,10 @@ op_sql() {
       # (mapMatchToSupabase); SLOT_COLS/SLOT_VALS sind ohne die Migration leer.
       echo "INSERT INTO public.matches (id,tournament_id,round,field${SLOT_COLS}) VALUES ('$ins_match','$tournament_id',9,9${SLOT_VALS});" ;;
     matches_update)
-      echo "UPDATE public.matches SET score_a = score_a + 1 WHERE id='$match_id';" ;;
+      # A-10 (Baustein Regel 3, umgeschrieben): misst writeMatchData an einer Spielplan-Spalte. Vorher
+      # "SET score_a = score_a + 1" -- seit 20261028_005 lehnt der Spalten-Schutz das fuer JEDE Identitaet ab
+      # (@EK-060); das belegen die eigenen Zeilen "a10-schutzspalte-score-a-*" weiter unten.
+      echo "UPDATE public.matches SET referee_number = coalesce(referee_number, 0) + 1 WHERE id='$match_id';" ;;
     matches_delete)
       echo "DELETE FROM public.matches WHERE id='$match_id';" ;;
     match_events_insert)
@@ -1071,6 +1084,40 @@ SQL
   done
 fi
 
+# --- 6c. A-10 (20261028_005, @EK-060, C-RECHTE-ERGEBNIS-DIREKT): Schutzspalte score_a fuer jede Identitaet verweigert --
+# Acht Zeilen (owner, owner-anonymous, co-admin, collaborator, trainer, viewer, non-member, anon). Das Spiel hat keine
+# Engine-Ereignisse (Altspiel, score_a = 0) -- vor A-10 haetten owner/co-admin/collaborator hier geschrieben. Nur im
+# Modus "nachher" (WITH_A10).
+if [[ "$WITH_A10" -eq 1 ]]; then
+  echo ""
+  echo "=== A-10: Schutzspalte score_a — $MODE_LABEL ==="
+  run_write_anon() {
+    local out ec
+    set +e
+    out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+SET LOCAL ROLE anon;
+$1
+SQL
+)"
+    ec=$?
+    set -e
+    if [[ $ec -eq 0 ]] && grep -qE '^UPDATE [1-9][0-9]*$' <<<"$out"; then echo "allowed"; else echo "denied"; fi
+  }
+  for id in owner owner-anonymous co-admin collaborator trainer viewer non-member anon; do
+    match_id="$M_MAIN"; [[ "$id" == "owner-anonymous" ]] && match_id="$M_ANON"
+    sql="UPDATE public.matches SET score_a = coalesce(score_a, 0) + 1 WHERE id = '$match_id';"
+    if [[ "$id" == "anon" ]]; then got="$(run_write_anon "$sql")"; else got="$(run_write "$(user_id_for_id "$id")" "$sql")"; fi
+    TOTAL=$((TOTAL + 1))
+    if [[ "$got" == "denied" ]]; then
+      echo "a10-schutzspalte-score-a-$id: $got"
+    else
+      echo "a10-schutzspalte-score-a-$id: ${got}!=denied"
+      MISMATCHES=$((MISMATCHES + 1))
+    fi
+  done
+fi
+
 # --- 7. Dedizierte Regressionsprüfung: Eigentümer bearbeitet/löscht ein Ereignis ------
 # Unabhängig vom Rollen-Loop oben (dort in "correctEvents" für die Zeile "owner" mit
 # eingerechnet). Eigene, klar beschriftete Zeilen, damit eine Wiederkehr des
@@ -1155,8 +1202,10 @@ else
 
   # K1-2: Mitarbeiter setzt owner_id auf matches per direktem UPDATE (kein Upsert, kein
   # *_sync_owner-Trigger beteiligt — der läuft nur BEFORE INSERT).
+  # A-10: Begleitspalte referee_number statt score_a (der Spalten-Schutz lehnt score_a seit 20261028_005 ab und
+  # wuerde die Zeile mit einem Fehler statt mit dem K1-Befund beenden).
   k1_matches_owner_id="$(run_write_then_select "$U_COADMIN" \
-    "UPDATE public.matches SET owner_id = '$U_COADMIN', score_a = score_a + 1 WHERE id = '$M_MAIN';" \
+    "UPDATE public.matches SET owner_id = '$U_COADMIN', referee_number = coalesce(referee_number, 0) + 1 WHERE id = '$M_MAIN';" \
     "SELECT owner_id FROM public.matches WHERE id = '$M_MAIN';")"
 
   # K1-3: Eigentümer-Übertragung über eine SECURITY-DEFINER-Funktion (Nachbau, siehe Fixtures-

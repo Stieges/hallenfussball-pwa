@@ -12,7 +12,7 @@ import { countMatchesWithResults, deleteTeamSafely } from '../utils/teamHelpers'
 import { getSportConfig, DEFAULT_SPORT_ID } from '../config/sports';
 import { TournamentCreationService } from '../core/services/TournamentCreationService';
 import { useRepository } from './useRepository';
-import { useMatchEntryGuard } from './useMatchEntryGuard';
+import { useResultsReset } from '../features/tournament-admin/hooks/useResultsReset';
 import { generateTeamId } from '../utils/idGenerator';
 
 export interface WizardState {
@@ -102,7 +102,7 @@ export function useTournamentWizard(
 ): UseTournamentWizardReturn {
   // Get auth-aware repository (Supabase for authenticated, localStorage for guests)
   const repository = useRepository();
-  const entryGuard = useMatchEntryGuard();
+  const resultsReset = useResultsReset(); // A-10 (@FU-090, L1, L8)
 
   // Create service with the repository (recreates if repository changes)
   const creationService = useMemo(
@@ -333,25 +333,18 @@ export function useTournamentWizard(
     }
   }, [formData.tournamentType]);
 
-  // Reset tournament -- A-08f3e4 (@FU-090): hat ein Spiel Einträge, nicht ausführen (Hinweis über den Wächter)
+  // Reset tournament -- A-08f3e4 (@FU-090): mit Einträgen nicht ausführen; A-10: Konto-Turnier erst am Server, dann lokal
   const handleResetTournament = useCallback(() => {
     const matches = formData.matches ?? [];
     if (matches.length === 0) { return; }
-    void entryGuard.blocks(formData).then((blocked) => {
+    void resultsReset.blocks(formData).then(async (blocked) => {
       const resultCount = countMatchesWithResults(matches);
       if (blocked || !window.confirm(`⚠️ TURNIER ZURÜCKSETZEN\n\nEs werden ${resultCount} Ergebnis${resultCount === 1 ? '' : 'se'} gelöscht!\n\n` +
         `Diese Aktion kann nicht rückgängig gemacht werden.\n\nMöchtest du wirklich fortfahren?`)) { return; }
-      const resetMatches = matches.map(match => ({
-        ...match,
-        scoreA: undefined,
-        scoreB: undefined,
-        matchStatus: 'scheduled' as const,
-        finishedAt: undefined,
-        correctionHistory: undefined,
-      }));
-      setFormData(prev => ({ ...prev, matches: resetMatches, updatedAt: new Date().toISOString() }));
+      const resetMatches = await resultsReset.reset(formData);
+      if (resetMatches) { setFormData(prev => ({ ...prev, matches: resetMatches, updatedAt: new Date().toISOString() })); }
     });
-  }, [formData, entryGuard]);
+  }, [formData, resultsReset]);
 
   // Create draft tournament
   const createDraftTournament = useCallback((): Tournament => {

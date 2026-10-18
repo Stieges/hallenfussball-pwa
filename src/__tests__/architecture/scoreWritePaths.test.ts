@@ -46,16 +46,8 @@ const SCORE_ALLOWLIST: Record<string, { reason: string; count: number }> = {
     reason:
       'Anlage/Import/Zurücksetzen: setzt oder übernimmt Ergebnisse beim Erzeugen/Kopieren/Importieren/Zurücksetzen, kein Spielverlauf',
   },
-  'features/tournament-admin/categories/DangerZone/index.tsx': {
-    count: 2,
-    reason:
-      'Anlage/Import/Zurücksetzen: setzt oder übernimmt Ergebnisse beim Erzeugen/Kopieren/Importieren/Zurücksetzen, kein Spielverlauf (Spielplan zurücksetzen)',
-  },
-  'hooks/useTournamentWizard.ts': {
-    count: 2,
-    reason:
-      'Anlage/Import/Zurücksetzen: setzt oder übernimmt Ergebnisse beim Erzeugen/Kopieren/Importieren/Zurücksetzen, kein Spielverlauf (Wizard-Daten zurücksetzen)',
-  },
+  // A-10: DangerZone und Assistent setzen nicht mehr selbst zurück (Einträge entfallen), beide rufen useResultsReset –
+  // das leert die Felder über SERVER_LED_MATCH_FIELDS (serverLedMatchFields.ts), ohne Feldnamen selbst zu setzen.
   'components/dialogs/ImportTemplates.ts': {
     count: 4,
     reason:

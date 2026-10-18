@@ -118,7 +118,8 @@ export class LocalStorageRepository implements ITournamentRepository {
     private async saveNow(tournament: Tournament, cached = false): Promise<void> {
         const list = await this.loadList();
         const index = list.findIndex(t => t.id === tournament.id);
-        const stamp = cached ? {} : { version: (tournament.version ?? 0) + 1, updatedAt: new Date().toISOString() };
+        // A-10: die Änderungszählung kommt nur aus der Cloud (cacheCloudCopy); lokale Schreibwege behalten den gespeicherten Wert.
+        const stamp = cached ? {} : { version: (tournament.version ?? 0) + 1, updatedAt: new Date().toISOString(), changeRevision: list[index]?.changeRevision };
 
         if (index >= 0) {
             // A-07e: bestehender Konto-Marker bleibt, wenn der Aufrufer keinen setzt
@@ -148,6 +149,7 @@ export class LocalStorageRepository implements ITournamentRepository {
                 ...list[index],
                 ...metadata,
                 version: metadata.version === undefined ? list[index].version : metadata.version + 1,
+                changeRevision: list[index].changeRevision, // A-10: nur aus der Cloud
                 updatedAt: new Date().toISOString()
             };
 

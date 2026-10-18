@@ -61,7 +61,6 @@ const OB017: RueckfrageFall[] = [
           tournament={makeTournament()}
           onTournamentUpdate={vi.fn()}
           onLocalTournamentUpdate={vi.fn()}
-          onMatchesUpdate={vi.fn()}
         />
       );
       expectRendered(container);
