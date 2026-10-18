@@ -26,10 +26,21 @@
 // --floor-schreiben schreibt die gemessene Zahl dorthin (danach committen).
 // Optionen dazu: [--base <git-ref>] [--floor <pfad>] [--summary <pfad>]
 // (Standard fuer --summary: Umgebungsvariable GITHUB_STEP_SUMMARY).
+//
+// TM-1 (@TA-013 bis @TA-015, @TA-018): Rot markierte Tests ("erwartet rot") brauchen einen Verweis auf einen Befund oder Defekt.
+//  - Markierung: Modifikator .fails/.fail am Aufruf (it.fails, test.fail('Titel', fn)) oder jeder Rumpf-Aufruf
+//    test.fail(..) / testInfo.fail(..), bedingt oder unbedingt. skip/fixme/todo sind keine Markierung im Sinn von TM-1.
+//  - Verweis: "@DF-nnn"/"DF-nnn" (genau drei Ziffern) oder eine Befund-Kennung "C-..." in Grossbuchstaben, gesucht in
+//    Testtitel, Titeln der umgebenden describe-Bloecke, bei Rumpf-Markierungen im Titel des umgebenden Tests und im
+//    String der Begruendung (2. Argument). Kommentare zaehlen nie; Template-Literale nur mit statischem Text.
+//  - Ratsche: Zahl der Markierungen ohne Verweis <= Zahl auf --base (gemessen); darueber rot und die neuen Tests genannt.
+//    Ohne --base nur Bericht. Sinkt die Zahl: gruen mit HINWEIS.
+//  - Jeder Verweis in einem Titel oder einer Begruendung (auch in regulaeren Tests) muss in tests/meta/befund-kennungen.json
+//    stehen (erzeugt von scripts/befund-kennungen-erzeugen.mjs, Option --befund-kennungen <pfad>), sonst sofort rot.
 import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
-import { join, resolve } from 'node:path'
+import { join, relative, resolve } from 'node:path'
 import { sammleTestDateien, testTexte } from './lib/testtexte.mjs'
 
 const KENNUNG = /(?<![A-Za-z0-9])[A-Z][A-Z0-9]{0,3}-\d{3}(?!\d)/g
@@ -52,6 +63,7 @@ function parseArgs(argv) {
     else if (a === '--scan') o.scan = wert().split(',')
     else if (a === '--base') o.base = wert()
     else if (a === '--floor') o.floor = wert()
+    else if (a === '--befund-kennungen') o.befundKennungen = wert()
     else if (a === '--summary') o.summary = wert()
     else if (a === '--floor-schreiben') o.floorSchreiben = true
     else throw new Error(`Unbekannte Option ${a}`)
@@ -63,9 +75,14 @@ function parseArgs(argv) {
 function messe(root, scan, istKennung) {
   const gefunden = new Set()
   const teilweise = new Set()
+  const markiert = [] // TM-1: jede "erwartet rot"-Markierung { datei, zeile, titel, verweise }
+  const stellen = [] // TM-1: jeder Verweis in einem Titel oder einer Begruendung { datei, zeile, kennung }
   const dateien = sammleTestDateien(root, scan)
   for (const datei of dateien) {
+    const rel = relative(root, datei)
     for (const t of testTexte(readFileSync(datei, 'utf8'))) {
+      if (t.markiert) markiert.push({ datei: rel, zeile: t.zeile, titel: t.titel, verweise: t.verweise })
+      for (const kennung of t.eigene) stellen.push({ datei: rel, zeile: t.zeile, kennung })
       if (!t.regulaer) continue
       for (const k of t.text.matchAll(KENNUNG)) {
         if (!istKennung(k[0])) continue
@@ -75,7 +92,7 @@ function messe(root, scan, istKennung) {
       }
     }
   }
-  return { gefunden, teilweise, dateien }
+  return { gefunden, teilweise, dateien, markiert, stellen }
 }
 
 /** Entpackt den Stand von <ref> (git archive) nach tmp und misst dort; raeumt immer auf. */
@@ -123,6 +140,32 @@ function kennungenDerAufgabe(planPfad, task) {
   return ids
 }
 
+/** Markierungen ohne Verweis im Arbeitsstand, die es als Schluessel (Datei::Titel) auf dem Hauptzweig nicht gab (Vielfachmenge). */
+function neueOhneVerweis(aktuell, haupt) {
+  const rest = new Map()
+  for (const x of haupt) rest.set(`${x.datei}::${x.titel}`, (rest.get(`${x.datei}::${x.titel}`) ?? 0) + 1)
+  return aktuell.filter((x) => {
+    const k = `${x.datei}::${x.titel}`
+    const n = rest.get(k) ?? 0
+    if (n > 0) rest.set(k, n - 1)
+    return n === 0
+  })
+}
+
+/** TM-1 (@TA-015): jeder Verweis in einem Testtitel oder einer Begruendung muss in tests/meta/befund-kennungen.json stehen. */
+function pruefeVerweise(opt, root, stellen, fehler) {
+  if (stellen.length === 0) return
+  const pfad = opt.befundKennungen ?? resolve(root, 'tests/meta/befund-kennungen.json')
+  if (!existsSync(pfad)) {
+    fehler.push(`Verweis ${stellen[0].kennung} in ${stellen[0].datei}:${stellen[0].zeile} (${stellen.length} Verweise insgesamt), aber ${pfad} fehlt (node scripts/befund-kennungen-erzeugen.mjs)`)
+    return
+  }
+  const bekannt = new Set(JSON.parse(readFileSync(pfad, 'utf8')).kennungen)
+  for (const s of stellen) {
+    if (!bekannt.has(s.kennung)) fehler.push(`Unbekannter Verweis ${s.kennung} in ${s.datei}:${s.zeile} (nicht in ${relative(root, pfad)}; Tippfehler oder Liste mit node scripts/befund-kennungen-erzeugen.mjs neu erzeugen)`)
+  }
+}
+
 /** Wie viele verlorene Kennungen die Job-Summary hoechstens nennt (stdout nennt alle). */
 const SUMMARY_MAX = 30
 
@@ -160,7 +203,7 @@ function ratchet(opt, root, scan, istKennung, ids, zahlen, fehler) {
     }
     if (refDa) {
       const m = messeRef(root, opt.base, scan, istKennung, fehler)
-      if (m) haupt = { mitTest: m.gefunden.size, kennungen: [...m.gefunden].sort() }
+      if (m) haupt = { mitTest: m.gefunden.size, kennungen: [...m.gefunden].sort(), markiert: m.markiert }
       // Die Untergrenze des Hauptzweigs darf nicht gesenkt werden. Fehlende Datei: Hinweis, defekte Datei: rot.
       let text = null
       try {
@@ -183,6 +226,15 @@ function ratchet(opt, root, scan, istKennung, ids, zahlen, fehler) {
   if (haupt && aktuell < haupt.mitTest) fehler.push(`Szenario-Abdeckung: ${aktuell} Kennungen mit regulaerem Test < Hauptzweig ${haupt.mitTest} (gemessen, Ratchet)`)
   if (eigener && aktuell > eigener.mitTest) hinweise.push(`Untergrenze kann angehoben werden: ${aktuell} > ${eigener.mitTest} (Datei per Commit anpassen)`)
   const verloren = haupt ? haupt.kennungen.filter((k) => !ids.includes(k)) : []
+  const ohneVerweis = zahlen.markiert.filter((x) => x.verweise.length === 0)
+  const hauptOhne = haupt ? haupt.markiert.filter((x) => x.verweise.length === 0) : null
+  const neueOhne = hauptOhne ? neueOhneVerweis(ohneVerweis, hauptOhne) : []
+  console.log(`\nErwartet rot (it.fails, test.fail): ${zahlen.markiert.length}, davon ohne Verweis auf Befund oder Defekt: ${ohneVerweis.length}${hauptOhne ? ` (Hauptzweig ${hauptOhne.length})` : ''}`)
+  for (const x of ohneVerweis) console.log(`  erwartet rot ohne Verweis: ${x.datei}:${x.zeile}  ${x.titel}`)
+  if (hauptOhne && ohneVerweis.length > hauptOhne.length) {
+    fehler.push(`Erwartet rot ohne Verweis: ${ohneVerweis.length} > Hauptzweig ${hauptOhne.length} (Ratchet). Neu: ${neueOhne.map((x) => `${x.datei}:${x.zeile} "${x.titel}"`).join('; ')}. Verweis (@DF-nnn oder C-...) in den Testnamen aufnehmen.`)
+  }
+  if (hauptOhne && ohneVerweis.length < hauptOhne.length) hinweise.push(`Erwartet rot ohne Verweis gesunken: ${ohneVerweis.length} < ${hauptOhne.length} auf ${opt.base}`)
   for (const h of hinweise) console.log(`\nHINWEIS: ${h}`)
   if (verloren.length > 0) console.log(`\nGegenueber ${opt.base} ohne regulaeren Test (neu verloren): ${verloren.join(', ')}`)
 
@@ -199,6 +251,8 @@ function ratchet(opt, root, scan, istKennung, ids, zahlen, fehler) {
       `| ${aktuell} | ${zahlen.nurTeilweise.length} | ${zahlen.ganzOhne.length} | ${haupt ? haupt.mitTest : '-'} | ${diff === null ? '-' : diff > 0 ? `+${diff}` : diff} | ${eigener ? eigener.mitTest : '-'} |`,
       '',
       verloren.length > 0 ? `Neu ohne regulaeren Test: ${genannt}${rest}` : 'Keine Kennung gegenueber dem Hauptzweig verloren.',
+      '',
+      `Erwartet rot ohne Verweis: ${ohneVerweis.length} (Hauptzweig ${hauptOhne ? hauptOhne.length : '-'}) von ${zahlen.markiert.length} Markierungen.`,
       '',
     ].join('\n')
     appendFileSync(summaryPfad, md + '\n')
@@ -231,7 +285,8 @@ function main() {
   for (const k of nachweis.kennungen) if (!recordVon.has(k)) fehler.push(`Nachweis ${k} ist keine MVP-Kennung`)
 
   const scan = opt.scan ?? ['src', 'tests', 'scripts']
-  const { gefunden, teilweise, dateien } = messe(root, scan, (k) => recordVon.has(k))
+  const { gefunden, teilweise, dateien, markiert, stellen } = messe(root, scan, (k) => recordVon.has(k))
+  pruefeVerweise(opt, root, stellen, fehler)
 
   let zuPruefen = [...recordVon.keys()]
   if (opt.task) {
@@ -263,7 +318,7 @@ function main() {
   }
   if (opt.task) console.log(`\nOhne Test (Aufgabe ${opt.task}): ${ohneTest.join(', ') || '-'}`)
 
-  if (!opt.task) ratchet(opt, root, scan, (k) => recordVon.has(k), [...gefunden].sort(), { mitTest, nurTeilweise, ganzOhne }, fehler)
+  if (!opt.task) ratchet(opt, root, scan, (k) => recordVon.has(k), [...gefunden].sort(), { mitTest, nurTeilweise, ganzOhne, markiert }, fehler)
 
   if (opt.strict && ohneTest.length > 0) fehler.push(`${ohneTest.length} MVP-Kennungen ohne Test (--strict)`)
   if (fehler.length > 0) {
