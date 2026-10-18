@@ -407,7 +407,7 @@ export const monitorThemes = {
     liveBadgeText: '#00E676', // Endfarbe des Fortschrittsbalkens (MatchTimer): bleibt grün, Live-Rot gehört nur dem Abzeichen
     // Aufgabe 1.1: Live-Rot des Abzeichens (Rose 400, Schrift dunkel) – eigene Tokens, damit der Balken unverändert bleibt
     liveBadgeFill: '#FB7185',
-    liveBadgeOn: '#0A1628',
+    liveBadgeOn: '#000000', // Schwarz: 7,8 : 1 auf Rose 400 (die Messung verlangt am Monitor ≥ 7 : 1, kontrast.monitor)
     liveDot: '#00E676',
     pauseBadgeBg: 'rgba(251, 191, 36, 0.2)',
     pauseBadgeText: '#fbbf24',
