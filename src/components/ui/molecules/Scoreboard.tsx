@@ -115,7 +115,8 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
   const rasterAbstand = gross ? cssVars.spacing.sm : cssVars.spacing.xs;
 
   const tafel: CSSProperties = {
-    display: 'grid', gap: rasterAbstand, minWidth: 0, boxSizing: 'border-box',
+    // eine Spalte mit Mindestbreite 0: eine lange einzeilige Meldung weitet die Tafel nie über ihre Breite
+    display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: rasterAbstand, minWidth: 0, boxSizing: 'border-box',
     padding: gross ? cssVars.spacing.md : `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
     background: cssVars.colors.scoreboardBg, color: cssVars.colors.scoreboardText,
     border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.scoreboardDivider}`, borderRadius: cssVars.borderRadius.lg,

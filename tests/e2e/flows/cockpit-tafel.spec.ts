@@ -130,6 +130,10 @@ test.describe('Cockpit-Tafel', () => {
       return 'im Fluss';
     });
     expect(lage).toBe('im Fluss');
+    // die Tafel läuft nie über ihre Breite hinaus (auch nicht mit Meldung) und überlagert nichts seitlich
+    const breite = await page.getByTestId('scoreboard').evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth, rechts: el.getBoundingClientRect().right, fenster: window.innerWidth }));
+    expect(breite.scroll).toBeLessThanOrEqual(breite.client);
+    expect(breite.rechts).toBeLessThanOrEqual(breite.fenster);
     // Uhr und Stand sind sichtbar und frei (nichts darüber)
     await page.getByTestId('scoreboard').scrollIntoViewIfNeeded();
     for (const id of ['scoreboard-clock', 'scoreboard-box-links', 'scoreboard-box-rechts']) {

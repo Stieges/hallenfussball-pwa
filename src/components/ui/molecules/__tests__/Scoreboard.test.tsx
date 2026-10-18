@@ -132,6 +132,11 @@ describe('Scoreboard', () => {
     expect(screen.queryByTestId('scoreboard-score')).toBeNull();
   });
 
+  it('@SL-064 eine lange einzeilige Meldung weitet die Tafel nicht über ihre Breite (eine Spalte mit Mindestbreite 0)', () => {
+    render(<Scoreboard model={model} size="compact" meldezeile={<div style={{ whiteSpace: 'nowrap' }}>Foul für Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921</div>} testId="scoreboard" />);
+    expect(screen.getByTestId('scoreboard')).toHaveStyle({ gridTemplateColumns: 'minmax(0, 1fr)', minWidth: '0px' });
+  });
+
   it('das Zustands-Abzeichen trägt den Text (Farbe allein bedeutet nichts) und die Größe steht als Attribut', () => {
     render(<Scoreboard model={model} size="regular" meldezeile={null} testId="scoreboard" />);
     expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Live');
