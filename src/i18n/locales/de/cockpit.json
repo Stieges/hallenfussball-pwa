@@ -331,7 +331,12 @@
     "fiveSeconds": "5 Sekunden",
     "tenSeconds": "10 Sekunden",
     "fifteenSeconds": "15 Sekunden",
-    "twentySeconds": "20 Sekunden"
+    "twentySeconds": "20 Sekunden",
+    "clockMode": "Uhr-Art",
+    "clockModeDesc": "Wann die Uhr bei Unterbrechungen angehalten wird – gilt ab dem nächsten Anpfiff",
+    "clockModeLastMinute": "durchlaufend, letzte Minute angehalten",
+    "clockModeAlwaysRunning": "immer durchlaufend",
+    "clockModeAlwaysStopped": "immer angehalten"
   },
   "editScore": {
     "title": "Ergebnis korrigieren",

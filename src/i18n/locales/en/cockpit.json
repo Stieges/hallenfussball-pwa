@@ -331,7 +331,12 @@
     "fiveSeconds": "5 seconds",
     "tenSeconds": "10 seconds",
     "fifteenSeconds": "15 seconds",
-    "twentySeconds": "20 seconds"
+    "twentySeconds": "20 seconds",
+    "clockMode": "Clock mode",
+    "clockModeDesc": "When the clock stops on interruptions – applies from the next kick-off",
+    "clockModeLastMinute": "running, stopped in the last minute",
+    "clockModeAlwaysRunning": "always running",
+    "clockModeAlwaysStopped": "always stopped"
   },
   "editScore": {
     "title": "Correct Score",
