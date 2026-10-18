@@ -122,6 +122,10 @@ describe('@ZM-148 Zuschauer-Seite zeigt den vollen Namen (Gegenbeispiel zu @ZM-0
     );
     await screen.findAllByRole('heading', { level: 1, name: t.title });
     expect(screen.getAllByText(new RegExp(VOLL)).length).toBeGreaterThan(0);
-    expect(container.textContent).not.toContain(KUERZEL);
+    // @ZM-169 (Ausnahme zu @ZM-148): nur die Mobil-Gruppentabelle trägt das Kürzel, sonst überall der volle Name
+    expect(container.querySelector('.standings-table .mobile-view')?.textContent).toContain(KUERZEL);
+    const klon = container.cloneNode(true) as HTMLElement;
+    klon.querySelectorAll('.standings-table .mobile-view').forEach(e => e.remove());
+    expect(klon.textContent).not.toContain(KUERZEL);
   });
 });

@@ -139,3 +139,35 @@ test('@ZM-088 Gegenbeispiel Desktop 1280: breite Tabelle bleibt, Mobil-Ansicht a
     description: JSON.stringify(await t.locator('.desktop-view thead th').evaluateAll((l) => l.map((e) => Math.round(e.getBoundingClientRect().width)))),
   });
 });
+
+const VOLL = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
+
+test('@ZM-169 Handy 360: Gruppentabelle zeigt „SG FF Nordheim-Süd 1921“ und „TSV Ost“, Spielkarten denselben Namen voll (Ausnahme zu @ZM-148)', async ({ page }) => {
+  await oeffne(page, 360, 'MESS26');
+  const namen = await page.locator('.standings-table .mobile-view tbody tr td:nth-child(2) > div').evaluateAll(
+    (l) => l.map((e) => Array.from(e.childNodes).filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.textContent ?? '').join('').trim()),
+  );
+  expect(namen).toContain('SG FF Nordheim-Süd 1921');
+  expect(namen).toContain('TSV Ost');
+  expect(namen).not.toContain(VOLL);
+  for (const t of namen) { expect(t).not.toContain('…'); }
+  // Gegenbeispiel: eine Spielkarte derselben Seite zeigt weiter den vollen Namen (nicht in der Tabelle)
+  const karte = page.locator(`xpath=//*[not(ancestor::*[contains(@class,'standings-table')])][normalize-space(text())='${VOLL}']`);
+  expect(await karte.count()).toBeGreaterThan(0);
+  expect(await page.locator('.standings-table').getByText(VOLL).count()).toBe(1); // nur die ausgeblendete Desktop-Tabelle
+  await bild(page, '169-tabelle-360-hell');
+});
+
+test('@ZM-169 Gegenbeispiel Desktop 1280: Gruppentabelle zeigt weiter den vollen Namen', async ({ page }) => {
+  await oeffne(page, 1280, 'MESS26');
+  await expect(page.locator('.standings-table .desktop-view').first().getByText(VOLL)).toBeVisible();
+  await expect(page.locator('.standings-table .desktop-view').getByText('SG FF Nordheim-Süd 1921')).toHaveCount(0);
+});
+
+test('@ZM-169 Handy 320 (MESS26): mit Kürzeln schiebt die Tabelle höchstens 3 px (gemessen)', async ({ page }) => {
+  await oeffne(page, 320, 'MESS26');
+  const m = await messe(page);
+  test.info().annotations.push({ type: 'messung', description: JSON.stringify(m) });
+  expect(m.gebrochen).toEqual([]);
+  expect(m.abgeschnitten).toBeLessThanOrEqual(3);
+});

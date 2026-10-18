@@ -252,6 +252,11 @@ describe('@ZM-087 Namen vollständig (Zuschauer-Seite Handy: voller Name, ohne �
     const c = await zeige({ ...cup.tournament, teams });
     expect(screen.getAllByText(lang).length).toBeGreaterThan(0);
     expect(text(c)).not.toContain('…');
-    expect(text(c)).not.toMatch(/GÜFÖ|SFNS|SG FF Nordheim/);
+    // @ZM-169 (Ausnahme zu @ZM-148): nur die Mobil-Gruppentabelle trägt das Vereinskürzel, alles andere bleibt voller Name
+    const mobil = c.querySelector('.standings-table .mobile-view');
+    expect(mobil?.textContent).toContain('SG FF Nordheim-Süd 1921');
+    const klon = c.cloneNode(true) as HTMLElement;
+    klon.querySelectorAll('.standings-table .mobile-view').forEach((e) => e.remove());
+    expect(klon.textContent).not.toMatch(/GÜFÖ|SFNS|SG FF Nordheim/);
   });
 });

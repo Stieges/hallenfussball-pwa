@@ -10,6 +10,7 @@ import { cssVars } from '../../design-tokens'
 import { Standing, TeamLogo, TeamColors } from '../../types/tournament';
 import type { ScheduleSource } from './scheduleSource';
 import { getGroupDisplayName } from '../../utils/displayNames';
+import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 import { TeamAvatar } from '../ui/TeamAvatar';
 import styles from './GroupTables.module.css';
 
@@ -322,7 +323,8 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                         hyphens: 'manual',
                       }}>
                         <TeamAvatar team={standing.team} size="xs" />
-                        {standing.team.name}
+                        {/* @ZM-169: nur hier Vereinskürzel nach der Monitor-Liste; Desktop-Tabelle und Spielkarten zeigen den vollen Namen */}
+                        {monitorTeamName(standing.team.name)}
                         {/* LIVE INDICATOR */}
                         {activeMatchTeamIds?.has(standing.team.id) && (
                           <span
