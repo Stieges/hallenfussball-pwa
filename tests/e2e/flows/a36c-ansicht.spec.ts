@@ -165,3 +165,38 @@ test.describe('A-36c Monitor 1280×720', () => {
     await bild(page, 'monitor-1280-live-ende-strafstoss');
   });
 });
+
+/**
+ * Fixrunde 2 (C-SPIELPLAN-SCHWEBETASTEN, öffentliche Variante), @OB-021/@OB-022: auf `/public/:id` verdeckt der Teilen-Knopf
+ * keine Spielkarte. Gemessen mit `elementFromPoint` (Mitte jeder sichtbaren Torzahl, Name und Kopfzeile je Karte) beim
+ * Durchscrollen der ganzen Seite; Treffer im Teilen-Knopf = verdeckt.
+ */
+for (const groesse of [{ width: 360, height: 640 }, { width: 390, height: 844 }, { width: 1280, height: 800 }]) {
+  test(`@OB-021 Teilen-Knopf überlappt keine Spielkarte (/public, ${groesse.width}×${groesse.height})`, async ({ page }) => {
+    await oeffne(page, groesse, '/#/public/hallencup-messlauf', '[data-match-card]');
+    const knopf = page.locator('.schedule-action-buttons');
+    await expect(knopf).toBeAttached();
+    const verdeckt: string[] = [];
+    const hoehe = await page.evaluate(() => document.documentElement.scrollHeight);
+    for (let y = 0; y <= hoehe; y += Math.floor(groesse.height / 2)) {
+      await page.evaluate((ziel) => window.scrollTo(0, ziel), y);
+      const treffer = await page.evaluate(() => {
+        const leiste = document.querySelector('.schedule-action-buttons');
+        const liste: string[] = [];
+        for (const el of document.querySelectorAll<HTMLElement>('[data-match-card] [data-testid^="match-goals-"], [data-match-card] [data-testid^="match-name-"], [data-match-card] button')) {
+          const r = el.getBoundingClientRect();
+          if (el.offsetParent === null || r.width === 0 || r.bottom < 0 || r.top > window.innerHeight) { continue; }
+          const oben = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          if (oben && leiste?.contains(oben)) { liste.push(el.dataset.testid ?? el.textContent ?? 'button'); }
+        }
+        return liste;
+      });
+      verdeckt.push(...treffer);
+    }
+    expect(verdeckt, 'vom Teilen-Knopf verdeckte Bedienelemente und Stände').toEqual([]);
+    // Gegenbeispiel: der Knopf ist erreichbar und sichtbar, er steht unter dem Spielplan
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(knopf.getByRole('button', { name: /Teilen/ })).toBeVisible();
+    await bild(page, `public-${groesse.width}-teilen-im-fluss`);
+  });
+}
