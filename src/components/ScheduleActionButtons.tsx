@@ -14,6 +14,8 @@ export interface ScheduleActionButtonsProps {
   schedule: GeneratedSchedule;
   standings: Standing[];
   variant?: 'organizer' | 'public';
+  /** A-11 @ZM-019: „Aushang mit QR-Code“ im PDF-Dialog anbieten (Recht tournamentSettings). Vorgabe: ja. */
+  canCreateNotice?: boolean;
 }
 
 export const ScheduleActionButtons = ({
@@ -21,6 +23,7 @@ export const ScheduleActionButtons = ({
   schedule,
   standings,
   variant = 'organizer',
+  canCreateNotice,
 }: ScheduleActionButtonsProps) => {
   const { t } = useTranslation('tournament');
   const navigate = useNavigate();
@@ -102,6 +105,7 @@ export const ScheduleActionButtons = ({
           tournament={tournament}
           schedule={schedule}
           standings={standings}
+          canCreateNotice={canCreateNotice}
           onOpenVisibility={() => {
             setShowPDFDialog(false);
             void navigate(`/tournament/${tournament.id}/admin/visibility`);
