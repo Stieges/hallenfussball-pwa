@@ -30,17 +30,15 @@ import { DangerZoneCategory } from '../index';
 function renderDangerZone(tournament: Tournament) {
   const onTournamentUpdate = vi.fn();
   const onLocalTournamentUpdate = vi.fn();
-  const onMatchesUpdate = vi.fn();
   render(
     <DangerZoneCategory
       tournamentId="t1"
       tournament={tournament}
       onTournamentUpdate={onTournamentUpdate}
       onLocalTournamentUpdate={onLocalTournamentUpdate}
-      onMatchesUpdate={onMatchesUpdate}
     />
   );
-  return { onTournamentUpdate, onLocalTournamentUpdate, onMatchesUpdate };
+  return { onTournamentUpdate, onLocalTournamentUpdate };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -62,7 +60,6 @@ describe('DangerZone — „Spielplan neu generieren" wird nie angeboten', () =>
     expect(screen.queryByRole('button', { name: /Spielplan neu generieren/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Spielplan neu generieren/i)).not.toBeInTheDocument();
     expect(spies.onLocalTournamentUpdate).not.toHaveBeenCalled();
-    expect(spies.onMatchesUpdate).not.toHaveBeenCalled();
     expect(spies.onTournamentUpdate).not.toHaveBeenCalled();
   });
 

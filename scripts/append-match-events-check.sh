@@ -58,8 +58,8 @@
 #               INVALID_PAYLOAD; compute_match_state == Zustand beim Anhaengen.
 #   Spaltenschutz  C0b (V4, Ruling PC2, Trigger matches_guard_engine_columns): Helfer/Eigentuemer
 #               aendern Ergebnis-/Status-/Uhr-/live_state-Spalten eines Spiels MIT Engine-Ereignis
-#               -> abgelehnt (Guard-Meldung); Spiel OHNE Engine-Ereignis (Altspiel, DangerZone) ->
-#               erlaubt; freie Spalte (referee_number) am Engine-Spiel -> erlaubt; der RPC-
+#               -> abgelehnt (Guard-Meldung); seit A-10 (20261028_005, @EK-060) auch Spiel OHNE
+#               Engine-Ereignis (Altspiel) -> abgelehnt; freie Spalte (referee_number) am Engine-Spiel -> erlaubt; der RPC-
 #               Zwischenspeicher schreibt weiter; is_public-Kaskade des Turniers erreicht das Spiel;
 #               Reihenfolge der BEFORE-UPDATE-Trigger auf matches (pg_trigger).
 #   Rechte-Assertion  scripts/db_privilege_assertions.sql gegen den migrierten Container.
@@ -109,6 +109,9 @@ AMEND_MIGRATION="20261001_001_amend_event.sql"
 ZA3_MIGRATION="20261028_001_transitions_za3.sql"
 # A-25a: juengste Fassung von append_match_events/payload_valid/apply_result_entry/cache_columns (stapelt auf ZA-3).
 A25A_MIGRATION="20261028_003_result_entry_shootout.sql"
+# A-10: juengste Fassung von matches_guard_engine_columns (unbedingt, BEFORE INSERT OR UPDATE) -- 20261001_001 erneut
+# einzuspielen stellte die alte Bedingung wieder her, deshalb ans Ende der Idempotenz-Kette.
+A10_MIGRATION="20261028_005_guard_all_matches.sql"
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 CONTAINER_NAME="append-match-events-check-$$"
 WORKDIR="$(mktemp -d)"
@@ -127,6 +130,7 @@ TARGET_FILE=""
 AMEND_FILE=""
 ZA3_FILE=""
 A25A_FILE=""
+A10_FILE=""
 AFTER_TARGET=0
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
@@ -142,10 +146,11 @@ while IFS= read -r line; do
   [[ "$(basename "$line")" == "$AMEND_MIGRATION" ]] && AMEND_FILE="$line"
   [[ "$(basename "$line")" == "$ZA3_MIGRATION" ]] && ZA3_FILE="$line"
   [[ "$(basename "$line")" == "$A25A_MIGRATION" ]] && A25A_FILE="$line"
+  [[ "$(basename "$line")" == "$A10_MIGRATION" ]] && A10_FILE="$line"
   NEWER_MIGRATIONS+=("$line")
 done <<< "$NEWER_MIGRATIONS_RAW"
-if [[ "$MODE" != "without-migration" && ( -z "$TARGET_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" ) ]]; then
-  echo "::error::$TARGET_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION oder $A25A_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
+if [[ "$MODE" != "without-migration" && ( -z "$TARGET_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" || -z "$A10_FILE" ) ]]; then
+  echo "::error::$TARGET_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION oder $A10_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
   exit 1
 fi
 
@@ -189,6 +194,7 @@ if [[ "$MODE" != "without-migration" ]]; then
   psql_stdin < "$AMEND_FILE"
   psql_stdin < "$ZA3_FILE"
   psql_stdin < "$A25A_FILE"
+  psql_stdin < "$A10_FILE"
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.
@@ -1136,9 +1142,15 @@ check Spaltenschutz "@FU-005 Zwischenspeicher nach den abgelehnten Versuchen unv
 res="$(q "SELECT public.__b3b_exec_msg('$U_HELPER', \$S\$UPDATE public.matches SET referee_number = 3, score_a = score_a WHERE id = '$(M cg-engine)'\$S\$);")"
 check Spaltenschutz "Helfer: freie Spalte (referee_number) am Engine-Spiel, geschuetzte unveraendert -> erlaubt" '. == "ok:1"' "$(jq -Rn --arg v "$res" '$v')"
 res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$UPDATE public.matches SET score_a = 3, score_b = 1, match_status = 'finished' WHERE id = '$(M cg-legacy)'\$S\$);")"
-check Spaltenschutz "Eigentuemer: Altspiel ohne Engine-Ereignis (DangerZone-Weg) -> erlaubt" '. == "ok:1"' "$(jq -Rn --arg v "$res" '$v')"
+# A-10 (20261028_005, @EK-060): umgeschrieben (Baustein Regel 3) -- vorher "Altspiel ohne Engine-Ereignis -> erlaubt".
+# Der Spalten-Schutz gilt jetzt fuer ALLE Spiele; die Turnierleitung setzt Altbestand ueber reset_match_results zurueck.
+check Spaltenschutz "@EK-060 Eigentuemer: Altspiel ohne Engine-Ereignis -> 42501 (Guard, unbedingt)" \
+  'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
 res="$(q "SELECT public.__b3b_exec_msg('$U_HELPER', \$S\$UPDATE public.matches SET score_a = 4 WHERE id = '$(M cg-legacy)'\$S\$);")"
-check Spaltenschutz "Helfer: Altspiel ohne Engine-Ereignis -> erlaubt" '. == "ok:1"' "$(jq -Rn --arg v "$res" '$v')"
+check Spaltenschutz "@EK-060 Helfer: Altspiel ohne Engine-Ereignis -> 42501 (Guard, unbedingt)" \
+  'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
+cache="$(cache_of "$(M cg-legacy)")"
+check Spaltenschutz "@EK-060 Altspiel nach beiden Versuchen unveraendert (0:0)" '.score_a == 0 and .score_b == 0' "$cache"
 out="$(call authenticated "$U_HELPER" "$(M cg-engine)" "$(arr "$(ev GOAL "$(E cg-goal)" '{"at":2000,"clockMs":1000,"teamId":"@T:cg-a@"}')")")"
 cache="$(cache_of "$(M cg-engine)")"
 check Spaltenschutz "RPC-Zwischenspeicher schreibt weiter (GOAL -> score_a 1, referee_number bleibt)" \
@@ -1172,6 +1184,10 @@ psql_stdin <<<'DROP POLICY "__c0b_hide_events" ON public.match_events;'
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 16) = 16;")"
 check Spaltenschutz "BEFORE-UPDATE-Trigger auf matches (Feuerreihenfolge = Name): $out" \
   '. == "matches_guard_engine_columns,matches_guard_kit_columns,matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at"' "$(jq -Rn --arg v "$out" '$v')"
+# A-10 (20261028_005, L7): der Spalten-Schutz feuert auch BEFORE INSERT (Client-INSERT neutral).
+out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4;")"
+check Spaltenschutz "BEFORE-INSERT-Trigger auf matches (Feuerreihenfolge = Name): $out" \
+  '. == "matches_guard_engine_columns,matches_guard_kit_columns,matches_sync_owner"' "$(jq -Rn --arg v "$out" '$v')"
 
 # --- 9e. C0b-Fixrunde 1 (Review M2, Ruling PC6): SKIP/UNSKIP pflegen skipped_at/skipped_reason --
 echo "Absetzen (skipped_at/skipped_reason)..." >&2

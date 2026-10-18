@@ -508,6 +508,12 @@ export interface Tournament {
 
   // Optimistic Locking
   version?: number;
+  /**
+   * A-10 (@TM-027, Befund C-SLOT-UPDATE-OHNE-VERSION): Änderungszählung des Servers (`tournaments.change_revision`),
+   * zählt Spielplan-Änderungen ohne Versions-CAS. Nur aus der Cloud gelesen; lokale Schreibwege ändern sie nie.
+   * Höherer Cloud-Wert → ganze Kopie übernehmen (Regel Q gilt). Fehlt die Spalte: 0.
+   */
+  changeRevision?: number;
 
   // Multi-User / Cloud Sync
   /** User ID of the tournament owner (for cloud sync) */

@@ -5,6 +5,7 @@
  * - Versionsweg (Cloud-Version höher, `isPublic` veraltet, oder erste Kopie): ganze Kopie speichern -- A-08f3c2 nur,
  *   wenn Regel Q es erlaubt (nichts Eigenes wartet oder ist gescheitert, `cloudQueueGuard.ts`); die Kopie trägt Version
  *   und `updatedAt` der Cloud (A-08f3c1, `cacheCloudCopy`).
+ * - A-10: ebenso, wenn die Änderungszählung der Cloud (`changeRevision`, @TM-027) höher ist.
  * - Sonst Feldweg (Regel S, `serverLedMatchFields.ts`).
  * - In beiden Fällen werden die Revisionen je Spiel fortgeschrieben (nie rückwärts). Sie liegen in der lokalen
  *   Kopie (Speicher-Schlüssel je Turnier), damit auch ein zweiter Tab einen älteren Stand nicht nachrücken lässt.
@@ -63,7 +64,9 @@ export function decideCloudAdoption(
     const localVersion = local?.version ?? 0;
     // N3: `isPublic` nur übernehmen, wenn die Cloud nicht älter ist (sonst überschriebe sich eine Offline-Freigabe).
     const visibilityStale = local !== null && local.isPublic !== cloud.isPublic && cloudVersion >= localVersion;
-    const wholeWanted = options.whole || cloudVersion > localVersion || visibilityStale;
+    // A-10 (@TM-027): Spielplan-Änderungen ohne Versions-CAS zählt der Server in `changeRevision` -- höher → ganze Kopie.
+    const revisionAhead = (cloud.changeRevision ?? 0) > (local?.changeRevision ?? 0);
+    const wholeWanted = options.whole || cloudVersion > localVersion || visibilityStale || revisionAhead;
     if (local === null || (wholeWanted && (options.wholeAllowed?.() ?? true))) {
         return { save: options.owned(keepNewerFields(cloud, local, read.matchRevisions, stored)), revisions: maxRevisions(stored, read.matchRevisions) };
     }

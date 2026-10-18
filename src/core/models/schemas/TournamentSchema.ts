@@ -146,6 +146,7 @@ export const TournamentSchema = z.object({
     // Multi-User / Cloud Sync
     ownerId: z.string().optional(),
     version: z.number().optional(),
+    changeRevision: z.number().optional(), // A-10: tournaments.change_revision (nur Cloud)
     /** Freigabe-Marker (ISO). Siehe Tournament.publishedAt — bewusst nicht `status`. */
     publishedAt: z.string().optional(),
     isPublic: z.boolean().optional(),
