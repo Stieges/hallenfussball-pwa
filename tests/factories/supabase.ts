@@ -111,6 +111,7 @@ export function createTournamentRow(
   return {
     id: 'tournament-1',
     owner_id: 'user-1',
+    change_revision: 0,
     title: 'Test Turnier',
     status: 'draft',
     sport: 'football-indoor',

@@ -1005,6 +1005,7 @@ export type Database = {
       }
       tournaments: {
         Row: {
+          change_revision: number
           completed_at: string | null
           config: Json
           created_at: string | null
@@ -1040,6 +1041,7 @@ export type Database = {
           version: number | null
         }
         Insert: {
+          change_revision?: number
           completed_at?: string | null
           config?: Json
           created_at?: string | null
@@ -1075,6 +1077,7 @@ export type Database = {
           version?: number | null
         }
         Update: {
+          change_revision?: number
           completed_at?: string | null
           config?: Json
           created_at?: string | null
@@ -1177,6 +1180,14 @@ export type Database = {
         }
         Returns: Json
       }
+      match_event_author_names: {
+        Args: { p_match_id: string }
+        Returns: {
+          author_name: string
+          author_role: string
+          event_id: string
+        }[]
+      }
       match_has_engine_events: {
         Args: { p_match_id: string }
         Returns: boolean
@@ -1211,6 +1222,10 @@ export type Database = {
           share_code: string
           share_code_created_at: string
         }[]
+      }
+      reset_match_results: {
+        Args: { p_match_ids: string[]; p_tournament_id: string }
+        Returns: Json
       }
       server_time: { Args: never; Returns: Json }
       tournament_has_started: {
