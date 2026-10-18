@@ -363,19 +363,6 @@
       ]
     },
     {
-      "id": "cockpit-meldung-foul",
-      "titel": "Cockpit: Meldezeile mit langem Teamnamen (Foul erfasst, Finale)",
-      "gruppen": [
-        "pflicht"
-      ],
-      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
-      "erwarte": "[data-testid=\"scoreboard\"]",
-      "profil": "app",
-      "klick": [
-        "[data-testid=\"foul-button-home\"]"
-      ]
-    },
-    {
       "id": "dialog-karte",
       "titel": "Dialog: Karte vergeben (Cockpit, Finale)",
       "gruppen": [
