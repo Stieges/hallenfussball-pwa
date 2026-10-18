@@ -22,19 +22,10 @@ export interface LiveFinalScoreProps {
 export function LiveFinalScore({ color, finalScore, names, accent }: LiveFinalScoreProps) {
   const { t } = useTranslation('monitor');
   if (finalScore?.penalty === undefined || finalScore.winner === null) {
-    // Sieg nach Verlängerung ohne Strafstoßschießen: „nach Verlängerung“ unter dem Endstand (Spec 4.4/4.5)
-    const nachVerlaengerung = Boolean(finalScore?.winner) && finalScore?.overtime !== undefined;
     return (
-      <>
-        <div data-testid="live-endstand" data-monitor="uhr" style={{ fontSize: displayFontSizes.clockXL, fontWeight: cssVars.fontWeights.bold, lineHeight: 1, color, textAlign: 'center' }}>
-          {t('liveMatch.finalScore')}
-        </div>
-        {nachVerlaengerung && (
-          <div data-testid="live-after-overtime" style={{ fontSize: displayFontSizes.clockHint, fontWeight: cssVars.fontWeights.bold, lineHeight: displayLayout.scoreArea.hintLineHeight, color, textAlign: 'center' }}>
-            {t('liveMatch.afterOvertime')}
-          </div>
-        )}
-      </>
+      <div data-testid="live-endstand" data-monitor="uhr" style={{ fontSize: displayFontSizes.clockXL, fontWeight: cssVars.fontWeights.bold, lineHeight: 1, color, textAlign: 'center' }}>
+        {t('liveMatch.finalScore')}
+      </div>
     );
   }
   const winner = monitorTeamName(finalScore.winner === 'a' ? names.home : names.away);
@@ -66,7 +57,6 @@ export function LivePenaltyResult({ finalScore, color, mutedColor }: { finalScor
   const small = { fontSize: displayFontSizes.clockHint, fontWeight: cssVars.fontWeights.bold, lineHeight: displayLayout.scoreArea.hintLineHeight, color: mutedColor } as const;
   return (
     <div data-testid="live-penalty-block" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', whiteSpace: 'nowrap', textAlign: 'center' }}>
-      {finalScore.overtime !== undefined && <div data-testid="live-after-overtime" style={small}>{t('liveMatch.afterOvertime')}</div>}
       <div data-testid="live-penalty">
         <span style={{ ...small, display: 'block' }}>{t('liveMatch.penaltyLabel')}</span>{' '}
         <span style={{ display: 'block', fontSize: displayFontSizes.teamName, fontWeight: cssVars.fontWeights.bold, lineHeight: displayLayout.scoreArea.hintLineHeight, color, fontVariantNumeric: 'tabular-nums' }}>

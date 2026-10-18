@@ -200,7 +200,7 @@ test.describe('A-36c Monitor 1280×720', () => {
     await bild(page, 'monitor-1280-live-ende-strafstoss-langer-verlierer');
   });
 
-  test('@ZM-049 Gegenbeispiel: Sieg in regulärer Zeit – Ring und Pokal am Sieger, keine Strafstoß-Zeile', async ({ page }) => {
+  test('@ZM-156 Gegenbeispiel: Sieg in regulärer Zeit – Ring und Pokal am Sieger, keine Strafstoß-Zeile', async ({ page }) => {
     await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-live', '[data-testid="live-slide-area"]');
     await beendeFinale(page, { scoreA: 3, scoreB: 1, decidedBy: 'regular' });
     await expect(page.getByTestId('live-cup-home')).toBeVisible({ timeout: 20000 });
@@ -209,7 +209,7 @@ test.describe('A-36c Monitor 1280×720', () => {
     await bild(page, 'monitor-1280-live-ende-regulaer');
   });
 
-  test('@ZM-049 Gruppenspiel: Ring um den Sieger, Name fett, Verlierer zurückgenommen, aber kein Pokal', async ({ page }) => {
+  test('@ZM-156 Gruppenspiel: Ring um den Sieger, Name fett, Verlierer zurückgenommen, aber kein Pokal', async ({ page }) => {
     await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-live', '[data-testid="live-slide-area"]');
     await beendeFinale(page, { scoreA: 3, scoreB: 1, decidedBy: 'regular', isFinal: false, group: 'A' });
     await expect(page.getByTestId('live-endstand')).toHaveText('Endstand', { timeout: 20000 });
@@ -220,12 +220,23 @@ test.describe('A-36c Monitor 1280×720', () => {
     await bild(page, 'monitor-1280-live-ende-gruppe');
   });
 
-  test('@ZM-049 Sieg nach Verlängerung (Finalrunde): Ring, Pokal und „nach Verlängerung“', async ({ page }) => {
+  test('@ZM-156 @ZM-157 Spiel um Platz 3 nach Verlängerung: Ring, Pokal, „nach Verlängerung“ unter dem Namen des Siegers (nicht unter „Endstand“), Kästen unverändert', async ({ page }) => {
     await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-live', '[data-testid="live-slide-area"]');
+    const vorher = await page.evaluate(() => [...document.querySelectorAll('[data-testid^="live-block-"] [data-position]')].map((e) => { const b = e.getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; }));
     await beendeFinale(page, { scoreA: 1, scoreB: 1, overtimeScoreA: 1, overtimeScoreB: 0, decidedBy: 'overtime' });
-    await expect(page.getByTestId('live-after-overtime')).toHaveText('nach Verlängerung', { timeout: 20000 });
+    const zusatz = page.getByTestId('live-after-overtime');
+    await expect(zusatz).toHaveText('nach Verlängerung', { timeout: 20000 });
     await expect(page.getByTestId('live-cup-home')).toBeVisible();
     await expect(page.getByTestId('live-penalty-block')).toHaveCount(0);
+    const boxen = await page.evaluate(() => {
+      const r = (sel: string) => { const b = document.querySelector(sel)?.getBoundingClientRect(); return b ? { l: b.left, r: b.right, t: b.top, b: b.bottom } : null; };
+      return { zusatz: r('[data-testid="live-after-overtime"]'), name: r('[data-testid="live-name-home"] [data-teamname]'), endstand: r('[data-testid="live-endstand"]'), kasten: [...document.querySelectorAll('[data-testid^="live-block-"] [data-position]')].map((e) => { const b = e.getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; }) };
+    });
+    expect(boxen.zusatz!.t, 'Zusatz unter dem Namen des Siegers').toBeGreaterThanOrEqual(boxen.name!.b - 1);
+    expect(boxen.zusatz!.b, 'Zusatz überlappt „Endstand“ nicht').toBeLessThanOrEqual(boxen.endstand!.t);
+    expect(boxen.zusatz!.l).toBeGreaterThanOrEqual(boxen.kasten[0][0] - 1);
+    expect(boxen.zusatz!.r).toBeLessThanOrEqual(boxen.kasten[0][0] + boxen.kasten[0][2] + 1);
+    for (let i = 0; i < vorher.length; i += 1) { for (let k = 0; k < 4; k += 1) { expect(Math.abs(boxen.kasten[i][k] - vorher[i][k])).toBeLessThanOrEqual(1); } }
     await bild(page, 'monitor-1280-live-ende-verlaengerung');
   });
 });

@@ -4,7 +4,7 @@
  */
 import { CSSProperties, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayLayout } from '../../design-tokens';
+import { cssVars, displayFontSizes, displayLayout, spacingScale } from '../../design-tokens';
 import type { monitorThemes } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
 import type { FinalScore } from '../../core/view';
@@ -34,6 +34,11 @@ export interface LiveScoreGridProps {
 const layout = displayLayout.scoreArea;
 /** Mit Strafstoßergebnis in der Mitte sind die Namen um diesen Anteil schmaler als der Kasten: Platz für „Strafstoßschießen“ zwischen den Namen (Mockup K5g) */
 const PENALTY_NAME_SHARE = 0.8;
+/** Pokal-Kreis (Mockup K5g `.cup`): Versatz über/rechts neben der Kastenecke als Bruchteil des Kreisdurchmessers, Symbolgröße als Anteil, Strichstärke des Symbols */
+const CUP_OFFSET_TOP_DIVISOR = 3;
+const CUP_OFFSET_RIGHT_DIVISOR = 5;
+const CUP_ICON_SHARE = 0.6;
+const CUP_ICON_STROKE = 2.4;
 
 export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, homeColor, awayColor, frames, finalScore, finalRound = false }: LiveScoreGridProps) {
   const { t } = useTranslation('monitor');
@@ -50,7 +55,9 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
 
   // @ZM-140 Raster: Kasten (Zeile 1) und Namen (Zeile 2) teilen sich ein Raster, Spalten 1 | 2 | 3
   // B-44a2: Zeile 1 hat die feste Kastenhöhe (auch im Kindermodus, gleiche Lage), Zeile 2 reserviert zwei Namenszeilen
-  const nameRowHeight = `calc(${displayFontSizes.teamName} * ${TEAM_NAME_ZEILENHOEHE * layout.nameLines})`;
+  // Dazu eine Zeile für Zusätze unter dem Namen („nach Verlängerung“, @ZM-156/@ZM-157), in jedem Zustand reserviert: die Kästen springen nicht (@ZM-151)
+  const addonLineHeight = `calc(${displayFontSizes.clockHint} * ${layout.hintLineHeight})`;
+  const nameRowHeight = `calc(${displayFontSizes.teamName} * ${TEAM_NAME_ZEILENHOEHE * layout.nameLines} + ${addonLineHeight})`;
   const gridStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: `minmax(0, 1fr) ${layout.separatorWidth} minmax(0, 1fr)`,
@@ -67,11 +74,10 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
   const separatorStyle: CSSProperties = {
     ...centeredCell,
     alignSelf: 'center',
-    fontSize: size === 'xl' ? displayFontSizes.liveSeparator : '64px',
-    fontWeight: 700,
+    fontSize: size === 'xl' ? displayFontSizes.liveSeparator : spacingScale['8'],
+    fontWeight: cssVars.fontWeights.bold,
     lineHeight: 1,
-    color: themeColors.text,
-    opacity: 0.8,
+    color: themeColors.textSecondary,
     userSelect: 'none',
   };
 
@@ -97,7 +103,8 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
     marginTop: hideScore ? layout.kidsNamesOffset : undefined,
     width: withPenalty ? `calc(${layout.blockWidth} * ${PENALTY_NAME_SHARE})` : layout.teamNameWidth,
     display: 'flex',
-    justifyContent: 'center',
+    flexDirection: 'column',
+    alignItems: 'center',
     minWidth: 0,
     maxWidth: '100%',
   });
@@ -105,15 +112,15 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
   // Pokal-Kreis oben rechts am Sieger-Kasten (Mockup K5g `.cup`), Maße aus `monitorCup`
   const cupStyle: CSSProperties = {
     position: 'absolute',
-    top: `calc(${layout.monitorCup} / -3)`,
-    right: `calc(${layout.monitorCup} / -5)`,
+    top: `calc(${layout.monitorCup} / -${CUP_OFFSET_TOP_DIVISOR})`,
+    right: `calc(${layout.monitorCup} / -${CUP_OFFSET_RIGHT_DIVISOR})`,
     width: layout.monitorCup,
     height: layout.monitorCup,
     borderRadius: cssVars.borderRadius.full,
     background: themeColors.progressBar,
     color: themeColors.background,
     border: `${layout.frameWidthSubtle} solid ${themeColors.background}`,
-    fontSize: `calc(${layout.monitorCup} * 0.6)`,
+    fontSize: `calc(${layout.monitorCup} * ${CUP_ICON_SHARE})`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -136,7 +143,7 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
         />
         {winner === side && finalRound && (
           <span style={cupStyle} role="img" aria-label={t('liveMatch.winnerAria')} data-testid={`live-cup-${home ? 'home' : 'away'}`}>
-            <Icons.Trophy size="1em" strokeWidth={2.4} />
+            <Icons.Trophy size="1em" strokeWidth={CUP_ICON_STROKE} />
           </span>
         )}
       </div>
@@ -157,6 +164,12 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
           onFitPx={home ? onHomePx : onAwayPx}
           emphasis={outcomeOf(side)}
         />
+        {/* unter dem Namen des Siegers (Spec 4.4): Sieg nach Verlängerung, mit oder ohne Strafstoßschießen */}
+        {winner === side && finalScore?.overtime !== undefined && (
+          <div data-testid="live-after-overtime" style={{ fontSize: displayFontSizes.clockHint, fontWeight: cssVars.fontWeights.bold, lineHeight: layout.hintLineHeight, color: themeColors.textSecondary, whiteSpace: 'nowrap' }}>
+            {t('liveMatch.afterOvertime')}
+          </div>
+        )}
       </div>
     );
   };

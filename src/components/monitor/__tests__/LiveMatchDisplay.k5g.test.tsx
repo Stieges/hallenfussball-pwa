@@ -100,9 +100,11 @@ describe('@ZM-147 @ZM-049 K5g4: Ergebnis nur eingetragen (ohne Schüsse)', () =>
 });
 
 describe('@ZM-049 K5g: mit Verlängerung (2:2 nach Verlängerung, Strafstoß 4:3)', () => {
-  it('zeigt „nach Verlängerung“ über dem Strafstoßergebnis', async () => {
+  it('@ZM-157 „nach Verlängerung“ steht unter dem Namen des Siegers (nicht unter dem Doppelpunkt), daneben unter dem Doppelpunkt das Strafstoß-Ergebnis', async () => {
     await ende({ score_a: 1, score_b: 1, overtime_score_a: 1, overtime_score_b: 1, penalty_score_a: 4, penalty_score_b: 3, decided_by: 'penalty' });
     expect(screen.getByTestId('live-after-overtime').textContent).toBe('nach Verlängerung');
+    expect(screen.getByTestId('live-name-home')).toContainElement(screen.getByTestId('live-after-overtime'));
+    expect(screen.getByTestId('live-penalty-block')).not.toContainElement(screen.getByTestId('live-after-overtime'));
     expect(screen.getByLabelText('Heim: 2')).toBeInTheDocument();
     expect(screen.getByTestId('live-penalty').textContent).toBe('Strafstoßschießen 4 : 3');
   });
@@ -124,7 +126,7 @@ describe('@ZM-087 @ZM-049 K5g3: 50-Zeichen-Verlierer', () => {
 });
 
 describe('Gegenbeispiele', () => {
-  it('Sieg in regulärer Zeit: Ring und Pokal am Sieger, aber keine Strafstoß-Zeile und keine Siegerzeile (nur „Endstand“)', async () => {
+  it('@ZM-156 Halbfinale nach regulärer Zeit: Ring und Pokal am Sieger, aber keine Strafstoß-Zeile und keine Siegerzeile (nur „Endstand“)', async () => {
     await ende({ score_a: 3, score_b: 1, decided_by: 'regular' });
     expect(kasten('home').dataset.outcome).toBe('winner');
     expect(screen.getByTestId('live-cup-home')).toBeInTheDocument();
@@ -135,11 +137,22 @@ describe('Gegenbeispiele', () => {
   });
 
   // Spec 4.4/4.5 (Daniel 18.10.): „nach Verlängerung“ erscheint auch ohne Strafstoßschießen
-  it('Sieg nach Verlängerung (Finalrunde): Ring, Pokal und „nach Verlängerung“, keine Strafstoß-Zeile', async () => {
+  it('@ZM-156 Spiel um Platz 3, Sieg nach Verlängerung: Ring und Pokal am Sieger, „nach Verlängerung“ unter dem Namen des Siegers (nicht unter „Endstand“, nicht beim Verlierer)', async () => {
     await ende({ score_a: 2, score_b: 2, overtime_score_a: 1, overtime_score_b: 0, decided_by: 'overtime' });
     expect(screen.getByTestId('live-cup-home')).toBeInTheDocument();
     expect(screen.queryByTestId('live-penalty-block')).toBeNull();
-    expect(screen.getByTestId('live-after-overtime').textContent).toBe('nach Verlängerung');
+    const zusatz = screen.getByTestId('live-after-overtime');
+    expect(zusatz.textContent).toBe('nach Verlängerung');
+    expect(screen.getByTestId('live-name-home')).toContainElement(zusatz);
+    expect(screen.getByTestId('live-name-away').querySelector('[data-testid="live-after-overtime"]')).toBeNull();
+    expect(screen.getByTestId('live-lower')).not.toContainElement(zusatz);
+    expect(screen.getByTestId('live-endstand').textContent).toBe('Endstand');
+  });
+
+  it('@ZM-156 Gegenbeispiel: gewinnt der Gast nach Verlängerung, steht „nach Verlängerung“ unter dem Namen des Gasts', async () => {
+    await ende({ score_a: 1, score_b: 1, overtime_score_a: 0, overtime_score_b: 1, decided_by: 'overtime' });
+    expect(screen.getByTestId('live-name-away')).toContainElement(screen.getByTestId('live-after-overtime'));
+    expect(screen.getByTestId('live-name-home').querySelector('[data-testid="live-after-overtime"]')).toBeNull();
   });
 
   it('Gegenbeispiel: Sieg in regulärer Zeit zeigt kein „nach Verlängerung“', async () => {
@@ -147,15 +160,15 @@ describe('Gegenbeispiele', () => {
     expect(screen.queryByTestId('live-after-overtime')).toBeNull();
   });
 
-  it('@ZM-049 Sieg nach Verlängerung in der Gruppe: Ring und „nach Verlängerung“, kein Pokal', async () => {
+  it('@ZM-156 Sieg nach Verlängerung in der Gruppe: Ring und „nach Verlängerung“ unter dem Siegernamen, kein Pokal', async () => {
     await ende({ score_a: 2, score_b: 2, overtime_score_a: 0, overtime_score_b: 1, decided_by: 'overtime' }, undefined, GAME[7]);
     expect(kasten('away').dataset.outcome).toBe('winner');
     expect(screen.queryByTestId('live-cup-away')).toBeNull();
-    expect(screen.getByTestId('live-after-overtime').textContent).toBe('nach Verlängerung');
+    expect(screen.getByTestId('live-name-away')).toContainElement(screen.getByTestId('live-after-overtime'));
   });
 
   // Spec 4.5: Pokal nur in der Finalrunde, Ring bei jedem Sieger
-  it('@ZM-049 Gruppensieg: Ring um den Sieger-Kasten, Name fett, Verlierer zurückgenommen, aber kein Pokal', async () => {
+  it('@ZM-156 Gruppensieg: Ring um den Sieger-Kasten, Name fett, Verlierer zurückgenommen, aber kein Pokal', async () => {
     await ende({ score_a: 3, score_b: 1, decided_by: 'regular' }, undefined, GAME[7]);
     expect(kasten('home').dataset.outcome).toBe('winner');
     expect(kasten('home').style.outline).toContain(displayLayout.scoreArea.frameWidthStrong);
@@ -166,14 +179,14 @@ describe('Gegenbeispiele', () => {
     expect(screen.queryByTestId('live-cup-away')).toBeNull();
   });
 
-  it('@ZM-049 Gegenbeispiel: Finalrunde (K.-o.) hat bei jedem Sieg Ring und Pokal', async () => {
+  it('@ZM-156 Gegenbeispiel: Finalrunde (K.-o.) hat bei jedem Sieg Ring und Pokal', async () => {
     await ende({ score_a: 0, score_b: 2, decided_by: 'regular' });
     expect(kasten('away').dataset.outcome).toBe('winner');
     expect(screen.getByTestId('live-cup-away')).toBeInTheDocument();
     expect(screen.queryByTestId('live-cup-home')).toBeNull();
   });
 
-  it('Unentschieden in der Gruppe: kein Ring, kein Pokal, kein Verlierer, nichts zurückgenommen', async () => {
+  it('@ZM-156 Unentschieden in der Gruppe: kein Ring, kein Pokal, kein Verlierer, nichts zurückgenommen', async () => {
     await ende({ score_a: 1, score_b: 1, decided_by: 'regular' }, undefined, GAME[7]);
     expect(kasten('home').dataset.outcome).toBeUndefined();
     expect(kasten('away').dataset.outcome).toBeUndefined();
@@ -183,7 +196,7 @@ describe('Gegenbeispiele', () => {
     expect(name('away').style.fontWeight).toBe('700');
   });
 
-  it('laufendes Spiel: weder Ring noch Pokal', async () => {
+  it('@ZM-156 laufendes Spiel: weder Ring noch Pokal', async () => {
     const cup = withCloudColumns(await hf1Besetzt(), GAME.HF1, { match_status: 'running', score_a: 2, score_b: 1 });
     zeige(cup);
     expect(kasten('home').dataset.outcome).toBeUndefined();
