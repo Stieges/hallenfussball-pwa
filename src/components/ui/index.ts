@@ -1,8 +1,8 @@
 // Barrel export for all UI components
 export { Button } from './Button';
 export { Card } from './Card';
-export { InlineNotice, NoticeLine } from './molecules';
-export type { NoticeLineProps } from './molecules';
+export { InlineNotice, NoticeLine, Scoreboard } from './molecules';
+export type { NoticeLineProps, ScoreboardProps, ScoreboardModel } from './molecules';
 export { Input } from './Input';
 export { Select } from './Select';
 export { Combobox } from './Combobox';

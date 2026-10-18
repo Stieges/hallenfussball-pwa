@@ -13,8 +13,7 @@ import { cssVars, spacingSemantics } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
-import { matchLabelText } from '../../core/models/slotLabel';
-import { buildSideContext, sideDisplay, type SideContext } from './matchSides';
+import { buildSideContext, matchHeading, matchViewOf, sideDisplay, type SideContext } from './matchSides';
 import { resultFigures } from './matchResult';
 import { EditableMatchCard, type MatchCardStatus, type RefereeOption } from './MatchCard';
 import type { ScheduleConflict } from '../../features/schedule-editor/types';
@@ -154,17 +153,19 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   // ---------------------------------------------------------------------------
 
   const sides = sideContext ?? buildSideContext(tournament, [match]);
+  const matchView = matchViewOf(sides, match.id);
   const cardProps = {
     matchId: match.id,
     matchNumber: match.matchNumber,
     scheduledTime: match.time,
     field: match.field,
-    group: (match.label === undefined ? undefined : matchLabelText(match.label)) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
+    group: matchHeading(match, sides) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
     showGroupLabel,
     homeTeam: sideDisplay(match, 'A', sides),
     awayTeam: sideDisplay(match, 'B', sides),
-    result: resultFigures(match, status),
+    result: resultFigures(matchView?.score, status),
     status,
+    viewStatus: matchView?.status,
   };
 
   // ---------------------------------------------------------------------------

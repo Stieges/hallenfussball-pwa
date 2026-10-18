@@ -93,11 +93,12 @@ export type ProgramSlide = MonitorSlide | QrRueckfallFolie;
 /** Haltezeit des Endergebnisses nach Abpfiff, bevor der Takt weiterläuft (@ZM-077). */
 export const FINAL_RESULT_HOLD_MS = 30_000;
 
-/** Die Felder der Spielregeln; ein Repository-Objekt erfüllt sie strukturell. */
+/** Die Felder der Spielregeln; ein Spiel der Ansicht (`MatchView`) erfüllt sie strukturell. */
 export interface RuleMatch {
   id: string;
   field: number;
-  matchStatus?: string | null;
+  /** Läuft ODER ist unterbrochen (Halbzeit, Verlängerung, Strafstoßschießen, angehaltene Uhr), @ZM-039 */
+  isLive: boolean;
 }
 
 export interface SlideProgram {
@@ -126,12 +127,6 @@ export function slideDurationMs(slide: ProgramSlide, defaultDurationSec: number)
   return (slide.duration ?? defaultDurationSec) * 1000;
 }
 
-/** Spiel „im Lauf“: laufend oder in der Halbzeit (`paused`, C-MON-PAUSE; der Typ bleibt Spur A). */
-export function isMatchInProgress(match: { matchStatus?: string | null }): boolean {
-  const status = String(match.matchStatus);
-  return status === 'running' || status === 'paused';
-}
-
 function wrapIndex(index: number, length: number): number {
   return ((index % length) + length) % length;
 }
@@ -154,7 +149,7 @@ function liveFieldOf(slide: ProgramSlide): number | null {
 }
 
 function runningOn(matches: readonly RuleMatch[], field: number): RuleMatch | undefined {
-  return matches.find(m => m.field === field && isMatchInProgress(m));
+  return matches.find(m => m.field === field && m.isLive);
 }
 
 /** Laufendes Spiel der Live-Folie auf ihrem Feld. */
@@ -241,7 +236,7 @@ export function nextSlide(program: SlideProgram, state: SlideshowState, now: num
 
   if ((state.pinnedMatchId ?? null) !== null) {
     const pinned = matches.find(m => m.id === state.pinnedMatchId);
-    if (pinned && isMatchInProgress(pinned)) {
+    if (pinned?.isLive === true) {
       // @ZM-079: Der Pin ist nicht mehr erlaubt (Anhalten aus, Live-Folie entfernt): der Takt läuft ab jetzt.
       return { ...state, pinnedMatchId: null, finalUntil: null, startedAt: now };
     }

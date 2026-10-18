@@ -89,7 +89,7 @@ async function navigateToLiveCockpit(page: any) {
   }
 
   // Wait for cockpit to load
-  await page.waitForSelector('[data-testid="match-timer-display"], [data-testid="match-start-button"]', {
+  await page.waitForSelector('[data-testid="scoreboard"], [data-testid="match-start-button"]', {
     timeout: 10000,
   });
 }
@@ -140,7 +140,7 @@ test.describe('Match Cockpit Extended', () => {
 
     // THEN - Match should be paused (start button visible again)
     // Note: Keyboard shortcuts may not be implemented - test passes if no error
-    const timer = page.getByTestId('match-timer-display');
+    const timer = page.getByTestId('scoreboard');
     await expect(timer).toBeVisible();
   });
 
@@ -509,7 +509,7 @@ test.describe('Match Cockpit Extended', () => {
     }
 
     // Wait for cockpit to be interactive
-    await expect(page.getByTestId('match-timer-display')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 3000 });
 
     const loadTime = Date.now() - startTime;
     // Allow some buffer for CI environments

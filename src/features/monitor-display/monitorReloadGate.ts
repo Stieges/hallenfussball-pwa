@@ -5,10 +5,9 @@
  * - bei mehr als einer Folie: beim Folienwechsel zu einer Folie ohne laufendes Spiel (seit dem Eintreffen der
  *   neuen Version mindestens ein Wechsel), oder
  * - bei nur einer Folie: sobald auf keinem Feld ein Spiel läuft.
- * „Laufend“ = running ODER paused (ein unterbrochenes Spiel ist nicht vorbei, `isMatchInProgress`).
+ * „Laufend“ = `isLive` der Ansicht: läuft ODER unterbrochen (ein unterbrochenes Spiel ist nicht vorbei).
  */
 import {
-  isMatchInProgress,
   liveSpielLaeuft,
   type ProgramSlide,
   type RuleMatch,
@@ -26,7 +25,7 @@ export interface NeuladenEingabe {
 export function neuladenErlaubt(eingabe: NeuladenEingabe): boolean {
   const { slides, matches, index, wechselSeitUpdate } = eingabe;
   if (slides.length <= 1) {
-    return !matches.some(isMatchInProgress);
+    return !matches.some(m => m.isLive);
   }
   const gezeigt = slides[index];
   if (gezeigt === undefined) {

@@ -19,6 +19,8 @@ import { cssVars } from '../../../design-tokens'
 import { MatchCardScore, type MatchCardStatus } from './MatchCardScore';
 import { formatTime } from './utils';
 import { TeamAvatar } from '../../ui/TeamAvatar';
+import { RunningBadge } from '../RunningBadge';
+import type { ViewMatchStatus } from '../../../core/view';
 import type { ResultFigures } from '../matchResult';
 import type { TeamLogo, TeamColors } from '../../../types/tournament';
 
@@ -58,6 +60,8 @@ export interface MatchCardDesktopProps {
   status: MatchCardStatus;
   /** Formatted elapsed time */
   elapsedFormatted?: string;
+  /** Fachlicher Status der Ansicht (ausgefallen, gewertet), @ZM-104 */
+  viewStatus?: ViewMatchStatus;
   /** Callback when row is clicked */
   onRowClick?: () => void;
   /** Callback when score circle is clicked */
@@ -89,6 +93,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   result = null,
   status,
   elapsedFormatted,
+  viewStatus,
   onRowClick,
   onCircleClick,
   isExpanded = false,
@@ -222,38 +227,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         {/* Time */}
         <div style={timeStyle}>
           {formatTime(scheduledTime)}
-          {isLive && (
-            <>
-              <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: cssVars.spacing.xs,
-                backgroundColor: cssVars.colors.statusLiveBg,
-                color: cssVars.colors.statusLive,
-                fontSize: cssVars.fontSizes.xs,
-                fontWeight: cssVars.fontWeights.bold,
-                padding: `2px 6px`,
-                borderRadius: cssVars.borderRadius.sm,
-                marginLeft: cssVars.spacing.sm,
-              }}>
-                <span style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  backgroundColor: cssVars.colors.statusLive,
-                  animation: 'pulse 2s ease-in-out infinite',
-                }} />
-                LIVE
-              </span>
-              <style>{`
-                @keyframes pulse {
-                  0% { opacity: 1; transform: scale(1); }
-                  50% { opacity: 0.6; transform: scale(1.2); }
-                  100% { opacity: 1; transform: scale(1); }
-                }
-              `}</style>
-            </>
-          )}
+          {isLive && <RunningBadge testId={`match-row-live-${matchId}`} />}
         </div>
 
         {/* Field */}
@@ -276,6 +250,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
             result={result}
             status={status}
             elapsedFormatted={elapsedFormatted}
+            viewStatus={viewStatus}
             onClick={handleCircleClick}
             disabled={disabled}
             matchId={matchId}

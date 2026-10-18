@@ -6,3 +6,5 @@ export { DialogActions } from './DialogActions';
 export type { DialogActionsProps, DialogAction } from './DialogActions';
 export { NoticeLine } from './NoticeLine';
 export type { NoticeLineProps } from './NoticeLine';
+export { Scoreboard } from './Scoreboard';
+export type { ScoreboardProps, ScoreboardModel, ScoreboardSeite, ScoreboardUhr, ScoreboardTon, ScoreboardAbzeichenKnopf } from './Scoreboard';

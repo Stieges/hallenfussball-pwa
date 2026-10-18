@@ -12,8 +12,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { cssVars, spacingSemantics } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import type { ScheduleSource } from './scheduleSource';
-import { matchLabelText } from '../../core/models/slotLabel';
-import { buildSideContext, sideName, type SideContext } from './matchSides';
+import { buildSideContext, matchHeading, sideName, type SideContext } from './matchSides';
 import { getGroupShortCode } from '../../utils/displayNames';
 import type { MatchCardStatus } from './MatchCard';
 import type { ScheduleConflict } from '../../features/schedule-editor/types';
@@ -344,7 +343,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
 
           {/* Group */}
           <div style={groupStyle}>
-            {showGroupLabel && ((match.label === undefined || match.label === '' ? '' : matchLabelText(match.label)) || (match.group && match.group !== 'all' ? t('matchCard.groupShort', { group: getGroupShortCode(match.group, tournament) }) : ''))}
+            {showGroupLabel && ((match.label === undefined || match.label === '' ? '' : (matchHeading(match, sides) ?? '')) || (match.group && match.group !== 'all' ? t('matchCard.groupShort', { group: getGroupShortCode(match.group, tournament) }) : ''))}
           </div>
         </div>
       </div>

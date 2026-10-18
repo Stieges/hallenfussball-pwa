@@ -31,7 +31,12 @@
       "stopped": "stopped"
     },
     "withoutResult": "without result",
-    "finalScore": "Final score"
+    "finalScore": "Final score",
+    "penaltyLabel": "$t(sport:events.penaltyShootout)",
+    "penaltyNumbers": "{{home}} : {{away}}",
+    "winnerAria": "Trophy",
+    "afterOvertime": "after extra time",
+    "winnerLine": "<name>{{name}}</name> wins"
   },
   "timer": {
     "pause": "Pause",

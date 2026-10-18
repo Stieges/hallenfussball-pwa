@@ -485,6 +485,7 @@ export const cssFontWeights = {
   medium: 'var(--font-weight-medium)',
   semibold: 'var(--font-weight-semibold)',
   bold: 'var(--font-weight-bold)',
+  extrabold: 'var(--font-weight-extrabold)',
 } as const;
 
 // =============================================================================

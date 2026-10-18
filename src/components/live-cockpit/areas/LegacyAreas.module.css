@@ -1,87 +1,19 @@
 /**
- * Altbereiche des Live-Cockpits (Kopf und Spielfläche) – Scheibe 1, ohne Sichtänderung.
+ * Altbereich des Live-Cockpits (Spielfläche) – Scheibe 1, ohne Sichtänderung.
  *
  * Die Klassen ersetzen die Inline-Stilobjekte aus `LiveCockpit.tsx` 1 : 1. Nur Design-Tokens.
- * Zustandsabhängige Farben laufen über `data-*`-Attribute (`data-status`, `data-timer-state`),
- * der Gerätetyp über Modifikator-Klassen (Quelle bleibt `useBreakpoint`).
- * Fällt mit `LegacyMatchHeader` (Aufgabe 2.4) bzw. `LegacyPlayArea` (Aufgabe 4.3) weg.
+ * Der Gerätetyp läuft über Modifikator-Klassen (Quelle bleibt `useBreakpoint`).
+ * Fällt mit `LegacyPlayArea` (Aufgabe 4.3) weg; der alte Spielkopf ist seit Aufgabe 2.4 die Tafel (`ScoreboardArea`).
  */
-
-/* ---------------------------------------------------------------------------
-   Spielkopf
-   --------------------------------------------------------------------------- */
-
-.matchHeader {
-  background: var(--color-surface-solid);
-  border-radius: var(--border-radius-lg);
-  padding: var(--spacing-md) var(--spacing-lg);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--spacing-md);
-}
-
-.matchInfo {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.matchNumber {
-  font-weight: var(--font-weight-bold);
-  font-size: var(--font-size-md);
-}
-
-.matchField {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.statusBadge {
-  background: var(--color-surface-elevated);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-  color: var(--color-text-primary);
-}
-
-.statusBadge[data-status='RUNNING'] {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-}
-
-/* ARIA-live-Bereich: außerhalb des Bildes, aber für Screenreader da */
-.liveRegion {
-  position: absolute;
-  left: -100vw;
-  width: var(--sizing-hairline);
-  height: var(--sizing-hairline);
-  overflow: hidden;
-}
-
-/* Task R2: Nur-Lesen-Hinweis (Berechtigungssperre, nicht bei beendetem Spiel allein) */
-.readOnlyBanner {
-  background: var(--color-warning-banner-bg);
-  border: var(--sizing-hairline) solid var(--color-warning-banner-border);
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
-}
 
 /* ---------------------------------------------------------------------------
    Spielfläche
    --------------------------------------------------------------------------- */
+
+.foulRow {
+  display: flex;
+  justify-content: center;
+}
 
 .nextBanner {
   background: linear-gradient(90deg, var(--color-danger-gradient-start) 0%, var(--color-danger-gradient-end) 100%);
@@ -116,52 +48,6 @@
 
 .scoreboardMobile {
   padding: var(--spacing-md);
-}
-
-.timerRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
-}
-
-.timerLabel {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-wider);
-}
-
-.timer {
-  font-size: var(--font-size-display-xl);
-  font-weight: var(--font-weight-bold);
-  font-variant-numeric: tabular-nums;
-  cursor: pointer;
-  color: var(--color-text-primary);
-  transition: color 0.3s ease;
-}
-
-.timerMobile {
-  font-size: var(--font-size-display-lg);
-}
-
-.timer[aria-disabled='true'] {
-  cursor: default;
-}
-
-.timer[data-timer-state='netto-warning'] {
-  color: var(--color-warning);
-}
-
-.timer[data-timer-state='overtime'],
-.timer[data-timer-state='zero'] {
-  color: var(--color-error);
-}
-
-.timerTotal {
-  font-size: var(--font-size-lg);
-  color: var(--color-text-secondary);
 }
 
 .scoreRow {

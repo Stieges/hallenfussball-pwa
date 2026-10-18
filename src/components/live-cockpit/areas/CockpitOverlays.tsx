@@ -1,7 +1,7 @@
 /**
  * CockpitOverlays – alle Overlays des Live-Cockpits an einer Stelle (Scheibe 1).
  *
- * Dialoge, Blätter, Banner und Toasts, bisher am Ende von `LiveCockpit.tsx`. Die Reihenfolge der
+ * Dialoge, Blätter und Banner, bisher am Ende von `LiveCockpit.tsx`. Der Ton-Hinweis ist seit Aufgabe 2.4 ein Abzeichen der Tafel. Die Reihenfolge der
  * Elemente bleibt wie vorher. Die Sperr-Regeln (readOnly, beendetes Spiel) stehen hier bei den
  * Overlays, die sie betreffen (Task R2).
  */
@@ -17,7 +17,6 @@ import {
   TimeAdjustDialog, CardDialog, TimePenaltyDialog, SubstitutionDialog, GoalScorerDialog,
   EventEditDialog, EventLogBottomSheet, SettingsDialog, TiebreakerBanner, PenaltyShootoutDialog,
 } from '../components';
-import { AudioActivationBanner } from './AudioActivationBanner';
 
 type EngineEventEditing = ReturnType<typeof useEngineEventEditing>;
 
@@ -67,12 +66,11 @@ export interface CockpitOverlaysProps {
   editingEvent: EditableMatchEvent | null;
   editing: Pick<EngineEventEditing, 'deleteBlock' | 'amendLock'>;
   handlers: CockpitOverlayHandlers;
-  sound: { activate: () => Promise<void>; isActivated: boolean };
   rejectedOutbox: UseRejectedOutboxDialogResult;
 }
 
 export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
-  const { match, tournamentId, readOnly, isLocked, settings, displaySeconds, effectiveScore, dialogs, editingEvent, editing, handlers, sound, rejectedOutbox } = props;
+  const { match, tournamentId, readOnly, isLocked, settings, displaySeconds, effectiveScore, dialogs, editingEvent, editing, handlers, rejectedOutbox } = props;
   const offen = dialogs.offen;
   const editingEventId = offen?.art === 'nummer' ? offen.eventId ?? null : null;
   const seite = offen?.seite ?? null;
@@ -181,11 +179,6 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
         onTestSound={handlers.testSound}
         readOnly={readOnly}
       />
-
-      {/* Audio Activation Banner - required for browser autoplay policy */}
-      {settings.soundEnabled && !sound.isActivated && (
-        <AudioActivationBanner show={true} onActivate={sound.activate} />
-      )}
 
       {/* L1: Tiebreaker-Banner. Task R2: bei isLocked (readOnly/finished) ohne die vier Handler,
           damit TiebreakerBanner die zugehörigen Knöpfe gar nicht erst anzeigt. */}

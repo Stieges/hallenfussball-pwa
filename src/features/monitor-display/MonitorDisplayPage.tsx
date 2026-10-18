@@ -38,6 +38,7 @@ import {
 } from './slideProgramme';
 import { isSlideShowable } from './publicVisibility';
 import { monitorPageCount } from './slideContent';
+import { buildMonitorView } from './monitorView';
 import { useSlideshow } from './useSlideshow';
 import { useReloadGate } from './useReloadGate';
 import { boundFieldNumbers, visibleGoal } from './monitorGoalFilter';
@@ -91,9 +92,10 @@ function MonitorDisplayPageContent({
   const cursorRuht = useIdleCursor();
   useTastenAbfang();
 
+  const view = useMemo(() => (tournament === null ? null : buildMonitorView(tournament)), [tournament]); // gemeinsame Ansicht (A-36c)
   // Live match events for animations (einzige Stelle mit useLiveMatches)
   // B-16e2 (@ZM-118): Kindermodus – keine Tor- oder Karten-Einblendung
-  const ergebnisseAusgeblendet = tournament?.hideScoresForPublic === true;
+  const ergebnisseAusgeblendet = view !== null && !view.rules.results;
   const { lastGoalEvent, clearLastGoalEvent, lastCardEvent, clearLastCardEvent } = useMonitorEvents(
     tournamentId,
     origin,
@@ -128,11 +130,8 @@ function MonitorDisplayPageContent({
   const qrMoeglich = tournament?.isPublic === true && Boolean(tournament?.shareCode);
   // B-16e2 (@ZM-090): Bei ausgeblendeten Ergebnissen fallen wertende Folien weg (Rückfall: QR)
   const slides = useMemo(
-    () => selectDisplayableSlides(monitor?.slides ?? [], {
-      qrMoeglich,
-      isShowable: (slide) => isSlideShowable(slide, { hideScoresForPublic: ergebnisseAusgeblendet }),
-    }),
-    [monitor, qrMoeglich, ergebnisseAusgeblendet]
+    () => selectDisplayableSlides(monitor?.slides ?? [], { qrMoeglich, isShowable: (slide) => view === null || isSlideShowable(slide, view.rules) }),
+    [monitor, qrMoeglich, view]
   );
   // Rückfall (B-16e1 Ruling, @ZM-122): Sind alle Live-Folien ohne Spiel, zeigt die Seite QR bzw. Spielplan.
   // Nur ohne Pin: Während eines Spiels und der 30-s-Haltezeit (@ZM-077) bleibt die Live-Folie sichtbar.
@@ -145,10 +144,10 @@ function MonitorDisplayPageContent({
     () => ({
       slides,
       defaultDurationSec: defaultSlideDuration,
-      matches: tournament?.matches,
-      pageCount: (slide) => monitorPageCount(slide, tournament),
+      matches: view?.matches,
+      pageCount: (slide) => monitorPageCount(slide, tournament, view),
     }),
-    [slides, defaultSlideDuration, tournament]
+    [slides, defaultSlideDuration, tournament, view]
   );
   const transitionMs = performanceSettings.enableTransitions && monitor?.transition !== 'none'
     ? (monitor?.transitionDuration ?? 0)
@@ -163,13 +162,13 @@ function MonitorDisplayPageContent({
   // Current slide
   const currentSlide = useMemo(() => {
     const rueckfallAktiv = slideState.pinnedMatchId === null
-      && alleUebersprungen(slides, tournament?.matches ?? []);
+      && alleUebersprungen(slides, view?.matches ?? []);
     return rueckfallAktiv ? rueckfallFolie : slides[slideState.currentIndex] ?? null;
-  }, [slides, slideState.currentIndex, slideState.pinnedMatchId, rueckfallFolie, tournament]);
+  }, [slides, slideState.currentIndex, slideState.pinnedMatchId, rueckfallFolie, view]);
 
   // B-17 (@ME-006): 10-s-Hinweis als Ecke, nur ohne laufendes Spiel auf dem Feld (Regeln in useWakeLockHinweis)
   // und nur auf den Ersatzfolien, solange gar kein Programm eingerichtet ist (monitor.slides leer), bzw. einer QR-Folie des Programms
-  const spielLaeuft = liveSpielLaeuft(slides, tournament?.matches ?? []);
+  const spielLaeuft = liveSpielLaeuft(slides, view?.matches ?? []);
   const hinweisPhase = useWakeLockHinweis(wakeLock.status, ansichtBereit, spielLaeuft);
   const hinweisZeigt = hinweisPhase && istHinweisFolie(currentSlide, monitor?.slides.length === 0 ? slides : monitor?.slides ?? []);
 
@@ -205,7 +204,7 @@ function MonitorDisplayPageContent({
     return <MonitorLoadingView />;
   }
 
-  if (error || !tournament || !monitor) {
+  if (error || !tournament || !monitor || !view) {
     return <MonitorErrorView error={error} onBack={onBack} />;
   }
 
@@ -231,6 +230,7 @@ function MonitorDisplayPageContent({
             <SlideRenderer
               slide={currentSlide}
               tournament={tournament}
+              view={view}
               performanceSettings={performanceSettings}
               theme={monitor.theme}
               overscanPercent={overscanPercent}

@@ -82,7 +82,7 @@ describe('LiveCockpit: Verlängerung endet nicht beim Anpfiff (C-VERLAENGERUNG-E
     expect(onFinish).not.toHaveBeenCalled();
     await letClockTick();
     expect(onFinish).not.toHaveBeenCalled();
-    expect(screen.getByTestId('match-timer-display')).toHaveTextContent('02:58');
+    expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('2:58');
   });
 
   it('@SL-081: die Uhr zeigt die Restzeit der Verlängerung (bei Spielzeit 2:00 noch 01:00)', async () => {
@@ -90,7 +90,7 @@ describe('LiveCockpit: Verlängerung endet nicht beim Anpfiff (C-VERLAENGERUNG-E
     const onFinish = renderAt(viewAt(overtimeRunningLog('overtime-then-shootout'), now), now);
     await letClockTick();
     expect(onFinish).not.toHaveBeenCalled();
-    expect(screen.getByTestId('match-timer-display')).toHaveTextContent('01:00');
+    expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('1:00');
   });
 
   it('@TM-052: nach Ablauf der 3 Minuten Verlängerung beendet das Auto-Ende das Spiel genau einmal', async () => {
@@ -105,7 +105,7 @@ describe('LiveCockpit: Verlängerung endet nicht beim Anpfiff (C-VERLAENGERUNG-E
     const onFinish = renderAt(viewAt(overtimeRunningLog('goldenGoal'), now), now);
     await letClockTick();
     expect(onFinish).not.toHaveBeenCalled();
-    expect(screen.getByTestId('match-timer-display')).toHaveTextContent('01:00');
+    expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('1:00');
   });
 
   it('@DR-019 @TM-052: fällt im Golden Goal kein Tor, beendet das Auto-Ende das Spiel nach Ablauf der 3 Minuten genau einmal', async () => {

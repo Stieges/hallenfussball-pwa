@@ -19,3 +19,6 @@ export type Uebersetzer = (key: string, options?: Record<string, unknown>) => st
  */
 // eslint-disable-next-line local-rules/no-hardcoded-sport-terms-preferred -- interner Typ-Schlüssel, nicht sichtbar
 export const EINTRAG_ZEITSTRAFE: EntryKind = 'zeitstrafe';
+
+/** Mindestpause unterschritten (@SL-051): Team, tatsächliche und geforderte Pause in Minuten. Sperrt nichts. */
+export interface MindestpauseHinweis { teamName: string; minuten: number; mindestMinuten: number }

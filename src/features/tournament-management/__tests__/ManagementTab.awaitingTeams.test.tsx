@@ -37,8 +37,17 @@ vi.mock('../../../components/live-cockpit', () => ({
   LiveCockpit: (props: {
     upcomingMatches?: { homeTeam: { name: string }; awayTeam: { name: string } }[];
     lastFinishedMatch?: { match: { homeTeam: { name: string }; awayTeam: { name: string } } } | null;
+    currentMatch?: { id: string } | null;
+    sperrHinweise?: { playerNumber: number }[];
+    leer?: { art: string; gruende?: string[]; offline?: boolean } | null;
   }) => (
-    <div data-testid="cockpit-stub">
+    <div data-testid="cockpit-stub" data-has-match={props.currentMatch ? 'ja' : 'nein'} data-match-id={props.currentMatch?.id ?? ''} data-sperr={(props.sperrHinweise ?? []).map((h) => h.playerNumber).join(',')}>
+      {props.leer?.art === 'wartetAufHerkunft' && (
+        <div data-testid="tafel-wartet">
+          {props.leer.gruende?.map((g) => <span key={g} data-testid="tafel-grund">{g}</span>)}
+          {props.leer.offline && <span data-testid="tafel-offline">offline</span>}
+        </div>
+      )}
       {props.lastFinishedMatch && (
         <span data-testid="last">{props.lastFinishedMatch.match.homeTeam.name} gegen {props.lastFinishedMatch.match.awayTeam.name}</span>
       )}
@@ -57,6 +66,9 @@ vi.mock('../../../hooks/useMatchSound', () => ({
 vi.mock('../../auth/hooks/useTournamentMembers', () => ({
   useTournamentMembers: () => ({ members: [], isLoading: false, error: null, myMembership: undefined }),
 }));
+
+const mockSperr = vi.hoisted(() => ({ hinweise: [] as { teamId: string; playerNumber: number; ausSpielNummer: number }[] }));
+vi.mock('../../../hooks/useRedCardSuspensions', () => ({ useRedCardSuspensions: () => mockSperr.hinweise }));
 
 const mockOnline = vi.hoisted(() => ({ value: true }));
 vi.mock('../../../hooks/useOnlineStatus', () => ({
@@ -143,9 +155,9 @@ const hf2 = scheduled({
   slotB: pendingSlot({ kind: 'groupRank', group: 'B', rank: 2 }),
 });
 
-function setup(options: { teams?: { id: string; name: string }[]; matches: ScheduledMatch[] }) {
+function setup(options: { teams?: { id: string; name: string }[]; matches: ScheduledMatch[]; skipped?: string[] }) {
   const teams = options.teams ?? [{ id: NORD, name: 'FC Nord' }, { id: UFER, name: 'VfB Ufer' }];
-  const tournament = { id: 't1', title: 'Hallencup', numberOfFields: 1, teams, matches: [], groups: [] } as unknown as Tournament;
+  const tournament = { id: 't1', title: 'Hallencup', numberOfFields: 1, teams, matches: (options.skipped ?? []).map((id) => ({ id, matchStatus: 'skipped' })), groups: [] } as unknown as Tournament;
   const schedule = {
     tournament: { id: 't1', title: 'Hallencup' }, teams, allMatches: options.matches, phases: [],
   } as unknown as GeneratedSchedule;
@@ -161,15 +173,15 @@ describe('ManagementTab – @TM-033 Wartegrund bei offener Seite', () => {
 
   it('@TM-033 Cockpit lässt den Anpfiff nicht zu und nennt den Abschluss von Gruppe B als Wartegrund', async () => {
     setup({ matches: [hf1] });
-    await waitFor(() => expect(screen.getByTestId('cockpit-awaiting-teams')).toBeInTheDocument());
-    expect(screen.getByTestId('cockpit-awaiting-reason')).toHaveTextContent('Wartegrund: Abschluss von Gruppe B');
-    // kein Cockpit = kein Anpfiff
-    expect(screen.queryByTestId('cockpit-stub')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('tafel-wartet')).toBeInTheDocument());
+    expect(screen.getByTestId('tafel-grund')).toHaveTextContent('Abschluss von Gruppe B');
+    // die Tafel steht ohne Spiel: nichts, was sich anpfeifen ließe
+    expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-has-match', 'nein');
   });
 
   it('@TM-033 Gegenbeispiel: ein Wartegrund ist kein Fehler – kein Toast, keine Sentry-Meldung, kein „wird vorbereitet“', async () => {
     setup({ matches: [hf1] });
-    await waitFor(() => expect(screen.getByTestId('cockpit-awaiting-teams')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('tafel-wartet')).toBeInTheDocument());
     expect(mockShowError).not.toHaveBeenCalled();
     expect(mockCaptureFeatureError).not.toHaveBeenCalled();
     expect(screen.queryByText('Spiel wird vorbereitet …')).toBeNull();
@@ -178,15 +190,15 @@ describe('ManagementTab – @TM-033 Wartegrund bei offener Seite', () => {
   it('@TM-033 zwei offene Seiten nennen beide Gründe; Gegenbeispiel: eine besetzte Seite nennt keinen', async () => {
     mockGetLiveMatchData.mockRejectedValue(new MatchAwaitingTeamsError(HF2, ['A', 'B']));
     const { unmount } = setup({ matches: [hf2] });
-    await waitFor(() => expect(screen.getAllByTestId('cockpit-awaiting-reason')).toHaveLength(2));
-    expect(screen.getByText('Wartegrund: Abschluss von Gruppe A')).toBeInTheDocument();
-    expect(screen.getByText('Wartegrund: Abschluss von Gruppe B')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByTestId('tafel-grund')).toHaveLength(2));
+    expect(screen.getByText('Abschluss von Gruppe A')).toBeInTheDocument();
+    expect(screen.getByText('Abschluss von Gruppe B')).toBeInTheDocument();
     unmount();
 
     // Halbfinale 1 hat eine besetzte Heimseite (FC Nord): genau EIN Grund
     mockGetLiveMatchData.mockRejectedValue(new MatchAwaitingTeamsError(HF1, ['B']));
     setup({ matches: [hf1] });
-    await waitFor(() => expect(screen.getAllByTestId('cockpit-awaiting-reason')).toHaveLength(1));
+    await waitFor(() => expect(screen.getAllByTestId('tafel-grund')).toHaveLength(1));
   });
 
   it('@TM-033 Gegenbeispiel: bei besetzten Seiten erscheint das Cockpit und kein Wartegrund', async () => {
@@ -194,7 +206,7 @@ describe('ManagementTab – @TM-033 Wartegrund bei offener Seite', () => {
     mockGetLiveMatchData.mockResolvedValue({ id: HF1, homeTeam: { id: NORD, name: 'FC Nord' }, awayTeam: { id: UFER, name: 'VfB Ufer' }, events: [] } as unknown as LiveMatch);
     setup({ matches: [besetzt] });
     await waitFor(() => expect(mockGetLiveMatchData).toHaveBeenCalled());
-    expect(screen.queryByTestId('cockpit-awaiting-teams')).toBeNull();
+    expect(screen.queryByTestId('tafel-wartet')).toBeNull();
   });
 });
 
@@ -207,16 +219,16 @@ describe('ManagementTab – @TM-035 Stand ohne Netz', () => {
   it('@TM-035 ohne Netz: Wartegrund UND der Hinweis, dass der Stand dieses Geräts ohne Netz ist', async () => {
     mockOnline.value = false;
     setup({ matches: [hf1] });
-    await waitFor(() => expect(screen.getByTestId('cockpit-awaiting-teams')).toBeInTheDocument());
-    expect(screen.getByTestId('cockpit-awaiting-reason')).toHaveTextContent('Abschluss von Gruppe B');
-    expect(screen.getByTestId('cockpit-awaiting-offline')).toHaveTextContent('kein Netz');
+    await waitFor(() => expect(screen.getByTestId('tafel-wartet')).toBeInTheDocument());
+    expect(screen.getByTestId('tafel-grund')).toHaveTextContent('Abschluss von Gruppe B');
+    expect(screen.getByTestId('tafel-offline')).toBeInTheDocument();
   });
 
   it('@TM-035 gegenbeispiel: mit Netz fehlt der Hinweis „ohne Netz“', async () => {
     mockOnline.value = true;
     setup({ matches: [hf1] });
-    await waitFor(() => expect(screen.getByTestId('cockpit-awaiting-teams')).toBeInTheDocument());
-    expect(screen.queryByTestId('cockpit-awaiting-offline')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('tafel-wartet')).toBeInTheDocument());
+    expect(screen.queryByTestId('tafel-offline')).toBeNull();
   });
 });
 
@@ -273,5 +285,66 @@ describe('ManagementTab – @TM-015 Cockpit mit laufendem Spiel: nächste Spiele
     expect((await screen.findByTestId('upcoming'))).toHaveTextContent('FC Nordlicht gegen Zweiter Gruppe B');
     expect(screen.getByTestId('last')).toHaveTextContent('FC Nordlicht gegen VfB Ufer');
     expect(screen.queryByText(/FC Nord gegen/)).toBeNull();
+  });
+});
+
+describe('ManagementTab – @SL-089 Sperr-Hinweise gehen an das Cockpit', () => {
+  const G1 = testUuid(120);
+  const spiel = scheduled({ id: G1, matchNumber: 11, slot: 1, phase: 'groupStage', slotA: teamSlot(NORD), slotB: teamSlot(UFER) });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockOnline.value = true;
+    mockLiveMatches.map = new Map([[G1, { id: G1, homeTeam: { id: NORD, name: 'FC Nord' }, awayTeam: { id: UFER, name: 'VfB Ufer' }, events: [] }]]);
+    mockGetLiveMatchData.mockResolvedValue(mockLiveMatches.map.get(G1) as LiveMatch);
+  });
+
+  it('@SL-089 die gesperrte Nr. 7 von FC Nord erreicht das Cockpit von Spiel 11', async () => {
+    mockSperr.hinweise = [{ teamId: NORD, playerNumber: 7, ausSpielNummer: 8 }];
+    setup({ matches: [spiel] });
+    expect(await screen.findByTestId('cockpit-stub')).toHaveAttribute('data-sperr', '7');
+  });
+
+  it('@SL-089 Gegenbeispiel: ohne Sperre geht nichts an das Cockpit', async () => {
+    mockSperr.hinweise = [];
+    setup({ matches: [spiel] });
+    expect(await screen.findByTestId('cockpit-stub')).toHaveAttribute('data-sperr', '');
+  });
+});
+
+describe('ManagementTab – @SL-056 @SL-117 das nächste Spiel des Felds steht bereit', () => {
+  const S11 = testUuid(130);
+  const S13 = testUuid(131);
+  const S15 = testUuid(132);
+  const live = (id: string) => ({ id, homeTeam: { id: NORD, name: 'FC Nord' }, awayTeam: { id: UFER, name: 'VfB Ufer' }, events: [] });
+  const spiel11 = scheduled({ id: S11, matchNumber: 11, slot: 1, phase: 'groupStage', scoreA: 2, scoreB: 1, slotA: teamSlot(NORD), slotB: teamSlot(UFER) });
+  const spiel13 = scheduled({ id: S13, matchNumber: 13, slot: 2, phase: 'groupStage', slotA: teamSlot(UFER), slotB: teamSlot(NORD) });
+  const spiel15 = scheduled({ id: S15, matchNumber: 15, slot: 3, phase: 'groupStage', slotA: teamSlot(NORD), slotB: teamSlot(UFER) });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockOnline.value = true;
+    mockLiveMatches.map = new Map([[S13, live(S13)], [S15, live(S15)]]);
+    mockGetLiveMatchData.mockResolvedValue(live(S13) as unknown as LiveMatch);
+  });
+
+  it('@SL-056 auch ohne Netz steht nach Spiel 11 das Spiel 13 zum Anpfiff bereit', async () => {
+    mockOnline.value = false;
+    setup({ matches: [spiel11, spiel13, spiel15] });
+    expect(await screen.findByTestId('cockpit-stub')).toHaveAttribute('data-match-id', S13);
+    expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-has-match', 'ja');
+  });
+
+  // BEFUND C-COCKPIT-AUSGEFALLEN-BEREIT (Ziel-Record Spiel leiten, Paket B-10a1 `readyMatchOf`): `ManagementTab.currentMatchData` wählt das
+  // erste Spiel des Felds ohne Ergebnis und überspringt ausgefallene (`tournament.matches[].matchStatus: 'skipped'`) nicht. Der Test steht
+  // nach dem Gherkin rot und wird nicht an den Code angepasst; mit B-10a1 grün (dann `it.fails` entfernen).
+  it.fails('@SL-117 ein ausgefallenes Spiel 13 steht nicht bereit: nach Spiel 11 steht Spiel 15 zum Anpfiff bereit', async () => {
+    setup({ matches: [spiel11, spiel13, spiel15], skipped: [S13] });
+    expect(await screen.findByTestId('cockpit-stub')).toHaveAttribute('data-match-id', S15);
+  });
+
+  it('@SL-117 Gegenbeispiel: ohne Ausfall steht das nächste Spiel 13 bereit, nicht Spiel 15 (Reihenfolge des Felds)', async () => {
+    setup({ matches: [spiel11, spiel13, spiel15] });
+    expect(await screen.findByTestId('cockpit-stub')).toHaveAttribute('data-match-id', S13);
   });
 });
