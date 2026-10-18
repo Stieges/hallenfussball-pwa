@@ -47,8 +47,6 @@ export interface CockpitCommands {
   overlayHandlers: CockpitOverlayHandlers;
   teamHandlers: Record<Side, TeamSideHandlers>;
   controls: LegacyPlayAreaProps['controls'];
-  /** Klick auf die Spieluhr; `undefined`, wenn die Zeit nicht angepasst werden darf. */
-  onTimerClick?: () => void;
   onSidebarEventEdit?: LegacyPlayAreaProps['sidebar']['onEventEdit'];
 }
 
@@ -87,7 +85,12 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   // Uhr: Meldungen und das Leeren der Zeitstrafen (BUG-008) hängen am Abpfiff, auch am automatischen.
   const clock = useClockControls({
     match, kannSteuern: !readOnly, autoFinishEnabled: settings.autoFinishEnabled, zeitAbgelaufen: isOvertime,
-    sound: { enabled: settings.soundEnabled, play: () => { void sound.play(); } }, hapticEnabled: settings.hapticEnabled,
+    sound: {
+      enabled: settings.soundEnabled, play: () => { void sound.play(); },
+      // Der Tipp auf Anpfiff/Pause/Weiter gibt den Ton frei (Browser-Geste); ein schwebender Hinweis entfällt.
+      aktiviere: () => { if (settings.soundEnabled && !sound.isActivated) { void sound.activate(); } },
+    },
+    hapticEnabled: settings.hapticEnabled,
     onStart: (id) => { onStart(id); showSuccess(t('meldung.angepfiffen')); },
     onPause: (id) => { onPause(id); showInfo(t('meldung.pausiert')); },
     onResume: (id) => { onResume(id); showSuccess(t('meldung.fortgesetzt')); },
@@ -240,7 +243,6 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
       undoLabel: editing.undoLabel,
       undoHint: editing.undoHint,
     },
-    onTimerClick: openTimeAdjust,
     // Task R2 Fixrunde 2 (M2/Rule 1): Bearbeiten nur bei echter readOnly-Sperre ausgeblendet.
     onSidebarEventEdit: readOnly ? undefined : handleEventEdit,
   };

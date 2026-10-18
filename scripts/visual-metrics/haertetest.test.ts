@@ -230,7 +230,7 @@ describe('Saat fuer die App-Messung (SM, @TA-011)', () => {
     expect(gruende(r.b)).toMatch(/Erwartete Ansicht fehlt/)
   })
   it('Turnier-Cockpit mit laufendem Spiel (Engine-Kopie der Saat) und Monitor-Folie sind messbar', async () => {
-    const cockpit = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015', '--erwarte', '[data-testid="match-timer-display"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    const cockpit = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015', '--erwarte', '[data-testid="scoreboard"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(cockpit.b.status, cockpit.out).not.toBe('BLOCKED')
     const monitor = await messe('--app', '/#/display/hallencup-messlauf/mon-live', '--erwarte', '[data-testid="monitor-slide"]', '--saat', 'hallencup-messlauf', '--profil', 'monitor-1080-rand0', '--varianten', 'normal', ...SCHNELL)
     expect(monitor.b.status, monitor.out).not.toBe('BLOCKED')

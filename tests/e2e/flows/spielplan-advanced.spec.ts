@@ -174,7 +174,7 @@ test.describe('Spielwechsel-Logik', () => {
     }
 
     // Verify first match is running
-    await expect(page.getByTestId('match-status-badge')).toContainText(/Läuft|RUNNING|LAUFEND/i);
+    await expect(page.getByTestId('scoreboard-state')).toContainText(/Live/i);
     await expect(page.getByTestId('score-home')).toContainText('1');
 
     // WHEN - Navigate to Spielplan and click on another scheduled match's circle
@@ -220,7 +220,7 @@ test.describe('Spielwechsel-Logik', () => {
         // Wait for the ManagementTab to fully render
         // The LiveCockpit needs time to initialize with the match data
         // Use a more robust wait strategy: wait for the timer display (always visible in cockpit)
-        const timerDisplay = page.getByTestId('match-timer-display');
+        const timerDisplay = page.getByTestId('scoreboard');
 
         // Wait for the timer display to be visible (cockpit is ready)
         // Use .first() to handle potential multiple matches in split-view on desktop
@@ -383,7 +383,7 @@ test.describe('Offline & Persistence', () => {
     }
 
     // THEN - Verify cockpit is visible after navigation
-    const timerElement = page.getByTestId('match-timer-display');
+    const timerElement = page.getByTestId('scoreboard-clock-rest');
     await expect(timerElement).toBeVisible({ timeout: 5000 });
 
     // Get timer value
@@ -431,7 +431,7 @@ test.describe('Timer-Stabilität', () => {
     await navigateAndStartMatch(page);
 
     // Get initial timer
-    const timerElement = page.getByTestId('match-timer-display');
+    const timerElement = page.getByTestId('scoreboard-clock-rest');
     await page.waitForTimeout(2000); // Let timer run for 2 seconds
 
     const timerBefore = await timerElement.textContent();
@@ -483,11 +483,11 @@ test.describe('Timer-Stabilität', () => {
     await expect(page.getByTestId('match-start-button')).toBeVisible();
 
     // Get timer immediately after pause
-    const timerBeforePause = await page.getByTestId('match-timer-display').textContent();
+    const timerBeforePause = await page.getByTestId('scoreboard-clock-rest').textContent();
 
     // Wait while paused
     await page.waitForTimeout(2000);
-    const timerDuringPause = await page.getByTestId('match-timer-display').textContent();
+    const timerDuringPause = await page.getByTestId('scoreboard-clock-rest').textContent();
 
     // Timer should NOT have changed during pause (allow 1s tolerance due to interval update)
     const diff = Math.abs(parseTime(timerDuringPause) - parseTime(timerBeforePause));
@@ -499,7 +499,7 @@ test.describe('Timer-Stabilität', () => {
 
     // Let it run
     await page.waitForTimeout(4000); // Increased from 2000ms to 4000ms
-    const timerAfterResume = await page.getByTestId('match-timer-display').textContent();
+    const timerAfterResume = await page.getByTestId('scoreboard-clock-rest').textContent();
 
     // THEN - Timer should have changed after resume
     // NOTE: The app uses COUNTDOWN timers, so timerAfterResume will be LESS than timerBeforePause
@@ -726,7 +726,7 @@ test.describe('LiveInfoExpand', () => {
         await page.waitForTimeout(500);
 
         // THEN - Should be in Live Cockpit
-        await expect(page.getByTestId('match-timer-display')).toBeVisible({ timeout: 5000 });
+        await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 5000 });
         await expect(page.getByTestId('match-pause-button')).toBeVisible();
       } else if (!isMobileOrTabletPortrait) {
         // On desktop, there might be a different navigation method
@@ -736,7 +736,7 @@ test.describe('LiveInfoExpand', () => {
           await liveButton.click();
           await page.waitForTimeout(500);
           // Verify we're in cockpit
-          await expect(page.getByTestId('match-timer-display')).toBeVisible({ timeout: 5000 });
+          await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 5000 });
         }
       }
     }

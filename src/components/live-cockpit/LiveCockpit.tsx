@@ -25,16 +25,18 @@ import { useMatchEngineContextOptional } from '../../features/match-engine/useMa
 import { getEffectiveScore } from '../../utils/matchScore';
 import type { LiveCockpitProps } from './types';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
-import { LegacyMatchHeader } from './areas/LegacyMatchHeader';
+import { ScoreboardArea } from './areas/ScoreboardArea';
 import { LegacyPlayArea } from './areas/LegacyPlayArea';
 import { CockpitOverlays } from './areas/CockpitOverlays';
 import shell from './LiveCockpitShell.module.css';
-import { useEntryFlows, useSideOrder } from './hooks';
+import { useCockpitPhase, useEntryFlows, useSideOrder } from './hooks';
+import { useEnginePhase } from './hooks/useEnginePhase';
+import { legacyPhaseViewOf } from './model/legacyPhaseView';
 import { useCockpitNotices } from './hooks/useCockpitNotices';
 import { useCockpitCommands } from './hooks/useCockpitCommands';
 
 export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
-  const { fieldName, tournamentId, cockpitSettings: cockpitSettingsProp, readOnly = false, currentMatch, upcomingMatches } = props;
+  const { tournamentId, cockpitSettings: cockpitSettingsProp, readOnly = false, currentMatch, upcomingMatches } = props;
   const { t } = useTranslation('cockpit');
 
   // W1 (Nachtrag C3a-2a): nur einbinden -- OutboxNotice rendert selbst nichts, solange kein
@@ -66,8 +68,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   // I4 (W1, Nachtrag Fixrunde 1): Ablehnungen (D-C1) auch für Helfer im Cockpit sichtbar.
   const rejectedOutbox = useRejectedOutboxDialog(tournamentId, notices.fehler);
 
-  // BUG-004 FIX: Echtzeit-Uhr (Countdown, Netto-Warnung, Zustand der Uhr)
-  const { displaySeconds, isOvertime, timerState } = useMatchTimerExtended(
+  // BUG-004 FIX: Echtzeit-Uhr; hier nur noch für den automatischen Abpfiff und das Zeit-Blatt (die Tafel liest `PhaseView`)
+  const { displaySeconds, elapsedSeconds, isOvertime } = useMatchTimerExtended(
     currentMatch?.timerStartTime ?? null,
     currentMatch?.timerElapsedSeconds ?? 0,
     currentMatch?.status ?? 'NOT_STARTED',
@@ -75,6 +77,17 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     cockpitSettings.timerDirection,
     cockpitSettings.nettoWarningSeconds,
   );
+
+  // Zustand der Tafel: Engine-Ansicht, ohne Engine-Kopie die Zeit aus dem `LiveMatch`
+  const engineView = useEnginePhase(currentMatch?.id ?? '');
+  const view = useMemo(
+    () => engineView ?? (currentMatch ? legacyPhaseViewOf(currentMatch, elapsedSeconds) : null),
+    [engineView, currentMatch, elapsedSeconds],
+  );
+  const phase = useCockpitPhase(currentMatch, view, null);
+  const tonHinweis = cockpitSettings.soundEnabled && !sound.isActivated
+    ? { label: t('tafel.tonAusAntippen'), kurz: t('tafel.tonAus'), onAntippen: () => { void sound.activate(); } }
+    : null;
 
   const cmd = useCockpitCommands({
     props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, isOvertime,
@@ -98,14 +111,16 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   return (
     <div className={shell.container}>
       <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>
-        <LegacyMatchHeader
+        <ScoreboardArea
           match={match}
-          fieldName={fieldName}
-          isMobile={isMobile}
-          homeFouls={homeFouls}
-          awayFouls={awayFouls}
-          readOnly={readOnly}
+          phase={phase}
+          view={view}
+          settings={cockpitSettings}
+          order={{ links: sides.links, rechts: sides.rechts }}
+          size={isMobile ? 'compact' : isTablet ? 'regular' : 'wide'}
           notices={notices}
+          eintraegeWarten={rejectedOutbox.pendingCount}
+          tonHinweis={tonHinweis}
           // A4 (C-SYNC): rendert selbst nichts außerhalb des Cloud-Modus. I4 (W1, Nachtrag
           // Fixrunde 1): rejectedCount/reviewCount aus dem echten Sender (useEngineOutboxSummary).
           sync={
@@ -120,6 +135,13 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
           }
         />
 
+        {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung (readOnly), nicht bei beendetem Spiel allein. */}
+        {readOnly && (
+          <div className={shell.readOnlyBanner} data-testid="cockpit-readonly-banner" role="status">
+            {t('readOnly.banner')}
+          </div>
+        )}
+
         {/* W1 (Nachtrag C3a-2a): rendert selbst nichts, solange kein Ausgangs-Zustand
             (clientOutdated/authRequired/notReady/review) vorliegt. */}
         <OutboxNotice status={outboxStatus} matchId={match.id} onReload={handleOutboxReload} />
@@ -131,13 +153,10 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
           isMobile={isMobile}
           isDesktop={!isMobile && !isTablet}
           isLocked={isLocked}
-          displaySeconds={displaySeconds}
-          timerState={timerState}
           homeFouls={homeFouls}
           awayFouls={awayFouls}
           effectiveScore={effectiveScore}
           order={{ links: sides.links, rechts: sides.rechts }}
-          onTimerClick={cmd.onTimerClick}
           teams={{ handlers: cmd.teamHandlers, extraProps: cmd.editing.teamBlockProps }}
           controls={cmd.controls}
           sidebar={{ activePenalties: cmd.activePenalties, onEventEdit: cmd.onSidebarEventEdit }}
@@ -156,7 +175,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         editingEvent={cmd.editingEvent}
         editing={cmd.editing}
         handlers={cmd.overlayHandlers}
-        sound={sound}
         rejectedOutbox={rejectedOutbox}
       />
     </div>

@@ -91,9 +91,9 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
     const zeile = screen.getByTestId(MELDUNG);
     expect(zeile).toHaveTextContent('FC Alpha: 5. Foul in dieser Halbzeit');
     expect(zeile).toHaveAttribute('aria-live', 'polite');
-    expect(screen.getByTestId('match-timer-display')).toBeVisible();
+    expect(screen.getByTestId('scoreboard-clock')).toBeVisible();
     expect(screen.getByTestId('score-home')).toBeVisible();
-    expect(zeile).not.toContainElement(screen.getByTestId('match-timer-display'));
+    expect(zeile).not.toContainElement(screen.getByTestId('scoreboard-clock'));
     expect(zeile).not.toContainElement(screen.getByTestId('score-home'));
   });
 

@@ -80,7 +80,7 @@ test.describe('@FU-007 Neustart ohne Netz', () => {
       await cutBackend(second.context);
       await openCockpit(second.page, ids.tournamentId, ids.matchId);
       // Das Spiel öffnet sich mit dem lokalen Stand 2:1 (Seed 1:0 plus zwei lokale Tore) ...
-      await expect(second.page.locator('[data-testid="match-status-badge"]')).toHaveText('LÄUFT', { timeout: 15000 });
+      await expect(second.page.locator('[data-testid="scoreboard-state"]')).toHaveText('Live', { timeout: 15000 });
       await expect(second.page.locator('[data-testid="score-home"]')).toHaveText('2', { timeout: 15000 });
       await expect(second.page.locator('[data-testid="score-away"]')).toHaveText('1');
       // ... und das Gerät zeigt "2 Einträge warten".
@@ -100,7 +100,7 @@ test.describe('@FU-007 Neustart ohne Netz', () => {
     try {
       await cutBackend(context);
       await openCockpit(page, ids.tournamentId, ids.matchId);
-      await expect(page.locator('[data-testid="match-status-badge"]')).toHaveCount(0);
+      await expect(page.locator('[data-testid="scoreboard-state"]')).toHaveCount(0);
       await expect(page.locator('[data-testid="score-home"]')).toHaveCount(0);
       await expect(page.locator('[data-testid="sync-status"][data-pending]:not([data-pending="0"])')).toHaveCount(0);
     } finally {

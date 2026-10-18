@@ -52,7 +52,7 @@ describe('LiveCockpit — Knöpfe ohne Engine-Weg ausblenden (A-08c, @FU-071)', 
 
     expect(screen.queryByTestId('match-edit-time-button')).toBeNull();
 
-    await user.click(screen.getByTestId('match-timer-display'));
+    await user.click(screen.getByTestId('scoreboard-clock'));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 

@@ -88,7 +88,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
 
     await helperPage.locator('[data-testid="match-finish-button"]').click();
 
-    await expect(ownerPage.locator('[data-testid="match-status-badge"]')).toHaveText('BEENDET', { timeout: owner3sMs });
+    await expect(ownerPage.locator('[data-testid="scoreboard-state"]')).toHaveText('Abgepfiffen', { timeout: owner3sMs });
     await expect(ownerPage.locator('[data-testid="score-home"]')).toHaveText('1');
     await expect(ownerPage.locator('[data-testid="score-away"]')).toHaveText('0');
 
@@ -210,7 +210,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     const ownerPage = await asRole('owner');
     await openCockpit(ownerPage, ids.tournamentId, ids.matchId);
     await expect(ownerPage.getByText('Engine-Cup NSTART', { exact: true }).first()).toBeVisible({ timeout: 15000 });
-    await expect(ownerPage.locator('[data-testid="match-status-badge"]')).toBeVisible({ timeout: 15000 });
+    await expect(ownerPage.locator('[data-testid="scoreboard-state"]')).toBeVisible({ timeout: 15000 });
     // Sichtbar, aber NICHT geklickt: das Spiel bleibt ungestartet.
     await expect(ownerPage.locator('[data-testid="match-start-button"]')).toBeVisible();
   });

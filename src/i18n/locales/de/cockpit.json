@@ -34,6 +34,53 @@
     "foulGrenze": "{{teamName}}: {{count}}. Foul in dieser Halbzeit",
     "schliessen": "Hinweis schließen"
   },
+  "tafel": {
+    "zustand": {
+      "vorAnpfiff": "Vor Anpfiff",
+      "live": "Live",
+      "halbzeit": "Halbzeit",
+      "verlaengerungFolgt": "Verlängerung folgt",
+      "entscheidung": "Entscheidung",
+      "strafstoss": "$t(sport:events.penaltyShootout)",
+      "abgepfiffen": "Abgepfiffen",
+      "wartet": "Wartet auf Teams",
+      "keinSpiel": "Kein Spiel"
+    },
+    "uhr": {
+      "restzeit": "Restzeit",
+      "angehalten": "angehalten",
+      "pause": "Pause",
+      "pauseVorbei": "Pause vorbei",
+      "endstand": "Endstand",
+      "schuesse": "Schüsse"
+    },
+    "unterzeile": {
+      "spielzeit": "Spielzeit {{zeit}}",
+      "bisWiederanpfiff": "bis Wiederanpfiff",
+      "bisVerlaengerung": "bis Verlängerung",
+      "wiederanpfiff": "Wiederanpfiff",
+      "anpfiffVerlaengerung": "Anpfiff Verlängerung",
+      "amSchuss": "am Schuss: {{team}}"
+    },
+    "uhrHaelt": "Uhr hält bei Unterbrechung",
+    "uhrSteht": "Uhr steht",
+    "wiederanpfiffJetzt": "Zeit für den Wiederanpfiff",
+    "entscheidungOffen": "Unentschieden – die Entscheidung folgt",
+    "abschnitt": {
+      "halbzeit": "{{nummer}}. Halbzeit",
+      "vonN": "Abschnitt {{nummer}} von {{gesamt}}",
+      "verlaengerung": "Verlängerung",
+      "goldenGoal": "Golden Goal"
+    },
+    "wachhaltenSymbol": "Bildschirm kann sich sperren – antippen zum Ausblenden",
+    "tonAus": "Ton aus",
+    "tonAusAntippen": "Ton für das Spielende ist aus – antippen zum Einschalten",
+    "eintraegeWarten_one": "1 Eintrag wartet",
+    "eintraegeWarten_other": "{{count}} Einträge warten",
+    "helferAnfragen_one": "1 Helfer-Anfrage",
+    "helferAnfragen_other": "{{count}} Helfer-Anfragen",
+    "ariaStand": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}"
+  },
   "ariaLive": {
     "running": "Spiel läuft",
     "paused": "Spiel pausiert",

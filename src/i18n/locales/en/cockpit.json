@@ -34,6 +34,53 @@
     "foulGrenze": "{{teamName}}: foul {{count}} this half",
     "schliessen": "Dismiss notice"
   },
+  "tafel": {
+    "zustand": {
+      "vorAnpfiff": "Before kick-off",
+      "live": "Live",
+      "halbzeit": "Half-time",
+      "verlaengerungFolgt": "Extra time next",
+      "entscheidung": "Decision",
+      "strafstoss": "$t(sport:events.penaltyShootout)",
+      "abgepfiffen": "Full time",
+      "wartet": "Waiting for teams",
+      "keinSpiel": "No match"
+    },
+    "uhr": {
+      "restzeit": "Time left",
+      "angehalten": "stopped",
+      "pause": "Break",
+      "pauseVorbei": "Break over",
+      "endstand": "Final score",
+      "schuesse": "Shots"
+    },
+    "unterzeile": {
+      "spielzeit": "Played {{zeit}}",
+      "bisWiederanpfiff": "until restart",
+      "bisVerlaengerung": "until extra time",
+      "wiederanpfiff": "Restart",
+      "anpfiffVerlaengerung": "Extra time kick-off",
+      "amSchuss": "next to shoot: {{team}}"
+    },
+    "uhrHaelt": "Clock stops at every stoppage",
+    "uhrSteht": "Clock stopped",
+    "wiederanpfiffJetzt": "Time to restart",
+    "entscheidungOffen": "Draw – the decision follows",
+    "abschnitt": {
+      "halbzeit": "Half {{nummer}}",
+      "vonN": "Period {{nummer}} of {{gesamt}}",
+      "verlaengerung": "Extra time",
+      "goldenGoal": "Golden goal"
+    },
+    "wachhaltenSymbol": "Screen may lock – tap to dismiss",
+    "tonAus": "Sound off",
+    "tonAusAntippen": "Full-time sound is off – tap to turn on",
+    "eintraegeWarten_one": "1 entry waiting",
+    "eintraegeWarten_other": "{{count}} entries waiting",
+    "helferAnfragen_one": "1 helper request",
+    "helferAnfragen_other": "{{count}} helper requests",
+    "ariaStand": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}"
+  },
   "ariaLive": {
     "running": "Match running",
     "paused": "Match paused",
