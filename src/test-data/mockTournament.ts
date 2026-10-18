@@ -2,7 +2,7 @@
  * Mock Tournament Data for Local Testing
  *
  * 7 Vereine mit realistischen Namen und Ergebnissen
- * Zum Testen der PublicLiveView ohne Supabase
+ * Zum Testen der Live-Ansicht ohne Supabase
  */
 
 import { Tournament, Team, Match, RuntimeMatchEvent } from '../types/tournament';

@@ -91,11 +91,6 @@ const SCORE_ALLOWLIST: Record<string, { reason: string; count: number }> = {
     reason:
       'Persistenz-Schutz: stripEngineOverlayFields setzt vor dem Speichern den Rohstand zurück, damit die Engine-Überlagerung nicht gespeichert wird; schreibt kein Ergebnis aus eigener Quelle',
   },
-  'screens/PublicTournamentViewScreen.tsx': {
-    count: 4,
-    reason:
-      'Lesende Abbildung für Anzeige/Export: baut nur ein Anzeige- bzw. Exportobjekt, speichert nichts (versteckt Stände für die Öffentlichkeit)',
-  },
   'features/public-view/publicScheduleFilters.ts': {
     count: 2,
     reason:
