@@ -48,4 +48,11 @@ describe('MatchCockpitSettingsPanel — verbleibende Einstellungen wirken', () =
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ timerDirection: 'countdown' }));
   });
+
+  it('@SL-005 @SL-009 Einstellung „Spiel automatisch beenden“ wird nicht angeboten, Ton und Vibration stehen weiter da', () => {
+    const { container } = renderPanel();
+    expect(screen.queryByRole('switch', { name: /enableAutoEnd|automatisch beenden|Auto-Beenden/i })).toBeNull();
+    expect(container.textContent ?? '').not.toMatch(/autoEnd|afterMatch|Auto-Beenden|automatisch beenden|Nach Spielende/i);
+    expect(screen.getByRole('switch', { name: /enableVibration/ })).toBeInTheDocument();
+  });
 });

@@ -11,11 +11,12 @@
  * in LiveCockpit.tsx bei `isLocked`).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useCallback, useState } from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LiveCockpit } from '../LiveCockpit';
 import type { LiveCockpitProps } from '../types';
+import { engineHuelle } from './engineLogFixture';
+import { REGEL_2X6, spielAnlegen, zu, type EngineSpiel } from './enginePhaseFixture';
 
 vi.mock('../../../hooks/useMatchSound', () => ({
   useMatchSound: () => ({ play: vi.fn(), stop: vi.fn(), testPlay: vi.fn(), activate: vi.fn(), isPlaying: false, isLoading: false, isReady: true, isActivated: true, error: null }),
@@ -504,105 +505,92 @@ describe('LiveCockpit — Fixrunde 2 (L2): ARIA-Attribute', () => {
 });
 
 /**
- * Fixrunde 4 (Task R4, H3): Auto-Finish ignorierte `readOnly` vollständig — der Effekt
- * (LiveCockpit.tsx, "Auto-Finish Logic") rief handleFinish() auf, sobald autoFinishEnabled
- * (Standard: true, DEFAULT_MATCH_COCKPIT_SETTINGS) && status === 'RUNNING' && isOvertime,
- * unabhängig vom Bearbeitungsrecht. Auf dem Gerät eines Viewers/Trainers hätte das Cockpit so
- * automatisch ein laufendes Spiel beendet: lokal (Offline-first) beendet, die DB lehnt den
- * Mutationsqueue-Eintrag für trainer/viewer ab (RLS), der Eintrag landet still in der
- * Dead-Letter-Queue, der lokale Stand weicht ab (final-review.md H3, bewiesen mit einem
- * temporären, danach gelöschten Test: readOnly=true → onFinish trotzdem 1×).
+ * Fixrunde 4 (Task R4, H3): Auto-Finish ignorierte `readOnly` vollständig – auf dem Gerät eines Viewers/Trainers hätte
+ * das Cockpit ein laufendes Spiel automatisch beendet (lokal beendet, die DB lehnt den Eintrag ab, der lokale Stand
+ * weicht ab; final-review.md H3).
  *
- * `isOvertime` kommt aus useMatchTimerExtended(timerElapsedSeconds, ..., durationSeconds, ...) —
- * ohne timerStartTime berechnet sich `elapsedSeconds` synchron aus `timerElapsedSeconds` (kein
- * RAF-Loop, kein Timer-Mock nötig): timerElapsedSeconds > durationSeconds ⇒ isOvertime bereits
- * beim ersten Render.
- *
- * Test-Harness statt direktem `onFinish: vi.fn()`: Ein reiner No-Op-Mock lässt `currentMatch`
- * für immer auf `status: 'RUNNING'` stehen — die Guard-Bedingung des Effekts bliebe unter
- * readOnly=false dauerhaft erfüllt, und weil `useMatchSound` (siehe Mock oben) bei jedem Render
- * ein frisches Objekt liefert, bekommt `handleFinish` bei jedem Render eine neue Identität, die
- * Effekt-Abhängigkeitsliste ändert sich erneut, der Effekt feuert erneut — Endlosschleife
- * (verifiziert: der naive Aufbau ohne Harness hängt sich in `act()` auf, siehe Task-R4-Report).
- * Die Harness bildet nach, was in der echten App passiert (`onFinish` beendet das Spiel, der
- * Status wechselt weg von `RUNNING`): Nach dem ersten Aufruf kippt `status` auf `FINISHED`,
- * die Guard-Bedingung wird falsch, die Schleife bricht kontrolliert nach einem Aufruf ab.
+ * B-08b: das Ende von selbst ist `useAutoSectionEnd` und läuft über die Engine. Die Tests nehmen deshalb eine echte
+ * Engine mit angepfiffenem Spiel (1 x 10 Minuten) und stellen die Uhr hinter die Grenze; geprüft wird das Log
+ * (kein / genau ein `MATCH_END`), nicht ein `onFinish`-Mock.
  */
-function makeOvertimeMatch(overrides: Record<string, unknown> = {}) {
+const GRENZE_MS = 600_000;
+
+function engineSpielMatch(spiel: EngineSpiel) {
   return makeMatch({
-    status: 'RUNNING',
-    durationSeconds: 600,
-    timerElapsedSeconds: 700, // > durationSeconds ⇒ isOvertime
-    ...overrides,
+    id: spiel.matchId, homeTeam: { id: 'teama', name: 'FC Alpha' }, awayTeam: { id: 'teamb', name: 'SV Beta' },
+    status: 'RUNNING', durationSeconds: 600, timerElapsedSeconds: 0,
   });
 }
 
-function OvertimeAutoFinishHarness({ readOnly, onFinishSpy }: { readOnly: boolean; onFinishSpy: (matchId: string) => void }) {
-  const [match, setMatch] = useState(() => makeOvertimeMatch());
-  const handleFinish = useCallback((matchId: string) => {
-    onFinishSpy(matchId);
-    setMatch((prev) => ({ ...prev, status: 'FINISHED' }));
-  }, [onFinishSpy]);
-  return <LiveCockpit {...baseProps(match, { onFinish: handleFinish })} readOnly={readOnly} />;
+async function laufendesSpiel() {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  zu(0);
+  const spiel = await spielAnlegen();
+  await spiel.a.commands.start(spiel.matchId, spiel.ctx, 'leitung', { ...REGEL_2X6, sections: 1, sectionSeconds: 600 });
+  const mitEngine = engineHuelle(spiel);
+  const enden = (): number => (spiel.a.engine.view(spiel.matchId)?.log ?? []).filter((e) => e.type === 'MATCH_END').length;
+  return { spiel, mitEngine, enden };
+}
+
+const echteWartezeit = (ms: number): Promise<void> => new Promise((fertig) => { setTimeout(fertig, ms); });
+async function wartenAuf(ms = 150): Promise<void> {
+  await act(async () => { await echteWartezeit(ms); });
 }
 
 describe('LiveCockpit — Fixrunde 4 (H3, Task R4): Auto-Finish ehrt readOnly', () => {
   beforeEach(() => vi.clearAllMocks());
+  afterEach(() => { vi.useRealTimers(); });
 
-  it('readOnly=true: autoFinishEnabled (Standard) + RUNNING + Spielzeit überschritten ⇒ onFinish wird NICHT automatisch aufgerufen', () => {
-    const onFinishSpy = vi.fn();
-    render(<OvertimeAutoFinishHarness readOnly onFinishSpy={onFinishSpy} />);
-    expect(onFinishSpy).not.toHaveBeenCalled();
+  it('readOnly=true: Standard-Einstellung + läuft + Spielzeit überschritten ⇒ kein Spielende im Log', async () => {
+    const { spiel, mitEngine, enden } = await laufendesSpiel();
+    zu(GRENZE_MS + 100_000);
+    render(mitEngine(<LiveCockpit {...baseProps(engineSpielMatch(spiel))} readOnly />));
+    await wartenAuf();
+    expect(enden()).toBe(0);
   });
 
-  it('readOnly=false: dieselbe Situation ⇒ onFinish wird automatisch 1× aufgerufen — Kontrolle, Verhalten wie vorher', () => {
-    const onFinishSpy = vi.fn();
-    render(<OvertimeAutoFinishHarness readOnly={false} onFinishSpy={onFinishSpy} />);
-    expect(onFinishSpy).toHaveBeenCalledTimes(1);
-    expect(onFinishSpy).toHaveBeenCalledWith('match-1');
+  it('readOnly=false: dieselbe Situation ⇒ genau ein Spielende im Log (Kontrolle)', async () => {
+    const { spiel, mitEngine, enden } = await laufendesSpiel();
+    zu(GRENZE_MS + 100_000);
+    render(mitEngine(<LiveCockpit {...baseProps(engineSpielMatch(spiel))} readOnly={false} />));
+    await waitFor(() => expect(enden()).toBe(1));
+    await wartenAuf();
+    expect(enden()).toBe(1);
   });
 });
 
 /**
- * Task R7 (aus task-R4-review.md, Befund M1): die beiden Fixrunde-4-Tests oben sind je ein
- * frisches `render` mit fest gesetztem `readOnly` — React führt den Effekt bei JEDEM Mount
- * einmal aus, unabhängig von der Abhängigkeitsliste. Sie beweisen daher nur, dass die Bedingung
- * `!readOnly && …` beim ERSTEN Rendern korrekt ausgewertet wird, nicht dass `readOnly` selbst in
- * der Abhängigkeitsliste steht. Die beiden Fälle hier nutzen `rerender` auf derselben
- * Komponenteninstanz, um den dynamischen Wechsel während eines laufenden, überzogenen Spiels zu
- * beweisen — genau das Szenario, das ein zweites Gerät per Realtime auslösen kann (Rollenwechsel
- * durch den Eigentümer, während das Cockpit auf einem anderen Gerät offen bleibt).
+ * Task R7 (aus task-R4-review.md, Befund M1): `readOnly` wechselt dynamisch während eines überzogenen Spiels – genau
+ * das Szenario, das ein zweites Gerät per Realtime auslösen kann (Rollenwechsel durch den Eigentümer, während das
+ * Cockpit auf einem anderen Gerät offen bleibt). `rerender` auf derselben Komponenteninstanz beweist, dass `readOnly`
+ * selbst in die Auslösung eingeht.
  */
 describe('LiveCockpit — Fixrunde R7 (Task R4-Review M1): readOnly wechselt dynamisch während eines überzogenen Spiels', () => {
   beforeEach(() => vi.clearAllMocks());
+  afterEach(() => { vi.useRealTimers(); });
 
-  it('true → false: onFinish feuert beim Mount mit readOnly=true nicht, nach dem Wechsel auf readOnly=false genau 1×', () => {
-    const onFinishSpy = vi.fn();
-    const { rerender } = render(<OvertimeAutoFinishHarness readOnly onFinishSpy={onFinishSpy} />);
-    expect(onFinishSpy).not.toHaveBeenCalled();
-
-    rerender(<OvertimeAutoFinishHarness readOnly={false} onFinishSpy={onFinishSpy} />);
-
-    expect(onFinishSpy).toHaveBeenCalledTimes(1);
-    expect(onFinishSpy).toHaveBeenCalledWith('match-1');
+  it('true → false: beim Mount mit readOnly=true kein Spielende, nach dem Wechsel auf readOnly=false genau eines', async () => {
+    const { spiel, mitEngine, enden } = await laufendesSpiel();
+    zu(GRENZE_MS + 100_000);
+    const match = engineSpielMatch(spiel);
+    const { rerender } = render(mitEngine(<LiveCockpit {...baseProps(match)} readOnly />));
+    await wartenAuf();
+    expect(enden()).toBe(0);
+    rerender(mitEngine(<LiveCockpit {...baseProps(match)} readOnly={false} />));
+    await waitFor(() => expect(enden()).toBe(1));
   });
 
-  it('false → true, bevor die Spielzeit abläuft: onFinish feuert nicht, auch nicht sobald das Spiel danach überzieht', () => {
-    const onFinishSpy = vi.fn();
-    const notYetOvertime = makeMatch({ status: 'RUNNING', durationSeconds: 600, timerElapsedSeconds: 300 });
-
-    const { rerender } = render(
-      <LiveCockpit {...baseProps(notYetOvertime, { onFinish: onFinishSpy })} readOnly={false} />
-    );
-    expect(onFinishSpy).not.toHaveBeenCalled();
-
-    // readOnly wechselt auf true, WÄHREND die Spielzeit noch nicht abgelaufen ist.
-    rerender(<LiveCockpit {...baseProps(notYetOvertime, { onFinish: onFinishSpy })} readOnly />);
-    expect(onFinishSpy).not.toHaveBeenCalled();
-
-    // Jetzt läuft die Zeit ab (isOvertime wird true) — readOnly ist zu diesem Zeitpunkt
-    // bereits true, der Guard muss also weiterhin verhindern, dass onFinish feuert.
-    rerender(<LiveCockpit {...baseProps(makeOvertimeMatch(), { onFinish: onFinishSpy })} readOnly />);
-    expect(onFinishSpy).not.toHaveBeenCalled();
+  it('false → true, bevor die Spielzeit abläuft: kein Spielende, auch nicht sobald das Spiel danach überzieht', async () => {
+    const { spiel, mitEngine, enden } = await laufendesSpiel();
+    zu(300_000);
+    const match = engineSpielMatch(spiel);
+    const { rerender } = render(mitEngine(<LiveCockpit {...baseProps(match)} readOnly={false} />));
+    await wartenAuf();
+    expect(enden()).toBe(0);
+    rerender(mitEngine(<LiveCockpit {...baseProps(match)} readOnly />));
+    zu(GRENZE_MS + 100_000);
+    rerender(mitEngine(<LiveCockpit {...baseProps(match)} readOnly />));
+    await wartenAuf();
+    expect(enden()).toBe(0);
   });
 });

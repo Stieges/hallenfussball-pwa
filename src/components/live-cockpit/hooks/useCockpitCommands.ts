@@ -14,10 +14,12 @@ import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '..
 import type { CockpitDialogState, CockpitOverlayHandlers } from '../areas/CockpitOverlays';
 import type { LegacyPlayAreaProps, TeamSideHandlers } from '../areas/LegacyPlayArea';
 import { EINTRAG_ZEITSTRAFE, type CardKind, type EntryKind, type Side } from '../model/cockpitTypes';
+import type { PhaseView } from '../engine/phaseView';
 import type { LiveCockpitProps } from '../types';
 import type { UseCockpitNoticesReturn } from './useCockpitNotices';
 import { useActivePenalties } from './useActivePenalties';
 import { useClockControls } from './useClockControls';
+import { useCockpitClock } from './useCockpitClock';
 import type { UseEntryFlowsReturn } from './useEntryFlows';
 import type { UseSideOrderReturn } from './useSideOrder';
 import { useTiebreakCommands } from './useTiebreakCommands';
@@ -35,8 +37,8 @@ export interface CockpitCommandsArgs {
   sides: UseSideOrderReturn;
   /** Meldezeile (Stufe 3 = Bestätigung, Stufe 2 = Fehler). */
   melde: UseCockpitNoticesReturn['melde'];
-  /** Spielzeit (auch Verlängerung) abgelaufen – Quelle: `useMatchTimerExtended`. */
-  isOvertime: boolean;
+  /** Engine-Ansicht des Spiels (`null` ohne Engine-Kopie): Grundlage für Abschnittsende von selbst und Wiederanpfiff. */
+  engineView: PhaseView | null;
 }
 
 export interface CockpitCommands {
@@ -50,7 +52,7 @@ export interface CockpitCommands {
   onSidebarEventEdit?: LegacyPlayAreaProps['sidebar']['onEventEdit'];
 }
 
-export function useCockpitCommands({ props, settings, sound, flows, sides, melde, isOvertime }: CockpitCommandsArgs): CockpitCommands {
+export function useCockpitCommands({ props, settings, sound, flows, sides, melde, engineView }: CockpitCommandsArgs): CockpitCommands {
   const { t } = useTranslation('cockpit');
   const { currentMatch: match, onStart, onPause, onResume, onFinish, onGoal, onAdjustTime, onTimePenalty, onCard, onSubstitution, onFoul, onUpdateSettings } = props;
   const readOnly = props.readOnly ?? false;
@@ -93,18 +95,23 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   const tiebreak = useTiebreakCommands(match, props);
 
   // Uhr: Meldungen und das Leeren der Zeitstrafen (BUG-008) hängen am Abpfiff, auch am automatischen.
+  // Abschnittsende und Abpfiff von selbst, Wiederanpfiff sowie Ton und Vibration (einzige Quelle) in `useCockpitClock`.
+  const clearPenalties = penalties.clear;
+  const cockpitClock = useCockpitClock({
+    tournamentId: props.tournamentId, match, readOnly, settings, engineView, melde,
+    playSound: useCallback(() => { void sound.play(); }, [sound]),
+    onSpielBeendet: clearPenalties,
+  });
   const clock = useClockControls({
-    match, kannSteuern: !readOnly, autoFinishEnabled: settings.autoFinishEnabled, zeitAbgelaufen: isOvertime,
-    sound: {
-      enabled: settings.soundEnabled, play: () => { void sound.play(); },
-      // Der Tipp auf Anpfiff/Pause/Weiter gibt den Ton frei (Browser-Geste); ein schwebender Hinweis entfällt.
-      aktiviere: () => { if (settings.soundEnabled && !sound.isActivated) { void sound.activate(); } },
-    },
-    hapticEnabled: settings.hapticEnabled,
+    match, abschnittspause: cockpitClock.abschnittspause,
+    // Der Tipp auf Anpfiff/Pause/Weiter gibt den Ton frei (Browser-Geste); ein schwebender Hinweis entfällt.
+    sound: { aktiviere: () => { if (settings.soundEnabled && !sound.isActivated) { void sound.activate(); } } },
     onStart: (id) => { onStart(id); showSuccess(t('meldung.angepfiffen')); },
     onPause: (id) => { onPause(id); showInfo(t('meldung.pausiert')); },
     onResume: (id) => { onResume(id); showSuccess(t('meldung.fortgesetzt')); },
-    onFinish: (id) => { onFinish(id); penalties.clear(); showInfo(t('meldung.abgepfiffen')); },
+    onStartSection: cockpitClock.wiederanpfiff,
+    onFinish: (id) => { const gesendet = onFinish(id); penalties.clear(); showInfo(t('meldung.abgepfiffen')); return gesendet; },
+    onFinished: cockpitClock.abgepfiffenVonHand,
   });
 
   const teamNameOf = useCallback(
@@ -243,6 +250,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
       onUndo: editing.undoVisible ? () => { void editing.undo(); } : undefined,
       onStart: clock.starte,
       onPauseResume: clock.pauseOderWeiter,
+      wiederanpfiff: cockpitClock.abschnittspause,
       onEditTime: openTimeAdjust,
       onSwitchSides: () => { sides.tausche(); showInfo(t('meldung.seitenGetauscht')); },
       onFinish: clock.pfeifeAb,

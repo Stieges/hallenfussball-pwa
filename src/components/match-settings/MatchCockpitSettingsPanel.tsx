@@ -375,19 +375,6 @@ export function MatchCockpitSettingsPanel({
           />
         </SettingRow>
       </section>
-
-      {/* Auto-Advance Section */}
-      <section style={styles.section}>
-        <h3 style={styles.sectionTitle}>{t('settings.afterMatch')}</h3>
-
-        <SettingRow label={t('settings.autoEnd')} description={t('settings.autoEndDesc')}>
-          <Toggle
-            checked={settings.autoFinishEnabled}
-            onChange={(v) => updateSetting('autoFinishEnabled', v)}
-            label={t('settings.enableAutoEnd')}
-          />
-        </SettingRow>
-      </section>
     </fieldset>
   );
 }

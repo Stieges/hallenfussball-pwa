@@ -5,16 +5,17 @@
  * abgelaufen ist – in der Verlängerung und im Golden Goal nach deren Ende (@DR-019); ein Golden-Goal-Tor beendet vorher (@SL-082).
  * Werte aus dem Gherkin: Halbfinale 1 FC Nord – DJK Berg 1:1, Verlängerung 3 Minuten.
  *
- * Harness wie in LiveCockpit.readOnly.test.tsx: `onFinish` setzt das Spiel auf FINISHED, sonst
- * feuert der Effekt bei jedem Render erneut.
+ * B-08b: das Ende von selbst läuft über die Engine (`useAutoSectionEnd`), nicht mehr über `onFinish`: Die Tests lesen
+ * deshalb das Log einer echten Engine (aus dem Log des Halbfinales) und zählen dort die Spielenden.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { useCallback, useState } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { LiveCockpit } from '../LiveCockpit';
 import type { LiveCockpitProps } from '../types';
 import type { LiveMatch } from '../../../core/models/LiveMatch';
+import { engineAusLog } from './engineLogFixture';
 import {
+  HF_CTX,
   OT_KICKOFF_AT,
   OVERTIME_S,
   T0,
@@ -45,15 +46,6 @@ function baseProps(match: LiveMatch, handlers: Partial<LiveCockpitProps> = {}): 
   };
 }
 
-function AutoFinishHarness({ view, onFinishSpy }: { view: LiveMatch; onFinishSpy: (matchId: string) => void }) {
-  const [match, setMatch] = useState(view);
-  const handleFinish = useCallback((matchId: string) => {
-    onFinishSpy(matchId);
-    setMatch((prev) => ({ ...prev, status: 'FINISHED' }));
-  }, [onFinishSpy]);
-  return <LiveCockpit {...baseProps(match, { onFinish: handleFinish })} />;
-}
-
 /** Echte Wartezeit, damit die Uhr (requestAnimationFrame) sicher mindestens einmal getickt hat. */
 async function letClockTick() {
   await act(async () => {
@@ -61,11 +53,15 @@ async function letClockTick() {
   });
 }
 
-function renderAt(view: LiveMatch, now: number) {
+type Log = ReturnType<typeof overtimeRunningLog>;
+
+/** Cockpit mit echter Engine aus dem Log; `enden()` zählt die Spielenden im Log (Regelzeit endete schon einmal). */
+async function renderAt(log: Log, now: number) {
   vi.setSystemTime(now);
-  const onFinishSpy = vi.fn();
-  render(<AutoFinishHarness view={view} onFinishSpy={onFinishSpy} />);
-  return onFinishSpy;
+  const engine = await engineAusLog(log, HF_CTX);
+  const enden = (): number => engine.eintraege('MATCH_END').length;
+  render(engine.mitEngine(<LiveCockpit {...baseProps(viewAt(log, now))} />));
+  return { enden, vorher: enden() };
 }
 
 describe('LiveCockpit: Verlängerung endet nicht beim Anpfiff (C-VERLAENGERUNG-ENDET-SOFORT)', () => {
@@ -78,46 +74,48 @@ describe('LiveCockpit: Verlängerung endet nicht beim Anpfiff (C-VERLAENGERUNG-E
 
   it('@SL-145 @TM-052 @SL-010: nach dem Anpfiff der Verlängerung läuft das Spiel weiter, das Cockpit pfeift nicht selbst ab', async () => {
     const now = OT_KICKOFF_AT + 2_000;
-    const onFinish = renderAt(viewAt(overtimeRunningLog('overtime-then-shootout'), now), now);
-    expect(onFinish).not.toHaveBeenCalled();
+    const { enden, vorher } = await renderAt(overtimeRunningLog('overtime-then-shootout'), now);
+    expect(enden()).toBe(vorher);
     await letClockTick();
-    expect(onFinish).not.toHaveBeenCalled();
+    expect(enden()).toBe(vorher);
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('2:58');
   });
 
   it('@SL-081: die Uhr zeigt die Restzeit der Verlängerung (bei Spielzeit 2:00 noch 01:00)', async () => {
     const now = OT_KICKOFF_AT + 120_000;
-    const onFinish = renderAt(viewAt(overtimeRunningLog('overtime-then-shootout'), now), now);
+    const { enden, vorher } = await renderAt(overtimeRunningLog('overtime-then-shootout'), now);
     await letClockTick();
-    expect(onFinish).not.toHaveBeenCalled();
+    expect(enden()).toBe(vorher);
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('1:00');
   });
 
   it('@TM-052: nach Ablauf der 3 Minuten Verlängerung beendet das Auto-Ende das Spiel genau einmal', async () => {
     const now = OT_KICKOFF_AT + (OVERTIME_S + 1) * 1000;
-    const onFinish = renderAt(viewAt(overtimeRunningLog('overtime-then-shootout'), now), now);
-    await waitFor(() => expect(onFinish).toHaveBeenCalledTimes(1));
-    expect(onFinish).toHaveBeenCalledWith('hf1');
+    const { enden, vorher } = await renderAt(overtimeRunningLog('overtime-then-shootout'), now);
+    await waitFor(() => expect(enden()).toBe(vorher + 1));
+    await letClockTick();
+    expect(enden()).toBe(vorher + 1);
   });
 
   it('@SL-082 @DR-019: im Golden Goal endet das Spiel vor Ablauf nicht von selbst (nur ein Tor beendet es)', async () => {
     const now = OT_KICKOFF_AT + 120_000;
-    const onFinish = renderAt(viewAt(overtimeRunningLog('goldenGoal'), now), now);
+    const { enden, vorher } = await renderAt(overtimeRunningLog('goldenGoal'), now);
     await letClockTick();
-    expect(onFinish).not.toHaveBeenCalled();
+    expect(enden()).toBe(vorher);
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('1:00');
   });
 
   it('@DR-019 @TM-052: fällt im Golden Goal kein Tor, beendet das Auto-Ende das Spiel nach Ablauf der 3 Minuten genau einmal', async () => {
     const now = OT_KICKOFF_AT + (OVERTIME_S + 1) * 1000;
-    const onFinish = renderAt(viewAt(overtimeRunningLog('goldenGoal'), now), now);
-    await waitFor(() => expect(onFinish).toHaveBeenCalledTimes(1));
-    expect(onFinish).toHaveBeenCalledWith('hf1');
+    const { enden, vorher } = await renderAt(overtimeRunningLog('goldenGoal'), now);
+    await waitFor(() => expect(enden()).toBe(vorher + 1));
+    await letClockTick();
+    expect(enden()).toBe(vorher + 1);
   });
 
   it('Gegenbeispiel: in der regulären Spielzeit endet das Spiel nach Ablauf weiter automatisch', async () => {
     const now = T0 + 661_000;
-    const onFinish = renderAt(viewAt(regularTimeDrawLog('overtime-then-shootout').slice(0, -1), now), now);
-    await waitFor(() => expect(onFinish).toHaveBeenCalledTimes(1));
+    const { enden, vorher } = await renderAt(regularTimeDrawLog('overtime-then-shootout').slice(0, -1), now);
+    await waitFor(() => expect(enden()).toBe(vorher + 1));
   });
 });

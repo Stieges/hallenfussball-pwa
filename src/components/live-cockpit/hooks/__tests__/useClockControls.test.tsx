@@ -4,9 +4,8 @@ import { useClockControls, type ClockControlsParams } from '../useClockControls'
 
 function params(overrides: Partial<ClockControlsParams> = {}): ClockControlsParams {
   return {
-    match: { id: 'match-11', status: 'RUNNING' }, kannSteuern: true, autoFinishEnabled: true,
-    zeitAbgelaufen: false, sound: { enabled: true, play: vi.fn() }, hapticEnabled: false,
-    onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), ...overrides,
+    match: { id: 'match-11', status: 'RUNNING' }, abschnittspause: false, sound: {},
+    onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onStartSection: vi.fn(), onFinish: vi.fn(), ...overrides,
   };
 }
 
@@ -22,7 +21,7 @@ describe('useClockControls', () => {
     const reihenfolge: string[] = [];
     const p = params({
       match: { id: 'match-11', status: 'NOT_STARTED' },
-      sound: { enabled: true, play: vi.fn(), aktiviere: () => { reihenfolge.push('aktiviere'); } },
+      sound: { aktiviere: () => { reihenfolge.push('aktiviere'); } },
       onStart: () => { reihenfolge.push('start'); },
     });
     const { result } = renderHook(() => useClockControls(p));
@@ -32,18 +31,10 @@ describe('useClockControls', () => {
 
   it('Pause und Weiter sind ebenfalls ein Tipp und geben den Ton frei', () => {
     const aktiviere = vi.fn();
-    const p = params({ sound: { enabled: true, play: vi.fn(), aktiviere } });
+    const p = params({ sound: { aktiviere } });
     const { result } = renderHook(() => useClockControls(p));
     act(() => result.current.pauseOderWeiter());
     expect(aktiviere).toHaveBeenCalledTimes(1);
-  });
-
-  it('Gegenbeispiel: der automatische Abpfiff gibt keinen Ton frei (keine Geste)', () => {
-    const aktiviere = vi.fn();
-    const p = params({ zeitAbgelaufen: true, sound: { enabled: true, play: vi.fn(), aktiviere } });
-    renderHook(() => useClockControls(p));
-    expect(p.onFinish).toHaveBeenCalled();
-    expect(aktiviere).not.toHaveBeenCalled();
   });
 
   it('pauseOderWeiter pausiert ein laufendes und setzt ein pausiertes Spiel fort', () => {
@@ -55,85 +46,62 @@ describe('useClockControls', () => {
     rerender(q);
     act(() => result.current.pauseOderWeiter());
     expect(p.onResume).toHaveBeenCalledWith('match-11');
+    expect(p.onStartSection).not.toHaveBeenCalled();
   });
 
-  it('Gegenbeispiel: ein beendetes Spiel wird weder pausiert noch fortgesetzt', () => {
-    const p = params({ match: { id: 'match-11', status: 'FINISHED' } });
+  // C-COCKPIT-HALBZEIT-START: „▶ Start“ in der Halbzeitpause meldete „Spiel fortgesetzt“, die Tafel blieb auf Halbzeit.
+  it('@SL-006 in der Halbzeitpause ist „Weiter“ der Wiederanpfiff (SECTION_START), nicht ein Fortsetzen', () => {
+    const p = params({ match: { id: 'match-11', status: 'PAUSED' }, abschnittspause: true });
+    const { result } = renderHook(() => useClockControls(p));
+    act(() => result.current.pauseOderWeiter());
+    expect(p.onStartSection).toHaveBeenCalledTimes(1);
+    expect(p.onStartSection).toHaveBeenCalledWith('match-11');
+    expect(p.onResume).not.toHaveBeenCalled();
+  });
+
+  it('Gegenbeispiel: eine Pause mitten im Abschnitt setzt fort und pfeift nicht wieder an', () => {
+    const p = params({ match: { id: 'match-11', status: 'PAUSED' }, abschnittspause: false });
+    const { result } = renderHook(() => useClockControls(p));
+    act(() => result.current.pauseOderWeiter());
+    expect(p.onResume).toHaveBeenCalledTimes(1);
+    expect(p.onStartSection).not.toHaveBeenCalled();
+  });
+
+  it('Gegenbeispiel: ein beendetes Spiel wird weder pausiert noch fortgesetzt noch wieder angepfiffen', () => {
+    const p = params({ match: { id: 'match-11', status: 'FINISHED' }, abschnittspause: true });
     const { result } = renderHook(() => useClockControls(p));
     act(() => result.current.pauseOderWeiter());
     expect(p.onPause).not.toHaveBeenCalled();
     expect(p.onResume).not.toHaveBeenCalled();
+    expect(p.onStartSection).not.toHaveBeenCalled();
   });
 
-  it('pfeifeAb spielt den Ton einmal und ruft onFinish einmal', () => {
+  it('@FU-070 pfeifeAb ruft onFinish genau einmal und meldet die ID des gesendeten Endes weiter', async () => {
+    const onFinished = vi.fn();
+    const p = params({ onFinish: vi.fn().mockResolvedValue('ende-1'), onFinished });
+    const { result } = renderHook(() => useClockControls(p));
+    await act(async () => { result.current.pfeifeAb(); await Promise.resolve(); });
+    expect(p.onFinish).toHaveBeenCalledTimes(1);
+    expect(p.onFinish).toHaveBeenCalledWith('match-11');
+    expect(onFinished).toHaveBeenCalledWith('ende-1');
+  });
+
+  it('B-08c Gegenbeispiel: ein abgelehntes Ende (null) oder eines ohne ID meldet keine ID weiter, es gibt keinen Pfiff', async () => {
+    const onFinished = vi.fn();
+    const abgelehnt = params({ onFinish: vi.fn().mockResolvedValue(null), onFinished });
+    const eins = renderHook(() => useClockControls(abgelehnt));
+    await act(async () => { eins.result.current.pfeifeAb(); await Promise.resolve(); });
+    const ohneId = params({ onFinish: vi.fn(), onFinished });
+    const zwei = renderHook(() => useClockControls(ohneId));
+    await act(async () => { zwei.result.current.pfeifeAb(); await Promise.resolve(); });
+    expect(onFinished).toHaveBeenNthCalledWith(1, null);
+    expect(onFinished).toHaveBeenNthCalledWith(2, null);
+  });
+
+  it('B-08b Gegenbeispiel: dieser Hook beendet nie von selbst (das macht useAutoSectionEnd)', () => {
     const p = params();
-    const { result } = renderHook(() => useClockControls(p));
-    act(() => result.current.pfeifeAb());
-    expect(p.sound.play).toHaveBeenCalledTimes(1);
-    expect(p.onFinish).toHaveBeenCalledTimes(1);
-  });
-
-  it('Gegenbeispiel: bei ausgeschaltetem Ton pfeift pfeifeAb nicht, beendet aber das Spiel', () => {
-    const p = params({ sound: { enabled: false, play: vi.fn() } });
-    const { result } = renderHook(() => useClockControls(p));
-    act(() => result.current.pfeifeAb());
-    expect(p.sound.play).not.toHaveBeenCalled();
-    expect(p.onFinish).toHaveBeenCalledTimes(1);
-  });
-
-  it('bei abgelaufener Zeit pfeift das steuernde Gerät automatisch ab', () => {
-    const p = params({ zeitAbgelaufen: true });
-    renderHook(() => useClockControls(p));
-    expect(p.onFinish).toHaveBeenCalledWith('match-11');
-  });
-
-  it('der automatische Abpfiff feuert je Spiel nur einmal, auch wenn neu gerendert wird', () => {
-    const p = params({ zeitAbgelaufen: true });
     const { rerender } = renderHook((q: ClockControlsParams) => useClockControls(q), { initialProps: p });
-    rerender({ ...p, sound: { enabled: true, play: p.sound.play }, match: { id: 'match-11', status: 'RUNNING' } });
-    expect(p.onFinish).toHaveBeenCalledTimes(1);
-  });
-
-  it('Gegenbeispiel (R4/H3): ein Gerät ohne Steuer pfeift nie automatisch ab', () => {
-    const p = params({ zeitAbgelaufen: true, kannSteuern: false });
-    renderHook(() => useClockControls(p));
+    rerender({ ...p, match: { id: 'match-11', status: 'RUNNING' } });
     expect(p.onFinish).not.toHaveBeenCalled();
-  });
-
-  // C-VERLAENGERUNG-ENDET-SOFORT (#244), zerlegte Fassung: Auto-Ende nur bei wirklich abgelaufener Zeit.
-  it('@TM-052 @SL-145: läuft die Verlängerung noch (Zeit nicht abgelaufen), pfeift das Gerät nicht ab; nach Ablauf genau einmal', () => {
-    const p = params({ zeitAbgelaufen: false });
-    const { rerender } = renderHook((q: ClockControlsParams) => useClockControls(q), { initialProps: p });
-    expect(p.onFinish).not.toHaveBeenCalled();
-    rerender({ ...p, zeitAbgelaufen: true });
-    expect(p.onFinish).toHaveBeenCalledTimes(1);
-    expect(p.onFinish).toHaveBeenCalledWith('match-11');
-  });
-
-  it('Gegenbeispiel: ein pausiertes oder beendetes Spiel pfeift trotz abgelaufener Zeit nicht ab', () => {
-    const pausiert = params({ zeitAbgelaufen: true, match: { id: 'match-11', status: 'PAUSED' } });
-    renderHook(() => useClockControls(pausiert));
-    const beendet = params({ zeitAbgelaufen: true, match: { id: 'match-11', status: 'FINISHED' } });
-    renderHook(() => useClockControls(beendet));
-    expect(pausiert.onFinish).not.toHaveBeenCalled();
-    expect(beendet.onFinish).not.toHaveBeenCalled();
-  });
-
-  it('Gegenbeispiel: ist das automatische Beenden ausgeschaltet, pfeift niemand ab', () => {
-    const p = params({ zeitAbgelaufen: true, autoFinishEnabled: false });
-    renderHook(() => useClockControls(p));
-    expect(p.onFinish).not.toHaveBeenCalled();
-  });
-
-  it('@DR-019: nach dem Abpfiff und einem erneuten Lauf desselben Spiels (Verlängerung) endet auch der zweite Abschnitt automatisch', () => {
-    const p = params({ zeitAbgelaufen: true });
-    const { rerender } = renderHook((q: ClockControlsParams) => useClockControls(q), { initialProps: p });
-    expect(p.onFinish).toHaveBeenCalledTimes(1);
-    // Regelzeit ist beendet, das Spiel steht, dann beginnt die Verlängerung (gleiche Spiel-ID, Zeit läuft wieder).
-    rerender({ ...p, zeitAbgelaufen: false, match: { id: 'match-11', status: 'FINISHED' } });
-    rerender({ ...p, zeitAbgelaufen: false, match: { id: 'match-11', status: 'RUNNING' } });
-    expect(p.onFinish).toHaveBeenCalledTimes(1);
-    rerender({ ...p, zeitAbgelaufen: true, match: { id: 'match-11', status: 'RUNNING' } });
-    expect(p.onFinish).toHaveBeenCalledTimes(2);
   });
 });

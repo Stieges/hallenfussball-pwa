@@ -288,10 +288,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     }
   }, [fieldMatches, currentMatchData, schedule.allMatches, selectedFieldNumber]);
 
-  const handleFinishAndReset = useCallback(async (matchId: string) => {
-    await handleFinish(matchId);
+  const handleFinishAndReset = useCallback((matchId: string): Promise<string | null> => handleFinish(matchId).then((eventId) => {
     setTimeout(() => { setSelectedMatchId(null); }, 0);
-  }, [handleFinish]);
+    return eventId;
+  }), [handleFinish]);
 
   const handleUpdateSettings = useCallback(async (settings: import('../../types/tournament').MatchCockpitSettings) => {
     // @W2A-030: Regelfelder speichert nur die Turnierleitung. Alle anderen behalten den
@@ -380,7 +380,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             onStart={(matchId) => { void hookHandleStart(matchId); }}
             onPause={(matchId) => { void handlePause(matchId); }}
             onResume={(matchId) => { void handleResume(matchId); }}
-            onFinish={(matchId) => { void handleFinishAndReset(matchId); }}
+            onFinish={handleFinishAndReset}
             onGoal={(matchId, teamId, delta, options) => { void handleGoal(matchId, teamId, delta, options); }}
             // A-08c (@FU-071): Undo, Direkteintrag, Zeit, Wiedereröffnen, K.-o.-/Strafstoß-Handler und
             // Ereignis-Bearbeiten/-Löschen haben keinen Engine-Weg und werden NICHT übergeben
