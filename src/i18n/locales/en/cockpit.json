@@ -185,19 +185,15 @@
     "redAria": "Red card for {{teamName}}"
   },
   "timeAdjust": {
-    "title": "Adjust Match Time",
-    "currentTime": "Current time",
-    "minutes": "Min",
-    "seconds": "Sec",
-    "reset": "00:00",
-    "halftime": "Halftime",
-    "end": "End",
+    "title": "Adjust match time",
+    "inSection": "Time in section",
+    "increase": "Add 10 seconds",
+    "decrease": "Subtract 10 seconds",
+    "limitMax": "at most {{zeit}}",
+    "limitMinGoal": "because of the goal at {{zeit}}, at least {{zeit}}",
+    "limitMinEntry": "because of an entry at {{zeit}}, at least {{zeit}}",
     "cancel": "Cancel",
-    "apply": "Apply",
-    "increaseMinute": "Increase minute",
-    "decreaseMinute": "Decrease minute",
-    "increaseSeconds": "Increase 10 seconds",
-    "decreaseSeconds": "Decrease 10 seconds"
+    "apply": "Apply"
   },
   "timePenalty": {
     "title": "Time Penalty",

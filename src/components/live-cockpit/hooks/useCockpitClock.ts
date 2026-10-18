@@ -33,6 +33,8 @@ export interface CockpitClock {
   wiederanpfiff: () => void;
   /** Ein Abpfiff von Hand ist gesendet: Ton und Vibration. */
   abgepfiffenVonHand: (eventId: string | null) => void;
+  /** Uhr auf `clockMs` stellen (B-08d, CLOCK_ADJUST); `previousClockMs` ist der bisherige Stand. */
+  korrigiereUhr: (clockMs: number, previousClockMs: number) => Promise<string | null>;
 }
 
 export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
@@ -60,5 +62,8 @@ export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
   }, [commands, melde, t]);
   const abgepfiffenVonHand = useCallback((eventId: string | null) => { whistle.pfeife(eventId, 'spiel'); }, [whistle]);
 
-  return { abschnittspause: engineView?.status === 'section_break', wiederanpfiff, abgepfiffenVonHand };
+  return {
+    abschnittspause: engineView?.status === 'section_break', wiederanpfiff, abgepfiffenVonHand,
+    korrigiereUhr: commands.adjustClock,
+  };
 }

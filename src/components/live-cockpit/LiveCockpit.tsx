@@ -70,7 +70,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const rejectedOutbox = useRejectedOutboxDialog(tournamentId, notices.fehler);
 
   // BUG-004 FIX: Echtzeit-Uhr; hier nur noch für das Zeit-Blatt (die Tafel liest `PhaseView`, das Ende von selbst `useAutoSectionEnd`)
-  const { displaySeconds, elapsedSeconds } = useMatchTimerExtended(
+  const { elapsedSeconds } = useMatchTimerExtended(
     currentMatch?.timerStartTime ?? null,
     currentMatch?.timerElapsedSeconds ?? 0,
     currentMatch?.status ?? 'NOT_STARTED',
@@ -189,7 +189,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         readOnly={readOnly}
         isLocked={isLocked}
         settings={cockpitSettings}
-        displaySeconds={displaySeconds}
         effectiveScore={effectiveScore}
         dialogs={cmd.dialogs}
         editingEvent={cmd.editingEvent}

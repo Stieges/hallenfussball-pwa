@@ -13,3 +13,7 @@ export type { MatchStatusBadgeProps } from './MatchStatusBadge';
 export type { MatchStatusBadgeSize, MatchStatusBadgeTone } from './matchStatusBadgeStyle';
 export { MatchClock } from './MatchClock';
 export type { MatchClockProps } from './MatchClock';
+
+// B-08d: fachfrei, Zähler mit Grenzen (Korrektur der Spielzeit)
+export { TimeStepper } from './TimeStepper';
+export type { TimeStepperProps } from './TimeStepper';

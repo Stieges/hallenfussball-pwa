@@ -186,18 +186,14 @@
   },
   "timeAdjust": {
     "title": "Spielzeit anpassen",
-    "currentTime": "Aktuelle Zeit",
-    "minutes": "Min",
-    "seconds": "Sek",
-    "reset": "00:00",
-    "halftime": "Halbzeit",
-    "end": "Ende",
+    "inSection": "Spielzeit im Abschnitt",
+    "increase": "10 Sekunden mehr",
+    "decrease": "10 Sekunden weniger",
+    "limitMax": "höchstens {{zeit}}",
+    "limitMinGoal": "wegen des Tors bei {{zeit}} frühestens {{zeit}}",
+    "limitMinEntry": "wegen eines Eintrags bei {{zeit}} frühestens {{zeit}}",
     "cancel": "Abbrechen",
-    "apply": "Übernehmen",
-    "increaseMinute": "Minute erhöhen",
-    "decreaseMinute": "Minute verringern",
-    "increaseSeconds": "10 Sekunden erhöhen",
-    "decreaseSeconds": "10 Sekunden verringern"
+    "apply": "Übernehmen"
   },
   "timePenalty": {
     "title": "Zeitstrafe",
