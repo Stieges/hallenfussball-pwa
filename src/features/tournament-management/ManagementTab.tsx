@@ -357,6 +357,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           {Array.from({ length: tournament.numberOfFields }, (_, i) => i + 1).map((fieldNum) => (
             <button
               key={fieldNum}
+              data-testid={`field-button-${fieldNum}`}
               className={`${styles.fieldButton} ${fieldNum === selectedFieldNumber ? styles.fieldButtonActive : ''}`}
               onClick={() => {
                 setSelectedFieldNumber(fieldNum);
