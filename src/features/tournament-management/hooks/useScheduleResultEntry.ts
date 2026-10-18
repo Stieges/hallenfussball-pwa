@@ -3,10 +3,11 @@
  * `ensureMatch` → `catchUp` → Status aus der Engine-Ansicht DANACH (N-4) → Weiche:
  * geplant → `enterResult`; beendet → Grund-Auswahl → `correct` (Grundpflicht); abgesetzt → Rückfrage →
  * `unskipAndEnterResult` (ein Stapel); laufend → Hinweis. A-25a (@FU-094): K.-o.-Unentschieden → Abfrage des
- * Strafstoßergebnisses, ohne Angabe nichts gespeichert; im abgesetzten K.-o.-Spiel weiter Hinweis (kein Stapel mit Strafstoß).
+ * Strafstoßergebnisses, ohne Angabe nichts gespeichert; A-08f3e4 Teil K (@FU-097): im abgesetzten K.-o.-Spiel ebenso,
+ * nach der Rückfrage, im selben Stapel.
  * Fixrunde 1: Rückfragen nur, wenn der Eintrag zulässig ist -- veralteter Stand (M-1) und fehlende Rolle
  * (M-2, Wortlaut @HE-042) melden sofort. K.-o.-Auflösung über `useResultEntryAck` → `useKoResolutionAfterAck`.
- * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094, @FU-069, @EK-004, @HE-042.
+ * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094, @FU-097, @FU-069, @EK-004, @HE-042.
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -131,25 +132,23 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
         showWarning(t(route === 'correct' ? 'schedule.resultEntry.correctionLeadOnly' : 'schedule.resultEntry.leadOnly'));
         return;
       }
-      if (route === 'enter') {
+      if (route === 'enter' || route === 'unskip') {
+        // @FU-093: abgesetzt → erst die Rückfrage; @FU-094/@FU-097: K.-o.-Unentschieden → danach die Strafstoß-Abfrage.
+        if (route === 'unskip' && (await ask({ kind: 'unskip', matchNumber: entry.meta.number })) === null) {
+          return;
+        }
         let shootout: Record<string, number> | undefined;
         if (knockoutDraw) {
           const { homeTeam, awayTeam } = entry.meta;
           const answer = await ask({ kind: 'shootout', matchNumber: entry.meta.number, score: score(scoreA, scoreB), homeName: homeTeam.name, awayName: awayTeam.name });
           if (answer === null) {
-            return; // @FU-094: ohne Strafstoßergebnis wird das Unentschieden nicht gespeichert
+            return; // ohne Strafstoßergebnis wird nichts gespeichert (abgesetzt bleibt abgesetzt)
           }
           shootout = shootoutOf(answer, entry.ctx.teamAId, entry.ctx.teamBId);
         }
-        eventId = await commands.enterResult(id, entry.ctx, actor, scores, shootout, knockout);
-      } else if (route === 'unskip' && knockoutDraw) {
-        showWarning(t('schedule.resultEntry.knockoutDraw'));
-        return;
-      } else if (route === 'unskip') {
-        if ((await ask({ kind: 'unskip', matchNumber: entry.meta.number })) === null) {
-          return;
-        }
-        eventId = await commands.unskipAndEnterResult(id, entry.ctx, actor, scores);
+        eventId = route === 'unskip'
+          ? await commands.unskipAndEnterResult(id, entry.ctx, actor, scores, shootout, knockout)
+          : await commands.enterResult(id, entry.ctx, actor, scores, shootout, knockout);
       } else {
         if (lockFinishedResults) {
           showWarning(t('actions.matchAlreadyFinished'));

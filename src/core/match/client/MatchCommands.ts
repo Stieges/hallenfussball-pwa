@@ -15,7 +15,7 @@ import type { DetailField } from '../details';
 import type { Actor, EngineEvent, ErrorCode, MatchContext, MatchRules } from '../types';
 import type { MatchEngineView } from './MatchEngine';
 import { definedFields, splitFirstTap, timingClock } from './matchCommandStamp';
-import { buildEvents, resultEntrySpec, skipSpec, storeEvents, UNSKIP_SPEC } from './matchCommandsSkip';
+import { buildEvents, skipSpec, storeEvents, UNSKIP_SPEC } from './matchCommandsSkip';
 import { resultEntryCommand } from '../resultEntryShootout';
 import type {
   AmendFields,
@@ -162,9 +162,10 @@ export class MatchCommands {
     return this.submit(matchId, ctx, actor, UNSKIP_SPEC);
   }
 
-  /** B-07a (@FU-093): abgesetztes Spiel wieder einplanen UND Ergebnis eintragen -- ein Stapel (R12). */
-  unskipAndEnterResult(matchId: string, ctx: MatchContext, actor: Actor, scores: TeamScores): CommandResult {
-    return this.submit(matchId, ctx, actor, UNSKIP_SPEC, resultEntrySpec(scores));
+  /** B-07a (@FU-093): abgesetztes Spiel wieder einplanen UND Ergebnis eintragen -- ein Stapel (R12). A-08f3e4 Teil K (@FU-097): Strafstoß wie `enterResult`. */
+  unskipAndEnterResult(matchId: string, ctx: MatchContext, actor: Actor, scores: TeamScores, shootout?: TeamScores, knockout = false): CommandResult {
+    const built = resultEntryCommand(knockout, scores, shootout);
+    return built.ok ? this.submit(matchId, ctx, actor, UNSKIP_SPEC, built.spec) : Promise.reject(new MatchCommandRejectedError(built.code, built.detail));
   }
 
   correct(

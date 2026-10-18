@@ -117,11 +117,21 @@
       "confirmSwitch": "Trotzdem wechseln"
     },
     "koAfterSend": "K.-o.-Plätze werden nach dem Senden besetzt",
+    "skip": {
+      "teamsMissing": "Absetzen erst, wenn beide Teams feststehen",
+      "unavailable": "Absetzen ist gerade nicht möglich"
+    },
+    "entriesGuard": {
+      "blocked": "Spiel {{number}} hat Einträge – nur über Spielplan auf Anfang setzen",
+      "unreadable": "Einträge konnten nicht geprüft werden – nichts geändert",
+      "restoreKept_one": "Bei {{count}} Spiel mit Einträgen wurde das Ergebnis nicht wiederhergestellt",
+      "restoreKept_other": "Bei {{count}} Spielen mit Einträgen wurden die Ergebnisse nicht wiederhergestellt",
+      "restoreServerLed": "Ergebnisse werden nicht aus der Sicherung übernommen – der Server führt sie"
+    },
     "resultEntry": {
       "running": "Spiel läuft – Ergebnis erst nach dem Abpfiff",
       "teamsMissing": "Ergebnis erst, wenn beide Teams feststehen",
       "unavailable": "Ergebnis eintragen ist gerade nicht möglich",
-      "knockoutDraw": "Unentschieden im K.-o.-Spiel – das Ergebnis mit $t(sport:events.penaltyShootout) bitte im Cockpit eintragen. Nichts gespeichert.",
       "shootoutTitle": "Ergebnis des Strafstoßschießens",
       "shootoutQuestion": "Spiel {{number}} endete {{score}} – wer hat das $t(sport:events.penaltyShootout) gewonnen?",
       "shootoutMissing": "Bitte das Ergebnis des Strafstoßschießens eintragen.",

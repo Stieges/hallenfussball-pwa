@@ -65,6 +65,12 @@ export const STATUS_CONFIG: Record<SyncStatus, StatusConfig> = {
         color: cssVars.colors.textMuted,
         bgColor: cssVars.colors.surfaceElevated,
     },
+    // A-08f3c2 (M-3): Cloud-Stand nicht übernommen, weil eigene Änderungen warten oder gescheitert sind
+    blocked: {
+        icon: '↑',
+        color: cssVars.colors.warning,
+        bgColor: cssVars.colors.warningLight,
+    },
 };
 
 export const LABEL_KEY_BY_STATUS: Record<SyncStatus, string> = {
@@ -73,6 +79,7 @@ export const LABEL_KEY_BY_STATUS: Record<SyncStatus, string> = {
     conflict: 'syncStatus.label.conflict',
     error: 'syncStatus.label.error',
     offline: 'syncStatus.label.offline',
+    blocked: 'syncStatus.label.blocked',
 };
 
 /** Darstellung fuer noch wartende Eintraege ohne Konflikt/Fehler (A-06i). */

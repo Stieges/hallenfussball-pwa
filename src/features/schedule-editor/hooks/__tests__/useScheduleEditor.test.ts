@@ -12,6 +12,9 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+const skipMock = vi.hoisted(() => ({ skip: vi.fn(async () => null as string | null), unskip: vi.fn(async () => null as string | null) }));
+vi.mock('../useMatchSkip', () => ({ useMatchSkip: () => skipMock }));
+
 import { useScheduleEditor } from '../useScheduleEditor';
 import { Match, Tournament } from '../../../../types/tournament';
 import { vs, testUuid } from '../../../../test/matchSlotFixtures';
@@ -70,8 +73,6 @@ describe('Mode Management', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -87,8 +88,6 @@ describe('Mode Management', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
         initialMode: 'edit',
       })
     );
@@ -105,8 +104,6 @@ describe('Mode Management', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -126,8 +123,6 @@ describe('Mode Management', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
         initialMode: 'edit',
       })
     );
@@ -148,8 +143,6 @@ describe('Mode Management', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -174,8 +167,6 @@ describe('Mode Management', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
         initialMode: 'edit',
       })
     );
@@ -207,8 +198,6 @@ describe('Match Selection', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -229,8 +218,6 @@ describe('Match Selection', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -253,8 +240,6 @@ describe('Match Selection', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -279,8 +264,6 @@ describe('Match Updates', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -304,8 +287,6 @@ describe('Match Updates', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -327,8 +308,6 @@ describe('Match Updates', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -354,8 +333,6 @@ describe('Match Updates', () => {
       useScheduleEditor({
         tournament: tournamentWithRef,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -377,8 +354,6 @@ describe('Match Updates', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -397,8 +372,6 @@ describe('Match Updates', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -416,138 +389,33 @@ describe('Match Updates', () => {
 // Skip/Unskip Tests
 // ============================================================================
 
-describe('Skip/Unskip', () => {
-  it('should skip a match', () => {
-    const tournament = createTournament();
+// A-08f3e4 (Baustein Regel 3: umgeschrieben -- vorher pinnten diese Tests den Altweg „lokal schreiben +
+// diffMatchResultStatusUpdates → UPDATE_MATCH“). Absetzen und Wieder einplanen laufen über den Server
+// (`useMatchSkip`, eigene Tests); der Editor schreibt dafür nichts mehr ins Turnier.
+describe('Skip/Unskip (A-08f3e4: über den Server)', () => {
+  it('@FU-089 skipMatch setzt über useMatchSkip ab und schreibt nichts lokal (kein Turnier-Update, kein UPDATE_MATCHES)', async () => {
     const onUpdate = vi.fn();
+    const { result } = renderHook(() => useScheduleEditor({ tournament: createTournament(), onTournamentUpdate: onUpdate }));
 
-    const { result } = renderHook(() =>
-      useScheduleEditor({
-        tournament,
-        onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
-      })
-    );
+    let text: string | null = 'unberührt';
+    await act(async () => { text = await result.current.skipMatch('m1', 'Team not present'); });
 
-    act(() => {
-      result.current.skipMatch('m1', 'Team not present');
-    });
-
-    expect(onUpdate).toHaveBeenCalled();
-    const updatedTournament = onUpdate.mock.calls[0][0];
-    const updatedMatch = updatedTournament.matches.find((m: Match) => m.id === 'm1');
-    expect(updatedMatch?.matchStatus).toBe('skipped');
-    expect(updatedMatch?.skippedReason).toBe('Team not present');
-    expect(updatedMatch?.skippedAt).toBeDefined();
+    expect(skipMock.skip).toHaveBeenCalledWith('m1', 'Team not present');
+    expect(text).toBeNull();
+    expect(onUpdate).not.toHaveBeenCalled();
   });
 
-  // A2 Fixrunde 1 (Ruling AJ, I1/I2: .superpowers/sdd/2026-09-25-oktober-fundament-helfer/
-  // task-A2-review.md): skipMatch used to persist ONLY via a full onTournamentUpdate() save,
-  // which (since A2) skips STATUS columns for existing matches. It must now ALSO call
-  // onMatchesUpdate with a targeted UPDATE_MATCH for the skipped match.
-  it('persists the skip via onMatchesUpdate (UPDATE_MATCH), not just local state', () => {
-    const tournament = createTournament();
-    const onMatchesUpdate = vi.fn();
-
-    const { result } = renderHook(() =>
-      useScheduleEditor({
-        tournament,
-        onTournamentUpdate: vi.fn(),
-        onLocalTournamentUpdate: vi.fn(),
-        onMatchesUpdate,
-      })
-    );
-
-    act(() => {
-      result.current.skipMatch('m1', 'Team not present');
-    });
-
-    expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
-    const updates = onMatchesUpdate.mock.calls[0][0];
-    expect(updates).toEqual([
-      expect.objectContaining({
-        id: 'm1',
-        matchStatus: 'skipped',
-        skippedReason: 'Team not present',
-      }),
-    ]);
-  });
-
-  it('should unskip a match', () => {
-    const tournamentWithSkipped = createTournament({
-      matches: [
-        createMatch({
-          id: 'm1',
-          matchStatus: 'skipped',
-          skippedReason: 'Test reason',
-          skippedAt: new Date().toISOString(),
-        }),
-      ],
-    });
+  it('@FU-071 unskipMatch plant über useMatchSkip wieder ein und gibt dessen Ablehnungstext weiter', async () => {
+    skipMock.unskip.mockResolvedValueOnce('nur Turnierleitung');
     const onUpdate = vi.fn();
+    const { result } = renderHook(() => useScheduleEditor({ tournament: createTournament(), onTournamentUpdate: onUpdate }));
 
-    const { result } = renderHook(() =>
-      useScheduleEditor({
-        tournament: tournamentWithSkipped,
-        onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
-      })
-    );
+    let text: string | null = null;
+    await act(async () => { text = await result.current.unskipMatch('m1'); });
 
-    act(() => {
-      result.current.unskipMatch('m1');
-    });
-
-    expect(onUpdate).toHaveBeenCalled();
-    const updatedTournament = onUpdate.mock.calls[0][0];
-    const updatedMatch = updatedTournament.matches.find((m: Match) => m.id === 'm1');
-    expect(updatedMatch?.matchStatus).toBe('scheduled');
-    expect(updatedMatch?.skippedReason).toBeUndefined();
-    expect(updatedMatch?.skippedAt).toBeUndefined();
-  });
-
-  // A2 Fixrunde 1 (I1/I2): same as skipMatch above -- ALSO fixes the pre-existing A1-review gap
-  // (M1) where skipped_reason/skipped_at never cleared in the cloud (see mapMatchUpdateToSupabase
-  // doc comment): the update here carries skippedReason/skippedAt as explicit (undefined) keys.
-  it('persists the unskip via onMatchesUpdate (UPDATE_MATCH) with cleared skip fields', () => {
-    const tournamentWithSkipped = createTournament({
-      matches: [
-        createMatch({
-          id: 'm1',
-          matchStatus: 'skipped',
-          skippedReason: 'Test reason',
-          skippedAt: new Date().toISOString(),
-        }),
-      ],
-    });
-    const onMatchesUpdate = vi.fn();
-
-    const { result } = renderHook(() =>
-      useScheduleEditor({
-        tournament: tournamentWithSkipped,
-        onTournamentUpdate: vi.fn(),
-        onLocalTournamentUpdate: vi.fn(),
-        onMatchesUpdate,
-      })
-    );
-
-    act(() => {
-      result.current.unskipMatch('m1');
-    });
-
-    expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
-    const updates = onMatchesUpdate.mock.calls[0][0];
-    expect(updates).toHaveLength(1);
-    expect(updates[0].id).toBe('m1');
-    expect(updates[0].matchStatus).toBe('scheduled');
-    // A2 Fixrunde 3 (N2): a cleared field transports as `null`, not `undefined` -- `undefined`
-    // would be dropped entirely by JSON.stringify in the offline mutation queue.
-    expect('skippedReason' in updates[0]).toBe(true);
-    expect(updates[0].skippedReason).toBeNull();
-    expect('skippedAt' in updates[0]).toBe(true);
-    expect(updates[0].skippedAt).toBeNull();
+    expect(skipMock.unskip).toHaveBeenCalledWith('m1');
+    expect(text).toBe('nur Turnierleitung');
+    expect(onUpdate).not.toHaveBeenCalled();
   });
 });
 
@@ -564,8 +432,6 @@ describe('Undo/Redo', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -581,8 +447,6 @@ describe('Undo/Redo', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -601,8 +465,6 @@ describe('Undo/Redo', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -624,8 +486,6 @@ describe('Undo/Redo', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -657,8 +517,6 @@ describe('Persistence', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -684,8 +542,6 @@ describe('Persistence', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -711,8 +567,6 @@ describe('Persistence', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -744,8 +598,6 @@ describe('Edge Cases', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -766,8 +618,6 @@ describe('Edge Cases', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -792,8 +642,6 @@ describe('Edge Cases', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -823,8 +671,6 @@ describe('Edge Cases', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -854,8 +700,6 @@ describe('Concurrent Updates', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
@@ -877,8 +721,6 @@ describe('Concurrent Updates', () => {
       useScheduleEditor({
         tournament,
         onTournamentUpdate: onUpdate,
-        onLocalTournamentUpdate: onUpdate,
-        onMatchesUpdate: vi.fn(),
       })
     );
 
