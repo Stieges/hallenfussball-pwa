@@ -26,14 +26,17 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 const LANG = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
 type Spalten = Parameters<typeof withCloudColumns>[2];
 
-async function ende(spalten: Spalten, benennen?: { id: string; name: string }) {
-  const cup = withCloudColumns(await hf1Besetzt(), GAME.HF1, { match_status: 'finished', ...spalten });
+/** `spiel`: Halbfinale 1 (Finalrunde) oder ein Gruppenspiel (z. B. GAME[7]) */
+async function ende(spalten: Spalten, benennen?: { id: string; name: string }, spiel: number = GAME.HF1) {
+  const cup = withCloudColumns(await hf1Besetzt(), spiel, { match_status: 'finished', ...spalten });
   const teams = benennen ? cup.tournament.teams.map((t) => (t.id === benennen.id ? { ...t, name: benennen.name } : t)) : cup.tournament.teams;
-  return zeige(cup, { ...cup.tournament, teams });
+  return zeige(cup, { ...cup.tournament, teams }, spiel);
 }
-function zeige(cup: Hallencup, tournament = cup.tournament) {
-  const match = tournament.matches[GAME.HF1];
-  return render(<LiveMatchDisplay match={liveMatchOf(match, tournament)} finalScore={buildMonitorView(tournament).byId.get(match.id)?.score} />);
+/** Wie der Monitor-Weg: Stand und Runde (Gruppe/Finalrunde) kommen aus der Ansicht des Spiels */
+function zeige(cup: Hallencup, tournament = cup.tournament, spiel: number = GAME.HF1) {
+  const match = tournament.matches[spiel];
+  const gezeigt = buildMonitorView(tournament).byId.get(match.id);
+  return render(<LiveMatchDisplay match={liveMatchOf(match, tournament)} finalScore={gezeigt?.score} finalRound={gezeigt?.phase === 'final'} />);
 }
 const NUR_ERGEBNIS: Spalten = { score_a: 2, score_b: 2, penalty_score_a: 4, penalty_score_b: 3, decided_by: 'penalty' };
 const kasten = (seite: 'home' | 'away') => screen.getByTestId(`live-block-${seite}`).querySelector<HTMLElement>('[data-position]')!;
@@ -131,15 +134,47 @@ describe('Gegenbeispiele', () => {
     expect(screen.getByTestId('live-endstand').textContent).toBe('Endstand');
   });
 
-  it('Sieg nach Verlängerung: Ring und Pokal, keine Strafstoß-Zeile', async () => {
+  // Spec 4.4/4.5 (Daniel 18.10.): „nach Verlängerung“ erscheint auch ohne Strafstoßschießen
+  it('Sieg nach Verlängerung (Finalrunde): Ring, Pokal und „nach Verlängerung“, keine Strafstoß-Zeile', async () => {
     await ende({ score_a: 2, score_b: 2, overtime_score_a: 1, overtime_score_b: 0, decided_by: 'overtime' });
     expect(screen.getByTestId('live-cup-home')).toBeInTheDocument();
     expect(screen.queryByTestId('live-penalty-block')).toBeNull();
+    expect(screen.getByTestId('live-after-overtime').textContent).toBe('nach Verlängerung');
+  });
+
+  it('Gegenbeispiel: Sieg in regulärer Zeit zeigt kein „nach Verlängerung“', async () => {
+    await ende({ score_a: 3, score_b: 1, decided_by: 'regular' });
     expect(screen.queryByTestId('live-after-overtime')).toBeNull();
   });
 
+  it('@ZM-049 Sieg nach Verlängerung in der Gruppe: Ring und „nach Verlängerung“, kein Pokal', async () => {
+    await ende({ score_a: 2, score_b: 2, overtime_score_a: 0, overtime_score_b: 1, decided_by: 'overtime' }, undefined, GAME[7]);
+    expect(kasten('away').dataset.outcome).toBe('winner');
+    expect(screen.queryByTestId('live-cup-away')).toBeNull();
+    expect(screen.getByTestId('live-after-overtime').textContent).toBe('nach Verlängerung');
+  });
+
+  // Spec 4.5: Pokal nur in der Finalrunde, Ring bei jedem Sieger
+  it('@ZM-049 Gruppensieg: Ring um den Sieger-Kasten, Name fett, Verlierer zurückgenommen, aber kein Pokal', async () => {
+    await ende({ score_a: 3, score_b: 1, decided_by: 'regular' }, undefined, GAME[7]);
+    expect(kasten('home').dataset.outcome).toBe('winner');
+    expect(kasten('home').style.outline).toContain(displayLayout.scoreArea.frameWidthStrong);
+    expect(name('home').style.fontWeight).toBe('800');
+    expect(kasten('away').dataset.outcome).toBe('loser');
+    expect(name('away').style.fontWeight).toBe('600');
+    expect(screen.queryByTestId('live-cup-home')).toBeNull();
+    expect(screen.queryByTestId('live-cup-away')).toBeNull();
+  });
+
+  it('@ZM-049 Gegenbeispiel: Finalrunde (K.-o.) hat bei jedem Sieg Ring und Pokal', async () => {
+    await ende({ score_a: 0, score_b: 2, decided_by: 'regular' });
+    expect(kasten('away').dataset.outcome).toBe('winner');
+    expect(screen.getByTestId('live-cup-away')).toBeInTheDocument();
+    expect(screen.queryByTestId('live-cup-home')).toBeNull();
+  });
+
   it('Unentschieden in der Gruppe: kein Ring, kein Pokal, kein Verlierer, nichts zurückgenommen', async () => {
-    await ende({ score_a: 1, score_b: 1, decided_by: 'regular' });
+    await ende({ score_a: 1, score_b: 1, decided_by: 'regular' }, undefined, GAME[7]);
     expect(kasten('home').dataset.outcome).toBeUndefined();
     expect(kasten('away').dataset.outcome).toBeUndefined();
     expect(screen.queryByTestId('live-cup-home')).toBeNull();

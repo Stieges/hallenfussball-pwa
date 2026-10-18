@@ -55,6 +55,7 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
           colorScheme={slide.config.liveColorScheme}
           hideScore={!view.rules.results}
           finalScore={shown.score}
+          finalRound={shown.phase === 'final'}
         />
       </div>
     );

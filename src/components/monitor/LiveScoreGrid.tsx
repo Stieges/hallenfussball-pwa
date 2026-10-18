@@ -1,6 +1,6 @@
 /**
  * LiveScoreGrid – Raster der Live-Folie: Kästen, Doppelpunkt, Namen (@ZM-140) und das Ende (Mockup K5g, @ZM-147/@ZM-049):
- * Sieger-Kasten mit Ring und Pokal-Kreis, Verlierer zurückgenommen, Strafstoßergebnis klein unter dem Doppelpunkt.
+ * Sieger-Kasten mit Ring (Pokal-Kreis nur in der Finalrunde), Verlierer zurückgenommen, Strafstoßergebnis klein unter dem Doppelpunkt.
  */
 import { CSSProperties, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,13 +27,15 @@ export interface LiveScoreGridProps {
   frames: { home: BlockFrame; away: BlockFrame };
   /** Endstand der Ansicht; nur ein beendetes Spiel trägt Ring, Pokal und Strafstoßergebnis */
   finalScore?: FinalScore;
+  /** Finalrunde: nur dort bekommt der Sieger den Pokal (Ring hat jeder Sieger, Spec 4.5) */
+  finalRound?: boolean;
 }
 
 const layout = displayLayout.scoreArea;
 /** Mit Strafstoßergebnis in der Mitte sind die Namen um diesen Anteil schmaler als der Kasten: Platz für „Strafstoßschießen“ zwischen den Namen (Mockup K5g) */
 const PENALTY_NAME_SHARE = 0.8;
 
-export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, homeColor, awayColor, frames, finalScore }: LiveScoreGridProps) {
+export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, homeColor, awayColor, frames, finalScore, finalRound = false }: LiveScoreGridProps) {
   const { t } = useTranslation('monitor');
   // B3: beide Teamnamen in derselben Größe (die kleinere der beiden passenden)
   const [namePx, setNamePx] = useState<{ home?: number; away?: number }>({});
@@ -41,7 +43,7 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
   const onAwayPx = useCallback((px: number) => setNamePx(p => (p.away === px ? p : { ...p, away: px })), []);
   const sharedNamePx = gemeinsameNamenGroesse(namePx.home, namePx.away);
 
-  // Sieger/Verlierer nur nach dem Abpfiff und mit Entscheidung; ein Unentschieden in der Gruppe hat weder Ring noch Pokal
+  // Sieger/Verlierer nur nach dem Abpfiff und mit Entscheidung; ein Unentschieden in der Gruppe hat weder Ring noch Pokal; der Pokal nur in der Finalrunde
   const winner = !hideScore && match.status === 'FINISHED' ? finalScore?.winner ?? null : null;
   const outcomeOf = (side: 'a' | 'b') => (winner === null ? undefined : winner === side ? 'winner' : 'loser');
   const withPenalty = winner !== null && finalScore?.penalty !== undefined;
@@ -132,7 +134,7 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
           ringColor={themeColors.progressBar}
           dimColor={themeColors.background}
         />
-        {winner === side && (
+        {winner === side && finalRound && (
           <span style={cupStyle} role="img" aria-label={t('liveMatch.winnerAria')} data-testid={`live-cup-${home ? 'home' : 'away'}`}>
             <Icons.Trophy size="1em" strokeWidth={2.4} />
           </span>

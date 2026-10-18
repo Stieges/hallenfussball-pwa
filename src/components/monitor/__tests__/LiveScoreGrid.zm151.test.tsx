@@ -85,11 +85,21 @@ describe('@ZM-151 Ergebniskästen: ein Raster für alle Zustände', () => {
     expect(screen.getByTestId('live-penalty-block')).toBeInTheDocument();
   });
 
-  it('der Sieger-Ring ist eine Outline (ändert die Größe nicht), der Pokal-Kreis liegt absolut über dem Kasten', () => {
-    render(<LiveMatchDisplay match={createMatch(ZUSTAENDE[5][1])} finalScore={ZUSTAENDE[5][2]} />);
+  it('der Sieger-Ring ist eine Outline (ändert die Größe nicht), der Pokal-Kreis (Finalrunde) liegt absolut über dem Kasten', () => {
+    render(<LiveMatchDisplay match={createMatch(ZUSTAENDE[5][1])} finalScore={ZUSTAENDE[5][2]} finalRound />);
     const kasten = screen.getByTestId('live-block-home').querySelector<HTMLElement>('[data-position]')!;
     expect(kasten.style.outline).not.toBe('');
     expect(kasten.style.borderWidth).toBe(screen.getByTestId('live-block-away').querySelector<HTMLElement>('[data-position]')!.style.borderWidth);
     expect(screen.getByTestId('live-cup-home').style.position).toBe('absolute');
+  });
+
+  it('@ZM-049 Gegenbeispiel: Gruppenspiel mit Sieger hat den Ring (Outline), aber keinen Pokal; die Kästen bleiben gleich', () => {
+    const { unmount } = render(<LiveMatchDisplay match={createMatch(ZUSTAENDE[3][1])} finalScore={ZUSTAENDE[3][2]} finalRound />);
+    const finale = kastenStile();
+    unmount();
+    render(<LiveMatchDisplay match={createMatch(ZUSTAENDE[3][1])} finalScore={ZUSTAENDE[3][2]} />);
+    expect(screen.getByTestId('live-block-home').querySelector<HTMLElement>('[data-position]')!.style.outline).not.toBe('');
+    expect(screen.queryByTestId('live-cup-home')).toBeNull();
+    expect(kastenStile()).toEqual(finale);
   });
 });

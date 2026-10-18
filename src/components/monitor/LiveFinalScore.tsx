@@ -22,10 +22,19 @@ export interface LiveFinalScoreProps {
 export function LiveFinalScore({ color, finalScore, names, accent }: LiveFinalScoreProps) {
   const { t } = useTranslation('monitor');
   if (finalScore?.penalty === undefined || finalScore.winner === null) {
+    // Sieg nach Verlängerung ohne Strafstoßschießen: „nach Verlängerung“ unter dem Endstand (Spec 4.4/4.5)
+    const nachVerlaengerung = Boolean(finalScore?.winner) && finalScore?.overtime !== undefined;
     return (
-      <div data-testid="live-endstand" data-monitor="uhr" style={{ fontSize: displayFontSizes.clockXL, fontWeight: cssVars.fontWeights.bold, lineHeight: 1, color, textAlign: 'center' }}>
-        {t('liveMatch.finalScore')}
-      </div>
+      <>
+        <div data-testid="live-endstand" data-monitor="uhr" style={{ fontSize: displayFontSizes.clockXL, fontWeight: cssVars.fontWeights.bold, lineHeight: 1, color, textAlign: 'center' }}>
+          {t('liveMatch.finalScore')}
+        </div>
+        {nachVerlaengerung && (
+          <div data-testid="live-after-overtime" style={{ fontSize: displayFontSizes.clockHint, fontWeight: cssVars.fontWeights.bold, lineHeight: displayLayout.scoreArea.hintLineHeight, color, textAlign: 'center' }}>
+            {t('liveMatch.afterOvertime')}
+          </div>
+        )}
+      </>
     );
   }
   const winner = monitorTeamName(finalScore.winner === 'a' ? names.home : names.away);

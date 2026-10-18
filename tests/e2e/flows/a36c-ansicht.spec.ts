@@ -106,7 +106,8 @@ test.describe('A-36c Verwaltung 360×640 (Spielplan)', () => {
 });
 
 /** Das Finale wird beendet, ohne einzelne Tore oder Schüsse: nur das Ergebnis steht im Turnier (wie nach Papier-Leitung). */
-async function beendeFinale(page: Page, ergebnis: { scoreA: number; scoreB: number; penaltyScoreA?: number; penaltyScoreB?: number; decidedBy: string }) {
+/** `gruppe`: das Spiel wird zum Gruppenspiel (kein Finalrunden-Spiel), um Ring ohne Pokal zu zeigen (@ZM-049). */
+async function beendeFinale(page: Page, ergebnis: { scoreA: number; scoreB: number; overtimeScoreA?: number; overtimeScoreB?: number; penaltyScoreA?: number; penaltyScoreB?: number; decidedBy: string; isFinal?: boolean; group?: string }) {
   await page.evaluate(({ id, werte }) => new Promise<void>((fertig, fehler) => {
     const auf = indexedDB.open('hallenfussball', 1);
     auf.onerror = () => fehler(new Error('IndexedDB'));
@@ -128,12 +129,12 @@ async function beendeFinale(page: Page, ergebnis: { scoreA: number; scoreB: numb
 }
 
 /** Ende nach Strafstoßschießen (Mockup K5g): nichts überlappt, Strafstoß mittig unter dem Doppelpunkt, Ring und Pokal nur am Sieger. */
-async function pruefeEnde(page: Page, siegerSeite: 'home' | 'away') {
+async function pruefeEnde(page: Page, siegerSeite: 'home' | 'away', pokal = true) {
   const kasten = (seite: string) => page.locator(`[data-testid="live-block-${seite}"] [data-position]`);
   const verlierer = siegerSeite === 'home' ? 'away' : 'home';
   await expect(kasten(siegerSeite)).toHaveAttribute('data-outcome', 'winner');
   await expect(kasten(verlierer)).toHaveAttribute('data-outcome', 'loser');
-  await expect(page.getByTestId(`live-cup-${siegerSeite}`)).toBeVisible();
+  await expect(page.getByTestId(`live-cup-${siegerSeite}`)).toHaveCount(pokal ? 1 : 0);
   await expect(page.getByTestId(`live-cup-${verlierer}`)).toHaveCount(0);
   const boxen = await page.evaluate(() => {
     const r = (sel: string) => { const b = document.querySelector(sel)?.getBoundingClientRect(); return b ? { l: b.left, r: b.right, t: b.top, b: b.bottom } : null; };
@@ -206,6 +207,26 @@ test.describe('A-36c Monitor 1280×720', () => {
     await expect(page.getByTestId('live-penalty-block')).toHaveCount(0);
     await expect(page.getByTestId('live-endstand')).toHaveText('Endstand');
     await bild(page, 'monitor-1280-live-ende-regulaer');
+  });
+
+  test('@ZM-049 Gruppenspiel: Ring um den Sieger, Name fett, Verlierer zurückgenommen, aber kein Pokal', async ({ page }) => {
+    await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-live', '[data-testid="live-slide-area"]');
+    await beendeFinale(page, { scoreA: 3, scoreB: 1, decidedBy: 'regular', isFinal: false, group: 'A' });
+    await expect(page.getByTestId('live-endstand')).toHaveText('Endstand', { timeout: 20000 });
+    await expect(page.locator('[data-testid="live-block-home"] [data-position]')).toHaveAttribute('data-outcome', 'winner');
+    await expect(page.locator('[data-testid="live-block-away"] [data-position]')).toHaveAttribute('data-outcome', 'loser');
+    await expect(page.getByTestId('live-cup-home')).toHaveCount(0);
+    await expect(page.getByTestId('live-cup-away')).toHaveCount(0);
+    await bild(page, 'monitor-1280-live-ende-gruppe');
+  });
+
+  test('@ZM-049 Sieg nach Verlängerung (Finalrunde): Ring, Pokal und „nach Verlängerung“', async ({ page }) => {
+    await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-live', '[data-testid="live-slide-area"]');
+    await beendeFinale(page, { scoreA: 1, scoreB: 1, overtimeScoreA: 1, overtimeScoreB: 0, decidedBy: 'overtime' });
+    await expect(page.getByTestId('live-after-overtime')).toHaveText('nach Verlängerung', { timeout: 20000 });
+    await expect(page.getByTestId('live-cup-home')).toBeVisible();
+    await expect(page.getByTestId('live-penalty-block')).toHaveCount(0);
+    await bild(page, 'monitor-1280-live-ende-verlaengerung');
   });
 });
 

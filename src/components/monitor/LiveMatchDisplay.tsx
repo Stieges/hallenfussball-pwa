@@ -44,6 +44,8 @@ export interface LiveMatchDisplayProps {
   /** Uhr-Art des Turniers (@ZM-137) */
   clockMode?: ClockMode;
   finalScore?: LiveFinalScoreProps['finalScore']; // Endstand der Ansicht (A-36c, @ZM-147)
+  /** Finalrunde (K.-o., Platzierungsspiel, Finale; `MatchView.phase === 'final'`): nur dort trägt der Sieger den Pokal, den Ring jeder Sieger (@ZM-049) */
+  finalRound?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -60,6 +62,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   hideScore = false,
   clockMode,
   finalScore,
+  finalRound = false,
 }) => {
   const { t } = useTranslation('monitor');
   const { themeColors } = useMonitorTheme(theme);
@@ -129,6 +132,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
           awayColor={awayColor}
           frames={frames}
           finalScore={finalScore}
+          finalRound={finalRound}
         />
 
         {/* Unterer Bereich: feste Höhe in jedem Zustand (B-44a2); H2: nach dem Abpfiff keine Uhr, nur das Endergebnis */}
