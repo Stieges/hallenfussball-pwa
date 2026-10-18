@@ -5,6 +5,8 @@
  * zwischengespeichert und neu geladen, sobald mehr Einträge bestätigt sind; (b) eigene noch nicht bestätigte Einträge
  * (Ausgang) → eigener Name nach derselben Regel wie der Server (Zwilling Z1, `authorNameRule`); (c) ohne
  * `writeMatchData` (Zwilling Z2, @FU-065), als Gast, ohne Netz oder bei Fehler → `null`, ohne Aufruf ohne Recht.
+ * Review A1: eigene wartende Einträge brauchen nur die Anmeldung, keine bekannte Rolle (ohne Netz ist sie oft
+ * unbekannt); kommt das Netz zurück (`online`), werden die Namen neu geladen.
  * Namen leben nur hier in der Ansicht, nie in `EngineEvent.actorUser` oder im Engine-Zustand (R-UR-2).
  * Szenarien: @FU-080, @FU-082, @FU-065.
  */
@@ -60,6 +62,13 @@ export function useEventAuthors(tournamentId: string, matchId: string): EventAut
   const accountId = context?.accountId ?? '';
   const id = matchId.toLowerCase();
   const canSee = isAuthenticated && role !== null && hasPermission(role, 'writeMatchData');
+  const [onlineTick, setOnlineTick] = useState(0);
+
+  useEffect(() => {
+    const onOnline = (): void => { setOnlineTick((tick) => tick + 1); };
+    window.addEventListener('online', onOnline);
+    return () => { window.removeEventListener('online', onOnline); };
+  }, []);
 
   const [snapshot, setSnapshot] = useState<Snapshot>(() => (engine ? snapshotOf(engine, id) : { confirmedCount: 0, ownIds: [] }));
   const [names, setNames] = useState<ReadonlyMap<string, EventAuthor>>(() => cache.get(`${accountId}|${id}`)?.names ?? new Map());
@@ -98,19 +107,19 @@ export function useEventAuthors(tournamentId: string, matchId: string): EventAut
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
-  }, [canSee, accountId, id, confirmedCount]);
+  }, [canSee, accountId, id, confirmedCount, onlineTick]);
 
   const ownName = authorNameRule({ isOwner: role === 'owner', label: null, displayName: user?.name ?? null });
   const { ownIds } = snapshot;
   const nameOf = useCallback((eventId: string): string | null => {
+    if (isAuthenticated && ownIds.includes(eventId)) {
+      return ownName;
+    }
     if (!canSee) {
       return null;
     }
-    if (ownIds.includes(eventId)) {
-      return ownName;
-    }
     return names.get(eventId)?.name ?? null;
-  }, [canSee, ownIds, ownName, names]);
+  }, [isAuthenticated, canSee, ownIds, ownName, names]);
 
   return { nameOf };
 }

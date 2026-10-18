@@ -10,9 +10,10 @@ import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
-const auth = vi.hoisted(() => ({ isAuthenticated: true, name: 'Olli', role: 'owner' }));
+const auth = vi.hoisted((): { isAuthenticated: boolean; guestUser: boolean; name: string; role: string | null } => ({ isAuthenticated: true, guestUser: false, name: 'Olli', role: 'owner' }));
 vi.mock('../../auth/hooks/useAuth', () => ({
-  useAuth: () => ({ isAuthenticated: auth.isAuthenticated, user: auth.isAuthenticated ? { id: 'olli', name: auth.name } : null }),
+  // Gast (globalRole guest): ein lokaler Nutzer mit Namen existiert, gilt aber nicht als angemeldet.
+  useAuth: () => ({ isAuthenticated: auth.isAuthenticated, user: auth.isAuthenticated || auth.guestUser ? { id: 'olli', name: auth.name } : null }),
 }));
 vi.mock('../../auth/hooks/useMyTournamentRole', () => ({
   useMyTournamentRole: () => ({ role: auth.role, isLoading: false }),
@@ -50,6 +51,7 @@ describe('UR useEventAuthors -- Name des Urhebers je Eintrag', () => {
   beforeEach(() => {
     vi.stubGlobal('indexedDB', new IDBFactory());
     auth.isAuthenticated = true;
+    auth.guestUser = false;
     auth.name = 'Olli';
     auth.role = 'owner';
     authors.read.mockReset();
@@ -126,6 +128,50 @@ describe('UR useEventAuthors -- Name des Urhebers je Eintrag', () => {
     await act(async () => { await settle(); });
 
     expect(result.current.nameOf('e1')).toBeNull();
+  });
+
+  // Review UR A1: ohne Netz ist die Rolle oft unbekannt (useMyTournamentRole fragt den Server) -- der eigene wartende
+  // Eintrag zeigt trotzdem den eigenen Namen (@FU-080 „Ergebnis eingetragen von Olli“), sobald man angemeldet ist.
+  it('A1 @FU-080: Rolle ohne Netz unbekannt (null) → eigener wartender Eintrag zeigt trotzdem „Olli“', async () => {
+    auth.role = null;
+    h = await makeScheduleEngine(undefined, { offline: true });
+    await h.engine.ensureMatch(SPIEL_9, CTX, 'T');
+    const commands = new MatchCommands({ engine: h.engine, store: h.store, sender: h.sender, accountId: h.value.accountId });
+    const id = await commands.enterResult(SPIEL_9, CTX, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 }, undefined, false);
+    const { result } = renderHook(() => useEventAuthors('T', SPIEL_9), { wrapper: wrapperFor(h) });
+
+    await waitFor(() => { expect(result.current.nameOf(id ?? '')).toBe('Olli'); });
+    expect(authors.read).not.toHaveBeenCalled();
+  });
+
+  it('A1 Gegenbeispiel: nicht angemeldet (Gast „Gast“) → eigener wartender Eintrag ohne Namen', async () => {
+    auth.isAuthenticated = false;
+    auth.guestUser = true;
+    auth.name = 'Gast';
+    auth.role = null;
+    h = await makeScheduleEngine(undefined, { offline: true });
+    await h.engine.ensureMatch(SPIEL_9, CTX, 'T');
+    const commands = new MatchCommands({ engine: h.engine, store: h.store, sender: h.sender, accountId: h.value.accountId });
+    const id = await commands.enterResult(SPIEL_9, CTX, 'leitung', { [SV_SUED]: 3, [FC_NORD]: 1 }, undefined, false);
+    const { result } = renderHook(() => useEventAuthors('T', SPIEL_9), { wrapper: wrapperFor(h) });
+    await act(async () => { await settle(); });
+
+    expect(result.current.nameOf(id ?? '')).toBeNull();
+  });
+
+  it('A1: Netz kommt zurück (online) → Namen werden erneut geladen', async () => {
+    h = await makeScheduleEngine();
+    await spiel9MitBestaetigtemEintrag(h);
+    authors.read.mockResolvedValueOnce(new Map());
+    const { result } = renderHook(() => useEventAuthors('T', SPIEL_9), { wrapper: wrapperFor(h) });
+    await waitFor(() => { expect(authors.read).toHaveBeenCalledTimes(1); });
+    expect(result.current.nameOf('e1')).toBeNull();
+
+    authors.read.mockResolvedValue(new Map([['e1', { name: 'Olli', role: 'owner' }]]));
+    await act(async () => { window.dispatchEvent(new Event('online')); await settle(); });
+
+    await waitFor(() => { expect(result.current.nameOf('e1')).toBe('Olli'); });
+    expect(authors.read).toHaveBeenCalledTimes(2);
   });
 
   it('Z1: Mitglied ohne label aus eigenen Daten → Profilname (Maria, „maria.k“)', async () => {
