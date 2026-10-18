@@ -90,6 +90,16 @@ describe('A-08f3e4 useMatchEntryGuard', () => {
     expect(toast.showWarning).toHaveBeenCalledWith('Spiel 9 hat Einträge – nur über Spielplan auf Anfang setzen');
   });
 
+  it('@FU-090 F-b: ohne Spielnummer nennt der Text die Stelle im Spielplan, nicht die Runde', async () => {
+    revisionSource.led = new Set([SPIEL_9]);
+    const ohneNummer = scheduleTournament({ [SPIEL_7]: { matchNumber: undefined, round: 1 }, [SPIEL_9]: { matchNumber: undefined, round: 1 } });
+    const guard = render(h);
+
+    await act(async () => { await guard.current.blocks(ohneNummer); });
+
+    expect(toast.showWarning).toHaveBeenCalledWith('Spiel 2 hat Einträge – nur über Spielplan auf Anfang setzen');
+  });
+
   it('Gegenbeispiel: ohne Einträge → nicht gesperrt, kein Hinweis', async () => {
     const guard = render(h);
 

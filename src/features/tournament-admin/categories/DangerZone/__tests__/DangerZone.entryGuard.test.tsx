@@ -53,7 +53,7 @@ function renderDangerZone(h: ScheduleEngine) {
 
 async function resetResults(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: /Spielplan zurücksetzen/i }));
-  const dialog = screen.getByRole('dialog');
+  const dialog = await screen.findByRole('dialog');
   await user.type(within(dialog).getByRole('textbox'), 'ZURÜCKSETZEN');
   await user.click(within(dialog).getByRole('button', { name: /Spielplan zurücksetzen/i }));
 }
@@ -75,9 +75,10 @@ describe('A-08f3e4 DangerZone: Zurücksetzen löscht keine Einträge still (@FU-
     const user = userEvent.setup();
     const { onLocalTournamentUpdate, onMatchesUpdate } = renderDangerZone(h);
 
-    await resetResults(user);
+    await user.click(screen.getByRole('button', { name: /Spielplan zurücksetzen/i }));
 
     expect(await screen.findByText('Spiel 7 hat Einträge – nur über Spielplan auf Anfang setzen')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument(); // Fixrunde 1 (7): kein Bestätigungswort angeboten
     expect(onLocalTournamentUpdate).not.toHaveBeenCalled();
     expect(onMatchesUpdate).not.toHaveBeenCalled();
     expect(await entryCount(h, SPIEL_7)).toBe(5);

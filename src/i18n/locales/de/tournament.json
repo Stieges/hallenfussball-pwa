@@ -125,7 +125,8 @@
       "blocked": "Spiel {{number}} hat Einträge – nur über Spielplan auf Anfang setzen",
       "unreadable": "Einträge konnten nicht geprüft werden – nichts geändert",
       "restoreKept_one": "Bei {{count}} Spiel mit Einträgen wurde das Ergebnis nicht wiederhergestellt",
-      "restoreKept_other": "Bei {{count}} Spielen mit Einträgen wurden die Ergebnisse nicht wiederhergestellt"
+      "restoreKept_other": "Bei {{count}} Spielen mit Einträgen wurden die Ergebnisse nicht wiederhergestellt",
+      "restoreServerLed": "Ergebnisse werden nicht aus der Sicherung übernommen – der Server führt sie"
     },
     "resultEntry": {
       "running": "Spiel läuft – Ergebnis erst nach dem Abpfiff",

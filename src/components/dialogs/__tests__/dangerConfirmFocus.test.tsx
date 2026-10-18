@@ -24,6 +24,10 @@ vi.mock('../../../features/auth/hooks/useTournamentMembers', () => ({
   useTournamentMembers: () => useTournamentMembersMock(),
 }));
 
+// A-08f3e4 Fixrunde 1: Turnier ohne Einträge -- ohne Spiel-Engine sperrte der Wächter schon das Öffnen der Rückfrage.
+vi.mock('../../../hooks/useMatchEntryGuard', () => ({
+  useMatchEntryGuard: () => ({ blocks: async () => false, read: async () => ({ matches: [], unreadable: false }), notify: () => undefined, isGuest: false }),
+}));
 import { DangerZoneCategory } from '../../../features/tournament-admin/categories/DangerZone/index';
 import { TeamsTab } from '../../../features/tournament-management/TeamsTab';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';

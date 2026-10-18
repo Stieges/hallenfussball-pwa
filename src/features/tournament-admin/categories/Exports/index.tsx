@@ -277,10 +277,11 @@ export function ExportsCategory({
 
         // Apply restored data (keep the current tournament ID). A-08f3e4 (@FU-091): Ergebnisse von Spielen mit Einträgen
         // bleiben (F2: bei Konto-Turnieren alle), Hinweis mit Anzahl; Spielplan-/Turnierdaten wie bisher über das Speichern.
-        const { restored, keptCount } = keepResultsOnRestore(tournament, { ...data.tournament, id: tournament.id, updatedAt: new Date().toISOString() },
+        const { restored, keptCount, serverLedCount } = keepResultsOnRestore(tournament, { ...data.tournament, id: tournament.id, updatedAt: new Date().toISOString() },
           await entryGuard.read(tournament), entryGuard.isGuest);
         await onTournamentUpdate(restored);
         if (keptCount > 0) { entryGuard.notify(tTournament('schedule.entriesGuard.restoreKept', { count: keptCount })); }
+        if (serverLedCount > 0) { entryGuard.notify(tTournament('schedule.entriesGuard.restoreServerLed')); } // F-c
         setExportSuccess(t('exports.restoreSuccess'));
         setTimeout(() => setExportSuccess(null), 3000);
       } catch (error) {

@@ -17,6 +17,7 @@ import {
   type ServerLedMatchPatch,
 } from '../../../../core/repositories/serverLedMatchFields';
 import type { MatchEntryReading } from '../../../../hooks/useMatchEntryGuard';
+import { hydrateTournament } from '../../../../core/repositories/hydration';
 
 /** Spiel ohne Ergebnis, geplant (für Spiele, die es nur in der Sicherung gibt). */
 const NO_RESULT: ServerLedMatchPatch = {
@@ -24,12 +25,17 @@ const NO_RESULT: ServerLedMatchPatch = {
   matchStatus: 'scheduled',
 };
 
+const differs = (a: Tournament['matches'][number], b: Tournament['matches'][number]): boolean =>
+  SERVER_LED_MATCH_FIELDS.some((field) => (a[field] ?? undefined) !== (b[field] ?? undefined));
+
 export function keepResultsOnRestore(
   current: Tournament,
-  restored: Tournament,
+  backup: Tournament,
   entries: MatchEntryReading,
   isGuest: boolean,
-): { restored: Tournament; keptCount: number } {
+): { restored: Tournament; keptCount: number; serverLedCount: number } {
+  // Fixrunde 1: die Sicherung ist JSON (Anstoßzeiten als Text) -- ohne Hydrierung stürzte die Turnierverwaltung danach ab.
+  const restored = hydrateTournament(backup);
   const withEntries = new Set(entries.matches.map((match) => match.id));
   const keepAll = !isGuest || entries.unreadable;
   const currentById = new Map(current.matches.map((match) => [match.id, match]));
@@ -43,5 +49,8 @@ export function keepResultsOnRestore(
     }
   }
   const keptCount = restored.matches.filter((match) => withEntries.has(match.id)).length;
-  return { restored: { ...restored, matches: applyServerLedPatch(restored.matches, patch) }, keptCount };
+  // M-2/F-c: Konto-Turnier -- Ergebnisse aus der Sicherung ohne Einträge, die nicht übernommen werden (Hinweis „der Server führt sie“)
+  const next = applyServerLedPatch(restored.matches, patch);
+  const serverLedCount = keepAll ? restored.matches.filter((match, i) => !withEntries.has(match.id) && differs(match, next[i])).length : 0;
+  return { restored: { ...restored, matches: next }, keptCount, serverLedCount };
 }

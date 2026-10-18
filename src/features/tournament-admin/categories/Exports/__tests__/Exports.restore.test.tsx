@@ -34,7 +34,7 @@ const aktuell = (): Tournament => scheduleTournament({ [SPIEL_7]: { scoreA: 2, s
 const sicherung = (): Tournament => ({
   ...scheduleTournament({
     [SPIEL_7]: { scoreA: 0, scoreB: 0, matchStatus: 'scheduled' },
-    [SPIEL_9]: { scoreA: 3, scoreB: 3, matchStatus: 'finished' },
+    [SPIEL_9]: { scoreA: 3, scoreB: 3, matchStatus: 'finished', scheduledTime: new Date('2026-10-18T10:00:00.000Z') },
   }),
   title: 'Live-Cup (Sicherung)',
 });
@@ -83,6 +83,7 @@ describe('A-08f3e4 Sicherung wiederherstellen überschreibt keine Ergebnisse von
 
     expect(match(SPIEL_7)).toMatchObject({ scoreA: 2, scoreB: 1, matchStatus: 'finished' });
     expect(restored.title).toBe('Live-Cup (Sicherung)'); // Spielplan-/Turnierdaten wie heute
+    expect(match(SPIEL_9)?.scheduledTime).toBeInstanceOf(Date); // Fixrunde 1: Sicherung hydriert (sonst Absturz der Verwaltung)
     expect(await screen.findByText(HINWEIS_1)).toBeInTheDocument();
     expect(onMatchesUpdate).not.toHaveBeenCalled(); // kein Altweg mehr
   });
@@ -107,6 +108,16 @@ describe('A-08f3e4 Sicherung wiederherstellen überschreibt keine Ergebnisse von
     expect(match(SPIEL_9)).toMatchObject({ scoreA: undefined, scoreB: undefined, matchStatus: 'scheduled' });
   });
 
+  it('F-c Konto-Turnier ohne Einträge: Ergebnisse der Sicherung bleiben draußen, Hinweis „der Server führt sie“', async () => {
+    h = await makeScheduleEngine();
+
+    const { match } = await restore(h);
+
+    expect(match(SPIEL_9)).toMatchObject({ scoreA: undefined, matchStatus: 'scheduled' });
+    expect(await screen.findByText('Ergebnisse werden nicht aus der Sicherung übernommen – der Server führt sie')).toBeInTheDocument();
+    expect(screen.queryByText(/mit Einträgen/)).not.toBeInTheDocument();
+  });
+
   it('Gegenbeispiel Gast ohne Einträge: alles wird wiederhergestellt, kein Hinweis', async () => {
     h = await makeScheduleEngine('guest');
 
@@ -115,5 +126,6 @@ describe('A-08f3e4 Sicherung wiederherstellen überschreibt keine Ergebnisse von
     expect(match(SPIEL_7)).toMatchObject({ scoreA: 0, scoreB: 0, matchStatus: 'scheduled' });
     expect(match(SPIEL_9)).toMatchObject({ scoreA: 3, scoreB: 3 });
     expect(screen.queryByText(/mit Einträgen/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/der Server führt sie/)).not.toBeInTheDocument();
   });
 });

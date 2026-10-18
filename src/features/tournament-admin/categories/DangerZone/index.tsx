@@ -264,11 +264,12 @@ export function DangerZoneCategory({
   // @OB-014: Fokus der Rückfrage liegt zuerst auf „Abbrechen".
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
-  const handleOpenDialog = useCallback((action: DangerAction) => {
-    const config = DANGER_ACTIONS[action];
-    setPendingAction(config);
+  const handleOpenDialog = useCallback(async (action: DangerAction) => {
+    // A-08f3e4 (@FU-090): mit Einträgen gar nicht erst das Bestätigungswort anbieten -- Hinweis sofort
+    if (action === 'reset_schedule' && await entryGuard.blocks(tournament)) { return; }
+    setPendingAction(DANGER_ACTIONS[action]);
     setConfirmationInput('');
-  }, []);
+  }, [entryGuard, tournament]);
 
   const handleCloseDialog = useCallback(() => {
     if (!isExecuting) {
@@ -384,7 +385,7 @@ export function DangerZoneCategory({
             ...styles.button,
             ...(isDanger ? styles.buttonDanger : styles.buttonWarning),
           }}
-          onClick={() => handleOpenDialog(action)}
+          onClick={() => { void handleOpenDialog(action); }}
         >
           {config.buttonLabel}
         </button>

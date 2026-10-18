@@ -71,9 +71,10 @@ export function useMatchEntryGuard(): MatchEntryGuard {
     if (matches.length === 0) {
       return false;
     }
-    notify(unreadable
-      ? t('schedule.entriesGuard.unreadable')
-      : t('schedule.entriesGuard.blocked', { number: matches[0].matchNumber ?? matches[0].round }));
+    // F-b: das erste betroffene Spiel in Spielplan-Reihenfolge; ohne Spielnummer die Stelle im Spielplan (wie der Generator)
+    const first = matches[0];
+    const number = first.matchNumber ?? (tournament.matches ?? []).indexOf(first) + 1;
+    notify(unreadable ? t('schedule.entriesGuard.unreadable') : t('schedule.entriesGuard.blocked', { number }));
     return true;
   }, [read, notify, t]);
 
