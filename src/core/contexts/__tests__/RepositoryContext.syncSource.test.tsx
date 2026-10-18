@@ -6,8 +6,6 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 // eslint-disable-next-line no-restricted-imports -- RepositoryContext ist eine bewusste React-Bridge; Test über React Testing Library.
 import { render } from '@testing-library/react';
-// eslint-disable-next-line no-restricted-imports -- s.o.
-import React from 'react';
 
 vi.mock('../../../lib/sentry', () => ({ captureFeatureError: vi.fn() }));
 vi.mock('../../../lib/supabase', () => ({

@@ -14,12 +14,13 @@ import {
 } from '../../../../core/repositories/activeTournamentSyncSource';
 
 type Result = { data: unknown; error: { message: string } | null };
+/** Antwort der Mitglieder-Abfrage (`tournament_collaborators`); 'throw' = kein Netz. */
+type MembersAnswer = Result | 'throw';
 
-const net = vi.hoisted(() => ({
-  /** Antwort der Mitglieder-Abfrage (`tournament_collaborators`); 'throw' = kein Netz. */
-  members: { data: [], error: null },
-  rpc: vi.fn(),
-}));
+const net = vi.hoisted(() => {
+  const state: { members: MembersAnswer; rpc: ReturnType<typeof vi.fn> } = { members: { data: [], error: null }, rpc: vi.fn() };
+  return state;
+});
 
 vi.mock('../useAuth', () => ({ useAuth: () => ({ isAuthenticated: true, user: { id: 'olli' } }) }));
 
