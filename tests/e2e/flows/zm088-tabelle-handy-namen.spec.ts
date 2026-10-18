@@ -174,3 +174,13 @@ test('@ZM-169 Gegenbeispiel Desktop 1280: Gruppentabelle zeigt weiter den vollen
   await expect(page.locator('.standings-table .desktop-view').first().getByText(VOLL)).toBeVisible();
   await expect(page.locator('.standings-table .desktop-view').getByText('SG FF Nordheim-Süd 1921')).toHaveCount(0);
 });
+
+test('@ZM-169 Handy 360: auch die Tabellen-Ansicht der Verwaltung zeigt das Vereinskürzel in der Gruppentabelle', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 640 });
+  await installiereSaat(page.context(), leseSaat('hallencup-messlauf'));
+  await page.goto('/#/tournament/hallencup-messlauf/standings');
+  await expect(page.locator('.standings-table').first()).toBeAttached({ timeout: 25000 });
+  const mobil = page.locator('.standings-table .mobile-view').first();
+  await expect(mobil).toContainText('SG FF Nordheim-Süd 1921');
+  await expect(mobil).not.toContainText(VOLL);
+});

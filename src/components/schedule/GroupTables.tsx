@@ -6,7 +6,7 @@
 
 import { CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../design-tokens'
+import { cssVars, breakpointValues } from '../../design-tokens'
 import { Standing, TeamLogo, TeamColors } from '../../types/tournament';
 import type { ScheduleSource } from './scheduleSource';
 import { getGroupDisplayName } from '../../utils/displayNames';
@@ -491,7 +491,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
         }
 
         /* Sehr schmale Handys (320-360): Teamspalte bekommt jeden Bildpunkt (@ZM-088, @OB-060) */
-        @media (max-width: 360px) {
+        @media (max-width: ${breakpointValues.narrowPhone}px) {
           .standings-table {
             padding-left: 0 !important;
             padding-right: 0 !important;
