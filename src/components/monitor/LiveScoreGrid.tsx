@@ -134,7 +134,7 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
         />
         {winner === side && (
           <span style={cupStyle} role="img" aria-label={t('liveMatch.winnerAria')} data-testid={`live-cup-${home ? 'home' : 'away'}`}>
-            <Icons.TrophyCup size="1em" />
+            <Icons.Trophy size="1em" strokeWidth={2.4} />
           </span>
         )}
       </div>

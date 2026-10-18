@@ -46,7 +46,7 @@ describe('@ZM-147 @ZM-049 K5g4: Ergebnis nur eingetragen (ohne Schüsse)', () =>
     expect(kasten('home').style.outline).toContain(displayLayout.scoreArea.frameWidthStrong);
     expect(screen.getByTestId('live-cup-home')).toBeInTheDocument();
     // Fixrunde 4: Pokal-Symbol (Mockup: Lucide „trophy“), Beschriftung „Pokal“
-    expect(screen.getByTestId('live-cup-home').querySelector('[data-icon="trophy-cup"]')).not.toBeNull();
+    expect(screen.getByTestId('live-cup-home').querySelector('[data-icon="trophy"]')).not.toBeNull();
     expect(screen.getByRole('img', { name: 'Pokal' })).toBe(screen.getByTestId('live-cup-home'));
     expect(screen.getByTestId('live-cup-home').style.width).toBe(displayLayout.scoreArea.monitorCup);
     expect(kasten('away').dataset.outcome).toBe('loser');
@@ -84,7 +84,7 @@ describe('@ZM-147 @ZM-049 K5g4: Ergebnis nur eingetragen (ohne Schüsse)', () =>
     await ende(NUR_ERGEBNIS);
     const sieger = screen.getByTestId('live-winner');
     expect(sieger.textContent).toBe('FC Nord gewinnt');
-    expect(sieger.querySelector('[data-icon="trophy-cup"]')).not.toBeNull();
+    expect(sieger.querySelector('[data-icon="trophy"]')).not.toBeNull();
     // Fixrunde 4: Teamname fett (800), „gewinnt“ normal (Mockup `.fin b`)
     const fett = screen.getByTestId('live-winner-name');
     expect(fett.textContent).toBe('FC Nord');
