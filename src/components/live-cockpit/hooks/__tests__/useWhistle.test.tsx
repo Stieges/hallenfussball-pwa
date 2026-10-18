@@ -1,7 +1,7 @@
 /**
  * useWhistle (B-08c): einzige Quelle für Abpfiff-Ton und Vibration, genau einmal je gesendetem Ende-Ereignis
  * dieses Geräts. Testwerte aus @SL-009 (genau einmal Ton), @SL-062 (Ton und Vibration), @SL-063 (Ton aus),
- * @SL-005 (Ton beim Abschnittsende), @FU-070 (zweites Auslösen, kein zweiter Ton), @SL-125 (Vibration bleibt).
+ * @SL-005 (Ton beim Abschnittsende), @FU-070 (zweites Auslösen, kein zweiter Ton) (Vibration bleibt).
  */
 import { renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -64,7 +64,7 @@ describe('useWhistle', () => {
     expect(vibrate).not.toHaveBeenCalled();
   });
 
-  it('@SL-063 @SL-125 Ton aus: kein Ton, die Vibration bleibt', () => {
+  it('@SL-063 Ton aus: kein Ton, die Vibration bleibt', () => {
     const o = optionen({ soundEnabled: false });
     const { result } = renderHook(() => useWhistle(o));
     result.current.pfeife('end-1', 'spiel');

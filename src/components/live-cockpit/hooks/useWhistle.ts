@@ -3,7 +3,7 @@
  * je gesendetem Ende-Ereignis dieses Geräts (Schlüssel = Ereignis-ID); ein zweites Auslösen desselben Endes, ein
  * Neuzeichnen oder ein Neuladen (kein neues Ereignis) pfeift nicht noch einmal. Ton bei Abschnittsende und Abpfiff
  * (nur wenn eingeschaltet), Vibration nur beim Abpfiff (nur wenn eingeschaltet und möglich).
- * Szenarien: @SL-005, @SL-009, @SL-062, @SL-063, @SL-125, @FU-070.
+ * Szenarien: @SL-005, @SL-009, @SL-062, @SL-063, @FU-070.
  */
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
