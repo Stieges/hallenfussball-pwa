@@ -359,7 +359,7 @@
       "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app",
       "klick": [
-        "button:has-text(\"Feld 2\")"
+        "role=button[name=/Feld 2/]"
       ]
     },
     {

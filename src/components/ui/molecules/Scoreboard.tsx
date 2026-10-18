@@ -77,9 +77,11 @@ const BADGE: Record<ScoreboardTon, { bg: string; fg: string }> = {
   info: { bg: cssVars.colors.scoreboardInfo, fg: cssVars.colors.scoreboardOnHighlight },
 };
 
-const ZEILE_PX = cssVars.spacing.lg;
+/** Höhe der Kopfzeile; die Tippfläche der Abzeichen (44 px) ragt darüber hinaus (`ueberstand`) und braucht dort Platz. */
+const zeileHoehe = (gross: boolean): string => (gross ? cssVars.spacing.xl : cssVars.spacing.lg);
+const ueberstandVon = (hoehe: string): string => `max(0px, calc((${cssVars.touchTargets.minimum} - ${hoehe}) / 2))`;
 
-function Abzeichen({ label, kurz, icon, onAntippen, testId }: { label: string; kurz?: string; icon: ReactNode; onAntippen?: () => void; testId?: string }): ReactElement {
+function Abzeichen({ label, kurz, icon, onAntippen, testId, hoehe }: { label: string; kurz?: string; icon: ReactNode; onAntippen?: () => void; testId?: string; hoehe: string }): ReactElement {
   const marke: CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs, padding: `0 ${cssVars.spacing.sm}`,
     border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.scoreboardBorder}`, borderRadius: cssVars.borderRadius.full,
@@ -92,7 +94,7 @@ function Abzeichen({ label, kurz, icon, onAntippen, testId }: { label: string; k
   // Tippfläche 44 px; der negative Rand hält die Zeile in ihrer Höhe (wie das Kreuz der Meldezeile)
   const flaeche: CSSProperties = {
     minHeight: cssVars.touchTargets.minimum, minWidth: cssVars.touchTargets.minimum,
-    margin: `calc(-1 * (${cssVars.touchTargets.minimum} - ${ZEILE_PX}) / 2) calc(-1 * ${cssVars.spacing.xs})`,
+    margin: `calc(-1 * ${ueberstandVon(hoehe)}) 0`,
     padding: 0, background: 'none', border: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     cursor: 'pointer', color: 'inherit', fontFamily: 'inherit',
   };
@@ -108,16 +110,20 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
   const id = (teil: string): string | undefined => (testId ? `${testId}-${teil}` : undefined);
   const uhr = model.uhr;
   const icon = iconSizeValues.xs;
+  const hoehe = zeileHoehe(gross);
+  const ueberstand = ueberstandVon(hoehe);
+  const rasterAbstand = gross ? cssVars.spacing.sm : cssVars.spacing.xs;
 
   const tafel: CSSProperties = {
-    display: 'grid', gap: gross ? cssVars.spacing.sm : cssVars.spacing.xs, minWidth: 0, boxSizing: 'border-box',
+    display: 'grid', gap: rasterAbstand, minWidth: 0, boxSizing: 'border-box',
     padding: gross ? cssVars.spacing.md : `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
     background: cssVars.colors.scoreboardBg, color: cssVars.colors.scoreboardText,
     border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.scoreboardDivider}`, borderRadius: cssVars.borderRadius.lg,
   };
   const kopf: CSSProperties = {
-    display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    minHeight: gross ? cssVars.spacing.xl : ZEILE_PX, minWidth: 0,
+    display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: `${ueberstand} ${cssVars.spacing.sm}`,
+    // Die Tippfläche der Abzeichen ragt unter die Zeile: so viel Luft darunter, dass sie keinen Text der nächsten Zeile schneidet
+    minHeight: hoehe, minWidth: 0, marginBottom: `max(0px, calc(${ueberstand} - ${rasterAbstand}))`,
   };
   const badge: CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs, padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
@@ -186,10 +192,10 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
         <span style={abschnitt}>{model.abschnittText}</span>
         <span style={rechts}>
           {kopfRechts}
-          {tonHinweis && <Abzeichen label={tonHinweis.label} kurz={tonHinweis.kurz} icon={<TafelIcons.VolumeOff size={icon} />} onAntippen={tonHinweis.onAntippen} testId={id('ton')} />}
-          {wachhaltenHinweis && <Abzeichen label={wachhaltenHinweis.label} kurz={wachhaltenHinweis.kurz} icon={<TafelIcons.Lock size={icon} />} onAntippen={wachhaltenHinweis.onAntippen} testId={id('wachhalten')} />}
-          {model.eintraegeWartenText && <Abzeichen label={model.eintraegeWartenText} icon={<Icons.Upload size={icon} />} testId={id('eintraege-warten')} />}
-          {model.helferAnfragenText && <Abzeichen label={model.helferAnfragenText} icon={<Icons.Users size={icon} />} onAntippen={onHelferAnfragen} testId={id('helfer-anfragen')} />}
+          {tonHinweis && <Abzeichen hoehe={hoehe} label={tonHinweis.label} kurz={tonHinweis.kurz} icon={<TafelIcons.VolumeOff size={icon} />} onAntippen={tonHinweis.onAntippen} testId={id('ton')} />}
+          {wachhaltenHinweis && <Abzeichen hoehe={hoehe} label={wachhaltenHinweis.label} kurz={wachhaltenHinweis.kurz} icon={<TafelIcons.Lock size={icon} />} onAntippen={wachhaltenHinweis.onAntippen} testId={id('wachhalten')} />}
+          {model.eintraegeWartenText && <Abzeichen hoehe={hoehe} label={model.eintraegeWartenText} icon={<Icons.Upload size={icon} />} testId={id('eintraege-warten')} />}
+          {model.helferAnfragenText && <Abzeichen hoehe={hoehe} label={model.helferAnfragenText} icon={<Icons.Users size={icon} />} onAntippen={onHelferAnfragen} testId={id('helfer-anfragen')} />}
         </span>
       </div>
 
