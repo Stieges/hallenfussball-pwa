@@ -105,6 +105,53 @@ test.describe('A-36c Verwaltung 360×640 (Spielplan)', () => {
   });
 });
 
+/** Das Finale wird beendet, ohne einzelne Tore oder Schüsse: nur das Ergebnis steht im Turnier (wie nach Papier-Leitung). */
+async function beendeFinale(page: Page, ergebnis: { scoreA: number; scoreB: number; penaltyScoreA?: number; penaltyScoreB?: number; decidedBy: string }) {
+  await page.evaluate(({ id, werte }) => new Promise<void>((fertig, fehler) => {
+    const auf = indexedDB.open('hallenfussball', 1);
+    auf.onerror = () => fehler(new Error('IndexedDB'));
+    auf.onsuccess = () => {
+      const tx = auf.result.transaction('cache', 'readwrite');
+      const speicher = tx.objectStore('cache');
+      const lesen = speicher.get('tournaments');
+      lesen.onsuccess = () => {
+        const eintrag = lesen.result as { key: string; value: Array<{ id: string; matches: Array<Record<string, unknown>> }> };
+        const spiel = eintrag.value.find((t) => t.id === 'hallencup-messlauf')?.matches.find((m) => m.id === id);
+        if (!spiel) { fehler(new Error('Finale fehlt')); return; }
+        Object.assign(spiel, { matchStatus: 'finished', timerStartTime: undefined, timerElapsedSeconds: 600, ...werte });
+        speicher.put(eintrag);
+      };
+      tx.oncomplete = () => fertig();
+      tx.onerror = () => fehler(new Error('Schreiben'));
+    };
+  }), { id: FINALE, werte: ergebnis });
+}
+
+/** Ende nach Strafstoßschießen (Mockup K5g): nichts überlappt, Strafstoß mittig unter dem Doppelpunkt, Ring und Pokal nur am Sieger. */
+async function pruefeEnde(page: Page, siegerSeite: 'home' | 'away') {
+  const kasten = (seite: string) => page.locator(`[data-testid="live-block-${seite}"] [data-position]`);
+  const verlierer = siegerSeite === 'home' ? 'away' : 'home';
+  await expect(kasten(siegerSeite)).toHaveAttribute('data-outcome', 'winner');
+  await expect(kasten(verlierer)).toHaveAttribute('data-outcome', 'loser');
+  await expect(page.getByTestId(`live-cup-${siegerSeite}`)).toBeVisible();
+  await expect(page.getByTestId(`live-cup-${verlierer}`)).toHaveCount(0);
+  const boxen = await page.evaluate(() => {
+    const r = (sel: string) => { const b = document.querySelector(sel)?.getBoundingClientRect(); return b ? { l: b.left, r: b.right, t: b.top, b: b.bottom } : null; };
+    return { px: r('[data-testid="live-penalty-block"]'), sep: r('[data-testid="live-separator"]'), home: r('[data-testid="live-name-home"] [data-teamname]'), away: r('[data-testid="live-name-away"] [data-teamname]'), winner: r('[data-testid="live-winner"]'), grid: r('[data-testid="live-grid"]'), kHome: r('[data-testid="live-block-home"]'), kAway: r('[data-testid="live-block-away"]') };
+  });
+  const schneiden = (a: { l: number; r: number; t: number; b: number } | null, b: { l: number; r: number; t: number; b: number } | null) =>
+    a !== null && b !== null && a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+  expect(boxen.px).not.toBeNull();
+  expect(schneiden(boxen.px, boxen.home), 'Strafstoß überlappt den linken Namen').toBe(false);
+  expect(schneiden(boxen.px, boxen.away), 'Strafstoß überlappt den rechten Namen').toBe(false);
+  expect(schneiden(boxen.px, boxen.kHome) || schneiden(boxen.px, boxen.kAway), 'Strafstoß überlappt einen Kasten (Beschriftung abgeschnitten)').toBe(false);
+  expect(schneiden(boxen.winner, boxen.home) || schneiden(boxen.winner, boxen.away), 'Siegerzeile überlappt einen Namen ' + JSON.stringify(boxen)).toBe(false);
+  const mitteBild = ((boxen.grid?.l ?? 0) + (boxen.grid?.r ?? 0)) / 2;
+  const mitteStrafstoss = ((boxen.px?.l ?? 0) + (boxen.px?.r ?? 0)) / 2;
+  expect(Math.abs(mitteStrafstoss - mitteBild), 'Strafstoß mittig unter dem Doppelpunkt').toBeLessThan(2);
+  expect((boxen.px?.t ?? 0)).toBeGreaterThan(boxen.sep?.b ?? 0);
+}
+
 test.describe('A-36c Monitor 1280×720', () => {
   test('@ZM-039 Spielplan Feld 1: das Finale trägt Statuspunkt „live“, die Halbfinals ihre Endstände', async ({ page }) => {
     await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-plan-feld', '[data-testid="monitor-match-row"]');
@@ -133,36 +180,32 @@ test.describe('A-36c Monitor 1280×720', () => {
 
   test('@ZM-147 nur Ergebnis: nach Abpfiff mit 2:2 und Strafstoßschießen 4:3 zeigt die Live-Folie „Strafstoßschießen 4 : 3“ und den Sieger', async ({ page }) => {
     await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-live', '[data-testid="live-slide-area"]');
-    // Das Finale wird beendet, ohne einzelne Tore oder Schüsse: nur das Ergebnis steht im Turnier (wie nach Papier-Leitung).
-    await page.evaluate(({ id }) => new Promise<void>((fertig, fehler) => {
-      const auf = indexedDB.open('hallenfussball', 1);
-      auf.onerror = () => fehler(new Error('IndexedDB'));
-      auf.onsuccess = () => {
-        const tx = auf.result.transaction('cache', 'readwrite');
-        const speicher = tx.objectStore('cache');
-        const lesen = speicher.get('tournaments');
-        lesen.onsuccess = () => {
-          const eintrag = lesen.result as { key: string; value: Array<{ id: string; matches: Array<Record<string, unknown>> }> };
-          const turnier = eintrag.value.find((t) => t.id === 'hallencup-messlauf');
-          const spiel = turnier?.matches.find((m) => m.id === id);
-          if (!spiel) { fehler(new Error('Finale fehlt')); return; }
-          Object.assign(spiel, {
-            matchStatus: 'finished', scoreA: 2, scoreB: 2, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty',
-            timerStartTime: undefined, timerElapsedSeconds: 600,
-          });
-          speicher.put(eintrag);
-        };
-        tx.oncomplete = () => fertig();
-        tx.onerror = () => fehler(new Error('Schreiben'));
-      };
-    }), { id: FINALE });
+    await beendeFinale(page, { scoreA: 2, scoreB: 2, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty' });
     // Abruf-Takt des Monitors (Vorbelegung 5 s): die Live-Folie hält das Endergebnis 30 s (@ZM-077)
     await expect(page.getByTestId('live-penalty')).toHaveText('Strafstoßschießen 4 : 3', { timeout: 20000 });
     await expect(page.getByTestId('live-winner')).toContainText('gewinnt');
     await expect(page.getByLabel('Heim: 2')).toBeVisible();
     await expect(page.getByLabel('Gast: 2')).toBeVisible();
     await expect(page.locator('[data-testid*="shootout"], [data-testid*="dots"]')).toHaveCount(0);
+    await pruefeEnde(page, 'home');
     await bild(page, 'monitor-1280-live-ende-strafstoss');
+  });
+
+  test('@ZM-049 @ZM-087 K5g3: 50-Zeichen-Verlierer – Umbruch, nichts überlappt, Sieger rechts mit Ring und Pokal', async ({ page }) => {
+    await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-live', '[data-testid="live-slide-area"]');
+    await beendeFinale(page, { scoreA: 2, scoreB: 2, penaltyScoreA: 3, penaltyScoreB: 4, decidedBy: 'penalty' });
+    await expect(page.getByTestId('live-penalty')).toHaveText('Strafstoßschießen 3 : 4', { timeout: 20000 });
+    await pruefeEnde(page, 'away');
+    await bild(page, 'monitor-1280-live-ende-strafstoss-langer-verlierer');
+  });
+
+  test('@ZM-049 Gegenbeispiel: Sieg in regulärer Zeit – Ring und Pokal am Sieger, keine Strafstoß-Zeile', async ({ page }) => {
+    await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-live', '[data-testid="live-slide-area"]');
+    await beendeFinale(page, { scoreA: 3, scoreB: 1, decidedBy: 'regular' });
+    await expect(page.getByTestId('live-cup-home')).toBeVisible({ timeout: 20000 });
+    await expect(page.getByTestId('live-penalty-block')).toHaveCount(0);
+    await expect(page.getByTestId('live-endstand')).toHaveText('Endstand');
+    await bild(page, 'monitor-1280-live-ende-regulaer');
   });
 });
 

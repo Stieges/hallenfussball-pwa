@@ -66,7 +66,7 @@ describe('@ZM-147 Monitor: Endstand ohne Verlauf nach dem Strafstoßschießen', 
     const { container } = zeigeLive(cup);
     expect(container.querySelectorAll('[data-testid*="shootout"], [data-testid*="schuetze"], [data-testid*="dots"]')).toHaveLength(0);
     expect(container.textContent).not.toMatch(/[○●✓✗]/);
-    expect(screen.queryByTestId('live-endstand')?.textContent).not.toMatch(/–|\?/);
+    expect(screen.getByTestId('live-winner').textContent).not.toMatch(/–|\?/);
   });
 
   it('@ET-013 Gegenbeispiel: das Strafstoßergebnis wird nicht zu den Toren addiert (nicht 6:5)', async () => {

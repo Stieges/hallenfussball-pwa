@@ -98,6 +98,19 @@ export function useTeamNameFit(
     };
   }, []);
 
+  // Ändert sich die Breite des Namensfelds (z. B. schmaler neben dem Strafstoßergebnis, @ZM-087), wird neu gemessen
+  useEffect(() => {
+    const el = ref.current;
+    if (!aktiv || !el || typeof ResizeObserver === 'undefined') { return; }
+    let breite = el.getBoundingClientRect().width;
+    const beobachter = new ResizeObserver(() => {
+      const neu = el.getBoundingClientRect().width;
+      if (Math.abs(neu - breite) > 0.5) { breite = neu; setTick(t => t + 1); }
+    });
+    beobachter.observe(el);
+    return () => beobachter.disconnect();
+  }, [ref, aktiv]);
+
   useLayoutEffect(() => {
     const el = ref.current;
     if (!aktiv || !el) { return; }

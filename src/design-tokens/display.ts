@@ -46,6 +46,8 @@ export const displayFontSizes = {
   // B-44a4 (@ME-020): Größen der Live-Folie in Container-Einheiten der Folienfläche (innerhalb des Bildrands);
   // außerhalb eines Containers rechnet der Browser cqh wie die Bildhöhe (svh)
   clockXL: '11cqh',
+  // Fixrunde 3 (Mockup K5g, Entscheidung Daniel 18.10.): Siegerzeile nach dem Strafstoßschießen
+  monitorWinner: '4.3cqh',
   teamName: '6.2cqh',   // Team-Name unter Score-Block
   // B-44a2 (@ZM-137, @ZM-125): Hinweistexte unter der Uhr, mindestens 3 % der Bildhöhe (lesbar aus 10 m)
   // B-44a4: an der Folienfläche, aber nie unter 3 % der Bildschirmhöhe (@ZM-125 gilt an der Bildschirmhöhe)
@@ -275,6 +277,8 @@ export const displayLayout = {
     frameWidthSubtle: '2px',
     frameWidthStrong: '4px',
     frameSubtleMix: '45%',
+    // Fixrunde 3 (Mockup K5g): Pokal-Kreis am Sieger-Kasten
+    monitorCup: '8.4cqh',
   },
 } as const;
 
