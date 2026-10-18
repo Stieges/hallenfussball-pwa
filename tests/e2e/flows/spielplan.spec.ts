@@ -660,7 +660,7 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
         await page.waitForTimeout(500);
 
         // THEN - Should navigate to Live Cockpit with the match loaded
-        await expect(page.getByTestId('match-timer-display')).toBeVisible({ timeout: 5000 });
+        await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 5000 });
         await expect(page.getByTestId('match-pause-button')).toBeVisible();
       }
     }

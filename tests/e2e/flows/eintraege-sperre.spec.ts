@@ -59,7 +59,7 @@ async function spielMitEintraegen(page: Page): Promise<void> {
   await page.getByTestId('match-finish-button').click();
   const confirm = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja/i });
   if (await confirm.isVisible({ timeout: 2000 }).catch(() => false)) { await confirm.first().click(); }
-  await expect(page.getByTestId('match-status-badge')).toBeVisible();
+  await expect(page.getByTestId('scoreboard-state')).toHaveText(/Abgepfiffen|Vor Anpfiff/i); // Tafel (Cockpit 2.4/2.5): nach dem Abpfiff steht Spiel 1 abgepfiffen oder die Tafel zeigt schon das nächste Spiel
 }
 
 test.describe('A-08f3e4 Sperren mit Einträgen (Gast)', () => {

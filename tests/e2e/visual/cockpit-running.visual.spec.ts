@@ -60,11 +60,11 @@ test('Live-Cockpit: laufendes Spiel', async ({ page, seedIndexedDB }) => {
   await expect(closeButtons).toHaveCount(0);
   // Uhr nach dem Anpfiff um feste 320 s vorrücken (Referenzstand 04:40 Restzeit bei 10:00 Spielzeit)
   await page.clock.setFixedTime(new Date(FIXED_NOW.getTime() + 320_000));
-  await expect(page.getByTestId('match-timer-display')).toHaveText('04:40');
+  await expect(page.getByTestId('scoreboard-clock-rest')).toHaveText('4:40');
   await expect(closeButtons).toHaveCount(0);
 
-  await expect(page.getByTestId('match-timer-display')).toBeVisible({ timeout: 10000 });
-  await expect(page.getByTestId('match-status-badge')).toContainText(/Läuft|RUNNING|LAUFEND/i);
+  await expect(page.getByTestId('scoreboard-clock-rest')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByTestId('scoreboard-state')).toContainText(/Live/i);
   await expect(page.getByTestId('score-home')).toContainText('2');
   await expect(page.getByTestId('score-away')).toContainText('1');
 

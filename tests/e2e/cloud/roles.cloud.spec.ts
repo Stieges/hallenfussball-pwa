@@ -225,7 +225,7 @@ for (const role of ALL_ROLES) {
       await page.waitForLoadState('networkidle');
 
       const readOnlyBanner = page.locator('[data-testid="cockpit-readonly-banner"]');
-      const statusBadge = page.locator('[data-testid="match-status-badge"]');
+      const statusBadge = page.locator('[data-testid="scoreboard-state"]');
       await expect(statusBadge).toBeVisible({ timeout: 15000 }); // Cockpit lädt in jedem Fall (laufendes Spiel im Seed)
 
       // M4: Verdrahtung bis zum tatsächlichen Bedienelement, nicht nur bis zum Banner --

@@ -125,7 +125,7 @@ Erwartete Turnier-Daten:
 
 1. Klicke auf "Spiel starten" (`[aria-label="Spiel starten"]`)
 2. Verifiziere:
-   - Timer startet (`[data-testid="match-timer-display"]`)
+   - Timer startet (`[data-testid="scoreboard-clock-rest"]`)
    - Status wechselt zu "running"
 
 ### Schritt 3.3: Tor eintragen (Team A)

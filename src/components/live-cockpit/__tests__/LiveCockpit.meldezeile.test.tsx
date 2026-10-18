@@ -91,9 +91,9 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
     const zeile = screen.getByTestId(MELDUNG);
     expect(zeile).toHaveTextContent('FC Alpha: 5. Foul in dieser Halbzeit');
     expect(zeile).toHaveAttribute('aria-live', 'polite');
-    expect(screen.getByTestId('match-timer-display')).toBeVisible();
+    expect(screen.getByTestId('scoreboard-clock')).toBeVisible();
     expect(screen.getByTestId('score-home')).toBeVisible();
-    expect(zeile).not.toContainElement(screen.getByTestId('match-timer-display'));
+    expect(zeile).not.toContainElement(screen.getByTestId('scoreboard-clock'));
     expect(zeile).not.toContainElement(screen.getByTestId('score-home'));
   });
 
@@ -166,12 +166,12 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
     expect(screen.queryByTestId('notice-icon-3')).toBeNull();
   });
 
-  it('@SL-064 die Zeile ist am Handy (360 px) 24 px, ab Tablet (768 px) 32 px hoch', () => {
+  it('@SL-064 die Zeile ist am Handy (360 px) zwei Zeilen hoch (N1), ab Tablet (768 px) 32 px', () => {
     const alt = window.innerWidth;
     try {
       window.innerWidth = 360;
       const mobil = render(<LiveCockpit {...baseProps(matchMit(0))} />);
-      expect(screen.getByTestId(MELDUNG).style.height).toBe('var(--sizing-notice-line-height-compact)');
+      expect(screen.getByTestId(MELDUNG).style.height).toMatch(/calc\(2 \*/);
       mobil.unmount();
       window.innerWidth = 1280;
       render(<LiveCockpit {...baseProps(matchMit(0))} />);
@@ -223,3 +223,58 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
 function fireClick(name: string): void {
   act(() => { screen.getByRole('button', { name }).click(); });
 }
+
+/**
+ * B3 (Review 2c, VISUAL-DESIGN § 1, @OB-025): Namen werden in der Meldezeile nie mit „…“ gekürzt. Die Zahl der reservierten
+ * Zeilen hängt je Spiel an den beiden Teamnamen und der Tafelgröße; sie ändert sich innerhalb eines Spiels nie.
+ */
+describe('LiveCockpit – Meldezeile reserviert Zeilen je Spiel (B3)', () => {
+  const NAME_50 = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
+  const breite = (px: number) => { Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: px }); };
+  const langesSpiel = (extra: Record<string, unknown> = {}) => makeMatch({ homeTeam: { id: 'team-a', name: NAME_50 }, ...extra });
+  afterEach(() => breite(1024));
+
+  it('@OB-025 am Handy (360 px) reserviert ein Spiel mit einem Namen von 50 Zeichen drei Zeilen, und die Meldung steht vollständig da', () => {
+    breite(360);
+    const { rerender } = render(<LiveCockpit {...baseProps(langesSpiel({ events: fouls('team-a', 4) }))} />);
+    const hoheOhne = screen.getByTestId(MELDUNG).style.height;
+    expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '3');
+    rerender(<LiveCockpit {...baseProps(langesSpiel({ events: fouls('team-a', 5) }))} />);
+    expect(screen.getByTestId(MELDUNG)).toHaveTextContent(`${NAME_50}: 5. Foul in dieser Halbzeit`);
+    expect(screen.getByTestId(MELDUNG).style.height).toBe(hoheOhne); // mit und ohne Meldung gleich hoch
+  });
+
+  it('N1 am Handy (360 px) reserviert auch ein Spiel mit kurzen Namen zwei Zeilen: „SV Südpark: 5. Foul in dieser Halbzeit“ steht ohne „…“ da', () => {
+    breite(360);
+    const kurz = (extra: Record<string, unknown>) => makeMatch({ awayTeam: { id: 'team-b', name: 'SV Südpark' }, ...extra });
+    const { rerender } = render(<LiveCockpit {...baseProps(kurz({}))} />);
+    expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '2');
+    rerender(<LiveCockpit {...baseProps(kurz({ events: fouls('team-b', 5) }))} />);
+    expect(screen.getByTestId(MELDUNG)).toHaveTextContent('SV Südpark: 5. Foul in dieser Halbzeit');
+    expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '2');
+  });
+
+  it('N1 „Spiel 15 von der Turnierleitung zurückgesetzt“ steht bei 360 px vollständig in der Meldezeile (2 Zeilen)', () => {
+    breite(360);
+    const match = makeMatch({ number: 15 });
+    const { rerender } = render(<LiveCockpit {...baseProps(match)} />);
+    rerender(<LiveCockpit {...baseProps(match, {})} {...({ letzteZuruecksetzung: { id: 'r1', spielNummer: 15 } } as object)} />);
+    expect(screen.getByTestId(MELDUNG)).toHaveTextContent('Spiel 15 von der Turnierleitung zurückgesetzt');
+    expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '2');
+  });
+
+  it('@OB-025 Gegenbeispiel: ab 768 px reicht auch bei langen Namen eine Zeile', () => {
+    breite(768);
+    render(<LiveCockpit {...baseProps(langesSpiel())} />);
+    expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '1');
+  });
+
+  it('@OB-025 die Reserve ändert sich innerhalb eines Spiels nie (Foul-Stand, Spielstand, Status)', () => {
+    breite(360);
+    const { rerender } = render(<LiveCockpit {...baseProps(langesSpiel())} />);
+    for (const extra of [{ events: fouls('team-a', 5) }, { status: 'RUNNING', homeScore: 1 }, { status: 'PAUSED' }]) {
+      rerender(<LiveCockpit {...baseProps(langesSpiel(extra))} />);
+      expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '3');
+    }
+  });
+});
