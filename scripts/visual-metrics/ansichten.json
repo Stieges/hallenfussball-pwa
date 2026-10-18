@@ -350,6 +350,19 @@
       "profil": "app"
     },
     {
+      "id": "cockpit-kein-spiel",
+      "titel": "Cockpit: kein Spiel mehr (Feld 2, alle Spiele gespielt)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app",
+      "klick": [
+        "button:has-text(\"Feld 2\")"
+      ]
+    },
+    {
       "id": "dialog-karte",
       "titel": "Dialog: Karte vergeben (Cockpit, Finale)",
       "gruppen": [
