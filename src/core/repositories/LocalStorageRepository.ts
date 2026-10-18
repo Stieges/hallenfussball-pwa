@@ -76,7 +76,7 @@ export class LocalStorageRepository implements ITournamentRepository {
         return this.serialize(async () => {
             const storage = await createStorage();
             const adoption = decide(await this.get(id), await readServerRevisions(storage, id));
-            if (adoption.save) { await this.saveNow(adoption.save); } else if (adoption.patch?.size) { await this.patchNow(id, adoption.patch); }
+            if (adoption.save) { await this.saveNow(adoption.save, true); } else if (adoption.patch?.size) { await this.patchNow(id, adoption.patch); }
             await writeServerRevisions(storage, id, adoption.revisions, adoption.save && new Set(adoption.save.matches.map(m => m.id)));
             return adoption;
         });
@@ -105,20 +105,26 @@ export class LocalStorageRepository implements ITournamentRepository {
         return list.find(t => t.shareCode?.toUpperCase() === normalizedCode && t.isPublic) ?? null;
     }
 
+    /** A-08f3c1: Version = Version der Nutzlast + 1 (wie die Cloud beim Speichern; ohne Version setzt sie 1). */
     save(tournament: Tournament): Promise<void> {
         return this.serialize(() => this.saveNow(tournament));
     }
 
-    private async saveNow(tournament: Tournament): Promise<void> {
+    /** A-08f3c1: Cloud-Kopie (oder lokale Kopie ohne Zählen) übernehmen -- Version und `updatedAt` wie übergeben. */
+    cacheCloudCopy(tournament: Tournament): Promise<void> {
+        return this.serialize(() => this.saveNow(tournament, true));
+    }
+
+    private async saveNow(tournament: Tournament, cached = false): Promise<void> {
         const list = await this.loadList();
         const index = list.findIndex(t => t.id === tournament.id);
+        const stamp = cached ? {} : { version: (tournament.version ?? 0) + 1, updatedAt: new Date().toISOString() };
 
         if (index >= 0) {
-            const currentVersion = list[index].version ?? 0;
             // A-07e: bestehender Konto-Marker bleibt, wenn der Aufrufer keinen setzt
-            list[index] = { ...tournament, ownerId: this.guestOr(tournament.ownerId ?? list[index].ownerId), version: currentVersion + 1, updatedAt: new Date().toISOString() };
+            list[index] = { ...tournament, ownerId: this.guestOr(tournament.ownerId ?? list[index].ownerId), ...stamp };
         } else {
-            list.push({ ...tournament, ownerId: this.guestOr(tournament.ownerId ?? GUEST_OWNER), version: 1, updatedAt: new Date().toISOString() });
+            list.push({ ...tournament, ownerId: this.guestOr(tournament.ownerId ?? GUEST_OWNER), ...stamp });
         }
 
         await this.saveList(list);
@@ -137,10 +143,11 @@ export class LocalStorageRepository implements ITournamentRepository {
                 throw new Error(`Tournament ${id} not found`);
             }
 
+            // A-08f3c1: wie die Cloud -- +1 nur mit `metadata.version` (CAS), sonst bleibt die Version.
             list[index] = {
                 ...list[index],
                 ...metadata,
-                version: (list[index].version ?? 0) + 1,
+                version: metadata.version === undefined ? list[index].version : metadata.version + 1,
                 updatedAt: new Date().toISOString()
             };
 
@@ -172,12 +179,8 @@ export class LocalStorageRepository implements ITournamentRepository {
                 return m;
             });
 
-            list[tournamentIndex] = {
-                ...tournament,
-                matches: updatedMatches,
-                version: (tournament.version ?? 0) + 1,
-                updatedAt: new Date().toISOString()
-            };
+            // A-08f3c1: ohne +1 -- die Cloud zählt `updateMatches` ohne `baseVersion` auch nicht (C-LOKALVERSION-DRIFT).
+            list[tournamentIndex] = { ...tournament, matches: updatedMatches, updatedAt: new Date().toISOString() };
 
             await this.saveList(list);
         });
@@ -261,7 +264,6 @@ export class LocalStorageRepository implements ITournamentRepository {
                 isPublic: true,
                 shareCode,
                 shareCodeCreatedAt: createdAt,
-                version: (list[index].version ?? 0) + 1,
                 updatedAt: createdAt
             };
 
@@ -288,7 +290,6 @@ export class LocalStorageRepository implements ITournamentRepository {
                 isPublic: false,
                 shareCode: undefined,
                 shareCodeCreatedAt: undefined,
-                version: (list[index].version ?? 0) + 1,
                 updatedAt: new Date().toISOString()
             };
 
@@ -320,7 +321,6 @@ export class LocalStorageRepository implements ITournamentRepository {
                 ...list[index],
                 shareCode,
                 shareCodeCreatedAt: createdAt,
-                version: (list[index].version ?? 0) + 1,
                 updatedAt: createdAt
             };
 

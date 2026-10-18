@@ -61,7 +61,7 @@ describe('A-08f3a Schreibkette: alle Schreibmethoden des lokalen Speichers laufe
 
     expect(storedMatch('m1')).toMatchObject({ scoreA: 1, scoreB: 0, matchStatus: 'running' });
     expect(new Date(storedMatch('m2').scheduledTime ?? KICKOFF_OLD).toISOString()).toBe(KICKOFF_NEW);
-    expect(stored().version).toBe(8);
+    expect(stored().version).toBe(7); // A-08f3c1 (Baustein Regel 3): updateMatches zählt lokal nicht mehr, wie die Cloud
   });
 
   it('applyServerMatchFields ändert weder Version noch updatedAt noch Konto-Marker', async () => {

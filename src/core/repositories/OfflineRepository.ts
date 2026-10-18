@@ -10,6 +10,7 @@ import { slotTeamId } from '../models/matchSlot';
 import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
 import { decideCloudAdoption, isCloudReadTimeout, withCloudReadTimeout } from './cloudAdoption';
 import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisionSource } from './serverRevisionRegistry';
+import { CloudQueueGuard } from './cloudQueueGuard';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -36,7 +37,8 @@ function normalizeMatchUpdateForQueue(update: MatchUpdate): MatchUpdate {
 // SYNC TYPES
 // =============================================================================
 
-export type SyncStatus = 'synced' | 'updated' | 'conflict' | 'error' | 'offline';
+/** `blocked` (A-08f3c2, M-3): Regel Q hat die ganze Cloud-Kopie nicht zugelassen (eigene Änderungen warten oder sind gescheitert). */
+export type SyncStatus = 'synced' | 'updated' | 'conflict' | 'error' | 'offline' | 'blocked';
 
 export interface SyncResult {
     status: SyncStatus;
@@ -130,6 +132,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     /** A-08f3b: laufender Cloud-Abruf je Turnier (ein Abruf je Turnier). */
     private readonly cloudReads = new Map<string, Promise<Tournament | null>>();
     private readonly cloudReadRerun = new Set<string>();
+    /** A-08f3c2 Regel Q: keine ganze Cloud-Kopie über eigene wartende, laufende oder gescheiterte Änderungen. */
+    private readonly queueGuard: CloudQueueGuard;
 
     constructor(
         private localRepo: LocalStorageRepository,
@@ -138,6 +142,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         private accountId?: string
     ) {
         this._mutationQueue = new MutationQueue(supabaseRepo, localRepo, undefined, accountId);
+        this.queueGuard = new CloudQueueGuard(this._mutationQueue);
     }
 
     /** A-07e: Kopie gehoert dem Konto dieses Repositorys (ohne Konto unveraendert). */
@@ -230,19 +235,29 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         const run = (async () => {
             let result = await this.readAndAdopt(id, firstCopy);
             while (this.cloudReadRerun.delete(id)) { result = await this.readAndAdopt(id, firstCopy); }
-            return result;
+            return result?.tournament ?? null;
         })().finally(() => { this.cloudReads.delete(id); this.cloudReadRerun.delete(id); });
         this.cloudReads.set(id, run);
         return run;
     }
 
-    private async readAndAdopt(id: string, firstCopy?: boolean): Promise<Tournament | null> {
+    /** `whole`: die ganze Kopie wurde übernommen (Versionsweg, von Regel Q zugelassen). */
+    private async readAndAdopt(id: string, firstCopy?: boolean): Promise<{ tournament: Tournament; whole: boolean } | null> {
+        const before = this.queueGuard.snapshot(id); // A-08f3c2 (H1): Stand der Warteschlange vor dem Lesen
         const read = await withCloudReadTimeout(this.supabaseRepo.getWithMatchRevisions(id));
         if (!read) { return null; }
-        const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined, owned: (t: Tournament) => this.owned(t) };
+        const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined, owned: (t: Tournament) => this.owned(t),
+            wholeAllowed: () => this.queueGuard.mayAdoptWhole(id, before) };
         const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => decideCloudAdoption(local, read, stored, options));
         this.serverRevisions.record(id, adoption.revisions);
-        return read.tournament;
+        return { tournament: read.tournament, whole: adoption.save !== undefined };
+    }
+
+    /** M-3: „Cloud übernehmen“/`syncDown` melden `updated` nur, wenn Regel Q die ganze Kopie zugelassen hat. */
+    private async adoptWhole(id: string, fallback: Tournament | null): Promise<SyncResult> {
+        const result = await this.readAndAdopt(id, true);
+        if (!result && !fallback) { return { status: 'error', error: 'Tournament not found' }; }
+        return { status: result && !result.whole ? 'blocked' : 'updated', data: result?.tournament ?? fallback ?? undefined };
     }
 
     async getByShareCode(code: string): Promise<Tournament | null> {
@@ -267,27 +282,27 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
      * 2. Enqueue Mutation (Persistent Background Sync)
      */
     async save(tournament: Tournament): Promise<void> {
-        // 1. Save Local
-        await this.localRepo.save(this.owned(tournament));
-        this.serverRevisions.retain(tournament.id, new Set(tournament.matches.map(m => m.id))); // A-08f3b: Neugenerieren
-
-        // 2. Enqueue Cloud Persistence
-        this.mutationQueue.enqueue('SAVE_TOURNAMENT', tournament);
+        await this.queueGuard.track(tournament.id, async () => { // A-08f3c2: Speichern + Einreihen als Einheit (Regel Q)
+            await this.localRepo.save(this.owned(tournament));
+            this.serverRevisions.retain(tournament.id, new Set(tournament.matches.map(m => m.id))); // A-08f3b: Neugenerieren
+            this.mutationQueue.enqueue('SAVE_TOURNAMENT', tournament);
+        });
     }
 
     async updateMatch(tournamentId: string, update: MatchUpdate): Promise<void> {
         // Local write keeps the ORIGINAL update (undefined-with-key-present semantics, resolved
         // against the in-memory Match by LocalStorageRepository) -- only the QUEUED copy is
         // normalized for the JSON round-trip (N2a).
-        await this.localRepo.updateMatch(tournamentId, update);
-        this.mutationQueue.enqueue('UPDATE_MATCH', { tournamentId, update: normalizeMatchUpdateForQueue(update) });
+        await this.queueGuard.track(tournamentId, async () => {
+            await this.localRepo.updateMatch(tournamentId, update);
+            this.mutationQueue.enqueue('UPDATE_MATCH', { tournamentId, update: normalizeMatchUpdateForQueue(update) });
+        });
     }
 
     async updateMatches(tournamentId: string, updates: MatchUpdate[], _baseVersion?: number): Promise<void> {
-        await this.localRepo.updateMatches(tournamentId, updates);
-        this.mutationQueue.enqueue('UPDATE_MATCHES', {
-            tournamentId,
-            updates: updates.map(normalizeMatchUpdateForQueue),
+        await this.queueGuard.track(tournamentId, async () => {
+            await this.localRepo.updateMatches(tournamentId, updates);
+            this.mutationQueue.enqueue('UPDATE_MATCHES', { tournamentId, updates: updates.map(normalizeMatchUpdateForQueue) });
         });
     }
 
@@ -298,8 +313,10 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     }
 
     async updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
-        await this.localRepo.updateTournamentMetadata(id, metadata);
-        this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', { tournamentId: id, metadata });
+        await this.queueGuard.track(id, async () => {
+            await this.localRepo.updateTournamentMetadata(id, metadata);
+            this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', { tournamentId: id, metadata });
+        });
     }
 
     // --- Extended Methods for Sync ---
@@ -364,8 +381,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     const cloudT = await this.supabaseRepo.get(localT.id);
 
                     if (!cloudT) {
-                        // Not in cloud -> Full Upload
+                        // Not in cloud -> Full Upload (A-08f3c1: die Cloud legt mit Version 1 an)
                         await this.supabaseRepo.save(localT);
+                        await this.localRepo.updateLocalVersion(localT.id, 1);
                         continue;
                     }
 
@@ -585,10 +603,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                 return { status: 'error', error: 'Tournament not found' };
             }
 
-            // Case: No local data - just save remote
+            // Case: No local data - übernehmen (A-08f3c1/M4: Cloud-Version, gleiche Regel wie der Abruf)
             if (!localT) {
-                await this.localRepo.save(this.owned(remoteT));
-                return { status: 'updated', data: remoteT };
+                return this.adoptWhole(tournamentId, remoteT);
             }
 
             // 2. Compare timestamps
@@ -610,9 +627,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     return { status: 'conflict', data: remoteT, conflicts };
                 }
 
-                // No conflicts - safe to update local
-                await this.localRepo.save(this.owned(remoteT));
-                return { status: 'updated', data: remoteT };
+                // No conflicts - A-08f3c1/M4: ganze Kopie über dieselbe Regel wie der Abruf (cacheCloudCopy, Q)
+                return this.adoptWhole(tournamentId, remoteT);
             }
 
             // Case: Local is newer - nothing to do for syncDown
@@ -666,15 +682,12 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                         };
                     }
                     await this.supabaseRepo.save(local);
+                    await this.localRepo.updateLocalVersion(tournamentId, (local.version ?? 0) + 1); // A-08f3c1: wie die Cloud
                     return { status: 'synced', data: local };
                 }
             } else {
-                // Pull remote to local
-                const remote = await this.supabaseRepo.get(tournamentId);
-                if (remote) {
-                    await this.localRepo.save(this.owned(remote));
-                    return { status: 'updated', data: remote };
-                }
+                // Pull remote to local (A-08f3c1/M4: Cloud-Version, gleiche Regel wie der Abruf)
+                return await this.adoptWhole(tournamentId, null);
             }
             return { status: 'error', error: 'Tournament not found' };
         } catch (error) {
@@ -708,6 +721,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                 const remote = await this.supabaseRepo.get(tournamentId);
                 if (!remote || new Date(local.updatedAt) > new Date(remote.updatedAt)) {
                     await this.supabaseRepo.save(local);
+                    await this.localRepo.updateLocalVersion(tournamentId, remote ? (local.version ?? 0) + 1 : 1); // A-08f3c1
                 }
             }
             return { status: 'synced', data: local ?? downResult.data };
@@ -733,13 +747,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             if (result) {
                 // Update local cache
                 const tournament = await this.localRepo.get(tournamentId);
-                if (tournament) {
-                    await this.localRepo.save({
-                        ...tournament,
-                        isPublic: true,
-                        shareCode: result.shareCode,
-                        shareCodeCreatedAt: result.createdAt,
-                    });
+                if (tournament) { // A-08f3c1: die Cloud zählt hier nicht -- lokal auch nicht
+                    await this.localRepo.cacheCloudCopy({ ...tournament, isPublic: true, shareCode: result.shareCode, shareCodeCreatedAt: result.createdAt });
                 }
                 return result;
             }
@@ -803,12 +812,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             if (result) {
                 // Update local cache
                 const tournament = await this.localRepo.get(tournamentId);
-                if (tournament) {
-                    await this.localRepo.save({
-                        ...tournament,
-                        shareCode: result.shareCode,
-                        shareCodeCreatedAt: result.createdAt,
-                    });
+                if (tournament) { // A-08f3c1: ohne +1 (wie die Cloud)
+                    await this.localRepo.cacheCloudCopy({ ...tournament, shareCode: result.shareCode, shareCodeCreatedAt: result.createdAt });
                 }
                 return result;
             }

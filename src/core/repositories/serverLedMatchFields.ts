@@ -6,9 +6,9 @@
  * dabei `matches.version` je Spiel erhöht. Die lokale Kopie ist für diese Felder nur Zwischenspeicher.
  * Bewusst NICHT dabei: Uhrfelder (gehören der Engine), Spielplan-Spalten (Versionsweg), Verlauf/Ereignisse.
  *
- * Regel S Stufe 1 (bis A-08f3e4): Übernahme für ein Spiel ⇔ Cloud-Revision > 1 und ≥ der zuletzt
- * übernommenen Revision (Monotonie). Revision 1 = keine Einträge; dort bleiben Altpfad-Ergebnisse
- * (Schnelleingabe, Überspringen) lokal, bis e2/e4 sie über den Server schreiben.
+ * Regel S Stufe 2 (seit A-08f3e4): Übernahme für ein Spiel ⇔ Cloud-Revision ≥ der zuletzt übernommenen
+ * Revision (Monotonie), auch Revision 1. Jede Ergebnisänderung ist ein Eintrag (Schnelleingabe e2, Absetzen e4);
+ * wartende eigene Einträge zeigt die Engine-Überlagerung. Altbestand ohne Ereignisse zählt nicht (Kurswechsel 01.10.).
  * Anforderungen: @FU-087, @FU-023 (`plattform/2026-09-24_fundament-gemeinsamer-stand.md`).
  */
 import type { Match, Tournament } from '../models/types';
@@ -24,12 +24,12 @@ export const SERVER_LED_MATCH_FIELDS = [
 export type ServerLedMatchField = typeof SERVER_LED_MATCH_FIELDS[number];
 export type ServerLedMatchPatch = Partial<Pick<Match, ServerLedMatchField>>;
 
-/** Nur Stufe 1 bis A-08f3e4; Stufe 2 entfernt den Zweig „Revision 1 bleibt lokal“. */
-export type ServerLedMode = 'stufe1';
+/** Stufe 2 (A-08f3e4): der Zweig „Revision 1 bleibt lokal“ (Stufe 1) ist entfallen. */
+export type ServerLedMode = 'stufe2';
 
-/** Regel S Stufe 1 mit Monotonie: Revision > 1 und nicht älter als die zuletzt übernommene. */
+/** Regel S Stufe 2 mit Monotonie: Revision vorhanden und nicht älter als die zuletzt übernommene (auch 1). */
 export function isServerLed(revision: number | undefined, lastAdopted: number | undefined, _mode: ServerLedMode): boolean {
-    if (revision === undefined || revision <= 1) { return false; }
+    if (revision === undefined) { return false; }
     return revision >= (lastAdopted ?? 0);
 }
 

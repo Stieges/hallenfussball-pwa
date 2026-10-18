@@ -143,12 +143,11 @@ test.describe('Spielplan liest fremde Tore', () => {
   });
 
   test('@FU-089 Eine Änderung der Co-Admin erscheint nach einer eigenen Änderung des Eigentümers nach höchstens 10 s', async ({ browser }) => {
-    test.fail(true, 'A-08f3c1/c2 (nach I1): Spielplan-Spalten fremder Änderungen werden nach eigener Änderung noch nicht übernommen (C-LOKALVERSION-DRIFT).');
     test.setTimeout(120_000);
-    // Stand-in (Befund im Report): die Oberfläche kennt kein "Spiel überspringen" und keine Anstoßzeit-Eingabe im
-    // Spielplan. Die eigene Änderung des Eigentümers ist eine gespeicherte Metadaten-Änderung (Ort) -- sie zählt
-    // die lokale Turnier-Version hoch, das ist der Auslöser von C-LOKALVERSION-DRIFT. Die Änderung der Co-Admin
-    // geht mit ihrem Schlüssel direkt an die Spalte der Anstoßzeit (kein Eingabefeld dafür in der Oberfläche).
+    // Stand-in: die Oberfläche kennt keinen Absetz-Einstieg (B-12) und keine Anstoßzeit-Eingabe im Spielplan. Die eigene
+    // Änderung des Eigentümers ist eine gespeicherte Metadaten-Änderung (Ort). Die Änderung der Co-Admin geht mit ihrem
+    // Schlüssel an die Spalte der Anstoßzeit und erhöht die Turnier-Version wie das Voll-Speichern der App
+    // (`SupabaseRepository.save`: CAS auf `version`, dann +1) -- A-08f3e4c1c2 Fixrunde 1 (M-1/F-a).
     const matches = (await serviceRest('GET', `matches?tournament_id=eq.${E2E_LIVE_CUP_ID}&order=slot.asc,field.asc,id.asc&select=id,scheduled_start`)).json as Array<{ id: string; scheduled_start: string }>;
     const spiel5 = matches[4];
     const [{ location_name: originalLocation }] = (await serviceRest('GET', `tournaments?id=eq.${E2E_LIVE_CUP_ID}&select=location_name`)).json as Array<{ location_name: string }>;
@@ -168,6 +167,10 @@ test.describe('Spielplan liest fremde Tore', () => {
       await expect(owner.page.getByText('14:10').first()).toBeVisible({ timeout: 15000 });
       const res = await restAsRole('coadmin', 'PATCH', `matches?id=eq.${spiel5.id}`, { scheduled_start: '14:40:00' });
       expect(res.status, res.text).toBeLessThan(300);
+      const version = await tournamentVersion(E2E_LIVE_CUP_ID);
+      const bump = await restAsRole('coadmin', 'PATCH', `tournaments?id=eq.${E2E_LIVE_CUP_ID}&version=eq.${version}`, { version: version + 1 });
+      expect(bump.status, bump.text).toBeLessThan(300);
+      expect(bump.json, 'CAS der Co-Admin trifft genau eine Zeile').toHaveLength(1);
       await expect(owner.page.getByText('14:40').first()).toBeVisible({ timeout: 10000 });
     } finally {
       await serviceRest('PATCH', `matches?id=eq.${spiel5.id}`, { scheduled_start: spiel5.scheduled_start });

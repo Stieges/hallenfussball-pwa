@@ -105,6 +105,13 @@ async function skipUploadForGuestEntries(
     }
 }
 
+/** A-08f3c2 (Regel Q): Turnier eines Eintrags -- SAVE trägt das Turnier, DELETE die ID, die übrigen `tournamentId`. */
+function tournamentIdOf(type: MutationType, payload: unknown): string | null {
+    if (type === 'SAVE_TOURNAMENT') { return (payload as Tournament | null)?.id ?? null; }
+    if (type === 'DELETE_TOURNAMENT') { return typeof payload === 'string' ? payload : null; }
+    return (payload as { tournamentId?: string } | null)?.tournamentId ?? null;
+}
+
 const LEGACY_QUEUE_KEY = 'mutation_queue_v1';
 const LEGACY_FAILED_KEY = 'mutation_queue_failed_v1';
 
@@ -209,22 +216,12 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
              * - UPDATE_MATCH/UPDATE_MATCHES: Do NOT coalesce (granular updates)
              */
             coalesceKey: (type, payload) => {
-                switch (type) {
-                    case 'SAVE_TOURNAMENT': {
-                        // Tournament has 'id' field
-                        const tournament = payload as Tournament;
-                        return tournament?.id ? `SAVE_TOURNAMENT:${tournament.id}` : null;
-                    }
-                    case 'UPDATE_TOURNAMENT_METADATA': {
-                        // Payload has 'tournamentId' field
-                        const meta = payload as { tournamentId: string };
-                        return meta?.tournamentId ? `UPDATE_METADATA:${meta.tournamentId}` : null;
-                    }
-                    default:
-                        // No coalescing for other types
-                        return null;
-                }
+                const id = tournamentIdOf(type, payload);
+                if (!id) { return null; }
+                if (type === 'SAVE_TOURNAMENT') { return `SAVE_TOURNAMENT:${id}`; }
+                return type === 'UPDATE_TOURNAMENT_METADATA' ? `UPDATE_METADATA:${id}` : null;
             },
+            scopeOf: tournamentIdOf, // A-08f3c2 (Regel Q): Zähler und Dead-Letter je Turnier
 
             execute: async (item) => {
                 if (accountId) {

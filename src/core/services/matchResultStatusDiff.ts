@@ -115,3 +115,16 @@ export function diffMatchResultStatusUpdates(
 
   return updates;
 }
+
+/**
+ * A-08f3e4 (@FU-090, @FU-091): die Spiele eines Turniers, die Einträge haben, in Spielplan-Reihenfolge. Die Quelle der
+ * IDs (Server-Revision > 1, lokale Engine-Kopie mit Einträgen) liest der Aufrufer (`useMatchEntryGuard`); die Engine
+ * führt Spiel-IDs klein geschrieben (`engineMatchModel.ts`), deshalb ohne Rücksicht auf Groß-/Kleinschreibung.
+ */
+export function matchesWithEntries<TMatch extends { id: string }>(
+  tournament: { matches: readonly TMatch[] },
+  entryMatchIds: ReadonlySet<string>
+): TMatch[] {
+  const ids = new Set([...entryMatchIds].map((id) => id.toLowerCase()));
+  return tournament.matches.filter((match) => ids.has(match.id.toLowerCase()));
+}
