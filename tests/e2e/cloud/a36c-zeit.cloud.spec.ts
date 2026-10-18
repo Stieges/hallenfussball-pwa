@@ -17,7 +17,9 @@ test.describe('A-36c F-ZEIT (@ZM-111)', () => {
     test.skip(testInfo.project.name !== 'cloud-desktop', 'ein Projekt reicht, die Zeitzone ist unabhängig von der Breite');
     const { url, headers } = getLocalServiceRoleClient();
     const res = await fetch(
-      `${url}/rest/v1/matches?tournament_id=eq.${E2E_PUBLIC_CUP_ID}&scheduled_start=not.is.null&order=scheduled_start&select=id,scheduled_start&limit=1`,
+      // Ein geplantes Spiel wie im Gherkin (Spiel 9 „mit 14:40 im Spielplan“): laufende und beendete Spiele zeigen in der
+      // Desktop-Zeile statt der Uhrzeit das Abzeichen (Daniel 18.10., @OB-065).
+      `${url}/rest/v1/matches?tournament_id=eq.${E2E_PUBLIC_CUP_ID}&scheduled_start=not.is.null&match_status=eq.scheduled&order=scheduled_start&select=id,scheduled_start&limit=1`,
       { headers },
     );
     expect(res.ok).toBe(true);

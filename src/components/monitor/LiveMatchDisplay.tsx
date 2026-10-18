@@ -22,6 +22,8 @@ import { LiveScoreGrid } from './LiveScoreGrid';
 import { LiveFinalScore, type LiveFinalScoreProps } from './LiveFinalScore';
 import { getBlockFrames, resolveColor } from './liveBlockFrame';
 import { LiveHeader } from './LiveHeader';
+import { badgeOfLiveMatch } from './liveBadge';
+import type { MatchBadgeModel } from '../../core/view';
 
 export { NoMatchDisplay } from './NoMatchDisplay';
 export type { NoMatchDisplayProps } from './NoMatchDisplay';
@@ -46,6 +48,8 @@ export interface LiveMatchDisplayProps {
   finalScore?: LiveFinalScoreProps['finalScore']; // Endstand der Ansicht (A-36c, @ZM-147)
   /** Finalrunde (K.-o., Platzierungsspiel, Finale; `MatchView.phase === 'final'`): nur dort trägt der Sieger den Pokal, den Ring jeder Sieger (@ZM-049) */
   finalRound?: boolean;
+  /** Abzeichen der Ansicht (`MatchView.badge`); ohne Angabe aus Status und Anstoß des Spiels (@OB-066) */
+  badge?: MatchBadgeModel;
 }
 
 // ---------------------------------------------------------------------------
@@ -63,6 +67,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   clockMode,
   finalScore,
   finalRound = false,
+  badge,
 }) => {
   const { t } = useTranslation('monitor');
   const { themeColors } = useMonitorTheme(theme);
@@ -113,7 +118,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     <>
       <div style={containerStyle}>
         <LiveHeader
-          status={match.status}
+          badge={badge ?? badgeOfLiveMatch(match)}
           field={match.field ?? 1}
           matchNumber={match.number}
           group={group ?? match.group}

@@ -102,15 +102,13 @@ describe('@ZM-071 Spielplan Feld 2: Paarungen mit Uhrzeit in Anpfiff-Reihenfolge
   });
 });
 
-describe('@ZM-071 Spielplan: Statuspunkt und Rahmen nur für das laufende Spiel (Ruling B-16f3)', () => {
-  it('Feld 1: laufendes Spiel 7 hat den Rahmen der Markierung, geplantes Spiel 9 nicht', async () => {
+describe('@ZM-071 Spielplan: Wort „Live“ nur am laufenden Spiel (Ruling B-16f3)', () => {
+  it('@OB-066 Feld 1: laufendes Spiel 7 trägt das Wort „Live“, geplantes Spiel 9 keins', async () => {
     await starte(monitorTurnier(buildTournament({ matches: withScheduledTimes() }), [slide('schedule-field', { fieldId: 'field-1' })]));
     expect(zeilen()).toHaveLength(2);
     expect(zeilen()[0]).toHaveTextContent('FC Nord');
-    // Laufende Zeile: Rahmen mit dem Markierungs-Token (2 px); geplante Zeile: dünner Rahmen.
-    expect(zeilen()[0].style.border).toContain('2px');
-    expect(zeilen()[1].style.border).not.toContain('2px');
-    expect(zeilen()[0].querySelector('[data-testid="monitor-match-status"]')).not.toBeNull();
+    expect(zeilen()[0]).toHaveTextContent('Live');
+    expect(zeilen()[1]).not.toHaveTextContent('Live');
   });
 });
 

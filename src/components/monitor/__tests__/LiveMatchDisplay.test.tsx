@@ -86,12 +86,7 @@ describe('LiveMatchDisplay', () => {
       expect(screen.getByText(':')).toBeInTheDocument();
     });
 
-    it('zeigt LIVE-Badge bei laufendem Spiel', () => {
-      const match = createMockMatch({ status: 'RUNNING' });
-      render(<LiveMatchDisplay match={match} />);
-
-      expect(screen.getByText('LIVE')).toBeInTheDocument();
-    });
+    // Wörter des Abzeichens (Live, Pause, Ende, Anstoßzeit): LiveMatchDisplay.badge.test.tsx (echte DE-Texte)
 
     it('zeigt Feld und Spielnummer', () => {
       const match = createMockMatch({ field: 2, number: 5 });
@@ -116,31 +111,7 @@ describe('LiveMatchDisplay', () => {
     });
   });
 
-  // ==========================================================================
-  // Status-Varianten
-  // ==========================================================================
-  describe('Status-Varianten', () => {
-    it('zeigt PAUSE-Badge bei pausiertem Spiel', () => {
-      const match = createMockMatch({ status: 'PAUSED' });
-      render(<LiveMatchDisplay match={match} />);
-
-      expect(screen.getByText('PAUSE')).toBeInTheDocument();
-    });
-
-    it('zeigt BEENDET-Badge bei abgeschlossenem Spiel', () => {
-      const match = createMockMatch({ status: 'FINISHED' });
-      render(<LiveMatchDisplay match={match} />);
-
-      expect(screen.getByText('BEENDET')).toBeInTheDocument();
-    });
-
-    it('zeigt WARTET-Badge bei nicht gestartetem Spiel', () => {
-      const match = createMockMatch({ status: 'NOT_STARTED' });
-      render(<LiveMatchDisplay match={match} />);
-
-      expect(screen.getByText('WARTET')).toBeInTheDocument();
-    });
-  });
+  // Status-Varianten (Abzeichen Live, Pause, Ende, Anstoßzeit): LiveMatchDisplay.badge.test.tsx
 
   // ==========================================================================
   // Size-Varianten

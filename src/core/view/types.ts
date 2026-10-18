@@ -9,6 +9,8 @@ import type { SlotSource, TeamId } from '../models/schemas/MatchSlotSchema';
 import type { MatchStatus as EngineStatus } from '../match/types';
 import type { SlotDescription } from './originText';
 import type { FinalScore } from './finalScore';
+import type { ClockMode } from '../match/clockDisplay';
+import type { MatchBadgeEngineDetail, MatchBadgeModel } from './badge';
 
 export type ViewAudience = 'organizer' | 'viewer' | 'screen';
 /** print: die öffentlichen Schalter gelten auch für die Leitung (@BM-032). */
@@ -94,6 +96,14 @@ export interface SideView {
   subLabel?: string;
 }
 
+/** Abschnitte und Längen eines Spiels für `spectatorClockOf` (Sekunden). */
+export interface SpectatorClockRules {
+  sections: number;
+  sectionSeconds: number;
+  overtimeSeconds: number;
+  clockMode: ClockMode;
+}
+
 export interface MatchView {
   id: string;
   matchNumber?: number;
@@ -116,6 +126,12 @@ export interface MatchView {
   score?: FinalScore;
   /** organizer = correctionHistory; viewer/screen = Feld corrected_at aus B-14. */
   correctedAt?: LocalClock;
+  /** Zustands-Abzeichen ohne Uhr (@OB-065, @OB-066); geplant → Anstoßzeit, ohne Anstoß keins. */
+  badge: MatchBadgeModel;
+  /** Feinstatus (Engine bzw. live_state, R-SA8); Quelle von Abzeichen und Restzeit. */
+  engine?: MatchBadgeEngineDetail;
+  /** Regeln der Spielzeit für die Restzeit ohne Feinstatus (5.1a): aus den Turnier-Einstellungen wie beim Anpfiff. */
+  clockRules?: SpectatorClockRules;
   home: SideView;
   away: SideView;
 }
@@ -148,11 +164,16 @@ export interface TournamentView {
 export type TournamentViewInput = Pick<
   Tournament,
   'teams' | 'groups' | 'matches' | 'date' | 'hideScoresForPublic' | 'hideRankingsForPublic' | 'isPublic' | 'shareCode'
-> & {
+> & Partial<Pick<Tournament, 'groupPhaseGameDuration' | 'finalRoundGameDuration' | 'gamePeriods' | 'halftimeBreak' | 'matchCockpitSettings' | 'finalsConfig'>> & {
   /** Feinstatus der Engine. Vorrang vor dem Cache (M4): Engine `finished`, Cache noch `running` → `finished`. */
   engineStatus?: (matchId: string) => EngineStatus | undefined;
   /** Nur öffentliche Leser: Korrekturzeit aus der Server-Funktion (B-14). Ohne sie hat viewer/screen kein correctedAt. */
   correctedAtPublic?: (matchId: string) => LocalClock | undefined;
+  /**
+   * Feinstatus je Spiel: Verwaltung aus der Engine, Monitor und Zuschauer aus `matches.live_state` (R-SA8).
+   * Ersetzt `engineStatus` nicht, hat aber Vorrang.
+   */
+  engineDetail?: (matchId: string) => MatchBadgeEngineDetail | undefined;
   finalRanking?: PlacementView['ranking'];
   closed?: boolean;
   /**

@@ -216,11 +216,11 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       for (const circle of container.querySelectorAll(`[data-testid="match-circle-${matchOf(t, 1).id}"]`)) {
         expect(circle).toHaveAttribute('data-match-status', 'finished');
       }
-      // Handy-Karte: Live-Kennzeichen „läuft“ in der Kopfzeile, nur bei Spiel 7
-      expect(container.querySelectorAll('[data-testid="match-card-live"]')).toHaveLength(1);
-      // Regulär beendet trägt weiter keinen Zusatz (@OB-064)
+      // Handy-Karte: Abzeichen „Live“ in der Kopfzeile, nur bei Spiel 7 (@OB-065)
+      expect(container.querySelectorAll('[data-testid="match-status-badge"][data-state="live"]')).toHaveLength(1);
+      // Regulär beendet trägt keinen Zusatz „n. V.“/„beendet i. E.“ (@OB-064); das Wort „Ende“ ist jetzt das Abzeichen (@OB-066)
       const zusatz = Array.from(container.querySelectorAll('*')).filter(
-        (el) => el.children.length === 0 && ['Ende', 'n. V.', 'beendet i. E.'].includes(el.textContent ?? '')
+        (el) => el.children.length === 0 && ['n. V.', 'beendet i. E.'].includes(el.textContent ?? '')
       );
       expect(zusatz).toHaveLength(0);
     });
@@ -238,7 +238,7 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       }
       // Handy-Karte: Kennzeichen „ausgefallen“, Tore ohne Zahl
       const karte = container.querySelector(`[data-testid="match-goals-${m5.id}-home"]`)?.closest('[data-match-card]');
-      expect(karte?.querySelector('[data-testid="match-card-status-note"]')?.textContent).toBe('ausgefallen');
+      expect(karte?.querySelector('[data-testid="match-status-badge"]')?.textContent).toBe('ausgefallen');
       expect(container.querySelector(`[data-testid="match-goals-${m5.id}-home"]`)?.textContent).toBe('–');
     });
 

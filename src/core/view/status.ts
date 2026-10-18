@@ -3,6 +3,7 @@
  * Cache (M4). Die Regel „hat Stand ⇒ beendet“ gibt es nicht (C-ZUSCHAUER-LIVE-ALS-BEENDET, @ZM-039/@ZM-040).
  */
 import i18next from 'i18next';
+import { MATCH_BADGE_WORD_KEY } from './badge';
 import type { EngineStatus, ViewLocale, ViewMatchStatus, ViewStatusSource } from './types';
 
 const FROM_ENGINE: Record<EngineStatus, ViewMatchStatus> = {
@@ -46,7 +47,21 @@ export function isUpcoming(status: ViewMatchStatus): boolean {
   return status === 'scheduled';
 }
 
-/** Wortlaut nach Record: „läuft“, „ausgefallen“, „gewertet“ … (`tournament:view.status.*`). */
+/**
+ * Wortlaut nach Record: Live, Pause, Ende, ausgefallen (@OB-066, @ZM-039) kommen aus `matchBadge.*` (eine Wortquelle mit
+ * dem Abzeichen); „geplant“ und „gewertet“ bleiben unter `tournament:view.status.*`.
+ */
 export function viewStatusText(status: ViewMatchStatus, locale: ViewLocale): string {
-  return i18next.t(`tournament:view.status.${status}`, { lng: locale });
+  switch (status) {
+    case 'running':
+      return i18next.t(`tournament:${MATCH_BADGE_WORD_KEY.live}`, { lng: locale });
+    case 'paused':
+      return i18next.t(`tournament:${MATCH_BADGE_WORD_KEY.pause}`, { lng: locale });
+    case 'finished':
+      return i18next.t(`tournament:${MATCH_BADGE_WORD_KEY.ended}`, { lng: locale });
+    case 'cancelled':
+      return i18next.t(`tournament:${MATCH_BADGE_WORD_KEY.cancelled}`, { lng: locale });
+    default:
+      return i18next.t(`tournament:view.status.${status}`, { lng: locale });
+  }
 }

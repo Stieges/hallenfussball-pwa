@@ -16,11 +16,11 @@
 import { type CSSProperties, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
-import { MatchCardScore, type MatchCardStatus } from './MatchCardScore';
+import type { MatchCardStatus } from './MatchCardScore';
+import { MatchCardSides } from './MatchCardSides';
 import { formatTime } from './utils';
-import { TeamAvatar } from '../../ui/TeamAvatar';
-import { RunningBadge } from '../RunningBadge';
-import type { ViewMatchStatus } from '../../../core/view';
+import { MatchStatusBadge } from '../../ui/molecules/MatchStatusBadge';
+import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../../core/view';
 import type { ResultFigures } from '../matchResult';
 import type { TeamLogo, TeamColors } from '../../../types/tournament';
 
@@ -58,10 +58,9 @@ export interface MatchCardDesktopProps {
   result?: ResultFigures | null;
   /** Match status */
   status: MatchCardStatus;
-  /** Formatted elapsed time */
-  elapsedFormatted?: string;
-  /** Fachlicher Status der Ansicht (ausgefallen, gewertet), @ZM-104 */
-  viewStatus?: ViewMatchStatus;
+  clock?: SpectatorClock | null; // Restzeit beim Stand (@ZM-162)
+  viewStatus?: ViewMatchStatus; // Fachlicher Status der Ansicht (ausgefallen, gewertet), @ZM-104
+  badge?: MatchBadgeModel; // Abzeichen der Ansicht (@OB-065)
   /** Callback when row is clicked */
   onRowClick?: () => void;
   /** Callback when score circle is clicked */
@@ -92,8 +91,9 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   awayTeam,
   result = null,
   status,
-  elapsedFormatted,
+  clock,
   viewStatus,
+  badge,
   onRowClick,
   onCircleClick,
   isExpanded = false,
@@ -163,35 +163,13 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
     fontWeight: cssVars.fontWeights.medium,
     color: isLive ? cssVars.colors.primary : cssVars.colors.textSecondary,
     fontVariantNumeric: 'tabular-nums',
-    minWidth: '50px',
+    width: '11em', // fest: Uhrzeit und Abzeichen teilen die Spalte, die Feld-Spalte steht in jeder Zeile gleich (@OB-065)
   };
 
   const fieldStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
     minWidth: '60px',
-  };
-
-  const teamStyle = (align: 'left' | 'right'): CSSProperties => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    justifyContent: align === 'right' ? 'flex-end' : 'flex-start',
-  });
-
-
-  const decided = result?.winner !== undefined && result.winner !== null;
-  const teamNameStyle = (side: 'a' | 'b'): CSSProperties => {
-    const isWinner = decided && result?.winner === side;
-    const isLoser = decided && result?.winner !== side;
-    return {
-      fontSize: cssVars.fontSizes.lg,
-      fontWeight: isWinner ? cssVars.fontWeights.bold : isLoser || status === 'finished' ? cssVars.fontWeights.medium : cssVars.fontWeights.semibold,
-      color: isLoser ? cssVars.colors.textSecondary : cssVars.colors.textPrimary,
-      // MOBILE-UX: No truncation - team names must be fully visible
-      wordBreak: 'break-word',
-      overflowWrap: 'break-word',
-    };
   };
 
   const groupStyle: CSSProperties = {
@@ -225,9 +203,10 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         aria-label={t('matchCard.ariaLabel', { matchNumber: matchNumber || '', homeTeam: homeTeam.name, awayTeam: awayTeam.name })}
       >
         {/* Time */}
-        <div style={timeStyle}>
-          {formatTime(scheduledTime)}
-          {isLive && <RunningBadge testId={`match-row-live-${matchId}`} />}
+        <div style={timeStyle} data-testid={`match-row-time-${matchId}`}>
+          {badge?.kind === 'badge'
+            ? <MatchStatusBadge model={badge} size="row" testId={isLive ? `match-row-live-${matchId}` : undefined} />
+            : formatTime(scheduledTime)}
         </div>
 
         {/* Field */}
@@ -238,44 +217,10 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
           )}
         </div>
 
-        {/* Home Team (right-aligned) */}
-        <div style={teamStyle('right')}>
-          <span style={teamNameStyle('a')} data-winner={decided && result?.winner === 'a' ? 'true' : undefined}>{homeTeam.name}</span>
-          <TeamAvatar team={homeTeam} size="sm" />
-        </div>
-
-        {/* Score Circle + Events Indicator */}
-        <div data-score-circle style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.xs }}>
-          <MatchCardScore
-            result={result}
-            status={status}
-            elapsedFormatted={elapsedFormatted}
-            viewStatus={viewStatus}
-            onClick={handleCircleClick}
-            disabled={disabled}
-            matchId={matchId}
-          />
-          {/* Chevron indicator for matches with events (shows expandability) */}
-          {hasEvents && !isLive && (
-            <span
-              style={{
-                color: cssVars.colors.textMuted,
-                fontSize: cssVars.fontSizes.sm,
-                transition: 'transform 0.2s ease',
-                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-              }}
-              aria-hidden="true"
-            >
-              ▼
-            </span>
-          )}
-        </div>
-
-        {/* Away Team (left-aligned) */}
-        <div style={teamStyle('left')}>
-          <TeamAvatar team={awayTeam} size="sm" />
-          <span style={teamNameStyle('b')} data-winner={decided && result?.winner === 'b' ? 'true' : undefined}>{awayTeam.name}</span>
-        </div>
+        <MatchCardSides
+          matchId={matchId} homeTeam={homeTeam} awayTeam={awayTeam} result={result} status={status} clock={clock}
+          viewStatus={viewStatus} onCircleClick={handleCircleClick} disabled={disabled} hasEvents={hasEvents} isExpanded={isExpanded}
+        />
 
         {/* Group */}
         <div style={groupStyle}>

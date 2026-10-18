@@ -143,7 +143,7 @@ export const palette = {
     gold: '#FFD700',
     silver: '#C0C0C0',
     bronze: '#CD7F32',
-    live: '#DC2626', // Pulse red for LIVE indicator
+    live: '#FB7185', // Live-Rot (Rose 400, dunkles Thema): eigener Ton, nicht das Fehler-Rot (@OB-039, Aufgabe 1.1)
   },
 } as const;
 
