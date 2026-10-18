@@ -68,9 +68,16 @@ describe('@ZM-039 @ZM-040 @ZM-041 F-PAUSE: unterbrochen bleibt live, nie „näc
     expect(v.byId.get(id8)?.score?.decidedBy).toBeNull(); // 0:0 beendet, Gruppe: nicht entschieden
   });
 
-  it.each(['de', 'en'] as const)('@ZM-039 Wortlaut „läuft“ (%s)', (locale) => {
-    expect(viewStatusText('paused', locale)).toBe(EXPECTED_STATE['F-PAUSE spiel7'].statusText[locale]);
-    expect(viewStatusText('running', locale)).toBe(EXPECTED_STATE['F-PAUSE spiel8'].statusText[locale]);
+  // Befund C-ABZEICHEN-WORT
+  it.fails('@OB-066 @ZM-039 Wortlaut „Pause“ und „Live“ (de)', () => {
+    expect(viewStatusText('paused', 'de')).toBe('Pause');
+    expect(viewStatusText('running', 'de')).toBe('Live');
+  });
+
+  // EN-Wortlaut steht nicht im Gherkin; Bestandswert bleibt bis zur Entscheidung des Controllers
+  it('@ZM-039 Wortlaut (en) bleibt wie im Fixture', () => {
+    expect(viewStatusText('paused', 'en')).toBe(EXPECTED_STATE['F-PAUSE spiel7'].statusText.en);
+    expect(viewStatusText('running', 'en')).toBe(EXPECTED_STATE['F-PAUSE spiel8'].statusText.en);
   });
 });
 

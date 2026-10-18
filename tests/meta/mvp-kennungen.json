@@ -1,7 +1,7 @@
 {
  "_hinweis": "Erzeugt von scripts/mvp-kennungen-erzeugen.mjs aus `anf.py mvp --json` (Klasse am Szenario). Nicht von Hand pflegen; soll aendert sich nur mit einer Entscheidung ueber den MVP-Schnitt.",
  "quelle": "anf.py mvp --json",
- "soll": 837,
+ "soll": 861,
  "records": {
   "helfer-am-turniertag": [
    "HE-001",
@@ -305,6 +305,7 @@
    "EK-047",
    "EK-048",
    "EK-049",
+   "EK-062",
    "EK-013",
    "EK-015",
    "EK-016",
@@ -356,7 +357,10 @@
    "OB-035",
    "OB-051",
    "OB-052",
-   "OB-053"
+   "OB-053",
+   "OB-065",
+   "OB-066",
+   "OB-067"
   ],
   "spiel-leiten": [
    "SL-001",
@@ -455,6 +459,10 @@
    "SL-137",
    "SL-138",
    "SL-139",
+   "SL-148",
+   "SL-149",
+   "SL-150",
+   "SL-151",
    "SL-048",
    "SL-114",
    "SL-115",
@@ -557,6 +565,9 @@
    "ZM-011",
    "ZM-012",
    "ZM-019",
+   "ZM-152",
+   "ZM-153",
+   "ZM-154",
    "ZM-020",
    "ZM-141",
    "ZM-102",
@@ -594,6 +605,12 @@
    "ZM-047",
    "ZM-049",
    "ZM-147",
+   "ZM-151",
+   "ZM-155",
+   "ZM-156",
+   "ZM-164",
+   "ZM-157",
+   "ZM-158",
    "ZM-114",
    "ZM-115",
    "ZM-058",
@@ -634,8 +651,12 @@
    "ZM-124",
    "ZM-128",
    "ZM-140",
+   "ZM-159",
+   "ZM-160",
+   "ZM-161",
    "ZM-138",
    "ZM-139",
+   "ZM-162",
    "ZM-145",
    "ZM-137",
    "ZM-125",
@@ -648,7 +669,8 @@
    "ZM-100",
    "ZM-101",
    "ZM-135",
-   "ZM-136"
+   "ZM-136",
+   "ZM-163"
   ],
   "monitor-einrichten": [
    "ME-001",
@@ -863,6 +885,7 @@
    "FU-082",
    "FU-083",
    "FU-093",
+   "FU-097",
    "FU-094",
    "FU-084",
    "FU-085"
@@ -886,7 +909,8 @@
    "TA-008",
    "TA-009",
    "TA-010",
-   "TA-011"
+   "TA-011",
+   "TA-012"
   ]
  }
 }

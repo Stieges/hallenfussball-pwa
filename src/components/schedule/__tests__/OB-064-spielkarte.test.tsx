@@ -122,19 +122,20 @@ describe('@OB-064 Tabellenzeile am Desktop: Ergebnis waagerecht', () => {
 });
 
 describe('Regel: laufendes Spiel zeigt seine Spielzeit in der Kopfzeile, Tore je Zeile', () => {
-  it('läuft 07:30 in der Kopfzeile, Tore 1 und 0, noch kein Sieger', () => {
+  // Befund C-ABZEICHEN-UHR
+  it.fails('@OB-065 läuft 07:30: Abzeichen „Live“ ohne Uhrzeit, Restzeit beim Stand, Tore 1 und 0, noch kein Sieger', () => {
     karte({ scoreA: 1, scoreB: 0 }, 'running', { elapsedFormatted: '07:30' });
-    // Mockup Variante D: „läuft 07:30“ (i18n `matchResult.runningElapsed`), nicht das feste Wort „LIVE“
-    expect(screen.getByTestId('match-card-live').textContent).toBe('läuft 07:30');
-    expect(screen.queryByText('LIVE')).toBeNull();
+    expect(screen.getByTestId('match-status-badge').textContent).toBe('Live');
+    expect(screen.getByTestId('match-clock')).toBeInTheDocument();
     expect(tore('home')).toBe('1');
     expect(tore('away')).toBe('0');
     expect(istFett('FC Nord')).toBe(false);
   });
 
-  it('läuft ohne bekannte Spielzeit: nur „läuft“, keine leere Zeit', () => {
+  // Befund C-ABZEICHEN-WORT
+  it.fails('@OB-066 läuft ohne bekannte Spielzeit: Abzeichen „Live“, keine leere Zeit', () => {
     karte({ scoreA: 0, scoreB: 0 }, 'running');
-    expect(screen.getByTestId('match-card-live').textContent).toBe('läuft');
+    expect(screen.getByTestId('match-status-badge').textContent).toBe('Live');
   });
 
   it('Gegenbeispiel: ein geplantes Spiel zeigt weder Spielzeit noch Tore noch „läuft“', () => {

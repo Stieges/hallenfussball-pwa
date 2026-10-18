@@ -96,15 +96,13 @@ describe('@TM-015 @ZM-102 Monitor: Herkunft offener Plätze, besetzter Platz ohn
 });
 
 describe('@ZM-039 @ZM-040 @ZM-041 F-PAUSE: unterbrochen bleibt live, nie „nächstes Spiel“', () => {
-  it('@ZM-039 Spielplan: Spiel 7 (angehalten bei 1:0) und Spiel 8 (läuft) tragen Statuspunkt und Rahmen „live“', async () => {
+  // Befund C-ABZEICHEN-WORT
+  it.fails('@OB-066 @ZM-039 Spielplan: Spiel 7 (angehalten bei 1:0) trägt „Pause“, Spiel 8 (läuft) „Live“', async () => {
     const cup = await fPAUSE();
-    for (const n of [7, 8] as const) {
+    for (const [n, wort] of [[7, 'Pause'], [8, 'Live']] as const) {
       const id = idOf(cup, GAME[n]);
       spielplan(cup, GAME[n]);
-      const row = zeile(id);
-      expect(within(row).getByTestId('monitor-match-status').style.background).toBe(LIVE_PUNKT);
-      expect(row.style.border).toContain(LIVE_PUNKT);
-      expect(row.getAttribute('data-status')).toBe(EXPECTED_STATE[n === 7 ? 'F-PAUSE spiel7' : 'F-PAUSE spiel8'].status);
+      expect(within(zeile(id)).getByTestId('match-status-badge')).toHaveTextContent(wort);
       document.body.innerHTML = '';
     }
   });

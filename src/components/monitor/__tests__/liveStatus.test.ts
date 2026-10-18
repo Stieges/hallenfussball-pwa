@@ -21,6 +21,14 @@ const STATUS_BY_THEME = {
   light: ['FINISHED', 'NOT_STARTED', 'RUNNING', 'PAUSED'],
 } as const;
 
+describe('@OB-066 Abzeichen trägt je Zustand sein Wort', () => {
+  // Befund C-ABZEICHEN-WORT
+  it.fails('@OB-066 laufend „Live“, unterbrochen „Pause“, beendet „Ende“', () => {
+    const theme = monitorThemes.dark;
+    expect((['RUNNING', 'PAUSED', 'FINISHED'] as const).map((s) => getStatusInfo(s, theme).label)).toEqual(['Live', 'Pause', 'Ende']);
+  });
+});
+
 describe.each(['dark', 'light'] as const)('Marken im Theme %s', (name) => {
   const theme = monitorThemes[name];
   it.each(STATUS_BY_THEME[name])('%s: Text zu Marken-Hintergrund ≥ 4,5 : 1', (status) => {

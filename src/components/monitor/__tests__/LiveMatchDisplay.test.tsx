@@ -86,11 +86,12 @@ describe('LiveMatchDisplay', () => {
       expect(screen.getByText(':')).toBeInTheDocument();
     });
 
-    it('zeigt LIVE-Badge bei laufendem Spiel', () => {
+    // Befund C-ABZEICHEN-WORT
+    it.fails('@OB-066 zeigt Abzeichen „Live“ bei laufendem Spiel', () => {
       const match = createMockMatch({ status: 'RUNNING' });
       render(<LiveMatchDisplay match={match} />);
 
-      expect(screen.getByText('LIVE')).toBeInTheDocument();
+      expect(screen.getByTestId('match-status-badge')).toHaveTextContent('Live');
     });
 
     it('zeigt Feld und Spielnummer', () => {
@@ -120,25 +121,23 @@ describe('LiveMatchDisplay', () => {
   // Status-Varianten
   // ==========================================================================
   describe('Status-Varianten', () => {
-    it('zeigt PAUSE-Badge bei pausiertem Spiel', () => {
-      const match = createMockMatch({ status: 'PAUSED' });
-      render(<LiveMatchDisplay match={match} />);
-
-      expect(screen.getByText('PAUSE')).toBeInTheDocument();
+    // Befund C-ABZEICHEN-WORT
+    it.fails('@OB-066 zeigt Abzeichen „Pause“ bei pausiertem Spiel', () => {
+      render(<LiveMatchDisplay match={createMockMatch({ status: 'PAUSED' })} />);
+      expect(screen.getByTestId('match-status-badge')).toHaveTextContent('Pause');
     });
 
-    it('zeigt BEENDET-Badge bei abgeschlossenem Spiel', () => {
-      const match = createMockMatch({ status: 'FINISHED' });
-      render(<LiveMatchDisplay match={match} />);
-
-      expect(screen.getByText('BEENDET')).toBeInTheDocument();
+    // Befund C-ABZEICHEN-WORT
+    it.fails('@OB-066 zeigt Abzeichen „Ende“ bei abgeschlossenem Spiel', () => {
+      render(<LiveMatchDisplay match={createMockMatch({ status: 'FINISHED' })} />);
+      expect(screen.getByTestId('match-status-badge')).toHaveTextContent('Ende');
     });
 
-    it('zeigt WARTET-Badge bei nicht gestartetem Spiel', () => {
-      const match = createMockMatch({ status: 'NOT_STARTED' });
-      render(<LiveMatchDisplay match={match} />);
-
-      expect(screen.getByText('WARTET')).toBeInTheDocument();
+    // Befund C-ABZEICHEN-WORT
+    it.fails('@OB-066 geplantes Spiel trägt kein Abzeichen, sondern seine Anstoßzeit', () => {
+      render(<LiveMatchDisplay match={createMockMatch({ status: 'NOT_STARTED' })} />);
+      expect(screen.queryByTestId('match-status-badge')).toBeNull();
+      expect(screen.getByTestId('match-kickoff').textContent).toMatch(/\d{1,2}:\d{2}/);
     });
   });
 

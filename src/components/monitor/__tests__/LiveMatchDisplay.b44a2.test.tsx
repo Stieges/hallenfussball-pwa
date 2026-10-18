@@ -246,15 +246,18 @@ describe('Festes Raster: gleiche Lage in allen Zuständen', () => {
     expect(a).toBe(b);
   });
 
-  it('Marke: dieselbe Breite für LIVE, PAUSE und BEENDET', () => {
-    const widths = (['RUNNING', 'PAUSED', 'FINISHED'] as const).map((status) => {
+  // Befund C-ABZEICHEN-WORT
+  it.fails('@OB-066 Marke: dieselbe Breite für Live, Pause, Ende', () => {
+    const marken = (['RUNNING', 'PAUSED', 'FINISHED'] as const).map((status) => {
       const { unmount } = render(<LiveMatchDisplay match={createMatch({ status })} />);
-      const w = screen.getByTestId('live-badge').style.width;
+      const badge = screen.getByTestId('live-badge');
+      const marke = { breite: badge.style.width, wort: badge.textContent };
       unmount();
-      return w;
+      return marke;
     });
-    expect(new Set(widths).size).toBe(1);
-    expect(widths[0]).toBe(L.badgeWidth);
+    expect(marken.map((m) => m.wort)).toEqual(['Live', 'Pause', 'Ende']);
+    expect(new Set(marken.map((m) => m.breite)).size).toBe(1);
+    expect(marken[0].breite).toBe(L.badgeWidth);
   });
 
   it('Kopfzeile ist ein Raster mit drei Spalten, auch ohne Gruppe', () => {
