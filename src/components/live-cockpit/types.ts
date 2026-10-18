@@ -161,7 +161,7 @@ export interface LiveCockpitProps {
   onPause(matchId: string): void;
   onResume(matchId: string): void;
   /** Liefert (optional, als `Promise<string | null>`) die ID des gesendeten Endes, damit Ton und Vibration genau einmal je Ende kommen (B-08c). */
-  onFinish(matchId: string): unknown;
+  onFinish(matchId: string): Promise<string | null> | undefined;
   onGoal(matchId: string, teamId: string, delta: 1 | -1, options?: {
     playerNumber?: number;
     assists?: number[];

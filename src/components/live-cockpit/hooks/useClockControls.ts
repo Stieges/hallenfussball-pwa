@@ -12,7 +12,7 @@ export interface ClockControlsParams {
   /** Wiederanpfiff nach der Abschnittspause (SECTION_START, B-08b). */
   onStartSection: (matchId: string) => void;
   /** Abpfiff von Hand; liefert (als Promise) die ID des gesendeten Endes, wenn der Aufrufer sie kennt (für `useWhistle`). */
-  onFinish: (matchId: string) => unknown;
+  onFinish: (matchId: string) => Promise<string | null> | undefined;
   /** Das Ende von Hand ist gesendet (`null`: abgelehnt oder nichts gespeichert). */
   onFinished?: (eventId: string | null) => void;
 }
