@@ -131,7 +131,9 @@ for (const breite of [360, 320]) {
         expect(Math.min(...m.teamspalte)).toBeGreaterThanOrEqual(Math.floor(m.breitestesWort));
         // „nichts abgeschnitten“ nur bei 360: bei 320 (@OB-060, Reflow) darf die Tabelle in ihrem Kasten seitlich
         // scrollen; die Schrift im CI-Container ist wenige Pixel breiter als lokal.
-        if (breite === 360) expect(m.abgeschnitten).toBe(0);
+        if (breite === 360) {
+          expect(m.abgeschnitten).toBe(0);
+        }
       }
       // MESS26 hat Wörter mit 17 Buchstaben (129 px): die Tabelle darf dort in ihrem Kasten seitlich scrollen (overflow-x: auto),
       // aber kein Wort wird zerlegt.
