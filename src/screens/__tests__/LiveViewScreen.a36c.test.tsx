@@ -255,6 +255,8 @@ describe('@ZM-087 Namen vollständig (Zuschauer-Seite Handy: voller Name, ohne �
     // @ZM-169 (Ausnahme zu @ZM-148): nur die Mobil-Gruppentabelle trägt das Vereinskürzel, alles andere bleibt voller Name
     const mobil = c.querySelector('.standings-table .mobile-view');
     expect(mobil?.textContent).toContain('SG FF Nordheim-Süd 1921');
+    expect(mobil?.textContent).not.toContain(lang);
+    expect(mobil?.textContent).not.toMatch(/GÜFÖ|SFNS/);
     const klon = c.cloneNode(true) as HTMLElement;
     klon.querySelectorAll('.standings-table .mobile-view').forEach((e) => e.remove());
     expect(klon.textContent).not.toMatch(/GÜFÖ|SFNS|SG FF Nordheim/);

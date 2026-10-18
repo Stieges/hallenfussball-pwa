@@ -32,6 +32,8 @@ interface Messung {
   fenster: number;
   verfuegbar: number;
   abgeschnitten: number;
+  jeTabelle: { verfuegbar: number; tabelle: number; abgeschnitten: number }[];
+  mitPunkten: string[];
 }
 
 async function oeffne(page: Page, breite: number, code: string) {
@@ -46,6 +48,7 @@ async function messe(page: Page): Promise<Messung> {
     const out: Messung = {
       namen: 0, gebrochen: [], senkrecht: [], zu_schmal: [], teamspalte: [], breitestesWort: 0,
       spaltenBreiten: [], tabelle: 0, ueberlauf: false, fenster: window.innerWidth, verfuegbar: 0, abgeschnitten: 0,
+      jeTabelle: [], mitPunkten: [],
     };
     const zellen = Array.from(document.querySelectorAll<HTMLElement>(sel));
     for (const div of zellen) {
@@ -53,6 +56,7 @@ async function messe(page: Page): Promise<Messung> {
       if (!text) { continue; }
       out.namen += 1;
       const roh = text.textContent ?? '';
+      if (roh.includes('…')) { out.mitPunkten.push(roh.trim()); }
       const re = /[^\s-]+/g;
       let m: RegExpExecArray | null;
       while ((m = re.exec(roh)) !== null) {
@@ -80,13 +84,18 @@ async function messe(page: Page): Promise<Messung> {
       out.teamspalte.push(Math.round(td.getBoundingClientRect().width));
       if (textBreite < 1) { out.zu_schmal.push(roh.trim()); }
     }
-    const tabelle = document.querySelector<HTMLElement>('.standings-table .mobile-view table');
-    out.tabelle = Math.round(tabelle?.getBoundingClientRect().width ?? 0);
+    // alle Gruppentabellen messen (nicht nur die erste): Überstand = scrollWidth − clientWidth des Kastens
+    const sichten = Array.from(document.querySelectorAll<HTMLElement>('.standings-table .mobile-view'));
+    out.jeTabelle = sichten.map((v) => ({
+      verfuegbar: Math.round(v.clientWidth),
+      tabelle: Math.round(v.querySelector('table')?.getBoundingClientRect().width ?? 0),
+      abgeschnitten: Math.max(0, v.scrollWidth - v.clientWidth),
+    }));
+    out.tabelle = Math.max(0, ...out.jeTabelle.map((t) => t.tabelle));
+    out.verfuegbar = Math.min(...out.jeTabelle.map((t) => t.verfuegbar));
+    out.abgeschnitten = Math.max(0, ...out.jeTabelle.map((t) => t.abgeschnitten));
     out.spaltenBreiten = Array.from(document.querySelectorAll<HTMLElement>('.standings-table .mobile-view thead th'))
       .map((th) => Math.round(th.getBoundingClientRect().width));
-    const sicht = document.querySelector<HTMLElement>('.standings-table .mobile-view');
-    out.verfuegbar = Math.round(sicht?.clientWidth ?? 0);
-    out.abgeschnitten = Math.max(0, (sicht?.scrollWidth ?? 0) - (sicht?.clientWidth ?? 0));
     out.ueberlauf = document.documentElement.scrollWidth > document.documentElement.clientWidth;
     return out;
   }, NAME_ZELLE);
@@ -115,6 +124,7 @@ for (const breite of [360, 320]) {
       // @ZM-088: nie senkrecht, nie mitten im Wort; @OB-060: die Seite selbst läuft nie seitlich über
       expect(m.senkrecht).toEqual([]);
       expect(m.gebrochen).toEqual([]);
+      expect(m.mitPunkten).toEqual([]);
       expect(m.ueberlauf).toBe(false);
       if (code === 'PHASES') {
         // Der Fall aus dem Befund (kurze Namen wie „SV Südpark“): Teamspalte >= breitestes Wort, nichts abgeschnitten
@@ -152,8 +162,9 @@ test('@ZM-169 Handy 360: Gruppentabelle zeigt „SG FF Nordheim-Süd 1921“ und
   expect(namen).not.toContain(VOLL);
   for (const t of namen) { expect(t).not.toContain('…'); }
   // Gegenbeispiel: eine Spielkarte derselben Seite zeigt weiter den vollen Namen (nicht in der Tabelle)
-  const karte = page.locator(`xpath=//*[not(ancestor::*[contains(@class,'standings-table')])][normalize-space(text())='${VOLL}']`);
+  const karte = page.locator('[data-match-card]').filter({ hasText: VOLL });
   expect(await karte.count()).toBeGreaterThan(0);
+  await expect(karte.first()).toContainText(VOLL);
   expect(await page.locator('.standings-table').getByText(VOLL).count()).toBe(1); // nur die ausgeblendete Desktop-Tabelle
   await bild(page, '169-tabelle-360-hell');
 });
@@ -162,12 +173,4 @@ test('@ZM-169 Gegenbeispiel Desktop 1280: Gruppentabelle zeigt weiter den vollen
   await oeffne(page, 1280, 'MESS26');
   await expect(page.locator('.standings-table .desktop-view').first().getByText(VOLL)).toBeVisible();
   await expect(page.locator('.standings-table .desktop-view').getByText('SG FF Nordheim-Süd 1921')).toHaveCount(0);
-});
-
-test('@ZM-169 Handy 320 (MESS26): mit Kürzeln schiebt die Tabelle höchstens 3 px (gemessen)', async ({ page }) => {
-  await oeffne(page, 320, 'MESS26');
-  const m = await messe(page);
-  test.info().annotations.push({ type: 'messung', description: JSON.stringify(m) });
-  expect(m.gebrochen).toEqual([]);
-  expect(m.abgeschnitten).toBeLessThanOrEqual(3);
 });

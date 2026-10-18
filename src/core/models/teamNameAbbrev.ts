@@ -6,7 +6,7 @@
  * Kleinschreibung wie in der Liste, die längste passende Folge zuerst. Ein Bindestrich an einer Wortfuge zwischen zwei
  * Buchstaben zählt beim Vergleich nicht („Sport-Verein“ wie „Sportverein“, siehe `vergleichsform`). Der Zusatz „e. V.“
  * bzw. „e.V.“ (als ganzes Wort) entfällt. Andere Kürzel (Anfangsbuchstaben) entstehen nie. Zuschauer-Seite, Spielplan und PDF nutzen diese
- * Funktion nicht (@ZM-148). Liegt die Liste in `core/models`, prüft der B-41-Scan sie nicht; sie ist ein Datenabgleich,
+ * Funktion nicht (@ZM-148); Ausnahme: Gruppentabelle am Handy (@ZM-169, `GroupTables` Mobil-Ansicht). Liegt die Liste in `core/models`, prüft der B-41-Scan sie nicht; sie ist ein Datenabgleich,
  * kein Anzeigetext (der Abgleich läuft gegen die deutschen Teamnamen aus den Turnierdaten).
  * Jede Erweiterung der Liste braucht eine Lern-Spur-Zeile im Record.
  */
