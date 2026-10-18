@@ -53,7 +53,6 @@ describe('DangerZoneCategory — frisch festgelegtes Turnier (@LZ-003, K1 Fixrun
         tournament={published}
         onTournamentUpdate={vi.fn()}
         onLocalTournamentUpdate={vi.fn()}
-        onMatchesUpdate={vi.fn()}
       />
     );
 

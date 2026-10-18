@@ -60,7 +60,6 @@ function renderDangerZone(tournament: Tournament) {
       tournament={tournament}
       onTournamentUpdate={vi.fn()}
       onLocalTournamentUpdate={vi.fn()}
-      onMatchesUpdate={vi.fn()}
     />
   );
 }

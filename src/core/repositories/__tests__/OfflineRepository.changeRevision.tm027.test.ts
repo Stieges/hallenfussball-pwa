@@ -16,12 +16,16 @@ import type { Tournament } from '../../models/types';
 
 const session = vi.hoisted(() => ({ userId: null as string | null }));
 const net = vi.hoisted(() => ({ online: true }));
+type Device = 'olli' | 'maria';
 /** Speicher je Gerät; `device` bestimmt, welches Gerät gerade liest/schreibt. */
-const devices = vi.hoisted(() => ({
-  device: 'olli',
-  raw: { olli: new Map<string, unknown>(), maria: new Map<string, unknown>() },
-  queue: { olli: new Map<string, string>(), maria: new Map<string, string>() },
-}));
+const devices = vi.hoisted(() => {
+  const state: { device: 'olli' | 'maria'; raw: Record<'olli' | 'maria', Map<string, unknown>>; queue: Record<'olli' | 'maria', Map<string, string>> } = {
+    device: 'olli',
+    raw: { olli: new Map<string, unknown>(), maria: new Map<string, unknown>() },
+    queue: { olli: new Map<string, string>(), maria: new Map<string, string>() },
+  };
+  return state;
+});
 
 vi.mock('../../storage/StorageFactory', () => ({
   createStorage: () =>
@@ -62,7 +66,7 @@ function liveCup(version: number, extra: Parameters<typeof liveCupBase>[1] = {})
   return { ...base, matches: base.matches.map((m) => (m.id === 'hf-1' ? { ...m, slotA: pendingSlot({ kind: 'groupRank', group: 'A', rank: 1 }) } : m)) };
 }
 
-function storedOn(device: 'olli' | 'maria'): Tournament {
+function storedOn(device: Device): Tournament {
   const found = (devices.raw[device].get('tournaments') as Tournament[]).find((t) => t.id === 'T');
   if (!found) { throw new Error(`lokale Kopie auf ${device} fehlt`); }
   return found;
@@ -73,7 +77,7 @@ describe('A-10 @TM-027 Zwei Geräte: K.-o.-Auflösung ohne Versions-CAS erreicht
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
-    for (const d of ['olli', 'maria'] as const) {
+    for (const d of ['olli', 'maria'] as const satisfies readonly Device[]) {
       devices.raw[d].clear();
       devices.queue[d].clear();
       devices.raw[d].set('tournaments', [liveCup(7)]);
@@ -90,7 +94,7 @@ describe('A-10 @TM-027 Zwei Geräte: K.-o.-Auflösung ohne Versions-CAS erreicht
     vi.useRealTimers();
   });
 
-  function on(device: 'olli' | 'maria'): void {
+  function on(device: Device): void {
     devices.device = device;
     session.userId = device;
   }
@@ -102,7 +106,7 @@ describe('A-10 @TM-027 Zwei Geräte: K.-o.-Auflösung ohne Versions-CAS erreicht
     await maria.updateMatches('T', [{ id: 'hf-1', slotA: teamSlot(FC_NORD) }]);
     await flush();
     expect(cloud.fake.updateMatches).toHaveBeenCalledTimes(1);
-    expect(cloud.fake.updateMatches.mock.calls[0][2]).toBeUndefined(); // ohne baseVersion (MutationQueue)
+    expect((cloud.fake.updateMatches.mock.calls[0] as unknown[])[2]).toBeUndefined(); // ohne baseVersion (MutationQueue)
     on('olli');
   }
 

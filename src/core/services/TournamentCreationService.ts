@@ -5,7 +5,6 @@ import { getSportConfig, DEFAULT_SPORT_ID } from '../../config/sports';
 import { generateFullSchedule } from '../generators';
 import { generateShareCode } from '../../utils/shareCode';
 import { matchOrigins } from '../models/matchOrigin';
-import { diffMatchResultStatusUpdates } from './matchResultStatusDiff';
 
 /**
  * @W1-020 (B-04b Fixrunde 1): Sichtbarkeit NACH dem Festlegen -- es gibt die
@@ -201,37 +200,14 @@ export class TournamentCreationService {
     }
 
     /**
-     * A2 Fixrunde 1 (Ruling AJ, I1: `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
-     * task-A2-review.md`): `repository.save()` intentionally skips result/status columns for
-     * EXISTING matches (A2) -- editing a PUBLISHED tournament in the Wizard can change those
-     * (e.g. "Turnier zurücksetzen" in `useTournamentWizard.ts` clears score/status/finishedAt).
-     * Fetches the pre-save state (only when editing an existing tournament) and persists any
-     * result/status change via a targeted update, same pattern as `DangerZone`/`useCorrectionMode`.
-     * Wrapped in try/catch: a failure here must never block the actual save that already
-     * succeeded above -- worst case the result/status change stays local-only, exactly the A2 gap
-     * this closes, not a new failure mode.
-     */
-    private async persistResultStatusChanges(tournamentId: string, previous: Tournament | null, next: Tournament): Promise<void> {
-        if (!previous) { return; }
-        try {
-            const updates = diffMatchResultStatusUpdates(previous.matches, next.matches);
-            if (updates.length > 0) {
-                await this.repository.updateMatches(tournamentId, updates);
-            }
-        } catch (err) {
-            console.error('Failed to persist result/status changes after save:', err);
-        }
-    }
-
-    /**
      * Saves the current draft state
      */
     async saveDraft(data: Partial<Tournament>): Promise<Tournament> {
-        const previous = data.id ? await this.repository.get(data.id) : null;
+        // A-10: Ergebnis-/Status-Spalten schreibt nur der Server (append_match_events, reset_match_results) --
+        // der frühere Nachtrag per updateMatches war in der Cloud ohne Wirkung (C3a-2b) und ist entfallen.
         const tournament = this.createDraft(data, data.id);
         tournament.updatedAt = new Date().toISOString();
         await this.repository.save(tournament);
-        await this.persistResultStatusChanges(tournament.id, previous, tournament);
         return tournament;
     }
 
@@ -271,7 +247,7 @@ export class TournamentCreationService {
         // task-A2-rereview.md`): "Erweiterte Bearbeitung" (re-publishing an already-published
         // tournament) regenerates the WHOLE schedule -- `schedule.allMatches` never carries
         // matchStatus/timer/tiebreaker fields (see `ScheduledMatch`, which doesn't declare them).
-        // Without this, `persistResultStatusChanges()` below would see e.g. a running match's
+        // Without this, the regenerated local copy would show e.g. a running match's
         // `matchStatus` go from `'running'` (in `previous`, the real DB state) to `undefined` (in
         // the freshly regenerated match) and reset it -- silently ending a helper's live match
         // from the cloud's point of view, just because the owner re-published the wizard. Carrying
@@ -340,8 +316,7 @@ export class TournamentCreationService {
         tournament.status = 'published';
         tournament.updatedAt = new Date().toISOString();
 
-        await this.repository.save(tournament);
-        await this.persistResultStatusChanges(tournament.id, previous, tournament);
+        await this.repository.save(tournament); // A-10: kein Ergebnis-Nachtrag mehr (nur der Server schreibt sie)
         return tournament;
     }
 

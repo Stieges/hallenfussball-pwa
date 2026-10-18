@@ -34,7 +34,6 @@ const ZWEI_ZU_EINS = { home: 2, away: 1 };
 
 function renderDangerZone(h: ScheduleEngine) {
   const onLocalTournamentUpdate = vi.fn();
-  const onMatchesUpdate = vi.fn();
   render(
     <ToastProvider>
       <MatchEngineContext.Provider value={h.value}>
@@ -43,12 +42,11 @@ function renderDangerZone(h: ScheduleEngine) {
           tournament={scheduleTournament({ [SPIEL_7]: { scoreA: 4, scoreB: 0, matchStatus: 'finished' } })}
           onTournamentUpdate={vi.fn()}
           onLocalTournamentUpdate={onLocalTournamentUpdate}
-          onMatchesUpdate={onMatchesUpdate}
         />
       </MatchEngineContext.Provider>
     </ToastProvider>,
   );
-  return { onLocalTournamentUpdate, onMatchesUpdate };
+  return { onLocalTournamentUpdate };
 }
 
 async function resetResults(user: ReturnType<typeof userEvent.setup>) {
@@ -73,14 +71,13 @@ describe('A-08f3e4 DangerZone: Zurücksetzen löscht keine Einträge still (@FU-
   it('@FU-090 Spiel 7 hat 5 Einträge → nicht ausgeführt, Text wörtlich, Spiel 7 behält alle 5 Einträge', async () => {
     await seedEntries(h, SPIEL_7, ZWEI_ZU_EINS);
     const user = userEvent.setup();
-    const { onLocalTournamentUpdate, onMatchesUpdate } = renderDangerZone(h);
+    const { onLocalTournamentUpdate } = renderDangerZone(h);
 
     await user.click(screen.getByRole('button', { name: /Spielplan zurücksetzen/i }));
 
     expect(await screen.findByText('Spiel 7 hat Einträge – nur über Spielplan auf Anfang setzen')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument(); // Fixrunde 1 (7): kein Bestätigungswort angeboten
     expect(onLocalTournamentUpdate).not.toHaveBeenCalled();
-    expect(onMatchesUpdate).not.toHaveBeenCalled();
     expect(await entryCount(h, SPIEL_7)).toBe(5);
   });
 
