@@ -515,7 +515,10 @@ run_probes() {
 run_assertions() {
   local priv names_sql names_sh
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
-  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
+  # UR: Zeilen SPAETERER Migrationen (20261028_006) sind im normalen Lauf erwartungsgemaess f -- dort laufen die
+  # spaeteren Migrationen erst nach dem Rueckweg (A5, wie match-kit-check.sh).
+  check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migration 20261028_006)" "" \
+    "$(grep -v '|t$' <<<"$priv" | grep -vE '^match-event-author-names-' || true)"
   check S "Rechte-Assertion: die 8 A-10-Zeilen vorhanden und |t" \
     "matches-bump-change-revision-definer-no-client-execute|t,matches-bump-change-revision-trigger-active|t,matches-guard-engine-columns-insert-and-update|t,matches-guard-engine-columns-unconditional|t,reset-match-results-definer-search-path|t,reset-match-results-execute-only-authenticated|t,tournaments-guard-change-revision-invoker-no-client-execute|t,tournaments-guard-change-revision-trigger-active|t" \
     "$(grep -E '^(matches-guard-engine-columns-(insert-and-update|unconditional)|reset-match-results|matches-bump-change-revision|tournaments-guard-change-revision)' <<<"$priv" | sort | paste -sd, -)"
@@ -611,7 +614,8 @@ DUMP_BEFORE="$(schema_dump)"
 COUNTS_BEFORE="$(counts "$DUMP_BEFORE")"
 echo "Migration einspielen..." >&2
 psql_stdin < "$TARGET_FILE"
-for f in ${AFTER[@]+"${AFTER[@]}"}; do psql_stdin < "$f"; done
+# UR: spaetere Migrationen (AFTER, z. B. 20261028_006) erst nach dem Rueckweg (A5, wie match-kit-check.sh) --
+# vorher wuerden die Katalogzaehlung (S) und der Rueckweg-Vergleich (X) sie mitmessen.
 check C "Bestand: change_revision aller Turniere 0, Spiel 3 unveraendert 3:1" "0|3|1|finished" \
   "$(q "SELECT count(*) FROM public.tournaments WHERE change_revision <> 0;")|$(score_of "$S3")"
 
@@ -658,6 +662,13 @@ check X "nach dem Rueckweg: Schema public = vor der Migration (pg_dump identisch
 if [[ "$DUMP_ROLLED_BACK" != "$DUMP_BEFORE" ]]; then
   diff <(echo "$DUMP_BEFORE") <(echo "$DUMP_ROLLED_BACK") | head -40 || true
 fi
+
+# A5: spaetere Migrationen auf dem Zustand NACH dem Rueckweg einspielen -- nur Lauffaehigkeits-Nachweis
+# (psql_stdin bricht bei einem Fehler ab). Die Messungen oben sind davon unabhaengig.
+for f in ${AFTER[@]+"${AFTER[@]}"}; do
+  psql_stdin < "$f"
+  echo "OK    A5 spaetere Migration laeuft nach dem Rueckweg: $(basename "$f")" >&2
+done
 
 summary
 echo

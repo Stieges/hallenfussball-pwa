@@ -87,6 +87,9 @@ A30A_MIGRATION="20261028_004_match_kit_colors.sql"
 # A-10: juengste Fassung von matches_guard_engine_columns (unbedingt, BEFORE INSERT OR UPDATE) -- 20261001_001
 # erneut einzuspielen stellte die alte Bedingung wieder her, deshalb ans Ende der Idempotenz-Kette.
 A10_MIGRATION="20261028_005_guard_all_matches.sql"
+# UR: additive Lesefunktion match_event_author_names (keine Engine-Funktion) -- laeuft in der Kette mit und wird
+# fuer die Idempotenz am Ende der Kette ein zweites Mal eingespielt.
+UR_MIGRATION="20261028_006_event_author_names.sql"
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 RULES_DIR="$FIXTURES_DIR/rules"
 CONTAINER_NAME="match-engine-parity-$$"
@@ -116,6 +119,7 @@ ZA3_FILE=""
 A25A_FILE=""
 A30A_FILE=""
 A10_FILE=""
+UR_FILE=""
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   NEWER_MIGRATIONS+=("$line")
@@ -127,10 +131,11 @@ while IFS= read -r line; do
     "$A25A_MIGRATION") A25A_FILE="$line" ;;
     "$A30A_MIGRATION") A30A_FILE="$line" ;;
     "$A10_MIGRATION") A10_FILE="$line" ;;
+    "$UR_MIGRATION") UR_FILE="$line" ;;
   esac
 done <<< "$NEWER_MIGRATIONS_RAW"
-if [[ -z "$ENGINE_FILE" || -z "$APPEND_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" || -z "$A30A_FILE" || -z "$A10_FILE" ]]; then
-  echo "::error::$ENGINE_MIGRATION, $APPEND_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION, $A30A_MIGRATION oder $A10_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
+if [[ -z "$ENGINE_FILE" || -z "$APPEND_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" || -z "$A30A_FILE" || -z "$A10_FILE" || -z "$UR_FILE" ]]; then
+  echo "::error::$ENGINE_MIGRATION, $APPEND_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION, $A30A_MIGRATION, $A10_MIGRATION oder $UR_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
   exit 1
 fi
 
@@ -187,7 +192,7 @@ for f in "${NEWER_MIGRATIONS[@]}"; do
 done
 # C0b: 002 allein erneut einzuspielen ersetzte die in 20261001 geaenderten Funktionen durch den
 # PR-B-Stand -- die Idempotenz wird deshalb fuer die ganze Kette 002 -> 003 -> 20261001 belegt.
-echo "Idempotenz: $ENGINE_MIGRATION, $APPEND_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION, $A30A_MIGRATION, $A10_MIGRATION ein zweites Mal einspielen..." >&2
+echo "Idempotenz: $ENGINE_MIGRATION, $APPEND_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION, $A30A_MIGRATION, $A10_MIGRATION, $UR_MIGRATION ein zweites Mal einspielen..." >&2
 psql_stdin < "$ENGINE_FILE"
 psql_stdin < "$APPEND_FILE"
 psql_stdin < "$AMEND_FILE"
@@ -195,6 +200,7 @@ psql_stdin < "$ZA3_FILE"
 psql_stdin < "$A25A_FILE"
 psql_stdin < "$A30A_FILE"
 psql_stdin < "$A10_FILE"
+psql_stdin < "$UR_FILE"
 
 # C0b-Gegenprobe Phase A: je Kategorie genau eine gezielte Mutation in 20261001 (grep belegt je
 # Muster genau einen Treffer). (4) wirkt auf state.details (und damit auch auf die Nachtrag-Regel,
