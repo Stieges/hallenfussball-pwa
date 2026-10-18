@@ -99,6 +99,11 @@ describe('Feinstatus (Engine bzw. live_state hat Vorrang)', () => {
     expect(spectatorClockOf({ totalElapsedSec: 600, sectionSec: 600, sections: 2, stopped: true, engine: pause, nowMs: 1_999_000 }).remaining).toBe('0:00');
   });
 
+  it('@OB-066 Gegenbeispiel: Ende des 1. von 2 Abschnitten (Uhr schon bei 0:00, Pause noch nicht gesetzt) ist nicht „Spielzeit abgelaufen“', () => {
+    const engine = E('running', 'regular', 1, 2, { sectionSeconds: 600, sectionElapsedSec: 600, running: true });
+    expect(spectatorClockOf({ totalElapsedSec: 600, sectionSec: 600, sections: 2, stopped: false, engine })).toMatchObject({ remaining: '0:00', expired: false });
+  });
+
   it('@OB-066 Pause nach dem 1. von 4 Abschnitten: Phase „Pause nach dem 1. von 4 Abschnitten“ (nicht Halbzeit)', () => {
     const pause = E('section_break', 'regular', 1, 4, { breakRemainingSec: 45 });
     expect(spectatorClockOf({ totalElapsedSec: 300, sectionSec: 300, sections: 4, stopped: true, engine: pause })).toMatchObject({ remaining: '0:45', sectionKey: 'sectionBreak', section: 1, sections: 4 });
