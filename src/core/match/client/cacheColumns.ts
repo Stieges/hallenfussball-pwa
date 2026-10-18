@@ -9,6 +9,7 @@
  * abgesetzt hat) und `skipped_reason` (`payload.reason` oder `null`), nur im Status `skipped`.
  */
 import { effectiveScoreFor, type EngineEvent, type MatchContext, type MatchState, type MatchStatus, type Phase, type TiebreakMode } from '../types';
+import { enteredShootoutStatus } from '../shootoutStatus';
 
 export type CacheMatchStatus = Exclude<MatchStatus, 'section_break' | 'decision_pending' | 'shootout'>;
 export type CacheDecidedBy = 'regular' | 'overtime' | 'goldenGoal' | 'penalty';
@@ -61,17 +62,19 @@ function cacheStatus(status: MatchStatus): CacheMatchStatus {
 /**
  * A-25a (@FU-094, @ZM-147): Strafstoßergebnis eines nur eingetragenen Ergebnisses -- aus der LETZTEN
  * Überschreibung, nur im beendeten Spiel. Eine spätere Korrektur ohne Strafstoß verdrängt es.
+ * SW (@EK-062): und nur bei effektivem Gleichstand (`enteredShootoutStatus`, kind `counts`) -- nach dem
+ * Wiedereröffnen und einem Ende ohne Gleichstand zählt der alte Strafstoß nirgends mehr.
  */
-function enteredShootout(state: MatchState): Record<string, number> | null {
-  const lastOverride = state.overrides[state.overrides.length - 1];
-  return state.status === 'finished' && lastOverride?.shootout !== undefined ? lastOverride.shootout : null;
+function enteredShootout(state: MatchState, ctx: MatchContext): Record<string, number> | null {
+  const status = enteredShootoutStatus(state, ctx);
+  return status?.kind === 'counts' ? status.shootout : null;
 }
 
-function cacheDecidedBy(state: MatchState): CacheDecidedBy | null {
+function cacheDecidedBy(state: MatchState, ctx: MatchContext): CacheDecidedBy | null {
   if (state.status !== 'finished' || state.decidedBy === null) {
     return null;
   }
-  if (state.decidedBy === 'shootout' || enteredShootout(state) !== null) {
+  if (state.decidedBy === 'shootout' || enteredShootout(state, ctx) !== null) {
     return 'penalty';
   }
   return state.decidedBy === 'correction' || state.decidedBy === 'direct' ? 'regular' : state.decidedBy;
@@ -141,7 +144,7 @@ export function cacheColumns(state: MatchState, ctx: MatchContext): CacheColumns
     state.baseDecidedBy === 'overtime' ||
     state.baseDecidedBy === 'goldenGoal';
   const inShootout = state.phase === 'shootout' && !unplayed;
-  const entered = enteredShootout(state);
+  const entered = enteredShootout(state, ctx);
   const penaltyScore = (teamId: string, breakdown: MatchState['scores'][string]): number | null => {
     if (inShootout) {
       return breakdown.shootout;
@@ -171,7 +174,7 @@ export function cacheColumns(state: MatchState, ctx: MatchContext): CacheColumns
     penalty_score_a: penaltyScore(teamAId, scoreA),
     penalty_score_b: penaltyScore(teamBId, scoreB),
     match_status: cacheStatus(state.status),
-    decided_by: cacheDecidedBy(state),
+    decided_by: cacheDecidedBy(state, ctx),
     running: state.clock.running,
     started: !unplayed,
     anchor_at: state.clock.running ? state.clock.anchorAt : null,

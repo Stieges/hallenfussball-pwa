@@ -34,3 +34,4 @@ export {
   type CacheLiveState,
   type CacheMatchStatus,
 } from './client/cacheColumns';
+export { enteredShootoutStatus, type EnteredShootoutStatus } from './shootoutStatus';
