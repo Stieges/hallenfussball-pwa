@@ -131,7 +131,6 @@
       "running": "Match in progress – enter the result after the final whistle",
       "teamsMissing": "Enter a result once both teams are known",
       "unavailable": "Entering a result is not possible right now",
-      "knockoutDraw": "Draw in a knockout match – please enter the result including the $t(sport:events.penaltyShootout) in the cockpit. Nothing saved.",
       "shootoutTitle": "Penalty shootout result",
       "shootoutQuestion": "Match {{number}} ended {{score}} – who won the $t(sport:events.penaltyShootout)?",
       "shootoutMissing": "Please enter the penalty shootout result.",
