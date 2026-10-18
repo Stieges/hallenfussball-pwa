@@ -246,16 +246,7 @@ describe('Festes Raster: gleiche Lage in allen Zuständen', () => {
     expect(a).toBe(b);
   });
 
-  it('Marke: dieselbe Breite für LIVE, PAUSE und BEENDET', () => {
-    const widths = (['RUNNING', 'PAUSED', 'FINISHED'] as const).map((status) => {
-      const { unmount } = render(<LiveMatchDisplay match={createMatch({ status })} />);
-      const w = screen.getByTestId('live-badge').style.width;
-      unmount();
-      return w;
-    });
-    expect(new Set(widths).size).toBe(1);
-    expect(widths[0]).toBe(L.badgeWidth);
-  });
+  // Marke: Wörter und Breite in LiveMatchDisplay.badge.test.tsx (echte DE-Texte)
 
   it('Kopfzeile ist ein Raster mit drei Spalten, auch ohne Gruppe', () => {
     render(<LiveMatchDisplay match={createMatch({ group: undefined })} />);

@@ -5,7 +5,7 @@
  * Erst mit fertigem Spielplan: ein Turnier, dessen Spielplan nicht entsteht, bekommt keine Ansicht.
  */
 import { useMemo } from 'react';
-import { buildTournamentView, toTournamentLocal, TOURNAMENT_TIME_ZONE, type TournamentView } from '../../core/view';
+import { buildTournamentView, engineDetailFromMatches, toTournamentLocal, TOURNAMENT_TIME_ZONE, type TournamentView } from '../../core/view';
 import type { GeneratedSchedule } from '../../core/generators';
 import { ANZEIGE_SPRACHE } from '../../i18n/anzeigeSprache';
 import type { Tournament } from '../../types/tournament';
@@ -14,7 +14,7 @@ export function usePublicView(tournament: Tournament | null, schedule: Generated
   return useMemo(
     () => (tournament === null || schedule === null
       ? null
-      : buildTournamentView(tournament, {
+      : buildTournamentView({ ...tournament, engineDetail: engineDetailFromMatches(tournament.matches, new Date().getTime()) }, {
         audience: 'viewer',
         medium: 'app',
         locale: ANZEIGE_SPRACHE,

@@ -9,6 +9,9 @@
 
 import { palette } from './palette';
 
+/** Live-Rot des hellen Themas: Rose 700 (@OB-039, Aufgabe 1.1); das dunkle Thema nimmt `palette.special.live` (Rose 400). */
+const LIVE_RED_LIGHT = '#BE123C';
+
 export const semanticColorsLight = {
   // ---------------------------------------------------------------------------
   // Brand Colors (darker for light mode contrast - WCAG AA 4.5:1 required)
@@ -126,8 +129,10 @@ export const semanticColorsLight = {
   // ---------------------------------------------------------------------------
   // Status Colors (for tournament states)
   // ---------------------------------------------------------------------------
-  statusLive: palette.red[600], // Darker red for visibility
-  statusLiveBg: 'rgba(220, 38, 38, 0.1)',
+  statusLive: LIVE_RED_LIGHT, // Live-Rot (Rose 700), Fläche des Abzeichens; ΔE2000 11,9 zum Fehler-Rot
+  statusLiveBg: 'rgba(190, 18, 60, 0.1)',
+  /** Schrift auf statusLive: Weiß, 6,3 : 1 */
+  statusLiveOn: palette.neutral[0],
   statusLiveRowBg: 'rgba(220, 38, 38, 0.05)',
 
   statusUpcoming: palette.emerald[600],
@@ -149,9 +154,9 @@ export const semanticColorsLight = {
   // ---------------------------------------------------------------------------
   // Live Cockpit Specific
   // ---------------------------------------------------------------------------
-  liveBadge: palette.red[600],
-  liveBadgeBg: 'rgba(220, 38, 38, 0.12)',
-  liveBadgePulse: 'rgba(220, 38, 38, 0.25)',
+  liveBadge: LIVE_RED_LIGHT,
+  liveBadgeBg: 'rgba(190, 18, 60, 0.12)',
+  liveBadgePulse: 'rgba(190, 18, 60, 0.25)',
 
   // ---------------------------------------------------------------------------
   // Correction/Warning Banner
@@ -285,7 +290,7 @@ export const semanticColorsLight = {
   scoreboardBg: '#0F1B33',
   scoreboardText: palette.neutral[0],
   scoreboardTextMuted: '#A3B8D4',
-  scoreboardLive: palette.special.live,
+  scoreboardLive: palette.red[600], // Tafel bleibt im bisherigen Rot bis 1.3
   scoreboardHighlight: palette.orange[400],
   scoreboardFinalPhase: palette.purple[300],
   scoreboardBorder: '#A3B8D4',

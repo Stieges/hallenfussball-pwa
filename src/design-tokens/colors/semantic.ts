@@ -136,8 +136,10 @@ export const semanticColorsDark = {
   // ---------------------------------------------------------------------------
   // Status Colors (for tournament states)
   // ---------------------------------------------------------------------------
-  statusLive: palette.special.live, // Red for LIVE indicator
-  statusLiveBg: 'rgba(220, 38, 38, 0.15)',
+  statusLive: palette.special.live, // Live-Rot (Rose 400), Fläche des Abzeichens
+  statusLiveBg: 'rgba(251, 113, 133, 0.15)',
+  /** Schrift auf statusLive: dunkel (Hintergrund-Ton), 7,8 : 1; Weiß hätte nur 2,7 : 1 */
+  statusLiveOn: palette.neutral[950],
   statusLiveRowBg: 'rgba(220, 38, 38, 0.08)',
 
   statusUpcoming: '#4CAF50',
@@ -160,8 +162,8 @@ export const semanticColorsDark = {
   // Live Cockpit Specific
   // ---------------------------------------------------------------------------
   liveBadge: palette.special.live,
-  liveBadgeBg: 'rgba(220, 38, 38, 0.2)',
-  liveBadgePulse: 'rgba(220, 38, 38, 0.4)',
+  liveBadgeBg: 'rgba(251, 113, 133, 0.2)',
+  liveBadgePulse: 'rgba(251, 113, 133, 0.4)',
 
   // ---------------------------------------------------------------------------
   // Correction/Warning Banner
@@ -296,7 +298,7 @@ export const semanticColorsDark = {
   scoreboardBg: '#050E1F',
   scoreboardText: palette.neutral[0],
   scoreboardTextMuted: '#A3B8D4',
-  scoreboardLive: palette.special.live,
+  scoreboardLive: palette.red[600], // Tafel bleibt im bisherigen Rot (weiße Schrift 4,83 : 1) bis 1.3 sie auf das Abzeichen umstellt
   scoreboardHighlight: palette.orange[400],
   scoreboardFinalPhase: palette.purple[300],
   scoreboardBorder: '#A3B8D4',

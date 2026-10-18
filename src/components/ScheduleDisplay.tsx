@@ -16,6 +16,7 @@ import type { TournamentView, ViewLocale } from '../core/view';
 import { Standing, Match, Team } from '../types/tournament';
 import type { ScheduleSource } from './schedule/scheduleSource';
 import { useElapsedSeconds } from './schedule/useTickingNow';
+import { useSpectatorClocks } from './schedule/useSpectatorClocks';
 import {
   TournamentHeader,
   ParticipantsAndGroups,
@@ -43,8 +44,7 @@ interface ScheduleDisplayProps {
   /** Die gemeinsame Ansicht (A-36c): Status, Seitentexte, Endstand; ohne sie gilt jedes Spiel als geplant. */
   view?: TournamentView;
   locale?: ViewLocale;
-  /** Gespielte Sekunden eines laufenden Spiels; ohne Angabe aus den Zeitfeldern von `currentMatches`. */
-  elapsedSeconds?: (matchId: string) => number | undefined;
+  elapsedSeconds?: (matchId: string) => number | undefined; // gespielte Sekunden; sonst aus `currentMatches`
   /** Optional: Current matches with live scores (overrides schedule scores) */
   currentMatches?: Match[];
   /** Zeige QR-Code für Live-Tracking */
@@ -155,7 +155,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     view,
     locale,
   }), [tournamentTeams, schedule.teams, schedule.tournament.groups, schedule.allMatches, view, locale]);
-  const elapsedOf = useElapsedSeconds(view, currentMatches, elapsedSeconds);
+  const clockOf = useSpectatorClocks(view, useElapsedSeconds(view, currentMatches, elapsedSeconds));
 
   // US-VIEWER-FILTERS: Filter matches based on visibleMatchIds (if provided)
   const filteredGroupPhaseMatches = useMemo(() => {
@@ -212,7 +212,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onScoreChange={onScoreChange}
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
-          elapsedSeconds={elapsedOf}
+          clockOf={clockOf}
           tournament={sideSource}
           onMatchSwap={onMatchSwap}
           onNavigateToCockpit={onNavigateToCockpit}
@@ -243,7 +243,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onScoreChange={onScoreChange}
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
-          elapsedSeconds={elapsedOf}
+          clockOf={clockOf}
           onMatchSwap={onMatchSwap}
           tournament={sideSource}
         />

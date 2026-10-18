@@ -3,6 +3,9 @@
  * PDF und Verwaltung. Status, Seitentexte, Uhrzeit, Endstand und Sichtbarkeit kommen nur von hier.
  */
 import type { Match } from '../../types/tournament';
+import { DEFAULT_CLOCK_MODE } from '../match/clockDisplay';
+import { serverRules } from '../match/client/serverRules';
+import { matchBadgeModel, type MatchBadgeEngineDetail } from './badge';
 import { matchFinalScore } from './finalScore';
 import { matchLabelText, type SlotLabelContext } from './originText';
 import { placementView } from './placement';
@@ -14,6 +17,7 @@ import type {
   CurrentView,
   LocalClock,
   MatchView,
+  SpectatorClockRules,
   TournamentView,
   TournamentViewInput,
   ViewMatchStatus,
@@ -66,10 +70,35 @@ function correctedAtFor(match: Match, input: TournamentViewInput, options: ViewO
   return instant === undefined || Number.isNaN(instant.getTime()) ? undefined : toTournamentLocal(instant, TOURNAMENT_TIME_ZONE);
 }
 
+/**
+ * Feinstatus nur, wo er stimmt (A2): Monitor und Zuschauer liefern nur `engineDetail` aus `live_state`. Ein liegengebliebenes
+ * `liveState` überstimmt dort nie „Ende“ oder „ausgefallen“ – es gilt nur bei Cache-Status running/paused. Die Verwaltung
+ * liefert zusätzlich `engineStatus` (Engine hat Vorrang, M4) und bleibt unverändert.
+ */
+function usableDetail(match: Match, input: TournamentViewInput): MatchBadgeEngineDetail | undefined {
+  const detail = input.engineDetail?.(match.id);
+  if (detail === undefined || input.engineStatus?.(match.id) !== undefined) {
+    return detail;
+  }
+  return match.matchStatus === 'running' || (match.matchStatus as string | undefined) === 'paused' ? detail : undefined;
+}
+
+/** Abschnitte und Längen wie beim Anpfiff (`serverRules`, gleiche Eingabe wie die Engine), für die Restzeit ohne Feinstatus. */
+function clockRulesOf(match: Match, input: TournamentViewInput): SpectatorClockRules {
+  const rules = serverRules({
+    durationMinutes: null, phase: match.phase ?? null, finalType: match.finalType ?? null,
+    groupPhaseDuration: input.groupPhaseGameDuration ?? null, finalRoundDuration: input.finalRoundGameDuration ?? null,
+    config: { gamePeriods: input.gamePeriods, halftimeBreak: input.halftimeBreak, matchCockpitSettings: input.matchCockpitSettings },
+    finalsConfig: input.finalsConfig ?? null,
+  });
+  return { sections: rules.sections, sectionSeconds: rules.sectionSeconds, overtimeSeconds: rules.overtimeSeconds, clockMode: input.matchCockpitSettings?.clockMode ?? DEFAULT_CLOCK_MODE };
+}
+
 function matchView(match: Match, input: TournamentViewInput, options: ViewOptions, rules: ViewRules, sides: SideContext): MatchView {
   const blank = sides.edition === 'blank';
   // Vorlage: keine Ergebnisse, keine Zustände – jedes Spiel hat seine Felder zum Eintragen (@DR-005, @DR-019).
-  const status = blank ? 'scheduled' : audienceStatus(viewStatus(match, input.engineStatus?.(match.id)), rules);
+  const detail = blank ? undefined : usableDetail(match, input);
+  const status = blank ? 'scheduled' : audienceStatus(viewStatus(match, detail?.status ?? input.engineStatus?.(match.id)), rules);
   const kickoff = kickoffLocal(input.date, match.scheduledTime);
   const score = blank ? undefined : scoreFor(match, status, rules);
   const correctedAt = blank ? undefined : correctedAtFor(match, input, options, rules);
@@ -88,6 +117,9 @@ function matchView(match: Match, input: TournamentViewInput, options: ViewOption
     isUpcoming: isUpcoming(status),
     ...(score === undefined ? {} : { score }),
     ...(correctedAt === undefined ? {} : { correctedAt }),
+    badge: matchBadgeModel({ status, ...(detail === undefined ? {} : { engine: detail }), ...(kickoff === undefined ? {} : { kickoff }) }),
+    ...(detail === undefined ? {} : { engine: detail }),
+    ...(isLive(status) ? { clockRules: clockRulesOf(match, input) } : {}),
     home: sideView(match, 'A', sides),
     away: sideView(match, 'B', sides),
   };

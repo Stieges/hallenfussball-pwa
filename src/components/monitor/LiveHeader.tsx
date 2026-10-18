@@ -4,14 +4,16 @@
  */
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayLayout, displaySpacing, type MonitorThemeColors } from '../../design-tokens';
-import type { MatchStatus } from '../../hooks/useLiveMatches';
-import { getStatusInfo } from './liveStatus';
+import { cssVars, displayFontSizes, displayLayout, type MonitorThemeColors } from '../../design-tokens';
+import type { MatchBadgeModel } from '../../core/view';
+import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
+import { monitorBadgeTone } from '../ui/molecules/matchStatusBadgeStyle';
 
 const layout = displayLayout.scoreArea;
 
 export interface LiveHeaderProps {
-  status: MatchStatus;
+  /** Abzeichen der Ansicht (`MatchView.badge`); ohne Angabe aus dem Status der Live-Anzeige */
+  badge: MatchBadgeModel;
   field: number;
   matchNumber: number | string;
   /** Gruppenname, falls vorhanden */
@@ -20,12 +22,9 @@ export interface LiveHeaderProps {
   themeColors: MonitorThemeColors;
 }
 
-export function LiveHeader({ status, field, matchNumber, group, size, themeColors }: LiveHeaderProps) {
+export function LiveHeader({ badge, field, matchNumber, group, size, themeColors }: LiveHeaderProps) {
   const { t } = useTranslation('monitor');
-  const statusInfo = getStatusInfo(status, themeColors);
-  const isRunning = status === 'RUNNING';
   const xl = size === 'xl';
-
   // B-44a2: feste drei Spalten (Marke links, Feld/Spiel Mitte, Gruppe rechts), auch wenn eine Gruppe fehlt
   const headerStyle: CSSProperties = {
     display: 'grid',
@@ -36,31 +35,12 @@ export function LiveHeader({ status, field, matchNumber, group, size, themeColor
     marginBottom: layout.headerGap,
     flexShrink: 0,
   };
-  const badgeStyle: CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: xl ? layout.badgeGap : cssVars.spacing.sm,
-    padding: xl ? `${layout.badgePadY} ${layout.badgePadX}` : `${cssVars.spacing.sm} ${cssVars.spacing.xl}`,
-    borderRadius: cssVars.borderRadius.md,
-    backgroundColor: statusInfo.bgColor,
-    color: statusInfo.color,
-    fontSize: xl ? displayFontSizes.liveBadge : displayFontSizes.bodySM,
-    fontWeight: cssVars.fontWeights.bold,
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-    // B-44a2: eine Marken-Gestaltung für alle Zustände, feste Mindestbreite
+  // B-44a2: eine Marken-Gestaltung für alle Zustände, feste Breite (das Abzeichen füllt sie)
+  const badgeSlotStyle: CSSProperties = {
+    display: 'flex',
     width: layout.badgeWidth,
-    justifyContent: 'center',
     justifySelf: 'start',
-    animation: isRunning ? 'livePulse 1.5s ease-in-out infinite' : undefined,
-  };
-  const liveDotStyle: CSSProperties = {
-    width: xl ? layout.badgeDot : layout.badgeDotCompact,
-    height: xl ? layout.badgeDot : layout.badgeDotCompact,
-    borderRadius: '50%',
-    backgroundColor: statusInfo.dotColor,
-    boxShadow: isRunning ? `0 0 ${displaySpacing.inlineSM} ${statusInfo.dotColor}` : undefined,
-    animation: isRunning ? 'liveDotPulse 1s ease-in-out infinite' : undefined,
+    fontSize: xl ? displayFontSizes.liveBadge : displayFontSizes.bodySM,
   };
   const infoStyle: CSSProperties = {
     fontSize: xl ? displayFontSizes.liveInfo : displayFontSizes.bodyMD,
@@ -72,9 +52,8 @@ export function LiveHeader({ status, field, matchNumber, group, size, themeColor
 
   return (
     <div style={headerStyle} data-testid="live-header">
-      <div style={badgeStyle} data-testid="live-badge">
-        <span style={liveDotStyle} />
-        {statusInfo.label}
+      <div style={badgeSlotStyle} data-testid="live-badge">
+        <MatchStatusBadge model={badge} size={xl ? 'display' : 'card'} tone={monitorBadgeTone(themeColors)} />
       </div>
       <div style={infoStyle} data-testid="live-info">Feld {field} — Spiel {matchNumber}</div>
       <div style={{ ...infoStyle, color: themeColors.text, justifySelf: 'end' }} data-testid="live-group">

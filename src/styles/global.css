@@ -198,8 +198,9 @@
   /* ===========================================
      Colors - Status (Tournament States)
      =========================================== */
-  --color-status-live: #DC2626;
-  --color-status-live-bg: rgba(220, 38, 38, 0.15);
+  --color-status-live: #FB7185;
+  --color-status-live-bg: rgba(251, 113, 133, 0.15);
+  --color-status-live-on: #0A1628;
   --color-status-live-row-bg: rgba(220, 38, 38, 0.08);
 
   --color-status-upcoming: #4CAF50;
@@ -220,9 +221,9 @@
   /* ===========================================
      Colors - Live Cockpit
      =========================================== */
-  --color-live-badge: #DC2626;
-  --color-live-badge-bg: rgba(220, 38, 38, 0.2);
-  --color-live-badge-pulse: rgba(220, 38, 38, 0.4);
+  --color-live-badge: #FB7185;
+  --color-live-badge-bg: rgba(251, 113, 133, 0.2);
+  --color-live-badge-pulse: rgba(251, 113, 133, 0.4);
 
   /* ===========================================
      Colors - Correction/Warning Banner
@@ -736,8 +737,9 @@ html[data-font-size="x-large"] {
   /* ===========================================
      Colors - Status (Tournament States)
      =========================================== */
-  --color-status-live: #DC2626;
-  --color-status-live-bg: rgba(220, 38, 38, 0.1);
+  --color-status-live: #BE123C;
+  --color-status-live-bg: rgba(190, 18, 60, 0.1);
+  --color-status-live-on: #FFFFFF;
   --color-status-live-row-bg: rgba(220, 38, 38, 0.05);
 
   --color-status-upcoming: #059669;
@@ -758,9 +760,9 @@ html[data-font-size="x-large"] {
   /* ===========================================
      Colors - Live Cockpit
      =========================================== */
-  --color-live-badge: #DC2626;
-  --color-live-badge-bg: rgba(220, 38, 38, 0.12);
-  --color-live-badge-pulse: rgba(220, 38, 38, 0.25);
+  --color-live-badge: #BE123C;
+  --color-live-badge-bg: rgba(190, 18, 60, 0.12);
+  --color-live-badge-pulse: rgba(190, 18, 60, 0.25);
 
   /* ===========================================
      Colors - Correction/Warning Banner

@@ -46,10 +46,10 @@ test.describe('A-36c Zuschauer-Seite 360×640 (/live/MESS26)', () => {
     await oeffne(page, HANDY, '/#/live/MESS26', '[data-testid^="final-card-"]');
   });
 
-  test('@OB-064 @ZM-039 Finale läuft: „läuft 05:2x“ in der Kopfzeile der Finalrunden-Karte (Status UND Spielzeit), Stand 2:1, noch kein Sieger fett', async ({ page }) => {
+  test('@OB-066 @ZM-039 Finale läuft: Abzeichen „Live“ ohne Uhrzeit, Stand 2:1, noch kein Sieger fett', async ({ page }) => {
     const finale = karte(page, FINALE);
     await finale.scrollIntoViewIfNeeded();
-    await expect(finale.locator(`[data-testid="final-live-${FINALE}"]`)).toHaveText(/^läuft 0[5-6]:\d\d$/);
+    await expect(finale.locator(`[data-testid="final-live-${FINALE}"]`)).toHaveText(/^Live$/);
     await expect(finale.locator('[data-testid^="final-goals-"]').nth(0)).toHaveText('2');
     await expect(finale.locator('[data-testid^="final-goals-"]').nth(1)).toHaveText('1');
     await expect(finale.locator('[data-winner="true"]')).toHaveCount(0);
@@ -93,11 +93,11 @@ test.describe('A-36c Zuschauer-Seite 360×640 (/live/MESS26)', () => {
 });
 
 test.describe('A-36c Verwaltung 360×640 (Spielplan)', () => {
-  test('@OB-064 Finale läuft: auch im Spielplan der Verwaltung „läuft 05:2x“ statt „beendet“ (C-SPIELPLAN-LAUFEND-ENGINE-QUELLE)', async ({ page }) => {
+  test('@OB-064 @OB-066 Finale läuft: auch im Spielplan der Verwaltung Abzeichen „Live“ statt „beendet“ (C-SPIELPLAN-LAUFEND-ENGINE-QUELLE)', async ({ page }) => {
     await oeffne(page, HANDY, '/#/tournament/hallencup-messlauf/schedule', '[data-testid^="final-card-"]');
     const finale = karte(page, FINALE);
     await finale.scrollIntoViewIfNeeded();
-    await expect(finale.locator(`[data-testid="final-live-${FINALE}"]`)).toHaveText(/^läuft 0[5-6]:\d\d$/);
+    await expect(finale.locator(`[data-testid="final-live-${FINALE}"]`)).toHaveText(/^Live$/);
     // Gegenbeispiel: ein laufendes Spiel mit Stand 2:1 ist kein beendetes Spiel (kein Sieger fett, kein Korrigieren-Knopf)
     await expect(finale.locator('[data-winner="true"]')).toHaveCount(0);
     await expect(finale.locator('.correction-btn-mobile')).toHaveCount(0);

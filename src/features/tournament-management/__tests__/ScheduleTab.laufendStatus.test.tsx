@@ -83,9 +83,9 @@ describe('ScheduleTab -- Status aus der Ansicht (A-36c, @ZM-039/@ZM-040, @FU-087
     const { container } = renderTab(mitStatus(tournament, firstId, { matchStatus: 'running', scoreA: 1, scoreB: 0 }), schedule);
     await act(async () => { await Promise.resolve(); });
 
-    // LIVE-Kennzeichen der Spielkarte (Hintergrund statusLiveBg nur bei Status läuft)
-    await waitFor(() => expect(container.innerHTML).toContain(cssVars.colors.statusLiveBg));
-    expect(container.querySelectorAll('[data-testid="match-card-live"]')).toHaveLength(1);
+    // Abzeichen „Live“ der Spielkarte (Live-Rot nur bei Status läuft, @OB-065)
+    await waitFor(() => expect(container.querySelectorAll('[data-testid="match-status-badge"][data-state="live"]')).toHaveLength(1));
+    expect(container.innerHTML).toContain(cssVars.colors.statusLive);
   });
 
   it('@ZM-039 Gegenbeispiel: veralteter localStorage-Eintrag RUNNING, Spiel im Turnier geplant -> kein Live-Kennzeichen', async () => {
@@ -95,7 +95,7 @@ describe('ScheduleTab -- Status aus der Ansicht (A-36c, @ZM-039/@ZM-040, @FU-087
     const { container } = renderTab(tournament, schedule);
     await act(async () => { await Promise.resolve(); });
 
-    expect(container.innerHTML).not.toContain(cssVars.colors.statusLiveBg);
+    expect(container.querySelector('[data-state="live"]')).toBeNull();
   });
 
   it('@ZM-040 Gegenbeispiel: nur der Alt-Live-Speicher meldet RUNNING, das Spiel im Turnier ist geplant -> kein Live-Kennzeichen (eine Quelle)', async () => {

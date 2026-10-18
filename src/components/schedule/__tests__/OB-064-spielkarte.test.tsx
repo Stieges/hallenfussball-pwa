@@ -17,6 +17,7 @@ await initRealDeI18n();
 
 import { cssVars } from '../../../design-tokens';
 import { MatchCard, MatchCardDesktop } from '../MatchCard';
+import { spectatorClockOf, type SpectatorClock } from '../../../core/view';
 import { matchFinalScore, type FinalScoreSource } from '../../../core/view/finalScore';
 import { resultFigures as figuresOf, type ResultStatus } from '../matchResult';
 
@@ -36,7 +37,7 @@ const AUSGANG = {
   regulaer: { scoreA: 1, scoreB: 0 },
 } satisfies Record<string, ResultSource>;
 
-function karte(source: ResultSource, status: ResultStatus, extra: { elapsedFormatted?: string } = {}) {
+function karte(source: ResultSource, status: ResultStatus, extra: { clock?: SpectatorClock } = {}) {
   return render(
     <MatchCard
       matchId={ID}
@@ -121,20 +122,27 @@ describe('@OB-064 Tabellenzeile am Desktop: Ergebnis waagerecht', () => {
   });
 });
 
-describe('Regel: laufendes Spiel zeigt seine Spielzeit in der Kopfzeile, Tore je Zeile', () => {
-  it('läuft 07:30 in der Kopfzeile, Tore 1 und 0, noch kein Sieger', () => {
-    karte({ scoreA: 1, scoreB: 0 }, 'running', { elapsedFormatted: '07:30' });
-    // Mockup Variante D: „läuft 07:30“ (i18n `matchResult.runningElapsed`), nicht das feste Wort „LIVE“
-    expect(screen.getByTestId('match-card-live').textContent).toBe('läuft 07:30');
-    expect(screen.queryByText('LIVE')).toBeNull();
+describe('Regel: laufendes Spiel zeigt sein Abzeichen ohne Uhr und die Restzeit beim Stand, Tore je Zeile', () => {
+  // W9 geteilt (Kennung bleibt): Abzeichen (1.2) und Restzeit beim Stand (5.1a)
+  it('@OB-065 läuft 07:30: Abzeichen „Live“ ohne Uhrzeit, Tore 1 und 0, noch kein Sieger', () => {
+    karte({ scoreA: 1, scoreB: 0 }, 'running', { clock: spectatorClockOf({ totalElapsedSec: 450, sectionSec: 600, sections: 1, stopped: false }) });
+    expect(screen.getByTestId('match-status-badge').textContent).toBe('Live');
+    expect(screen.getByTestId('match-status-badge').textContent).not.toMatch(/\d{1,2}:\d{2}/);
     expect(tore('home')).toBe('1');
     expect(tore('away')).toBe('0');
     expect(istFett('FC Nord')).toBe(false);
   });
 
-  it('läuft ohne bekannte Spielzeit: nur „läuft“, keine leere Zeit', () => {
+  it('@OB-065 läuft 07:30: Restzeit beim Stand (match-clock), nicht die gespielte Zeit', () => {
+    // 07:30 gespielt von 10:00 → Restzeit 2:30 (5.1a: die Karte bekommt die Uhr der Ansicht, `clock`)
+    karte({ scoreA: 1, scoreB: 0 }, 'running', { clock: spectatorClockOf({ totalElapsedSec: 450, sectionSec: 600, sections: 1, stopped: false }) });
+    expect(screen.getByTestId('match-clock').textContent).toBe('2:30');
+    expect(screen.queryByText('07:30')).toBeNull();
+  });
+
+  it('@OB-066 läuft ohne bekannte Spielzeit: Abzeichen „Live“, keine leere Zeit', () => {
     karte({ scoreA: 0, scoreB: 0 }, 'running');
-    expect(screen.getByTestId('match-card-live').textContent).toBe('läuft');
+    expect(screen.getByTestId('match-status-badge').textContent).toBe('Live');
   });
 
   it('Gegenbeispiel: ein geplantes Spiel zeigt weder Spielzeit noch Tore noch „läuft“', () => {

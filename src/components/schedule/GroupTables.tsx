@@ -6,10 +6,11 @@
 
 import { CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../design-tokens'
+import { cssVars, breakpointValues } from '../../design-tokens'
 import { Standing, TeamLogo, TeamColors } from '../../types/tournament';
 import type { ScheduleSource } from './scheduleSource';
 import { getGroupDisplayName } from '../../utils/displayNames';
+import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 import { TeamAvatar } from '../ui/TeamAvatar';
 import styles from './GroupTables.module.css';
 
@@ -74,7 +75,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
         }
         @media (max-width: 768px) {
           .group-tables-container {
-            padding: 12px !important;
+            padding: 0 !important;
           }
           .group-tables-empty {
             padding: 24px 12px !important;
@@ -144,6 +145,12 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
     borderBottom: `1px solid ${cssVars.colors.border}`,
     color: cssVars.colors.textPrimary,
   };
+
+  // Mobil (@ZM-088): Platz/Punkte/Differenz/Pfeil nehmen nur so viel Breite wie ihr Inhalt (statt fester Pixelbreiten),
+  // der Rest gehört der Teamspalte – Teamnamen brechen nur an Leerzeichen, nie mitten im Wort.
+  const mobileThStyle: CSSProperties = { ...thStyle, paddingLeft: cssVars.spacing.xs, paddingRight: cssVars.spacing.xs };
+  const mobileTdStyle: CSSProperties = { ...tdStyle, paddingLeft: cssVars.spacing.xs, paddingRight: cssVars.spacing.xs };
+  const mobileFixedColStyle: CSSProperties = { ...mobileThStyle, textAlign: 'center', whiteSpace: 'nowrap' };
 
   // Get enabled placement criteria (with fallback if tournament is not provided)
   // Note: placementLogic can be undefined at runtime for older tournaments despite type definition
@@ -276,15 +283,16 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
       </div>
 
       {/* Mobile Condensed View - hidden on desktop via CSS */}
-      <div className="mobile-view">
+      {/* overflowX: nur bei sehr langen Wörtern scrollt die Tabelle im Kasten; tabIndex/role/aria-label machen den Bereich per Tastatur erreichbar (axe scrollable-region-focusable) */}
+      <div className="mobile-view" style={{ overflowX: 'auto' }} tabIndex={0} role="region" aria-label={title}>
         <table style={tableStyle}>
           <thead>
             <tr>
-              <th style={{ ...thStyle, width: '35px', textAlign: 'center' }}>{t('groupTables.columns.rank')}</th>
-              <th style={thStyle}>{t('groupTables.columns.team')}</th>
-              <th style={{ ...thStyle, width: '45px', textAlign: 'center' }}>{t('groupTables.columns.points')}</th>
-              <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>{t('groupTables.columns.diff')}</th>
-              <th style={{ ...thStyle, width: '30px', textAlign: 'center' }}></th>
+              <th style={{ ...mobileFixedColStyle, width: '1%' }}>{t('groupTables.columns.rank')}</th>
+              <th style={mobileThStyle}>{t('groupTables.columns.team')}</th>
+              <th style={{ ...mobileFixedColStyle, width: '1%' }}>{t('groupTables.columns.points')}</th>
+              <th style={{ ...mobileFixedColStyle, width: '1%' }}>{t('groupTables.columns.diff')}</th>
+              <th style={{ ...mobileFixedColStyle, width: '1%' }}></th>
             </tr>
           </thead>
           <tbody>
@@ -301,20 +309,22 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                     onClick={() => toggleRowExpansion(teamKey)}
                     style={{ cursor: 'pointer' }}
                   >
-                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: cssVars.fontWeights.bold }}>
+                    <td style={{ ...mobileTdStyle, textAlign: 'center', fontWeight: cssVars.fontWeights.bold }}>
                       {rank}
                     </td>
-                    <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
+                    <td style={{ ...mobileTdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: cssVars.spacing.xs,
-                        // MOBILE-UX: No truncation - team names must be fully visible
-                        wordBreak: 'break-word',
-                        overflowWrap: 'break-word',
+                        // MOBILE-UX / @ZM-088: keine Kürzung; Umbruch nur an Leerzeichen und Bindestrichen, nie mitten im Wort (hyphens:auto ist ausserhalb Fliesstext verboten)
+                        wordBreak: 'normal',
+                        overflowWrap: 'normal',
+                        hyphens: 'manual',
                       }}>
                         <TeamAvatar team={standing.team} size="xs" />
-                        {standing.team.name}
+                        {/* @ZM-169: nur hier Vereinskürzel nach der Monitor-Liste; Desktop-Tabelle und Spielkarten zeigen den vollen Namen */}
+                        {monitorTeamName(standing.team.name)}
                         {/* LIVE INDICATOR */}
                         {activeMatchTeamIds?.has(standing.team.id) && (
                           <span
@@ -333,7 +343,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                         )}
                       </div>
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
+                    <td style={{ ...mobileTdStyle, textAlign: 'center' }}>
                       <span style={{
                         fontWeight: cssVars.fontWeights.bold,
                         fontSize: cssVars.fontSizes.md,
@@ -345,7 +355,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                       </span>
                     </td>
                     <td style={{
-                      ...tdStyle,
+                      ...mobileTdStyle,
                       textAlign: 'center',
                       color: goalDiff > 0 ? cssVars.colors.primary : goalDiff < 0 ? cssVars.colors.error : cssVars.colors.textSecondary,
                     }}>
@@ -359,7 +369,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                         {goalDiff > 0 ? '+' : ''}{goalDiff}
                       </span>
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'center', padding: '10px 4px' }}>
+                    <td style={{ ...mobileTdStyle, textAlign: 'center', paddingLeft: 0, paddingRight: 0 }}>
                       <span style={{ fontSize: cssVars.fontSizes.lg, color: cssVars.colors.primary }}>
                         {isExpanded ? '▼' : '▶'}
                       </span>
@@ -456,7 +466,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
         /* Mobile: Show cards, hide table */
         @media (max-width: 768px) {
           .standings-table {
-            padding: 12px !important;
+            padding: var(--spacing-xs) !important;
           }
           .standings-table h3 {
             font-size: 14px !important;
@@ -473,10 +483,18 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
           }
           .standings-table th,
           .standings-table td {
-            padding: 8px 6px;
+            padding: var(--spacing-sm) var(--spacing-xs);
           }
           .standings-table th {
             font-size: 12px;
+          }
+        }
+
+        /* Sehr schmale Handys (320-360): Teamspalte bekommt jeden Bildpunkt (@ZM-088, @OB-060) */
+        @media (max-width: ${breakpointValues.narrowPhone}px) {
+          .standings-table {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
           }
         }
 

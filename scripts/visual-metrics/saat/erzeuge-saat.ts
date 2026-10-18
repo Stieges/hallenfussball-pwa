@@ -194,6 +194,10 @@ function wendeEngineAn(t: Tournament, match: Match, teamA: string, teamB: string
     finishedAt: c.finished_at === null ? undefined : new Date(c.finished_at).toISOString(),
     timerElapsedSeconds: c.timer_elapsed_seconds,
     ...(live ? { timerStartTime: `@jetzt-${String(Math.round((jetzt - start) / 1000))}s`, timerElapsedSeconds: 0 } : {}),
+    // Aufgabe 1.2 (R-SA8): der Feinstatus aus `live_state` (Halbzeitpause, Verlängerung, Strafstoßschießen) für Monitor und Zuschauer
+    ...(live && c.live_state !== null
+      ? { liveState: { ...c.live_state, anchorAt: c.live_state.anchorAt === null ? null : zeit(c.live_state.anchorAt), breakStartedAt: c.live_state.breakStartedAt === null ? null : zeit(c.live_state.breakStartedAt) } }
+      : {}),
   } as Match
   const kopie: EngineKopie = {
     formatVersion: MATCH_COPY_FORMAT_VERSION, accountId: 'guest', matchId: match.id.toLowerCase(), tournamentId: t.id, ctx,
@@ -346,6 +350,8 @@ async function erzeugePhasenturnier(art: PhasenArt, nr: number): Promise<Erzeugt
     finalsConfig: { preset: 'top-4', tiebreaker: 'overtime-then-shootout', tiebreakerDuration: 5 },
     finals: { final: true, thirdPlace: true, fifthSixth: false, seventhEighth: false },
     isPublic: true, shareCode: kopf.code, shareCodeCreatedAt: SAAT_ZEIT, lastVisitedStep: 6,
+    // Aufgabe 1.2: die Live-Folie zeigt das Abzeichen der Phase (Halbzeit, Strafstoßschießen) am Monitor
+    monitors: [monitor('mon-live', 'Folie Live', [FOLIEN[0].slide])],
     // Das Cockpit beendet ein Spiel selbstaendig, sobald die kumulierte Spielzeit die Regelspielzeit erreicht – in der
     // Verlaengerung also sofort (Befund im Report). Fuer eine stabile Ansicht "Verlaengerung laeuft" ist das hier aus.
     matchCockpitSettings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, autoFinishEnabled: art !== 'verlaengerung' },

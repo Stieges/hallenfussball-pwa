@@ -21,7 +21,8 @@ import { cssVars } from '../../../design-tokens'
 import type { MatchCardStatus } from './MatchCardScore';
 import { MatchCardHeader } from './MatchCardHeader';
 import { TeamScoreRows } from './TeamScoreRows';
-import type { ViewMatchStatus } from '../../../core/view';
+import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../../core/view';
+import { MatchClock } from '../../ui/molecules/MatchClock';
 import type { ResultFigures } from '../matchResult';
 import type { TeamLogo, TeamColors } from '../../../types/tournament';
 
@@ -59,8 +60,10 @@ export interface MatchCardProps {
   result?: ResultFigures | null;
   /** Match status */
   status: MatchCardStatus;
-  /** Spielzeit eines laufenden Spiels (z. B. "07:30") für die Kopfzeile */
-  elapsedFormatted?: string;
+  /** Abzeichen der Ansicht (`MatchView.badge`) für die Kopfzeile */
+  badge?: MatchBadgeModel;
+  /** Restzeit beim Stand (`MatchView` + Uhr, @ZM-162) */
+  clock?: SpectatorClock | null;
   /** Fachlicher Status der Ansicht: „ausgefallen“ / „gewertet“ in der Kopfzeile (@ZM-104) */
   viewStatus?: ViewMatchStatus;
   /** Callback when card body is clicked */
@@ -93,7 +96,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   awayTeam,
   result = null,
   status,
-  elapsedFormatted,
+  badge,
+  clock,
   viewStatus,
   onCardClick,
   onCircleClick,
@@ -160,6 +164,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({
     gap: cssVars.spacing.sm,
   };
 
+  const clockStyle: CSSProperties = { padding: `0 ${cssVars.spacing.sm} ${cssVars.spacing.sm}` };
+
   const expandStyle: CSSProperties = {
     borderTop: `1px solid ${cssVars.colors.border}`,
     backgroundColor: cssVars.colors.surfaceVariant,
@@ -189,7 +195,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         referee={referee}
         status={status}
         result={result}
-        elapsedFormatted={elapsedFormatted}
+        badge={badge}
         viewStatus={viewStatus}
       />
 
@@ -220,6 +226,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           </span>
         )}
       </div>
+      {clock && <div style={clockStyle}><MatchClock clock={clock} size="card" /></div>}
 
       {/* Expand Content */}
       {isExpanded && expandContent && (
