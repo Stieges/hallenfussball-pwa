@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../types/tournament';
 import { ToastProvider } from '../../ui/Toast/ToastContext';
 import { renderInRouter, oeffneAlleAbschnitte, makeTournament } from '../../../__tests__/helpers/b03PlatzhalterHarness';
 
@@ -43,5 +44,50 @@ describe('B-06 MatchCockpitSettingsPanel nach dem Umzug', () => {
       <MatchCockpitCategory tournamentId="t1" tournament={makeTournament()} onTournamentUpdate={vi.fn()} />
     );
     expect(await screen.findByTestId('settings-time-penalty-duration')).toBeInTheDocument();
+  }, 30_000);
+
+  it('@SL-005 @SL-009 Wizard Schritt 2 bietet „Spiel automatisch beenden“ nicht an, Ton und Vibration stehen weiter da', async () => {
+    const { Step2_ModeAndSystem } = await import('../../../features/tournament-creation/Step2_ModeAndSystem');
+    const { container } = renderInRouter(
+      <ToastProvider>
+        <Step2_ModeAndSystem
+          formData={{ mode: 'classic' }}
+          onUpdate={vi.fn()}
+          onMovePlacementLogic={vi.fn()}
+          onTogglePlacementLogic={vi.fn()}
+        />
+      </ToastProvider>
+    );
+    oeffneAlleAbschnitte(container);
+    expect(await screen.findByTestId('settings-time-penalty-duration')).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /enableAutoEnd|automatisch beenden|Auto-Beenden/i })).toBeNull();
+    expect(container.textContent ?? '').not.toMatch(/autoEnd|Auto-Beenden|automatisch beenden/i);
+    expect(screen.getAllByRole('switch', { name: /enableVibration|Vibration/i }).length).toBeGreaterThan(0);
+  }, 30_000);
+
+  it('@SL-005 @SL-009 Wizard-Zusammenfassung nennt „Auto“ nicht, auch bei gespeichertem autoFinishEnabled=true', async () => {
+    const { Step2_ModeAndSystem } = await import('../../../features/tournament-creation/Step2_ModeAndSystem');
+    const { container } = renderInRouter(
+      <ToastProvider>
+        <Step2_ModeAndSystem
+          formData={{ mode: 'classic', matchCockpitSettings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, autoFinishEnabled: true, soundEnabled: true } }}
+          onUpdate={vi.fn()}
+          onMovePlacementLogic={vi.fn()}
+          onTogglePlacementLogic={vi.fn()}
+        />
+      </ToastProvider>
+    );
+    expect((await screen.findAllByText(/Sound/)).length).toBeGreaterThan(0);
+    expect(container.textContent ?? '').not.toMatch(/Sound \+ (Haptik \+ )?Auto|\bAuto\b/);
+  }, 30_000);
+
+  it('@SL-005 @SL-009 Admin-Center bietet „Spiel automatisch beenden“ nicht an', async () => {
+    const { MatchCockpitCategory } = await import('../../../features/tournament-admin/categories/MatchCockpit');
+    const { container } = renderInRouter(
+      <MatchCockpitCategory tournamentId="t1" tournament={makeTournament()} onTournamentUpdate={vi.fn()} />
+    );
+    expect(await screen.findByTestId('settings-time-penalty-duration')).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /enableAutoEnd|automatisch beenden|Auto-Beenden/i })).toBeNull();
+    expect(container.textContent ?? '').not.toMatch(/autoEnd|Auto-Beenden|automatisch beenden/i);
   }, 30_000);
 });

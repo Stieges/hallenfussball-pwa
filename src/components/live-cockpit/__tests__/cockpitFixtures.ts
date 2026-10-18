@@ -29,7 +29,8 @@ export function makeProps(match: LiveMatch | null, overrides: Partial<LiveCockpi
 export function makePhaseView(overrides: Partial<PhaseView> = {}): PhaseView {
   return {
     status: 'running', phase: 'regular', section: 2, sections: 2,
-    sectionElapsedMs: 192_000, sectionLimitMs: 360_000, isLastRegularSection: true,
+    sectionElapsedMs: 192_000, sectionLimitMs: 360_000, limitClockMs: 360_000, limitAt: null, reopenCount: 0,
+    isLastRegularSection: true,
     breakRemainingMs: null, earliestAdjustMs: 0, penalties: [], shootout: null,
     clockAdjustments: [], tiebreakMode: null,
     ...overrides,

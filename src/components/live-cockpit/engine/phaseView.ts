@@ -45,6 +45,12 @@ export interface PhaseView {
   /** Gespielte Zeit im Abschnitt (Spieluhr seit `sectionStartMs`). */
   sectionElapsedMs: number;
   sectionLimitMs: number;
+  /** Grenze des Abschnitts auf der Spieluhr (absolut, ms): Nullpunkt + Grenze. Damit endet der Abschnitt von selbst (B-08b). */
+  limitClockMs: number;
+  /** Wanduhr-Zeitpunkt (Serverzeit), an dem die laufende Uhr die Grenze erreicht; `null`, wenn die Uhr steht. */
+  limitAt: number | null;
+  /** Wie oft das Spiel nach dem Abpfiff wieder eröffnet wurde (trennt zwei Enden desselben Abschnitts). */
+  reopenCount: number;
   isLastRegularSection: boolean;
   /** Restzeit der Abschnittspause, geklemmt auf 0; `null` außerhalb der Pause. */
   breakRemainingMs: number | null;
@@ -75,6 +81,9 @@ export function phaseViewOf(state: MatchState, ctx: MatchContext, serverNow: num
     sections,
     sectionElapsedMs: Math.max(0, elapsedMs - sectionBasisOf(state)),
     sectionLimitMs: sectionLimitOf(state),
+    limitClockMs: sectionBasisOf(state) + sectionLimitOf(state),
+    limitAt: limitAtOf(state),
+    reopenCount: reopenCountOf(state),
     isLastRegularSection: state.section >= sections,
     breakRemainingMs,
     earliestAdjustMs: earliestAdjustOf(state),
@@ -104,6 +113,20 @@ function sectionLimitOf(state: MatchState): number {
     return 0;
   }
   return state.phase === 'overtime' ? rules.overtimeSeconds * 1000 : rules.sectionSeconds * 1000;
+}
+
+/** Wanduhr-Zeitpunkt der Grenze: nur bei laufender Uhr (`anchorAt` + Rest bis zur Grenze). */
+function limitAtOf(state: MatchState): number | null {
+  const clock = state.clock;
+  if (state.status !== 'running' || !clock.running || clock.anchorAt === null) {
+    return null;
+  }
+  return clock.anchorAt + (sectionBasisOf(state) + sectionLimitOf(state) - clock.elapsedMs);
+}
+
+/** Wirksame Wiedereröffnungen des Spiels (nicht zurückgenommen). */
+function reopenCountOf(state: MatchState): number {
+  return Object.values(state.accepted).filter((event) => event.type === 'REOPEN' && !state.retracted.includes(event.id)).length;
 }
 
 /** Spätester Uhrstand eines wirksamen Eintrags im aktuellen Abschnitt, relativ zum Abschnittsbeginn, mind. 0. */

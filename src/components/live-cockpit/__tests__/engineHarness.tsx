@@ -10,8 +10,9 @@ import { LocalMatchStore, ClockSync, MatchEngine } from '../../../core/match/cli
 import { MatchEngineContext, type MatchEngineContextValue } from '../../../features/match-engine/matchEngineContextInstance';
 import { buildValidMatches, computeLiveMatches } from '../../../hooks/engineMatchModel';
 import { useEngineCommandWiring } from '../../../hooks/useEngineCommandWiring';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS, type MatchCockpitSettings, type Tournament } from '../../../types/tournament';
 import { LiveCockpit } from '../LiveCockpit';
-import { HARNESS_MATCH_ID, HARNESS_TOURNAMENT_ID, harnessTournament as tournament, storeSender, type SenderFabrik } from './engineHarnessSupport';
+import { HARNESS_MATCH_ID, HARNESS_TOURNAMENT_ID, harnessTournament, storeSender, type SenderFabrik } from './engineHarnessSupport';
 
 let konten = 0;
 
@@ -22,12 +23,12 @@ async function baueKontext(senderFabrik: SenderFabrik, gastKonto: boolean): Prom
   const sender = senderFabrik(store, accountId, HARNESS_TOURNAMENT_ID);
   const engine = new MatchEngine({ store, clock, sender, fetchConfirmed: () => Promise.resolve({ events: [], newWatermark: 0 }), now: () => Date.now() });
   await engine.start(accountId);
-  await engine.ensureMatch(HARNESS_MATCH_ID, { matchId: HARNESS_MATCH_ID, teamAId: 'teama', teamBId: 'teamb' }, tournament.id);
+  await engine.ensureMatch(HARNESS_MATCH_ID, { matchId: HARNESS_MATCH_ID, teamAId: 'teama', teamBId: 'teamb' }, harnessTournament.id);
   return { engine, store, clock, sender, accountId } as unknown as MatchEngineContextValue;
 }
 
 const STABLE_PROPS = {
-  fieldName: 'Feld 1', tournamentName: 'Hallencup Süd', tournamentId: tournament.id, upcomingMatches: [],
+  fieldName: 'Feld 1', tournamentName: 'Hallencup Süd', tournamentId: harnessTournament.id, upcomingMatches: [],
   onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(), onLoadNextMatch: vi.fn(),
 };
 
@@ -35,13 +36,18 @@ export interface HarnessProps {
   senderFabrik?: SenderFabrik;
   /** Konto `guest`: schreibt sofort `confirmed`, nichts wartet. */
   gastKonto?: boolean;
+  /** Abweichende Turnier-Regeln (z. B. `groupPhaseGameDuration`, `gamePeriods`, `halftimeBreak`); stabil halten (außerhalb der Komponente anlegen). */
+  turnier?: Partial<Tournament>;
+  /** Cockpit-Einstellungen (Ton, Vibration, …); stabil halten. */
+  einstellungen?: Partial<MatchCockpitSettings>;
 }
 
-function Cockpit({ context }: { context: MatchEngineContextValue }): ReactElement | null {
-  const validMatches = useMemo(() => buildValidMatches(tournament), []);
+function Cockpit({ context, turnier, einstellungen }: { context: MatchEngineContextValue; turnier?: Partial<Tournament>; einstellungen?: Partial<MatchCockpitSettings> }): ReactElement | null {
+  const tournament = useMemo((): Tournament => ({ ...harnessTournament, ...turnier }), [turnier]);
+  const validMatches = useMemo(() => buildValidMatches(tournament), [tournament]);
   const compute = useCallback(
     () => computeLiveMatches(context, validMatches, new Set([HARNESS_MATCH_ID]), tournament, new Map()),
-    [context, validMatches],
+    [context, validMatches, tournament],
   );
   const [liveMatches, setLiveMatches] = useState(compute);
   // Jede Engine-Änderung berechnet die Ansicht neu (wie useEngineMatches).
@@ -53,7 +59,9 @@ function Cockpit({ context }: { context: MatchEngineContextValue }): ReactElemen
     <LiveCockpit
       {...STABLE_PROPS}
       currentMatch={match}
+      cockpitSettings={einstellungen ? { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...einstellungen } : undefined}
       onStart={(matchId) => { void wiring.handleStart(matchId); }}
+      onFinish={wiring.handleFinish}
       onGoal={(matchId, teamId, delta, options) => { void wiring.handleGoal(matchId, teamId, delta, options); }}
       onCard={wiring.handleCard}
       onFoul={wiring.handleFoul}
@@ -62,7 +70,7 @@ function Cockpit({ context }: { context: MatchEngineContextValue }): ReactElemen
 }
 
 /** Baut die Engine im Hintergrund auf und zeigt dann das Cockpit mit einem noch nicht angepfiffenen Spiel. */
-export function Harness({ senderFabrik = storeSender, gastKonto = false }: HarnessProps): ReactElement | null {
+export function Harness({ senderFabrik = storeSender, gastKonto = false, turnier, einstellungen }: HarnessProps): ReactElement | null {
   const [context, setContext] = useState<MatchEngineContextValue | null>(null);
   useEffect(() => {
     let abgebrochen = false;
@@ -70,6 +78,6 @@ export function Harness({ senderFabrik = storeSender, gastKonto = false }: Harne
     return () => { abgebrochen = true; };
   }, [senderFabrik, gastKonto]);
   if (!context) { return null; }
-  return <MatchEngineContext.Provider value={context}><Cockpit context={context} /></MatchEngineContext.Provider>;
+  return <MatchEngineContext.Provider value={context}><Cockpit context={context} turnier={turnier} einstellungen={einstellungen} /></MatchEngineContext.Provider>;
 }
 
