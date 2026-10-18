@@ -129,14 +129,14 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
 
   // Befund (Ziel-Record Spiel leiten, Paket B-11a): Das Cockpit liest `cockpitSettings.foulLimit` nicht,
   // die Grenze gilt fest 5. Rot nach dem Gherkin, deshalb `it.fails` (Baustein „Tests gegen die Anforderung“).
-  it.fails('@SL-034 Grenze 3: das 3. Foul meldet „FC Alpha: 3. Foul in dieser Halbzeit“ (Befund: foulLimit wird nicht gelesen, B-11a)', () => {
+  it.fails('@SL-034 Grenze 3: das 3. Foul meldet „FC Alpha: 3. Foul in dieser Halbzeit“ (Befund C-FOUL-GRENZE-FEST: foulLimit wird nicht gelesen, B-11a)', () => {
     const settings = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: 3 };
     const { rerender } = render(<LiveCockpit {...baseProps(matchMit(2), { cockpitSettings: settings })} />);
     rerender(<LiveCockpit {...baseProps(matchMit(3), { cockpitSettings: settings })} />);
     expect(screen.getByTestId(MELDUNG)).toHaveTextContent('FC Alpha: 3. Foul in dieser Halbzeit');
   });
 
-  it.fails('@SL-102 ist die Foul-Grenze ausgeschaltet, gibt es beim 5. Foul keinen Hinweis (Befund: foulLimit wird nicht gelesen, B-11a)', () => {
+  it.fails('@SL-102 ist die Foul-Grenze ausgeschaltet, gibt es beim 5. Foul keinen Hinweis (Befund C-FOUL-GRENZE-FEST: foulLimit wird nicht gelesen, B-11a)', () => {
     const settings = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: null };
     const { rerender } = render(<LiveCockpit {...baseProps(matchMit(4), { cockpitSettings: settings })} />);
     rerender(<LiveCockpit {...baseProps(matchMit(5), { cockpitSettings: settings })} />);
