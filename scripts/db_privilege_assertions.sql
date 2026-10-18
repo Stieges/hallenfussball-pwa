@@ -512,4 +512,30 @@ SELECT 'tournaments-guard-change-revision-invoker-no-client-execute',
                         AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
                         AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.tournaments_guard_change_revision()')), false)
+-- UR (20261028_006_event_author_names.sql, @FU-080, @FU-082, @FU-065): Lesefunktion fuer die Namen der Urheber
+-- von Spiel-Eintraegen (SECURITY DEFINER, STABLE, fester search_path; EXECUTE nur authenticated -- anon,
+-- service_role und PUBLIC nicht, @FU-065: keine Konto-Angabe fuer Zuschauer/oeffentliche Ansicht).
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'match-event-author-names-definer-search-path',
+       coalesce((SELECT p.prosecdef AND p.provolatile = 's' AND p.proconfig = ARRAY['search_path=public, pg_temp'] FROM pg_proc p
+                  WHERE p.oid = to_regprocedure('public.match_event_author_names(uuid)')), false)
+UNION ALL
+SELECT 'match-event-author-names-execute-only-authenticated',
+       coalesce((SELECT p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.match_event_author_names(uuid)')), false)
+-- SW (20261028_007_entered_shootout_needs_draw.sql, @EK-062): cache_columns nach 20261028_007 -- IMMUTABLE, kein
+-- SECURITY DEFINER, fester search_path, kein EXECUTE fuer PUBLIC/anon/authenticated/service_role (nur
+-- append_match_events ruft sie als Definer). Regressionswache: schon VOR dem Live-Einspielen "t" (Rechte unveraendert).
+UNION ALL
+SELECT 'cache-columns-immutable-no-client-execute',
+       coalesce((SELECT p.provolatile = 'i' AND NOT p.prosecdef
+                        AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0)
+                        AND NOT EXISTS (SELECT 1 FROM unnest(ARRAY['anon', 'authenticated', 'service_role']) AS r(role)
+                                         WHERE has_function_privilege(r.role, p.oid, 'EXECUTE'))
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('match_engine.cache_columns(jsonb,jsonb)')), false)
 ;

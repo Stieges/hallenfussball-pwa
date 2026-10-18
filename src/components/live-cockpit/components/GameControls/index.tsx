@@ -20,6 +20,8 @@ export interface GameControlsProps {
   onUndo?: () => void;
   onStart: () => void;
   onPauseResume: () => void;
+  /** Abschnittspause (Halbzeit): der Hauptknopf ist der Wiederanpfiff (B-08b, @SL-006). */
+  wiederanpfiff?: boolean;
   /** A-08c: ohne Handler kein Zeit-Knopf (@FU-071). */
   onEditTime?: () => void;
   onSwitchSides: () => void;
@@ -52,6 +54,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
   onUndo,
   onStart,
   onPauseResume,
+  wiederanpfiff = false,
   onEditTime,
   onSwitchSides,
   onFinish,
@@ -145,7 +148,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
   const getMainButtonLabel = (): string => {
     if (isNotStarted) { return t('controls.start'); }
     if (isRunning) { return t('controls.pause'); }
-    if (isPaused) { return t('controls.start'); }
+    if (isPaused) { return wiederanpfiff ? t('controls.wiederanpfiff') : t('controls.start'); }
     return t('controls.start');
   };
 
@@ -187,8 +190,8 @@ export const GameControls: React.FC<GameControlsProps> = ({
         onClick={handleMainButtonClick}
         disabled={disabled || isFinished}
         type="button"
-        aria-label={isRunning ? 'Pausieren' : 'Starten'}
-        data-testid={isRunning ? 'match-pause-button' : 'match-start-button'}
+        aria-label={wiederanpfiff && isPaused ? t('controls.wiederanpfiffAria') : isRunning ? 'Pausieren' : 'Starten'}
+        data-testid={isRunning ? 'match-pause-button' : wiederanpfiff && isPaused ? 'match-wiederanpfiff-button' : 'match-start-button'}
       >
         {getMainButtonLabel()}
       </button>

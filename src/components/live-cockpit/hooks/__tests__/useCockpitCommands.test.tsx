@@ -13,6 +13,13 @@ import { makeLiveMatch, makeProps } from '../../__tests__/cockpitFixtures';
 import type { LiveCockpitProps } from '../../types';
 import type { OffenerEintrag } from '../../model/cockpitTypes';
 import { useCockpitCommands } from '../useCockpitCommands';
+import type { ReactNode } from 'react';
+import type { MatchEngineContextValue } from '../../../../features/match-engine/matchEngineContextInstance';
+import { MatchEngineContext } from '../../../../features/match-engine/matchEngineContextInstance';
+import { phaseViewOf } from '../../engine/phaseView';
+import { REGEL_2X6, spielAnlegen, zu } from '../../__tests__/enginePhaseFixture';
+
+const echtesSetTimeout = setTimeout;
 
 vi.mock('../../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 vi.unmock('i18next');
@@ -27,11 +34,10 @@ function setup(options: { offen?: OffenerEintrag | null; props?: Partial<LiveCoc
   const sides = { getauscht: false, links: 'home' as const, rechts: 'away' as const, tausche: vi.fn() };
   const melde = vi.fn();
   const sound = { play: vi.fn(), activate: vi.fn().mockResolvedValue(undefined), isActivated: true };
-  const state = { isOvertime: false };
   const hook = renderHook(() =>
-    useCockpitCommands({ props, settings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...options.settings }, sound, flows, sides, melde, isOvertime: state.isOvertime }),
+    useCockpitCommands({ props, settings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...options.settings }, sound, flows, sides, melde, engineView: null }),
   );
-  return { hook, props, flows, sides, melde, state };
+  return { hook, props, flows, sides, melde };
 }
 
 describe('useCockpitCommands – Tor', () => {
@@ -207,17 +213,48 @@ describe('useCockpitCommands – BUG-008 Zeitstrafen nach dem Abpfiff', () => {
     expect(hook.result.current.activePenalties).toEqual([]);
   });
 
-  it('automatischer Abpfiff bei abgelaufener Zeit: die Liste ist danach ebenfalls leer', () => {
-    const { hook, props, state } = mitStrafe();
-    state.isOvertime = true;
-    hook.rerender();
-    expect(props.onFinish).toHaveBeenCalledWith('match-11');
-    expect(hook.result.current.activePenalties).toEqual([]);
-  });
-
   it('Gegenbeispiel: ohne Abpfiff bleibt die Zeitstrafe in der Liste', () => {
     const { hook } = mitStrafe();
     act(() => hook.result.current.controls.onPauseResume());
     expect(hook.result.current.activePenalties).toHaveLength(1);
+  });
+});
+
+// B-08b: der automatische Abpfiff läuft über die Engine (`useAutoSectionEnd`); danach ist die Liste ebenfalls leer (BUG-008).
+describe('useCockpitCommands – BUG-008 Zeitstrafen nach dem automatischen Abpfiff (Engine)', () => {
+  it('Spielzeit abgelaufen: die Engine beendet das Spiel einmal, die Liste der Zeitstrafen ist leer, die Meldung erscheint', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+    try {
+      zu(0);
+      const spiel = await spielAnlegen();
+      await spiel.a.commands.start(spiel.matchId, spiel.ctx, 'leitung', { ...REGEL_2X6, sections: 1, sectionSeconds: 600 });
+      const ansicht = spiel.a.engine.view(spiel.matchId);
+      if (!ansicht) { throw new Error('keine Ansicht'); }
+      const engineView = phaseViewOf(ansicht.result.state, spiel.ctx, spiel.a.engine.serverNow());
+      const match = makeLiveMatch({ id: spiel.matchId, homeTeam: { id: 'teama', name: 'FC Nord' }, awayTeam: { id: 'teamb', name: 'SV Süd' } });
+      const props = makeProps(match, { onTimePenalty: vi.fn() });
+      const flows = { offen: null, oeffne: vi.fn(), schliesse: vi.fn() };
+      const sides = { getauscht: false, links: 'home' as const, rechts: 'away' as const, tausche: vi.fn() };
+      const melde = vi.fn();
+      const sound = { play: vi.fn(), activate: vi.fn().mockResolvedValue(undefined), isActivated: true };
+      const wert = { engine: spiel.a.engine, store: spiel.store, sender: { kick: vi.fn().mockResolvedValue(undefined) }, accountId: spiel.accountId } as unknown as MatchEngineContextValue;
+      const wrapper = ({ children }: { children: ReactNode }) => <MatchEngineContext.Provider value={wert}>{children}</MatchEngineContext.Provider>;
+      const hook = renderHook(
+        () => useCockpitCommands({ props, settings: DEFAULT_MATCH_COCKPIT_SETTINGS, sound, flows, sides, melde, engineView }),
+        { wrapper },
+      );
+      act(() => hook.result.current.overlayHandlers.confirmTimePenalty(120, 'teama', 4));
+      expect(hook.result.current.activePenalties).toHaveLength(1);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(600_000);
+        await new Promise<void>((fertig) => { echtesSetTimeout(fertig, 40); });
+      });
+      expect((spiel.a.engine.view(spiel.matchId)?.log ?? []).filter((e) => e.type === 'MATCH_END')).toHaveLength(1);
+      expect(hook.result.current.activePenalties).toEqual([]);
+      expect(melde).toHaveBeenCalledWith(3, 'Spiel abgepfiffen');
+      expect(sound.play).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

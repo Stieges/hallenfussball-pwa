@@ -27,6 +27,7 @@
   "meldung": {
     "angepfiffen": "Match kicked off",
     "pausiert": "Match paused",
+    "wiederangepfiffen": "Restart – the next section is running",
     "fortgesetzt": "Match resumed",
     "abgepfiffen": "Match ended",
     "seitenGetauscht": "Sides swapped",
@@ -116,6 +117,7 @@
   },
   "controls": {
     "start": "▶ Start",
+    "wiederanpfiff": "▶ Restart",
     "pause": "⏸ Pause",
     "time": "🕒 Time",
     "switchSides": "🔄 Sides",
@@ -125,6 +127,7 @@
     "events": "📋 Events",
     "undoAria": "Undo",
     "pauseAria": "Pause",
+    "wiederanpfiffAria": "Restart play",
     "startAria": "Start",
     "editTimeAria": "Edit time",
     "switchSidesAria": "Switch sides",
@@ -254,7 +257,9 @@
     "editAria": "Edit {{description}}",
     "edit": "Edit",
     "retractedMark": "retracted",
-    "retractedAria": "{{description}} – retracted"
+    "retractedAria": "{{description}} – retracted",
+    "resultEntryBy": "Result entered by {{name}}",
+    "resultEntry": "Result entered"
   },
   "matchCockpit": {
     "title": "Referee Cockpit",
@@ -325,10 +330,6 @@
     "keepScreenOn": "Keep Screen On",
     "keepScreenOnDesc": "Prevents dimming during match",
     "enableKeepScreenOn": "Keep screen on",
-    "afterMatch": "After Match End",
-    "autoEnd": "Auto End",
-    "autoEndDesc": "Automatically end match at 0:00",
-    "enableAutoEnd": "Auto-end match",
     "delay": "Delay",
     "delayDesc": "Time until next match",
     "fiveSeconds": "5 seconds",

@@ -384,6 +384,11 @@ PRIVILEGE_ASSERTION_NAMES=(
   "matches-bump-change-revision-definer-no-client-execute"
   "tournaments-guard-change-revision-trigger-active"
   "tournaments-guard-change-revision-invoker-no-client-execute"
+  # UR (20261028_006, @FU-080/@FU-082/@FU-065): Lesefunktion fuer die Namen der Urheber von Spiel-Eintraegen.
+  "match-event-author-names-definer-search-path"
+  "match-event-author-names-execute-only-authenticated"
+  # SW (20261028_007, @EK-062): cache_columns bleibt IMMUTABLE, definer-only (Regressionswache).
+  "cache-columns-immutable-no-client-execute"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

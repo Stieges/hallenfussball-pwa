@@ -85,6 +85,11 @@
 #                                                                 matches_guard_engine_columns ->
 #                                                                 Spaltenschutz muss ROT sein
 #                                                                 (Exit 0 nur dann)
+#   bash scripts/append-match-events-check.sh --without-sw       Gegenprobe D (SW, @EK-062): alles
+#                                                                 ausser 20261028_007 eingespielt ->
+#                                                                 9i Fall 1 (Sonstiges) und Fixture
+#                                                                 68a (Fixtures) muessen ROT sein
+#                                                                 (Exit 0 nur dann)
 #
 # Aendert NICHTS an der Produktionsdatenbank -- Wegwerf-Container, wird am Ende entfernt (trap).
 #
@@ -96,7 +101,8 @@ case "${1:-}" in
   --without-migration) MODE="without-migration" ;;
   --gegenprobe) MODE="gegenprobe" ;;
   --without-column-guard) MODE="without-column-guard" ;;
-  *) echo "::error::Unbekannte Option: $1 (erlaubt: --without-migration, --gegenprobe, --without-column-guard)" >&2; exit 2 ;;
+  --without-sw) MODE="without-sw" ;;
+  *) echo "::error::Unbekannte Option: $1 (erlaubt: --without-migration, --gegenprobe, --without-column-guard, --without-sw)" >&2; exit 2 ;;
 esac
 
 POSTGRES_IMAGE="supabase/postgres:17.6.1.063"
@@ -112,6 +118,12 @@ A25A_MIGRATION="20261028_003_result_entry_shootout.sql"
 # A-10: juengste Fassung von matches_guard_engine_columns (unbedingt, BEFORE INSERT OR UPDATE) -- 20261001_001 erneut
 # einzuspielen stellte die alte Bedingung wieder her, deshalb ans Ende der Idempotenz-Kette.
 A10_MIGRATION="20261028_005_guard_all_matches.sql"
+# UR: additive Lesefunktion match_event_author_names -- am Ende der Idempotenz-Kette ein zweites Mal.
+UR_MIGRATION="20261028_006_event_author_names.sql"
+# SW (@EK-062): juengste Fassung von match_engine.cache_columns (Strafstoss aus dem Direkteintrag nur bei
+# Gleichstand) -- jedes erneute Einspielen von 20261028_003 stellte die alte Fassung wieder her, deshalb ans
+# Ende der Idempotenz-Kette. --without-sw laesst genau diese Datei aus (Gegenprobe D).
+SW_MIGRATION="20261028_007_entered_shootout_needs_draw.sql"
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 CONTAINER_NAME="append-match-events-check-$$"
 WORKDIR="$(mktemp -d)"
@@ -131,6 +143,8 @@ AMEND_FILE=""
 ZA3_FILE=""
 A25A_FILE=""
 A10_FILE=""
+UR_FILE=""
+SW_FILE=""
 AFTER_TARGET=0
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
@@ -147,10 +161,15 @@ while IFS= read -r line; do
   [[ "$(basename "$line")" == "$ZA3_MIGRATION" ]] && ZA3_FILE="$line"
   [[ "$(basename "$line")" == "$A25A_MIGRATION" ]] && A25A_FILE="$line"
   [[ "$(basename "$line")" == "$A10_MIGRATION" ]] && A10_FILE="$line"
+  [[ "$(basename "$line")" == "$UR_MIGRATION" ]] && UR_FILE="$line"
+  if [[ "$(basename "$line")" == "$SW_MIGRATION" ]]; then
+    SW_FILE="$line"
+    [[ "$MODE" == "without-sw" ]] && continue
+  fi
   NEWER_MIGRATIONS+=("$line")
 done <<< "$NEWER_MIGRATIONS_RAW"
-if [[ "$MODE" != "without-migration" && ( -z "$TARGET_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" || -z "$A10_FILE" ) ]]; then
-  echo "::error::$TARGET_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION oder $A10_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
+if [[ "$MODE" != "without-migration" && ( -z "$TARGET_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" || -z "$A10_FILE" || -z "$UR_FILE" || -z "$SW_FILE" ) ]]; then
+  echo "::error::$TARGET_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION, $A10_MIGRATION, $UR_MIGRATION oder $SW_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
   exit 1
 fi
 
@@ -195,6 +214,8 @@ if [[ "$MODE" != "without-migration" ]]; then
   psql_stdin < "$ZA3_FILE"
   psql_stdin < "$A25A_FILE"
   psql_stdin < "$A10_FILE"
+  psql_stdin < "$UR_FILE"
+  [[ "$MODE" != "without-sw" ]] && psql_stdin < "$SW_FILE"
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.
@@ -1320,6 +1341,82 @@ check Sonstiges "@FU-094 Gegenbeispiel: Gruppenspiel 2:2 mit Strafstoss -> abgel
   '.results[0].status == "rejected" and .results[0].code == "INVALID_PAYLOAD" and .results[0].detail.reason == "SHOOTOUT_NOT_ALLOWED" and .state.status == "scheduled"' "$out"
 check Sonstiges "@FU-094 Gruppenspiel 2:2 mit Strafstoss: keine Zeile gespeichert" '. == 0' "$(rows_of "$(M a25a-g2)")"
 
+# --- 9i. SW (@EK-062): Strafstoss aus dem Direkteintrag zaehlt nach dem Wiedereroeffnen nur bei Gleichstand ---
+# Halbfinale 1 FC Nord gegen DJK Berg: Direkteintrag 2:2 + Strafstoss 4:3 fuer FC Nord, Turnierleitung (Owner)
+# eroeffnet wieder, Tor DJK Berg, Abpfiff -- alles ueber append_match_events, geprueft an der Spielzeile.
+# Ohne 20261028_007 (--without-sw) ist Fall 1 rot (Beleg der Luecke C-STRAFSTOSS-NACH-WIEDEREROEFFNEN).
+echo "SW (@EK-062, Strafstoss nach Wiedereroeffnen)..." >&2
+T_SW="$(uuid_for tournament:sw)"
+{
+  tournament_sql "$T_SW" '{}' '{"tiebreaker":"shootout"}' 10
+  echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$(uuid_for team:sw-nord)', '$T_SW', 'FC Nord'), ('$(uuid_for team:sw-berg)', '$T_SW', 'DJK Berg');"
+  for name in sw-hf1 sw-hf2 sw-hf3; do
+    echo "INSERT INTO public.matches (id, tournament_id, round, field, phase, team_a_id, team_b_id) VALUES ('$(M "$name")', '$T_SW', 1, 1, 'semifinal', '$(uuid_for team:sw-nord)', '$(uuid_for team:sw-berg)');"
+  done
+  for name in sw-g1 sw-g2; do
+    echo "INSERT INTO public.matches (id, tournament_id, round, field, phase, team_a_id, team_b_id) VALUES ('$(M "$name")', '$T_SW', 1, 1, 'groupStage', '$(uuid_for team:sw-nord)', '$(uuid_for team:sw-berg)');"
+  done
+} | psql_stdin
+SW_22='{"scores":{"@T:sw-nord@":2,"@T:sw-berg@":2}}'
+SW_22_43='{"scores":{"@T:sw-nord@":2,"@T:sw-berg@":2},"shootout":{"@T:sw-nord@":4,"@T:sw-berg@":3}}'
+# \"-Escapes nur auf oberster Ebene einer Funktion (bash 3.2 scheitert an ihnen in verschachtelten $(...)).
+sw_entry_ev() { ev RESULT_ENTRY "$(E "$1-entry")" "{\"at\":1000,\"section\":null,\"clockMs\":null,\"payload\":$2}"; }
+sw_entry() { # $1 Spiel-Schluessel, $2 Payload-JSON
+  call authenticated "$U_OWNER" "$(M "$1")" "$(arr "$(sw_entry_ev "$1" "$2")")"
+}
+sw_kick() { # $1 Ereignis-Schluessel, $2 at, $3 Team-Schluessel, $4 scored
+  ev SHOOTOUT_KICK "$(E "$1")" "{\"at\":$2,\"section\":null,\"clockMs\":null,\"teamId\":\"@T:$3@\",\"payload\":{\"scored\":$4}}"
+}
+sw_reopen() { call authenticated "$U_OWNER" "$(M "$1")" "$(arr "$(ev REOPEN "$(E "$1-reopen")" '{"at":2000,"section":null,"clockMs":null}')")"; }
+sw_goal_berg() { call authenticated "$U_OWNER" "$(M "$1")" "$(arr "$(ev GOAL "$(E "$1-goal")" '{"at":3000,"teamId":"@T:sw-berg@"}')")"; }
+sw_end() { call authenticated "$U_OWNER" "$(M "$1")" "$(arr "$(ev MATCH_END "$(E "$1-end")" '{"at":5000}')")"; }
+sw_accepted() { # $1 Name, $2 Ausgabe
+  check Sonstiges "$1" '[.results[].status] | all(. == "accepted")' "$2"
+}
+# Fall 1 (@EK-062 Dann 1): 2:2 + 4:3 -> wiedereroeffnet -> Tor DJK Berg -> Ende 2:3.
+sw_accepted "@EK-062 Halbfinale 1: Direkteintrag 2:2 + 4:3 angenommen" "$(sw_entry sw-hf1 "$SW_22_43")"
+sw_accepted "@EK-062 Halbfinale 1: Owner eroeffnet wieder" "$(sw_reopen sw-hf1)"
+sw_accepted "@EK-062 Halbfinale 1: Tor DJK Berg angenommen" "$(sw_goal_berg sw-hf1)"
+out="$(sw_end sw-hf1)"
+check Sonstiges "@EK-062 Halbfinale 1: Abpfiff -> beendet 2:3" \
+  '.results[0].status == "accepted" and .state.status == "finished" and .state.effectiveScores == {"'"$(uuid_for team:sw-nord)"'": 2, "'"$(uuid_for team:sw-berg)"'": 3}' "$out"
+check Sonstiges "@EK-062 wiedereroeffnet und 2:3 beendet: matches finished, 2/3, penalty null/null, decided_by regular (DJK Berg Sieger, 4:3 zaehlt nirgends)" \
+  '.match_status == "finished" and .score_a == 2 and .score_b == 3 and .penalty_score_a == null and .penalty_score_b == null and .decided_by == "regular"' "$(cache_of "$(M sw-hf1)")"
+# Fall 2 (@EK-062 Aber): 2:2 + 4:3 -> wiedereroeffnet -> Ende erneut 2:2.
+sw_accepted "@EK-062 Halbfinale 2: Direkteintrag 2:2 + 4:3 angenommen" "$(sw_entry sw-hf2 "$SW_22_43")"
+sw_accepted "@EK-062 Halbfinale 2: Owner eroeffnet wieder" "$(sw_reopen sw-hf2)"
+sw_accepted "@EK-062 Halbfinale 2: Abpfiff angenommen" "$(sw_end sw-hf2)"
+check Sonstiges "@EK-062 erneut 2:2 nach dem Wiedereroeffnen: matches finished, 2/2, penalty 4/3, decided_by penalty" \
+  '.match_status == "finished" and .score_a == 2 and .score_b == 2 and .penalty_score_a == 4 and .penalty_score_b == 3 and .decided_by == "penalty"' "$(cache_of "$(M sw-hf2)")"
+# Fall 3 (Gegenbeispiel Gruppe): 2:2 ohne Strafstoss -> wiedereroeffnet -> Tor -> 2:3; Strafstoss im Gruppenspiel abgelehnt.
+sw_accepted "@EK-062 Gegenbeispiel Gruppe: Direkteintrag 2:2 angenommen" "$(sw_entry sw-g1 "$SW_22")"
+sw_accepted "@EK-062 Gegenbeispiel Gruppe: wiedereroeffnet" "$(sw_reopen sw-g1)"
+sw_accepted "@EK-062 Gegenbeispiel Gruppe: Tor DJK Berg" "$(sw_goal_berg sw-g1)"
+sw_accepted "@EK-062 Gegenbeispiel Gruppe: Abpfiff" "$(sw_end sw-g1)"
+check Sonstiges "@EK-062 Gegenbeispiel Gruppe 2:3: regular, kein Strafstoss-Stand" \
+  '.match_status == "finished" and .score_a == 2 and .score_b == 3 and .penalty_score_a == null and .penalty_score_b == null and .decided_by == "regular"' "$(cache_of "$(M sw-g1)")"
+out="$(sw_entry sw-g2 "$SW_22_43")"
+check Sonstiges "@EK-062 Gegenbeispiel Gruppe 2:2 mit Strafstoss -> SHOOTOUT_NOT_ALLOWED (Bestand 9h)" \
+  '.results[0].code == "INVALID_PAYLOAD" and .results[0].detail.reason == "SHOOTOUT_NOT_ALLOWED" and .state.status == "scheduled"' "$out"
+# Fall 4 (Gegenbeispiel B-U11): geleitetes Strafstossschiessen 3:0 -> REOPEN abgelehnt, Spielzeile unveraendert.
+SW_KICKS=()
+for i in 1 2 3; do
+  SW_KICKS+=("$(sw_kick "sw-hf3-ka$i" "$((700000 + i * 10))" sw-nord true)")
+  SW_KICKS+=("$(sw_kick "sw-hf3-kb$i" "$((700005 + i * 10))" sw-berg false)")
+done
+out="$(call authenticated "$U_HELPER" "$(M sw-hf3)" "$(arr "$(ev MATCH_START "$(E sw-hf3-start)" '{"clockMs":null}')" \
+  "$(ev MATCH_END "$(E sw-hf3-end)" '{"at":601000,"clockMs":600000}')" "${SW_KICKS[@]}" \
+  "$(ev SHOOTOUT_END "$(E sw-hf3-send)" '{"at":702000,"section":null,"clockMs":null}')")")"
+check Sonstiges "@EK-062 Gegenbeispiel B-U11: geleitetes Strafstossschiessen 3:0 beendet" \
+  '([.results[].status] | all(. == "accepted")) and .state.status == "finished"' "$out"
+SW_HF3_BEFORE="$(cache_of "$(M sw-hf3)")"
+out="$(call authenticated "$U_OWNER" "$(M sw-hf3)" "$(arr "$(ev REOPEN "$(E sw-hf3-reopen)" '{"at":710000,"clockMs":null}')")")"
+check Sonstiges "@EK-062 Gegenbeispiel B-U11: REOPEN nach dem Strafstossschiessen -> INVALID_TRANSITION (SHOOTOUT_FINISHED)" \
+  '.results[0].status == "rejected" and .results[0].code == "INVALID_TRANSITION" and .results[0].detail.reason == "SHOOTOUT_FINISHED"' "$out"
+check Sonstiges "@EK-062 Gegenbeispiel B-U11: Spielzeile unveraendert (penalty 3/0 aus den Schuessen, decided_by penalty)" \
+  '.same and .b.match_status == "finished" and .b.penalty_score_a == 3 and .b.penalty_score_b == 0 and .b.decided_by == "penalty"' \
+  "$(jq -cn --argjson a "$SW_HF3_BEFORE" --argjson b "$(cache_of "$(M sw-hf3)")" '{same: ($a == $b), b: $b}')"
+
 # --- 10. Laufzeit: 1 Ereignis bei 100 gespeicherten (nur Ausgabe) -----------------------------
 if [[ "$MODE" == "normal" ]]; then
   PERF_EVENTS="$(jq -cn --arg a "$TA" --arg p "$(E perf)" '
@@ -1489,6 +1586,7 @@ case "$MODE" in
   without-migration) red_required Fixtures Rechte Idempotenz Kaskade Nebenlaeufig Sonstiges Nachtrag Spaltenschutz Rechte-Assertion A-08h ;;
   gegenprobe) red_required Fixtures Rechte ;;
   without-column-guard) red_required Spaltenschutz ;;
+  without-sw) red_required Sonstiges Fixtures ;;
 esac
 if [[ "$TOTAL_DEV" -gt 0 ]]; then
   echo "::error::$TOTAL_DEV Abweichung(en) im Schreibweg-Harness." >&2

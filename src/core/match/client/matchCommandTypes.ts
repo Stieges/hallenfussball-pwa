@@ -52,6 +52,8 @@ export interface CommandTiming {
   at: number;
   /** Fixrunde F5: Abschnitt des Endes; fehlt er, gilt der aktuelle. */
   section?: number;
+  /** B-08b: feste Ereignis-ID (`autoEndEventId`), damit zwei Geräte dasselbe Ende erzeugen; fehlt sie, gilt eine zufällige. */
+  id?: string;
 }
 
 /** B-07: Wahl der Entscheidung bei K.-o.-Remis ohne festen Modus (TIEBREAK_CHOICE). */
@@ -71,7 +73,7 @@ export type ClockSource =
   | { kind: 'now' }
   | { kind: 'firstTap'; clockMs: number; section?: number }
   | { kind: 'set'; clockMs: number; previousClockMs: number }
-  | { kind: 'timing'; clockMs: number; at: number; section?: number };
+  | { kind: 'timing'; clockMs: number; at: number; section?: number; id?: string };
 
 /** B-07: ein zu sendender Eintrag (Umschlag ohne `id`, `actor`, `at`, `section`). */
 export interface CommandSpec {

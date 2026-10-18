@@ -1,0 +1,121 @@
+{
+  "title": "Halbfinale 1, FC Nord (teamA) gegen DJK Berg (teamB): Direkteintrag 2:2 mit Strafstoß 4:3 für FC Nord, Olli öffnet wieder, Tor DJK Berg, Abpfiff 2:3 -- DJK Berg Sieger, Strafstoß 4:3 zählt nirgends (score 2/3, penalty null, decided_by regular)",
+  "szenario": null,
+  "knockout": true,
+  "ctx": {
+    "matchId": "match-0000068a",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000068a-0000-4000-8000-000000000001",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 1000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 2,
+          "teamB": 2
+        },
+        "shootout": {
+          "teamA": 4,
+          "teamB": 3
+        }
+      },
+      "actorUser": "owner"
+    },
+    {
+      "id": "0000068a-0000-4000-8000-000000000002",
+      "type": "REOPEN",
+      "actor": "leitung",
+      "at": 2000,
+      "section": null,
+      "clockMs": null,
+      "payload": {},
+      "actorUser": "owner"
+    },
+    {
+      "id": "0000068a-0000-4000-8000-000000000003",
+      "type": "GOAL",
+      "actor": "leitung",
+      "at": 3000,
+      "section": 1,
+      "clockMs": 0,
+      "payload": {},
+      "actorUser": "owner",
+      "teamId": "teamB"
+    },
+    {
+      "id": "0000068a-0000-4000-8000-000000000004",
+      "type": "MATCH_END",
+      "actor": "leitung",
+      "at": 5000,
+      "section": 1,
+      "clockMs": 0,
+      "payload": {},
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000068a-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000068a-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000068a-0000-4000-8000-000000000003",
+        "status": "accepted"
+      },
+      {
+        "id": "0000068a-0000-4000-8000-000000000004",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 1,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 2,
+        "teamB": 3
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000068a-0000-4000-8000-000000000003",
+      "decidedBy": "direct",
+      "finishedAt": 5000
+    },
+    "cacheColumns": {
+      "match_status": "finished",
+      "score_a": 2,
+      "score_b": 3,
+      "penalty_score_a": null,
+      "penalty_score_b": null,
+      "decided_by": "regular"
+    }
+  }
+}

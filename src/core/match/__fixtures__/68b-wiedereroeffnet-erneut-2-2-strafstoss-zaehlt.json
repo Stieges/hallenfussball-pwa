@@ -1,0 +1,106 @@
+{
+  "title": "Halbfinale 1, FC Nord (teamA) gegen DJK Berg (teamB): Direkteintrag 2:2 mit Strafstoß 4:3, wieder eröffnet und erneut 2:2 beendet -- Strafstoß 4:3 zählt wieder, FC Nord Sieger (penalty 4/3, decided_by penalty)",
+  "szenario": null,
+  "knockout": true,
+  "ctx": {
+    "matchId": "match-0000068b",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000068b-0000-4000-8000-000000000001",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 1000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 2,
+          "teamB": 2
+        },
+        "shootout": {
+          "teamA": 4,
+          "teamB": 3
+        }
+      },
+      "actorUser": "owner"
+    },
+    {
+      "id": "0000068b-0000-4000-8000-000000000002",
+      "type": "REOPEN",
+      "actor": "leitung",
+      "at": 2000,
+      "section": null,
+      "clockMs": null,
+      "payload": {},
+      "actorUser": "owner"
+    },
+    {
+      "id": "0000068b-0000-4000-8000-000000000003",
+      "type": "MATCH_END",
+      "actor": "leitung",
+      "at": 5000,
+      "section": 1,
+      "clockMs": 0,
+      "payload": {},
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000068b-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000068b-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000068b-0000-4000-8000-000000000003",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 2,
+        "teamB": 2
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000068b-0000-4000-8000-000000000001",
+      "decidedBy": "direct",
+      "finishedAt": 5000
+    },
+    "cacheColumns": {
+      "match_status": "finished",
+      "score_a": 2,
+      "score_b": 2,
+      "penalty_score_a": 4,
+      "penalty_score_b": 3,
+      "decided_by": "penalty"
+    }
+  }
+}
