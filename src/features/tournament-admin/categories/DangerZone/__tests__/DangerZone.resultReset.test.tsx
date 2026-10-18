@@ -1,12 +1,10 @@
 /**
- * DangerZone.resultReset.test.tsx — A2 Fixrunde 1 (Ruling AJ, I1/I2:
- * .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-review.md).
+ * DangerZone.resultReset.test.tsx — A2 Fixrunde 1, umgeschrieben in A-10 (Baustein Regel 3, brief-A-10.md § 8 Fall 13).
  *
- * I1: "Ergebnisse zurücksetzen" (reset_schedule) and "Spielplan neu generieren"
- * (regenerate_schedule) reset RESULT/STATUS columns (score, status, timer) on EXISTING matches.
- * They used to persist ONLY via a full onTournamentUpdate() save, which (since A2) skips those
- * columns for existing matches -- the reset landed in local state, never in the cloud. Fixed by
- * ALSO calling onMatchesUpdate with a targeted UPDATE_MATCH per touched match.
+ * Vorher hielt der Test fest, dass „Spielplan zurücksetzen“ zusätzlich je Spiel ein UPDATE_MATCH sendet
+ * (onMatchesUpdate). Seit C3a-2b verwarf der Mapper diese Spalten, die Cloud blieb unverändert; seit A-10 schreibt
+ * nur der Server Ergebnisse (reset_match_results, DangerZone.resultsReset.a10.test.tsx). Ohne Cloud (hier: Supabase
+ * nicht eingerichtet, wie im Gastmodus) setzt die DangerZone lokal zurück und speichert nicht voll.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
@@ -51,13 +49,12 @@ async function triggerAction(user: ReturnType<typeof userEvent.setup>, opener: R
   await user.click(within(dialog).getByRole('button', { name: opener }));
 }
 
-describe('DangerZone — Ergebnis-/Statuszurücksetzung (A2 Fixrunde 1)', () => {
+describe('DangerZone — Ergebnis-/Statuszurücksetzung (A2 Fixrunde 1, A-10)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('"Spielplan zurücksetzen" persists via onMatchesUpdate (UPDATE_MATCH per match), NOT a full save', async () => {
+  it('A-10 „Spielplan zurücksetzen“ ohne Cloud → lokal zurückgesetzt, kein Voll-Speichern, kein gezieltes Update', async () => {
     const onTournamentUpdate = vi.fn();
     const onLocalTournamentUpdate = vi.fn();
-    const onMatchesUpdate = vi.fn();
     const user = userEvent.setup();
 
     render(
@@ -66,26 +63,17 @@ describe('DangerZone — Ergebnis-/Statuszurücksetzung (A2 Fixrunde 1)', () => 
         tournament={tournament}
         onTournamentUpdate={onTournamentUpdate}
         onLocalTournamentUpdate={onLocalTournamentUpdate}
-        onMatchesUpdate={onMatchesUpdate}
       />
     );
 
     await triggerAction(user, /Spielplan zurücksetzen/i, 'ZURÜCKSETZEN');
 
-    // Full save is NOT used for this -- local sync + targeted update instead.
     expect(onTournamentUpdate).not.toHaveBeenCalled();
-    expect(onLocalTournamentUpdate).toHaveBeenCalledTimes(1);
-
-    expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
-    const updates = onMatchesUpdate.mock.calls[0][0];
-    expect(updates).toHaveLength(2);
-    for (const update of updates) {
-      // A2 Fixrunde 3 (N1b/N2): the schedule-default for matchStatus is 'scheduled' (never
-      // null), and a genuinely cleared field (scoreA) is `null` -- NOT `undefined` (would be
-      // dropped by JSON.stringify in the offline mutation queue, N2).
-      expect(update.matchStatus).toBe('scheduled');
-      expect('scoreA' in update).toBe(true);
-      expect(update.scoreA).toBeNull();
+    await vi.waitFor(() => expect(onLocalTournamentUpdate).toHaveBeenCalledTimes(1));
+    const local = onLocalTournamentUpdate.mock.calls[0][0] as Tournament;
+    expect(local.matches).toHaveLength(2);
+    for (const match of local.matches) {
+      expect(match).toMatchObject({ matchStatus: 'scheduled', scoreA: undefined, scoreB: undefined });
     }
   });
 });

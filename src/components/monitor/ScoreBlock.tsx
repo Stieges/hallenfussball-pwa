@@ -8,7 +8,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { cssVars, displayFontSizes, getScoreTextColor } from '../../design-tokens';
+import { cssVars, displayFontSizes, displayLayout, getScoreTextColor } from '../../design-tokens';
 import { scoreDigitFontSize } from './scoreDigitSize';
 import type { BlockFrame } from './liveBlockFrame';
 
@@ -25,6 +25,17 @@ export interface ScoreBlockProps {
   hideScore?: boolean;
   /** Rahmen (B-44a2): dezent, bei zu geringem Kontrast zum Hintergrund kräftig (@ZM-140) */
   frame?: BlockFrame;
+  /** Ende (Mockup K5g): Sieger-Kasten mit Ring in `ringColor`, Verlierer abgedunkelt */
+  outcome?: 'winner' | 'loser';
+  ringColor?: string;
+  /** Schleierfarbe des Verlierers (Hintergrund der Folie, Anteil `loserDimShare`) */
+  dimColor?: string;
+}
+
+/** Dezenter Schleier statt Scrim (Mockup K5g `--lose-ov`): Folienhintergrund mit `loserDimShare` Deckkraft */
+function loserVeil(dimColor: string | undefined): string {
+  const schleier = `color-mix(in srgb, ${dimColor ?? cssVars.colors.background} ${displayLayout.scoreArea.loserDimShare}, transparent)`;
+  return `linear-gradient(${schleier}, ${schleier})`;
 }
 
 const sizeConfig = {
@@ -53,6 +64,9 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
   size = 'xl',
   hideScore = false,
   frame,
+  outcome,
+  ringColor,
+  dimColor,
 }) => {
   const textColor = getScoreTextColor(backgroundColor);
   const config = sizeConfig[size];
@@ -70,6 +84,8 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
     borderRadius: config.borderRadius,
     boxSizing: 'border-box',
     border: frame ? `${frame.width} solid ${frame.color}` : undefined,
+    ...(outcome === 'winner' ? { outline: `${displayLayout.scoreArea.frameWidthStrong} solid ${ringColor}`, outlineOffset: displayLayout.scoreArea.frameWidthSubtle } : {}),
+    ...(outcome === 'loser' ? { backgroundImage: loserVeil(dimColor) } : {}),
     position: 'relative',
     overflow: 'hidden',
   };
@@ -97,6 +113,7 @@ export const ScoreBlock: React.FC<ScoreBlockProps> = ({
     <div
       style={blockStyle}
       data-position={position}
+      data-outcome={outcome}
       aria-label={hideScore ? (position === 'home' ? 'Heim' : 'Gast') : `${position === 'home' ? 'Heim' : 'Gast'}: ${score}`}
     >
       <div style={glowStyle} />

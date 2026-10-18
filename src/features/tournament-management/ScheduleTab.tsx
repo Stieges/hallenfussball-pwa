@@ -10,7 +10,7 @@
  *
  * Refactored: Logic extracted to custom hooks for maintainability
  * - useScheduleHistory: Undo/Redo functionality
- * - useRunningMatchIds: Live match detection (useLiveMatches)
+ * - Status: eine Quelle, die gemeinsame Ansicht (`buildTournamentView`, Leitung + Engine-Status, A-36c)
  * - usePendingChanges: Edit mode state
  * - useScheduleTabActions: Action handlers
  */
@@ -24,14 +24,12 @@ import { Tournament, Standing, Match } from '../../types/tournament';
 import { MatchUpdate } from '../../core/models/types';
 import {
   useScheduleHistory,
-  useRunningMatchIds,
   usePendingChanges,
   useScheduleTabActions,
   useScheduleFilters,
   getFilterOptions,
 } from './hooks';
-import { isMatchFinished } from './utils';
-import { slotLabel, type SlotLabelContext } from '../../core/models/slotLabel';
+import { useScheduleView } from './hooks/useScheduleView';
 import { ScheduleToolbar, ScheduleViewMode, ScheduleConflictContent } from './components';
 import { ScheduleResultEntryPrompt } from './components/ScheduleResultEntryPrompt';
 import { GeneratedSchedule } from '../../core/generators';
@@ -119,8 +117,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       isEditing,
     });
 
-  // Running matches (for live indicators)
-  const runningMatchIds = useRunningMatchIds(tournament.id);
+  // Die gemeinsame Ansicht der Leitung (A-36c): eine Statusquelle für Karten, Filter und „läuft gerade“
+  const { view, locale, liveMatchIds, elapsedSeconds } = useScheduleView(tournament);
 
   // US-VIEWER-FILTERS: Schedule filtering
   const filterOptions = useMemo(() => getFilterOptions(tournament), [tournament]);
@@ -167,17 +165,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const [pendingCockpitMatchId, setPendingCockpitMatchId] = useState<string | null>(null);
   const [showRunningMatchDialog, setShowRunningMatchDialog] = useState(false);
 
-  // Spielseiten: Team über die Team-ID, offene Seite über ihre Herkunft (@TM-015) – nie über gespeicherte Namen
-  const slotContext = useMemo((): SlotLabelContext => ({
-    teams: tournament.teams,
-    matches: tournament.matches,
-    groups: tournament.groups,
-  }), [tournament.teams, tournament.matches, tournament.groups]);
-
   // Handler for navigating to cockpit with running match check
   const handleNavigateToCockpit = useCallback((matchId: string) => {
     // Check if there's a running match (other than the target match)
-    const runningMatchArray = Array.from(runningMatchIds).filter(id => id !== matchId);
+    const runningMatchArray = Array.from(liveMatchIds).filter(id => id !== matchId);
 
     if (runningMatchArray.length > 0) {
       // There's a running match - need confirmation
@@ -193,7 +184,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       // No running match - navigate directly
       onNavigateToCockpit?.(matchId);
     }
-  }, [runningMatchIds, canControlTimer, showWarning, onNavigateToCockpit, t]);
+  }, [liveMatchIds, canControlTimer, showWarning, onNavigateToCockpit, t]);
 
   // Handler to confirm navigation (ends running match)
   const handleConfirmCockpitNavigation = useCallback(() => {
@@ -212,18 +203,20 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
   // Get info about the currently running match for dialog
   const runningMatchInfo = useMemo(() => {
-    const runningMatchId = Array.from(runningMatchIds)[0];
+    const runningMatchId = Array.from(liveMatchIds)[0];
     if (!runningMatchId) { return null; }
     const match = tournament.matches.find(m => m.id === runningMatchId);
-    if (!match) { return null; }
+    const shown = view.byId.get(runningMatchId);
+    if (!match || !shown) { return null; }
+    // Spielseiten aus der Ansicht (@TM-015): Teamname bzw. Herkunft, nie ein gespeicherter Name
     return {
       id: runningMatchId,
-      homeName: slotLabel(match.slotA, slotContext),
-      awayName: slotLabel(match.slotB, slotContext),
+      homeName: shown.home.label,
+      awayName: shown.away.label,
       scoreA: match.scoreA,
       scoreB: match.scoreB,
     };
-  }, [runningMatchIds, tournament.matches, slotContext]);
+  }, [liveMatchIds, tournament.matches, view]);
 
   // Action handlers (extracted for maintainability)
   const {
@@ -265,15 +258,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     backdropFilter: 'none',
     WebkitBackdropFilter: 'none',
   } : {};
-
-  // Build finished matches set for display
-  // Always populate this set to show proper match status (summary view on circle click)
-  // The lockFinishedResults setting only controls whether editing is prevented
-  const finishedMatchIds = new Set(
-    tournament.matches
-      .filter(m => isMatchFinished(m))
-      .map(m => m.id)
-  );
 
   // Count conflicts by severity
   const criticalConflicts = detectedConflicts.filter(c =>
@@ -354,8 +338,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 onRefereeChange={handleRefereeAssignment}
                 onFieldChange={handleFieldChange}
                 onMatchSwap={isEditing ? handleMatchSwap : undefined}
-                finishedMatches={finishedMatchIds}
-                runningMatchIds={runningMatchIds}
+                view={view}
+                locale={locale}
+                elapsedSeconds={elapsedSeconds}
                 onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
                 visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
               />

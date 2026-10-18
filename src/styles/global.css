@@ -489,6 +489,7 @@
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
 
   /* Shadows - Synced with theme.ts */
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);

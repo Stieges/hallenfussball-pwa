@@ -1,13 +1,15 @@
 /** B-16f1 – Auswahl-Funktionen für Folieninhalte: Reihenfolge, offene Spiele, Feldplan, Seiten (@ZM-129 Logik). */
 import { describe, it, expect } from 'vitest';
 import type { Match, MatchStatus } from '../../../types/tournament';
+import type { MatchView, TournamentView } from '../../../core/view';
 import { looseVs } from '../../../test/matchSlotFixtures';
 import type { MonitorSlide } from '../../../types/monitor';
+import { buildTournament } from './monitorFixture';
+import { buildMonitorView } from '../monitorView';
 import {
   MONITOR_ROWS_PER_PAGE,
   compareKickoff,
   fieldSchedule,
-  isUpcoming,
   monitorPageCount,
   pageOf,
   pagesFor,
@@ -28,6 +30,16 @@ function spiel(id: string, over: Partial<Match> = {}): Match {
   };
 }
 
+/** Die Ansicht des Monitors über diese Spiele (A-36c): Status, Anstoß und Sortierung kommen von dort. */
+const ansicht = (matches: Match[]): TournamentView => buildMonitorView(buildTournament({ matches, date: '2026-10-24' }));
+/** Ein Spiel der Ansicht. */
+const viewSpiel = (m: Match): MatchView => {
+  const found = ansicht([m]).byId.get(m.id);
+  if (!found) { throw new Error('Spiel fehlt in der Ansicht'); }
+  return found;
+};
+const ids = (list: MatchView[]) => list.map(m => m.id);
+
 /** Status, den der Typ nicht kennt (z. B. unterbrochen) – nur für den Gegenbeispiel-Test. */
 const unbekannterStatus = (s: string) => s as unknown as MatchStatus;
 
@@ -36,36 +48,38 @@ describe('compareKickoff – Anpfiff-Reihenfolge', () => {
     const platz3 = spiel('platz3', { round: 9, matchNumber: 12, scheduledTime: um(15, 20), label: 'Spiel um Platz 3' });
     const gruppe1 = spiel('g1', { matchNumber: 1, scheduledTime: um(14, 0) });
     const gruppe2 = spiel('g2', { matchNumber: 2, scheduledTime: um(14, 20) });
-    const sortiert = upcomingMatches([platz3, gruppe2, gruppe1], { count: 3 });
-    expect(sortiert.map(m => m.id)).toEqual(['g1', 'g2', 'platz3']);
+    const sortiert = upcomingMatches(ansicht([platz3, gruppe2, gruppe1]), { count: 3 });
+    expect(ids(sortiert)).toEqual(['g1', 'g2', 'platz3']);
   });
 
   it('unlesbare Uhrzeit (NaN) steht hinter allen Spielen mit Uhrzeit', () => {
     const kaputt = spiel('kaputt', { matchNumber: 1, scheduledTime: 'kaputt' as unknown as Date });
     const frueh = spiel('frueh', { matchNumber: 9, scheduledTime: um(14, 0) });
     const spaet = spiel('spaet', { matchNumber: 2, scheduledTime: um(15, 0) });
-    expect([kaputt, spaet, frueh].sort(compareKickoff).map(m => m.id)).toEqual(['frueh', 'spaet', 'kaputt']);
+    expect(ids(ansicht([kaputt, spaet, frueh]).matches.slice().sort(compareKickoff))).toEqual(['frueh', 'spaet', 'kaputt']);
   });
 
-  it('ohne Uhrzeit nach Spielnummer, dann Runde, dann Id; fehlende Uhrzeit ans Ende', () => {
+  it('ohne Uhrzeit nach Spielnummer, dann Id; fehlende Uhrzeit ans Ende', () => {
     const ohneZeit = spiel('ohne', { scheduledTime: undefined, matchNumber: 1 });
     const spaet = spiel('spaet', { matchNumber: 5, scheduledTime: um(16, 0) });
     const nr2 = spiel('nr2', { matchNumber: 2, scheduledTime: undefined });
     const nr1 = spiel('nr1', { matchNumber: 1, scheduledTime: undefined });
-    expect([ohneZeit, nr2, spaet, nr1].sort(compareKickoff).map(m => m.id)).toEqual(['spaet', 'nr1', 'ohne', 'nr2']);
+    expect(ids(ansicht([ohneZeit, nr2, spaet, nr1]).matches.slice().sort(compareKickoff))).toEqual(['spaet', 'nr1', 'ohne', 'nr2']);
   });
 
   it('liest scheduledTime auch als String (aus JSON)', () => {
     const a = spiel('a', { scheduledTime: new Date(um(15, 0).toISOString()) });
     const b = spiel('b', { scheduledTime: um(14, 0).toISOString() as unknown as Date });
-    expect([a, b].sort(compareKickoff).map(m => m.id)).toEqual(['b', 'a']);
+    expect(ids(ansicht([a, b]).matches.slice().sort(compareKickoff))).toEqual(['b', 'a']);
   });
 
   it('gleiche Uhrzeit: Id als letzte Stufe, stabil', () => {
     const x = spiel('x', { matchNumber: 3 });
     const y = spiel('y', { matchNumber: 3 });
-    expect([y, x].sort(compareKickoff).map(m => m.id)).toEqual(['x', 'y']);
-    expect(compareKickoff(x, x)).toBe(0);
+    const view = ansicht([y, x]);
+    expect(ids(view.matches.slice().sort(compareKickoff))).toEqual(['x', 'y']);
+    const vx = viewSpiel(x);
+    expect(compareKickoff(vx, vx)).toBe(0);
   });
 });
 
@@ -75,25 +89,25 @@ describe('isUpcoming – offene Spiele', () => {
     ['angesetzt', 'scheduled'],
     ['wartend', 'waiting'],
   ] as const)('%s zählt als offen', (_name, status) => {
-    expect(isUpcoming(spiel('m', { matchStatus: status }))).toBe(true);
+    expect(viewSpiel(spiel('m', { matchStatus: status })).isUpcoming).toBe(true);
   });
 
   it('läuft nie als offen (@ZM-071 Nächste Spiele, Gegenbeispiel)', () => {
-    expect(isUpcoming(spiel('m', { matchStatus: 'running' }))).toBe(false);
+    expect(viewSpiel(spiel('m', { matchStatus: 'running' })).isUpcoming).toBe(false);
   });
 
   it('unterbrochen (paused) zählt nie als offen', () => {
-    expect(isUpcoming(spiel('m', { matchStatus: unbekannterStatus('paused') }))).toBe(false);
+    expect(viewSpiel(spiel('m', { matchStatus: unbekannterStatus('paused') })).isUpcoming).toBe(false);
   });
 
   it('Laufzeitstatus paused und finished zählen nie als nächstes Spiel', () => {
-    expect(upcomingMatches([spiel('p', { matchStatus: unbekannterStatus('paused') })], { count: 1 })).toEqual([]);
-    expect(upcomingMatches([spiel('f', { matchStatus: 'finished' })], { count: 1 })).toEqual([]);
+    expect(upcomingMatches(ansicht([spiel('p', { matchStatus: unbekannterStatus('paused') })]), { count: 1 })).toEqual([]);
+    expect(upcomingMatches(ansicht([spiel('f', { matchStatus: 'finished' })]), { count: 1 })).toEqual([]);
   });
 
   it('beendet und übersprungen zählen nie als offen', () => {
-    expect(isUpcoming(spiel('m', { matchStatus: 'finished' }))).toBe(false);
-    expect(isUpcoming(spiel('m', { matchStatus: 'skipped' }))).toBe(false);
+    expect(viewSpiel(spiel('m', { matchStatus: 'finished' })).isUpcoming).toBe(false);
+    expect(viewSpiel(spiel('m', { matchStatus: 'skipped' })).isUpcoming).toBe(false);
   });
 });
 
@@ -108,20 +122,20 @@ describe('upcomingMatches – Nächste Spiele', () => {
   ];
 
   it('zählt nur offene Spiele, sortiert, ohne laufende und unterbrochene', () => {
-    expect(upcomingMatches(liste, { count: 10 }).map(m => m.id)).toEqual(['spiel9', 'spiel10', 'spiel11']);
+    expect(ids(upcomingMatches(ansicht(liste), { count: 10 }))).toEqual(['spiel9', 'spiel10', 'spiel11']);
   });
 
   it('count begrenzt die Liste', () => {
-    expect(upcomingMatches(liste, { count: 2 }).map(m => m.id)).toEqual(['spiel9', 'spiel10']);
+    expect(ids(upcomingMatches(ansicht(liste), { count: 2 }))).toEqual(['spiel9', 'spiel10']);
   });
 
   it('field-Filter lässt nur das Feld zu', () => {
-    expect(upcomingMatches(liste, { count: 5, field: 1 }).map(m => m.id)).toEqual(['spiel9', 'spiel11']);
+    expect(ids(upcomingMatches(ansicht(liste), { count: 5, field: 1 }))).toEqual(['spiel9', 'spiel11']);
   });
 
   it('liefert eine neue Liste und verändert die Eingabe nicht', () => {
     const vorher = liste.map(m => m.id);
-    upcomingMatches(liste, { count: 3 });
+    upcomingMatches(ansicht(liste), { count: 3 });
     expect(liste.map(m => m.id)).toEqual(vorher);
   });
 });
@@ -133,12 +147,12 @@ describe('fieldSchedule – Spielplan eines Feldes', () => {
       spiel('f1', { field: 1, matchNumber: 1, scheduledTime: um(14, 0), matchStatus: 'finished' }),
       spiel('f2-frueh', { field: 2, matchNumber: 2, scheduledTime: um(14, 0) }),
     ];
-    expect(fieldSchedule(liste, 2).map(m => m.id)).toEqual(['f2-frueh', 'f2-spaet']);
+    expect(ids(fieldSchedule(ansicht(liste), 2))).toEqual(['f2-frueh', 'f2-spaet']);
   });
 
   it('mehr als sechs Spiele: alle bleiben enthalten (kein slice)', () => {
     const liste = Array.from({ length: 9 }, (_, i) => spiel(`s${i}`, { field: 1, matchNumber: i + 1, scheduledTime: um(9, i) }));
-    expect(fieldSchedule(liste, 1)).toHaveLength(9);
+    expect(fieldSchedule(ansicht(liste), 1)).toHaveLength(9);
   });
 });
 

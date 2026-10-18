@@ -341,7 +341,8 @@ CONSTRAINTS_BEFORE="$(q "SELECT count(*) FROM pg_constraint WHERE conrelid = 'pu
 
 echo "Migration einspielen..." >&2
 psql_stdin < "$TARGET_FILE"
-for f in ${AFTER[@]+"${AFTER[@]}"}; do psql_stdin < "$f"; done
+# A-10: Spaetere Migrationen (AFTER, z. B. 20261028_005) laufen erst ganz am Ende (A5, wie match-origin-check.sh) --
+# vorher wuerden S4 (Katalog-Delta) und X (Rueckbau-Vergleich) sie mitmessen.
 check "V Bestand: keine Zeile betroffen (alle Spalten NULL)" "0" \
   "$(q "SELECT count(*) FROM public.matches WHERE kit_color_a IS NOT NULL OR kit_color_b IS NOT NULL OR bib_side IS NOT NULL;")"
 
@@ -369,7 +370,11 @@ run_probes
 
 # --- R: Rechte-Assertion (alle Zeilen |t, inkl. der vier neuen) ---------------------------------------
 PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || PRIV_OUT="nicht ausfuehrbar: $PRIV_OUT"
-check "R Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$PRIV_OUT" || true)"
+# A5: Zeilen aus SPAETEREN Migrationen (20261028_005, A-10) sind in diesem Stand erwartungsgemaess f.
+# UR: ebenso die Zeilen von 20261028_006 (match_event_author_names).
+A10_ROWS='^(matches-guard-engine-columns-(insert-and-update|unconditional)|reset-match-results-|matches-bump-change-revision-|tournaments-guard-change-revision-|match-event-author-names-)'
+check "R Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migrationen 20261028_005/_006)" "" \
+  "$(grep -v '|t$' <<<"$PRIV_OUT" | grep -vE "$A10_ROWS" || true)"
 check "R neue Zeilen vorhanden und |t" \
   "match-events-kit-from-match-start-trigger-active|t,matches-guard-kit-columns-invoker-no-client-execute|t,matches-guard-kit-columns-trigger-active|t,matches-kit-from-match-start-definer-no-client-execute|t" \
   "$(grep -E '^(match-events-kit|matches-guard-kit|matches-kit-from)' <<<"$PRIV_OUT" | sort | paste -sd, -)"
@@ -398,6 +403,13 @@ check "X nach Rueckbau: Schema public = vor der Migration (pg_dump identisch)" "
 if [[ "$DUMP_ROLLED_BACK" != "$DUMP_BEFORE" ]]; then
   diff <(echo "$DUMP_BEFORE") <(echo "$DUMP_ROLLED_BACK") | head -40 || true
 fi
+
+# A5: spaetere Migrationen auf dem Zustand NACH dem Rueckbau einspielen -- nur als Lauffaehigkeits-
+# Nachweis (psql_stdin bricht bei einem Fehler ab). Die Messungen oben sind davon unabhaengig.
+for f in ${AFTER[@]+"${AFTER[@]}"}; do
+  psql_stdin < "$f"
+  echo "OK    A5 spaetere Migration laeuft nach dem Rueckbau: $(basename "$f")" >&2
+done
 
 echo
 echo "Ergebnis: $OK OK, $DEV Abweichung(en)."

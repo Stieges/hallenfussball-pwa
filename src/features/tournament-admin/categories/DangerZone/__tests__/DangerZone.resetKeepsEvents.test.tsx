@@ -2,10 +2,9 @@
  * @SL-129 — „Spielplan zurücksetzen" löscht KEINE Spiel-Ereignisse.
  *
  * Szenario @SL-129: Zurückgesetzte Einträge bleiben im Verlauf sichtbar. Dieser
- * Test hält den heutigen Client-Weg fest: Die lokalen Ereignislisten
- * (`match.events`) überstehen das Zurücksetzen unverändert, und die gezielten
- * Match-Updates (diffMatchResultStatusUpdates) enthalten keinen Ereignis-Payload
- * (der Server-Weg/Migrations-Schutz kommt in einer anderen Aufgabe, A-10).
+ * Test hält den Client-Weg fest: Die lokalen Ereignislisten (`match.events`) überstehen das Zurücksetzen
+ * unverändert. A-10: gezielte Match-Updates gibt es nicht mehr (Server-Weg reset_match_results, der
+ * match_events nie anfasst – belegt in scripts/guard-all-matches-check.sh).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
@@ -51,7 +50,6 @@ describe('DangerZone — „Spielplan zurücksetzen" behält die Spiel-Ereigniss
   it('@SL-129 Tor und Gelbe Karte bleiben nach dem Zurücksetzen in der Ereignisliste erhalten', async () => {
     const user = userEvent.setup();
     const onLocalTournamentUpdate = vi.fn();
-    const onMatchesUpdate = vi.fn();
     const tournament = {
       id: 't1', title: 'Test-Turnier', status: 'published',
       teams: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
@@ -71,7 +69,6 @@ describe('DangerZone — „Spielplan zurücksetzen" behält die Spiel-Ereigniss
         tournament={tournament}
         onTournamentUpdate={vi.fn()}
         onLocalTournamentUpdate={onLocalTournamentUpdate}
-        onMatchesUpdate={onMatchesUpdate}
       />
     );
 
@@ -83,10 +80,5 @@ describe('DangerZone — „Spielplan zurücksetzen" behält die Spiel-Ereigniss
     expect(onLocalTournamentUpdate).toHaveBeenCalledTimes(1);
     const updated = onLocalTournamentUpdate.mock.calls[0][0] as Tournament;
     expect(updated.matches[0].events).toEqual([torEvent, kartenEvent]);
-
-    expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
-    const updates = onMatchesUpdate.mock.calls[0][0] as Record<string, unknown>[];
-    expect(updates).toHaveLength(1);
-    expect(updates[0]).not.toHaveProperty('events');
   });
 });

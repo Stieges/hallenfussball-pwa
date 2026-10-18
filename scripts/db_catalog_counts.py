@@ -19,6 +19,8 @@ Controller unabhängig über pg_catalog gemessenen Werte (Stand 2026-09-21):
 Nach A-08h (20261028_002, Befund C-MATCH-EVENTS-DIREKTWEG) gibt es in `public` genau 3 Policies weniger als
 vorher: die drei Client-Schreib-Policies auf match_events sind entfernt (Container mit allen Migrationen:
 51 -> 48). Die Baseline-Zaehlung (44) bleibt, weil die Baseline-Datei unveraendert ist.
+Nach UR (20261028_006, Befund C-EREIGNIS-OHNE-URHEBER) gibt es in `public` genau eine Funktion mehr
+(match_event_author_names); alle anderen Dimensionen bleiben gleich (scripts/event-author-names-check.sh, Kategorie S).
 
 Wichtig zu Triggern: pg_dump exportiert NIE interne/System-Trigger (z.B. für Fremdschlüssel-
 Constraints) — jedes "CREATE TRIGGER"/"CREATE OR REPLACE TRIGGER" im Dump-Text ist bereits ein

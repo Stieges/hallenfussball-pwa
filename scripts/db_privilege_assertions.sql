@@ -457,4 +457,85 @@ UNION ALL
 SELECT 'match-events-only-select-policy',
        NOT EXISTS (SELECT 1 FROM pg_policies
                     WHERE schemaname = 'public' AND tablename = 'match_events' AND cmd <> 'SELECT')
+-- A-10 (20261028_005_guard_all_matches.sql, @EK-060, @FU-090, @TM-027): Spalten-Schutz fuer ALLE Spiele
+-- (BEFORE INSERT OR UPDATE, Funktion ohne die Bedingung match_has_engine_events -- faengt die Rueckkehr der
+-- Bedingung live), reset_match_results (SECURITY DEFINER, EXECUTE nur authenticated), Zaehlung
+-- tournaments.change_revision (Bump-Trigger AFTER UPDATE als SECURITY DEFINER, Schutz-Trigger BEFORE INSERT OR
+-- UPDATE als SECURITY INVOKER; beide ohne EXECUTE fuer Clients). Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'matches-guard-engine-columns-insert-and-update',
+       EXISTS (SELECT 1 FROM pg_trigger t
+                WHERE t.tgrelid = to_regclass('public.matches') AND t.tgname = 'matches_guard_engine_columns'
+                  AND NOT t.tgisinternal AND t.tgenabled = 'O'
+                  AND t.tgfoid = to_regprocedure('public.matches_guard_engine_columns()')
+                  AND (t.tgtype & 1) = 1 AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4 AND (t.tgtype & 16) = 16)
+UNION ALL
+SELECT 'matches-guard-engine-columns-unconditional',
+       coalesce((SELECT p.prosrc NOT LIKE '%match_has_engine_events%' FROM pg_proc p
+                  WHERE p.oid = to_regprocedure('public.matches_guard_engine_columns()')), false)
+UNION ALL
+SELECT 'reset-match-results-definer-search-path',
+       coalesce((SELECT p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp'] FROM pg_proc p
+                  WHERE p.oid = to_regprocedure('public.reset_match_results(uuid,uuid[])')), false)
+UNION ALL
+SELECT 'reset-match-results-execute-only-authenticated',
+       coalesce((SELECT p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.reset_match_results(uuid,uuid[])')), false)
+UNION ALL
+SELECT 'matches-bump-change-revision-trigger-active',
+       EXISTS (SELECT 1 FROM pg_trigger t
+                WHERE t.tgrelid = to_regclass('public.matches') AND t.tgname = 'matches_bump_change_revision'
+                  AND NOT t.tgisinternal AND t.tgenabled = 'O'
+                  AND t.tgfoid = to_regprocedure('public.matches_bump_change_revision()')
+                  AND (t.tgtype & 1) = 1 AND (t.tgtype & 2) = 0 AND (t.tgtype & 4) = 0 AND (t.tgtype & 16) = 16)
+UNION ALL
+SELECT 'matches-bump-change-revision-definer-no-client-execute',
+       coalesce((SELECT p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                        AND p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_bump_change_revision()')), false)
+UNION ALL
+SELECT 'tournaments-guard-change-revision-trigger-active',
+       EXISTS (SELECT 1 FROM pg_trigger t
+                WHERE t.tgrelid = to_regclass('public.tournaments') AND t.tgname = 'tournaments_guard_change_revision'
+                  AND NOT t.tgisinternal AND t.tgenabled = 'O'
+                  AND t.tgfoid = to_regprocedure('public.tournaments_guard_change_revision()')
+                  AND (t.tgtype & 1) = 1 AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4 AND (t.tgtype & 16) = 16)
+UNION ALL
+SELECT 'tournaments-guard-change-revision-invoker-no-client-execute',
+       coalesce((SELECT NOT p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                        AND p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.tournaments_guard_change_revision()')), false)
+-- UR (20261028_006_event_author_names.sql, @FU-080, @FU-082, @FU-065): Lesefunktion fuer die Namen der Urheber
+-- von Spiel-Eintraegen (SECURITY DEFINER, STABLE, fester search_path; EXECUTE nur authenticated -- anon,
+-- service_role und PUBLIC nicht, @FU-065: keine Konto-Angabe fuer Zuschauer/oeffentliche Ansicht).
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'match-event-author-names-definer-search-path',
+       coalesce((SELECT p.prosecdef AND p.provolatile = 's' AND p.proconfig = ARRAY['search_path=public, pg_temp'] FROM pg_proc p
+                  WHERE p.oid = to_regprocedure('public.match_event_author_names(uuid)')), false)
+UNION ALL
+SELECT 'match-event-author-names-execute-only-authenticated',
+       coalesce((SELECT p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.match_event_author_names(uuid)')), false)
+-- SW (20261028_007_entered_shootout_needs_draw.sql, @EK-062): cache_columns nach 20261028_007 -- IMMUTABLE, kein
+-- SECURITY DEFINER, fester search_path, kein EXECUTE fuer PUBLIC/anon/authenticated/service_role (nur
+-- append_match_events ruft sie als Definer). Regressionswache: schon VOR dem Live-Einspielen "t" (Rechte unveraendert).
+UNION ALL
+SELECT 'cache-columns-immutable-no-client-execute',
+       coalesce((SELECT p.provolatile = 'i' AND NOT p.prosecdef
+                        AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0)
+                        AND NOT EXISTS (SELECT 1 FROM unnest(ARRAY['anon', 'authenticated', 'service_role']) AS r(role)
+                                         WHERE has_function_privilege(r.role, p.oid, 'EXECUTE'))
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('match_engine.cache_columns(jsonb,jsonb)')), false)
 ;

@@ -4,6 +4,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { generateFullSchedule } from '../../../core/generators';
+import { buildTournamentView } from '../../../core/view';
+import type { Tournament } from '../../../types/tournament';
 import type { ViewFilters } from '../publicScheduleFilters';
 import {
   applyViewFilters,
@@ -15,6 +17,9 @@ import {
   myTeamName,
 } from '../publicScheduleFilters';
 import { buildLiveViewTournament, TEAM_IDS } from '../../../screens/__tests__/liveViewFixture';
+
+/** Die Ansicht der Zuschauer: Status und Sichtbarkeit kommen daraus (A-36c). */
+const viewOf = (t: Tournament) => buildTournamentView(t, { audience: 'viewer', medium: 'app', locale: 'de' });
 
 const NO_FILTER: ViewFilters = {
   showOnlyMyTeam: false,
@@ -32,13 +37,13 @@ function scheduleOf(opts: Parameters<typeof buildLiveViewTournament>[0] = {}) {
 describe('applyViewFilters', () => {
   it('Status live (running) liefert nur Spiel 7', () => {
     const { t, schedule } = scheduleOf();
-    const result = applyViewFilters(schedule, t, { ...NO_FILTER, selectedStatus: 'live' });
+    const result = applyViewFilters(schedule, viewOf(t), { ...NO_FILTER, selectedStatus: 'live' });
     expect(result.allMatches.map((m) => m.matchNumber)).toEqual([7]);
   });
 
   it('Gegenbeispiel: Status live nimmt beendete (Spiel 1) und ausgefallene (Spiel 5) Spiele nicht mit', () => {
     const { t, schedule } = scheduleOf();
-    const result = applyViewFilters(schedule, t, { ...NO_FILTER, selectedStatus: 'live' });
+    const result = applyViewFilters(schedule, viewOf(t), { ...NO_FILTER, selectedStatus: 'live' });
     const numbers = result.allMatches.map((m) => m.matchNumber);
     expect(numbers).not.toContain(1);
     expect(numbers).not.toContain(5);
@@ -46,20 +51,20 @@ describe('applyViewFilters', () => {
 
   it('Status finished liefert nur Spiel 1', () => {
     const { t, schedule } = scheduleOf();
-    const result = applyViewFilters(schedule, t, { ...NO_FILTER, selectedStatus: 'finished' });
+    const result = applyViewFilters(schedule, viewOf(t), { ...NO_FILTER, selectedStatus: 'finished' });
     expect(result.allMatches.map((m) => m.matchNumber)).toEqual([1]);
   });
 
   it('Status scheduled schließt ausgefallene (skipped) Spiele aus', () => {
     const { t, schedule } = scheduleOf();
-    const result = applyViewFilters(schedule, t, { ...NO_FILTER, selectedStatus: 'scheduled' });
+    const result = applyViewFilters(schedule, viewOf(t), { ...NO_FILTER, selectedStatus: 'scheduled' });
     expect(result.allMatches.map((m) => m.matchNumber)).not.toContain(5);
     expect(result.allMatches.map((m) => m.matchNumber)).not.toContain(7);
   });
 
   it('Status scheduled enthält geplante Spiele (Spiel 9 ist drin)', () => {
     const { t, schedule } = scheduleOf();
-    const result = applyViewFilters(schedule, t, { ...NO_FILTER, selectedStatus: 'scheduled' });
+    const result = applyViewFilters(schedule, viewOf(t), { ...NO_FILTER, selectedStatus: 'scheduled' });
     expect(result.allMatches.map((m) => m.matchNumber)).toContain(9);
   });
 
@@ -69,21 +74,21 @@ describe('applyViewFilters', () => {
       ...t,
       matches: t.matches.map((tm) => (tm.matchNumber === 9 ? { ...tm, matchStatus: 'waiting' as const } : tm)),
     };
-    const scheduled = applyViewFilters(schedule, waitingTournament, { ...NO_FILTER, selectedStatus: 'scheduled' });
+    const scheduled = applyViewFilters(schedule, viewOf(waitingTournament), { ...NO_FILTER, selectedStatus: 'scheduled' });
     expect(scheduled.allMatches.map((m) => m.matchNumber)).toContain(9);
-    const live = applyViewFilters(schedule, waitingTournament, { ...NO_FILTER, selectedStatus: 'live' });
+    const live = applyViewFilters(schedule, viewOf(waitingTournament), { ...NO_FILTER, selectedStatus: 'live' });
     expect(live.allMatches.map((m) => m.matchNumber)).not.toContain(9);
   });
 
   it('„Nur meine“ ohne gewähltes Team filtert nicht', () => {
     const { t, schedule } = scheduleOf();
-    const result = applyViewFilters(schedule, t, { ...NO_FILTER, showOnlyMyTeam: true, myTeamId: null });
+    const result = applyViewFilters(schedule, viewOf(t), { ...NO_FILTER, showOnlyMyTeam: true, myTeamId: null });
     expect(result.allMatches).toHaveLength(schedule.allMatches.length);
   });
 
   it('„Nur meine“ mit Team nord zeigt nur Spiele, an denen FC Nord beteiligt ist', () => {
     const { t, schedule } = scheduleOf();
-    const result = applyViewFilters(schedule, t, { ...NO_FILTER, showOnlyMyTeam: true, myTeamId: TEAM_IDS.nord });
+    const result = applyViewFilters(schedule, viewOf(t), { ...NO_FILTER, showOnlyMyTeam: true, myTeamId: TEAM_IDS.nord });
     expect(result.allMatches.length).toBeGreaterThan(0);
     for (const m of result.allMatches) {
       expect([m.originalTeamA, m.originalTeamB]).toContain(TEAM_IDS.nord);
@@ -92,7 +97,7 @@ describe('applyViewFilters', () => {
 
   it('Gruppenfilter B zeigt nur Gruppe-B-Spiele und leert keine Phasen-Hülle', () => {
     const { t, schedule } = scheduleOf();
-    const result = applyViewFilters(schedule, t, { ...NO_FILTER, selectedGroup: 'B' });
+    const result = applyViewFilters(schedule, viewOf(t), { ...NO_FILTER, selectedGroup: 'B' });
     expect(result.allMatches.length).toBeGreaterThan(0);
     expect(result.allMatches.every((m) => m.group === 'B')).toBe(true);
     expect(result.phases.every((p) => p.matches.length > 0)).toBe(true);
@@ -100,14 +105,14 @@ describe('applyViewFilters', () => {
 
   it('Phase final schließt die Gruppenphase aus', () => {
     const { t, schedule } = scheduleOf();
-    const result = applyViewFilters(schedule, t, { ...NO_FILTER, selectedPhase: 'final' });
+    const result = applyViewFilters(schedule, viewOf(t), { ...NO_FILTER, selectedPhase: 'final' });
     expect(result.allMatches.length).toBeGreaterThan(0);
     expect(result.allMatches.every((m) => m.phase !== 'groupStage')).toBe(true);
   });
 
   it('ohne Filter bleibt der Spielplan vollständig', () => {
     const { t, schedule } = scheduleOf();
-    const result = applyViewFilters(schedule, t, NO_FILTER);
+    const result = applyViewFilters(schedule, viewOf(t), NO_FILTER);
     expect(result.allMatches).toHaveLength(schedule.allMatches.length);
   });
 });
@@ -115,7 +120,7 @@ describe('applyViewFilters', () => {
 describe('applyScoreVisibility / publicSchedule', () => {
   it('hideScoresForPublic entfernt Stände aus Spielplan und Phasen', () => {
     const { t, schedule } = scheduleOf({ hideScoresForPublic: true });
-    const result = applyScoreVisibility(schedule, t);
+    const result = applyScoreVisibility(schedule, viewOf(t).rules);
     expect(result.allMatches.some((m) => m.scoreA !== undefined || m.scoreB !== undefined)).toBe(false);
     expect(
       result.phases.some((p) => p.matches.some((m) => m.scoreA !== undefined || m.scoreB !== undefined))
@@ -124,14 +129,14 @@ describe('applyScoreVisibility / publicSchedule', () => {
 
   it('ohne hideScoresForPublic bleibt der Spielplan unverändert (Gegenbeispiel)', () => {
     const { t, schedule } = scheduleOf({ hideScoresForPublic: false });
-    expect(applyScoreVisibility(schedule, t)).toBe(schedule);
-    const stand = applyScoreVisibility(schedule, t).allMatches.find((m) => m.matchNumber === 1);
+    expect(applyScoreVisibility(schedule, viewOf(t).rules)).toBe(schedule);
+    const stand = applyScoreVisibility(schedule, viewOf(t).rules).allMatches.find((m) => m.matchNumber === 1);
     expect(stand?.scoreA).toBe(2);
   });
 
   it('publicSchedule kombiniert Filter und Ausblenden der Stände', () => {
     const { t, schedule } = scheduleOf({ hideScoresForPublic: true });
-    const result = publicSchedule(schedule, t, { ...NO_FILTER, selectedGroup: 'A' });
+    const result = publicSchedule(schedule, viewOf(t), { ...NO_FILTER, selectedGroup: 'A' });
     expect(result.allMatches.every((m) => m.group === 'A')).toBe(true);
     expect(result.allMatches.every((m) => m.scoreA === undefined)).toBe(true);
   });
@@ -140,14 +145,14 @@ describe('applyScoreVisibility / publicSchedule', () => {
 describe('publicMatches', () => {
   it('hideScoresForPublic: Liste ohne Stände, Turnierdaten unverändert', () => {
     const t = buildLiveViewTournament({ hideScoresForPublic: true });
-    const list = publicMatches(t);
+    const list = publicMatches(t, viewOf(t).rules);
     expect(list.every((m) => m.scoreA === undefined && m.scoreB === undefined)).toBe(true);
     expect(t.matches.find((m) => m.id !== undefined && m.scoreA === 2)).toBeDefined();
   });
 
   it('ohne hideScoresForPublic: dieselbe Liste wie im Turnier', () => {
     const t = buildLiveViewTournament({ hideScoresForPublic: false });
-    expect(publicMatches(t)).toBe(t.matches);
+    expect(publicMatches(t, viewOf(t).rules)).toBe(t.matches);
   });
 });
 
@@ -156,12 +161,12 @@ describe('visibleStandings', () => {
 
   it('hideRankingsForPublic liefert keine Tabelle', () => {
     const t = buildLiveViewTournament({ hideRankingsForPublic: true });
-    expect(visibleStandings(t, standings)).toEqual([]);
+    expect(visibleStandings(viewOf(t).rules, standings)).toEqual([]);
   });
 
   it('ohne hideRankingsForPublic bleiben die Tabellen', () => {
     const t = buildLiveViewTournament({ hideRankingsForPublic: false });
-    expect(visibleStandings(t, standings)).toBe(standings);
+    expect(visibleStandings(viewOf(t).rules, standings)).toBe(standings);
   });
 });
 

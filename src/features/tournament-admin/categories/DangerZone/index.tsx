@@ -17,9 +17,7 @@ import { useTournamentStartState } from '../../../../hooks/useTournamentStartSta
 import { useMyTournamentRole } from '../../../auth/hooks/useMyTournamentRole';
 import { canDeleteTournament } from '../../../auth/utils/permissions';
 import type { Tournament } from '../../../../types/tournament';
-import type { MatchUpdate } from '../../../../core/models/types';
-import { diffMatchResultStatusUpdates } from '../../../../core/services';
-import { useMatchEntryGuard } from '../../../../hooks/useMatchEntryGuard';
+import { useResultsReset } from '../../hooks/useResultsReset';
 import type { DangerAction, DangerActionConfig } from '../../types/admin.types';
 
 // =============================================================================
@@ -30,9 +28,8 @@ interface DangerZoneCategoryProps {
   tournamentId: string;
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament) => void | Promise<void>;
-  /** A2 Fixrunde 1: Zurücksetzen ohne Einträge lokal + gezielt; mit Einträgen gesperrt (A-08f3e4, @FU-090). */
+  /** A-10: Zurücksetzen erst am Server (Konto), dann lokal; mit Einträgen gesperrt (@FU-090). */
   onLocalTournamentUpdate: (tournament: Tournament) => void;
-  onMatchesUpdate: (updates: MatchUpdate[]) => void;
 }
 
 // =============================================================================
@@ -232,14 +229,13 @@ export function DangerZoneCategory({
   tournament,
   onTournamentUpdate,
   onLocalTournamentUpdate,
-  onMatchesUpdate,
 }: DangerZoneCategoryProps) {
   const { t } = useTranslation('admin');
   const { role: myRole } = useMyTournamentRole(tournamentId);
   const [pendingAction, setPendingAction] = useState<DangerActionConfig | null>(null);
   const [confirmationInput, setConfirmationInput] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
-  const entryGuard = useMatchEntryGuard(); // A-08f3e4 (@FU-090)
+  const resultsReset = useResultsReset(); // A-10 (@FU-090, L1, L8)
 
   // R7: Das Löschen des Turniers hatte keine Rollensperre in der UI -- die DB lässt seit
   // R5b (protect_deleted_at → has_tournament_permission(..., 'deleteTournament')) nur den
@@ -266,10 +262,10 @@ export function DangerZoneCategory({
 
   const handleOpenDialog = useCallback(async (action: DangerAction) => {
     // A-08f3e4 (@FU-090): mit Einträgen gar nicht erst das Bestätigungswort anbieten -- Hinweis sofort
-    if (action === 'reset_schedule' && await entryGuard.blocks(tournament)) { return; }
+    if (action === 'reset_schedule' && await resultsReset.blocks(tournament)) { return; }
     setPendingAction(DANGER_ACTIONS[action]);
     setConfirmationInput('');
-  }, [entryGuard, tournament]);
+  }, [resultsReset, tournament]);
 
   const handleCloseDialog = useCallback(() => {
     if (!isExecuting) {
@@ -290,25 +286,9 @@ export function DangerZoneCategory({
 
       switch (pendingAction.action) {
         case 'reset_schedule': {
-          if (await entryGuard.blocks(tournament)) { break; } // @FU-090: mit Einträgen nicht ausführen
-          const resetMatches = tournament.matches.map(match => ({
-            ...match,
-            matchStatus: 'scheduled' as const,
-            scoreA: undefined,
-            scoreB: undefined,
-            timerStartTime: undefined,
-            timerPausedAt: undefined,
-            timerElapsedSeconds: undefined,
-            finishedAt: undefined,
-            correctionHistory: undefined,
-          }));
-
-          onLocalTournamentUpdate({
-            ...tournament,
-            matches: resetMatches,
-            updatedAt: now,
-          });
-          onMatchesUpdate(diffMatchResultStatusUpdates(tournament.matches, resetMatches));
+          // A-10: Konto-Turnier erst am Server (reset_match_results), dann lokal; mit Einträgen nicht ausführen (@FU-090)
+          const resetMatches = await resultsReset.reset(tournament);
+          if (resetMatches) { onLocalTournamentUpdate({ ...tournament, matches: resetMatches, updatedAt: now }); }
           break;
         }
 
@@ -335,7 +315,7 @@ export function DangerZoneCategory({
     } finally {
       setIsExecuting(false);
     }
-  }, [pendingAction, confirmationInput, tournament, onTournamentUpdate, onLocalTournamentUpdate, onMatchesUpdate, entryGuard]);
+  }, [pendingAction, confirmationInput, tournament, onTournamentUpdate, onLocalTournamentUpdate, resultsReset]);
 
   const isConfirmEnabled = confirmationInput === pendingAction?.confirmText;
 

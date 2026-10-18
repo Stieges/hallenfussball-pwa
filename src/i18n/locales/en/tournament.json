@@ -126,7 +126,9 @@
       "unreadable": "Entries could not be checked – nothing changed",
       "restoreKept_one": "For {{count}} match with entries the result was not restored",
       "restoreKept_other": "For {{count}} matches with entries the results were not restored",
-      "restoreServerLed": "Results are not taken from the backup – the server keeps them"
+      "restoreServerLed": "Results are not taken from the backup – the server keeps them",
+      "resetOffline": "Resetting needs a connection – nothing changed",
+      "resetFailed": "Resetting is not possible right now – nothing changed"
     },
     "resultEntry": {
       "running": "Match in progress – enter the result after the final whistle",
@@ -893,7 +895,7 @@
       "waiting": "Waiting",
       "running": "Running",
       "finished": "Finished",
-      "skipped": "Skipped",
+      "skipped": "Cancelled",
       "active": "(active)"
     }
   },

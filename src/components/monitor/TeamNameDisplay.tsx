@@ -33,6 +33,8 @@ export interface TeamNameDisplayProps {
   onFitPx?: (px: number) => void;
   /** Hinterlegter Kurzname (hat Vorrang vor der Kürzung nach Liste) */
   shortName?: string | null;
+  /** Ende (Mockup K5g): Verlierer zurückgenommen (Textfarbe zweiter Ordnung, 600), Sieger in voller Stärke (800) */
+  emphasis?: 'winner' | 'loser';
 }
 
 const sizeConfig = {
@@ -50,6 +52,7 @@ export const TeamNameDisplay: React.FC<TeamNameDisplayProps> = ({
   sizePx,
   onFitPx,
   shortName,
+  emphasis,
 }) => {
   const { themeColors } = useMonitorTheme(theme);
   const config = { fontSize: fontSize ?? sizeConfig[size].fontSize };
@@ -65,8 +68,8 @@ export const TeamNameDisplay: React.FC<TeamNameDisplayProps> = ({
 
   const nameStyle: CSSProperties = {
     fontSize: config.fontSize,
-    fontWeight: 700,
-    color: themeColors.text,
+    fontWeight: emphasis === 'winner' ? cssVars.fontWeights.extrabold : emphasis === 'loser' ? cssVars.fontWeights.semibold : cssVars.fontWeights.bold,
+    color: emphasis === 'loser' ? themeColors.textSecondary : themeColors.text,
     fontFamily: cssVars.fontFamilies.body,
     textAlign: 'center',
     maxWidth,

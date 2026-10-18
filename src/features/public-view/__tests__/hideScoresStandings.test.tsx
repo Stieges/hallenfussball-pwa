@@ -122,6 +122,15 @@ describe('W2A-031 Zuschauer-Seite: hideScoresForPublic blendet Stände, Tabellen
     expect(container.querySelectorAll('.participants-and-groups li')).toHaveLength(0);
   });
 
+  it('hideRankingsForPublic ohne Kindermodus: keine Tabellenzeilen (kein Team, keine Punkte) auf /live; Gegenbeispiel ohne Schalter: Zeilen da', async () => {
+    const mitSchalter = await renderWith(buildLiveViewTournament({ hideScoresForPublic: false, hideRankingsForPublic: true }));
+    // der leere Gruppenkasten (.standings-table) bleibt wie vorher (siehe Test oben), aber ohne Zeilen
+    expect(mitSchalter.container.querySelectorAll('.standings-table tbody tr')).toHaveLength(0);
+    mitSchalter.unmount();
+    const ohneSchalter = await renderWith(buildLiveViewTournament({ hideScoresForPublic: false, hideRankingsForPublic: false }));
+    expect(ohneSchalter.container.querySelectorAll('.standings-table tbody tr').length).toBeGreaterThan(0);
+  });
+
   it('Gegenbeispiel: ohne hideScoresForPublic bleibt der Tabellen-Tab mit Tabellen', async () => {
     const t = buildLiveViewTournament({ hideScoresForPublic: false, hideRankingsForPublic: false });
     const { container } = await renderWith(t, '?tab=standings');

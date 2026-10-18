@@ -31,6 +31,7 @@ async function setupTournamentWithMonitor(seedIndexedDB: TestOptions['seedIndexe
     id: 'test-tournament',
     title: 'E2E Test Turnier',
     name: 'E2E Test Turnier',
+    date: '2026-03-14',
     status: 'published',
     sport: 'hallenfussball',
     sportId: 'football-indoor',

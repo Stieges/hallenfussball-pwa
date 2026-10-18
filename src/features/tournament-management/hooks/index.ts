@@ -5,8 +5,6 @@
 export { useScheduleHistory } from './useScheduleHistory';
 export type { ScheduleHistoryControls } from './useScheduleHistory';
 
-export { useRunningMatchIds } from './useRunningMatchIds';
-
 export { useCorrectionMode } from './useCorrectionMode';
 export type { CorrectionModeControls } from './useCorrectionMode';
 

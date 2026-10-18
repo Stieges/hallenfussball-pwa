@@ -257,7 +257,9 @@
     "editAria": "{{description}} bearbeiten",
     "edit": "Bearbeiten",
     "retractedMark": "zurückgenommen",
-    "retractedAria": "{{description}} – zurückgenommen"
+    "retractedAria": "{{description}} – zurückgenommen",
+    "resultEntryBy": "Ergebnis eingetragen von {{name}}",
+    "resultEntry": "Ergebnis eingetragen"
   },
   "matchCockpit": {
     "title": "Kampfgericht Cockpit",

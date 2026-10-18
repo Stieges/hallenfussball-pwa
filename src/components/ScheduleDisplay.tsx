@@ -12,8 +12,10 @@
 import { CSSProperties, useMemo } from 'react';
 import { cssVars } from '../design-tokens'
 import { GeneratedSchedule } from '../core/generators';
+import type { TournamentView, ViewLocale } from '../core/view';
 import { Standing, Match, Team } from '../types/tournament';
 import type { ScheduleSource } from './schedule/scheduleSource';
+import { useElapsedSeconds } from './schedule/useTickingNow';
 import {
   TournamentHeader,
   ParticipantsAndGroups,
@@ -38,8 +40,11 @@ interface ScheduleDisplayProps {
   showGroupTables?: boolean;
   /** Optional: Quelle für die Teilnehmerliste; Vorgabe ist currentStandings bzw. initialStandings. */
   participantStandings?: Standing[];
-  /** Kindermodus (@TM-036): offene Seiten zeigen „noch offen“ statt der Herkunft (öffentliche Ansichten). */
-  hidePendingOrigin?: boolean;
+  /** Die gemeinsame Ansicht (A-36c): Status, Seitentexte, Endstand; ohne sie gilt jedes Spiel als geplant. */
+  view?: TournamentView;
+  locale?: ViewLocale;
+  /** Gespielte Sekunden eines laufenden Spiels; ohne Angabe aus den Zeitfeldern von `currentMatches`. */
+  elapsedSeconds?: (matchId: string) => number | undefined;
   /** Optional: Current matches with live scores (overrides schedule scores) */
   currentMatches?: Match[];
   /** Zeige QR-Code für Live-Tracking */
@@ -62,14 +67,10 @@ interface ScheduleDisplayProps {
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
   /** Callback when score is changed */
   onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => void;
-  /** Set of finished match IDs (for correction mode) */
-  finishedMatches?: Set<string>;
   /** Match ID currently in correction mode */
   correctionMatchId?: string | null;
   /** Callback when starting correction mode */
   onStartCorrection?: (matchId: string) => void;
-  /** MON-LIVE-INDICATOR-01: Set of match IDs that are currently running */
-  runningMatchIds?: Set<string>;
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
   onMatchSwap?: (matchId1: string, matchId2: string) => void;
   /** Callback to navigate to cockpit with selected match */
@@ -88,7 +89,9 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   currentStandings,
   showGroupTables = true,
   participantStandings,
-  hidePendingOrigin = false,
+  view,
+  locale,
+  elapsedSeconds,
   currentMatches,
   showQRCode = false,
   qrCodeUrl,
@@ -100,10 +103,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   onRefereeChange,
   onFieldChange,
   onScoreChange,
-  finishedMatches,
   correctionMatchId,
   onStartCorrection,
-  runningMatchIds,
   onMatchSwap,
   onNavigateToCockpit,
   visibleMatchIds,
@@ -113,7 +114,6 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   const standings = currentStandings ?? schedule.initialStandings;
   const hasGroups = schedule.teams.some(t => t.group);
 
-  // Get phases
   const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
   const finalPhases = schedule.phases.filter(p => p.name !== 'groupStage');
   const finalMatches = finalPhases.flatMap(p => p.matches);
@@ -125,19 +125,19 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     return groupPhase.matches.map(sm => {
       const currentMatch = currentMatches.find(m => m.id === sm.id);
       if (currentMatch) {
-        return { ...sm, scoreA: currentMatch.scoreA, scoreB: currentMatch.scoreB, finalSource: currentMatch };
+        return { ...sm, scoreA: currentMatch.scoreA, scoreB: currentMatch.scoreB };
       }
       return sm;
     });
   }, [groupPhase, currentMatches]);
 
   // Finalspiele mit den aktuellen Ergebnissen. Die Namen der Seiten entstehen in den Spielplan-Komponenten
-  // aus den Slots (slotLabel, A-04a/@TM-015) – nicht aus gespeicherten Anzeigetexten.
+  // aus den Slots (Ansicht, A-04a/A-36c, @TM-015) – nicht aus gespeicherten Anzeigetexten.
   const finalPhaseMatches = useMemo(() => {
     if (!currentMatches) { return finalMatches; }
     return finalMatches.map(sm => {
       const currentMatch = currentMatches.find(m => m.id === sm.id);
-      return currentMatch ? { ...sm, scoreA: currentMatch.scoreA, scoreB: currentMatch.scoreB, finalSource: currentMatch } : sm;
+      return currentMatch ? { ...sm, scoreA: currentMatch.scoreA, scoreB: currentMatch.scoreB } : sm;
     });
   }, [finalMatches, currentMatches]);
 
@@ -152,8 +152,10 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     teams: tournamentTeams ?? schedule.teams,
     groups: schedule.tournament.groups,
     matches: schedule.allMatches,
-    hidePendingOrigin,
-  }), [tournamentTeams, schedule.teams, schedule.tournament.groups, schedule.allMatches, hidePendingOrigin]);
+    view,
+    locale,
+  }), [tournamentTeams, schedule.teams, schedule.tournament.groups, schedule.allMatches, view, locale]);
+  const elapsedOf = useElapsedSeconds(view, currentMatches, elapsedSeconds);
 
   // US-VIEWER-FILTERS: Filter matches based on visibleMatchIds (if provided)
   const filteredGroupPhaseMatches = useMemo(() => {
@@ -208,10 +210,9 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onRefereeChange={onRefereeChange}
           onFieldChange={onFieldChange}
           onScoreChange={onScoreChange}
-          finishedMatches={finishedMatches}
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
-          runningMatchIds={runningMatchIds}
+          elapsedSeconds={elapsedOf}
           tournament={sideSource}
           onMatchSwap={onMatchSwap}
           onNavigateToCockpit={onNavigateToCockpit}
@@ -240,10 +241,9 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onRefereeChange={onRefereeChange}
           onFieldChange={onFieldChange}
           onScoreChange={onScoreChange}
-          finishedMatches={finishedMatches}
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
-          runningMatchIds={runningMatchIds}
+          elapsedSeconds={elapsedOf}
           onMatchSwap={onMatchSwap}
           tournament={sideSource}
         />
