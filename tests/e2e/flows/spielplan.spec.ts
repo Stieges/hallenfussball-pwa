@@ -343,19 +343,33 @@ test.describe('Spielplan 2.0 - Progress-Ring', () => {
     // Note: The exact selector depends on implementation
   });
 
-  test('Live-Badge zeigt "LIVE" mit pulsierendem Dot', async ({ page }) => {
-    // GIVEN - Start a match
+  test('@OB-039 Live-Abzeichen im Live-Rot, nicht im Fehler-Rot', async ({ page }) => {
+    // GIVEN - ein gestartetes Spiel
     await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Spielplan Test Turnier').click();
     await startMatchInCockpit(page);
 
-    // WHEN - Navigate to Spielplan
+    // WHEN - im Spielplan
     await clickSpielplanTab(page);
-    await page.waitForTimeout(500);
 
-    // THEN - Live badge should be visible
-    // Test documents expected behavior - LIVE badge should appear
+    // THEN - das Abzeichen „Live“ trägt das Live-Rot (statusLive), nicht die Farbe einer Fehlermeldung (error)
+    const abzeichen = page.locator('[data-testid="match-status-badge"][data-state="live"]').first();
+    await expect(abzeichen).toBeVisible();
+    await expect(abzeichen).toHaveText('Live');
+    const farben = await abzeichen.evaluate((el) => {
+      const aufgeloest = (variable: string): string => {
+        const probe = document.createElement('span');
+        probe.style.background = `var(${variable})`;
+        document.body.appendChild(probe);
+        const farbe = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return farbe;
+      };
+      return { ist: getComputedStyle(el).backgroundColor, live: aufgeloest('--color-status-live'), fehler: aufgeloest('--color-error') };
+    });
+    expect(farben.ist).toBe(farben.live);
+    expect(farben.ist).not.toBe(farben.fehler);
   });
 });
 

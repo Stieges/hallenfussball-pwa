@@ -2,7 +2,7 @@
  * LiveInfoExpand - Read-only info panel for running matches
  *
  * Displays live match info without editing capability:
- * - LIVE badge with timer
+ * - Zustands-Abzeichen (MatchStatusBadge) mit Zeit
  * - Large score display (read-only)
  * - Recent events (last 3-5)
  * - "Go to Cockpit" button
@@ -25,6 +25,8 @@ import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui/Button';
+import { MatchStatusBadge } from '../../ui/molecules/MatchStatusBadge';
+import type { MatchBadgeModel } from '../../../core/view';
 import { cardKindOf } from '../../../utils/cardKind';
 
 // ---------------------------------------------------------------------------
@@ -59,6 +61,8 @@ export interface LiveInfoExpandProps {
   awayScore: number;
   /** Formatted elapsed time (e.g., "07:30") */
   elapsedFormatted: string;
+  /** Abzeichen der Ansicht (`MatchView.badge`); ohne Angabe „Live“ */
+  badge?: MatchBadgeModel;
   /** Recent match events */
   events?: MatchEvent[];
   /** Maximum events to display */
@@ -72,6 +76,8 @@ export interface LiveInfoExpandProps {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+const LIVE_BADGE: MatchBadgeModel = { kind: 'badge', state: 'live' };
 
 function formatEventTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -140,6 +146,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
   homeScore,
   awayScore,
   elapsedFormatted,
+  badge,
   events = [],
   maxEvents = 5,
   onNavigateToCockpit,
@@ -167,26 +174,6 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-  };
-
-  const liveBadgeStyle: CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    backgroundColor: cssVars.colors.liveBadgeBg,
-    color: cssVars.colors.liveBadge,
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.bold,
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    borderRadius: cssVars.borderRadius.sm,
-  };
-
-  const liveDotStyle: CSSProperties = {
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    backgroundColor: cssVars.colors.liveBadge,
-    animation: 'pulse 2s ease-in-out infinite',
   };
 
   const timerStyle: CSSProperties = {
@@ -300,10 +287,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
     <div style={containerStyle} data-testid="live-info-expand">
       {/* Header with LIVE badge and timer */}
       <div style={headerStyle}>
-        <span style={liveBadgeStyle} data-testid="live-badge">
-          <span style={liveDotStyle} />
-          LIVE
-        </span>
+        <MatchStatusBadge model={badge ?? LIVE_BADGE} size="card" />
         <span style={timerStyle} data-testid="live-timer">{elapsedFormatted}</span>
       </div>
 

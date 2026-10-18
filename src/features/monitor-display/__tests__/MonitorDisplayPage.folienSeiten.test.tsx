@@ -103,8 +103,7 @@ describe('@ZM-071 Spielplan Feld 2: Paarungen mit Uhrzeit in Anpfiff-Reihenfolge
 });
 
 describe('@ZM-071 Spielplan: Wort „Live“ nur am laufenden Spiel (Ruling B-16f3)', () => {
-  // Befund C-ABZEICHEN-WORT
-  it.fails('@OB-066 Feld 1: laufendes Spiel 7 trägt das Wort „Live“, geplantes Spiel 9 keins', async () => {
+  it('@OB-066 Feld 1: laufendes Spiel 7 trägt das Wort „Live“, geplantes Spiel 9 keins', async () => {
     await starte(monitorTurnier(buildTournament({ matches: withScheduledTimes() }), [slide('schedule-field', { fieldId: 'field-1' })]));
     expect(zeilen()).toHaveLength(2);
     expect(zeilen()[0]).toHaveTextContent('FC Nord');

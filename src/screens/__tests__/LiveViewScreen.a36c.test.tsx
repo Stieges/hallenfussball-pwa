@@ -126,8 +126,7 @@ describe('@TM-015 @ZM-102 Zuschauer-Seite: Herkunft offener Plätze, besetzter P
 });
 
 describe('@ZM-039 @ZM-040 @ZM-041 F-PAUSE: unterbrochen bleibt live, nie beendet, nie „nächstes“', () => {
-  // Befund C-ABZEICHEN-WORT
-  it.fails('@OB-066 @ZM-039 Spiel 7 (angehalten bei 1:0) steht als „Pause“, Spiel 8 (läuft 0:0) als „Live“, beide mit Stand', async () => {
+  it('@OB-066 @ZM-039 Spiel 7 (angehalten bei 1:0) steht als „Pause“, Spiel 8 (läuft 0:0) als „Live“, beide mit Stand', async () => {
     const cup = await fPAUSE();
     const c = await zeige(cup.tournament);
     for (const [n, wort, stand] of [[7, 'Pause', [1, 0]], [8, 'Live', [0, 0]]] as const) {
@@ -189,8 +188,9 @@ describe('@ZM-104 F-AUS / F-WERT: ausgefallen und gewertet', () => {
       expect(k.textContent).toBe(erwartet.statusText.de);
     }
     const karte = screen.getByTestId(`match-goals-${id9}-home`).closest<HTMLElement>('[data-match-card]')!;
-    expect(within(karte).getByTestId('match-card-status-note').textContent).toBe(erwartet.statusText.de);
-    expect(within(karte).queryByTestId('match-card-live')).toBeNull();
+    // „ausgefallen“ steht im Abzeichen (@OB-066); Wortlaut unverändert, kein Live-Abzeichen
+    expect(within(karte).getByTestId('match-status-badge').textContent).toBe(erwartet.statusText.de);
+    expect(within(karte).getByTestId('match-status-badge')).not.toHaveAttribute('data-state', 'live');
     expect(screen.getByTestId(`match-goals-${id9}-home`).textContent).toBe('–');
   });
 

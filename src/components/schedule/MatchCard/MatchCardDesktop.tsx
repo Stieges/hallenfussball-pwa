@@ -19,8 +19,8 @@ import { cssVars } from '../../../design-tokens'
 import { MatchCardScore, type MatchCardStatus } from './MatchCardScore';
 import { formatTime } from './utils';
 import { TeamAvatar } from '../../ui/TeamAvatar';
-import { RunningBadge } from '../RunningBadge';
-import type { ViewMatchStatus } from '../../../core/view';
+import { MatchStatusBadge } from '../../ui/molecules/MatchStatusBadge';
+import type { MatchBadgeModel, ViewMatchStatus } from '../../../core/view';
 import type { ResultFigures } from '../matchResult';
 import type { TeamLogo, TeamColors } from '../../../types/tournament';
 
@@ -58,10 +58,9 @@ export interface MatchCardDesktopProps {
   result?: ResultFigures | null;
   /** Match status */
   status: MatchCardStatus;
-  /** Formatted elapsed time */
-  elapsedFormatted?: string;
-  /** Fachlicher Status der Ansicht (ausgefallen, gewertet), @ZM-104 */
-  viewStatus?: ViewMatchStatus;
+  elapsedFormatted?: string; // Formatted elapsed time
+  viewStatus?: ViewMatchStatus; // Fachlicher Status der Ansicht (ausgefallen, gewertet), @ZM-104
+  badge?: MatchBadgeModel; // Abzeichen der Ansicht (@OB-065)
   /** Callback when row is clicked */
   onRowClick?: () => void;
   /** Callback when score circle is clicked */
@@ -94,6 +93,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   status,
   elapsedFormatted,
   viewStatus,
+  badge,
   onRowClick,
   onCircleClick,
   isExpanded = false,
@@ -227,7 +227,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         {/* Time */}
         <div style={timeStyle}>
           {formatTime(scheduledTime)}
-          {isLive && <RunningBadge testId={`match-row-live-${matchId}`} />}
+          {badge?.kind === 'badge' && <MatchStatusBadge model={badge} size="row" testId={isLive ? `match-row-live-${matchId}` : undefined} />}
         </div>
 
         {/* Field */}

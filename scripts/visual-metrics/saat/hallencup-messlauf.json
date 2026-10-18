@@ -539,7 +539,28 @@
                 "scheduledTime": "2026-11-14T09:27:00.000Z",
                 "matchStatus": "running",
                 "timerElapsedSeconds": 0,
-                "timerStartTime": "@jetzt-320s"
+                "timerStartTime": "@jetzt-320s",
+                "liveState": {
+                  "engine": true,
+                  "status": "running",
+                  "phase": "regular",
+                  "section": 1,
+                  "running": true,
+                  "elapsedMs": 0,
+                  "anchorAt": "@jetzt-ms-320000",
+                  "elapsedSeconds": 0,
+                  "durationSeconds": 600,
+                  "playPhase": "regular",
+                  "tiebreakerMode": "overtime-then-shootout",
+                  "overtimeDurationSeconds": 300,
+                  "awaitingTiebreakerChoice": false,
+                  "sections": 1,
+                  "sectionSeconds": 600,
+                  "breakSeconds": 60,
+                  "overtimeSeconds": 300,
+                  "sectionStartMs": 0,
+                  "breakStartedAt": null
+                }
               },
               {
                 "id": "00000003-0000-4000-8000-000000000016",
@@ -1127,7 +1148,28 @@
                 "scheduledTime": "2026-11-14T08:29:00.000Z",
                 "matchStatus": "running",
                 "timerElapsedSeconds": 0,
-                "timerStartTime": "@jetzt-320s"
+                "timerStartTime": "@jetzt-320s",
+                "liveState": {
+                  "engine": true,
+                  "status": "section_break",
+                  "phase": "regular",
+                  "section": 1,
+                  "running": false,
+                  "elapsedMs": 300000,
+                  "anchorAt": null,
+                  "elapsedSeconds": 300,
+                  "durationSeconds": 600,
+                  "playPhase": "regular",
+                  "tiebreakerMode": "overtime-then-shootout",
+                  "overtimeDurationSeconds": 300,
+                  "awaitingTiebreakerChoice": false,
+                  "sections": 2,
+                  "sectionSeconds": 300,
+                  "breakSeconds": 60,
+                  "overtimeSeconds": 300,
+                  "sectionStartMs": 0,
+                  "breakStartedAt": "@jetzt-ms-20000"
+                }
               },
               {
                 "id": "00000006-0000-4000-8000-000000000004",
@@ -1267,6 +1309,30 @@
             ],
             "shareCode": "PHASEH",
             "shareCodeCreatedAt": "2026-11-14T08:00:00.000Z",
+            "monitors": [
+              {
+                "id": "mon-live",
+                "name": "Folie Live",
+                "defaultSlideDuration": 15,
+                "transition": "none",
+                "transitionDuration": 0,
+                "theme": "dark",
+                "performanceMode": "auto",
+                "slides": [
+                  {
+                    "id": "s-live",
+                    "type": "live",
+                    "config": {
+                      "fieldId": "field-1"
+                    },
+                    "order": 0,
+                    "duration": null
+                  }
+                ],
+                "createdAt": "2026-11-14T07:00:00.000Z",
+                "updatedAt": "2026-11-14T07:00:00.000Z"
+              }
+            ],
             "matchCockpitSettings": {
               "timerDirection": "countdown",
               "nettoWarningEnabled": true,
@@ -1476,7 +1542,28 @@
                 "overtimeScoreB": 0,
                 "matchStatus": "running",
                 "timerElapsedSeconds": 0,
-                "timerStartTime": "@jetzt-740s"
+                "timerStartTime": "@jetzt-740s",
+                "liveState": {
+                  "engine": true,
+                  "status": "running",
+                  "phase": "overtime",
+                  "section": 3,
+                  "running": true,
+                  "elapsedMs": 600000,
+                  "anchorAt": "@jetzt-ms-20000",
+                  "elapsedSeconds": 600,
+                  "durationSeconds": 600,
+                  "playPhase": "overtime",
+                  "tiebreakerMode": "overtime-then-shootout",
+                  "overtimeDurationSeconds": 300,
+                  "awaitingTiebreakerChoice": false,
+                  "sections": 2,
+                  "sectionSeconds": 300,
+                  "breakSeconds": 60,
+                  "overtimeSeconds": 300,
+                  "sectionStartMs": 600000,
+                  "breakStartedAt": null
+                }
               },
               {
                 "id": "00000007-0000-4000-8000-000000000004",
@@ -1616,6 +1703,30 @@
             ],
             "shareCode": "PHASEV",
             "shareCodeCreatedAt": "2026-11-14T08:00:00.000Z",
+            "monitors": [
+              {
+                "id": "mon-live",
+                "name": "Folie Live",
+                "defaultSlideDuration": 15,
+                "transition": "none",
+                "transitionDuration": 0,
+                "theme": "dark",
+                "performanceMode": "auto",
+                "slides": [
+                  {
+                    "id": "s-live",
+                    "type": "live",
+                    "config": {
+                      "fieldId": "field-1"
+                    },
+                    "order": 0,
+                    "duration": null
+                  }
+                ],
+                "createdAt": "2026-11-14T07:00:00.000Z",
+                "updatedAt": "2026-11-14T07:00:00.000Z"
+              }
+            ],
             "matchCockpitSettings": {
               "timerDirection": "countdown",
               "nettoWarningEnabled": true,
@@ -1825,7 +1936,28 @@
                 "penaltyScoreB": 1,
                 "matchStatus": "running",
                 "timerElapsedSeconds": 0,
-                "timerStartTime": "@jetzt-1080s"
+                "timerStartTime": "@jetzt-1080s",
+                "liveState": {
+                  "engine": true,
+                  "status": "shootout",
+                  "phase": "shootout",
+                  "section": 3,
+                  "running": false,
+                  "elapsedMs": 900000,
+                  "anchorAt": null,
+                  "elapsedSeconds": 900,
+                  "durationSeconds": 600,
+                  "playPhase": "penalty",
+                  "tiebreakerMode": "overtime-then-shootout",
+                  "overtimeDurationSeconds": 300,
+                  "awaitingTiebreakerChoice": false,
+                  "sections": 2,
+                  "sectionSeconds": 300,
+                  "breakSeconds": 60,
+                  "overtimeSeconds": 300,
+                  "sectionStartMs": 600000,
+                  "breakStartedAt": null
+                }
               },
               {
                 "id": "00000008-0000-4000-8000-000000000004",
@@ -1965,6 +2097,30 @@
             ],
             "shareCode": "PHASES",
             "shareCodeCreatedAt": "2026-11-14T08:00:00.000Z",
+            "monitors": [
+              {
+                "id": "mon-live",
+                "name": "Folie Live",
+                "defaultSlideDuration": 15,
+                "transition": "none",
+                "transitionDuration": 0,
+                "theme": "dark",
+                "performanceMode": "auto",
+                "slides": [
+                  {
+                    "id": "s-live",
+                    "type": "live",
+                    "config": {
+                      "fieldId": "field-1"
+                    },
+                    "order": 0,
+                    "duration": null
+                  }
+                ],
+                "createdAt": "2026-11-14T07:00:00.000Z",
+                "updatedAt": "2026-11-14T07:00:00.000Z"
+              }
+            ],
             "matchCockpitSettings": {
               "timerDirection": "countdown",
               "nettoWarningEnabled": true,

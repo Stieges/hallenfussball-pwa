@@ -5,7 +5,7 @@
  * Engine, für Monitor und Zuschauer aus `matches.live_state` (R-SA8, `badgeDetailFromLiveState`). Kein React.
  */
 import { z } from 'zod';
-import { MatchStatusSchema, PhaseSchema } from '../match/types';
+import { MatchStatusSchema, PhaseSchema, type MatchState } from '../match/types';
 import type { EngineStatus, LocalClock, ViewMatchStatus } from './types';
 
 export type MatchBadgeState = 'live' | 'pause' | 'halftime' | 'overtime' | 'shootout' | 'ended' | 'cancelled';
@@ -121,6 +121,27 @@ export function badgeDetailFromLiveState(raw: unknown, nowMs: number): MatchBadg
   }
   if (typeof s.breakStartedAt === 'number' && typeof s.breakSeconds === 'number') {
     detail.breakRemainingSec = Math.max(0, s.breakSeconds - Math.floor((nowMs - s.breakStartedAt) / MS_PER_SECOND));
+  }
+  return detail;
+}
+
+/**
+ * Feinstatus für den Monitor und die Zuschauer-Seite: je Spiel aus `Match.liveState` (R-SA8). Spiele ohne gültiges
+ * `live_state` liefern `undefined`; ob der Feinstatus gilt, entscheidet die Ansicht nach dem Cache-Status (A2).
+ */
+export function engineDetailFromMatches(
+  matches: readonly { id: string; liveState?: unknown }[],
+  nowMs: number,
+): (matchId: string) => MatchBadgeEngineDetail | undefined {
+  const byId = new Map(matches.map((m) => [m.id, m.liveState] as const));
+  return (matchId) => badgeDetailFromLiveState(byId.get(matchId), nowMs);
+}
+
+/** Feinstatus der Verwaltung aus dem Stand der Engine (`MatchState`). */
+export function badgeDetailFromEngineState(state: Pick<MatchState, 'status' | 'phase' | 'section' | 'rules'>): MatchBadgeEngineDetail {
+  const detail: MatchBadgeEngineDetail = { status: state.status, phase: state.phase, section: state.section, sections: state.rules?.sections ?? 1 };
+  if (state.rules?.sectionSeconds !== undefined) {
+    detail.sectionSeconds = state.rules.sectionSeconds;
   }
   return detail;
 }

@@ -4,7 +4,7 @@
  * Rahmen, Ende und ausgefallen gedämpft. Das Wort trägt die Bedeutung, nie die Farbe allein.
  */
 import type { CSSProperties } from 'react';
-import { cssVars, displayFontSizes, displayLayout } from '../../../design-tokens';
+import { cssVars, displayFontSizes, displayLayout, type MonitorThemeColors } from '../../../design-tokens';
 import type { MatchBadgeState } from '../../../core/view/badge';
 
 export type MatchStatusBadgeSize = 'card' | 'row' | 'display';
@@ -15,6 +15,11 @@ export interface MatchStatusBadgeTone {
   liveFg: string;
   neutralBg: string;
   neutralFg: string;
+}
+
+/** Farben des Abzeichens in einem Monitor-Theme: Live im Live-Rot, alle übrigen Zustände auf der neutralen Fläche. */
+export function monitorBadgeTone(theme: Pick<MonitorThemeColors, 'liveBadgeFill' | 'liveBadgeOn' | 'border' | 'text'>): MatchStatusBadgeTone {
+  return { liveBg: theme.liveBadgeFill, liveFg: theme.liveBadgeOn, neutralBg: theme.border, neutralFg: theme.text };
 }
 
 export interface BadgeColors {
@@ -68,6 +73,8 @@ export function badgeStyle(state: MatchBadgeState, size: MatchStatusBadgeSize, t
       padding: `${scoreArea.badgePadY} ${scoreArea.badgePadX}`,
       borderRadius: cssVars.borderRadius.md,
       fontSize: displayFontSizes.liveBadge,
+      width: '100%', // füllt die feste Breite der Monitor-Kopfzeile (`scoreArea.badgeWidth`)
+      boxSizing: 'border-box',
     };
   }
   return {

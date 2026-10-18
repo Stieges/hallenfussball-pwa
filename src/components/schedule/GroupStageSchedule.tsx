@@ -408,8 +408,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         );
       case 'live': {
         const liveMatch = liveMatches.get(match.id);
-        const liveEvents = liveMatch?.events;
-        const sourceEvents = match.events ?? liveEvents;
+        const sourceEvents = match.events ?? liveMatch?.events;
 
         // Flatten events for LiveInfoExpand (expects params at top level, not in payload)
         const events = sourceEvents?.map((e: RuntimeMatchEvent) => ({
@@ -425,6 +424,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             homeScore={match.scoreA ?? 0}
             awayScore={match.scoreB ?? 0}
             elapsedFormatted={elapsedTextOf(match) ?? '–'}
+            badge={matchViewOf(sides, match.id)?.badge}
             events={events}
             onNavigateToCockpit={_editable ? () => handleNavigateToCockpit(match.id) : undefined}
             onClose={handleExpandClose}
@@ -838,7 +838,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               result: resultFigures(matchViewOf(sides, match.id)?.score, status),
               status: status,
               viewStatus: matchViewOf(sides, match.id)?.status,
-              elapsedFormatted: elapsedTextOf(match),
+              badge: matchViewOf(sides, match.id)?.badge,
             };
 
             return (

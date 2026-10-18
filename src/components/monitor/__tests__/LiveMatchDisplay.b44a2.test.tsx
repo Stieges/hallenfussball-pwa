@@ -246,19 +246,7 @@ describe('Festes Raster: gleiche Lage in allen Zuständen', () => {
     expect(a).toBe(b);
   });
 
-  // Befund C-ABZEICHEN-WORT
-  it.fails('@OB-066 Marke: dieselbe Breite für Live, Pause, Ende', () => {
-    const marken = (['RUNNING', 'PAUSED', 'FINISHED'] as const).map((status) => {
-      const { unmount } = render(<LiveMatchDisplay match={createMatch({ status })} />);
-      const badge = screen.getByTestId('live-badge');
-      const marke = { breite: badge.style.width, wort: badge.textContent };
-      unmount();
-      return marke;
-    });
-    expect(marken.map((m) => m.wort)).toEqual(['Live', 'Pause', 'Ende']);
-    expect(new Set(marken.map((m) => m.breite)).size).toBe(1);
-    expect(marken[0].breite).toBe(L.badgeWidth);
-  });
+  // Marke: Wörter und Breite in LiveMatchDisplay.badge.test.tsx (echte DE-Texte)
 
   it('Kopfzeile ist ein Raster mit drei Spalten, auch ohne Gruppe', () => {
     render(<LiveMatchDisplay match={createMatch({ group: undefined })} />);

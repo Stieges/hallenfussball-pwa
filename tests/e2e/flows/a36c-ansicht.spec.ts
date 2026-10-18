@@ -46,8 +46,7 @@ test.describe('A-36c Zuschauer-Seite 360×640 (/live/MESS26)', () => {
     await oeffne(page, HANDY, '/#/live/MESS26', '[data-testid^="final-card-"]');
   });
 
-  // Befund C-ABZEICHEN-UHR
-  test.fail('@OB-066 @ZM-039 Finale läuft: Abzeichen „Live“ ohne Uhrzeit, Stand 2:1, noch kein Sieger fett', async ({ page }) => {
+  test('@OB-066 @ZM-039 Finale läuft: Abzeichen „Live“ ohne Uhrzeit, Stand 2:1, noch kein Sieger fett', async ({ page }) => {
     const finale = karte(page, FINALE);
     await finale.scrollIntoViewIfNeeded();
     await expect(finale.locator(`[data-testid="final-live-${FINALE}"]`)).toHaveText(/^Live$/);
@@ -94,8 +93,7 @@ test.describe('A-36c Zuschauer-Seite 360×640 (/live/MESS26)', () => {
 });
 
 test.describe('A-36c Verwaltung 360×640 (Spielplan)', () => {
-  // Befund C-ABZEICHEN-UHR
-  test.fail('@OB-064 @OB-066 Finale läuft: auch im Spielplan der Verwaltung Abzeichen „Live“ statt „beendet“ (C-SPIELPLAN-LAUFEND-ENGINE-QUELLE)', async ({ page }) => {
+  test('@OB-064 @OB-066 Finale läuft: auch im Spielplan der Verwaltung Abzeichen „Live“ statt „beendet“ (C-SPIELPLAN-LAUFEND-ENGINE-QUELLE)', async ({ page }) => {
     await oeffne(page, HANDY, '/#/tournament/hallencup-messlauf/schedule', '[data-testid^="final-card-"]');
     const finale = karte(page, FINALE);
     await finale.scrollIntoViewIfNeeded();

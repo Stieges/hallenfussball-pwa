@@ -6,7 +6,6 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import { monitorThemes } from '../../../design-tokens';
 import type { MonitorSlide } from '../../../types/monitor';
 
 vi.unmock('i18next'); vi.unmock('react-i18next');
@@ -50,13 +49,6 @@ function spielplan(cup: Hallencup, index: number, tournament: Tournament = cup.t
   return render(<ScheduleFieldSlide slide={folie} {...withView(tournament)} theme="dark" style={{}} page={seiteVon(tournament, index)} />);
 }
 
-/** jsdom schreibt #rrggbb als rgb(...); der Vergleichswert wird gleich umgeschrieben. */
-function rgb(hex: string): string {
-  const n = parseInt(hex.slice(1), 16);
-  return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
-}
-const LIVE_PUNKT = rgb(monitorThemes.dark.liveDot);
-
 describe('@TM-015 @ZM-102 Monitor: Herkunft offener Plätze, besetzter Platz ohne Herkunft', () => {
   it('@TM-015 F-HF Finalrunde: HF1 „FC Nord“ gegen „Zweiter Gruppe B“, Finale Heim „Sieger Halbfinale 1“', async () => {
     const cup = await fHF();
@@ -96,8 +88,7 @@ describe('@TM-015 @ZM-102 Monitor: Herkunft offener Plätze, besetzter Platz ohn
 });
 
 describe('@ZM-039 @ZM-040 @ZM-041 F-PAUSE: unterbrochen bleibt live, nie „nächstes Spiel“', () => {
-  // Befund C-ABZEICHEN-WORT
-  it.fails('@OB-066 @ZM-039 Spielplan: Spiel 7 (angehalten bei 1:0) trägt „Pause“, Spiel 8 (läuft) „Live“', async () => {
+  it('@OB-066 @ZM-039 Spielplan: Spiel 7 (angehalten bei 1:0) trägt „Pause“, Spiel 8 (läuft) „Live“', async () => {
     const cup = await fPAUSE();
     for (const [n, wort] of [[7, 'Pause'], [8, 'Live']] as const) {
       const id = idOf(cup, GAME[n]);
@@ -135,7 +126,7 @@ describe('@ZM-039 @ZM-040 @ZM-041 F-PAUSE: unterbrochen bleibt live, nie „näc
     const spiel7 = cup.tournament.matches[GAME[7]];
     const name = (slot: typeof spiel7.slotA) => cup.tournament.teams.find(t => slot.kind === 'team' && t.id === slot.teamId)?.name ?? '';
     expect(screen.getAllByText(name(spiel7.slotA)).length).toBeGreaterThan(0);
-    expect(screen.getByText('PAUSE')).toBeInTheDocument();
+    expect(screen.getByTestId('match-status-badge')).toHaveTextContent('Pause'); // Wort statt Marke „PAUSE“ (@OB-066)
   });
 });
 
@@ -146,9 +137,11 @@ describe('@ZM-104 F-AUS / F-WERT: ausgefallen und gewertet', () => {
     const row = zeile(idOf(cup, GAME[9]));
     const erwartet = EXPECTED_STATE['F-AUS spiel9'];
     expect(row.getAttribute('data-status')).toBe(erwartet.status);
-    expect(within(row).getByTestId('monitor-match-note').textContent).toBe(erwartet.statusText.de);
+    // „ausgefallen“ steht im Abzeichen (@OB-066), nicht mehr als Zusatzzeile; Wortlaut unverändert
+    expect(within(row).getByTestId('match-status-badge').textContent).toBe(erwartet.statusText.de);
     expect(within(row).getByTestId('monitor-match-separator').textContent).not.toMatch(/\d/);
-    expect(within(row).getByTestId('monitor-match-status').style.background).not.toBe(LIVE_PUNKT);
+    expect(within(row).getByTestId('match-status-badge')).toHaveAttribute('data-state', 'cancelled');
+    expect(within(row).getByTestId('match-status-badge')).not.toHaveAttribute('data-pulse');
   });
 
   it('@ZM-104 Gegenbeispiel: ausgefallen ist kein „nächstes Spiel“ und keine Live-Anzeige auf Feld 1', async () => {

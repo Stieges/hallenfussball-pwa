@@ -122,18 +122,22 @@ describe('@OB-064 Tabellenzeile am Desktop: Ergebnis waagerecht', () => {
 });
 
 describe('Regel: laufendes Spiel zeigt seine Spielzeit in der Kopfzeile, Tore je Zeile', () => {
-  // Befund C-ABZEICHEN-UHR
-  it.fails('@OB-065 läuft 07:30: Abzeichen „Live“ ohne Uhrzeit, Restzeit beim Stand, Tore 1 und 0, noch kein Sieger', () => {
+  // W9 geteilt (Kennung bleibt): Abzeichen (1.2) und Restzeit beim Stand (5.1a)
+  it('@OB-065 läuft 07:30: Abzeichen „Live“ ohne Uhrzeit, Tore 1 und 0, noch kein Sieger', () => {
     karte({ scoreA: 1, scoreB: 0 }, 'running', { elapsedFormatted: '07:30' });
     expect(screen.getByTestId('match-status-badge').textContent).toBe('Live');
-    expect(screen.getByTestId('match-clock')).toBeInTheDocument();
     expect(tore('home')).toBe('1');
     expect(tore('away')).toBe('0');
     expect(istFett('FC Nord')).toBe(false);
   });
 
-  // Befund C-ABZEICHEN-WORT
-  it.fails('@OB-066 läuft ohne bekannte Spielzeit: Abzeichen „Live“, keine leere Zeit', () => {
+  // Befund C-ABZEICHEN-UHR
+  it.fails('@OB-065 läuft 07:30: Restzeit beim Stand (match-clock)', () => {
+    karte({ scoreA: 1, scoreB: 0 }, 'running', { elapsedFormatted: '07:30' });
+    expect(screen.getByTestId('match-clock')).toBeInTheDocument();
+  });
+
+  it('@OB-066 läuft ohne bekannte Spielzeit: Abzeichen „Live“, keine leere Zeit', () => {
     karte({ scoreA: 0, scoreB: 0 }, 'running');
     expect(screen.getByTestId('match-status-badge').textContent).toBe('Live');
   });

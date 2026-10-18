@@ -31,8 +31,8 @@ import { buildSideContext, matchViewOf, sideDisplay, sideName, type SideSource }
 import { finalMatchLabel } from './finalMatchLabel';
 import { MatchScoreCell } from './MatchScoreCell';
 import { FinalStageMobileCard } from './FinalStageMobileCard';
-import { cardStatusOf, formatElapsed, resultFigures, type ResultFigures } from './matchResult';
-import { RunningBadge } from './RunningBadge';
+import { cardStatusOf, resultFigures, type ResultFigures } from './matchResult';
+import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
 
 // Pending changes during edit mode
 interface PendingChanges {
@@ -77,7 +77,6 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   pendingChanges,
   correctionMatchId,
   onStartCorrection,
-  elapsedSeconds,
   onMatchSwap,
   showTitle = true,
   tournament,
@@ -325,7 +324,9 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
         {sortedMatches.map((match) => {
           const status = statusOf(match);
           const isRunning = status === 'running';
-          const result = resultFigures(matchViewOf(sides, match.id)?.score, status);
+          const rowView = matchViewOf(sides, match.id);
+          const rowBadge = rowView?.badge;
+          const result = resultFigures(rowView?.score, status);
 
           return (
             <SortableRow key={match.id} match={match}>
@@ -349,7 +350,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
                       <span>{match.matchNumber}</span>
-                      {isRunning && <RunningBadge testId={`final-row-live-${match.id}`} />}
+                      {rowBadge?.kind === 'badge' && <MatchStatusBadge model={rowBadge} size="row" testId={isRunning ? `final-row-live-${match.id}` : undefined} />}
                     </div>
                   </td>
                   {showReferees && (() => {
@@ -527,7 +528,6 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
           const status = statusOf(match);
           const isFinished = status === 'finished';
           const matchView = matchViewOf(sides, match.id);
-          const elapsed = status === 'running' ? elapsedSeconds?.(match.id) : undefined;
           const home = sideDisplay(match, 'A', sides);
           const away = sideDisplay(match, 'B', sides);
           const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
@@ -544,7 +544,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               awayPending={away.pending}
               result={resultFigures(matchView?.score, status)}
               isRunning={status === 'running'}
-              elapsedFormatted={elapsed === undefined ? undefined : formatElapsed(elapsed)}
+              badge={matchView?.badge}
               viewStatus={matchView?.status}
               isFinished={isFinished}
               canEditScore={editable && onScoreChange !== undefined && !isFinished}

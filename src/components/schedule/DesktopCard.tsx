@@ -93,6 +93,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         status={status}
         elapsedFormatted={elapsedFormatted}
         viewStatus={matchView?.status}
+        badge={matchView?.badge}
         onRowClick={() => onCardClick(match.id)}
         onCircleClick={() => onCircleClick(match.id)}
         isExpanded={isExpanded}

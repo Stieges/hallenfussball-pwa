@@ -7,6 +7,8 @@ export { viewRules } from './visibility';
 export {
   matchBadgeModel,
   badgeDetailFromLiveState,
+  badgeDetailFromEngineState,
+  engineDetailFromMatches,
   MATCH_BADGE_WORD_KEY,
   type MatchBadgeModel,
   type MatchBadgeState,

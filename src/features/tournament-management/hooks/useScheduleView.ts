@@ -5,7 +5,7 @@
  */
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { buildTournamentView, toTournamentLocal, TOURNAMENT_TIME_ZONE, type TournamentView, type ViewLocale } from '../../../core/view';
+import { buildTournamentView, badgeDetailFromEngineState, toTournamentLocal, TOURNAMENT_TIME_ZONE, type TournamentView, type ViewLocale } from '../../../core/view';
 import { elapsedAt } from '../../../core/match';
 import { useMatchEngineContextOptional } from '../../match-engine/useMatchEngineContext';
 import type { Tournament } from '../../../types/tournament';
@@ -23,14 +23,18 @@ export function useScheduleView(tournament: Tournament): ScheduleView {
   const engine = useMatchEngineContextOptional()?.engine;
   const locale: ViewLocale = i18n.language.startsWith('en') ? 'en' : 'de';
   const engineStatus = useCallback((matchId: string) => engine?.view(matchId)?.result.state.status, [engine]);
+  const engineDetail = useCallback((matchId: string) => {
+    const state = engine?.view(matchId)?.result.state;
+    return state === undefined ? undefined : badgeDetailFromEngineState(state);
+  }, [engine]);
   const view = useMemo(
-    () => buildTournamentView({ ...tournament, engineStatus }, {
+    () => buildTournamentView({ ...tournament, engineStatus, engineDetail }, {
       audience: 'organizer',
       medium: 'app',
       locale,
       now: toTournamentLocal(new Date(), TOURNAMENT_TIME_ZONE),
     }),
-    [tournament, engineStatus, locale],
+    [tournament, engineStatus, engineDetail, locale],
   );
   const liveMatchIds = useMemo(() => new Set(view.current.live.map((m) => m.id)), [view]);
   const elapsedSeconds = useCallback((matchId: string): number | undefined => {

@@ -7,7 +7,7 @@
  */
 import type { CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { animations, cssVars } from '../../../design-tokens';
+import { animations, cssVars, displayFontSizes } from '../../../design-tokens';
 import { MATCH_BADGE_WORD_KEY, type MatchBadgeModel, type MatchBadgeState } from '../../../core/view/badge';
 import { badgeColorsFor, badgeStyle, dotStyle, type MatchStatusBadgeSize, type MatchStatusBadgeTone } from './matchStatusBadgeStyle';
 
@@ -41,7 +41,7 @@ export function MatchStatusBadge({ model, size, tone, testId }: MatchStatusBadge
   }
   if (model.kind === 'kickoff') {
     const style: CSSProperties = {
-      fontSize: cssVars.fontSizes.sm,
+      fontSize: size === 'display' ? displayFontSizes.liveBadge : cssVars.fontSizes.sm,
       lineHeight: cssVars.lineHeights.bodySm,
       fontWeight: cssVars.fontWeights.bold,
       fontVariantNumeric: 'tabular-nums',

@@ -86,13 +86,7 @@ describe('LiveMatchDisplay', () => {
       expect(screen.getByText(':')).toBeInTheDocument();
     });
 
-    // Befund C-ABZEICHEN-WORT
-    it.fails('@OB-066 zeigt Abzeichen „Live“ bei laufendem Spiel', () => {
-      const match = createMockMatch({ status: 'RUNNING' });
-      render(<LiveMatchDisplay match={match} />);
-
-      expect(screen.getByTestId('match-status-badge')).toHaveTextContent('Live');
-    });
+    // Wörter des Abzeichens (Live, Pause, Ende, Anstoßzeit): LiveMatchDisplay.badge.test.tsx (echte DE-Texte)
 
     it('zeigt Feld und Spielnummer', () => {
       const match = createMockMatch({ field: 2, number: 5 });
@@ -117,29 +111,7 @@ describe('LiveMatchDisplay', () => {
     });
   });
 
-  // ==========================================================================
-  // Status-Varianten
-  // ==========================================================================
-  describe('Status-Varianten', () => {
-    // Befund C-ABZEICHEN-WORT
-    it.fails('@OB-066 zeigt Abzeichen „Pause“ bei pausiertem Spiel', () => {
-      render(<LiveMatchDisplay match={createMockMatch({ status: 'PAUSED' })} />);
-      expect(screen.getByTestId('match-status-badge')).toHaveTextContent('Pause');
-    });
-
-    // Befund C-ABZEICHEN-WORT
-    it.fails('@OB-066 zeigt Abzeichen „Ende“ bei abgeschlossenem Spiel', () => {
-      render(<LiveMatchDisplay match={createMockMatch({ status: 'FINISHED' })} />);
-      expect(screen.getByTestId('match-status-badge')).toHaveTextContent('Ende');
-    });
-
-    // Befund C-ABZEICHEN-WORT
-    it.fails('@OB-066 geplantes Spiel trägt kein Abzeichen, sondern seine Anstoßzeit', () => {
-      render(<LiveMatchDisplay match={createMockMatch({ status: 'NOT_STARTED' })} />);
-      expect(screen.queryByTestId('match-status-badge')).toBeNull();
-      expect(screen.getByTestId('match-kickoff').textContent).toMatch(/\d{1,2}:\d{2}/);
-    });
-  });
+  // Status-Varianten (Abzeichen Live, Pause, Ende, Anstoßzeit): LiveMatchDisplay.badge.test.tsx
 
   // ==========================================================================
   // Size-Varianten
