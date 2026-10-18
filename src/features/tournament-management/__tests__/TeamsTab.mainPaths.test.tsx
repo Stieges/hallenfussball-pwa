@@ -10,6 +10,9 @@ import userEvent from '@testing-library/user-event';
 import type { Match, Tournament } from '../../../types/tournament';
 import { looseVs } from '../../../test/matchSlotFixtures';
 
+// A-11: TeamsTab fragt Rechte über useCan -- hier die Turnierleitung (alles erlaubt).
+vi.mock('../../auth/hooks/useCan', () => ({ useCan: () => true }));
+
 import { TeamsTab } from '../TeamsTab';
 
 function tournamentWith(teams: Array<{ id: string; name: string; isRemoved?: boolean; logo?: unknown; color?: string }>, matches: Array<Partial<Match> & { id: string }> = []): Tournament {

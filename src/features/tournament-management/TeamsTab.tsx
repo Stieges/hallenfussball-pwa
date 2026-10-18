@@ -28,6 +28,8 @@ import {
 } from '../../utils/teamHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
+import { LeadOnlyHint } from '../../components/ui/molecules/LeadOnlyHint';
+import { useCan } from '../auth/hooks/useCan';
 
 interface TeamsTabProps {
   tournament: Tournament;
@@ -39,6 +41,9 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   onTournamentUpdate,
 }) => {
   const { t } = useTranslation('tournament');
+  // A-11 (@HE-042, L6): Umbenennen, Logo, Farbe = teams; Löschen, Wiederherstellen = restructure. Ohne Recht lesend + Hinweis.
+  const canEditTeams = useCan('teams', tournament.id);
+  const canRestructure = useCan('restructure', tournament.id);
   // State für Bearbeitung
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -232,11 +237,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   // STYLES
   // ============================================================================
 
-  const containerStyle: CSSProperties = {
-    padding: cssVars.spacing.lg,
-    background: cssVars.colors.background,
-    minHeight: 'calc(100vh - 200px)',
-  };
+  const containerStyle: CSSProperties = { padding: cssVars.spacing.lg, background: cssVars.colors.background, minHeight: 'calc(100vh - 200px)' };
 
   const titleStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.xl,
@@ -277,10 +278,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     fontWeight: cssVars.fontWeights.medium,
   });
 
-  const buttonGroupStyle: CSSProperties = {
-    display: 'flex',
-    gap: cssVars.spacing.sm,
-  };
+  const buttonGroupStyle: CSSProperties = { display: 'flex', gap: cssVars.spacing.sm };
 
   const actionButtonStyle = (variant: 'edit' | 'delete'): CSSProperties => ({
     padding: '6px 12px',
@@ -294,22 +292,11 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     transition: 'all 0.2s ease',
   });
 
-  const editInputStyle: CSSProperties = {
-    flex: 1,
-    maxWidth: '300px',
-  };
+  const editInputStyle: CSSProperties = { flex: 1, maxWidth: '300px' };
 
-  const removedTeamStyle: CSSProperties = {
-    ...teamRowStyle,
-    opacity: 0.6,
-    background: cssVars.colors.neutralRowBg,
-  };
+  const removedTeamStyle: CSSProperties = { ...teamRowStyle, opacity: 0.6, background: cssVars.colors.neutralRowBg };
 
-  const removedTeamNameStyle: CSSProperties = {
-    ...teamNameStyle,
-    textDecoration: 'line-through',
-    color: cssVars.colors.textSecondary,
-  };
+  const removedTeamNameStyle: CSSProperties = { ...teamNameStyle, textDecoration: 'line-through', color: cssVars.colors.textSecondary };
 
   // New card-based styles
   const teamCardStyle: CSSProperties = {
@@ -357,11 +344,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     transition: 'transform 0.2s ease',
   };
 
-  const expandedSectionStyle: CSSProperties = {
-    borderTop: `1px solid ${cssVars.colors.border}`,
-    padding: cssVars.spacing.lg,
-    background: cssVars.colors.surfaceVariant,
-  };
+  const expandedSectionStyle: CSSProperties = { borderTop: `1px solid ${cssVars.colors.border}`, padding: cssVars.spacing.lg, background: cssVars.colors.surfaceVariant };
 
   const expandedRowStyle: CSSProperties = {
     display: 'flex',
@@ -411,8 +394,9 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
         </Card>
       )}
 
-      {/* Info Box */}
-      <Card style={{ marginBottom: cssVars.spacing.lg, background: cssVars.colors.infoBannerBg }}>
+      {/* Info Box (nur wer ändern darf); sonst „Ändern nur durch die Turnierleitung“ */}
+      {!canEditTeams && <div style={{ marginBottom: cssVars.spacing.lg }}><LeadOnlyHint /></div>}
+      {canEditTeams && <Card style={{ marginBottom: cssVars.spacing.lg, background: cssVars.colors.infoBannerBg }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.md }}>
           <span style={{ fontSize: cssVars.fontSizes.xxl }}>ℹ️</span>
           <div>
@@ -426,7 +410,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
             </ul>
           </div>
         </div>
-      </Card>
+      </Card>}
 
       {/* Active Teams */}
       <Card>
@@ -466,9 +450,9 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                     <div
                       onClick={(e) => {
                         e.stopPropagation();
-                        setLogoUploadTeamId(team.id);
+                        if (canEditTeams) { setLogoUploadTeamId(team.id); }
                       }}
-                      style={{ cursor: 'pointer' }}
+                      style={{ cursor: canEditTeams ? 'pointer' : 'default' }}
                     >
                       <TeamAvatar team={team} size="lg" showColorRing />
                     </div>
@@ -544,8 +528,8 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                       ) : (
                         // View Mode - Expanded Details
                         <>
-                          {/* Logo Section */}
-                          <div style={expandedRowStyle}>
+                          {/* Logo und Farbe: nur mit Recht teams */}
+                          {canEditTeams && <><div style={expandedRowStyle}>
                             <span style={expandedLabelStyle}>{t('teams.logo.label')}</span>
                             <Button
                               variant="secondary"
@@ -572,23 +556,23 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                               value={primaryColor}
                               onChange={(color) => handleColorChange(team.id, color)}
                             />
-                          </div>
+                          </div></>}
 
                           {/* Action Buttons */}
                           <div style={{ ...expandedRowStyle, marginTop: cssVars.spacing.lg, marginBottom: 0 }}>
-                            <button
+                            {canEditTeams && <button
                               style={actionButtonStyle('edit')}
                               onClick={() => handleStartEdit(team)}
                               data-testid={`team-edit-button-${team.id}`}
                             >
                               ✏️ {t('teams.rename')}
-                            </button>
-                            <button
+                            </button>}
+                            {canRestructure && <button
                               style={actionButtonStyle('delete')}
                               onClick={() => handleDeleteClick(team)}
                             >
                               🗑️ {t('teams.delete')}
-                            </button>
+                            </button>}
                           </div>
                         </>
                       )}
@@ -631,7 +615,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                       </span>
                     )}
                   </div>
-                  <button
+                  {canRestructure && <button
                     style={{
                       padding: '6px 12px',
                       fontSize: cssVars.fontSizes.sm,
@@ -644,7 +628,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                     onClick={() => handleRestoreTeam(team.id)}
                   >
                     ↩️ {t('teams.restore')}
-                  </button>
+                  </button>}
                 </div>
               );
             })}

@@ -1088,5 +1088,8 @@
       "undecided": "noch offen"
     },
     "finalTable": "Abschlusstabelle"
+  },
+  "rights": {
+    "leadOnlyHint": "Ändern nur durch die Turnierleitung"
   }
 }

@@ -24,8 +24,8 @@ import { ContactForm } from '../../components/ContactForm';
 import { SponsorManagement } from './SponsorManagement';
 import { FieldManagement } from './FieldManagement';
 import { useTournamentStartState } from '../../hooks/useTournamentStartState';
-import { useMyTournamentRole } from '../auth/hooks/useMyTournamentRole';
-import { canManageTournament } from '../auth/utils/permissions';
+import { useCan } from '../auth/hooks/useCan';
+import { LeadOnlyHint } from '../../components/ui/molecules/LeadOnlyHint';
 
 interface SettingsTabProps {
   tournament: Tournament;
@@ -46,12 +46,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   // gemeinsame Funktion statt Kopie).
   const { state: matchStartState } = useTournamentStartState(tournament);
   const canEditInWizard = matchStartState === 'not-started';
-  // B-04d (@W2A-030): Regeln ändern nur die Turnierleitung (inkl. Co-Admin) —
-  // Helfern bietet die App das nicht an. Vorhandene Rechte-Prüfung
-  // (useMyTournamentRole + canManageTournament aus der zentralen Rechtetabelle),
-  // keine eigene Rechte-Logik.
-  const { role: myRole } = useMyTournamentRole(tournament.id);
-  const canChangeRules = myRole ? canManageTournament(myRole) : false;
+  // A-11 (@W5-017, @HE-042, L6): Einstellungen ändern = tournamentSettings (sonst lesend mit Hinweis); Neuplanen und
+  // Teams ersetzen (Erweiterte Bearbeitung) = restructure. Rechte nur über useCan.
+  const canChangeRules = useCan('tournamentSettings', tournament.id);
+  const canRestructure = useCan('restructure', tournament.id);
   // Collapse-State für Formular-Bereich
   const [isFormCollapsed, setIsFormCollapsed] = useState(true);
 
@@ -304,6 +302,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   return (
     <div style={containerStyle}>
       <div style={contentStyle}>
+        {!canChangeRules && <div style={{ marginBottom: cssVars.spacing.md }}><LeadOnlyHint /></div>}
         {/* Collapsible Header für Metadaten-Bearbeitung */}
         <div
           style={collapsibleHeaderStyle}
@@ -325,7 +324,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </span>
         </div>
 
-        {/* Collapsible Form Content */}
+        {/* Collapsible Form Content (ohne tournamentSettings lesend: alle Eingaben gesperrt, L6) */}
+        <fieldset disabled={!canChangeRules} style={{ border: 0, padding: 0, margin: 0, minInlineSize: 0 }}>
         {!isFormCollapsed && (
           <>
             {/* Header mit Buttons */}
@@ -480,10 +480,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             onTournamentUpdate={handleAsyncTournamentUpdate}
           />
         </div>
+        </fieldset>
 
-        {/* Wizard-Bearbeitung Buttons — nur vor dem ersten Anpfiff (@LZ-003 / W3)
-            und nur für die Turnierleitung inkl. Co-Admin (@W2A-030) */}
-        {onEditInWizard && canEditInWizard && canChangeRules && (
+        {/* Wizard-Bearbeitung (Neuplanen, Teams ersetzen) — nur vor dem ersten Anpfiff (@LZ-003 / W3), nur mit restructure (@W5-017) */}
+        {onEditInWizard && canEditInWizard && canRestructure && (
           <Card style={{ marginTop: cssVars.spacing.lg, background: cssVars.colors.warningBannerBg, border: `1px solid ${cssVars.colors.warningBannerBorder}` }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.md }}>
               <span style={{ fontSize: cssVars.fontSizes.xxl }}>⚠️</span>
