@@ -323,15 +323,16 @@ test.describe('Widerruf / Fremde', () => {
 // =============================================================================
 
 test.describe('A-11 Helfer und Zeitplan', () => {
-  // BLOCKED bis der lokale Stack 20261110_001 eingespielt hat (Controller stellt ihn bereit, Umsetzer startet keinen
-  // Stack). Ohne die Migration darf der Helfer Spielplan-Spalten schreiben (matches_update_v3, writeMatchData) -- der
-  // Fall wäre rot. Nicht löschen: nach dem Einspielen `test.fixme` entfernen (task-A-11-report.md, BLOCKED-Punkt).
-  test.fixme(true, 'A-11: lokaler Stack ohne 20261110_001 (Controller stellt ihn bereit)');
+  // Review A-11 A1: läuft auf jedem PR. Der CI-Stack (`npm run test:env:reset` = `supabase db reset --local`) spielt
+  // alle Migrationen ein, auch 20261110_001. Ein lokaler Stack ohne _001 lässt den Server-Teil rot werden (erwartet).
 
   test('@W5-017/@ZP-040 Helfer sieht kein Bearbeiten, Server lehnt Verschieben ab (@ZP-041)', async ({ asRole }) => {
     const page = await asRole('helper');
     await page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}`);
     await expect(page.getByText(E2E_LIVE_CUP_TITLE, { exact: true }).first()).toBeVisible({ timeout: 15000 });
+    // Positiver Anker: die Werkzeugleiste des Spielplans steht, die Rolle ist geladen -- erst dann sagt „kein Knopf“ etwas.
+    await expect(page.locator('[data-testid="schedule-view-table"]')).toBeVisible({ timeout: 15000 });
+    await page.waitForLoadState('networkidle');
     await expect(page.locator('[data-testid="schedule-edit-start"]')).toHaveCount(0);
 
     const before = await serviceRest('GET', `matches?tournament_id=eq.${E2E_LIVE_CUP_ID}&select=id,scheduled_start&order=id`);
