@@ -90,3 +90,30 @@ describe('@ZP-040 Wer den Zeitplan ändern darf – Spielplan der Verwaltung', (
     expect(refereeEditor()).toBeInTheDocument();
   });
 });
+
+/**
+ * Review A-11 A2 (@ZM-019 „den Aushang zum Drucken erzeugen“, R-A11-5 tournamentSettings) von Ende zu Ende über den
+ * Spielplan: der PDF-Dialog wird über den echten Knopf der Werkzeugleiste geöffnet, das Recht kommt aus useCan.
+ */
+describe('@ZM-019 Aushang zum Drucken – über den Spielplan der Verwaltung', () => {
+  async function openPdfDialog() {
+    const user = userEvent.setup();
+    renderTab();
+    await user.click(screen.getByTestId('schedule-action-pdf'));
+    // Positiver Anker: der Dialog steht (Karte „Spielplan“ ist da), erst dann sagt „keine Aushang-Karte“ etwas.
+    expect(await screen.findByTestId('pdf-choice-schedule')).toBeInTheDocument();
+  }
+
+  it('@ZM-019 Tom (Helfer) öffnet den PDF-Dialog: „Aushang mit QR-Code“ ist nicht angeboten', async () => {
+    role.current = 'collaborator';
+    await openPdfDialog();
+    expect(screen.queryByTestId('pdf-choice-notice')).not.toBeInTheDocument();
+    expect(screen.queryByText('Zum Aufhängen')).not.toBeInTheDocument();
+  });
+
+  it.each(['co-admin', 'owner'])('Gegenbeispiel @ZM-019 %s (Maria/Olli): die Karte „Aushang mit QR-Code“ ist da', async (r) => {
+    role.current = r;
+    await openPdfDialog();
+    expect(screen.getByTestId('pdf-choice-notice')).toBeInTheDocument();
+  });
+});
