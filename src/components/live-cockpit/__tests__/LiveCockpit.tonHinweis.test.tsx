@@ -70,6 +70,24 @@ describe('LiveCockpit: Ton-Hinweis als Abzeichen der Tafel', () => {
     expect(props.onStart).toHaveBeenCalledWith('match-11');
   });
 
+  // A4 (Review 2c): ein Abzeichen ohne Wirkung gehört nicht vor den Anpfiff und nicht in die Zustände ohne Spiel
+  it('@OB-021 vor dem Anpfiff steht kein Abzeichen „Ton aus“: der Tipp auf Anpfiff gibt den Ton frei', () => {
+    render(<LiveCockpit {...makeProps(makeLiveMatch({ status: 'NOT_STARTED' }))} />);
+    expect(screen.queryByRole('button', { name: ABZEICHEN })).toBeNull();
+  });
+
+  it('@OB-021 ohne Spiel („kein Spiel mehr“, „wartet auf Teams“) steht kein Abzeichen „Ton aus“', () => {
+    const { rerender } = render(<LiveCockpit {...makeProps(null, { leer: { art: 'keinSpiel', feldName: 'Feld 2' } })} />);
+    expect(screen.queryByRole('button', { name: ABZEICHEN })).toBeNull();
+    rerender(<LiveCockpit {...makeProps(null, { leer: { art: 'wartetAufHerkunft', gruende: ['Abschluss von Gruppe B'] } })} />);
+    expect(screen.queryByRole('button', { name: ABZEICHEN })).toBeNull();
+  });
+
+  it('@OB-021 Gegenbeispiel: im laufenden Spiel steht das Abzeichen weiter, wenn die Freigabe nicht gelang', () => {
+    render(<LiveCockpit {...makeProps(makeLiveMatch({ status: 'RUNNING' }))} />);
+    expect(screen.getByRole('button', { name: ABZEICHEN })).toBeInTheDocument();
+  });
+
   it('Gegenbeispiel: ist der Ton schon freigegeben, gibt es kein Abzeichen und der Anpfiff aktiviert nichts doppelt', async () => {
     ton.isActivated = true;
     const user = userEvent.setup();

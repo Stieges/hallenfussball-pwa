@@ -43,6 +43,27 @@ describe('NoticeLine', () => {
     expect(text.style.overflow).toBe('hidden');
   });
 
+  // B3 (Review 2c, VISUAL-DESIGN § 1): Namen werden nie mit „…“ gekürzt – bei langen Namen reserviert die Zeile drei Zeilen und bricht um
+  it('@OB-025 mit zeilen=3 bricht der Text um, ohne „…“ und ohne Abschneiden; die Zeile ist dafür dauerhaft höher', () => {
+    const { rerender } = render(<NoticeLine text={null} zeilen={3} closeLabel="Schließen" testId="notice-line" />);
+    const hoheLeere = screen.getByTestId('notice-line').style.height;
+    expect(hoheLeere).toMatch(/3/);
+    expect(hoheLeere).not.toBe('var(--sizing-notice-line-height-compact)');
+    rerender(<NoticeLine text={LANG} zeilen={3} closeLabel="Schließen" testId="notice-line" />);
+    const text = screen.getByText(LANG);
+    expect(text.style.textOverflow).not.toBe('ellipsis');
+    expect(text.style.whiteSpace).toBe('normal');
+    expect(text.style.overflow).not.toBe('hidden');
+    expect(screen.getByTestId('notice-line').style.height).toBe(hoheLeere); // mit und ohne Meldung gleich hoch
+    expect(screen.getByTestId('notice-line')).toHaveAttribute('data-zeilen', '3');
+  });
+
+  it('@OB-025 Gegenbeispiel: mit zeilen=1 (Vorgabe) bleibt es bei einer Zeile mit „…“', () => {
+    render(<NoticeLine text={LANG} closeLabel="Schließen" testId="notice-line" />);
+    expect(screen.getByTestId('notice-line')).toHaveAttribute('data-zeilen', '1');
+    expect(screen.getByText(LANG).style.textOverflow).toBe('ellipsis');
+  });
+
   it('ist reine Anzeige: ohne onClose gibt es keinen Knopf, ein Tipp auf die Zeile tut nichts', async () => {
     render(<NoticeLine text="Tor für FC Nord" closeLabel="Schließen" testId="notice-line" />);
     expect(screen.queryByRole('button')).toBeNull();

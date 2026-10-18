@@ -89,7 +89,7 @@ describe('LiveCockpit: Tafel ohne Spiel', () => {
     expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Wartet auf Teams');
     expect(screen.getByTestId('scoreboard-empty')).toHaveTextContent('FC Nord – Zweiter Gruppe B');
     expect(screen.getByTestId('scoreboard-empty')).toHaveTextContent('Spiel 7 · Feld 1');
-    expect(screen.getByText('Abschluss von Gruppe B')).toBeInTheDocument();
+    expect(screen.getByText('Wartet auf: Abschluss von Gruppe B')).toBeInTheDocument();
     expect(screen.getByText('Nur die Turnierleitung ändert die Reihenfolge')).toBeInTheDocument();
     expect(screen.queryByTestId('match-start-button')).toBeNull();
   });

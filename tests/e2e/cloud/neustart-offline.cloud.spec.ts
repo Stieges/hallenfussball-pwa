@@ -100,7 +100,8 @@ test.describe('@FU-007 Neustart ohne Netz', () => {
     try {
       await cutBackend(context);
       await openCockpit(page, ids.tournamentId, ids.matchId);
-      await expect(page.locator('[data-testid="scoreboard-state"]')).toHaveCount(0);
+      // `scoreboard-state` gibt es auch ohne Spiel („Kein Spiel“); `scoreboard-score` steht nur mit einem Spiel im Cockpit
+      await expect(page.locator('[data-testid="scoreboard-score"]')).toHaveCount(0);
       await expect(page.locator('[data-testid="score-home"]')).toHaveCount(0);
       await expect(page.locator('[data-testid="sync-status"][data-pending]:not([data-pending="0"])')).toHaveCount(0);
     } finally {

@@ -37,11 +37,11 @@ vi.mock('../../../components/live-cockpit', () => ({
   LiveCockpit: (props: {
     upcomingMatches?: { homeTeam: { name: string }; awayTeam: { name: string } }[];
     lastFinishedMatch?: { match: { homeTeam: { name: string }; awayTeam: { name: string } } } | null;
-    currentMatch?: unknown;
+    currentMatch?: { id: string } | null;
     sperrHinweise?: { playerNumber: number }[];
     leer?: { art: string; gruende?: string[]; offline?: boolean } | null;
   }) => (
-    <div data-testid="cockpit-stub" data-has-match={props.currentMatch ? 'ja' : 'nein'} data-sperr={(props.sperrHinweise ?? []).map((h) => h.playerNumber).join(',')}>
+    <div data-testid="cockpit-stub" data-has-match={props.currentMatch ? 'ja' : 'nein'} data-match-id={props.currentMatch?.id ?? ''} data-sperr={(props.sperrHinweise ?? []).map((h) => h.playerNumber).join(',')}>
       {props.leer?.art === 'wartetAufHerkunft' && (
         <div data-testid="tafel-wartet">
           {props.leer.gruende?.map((g) => <span key={g} data-testid="tafel-grund">{g}</span>)}
@@ -309,5 +309,40 @@ describe('ManagementTab – @SL-089 Sperr-Hinweise gehen an das Cockpit', () => 
     mockSperr.hinweise = [];
     setup({ matches: [spiel] });
     expect(await screen.findByTestId('cockpit-stub')).toHaveAttribute('data-sperr', '');
+  });
+});
+
+describe('ManagementTab – @SL-056 @SL-117 das nächste Spiel des Felds steht bereit', () => {
+  const S11 = testUuid(130);
+  const S13 = testUuid(131);
+  const S15 = testUuid(132);
+  const live = (id: string) => ({ id, homeTeam: { id: NORD, name: 'FC Nord' }, awayTeam: { id: UFER, name: 'VfB Ufer' }, events: [] });
+  const spiel11 = scheduled({ id: S11, matchNumber: 11, slot: 1, phase: 'groupStage', scoreA: 2, scoreB: 1, slotA: teamSlot(NORD), slotB: teamSlot(UFER) });
+  const spiel13 = scheduled({ id: S13, matchNumber: 13, slot: 2, phase: 'groupStage', slotA: teamSlot(UFER), slotB: teamSlot(NORD) });
+  const spiel15 = scheduled({ id: S15, matchNumber: 15, slot: 3, phase: 'groupStage', slotA: teamSlot(NORD), slotB: teamSlot(UFER) });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockOnline.value = true;
+    mockLiveMatches.map = new Map([[S13, live(S13)], [S15, live(S15)]]);
+    mockGetLiveMatchData.mockResolvedValue(live(S13) as unknown as LiveMatch);
+  });
+
+  it('@SL-056 auch ohne Netz steht nach Spiel 11 das Spiel 13 zum Anpfiff bereit', async () => {
+    mockOnline.value = false;
+    setup({ matches: [spiel11, spiel13, spiel15] });
+    expect(await screen.findByTestId('cockpit-stub')).toHaveAttribute('data-match-id', S13);
+    expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-has-match', 'ja');
+  });
+
+  // @SL-117 (ausgefallenes Spiel steht nicht bereit): `ManagementTab` liest den Zeitplan (`ScheduledMatch`), der den Ausfall nicht
+  // kennt; der Ausfall steht nur am gespeicherten Spiel (`matchStatus: 'skipped'`). Die Auswahl „nächstes Spiel“ übernimmt
+  // B-10a1 (`readyMatchOf`). Bis dahin wählt `currentMatchData` das erste Spiel ohne Ergebnis, auch ein ausgefallenes (Befund
+  // C-COCKPIT-AUSGEFALLEN-BEREIT, Ziel Record Spiel leiten); der Test entsteht mit B-10a1 am dann vorhandenen Baustein.
+  it.todo('@SL-117 ein ausgefallenes Spiel 13 steht nicht bereit: nach Spiel 11 steht Spiel 15 zum Anpfiff bereit (B-10a1)');
+
+  it('@SL-117 Gegenbeispiel: ohne Ausfall steht das nächste Spiel 13 bereit, nicht Spiel 15 (Reihenfolge des Felds)', async () => {
+    setup({ matches: [spiel11, spiel13, spiel15] });
+    expect(await screen.findByTestId('cockpit-stub')).toHaveAttribute('data-match-id', S13);
   });
 });

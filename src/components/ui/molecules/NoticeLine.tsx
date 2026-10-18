@@ -19,10 +19,17 @@ export interface NoticeLineProps {
   size?: 'compact' | 'regular';
   /** Symbol vor dem Text (Farbe allein trägt keine Bedeutung). */
   icon?: ReactNode;
+  /**
+   * Reservierte Zeilen. 1 (Vorgabe): eine Zeile, lange Texte gekürzt mit „…“. 3: dauerhaft drei Zeilen hoch, der Text bricht
+   * um und wird nie gekürzt – für Spiele mit langen Teamnamen am Handy (Namen nie mit „…“, VISUAL-DESIGN § 1).
+   */
+  zeilen?: 1 | 3;
 }
 
-export function NoticeLine({ text, onClose, closeLabel, testId, size = 'compact', icon }: NoticeLineProps): ReactElement {
-  const hoehe = size === 'regular' ? cssVars.sizing.noticeLineHeightRegular : cssVars.sizing.noticeLineHeightCompact;
+export function NoticeLine({ text, onClose, closeLabel, testId, size = 'compact', icon, zeilen = 1 }: NoticeLineProps): ReactElement {
+  const einzeilig = size === 'regular' ? cssVars.sizing.noticeLineHeightRegular : cssVars.sizing.noticeLineHeightCompact;
+  // mehrzeilig: drei Zeilen der kleinen Zeilenhöhe plus der Abstand, den die einzeilige Zeile über ihre Schrift hinaus hat
+  const hoehe = zeilen === 1 ? einzeilig : `calc(${zeilen} * ${cssVars.lineHeights.bodySm} + ${cssVars.spacing.xs})`;
   const zeile: CSSProperties = {
     position: 'relative',
     height: hoehe,
@@ -37,7 +44,9 @@ export function NoticeLine({ text, onClose, closeLabel, testId, size = 'compact'
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.semibold,
   };
-  const textStil: CSSProperties = { flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+  const textStil: CSSProperties = zeilen === 1
+    ? { flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+    : { flex: 1, minWidth: 0, whiteSpace: 'normal', overflowWrap: 'anywhere', lineHeight: cssVars.lineHeights.bodySm };
   const kreuz: CSSProperties = {
     flex: 'none',
     minWidth: cssVars.touchTargets.minimum,
@@ -52,7 +61,7 @@ export function NoticeLine({ text, onClose, closeLabel, testId, size = 'compact'
     cursor: 'pointer',
   };
   return (
-    <div data-testid={testId} role="status" aria-live="polite" style={zeile}>
+    <div data-testid={testId} data-zeilen={zeilen} role="status" aria-live="polite" style={zeile}>
       {text !== null && icon !== undefined && <span aria-hidden="true" style={{ display: 'flex', flex: 'none' }}>{icon}</span>}
       {text !== null && <span style={textStil}>{text}</span>}
       {text !== null && onClose && (

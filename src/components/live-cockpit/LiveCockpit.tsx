@@ -32,6 +32,7 @@ import shell from './LiveCockpitShell.module.css';
 import { useCockpitPhase, useEntryFlows, useSideOrder } from './hooks';
 import { useEnginePhase } from './hooks/useEnginePhase';
 import { legacyPhaseViewOf } from './model/legacyPhaseView';
+import { istAngepfiffenUndNichtBeendet } from './model/cockpitPhase';
 import { useCockpitNotices } from './hooks/useCockpitNotices';
 import { useCockpitCommands } from './hooks/useCockpitCommands';
 
@@ -85,7 +86,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     [engineView, currentMatch, elapsedSeconds],
   );
   const phase = useCockpitPhase(currentMatch, view, currentMatch ? null : leer);
-  const tonHinweis = cockpitSettings.soundEnabled && !sound.isActivated
+  // Nur im angepfiffenen Spiel: vor dem Anpfiff und ohne Spiel hat das Abzeichen keine Wirkung, der Anpfiff-Tipp gibt den Ton frei
+  const tonHinweis = cockpitSettings.soundEnabled && !sound.isActivated && istAngepfiffenUndNichtBeendet(phase.zustand)
     ? { label: t('tafel.tonAusAntippen'), kurz: t('tafel.tonAus'), onAntippen: () => { void sound.activate(); } }
     : null;
 

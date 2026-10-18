@@ -48,10 +48,22 @@ export interface ScoreboardAreaProps {
   uebernahmeVon?: string | null;
 }
 
-/** Anstoßzeit als `HH:MM` in Ortszeit; unlesbar → leer. */
-function anstossText(kickoff: string | undefined): string {
+/** Anstoßzeit als `HH:MM` in Ortszeit in der Anzeigesprache; unlesbar → leer. */
+function anstossText(kickoff: string | undefined, sprache: string): string {
   const datum = kickoff ? new Date(kickoff) : null;
-  return datum && Number.isFinite(datum.getTime()) ? datum.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
+  return datum && Number.isFinite(datum.getTime()) ? datum.toLocaleTimeString(sprache, { hour: '2-digit', minute: '2-digit' }) : '';
+}
+
+/**
+ * Namen ab dieser Länge brauchen am Handy (360 px, 14 px Schrift, ≈ 31 Zeichen je Zeile) für „Foul für <Name>“ und die übrigen
+ * Meldungen mehr als eine Zeile. Gemessen im Review 2c: mit dem Namen von 50 Zeichen sind es drei Zeilen.
+ */
+const LANGER_NAME = 16;
+
+/** Reservierte Zeilen der Meldezeile: je Spiel aus den Teamnamen, nur am Handy mehr als eine; ändert sich im Spiel nie (B3). */
+function meldezeilen(match: LiveMatch | null, size: ScoreboardAreaProps['size']): 1 | 3 {
+  const lang = match !== null && Math.max(match.homeTeam.name.length, match.awayTeam.name.length) > LANGER_NAME;
+  return size === 'compact' && lang ? 3 : 1;
 }
 
 /** Symbol je Stufe (Mockup `.msg.l2/.l3`): Farbe allein trägt keine Bedeutung. */
@@ -64,7 +76,7 @@ function noticeIcon(stufe: NoticeStufe | undefined): ReactElement | undefined {
 
 export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
   const { match, phase, view, settings, order, size, notices, eintraegeWarten, helferAnfragen = 0, onHelferAnfragen, tonHinweis, sync, fieldName, tournamentName, leer = null, mindestpause = null, sperrHinweise = [], uebernahmeVon = null } = props;
-  const { t } = useTranslation('cockpit');
+  const { t, i18n } = useTranslation('cockpit');
   // Takt nur vor dem Anpfiff: „seit … Minuten überfällig“ (@SL-118); sonst steht der Wert still
   const jetztMs = useNow(phase.zustand === 'vorAnpfiff' ? 30_000 : null);
   const kickoff = match?.scheduledKickoff;
@@ -72,9 +84,9 @@ export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
     () => toScoreboardModel({
       match, phase, view, links: order.links, rechts: order.rechts, uhrArt: settings.clockMode,
       schlussphaseMinuten: settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName,
-      vor: { anstoss: anstossText(kickoff), mindestpause, sperrHinweise, leer, uebernahmeVon },
+      vor: { anstoss: anstossText(kickoff, i18n.language), mindestpause, sperrHinweise, leer, uebernahmeVon },
     }, alsUebersetzer(t)),
-    [match, phase, view, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName, kickoff, mindestpause, sperrHinweise, leer, uebernahmeVon, t],
+    [match, phase, view, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName, kickoff, mindestpause, sperrHinweise, leer, uebernahmeVon, t, i18n.language],
   );
   const meldung = notices.aktuell;
   return (
@@ -93,6 +105,7 @@ export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
           closeLabel={t('meldung.schliessen')}
           icon={noticeIcon(meldung?.stufe)}
           size={size === 'compact' ? 'compact' : 'regular'}
+          zeilen={meldezeilen(match, size)}
         />
       )}
     />

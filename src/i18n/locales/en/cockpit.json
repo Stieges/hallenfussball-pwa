@@ -49,12 +49,14 @@
     },
     "uhr": {
       "restzeit": "Time left",
-      "angehalten": "stopped",
+      "steht": "Clock stopped",
       "pause": "Break",
       "pauseVorbei": "Break over",
       "endstand": "Final score",
       "schuesse": "Shots",
-      "anstoss": "Kick-off"
+      "anstoss": "Kick-off",
+      "spielzeit": "Match time",
+      "strafstoss": "$t(sport:events.penaltyShootout)"
     },
     "unterzeile": {
       "spielzeit": "Played {{zeit}}",
@@ -65,8 +67,6 @@
       "amSchuss": "next to shoot: {{team}}"
     },
     "uhrHaelt": "Clock stops at every stoppage",
-    "uhrSteht": "Clock stopped",
-    "wiederanpfiffJetzt": "Time to restart",
     "entscheidungOffen": "Draw – the decision follows",
     "abschnitt": {
       "halbzeit": "Half {{nummer}}",
@@ -83,7 +83,8 @@
       "gesperrt": "{{team}}: no. {{nummer}} is suspended for this tournament",
       "reihenfolgeNurLeitung": "Only the organisers can change the order",
       "keinSpielMehr": "No more matches on {{feld}}",
-      "wartetOffline": "Your device has no network – your data may be out of date. The line-up may already be set on the server."
+      "wartetOffline": "Your device has no network – your data may be out of date. The line-up may already be set on the server.",
+      "wartetAuf": "Waiting for: {{grund}}"
     },
     "wachhaltenSymbol": "Screen may lock – tap to dismiss",
     "tonAus": "Sound off",
@@ -92,7 +93,8 @@
     "eintraegeWarten_other": "{{count}} entries waiting",
     "helferAnfragen_one": "1 helper request",
     "helferAnfragen_other": "{{count}} helper requests",
-    "ariaStand": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}"
+    "ariaStand": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}",
+    "ariaStandStrafstoss": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}, $t(sport:events.penaltyShootout) {{linksStrafstoss}}:{{rechtsStrafstoss}}"
   },
   "ariaLive": {
     "running": "Match running",

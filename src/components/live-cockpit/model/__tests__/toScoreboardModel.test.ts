@@ -36,17 +36,25 @@ describe('toScoreboardModel: Restzeit und Spielzeit', () => {
     expect([formatUhr(0), formatUhr(59), formatUhr(60), formatUhr(110), formatUhr(600), formatUhr(-5)]).toEqual(['0:00', '0:59', '1:00', '1:50', '10:00', '0:00']);
   });
 
-  it('@SL-004 angehaltene Uhr: sie steht bei gespielten 4:10, markiert, mit dem Hinweis „Uhr steht“; der Zustand bleibt Live', () => {
+  it('@SL-004 angehaltene Uhr: sie steht bei gespielten 4:10, markiert und mit „Uhr steht“ im Uhrfeld; der Zustand bleibt Live', () => {
     const m = toScoreboardModel(input({ status: 'paused', sectionElapsedMs: min(4, 10) }), t);
-    expect(m.uhr).toMatchObject({ gespielt: '4:10', rest: '1:50', steht: true, hervorgehoben: true });
+    expect(m.uhr).toMatchObject({ gespielt: '4:10', rest: '1:50', steht: true, hervorgehoben: true, label: 'tafel.uhr.steht' });
     expect(m.zustandText).toBe('tafel.zustand.live');
-    expect(m.hinweise).toContain('tafel.uhrSteht');
+  });
+
+  // B1 (Review 2c): die Tafel darf beim Pausieren und beim Wiederanpfiff nicht wachsen – keine zusätzliche Hinweis-Zeile
+  it('B1 läuft, pausiert, Pause 0:40 und Pause 0:00 haben dieselben stehenden Zeilen (keine zusätzliche Zeile bei „Uhr steht“ und Wiederanpfiff)', () => {
+    const zeilen = (view: Partial<PhaseView>) => toScoreboardModel(input(view), t).hinweise;
+    const laeuft = zeilen({ sectionElapsedMs: min(1) });
+    expect(zeilen({ status: 'paused', sectionElapsedMs: min(1) })).toEqual(laeuft);
+    expect(zeilen({ status: 'section_break', section: 1, isLastRegularSection: false, breakRemainingMs: min(0, 40) })).toEqual(laeuft);
+    expect(zeilen({ status: 'section_break', section: 1, isLastRegularSection: false, breakRemainingMs: 0 })).toEqual(laeuft);
   });
 
   it('@SL-004 Gegenbeispiel: eine laufende Uhr steht nicht und trägt keinen Hinweis „Uhr steht“', () => {
     const m = toScoreboardModel(input({ sectionElapsedMs: min(4, 10) }), t);
     expect(m.uhr?.steht).toBe(false);
-    expect(m.hinweise).not.toContain('tafel.uhrSteht');
+    expect(m.uhr?.label).toBe('tafel.uhr.restzeit');
   });
 });
 
@@ -103,13 +111,11 @@ describe('toScoreboardModel: Zustand, Abschnitt und Stand', () => {
     const m = toScoreboardModel(input({ status: 'section_break', section: 1, isLastRegularSection: false, breakRemainingMs: min(1) }), t);
     expect(m.zustandText).toBe('tafel.zustand.halbzeit');
     expect(m.uhr).toMatchObject({ rest: '1:00', gespielt: null });
-    expect(m.hinweise).not.toContain('tafel.wiederanpfiffJetzt');
   });
 
   it('@SL-070 ist die Pausen-Restzeit 0:00, bleibt sie dort stehen und die Tafel weist deutlich auf den Wiederanpfiff hin', () => {
     const m = toScoreboardModel(input({ status: 'section_break', section: 1, isLastRegularSection: false, breakRemainingMs: 0 }), t);
-    expect(m.uhr).toMatchObject({ rest: '0:00', hervorgehoben: true });
-    expect(m.hinweise).toContain('tafel.wiederanpfiffJetzt');
+    expect(m.uhr).toMatchObject({ rest: '0:00', hervorgehoben: true, ton: 'ok', label: 'tafel.uhr.pauseVorbei', unterzeile: 'tafel.unterzeile.wiederanpfiff' });
   });
 
   it('@SL-009 @SL-073 abgepfiffen mit 2:1: die Tafel zeigt „Abgepfiffen“ mit dem Endstand, auch ohne Ton', () => {
@@ -118,6 +124,39 @@ describe('toScoreboardModel: Zustand, Abschnitt und Stand', () => {
     expect(m.ton).toBe('ende');
     expect([m.links.tore, m.rechts.tore]).toEqual([2, 1]);
     expect(m.ariaStand).toBe('tafel.ariaStand:{"links":"FC Nord","linksTore":2,"rechts":"SV Süd","rechtsTore":1}');
+  });
+
+  // B2 (Review 2c, Auflage A-36b „Endstand nur aus matchFinalScore“): unter „Abgepfiffen“ steht nie eine Restzeit
+  it('@SL-073 abgepfiffen nach Ablauf: unter dem Zustand steht die gespielte Zeit, keine Restzeit', () => {
+    const m = toScoreboardModel(input({ status: 'finished', sectionElapsedMs: min(6) }, { match: makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 1 }) }, 'FINISHED'), t);
+    expect(m.uhr).toMatchObject({ label: 'tafel.uhr.spielzeit', rest: '6:00', ton: 'gedaempft' });
+  });
+
+  it('@SL-082 Golden Goal bei 1:10 von 3:00 beendet das Spiel: die Tafel zeigt 1:10 gespielt, nicht 1:50 „Rest“', () => {
+    const m = toScoreboardModel(input(
+      { status: 'finished', phase: 'overtime', tiebreakMode: 'goldenGoal', sectionLimitMs: min(3), sectionElapsedMs: min(1, 10) },
+      { match: makeLiveMatch({ status: 'FINISHED', homeScore: 1, awayScore: 1, overtimeScoreA: 1, overtimeScoreB: 0 }) }, 'FINISHED'), t);
+    expect(m.uhr).toMatchObject({ label: 'tafel.uhr.spielzeit', rest: '1:10' });
+    expect([m.links.tore, m.rechts.tore]).toEqual([2, 1]);
+  });
+
+  it('@SL-053 nach dem Strafstoßschießen (2:2, 4:3) steht dessen Ergebnis in der Tafel, nicht „5:00“; der Stand bleibt 2:2', () => {
+    const match = makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 2, penaltyScoreA: 4, penaltyScoreB: 3 });
+    const m = toScoreboardModel(input({ status: 'finished', phase: 'shootout', sectionElapsedMs: min(1) }, { match }, 'FINISHED'), t);
+    expect(m.uhr).toMatchObject({ label: 'tafel.uhr.strafstoss', rest: '4:3' });
+    expect([m.links.tore, m.rechts.tore]).toEqual([2, 2]);
+    expect(m.ariaStand).toBe('tafel.ariaStandStrafstoss:{"links":"FC Nord","linksTore":2,"rechts":"SV Süd","rechtsTore":2,"linksStrafstoss":4,"rechtsStrafstoss":3}');
+  });
+
+  it('@SL-053 Gegenbeispiel: mit getauschten Seiten steht das Strafstoß-Ergebnis in der Anzeigereihenfolge (3:4)', () => {
+    const match = makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 2, penaltyScoreA: 4, penaltyScoreB: 3 });
+    expect(toScoreboardModel(input({ status: 'finished', phase: 'shootout' }, { match, links: 'away', rechts: 'home' }, 'FINISHED'), t).uhr?.rest).toBe('3:4');
+  });
+
+  it('@SL-009 Gegenbeispiel: ein reguläres Ende ohne Strafstoßschießen zeigt kein Strafstoß-Ergebnis', () => {
+    const m = toScoreboardModel(input({ status: 'finished', sectionElapsedMs: min(6) }, { match: makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 1 }) }, 'FINISHED'), t);
+    expect(m.uhr?.label).not.toBe('tafel.uhr.strafstoss');
+    expect(m.ariaStand.startsWith('tafel.ariaStand:')).toBe(true);
   });
 
   it('@SL-082 Golden Goal: der Abschnitt heißt „Golden Goal“, der Zustand bleibt Live', () => {

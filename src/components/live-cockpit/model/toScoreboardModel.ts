@@ -12,10 +12,10 @@ import type { CockpitPhase, CockpitZustand } from './cockpitPhase';
 import type { ScoreboardModel, ScoreboardSeite, ScoreboardTon, ScoreboardUhr } from '../../ui/molecules/Scoreboard';
 import type { Side, Uebersetzer } from './cockpitTypes';
 import { scoreboardVor, type ScoreboardVorInput } from './scoreboardVor';
-import { getEffectiveScore } from '../../../utils/matchScore';
+import { liveMatchFinalScore } from '../../../utils/matchScore';
 
 /** Was die Tafel vom Spiel liest (der Cockpit-`LiveMatch` und der Kern-`LiveMatch` erfüllen es beide). */
-export type ScoreboardMatch = Pick<LiveMatch, 'id' | 'number' | 'scheduledKickoff' | 'homeTeam' | 'awayTeam' | 'homeScore' | 'awayScore' | 'overtimeScoreA' | 'overtimeScoreB'>;
+export type ScoreboardMatch = Pick<LiveMatch, 'id' | 'number' | 'scheduledKickoff' | 'homeTeam' | 'awayTeam' | 'homeScore' | 'awayScore' | 'overtimeScoreA' | 'overtimeScoreB' | 'penaltyScoreA' | 'penaltyScoreB'>;
 
 export interface ScoreboardInput {
   /** `null`, solange kein Spiel dasteht („wartet auf Teams“, „kein Spiel mehr“). */
@@ -47,7 +47,7 @@ export function formatUhr(sekunden: number): string {
 
 const TON: Record<CockpitZustand, ScoreboardTon> = {
   vorAnpfiff: 'neutral', laeuft: 'live', pausiert: 'live', halbzeitpause: 'pause', pauseVorVerlaengerung: 'pause',
-  entscheidung: 'info', strafstoss: 'info', abgepfiffen: 'ende', wartetAufHerkunft: 'neutral', keinSpiel: 'neutral',
+  entscheidung: 'info', strafstoss: 'info', abgepfiffen: 'ende', wartetAufHerkunft: 'info', keinSpiel: 'neutral',
 };
 const ZUSTAND_KEY: Record<CockpitZustand, string> = {
   vorAnpfiff: 'tafel.zustand.vorAnpfiff', laeuft: 'tafel.zustand.live', pausiert: 'tafel.zustand.live',
@@ -85,12 +85,11 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
     const schlussphase = anzeige.phase === 'schlussphaseAngehalten';
     const gespielt = formatUhr(view.sectionElapsedMs / 1000);
     if (anzeige.hinweisUhrHaelt && !schlussphase) { hinweise.push(t('tafel.uhrHaelt')); }
-    if (steht) { hinweise.push(t('tafel.uhrSteht')); }
     return {
       hinweise,
       uhr: {
         rest: formatUhr(anzeige.restSekunden), gespielt, schlussphase, steht, hervorgehoben: anzeige.hervorhebung || steht,
-        label: t(steht ? 'tafel.uhr.angehalten' : 'tafel.uhr.restzeit'), unterzeile: t('tafel.unterzeile.spielzeit', { zeit: gespielt }),
+        label: t(steht ? 'tafel.uhr.steht' : 'tafel.uhr.restzeit'), unterzeile: t('tafel.unterzeile.spielzeit', { zeit: gespielt }),
       },
     };
   }
@@ -98,7 +97,6 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
     const rest = (view.breakRemainingMs ?? 0) / 1000;
     const vorbei = rest === 0;
     const vorVerlaengerung = phase.zustand === 'pauseVorVerlaengerung';
-    if (vorbei) { hinweise.push(t('tafel.wiederanpfiffJetzt')); }
     return {
       hinweise,
       uhr: {
@@ -120,19 +118,39 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
       },
     };
   }
-  if (phase.zustand === 'entscheidung' || phase.zustand === 'abgepfiffen') {
-    if (phase.zustand === 'entscheidung') { hinweise.push(t('tafel.entscheidungOffen')); }
+  if (phase.zustand === 'entscheidung') {
+    hinweise.push(t('tafel.entscheidungOffen'));
+    return { hinweise, uhr: { rest: abgelaufenRest, gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', label: t('tafel.uhr.endstand'), unterzeile: null } };
+  }
+  if (phase.zustand === 'abgepfiffen') {
+    // B2: nie eine Restzeit unter „Abgepfiffen“ – nach dem Strafstoßschießen dessen Ergebnis, sonst die gespielte Zeit
+    const strafstoss = match ? liveMatchFinalScore(match)?.penalty : undefined;
+    if (strafstoss) {
+      const seite = (anzeige: Side): number => (anzeige === 'home' ? strafstoss.a : strafstoss.b);
+      return {
+        hinweise,
+        uhr: { rest: `${seite(input.links)}:${seite(input.rechts)}`, gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', label: t('tafel.uhr.strafstoss'), unterzeile: null },
+      };
+    }
     return {
       hinweise,
-      uhr: { rest: abgelaufenRest, gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', label: t('tafel.uhr.endstand'), unterzeile: null },
+      uhr: { rest: formatUhr(Math.min(view.sectionElapsedMs, view.sectionLimitMs) / 1000), gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', label: t('tafel.uhr.spielzeit'), unterzeile: null },
     };
   }
   return { uhr: null, hinweise };
 }
 
+function ariaStandOf(input: ScoreboardInput, links: ScoreboardSeite, rechts: ScoreboardSeite, strafstoss: { a: number; b: number } | undefined, t: Uebersetzer): string {
+  const basis = { links: links.name, linksTore: links.tore, rechts: rechts.name, rechtsTore: rechts.tore };
+  if (input.phase.zustand !== 'abgepfiffen' || !strafstoss) { return t('tafel.ariaStand', basis); }
+  const seite = (anzeige: Side): number => (anzeige === 'home' ? strafstoss.a : strafstoss.b);
+  return t('tafel.ariaStandStrafstoss', { ...basis, linksStrafstoss: seite(input.links), rechtsStrafstoss: seite(input.rechts) });
+}
+
 export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): ScoreboardModel {
   const { match, phase } = input;
-  const stand = match ? getEffectiveScore(match) : { home: 0, away: 0 }; // Verlängerung/Golden Goal zählen mit
+  const endstand = match ? liveMatchFinalScore(match) : null; // Tore = regulär + Verlängerung, ohne Strafstoßschießen (A-36b)
+  const stand = endstand ? { home: endstand.a, away: endstand.b } : { home: 0, away: 0 };
   const seite = (anzeige: 'links' | 'rechts'): ScoreboardSeite => {
     const s = input[anzeige];
     const trikot = input.trikot?.[anzeige];
@@ -147,6 +165,6 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
     uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige,
     eintraegeWartenText: input.eintraegeWarten > 0 ? t('tafel.eintraegeWarten', { count: input.eintraegeWarten }) : null,
     helferAnfragenText: input.helferAnfragen > 0 ? t('tafel.helferAnfragen', { count: input.helferAnfragen }) : null,
-    ariaStand: t('tafel.ariaStand', { links: links.name, linksTore: links.tore, rechts: rechts.name, rechtsTore: rechts.tore }),
+    ariaStand: ariaStandOf(input, links, rechts, endstand?.penalty, t),
   };
 }

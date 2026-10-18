@@ -103,7 +103,7 @@ test.describe('Cockpit-Tafel', () => {
     await expect(page.getByTestId('scoreboard-state')).toContainText('Live');
     await page.getByTestId('match-pause-button').click();
     await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'true');
-    await expect(page.getByTestId('scoreboard')).toContainText('Uhr steht');
+    await expect(page.getByTestId('scoreboard-clock')).toContainText('Uhr steht');
     const beiPause = await page.getByTestId('scoreboard-clock-rest').textContent();
     await page.waitForTimeout(2200);
     expect(await page.getByTestId('scoreboard-clock-rest').textContent()).toBe(beiPause);
@@ -113,6 +113,20 @@ test.describe('Cockpit-Tafel', () => {
     await expect(async () => {
       expect(await page.getByTestId('scoreboard-clock-rest').textContent()).not.toBe(beiPause);
     }).toPass({ timeout: 5000 });
+  });
+
+  test('B1 die Tafel springt nicht: gleiche Höhe laufend, pausiert und nach Weiter (Spec § 7)', async ({ page }) => {
+    await page.getByTestId('match-start-button').click();
+    await expect(page.getByTestId('scoreboard-state')).toContainText('Live');
+    const hoehe = async () => Math.round((await page.getByTestId('scoreboard').boundingBox())!.height);
+    const laeuft = await hoehe();
+    await page.getByTestId('match-pause-button').click();
+    await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'true');
+    await expect(page.getByTestId('scoreboard-clock')).toContainText('Uhr steht');
+    expect(await hoehe()).toBe(laeuft);
+    await page.getByTestId('match-start-button').click();
+    await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'false');
+    expect(await hoehe()).toBe(laeuft);
   });
 
   test('@SL-064 @OB-021 nichts liegt fest über Uhr, Stand oder Bedienelementen: keine schwebenden Hinweise', async ({ page }) => {

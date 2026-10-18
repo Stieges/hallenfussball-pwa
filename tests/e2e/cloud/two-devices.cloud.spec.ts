@@ -119,12 +119,9 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
   });
 
   test('Cup FINISHAUSGANG: nach dem Abpfiff des letzten Spiels zeigt der Helfer-Ausgang data-pending="0" (C-COCKPIT-LAEDT-NACH-ABPFIFF)', async ({ asRole }) => {
-    // Besitzer: B-11 (Cockpit-Umbau). Heute steht nach dem Abpfiff des LETZTEN Spiels dauerhaft
-    // "Spiel wird geladen…" statt des Cockpits (ManagementTab `isInitializingMatch`, Befund N3); der
-    // SyncStatusIndicator hängt nur im Cockpit und ist dann nicht gerendert. Die Aussage bleibt
-    // unverändert (data-pending="0" beim handelnden Gerät); sie scheitert erwartungsgemäß an der
-    // fehlenden Anzeige. Wird sie grün ("Expected to fail, but passed"), ist B-11 fertig: test.fail entfernen.
-    test.fail(true, 'Besitzer: B-11 (C-COCKPIT-LAEDT-NACH-ABPFIFF)');
+    // Behoben mit Cockpit 2.5: Nach dem Abpfiff des LETZTEN Spiels steht die Tafel mit „Kein weiteres Spiel“ (@SL-054) statt „Spiel wird
+    // geladen…“, und der SyncStatusIndicator in der Tafel zeigt den Ausgang des handelnden Geräts. Der Test erwartete bis dahin
+    // einen Fehler (`test.fail`, Besitzer B-11); er läuft jetzt als normaler Test.
     const { ids, target } = cup('FINISHAUSGANG');
     await expectSeededEngineMatch(target);
     const helperPage = await asRole('helper');

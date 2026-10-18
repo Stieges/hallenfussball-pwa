@@ -97,6 +97,31 @@ describe('Scoreboard', () => {
     expect(screen.getByTestId('scoreboard-clock')).toHaveTextContent('angehalten');
   });
 
+  // B1 (Review 2c): „die Tafel springt nicht“ – Markierungen der Uhr dürfen die Höhe nicht ändern
+  it('B1 die Markierung der angehaltenen Uhr hat keine Layoutwirkung: Outline, kein Rand und kein Innenabstand', () => {
+    const { rerender } = render(<Scoreboard model={model} size="compact" meldezeile={null} testId="scoreboard" />);
+    const laeuft = screen.getByTestId('scoreboard-clock').getAttribute('style');
+    rerender(<Scoreboard model={{ ...model, uhr: { ...model.uhr!, steht: true, hervorgehoben: true, label: 'Uhr steht' } }} size="compact" meldezeile={null} testId="scoreboard" />);
+    const steht = screen.getByTestId('scoreboard-clock');
+    expect(steht.style.outline).toMatch(/dashed/);
+    expect(steht.style.padding).toBe('');
+    expect(steht.style.border).toBe('');
+    expect(laeuft).not.toMatch(/padding|border:/);
+  });
+
+  it('B1 „Pause vorbei“ (Wiederanpfiff) wird nur durch Farbe und Text markiert, ohne Rand und Innenabstand', () => {
+    render(<Scoreboard model={{ ...model, uhr: { ...model.uhr!, ton: 'ok', hervorgehoben: true, label: 'Pause vorbei', unterzeile: 'Wiederanpfiff' } }} size="compact" meldezeile={null} testId="scoreboard" />);
+    const uhr = screen.getByTestId('scoreboard-clock');
+    expect(uhr.style.padding).toBe('');
+    expect(uhr.style.border).toBe('');
+    expect(screen.getByTestId('scoreboard-clock-rest')).toHaveStyle({ color: 'var(--color-scoreboard-ok)' });
+  });
+
+  it('B1 die Unterzeile behält ihre Höhe, auch wenn sie leer ist (Strafstoßschießen entschieden, Endstand)', () => {
+    render(<Scoreboard model={{ ...model, uhr: { ...model.uhr!, unterzeile: null, gespielt: null } }} size="compact" meldezeile={null} testId="scoreboard" />);
+    expect(screen.getByTestId('scoreboard-clock-sub')).toHaveStyle({ minHeight: 'var(--line-height-body-sm)' });
+  });
+
   it('das Uhr-Element steht immer, ohne Uhr leer (die Tafel springt nicht)', () => {
     render(<Scoreboard model={{ ...model, uhr: null }} size="compact" meldezeile={null} testId="scoreboard" />);
     expect(screen.getByTestId('scoreboard-clock')).toBeEmptyDOMElement();

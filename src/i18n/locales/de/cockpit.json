@@ -49,12 +49,14 @@
     },
     "uhr": {
       "restzeit": "Restzeit",
-      "angehalten": "angehalten",
+      "steht": "Uhr steht",
       "pause": "Pause",
       "pauseVorbei": "Pause vorbei",
       "endstand": "Endstand",
       "schuesse": "Schüsse",
-      "anstoss": "Anstoß"
+      "anstoss": "Anstoß",
+      "spielzeit": "Spielzeit",
+      "strafstoss": "$t(sport:events.penaltyShootout)"
     },
     "unterzeile": {
       "spielzeit": "Spielzeit {{zeit}}",
@@ -65,8 +67,6 @@
       "amSchuss": "am Schuss: {{team}}"
     },
     "uhrHaelt": "Uhr hält bei Unterbrechung",
-    "uhrSteht": "Uhr steht",
-    "wiederanpfiffJetzt": "Zeit für den Wiederanpfiff",
     "entscheidungOffen": "Unentschieden – die Entscheidung folgt",
     "abschnitt": {
       "halbzeit": "{{nummer}}. Halbzeit",
@@ -83,7 +83,8 @@
       "gesperrt": "{{team}}: Nr. {{nummer}} ist für dieses Turnier gesperrt",
       "reihenfolgeNurLeitung": "Nur die Turnierleitung ändert die Reihenfolge",
       "keinSpielMehr": "Auf {{feld}} folgt kein Spiel mehr",
-      "wartetOffline": "Dein Gerät hat kein Netz – dein Stand kann veraltet sein. Die Besetzung steht am Server vielleicht schon fest."
+      "wartetOffline": "Dein Gerät hat kein Netz – dein Stand kann veraltet sein. Die Besetzung steht am Server vielleicht schon fest.",
+      "wartetAuf": "Wartet auf: {{grund}}"
     },
     "wachhaltenSymbol": "Bildschirm kann sich sperren – antippen zum Ausblenden",
     "tonAus": "Ton aus",
@@ -92,7 +93,8 @@
     "eintraegeWarten_other": "{{count}} Einträge warten",
     "helferAnfragen_one": "1 Helfer-Anfrage",
     "helferAnfragen_other": "{{count}} Helfer-Anfragen",
-    "ariaStand": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}"
+    "ariaStand": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}",
+    "ariaStandStrafstoss": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}, $t(sport:events.penaltyShootout) {{linksStrafstoss}}:{{rechtsStrafstoss}}"
   },
   "ariaLive": {
     "running": "Spiel läuft",

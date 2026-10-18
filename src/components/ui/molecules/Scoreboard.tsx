@@ -8,7 +8,7 @@
  * Die Tafel ist in beiden Themes dunkel (Tokens `scoreboard*`).
  */
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
-import { cssVars, iconSizeValues } from '../../../design-tokens';
+import { animations, cssVars, iconSizeValues } from '../../../design-tokens';
 import { Icons } from '../Icons';
 import { TafelIcons } from '../IconsTafel';
 
@@ -134,7 +134,7 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
   };
   const punkt: CSSProperties = {
     width: cssVars.spacing.sm, height: cssVars.spacing.sm, borderRadius: cssVars.borderRadius.full,
-    background: cssVars.colors.scoreboardOnLive, animation: 'pulse 1.4s infinite',
+    background: cssVars.colors.scoreboardOnLive, animation: animations.pulse,
   };
   const abschnitt: CSSProperties = {
     flex: '1 1 auto', minWidth: 'max-content', textAlign: 'center', color: cssVars.colors.scoreboardTextMuted,
@@ -161,9 +161,12 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
       background: farbe && seite.trikot ? seite.trikot : 'transparent', color: farbe ?? cssVars.colors.scoreboardText,
     };
   };
+  // Markierung ohne Layoutwirkung (B1: „die Tafel springt nicht“): Outline statt Rand und Innenabstand
+  const markierung = uhr?.steht ? cssVars.colors.scoreboardHighlight : uhr?.ton === 'ok' ? cssVars.colors.scoreboardOk : null;
   const uhrFlaeche: CSSProperties = {
-    textAlign: 'center', minWidth: 0, margin: '0 auto', padding: uhr?.steht ? cssVars.spacing.xs : undefined, borderRadius: cssVars.borderRadius.md,
-    border: uhr?.steht ? `calc(${cssVars.borderWidth.thin} * 2) dashed ${cssVars.colors.scoreboardHighlight}` : undefined,
+    textAlign: 'center', minWidth: 0, margin: '0 auto', borderRadius: cssVars.borderRadius.md,
+    outline: markierung ? `calc(${cssVars.borderWidth.thin} * 2) dashed ${markierung}` : undefined,
+    outlineOffset: markierung ? cssVars.spacing.xs : undefined,
   };
   const uhrGroesse = size === 'compact' ? cssVars.sizing.scoreboardClockCompact : size === 'regular' ? cssVars.sizing.scoreboardClockRegular : cssVars.sizing.scoreboardClockWide;
   const uhrFarbe = uhr?.schlussphase ? cssVars.colors.scoreboardFinalPhase : uhr?.ton === 'ok' ? cssVars.colors.scoreboardOk : uhr?.ton === 'gedaempft' ? cssVars.colors.scoreboardTextMuted : cssVars.colors.scoreboardText;
@@ -214,7 +217,7 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
               <>
                 {uhr.label && <div style={{ ...klein, fontWeight: cssVars.fontWeights.bold, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: cssVars.spacing.xs }}>{uhr.steht && <TafelIcons.Pause size={iconSizeValues.xs} />}{uhr.label}</div>}
                 <div style={uhrZahl} data-testid={id('clock-rest')}>{uhr.rest}</div>
-                {(uhr.unterzeile ?? uhr.gespielt) && <div style={klein} data-testid={id('clock-sub')}>{uhr.unterzeile ?? uhr.gespielt}</div>}
+                <div style={{ ...klein, minHeight: gross ? cssVars.lineHeights.bodyMd : cssVars.lineHeights.bodySm }} data-testid={id('clock-sub')}>{uhr.unterzeile ?? uhr.gespielt}</div>
               </>
             )}
           </div>
@@ -226,8 +229,8 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
       )}
       {model.hinweise.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs }}>
-          {model.hinweise.map((text) => (
-            <div key={text} style={zeile}><span style={{ color: cssVars.colors.scoreboardHighlight, display: 'flex' }} aria-hidden="true"><Icons.Info size={icon} /></span>{text}</div>
+          {model.hinweise.map((text, index) => (
+            <div key={`${index}-${text}`} style={zeile}><span style={{ color: cssVars.colors.scoreboardHighlight, display: 'flex' }} aria-hidden="true"><Icons.Info size={icon} /></span>{text}</div>
           ))}
         </div>
       )}

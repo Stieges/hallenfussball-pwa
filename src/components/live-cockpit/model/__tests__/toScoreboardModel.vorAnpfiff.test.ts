@@ -83,13 +83,14 @@ describe('Tafel: wartet auf die Herkunft, kein Spiel mehr', () => {
     const m = toScoreboardModel(vorAnpfiff({}, um('15:00'), wartet), t);
     expect(m.zustandText).toBe('tafel.zustand.wartet');
     expect(m.leerAnzeige).toEqual({ titel: 'FC Nord – Zweiter Gruppe B', untertitel: 'Halbfinale 1 · Feld 1' });
-    expect(m.hinweise).toContain('Gruppe B ist noch nicht abgeschlossen');
+    expect(m.hinweise).toContain('tafel.vor.wartetAuf:{"grund":"Gruppe B ist noch nicht abgeschlossen"}');
     expect(m.uhr).toBeNull();
+    expect(m.ton).toBe('info');
   });
 
   it('@SL-119 die Tafel nennt den Grund und dass nur die Turnierleitung die Reihenfolge auf Feld 1 ändert', () => {
     const m = toScoreboardModel(vorAnpfiff({}, um('15:00'), wartet), t);
-    expect(m.hinweise).toEqual(expect.arrayContaining(['Gruppe B ist noch nicht abgeschlossen', 'tafel.vor.reihenfolgeNurLeitung']));
+    expect(m.hinweise).toEqual(expect.arrayContaining(['tafel.vor.wartetAuf:{"grund":"Gruppe B ist noch nicht abgeschlossen"}', 'tafel.vor.reihenfolgeNurLeitung']));
   });
 
   it('@TM-035 ohne Netz nennt die Tafel zusätzlich, dass der Stand dieses Geräts ohne Netz ist', () => {

@@ -17,8 +17,7 @@ import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
 import { LiveCockpit } from '../../components/live-cockpit';
 import type { MatchSummary } from '../../components/live-cockpit/types';
 import { useCockpitExecution } from '../../hooks/useCockpitExecution';
-import { useRedCardSuspensions } from '../../hooks/useRedCardSuspensions';
-import type { LeerGrund } from '../../components/live-cockpit/model/cockpitPhase';
+import { useCockpitLeerGrund } from './hooks/useCockpitLeerGrund';
 import { useTournamentMembers } from '../auth/hooks/useTournamentMembers';
 import { useEffectiveTournamentRole } from '../auth/hooks/useMyTournamentRole';
 import { canEditResults, canManageTournament } from '../auth/utils/permissions';
@@ -26,7 +25,7 @@ import { RulesLockProvider } from '../../components/match-settings/RulesLockCont
 import { useToast } from '../../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../../lib/sentry';
 import { MatchAwaitingTeamsError, MatchNotOnEngineError, type MatchNotOnEngineReason } from '../../core/errors';
-import { awaitingLabel, matchLabelText } from '../../core/models/slotLabel';
+import { matchLabelText } from '../../core/models/slotLabel';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { buildSideContext, sideDisplay, sideName } from '../../components/schedule/matchSides';
 import styles from './ManagementTab.module.css';
@@ -317,37 +316,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // A-08d2b (B1): Ereignisse kommen vom Engine-Weg bereits im Laufzeitformat (teamId) -- keine
   // Umrechnung mehr an der Prop-Grenze. Das Cockpit bekommt das Match unveraendert.
 
-  // @TM-033: Wartegründe der offenen Seiten des gewählten Spiels
-  const awaitingReasons = useMemo(() => {
-    if (!currentMatchData) { return []; }
-    const ctx = { teams: tournament.teams, matches: schedule.allMatches, groups: tournament.groups };
-    const reasons = [awaitingLabel(currentMatchData.slotA, ctx), awaitingLabel(currentMatchData.slotB, ctx)]
-      .filter((reason): reason is string => reason !== undefined);
-    return Array.from(new Set(reasons));
-  }, [currentMatchData, tournament.teams, tournament.groups, schedule.allMatches]);
-
-  // @SL-089: gesperrte Nummern nach Rot (L6) für das Spiel, das im Cockpit steht
-  const sperrHinweise = useRedCardSuspensions(tournament, currentMatchData?.id ?? '');
-
-  // Kein Spiel im Cockpit: die Tafel nennt den Grund (@SL-052 wartet auf die Herkunft, @SL-054 kein Spiel mehr) statt eines eigenen Hinweises
-  const leer = useMemo((): LeerGrund | null => {
-    if (awaitingTeams && currentMatchData) {
-      return {
-        art: 'wartetAufHerkunft', gruende: awaitingReasons, offline: !isOnline,
-        paarung: `${sideName(currentMatchData, 'A', sides)} – ${sideName(currentMatchData, 'B', sides)}`,
-        spielLabel: tCockpit('tafel.vor.spielFeld', { nummer: currentMatchData.matchNumber, feld: t('management.field', { number: selectedFieldNumber }) }),
-      };
-    }
-    return !currentMatchData ? { art: 'keinSpiel', feldName: t('management.field', { number: selectedFieldNumber }) } : null;
-  }, [awaitingTeams, currentMatchData, awaitingReasons, isOnline, sides, tCockpit, t, selectedFieldNumber]);
-
-  // Ohne Spiel braucht das Cockpit nur die Tafel; die Rückrufe sind Pflicht des Typs, aber ohne Spiel nie erreichbar
-  const leerProps = {
-    fieldName: t('management.field', { number: selectedFieldNumber }), tournamentName: tournament.title, tournamentId: tournament.id,
-    cockpitSettings: tournament.matchCockpitSettings, currentMatch: null, leer, upcomingMatches,
-    onStart: () => undefined, onPause: () => undefined, onResume: () => undefined, onFinish: () => undefined,
-    onGoal: () => undefined, onLoadNextMatch: handleLoadNextMatch,
-  } as const;
+  // Kein Spiel im Cockpit: die Tafel nennt den Grund (@SL-052, @SL-054); Sperr-Hinweise nach Rot (@SL-089)
+  const { leer, sperrHinweise, leerProps } = useCockpitLeerGrund({
+    tournament, allMatches: schedule.allMatches, currentMatchData, awaitingTeams, isOnline, sides, selectedFieldNumber,
+    upcomingMatches, onLoadNextMatch: handleLoadNextMatch,
+  });
 
   return (
     <div className={styles.container}>

@@ -223,3 +223,45 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
 function fireClick(name: string): void {
   act(() => { screen.getByRole('button', { name }).click(); });
 }
+
+/**
+ * B3 (Review 2c, VISUAL-DESIGN § 1, @OB-025): Namen werden in der Meldezeile nie mit „…“ gekürzt. Die Zahl der reservierten
+ * Zeilen hängt je Spiel an den beiden Teamnamen und der Tafelgröße; sie ändert sich innerhalb eines Spiels nie.
+ */
+describe('LiveCockpit – Meldezeile reserviert Zeilen je Spiel (B3)', () => {
+  const NAME_50 = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
+  const breite = (px: number) => { Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: px }); };
+  const langesSpiel = (extra: Record<string, unknown> = {}) => makeMatch({ homeTeam: { id: 'team-a', name: NAME_50 }, ...extra });
+  afterEach(() => breite(1024));
+
+  it('@OB-025 am Handy (360 px) reserviert ein Spiel mit einem Namen von 50 Zeichen drei Zeilen, und die Meldung steht vollständig da', () => {
+    breite(360);
+    const { rerender } = render(<LiveCockpit {...baseProps(langesSpiel({ events: fouls('team-a', 4) }))} />);
+    const hoheOhne = screen.getByTestId(MELDUNG).style.height;
+    expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '3');
+    rerender(<LiveCockpit {...baseProps(langesSpiel({ events: fouls('team-a', 5) }))} />);
+    expect(screen.getByTestId(MELDUNG)).toHaveTextContent(`${NAME_50}: 5. Foul in dieser Halbzeit`);
+    expect(screen.getByTestId(MELDUNG).style.height).toBe(hoheOhne); // mit und ohne Meldung gleich hoch
+  });
+
+  it('@OB-025 Gegenbeispiel: bei kurzen Namen bleibt es am Handy bei einer Zeile', () => {
+    breite(360);
+    render(<LiveCockpit {...baseProps(makeMatch())} />);
+    expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '1');
+  });
+
+  it('@OB-025 Gegenbeispiel: ab 768 px reicht auch bei langen Namen eine Zeile', () => {
+    breite(768);
+    render(<LiveCockpit {...baseProps(langesSpiel())} />);
+    expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '1');
+  });
+
+  it('@OB-025 die Reserve ändert sich innerhalb eines Spiels nie (Foul-Stand, Spielstand, Status)', () => {
+    breite(360);
+    const { rerender } = render(<LiveCockpit {...baseProps(langesSpiel())} />);
+    for (const extra of [{ events: fouls('team-a', 5) }, { status: 'RUNNING', homeScore: 1 }, { status: 'PAUSED' }]) {
+      rerender(<LiveCockpit {...baseProps(langesSpiel(extra))} />);
+      expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '3');
+    }
+  });
+});

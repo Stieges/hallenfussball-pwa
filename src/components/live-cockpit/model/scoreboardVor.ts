@@ -72,7 +72,7 @@ export function scoreboardVor(input: VorEingang, t: Uebersetzer): ScoreboardVorE
   const grund = vor.leer;
   if (phase.zustand === 'wartetAufHerkunft' && grund?.art === 'wartetAufHerkunft') {
     leerAnzeige = { titel: grund.paarung ?? t('tafel.zustand.wartet'), untertitel: grund.spielLabel ?? null };
-    hinweise.push(...grund.gruende, t('tafel.vor.reihenfolgeNurLeitung'));
+    hinweise.push(...grund.gruende.map((g) => t('tafel.vor.wartetAuf', { grund: g })), t('tafel.vor.reihenfolgeNurLeitung'));
     if (grund.offline) { hinweise.push(t('tafel.vor.wartetOffline')); }
   }
   if (phase.zustand === 'keinSpiel' && grund?.art === 'keinSpiel') {
