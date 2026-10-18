@@ -12,7 +12,7 @@
 export type RouteName =
   | 'dashboard' | 'archive' | 'trash'
   | 'wizardNew' | 'wizardEdit' | 'admin' | 'tournament'
-  | 'publicLive' | 'monitorDisplay' | 'public'
+  | 'publicLive' | 'monitorDisplay'
   | 'authCallback' | 'authConfirm' | 'setPassword' | 'localTest'
   | 'login' | 'register' | 'invite' | 'settings' | 'profile'
   | 'impressum' | 'datenschutz';
@@ -103,8 +103,6 @@ const ROUTES: readonly RouteDef[] = [
   { name: 'publicLive', pattern: /^\/live\/([A-Za-z0-9]+)$/, paramNames: ['shareCode'] },
   // App.tsx:168/279 — /^\/display\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9-]+)$/
   { name: 'monitorDisplay', pattern: /^\/display\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9-]+)$/, paramNames: ['tournamentId', 'monitorId'], kiosk: true },
-  // App.tsx:275 — /^\/public\/([a-zA-Z0-9-]+)$/
-  { name: 'public', pattern: /^\/public\/([a-zA-Z0-9-]+)$/, paramNames: ['tournamentId'] },
 
   // App.tsx:299 — path === '/auth/callback'
   { name: 'authCallback', pattern: /^\/auth\/callback$/, paramNames: [] },

@@ -14,7 +14,6 @@
 | **Tournament Wizard** | `flows/wizard.spec.ts` | 14 | ✅ Neu |
 | **Tournament Tabs** | `flows/tournament-tabs.spec.ts` | 15 | ✅ Neu |
 | **Match Cockpit (Extended)** | `flows/match-cockpit-extended.spec.ts` | 13 | ✅ Neu |
-| **Public View** | `flows/public-view.spec.ts` | 17 | ✅ Neu |
 | **Settings** | `flows/settings.spec.ts` | 22 | ✅ Neu |
 | **Spielplan** | `flows/spielplan.spec.ts` | - | ✅ Vorhanden |
 | **Live Cockpit** | `flows/live-cockpit.spec.ts` | - | ✅ Vorhanden |
@@ -108,7 +107,6 @@ tests/e2e/
 │   ├── wizard.spec.ts             # ✅ NEU - 5-Step Wizard
 │   ├── tournament-tabs.spec.ts    # ✅ NEU - Tab-Navigation
 │   ├── match-cockpit-extended.ts  # ✅ NEU - Keyboard, Audio, Multi-Goal
-│   ├── public-view.spec.ts        # ✅ NEU - Public/Share View
 │   ├── settings.spec.ts           # ✅ NEU - App Settings
 │   ├── spielplan.spec.ts          # Spielplan 2.0
 │   ├── live-cockpit.spec.ts       # Live Match Management

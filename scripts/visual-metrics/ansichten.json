@@ -404,16 +404,6 @@
       ]
     },
     {
-      "id": "zuschauer-lokal",
-      "titel": "Zuschauer-Seite (lokal, /public)",
-      "gruppen": [
-        "pflicht"
-      ],
-      "app": "/#/public/hallencup-messlauf",
-      "erwarte": "h1",
-      "profil": "app"
-    },
-    {
       "id": "zuschauer-live-code",
       "titel": "Zuschauer-Seite per Code (/live/MESS26, lokale Daten)",
       "gruppen": [
