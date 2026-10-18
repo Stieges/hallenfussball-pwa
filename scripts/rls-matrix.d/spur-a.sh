@@ -1,97 +1,16 @@
 # shellcheck shell=bash
 #
 # rls-matrix.d/spur-a.sh — Zeilen der Spur A fuer scripts/rls-role-matrix.sh (A-11, brief-A-11.md R-A11-4).
-# Wird vom Hauptskript per `source` eingebunden (kein eigener Container, keine eigene Ausfuehrung): es nutzt
-# CONTAINER_NAME, uuid_for, user_id_for_id, perm_expected, MATRIX_IDS, T_MAIN/T_ANON/T_PUBLIC, U_* und zaehlt in
-# TOTAL/MISMATCHES. Erwartungen kommen aus rolePermissions.json (perm_expected) bzw. aus dem Gherkin der Kennung.
+# Per `source` eingebunden (nach _hilfen.sh: a11_mark, a11_probe, a11_denied_verdict, a11_allowed_verdict); nutzt
+# die Variablen und Hilfen des Hauptskripts. Erwartungen aus rolePermissions.json bzw. dem Gherkin der Kennung.
 #
-# Inhalt:
-#   (i)   has_tournament_permission(T, <Recht>) fuer die fuenf MVP-Rechte x neun Identitaeten (+45).
-#   (iii) Szenario-Zeilen mit Kennung (@ZP-041, @ZP-084, @LZ-023, @TM-084, @HE-042, @ZM-019): je Vorher-SELECT als
-#         dieselbe Identitaet (Zeilen sichtbar -- "UPDATE 0" allein ist nicht aussagekraeftig, Lehre A-10), dann
-#         Schreiben, dann Wertevergleich als Superuser. Gegenbeispiele (Maria, Olli) muessen gelingen.
-#   (ii) steht im Hauptskript (Vollmatrix: matches_update -> manageSchedule, monitors_* -> manageScreens).
-#
+# (i) has_tournament_permission fuer die fuenf MVP-Rechte x neun Identitaeten; (ii) Vollmatrix im Hauptskript;
+# (iii) Szenario-Zeilen mit Kennung: Vorher-SELECT als dieselbe Identitaet (sichtbar -- "UPDATE 0" allein sagt nichts,
+# Lehre A-10), Schreiben, Wertevergleich als Superuser; Gegenbeispiele (Maria, Olli) muessen gelingen.
 # Testwerte aus dem Gherkin: „Hallencup Ost“ (= T_MAIN), es ist 15:05; Olli = Eigentuemer (U_OWNER), Maria = Co-Admin
 # (U_COADMIN), Tom = Helfer (U_COLLAB), Mama Petra = ohne Konto (Rolle anon). Spiel 13 um 15:15.
 
 A11_RIGHTS=(manageSchedule manageLifecycle manageScreens manageHelpers readDisplay)
-
-a11_mark() {
-  local label="$1" got="$2" exp="$3"
-  TOTAL=$((TOTAL + 1))
-  if [[ "$got" == "$exp" ]]; then
-    echo "$label: $got"
-  else
-    echo "$label: ${got}!=${exp}"
-    MISMATCHES=$((MISMATCHES + 1))
-  fi
-}
-
-# a11_probe <rolle authenticated|anon> <user-id oder leer> <sichtbar-SQL> <schreib-SQL> <pruef-SQL> [vorbereitung-SQL]
-# Eine nie committete Transaktion: (optional) Vorbereitung als Superuser, dann als Client-Rolle "sichtbar" (Zahl),
-# dann Schreiben, dann RESET ROLE und Pruefwert als Superuser. Ausgabe: "<sichtbar>|<zeilen>|<pruefwert>";
-# <zeilen> ist die Zahl aus dem Befehls-Tag (UPDATE n / DELETE n / INSERT 0 n) oder "fehler" (RLS-/Trigger-Fehler).
-a11_probe() {
-  local role="$1" uid="$2" visible_sql="$3" write_sql="$4" check_sql="$5" setup_sql="${6:-}"
-  local sub_line="" out ec visible rows check
-  [[ -n "$uid" ]] && sub_line="SET LOCAL request.jwt.claim.sub = '$uid';"
-  set +e
-  out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -A -v ON_ERROR_STOP=0 <<SQL 2>&1
-BEGIN;
-$setup_sql
-SET LOCAL ROLE $role;
-$sub_line
-SELECT 'a11sichtbar:' || ($visible_sql);
-SAVEPOINT a11_schreiben;
-SELECT 'a11schreiben:ab-hier';
-$write_sql
-\\if :ERROR
-ROLLBACK TO SAVEPOINT a11_schreiben;
-\\endif
-RESET ROLE;
-SELECT 'a11pruef:' || coalesce(($check_sql)::text, 'NULL');
-ROLLBACK;
-SQL
-)"
-  ec=$?
-  set -e
-  visible="$( (grep -m1 '^a11sichtbar:' <<<"$out" || true) | sed 's/^a11sichtbar://')"
-  check="$( (grep -m1 '^a11pruef:' <<<"$out" || true) | sed 's/^a11pruef://')"
-  # Nur die Befehls-Tags NACH der Marke zaehlen (die Vorbereitung als Superuser meldet eigene Tags).
-  local written
-  written="$(sed -n '/^a11schreiben:ab-hier$/,$p' <<<"$out")"
-  if grep -qE '^ERROR:' <<<"$out"; then
-    rows="fehler"
-  else
-    rows="$( (grep -E '^(UPDATE|DELETE) [0-9]+$|^INSERT 0 [0-9]+$' <<<"$written" || true) | awk '{s += $NF} END {print s + 0}')"
-  fi
-  [[ "$ec" -ne 0 ]] && rows="fehler"
-  echo "${visible:-?}|${rows}|${check:-?}"
-}
-
-# Hilfe fuer die Ablehnungs-Zeilen: "sichtbar>0, 0 Zeilen oder Fehler, Wert unveraendert" -> "abgelehnt".
-a11_denied_verdict() {
-  local result="$1" unchanged_value="$2"
-  local visible rows check
-  IFS='|' read -r visible rows check <<<"$result"
-  if [[ "$visible" =~ ^[0-9]+$ && "$visible" -gt 0 && ( "$rows" == "0" || "$rows" == "fehler" ) && "$check" == "$unchanged_value" ]]; then
-    echo "abgelehnt"
-  else
-    echo "nicht-abgelehnt(sichtbar=$visible,zeilen=$rows,wert=$check)"
-  fi
-}
-
-a11_allowed_verdict() {
-  local result="$1" expected_rows="$2" expected_value="$3"
-  local visible rows check
-  IFS='|' read -r visible rows check <<<"$result"
-  if [[ "$rows" == "$expected_rows" && "$check" == "$expected_value" ]]; then
-    echo "gelingt"
-  else
-    echo "gelingt-nicht(sichtbar=$visible,zeilen=$rows,wert=$check)"
-  fi
-}
 
 # --- (i) has_tournament_permission fuer die fuenf MVP-Rechte x neun Identitaeten -----------------------------
 A11_I_MISMATCHES=0
@@ -170,7 +89,6 @@ a11_mark "@ZP-041 tom-verschiebt-ab-1515-abgelehnt-uhrzeiten-gleich      " "$(a1
 # Gegenbeispiel: Maria (Co-Admin) dieselbe Anfrage -> 5 Spiele ab 15:15 um 10 Minuten, Spiel 13 um 15:25.
 r="$(a11_probe authenticated "$U_COADMIN" "$A11_AB_1515" "$A11_SHIFT" "$A11_SPIEL13")"
 a11_mark "@ZP-041 gegen-maria-verschiebt-spiel-13-auf-1525               " "$(a11_allowed_verdict "$r" 5 "15:25")" "gelingt"
-# Gegenbeispiel: Olli (Eigentuemer) ebenso.
 r="$(a11_probe authenticated "$U_OWNER" "$A11_AB_1515" "$A11_SHIFT" "$A11_SPIEL13")"
 a11_mark "@ZP-040 gegen-olli-verschiebt-spiel-13-auf-1525                " "$(a11_allowed_verdict "$r" 5 "15:25")" "gelingt"
 
@@ -213,7 +131,6 @@ r="$(a11_probe authenticated "$U_COLLAB" "SELECT count(*) FROM public.tournament
   "UPDATE public.tournaments SET config = config || '{\"manuallyCompleted\":false}'::jsonb, completed_at = NULL WHERE id = '$T_MAIN';" \
   "$A11_FINISH_STATE" "$A11_FINISH")"
 a11_mark "@LZ-023 tom-oeffnet-abgeschlossenes-turnier-abgelehnt          " "$(a11_denied_verdict "$r" "true")" "abgelehnt"
-# Gegenbeispiel: Maria schliesst ab.
 r="$(a11_probe authenticated "$U_COADMIN" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_FINISH" "$A11_FINISH_STATE")"
 a11_mark "@LZ-023 gegen-maria-schliesst-turnier-ab                       " "$(a11_allowed_verdict "$r" 1 "true")" "gelingt"
 

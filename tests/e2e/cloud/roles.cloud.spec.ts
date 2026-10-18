@@ -37,6 +37,7 @@ import { test, expect } from './fixtures';
 import type { LoggedInRole } from './fixtures';
 import { expectSeededEngineMatch, getStoredAccessToken, runningEngineTarget } from './engineHelpers';
 import { getLocalServiceRoleClient } from './helpers';
+import { restAsRole, serviceRest } from './restAsRole';
 import { E2E_DRAFT_CUP_ID, E2E_LIVE_CUP_ID, E2E_LIVE_CUP_TITLE, E2E_STRANGER_CUP_ID, E2E_STRANGER_CUP_TITLE } from './testData';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -314,5 +315,36 @@ test.describe('Widerruf / Fremde', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.getByText('Turnier nicht gefunden')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(E2E_LIVE_CUP_TITLE, { exact: true })).toHaveCount(0);
+  });
+});
+
+// =============================================================================
+// A-11 (brief-A-11.md Schritt 6): @W5-017/@ZP-040 App-Seite + @ZP-041 Server mit echtem Konto
+// =============================================================================
+
+test.describe('A-11 Helfer und Zeitplan', () => {
+  // BLOCKED bis der lokale Stack 20261110_001 eingespielt hat (Controller stellt ihn bereit, Umsetzer startet keinen
+  // Stack). Ohne die Migration darf der Helfer Spielplan-Spalten schreiben (matches_update_v3, writeMatchData) -- der
+  // Fall wäre rot. Nicht löschen: nach dem Einspielen `test.fixme` entfernen (task-A-11-report.md, BLOCKED-Punkt).
+  test.fixme(true, 'A-11: lokaler Stack ohne 20261110_001 (Controller stellt ihn bereit)');
+
+  test('@W5-017/@ZP-040 Helfer sieht kein Bearbeiten, Server lehnt Verschieben ab (@ZP-041)', async ({ asRole }) => {
+    const page = await asRole('helper');
+    await page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}`);
+    await expect(page.getByText(E2E_LIVE_CUP_TITLE, { exact: true }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('[data-testid="schedule-edit-start"]')).toHaveCount(0);
+
+    const before = await serviceRest('GET', `matches?tournament_id=eq.${E2E_LIVE_CUP_ID}&select=id,scheduled_start&order=id`);
+    expect(Array.isArray(before.json) && before.json.length > 0).toBe(true);
+    const shift = await restAsRole('helper', 'PATCH', `matches?tournament_id=eq.${E2E_LIVE_CUP_ID}`, { scheduled_start: '23:59:00' });
+    expect(shift.json).toEqual([]);
+    const after = await serviceRest('GET', `matches?tournament_id=eq.${E2E_LIVE_CUP_ID}&select=id,scheduled_start&order=id`);
+    expect(after.json).toEqual(before.json);
+  });
+
+  test('Gegenbeispiel: Co-Admin bekommt „Spielplan bearbeiten“ angeboten', async ({ asRole }) => {
+    const page = await asRole('coadmin');
+    await page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}`);
+    await expect(page.locator('[data-testid="schedule-edit-start"]')).toBeVisible({ timeout: 15000 });
   });
 });

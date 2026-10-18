@@ -372,8 +372,9 @@ run_probes
 PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || PRIV_OUT="nicht ausfuehrbar: $PRIV_OUT"
 # A5: Zeilen aus SPAETEREN Migrationen (20261028_005, A-10) sind in diesem Stand erwartungsgemaess f.
 # UR: ebenso die Zeilen von 20261028_006 (match_event_author_names).
-A10_ROWS='^(matches-guard-engine-columns-(insert-and-update|unconditional)|reset-match-results-|matches-bump-change-revision-|tournaments-guard-change-revision-|match-event-author-names-)'
-check "R Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migrationen 20261028_005/_006)" "" \
+# A-11: auch die drei Zeilen von 20261110_001 (laeuft hier erst in A5 nach dem Rueckbau).
+A10_ROWS='^(matches-guard-engine-columns-(insert-and-update|unconditional)|reset-match-results-|matches-bump-change-revision-|tournaments-guard-change-revision-|match-event-author-names-|role-permissions-check-mvp-rights|matches-update-only-manage-schedule|monitors-writes-manage-screens)'
+check "R Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migrationen 20261028_005/_006, 20261110_001)" "" \
   "$(grep -v '|t$' <<<"$PRIV_OUT" | grep -vE "$A10_ROWS" || true)"
 check "R neue Zeilen vorhanden und |t" \
   "match-events-kit-from-match-start-trigger-active|t,matches-guard-kit-columns-invoker-no-client-execute|t,matches-guard-kit-columns-trigger-active|t,matches-kit-from-match-start-definer-no-client-execute|t" \

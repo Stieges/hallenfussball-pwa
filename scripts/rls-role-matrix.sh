@@ -1962,8 +1962,11 @@ RLS_MATRIX_D="$REPO_ROOT/scripts/rls-matrix.d"
 if [[ -d "$RLS_MATRIX_D" ]]; then
   for rls_matrix_part in "$RLS_MATRIX_D"/*.sh; do
     [[ -f "$rls_matrix_part" ]] || continue
-    echo ""
-    echo "=== rls-matrix.d/$(basename "$rls_matrix_part") — $MODE_LABEL ==="
+    # _*.sh: gemeinsame Hilfen ohne eigene Zeilen (Glob-Reihenfolge: vor spur-*.sh).
+    if [[ "$(basename "$rls_matrix_part")" != _* ]]; then
+      echo ""
+      echo "=== rls-matrix.d/$(basename "$rls_matrix_part") — $MODE_LABEL ==="
+    fi
     # shellcheck source=/dev/null
     source "$rls_matrix_part"
   done
