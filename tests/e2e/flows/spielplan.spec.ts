@@ -129,9 +129,18 @@ async function startMatchInCockpit(page: Page) {
 
 // Helper: Click on Spielplan tab (uses aria-label for reliability)
 async function clickSpielplanTab(page: Page) {
+  // Handy: untere Leiste (aria-label); Tablet/Desktop: Reiter bzw. Link „Spielplan“ in der Kopfzeile.
   const spielplanButton = page.locator('button[aria-label="Spielplan"]');
   if (await spielplanButton.isVisible({ timeout: 3000 })) {
     await spielplanButton.click();
+  } else {
+    await page
+      .getByRole('tab', { name: 'Spielplan' })
+      .or(page.getByRole('link', { name: 'Spielplan' }))
+      .or(page.getByRole('button', { name: 'Spielplan' }))
+      .filter({ visible: true })
+      .first()
+      .click();
   }
   await page.waitForTimeout(500);
 }
@@ -354,7 +363,8 @@ test.describe('Spielplan 2.0 - Progress-Ring', () => {
     await clickSpielplanTab(page);
 
     // THEN - das Abzeichen „Live“ trägt das Live-Rot (statusLive), nicht die Farbe einer Fehlermeldung (error)
-    const abzeichen = page.locator('[data-testid="match-status-badge"][data-state="live"]').first();
+    // Desktop-Zeile vergibt eine eigene Kennung (match-row-live-<id>); das Abzeichen ist überall data-state="live".
+    const abzeichen = page.locator('[data-state="live"]').filter({ visible: true }).first();
     await expect(abzeichen).toBeVisible();
     await expect(abzeichen).toHaveText('Live');
     const farben = await abzeichen.evaluate((el) => {
