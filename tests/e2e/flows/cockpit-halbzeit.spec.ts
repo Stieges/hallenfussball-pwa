@@ -2,8 +2,8 @@
  * E2E: Halbzeit von selbst, Wiederanpfiff, Abpfiff von selbst im Live-Cockpit (B-08b/c, T2-UI).
  *
  * Szenarien: @SL-005 (Ablauf des ersten Abschnitts -> Halbzeit mit Pausen-Restzeit, Wiederanpfiff angeboten),
- * @SL-006 (der Wiederanpfiff startet den zweiten Abschnitt bei 0:00), @SL-009/@SL-073 (Ablauf der Spielzeit ->
- * abgepfiffen, sichtbar auch ohne Ton); Befund C-COCKPIT-HALBZEIT-START („Start“ in der Halbzeitpause meldete
+ * @SL-006 (der Wiederanpfiff startet den zweiten Abschnitt bei 0:00), @SL-009 (Ablauf der Spielzeit ->
+ * Spiel abgepfiffen; der Endstand-Teil von @SL-073 ist offen: Befund C-COCKPIT-ENDSTAND-NACH-AUTOENDE); Befund C-COCKPIT-HALBZEIT-START („Start“ in der Halbzeitpause meldete
  * „Spiel fortgesetzt“, die Tafel blieb auf Halbzeit).
  *
  * Das Turnier ist so eingestellt, dass kein langes Warten nötig ist: 1 Minute Spielzeit in 2 Abschnitten = 2 x 30 Sekunden.
@@ -114,8 +114,10 @@ test.describe('Cockpit: Halbzeit, Wiederanpfiff, Abpfiff von selbst', () => {
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
     await bild('3-zweiter-abschnitt');
 
-    // @SL-009/@SL-073: nach weiteren 30 Sekunden ist das Spiel abgepfiffen, sichtbar in der Tafel
-    await expect(page.getByTestId('scoreboard-state')).toContainText(/Abgepfiffen|Vor Anpfiff/, { timeout: 45_000 });
+    // @SL-009: nach weiteren 30 Sekunden ist das Spiel abgepfiffen. Das Cockpit springt sofort zum nächsten Spiel
+    // (Befund C-COCKPIT-ENDSTAND-NACH-AUTOENDE, @SL-073 offen), belegt ist der Abpfiff durch die Meldung.
+    await expect(page.getByTestId('notice-line')).toContainText('abgepfiffen', { timeout: 45_000 });
+    await expect(page.getByTestId('scoreboard-state')).toContainText(/Abgepfiffen|Vor Anpfiff/);
     await bild('4-abgepfiffen');
   });
 });
