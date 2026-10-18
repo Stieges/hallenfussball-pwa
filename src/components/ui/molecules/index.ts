@@ -13,3 +13,5 @@ export type { MatchStatusBadgeProps } from './MatchStatusBadge';
 export type { MatchStatusBadgeSize, MatchStatusBadgeTone } from './matchStatusBadgeStyle';
 export { MatchClock } from './MatchClock';
 export type { MatchClockProps } from './MatchClock';
+export { ThumbBar } from './ThumbBar';
+export type { ThumbBarProps, ThumbBarSlot, ThumbBarRolle } from './ThumbBar';

@@ -7,6 +7,11 @@ export { Input } from './Input';
 export { Select } from './Select';
 export { Combobox } from './Combobox';
 export { Icons } from './Icons';
+export { MatchIcons } from './IconsMatch';
+export { HoldButton, HOLD_MS } from './atoms';
+export type { HoldButtonProps } from './atoms';
+export { ThumbBar } from './molecules';
+export type { ThumbBarProps, ThumbBarSlot, ThumbBarRolle } from './molecules';
 export { NumberStepper } from './NumberStepper';
 export { CollapsibleSection } from './CollapsibleSection';
 

@@ -303,6 +303,8 @@ export const semanticColorsLight = {
   scoreboardNeutral: palette.neutral[500],
   noticeLineBg: 'rgba(255, 255, 255, 0.08)',
   noticeLineText: palette.neutral[0],
+  // Halteknopf (Cockpit Scheibe 3, 3.1): Füllung beim Gedrückthalten, gleiche Farbe wie der Abpfiff-Rand (error)
+  holdFill: palette.red[600],
 } as const;
 
 export type SemanticColorToken = keyof typeof semanticColorsLight;

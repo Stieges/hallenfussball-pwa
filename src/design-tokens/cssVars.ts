@@ -130,6 +130,7 @@ export const cssColors = {
   scoreboardNeutral: 'var(--color-scoreboard-neutral)',
   noticeLineBg: 'var(--color-notice-line-bg)',
   noticeLineText: 'var(--color-notice-line-text)',
+  holdFill: 'var(--color-hold-fill)',
 
   // ---------------------------------------------------------------------------
   // Semantic: Error
