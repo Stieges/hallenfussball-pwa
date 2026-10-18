@@ -124,7 +124,7 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
   }
   if (phase.zustand === 'abgepfiffen') {
     // B2: nie eine Restzeit unter „Abgepfiffen“ – nach dem Strafstoßschießen dessen Ergebnis, sonst die gespielte Zeit
-    const strafstoss = match ? liveMatchFinalScore(match)?.penalty : undefined;
+    const strafstoss = match && view.phase === 'shootout' ? liveMatchFinalScore(match)?.penalty : undefined; // nur, wenn die Phase es hergibt
     if (strafstoss) {
       const seite = (anzeige: Side): number => (anzeige === 'home' ? strafstoss.a : strafstoss.b);
       return {
@@ -165,6 +165,6 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
     uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige,
     eintraegeWartenText: input.eintraegeWarten > 0 ? t('tafel.eintraegeWarten', { count: input.eintraegeWarten }) : null,
     helferAnfragenText: input.helferAnfragen > 0 ? t('tafel.helferAnfragen', { count: input.helferAnfragen }) : null,
-    ariaStand: ariaStandOf(input, links, rechts, endstand?.penalty, t),
+    ariaStand: ariaStandOf(input, links, rechts, input.view?.phase === 'shootout' ? endstand?.penalty : undefined, t),
   };
 }

@@ -140,7 +140,7 @@ describe('toScoreboardModel: Zustand, Abschnitt und Stand', () => {
     expect([m.links.tore, m.rechts.tore]).toEqual([2, 1]);
   });
 
-  it('@SL-053 nach dem Strafstoßschießen (2:2, 4:3) steht dessen Ergebnis in der Tafel, nicht „5:00“; der Stand bleibt 2:2', () => {
+  it('@SL-073 @ET-013 nach dem Strafstoßschießen (2:2, 4:3) steht dessen Ergebnis in der Tafel, nicht „5:00“; der Stand bleibt 2:2', () => {
     const match = makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 2, penaltyScoreA: 4, penaltyScoreB: 3 });
     const m = toScoreboardModel(input({ status: 'finished', phase: 'shootout', sectionElapsedMs: min(1) }, { match }, 'FINISHED'), t);
     expect(m.uhr).toMatchObject({ label: 'tafel.uhr.strafstoss', rest: '4:3' });
@@ -148,9 +148,16 @@ describe('toScoreboardModel: Zustand, Abschnitt und Stand', () => {
     expect(m.ariaStand).toBe('tafel.ariaStandStrafstoss:{"links":"FC Nord","linksTore":2,"rechts":"SV Süd","rechtsTore":2,"linksStrafstoss":4,"rechtsStrafstoss":3}');
   });
 
-  it('@SL-053 Gegenbeispiel: mit getauschten Seiten steht das Strafstoß-Ergebnis in der Anzeigereihenfolge (3:4)', () => {
+  it('@SL-073 @ET-013 Gegenbeispiel: mit getauschten Seiten steht das Strafstoß-Ergebnis in der Anzeigereihenfolge (3:4)', () => {
     const match = makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 2, penaltyScoreA: 4, penaltyScoreB: 3 });
     expect(toScoreboardModel(input({ status: 'finished', phase: 'shootout' }, { match, links: 'away', rechts: 'home' }, 'FINISHED'), t).uhr?.rest).toBe('3:4');
+  });
+
+  it('@ET-013 Gegenbeispiel: Strafstoß-Spalten ohne Phase Strafstoßschießen ergeben keinen Strafstoß-Text', () => {
+    const match = makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 2, penaltyScoreA: 4, penaltyScoreB: 3 });
+    const m = toScoreboardModel(input({ status: 'finished', phase: 'regular', sectionElapsedMs: min(6) }, { match }, 'FINISHED'), t);
+    expect(m.uhr?.label).toBe('tafel.uhr.spielzeit');
+    expect(m.ariaStand.startsWith('tafel.ariaStand:')).toBe(true);
   });
 
   it('@SL-009 Gegenbeispiel: ein reguläres Ende ohne Strafstoßschießen zeigt kein Strafstoß-Ergebnis', () => {

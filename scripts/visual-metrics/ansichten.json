@@ -377,6 +377,20 @@
       ]
     },
     {
+      "id": "cockpit-meldung-foul-kurz",
+      "titel": "Cockpit: Meldezeile mit kurzem Teamnamen (Foul erfasst, Verlängerung)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-phase-verlaengerung/live?matchId=00000007-0000-4000-8000-000000000003",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"foul-button-home\"]",
+        "[data-testid=\"scoreboard\"]"
+      ]
+    },
+    {
       "id": "dialog-karte",
       "titel": "Dialog: Karte vergeben (Cockpit, Finale)",
       "gruppen": [

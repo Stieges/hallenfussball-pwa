@@ -60,10 +60,12 @@ function anstossText(kickoff: string | undefined, sprache: string): string {
  */
 const LANGER_NAME = 16;
 
-/** Reservierte Zeilen der Meldezeile: je Spiel aus den Teamnamen, nur am Handy mehr als eine; ändert sich im Spiel nie (B3). */
-function meldezeilen(match: LiveMatch | null, size: ScoreboardAreaProps['size']): 1 | 3 {
+/** Reservierte Zeilen der Meldezeile: am Handy 2, bei langen Namen 3, sonst 1 (je Spiel aus den Teamnamen); ändert sich im Spiel nie (B3). */
+function meldezeilen(match: LiveMatch | null, size: ScoreboardAreaProps['size']): 1 | 2 | 3 {
   const lang = match !== null && Math.max(match.homeTeam.name.length, match.awayTeam.name.length) > LANGER_NAME;
-  return size === 'compact' && lang ? 3 : 1;
+  // Am Handy passt auch „SV Südpark: 5. Foul in dieser Halbzeit“ nicht in eine Zeile: mindestens 2, bei langem Namen 3 (N1)
+  if (size !== 'compact') { return 1; }
+  return lang ? 3 : 2;
 }
 
 /** Symbol je Stufe (Mockup `.msg.l2/.l3`): Farbe allein trägt keine Bedeutung. */

@@ -129,6 +129,22 @@ test.describe('Cockpit-Tafel', () => {
     expect(await hoehe()).toBe(laeuft);
   });
 
+  test('N1 die Foul-Grenze „5. Foul in dieser Halbzeit“ steht in der Meldezeile vollständig, ohne „…“, und die Tafel wächst nicht', async ({ page }) => {
+    await page.getByTestId('match-start-button').click();
+    await expect(page.getByTestId('scoreboard-state')).toContainText('Live');
+    const hoehe = async () => Math.round((await page.getByTestId('scoreboard').boundingBox())!.height);
+    const vorher = await hoehe();
+    for (let i = 0; i < 5; i += 1) { await page.getByTestId('foul-button-home').click(); }
+    const zeile = page.getByTestId('notice-line');
+    await expect(zeile).toContainText('5. Foul in dieser Halbzeit');
+    const abgeschnitten = await zeile.evaluate((el) => {
+      const text = el.querySelector('span:last-of-type') ?? el;
+      return { ellipse: getComputedStyle(text as HTMLElement).textOverflow === 'ellipsis' && text.scrollWidth > (text as HTMLElement).clientWidth, hoch: el.scrollHeight > el.clientHeight + 1 };
+    });
+    expect(abgeschnitten).toEqual({ ellipse: false, hoch: false });
+    expect(await hoehe()).toBe(vorher);
+  });
+
   test('@SL-064 @OB-021 nichts liegt fest über Uhr, Stand oder Bedienelementen: keine schwebenden Hinweise', async ({ page }) => {
     await page.getByTestId('match-start-button').click();
     await expect(page.getByTestId('scoreboard-state')).toContainText('Live');

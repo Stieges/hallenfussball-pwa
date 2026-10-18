@@ -166,12 +166,12 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
     expect(screen.queryByTestId('notice-icon-3')).toBeNull();
   });
 
-  it('@SL-064 die Zeile ist am Handy (360 px) 24 px, ab Tablet (768 px) 32 px hoch', () => {
+  it('@SL-064 die Zeile ist am Handy (360 px) zwei Zeilen hoch (N1), ab Tablet (768 px) 32 px', () => {
     const alt = window.innerWidth;
     try {
       window.innerWidth = 360;
       const mobil = render(<LiveCockpit {...baseProps(matchMit(0))} />);
-      expect(screen.getByTestId(MELDUNG).style.height).toBe('var(--sizing-notice-line-height-compact)');
+      expect(screen.getByTestId(MELDUNG).style.height).toMatch(/calc\(2 \*/);
       mobil.unmount();
       window.innerWidth = 1280;
       render(<LiveCockpit {...baseProps(matchMit(0))} />);
@@ -244,10 +244,23 @@ describe('LiveCockpit – Meldezeile reserviert Zeilen je Spiel (B3)', () => {
     expect(screen.getByTestId(MELDUNG).style.height).toBe(hoheOhne); // mit und ohne Meldung gleich hoch
   });
 
-  it('@OB-025 Gegenbeispiel: bei kurzen Namen bleibt es am Handy bei einer Zeile', () => {
+  it('N1 am Handy (360 px) reserviert auch ein Spiel mit kurzen Namen zwei Zeilen: „SV Südpark: 5. Foul in dieser Halbzeit“ steht ohne „…“ da', () => {
     breite(360);
-    render(<LiveCockpit {...baseProps(makeMatch())} />);
-    expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '1');
+    const kurz = (extra: Record<string, unknown>) => makeMatch({ awayTeam: { id: 'team-b', name: 'SV Südpark' }, ...extra });
+    const { rerender } = render(<LiveCockpit {...baseProps(kurz({}))} />);
+    expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '2');
+    rerender(<LiveCockpit {...baseProps(kurz({ events: fouls('team-b', 5) }))} />);
+    expect(screen.getByTestId(MELDUNG)).toHaveTextContent('SV Südpark: 5. Foul in dieser Halbzeit');
+    expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '2');
+  });
+
+  it('N1 „Spiel 15 von der Turnierleitung zurückgesetzt“ steht bei 360 px vollständig in der Meldezeile (2 Zeilen)', () => {
+    breite(360);
+    const match = makeMatch({ number: 15 });
+    const { rerender } = render(<LiveCockpit {...baseProps(match)} />);
+    rerender(<LiveCockpit {...baseProps(match, {})} {...({ letzteZuruecksetzung: { id: 'r1', spielNummer: 15 } } as object)} />);
+    expect(screen.getByTestId(MELDUNG)).toHaveTextContent('Spiel 15 von der Turnierleitung zurückgesetzt');
+    expect(screen.getByTestId(MELDUNG)).toHaveAttribute('data-zeilen', '2');
   });
 
   it('@OB-025 Gegenbeispiel: ab 768 px reicht auch bei langen Namen eine Zeile', () => {

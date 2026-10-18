@@ -18,7 +18,7 @@ const BRACKET_READER = /\[\s*['"`]((overtime|penalty)Score[AB]|(overtime|penalty
 /** Datei → Rolle. Jede Zeile ist begründet; neue Einträge nur mit Ruling. */
 const ALLOWED: Readonly<Record<string, string>> = {
   'core/view/finalScore.ts': 'zentraler Endstand',
-  'utils/matchScore.ts': 'Re-Export getEffectiveScore (Eingangstyp), ÜBERGANG bis Cockpit 4.3',
+  'utils/matchScore.ts': 'Re-Export getEffectiveScore und Übergang liveMatchFinalScore (Eingangstyp, Tafel), entfällt mit A-36d/Cockpit 4.3',
   // Typen und Schemas (deklarieren die Felder)
   'types/tournament.ts': 'Typ Match',
   'types/supabase.ts': 'erzeugte Datenbank-Typen (snake_case-Spalten)',

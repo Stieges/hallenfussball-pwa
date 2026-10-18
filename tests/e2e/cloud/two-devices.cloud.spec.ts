@@ -111,10 +111,9 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     // Nach dem Abpfiff zeigt der Helfer-Kopf kein sync-status mehr (Spiel beendet, nur ein Spiel im
     // Turnier): geprüft wird, dass nichts abgelehnt wurde -- die Annahme der MATCH_END-Zeile steht oben.
     await expect(helperPage.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
-    // Hinweis (Fixrunde 1, 4.1/N3): Diese letzte Prüfung ist LEER, solange das Cockpit nach dem Abpfiff
-    // des letzten Spiels nicht gerendert ist (C-COCKPIT-LAEDT-NACH-ABPFIFF). Die eigentliche Aussage
-    // `data-pending="0"` beim Helfer steht im Test "Cup FINISHAUSGANG" (test.fail, Besitzer B-11).
-    // Wo die Anzeige gerendert ist -- beim Owner, dessen Cockpit BEENDET zeigt -- gilt sie sofort:
+    // Hinweis: Das Cockpit nach dem Abpfiff des letzten Spiels zeigt seit Cockpit 2.5 die Tafel „Kein weiteres Spiel“ (behoben:
+    // C-COCKPIT-LAEDT-NACH-ABPFIFF); die Aussage `data-pending="0"` beim Helfer steht im Test "Cup FINISHAUSGANG".
+    // Beim Owner, dessen Cockpit „Abgepfiffen“ zeigt, gilt sie sofort:
     await expect(ownerPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: owner3sMs });
   });
 

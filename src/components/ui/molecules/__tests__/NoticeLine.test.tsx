@@ -58,6 +58,13 @@ describe('NoticeLine', () => {
     expect(screen.getByTestId('notice-line')).toHaveAttribute('data-zeilen', '3');
   });
 
+  it('N1 mit zeilen=2 bricht der Text um, ohne „…“; die Zeile ist dauerhaft höher als eine, aber niedriger als drei', () => {
+    render(<NoticeLine text={LANG} zeilen={2} closeLabel="Schließen" testId="notice-line" />);
+    expect(screen.getByText(LANG).style.textOverflow).not.toBe('ellipsis');
+    expect(screen.getByTestId('notice-line')).toHaveAttribute('data-zeilen', '2');
+    expect(screen.getByTestId('notice-line').style.height).toMatch(/2/);
+  });
+
   it('@OB-025 Gegenbeispiel: mit zeilen=1 (Vorgabe) bleibt es bei einer Zeile mit „…“', () => {
     render(<NoticeLine text={LANG} closeLabel="Schließen" testId="notice-line" />);
     expect(screen.getByTestId('notice-line')).toHaveAttribute('data-zeilen', '1');

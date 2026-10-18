@@ -20,10 +20,10 @@ export interface NoticeLineProps {
   /** Symbol vor dem Text (Farbe allein trägt keine Bedeutung). */
   icon?: ReactNode;
   /**
-   * Reservierte Zeilen. 1 (Vorgabe): eine Zeile, lange Texte gekürzt mit „…“. 3: dauerhaft drei Zeilen hoch, der Text bricht
-   * um und wird nie gekürzt – für Spiele mit langen Teamnamen am Handy (Namen nie mit „…“, VISUAL-DESIGN § 1).
+   * Reservierte Zeilen. 1 (Vorgabe): eine Zeile, lange Texte gekürzt mit „…“. 2 oder 3: dauerhaft so viele Zeilen hoch, der Text bricht
+   * um und wird nie gekürzt – am Handy (Meldungen mit Teamnamen sind länger als eine Zeile; 3 bei langen Namen) (Namen nie mit „…“, VISUAL-DESIGN § 1).
    */
-  zeilen?: 1 | 3;
+  zeilen?: 1 | 2 | 3;
 }
 
 export function NoticeLine({ text, onClose, closeLabel, testId, size = 'compact', icon, zeilen = 1 }: NoticeLineProps): ReactElement {

@@ -155,9 +155,9 @@ const hf2 = scheduled({
   slotB: pendingSlot({ kind: 'groupRank', group: 'B', rank: 2 }),
 });
 
-function setup(options: { teams?: { id: string; name: string }[]; matches: ScheduledMatch[] }) {
+function setup(options: { teams?: { id: string; name: string }[]; matches: ScheduledMatch[]; skipped?: string[] }) {
   const teams = options.teams ?? [{ id: NORD, name: 'FC Nord' }, { id: UFER, name: 'VfB Ufer' }];
-  const tournament = { id: 't1', title: 'Hallencup', numberOfFields: 1, teams, matches: [], groups: [] } as unknown as Tournament;
+  const tournament = { id: 't1', title: 'Hallencup', numberOfFields: 1, teams, matches: (options.skipped ?? []).map((id) => ({ id, matchStatus: 'skipped' })), groups: [] } as unknown as Tournament;
   const schedule = {
     tournament: { id: 't1', title: 'Hallencup' }, teams, allMatches: options.matches, phases: [],
   } as unknown as GeneratedSchedule;
@@ -335,11 +335,13 @@ describe('ManagementTab – @SL-056 @SL-117 das nächste Spiel des Felds steht b
     expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-has-match', 'ja');
   });
 
-  // @SL-117 (ausgefallenes Spiel steht nicht bereit): `ManagementTab` liest den Zeitplan (`ScheduledMatch`), der den Ausfall nicht
-  // kennt; der Ausfall steht nur am gespeicherten Spiel (`matchStatus: 'skipped'`). Die Auswahl „nächstes Spiel“ übernimmt
-  // B-10a1 (`readyMatchOf`). Bis dahin wählt `currentMatchData` das erste Spiel ohne Ergebnis, auch ein ausgefallenes (Befund
-  // C-COCKPIT-AUSGEFALLEN-BEREIT, Ziel Record Spiel leiten); der Test entsteht mit B-10a1 am dann vorhandenen Baustein.
-  it.todo('@SL-117 ein ausgefallenes Spiel 13 steht nicht bereit: nach Spiel 11 steht Spiel 15 zum Anpfiff bereit (B-10a1)');
+  // BEFUND C-COCKPIT-AUSGEFALLEN-BEREIT (Ziel-Record Spiel leiten, Paket B-10a1 `readyMatchOf`): `ManagementTab.currentMatchData` wählt das
+  // erste Spiel des Felds ohne Ergebnis und überspringt ausgefallene (`tournament.matches[].matchStatus: 'skipped'`) nicht. Der Test steht
+  // nach dem Gherkin rot und wird nicht an den Code angepasst; mit B-10a1 grün (dann `it.fails` entfernen).
+  it.fails('@SL-117 ein ausgefallenes Spiel 13 steht nicht bereit: nach Spiel 11 steht Spiel 15 zum Anpfiff bereit', async () => {
+    setup({ matches: [spiel11, spiel13, spiel15], skipped: [S13] });
+    expect(await screen.findByTestId('cockpit-stub')).toHaveAttribute('data-match-id', S15);
+  });
 
   it('@SL-117 Gegenbeispiel: ohne Ausfall steht das nächste Spiel 13 bereit, nicht Spiel 15 (Reihenfolge des Felds)', async () => {
     setup({ matches: [spiel11, spiel13, spiel15] });

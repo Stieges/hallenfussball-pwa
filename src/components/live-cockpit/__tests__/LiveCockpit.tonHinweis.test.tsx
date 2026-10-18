@@ -83,6 +83,11 @@ describe('LiveCockpit: Ton-Hinweis als Abzeichen der Tafel', () => {
     expect(screen.queryByRole('button', { name: ABZEICHEN })).toBeNull();
   });
 
+  it('@OB-021 nach dem Abpfiff steht kein Abzeichen „Ton aus“ mehr', () => {
+    render(<LiveCockpit {...makeProps(makeLiveMatch({ status: 'FINISHED' }))} />);
+    expect(screen.queryByRole('button', { name: ABZEICHEN })).toBeNull();
+  });
+
   it('@OB-021 Gegenbeispiel: im laufenden Spiel steht das Abzeichen weiter, wenn die Freigabe nicht gelang', () => {
     render(<LiveCockpit {...makeProps(makeLiveMatch({ status: 'RUNNING' }))} />);
     expect(screen.getByRole('button', { name: ABZEICHEN })).toBeInTheDocument();
