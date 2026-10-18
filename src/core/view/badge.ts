@@ -91,7 +91,7 @@ const LiveStateSchema = z.object({
   phase: PhaseSchema,
   section: z.number().int().min(1),
   sections: z.number().int().min(1).nullish(),
-  sectionSeconds: z.number().positive().nullish(),
+  sectionSeconds: z.number().nonnegative().nullish(),
   sectionStartMs: z.number().nullish(),
   elapsedMs: z.number().nullish(),
   anchorAt: z.number().nullish(),

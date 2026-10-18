@@ -936,7 +936,7 @@
   "view": {
     "status": {
       "scheduled": "scheduled",
-      "cancelled": "cancelled",
+      "cancelled": "Cancelled",
       "awarded": "awarded"
     }
   },

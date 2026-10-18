@@ -403,9 +403,11 @@ export const monitorThemes = {
     warningSymbol: '#ffb300',
 
     // Status Badges
-    // Aufgabe 1.1: Live-Rot (Rose 400) statt Grün (C-ZWEI-LIVE-FARBEN)
-    liveBadgeBg: 'rgba(251, 113, 133, 0.2)',
-    liveBadgeText: '#FB7185',
+    liveBadgeBg: 'rgba(0, 230, 118, 0.2)',
+    liveBadgeText: '#00E676', // Endfarbe des Fortschrittsbalkens (MatchTimer): bleibt grün, Live-Rot gehört nur dem Abzeichen
+    // Aufgabe 1.1: Live-Rot des Abzeichens (Rose 400, Schrift dunkel) – eigene Tokens, damit der Balken unverändert bleibt
+    liveBadgeFill: '#FB7185',
+    liveBadgeOn: '#0A1628',
     liveDot: '#00E676',
     pauseBadgeBg: 'rgba(251, 191, 36, 0.2)',
     pauseBadgeText: '#fbbf24',
@@ -475,9 +477,11 @@ export const monitorThemes = {
     warningSymbol: '#B45309',
 
     // Status Badges
-    // Aufgabe 1.1: Live-Rot (Rose 700) statt Grün (C-ZWEI-LIVE-FARBEN)
-    liveBadgeBg: 'rgba(190, 18, 60, 0.15)',
-    liveBadgeText: '#BE123C',
+    liveBadgeBg: 'rgba(4, 120, 87, 0.15)',
+    liveBadgeText: '#047857', // Endfarbe des Fortschrittsbalkens (MatchTimer): bleibt grün
+    // Aufgabe 1.1: Live-Rot des Abzeichens (Rose 700, Schrift weiß)
+    liveBadgeFill: '#BE123C',
+    liveBadgeOn: '#FFFFFF',
     liveDot: '#047857',
     pauseBadgeBg: 'rgba(217, 119, 6, 0.15)',
     pauseBadgeText: '#d97706',

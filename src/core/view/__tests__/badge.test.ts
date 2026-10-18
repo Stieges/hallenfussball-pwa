@@ -47,6 +47,22 @@ describe('matchBadgeModel', () => {
     expect(matchBadgeModel({ status: 'finished', engine: E('finished', 'regular', 1, 1) })).toEqual({ kind: 'badge', state: 'ended' });
   });
 
+  it('@OB-066 Spielzeit abgelaufen, noch nicht abgepfiffen: Abzeichen „Live“, nicht „Ende“', () => {
+    const engine: MatchBadgeEngineDetail = { ...E('running', 'regular', 2, 2), sectionSeconds: 360, sectionElapsedSec: 361 };
+    const model = matchBadgeModel({ status: 'running', engine });
+    expect(model).toEqual({ kind: 'badge', state: 'live' });
+    expect(model).not.toEqual({ kind: 'badge', state: 'ended' });
+  });
+
+  it('@OB-066 Engine running in Phase shootout heißt „Strafstoßschießen“', () => {
+    expect(matchBadgeModel({ status: 'running', engine: E('running', 'shootout', 1, 1) })).toEqual({ kind: 'badge', state: 'shootout' });
+  });
+
+  it('@OB-066 unbekannter Feinstatus (scheduled bei laufendem Spiel) fällt auf den Status zurück', () => {
+    expect(matchBadgeModel({ status: 'running', engine: E('scheduled', 'regular', 1, 1) })).toEqual({ kind: 'badge', state: 'live' });
+    expect(matchBadgeModel({ status: 'paused', engine: E('scheduled', 'regular', 1, 1) })).toEqual({ kind: 'badge', state: 'pause' });
+  });
+
   it('@ZM-044 Pause vor dem Strafstoßschießen heißt „Pause“, nicht „Strafstoßschießen“', () => {
     expect(matchBadgeModel({ status: 'paused', engine: E('section_break', 'shootout', 1, 1) })).toEqual({ kind: 'badge', state: 'pause' });
   });
@@ -108,6 +124,13 @@ describe('badgeDetailFromLiveState (Feinstatus für Monitor und Zuschauer, R-SA8
     const stopped = { engine: true, status: 'paused', phase: 'regular', section: 1, sections: 2, sectionSeconds: 600, elapsedMs: 460_000, anchorAt: null, sectionStartMs: 0, breakStartedAt: null, breakSeconds: 60 };
     expect(badgeDetailFromLiveState(stopped, 1_000_000)?.sectionElapsedSec).toBe(460);
     expect(badgeDetailFromLiveState(stopped, 9_000_000)?.sectionElapsedSec).toBe(460);
+  });
+
+  it('@OB-066 live_state mit sectionSeconds 0: Strafstoßschießen bleibt „Strafstoßschießen“', () => {
+    const raw = { engine: true, status: 'shootout', phase: 'shootout', section: 1, sections: 1, sectionSeconds: 0, elapsedMs: 0, anchorAt: null, sectionStartMs: 0, breakStartedAt: null, breakSeconds: 0 };
+    const detail = badgeDetailFromLiveState(raw, 1000);
+    expect(detail).toMatchObject({ status: 'shootout', sectionSeconds: 0 });
+    expect(matchBadgeModel({ status: 'paused', ...(detail === undefined ? {} : { engine: detail }) })).toEqual({ kind: 'badge', state: 'shootout' });
   });
 
   it('@OB-066 Gegenbeispiel: ungültiges live_state → undefined, das Abzeichen kommt aus dem Status', () => {

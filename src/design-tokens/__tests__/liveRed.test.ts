@@ -5,6 +5,8 @@
 import { describe, expect, it } from 'vitest';
 import { contrastRatio, MIN_TEXT_CONTRAST, resolveToken, type ThemeName } from '../../test/contrast';
 import { hexDeltaE2000 } from '../../core/models/kitColorDistance';
+import { semanticColorsDark } from '../colors/semantic';
+import { semanticColorsLight } from '../colors/semantic-light';
 
 const THEMES: ThemeName[] = ['dark', 'light'];
 const LIVE_ROT_MIN_ABSTAND = 10;
@@ -30,4 +32,13 @@ describe('Live-Rot (Tokens statusLive, statusLiveOn)', () => {
   it('@OB-065 Gegenbeispiel: weiße Schrift auf dem hellen Live-Rot des dunklen Themas wäre zu schwach', () => {
     expect(contrastRatio('#FFFFFF', resolveToken('dark', 'var(--color-status-live)'))).toBeLessThan(MIN_TEXT_CONTRAST);
   });
+
+  it.each([['dark', semanticColorsDark], ['light', semanticColorsLight]] as const)(
+    '@OB-039 Kontrollwert: die TS-Token (statusLive, statusLiveOn, statusLiveBg) stimmen mit global.css überein (%s)',
+    (theme, ts) => {
+      expect(resolveToken(theme, 'var(--color-status-live)').toLowerCase()).toBe(ts.statusLive.toLowerCase());
+      expect(resolveToken(theme, 'var(--color-status-live-on)').toLowerCase()).toBe(ts.statusLiveOn.toLowerCase());
+      expect(resolveToken(theme, 'var(--color-status-live-bg)').replace(/\s/g, '')).toBe(ts.statusLiveBg.replace(/\s/g, ''));
+    },
+  );
 });

@@ -41,7 +41,7 @@ export function MatchStatusBadge({ model, size, tone, testId }: MatchStatusBadge
   }
   if (model.kind === 'kickoff') {
     const style: CSSProperties = {
-      fontSize: cssVars.fontSizes.xs,
+      fontSize: cssVars.fontSizes.sm,
       lineHeight: cssVars.lineHeights.bodySm,
       fontWeight: cssVars.fontWeights.bold,
       fontVariantNumeric: 'tabular-nums',

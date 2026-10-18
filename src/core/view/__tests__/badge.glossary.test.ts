@@ -29,4 +29,15 @@ describe('Abzeichen-Wörter', () => {
   it('@OB-066 Gegenbeispiel: der englische Zustand „Pause“ heißt nicht „Live“ (Uhr angehalten ≠ läuft)', () => {
     expect(enTournament.matchBadge.pause).not.toBe(enTournament.matchBadge.live);
   });
+
+  it.each([['de', deTournament], ['en', enTournament]] as const)(
+    '@OB-066 @ZM-104 „ausgefallen“ heißt in Abzeichen und Statushinweis gleich (%s)',
+    (_lang, tournament) => {
+      expect(tournament.view.status.cancelled).toBe(tournament.matchBadge.cancelled);
+    },
+  );
+
+  it('@OB-066 GLOSSAR.md nennt die Abweichung „Penalties“ zu glossary.json („penalty shootout“) ausdrücklich', () => {
+    expect(glossar).toMatch(/Penalties[\s\S]*penalty shootout/);
+  });
 });

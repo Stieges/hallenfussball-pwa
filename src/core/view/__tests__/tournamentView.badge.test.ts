@@ -73,4 +73,31 @@ describe('@OB-065 @OB-066 MatchView.badge', () => {
     expect(v.byId.get(id)?.badge.kind).not.toBe('badge');
     expect(v.byId.get(id)?.engine).toBeUndefined();
   });
+
+  const stale = (): MatchBadgeEngineDetail => ({ status: 'running', phase: 'regular', section: 2, sections: 2 });
+
+  it('@OB-066 Gegenbeispiel: Spiel 1 beendet (Cache finished) mit altem live_state „running“ trägt „Ende“, nicht „Live“', async () => {
+    const cup = await fES();
+    const final = idOf(cup, GAME.FINAL);
+    const v = build(cup, (id) => (id === final ? stale() : undefined));
+    expect(v.byId.get(final)?.badge).toEqual({ kind: 'badge', state: 'ended' });
+    expect(v.byId.get(final)?.isLive).toBe(false);
+    expect(v.byId.get(final)?.engine).toBeUndefined();
+  });
+
+  it('@OB-066 Gegenbeispiel: Spiel 9 ausgefallen (Cache skipped) mit altem live_state „running“ trägt „ausgefallen“, nicht „Live“', () => {
+    const id = idOf(aus, GAME[9]);
+    const v = build(aus, (matchId) => (matchId === id ? stale() : undefined));
+    expect(v.byId.get(id)?.badge).toEqual({ kind: 'badge', state: 'cancelled' });
+    expect(v.byId.get(id)?.isLive).toBe(false);
+  });
+
+  it('@OB-066 Verwaltung (engineStatus gesetzt) bleibt unverändert: die Engine hat Vorrang vor dem Cache', () => {
+    const id = idOf(pause, GAME[7]);
+    const v = buildTournamentView(
+      { ...pause.tournament, engineStatus: (m) => (m === id ? 'shootout' : undefined), engineDetail: (m) => (m === id ? { status: 'shootout', phase: 'shootout', section: 1, sections: 1 } : undefined) },
+      { audience: 'organizer', medium: 'app', locale: 'de' },
+    );
+    expect(v.byId.get(id)?.badge).toEqual({ kind: 'badge', state: 'shootout' });
+  });
 });

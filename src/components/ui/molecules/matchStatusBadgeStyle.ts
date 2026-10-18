@@ -75,7 +75,7 @@ export function badgeStyle(state: MatchBadgeState, size: MatchStatusBadgeSize, t
     gap: cssVars.spacing.xs,
     padding: `${cssVars.spacing.xs} ${size === 'row' ? cssVars.spacing.xs : cssVars.spacing.sm}`,
     borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.xs,
+    fontSize: cssVars.fontSizes.sm,
     lineHeight: cssVars.lineHeights.bodySm,
   };
 }

@@ -85,3 +85,6 @@ unbemerkt abweicht.
 
 Die englischen Wörter sind eine Controller-Entscheidung (18.10.2026), das Gherkin legt nur die deutschen fest. Die Wörter stehen bewusst nicht in `glossary.json`: die Lint-Regel `no-hardcoded-sport-terms-preferred` meldete dann jedes
 „live“ und „Ende“ im Code. Quelle im Code: `matchBadge.*` in `tournament.json` (Test `badge.glossary.test.ts` hält Tabelle und Texte gleich).
+
+**Abweichung zu `glossary.json`:** Das Abzeichen sagt auf Englisch „Penalties“ (Kurzform, Controller bestätigt 18.10.2026); `glossary.json` führt für das
+Strafstoßschießen „penalty shootout“ (`events.penaltyShootout`) und gilt für alle Fließtexte weiter.
