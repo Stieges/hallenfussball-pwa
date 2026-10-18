@@ -4,7 +4,7 @@
  */
 import { CSSProperties, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayLayout, spacingScale } from '../../design-tokens';
+import { cssVars, displayFontSizes, displayLayout, displaySizes } from '../../design-tokens';
 import type { monitorThemes } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
 import type { FinalScore } from '../../core/view';
@@ -74,7 +74,7 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
   const separatorStyle: CSSProperties = {
     ...centeredCell,
     alignSelf: 'center',
-    fontSize: size === 'xl' ? displayFontSizes.liveSeparator : spacingScale['8'],
+    fontSize: size === 'xl' ? displayFontSizes.liveSeparator : displaySizes.xl,
     fontWeight: cssVars.fontWeights.bold,
     lineHeight: 1,
     color: themeColors.textSecondary,
