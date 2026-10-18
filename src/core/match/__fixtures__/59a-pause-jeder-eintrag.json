@@ -1,0 +1,204 @@
+{
+  "title": "@SL-085 Uhr bei 4:12 angehalten: Tor, Eigentor, Foul, Gelbe Karte, Zeitstrafe werden angenommen",
+  "szenario": "@SL-085 Bei angehaltener Uhr lässt sich jeder Eintrag erfassen",
+  "ctx": {
+    "matchId": "match-0000059a",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000059a-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 360,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 300,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 6,
+          "penaltySeconds": 120
+        }
+      },
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000059a-0000-4000-8000-000000000002",
+      "type": "PAUSE",
+      "actor": "helper",
+      "at": 253000,
+      "section": 1,
+      "clockMs": 252000,
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000059a-0000-4000-8000-000000000003",
+      "type": "GOAL",
+      "actor": "helper",
+      "at": 254000,
+      "section": 1,
+      "clockMs": 252000,
+      "teamId": "teamA",
+      "payload": {
+        "playerNumber": 7
+      },
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000059a-0000-4000-8000-000000000004",
+      "type": "OWN_GOAL",
+      "actor": "helper",
+      "at": 255000,
+      "section": 1,
+      "clockMs": 252000,
+      "teamId": "teamB",
+      "payload": {
+        "playerNumber": 4
+      },
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000059a-0000-4000-8000-000000000005",
+      "type": "FOUL",
+      "actor": "helper",
+      "at": 256000,
+      "section": 1,
+      "clockMs": 252000,
+      "teamId": "teamB",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000059a-0000-4000-8000-000000000006",
+      "type": "YELLOW_CARD",
+      "actor": "helper",
+      "at": 257000,
+      "section": 1,
+      "clockMs": 252000,
+      "teamId": "teamB",
+      "payload": {
+        "playerNumber": 5
+      },
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000059a-0000-4000-8000-000000000007",
+      "type": "TIME_PENALTY",
+      "actor": "helper",
+      "at": 258000,
+      "section": 1,
+      "clockMs": 252000,
+      "teamId": "teamB",
+      "payload": {
+        "playerNumber": 5
+      },
+      "actorUser": "helper"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000059a-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000059a-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000059a-0000-4000-8000-000000000003",
+        "status": "accepted"
+      },
+      {
+        "id": "0000059a-0000-4000-8000-000000000004",
+        "status": "accepted"
+      },
+      {
+        "id": "0000059a-0000-4000-8000-000000000005",
+        "status": "accepted"
+      },
+      {
+        "id": "0000059a-0000-4000-8000-000000000006",
+        "status": "accepted"
+      },
+      {
+        "id": "0000059a-0000-4000-8000-000000000007",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "paused",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 252000,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 2,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 2,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000059a-0000-4000-8000-000000000004",
+      "decidedBy": null,
+      "finishedAt": null
+    },
+    "state": {
+      "fouls": [
+        {
+          "id": "0000059a-0000-4000-8000-000000000005",
+          "teamId": "teamB",
+          "clockMs": 252000
+        }
+      ],
+      "cards": [
+        {
+          "id": "0000059a-0000-4000-8000-000000000006",
+          "type": "YELLOW_CARD",
+          "teamId": "teamB",
+          "clockMs": 252000
+        }
+      ],
+      "penalties": [
+        {
+          "id": "0000059a-0000-4000-8000-000000000007",
+          "teamId": "teamB",
+          "startMs": 252000,
+          "durationMs": 120000
+        }
+      ]
+    },
+    "penaltyChecks": [
+      {
+        "remaining": {
+          "0000059a-0000-4000-8000-000000000007": 120000
+        },
+        "active": [
+          "0000059a-0000-4000-8000-000000000007"
+        ]
+      }
+    ]
+  }
+}

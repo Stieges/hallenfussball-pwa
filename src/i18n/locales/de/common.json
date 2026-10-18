@@ -1,4 +1,7 @@
 {
+  "toast": {
+    "dismissAriaLabel": "Hinweis schließen"
+  },
   "loading": {
     "generic": "Lade...",
     "tournaments": "Lade Turniere..."
@@ -86,7 +89,8 @@
       "updated": "Aktualisiert",
       "conflict": "Konflikt",
       "error": "Fehler",
-      "offline": "Offline"
+      "offline": "Offline",
+      "blocked": "Eigene Änderungen warten"
     },
     "syncingAriaLabel": "Wird synchronisiert...",
     "syncingLabel": "Synchronisiere...",

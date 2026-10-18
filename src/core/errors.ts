@@ -263,6 +263,9 @@ export function isTransientMutationError(error: unknown): boolean {
   if (error instanceof TeamStillReferencedError || isOriginImmutableError(error)) {
     return false;
   }
+  if (error && typeof error === 'object' && (error as { code?: unknown }).code === KIT_COLUMNS_SERVER_ONLY_CODE) {
+    return false;
+  }
   if (isAbortError(error)) {
     return true;
   }
@@ -372,8 +375,12 @@ export class TeamStillReferencedError extends Error {
  * Eigene Fehlercodes der Datenbank (SQLSTATE-Klasse `HF`, ausserhalb des PostgREST-Namensraums `PT`):
  * - HF001 – Freigabe vor Veröffentlichung (`make_tournament_public`, `enforce_release_before_public`)
  * - HF002 – Herkunft eines Platzes unveränderlich (Trigger `matches_keep_origin`, A-36a)
+ * - HF003 – getragene Farben setzt nur der Anpfiff (Trigger `matches_guard_kit_columns`, A-30a)
  */
 export const ORIGIN_IMMUTABLE_CODE = 'HF002';
+
+/** A-30a: Client-Schreiben auf `kit_color_a/kit_color_b/bib_side` – nicht transient (Fehler im Stand, nicht im Netz). */
+export const KIT_COLUMNS_SERVER_ONLY_CODE = 'HF003';
 
 /**
  * Ein Schreiben wollte `origin_a/origin_b` eines Spiels ändern. Nicht transient: der Fehler liegt im Stand,

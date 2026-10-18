@@ -1,16 +1,15 @@
 /**
  * Typen der reinen Spiel-Rechenfunktion (B1a).
  *
- * TS jetzt, SQL-Zwilling folgt in B3a (Ruling R1). Diese Datei legt Zustände,
- * Ereignistypen, Fehlercodes und den Zustandstyp `MatchState` fest, die App
- * nutzt nichts davon vor PR C. Payload-Zod-Schemas + Validierung stehen wegen
- * der 300-Zeilen-Grenze in `payloadValidation.ts`.
+ * SQL-Zwilling in B3a (Ruling R1). Zustände, Ereignistypen, Fehlercodes und `MatchState`.
+ * Payload-Zod-Schemas + Validierung: `payloadValidation.ts` (300-Zeilen-Grenze).
  *
  * @see .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B1a-brief.md
  * @see .superpowers/sdd/2026-09-25-pr-b-schreibweg/rulings.md (R1-R19)
  */
 import { z } from 'zod';
 import type { EventDetails } from './details';
+import type { UndoInfo } from './handlers/clock';
 
 // ============================================
 // Zustände, Phasen, Akteure, Ereignistypen
@@ -203,13 +202,14 @@ export interface ShootoutKickRecord {
  * "Überschreibungen" (nicht zurückgenommene, in Log-Reihenfolge). Jede Überschreibung
  * speichert `snapshot` = der aus Toren berechnete Stand zum Zeitpunkt ihrer Annahme. Der
  * effektive Stand ist dann die letzte Überschreibung plus die seitdem gefallenen Tore
- * (`effectiveScoreFor`). Damit zählen Tore nach REOPEN weiter, ohne dass eine Korrektur
- * verloren geht.
+ * (`effectiveScoreFor`). Damit zählen Tore nach REOPEN weiter, ohne Korrektur-Verlust.
  */
 export interface OverrideRecord {
   id: string;
   kind: 'correction' | 'direct';
   scores: Record<string, number>;
+  /** A-25a (@FU-094): Strafstoßergebnis eines Direkteintrags (nur `direct`, nur wenn eingetragen). */
+  shootout?: Record<string, number>;
   snapshot: Record<string, number>;
   reason?: string;
   basedOn?: string | null;
@@ -258,6 +258,8 @@ export interface MatchState {
   /** C0a (V2): Spieluhr-ms bei Beginn des Abschnitts / Wanduhr-`at` bei Beginn der Pause (sonst null). */
   sectionStartMs: number;
   breakStartedAt: number | null;
+  /** ZA-3: Grundlage für das Zurücknehmen von Anpfiff (@SL-066) und Uhr-Korrektur (@SL-109), handlers/clock.ts. */
+  undo: UndoInfo;
 }
 
 /** Aus Toren berechneter Stand eines Teams, ohne Überschreibungen (regular+overtime). */

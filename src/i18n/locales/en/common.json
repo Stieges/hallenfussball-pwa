@@ -1,4 +1,7 @@
 {
+  "toast": {
+    "dismissAriaLabel": "Dismiss notice"
+  },
   "loading": {
     "generic": "Loading...",
     "tournaments": "Loading tournaments..."
@@ -86,7 +89,8 @@
       "updated": "Updated",
       "conflict": "Conflict",
       "error": "Error",
-      "offline": "Offline"
+      "offline": "Offline",
+      "blocked": "Own changes pending"
     },
     "syncingAriaLabel": "Syncing...",
     "syncingLabel": "Syncing...",

@@ -1,0 +1,79 @@
+{
+  "title": "@FU-094 Gegenbeispiel: Strafstoßergebnis bei ungleichem Stand (3:2, 4:3) ist ungültig, nichts gespeichert",
+  "szenario": "Ein Unentschieden im K.o.-Spiel fragt beim Direkteintrag das Strafstoßschießen mit ab",
+  "knockout": true,
+  "ctx": {
+    "matchId": "match-0000066b",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000066b-0000-4000-8000-000000000001",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 1000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 3,
+          "teamB": 2
+        },
+        "shootout": {
+          "teamA": 4,
+          "teamB": 3
+        }
+      },
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000066b-0000-4000-8000-000000000001",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      }
+    ],
+    "serverState": {
+      "status": "scheduled",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": null,
+      "finishedAt": null
+    },
+    "cacheColumns": {
+      "score_a": null,
+      "score_b": null,
+      "penalty_score_a": null,
+      "penalty_score_b": null,
+      "match_status": "scheduled",
+      "decided_by": null
+    }
+  }
+}

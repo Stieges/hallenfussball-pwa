@@ -1,6 +1,13 @@
 import { SportId } from '../config/sports/types';
 import type { MatchSlot, SlotSource } from '../core/models/schemas/MatchSlotSchema';
-import { DEFAULT_CLOCK_MODE, type ClockMode } from '../core/match/clockDisplay';
+import {
+  CLOCK_MODES,
+  DEFAULT_CLOCK_MODE,
+  DEFAULT_FINAL_PHASE_MINUTES,
+  FINAL_PHASE_MINUTES_MAX,
+  FINAL_PHASE_MINUTES_MIN,
+  type ClockMode,
+} from '../core/match/clockDisplay';
 
 // Core Tournament Types
 export type Sport = 'football' | 'other';
@@ -310,6 +317,7 @@ export interface Match {
   // US-SCHEDULE-EDITOR: Skipped match support
   skippedReason?: string;        // Grund für Überspringen (z.B. "Team zurückgezogen")
   skippedAt?: string;            // ISO timestamp when match was skipped
+  kit?: import('../core/models/kit').MatchKit; // A-30a: beim Anpfiff getragene Farben (nur Server schreibt, @W3-028)
 
   // DB-PERSISTENCE: Events for detailed match summary (scorers, cards)
   events?: RuntimeMatchEvent[]; // Full event history persisted with the match
@@ -428,6 +436,7 @@ export interface Tournament {
   location: LocationDetails;
   organizer?: string; // Veranstalter-Name (optional)
   rulebook?: string; // Regelwerk-Text für den Ausdruck, höchstens 80 Zeichen (@DR-016)
+  bibColor?: string; // A-30a @W3-029: Leibchenfarbe des Turniers (#RRGGBB), ohne Einstellung Gelb
   contactInfo?: ContactInfo; // Kontaktinformationen (optional)
 
   // Step 4: Teams
@@ -582,6 +591,8 @@ export interface MatchCockpitSettings {
   penaltyEndsOnGoal: boolean;
   /** Unterzahl-Dauer nach Gelb-Rot oder Rot in Sekunden. Default: 120 */
   shortHandedSeconds: number;
+  /** Länge der angehaltenen Schlussphase in Minuten, ganzzahlig 1–5 (@W2A-040, @SL-136). Default: 1 */
+  finalPhaseMinutes: number;
 
   // Sound Settings
   /** Enable end-of-match horn sound. Default: true (@W2A-038, Vorbelegung des Turniers) */
@@ -628,6 +639,7 @@ export const DEFAULT_MATCH_COCKPIT_SETTINGS: MatchCockpitSettings = {
   enabledCards: { yellow: true, yellowRed: true, red: true, timePenalty: true },
   penaltyEndsOnGoal: true,
   shortHandedSeconds: 120,
+  finalPhaseMinutes: DEFAULT_FINAL_PHASE_MINUTES,
 
   // Sound
   soundEnabled: true,
@@ -640,20 +652,57 @@ export const DEFAULT_MATCH_COCKPIT_SETTINGS: MatchCockpitSettings = {
   wakeLockEnabled: true,
 };
 
+/** Ganzzahl im Bereich [min, max] (max optional) -- Prüfung je Regel-Feld (H3). */
+function isIntInRange(value: unknown, min: number, max = Number.MAX_SAFE_INTEGER): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
+}
+
+/** Wert behalten, wenn er gültig ist, sonst Vorgabe (H3, wie der SQL-Zwilling bei ungültigen Werten). */
+function validOr<T>(value: unknown, isValid: (candidate: unknown) => boolean, fallback: T): T {
+  return isValid(value) ? (value as T) : fallback;
+}
+
+const isBoolean = (value: unknown): boolean => typeof value === 'boolean';
+
+/** `enabledCards`: jede Kartenart einzeln; ein ungültiger Schalter fällt auf die Vorgabe zurück. */
+function completeEnabledCards(value: unknown): EnabledCards {
+  const defaults = DEFAULT_MATCH_COCKPIT_SETTINGS.enabledCards;
+  const stored = typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return {
+    ...stored,
+    yellow: validOr(stored.yellow, isBoolean, defaults.yellow),
+    yellowRed: validOr(stored.yellowRed, isBoolean, defaults.yellowRed),
+    red: validOr(stored.red, isBoolean, defaults.red),
+    timePenalty: validOr(stored.timePenalty, isBoolean, defaults.timePenalty),
+  };
+}
+
 /**
  * Ergänzt eine gespeicherte Cockpit-Konfiguration um die Vorgaben für fehlende Felder
  * (alte Turniere ohne Spielregel-Felder). Fehlt die Konfiguration oder ist sie kein
  * Objekt, bleibt sie `undefined`; die Verbraucher nehmen dann die Vorgaben selbst.
+ * ZA-3 (H3): ungültige Einzelwerte der Spielregel-Felder fallen ebenfalls auf die Vorgabe zurück;
+ * `foulLimit: null` (ausgeschaltet) bleibt erhalten.
  */
 export function completeMatchCockpitSettings(value: unknown): MatchCockpitSettings | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return undefined;
   }
   const gespeichert = value as Partial<MatchCockpitSettings>;
+  const vorgabe = DEFAULT_MATCH_COCKPIT_SETTINGS;
   return {
-    ...DEFAULT_MATCH_COCKPIT_SETTINGS,
+    ...vorgabe,
     ...gespeichert,
-    enabledCards: { ...DEFAULT_MATCH_COCKPIT_SETTINGS.enabledCards, ...gespeichert.enabledCards },
+    clockMode: validOr(gespeichert.clockMode, (v) => CLOCK_MODES.some((mode) => mode === v), vorgabe.clockMode),
+    foulLimit: gespeichert.foulLimit === null ? null : validOr(gespeichert.foulLimit, (v) => isIntInRange(v, 1), vorgabe.foulLimit),
+    enabledCards: completeEnabledCards(gespeichert.enabledCards),
+    penaltyEndsOnGoal: validOr(gespeichert.penaltyEndsOnGoal, isBoolean, vorgabe.penaltyEndsOnGoal),
+    shortHandedSeconds: validOr(gespeichert.shortHandedSeconds, (v) => isIntInRange(v, 0), vorgabe.shortHandedSeconds),
+    finalPhaseMinutes: validOr(
+      gespeichert.finalPhaseMinutes,
+      (v) => isIntInRange(v, FINAL_PHASE_MINUTES_MIN, FINAL_PHASE_MINUTES_MAX),
+      vorgabe.finalPhaseMinutes,
+    ),
   };
 }
 

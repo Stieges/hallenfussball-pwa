@@ -2,11 +2,12 @@
  * useScheduleResultEntry (A-08f3e2): Schnelleingabe im Spielplan über Server-Einträge.
  * `ensureMatch` → `catchUp` → Status aus der Engine-Ansicht DANACH (N-4) → Weiche:
  * geplant → `enterResult`; beendet → Grund-Auswahl → `correct` (Grundpflicht); abgesetzt → Rückfrage →
- * `unskipAndEnterResult` (ein Stapel); laufend → Hinweis. K.-o.-Unentschieden → Hinweis, nichts gespeichert
- * (Strafstoßergebnis im Direkteintrag kommt mit A-25a, Befund C-DIREKTEINTRAG-OHNE-STRAFSTOSS).
+ * `unskipAndEnterResult` (ein Stapel); laufend → Hinweis. A-25a (@FU-094): K.-o.-Unentschieden → Abfrage des
+ * Strafstoßergebnisses, ohne Angabe nichts gespeichert; A-08f3e4 Teil K (@FU-097): im abgesetzten K.-o.-Spiel ebenso,
+ * nach der Rückfrage, im selben Stapel.
  * Fixrunde 1: Rückfragen nur, wenn der Eintrag zulässig ist -- veralteter Stand (M-1) und fehlende Rolle
  * (M-2, Wortlaut @HE-042) melden sofort. K.-o.-Auflösung über `useResultEntryAck` → `useKoResolutionAfterAck`.
- * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094 (Teil), @FU-069, @EK-004, @HE-042.
+ * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094, @FU-097, @FU-069, @EK-004, @HE-042.
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,12 +24,13 @@ import { useResultEntryAck } from './useResultEntryAck';
 
 export type ResultEntryPrompt =
   | { kind: 'reason'; matchNumber: number; before: string; after: string }
-  | { kind: 'unskip'; matchNumber: number };
+  | { kind: 'unskip'; matchNumber: number }
+  | { kind: 'shootout'; matchNumber: number; score: string; homeName: string; awayName: string };
 
 export interface ScheduleResultEntry {
   enterScore: (matchId: string, scoreA: number, scoreB: number) => Promise<void>;
   prompt: ResultEntryPrompt | null;
-  /** Grund (`reason`), `'yes'` (abgesetzt) oder `null` = Abbruch. */
+  /** Grund (`reason`), `'yes'` (abgesetzt), Strafstoßstand `'4:3'` (`shootout`) oder `null` = Abbruch. */
   answerPrompt: (answer: string | null) => void;
 }
 
@@ -39,6 +41,11 @@ export interface UseScheduleResultEntryOptions {
 }
 
 const score = (a: number, b: number): string => `${a}:${b}`;
+/** Antwort der Strafstoß-Abfrage `'4:3'` → Stand je Team (Heim = Team A). */
+const shootoutOf = (answer: string, teamAId: string, teamBId: string): Record<string, number> => {
+  const [home, away] = answer.split(':').map(Number);
+  return { [teamAId]: home, [teamBId]: away };
+};
 
 export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): ScheduleResultEntry {
   const { tournament, showWarning, lockFinishedResults } = options;
@@ -100,10 +107,8 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       return;
     }
     const match = tournament.matches.find((m) => m.id === matchId);
-    if (scoreA === scoreB && serverRulesFor(tournament, match).knockout) {
-      showWarning(t('schedule.resultEntry.knockoutDraw'));
-      return;
-    }
+    const knockout = serverRulesFor(tournament, match).knockout;
+    const knockoutDraw = knockout && scoreA === scoreB;
     const { engine } = context;
     const id = entry.matchId;
     const scores = { [entry.ctx.teamAId]: scoreA, [entry.ctx.teamBId]: scoreB };
@@ -127,13 +132,23 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
         showWarning(t(route === 'correct' ? 'schedule.resultEntry.correctionLeadOnly' : 'schedule.resultEntry.leadOnly'));
         return;
       }
-      if (route === 'enter') {
-        eventId = await commands.enterResult(id, entry.ctx, actor, scores);
-      } else if (route === 'unskip') {
-        if ((await ask({ kind: 'unskip', matchNumber: entry.meta.number })) === null) {
+      if (route === 'enter' || route === 'unskip') {
+        // @FU-093: abgesetzt → erst die Rückfrage; @FU-094/@FU-097: K.-o.-Unentschieden → danach die Strafstoß-Abfrage.
+        if (route === 'unskip' && (await ask({ kind: 'unskip', matchNumber: entry.meta.number })) === null) {
           return;
         }
-        eventId = await commands.unskipAndEnterResult(id, entry.ctx, actor, scores);
+        let shootout: Record<string, number> | undefined;
+        if (knockoutDraw) {
+          const { homeTeam, awayTeam } = entry.meta;
+          const answer = await ask({ kind: 'shootout', matchNumber: entry.meta.number, score: score(scoreA, scoreB), homeName: homeTeam.name, awayName: awayTeam.name });
+          if (answer === null) {
+            return; // ohne Strafstoßergebnis wird nichts gespeichert (abgesetzt bleibt abgesetzt)
+          }
+          shootout = shootoutOf(answer, entry.ctx.teamAId, entry.ctx.teamBId);
+        }
+        eventId = route === 'unskip'
+          ? await commands.unskipAndEnterResult(id, entry.ctx, actor, scores, shootout, knockout)
+          : await commands.enterResult(id, entry.ctx, actor, scores, shootout, knockout);
       } else {
         if (lockFinishedResults) {
           showWarning(t('actions.matchAlreadyFinished'));

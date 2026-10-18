@@ -1,5 +1,5 @@
 {
-  "title": "Ungültiger Übergang wird abgelehnt (kein Zustandswechsel)",
+  "title": "Ungültiger Übergang wird abgelehnt (kein Zustandswechsel; ZA-3: Tor bei angehaltener Uhr ist erlaubt (@SL-085), daher Wiederanpfiff aus der Pause)",
   "szenario": null,
   "ctx": {
     "matchId": "match-02",
@@ -53,12 +53,11 @@
     },
     {
       "id": "11111111-1111-4111-8111-111111111104",
-      "type": "GOAL",
+      "type": "SECTION_START",
       "actor": "helper",
       "at": 3000,
       "section": 1,
       "clockMs": 59000,
-      "teamId": "teamA",
       "payload": {},
       "actorUser": "helper"
     }

@@ -118,7 +118,7 @@
       "id": "11111111-1111-4111-8111-111111111109",
       "type": "REOPEN",
       "actor": "helper",
-      "at": 9000,
+      "at": 129000,
       "section": null,
       "clockMs": null,
       "payload": {},
@@ -128,7 +128,7 @@
       "id": "11111111-1111-4111-8111-111111111110",
       "type": "REOPEN",
       "actor": "leitung",
-      "at": 10000,
+      "at": 130000,
       "section": null,
       "clockMs": null,
       "payload": {},
@@ -138,7 +138,7 @@
       "id": "11111111-1111-4111-8111-111111111111",
       "type": "RETRACT",
       "actor": "helper",
-      "at": 11000,
+      "at": 131000,
       "section": null,
       "clockMs": null,
       "targetId": "11111111-1111-4111-8111-111111111108",
@@ -149,7 +149,7 @@
       "id": "11111111-1111-4111-8111-111111111112",
       "type": "RETRACT",
       "actor": "leitung",
-      "at": 12000,
+      "at": 132000,
       "section": null,
       "clockMs": null,
       "targetId": "11111111-1111-4111-8111-111111111108",
@@ -197,7 +197,10 @@
       {
         "id": "11111111-1111-4111-8111-111111111109",
         "status": "rejected",
-        "code": "FORBIDDEN_ACTOR"
+        "code": "FORBIDDEN_ACTOR",
+        "detail": {
+          "reason": "CONTINUE_WINDOW_EXPIRED"
+        }
       },
       {
         "id": "11111111-1111-4111-8111-111111111110",
@@ -220,7 +223,7 @@
       "clock": {
         "running": true,
         "elapsedMs": 600000,
-        "anchorAt": 10000
+        "anchorAt": 130000
       },
       "scores": {
         "teamA": {

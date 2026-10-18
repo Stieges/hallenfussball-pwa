@@ -120,6 +120,11 @@ vi.mock('../../../hooks/useTournamentWizard', () => ({
   },
 }));
 
+// A-08f3e4 Fixrunde 1: Turnier ohne Einträge (@FU-090 Gegenbeispiel) – ohne Spiel-Engine sperrte der Wächter die Neuplanung.
+vi.mock('../../../hooks/useMatchEntryGuard', () => ({
+  useMatchEntryGuard: () => ({ blocks: async () => false, read: async () => ({ matches: [], unreadable: false }), notify: () => undefined, isGuest: false }),
+}));
+
 import { TournamentCreationScreen } from '../../../screens/TournamentCreationScreen';
 import { ToastProvider } from '../../../components/ui/Toast';
 import { testUuid } from '../../../test/testIds';

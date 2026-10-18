@@ -18,12 +18,21 @@
     "goalScored": "Goal for {{teamName}}",
     "goalRemoved": "Goal removed for {{teamName}}",
     "foul": "Foul for {{teamName}}",
-    "foulWarning": "⚠ WARNING: {{teamName}} has 5 fouls!",
     "halftime": "Halftime",
     "yellowCard": "Yellow card for {{teamName}}",
     "yellowRedCard": "Yellow-red card for {{teamName}}",
     "redCard": "Red card for {{teamName}}",
     "timePenalty": "{{minutes}} min time penalty for {{teamName}}"
+  },
+  "meldung": {
+    "angepfiffen": "Match kicked off",
+    "pausiert": "Match paused",
+    "fortgesetzt": "Match resumed",
+    "abgepfiffen": "Match ended",
+    "seitenGetauscht": "Sides swapped",
+    "zeitGesetzt": "Time set to {{zeit}}",
+    "foulGrenze": "{{teamName}}: foul {{count}} this half",
+    "schliessen": "Dismiss notice"
   },
   "ariaLive": {
     "running": "Match running",
@@ -346,6 +355,7 @@
   "engine": {
     "notYet": "This action will be available in a later step.",
     "invalid": "This action isn't possible right now.",
+    "invalidKit": "The jersey or bib color is invalid. Please pick a color from the palette.",
     "storeFull": "Device storage is full. Please free up space.",
     "retract": {
       "hint": {

@@ -59,6 +59,7 @@ const FULL_MATCH: Required<Match> = {
   decidedBy: 'penalty',
   skippedReason: 'Team zurückgezogen',
   skippedAt: '2026-11-14T13:00:00.000Z',
+  kit: { a: '#CC0000', b: '#FFFFFF', bibSide: 'b' }, // A-30a: getragene Farben beim Anpfiff (@W3-028)
   events: [
     { id: 'e1', matchId: 'm-11', timestampSeconds: 12, type: 'GOAL', payload: { teamId: 'a', playerNumber: 7 }, scoreAfter: { home: 1, away: 0 } },
   ],

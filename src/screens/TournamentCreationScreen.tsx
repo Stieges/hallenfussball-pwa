@@ -7,7 +7,8 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { TournamentPreview } from '../features/tournament-creation/TournamentPreview';
 import { ReplanPanel } from '../features/tournament-creation/components/ReplanPanel';
-import { openReplan, type ReplanSession } from '../features/tournament-creation/utils/replan';
+import type { ReplanSession } from '../features/tournament-creation/utils/replan';
+import { useGuardedReplan } from '../features/tournament-creation/hooks/useGuardedReplan';
 import { useTournamentStartState } from '../hooks/useTournamentStartState';
 import { Step5_Overview as Step5_OverviewDirect } from '../features/tournament-creation/Step5_Overview';
 import { getStepFromSearchParams, buildWizardStepPath, type WizardStep } from '../features/tournament-creation';
@@ -196,6 +197,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   // ============================================================================
   const [generatedSchedule, setGeneratedSchedule] = useState<ReturnType<typeof generateFullSchedule> | null>(null);
   const [replanSession, setReplanSession] = useState<ReplanSession | null>(null);
+  const startReplan = useGuardedReplan(setReplanSession); // A-08f3e4 (@FU-090): mit Einträgen keine Neuplanung
   const [showSaveNotification, setShowSaveNotification] = useState(false);
   // @W1-023: Festlegen mit Ladezustand; Sperre verhindert zweites Turnier bei Doppelklick.
   const [isPublishing, setIsPublishing] = useState(false);
@@ -305,17 +307,14 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   }, [hasUnsavedChanges, saveAsDraft]);
 
   const handlePreview = () => {
-    // Reset error state
-    setScheduleError(null);
-
-    // Validate by attempting to generate schedule
+    setScheduleError(null); // Reset error state; validate by attempting to generate schedule
     try {
       const tournament = createDraftTournament();
       // B-02 Paket A (@W5-005): Im Bearbeiten-Modus wird die Strukturänderung
       // als Neuplanung mit Vorschau angeboten – bis zur Bestätigung ändert sich
       // nichts (@W5-007), nach dem Anpfiff nicht (@W5-008).
       if (existingTournament) {
-        setReplanSession(openReplan(existingTournament, tournament, matchStartState));
+        startReplan(existingTournament, tournament, matchStartState);
         return;
       }
       const schedule = generateFullSchedule(tournament);

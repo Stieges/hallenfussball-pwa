@@ -10,12 +10,16 @@ import { ERROR_CODES } from '../core/match/types';
  * zeigt den Hinweis „Korrektur über die Turnierleitung“; Speicher voll: eigener Text; alles andere
  * (inkl. Nicht-Engine-Spiel) ist „gerade nicht möglich“ – kein Verweis auf eine spätere Umsetzung.
  */
-export type RejectionMessageKey = 'engine.storeFull' | 'engine.retract.hint.goalFinished' | 'engine.invalid';
+export type RejectionMessageKey = 'engine.storeFull' | 'engine.retract.hint.goalFinished' | 'engine.invalidKit' | 'engine.invalid';
 
 export function rejectionMessageKey(error: unknown): RejectionMessageKey {
   if (error instanceof LocalStoreFullError) { return 'engine.storeFull'; }
   if (error instanceof MatchCommandRejectedError && error.code === ERROR_CODES.MATCH_FINISHED) {
     return 'engine.retract.hint.goalFinished';
+  }
+  // A-30a (@SL-137): ungültige Trikot-/Leibchenfarbe beim Anpfiff – eigener, verständlicher Text.
+  if (error instanceof MatchCommandRejectedError && (error.detail as { reason?: unknown } | undefined)?.reason === 'INVALID_KIT') {
+    return 'engine.invalidKit';
   }
   return 'engine.invalid';
 }

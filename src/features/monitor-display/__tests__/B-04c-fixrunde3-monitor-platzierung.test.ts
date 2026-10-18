@@ -5,14 +5,14 @@
  *   - finalsConfig { preset: 'top-4', tiebreakerByRound: { final: 'overtime-then-shootout',
  *     placement: 'goldenGoal' } }, Platz-3-Spiel (finalType 'thirdPlace') → toLiveMatch liefert 'goldenGoal'.
  *     Der Wert ist bewusst NICHT der Engine-Rückfall ('shootout'), damit der Test nicht zufällig grün ist (F2).
- * Pflichttest (Cockpit, it.fails, Engine-Weg, A-08d1 F2): Cockpit-Regel = Monitor-Regel für Platz 3.
+ * Pflichttest (Cockpit, Engine-Weg, A-08d1 F2; seit ZA-3 regulär): Cockpit-Regel = Monitor-Regel für Platz 3.
  *   Die Engine kennt nur finalsConfig.tiebreaker und die Phase; sie liefert 'shootout' statt 'goldenGoal'.
  * Gegenbeispiele (grün, Monitor):
  *   - finalType 'final' → 'overtime-then-shootout'
  *   - ohne placement folgt Platz 3 dem Finale ('overtime-then-shootout')
  * Mutation:
  *   - match.finalType aus monitorMatch.ts entfernen → rot (Monitor-Pflichttest)
- *   - Rückfall in serverRules (shootout → goldenGoal) → Cockpit-Test wird rot (it.fails bestanden = rot, F2)
+ *   - Rückfall in serverRules (shootout → goldenGoal) → Cockpit-Test wird rot (F2)
  */
 import { describe, it, expect } from 'vitest';
 import { liveMatchOf } from './monitorViewHelper';
@@ -51,7 +51,7 @@ function monitorRegel(finalType: FinalType | undefined) {
   return liveMatchOf(planMatch(finalType), turnier).tiebreakerMode;
 }
 
-/** Cockpit-Seite auf dem Engine-Weg (A-08d1); die Engine kennt kein finalType, nur die Phase. */
+/** Cockpit-Seite auf dem Engine-Weg (A-08d1); seit ZA-3 mit Phase und finalType. */
 async function cockpitRegel(tournament: Tournament, finalType: FinalType) {
   const spiel = await startEngineSpiel(tournament, { phase: 'final', finalType });
   return spiel.tiebreakerMode;
@@ -62,10 +62,10 @@ describe('B-04c Fixrunde 3 – Monitor-Pfad für Platzierungsspiele (@W2A-009, @
     expect(monitorRegel('thirdPlace')).toBe('goldenGoal');
   });
 
-  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
+  // ZA-3 (D1): Befund C-KO-RUNDENREGEL-SERVER behoben – Engine-Regeln lesen Runde und finalType, Markierung entfernt
   // Engine-Weg: Platz 3 bekommt den Rückfall 'shootout' statt der Platzierungsregel 'goldenGoal' (kein finalType, keine Runden-Regel).
   // Nach A-27 grün; der Monitor-Test oben und das Finale-Gegenbeispiel bleiben dann als Gegenbeweis nötig.
-  it.fails('Pflichttest (Cockpit) @W2A-039: Platz 3 zeigt im Cockpit dieselbe Regel wie im Monitor', async () => {
+  it('Pflichttest (Cockpit) @W2A-039: Platz 3 zeigt im Cockpit dieselbe Regel wie im Monitor', async () => {
     expect(await cockpitRegel(turnier, 'thirdPlace')).toBe(monitorRegel('thirdPlace'));
   });
 

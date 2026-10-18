@@ -65,6 +65,9 @@ describe('@ZM-147 Monitor: Endstand ohne Verlauf nach dem Strafstoßschießen', 
     const cup = await nurErgebnis();
     const { container } = zeigeLive(cup);
     expect(container.querySelectorAll('[data-testid*="shootout"], [data-testid*="schuetze"], [data-testid*="dots"]')).toHaveLength(0);
+    // aus main (A-25a): auch keine Torschützen
+    expect(container.querySelector('[data-testid*="scorer"], [data-testid*="kick"]')).toBeNull();
+    expect(screen.queryByText(/Torschütze|Schütze/)).toBeNull();
     expect(container.textContent).not.toMatch(/[○●✓✗]/);
     expect(screen.getByTestId('live-winner').textContent).not.toMatch(/–|\?/);
   });
@@ -85,7 +88,7 @@ describe('@ZM-147 Monitor: Endstand ohne Verlauf nach dem Strafstoßschießen', 
     expect(screen.getByTestId('live-endstand').textContent).toBe('Endstand');
   });
 
-  it('@ZM-090 Kindermodus: weder Strafstoßergebnis noch Sieger (kein Stand wird verraten)', async () => {
+  it('@W2A-031 Kindermodus: weder Strafstoßergebnis noch Sieger (kein Stand wird verraten)', async () => {
     const cup = await nurErgebnis();
     const kinder = { ...cup.tournament, hideScoresForPublic: true };
     const match = kinder.matches[GAME.HF1];

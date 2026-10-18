@@ -22,7 +22,7 @@
     "sectionSeconds": 2147483647,
     "breakSeconds": 2147483647,
     "knockout": false,
-    "tiebreak": "shootout",
+    "tiebreak": "overtime-then-shootout",
     "overtimeSeconds": 2147483647,
     "shootersPerTeam": 2147483647,
     "suddenDeathAfter": 2147483647,

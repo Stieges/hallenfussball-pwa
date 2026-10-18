@@ -117,11 +117,26 @@
       "confirmSwitch": "Switch anyway"
     },
     "koAfterSend": "Knockout places will be filled after sending",
+    "skip": {
+      "teamsMissing": "A match can only be called off once both teams are known",
+      "unavailable": "Calling off the match is not possible right now"
+    },
+    "entriesGuard": {
+      "blocked": "Match {{number}} has entries – only via resetting the schedule to the start",
+      "unreadable": "Entries could not be checked – nothing changed",
+      "restoreKept_one": "For {{count}} match with entries the result was not restored",
+      "restoreKept_other": "For {{count}} matches with entries the results were not restored",
+      "restoreServerLed": "Results are not taken from the backup – the server keeps them"
+    },
     "resultEntry": {
       "running": "Match in progress – enter the result after the final whistle",
       "teamsMissing": "Enter a result once both teams are known",
       "unavailable": "Entering a result is not possible right now",
-      "knockoutDraw": "Draw in a knockout match – please enter the result including the $t(sport:events.penaltyShootout) in the cockpit. Nothing saved.",
+      "shootoutTitle": "Penalty shootout result",
+      "shootoutQuestion": "Match {{number}} ended {{score}} – who won the $t(sport:events.penaltyShootout)?",
+      "shootoutMissing": "Please enter the penalty shootout result.",
+      "shootoutTie": "The $t(sport:events.penaltyShootout) needs a winner – please enter an unequal result.",
+      "shootoutSave": "Save result",
       "stale": "Match {{number}} was changed by {{name}} in the meantime (now {{score}})",
       "staleNoName": "Match {{number}} was changed in the meantime (now {{score}})",
       "skippedTitle": "Match {{number}} called off",
