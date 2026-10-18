@@ -27,6 +27,7 @@
   "meldung": {
     "angepfiffen": "Spiel angepfiffen",
     "pausiert": "Spiel pausiert",
+    "wiederangepfiffen": "Wiederanpfiff – der nächste Abschnitt läuft",
     "fortgesetzt": "Spiel fortgesetzt",
     "abgepfiffen": "Spiel abgepfiffen",
     "seitenGetauscht": "Seiten getauscht",
@@ -116,6 +117,7 @@
   },
   "controls": {
     "start": "▶ Start",
+    "wiederanpfiff": "▶ Wiederanpfiff",
     "pause": "⏸ Pause",
     "time": "🕒 Zeit",
     "switchSides": "🔄 Seiten",
@@ -125,6 +127,7 @@
     "events": "📋 Ereignisse",
     "undoAria": "Rückgängig",
     "pauseAria": "Pausieren",
+    "wiederanpfiffAria": "Wiederanpfiff",
     "startAria": "Starten",
     "editTimeAria": "Zeit bearbeiten",
     "switchSidesAria": "Seiten tauschen",

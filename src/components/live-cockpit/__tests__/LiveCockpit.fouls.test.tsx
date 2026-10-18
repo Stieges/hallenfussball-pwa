@@ -67,9 +67,9 @@ function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): Li
 describe('LiveCockpit — Fouls für das ganze Spiel (C3b-2, G11)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  // Merge Spur A/B: der Halbzeit-Knopf ist seit B-03 Fixrunde 1 (Platzhalter-Liste Nr. 3, @OB-002) bis B-08
-  // ausgeblendet -- es gibt keinen Halbzeit-Weg, der die Fouls zuruecksetzen koennte (G11 bleibt erfuellt).
-  it('kein Reset bei Halbzeit (kein Halbzeit-Knopf bis B-08, Zaehler aus den Ereignissen)', () => {
+  // B-08b: die Halbzeit kommt von selbst (`useAutoSectionEnd`); ein Weg, der die Fouls zuruecksetzen koennte, gibt es nicht.
+  // Den Ablauf ueber die Halbzeit prueft LiveCockpit.abschnittsende.test.tsx mit echter Engine.
+  it('kein Reset bei Halbzeit (kein Halbzeit-Knopf, Zaehler aus den Ereignissen)', () => {
     render(<LiveCockpit {...baseProps(makeMatch())} />);
     expect(screen.getByTestId('foul-count-home')).toHaveTextContent('2');
     expect(screen.getByTestId('foul-count-away')).toHaveTextContent('1');
@@ -149,7 +149,7 @@ describe('LiveCockpit — M7: Meldungen i18n, Foul ohne Zahl, 5er-Warnung (F3a)'
     expect(onFoul).not.toHaveBeenCalled();
   });
 
-  // Merge Spur A/B: Halbzeit-Teil entfaellt mit dem Halbzeit-Knopf (B-03 Fixrunde 1, bis B-08).
+  // Halbzeit-Teil: siehe LiveCockpit.abschnittsende.test.tsx (B-08b).
   it('Karten- und Zeitstrafen-Meldungen kommen aus i18n', async () => {
     const onCard = vi.fn();
     const onTimePenalty = vi.fn();

@@ -1,28 +1,30 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { isAutoFinishDue } from '../../../core/match/client/viewDuration';
+import { useCallback } from 'react';
 
 export interface ClockControlsParams {
   match: { id: string; status: 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED' } | null;
-  /** Nur ein steuerndes Gerät beendet das Spiel automatisch (R4/H3, @SL-018). */
-  kannSteuern: boolean;
-  autoFinishEnabled: boolean;
-  /** Spielzeit (auch Verlängerung/Golden Goal) ist wirklich abgelaufen. */
-  zeitAbgelaufen: boolean;
-  sound: { enabled: boolean; play: () => void; /** Ton freigeben, falls noch nicht geschehen; läuft im Tipp (Browser-Geste), @OB-021. */ aktiviere?: () => void };
-  hapticEnabled: boolean;
+  /** Engine-Zustand `section_break` (Halbzeitpause oder Pause vor der Verlängerung): „Weiter“ heißt dort Wiederanpfiff. */
+  abschnittspause: boolean;
+  /** Ton freigeben, falls noch nicht geschehen; läuft im Tipp (Browser-Geste), @OB-021. */
+  sound: { aktiviere?: () => void };
   onStart: (matchId: string) => void;
   onPause: (matchId: string) => void;
   onResume: (matchId: string) => void;
-  onFinish: (matchId: string) => void;
+  /** Wiederanpfiff nach der Abschnittspause (SECTION_START, B-08b). */
+  onStartSection: (matchId: string) => void;
+  /** Abpfiff von Hand; liefert (als Promise) die ID des gesendeten Endes, wenn der Aufrufer sie kennt (für `useWhistle`). */
+  onFinish: (matchId: string) => unknown;
+  /** Das Ende von Hand ist gesendet (`null`: abgelehnt oder nichts gespeichert). */
+  onFinished?: (eventId: string | null) => void;
 }
 export interface UseClockControlsReturn { starte: () => void; pauseOderWeiter: () => void; pfeifeAb: () => void }
 
 /**
- * Anpfiff, Pause/Weiter und Abpfiff (Ton, Vibration) des Cockpits sowie der automatische Abpfiff.
+ * Anpfiff, Pause/Weiter, Wiederanpfiff und Abpfiff von Hand des Cockpits. Ton und Vibration kommen allein aus
+ * `useWhistle` (B-08c), das Abschnittsende und den Abpfiff von selbst macht `useAutoSectionEnd` (B-08b).
  * Meldungen (Toasts) hängen die Aufrufer über die `on…`-Rückrufe an (bis Aufgabe 2.3).
  */
 export function useClockControls(p: ClockControlsParams): UseClockControlsReturn {
-  const { match, kannSteuern, autoFinishEnabled, zeitAbgelaufen, sound, hapticEnabled, onStart, onPause, onResume, onFinish } = p;
+  const { match, abschnittspause, sound, onStart, onPause, onResume, onStartSection, onFinish, onFinished } = p;
   const starte = useCallback(() => {
     if (!match) { return; }
     sound.aktiviere?.();
@@ -31,28 +33,15 @@ export function useClockControls(p: ClockControlsParams): UseClockControlsReturn
   const pauseOderWeiter = useCallback(() => {
     if (!match) { return; }
     sound.aktiviere?.();
-    if (match.status === 'RUNNING') { onPause(match.id); } else if (match.status === 'PAUSED') { onResume(match.id); }
-  }, [match, sound, onPause, onResume]);
+    if (match.status === 'RUNNING') { onPause(match.id); return; }
+    if (match.status !== 'PAUSED') { return; }
+    // C-COCKPIT-HALBZEIT-START: in der Abschnittspause gibt es kein RESUME, sondern den Wiederanpfiff (SECTION_START).
+    if (abschnittspause) { onStartSection(match.id); } else { onResume(match.id); }
+  }, [match, abschnittspause, sound, onPause, onResume, onStartSection]);
   const pfeifeAb = useCallback(() => {
     if (!match) { return; }
-    // Bis B-08c: Ton und Vibration hier. B-08c P1 macht `useWhistle` zur einzigen Quelle und entfernt diese zwei Zeilen.
-    if (sound.enabled) { sound.play(); }
-    if (hapticEnabled && typeof navigator.vibrate === 'function') { navigator.vibrate([200, 100, 200]); }
-    onFinish(match.id);
-  }, [match, sound, hapticEnabled, onFinish]);
-
-  // Automatischer Abpfiff: nur bei laufendem Spiel mit wirklich abgelaufener Zeit (C-VERLAENGERUNG-ENDET-SOFORT,
-  // `isAutoFinishDue`). Einmal je Lauf: `abgepfiffenFuer` hält die Spiel-ID, solange das Spiel RUNNING bleibt
-  // (bekannte Schleife bei neu erzeugtem `sound`/`match`, vgl. LiveCockpit.readOnly.test.tsx) und wird frei, sobald
-  // das Spiel nicht mehr läuft – so endet auch ein folgender Abschnitt desselben Spiels (Verlängerung) von selbst.
-  // B-08b ersetzt diesen Effekt durch useAutoSectionEnd.
-  const abgepfiffenFuer = useRef<string | null>(null);
-  useEffect(() => {
-    if (match?.status !== 'RUNNING') { abgepfiffenFuer.current = null; return; }
-    if (!kannSteuern || !autoFinishEnabled || !isAutoFinishDue(match, zeitAbgelaufen)) { return; }
-    if (abgepfiffenFuer.current === match.id) { return; }
-    abgepfiffenFuer.current = match.id;
-    pfeifeAb();
-  }, [kannSteuern, autoFinishEnabled, match, zeitAbgelaufen, pfeifeAb]);
+    const gesendet = onFinish(match.id);
+    void Promise.resolve(gesendet).then((id) => { onFinished?.(typeof id === 'string' ? id : null); });
+  }, [match, onFinish, onFinished]);
   return { starte, pauseOderWeiter, pfeifeAb };
 }

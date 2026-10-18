@@ -69,8 +69,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   // I4 (W1, Nachtrag Fixrunde 1): Ablehnungen (D-C1) auch für Helfer im Cockpit sichtbar.
   const rejectedOutbox = useRejectedOutboxDialog(tournamentId, notices.fehler);
 
-  // BUG-004 FIX: Echtzeit-Uhr; hier nur noch für den automatischen Abpfiff und das Zeit-Blatt (die Tafel liest `PhaseView`)
-  const { displaySeconds, elapsedSeconds, isOvertime } = useMatchTimerExtended(
+  // BUG-004 FIX: Echtzeit-Uhr; hier nur noch für das Zeit-Blatt (die Tafel liest `PhaseView`, das Ende von selbst `useAutoSectionEnd`)
+  const { displaySeconds, elapsedSeconds } = useMatchTimerExtended(
     currentMatch?.timerStartTime ?? null,
     currentMatch?.timerElapsedSeconds ?? 0,
     currentMatch?.status ?? 'NOT_STARTED',
@@ -92,7 +92,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     : null;
 
   const cmd = useCockpitCommands({
-    props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, isOvertime,
+    props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView,
   });
 
   // Tafel: mit Spiel und ohne (wartet auf Teams, kein Spiel mehr). Die Verbindungsanzeige steht bis zum schmalen Kopf (3.8) darin.
