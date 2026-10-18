@@ -150,6 +150,7 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
             // BUG-010 / Task R2 Fixrunde 2 (M2/Rule 1): Bearbeiten nur bei echter readOnly-Sperre
             // ausgeblendet (`undefined`), nicht bei beendetem Spiel allein.
             onEventEdit={sidebar.onEventEdit}
+            matchId={match.id}
           />
         )}
       </div>

@@ -5,6 +5,7 @@
  * Shows active time penalties and event history
  *
  * BUG-010: Added edit functionality for all events
+ * UR (@FU-080): Direkteinträge des Spiels als eigene Zeilen „Ergebnis eingetragen von …“ (`matchId`).
  */
 
 import { type CSSProperties } from 'react';
@@ -14,6 +15,8 @@ import type { ActivePenalty, RuntimeMatchEvent } from '../../../../types/tournam
 import { mergeProtocol, takeRecent, formatTime } from '../protocolEntries';
 import { ProtocolRow } from '../ProtocolRow';
 import { cardKindOf } from '../../../../utils/cardKind';
+import { useResultEntryEvents } from '../../../../features/match-engine/useResultEntryEvents';
+import { ResultEntryProtocolRows } from '../ResultEntryProtocolRow';
 
 export interface SidebarProps {
   activePenalties: ActivePenalty[];
@@ -26,6 +29,8 @@ export interface SidebarProps {
   awayTeamId: string;
   /** BUG-010: Callback when edit button is clicked on any event */
   onEventEdit?: (event: RuntimeMatchEvent) => void;
+  /** UR (@FU-080): Spiel-ID für die Protokoll-Zeilen der Direkteinträge. Ohne ID keine solche Zeile. */
+  matchId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -45,8 +50,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   homeTeamId,
   awayTeamId,
   onEventEdit,
+  matchId,
 }) => {
   const { t } = useTranslation('cockpit');
+  const resultEntries = useResultEntryEvents(matchId);
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -191,10 +198,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Event Log */}
       <div style={panelStyle}>
         <div style={panelTitleStyle}>{t('sidebar.events')}</div>
+        {matchId && (
+          <ResultEntryProtocolRows tournamentId={resultEntries.tournamentId} matchId={matchId} ids={resultEntries.ids} variant="sidebar" />
+        )}
         {recentEvents.length === 0 ? (
-          <div style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
-            {t('sidebar.noEvents')}
-          </div>
+          resultEntries.ids.length === 0 && (
+            <div style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
+              {t('sidebar.noEvents')}
+            </div>
+          )
         ) : (
           recentEvents.map((entry, index) => (
             <ProtocolRow

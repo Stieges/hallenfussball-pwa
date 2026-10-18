@@ -8,6 +8,7 @@
  * - Shows all events (not just incomplete ones)
  * - Edit button for each event
  * - Styled consistently with other bottom sheets
+ * - UR (@FU-080): Direkteinträge des Spiels als eigene Zeilen „Ergebnis eingetragen von …“ (`matchId`)
  */
 
 import { type CSSProperties } from 'react';
@@ -19,6 +20,8 @@ import type { RuntimeMatchEvent } from '../../../../types/tournament';
 import { mergeProtocol } from '../protocolEntries';
 import { ProtocolRow } from '../ProtocolRow';
 import { cardKindOf } from '../../../../utils/cardKind';
+import { useResultEntryEvents } from '../../../../features/match-engine/useResultEntryEvents';
+import { ResultEntryProtocolRows } from '../ResultEntryProtocolRow';
 
 interface EventLogBottomSheetProps {
   isOpen: boolean;
@@ -34,6 +37,8 @@ interface EventLogBottomSheetProps {
    *  die Komponente den "Bearbeiten"-Knopf komplett aus (gleiches Muster wie Sidebar/index.tsx
    *  `canEdit = !!onEventEdit`). Das Sheet selbst bleibt immer les-/öffenbar (Regel 2). */
   onEventEdit?: (event: RuntimeMatchEvent) => void;
+  /** UR (@FU-080): Spiel-ID für die Protokoll-Zeilen der Direkteinträge. Ohne ID keine solche Zeile. */
+  matchId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -54,8 +59,10 @@ export function EventLogBottomSheet({
   homeTeamId,
   awayTeamId,
   onEventEdit,
+  matchId,
 }: EventLogBottomSheetProps) {
   const { t } = useTranslation('cockpit');
+  const resultEntries = useResultEntryEvents(matchId);
   const getTeamName = (teamId?: string): string => {
     if (teamId === homeTeamId) {return homeTeamName;}
     if (teamId === awayTeamId) {return awayTeamName;}
@@ -148,12 +155,15 @@ export function EventLogBottomSheet({
       onClose={onClose}
       title="Ereignisprotokoll"
     >
-      {sortedEvents.length === 0 ? (
+      {sortedEvents.length === 0 && resultEntries.ids.length === 0 ? (
         <div style={emptyStyle}>
           Noch keine Ereignisse aufgezeichnet
         </div>
       ) : (
         <div style={listStyle}>
+          {matchId && (
+            <ResultEntryProtocolRows tournamentId={resultEntries.tournamentId} matchId={matchId} ids={resultEntries.ids} variant="sheet" />
+          )}
           {sortedEvents.map((entry) => (
             <ProtocolRow
               key={entry.event.id}

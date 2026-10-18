@@ -168,6 +168,7 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
         homeTeamId={match.homeTeam.id}
         awayTeamId={match.awayTeam.id}
         onEventEdit={readOnly ? undefined : handlers.editEventFromLog}
+        matchId={match.id}
       />
 
       {/* Task R2 Fixrunde 3: `readOnly` (nicht `isLocked`) – Ansehen bleibt erlaubt, nur die Eingaben sperren. */}

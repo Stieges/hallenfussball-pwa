@@ -192,7 +192,9 @@
     "editAria": "Edit {{description}}",
     "edit": "Edit",
     "retractedMark": "retracted",
-    "retractedAria": "{{description}} – retracted"
+    "retractedAria": "{{description}} – retracted",
+    "resultEntryBy": "Result entered by {{name}}",
+    "resultEntry": "Result entered"
   },
   "matchCockpit": {
     "title": "Referee Cockpit",
