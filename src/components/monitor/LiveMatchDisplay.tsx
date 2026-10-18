@@ -11,7 +11,7 @@
 
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayLayout } from '../../design-tokens';
+import { cssVars, displayFontSizes, displayLayout, getBlockFrames } from '../../design-tokens';
 import type { MonitorTheme, LiveColorScheme } from '../../types/monitor';
 import { DEFAULT_LIVE_COLOR_SCHEME } from '../../types/monitor';
 import { LiveMatch } from '../../hooks/useLiveMatches';
@@ -20,7 +20,7 @@ import { MatchTimer } from './MatchTimer';
 import type { ClockMode } from '../../core/match/clockDisplay';
 import { LiveScoreGrid } from './LiveScoreGrid';
 import { LiveFinalScore, type LiveFinalScoreProps } from './LiveFinalScore';
-import { getBlockFrames, resolveColor } from './liveBlockFrame';
+import { resolveColor } from './liveBlockFrame';
 import { LiveHeader } from './LiveHeader';
 import { badgeOfLiveMatch } from './liveBadge';
 import type { MatchBadgeModel } from '../../core/view';

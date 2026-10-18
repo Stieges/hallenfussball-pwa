@@ -133,6 +133,7 @@ export {
   type MonitorColorPresetKey,
 } from './display';
 export { displayList } from './displayList';
+export { mixHex, getBlockFrame, getBlockFrames, type BlockFrame, type BlockFrameWidths } from './displayColor';
 
 export {
   touchTargets,
@@ -145,6 +146,7 @@ export {
   layoutHeights,
   layoutHeightValues,
   componentSizes,
+  borderWidths,
   type TouchTargetKey,
   type IconSizeKey,
   type InputHeightKey,

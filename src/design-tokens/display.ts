@@ -281,6 +281,8 @@ export const displayLayout = {
     monitorCup: '8.4cqh',
     // Fixrunde 4: Verlierer-Kasten nur mit dezentem Schleier (Anteil der Hintergrundfarbe), Teamfarbe bleibt erkennbar
     loserDimShare: '30%',
+    // Spielanzeige 2.2 (Spec § 8, Mockup --vest: 14 %): Breite je Streifen der Weste als Anteil der Kastenbreite
+    vestStripeShare: 0.14,
   },
 } as const;
 
