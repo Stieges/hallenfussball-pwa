@@ -75,6 +75,17 @@
 #
 # Ändert NICHTS an der Live-Datenbank (nur `supabase db dump`, ein reiner Lesevorgang).
 #
+# PENDING-LIVE (A-11 Fixrunde A6): supabase/migrations/PENDING-LIVE.txt listet Migrationen, deren Code schon auf `main`
+# ist, die aber erst in einem späteren DB-Fenster live gehen (eine Zeile je Migration:
+# `<dateiname> <frist YYYY-MM-DD> <commit-vorher>`). NUR dieses Skript liest die Datei – rls-role-matrix.sh,
+# local-db-apply.sh und die CI-Tests spielen jede Migration weiter ein. Für jede gelistete Migration:
+#   (a) sie wird beim Nachspielen übersprungen,
+#   (b) ihre Rechte-Assertions (Zuordnung fest in pending_assertions_for() unten, kein Namensraten) werden ausgelassen,
+#   (c) role_permissions live wird gegen rolePermissions.json aus <commit-vorher> verglichen (`git show`),
+#   (d) ist die Frist überschritten (heute > Frist, UTC), bricht der Lauf hart ab,
+#   (e) jeder Lauf druckt, was ausgenommen ist.
+# Nach dem Einspielen entfernt der Controller die Zeile (Freigabe-Unterlage des Pakets, § 2).
+#
 set -euo pipefail
 
 POSTGRES_IMAGE="supabase/postgres:17.6.1.063" # muss zur Live-Postgres-Version passen (siehe Baseline-Kopfkommentar)
@@ -126,6 +137,94 @@ if [[ -n "$NEWER_MIGRATIONS_RAW" ]]; then
   while IFS= read -r line; do
     NEWER_MIGRATIONS+=("$line")
   done <<< "$NEWER_MIGRATIONS_RAW"
+fi
+
+# --- 1b. PENDING-LIVE (A-11 Fixrunde A6, siehe Kopfkommentar) ----------------------------
+PENDING_FILE="$MIGRATIONS_DIR/PENDING-LIVE.txt"
+JSON_REL_PATH="src/features/auth/permissions/rolePermissions.json"
+
+# (b) Welche Rechte-Assertions gehören zu welcher noch nicht eingespielten Migration -- fest zugeordnet.
+# Eine gelistete Migration ohne Eintrag hier ist ein harter Fehler (nie still alles auslassen).
+pending_assertions_for() {
+  case "$1" in
+    20261110_001_role_permissions_mvp.sql)
+      echo "role-permissions-check-mvp-rights matches-update-only-manage-schedule monitors-writes-manage-screens"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+PENDING_NAMES=()
+PENDING_ASSERTIONS=()
+PENDING_JSON_COMMIT=""
+TODAY_UTC="$(date -u +%Y-%m-%d)"
+if [[ -f "$PENDING_FILE" ]]; then
+  while IFS= read -r pending_raw || [[ -n "$pending_raw" ]]; do
+    pending_line="${pending_raw%%#*}"
+    pending_line="$(echo "$pending_line" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+    [[ -z "$pending_line" ]] && continue
+    read -r p_name p_due p_commit p_extra <<< "$pending_line"
+    if [[ -z "${p_commit:-}" || -n "${p_extra:-}" ]] \
+      || ! [[ "$p_due" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] \
+      || ! [[ "$p_commit" =~ ^[0-9a-f]{7,40}$ ]]; then
+      echo "::error::PENDING-LIVE.txt: Zeile nicht im Format '<dateiname> <frist YYYY-MM-DD> <commit-vorher>': '$pending_raw'" >&2
+      exit 1
+    fi
+    if [[ ! -f "$MIGRATIONS_DIR/$p_name" ]]; then
+      echo "::error::PENDING-LIVE.txt nennt $p_name, die Datei gibt es in supabase/migrations nicht (Zeile veraltet?)." >&2
+      exit 1
+    fi
+    if [[ "$TODAY_UTC" > "$p_due" ]]; then
+      echo "::error::PENDING-LIVE: Frist $p_due für $p_name überschritten (heute $TODAY_UTC). Die Migration ist nicht live eingespielt oder die Zeile wurde nach dem Einspielen nicht entfernt -- einspielen bzw. Zeile entfernen, dann neu laufen lassen." >&2
+      exit 1
+    fi
+    if ! p_assertions="$(pending_assertions_for "$p_name")"; then
+      echo "::error::PENDING-LIVE: für $p_name ist in scripts/db-drift-check.sh (pending_assertions_for) keine Zuordnung der Rechte-Assertions hinterlegt." >&2
+      exit 1
+    fi
+    if [[ -n "$PENDING_JSON_COMMIT" && "$PENDING_JSON_COMMIT" != "$p_commit" ]]; then
+      echo "::error::PENDING-LIVE: alle Zeilen brauchen denselben <commit-vorher> (Vergleichsstand der rolePermissions.json): $PENDING_JSON_COMMIT vs. $p_commit." >&2
+      exit 1
+    fi
+    PENDING_JSON_COMMIT="$p_commit"
+    PENDING_NAMES+=("$p_name")
+    for a in $p_assertions; do PENDING_ASSERTIONS+=("$a"); done
+    echo "PENDING-LIVE: ausgenommen bis $p_due (noch nicht live): $p_name"
+    echo "PENDING-LIVE:   nicht nachgespielt; Rechte-Assertions ausgelassen: $p_assertions"
+    echo "PENDING-LIVE:   role_permissions live wird gegen $JSON_REL_PATH aus Commit $p_commit verglichen"
+  done < "$PENDING_FILE"
+fi
+if [[ ${#PENDING_NAMES[@]} -eq 0 ]]; then
+  echo "PENDING-LIVE: keine Ausnahmen -- alle Migrationen werden geprüft."
+fi
+
+is_pending() {
+  local candidate="$1" pending
+  for pending in "${PENDING_NAMES[@]:-}"; do
+    [[ -n "$pending" && "$candidate" == "$pending" ]] && return 0
+  done
+  return 1
+}
+is_pending_assertion() {
+  local candidate="$1" pending
+  for pending in "${PENDING_ASSERTIONS[@]:-}"; do
+    [[ -n "$pending" && "$candidate" == "$pending" ]] && return 0
+  done
+  return 1
+}
+
+if [[ ${#PENDING_NAMES[@]} -gt 0 && ${#NEWER_MIGRATIONS[@]} -gt 0 ]]; then
+  KEPT_MIGRATIONS=()
+  for f in "${NEWER_MIGRATIONS[@]}"; do
+    if is_pending "$(basename "$f")"; then
+      continue
+    fi
+    KEPT_MIGRATIONS+=("$f")
+  done
+  NEWER_MIGRATIONS=("${KEPT_MIGRATIONS[@]:-}")
+  [[ -z "${NEWER_MIGRATIONS[0]:-}" ]] && NEWER_MIGRATIONS=()
 fi
 
 echo "Baseline enthält bereits bis einschließlich: $(grep -m1 -- '--   baseline-includes-through:' "$BASELINE_FILE" | sed -E 's/^--   baseline-includes-through:[[:space:]]*//')"
@@ -408,6 +507,22 @@ if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
   fi
   cat "$PRIV_OUT"
 
+  # PENDING-LIVE (b): Zeilen der noch nicht eingespielten Migrationen sichtbar auslassen.
+  CHECKED_ASSERTION_NAMES=()
+  for expected_name in "${PRIVILEGE_ASSERTION_NAMES[@]}"; do
+    if is_pending_assertion "$expected_name"; then
+      echo "PENDING-LIVE: Rechte-Assertion ausgelassen: $(grep -E "^${expected_name}\|" "$PRIV_OUT" || echo "${expected_name}|(keine Zeile)")"
+      continue
+    fi
+    CHECKED_ASSERTION_NAMES+=("$expected_name")
+  done
+  if [[ ${#PENDING_ASSERTIONS[@]} -gt 0 ]]; then
+    PENDING_PATTERN="^($(IFS='|'; echo "${PENDING_ASSERTIONS[*]}"))\|"
+    grep -vE "$PENDING_PATTERN" "$PRIV_OUT" > "$PRIV_OUT.checked" || true
+    mv "$PRIV_OUT.checked" "$PRIV_OUT"
+  fi
+  PRIVILEGE_ASSERTION_NAMES=("${CHECKED_ASSERTION_NAMES[@]}")
+
   PRIV_ASSERTION_FAILED=0
 
   # 1. Namensliste: jeder erwartete Name muss GENAU EINMAL vorkommen.
@@ -464,8 +579,22 @@ if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
     2>"$WORKDIR/role_permissions_live.log" | sort)" \
     || { echo "::error::Konnte public.role_permissions nicht live lesen (ci_schema_reader):" >&2
          cat "$WORKDIR/role_permissions_live.log" >&2; exit 1; }
+  JSON_SOURCE_FILE="$REPO_ROOT/$JSON_REL_PATH"
+  if [[ -n "$PENDING_JSON_COMMIT" ]]; then
+    # PENDING-LIVE (c): live steht noch der Stand VOR der Migration -- Vergleich gegen die JSON aus diesem Commit.
+    if ! git -C "$REPO_ROOT" cat-file -e "$PENDING_JSON_COMMIT^{commit}" 2>/dev/null; then
+      git -C "$REPO_ROOT" fetch --quiet --no-tags --depth=1 origin "$PENDING_JSON_COMMIT" >/dev/null 2>&1 || true
+    fi
+    JSON_SOURCE_FILE="$WORKDIR/rolePermissions.pending-base.json"
+    if ! git -C "$REPO_ROOT" show "$PENDING_JSON_COMMIT:$JSON_REL_PATH" > "$JSON_SOURCE_FILE" 2>"$WORKDIR/git_show.log"; then
+      echo "::error::PENDING-LIVE: $JSON_REL_PATH aus Commit $PENDING_JSON_COMMIT nicht lesbar:" >&2
+      cat "$WORKDIR/git_show.log" >&2
+      exit 1
+    fi
+    echo "PENDING-LIVE: Vergleichsstand $JSON_REL_PATH aus Commit $PENDING_JSON_COMMIT"
+  fi
   JSON_ROLE_PERMISSIONS="$(jq -r '.roles | to_entries[] | .key as $role | .value[] | $role + "|" + .' \
-    "$REPO_ROOT/src/features/auth/permissions/rolePermissions.json" | sort)"
+    "$JSON_SOURCE_FILE" | sort)"
   if [[ "$DB_ROLE_PERMISSIONS_LIVE" == "$JSON_ROLE_PERMISSIONS" ]]; then
     ROW_COUNT="$(wc -l <<<"$JSON_ROLE_PERMISSIONS" | tr -d ' ')"
     echo "Gleichlauf grün: role_permissions (live) und rolePermissions.json stimmen überein ($ROW_COUNT Zeilen)."

@@ -1,0 +1,7 @@
+# PENDING-LIVE – Migrationen, deren Code schon auf main ist, die aber erst im DB-Fenster live gehen.
+# Liest NUR scripts/db-drift-check.sh (nicht nachspielen, zugehörige Rechte-Assertions auslassen, role_permissions
+# gegen rolePermissions.json aus <commit-vorher>; nach der Frist harter Fehler). rls-role-matrix.sh, local-db-apply.sh
+# und die CI-Tests spielen jede Migration weiter ein.
+# Format je Zeile: <dateiname> <frist YYYY-MM-DD> <commit-vorher (origin/main vor dem Merge)>
+# Nach dem Einspielen im Fenster entfernt der Controller die Zeile (Freigabe-Unterlage des Pakets, § 2).
+20261110_001_role_permissions_mvp.sql 2026-11-10 169ab9521de7c1979886a136c5d8f9e3622a1d94
