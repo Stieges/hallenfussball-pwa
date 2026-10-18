@@ -17,8 +17,80 @@
 │  npm run test:e2e:mobile     │ Nur iPhone + Pixel               │
 │  npm run test:e2e:headed     │ Mit sichtbarem Browser           │
 │  npm run test:a11y           │ Accessibility Tests              │
+│  npm run test:scenarios      │ Szenarien, Verweis-Pflicht       │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+# Teil 0: Anforderung, Test, Defekt
+
+> Gilt für jede Testdatei unter `src/`, `tests/` und `scripts/`. Die Prüfung läuft in der CI
+> (`npm run test:scenarios -- --base origin/main`) und lokal mit demselben Befehl.
+
+## 0.1 Kennung im Testnamen
+
+- Ein Test belegt ein Szenario, wenn seine **Kennung im Testnamen** steht: `it('@SL-034 Grenze 3: das 3. Foul meldet einen Hinweis', …)`.
+  Gezählt werden Namen von `it`/`test`/`describe`/`test.step` und `each`-Tabellen, nie Kommentare oder andere Strings.
+- **Regulär** heißt: ein Test, der in der CI wirklich läuft und grün sein muss. Nicht regulär sind `skip`, `todo`, `fixme`,
+  `it.fails`/`test.fail` und alles darin. Nur reguläre Tests zählen als „mit Test“.
+- `@XX-nnn:teil` im Namen heißt **teilweise** abgedeckt (eigene Spalte, zählt nicht als „mit Test“).
+
+## 0.2 Markierung „erwartet rot“ nur mit Verweis
+
+Zeigt ein Test einen bekannten Fehler (Beobachtung aus der Anforderung, die der Code noch verletzt), wird er **nicht an den Code
+angepasst**, sondern als „erwartet rot“ markiert und nennt im Namen den Befund oder Defekt:
+
+```ts
+// Vitest: Verweis im Testnamen oder im Namen eines umgebenden describe
+it.fails('@SL-034 @DF-001 Grenze 3: das 3. Foul meldet einen Hinweis', () => { … });
+describe('Offen C-KONTRAST-TEXTPAARE: Text-Paare unter 4,5 : 1', () => { it.fails('hell: Schrift auf Fläche', () => { … }); });
+
+// Playwright: Verweis in der Begründung (2. Argument) oder im Testnamen
+test.fail(testInfo.project.name === 'tablet-portrait', 'Befund C-COCKPIT-TABLET-OHNE-PROTOKOLL');
+```
+
+- **Markierung** ist `it.fails`/`test.fail('Titel', fn)` am Aufruf oder jedes `test.fail(…)`/`testInfo.fail(…)` im Rumpf, bedingt oder
+  unbedingt. `skip`/`fixme`/`todo` brauchen keinen Verweis.
+- **Schreibweisen des Verweises:** `@DF-001` oder `DF-001` (genau drei Ziffern) oder eine Befund-Kennung `C-…` in Großbuchstaben
+  (`C-COCKPIT-TABLET-OHNE-PROTOKOLL`). Nicht gültig: `@DF-01`, `@DF-0012`, `B-51b`, `F-B13-4`, `C-Jugend`. Ein Verweis nur im Kommentar zählt nicht.
+- **Ratsche:** Die Zahl der Markierungen ohne Verweis darf nicht größer sein als auf `main` (Verschieben zählt nicht als Zuwachs);
+  die Meldung nennt die neuen Tests. Sinkt die Zahl, ist die Prüfung grün und meldet es.
+- **Unbekannter Verweis ist sofort rot**, auch in regulären Tests (Tippfehler). Bekannt ist, was in `tests/meta/befund-kennungen.json` steht.
+
+## 0.3 Selbst-Auflösung
+
+Wird der Fehler behoben, schlägt der Lauf fehl („Expect test to fail“). Dann die **Markierung entfernen**; der Verweis bleibt im Namen als
+Spur. Der Test zählt ab dann als regulärer Test für seine Kennung.
+
+## 0.4 Beobachtung, Defekt, Stationen
+
+Beobachtung (`C-…` in der Befundliste, lokal) → bei Bestätigung ein Defekt → eingeplant → in Arbeit → behoben. In Teil 1 ist die Station
+eine Spalte der Befundliste; eine eigene Defekt-Datei je `DF-nnn` ist Teil 2. Neue Zeilen in der Befundliste trägt die Projektleitung ein,
+nicht der Umsetzer: ein Umsetzer schlägt sie vor und lässt den Test bis dahin „ohne Verweis“.
+
+## 0.5 Liste der bekannten Kennungen und Untergrenze
+
+```bash
+node scripts/befund-kennungen-erzeugen.mjs --befunde <Pfad zur Befundliste>   # braucht die lokale Befundliste (docs/ fehlt in CI und Worktrees)
+node scripts/mvp-kennungen-erzeugen.mjs --repo <Hauptrepo>                    # MVP-Kennungen aus den Anforderungen neu erzeugen
+node scripts/scenario-tests.mjs --floor-schreiben                             # Untergrenze auf den gemessenen Stand, nie von Hand
+```
+
+- `tests/meta/befund-kennungen.json` enthält **nur** Kennungen, die ein Test nennt, keinen Befundtext. Nach jedem neuen Verweis neu
+  erzeugen und mit committen; eine veraltete Liste macht die CI rot.
+- **Untergrenze** am Paketende nachziehen (`--floor-schreiben`, nach der MVP-Liste), nie senken.
+
+## 0.6 Datenwege
+
+| Objekt | liegt | geprüft von |
+|---|---|---|
+| Szenario `@XX-nnn` | Anforderungs-Record (lokal) | `mvp-kennungen.json` (Auszug im Repo), CI |
+| Beobachtung / Befund `C-…`, `DF-nnn` | Befundliste (lokal) | `befund-kennungen.json` (Auszug im Repo), CI |
+| Test | `src/`, `tests/`, `scripts/` | Vitest/Playwright, `scenario-tests.mjs` |
+| Untergrenze | `tests/meta/szenario-floor.json` | `scenario-tests.mjs` |
+| Aufgaben, Briefe, Proben | lokal | Review |
+| Lokal vs. Repo | Records und Befundliste nur lokal; die CI sieht nur die erzeugten Auszüge | |
 
 ---
 
