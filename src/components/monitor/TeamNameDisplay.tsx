@@ -68,7 +68,7 @@ export const TeamNameDisplay: React.FC<TeamNameDisplayProps> = ({
 
   const nameStyle: CSSProperties = {
     fontSize: config.fontSize,
-    fontWeight: emphasis === 'winner' ? 800 : emphasis === 'loser' ? 600 : 700,
+    fontWeight: emphasis === 'winner' ? cssVars.fontWeights.extrabold : emphasis === 'loser' ? cssVars.fontWeights.semibold : cssVars.fontWeights.bold,
     color: emphasis === 'loser' ? themeColors.textSecondary : themeColors.text,
     fontFamily: cssVars.fontFamilies.body,
     textAlign: 'center',

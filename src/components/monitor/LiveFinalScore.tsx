@@ -41,7 +41,7 @@ export function LiveFinalScore({ color, finalScore, names, accent }: LiveFinalSc
       <span aria-hidden="true" style={{ display: 'inline-flex', flexShrink: 0, color: accent }}><Icons.Trophy size="1em" /></span>
       <span>
         {/* Mockup `.fin b`: Teamname fett (800), der Rest normal */}
-        <Trans t={t} i18nKey="liveMatch.winnerLine" values={{ name: winner }} components={{ name: <strong data-testid="live-winner-name" style={{ fontWeight: 800 }} /> }} />
+        <Trans t={t} i18nKey="liveMatch.winnerLine" values={{ name: winner }} components={{ name: <strong data-testid="live-winner-name" style={{ fontWeight: cssVars.fontWeights.extrabold }} /> }} />
       </span>
     </div>
   );

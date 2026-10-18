@@ -13,7 +13,7 @@ vi.unmock('i18next'); vi.unmock('react-i18next');
 import { initRealDeI18n } from '../../../test/realDeI18n';
 await initRealDeI18n();
 
-import { displayLayout, displayFontSizes, displayMonitor } from '../../../design-tokens';
+import { cssVars, displayLayout, displayFontSizes, displayMonitor } from '../../../design-tokens';
 import { LiveMatchDisplay } from '../LiveMatchDisplay';
 import { buildMonitorView } from '../../../features/monitor-display/monitorView';
 import { liveMatchOf } from '../../../features/monitor-display/__tests__/monitorViewHelper';
@@ -64,8 +64,8 @@ describe('@ZM-147 @ZM-049 K5g4: Ergebnis nur eingetragen (ohne Schüsse)', () =>
 
   it('Verlierer-Name zurückgenommen (Textfarbe zweiter Ordnung, 600), Sieger-Name in voller Stärke (800)', async () => {
     await ende(NUR_ERGEBNIS);
-    expect(name('home').style.fontWeight).toBe('800');
-    expect(name('away').style.fontWeight).toBe('600');
+    expect(name('home').style.fontWeight).toBe(cssVars.fontWeights.extrabold);
+    expect(name('away').style.fontWeight).toBe(cssVars.fontWeights.semibold);
     expect(name('away').style.color).not.toBe(name('home').style.color);
   });
 
@@ -91,7 +91,7 @@ describe('@ZM-147 @ZM-049 K5g4: Ergebnis nur eingetragen (ohne Schüsse)', () =>
     // Fixrunde 4: Teamname fett (800), „gewinnt“ normal (Mockup `.fin b`)
     const fett = screen.getByTestId('live-winner-name');
     expect(fett.textContent).toBe('FC Nord');
-    expect(fett.style.fontWeight).toBe('800');
+    expect(fett.style.fontWeight).toBe(cssVars.fontWeights.extrabold);
     expect(sieger.textContent?.replace(fett.textContent ?? '', '').trim()).toBe('gewinnt');
     expect(sieger.style.fontSize).toBe(displayFontSizes.monitorWinner);
     const ziffer = (p: string) => parseFloat(p);
@@ -119,7 +119,7 @@ describe('@ZM-087 @ZM-049 K5g3: 50-Zeichen-Verlierer', () => {
     expect(prozent(screen.getByTestId('live-name-home').style.width)).toBeLessThan(parseFloat(displayLayout.scoreArea.blockWidth));
     expect(prozent(screen.getByTestId('live-name-away').style.width)).toBeLessThan(parseFloat(displayLayout.scoreArea.blockWidth));
     expect(name('home').textContent).toBe('SG FF Nordheim-Süd 1921');
-    expect(name('home').style.fontWeight).toBe('600'); // Verlierer
+    expect(name('home').style.fontWeight).toBe(cssVars.fontWeights.semibold); // Verlierer
     expect(screen.getByTestId('live-winner').textContent).not.toContain('…');
     expect(container.textContent).not.toContain('…');
   });
@@ -172,9 +172,9 @@ describe('Gegenbeispiele', () => {
     await ende({ score_a: 3, score_b: 1, decided_by: 'regular' }, undefined, GAME[7]);
     expect(kasten('home').dataset.outcome).toBe('winner');
     expect(kasten('home').style.outline).toContain(displayLayout.scoreArea.frameWidthStrong);
-    expect(name('home').style.fontWeight).toBe('800');
+    expect(name('home').style.fontWeight).toBe(cssVars.fontWeights.extrabold);
     expect(kasten('away').dataset.outcome).toBe('loser');
-    expect(name('away').style.fontWeight).toBe('600');
+    expect(name('away').style.fontWeight).toBe(cssVars.fontWeights.semibold);
     expect(screen.queryByTestId('live-cup-home')).toBeNull();
     expect(screen.queryByTestId('live-cup-away')).toBeNull();
   });
@@ -192,8 +192,8 @@ describe('Gegenbeispiele', () => {
     expect(kasten('away').dataset.outcome).toBeUndefined();
     expect(screen.queryByTestId('live-cup-home')).toBeNull();
     expect(screen.queryByTestId('live-cup-away')).toBeNull();
-    expect(name('home').style.fontWeight).toBe('700');
-    expect(name('away').style.fontWeight).toBe('700');
+    expect(name('home').style.fontWeight).toBe(cssVars.fontWeights.bold);
+    expect(name('away').style.fontWeight).toBe(cssVars.fontWeights.bold);
   });
 
   it('@ZM-156 laufendes Spiel: weder Ring noch Pokal', async () => {
