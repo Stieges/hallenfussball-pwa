@@ -33,6 +33,12 @@ vi.mock('qrcode.react', async () => {
 
 import App from '../../../App';
 
+/**
+ * Wartebudget für asynchrone Abfragen. Die Monitor-Seite wird per Lazy-Import geladen; unter Last (parallele
+ * Testläufe) überschreitet das den Standard von 1000 ms. Keine Zeitabhängigkeit: die Erwartungen bleiben gleich.
+ */
+const LADEZEIT = { timeout: 5000 };
+
 function monitorTurnier() {
   return attachMonitor(buildTournament(), withMonitor({ slides: [slide('custom-text', { headline: 'Folie A' })] }));
 }
@@ -49,13 +55,13 @@ async function rendere(adresse: string): Promise<void> {
       <App />
     </MemoryRouter>,
   );
-  await waitFor(() => expect(registerSWMock).toHaveBeenCalled());
+  await waitFor(() => expect(registerSWMock).toHaveBeenCalled(), LADEZEIT);
 }
 
 async function starteKiosk(): Promise<void> {
   monitorLoad.mockResolvedValue(monitorSnapshot());
   await rendere('/display/tour-1/mon-1');
-  await screen.findByText('Folie A');
+  await screen.findByText('Folie A', {}, LADEZEIT);
 }
 
 /** Netz wechselt: navigator.onLine plus das passende Ereignis, so wie der Browser es meldet. */
@@ -107,7 +113,7 @@ describe('Kiosk-Route Monitor (B-19a, @ME-003, @OB-028)', () => {
     monitorLoad.mockResolvedValue(monitorSnapshot());
     await rendere('/display/tour-1/mon-1');
     act(() => { __fireNeedRefresh(); });
-    expect(await screen.findByText('Folie A')).toBeInTheDocument();
+    expect(await screen.findByText('Folie A', {}, LADEZEIT)).toBeInTheDocument();
     expect(screen.queryByTestId('sw-update-notice')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
   });
@@ -135,7 +141,7 @@ describe('Kiosk-Route Monitor (B-19a, @ME-003, @OB-028)', () => {
   it('Gegenbeispiel „/“ (Verwaltung): Offline-Hinweis und Einwilligung bleiben', async () => {
     online.value = false;
     await rendere('/');
-    expect(await screen.findByLabelText('Offline')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Offline', {}, LADEZEIT)).toBeInTheDocument();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
@@ -143,10 +149,10 @@ describe('Kiosk-Route Monitor (B-19a, @ME-003, @OB-028)', () => {
   it('Gegenbeispiel „/“: neue Version zeigt den Update-Hinweis; Netzrückkehr zeigt „verbunden“', async () => {
     await rendere('/');
     act(() => { __fireNeedRefresh(); });
-    expect(await screen.findByTestId('sw-update-notice')).toBeInTheDocument();
+    expect(await screen.findByTestId('sw-update-notice', {}, LADEZEIT)).toBeInTheDocument();
     setzeNetz(false);
     setzeNetz(true);
-    expect(await screen.findByLabelText('Connected')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Connected', {}, LADEZEIT)).toBeInTheDocument();
   });
 
   it('Gegenbeispiel „/“: Speicherwarnung erscheint', async () => {
@@ -154,6 +160,6 @@ describe('Kiosk-Route Monitor (B-19a, @ME-003, @OB-028)', () => {
     act(() => {
       window.dispatchEvent(new CustomEvent('storage-quota-warning', { detail: { message: 'Speicher voll', timestamp: 1 } }));
     });
-    expect(await screen.findByText('Speicher voll')).toBeInTheDocument();
+    expect(await screen.findByText('Speicher voll', {}, LADEZEIT)).toBeInTheDocument();
   });
 });
