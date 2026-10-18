@@ -96,6 +96,8 @@ export interface MutationQueueConfig<TType extends string> {
     isKnownType?: (type: string) => boolean;
     /** Injizierbare Timer (Standard: globale Wrapper wie MatchEngineProvider.tsx:72-75). */
     timers?: QueueTimers;
+    /** A-08f3c2 (Regel Q): Bereich eines Eintrags (Turnier-ID) für `completedCount`/`hasPending`/`hasFailed`. */
+    scopeOf?: (type: TType, payload: unknown) => string | null;
 }
 
 /**
@@ -119,6 +121,7 @@ export class GenericMutationQueue<TType extends string> {
     private lastFailure: 'transient' | 'permanent' | 'storage' | 'storageBlocked' | null = null;
     private listeners: ((status: MutationQueueStatus) => void)[] = [];
     private readonly storageReported = new Set<string>(); // A-07i Fixrunde 1: Sentry je Ursache nur einmal
+    private readonly completed = new Map<string, number>(); // A-08f3c2: erledigte Einträge je Bereich (H1)
 
     constructor(private config: MutationQueueConfig<TType>) {
         const timers = config.timers ?? globalQueueTimers();
@@ -212,23 +215,24 @@ export class GenericMutationQueue<TType extends string> {
         }
     }
 
-    public getPendingCount(): number {
-        return this.queue.length;
-    }
+    public getPendingCount(): number { return this.queue.length; }
 
-    public getFailedCount(): number {
-        return this.failedQueue.length;
-    }
+    public getFailedCount(): number { return this.failedQueue.length; }
 
-    public getFailedMutations(): FailedMutationItem<TType>[] {
-        return [...this.failedQueue];
-    }
+    public getFailedMutations(): FailedMutationItem<TType>[] { return [...this.failedQueue]; }
 
     public getStatus(): MutationQueueStatus {
-        return {
-            pendingCount: this.queue.length,
-            failedCount: this.failedQueue.length,
-        };
+        return { pendingCount: this.queue.length, failedCount: this.failedQueue.length };
+    }
+
+    private inScope(item: GenericMutationItem<TType>, scope: string): boolean { return this.config.scopeOf?.(item.type, item.payload) === scope; }
+    /** A-08f3c2 (Regel Q, H1): erfolgreich gesendete Einträge des Bereichs seit dem Start der Instanz. */
+    public completedCount(scope: string): number { return this.completed.get(scope) ?? 0; }
+    /** A-08f3c2: wartet ein Eintrag des Bereichs? */
+    public hasPending(scope: string): boolean { return this.queue.some((item) => this.inScope(item, scope)); }
+    /** A-08f3c2 (H2): liegt ein Eintrag des Bereichs mit einem dieser Typen im Dead-Letter? */
+    public hasFailed(scope: string, types: readonly TType[]): boolean {
+        return this.failedQueue.some((item) => types.includes(item.type) && this.inScope(item, scope));
     }
 
     /** Letzter Fehlerabschluss (A-06e): 'transient' | 'permanent' | null nach Erfolg; 'storage' = Gerätespeicher voll (A-07i). */
@@ -236,14 +240,10 @@ export class GenericMutationQueue<TType extends string> {
 
     public subscribe(listener: (status: MutationQueueStatus) => void): () => void {
         this.listeners.push(listener);
-        return () => {
-            this.listeners = this.listeners.filter(l => l !== listener);
-        };
+        return () => { this.listeners = this.listeners.filter(l => l !== listener); };
     }
 
-    private notifyListeners() {
-        this.listeners.forEach(l => l(this.getStatus()));
-    }
+    private notifyListeners() { this.listeners.forEach(l => l(this.getStatus())); }
 
     /**
      * Move a failed mutation to the dead-letter queue
@@ -339,9 +339,7 @@ export class GenericMutationQueue<TType extends string> {
      */
     public clearFailedMutation(id: string): boolean {
         const index = this.failedQueue.findIndex(item => item.id === id);
-        if (index === -1) {
-            return false;
-        }
+        if (index === -1) { return false; }
 
         this.failedQueue.splice(index, 1);
         this.saveFailed();
@@ -516,6 +514,8 @@ export class GenericMutationQueue<TType extends string> {
                 if (this.disposed) { break; }
                 this.lastFailure = null;
                 this.queue.shift(); // Remove handled item
+                const scope = this.config.scopeOf?.(item.type, item.payload);
+                if (scope) { this.completed.set(scope, this.completedCount(scope) + 1); }
                 this.retryTimer.reset();
                 this.retryTimer.hold = false;
                 this.save();

@@ -10,6 +10,7 @@ import { slotTeamId } from '../models/matchSlot';
 import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
 import { decideCloudAdoption, isCloudReadTimeout, withCloudReadTimeout } from './cloudAdoption';
 import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisionSource } from './serverRevisionRegistry';
+import { CloudQueueGuard } from './cloudQueueGuard';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -130,6 +131,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     /** A-08f3b: laufender Cloud-Abruf je Turnier (ein Abruf je Turnier). */
     private readonly cloudReads = new Map<string, Promise<Tournament | null>>();
     private readonly cloudReadRerun = new Set<string>();
+    /** A-08f3c2 Regel Q: keine ganze Cloud-Kopie über eigene wartende, laufende oder gescheiterte Änderungen. */
+    private readonly queueGuard: CloudQueueGuard;
 
     constructor(
         private localRepo: LocalStorageRepository,
@@ -138,6 +141,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         private accountId?: string
     ) {
         this._mutationQueue = new MutationQueue(supabaseRepo, localRepo, undefined, accountId);
+        this.queueGuard = new CloudQueueGuard(this._mutationQueue);
     }
 
     /** A-07e: Kopie gehoert dem Konto dieses Repositorys (ohne Konto unveraendert). */
@@ -237,9 +241,11 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     }
 
     private async readAndAdopt(id: string, firstCopy?: boolean): Promise<Tournament | null> {
+        const before = this.queueGuard.snapshot(id); // A-08f3c2 (H1): Stand der Warteschlange vor dem Lesen
         const read = await withCloudReadTimeout(this.supabaseRepo.getWithMatchRevisions(id));
         if (!read) { return null; }
-        const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined, owned: (t: Tournament) => this.owned(t) };
+        const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined, owned: (t: Tournament) => this.owned(t),
+            wholeAllowed: () => this.queueGuard.mayAdoptWhole(id, before) };
         const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => decideCloudAdoption(local, read, stored, options));
         this.serverRevisions.record(id, adoption.revisions);
         return read.tournament;
@@ -267,27 +273,27 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
      * 2. Enqueue Mutation (Persistent Background Sync)
      */
     async save(tournament: Tournament): Promise<void> {
-        // 1. Save Local
-        await this.localRepo.save(this.owned(tournament));
-        this.serverRevisions.retain(tournament.id, new Set(tournament.matches.map(m => m.id))); // A-08f3b: Neugenerieren
-
-        // 2. Enqueue Cloud Persistence
-        this.mutationQueue.enqueue('SAVE_TOURNAMENT', tournament);
+        await this.queueGuard.track(tournament.id, async () => { // A-08f3c2: Speichern + Einreihen als Einheit (Regel Q)
+            await this.localRepo.save(this.owned(tournament));
+            this.serverRevisions.retain(tournament.id, new Set(tournament.matches.map(m => m.id))); // A-08f3b: Neugenerieren
+            this.mutationQueue.enqueue('SAVE_TOURNAMENT', tournament);
+        });
     }
 
     async updateMatch(tournamentId: string, update: MatchUpdate): Promise<void> {
         // Local write keeps the ORIGINAL update (undefined-with-key-present semantics, resolved
         // against the in-memory Match by LocalStorageRepository) -- only the QUEUED copy is
         // normalized for the JSON round-trip (N2a).
-        await this.localRepo.updateMatch(tournamentId, update);
-        this.mutationQueue.enqueue('UPDATE_MATCH', { tournamentId, update: normalizeMatchUpdateForQueue(update) });
+        await this.queueGuard.track(tournamentId, async () => {
+            await this.localRepo.updateMatch(tournamentId, update);
+            this.mutationQueue.enqueue('UPDATE_MATCH', { tournamentId, update: normalizeMatchUpdateForQueue(update) });
+        });
     }
 
     async updateMatches(tournamentId: string, updates: MatchUpdate[], _baseVersion?: number): Promise<void> {
-        await this.localRepo.updateMatches(tournamentId, updates);
-        this.mutationQueue.enqueue('UPDATE_MATCHES', {
-            tournamentId,
-            updates: updates.map(normalizeMatchUpdateForQueue),
+        await this.queueGuard.track(tournamentId, async () => {
+            await this.localRepo.updateMatches(tournamentId, updates);
+            this.mutationQueue.enqueue('UPDATE_MATCHES', { tournamentId, updates: updates.map(normalizeMatchUpdateForQueue) });
         });
     }
 
@@ -298,8 +304,10 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     }
 
     async updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
-        await this.localRepo.updateTournamentMetadata(id, metadata);
-        this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', { tournamentId: id, metadata });
+        await this.queueGuard.track(id, async () => {
+            await this.localRepo.updateTournamentMetadata(id, metadata);
+            this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', { tournamentId: id, metadata });
+        });
     }
 
     // --- Extended Methods for Sync ---
