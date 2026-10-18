@@ -115,7 +115,6 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
     const features: string[] = [];
     if (settings.soundEnabled) {features.push('Sound');}
     if (settings.hapticEnabled) {features.push('Haptik');}
-    if (settings.autoFinishEnabled) {features.push('Auto');}
     if (features.length === 0) {return t('step2.summaries.cockpitStandard');}
     return features.join(' + ');
   };

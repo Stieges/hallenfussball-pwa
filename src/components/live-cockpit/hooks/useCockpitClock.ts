@@ -17,7 +17,7 @@ export interface CockpitClockArgs {
   tournamentId: string;
   match: Pick<LiveMatch, 'id' | 'homeTeam' | 'awayTeam'> | null;
   readOnly: boolean;
-  settings: Pick<MatchCockpitSettings, 'autoFinishEnabled' | 'soundEnabled' | 'hapticEnabled'>;
+  settings: Pick<MatchCockpitSettings, 'soundEnabled' | 'hapticEnabled'>;
   playSound: () => void;
   /** Engine-Ansicht des Spiels (`null` ohne Engine-Kopie). */
   engineView: PhaseView | null;
@@ -52,7 +52,7 @@ export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
     }
   }, [whistle, onSpielBeendet, melde, t]);
   useAutoSectionEnd({
-    matchId: match?.id ?? null, view: engineView, enabled: !readOnly && settings.autoFinishEnabled, serverNow, commands, onEnded,
+    matchId: match?.id ?? null, view: engineView, enabled: !readOnly, serverNow, commands, onEnded,
   });
 
   const wiederanpfiff = useCallback(() => {

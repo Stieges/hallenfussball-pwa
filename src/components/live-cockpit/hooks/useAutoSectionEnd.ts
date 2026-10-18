@@ -25,7 +25,7 @@ export interface AutoSectionEndParams {
   matchId: string | null;
   /** Engine-Ansicht; `null` ohne Engine-Kopie (dann endet nichts von selbst). */
   view: PhaseView | null;
-  /** Steuerndes Gerät und automatisches Ende eingeschaltet. */
+  /** Steuerndes Gerät (nicht schreibgeschützt); das Ende von selbst gilt fürs MVP immer. */
   enabled: boolean;
   /** Serverzeit (Engine-Uhr). */
   serverNow: () => number;

@@ -77,6 +77,8 @@ describe('LiveCockpit: Halbzeit von selbst und Wiederanpfiff (B-08b)', () => {
     render(<Harness turnier={ZWEI_ABSCHNITTE} />);
     await bisHalbzeit(user);
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('1:00');
+    zu(361_000);
+    await waitFor(() => expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('0:59'));
     expect(ton.play).toHaveBeenCalledTimes(1);
     expect(vibrate).not.toHaveBeenCalled(); // Vibration nur beim Abpfiff
     expect(screen.getByTestId('match-wiederanpfiff-button')).toHaveTextContent('Wiederanpfiff');
@@ -97,7 +99,7 @@ describe('LiveCockpit: Halbzeit von selbst und Wiederanpfiff (B-08b)', () => {
     expect(screen.getByTestId('match-pause-button')).toBeInTheDocument();
   });
 
-  it('@SL-070 Gegenbeispiel: bei 0:00 der Pause bleibt die Halbzeit stehen, es wird nicht von selbst angepfiffen', async () => {
+  it('@SL-070 bei 0:00 der Pause bleibt die Halbzeit stehen, es wird nicht von selbst angepfiffen', async () => {
     const user = userEvent.setup();
     render(<Harness turnier={ZWEI_ABSCHNITTE} />);
     await bisHalbzeit(user);
@@ -106,6 +108,28 @@ describe('LiveCockpit: Halbzeit von selbst und Wiederanpfiff (B-08b)', () => {
     expect(zustand()).toHaveTextContent('Halbzeit');
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('0:00');
     expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent('Wiederanpfiff');
+    expect(ton.play).toHaveBeenCalledTimes(1);
+  });
+
+  it('@SL-005 auch mit gespeicherter Einstellung autoFinishEnabled=false endet der erste Abschnitt von selbst: Halbzeit, 1:00, Ton einmal', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={{ autoFinishEnabled: false }} />);
+    await bisHalbzeit(user);
+    expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('1:00');
+    expect(ton.play).toHaveBeenCalledTimes(1);
+  });
+
+  it('@SL-009 auch mit autoFinishEnabled=false ist das Spiel mit Ablauf einmal abgepfiffen (1:0, Ton einmal)', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={{ groupPhaseGameDuration: 10, gamePeriods: 1 }} einstellungen={{ autoFinishEnabled: false }} />);
+    await anpfiff(user);
+    await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
+    await toreHeim(user);
+    await waitFor(() => expect(stand()).toHaveTextContent('1:0'));
+    zu(600_000);
+    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    expect(stand()).toHaveTextContent('1:0');
+    await new Promise((fertig) => { setTimeout(fertig, 700); });
     expect(ton.play).toHaveBeenCalledTimes(1);
   });
 
