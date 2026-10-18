@@ -244,6 +244,98 @@ describe('Saat fuer die App-Messung (SM, @TA-011)', () => {
   })
 })
 
+describe('@TA-012 Verdeckte Bedienelemente', () => {
+  const verdeckt = (b: Bericht) => b.laeufe.flatMap((l) => l.befunde.filter((x) => x.metrik === 'verdeckt.bedienelement'))
+  it('Beispiel 1 Spielplan vor dem Fix (360): Tor-Eingabe Gast von Spiel 16 vom "Teilen"-Balken verdeckt, HART; die Zeilen davor sind beim Scrollen frei', async () => {
+    const r = await messe('--ziel', FIX('verdeckt-leiste.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(r.code, r.out).toBe(1)
+    const v = verdeckt(r.b)
+    expect(v.map((x) => `${x.typ} ${x.selektor}`)).toEqual(['HART [data-testid="tor-gast-16"]'])
+    expect(JSON.stringify(v)).toContain('teilen')
+  })
+  it('Beispiel 2 Cockpit, Variante ohne Weiterscrollen (360): Gelb- und Rot-Knopf vom Sound-Hinweis dauerhaft verdeckt, HART (mit Weiterscrollen: Warnung, siehe Fixrunde 1)', async () => {
+    const r = await messe('--ziel', FIX('verdeckt-hinweis.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(r.code, r.out).toBe(1)
+    const v = verdeckt(r.b)
+    expect(v.map((x) => x.selektor).sort()).toEqual(['[data-testid="karte-gelb"]', '[data-testid="karte-rot"]'])
+    expect(v.every((x) => x.typ === 'HART' && JSON.stringify(x).includes('sound-hinweis'))).toBe(true)
+  })
+  it.each(['verdeckt-leiste-korrigiert.html', 'verdeckt-hinweis-korrigiert.html', 'verdeckt-dialog.html'])(
+    'Beispiel 3 / Gegenbeispiel %s: keine Meldung (frei, Eltern-Label, Rollbereich, offener Dialog)', async (datei) => {
+      const r = await messe('--ziel', FIX(datei), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+      gruen(r)
+      expect(verdeckt(r.b)).toHaveLength(0)
+      expect(r.b.zusammenfassung.zaehler['verdeckt.bedienelement'] ?? 0).toBe(0)
+    })
+  const schwebend = (b: Bericht) => b.laeufe.flatMap((l) => l.befunde.filter((x) => x.metrik === 'verdeckt.schwebend'))
+  it('Fixrunde 1: schwebende Leiste ueber Zeilen, die beim Weiterscrollen frei werden: WARNUNG verdeckt.schwebend, kein HART', async () => {
+    const r = await messe('--ziel', FIX('verdeckt-schwebend.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    gruen(r)
+    expect(verdeckt(r.b)).toHaveLength(0)
+    const w = schwebend(r.b)
+    expect(w.length).toBeGreaterThan(0)
+    expect(w.every((x) => x.typ === 'WARNUNG' && JSON.stringify(x).includes('teilen'))).toBe(true)
+  })
+  it('Fixrunde 1 Beispiel 2: Gelb-/Rot-Knopf vom schwebenden Sound-Hinweis, erst durch Weiterscrollen frei: WARNUNG', async () => {
+    const r = await messe('--ziel', FIX('verdeckt-hinweis-lang.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    gruen(r)
+    expect(verdeckt(r.b)).toHaveLength(0)
+    expect(schwebend(r.b).map((x) => x.selektor).sort()).toEqual(['[data-testid="karte-gelb"]', '[data-testid="karte-rot"]'])
+    expect(schwebend(r.b).every((x) => x.typ === 'WARNUNG' && JSON.stringify(x).includes('sound-hinweis'))).toBe(true)
+  })
+  it.each(['verdeckt-leiste-im-fluss.html', 'verdeckt-nav.html'])('Fixrunde 1 Gegenbeispiel %s: keine Meldung (Leiste im Fluss, feste Navigation)', async (datei) => {
+    const r = await messe('--ziel', FIX(datei), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    gruen(r)
+    expect(verdeckt(r.b)).toHaveLength(0)
+    expect(schwebend(r.b)).toHaveLength(0)
+  })
+  it('Fixrunde 2 A2: feste Navigation ohne Abstand unten: HART nur fuer das unterste Element (tor-gast-16), keine Warnung fuer die uebrigen Zeilen', async () => {
+    const r = await messe('--ziel', FIX('verdeckt-nav-unten.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(r.code, r.out).toBe(1)
+    expect(verdeckt(r.b).map((x) => `${x.typ} ${x.selektor}`)).toEqual(['HART [data-testid="tor-gast-16"]'])
+    expect(schwebend(r.b)).toHaveLength(0)
+  })
+  it('Fixrunde 1 echter Stand: Spielplan nach dem SK-Fix meldet nichts Schwebendes; das Cockpit hat kein HART, jede Verdeckungs-Meldung ist bekannt oder eine Warnung (kein bestimmter Fehler erwartet)', async () => {
+    const plan = await messe('--app', '/#/tournament/hallencup-messlauf/schedule', '--erwarte', '[data-testid="schedule-view-table"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(plan.b.status, plan.out).not.toBe('BLOCKED')
+    expect(schwebend(plan.b)).toHaveLength(0)
+    expect(verdeckt(plan.b).filter((x) => x.typ === 'HART')).toHaveLength(0)
+    const c = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015', '--erwarte', '[data-testid="match-timer-display"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(c.b.status, c.out).not.toBe('BLOCKED')
+    // @TA-012 verlangt nicht, dass die App einen bestimmten Fehler hat: kein HART; jede Meldung traegt eine Befund-Kennung
+    // der Ausnahmeliste oder ist eine Warnung verdeckt.schwebend. Der positive Fall (Warnung entsteht) liegt in den Fixtures
+    // verdeckt-hinweis-lang.html und verdeckt-schwebend.html.
+    const alle = c.b.laeufe.flatMap((l) => l.befunde.filter((x) => x.metrik.startsWith('verdeckt.')))
+    expect(alle.filter((x) => x.typ === 'HART')).toHaveLength(0)
+    for (const x of alle) {
+      expect(x.metrik === 'verdeckt.schwebend' ? x.typ === 'WARNUNG' : /\[bekannt: C-[A-Z0-9-]+\]/.test(JSON.stringify(x)), JSON.stringify(x)).toBe(true)
+    }
+  })
+  it('Ausnahmeliste: jeder Eintrag nennt Befund-Kennung, Begruendung und mindestens Element oder Verdecker', () => {
+    const gw = JSON.parse(readFileSync(join(ORDNER, 'grenzwerte.json'), 'utf8')) as { grenzwerte: { id: string; typ: string; ausnahmeliste?: { befund: string; selektor?: string; verdecktVon?: string; begruendung: string }[] }[] }
+    const regel = gw.grenzwerte.find((e) => e.id === 'verdeckt.bedienelement')
+    expect(regel?.typ).toBe('HART')
+    expect(regel?.ausnahmeliste?.length).toBeGreaterThan(0)
+    for (const a of regel?.ausnahmeliste ?? []) {
+      expect(a.befund).toMatch(/^C-[A-Z0-9-]+$/)
+      expect((a.selektor ?? '').length + (a.verdecktVon ?? '').length).toBeGreaterThan(3)
+      expect(a.begruendung.length).toBeGreaterThan(10)
+    }
+  })
+  it('Ausnahmeliste greift: Fuss-Links unter der Tab-Leiste und unter dem Sound-Hinweis sind WARNUNG mit Befund-Kennung, nicht HART', async () => {
+    const start = await messe('--app', '/#/archiv', '--erwarte', '[data-testid="footer-impressum-link"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(start.b.status, start.out).not.toBe('BLOCKED')
+    const a = verdeckt(start.b)
+    expect(a.length).toBeGreaterThan(0)
+    expect(a.every((x) => x.typ === 'WARNUNG' && JSON.stringify(x).includes('C-FUSS-LINKS-UNTER-LEISTE'))).toBe(true)
+    const cockpit = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015', '--erwarte', '[data-testid="match-timer-display"]', '--saat', 'hallencup-messlauf', '--profil', 'desktop-1440', '--varianten', 'normal', ...SCHNELL)
+    const c = verdeckt(cockpit.b)
+    expect(c.length).toBeGreaterThan(0)
+    expect(c.some((x) => JSON.stringify(x).includes('C-COCKPIT-SOUNDHINWEIS-VERDECKT'))).toBe(true)
+    expect(c.filter((x) => x.typ === 'HART')).toHaveLength(0)
+  })
+})
+
 describe('Fehlalarme aus dem Review sind weg', () => {
   it('B-04 normaler Absatz bleibt in der Langtext-Variante gruen', async () => {
     const r = await messe('--ziel', FIX('langtext-absatz.html'), '--profil', 'handy-360', '--varianten', 'normal,langtext', ...SCHNELL)

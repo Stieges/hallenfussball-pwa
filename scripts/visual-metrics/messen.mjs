@@ -133,6 +133,19 @@ function grenzenFuer(gw, profil, opts, modus) {
   return { g, typ, monitorSchrift, randPx, injektionPx: profil.rand === 'standard' ? std : 0, ebuPruefen }
 }
 
+// Ausnahmeliste einer Regel (grenzwerte.json, Feld ausnahmeliste): Eintrag { befund, begruendung, selektor?, verdecktVon?, app? } (mindestens selektor oder verdecktVon).
+// Greift nur, wenn Metrik, Element (Teilstring des Selektors), ggf. verdeckendes Element und ggf. Ansicht passen.
+function bekannteAusnahme(gw, b, ziel) {
+  const regel = gw.grenzwerte.find((e) => e.id === b.metrik)
+  for (const a of regel?.ausnahmeliste ?? []) {
+    if (a.selektor && !String(b.selektor).includes(a.selektor)) continue
+    if (a.verdecktVon && !String(b.verdecktVon ?? '').includes(a.verdecktVon)) continue
+    if (a.app && !String(ziel).includes(a.app)) continue
+    return a
+  }
+  return null
+}
+
 const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 async function axeBefunde(page) {
   let AxeBuilder
@@ -393,6 +406,11 @@ async function main() {
             befunde = befunde.map((b) => {
               const t = profil.art === 'reflow' ? 'WARNUNG' : (typ[b.metrik] ?? axeTyp(b.metrik))
               return { typ: t, ...b }
+            })
+            // Bekannte Verstoesse auf main (ausnahmeliste mit Befund-Kennung): WARNUNG mit Kennung statt HART.
+            befunde = befunde.map((b) => {
+              const a = b.typ === 'HART' ? bekannteAusnahme(gw, b, o.app ?? o.ziel ?? '') : null
+              return a ? { ...b, typ: 'WARNUNG', ausnahme: a.befund, ist: `${b.ist} [bekannt: ${a.befund}]` } : b
             })
             const hart = befunde.filter((b) => b.typ === 'HART').length
             const lauf = { profil: name, art: profil.art, viewport: `${profil.breite}x${profil.hoehe}@${profil.dpr ?? 1}`, randPx, thema, sprache, variante, info: m.info, markierungen: m.markierungen, zaehler: m.zaehler, hart, warnung: befunde.length - hart, befunde }
