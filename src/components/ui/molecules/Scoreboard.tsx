@@ -169,7 +169,8 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
   const klein: CSSProperties = { color: cssVars.colors.scoreboardTextMuted, fontSize: gross ? cssVars.fontSizes.md : cssVars.fontSizes.sm, lineHeight: gross ? cssVars.lineHeights.bodyMd : cssVars.lineHeights.bodySm, fontVariantNumeric: 'tabular-nums' };
   const uhrZahl: CSSProperties = {
     color: uhrFarbe, fontSize: uhrGroesse, fontWeight: cssVars.fontWeights.bold, fontVariantNumeric: 'tabular-nums',
-    lineHeight: size === 'compact' ? cssVars.lineHeights.displayMd : cssVars.lineHeights.displayLg, whiteSpace: 'nowrap', minWidth: '5ch',
+    lineHeight: size === 'compact' ? cssVars.lineHeights.displayMd : `calc(${cssVars.lineHeights.displayLg} + ${size === 'regular' ? cssVars.spacing.md : cssVars.spacing.sm})`,
+    whiteSpace: 'nowrap', minWidth: '5ch',
   };
   // Der Stand als Text für Screenreader (die Kästen sind aria-hidden); außerhalb des Bildes wie die alte Statusmeldung
   const nurVorlesen: CSSProperties = { position: 'absolute', left: '-100vw', width: cssVars.sizing.hairline, height: cssVars.sizing.hairline, overflow: 'hidden' };
