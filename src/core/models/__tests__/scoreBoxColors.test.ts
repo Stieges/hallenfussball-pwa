@@ -95,10 +95,8 @@ describe('@ZM-159 whiteOrBlackFarthestFrom', () => {
     expect(whiteOrBlackFarthestFrom(GELB)).toBe(SCHWARZ);
   });
 
-  // Befund SA21-B1: `hexDeltaE2000` (A-30a) liefert 49,71 → „49,7“, das Gherkin @ZM-153 nennt 49,8. Die Entscheidung
-  // (Weiß weiter entfernt als Schwarz) gilt trotzdem (Test oben); Wert im Record oder Abstandsfunktion klären.
-  it.fails('@ZM-153 Blau #1565C0: Weiß 49,8', () => {
-    expectDistance(BLAU_STD, WEISS, 49.8);
+  it('@ZM-153 Blau #1565C0: Weiß 49,7', () => {
+    expectDistance(BLAU_STD, WEISS, 49.7);
   });
 
   it('@ZM-153 Blau #1565C0: gegen Schwarz 39,1', () => {
