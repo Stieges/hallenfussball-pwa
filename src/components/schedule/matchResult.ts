@@ -2,10 +2,11 @@
  * Ergebnis-Darstellung des Spielplans (@OB-064, Paket SK): „Tore folgen der Anordnung der Mannschaften“.
  *
  * Eine Quelle für Spielkarte (Teams untereinander: Tore je Zeile) und Tabellenzeile (Heim und Gast nebeneinander:
- * waagerechtes Ergebnis). Tore, Sieger und Entscheidungsart kommen aus dem zentralen Endstand `matchFinalScore`
- * (A-36b, `decided_by`) – hier wird nichts neu abgeleitet.
+ * waagerechtes Ergebnis). Tore, Sieger und Entscheidungsart kommen aus dem Endstand der Ansicht (`MatchView.score`,
+ * A-36b/A-36c, gerechnet in `matchFinalScore`) – hier wird nichts neu abgeleitet.
  */
-import { matchFinalScore, type FinalScoreSource } from '../../core/view/finalScore';
+import type { FinalScore, MatchView } from '../../core/view';
+import type { Match } from '../../types/tournament';
 
 export type ResultStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
 
@@ -24,22 +25,15 @@ export interface ResultFigures {
 }
 
 /**
- * Was die Darstellung vom Spiel liest: ein Spiel (Tore, Verlängerung, Strafstoß, Entscheidung) oder – im Spielplan –
- * ein `ScheduledMatch` mit dem aktuellen Spiel als `finalSource`. Die Felder werden nur durchgereicht; gerechnet wird
- * ausschließlich in `matchFinalScore`.
+ * Ergebnis-Darstellung aus dem Endstand der Ansicht (`MatchView.score`). Fehlt der Stand (ausgefallen, geplant oder für
+ * die Zielgruppe ausgeblendet), gibt es keine Zahlen – nie ein erfundenes 0:0. Gerechnet wird ausschließlich in
+ * `matchFinalScore` (A-36b); hier wird nur umgeformt.
  */
-export type ResultSource = FinalScoreSource & { finalSource?: FinalScoreSource };
-
-/** `null` für ein geplantes, wartendes oder ausgefallenes Spiel: dort stehen keine Tore. */
-export function resultFigures(source: ResultSource, status: ResultStatus): ResultFigures | null {
-  if (status === 'scheduled' || status === 'waiting' || status === 'skipped') {
+export function resultFigures(score: FinalScore | undefined, status: ResultStatus): ResultFigures | null {
+  if (score === undefined || status === 'scheduled' || status === 'waiting' || status === 'skipped') {
     return null;
   }
   const running = status === 'running';
-  const score = matchFinalScore({ ...(source.finalSource ?? source), matchStatus: running ? 'running' : 'finished' });
-  if (score === null) {
-    return running ? { goalsA: 0, goalsB: 0, winner: null, decision: null } : null;
-  }
   const decision: ResultDecision =
     score.decidedBy === 'penalty' ? 'penalty' : score.decidedBy === 'overtime' || score.decidedBy === 'goldenGoal' ? 'overtime' : null;
   return {
@@ -51,21 +45,46 @@ export function resultFigures(source: ResultSource, status: ResultStatus): Resul
   };
 }
 
+/**
+ * Status der Karte aus der Ansicht (eine Quelle, A-36c): läuft ODER unterbrochen = läuft (@ZM-039), ausgefallen =
+ * `skipped`, gewertet = beendet. Ohne Ansicht gilt das Spiel als geplant – nie „hat Stand ⇒ beendet“.
+ */
+export function cardStatusOf(match: Pick<MatchView, 'status' | 'isLive'> | undefined): ResultStatus {
+  if (match === undefined) {
+    return 'scheduled';
+  }
+  if (match.isLive) {
+    return 'running';
+  }
+  switch (match.status) {
+    case 'finished':
+    case 'awarded':
+      return 'finished';
+    case 'cancelled':
+      return 'skipped';
+    default:
+      return 'scheduled';
+  }
+}
+
 /** Übersetzungsfunktion, soweit die Formatierung sie braucht (react-i18next `t` passt). */
 export type ResultTranslate = (key: 'matchResult.penaltyShort' | 'matchResult.overtimeShort') => string;
+
+/** Zusatz hinter dem Ergebnis: „(4:3 i. E.)“ nach Strafstoßschießen, „n. V.“ nach Verlängerung, sonst keiner. */
+export function tableResultExtra(figures: ResultFigures, t: ResultTranslate): string | undefined {
+  if (figures.decision === 'penalty' && figures.penaltyA !== undefined && figures.penaltyB !== undefined) {
+    return `(${figures.penaltyA}:${figures.penaltyB} ${t('matchResult.penaltyShort')})`;
+  }
+  return figures.decision === 'overtime' ? t('matchResult.overtimeShort') : undefined;
+}
 
 /**
  * Tabellenzeile: „2:2 (4:3 i. E.)“, „3:2 n. V.“, „1:0“. Der Zusatz steht nur, wenn die Entscheidung ihn trägt.
  */
 export function formatTableResult(figures: ResultFigures, t: ResultTranslate): string {
   const base = `${figures.goalsA}:${figures.goalsB}`;
-  if (figures.decision === 'penalty' && figures.penaltyA !== undefined && figures.penaltyB !== undefined) {
-    return `${base} (${figures.penaltyA}:${figures.penaltyB} ${t('matchResult.penaltyShort')})`;
-  }
-  if (figures.decision === 'overtime') {
-    return `${base} ${t('matchResult.overtimeShort')}`;
-  }
-  return base;
+  const extra = tableResultExtra(figures, t);
+  return extra === undefined ? base : `${base} ${extra}`;
 }
 
 /** Spielzeit „07:30“ aus gespielten Sekunden. */
@@ -76,17 +95,22 @@ export function formatElapsed(seconds: number): string {
   return `${minutes}:${rest}`;
 }
 
-/** Status eines Spielplan-Spiels wie in der Gruppenphase: läuft, beendet (auch mit eingetragenem Stand) oder geplant. */
-export function scheduleStatusOf(
-  match: Pick<FinalScoreSource, 'scoreA' | 'scoreB'> & { id: string },
-  running: ReadonlySet<string> | undefined,
-  finished: ReadonlySet<string> | undefined,
-): ResultStatus {
-  if (running?.has(match.id)) {
-    return 'running';
+/**
+ * Spielzeit eines laufenden Spiels aus den Zeitfeldern des Spiels (Zwischenspeicher des Servers):
+ * bei laufender Uhr `timerElapsedSeconds` + Zeit seit `timerStartTime`, sonst der gespeicherte Stand.
+ * `undefined`, wenn das Spiel keine Zeit trägt.
+ */
+export function cachedElapsedSeconds(
+  match: Pick<Match, 'timerStartTime' | 'timerElapsedSeconds'> | undefined,
+  nowMs: number,
+): number | undefined {
+  if (match === undefined || (match.timerElapsedSeconds === undefined && match.timerStartTime === undefined)) {
+    return undefined;
   }
-  if (finished?.has(match.id) || (match.scoreA !== undefined && match.scoreB !== undefined)) {
-    return 'finished';
+  const base = match.timerElapsedSeconds ?? 0;
+  if (match.timerStartTime === undefined) {
+    return base;
   }
-  return 'scheduled';
+  const startedMs = Date.parse(match.timerStartTime);
+  return Number.isNaN(startedMs) ? base : base + Math.max(0, Math.floor((nowMs - startedMs) / 1000));
 }

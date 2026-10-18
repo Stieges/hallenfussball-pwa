@@ -22,6 +22,7 @@ import { formatDateGerman } from '../utils/locationHelpers';
 import { Card } from '../components/ui/Card';
 import { PublicBottomNav } from '../components/ui/PublicBottomNav';
 import { usePublicTournament } from '../features/public-view/usePublicTournament';
+import { usePublicView } from '../features/public-view/usePublicView';
 import { usePublicViewFilters } from '../features/public-view/usePublicViewFilters';
 import { usePullToRefresh, getRefreshIndicatorStyle, getRefreshSpinnerStyle, PULL_THRESHOLD } from '../features/public-view/usePullToRefresh';
 import { publicPageContainerStyle, publicPageContentStyle } from '../features/public-view/publicPageStyles';
@@ -73,6 +74,9 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   const { showOnlyMyTeam, myTeamId, selectedGroup, selectedPhase, selectedStatus } = filters;
 
 
+  // Die gemeinsame Ansicht der Zuschauer (A-36c): Status, Seitentexte, Endstand und Sichtbarkeit nur von hier
+  const view = usePublicView(tournament, schedule);
+
   // Styles
   const headerStyle: CSSProperties = {
     marginBottom: cssVars.spacing.lg,
@@ -115,14 +119,14 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   }
 
   // Success - show tournament
-  if (!tournament || !schedule) {
+  if (!tournament || !schedule || !view) {
     return null;
   }
 
   // Tabellen-Tab nur, wenn Stände sichtbar sein dürfen; Direktaufruf fällt auf den Spielplan zurück (W2A-031)
-  const tab = effectiveNavTab(activeTab, tournament);
-  const filteredSchedule = publicSchedule(schedule, tournament, filters);
-  const filteredStandings = visibleStandings(tournament, currentStandings);
+  const tab = effectiveNavTab(activeTab, view.rules);
+  const filteredSchedule = publicSchedule(schedule, view, filters);
+  const filteredStandings = visibleStandings(view.rules, currentStandings);
   const myTeamLabel = myTeamName(tournament, myTeamId);
   const groups = uniqueGroups(tournament);
 
@@ -201,11 +205,12 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
             <Card>
               <ScheduleDisplay
                 schedule={filteredSchedule}
-                hidePendingOrigin={tournament.hideScoresForPublic}
+                view={view}
+                locale={ANZEIGE_SPRACHE}
                 currentStandings={filteredStandings}
-                showGroupTables={standingsTabAvailable(tournament)}
-                participantStandings={tournament.hideScoresForPublic ? schedule.initialStandings : undefined}
-                currentMatches={publicMatches(tournament)}
+                showGroupTables={standingsTabAvailable(view.rules)}
+                participantStandings={view.rules.results ? undefined : schedule.initialStandings}
+                currentMatches={publicMatches(tournament, view.rules)}
                 tournamentTeams={tournament.teams}
                 editable={false}
               />
@@ -244,7 +249,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
       <PublicBottomNav
         activeTab={tab}
         onTabChange={handleTabChange}
-        hiddenTabs={standingsTabAvailable(tournament) ? [] : ['standings']}
+        hiddenTabs={standingsTabAvailable(view.rules) ? [] : ['standings']}
       />
     </div>
   );

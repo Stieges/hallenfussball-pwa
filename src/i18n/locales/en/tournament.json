@@ -893,7 +893,7 @@
       "waiting": "Waiting",
       "running": "Running",
       "finished": "Finished",
-      "skipped": "Skipped",
+      "skipped": "Cancelled",
       "active": "(active)"
     }
   },

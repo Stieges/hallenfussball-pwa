@@ -893,7 +893,7 @@
       "waiting": "Wartend",
       "running": "Laufend",
       "finished": "Beendet",
-      "skipped": "Übersprungen",
+      "skipped": "Ausgefallen",
       "active": "(aktiv)"
     }
   },

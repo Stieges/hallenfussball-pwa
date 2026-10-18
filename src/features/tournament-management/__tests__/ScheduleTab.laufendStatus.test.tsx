@@ -1,7 +1,8 @@
 /**
- * A-08f2 (@FU-087): Spielplan markiert laufende Spiele aus dem echten `useLiveMatches` (Fake-Realtime-
- * Repo), nicht aus localStorage. Pflichttest echter Weg: ScheduleTab mit echten Hooks; das Repo meldet
- * das erste Spiel RUNNING -> LiveBadge erscheint; ohne laufendes Spiel im Repo -> kein Live-Kennzeichen.
+ * A-36c (@ZM-039, @ZM-040, C-ZUSCHAUER-LIVE-ALS-BEENDET; vorher A-08f2/@FU-087): der Spielplan der Leitung hat EINE Statusquelle,
+ * die gemeinsame Ansicht (Zwischenspeicher des Spiels, Engine vorn). Ein laufendes Spiel steht als laufend da – auch mit
+ * Zwischenstand und ohne Eintrag im Alt-Live-Speicher; „hat Stand“ macht kein Spiel zu „beendet“.
+ * Pflichttest echter Weg: ScheduleTab mit echten Hooks.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
@@ -66,47 +67,67 @@ function coreMatch(id: string, status: string): CoreLiveMatch {
   } as unknown as CoreLiveMatch;
 }
 
-describe('ScheduleTab -- laufende Spiele aus useLiveMatches (A-08f2, @FU-087)', () => {
+describe('ScheduleTab -- Status aus der Ansicht (A-36c, @ZM-039/@ZM-040, @FU-087)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     repoMatches.clear();
     vi.mocked(localStorage.getItem).mockReturnValue(null);
   });
 
-  it('@FU-087 Pflicht: Repo meldet das erste Spiel RUNNING -> Live-Kennzeichen im Spielplan', async () => {
-    const { tournament, schedule, firstId } = setup();
-    repoMatches.set(firstId, coreMatch(firstId, 'RUNNING'));
-
-    const { container } = renderTab(tournament, schedule);
-    await act(async () => { await Promise.resolve(); });
-
-    expect(getAll).toHaveBeenCalledWith(tournament.id);
-    // LIVE-Kennzeichen der Spielkarte (MatchCard: Hintergrund statusLiveBg nur bei status running)
-    await waitFor(() => expect(container.innerHTML).toContain(cssVars.colors.statusLiveBg));
+  const mitStatus = (tournament: Tournament, id: string, over: Partial<Tournament['matches'][number]>): Tournament => ({
+    ...tournament,
+    matches: tournament.matches.map((m) => (m.id === id ? { ...m, ...over } : m)),
   });
 
-  it('@FU-087 Gegenbeispiel: veralteter localStorage-Eintrag RUNNING, Repo ohne laufendes Spiel -> kein Live-Kennzeichen', async () => {
+  it('@ZM-039 Pflicht: Spiel mit Status „läuft“ im Turnier -> Live-Kennzeichen im Spielplan, ohne Eintrag im Alt-Live-Speicher', async () => {
+    const { tournament, schedule, firstId } = setup();
+    const { container } = renderTab(mitStatus(tournament, firstId, { matchStatus: 'running', scoreA: 1, scoreB: 0 }), schedule);
+    await act(async () => { await Promise.resolve(); });
+
+    // LIVE-Kennzeichen der Spielkarte (Hintergrund statusLiveBg nur bei Status läuft)
+    await waitFor(() => expect(container.innerHTML).toContain(cssVars.colors.statusLiveBg));
+    expect(container.querySelectorAll('[data-testid="match-card-live"]')).toHaveLength(1);
+  });
+
+  it('@ZM-039 Gegenbeispiel: veralteter localStorage-Eintrag RUNNING, Spiel im Turnier geplant -> kein Live-Kennzeichen', async () => {
     const { tournament, schedule, firstId } = setup();
     vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify({ [firstId]: { status: 'RUNNING' } }));
 
     const { container } = renderTab(tournament, schedule);
     await act(async () => { await Promise.resolve(); });
 
-    expect(getAll).toHaveBeenCalled();
     expect(container.innerHTML).not.toContain(cssVars.colors.statusLiveBg);
   });
 
-  it('@FU-087 PAUSED: Repo meldet das Spiel PAUSED (mit Zwischenstand) -> Live-Kennzeichen, nicht "beendet"', async () => {
+  it('@ZM-040 Gegenbeispiel: nur der Alt-Live-Speicher meldet RUNNING, das Spiel im Turnier ist geplant -> kein Live-Kennzeichen (eine Quelle)', async () => {
     const { tournament, schedule, firstId } = setup();
-    const withScore: Tournament = {
-      ...tournament,
-      matches: tournament.matches.map((m) => (m.id === firstId ? { ...m, scoreA: 1, scoreB: 0 } : m)),
-    };
-    repoMatches.set(firstId, coreMatch(firstId, 'PAUSED'));
+    repoMatches.set(firstId, coreMatch(firstId, 'RUNNING'));
 
-    const { container } = renderTab(withScore, schedule);
+    const { container } = renderTab(tournament, schedule);
     await act(async () => { await Promise.resolve(); });
 
-    await waitFor(() => expect(container.innerHTML).toContain(cssVars.colors.statusLiveBg));
+    expect(container.innerHTML).not.toContain(cssVars.colors.statusLiveBg);
+  });
+
+  it('@ZM-039 „hat Stand“ macht kein Spiel beendet: Zwischenstand 1:0 und Status „läuft“ -> laufend, nicht beendet', async () => {
+    const { tournament, schedule, firstId } = setup();
+    const { container } = renderTab(mitStatus(tournament, firstId, { matchStatus: 'running', scoreA: 1, scoreB: 0 }), schedule);
+    await act(async () => { await Promise.resolve(); });
+
+    for (const circle of container.querySelectorAll(`[data-testid="match-circle-${firstId}"]`)) {
+      expect(circle).toHaveAttribute('data-match-status', 'running');
+    }
+  });
+
+  it('Gegenbeispiel: beendetes Spiel (Status „beendet“, 2:1) bleibt beendet mit Stand', async () => {
+    const { tournament, schedule, firstId } = setup();
+    const { container } = renderTab(mitStatus(tournament, firstId, { matchStatus: 'finished', scoreA: 2, scoreB: 1 }), schedule);
+    await act(async () => { await Promise.resolve(); });
+
+    for (const circle of container.querySelectorAll(`[data-testid="match-circle-${firstId}"]`)) {
+      expect(circle).toHaveAttribute('data-match-status', 'finished');
+      expect(circle.textContent).toBe('2:1');
+    }
+    expect(container.innerHTML).not.toContain(cssVars.colors.statusLiveBg);
   });
 });

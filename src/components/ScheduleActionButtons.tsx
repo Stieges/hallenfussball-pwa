@@ -47,18 +47,10 @@ export const ScheduleActionButtons = ({
     flexWrap: 'wrap',
   };
 
-  // Responsive styles for mobile FAB buttons - positioned above bottom nav
-  const fabContainerStyle: CSSProperties = {
-    position: 'fixed',
-    bottom: `calc(${layoutHeights.bottomNav} + ${cssVars.spacing.lg} + env(safe-area-inset-bottom, 0px))`,
-    right: cssVars.spacing.lg,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.md,
-    zIndex: 100,
-  };
+  // Öffentliche Seite: der Knopf steht im Fluss unter dem Spielplan, rechtsbündig mit Abstand – nie schwebend über einer Karte (@OB-021)
+  const publicStyle: CSSProperties = { ...containerStyle, justifyContent: 'flex-end', marginTop: cssVars.spacing.lg };
 
-  const isMobile = variant === 'public'; // Public view uses FAB style on mobile
+  const isPublic = variant === 'public';
   // Über die alte Zuschauer-Adresse gibt es kein PDF (@BM-057); das PDF der Zuschauer-Seite kommt über `PublicPdfButton`
   const withPdf = variant === 'organizer';
 
@@ -67,7 +59,7 @@ export const ScheduleActionButtons = ({
       {/* Action Buttons */}
       <div
         ref={barRef}
-        style={isMobile ? fabContainerStyle : containerStyle}
+        style={isPublic ? publicStyle : containerStyle}
         className="schedule-action-buttons"
       >
         <Button
@@ -117,29 +109,25 @@ export const ScheduleActionButtons = ({
         />
       ) : null}
 
-      {/* Responsive Styles */}
-      <style>{`
-        ${mediaQueries.tabletDown} {
-          .schedule-action-buttons {
-            position: fixed !important;
-            bottom: calc(${layoutHeights.bottomNav} + ${cssVars.spacing.lg} + env(safe-area-inset-bottom, 0px)) !important;
-            right: ${cssVars.spacing.lg} !important;
-            flex-direction: column !important;
-            z-index: 100 !important;
-          }
+      {/* Verwaltung: mobil schwebende Leiste (die Karte reserviert den Platz, ScheduleTab); öffentlich im Fluss */}
+      {isPublic ? null : (
+        <style>{`
+          ${mediaQueries.tabletDown} {
+            .schedule-action-buttons {
+              position: fixed !important;
+              bottom: calc(${layoutHeights.bottomNav} + ${cssVars.spacing.lg} + env(safe-area-inset-bottom, 0px)) !important;
+              right: ${cssVars.spacing.lg} !important;
+              flex-direction: column !important;
+              z-index: 100 !important;
+            }
 
-          .schedule-action-buttons button {
-            min-width: 120px;
-            box-shadow: ${cssVars.shadows.lg};
+            .schedule-action-buttons button {
+              min-width: 120px;
+              box-shadow: ${cssVars.shadows.lg};
+            }
           }
-        }
-
-        @media (min-width: 768px) {
-          .schedule-action-buttons {
-            ${variant === 'organizer' ? '' : 'justify-content: flex-end;'}
-          }
-        }
-      `}</style>
+        `}</style>
+      )}
     </>
   );
 };

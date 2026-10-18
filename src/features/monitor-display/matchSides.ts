@@ -1,57 +1,23 @@
 /**
- * Teamzuordnung eines Spiels zu Seite A/B am Monitor (B-16d1, Spec § 2 Nr. 9).
+ * Spielseiten am Hallen-Monitor (A-36c, @TM-015, @ZM-087, @ZM-102): ein Weg über die gemeinsame Ansicht.
  *
- * Merge main → Spur B (I1): Die Seiten kommen aus dem Slot (`slotA`/`slotB`, A-03), nicht mehr aus dem
- * Übergangsfeld `teamA`/`teamB`. Das Team wird nur über die ID gefunden (`monitorSideTeam`); den Text
- * liefert die eine Anzeigefunktion `slotLabel` (@TM-015 Herkunft offener Plätze, unbekannte ID → `slot.unknown`).
- *
- * B-16f2: `sideLabel` ist die eine Stelle für die Herkunft offener Plätze am Monitor. Bei ausgeblendeten
- * Ergebnissen (Kindermodus, @W2A-031) steht dort „noch offen“ (`tournament:slot.undecided`).
- * B-41: Der Monitor bleibt fest deutsch (`ANZEIGE_SPRACHE`), unabhängig von der Gerätesprache.
+ * Die Seite kommt fertig aus `MatchView` (`sideView` in `core/view`): besetzt der Teamname, offen die Herkunft
+ * („Erster Gruppe A“) bzw. „noch offen“, wenn die Regeln der Ansicht den Gruppenrang nicht zeigen (`rules.groupOrigin`).
+ * Am Monitor kommt nur das Vereinskürzel nach Liste dazu (`monitorTeamName`, @ZM-087) – nie ein erfundenes Kürzel.
  */
-import { ANZEIGE_SPRACHE } from '../../i18n/anzeigeSprache';
-import { slotLabel } from '../../core/models/slotLabel';
-import type { Match, Team, TournamentGroup } from '../../types/tournament';
-import { monitorSideTeam } from './monitorSides';
+import type { SideView } from '../../core/view';
+import type { Team } from '../../types/tournament';
 import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 
-export type MatchSide = 'A' | 'B';
-
-/** Kontext der Anzeige: Teams des Turniers und ob die Herkunft offener Plätze verborgen wird. */
-export interface SideContext {
-  teams: Team[];
-  /** Spiele des Turniers – nötig, um „Sieger/Verlierer <Spiel>“ zu benennen. */
-  matches?: readonly Match[];
-  /** Gruppen des Turniers – für eigene Gruppennamen in der Herkunft. */
-  groups?: readonly TournamentGroup[];
-  /** true = Kindermodus (Ergebnisse ausgeblendet): offener Platz zeigt „noch offen“. */
-  hidePendingOrigin?: boolean;
-}
-
-/** Team der Seite (nur per ID aus dem Slot); `undefined`, solange die Seite offen ist oder das Team fehlt. */
-export function sideTeam(match: Match, side: MatchSide, teams: readonly Team[]): Team | undefined {
-  return monitorSideTeam(match, side, teams);
+/** Das besetzte Team der Seite (für Logo und Farben) oder `undefined`, solange sie offen ist. */
+export function sideTeam(side: SideView, teams: readonly Team[]): Team | undefined {
+  return side.teamId === undefined ? undefined : teams.find((team) => team.id === side.teamId);
 }
 
 /**
- * Anzeigename der Seite. Besetzt: Teamname. Offen: Kindermodus → „noch offen“, sonst die lesbare
- * Herkunft („1. Gruppe A“, „Sieger 1. Halbfinale“).
+ * Anzeigename der Seite am Monitor: besetzt → Teamname mit Vereinskürzeln nach Liste, offen → Herkunft bzw.
+ * „noch offen“ aus der Ansicht (nie gekürzt, nie ein Rohschlüssel).
  */
-export function sideLabel(match: Match, side: MatchSide, ctx: SideContext): string {
-  return slotLabel(side === 'A' ? match.slotA : match.slotB, {
-    teams: ctx.teams,
-    matches: ctx.matches ?? [],
-    groups: ctx.groups,
-    hidePendingOrigin: ctx.hidePendingOrigin,
-    locale: ANZEIGE_SPRACHE,
-  });
-}
-
-/**
- * Anzeigename der Seite am Monitor (MS1, @ZM-087): besetzt → Teamname mit Vereinskürzeln nach Liste
- * (`monitorTeamName`), offen → Herkunft bzw. „noch offen“ wie `sideLabel`.
- */
-export function monitorSideLabel(match: Match, side: MatchSide, ctx: SideContext): string {
-  const team = sideTeam(match, side, ctx.teams);
-  return team ? monitorTeamName(team.name) : sideLabel(match, side, ctx);
+export function monitorSideLabel(side: SideView): string {
+  return side.pending ? side.label : monitorTeamName(side.teamName ?? side.label);
 }

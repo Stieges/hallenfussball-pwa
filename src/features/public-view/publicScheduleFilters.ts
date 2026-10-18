@@ -1,11 +1,13 @@
 /**
  * Reine Ansichts-Logik der Zuschauer-Seite (B-13c): Filter, Datenschutz-Ausblendung, Tabellen-Sichtbarkeit.
- * Ohne React. Die Logik ist 1:1 aus LiveViewScreen übernommen; die Ausblendung der Stände gilt für
+ * Ohne React. A-36c: Status und Sichtbarkeit kommen aus der gemeinsamen Ansicht (`MatchView`, `viewRules`) – hier
+ * gibt es keine eigene Statusregel und keinen eigenen Schalter mehr. Die Ausblendung der Stände gilt für
  * Spielplan UND die Spielliste, die ScheduleDisplay wieder einmischt (F-B13-11, Ruling R1 überholt).
  */
 import type { GeneratedSchedule } from '../../core/generators';
+import type { TournamentView, ViewRules } from '../../core/view';
+import { matchInvolvesTeam } from '../../core/models/matchSlot';
 import type { Match, Standing, Tournament } from '../../types/tournament';
-import { involvesTeam } from './matchSides';
 
 export type PhaseFilter = 'all' | 'groupStage' | 'final';
 export type StatusFilter = 'all' | 'scheduled' | 'live' | 'finished';
@@ -22,17 +24,20 @@ function withoutScore<T extends { scoreA?: number; scoreB?: number }>(item: T): 
   return { ...item, scoreA: undefined, scoreB: undefined };
 }
 
-/** Nutzer-Filter (Mein Team, Gruppe, Phase, Status). Status wird am Turnier-Spiel abgelesen. */
+/**
+ * Nutzer-Filter (Mein Team, Gruppe, Phase, Status). Der Status kommt aus der Ansicht: „Live“ = läuft ODER unterbrochen
+ * (@ZM-039), „Geplant“ = nur kommende Spiele; ausgefallene Spiele stehen nur unter „Alle“ (@ZM-104).
+ */
 export function applyViewFilters(
   schedule: GeneratedSchedule,
-  tournament: Tournament,
+  view: TournamentView,
   filters: ViewFilters
 ): GeneratedSchedule {
   let filteredMatches = [...schedule.allMatches];
 
   if (filters.showOnlyMyTeam && filters.myTeamId) {
     const teamId = filters.myTeamId;
-    filteredMatches = filteredMatches.filter((m) => involvesTeam(m, teamId));
+    filteredMatches = filteredMatches.filter((m) => matchInvolvesTeam(m, teamId));
   }
 
   if (filters.selectedGroup) {
@@ -48,15 +53,15 @@ export function applyViewFilters(
 
   if (filters.selectedStatus !== 'all') {
     filteredMatches = filteredMatches.filter((m) => {
-      const matchStatus = tournament.matches.find((tm) => tm.id === m.id)?.matchStatus ?? 'scheduled';
-      if (filters.selectedStatus === 'finished') {
-        return matchStatus === 'finished';
+      const match = view.byId.get(m.id);
+      switch (filters.selectedStatus) {
+        case 'finished':
+          return match?.status === 'finished' || match?.status === 'awarded';
+        case 'live':
+          return match?.isLive === true;
+        default:
+          return match?.isUpcoming === true;
       }
-      // UI nennt den Status „live“, MatchStatus heißt er „running“
-      if (filters.selectedStatus === 'live') {
-        return matchStatus === 'running';
-      }
-      return matchStatus === 'scheduled' || matchStatus === 'waiting';
     });
   }
 
@@ -70,9 +75,9 @@ export function applyViewFilters(
   return { ...schedule, allMatches: filteredMatches, phases: filteredPhases };
 }
 
-/** Datenschutz: ohne Stände, wenn die Turnierleitung „Ergebnisse ausblenden“ gesetzt hat. */
-export function applyScoreVisibility(schedule: GeneratedSchedule, tournament: Tournament): GeneratedSchedule {
-  if (!tournament.hideScoresForPublic) {
+/** Datenschutz: ohne Stände, wenn die Regeln der Ansicht Ergebnisse verbergen (`rules.results`, Kindermodus). */
+export function applyScoreVisibility(schedule: GeneratedSchedule, rules: Pick<ViewRules, 'results'>): GeneratedSchedule {
+  if (rules.results) {
     return schedule;
   }
   return {
@@ -85,36 +90,36 @@ export function applyScoreVisibility(schedule: GeneratedSchedule, tournament: To
 /** Spielplan für die Anzeige: erst Nutzer-Filter, dann Ausblenden der Stände. */
 export function publicSchedule(
   schedule: GeneratedSchedule,
-  tournament: Tournament,
+  view: TournamentView,
   filters: ViewFilters
 ): GeneratedSchedule {
-  return applyScoreVisibility(applyViewFilters(schedule, tournament, filters), tournament);
+  return applyScoreVisibility(applyViewFilters(schedule, view, filters), view.rules);
 }
 
 /** Spielliste für ScheduleDisplay (dort werden Stände aus dieser Liste wieder eingemischt). */
-export function publicMatches(tournament: Tournament): Match[] {
-  return tournament.hideScoresForPublic ? tournament.matches.map(withoutScore) : tournament.matches;
+export function publicMatches(tournament: Tournament, rules: Pick<ViewRules, 'results'>): Match[] {
+  return rules.results ? tournament.matches : tournament.matches.map(withoutScore);
 }
 
 /**
- * Gruppentabellen nur, wenn die Turnierleitung sie nicht verbirgt. Ohne Stände gibt es auch keine
- * Tabelle, also keinen Platz und keine Punkte (hideScoresForPublic, W2A-031).
+ * Gruppentabellen nur, wenn die Regeln der Ansicht sie zeigen (`rules.tables`): ohne Stände (Kindermodus) und bei
+ * ausgeschalteten Tabellen gibt es keine Tabelle, also keinen Platz und keine Punkte (W2A-031, @ZM-005).
  */
-export function visibleStandings(tournament: Tournament, standings: Standing[]): Standing[] {
-  return tournament.hideRankingsForPublic || tournament.hideScoresForPublic ? [] : standings;
+export function visibleStandings(rules: Pick<ViewRules, 'tables'>, standings: Standing[]): Standing[] {
+  return rules.tables ? standings : [];
 }
 
 /** Der Tabellen-Tab wird nur angeboten, wenn Stände sichtbar sein dürfen (W2A-031). */
-export function standingsTabAvailable(tournament: Tournament): boolean {
-  return !tournament.hideScoresForPublic;
+export function standingsTabAvailable(rules: Pick<ViewRules, 'results'>): boolean {
+  return rules.results;
 }
 
 /** Ein Direktaufruf des Tabellen-Tabs fällt auf den Spielplan zurück, wenn der Tab nicht angeboten wird. */
 export function effectiveNavTab<T extends 'schedule' | 'standings' | 'settings'>(
   tab: T,
-  tournament: Tournament
+  rules: Pick<ViewRules, 'results'>
 ): T | 'schedule' {
-  return tab === 'standings' && !standingsTabAvailable(tournament) ? 'schedule' : tab;
+  return tab === 'standings' && !standingsTabAvailable(rules) ? 'schedule' : tab;
 }
 
 export function uniqueGroups(tournament: Tournament): string[] {

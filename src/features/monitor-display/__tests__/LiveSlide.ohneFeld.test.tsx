@@ -6,12 +6,13 @@ import { render, screen } from '@testing-library/react';
 import { LiveSlide } from '../slides/LiveSlide';
 import type { PerformanceSettings } from '../../../types/monitor';
 import { buildTournament, slide, withMatch } from './monitorFixture';
+import { withView } from './monitorViewHelper';
 
 const performanceSettings = {} as PerformanceSettings;
 
 function renderOhneFeld(matches: ReturnType<typeof withMatch>) {
   return render(
-    <LiveSlide slide={slide('live', {})} tournament={buildTournament({ matches })} performanceSettings={performanceSettings} theme="dark" style={{}} />,
+    <LiveSlide slide={slide('live', {})} {...withView(buildTournament({ matches }))} performanceSettings={performanceSettings} theme="dark" style={{}} />,
   );
 }
 

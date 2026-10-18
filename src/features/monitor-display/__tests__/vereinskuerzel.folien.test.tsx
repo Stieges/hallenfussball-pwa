@@ -10,7 +10,6 @@ import { LiveMatchDisplay } from '../../../components/monitor/LiveMatchDisplay';
 import { NextMatchesSlide } from '../slides/NextMatchesSlide';
 import { StandingsSlide } from '../slides/StandingsSlide';
 import { ScheduleFieldSlide } from '../slides/ScheduleFieldSlide';
-import { toLiveMatch } from '../monitorMatch';
 import { buildTournament, FIXTURE_MATCHES, FIXTURE_TEAMS, slide } from './monitorFixture';
 import { buildLiveViewTournament, TEAM_IDS, SHARE_CODE } from '../../../screens/__tests__/liveViewFixture';
 
@@ -25,6 +24,7 @@ vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
 
 import { LiveViewScreen } from '../../../screens/LiveViewScreen';
 import { RepositoryProvider } from '../../../core/contexts/RepositoryContext';
+import { liveMatchOf, withView } from './monitorViewHelper';
 
 const VOLL = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
 const KUERZEL = 'SG FF Nordheim-Süd 1921';
@@ -41,7 +41,7 @@ describe('@ZM-087 Monitor-Folien zeigen das Vereinskürzel nach Liste', () => {
     const t = mitName(VOLL);
     const match = t.matches.find(m => m.id === 'match-9');
     if (!match) { throw new Error('Fixture-Spiel fehlt'); }
-    const { container } = render(<LiveMatchDisplay match={toLiveMatch(match, t.teams, t)} />);
+    const { container } = render(<LiveMatchDisplay match={liveMatchOf(match, t)} />);
     expect(screen.getByText(KUERZEL)).toBeInTheDocument();
     expect(container.textContent).not.toContain('…');
     expect(container.textContent).not.toMatch(INITIALEN);
@@ -49,7 +49,7 @@ describe('@ZM-087 Monitor-Folien zeigen das Vereinskürzel nach Liste', () => {
   });
 
   it('Nächste Spiele: „SG FF Nordheim-Süd 1921“ in der Zeile, kein „…“, keine Initialen', () => {
-    const { container } = render(<NextMatchesSlide slide={slide('next-matches')} tournament={mitName(VOLL)} theme="dark" style={{}} />);
+    const { container } = render(<NextMatchesSlide slide={slide('next-matches')} {...withView(mitName(VOLL))} theme="dark" style={{}} />);
     expect(screen.getAllByText(KUERZEL).length).toBeGreaterThan(0);
     expect(container.textContent).not.toContain('…');
     expect(container.textContent).not.toMatch(INITIALEN);
@@ -63,7 +63,7 @@ describe('@ZM-087 Monitor-Folien zeigen das Vereinskürzel nach Liste', () => {
   });
 
   it('Spielplan Feld: Name gekürzt, jede Namenszelle trägt die Markierung data-teamname', () => {
-    const { container } = render(<ScheduleFieldSlide slide={slide('schedule-field', { fieldId: 'field-1' })} tournament={mitName(VOLL)} theme="dark" style={{}} />);
+    const { container } = render(<ScheduleFieldSlide slide={slide('schedule-field', { fieldId: 'field-1' })} {...withView(mitName(VOLL))} theme="dark" style={{}} />);
     expect(screen.getAllByText(KUERZEL).length).toBeGreaterThan(0);
     for (const el of Array.from(container.querySelectorAll('[data-teamname]'))) {
       expect(el.textContent).not.toContain(VOLL);
@@ -71,7 +71,7 @@ describe('@ZM-087 Monitor-Folien zeigen das Vereinskürzel nach Liste', () => {
   });
 
   it('Markierung: Nächste Spiele hat je Zeile zwei data-teamname-Zellen', () => {
-    const { container } = render(<NextMatchesSlide slide={slide('next-matches')} tournament={buildTournament()} theme="dark" style={{}} />);
+    const { container } = render(<NextMatchesSlide slide={slide('next-matches')} {...withView(buildTournament())} theme="dark" style={{}} />);
     const zeilen = screen.getAllByTestId('monitor-match-row');
     expect(container.querySelectorAll('[data-teamname]')).toHaveLength(zeilen.length * 2);
   });
@@ -85,7 +85,7 @@ describe('@ZM-149 Gegenbeispiele am Monitor', () => {
     const t = mitName(name);
     const match = FIXTURE_MATCHES.find(m => m.id === 'match-9');
     if (!match) { throw new Error('Fixture-Spiel fehlt'); }
-    render(<LiveMatchDisplay match={toLiveMatch(match, t.teams, t)} />);
+    render(<LiveMatchDisplay match={liveMatchOf(match, t)} />);
     expect(screen.getByText(name)).toBeInTheDocument();
   });
 
@@ -93,7 +93,7 @@ describe('@ZM-149 Gegenbeispiele am Monitor', () => {
     const t = mitName('Turn- und Sportverein Ost');
     const match = FIXTURE_MATCHES.find(m => m.id === 'match-9');
     if (!match) { throw new Error('Fixture-Spiel fehlt'); }
-    render(<LiveMatchDisplay match={toLiveMatch(match, t.teams, t)} />);
+    render(<LiveMatchDisplay match={liveMatchOf(match, t)} />);
     expect(screen.getByText('TSV Ost')).toBeInTheDocument();
   });
 });

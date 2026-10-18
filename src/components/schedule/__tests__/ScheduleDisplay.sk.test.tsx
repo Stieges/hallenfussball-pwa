@@ -16,6 +16,7 @@ import type { Match, Team } from '../../../types/tournament';
 import { createMockTournament } from '../../../test/factories';
 import { testUuid } from '../../../test/testIds';
 import { ScheduleDisplay } from '../../ScheduleDisplay';
+import { viewOf } from './scheduleViewFixture';
 
 vi.mock('../../../hooks/useLiveMatches', () => ({ useLiveMatches: () => ({ liveMatches: new Map() }) }));
 
@@ -40,7 +41,7 @@ describe('@OB-064 durchgehend: Spielplan → Finalrunden-Karte und -Tabelle', ()
       [HF1.id]: { scoreA: 2, scoreB: 2, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty', matchStatus: 'finished' },
     });
     const { container } = render(
-      <ScheduleDisplay schedule={schedule} currentMatches={currentMatches} finishedMatches={new Set([HF1.id])} />,
+      <ScheduleDisplay schedule={schedule} currentMatches={currentMatches} view={viewOf(currentMatches, teams)} />,
     );
     expect(screen.getByTestId(`final-penalty-${HF1.id}-home`).textContent).toBe('(4)');
     expect(screen.getByTestId(`final-penalty-${HF1.id}-away`).textContent).toBe('(3)');
@@ -53,7 +54,7 @@ describe('@OB-064 durchgehend: Spielplan → Finalrunden-Karte und -Tabelle', ()
       [HF1.id]: { scoreA: 2, scoreB: 2, overtimeScoreA: 1, overtimeScoreB: 0, decidedBy: 'overtime', matchStatus: 'finished' },
     });
     const { container } = render(
-      <ScheduleDisplay schedule={schedule} currentMatches={currentMatches} finishedMatches={new Set([HF1.id])} />,
+      <ScheduleDisplay schedule={schedule} currentMatches={currentMatches} view={viewOf(currentMatches, teams)} />,
     );
     expect(screen.getByTestId(`final-goals-${HF1.id}-home`).textContent).toBe('3');
     expect(screen.getByTestId(`final-decision-${HF1.id}`).textContent).toBe('n. V.');
@@ -63,7 +64,7 @@ describe('@OB-064 durchgehend: Spielplan → Finalrunden-Karte und -Tabelle', ()
   it('Gegenbeispiel: ohne Verlängerung und Strafstoß steht beim Finalrunden-Spiel kein Zusatz', () => {
     const currentMatches = aktuell({ [HF1.id]: { scoreA: 1, scoreB: 0, matchStatus: 'finished' } });
     const { container } = render(
-      <ScheduleDisplay schedule={schedule} currentMatches={currentMatches} finishedMatches={new Set([HF1.id])} />,
+      <ScheduleDisplay schedule={schedule} currentMatches={currentMatches} view={viewOf(currentMatches, teams)} />,
     );
     expect(screen.queryByTestId(`final-decision-${HF1.id}`)).toBeNull();
     expect(container.textContent).not.toMatch(/n\. V\.|i\. E\./);
@@ -76,7 +77,7 @@ describe('Gegenbeispiel: Gruppenphase bleibt unverändert', () => {
     const id = (groupMatch as { id: string }).id;
     const currentMatches = aktuell({ [id]: { scoreA: 3, scoreB: 1, matchStatus: 'finished' } });
     const { container } = render(
-      <ScheduleDisplay schedule={schedule} currentMatches={currentMatches} finishedMatches={new Set([id])} editable onScoreChange={vi.fn()} />,
+      <ScheduleDisplay schedule={schedule} currentMatches={currentMatches} view={viewOf(currentMatches, teams)} editable onScoreChange={vi.fn()} />,
     );
     expect(screen.getByTestId(`match-goals-${id}-home`).textContent).toBe('3');
     expect(screen.getByTestId(`match-goals-${id}-away`).textContent).toBe('1');

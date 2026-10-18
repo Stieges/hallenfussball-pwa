@@ -7,6 +7,7 @@ import { render, screen } from '@testing-library/react';
 import { LiveSlide } from '../slides/LiveSlide';
 import type { PerformanceSettings } from '../../../types/monitor';
 import { buildTournament, slide, FIXTURE_MATCHES } from './monitorFixture';
+import { withView } from './monitorViewHelper';
 
 const performanceSettings = {} as PerformanceSettings;
 
@@ -15,7 +16,7 @@ describe('@ZM-138 Vor dem Anpfiff: nächstes Spiel mit Anstoßzeit', () => {
     render(
       <LiveSlide
         slide={slide('live', { fieldId: 'field-2' })}
-        tournament={buildTournament()}
+        {...withView(buildTournament())}
         performanceSettings={performanceSettings}
         theme="dark"
         style={{}}
@@ -30,7 +31,7 @@ describe('@ZM-138 Vor dem Anpfiff: nächstes Spiel mit Anstoßzeit', () => {
     render(
       <LiveSlide
         slide={slide('live', { fieldId: 'field-1' })}
-        tournament={buildTournament()}
+        {...withView(buildTournament())}
         performanceSettings={performanceSettings}
         theme="dark"
         style={{}}
@@ -45,7 +46,7 @@ describe('@ZM-138 Vor dem Anpfiff: nächstes Spiel mit Anstoßzeit', () => {
     render(
       <LiveSlide
         slide={slide('live', { fieldId: 'field-2', whenIdle: { type: 'skip' } })}
-        tournament={buildTournament()}
+        {...withView(buildTournament())}
         performanceSettings={performanceSettings}
         theme="dark"
         style={{}}
