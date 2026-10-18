@@ -42,7 +42,7 @@ export function MatchClock({ clock, size, color, testId }: MatchClockProps): Rea
     color: color ?? (clock.stopped ? cssVars.colors.textSecondary : cssVars.colors.textPrimary),
   };
   return (
-    <div style={wrap} data-testid={testId === undefined ? undefined : `${testId}-area`} aria-label={clock.remaining === null ? undefined : t('matchClock.ariaRemaining', { time: clock.remaining })}>
+    <div style={wrap} data-testid={testId === undefined ? undefined : `${testId}-area`}>
       <span style={meta}>
         {prefix !== null && <>{prefix}{section !== null && ' · '}</>}
         {section !== null && <span data-testid={testId === undefined ? 'match-clock-section' : `${testId}-section`}>{section}</span>}
