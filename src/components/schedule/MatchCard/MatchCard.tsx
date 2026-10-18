@@ -21,7 +21,8 @@ import { cssVars } from '../../../design-tokens'
 import type { MatchCardStatus } from './MatchCardScore';
 import { MatchCardHeader } from './MatchCardHeader';
 import { TeamScoreRows } from './TeamScoreRows';
-import type { MatchBadgeModel, ViewMatchStatus } from '../../../core/view';
+import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../../core/view';
+import { MatchClock } from '../../ui/molecules/MatchClock';
 import type { ResultFigures } from '../matchResult';
 import type { TeamLogo, TeamColors } from '../../../types/tournament';
 
@@ -61,6 +62,8 @@ export interface MatchCardProps {
   status: MatchCardStatus;
   /** Abzeichen der Ansicht (`MatchView.badge`) für die Kopfzeile */
   badge?: MatchBadgeModel;
+  /** Restzeit beim Stand (`MatchView` + Uhr, @ZM-162) */
+  clock?: SpectatorClock | null;
   /** Fachlicher Status der Ansicht: „ausgefallen“ / „gewertet“ in der Kopfzeile (@ZM-104) */
   viewStatus?: ViewMatchStatus;
   /** Callback when card body is clicked */
@@ -94,6 +97,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   result = null,
   status,
   badge,
+  clock,
   viewStatus,
   onCardClick,
   onCircleClick,
@@ -160,6 +164,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({
     gap: cssVars.spacing.sm,
   };
 
+  const clockStyle: CSSProperties = { padding: `0 ${cssVars.spacing.sm} ${cssVars.spacing.sm}` };
+
   const expandStyle: CSSProperties = {
     borderTop: `1px solid ${cssVars.colors.border}`,
     backgroundColor: cssVars.colors.surfaceVariant,
@@ -220,6 +226,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           </span>
         )}
       </div>
+      {clock && <div style={clockStyle}><MatchClock clock={clock} size="card" /></div>}
 
       {/* Expand Content */}
       {isExpanded && expandContent && (

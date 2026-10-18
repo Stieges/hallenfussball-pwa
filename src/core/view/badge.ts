@@ -5,6 +5,7 @@
  * Engine, für Monitor und Zuschauer aus `matches.live_state` (R-SA8, `badgeDetailFromLiveState`). Kein React.
  */
 import { z } from 'zod';
+import { elapsedAt } from '../match/penalties';
 import { MatchStatusSchema, PhaseSchema, type MatchState } from '../match/types';
 import type { EngineStatus, LocalClock, ViewMatchStatus } from './types';
 
@@ -23,6 +24,12 @@ export interface MatchBadgeEngineDetail {
   sectionElapsedSec?: number;
   /** Rest der Pause aus breakStartedAt/breakSeconds */
   breakRemainingSec?: number;
+  /** Länge der Verlängerung (Restzeit in der Verlängerung, 5.1a) */
+  overtimeSeconds?: number;
+  /** Die Spieluhr läuft (Anker gesetzt): `spectatorClockOf` zählt ab `asOfMs` weiter */
+  running?: boolean;
+  /** Zeitpunkt (Geräteuhr, ms), auf den sich `sectionElapsedSec` und `breakRemainingSec` beziehen */
+  asOfMs?: number;
 }
 
 export interface MatchBadgeInput {
@@ -92,6 +99,7 @@ const LiveStateSchema = z.object({
   section: z.number().int().min(1),
   sections: z.number().int().min(1).nullish(),
   sectionSeconds: z.number().nonnegative().nullish(),
+  overtimeSeconds: z.number().nonnegative().nullish(),
   sectionStartMs: z.number().nullish(),
   elapsedMs: z.number().nullish(),
   anchorAt: z.number().nullish(),
@@ -111,7 +119,10 @@ export function badgeDetailFromLiveState(raw: unknown, nowMs: number): MatchBadg
     return undefined;
   }
   const s = parsed.data;
-  const detail: MatchBadgeEngineDetail = { status: s.status, phase: s.phase, section: s.section, sections: s.sections ?? 1 };
+  const detail: MatchBadgeEngineDetail = { status: s.status, phase: s.phase, section: s.section, sections: s.sections ?? 1, asOfMs: nowMs, running: typeof s.anchorAt === 'number' };
+  if (typeof s.overtimeSeconds === 'number') {
+    detail.overtimeSeconds = s.overtimeSeconds;
+  }
   if (typeof s.sectionSeconds === 'number') {
     detail.sectionSeconds = s.sectionSeconds;
   }
@@ -137,11 +148,23 @@ export function engineDetailFromMatches(
   return (matchId) => badgeDetailFromLiveState(byId.get(matchId), nowMs);
 }
 
-/** Feinstatus der Verwaltung aus dem Stand der Engine (`MatchState`). */
-export function badgeDetailFromEngineState(state: Pick<MatchState, 'status' | 'phase' | 'section' | 'rules'>): MatchBadgeEngineDetail {
-  const detail: MatchBadgeEngineDetail = { status: state.status, phase: state.phase, section: state.section, sections: state.rules?.sections ?? 1 };
-  if (state.rules?.sectionSeconds !== undefined) {
-    detail.sectionSeconds = state.rules.sectionSeconds;
+/** Feinstatus der Verwaltung aus dem Stand der Engine (`MatchState`) zum Zeitpunkt `nowMs`. */
+export function badgeDetailFromEngineState(
+  state: Pick<MatchState, 'status' | 'phase' | 'section' | 'rules' | 'clock' | 'sectionStartMs' | 'breakStartedAt'>,
+  nowMs: number,
+): MatchBadgeEngineDetail {
+  const rules = state.rules;
+  const detail: MatchBadgeEngineDetail = {
+    status: state.status, phase: state.phase, section: state.section, sections: rules?.sections ?? 1,
+    running: state.clock.running, asOfMs: nowMs,
+    sectionElapsedSec: Math.max(0, Math.floor((elapsedAt(state.clock, nowMs) - state.sectionStartMs) / MS_PER_SECOND)),
+  };
+  if (rules !== null && rules !== undefined) {
+    detail.sectionSeconds = rules.sectionSeconds;
+    detail.overtimeSeconds = rules.overtimeSeconds;
+    if (state.breakStartedAt !== null) {
+      detail.breakRemainingSec = Math.max(0, rules.breakSeconds - Math.floor((nowMs - state.breakStartedAt) / MS_PER_SECOND));
+    }
   }
   return detail;
 }

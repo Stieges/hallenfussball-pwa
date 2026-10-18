@@ -9,8 +9,9 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import type { ScheduledMatch } from '../../core/generators';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
+import { MatchClock } from '../ui/molecules/MatchClock';
 import { MobileScoreInput, ScoreDraftProvider } from './FinalStageMobileScore';
-import type { MatchBadgeModel, ViewMatchStatus } from '../../core/view';
+import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../core/view';
 import type { ResultFigures } from './matchResult';
 
 export interface FinalMobileOption {
@@ -31,6 +32,8 @@ export interface FinalStageMobileCardProps {
   isFinished: boolean;
   /** Abzeichen der Ansicht (`MatchView.badge`): Wort je Zustand, ohne Uhr (@OB-065, @OB-066) */
   badge?: MatchBadgeModel;
+  /** Restzeit beim Stand (@ZM-162) */
+  clock?: SpectatorClock | null;
   /** Fachlicher Status der Ansicht: „ausgefallen“ / „gewertet“ (@ZM-104) */
   viewStatus?: ViewMatchStatus;
   /** Tore dürfen eingetragen werden (Verwaltung, Spiel nicht beendet) */
@@ -67,7 +70,7 @@ const selectStyle: CSSProperties = {
 
 export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props) => {
   const {
-    match, label, homeName, awayName, homePending, awayPending, result, isRunning, isFinished, badge, viewStatus, canEditScore, inCorrectionMode,
+    match, label, homeName, awayName, homePending, awayPending, result, isRunning, isFinished, badge, clock, viewStatus, canEditScore, inCorrectionMode,
     onScoreChange, onStartCorrection, showReferees, showFields, editingSchedule, displayedRef, displayedField,
     hasPendingRef, hasPendingField, refereeOptions, fieldOptions, onRefereeChange, onFieldChange,
   } = props;
@@ -181,6 +184,8 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
           </>
         )}
       </ScoreDraftProvider>
+
+      {clock && <div style={{ marginTop: cssVars.spacing.xs }}><MatchClock clock={clock} size="card" /></div>}
 
       {isFinished && !inCorrectionMode && onStartCorrection && (
         <button

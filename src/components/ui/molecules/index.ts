@@ -11,3 +11,5 @@ export type { ScoreboardProps, ScoreboardModel, ScoreboardSeite, ScoreboardUhr, 
 export { MatchStatusBadge } from './MatchStatusBadge';
 export type { MatchStatusBadgeProps } from './MatchStatusBadge';
 export type { MatchStatusBadgeSize, MatchStatusBadgeTone } from './matchStatusBadgeStyle';
+export { MatchClock } from './MatchClock';
+export type { MatchClockProps } from './MatchClock';

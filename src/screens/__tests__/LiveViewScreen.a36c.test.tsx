@@ -165,15 +165,30 @@ describe('@ZM-039 @ZM-040 @ZM-041 F-PAUSE: unterbrochen bleibt live, nie beendet
     expect(kreis(c, idOf(cup, GAME[8]))).toHaveLength(0);
   });
 
-  // Befund C-ABZEICHEN-UHR
-  it.fails('@OB-066 @ZM-040 angehaltene Uhr bei 07:40: Abzeichen „Pause“, Abschnitt „1. Halbzeit“ klein bei der Restzeit 2:20', async () => {
+  // Fixture-Ergänzung (5.1a): das Spiel kommt wie aus der Cloud mit `live_state` (2 Abschnitte à 10 min, Uhr bei 7:40 angehalten);
+  // der Zwischenspeicher allein kennt die Abschnitte nicht, die Fixture „Hallencup Nord“ hat einen Abschnitt
+  it('@OB-066 @ZM-040 angehaltene Uhr bei 07:40: Abzeichen „Pause“, Abschnitt „1. Halbzeit“ klein bei der Restzeit 2:20', async () => {
     const base = await fPAUSE();
-    const cup = withCloudColumns(base, GAME[7], { match_status: 'paused', score_a: 1, score_b: 0, timer_elapsed_seconds: 460 });
+    const liveState = { engine: true, status: 'paused', phase: 'regular', section: 1, sections: 2, sectionSeconds: 600, elapsedMs: 460_000, anchorAt: null, sectionStartMs: 0, breakStartedAt: null, breakSeconds: 60 };
+    const cup = withCloudColumns(base, GAME[7], { match_status: 'paused', score_a: 1, score_b: 0, timer_elapsed_seconds: 460, live_state: liveState });
     await zeige(cup.tournament);
     const karte = within(screen.getByTestId(`match-goals-${idOf(cup, GAME[7])}-home`).closest<HTMLElement>('[data-match-card]')!);
     expect(karte.getByTestId('match-status-badge').textContent).toBe('Pause');
     expect(karte.getByTestId('match-clock-section').textContent).toBe('1. Halbzeit');
     expect(karte.getByTestId('match-clock').textContent).toBe('2:20');
+  });
+});
+
+describe('@ZM-162 laufende Uhr: Restzeit zählt herunter, nie die gespielte Zeit', () => {
+  it('@ZM-162 Spiel 8 läuft seit 95 s (Zwischenspeicher): Restzeit um 8:25 von 10:00, nie 01:35', async () => {
+    const base = await fPAUSE();
+    const gestartet = new Date(Date.now() - 95_000).toISOString();
+    const cup = withCloudColumns(base, GAME[8], { match_status: 'running', score_a: 0, score_b: 0, timer_elapsed_seconds: 0, timer_start_time: gestartet });
+    await zeige(cup.tournament);
+    const karte = within(screen.getByTestId(`match-goals-${idOf(cup, GAME[8])}-home`).closest<HTMLElement>('[data-match-card]')!);
+    expect(karte.getByTestId('match-status-badge').textContent).toBe('Live');
+    expect(karte.getByTestId('match-clock').textContent).toMatch(/^8:2[0-5]$/);
+    expect(karte.getByTestId('match-clock').textContent).not.toMatch(/01:3/);
   });
 });
 

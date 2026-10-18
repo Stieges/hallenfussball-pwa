@@ -2,7 +2,7 @@
  * LiveInfoExpand - Read-only info panel for running matches
  *
  * Displays live match info without editing capability:
- * - Zustands-Abzeichen (MatchStatusBadge) mit Zeit
+ * - Zustands-Abzeichen (MatchStatusBadge) und Restzeit (MatchClock)
  * - Large score display (read-only)
  * - Recent events (last 3-5)
  * - "Go to Cockpit" button
@@ -14,7 +14,7 @@
  *   awayTeam={{ id: '2', name: 'Team B' }}
  *   homeScore={2}
  *   awayScore={1}
- *   elapsedFormatted="07:30"
+ *   clock={clock}
  *   events={matchEvents}
  *   onNavigateToCockpit={() => navigate(`/cockpit/${matchId}`)}
  * />
@@ -26,7 +26,8 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui/Button';
 import { MatchStatusBadge } from '../../ui/molecules/MatchStatusBadge';
-import type { MatchBadgeModel } from '../../../core/view';
+import type { MatchBadgeModel, SpectatorClock } from '../../../core/view';
+import { MatchClock } from '../../ui/molecules/MatchClock';
 import { cardKindOf } from '../../../utils/cardKind';
 
 // ---------------------------------------------------------------------------
@@ -59,8 +60,8 @@ export interface LiveInfoExpandProps {
   homeScore: number;
   /** Current away score */
   awayScore: number;
-  /** Formatted elapsed time (e.g., "07:30") */
-  elapsedFormatted: string;
+  /** Restzeit beim Stand (@ZM-162); ohne Uhr steht nichts */
+  clock?: SpectatorClock | null;
   /** Abzeichen der Ansicht (`MatchView.badge`); ohne Angabe „Live“ */
   badge?: MatchBadgeModel;
   /** Recent match events */
@@ -145,7 +146,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
   awayTeam,
   homeScore,
   awayScore,
-  elapsedFormatted,
+  clock,
   badge,
   events = [],
   maxEvents = 5,
@@ -174,13 +175,6 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-  };
-
-  const timerStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.primary,
-    fontVariantNumeric: 'tabular-nums',
   };
 
   const scoreContainerStyle: CSSProperties = {
@@ -288,7 +282,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
       {/* Header with LIVE badge and timer */}
       <div style={headerStyle}>
         <MatchStatusBadge model={badge ?? LIVE_BADGE} size="card" />
-        <span style={timerStyle} data-testid="live-timer">{elapsedFormatted}</span>
+        {clock && <MatchClock clock={clock} size="card" />}
       </div>
 
       {/* Large Score Display */}

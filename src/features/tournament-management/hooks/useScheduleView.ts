@@ -25,7 +25,7 @@ export function useScheduleView(tournament: Tournament): ScheduleView {
   const engineStatus = useCallback((matchId: string) => engine?.view(matchId)?.result.state.status, [engine]);
   const engineDetail = useCallback((matchId: string) => {
     const state = engine?.view(matchId)?.result.state;
-    return state === undefined ? undefined : badgeDetailFromEngineState(state);
+    return state === undefined ? undefined : badgeDetailFromEngineState(state, new Date().getTime());
   }, [engine]);
   const view = useMemo(
     () => buildTournamentView({ ...tournament, engineStatus, engineDetail }, {

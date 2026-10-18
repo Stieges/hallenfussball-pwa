@@ -949,6 +949,22 @@
     "ended": "Full time",
     "cancelled": "Cancelled"
   },
+  "matchClock": {
+    "remaining": "Time left",
+    "breakPrefix": "Break",
+    "expired": "Time is up – result to follow",
+    "ariaRemaining": "Time left {{time}}",
+    "section": {
+      "firstHalf": "1st half",
+      "secondHalf": "2nd half",
+      "sectionOfN": "Period {{section}} of {{sections}}",
+      "overtime": "Extra time",
+      "breakBeforeOvertime": "Break before extra time",
+      "breakBeforeShootout": "Break before penalties",
+      "halftimeBreak": "Half-time",
+      "sectionBreak": "Break after period {{section}} of {{sections}}"
+    }
+  },
   "pdf": {
     "organizer": "Organizer",
     "hall": "Hall",

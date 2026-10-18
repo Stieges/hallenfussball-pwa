@@ -79,13 +79,13 @@ describe('@OB-065 dasselbe Abzeichen auf allen Karten', () => {
 
   it('@OB-065 aufgeklappte Karte (LiveInfoExpand) zeigt dasselbe Abzeichen, kein festes „LIVE“', () => {
     const { container } = render(
-      <LiveInfoExpand homeTeam={NORD} awayTeam={BERG} homeScore={1} awayScore={0} elapsedFormatted="07:30" badge={{ kind: 'badge', state: 'halftime' }} />,
+      <LiveInfoExpand homeTeam={NORD} awayTeam={BERG} homeScore={1} awayScore={0} badge={{ kind: 'badge', state: 'halftime' }} />,
     );
     const badge = screen.getByTestId('match-status-badge');
     expect(badge).toHaveTextContent('Halbzeit');
     expect(container.textContent).not.toContain('LIVE');
     // ohne Angabe der Ansicht ist die aufgeklappte Karte eines laufenden Spiels „Live“, in derselben Farbe wie die Spielkarte
-    const { unmount } = render(<LiveInfoExpand homeTeam={NORD} awayTeam={BERG} homeScore={0} awayScore={0} elapsedFormatted="01:00" />);
+    const { unmount } = render(<LiveInfoExpand homeTeam={NORD} awayTeam={BERG} homeScore={0} awayScore={0} />);
     const live = screen.getAllByTestId('match-status-badge')[1];
     expect(live).toHaveTextContent('Live');
     expect(live).toHaveAttribute('data-state', 'live');

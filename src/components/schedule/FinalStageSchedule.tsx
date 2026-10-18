@@ -26,6 +26,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { cssVars, shadowSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
+import type { SpectatorClock } from '../../core/view';
 import { RefereeConfig } from '../../types/tournament';
 import { buildSideContext, matchViewOf, sideDisplay, sideName, type SideSource } from './matchSides';
 import { finalMatchLabel } from './finalMatchLabel';
@@ -34,7 +35,6 @@ import { FinalStageMobileCard } from './FinalStageMobileCard';
 import { cardStatusOf, resultFigures, type ResultFigures } from './matchResult';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
 
-// Pending changes during edit mode
 interface PendingChanges {
   refereeAssignments: Record<string, number | null>;
   fieldAssignments: Record<string, number>;
@@ -54,8 +54,7 @@ interface FinalStageScheduleProps {
   pendingChanges?: PendingChanges;
   correctionMatchId?: string | null;
   onStartCorrection?: (matchId: string) => void;
-  /** Gespielte Sekunden eines laufenden Spiels (Kopfzeile der Karte, @OB-064); ohne Angabe steht nur „läuft“ */
-  elapsedSeconds?: (matchId: string) => number | undefined;
+  clockOf?: (matchId: string) => SpectatorClock | null; // Restzeit laufender Spiele (@ZM-162)
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
   onMatchSwap?: (matchId1: string, matchId2: string) => void;
   /** Whether to show the section title (default: true) */
@@ -77,6 +76,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   pendingChanges,
   correctionMatchId,
   onStartCorrection,
+  clockOf,
   onMatchSwap,
   showTitle = true,
   tournament,
@@ -325,7 +325,6 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
           const status = statusOf(match);
           const isRunning = status === 'running';
           const rowView = matchViewOf(sides, match.id);
-          const rowBadge = rowView?.badge;
           const result = resultFigures(rowView?.score, status);
 
           return (
@@ -350,7 +349,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
                       <span>{match.matchNumber}</span>
-                      {rowBadge?.kind === 'badge' && <MatchStatusBadge model={rowBadge} size="row" testId={isRunning ? `final-row-live-${match.id}` : undefined} />}
+                      {rowView?.badge.kind === 'badge' && <MatchStatusBadge model={rowView.badge} size="row" testId={isRunning ? `final-row-live-${match.id}` : undefined} />}
                     </div>
                   </td>
                   {showReferees && (() => {
@@ -545,6 +544,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               result={resultFigures(matchView?.score, status)}
               isRunning={status === 'running'}
               badge={matchView?.badge}
+              clock={clockOf?.(match.id) ?? null}
               viewStatus={matchView?.status}
               isFinished={isFinished}
               canEditScore={editable && onScoreChange !== undefined && !isFinished}

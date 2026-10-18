@@ -28,7 +28,8 @@ import { RefereeConfig, RuntimeMatchEvent } from '../../types/tournament';
 import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { buildSideContext, matchHeading, matchViewOf, sideDisplay, sideName } from './matchSides';
-import { cardStatusOf, formatElapsed, resultFigures } from './matchResult';
+import { cardStatusOf, resultFigures } from './matchResult';
+import type { SpectatorClock } from '../../core/view';
 import {
   MatchCard,
   type MatchCardStatus,
@@ -64,7 +65,8 @@ interface GroupStageScheduleProps {
   correctionMatchId?: string | null;
   onStartCorrection?: (matchId: string) => void;
   /** Gespielte Sekunden eines laufenden Spiels (Kopfzeile der Karte, @OB-064); ohne Angabe steht nur „läuft“ */
-  elapsedSeconds?: (matchId: string) => number | undefined;
+  /** Restzeit eines laufenden Spiels (`useSpectatorClocks`, @ZM-162); ohne Angabe keine Uhr */
+  clockOf?: (matchId: string) => SpectatorClock | null;
   /** Teams, Gruppen, Spiele und die gemeinsame Ansicht (Status, Seiten, Endstand) */
   tournament?: ScheduleSource;
   /**
@@ -94,7 +96,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   pendingChanges,
   correctionMatchId: _correctionMatchId,
   onStartCorrection: _onStartCorrection,
-  elapsedSeconds,
+  clockOf,
   tournament,
   conflictSource,
   onMatchSwap,
@@ -233,12 +235,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     (match: ScheduledMatch): MatchCardStatus => cardStatusOf(view?.byId.get(match.id)),
     [view],
   );
-
-  /** Spielzeit „07:30“ eines laufenden Spiels (@OB-064); fehlt die Quelle, steht in der Kopfzeile nur „läuft“. */
-  const elapsedTextOf = useCallback((match: ScheduledMatch): string | undefined => {
-    const seconds = getMatchStatus(match) === 'running' ? elapsedSeconds?.(match.id) : undefined;
-    return seconds === undefined ? undefined : formatElapsed(seconds);
-  }, [getMatchStatus, elapsedSeconds]);
 
   /*
    * Handle card body click - opens QuickScore expand for non-live matches
@@ -423,7 +419,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             awayTeam={awayTeam}
             homeScore={match.scoreA ?? 0}
             awayScore={match.scoreB ?? 0}
-            elapsedFormatted={elapsedTextOf(match) ?? '–'}
+            clock={clockOf?.(match.id) ?? null}
             badge={matchViewOf(sides, match.id)?.badge}
             events={events}
             onNavigateToCockpit={_editable ? () => handleNavigateToCockpit(match.id) : undefined}
@@ -489,7 +485,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       default:
         return null;
     }
-  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, elapsedTextOf, _onStartCorrection, _editable]);
+  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, clockOf, _onStartCorrection, _editable]);
 
   // Sort matches by displayOrder for rendering
   const sortedMatches = useMemo(() => {
@@ -596,7 +592,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             onCircleClick={handleCircleClick}
             renderExpandContent={renderExpandContent}
             hasEvents={hasEvents}
-            elapsedFormatted={elapsedTextOf(match)}
+            clock={clockOf?.(match.id) ?? null}
           />
         );
       })}
@@ -839,6 +835,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               status: status,
               viewStatus: matchViewOf(sides, match.id)?.status,
               badge: matchViewOf(sides, match.id)?.badge,
+              clock: clockOf?.(match.id) ?? null,
             };
 
             return (

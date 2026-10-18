@@ -9,6 +9,7 @@ import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
+import type { SpectatorClock } from '../../core/view';
 import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { buildSideContext, matchHeading, matchViewOf, sideDisplay, type SideContext } from './matchSides';
@@ -40,8 +41,8 @@ export interface DesktopCardProps {
   renderExpandContent: (match: ScheduledMatch) => React.ReactNode;
   /** Whether the match has events (goals, cards, etc.) - shows chevron indicator */
   hasEvents?: boolean;
-  /** Spielzeit eines laufenden Spiels, z. B. „07:30“ */
-  elapsedFormatted?: string;
+  /** Restzeit eines laufenden Spiels beim Stand (@ZM-162) */
+  clock?: SpectatorClock | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -59,7 +60,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
   onCircleClick,
   renderExpandContent,
   hasEvents = false,
-  elapsedFormatted,
+  clock,
 }) => {
   const { t } = useTranslation('tournament');
   const sides = sideContext ?? buildSideContext(tournament, [match]);
@@ -91,7 +92,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         awayTeam={sideDisplay(match, 'B', sides)}
         result={resultFigures(matchView?.score, status)}
         status={status}
-        elapsedFormatted={elapsedFormatted}
+        clock={clock}
         viewStatus={matchView?.status}
         badge={matchView?.badge}
         onRowClick={() => onCardClick(match.id)}

@@ -3,7 +3,7 @@
  *
  * Heim und Gast stehen in der Tabelle nebeneinander, deshalb steht das Ergebnis waagerecht:
  * - geplant: "VS"
- * - läuft: "1:0" mit Spielzeit darunter
+ * - läuft: "1:0" mit Restzeit darunter
  * - beendet: "1:0", "3:2 n. V." oder "2:2 (4:3 i. E.)"
  *
  * Der Knopf ist das Klickziel ins Cockpit (≥ 44 px hoch). Der frühere Kreis mit Fortschrittsring entfällt.
@@ -12,7 +12,8 @@
 import { type CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
-import type { ViewMatchStatus } from '../../../core/view';
+import type { SpectatorClock, ViewMatchStatus } from '../../../core/view';
+import { MatchClock } from '../../ui/molecules/MatchClock';
 import { formatTableResult, type ResultFigures } from '../matchResult';
 
 export type MatchCardStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
@@ -22,8 +23,8 @@ export interface MatchCardScoreProps {
   result: ResultFigures | null;
   /** Current match status */
   status: MatchCardStatus;
-  /** Formatted elapsed time (e.g., "07:30") */
-  elapsedFormatted?: string;
+  /** Restzeit beim Stand (@ZM-162) */
+  clock?: SpectatorClock | null;
   /** Click handler */
   onClick?: () => void;
   /** Disable interaction */
@@ -37,7 +38,7 @@ export interface MatchCardScoreProps {
 export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
   result,
   status,
-  elapsedFormatted,
+  clock,
   onClick,
   disabled = false,
   matchId,
@@ -73,7 +74,7 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
   const label = (() => {
     if (!showsResult) { return t('matchCard.startMatch'); }
     const values = { homeScore: result.goalsA, awayScore: result.goalsB, homePenalty: result.penaltyA, awayPenalty: result.penaltyB };
-    if (isLive) { return t('matchCard.scoreAriaLive', { ...values, elapsed: elapsedFormatted ?? t('matchCard.live') }); }
+    if (isLive) { return t('matchCard.scoreAriaLive', { ...values, elapsed: clock?.remaining === undefined || clock.remaining === null ? t('matchCard.live') : t('matchClock.ariaRemaining', { time: clock.remaining }) }); }
     if (result.decision === 'penalty') { return t('matchResult.scoreAriaPenalty', values); }
     if (result.decision === 'overtime') { return t('matchResult.scoreAriaOvertime', values); }
     return t('matchCard.scoreAriaFinal', values);
@@ -96,11 +97,7 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
           {t('view.status.awarded')}
         </span>
       )}
-      {isLive && elapsedFormatted && (
-        <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.primary, fontWeight: cssVars.fontWeights.semibold }}>
-          {elapsedFormatted}
-        </span>
-      )}
+      {isLive && clock && <MatchClock clock={clock} size="card" testId={`match-row-clock-${matchId ?? ''}`} />}
     </button>
   );
 };

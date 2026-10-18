@@ -15,6 +15,7 @@ export {
   type MatchBadgeInput,
   type MatchBadgeEngineDetail,
 } from './badge';
+export { spectatorClockOf, spectatorClockForMatch, formatRemaining, type SpectatorClock, type SpectatorClockInput, type SpectatorSectionKey } from './spectatorClock';
 export { viewStatus, viewStatusText, isLive, isUpcoming } from './status';
 export { sideView } from './sides';
 export { placementView, groupPhaseOpen } from './placement';
