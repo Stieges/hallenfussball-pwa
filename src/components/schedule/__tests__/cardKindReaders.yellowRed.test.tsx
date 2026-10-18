@@ -68,7 +68,7 @@ describe('LiveInfoExpand -- Gelb-Rot (F3b2)', () => {
     ...(cardType !== undefined ? { cardType } : {}),
   } as MatchEvent);
   const renderExpand = (event: MatchEvent) => render(
-    <LiveInfoExpand homeTeam={homeTeam} awayTeam={awayTeam} homeScore={0} awayScore={0} elapsedFormatted="01:40" events={[event]} />,
+    <LiveInfoExpand homeTeam={homeTeam} awayTeam={awayTeam} homeScore={0} awayScore={0} events={[event]} />,
   );
 
   it('Gelb-Rot zeigt "Gelb-Rote Karte" und das Doppel-Symbol', () => {

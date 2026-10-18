@@ -68,9 +68,17 @@ describe('@ZM-039 @ZM-040 @ZM-041 F-PAUSE: unterbrochen bleibt live, nie „näc
     expect(v.byId.get(id8)?.score?.decidedBy).toBeNull(); // 0:0 beendet, Gruppe: nicht entschieden
   });
 
-  it.each(['de', 'en'] as const)('@ZM-039 Wortlaut „läuft“ (%s)', (locale) => {
-    expect(viewStatusText('paused', locale)).toBe(EXPECTED_STATE['F-PAUSE spiel7'].statusText[locale]);
-    expect(viewStatusText('running', locale)).toBe(EXPECTED_STATE['F-PAUSE spiel8'].statusText[locale]);
+  it('@OB-066 @ZM-039 Wortlaut „Pause“ und „Live“ (de)', () => {
+    expect(viewStatusText('paused', 'de')).toBe('Pause');
+    expect(viewStatusText('running', 'de')).toBe('Live');
+  });
+
+  // EN-Wortlaut steht nicht im Gherkin: Controller-Entscheidung 18.10.2026 (docs/GLOSSAR.md, Abzeichen-Wörter);
+  // „Paused“ statt „live“ – eine angehaltene Uhr ist nicht „läuft“ (@ZM-040)
+  it('@OB-066 @ZM-039 Wortlaut „Paused“ und „Live“ (en)', () => {
+    expect(viewStatusText('paused', 'en')).toBe('Paused');
+    expect(viewStatusText('running', 'en')).toBe('Live');
+    expect(viewStatusText('paused', 'en')).not.toBe(viewStatusText('running', 'en'));
   });
 });
 

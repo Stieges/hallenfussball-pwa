@@ -126,19 +126,18 @@ describe('@TM-015 @ZM-102 Zuschauer-Seite: Herkunft offener Plätze, besetzter P
 });
 
 describe('@ZM-039 @ZM-040 @ZM-041 F-PAUSE: unterbrochen bleibt live, nie beendet, nie „nächstes“', () => {
-  it('@ZM-039 Spiel 7 (angehalten bei 1:0) und Spiel 8 (läuft 0:0) stehen als „läuft“ mit Stand da', async () => {
+  it('@OB-066 @ZM-039 Spiel 7 (angehalten bei 1:0) steht als „Pause“, Spiel 8 (läuft 0:0) als „Live“, beide mit Stand', async () => {
     const cup = await fPAUSE();
     const c = await zeige(cup.tournament);
-    for (const [n, key] of [[7, 'F-PAUSE spiel7'], [8, 'F-PAUSE spiel8']] as const) {
+    for (const [n, wort, stand] of [[7, 'Pause', [1, 0]], [8, 'Live', [0, 0]]] as const) {
       const id = idOf(cup, GAME[n]);
-      const erwartet = EXPECTED_STATE[key];
       for (const k of kreis(c, id)) {
         expect(k).toHaveAttribute('data-match-status', 'running');
       }
       const karte = within(screen.getByTestId(`match-goals-${id}-home`).closest<HTMLElement>('[data-match-card]')!);
-      expect(karte.getByTestId('match-card-live').textContent).toContain(erwartet.statusText.de);
-      expect(screen.getByTestId(`match-goals-${id}-home`).textContent).toBe(String(erwartet.score[0]));
-      expect(screen.getByTestId(`match-goals-${id}-away`).textContent).toBe(String(erwartet.score[1]));
+      expect(karte.getByTestId('match-status-badge').textContent).toBe(wort);
+      expect(screen.getByTestId(`match-goals-${id}-home`).textContent).toBe(String(stand[0]));
+      expect(screen.getByTestId(`match-goals-${id}-away`).textContent).toBe(String(stand[1]));
     }
   });
 
@@ -166,18 +165,30 @@ describe('@ZM-039 @ZM-040 @ZM-041 F-PAUSE: unterbrochen bleibt live, nie beendet
     expect(kreis(c, idOf(cup, GAME[8]))).toHaveLength(0);
   });
 
-  it('@ZM-040 die Spielzeit steht in der Kopfzeile der Karte (aus dem Zwischenspeicher des Spiels)', async () => {
+  // Fixture-Ergänzung (5.1a): das Spiel kommt wie aus der Cloud mit `live_state` (2 Abschnitte à 10 min, Uhr bei 7:40 angehalten);
+  // der Zwischenspeicher allein kennt die Abschnitte nicht, die Fixture „Hallencup Nord“ hat einen Abschnitt
+  it('@OB-066 @ZM-040 angehaltene Uhr bei 07:40: Abzeichen „Pause“, Abschnitt „1. Halbzeit“ klein bei der Restzeit 2:20', async () => {
+    const base = await fPAUSE();
+    const liveState = { engine: true, status: 'paused', phase: 'regular', section: 1, sections: 2, sectionSeconds: 600, elapsedMs: 460_000, anchorAt: null, sectionStartMs: 0, breakStartedAt: null, breakSeconds: 60 };
+    const cup = withCloudColumns(base, GAME[7], { match_status: 'paused', score_a: 1, score_b: 0, timer_elapsed_seconds: 460, live_state: liveState });
+    await zeige(cup.tournament);
+    const karte = within(screen.getByTestId(`match-goals-${idOf(cup, GAME[7])}-home`).closest<HTMLElement>('[data-match-card]')!);
+    expect(karte.getByTestId('match-status-badge').textContent).toBe('Pause');
+    expect(karte.getByTestId('match-clock-section').textContent).toBe('1. Halbzeit');
+    expect(karte.getByTestId('match-clock').textContent).toBe('2:20');
+  });
+});
+
+describe('@ZM-162 laufende Uhr: Restzeit zählt herunter, nie die gespielte Zeit', () => {
+  it('@ZM-162 Spiel 8 läuft seit 95 s (Zwischenspeicher): Restzeit um 8:25 von 10:00, nie 01:35', async () => {
     const base = await fPAUSE();
     const gestartet = new Date(Date.now() - 95_000).toISOString();
-    const cup = withCloudColumns(
-      withCloudColumns(base, GAME[7], { match_status: 'paused', score_a: 1, score_b: 0, timer_elapsed_seconds: 460 }),
-      GAME[8],
-      { match_status: 'running', score_a: 0, score_b: 0, timer_elapsed_seconds: 0, timer_start_time: gestartet },
-    );
+    const cup = withCloudColumns(base, GAME[8], { match_status: 'running', score_a: 0, score_b: 0, timer_elapsed_seconds: 0, timer_start_time: gestartet });
     await zeige(cup.tournament);
-    const live = (n: 7 | 8) => screen.getByTestId(`match-goals-${idOf(cup, GAME[n])}-home`).closest<HTMLElement>('[data-match-card]')!.querySelector('[data-testid="match-card-live"]')?.textContent;
-    expect(live(7)).toBe('läuft 07:40'); // angehaltene Uhr: die Spielzeit steht
-    expect(live(8)).toMatch(/^läuft 01:3[5-9]$/); // laufende Uhr: 95 s seit dem Anpfiff
+    const karte = within(screen.getByTestId(`match-goals-${idOf(cup, GAME[8])}-home`).closest<HTMLElement>('[data-match-card]')!);
+    expect(karte.getByTestId('match-status-badge').textContent).toBe('Live');
+    expect(karte.getByTestId('match-clock').textContent).toMatch(/^8:2[0-5]$/);
+    expect(karte.getByTestId('match-clock').textContent).not.toMatch(/01:3/);
   });
 });
 
@@ -192,8 +203,9 @@ describe('@ZM-104 F-AUS / F-WERT: ausgefallen und gewertet', () => {
       expect(k.textContent).toBe(erwartet.statusText.de);
     }
     const karte = screen.getByTestId(`match-goals-${id9}-home`).closest<HTMLElement>('[data-match-card]')!;
-    expect(within(karte).getByTestId('match-card-status-note').textContent).toBe(erwartet.statusText.de);
-    expect(within(karte).queryByTestId('match-card-live')).toBeNull();
+    // „ausgefallen“ steht im Abzeichen (@OB-066); Wortlaut unverändert, kein Live-Abzeichen
+    expect(within(karte).getByTestId('match-status-badge').textContent).toBe(erwartet.statusText.de);
+    expect(within(karte).getByTestId('match-status-badge')).not.toHaveAttribute('data-state', 'live');
     expect(screen.getByTestId(`match-goals-${id9}-home`).textContent).toBe('–');
   });
 

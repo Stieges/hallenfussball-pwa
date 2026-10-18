@@ -8,9 +8,10 @@ import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import type { ScheduledMatch } from '../../core/generators';
-import { RunningBadge } from './RunningBadge';
+import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
+import { MatchClock } from '../ui/molecules/MatchClock';
 import { MobileScoreInput, ScoreDraftProvider } from './FinalStageMobileScore';
-import type { ViewMatchStatus } from '../../core/view';
+import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../core/view';
 import type { ResultFigures } from './matchResult';
 
 export interface FinalMobileOption {
@@ -29,8 +30,10 @@ export interface FinalStageMobileCardProps {
   result: ResultFigures | null;
   isRunning: boolean;
   isFinished: boolean;
-  /** Spielzeit eines laufenden Spiels, z. B. „07:30“ (Kopfzeile, @OB-064) */
-  elapsedFormatted?: string;
+  /** Abzeichen der Ansicht (`MatchView.badge`): Wort je Zustand, ohne Uhr (@OB-065, @OB-066) */
+  badge?: MatchBadgeModel;
+  /** Restzeit beim Stand (@ZM-162) */
+  clock?: SpectatorClock | null;
   /** Fachlicher Status der Ansicht: „ausgefallen“ / „gewertet“ (@ZM-104) */
   viewStatus?: ViewMatchStatus;
   /** Tore dürfen eingetragen werden (Verwaltung, Spiel nicht beendet) */
@@ -67,7 +70,7 @@ const selectStyle: CSSProperties = {
 
 export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props) => {
   const {
-    match, label, homeName, awayName, homePending, awayPending, result, isRunning, isFinished, elapsedFormatted, viewStatus, canEditScore, inCorrectionMode,
+    match, label, homeName, awayName, homePending, awayPending, result, isRunning, isFinished, badge, clock, viewStatus, canEditScore, inCorrectionMode,
     onScoreChange, onStartCorrection, showReferees, showFields, editingSchedule, displayedRef, displayedField,
     hasPendingRef, hasPendingField, refereeOptions, fieldOptions, onRefereeChange, onFieldChange,
   } = props;
@@ -76,7 +79,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
   const note = isFinished
     ? result?.decision === 'penalty' ? t('matchResult.finishedPenalty') : result?.decision === 'overtime' ? t('matchResult.overtimeShort') : undefined
     : undefined;
-  const statusNote = viewStatus === 'cancelled' || viewStatus === 'awarded' ? t(`view.status.${viewStatus}`) : undefined;
+  const statusNote = viewStatus === 'awarded' ? t('view.status.awarded') : undefined;
   const editable = canEditScore || inCorrectionMode;
 
   const renderRow = (side: 'a' | 'b', name: string, pending: boolean, draftValue: string, onDraft: (value: string) => void) => {
@@ -143,7 +146,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
           <span style={{ fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.accent }}>#{match.matchNumber}</span>
           <span>•</span>
           <span>{match.time}</span>
-          {isRunning && <RunningBadge elapsedFormatted={elapsedFormatted} testId={`final-live-${match.id}`} />}
+          {badge?.kind === 'badge' && <MatchStatusBadge model={badge} size="card" testId={isRunning ? `final-live-${match.id}` : undefined} />}
           {statusNote && <span style={{ fontWeight: cssVars.fontWeights.bold }} data-testid={`final-status-note-${match.id}`}>{statusNote}</span>}
           {note && <span style={{ fontWeight: cssVars.fontWeights.bold }} data-testid={`final-decision-${match.id}`}>{note}</span>}
         </div>
@@ -181,6 +184,8 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
           </>
         )}
       </ScoreDraftProvider>
+
+      {clock && <div style={{ marginTop: cssVars.spacing.xs }}><MatchClock clock={clock} size="card" /></div>}
 
       {isFinished && !inCorrectionMode && onStartCorrection && (
         <button

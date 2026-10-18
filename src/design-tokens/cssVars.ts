@@ -177,6 +177,7 @@ export const cssColors = {
   // ---------------------------------------------------------------------------
   statusLive: 'var(--color-status-live)',
   statusLiveBg: 'var(--color-status-live-bg)',
+  statusLiveOn: 'var(--color-status-live-on)',
   statusLiveRowBg: 'var(--color-status-live-row-bg)',
 
   statusUpcoming: 'var(--color-status-upcoming)',

@@ -24,7 +24,7 @@ export function useTickingNow(active: boolean): number {
 
 /**
  * Spielzeit laufender Spiele für die Kopfzeile der Karte (@OB-064): ein Sekundentakt, solange ein Spiel der Ansicht läuft.
- * `custom` (z. B. die Uhr der Engine in der Verwaltung) hat Vorrang; sonst die Zeitfelder des Spiels im Zwischenspeicher.
+ * `custom` (z. B. die Uhr der Engine in der Verwaltung) hat Vorrang; kennt sie das Spiel nicht, gelten die Zeitfelder des Spiels im Zwischenspeicher.
  */
 export function useElapsedSeconds(
   view: TournamentView | undefined,
@@ -35,7 +35,7 @@ export function useElapsedSeconds(
   const byId = useMemo(() => new Map((currentMatches ?? []).map((m) => [m.id, m])), [currentMatches]);
   // nowMs gehört in die Abhängigkeiten: jeder Takt liefert neue Zeiten
   return useMemo(
-    () => custom ?? ((matchId: string) => cachedElapsedSeconds(byId.get(matchId), nowMs)),
+    () => (matchId: string) => custom?.(matchId) ?? cachedElapsedSeconds(byId.get(matchId), nowMs),
     [custom, byId, nowMs],
   );
 }

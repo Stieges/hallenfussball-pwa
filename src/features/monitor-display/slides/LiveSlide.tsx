@@ -56,6 +56,7 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
           hideScore={!view.rules.results}
           finalScore={shown.score}
           finalRound={shown.phase === 'final'}
+          badge={shown.badge}
         />
       </div>
     );

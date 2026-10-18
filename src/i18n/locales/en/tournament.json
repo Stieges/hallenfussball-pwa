@@ -936,11 +936,33 @@
   "view": {
     "status": {
       "scheduled": "scheduled",
-      "running": "live",
-      "paused": "live",
-      "finished": "finished",
-      "cancelled": "cancelled",
+      "cancelled": "Cancelled",
       "awarded": "awarded"
+    }
+  },
+  "matchBadge": {
+    "live": "Live",
+    "pause": "Paused",
+    "halftime": "Half-time",
+    "overtime": "Extra time",
+    "shootout": "Penalties",
+    "ended": "Full time",
+    "cancelled": "Cancelled"
+  },
+  "matchClock": {
+    "remaining": "Time left",
+    "breakPrefix": "Break",
+    "expired": "Time is up – result to follow",
+    "ariaRemaining": "Time left {{time}}",
+    "section": {
+      "firstHalf": "1st half",
+      "secondHalf": "2nd half",
+      "sectionOfN": "Period {{section}} of {{sections}}",
+      "overtime": "Extra time",
+      "breakBeforeOvertime": "Break before extra time",
+      "breakBeforeShootout": "Break before penalties",
+      "halftimeBreak": "Half-time",
+      "sectionBreak": "Break after period {{section}} of {{sections}}"
     }
   },
   "pdf": {

@@ -68,10 +68,10 @@ export const EXPECTED_LABEL = {
 
 /** Zustände (@ZM-039/@ZM-040/@ZM-041/@ZM-104) und Endstand (@ET-002/@ET-013/@ZM-147). */
 export const EXPECTED_STATE = {
-  'F-PAUSE spiel7': { status: 'paused', statusText: { de: 'läuft', en: 'live' }, isLive: true, score: [1, 0] },
-  'F-PAUSE spiel8': { status: 'running', statusText: { de: 'läuft', en: 'live' }, isLive: true, score: [0, 0] },
+  'F-PAUSE spiel7': { status: 'paused', statusText: { de: 'Pause', en: 'Paused' }, isLive: true, score: [1, 0] },
+  'F-PAUSE spiel8': { status: 'running', statusText: { de: 'Live', en: 'Live' }, isLive: true, score: [0, 0] },
   // eslint-disable-next-line local-rules/no-hardcoded-sport-terms-preferred -- feste Record-Literale (M5), bewusst nicht aus i18n
-  'F-AUS spiel9': { status: 'cancelled', statusText: { de: 'ausgefallen', en: 'cancelled' }, isLive: false },
+  'F-AUS spiel9': { status: 'cancelled', statusText: { de: 'ausgefallen', en: 'Cancelled' }, isLive: false },
   'F-NV hf2': { status: 'finished', score: [4, 1], overtime: [3, 0], decidedBy: 'overtime', winner: 'a' },
   'F-ES finale': { status: 'finished', score: [1, 1], penalty: [4, 3], decidedBy: 'penalty', winner: 'a' },
   'F-NUR spiel3': { status: 'finished', score: [2, 1], decidedBy: 'regular', winner: 'a' },

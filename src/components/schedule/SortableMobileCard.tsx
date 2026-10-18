@@ -166,6 +166,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
     result: resultFigures(matchView?.score, status),
     status,
     viewStatus: matchView?.status,
+    badge: matchView?.badge,
   };
 
   // ---------------------------------------------------------------------------

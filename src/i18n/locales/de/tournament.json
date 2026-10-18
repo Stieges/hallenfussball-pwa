@@ -936,11 +936,33 @@
   "view": {
     "status": {
       "scheduled": "geplant",
-      "running": "läuft",
-      "paused": "läuft",
-      "finished": "beendet",
       "cancelled": "ausgefallen",
       "awarded": "gewertet"
+    }
+  },
+  "matchBadge": {
+    "live": "Live",
+    "pause": "Pause",
+    "halftime": "Halbzeit",
+    "overtime": "Verlängerung",
+    "shootout": "Strafstoßschießen",
+    "ended": "Ende",
+    "cancelled": "ausgefallen"
+  },
+  "matchClock": {
+    "remaining": "Restzeit",
+    "breakPrefix": "Pause",
+    "expired": "Spielzeit abgelaufen – Ergebnis folgt",
+    "ariaRemaining": "Restzeit {{time}}",
+    "section": {
+      "firstHalf": "1. Halbzeit",
+      "secondHalf": "2. Halbzeit",
+      "sectionOfN": "Abschnitt {{section}} von {{sections}}",
+      "overtime": "Verlängerung",
+      "breakBeforeOvertime": "Pause vor der Verlängerung",
+      "breakBeforeShootout": "Pause vor dem Strafstoßschießen",
+      "halftimeBreak": "Halbzeit",
+      "sectionBreak": "Pause nach dem {{section}}. von {{sections}} Abschnitten"
     }
   },
   "pdf": {
