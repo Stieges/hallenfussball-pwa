@@ -66,9 +66,12 @@ gespeicherte Wert — der Live-Cup dürfte deshalb nicht ohne Weiteres auf `is_p
 umgestellt werden, obwohl die Oberfläche ihn als veröffentlicht anzeigt.
 
 Der Entwurf-Cup bleibt bewusst ein reiner Entwurf (kein `publishedAt`) — das prüft, dass ein noch
-nie freigegebenes Turnier per Direktlink nicht erreichbar ist (`public-view.cloud.spec.ts`; eine
-gesonderte Prüfung über die Veröffentlichen-RPC/`make_tournament_public` existiert dafür NICHT,
-nur der Direktlink-Weg ist getestet).
+nie freigegebenes Turnier per Direktlink nicht erreichbar ist. Der frühere Direktlink-Test auf
+`/#/public/<ID>` ist mit der alten Seite entfernt (Paket 1). Auf `/#/live/<Code>` prüft
+`public-view.cloud.spec.ts` (@ZM-068) nur einen unbekannten Code (Hinweis, kein Turniername). Der
+Fall „Code eines nicht geteilten Turniers“ ist NICHT abgedeckt, weil der Entwurf- und der
+Live-Cup im Seed keinen `share_code` haben. Eine gesonderte Prüfung über die
+Veröffentlichen-RPC/`make_tournament_public` existiert ebenfalls nicht.
 Der Freigabe-Cup ist das Gegenstück dafür, wo eine Freigabe schon stattgefunden hat
 (`publishedAt` gesetzt), das Turnier aber noch nicht öffentlich geteilt ist (`is_public=false`)
 — genau der Zustand, den `publish-coadmin.cloud.spec.ts` braucht, um die
@@ -356,10 +359,10 @@ Tablet 768, Desktop 1280 — eigene Playwright-Projekte `visual-mobile`/`visual-
 | Turnier-Admin (Dashboard-Kategorie) | `admin.visual.spec.ts` | `/#/tournament/:id/admin/dashboard` |
 | Live-Cockpit (laufendes Spiel) | `cockpit-running.visual.spec.ts` | `/#/tournament/:id/live` |
 | Monitor | `monitor.visual.spec.ts` | `/#/display/:id/:monitorId` |
-| Öffentliche Turnierseite | `public-tournament-page.visual.spec.ts` | `/#/public/:id` |
 | Login | `login.visual.spec.ts` | `/#/login` |
 
-Macht 8 × 3 = 24 Vorlagen, wie im Plan vorgegeben.
+Macht 7 × 3 = 21 Vorlagen. Vorher 8 × 3 = 24, inkl. der Öffentlichen Turnierseite; die ist mit der
+alten Route `/public/:tournamentId` entfernt (Paket 1, Befund C-PUBLIC-SEITE-VERWAIST).
 
 **Fixrunde 1 (T5-Review, Ruling AD):** Der zweite Wizard-Screen war ursprünglich Schritt 5
 ("Teams"), das entsprach aber nicht der Plan-Absicht „erster und letzter Schritt" — der Wizard
@@ -372,12 +375,10 @@ hat 6 Schritte, der letzte ist „Übersicht" (Schritt 6). Datei entsprechend um
 Screen. `tests/e2e/visual/live-view.visual.spec.ts` hält das als `test.fixme` fest, mit
 Begründung im Datei-Kommentar. Grund: `LiveViewScreen` braucht einen echten Supabase-Stack zur
 Share-Code-Auflösung, der Visual-Job hat bewusst keinen (Ruling Y, Punkt 2 — „kein Supabase im
-Container nötig"). Die „Öffentliche Turnierseite" (`/public/:tournamentId`,
-`PublicTournamentViewScreen`) ist **nicht** derselbe Screen wie `/live/:shareCode` — eigener
-State, eigene Komponente (`src/App.tsx:706-716`, Kommentar dort bestätigt die bewusste Trennung)
-— und deckt diese Lücke deshalb NICHT ab, auch wenn sie oberflächlich ähnlich aussieht. (Der
-ursprüngliche T5-Report hatte das fälschlich als „keine Lücke" behauptet — korrigiert in
-Fixrunde 1.)
+Container nötig"). Die frühere „Öffentliche Turnierseite" (`/public/:tournamentId`, `PublicTournamentViewScreen`)
+ist entfernt und deckte diese Lücke nie ab. Die Zuschauersicht ist seitdem nur noch
+`/#/live/<Code>` (`LiveViewScreen`). (Der ursprüngliche T5-Report hatte das fälschlich als
+„keine Lücke" behauptet — korrigiert in Fixrunde 1.)
 
 ### Warum ein eigener Ordner, eigene Projekte
 
@@ -478,21 +479,12 @@ Kommentar in `helpers.ts` entsprechend präzisiert.
 
 ### Datenquelle: Offline-Fixtures statt Supabase
 
-Alle acht echten Screens laufen offline (IndexedDB-Fixtures über `seedIndexedDB`, wie die
-bestehenden `tests/e2e/flows/*.spec.ts`). Für die Zuschauersicht gibt es zwei Routen mit
-unterschiedlicher Datenquelle UND unterschiedlichem Screen (`src/core/routing/routeRegistry.ts`,
-`src/App.tsx:706-716`):
-- `/live/:shareCode` (`LiveViewScreen`) — braucht einen echten Supabase-Stack, eigenständige
-  Komponente (Pull-to-Refresh, „Mein Team", Theme-Umschalter, eigene URL-Filter).
-- `/public/:tournamentId` (`PublicTournamentViewScreen`) — rendert komplett aus IndexedDB, aber
-  ein ANDERER, eigenständiger Screen (u. a. mit `ScheduleActionButtons` für Share/PDF).
-
-**Korrektur (T5-Review, Fixrunde 1):** Diese beiden Routen sind NICHT austauschbar. Die
-Visual-Specs decken deshalb nur `/public/:tournamentId` als eigenen Screen „Öffentliche
-Turnierseite" ab (`public-tournament-page.visual.spec.ts`) — `/live/:shareCode` bleibt eine offen
-benannte Lücke (`live-view.visual.spec.ts`, `test.fixme`), siehe Tabelle oben. Der ursprüngliche
-Report hatte `/public/:tournamentId` fälschlich als vollwertigen Ersatz für `/live/:shareCode`
-dargestellt.
+Alle sieben echten Screens laufen offline (IndexedDB-Fixtures über `seedIndexedDB`, wie die
+bestehenden `tests/e2e/flows/*.spec.ts`). Die Zuschauersicht ist nur noch `/live/:shareCode` (`LiveViewScreen`, `src/core/routing/routeRegistry.ts`).
+Sie braucht einen echten Supabase-Stack (Pull-to-Refresh, „Mein Team", Theme-Umschalter, eigene
+URL-Filter). Die frühere Route `/public/:tournamentId` ist entfernt; ihre Visual-Spec
+`public-tournament-page.visual.spec.ts` gibt es nicht mehr. `/live/:shareCode` bleibt die offen
+benannte Lücke (`live-view.visual.spec.ts`, `test.fixme`), siehe Tabelle oben.
 
 Das Live-Cockpit braucht zusätzlich einen Eintrag in der `liveMatches-<tournamentId>`-
 localStorage-Quelle (`src/hooks/useLiveMatches.ts`, getrennt vom IndexedDB-Turnier-Blob) — dafür

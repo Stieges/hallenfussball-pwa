@@ -202,6 +202,17 @@ test.describe('Public-View', () => {
     await expectSichtbaresErgebnis(page, 2, 0);
   });
 
+  // @ZM-068 (Beispielzeile 2): Ein unbekannter Code zeigt den Hinweis, und kein Turniername erscheint.
+  // Der Hinweis wird über `PublicNotFoundView` gerendert (publicView.notFound.*).
+  test('@ZM-068 unbekannter Code auf /#/live zeigt den Hinweis ohne Turniernamen', async ({ page }) => {
+    await page.goto('/#/live/ZZZZZZ');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByText('Turnier nicht gefunden', { exact: true })).toBeVisible({ timeout: 15000 });
+    for (const name of ['Public-Cup', 'Live-Cup', 'Entwurf-Cup']) {
+      await expect(page.getByText(name, { exact: true })).toHaveCount(0);
+    }
+  });
+
   test('Ein Tor, das owner einträgt, erscheint ohne Neuladen', async ({ page }, testInfo) => {
     // Ruling AB: nur auf cloud-desktop -- dieser Test ändert per Service-Role EINE Zeile im
     // Public-Cup; eine gleichzeitige zweite Projekt-Instanz (cloud-mobile) würde entweder
@@ -245,8 +256,9 @@ test.describe('Public-View', () => {
       // zeigt den Public-Cup, Zeile gefunden, Ausgangs-Score gesehen, PATCH erfolgreich) sind
       // jetzt echte Fehlschläge. Bekannte Abweichung (Brief, Katalog-Schnitt Z1, docs/anforderungen/
       // 2026-09-24_zielbild-einzelturnier.md): Die alte Route /public/:tournamentId ist entfernt
-      // (Paket 1, Befund C-PUBLIC-SEITE-VERWAIST). Ob die Live-Ansicht (/live/:shareCode) ohne
-      // Neuladen aktualisiert, ist hier nicht belegt -- Ursache offen, vor Auflösung prüfen.
+      // (Paket 1, Befund C-PUBLIC-SEITE-VERWAIST). Dieser Test prüft seit jeher /#/live/E2EPUB
+      // (LiveViewScreen), nicht die entfernte Seite. Kennung @ZM-021 (≤ 10 s ohne Neuladen): Die
+      // Abweichung liegt in LiveViewScreen, Ursache offen -- vor Auflösung prüfen.
       test.fail();
 
       await expect(matchRow.getByText(`${UNIQUE_TARGET_SCORE_A}:0`, { exact: true })).toBeVisible({ timeout: 3000 });
