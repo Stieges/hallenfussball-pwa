@@ -48,10 +48,10 @@ export interface ScoreboardAreaProps {
   uebernahmeVon?: string | null;
 }
 
-/** Anstoßzeit als `HH:MM` in Ortszeit in der Anzeigesprache; unlesbar → leer. */
+/** Anstoßzeit als `HH:MM` (24 Stunden, auch in der englischen Anzeige) in Ortszeit; unlesbar → leer. */
 function anstossText(kickoff: string | undefined, sprache: string): string {
   const datum = kickoff ? new Date(kickoff) : null;
-  return datum && Number.isFinite(datum.getTime()) ? datum.toLocaleTimeString(sprache, { hour: '2-digit', minute: '2-digit' }) : '';
+  return datum && Number.isFinite(datum.getTime()) ? datum.toLocaleTimeString(sprache, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '';
 }
 
 /**

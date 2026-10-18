@@ -112,3 +112,16 @@ describe('LiveCockpit: Tafel ohne Spiel', () => {
     expect(screen.queryByTestId('scoreboard')).toBeNull();
   });
 });
+
+describe('LiveCockpit: Anstoßzeit in der Anzeigesprache', () => {
+  it('B6 die Anstoßzeit steht auch in der englischen Anzeige im 24-Stunden-Format (15:15, nicht „3:15 PM“)', async () => {
+    const i18n = (await import('i18next')).default;
+    await i18n.changeLanguage('en');
+    try {
+      render(<LiveCockpit {...makeProps(spiel13)} />);
+      expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent(/^15:15$/);
+    } finally {
+      await i18n.changeLanguage('de');
+    }
+  });
+});
