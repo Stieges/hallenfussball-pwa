@@ -112,6 +112,8 @@ A25A_MIGRATION="20261028_003_result_entry_shootout.sql"
 # A-10: juengste Fassung von matches_guard_engine_columns (unbedingt, BEFORE INSERT OR UPDATE) -- 20261001_001 erneut
 # einzuspielen stellte die alte Bedingung wieder her, deshalb ans Ende der Idempotenz-Kette.
 A10_MIGRATION="20261028_005_guard_all_matches.sql"
+# UR: additive Lesefunktion match_event_author_names -- am Ende der Idempotenz-Kette ein zweites Mal.
+UR_MIGRATION="20261028_006_event_author_names.sql"
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 CONTAINER_NAME="append-match-events-check-$$"
 WORKDIR="$(mktemp -d)"
@@ -131,6 +133,7 @@ AMEND_FILE=""
 ZA3_FILE=""
 A25A_FILE=""
 A10_FILE=""
+UR_FILE=""
 AFTER_TARGET=0
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
@@ -147,10 +150,11 @@ while IFS= read -r line; do
   [[ "$(basename "$line")" == "$ZA3_MIGRATION" ]] && ZA3_FILE="$line"
   [[ "$(basename "$line")" == "$A25A_MIGRATION" ]] && A25A_FILE="$line"
   [[ "$(basename "$line")" == "$A10_MIGRATION" ]] && A10_FILE="$line"
+  [[ "$(basename "$line")" == "$UR_MIGRATION" ]] && UR_FILE="$line"
   NEWER_MIGRATIONS+=("$line")
 done <<< "$NEWER_MIGRATIONS_RAW"
-if [[ "$MODE" != "without-migration" && ( -z "$TARGET_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" || -z "$A10_FILE" ) ]]; then
-  echo "::error::$TARGET_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION oder $A10_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
+if [[ "$MODE" != "without-migration" && ( -z "$TARGET_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" || -z "$A10_FILE" || -z "$UR_FILE" ) ]]; then
+  echo "::error::$TARGET_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION, $A10_MIGRATION oder $UR_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
   exit 1
 fi
 
@@ -195,6 +199,7 @@ if [[ "$MODE" != "without-migration" ]]; then
   psql_stdin < "$ZA3_FILE"
   psql_stdin < "$A25A_FILE"
   psql_stdin < "$A10_FILE"
+  psql_stdin < "$UR_FILE"
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.

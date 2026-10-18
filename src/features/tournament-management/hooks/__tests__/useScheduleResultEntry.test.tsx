@@ -14,6 +14,12 @@ vi.unmock('i18next');
 vi.unmock('react-i18next');
 const role = vi.hoisted(() => ({ actor: 'leitung' }));
 vi.mock('../../../../hooks/useActorRole', () => ({ useActorRole: () => role.actor }));
+// UR: Antwort der Lesefunktion match_event_author_names (Server), je Test gesetzt; Standard: keine Namen.
+const authors = vi.hoisted(() => ({ read: vi.fn() }));
+vi.mock('../../../../core/repositories/eventAuthorNamesRpc', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../core/repositories/eventAuthorNamesRpc')>()),
+  readEventAuthorNames: authors.read,
+}));
 
 import { initRealDeI18n } from '../../../../test/realDeI18n';
 import { MatchEngineContext } from '../../../match-engine/matchEngineContextInstance';
@@ -71,6 +77,8 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
 
   beforeEach(async () => {
     vi.stubGlobal('indexedDB', new IDBFactory());
+    authors.read.mockReset();
+    authors.read.mockResolvedValue(new Map());
     h = await makeScheduleEngine();
   });
   afterEach(() => {
@@ -176,14 +184,27 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
       expect(scoreOf(h, SPIEL_7, FC_NORD, SV_SUED)).toBe('2:2');
     });
 
-    // Befund C-EREIGNIS-OHNE-URHEBER: `match_events` speichert keinen Urheber, `rowToEngineEvent` kennt keinen Namen.
-    it.fails('@FU-082 Text nennt den Namen: „Spiel 7 wurde inzwischen von Olli geändert (jetzt 2:2)“', async () => {
+    // UR (C-EREIGNIS-OHNE-URHEBER): der Urheber steht am Server (match_event_authors), der Name kommt über die
+    // Lesefunktion match_event_author_names -- hier ihre Antwort: Eintrag e2 stammt von Olli.
+    it('@FU-082 Text nennt den Namen: „Spiel 7 wurde inzwischen von Olli geändert (jetzt 2:2)“', async () => {
+      authors.read.mockResolvedValue(new Map([['e2', { name: 'Olli', role: 'owner' }]]));
       await mariaSieht21();
       const row = { id: 'e2', type: 'CORRECTION', client_time: null, recorded_at: new Date(NOW).toISOString(), section: null, clock_ms: null, team_id: null, target_event_id: null, payload: { scores: { [FC_NORD]: 2, [SV_SUED]: 2 }, reason: 'input_error', basedOn: 'e1' }, seq: 2, event_format: 1, review_state: null };
       h.fetchConfirmed.mockResolvedValueOnce({ events: [rowToEngineEvent(row)], newWatermark: 2 });
       const { enter, showWarning } = render(h);
       await enter(SPIEL_7, 3, 1);
       expect(lastWarning(showWarning)).toBe('Spiel 7 wurde inzwischen von Olli geändert (jetzt 2:2)');
+      expect(authors.read.mock.calls.map((call) => call[1])).toContain(SPIEL_7);
+    });
+
+    it('@FU-082 Gegenbeispiel: Lesefunktion scheitert → „Spiel 7 wurde inzwischen geändert (jetzt 2:2)“, keine Fehlermeldung', async () => {
+      authors.read.mockRejectedValue(new Error('Zeitlimit'));
+      await mariaSieht21();
+      h.fetchConfirmed.mockResolvedValueOnce({ events: [seq(correction('e2', { [FC_NORD]: 2, [SV_SUED]: 2 }, 'e1'), 2)], newWatermark: 2 });
+      const { enter, showWarning } = render(h);
+      await enter(SPIEL_7, 3, 1);
+      expect(showWarning).toHaveBeenCalledTimes(1);
+      expect(lastWarning(showWarning)).toBe('Spiel 7 wurde inzwischen geändert (jetzt 2:2)');
     });
 
     it('@FU-082 Gegenbeispiel: Olli korrigiert vom aktuellen Stand 2:1 auf 2:2 → CORRECTION angenommen', async () => {

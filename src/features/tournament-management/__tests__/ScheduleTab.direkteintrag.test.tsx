@@ -3,6 +3,8 @@
  * `OfflineRepository` und echtem Engine-Kontext (Store + MatchEngine + OutboxSender, Server-RPC gemockt).
  * Olli trägt im Spielplan 3:1 ein → Ausgang `RESULT_ENTRY`, Zeile 3:1, Tabelle rechnet mit; `updateMatches`
  * enthält keine Spielstand-Felder. Szenario @FU-080 (`plattform/2026-09-24_fundament-gemeinsamer-stand.md`).
+ * UR: „Und das Protokoll zeigt ‚Ergebnis eingetragen von Olli‘“ über das Cockpit-Protokoll (echte DE-Texte), die
+ * Server-Lesefunktion match_event_author_names gemockt mit ihrer Antwort.
  */
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
@@ -11,6 +13,8 @@ import { act, fireEvent, render, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Standing, Team, Tournament } from '../../../types/tournament';
 
+vi.unmock('i18next');
+vi.unmock('react-i18next');
 const stores = vi.hoisted(() => ({ raw: new Map<string, unknown>(), queue: new Map<string, string>() }));
 const REPOS = vi.hoisted(() => ({
   tournamentRepository: null as object | null,
@@ -45,6 +49,14 @@ vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'leitung' })
 vi.mock('../../../hooks/usePermissions', () => ({
   usePermissions: () => ({ canCorrectResults: true, hasPermission: () => true }),
 }));
+// UR: Olli ist angemeldet und Eigentümer von „T“; Antwort der Lesefunktion je Test.
+vi.mock('../../auth/hooks/useAuth', () => ({ useAuth: () => ({ isAuthenticated: true, user: { id: 'olli', name: 'Olli' } }) }));
+vi.mock('../../auth/hooks/useMyTournamentRole', () => ({ useMyTournamentRole: () => ({ role: 'owner', isLoading: false }) }));
+const authors = vi.hoisted(() => ({ read: vi.fn() }));
+vi.mock('../../../core/repositories/eventAuthorNamesRpc', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../core/repositories/eventAuthorNamesRpc')>()),
+  readEventAuthorNames: authors.read,
+}));
 vi.mock('../../../core/realtime', () => ({
   realtimeService: { subscribeTournament: vi.fn(), unsubscribeTournament: vi.fn(), pause: vi.fn(), resume: vi.fn() },
 }));
@@ -60,6 +72,10 @@ import { MatchEngineContext } from '../../match-engine/matchEngineContextInstanc
 import { makeScheduleEngine, settle, type ScheduleEngine } from '../../../test/scheduleEngineHarness';
 import { ScheduleTab } from '../ScheduleTab';
 import { useTournamentManager } from '../../../hooks/useTournamentManager';
+import { Sidebar } from '../../../components/live-cockpit/components/Sidebar';
+import { initRealDeI18n } from '../../../test/realDeI18n';
+
+await initRealDeI18n();
 
 const teams: Team[] = ['A', 'B'].flatMap((group, g) =>
   [1, 2, 3, 4].map((n) => ({ id: testUuid(g * 10 + n), name: `Team ${group}${n}`, group })),
@@ -101,6 +117,8 @@ describe('A-08f3e2 Pflichttest echter Weg: Spielplan → Server-Eintrag (@FU-080
     h = await makeScheduleEngine();
     repo = new OfflineRepository(new LocalStorageRepository(), createFakeCloud({ tournament, revisions: new Map() }).fake as never, 'olli');
     REPOS.tournamentRepository = repo;
+    authors.read.mockReset();
+    authors.read.mockResolvedValue(new Map());
   });
   afterEach(() => {
     repo.mutationQueue.dispose();
@@ -135,10 +153,18 @@ describe('A-08f3e2 Pflichttest echter Weg: Spielplan → Server-Eintrag (@FU-080
     expect(scoreFields).toEqual([]);
   });
 
-  // Befund C-EREIGNIS-OHNE-URHEBER: weder der Eintrag noch `match_events` tragen einen Urheber -- das Protokoll
-  // kann „Ergebnis eingetragen von Olli“ nicht zeigen.
-  it.fails('@FU-080 das Protokoll zeigt „Ergebnis eingetragen von Olli“ (Urheber am Eintrag)', async () => {
+  // UR (Baustein Regel 3/4 umgeschrieben): vorher am Code abgelesen („actorUser: 'olli' in der gesendeten Payload“),
+  // jetzt das Gherkin -- das Protokoll von Spiel 9 (hier: dem ersten Spiel) zeigt „Ergebnis eingetragen von Olli“.
+  it('@FU-080 das Protokoll zeigt „Ergebnis eingetragen von Olli“ (Urheber am Eintrag)', async () => {
     await enterInFirstCard(3, 1);
-    expect(h.api.mock.calls[0][1][0]).toMatchObject({ actorUser: 'olli' });
+    const sentId = h.api.mock.calls[0][1][0].id;
+    authors.read.mockResolvedValue(new Map([[sentId, { name: 'Olli', role: 'owner' }]]));
+    const protocol = render(
+      <MatchEngineContext.Provider value={h.value}>
+        <Sidebar activePenalties={[]} events={[]} homeTeamName={HOME?.name ?? ''} awayTeamName={AWAY?.name ?? ''}
+          homeTeamId={HOME?.id ?? ''} awayTeamId={AWAY?.id ?? ''} matchId={FIRST.id} />
+      </MatchEngineContext.Provider>,
+    );
+    expect(await protocol.findByText('Ergebnis eingetragen von Olli')).toBeTruthy();
   });
 });

@@ -147,6 +147,15 @@ export const E2E_ENGINE_CUPS = [
     helper: false,
   },
   {
+    // UR (@FU-080, @FU-065): geplantes Spiel, Olli trägt im Spielplan ein; das Protokoll nennt den Urheber, auch beim Helfer.
+    slug: 'URHEBER',
+    title: 'Engine-Cup URHEBER',
+    form: 'untouched',
+    events: [],
+    expected: { status: 'scheduled', scoreA: 0, scoreB: 0 },
+    helper: true,
+  },
+  {
     // A-08f3e3 Fixrunde 1 (I-4): Kopf-Hinweis bei 360 px; der Server bekommt nie einen Eintrag (abgefangen/abgelehnt).
     slug: 'KOPFHINWEIS',
     title: 'Engine-Cup KOPFHINWEIS',

@@ -7,6 +7,8 @@
  * nach der Rückfrage, im selben Stapel.
  * Fixrunde 1: Rückfragen nur, wenn der Eintrag zulässig ist -- veralteter Stand (M-1) und fehlende Rolle
  * (M-2, Wortlaut @HE-042) melden sofort. K.-o.-Auflösung über `useResultEntryAck` → `useKoResolutionAfterAck`.
+ * UR (@FU-082): den Namen im Hinweis „inzwischen von … geändert“ liest `readEventAuthorNames` (Server-Lesefunktion),
+ * ohne Namen bleibt es beim Text ohne „von …“.
  * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094, @FU-097, @FU-069, @EK-004, @HE-042.
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -21,6 +23,8 @@ import { buildValidMatches, type ValidMatchEntry } from '../../../hooks/engineMa
 import { rejectionMessageKey } from '../../../hooks/engineCommandWiringHelpers';
 import { routeForStatus } from './scoreChangeHelpers';
 import { useResultEntryAck } from './useResultEntryAck';
+import { readEventAuthorNames } from '../../../core/repositories/eventAuthorNamesRpc';
+import { supabase } from '../../../lib/supabase';
 
 export type ResultEntryPrompt =
   | { kind: 'reason'; matchNumber: number; before: string; after: string }
@@ -76,16 +80,28 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     resolve?.(answer);
   }, []);
 
-  /** „Spiel 7 wurde inzwischen (von …) geändert (jetzt 2:2)“ -- Urheber kennt der Server nicht (C-EREIGNIS-OHNE-URHEBER). */
-  const staleText = useCallback((entry: ValidMatchEntry, now: string): string => {
-    const state = context?.engine.view(entry.matchId)?.result.state;
-    const author = state?.lastScoreEventId ? state.accepted[state.lastScoreEventId]?.actorUser : undefined;
+  /** Name des Urhebers des letzten Spielstand-Eintrags (UR, Lesefunktion am Server); ohne Namen/bei Fehler `null`. */
+  const lastScoreAuthor = useCallback(async (matchId: string): Promise<string | null> => {
+    const eventId = context?.engine.view(matchId)?.result.state.lastScoreEventId;
+    if (!eventId) {
+      return null;
+    }
+    try {
+      return (await readEventAuthorNames(supabase, matchId)).get(eventId)?.name ?? null;
+    } catch {
+      return null;
+    }
+  }, [context]);
+
+  /** „Spiel 7 wurde inzwischen (von Olli) geändert (jetzt 2:2)“ (@FU-082). */
+  const staleText = useCallback(async (entry: ValidMatchEntry, now: string): Promise<string> => {
+    const author = await lastScoreAuthor(entry.matchId);
     return author
       ? t('schedule.resultEntry.stale', { number: entry.meta.number, name: author, score: now })
       : t('schedule.resultEntry.staleNoName', { number: entry.meta.number, score: now });
-  }, [context, t]);
+  }, [lastScoreAuthor, t]);
 
-  const rejectionText = useCallback((error: unknown, entry: ValidMatchEntry): string => {
+  const rejectionText = useCallback(async (error: unknown, entry: ValidMatchEntry): Promise<string> => {
     if (error instanceof MatchCommandRejectedError && error.code === ERROR_CODES.STALE_BASE) {
       const current = (error.detail as { currentScores?: Record<string, number> } | undefined)?.currentScores ?? {};
       return staleText(entry, score(current[entry.ctx.teamAId] ?? 0, current[entry.ctx.teamBId] ?? 0));
@@ -156,7 +172,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
         }
         const before = score(effectiveScoreFor(state, entry.ctx.teamAId), effectiveScoreFor(state, entry.ctx.teamBId));
         if (basedOn !== state.lastScoreEventId) {
-          showWarning(staleText(entry, before)); // M-1: inzwischen geändert -- keine Rückfrage
+          showWarning(await staleText(entry, before)); // M-1: inzwischen geändert -- keine Rückfrage
           return;
         }
         const reason = await ask({ kind: 'reason', matchNumber: entry.meta.number, before, after: score(scoreA, scoreB) });
@@ -169,7 +185,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
         trackAck(eventId, entry);
       }
     } catch (error) {
-      showWarning(rejectionText(error, entry));
+      showWarning(await rejectionText(error, entry));
     }
   }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText]);
 
