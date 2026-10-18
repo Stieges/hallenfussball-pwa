@@ -13,8 +13,13 @@ import { initRealDeI18n } from '../../../test/realDeI18n';
 await initRealDeI18n();
 
 import { MatchCard, MatchCardDesktop } from '../MatchCard';
-import { resultFigures } from '../matchResult';
+import { resultFigures as figuresOf } from '../matchResult';
+import { matchFinalScore, type FinalScoreSource } from '../../../core/view/finalScore';
 import { gespielt } from '../../../core/view/__fixtures__/ek062Halbfinale';
+
+/** Spielzeile → Endstand der Ansicht (`matchFinalScore`) → Darstellung, wie in OB-064-spielkarte.test.tsx. */
+const resultFigures = (source: FinalScoreSource, status: 'finished') =>
+  figuresOf(matchFinalScore({ ...source, matchStatus: 'finished' }) ?? undefined, status);
 
 const NORD = { id: 'nord', name: 'FC Nord' };
 const BERG = { id: 'berg', name: 'DJK Berg' };

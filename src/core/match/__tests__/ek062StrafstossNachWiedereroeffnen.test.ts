@@ -80,6 +80,25 @@ describe('@EK-062 Strafstoß aus dem Direkteintrag zählt nach dem Wiedereröffn
     expect(cacheColumns(state, ctx)).toMatchObject({ score_a: 2, score_b: 2, penalty_score_a: 4, penalty_score_b: 3, decided_by: 'penalty' });
   });
 
+  it('@EK-062 Gegenbeispiel: wiedereröffnet und 3:2 für FC Nord beendet – 4:3 zählt nicht, regulär, Klärungsfall', () => {
+    const torFcNord = ev('GOAL', 3000, { section: 1, clockMs: 0, teamId: FC_NORD });
+    const { state, results } = reduceMatch([eintrag(), wiederEroeffnen(), torFcNord, abpfiff()], ctx);
+    expect(results.every((r) => r.status === 'accepted')).toBe(true);
+    expect(cacheColumns(state, ctx)).toMatchObject({
+      match_status: 'finished',
+      score_a: 3,
+      score_b: 2,
+      penalty_score_a: null,
+      penalty_score_b: null,
+      decided_by: 'regular',
+    });
+    expect(enteredShootoutStatus(state, ctx)).toEqual({
+      kind: 'stale',
+      shootout: { [FC_NORD]: 4, [DJK_BERG]: 3 },
+      finalScores: { [FC_NORD]: 3, [DJK_BERG]: 2 },
+    });
+  });
+
   it('@EK-062 Gegenbeispiel: Direkteintrag 2:2 mit 4:3 ohne Wiedereröffnen zählt, keine erneute Abfrage', () => {
     const { state } = reduceMatch([eintrag()], ctx);
     expect(enteredShootoutStatus(state, ctx)).toEqual({ kind: 'counts', shootout: { [FC_NORD]: 4, [DJK_BERG]: 3 }, reopened: false });
@@ -115,9 +134,10 @@ describe('@EK-062 Strafstoß aus dem Direkteintrag zählt nach dem Wiedereröffn
 
   it('@EK-062 Zusammenspiel @FU-097: nachgetragenes Halbfinale 2, wiedereröffnet, 2:3 → kein Strafstoß', () => {
     const events = [ev('SKIP', 500), ev('UNSKIP', 900), eintrag(), wiederEroeffnen(), torDjkBerg(), abpfiff()];
-    const { state, results } = reduceMatch(events, { ...ctx, matchId: 'halbfinale-2' });
+    const ctxHf2: MatchContext = { ...ctx, matchId: 'halbfinale-2' };
+    const { state, results } = reduceMatch(events, ctxHf2);
     expect(results.every((r) => r.status === 'accepted')).toBe(true);
-    expect(cacheColumns(state, ctx)).toMatchObject({
+    expect(cacheColumns(state, ctxHf2)).toMatchObject({
       match_status: 'finished',
       score_a: 2,
       score_b: 3,
@@ -125,7 +145,7 @@ describe('@EK-062 Strafstoß aus dem Direkteintrag zählt nach dem Wiedereröffn
       penalty_score_b: null,
       decided_by: 'regular',
     });
-    expect(enteredShootoutStatus(state, ctx)).toMatchObject({ kind: 'stale' });
+    expect(enteredShootoutStatus(state, ctxHf2)).toMatchObject({ kind: 'stale' });
   });
 
   it('@EK-062 Gegenbeispiel: ein geleitetes Strafstoßschießen lässt sich weiter nicht wiedereröffnen (B-U11)', () => {
