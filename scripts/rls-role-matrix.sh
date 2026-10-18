@@ -131,6 +131,14 @@
 #                                                   # Follow-up aus task-R5b-report.md "Fixrunde
 #                                                   # 1", M3), sonst misst der Harness die R7-
 #                                                   # Lücken nicht.
+#   scripts/rls-role-matrix.sh --without-a11       # Alles ("nachher"), aber OHNE 20261110_001 (A-11:
+#                                                   # manageSchedule/manageScreens, Helfer ohne teams) --
+#                                                   # die A-11-Zeilen (scripts/rls-matrix.d/spur-a.sh)
+#                                                   # und die Vollmatrix-Zellen matches_update/teams_update/
+#                                                   # monitors_* muessen hier ROT sein (Gegenprobe, Exit 0).
+#
+# A-11 (brief-A-11.md, R-A11-4): Vor dem L4-Gate werden alle scripts/rls-matrix.d/*.sh eingebunden
+# (source, gleiche Hilfsfunktionen; Abweichungen zaehlen in MISMATCHES). Je Spur eine Datei.
 #
 # Ändert NICHTS an der Produktionsdatenbank — der Container ist eine Wegwerf-Instanz, wird am
 # Ende entfernt (trap).
@@ -214,6 +222,8 @@ WITH_PARENT_KEYS=1
 WITH_R6=1
 WITH_R5=1
 WITH_R7=1
+# A-11: 20261110_001 im Modus "nachher" einspielen (Gegenprobe --without-a11 laesst sie weg).
+WITH_A11_REQ=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -245,6 +255,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-r7)
       WITH_R7=0
+      shift
+      ;;
+    --without-a11)
+      WITH_A11_REQ=0
       shift
       ;;
     -h|--help)
@@ -460,6 +474,20 @@ if [[ "$WITH_A08H" -eq 1 ]]; then
   psql_stdin < "$A10_FILE"
 fi
 
+# A-11 (20261110_001, @ZP-041, @ZM-019, @HE-042): Rechte fuer den MVP -- matches_update_v4 (manageSchedule),
+# monitors_*_v3/select_v4 (manageScreens), Helfer ohne teams/correctEvents. Nur im Modus "nachher" (setzt A-10
+# voraus: reset_match_results, Fail-fast der Migration); --without-a11 ist die Gegenprobe.
+A11_FILE="$(find_migration 20261110_001)"
+WITH_A11=0
+if [[ "$WITH_A10" -eq 1 && "$WITH_A11_REQ" -eq 1 ]]; then
+  WITH_A11=1
+  echo "Migration einspielen: $(basename "$A11_FILE")" >&2
+  psql_stdin < "$A11_FILE"
+  MODE_LABEL="$MODE_LABEL + A-11 (20261110_001)"
+elif [[ "$WITH_A10" -eq 1 ]]; then
+  MODE_LABEL="vorher/A-11-Gegenprobe (alles ohne 20261110_001)"
+fi
+
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,
 #        nur wenn WITH_R5=1 -- die neue Tabelle existiert sonst nicht) ------------------------
 EXPECTED_POLICY_COUNT=44
@@ -573,6 +601,9 @@ TEAM_ANON="$(uuid_for team:anon)"
 TEAM_N4_INSERT="$(uuid_for team:n4-attacker-insert-foreign-tournament)"
 SPONSOR_MAIN="$(uuid_for sponsor:main)"
 MONITOR_MAIN="$(uuid_for monitor:main)"
+# A-11: Gegenstueck im owner-anonymous-Turnier (Ziel der Vollmatrix-Operationen monitors_update/_delete der
+# Zeile "owner-anonymous", die immer gegen T_ANON misst).
+MONITOR_ANON="$(uuid_for monitor:anon)"
 
 E_MAIN="$(uuid_for event:main)"
 E_ANON="$(uuid_for event:anon)"
@@ -710,7 +741,8 @@ VALUES
 
 INSERT INTO public.monitors (id, tournament_id, name)
 VALUES
-  ('$MONITOR_MAIN', '$T_MAIN', 'RLS Matrix Monitor');
+  ('$MONITOR_MAIN', '$T_MAIN', 'RLS Matrix Monitor'),
+  ('$MONITOR_ANON', '$T_ANON', 'RLS Matrix Monitor (anon owner)');
 
 INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away)
 VALUES
@@ -933,18 +965,23 @@ OPERATIONS=(
   match_events_insert match_events_update match_events_delete
   tournaments_settings_update tournaments_deleted_at_update tournaments_hard_delete
   collaborators_insert collaborators_update collaborators_delete
+  monitors_insert monitors_update monitors_delete
 )
 
 right_for_op() {
   case "$1" in
     teams_insert|teams_delete|matches_insert|matches_delete) echo "restructure" ;;
     teams_update) echo "teams" ;;
-    matches_update|match_events_insert) echo "writeMatchData" ;;
+    # A-11 (20261110_001, @ZP-041): matches UPDATE aendert seit A-10 nur noch Spielplan-Spalten -> manageSchedule.
+    matches_update) echo "manageSchedule" ;;
+    match_events_insert) echo "writeMatchData" ;;
     match_events_update|match_events_delete) echo "correctEvents" ;;
     tournaments_settings_update) echo "tournamentSettings" ;;
     tournaments_deleted_at_update) echo "deleteTournament" ;;
     tournaments_hard_delete) echo "ownerOnly" ;;
     collaborators_insert|collaborators_update|collaborators_delete) echo "manageMembers" ;;
+    # A-11 (@ZM-019 "Folienprogramm aendern"): Monitore verwaltet, wer manageScreens hat.
+    monitors_insert|monitors_update|monitors_delete) echo "manageScreens" ;;
   esac
 }
 
@@ -956,6 +993,7 @@ right_for_op() {
 op_sql() {
   local op="$1" tournament_id="$2" match_id="$3" team_id="$4" event_id="$5"
   local ins_team="$6" ins_match="$7" ins_invite="$8" target_membership="$9"
+  local monitor_id="${10}" ins_monitor="${11}"
   case "$op" in
     teams_insert)
       echo "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$ins_team','$tournament_id','Vollmatrix Team');" ;;
@@ -992,6 +1030,12 @@ op_sql() {
       echo "UPDATE public.tournament_collaborators SET role='trainer' WHERE id='$target_membership';" ;;
     collaborators_delete)
       echo "DELETE FROM public.tournament_collaborators WHERE id='$target_membership';" ;;
+    monitors_insert)
+      echo "INSERT INTO public.monitors (id,tournament_id,name) VALUES ('$ins_monitor','$tournament_id','Vollmatrix Monitor');" ;;
+    monitors_update)
+      echo "UPDATE public.monitors SET config = '{\"slides\":[{\"type\":\"live\"}]}'::jsonb WHERE id='$monitor_id';" ;;
+    monitors_delete)
+      echo "DELETE FROM public.monitors WHERE id='$monitor_id';" ;;
   esac
 }
 
@@ -1008,9 +1052,9 @@ for id in "${MATRIX_IDS[@]}"; do
   target_membership="$(target_membership_for_id "$id")"
 
   if [[ "$id" == "owner-anonymous" ]]; then
-    tournament_id="$T_ANON"; match_id="$M_ANON"; event_id="$E_ANON"; team_id="$TEAM_ANON"
+    tournament_id="$T_ANON"; match_id="$M_ANON"; event_id="$E_ANON"; team_id="$TEAM_ANON"; monitor_id="$MONITOR_ANON"
   else
-    tournament_id="$T_MAIN"; match_id="$M_MAIN"; event_id="$E_MAIN"; team_id="$TEAM_MAIN"
+    tournament_id="$T_MAIN"; match_id="$M_MAIN"; event_id="$E_MAIN"; team_id="$TEAM_MAIN"; monitor_id="$MONITOR_MAIN"
   fi
 
   for op in "${OPERATIONS[@]}"; do
@@ -1028,8 +1072,9 @@ for id in "${MATRIX_IDS[@]}"; do
     ins_team="$(uuid_for "vollmatrix-team:$id:$op")"
     ins_match="$(uuid_for "vollmatrix-match:$id:$op")"
     ins_invite="$(uuid_for "vollmatrix-invite:$id:$op")"
+    ins_monitor="$(uuid_for "vollmatrix-monitor:$id:$op")"
 
-    sql="$(op_sql "$op" "$tournament_id" "$match_id" "$team_id" "$event_id" "$ins_team" "$ins_match" "$ins_invite" "$target_membership")"
+    sql="$(op_sql "$op" "$tournament_id" "$match_id" "$team_id" "$event_id" "$ins_team" "$ins_match" "$ins_invite" "$target_membership" "$monitor_id" "$ins_monitor")"
     result="$(run_write "$user_id" "$sql")"
     got="$([[ "$result" == "allowed" ]] && echo true || echo false)"
 
@@ -1043,7 +1088,7 @@ for id in "${MATRIX_IDS[@]}"; do
   done
 done
 
-echo "Vollmatrix: $((${#MATRIX_IDS[@]} * ${#OPERATIONS[@]})) Zellen geprüft (9 Identitäten × 15 Operationen), $VOLLMATRIX_MISMATCHES Abweichung(en) — nur abweichende Zellen werden einzeln aufgelistet (siehe oben), der Rest ist grün."
+echo "Vollmatrix: $((${#MATRIX_IDS[@]} * ${#OPERATIONS[@]})) Zellen geprüft (${#MATRIX_IDS[@]} Identitäten × ${#OPERATIONS[@]} Operationen), $VOLLMATRIX_MISMATCHES Abweichung(en) — nur abweichende Zellen werden einzeln aufgelistet (siehe oben), der Rest ist grün."
 
 # --- 6b. A-05 (M2): Spiel mit slot_source einfuegen (Turnierleitung) --------------------------
 # Eigene, klar beschriftete Zeilen (die Vollmatrix-Zelle matches_insert traegt dasselbe, geht aber in
@@ -1385,6 +1430,9 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" 
   # Regressionen, in BEIDEN Modi gleich (M3 lässt collaborator UPDATE unverändert zu — das war
   # schon vor R5 so, siehe Baseline-Bug oben):
   exp_m3_collab_update="allowed"
+  # A-11 (Baustein Regel 3, umgeschrieben statt geloescht; @HE-042 "ein Team umbenennen -> nur Turnierleitung"):
+  # mit 20261110_001 hat der Helfer (collaborator) das Recht 'teams' nicht mehr -- dieselbe Sonde ist dann verweigert.
+  [[ "$WITH_A11" -eq 1 ]] && exp_m3_collab_update="denied"
   exp_m5_coadmin_unchanged_deleted_at="allowed"
   exp_m5_owner_sets_deleted_at="allowed"
   # R5-H1-Regression: Collaborator durfte NIE löschen — weder vor noch nach R5b (kein
@@ -1907,6 +1955,20 @@ if [[ "$pub_got" != "$pub_expect" ]]; then
   MISMATCHES=$((MISMATCHES + 1))
 fi
 
+# --- 8b. A-11 (R-A11-4): Zeilen je Spur aus scripts/rls-matrix.d/*.sh -- gleiche Hilfsfunktionen
+# (run_write, run_select_as, uuid_for, user_id_for_id, perm_expected, MATRIX_IDS ...) und dieselben Zaehler
+# TOTAL/MISMATCHES. Die Dateien laufen im Hauptprozess (source, keine Subshell), damit ihre Zaehlungen zaehlen.
+RLS_MATRIX_D="$REPO_ROOT/scripts/rls-matrix.d"
+if [[ -d "$RLS_MATRIX_D" ]]; then
+  for rls_matrix_part in "$RLS_MATRIX_D"/*.sh; do
+    [[ -f "$rls_matrix_part" ]] || continue
+    echo ""
+    echo "=== rls-matrix.d/$(basename "$rls_matrix_part") — $MODE_LABEL ==="
+    # shellcheck source=/dev/null
+    source "$rls_matrix_part"
+  done
+fi
+
 echo ""
 echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $TOTAL geprüften Zellen inkl. dedizierter Prüfung, K1/K2-Härtung, K3/H5/L5-Härtung, R5b (H4/M3/M4/M5, R5-H1, N4, manageMembers), R6 (F3/F7), R7 (declined_at/expires_at) und Public-Read-Stichprobe) ==="
 
@@ -1917,7 +1979,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi

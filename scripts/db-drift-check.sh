@@ -389,6 +389,10 @@ PRIVILEGE_ASSERTION_NAMES=(
   "match-event-author-names-execute-only-authenticated"
   # SW (20261028_007, @EK-062): cache_columns bleibt IMMUTABLE, definer-only (Regressionswache).
   "cache-columns-immutable-no-client-execute"
+  # A-11 (20261110_001, @ZP-041, @ZM-019): MVP-Rechte im CHECK, matches-UPDATE nur manageSchedule, monitors ueber manageScreens.
+  "role-permissions-check-mvp-rights"
+  "matches-update-only-manage-schedule"
+  "monitors-writes-manage-screens"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
