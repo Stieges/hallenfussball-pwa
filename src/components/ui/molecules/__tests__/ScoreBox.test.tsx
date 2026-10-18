@@ -10,7 +10,7 @@ import { BOX_BLACK, BOX_WHITE, type BoxFill } from '../../../../core/models/scor
 import { borderWidths, cssVars, displayLayout, monitorThemes } from '../../../../design-tokens';
 import { mixHex } from '../../../../design-tokens/displayColor';
 import { ScoreBox, type ScoreBoxProps } from '../ScoreBox';
-import { LOSER_DIM_SHARE } from '../scoreBoxStyle';
+import { LOSER_DIM_SHARE, pairFrameStrength } from '../scoreBoxStyle';
 
 const solid = (color: string): BoxFill => ({ kind: 'solid', color });
 const vest = (center: string, stripes: string): BoxFill => ({ kind: 'vest', center, stripes });
@@ -289,5 +289,42 @@ describe('ScoreBox Maße und Ecken (@ZM-151, @ZM-160, RF3)', () => {
     expect(el.style.height).toBe('100%');
     const klein = draw({ size: 'compact', testId: 'klein' });
     expect(klein.style.width).not.toBe('100%');
+  });
+});
+
+describe('ScoreBox gleiche Rahmenbreite beider Kästen (Entscheidung Daniel 15.10., @ZM-140)', () => {
+  const frame = (side: 'home' | 'away', fill: BoxFill, outcome: 'winner' | 'loser' | undefined, other: BoxFill, otherOutcome: 'winner' | 'loser' | undefined) => {
+    const strength = side === 'home'
+      ? pairFrameStrength({ fill, outcome }, { fill: other, outcome: otherOutcome }, DUNKEL)
+      : pairFrameStrength({ fill: other, outcome: otherOutcome }, { fill, outcome }, DUNKEL);
+    return draw({ fill, outcome, frameStrength: strength, size: 'display', background: DUNKEL, textColor: TEXT_HELL, testId: side });
+  };
+
+  it('@ZM-140 ein Kasten braucht den kräftigen Rahmen (gedämpftes Blau), der andere nicht (Gelb): beide kräftig, Farbe je Kasten', () => {
+    const gelb = frame('home', solid(GELB), 'winner', solid(BLAU), 'loser');
+    const blau = frame('away', solid(BLAU), 'loser', solid(GELB), 'winner');
+    expect(gelb.style.borderWidth).toBe(displayLayout.scoreArea.frameWidthStrong);
+    expect(blau.style.borderWidth).toBe(gelb.style.borderWidth);
+    expect(blau.style.borderColor).toBe(rgb(TEXT_HELL));
+    expect(gelb.style.borderColor).not.toBe(rgb(TEXT_HELL));
+  });
+
+  it('@ZM-140 Gegenbeispiel: brauchen beide keinen kräftigen Rahmen, bleibt es bei der dezenten Breite', () => {
+    const a = frame('home', solid(GELB), undefined, solid(ROT), undefined);
+    const b = frame('away', solid(ROT), undefined, solid(GELB), undefined);
+    expect(a.style.borderWidth).toBe(displayLayout.scoreArea.frameWidthSubtle);
+    expect(b.style.borderWidth).toBe(a.style.borderWidth);
+  });
+
+  it('pairFrameStrength: einer kräftig → kräftig, beide dezent → dezent; Paarung ist symmetrisch', () => {
+    const blauVerlierer = { fill: solid(BLAU), outcome: 'loser' as const };
+    const gelb = { fill: solid(GELB) };
+    expect(pairFrameStrength(blauVerlierer, gelb, DUNKEL)).toBe('strong');
+    expect(pairFrameStrength(gelb, blauVerlierer, DUNKEL)).toBe('strong');
+    expect(pairFrameStrength(gelb, { fill: solid(ROT) }, DUNKEL)).toBe('subtle');
+  });
+
+  it('ohne frameStrength bestimmt jeder Kasten seine Breite selbst (Einzelkasten)', () => {
+    expect(draw({ fill: solid(GELB), size: 'display', testId: 'solo' }).style.borderWidth).toBe(displayLayout.scoreArea.frameWidthSubtle);
   });
 });

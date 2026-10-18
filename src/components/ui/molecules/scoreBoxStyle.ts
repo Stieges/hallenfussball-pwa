@@ -112,9 +112,33 @@ const LAYOUTS: Record<ScoreBoxSize, SizeLayout> = {
   },
 };
 
-/** Rahmen des Kastens: Breite nach Größe, kräftig in voller Textfarbe, sonst dezent. */
-export function frameOf(fill: BoxFill, outcome: ScoreBoxOutcome | undefined, background: string, textColor: string, size: ScoreBoxSize): BlockFrame {
-  return getBlockFrame(weakestColor(fill, outcome, background), background, textColor, LAYOUTS[size].frame);
+export type FrameStrength = 'subtle' | 'strong';
+
+/**
+ * Rahmen des Kastens: Breite nach Größe, kräftig in voller Textfarbe, sonst dezent. `strength` (vom Aufrufer für das Paar
+ * bestimmt, `pairFrameStrength`) erzwingt die Breite; die Farbe richtet sich weiter nach dem eigenen Kasten.
+ */
+export function frameOf(
+  fill: BoxFill,
+  outcome: ScoreBoxOutcome | undefined,
+  background: string,
+  textColor: string,
+  size: ScoreBoxSize,
+  strength?: FrameStrength,
+): BlockFrame {
+  const widths = LAYOUTS[size].frame;
+  const frame = getBlockFrame(weakestColor(fill, outcome, background), background, textColor, widths);
+  return strength === undefined ? frame : { ...frame, width: widths[strength] };
+}
+
+interface PairSide {
+  fill: BoxFill;
+  outcome?: ScoreBoxOutcome;
+}
+
+/** Gleiche Rahmenbreite beider Kästen (Entscheidung Daniel 15.10.): braucht einer den kräftigen Rahmen, bekommen ihn beide. */
+export function pairFrameStrength(home: PairSide, away: PairSide, background: string): FrameStrength {
+  return needsStrongFrame(home.fill, background, home.outcome) || needsStrongFrame(away.fill, background, away.outcome) ? 'strong' : 'subtle';
 }
 
 export interface BoxStyleInput {
@@ -124,13 +148,14 @@ export interface BoxStyleInput {
   textColor: string;
   outcome: ScoreBoxOutcome | undefined;
   ringColor: string;
+  frameStrength?: FrameStrength;
 }
 
 /** Wurzel des Kastens: feste Maße, Fläche (Farbe oder Weste), Rahmen, Ring nur beim Sieger. */
-export function boxStyle({ fill, size, background, textColor, outcome, ringColor }: BoxStyleInput): CSSProperties {
+export function boxStyle({ fill, size, background, textColor, outcome, ringColor, frameStrength }: BoxStyleInput): CSSProperties {
   const layout = LAYOUTS[size];
   const colors = shownColors(fill, outcome, background);
-  const frame = frameOf(fill, outcome, background, textColor, size);
+  const frame = frameOf(fill, outcome, background, textColor, size, frameStrength);
   const stripe = percent(L.vestStripeShare);
   const surface: CSSProperties = {
     backgroundColor: colors.center,

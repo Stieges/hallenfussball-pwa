@@ -19,6 +19,7 @@ import {
   frameOf,
   markStyle,
   needsStrongFrame,
+  type FrameStrength,
   type ScoreBoxOutcome,
   type ScoreBoxSize,
 } from './scoreBoxStyle';
@@ -42,6 +43,8 @@ export interface ScoreBoxProps {
   cup?: boolean;
   /** Leibchen-Zeichen oben links */
   bib?: boolean;
+  /** Rahmenbreite für beide Kästen gemeinsam (`pairFrameStrength`); ohne Angabe bestimmt der Kasten sie selbst */
+  frameStrength?: FrameStrength;
   /** Zugänglicher Name des ganzen Kastens (Stand, Sieger, Leibchen); die Zeichen selbst sind dekorativ */
   ariaLabel: string;
   /** Kinder: `${testId}-digits`, `${testId}-cup`, `${testId}-bib` */
@@ -67,23 +70,24 @@ export function ScoreBox({
   ringColor = cssVars.colors.primary,
   cup = false,
   bib = false,
+  frameStrength,
   ariaLabel,
   testId,
 }: ScoreBoxProps): ReactElement {
   const marks = { background, textColor, ringColor };
-  const frame = frameOf(fill, outcome, background, textColor, size);
+  const frame = frameOf(fill, outcome, background, textColor, size, frameStrength);
   return (
     <span
       role="img"
       aria-label={ariaLabel}
-      style={boxStyle({ fill, size, background, textColor, outcome, ringColor })}
+      style={boxStyle({ fill, size, background, textColor, outcome, ringColor, frameStrength })}
       data-testid={testId}
       data-fill={fill.kind}
       data-color={fill.kind === 'vest' ? fill.center : fill.color}
       {...(fill.kind === 'vest' ? { 'data-stripes': fill.stripes } : {})}
       {...(outcome !== undefined ? { 'data-outcome': outcome } : {})}
       data-digit-color={digitColor(fill, outcome, background)}
-      data-frame={needsStrongFrame(fill, background, outcome) ? 'strong' : 'subtle'}
+      data-frame={frameStrength ?? (needsStrongFrame(fill, background, outcome) ? 'strong' : 'subtle')}
       data-frame-width={frame.width}
     >
       <span style={digitAreaStyle(size)}>
