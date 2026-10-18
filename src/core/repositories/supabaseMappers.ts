@@ -33,6 +33,7 @@ import { pendingSlot, slotSource, slotTeamId, teamSlot } from '../models/matchSl
 import { originFromRow, originToColumns, type MatchOriginColumns } from './matchOriginColumns';
 import { kitFromRow } from './matchKitRow';
 import { bibColorFromConfig, bibColorToConfig } from './tournamentBibColor';
+import { spectatorDisplayFromConfig, spectatorDisplayToConfig } from './tournamentSpectatorDisplay';
 import { changeRevisionFromRow } from './tournamentChangeRevisionRow';
 
 // Supabase Row Types
@@ -587,7 +588,7 @@ export function mapTournamentFromSupabase(
     startTime: row.start_time ?? undefined,
     location,
     organizer: config.organizer,
-    rulebook: config.rulebook, ...bibColorFromConfig(config), // A-30a: Leibchenfarbe (@W3-029)
+    rulebook: config.rulebook, ...bibColorFromConfig(config), ...spectatorDisplayFromConfig(config), // A-30a: Leibchenfarbe (@W3-029); 2.1: Anzeige für Zuschauer (@ZM-152)
     contactInfo: config.contactInfo as Tournament['contactInfo'],
     teams,
     matches,
@@ -679,7 +680,7 @@ export function mapTournamentToSupabase(
     fields: tournament.fields,
     ageClass: tournament.ageClass,
     organizer: tournament.organizer,
-    rulebook: tournament.rulebook, ...bibColorToConfig(tournament), // A-30a: Leibchenfarbe (@W3-029)
+    rulebook: tournament.rulebook, ...bibColorToConfig(tournament), ...spectatorDisplayToConfig(tournament), // A-30a: Leibchenfarbe (@W3-029); 2.1: Anzeige für Zuschauer (@ZM-152)
     contactInfo: tournament.contactInfo,
     dashboardStatus: tournament.dashboardStatus,
     tournamentSystem: tournament.tournamentSystem,

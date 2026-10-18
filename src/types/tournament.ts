@@ -438,6 +438,7 @@ export interface Tournament {
   organizer?: string; // Veranstalter-Name (optional)
   rulebook?: string; // Regelwerk-Text für den Ausdruck, höchstens 80 Zeichen (@DR-016)
   bibColor?: string; // A-30a @W3-029: Leibchenfarbe des Turniers (#RRGGBB), ohne Einstellung Gelb
+  spectatorDisplay?: import('../core/models/spectatorDisplay').SpectatorDisplaySettings; // Spielanzeige 2.1 @ZM-152: „Anzeige für Zuschauer“ (config-JSONB), ohne Eintrag Vorbelegung
   contactInfo?: ContactInfo; // Kontaktinformationen (optional)
 
   // Step 4: Teams

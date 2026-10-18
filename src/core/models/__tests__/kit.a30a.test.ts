@@ -15,7 +15,8 @@ import {
 } from '../kit';
 import { hexDeltaE2000 } from '../kitColorDistance';
 import { teamSlot } from '../matchSlot';
-import { liveColorSchemeDefaults } from '../../../design-tokens/display';
+import { resolveBoxColors, type BoxFill } from '../scoreBoxColors';
+import { DEFAULT_SPECTATOR_DISPLAY } from '../spectatorDisplay';
 import type { Match, Team } from '../../../types/tournament';
 
 const SV_SUED = '11111111-1111-4111-8111-000000000001';
@@ -208,20 +209,32 @@ describe('A-30a @W3-028 Trikotfarbe am Turniertag', () => {
   });
 });
 
-describe('A-30a @ZM-140 getragene Farbe am Spiel (Datenteil; Darstellung B-44a, Monitor liest sie in A-30b)', () => {
-  const teams = [team(SV_SUED, 'SV Süd', ROT), team(FC_NORD, 'FC Nord', ROT)];
+describe('A-30a @ZM-140 getragene Farbe am Spiel → Kasten (Farbregel Spielanzeige 2.1, Vorbelegung Heim Blau, Gast Rot)', () => {
+  // Gherkin @ZM-140 (angepasst 2026-10-18): Weste statt nur Leibchenfarbe, ohne Farbe die Standardfarbe der Seite mit Ausweichregel.
+  const GELB = DEFAULT_BIB_COLOR;
+  const BLAU = '#0033CC';
+  const teams = [team(SV_SUED, 'SV Süd', ROT), team(FC_NORD, 'FC Nord', WEISS)];
+  const solid = (color: string): BoxFill => ({ kind: 'solid', color });
+  const vest = (center: string, stripes: string): BoxFill => ({ kind: 'vest', center, stripes });
 
   it.each([
-    { farbe: 'Gelb als Leibchen', kit: { a: DEFAULT_BIB_COLOR, b: ROT, bibSide: 'a' as const }, kasten: DEFAULT_BIB_COLOR },
-    { farbe: 'Schwarz', kit: { a: SCHWARZ, b: ROT }, kasten: SCHWARZ },
-    { farbe: 'keine eingetragene Farbe', kit: { b: ROT }, kasten: liveColorSchemeDefaults.homeColor },
-  ])('@ZM-140 Heimseite trägt $farbe → Kasten $kasten', ({ kit, kasten }) => {
+    { farbe: 'gelbe Leibchen über roten Trikots', gast: 'Weiß', kit: { a: GELB, b: WEISS, bibSide: 'a' as const }, shirt: ROT, kasten: vest(GELB, ROT) },
+    { farbe: 'Schwarz', gast: 'Weiß', kit: { a: SCHWARZ, b: WEISS }, shirt: undefined, kasten: solid(SCHWARZ) },
+    { farbe: 'keine eingetragene Farbe', gast: 'Weiß', kit: { b: WEISS }, shirt: undefined, kasten: solid('#1565C0') },
+    { farbe: 'keine eingetragene Farbe', gast: 'Blau', kit: { b: BLAU }, shirt: undefined, kasten: solid('#C62828') },
+    { farbe: 'gelbe Leibchen, ohne eingetragene Trikotfarbe', gast: 'Weiß', kit: { a: GELB, b: WEISS, bibSide: 'a' as const }, shirt: undefined, kasten: vest(GELB, '#1565C0') },
+  ])('@ZM-140 Heimseite trägt $farbe, Gast $gast → Kasten', ({ kit, shirt, kasten }) => {
     const spiel12 = spiel('spiel-12', SV_SUED, FC_NORD, { matchStatus: 'running', kit });
-    const worn = wornColors(spiel12, teams);
-    expect(worn.a ?? liveColorSchemeDefaults.homeColor).toBe(kasten);
+    const boxes = resolveBoxColors({
+      worn: wornColors(spiel12, teams),
+      ...(kit.bibSide === undefined ? {} : { bibSide: kit.bibSide }),
+      ...(shirt === undefined ? {} : { shirt }),
+      settings: DEFAULT_SPECTATOR_DISPLAY,
+    });
+    expect(boxes.a.fill).toEqual(kasten);
   });
 
-  it('@ZM-140 „keine eingetragene Farbe“ ist Blau (Vorgabe der Anzeige)', () => {
-    expect(liveColorSchemeDefaults.homeColor).toBe('#1E40AF');
+  it('@ZM-140 „keine eingetragene Farbe“ ist die Standardfarbe Heim (Blau #1565C0, Vorgabe der Einstellung)', () => {
+    expect(DEFAULT_SPECTATOR_DISPLAY.homeColor).toBe('#1565C0');
   });
 });
