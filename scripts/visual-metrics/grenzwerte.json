@@ -229,6 +229,55 @@
       "quelle": "Record @OB-021, @OB-025, @ZM-086 (kein Element ueberlappt); Review B-05/B-08"
     },
     {
+      "id": "verdeckt.bedienelement",
+      "wert": true,
+      "einheit": "bool",
+      "typ": "HART",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Die Ansicht wird von oben bis ganz unten gescrollt (Fenster und jeder Rollbereich, Schritt = 1/4 Fensterhoehe). Bei jedem Schritt prueft document.elementFromPoint die Mitte jedes Bedienelements im Fenster (Knopf, Link, Eingabefeld, Auswahl, [role=button], [tabindex] >= 0). Liefert es nicht das Element, eines seiner Kinder oder sein Eltern-Label, ist es verdeckt. Verstoss ist ein Element, das in keinem Schritt frei war: wer nur unter einer Leiste hindurchrollt oder ueber den unteren Rand ragt und beim Scrollen frei wird, zaehlt nicht; wer ganz unten gescrollt noch verdeckt bleibt, ist ein Verstoss. Nicht gemeldet wird, was ein offener Dialog der Ansicht selbst verdeckt (aria-modal, role=dialog/alertdialog, <dialog open> liegt darueber). Bekannte Verstoesse auf main stehen mit Befund-Kennung in der ausnahmeliste: sie erscheinen als WARNUNG mit Kennung, jeder neue Verstoss ist HART. Eintraege werden nur entfernt (Ratsche), wenn der Befund behoben ist.",
+      "quelle": "Record plattform 2026-10-03_testabdeckung-und-szenario-tests @TA-012; Record Oberflaeche @OB-021 (kein Element ueberlappt ein anderes), @OB-022; Befunde C-COCKPIT-SOUNDHINWEIS-VERDECKT",
+      "ausnahmeliste": [
+        {
+          "befund": "C-COCKPIT-SOUNDHINWEIS-VERDECKT",
+          "verdecktVon": "Sound für Spielende",
+          "begruendung": "Der schwebende Hinweis \"Sound für Spielende aktivieren?\" liegt im Cockpit auf Bedienelementen (Fuss-Links am Seitenende, am Handy auch die Karten-Knoepfe beim Hineinscrollen). Befund in BEFUNDE-HEUTIGER-CODE.md; Ziel Cockpit-Scheibe 2/3 (Meldezeile statt schwebendem Hinweis)."
+        },
+        {
+          "befund": "C-FUSS-LINKS-UNTER-LEISTE",
+          "selektor": "footer-",
+          "verdecktVon": "nav-tab-",
+          "begruendung": "Am Handy liegen die Fuss-Links Impressum und Datenschutz ganz unten gescrollt unter der festen Tab-Leiste der Turnierliste (Startseite, Archiv, Papierkorb). Befund steht in BEFUNDE-HEUTIGER-CODE.md (C-FUSS-LINKS-UNTER-LEISTE)."
+        },
+        {
+          "befund": "C-FUSS-LINKS-UNTER-LEISTE",
+          "selektor": "footer-",
+          "verdecktVon": "bottom-nav-",
+          "begruendung": "Wie oben, in den Turnier-Ansichten (Verwaltung, Cockpit) unter der festen unteren Navigation. Befund steht in BEFUNDE-HEUTIGER-CODE.md (C-FUSS-LINKS-UNTER-LEISTE)."
+        }
+      ]
+    },
+    {
+      "id": "verdeckt.schwebend",
+      "wert": true,
+      "einheit": "bool",
+      "typ": "WARNUNG",
+      "geltung": [
+        "handy",
+        "tablet",
+        "desktop",
+        "monitor",
+        "reflow"
+      ],
+      "begruendung": "Gleiche Messung wie verdeckt.bedienelement (Scrollen in Schritten, elementFromPoint an der Mitte). Liegt ein schwebendes Element (position fixed oder sticky, also Leiste oder Hinweis) in einer Scroll-Stellung auf der Mitte eines Bedienelements, das in einer anderen Stellung frei wird, ist das nur eine Warnung: erreichbar, aber beim Hineinscrollen verdeckt. Was in keiner Stellung frei wird, ist HART (verdeckt.bedienelement). Offene Dialoge sind wie dort ausgenommen, ebenso feste Navigation (nav, role=navigation): sie begrenzt jede Seite, ihr Verdecken ganz unten meldet die HART-Regel.",
+      "quelle": "Record plattform 2026-10-03_testabdeckung-und-szenario-tests @TA-012 (Praezisierung 2026-10-17); Befund C-COCKPIT-SOUNDHINWEIS-VERDECKT"
+    },
+    {
       "id": "titel.zeilen",
       "wert": 2,
       "einheit": "Zeilen hoechstens",
