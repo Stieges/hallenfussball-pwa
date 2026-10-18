@@ -18,7 +18,7 @@
 #      append_match_events +0, is_public-Kaskade +0, gleicher Wert +0, Client setzt Zaehlung -> HF004,
 #      Client-INSERT -> 0, Voll-Speichern bleibt konfliktfrei (version genau +1).
 #   S  Schema, Trigger, Rechte-Assertion (alle Zeilen |t, die 8 neuen da), Namensliste = db-drift-check.sh,
-#      Katalogzaehlung (Funktionen +3, Trigger +3, Spalten +1).
+#      Katalogzaehlung (Funktionen +3, Trigger +2, Spalten +1).
 #   W  zweites Einspielen (idempotent).  X  Rueckweg laut Kopfkommentar -> Schema = vor der Migration.
 #
 # Aufrufoptionen:
