@@ -32,7 +32,8 @@
     "seitenGetauscht": "Seiten getauscht",
     "zeitGesetzt": "Zeit auf {{zeit}} gesetzt",
     "foulGrenze": "{{teamName}}: {{count}}. Foul in dieser Halbzeit",
-    "schliessen": "Hinweis schließen"
+    "schliessen": "Hinweis schließen",
+    "zurueckgesetzt": "Spiel {{nummer}} von der Turnierleitung zurückgesetzt"
   },
   "tafel": {
     "zustand": {
@@ -52,7 +53,8 @@
       "pause": "Pause",
       "pauseVorbei": "Pause vorbei",
       "endstand": "Endstand",
-      "schuesse": "Schüsse"
+      "schuesse": "Schüsse",
+      "anstoss": "Anstoß"
     },
     "unterzeile": {
       "spielzeit": "Spielzeit {{zeit}}",
@@ -71,6 +73,17 @@
       "vonN": "Abschnitt {{nummer}} von {{gesamt}}",
       "verlaengerung": "Verlängerung",
       "goldenGoal": "Golden Goal"
+    },
+    "keinWeiteresSpiel": "Kein weiteres Spiel",
+    "uebernahmePruefen": "Spielzeit beruht auf {{name}}s Gerät – bitte prüfen",
+    "vor": {
+      "spielFeld": "Spiel {{nummer}} · {{feld}}",
+      "mindestpause": "{{teamName}} hätte nur {{minuten}} statt {{mindestMinuten}} Minuten Pause",
+      "ueberfaellig": "seit {{minuten}} Minuten überfällig",
+      "gesperrt": "{{team}}: Nr. {{nummer}} ist für dieses Turnier gesperrt",
+      "reihenfolgeNurLeitung": "Nur die Turnierleitung ändert die Reihenfolge",
+      "keinSpielMehr": "Auf {{feld}} folgt kein Spiel mehr",
+      "wartetOffline": "Dein Gerät hat kein Netz – dein Stand kann veraltet sein. Die Besetzung steht am Server vielleicht schon fest."
     },
     "wachhaltenSymbol": "Bildschirm kann sich sperren – antippen zum Ausblenden",
     "tonAus": "Ton aus",

@@ -36,7 +36,7 @@ import { useCockpitNotices } from './hooks/useCockpitNotices';
 import { useCockpitCommands } from './hooks/useCockpitCommands';
 
 export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
-  const { tournamentId, cockpitSettings: cockpitSettingsProp, readOnly = false, currentMatch, upcomingMatches } = props;
+  const { fieldName, tournamentName, tournamentId, cockpitSettings: cockpitSettingsProp, readOnly = false, currentMatch, upcomingMatches, leer = null } = props;
   const { t } = useTranslation('cockpit');
 
   // W1 (Nachtrag C3a-2a): nur einbinden -- OutboxNotice rendert selbst nichts, solange kein
@@ -84,7 +84,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     () => engineView ?? (currentMatch ? legacyPhaseViewOf(currentMatch, elapsedSeconds) : null),
     [engineView, currentMatch, elapsedSeconds],
   );
-  const phase = useCockpitPhase(currentMatch, view, null);
+  const phase = useCockpitPhase(currentMatch, view, currentMatch ? null : leer);
   const tonHinweis = cockpitSettings.soundEnabled && !sound.isActivated
     ? { label: t('tafel.tonAusAntippen'), kurz: t('tafel.tonAus'), onAntippen: () => { void sound.activate(); } }
     : null;
@@ -93,7 +93,47 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, isOvertime,
   });
 
+  // Tafel: mit Spiel und ohne (wartet auf Teams, kein Spiel mehr). Die Verbindungsanzeige steht bis zum schmalen Kopf (3.8) darin.
+  const tafel = (
+    <ScoreboardArea
+      match={currentMatch}
+      phase={phase}
+      view={view}
+      settings={cockpitSettings}
+      order={{ links: sides.links, rechts: sides.rechts }}
+      size={isMobile ? 'compact' : isTablet ? 'regular' : 'wide'}
+      notices={notices}
+      eintraegeWarten={rejectedOutbox.pendingCount}
+      tonHinweis={tonHinweis}
+      fieldName={fieldName}
+      tournamentName={tournamentName}
+      leer={leer}
+      mindestpause={props.mindestpause}
+      sperrHinweise={props.sperrHinweise}
+      uebernahmeVon={props.uebernahmeVon}
+      // A4 (C-SYNC): rendert selbst nichts außerhalb des Cloud-Modus. I4 (W1, Nachtrag
+      // Fixrunde 1): rejectedCount/reviewCount aus dem echten Sender (useEngineOutboxSummary).
+      sync={
+        <SyncStatusIndicator
+          tournamentId={tournamentId}
+          compact
+          rejectedCount={rejectedOutbox.rejectedCount}
+          reviewCount={rejectedOutbox.reviewCount}
+          onShowRejected={rejectedOutbox.show}
+          enginePendingCount={rejectedOutbox.pendingCount}
+        />
+      }
+    />
+  );
+
   if (!currentMatch) {
+    if (leer) {
+      return (
+        <div className={shell.container}>
+          <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>{tafel}</main>
+        </div>
+      );
+    }
     return (
       <div className={shell.empty}>
         <p className={shell.emptyText}>{t('leer.keinSpielGewaehlt')}</p>
@@ -111,29 +151,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   return (
     <div className={shell.container}>
       <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>
-        <ScoreboardArea
-          match={match}
-          phase={phase}
-          view={view}
-          settings={cockpitSettings}
-          order={{ links: sides.links, rechts: sides.rechts }}
-          size={isMobile ? 'compact' : isTablet ? 'regular' : 'wide'}
-          notices={notices}
-          eintraegeWarten={rejectedOutbox.pendingCount}
-          tonHinweis={tonHinweis}
-          // A4 (C-SYNC): rendert selbst nichts außerhalb des Cloud-Modus. I4 (W1, Nachtrag
-          // Fixrunde 1): rejectedCount/reviewCount aus dem echten Sender (useEngineOutboxSummary).
-          sync={
-            <SyncStatusIndicator
-              tournamentId={tournamentId}
-              compact
-              rejectedCount={rejectedOutbox.rejectedCount}
-              reviewCount={rejectedOutbox.reviewCount}
-              onShowRejected={rejectedOutbox.show}
-              enginePendingCount={rejectedOutbox.pendingCount}
-            />
-          }
-        />
+        {tafel}
 
         {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung (readOnly), nicht bei beendetem Spiel allein. */}
         {readOnly && (

@@ -6,6 +6,9 @@
  */
 
 import type { RuntimeMatchEvent } from '../../types/tournament';
+import type { SperrHinweis } from '../../core/match';
+import type { LeerGrund } from './model/cockpitPhase';
+import type { MindestpauseHinweis } from './model/cockpitTypes';
 
 // ---------------------------------------------------------------------------
 // Spiel-Typen (B-06: aus dem gelöschten match-cockpit/MatchCockpit.tsx hierher umgezogen)
@@ -132,6 +135,16 @@ export interface LiveCockpitProps {
 
   /** The current match being played */
   currentMatch: LiveMatch | null;
+  /** Kein Spiel dasteht: wartet auf die Herkunft bzw. kein Spiel mehr; die Tafel nennt den Grund (@SL-052, @SL-054). */
+  leer?: LeerGrund | null;
+  /** Mindestpause unterschritten (@SL-051); sperrt nichts. Quelle B-10a3, bis dahin leer. */
+  mindestpause?: MindestpauseHinweis | null;
+  /** Gesperrte Rückennummern nach Rot (@SL-089, L6). */
+  sperrHinweise?: readonly SperrHinweis[];
+  /** Name des Geräts, von dem das Spiel übernommen wurde (@SL-015, B-49). */
+  uebernahmeVon?: string | null;
+  /** Letztes Zurücksetzen durch die Turnierleitung (@SL-068, A-10); eine neue `id` meldet sich in der Meldezeile. */
+  letzteZuruecksetzung?: { id: string; spielNummer: number } | null;
   /** Last finished match for reopening */
   lastFinishedMatch?: {
     match: MatchSummary;

@@ -13,7 +13,7 @@ const t = (key: string, o?: Record<string, unknown>) => (o ? `${key}:${JSON.stri
 function modell(match: ReturnType<typeof makeLiveMatch>, elapsed: number) {
   const view = legacyPhaseViewOf(match, elapsed);
   const phase = cockpitPhaseOf({ view, matchStatus: match.status, leer: null });
-  return toScoreboardModel({ match, phase, view, links: 'home', rechts: 'away', uhrArt: 'durchlaufend-letzte-minute-angehalten', eintraegeWarten: 0, helferAnfragen: 0 }, t);
+  return toScoreboardModel({ match, phase, view, links: 'home', rechts: 'away', uhrArt: 'durchlaufend-letzte-minute-angehalten', eintraegeWarten: 0, helferAnfragen: 0, jetztMs: 0 }, t);
 }
 
 describe('legacyPhaseViewOf', () => {

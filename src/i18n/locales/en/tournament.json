@@ -540,10 +540,7 @@
     "matchLoading": "Loading match...",
     "noMatchesOnField": "No matches on this field",
     "enginePreparing": "Match is being prepared …",
-    "engineReadyError": "Match could not be prepared — please try again",
-    "awaitingTitle": "Kick-off not possible yet",
-    "awaitingReason": "Waiting for: {{reason}}",
-    "awaitingOffline": "Your device has no network – your data may be out of date. The line-up may already be set on the server."
+    "engineReadyError": "Match could not be prepared — please try again"
   },
   "tables": {
     "noGroups": "This tournament has no groups.",

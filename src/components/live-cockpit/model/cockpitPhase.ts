@@ -5,7 +5,16 @@ export type CockpitZustand =
   | 'entscheidung' | 'strafstoss' | 'abgepfiffen' | 'wartetAufHerkunft' | 'keinSpiel';
 export type AbschnittArt = 'regulaer' | 'verlaengerung' | 'goldenGoal';
 export type LeerGrund =
-  | { art: 'wartetAufHerkunft'; gruende: string[] }
+  | {
+      art: 'wartetAufHerkunft';
+      gruende: string[];
+      /** Paarung mit der Herkunft der offenen Seite, z. B. „FC Nord – Zweiter Gruppe B“ (@SL-052). */
+      paarung?: string;
+      /** Zeile unter der Paarung, z. B. „Halbfinale 1 · Feld 1“. */
+      spielLabel?: string;
+      /** Das Gerät hat kein Netz: Die Besetzung am Server kann schon feststehen (@TM-035). */
+      offline?: boolean;
+    }
   | { art: 'keinSpiel'; feldName: string };
 export interface CockpitPhase {
   zustand: CockpitZustand;

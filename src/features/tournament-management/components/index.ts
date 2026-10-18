@@ -11,5 +11,3 @@ export type { ScheduleConflictContentProps } from './ScheduleConflictContent';
 export { HighlightedCell } from './HighlightedCell';
 export type { HighlightedCellProps } from './HighlightedCell';
 
-export { AwaitingTeamsNotice } from './AwaitingTeamsNotice';
-export type { AwaitingTeamsNoticeProps } from './AwaitingTeamsNotice';

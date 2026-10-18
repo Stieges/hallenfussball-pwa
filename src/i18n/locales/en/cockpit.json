@@ -32,7 +32,8 @@
     "seitenGetauscht": "Sides swapped",
     "zeitGesetzt": "Time set to {{zeit}}",
     "foulGrenze": "{{teamName}}: foul {{count}} this half",
-    "schliessen": "Dismiss notice"
+    "schliessen": "Dismiss notice",
+    "zurueckgesetzt": "Match {{nummer}} was reset by the organisers"
   },
   "tafel": {
     "zustand": {
@@ -52,7 +53,8 @@
       "pause": "Break",
       "pauseVorbei": "Break over",
       "endstand": "Final score",
-      "schuesse": "Shots"
+      "schuesse": "Shots",
+      "anstoss": "Kick-off"
     },
     "unterzeile": {
       "spielzeit": "Played {{zeit}}",
@@ -71,6 +73,17 @@
       "vonN": "Period {{nummer}} of {{gesamt}}",
       "verlaengerung": "Extra time",
       "goldenGoal": "Golden goal"
+    },
+    "keinWeiteresSpiel": "No more matches",
+    "uebernahmePruefen": "Match time comes from {{name}}'s device – please check",
+    "vor": {
+      "spielFeld": "Match {{nummer}} · {{feld}}",
+      "mindestpause": "{{teamName}} would have only {{minuten}} instead of {{mindestMinuten}} minutes break",
+      "ueberfaellig": "{{minuten}} minutes overdue",
+      "gesperrt": "{{team}}: no. {{nummer}} is suspended for this tournament",
+      "reihenfolgeNurLeitung": "Only the organisers can change the order",
+      "keinSpielMehr": "No more matches on {{feld}}",
+      "wartetOffline": "Your device has no network – your data may be out of date. The line-up may already be set on the server."
     },
     "wachhaltenSymbol": "Screen may lock – tap to dismiss",
     "tonAus": "Sound off",

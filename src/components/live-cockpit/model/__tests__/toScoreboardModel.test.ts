@@ -21,7 +21,7 @@ function input(view: Partial<PhaseView>, extra: Partial<ScoreboardInput> = {}, m
     match: makeLiveMatch({ homeScore: 1, awayScore: 0 }),
     phase: cockpitPhaseOf({ view: v, matchStatus, leer: null }),
     view: v, links: 'home', rechts: 'away', uhrArt: 'durchlaufend-letzte-minute-angehalten',
-    eintraegeWarten: 0, helferAnfragen: 0,
+    eintraegeWarten: 0, helferAnfragen: 0, jetztMs: Date.parse('2026-11-28T10:20:00.000Z'),
     ...extra,
   };
 }

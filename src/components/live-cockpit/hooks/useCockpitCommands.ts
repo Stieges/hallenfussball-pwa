@@ -6,7 +6,7 @@
  * und die Entscheidung nach Gleichstand (`useTiebreakCommands`). Hier – nicht in `LiveCockpit.tsx` –
  * kommt jede weitere Befehls- und Effektlogik der Hülle hin, damit sie unter 300 Zeilen bleibt.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { useMatchSound } from '../../../hooks';
 import { useEngineEventEditing } from '../../../hooks/useEngineEventEditing';
@@ -58,6 +58,16 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   const showSuccess = useCallback((message: string) => { melde(3, message); }, [melde]);
   const showInfo = showSuccess;
   const showError = useCallback((message: string) => { melde(2, message); }, [melde]);
+
+  // @SL-068: ein Zurücksetzen durch die Turnierleitung meldet sich, WÄHREND das Cockpit offen ist. Beim Öffnen merkt sich der
+  // Ref die vorhandene Kennung und meldet nichts (Gegenbeispiel: schon bekannte Zurücksetzung, auch nicht nach Neuzeichnen).
+  const zuruecksetzung = props.letzteZuruecksetzung ?? null;
+  const bekannteZuruecksetzung = useRef<string | null>(zuruecksetzung?.id ?? null);
+  useEffect(() => {
+    if (zuruecksetzung === null || zuruecksetzung.id === bekannteZuruecksetzung.current) { return; }
+    bekannteZuruecksetzung.current = zuruecksetzung.id;
+    melde(3, t('meldung.zurueckgesetzt', { nummer: zuruecksetzung.spielNummer }));
+  }, [zuruecksetzung, melde, t]);
 
   const [showTimeAdjust, setShowTimeAdjust] = useState(false);
   const [showEventLog, setShowEventLog] = useState(false);

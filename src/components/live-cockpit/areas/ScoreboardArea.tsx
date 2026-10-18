@@ -14,7 +14,10 @@ import { Scoreboard, type ScoreboardAbzeichenKnopf } from '../../ui/molecules/Sc
 import type { PhaseView } from '../engine/phaseView';
 import type { UseCockpitNoticesReturn, NoticeStufe } from '../hooks/useCockpitNotices';
 import type { CockpitPhase } from '../model/cockpitPhase';
-import type { Side } from '../model/cockpitTypes';
+import type { MindestpauseHinweis, Side } from '../model/cockpitTypes';
+import type { LeerGrund } from '../model/cockpitPhase';
+import type { SperrHinweis } from '../../../core/match';
+import { useNow } from '../hooks/useNow';
 import { alsUebersetzer } from '../model/alsUebersetzer';
 import { toScoreboardModel } from '../model/toScoreboardModel';
 import type { LiveMatch } from '../types';
@@ -35,6 +38,20 @@ export interface ScoreboardAreaProps {
   tonHinweis?: ScoreboardAbzeichenKnopf | null;
   /** Übergang bis zum schmalen Kopf (Aufgabe 3.8): Verbindungsanzeige. */
   sync?: ReactNode;
+  fieldName?: string;
+  tournamentName?: string;
+  /** Kein Spiel dasteht: wartet auf die Herkunft bzw. kein Spiel mehr (Aufgabe 2.5). */
+  leer?: LeerGrund | null;
+  mindestpause?: MindestpauseHinweis | null;
+  sperrHinweise?: readonly SperrHinweis[];
+  /** Name des Geräts, von dem das Spiel übernommen wurde (@SL-015). */
+  uebernahmeVon?: string | null;
+}
+
+/** Anstoßzeit als `HH:MM` in Ortszeit; unlesbar → leer. */
+function anstossText(kickoff: string | undefined): string {
+  const datum = kickoff ? new Date(kickoff) : null;
+  return datum && Number.isFinite(datum.getTime()) ? datum.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
 }
 
 /** Symbol je Stufe (Mockup `.msg.l2/.l3`): Farbe allein trägt keine Bedeutung. */
@@ -46,14 +63,18 @@ function noticeIcon(stufe: NoticeStufe | undefined): ReactElement | undefined {
 }
 
 export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
-  const { match, phase, view, settings, order, size, notices, eintraegeWarten, helferAnfragen = 0, onHelferAnfragen, tonHinweis, sync } = props;
+  const { match, phase, view, settings, order, size, notices, eintraegeWarten, helferAnfragen = 0, onHelferAnfragen, tonHinweis, sync, fieldName, tournamentName, leer = null, mindestpause = null, sperrHinweise = [], uebernahmeVon = null } = props;
   const { t } = useTranslation('cockpit');
+  // Takt nur vor dem Anpfiff: „seit … Minuten überfällig“ (@SL-118); sonst steht der Wert still
+  const jetztMs = useNow(phase.zustand === 'vorAnpfiff' ? 30_000 : null);
+  const kickoff = match?.scheduledKickoff;
   const model = useMemo(
     () => toScoreboardModel({
       match, phase, view, links: order.links, rechts: order.rechts, uhrArt: settings.clockMode,
-      schlussphaseMinuten: settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen,
+      schlussphaseMinuten: settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName,
+      vor: { anstoss: anstossText(kickoff), mindestpause, sperrHinweise, leer, uebernahmeVon },
     }, alsUebersetzer(t)),
-    [match, phase, view, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, t],
+    [match, phase, view, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName, kickoff, mindestpause, sperrHinweise, leer, uebernahmeVon, t],
   );
   const meldung = notices.aktuell;
   return (

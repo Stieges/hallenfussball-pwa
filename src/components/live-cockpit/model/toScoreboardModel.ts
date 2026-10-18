@@ -11,6 +11,7 @@ import type { PhaseView } from '../engine/phaseView';
 import type { CockpitPhase, CockpitZustand } from './cockpitPhase';
 import type { ScoreboardModel, ScoreboardSeite, ScoreboardTon, ScoreboardUhr } from '../../ui/molecules/Scoreboard';
 import type { Side, Uebersetzer } from './cockpitTypes';
+import { scoreboardVor, type ScoreboardVorInput } from './scoreboardVor';
 import { getEffectiveScore } from '../../../utils/matchScore';
 
 /** Was die Tafel vom Spiel liest (der Cockpit-`LiveMatch` und der Kern-`LiveMatch` erfüllen es beide). */
@@ -28,8 +29,14 @@ export interface ScoreboardInput {
   schlussphaseMinuten?: number;
   eintraegeWarten: number;
   helferAnfragen: number;
+  /** Jetzt in ms (für „seit … Minuten überfällig“); kommt aus einem Takt, nie aus `Date.now()` im Render. */
+  jetztMs: number;
   /** Trikotfarben der Stand-Kästen je Anzeigeseite (Aufgabe 2.6); fehlt sie, bleibt der Kasten neutral. */
   trikot?: Partial<Record<'links' | 'rechts', string | null>>;
+  fieldName?: string;
+  tournamentName?: string;
+  /** Vor dem Anpfiff, zwischen den Spielen und nach der Übernahme (Aufgabe 2.5). */
+  vor?: ScoreboardVorInput;
 }
 
 /** Sekunden als `m:ss` (Minuten ohne führende Null, nie negativ). */
@@ -134,9 +141,10 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
   const links = seite('links');
   const rechts = seite('rechts');
   const { uhr, hinweise } = uhrOf(input, t);
+  const vor = scoreboardVor(input, t);
   return {
     zustandText: t(ZUSTAND_KEY[phase.zustand]), ton: TON[phase.zustand], links, rechts,
-    uhr, abschnittText: abschnittTextOf(phase, t), hinweise,
+    uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige,
     eintraegeWartenText: input.eintraegeWarten > 0 ? t('tafel.eintraegeWarten', { count: input.eintraegeWarten }) : null,
     helferAnfragenText: input.helferAnfragen > 0 ? t('tafel.helferAnfragen', { count: input.helferAnfragen }) : null,
     ariaStand: t('tafel.ariaStand', { links: links.name, linksTore: links.tore, rechts: rechts.name, rechtsTore: rechts.tore }),
