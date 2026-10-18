@@ -37,7 +37,8 @@ function normalizeMatchUpdateForQueue(update: MatchUpdate): MatchUpdate {
 // SYNC TYPES
 // =============================================================================
 
-export type SyncStatus = 'synced' | 'updated' | 'conflict' | 'error' | 'offline';
+/** `blocked` (A-08f3c2, M-3): Regel Q hat die ganze Cloud-Kopie nicht zugelassen (eigene Änderungen warten oder sind gescheitert). */
+export type SyncStatus = 'synced' | 'updated' | 'conflict' | 'error' | 'offline' | 'blocked';
 
 export interface SyncResult {
     status: SyncStatus;
@@ -234,13 +235,14 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         const run = (async () => {
             let result = await this.readAndAdopt(id, firstCopy);
             while (this.cloudReadRerun.delete(id)) { result = await this.readAndAdopt(id, firstCopy); }
-            return result;
+            return result?.tournament ?? null;
         })().finally(() => { this.cloudReads.delete(id); this.cloudReadRerun.delete(id); });
         this.cloudReads.set(id, run);
         return run;
     }
 
-    private async readAndAdopt(id: string, firstCopy?: boolean): Promise<Tournament | null> {
+    /** `whole`: die ganze Kopie wurde übernommen (Versionsweg, von Regel Q zugelassen). */
+    private async readAndAdopt(id: string, firstCopy?: boolean): Promise<{ tournament: Tournament; whole: boolean } | null> {
         const before = this.queueGuard.snapshot(id); // A-08f3c2 (H1): Stand der Warteschlange vor dem Lesen
         const read = await withCloudReadTimeout(this.supabaseRepo.getWithMatchRevisions(id));
         if (!read) { return null; }
@@ -248,7 +250,14 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             wholeAllowed: () => this.queueGuard.mayAdoptWhole(id, before) };
         const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => decideCloudAdoption(local, read, stored, options));
         this.serverRevisions.record(id, adoption.revisions);
-        return read.tournament;
+        return { tournament: read.tournament, whole: adoption.save !== undefined };
+    }
+
+    /** M-3: „Cloud übernehmen“/`syncDown` melden `updated` nur, wenn Regel Q die ganze Kopie zugelassen hat. */
+    private async adoptWhole(id: string, fallback: Tournament | null): Promise<SyncResult> {
+        const result = await this.readAndAdopt(id, true);
+        if (!result && !fallback) { return { status: 'error', error: 'Tournament not found' }; }
+        return { status: result && !result.whole ? 'blocked' : 'updated', data: result?.tournament ?? fallback ?? undefined };
     }
 
     async getByShareCode(code: string): Promise<Tournament | null> {
@@ -596,7 +605,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
 
             // Case: No local data - übernehmen (A-08f3c1/M4: Cloud-Version, gleiche Regel wie der Abruf)
             if (!localT) {
-                return { status: 'updated', data: (await this.readAndAdopt(tournamentId, true)) ?? remoteT };
+                return this.adoptWhole(tournamentId, remoteT);
             }
 
             // 2. Compare timestamps
@@ -619,7 +628,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                 }
 
                 // No conflicts - A-08f3c1/M4: ganze Kopie über dieselbe Regel wie der Abruf (cacheCloudCopy, Q)
-                return { status: 'updated', data: (await this.readAndAdopt(tournamentId, true)) ?? remoteT };
+                return this.adoptWhole(tournamentId, remoteT);
             }
 
             // Case: Local is newer - nothing to do for syncDown
@@ -678,10 +687,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                 }
             } else {
                 // Pull remote to local (A-08f3c1/M4: Cloud-Version, gleiche Regel wie der Abruf)
-                const remote = await this.readAndAdopt(tournamentId, true);
-                if (remote) {
-                    return { status: 'updated', data: remote };
-                }
+                return await this.adoptWhole(tournamentId, null);
             }
             return { status: 'error', error: 'Tournament not found' };
         } catch (error) {

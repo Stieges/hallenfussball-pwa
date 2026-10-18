@@ -9,7 +9,7 @@
  */
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { Tournament, Match } from '../../models/types';
+import type { Tournament } from '../../models/types';
 
 const session = vi.hoisted(() => ({ userId: null as string | null }));
 const net = vi.hoisted(() => ({ online: true }));
@@ -44,43 +44,11 @@ vi.mock('../../../lib/supabase', () => ({
 import { OfflineRepository } from '../OfflineRepository';
 import { LocalStorageRepository } from '../LocalStorageRepository';
 import { createFakeCloud } from '../../../test/fakeCloudRepository';
-import { createMockMatch, createMockTournament } from '../../../test/factories';
 import { teamSlot } from '../../models/matchSlot';
-import { testUuid } from '../../../test/testIds';
+import { createMockMatch } from '../../../test/factories';
+import { FC_NORD, flush, heimseite, liveCup, revisions, stored as storedIn } from '../../../test/queueGuardFixtures';
 
-const UPDATED_AT = '2026-10-15T08:00:00.000Z';
-const FC_NORD = testUuid(81);
-
-/** Live-Cup: Gruppe-A-Spiel und Halbfinale 1 (Heimseite noch offen). */
-function liveCup(version: number, extra: { title?: string; teamName?: string; hfHeim?: string; plus?: Match[]; updatedAt?: string } = {}): Tournament {
-  const base = createMockTournament({ id: 'T', ownerId: 'olli', version, updatedAt: extra.updatedAt ?? UPDATED_AT, title: extra.title ?? 'Live-Cup' });
-  const teams = extra.teamName ? base.teams.map((t, i) => (i === 0 ? { ...t, name: extra.teamName! } : t)) : base.teams;
-  const hf = createMockMatch({ id: 'hf-1', matchStatus: 'scheduled', ...(extra.hfHeim ? { slotA: teamSlot(extra.hfHeim) } : {}) });
-  return { ...base, teams, matches: [createMockMatch({ id: 'spiel-4', matchStatus: 'scheduled' }), hf, ...(extra.plus ?? [])] };
-}
-
-const revisions = (): Map<string, number> => new Map([['spiel-4', 1], ['hf-1', 1]]);
-
-function stored(): Tournament {
-  const found = (stores.raw.get('tournaments') as Tournament[]).find((t) => t.id === 'T');
-  if (!found) { throw new Error('lokale Kopie fehlt'); }
-  return found;
-}
-const heimseite = (t: Tournament): string | undefined => {
-  const slot = t.matches.find((m) => m.id === 'hf-1')?.slotA;
-  return slot?.kind === 'team' ? slot.teamId : undefined;
-};
-
-/** Dead-Letter-Eintrag des Kontos (wie nach MAX_RETRIES), vor dem Anlegen des Repositorys. */
-function deadLetter(type: string, payload: unknown): void {
-  stores.queue.set('mutation_queue_failed_v1:olli', JSON.stringify([
-    { id: 'dl-1', type, payload, timestamp: 1, retryCount: 5, failedAt: 2, lastError: 'Optimistic lock failed' },
-  ]));
-}
-
-async function flush(): Promise<void> {
-  for (let i = 0; i < 20; i++) { await new Promise<void>((resolve) => setImmediate(resolve)); }
-}
+const stored = (): Tournament => storedIn(stores);
 
 describe('A-08f3c2 Regel Q: keine stille Übernahme über eigene wartende oder gescheiterte Änderungen', () => {
   let repo: OfflineRepository | undefined;
@@ -154,50 +122,6 @@ describe('A-08f3c2 Regel Q: keine stille Übernahme über eigene wartende oder g
     expect(r.mutationQueue.getPendingCount()).toBe(1);
   });
 
-  it('@FU-004 H2: gescheitertes Umbenennen (SAVE_TOURNAMENT im Dead-Letter) schützt die lokale Kopie', async () => {
-    stores.raw.set('tournaments', [liveCup(8, { teamName: 'FC Nord II' })]);
-    deadLetter('SAVE_TOURNAMENT', liveCup(8, { teamName: 'FC Nord II' }));
-    const { repo: r } = setup(liveCup(9, { title: 'Hallen-Cup' }));
-
-    await r.get('T', { fresh: true });
-    await flush();
-
-    expect(stored().teams[0].name).toBe('FC Nord II');
-    expect(stored().title).toBe('Live-Cup');
-  });
-
-  it('Gegenbeispiel (9): Dead-Letter verworfen → der nächste Takt übernimmt die Cloud-Kopie', async () => {
-    stores.raw.set('tournaments', [liveCup(8, { teamName: 'FC Nord II' })]);
-    deadLetter('SAVE_TOURNAMENT', liveCup(8, { teamName: 'FC Nord II' }));
-    const { repo: r } = setup(liveCup(9, { title: 'Hallen-Cup' }));
-    await r.get('T', { fresh: true });
-
-    r.mutationQueue.clearFailedMutation('dl-1');
-    await r.get('T', { fresh: true });
-
-    expect(stored()).toMatchObject({ title: 'Hallen-Cup', version: 9 });
-    expect(stored().teams[0].name).not.toBe('FC Nord II');
-  });
-
-  it('@FU-004 UPDATE_MATCHES im Dead-Letter schützt die eigene Besetzung ebenfalls', async () => {
-    stores.raw.set('tournaments', [liveCup(7, { hfHeim: FC_NORD })]);
-    deadLetter('UPDATE_MATCHES', { tournamentId: 'T', updates: [{ id: 'hf-1', slotA: teamSlot(FC_NORD) }] });
-    const { repo: r } = setup(liveCup(8, { title: 'Hallen-Cup' }));
-
-    await r.get('T', { fresh: true });
-
-    expect(heimseite(stored())).toBe(FC_NORD);
-  });
-
-  it('Dead-Letter eines anderen Turniers schützt dieses Turnier nicht', async () => {
-    deadLetter('SAVE_TOURNAMENT', { ...liveCup(3), id: 'ANDERES' });
-    const { repo: r } = setup(liveCup(8, { title: 'Hallen-Cup' }));
-
-    await r.get('T', { fresh: true });
-
-    expect(stored()).toMatchObject({ title: 'Hallen-Cup', version: 8 });
-  });
-
   it('M5: ein Spiel, das es nur in der Cloud gibt, kommt mit der ganzen Kopie (deshalb ist „neu erzeugen“ mit Einträgen gesperrt)', async () => {
     const geist = createMockMatch({ id: 'spiel-7-alt', matchStatus: 'finished', scoreA: 2, scoreB: 1 });
     const { repo: r } = setup(liveCup(8, { plus: [geist] }));
@@ -217,5 +141,26 @@ describe('A-08f3c2 Regel Q: keine stille Übernahme über eigene wartende oder g
 
     expect(heimseite(stored())).toBe(FC_NORD);
     expect(stored().title).toBe('Live-Cup');
+  });
+
+  it('M-3: „Cloud übernehmen“ mit wartender eigener Änderung meldet „blocked“, nicht „updated“, und übernimmt nicht', async () => {
+    const { repo: r } = setup(liveCup(9, { title: 'Hallen-Cup' }));
+    net.online = false;
+    await r.updateMatches('T', [{ id: 'hf-1', slotA: teamSlot(FC_NORD) }]);
+    net.online = true;
+
+    const result = await r.resolveConflict('T', 'remote');
+
+    expect(result.status).toBe('blocked');
+    expect(stored().title).toBe('Live-Cup');
+  });
+
+  it('M-3: syncDown mit wartender eigener Änderung meldet „blocked“', async () => {
+    const { repo: r } = setup(liveCup(9, { title: 'Hallen-Cup', updatedAt: '2030-01-01T00:00:00.000Z' }));
+    net.online = false;
+    await r.updateMatches('T', [{ id: 'hf-1', slotA: teamSlot(FC_NORD) }]);
+    net.online = true;
+
+    expect((await r.syncDown('T')).status).toBe('blocked');
   });
 });
