@@ -13,7 +13,6 @@ import { type CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import type { SpectatorClock, ViewMatchStatus } from '../../../core/view';
-import { MatchClock } from '../../ui/molecules/MatchClock';
 import { formatTableResult, type ResultFigures } from '../matchResult';
 
 export type MatchCardStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
@@ -97,7 +96,12 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
           {t('view.status.awarded')}
         </span>
       )}
-      {isLive && clock && <MatchClock clock={clock} size="card" testId={`match-row-clock-${matchId ?? ''}`} />}
+      {isLive && clock?.remaining && (
+        // Tabellenzeile: nur die Zahl, klein und grau unter dem Stand, ohne das Wort „Restzeit“ (Daniel 18.10.; die Handy-Karte behält es)
+        <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, fontVariantNumeric: 'tabular-nums', fontWeight: cssVars.fontWeights.semibold }} data-testid={`match-row-clock-${matchId ?? ''}`}>
+          {clock.remaining}
+        </span>
+      )}
     </button>
   );
 };

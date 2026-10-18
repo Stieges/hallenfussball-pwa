@@ -163,7 +163,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
     fontWeight: cssVars.fontWeights.medium,
     color: isLive ? cssVars.colors.primary : cssVars.colors.textSecondary,
     fontVariantNumeric: 'tabular-nums',
-    minWidth: '50px',
+    width: '11em', // fest: Uhrzeit und Abzeichen teilen die Spalte, die Feld-Spalte steht in jeder Zeile gleich (@OB-065)
   };
 
   const fieldStyle: CSSProperties = {
@@ -203,9 +203,10 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         aria-label={t('matchCard.ariaLabel', { matchNumber: matchNumber || '', homeTeam: homeTeam.name, awayTeam: awayTeam.name })}
       >
         {/* Time */}
-        <div style={timeStyle}>
-          {formatTime(scheduledTime)}
-          {badge?.kind === 'badge' && <MatchStatusBadge model={badge} size="row" testId={isLive ? `match-row-live-${matchId}` : undefined} />}
+        <div style={timeStyle} data-testid={`match-row-time-${matchId}`}>
+          {badge?.kind === 'badge'
+            ? <MatchStatusBadge model={badge} size="row" testId={isLive ? `match-row-live-${matchId}` : undefined} />
+            : formatTime(scheduledTime)}
         </div>
 
         {/* Field */}
