@@ -143,7 +143,8 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
   const rechts: CSSProperties = { display: 'flex', alignItems: 'center', gap: cssVars.spacing.xs, minWidth: 0, marginLeft: 'auto' };
 
   const mitte: CSSProperties = {
-    display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', gap: cssVars.spacing.sm, alignItems: 'center', minWidth: 0,
+    // Die Uhr nimmt höchstens 40 % (ihre Zeilen brechen um); die Namen bekommen den Rest und brechen kein Wort
+    display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) fit-content(40%) minmax(0, 1fr)', gap: cssVars.spacing.sm, alignItems: 'center', minWidth: 0,
   };
   const team: CSSProperties = { display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: cssVars.spacing.xs, minWidth: 0, alignSelf: 'end' };
   const name: CSSProperties = {
