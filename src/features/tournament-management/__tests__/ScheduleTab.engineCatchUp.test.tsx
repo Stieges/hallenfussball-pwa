@@ -127,10 +127,12 @@ async function engineWithLoadedCopy() {
   // Live-Tab: Kopie geladen und nachgeholt (Anpfiff + 1:0)
   fetchConfirmed.mockResolvedValueOnce({ events: [withSeq(start(), 1), withSeq(goal('g1', ctx.teamAId, 2000, 60_000), 2)], newWatermark: 2 });
   await engine.catchUp(matchId);
-  // Danach am Server: das 2:0
-  fetchConfirmed.mockResolvedValue({ events: [withSeq(goal('g2', ctx.teamAId, 3000, 120_000), 3)], newWatermark: 3 });
+  // A-08f3e4 (Stufe 2): der Server-Stand passt zur Cloud-Revision -- bis zum 2:0 (Revision 5) nichts Neues. Seit Stufe 2
+  // meldet schon die Übernahme von Revision 1 ein Nachladen; vorher lieferte dieser Fake das 2:0 zu früh.
+  fetchConfirmed.mockResolvedValue({ events: [], newWatermark: 2 });
+  const secondGoalOnServer = () => fetchConfirmed.mockResolvedValue({ events: [withSeq(goal('g2', ctx.teamAId, 3000, 120_000), 3)], newWatermark: 3 });
   const value = { engine, store: null, clock: null, sender: { kick: vi.fn() }, accountId } as unknown as MatchEngineContextValue;
-  return { value, fetchConfirmed, catchUp: vi.spyOn(engine, 'catchUp') };
+  return { value, fetchConfirmed, secondGoalOnServer, catchUp: vi.spyOn(engine, 'catchUp') };
 }
 
 describe('A-08f3b H-1: geladene Engine-Kopie wird nach höherer Revision nachgeladen', () => {
@@ -148,7 +150,7 @@ describe('A-08f3b H-1: geladene Engine-Kopie wird nach höherer Revision nachgel
   });
 
   it('Pflicht H-1: Kopie zeigt 1:0, Cloud 2:0 (Revision 5) → Tick → catchUp, Zeile zeigt „2:0“', async () => {
-    const { value, catchUp } = await engineWithLoadedCopy();
+    const { value, catchUp, secondGoalOnServer } = await engineWithLoadedCopy();
     stores.raw.set('tournaments', [withFirst(7, {})]);
     const cloud = createFakeCloud({ tournament: withFirst(7, {}), revisions: revisions(1) });
     repo = new OfflineRepository(new LocalStorageRepository(), cloud.fake as never, 'olli');
@@ -161,6 +163,7 @@ describe('A-08f3b H-1: geladene Engine-Kopie wird nach höherer Revision nachgel
 
     act(() => channel.status('connected'));
     act(() => channel.status('disconnected'));
+    secondGoalOnServer();
     cloud.setState({ tournament: withFirst(7, { scoreA: 2, scoreB: 0, matchStatus: 'running' }), revisions: revisions(5) });
     await tick(5000);
 

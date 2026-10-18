@@ -145,14 +145,27 @@ describe('A-08f3a Feldweg: Spielstand aus der Cloud beim Eigentümer (@FU-087, @
     expect(second?.matches.find((m) => m.id === 'm1')).toMatchObject({ scoreA: 1, scoreB: 0, matchStatus: 'running' });
   });
 
-  it('Gegenbeispiel (i): Altpfad-Ergebnis m2 2:1 und übersprungenes m3 bleiben bei Revision 1', async () => {
+  // A-08f3e4 Regel S Stufe 2 (Plan v4 § 2.2): umgeschrieben nach Baustein Regel 3 -- vorher pinnte (i) Stufe 1
+  // („Revision 1 bleibt lokal“). Altbestand ohne Ereignisse zählt nicht (Kurswechsel 01.10.), die Cloud führt auch Revision 1.
+  it('@FU-023 Stufe 2: Altpfad-Ergebnis m2 2:1 und übersprungenes m3 ohne Einträge (Revision 1) folgen der Cloud', async () => {
     const { repo: r } = setup();
 
     await r.get('T');
     await flush();
 
-    expect(storedMatch('m2')).toMatchObject({ scoreA: 2, scoreB: 1, matchStatus: 'finished' });
-    expect(storedMatch('m3')).toMatchObject({ matchStatus: 'skipped', skippedReason: 'Team fehlt' });
+    expect(storedMatch('m2')).toMatchObject({ scoreA: undefined, scoreB: undefined, matchStatus: 'scheduled' });
+    expect(storedMatch('m3')).toMatchObject({ matchStatus: 'scheduled', skippedReason: undefined });
+  });
+
+  it('@FU-023 Stufe 2 Gegenbeispiel (7): Seed-Ergebnis 3:1 mit Revision 1 wird übernommen', async () => {
+    const cloud = cloudV7();
+    cloud.matches[1] = { ...cloud.matches[1], scoreA: 3, scoreB: 1, matchStatus: 'finished' };
+    const { repo: r } = setup({ tournament: cloud, revisions: revisions(3) });
+
+    await r.get('T');
+    await flush();
+
+    expect(storedMatch('m2')).toMatchObject({ scoreA: 3, scoreB: 1, matchStatus: 'finished' });
   });
 
   // A-08f3c1: umgeschrieben nach Baustein Regel 3 -- `updateMatches` zählt die lokale Version nicht mehr (Cloud zählt auch nicht).

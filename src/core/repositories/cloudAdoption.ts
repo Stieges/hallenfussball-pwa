@@ -67,7 +67,7 @@ export function decideCloudAdoption(
     if (local === null || (wholeWanted && (options.wholeAllowed?.() ?? true))) {
         return { save: options.owned(keepNewerFields(cloud, local, read.matchRevisions, stored)), revisions: maxRevisions(stored, read.matchRevisions) };
     }
-    const merged = mergeServerLedFields(local, cloud, read.matchRevisions, stored, 'stufe1');
+    const merged = mergeServerLedFields(local, cloud, read.matchRevisions, stored, 'stufe2');
     return { patch: merged.patch, revisions: maxRevisions(stored, merged.adopted) };
 }
 

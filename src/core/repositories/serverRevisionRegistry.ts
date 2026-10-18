@@ -1,8 +1,8 @@
 /**
  * A-08f3a2/b (Plan `task-A-08f3-plan.md` v4): übernommene Server-Revision je Spiel, je Turnier, mit Benachrichtigung.
  *
- * - `serverLedMatchIds(id)`: Spiele mit Revision > 1 (Server führt den Spielstand). a2 sperrt dafür die
- *   Schnelleingabe wie heute (Befund C-SCHNELLEINGABE-SPERRE-STATUS, Rückbau in e2).
+ * - `serverLedMatchIds(id)`: Spiele mit Revision > 1 (am Server gibt es Einträge). Seit A-08f3e4 Quelle der Sperren
+ *   „Spiel hat Einträge“ (`useMatchEntryGuard`); übernommen wird nach Regel S Stufe 2 auch Revision 1.
  * - `subscribe(id, cb)`: meldet je Übernahme die Spiele, deren Revision gestiegen ist (b, H-1: geladene
  *   Engine-Kopien nachladen). `OfflineRepository` kennt die Engine nicht (Layering).
  * Anforderungen: @FU-087, @FU-023 (`plattform/2026-09-24_fundament-gemeinsamer-stand.md`).
