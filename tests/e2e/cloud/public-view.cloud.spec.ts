@@ -7,9 +7,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { getLocalServiceRoleClient, safeCleanup } from './helpers';
 import {
-  E2E_LIVE_CUP_ID,
   E2E_PUBLIC_CUP_ID,
-  E2E_DRAFT_CUP_ID,
   E2E_PUBLIC_CUP_SHARE_CODE,
 } from './testData';
 
@@ -204,24 +202,6 @@ test.describe('Public-View', () => {
     await expectSichtbaresErgebnis(page, 2, 0);
   });
 
-  test('Entwurf-Cup und Live-Cup (privat) sind per Direktlink nicht erreichbar', async ({ page }) => {
-    // Beide haben laut Seed keinen share_code (T2) -- der einzige Direktlink ist die
-    // ID-Route /#/public/:tournamentId (PublicTournamentViewScreen, versucht Share-Code-Format
-    // ZUERST, fällt dann auf `repo.get(tournamentId)` zurück -- RLS lässt anonym nur
-    // `is_public=true`-Turniere durch). Fixrunde 2 (N3): der Entwurf-Cup ist wieder ein reiner
-    // Entwurf (kein `publishedAt`, Ruling AA) -- dieser Test bleibt davon unberührt, er prüfte
-    // ohnehin nur `is_public=false`.
-    await page.goto(`/#/public/${E2E_DRAFT_CUP_ID}`);
-    await page.waitForLoadState('networkidle');
-    await expect(page.getByText('Turnier nicht gefunden')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText('Entwurf-Cup', { exact: true })).toHaveCount(0);
-
-    await page.goto(`/#/public/${E2E_LIVE_CUP_ID}`);
-    await page.waitForLoadState('networkidle');
-    await expect(page.getByText('Turnier nicht gefunden')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText('Live-Cup', { exact: true })).toHaveCount(0);
-  });
-
   test('Ein Tor, das owner einträgt, erscheint ohne Neuladen', async ({ page }, testInfo) => {
     // Ruling AB: nur auf cloud-desktop -- dieser Test ändert per Service-Role EINE Zeile im
     // Public-Cup; eine gleichzeitige zweite Projekt-Instanz (cloud-mobile) würde entweder
@@ -264,10 +244,9 @@ test.describe('Public-View', () => {
       // I4: test.fail() direkt vor dem bekannten Bruchpunkt -- die Vorbedingungen oben (Seite
       // zeigt den Public-Cup, Zeile gefunden, Ausgangs-Score gesehen, PATCH erfolgreich) sind
       // jetzt echte Fehlschläge. Bekannte Abweichung (Brief, Katalog-Schnitt Z1, docs/anforderungen/
-      // 2026-09-24_zielbild-einzelturnier.md): PublicTournamentViewScreen lädt das Turnier NUR
-      // einmalig beim Mount (ein `useEffect` mit `[tournamentId]`-Deps, keine Polling-/
-      // Realtime-Subscription, src/screens/PublicTournamentViewScreen.tsx) -- eine
-      // Ergebnisänderung erscheint nie ohne Neuladen.
+      // 2026-09-24_zielbild-einzelturnier.md): Die alte Route /public/:tournamentId ist entfernt
+      // (Paket 1, Befund C-PUBLIC-SEITE-VERWAIST). Ob die Live-Ansicht (/live/:shareCode) ohne
+      // Neuladen aktualisiert, ist hier nicht belegt -- Ursache offen, vor Auflösung prüfen.
       test.fail();
 
       await expect(matchRow.getByText(`${UNIQUE_TARGET_SCORE_A}:0`, { exact: true })).toBeVisible({ timeout: 3000 });
