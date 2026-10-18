@@ -3,8 +3,21 @@
  * `matches.live_state` (@OB-066, @ZM-115, @ZM-044) – und ein liegengebliebenes `liveState` überstimmt nie
  * „Ende“ oder „ausgefallen“. Die Spiele kommen aus der Fixture „Hallencup Nord“ (Engine → Zwischenspeicher → Mapper).
  */
-import { describe, expect, it } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { render, renderHook, screen } from '@testing-library/react';
+
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+import { initRealDeI18n } from '../../../test/realDeI18n';
+await initRealDeI18n();
+
+vi.mock('../../../hooks/useLiveMatches', () => ({
+  useLiveMatches: () => ({ liveMatches: new Map(), lastGoalEvent: null, lastCardEvent: null }),
+}));
+
+import { LiveSlide } from '../slides/LiveSlide';
+import { withView } from './monitorViewHelper';
+import { slide } from './monitorFixture';
 import { buildMonitorView } from '../monitorView';
 import { usePublicView } from '../../public-view/usePublicView';
 import type { GeneratedSchedule } from '../../../core/generators';
@@ -67,5 +80,23 @@ describe.each(WEGE)('%s', (_name, build) => {
     const m = build(stale.tournament).byId.get(idOf(cup, GAME[9]));
     expect(m?.badge).toEqual({ kind: 'badge', state: 'cancelled' });
     expect(m?.isLive).toBe(false);
+  });
+});
+
+describe('@OB-066 Live-Folie des Monitors (Kopf der Live-Anzeige)', () => {
+  const zeigeLiveFolie = (cup: Hallencup) => {
+    const feld = cup.tournament.matches[GAME[7]].field;
+    return render(<LiveSlide slide={slide('live', { fieldId: `field-${feld}` })} {...withView(cup.tournament)} performanceSettings={{} as never} theme="dark" style={{}} />);
+  };
+
+  it('@OB-066 Halbfinale 1 im Strafstoßschießen (Cache „paused“): der Kopf der Live-Folie trägt „Strafstoßschießen“, nicht „Pause“', async () => {
+    zeigeLiveFolie(withCloudColumns(await fPAUSE(), GAME[7], { match_status: 'paused', live_state: STRAFSTOSS }));
+    expect(screen.getByTestId('live-badge')).toHaveTextContent('Strafstoßschießen');
+    expect(screen.getByTestId('live-badge')).not.toHaveTextContent('Pause');
+  });
+
+  it('@ZM-115 Spiel 7 in der Halbzeit: der Kopf der Live-Folie trägt „Halbzeit“', async () => {
+    zeigeLiveFolie(withCloudColumns(await fPAUSE(), GAME[7], { match_status: 'paused', live_state: HALBZEIT }));
+    expect(screen.getByTestId('live-badge')).toHaveTextContent('Halbzeit');
   });
 });
