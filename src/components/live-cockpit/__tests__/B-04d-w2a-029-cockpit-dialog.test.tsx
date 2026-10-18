@@ -7,7 +7,7 @@
  * Dann gilt im laufenden Spiel weiter 2 Minuten
  * Und ab dem nächsten Anpfiff gilt 1 Minute
  *
- * Pflichttest über den echten Dialog: Klick auf „Zeitstrafe für FC Alpha“ und
+ * Pflichttest über den echten Dialog: Klick auf den Zeitstrafen-Knopf der Spalte von FC Alpha und
  * Speichern im TimePenaltyDialog. Die Dauer kommt aus dem Spielstand des Spiels.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -57,7 +57,7 @@ function renderCockpit(match: unknown, cockpitTimePenaltySeconds: number, handle
 }
 
 async function confirmTimePenaltyForAlpha(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getAllByRole('button', { name: /Zeitstrafe für FC Alpha/ })[0]);
+  await user.click(screen.getByTestId('penalty-button-home'));
   await user.click(screen.getByRole('button', { name: 'cockpit:timePenalty.save' }));
 }
 

@@ -3,8 +3,8 @@
  */
 export type Side = 'home' | 'away';
 export type CardKind = 'YELLOW' | 'YELLOW_RED' | 'RED';
-/** 'wechsel' entfällt in Aufgabe 3.3, 'nummer' = Rückennummer ändern/nachtragen aus der Liste. */
-export type EntryKind = 'tor' | 'karte' | 'zeitstrafe' | 'wechsel' | 'nummer';
+/** 'nummer' = Rückennummer ändern/nachtragen aus der Liste. Spielerwechsel gibt es nicht mehr (@SL-037, Aufgabe 3.3). */
+export type EntryKind = 'tor' | 'karte' | 'zeitstrafe' | 'nummer';
 export interface OffenerEintrag {
   art: EntryKind;
   seite: Side | null;

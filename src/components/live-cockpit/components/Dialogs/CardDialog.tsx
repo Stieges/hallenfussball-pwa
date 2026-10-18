@@ -122,10 +122,16 @@ export function CardDialog({
     }
   }, [isOpen, initialCardType, preselectedTeamSide, homeTeam, awayTeam, resetTimer]);
 
+  // Aufgabe 3.3: Die Team-Spalte öffnet den Dialog mit gewähltem Team, nur die Art fehlt -- dann entfällt die Teamfrage.
   const handleCardTypeSelect = useCallback((type: CardType) => {
     setCardType(type);
+    if (preselectedTeamSide !== undefined) {
+      setSelectedTeam(preselectedTeamSide === 'home' ? homeTeam : awayTeam);
+      setStep(3);
+      return;
+    }
     setStep(2);
-  }, []);
+  }, [preselectedTeamSide, homeTeam, awayTeam]);
 
   const handleTeamSelect = useCallback((team: Team) => {
     setSelectedTeam(team);

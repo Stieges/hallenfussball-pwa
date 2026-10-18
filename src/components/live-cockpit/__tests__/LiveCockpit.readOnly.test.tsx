@@ -60,18 +60,15 @@ function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): Li
 describe('LiveCockpit — readOnly sperrt die Bedienung (Task R2)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('readOnly=true: goal-button-home ist disabled, ein Klick ruft onGoal NICHT auf', async () => {
+  it('@SL-018 readOnly=true: die Spalte hat keine Tor-Taste (Zähler bleibt), onGoal wird nie gerufen', () => {
     const onGoal = vi.fn();
-    const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch(), { onGoal })} readOnly />);
 
-    const goalButton = screen.getByTestId('goal-button-home');
-    expect(goalButton).toBeDisabled();
-
-    // userEvent.click() auf einem disabled-Button löst in jsdom keinen Klick aus — trotzdem
-    // explizit geprüft, damit ein künftiger Wegfall des disabled-Attributs (z.B. durch
-    // versehentliches Entfernen von `isLocked` in TeamBlock) hier sichtbar würde.
-    await user.click(goalButton);
+    expect(screen.queryByTestId('goal-button-home')).toBeNull();
+    expect(screen.queryByTestId('foul-button-home')).toBeNull();
+    expect(screen.queryByTestId('card-button-home')).toBeNull();
+    expect(screen.queryByTestId('penalty-button-home')).toBeNull();
+    expect(screen.getByTestId('team-fouls-home')).toBeInTheDocument();
     expect(onGoal).not.toHaveBeenCalled();
   });
 
@@ -118,15 +115,15 @@ describe('LiveCockpit — readOnly sperrt die Bedienung (Task R2)', () => {
     expect(screen.queryByTitle('cockpit:sidebar.edit')).not.toBeInTheDocument();
   });
 
-  it('readOnly=false (Standard): goal-button-home ist NICHT disabled, kein Banner — Verhalten wie vorher', () => {
+  it('readOnly=false (Standard): Tor-Taste da und nicht disabled, kein Banner — Verhalten wie vorher', () => {
     render(<LiveCockpit {...baseProps(makeMatch())} />);
     expect(screen.getByTestId('goal-button-home')).not.toBeDisabled();
     expect(screen.queryByTestId('cockpit-readonly-banner')).not.toBeInTheDocument();
   });
 
-  it('readOnly=false + isFinished: gesperrt wie zuvor (Match-Ende), aber KEIN Berechtigungs-Banner', () => {
+  it('readOnly=false + isFinished: keine Tasten wie zuvor gesperrt (Match-Ende, @SL-113), aber KEIN Berechtigungs-Banner', () => {
     render(<LiveCockpit {...baseProps(makeMatch({ status: 'FINISHED' }))} />);
-    expect(screen.getByTestId('goal-button-home')).toBeDisabled();
+    expect(screen.queryByTestId('goal-button-home')).toBeNull();
     expect(screen.queryByTestId('cockpit-readonly-banner')).not.toBeInTheDocument();
   });
 });
@@ -325,9 +322,9 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
 
   it('Seitenwechsel: readOnly=true disabled; readOnly=false enabled + Klick tauscht die Teams tatsächlich', async () => {
     // Review-Befund (Fixrunde 3, niedrig): nicht nur `disabled` prüfen, sondern wie die
-    // Nachbartests den tatsächlichen Effekt. team-name-{home|away} bleibt inhaltlich konstant
-    // (die testid folgt dem `side`-Prop, das beim Tausch mitwandert) — was sich ändert, ist die
-    // DOM-REIHENFOLGE der beiden Blöcke (links/rechts). Das prüfen wir hier.
+    // Nachbartests den tatsächlichen Effekt. team-column-{home|away} bleibt inhaltlich konstant
+    // (die testid folgt dem `seite`-Prop, das beim Tausch mitwandert) — was sich ändert, ist die
+    // DOM-REIHENFOLGE der beiden Spalten (links/rechts). Das prüfen wir hier.
     const match = makeMatch({ status: 'PAUSED' });
     const user = userEvent.setup();
 
@@ -339,16 +336,16 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
     const switchButton = screen.getByRole('button', { name: 'Seiten tauschen' });
     expect(switchButton).not.toBeDisabled();
 
-    const before = container.querySelectorAll('[data-testid^="team-name-"]');
+    const before = container.querySelectorAll('[data-testid^="team-column-"]');
     expect(before).toHaveLength(2);
-    expect(before[0]).toHaveAttribute('data-testid', 'team-name-home');
-    expect(before[1]).toHaveAttribute('data-testid', 'team-name-away');
+    expect(before[0]).toHaveAttribute('data-testid', 'team-column-home');
+    expect(before[1]).toHaveAttribute('data-testid', 'team-column-away');
 
     await user.click(switchButton);
 
-    const after = container.querySelectorAll('[data-testid^="team-name-"]');
-    expect(after[0]).toHaveAttribute('data-testid', 'team-name-away');
-    expect(after[1]).toHaveAttribute('data-testid', 'team-name-home');
+    const after = container.querySelectorAll('[data-testid^="team-column-"]');
+    expect(after[0]).toHaveAttribute('data-testid', 'team-column-away');
+    expect(after[1]).toHaveAttribute('data-testid', 'team-column-home');
   });
 
   it('Halbzeit: der Knopf fehlt im Cockpit bei JEDEM Status (Platzhalter-Liste Nr. 3, @OB-002; B-08 baut Halbzeit)', () => {
@@ -413,18 +410,16 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
   });
 });
 
-describe('LiveCockpit — Fixrunde 2 (M1): Tor-Knopf des Gast-Teams (TeamBlock rechts)', () => {
+describe('LiveCockpit — Fixrunde 2 (M1): Tor-Knopf des Gast-Teams (Team-Spalte rechts)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('readOnly=true: goal-button-away ist disabled, Klick ruft onGoal NICHT auf; readOnly=false: enabled, Klick ruft es auf', async () => {
+  it('@SL-018 readOnly=true: keine Tor-Taste für das Gast-Team; readOnly=false: da, der Tipp zählt mit dem Dialog-Weg', async () => {
     const onGoal = vi.fn();
     const match = makeMatch();
     const user = userEvent.setup();
 
     const { unmount } = render(<LiveCockpit {...baseProps(match, { onGoal })} readOnly />);
-    const goalButtonLocked = screen.getByTestId('goal-button-away');
-    expect(goalButtonLocked).toBeDisabled();
-    await user.click(goalButtonLocked);
+    expect(screen.queryByTestId('goal-button-away')).toBeNull();
     expect(onGoal).not.toHaveBeenCalled();
     unmount();
 

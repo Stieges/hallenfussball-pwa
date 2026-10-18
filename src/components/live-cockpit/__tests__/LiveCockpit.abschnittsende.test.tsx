@@ -152,16 +152,16 @@ describe('LiveCockpit: Fouls über die Halbzeit (G11, B-08b Punkt 3)', () => {
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     await user.click(screen.getByTestId('foul-button-home'));
-    await waitFor(() => expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1'));
+    await waitFor(() => expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 1/5'));
     zu(360_000);
     await waitFor(() => expect(zustand()).toHaveTextContent('Halbzeit'));
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 1/5');
     zu(420_000);
     await user.click(screen.getByTestId('match-wiederanpfiff-button'));
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 1/5');
     await user.click(screen.getByTestId('foul-button-home'));
-    await waitFor(() => expect(screen.getByTestId('foul-count-home')).toHaveTextContent('2'));
+    await waitFor(() => expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 2/5'));
   });
 });
 

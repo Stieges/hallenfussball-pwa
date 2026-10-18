@@ -34,7 +34,9 @@
     "zeitGesetzt": "Zeit auf {{zeit}} gesetzt",
     "foulGrenze": "{{teamName}}: {{count}}. Foul in dieser Halbzeit",
     "schliessen": "Hinweis schließen",
-    "zurueckgesetzt": "Spiel {{nummer}} von der Turnierleitung zurückgesetzt"
+    "zurueckgesetzt": "Spiel {{nummer}} von der Turnierleitung zurückgesetzt",
+    "zeitstrafeAbgelaufen": "Zeitstrafe {{team}} Nr. {{nummer}} abgelaufen",
+    "zeitstrafeAbgelaufenOhneNr": "Zeitstrafe {{team}} abgelaufen"
   },
   "tafel": {
     "zustand": {
@@ -452,5 +454,27 @@
       "locked": "Korrektur nur durch die Turnierleitung",
       "done": "{{target}} aktualisiert"
     }
+  },
+  "spalte": {
+    "heim": "Heim",
+    "gast": "Gast",
+    "tor": "Tor",
+    "foul": "Foul",
+    "karte": "Karte",
+    "fouls": "Foul {{zaehlt}}/{{grenze}}",
+    "foulsOhneGrenze": "Foul {{zaehlt}}",
+    "strafe": "Nr. {{nummer}} · {{rest}}",
+    "strafeOhneNr": "ohne Nr. · {{rest}}",
+    "unterzahl": "Unterzahl · {{rest}}",
+    "ergaenzen": "darf sich ergänzen",
+    "gesperrt": "Nr. {{nummer}} gesperrt",
+    "aria": {
+      "tor": "Tor {{team}}",
+      "foul": "Foul {{team}}",
+      "karte": "Karte {{team}}",
+      "strafe": "Zeitstrafe {{team}}"
+    },
+    "strafeKnopf": "Zeitstrafe",
+    "strafeDauer": "{{minuten}} Min"
   }
 }

@@ -23,6 +23,7 @@ import { useOutboxStatus } from '../../features/collaboration/outbox/useOutboxSt
 import { useRejectedOutboxDialog } from '../../features/collaboration/outbox/useRejectedOutboxDialog';
 import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
 import { getEffectiveScore } from '../../utils/matchScore';
+import type { SperrHinweis } from '../../core/match';
 import type { LiveCockpitProps } from './types';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 import { ScoreboardArea } from './areas/ScoreboardArea';
@@ -35,6 +36,11 @@ import { legacyPhaseViewOf } from './model/legacyPhaseView';
 import { istAngepfiffenUndNichtBeendet } from './model/cockpitPhase';
 import { useCockpitNotices } from './hooks/useCockpitNotices';
 import { useCockpitCommands } from './hooks/useCockpitCommands';
+import { useTeamColumns } from './hooks/useTeamColumns';
+import { usePenaltyExpiryNotice } from './hooks/usePenaltyExpiryNotice';
+import { alsUebersetzer } from './model/alsUebersetzer';
+
+const NO_SPERREN: readonly SperrHinweis[] = [];
 
 export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const { fieldName, tournamentName, tournamentId, cockpitSettings: cockpitSettingsProp, readOnly = false, currentMatch, upcomingMatches, leer = null } = props;
@@ -94,6 +100,14 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const cmd = useCockpitCommands({
     props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView,
   });
+  const foulsJeSeite = useMemo(() => ({ home: homeFouls, away: awayFouls }), [homeFouls, awayFouls]);
+  const anzeigeOrdnung = useMemo(() => ({ links: sides.links, rechts: sides.rechts }), [sides.links, sides.rechts]);
+  const spalten = useTeamColumns({
+    match: currentMatch, view, phase, settings: cockpitSettings, kannSteuern: !readOnly, fouls: foulsJeSeite,
+    sperrHinweise: props.sperrHinweise ?? NO_SPERREN, order: anzeigeOrdnung, handlers: cmd.teamHandlers,
+  });
+  const teams = useMemo(() => (currentMatch ? { home: currentMatch.homeTeam, away: currentMatch.awayTeam } : null), [currentMatch]);
+  usePenaltyExpiryNotice(currentMatch?.id, view, teams, notices.melde, alsUebersetzer(t));
 
   // Tafel: mit Spiel und ohne (wartet auf Teams, kein Spiel mehr). Die Verbindungsanzeige steht bis zum schmalen Kopf (3.8) darin.
   const tafel = (
@@ -144,6 +158,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   }
 
   const match = currentMatch;
+  if (!spalten) { return null; } // nie: ohne Spiel (spalten === null) kehrt die Hülle oben zurück
   // Task R2: readOnly kommt aus einer echten Berechtigungsprüfung (ManagementTab.checkCanEditMatch
   // → canEditResults), das beendete Spiel ist die bestehende "Spiel ist vorbei"-Sperre. Beide
   // führen zu "keine Bedienung", aber nur `readOnly` zeigt das Berechtigungs-Banner.
@@ -173,11 +188,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
           isMobile={isMobile}
           isDesktop={!isMobile && !isTablet}
           isLocked={isLocked}
-          homeFouls={homeFouls}
-          awayFouls={awayFouls}
-          effectiveScore={effectiveScore}
-          order={{ links: sides.links, rechts: sides.rechts }}
-          teams={{ handlers: cmd.teamHandlers, extraProps: cmd.editing.teamBlockProps }}
+          columns={spalten}
           controls={cmd.controls}
           sidebar={{ activePenalties: cmd.activePenalties, onEventEdit: cmd.onSidebarEventEdit }}
         />

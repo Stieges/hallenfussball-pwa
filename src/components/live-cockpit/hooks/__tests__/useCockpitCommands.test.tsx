@@ -70,7 +70,7 @@ describe('useCockpitCommands – Tor', () => {
   });
 });
 
-describe('useCockpitCommands – Karte, Zeitstrafe, Wechsel, Foul', () => {
+describe('useCockpitCommands – Karte, Zeitstrafe, Foul', () => {
   it('Gelbe Karte für SV Süd, Nr. 7: onCard, Meldung mit Nummer, Auswahl schließt', () => {
     const { hook, flows, melde } = setup(); // ohne Karten-Rückruf: nichts wird gesendet, nichts bricht
     hook.result.current.overlayHandlers.confirmCard('YELLOW', 'sv-sued', 7);
@@ -94,15 +94,12 @@ describe('useCockpitCommands – Karte, Zeitstrafe, Wechsel, Foul', () => {
     expect(flows.schliesse).toHaveBeenCalledTimes(1);
   });
 
-  it('Wechsel bei FC Nord: Nr. 4 raus, Nr. 9 rein; leere Listen zeigen „?“', () => {
+  it('@SL-037 es gibt keinen Wechsel-Ablauf mehr: kein Rückruf `confirmSubstitution`, kein Handler `onSubstitution` je Seite', () => {
     const onSubstitution = vi.fn();
-    const { hook, melde } = setup({ props: { onSubstitution } });
-    hook.result.current.overlayHandlers.confirmSubstitution('fc-nord', [4], [9]);
-    expect(onSubstitution).toHaveBeenCalledWith('match-11', 'fc-nord', { playersOut: [4], playersIn: [9] });
-    expect(melde).toHaveBeenCalledWith(3, 'Wechsel FC Nord: #4 → #9');
-    hook.result.current.overlayHandlers.confirmSubstitution('sv-sued', [], []);
-    expect(onSubstitution).toHaveBeenLastCalledWith('match-11', 'sv-sued', { playersOut: undefined, playersIn: undefined });
-    expect(melde).toHaveBeenLastCalledWith(3, 'Wechsel SV Süd: ? → ?');
+    const { hook } = setup({ props: { onSubstitution } });
+    expect('confirmSubstitution' in hook.result.current.overlayHandlers).toBe(false);
+    expect('onSubstitution' in hook.result.current.teamHandlers.home).toBe(false);
+    expect(onSubstitution).not.toHaveBeenCalled();
   });
 
   it('Foul für FC Nord: onFoul mit Team und Meldung', () => {
@@ -113,14 +110,14 @@ describe('useCockpitCommands – Karte, Zeitstrafe, Wechsel, Foul', () => {
     expect(melde).toHaveBeenCalledWith(3, 'Foul für FC Nord');
   });
 
-  it('die Knöpfe je Seite öffnen die passende Auswahl (Tor, Gelb-Rot, Wechsel)', () => {
+  it('die Tipps je Seite öffnen die passende Auswahl (Tor, Zeitstrafe, Karte)', () => {
     const { hook, flows } = setup();
-    hook.result.current.teamHandlers.away.onGoal();
+    hook.result.current.teamHandlers.away.onTor();
     expect(flows.oeffne).toHaveBeenLastCalledWith({ art: 'tor', seite: 'away' });
-    hook.result.current.teamHandlers.home.onYellowRedCard();
-    expect(flows.oeffne).toHaveBeenLastCalledWith({ art: 'karte', seite: 'home', kartenArt: 'YELLOW_RED' });
-    hook.result.current.teamHandlers.home.onSubstitution();
-    expect(flows.oeffne).toHaveBeenLastCalledWith({ art: 'wechsel', seite: 'home' });
+    hook.result.current.teamHandlers.home.onZeitstrafe();
+    expect(flows.oeffne).toHaveBeenLastCalledWith({ art: 'zeitstrafe', seite: 'home' });
+    hook.result.current.teamHandlers.home.onKarte();
+    expect(flows.oeffne).toHaveBeenLastCalledWith({ art: 'karte', seite: 'home' });
   });
 });
 

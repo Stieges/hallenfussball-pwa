@@ -14,7 +14,7 @@ import { RejectedOutboxDialog } from '../../../features/collaboration/outbox/Rej
 import type { useEngineEventEditing } from '../../../hooks/useEngineEventEditing';
 import { EINTRAG_ZEITSTRAFE, type CardKind, type OffenerEintrag } from '../model/cockpitTypes';
 import {
-  TimeAdjustDialog, CardDialog, TimePenaltyDialog, SubstitutionDialog, GoalScorerDialog,
+  TimeAdjustDialog, CardDialog, TimePenaltyDialog, GoalScorerDialog,
   EventEditDialog, EventLogBottomSheet, SettingsDialog, TiebreakerBanner, PenaltyShootoutDialog,
 } from '../components';
 
@@ -33,11 +33,10 @@ export interface CockpitDialogState {
 export interface CockpitOverlayHandlers {
   closeTimeAdjust: () => void;
   confirmTimeAdjust: (newDisplaySeconds: number) => void;
-  /** Schließt die offene Eintrags-Auswahl (Tor, Karte, Zeitstrafe, Wechsel, Nummer ändern). */
+  /** Schließt die offene Eintrags-Auswahl (Tor, Karte, Zeitstrafe, Nummer ändern). */
   closeEntry: () => void;
   confirmCard: (cardType: CardKind, teamId: string, playerNumber?: number) => void;
   confirmTimePenalty: (durationSeconds: number, teamId: string, playerNumber?: number) => void;
-  confirmSubstitution: (teamId: string, playersOut: number[], playersIn: number[]) => void;
   confirmGoal: (jerseyNumber: number | null, assists?: (number | null)[], incomplete?: boolean) => void;
   updateEvent: EngineEventEditing['update'];
   deleteEvent: EngineEventEditing['remove'];
@@ -117,17 +116,6 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
         // BUG-006: Pre-select 2 minutes and team based on button clicked
         preselectedDurationSeconds={match.timePenaltyDurationSeconds ?? settings.timePenaltyDurationSeconds}
         preselectedTeamSide={offen?.art === EINTRAG_ZEITSTRAFE ? seite ?? undefined : undefined}
-        autoDismissSeconds={10}
-      />
-
-      <SubstitutionDialog
-        isOpen={offen?.art === 'wechsel'}
-        onClose={handlers.closeEntry}
-        onConfirm={handlers.confirmSubstitution}
-        homeTeam={match.homeTeam}
-        awayTeam={match.awayTeam}
-        // BUG-009: Pre-select team based on button clicked
-        preselectedTeamSide={offen?.art === 'wechsel' ? seite ?? undefined : undefined}
         autoDismissSeconds={10}
       />
 

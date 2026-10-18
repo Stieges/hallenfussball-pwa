@@ -1,8 +1,8 @@
 /**
  * useCockpitCommands – Befehls-Adapter und Effekte der Cockpit-Hülle (Aufgabe 1.3).
  *
- * Verbindet die `on…`-Rückrufe des Aufrufers mit den Bereichen: Tor-, Foul-, Karten-, Zeitstrafen-
- * und Wechsel-Abläufe samt Meldungen, Zeit anpassen, Rückgängig, Uhr-Steuerung (`useClockControls`)
+ * Verbindet die `on…`-Rückrufe des Aufrufers mit den Bereichen: Tor-, Foul-, Karten- und Zeitstrafen-
+ * Abläufe samt Meldungen, Zeit anpassen, Rückgängig, Uhr-Steuerung (`useClockControls`)
  * und die Entscheidung nach Gleichstand (`useTiebreakCommands`). Hier – nicht in `LiveCockpit.tsx` –
  * kommt jede weitere Befehls- und Effektlogik der Hülle hin, damit sie unter 300 Zeilen bleibt.
  */
@@ -12,7 +12,7 @@ import type { useMatchSound } from '../../../hooks';
 import { useEngineEventEditing } from '../../../hooks/useEngineEventEditing';
 import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../../types/tournament';
 import type { CockpitDialogState, CockpitOverlayHandlers } from '../areas/CockpitOverlays';
-import type { LegacyPlayAreaProps, TeamSideHandlers } from '../areas/LegacyPlayArea';
+import type { LegacyPlayAreaProps } from '../areas/LegacyPlayArea';
 import { EINTRAG_ZEITSTRAFE, type CardKind, type EntryKind, type Side } from '../model/cockpitTypes';
 import type { PhaseView } from '../engine/phaseView';
 import type { LiveCockpitProps } from '../types';
@@ -28,6 +28,9 @@ import { useTiebreakCommands } from './useTiebreakCommands';
 const CARD_TOAST_KEYS: Record<CardKind, 'toast.yellowCard' | 'toast.yellowRedCard' | 'toast.redCard'> = {
   YELLOW: 'toast.yellowCard', YELLOW_RED: 'toast.yellowRedCard', RED: 'toast.redCard',
 };
+
+/** Die vier Tipps einer Team-Spalte, je Seite (Aufgabe 3.3). */
+export interface TeamSideHandlers { onTor: () => void; onFoul: () => void; onZeitstrafe: () => void; onKarte: () => void }
 
 export interface CockpitCommandsArgs {
   props: LiveCockpitProps;
@@ -54,7 +57,7 @@ export interface CockpitCommands {
 
 export function useCockpitCommands({ props, settings, sound, flows, sides, melde, engineView }: CockpitCommandsArgs): CockpitCommands {
   const { t } = useTranslation('cockpit');
-  const { currentMatch: match, onStart, onPause, onResume, onFinish, onGoal, onAdjustTime, onTimePenalty, onCard, onSubstitution, onFoul, onUpdateSettings } = props;
+  const { currentMatch: match, onStart, onPause, onResume, onFinish, onGoal, onAdjustTime, onTimePenalty, onCard, onFoul, onUpdateSettings } = props;
   const readOnly = props.readOnly ?? false;
   // Bestätigungen sind Stufe 3, Fehler Stufe 2 (Spec § 7); `melde` ist stabil.
   const showSuccess = useCallback((message: string) => { melde(3, message); }, [melde]);
@@ -177,18 +180,6 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     flows.schliesse();
   }, [match, onTimePenalty, flows, showInfo, penalties, t, teamNameOf]);
 
-  // BUG-009: mehrere Spieler je Wechsel
-  const handleSubstitutionConfirm = useCallback((teamId: string, playersOut: number[], playersIn: number[]) => {
-    if (!match) { return; }
-    onSubstitution?.(match.id, teamId, {
-      playersOut: playersOut.length > 0 ? playersOut : undefined,
-      playersIn: playersIn.length > 0 ? playersIn : undefined,
-    });
-    const nummern = (liste: number[]): string => (liste.length > 0 ? liste.map((n) => `#${n}`).join(',') : '?');
-    showInfo(`Wechsel ${teamNameOf(teamId)}: ${nummern(playersOut)} → ${nummern(playersIn)}`);
-    flows.schliesse();
-  }, [match, onSubstitution, flows, showInfo, teamNameOf]);
-
   const handleTimeAdjust = useCallback((newDisplaySeconds: number) => {
     if (!match) { return; }
     // Im Countdown stellt der Nutzer die Restzeit ein: verstrichen = Dauer - Rest.
@@ -199,14 +190,10 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
 
   const open = (art: EntryKind, side: Side) => () => flows.oeffne({ art, seite: side });
   const sideHandlers = (side: Side): TeamSideHandlers => ({
-    onGoal: open('tor', side),
-    onMinus: () => { void editing.minus(side); },
-    onPenalty: open(EINTRAG_ZEITSTRAFE, side),
-    onYellowCard: () => flows.oeffne({ art: 'karte', seite: side, kartenArt: 'YELLOW' }),
-    onYellowRedCard: () => flows.oeffne({ art: 'karte', seite: side, kartenArt: 'YELLOW_RED' }),
-    onRedCard: () => flows.oeffne({ art: 'karte', seite: side, kartenArt: 'RED' }),
-    onSubstitution: open('wechsel', side),
+    onTor: open('tor', side),
     onFoul: () => handleFoul(side),
+    onZeitstrafe: open(EINTRAG_ZEITSTRAFE, side),
+    onKarte: open('karte', side),
   });
 
   const openTimeAdjust = onAdjustTime ? () => setShowTimeAdjust(true) : undefined;
@@ -216,7 +203,6 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     closeEntry: flows.schliesse,
     confirmCard: handleCardConfirm,
     confirmTimePenalty: handleTimePenaltyConfirm,
-    confirmSubstitution: handleSubstitutionConfirm,
     confirmGoal: handleGoalConfirm,
     updateEvent: editing.update,
     deleteEvent: editing.remove,

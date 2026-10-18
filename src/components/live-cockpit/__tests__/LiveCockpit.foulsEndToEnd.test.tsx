@@ -1,6 +1,6 @@
 /**
  * LiveCockpit -- Foul-Zaehler Ende-zu-Ende (C3b-2 F3b2, Fixrunde Aufgabe 5): der Helfer bedient
- * den CardDialog (Gelb-Rot waehlen, "Ohne Details"), die ECHTE Kette laeuft bis zum Zaehler:
+ * den CardDialog (Karten-Knopf der Spalte, Gelb-Rot waehlen, "Ohne Details"), die ECHTE Kette laeuft bis zum Zaehler:
  * Dialog -> onCard('YELLOW_RED') -> useEngineCommandWiring.handleCard (mapCardTypeToEngine) ->
  * MatchCommands.card (YELLOW_RED_CARD) -> MatchEngine (fake-indexeddb) -> computeLiveMatches /
  * toLiveMatchView (Adapter) -> LiveCockpit/useFoulCounts.
@@ -129,13 +129,14 @@ describe('LiveCockpit -- Foul-Zaehler Ende-zu-Ende ueber die echte Engine-Kette 
     const { context } = await makeRunningEngine();
     const user = userEvent.setup();
     render(<Harness context={context} />);
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('0');
-    expect(screen.getByTestId('foul-count-away')).toHaveTextContent('0');
-    await user.click(screen.getByRole('button', { name: 'Gelb-Rote Karte für FC Alpha' }));
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 0/5');
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0/5');
+    await user.click(screen.getByTestId('card-button-home'));
+    await user.click(screen.getByRole('button', { name: 'Gelb-Rot' }));
     await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
 
-    await waitFor(() => expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1'));
-    expect(screen.getByTestId('foul-count-away')).toHaveTextContent('0');
+    await waitFor(() => expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 1/5'));
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0/5');
     // Der Engine-Befehl war wirklich YELLOW_RED_CARD (nicht RED_CARD).
     const log = context.engine.view(MATCH_ID)?.log ?? [];
     expect(log.some((event) => event.type === 'YELLOW_RED_CARD')).toBe(true);
@@ -147,11 +148,12 @@ describe('LiveCockpit -- Foul-Zaehler Ende-zu-Ende ueber die echte Engine-Kette 
     const user = userEvent.setup();
     render(<Harness context={context} />);
 
-    await user.click(screen.getByRole('button', { name: 'Gelb-Rote Karte für SV Beta' }));
+    await user.click(screen.getByTestId('card-button-away'));
+    await user.click(screen.getByRole('button', { name: 'Gelb-Rot' }));
     await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
 
-    await waitFor(() => expect(screen.getByTestId('foul-count-away')).toHaveTextContent('1'));
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('0');
+    await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 1/5'));
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 0/5');
   });
 
   it('Gegenbeispiel: ein TOR fuer Team A laesst den Zaehler bei 0 (kein Foul)', async () => {
@@ -163,7 +165,7 @@ describe('LiveCockpit -- Foul-Zaehler Ende-zu-Ende ueber die echte Engine-Kette 
     });
 
     await waitFor(() => expect(context.engine.view(MATCH_ID)?.log.some((event) => event.type === 'GOAL')).toBe(true));
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('0');
-    expect(screen.getByTestId('foul-count-away')).toHaveTextContent('0');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 0/5');
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0/5');
   });
 });
