@@ -1,7 +1,7 @@
 /**
  * ManagementTab – @FU-004 (C-COCKPIT-LAEDT-NACH-ABPFIFF): Ist das Laden eines Spiels noch offen
  * (z. B. weil der Wechsel des Felds es abgebrochen hat) und hat danach jedes Spiel des Felds ein
- * Ergebnis, bleibt „Spiel wird geladen…“ nicht stehen, sondern es erscheint „Keine Spiele“.
+ * Ergebnis, bleibt „Spiel wird geladen…“ nicht stehen, sondern die Tafel sagt „kein Spiel mehr“ (@SL-054).
  *
  * Der Kopf (Mocks, HOME/AWAY, tournament, schedule) stammt aus ManagementTab.engineReadyError.test.tsx.
  */
@@ -31,7 +31,8 @@ vi.mock('../../../lib/sentry', () => ({
 }));
 
 vi.mock('../../../components/live-cockpit', () => ({
-  LiveCockpit: () => <div data-testid="cockpit-stub" />,
+  // ohne Spiel zeigt die Tafel den Grund (@SL-054): der Stub legt die Art offen
+  LiveCockpit: (props: { leer?: { art: string } | null }) => <div data-testid="cockpit-stub" data-leer={props.leer?.art ?? ''} />,
 }));
 
 vi.mock('../../../hooks/useMatchSound', () => ({
@@ -97,7 +98,6 @@ const schedule = {
 describe('ManagementTab – @FU-004 kein dauerhaftes „Spiel wird geladen…“ (C-COCKPIT-LAEDT-NACH-ABPFIFF)', () => {
   // Texte über den globalen Passthrough-Mock: Schlüssel mit Namensraum.
   const LADEN = 'tournament:management.matchLoading';
-  const KEINE = 'tournament:management.noMatchesOnField';
   const mitErgebnis = {
     ...schedule,
     allMatches: schedule.allMatches.map((m) => ({ ...m, scoreA: 2, scoreB: 1 })),
@@ -108,7 +108,7 @@ describe('ManagementTab – @FU-004 kein dauerhaftes „Spiel wird geladen…“
     mockLiveMatches = new Map<string, LiveMatch>();
   });
 
-  it('@FU-004 hängt das Laden und hat danach jedes Spiel des Felds ein Ergebnis, steht „Keine Spiele“ statt „wird geladen“', async () => {
+  it('@FU-004 hängt das Laden und hat danach jedes Spiel des Felds ein Ergebnis, sagt die Tafel „kein Spiel mehr“ statt „wird geladen“', async () => {
     mockGetLiveMatchData.mockReturnValue(new Promise(() => undefined)); // erster Lauf hängt, wird abgebrochen
     const { rerender } = render(
       <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />,
@@ -118,7 +118,7 @@ describe('ManagementTab – @FU-004 kein dauerhaftes „Spiel wird geladen…“
       <ManagementTab tournament={{ ...tournament }} schedule={mitErgebnis} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />,
     );
     await waitFor(() => expect(screen.queryByText(LADEN)).toBeNull());
-    expect(screen.getByText(KEINE)).toBeInTheDocument();
+    expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-leer', 'keinSpiel');
   });
 
   it('Gegenbeispiel: solange das Spiel ohne Ergebnis noch lädt, steht der Ladehinweis', async () => {

@@ -202,30 +202,30 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       warn.mockRestore();
     });
 
-    it('Bestand (F-B13-2): laufendes Spiel 7 erscheint mit Stand 1:0 als beendet, ohne matchCard.live', async () => {
+    it('@ZM-039 @ZM-040 (C-ZUSCHAUER-LIVE-ALS-BEENDET): laufendes Spiel 7 mit Stand 1:0 steht als laufend da, nicht als beendet', async () => {
       const t = buildLiveViewTournament({ hideRankingsForPublic: true });
       const m7 = matchOf(t, 7);
       const { container } = await renderWith(t);
       expect(screen.getAllByText(m7.homeTeam).length).toBeGreaterThan(0);
+      // Stand 1:0 bleibt sichtbar (Tabellenzeile am Desktop waagerecht, Karte am Handy je Zeile)
       expect(screen.getAllByText('1:0').length).toBeGreaterThan(0);
-      const text = container.textContent ?? '';
-      expect(text).not.toContain('matchCard.live');
-      // Spiel 1 und Spiel 7 haben beide einen Stand und gelten darum als beendet. Seit @OB-064 (Tore je Zeile, Ergebnis
-      // waagerecht) trägt eine regulär beendete Karte keinen Zusatz mehr: weder „Ende“ unter dem Ergebnis noch
-      // „n. V.“ / „beendet i. E.“ in der Kopfzeile.
+      // Je Spiel: der Status steht am Ergebnis der Tabellenzeile (data-match-status): Spiel 7 läuft, Spiel 1 ist beendet.
+      for (const circle of container.querySelectorAll(`[data-testid="match-circle-${m7.id}"]`)) {
+        expect(circle).toHaveAttribute('data-match-status', 'running');
+      }
+      for (const circle of container.querySelectorAll(`[data-testid="match-circle-${matchOf(t, 1).id}"]`)) {
+        expect(circle).toHaveAttribute('data-match-status', 'finished');
+      }
+      // Handy-Karte: Live-Kennzeichen „läuft“ in der Kopfzeile, nur bei Spiel 7
+      expect(container.querySelectorAll('[data-testid="match-card-live"]')).toHaveLength(1);
+      // Regulär beendet trägt weiter keinen Zusatz (@OB-064)
       const zusatz = Array.from(container.querySelectorAll('*')).filter(
         (el) => el.children.length === 0 && ['Ende', 'n. V.', 'beendet i. E.'].includes(el.textContent ?? '')
       );
       expect(zusatz).toHaveLength(0);
-      // Je Spiel: der Status steht am Ergebnis der Tabellenzeile (data-match-status), nicht nur im Zähler.
-      const circles = container.querySelectorAll(`[data-testid="match-circle-${m7.id}"]`);
-      expect(circles.length).toBeGreaterThan(0);
-      for (const circle of circles) {
-        expect(circle).toHaveAttribute('data-match-status', 'finished');
-      }
     });
 
-    it('Bestand (F-B13-8): übersprungenes Spiel 5 bleibt geplant, ohne Status "ausgefallen"', async () => {
+    it('@ZM-104 (F-B13-8): ausgefallenes Spiel 5 steht als „ausgefallen“ ohne Ergebnis da, nicht als geplant', async () => {
       const t = buildLiveViewTournament({ hideRankingsForPublic: true });
       const m5 = matchOf(t, 5);
       const { container } = await renderWith(t);
@@ -233,8 +233,13 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
       const circles = container.querySelectorAll(`[data-testid="match-circle-${m5.id}"]`);
       expect(circles.length).toBeGreaterThan(0);
       for (const circle of circles) {
-        expect(circle).toHaveAttribute('data-match-status', 'scheduled');
+        expect(circle).toHaveAttribute('data-match-status', 'skipped');
+        expect(circle.textContent).toBe('ausgefallen');
       }
+      // Handy-Karte: Kennzeichen „ausgefallen“, Tore ohne Zahl
+      const karte = container.querySelector(`[data-testid="match-goals-${m5.id}-home"]`)?.closest('[data-match-card]');
+      expect(karte?.querySelector('[data-testid="match-card-status-note"]')?.textContent).toBe('ausgefallen');
+      expect(container.querySelector(`[data-testid="match-goals-${m5.id}-home"]`)?.textContent).toBe('–');
     });
 
     it('Bestand: Status-Filter „Live“ (?s=live) zeigt nur die Paarung von Spiel 7', async () => {

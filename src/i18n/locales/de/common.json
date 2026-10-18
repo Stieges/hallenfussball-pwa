@@ -1,4 +1,7 @@
 {
+  "toast": {
+    "dismissAriaLabel": "Hinweis schließen"
+  },
   "loading": {
     "generic": "Lade...",
     "tournaments": "Lade Turniere..."

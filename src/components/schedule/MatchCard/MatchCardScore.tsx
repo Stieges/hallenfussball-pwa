@@ -12,6 +12,7 @@
 import { type CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
+import type { ViewMatchStatus } from '../../../core/view';
 import { formatTableResult, type ResultFigures } from '../matchResult';
 
 export type MatchCardStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
@@ -29,6 +30,8 @@ export interface MatchCardScoreProps {
   disabled?: boolean;
   /** Match ID for testing */
   matchId?: string;
+  /** Fachlicher Status der Ansicht: „ausgefallen“ statt „VS“, „gewertet“ neben dem Ergebnis (@ZM-104) */
+  viewStatus?: ViewMatchStatus;
 }
 
 export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
@@ -38,6 +41,7 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
   onClick,
   disabled = false,
   matchId,
+  viewStatus,
 }) => {
   const { t } = useTranslation('tournament');
   const [isHovered, setIsHovered] = useState(false);
@@ -84,9 +88,14 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       aria-label={label}
       data-testid={matchId ? `match-circle-${matchId}` : 'match-circle'}
-      data-match-status={isLive ? 'running' : showsResult ? 'finished' : 'scheduled'}
+      data-match-status={isLive ? 'running' : showsResult ? 'finished' : status === 'skipped' ? 'skipped' : 'scheduled'}
     >
-      {showsResult ? <span>{formatTableResult(result, t)}</span> : <span>VS</span>}
+      {showsResult ? <span>{formatTableResult(result, t)}</span> : <span>{viewStatus === 'cancelled' ? t('view.status.cancelled') : 'VS'}</span>}
+      {viewStatus === 'awarded' && (
+        <span style={{ fontSize: cssVars.fontSizes.xs, fontWeight: cssVars.fontWeights.semibold }} data-testid="match-awarded-mark">
+          {t('view.status.awarded')}
+        </span>
+      )}
       {isLive && elapsedFormatted && (
         <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.primary, fontWeight: cssVars.fontWeights.semibold }}>
           {elapsedFormatted}

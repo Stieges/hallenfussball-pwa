@@ -32,7 +32,69 @@
     "seitenGetauscht": "Sides swapped",
     "zeitGesetzt": "Time set to {{zeit}}",
     "foulGrenze": "{{teamName}}: foul {{count}} this half",
-    "schliessen": "Dismiss notice"
+    "schliessen": "Dismiss notice",
+    "zurueckgesetzt": "Match {{nummer}} was reset by the organisers"
+  },
+  "tafel": {
+    "zustand": {
+      "vorAnpfiff": "Before kick-off",
+      "live": "Live",
+      "halbzeit": "Half-time",
+      "verlaengerungFolgt": "Extra time next",
+      "entscheidung": "Decision",
+      "strafstoss": "$t(sport:events.penaltyShootout)",
+      "abgepfiffen": "Full time",
+      "wartet": "Waiting for teams",
+      "keinSpiel": "No match"
+    },
+    "uhr": {
+      "restzeit": "Time left",
+      "steht": "Clock stopped",
+      "pause": "Break",
+      "pauseVorbei": "Break over",
+      "endstand": "Final score",
+      "schuesse": "Shots",
+      "anstoss": "Kick-off",
+      "spielzeit": "Match time",
+      "strafstoss": "$t(sport:events.penaltyShootout)"
+    },
+    "unterzeile": {
+      "spielzeit": "Played {{zeit}}",
+      "bisWiederanpfiff": "until restart",
+      "bisVerlaengerung": "until extra time",
+      "wiederanpfiff": "Restart",
+      "anpfiffVerlaengerung": "Extra time kick-off",
+      "amSchuss": "next to shoot: {{team}}"
+    },
+    "uhrHaelt": "Clock stops at every stoppage",
+    "entscheidungOffen": "Draw – the decision follows",
+    "abschnitt": {
+      "halbzeit": "Half {{nummer}}",
+      "vonN": "Period {{nummer}} of {{gesamt}}",
+      "verlaengerung": "Extra time",
+      "goldenGoal": "Golden goal"
+    },
+    "keinWeiteresSpiel": "No more matches",
+    "uebernahmePruefen": "Match time comes from {{name}}'s device – please check",
+    "vor": {
+      "spielFeld": "Match {{nummer}} · {{feld}}",
+      "mindestpause": "{{teamName}} would have only {{minuten}} instead of {{mindestMinuten}} minutes break",
+      "ueberfaellig": "{{minuten}} minutes overdue",
+      "gesperrt": "{{team}}: no. {{nummer}} is suspended for this tournament",
+      "reihenfolgeNurLeitung": "Only the organisers can change the order",
+      "keinSpielMehr": "No more matches on {{feld}}",
+      "wartetOffline": "Your device has no network – your data may be out of date. The line-up may already be set on the server.",
+      "wartetAuf": "Waiting for: {{grund}}"
+    },
+    "wachhaltenSymbol": "Screen may lock – tap to dismiss",
+    "tonAus": "Sound off",
+    "tonAusAntippen": "Full-time sound is off – tap to turn on",
+    "eintraegeWarten_one": "1 entry waiting",
+    "eintraegeWarten_other": "{{count}} entries waiting",
+    "helferAnfragen_one": "1 helper request",
+    "helferAnfragen_other": "{{count}} helper requests",
+    "ariaStand": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}",
+    "ariaStandStrafstoss": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}, $t(sport:events.penaltyShootout) {{linksStrafstoss}}:{{rechtsStrafstoss}}"
   },
   "ariaLive": {
     "running": "Match running",

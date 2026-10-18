@@ -14,8 +14,8 @@ const LIVE_F1 = folie('live-f1', 'live', { fieldId: 'field-1', pauseRotationDuri
 const LIVE_F2 = folie('live-f2', 'live', { fieldId: 'field-2', pauseRotationDuringMatch: true });
 const TABELLE = folie('tabelle', 'standings', { groupId: 'A' });
 const BEIDE: RuleMatch[] = [
-  { id: 'm1', field: 1, matchStatus: 'running' },
-  { id: 'm2', field: 2, matchStatus: 'running' },
+  { id: 'm1', field: 1, isLive: true },
+  { id: 'm2', field: 2, isLive: true },
 ];
 
 const programm = (slides: MonitorSlide[], matches: RuleMatch[]): SlideProgram => ({ slides, defaultDurationSec: 15, matches });
@@ -62,20 +62,20 @@ describe('Live-Folie ohne Feld gilt als Feld 1 und hält an (B-44b-F, @ZM-074)',
   const OHNE = folie('live-ohne', 'live', { ...DEFAULT_SLIDE_CONFIG });
 
   it('einzige Live-Folie ohne fieldId, Spiel läuft auf Feld 1: Folie hält über 120 s, kein Takt', () => {
-    const p = programm([OHNE, TABELLE], [{ id: 'm1', field: 1, matchStatus: 'running' }]);
+    const p = programm([OHNE, TABELLE], [{ id: 'm1', field: 1, isLive: true }]);
     let s = nextSlide(p, start(), 0);
     for (let t = 1_000; t <= 120_000; t += 1_000) { s = nextSlide(p, s, t); expect(s).toMatchObject({ index: 0, pinnedMatchId: 'm1' }); }
   });
 
   it('Gegenbeispiel: läuft nur auf Feld 2 ein Spiel, wird die Folie übersprungen und die Rotation läuft weiter', () => {
-    const p = programm([OHNE, TABELLE], [{ id: 'm2', field: 2, matchStatus: 'running' }]);
+    const p = programm([OHNE, TABELLE], [{ id: 'm2', field: 2, isLive: true }]);
     const s = nextSlide(p, start(), 0);
     expect(s).toMatchObject({ index: 1 });
     expect(s.pinnedMatchId ?? null).toBeNull();
   });
 
   it('Gegenbeispiel: läuft kein Spiel, rotiert die Tabelle weiter (kein Pin)', () => {
-    const p = programm([OHNE, TABELLE], [{ id: 'm9', field: 1, matchStatus: 'scheduled' }]);
+    const p = programm([OHNE, TABELLE], [{ id: 'm9', field: 1, isLive: false }]);
     expect(nextSlide(p, start(), 0)).toMatchObject({ index: 1 });
   });
 });

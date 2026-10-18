@@ -41,6 +41,7 @@ async function seed(seedIndexedDB: TestOptions['seedIndexedDB'], slideType: Slid
   const tournament = {
     id: TOURNAMENT_ID,
     title: 'MS1 Hallencup',
+    date: '2026-03-14',
     name: 'MS1 Hallencup',
     status: 'published',
     sport: 'hallenfussball',

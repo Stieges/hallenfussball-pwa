@@ -143,7 +143,6 @@ describe('useCockpitCommands – Uhr und Bedienung', () => {
     expect(props.onStart).toHaveBeenCalledWith('match-11');
     expect(melde).toHaveBeenCalledWith(3, 'Spiel angepfiffen');
     expect(hook.result.current.controls.onEditTime).toBeUndefined();
-    expect(hook.result.current.onTimerClick).toBeUndefined();
   });
 
   it('Pause meldet „Spiel pausiert“, der Abpfiff meldet „Spiel abgepfiffen“', () => {

@@ -86,7 +86,7 @@ describe('LiveCockpit — readOnly sperrt die Bedienung (Task R2)', () => {
     expect(screen.getByTestId('match-finish-button')).toBeDisabled();
   });
 
-  it('readOnly=true: Timer-Klick öffnet den Zeit-Dialog NICHT', async () => {
+  it('readOnly=true: „Zeit bearbeiten“ öffnet den Zeit-Dialog NICHT (die Uhr der Tafel ist reine Anzeige)', async () => {
     // Fixrunde 1 (Coordinator-Gegenprobe): die ursprüngliche Fassung suchte
     // `screen.queryByText('timeAdjust.title')` — unter dem i18next-Passthrough-Mock
     // (src/test/setup.ts) liefert t() aber `cockpit:timeAdjust.title` (Namespace-Präfix,
@@ -96,14 +96,15 @@ describe('LiveCockpit — readOnly sperrt die Bedienung (Task R2)', () => {
     // (TimeAdjustDialog.tsx:100-102), das nur bei isOpen=true gerendert wird.
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch())} readOnly />);
-    await user.click(screen.getByTestId('match-timer-display'));
+    await user.click(screen.getByTestId('scoreboard-clock'));
+    await user.click(screen.getByTestId('match-edit-time-button'));
     expect(screen.queryByRole('dialog', { name: 'cockpit:timeAdjust.title' })).not.toBeInTheDocument();
   });
 
-  it('readOnly=false: Timer-Klick öffnet den Zeit-Dialog — Verhalten wie vorher', async () => {
+  it('readOnly=false: „Zeit bearbeiten“ öffnet den Zeit-Dialog — Verhalten wie vorher', async () => {
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch())} />);
-    await user.click(screen.getByTestId('match-timer-display'));
+    await user.click(screen.getByTestId('match-edit-time-button'));
     expect(screen.getByRole('dialog', { name: 'cockpit:timeAdjust.title' })).toBeInTheDocument();
   });
 
@@ -490,13 +491,15 @@ describe('LiveCockpit — Fixrunde 2 (L2): ARIA-Attribute', () => {
     expect(screen.getByTestId('cockpit-readonly-banner')).toHaveAttribute('role', 'status');
   });
 
-  it('Timer hat aria-disabled="true" unter Sperre (readOnly), "false" wenn entsperrt', () => {
+  it('Die Uhr der Tafel ist reine Anzeige (kein Knopf, kein aria-disabled); „Zeit bearbeiten“ ist unter Sperre gesperrt, sonst frei', () => {
     const { unmount } = render(<LiveCockpit {...baseProps(makeMatch())} readOnly />);
-    expect(screen.getByTestId('match-timer-display')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByTestId('scoreboard-clock')).not.toHaveAttribute('aria-disabled');
+    expect(screen.getByTestId('scoreboard-clock')).not.toHaveAttribute('role');
+    expect(screen.getByTestId('match-edit-time-button')).toBeDisabled();
     unmount();
 
     render(<LiveCockpit {...baseProps(makeMatch())} />);
-    expect(screen.getByTestId('match-timer-display')).toHaveAttribute('aria-disabled', 'false');
+    expect(screen.getByTestId('match-edit-time-button')).not.toBeDisabled();
   });
 });
 

@@ -27,12 +27,17 @@ vi.mock('../useAuth', () => ({
   useAuth: () => hoisted.authState,
 }));
 
-vi.mock('../../../../hooks/useRepository', () => ({
-  useRepository: () => ({
+// Stabile Repository-Instanz wie der echte Kontext (src/hooks/useRepository.ts liefert die
+// Context-Instanz). Eine neue Instanz pro Render ließ useUserTournaments bei jedem setState neu laden
+// (Probe: 577 Ladevorgänge in einem Test); unter Last blieb isLoading dann länger als waitFors
+// Standard-Timeout von 1 s true.
+vi.mock('../../../../hooks/useRepository', () => {
+  const repo = {
     listForCurrentUser: vi.fn(async () => hoisted.repoList),
     save: vi.fn(async () => undefined),
-  }),
-}));
+  };
+  return { useRepository: () => repo };
+});
 
 import { useUserTournaments } from '../useUserTournaments';
 

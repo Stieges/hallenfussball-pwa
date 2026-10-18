@@ -1,46 +1,46 @@
 /**
- * Monitor-Matchaufbereitung (B-04c, @W2A-009).
+ * Monitor-Matchaufbereitung (B-04c, @W2A-009; A-36c: aus der gemeinsamen Ansicht).
  *
- * `toLiveMatch` ermittelt die Entscheidung bei Unentschieden über dieselbe
- * exportierte Funktion wie die Spielsteuerung/Cockpit
- * (Entscheidungsregel `resolveTiebreakMode`, dieselbe wie im Anpfiff) — eine Quelle,
- * keine zweite, abweichende Ermittlung.
+ * `toLiveMatch` nimmt das Spiel der Ansicht (`MatchView`): Status, Bezeichnung, Anstoß in Turnier-Ortszeit, Seitentexte und
+ * Endstand (inkl. Verlängerung, ohne Strafstoßschießen) kommen von dort – keine eigene Statusregel, kein Rohwert.
+ * Die Entscheidung bei Unentschieden ermittelt weiter dieselbe Funktion wie Spielsteuerung/Cockpit
+ * (Entscheidungsregel `resolveTiebreakMode`, dieselbe wie im Anpfiff) — eine Quelle, keine zweite Ermittlung.
+ * Die Dauer- und Uhrzeilen (Spieldauer, Timer) gehören zum Paket „Monitor-Uhr“ und bleiben unverändert.
  */
 import type { Tournament, Match, Team, TiebreakerMode } from '../../types/tournament';
 import type { LiveMatch } from '../../hooks/useLiveMatches';
+import type { MatchView, ViewMatchStatus } from '../../core/view';
 import { resolveTiebreakMode, knockoutRoundOf } from '../../core/match/tiebreakDecision';
 import sportGlossary from '../../i18n/glossary.json';
-import { sideLabel, sideTeam, type MatchSide } from './matchSides';
-import { scoresPublic } from './publicVisibility';
+import { sideTeam } from './matchSides';
 
 export type MonitorLiveMatch = LiveMatch & {
   /** Entscheidung bei Unentschieden (dieselbe Quelle wie im Cockpit) */
   tiebreakerMode?: TiebreakerMode;
 };
 
-/**
- * Convert Tournament Match + Team[] to LiveMatch format for LiveMatchDisplay.
- */
-export function toLiveMatch(match: Match, teams: Team[], tournament: Tournament): MonitorLiveMatch {
-  // Seiten über den Slot (Merge I1): besetzt → Team (Logo/Farben), offen → Herkunft bzw. „noch offen“ (Kindermodus).
-  const sideCtx = {
-    teams,
-    matches: tournament.matches,
-    groups: tournament.groups,
-    hidePendingOrigin: !scoresPublic(tournament),
-  };
-  const sideOf = (side: MatchSide) =>
-    sideTeam(match, side, teams) ?? { id: `${match.id}:${side}`, name: sideLabel(match, side, sideCtx) };
+type LiveStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
 
-  // `paused` (Halbzeit, C-MON-PAUSE) ist kein MatchStatus-Wert, kommt aber aus dem Speicher.
-  const statusMap: Record<string, 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED'> = {
-    running: 'RUNNING',
-    paused: 'PAUSED',
-    finished: 'FINISHED',
-    scheduled: 'NOT_STARTED',
-    waiting: 'NOT_STARTED',
-    skipped: 'FINISHED',
-  };
+/**
+ * Status der Ansicht → Status der Live-Anzeige. Ein ausgefallenes Spiel ist nie „beendet“ (@ZM-104):
+ * es hat weder Endstand noch Sieger und bleibt „nicht gestartet“.
+ */
+const LIVE_STATUS: Record<ViewMatchStatus, LiveStatus> = {
+  scheduled: 'NOT_STARTED',
+  running: 'RUNNING',
+  paused: 'PAUSED',
+  finished: 'FINISHED',
+  awarded: 'FINISHED',
+  cancelled: 'NOT_STARTED',
+};
+
+/**
+ * Spiel der Ansicht + Spiel des Turniers → LiveMatch-Form für LiveMatchDisplay.
+ */
+export function toLiveMatch(shown: MatchView, match: Match, teams: Team[], tournament: Tournament): MonitorLiveMatch {
+  // Seiten aus der Ansicht (Merge I1): besetzt → Team (Logo/Farben), offen → Herkunft bzw. „noch offen“ (Regeln der Ansicht).
+  const sideOf = (side: MatchView['home'], key: 'A' | 'B') =>
+    sideTeam(side, teams) ?? { id: `${match.id}:${key}`, name: side.label };
 
   const durationMinutes = tournament.groupPhaseGameDuration ?? tournament.gameDuration ?? 8;
 
@@ -51,18 +51,20 @@ export function toLiveMatch(match: Match, teams: Team[], tournament: Tournament)
 
   return {
     id: match.id,
-    number: match.matchNumber ?? match.round,
-    phaseLabel: match.label ?? match.phase ?? sportGlossary.terms.groupStage.de,
+    number: shown.matchNumber ?? match.round,
+    phaseLabel: shown.labelText ?? match.phase ?? sportGlossary.terms.groupStage.de,
     fieldId: `field-${match.field}`,
     field: match.field,
-    scheduledKickoff: match.scheduledTime ? new Date(match.scheduledTime).toISOString() : '',
+    // Anstoß als Wanduhr des Turniers (@ZM-111), nie als UTC/ISO der Gerätezeit
+    scheduledKickoff: shown.kickoff ? `${shown.kickoff.date}T${shown.kickoff.time}` : '',
     durationSeconds: durationMinutes * 60,
     refereeName: refereeTeam?.name,
-    homeTeam: sideOf('A'),
-    awayTeam: sideOf('B'),
-    homeScore: match.scoreA ?? 0,
-    awayScore: match.scoreB ?? 0,
-    status: statusMap[match.matchStatus ?? 'scheduled'] ?? 'NOT_STARTED',
+    homeTeam: sideOf(shown.home, 'A'),
+    awayTeam: sideOf(shown.away, 'B'),
+    // Tore inkl. Verlängerung, ohne Strafstoßschießen (@ET-013); ohne sichtbaren Stand 0:0 (Kindermodus blendet aus)
+    homeScore: shown.score?.a ?? 0,
+    awayScore: shown.score?.b ?? 0,
+    status: LIVE_STATUS[shown.status],
     elapsedSeconds: match.timerElapsedSeconds ?? 0,
     events: [],
     timerStartTime: match.timerStartTime,

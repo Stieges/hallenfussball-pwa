@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { monitorThemes, cssVars } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
+import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
 import type { QrRueckfallFolie } from '../slideProgramme';
 import { resolveTheme } from '../monitorDisplayHelpers';
@@ -17,6 +18,8 @@ import { AllStandingsSlide } from './AllStandingsSlide';
 interface SlideRendererProps {
   slide: MonitorSlide | QrRueckfallFolie;
   tournament: Tournament;
+  /** Die gemeinsame Ansicht des Monitors (A-36c): Status, Seitentexte, Anstoß, Endstand und Sichtbarkeit */
+  view: TournamentView;
   performanceSettings: PerformanceSettings;
   theme: MonitorTheme;
   /** Bildrand in Prozent je Seite (@ME-067); ohne Angabe die Vorbelegung 5 %. */
@@ -30,7 +33,7 @@ interface SlideRendererProps {
 }
 
 /** Wählt die Folien-Komponente nach Typ; unbekannte Typen fallen auf die Zuschauer-QR-Folie. */
-export function SlideRenderer({ slide, tournament, performanceSettings, theme, overscanPercent, hinweisHoehe, pinnedMatchId, page = 0 }: SlideRendererProps) {
+export function SlideRenderer({ slide, tournament, view, performanceSettings, theme, overscanPercent, hinweisHoehe, pinnedMatchId, page = 0 }: SlideRendererProps) {
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
@@ -51,22 +54,22 @@ export function SlideRenderer({ slide, tournament, performanceSettings, theme, o
 
   switch (slide.type) {
     case 'live':
-      return <LiveSlide slide={slide} tournament={tournament} performanceSettings={performanceSettings} theme={theme} style={slideStyle} pinnedMatchId={pinnedMatchId} />;
+      return <LiveSlide slide={slide} tournament={tournament} view={view} performanceSettings={performanceSettings} theme={theme} style={slideStyle} pinnedMatchId={pinnedMatchId} />;
 
     case 'standings':
       return <StandingsSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} />;
 
     case 'schedule-field':
-      return <ScheduleFieldSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} page={page} />;
+      return <ScheduleFieldSlide slide={slide} tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} />;
 
     case 'sponsor':
       return <SponsorSlide slide={slide} tournament={tournament} performanceSettings={performanceSettings} theme={theme} style={slideStyle} />;
 
     case 'next-matches':
-      return <NextMatchesSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} page={page} />;
+      return <NextMatchesSlide slide={slide} tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} />;
 
     case 'all-standings':
-      return <AllStandingsSlide tournament={tournament} theme={theme} style={slideStyle} page={page} />;
+      return <AllStandingsSlide tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} />;
 
     case 'custom-text':
       return <CustomTextSlide slide={slide} style={slideStyle} />;

@@ -78,14 +78,17 @@
 }
 
 .dismissButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-target-minimum);
+  min-height: var(--touch-target-minimum);
   background: transparent;
   border: none;
   color: inherit;
-  font-size: 24px;
-  line-height: 1;
   cursor: pointer;
   opacity: 0.7;
-  padding: 0 4px;
+  padding: 0;
   margin-left: var(--spacing-sm, 8px);
   transition: opacity 0.2s ease;
 }

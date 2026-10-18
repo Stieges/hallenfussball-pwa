@@ -1,6 +1,7 @@
 import { useState, useEffect, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, mediaQueries } from '../../design-tokens'
+import type { ViewMatchStatus } from '../../core/view';
 import { formatTableResult, type ResultFigures } from './matchResult';
 interface MatchScoreCellProps {
   matchId: string;
@@ -11,6 +12,8 @@ interface MatchScoreCellProps {
   inCorrectionMode: boolean;
   /** Tore, Strafstoß und Sieger (`resultFigures`): zeigt „2:2 (4:3 i. E.)“ bzw. „3:2 n. V.“ statt `scoreA : scoreB` (@OB-064) */
   result?: ResultFigures | null;
+  /** Fachlicher Status der Ansicht: „ausgefallen“ statt Platzhalter, „gewertet“ neben dem Ergebnis (@ZM-104) */
+  viewStatus?: ViewMatchStatus;
   onScoreChange: (scoreA: number, scoreB: number) => void;
   /** Ohne Handler (bis B-24) gibt es keinen Korrigieren-Knopf. */
   onStartCorrection?: () => void;
@@ -25,18 +28,19 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   isFinished,
   inCorrectionMode,
   result,
+  viewStatus,
   onScoreChange,
   onStartCorrection,
 }) => {
   const { t } = useTranslation('tournament');
 
   // Local state for partial score entry - allows user to fill one field at a time
-  const [localScoreA, setLocalScoreA] = useState<string>(scoreA !== undefined ? String(scoreA) : '');
+  const [localScoreA, setLocalScoreA] = useState<string>(scoreA === undefined ? '' : String(scoreA));
   const [localScoreB, setLocalScoreB] = useState<string>(scoreB !== undefined ? String(scoreB) : '');
 
   // Sync local state when props change (e.g., from parent updates)
   useEffect(() => {
-    setLocalScoreA(scoreA !== undefined ? String(scoreA) : '');
+    setLocalScoreA(scoreA === undefined ? '' : String(scoreA));
     setLocalScoreB(scoreB !== undefined ? String(scoreB) : '');
   }, [matchId, scoreA, scoreB]);
 
@@ -56,9 +60,11 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
       onScoreChange(parseInt(localScoreA), parseInt(value));
     }
   };
+  const placeholder = viewStatus === 'cancelled' ? t('view.status.cancelled') : '___ : ___';
+  const awardedMark = viewStatus === 'awarded' ? ` ${t('view.status.awarded')}` : '';
   const shownResult = result === undefined || result === null
-    ? (scoreA !== undefined && scoreB !== undefined ? `${scoreA} : ${scoreB}` : '___ : ___')
-    : formatTableResult(result, t);
+    ? (typeof scoreA === 'number' && typeof scoreB === 'number' && viewStatus === undefined ? `${scoreA} : ${scoreB}` : placeholder)
+    : `${formatTableResult(result, t)}${awardedMark}`;
 
   // State 1: Finished match - ALWAYS read-only with correction button
   // BUG FIX: Beendete Spiele dürfen nicht direkt bearbeitet werden, auch wenn editable=true
