@@ -18,6 +18,34 @@ describe('useClockControls', () => {
     expect(p.onStart).toHaveBeenCalledWith('match-11');
   });
 
+  it('@SL-009 der Tipp auf Anpfiff gibt den Ton frei, bevor das Spiel angepfiffen wird (Browser-Geste)', () => {
+    const reihenfolge: string[] = [];
+    const p = params({
+      match: { id: 'match-11', status: 'NOT_STARTED' },
+      sound: { enabled: true, play: vi.fn(), aktiviere: () => { reihenfolge.push('aktiviere'); } },
+      onStart: () => { reihenfolge.push('start'); },
+    });
+    const { result } = renderHook(() => useClockControls(p));
+    act(() => result.current.starte());
+    expect(reihenfolge).toEqual(['aktiviere', 'start']);
+  });
+
+  it('Pause und Weiter sind ebenfalls ein Tipp und geben den Ton frei', () => {
+    const aktiviere = vi.fn();
+    const p = params({ sound: { enabled: true, play: vi.fn(), aktiviere } });
+    const { result } = renderHook(() => useClockControls(p));
+    act(() => result.current.pauseOderWeiter());
+    expect(aktiviere).toHaveBeenCalledTimes(1);
+  });
+
+  it('Gegenbeispiel: der automatische Abpfiff gibt keinen Ton frei (keine Geste)', () => {
+    const aktiviere = vi.fn();
+    const p = params({ zeitAbgelaufen: true, sound: { enabled: true, play: vi.fn(), aktiviere } });
+    renderHook(() => useClockControls(p));
+    expect(p.onFinish).toHaveBeenCalled();
+    expect(aktiviere).not.toHaveBeenCalled();
+  });
+
   it('pauseOderWeiter pausiert ein laufendes und setzt ein pausiertes Spiel fort', () => {
     const p = params();
     const { result, rerender } = renderHook((q: ClockControlsParams) => useClockControls(q), { initialProps: p });

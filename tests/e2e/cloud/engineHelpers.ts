@@ -236,7 +236,7 @@ export async function expectSeededEngineMatch(target: SeededEngineTarget): Promi
  * (Status-Badge, Pause-Button sichtbar, KEIN Start-Button) -- und klickt nie.
  */
 export async function expectEngineMatchRunningUi(page: Page): Promise<void> {
-  await expect(page.locator('[data-testid="match-status-badge"]')).toHaveText('LÄUFT', { timeout: 15000 });
+  await expect(page.locator('[data-testid="scoreboard-state"]')).toHaveText('Live', { timeout: 15000 });
   await expect(page.locator('[data-testid="match-pause-button"]')).toBeVisible({ timeout: 15000 });
   await expect(page.locator('[data-testid="match-start-button"]')).toHaveCount(0);
 }

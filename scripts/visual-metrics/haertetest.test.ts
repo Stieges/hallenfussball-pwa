@@ -230,7 +230,7 @@ describe('Saat fuer die App-Messung (SM, @TA-011)', () => {
     expect(gruende(r.b)).toMatch(/Erwartete Ansicht fehlt/)
   })
   it('Turnier-Cockpit mit laufendem Spiel (Engine-Kopie der Saat) und Monitor-Folie sind messbar', async () => {
-    const cockpit = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015', '--erwarte', '[data-testid="match-timer-display"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    const cockpit = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015', '--erwarte', '[data-testid="scoreboard"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(cockpit.b.status, cockpit.out).not.toBe('BLOCKED')
     const monitor = await messe('--app', '/#/display/hallencup-messlauf/mon-live', '--erwarte', '[data-testid="monitor-slide"]', '--saat', 'hallencup-messlauf', '--profil', 'monitor-1080-rand0', '--varianten', 'normal', ...SCHNELL)
     expect(monitor.b.status, monitor.out).not.toBe('BLOCKED')
@@ -300,7 +300,7 @@ describe('@TA-012 Verdeckte Bedienelemente', () => {
     expect(plan.b.status, plan.out).not.toBe('BLOCKED')
     expect(schwebend(plan.b)).toHaveLength(0)
     expect(verdeckt(plan.b).filter((x) => x.typ === 'HART')).toHaveLength(0)
-    const c = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015', '--erwarte', '[data-testid="match-timer-display"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    const c = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015', '--erwarte', '[data-testid="scoreboard"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(c.b.status, c.out).not.toBe('BLOCKED')
     // @TA-012 verlangt nicht, dass die App einen bestimmten Fehler hat: kein HART; jede Meldung traegt eine Befund-Kennung
     // der Ausnahmeliste oder ist eine Warnung verdeckt.schwebend. Der positive Fall (Warnung entsteht) liegt in den Fixtures
@@ -322,17 +322,18 @@ describe('@TA-012 Verdeckte Bedienelemente', () => {
       expect(a.begruendung.length).toBeGreaterThan(10)
     }
   })
-  it('Ausnahmeliste greift: Fuss-Links unter der Tab-Leiste und unter dem Sound-Hinweis sind WARNUNG mit Befund-Kennung, nicht HART', async () => {
+  it('Ausnahmeliste greift: Fuss-Links unter der Tab-Leiste sind WARNUNG mit Befund-Kennung, nicht HART; das Cockpit hat keinen Sound-Hinweis mehr, der etwas verdeckt (C-COCKPIT-SOUNDHINWEIS-VERDECKT behoben, Aufgabe 2.4)', async () => {
     const start = await messe('--app', '/#/archiv', '--erwarte', '[data-testid="footer-impressum-link"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(start.b.status, start.out).not.toBe('BLOCKED')
     const a = verdeckt(start.b)
     expect(a.length).toBeGreaterThan(0)
     expect(a.every((x) => x.typ === 'WARNUNG' && JSON.stringify(x).includes('C-FUSS-LINKS-UNTER-LEISTE'))).toBe(true)
-    const cockpit = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015', '--erwarte', '[data-testid="match-timer-display"]', '--saat', 'hallencup-messlauf', '--profil', 'desktop-1440', '--varianten', 'normal', ...SCHNELL)
+    const cockpit = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015', '--erwarte', '[data-testid="scoreboard"]', '--saat', 'hallencup-messlauf', '--profil', 'desktop-1440', '--varianten', 'normal', ...SCHNELL)
+    expect(cockpit.b.status, cockpit.out).not.toBe('BLOCKED')
     const c = verdeckt(cockpit.b)
-    expect(c.length).toBeGreaterThan(0)
-    expect(c.some((x) => JSON.stringify(x).includes('C-COCKPIT-SOUNDHINWEIS-VERDECKT'))).toBe(true)
+    // Der Hinweis ist ein Abzeichen der Tafel statt eines schwebenden Banners: nichts im Cockpit verdeckt ihn betreffend etwas
     expect(c.filter((x) => x.typ === 'HART')).toHaveLength(0)
+    expect(c.some((x) => JSON.stringify(x).includes('C-COCKPIT-SOUNDHINWEIS-VERDECKT') || JSON.stringify(x).includes('Sound für Spielende'))).toBe(false)
   })
 })
 

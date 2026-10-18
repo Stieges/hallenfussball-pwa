@@ -8,7 +8,7 @@ export interface ClockControlsParams {
   autoFinishEnabled: boolean;
   /** Spielzeit (auch Verlängerung/Golden Goal) ist wirklich abgelaufen. */
   zeitAbgelaufen: boolean;
-  sound: { enabled: boolean; play: () => void };
+  sound: { enabled: boolean; play: () => void; /** Ton freigeben, falls noch nicht geschehen; läuft im Tipp (Browser-Geste), @OB-021. */ aktiviere?: () => void };
   hapticEnabled: boolean;
   onStart: (matchId: string) => void;
   onPause: (matchId: string) => void;
@@ -23,11 +23,16 @@ export interface UseClockControlsReturn { starte: () => void; pauseOderWeiter: (
  */
 export function useClockControls(p: ClockControlsParams): UseClockControlsReturn {
   const { match, kannSteuern, autoFinishEnabled, zeitAbgelaufen, sound, hapticEnabled, onStart, onPause, onResume, onFinish } = p;
-  const starte = useCallback(() => { if (match) { onStart(match.id); } }, [match, onStart]);
+  const starte = useCallback(() => {
+    if (!match) { return; }
+    sound.aktiviere?.();
+    onStart(match.id);
+  }, [match, sound, onStart]);
   const pauseOderWeiter = useCallback(() => {
     if (!match) { return; }
+    sound.aktiviere?.();
     if (match.status === 'RUNNING') { onPause(match.id); } else if (match.status === 'PAUSED') { onResume(match.id); }
-  }, [match, onPause, onResume]);
+  }, [match, sound, onPause, onResume]);
   const pfeifeAb = useCallback(() => {
     if (!match) { return; }
     // Bis B-08c: Ton und Vibration hier. B-08c P1 macht `useWhistle` zur einzigen Quelle und entfernt diese zwei Zeilen.

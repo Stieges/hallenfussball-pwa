@@ -88,7 +88,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
 
     await helperPage.locator('[data-testid="match-finish-button"]').click();
 
-    await expect(ownerPage.locator('[data-testid="match-status-badge"]')).toHaveText('BEENDET', { timeout: owner3sMs });
+    await expect(ownerPage.locator('[data-testid="scoreboard-state"]')).toHaveText('Abgepfiffen', { timeout: owner3sMs });
     await expect(ownerPage.locator('[data-testid="score-home"]')).toHaveText('1');
     await expect(ownerPage.locator('[data-testid="score-away"]')).toHaveText('0');
 
@@ -111,20 +111,16 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     // Nach dem Abpfiff zeigt der Helfer-Kopf kein sync-status mehr (Spiel beendet, nur ein Spiel im
     // Turnier): geprüft wird, dass nichts abgelehnt wurde -- die Annahme der MATCH_END-Zeile steht oben.
     await expect(helperPage.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
-    // Hinweis (Fixrunde 1, 4.1/N3): Diese letzte Prüfung ist LEER, solange das Cockpit nach dem Abpfiff
-    // des letzten Spiels nicht gerendert ist (C-COCKPIT-LAEDT-NACH-ABPFIFF). Die eigentliche Aussage
-    // `data-pending="0"` beim Helfer steht im Test "Cup FINISHAUSGANG" (test.fail, Besitzer B-11).
-    // Wo die Anzeige gerendert ist -- beim Owner, dessen Cockpit BEENDET zeigt -- gilt sie sofort:
+    // Hinweis: Das Cockpit nach dem Abpfiff des letzten Spiels zeigt seit Cockpit 2.5 die Tafel „Kein weiteres Spiel“ (behoben:
+    // C-COCKPIT-LAEDT-NACH-ABPFIFF); die Aussage `data-pending="0"` beim Helfer steht im Test "Cup FINISHAUSGANG".
+    // Beim Owner, dessen Cockpit „Abgepfiffen“ zeigt, gilt sie sofort:
     await expect(ownerPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: owner3sMs });
   });
 
   test('Cup FINISHAUSGANG: nach dem Abpfiff des letzten Spiels zeigt der Helfer-Ausgang data-pending="0" (C-COCKPIT-LAEDT-NACH-ABPFIFF)', async ({ asRole }) => {
-    // Besitzer: B-11 (Cockpit-Umbau). Heute steht nach dem Abpfiff des LETZTEN Spiels dauerhaft
-    // "Spiel wird geladen…" statt des Cockpits (ManagementTab `isInitializingMatch`, Befund N3); der
-    // SyncStatusIndicator hängt nur im Cockpit und ist dann nicht gerendert. Die Aussage bleibt
-    // unverändert (data-pending="0" beim handelnden Gerät); sie scheitert erwartungsgemäß an der
-    // fehlenden Anzeige. Wird sie grün ("Expected to fail, but passed"), ist B-11 fertig: test.fail entfernen.
-    test.fail(true, 'Besitzer: B-11 (C-COCKPIT-LAEDT-NACH-ABPFIFF)');
+    // Behoben mit Cockpit 2.5: Nach dem Abpfiff des LETZTEN Spiels steht die Tafel mit „Kein weiteres Spiel“ (@SL-054) statt „Spiel wird
+    // geladen…“, und der SyncStatusIndicator in der Tafel zeigt den Ausgang des handelnden Geräts. Der Test erwartete bis dahin
+    // einen Fehler (`test.fail`, Besitzer B-11); er läuft jetzt als normaler Test.
     const { ids, target } = cup('FINISHAUSGANG');
     await expectSeededEngineMatch(target);
     const helperPage = await asRole('helper');
@@ -210,7 +206,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     const ownerPage = await asRole('owner');
     await openCockpit(ownerPage, ids.tournamentId, ids.matchId);
     await expect(ownerPage.getByText('Engine-Cup NSTART', { exact: true }).first()).toBeVisible({ timeout: 15000 });
-    await expect(ownerPage.locator('[data-testid="match-status-badge"]')).toBeVisible({ timeout: 15000 });
+    await expect(ownerPage.locator('[data-testid="scoreboard-state"]')).toBeVisible({ timeout: 15000 });
     // Sichtbar, aber NICHT geklickt: das Spiel bleibt ungestartet.
     await expect(ownerPage.locator('[data-testid="match-start-button"]')).toBeVisible();
   });

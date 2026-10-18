@@ -22,7 +22,7 @@ const dir = resolve(__dirname, '..');
 const lines = (p: string) => readFileSync(resolve(dir, p), 'utf8').split('\n').length;
 
 describe('Cockpit-Hülle – Struktur (Scheibe 1, ohne Sichtänderung)', () => {
-  it.each([['areas/LegacyMatchHeader.tsx'], ['areas/LegacyPlayArea.tsx'], ['areas/CockpitOverlays.tsx']])(
+  it.each([['areas/ScoreboardArea.tsx'], ['areas/LegacyPlayArea.tsx'], ['areas/CockpitOverlays.tsx']])(
     '%s existiert und hat weniger als 300 Zeilen',
     (file) => {
       expect(existsSync(resolve(dir, file))).toBe(true);
@@ -35,12 +35,12 @@ describe('Cockpit-Hülle – Struktur (Scheibe 1, ohne Sichtänderung)', () => {
     expect(src).not.toMatch(/:\s*CSSProperties\s*=\s*\{/);
   });
 
-  it('dieselben Bedienelemente wie vorher sind da (Tor je Team, Status, Uhr)', () => {
+  it('dieselben Bedienelemente wie vorher sind da (Tor je Team, Zustand, Uhr)', () => {
     render(<LiveCockpit {...makeProps(makeLiveMatch())} />);
     expect(screen.getByTestId('goal-button-home')).toBeInTheDocument();
     expect(screen.getByTestId('goal-button-away')).toBeInTheDocument();
-    expect(screen.getByTestId('match-status-badge')).toHaveTextContent(/läuft/i);
-    expect(screen.getByTestId('match-timer-display')).toBeInTheDocument();
+    expect(screen.getByTestId('scoreboard-state')).toHaveTextContent(/live/i);
+    expect(screen.getByTestId('scoreboard-clock')).toBeInTheDocument();
   });
 
   it('LiveCockpit.tsx hat höchstens 300 Zeilen (Spec § 1 Nr. 4)', () => {

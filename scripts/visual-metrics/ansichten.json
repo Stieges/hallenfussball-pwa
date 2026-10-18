@@ -246,7 +246,7 @@
         "pflicht"
       ],
       "app": "/#/tournament/hallencup-messlauf/live",
-      "erwarte": "[data-testid=\"match-timer-display\"]",
+      "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app"
     },
     {
@@ -286,7 +286,7 @@
         "pflicht"
       ],
       "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
-      "erwarte": "[data-testid=\"match-timer-display\"]",
+      "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app"
     },
     {
@@ -296,7 +296,7 @@
         "pflicht"
       ],
       "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
-      "erwarte": "[data-testid=\"match-timer-display\"]",
+      "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app"
     },
     {
@@ -306,7 +306,7 @@
         "pflicht"
       ],
       "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000013",
-      "erwarte": "[data-testid=\"match-timer-display\"]",
+      "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app"
     },
     {
@@ -316,7 +316,7 @@
         "pflicht"
       ],
       "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000014",
-      "erwarte": "[data-testid=\"match-timer-display\"]",
+      "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app"
     },
     {
@@ -326,7 +326,7 @@
         "pflicht"
       ],
       "app": "/#/tournament/hallencup-phase-halbzeit/live?matchId=00000006-0000-4000-8000-000000000003",
-      "erwarte": "[data-testid=\"match-timer-display\"]",
+      "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app"
     },
     {
@@ -336,7 +336,7 @@
         "pflicht"
       ],
       "app": "/#/tournament/hallencup-phase-verlaengerung/live?matchId=00000007-0000-4000-8000-000000000003",
-      "erwarte": "[data-testid=\"match-timer-display\"]",
+      "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app"
     },
     {
@@ -346,8 +346,49 @@
         "pflicht"
       ],
       "app": "/#/tournament/hallencup-phase-strafstoss/live?matchId=00000008-0000-4000-8000-000000000003",
-      "erwarte": "[data-testid=\"match-timer-display\"]",
+      "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app"
+    },
+    {
+      "id": "cockpit-kein-spiel",
+      "titel": "Cockpit: kein Spiel mehr (Feld 2, alle Spiele gespielt)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"field-button-2\"]"
+      ]
+    },
+    {
+      "id": "cockpit-meldung-foul",
+      "titel": "Cockpit: Meldezeile mit langem Teamnamen (Foul erfasst, Finale)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"foul-button-home\"]",
+        "[data-testid=\"scoreboard\"]"
+      ]
+    },
+    {
+      "id": "cockpit-meldung-foul-kurz",
+      "titel": "Cockpit: Meldezeile mit kurzem Teamnamen (Foul erfasst, Verlängerung)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-phase-verlaengerung/live?matchId=00000007-0000-4000-8000-000000000003",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"foul-button-home\"]",
+        "[data-testid=\"scoreboard\"]"
+      ]
     },
     {
       "id": "dialog-karte",
@@ -356,7 +397,7 @@
         "pflicht"
       ],
       "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
-      "erwarte": "[data-testid=\"match-timer-display\"]",
+      "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app",
       "klick": [
         "[data-testid=\"yellow-card-button-home\"]"

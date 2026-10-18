@@ -6,7 +6,7 @@
  * und die Entscheidung nach Gleichstand (`useTiebreakCommands`). Hier – nicht in `LiveCockpit.tsx` –
  * kommt jede weitere Befehls- und Effektlogik der Hülle hin, damit sie unter 300 Zeilen bleibt.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { useMatchSound } from '../../../hooks';
 import { useEngineEventEditing } from '../../../hooks/useEngineEventEditing';
@@ -47,8 +47,6 @@ export interface CockpitCommands {
   overlayHandlers: CockpitOverlayHandlers;
   teamHandlers: Record<Side, TeamSideHandlers>;
   controls: LegacyPlayAreaProps['controls'];
-  /** Klick auf die Spieluhr; `undefined`, wenn die Zeit nicht angepasst werden darf. */
-  onTimerClick?: () => void;
   onSidebarEventEdit?: LegacyPlayAreaProps['sidebar']['onEventEdit'];
 }
 
@@ -60,6 +58,16 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   const showSuccess = useCallback((message: string) => { melde(3, message); }, [melde]);
   const showInfo = showSuccess;
   const showError = useCallback((message: string) => { melde(2, message); }, [melde]);
+
+  // @SL-068: ein Zurücksetzen durch die Turnierleitung meldet sich, WÄHREND das Cockpit offen ist. Beim Öffnen merkt sich der
+  // Ref die vorhandene Kennung und meldet nichts (Gegenbeispiel: schon bekannte Zurücksetzung, auch nicht nach Neuzeichnen).
+  const zuruecksetzung = props.letzteZuruecksetzung ?? null;
+  const bekannteZuruecksetzung = useRef<string | null>(zuruecksetzung?.id ?? null);
+  useEffect(() => {
+    if (zuruecksetzung === null || zuruecksetzung.id === bekannteZuruecksetzung.current) { return; }
+    bekannteZuruecksetzung.current = zuruecksetzung.id;
+    melde(3, t('meldung.zurueckgesetzt', { nummer: zuruecksetzung.spielNummer }));
+  }, [zuruecksetzung, melde, t]);
 
   const [showTimeAdjust, setShowTimeAdjust] = useState(false);
   const [showEventLog, setShowEventLog] = useState(false);
@@ -87,7 +95,12 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   // Uhr: Meldungen und das Leeren der Zeitstrafen (BUG-008) hängen am Abpfiff, auch am automatischen.
   const clock = useClockControls({
     match, kannSteuern: !readOnly, autoFinishEnabled: settings.autoFinishEnabled, zeitAbgelaufen: isOvertime,
-    sound: { enabled: settings.soundEnabled, play: () => { void sound.play(); } }, hapticEnabled: settings.hapticEnabled,
+    sound: {
+      enabled: settings.soundEnabled, play: () => { void sound.play(); },
+      // Der Tipp auf Anpfiff/Pause/Weiter gibt den Ton frei (Browser-Geste); ein schwebender Hinweis entfällt.
+      aktiviere: () => { if (settings.soundEnabled && !sound.isActivated) { void sound.activate(); } },
+    },
+    hapticEnabled: settings.hapticEnabled,
     onStart: (id) => { onStart(id); showSuccess(t('meldung.angepfiffen')); },
     onPause: (id) => { onPause(id); showInfo(t('meldung.pausiert')); },
     onResume: (id) => { onResume(id); showSuccess(t('meldung.fortgesetzt')); },
@@ -240,7 +253,6 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
       undoLabel: editing.undoLabel,
       undoHint: editing.undoHint,
     },
-    onTimerClick: openTimeAdjust,
     // Task R2 Fixrunde 2 (M2/Rule 1): Bearbeiten nur bei echter readOnly-Sperre ausgeblendet.
     onSidebarEventEdit: readOnly ? undefined : handleEventEdit,
   };

@@ -34,7 +34,8 @@ vi.mock('../../../lib/sentry', () => ({
 }));
 
 vi.mock('../../../components/live-cockpit', () => ({
-  LiveCockpit: () => <div data-testid="cockpit-stub" />,
+  // ohne Spiel zeigt die Tafel den Grund (@SL-054): der Stub legt die Art offen
+  LiveCockpit: (props: { leer?: { art: string } | null }) => <div data-testid="cockpit-stub" data-leer={props.leer?.art ?? ''} />,
 }));
 
 vi.mock('../../../hooks/useMatchSound', () => ({
@@ -138,13 +139,14 @@ describe('ManagementTab — P7: ensureEngineMatchReady-Fehler', () => {
     // s. `src/test/setup.ts`) -- der Schluessel selbst ist hier das beobachtbare Signal.
     await waitFor(() => expect(mockShowError).toHaveBeenCalled());
     expect(screen.queryByText('tournament:management.noMatchesOnField')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('cockpit-stub')).not.toBeInTheDocument(); // keine Tafel „kein Spiel mehr“, solange ein Spiel nur noch nicht bereit ist
     expect(screen.getByText('tournament:management.enginePreparing')).toBeInTheDocument();
   });
 
   // Minor 2 (Fixrunde 4): `engineReadyError` wurde bisher NUR im Init-Zweig zurueckgesetzt -- ein
   // Wechsel auf ein LEERES Feld (kein `currentMatchData`, der Effekt nimmt den fruehen
   // `!currentMatchData`-Ausstieg VOR dem Reset) zeigte "Spiel wird vorbereitet" weiter an, obwohl
-  // gar kein Spiel mehr existiert (sollte "Keine Spiele auf diesem Feld" zeigen).
+  // gar kein Spiel mehr existiert (die Tafel sagt „kein Spiel mehr“, @SL-054).
   it('Minor 2: engineReadyError wird zurueckgesetzt, sobald das Feld leer ist (kein currentMatchData)', async () => {
     const { rerender } = render(
       <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
@@ -161,7 +163,7 @@ describe('ManagementTab — P7: ensureEngineMatchReady-Fehler', () => {
     });
 
     expect(screen.queryByText('tournament:management.enginePreparing')).not.toBeInTheDocument();
-    expect(screen.getByText('tournament:management.noMatchesOnField')).toBeInTheDocument();
+    expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-leer', 'keinSpiel');
   });
 
   // Minor 4 (Fixrunde 4): "Spiel wird vorbereitet" bekommt einen "Erneut versuchen"-Knopf --
