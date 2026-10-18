@@ -50,7 +50,7 @@ export function buildEvents(
     }
     const { at, clockMs, section } = stamp;
     const event: EngineEvent = {
-      id: crypto.randomUUID(),
+      id: (spec.clock?.kind === 'timing' ? spec.clock.id : undefined) ?? crypto.randomUUID(),
       type: spec.type,
       actor,
       at,

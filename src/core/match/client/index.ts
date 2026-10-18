@@ -65,6 +65,7 @@ export {
   type TiebreakChoice,
 } from './MatchCommands';
 export { NotOnEngineYetError } from './errors';
+export { autoEndEventId, type AutoEndSeed } from './autoEndId';
 export {
   applyEngineOverlay,
   engineOverlayFields,
