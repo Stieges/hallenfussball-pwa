@@ -72,7 +72,11 @@ test.describe('@FU-080 Protokoll eines im Spielplan eingetragenen Spiels (Gast, 
     await seedIndexedDB({ tournaments: [papierTurnier()] });
   });
 
-  test('@FU-080 L4: Gast trägt 3:1 ein → Protokoll zeigt „Ergebnis eingetragen“ ohne Namen', async ({ page }) => {
+  test('@FU-080 L4: Gast trägt 3:1 ein → Protokoll zeigt „Ergebnis eingetragen“ ohne Namen', async ({ page }, testInfo) => {
+    // Befund C-COCKPIT-TABLET-OHNE-PROTOKOLL: Bei Tablet-Breite (768 px bis Desktop) zeigt das Cockpit weder die
+    // Seitenleiste (nur Desktop) noch den Knopf „Ereignisse“ (nur Handy) -- das Protokoll ist dort nicht erreichbar.
+    // Die Anforderung (@FU-080, Spiel leiten: „auf dem Tablet ist auch die Liste der Einträge zu sehen“) gilt; Test bleibt.
+    test.fail(testInfo.project.name === 'tablet-portrait', 'Befund C-COCKPIT-TABLET-OHNE-PROTOKOLL');
     await trageDreiZuEinsEin(page);
 
     // Einstieg: Live-Bereich, Spiel-Auswahl (ManagementTab) -- dasselbe wie in der Cloud-E2E.
