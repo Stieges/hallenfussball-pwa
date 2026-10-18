@@ -42,6 +42,11 @@ export interface UseMyTournamentRoleReturn {
   /** Effektive Rolle inkl. 'owner' -- null nur für einen echten Nicht-Mitglied im Cloud-Modus. */
   role: TournamentRole | null;
   isLoading: boolean;
+  /**
+   * A-11 (useCan, L7): nur gesetzt (true), wenn die Rolle NICHT bestimmt werden konnte -- die Eigentümer-Prüfung
+   * scheiterte (z. B. kein Netz). `role: null` heißt dann „unbekannt“, nicht „kein Mitglied“.
+   */
+  isUnknown?: true;
 }
 
 /**
@@ -55,7 +60,7 @@ export function useEffectiveTournamentRole(
   membersLoading: boolean
 ): UseMyTournamentRoleReturn {
   const { isAuthenticated } = useAuth();
-  const [ownerCheck, setOwnerCheck] = useState<{ tournamentId: string; isOwner: boolean } | null>(null);
+  const [ownerCheck, setOwnerCheck] = useState<{ tournamentId: string; isOwner: boolean; failed?: true } | null>(null);
   const [isCheckingOwnership, setIsCheckingOwnership] = useState(false);
 
   const needsOwnerCheck =
@@ -82,10 +87,15 @@ export function useEffectiveTournamentRole(
           if (import.meta.env.DEV) {
             console.error('useMyTournamentRole: Eigentümer-Prüfung fehlgeschlagen', error);
           }
-          setOwnerCheck({ tournamentId, isOwner: false });
+          setOwnerCheck({ tournamentId, isOwner: false, failed: true });
           return;
         }
         setOwnerCheck({ tournamentId, isOwner: data ?? false });
+      } catch {
+        // A-11: ein geworfener Netzfehler zählt wie ein gemeldeter -- Rolle unbekannt (useCan: Gedächtnis/L7).
+        if (!cancelled) {
+          setOwnerCheck({ tournamentId, isOwner: false, failed: true });
+        }
       } finally {
         if (!cancelled) {
           setIsCheckingOwnership(false);
@@ -110,9 +120,12 @@ export function useEffectiveTournamentRole(
     return { role: myMembership.role, isLoading: false };
   }
   if (ownerCheck?.tournamentId === tournamentId) {
-    return { role: ownerCheck.isOwner ? 'owner' : null, isLoading: false };
+    return ownerCheck.failed
+      ? { role: null, isLoading: false, isUnknown: true }
+      : { role: ownerCheck.isOwner ? 'owner' : null, isLoading: false };
   }
-  return { role: null, isLoading: isCheckingOwnership };
+  // A-11: solange die Eigentümer-Prüfung aussteht (auch im ersten Render vor dem Effekt), gilt die Rolle als ladend.
+  return { role: null, isLoading: isCheckingOwnership || needsOwnerCheck };
 }
 
 /**
