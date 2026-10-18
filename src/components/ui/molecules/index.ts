@@ -15,3 +15,5 @@ export { MatchClock } from './MatchClock';
 export type { MatchClockProps } from './MatchClock';
 export { ThumbBar } from './ThumbBar';
 export type { ThumbBarProps, ThumbBarSlot, ThumbBarRolle } from './ThumbBar';
+export { NumberPicker, NUMBER_PICKER_SPERRE_MS, NUMBER_PICKER_ZEITABLAUF_MS } from './NumberPicker';
+export type { NumberPickerProps, NumberPickerTexte, NumberPickerSchliessGrund } from './NumberPicker';
