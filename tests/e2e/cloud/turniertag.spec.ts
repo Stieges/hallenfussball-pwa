@@ -1,6 +1,6 @@
 /**
  * tests/e2e/cloud/turniertag.spec.ts — der Durchstich (A-23, Plan § 8): EIN Ablauf über den
- * Turniertag, Schritte D1-D15 als Module unter `turniertag/steps/` (eine Datei je Besitzer-
+ * Turniertag, Schritte D0a-D18 als Module unter `turniertag/steps/` (eine Datei je Besitzer-
  * Aufgabe, keine Hotspot-Datei). Läuft NUR gegen den lokalen Stack (`scripts/require-local-stack.sh`,
  * Aufruf `npm run test:e2e:cloud -- tests/e2e/cloud/turniertag.spec.ts`) und nur auf `cloud-desktop`.
  *
@@ -11,19 +11,25 @@
  * Turniertag-Cup; ohne neuen Seed (`npm run test:env:seed`) ist der Cup verbraucht.
  */
 import { test } from './fixtures';
+import { steps as d00 } from './turniertag/steps/d00-vorbereitung';
 import { steps as d01, stepsNachGruppenabschluss as d01Monitor } from './turniertag/steps/d01-anlegen';
 import { steps as d02 } from './turniertag/steps/d02-cloud-stand';
 import { steps as direktaufruf } from './turniertag/steps/direktaufruf';
 import { steps as d03 } from './turniertag/steps/d03-helfer-qr';
+import { steps as d03b } from './turniertag/steps/d03b-helfer-feld';
 import { steps as d04 } from './turniertag/steps/d04-anpfiff-tor-karte';
+import { steps as d04b } from './turniertag/steps/d04b-uebernahme';
 import { steps as d05 } from './turniertag/steps/d05-offline-tor';
+import { steps as d05b, stepsNachHalbzeit as d06b } from './turniertag/steps/d05b-netz-und-eingabe';
 import { steps as d06 } from './turniertag/steps/d06-halbzeit-zeitstrafe';
 import { steps as d07 } from './turniertag/steps/d07-zuschauer-live';
 import { steps as d07b } from './turniertag/steps/d07b-tv-gekoppelt';
 import { steps as d08 } from './turniertag/steps/d08-gruppenabschluss-hf';
+import { steps as d08b } from './turniertag/steps/d08b-ablauf-regeln';
 import { steps as d09 } from './turniertag/steps/d09-hf-elfmeter';
 import { steps as d10 } from './turniertag/steps/d10-finale-nichtantritt';
 import { steps as d11 } from './turniertag/steps/d11-abschluss-sperre';
+import { steps as d11b, stepsNachZeitplan as d13Folgen, stepsEnde as d18 } from './turniertag/steps/d11b-abschluss-folgen';
 import { steps as d12 } from './turniertag/steps/d12-korrektur';
 import { steps as d13 } from './turniertag/steps/d13-zeitplan-verschieben';
 import { steps as d14 } from './turniertag/steps/d14-pdf-sicherung';
@@ -31,12 +37,15 @@ import { steps as d15 } from './turniertag/steps/d15-zweites-turnier';
 import type { TurniertagStep } from './turniertag/steps/types';
 
 export const TURNIERTAG_STEPS: readonly TurniertagStep[] = [
+  // Reihenfolge entlang des Turnierablaufs (Plan "Turnier durchspielbar" (b)):
   // d01Monitor (@TM-015 Hallen-Monitor) steht vor d08: die Vorbereitung beendet nur die
   // Gruppenspiele auf Feld 1, auf Feld 2 laufen Gruppe A und B noch (Szenario @TM-015).
-  ...d01, ...d02, ...direktaufruf, ...d03, ...d04, ...d05, ...d06, ...d07, ...d07b, ...d01Monitor, ...d08, ...d09, ...d10, ...d11, ...d12, ...d13, ...d14, ...d15,
+  // d12 (Korrektur) steht vor d11 (Abschluss): nach dem Abschluss ist jede Korrektur gesperrt.
+  ...d00, ...d01, ...d02, ...direktaufruf, ...d03, ...d03b, ...d04, ...d04b, ...d05, ...d05b, ...d06, ...d06b, ...d07, ...d07b,
+  ...d01Monitor, ...d08, ...d08b, ...d09, ...d10, ...d12, ...d11, ...d11b, ...d13, ...d13Folgen, ...d14, ...d15, ...d18,
 ];
 
-test.describe('Turniertag-Durchstich (D1-D15)', () => {
+test.describe('Turniertag-Durchstich (D0a-D18)', () => {
   // 'default' statt 'parallel' (fullyParallel in der Config): die Schritte laufen nacheinander im selben
   // Worker; ein unerwartet grüner Schritt bricht die Kette nicht ab (nur 'serial' würde den Rest überspringen).
   test.describe.configure({ mode: 'default', retries: 0 });
@@ -47,7 +56,7 @@ test.describe('Turniertag-Durchstich (D1-D15)', () => {
   });
 
   for (const step of TURNIERTAG_STEPS) {
-    test(`${step.id} ${step.title} ${step.scenarios.join(' ')}`.trim(), async ({ asRole, browser, page }) => {
+    test(`${step.id} ${step.title} ${step.scenarios.join(' ')} ${(step.befunde ?? []).join(' ')}`.trim(), async ({ asRole, browser, page }) => {
       test.fail(step.expectedFail, `Besitzer: ${step.owner}`);
       await step.run({ asRole, browser, anonPage: page });
     });

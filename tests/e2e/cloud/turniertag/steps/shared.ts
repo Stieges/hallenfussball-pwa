@@ -2,7 +2,9 @@
  * Gemeinsame Bausteine der Durchstich-Schritte (A-23): Zugriff auf den Turniertag-Cup per
  * Service-Role (nur lokaler Stack) und der "Soll-Marker" für noch nicht gebaute Schritte.
  */
-import { expect, type Locator, type Page } from '@playwright/test';
+import path from 'node:path';
+import { expect, type Browser, type Locator, type Page } from '@playwright/test';
+import { AUTH_DIR, type LoggedInRole } from '../../fixtures';
 import { getLocalServiceRoleClient } from '../../helpers';
 import { e2eUuid } from '../../e2eUuid';
 import { E2E_TURNIERTAG_CUP_ID } from '../../testData';
@@ -223,4 +225,16 @@ export async function finalrundeLabelOf(
     expect(zeile ?? karte, `Karte/Zeile von "${bezeichnung ?? match.id}"`).toBeDefined();
   }).toPass({ timeout: 20000 });
   return zeile ?? karte;
+}
+
+/** Handy-Ansicht (390 x 844, Touch) für Schritte, die ein Helfer-Handy abbilden (Plan (b), D3b); die Hülle schließt der Aufrufer über `page.context()`. */
+export async function mobileRolePage(browser: Browser, role: LoggedInRole): Promise<Page> {
+  const context = await browser.newContext({
+    storageState: path.join(AUTH_DIR, `${role}.json`),
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3,
+    isMobile: true,
+    hasTouch: true,
+  });
+  return context.newPage();
 }
