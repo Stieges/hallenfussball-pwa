@@ -1,7 +1,8 @@
 /**
  * C-SITZUNG-STILL (Anmelden Ü1.2): Ein langsamer Server beim Öffnen der App meldet niemanden ab
- * (@AN-019), heißt „Server antwortet langsam“ und nicht „offline“ (@AN-032); eine wirklich
- * abgelaufene Anmeldung kommt mit klarer Meldung (Ü1.2 „Nie still abmelden“, Wortlaut @AN-021).
+ * (@AN-019, @AN-020), heißt „Server antwortet langsam“ und nicht „offline“ (@AN-032); lehnt der Server
+ * die Erneuerung ab, kommt die Meldung „von einem anderen Gerät aus abgemeldet“ (@AN-024; solange es
+ * keinen Zeitablauf gibt, sind Ablauf und Widerruf nicht unterscheidbar). Nie still abmelden.
  * i18n ist im Test ein Durchreicher: Schlüssel statt Text.
  */
 
@@ -58,6 +59,7 @@ vi.mock('../../../../lib/supabase', async () => {
   return { supabase: client, isSupabaseConfigured: true, supabaseProjectUrl: 'http://localhost:54321' };
 });
 
+import { AuthRetryableFetchError } from '@supabase/supabase-js';
 import { supabase } from '../../../../lib/supabase';
 import { AuthProvider } from '../AuthContext';
 import { AuthContext } from '../authContextInstance';
@@ -97,6 +99,8 @@ function Probe() {
   return (
     <div>
       <div data-testid="probe">{ctx?.user ? 'user' : 'none'}</div>
+      <div data-testid="conn">{ctx?.connectionState}</div>
+      <button data-testid="do-reconnect" onClick={() => { void ctx?.reconnect(); }}>reconnect</button>
       <button data-testid="do-logout" onClick={() => { void ctx?.logout(); }}>logout</button>
     </div>
   );
@@ -118,7 +122,6 @@ async function advance(ms: number): Promise<void> {
 
 const CACHED_USER = { id: 'user-a', email: 'a@example.test', name: 'A', globalRole: 'user' };
 const SLOW_KEY = 'auth:notices.serverSlow';
-const EXPIRED_KEY = 'auth:errors.sessionExpired';
 
 describe('AuthProvider – langsamer Start (@AN-019, @AN-032)', () => {
   beforeEach(() => {
@@ -208,6 +211,52 @@ describe('AuthProvider – langsamer Start (@AN-019, @AN-032)', () => {
     expect(screen.queryByTestId('server-slow')).toBeNull();
   });
 
+  it('@AN-032 ab 15 s ohne Antwort steht kein „offline“, solange das Gerät Netz meldet; Hinweis bleibt', async () => {
+    cache.user = CACHED_USER;
+    store.local.setItem(TOKEN_KEY, sessionRaw());
+    net.respond = async (url) => (url.includes('/rest/v1/profiles') ? after(SLOW_MS, () => json(PROFILE)) : new Response(null, { status: 204 }));
+
+    renderProvider();
+    await advance(20_000);
+
+    expect(screen.getByTestId('server-slow')).toBeTruthy();
+    expect(screen.getByTestId('conn').textContent).not.toBe('offline');
+  });
+
+  it('@AN-019 jede Antwort des Servers beendet den Hinweis: TOKEN_REFRESHED nach 30 s ohne Antwort des Profils', async () => {
+    cache.user = CACHED_USER;
+    store.local.setItem(TOKEN_KEY, sessionRaw());
+    net.respond = async (url) => (url.includes('/rest/v1/profiles') ? new Promise<Response>(() => undefined) : new Response(null, { status: 204 }));
+    if (!supabase) { throw new Error('Test-Client fehlt'); }
+    const subscribeSpy = vi.spyOn(supabase.auth, 'onAuthStateChange');
+
+    renderProvider();
+    await advance(30_000);
+    expect(screen.getByTestId('server-slow')).toBeTruthy();
+
+    const callback = subscribeSpy.mock.calls[0]?.[0] as (event: string, session: unknown) => void;
+    net.respond = async (url) => (url.includes('/rest/v1/profiles') ? json(PROFILE) : new Response(null, { status: 204 }));
+    const raw = JSON.parse(sessionRaw()) as Record<string, unknown>;
+    act(() => { callback('TOKEN_REFRESHED', raw); });
+    await advance(100);
+
+    expect(screen.queryByTestId('server-slow')).toBeNull();
+    expect(screen.getByTestId('conn').textContent).toBe('connected');
+  });
+
+  it('Gegenbeispiel: Gerät meldet kein Netz → kein Hinweis „antwortet langsam“', async () => {
+    const online = vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false);
+    cache.user = CACHED_USER;
+    store.local.setItem(TOKEN_KEY, sessionRaw());
+    net.respond = async (url) => (url.includes('/rest/v1/profiles') ? after(SLOW_MS, () => json(PROFILE)) : new Response(null, { status: 204 }));
+
+    renderProvider();
+    await advance(10_000);
+
+    expect(screen.queryByTestId('server-slow')).toBeNull();
+    online.mockRestore();
+  });
+
   it('Gegenbeispiel: schnelle Antwort zeigt nie einen Hinweis', async () => {
     store.local.setItem(TOKEN_KEY, sessionRaw());
     net.respond = async (url) => (url.includes('/rest/v1/profiles') ? json(PROFILE) : new Response(null, { status: 204 }));
@@ -235,7 +284,7 @@ describe('AuthProvider – abgelaufene Anmeldung und Gegenbeispiele (Ü1.2 „Ni
     cleanup();
   });
 
-  it('@AN-021 Server sagt „Erneuerungsschlüssel ungültig“: Meldung „Sitzung abgelaufen“, nicht still und nicht „anderes Gerät“', async () => {
+  it('@AN-024 Server lehnt die Erneuerung beim Start ab (verlorenes Handy nach Widerruf): „von einem anderen Gerät abgemeldet“', async () => {
     store.local.setItem(TOKEN_KEY, sessionRaw(true));
     net.respond = async (url) => (url.includes('/auth/v1/token')
       ? json({ code: 'refresh_token_not_found', message: 'Invalid Refresh Token: Refresh Token Not Found' }, 400)
@@ -245,27 +294,39 @@ describe('AuthProvider – abgelaufene Anmeldung und Gegenbeispiele (Ü1.2 „Ni
     await advance(2_000);
 
     expect(screen.getByTestId('probe').textContent).toBe('none');
-    const notice = screen.getByTestId('session-expired');
-    expect(notice.getAttribute('role')).toBe('status');
-    expect(notice.textContent).toContain(EXPIRED_KEY);
-    expect(screen.queryByTestId('signed-out-elsewhere')).toBeNull();
+    expect(screen.getByTestId('signed-out-elsewhere').textContent).toContain('login.signedOutElsewhere');
   });
 
-  it('@AN-021 Anmeldung geht beim Start verloren (SIGNED_OUT während der Erneuerung): „Sitzung abgelaufen“, nicht „anderes Gerät“', async () => {
-    // Wie im Browser: der Client erneuert beim Laden selbst und meldet ein Abmelden, bevor getSession antwortet.
+  it('@AN-024 Ablehnung ohne Ereignis (Wettlauf vor dem Abonnieren): Anmeldung war da, jetzt keine Sitzung → Hinweis, nicht still', async () => {
     store.local.setItem(TOKEN_KEY, sessionRaw(true));
-    net.respond = async (url) => (url.includes('/auth/v1/token') ? new Promise<Response>(() => undefined) : new Response(null, { status: 204 }));
     if (!supabase) { throw new Error('Test-Client fehlt'); }
-    const subscribeSpy = vi.spyOn(supabase.auth, 'onAuthStateChange');
+    // auth-js hat die Ablehnung schon vor dem Abonnieren verteilt: getSession liefert „keine Sitzung“ ohne Fehler.
+    vi.spyOn(supabase.auth, 'getSession').mockResolvedValue({ data: { session: null }, error: null });
 
     renderProvider();
-    await advance(10);
-    const callback = subscribeSpy.mock.calls[0]?.[0] as (event: string, session: unknown) => void;
-    act(() => { callback('SIGNED_OUT', null); });
-    await advance(10);
+    await advance(500);
 
-    expect(screen.getByTestId('session-expired').textContent).toContain(EXPIRED_KEY);
-    expect(screen.queryByTestId('signed-out-elsewhere')).toBeNull();
+    expect(screen.getByTestId('probe').textContent).toBe('none');
+    expect(screen.getByTestId('signed-out-elsewhere')).toBeTruthy();
+  });
+
+  it('@AN-020 manuelle Wiederverbindung mit Netzfehler meldet nicht ab', async () => {
+    store.local.setItem(TOKEN_KEY, sessionRaw());
+    net.respond = async (url) => (url.includes('/rest/v1/profiles') ? json(PROFILE) : new Response(null, { status: 204 }));
+    renderProvider();
+    await advance(1_000);
+    expect(screen.getByTestId('probe').textContent).toBe('user');
+
+    if (!supabase) { throw new Error('Test-Client fehlt'); }
+    vi.spyOn(supabase.auth, 'getSession').mockResolvedValue({
+      data: { session: null },
+      error: new AuthRetryableFetchError('Failed to fetch', 0),
+    });
+    fireEvent.click(screen.getByTestId('do-reconnect'));
+    await advance(120_000);
+
+    expect(screen.getByTestId('probe').textContent).toBe('user');
+    expect(store.local.getItem(TOKEN_KEY)).not.toBeNull();
   });
 
   it('Gegenbeispiel: Abmelden durch den Nutzer bleibt Abmelden – keine Ablauf-Meldung, kein Hinweis „anderes Gerät“', async () => {
@@ -284,7 +345,6 @@ describe('AuthProvider – abgelaufene Anmeldung und Gegenbeispiele (Ü1.2 „Ni
     await advance(1_000);
 
     expect(screen.getByTestId('probe').textContent).toBe('none');
-    expect(screen.queryByTestId('session-expired')).toBeNull();
     expect(screen.queryByTestId('signed-out-elsewhere')).toBeNull();
     expect(screen.queryByTestId('server-slow')).toBeNull();
   });
@@ -299,7 +359,6 @@ describe('AuthProvider – abgelaufene Anmeldung und Gegenbeispiele (Ü1.2 „Ni
 
     expect(screen.getByTestId('probe').textContent).toBe('user');
     expect(store.local.getItem(TOKEN_KEY)).not.toBeNull();
-    expect(screen.queryByTestId('session-expired')).toBeNull();
     expect(screen.queryByTestId('signed-out-elsewhere')).toBeNull();
   });
 });

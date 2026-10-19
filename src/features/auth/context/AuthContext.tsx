@@ -32,12 +32,11 @@ import {
 import { isFeatureEnabled } from '../../../config';
 import { captureFeatureError } from '../../../lib/sentry';
 import { executeWithTimeout } from '../../../core/utils/SingleFlight';
-import { useRemoteSessionCheck } from './remoteSignOut';
+import { setSignedOutElsewhere, useRemoteSessionCheck } from './remoteSignOut';
 import { applyAuthEventEffects, reportAuthCallbackError } from './authEventEffects';
 import { SignedOutElsewhereNotice } from '../components/SignedOutElsewhereNotice';
-import { SessionExpiredNotice } from '../components/SessionExpiredNotice';
 import { ServerSlowNotice } from '../components/ServerSlowNotice';
-import { setSessionExpired } from './sessionExpired';
+import { hasStoredAuthToken, readSessionOrThrow } from './readSession';
 
 // Re-export the context for consumers
 export { AuthContext } from './authContextInstance';
@@ -102,6 +101,17 @@ const SERVER_SLOW_AFTER_MS = 5_000;
 
 /** Meldet das Gerät selbst „kein Netz“, ist eine ausbleibende Antwort keine langsame Antwort. */
 const isBrowserOffline = (): boolean => typeof navigator !== 'undefined' && !navigator.onLine;
+
+/**
+ * Verbindungszustand nach einem gescheiterten Versuch. Blieb die Antwort nur aus (Zeitüberschreitung)
+ * und das Gerät meldet Netz, ist der Server langsam, nicht „offline“ (@AN-032): der Zustand bleibt
+ * „connecting“, die Wiederverbindung läuft weiter (Hinweis „Server antwortet langsam“).
+ * Eine gescheiterte Prüfung (Netzfehler) oder ein Gerät ohne Netz bleibt „offline“.
+ */
+const stateAfterFailure = (error: unknown): ConnectionState =>
+  error instanceof Error && error.message.includes('timed out') && !isBrowserOffline()
+    ? 'connecting'
+    : 'offline';
 
 // ============================================================================
 
@@ -277,7 +287,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           if (cachedUser) {
             setUser(cachedUser);
           }
-          setConnectionState('offline');
+          // Kein „offline“, solange das Gerät Netz meldet und nur die Antwort fehlt (@AN-032).
+          if (isBrowserOffline()) {
+            setConnectionState('offline');
+          }
           setIsLoading(false);
         }
       }, AUTH_INIT_TIMEOUT_MS);
@@ -297,17 +310,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // safetyTimeout as the only escape hatch (Sub-Spec 1.5 F1).
         // Capture client reference to satisfy the closure's type narrowing.
         const supabaseClient = supabase;
-        const { data: { session: currentSession }, error: sessionError } = await executeWithTimeout(
-          () => supabaseClient.auth.getSession(),
-          AUTH_GETSESSION_TIMEOUT_MS,
-        );
-        // getSession wirft nicht, es liefert den Fehler (Erneuerung gescheitert) mit „keine Sitzung“.
-        // Ohne diese Weiterleitung gälte eine gespeicherte Anmeldung bei Netzfehler als abgemeldet
-        // und ein vom Server abgelehnter Schlüssel liefe still aus. Die Fehlerbehandlung unten
-        // trennt beides: Server sagt ungültig → Meldung, sonst Nutzerkopie und Wiederverbindung.
-        if (sessionError) {
-          throw sessionError;
-        }
+        // getSession wirft nicht (Fehler im Ergebnis); readSessionOrThrow trennt die Fälle für alle Aufrufer gleich.
+        const currentSession = await readSessionOrThrow(supabaseClient, AUTH_GETSESSION_TIMEOUT_MS);
 
         if (mounted) {
           setConnectionState('connected');
@@ -344,7 +348,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
           // Genuinely invalid (der Server hat es gesagt) — klar melden, dann neu anmelden lassen.
           // Der Merker steht vor dem lokalen Abmelden: dessen SIGNED_OUT ist kein „anderes Gerät“.
-          setSessionExpired();
+          // Ablauf und Widerruf sind nicht unterscheidbar: @AN-024 (nicht der Text von @AN-021).
+          setSignedOutElsewhere();
           await clearStaleAuthState();
           if (mounted) {
             setUser(null);
@@ -400,12 +405,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
             // eslint-disable-next-line no-console -- intentional debug logging
             console.debug('Restored cached user after auth error:', cachedUser.email);
             setUser(cachedUser);
-            setConnectionState('offline');
+            setConnectionState(stateAfterFailure(error));
             setIsLoading(false);
             return;
           }
           // No cached user - check for guest user via updateAuthState
-          setConnectionState('offline');
+          setConnectionState(stateAfterFailure(error));
           await updateAuthState(null);
         }
       } finally {
@@ -422,7 +427,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const { data } = supabase.auth.onAuthStateChange(
           (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
-            const duringStart = startingRef.current; // jetzt lesen: die Arbeit läuft erst danach
             // Synchron bleiben (A-07d2, C-AUTH-CALLBACK-ASYNC): die Arbeit läuft danach.
             setTimeout(() => {
               if (import.meta.env.DEV) {
@@ -433,7 +437,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
               if (mounted) {
                 // Fehlerfang (N2): sonst wäre die Ablehnung ein unbehandeltes Promise.
                 void (async () => {
-                  applyAuthEventEffects(event, newSession, setIsGuest, duringStart);
+                  // Scheitert das Erneuern am Netz, meldet auth-js nach den Wiederholungen INITIAL_SESSION ohne
+                  // Sitzung, behält aber den Schlüssel: das ist keine Abmeldung (@AN-019/@AN-020, Probe P2).
+                  if (event === 'INITIAL_SESSION' && !newSession && hasStoredAuthToken()) {
+                    return;
+                  }
+                  applyAuthEventEffects(event, newSession, setIsGuest);
+                  // Jede Antwort des Servers beendet „antwortet langsam“ (@AN-019), auch eine abgekoppelte Erneuerung.
+                  if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+                    setIsServerSlow(false);
+                    setConnectionState('connected');
+                  }
                   await updateAuthState(newSession);
                 })().catch(reportAuthCallbackError);
               }
@@ -464,7 +478,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Auto-reconnect when offline
   useEffect(() => {
-    if (connectionState !== 'offline' || !isSupabaseConfigured || !supabase) {
+    // „offline“ oder Antwort bleibt aus (langsam): die Wiederverbindung läuft in beiden Fällen weiter.
+    if ((connectionState !== 'offline' && !isServerSlow) || !isSupabaseConfigured || !supabase) {
       return;
     }
 
@@ -485,10 +500,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }, SERVER_SLOW_AFTER_MS);
 
       try {
-        const { data: { session: currentSession } } = await executeWithTimeout(
-          () => supabaseClient.auth.getSession(),
-          AUTH_GETSESSION_REFRESH_TIMEOUT_MS,
-        );
+        const currentSession = await readSessionOrThrow(supabaseClient, AUTH_GETSESSION_REFRESH_TIMEOUT_MS);
         setConnectionState('connected');
         await updateAuthState(currentSession);
         setIsServerSlow(false);
@@ -515,9 +527,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (import.meta.env.DEV) {
           console.warn('Reconnect failed:', error);
         }
-        // Der Server sagt selbst, dass der Erneuerungsschlüssel nicht mehr gilt: klar melden (Ü1.2).
+        // Der Server sagt selbst, dass der Erneuerungsschlüssel nicht mehr gilt: klar melden (@AN-024).
         if (isInvalidRefreshTokenError(error)) {
-          setSessionExpired();
+          setSignedOutElsewhere();
           await clearStaleAuthState();
           setUser(null);
           setSession(null);
@@ -526,7 +538,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setIsServerSlow(false);
           return;
         }
-        setConnectionState('offline');
+        setConnectionState(stateAfterFailure(error));
         // Schedule next retry
         retryTimeout = setTimeout(() => { void attemptReconnect(); }, AUTH_RECONNECT_INTERVAL_MS);
       } finally {
@@ -554,7 +566,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         clearTimeout(retryTimeout);
       }
     };
-  }, [connectionState, updateAuthState]);
+  }, [connectionState, isServerSlow, updateAuthState]);
 
   // Cross-tab auth sync: Listen for localStorage changes from other tabs
   useEffect(() => {
@@ -755,5 +767,5 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // Globale Hinweise (B2): „anderes Gerät“, „Anmeldung abgelaufen“ (auf /login zeigt sie die Anmeldeseite selbst) und „Server antwortet langsam“.
-  return <AuthContext.Provider value={value}>{children}<SignedOutElsewhereNotice /><SessionExpiredNotice /><ServerSlowNotice visible={isServerSlow} /></AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}<SignedOutElsewhereNotice /><ServerSlowNotice visible={isServerSlow} /></AuthContext.Provider>;
 }

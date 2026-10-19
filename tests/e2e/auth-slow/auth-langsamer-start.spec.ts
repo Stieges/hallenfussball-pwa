@@ -1,7 +1,7 @@
 /**
  * C-SITZUNG-STILL: Hinweise bei langsamem Start und abgelaufener Anmeldung (T2-UI).
- * Szenarien: Anmelden @AN-019 (langsamer Server meldet niemanden ab), @AN-032 (langsam ≠ offline),
- * @AN-021 / Ü1.2 (abgelaufene Anmeldung mit klarer Meldung).
+ * Szenarien: Anmelden @AN-019 (30 s ohne Antwort meldet niemanden ab), @AN-032 (langsam ≠ offline),
+ * @AN-024 (abgelehnte Erneuerung: „von einem anderen Gerät aus abgemeldet“, nicht „abgelaufen“).
  *
  * Läuft nur mit `playwright.auth-slow.config.ts` (erfundene Supabase-Adresse, alle Antworten per
  * `page.route`). Bildschirmfotos nur, wenn AUTH_SLOW_SHOTS_DIR gesetzt ist.
@@ -40,13 +40,15 @@ async function seedStoredSession(page: Page, expired: boolean): Promise<void> {
 
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'X-Supabase-Api-Version': '2024-01-01' };
 
-test.describe('Auth: langsamer Server und abgelaufene Anmeldung', () => {
-  test('@AN-019 @AN-032 Hinweis „Server antwortet langsam“ erscheint nach 5 s, ist nicht „offline“ und verschwindet bei Antwort', async ({ page }, testInfo) => {
+test.describe('Auth: langsamer Server und abgelehnte Erneuerung', () => {
+  test('@AN-019 @AN-032 30 s ohne Antwort: Hinweis „Server antwortet langsam“, kein „offline“, angemeldet; endet bei Antwort', async ({ page }, testInfo) => {
     await seedStoredSession(page, false);
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
     await page.route(`${SUPABASE}/**`, async (route) => {
       const url = route.request().url();
       if (url.includes('/rest/v1/profiles')) {
-        await new Promise((r) => setTimeout(r, 14_000));
+        await gate; // der Server antwortet nicht, bis der Test es erlaubt
         await route.fulfill({ status: 200, headers: JSON_HEADERS, body: JSON.stringify({ display_name: 'A', avatar_url: null, role: 'user' }) });
         return;
       }
@@ -57,22 +59,28 @@ test.describe('Auth: langsamer Server und abgelaufene Anmeldung', () => {
       await route.fulfill({ status: 200, headers: JSON_HEADERS, body: '[]' });
     });
 
+    await page.clock.install(); // Fake-Zeit: 30 s ohne Antwort in Millisekunden
     await page.goto('/');
+    await page.clock.runFor(4_000);
     await expect(page.getByTestId('server-slow')).toHaveCount(0);
 
+    await page.clock.runFor(26_000); // insgesamt 30 s ohne Antwort
     const hint = page.getByTestId('server-slow');
-    await expect(hint).toBeVisible({ timeout: 9_000 });
+    await expect(hint).toBeVisible();
     await expect(hint).toHaveText('Server antwortet langsam');
-    await expect(hint).not.toContainText(/offline|keine Verbindung/i);
+    await expect(page.getByText(/offline|keine Verbindung/i)).toHaveCount(0);
     expect(await page.evaluate((k) => window.localStorage.getItem(k), TOKEN_KEY)).not.toBeNull();
+    await expect(page.getByTestId('signed-out-elsewhere')).toHaveCount(0);
     if (SHOTS) {
       await page.screenshot({ path: `${SHOTS}/server-antwortet-langsam-${testInfo.project.name}.png` });
     }
 
-    await expect(hint).toBeHidden({ timeout: 20_000 });
+    release();
+    await page.clock.runFor(1_000);
+    await expect(hint).toBeHidden();
   });
 
-  test('@AN-021 abgelaufene Anmeldung (Server lehnt Erneuerung ab) zeigt „Anmeldung abgelaufen“', async ({ page }, testInfo) => {
+  test('@AN-024 Server lehnt die Erneuerung ab: „Du wurdest von einem anderen Gerät aus abgemeldet“, nicht „abgelaufen“', async ({ page }, testInfo) => {
     await seedStoredSession(page, true);
     await page.route(`${SUPABASE}/**`, async (route) => {
       if (route.request().url().includes('/auth/v1/token')) {
@@ -86,14 +94,14 @@ test.describe('Auth: langsamer Server und abgelaufene Anmeldung', () => {
     });
 
     await page.goto('/');
-    const notice = page.getByTestId('session-expired').first();
+    const notice = page.getByTestId('signed-out-elsewhere').first();
     await expect(notice).toBeVisible({ timeout: 10_000 });
-    await expect(notice).toContainText('Deine Anmeldung ist abgelaufen – bitte melde dich neu an');
-    await expect(page.getByTestId('signed-out-elsewhere')).toHaveCount(0);
+    await expect(notice).toContainText('Du wurdest von einem anderen Gerät aus abgemeldet');
+    await expect(page.getByText(/abgelaufen/i)).toHaveCount(0);
     await page.waitForLoadState('networkidle');
     await expect(page.getByText('Lade...')).toHaveCount(0);
     if (SHOTS) {
-      await page.screenshot({ path: `${SHOTS}/anmeldung-abgelaufen-${testInfo.project.name}.png` });
+      await page.screenshot({ path: `${SHOTS}/abgemeldet-anderes-geraet-${testInfo.project.name}.png` });
     }
   });
 });
