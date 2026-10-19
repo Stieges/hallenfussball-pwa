@@ -14,6 +14,15 @@ describe('darfAktion – Matrix § 6 und Nur-Lesen § 4.4', () => {
     expect(darfAktion(phase('halbzeitpause'), true, aktion)).toBe(erwartet);
   });
 
+  it.each<[string, CockpitAktion, boolean]>([
+    ['eine Gelbe Karte für SV Süd, Nr. 5', 'karte', true],
+    ['eine Zeitstrafe für SV Süd, Nr. 5', 'zeitstrafe', true],
+    ['ein Tor für FC Nord', 'tor', false],
+    ['ein Foul für SV Süd', 'foul', false],
+  ])('Spec § 6 Pause vor der Verlängerung (wie die Halbzeitpause, @SL-087): %s → %s', (_e, aktion, erwartet) => {
+    expect(darfAktion(phase('pauseVorVerlaengerung'), true, aktion)).toBe(erwartet);
+  });
+
   it.each<CockpitAktion>(['tor', 'foul', 'karte', 'zeitstrafe'])('@SL-085 pausiert: %s erlaubt', (aktion) => {
     expect(darfAktion(phase('pausiert'), true, aktion)).toBe(true);
   });

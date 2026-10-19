@@ -108,6 +108,17 @@ describe('EntrySheets – Rückfrage zweite Gelbe (@SL-088)', () => {
     expect(p.flows.antworteZweiteGelbe).toHaveBeenCalledWith('trotzdemGelb');
   });
 
+  it('@SL-088 Schließen der Rückfrage (Esc, Abdunkelung) verwirft die Karte: schliesse, keine Antwort „Trotzdem Gelb“ und keine Gelb-Rot', async () => {
+    const p = props(offenGelb, {}, { nummer: 7 });
+    render(<EntrySheets {...p} />);
+    await userEvent.setup().keyboard('{Escape}');
+    expect(p.flows.schliesse).toHaveBeenCalledTimes(1);
+    expect(p.flows.antworteZweiteGelbe).not.toHaveBeenCalled();
+    await userEvent.setup().click(screen.getByRole('alertdialog').parentElement!); // Abdunkelung
+    expect(p.flows.antworteZweiteGelbe).not.toHaveBeenCalled();
+    expect(p.flows.schliesse).toHaveBeenCalledTimes(2);
+  });
+
   it('Gegenbeispiel: ohne Rückfrage kein alertdialog; mit Rückfrage ruht die Nummernauswahl darunter (kein zweiter Zeitablauf)', () => {
     const { unmount } = render(<EntrySheets {...props(offenGelb)} />);
     expect(screen.queryByRole('alertdialog')).toBeNull();
