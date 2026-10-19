@@ -5,13 +5,14 @@
  * Die Seite ist der Reiter "Monitore" (`/monitors`, nicht `/monitore`).
  */
 import { expect } from '@playwright/test';
+import { MONITOR_OVERSCAN } from '../../../../../src/types/monitor';
 import { E2E_ZWEITES_TURNIER_ID } from '../../testData';
 import { expectPageAnchor, expectSollMarker, getRows, openTurniertagPath, TURNIERTAG_ID } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function monitoreUebernehmen({ asRole }: StepContext): Promise<void> {
   // Vorbedingung: Monitore des Turniertag-Cups aus tournaments.config.monitors lesen.
-  const own = await getRows<{ config: { monitors?: { name: string }[] } }>(
+  const own = await getRows<{ config: { monitors?: MonitorKonfig[] } }>(
     `tournaments?id=eq.${TURNIERTAG_ID}&select=config`,
     'Turniertag-Cup config'
   );
@@ -25,14 +26,37 @@ async function monitoreUebernehmen({ asRole }: StepContext): Promise<void> {
   await ownerPage.locator(`[data-testid="transfer-source-${TURNIERTAG_ID}"]`).click();
   await ownerPage.locator('[data-testid="transfer-confirm"]').click();
   await expect(ownerPage.locator('[data-testid="transfer-done"]')).toBeVisible({ timeout: 10000 });
-  // Wirkung (DB): config.monitors des zweiten Turniers enthält den Monitor "Hallenbildschirm" des Turniertag-Cups.
+  // Wirkung (DB, @ME-039): der Monitor "Hallenbildschirm" kommt im zweiten Turnier an, mit denselben Folien in derselben
+  // Reihenfolge, Dauer und mit demselben Bildrand. Verglichen wird ohne IDs (Folien-/Monitor-IDs dürfen neu vergeben werden).
+  const quelle = monitors.find((m) => m.name === 'Hallenbildschirm');
+  expect(quelle, 'Quell-Monitor "Hallenbildschirm"').toBeDefined();
   await expect.poll(async () => {
-    const rows = await getRows<{ config: { monitors?: { name: string }[] } }>(
+    const rows = await getRows<{ config: { monitors?: MonitorKonfig[] } }>(
       `tournaments?id=eq.${E2E_ZWEITES_TURNIER_ID}&select=config`,
       'Zweites Turnier config'
     );
-    return (rows[0]?.config?.monitors ?? []).some((m) => m.name === 'Hallenbildschirm');
-  }, { message: 'Monitor "Hallenbildschirm" ist im zweiten Turnier angekommen', timeout: 10000 }).toBe(true);
+    const ziel = (rows[0]?.config?.monitors ?? []).find((m) => m.name === 'Hallenbildschirm');
+    return ziel ? ohneIds(ziel) : null;
+  }, { message: 'Monitor "Hallenbildschirm" ist im zweiten Turnier angekommen, mit denselben Folien, Reihenfolge, Dauer und Bildrand', timeout: 10000 }).toEqual(ohneIds(quelle!));
+}
+
+/** Monitor-Konfiguration, soweit @ME-039 sie vergleicht (Folien, Reihenfolge, Dauer, Bildrand). */
+interface MonitorKonfig {
+  name: string;
+  defaultSlideDuration?: number;
+  overscanPercent?: number;
+  slides?: { type: string; config?: Record<string, unknown>; duration: number | null; order: number }[];
+}
+
+/** Die für die Übernahme maßgeblichen Eigenschaften ohne IDs und Zeitstempel; Folien nach `order` sortiert. */
+function ohneIds(monitor: MonitorKonfig): unknown {
+  return {
+    name: monitor.name,
+    defaultSlideDuration: monitor.defaultSlideDuration ?? null,
+    // Ein Monitor ohne gesetzten Bildrand hat den vorbelegten (@ME-067); die Übernahme schreibt ihn aus.
+    overscanPercent: monitor.overscanPercent ?? MONITOR_OVERSCAN.defaultPercent,
+    folien: [...(monitor.slides ?? [])].sort((a, b) => a.order - b.order).map((f) => ({ type: f.type, dauer: f.duration, config: f.config ?? null })),
+  };
 }
 
 async function bildschirmNeuKoppeln({ asRole }: StepContext): Promise<void> {
@@ -43,6 +67,6 @@ async function bildschirmNeuKoppeln({ asRole }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D15a', title: 'Zweites Turnier: Monitore übernehmen', scenarios: ['@ME-039'], owner: 'B-22 (gebaut)', expectedFail: false, run: monitoreUebernehmen },
+  { id: 'D15a', title: 'Zweites Turnier: Monitore übernehmen (gleiche Folien, Reihenfolge, Dauer, Bildrand)', scenarios: ['@ME-039'], owner: 'B-22 (gebaut)', expectedFail: false, run: monitoreUebernehmen },
   { id: 'D15b', title: 'Zweites Turnier: Bildschirm neu koppeln (Code eintippen)', scenarios: ['@ME-023', '@ME-051'], owner: 'B-20/B-21', expectedFail: true, run: bildschirmNeuKoppeln },
 ];
