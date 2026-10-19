@@ -78,6 +78,11 @@ describe('@HE-084 @ME-069 die App bietet keinen Rollenwechsel von oder zu einer 
     expect(canRemoveMember('owner', 'screen')).toBe(true);
     expect(canRemoveMember('helper', 'viewer')).toBe(false);
   });
+
+  it('Gegenbeispiel: den Eigentümer entfernt niemand (auch nicht er selbst oder eine Co-Admin)', () => {
+    expect(canRemoveMember('owner', 'owner')).toBe(false);
+    expect(canRemoveMember('co-admin', 'owner')).toBe(false);
+  });
 });
 
 describe('@HE-006:teil Rechte-Teil – wer über eine Beitrittsanfrage entscheiden darf (Ablauf: A-16)', () => {
