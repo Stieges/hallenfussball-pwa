@@ -51,7 +51,18 @@ describe('@W4-028 Spielplan mit gespeichertem DFB-Schlüssel', () => {
     expect([...pairs].sort()).toEqual(allPairs(6).sort());
   });
 
-  it('@W4-028 Gegenbeispiel: 7 Teams auf 1 Feld mit 1T07M: 21 Gruppenspiele, jede Paarung genau einmal', () => {
+  it('@W4-028 Gegenbeispiel: ohne DFB-Schlüssel (useDFBKeys=false) bleibt der Plan für 6 Teams vollständig: 15 Spiele, jede Paarung einmal', () => {
+    const schedule = generateFullSchedule({ ...tournamentOf(6, '1T06M'), useDFBKeys: false });
+    const pairs = schedule.allMatches
+      .filter((m) => m.phase === 'groupStage')
+      .map((m) => [m.homeTeam, m.awayTeam].sort().join(' | '));
+
+    expect(pairs).toHaveLength(15);
+    expect(new Set(pairs).size).toBe(15);
+    expect([...pairs].sort()).toEqual(allPairs(6).sort());
+  });
+
+  it('@W4-028 7 Teams auf 1 Feld mit 1T07M (gespeicherter Schlüssel): 21 Gruppenspiele, jede Paarung genau einmal', () => {
     const pairs = groupPairs(7, '1T07M');
 
     expect(pairs).toHaveLength(21);

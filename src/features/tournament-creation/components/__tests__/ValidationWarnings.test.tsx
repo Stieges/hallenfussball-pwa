@@ -70,6 +70,7 @@ function validateConfiguration(formData: Partial<Tournament>) {
     });
   }
 
+  // @W4-028: Prüfung 6 ist im Component aus. Dieser Test prüft nur eine Kopie der Logik und kehrt mit @W4-015 zurück.
   // DFB mismatch
   if (formData.useDFBKeys && formData.dfbKeyPattern) {
     const patternTeams = parseInt(formData.dfbKeyPattern.match(/(\d+)M/)?.[1] ?? '0');

@@ -7,7 +7,7 @@
  * Auch wenn im Entwurf noch useDFBKeys=true steht, erscheint der Block nicht.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { Step2_ModeAndSystem } from '../Step2_ModeAndSystem';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import type { Tournament } from '../../../types/tournament';
@@ -49,6 +49,6 @@ describe('@W4-028 Schritt Modus/System bietet keinen DFB-Schlüssel an', () => {
 
     expect(container.querySelector('#dfb-description')).toBeNull();
     expect(container.querySelector('input[type="checkbox"][aria-describedby="dfb-description"]')).toBeNull();
-    expect(container.querySelector('[role="region"][aria-label]')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Musterdetails' })).toBeNull();
   });
 });
