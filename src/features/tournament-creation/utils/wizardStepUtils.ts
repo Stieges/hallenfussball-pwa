@@ -28,6 +28,28 @@ export function getStepFromSearchParams(searchParams: URLSearchParams): WizardSt
   return parsed as WizardStep;
 }
 
+/** Schritt aus der Adresse; fehlt der Parameter oder ist der Wert unbekannt, gibt es keinen Wunsch (null). */
+export function parseStepParam(searchParams: URLSearchParams): WizardStep | null {
+  const stepParam = searchParams.get('step');
+  if (!stepParam || !/^\d+$/.test(stepParam)) { return null; }
+  const parsed = parseInt(stepParam, 10);
+  return parsed >= 1 && parsed <= 6 ? (parsed as WizardStep) : null;
+}
+
+/**
+ * Erster erreichbarer Schritt für den Wunsch aus der Adresse (@OB-029): man darf nur bis zum ersten Schritt
+ * vor dem Ziel, dessen Pflichtfelder fehlen. Die Pflichtfelder entscheiden, nicht der Besuchsverlauf.
+ */
+export function resolveReachableStep(
+  target: WizardStep,
+  validateStep: (step: number) => string[]
+): WizardStep {
+  for (let i = 1; i < target; i++) {
+    if (validateStep(i).length > 0) { return i as WizardStep; }
+  }
+  return target;
+}
+
 /** Build wizard URL with step parameter */
 export function buildWizardStepPath(step: WizardStep, tournamentId?: string): string {
   const basePath = tournamentId
