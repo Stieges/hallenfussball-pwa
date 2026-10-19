@@ -62,6 +62,7 @@ vi.mock('../../../../lib/supabase', async () => {
 
 import { AuthRetryableFetchError } from '@supabase/supabase-js';
 import { supabase } from '../../../../lib/supabase';
+import { advanceInSteps } from './fakeTime';
 import { AuthProvider } from '../AuthContext';
 import { AuthContext } from '../authContextInstance';
 
@@ -115,13 +116,6 @@ async function advance(ms: number): Promise<void> {
 }
 
 const CACHED_USER = { id: 'user-a', email: 'a@example.test', name: 'A', globalRole: 'user' };
-
-/** In Schritten vorspulen: React übernimmt Zustand und Effekte zwischen den Schritten (wie im echten Takt). */
-async function advanceInSteps(ms: number, step = 1_000): Promise<void> {
-  for (let t = 0; t < ms; t += step) {
-    await advance(step);
-  }
-}
 
 const NETWORK_ERROR = { data: { session: null }, error: new AuthRetryableFetchError('Failed to fetch', 0) };
 

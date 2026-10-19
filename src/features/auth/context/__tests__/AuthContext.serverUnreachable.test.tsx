@@ -8,7 +8,7 @@
 
 import { useContext } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const net = vi.hoisted(() => ({
@@ -59,6 +59,7 @@ vi.mock('../../../../lib/supabase', async () => {
   return { supabase: client, isSupabaseConfigured: true, supabaseProjectUrl: 'http://localhost:54321' };
 });
 
+import { advanceInSteps } from './fakeTime';
 import { AuthProvider } from '../AuthContext';
 import { AuthContext } from '../authContextInstance';
 
@@ -100,9 +101,6 @@ function renderProvider() {
   );
 }
 
-async function advance(ms: number): Promise<void> {
-  await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
-}
 
 const CACHED_USER = { id: 'user-a', email: 'a@example.test', name: 'A', globalRole: 'user' };
 
@@ -127,7 +125,7 @@ describe('AuthProvider – Server nicht erreichbar meldet nicht ab (@AN-019, @AN
     net.respond = async () => { throw new TypeError('Failed to fetch'); };
 
     renderProvider();
-    await advance(90_000);
+    await advanceInSteps(90_000);
 
     expect(screen.getByTestId('probe').textContent).toBe('user');
     expect(store.local.getItem(TOKEN_KEY)).not.toBeNull();

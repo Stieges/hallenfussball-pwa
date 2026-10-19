@@ -8,7 +8,7 @@
 
 import { useContext } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const net = vi.hoisted(() => ({
@@ -59,6 +59,7 @@ vi.mock('../../../../lib/supabase', async () => {
   return { supabase: client, isSupabaseConfigured: true, supabaseProjectUrl: 'http://localhost:54321' };
 });
 
+import { advanceInSteps } from './fakeTime';
 import { AuthProvider } from '../AuthContext';
 import { AuthContext } from '../authContextInstance';
 
@@ -99,9 +100,6 @@ function renderProvider() {
   );
 }
 
-async function advance(ms: number): Promise<void> {
-  await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
-}
 
 const CACHED_USER = { id: 'user-a', email: 'a@example.test', name: 'A', globalRole: 'user' };
 
@@ -126,7 +124,7 @@ describe('AuthProvider – Erneuerung hängt (Server antwortet nicht), Gerät me
     net.respond = async (url) => (url.includes('/auth/v1/token') ? new Promise<Response>(() => undefined) : new Response(null, { status: 204 }));
 
     renderProvider();
-    await advance(30_000);
+    await advanceInSteps(30_000);
 
     expect(screen.getByTestId('server-slow')).toBeTruthy();
     expect(screen.getByTestId('probe').textContent).toBe('user');

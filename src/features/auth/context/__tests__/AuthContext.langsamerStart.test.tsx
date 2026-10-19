@@ -61,6 +61,7 @@ vi.mock('../../../../lib/supabase', async () => {
 
 import { AuthRetryableFetchError } from '@supabase/supabase-js';
 import { supabase } from '../../../../lib/supabase';
+import { advanceInSteps } from './fakeTime';
 import { AuthProvider } from '../AuthContext';
 import { AuthContext } from '../authContextInstance';
 
@@ -143,7 +144,7 @@ describe('AuthProvider – langsamer Start (@AN-019, @AN-032)', () => {
     net.respond = async (url) => (url.includes('/rest/v1/profiles') ? after(SLOW_MS, () => json(PROFILE)) : new Response(null, { status: 204 }));
 
     renderProvider();
-    await advance(20_000); // über der 15-s-Zeitgrenze des Starts
+    await advanceInSteps(20_000); // über der 15-s-Zeitgrenze des Starts
 
     expect(store.local.getItem(TOKEN_KEY)).not.toBeNull();
   });
@@ -165,7 +166,7 @@ describe('AuthProvider – langsamer Start (@AN-019, @AN-032)', () => {
     net.respond = async (url) => (url.includes('/rest/v1/profiles') ? after(SLOW_MS, () => json(PROFILE)) : new Response(null, { status: 204 }));
 
     renderProvider();
-    await advance(20_000);
+    await advanceInSteps(20_000);
 
     expect(screen.getByTestId('probe').textContent).toBe('user');
     expect(store.local.getItem(TOKEN_KEY)).not.toBeNull();
@@ -217,7 +218,7 @@ describe('AuthProvider – langsamer Start (@AN-019, @AN-032)', () => {
     net.respond = async (url) => (url.includes('/rest/v1/profiles') ? after(SLOW_MS, () => json(PROFILE)) : new Response(null, { status: 204 }));
 
     renderProvider();
-    await advance(20_000);
+    await advanceInSteps(20_000);
 
     expect(screen.getByTestId('server-slow')).toBeTruthy();
     expect(screen.getByTestId('conn').textContent).not.toBe('offline');
@@ -231,7 +232,7 @@ describe('AuthProvider – langsamer Start (@AN-019, @AN-032)', () => {
     const subscribeSpy = vi.spyOn(supabase.auth, 'onAuthStateChange');
 
     renderProvider();
-    await advance(30_000);
+    await advanceInSteps(30_000);
     expect(screen.getByTestId('server-slow')).toBeTruthy();
 
     const callback = subscribeSpy.mock.calls[0]?.[0] as (event: string, session: unknown) => void;
@@ -348,7 +349,7 @@ describe('AuthProvider – abgelaufene Anmeldung und Gegenbeispiele (Ü1.2 „Ni
       error: new AuthRetryableFetchError('Failed to fetch', 0),
     });
     fireEvent.click(screen.getByTestId('do-reconnect'));
-    await advance(120_000);
+    await advanceInSteps(120_000);
 
     expect(screen.getByTestId('probe').textContent).toBe('user');
     expect(store.local.getItem(TOKEN_KEY)).not.toBeNull();
@@ -380,7 +381,7 @@ describe('AuthProvider – abgelaufene Anmeldung und Gegenbeispiele (Ü1.2 „Ni
     net.respond = async () => { throw new TypeError('Failed to fetch'); };
 
     renderProvider();
-    await advance(20_000);
+    await advanceInSteps(20_000);
 
     expect(screen.getByTestId('probe').textContent).toBe('user');
     expect(store.local.getItem(TOKEN_KEY)).not.toBeNull();

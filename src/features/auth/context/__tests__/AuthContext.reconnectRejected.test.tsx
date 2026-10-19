@@ -61,6 +61,7 @@ vi.mock('../../../../lib/supabase', async () => {
 
 import { AuthApiError, AuthRetryableFetchError } from '@supabase/supabase-js';
 import { supabase } from '../../../../lib/supabase';
+import { advanceInSteps } from './fakeTime';
 import { AuthProvider } from '../AuthContext';
 import { AuthContext } from '../authContextInstance';
 
@@ -136,13 +137,13 @@ describe('AuthProvider – Wiederverbindung: Server lehnt Erneuerung ab (@AN-024
     net.respond = async () => { throw new TypeError('Failed to fetch'); };
 
     renderProvider();
-    await advance(20_000);
+    await advanceInSteps(20_000);
     expect(screen.getByTestId('probe').textContent).toBe('user');
 
     net.respond = async (url) => (url.includes('/auth/v1/token')
       ? json({ code: 'refresh_token_not_found', message: 'Invalid Refresh Token: Refresh Token Not Found' }, 400)
       : new Response(null, { status: 204 }));
-    await advance(150_000);
+    await advanceInSteps(150_000);
 
     expect(screen.getByTestId('signed-out-elsewhere')).toBeTruthy();
     expect(screen.getByTestId('probe').textContent).toBe('none');
@@ -169,7 +170,7 @@ describe('AuthProvider – Wiederverbindung: Server lehnt Erneuerung ab (@AN-024
       data: { session: null },
       error: new AuthApiError('Invalid Refresh Token: Refresh Token Not Found', 400, 'refresh_token_not_found'),
     });
-    await advance(35_000);
+    await advanceInSteps(35_000);
 
     expect(screen.getByTestId('signed-out-elsewhere')).toBeTruthy();
     expect(screen.getByTestId('probe').textContent).toBe('none');
