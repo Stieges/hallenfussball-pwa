@@ -67,6 +67,18 @@ async function schnelleingabe({ asRole }: StepContext): Promise<void> {
     await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
     const heim = ownerPage.locator(`[data-testid="match-score-input-${spiel.id}-home"]`);
     const gast = ownerPage.locator(`[data-testid="match-score-input-${spiel.id}-away"]`);
+    // Die Liste rendert nur Zeilen im Umfeld des sichtbaren Bereichs: über die Seite scrollen, bis die Zeile des Finales steht.
+    await expect(async () => {
+      for (const anteil of [0, 0.4, 0.7, 1]) {
+        await ownerPage.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), anteil);
+        await ownerPage.waitForTimeout(250);
+        if (await heim.count() > 0) {
+          await heim.scrollIntoViewIfNeeded();
+          return;
+        }
+      }
+      throw new Error('Zeile des Finales nicht gerendert');
+    }).toPass({ timeout: 20000 });
     await expect(heim, 'Tore-Feld Heim der Finalrunden-Tabelle').toBeVisible({ timeout: 5000 });
     await heim.pressSequentially('10');
     await expect(heim, 'beide Ziffern bleiben stehen, kein Speichern nach der ersten').toHaveValue('10', { timeout: 3000 });
