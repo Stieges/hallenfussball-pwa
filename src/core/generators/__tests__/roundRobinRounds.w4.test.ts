@@ -181,6 +181,13 @@ describe('@W4-039 Findet die App im Rechenbudget keinen Plan mit DFB-Abstand, wi
     expect(reported).toEqual(shortGapSpots(result.matches, 6));
   }, SLOW_TIMEOUT_MS);
 
+  it('@W4-031 Gegenstück zu @W4-039: 15 Teams, knappes Budget (10 000 Knoten), in dem ein DFB-Plan gefunden wird → Abstand ≥ 6, keine Meldung', () => {
+    const result = generateGroupPhaseScheduleWithReport(scenarioOptions([15], 1, { roundsNodeBudget: 10_000 }));
+
+    expect(minGamesBetween(result.matches)).toBeGreaterThanOrEqual(6);
+    expect(result.notices.filter((n) => n.kind === 'dfbGapShortfall')).toEqual([]);
+  }, SLOW_TIMEOUT_MS);
+
   it('Gegenbeispiel: mit dem normalen Budget gibt es keinen kürzeren Abstand und keine Meldung', () => {
     const result = generateGroupPhaseScheduleWithReport(scenarioOptions([15], 1));
 
