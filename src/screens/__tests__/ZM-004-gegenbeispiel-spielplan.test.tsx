@@ -9,7 +9,7 @@
  * Der Befund zur nicht sichtbaren Tabelle steht in LiveViewScreen.scenarios.test.tsx (it.fails).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { generateFullSchedule } from '../../core/generators';
 import { buildLiveViewTournament, SHARE_CODE } from './liveViewFixture';
@@ -57,12 +57,16 @@ describe('@ZM-004 Gegenbeispiel: ohne Gruppentabellen bleibt der Spielplan mit S
     );
     await screen.findAllByRole('heading', { level: 1, name: 'Hallencup Nord' });
 
-    // Spielplan vorhanden (Gruppenspiele), Spiel 7 mit Paarung und Stand 1:0
+    // Spielplan vorhanden (Gruppenspiele)
     expect(container.querySelector('.group-stage-schedule')).not.toBeNull();
-    expect(screen.getAllByText(m7!.homeTeam).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('1:0').length).toBeGreaterThan(0);
-    for (const circle of container.querySelectorAll(`[data-testid="match-circle-${m7!.id}"]`)) {
-      expect(circle).toHaveAttribute('data-match-status', 'running');
-    }
+
+    // Spiel 7 fest verankert: der Spielkreis muss existieren, dann Status, Paarung und Stand in derselben Karte
+    const kreis = screen.getByTestId(`match-circle-${m7!.id}`);
+    expect(kreis).toHaveAttribute('data-match-status', 'running');
+    const karte = kreis.closest<HTMLElement>('[role="row"]');
+    expect(karte).not.toBeNull();
+    expect(within(karte!).getByText(m7!.homeTeam)).toBeInTheDocument();
+    expect(within(karte!).getByText(m7!.awayTeam)).toBeInTheDocument();
+    expect(within(karte!).getByText('1:0')).toBeInTheDocument();
   });
 });
