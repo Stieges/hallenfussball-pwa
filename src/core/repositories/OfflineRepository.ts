@@ -11,6 +11,7 @@ import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
 import { decideCloudAdoption, isCloudReadTimeout, withCloudReadTimeout } from './cloudAdoption';
 import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisionSource } from './serverRevisionRegistry';
 import { CloudQueueGuard } from './cloudQueueGuard';
+import { effectiveHostTeamIds } from '../models/hostTeams';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -535,6 +536,10 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         if (stableKey(local.monitors) !== stableKey(remote.monitors)) {return true;}
         if (stableKey(local.sponsors) !== stableKey(remote.sponsors)) {return true;}
         if ((local.bibColor ?? '').toUpperCase() !== (remote.bibColor ?? '').toUpperCase()) {return true;} // A-30a @W3-029: Leibchenfarbe nur im config-JSONB
+        // @W4-034: Markierung des Veranstalters und Eröffnungswahl liegen nur im config-JSONB (wie bibColor).
+        // @W4-044: verwaiste IDs (Team gelöscht) zählen auf keiner Seite (die Teams sind oben schon als gleich geprüft).
+        if (stableKey(effectiveHostTeamIds(local.hostTeamIds, local.teams)) !== stableKey(effectiveHostTeamIds(remote.hostTeamIds, remote.teams))) {return true;}
+        if ((local.openingMode ?? '') !== (remote.openingMode ?? '')) {return true;}
 
         // Fix 3 (Review 2026-09-18): publishedAt liegt ebenfalls nur im config-JSONB (siehe
         // supabase/migrations/20260918_002_make_public_refuses_drafts.sql) und hat — anders

@@ -5,6 +5,7 @@ import { getSportConfig, DEFAULT_SPORT_ID } from '../../config/sports';
 import { generateFullSchedule } from '../generators';
 import { generateShareCode } from '../../utils/shareCode';
 import { matchOrigins } from '../models/matchOrigin';
+import { effectiveHostTeamIds } from '../models/hostTeams';
 
 /**
  * @W1-020 (B-04b Fixrunde 1): Sichtbarkeit NACH dem Festlegen -- es gibt die
@@ -103,6 +104,8 @@ export class TournamentCreationService {
             // Ensure critical fields are set if they were missing in data but present in base
             finalsConfig: { ...base.finalsConfig, ...data?.finalsConfig },
             refereeConfig: { ...base.refereeConfig, ...data?.refereeConfig },
+            // @W4-044: Markierungen gelöschter Teams werden beim Speichern entfernt (Reihenfolge = Teamliste).
+            ...(data?.hostTeamIds && data.teams ? { hostTeamIds: effectiveHostTeamIds(data.hostTeamIds, data.teams) } : {}),
         } as Tournament;
     }
 

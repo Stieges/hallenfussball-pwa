@@ -4,6 +4,7 @@ import { RULEBOOK_MAX_LENGTH } from '../../../constants/rulebook';
 import { MatchSlotSchema, SlotSourceSchema } from './MatchSlotSchema';
 import { CLOCK_MODES, FINAL_PHASE_MINUTES_MAX, FINAL_PHASE_MINUTES_MIN } from '../../match/clockDisplay';
 import { MatchKitSchema } from '../kit';
+import { OPENING_MODES } from '../../../types/tournament';
 
 const TeamLogoSchema = z.object({
     type: z.enum(['url', 'base64', 'initials']),
@@ -152,6 +153,11 @@ export const TournamentSchema = z.object({
     isPublic: z.boolean().optional(),
     shareCode: z.string().optional(),
     shareCodeCreatedAt: z.string().optional(),
+
+    // Mannschaften des Veranstalters und Eröffnung (@W4-034, @W4-033). Ungültige Werte machen das Turnier
+    // nicht ungültig, sie werden verworfen (Bestandsdaten ohne die Felder bleiben gültig).
+    hostTeamIds: z.array(z.string()).optional().catch(undefined),
+    openingMode: z.enum(OPENING_MODES).optional().catch(undefined),
 })
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- passthrough needed to prevent data loss of unmapped fields
   .passthrough();
