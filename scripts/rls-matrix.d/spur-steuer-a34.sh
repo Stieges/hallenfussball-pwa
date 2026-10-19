@@ -34,7 +34,7 @@ for a34_id in "${MATRIX_IDS[@]}"; do
 
   # (i) Uebernahme
   a34_out="$(a27_sql authenticated "$a34_uid" \
-    "SELECT 'r:' || (x ->> 'status') || coalesce(':' || (x ->> 'code'), '') FROM public.take_field_control('$T_MAIN', 1, '$a34_dev', NULL, NULL) AS x;")"
+    "SELECT 'r:' || (x ->> 'status') || coalesce(':' || (x ->> 'code'), '') FROM public.take_field_control('$T_MAIN', 1, '$a34_dev', NULL, 0) AS x;")"
   a34_got="$( (grep -m1 '^r:' <<<"$a34_out" || echo "r:fehler") | cut -c3-)"
   [[ "$a34_allowed" == "true" ]] && a34_exp="taken" || a34_exp="rejected:FORBIDDEN_ACTOR"
   a34_cell "@FU-027 take_field_control $a34_id" "$a34_got" "$a34_exp"

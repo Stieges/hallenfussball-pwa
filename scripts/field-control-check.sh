@@ -19,7 +19,7 @@
 # Aufrufoptionen:
 #   bash scripts/field-control-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
 #   bash scripts/field-control-check.sh --without-migration  Gegenprobe: ohne 20261110_003 -> K und R muessen ROT sein
-#   bash scripts/field-control-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M14); Exit 0 NUR,
+#   bash scripts/field-control-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M15); Exit 0 NUR,
 #                                                            wenn JEDE Mutation mindestens eine Pruefung rot faerbt
 #   bash scripts/field-control-check.sh --print-rueckweg     gibt den Rueckweg (Anhang B der Freigabe) aus, ohne Container
 #
@@ -405,7 +405,7 @@ SQL
   ev GOAL "$(E live-tom-goal-1)" "$(goal "$nord")"
   send "$U_TOM_HANDY" "$D_TOM_HANDY" "$s9"
   check K "@FU-026 Gegenbeispiel: Toms Handy (steuernd) traegt das Tor ein" "accepted|1:0|running" "$(results "$OUT")|$(score "$s9")"
-  res="$(take "$U_TOM_HANDY" "$T_LIVE" 2 "$D_TOM_HANDY" "Handy")"
+  res="$(take "$U_TOM_HANDY" "$T_LIVE" 2 "$D_TOM_HANDY" "Handy" 1)"
   check K "@HE-049 Toms Handy nennt sich 'Handy' (steuert schon: Epoche bleibt)" "unchanged|1|Tom|NULL" "$(take_short "$res")"
   check K "@HE-049 Olli sieht in der Feldübersicht 'Feld 2: Tom (Handy)'" "Feld 2: Tom (Handy) e1" "$(state_short "$(state "$U_OLLI" "$T_LIVE" "$D_OLLI_TABLET")")"
   ev GOAL "$(E live-tablet-goal)" "$(goal "$nord")"
@@ -423,6 +423,9 @@ SQL
   check K "@FU-080 der Direkteintrag aendert die Steuer nicht (Toms Handy, Epoche 1)" "$U_TOM_HANDY|$D_TOM_HANDY|1" "$(holder "$T_LIVE" 2)"
 
   # --- @FU-027: Olli uebernimmt (online) ------------------------------------------------------------------
+  # Fixrunde 2: Uebernahme nur mit bekanntem Stand -- ohne erwartete Epoche abgelehnt (22023), Tom steuert weiter.
+  check K "@FU-027 @FU-028 Uebernahme ohne bekannten Stand (erwartete Epoche fehlt) -> abgelehnt (22023), Tom steuert weiter" \
+    "error:22023|$U_TOM_HANDY|$D_TOM_HANDY|1" "$(take "$U_OLLI" "$T_LIVE" 2 "$D_OLLI_TABLET" "Tablet")|$(holder "$T_LIVE" 2)"
   res="$(take "$U_OLLI" "$T_LIVE" 2 "$D_OLLI_TABLET" "Tablet" 1)"
   check K "@FU-027 Olli bestaetigt 'Spielleitung uebernehmen' -> steuert Feld 2 (Epoche 2, vorher Tom)" "taken|2|Olli|Tom" "$(take_short "$res")"
   ev GOAL "$(E live-tom-goal-2)" "$(goal "$nord" 3000)"
@@ -556,7 +559,7 @@ SQL
       trainer) uid="$U_TRAINER"; dev="$D_TRAINER" ;; viewer) uid="$U_VIEWER"; dev="$D_TRAINER" ;;
       stranger) uid="$U_STRANGER"; dev="$D_TRAINER" ;; lena) uid="$U_LENA"; dev="$D_LENA" ;; screen) uid="$U_SCREEN"; dev="$D_SCREEN" ;;
     esac
-    res="$res$who=$(take_short "$(take "$uid" "$T_LIVE" 2 "$dev" "")");"
+    res="$res$who=$(take_short "$(take "$uid" "$T_LIVE" 2 "$dev" "" 5)");"
   done
   check R "take_field_control: Trainer, Zuschauerin, Fremde, Lena (ohne Rolle), Hallen-Rechner (screen) -> FORBIDDEN_ACTOR" \
     "trainer=rejected:FORBIDDEN_ACTOR|NULL|NULL|NULL;viewer=rejected:FORBIDDEN_ACTOR|NULL|NULL|NULL;stranger=rejected:FORBIDDEN_ACTOR|NULL|NULL|NULL;lena=rejected:FORBIDDEN_ACTOR|NULL|NULL|NULL;screen=rejected:FORBIDDEN_ACTOR|NULL|NULL|NULL;" "$res"
@@ -566,11 +569,11 @@ SQL
   check R "take_field_control als service_role -> kein EXECUTE (42501)" "error:42501" \
     "$(q "SELECT harness.take(NULL, false, '$T_LIVE'::uuid, 2, '$D_LENA'::uuid, NULL, NULL, 'service_role');")"
   check R "Papierkorb: Olli uebernimmt im geloeschten Turnier -> FORBIDDEN_ACTOR" "rejected:FORBIDDEN_ACTOR|NULL|NULL|NULL" \
-    "$(take_short "$(take "$U_OLLI" "$T_TRASH" 2 "$D_OLLI_TABLET" "")")"
+    "$(take_short "$(take "$U_OLLI" "$T_TRASH" 2 "$D_OLLI_TABLET" "" 0)")"
   check R "Feld 7 ohne Spiel -> UNKNOWN_FIELD, keine Zeile" "rejected:UNKNOWN_FIELD|NULL|NULL|NULL|0" \
-    "$(take_short "$(take "$U_OLLI" "$T_LIVE" 7 "$D_OLLI_TABLET" "")")|$(q "SELECT count(*) FROM public.field_control WHERE field = 7;")"
-  check R "ohne Geraete-ID -> 22023" "error:22023" "$(take "$U_OLLI" "$T_LIVE" 2 "" "")"
-  check R "Bezeichnung laenger als 40 Zeichen -> 22023" "error:22023" "$(take "$U_OLLI" "$T_LIVE" 2 "$D_OLLI_TABLET" "Handy-mit-einer-viel-zu-langen-Bezeichnung-x")"
+    "$(take_short "$(take "$U_OLLI" "$T_LIVE" 7 "$D_OLLI_TABLET" "" 0)")|$(q "SELECT count(*) FROM public.field_control WHERE field = 7;")"
+  check R "ohne Geraete-ID -> 22023" "error:22023" "$(take "$U_OLLI" "$T_LIVE" 2 "" "" 5)"
+  check R "Bezeichnung laenger als 40 Zeichen -> 22023" "error:22023" "$(take "$U_OLLI" "$T_LIVE" 2 "$D_OLLI_TABLET" "Handy-mit-einer-viel-zu-langen-Bezeichnung-x" 5)"
   check R "field_control_state: Trainer und Zuschauerin sehen nichts ([])" "[]|[]" \
     "$(state "$U_TRAINER" "$T_LIVE" "")|$(state "$U_VIEWER" "$T_LIVE" "")"
   check R "field_control_state: Hallen-Rechner (screen) und Lena (ohne Rolle) sehen nichts ([])" "[]|[]" \
@@ -616,7 +619,7 @@ summary() {
 
 # ---------------------------------------------------------------------------------------------------------
 if [[ "$MODE" == "gegenprobe" ]]; then
-  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14)
+  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15)
   # Teilmenge fuer Nachproben: GEGENPROBE_NUR="M12 M13 M14"
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a MUTATIONS <<<"$GEGENPROBE_NUR"; fi
   RED_TOTAL=0
@@ -643,7 +646,7 @@ M = {
   # M7 Auflage weg: auch an nicht laufenden Spielen immer geprueft
   "M7": [("        IF v_state ->> '\''status'\'' = ANY (c_live_states) OR v_event ->> '\''type'\'' IN ('\''MATCH_START'\'', '\''REOPEN'\'') THEN\n", "        IF true THEN\n")],
   # M8 p_expected_epoch ignoriert
-  "M8": [("  IF p_expected_epoch IS NOT NULL AND p_expected_epoch <> v_fc.epoch THEN\n", "  IF false THEN\n")],
+  "M8": [("  IF p_expected_epoch <> v_fc.epoch THEN\n", "  IF false THEN\n")],
   # M9 EXECUTE der Uebernahme auch fuer anon
   "M9": [("GRANT EXECUTE ON FUNCTION public.take_field_control(uuid, integer, uuid, text, integer) TO authenticated;\n",
           "GRANT EXECUTE ON FUNCTION public.take_field_control(uuid, integer, uuid, text, integer) TO authenticated, anon;\n")],
@@ -651,6 +654,9 @@ M = {
   "M10": [("REVOKE ALL ON TABLE public.field_control FROM PUBLIC, anon, authenticated;\n", "REVOKE ALL ON TABLE public.field_control FROM PUBLIC, anon;\n")],
   # M11 Stand fuer alle Mitglieder (ohne writeMatchData)
   "M11": [("     AND public.has_tournament_permission(p_tournament_id, '\''writeMatchData'\'');\n", "     AND true;\n")],
+  # M15 (Fixrunde 2) Uebernahme ohne erwartete Epoche wieder erlaubt
+  "M15": [("  IF p_tournament_id IS NULL OR p_field IS NULL OR p_device_id IS NULL OR p_expected_epoch IS NULL THEN\n",
+           "  IF p_tournament_id IS NULL OR p_field IS NULL OR p_device_id IS NULL THEN\n")],
   # M12 (Review R3) REOPEN braucht keine Steuer mehr
   "M12": [("OR v_event ->> '\''type'\'' IN ('\''MATCH_START'\'', '\''REOPEN'\'') THEN\n", "OR v_event ->> '\''type'\'' IN ('\''MATCH_START'\'') THEN\n")],
   # M13 (Review R4) isMine ohne Geraete-Vergleich

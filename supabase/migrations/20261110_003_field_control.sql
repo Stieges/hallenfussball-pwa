@@ -21,7 +21,8 @@
 --      B-49) entsteht kein Anspruch, ein bestehender gilt aber auch dann. controlEpoch null vom Halter zaehlt.
 --      Antwort zusaetzlich `control` (Stand des Feldes aus Sicht dieses Geraets).
 --   4. public.take_field_control(...): "Spielleitung uebernehmen" (online, nie im Ausgang) fuer jedes Geraet mit
---      writeMatchData; p_expected_epoch schuetzt vor veralteten Anfragen (CONTROL_CHANGED, @FU-028).
+--      writeMatchData; p_expected_epoch ist Pflicht (NULL -> 22023) und schuetzt vor veralteten Anfragen
+--      (CONTROL_CHANGED, @FU-028).
 --   5. public.field_control_state(...): Stand aller Felder eines Turniers (@HE-049 "Feld 2: Tom (Handy)").
 --   6. Rechte: EXECUTE der zwei RPCs nur authenticated; append_match_events unveraendert.
 --
@@ -551,8 +552,10 @@ BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'take_field_control: nicht angemeldet (auth.uid() ist NULL)' USING ERRCODE = '42501';
   END IF;
-  IF p_tournament_id IS NULL OR p_field IS NULL OR p_device_id IS NULL THEN
-    RAISE EXCEPTION 'take_field_control: Turnier, Feld und Geraete-ID sind Pflicht' USING ERRCODE = '22023';
+  -- p_expected_epoch ist Pflicht: uebernommen wird nur mit bekanntem Stand (freies, nie gesteuertes Feld = 0);
+  -- ein "unbedingt uebernehmen" gibt es nicht (A-34 Fixrunde 2, @FU-028).
+  IF p_tournament_id IS NULL OR p_field IS NULL OR p_device_id IS NULL OR p_expected_epoch IS NULL THEN
+    RAISE EXCEPTION 'take_field_control: Turnier, Feld, Geraete-ID und erwartete Epoche sind Pflicht' USING ERRCODE = '22023';
   END IF;
   IF char_length(v_label) > 40 THEN
     RAISE EXCEPTION 'take_field_control: Geraete-Bezeichnung hoechstens 40 Zeichen' USING ERRCODE = '22023';
@@ -576,7 +579,7 @@ BEGIN
      FOR UPDATE;
 
   -- Veraltete Anfrage (z. B. ohne Netz ausgeloest, spaeter gesendet; oder zwei Uebernahmen zugleich): nichts aendern.
-  IF p_expected_epoch IS NOT NULL AND p_expected_epoch <> v_fc.epoch THEN
+  IF p_expected_epoch <> v_fc.epoch THEN
     RETURN jsonb_build_object('status', 'rejected', 'code', 'CONTROL_CHANGED',
                               'control', public.field_control_info(p_tournament_id, p_field, p_device_id),
                               'serverTime', v_now_ms);
@@ -612,7 +615,8 @@ $$;
 
 COMMENT ON FUNCTION public.take_field_control(uuid, integer, uuid, text, integer) IS
   'A-34 (@FU-027, @FU-028): Spielleitung uebernehmen -- das aufrufende Geraet (Konto/Geraetesitzung + Geraete-ID)
-   steuert danach das Feld, Epoche +1. Nur online (nie im Ausgang); p_expected_epoch <> aktuell -> CONTROL_CHANGED.
+   steuert danach das Feld, Epoche +1. Nur online (nie im Ausgang); p_expected_epoch Pflicht (NULL -> 22023),
+   <> aktuell -> CONTROL_CHANGED.
    Recht writeMatchData; sonst FORBIDDEN_ACTOR. Feld ohne Spiel -> UNKNOWN_FIELD.';
 
 -- ============================================================================================

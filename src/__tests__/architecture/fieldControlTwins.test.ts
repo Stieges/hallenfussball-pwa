@@ -45,6 +45,12 @@ describe('A-34 Zwillinge Migration ↔ Client', () => {
     expect(live).toEqual(MatchStatusSchema.options.filter((s) => !notLive.has(s)).sort());
   });
 
+  it('@FU-028 Fixrunde 2: Übernahme nur mit bekanntem Stand – ohne erwartete Epoche Parameterfehler (22023)', () => {
+    const take = migration.slice(migration.indexOf('FUNCTION public.take_field_control'));
+    expect(take).toMatch(/IF p_tournament_id IS NULL OR p_field IS NULL OR p_device_id IS NULL OR p_expected_epoch IS NULL THEN\s+RAISE EXCEPTION [^;]+USING ERRCODE = '22023'/);
+    expect(migration).not.toContain('p_expected_epoch IS NOT NULL AND');
+  });
+
   it('Anpfiff und Wiedereröffnen brauchen die Steuer auch an nicht laufenden Spielen (brief L5/L6)', () => {
     expect(migration).toContain("v_event ->> 'type' IN ('MATCH_START', 'REOPEN')");
   });
