@@ -9,7 +9,8 @@
  */
 
 import { Team, Match, Tournament } from '../../types/tournament';
-import { generateGroupPhaseSchedule } from './fairScheduler'
+import { generateGroupPhaseScheduleWithReport } from './fairScheduler'
+import { effectiveHostTeamIds } from '../models/hostTeams'
 import {
   generatePlayoffSchedule,
   generatePlayoffDefinitions,
@@ -27,7 +28,7 @@ export type { ScheduledMatch, SchedulePhase, GeneratedSchedule } from './schedul
 export { formatScheduleForPrint, exportScheduleAsCSV, calculateScheduleStats } from '../../lib/scheduleRenderer'
 
 // Import internal helpers
-import { SchedulePhase, GeneratedSchedule, ScheduledMatch } from './scheduleTypes'
+import { SchedulePhase, GeneratedSchedule, ScheduledMatch, ScheduleNotice } from './scheduleTypes'
 import {
   parseStartTime,
   addMinutes,
@@ -55,6 +56,8 @@ export function generateFullSchedule(
   let allMatches: ScheduledMatch[]
   let groupStageMatches: Match[]
   let finalMatches: Match[]
+  let scheduleNotices: ScheduleNotice[] = []
+  let roundsPlan = false
 
   // Helper interfaces for imported data - separate from strict Match/Tournament interfaces
   // to avoid inheritance conflicts with different property types
@@ -193,6 +196,8 @@ export function generateFullSchedule(
     const generated = generateMatches(tournament, startTime)
     groupStageMatches = generated.groupStageMatches
     finalMatches = generated.finalMatches
+    scheduleNotices = generated.notices
+    roundsPlan = generated.roundsPlan
 
     // Scheduliere Gruppenphase
     const scheduledGroupStage = scheduleMatches({
@@ -258,6 +263,8 @@ export function generateFullSchedule(
     })),
     initialStandings: createInitialStandings(tournament.teams),
     refereeConfig: tournament.refereeConfig,
+    scheduleNotices,
+    roundsPlan,
   }
 }
 
@@ -268,13 +275,18 @@ export function generateFullSchedule(
 function generateMatches(
   tournament: Tournament,
   startTime: Date
-): { groupStageMatches: Match[]; finalMatches: Match[] } {
+): { groupStageMatches: Match[]; finalMatches: Match[]; notices: ScheduleNotice[]; roundsPlan: boolean } {
   let groupStageMatches: Match[] = []
   let finalMatches: Match[] = []
+  let notices: ScheduleNotice[] = []
+  let roundsPlan = false
 
   // 1. Generiere Gruppenphase
   if (tournament.groupSystem === 'roundRobin' || tournament.groupSystem === 'groupsAndFinals') {
-    groupStageMatches = generateGroupStageMatches(tournament, startTime)
+    const groupPhase = generateGroupStageMatches(tournament, startTime)
+    groupStageMatches = groupPhase.matches
+    notices = groupPhase.notices
+    roundsPlan = groupPhase.roundsPlan
   }
 
   // 2. Generiere Playoffs
@@ -288,10 +300,10 @@ function generateMatches(
     finalMatches = generateFinalMatches(tournament, groupStageMatches, startTime)
   }
 
-  return { groupStageMatches, finalMatches }
+  return { groupStageMatches, finalMatches, notices, roundsPlan }
 }
 
-function generateGroupStageMatches(tournament: Tournament, startTime: Date): Match[] {
+function generateGroupStageMatches(tournament: Tournament, startTime: Date): ReturnType<typeof generateGroupPhaseScheduleWithReport> {
   const groupsMap = new Map<string, Team[]>()
 
   if (tournament.groupSystem === 'roundRobin') {
@@ -306,7 +318,7 @@ function generateGroupStageMatches(tournament: Tournament, startTime: Date): Mat
     }
   }
 
-  return generateGroupPhaseSchedule({
+  return generateGroupPhaseScheduleWithReport({
     groups: groupsMap,
     numberOfFields: tournament.numberOfFields,
     slotDurationMinutes: tournament.groupPhaseGameDuration,
@@ -314,6 +326,8 @@ function generateGroupStageMatches(tournament: Tournament, startTime: Date): Mat
     minRestSlotsPerTeam: tournament.minRestSlots ?? 1,
     startTime,
     dfbPatternCode: tournament.useDFBKeys ? tournament.dfbKeyPattern : undefined,
+    hostTeamIds: effectiveHostTeamIds(tournament.hostTeamIds, tournament.teams), // @W4-027, Reihenfolge = Teamliste
+    openingMode: tournament.openingMode,
   })
 }
 
