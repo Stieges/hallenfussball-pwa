@@ -3,7 +3,7 @@
  * Service-Role (nur lokaler Stack) und der "Soll-Marker" für noch nicht gebaute Schritte.
  */
 import path from 'node:path';
-import { expect, type Browser, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Locator, type Page } from '@playwright/test';
 import { AUTH_DIR, type LoggedInRole } from '../../fixtures';
 import { getLocalServiceRoleClient } from '../../helpers';
 import { e2eUuid } from '../../e2eUuid';
@@ -79,6 +79,21 @@ export function turniertagEventId(key: string): string {
  */
 export async function expectSollMarker(page: Page, testId: string): Promise<void> {
   await expect(page.locator(`[data-testid="${testId}"]`)).toBeVisible({ timeout: SOLL_TIMEOUT_MS });
+}
+
+/**
+ * Vorbedingung eines Schritts (Fixrunde 1, A1): Aufbau, den der Schritt selbst nicht prüft (Spiele anpfeifen, beenden,
+ * Voraussetzungen lesen). Schlägt sie fehl, wird der Schritt UNERWARTET rot (`expectedStatus = 'passed'`) -- ein Fehler
+ * im Aufbau darf nicht als "erwartet rot" (`test.fail`) durchgehen und den eigentlichen Soll-Fehler verdecken.
+ */
+export async function vorbedingung<T>(label: string, aufbau: () => Promise<T>): Promise<T> {
+  try {
+    return await aufbau();
+  } catch (error) {
+    test.info().expectedStatus = 'passed';
+    const grund = error instanceof Error ? error.message : String(error);
+    throw new Error(`Vorbedingung "${label}" fehlgeschlagen (kein erwartetes Rot des Schritts): ${grund}`, { cause: error });
+  }
 }
 
 /** Zeitgrenze für den Seitenanker: die Seite darf laden, der Anker soll nicht flackern. */

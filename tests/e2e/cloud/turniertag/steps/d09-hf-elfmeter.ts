@@ -7,7 +7,7 @@
  */
 import { expect } from '@playwright/test';
 import { E2E_TURNIERTAG_SHARE_CODE } from '../../testData';
-import { fetchTurniertagBracket, findFinalByLabel, SOLL_TIMEOUT_MS } from './shared';
+import { fetchTurniertagBracket, findFinalByLabel, SOLL_TIMEOUT_MS, vorbedingung } from './shared';
 import { appendOwner, eventOf, regularResultEvents } from './playViaRpc';
 import type { StepContext, TurniertagStep } from './types';
 
@@ -17,8 +17,10 @@ async function halbfinaleElfmeter({ anonPage }: StepContext): Promise<void> {
   expect(hf1.team_a_id && hf1.team_b_id, 'Halbfinale 1 ist besetzt (hängt an D8)').toBeTruthy();
   const start = Date.now() - 600_000;
   const base = regularResultEvents(hf1, 1, 1, 600_000);
-  const regular = await appendOwner(hf1.id, base);
-  expect(regular.results.map((r) => r.status)).toEqual(base.map(() => 'accepted'));
+  await vorbedingung('Halbfinale 1 regulär 1:1 spielen', async () => {
+    const regular = await appendOwner(hf1.id, base);
+    expect(regular.results.map((r) => r.status)).toEqual(base.map(() => 'accepted'));
+  });
   const choice = eventOf('TIEBREAK_CHOICE', start + 100_000, start, { payload: { choice: 'shootout' } });
   const kicks = [0, 1, 2, 3, 4].flatMap((round) => [
     eventOf('SHOOTOUT_KICK', start + 110_000 + round * 2000, start, { teamId: hf1.team_a_id, payload: { scored: true } }),
@@ -46,8 +48,10 @@ async function halbfinale2(_ctx: StepContext): Promise<void> {
   const hf2 = findFinalByLabel(finals, '2. Halbfinale');
   expect(hf2.team_a_id && hf2.team_b_id, 'Halbfinale 2 ist besetzt (hängt an D8)').toBeTruthy();
   const events = regularResultEvents(hf2, 2, 1);
-  const result = await appendOwner(hf2.id, events);
-  expect(result.results.map((r) => r.status)).toEqual(events.map(() => 'accepted'));
+  await vorbedingung('Halbfinale 2 regulär 2:1 spielen', async () => {
+    const result = await appendOwner(hf2.id, events);
+    expect(result.results.map((r) => r.status)).toEqual(events.map(() => 'accepted'));
+  });
   await expect.poll(async () => {
     const m = findFinalByLabel((await fetchTurniertagBracket()).finals, '2. Halbfinale');
     return [m.match_status, m.score_a, m.score_b];
