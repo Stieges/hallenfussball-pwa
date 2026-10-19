@@ -57,7 +57,7 @@ describe('@W5-025 Eine Kopie fürs Proben startet leer', () => {
     for (const spiel of kopieVon().matches) {
       for (const feld of [
         'finishedAt', 'decidedBy', 'correctionHistory', 'overtimeScoreA', 'overtimeScoreB', 'penaltyScoreA', 'penaltyScoreB',
-        'timerStartTime', 'timerPausedAt', 'timerElapsedSeconds', 'skippedReason', 'skippedAt', 'liveState',
+        'timerStartTime', 'timerPausedAt', 'timerElapsedSeconds', 'skippedReason', 'skippedAt', 'liveState', 'kit',
       ] as const) {
         expect(spiel[feld], feld).toBeUndefined();
       }

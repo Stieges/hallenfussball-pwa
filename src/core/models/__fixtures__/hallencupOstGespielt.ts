@@ -29,6 +29,7 @@ const matches = [
     overtimeScoreA: 1, overtimeScoreB: 1, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty',
     skippedReason: 'Team zurückgezogen', skippedAt: '2026-11-26T09:00:00.000Z',
     liveState: { phase: 'ended' },
+    kit: { a: 'red', b: 'blue' },
   },
   {
     id: OST_M_FINALE, round: 2, field: 1, isFinal: true, finalType: 'final',
