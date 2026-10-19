@@ -174,6 +174,18 @@ describe('Fixrunde 2 A6: Speichern in fester Fußleiste (Mockup einstellungen.ht
     expect(knopf).toHaveAttribute('data-primary');
   });
 
+  it('A6 solange die Leiste steht, hält die Seite unten Platz frei (verdeckt die Fußzeile der App nicht); danach wieder nicht', () => {
+    const { unmount } = render(<Host initial={buildTournament()} onUpdate={vi.fn()} />);
+    expect(document.body.style.paddingBottom).not.toBe('');
+    unmount();
+    expect(document.body.style.paddingBottom).toBe('');
+  });
+
+  it('A6 ohne Recht bleibt der Seitenrand unberührt', () => {
+    render(<Host initial={buildTournament()} canEdit={false} onUpdate={vi.fn()} />);
+    expect(document.body.style.paddingBottom).toBe('');
+  });
+
   it('A6 die Leiste speichert wie der Knopf vorher (Navy bleibt speicherbar)', () => {
     const onUpdate = zeige();
     waehle('spectator-display-away-color', NAVY);

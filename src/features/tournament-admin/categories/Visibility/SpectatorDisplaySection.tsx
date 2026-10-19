@@ -38,6 +38,8 @@ export interface SpectatorDisplaySectionProps {
 const PREVIEW_SCORES = { home: 2, away: 1 } as const;
 const PICKER_PRESETS = BOX_COLOR_PRESETS.map((preset) => preset.hex);
 const SAVED_VISIBLE_MS = 2000;
+/** Höhe der Fußleiste: Primär-Touchgröße des Knopfes plus oben und unten Rand */
+const FOOTER_HEIGHT = `calc(${cssVars.touchTargets.primary} + ${cssVars.spacing.md} * 2)`;
 
 const S = {
   lead: { margin: 0, marginBottom: cssVars.spacing.md, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.bodySm },
@@ -81,14 +83,13 @@ const S = {
   },
   word: { flex: 'none', minWidth: cssVars.spacing.xl, textAlign: 'right', fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold },
   label: { display: 'block', margin: `${cssVars.spacing.md} 0 ${cssVars.spacing.xs}`, fontSize: cssVars.fontSizes.bodyMd, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary },
-  // Fußleiste (Mockup `.foot2`): am Fensterrand fest, damit „Speichern“ am Handy ohne Scrollen erreichbar ist; die Leiste selbst
-  // fängt keine Eingaben ab, nur ihr Inhalt
-  footer: { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: zIndex.sticky, pointerEvents: 'none' },
+  // Fußleiste (Mockup `.foot2`): am unteren Fensterrand fest, damit „Speichern“ am Handy ohne Scrollen erreichbar ist. Damit sie
+  // am Seitenende die Fußzeile der App nicht verdeckt, hält die Seite solange `FOOTER_HEIGHT` Platz unten frei (Effekt unten)
+  footer: { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: zIndex.sticky },
   footerInner: {
-    pointerEvents: 'auto', maxWidth: dialogWidths.lg, margin: '0 auto', boxSizing: 'border-box', padding: cssVars.spacing.md,
+    maxWidth: dialogWidths.lg, margin: '0 auto', boxSizing: 'border-box', padding: cssVars.spacing.md,
     background: cssVars.colors.background, borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
   },
-  footerSpace: { height: `calc(${cssVars.touchTargets.primary} + ${cssVars.spacing.md} * 2)` },
   save: {
     width: '100%', minHeight: cssVars.touchTargets.primary, border: 0,
     borderRadius: cssVars.borderRadius.md, background: cssVars.colors.primary, color: cssVars.colors.onPrimary,
@@ -105,6 +106,15 @@ export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdi
   const stored = parseSpectatorDisplay(tournament.spectatorDisplay ?? DEFAULT_SPECTATOR_DISPLAY);
   const [draft, setDraft] = useState<SpectatorDisplaySettings>(stored);
   const [saved, setSaved] = useState(false);
+  // Platz am Seitenende für die feste Fußleiste, solange sie steht (nur mit Recht)
+  useEffect(() => {
+    if (!canEdit) {
+      return undefined;
+    }
+    const vorher = document.body.style.paddingBottom;
+    document.body.style.paddingBottom = FOOTER_HEIGHT;
+    return () => { document.body.style.paddingBottom = vorher; };
+  }, [canEdit]);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // A5: der Timer der Meldung „Gespeichert“ läuft nicht über den Abbau hinaus
   useEffect(() => () => clearTimeout(savedTimer.current), []);
@@ -164,6 +174,7 @@ export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdi
 
   const on = draft.teamColors;
   return (
+    <>
     <div data-testid="spectator-display-section">
       <CollapsibleSection icon="🎨" title={t('spectatorDisplay.title')} defaultOpen>
         <p style={S.lead}>{t('spectatorDisplay.description')}</p>
@@ -202,13 +213,12 @@ export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdi
             </div>
             {picker('home', draft.homeColor)}
             {picker('away', draft.awayColor)}
-            {/* Platz für die feste Fußleiste, damit sie keinen Inhalt verdeckt */}
-            <div style={S.footerSpace} aria-hidden="true" />
           </>
         ) : (
           <div data-testid="spectator-display-lead-only"><LeadOnlyHint /></div>
         )}
       </CollapsibleSection>
+    </div>
       {canEdit && (
         <div style={S.footer} data-testid="spectator-display-footer">
           <div style={S.footerInner}>
@@ -217,6 +227,6 @@ export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdi
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

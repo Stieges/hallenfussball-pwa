@@ -447,9 +447,6 @@ export function VisibilityCategory({
         </div>
       </CollapsibleSection>
 
-      {/* Anzeige für Zuschauer: Teamfarben und Standardfarben der Ergebniskästen mit Vorschau (@ZM-152) */}
-      <SpectatorDisplaySection tournament={tournament} onTournamentUpdate={onTournamentUpdate} canEdit={canEditDisplay} />
-
       {/* Visibility Level */}
       <CollapsibleSection icon="🔒" title={t('visibility.tournamentVisibility')}>
         {isDraft && (
@@ -546,6 +543,8 @@ export function VisibilityCategory({
           </span>
         </div>
       </CollapsibleSection>
+      {/* Anzeige für Zuschauer: Teamfarben und Standardfarben der Ergebniskästen mit Vorschau (@ZM-152) */}
+      <SpectatorDisplaySection tournament={tournament} onTournamentUpdate={onTournamentUpdate} canEdit={canEditDisplay} />
     </CategoryPage>
   );
 }
