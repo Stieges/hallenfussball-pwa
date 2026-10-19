@@ -9,12 +9,15 @@ import type { AuthChangeEvent, Session as SupabaseSession } from '@supabase/supa
 import { safeLocalStorage, safeSessionStorage } from '../../../core/utils/safeStorage';
 import { captureFeatureError } from '../../../lib/sentry';
 import { clearProfileCache } from '../services/profileCacheService';
+import { clearSessionExpired, hasSessionExpired, setSessionExpired } from './sessionExpired';
 import { clearOwnSignOut, clearSignedOutElsewhere, isOwnSignOut, setSignedOutElsewhere } from './remoteSignOut';
 
 export function applyAuthEventEffects(
   event: AuthChangeEvent,
   newSession: SupabaseSession | null,
   setIsGuest: (isGuest: boolean) => void,
+  /** true, solange die App startet: die gespeicherte Anmeldung ging beim Erneuern verloren. */
+  duringStart = false,
 ): void {
   // Handle password recovery - set flag with TTL for AuthCallback to redirect
   if (event === 'PASSWORD_RECOVERY' && newSession) {
@@ -30,6 +33,7 @@ export function applyAuthEventEffects(
     safeLocalStorage.removeItem('auth:guestUser');
     setIsGuest(false);
     clearSignedOutElsewhere();
+    clearSessionExpired();
     // Neue Sitzung: ein eigenes Abmelden davor zählt nicht mehr (M2, kein Zeitfenster).
     clearOwnSignOut();
   }
@@ -42,7 +46,13 @@ export function applyAuthEventEffects(
     void clearProfileCache();
     // Ohne eigenes Abmelden kam das Ende der Sitzung vom Server: Hinweis auf der Anmeldeseite.
     if (!isOwnSignOut()) {
-      setSignedOutElsewhere();
+      if (duringStart) {
+        // Die gespeicherte Anmeldung ging beim Start verloren: der Server lehnte die Erneuerung ab
+        // (Ablauf oder Widerruf, beides `refresh_token_not_found`). Klare Meldung statt Stille (Ü1.2).
+        setSessionExpired();
+      } else if (!hasSessionExpired()) {
+        setSignedOutElsewhere();
+      }
     }
   }
 }

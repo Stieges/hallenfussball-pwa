@@ -20,6 +20,7 @@ import { mapProfileUpdateToSupabase } from '../../../core/repositories/supabaseM
 import { executeWithTimeout } from '../../../core/utils/SingleFlight';
 import { captureFeatureError, setUserContext as setSentryUserContext } from '../../../lib/sentry';
 import { logout as logoutAction, type LogoutOptions, type LogoutResult } from './logoutAction';
+import { setSessionExpired } from './sessionExpired';
 
 /**
  * Timeout for auth operations (login, register, etc.)
@@ -622,6 +623,7 @@ export async function reconnect(deps: AuthActionDeps): Promise<boolean> {
       if (import.meta.env.DEV) {
         console.warn('[Auth] Session expired, clearing auth state for fresh login');
       }
+      setSessionExpired();
       await clearStaleAuthState();
       setUserAndSentry(deps, null);
       deps.setSession(null);

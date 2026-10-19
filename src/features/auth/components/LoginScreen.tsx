@@ -31,6 +31,7 @@ import { ConnectingIndicator } from './ConnectingIndicator';
 import { clearCachesAndReload } from '../../../lib/cacheRecovery';
 import { useBrowserOnlineStatus } from '../hooks/useBrowserOnlineStatus';
 import { hasSignedOutElsewhere } from '../context/remoteSignOut';
+import { hasSessionExpired } from '../context/sessionExpired';
 
 /** Soft threshold (ms) after which the subtle "connecting…" pill surfaces. */
 const CONNECTING_HINT_DELAY_MS = 3000;
@@ -99,6 +100,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   // Hinweis, wenn ein anderes Gerät dieses Gerät abgemeldet hat (A-07d2, @AN-024).
   const [signedOutElsewhere] = useState(hasSignedOutElsewhere);
+  // Hinweis, wenn die Anmeldung abgelaufen ist (Ü1.2, @AN-021).
+  const [sessionExpired] = useState(hasSessionExpired);
   const [resetPasswordSent, setResetPasswordSent] = useState(false);
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
@@ -319,6 +322,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         {signedOutElsewhere && (
           <p role="status" data-testid="signed-out-elsewhere" style={styles.signedOutHint}>
             {t('login.signedOutElsewhere')}
+          </p>
+        )}
+
+        {sessionExpired && (
+          <p role="status" data-testid="session-expired" style={styles.signedOutHint}>
+            {AUTH_ERRORS.SESSION_EXPIRED}
           </p>
         )}
 
