@@ -33,6 +33,7 @@ import { pendingSlot, slotSource, slotTeamId, teamSlot } from '../models/matchSl
 import { originFromRow, originToColumns, type MatchOriginColumns } from './matchOriginColumns';
 import { kitFromRow } from './matchKitRow';
 import { bibColorFromConfig, bibColorToConfig } from './tournamentBibColor';
+import { hostTeamsFromConfig, hostTeamsToConfig } from './tournamentHostTeams';
 import { changeRevisionFromRow } from './tournamentChangeRevisionRow';
 
 // Supabase Row Types
@@ -481,6 +482,10 @@ interface TournamentConfig {
   useDFBKeys?: boolean;
   dfbKeyPattern?: string;
 
+  // Mannschaften des Veranstalters, Eröffnung (@W4-034)
+  hostTeamIds?: string[];
+  openingMode?: string;
+
   // Wizard state
   lastVisitedStep?: number;
 
@@ -607,7 +612,7 @@ export function mapTournamentFromSupabase(
     isExternal: config.isExternal,
     externalSource: config.externalSource,
     useDFBKeys: config.useDFBKeys,
-    dfbKeyPattern: config.dfbKeyPattern,
+    dfbKeyPattern: config.dfbKeyPattern, ...hostTeamsFromConfig(config, teams), // @W4-034/@W4-044
     monitors: config.monitors as Tournament['monitors'],
     sponsors: config.sponsors as Tournament['sponsors'],
     version: row.version ?? undefined, ...changeRevisionFromRow(row), // A-10: Änderungszählung (@TM-027)
@@ -694,7 +699,7 @@ export function mapTournamentToSupabase(
     externalSource: tournament.externalSource,
     sportId: tournament.sportId,
     useDFBKeys: tournament.useDFBKeys,
-    dfbKeyPattern: tournament.dfbKeyPattern,
+    dfbKeyPattern: tournament.dfbKeyPattern, ...hostTeamsToConfig(tournament), // @W4-034/@W4-044
     monitors: tournament.monitors,
     sponsors: tournament.sponsors,
     publishedAt: tournament.publishedAt,
