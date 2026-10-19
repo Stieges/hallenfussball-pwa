@@ -7,16 +7,17 @@
  * Anzeige weicht dann aus (Gast Weiß oder Schwarz, `resolveBoxColors`). Die Vorschau zeigt die gewählten Farben.
  * Ohne das Recht `tournamentSettings` (`canEdit` false, @ZM-019) gibt es keine Eingaben, nur Vorschau und Hinweis.
  */
-import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CollapsibleSection } from '../shared';
 import { ColorPicker } from '../../../../components/ui/ColorPicker';
 import { ScoreBox } from '../../../../components/ui/molecules/ScoreBox';
 import { InlineNotice } from '../../../../components/ui/molecules/InlineNotice';
 import { LeadOnlyHint } from '../../../../components/ui/molecules/LeadOnlyHint';
+import { useBreakpoint } from '../../../../hooks/useBreakpoint';
 import { useTheme } from '../../../../hooks/useTheme';
 import { getColorsByTheme } from '../../../../design-tokens/colors';
-import { borderWidths, cssVars, dialogWidths, zIndex } from '../../../../design-tokens';
+import { borderWidths, cssVars, zIndex } from '../../../../design-tokens';
 import {
   BOX_COLOR_PRESETS,
   DEFAULT_SPECTATOR_DISPLAY,
@@ -87,7 +88,7 @@ const S = {
   // am Seitenende die Fußzeile der App nicht verdeckt, hält die Seite solange `FOOTER_HEIGHT` Platz unten frei (Effekt unten)
   footer: { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: zIndex.sticky },
   footerInner: {
-    maxWidth: dialogWidths.lg, margin: '0 auto', boxSizing: 'border-box', padding: cssVars.spacing.md,
+    boxSizing: 'border-box', padding: cssVars.spacing.md,
     background: cssVars.colors.background, borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
   },
   save: {
@@ -101,6 +102,8 @@ const S = {
 export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdit }: SpectatorDisplaySectionProps): ReactElement {
   const { t } = useTranslation('admin');
   const { resolvedTheme } = useTheme();
+  // Ab Tablet-Breite hat die Seite eine Inhaltsspalte: die Leiste ist dann so breit und so ausgerichtet wie die Karte
+  const { isMobile } = useBreakpoint();
   // Hintergrund und Textfarbe des Themas als Hex (der Kasten rechnet Kontrast und Rahmen daraus); Kontrast-Thema zählt als dunkel
   const colors = getColorsByTheme(resolvedTheme === 'light' ? 'light' : 'dark');
   const stored = parseSpectatorDisplay(tournament.spectatorDisplay ?? DEFAULT_SPECTATOR_DISPLAY);
@@ -115,6 +118,25 @@ export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdi
     document.body.style.paddingBottom = FOOTER_HEIGHT;
     return () => { document.body.style.paddingBottom = vorher; };
   }, [canEdit]);
+  // Leiste bündig mit der Karte: Lage und Breite der Karte messen (Fenstergröße und Spalte ändern sich)
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [column, setColumn] = useState<{ left: number; width: number } | null>(null);
+  useLayoutEffect(() => {
+    const card = cardRef.current;
+    if (!card) {
+      return undefined;
+    }
+    const measure = () => {
+      const r = card.getBoundingClientRect();
+      const next = !isMobile && r.width > 0 ? { left: r.left, width: r.width } : null;
+      setColumn((cur) => (cur?.left === next?.left && cur?.width === next?.width ? cur : next));
+    };
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure);
+    observer?.observe(card);
+    window.addEventListener('resize', measure);
+    return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
+  }, [canEdit, isMobile]);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // A5: der Timer der Meldung „Gespeichert“ läuft nicht über den Abbau hinaus
   useEffect(() => () => clearTimeout(savedTimer.current), []);
@@ -175,7 +197,7 @@ export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdi
   const on = draft.teamColors;
   return (
     <>
-    <div data-testid="spectator-display-section">
+    <div ref={cardRef} data-testid="spectator-display-section">
       <CollapsibleSection icon="🎨" title={t('spectatorDisplay.title')} defaultOpen>
         <p style={S.lead}>{t('spectatorDisplay.description')}</p>
 
@@ -220,8 +242,8 @@ export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdi
       </CollapsibleSection>
     </div>
       {canEdit && (
-        <div style={S.footer} data-testid="spectator-display-footer">
-          <div style={S.footerInner}>
+        <div style={column === null ? S.footer : { ...S.footer, left: column.left, right: 'auto', width: column.width }} data-testid="spectator-display-footer">
+          <div style={column === null ? S.footerInner : { ...S.footerInner, paddingLeft: 0, paddingRight: 0 }}>
             {saved && <p role="status" style={S.saved}>{t('spectatorDisplay.saved')}</p>}
             <button type="button" style={S.save} onClick={handleSave} data-primary data-testid="spectator-display-save">{t('spectatorDisplay.save')}</button>
           </div>
