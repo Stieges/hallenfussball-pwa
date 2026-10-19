@@ -391,6 +391,8 @@
   --sizing-hairline: 1px;
   /* Tafel Live-Cockpit (Mockup, fest): Uhr und Stand über Schrift-Tokens, Meldezeile reine Anzeige */
   --sizing-team-stripe-width: var(--spacing-xs);
+  /* Spaltenkopf im Cockpit: Streifenzeile + drei Namenszeilen, beide Köpfe gleich hoch (@OB-025, Altplan 3.3) */
+  --sizing-spaltenkopf-max: calc(var(--spacing-md) + var(--spacing-md) + var(--spacing-xs) + 3 * var(--line-height-body-md));
   --sizing-notice-line-height-compact: 24px;
   --sizing-notice-line-height-regular: 32px;
 

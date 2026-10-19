@@ -27,21 +27,30 @@ export interface TeamColumnProps {
 }
 
 const spalteStil: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, minWidth: 0, flex: 1 };
-const kopfStil = (breit: boolean): CSSProperties => ({
-  display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs,
-  overflowWrap: 'break-word', hyphens: 'auto',
-  fontSize: breit ? cssVars.fontSizes.titleMd : cssVars.fontSizes.lg,
+// Kopf nach Mockup: umrandet, oben Streifen und „Heim/Gast“, darunter der Name (@OB-025). Mindesthöhe für drei Namenszeilen, damit
+// beide Köpfe gleich hoch sind und die Tor-Knöpfe auf einer Höhe stehen. Der Name wird nie gekürzt und nie getrennt (VISUAL-DESIGN § 1/§ 2).
+const kopfStil: CSSProperties = {
+  display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs, boxSizing: 'border-box', minWidth: 0,
+  minHeight: cssVars.sizing.spaltenkopfMax, padding: cssVars.spacing.xs,
+  border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`, borderRadius: cssVars.borderRadius.md,
+  hyphens: 'manual',
+};
+const zeileStil: CSSProperties = { display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm };
+const nameStil = (breit: boolean): CSSProperties => ({
+  margin: 0, hyphens: 'manual', overflowWrap: 'anywhere', lineHeight: cssVars.lineHeights.bodyMd,
+  // Kleiner statt kürzen: eine Stufe zwischen mittel und groß, damit der Name in höchstens drei Zeilen passt
+  fontSize: breit ? cssVars.fontSizes.titleMd : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`,
   fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary,
 });
 const streifenStil = (farbe: string | null): CSSProperties => ({
-  height: cssVars.sizing.teamStripeWidth, background: farbe ?? cssVars.colors.border,
+  flex: 1, height: cssVars.sizing.teamStripeWidth, background: farbe ?? cssVars.colors.border, borderRadius: cssVars.borderRadius.sm,
   border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderSolid}`,
 });
 const seiteStil: CSSProperties = { fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textMuted, textTransform: 'uppercase' };
 const zaehlerStil: CSSProperties = { fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary, fontWeight: cssVars.fontWeights.semibold };
 const torStil: CSSProperties = { minHeight: cssVars.touchTargets.primary, width: '100%' };
 const knopfStil: CSSProperties = { minHeight: cssVars.touchTargets.minimum, flexDirection: 'column', gap: 0, padding: cssVars.spacing.sm, minWidth: 0 };
-const zeileStil = (steht: boolean): CSSProperties => ({
+const markeStil = (steht: boolean): CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', fontSize: cssVars.fontSizes.sm, color: cssVars.colors.warning,
   border: `${cssVars.borderWidth.thin} solid ${steht ? cssVars.colors.textMuted : cssVars.colors.warning}`,
   borderRadius: cssVars.borderRadius.sm, padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
@@ -65,10 +74,12 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
 
   return (
     <section style={spalteStil} data-testid={`team-column-${seite}`} aria-label={name}>
-      <div style={kopfStil(breit)} data-testid={`team-head-${seite}`} lang="de">
-        <div data-testid={`team-stripe-${seite}`} style={streifenStil(model.farbe)} />
-        <span data-testid={`team-name-${seite}`}>{name}</span>
-        <span style={seiteStil}>{t(seite === 'home' ? 'spalte.heim' : 'spalte.gast')}</span>
+      <div style={kopfStil} data-testid={`team-head-${seite}`}>
+        <div style={zeileStil}>
+          <span data-testid={`team-stripe-${seite}`} style={streifenStil(model.farbe)} />
+          <span style={seiteStil}>{t(seite === 'home' ? 'spalte.heim' : 'spalte.gast')}</span>
+        </div>
+        <p data-teamname="" data-testid={`team-name-${seite}`} style={nameStil(breit)}>{name}</p>
       </div>
       <div style={zaehlerStil} data-testid={`team-fouls-${seite}`}>
         {fouls.grenze === null
@@ -99,7 +110,7 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
       {strafen.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: cssVars.spacing.xs }}>
           {strafen.map((s) => (
-            <span key={s.id} style={zeileStil(s.steht)} data-testid={`team-penalty-${s.id}`} data-steht={String(s.steht)}>
+            <span key={s.id} style={markeStil(s.steht)} data-testid={`team-penalty-${s.id}`} data-steht={String(s.steht)}>
               {s.nummer === null ? t('spalte.strafeOhneNr', { rest: s.rest }) : t('spalte.strafe', { nummer: s.nummer, rest: s.rest })}
             </span>
           ))}

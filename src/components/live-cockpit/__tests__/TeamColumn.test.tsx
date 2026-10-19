@@ -139,14 +139,45 @@ describe('TeamColumn', () => {
     expect([p.onTor, p.onFoul, p.onZeitstrafe, p.onKarte].map((f) => (f as ReturnType<typeof vi.fn>).mock.calls.length)).toEqual([1, 1, 1, 1]);
   });
 
-  it('@OB-025 50-Zeichen-Name steht vollständig, wortweise umbrochen, ohne „…“', () => {
+  it('@OB-025 50-Zeichen-Name steht vollständig im Text, ohne „…“, ohne Silbentrennung und ohne Kürzung', () => {
     render(<TeamColumn {...props({ name: NAME_50 })} />);
     const kopf = screen.getByTestId('team-head-away');
-    expect(kopf).toHaveTextContent(NAME_50);
-    expect(kopf.style.textOverflow).not.toBe('ellipsis');
-    expect(kopf.style.whiteSpace).not.toBe('nowrap');
-    expect(kopf.style.getPropertyValue('-webkit-line-clamp')).toBe('');
-    expect(kopf).toHaveAttribute('lang', 'de');
+    const name = screen.getByTestId('team-name-away');
+    expect(name).toHaveTextContent(NAME_50);
+    expect(name.textContent).not.toMatch(/…|\.\.\./);
+    expect(name).toHaveAttribute('data-teamname');
+    for (const el of [kopf, name]) {
+      expect(el.style.textOverflow).not.toBe('ellipsis');
+      expect(el.style.whiteSpace).not.toBe('nowrap');
+      expect(el.style.getPropertyValue('-webkit-line-clamp')).toBe('');
+      expect(el.style.hyphens).not.toBe('auto'); // VISUAL-DESIGN § 2: Teamnamen trennen nie
+      expect(el).not.toHaveAttribute('lang');
+    }
+    expect(name.style.overflowWrap).toBe('anywhere');
+  });
+
+  it('@OB-025 die Schrift des Namens ist eine Stufe zwischen mittel und groß (kleiner statt kürzen), nie darunter', () => {
+    render(<TeamColumn {...props({ name: NAME_50 })} />);
+    const schrift = screen.getByTestId('team-name-away').style.fontSize;
+    expect(schrift).toContain('clamp(');
+    expect(schrift).toContain('var(--font-size-md)');
+    expect(schrift).toContain('var(--font-size-lg)');
+  });
+
+  it('@OB-025 beide Köpfe haben dieselbe Mindesthöhe aus dem Token, damit die Tor-Knöpfe auf einer Höhe stehen', () => {
+    render(<><TeamColumn {...props({ seite: 'home', name: NAME_50 })} /><TeamColumn {...props({ seite: 'away', name: 'SV Süd' })} /></>);
+    expect(screen.getByTestId('team-head-home').style.minHeight).toBe('var(--sizing-spaltenkopf-max)');
+    expect(screen.getByTestId('team-head-away').style.minHeight).toBe('var(--sizing-spaltenkopf-max)');
+  });
+
+  it('Kopf nach Mockup: umrandet, Streifen und „Heim/Gast“ in einer Zeile, der Name darunter', () => {
+    render(<TeamColumn {...props({ farbe: 'var(--color-team-fallback)' })} />);
+    const kopf = screen.getByTestId('team-head-away');
+    expect(kopf.style.border).not.toBe('');
+    const zeile = within(kopf).getByTestId('team-stripe-away').parentElement!;
+    expect(zeile).toHaveTextContent('Gast');
+    expect(zeile).not.toContainElement(screen.getByTestId('team-name-away'));
+    expect(kopf.lastElementChild).toBe(screen.getByTestId('team-name-away'));
   });
 
   it('Teamfarbe nur als Streifen im Kopf, nie als Schrifthintergrund', () => {

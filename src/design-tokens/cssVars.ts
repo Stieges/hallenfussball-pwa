@@ -549,6 +549,7 @@ export const cssSizing = {
   noticeLineHeightCompact: 'var(--sizing-notice-line-height-compact)',
   noticeLineHeightRegular: 'var(--sizing-notice-line-height-regular)',
   teamStripeWidth: 'var(--sizing-team-stripe-width)',
+  spaltenkopfMax: 'var(--sizing-spaltenkopf-max)',
 } as const;
 
 export const cssLetterSpacing = {

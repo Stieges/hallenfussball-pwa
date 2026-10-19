@@ -41,8 +41,9 @@
   padding: var(--spacing-xl);
 }
 
+/* Handy: wenig Rand, damit lange Teamnamen in höchstens drei Zeilen passen (@OB-025) */
 .scoreboardMobile {
-  padding: var(--spacing-md);
+  padding: var(--spacing-xs);
 }
 
 .scoreRow {
