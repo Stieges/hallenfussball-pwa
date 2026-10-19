@@ -466,7 +466,6 @@
     "heim": "Home",
     "gast": "Away",
     "tor": "Goal",
-    "foul": "Foul",
     "karte": "Card",
     "fouls": "Foul {{zaehlt}}/{{grenze}}",
     "foulsOhneGrenze": "Foul {{zaehlt}}",
@@ -477,7 +476,7 @@
     "gesperrt": "No. {{nummer}} suspended",
     "aria": {
       "tor": "Goal {{team}}",
-      "foul": "Foul {{team}}",
+      "foul": "Foul {{team}}, {{zaehler}}",
       "karte": "Card {{team}}",
       "strafe": "Time penalty {{team}}"
     },

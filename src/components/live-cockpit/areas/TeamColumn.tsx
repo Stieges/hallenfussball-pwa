@@ -96,7 +96,7 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
       <div style={reiheStil} data-testid={`team-row3-${seite}`}>
         {knoepfe.foul && (
           <Button variant="secondary" icon={<MatchIcons.Flag />} style={knopfStil} data-testid={`foul-button-${seite}`} onClick={onFoul}
-            aria-label={t('spalte.aria.foul', { team: name })}>
+            aria-label={t('spalte.aria.foul', { team: name, zaehler: foulText })}>
             <span data-testid={`team-fouls-${seite}`}>{foulText}</span>
           </Button>
         )}

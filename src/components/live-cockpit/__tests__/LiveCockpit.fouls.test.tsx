@@ -107,7 +107,7 @@ describe('LiveCockpit — Fouls für das ganze Spiel (C3b-2, G11)', () => {
     render(<LiveCockpit {...baseProps(makeMatch(), { onFoul })} />);
     expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 2/5');
 
-    await user.click(screen.getByRole('button', { name: 'Foul FC Alpha' }));
+    await user.click(screen.getByRole('button', { name: /^Foul FC Alpha, Foul \d+\/5$/ }));
 
     expect(onFoul).toHaveBeenCalledWith('match-1', 'team-a');
     expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 2/5');
@@ -138,7 +138,7 @@ describe('LiveCockpit — M7: Meldungen i18n, Foul ohne Zahl, 5er-Warnung (F3a)'
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch(), { onFoul })} />);
 
-    await user.click(screen.getByRole('button', { name: 'Foul FC Alpha' }));
+    await user.click(screen.getByRole('button', { name: /^Foul FC Alpha, Foul \d+\/5$/ }));
 
     expect(await screen.findByText('Foul für FC Alpha')).toBeInTheDocument();
     expect(screen.queryByText(/Foul für FC Alpha \(\d+\)/)).toBeNull();

@@ -466,7 +466,6 @@
     "heim": "Heim",
     "gast": "Gast",
     "tor": "Tor",
-    "foul": "Foul",
     "karte": "Karte",
     "fouls": "Foul {{zaehlt}}/{{grenze}}",
     "foulsOhneGrenze": "Foul {{zaehlt}}",
@@ -477,7 +476,7 @@
     "gesperrt": "Nr. {{nummer}} gesperrt",
     "aria": {
       "tor": "Tor {{team}}",
-      "foul": "Foul {{team}}",
+      "foul": "Foul {{team}}, {{zaehler}}",
       "karte": "Karte {{team}}",
       "strafe": "Zeitstrafe {{team}}"
     },

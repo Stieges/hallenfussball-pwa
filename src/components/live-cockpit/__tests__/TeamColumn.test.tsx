@@ -113,6 +113,18 @@ describe('TeamColumn', () => {
     expect(screen.getAllByTestId('team-fouls-away')).toHaveLength(1);
   });
 
+  it('@SL-099 WCAG 2.5.3: der zugängliche Name des Foul-Knopfs enthält den sichtbaren Zähler („Foul SV Süd, Foul 3/5“)', () => {
+    render(<TeamColumn {...props()} />);
+    const knopf = screen.getByRole('button', { name: 'Foul SV Süd, Foul 3/5' });
+    expect(knopf).toBe(screen.getByTestId('foul-button-away'));
+    expect(knopf.getAttribute('aria-label')).toContain(screen.getByTestId('team-fouls-away').textContent ?? '');
+  });
+
+  it('@SL-102 Gegenbeispiel: ohne Grenze steht die Zahl im Namen („Foul SV Süd, Foul 5“)', () => {
+    render(<TeamColumn {...props({ fouls: { zaehlt: 5, grenze: null } })} />);
+    expect(screen.getByRole('button', { name: 'Foul SV Süd, Foul 5' })).toBeInTheDocument();
+  });
+
   it('@SL-099 ohne Foul-Knopf (Halbzeitpause, Nur-Lesen) steht der Zähler als eigene Zeile außerhalb eines Knopfs', () => {
     render(<TeamColumn {...props({}, { knoepfe: { tor: false, foul: false, zeitstrafe: true, karte: true } })} />);
     const zaehler = screen.getByTestId('team-fouls-away');

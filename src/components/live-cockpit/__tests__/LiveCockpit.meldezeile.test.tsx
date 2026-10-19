@@ -158,7 +158,7 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
   it('@SL-034 „deutlich“: die Foul-Grenze (Stufe 2) trägt ein Warn-Symbol, eine Bestätigung (Stufe 3) ein Häkchen', async () => {
     const user = userEvent.setup();
     const { rerender } = render(<LiveCockpit {...baseProps(matchMit(4), { onFoul: vi.fn() })} />);
-    await user.click(screen.getByRole('button', { name: 'Foul FC Alpha' }));
+    await user.click(screen.getByRole('button', { name: /^Foul FC Alpha, Foul \d+\/5$/ }));
     expect(screen.getByTestId('notice-icon-3')).toBeInTheDocument();
     expect(screen.queryByTestId('notice-icon-2')).toBeNull();
     rerender(<LiveCockpit {...baseProps(matchMit(5), { onFoul: vi.fn() })} />);
@@ -193,7 +193,7 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(matchMit(0), { onFoul })} />);
 
-    await user.click(screen.getByRole('button', { name: 'Foul FC Alpha' }));
+    await user.click(screen.getByRole('button', { name: /^Foul FC Alpha, Foul \d+\/5$/ }));
 
     expect(screen.getByTestId(MELDUNG)).toHaveTextContent('Foul für FC Alpha');
     expect(screen.queryByText('×')).toBeNull();
@@ -204,7 +204,7 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
     const onFoul = vi.fn();
     const laufend = matchMit(0, { status: 'RUNNING', timerStartTime: new Date().toISOString(), elapsedSeconds: 10 });
     render(<LiveCockpit {...baseProps(laufend, { onFoul })} />);
-    fireClick('Foul FC Alpha');
+    fireClick(/^Foul FC Alpha, Foul \d+\/5$/);
     expect(screen.getByTestId(MELDUNG)).toHaveTextContent('Foul für FC Alpha');
 
     for (let s = 0; s < 2; s++) { await act(async () => { await vi.advanceTimersByTimeAsync(1000); }); }
@@ -220,7 +220,7 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
   });
 });
 
-function fireClick(name: string): void {
+function fireClick(name: string | RegExp): void {
   act(() => { screen.getByRole('button', { name }).click(); });
 }
 
