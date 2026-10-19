@@ -46,9 +46,8 @@ vi.mock('../../../lib/supabase', () => ({
 }));
 vi.mock('../../../core/contexts/RepositoryContext', () => ({ useRepositories: () => REPOS }));
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'leitung' }));
-vi.mock('../../../hooks/usePermissions', () => ({
-  usePermissions: () => ({ canCorrectResults: true, hasPermission: () => true }),
-}));
+// A-11: Rechte nur über useCan (der Stub usePermissions ist gelöscht) -- hier die Turnierleitung, alles erlaubt.
+vi.mock('../../auth/hooks/useCan', () => ({ useCan: () => true }));
 // UR: Olli ist angemeldet und Eigentümer von „T“; Antwort der Lesefunktion je Test.
 vi.mock('../../auth/hooks/useAuth', () => ({ useAuth: () => ({ isAuthenticated: true, user: { id: 'olli', name: 'Olli' } }) }));
 vi.mock('../../auth/hooks/useMyTournamentRole', () => ({ useMyTournamentRole: () => ({ role: 'owner', isLoading: false }) }));

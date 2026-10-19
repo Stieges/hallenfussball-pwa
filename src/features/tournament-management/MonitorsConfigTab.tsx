@@ -20,8 +20,7 @@ import type { Tournament } from '../../types/tournament';
 import { SLIDE_TYPES } from '../../types/monitor';
 import { useMonitors } from '../../hooks';
 import { useMonitorHeartbeats } from '../../hooks/useMonitorHeartbeats';
-import { useMyTournamentRole } from '../auth/hooks/useMyTournamentRole';
-import { canManageTournament } from '../auth/utils/permissions';
+import { useCan } from '../auth/hooks/useCan';
 import { MonitorCard } from './components/MonitorCard';
 import { MonitorTransferSheet } from './MonitorTransferSheet';
 import { downloadMonitorConfig } from './monitorConfigDownload';
@@ -81,10 +80,8 @@ export function MonitorsConfigTab({
   // Heartbeat status for all monitors in this tournament
   const heartbeats = useMonitorHeartbeats(tournament.id);
 
-  // Übernehmen und Exportieren: nur Turnierleitung und Co-Admin (@ME-043).
-  // Vorhandene Rechteprüfung wie in SettingsTab (useMyTournamentRole + canManageTournament).
-  const { role: myRole } = useMyTournamentRole(tournament.id);
-  const canTransfer = myRole ? canManageTournament(myRole) : false;
+  // A-11 (@ZM-019, @ME-043): Monitore und Folienprogramme anlegen, ändern, übernehmen, exportieren nur mit manageScreens.
+  const canTransfer = useCan('manageScreens', tournament.id);
 
   // ==========================================================================
   // HANDLERS
@@ -447,10 +444,10 @@ export function MonitorsConfigTab({
                   {t('monitors.transfer.exportButton')}
                 </button>
               )}
-              <button style={addButtonStyle} onClick={handleStartCreate}>
+              {canTransfer && <button style={addButtonStyle} onClick={handleStartCreate}>
                 <span>+</span>
                 <span>{t('monitors.addMonitor')}</span>
-              </button>
+              </button>}
             </div>
           )}
         </div>
@@ -511,10 +508,10 @@ export function MonitorsConfigTab({
                 heartbeatStatus={heartbeats.get(monitor.id)?.status ?? null}
                 isDeleting={deleteConfirmId === monitor.id}
                 isCopied={copiedId === monitor.id}
-                onEdit={() => handleEdit(monitor.id)}
-                onDelete={() => void handleDelete(monitor.id)}
+                onEdit={canTransfer ? () => handleEdit(monitor.id) : undefined}
+                onDelete={canTransfer ? () => void handleDelete(monitor.id) : undefined}
                 onCancelDelete={handleCancelDelete}
-                onDuplicate={() => void handleDuplicate(monitor.id)}
+                onDuplicate={canTransfer ? () => void handleDuplicate(monitor.id) : undefined}
                 onCopyUrl={() => void handleCopyUrl(monitor.id)}
                 onOpenDisplay={() => handleOpenDisplay(monitor.id)}
                 getSlideTypeIcon={getSlideTypeIcon}

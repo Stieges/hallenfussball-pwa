@@ -27,6 +27,8 @@ export interface PdfFormStepProps {
   notShared: boolean;
   /** Wege zu den Schaltern; ohne Angabe erscheint nur der Text. */
   onOpenVisibility?: () => void;
+  /** A-11 @ZM-019: „Aushang mit QR-Code“ nur mit Recht auf Turniereinstellungen (Aufrufer fragt useCan). Vorgabe: ja. */
+  canCreateNotice?: boolean;
 }
 
 const groupLabel: CSSProperties = {
@@ -53,7 +55,7 @@ const link: CSSProperties = {
   cursor: 'pointer',
 };
 
-export const PdfFormStep = ({ viewer, choice, onChoice, shared, finalAvailable, hideScores, hideTables, offlineStamp, failed, notShared, onOpenVisibility }: PdfFormStepProps) => {
+export const PdfFormStep = ({ viewer, choice, onChoice, shared, finalAvailable, hideScores, hideTables, offlineStamp, failed, notShared, onOpenVisibility, canCreateNotice = true }: PdfFormStepProps) => {
   const { t } = useTranslation('tournament');
   const card = (id: PdfChoice, icon: ReactNode, disabled: boolean, reasonKey?: 'pdfExport.cards.final.reason' | 'pdfExport.cards.notice.reason') => (
     <ChoiceCard
@@ -93,10 +95,14 @@ export const PdfFormStep = ({ viewer, choice, onChoice, shared, finalAvailable, 
             {card('blank', <Icons.Edit size={iconSizeValues.sm} />, false)}
             {card('final', <Icons.Trophy size={iconSizeValues.sm} />, !finalAvailable, 'pdfExport.cards.final.reason')}
           </div>
-          <div style={groupLabel}>{t('pdfExport.groups.hang')}</div>
-          <div style={cards} role="radiogroup" aria-label={t('pdfExport.groups.hang')}>
-            {card('notice', <Icons.QrCode size={iconSizeValues.sm} />, !shared, 'pdfExport.cards.notice.reason')}
-          </div>
+          {canCreateNotice ? (
+            <>
+              <div style={groupLabel}>{t('pdfExport.groups.hang')}</div>
+              <div style={cards} role="radiogroup" aria-label={t('pdfExport.groups.hang')}>
+                {card('notice', <Icons.QrCode size={iconSizeValues.sm} />, !shared, 'pdfExport.cards.notice.reason')}
+              </div>
+            </>
+          ) : null}
         </div>
       )}
 

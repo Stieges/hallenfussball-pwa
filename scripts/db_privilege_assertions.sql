@@ -538,4 +538,34 @@ SELECT 'cache-columns-immutable-no-client-execute',
                         AND NOT EXISTS (SELECT 1 FROM unnest(ARRAY['anon', 'authenticated', 'service_role']) AS r(role)
                                          WHERE has_function_privilege(r.role, p.oid, 'EXECUTE'))
                    FROM pg_proc p WHERE p.oid = to_regprocedure('match_engine.cache_columns(jsonb,jsonb)')), false)
+
+-- A-11 (20261110_001_role_permissions_mvp.sql, @ZP-041, @ZM-019, @HE-042): Rechte-Namen inkl. der fuenf MVP-Rechte im
+-- CHECK von role_permissions; genau eine UPDATE-Policy auf matches, die (USING und WITH CHECK) manageSchedule prueft
+-- und writeMatchData nicht mehr; je eine INSERT-/UPDATE-/DELETE-Policy auf monitors ueber manageScreens statt owner_id.
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'role-permissions-check-mvp-rights',
+       coalesce((SELECT bool_and(position(quote_literal(r.name) IN pg_get_constraintdef(c.oid)) > 0)
+                   FROM pg_constraint c
+                   CROSS JOIN unnest(ARRAY['writeMatchData', 'correctEvents', 'tournamentSettings', 'teams', 'restructure',
+                                           'deleteTournament', 'manageMembers', 'leadMatches', 'manageSchedule',
+                                           'manageLifecycle', 'manageScreens', 'manageHelpers', 'readDisplay']) AS r(name)
+                  WHERE c.conrelid = to_regclass('public.role_permissions') AND c.conname = 'role_permissions_permission_check'), false)
+UNION ALL
+SELECT 'matches-update-only-manage-schedule',
+       coalesce((SELECT count(*) = 1
+                        AND bool_and(position('manageSchedule' IN coalesce(p.qual, '')) > 0
+                                     AND position('manageSchedule' IN coalesce(p.with_check, '')) > 0)
+                        AND NOT bool_or(position('writeMatchData' IN coalesce(p.qual, '') || coalesce(p.with_check, '')) > 0)
+                   FROM pg_policies p
+                  WHERE p.schemaname = 'public' AND p.tablename = 'matches' AND p.cmd = 'UPDATE'), false)
+UNION ALL
+SELECT 'monitors-writes-manage-screens',
+       coalesce((SELECT count(*) FILTER (WHERE p.cmd = 'INSERT') = 1
+                        AND count(*) FILTER (WHERE p.cmd = 'UPDATE') = 1
+                        AND count(*) FILTER (WHERE p.cmd = 'DELETE') = 1
+                        AND bool_and(position('manageScreens' IN coalesce(p.qual, '') || coalesce(p.with_check, '')) > 0)
+                        AND NOT bool_or(position('owner_id' IN coalesce(p.qual, '') || coalesce(p.with_check, '')) > 0)
+                   FROM pg_policies p
+                  WHERE p.schemaname = 'public' AND p.tablename = 'monitors' AND p.cmd IN ('INSERT', 'UPDATE', 'DELETE')), false)
 ;

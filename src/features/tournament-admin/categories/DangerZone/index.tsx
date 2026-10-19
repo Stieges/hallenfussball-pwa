@@ -14,8 +14,7 @@ import { DANGER_ACTIONS } from '../../constants/admin.constants';
 import { Dialog } from '../../../../components/dialogs/Dialog';
 import { buildFinishTournamentPatch } from '../../../../utils/tournamentStats';
 import { useTournamentStartState } from '../../../../hooks/useTournamentStartState';
-import { useMyTournamentRole } from '../../../auth/hooks/useMyTournamentRole';
-import { canDeleteTournament } from '../../../auth/utils/permissions';
+import { useCan } from '../../../auth/hooks/useCan';
 import type { Tournament } from '../../../../types/tournament';
 import { useResultsReset } from '../../hooks/useResultsReset';
 import type { DangerAction, DangerActionConfig } from '../../types/admin.types';
@@ -231,25 +230,15 @@ export function DangerZoneCategory({
   onLocalTournamentUpdate,
 }: DangerZoneCategoryProps) {
   const { t } = useTranslation('admin');
-  const { role: myRole } = useMyTournamentRole(tournamentId);
   const [pendingAction, setPendingAction] = useState<DangerActionConfig | null>(null);
   const [confirmationInput, setConfirmationInput] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const resultsReset = useResultsReset(); // A-10 (@FU-090, L1, L8)
 
-  // R7: Das Löschen des Turniers hatte keine Rollensperre in der UI -- die DB lässt seit
-  // R5b (protect_deleted_at → has_tournament_permission(..., 'deleteTournament')) nur den
-  // Eigentümer löschen. Gleiches UI-Muster wie TeamHelpers/MemberList (R5/N4): der
-  // Löschen-Bereich wird für alle anderen Rollen komplett ausgeblendet, nicht nur
-  // deaktiviert -- konsistent mit canManageMembers in TeamHelpers/index.tsx.
-  //
-  // R7-Fixrunde 1 (H-1, final-review-2.md): NICHT mehr direkt aus useTournamentMembers()
-  // ableiten -- der echte Eigentümer hat live KEINE Zeile in tournament_collaborators
-  // (createOwnerMembership() hat keinen Aufrufer), `myMembership` wäre für ihn immer null und
-  // canDelete immer false. useMyTournamentRole() erkennt den Eigentümer zuverlässig (lokal/
-  // Gastmodus, echte Mitgliedszeile, oder per RPC-Fallback über has_tournament_permission),
-  // gemeinsam mit TeamHelpersCategory und MemberList.
-  const canDelete = myRole ? canDeleteTournament(myRole) : false;
+  // R7: Löschen nur der Eigentümer (DB: protect_deleted_at -> deleteTournament), für alle anderen ausgeblendet.
+  // A-11 (useCan, @LZ-022): Abschließen/Archivieren nur mit manageLifecycle; Zurücksetzen bleibt (A-10, Server prüft).
+  const canDelete = useCan('deleteTournament', tournamentId);
+  const canLifecycle = useCan('manageLifecycle', tournamentId);
 
   // @LZ-003: „Turnier löschen" nur vor dem ersten Anpfiff — und nur, wenn der
   // Anpfiff-Zustand überhaupt feststellbar ist (fail-closed, siehe
@@ -390,11 +379,9 @@ export function DangerZoneCategory({
       {/* Reset Schedule (Danger) */}
       {renderActionCard('reset_schedule')}
 
-      {/* End Tournament (Warning) */}
-      {renderActionCard('end_tournament')}
-
-      {/* Archive Tournament (Warning) */}
-      {renderActionCard('archive_tournament')}
+      {/* End/Archive Tournament (Warning) — @LZ-022: nur mit manageLifecycle */}
+      {canLifecycle && renderActionCard('end_tournament')}
+      {canLifecycle && renderActionCard('archive_tournament')}
 
       {/* Delete Tournament (Danger) — R7: nur für den Eigentümer, @LZ-003: nur vor dem ersten Anpfiff */}
       {canOfferDelete && renderActionCard('delete_tournament')}

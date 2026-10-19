@@ -1110,5 +1110,8 @@
       "undecided": "to be decided"
     },
     "finalTable": "Final standings"
+  },
+  "rights": {
+    "leadOnlyHint": "Only the tournament management can change this"
   }
 }
