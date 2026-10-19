@@ -28,15 +28,18 @@ async function netzwechsel({ browser }: StepContext): Promise<void> {
   try {
     const fehler: string[] = [];
     page.on('pageerror', (e) => fehler.push(e.message));
-    const gefunden = (await kopieSpiele(kopie.id)).find((m) => m.phase === 'groupStage' && m.team_a_id && m.team_b_id);
-    if (!gefunden) {
-      throw new Error('Die Kopie hat kein besetztes Gruppenspiel.');
-    }
-    const spiel = gefunden;
+    const spiele = await kopieSpiele(kopie.id);
     await openTurniertagPath(page, '/schedule', kopie.id);
     await expectPageAnchor(page.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
+    // Die Liste rendert nur einen Ausschnitt: ein besetztes Gruppenspiel nehmen, dessen Kreis gerade im Dokument steht.
+    const kreise = page.locator('[data-testid^="match-circle-"]');
+    await expect(kreise.first(), 'Spiele in der Liste').toBeVisible({ timeout: 15000 });
+    const sichtbar = await kreise.evaluateAll((els) => els.map((el) => (el.getAttribute('data-testid') ?? '').replace('match-circle-', '')));
+    const spiel = spiele.find((m) => m.phase === 'groupStage' && m.team_a_id && m.team_b_id && sichtbar.includes(m.id));
+    if (!spiel) {
+      throw new Error(`Kein besetztes Gruppenspiel in der Liste (sichtbar: ${sichtbar.join(', ')}).`);
+    }
     const kreis = page.locator(`[data-testid="match-circle-${spiel.id}"]`);
-    await expect(kreis, 'Spiel in der Liste, noch ohne Ergebnis').toBeVisible({ timeout: 15000 });
     for (let i = 0; i < 3; i++) {
       await context.setOffline(true);
       await page.waitForTimeout(400);
@@ -119,9 +122,12 @@ async function schnelleingabe({ browser }: StepContext): Promise<void> {
     const heim = page.locator(`[data-testid="match-score-input-${spiel.id}-home"]`);
     const gast = page.locator(`[data-testid="match-score-input-${spiel.id}-away"]`);
     // Gegeben: das Feld des Gastes zeigt schon 2 (Fokus verlassen, das Heim-Feld ist noch leer: nichts wird gespeichert).
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(3000);
     await gast.pressSequentially('2');
     await heim.click();
     await page.waitForTimeout(1500);
+    await expect(gast, 'das Feld des Gastes zeigt weiter 2').toHaveValue('2');
     expect(await serverStand(spiel.id), 'nach "2" im Gast-Feld steht am Server nichts').toEqual({ tore: [null, null], arten: [] });
     // Wenn Olli im Heim-Feld "1" und dann "0" tippt ...
     await heim.pressSequentially('1');
