@@ -48,7 +48,10 @@ const streifenStil = (farbe: string | null): CSSProperties => ({
 });
 const seiteStil: CSSProperties = { fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textMuted, textTransform: 'uppercase' };
 const zaehlerStil: CSSProperties = { fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary, fontWeight: cssVars.fontWeights.semibold };
-const torStil: CSSProperties = { minHeight: cssVars.touchTargets.primary, width: '100%' };
+// Volle Fläche in der Primärfarbe, Schrift in „auf Primär“ (Kontrast ≥ 4,5 : 1, VISUAL-DESIGN § 5), kein Verlauf
+const torStil: CSSProperties = {
+  minHeight: cssVars.touchTargets.primary, width: '100%', background: cssVars.colors.primary, color: cssVars.colors.onPrimary,
+};
 const knopfStil: CSSProperties = { minHeight: cssVars.touchTargets.minimum, flexDirection: 'column', gap: 0, padding: cssVars.spacing.sm, minWidth: 0 };
 const markeStil = (steht: boolean): CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', fontSize: cssVars.fontSizes.sm, color: cssVars.colors.warning,
@@ -87,7 +90,7 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
           : t('spalte.fouls', { zaehlt: fouls.zaehlt, grenze: fouls.grenze })}
       </div>
       {knoepfe.tor && (
-        <Button size="lg" icon={<MatchIcons.Ball />} style={torStil} data-testid={`goal-button-${seite}`} onClick={onTor}
+        <Button size="lg" icon={<MatchIcons.Ball />} style={torStil} data-primary data-testid={`goal-button-${seite}`} onClick={onTor}
           aria-label={t('spalte.aria.tor', { team: name })}>{t('spalte.tor')}</Button>
       )}
       <div style={reiheStil} data-testid={`team-row3-${seite}`}>

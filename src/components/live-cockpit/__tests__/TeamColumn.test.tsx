@@ -95,6 +95,16 @@ describe('TeamColumn', () => {
     expect(screen.queryByText(/Unterzahl|darf sich ergänzen|gesperrt/)).toBeNull();
   });
 
+  it('@SL-061 Tor-Knopf: volle Fläche in der Primärfarbe, Schrift in „auf Primär“, kein Verlauf, als Haupttaste markiert (VISUAL-DESIGN § 5/§ 6)', () => {
+    render(<TeamColumn {...props()} />);
+    const tor = screen.getByTestId('goal-button-away');
+    expect(tor.style.background).toBe('var(--color-primary)');
+    expect(tor.style.background).not.toContain('gradient');
+    expect(tor.style.color).toBe('var(--color-on-primary)');
+    expect(tor).toHaveAttribute('data-primary');
+    expect(screen.getByTestId('foul-button-away')).not.toHaveAttribute('data-primary');
+  });
+
   it('@SL-087 in der Halbzeitpause nur Karte und Zeitstrafe', () => {
     render(<TeamColumn {...props({}, { knoepfe: { tor: false, foul: false, zeitstrafe: true, karte: true } })} />);
     expect(screen.queryByTestId('goal-button-away')).toBeNull();
