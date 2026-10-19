@@ -29,5 +29,5 @@ async function gruppenabschluss(_ctx: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D8', title: 'Gruppenabschluss: Halbfinale über Kreuz besetzt', scenarios: [], owner: 'A-13', expectedFail: true, run: gruppenabschluss },
+  { id: 'D8', title: 'Gruppenabschluss: Halbfinale über Kreuz besetzt', scenarios: ['@TM-046', '@TM-047'], owner: 'A-13', expectedFail: true, run: gruppenabschluss },
 ];

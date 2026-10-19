@@ -55,6 +55,6 @@ async function halbfinale2(_ctx: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D9', title: 'Halbfinale unentschieden: Strafstoßschießen entscheidet', scenarios: [], owner: 'B-09/A-14', expectedFail: true, run: halbfinaleElfmeter },
+  { id: 'D9', title: 'Halbfinale unentschieden: Strafstoßschießen entscheidet', scenarios: ['@SL-145'], owner: 'B-09/A-14', expectedFail: true, run: halbfinaleElfmeter },
   { id: 'D9b', title: 'Halbfinale 2 regulär entschieden (Voraussetzung für Platz 3 und Finale)', scenarios: [], owner: 'A-13', expectedFail: true, run: halbfinale2 },
 ];
