@@ -9,6 +9,26 @@ import type { Match, Team, Tournament } from '../../types/tournament';
 import { copySlot, copySource } from './matchSlot';
 import { matchOrigins } from './matchOrigin';
 
+/** Ergebnis-, Abschluss-, Timer- und Überspringen-Felder, die eine Kopie nie übernimmt (C-KOPIE-ERGEBNISSE, @W5-025). */
+const MATCH_CLEARED = {
+  // Kein Ergebnis heißt kein Wert, nicht 0:0: `isTournamentCompleted` liest jede Zahl als Ergebnis (C-COPY-DASH).
+  scoreA: undefined,
+  scoreB: undefined,
+  finishedAt: undefined,
+  correctionHistory: undefined,
+  timerStartTime: undefined,
+  timerPausedAt: undefined,
+  timerElapsedSeconds: undefined,
+  overtimeScoreA: undefined,
+  overtimeScoreB: undefined,
+  penaltyScoreA: undefined,
+  penaltyScoreB: undefined,
+  decidedBy: undefined,
+  skippedReason: undefined,
+  skippedAt: undefined,
+  liveState: undefined,
+} as const;
+
 export interface CopiedContent {
   teams: Team[];
   matches: Match[];
@@ -41,34 +61,78 @@ export function copyTeamsAndMatches(
         originB: originB && copySource(originB, matchIdMap),
       }),
       matchStatus: 'scheduled',
-      scoreA: 0,
-      scoreB: 0,
       events: [],
+      ...MATCH_CLEARED,
     };
   });
   return { teams, matches };
 }
 
+/** Schlüssel einer Zuordnung `Spiel-ID → Wert` auf die neuen Spiel-IDs umhängen; unbekannte Schlüssel entfallen. */
+function remapByMatchId(
+  assignments: Record<string, number> | undefined,
+  matchIdMap: ReadonlyMap<string, string>,
+): Record<string, number> | undefined {
+  if (!assignments) { return undefined; }
+  const remapped: Record<string, number> = {};
+  for (const [oldId, value] of Object.entries(assignments)) {
+    const newId = matchIdMap.get(oldId);
+    if (newId !== undefined) { remapped[newId] = value; }
+  }
+  return remapped;
+}
+
 /**
- * Das kopierte Turnier für „Turnier kopieren“ (App.tsx): Entwurf mit neuer ID, neuen Team-/Spiel-IDs und
- * Spielseiten über `copySlot`. `makeId` muss UUIDs liefern.
+ * Das kopierte Turnier – EINE Funktion für beide Einstiege (Dashboard „Kopieren“ und Admin Center „Duplizieren“),
+ * @W5-024 bis @W5-027: Teams, Gruppen, Spielplan und Regeln bleiben, alles andere wird neu.
+ *
+ * - Neue Turnier-, Team- und Spiel-IDs (UUIDs aus `makeId`; C-COPY-AC-ID), Spielseiten über `copySlot`.
+ * - Alle Spiele geplant ohne Ergebnis, Tor, Karte, Abschluss-, Timer- und Überspringen-Felder; das Turnier ist weder
+ *   abgeschlossen noch abgebrochen (C-KOPIE-ERGEBNISSE, C-COPY-DASH, C-COPY-AC-FELDER).
+ * - Keine Freigabe: nicht öffentlich, kein Freigabe-Code (der eigene Code entsteht bei der Freigabe der Kopie, serverseitig).
+ *   Ein festgelegtes Original ergibt eine festgelegte (spielbereite), aber nicht öffentliche Kopie; ein Entwurf bleibt Entwurf.
+ * - Keine Bildschirme: `monitors` entfällt („Monitore übernehmen“ holt sie). Helfer hängen an der Turnier-ID und kommen nie mit.
  */
 export function buildCopiedTournament(
   tournament: Tournament,
   options: { newId: string; title: string; now: string; makeId: () => string },
 ): Tournament {
   const { teams, matches } = copyTeamsAndMatches(tournament, options.makeId);
+  const matchIdMap = new Map(tournament.matches.map((match, index) => [match.id, matches[index].id]));
+  const released = tournament.status === 'published';
+  const refereeConfig = tournament.refereeConfig && {
+    ...tournament.refereeConfig,
+    manualAssignments: remapByMatchId(tournament.refereeConfig.manualAssignments, matchIdMap),
+  };
   return {
     ...tournament,
     id: options.newId,
     title: options.title,
-    status: 'draft',
+    status: released ? 'published' : 'draft',
     createdAt: options.now,
     updatedAt: options.now,
-    lastVisitedStep: 1, // Start at Step 1 so user can review
+    lastVisitedStep: released ? tournament.lastVisitedStep : 1,
     teams,
     matches,
-    // Reset soft-delete state
+    fieldAssignments: remapByMatchId(tournament.fieldAssignments, matchIdMap),
+    refereeConfig,
+    // Keine Freigabe (@W5-024)
+    isPublic: false,
+    shareCode: undefined,
+    shareCodeCreatedAt: undefined,
+    publishedAt: released ? options.now : undefined,
+    // Nicht abgeschlossen (@W5-025)
+    manuallyCompleted: undefined,
+    completedAt: undefined,
+    cancelledAt: undefined,
+    cancelledReason: undefined,
+    statsSnapshot: undefined,
+    dashboardStatus: undefined,
     deletedAt: undefined,
+    // Neue Zeile in der Datenhaltung: Versionen des Originals gelten nicht
+    version: undefined,
+    changeRevision: undefined,
+    // Keine Bildschirme (@W5-026)
+    monitors: undefined,
   };
 }

@@ -5,8 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ScrollToTop } from './components/ScrollToTop';
 import { useTournaments } from './hooks/useTournaments';
 import { Tournament, TournamentStatus } from './types/tournament';
-import { generateTournamentId, generateUniqueId } from './utils/idGenerator';
-import { buildCopiedTournament } from './core/models/tournamentCopy';
+import { useCopyTournament } from './hooks/useCopyTournament';
 import { cssVars } from './design-tokens';
 import { useToast } from './components/ui/Toast';
 import { ConfirmDialog, useConfirmDialog } from './components/ui/ConfirmDialog';
@@ -200,6 +199,7 @@ function AppContent() {
     restoreTournament,
     permanentDeleteTournament,
   } = useTournaments();
+  const copyTournament = useCopyTournament(saveTournament);
 
   // ============================================================================
   // CONFIRM DIALOG HOOKS (must be called unconditionally before any returns)
@@ -424,18 +424,8 @@ function AppContent() {
   // Handler for copying/duplicating a tournament
   const handleCopyTournament = async (tournament: Tournament) => {
     try {
-      const now = new Date().toISOString();
-      const newId = generateTournamentId();
-
-      // Kopie mit neuen Team-/Spiel-IDs; Spielseiten über copySlot (V14), nie auf alten IDs
-      const copiedTournament = buildCopiedTournament(tournament, {
-        newId,
-        title: `${tournament.title} ${t('tournament.copySuffix')}`,
-        now,
-        makeId: generateUniqueId,
-      });
-
-      await saveTournament(copiedTournament);
+      // Eine gemeinsame Kopierlogik mit dem Admin Center (core/models/tournamentCopy, Paket KP)
+      await copyTournament(tournament, `${tournament.title} ${t('tournament.copySuffix')}`);
       // Stay on dashboard - user can see the new tournament
     } catch (error) {
       console.error('[App] Failed to copy tournament:', error);
