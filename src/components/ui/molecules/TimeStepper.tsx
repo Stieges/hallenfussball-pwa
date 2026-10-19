@@ -1,6 +1,7 @@
 /**
  * TimeStepper (B-08d): fachfrei. Ein Zähler mit zwei Knöpfen, der einen Wert in Schritten verändert und
  * auf [min, max] begrenzt. Die Anzeige formatiert der Aufrufer (`format`), der Stepper kennt keine Spielzeit.
+ * Der erste Schritt führt auf das Raster der Schrittweite (5:23 → 5:20 bzw. 5:30), danach in vollen Schritten.
  * Ein Knopf an der Grenze ist deaktiviert; über die Grenze hinaus meldet er nichts.
  */
 import type { CSSProperties } from 'react';
@@ -44,8 +45,9 @@ const valueStyle: CSSProperties = {
 };
 
 export function TimeStepper({ value, min, max, step, format, labelDecrease, labelIncrease, onChange, testId }: TimeStepperProps) {
-  const weniger = Math.max(min, value - step);
-  const mehr = Math.min(max, value + step);
+  // Der erste Schritt springt aufs Raster (Vielfache von `step`): 323 → 320 / 330, danach volle Schritte.
+  const weniger = Math.max(min, (Math.ceil(value / step) - 1) * step);
+  const mehr = Math.min(max, (Math.floor(value / step) + 1) * step);
   const minusAus = value <= min;
   const plusAus = value >= max;
 

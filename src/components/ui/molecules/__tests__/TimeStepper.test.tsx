@@ -58,4 +58,20 @@ describe('TimeStepper', () => {
     fireEvent.click(screen.getByRole('button', { name: 'mehr' }));
     expect(onChange).toHaveBeenLastCalledWith(360);
   });
+
+  it('@SL-011 Raster: von 5:23 springt „weniger“ auf 5:20 und „mehr“ auf 5:30, nicht auf 5:13 / 5:33', () => {
+    const onChange = stepper(323, 0, 360);
+    fireEvent.click(screen.getByRole('button', { name: 'weniger' }));
+    expect(onChange).toHaveBeenLastCalledWith(320);
+    fireEvent.click(screen.getByRole('button', { name: 'mehr' }));
+    expect(onChange).toHaveBeenLastCalledWith(330);
+  });
+
+  it('@SL-011 Gegenbeispiel: liegt der Wert genau auf dem Raster, bleibt es ein voller Schritt (5:20 → 5:10 / 5:30)', () => {
+    const onChange = stepper(320, 0, 360);
+    fireEvent.click(screen.getByRole('button', { name: 'weniger' }));
+    expect(onChange).toHaveBeenLastCalledWith(310);
+    fireEvent.click(screen.getByRole('button', { name: 'mehr' }));
+    expect(onChange).toHaveBeenLastCalledWith(330);
+  });
 });

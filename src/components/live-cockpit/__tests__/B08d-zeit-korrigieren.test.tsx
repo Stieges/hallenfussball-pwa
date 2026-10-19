@@ -11,7 +11,8 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { Harness } from './engineHarness';
-import { anpfiff } from './engineHarnessSupport';
+import { anpfiff, storeSender, HARNESS_MATCH_ID, type SenderFabrik } from './engineHarnessSupport';
+import type { LocalMatchStore } from '../../../core/match/client';
 import { T0 } from './enginePhaseFixture';
 
 vi.unmock('i18next');
@@ -86,6 +87,43 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('1:10');
     zu(750_000); // +10 s bei laufender Uhr (Anker neu)
     await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:00'));
+  });
+
+  it('@SL-011 laufende Uhr bei 5:23: Ziel 4:50 ist erreichbar und kommt als CLOCK_ADJUST mit 650000 an', async () => {
+    const user = userEvent.setup();
+    let store: LocalMatchStore | null = null;
+    let konto = '';
+    const fabrik: SenderFabrik = (s, accountId, tournamentId) => { store = s; konto = accountId; return storeSender(s, accountId, tournamentId); };
+    render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur senderFabrik={fabrik} />);
+    await zurZweitenHalbzeit(user);
+    zu(743_000); // Tom hat vergessen anzuhalten: die Uhr läuft, 5:23
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:23'));
+
+    const dialog = await zeitDialog(user);
+    const weniger = within(dialog).getByRole('button', { name: '10 Sekunden weniger' });
+    await user.click(weniger);
+    expect(within(dialog).getByText('5:20')).toBeInTheDocument(); // erster Schritt aufs Raster
+    for (let i = 0; i < 3; i += 1) { await user.click(weniger); }
+    expect(within(dialog).getByText('4:50')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Übernehmen' }));
+
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 4:50'));
+    const kopie = await (store as LocalMatchStore | null)?.load(konto, HARNESS_MATCH_ID);
+    const korrekturen = (kopie?.pending ?? []).filter((e) => e.type === 'CLOCK_ADJUST');
+    expect(korrekturen).toHaveLength(1);
+    expect(korrekturen[0]?.clockMs).toBe(650_000);
+  });
+
+  it('@SL-011 Gegenbeispiel: steht die Uhr genau auf 5:20, ist der erste Schritt 5:10', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur />);
+    await zurZweitenHalbzeit(user);
+    zu(740_000);
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:20'));
+
+    const dialog = await zeitDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: '10 Sekunden weniger' }));
+    expect(within(dialog).getByText('5:10')).toBeInTheDocument();
   });
 
   it('@SL-012 Gegenbeispiel: über 6:00 hinaus geht es nicht, Abbrechen lässt die Uhr stehen', async () => {
