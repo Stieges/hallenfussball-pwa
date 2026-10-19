@@ -26,5 +26,5 @@ async function anpfiffTorKarte({ asRole }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D4', title: 'Anpfiff, Tor und Karte im ersten Gruppenspiel', scenarios: [], owner: 'B-11', expectedFail: false, run: anpfiffTorKarte },
+  { id: 'D4', title: 'Anpfiff, Tor und Karte im ersten Gruppenspiel', scenarios: ['@SL-001'], owner: 'B-11', expectedFail: false, run: anpfiffTorKarte },
 ];

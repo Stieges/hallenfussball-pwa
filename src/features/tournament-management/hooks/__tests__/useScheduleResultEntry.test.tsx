@@ -53,7 +53,7 @@ function render(h: ScheduleEngine, options: { lockFinishedResults?: boolean; mat
   );
   /** Startet die Eingabe; Rückfragen beantwortet der Test selbst. */
   const enter = (matchId: string, a: number, b: number) => {
-    let done: Promise<void> = Promise.resolve();
+    let done: Promise<boolean> = Promise.resolve(true);
     act(() => { done = hook.result.current.enterScore(matchId, a, b); });
     return done;
   };
@@ -89,9 +89,10 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
 
   it('@FU-080 Spiel 9 geplant, Olli trägt 3:1 ein → RESULT_ENTRY, beendet mit 3:1', async () => {
     const { enter, showWarning } = render(h);
-    await enter(SPIEL_9, 3, 1);
+    const saved = await enter(SPIEL_9, 3, 1);
     await settle();
 
+    expect(saved).toBe(true); // die Zelle behält die Eingabe, bis der gespeicherte Stand ankommt (@FU-101)
     expect(showWarning).not.toHaveBeenCalled();
     expect(sentTypes(h)).toEqual([['RESULT_ENTRY']]);
     expect(h.api.mock.calls[0][1][0].payload).toEqual({ scores: { [SV_SUED]: 3, [FC_NORD]: 1 } });
@@ -257,7 +258,7 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
       const done = enter(SPIEL_9, 3, 1);
       await act(async () => { await settle(); });
       await answer(null);
-      await done;
+      expect(await done).toBe(false); // „Nein“: die Zelle zeigt wieder den gespeicherten Stand (@FU-101)
 
       expect(h.api).not.toHaveBeenCalled();
       expect((await outbox(h, SPIEL_9))?.pending).toEqual([]);
@@ -306,7 +307,7 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
     it('@FU-094 ohne Angabe des Strafstoßergebnisses speichert die App das Unentschieden nicht', async () => {
       const { answer, done, showWarning } = await halbfinale22();
       await answer(null);
-      await done;
+      expect(await done).toBe(false); // „Abbrechen“: die Zelle zeigt wieder den gespeicherten Stand (@FU-101)
       await settle();
 
       expect((await outbox(h, HALBFINALE_1))?.pending ?? []).toEqual([]);
