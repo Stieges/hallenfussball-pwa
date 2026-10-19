@@ -15,6 +15,7 @@ import { RulesLockProvider } from '../../../../components/match-settings/RulesLo
 import type { Tournament, MatchCockpitSettings } from '../../../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../../types/tournament';
 import { MatchRulesSection } from './MatchRulesSection';
+import { sectionSecondsOf } from './sectionSeconds';
 
 // =============================================================================
 // PROPS
@@ -67,7 +68,8 @@ export function MatchCockpitCategory({
                 !canChangeRules &&
                 (newSettings.timePenaltyDurationSeconds !== gespeichert.timePenaltyDurationSeconds ||
                     newSettings.penaltyShootersPerTeam !== gespeichert.penaltyShootersPerTeam ||
-                    newSettings.clockMode !== gespeichert.clockMode)
+                    newSettings.clockMode !== gespeichert.clockMode ||
+                    newSettings.finalPhaseMinutes !== gespeichert.finalPhaseMinutes)
             ) {
                 return;
             }
@@ -95,6 +97,9 @@ export function MatchCockpitCategory({
                     value={cockpitSettings.clockMode}
                     locked={!canChangeRules}
                     onChange={(clockMode) => handleCockpitSettingsChange({ ...cockpitSettings, clockMode })}
+                    finalPhaseMinutes={cockpitSettings.finalPhaseMinutes}
+                    sectionSeconds={sectionSecondsOf(tournament)}
+                    onFinalPhaseChange={(finalPhaseMinutes) => handleCockpitSettingsChange({ ...cockpitSettings, finalPhaseMinutes })}
                 />
                 <MatchCockpitSettingsPanel
                     settings={cockpitSettings}

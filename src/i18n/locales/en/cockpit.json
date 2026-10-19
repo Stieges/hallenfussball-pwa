@@ -336,7 +336,12 @@
     "clockModeDesc": "When the clock stops on interruptions – applies from the next kick-off",
     "clockModeLastMinute": "running, stopped in the last minute",
     "clockModeAlwaysRunning": "always running",
-    "clockModeAlwaysStopped": "always stopped"
+    "clockModeAlwaysStopped": "always stopped",
+    "finalPhaseMinutes": "Length of the stopped final phase (minutes)",
+    "finalPhaseDesc": "The clock stands still for this time at the end of the last section – 1 to 5 minutes, applies from the next kick-off",
+    "finalPhaseRange": "Valid are 1 to {{max}} minutes – the value was not accepted",
+    "finalPhaseRangeOne": "Valid is 1 minute – the value was not accepted",
+    "finalPhaseTooShort": "A section is shorter than one minute, a stopped final phase is not possible"
   },
   "editScore": {
     "title": "Correct Score",

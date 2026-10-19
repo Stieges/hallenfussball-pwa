@@ -336,7 +336,12 @@
     "clockModeDesc": "Wann die Uhr bei Unterbrechungen angehalten wird – gilt ab dem nächsten Anpfiff",
     "clockModeLastMinute": "durchlaufend, letzte Minute angehalten",
     "clockModeAlwaysRunning": "immer durchlaufend",
-    "clockModeAlwaysStopped": "immer angehalten"
+    "clockModeAlwaysStopped": "immer angehalten",
+    "finalPhaseMinutes": "Länge der angehaltenen Schlussphase (Minuten)",
+    "finalPhaseDesc": "Die Uhr steht in dieser Zeit am Ende des letzten Abschnitts still – 1 bis 5 Minuten, gilt ab dem nächsten Anpfiff",
+    "finalPhaseRange": "Gültig sind 1 bis {{max}} Minuten – der Wert wurde nicht übernommen",
+    "finalPhaseRangeOne": "Gültig ist 1 Minute – der Wert wurde nicht übernommen",
+    "finalPhaseTooShort": "Ein Abschnitt ist kürzer als eine Minute, eine angehaltene Schlussphase ist nicht möglich"
   },
   "editScore": {
     "title": "Ergebnis korrigieren",
