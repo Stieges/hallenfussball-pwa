@@ -36,6 +36,9 @@ vi.mock('jspdf', () => {
     setFillColor = vi.fn().mockReturnThis();
     triangle = vi.fn().mockReturnThis();
     rect = vi.fn().mockReturnThis();
+    setDrawColor = vi.fn().mockReturnThis();
+    setLineWidth = vi.fn().mockReturnThis();
+    line = vi.fn().mockReturnThis();
     setTextColor = vi.fn().mockReturnThis();
     text = vi.fn().mockReturnThis();
     addPage = vi.fn().mockReturnThis();
@@ -48,6 +51,7 @@ vi.mock('jspdf', () => {
 // nach den Mocks platziert fuer Lesbarkeit).
 import { exportStatisticsToPDF } from '../pdfStatisticsExporter';
 import { hexToRgb } from '../colorUtils';
+import { printStroke } from '../../design-tokens/print';
 import { resolveToken } from '../../test/contrast';
 
 function tournamentWithYellowRed(): Tournament {
@@ -184,6 +188,20 @@ describe('Karten-Farben nur für Karten (Oberfläche E) – PDF Fair-Play-Tabell
     expect(doc.rect).not.toHaveBeenCalled();
     const [x1, , x2, , x3] = doc.triangle.mock.calls[0] as number[];
     expect(Math.min(x1, x2, x3)).toBeGreaterThanOrEqual(z.cell.x + z.cell.width - rand.right);
+  });
+
+  it('Zwischen den Kopfzellen Gelb und Gelb-Rot steht eine sichtbare weiße Trennlinie (verschwimmen nicht zu einer Fläche)', async () => {
+    await exportStatisticsToPDF(tournamentWithYellowRed());
+    const opts = findFairPlayCall();
+    const idx = (opts.head?.[0] ?? []).indexOf('Gelb-Rot');
+    const z = zelle(idx);
+    opts.didParseCell?.(z);
+    const doc = autoTableMock.mock.calls[0][0] as unknown as { setDrawColor: ReturnType<typeof vi.fn>; setLineWidth: ReturnType<typeof vi.fn>; line: ReturnType<typeof vi.fn> };
+    opts.didDrawCell?.(z);
+    expect(doc.setDrawColor).toHaveBeenCalledWith(255, 255, 255);
+    expect(doc.setLineWidth).toHaveBeenCalledWith(printStroke.thead);
+    // senkrecht an der linken Kante der Gelb-Rot-Zelle, über die ganze Zellhöhe
+    expect(doc.line).toHaveBeenCalledWith(z.cell.x, z.cell.y, z.cell.x, z.cell.y + z.cell.height);
   });
 
   it('Gegenbeispiel: andere Kopfzellen (Team, Punkte, Zeit) und Körperzellen bleiben ohne Kartenfarbe', async () => {

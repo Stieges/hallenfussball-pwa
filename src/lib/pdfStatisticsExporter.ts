@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable';
 import { Tournament } from '../types/tournament';
 import { calculateScorers, calculateFairPlay, type EngineEventsById } from '../utils/calculations';
 import { pdfKartenFarben } from './pdf/kartenFarben';
+import { printColors, printStroke } from '../design-tokens/print';
 
 // Reuse styles from pdfExporter (simplified)
 const PDF_STYLE = {
@@ -140,6 +141,10 @@ export async function exportStatisticsToPDF(tournament: Tournament, engineEvents
             if (data.section !== 'head' || data.column.index !== COL_YELLOW_RED) { return; }
             const { x, y, width, height } = data.cell;
             const ecke = data.cell.padding('right');
+            // weiße Trennlinie an der linken Kante: „Gelb“ und „Gelb-Rot“ bleiben zwei Zellen
+            doc.setDrawColor(...printColors.paper);
+            doc.setLineWidth(printStroke.thead);
+            doc.line(x, y, x, y + height);
             doc.setFillColor(...pdfKartenFarben.red);
             doc.triangle(x + width, y, x + width, y + height, x + width - ecke, y + height, 'F');
         },
