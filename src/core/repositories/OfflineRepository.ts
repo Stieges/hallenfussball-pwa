@@ -365,9 +365,17 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             const localList = await this.localListForAccount();
             const localOnly = localList.filter(t => !cloudIds.has(t.id));
 
+            // @W5-027: Eine lokale Änderung, die noch in der Warteschlange wartet (z. B. archivierte Kopie), ist neuer als die
+            // Cloud-Zeile. Dann gilt die lokale Fassung, sonst käme beim Neuladen kurz der alte Stand zurück.
+            const localById = new Map(localList.map(t => [t.id, t]));
+            const merged = cloudList.map(cloudT => {
+                const localT = localById.get(cloudT.id);
+                return localT && Date.parse(localT.updatedAt) > Date.parse(cloudT.updatedAt) ? localT : cloudT;
+            });
+
             // Return cloud list + unsynced local tournaments
             // Local-only items are marked so UI can show sync indicator if needed
-            return [...cloudList, ...localOnly];
+            return [...merged, ...localOnly];
         } catch (error) {
             // Only log non-AbortErrors (AbortError is expected during navigation)
             if (!isAbortError(error)) {
