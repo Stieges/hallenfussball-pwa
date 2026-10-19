@@ -1,28 +1,71 @@
 /**
- * D12 Korrektur. Besitzer: B-25 (Korrekturmodus im Cockpit).
- * Besitzer: B-25 -- Soll-Marker: das Cockpit eines beendeten Spiels bietet die Korrektur
- * (`match-correction-button`).
+ * D12 Korrektur eines beendeten Spiels.
+ *
+ * Die Korrektur schreibt ein Engine-Ereignis `CORRECTION` in `match_events` (nicht mehr in `match_corrections`).
+ * Gherkin @EK-063: Einstieg im Spielplan beim beendeten Spiel ODER im Cockpit, immer derselbe Dialog.
+ *  - D12: Spielplan-Weg. Auf main ist er NICHT angeschlossen: `MatchScoreCell` zeigt `correction-button-<id>` nur mit
+ *    `onStartCorrection`, ScheduleTab reicht keinen Handler durch (A-08e, Daniel 15.10. Frage 1 = A: kein Korrektur-Knopf
+ *    im Spielplan bis B-24); der Weg Ergebnis-Kreis -> `match-summary-edit-score` blendet `onEditScore` ebenfalls nur
+ *    mit Handler ein. Der Dialog (`correction-score-a/b`, `correction-confirm-button`) ist erst erreichbar, wenn B-24
+ *    den Einstieg baut (Besitzer B-24, W4). Der Schritt behält die Erwartung (CORRECTION-Ereignis, Stand 4:0) und ist expectedFail.
+ *    @EK-063 verlangt im Dialog "bisher und neu UND die Auswahl des Grunds": die Grund-Auswahl (`correction-reason`) ist
+ *    Pflicht und wird im Schritt ausgefüllt; der Besitzer ergänzt den Marker beim Bauen (heute hat das Auswahlfeld keinen).
+ *  - D12b: Cockpit-Einstieg (`match-correction-button`), Besitzer B-25 (W5), auf einem BEENDETEN Spiel (Gruppenspiel 4,
+ *    nach D8 beendet; @EK-063: "nachdem er das Spiel selbst geleitet hat und es abgepfiffen ist").
  */
 import { expect } from '@playwright/test';
-import { openCockpit } from '../../engineHelpers';
-import { expectPageAnchor, expectSollMarker, fetchTurniertagBracket, getRows, SOLL_TIMEOUT_MS, TURNIERTAG_ID } from './shared';
+import { fetchEngineRows, openCockpit } from '../../engineHelpers';
+import { expectPageAnchor, expectSollMarker, fetchTurniertagBracket, fetchTurniertagMatches, openTurniertagPath, TURNIERTAG_ID } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
-async function korrektur({ asRole }: StepContext): Promise<void> {
+async function korrekturImSpielplan({ asRole }: StepContext): Promise<void> {
+  const { groupMatches } = await fetchTurniertagBracket();
+  const match = groupMatches[0];
+  const before = (await fetchEngineRows(match.id)).filter((row) => row.type === 'CORRECTION').length;
+  const ownerPage = await asRole('owner');
+  await openTurniertagPath(ownerPage, '/schedule');
+  await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
+  const knopf = ownerPage.locator(`[data-testid="correction-button-${match.id}"]`);
+  await expect(async () => {
+    for (const fraction of [0, 0.3, 0.6, 1]) {
+      await ownerPage.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), fraction);
+      await ownerPage.waitForTimeout(250);
+      if (await knopf.isVisible().catch(() => false)) {
+        return;
+      }
+    }
+    expect(await knopf.isVisible(), 'Korrigieren-Knopf des beendeten Spiels').toBe(true);
+  }).toPass({ timeout: 20000 });
+  await knopf.click();
+  await ownerPage.locator('[data-testid="correction-score-a"]').fill('4');
+  await ownerPage.locator('[data-testid="correction-score-b"]').fill('0');
+  // @EK-063: die Auswahl des Grunds gehört zum Dialog (Pflicht); ein anderer als der vorbelegte Grund wird gewählt.
+  await ownerPage.locator('[data-testid="correction-reason"]').selectOption({ index: 1 });
+  await ownerPage.locator('[data-testid="correction-confirm-button"]').click();
+  // Ereignis: genau eine neue CORRECTION-Zeile mit dem neuen Stand je Team.
+  await expect.poll(async () => (await fetchEngineRows(match.id)).filter((row) => row.type === 'CORRECTION').length, {
+    message: 'Korrektur erzeugt ein CORRECTION-Ereignis in match_events', timeout: 10000,
+  }).toBe(before + 1);
+  const rows = (await fetchEngineRows(match.id)).filter((row) => row.type === 'CORRECTION');
+  const scores = rows[rows.length - 1].payload.scores as Record<string, number>;
+  expect(scores[match.team_a_id ?? '']).toBe(4);
+  expect(scores[match.team_b_id ?? '']).toBe(0);
+  // Neuer Stand: das Spiel steht in der Cloud auf 4:0.
+  await expect.poll(async () => {
+    const m = (await fetchTurniertagMatches()).find((x) => x.id === match.id);
+    return [m?.score_a, m?.score_b];
+  }, { message: 'Ergebnis des Spiels nach der Korrektur', timeout: 10000 }).toEqual([4, 0]);
+}
+
+async function korrekturImCockpit({ asRole }: StepContext): Promise<void> {
   const { groupMatches } = await fetchTurniertagBracket();
   const ownerPage = await asRole('owner');
-  await openCockpit(ownerPage, TURNIERTAG_ID, groupMatches[0].id);
+  await openCockpit(ownerPage, TURNIERTAG_ID, groupMatches[3].id);
   await expectPageAnchor(ownerPage.locator('[data-testid="team-name-home"]'), 'Cockpit des Spiels');
   await expectSollMarker(ownerPage, 'match-correction-button');
-  // Soll-Wirkung (DB): die Korrektur erzeugt eine neue Zeile in `match_corrections` für dieses Spiel.
-  const query = `match_corrections?match_id=eq.${groupMatches[0].id}&select=id`;
-  const before = (await getRows<{ id: string }>(query, 'match_corrections vorher')).length;
-  await ownerPage.locator('[data-testid="match-correction-button"]').click();
-  await expect.poll(async () => (await getRows<{ id: string }>(query, 'match_corrections nachher')).length, {
-    message: 'Korrektur erzeugt eine Zeile in match_corrections', timeout: SOLL_TIMEOUT_MS,
-  }).toBeGreaterThan(before);
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D12', title: 'Ergebnis eines beendeten Spiels korrigieren', scenarios: [], owner: 'B-25', expectedFail: true, run: korrektur },
+  { id: 'D12', title: 'Ergebnis eines beendeten Spiels im Spielplan korrigieren (CORRECTION in match_events)', scenarios: ['@EK-063'], befunde: ['C-KORREKTUR-EINSTIEG-FEHLT'], owner: 'B-24', expectedFail: true, run: korrekturImSpielplan },
+  { id: 'D12b', title: 'Korrektur aus dem Cockpit der Turnierleitung (gleicher Dialog)', scenarios: ['@EK-063'], owner: 'B-25', expectedFail: true, run: korrekturImCockpit },
 ];

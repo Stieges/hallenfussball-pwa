@@ -11,7 +11,7 @@ import { expect } from '@playwright/test';
 import { fetchEngineRows } from '../../engineHelpers';
 import { E2E_TURNIERTAG_MONITOR_ID, E2E_TURNIERTAG_SHARE_CODE } from '../../testData';
 import { appendOwner, finishingEvents, regularResultEvents } from './playViaRpc';
-import { expectPageAnchor, fetchTurniertagBracket, fetchTurniertagTeams, finalMatchLabel, finalrundeLabelOf, findFinalByLabel, finalrundeLabels, openSpielplanFinalrunde, openTurniertagPath, TURNIERTAG_ID } from './shared';
+import { expectPageAnchor, fetchTurniertagBracket, fetchTurniertagTeams, finalMatchLabel, finalrundeLabelOf, findFinalByLabel, finalrundeLabels, openSpielplanFinalrunde, openTurniertagPath, TURNIERTAG_ID, vorbedingung } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function anlegen({ asRole }: StepContext): Promise<void> {
@@ -67,11 +67,13 @@ async function halbfinaleHerkunft(view: (typeof TM015_VIEWS)[number], { asRole, 
     await expect(cockpitPage.locator(`select:has(option[value="${hf1.id}"])`)).toHaveValue(hf1.id);
   } else if (view === 'Hallen-Monitor') {
     // Vorbereitung (E1): nur die Gruppenspiele auf Feld 1 beenden, Feld 2 bleibt offen.
-    const { groupMatches } = await fetchTurniertagBracket();
-    for (const match of groupMatches.filter((m) => m.field === 1)) {
-      const batch = finishingEvents(await fetchEngineRows(match.id), regularResultEvents(match, 1, 0));
-      expect((await appendOwner(match.id, batch)).results.map((r) => r.status), `Feld-1-Vorbereitung ${match.id}`).toEqual(batch.map(() => 'accepted'));
-    }
+    await vorbedingung('Gruppenspiele auf Feld 1 beenden', async () => {
+      const { groupMatches } = await fetchTurniertagBracket();
+      for (const match of groupMatches.filter((m) => m.field === 1)) {
+        const batch = finishingEvents(await fetchEngineRows(match.id), regularResultEvents(match, 1, 0));
+        expect((await appendOwner(match.id, batch)).results.map((r) => r.status), `Feld-1-Vorbereitung ${match.id}`).toEqual(batch.map(() => 'accepted'));
+      }
+    });
     await anonPage.goto(`/#/display/${TURNIERTAG_ID}/${E2E_TURNIERTAG_MONITOR_ID}`);
     await anonPage.waitForLoadState('networkidle');
     await expectPageAnchor(anonPage.getByText('Nächstes Spiel', { exact: true }), 'Hallen-Monitor (LiveSlide)');
