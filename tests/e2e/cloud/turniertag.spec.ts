@@ -25,7 +25,7 @@ import { steps as d06 } from './turniertag/steps/d06-halbzeit-zeitstrafe';
 import { steps as d07 } from './turniertag/steps/d07-zuschauer-live';
 import { steps as d07b } from './turniertag/steps/d07b-tv-gekoppelt';
 import { steps as d08 } from './turniertag/steps/d08-gruppenabschluss-hf';
-import { steps as d08b } from './turniertag/steps/d08b-ablauf-regeln';
+import { steps as d08b, stepsEndstand as d10b, stepsAbsetzen as d10c } from './turniertag/steps/d08b-ablauf-regeln';
 import { steps as d09 } from './turniertag/steps/d09-hf-elfmeter';
 import { steps as d10 } from './turniertag/steps/d10-finale-nichtantritt';
 import { steps as d11 } from './turniertag/steps/d11-abschluss-sperre';
@@ -37,12 +37,18 @@ import { steps as d15 } from './turniertag/steps/d15-zweites-turnier';
 import type { TurniertagStep } from './turniertag/steps/types';
 
 export const TURNIERTAG_STEPS: readonly TurniertagStep[] = [
-  // Reihenfolge entlang des Turnierablaufs (Plan "Turnier durchspielbar" (b)):
-  // d01Monitor (@TM-015 Hallen-Monitor) steht vor d08: die Vorbereitung beendet nur die
-  // Gruppenspiele auf Feld 1, auf Feld 2 laufen Gruppe A und B noch (Szenario @TM-015).
-  // d12 (Korrektur) steht vor d11 (Abschluss): nach dem Abschluss ist jede Korrektur gesperrt.
-  ...d00, ...d01, ...d02, ...direktaufruf, ...d03, ...d03b, ...d04, ...d04b, ...d05, ...d05b, ...d06, ...d06b, ...d07, ...d07b,
-  ...d01Monitor, ...d08, ...d08b, ...d09, ...d10, ...d12, ...d11, ...d11b, ...d13, ...d13Folgen, ...d14, ...d15, ...d18,
+  // Reihenfolge entlang des Turnierablaufs (Plan "Turnier durchspielbar" (b); Fixrunde 1, A3):
+  //  - Vorbereitung: D0a-D0e und D16 (Spielplan auf Anfang, auf der Kopie fürs Proben) VOR dem Turniertag.
+  //  - Turniertag vor dem Gruppenabschluss: Absetzen/Wiedereinplanen (D10c), Zeitplan verschieben mit ehrlichen Zeiten und
+  //    Hallenton (D13, D13b, D13c): der Zeitplan wird während des Tages verschoben, der Hallenton braucht ein laufendes Spiel,
+  //    und nach dem Abschluss ist das Turnier gesperrt.
+  //  - d01Monitor (@TM-015 Hallen-Monitor) steht vor d08: die Vorbereitung beendet nur die Gruppenspiele auf Feld 1,
+  //    auf Feld 2 laufen Gruppe A und B noch (Szenario @TM-015).
+  //  - d12 (Korrektur eines beendeten Spiels) und D12b stehen vor d11 (Abschluss): nach dem Abschluss ist jede Korrektur gesperrt.
+  //  - D10b (Endstand des abgeschlossenen Turniers) steht nach dem Abschluss.
+  ...d00, ...d01, ...d02, ...direktaufruf, ...d03, ...d03b, ...d04, ...d04b, ...d05, ...d05b, ...d10c, ...d06, ...d06b, ...d07, ...d07b,
+  ...d13, ...d13Folgen,
+  ...d01Monitor, ...d08, ...d08b, ...d09, ...d10, ...d12, ...d11, ...d11b, ...d10b, ...d14, ...d15, ...d18,
 ];
 
 test.describe('Turniertag-Durchstich (D0a-D18)', () => {

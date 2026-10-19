@@ -1,5 +1,7 @@
 /**
  * D11b-D18: Folgen des Abschlusses und Betrieb (Plan (b)). Alle expectedFail mit Besitzer.
+ * Reihenfolge (Fixrunde 1, A3): D13b/D13c (Zeiten, Hallenton) gehören an den Turniertag VOR den Abschluss (Export `stepsNachZeitplan`,
+ * im Spec vor D8); nach dem Abschluss ist das Turnier gesperrt.
  */
 import { expect } from '@playwright/test';
 import { E2E_TURNIERTAG_SHARE_CODE } from '../../testData';
@@ -32,13 +34,6 @@ async function hallenton({ asRole }: StepContext): Promise<void> {
   await expectSollMarker(ownerPage, 'hall-speaker-start');
 }
 
-/** D16: Spielplan auf Anfang setzen / ein Spiel zurücksetzen (@SA-001, @SA-015; Stufe 3). */
-async function aufAnfang({ asRole }: StepContext): Promise<void> {
-  const ownerPage = await asRole('owner');
-  await openTurniertagPath(ownerPage, '/admin/danger');
-  await expectSollMarker(ownerPage, 'schedule-reset-button');
-}
-
 /** D17: Impressum und Datenschutz mit echtem Text, von der Zuschauer-Seite erreichbar, Fußzeile nicht verdeckt (@ZM-020, C-LEGAL). */
 async function rechtstexte({ anonPage }: StepContext): Promise<void> {
   await anonPage.setViewportSize({ width: 390, height: 844 });
@@ -49,7 +44,7 @@ async function rechtstexte({ anonPage }: StepContext): Promise<void> {
   await expectSollMarker(anonPage, 'legal-text-complete');
 }
 
-/** D18: Lastmessung: ein Turniertag gegen den lokalen Stack (@FT-001 bis @FT-004, Paket 11b). */
+/** D18: Lastmessung: ein Turniertag gegen den lokalen Stack, Verbrauch für beide Abrufwege (@FT-002, Paket 11b). */
 async function lastmessung({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
   await openTurniertagPath(ownerPage, '/admin/dashboard');
@@ -67,9 +62,8 @@ export const stepsNachZeitplan: readonly TurniertagStep[] = [
   { id: 'D13c', title: 'Hallenton an Abschnittsende und Spielende', scenarios: ['@HT-001', '@HT-004'], owner: 'B-46', expectedFail: true, run: hallenton },
 ];
 
-/** Ende des Ablaufs (nach Sicherung und zweitem Turnier). */
+/** Ende des Ablaufs (nach Sicherung und zweitem Turnier). D16 steht in der Vorbereitung (d00-vorbereitung.ts). */
 export const stepsEnde: readonly TurniertagStep[] = [
-  { id: 'D16', title: 'Spielplan auf Anfang setzen, Spiel zurücksetzen', scenarios: ['@SA-001', '@SA-015'], owner: 'A-33/B-36 (Stufe 3)', expectedFail: true, run: aufAnfang },
   { id: 'D17', title: 'Impressum und Datenschutz mit echtem Text, Fußzeile erreichbar (Handy)', scenarios: ['@ZM-020'], befunde: ['C-LEGAL', 'C-FUSS-LINKS-UNTER-LEISTE'], owner: 'B-32 / Kleinfix', expectedFail: true, run: rechtstexte },
-  { id: 'D18', title: 'Lastmessung: ein Turniertag gegen den lokalen Stack', scenarios: ['@FT-001', '@FT-004'], owner: '11b (FT-Messlauf)', expectedFail: true, run: lastmessung },
+  { id: 'D18', title: 'Lastmessung: ein Turniertag gegen den lokalen Stack', scenarios: ['@FT-002'], owner: '11b (FT-Messlauf)', expectedFail: true, run: lastmessung },
 ];

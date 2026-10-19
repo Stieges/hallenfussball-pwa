@@ -1,5 +1,6 @@
 /**
  * D8b-D10c: Regeln im Turnierablauf (Plan (b)): Gleichstand und Team ersetzen, eigene Halbfinal-Regel, Endstand, Absetzen.
+ * Die Reihenfolge steht im Spec (Fixrunde 1, A3): D8b/D9c nach D8, D10b nach dem Abschluss, D10c vor dem Gruppenabschluss.
  * Alle expectedFail; jeder Schritt prüft eine Soll-Wirkung, die der Besitzer baut.
  */
 import { expect } from '@playwright/test';
@@ -23,7 +24,7 @@ async function eigeneHalbfinalRegel(_ctx: StepContext): Promise<void> {
   expect(hf1.phase).toBe('semifinal');
 }
 
-/** D10b: Endstand, Platzierungen und Torschützen sind auf Zuschauer-Seite und Monitor gleich (@ET-044, @ET-032). */
+/** D10b: Endstand, Platzierungen und Torschützen des abgeschlossenen Turniers stehen auf der Zuschauer-Seite (@ET-044, @ET-032). Läuft NACH dem Abschluss (D11). */
 async function endstandAnzeige({ anonPage }: StepContext): Promise<void> {
   await anonPage.goto(`/#/live/${E2E_TURNIERTAG_SHARE_CODE}`);
   await expectPageAnchor(anonPage.getByRole('heading', { level: 1 }).first(), 'Zuschauer-Seite');
@@ -31,7 +32,7 @@ async function endstandAnzeige({ anonPage }: StepContext): Promise<void> {
   await expect(anonPage.locator('[data-testid="scorers-list"]')).toBeVisible({ timeout: SOLL_TIMEOUT_MS });
 }
 
-/** D10c: ein abgesetztes Gruppenspiel wird wieder eingeplant (@FU-071, @FU-097). */
+/** D10c: ein abgesetztes Gruppenspiel wird wieder eingeplant (@FU-071, @FU-093). */
 async function absetzenWiederEinplanen({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
   await openTurniertagPath(ownerPage, '/schedule');
@@ -39,9 +40,18 @@ async function absetzenWiederEinplanen({ asRole }: StepContext): Promise<void> {
   await expectSollMarker(ownerPage, 'match-skip-resume-button');
 }
 
+/** Nach D8 im Halbfinal-Block. */
 export const steps: readonly TurniertagStep[] = [
   { id: 'D8b', title: 'Team bei einer Absage ersetzen, Gleichstand in der Gruppe entscheiden', scenarios: ['@W5-010'], owner: 'GA4 / A-12c / B-02c', expectedFail: true, run: teamErsetzen },
-  { id: 'D9c', title: 'Eigene Halbfinal-Regel greift ohne manuelle Wahl', scenarios: ['@SL-145'], befunde: ['C-FINALPHASE-AUS-ID'], owner: 'A-12a (Phase aus dem Generator), A-14b/c', expectedFail: true, run: eigeneHalbfinalRegel },
-  { id: 'D10b', title: 'Endstand, Platzierungen und Torschützen auf Zuschauer-Seite und Monitor', scenarios: ['@ET-044', '@ET-032'], owner: 'A-19, A-20, B-23, B-29', expectedFail: true, run: endstandAnzeige },
-  { id: 'D10c', title: 'Abgesetztes Gruppenspiel wieder einplanen', scenarios: ['@FU-071', '@FU-097'], befunde: ['C-T2UI-ABSETZEN-AUFGESCHOBEN'], owner: 'B-12', expectedFail: true, run: absetzenWiederEinplanen },
+  { id: 'D9c', title: 'Eigene Halbfinal-Regel greift ohne manuelle Wahl', scenarios: ['@W2A-007', '@SL-053'], befunde: ['C-FINALPHASE-AUS-ID'], owner: 'A-12a (Phase aus dem Generator), A-14b/c', expectedFail: true, run: eigeneHalbfinalRegel },
+];
+
+/** Nach dem Abschluss (D11): der Endstand des abgeschlossenen Turniers. */
+export const stepsEndstand: readonly TurniertagStep[] = [
+  { id: 'D10b', title: 'Endstand, Platzierungen und Torschützen auf der Zuschauer-Seite', scenarios: ['@ET-044', '@ET-032'], owner: 'A-19, A-20, B-23, B-29', expectedFail: true, run: endstandAnzeige },
+];
+
+/** Vor dem Gruppenabschluss (Block D5-D7): ein abgesetztes Gruppenspiel wieder einplanen. */
+export const stepsAbsetzen: readonly TurniertagStep[] = [
+  { id: 'D10c', title: 'Abgesetztes Gruppenspiel wieder einplanen', scenarios: ['@FU-071', '@FU-093'], befunde: ['C-T2UI-ABSETZEN-AUFGESCHOBEN'], owner: 'B-12', expectedFail: true, run: absetzenWiederEinplanen },
 ];
