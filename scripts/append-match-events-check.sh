@@ -127,6 +127,8 @@ SW_MIGRATION="20261028_007_entered_shootout_needs_draw.sql"
 # A-34 (Steuer je Feld): juengste Fassung von append_match_events (Pruefung c3) -- jedes erneute Einspielen von
 # 20261028_003 stellte die Fassung ohne Steuer wieder her (Assertion append-match-events-checks-field-control f),
 # deshalb ans Ende der Idempotenz-Kette. Die Proben hier senden keine Geraete-ID -> kein Anspruch, Verhalten gleich.
+# Pflicht (A-34 Fixrunde 2): fehlt die Datei (z. B. umbenannt), bricht das Skript ab statt still die Fassung ohne Steuer
+# zu pruefen.
 A34_MIGRATION="20261110_003_field_control.sql"
 A34_FILE=""
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
@@ -176,6 +178,11 @@ while IFS= read -r line; do
 done <<< "$NEWER_MIGRATIONS_RAW"
 if [[ "$MODE" != "without-migration" && ( -z "$TARGET_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" || -z "$A10_FILE" || -z "$UR_FILE" || -z "$SW_FILE" ) ]]; then
   echo "::error::$TARGET_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION, $A10_MIGRATION, $UR_MIGRATION oder $SW_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
+  exit 1
+fi
+
+if [[ -z "$A34_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
+  echo "::error::$A34_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still append_match_events ohne Steuer je Feld." >&2
   exit 1
 fi
 
