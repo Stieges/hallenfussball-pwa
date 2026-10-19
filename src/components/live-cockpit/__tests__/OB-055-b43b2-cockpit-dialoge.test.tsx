@@ -41,7 +41,7 @@ const KINDS: Kind[] = [
   { name: 'SettingsDialog', mount: () => void render(<SettingsDialog isOpen onClose={noop} settings={DEFAULT_MATCH_COCKPIT_SETTINGS} onChange={noop} tournamentId="t1" />) },
   { name: 'SubstitutionDialog', mount: () => void render(<SubstitutionDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
   { name: 'SubstitutionDialog (Team gewählt)', mount: () => void render(<SubstitutionDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} preselectedTeamSide="home" />) },
-  { name: 'TimeAdjustDialog', mount: () => void render(<TimeAdjustDialog isOpen onClose={noop} onConfirm={noop} currentTimeSeconds={125} matchDurationMinutes={10} />) },
+  { name: 'TimeAdjustDialog', mount: () => void render(<TimeAdjustDialog isOpen onClose={noop} onConfirm={noop} currentSeconds={125} minSeconds={0} maxSeconds={600} minIsGoal={false} />) },
   { name: 'TimePenaltyDialog', mount: () => void render(<TimePenaltyDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
   { name: 'Tiebreaker/PenaltyShootoutDialog', mount: () => void render(<LivePenaltyShootoutDialog homeTeamName="VfB Ufer" awayTeamName="SC Nord" onRecordShot={noop} onFinish={noop} onCancel={noop} />) },
   { name: 'Tiebreaker/TiebreakerBanner', mount: () => void render(<TiebreakerBanner homeTeamName="VfB Ufer" awayTeamName="SC Nord" score={2} onStartPenaltyShootout={noop} onEndAsDraw={noop} />) },
@@ -213,7 +213,7 @@ describe('@OB-055 B-43b2 – Verhalten wie vor der Umstellung', () => {
 
   it('verschachtelt: ein Cockpit-Dialog über einem zweiten lässt den Hintergrund gesperrt, bis der letzte schließt', () => {
     const a = render(<TimePenaltyDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />);
-    const b = render(<TimeAdjustDialog isOpen onClose={noop} onConfirm={noop} currentTimeSeconds={5} matchDurationMinutes={10} />);
+    const b = render(<TimeAdjustDialog isOpen onClose={noop} onConfirm={noop} currentSeconds={5} minSeconds={0} maxSeconds={600} minIsGoal={false} />);
     b.unmount();
     expect(document.body.style.overflow).toBe('hidden');
     a.unmount();

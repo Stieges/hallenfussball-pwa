@@ -30,9 +30,11 @@ export interface PDFExportDialogProps {
   audience?: PdfAudience;
   /** Weg zu den Sichtbarkeits-Schaltern („Online teilen“, „Sichtbarkeit ändern“); ohne Angabe nur der Hinweistext. */
   onOpenVisibility?: () => void;
+  /** A-11 @ZM-019: „Aushang mit QR-Code“ anbieten (Recht tournamentSettings, vom Aufrufer über useCan). Vorgabe: ja. */
+  canCreateNotice?: boolean;
 }
 
-export const PDFExportDialog = ({ isOpen, onClose, tournament, schedule, standings, audience = 'organizer', onOpenVisibility }: PDFExportDialogProps) => {
+export const PDFExportDialog = ({ isOpen, onClose, tournament, schedule, standings, audience = 'organizer', onOpenVisibility, canCreateNotice }: PDFExportDialogProps) => {
   const { t } = useTranslation('tournament');
   const { isOnline } = useOnlineStatus();
   const viewer = audience === 'viewer';
@@ -83,6 +85,7 @@ export const PDFExportDialog = ({ isOpen, onClose, tournament, schedule, standin
           failed={state.failed}
           notShared={state.notShared}
           onOpenVisibility={onOpenVisibility}
+          canCreateNotice={canCreateNotice}
         />
       ) : null}
       {state.step === 'hint' && state.pending ? <PdfHintStep hints={state.pending.hints} /> : null}

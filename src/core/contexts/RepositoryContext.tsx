@@ -7,6 +7,7 @@ import { LocalStorageLiveMatchRepository } from '../repositories/LocalStorageLiv
 import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { SupabaseLiveMatchRepository } from '../repositories/SupabaseLiveMatchRepository';
 import { OfflineRepository } from '../repositories/OfflineRepository';
+import { setActiveTournamentSyncSource } from '../repositories/activeTournamentSyncSource';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { RealtimeEnabledContext } from '../../lib/realtimeEnabled';
 
@@ -132,6 +133,11 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
             previous.dispose();
         }
         activeQueueRef.current = queue;
+        // Review A-11 A4 (@FU-098): Rechte-Frage erkennt „angelegt, noch nicht in der Cloud“ über das Konto-Repo.
+        const repo = value.tournamentRepository;
+        setActiveTournamentSyncSource(repo instanceof OfflineRepository
+            ? { isAwaitingFirstUpload: (id) => repo.isAwaitingFirstUpload(id), subscribe: (listener) => repo.subscribeSync(listener) }
+            : null);
     }, [value]);
 
     // Cleanup subscriptions on unmount

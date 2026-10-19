@@ -35,9 +35,8 @@ const REPOS = {
 vi.mock('../../../core/contexts/RepositoryContext', () => ({ useRepositories: () => REPOS }));
 // A-08f3e2: die Schnelleingabe fragt die Akteursrolle ab (useActorRole braucht sonst den AuthProvider).
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'leitung' }));
-vi.mock('../../../hooks/usePermissions', () => ({
-  usePermissions: () => ({ canCorrectResults: true, hasPermission: () => true }),
-}));
+// A-11: Rechte nur über useCan (der Stub usePermissions ist gelöscht) -- hier die Turnierleitung, alles erlaubt.
+vi.mock('../../auth/hooks/useCan', () => ({ useCan: () => true }));
 vi.mock('../../../lib/supabase', () => ({ isSupabaseConfigured: true, supabase: null }));
 
 let reportChannelStatus: (status: RealtimeConnectionStatus) => void = () => undefined;

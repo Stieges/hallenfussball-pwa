@@ -41,13 +41,14 @@ vi.mock('../../../components/ui/Toast/ToastContext', () => ({
   useToast: () => ({ showError: vi.fn(), showSuccess: vi.fn(), showWarning: vi.fn(), showInfo: vi.fn() }),
 }));
 
-// Keine Mitgliedschafts-Abfrage (Supabase) -- ohne Membership erlaubt ManagementTab die Bearbeitung.
+// A-11 (Baustein Regel 3, umgeschrieben): „ohne Membership erlaubt ManagementTab die Bearbeitung“ gilt nicht mehr --
+// ein Konto ohne Mitgliedschaft hat online kein Recht (useCan). Bearbeiten darf hier der Helfer (writeMatchData).
 vi.mock('../../auth/hooks/useAuth', () => ({
   useAuth: () => ({ isAuthenticated: true, user: { id: 'user-1' } }),
 }));
 
 vi.mock('../../auth/hooks/useTournamentMembers', () => ({
-  useTournamentMembers: () => ({ myMembership: null, members: [], isLoading: false, error: null }),
+  useTournamentMembers: () => ({ myMembership: { role: 'collaborator', teamIds: [] }, members: [], isLoading: false, error: null }),
 }));
 
 // A4 (C-SYNC): SyncStatusIndicator braucht RepositoryContext; isCloudSyncAvailable:false spiegelt das wider.

@@ -11,6 +11,8 @@
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// A-11: die Komponente fragt Rechte über useCan -- hier die Turnierleitung (alles erlaubt).
+vi.mock('../../../../auth/hooks/useCan', () => ({ useCan: () => true }));
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 

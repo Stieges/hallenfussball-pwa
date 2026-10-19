@@ -1,240 +1,113 @@
 /**
- * TimeAdjustDialog - Manual Time Adjustment
+ * TimeAdjustDialog (B-08d): Spielzeit im laufenden Abschnitt korrigieren, mit Grenzen.
  *
- * Allows tournament directors to manually adjust match time.
- * Use cases:
- * - Wrong start time
- * - Technical issues
- * - Paused too long by accident
+ * Eingabe ist die Spielzeit im Abschnitt (mm:ss). Untergrenze: der späteste Eintrag des Abschnitts (ein Tor
+ * oder anderer Eintrag, sonst 0:00); Obergrenze: die Länge des Abschnitts. Der Stepper kappt an den Grenzen,
+ * die Hinweise nennen sie. Der Dialog meldet nur die neue Spielzeit; das Senden macht die Hülle über die
+ * Engine (`adjustClock`). Szenarien: @SL-011, @SL-012, @SL-077.
  */
-
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { cssVars, dialogWidths, touchTargets } from '../../../../design-tokens';
 import { DialogSurface } from '../../../ui/molecules/DialogSurface';
+import { TimeStepper } from '../../../ui/molecules/TimeStepper';
 import moduleStyles from '../../LiveCockpit.module.css';
 
-interface TimeAdjustDialogProps {
+/** Schritt je Knopfdruck: zehn Sekunden. */
+const STEP_SECONDS = 10;
+
+export interface TimeAdjustDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (newTimeSeconds: number) => void;
-  currentTimeSeconds: number;
-  matchDurationMinutes: number;
+  /** Neue Spielzeit im Abschnitt in ganzen Sekunden; liegt immer innerhalb der Grenzen. */
+  onConfirm: (sectionSeconds: number) => void;
+  /** Aktuelle Spielzeit im Abschnitt in ganzen Sekunden. */
+  currentSeconds: number;
+  /** Untergrenze in Sekunden: spätester Eintrag des Abschnitts. */
+  minSeconds: number;
+  /** Obergrenze in Sekunden: Länge des Abschnitts. */
+  maxSeconds: number;
+  /** Die Untergrenze stammt von einem Tor (für den Hinweistext). */
+  minIsGoal: boolean;
+}
+
+/** Sekunden als `m:ss` (Minuten ohne führende Null). */
+function formatMmSs(sekunden: number): string {
+  return `${Math.floor(sekunden / 60)}:${String(sekunden % 60).padStart(2, '0')}`;
 }
 
 export function TimeAdjustDialog({
-  isOpen,
-  onClose,
-  onConfirm,
-  currentTimeSeconds,
-  matchDurationMinutes,
+  isOpen, onClose, onConfirm, currentSeconds, minSeconds, maxSeconds, minIsGoal,
 }: TimeAdjustDialogProps) {
   const { t } = useTranslation('cockpit');
-  const [minutes, setMinutes] = useState(0);
-  const [seconds, setSeconds] = useState(0);
+  // Eingabe; `null` = noch nicht geändert, dann gilt die laufende Spielzeit (die Uhr tickt weiter).
+  const [eingabe, setEingabe] = useState<number | null>(null);
+  const seconds = eingabe ?? currentSeconds;
 
-  // Initialize with current time when dialog opens
+  // Beim Schließen (auch von außen) wird die Eingabe verworfen, beim nächsten Öffnen beginnt sie bei der Uhr.
   useEffect(() => {
-    if (isOpen) {
-      const currentMinutes = Math.floor(currentTimeSeconds / 60);
-      const currentSeconds = currentTimeSeconds % 60;
-      setMinutes(currentMinutes);
-      setSeconds(currentSeconds);
-    }
-  }, [isOpen, currentTimeSeconds]);
+    if (!isOpen) { setEingabe(null); }
+  }, [isOpen]);
 
   if (!isOpen) {
     return null;
   }
 
-  const handleMinutesChange = (delta: number) => {
-    const newMinutes = Math.max(0, Math.min(matchDurationMinutes + 10, minutes + delta));
-    setMinutes(newMinutes);
-  };
+  const hasChanged = seconds !== currentSeconds;
+  const minText = formatMmSs(minSeconds);
+  const hinweisMin = minIsGoal
+    ? t('timeAdjust.limitMinGoal', { zeit: minText })
+    : t('timeAdjust.limitMinEntry', { zeit: minText });
 
-  const handleSecondsChange = (delta: number) => {
-    let newSeconds = seconds + delta;
-    if (newSeconds >= 60) {
-      newSeconds = 0;
-      setMinutes((m) => Math.min(matchDurationMinutes + 10, m + 1));
-    } else if (newSeconds < 0) {
-      if (minutes > 0) {
-        newSeconds = 59;
-        setMinutes((m) => m - 1);
-      } else {
-        newSeconds = 0;
-      }
-    }
-    setSeconds(newSeconds);
-  };
-
-  const handleConfirm = () => {
-    const totalSeconds = minutes * 60 + seconds;
-    onConfirm(totalSeconds);
-    onClose();
-  };
-
-  const formatTime = (m: number, s: number) => {
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
-  const currentFormatted = formatTime(
-    Math.floor(currentTimeSeconds / 60),
-    currentTimeSeconds % 60
-  );
-  const newFormatted = formatTime(minutes, seconds);
-  const hasChanged = currentFormatted !== newFormatted;
+  const schliesse = (): void => { setEingabe(null); onClose(); };
 
   return (
     <DialogSurface
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={schliesse}
       maxWidth={dialogWidths.sm}
       labelledBy="time-adjust-dialog-title"
       panelClassName={moduleStyles.dialogOverlay}
     >
       <div style={styles.dialog}>
-        {/* Title */}
         <h2 id="time-adjust-dialog-title" style={styles.title}>{t('timeAdjust.title')}</h2>
+        <p style={styles.label}>{t('timeAdjust.inSection')}</p>
 
-        {/* Current Time */}
-        <p style={styles.currentTime}>
-          {t('timeAdjust.currentTime')}: <strong>{currentFormatted}</strong>
-        </p>
-
-        {/* Time Picker */}
-        <div style={styles.pickerContainer}>
-          {/* Minutes */}
-          <div style={styles.pickerColumn}>
-            <button
-              style={styles.pickerButton}
-              onClick={() => handleMinutesChange(1)}
-              aria-label={t('timeAdjust.increaseMinute')}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M18 15l-6-6-6 6"
-                  stroke={cssVars.colors.textSecondary}
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <div style={styles.pickerValue}>
-              {minutes.toString().padStart(2, '0')}
-            </div>
-            <button
-              style={styles.pickerButton}
-              onClick={() => handleMinutesChange(-1)}
-              aria-label={t('timeAdjust.decreaseMinute')}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M6 9l6 6 6-6"
-                  stroke={cssVars.colors.textSecondary}
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <span style={styles.pickerLabel}>{t('timeAdjust.minutes')}</span>
-          </div>
-
-          {/* Separator */}
-          <div style={styles.pickerSeparator}>:</div>
-
-          {/* Seconds */}
-          <div style={styles.pickerColumn}>
-            <button
-              style={styles.pickerButton}
-              onClick={() => handleSecondsChange(10)}
-              aria-label={t('timeAdjust.increaseSeconds')}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M18 15l-6-6-6 6"
-                  stroke={cssVars.colors.textSecondary}
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <div style={styles.pickerValue}>
-              {seconds.toString().padStart(2, '0')}
-            </div>
-            <button
-              style={styles.pickerButton}
-              onClick={() => handleSecondsChange(-10)}
-              aria-label={t('timeAdjust.decreaseSeconds')}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M6 9l6 6 6-6"
-                  stroke={cssVars.colors.textSecondary}
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <span style={styles.pickerLabel}>{t('timeAdjust.seconds')}</span>
-          </div>
+        <div style={styles.stepper}>
+          <TimeStepper
+            value={seconds}
+            min={minSeconds}
+            max={maxSeconds}
+            step={STEP_SECONDS}
+            format={formatMmSs}
+            labelDecrease={t('timeAdjust.decrease')}
+            labelIncrease={t('timeAdjust.increase')}
+            onChange={setEingabe}
+            testId="time-adjust-stepper"
+          />
         </div>
 
-        {/* Quick Adjust Buttons */}
-        <div style={styles.quickAdjustContainer}>
-          <button
-            style={styles.quickButton}
-            onClick={() => {
-              setMinutes(0);
-              setSeconds(0);
-            }}
-          >
-            {t('timeAdjust.reset')}
-          </button>
-          <button
-            style={styles.quickButton}
-            onClick={() => {
-              const half = Math.floor(matchDurationMinutes / 2);
-              setMinutes(half);
-              setSeconds(0);
-            }}
-          >
-            {t('timeAdjust.halftime')}
-          </button>
-          <button
-            style={styles.quickButton}
-            onClick={() => {
-              setMinutes(matchDurationMinutes);
-              setSeconds(0);
-            }}
-          >
-            {t('timeAdjust.end')}
-          </button>
+        <div style={styles.limits}>
+          {minSeconds > 0 && <p style={styles.limit}>{hinweisMin}</p>}
+          <p style={styles.limit}>{t('timeAdjust.limitMax', { zeit: formatMmSs(maxSeconds) })}</p>
         </div>
 
-        {/* Change Indicator */}
         {hasChanged && (
           <div style={styles.changeIndicator}>
-            {currentFormatted} → {newFormatted}
+            {formatMmSs(currentSeconds)} → {formatMmSs(seconds)}
           </div>
         )}
 
-        {/* Action Buttons */}
         <div style={styles.buttonContainer}>
-          <button style={styles.cancelButton} onClick={onClose}>
+          <button type="button" style={styles.cancelButton} onClick={schliesse} data-testid="time-adjust-cancel">
             {t('timeAdjust.cancel')}
           </button>
           <button
-            style={{
-              ...styles.confirmButton,
-              opacity: hasChanged ? 1 : 0.5,
-            }}
-            onClick={handleConfirm}
+            type="button"
+            style={hasChanged ? styles.confirmButton : { ...styles.confirmButton, opacity: 0.5 }}
             disabled={!hasChanged}
+            onClick={() => { onConfirm(seconds); schliesse(); }}
+            data-testid="time-adjust-apply"
           >
             {t('timeAdjust.apply')}
           </button>
@@ -251,76 +124,29 @@ const styles: Record<string, React.CSSProperties> = {
   },
   title: {
     fontSize: cssVars.fontSizes.xl,
-    fontWeight: 600,
+    fontWeight: cssVars.fontWeights.semibold,
     color: cssVars.colors.textPrimary,
     margin: 0,
     marginBottom: cssVars.spacing.md,
   },
-  currentTime: {
+  label: {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
     margin: 0,
-    marginBottom: cssVars.spacing.xl,
-  },
-  pickerContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: cssVars.spacing.lg,
     marginBottom: cssVars.spacing.lg,
   },
-  pickerColumn: {
+  stepper: {
     display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-  },
-  pickerButton: {
-    width: '48px',
-    height: '48px',
-    display: 'flex',
-    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: cssVars.colors.surface,
-    border: 'none',
-    borderRadius: cssVars.borderRadius.md,
-    cursor: 'pointer',
+    marginBottom: cssVars.spacing.md,
   },
-  pickerValue: {
-    fontSize: '48px',
-    fontWeight: 700,
-    color: cssVars.colors.textPrimary,
-    fontVariantNumeric: 'tabular-nums',
-    lineHeight: 1,
-    padding: `${cssVars.spacing.sm} 0`,
-  },
-  pickerLabel: {
-    fontSize: cssVars.fontSizes.xs,
-    color: cssVars.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  },
-  pickerSeparator: {
-    fontSize: '48px',
-    fontWeight: 700,
-    color: cssVars.colors.textSecondary,
-    alignSelf: 'center',
-    marginTop: '-24px',
-  },
-  quickAdjustContainer: {
-    display: 'flex',
-    gap: cssVars.spacing.sm,
-    justifyContent: 'center',
+  limits: {
     marginBottom: cssVars.spacing.lg,
   },
-  quickButton: {
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+  limit: {
     fontSize: cssVars.fontSizes.sm,
-    backgroundColor: cssVars.colors.surface,
     color: cssVars.colors.textSecondary,
-    border: 'none',
-    borderRadius: cssVars.borderRadius.full,
-    cursor: 'pointer',
+    margin: 0,
   },
   changeIndicator: {
     fontSize: cssVars.fontSizes.sm,
@@ -339,25 +165,25 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
     fontSize: cssVars.fontSizes.md,
-    fontWeight: 500,
+    fontWeight: cssVars.fontWeights.medium,
     backgroundColor: 'transparent',
     color: cssVars.colors.textSecondary,
     border: `1px solid ${cssVars.colors.borderDefault}`,
     borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
-    minHeight: '48px',
+    minHeight: touchTargets.comfortable,
   },
   confirmButton: {
     flex: 1,
     padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
     fontSize: cssVars.fontSizes.md,
-    fontWeight: 600,
+    fontWeight: cssVars.fontWeights.semibold,
     backgroundColor: cssVars.colors.primary,
     color: cssVars.colors.onPrimary,
     border: 'none',
     borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
-    minHeight: '48px',
+    minHeight: touchTargets.comfortable,
   },
 };
 

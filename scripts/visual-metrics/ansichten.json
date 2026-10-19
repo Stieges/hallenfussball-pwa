@@ -540,6 +540,16 @@
       "app": "/#/display/hallencup-messlauf/mon-qr",
       "erwarte": "[data-testid=\"monitor-slide\"]",
       "profil": "monitor"
+    },
+    {
+      "id": "admin-match-cockpit-regeln",
+      "titel": "Admin Center: Match Cockpit, Regeln Uhr-Art und Schlussphase (B-08e)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/admin/match-cockpit",
+      "erwarte": "[data-testid=\"settings-final-phase-minutes\"]",
+      "profil": "app"
     }
   ]
 }

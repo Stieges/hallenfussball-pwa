@@ -1144,15 +1144,18 @@ GUARD_COLUMNS=(
 )
 GUARD_DENIED=0
 GUARD_DETAIL=""
+# A-11 (20261110_001, Baustein Regel 3 -- umgeschrieben, nicht geloescht): seit matches_update_v4 (manageSchedule)
+# erreicht der Helfer den Spalten-Schutz gar nicht mehr -- RLS filtert sein UPDATE vorher (0 Zeilen, eigene Zeile
+# unten). Damit diese Zeilen weiter den GUARD messen, schreibt hier der Co-Admin (passiert RLS, ist Client-Rolle).
 for assignment in "${GUARD_COLUMNS[@]}"; do
-  res="$(q "SELECT public.__b3b_exec_msg('$U_HELPER', \$S\$UPDATE public.matches SET $assignment WHERE id = '$(M cg-engine)'\$S\$);")"
+  res="$(q "SELECT public.__b3b_exec_msg('$U_COADMIN', \$S\$UPDATE public.matches SET $assignment WHERE id = '$(M cg-engine)'\$S\$);")"
   if [[ "$res" == error:42501:*append_match_events* ]]; then
     GUARD_DENIED=$((GUARD_DENIED + 1))
   else
     GUARD_DETAIL+="[$assignment -> $res] "
   fi
 done
-check Spaltenschutz "@FU-005 Helfer: jede der 16 geschuetzten Spalten am Engine-Spiel -> 42501 mit Guard-Meldung ($GUARD_DETAIL)" \
+check Spaltenschutz "@FU-005 Co-Admin (Client-Rolle mit Schreibrecht): jede der 16 geschuetzten Spalten am Engine-Spiel -> 42501 mit Guard-Meldung ($GUARD_DETAIL)" \
   ". == ${#GUARD_COLUMNS[@]}" "$GUARD_DENIED"
 res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$UPDATE public.matches SET score_a = 7, score_b = 7 WHERE id = '$(M cg-engine)'\$S\$);")"
 check Spaltenschutz "@FU-005 Eigentuemer: score_a am Engine-Spiel -> 42501 mit Guard-Meldung" \
@@ -1160,15 +1163,18 @@ check Spaltenschutz "@FU-005 Eigentuemer: score_a am Engine-Spiel -> 42501 mit G
 cache="$(cache_of "$(M cg-engine)")"
 check Spaltenschutz "@FU-005 Zwischenspeicher nach den abgelehnten Versuchen unveraendert (0:0, running, live_state engine)" \
   '.score_a == 0 and .score_b == 0 and .match_status == "running" and .live_state.engine == true and .live_state.x == null' "$cache"
-res="$(q "SELECT public.__b3b_exec_msg('$U_HELPER', \$S\$UPDATE public.matches SET referee_number = 3, score_a = score_a WHERE id = '$(M cg-engine)'\$S\$);")"
-check Spaltenschutz "Helfer: freie Spalte (referee_number) am Engine-Spiel, geschuetzte unveraendert -> erlaubt" '. == "ok:1"' "$(jq -Rn --arg v "$res" '$v')"
+res="$(q "SELECT public.__b3b_exec_msg('$U_COADMIN', \$S\$UPDATE public.matches SET referee_number = 3, score_a = score_a WHERE id = '$(M cg-engine)'\$S\$);")"
+check Spaltenschutz "Co-Admin: freie Spalte (referee_number) am Engine-Spiel, geschuetzte unveraendert -> erlaubt" '. == "ok:1"' "$(jq -Rn --arg v "$res" '$v')"
+# A-11 @ZP-041: der Helfer aendert keine Spielplan-Spalte mehr (RLS matches_update_v4 -> 0 Zeilen, kein Fehler).
+res="$(q "SELECT public.__b3b_exec_msg('$U_HELPER', \$S\$UPDATE public.matches SET referee_number = 4 WHERE id = '$(M cg-engine)'\$S\$);")"
+check Spaltenschutz "@ZP-041 Helfer: freie Spalte (referee_number) am Engine-Spiel -> 0 Zeilen (RLS manageSchedule)" '. == "ok:0"' "$(jq -Rn --arg v "$res" '$v')"
 res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$UPDATE public.matches SET score_a = 3, score_b = 1, match_status = 'finished' WHERE id = '$(M cg-legacy)'\$S\$);")"
 # A-10 (20261028_005, @EK-060): umgeschrieben (Baustein Regel 3) -- vorher "Altspiel ohne Engine-Ereignis -> erlaubt".
 # Der Spalten-Schutz gilt jetzt fuer ALLE Spiele; die Turnierleitung setzt Altbestand ueber reset_match_results zurueck.
 check Spaltenschutz "@EK-060 Eigentuemer: Altspiel ohne Engine-Ereignis -> 42501 (Guard, unbedingt)" \
   'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
-res="$(q "SELECT public.__b3b_exec_msg('$U_HELPER', \$S\$UPDATE public.matches SET score_a = 4 WHERE id = '$(M cg-legacy)'\$S\$);")"
-check Spaltenschutz "@EK-060 Helfer: Altspiel ohne Engine-Ereignis -> 42501 (Guard, unbedingt)" \
+res="$(q "SELECT public.__b3b_exec_msg('$U_COADMIN', \$S\$UPDATE public.matches SET score_a = 4 WHERE id = '$(M cg-legacy)'\$S\$);")"
+check Spaltenschutz "@EK-060 Co-Admin: Altspiel ohne Engine-Ereignis -> 42501 (Guard, unbedingt)" \
   'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
 cache="$(cache_of "$(M cg-legacy)")"
 check Spaltenschutz "@EK-060 Altspiel nach beiden Versuchen unveraendert (0:0)" '.score_a == 0 and .score_b == 0' "$cache"
@@ -1193,8 +1199,8 @@ check Spaltenschutz "M1-Vorbedingung: RESTRICTIVE-Policy versteckt dem Eigentuem
 res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$UPDATE public.matches SET score_a = 9 WHERE id = '$(M cg-engine)'\$S\$);")"
 check Spaltenschutz "M1: Eigentuemer ohne Leserecht auf die Ereignisse: score_a am Engine-Spiel -> trotzdem 42501 (Guard)" \
   'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
-res="$(q "SELECT public.__b3b_exec_msg('$U_HELPER', \$S\$UPDATE public.matches SET match_status = 'finished' WHERE id = '$(M cg-engine)'\$S\$);")"
-check Spaltenschutz "M1: Helfer ohne Leserecht auf die Ereignisse: match_status am Engine-Spiel -> trotzdem 42501 (Guard)" \
+res="$(q "SELECT public.__b3b_exec_msg('$U_COADMIN', \$S\$UPDATE public.matches SET match_status = 'finished' WHERE id = '$(M cg-engine)'\$S\$);")"
+check Spaltenschutz "M1: Co-Admin ohne Leserecht auf die Ereignisse: match_status am Engine-Spiel -> trotzdem 42501 (Guard)" \
   'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
 psql_stdin <<<'DROP POLICY "__c0b_hide_events" ON public.match_events;'
 

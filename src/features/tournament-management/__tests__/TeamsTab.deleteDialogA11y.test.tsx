@@ -12,6 +12,9 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Tournament } from '../../../types/tournament';
 
+// A-11: TeamsTab fragt Rechte über useCan -- hier die Turnierleitung (alles erlaubt).
+vi.mock('../../auth/hooks/useCan', () => ({ useCan: () => true }));
+
 import { TeamsTab } from '../TeamsTab';
 
 function tournamentWithTeam(): Tournament {

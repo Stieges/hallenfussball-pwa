@@ -131,35 +131,45 @@ export const createOwnerMembership = async (
 };
 
 /**
+ * Review A-11 A4 (@FU-100, Befund C-RECHTE-NACH-ANLEGEN-UNBEKANNT): Die Mitglieder-Abfrage ist gescheitert (Fehler des
+ * Servers oder kein Netz). Die Rolle ist dann UNBEKANNT -- nicht „kein Mitglied“ (gespeicherte Rolle bzw. L7 gelten).
+ */
+export class MembersUnknownError extends Error {
+  constructor(readonly reason: unknown) {
+    super('Mitglieder konnten nicht geladen werden');
+    this.name = 'MembersUnknownError';
+  }
+}
+
+/**
  * Lädt alle Mitglieder eines Turniers (nur akzeptierte)
  *
  * @param tournamentId - Turnier-ID
  * @returns Array von Memberships
+ * @throws MembersUnknownError, wenn die Abfrage scheitert (Rolle unbekannt, @FU-100)
  */
 export const getTournamentMembers = async (tournamentId: string): Promise<TournamentMembership[]> => {
   if (!isSupabaseConfigured || !supabase) {
     return [];
   }
 
+  let result: { data: unknown; error: unknown };
   try {
-    const { data, error } = await supabase
+    result = await supabase
       .from('tournament_collaborators')
       .select('*')
       .eq('tournament_id', tournamentId)
       .not('user_id', 'is', null) // Only accepted members (have user_id)
       .is('declined_at', null); // Not declined
-
-
-    if (error || !data) {
-      if (import.meta.env.DEV) { console.error('Get tournament members error:', error); }
-      return [];
-    }
-
-    return (data as CollaboratorRow[]).map(mapRowToMembership);
   } catch (err) {
-    if (import.meta.env.DEV) { console.error('Get tournament members error:', err); }
-    return [];
+    throw new MembersUnknownError(err);
   }
+
+  // Review A-11 A4 (@FU-100): eine gescheiterte Abfrage ist „unbekannt“, keine leere Liste („kein Mitglied“).
+  if (result.error || !result.data) {
+    throw new MembersUnknownError(result.error);
+  }
+  return (result.data as CollaboratorRow[]).map(mapRowToMembership);
 };
 
 /**

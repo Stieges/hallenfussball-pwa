@@ -69,10 +69,24 @@ test.describe('Schreibweg nur über Ereignisse', () => {
     await expect.poll(async () => (await fetchMatchRow(ids.matchId)).score_a, { timeout: 10000 }).toBe(2);
   });
 
-  test('@FU-084 Spalten-PATCH auf matches.score_a durch den Helfer wird vom Spaltenwächter abgelehnt', async () => {
+  // A-11 Fixrunde 3 (Gegenteil-Pin umgeschrieben, nicht gelöscht): vorher „Helfer-PATCH → 42501 vom Spaltenwächter“.
+  // Seit 20261110_001 (matches_update_v4 = manageSchedule) lässt RLS den Helfer gar nicht an die Zeile: 200 mit 0 Zeilen.
+  // @FU-084 verlangt nur „die Datenbank speichert nichts, der Spielstand bleibt“ -- das gilt auf beiden Wegen. Den
+  // Spaltenwächter selbst belegt die Gegenprobe darunter mit einer Rolle, die RLS durchlässt (Olli, manageSchedule).
+  test('@FU-084 Spalten-PATCH auf matches.score_a durch den Helfer: die Datenbank speichert nichts, der Spielstand bleibt', async () => {
     const ids = engineCupIds('SCHREIBWEG');
     await expectSeededEngineMatch(engineCupTarget('SCHREIBWEG'));
     const res = await restAsRole('helper', 'PATCH', `matches?id=eq.${ids.matchId}`, { score_a: 7 });
+    const rejected = res.status >= 400;
+    const noRowWritten = res.status < 300 && Array.isArray(res.json) && res.json.length === 0;
+    expect(rejected || noRowWritten, `${res.status} ${res.text}`).toBe(true);
+    await expectScore(ids.matchId, 1, 1, 'finished');
+  });
+
+  test('@FU-084 Gegenprobe Spaltenwächter: auch Olli (RLS lässt ihn an die Zeile) kann score_a nicht direkt setzen (42501)', async () => {
+    const ids = engineCupIds('SCHREIBWEG');
+    await expectSeededEngineMatch(engineCupTarget('SCHREIBWEG'));
+    const res = await restAsRole('owner', 'PATCH', `matches?id=eq.${ids.matchId}`, { score_a: 7 });
     expect(res.status, res.text).toBeGreaterThanOrEqual(400);
     expect(res.text).toContain('42501');
     await expectScore(ids.matchId, 1, 1, 'finished');

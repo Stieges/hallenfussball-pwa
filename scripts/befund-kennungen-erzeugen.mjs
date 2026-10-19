@@ -14,7 +14,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
-import { sammleTestDateien, testTexte, verweiseIn } from './lib/testtexte.mjs'
+import { sammleTestDateien, testTexte } from './lib/testtexte.mjs'
 
 const REL = 'docs/anforderungen/BEFUNDE-HEUTIGER-CODE.md'
 

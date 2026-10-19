@@ -48,6 +48,11 @@ export interface ScheduleToolbarProps {
   tournament: Tournament;
   schedule: GeneratedSchedule;
   standings: Standing[];
+
+  /** A-11 @ZP-040: „Spielplan bearbeiten“ nur mit manageSchedule (ScheduleTab fragt useCan). Vorgabe: ja. */
+  canEditSchedule?: boolean;
+  /** A-11 @ZM-019: Aushang im PDF-Dialog nur mit tournamentSettings. Vorgabe: ja. */
+  canCreateNotice?: boolean;
 }
 
 export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
@@ -69,6 +74,8 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
   tournament,
   schedule,
   standings,
+  canEditSchedule = true,
+  canCreateNotice,
 }) => {
   const { t } = useTranslation('tournament');
 
@@ -130,13 +137,16 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
       <div style={leftSectionStyle}>
         {/* Edit Mode Controls */}
         {!isEditing ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onStartEditing}
-          >
-            {t('toolbar.editSchedule')}
-          </Button>
+          canEditSchedule ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onStartEditing}
+              data-testid="schedule-edit-start"
+            >
+              {t('toolbar.editSchedule')}
+            </Button>
+          ) : null
         ) : (
           <>
             <span style={editModeBadgeStyle}>
@@ -226,6 +236,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
         schedule={schedule}
         standings={standings}
         variant="organizer"
+        canCreateNotice={canCreateNotice}
       />
     </div>
   );

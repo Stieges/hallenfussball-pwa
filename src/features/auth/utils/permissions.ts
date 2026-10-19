@@ -44,9 +44,19 @@ const PermissionSchema = z.enum([
   'deleteTournament',
   'manageMembers',
   'leadMatches',
+  // A-11 (brief-A-11.md R-A11-1, 20261110_001_role_permissions_mvp.sql): MVP-Rechte. readDisplay hat noch keine
+  // Rolle (Rolle screen kommt mit A-27).
+  'manageSchedule',
+  'manageLifecycle',
+  'manageScreens',
+  'manageHelpers',
+  'readDisplay',
 ]);
 
 export type Permission = z.infer<typeof PermissionSchema>;
+
+/** Alle Rechte (Zwilling des SQL-CHECK, src/__tests__/architecture/rolePermissionsTwins.test.ts). */
+export const PERMISSIONS: readonly Permission[] = PermissionSchema.options;
 
 /**
  * Bekannte Rollen aus role_permissions -- deckungsgleich mit dessen role-CHECK-Constraint

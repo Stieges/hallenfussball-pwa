@@ -22,6 +22,7 @@ import { useCockpitClock } from './useCockpitClock';
 import type { UseEntryFlowsReturn } from './useEntryFlows';
 import type { UseSideOrderReturn } from './useSideOrder';
 import { useTiebreakCommands } from './useTiebreakCommands';
+import { korrekturUhrstaende } from '../model/zeitKorrektur';
 
 /** Die vier Tipps einer Team-Spalte, je Seite (Aufgabe 3.3). */
 export interface TeamSideHandlers { onTor: () => void; onFoul: () => void; onZeitstrafe: () => void; onKarte: () => void }
@@ -123,13 +124,23 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     if (match?.events.some((e) => e.id === event.id)) { flows.oeffne({ art: 'nummer', seite: null, eventId: event.id }); }
   }, [match, flows]);
 
-  const handleTimeAdjust = useCallback((newDisplaySeconds: number) => {
+  // B-08d: die neue Spielzeit im Abschnitt geht als CLOCK_ADJUST über die Engine. Der Abschnittsbeginn auf der
+  // Spieluhr (`limitClockMs - sectionLimitMs`) macht aus der Abschnittszeit den absoluten Uhrstand. Keine Meldung
+  // bei Erfolg: die Liste der Einträge zeigt die Korrektur (Aufgabe 4.1); eine Ablehnung meldet die Engine.
+  const korrigiereUhr = cockpitClock.korrigiereUhr;
+  const handleTimeAdjust = useCallback((neuSekunden: number) => {
     if (!match) { return; }
-    // Im Countdown stellt der Nutzer die Restzeit ein: verstrichen = Dauer - Rest.
-    const elapsed = settings.timerDirection === 'countdown' ? match.durationSeconds - newDisplaySeconds : newDisplaySeconds;
-    onAdjustTime?.(match.id, elapsed);
-    showInfo(t('meldung.zeitGesetzt', { zeit: `${Math.floor(newDisplaySeconds / 60)}:${(newDisplaySeconds % 60).toString().padStart(2, '0')}` }));
-  }, [match, onAdjustTime, showInfo, settings.timerDirection, t]);
+    // Ohne Engine-Ansicht (Ersatz-Ansicht aus dem LiveMatch) bleibt der bisherige Weg über `onAdjustTime`, mit Meldung.
+    if (!engineView) {
+      // Im Countdown stellt der Nutzer die Restzeit ein: verstrichen = Dauer - Rest.
+      const elapsed = settings.timerDirection === 'countdown' ? match.durationSeconds - neuSekunden : neuSekunden;
+      onAdjustTime?.(match.id, elapsed);
+      showInfo(t('meldung.zeitGesetzt', { zeit: `${Math.floor(neuSekunden / 60)}:${(neuSekunden % 60).toString().padStart(2, '0')}` }));
+      return;
+    }
+    const { clockMs, previousClockMs } = korrekturUhrstaende(engineView, neuSekunden);
+    void korrigiereUhr(clockMs, previousClockMs);
+  }, [match, engineView, korrigiereUhr, onAdjustTime, settings.timerDirection, showInfo, t]);
 
   const sideHandlers = (side: Side): TeamSideHandlers => ({
     onTor: () => flows.tippeTor(side),
@@ -138,7 +149,22 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     onKarte: () => flows.tippeKarte(side),
   });
 
-  const openTimeAdjust = onAdjustTime ? () => setShowTimeAdjust(true) : undefined;
+  // @SL-079: in der Halbzeitpause und nach dem Abpfiff gibt es keine Korrektur (nur laufend oder angehalten).
+  // Ohne Engine-Ansicht (Ersatz-Ansicht aus dem LiveMatch) gilt der Status des Spiels.
+  const zeitKorrekturMoeglich = engineView
+    ? engineView.status === 'running' || engineView.status === 'paused'
+    : match?.status === 'RUNNING' || match?.status === 'PAUSED';
+  const openTimeAdjust = onAdjustTime && zeitKorrekturMoeglich ? () => setShowTimeAdjust(true) : undefined;
+  const zeitGrenzen = engineView
+    ? {
+      current: Math.floor(engineView.sectionElapsedMs / 1000),
+      min: Math.ceil(engineView.earliestAdjustMs / 1000),
+      max: Math.floor(engineView.sectionLimitMs / 1000),
+      minIsGoal: engineView.earliestAdjustIsGoal,
+    }
+    : match
+      ? { current: match.timerElapsedSeconds ?? 0, min: 0, max: match.durationSeconds, minIsGoal: false }
+      : null;
   const overlayHandlers: CockpitOverlayHandlers = {
     closeTimeAdjust: () => setShowTimeAdjust(false),
     confirmTimeAdjust: handleTimeAdjust,
@@ -165,7 +191,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     activePenalties,
     dialogs: {
       offen: flows.offen,
-      showTimeAdjust, showEventLog, showSettings,
+      showTimeAdjust, showEventLog, showSettings, zeit: zeitGrenzen,
       // Task R2 Fixrunde 2 (H1): unter readOnly gar nicht, und nur mit beiden Strafstoß-Handlern.
       showPenaltyShootout: tiebreak.showPenaltyDialog && !readOnly && !!props.onRecordPenaltyResult && !!props.onAbortPenaltyShootout,
     },

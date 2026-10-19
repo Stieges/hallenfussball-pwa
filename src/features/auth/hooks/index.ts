@@ -34,3 +34,5 @@ export type {
 
 export { useTournamentLimit, ANONYMOUS_TOURNAMENT_LIMIT } from './useTournamentLimit';
 export type { UseTournamentLimitReturn } from './useTournamentLimit';
+
+export { useCan } from './useCan';

@@ -18,9 +18,7 @@ import { LiveCockpit } from '../../components/live-cockpit';
 import type { MatchSummary } from '../../components/live-cockpit/types';
 import { useCockpitExecution } from '../../hooks/useCockpitExecution';
 import { useCockpitLeerGrund } from './hooks/useCockpitLeerGrund';
-import { useTournamentMembers } from '../auth/hooks/useTournamentMembers';
-import { useEffectiveTournamentRole } from '../auth/hooks/useMyTournamentRole';
-import { canEditResults, canManageTournament } from '../auth/utils/permissions';
+import { useCan } from '../auth/hooks/useCan';
 import { RulesLockProvider } from '../../components/match-settings/RulesLockContext';
 import { useToast } from '../../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../../lib/sentry';
@@ -85,22 +83,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handleFoul,
   } = useCockpitExecution(tournament);
 
-  // Permission check: Get current user's role in this tournament
-  const { myMembership, isLoading: membersLoading } = useTournamentMembers(tournament.id);
-
-  // Spielregeln (@W2A-030) ändert nur die Turnierleitung: vorhandene Rechte-Logik, keine Sonderregel
-  const { role: myRole } = useEffectiveTournamentRole(tournament.id, myMembership, membersLoading);
-  const canChangeRules = myRole ? canManageTournament(myRole) : false;
-
-
-  // Determine if user can edit results for a specific match
-  const userTeamIds = useMemo(() => myMembership?.teamIds ?? [], [myMembership?.teamIds]);
-  const checkCanEditMatch = useCallback((matchTeamIds: string[]) => {
-    if (!myMembership) {
-      return true; // No membership info = allow by default (offline/local mode)
-    }
-    return canEditResults(myMembership.role, userTeamIds, matchTeamIds);
-  }, [myMembership, userTeamIds]);
+  // A-11 (useCan): Spielregeln (@W2A-030) = tournamentSettings; Spielbetrieb im Cockpit = writeMatchData. Ohne bekannte
+  // Rolle entscheidet useCan (Gedächtnis, sonst L7: Spielbetrieb offen) -- „ohne Mitgliedszeile erlaubt“ entfällt.
+  const canChangeRules = useCan('tournamentSettings', tournament.id);
+  const canPlay = useCan('writeMatchData', tournament.id);
 
   // Handle initial match ID from navigation (e.g., from ScheduleTab "Zum Cockpit", URL `?matchId=`).
   // C-COCKPIT-MATCHID-BEENDET: Öffnen beendet nie ein anderes Spiel (@SL-010, ein Gerät je Feld) –
@@ -371,7 +357,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             tournamentName={tournament.title}
             tournamentId={tournament.id}
             cockpitSettings={tournament.matchCockpitSettings}
-            readOnly={!checkCanEditMatch([currentMatch.homeTeam.id, currentMatch.awayTeam.id])}
+            readOnly={!canPlay}
             currentMatch={currentMatch}
             sperrHinweise={sperrHinweise}
             lastFinishedMatch={lastFinishedMatch}
