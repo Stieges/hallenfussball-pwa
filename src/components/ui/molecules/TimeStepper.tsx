@@ -38,7 +38,7 @@ const buttonDisabled: CSSProperties = { opacity: 0.4, cursor: 'not-allowed' };
 
 const valueStyle: CSSProperties = {
   fontSize: cssVars.fontSizes.xl,
-  fontWeight: 700,
+  fontWeight: cssVars.fontWeights.bold,
   color: cssVars.colors.textPrimary,
   fontVariantNumeric: 'tabular-nums',
   textAlign: 'center',

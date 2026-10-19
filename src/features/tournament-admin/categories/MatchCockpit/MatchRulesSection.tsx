@@ -17,7 +17,7 @@ export interface MatchRulesSectionProps {
 const sectionStyle: CSSProperties = { marginBottom: cssVars.spacing.lg };
 const titleStyle: CSSProperties = {
   fontSize: cssVars.fontSizes.lg,
-  fontWeight: 600,
+  fontWeight: cssVars.fontWeights.semibold,
   color: cssVars.colors.textPrimary,
   margin: 0,
   marginBottom: cssVars.spacing.sm,
@@ -31,7 +31,6 @@ const rowStyle: CSSProperties = {
 };
 const textStyle: CSSProperties = { fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, margin: 0 };
 const selectStyle: CSSProperties = {
-  minWidth: 240,
   padding: cssVars.spacing.sm,
   fontSize: cssVars.fontSizes.md,
   color: cssVars.colors.textPrimary,
