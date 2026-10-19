@@ -51,3 +51,19 @@ describe('@TA-013 Rumpf-Markierung erbt den Verweis aus dem Titel des umgebenden
     expect(gemeldet(lauf().stdout)).toEqual(['src/h.test.ts:2'])
   })
 })
+
+describe('@TA-015 unbekannter Verweis im describe-Titel (A3)', () => {
+  it('@TA-015 ein Tippfehler im Block-Titel ist rot und nennt Datei und Zeile des Blocks', () => {
+    befundKennungen(ordner, ['C-KONTRAST-TEXTPAARE'])
+    schreibe('src/d.test.ts', "// Kopf\ndescribe('Offen C-KONTRAST-TEXTPAARRE: Text-Paare', () => {\n  it.fails('hell: Schrift', () => {})\n})\n")
+    const r = lauf()
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/Unbekannter Verweis C-KONTRAST-TEXTPAARRE in src\/d\.test\.ts:2/)
+  })
+
+  it('@TA-015 gleicher Block mit richtig geschriebenem Verweis ist gruen', () => {
+    befundKennungen(ordner, ['C-KONTRAST-TEXTPAARE'])
+    schreibe('src/d.test.ts', "describe('Offen C-KONTRAST-TEXTPAARE: Text-Paare', () => {\n  it.fails('hell: Schrift', () => {})\n})\n")
+    expect(lauf().status).toBe(0)
+  })
+})
