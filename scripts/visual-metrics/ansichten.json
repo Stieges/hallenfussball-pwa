@@ -428,7 +428,7 @@
       "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app",
       "klick": [
-        "[data-testid=\"yellow-card-button-home\"]"
+        "[data-testid=\"card-button-home\"]"
       ]
     },
     {
