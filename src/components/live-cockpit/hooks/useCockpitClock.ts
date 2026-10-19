@@ -23,8 +23,6 @@ export interface CockpitClockArgs {
   engineView: PhaseView | null;
   /** Meldezeile: Stufe 3 = Bestätigung, Stufe 2 = Fehler. */
   melde: (stufe: 2 | 3, text: string) => void;
-  /** Das Spiel ist von selbst abgepfiffen (z. B. Zeitstrafen leeren). */
-  onSpielBeendet: () => void;
 }
 
 export interface CockpitClock {
@@ -33,10 +31,12 @@ export interface CockpitClock {
   wiederanpfiff: () => void;
   /** Ein Abpfiff von Hand ist gesendet: Ton und Vibration. */
   abgepfiffenVonHand: (eventId: string | null) => void;
+  /** Uhr auf `clockMs` stellen (B-08d, CLOCK_ADJUST); `previousClockMs` ist der bisherige Stand. */
+  korrigiereUhr: (clockMs: number, previousClockMs: number) => Promise<string | null>;
 }
 
 export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
-  const { tournamentId, match, readOnly, settings, playSound, engineView, melde, onSpielBeendet } = args;
+  const { tournamentId, match, readOnly, settings, playSound, engineView, melde } = args;
   const { t } = useTranslation('cockpit');
   const engine = useMatchEngineContextOptional()?.engine ?? null;
   const serverNow = useCallback(() => (engine ? engine.serverNow() : Date.now()), [engine]);
@@ -47,10 +47,9 @@ export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
   const onEnded = useCallback((ended: SectionEnded) => {
     whistle.pfeife(ended.eventId, ended.kind === 'match' ? 'spiel' : 'abschnitt');
     if (ended.kind === 'match' && ended.eventId !== null) {
-      onSpielBeendet();
       melde(3, t('meldung.abgepfiffen'));
     }
-  }, [whistle, onSpielBeendet, melde, t]);
+  }, [whistle, melde, t]);
   useAutoSectionEnd({
     matchId: match?.id ?? null, view: engineView, enabled: !readOnly, serverNow, commands, onEnded,
   });
@@ -60,5 +59,8 @@ export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
   }, [commands, melde, t]);
   const abgepfiffenVonHand = useCallback((eventId: string | null) => { whistle.pfeife(eventId, 'spiel'); }, [whistle]);
 
-  return { abschnittspause: engineView?.status === 'section_break', wiederanpfiff, abgepfiffenVonHand };
+  return {
+    abschnittspause: engineView?.status === 'section_break', wiederanpfiff, abgepfiffenVonHand,
+    korrigiereUhr: commands.adjustClock,
+  };
 }

@@ -126,7 +126,7 @@ function UrlEntry({ matchId }: { matchId: string }) {
   );
 }
 
-describe('ManagementTab: Öffnen eines Spiels beendet kein anderes Spiel (C-COCKPIT-MATCHID-BEENDET)', () => {
+describe('ManagementTab: Öffnen eines Spiels beendet kein anderes Spiel (C-MATCHID-BEENDET-ANDERES-SPIEL)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     handleFinish.mockResolvedValue(undefined);

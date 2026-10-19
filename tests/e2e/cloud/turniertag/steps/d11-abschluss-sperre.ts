@@ -37,5 +37,5 @@ async function abschluss({ asRole }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D11', title: 'Turnier abschließen: Sperre, Bildschirm frei', scenarios: [], owner: 'A-21a/B-33/B-20', expectedFail: true, run: abschluss },
+  { id: 'D11', title: 'Turnier abschließen: Sperre, Bildschirm frei', scenarios: ['@LZ-030'], befunde: ['C-ZUSTAND-ABGELEITET'], owner: 'A-21a/B-33/B-20', expectedFail: true, run: abschluss },
 ];

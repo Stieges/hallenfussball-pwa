@@ -15,3 +15,12 @@ export { MatchClock } from './MatchClock';
 export type { MatchClockProps } from './MatchClock';
 export { ScoreBox } from './ScoreBox';
 export type { ScoreBoxProps } from './ScoreBox';
+
+export { ThumbBar } from './ThumbBar';
+export type { ThumbBarProps, ThumbBarSlot, ThumbBarRolle } from './ThumbBar';
+export { NumberPicker, NUMBER_PICKER_SPERRE_MS, NUMBER_PICKER_ZEITABLAUF_MS } from './NumberPicker';
+export type { NumberPickerProps, NumberPickerTexte, NumberPickerSchliessGrund } from './NumberPicker';
+
+// B-08d: fachfrei, Zähler mit Grenzen (Korrektur der Spielzeit)
+export { TimeStepper } from './TimeStepper';
+export type { TimeStepperProps } from './TimeStepper';

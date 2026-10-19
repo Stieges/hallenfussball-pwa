@@ -5,40 +5,16 @@ name: RLS Role Matrix
 # .superpowers/sdd/2026-09-24-testumgebung/task-T6-brief.md). Prüft rolePermissions.json gegen
 # eine ECHTE Postgres-Instanz mit aktivem RLS -- das Skript startet seinen eigenen Wegwerf-
 # Container (supabase/postgres:17.6.1.063), braucht dafür keinen laufenden lokalen Supabase-
-# Stack. Läuft NUR bei PRs, die etwas an der geprüften Fläche ändern: Migrationen, das Skript
-# selbst oder die Rechte-Tabelle.
+# Stack. Bindet seit A-11 die Zeilen der Spuren aus scripts/rls-matrix.d/*.sh ein.
 #
-# Kein Pflicht-Check (Branch-Protection unverändert) -- wird laut Ruling im Programm-Ledger
-# (.superpowers/sdd/2026-09-24-testumgebung/progress.md) eine Woche nur beobachtet, siehe
-# docs/TESTUMGEBUNG.md, Abschnitt "CI".
+# Pflicht-Check seit A-11 (brief-A-11.md R-A11-4): läuft bei JEDEM PR, ohne paths-Filter -- ein Pflicht-Check
+# mit Pfadfilter bliebe bei fremden PRs für immer "ausstehend" (Laufzeit 2-3,5 min). Den Branch-Schutz setzt
+# Daniel nach dem Merge; Kontextname ist der Jobname unten (nicht ändern):
+# "Rechte-Matrix gegen echtes RLS (Postgres-Wegwerfcontainer)". Ein Wächter
+# (src/__tests__/architecture/rightsOnlyViaUseCan.test.ts) hält paths-Filter und Jobnamen fest.
 
 on:
   pull_request:
-    paths:
-      - 'supabase/migrations/**'
-      - 'scripts/rls-role-matrix.sh'
-      # Abschluss-Review (final-review.md, M4): das Skript sourced diese Datei seit Task T1 für
-      # die Baseline-Migrationsliste (siehe scripts/lib/migrations-since-baseline.sh) -- eine
-      # Änderung dort ändert, welche Migrationen der Wegwerf-Container einspielt, ohne dass der
-      # Pfad-Filter vorher darauf reagierte. Der Workflow selbst gehört ebenfalls in den Filter,
-      # sonst prüft ein PR, der NUR diese Datei ändert, sich nie selbst.
-      - 'scripts/lib/migrations-since-baseline.sh'
-      - '.github/workflows/rls-role-matrix.yml'
-      - 'src/features/auth/permissions/rolePermissions.json'
-      # B2 (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md): Ereignis-Log-Schema --
-      # derselbe Wegwerf-Container-Job prüft jetzt zusätzlich scripts/match-event-log-check.sh.
-      # Die Übergangstabelle ist die zweite fachliche Quelle, deren Änderung diesen Job auslösen
-      # muss (Seed von public.match_transitions, Gleichlauf-Beweis in Probe 7 des Harnesses).
-      - 'src/core/match/matchTransitions.json'
-      - 'scripts/match-event-log-check.sh'
-      # A-05 (M1, Controller-Zusatz aus dem A-02-Review): Slot-Migration 20261003_001 samt Fixture
-      # (Fixture nutzt den App-Weg TournamentCreationService -> mapTournamentToSupabase).
-      - 'scripts/match-slots-check.sh'
-      - 'scripts/match-slots-fixture.ts'
-      - 'src/core/models/**'
-      - 'src/core/services/TournamentCreationService.ts'
-      - 'src/core/generators/**'
-      - 'src/core/repositories/supabaseMappers.ts'
 
 permissions:
   contents: read

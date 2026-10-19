@@ -69,7 +69,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);
     await expectEngineMatchRunningUi(helperPage);
 
-    const ownerHomeScore = ownerPage.locator('[data-testid="score-home"]');
+    const ownerHomeScore = ownerPage.locator('[data-testid="scoreboard-box-links"]');
     await expect(ownerHomeScore).toHaveText('1');
     await enterGoal(helperPage, 'home');
     // Kein page.reload(): Timeout 3000 ms IST der Beweis "ohne Neuladen innerhalb von 3 s".
@@ -89,8 +89,8 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     await helperPage.locator('[data-testid="match-finish-button"]').click();
 
     await expect(ownerPage.locator('[data-testid="scoreboard-state"]')).toHaveText('Abgepfiffen', { timeout: owner3sMs });
-    await expect(ownerPage.locator('[data-testid="score-home"]')).toHaveText('1');
-    await expect(ownerPage.locator('[data-testid="score-away"]')).toHaveText('0');
+    await expect(ownerPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('1');
+    await expect(ownerPage.locator('[data-testid="scoreboard-box-rechts"]')).toHaveText('0');
 
     await expect.poll(async () => (await fetchEngineRows(ids.matchId)).filter((row) => row.type === 'MATCH_END').length, {
       message: 'genau eine MATCH_END-Zeile (manueller Abpfiff)',
@@ -171,7 +171,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await expect.poll(() => fetchMatchRow(ids.matchId).then((row) => row.match_status)).toBe('running');
 
       await openCockpit(ownerPage, ids.tournamentId, ids.matchId);
-      await expect(ownerPage.locator('[data-testid="score-home"]')).toHaveText('2', { timeout: 15000 });
+      await expect(ownerPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('2', { timeout: 15000 });
     } finally {
       await safeCleanup('Owner-Context wieder online schalten (A2)', () => ownerContext.setOffline(false));
       await ownerContext.close();
@@ -221,8 +221,8 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);
     await expectEngineMatchRunningUi(helperPage);
 
-    const helperHome = helperPage.locator('[data-testid="score-home"]');
-    const ownerHome = ownerPage.locator('[data-testid="score-home"]');
+    const helperHome = helperPage.locator('[data-testid="scoreboard-box-links"]');
+    const ownerHome = ownerPage.locator('[data-testid="scoreboard-box-links"]');
     await enterGoal(helperPage, 'home');
     await expect(helperHome).toHaveText('2');
     await expect(ownerHome).toHaveText('2', { timeout: 5000 });
@@ -246,7 +246,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await enterGoal(page, 'home');
       await enterGoal(page, 'home');
       await expect(page.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '2', { timeout: 5000 });
-      await expect(page.locator('[data-testid="score-home"]')).toHaveText('3');
+      await expect(page.locator('[data-testid="scoreboard-box-links"]')).toHaveText('3');
     } finally {
       await context.close();
     }
@@ -286,7 +286,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await expect(helperPage.locator('[data-testid="outbox-rejected-item"]')).toHaveCount(1);
       await helperPage.locator('[data-testid="outbox-rejected-dismiss"]').click();
       await expect(helperPage.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
-      await expect(helperPage.locator('[data-testid="score-home"]')).toHaveText('1');
+      await expect(helperPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('1');
     } finally {
       await safeCleanup('Helfer-Context schließen (REJECT)', () => helperContext.close());
     }
@@ -318,8 +318,8 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await context.setOffline(false);
       // Höchstens 10 s nach der Rückkehr des Netzes: beide Geräte zeigen denselben Stand (3:1) mit der Strafe.
       const deviceState = async (page: Page) => ({
-        home: await page.locator('[data-testid="score-home"]').textContent(),
-        away: await page.locator('[data-testid="score-away"]').textContent(),
+        home: await page.locator('[data-testid="scoreboard-box-links"]').textContent(),
+        away: await page.locator('[data-testid="scoreboard-box-rechts"]').textContent(),
         penalties: await penaltyRow(page).count(),
       });
       await expect

@@ -130,6 +130,9 @@ export const cssColors = {
   scoreboardNeutral: 'var(--color-scoreboard-neutral)',
   noticeLineBg: 'var(--color-notice-line-bg)',
   noticeLineText: 'var(--color-notice-line-text)',
+  holdFill: 'var(--color-hold-fill)',
+  cardYellow: 'var(--color-card-yellow)',
+  cardRed: 'var(--color-card-red)',
 
   // ---------------------------------------------------------------------------
   // Semantic: Error
@@ -548,6 +551,7 @@ export const cssSizing = {
   noticeLineHeightCompact: 'var(--sizing-notice-line-height-compact)',
   noticeLineHeightRegular: 'var(--sizing-notice-line-height-regular)',
   teamStripeWidth: 'var(--sizing-team-stripe-width)',
+  spaltenkopfMax: 'var(--sizing-spaltenkopf-max)',
 } as const;
 
 export const cssLetterSpacing = {

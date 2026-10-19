@@ -17,10 +17,11 @@ interface MonitorCardProps {
   heartbeatStatus: HeartbeatStatus | null;
   isDeleting: boolean;
   isCopied: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
+  /** A-11 @ZM-019: Bearbeiten, Duplizieren, Löschen fehlen, wenn der Aufrufer sie nicht anbietet (ohne manageScreens). */
+  onEdit?: () => void;
+  onDelete?: () => void;
   onCancelDelete: () => void;
-  onDuplicate: () => void;
+  onDuplicate?: () => void;
   onCopyUrl: () => void;
   onOpenDisplay: () => void;
   getSlideTypeIcon: (type: string) => string;
@@ -110,13 +111,15 @@ function MonitorCard({
 
       {/* Actions */}
       <div style={styles.actionsStyle as CSSProperties}>
-        <button
-          style={actionButtonStyle('primary')}
-          onClick={onEdit}
-          aria-label={t('monitors.editAria', { name: monitor.name })}
-        >
-          ✏️ {t('monitors.edit')}
-        </button>
+        {onEdit && (
+          <button
+            style={actionButtonStyle('primary')}
+            onClick={onEdit}
+            aria-label={t('monitors.editAria', { name: monitor.name })}
+          >
+            ✏️ {t('monitors.edit')}
+          </button>
+        )}
         <button
           style={actionButtonStyle()}
           onClick={onOpenDisplay}
@@ -131,24 +134,28 @@ function MonitorCard({
         >
           {isCopied ? t('monitors.copied') : t('monitors.copyUrl')}
         </button>
-        <button
-          style={actionButtonStyle()}
-          onClick={onDuplicate}
-          aria-label={t('monitors.duplicateAria', { name: monitor.name })}
-        >
-          📋 {t('monitors.duplicate')}
-        </button>
-        <button
-          style={actionButtonStyle(isDeleting ? 'danger' : 'secondary')}
-          onClick={onDelete}
-          aria-label={isDeleting ? t('monitors.confirmDeleteAria', { name: monitor.name }) : t('monitors.deleteAria', { name: monitor.name })}
-        >
-          🗑️ {isDeleting ? t('monitors.confirm') : t('monitors.delete')}
-        </button>
+        {onDuplicate && (
+          <button
+            style={actionButtonStyle()}
+            onClick={onDuplicate}
+            aria-label={t('monitors.duplicateAria', { name: monitor.name })}
+          >
+            📋 {t('monitors.duplicate')}
+          </button>
+        )}
+        {onDelete && (
+          <button
+            style={actionButtonStyle(isDeleting ? 'danger' : 'secondary')}
+            onClick={onDelete}
+            aria-label={isDeleting ? t('monitors.confirmDeleteAria', { name: monitor.name }) : t('monitors.deleteAria', { name: monitor.name })}
+          >
+            🗑️ {isDeleting ? t('monitors.confirm') : t('monitors.delete')}
+          </button>
+        )}
       </div>
 
       {/* Delete Confirmation */}
-      {isDeleting && (
+      {isDeleting && onDelete && (
         <div
           role="alert"
           aria-live="polite"

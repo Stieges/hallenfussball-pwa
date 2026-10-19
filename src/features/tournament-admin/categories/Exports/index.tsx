@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { PDFExportDialog } from '../../../../components/dialogs/PDFExportDialog';
+import { useCan } from '../../../auth/hooks/useCan';
 import { generateFullSchedule } from '../../../../core/generators';
 import { calculateStandings, eventsForMatch, type EngineEventsById } from '../../../../utils/calculations';
 import { cardKindOf } from '../../../../utils/cardKind';
@@ -165,6 +166,7 @@ export function ExportsCategory({
   onTournamentUpdate,
 }: ExportsCategoryProps) {
   const { t } = useTranslation('admin');
+  const canNotice = useCan('tournamentSettings', tournament.id); // A-11 @ZM-019: Aushang nur mit Turniereinstellungen
   const { t: tSport } = useTranslation('sport');
   const { t: tTournament } = useTranslation('tournament');
   // F3b2 (M8/U1): EIN Lauf beim Klick auf "Exportieren" statt eines Dauer-Abos -- s.
@@ -970,13 +972,8 @@ export function ExportsCategory({
       </CollapsibleSection>
 
       {/* PDF Export Dialog */}
-      <PDFExportDialog
-        isOpen={showPDFDialog}
-        onClose={() => setShowPDFDialog(false)}
-        tournament={tournament}
-        schedule={schedule}
-        standings={standings}
-      />
+      <PDFExportDialog isOpen={showPDFDialog} onClose={() => setShowPDFDialog(false)} tournament={tournament} schedule={schedule}
+        standings={standings} canCreateNotice={canNotice} />
     </CategoryPage>
   );
 }

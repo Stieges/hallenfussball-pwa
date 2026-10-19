@@ -639,6 +639,9 @@ SQL
   # eigenes Turnier/Spiel mit U_COLLAB als 'collaborator' (correctEvents), damit RLS die Zeile
   # ueberhaupt durchlaesst -- sonst (wie im ersten Fixrunde-1-Bug) ein stilles "UPDATE 0" statt
   # einer echten Ablehnung.
+  # A-11 Fixrunde 3: seit 20261110_001 hat der Helfer (collaborator) kein correctEvents mehr -- RLS liesse ihn die Zeile
+  # gar nicht mehr anfassen, die Gegenprobe ohne Guard bewiese nichts. Deshalb laeuft die Probe als Co-Admin (behaelt
+  # correctEvents, L10): RLS laesst durch, nur der Guard (G5 gilt fuer JEDE Client-Rolle) kann ablehnen.
   T_MR1="$(uuid_for tournament:mr1)"
   M_MR1="$(uuid_for match:mr1)"
   E_MR1="$(uuid_for event:mr1)"
@@ -647,7 +650,7 @@ BEGIN;
 INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, config, is_public)
 VALUES ('$T_MR1', '$U_OWNER', 'Match-Event-Log — MR1', '2026-09-28', 8, 15, '{"publishedAt":"2026-09-28T00:00:00.000Z"}'::jsonb, false);
 INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at)
-VALUES ('$(uuid_for membership:mr1-collab)', '$T_MR1', '$U_COLLAB', 'collaborator', now());
+VALUES ('$(uuid_for membership:mr1-coadmin)', '$T_MR1', '$U_COADMIN', 'co-admin', now());
 INSERT INTO public.matches (id, tournament_id, round, field, match_status${SLOT_COLS})
 VALUES ('$M_MR1', '$T_MR1', 1, 1, 'running'${SLOT_VALS});
 COMMIT;
@@ -658,8 +661,8 @@ SQL
   # run_sql_committed (nicht run_sql!): eine denied-Probe rollt ohnehin nichts zurueck, aber eine
   # FAELSCHLICH erlaubte Probe MUSS committen, sonst zeigt die Nachprobe 4h2 (separate Abfrage)
   # immer den Ausgangswert -- unabhaengig davon, ob der Guard tatsaechlich blockiert hat.
-  run_sql_committed "$U_COLLAB" "UPDATE public.match_events SET is_public = true WHERE id = '$E_MR1';"
-  client_write_check "4h. (MR1-Fix, Ruling G5) Collaborator UPDATE is_public direkt auf Engine-Zeile -> abgelehnt" "4h"
+  run_sql_committed "$U_COADMIN" "UPDATE public.match_events SET is_public = true WHERE id = '$E_MR1';"
+  client_write_check "4h. (MR1-Fix, Ruling G5) Co-Admin (Client-Rolle, RLS laesst durch) UPDATE is_public direkt auf Engine-Zeile -> abgelehnt" "4h"
   IS_PUBLIC_AFTER_4H="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT is_public FROM public.match_events WHERE id = '$E_MR1';")"
   if [[ "$MODE" == "without-guard" ]]; then
     check "4h2. is_public tatsaechlich auf true gesetzt (ohne Guard, ohne A-08h)" "t" "$IS_PUBLIC_AFTER_4H"

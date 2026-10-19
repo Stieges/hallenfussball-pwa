@@ -68,6 +68,10 @@ while IFS= read -r line; do
     SEEN_TARGET=1
   elif [[ "$SEEN_TARGET" -eq 0 ]]; then
     BEFORE+=("$line")
+  elif [[ "$(basename "$line")" == 20261110_001_* ]]; then
+    # A-11 (20261110_001) setzt A-10 voraus (Fail-fast: reset_match_results) -- ein Rueckweg von A-10 setzt den
+    # Rueckweg von A-11 voraus. Deshalb nicht in A5 (Lauf nach dem Rueckweg) und nicht ohne die Migration.
+    continue
   else
     AFTER+=("$line")
   fi
@@ -516,9 +520,9 @@ run_assertions() {
   local priv names_sql names_sh
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
   # UR: Zeilen SPAETERER Migrationen (20261028_006) sind im normalen Lauf erwartungsgemaess f -- dort laufen die
-  # spaeteren Migrationen erst nach dem Rueckweg (A5, wie match-kit-check.sh).
-  check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migration 20261028_006)" "" \
-    "$(grep -v '|t$' <<<"$priv" | grep -vE '^match-event-author-names-' || true)"
+  # spaeteren Migrationen erst nach dem Rueckweg (A5, wie match-kit-check.sh). A-11 (20261110_001) laeuft hier nie (s. o.).
+  check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migrationen 20261028_006, 20261110_001)" "" \
+    "$(grep -v '|t$' <<<"$priv" | grep -vE '^(match-event-author-names-|role-permissions-check-mvp-rights|matches-update-only-manage-schedule|monitors-writes-manage-screens)' || true)"
   check S "Rechte-Assertion: die 8 A-10-Zeilen vorhanden und |t" \
     "matches-bump-change-revision-definer-no-client-execute|t,matches-bump-change-revision-trigger-active|t,matches-guard-engine-columns-insert-and-update|t,matches-guard-engine-columns-unconditional|t,reset-match-results-definer-search-path|t,reset-match-results-execute-only-authenticated|t,tournaments-guard-change-revision-invoker-no-client-execute|t,tournaments-guard-change-revision-trigger-active|t" \
     "$(grep -E '^(matches-guard-engine-columns-(insert-and-update|unconditional)|reset-match-results|matches-bump-change-revision|tournaments-guard-change-revision)' <<<"$priv" | sort | paste -sd, -)"

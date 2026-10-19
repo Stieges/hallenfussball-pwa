@@ -391,6 +391,34 @@
       ]
     },
     {
+      "id": "cockpit-spalten-schwer",
+      "titel": "Cockpit: Spalten im schweren Fall (Finale, 50-Zeichen-Name, zwei Zeitstrafen je Team)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"penalty-button-home\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200",
+        "[data-testid=\"penalty-button-home\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200",
+        "[data-testid=\"penalty-button-away\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200",
+        "[data-testid=\"penalty-button-away\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200"
+      ]
+    },
+    {
       "id": "dialog-karte",
       "titel": "Dialog: Karte vergeben (Cockpit, Finale)",
       "gruppen": [
@@ -512,6 +540,16 @@
       "app": "/#/display/hallencup-messlauf/mon-qr",
       "erwarte": "[data-testid=\"monitor-slide\"]",
       "profil": "monitor"
+    },
+    {
+      "id": "admin-match-cockpit-regeln",
+      "titel": "Admin Center: Match Cockpit, Regeln Uhr-Art und Schlussphase (B-08e)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/admin/match-cockpit",
+      "erwarte": "[data-testid=\"settings-final-phase-minutes\"]",
+      "profil": "app"
     }
   ]
 }

@@ -92,9 +92,9 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
     expect(zeile).toHaveTextContent('FC Alpha: 5. Foul in dieser Halbzeit');
     expect(zeile).toHaveAttribute('aria-live', 'polite');
     expect(screen.getByTestId('scoreboard-clock')).toBeVisible();
-    expect(screen.getByTestId('score-home')).toBeVisible();
+    expect(screen.getByTestId('scoreboard-score')).toBeVisible();
     expect(zeile).not.toContainElement(screen.getByTestId('scoreboard-clock'));
-    expect(zeile).not.toContainElement(screen.getByTestId('score-home'));
+    expect(zeile).not.toContainElement(screen.getByTestId('scoreboard-score'));
   });
 
   it('@SL-064 die Meldung überlagert nichts: kein fixiertes oder absolutes Element in der Kette der Zeile, kein Toast-Stapel, kein ×', () => {
@@ -119,24 +119,24 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
     expect(screen.getByTestId(MELDUNG)).toHaveTextContent('FC Alpha: 6. Foul in dieser Halbzeit');
   });
 
-  it('@SL-035 Gegenbeispiel: unter der Grenze (3 → 4 Fouls) bleibt die Meldezeile leer, der Zähler zeigt 4', () => {
+  it('@SL-035 Gegenbeispiel: unter der Grenze (3 → 4 Fouls) bleibt die Meldezeile leer, der Zähler zeigt „Foul 4/5“', () => {
     const { rerender } = render(<LiveCockpit {...baseProps(matchMit(3))} />);
     rerender(<LiveCockpit {...baseProps(matchMit(4))} />);
 
     expect(screen.getByTestId(MELDUNG)).toBeEmptyDOMElement();
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('4');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 4/5');
   });
 
   // Befund (Ziel-Record Spiel leiten, Paket B-11a): Das Cockpit liest `cockpitSettings.foulLimit` nicht,
   // die Grenze gilt fest 5. Rot nach dem Gherkin, deshalb `it.fails` (Baustein „Tests gegen die Anforderung“).
-  it.fails('@SL-034 Grenze 3: das 3. Foul meldet „FC Alpha: 3. Foul in dieser Halbzeit“ (Befund: foulLimit wird nicht gelesen, B-11a)', () => {
+  it.fails('@SL-034 Grenze 3: das 3. Foul meldet „FC Alpha: 3. Foul in dieser Halbzeit“ (Befund C-FOUL-GRENZE-FEST: foulLimit wird nicht gelesen, B-11a)', () => {
     const settings = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: 3 };
     const { rerender } = render(<LiveCockpit {...baseProps(matchMit(2), { cockpitSettings: settings })} />);
     rerender(<LiveCockpit {...baseProps(matchMit(3), { cockpitSettings: settings })} />);
     expect(screen.getByTestId(MELDUNG)).toHaveTextContent('FC Alpha: 3. Foul in dieser Halbzeit');
   });
 
-  it.fails('@SL-102 ist die Foul-Grenze ausgeschaltet, gibt es beim 5. Foul keinen Hinweis (Befund: foulLimit wird nicht gelesen, B-11a)', () => {
+  it.fails('@SL-102 ist die Foul-Grenze ausgeschaltet, gibt es beim 5. Foul keinen Hinweis (Befund C-FOUL-GRENZE-FEST: foulLimit wird nicht gelesen, B-11a)', () => {
     const settings = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: null };
     const { rerender } = render(<LiveCockpit {...baseProps(matchMit(4), { cockpitSettings: settings })} />);
     rerender(<LiveCockpit {...baseProps(matchMit(5), { cockpitSettings: settings })} />);
@@ -158,7 +158,7 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
   it('@SL-034 „deutlich“: die Foul-Grenze (Stufe 2) trägt ein Warn-Symbol, eine Bestätigung (Stufe 3) ein Häkchen', async () => {
     const user = userEvent.setup();
     const { rerender } = render(<LiveCockpit {...baseProps(matchMit(4), { onFoul: vi.fn() })} />);
-    await user.click(screen.getByRole('button', { name: 'Foul für FC Alpha' }));
+    await user.click(screen.getByRole('button', { name: /^Foul FC Alpha, Foul \d+\/5$/ }));
     expect(screen.getByTestId('notice-icon-3')).toBeInTheDocument();
     expect(screen.queryByTestId('notice-icon-2')).toBeNull();
     rerender(<LiveCockpit {...baseProps(matchMit(5), { onFoul: vi.fn() })} />);
@@ -193,7 +193,7 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(matchMit(0), { onFoul })} />);
 
-    await user.click(screen.getByRole('button', { name: 'Foul für FC Alpha' }));
+    await user.click(screen.getByRole('button', { name: /^Foul FC Alpha, Foul \d+\/5$/ }));
 
     expect(screen.getByTestId(MELDUNG)).toHaveTextContent('Foul für FC Alpha');
     expect(screen.queryByText('×')).toBeNull();
@@ -204,7 +204,7 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
     const onFoul = vi.fn();
     const laufend = matchMit(0, { status: 'RUNNING', timerStartTime: new Date().toISOString(), elapsedSeconds: 10 });
     render(<LiveCockpit {...baseProps(laufend, { onFoul })} />);
-    fireClick('Foul für FC Alpha');
+    fireClick(/^Foul FC Alpha, Foul \d+\/5$/);
     expect(screen.getByTestId(MELDUNG)).toHaveTextContent('Foul für FC Alpha');
 
     for (let s = 0; s < 2; s++) { await act(async () => { await vi.advanceTimersByTimeAsync(1000); }); }
@@ -220,7 +220,7 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
   });
 });
 
-function fireClick(name: string): void {
+function fireClick(name: string | RegExp): void {
   act(() => { screen.getByRole('button', { name }).click(); });
 }
 

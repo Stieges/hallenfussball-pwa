@@ -8,11 +8,9 @@
  * - Konfliktprüfung beim Speichern
  * - Live-Tabellen-Berechnung
  *
- * Refactored: Logic extracted to custom hooks for maintainability
- * - useScheduleHistory: Undo/Redo functionality
- * - Status: eine Quelle, die gemeinsame Ansicht (`buildTournamentView`, Leitung + Engine-Status, A-36c)
- * - usePendingChanges: Edit mode state
- * - useScheduleTabActions: Action handlers
+ * Logik in Hooks: useScheduleHistory (Undo/Redo), usePendingChanges (Bearbeiten), useScheduleTabActions (Aktionen);
+ * Status aus einer Quelle, der gemeinsamen Ansicht (`buildTournamentView`, Leitung + Engine-Status, A-36c).
+ * Rechte (A-11): nur über useCan -- Bearbeiten, Tauschen, Schiri nur mit manageSchedule (@ZP-040).
  */
 
 import { useCallback, CSSProperties, useState, useMemo } from 'react';
@@ -38,7 +36,7 @@ import { ScheduleEditor } from '../schedule-editor';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useAppSettings } from '../../hooks/useUserProfile';
-import { usePermissions } from '../../hooks/usePermissions';
+import { useCan } from '../auth/hooks/useCan';
 import { ScheduleFilterBar, EmptyFilterState } from './components/schedule-filter';
 
 interface ScheduleTabProps {
@@ -70,9 +68,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const { t } = useTranslation('tournament');
   // App settings for result lock behavior
   const appSettings = useAppSettings();
-  // Permission check for timer control
-  const { hasPermission } = usePermissions(tournament.id);
-  const canControlTimer = hasPermission('control_timer');
+  // A-11: Cockpit-Hinweis bei laufendem Spiel = Spielbetrieb; Spielplan ändern = manageSchedule; Aushang (@ZM-019)
+  const canControlTimer = useCan('writeMatchData', tournament.id);
+  const canSchedule = useCan('manageSchedule', tournament.id);
+  const canNotice = useCan('tournamentSettings', tournament.id);
   // Toast notifications
   const { showWarning, showSuccess } = useToast();
 
@@ -293,6 +292,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             tournament={tournament}
             schedule={schedule}
             standings={currentStandings}
+            canEditSchedule={canSchedule} canCreateNotice={canNotice}
           />
 
           {/* US-VIEWER-FILTERS: Filter Bar */}
@@ -358,7 +358,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           )}
 
           {/* Manuelle SR-Zuweisung (wenn SR aktiv) */}
-          {tournament.refereeConfig && tournament.refereeConfig.mode !== 'none' && (
+          {canSchedule && tournament.refereeConfig && tournament.refereeConfig.mode !== 'none' && (
             <RefereeAssignmentEditor
               matches={schedule.allMatches}
               refereeConfig={tournament.refereeConfig}

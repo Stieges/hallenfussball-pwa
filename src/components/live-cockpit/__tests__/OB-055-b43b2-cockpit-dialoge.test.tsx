@@ -12,6 +12,7 @@ import userEvent from '@testing-library/user-event';
 import { CardDialog } from '../components/Dialogs/CardDialog';
 import { EventEditDialog } from '../components/Dialogs/EventEditDialog';
 import { GoalScorerDialog } from '../components/Dialogs/GoalScorerDialog';
+import { NumberPicker } from '../../ui/molecules/NumberPicker';
 import { SettingsDialog } from '../components/Dialogs/SettingsDialog';
 import { SubstitutionDialog } from '../components/Dialogs/SubstitutionDialog';
 import { TimeAdjustDialog } from '../components/Dialogs/TimeAdjustDialog';
@@ -40,7 +41,7 @@ const KINDS: Kind[] = [
   { name: 'SettingsDialog', mount: () => void render(<SettingsDialog isOpen onClose={noop} settings={DEFAULT_MATCH_COCKPIT_SETTINGS} onChange={noop} tournamentId="t1" />) },
   { name: 'SubstitutionDialog', mount: () => void render(<SubstitutionDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
   { name: 'SubstitutionDialog (Team gewählt)', mount: () => void render(<SubstitutionDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} preselectedTeamSide="home" />) },
-  { name: 'TimeAdjustDialog', mount: () => void render(<TimeAdjustDialog isOpen onClose={noop} onConfirm={noop} currentTimeSeconds={125} matchDurationMinutes={10} />) },
+  { name: 'TimeAdjustDialog', mount: () => void render(<TimeAdjustDialog isOpen onClose={noop} onConfirm={noop} currentSeconds={125} minSeconds={0} maxSeconds={600} minIsGoal={false} />) },
   { name: 'TimePenaltyDialog', mount: () => void render(<TimePenaltyDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
   { name: 'Tiebreaker/PenaltyShootoutDialog', mount: () => void render(<LivePenaltyShootoutDialog homeTeamName="VfB Ufer" awayTeamName="SC Nord" onRecordShot={noop} onFinish={noop} onCancel={noop} />) },
   { name: 'Tiebreaker/TiebreakerBanner', mount: () => void render(<TiebreakerBanner homeTeamName="VfB Ufer" awayTeamName="SC Nord" score={2} onStartPenaltyShootout={noop} onEndAsDraw={noop} />) },
@@ -166,13 +167,17 @@ describe('@OB-055 B-43b2 – Verhalten wie vor der Umstellung', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('GoalScorerDialog: Esc ruft onClose genau einmal auf, speichert aber nichts', () => {
-    const onClose = vi.fn();
-    const onConfirm = vi.fn();
-    render(<GoalScorerDialog isOpen onClose={onClose} onConfirm={onConfirm} teamName="VfB Ufer" />);
+  // Aufgabe 3.4: Der Tor-Ablauf läuft über den Nummern-Baustein statt über den GoalScorerDialog. Esc schließt ihn genau einmal und
+  // wählt keine Nummer; das Tor zählt dabei ohne Nummer (@SL-083, End-zu-Ende in LiveCockpit.torAblauf.engine.test.tsx).
+  it('Tor-Ablauf (NumberPicker): Esc ruft onSchliesse genau einmal auf, wählt aber keine Nummer', () => {
+    const onSchliesse = vi.fn();
+    const onWaehle = vi.fn();
+    const texte = { titel: 'Rückennummer – Tor VfB Ufer', ohneNummer: 'ohne Nummer', andereNummer: 'Andere Nr.', uebernehmen: 'Übernehmen', eingabeLabel: 'Rückennummer' };
+    render(<NumberPicker isOpen texte={texte} ausloeserSeite="links" onWaehle={onWaehle} onSchliesse={onSchliesse} />);
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect(onConfirm).not.toHaveBeenCalled();
+    expect(onSchliesse).toHaveBeenCalledTimes(1);
+    expect(onSchliesse).toHaveBeenCalledWith('schliessen');
+    expect(onWaehle).not.toHaveBeenCalled();
   });
 
   it('GoalScorerDialog: Fokus liegt auf dem Trikotnummer-Feld', async () => {
@@ -208,7 +213,7 @@ describe('@OB-055 B-43b2 – Verhalten wie vor der Umstellung', () => {
 
   it('verschachtelt: ein Cockpit-Dialog über einem zweiten lässt den Hintergrund gesperrt, bis der letzte schließt', () => {
     const a = render(<TimePenaltyDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />);
-    const b = render(<TimeAdjustDialog isOpen onClose={noop} onConfirm={noop} currentTimeSeconds={5} matchDurationMinutes={10} />);
+    const b = render(<TimeAdjustDialog isOpen onClose={noop} onConfirm={noop} currentSeconds={5} minSeconds={0} maxSeconds={600} minIsGoal={false} />);
     b.unmount();
     expect(document.body.style.overflow).toBe('hidden');
     a.unmount();

@@ -16,6 +16,9 @@ vi.unmock('i18next');
 vi.unmock('react-i18next');
 
 import i18n from '../../../i18n';
+// A-11: TeamsTab fragt Rechte über useCan -- hier die Turnierleitung (alles erlaubt).
+vi.mock('../../auth/hooks/useCan', () => ({ useCan: () => true }));
+
 import { TeamsTab } from '../TeamsTab';
 
 const NORD = testUuid(1);

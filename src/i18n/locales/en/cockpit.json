@@ -34,7 +34,16 @@
     "zeitGesetzt": "Time set to {{zeit}}",
     "foulGrenze": "{{teamName}}: foul {{count}} this half",
     "schliessen": "Dismiss notice",
-    "zurueckgesetzt": "Match {{nummer}} was reset by the organisers"
+    "zurueckgesetzt": "Match {{nummer}} was reset by the organisers",
+    "zeitstrafeAbgelaufen": "Time penalty {{team}} no. {{nummer}} has ended",
+    "zeitstrafeAbgelaufenOhneNr": "Time penalty {{team}} has ended",
+    "tor": "Goal for {{team}}",
+    "foul": "Foul for {{team}}",
+    "karteGelb": "Yellow card for {{team}}",
+    "karteGelbRot": "Second yellow for {{team}}",
+    "karteRot": "Red card for {{team}}",
+    "nichtErfasst": "Not recorded – the match state has changed (e.g. full time)",
+    "strafeErfasst": "Time penalty for {{team}}"
   },
   "tafel": {
     "zustand": {
@@ -185,19 +194,15 @@
     "redAria": "Red card for {{teamName}}"
   },
   "timeAdjust": {
-    "title": "Adjust Match Time",
-    "currentTime": "Current time",
-    "minutes": "Min",
-    "seconds": "Sec",
-    "reset": "00:00",
-    "halftime": "Halftime",
-    "end": "End",
+    "title": "Adjust match time",
+    "inSection": "Time in section",
+    "increase": "Add 10 seconds",
+    "decrease": "Subtract 10 seconds",
+    "limitMax": "at most {{zeit}}",
+    "limitMinGoal": "because of the goal at {{zeit}}, at least {{zeit}}",
+    "limitMinEntry": "because of an entry at {{zeit}}, at least {{zeit}}",
     "cancel": "Cancel",
-    "apply": "Apply",
-    "increaseMinute": "Increase minute",
-    "decreaseMinute": "Decrease minute",
-    "increaseSeconds": "Increase 10 seconds",
-    "decreaseSeconds": "Decrease 10 seconds"
+    "apply": "Apply"
   },
   "timePenalty": {
     "title": "Time Penalty",
@@ -335,7 +340,17 @@
     "fiveSeconds": "5 seconds",
     "tenSeconds": "10 seconds",
     "fifteenSeconds": "15 seconds",
-    "twentySeconds": "20 seconds"
+    "twentySeconds": "20 seconds",
+    "clockMode": "Clock mode",
+    "clockModeDesc": "When the clock stops on interruptions – applies from the next kick-off",
+    "clockModeLastMinute": "running, stopped in the last minute",
+    "clockModeAlwaysRunning": "always running",
+    "clockModeAlwaysStopped": "always stopped",
+    "finalPhaseMinutes": "Length of the stopped final phase (minutes)",
+    "finalPhaseDesc": "The clock stands still for this time at the end of the last section – 1 to 5 minutes, applies from the next kick-off",
+    "finalPhaseRange": "Valid are 1 to {{max}} minutes – the value was not accepted",
+    "finalPhaseRangeOne": "Valid is 1 minute – the value was not accepted",
+    "finalPhaseTooShort": "A section is shorter than one minute, a stopped final phase is not possible"
   },
   "editScore": {
     "title": "Correct Score",
@@ -452,5 +467,45 @@
       "locked": "Corrections only by the tournament director",
       "done": "{{target}} updated"
     }
+  },
+  "spalte": {
+    "heim": "Home",
+    "gast": "Away",
+    "tor": "Goal",
+    "karte": "Card",
+    "fouls": "Foul {{zaehlt}}/{{grenze}}",
+    "foulsOhneGrenze": "Foul {{zaehlt}}",
+    "strafe": "No. {{nummer}} · {{rest}}",
+    "strafeOhneNr": "no number · {{rest}}",
+    "unterzahl": "Short-handed · {{rest}}",
+    "ergaenzen": "may bring on a player",
+    "gesperrt": "No. {{nummer}} suspended",
+    "aria": {
+      "tor": "Goal {{team}}",
+      "foul": "Foul {{team}}, {{zaehler}}",
+      "karte": "Card {{team}}",
+      "strafe": "Time penalty {{team}}"
+    },
+    "strafeKnopf": "Time penalty",
+    "strafeDauer": "{{minuten}} min"
+  },
+  "nummer": {
+    "titelTor": "Shirt number – goal {{team}}",
+    "eigentor": "Own goal ({{gegner}})",
+    "titelEigentor": "Number of the {{gegner}} player",
+    "ohneNummer": "no number",
+    "andere": "Other no.",
+    "uebernehmen": "Apply",
+    "eingabe": "Shirt number",
+    "titelKarte": "Shirt number – {{art}} {{team}}",
+    "titelZeitstrafe": "Shirt number – time penalty {{team}}"
+  },
+  "karte": {
+    "titel": "Card for {{team}}",
+    "gelb": "Yellow",
+    "gelbRot": "Second yellow",
+    "rot": "Red",
+    "schonGelb": "No. {{nummer}} already has a yellow",
+    "trotzdemGelb": "Yellow anyway"
   }
 }

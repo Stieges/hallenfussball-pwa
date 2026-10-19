@@ -155,6 +155,26 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         return this.accountId === undefined ? this.localRepo.listForCurrentUser() : this.localRepo.listOwnedBy(this.accountId);
     }
 
+    /**
+     * Review A-11 A4 (@FU-098, Befund C-RECHTE-NACH-ANLEGEN-UNBEKANNT): Hat dieses Konto das Turnier auf diesem Gerät
+     * angelegt und ist es noch nicht (sicher) in der Cloud? Alle drei Bedingungen: die lokale Kopie gehört dem Konto,
+     * sie wurde nie aus der Cloud übernommen (`changeRevision` liest nur ein Cloud-Abruf, A-10) und die Warteschlange
+     * hält dafür noch Ungesendetes oder eine gescheiterte Speicherung. Der Konto-Marker `ownerId` allein reicht nicht:
+     * auch die aus der Cloud geladene Kopie eines Helfers trägt ihn (@FU-100).
+     */
+    async isAwaitingFirstUpload(tournamentId: string): Promise<boolean> {
+        if (this.accountId === undefined) { return false; }
+        const queue = this._mutationQueue;
+        if (!queue.hasPending(tournamentId) && !queue.hasFailed(tournamentId, ['SAVE_TOURNAMENT'])) { return false; }
+        const local = await this.localRepo.get(tournamentId);
+        return local !== null && local.ownerId === this.accountId && local.changeRevision === undefined;
+    }
+
+    /** Review A-11 A4: meldet jede Änderung der Warteschlange (für die erneute Rechte-Prüfung nach dem Sync). */
+    subscribeSync(listener: () => void): () => void {
+        return this._mutationQueue.subscribe(() => listener());
+    }
+
     /** A-08f3a2: Spiele mit Server-Revision > 1 (Schnelleingabe gesperrt wie heute, Rückbau in e2). */
     serverLedMatchIds(tournamentId: string): ReadonlySet<string> {
         return this.serverRevisions.serverLedMatchIds(tournamentId);

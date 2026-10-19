@@ -9,11 +9,12 @@ import { useCallback } from 'react';
 import { CategoryPage } from '../shared';
 import { MatchCockpitSettingsPanel } from '../../../../components/match-settings/MatchCockpitSettingsPanel';
 import { useMatchSound } from '../../../../hooks';
-import { useMyTournamentRole } from '../../../auth/hooks/useMyTournamentRole';
-import { canManageTournament } from '../../../auth/utils/permissions';
+import { useCan } from '../../../auth/hooks/useCan';
 import { RulesLockProvider } from '../../../../components/match-settings/RulesLockContext';
 import type { Tournament, MatchCockpitSettings } from '../../../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../../types/tournament';
+import { MatchRulesSection } from './MatchRulesSection';
+import { sectionSecondsOf } from './sectionSeconds';
 
 // =============================================================================
 // PROPS
@@ -54,8 +55,7 @@ export function MatchCockpitCategory({
     );
 
     // Spielregeln (@W2A-030) ändert nur die Turnierleitung
-    const { role: myRole } = useMyTournamentRole(tournamentId);
-    const canChangeRules = myRole ? canManageTournament(myRole) : false;
+    const canChangeRules = useCan('tournamentSettings', tournamentId);
 
     // Handle cockpit settings change
     const handleCockpitSettingsChange = useCallback(
@@ -65,7 +65,9 @@ export function MatchCockpitCategory({
             if (
                 !canChangeRules &&
                 (newSettings.timePenaltyDurationSeconds !== gespeichert.timePenaltyDurationSeconds ||
-                    newSettings.penaltyShootersPerTeam !== gespeichert.penaltyShootersPerTeam)
+                    newSettings.penaltyShootersPerTeam !== gespeichert.penaltyShootersPerTeam ||
+                    newSettings.clockMode !== gespeichert.clockMode ||
+                    newSettings.finalPhaseMinutes !== gespeichert.finalPhaseMinutes)
             ) {
                 return;
             }
@@ -89,6 +91,14 @@ export function MatchCockpitCategory({
             description="Konfiguration für das Live-Scoreboard, Timer und Sounds"
         >
             <RulesLockProvider value={!canChangeRules}>
+                <MatchRulesSection
+                    value={cockpitSettings.clockMode}
+                    locked={!canChangeRules}
+                    onChange={(clockMode) => handleCockpitSettingsChange({ ...cockpitSettings, clockMode })}
+                    finalPhaseMinutes={cockpitSettings.finalPhaseMinutes}
+                    sectionSeconds={sectionSecondsOf(tournament)}
+                    onFinalPhaseChange={(finalPhaseMinutes) => handleCockpitSettingsChange({ ...cockpitSettings, finalPhaseMinutes })}
+                />
                 <MatchCockpitSettingsPanel
                     settings={cockpitSettings}
                     onChange={handleCockpitSettingsChange}
