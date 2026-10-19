@@ -68,6 +68,9 @@ function Hinweis({ children, testId }: { children: ReactNode; testId?: string })
 export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKarte, kompakt = false, breit = false }: TeamColumnProps): ReactElement {
   const { t } = useTranslation('cockpit');
   const { seite, name, fouls, strafen, kartenArten } = model;
+  const foulText = fouls.grenze === null
+    ? t('spalte.foulsOhneGrenze', { zaehlt: fouls.zaehlt })
+    : t('spalte.fouls', { zaehlt: fouls.zaehlt, grenze: fouls.grenze });
   const zeigeKarte = knoepfe.karte && (kartenArten.yellow || kartenArten.yellowRed || kartenArten.red);
   const zeigeStrafe = knoepfe.zeitstrafe && kartenArten.timePenalty;
   const reiheStil: CSSProperties = {
@@ -84,11 +87,8 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
         </div>
         <p data-teamname="" data-testid={`team-name-${seite}`} style={nameStil(breit)}>{name}</p>
       </div>
-      <div style={zaehlerStil} data-testid={`team-fouls-${seite}`}>
-        {fouls.grenze === null
-          ? t('spalte.foulsOhneGrenze', { zaehlt: fouls.zaehlt })
-          : t('spalte.fouls', { zaehlt: fouls.zaehlt, grenze: fouls.grenze })}
-      </div>
+      {/* Der Zähler steht im Foul-Knopf (Laptop-Mockup Stand 4); eine eigene Zeile nur ohne Foul-Knopf (Halbzeitpause, Nur-Lesen) */}
+      {!knoepfe.foul && <div style={zaehlerStil} data-testid={`team-fouls-${seite}`}>{foulText}</div>}
       {knoepfe.tor && (
         <Button size="lg" icon={<MatchIcons.Ball />} style={torStil} data-primary data-testid={`goal-button-${seite}`} onClick={onTor}
           aria-label={t('spalte.aria.tor', { team: name })}>{t('spalte.tor')}</Button>
@@ -96,7 +96,9 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
       <div style={reiheStil} data-testid={`team-row3-${seite}`}>
         {knoepfe.foul && (
           <Button variant="secondary" icon={<MatchIcons.Flag />} style={knopfStil} data-testid={`foul-button-${seite}`} onClick={onFoul}
-            aria-label={t('spalte.aria.foul', { team: name })}>{t('spalte.foul')}</Button>
+            aria-label={t('spalte.aria.foul', { team: name })}>
+            <span data-testid={`team-fouls-${seite}`}>{foulText}</span>
+          </Button>
         )}
         {zeigeStrafe && (
           <Button variant="secondary" icon={<MatchIcons.Stopwatch />} style={knopfStil} data-testid={`penalty-button-${seite}`} onClick={onZeitstrafe}

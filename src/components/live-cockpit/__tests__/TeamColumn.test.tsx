@@ -105,6 +105,22 @@ describe('TeamColumn', () => {
     expect(screen.getByTestId('foul-button-away')).not.toHaveAttribute('data-primary');
   });
 
+  it('@SL-099 Laptop-Mockup Stand 4: „Foul 3/5“ steht im Foul-Knopf, es gibt keine zweite Zählerzeile', () => {
+    render(<TeamColumn {...props()} />);
+    const knopf = screen.getByTestId('foul-button-away');
+    expect(within(knopf).getByTestId('team-fouls-away')).toHaveTextContent('Foul 3/5');
+    expect(knopf).toHaveTextContent(/^Foul 3\/5$/);
+    expect(screen.getAllByTestId('team-fouls-away')).toHaveLength(1);
+  });
+
+  it('@SL-099 ohne Foul-Knopf (Halbzeitpause, Nur-Lesen) steht der Zähler als eigene Zeile außerhalb eines Knopfs', () => {
+    render(<TeamColumn {...props({}, { knoepfe: { tor: false, foul: false, zeitstrafe: true, karte: true } })} />);
+    const zaehler = screen.getByTestId('team-fouls-away');
+    expect(zaehler).toHaveTextContent('Foul 3/5');
+    expect(zaehler.closest('button')).toBeNull();
+    expect(screen.getAllByTestId('team-fouls-away')).toHaveLength(1);
+  });
+
   it('@SL-087 in der Halbzeitpause nur Karte und Zeitstrafe', () => {
     render(<TeamColumn {...props({}, { knoepfe: { tor: false, foul: false, zeitstrafe: true, karte: true } })} />);
     expect(screen.queryByTestId('goal-button-away')).toBeNull();
