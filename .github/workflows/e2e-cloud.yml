@@ -31,7 +31,7 @@ jobs:
   e2e-cloud:
     name: Cloud E2E Tests (lokaler Supabase-Stack)
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
 
     steps:
       - name: Checkout

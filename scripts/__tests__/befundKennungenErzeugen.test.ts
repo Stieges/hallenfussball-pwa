@@ -76,4 +76,20 @@ describe('befund-kennungen-erzeugen.mjs', () => {
     expect(r.status, r.stderr).toBe(0)
     expect(JSON.parse(readFileSync(ausgabe(), 'utf8')).kennungen).toEqual([])
   })
+
+  it('@TA-016 liest auch die befunde-Felder der Durchstich-Step-Module, nicht aber Kommentare', () => {
+    befundliste('C-SIGNOUT', 'C-IM-SCHRITT', 'C-NUR-KOMMENTAR')
+    schreibe('tests/e2e/cloud/turniertag/steps/d99.ts', "// befunde: ['C-NUR-KOMMENTAR']\nexport const steps = [{ id: 'D99', befunde: ['C-IM-SCHRITT'], owner: 'x' }]\n")
+    const r = erzeuge()
+    expect(r.status, r.stderr).toBe(0)
+    expect(JSON.parse(readFileSync(ausgabe(), 'utf8')).kennungen).toEqual(['C-IM-SCHRITT'])
+  })
+
+  it('@TA-016 Gegenbeispiel: eine Kennung im befunde-Feld eines Step-Moduls, die die Befundliste nicht hat, bricht ab', () => {
+    befundliste('C-SIGNOUT')
+    schreibe('tests/e2e/cloud/turniertag/steps/d99.ts', "export const steps = [{ id: 'D99', befunde: ['C-TIPPFEHLER'], owner: 'x' }]\n")
+    const r = erzeuge()
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/C-TIPPFEHLER/)
+  })
 })
