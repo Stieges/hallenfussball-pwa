@@ -19,6 +19,8 @@ export interface TurniertagStep {
   title: string;
   /** Kennungen aus den Anforderungen (im Testnamen: je MVP-Kennung ein Test). */
   scenarios: readonly string[];
+  /** Befund-Kennungen (`C-...`, BEFUNDE-HEUTIGER-CODE.md), die dieser Schritt belegt; stehen im Testtitel (TM-1). */
+  befunde?: readonly string[];
   /** Besitzer-Aufgabe(n) laut Plan § 8; bei `expectedFail` die Aufgabe, die den Schritt grün macht. */
   owner: string;
   /** `true` = `test.fail`: der Besitzer ist noch nicht gebaut, der Schritt scheitert erwartungsgemäß. */
