@@ -14,7 +14,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
-import { sammleTestDateien, testTexte } from './lib/testtexte.mjs'
+import { sammleStepModule, sammleTestDateien, stepBefunde, testTexte } from './lib/testtexte.mjs'
 
 const REL = 'docs/anforderungen/BEFUNDE-HEUTIGER-CODE.md'
 
@@ -74,6 +74,12 @@ function main() {
   for (const datei of sammleTestDateien(root, opt.scan ?? ['src', 'tests', 'scripts'])) {
     for (const t of testTexte(readFileSync(datei, 'utf8'))) {
       for (const k of t.eigene) if (!genannt.has(k)) genannt.set(k, `${relative(root, datei)}:${t.zeile}`)
+    }
+  }
+  // Durchstich: die Step-Module tragen ihre Befunde als Daten (`befunde: [...]`), nicht im Testtitel.
+  for (const datei of sammleStepModule(root, opt.scan ?? ['src', 'tests', 'scripts'])) {
+    for (const t of stepBefunde(readFileSync(datei, 'utf8'))) {
+      if (!genannt.has(t.kennung)) genannt.set(t.kennung, `${relative(root, datei)}:${t.zeile}`)
     }
   }
   const bekannt = new Set(ids)
