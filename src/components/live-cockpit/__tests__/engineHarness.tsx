@@ -48,6 +48,8 @@ function Cockpit({ context, turnier, einstellungen }: { context: MatchEngineCont
       cockpitSettings={einstellungen ? { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...einstellungen } : undefined}
       onStart={(matchId) => { void wiring.handleStart(matchId); }}
       onFinish={wiring.handleFinish}
+      onPause={(matchId) => { void wiring.handlePause(matchId); }}
+      onResume={(matchId) => { void wiring.handleResume(matchId); }}
       onGoal={wiring.handleGoal}
       onCard={wiring.handleCard}
       onFoul={wiring.handleFoul}

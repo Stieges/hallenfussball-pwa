@@ -11,10 +11,10 @@ import type { EditableMatchEvent, MatchCockpitSettings } from '../../../types/to
 import type { UseRejectedOutboxDialogResult } from '../../../features/collaboration/outbox/useRejectedOutboxDialog';
 import { RejectedOutboxDialog } from '../../../features/collaboration/outbox/RejectedOutboxDialog';
 import type { useEngineEventEditing } from '../../../hooks/useEngineEventEditing';
-import { EINTRAG_ZEITSTRAFE, type CardKind, type OffenerEintrag } from '../model/cockpitTypes';
+import type { OffenerEintrag } from '../model/cockpitTypes';
 import { EntrySheets, type EntrySheetsProps } from './EntrySheets';
 import {
-  TimeAdjustDialog, CardDialog, TimePenaltyDialog,
+  TimeAdjustDialog,
   EventEditDialog, EventLogBottomSheet, SettingsDialog, TiebreakerBanner, PenaltyShootoutDialog,
 } from '../components';
 
@@ -35,8 +35,6 @@ export interface CockpitOverlayHandlers {
   confirmTimeAdjust: (newDisplaySeconds: number) => void;
   /** Schließt die offene Eintrags-Auswahl (Tor, Karte, Zeitstrafe, Nummer ändern). */
   closeEntry: () => void;
-  confirmCard: (cardType: CardKind, teamId: string, playerNumber?: number) => void;
-  confirmTimePenalty: (durationSeconds: number, teamId: string, playerNumber?: number) => void;
   updateEvent: EngineEventEditing['update'];
   deleteEvent: EngineEventEditing['remove'];
   closeEventLog: () => void;
@@ -72,7 +70,6 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
   const { match, tournamentId, readOnly, isLocked, settings, displaySeconds, effectiveScore, dialogs, editingEvent, editing, handlers, rejectedOutbox, entrySheets } = props;
   const offen = dialogs.offen;
   const editingEventId = offen?.art === 'nummer' ? offen.eventId ?? null : null;
-  const seite = offen?.seite ?? null;
 
   return (
     <>
@@ -92,31 +89,7 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
         matchDurationMinutes={Math.floor(match.durationSeconds / 60)}
       />
 
-      <CardDialog
-        isOpen={offen?.art === 'karte'}
-        onClose={handlers.closeEntry}
-        onConfirm={handlers.confirmCard}
-        homeTeam={match.homeTeam}
-        awayTeam={match.awayTeam}
-        // BUG-007: Pre-select card type and team based on button clicked
-        initialCardType={offen?.art === 'karte' ? offen.kartenArt : undefined}
-        preselectedTeamSide={offen?.art === 'karte' ? seite ?? undefined : undefined}
-        autoDismissSeconds={10}
-      />
-
-      <TimePenaltyDialog
-        isOpen={offen?.art === EINTRAG_ZEITSTRAFE}
-        onClose={handlers.closeEntry}
-        onConfirm={handlers.confirmTimePenalty}
-        homeTeam={match.homeTeam}
-        awayTeam={match.awayTeam}
-        // BUG-006: Pre-select 2 minutes and team based on button clicked
-        preselectedDurationSeconds={match.timePenaltyDurationSeconds ?? settings.timePenaltyDurationSeconds}
-        preselectedTeamSide={offen?.art === EINTRAG_ZEITSTRAFE ? seite ?? undefined : undefined}
-        autoDismissSeconds={10}
-      />
-
-      {/* Aufgabe 3.4: Nummernauswahl des Tors und des Eigentors (Tor zählt schon mit dem ersten Tipp) */}
+      {/* Aufgaben 3.4/3.5: Nummernauswahl, Kartenart-Schritt und Rückfrage der Einträge (Tor, Karte, Zeitstrafe zählen mit dem ersten Tipp) */}
       <EntrySheets {...entrySheets} />
 
       {/* BUG-010: EventEditDialog for editing/deleting events */}

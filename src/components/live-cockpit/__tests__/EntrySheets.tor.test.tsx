@@ -10,6 +10,7 @@ import { alsUebersetzer } from '../model/alsUebersetzer';
 import type { UseEntryFlowsReturn } from '../hooks/useEntryFlows';
 import type { OffenerEintrag } from '../model/cockpitTypes';
 import { EntrySheets, type EntrySheetsProps } from '../areas/EntrySheets';
+import { makeFlows } from './entryFlowsMock';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
@@ -17,12 +18,7 @@ await initRealDeI18n();
 
 const TEAMS = { home: { id: 'fc-nord', name: 'FC Nord' }, away: { id: 'sv-sued', name: 'SV Süd' } };
 const ARTEN = { yellow: true, yellowRed: true, red: true };
-function flows(offen: OffenerEintrag | null): UseEntryFlowsReturn {
-  return {
-    offen, oeffne: vi.fn(), schliesse: vi.fn(), tippeTor: vi.fn(), waehleNummer: vi.fn().mockResolvedValue(undefined),
-    schliesseAuswahl: vi.fn().mockResolvedValue(undefined), waehleEigentor: vi.fn().mockResolvedValue(undefined),
-  };
-}
+const flows = (offen: OffenerEintrag | null): UseEntryFlowsReturn => makeFlows(offen);
 const props = (offen: OffenerEintrag | null, extra: Partial<EntrySheetsProps> = {}): EntrySheetsProps => ({
   flows: flows(offen), teams: TEAMS, ausloeserSeite: (seite) => (seite === 'home' ? 'links' : 'rechts'), kartenArten: ARTEN,
   t: alsUebersetzer(i18n.getFixedT('de', 'cockpit')), ...extra,

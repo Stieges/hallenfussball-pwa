@@ -23,8 +23,6 @@ export interface CockpitClockArgs {
   engineView: PhaseView | null;
   /** Meldezeile: Stufe 3 = Bestätigung, Stufe 2 = Fehler. */
   melde: (stufe: 2 | 3, text: string) => void;
-  /** Das Spiel ist von selbst abgepfiffen (z. B. Zeitstrafen leeren). */
-  onSpielBeendet: () => void;
 }
 
 export interface CockpitClock {
@@ -36,7 +34,7 @@ export interface CockpitClock {
 }
 
 export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
-  const { tournamentId, match, readOnly, settings, playSound, engineView, melde, onSpielBeendet } = args;
+  const { tournamentId, match, readOnly, settings, playSound, engineView, melde } = args;
   const { t } = useTranslation('cockpit');
   const engine = useMatchEngineContextOptional()?.engine ?? null;
   const serverNow = useCallback(() => (engine ? engine.serverNow() : Date.now()), [engine]);
@@ -47,10 +45,9 @@ export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
   const onEnded = useCallback((ended: SectionEnded) => {
     whistle.pfeife(ended.eventId, ended.kind === 'match' ? 'spiel' : 'abschnitt');
     if (ended.kind === 'match' && ended.eventId !== null) {
-      onSpielBeendet();
       melde(3, t('meldung.abgepfiffen'));
     }
-  }, [whistle, onSpielBeendet, melde, t]);
+  }, [whistle, melde, t]);
   useAutoSectionEnd({
     matchId: match?.id ?? null, view: engineView, enabled: !readOnly, serverNow, commands, onEnded,
   });

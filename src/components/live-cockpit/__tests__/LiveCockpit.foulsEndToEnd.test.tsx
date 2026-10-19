@@ -1,6 +1,6 @@
 /**
  * LiveCockpit -- Foul-Zaehler Ende-zu-Ende (C3b-2 F3b2, Fixrunde Aufgabe 5): der Helfer bedient
- * den CardDialog (Karten-Knopf der Spalte, Gelb-Rot waehlen, "Ohne Details"), die ECHTE Kette laeuft bis zum Zaehler:
+ * den Kartenart-Schritt und die Nummernauswahl (Karten-Knopf der Spalte, Gelb-Rot waehlen, "ohne Nummer"), die ECHTE Kette laeuft bis zum Zaehler:
  * Dialog -> onCard('YELLOW_RED') -> useEngineCommandWiring.handleCard (mapCardTypeToEngine) ->
  * MatchCommands.card (YELLOW_RED_CARD) -> MatchEngine (fake-indexeddb) -> computeLiveMatches /
  * toLiveMatchView (Adapter) -> LiveCockpit/useFoulCounts.
@@ -11,7 +11,7 @@
 import 'fake-indexeddb/auto';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Tournament } from '../../../types/tournament';
 import { looseVs } from '../../../test/matchSlotFixtures';
@@ -21,6 +21,7 @@ import type { MatchEngineContextValue } from '../../../features/match-engine/mat
 import { buildValidMatches, computeLiveMatches } from '../../../hooks/engineMatchModel';
 import { useEngineCommandWiring } from '../../../hooks/useEngineCommandWiring';
 import { LiveCockpit } from '../LiveCockpit';
+import { warteSperre } from './engineHarnessSupport';
 
 vi.mock('react-i18next', async () => {
   const de: unknown = (await import('../../../i18n/locales/de/cockpit.json')).default;
@@ -125,15 +126,16 @@ afterEach(() => {
 });
 
 describe('LiveCockpit -- Foul-Zaehler Ende-zu-Ende ueber die echte Engine-Kette (F3b2, Aufgabe 5)', () => {
-  it('Gelb-Rot fuer Team A im CardDialog -> Zaehler Team A = 1, Team B bleibt 0', async () => {
+  it('Gelb-Rot fuer Team A ueber Kartenart-Schritt und Nummernauswahl -> Zaehler Team A = 1, Team B bleibt 0', async () => {
     const { context } = await makeRunningEngine();
     const user = userEvent.setup();
     render(<Harness context={context} />);
     expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 0/5');
     expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0/5');
     await user.click(screen.getByTestId('card-button-home'));
-    await user.click(screen.getByRole('button', { name: 'Gelb-Rot' }));
-    await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
+    await user.click(within(screen.getByTestId('card-kind-step')).getByRole('button', { name: 'Gelb-Rot' }));
+    await warteSperre();
+    await user.click(within(screen.getByTestId('number-picker')).getByRole('button', { name: 'ohne Nummer' }));
 
     await waitFor(() => expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 1/5'));
     expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0/5');
@@ -149,8 +151,9 @@ describe('LiveCockpit -- Foul-Zaehler Ende-zu-Ende ueber die echte Engine-Kette 
     render(<Harness context={context} />);
 
     await user.click(screen.getByTestId('card-button-away'));
-    await user.click(screen.getByRole('button', { name: 'Gelb-Rot' }));
-    await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
+    await user.click(within(screen.getByTestId('card-kind-step')).getByRole('button', { name: 'Gelb-Rot' }));
+    await warteSperre();
+    await user.click(within(screen.getByTestId('number-picker')).getByRole('button', { name: 'ohne Nummer' }));
 
     await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 1/5'));
     expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 0/5');

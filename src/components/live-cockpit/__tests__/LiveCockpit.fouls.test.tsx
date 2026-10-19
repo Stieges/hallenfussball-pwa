@@ -4,10 +4,11 @@
  * Kein Halbzeit-Reset, kein lokales +1. Echte deutsche Texte.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LiveCockpit } from '../LiveCockpit';
 import type { LiveCockpitProps } from '../types';
+import { warteSperre } from './engineHarnessSupport';
 
 const tCalls = vi.hoisted(() => [] as string[]);
 
@@ -65,11 +66,12 @@ function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): Li
   };
 }
 
-/** Karte über die Spalte: Knopf, Art, „Ohne Details“ (Übergang bis zum Nummern-Baustein in 3.5). */
+/** Karte über die Spalte (Aufgabe 3.5): Knopf, Art im Kartenart-Schritt, Nummernauswahl nach der Sperre mit „ohne Nummer“. */
 async function karteOhneDetails(user: ReturnType<typeof userEvent.setup>, seite: 'home' | 'away', art: 'Gelb' | 'Gelb-Rot' | 'Rot') {
   await user.click(screen.getByTestId(`card-button-${seite}`));
-  await user.click(screen.getByRole('button', { name: art }));
-  await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
+  await user.click(within(screen.getByTestId('card-kind-step')).getByRole('button', { name: art }));
+  await warteSperre();
+  await user.click(within(screen.getByTestId('number-picker')).getByRole('button', { name: 'ohne Nummer' }));
 }
 
 describe('LiveCockpit — Fouls für das ganze Spiel (C3b-2, G11)', () => {
@@ -151,12 +153,12 @@ describe('LiveCockpit — M7: Meldungen i18n, Foul ohne Zahl, 5er-Warnung (F3a)'
     await karteOhneDetails(user, 'home', 'Gelb');
 
     expect(onCard).toHaveBeenCalledTimes(1);
-    expect(onCard).toHaveBeenCalledWith('match-1', 'team-a', 'YELLOW', { playerNumber: undefined });
+    expect(onCard).toHaveBeenCalledWith('match-1', 'team-a', 'YELLOW', { playerNumber: undefined, clockMs: 0 });
     expect(onFoul).not.toHaveBeenCalled();
   });
 
   // Halbzeit-Teil: siehe LiveCockpit.abschnittsende.test.tsx (B-08b).
-  it('Karten- und Zeitstrafen-Meldungen kommen aus i18n', async () => {
+  it('Karten- und Zeitstrafen-Meldungen kommen aus i18n (meldung.*)', async () => {
     const onCard = vi.fn();
     const onTimePenalty = vi.fn();
     const user = userEvent.setup();
@@ -167,10 +169,11 @@ describe('LiveCockpit — M7: Meldungen i18n, Foul ohne Zahl, 5er-Warnung (F3a)'
     expect(await screen.findByText('Gelbe Karte für FC Alpha')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Zeitstrafe FC Alpha' }));
-    await user.click(screen.getByRole('button', { name: /Ohne Nr\./ }));
-    expect(await screen.findByText('2 Min Zeitstrafe für FC Alpha')).toBeInTheDocument();
-    expect(tCalls).toContain('toast.yellowCard');
-    expect(tCalls).toContain('toast.timePenalty');
+    await warteSperre();
+    await user.click(within(screen.getByTestId('number-picker')).getByRole('button', { name: 'ohne Nummer' }));
+    expect(await screen.findByText('Zeitstrafe für FC Alpha')).toBeInTheDocument();
+    expect(tCalls).toContain('meldung.karteGelb');
+    expect(tCalls).toContain('meldung.strafeErfasst');
   });
 
   it('@SL-034 Hinweis in der Meldezeile bei der 5. Strafe – auch als Karte; @SL-035 Gegenbeispiel: 4. Strafe ohne Hinweis', async () => {
@@ -200,7 +203,7 @@ describe('LiveCockpit — Gelb-Rot im Cockpit (C3b-2 F3b2, PO 30.09.)', () => {
     await karteOhneDetails(user, 'home', 'Gelb-Rot');
 
     expect(onCard).toHaveBeenCalledTimes(1);
-    expect(onCard).toHaveBeenCalledWith('match-1', 'team-a', 'YELLOW_RED', { playerNumber: undefined });
+    expect(onCard).toHaveBeenCalledWith('match-1', 'team-a', 'YELLOW_RED', { playerNumber: undefined, clockMs: 0 });
   });
 
   it('Meldung nach Gelb-Rot kommt aus i18n ("Gelb-Rote Karte für ...")', async () => {

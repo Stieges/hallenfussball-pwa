@@ -37,7 +37,13 @@
     "zurueckgesetzt": "Match {{nummer}} was reset by the organisers",
     "zeitstrafeAbgelaufen": "Time penalty {{team}} no. {{nummer}} has ended",
     "zeitstrafeAbgelaufenOhneNr": "Time penalty {{team}} has ended",
-    "tor": "Goal for {{team}}"
+    "tor": "Goal for {{team}}",
+    "foul": "Foul for {{team}}",
+    "karteGelb": "Yellow card for {{team}}",
+    "karteGelbRot": "Second yellow for {{team}}",
+    "karteRot": "Red card for {{team}}",
+    "nichtErfasst": "Not recorded – the match state has changed (e.g. full time)",
+    "strafeErfasst": "Time penalty for {{team}}"
   },
   "tafel": {
     "zustand": {
@@ -485,6 +491,16 @@
     "ohneNummer": "no number",
     "andere": "Other no.",
     "uebernehmen": "Apply",
-    "eingabe": "Shirt number"
+    "eingabe": "Shirt number",
+    "titelKarte": "Shirt number – {{art}} {{team}}",
+    "titelZeitstrafe": "Shirt number – time penalty {{team}}"
+  },
+  "karte": {
+    "titel": "Card for {{team}}",
+    "gelb": "Yellow",
+    "gelbRot": "Second yellow",
+    "rot": "Red",
+    "schonGelb": "No. {{nummer}} already has a yellow",
+    "trotzdemGelb": "Yellow anyway"
   }
 }

@@ -37,7 +37,13 @@
     "zurueckgesetzt": "Spiel {{nummer}} von der Turnierleitung zurückgesetzt",
     "zeitstrafeAbgelaufen": "Zeitstrafe {{team}} Nr. {{nummer}} abgelaufen",
     "zeitstrafeAbgelaufenOhneNr": "Zeitstrafe {{team}} abgelaufen",
-    "tor": "Tor für {{team}}"
+    "tor": "Tor für {{team}}",
+    "foul": "Foul für {{team}}",
+    "karteGelb": "Gelbe Karte für {{team}}",
+    "karteGelbRot": "Gelb-Rote Karte für {{team}}",
+    "karteRot": "Rote Karte für {{team}}",
+    "nichtErfasst": "Nicht erfasst – das Spiel ist in einem anderen Zustand (z. B. abgepfiffen)",
+    "strafeErfasst": "Zeitstrafe für {{team}}"
   },
   "tafel": {
     "zustand": {
@@ -485,6 +491,16 @@
     "ohneNummer": "ohne Nummer",
     "andere": "Andere Nr.",
     "uebernehmen": "Übernehmen",
-    "eingabe": "Rückennummer"
+    "eingabe": "Rückennummer",
+    "titelKarte": "Rückennummer – {{art}} {{team}}",
+    "titelZeitstrafe": "Rückennummer – Zeitstrafe {{team}}"
+  },
+  "karte": {
+    "titel": "Karte für {{team}}",
+    "gelb": "Gelb",
+    "gelbRot": "Gelb-Rot",
+    "rot": "Rot",
+    "schonGelb": "Nr. {{nummer}} hat schon Gelb",
+    "trotzdemGelb": "Trotzdem Gelb"
   }
 }

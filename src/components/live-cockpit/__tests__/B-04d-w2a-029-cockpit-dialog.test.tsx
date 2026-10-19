@@ -1,14 +1,15 @@
 /**
- * B-04 Fixrunde 1 – @W2A-029: Die Zeitstrafe im Cockpit nimmt die Dauer aus dem Spielstand
- * (Schnitt beim Anpfiff), nicht aus einer festen 120 Sekunden.
+ * B-04 Fixrunde 1 – @W2A-029, @SL-029: Die Zeitstrafe im Cockpit folgt dem Spielstand (Schnitt beim Anpfiff), nicht einer festen
+ * Dauer, und das Cockpit fragt keine Dauer ab.
  *
  * Gegeben ein Spiel läuft mit Zeitstrafe 2 Minuten
  * Wenn die Turnierleitung die Zeitstrafe auf 1 Minute ändert
  * Dann gilt im laufenden Spiel weiter 2 Minuten
  * Und ab dem nächsten Anpfiff gilt 1 Minute
  *
- * Pflichttest über den echten Dialog: Klick auf den Zeitstrafen-Knopf der Spalte von FC Alpha und
- * Speichern im TimePenaltyDialog. Die Dauer kommt aus dem Spielstand des Spiels.
+ * Seit Aufgabe 3.5 ohne Dialog: Der Zeitstrafen-Knopf der Spalte nennt die Dauer aus dem Spielstand („Zeitstrafe 2 Min“) und
+ * die Nummernauswahl sendet nur Nummer und Spielzeit; die Dauer setzt die Engine aus der Regel (Test des Handlers in
+ * `useEntryCommands.test.tsx`, Engine in `LiveCockpit.eintraege.engine.test.tsx`).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -16,6 +17,12 @@ import userEvent from '@testing-library/user-event';
 import { LiveCockpit } from '../LiveCockpit';
 import type { LiveCockpitProps } from '../types';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../types/tournament';
+import { initRealDeI18n } from '../../../test/realDeI18n';
+import { warteSperre } from './engineHarnessSupport';
+
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+await initRealDeI18n();
 
 // Merge Spur A/B: LiveCockpit bindet seit C3b-1 useEngineEventEditing ein -> useActorRole (braucht
 // AuthProvider); hier nicht Gegenstand (Muster wie LiveCockpit.fouls.test.tsx).
@@ -56,39 +63,34 @@ function renderCockpit(match: unknown, cockpitTimePenaltySeconds: number, handle
   return render(<LiveCockpit {...props} />);
 }
 
-async function confirmTimePenaltyForAlpha(user: ReturnType<typeof userEvent.setup>) {
+async function zeitstrafeFuerAlpha(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTestId('penalty-button-home'));
-  await user.click(screen.getByRole('button', { name: 'cockpit:timePenalty.save' }));
+  await warteSperre();
+  await user.click(screen.getByRole('button', { name: 'ohne Nummer' }));
 }
 
 describe('B-04 Fixrunde 1 @W2A-029 – Zeitstrafe im Cockpit folgt dem Spielstand', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('Pflichttest: laufendes Spiel mit Schnitt 120 s bleibt bei 120 s, auch wenn die Turnierleitung 60 s einstellt', async () => {
+  it('Pflichttest: laufendes Spiel mit Schnitt 120 s zeigt 2 Min, auch wenn die Turnierleitung 60 s einstellt; gesendet wird keine Dauer', async () => {
     const user = userEvent.setup();
     const onTimePenalty = vi.fn();
     renderCockpit(makeMatch({ timePenaltyDurationSeconds: 120 }), 60, { onTimePenalty });
+    expect(screen.getByTestId('penalty-button-home')).toHaveTextContent('Zeitstrafe 2 Min');
 
-    await confirmTimePenaltyForAlpha(user);
+    await zeitstrafeFuerAlpha(user);
 
-    expect(onTimePenalty).toHaveBeenCalledWith(
-      'match-1',
-      'team-a',
-      expect.objectContaining({ durationSeconds: 120 }),
-    );
+    expect(onTimePenalty).toHaveBeenCalledWith('match-1', 'team-a', expect.not.objectContaining({ durationSeconds: expect.anything() }));
   });
 
-  it('Gegenbeispiel: Spiel mit Schnitt 60 s bekommt 60 s, auch wenn die Einstellung 120 s sagt', async () => {
+  it('Gegenbeispiel: Spiel mit Schnitt 60 s bekommt 60 s, auch wenn die Einstellung 120 s sagt (Knopf nennt die Minuten des Spiels)', async () => {
     const user = userEvent.setup();
     const onTimePenalty = vi.fn();
     renderCockpit(makeMatch({ timePenaltyDurationSeconds: 60 }), 120, { onTimePenalty });
+    expect(screen.getByTestId('penalty-button-home')).toHaveTextContent('Zeitstrafe 1 Min');
 
-    await confirmTimePenaltyForAlpha(user);
+    await zeitstrafeFuerAlpha(user);
 
-    expect(onTimePenalty).toHaveBeenCalledWith(
-      'match-1',
-      'team-a',
-      expect.objectContaining({ durationSeconds: 60 }),
-    );
+    expect(onTimePenalty).toHaveBeenCalledTimes(1);
   });
 });

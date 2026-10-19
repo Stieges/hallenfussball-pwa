@@ -13,21 +13,15 @@ import { useEngineEventEditing } from '../../../hooks/useEngineEventEditing';
 import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../../types/tournament';
 import type { CockpitDialogState, CockpitOverlayHandlers } from '../areas/CockpitOverlays';
 import type { LegacyPlayAreaProps } from '../areas/LegacyPlayArea';
-import { EINTRAG_ZEITSTRAFE, type CardKind, type EntryKind, type Side } from '../model/cockpitTypes';
+import type { Side } from '../model/cockpitTypes';
 import type { PhaseView } from '../engine/phaseView';
 import type { LiveCockpitProps } from '../types';
 import type { UseCockpitNoticesReturn } from './useCockpitNotices';
-import { useActivePenalties } from './useActivePenalties';
 import { useClockControls } from './useClockControls';
 import { useCockpitClock } from './useCockpitClock';
 import type { UseEntryFlowsReturn } from './useEntryFlows';
 import type { UseSideOrderReturn } from './useSideOrder';
 import { useTiebreakCommands } from './useTiebreakCommands';
-
-// F3b2: Toast-Schluessel je Kartentyp -- Modulebene statt useCallback-Abhaengigkeit (statisch).
-const CARD_TOAST_KEYS: Record<CardKind, 'toast.yellowCard' | 'toast.yellowRedCard' | 'toast.redCard'> = {
-  YELLOW: 'toast.yellowCard', YELLOW_RED: 'toast.yellowRedCard', RED: 'toast.redCard',
-};
 
 /** Die vier Tipps einer Team-Spalte, je Seite (Aufgabe 3.3). */
 export interface TeamSideHandlers { onTor: () => void; onFoul: () => void; onZeitstrafe: () => void; onKarte: () => void }
@@ -57,7 +51,7 @@ export interface CockpitCommands {
 
 export function useCockpitCommands({ props, settings, sound, flows, sides, melde, engineView }: CockpitCommandsArgs): CockpitCommands {
   const { t } = useTranslation('cockpit');
-  const { currentMatch: match, onStart, onPause, onResume, onFinish, onGoal, onAdjustTime, onTimePenalty, onCard, onFoul, onUpdateSettings } = props;
+  const { currentMatch: match, onStart, onPause, onResume, onFinish, onGoal, onAdjustTime, onUpdateSettings } = props;
   const readOnly = props.readOnly ?? false;
   // Bestätigungen sind Stufe 3, Fehler Stufe 2 (Spec § 7); `melde` ist stabil.
   const showSuccess = useCallback((message: string) => { melde(3, message); }, [melde]);
@@ -86,7 +80,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     setShowSettings(false);
   }, [matchId]);
 
-  // C3b-1: Minus/Rückgängig/Löschen/Bearbeiten (Engine-Spiele: RETRACT/AMEND) und Zeitstrafen-Countdown.
+  // C3b-1: Minus/Rückgängig/Löschen/Bearbeiten (Engine-Spiele: RETRACT/AMEND).
   const editing = useEngineEventEditing({
     tournamentId: props.tournamentId,
     match,
@@ -94,16 +88,18 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     legacy: { onGoal, onUndoLastEvent: props.onUndoLastEvent, onUpdateEvent: props.onUpdateEvent, onDeleteEvent: props.onDeleteEvent },
     notify: { success: showSuccess, error: showError },
   });
-  const penalties = useActivePenalties(match?.id, match?.status, match?.events);
   const tiebreak = useTiebreakCommands(match, props);
 
-  // Uhr: Meldungen und das Leeren der Zeitstrafen (BUG-008) hängen am Abpfiff, auch am automatischen.
-  // Abschnittsende und Abpfiff von selbst, Wiederanpfiff sowie Ton und Vibration (einzige Quelle) in `useCockpitClock`.
-  const clearPenalties = penalties.clear;
+  // Zeitstrafen kommen aus der Engine-Ansicht (B-08a): Sie enden mit dem Abpfiff von selbst (@SL-097), kein lokaler Countdown mehr.
+  const activePenalties = useMemo((): ActivePenalty[] => (engineView?.penalties ?? []).map((p) => ({
+    eventId: p.id, teamId: p.teamId, ...(p.playerNumber !== undefined ? { playerNumber: p.playerNumber } : {}),
+    remainingSeconds: Math.ceil(p.remainingMs / 1000), startedAt: new Date(0), endsAt: new Date(0),
+  })), [engineView]);
+
+  // Uhr: Abschnittsende und Abpfiff von selbst, Wiederanpfiff sowie Ton und Vibration (einzige Quelle) in `useCockpitClock`.
   const cockpitClock = useCockpitClock({
     tournamentId: props.tournamentId, match, readOnly, settings, engineView, melde,
     playSound: useCallback(() => { void sound.play(); }, [sound]),
-    onSpielBeendet: clearPenalties,
   });
   const clock = useClockControls({
     match, abschnittspause: cockpitClock.abschnittspause,
@@ -113,14 +109,9 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     onPause: (id) => { onPause(id); showInfo(t('meldung.pausiert')); },
     onResume: (id) => { onResume(id); showSuccess(t('meldung.fortgesetzt')); },
     onStartSection: cockpitClock.wiederanpfiff,
-    onFinish: (id) => { const gesendet = onFinish(id); penalties.clear(); showInfo(t('meldung.abgepfiffen')); return gesendet; },
+    onFinish: (id) => { const gesendet = onFinish(id); showInfo(t('meldung.abgepfiffen')); return gesendet; },
     onFinished: cockpitClock.abgepfiffenVonHand,
   });
-
-  const teamNameOf = useCallback(
-    (teamId: string): string => (match?.homeTeam.id === teamId ? match.homeTeam.name : match?.awayTeam.name ?? ''),
-    [match],
-  );
 
   // M-1 FIX: Das bearbeitete Ereignis wird aus den aktuellen Ereignissen abgeleitet (kein veralteter Stand).
   const editingEventId = flows.offen?.art === 'nummer' ? flows.offen.eventId ?? null : null;
@@ -132,28 +123,6 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     if (match?.events.some((e) => e.id === event.id)) { flows.oeffne({ art: 'nummer', seite: null, eventId: event.id }); }
   }, [match, flows]);
 
-  const handleFoul = useCallback((side: Side) => {
-    if (!match) { return; }
-    const team = side === 'home' ? match.homeTeam : match.awayTeam;
-    onFoul?.(match.id, team.id);
-    showInfo(t('toast.foul', { teamName: team.name }));
-  }, [match, onFoul, showInfo, t]);
-
-  const handleCardConfirm = useCallback((cardType: CardKind, teamId: string, playerNumber?: number) => {
-    if (!match) { return; }
-    onCard?.(match.id, teamId, cardType, { playerNumber });
-    showInfo(`${t(CARD_TOAST_KEYS[cardType], { teamName: teamNameOf(teamId) })}${playerNumber ? ` (#${playerNumber})` : ''}`);
-    flows.schliesse();
-  }, [match, onCard, flows, showInfo, t, teamNameOf]);
-
-  const handleTimePenaltyConfirm = useCallback((durationSeconds: number, teamId: string, playerNumber?: number) => {
-    if (!match) { return; }
-    onTimePenalty?.(match.id, teamId, { playerNumber, durationSeconds });
-    showInfo(`${t('toast.timePenalty', { minutes: Math.floor(durationSeconds / 60), teamName: teamNameOf(teamId) })}${playerNumber ? ` (#${playerNumber})` : ''}`);
-    penalties.add({ teamId, playerNumber, durationSeconds }); // lokaler Countdown
-    flows.schliesse();
-  }, [match, onTimePenalty, flows, showInfo, penalties, t, teamNameOf]);
-
   const handleTimeAdjust = useCallback((newDisplaySeconds: number) => {
     if (!match) { return; }
     // Im Countdown stellt der Nutzer die Restzeit ein: verstrichen = Dauer - Rest.
@@ -162,12 +131,11 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     showInfo(t('meldung.zeitGesetzt', { zeit: `${Math.floor(newDisplaySeconds / 60)}:${(newDisplaySeconds % 60).toString().padStart(2, '0')}` }));
   }, [match, onAdjustTime, showInfo, settings.timerDirection, t]);
 
-  const open = (art: EntryKind, side: Side) => () => flows.oeffne({ art, seite: side });
   const sideHandlers = (side: Side): TeamSideHandlers => ({
     onTor: () => flows.tippeTor(side),
-    onFoul: () => handleFoul(side),
-    onZeitstrafe: open(EINTRAG_ZEITSTRAFE, side),
-    onKarte: open('karte', side),
+    onFoul: () => flows.tippeFoul(side),
+    onZeitstrafe: () => flows.tippeZeitstrafe(side),
+    onKarte: () => flows.tippeKarte(side),
   });
 
   const openTimeAdjust = onAdjustTime ? () => setShowTimeAdjust(true) : undefined;
@@ -175,8 +143,6 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     closeTimeAdjust: () => setShowTimeAdjust(false),
     confirmTimeAdjust: handleTimeAdjust,
     closeEntry: flows.schliesse,
-    confirmCard: handleCardConfirm,
-    confirmTimePenalty: handleTimePenaltyConfirm,
     updateEvent: editing.update,
     deleteEvent: editing.remove,
     closeEventLog: () => setShowEventLog(false),
@@ -196,7 +162,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   return {
     editing,
     editingEvent,
-    activePenalties: penalties.penalties,
+    activePenalties,
     dialogs: {
       offen: flows.offen,
       showTimeAdjust, showEventLog, showSettings,

@@ -29,7 +29,12 @@ const ERLAUBT: Record<CockpitAktion, readonly CockpitZustand[]> = {
   ergebnisBestaetigen: ['abgepfiffen'], entscheidung: ['entscheidung'], strafstoss: ['strafstoss'], spielFortsetzen: ['abgepfiffen'],
 };
 
-export function darfAktion(phase: CockpitPhase, kannSteuern: boolean, aktion: CockpitAktion): boolean {
+/** Wie `darfAktion`, wenn nur der Zustand bekannt ist (z. B. in den Eintrags-Abläufen). */
+export function darfImZustand(zustand: CockpitZustand, kannSteuern: boolean, aktion: CockpitAktion): boolean {
   if (!kannSteuern && aktion !== 'seitenTauschen') { return false; }
-  return ERLAUBT[aktion].includes(phase.zustand);
+  return ERLAUBT[aktion].includes(zustand);
+}
+
+export function darfAktion(phase: CockpitPhase, kannSteuern: boolean, aktion: CockpitAktion): boolean {
+  return darfImZustand(phase.zustand, kannSteuern, aktion);
 }

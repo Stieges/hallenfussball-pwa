@@ -9,14 +9,15 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, type MatchCockpitSettings } from '../../../../types/tournament';
-import { makeLiveMatch, makeProps } from '../../__tests__/cockpitFixtures';
+import { makeLiveMatch, makePhaseView, makeProps } from '../../__tests__/cockpitFixtures';
 import type { LiveCockpitProps } from '../../types';
 import type { OffenerEintrag } from '../../model/cockpitTypes';
 import { useCockpitCommands } from '../useCockpitCommands';
 import type { ReactNode } from 'react';
 import type { MatchEngineContextValue } from '../../../../features/match-engine/matchEngineContextInstance';
 import { MatchEngineContext } from '../../../../features/match-engine/matchEngineContextInstance';
-import { phaseViewOf } from '../../engine/phaseView';
+import { phaseViewOf, type PhaseView } from '../../engine/phaseView';
+import { makeFlows } from '../../__tests__/entryFlowsMock';
 import { REGEL_2X6, spielAnlegen, zu } from '../../__tests__/enginePhaseFixture';
 
 const echtesSetTimeout = setTimeout;
@@ -27,18 +28,15 @@ vi.unmock('react-i18next');
 import { initRealDeI18n } from '../../../../test/realDeI18n';
 await initRealDeI18n();
 
-function setup(options: { offen?: OffenerEintrag | null; props?: Partial<LiveCockpitProps>; settings?: Partial<MatchCockpitSettings>; events?: unknown[] } = {}) {
+function setup(options: { offen?: OffenerEintrag | null; props?: Partial<LiveCockpitProps>; settings?: Partial<MatchCockpitSettings>; events?: unknown[]; engineView?: PhaseView | null } = {}) {
   const match = makeLiveMatch(options.events ? { events: options.events as never } : {});
   const props = makeProps(match, options.props);
-  const flows = {
-    offen: options.offen ?? null, oeffne: vi.fn(), schliesse: vi.fn(), tippeTor: vi.fn(), waehleNummer: vi.fn(),
-    schliesseAuswahl: vi.fn(), waehleEigentor: vi.fn(),
-  };
+  const flows = makeFlows(options.offen ?? null);
   const sides = { getauscht: false, links: 'home' as const, rechts: 'away' as const, tausche: vi.fn() };
   const melde = vi.fn();
   const sound = { play: vi.fn(), activate: vi.fn().mockResolvedValue(undefined), isActivated: true };
   const hook = renderHook(() =>
-    useCockpitCommands({ props, settings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...options.settings }, sound, flows, sides, melde, engineView: null }),
+    useCockpitCommands({ props, settings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...options.settings }, sound, flows, sides, melde, engineView: options.engineView ?? null }),
   );
   return { hook, props, flows, sides, melde };
 }
@@ -60,28 +58,22 @@ describe('useCockpitCommands – Tor (Aufgabe 3.4)', () => {
   });
 });
 
-describe('useCockpitCommands – Karte, Zeitstrafe, Foul', () => {
-  it('Gelbe Karte für SV Süd, Nr. 7: onCard, Meldung mit Nummer, Auswahl schließt', () => {
-    const { hook, flows, melde } = setup(); // ohne Karten-Rückruf: nichts wird gesendet, nichts bricht
-    hook.result.current.overlayHandlers.confirmCard('YELLOW', 'sv-sued', 7);
-    expect(melde).toHaveBeenCalledWith(3, 'Gelbe Karte für SV Süd (#7)');
-    expect(flows.schliesse).toHaveBeenCalledTimes(1);
+describe('useCockpitCommands – Foul, Zeitstrafe, Karte (Aufgabe 3.5)', () => {
+  it('@SL-087 @SL-085 die Tipps der Spalte übergeben Foul, Zeitstrafe und Karte je Seite dem Eintrags-Ablauf', () => {
+    const { hook, flows } = setup();
+    hook.result.current.teamHandlers.home.onFoul();
+    expect(flows.tippeFoul).toHaveBeenLastCalledWith('home');
+    hook.result.current.teamHandlers.away.onZeitstrafe();
+    expect(flows.tippeZeitstrafe).toHaveBeenLastCalledWith('away');
+    hook.result.current.teamHandlers.home.onKarte();
+    expect(flows.tippeKarte).toHaveBeenLastCalledWith('home');
+    expect(flows.oeffne).not.toHaveBeenCalled();
   });
 
-  it('Karte mit Rückruf: onCard bekommt Kartenart, Team und Nummer', () => {
-    const onCard = vi.fn();
-    const { hook } = setup({ props: { onCard } });
-    hook.result.current.overlayHandlers.confirmCard('YELLOW_RED', 'fc-nord', 7);
-    expect(onCard).toHaveBeenCalledWith('match-11', 'fc-nord', 'YELLOW_RED', { playerNumber: 7 });
-  });
-
-  it('Zeitstrafe 2 Minuten für FC Nord, Nr. 4: onTimePenalty mit Dauer, Meldung, Auswahl schließt', () => {
-    const onTimePenalty = vi.fn();
-    const { hook, flows, melde } = setup({ props: { onTimePenalty } });
-    hook.result.current.overlayHandlers.confirmTimePenalty(120, 'fc-nord', 4);
-    expect(onTimePenalty).toHaveBeenCalledWith('match-11', 'fc-nord', { playerNumber: 4, durationSeconds: 120 });
-    expect(melde).toHaveBeenCalledWith(3, '2 Min Zeitstrafe für FC Nord (#4)');
-    expect(flows.schliesse).toHaveBeenCalledTimes(1);
+  it('@SL-029 Gegenbeispiel: die Overlay-Handler kennen keine Dialoge für Karte und Zeitstrafe mehr (kein confirmCard, kein confirmTimePenalty)', () => {
+    const { hook } = setup();
+    expect('confirmCard' in hook.result.current.overlayHandlers).toBe(false);
+    expect('confirmTimePenalty' in hook.result.current.overlayHandlers).toBe(false);
   });
 
   it('@SL-037 es gibt keinen Wechsel-Ablauf mehr: kein Rückruf `confirmSubstitution`, kein Handler `onSubstitution` je Seite', () => {
@@ -90,22 +82,6 @@ describe('useCockpitCommands – Karte, Zeitstrafe, Foul', () => {
     expect('confirmSubstitution' in hook.result.current.overlayHandlers).toBe(false);
     expect('onSubstitution' in hook.result.current.teamHandlers.home).toBe(false);
     expect(onSubstitution).not.toHaveBeenCalled();
-  });
-
-  it('Foul für FC Nord: onFoul mit Team und Meldung', () => {
-    const onFoul = vi.fn();
-    const { hook, melde } = setup({ props: { onFoul } });
-    hook.result.current.teamHandlers.home.onFoul();
-    expect(onFoul).toHaveBeenCalledWith('match-11', 'fc-nord');
-    expect(melde).toHaveBeenCalledWith(3, 'Foul für FC Nord');
-  });
-
-  it('die Tipps je Seite öffnen die passende Auswahl (Zeitstrafe, Karte)', () => {
-    const { hook, flows } = setup();
-    hook.result.current.teamHandlers.home.onZeitstrafe();
-    expect(flows.oeffne).toHaveBeenLastCalledWith({ art: 'zeitstrafe', seite: 'home' });
-    hook.result.current.teamHandlers.home.onKarte();
-    expect(flows.oeffne).toHaveBeenLastCalledWith({ art: 'karte', seite: 'home' });
   });
 });
 
@@ -154,7 +130,7 @@ describe('useCockpitCommands – Ereignisse, Sperre, Entscheidung', () => {
     const { hook, flows } = setup({ events: [tor] });
     hook.result.current.onSidebarEventEdit?.({ id: 'e1' } as never);
     expect(flows.oeffne).toHaveBeenCalledWith({ art: 'nummer', seite: null, eventId: 'e1' });
-    flows.oeffne.mockClear();
+    vi.mocked(flows.oeffne).mockClear();
     hook.result.current.onSidebarEventEdit?.({ id: 'gibt-es-nicht' } as never);
     expect(flows.oeffne).not.toHaveBeenCalled();
   });
@@ -182,59 +158,71 @@ describe('useCockpitCommands – Ereignisse, Sperre, Entscheidung', () => {
   });
 });
 
-// BUG-008 (Zeitstrafe verschwindet nicht nach Spielende) und @FU-074: Mit dem Abpfiff endet jede
-// laufende Zeitstrafe – von Hand wie automatisch. Spiel 11, FC Nord, Nr. 4, 2 Minuten.
-describe('useCockpitCommands – BUG-008 Zeitstrafen nach dem Abpfiff', () => {
-  const mitStrafe = () => {
-    const ctx = setup({ props: { onTimePenalty: vi.fn() } });
-    act(() => ctx.hook.result.current.overlayHandlers.confirmTimePenalty(120, 'fc-nord', 4));
-    expect(ctx.hook.result.current.activePenalties).toHaveLength(1);
-    return ctx;
-  };
+// @SL-097 (Zeitstrafe endet mit dem Abpfiff) und @SL-031: die laufenden Zeitstrafen kommen aus der Engine-Ansicht (B-08a, Aufgabe 3.5),
+// kein lokaler Countdown mehr. Spiel 11, FC Nord, Nr. 4.
+describe('useCockpitCommands – laufende Zeitstrafen aus der Engine-Ansicht', () => {
+  const strafe = { id: 'p1', teamId: 'fc-nord', playerNumber: 4, remainingMs: 72_000 };
 
-  it('Abpfiff von Hand: die Liste der laufenden Zeitstrafen ist danach leer', () => {
-    const { hook } = mitStrafe();
-    act(() => hook.result.current.controls.onFinish());
+  it('@SL-031 die Strafe von FC Nord, Nr. 4, steht mit Restzeit (72 s) in der Liste', () => {
+    const { hook } = setup({ engineView: makePhaseView({ penalties: [strafe] }) });
+    expect(hook.result.current.activePenalties).toEqual([expect.objectContaining({ eventId: 'p1', teamId: 'fc-nord', playerNumber: 4, remainingSeconds: 72 })]);
+  });
+
+  it('die Restzeit wird auf ganze Sekunden aufgerundet (0,2 s → 1 s)', () => {
+    const { hook } = setup({ engineView: makePhaseView({ penalties: [{ ...strafe, remainingMs: 200 }] }) });
+    expect(hook.result.current.activePenalties[0]?.remainingSeconds).toBe(1);
+  });
+
+  it('@SL-097 nach dem Abpfiff (Ansicht ohne Strafen) ist die Liste leer', () => {
+    const { hook } = setup({ engineView: makePhaseView({ status: 'finished', penalties: [] }) });
     expect(hook.result.current.activePenalties).toEqual([]);
   });
 
-  it('Gegenbeispiel: ohne Abpfiff bleibt die Zeitstrafe in der Liste', () => {
-    const { hook } = mitStrafe();
-    act(() => hook.result.current.controls.onPauseResume());
+  it('Gegenbeispiel: ohne Engine-Ansicht (Altspiel) gibt es keine laufenden Zeitstrafen', () => {
+    const { hook } = setup();
+    expect(hook.result.current.activePenalties).toEqual([]);
+  });
+
+  it('Gegenbeispiel: ein Abpfiff von Hand leert nichts lokal (die Engine-Ansicht entscheidet)', () => {
+    const { hook } = setup({ engineView: makePhaseView({ penalties: [strafe] }) });
+    act(() => hook.result.current.controls.onFinish());
     expect(hook.result.current.activePenalties).toHaveLength(1);
   });
 });
 
-// B-08b: der automatische Abpfiff läuft über die Engine (`useAutoSectionEnd`); danach ist die Liste ebenfalls leer (BUG-008).
-describe('useCockpitCommands – BUG-008 Zeitstrafen nach dem automatischen Abpfiff (Engine)', () => {
-  it('Spielzeit abgelaufen: die Engine beendet das Spiel einmal, die Liste der Zeitstrafen ist leer, die Meldung erscheint', async () => {
+// B-08b: der automatische Abpfiff läuft über die Engine (`useAutoSectionEnd`); danach ist die Liste ebenfalls leer (@SL-097).
+describe('useCockpitCommands – Zeitstrafen nach dem automatischen Abpfiff (Engine)', () => {
+  it('Spielzeit abgelaufen: die Engine beendet das Spiel einmal, die Ansicht danach hat keine Zeitstrafe mehr, die Meldung erscheint', async () => {
     vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
     try {
       zu(0);
       const spiel = await spielAnlegen();
       await spiel.a.commands.start(spiel.matchId, spiel.ctx, 'leitung', { ...REGEL_2X6, sections: 1, sectionSeconds: 600 });
-      const ansicht = spiel.a.engine.view(spiel.matchId);
-      if (!ansicht) { throw new Error('keine Ansicht'); }
-      const engineView = phaseViewOf(ansicht.result.state, spiel.ctx, spiel.a.engine.serverNow());
+      await spiel.a.commands.timePenalty(spiel.matchId, spiel.ctx, 'leitung', 'teama', { playerNumber: 4 });
+      const sicht = (): PhaseView => {
+        const ansicht = spiel.a.engine.view(spiel.matchId);
+        if (!ansicht) { throw new Error('keine Ansicht'); }
+        return phaseViewOf(ansicht.result.state, spiel.ctx, spiel.a.engine.serverNow());
+      };
       const match = makeLiveMatch({ id: spiel.matchId, homeTeam: { id: 'teama', name: 'FC Nord' }, awayTeam: { id: 'teamb', name: 'SV Süd' } });
       const props = makeProps(match, { onTimePenalty: vi.fn() });
-      const flows = { offen: null, oeffne: vi.fn(), schliesse: vi.fn(), tippeTor: vi.fn(), waehleNummer: vi.fn(), schliesseAuswahl: vi.fn(), waehleEigentor: vi.fn() };
+      const flows = makeFlows(null);
       const sides = { getauscht: false, links: 'home' as const, rechts: 'away' as const, tausche: vi.fn() };
       const melde = vi.fn();
       const sound = { play: vi.fn(), activate: vi.fn().mockResolvedValue(undefined), isActivated: true };
       const wert = { engine: spiel.a.engine, store: spiel.store, sender: { kick: vi.fn().mockResolvedValue(undefined) }, accountId: spiel.accountId } as unknown as MatchEngineContextValue;
       const wrapper = ({ children }: { children: ReactNode }) => <MatchEngineContext.Provider value={wert}>{children}</MatchEngineContext.Provider>;
       const hook = renderHook(
-        () => useCockpitCommands({ props, settings: DEFAULT_MATCH_COCKPIT_SETTINGS, sound, flows, sides, melde, engineView }),
-        { wrapper },
+        ({ engineView }: { engineView: PhaseView }) => useCockpitCommands({ props, settings: DEFAULT_MATCH_COCKPIT_SETTINGS, sound, flows, sides, melde, engineView }),
+        { wrapper, initialProps: { engineView: sicht() } },
       );
-      act(() => hook.result.current.overlayHandlers.confirmTimePenalty(120, 'teama', 4));
       expect(hook.result.current.activePenalties).toHaveLength(1);
       await act(async () => {
         await vi.advanceTimersByTimeAsync(600_000);
         await new Promise<void>((fertig) => { echtesSetTimeout(fertig, 40); });
       });
       expect((spiel.a.engine.view(spiel.matchId)?.log ?? []).filter((e) => e.type === 'MATCH_END')).toHaveLength(1);
+      hook.rerender({ engineView: sicht() });
       expect(hook.result.current.activePenalties).toEqual([]);
       expect(melde).toHaveBeenCalledWith(3, 'Spiel abgepfiffen');
       expect(sound.play).toHaveBeenCalledTimes(1);

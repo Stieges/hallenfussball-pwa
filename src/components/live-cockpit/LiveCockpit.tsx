@@ -43,10 +43,10 @@ import { useCockpitCommands } from './hooks/useCockpitCommands';
 import { useTeamColumns } from './hooks/useTeamColumns';
 import { usePenaltyExpiryNotice } from './hooks/usePenaltyExpiryNotice';
 import { alsUebersetzer } from './model/alsUebersetzer';
+import { hatSchonGelb as hatSchonGelbIn } from './model/secondYellow';
 
 const NO_SPERREN: readonly SperrHinweis[] = [];
 const NO_TEAMS = { home: { id: '', name: '' }, away: { id: '', name: '' } };
-const NIE_GELB = (): boolean => false; // Aufgabe 3.5 ersetzt es durch die Ereignisse des Spiels (@SL-088)
 
 export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const { fieldName, tournamentName, tournamentId, cockpitSettings: cockpitSettingsProp, readOnly = false, currentMatch, upcomingMatches, leer = null } = props;
@@ -108,9 +108,11 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const frisch = useFreshEntryCommands({
     tournamentId, matchId: currentMatch?.id, teamAId: currentMatch?.homeTeam.id ?? '', teamBId: currentMatch?.awayTeam.id ?? '', melde: notices.melde, t: tx,
   });
+  const matchEvents = currentMatch?.events;
+  const hatSchonGelb = useCallback((teamId: string, nummer: number): boolean => hatSchonGelbIn(matchEvents ?? [], teamId, nummer), [matchEvents]);
   const flows = useEntryFlows({
     matchId: currentMatch?.id, teams: teams ?? NO_TEAMS, commands: useEntryCommands(props, frisch), spielzeitJetzt: useSpielzeitJetzt(currentMatch?.id),
-    zustand: phase.zustand, melde: notices.melde, t: tx, hatSchonGelb: NIE_GELB,
+    zustand: phase.zustand, melde: notices.melde, t: tx, hatSchonGelb,
   });
 
   const cmd = useCockpitCommands({
