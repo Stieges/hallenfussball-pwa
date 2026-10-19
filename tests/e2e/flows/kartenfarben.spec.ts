@@ -2,7 +2,7 @@
  * E2E: Karten-Farben nur für Karten (Oberfläche E, Befund C-KARTE-GELB-ALS-WARNFARBE; Regel T2-UI).
  * Ablauf: Anpfiff -> Gelbe Karte, Gelb-Rote Karte und Rote Karte, Zeitstrafe und Foul -> im Verlauf je Karte das Kartensymbol in
  * Kartenfarbe (berechneter Hintergrund = aufgelöstes cardYellow/cardRed, hell und dunkel gleich), kein Farb-Emoji; Zeitstrafe ohne
- * Kartensymbol, Foul mit neutralem Text-Glyph statt gelbem Emoji (@SL-084).
+ * Kartensymbol, Foul mit neutralem Text-Glyph statt gelbem Emoji
  */
 import { test, expect } from '../helpers/test-fixtures';
 import type { Locator, Page } from '@playwright/test';
@@ -62,7 +62,7 @@ test.describe('Karten-Farben nur für Karten (Oberfläche E): Verlauf im Cockpit
     await expect(page.getByText('Kartenfarben-Cup')).toBeVisible({ timeout: 15000 });
   });
 
-  test('@SL-084 Karten-Farben nur für Karten (Oberfläche E): Gelb cardYellow, Rot cardRed, Gelb-Rot beide; Zeitstrafe und Foul ohne Kartenfarbe', async ({ page }) => {
+  test('Karten-Farben nur für Karten (Oberfläche E): Gelb cardYellow, Rot cardRed, Gelb-Rot beide; Zeitstrafe und Foul ohne Kartenfarbe', async ({ page }) => {
     await page.goto(`/#/tournament/${ID}/live`);
     await page.getByTestId('match-start-button').click({ timeout: 15000 });
     await expect(page.getByTestId('match-pause-button')).toBeVisible();

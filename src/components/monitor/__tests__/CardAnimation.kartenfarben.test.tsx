@@ -54,6 +54,17 @@ describe('Karten-Farben nur für Karten (Oberfläche E) – Monitor-Kartenanimat
     }
   });
 
+  it('Die Karte erscheint auf der Seite des bestraften Teams (Heim links, Gast rechts)', () => {
+    const seite = (side: 'home' | 'away'): string => {
+      const { container, unmount } = render(<CardAnimation cardEvent={{ ...ereignis('YELLOW'), side }} onAnimationComplete={vi.fn()} />);
+      const wert = (container.firstElementChild as HTMLElement).style.justifyContent;
+      unmount();
+      return wert;
+    };
+    expect(seite('home')).toBe('flex-start');
+    expect(seite('away')).toBe('flex-end');
+  });
+
   it('Gegenbeispiel: keine festen Farben und kein warning/error in der Kartenanimation (Quelle)', () => {
     const quelle = readFileSync(resolve(process.cwd(), 'src/components/monitor/CardAnimation.tsx'), 'utf8');
     expect(quelle).not.toMatch(/#[0-9a-fA-F]{3,6}\b/);
