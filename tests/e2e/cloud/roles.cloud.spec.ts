@@ -229,7 +229,7 @@ for (const role of ALL_ROLES) {
       await expect(statusBadge).toBeVisible({ timeout: 15000 }); // Cockpit lädt in jedem Fall (laufendes Spiel im Seed)
 
       // M4: Verdrahtung bis zum tatsächlichen Bedienelement, nicht nur bis zum Banner --
-      // goal-button-home trägt das echte disabled-Attribut (TeamBlock/index.tsx).
+      // Die Tor-Taste der Team-Spalte fehlt ohne Steuerrecht ganz (@SL-018; früher: disabled-Attribut am TeamBlock).
       const goalButton = page.locator('[data-testid="goal-button-home"]');
       if (canWrite) {
         await expect(readOnlyBanner).toHaveCount(0);
@@ -237,7 +237,7 @@ for (const role of ALL_ROLES) {
         await expect(goalButton).toBeEnabled();
       } else {
         await expect(readOnlyBanner).toBeVisible({ timeout: 15000 });
-        await expect(goalButton).toBeDisabled();
+        await expect(goalButton).toHaveCount(0);
       }
     });
   });

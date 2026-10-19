@@ -9,6 +9,7 @@
  */
 
 import { test, expect } from '../helpers/test-fixtures';
+import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
 /**
  * Generate a future date string (tomorrow) in YYYY-MM-DD format
@@ -150,19 +151,16 @@ test.describe('Live Cockpit', () => {
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
 
     // Get initial score
-    const homeScoreBefore = await page.getByTestId('score-home').textContent();
+    const homeScoreBefore = await page.getByTestId('scoreboard-box-links').textContent();
 
     // WHEN - Click goal button for home team
     await page.getByTestId('goal-button-home').click();
 
     // Handle goal scorer dialog if it appears
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // THEN - Home score should increase
-    await expect(page.getByTestId('score-home')).not.toHaveText(homeScoreBefore ?? '0');
+    await expect(page.getByTestId('scoreboard-box-links')).not.toHaveText(homeScoreBefore ?? '0');
   });
 
   test('Can pause and resume a match', async ({ page }) => {
@@ -269,13 +267,10 @@ test.describe('Live Cockpit', () => {
     await page.getByTestId('goal-button-home').click();
 
     // Handle goal scorer dialog
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // Verify goal was scored
-    await expect(page.getByTestId('score-home')).toContainText('1');
+    await expect(page.getByTestId('scoreboard-box-links')).toContainText('1');
 
     // WHEN - Click undo button
     const undoButton = page.getByTestId('match-undo-button');
@@ -289,7 +284,7 @@ test.describe('Live Cockpit', () => {
       }
 
       // THEN - Score should be back to 0
-      await expect(page.getByTestId('score-home')).toContainText('0');
+      await expect(page.getByTestId('scoreboard-box-links')).toContainText('0');
     }
   });
 
@@ -305,21 +300,17 @@ test.describe('Live Cockpit', () => {
     // WHEN - Click goal button to open dialog
     await page.getByTestId('goal-button-home').click();
 
-    // THEN - Dialog should appear with countdown timer on skip button
-    const skipButton = page.getByTestId('dialog-skip-button');
-    await expect(skipButton).toBeVisible({ timeout: 2000 });
-
-    // Skip button should show countdown (e.g., "Ohne Nr. (10s)" or "(9s)")
-    await expect(async () => {
-      const buttonText = await skipButton.textContent();
-      expect(buttonText).toMatch(/\(\d+s\)/);
-    }).toPass({ timeout: 3000 });
+    // THEN - Das Tor zählt mit dem ersten Tipp (@SL-083); die Nummernauswahl bietet „ohne Nummer“ an
+    // (Gherkin: kein Zähler im Knopf, der Zeitablauf von 10 s schließt die Auswahl ohne Nummer).
+    await expect(page.getByTestId('number-picker')).toBeVisible({ timeout: 2000 });
+    await expect(page.getByTestId('scoreboard-box-links')).toContainText('1');
+    await expect(page.getByTestId('number-picker').getByRole('button', { name: 'ohne Nummer' })).toBeVisible();
 
     // Close dialog
-    await skipButton.click();
+    await schliesseTorAuswahl(page);
   });
 
-  test('GoalScorerDialog auto-dismisses after timeout', async ({ page }) => {
+  test('Nummernauswahl des Tors schließt nach dem Zeitablauf von selbst, das Tor bleibt', async ({ page }) => {
     // Note: This test uses a shorter timeout for faster execution
     // The actual app uses 10 seconds, but we'll verify the mechanism works
 
@@ -334,16 +325,15 @@ test.describe('Live Cockpit', () => {
     // WHEN - Click goal button to open dialog
     await page.getByTestId('goal-button-home').click();
 
-    // THEN - Dialog should appear
-    const skipButton = page.getByTestId('dialog-skip-button');
-    await expect(skipButton).toBeVisible({ timeout: 2000 });
+    // THEN - Nummernauswahl erscheint
+    await expect(page.getByTestId('number-picker')).toBeVisible({ timeout: 2000 });
 
     // Wait for auto-dismiss (10 seconds + buffer)
-    // Note: Goal is still recorded even when dialog auto-dismisses
-    await expect(skipButton).toBeHidden({ timeout: 15000 });
+    // Note: Goal is still recorded (counted with the first tap, @SL-083)
+    await expect(page.getByTestId('number-picker')).toBeHidden({ timeout: 15000 });
 
-    // Verify goal was recorded (auto-dismiss saves as "incomplete")
-    await expect(page.getByTestId('score-home')).toContainText('1');
+    // Verify goal was recorded (zählt ohne Nummer)
+    await expect(page.getByTestId('scoreboard-box-links')).toContainText('1');
   });
 
   test('Results are persisted to tournament after finish', async ({ page }) => {
@@ -360,21 +350,15 @@ test.describe('Live Cockpit', () => {
     // Score 2 goals for home team
     for (let i = 0; i < 2; i++) {
       await page.getByTestId('goal-button-home').click();
-      const skipButton = page.getByTestId('dialog-skip-button');
-      if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await skipButton.click();
-      }
+      await schliesseTorAuswahl(page);
       // Wait for score to update in UI before firing next goal
-      await expect(page.getByTestId('score-home')).toContainText(`${i + 1}`);
+      await expect(page.getByTestId('scoreboard-box-links')).toContainText(`${i + 1}`);
     }
 
     // Score 1 goal for away team
     await page.getByTestId('goal-button-away').click();
-    const skipButtonAway = page.getByTestId('dialog-skip-button');
-    if (await skipButtonAway.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButtonAway.click();
-    }
-    await expect(page.getByTestId('score-away')).toContainText('1');
+    await schliesseTorAuswahl(page);
+    await expect(page.getByTestId('scoreboard-box-rechts')).toContainText('1');
 
     // Pause and finish the match
     await page.getByTestId('match-pause-button').click();
@@ -429,6 +413,8 @@ test.describe('Live Cockpit - Mobile', () => {
     const liveNavItem = page.getByText('Live').first();
     await liveNavItem.click({ force: true });
 
+    // Seit Scheibe 3 bietet die Team-Spalte die Tor-Taste erst nach dem Anpfiff an (@SL-087-Matrix, darfAktion)
+    await page.getByTestId('match-start-button').click({ timeout: 10000 });
     await page.waitForSelector('[data-testid="goal-button-home"]', { timeout: 10000 });
 
     // THEN - Goal buttons should be at least 44x44 (WCAG minimum)

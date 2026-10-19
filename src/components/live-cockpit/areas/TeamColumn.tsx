@@ -67,7 +67,7 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
     <section style={spalteStil} data-testid={`team-column-${seite}`} aria-label={name}>
       <div style={kopfStil(breit)} data-testid={`team-head-${seite}`} lang="de">
         <div data-testid={`team-stripe-${seite}`} style={streifenStil(model.farbe)} />
-        <span>{name}</span>
+        <span data-testid={`team-name-${seite}`}>{name}</span>
         <span style={seiteStil}>{t(seite === 'home' ? 'spalte.heim' : 'spalte.gast')}</span>
       </div>
       <div style={zaehlerStil} data-testid={`team-fouls-${seite}`}>

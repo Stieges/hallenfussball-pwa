@@ -144,7 +144,7 @@ test('Feature funktioniert', async ({ page, seedIndexedDB }) => {
   await page.getByTestId('goal-button-home').click();
 
   // THEN - Erwartetes Ergebnis prüfen
-  await expect(page.getByTestId('score-home')).toHaveText('1');
+  await expect(page.getByTestId('scoreboard-box-links')).toHaveText('1');
 });
 ```
 

@@ -32,9 +32,10 @@ describe('TeamColumn', () => {
     expect(screen.getByRole('button', { name: /Tor.*SV Süd/ })).toBeInTheDocument();
   });
 
-  it('der Kopf nennt „Heim“ bzw. „Gast“ klein', () => {
+  it('der Kopf nennt „Heim“ bzw. „Gast“ klein, der Name steht unter `team-name-*` (Selektor der E2E-Specs)', () => {
     render(<TeamColumn {...props()} />);
     expect(screen.getByTestId('team-head-away')).toHaveTextContent('Gast');
+    expect(screen.getByTestId('team-name-away')).toHaveTextContent(/^SV Süd$/);
   });
 
   it('@SL-037 kein Wechsel-Knopf und kein Minus-Knopf', () => {
