@@ -12,18 +12,18 @@
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, displayFontSizes, displayLayout, getBlockFrames } from '../../design-tokens';
-import type { MonitorTheme, LiveColorScheme } from '../../types/monitor';
-import { DEFAULT_LIVE_COLOR_SCHEME } from '../../types/monitor';
+import type { MonitorTheme } from '../../types/monitor';
+import { DEFAULT_SPECTATOR_DISPLAY } from '../../core/models/spectatorDisplay';
+import { resolveBoxColors, type BoxFill } from '../../core/models/scoreBoxColors';
 import { LiveMatch } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
 import { MatchTimer } from './MatchTimer';
 import type { ClockMode } from '../../core/match/clockDisplay';
 import { LiveScoreGrid } from './LiveScoreGrid';
 import { LiveFinalScore, type LiveFinalScoreProps } from './LiveFinalScore';
-import { resolveColor } from './liveBlockFrame';
 import { LiveHeader } from './LiveHeader';
 import { badgeOfLiveMatch } from './liveBadge';
-import type { MatchBadgeModel } from '../../core/view';
+import type { MatchBadgeModel, MatchView } from '../../core/view';
 
 export { NoMatchDisplay } from './NoMatchDisplay';
 export type { NoMatchDisplayProps } from './NoMatchDisplay';
@@ -39,8 +39,8 @@ export interface LiveMatchDisplayProps {
   fullscreen?: boolean;
   /** Theme (dark/light/auto) */
   theme?: MonitorTheme;
-  /** Color scheme for position colors (home/away blocks) */
-  colorScheme?: LiveColorScheme;
+  /** Kastenfarben der Ansicht (`MatchView.boxes`, 2.3): die Folie hat keine eigene Farbe mehr; ohne Angabe die Standardfarben */
+  boxes?: MatchView['boxes'];
   /** Kindermodus (B-16e2, @W2A-031): ohne Stand, Paarung/Uhr/Phase bleiben */
   hideScore?: boolean;
   /** Uhr-Art des Turniers (@ZM-137) */
@@ -50,6 +50,17 @@ export interface LiveMatchDisplayProps {
   finalRound?: boolean;
   /** Abzeichen der Ansicht (`MatchView.badge`); ohne Angabe aus Status und Anstoß des Spiels (@OB-066) */
   badge?: MatchBadgeModel;
+}
+
+/** Fläche als eine Farbe: bei der Weste die Mitte (die Ziffer steht darauf, @ZM-156). */
+function flatColorOf(fill: BoxFill): string {
+  return fill.kind === 'solid' ? fill.color : fill.center;
+}
+
+/** Ohne Ansicht (z. B. Vorschau): keine Seite trägt eine Farbe, also Standardfarben Heim/Gast (@ZM-159 Fall A). */
+function standardBoxes(): NonNullable<LiveMatchDisplayProps['boxes']> {
+  const { a, b } = resolveBoxColors({ worn: {}, settings: DEFAULT_SPECTATOR_DISPLAY });
+  return { home: a, away: b };
 }
 
 // ---------------------------------------------------------------------------
@@ -62,7 +73,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   size = 'xl',
   fullscreen = false,
   theme = 'dark',
-  colorScheme,
+  boxes,
   hideScore = false,
   clockMode,
   finalScore,
@@ -71,12 +82,13 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
 }) => {
   const { t } = useTranslation('monitor');
   const { themeColors } = useMonitorTheme(theme);
-  const scheme = colorScheme ?? DEFAULT_LIVE_COLOR_SCHEME;
   const isRunning = match.status === 'RUNNING';
   const isPaused = match.status === 'PAUSED';
 
-  const homeColor = resolveColor('home', scheme, match.homeTeam);
-  const awayColor = resolveColor('away', scheme, match.awayTeam);
+  // Bis 3.2 (ScoreBox am Monitor) trägt die Weste ihre Mitte als Fläche
+  const shown = boxes ?? standardBoxes();
+  const homeColor = flatColorOf(shown.home.fill);
+  const awayColor = flatColorOf(shown.away.fill);
 
   const layout = displayLayout.scoreArea;
   const frames = getBlockFrames(homeColor, awayColor, themeColors.background, themeColors.text);

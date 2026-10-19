@@ -7,9 +7,8 @@ import {
   getContrastRatio,
   getScoreTextColor,
   needsContrastFrame,
-  liveColorSchemeDefaults,
 } from '../../../design-tokens/display';
-import { DEFAULT_LIVE_COLOR_SCHEME } from '../../../types/monitor';
+import { DEFAULT_SPECTATOR_DISPLAY } from '../../../core/models/spectatorDisplay';
 
 import { monitorThemes } from '../../../design-tokens';
 
@@ -59,11 +58,14 @@ describe('@ZM-140 Kasten hebt sich vom Hintergrund ab (echte Token-Werte)', () =
   });
 });
 
-describe('@ZM-140 Vorgabe ohne Farbe ist Blau (Heim) und Rot (Gast)', () => {
-  it('Standard-Farbschema: Heim Blau, Gast Rot', () => {
-    expect(liveColorSchemeDefaults.homeColor).toBe('#1E40AF');
-    expect(liveColorSchemeDefaults.awayColor).toBe('#DC2626');
-    expect(DEFAULT_LIVE_COLOR_SCHEME.homeColor).toBe(liveColorSchemeDefaults.homeColor);
-    expect(DEFAULT_LIVE_COLOR_SCHEME.awayColor).toBe(liveColorSchemeDefaults.awayColor);
+// W14: die Vorgabe liegt nicht mehr an der Monitor-Folie, sondern in der Turnier-Einstellung „Anzeige für Zuschauer“ (@ZM-152)
+describe('@ZM-152 Vorbelegung der Standardfarben ist Blau (Heim) und Rot (Gast)', () => {
+  it('@ZM-152 Vorbelegung: Teamfarben an, Heim Blau, Gast Rot', () => {
+    expect(DEFAULT_SPECTATOR_DISPLAY).toEqual({ teamColors: true, homeColor: '#1565C0', awayColor: '#C62828' });
+  });
+
+  it('@ZM-140 Gegenbeispiel: die alten Folien-Vorgaben #1E40AF und #DC2626 gelten nirgends mehr', () => {
+    expect(Object.values(DEFAULT_SPECTATOR_DISPLAY)).not.toContain('#1E40AF');
+    expect(Object.values(DEFAULT_SPECTATOR_DISPLAY)).not.toContain('#DC2626');
   });
 });
