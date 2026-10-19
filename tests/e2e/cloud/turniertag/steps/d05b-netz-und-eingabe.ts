@@ -71,17 +71,18 @@ async function schnelleingabe({ asRole }: StepContext): Promise<void> {
   const { finals } = await fetchTurniertagBracket();
   const teams = await fetchTurniertagTeams();
   expect(teams.length, 'der Turniertag-Cup hat mindestens zwei Teams').toBeGreaterThanOrEqual(2);
-  const ownerPage = await asRole('owner');
-  await openSpielplanFinalrunde(ownerPage);
-  await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
-  const spiel = await spielDerFinalrundenTabelle(ownerPage, finals);
+  const suchSeite = await asRole('owner');
+  await openSpielplanFinalrunde(suchSeite);
+  await expectPageAnchor(suchSeite.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
+  const spiel = await spielDerFinalrundenTabelle(suchSeite, finals);
   const vorher = (await getRows<Record<string, unknown>>(`matches?id=eq.${spiel.id}&select=${EINGABE_SPALTEN}`, 'Spiel vor D5d'))[0];
   try {
     await vorbedingung('Spiel der Finalrunden-Tabelle mit zwei Teams besetzen (wird danach zurückgesetzt)', async () => {
       const res = await serviceRest('PATCH', `matches?id=eq.${spiel.id}`, { team_a_id: teams[0].id, team_b_id: teams[1].id });
       expect(res.status, `Spiel besetzen: ${res.text}`).toBeLessThan(300);
     });
-    await ownerPage.reload();
+    // Neue Seite in eigenem Browser-Context: die erste hält den alten Stand (Local-First) im Zwischenspeicher.
+    const ownerPage = await asRole('owner');
     await openSpielplanFinalrunde(ownerPage);
     const heim = ownerPage.locator(`[data-testid="match-score-input-${spiel.id}-home"]`);
     const gast = ownerPage.locator(`[data-testid="match-score-input-${spiel.id}-away"]`);
