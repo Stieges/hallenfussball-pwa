@@ -145,30 +145,18 @@ test.describe('Match Cockpit Extended', () => {
     await expect(timer).toBeVisible();
   });
 
-  test('Keyboard: Q/W für Home Goal, O/P für Away Goal', async ({ page }) => {
-    // GIVEN - Navigate to running match
+  // Tastenkürzel (Q/W Heim-Tor, O/P Gast-Tor) sind noch nicht gebaut: kommen mit LT-7 (Plan Cockpit Scheibe 3, PR 5), @SL-153.
+  // Bis dahin ein offenes Test-Fixme statt eines immer grünen Tests (der alte Test prüfte nur `typeof newScore === 'string'`).
+  test.fixme('Keyboard: Q/W für Home Goal, O/P für Away Goal (@SL-153, kommt mit LT-7)', async ({ page }) => {
     await navigateToLiveCockpit(page);
+    await page.getByTestId('match-start-button').click();
+    await expect(page.getByTestId('match-pause-button')).toBeVisible();
 
-    // Start match first
-    const startButton = page.getByTestId('match-start-button');
-    if (await startButton.isVisible()) {
-      await startButton.click();
-      await expect(page.getByTestId('match-pause-button')).toBeVisible();
-    }
-
-    // WHEN - Press Q (Home Goal)
     await page.keyboard.press('q');
-    await page.waitForTimeout(500);
-
-    // Handle number picker if it appears (Tastenkürzel sind erst mit LT-7 gebaut)
-    if (await page.getByTestId('number-picker').isVisible({ timeout: 2000 }).catch(() => false)) {
-      await schliesseTorAuswahl(page);
-    }
-
-    // THEN - Score might have changed (if keyboard shortcuts are implemented)
-    const newScore = await page.getByTestId('scoreboard-box-links').textContent();
-    // Test passes regardless - keyboard shortcuts may not be implemented
-    expect(typeof newScore).toBe('string');
+    await expect(page.getByTestId('scoreboard-box-links')).toHaveText('1');
+    await schliesseTorAuswahl(page);
+    await page.keyboard.press('o');
+    await expect(page.getByTestId('scoreboard-box-rechts')).toHaveText('1');
   });
 
   test('Keyboard: Esc schließt Dialoge', async ({ page }) => {

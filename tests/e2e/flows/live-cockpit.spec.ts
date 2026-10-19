@@ -413,7 +413,7 @@ test.describe('Live Cockpit - Mobile', () => {
     const liveNavItem = page.getByText('Live').first();
     await liveNavItem.click({ force: true });
 
-    // Seit Scheibe 3 bietet die Team-Spalte die Tor-Taste erst nach dem Anpfiff an (@SL-087-Matrix, darfAktion)
+    // Seit Scheibe 3 bietet die Team-Spalte die Tor-Taste erst nach dem Anpfiff an (Spec § 6 Matrix „Vor Anpfiff: Köpfe sichtbar, Knöpfe ausgeblendet“, darfAktion)
     await page.getByTestId('match-start-button').click({ timeout: 10000 });
     await page.waitForSelector('[data-testid="goal-button-home"]', { timeout: 10000 });
 

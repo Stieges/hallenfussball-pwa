@@ -4,7 +4,8 @@
  * Stand, Zähler und Marke geprüft. Saat: Spiel 1 FC Nord – SV Süd, 2 × 6 Minuten, Foul-Grenze 5 (Vorgabe).
  * Szenarien: @SL-019, @SL-083 (Tor zählt mit dem ersten Tipp, Nummer als Nachtrag), @SL-033/@SL-099 (Zähler „Foul n/5“),
  * @SL-029/@SL-031 (Zeitstrafe ohne Dauer-Auswahl, Marke mit Restzeit), @SL-084 (Karte), @SL-061/@OB-025 (alles auf einem Gerät
- * bedienbar). Am Laptop darf in PR 2 noch gescrollt werden (das löst PR 3).
+ * bedienbar), @OB-025 (langer Name: vollständig, höchstens drei Zeilen, Tor-Knöpfe auf einer Höhe, kein „…“). Am Laptop darf in PR 2
+ * noch gescrollt werden (das löst PR 3).
  */
 import { test, expect } from '../helpers/test-fixtures';
 import { tippeKarte, wartePicker } from '../helpers/cockpitNeu';
@@ -12,9 +13,11 @@ import { tippeKarte, wartePicker } from '../helpers/cockpitNeu';
 const ID = 'e2e-s3-cup';
 const TEAMS = ['e1', 'e2', 'e3', 'e4'].map((n) => `00000000-0000-4000-8000-0000000000${n}`);
 const NAMEN = ['FC Nord', 'SV Süd', 'TSV Ost', 'FC West'];
+const NAME_50 = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
+const FARBEN = ['#FFD700', '#1E56D9', '#2E8B57', '#C0392B']; // Farbsaat: Trikotfarben für den Streifen im Spaltenkopf
 const PAARE: Array<[number, number]> = [[0, 1], [2, 3], [0, 2], [1, 3], [0, 3], [1, 2]];
 
-function cup() {
+function cup(namen: readonly string[] = NAMEN) {
   const date = new Date(Date.now() + 86_400_000).toISOString().split('T')[0];
   return {
     id: ID, status: 'published', publishedAt: new Date().toISOString(), sport: 'football', sportId: 'football-indoor',
@@ -24,7 +27,7 @@ function cup() {
     hideScoresForPublic: false, hideRankingsForPublic: false, resultMode: 'goals', pointSystem: { win: 3, draw: 1, loss: 0 },
     title: 'Cockpit-Cup Spalten', ageClass: 'U12', date, timeSlot: '10:00 - 14:00', startDate: date, startTime: '10:00',
     location: { name: 'Test-Halle' },
-    teams: TEAMS.map((id, i) => ({ id, name: NAMEN[i], group: 'A' })),
+    teams: TEAMS.map((id, i) => ({ id, name: namen[i], group: 'A', colors: { primary: FARBEN[i] } })),
     matches: PAARE.map(([a, b], i) => ({
       id: `00000000-0000-4000-8000-0000000009${i + 10}`, matchNumber: i + 1, round: i + 1, field: 1, group: 'A', phase: 'groupStage',
       slotA: { kind: 'team', teamId: TEAMS[a] }, slotB: { kind: 'team', teamId: TEAMS[b] }, matchStatus: 'scheduled',
@@ -75,6 +78,34 @@ test.describe('Cockpit Scheibe 3: Team-Spalten und Einträge (Gast, lokal)', () 
     await tippeKarte(page, 'home', 'Gelb', 9);
     await expect(page.getByTestId('team-fouls-home')).toHaveText('Foul 1/5');
     await expect(page.getByTestId('scoreboard-box-links')).toHaveText('1');
+  });
+
+  test('@OB-025 @SL-061 50-Zeichen-Name: vollständig, höchstens drei Zeilen, ohne „…“, die beiden Tor-Knöpfe stehen auf einer Höhe', async ({ page, seedIndexedDB }) => {
+    await seedIndexedDB({ tournaments: [cup([NAME_50, NAMEN[1], NAMEN[2], NAMEN[3]])] });
+    await page.goto(`/#/tournament/${ID}/live`);
+    await page.getByTestId('match-start-button').click({ timeout: 15000 });
+    await expect(page.getByTestId('match-pause-button')).toBeVisible();
+
+    const name = page.getByTestId('team-name-home');
+    await expect(name).toHaveText(NAME_50);
+    expect(await name.textContent()).not.toMatch(/…|\.\.\./);
+    const mass = await name.evaluate((el) => {
+      const stil = getComputedStyle(el);
+      return { zeilen: Math.round(el.getBoundingClientRect().height / parseFloat(stil.lineHeight)), hyphens: stil.hyphens, ueberlauf: el.scrollWidth > el.clientWidth };
+    });
+    expect(mass.zeilen).toBeLessThanOrEqual(3);
+    expect(mass.hyphens).not.toBe('auto');
+    expect(mass.ueberlauf).toBe(false);
+
+    // Beide Köpfe gleich hoch -> die Tor-Knöpfe beider Spalten stehen auf einer Höhe (±1 px) und der Kopf überlappt das Tor nicht
+    const torHeim = await page.getByTestId('goal-button-home').boundingBox();
+    const torGast = await page.getByTestId('goal-button-away').boundingBox();
+    const kopfHeim = await page.getByTestId('team-head-home').boundingBox();
+    if (!torHeim || !torGast || !kopfHeim) { throw new Error('Spalte nicht sichtbar'); }
+    expect(Math.abs(torHeim.y - torGast.y)).toBeLessThanOrEqual(1);
+    expect(kopfHeim.y + kopfHeim.height).toBeLessThanOrEqual(torHeim.y + 1);
+    // Der Streifen trägt die Trikotfarbe (Farbsaat)
+    await expect(page.getByTestId('team-stripe-home')).toHaveCSS('background-color', 'rgb(255, 215, 0)');
   });
 
   test('@SL-087 Gegenbeispiel: ohne Anpfiff bietet die Spalte keine Eintrags-Tasten an', async ({ page }) => {
