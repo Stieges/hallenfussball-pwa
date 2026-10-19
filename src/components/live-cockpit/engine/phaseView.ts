@@ -56,6 +56,8 @@ export interface PhaseView {
   breakRemainingMs: number | null;
   /** Kleinste zulässige Uhr im Abschnitt (relativ): spätester Eintrag des Abschnitts. */
   earliestAdjustMs: number;
+  /** Der spätere Eintrag, der die Untergrenze setzt, ist ein Tor (für den Hinweis im Korrektur-Dialog, B-08d). */
+  earliestAdjustIsGoal: boolean;
   penalties: PhasePenalty[];
   shootout: PhaseShootout | null;
   clockAdjustments: PhaseClockAdjustment[];
@@ -86,7 +88,8 @@ export function phaseViewOf(state: MatchState, ctx: MatchContext, serverNow: num
     reopenCount: reopenCountOf(state),
     isLastRegularSection: state.section >= sections,
     breakRemainingMs,
-    earliestAdjustMs: earliestAdjustOf(state),
+    earliestAdjustMs: earliestAdjustOf(state).ms,
+    earliestAdjustIsGoal: earliestAdjustOf(state).isGoal,
     penalties: penaltiesOf(state, elapsedMs),
     shootout: shootoutOf(state, ctx),
     clockAdjustments: clockAdjustmentsOf(state),
@@ -129,9 +132,9 @@ function reopenCountOf(state: MatchState): number {
   return Object.values(state.accepted).filter((event) => event.type === 'REOPEN' && !state.retracted.includes(event.id)).length;
 }
 
-/** Spätester Uhrstand eines wirksamen Eintrags im aktuellen Abschnitt, relativ zum Abschnittsbeginn, mind. 0. */
-function earliestAdjustOf(state: MatchState): number {
-  let latest: number | null = null;
+/** Spätester Uhrstand eines wirksamen Eintrags im aktuellen Abschnitt, relativ zum Abschnittsbeginn, mind. 0; `isGoal` für ein Tor. */
+function earliestAdjustOf(state: MatchState): { ms: number; isGoal: boolean } {
+  let latest: { clockMs: number; type: string } | null = null;
   for (const event of Object.values(state.accepted)) {
     if (
       NON_ENTRY_TYPES.has(event.type) ||
@@ -141,9 +144,14 @@ function earliestAdjustOf(state: MatchState): number {
     ) {
       continue;
     }
-    latest = latest === null ? event.clockMs : Math.max(latest, event.clockMs);
+    if (latest === null || event.clockMs > latest.clockMs) {
+      latest = { clockMs: event.clockMs, type: event.type };
+    }
   }
-  return latest === null ? 0 : Math.max(0, latest - sectionBasisOf(state));
+  if (latest === null) {
+    return { ms: 0, isGoal: false };
+  }
+  return { ms: Math.max(0, latest.clockMs - sectionBasisOf(state)), isGoal: latest.type === 'GOAL' };
 }
 
 /** Laufende Strafen; bei beendetem Spiel keine (@SL-097). */

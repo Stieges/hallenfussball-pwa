@@ -33,6 +33,7 @@ export function legacyPhaseViewOf(match: LegacyPhaseMatch, elapsedSeconds: numbe
     isLastRegularSection: true,
     breakRemainingMs: null,
     earliestAdjustMs: 0,
+    earliestAdjustIsGoal: false,
     penalties: [],
     shootout: null,
     clockAdjustments: [],

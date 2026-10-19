@@ -14,6 +14,8 @@ import { canManageTournament } from '../../../auth/utils/permissions';
 import { RulesLockProvider } from '../../../../components/match-settings/RulesLockContext';
 import type { Tournament, MatchCockpitSettings } from '../../../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../../types/tournament';
+import { MatchRulesSection } from './MatchRulesSection';
+import { sectionSecondsOf } from './sectionSeconds';
 
 // =============================================================================
 // PROPS
@@ -65,7 +67,9 @@ export function MatchCockpitCategory({
             if (
                 !canChangeRules &&
                 (newSettings.timePenaltyDurationSeconds !== gespeichert.timePenaltyDurationSeconds ||
-                    newSettings.penaltyShootersPerTeam !== gespeichert.penaltyShootersPerTeam)
+                    newSettings.penaltyShootersPerTeam !== gespeichert.penaltyShootersPerTeam ||
+                    newSettings.clockMode !== gespeichert.clockMode ||
+                    newSettings.finalPhaseMinutes !== gespeichert.finalPhaseMinutes)
             ) {
                 return;
             }
@@ -89,6 +93,14 @@ export function MatchCockpitCategory({
             description="Konfiguration für das Live-Scoreboard, Timer und Sounds"
         >
             <RulesLockProvider value={!canChangeRules}>
+                <MatchRulesSection
+                    value={cockpitSettings.clockMode}
+                    locked={!canChangeRules}
+                    onChange={(clockMode) => handleCockpitSettingsChange({ ...cockpitSettings, clockMode })}
+                    finalPhaseMinutes={cockpitSettings.finalPhaseMinutes}
+                    sectionSeconds={sectionSecondsOf(tournament)}
+                    onFinalPhaseChange={(finalPhaseMinutes) => handleCockpitSettingsChange({ ...cockpitSettings, finalPhaseMinutes })}
+                />
                 <MatchCockpitSettingsPanel
                     settings={cockpitSettings}
                     onChange={handleCockpitSettingsChange}

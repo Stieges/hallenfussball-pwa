@@ -24,6 +24,8 @@ type EngineEventEditing = ReturnType<typeof useEngineEventEditing>;
 export interface CockpitDialogState {
   offen: OffenerEintrag | null;
   showTimeAdjust: boolean;
+  /** Grenzen der Zeitkorrektur aus der Engine-Ansicht (B-08d); `null` ohne Engine-Ansicht. */
+  zeit: { current: number; min: number; max: number; minIsGoal: boolean } | null;
   showEventLog: boolean;
   showSettings: boolean;
   showPenaltyShootout: boolean;
@@ -32,7 +34,8 @@ export interface CockpitDialogState {
 /** Alle `on…`-Rückrufe der Overlays. Tiebreak-Handler sind `undefined`, wenn der Aufrufer sie nicht liefert. */
 export interface CockpitOverlayHandlers {
   closeTimeAdjust: () => void;
-  confirmTimeAdjust: (newDisplaySeconds: number) => void;
+  /** Neue Spielzeit im Abschnitt in Sekunden (B-08d). */
+  confirmTimeAdjust: (sectionSeconds: number) => void;
   /** Schließt die offene Eintrags-Auswahl (Tor, Karte, Zeitstrafe, Wechsel, Nummer ändern). */
   closeEntry: () => void;
   confirmCard: (cardType: CardKind, teamId: string, playerNumber?: number) => void;
@@ -60,7 +63,6 @@ export interface CockpitOverlaysProps {
   readOnly: boolean;
   isLocked: boolean;
   settings: MatchCockpitSettings;
-  displaySeconds: number;
   effectiveScore: { home: number; away: number };
   dialogs: CockpitDialogState;
   editingEvent: EditableMatchEvent | null;
@@ -70,7 +72,8 @@ export interface CockpitOverlaysProps {
 }
 
 export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
-  const { match, tournamentId, readOnly, isLocked, settings, displaySeconds, effectiveScore, dialogs, editingEvent, editing, handlers, rejectedOutbox } = props;
+  const { match, tournamentId, readOnly, isLocked, settings, effectiveScore, dialogs, editingEvent, editing, handlers, rejectedOutbox } = props;
+  const zeit = dialogs.zeit;
   const offen = dialogs.offen;
   const editingEventId = offen?.art === 'nummer' ? offen.eventId ?? null : null;
   const seite = offen?.seite ?? null;
@@ -89,11 +92,13 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
       />
 
       <TimeAdjustDialog
-        isOpen={dialogs.showTimeAdjust}
+        isOpen={dialogs.showTimeAdjust && zeit !== null}
         onClose={handlers.closeTimeAdjust}
         onConfirm={handlers.confirmTimeAdjust}
-        currentTimeSeconds={displaySeconds}
-        matchDurationMinutes={Math.floor(match.durationSeconds / 60)}
+        currentSeconds={zeit?.current ?? 0}
+        minSeconds={zeit?.min ?? 0}
+        maxSeconds={zeit?.max ?? 0}
+        minIsGoal={zeit?.minIsGoal ?? false}
       />
 
       <CardDialog
