@@ -137,8 +137,9 @@ function isTournamentRunning(tournament: Tournament, now: Date): boolean {
 function isTournamentUpcoming(tournament: Tournament, now: Date): boolean {
   if (tournament.status !== 'published') {return false;}
 
-  // Abgeschlossen/archiviert heißt „nicht mehr kommend“, auch bei Datum in der Zukunft (@W5-027: Generalprobe vor dem Turniertag)
-  if (isTournamentCompleted(tournament)) {return false;}
+  // Archiviert/manuell abgeschlossen heißt „nicht mehr kommend“, auch bei Datum in der Zukunft (@W5-027: Generalprobe
+  // vor dem Turniertag). Nur das Flag, nicht „alle Ergebnisse da“: ein laufendes Turnier mit Zwischenstand bleibt sichtbar.
+  if (tournament.manuallyCompleted) {return false;}
 
   const tournamentDate = getTournamentDateTime(tournament);
   if (!tournamentDate) {return false;}

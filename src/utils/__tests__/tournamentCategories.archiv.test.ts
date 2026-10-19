@@ -16,8 +16,8 @@ describe('Kategorie bei Datum in der Zukunft', () => {
   it('@W5-027 manuell abgeschlossen/archiviert: Archiv, nicht kommend', () => {
     expect(categorizeTournament({ ...basis, manuallyCompleted: true }, JETZT)).toBe('finished');
   });
-  it('alle Spiele mit Ergebnis: Archiv, nicht kommend', () => {
+  it('Gegenbeispiel: alle Spiele mit Ergebnis, aber nicht archiviert: bleibt kommend (Zwischenstand läuft)', () => {
     const gespielt = { ...basis, matches: [{ id: 'm1', scoreA: 1, scoreB: 0 }] } as unknown as Tournament;
-    expect(categorizeTournament(gespielt, JETZT)).toBe('finished');
+    expect(categorizeTournament(gespielt, JETZT)).toBe('upcoming');
   });
 });
