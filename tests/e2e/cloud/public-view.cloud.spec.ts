@@ -213,7 +213,7 @@ test.describe('Public-View', () => {
     }
   });
 
-  test('Ein Tor, das owner einträgt, erscheint ohne Neuladen', async ({ page }, testInfo) => {
+  test('C-ZUSCHAUER-OHNE-NEULADEN Ein Tor, das owner einträgt, erscheint ohne Neuladen', async ({ page }, testInfo) => {
     // Ruling AB: nur auf cloud-desktop -- dieser Test ändert per Service-Role EINE Zeile im
     // Public-Cup; eine gleichzeitige zweite Projekt-Instanz (cloud-mobile) würde entweder
     // dieselbe Zeile treffen (Konflikt) oder ihre eigene Vorbedingung ("2:0 sichtbar", Test 1

@@ -220,7 +220,7 @@ describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als i
     expect(flatText(pdf).some(t => /^\d+ Platzierung$/.test(t))).toBe(true);
   });
 
-  it.fails('@BM-032 Ziel: ohne Tabellen keine Platzierung', async () => {
+  it.fails('@BM-032 C-KIDS-PDF Ziel: ohne Tabellen keine Platzierung', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, { ...SCHEDULE_OPTIONS, includeStandings: false });
 
     expect(flatText(pdf).some(t => /^\d+ Platzierung$/.test(t))).toBe(false);
