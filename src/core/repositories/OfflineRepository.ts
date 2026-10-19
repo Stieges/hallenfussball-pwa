@@ -535,6 +535,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         if (stableKey(local.monitors) !== stableKey(remote.monitors)) {return true;}
         if (stableKey(local.sponsors) !== stableKey(remote.sponsors)) {return true;}
         if ((local.bibColor ?? '').toUpperCase() !== (remote.bibColor ?? '').toUpperCase()) {return true;} // A-30a @W3-029: Leibchenfarbe nur im config-JSONB
+        // @W4-034: Markierung des Veranstalters und Eröffnungswahl liegen nur im config-JSONB (wie bibColor)
+        if (stableKey(local.hostTeamIds ?? []) !== stableKey(remote.hostTeamIds ?? [])) {return true;}
+        if ((local.openingMode ?? '') !== (remote.openingMode ?? '')) {return true;}
 
         // Fix 3 (Review 2026-09-18): publishedAt liegt ebenfalls nur im config-JSONB (siehe
         // supabase/migrations/20260918_002_make_public_refuses_drafts.sql) und hat — anders
