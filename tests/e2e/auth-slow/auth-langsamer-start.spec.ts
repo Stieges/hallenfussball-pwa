@@ -13,6 +13,7 @@ import { test } from '../helpers/test-fixtures';
 const SUPABASE = 'http://127.0.0.1:59999';
 const TOKEN_KEY = 'sb-127-auth-token';
 const SHOTS = process.env.AUTH_SLOW_SHOTS_DIR;
+const OLLI = 'Olli Beispiel';
 
 const USER = {
   id: 'user-a', aud: 'authenticated', email: 'a@example.test',
@@ -31,7 +32,7 @@ function sessionJson(expired: boolean): string {
 
 async function seedStoredSession(page: Page, expired: boolean): Promise<void> {
   const raw = sessionJson(expired);
-  const cached = JSON.stringify({ id: 'user-a', email: 'a@example.test', name: 'A', globalRole: 'user' });
+  const cached = JSON.stringify({ id: 'user-a', email: 'a@example.test', name: OLLI, globalRole: 'user' });
   await page.addInitScript(([key, session, cachedUser]) => {
     window.localStorage.setItem(key, session);
     window.localStorage.setItem('auth:cachedUser', cachedUser);
@@ -49,7 +50,7 @@ test.describe('Auth: langsamer Server und abgelehnte Erneuerung', () => {
       const url = route.request().url();
       if (url.includes('/rest/v1/profiles')) {
         await gate; // der Server antwortet nicht, bis der Test es erlaubt
-        await route.fulfill({ status: 200, headers: JSON_HEADERS, body: JSON.stringify({ display_name: 'A', avatar_url: null, role: 'user' }) });
+        await route.fulfill({ status: 200, headers: JSON_HEADERS, body: JSON.stringify({ display_name: OLLI, avatar_url: null, role: 'user' }) });
         return;
       }
       if (url.includes('/auth/v1/user')) {
@@ -71,6 +72,14 @@ test.describe('Auth: langsamer Server und abgelehnte Erneuerung', () => {
     await expect(page.getByText(/offline|keine Verbindung/i)).toHaveCount(0);
     expect(await page.evaluate((k) => window.localStorage.getItem(k), TOKEN_KEY)).not.toBeNull();
     await expect(page.getByTestId('signed-out-elsewhere')).toHaveCount(0);
+    // Olli bleibt angemeldet (N1): Avatar im Kopf, kein „Anmelden“, die Nutzerkopie ist noch da.
+    await expect(page.getByTestId('auth-avatar-button')).toBeVisible();
+    await expect(page.getByTestId('auth-login-button')).toHaveCount(0);
+    await expect(page.getByTestId('auth-mobile-button')).toHaveCount(0);
+    if (!testInfo.project.name.startsWith('handy')) {
+      await expect(page.getByText(OLLI, { exact: true })).toBeVisible();
+    }
+    expect(await page.evaluate(() => window.localStorage.getItem('auth:cachedUser'))).not.toBeNull();
     if (SHOTS) {
       await page.screenshot({ path: `${SHOTS}/server-antwortet-langsam-${testInfo.project.name}.png` });
     }
