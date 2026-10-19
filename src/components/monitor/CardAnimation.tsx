@@ -37,21 +37,17 @@ export interface CardAnimationProps {
 }
 
 // Kartenfarben nur aus den Karten-Tokens (Oberfläche E „Karten-Farben nur für Karten“, Befund C-KARTE-GELB-ALS-WARNFARBE).
-// Schrift: dunkel auf Kartengelb (und auf der geteilten Gelb-Rot-Fläche), hell auf Kartenrot (Tafel-Tokens, hell und dunkel gleich).
 const KARTEN_ZEICHNUNG = {
   YELLOW: {
-    text: cssVars.colors.scoreboardOnHighlight,
     glow: `color-mix(in srgb, ${cssVars.colors.cardYellow} 60%, transparent)`,
     shadow: `color-mix(in srgb, ${cssVars.colors.cardYellow} 50%, transparent)`,
   },
   RED: {
-    text: cssVars.colors.scoreboardOnLive,
     glow: `color-mix(in srgb, ${cssVars.colors.cardRed} 60%, transparent)`,
     shadow: `color-mix(in srgb, ${cssVars.colors.cardRed} 50%, transparent)`,
   },
-  // Gelb-Rot: Fläche diagonal geteilt (KARTEN_FLAECHE), Schrift dunkel (auch auf Rot ≥ 3 : 1, große Schrift).
+  // Gelb-Rot: Fläche diagonal geteilt (KARTEN_FLAECHE), Schein in Rot.
   YELLOW_RED: {
-    text: cssVars.colors.scoreboardOnHighlight,
     glow: `color-mix(in srgb, ${cssVars.colors.cardRed} 60%, transparent)`,
     shadow: `color-mix(in srgb, ${cssVars.colors.cardRed} 50%, transparent)`,
   },
@@ -154,39 +150,39 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
     zIndex: 2000,
   };
 
-  // Die ganze Fläche ist die Karte (Entscheidung Daniel 19.10.): kein inneres Kartensymbol, Schrift groß (Anzeige-Tokens, lesbar aus 15–20 m).
-  const cardContainerStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'stretch',
-    padding: `${cssVars.spacing.xxl} 0`,
-    background: flaeche,
-    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.xl,
-    boxShadow: `0 0 80px ${colors.glow}, 0 20px 60px ${colors.shadow}`,
-    transformOrigin: isHomeSide ? 'left center' : 'right center',
-    overflow: 'hidden',
-    textAlign: 'center',
-  };
-
-  // Gelb-Rot: ruhiges dunkles Band quer über die Karte mit heller Schrift (Kontrast unabhängig vom geteilten Untergrund).
-  const istGelbRot = currentEvent.cardType === 'YELLOW_RED';
-  const textStyleOnBand = istGelbRot ? cssVars.colors.scoreboardText : colors.text;
-  const contentStyle: CSSProperties = {
+  // Variante A (Entscheidung Daniel 19.10.): Karte hochkant 3 : 4 in reiner Kartenfarbe ohne Schrift; Kartenart, Team und Nummer
+  // stehen groß und hell darunter auf dem dunklen Monitor-Grund (Anzeige-Tokens, lesbar aus 15–20 m).
+  const cardWrapperStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: cssVars.spacing.md,
-    padding: `${cssVars.spacing.lg} ${cssVars.spacing.xxl}`,
-    ...(istGelbRot ? { background: cssVars.colors.scoreboardBg, color: cssVars.colors.scoreboardText } : {}),
+    gap: cssVars.spacing.lg,
+    transformOrigin: isHomeSide ? 'left center' : 'right center',
+    textAlign: 'center',
+  };
+
+  const cardFaceStyle: CSSProperties = {
+    width: `calc(${cssVars.scoreSizes.xl} * 4)`,
+    aspectRatio: '3 / 4',
+    background: flaeche,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
+    borderRadius: cssVars.borderRadius.lg,
+    boxShadow: `0 0 80px ${colors.glow}, 0 20px 60px ${colors.shadow}`,
+  };
+
+  const captionStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: cssVars.spacing.sm,
+    color: cssVars.colors.scoreboardText,
   };
 
   const cardTextStyle: CSSProperties = {
     fontSize: cssVars.scoreSizes.lg,
     lineHeight: cssVars.lineHeights.displayLg,
     fontWeight: cssVars.fontWeights.bold,
-    color: textStyleOnBand,
+    color: cssVars.colors.scoreboardText,
     fontFamily: cssVars.fontFamilies.heading,
     textTransform: 'uppercase',
     letterSpacing: cssVars.letterSpacing.wider,
@@ -196,14 +192,14 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
     fontSize: cssVars.scoreSizes.sm,
     lineHeight: cssVars.lineHeights.displayLg,
     fontWeight: cssVars.fontWeights.bold,
-    color: textStyleOnBand,
+    color: cssVars.colors.scoreboardText,
   };
 
   const playerNumberStyle: CSSProperties = {
     fontSize: cssVars.scoreSizes.md,
     lineHeight: cssVars.lineHeights.displayLg,
     fontWeight: cssVars.fontWeights.bold,
-    color: textStyleOnBand,
+    color: cssVars.colors.scoreboardText,
     fontFamily: cssVars.fontFamilies.heading,
   };
 
@@ -211,11 +207,11 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
     <>
       <div style={overlayStyle} key={animationKey}>
         <div
-          style={cardContainerStyle}
+          style={cardWrapperStyle}
           className={`card-animation-box ${isRed ? 'card-red' : 'card-yellow'}`}
         >
-          <div style={contentStyle} data-testid={istGelbRot ? 'card-band' : undefined}>
-            {/* F3b2: Gelb-Rot zeigt "GELB-ROT" statt "ROTE KARTE". */}
+          <div style={cardFaceStyle} data-testid="card-face" />
+          <div style={captionStyle} data-testid="card-caption">
             <div style={cardTextStyle} data-testid="card-kind-text">
               {currentEvent.cardType === 'YELLOW_RED' ? t('cardAnimation.yellowRedCard') : isRed ? t('cardAnimation.redCard') : t('cardAnimation.yellowCard')}
             </div>

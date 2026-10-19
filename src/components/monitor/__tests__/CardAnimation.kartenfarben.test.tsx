@@ -22,50 +22,60 @@ function ereignis(cardType: CardEventInfo['cardType']): CardEventInfo {
 }
 
 function zeige(cardType: CardEventInfo['cardType']): HTMLElement {
-  const { container } = render(<CardAnimation cardEvent={ereignis(cardType)} onAnimationComplete={vi.fn()} />);
-  return container.querySelector<HTMLElement>('.card-animation-box')!;
+  render(<CardAnimation cardEvent={ereignis(cardType)} onAnimationComplete={vi.fn()} />);
+  return screen.getByTestId('card-face');
 }
 
-describe('Karten-Farben nur für Karten (Oberfläche E) – Monitor-Kartenanimation', () => {
-  it('die ganze Fläche ist die Karte: kein inneres Kartensymbol mehr', () => {
-    const box = zeige('YELLOW');
-    expect(box.querySelector('.card-icon')).toBeNull();
+describe('Karten-Farben nur für Karten (Oberfläche E) – Monitor-Kartenanimation (Variante A)', () => {
+  it('Gelb: reine Kartenfarbe cardYellow, ohne Rot', () => {
+    const karte = zeige('YELLOW');
+    expect(karte.style.background).toContain(GELB);
+    expect(karte.style.background).not.toContain(ROT);
   });
 
-  it('Gelb zeigt cardYellow, dunkle Schrift, kein Band', () => {
-    const box = zeige('YELLOW');
-    expect(box.style.background).toContain(GELB);
-    expect(box.style.background).not.toContain(ROT);
-    expect(box.querySelector('[data-testid="card-band"]')).toBeNull();
-    expect(screen.getByTestId('card-kind-text').style.color).toBe('var(--color-scoreboard-on-highlight)');
+  it('Rot: reine Kartenfarbe cardRed, ohne Gelb', () => {
+    const karte = zeige('RED');
+    expect(karte.style.background).toContain(ROT);
+    expect(karte.style.background).not.toContain(GELB);
   });
 
-  it('Rot zeigt cardRed, helle Schrift, kein Band', () => {
-    const box = zeige('RED');
-    expect(box.style.background).toContain(ROT);
-    expect(box.style.background).not.toContain(GELB);
-    expect(box.querySelector('[data-testid="card-band"]')).toBeNull();
-    expect(screen.getByTestId('card-kind-text').style.color).toBe('var(--color-scoreboard-on-live)');
+  it('Gelb-Rot: beide Farben diagonal geteilt (volle Diagonale, kein Band)', () => {
+    const karte = zeige('YELLOW_RED');
+    expect(karte.style.background).toContain('linear-gradient(135deg');
+    expect(karte.style.background).toContain(GELB);
+    expect(karte.style.background).toContain(ROT);
+    expect(screen.queryByTestId('card-band')).toBeNull();
   });
 
-  it('Gelb-Rot zeigt beide Farben diagonal geteilt und die Schrift auf einem ruhigen dunklen Band quer über die Karte', () => {
-    const box = zeige('YELLOW_RED');
-    expect(box.style.background).toContain(GELB);
-    expect(box.style.background).toContain(ROT);
-    expect(box.style.background).toContain('linear-gradient(135deg');
-    const band = screen.getByTestId('card-band');
-    expect(band.style.background).toContain('var(--color-scoreboard-bg)');
-    expect(band.style.color).toBe('var(--color-scoreboard-text)');
-    expect(band.textContent).toContain('cardAnimation.yellowRedCard');
-    // die Schrift selbst (Kartenart, Team, Nummer) ist hell, nicht nur das Band
-    for (const el of [screen.getByTestId('card-kind-text'), band.querySelector<HTMLElement>('[data-teamname]'), screen.getByTestId('card-player-number')]) {
+  it.each(['YELLOW', 'YELLOW_RED', 'RED'] as const)('%s: Karte hochkant (Seitenverhältnis 3 : 4), dünner dunkler Rand, Schein in Kartenfarbe', (art) => {
+    const karte = zeige(art);
+    expect(karte.style.aspectRatio).toBe('3 / 4');
+    expect(karte.style.border).toContain('var(--color-border-control)');
+    expect(karte.style.boxShadow).toMatch(/color-card-(yellow|red)/);
+  });
+
+  it.each(['YELLOW', 'YELLOW_RED', 'RED'] as const)('%s: keine Schrift auf der Karte, Kartenart/Team/Nummer stehen unter der Karte', (art) => {
+    const karte = zeige(art);
+    expect(karte.textContent).toBe('');
+    const unter = screen.getByTestId('card-caption');
+    expect(unter.contains(karte)).toBe(false);
+    expect(karte.compareDocumentPosition(unter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(unter.textContent).toContain('FC Alpha');
+    expect(unter.textContent).toContain('#7');
+    expect(screen.getByTestId('card-kind-text').textContent).not.toBe('');
+  });
+
+  it('Schrift unter der Karte ist hell (scoreboardText), das Band entfällt', () => {
+    zeige('YELLOW_RED');
+    for (const el of [screen.getByTestId('card-kind-text'), document.querySelector<HTMLElement>('[data-teamname]'), screen.getByTestId('card-player-number')]) {
       expect(el?.style.color).toBe('var(--color-scoreboard-text)');
     }
+    expect(screen.queryByTestId('card-band')).toBeNull();
   });
 
-  it.each(['light', 'dark'] as const)('%s: Band-Schrift auf dem Band ≥ 4,5 : 1, unabhängig vom Untergrund (Band deckend)', (theme) => {
-    const band = resolveToken(theme, 'var(--color-scoreboard-bg)');
-    expect(contrastRatio(resolveToken(theme, 'var(--color-scoreboard-text)'), band)).toBeGreaterThanOrEqual(4.5);
+  it.each(['light', 'dark'] as const)('%s: helle Schrift auf dem dunklen Monitor-Grund ≥ 4,5 : 1', (theme) => {
+    const grund = resolveToken(theme, 'var(--color-scoreboard-bg)');
+    expect(contrastRatio(resolveToken(theme, 'var(--color-scoreboard-text)'), grund)).toBeGreaterThanOrEqual(4.5);
   });
 
   it('Kartenart, Team und Nummer sind groß: Schriftgrößen nur aus den Anzeige-Tokens, keine festen clamp()-Maße', () => {
