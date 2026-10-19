@@ -711,7 +711,10 @@
     "goalsOf": "Goals {{team}}",
     "homeFallback": "Home",
     "awayFallback": "Away",
-    "invalidScore": "Enter whole numbers from 0 only"
+    "invalidScore": "Enter whole numbers from 0 only",
+    "changedElsewhere": "Result was changed in the meantime by {{name}} (now {{score}})",
+    "changedElsewhereNoName": "Result was changed in the meantime on another device (now {{score}})",
+    "keepDraft": "Keep my entry"
   },
   "sortable": {
     "referee": "Referee",

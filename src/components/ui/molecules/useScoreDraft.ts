@@ -6,6 +6,10 @@
  * Doppelschutz: Enter und danach Verlassen sendet genau einmal. Meldet `onCommit` per Rückgabe `false` (bzw. eine
  * abgelehnte Zusage), dass nichts gespeichert wurde (@FU-093 „Nein“, @FU-097 „Abbrechen“, Ablehnung), zeigen
  * die Felder wieder den gespeicherten Stand, und derselbe Stand lässt sich erneut senden.
+ * @FU-103: Ein neuer Stand von außen, der dieses Spiel nicht ändert, lässt den Entwurf stehen (kein Effekt auf Primitive).
+ * @FU-104: Ändert sich der gespeicherte Stand dieses Spiels von außen, während ein Entwurf offen ist, bleibt der Entwurf
+ * sichtbar, `changed` nennt den neuen Stand (und den Urheber, sobald `resolveAuthor` ihn liefert), und weder Verlassen
+ * noch Enter senden, bis Olli mit `keepDraft` bewusst bei seiner Eingabe bleibt; Escape zeigt den neuen Stand.
  */
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { ScoreFieldProps } from '../atoms/ScoreDraftInput';
@@ -22,6 +26,17 @@ export interface UseScoreDraftOptions {
   savedA: number | undefined;
   savedB: number | undefined;
   onCommit: (scoreA: number, scoreB: number) => ScoreCommitResult;
+  /** Wer den Stand dieses Spiels zuletzt geändert hat (@FU-104); `null` = unbekannt */
+  resolveAuthor?: () => Promise<string | null>;
+}
+
+/** Der gespeicherte Stand hat sich von außen geändert, während ein Entwurf offen war (@FU-104) */
+export interface ScoreChangedElsewhere {
+  /** Neuer gespeicherter Stand (Anzeige, kein Schreibweg) */
+  goalsA: number | undefined;
+  goalsB: number | undefined;
+  /** Name des Ändernden, `null` solange unbekannt */
+  by: string | null;
 }
 
 export interface ScoreDraft {
@@ -30,6 +45,10 @@ export interface ScoreDraft {
   /** Id für den Hinweis (`aria-describedby`) */
   hintId: string;
   fieldProps: (side: ScoreSide) => ScoreFieldProps;
+  /** Gesetzt, solange der Hinweis „inzwischen geändert“ gilt (@FU-104) */
+  changed: ScoreChangedElsewhere | null;
+  /** Olli bleibt bewusst bei seiner Eingabe: der Hinweis geht, danach senden Verlassen und Enter wieder */
+  keepDraft: () => void;
 }
 
 const WHOLE_NUMBER = /^\d+$/;
@@ -41,7 +60,7 @@ interface Pair {
   b: number | undefined;
 }
 
-export function useScoreDraft({ resetKey, savedA, savedB, onCommit }: UseScoreDraftOptions): ScoreDraft {
+export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAuthor }: UseScoreDraftOptions): ScoreDraft {
   const [a, setA] = useState(asText(savedA));
   const [b, setB] = useState(asText(savedB));
   const hintId = useId();
@@ -50,17 +69,46 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit }: UseScoreDr
   const sentRef = useRef<Pair | null>(null);
   const onCommitRef = useRef(onCommit);
   onCommitRef.current = onCommit;
+  const resolveAuthorRef = useRef(resolveAuthor);
+  resolveAuthorRef.current = resolveAuthor;
+  /** Zuletzt selbst gesendeter Stand: kommt er zurück, ist das kein Wechsel von außen (Tippen setzt ihn nicht zurück) */
+  const ownSentRef = useRef<Pair | null>(null);
+  const draftRef = useRef({ a, b });
+  draftRef.current = { a, b };
+  const resetKeyRef = useRef(resetKey);
+  const [changed, setChanged] = useState<ScoreChangedElsewhere | null>(null);
+  const changedRef = useRef(changed);
+  changedRef.current = changed;
 
-  // Neuer Stand von außen (Speichern angekommen, anderes Gerät, anderes Spiel): Entwurf und Doppelschutz zurücksetzen
+  // Neuer gespeicherter Stand (Speichern angekommen, anderes Gerät) oder anderes Spiel
   useEffect(() => {
+    const before = savedRef.current;
+    const sameMatch = resetKeyRef.current === resetKey;
+    const own = ownSentRef.current !== null && ownSentRef.current.a === savedA && ownSentRef.current.b === savedB;
+    const draftOpen = draftRef.current.a !== asText(before.a) || draftRef.current.b !== asText(before.b);
+    const movedElsewhere = before.a !== savedA || before.b !== savedB;
+    resetKeyRef.current = resetKey;
     savedRef.current = { a: savedA, b: savedB };
     sentRef.current = null;
+    ownSentRef.current = null;
+    if (sameMatch && movedElsewhere && !own && draftOpen) {
+      // @FU-104: Entwurf bleibt sichtbar, wird aber nicht gesendet, bis Olli bewusst bei ihm bleibt
+      const next: ScoreChangedElsewhere = { goalsA: savedA, goalsB: savedB, by: null };
+      setChanged(next);
+      resolveAuthorRef.current?.().then(
+        (by) => { if (by) { setChanged((current) => (current === next ? { ...next, by } : current)); } },
+        () => undefined,
+      );
+      return;
+    }
+    setChanged(null);
     setA(asText(savedA));
     setB(asText(savedB));
     setInvalidSides(NONE_INVALID);
   }, [resetKey, savedA, savedB]);
 
   const showSaved = useCallback(() => {
+    setChanged(null);
     sentRef.current = null;
     setA(asText(savedRef.current.a));
     setB(asText(savedRef.current.b));
@@ -74,7 +122,7 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit }: UseScoreDr
       setInvalidSides({ a: badA, b: badB });
       return;
     }
-    if (valueA === '' || valueB === '') {
+    if (valueA === '' || valueB === '' || changedRef.current !== null) {
       return;
     }
     const goalsA = parseInt(valueA, 10);
@@ -86,6 +134,7 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit }: UseScoreDr
       return;
     }
     sentRef.current = next;
+    ownSentRef.current = next;
     const stillCurrent = () => sentRef.current === next;
     try {
       Promise.resolve(onCommitRef.current(goalsA, goalsB)).then(
@@ -125,5 +174,7 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit }: UseScoreDr
     },
   });
 
-  return { invalid: invalidSides.a || invalidSides.b, hintId, fieldProps };
+  const keepDraft = useCallback(() => { setChanged(null); }, []);
+
+  return { invalid: invalidSides.a || invalidSides.b, hintId, fieldProps, changed, keepDraft };
 }

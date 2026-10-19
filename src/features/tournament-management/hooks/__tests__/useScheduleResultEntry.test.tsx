@@ -224,6 +224,38 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
     });
   });
 
+  // @FU-104: Tom trägt für Spiel 9 an seinem Gerät 3:1 ein, während Olli tippt -- der Hinweis nennt Toms Namen.
+  describe('@FU-104 Name dessen, der genau dieses Spiel inzwischen geändert hat', () => {
+    const tomsEintrag = () => h.fetchConfirmed.mockResolvedValueOnce({ events: [seq(resultEntry('t1', { [SV_SUED]: 3, [FC_NORD]: 1 }), 1)], newWatermark: 1 });
+
+    it('@FU-104 nach dem Abgleich: letzter Spielstand-Eintrag t1 stammt von Tom → „Tom“', async () => {
+      authors.read.mockResolvedValue(new Map([['t1', { name: 'Tom', role: 'helper' }]]));
+      tomsEintrag();
+      const { hook } = render(h);
+      let name: string | null = null;
+      await act(async () => { name = await hook.result.current.changeAuthor(SPIEL_9); });
+      expect(name).toBe('Tom');
+      expect(authors.read.mock.calls.map((call) => call[1])).toContain(SPIEL_9);
+    });
+
+    it('@FU-104 Gegenbeispiel: ohne Namen (Lesefunktion leer oder gescheitert) → null, der Hinweis sagt „von einem anderen Gerät“', async () => {
+      authors.read.mockRejectedValue(new Error('Zeitlimit'));
+      tomsEintrag();
+      const { hook } = render(h);
+      let name: string | null = 'x';
+      await act(async () => { name = await hook.result.current.changeAuthor(SPIEL_9); });
+      expect(name).toBeNull();
+    });
+
+    it('@FU-104 Gegenbeispiel: Spiel ohne zwei feststehende Teams → null, ohne Lesefunktion', async () => {
+      const { hook } = render(h);
+      let name: string | null = 'x';
+      await act(async () => { name = await hook.result.current.changeAuthor('gibt-es-nicht'); });
+      expect(name).toBeNull();
+      expect(authors.read).not.toHaveBeenCalled();
+    });
+  });
+
   describe('@FU-093 Ein abgesetztes Spiel bekommt nach Rückfrage ein Ergebnis', () => {
     async function spiel9Abgesetzt(): Promise<void> {
       await h.engine.ensureMatch(SPIEL_9, { matchId: SPIEL_9, teamAId: SV_SUED, teamBId: FC_NORD }, 'T');

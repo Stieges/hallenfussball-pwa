@@ -54,6 +54,8 @@ interface FinalStageScheduleProps {
   pendingChanges?: PendingChanges;
   correctionMatchId?: string | null;
   onStartCorrection?: (matchId: string) => void;
+  /** Wer ein Spiel zuletzt geändert hat, für den Hinweis „inzwischen geändert“ der Schnelleingabe (@FU-104) */
+  changeAuthorOf?: (matchId: string) => Promise<string | null>;
   clockOf?: (matchId: string) => SpectatorClock | null; // Restzeit laufender Spiele (@ZM-162)
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
   onMatchSwap?: (matchId1: string, matchId2: string) => void;
@@ -76,6 +78,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   pendingChanges,
   correctionMatchId,
   onStartCorrection,
+  changeAuthorOf,
   clockOf,
   onMatchSwap,
   showTitle = true,
@@ -340,6 +343,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                       nameB={sideName(match, 'B', sides)}
                       onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
                       onStartCorrection={onStartCorrection ? () => onStartCorrection(match.id) : undefined}
+                      changeAuthorOf={changeAuthorOf}
                     />
                   </td>
                   <td style={{
@@ -497,6 +501,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               inCorrectionMode={correctionMatchId === match.id}
               onScoreChange={onScoreChange}
               onStartCorrection={onStartCorrection}
+              changeAuthorOf={changeAuthorOf}
               showReferees={!!showReferees}
               showFields={showFields}
               editingSchedule={editingSchedule}
