@@ -30,12 +30,16 @@ function sessionJson(expired: boolean): string {
   });
 }
 
-async function seedStoredSession(page: Page, expired: boolean): Promise<void> {
+async function seedStoredSession(page: Page, expired: boolean, withUserCopy = true): Promise<void> {
   const raw = sessionJson(expired);
-  const cached = JSON.stringify({ id: 'user-a', email: 'a@example.test', name: OLLI, globalRole: 'user' });
+  const cached = withUserCopy
+    ? JSON.stringify({ id: 'user-a', email: 'a@example.test', name: OLLI, globalRole: 'user' })
+    : '';
   await page.addInitScript(([key, session, cachedUser]) => {
     window.localStorage.setItem(key, session);
-    window.localStorage.setItem('auth:cachedUser', cachedUser);
+    if (cachedUser) {
+      window.localStorage.setItem('auth:cachedUser', cachedUser);
+    }
   }, [TOKEN_KEY, raw, cached]);
 }
 
@@ -111,6 +115,24 @@ test.describe('Auth: langsamer Server und abgelehnte Erneuerung', () => {
     await expect(page.getByText('Lade...')).toHaveCount(0);
     if (SHOTS) {
       await page.screenshot({ path: `${SHOTS}/abgemeldet-anderes-geraet-${testInfo.project.name}.png` });
+    }
+  });
+
+  test('@AN-032 Anmeldeseite, Server antwortet nicht: Kapsel mit „Erneut versuchen“, kein „offline“', async ({ page }, testInfo) => {
+    // Gespeicherte Anmeldung ohne Nutzerkopie: bis zur Antwort bleibt die Anmeldeseite stehen.
+    await seedStoredSession(page, true, false);
+    // Der Server antwortet gar nicht (die Erneuerung hängt); Fake-Zeit über die Zeitgrenze des Starts hinaus.
+    await page.route(`${SUPABASE}/**`, () => new Promise<void>(() => undefined));
+    await page.clock.install();
+    await page.goto('/#/login');
+    await page.clock.runFor(20_000);
+
+    const retry = page.getByTestId('connecting-indicator-retry');
+    await expect(retry).toBeVisible();
+    await expect(retry).toHaveText('Erneut versuchen');
+    await expect(page.getByTestId('offline-banner')).toHaveCount(0);
+    if (SHOTS) {
+      await page.screenshot({ path: `${SHOTS}/anmeldeseite-erneut-versuchen-${testInfo.project.name}.png` });
     }
   });
 });
