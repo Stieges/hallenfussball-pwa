@@ -21,3 +21,6 @@ export type { NumberPickerProps, NumberPickerTexte, NumberPickerSchliessGrund } 
 // B-08d: fachfrei, Zähler mit Grenzen (Korrektur der Spielzeit)
 export { TimeStepper } from './TimeStepper';
 export type { TimeStepperProps } from './TimeStepper';
+export { useScoreDraft } from './useScoreDraft';
+export type { ScoreDraft, ScoreCommitResult, UseScoreDraftOptions, ScoreSide } from './useScoreDraft';
+export { ScoreDraftHint } from './ScoreDraftHint';

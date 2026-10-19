@@ -93,17 +93,7 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
     });
   }
 
-  // 6. DFB mode but team count doesn't match pattern
-  if (formData.useDFBKeys && formData.dfbKeyPattern) {
-    const patternTeams = parseInt(formData.dfbKeyPattern.match(/(\d+)M/)?.[1] ?? '0');
-    if (patternTeams > 0 && patternTeams !== teams) {
-      issues.push({
-        type: 'info',
-        message: i18n.t('wizard:validation.dfbMismatch', { patternTeams, currentTeams: teams, defaultValue: '' }),
-        suggestion: i18n.t('wizard:validation.dfbMismatchSuggestion', { count: patternTeams, defaultValue: '' }),
-      });
-    }
-  }
+  // 6. @W4-028: DFB-Muster-Hinweis aus (kein DFB-Schalter im MVP). Rückkehr mit @W4-015.
 
   // 7. Very short game duration
   if (gameDuration < 5) {

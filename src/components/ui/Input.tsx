@@ -51,6 +51,8 @@ export const Input: React.FC<InputProps> = ({
   const hasError = error || !!errorMessage;
   // Stable unique ID for aria-describedby (React 18+)
   const generatedId = useId();
+  // Label und Feld gehören zusammen (axe „label“, Feld ohne Namen für Screenreader)
+  const inputId = `input-${generatedId}`;
   const errorId = errorMessage ? `error-${testId ?? generatedId}` : undefined;
   const containerStyles: CSSProperties = {
     display: 'flex',
@@ -89,12 +91,13 @@ export const Input: React.FC<InputProps> = ({
   return (
     <div style={containerStyles}>
       {label && (
-        <label style={labelStyles}>
+        <label htmlFor={inputId} style={labelStyles}>
           {label}
           {required && <span style={{ color: cssVars.colors.error }}> *</span>}
         </label>
       )}
       <input
+        id={inputId}
         type={type}
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
