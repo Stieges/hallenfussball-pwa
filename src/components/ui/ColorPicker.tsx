@@ -107,6 +107,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     alignItems: 'center',
     gap: cssVars.spacing.sm,
     padding: cssVars.spacing.sm,
+    minHeight: cssVars.touchTargets.minimum,
     background: cssVars.colors.inputBg,
     border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
@@ -201,7 +202,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         ) : (
           <>
             <span style={nameStyles}>{valueLabel}</span>
-            <span style={{ ...valueTextStyles, marginLeft: 'auto', fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>{value}</span>
+            <span style={{ ...valueTextStyles, marginLeft: 'auto', fontSize: cssVars.fontSizes.labelMd, color: cssVars.colors.textSecondary }}>{value}</span>
           </>
         )}
         <span style={{ marginLeft: valueLabel === undefined ? 'auto' : undefined, color: cssVars.colors.textSecondary }}>

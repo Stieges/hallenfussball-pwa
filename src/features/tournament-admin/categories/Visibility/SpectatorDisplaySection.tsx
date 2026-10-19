@@ -51,7 +51,7 @@ const S = {
   eyebrow: {
     margin: 0,
     marginBottom: cssVars.spacing.md,
-    fontSize: cssVars.fontSizes.labelSm,
+    fontSize: cssVars.fontSizes.labelMd,
     fontWeight: cssVars.fontWeights.bold,
     color: cssVars.colors.textSecondary,
     textTransform: 'uppercase',
@@ -61,7 +61,7 @@ const S = {
   // 112 × 84 (Mockup `.sb.v`): Vielfache der Primär-Touchgröße, kein eigener Wert
   box: { width: `calc(${cssVars.touchTargets.primary} * 2)`, height: `calc(${cssVars.touchTargets.primary} * 1.5)` },
   separator: { fontSize: cssVars.fontSizes.xxl, lineHeight: `calc(${cssVars.touchTargets.primary} * 1.5)`, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textSecondary },
-  caption: { textAlign: 'center', fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textSecondary },
+  caption: { textAlign: 'center', fontSize: cssVars.fontSizes.labelMd, color: cssVars.colors.textSecondary },
   captionName: { display: 'block', fontSize: cssVars.fontSizes.bodySm, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary },
   switchRow: {
     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: cssVars.spacing.md,
@@ -70,7 +70,7 @@ const S = {
     fontSize: cssVars.fontSizes.bodyMd, fontWeight: cssVars.fontWeights.semibold,
   },
   switchLabel: { flex: '1 1 auto', minWidth: 0 },
-  note: { display: 'block', fontSize: cssVars.fontSizes.labelSm, fontWeight: cssVars.fontWeights.normal, color: cssVars.colors.textSecondary },
+  note: { display: 'block', fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.normal, color: cssVars.colors.textSecondary },
   track: {
     flex: 'none', position: 'relative', width: `calc(${cssVars.touchTargets.minimum} + ${cssVars.spacing.sm})`, height: cssVars.spacing.xl,
     borderRadius: cssVars.borderRadius.full, border: `${borderWidths.medium} solid`, boxSizing: 'border-box',
@@ -79,14 +79,14 @@ const S = {
     position: 'absolute', top: borderWidths.medium, width: cssVars.spacing.lg, height: cssVars.spacing.lg,
     borderRadius: cssVars.borderRadius.full,
   },
-  word: { flex: 'none', minWidth: cssVars.spacing.xl, textAlign: 'right', fontSize: cssVars.fontSizes.labelSm, fontWeight: cssVars.fontWeights.bold },
+  word: { flex: 'none', minWidth: cssVars.spacing.xl, textAlign: 'right', fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold },
   label: { display: 'block', margin: `${cssVars.spacing.md} 0 ${cssVars.spacing.xs}`, fontSize: cssVars.fontSizes.bodyMd, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary },
   save: {
     width: '100%', minHeight: cssVars.touchTargets.primary, marginTop: cssVars.spacing.lg, border: 0,
     borderRadius: cssVars.borderRadius.md, background: cssVars.colors.primary, color: cssVars.colors.onPrimary,
     fontSize: cssVars.fontSizes.bodyLg, fontWeight: cssVars.fontWeights.bold, cursor: 'pointer',
   },
-  saved: { marginTop: cssVars.spacing.sm, textAlign: 'center', fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.success },
+  saved: { marginTop: cssVars.spacing.sm, textAlign: 'center', fontSize: cssVars.fontSizes.labelMd, color: cssVars.colors.success },
 } satisfies Record<string, CSSProperties>;
 
 export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdit }: SpectatorDisplaySectionProps): ReactElement {
@@ -152,49 +152,51 @@ export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdi
 
   const on = draft.teamColors;
   return (
-    <CollapsibleSection icon="🎨" title={t('spectatorDisplay.title')} defaultOpen>
-      <p style={S.lead}>{t('spectatorDisplay.description')}</p>
+    <div data-testid="spectator-display-section">
+      <CollapsibleSection icon="🎨" title={t('spectatorDisplay.title')} defaultOpen>
+        <p style={S.lead}>{t('spectatorDisplay.description')}</p>
 
-      <div style={S.preview} data-testid="spectator-display-preview">
-        <p style={S.eyebrow}>{t('spectatorDisplay.preview')}</p>
-        <div style={S.pair}>
-          {side('home', draft.homeColor)}
-          <span style={S.separator} aria-hidden="true">:</span>
-          {side('away', draft.awayColor)}
-        </div>
-      </div>
-
-      {standardColorsTooSimilar(draft) && (
-        <div style={{ marginBottom: cssVars.spacing.md }}>
-          <InlineNotice tone="warn" data-testid="spectator-display-similar-hint">
-            <strong>{t('spectatorDisplay.similarTitle')}</strong>
-            <span>{t('spectatorDisplay.similarText')}</span>
-          </InlineNotice>
-        </div>
-      )}
-
-      {canEdit ? (
-        <>
-          <div data-testid="spectator-display-team-colors">
-            <button type="button" role="switch" aria-checked={on} style={S.switchRow} onClick={() => patch({ teamColors: !on })}>
-              <span style={S.switchLabel}>
-                {t('spectatorDisplay.teamColors')}
-                <span style={S.note}>{t('spectatorDisplay.teamColorsNote')}</span>
-              </span>
-              <span style={{ ...S.track, borderColor: on ? cssVars.colors.primary : cssVars.colors.borderControl, background: on ? cssVars.colors.primary : cssVars.colors.background }} aria-hidden="true">
-                <span style={{ ...S.knob, ...(on ? { right: borderWidths.medium } : { left: borderWidths.medium }), background: on ? cssVars.colors.onPrimary : cssVars.colors.borderControl }} />
-              </span>
-              <span style={S.word} aria-hidden="true">{on ? t('spectatorDisplay.on') : t('spectatorDisplay.off')}</span>
-            </button>
+        <div style={S.preview} data-testid="spectator-display-preview">
+          <p style={S.eyebrow}>{t('spectatorDisplay.preview')}</p>
+          <div style={S.pair}>
+            {side('home', draft.homeColor)}
+            <span style={S.separator} aria-hidden="true">:</span>
+            {side('away', draft.awayColor)}
           </div>
-          {picker('home', draft.homeColor)}
-          {picker('away', draft.awayColor)}
-          <button type="button" style={S.save} onClick={handleSave} data-testid="spectator-display-save">{t('spectatorDisplay.save')}</button>
-          {saved && <p role="status" style={S.saved}>{t('spectatorDisplay.saved')}</p>}
-        </>
-      ) : (
-        <div data-testid="spectator-display-lead-only"><LeadOnlyHint /></div>
-      )}
-    </CollapsibleSection>
+        </div>
+
+        {standardColorsTooSimilar(draft) && (
+          <div style={{ marginBottom: cssVars.spacing.md }}>
+            <InlineNotice tone="warn" data-testid="spectator-display-similar-hint">
+              <strong>{t('spectatorDisplay.similarTitle')}</strong>
+              <span>{t('spectatorDisplay.similarText')}</span>
+            </InlineNotice>
+          </div>
+        )}
+
+        {canEdit ? (
+          <>
+            <div data-testid="spectator-display-team-colors">
+              <button type="button" role="switch" aria-checked={on} style={S.switchRow} onClick={() => patch({ teamColors: !on })}>
+                <span style={S.switchLabel}>
+                  {t('spectatorDisplay.teamColors')}
+                  <span style={S.note}>{t('spectatorDisplay.teamColorsNote')}</span>
+                </span>
+                <span style={{ ...S.track, borderColor: on ? cssVars.colors.primary : cssVars.colors.borderControl, background: on ? cssVars.colors.primary : cssVars.colors.background }} aria-hidden="true">
+                  <span style={{ ...S.knob, ...(on ? { right: borderWidths.medium } : { left: borderWidths.medium }), background: on ? cssVars.colors.onPrimary : cssVars.colors.borderControl }} />
+                </span>
+                <span style={S.word} aria-hidden="true">{on ? t('spectatorDisplay.on') : t('spectatorDisplay.off')}</span>
+              </button>
+            </div>
+            {picker('home', draft.homeColor)}
+            {picker('away', draft.awayColor)}
+            <button type="button" style={S.save} onClick={handleSave} data-testid="spectator-display-save">{t('spectatorDisplay.save')}</button>
+            {saved && <p role="status" style={S.saved}>{t('spectatorDisplay.saved')}</p>}
+          </>
+        ) : (
+          <div data-testid="spectator-display-lead-only"><LeadOnlyHint /></div>
+        )}
+      </CollapsibleSection>
+    </div>
   );
 }
