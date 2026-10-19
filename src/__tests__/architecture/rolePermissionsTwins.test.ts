@@ -4,7 +4,8 @@
  * Z1 Rechte-Namen: CHECK role_permissions_permission_check aus 20261110_001 = PERMISSIONS (permissions.ts) =
  *    Schlüssel von capabilities in rolePermissions.json.
  * Z2 Rechte je Rolle: Endstand aus den Migrationen (20260924_002 INSERT + 20260928_001 INSERT + 20261110_001
- *    INSERT/DELETE) = roles der JSON. Z3 (Policy ↔ Recht) prüft die Vollmatrix in scripts/rls-role-matrix.sh.
+ *    INSERT/DELETE + 20261110_002 INSERT, A-27: helper/screen) = roles der JSON. Z3 (Policy ↔ Recht) prüft die
+ *    Vollmatrix in scripts/rls-role-matrix.sh. Rollen-Zwillinge (A-27): deviceRolesTwins.test.ts.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -18,6 +19,7 @@ const read = (file: string): string => readFileSync(resolve(MIGRATIONS, file), '
 const A11 = read('20261110_001_role_permissions_mvp.sql');
 const R5B = read('20260924_002_central_role_permissions.sql');
 const B2 = read('20260928_001_match_event_log.sql');
+const A27 = read('20261110_002_device_roles.sql');
 
 const json = rolePermissionsJson as unknown as { capabilities: Record<string, string>; roles: Record<string, string[]> };
 
@@ -62,15 +64,17 @@ describe('Z1 Rechte-Namen: SQL-CHECK = PERMISSIONS = capabilities', () => {
 });
 
 describe('Z2 Rechte je Rolle: Endstand der Migrationen = roles der JSON', () => {
-  const endstand = new Set([...insertedPairs(R5B), ...insertedPairs(B2), ...insertedPairs(A11)]);
+  const nachA11 = new Set([...insertedPairs(R5B), ...insertedPairs(B2), ...insertedPairs(A11)]);
   for (const pair of deletedPairs(A11)) {
-    endstand.delete(pair);
+    nachA11.delete(pair);
   }
+  const endstand = new Set([...nachA11, ...insertedPairs(A27)]);
   const fromJson = Object.entries(json.roles).flatMap(([role, rights]) => rights.map((r) => `${role}:${r}`));
 
-  it('Endstand hat 11 Zeilen und ist gleich der JSON', () => {
+  it('Endstand hat 13 Zeilen (A-27: + helper:writeMatchData, screen:readDisplay) und ist gleich der JSON', () => {
     expect([...endstand].sort()).toEqual(fromJson.sort());
-    expect(endstand.size).toBe(11);
+    expect(endstand.size).toBe(13);
+    expect(insertedPairs(A27).sort()).toEqual(['helper:writeMatchData', 'screen:readDisplay']);
   });
 
   it('@HE-042 / C-RECHTE-KORREKTUR: die Migration entzieht dem Helfer teams und correctEvents', () => {
@@ -78,10 +82,17 @@ describe('Z2 Rechte je Rolle: Endstand der Migrationen = roles der JSON', () => 
     expect(json.roles.collaborator).toEqual(['writeMatchData']);
   });
 
-  it('die Endstand-Prüfung der Migration nennt dieselben 11 Zeilen wie die JSON', () => {
-    const soll = /v_soll text := ([\s\S]*?);\s*BEGIN/.exec(A11);
+  const sollAus = (sql: string): string[] => {
+    const soll = /v_soll text := ([\s\S]*?);\s*BEGIN/.exec(sql);
     expect(soll).not.toBeNull();
-    const text = [...(soll?.[1] ?? '').matchAll(/'([^']*)'/g)].map((m) => m[1]).join('');
-    expect(text.split(',').sort()).toEqual(fromJson.sort());
+    return [...(soll?.[1] ?? '').matchAll(/'([^']*)'/g)].map((m) => m[1]).join('').split(',');
+  };
+
+  it('die Endstand-Prüfung von 20261110_001 nennt die 11 Zeilen nach A-11', () => {
+    expect(sollAus(A11).sort()).toEqual([...nachA11].sort());
+  });
+
+  it('die Endstand-Prüfung von 20261110_002 nennt dieselben 13 Zeilen wie die JSON', () => {
+    expect(sollAus(A27).sort()).toEqual(fromJson.sort());
   });
 });

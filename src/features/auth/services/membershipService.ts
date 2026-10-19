@@ -7,7 +7,7 @@
  */
 
 import type { TournamentMembership, TournamentRole } from '../types/auth.types';
-import { canChangeRole, canSetRoleTo, canTransferOwnership } from '../utils/permissions';
+import { canChangeRole, canRemoveMember, canSetRoleTo, canTransferOwnership } from '../utils/permissions';
 // getCurrentUser removed - userId now passed as parameter
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import {
@@ -393,8 +393,9 @@ export const removeMember = async (membershipId: string, userId: string): Promis
       return false;
     }
 
-    // Permission check
-    if (!canChangeRole(myMembership.role, targetMembership.role)) {
+    // Permission check -- A-27: Entfernen (auch eines Geräte-Zugangs) folgt canRemoveMember, nicht dem gesperrten
+    // Rollenwechsel.
+    if (!canRemoveMember(myMembership.role, targetMembership.role)) {
       return false;
     }
 

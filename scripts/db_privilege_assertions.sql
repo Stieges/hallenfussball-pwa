@@ -568,4 +568,52 @@ SELECT 'monitors-writes-manage-screens',
                         AND NOT bool_or(position('owner_id' IN coalesce(p.qual, '') || coalesce(p.with_check, '')) > 0)
                    FROM pg_policies p
                   WHERE p.schemaname = 'public' AND p.tablename = 'monitors' AND p.cmd IN ('INSERT', 'UPDATE', 'DELETE')), false)
+
+-- A-27 (20261110_002_device_roles.sql, @HE-082, @AN-045, @AN-006, @ME-059, @HE-062; C-ANON-POLICIES, C-REG):
+-- Geraete-Rollen in beiden Rollen-CHECKs; has_tournament_permission laesst anonyme Sitzungen nur mit Geraete-Rolle zu;
+-- genau eine INSERT-Policy auf tournaments (nur echtes Konto) und die 3-Turniere-Regel ist weg; anon hat auf keiner
+-- public-Tabelle Schreibrechte (faengt auch kuenftige Tabellen); Guard-Trigger aktiv; Registrierungs-Hook nur fuer den
+-- Auth-Dienst ausfuehrbar. Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'role-checks-device-roles',
+       coalesce((SELECT count(*) = 2 AND bool_and(position('''helper''' IN pg_get_constraintdef(c.oid)) > 0
+                                                AND position('''screen''' IN pg_get_constraintdef(c.oid)) > 0)
+                   FROM pg_constraint c
+                  WHERE (c.conrelid = to_regclass('public.tournament_collaborators') AND c.conname = 'tournament_collaborators_role_check')
+                     OR (c.conrelid = to_regclass('public.role_permissions') AND c.conname = 'role_permissions_role_check')), false)
+UNION ALL
+SELECT 'has-permission-device-roles-for-anonymous',
+       coalesce((SELECT position('is_real_account' IN pg_get_functiondef(p.oid)) > 0
+                        AND position('''helper'', ''screen''' IN pg_get_functiondef(p.oid)) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.has_tournament_permission(uuid,text)')), false)
+UNION ALL
+SELECT 'tournaments-insert-real-account-only',
+       coalesce((SELECT count(*) = 1 AND bool_and(position('is_real_account' IN coalesce(p.with_check, '')) > 0)
+                   FROM pg_policies p
+                  WHERE p.schemaname = 'public' AND p.tablename = 'tournaments' AND p.cmd = 'INSERT'), false)
+       AND to_regprocedure('public.anonymous_tournament_limit()') IS NULL
+UNION ALL
+SELECT 'anon-no-write-public-tables',
+       NOT EXISTS (SELECT 1 FROM pg_class c
+                    WHERE c.relnamespace = 'public'::regnamespace AND c.relkind IN ('r', 'p')
+                      AND (has_table_privilege('anon', c.oid, 'INSERT') OR has_table_privilege('anon', c.oid, 'UPDATE')
+                           OR has_table_privilege('anon', c.oid, 'DELETE') OR has_table_privilege('anon', c.oid, 'TRUNCATE')))
+UNION ALL
+SELECT 'device-roles-guard-trigger',
+       coalesce((SELECT t.tgenabled = 'O'
+                        AND (t.tgtype & 2) <> 0     -- BEFORE
+                        AND (t.tgtype & 1) <> 0     -- FOR EACH ROW
+                        AND (t.tgtype & 4) <> 0     -- INSERT
+                        AND (t.tgtype & 16) <> 0    -- UPDATE
+                        AND t.tgfoid = to_regprocedure('public.protect_device_roles()')
+                   FROM pg_trigger t
+                  WHERE t.tgrelid = to_regclass('public.tournament_collaborators') AND t.tgname = 'protect_device_roles'
+                    AND NOT t.tgisinternal), false)
+UNION ALL
+SELECT 'hook-before-user-created-auth-admin-only',
+       coalesce((SELECT has_function_privilege('supabase_auth_admin', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0)
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.hook_before_user_created(jsonb)')), false)
 ;
