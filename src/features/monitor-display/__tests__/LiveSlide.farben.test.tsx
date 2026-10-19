@@ -11,14 +11,15 @@ import type { SpectatorDisplaySettings } from '../../../core/models/spectatorDis
 import type { MatchKit } from '../../../core/models/kit';
 import { buildTournament, slide, withMatch } from './monitorFixture';
 import { withView } from './monitorViewHelper';
+import { palette } from '../../../design-tokens/colors/palette';
 
 const performanceSettings = {} as PerformanceSettings;
-const VORBELEGUNG: SpectatorDisplaySettings = { teamColors: true, homeColor: '#1565C0', awayColor: '#C62828' };
+const VORBELEGUNG: SpectatorDisplaySettings = { teamColors: true, homeColor: palette.kit.blue, awayColor: palette.kit.red };
 
-const BLAU = '#1565C0';
-const ROT = '#C62828';
-const GELB = '#FACC15';
-const WEISS = '#FFFFFF';
+const BLAU = palette.kit.blue;
+const ROT = palette.kit.red;
+const GELB = palette.yellow[400];
+const WEISS = palette.neutral[0];
 const GRAUVIOLETT = '#736469';
 
 function zeigeSpiel7(kit: MatchKit | undefined, spectatorDisplay: SpectatorDisplaySettings | undefined = VORBELEGUNG, config: SlideConfig = { fieldId: 'field-1' }) {
@@ -54,7 +55,7 @@ describe('@ZM-159 Farbe der Kästen am Monitor Feld 1 (Fälle A, B, C)', () => {
 });
 
 describe('@ZM-153 Standardfarben zu ähnlich: Gast-Kasten am Monitor weiß', () => {
-  const NAVY = '#0D1B4C';
+  const NAVY = palette.kit.navy;
   it('@ZM-153 Blau/Navy, Spiel ohne Teamfarben: Heim Blau, Gast Weiß', () => {
     zeigeSpiel7(undefined, { teamColors: true, homeColor: BLAU, awayColor: NAVY });
     expect(heim()).toHaveStyle({ backgroundColor: BLAU });
@@ -74,7 +75,7 @@ describe('@ZM-153 Standardfarben zu ähnlich: Gast-Kasten am Monitor weiß', () 
 
 describe('@ZM-154 Ohne Teamfarben tragen die Kästen die Standardfarben', () => {
   const GRUEN = '#2E7D32';
-  const SCHWARZ = '#000000';
+  const SCHWARZ = palette.kit.black;
   it('@ZM-154 ausgeschaltet: Heim Standardfarbe Heim (Blau), Gast ganz Standardfarbe Gast (Rot), ohne Weste', () => {
     zeigeSpiel7({ a: GRUEN, b: SCHWARZ, bibSide: 'b' }, { ...VORBELEGUNG, teamColors: false });
     expect(heim()).toHaveStyle({ backgroundColor: BLAU });
@@ -98,7 +99,7 @@ describe('@ZM-154 Ohne Teamfarben tragen die Kästen die Standardfarben', () => 
 
 describe('@ZM-152 Die Folie hat keine eigene Farbe mehr', () => {
   it('@ZM-152 ein Altschlüssel liveColorScheme an der Folie ändert die Kästen nicht', () => {
-    const alt = { fieldId: 'field-1', liveColorScheme: { preset: 'custom', homeColor: '#FDE047', awayColor: '#000000', useTeamColors: false } } as unknown as SlideConfig;
+    const alt = { fieldId: 'field-1', liveColorScheme: { preset: 'custom', homeColor: '#FDE047', awayColor: palette.kit.black, useTeamColors: false } } as unknown as SlideConfig;
     zeigeSpiel7(undefined, VORBELEGUNG, alt);
     expect(heim()).toHaveStyle({ backgroundColor: BLAU });
     expect(gast()).toHaveStyle({ backgroundColor: ROT });

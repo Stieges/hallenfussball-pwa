@@ -11,17 +11,18 @@ import { borderWidths, cssVars, displayLayout, monitorThemes } from '../../../..
 import { mixHex } from '../../../../design-tokens/displayColor';
 import { ScoreBox, type ScoreBoxProps } from '../ScoreBox';
 import { LOSER_DIM_SHARE, pairFrameStrength } from '../scoreBoxStyle';
+import { palette } from '../../../../design-tokens/colors/palette';
 
 const solid = (color: string): BoxFill => ({ kind: 'solid', color });
 const vest = (center: string, stripes: string): BoxFill => ({ kind: 'vest', center, stripes });
 
 const DUNKEL = monitorThemes.dark.background;
-const HELL = '#FFFFFF';
-const TEXT_HELL = '#FFFFFF';
+const HELL = palette.neutral[0];
+const TEXT_HELL = palette.neutral[0];
 const TEXT_DUNKEL = '#171717';
-const GELB = '#FACC15';
-const ROT = '#C62828';
-const BLAU = '#1565C0';
+const GELB = palette.yellow[400];
+const ROT = palette.kit.red;
+const BLAU = palette.kit.blue;
 const SIZES: ReadonlyArray<ScoreBoxProps['size']> = ['display', 'row', 'compact'];
 
 function props(over: Partial<ScoreBoxProps> = {}): ScoreBoxProps {
@@ -188,11 +189,11 @@ describe('ScoreBox Verlierer (@ZM-156)', () => {
 
 describe('ScoreBox Rahmen (@ZM-140, RF5)', () => {
   it('@ZM-140 Schwarz auf dunklem Monitor: kräftiger Rahmen in heller Textfarbe (Zeile 2 „Schwarz mit hellem Rahmen“)', () => {
-    const el = draw({ size: 'display', fill: solid(BOX_BLACK), background: DUNKEL, textColor: '#FFFFFF' });
+    const el = draw({ size: 'display', fill: solid(BOX_BLACK), background: DUNKEL, textColor: palette.neutral[0] });
     expect(el).toHaveAttribute('data-frame', 'strong');
     expect(el.style.borderStyle).toBe('solid');
     expect(el.style.borderWidth).toBe(displayLayout.scoreArea.frameWidthStrong);
-    expect(el.style.borderColor).toBe(rgb('#FFFFFF'));
+    expect(el.style.borderColor).toBe(rgb(palette.neutral[0]));
   });
 
   it('@ZM-140 Gegenbeispiel: Schwarz auf hellem Grund braucht keinen kräftigen Rahmen', () => {

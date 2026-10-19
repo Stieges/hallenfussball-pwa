@@ -10,6 +10,7 @@ import { TeamNameDisplay } from '../TeamNameDisplay';
 import type { LiveMatch } from '../../../hooks/useLiveMatches';
 import { displayFontSizes, displayLayout, monitorThemes } from '../../../design-tokens';
 import { getContrastRatio } from '../../../design-tokens/display';
+import { palette } from '../../../design-tokens/colors/palette';
 
 vi.mock('../../../hooks', () => ({
   useMonitorTheme: vi.fn(() => ({
@@ -110,13 +111,13 @@ describe('Rahmenlogik einheitlich', () => {
   });
 
   it('@ZM-140 Navy (unter 3 : 1 zum dunklen Grund) macht beide Rahmen kräftig (gleiche Breite, Entscheidung 2026-10-15)', () => {
-    render(<LiveMatchDisplay match={createMatch()} boxes={{ home: { fill: { kind: 'solid', color: '#1565C0' }, bib: false }, away: { fill: { kind: 'solid', color: '#0D1B4C' }, bib: false } }} />);
+    render(<LiveMatchDisplay match={createMatch()} boxes={{ home: { fill: { kind: 'solid', color: palette.kit.blue }, bib: false }, away: { fill: { kind: 'solid', color: palette.kit.navy }, bib: false } }} />);
     expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe(L.frameWidthStrong);
     expect(document.querySelector<HTMLElement>('[data-position="away"]')!.style.borderWidth).toBe(L.frameWidthStrong);
   });
 
   it('Schwarz: kräftiger Rahmen, der andere Kasten bekommt dieselbe Breite', () => {
-    render(<LiveMatchDisplay match={createMatch()} boxes={{ home: { fill: { kind: 'solid', color: '#000000' }, bib: false }, away: { fill: { kind: 'solid', color: '#DC2626' }, bib: false } }} />);
+    render(<LiveMatchDisplay match={createMatch()} boxes={{ home: { fill: { kind: 'solid', color: palette.kit.black }, bib: false }, away: { fill: { kind: 'solid', color: '#DC2626' }, bib: false } }} />);
     expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe(L.frameWidthStrong);
     expect(document.querySelector<HTMLElement>('[data-position="away"]')!.style.borderWidth).toBe(L.frameWidthStrong);
   });

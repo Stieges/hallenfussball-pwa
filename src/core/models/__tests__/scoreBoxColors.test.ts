@@ -8,15 +8,16 @@ import { DEFAULT_BIB_COLOR, KIT_SIMILAR_DELTA_E, kitConflict } from '../kit';
 import { hexDeltaE2000 } from '../kitColorDistance';
 import { resolveBoxColors, whiteOrBlackFarthestFrom, type BoxColorInput, type BoxFill } from '../scoreBoxColors';
 import { DEFAULT_AWAY_BOX_COLOR, DEFAULT_HOME_BOX_COLOR, DEFAULT_SPECTATOR_DISPLAY, type SpectatorDisplaySettings } from '../spectatorDisplay';
+import { palette } from '../../../design-tokens/colors/palette';
 
 const GELB = '#FFCC00';
 const ROT = '#DC0000';
 const BLAU = '#0033CC';
 const GRUEN = '#009933';
-const WEISS = '#FFFFFF';
-const SCHWARZ = '#000000';
+const WEISS = palette.neutral[0];
+const SCHWARZ = palette.kit.black;
 const GRAUVIOLETT = '#736469';
-const NAVY = '#0D1B4C';
+const NAVY = palette.kit.navy;
 const BLAU_STD = DEFAULT_HOME_BOX_COLOR;
 const ROT_STD = DEFAULT_AWAY_BOX_COLOR;
 
@@ -30,7 +31,7 @@ const expectDistance = (x: string, y: string, gherkin: number) => expect(Math.ab
 
 describe('@ZM-159 Vorbelegung der Standardfarben', () => {
   it('@ZM-159 Standardfarbe Heim Blau #1565C0, Gast Rot #C62828, Teamfarben an', () => {
-    expect(DEFAULT_SPECTATOR_DISPLAY).toEqual({ teamColors: true, homeColor: '#1565C0', awayColor: '#C62828' });
+    expect(DEFAULT_SPECTATOR_DISPLAY).toEqual({ teamColors: true, homeColor: palette.kit.blue, awayColor: palette.kit.red });
   });
 
   it('@ZM-159 Grauviolett #736469: Abstand 26,3 zu Blau, 25,3 zu Rot; Weiß 43,2 gegen Schwarz 32,1', () => {

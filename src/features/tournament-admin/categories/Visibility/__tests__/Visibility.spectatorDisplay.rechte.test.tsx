@@ -18,6 +18,7 @@ import { initRealDeI18n } from '../../../../../test/realDeI18n';
 import { ToastProvider } from '../../../../../components/ui/Toast';
 import { VisibilityCategory } from '../index';
 import type { Tournament } from '../../../../../types/tournament';
+import { palette } from '../../../../../design-tokens/colors/palette';
 
 await initRealDeI18n();
 
@@ -53,7 +54,7 @@ describe('@ZM-019 Anzeige für Zuschauer: wer die Farben stellt', () => {
     fireEvent.click(within(screen.getByTestId('spectator-display-home-color')).getAllByRole('button')[0]);
     fireEvent.click(screen.getByRole('option', { name: 'Farbe #FACC15' }));
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(onUpdate.mock.calls.at(-1)![0].spectatorDisplay?.homeColor).toBe('#FACC15');
+    expect(onUpdate.mock.calls.at(-1)![0].spectatorDisplay?.homeColor).toBe(palette.yellow[400]);
   });
 
   it('@ZM-019 Tom (collaborator) „Teamfarben in den Ergebniskästen“ ausschalten: bietet die App das nicht an', () => {

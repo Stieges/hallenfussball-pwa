@@ -13,6 +13,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/lader.mjs';
+import { palette } from '../../../src/design-tokens/colors/palette';
 
 const BILDER = process.env.SA23_BILDER;
 const PHASE = process.env.SA23_PHASE ?? 'nachher';
@@ -85,7 +86,7 @@ test.describe('@ZM-152 @ZM-153 Anzeige für Zuschauer in den Einstellungen', () 
   test('@ZM-153 Olli stellt Gast auf Navy: Hinweis, speichern, Monitor Feld 1 zeigt den Gast-Kasten weiß', async ({ page }) => {
     await starte(page);
     await zeigeEinstellung(page);
-    await waehle(page, 'away', '#0D1B4C');
+    await waehle(page, 'away', palette.kit.navy);
     await expect(page.getByTestId('spectator-display-similar-hint')).toContainText('Diese beiden Farben sehen sich zu ähnlich.');
     await page.getByTestId('spectator-display-save').click();
     await expect(page.getByText('Gespeichert')).toBeVisible();
@@ -107,7 +108,7 @@ test.describe('@ZM-152 @ZM-153 Anzeige für Zuschauer in den Einstellungen', () 
 
 test.describe('@ZM-154 Teamfarben aus', () => {
   test('@ZM-154 Teamfarben aus: Monitor Feld 1 zeigt Blau/Rot, die Kästen sind gleich groß wie bei „an“', async ({ page }) => {
-    await starte(page, { a: '#2E7D32', b: '#000000', bibSide: 'b' });
+    await starte(page, { a: '#2E7D32', b: palette.kit.black, bibSide: 'b' });
     await zeigeMonitor(page);
     const grossAn = [await groesse(page, 'home'), await groesse(page, 'away')];
     expect(await flaeche(page, 'home')).toBe('rgb(46, 125, 50)');
@@ -132,8 +133,8 @@ test.describe('@ZM-154 Teamfarben aus', () => {
 test.describe('@ZM-159 Farbe der Kästen am Monitor Feld 1', () => {
   const faelle: Array<{ name: string; kit: Kit | undefined; heim: string; gast: string }> = [
     { name: 'A keine Farbe / keine Farbe', kit: undefined, heim: BLAU, gast: ROT },
-    { name: 'B keine Farbe / Gelb', kit: { b: '#FACC15' }, heim: BLAU, gast: GELB },
-    { name: 'C Gelb / Blau', kit: { a: '#FACC15', b: '#1565C0' }, heim: GELB, gast: BLAU },
+    { name: 'B keine Farbe / Gelb', kit: { b: palette.yellow[400] }, heim: BLAU, gast: GELB },
+    { name: 'C Gelb / Blau', kit: { a: palette.yellow[400], b: palette.kit.blue }, heim: GELB, gast: BLAU },
   ];
   for (const fall of faelle) {
     test(`@ZM-159 Fall ${fall.name}`, async ({ page }) => {
@@ -159,7 +160,7 @@ test.describe('T2-UI Bilder der Einstellung', () => {
           await page.setViewportSize({ width: format.width, height: format.height });
           await zeigeEinstellung(page);
           if (navy) {
-            await waehle(page, 'away', '#0D1B4C');
+            await waehle(page, 'away', palette.kit.navy);
             await expect(page.getByTestId('spectator-display-similar-hint')).toBeVisible();
           }
           // Bereich an den oberen Rand, unter die feste Kopfzeile der Seite (Mockup zeigt Titel und Vorschau oben)

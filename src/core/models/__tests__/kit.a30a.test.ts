@@ -18,15 +18,16 @@ import { teamSlot } from '../matchSlot';
 import { resolveBoxColors, type BoxFill } from '../scoreBoxColors';
 import { DEFAULT_SPECTATOR_DISPLAY } from '../spectatorDisplay';
 import type { Match, Team } from '../../../types/tournament';
+import { palette } from '../../../design-tokens/colors/palette';
 
 const SV_SUED = '11111111-1111-4111-8111-000000000001';
 const FC_NORD = '11111111-1111-4111-8111-000000000002';
 const TSV_OST = '11111111-1111-4111-8111-000000000003';
 const DJK_BERG = '11111111-1111-4111-8111-000000000004';
 
-const ROT = '#C62828';
-const WEISS = '#FFFFFF';
-const SCHWARZ = '#000000';
+const ROT = palette.kit.red;
+const WEISS = palette.neutral[0];
+const SCHWARZ = palette.kit.black;
 const ORANGE = '#FF6600';
 
 function team(id: string, name: string, primary?: string): Team {
@@ -44,11 +45,11 @@ describe('A-30a @SL-139 Farbabstand ΔE2000, Hinweis unter 30', () => {
 
   // Szenariogrundriss @SL-139, alle fünf Beispielzeilen wörtlich (Farbe FC Nord | Farbe DJK Berg | Anzeige | Abstand).
   it.each([
-    { zeile: 'Schwarz/Dunkelblau', nord: '#000000', berg: '#0D1B4C', abstand: 21.6, hinweis: true },
-    { zeile: 'Blau/Navy', nord: '#1565C0', berg: '#0D1B4C', abstand: 26.8, hinweis: true },
-    { zeile: 'Weiß/Gelb', nord: '#FFFFFF', berg: '#FFEB3B', abstand: 29.2, hinweis: true },
-    { zeile: 'Weiß/Zitronengelb', nord: '#FFFFFF', berg: '#FFFF00', abstand: 30.5, hinweis: false },
-    { zeile: 'Rot/Weiß', nord: '#C62828', berg: '#FFFFFF', abstand: 50.8, hinweis: false },
+    { zeile: 'Schwarz/Dunkelblau', nord: palette.kit.black, berg: palette.kit.navy, abstand: 21.6, hinweis: true },
+    { zeile: 'Blau/Navy', nord: palette.kit.blue, berg: palette.kit.navy, abstand: 26.8, hinweis: true },
+    { zeile: 'Weiß/Gelb', nord: palette.neutral[0], berg: '#FFEB3B', abstand: 29.2, hinweis: true },
+    { zeile: 'Weiß/Zitronengelb', nord: palette.neutral[0], berg: '#FFFF00', abstand: 30.5, hinweis: false },
+    { zeile: 'Rot/Weiß', nord: palette.kit.red, berg: palette.neutral[0], abstand: 50.8, hinweis: false },
   ])('@SL-139 $zeile: Abstand $abstand → Hinweis $hinweis', ({ nord, berg, abstand, hinweis }) => {
     expect(Math.round(hexDeltaE2000(nord, berg) * 10) / 10).toBe(abstand);
     expect(hexDeltaE2000(nord, berg) < 30).toBe(hinweis);
@@ -61,19 +62,19 @@ describe('A-30a @SL-139 Farbabstand ΔE2000, Hinweis unter 30', () => {
   });
 
   it('@SL-139 Zusatzpaar Schwarz/Bordeaux (26,1) liegt unter der Grenze → Hinweis', () => {
-    expect(Math.round(hexDeltaE2000('#000000', '#5D0F1F') * 10) / 10).toBe(26.1);
-    expect(kitConflict('#000000', '#5D0F1F')).toBe('similar');
+    expect(Math.round(hexDeltaE2000(palette.kit.black, '#5D0F1F') * 10) / 10).toBe(26.1);
+    expect(kitConflict(palette.kit.black, '#5D0F1F')).toBe('similar');
   });
 
   it('@SL-139 der Abstand hängt nicht von der Reihenfolge der Seiten ab', () => {
-    expect(kitConflict('#FFEB3B', '#FFFFFF')).toBe('similar');
-    expect(kitConflict('#FFFFFF', '#C62828')).toBe('none');
+    expect(kitConflict('#FFEB3B', palette.neutral[0])).toBe('similar');
+    expect(kitConflict(palette.neutral[0], palette.kit.red)).toBe('none');
   });
 
   it('@SL-139 Gegenbeispiel: Groß-/Kleinschreibung und Kurzform sind kein Unterschied', () => {
     expect(kitConflict('#dc0000', '#DC0000')).toBe('same');
-    expect(kitConflict('#fff', '#FFFFFF')).toBe('same');
-    expect(normalizeKitColor('#fff')).toBe('#FFFFFF');
+    expect(kitConflict('#fff', palette.neutral[0])).toBe('same');
+    expect(normalizeKitColor('#fff')).toBe(palette.neutral[0]);
     expect(normalizeKitColor('#dc0000')).toBe('#DC0000');
   });
 
@@ -220,9 +221,9 @@ describe('A-30a @ZM-140 getragene Farbe am Spiel → Kasten (Farbregel Spielanze
   it.each([
     { farbe: 'gelbe Leibchen über roten Trikots', gast: 'Weiß', kit: { a: GELB, b: WEISS, bibSide: 'a' as const }, shirt: ROT, kasten: vest(GELB, ROT) },
     { farbe: 'Schwarz', gast: 'Weiß', kit: { a: SCHWARZ, b: WEISS }, shirt: undefined, kasten: solid(SCHWARZ) },
-    { farbe: 'keine eingetragene Farbe', gast: 'Weiß', kit: { b: WEISS }, shirt: undefined, kasten: solid('#1565C0') },
-    { farbe: 'keine eingetragene Farbe', gast: 'Blau', kit: { b: BLAU }, shirt: undefined, kasten: solid('#C62828') },
-    { farbe: 'gelbe Leibchen, ohne eingetragene Trikotfarbe', gast: 'Weiß', kit: { a: GELB, b: WEISS, bibSide: 'a' as const }, shirt: undefined, kasten: vest(GELB, '#1565C0') },
+    { farbe: 'keine eingetragene Farbe', gast: 'Weiß', kit: { b: WEISS }, shirt: undefined, kasten: solid(palette.kit.blue) },
+    { farbe: 'keine eingetragene Farbe', gast: 'Blau', kit: { b: BLAU }, shirt: undefined, kasten: solid(palette.kit.red) },
+    { farbe: 'gelbe Leibchen, ohne eingetragene Trikotfarbe', gast: 'Weiß', kit: { a: GELB, b: WEISS, bibSide: 'a' as const }, shirt: undefined, kasten: vest(GELB, palette.kit.blue) },
   ])('@ZM-140 Heimseite trägt $farbe, Gast $gast → Kasten', ({ kit, shirt, kasten }) => {
     const spiel12 = spiel('spiel-12', SV_SUED, FC_NORD, { matchStatus: 'running', kit });
     const boxes = resolveBoxColors({
@@ -235,6 +236,6 @@ describe('A-30a @ZM-140 getragene Farbe am Spiel → Kasten (Farbregel Spielanze
   });
 
   it('@ZM-140 „keine eingetragene Farbe“ ist die Standardfarbe Heim (Blau #1565C0, Vorgabe der Einstellung)', () => {
-    expect(DEFAULT_SPECTATOR_DISPLAY.homeColor).toBe('#1565C0');
+    expect(DEFAULT_SPECTATOR_DISPLAY.homeColor).toBe(palette.kit.blue);
   });
 });

@@ -11,9 +11,10 @@
 import { kitConflict, normalizeKitColor, type KitSide } from './kit';
 import { hexDeltaE2000 } from './kitColorDistance';
 import type { SpectatorDisplaySettings } from './spectatorDisplay';
+import { palette } from '../../design-tokens/colors/palette';
 
-export const BOX_WHITE = '#FFFFFF';
-export const BOX_BLACK = '#000000';
+export const BOX_WHITE = palette.neutral[0];
+export const BOX_BLACK = palette.kit.black;
 
 /** Fläche eines Kastens: eine Farbe oder Weste (Mitte = Leibchen, Streifen = Trikot). */
 export type BoxFill = { kind: 'solid'; color: string } | { kind: 'vest'; center: string; stripes: string };

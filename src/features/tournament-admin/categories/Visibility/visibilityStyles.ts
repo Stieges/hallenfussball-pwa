@@ -104,9 +104,8 @@ export const visibilityStyles = {
   } as CSSProperties,
 
   qrPlaceholder: {
-    // kein Größen-Token für eine quadratische Platzhalterfläche: Anteil der Zeile, quadratisch
-    width: '40%',
-    aspectRatio: '1 / 1',
+    width: cssVars.sizing.qrPlaceholder,
+    height: cssVars.sizing.qrPlaceholder,
     background: cssVars.colors.surfaceHover,
     border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
@@ -152,7 +151,7 @@ export const visibilityStyles = {
   } as CSSProperties,
 
   disabledSection: {
-    opacity: 0.5,
+    opacity: cssVars.opacity.disabled,
     pointerEvents: 'none',
   } as CSSProperties,
 

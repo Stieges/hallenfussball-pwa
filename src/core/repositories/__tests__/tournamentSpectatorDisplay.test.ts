@@ -17,10 +17,11 @@ import {
   type SpectatorDisplaySettings,
 } from '../../models/spectatorDisplay';
 import { spectatorDisplayFromConfig, spectatorDisplayToConfig } from '../tournamentSpectatorDisplay';
+import { palette } from '../../../design-tokens/colors/palette';
 
-const BLAU = '#1565C0';
-const ROT = '#C62828';
-const NAVY = '#0D1B4C';
+const BLAU = palette.kit.blue;
+const ROT = palette.kit.red;
+const NAVY = palette.kit.navy;
 
 describe('@ZM-152 Vorbelegung der Anzeige für Zuschauer', () => {
   it('@ZM-152 ohne Eintrag in config: Teamfarben an, Heim Blau #1565C0, Gast Rot #C62828', () => {
@@ -35,7 +36,7 @@ describe('@ZM-152 Vorbelegung der Anzeige für Zuschauer', () => {
   });
 
   it('@ZM-152 Hin- und Rückweg über config verliert nichts', () => {
-    const settings: SpectatorDisplaySettings = { teamColors: false, homeColor: NAVY, awayColor: '#FFFFFF' };
+    const settings: SpectatorDisplaySettings = { teamColors: false, homeColor: NAVY, awayColor: palette.neutral[0] };
     const config = { ...spectatorDisplayToConfig({ spectatorDisplay: settings }) };
     expect(config).toEqual({ spectatorDisplay: settings });
     expect(spectatorDisplayFromConfig(JSON.parse(JSON.stringify(config)) as object)).toEqual({ spectatorDisplay: settings });
@@ -72,7 +73,7 @@ describe('RF1 ungültige oder abweichend geschriebene Einstellung', () => {
     expect(parseSpectatorDisplay({ teamColors: 'ja', homeColor: '#1565c0', awayColor: '#fff' })).toEqual({
       teamColors: true,
       homeColor: BLAU,
-      awayColor: '#FFFFFF',
+      awayColor: palette.neutral[0],
     });
     expect(parseSpectatorDisplay({ teamColors: false, homeColor: 'blau', awayColor: '' })).toEqual({
       teamColors: false,
@@ -89,13 +90,13 @@ describe('RF1 ungültige oder abweichend geschriebene Einstellung', () => {
 
   it('RF1 config mit kaputtem Eintrag: Lesen liefert die je Schlüssel reparierte Einstellung', () => {
     expect(spectatorDisplayFromConfig({ spectatorDisplay: { homeColor: '#fff', extra: 1 } })).toEqual({
-      spectatorDisplay: { teamColors: true, homeColor: '#FFFFFF', awayColor: ROT },
+      spectatorDisplay: { teamColors: true, homeColor: palette.neutral[0], awayColor: ROT },
     });
   });
 
   it('RF1 Schreiben normalisiert ebenfalls (keine Kurzform, keine Kleinbuchstaben in config)', () => {
     const written = spectatorDisplayToConfig({ spectatorDisplay: { teamColors: true, homeColor: '#0d1b4c', awayColor: '#fff' } });
-    expect(written).toEqual({ spectatorDisplay: { teamColors: true, homeColor: NAVY, awayColor: '#FFFFFF' } });
+    expect(written).toEqual({ spectatorDisplay: { teamColors: true, homeColor: NAVY, awayColor: palette.neutral[0] } });
   });
 });
 

@@ -16,10 +16,11 @@ import { SpectatorDisplaySection } from '../SpectatorDisplaySection';
 import type { Tournament } from '../../../../../types/tournament';
 import { buildTournament } from '../../../../monitor-display/__tests__/monitorFixture';
 import { buildMonitorView } from '../../../../monitor-display/monitorView';
+import { palette } from '../../../../../design-tokens/colors/palette';
 
-const BLAU = '#1565C0';
-const ROT = '#C62828';
-const NAVY = '#0D1B4C';
+const BLAU = palette.kit.blue;
+const ROT = palette.kit.red;
+const NAVY = palette.kit.navy;
 
 /** Hält das Turnier wie die Verwaltung: `onTournamentUpdate` ersetzt es. */
 function Host({ initial, canEdit = true, onUpdate }: { initial: Tournament; canEdit?: boolean; onUpdate: (t: Tournament) => void }) {
@@ -115,7 +116,7 @@ describe('@ZM-153 Die Vorschau weist auf zu ähnliche Standardfarben hin', () =>
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     const boxes = buildMonitorView(gespeichert(onUpdate)).byId.get('match-7')!.boxes;
     expect(boxes.home.fill).toEqual({ kind: 'solid', color: BLAU });
-    expect(boxes.away.fill).toEqual({ kind: 'solid', color: '#FFFFFF' });
+    expect(boxes.away.fill).toEqual({ kind: 'solid', color: palette.neutral[0] });
   });
 
   it('RF2 Blau/Blau: Hinweis, speicherbar, der Monitor zeigt Gast Weiß', () => {
@@ -125,7 +126,7 @@ describe('@ZM-153 Die Vorschau weist auf zu ähnliche Standardfarben hin', () =>
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     const saved = gespeichert(onUpdate);
     expect(saved.spectatorDisplay).toEqual({ teamColors: true, homeColor: BLAU, awayColor: BLAU });
-    expect(buildMonitorView(saved).byId.get('match-7')!.boxes.away.fill).toEqual({ kind: 'solid', color: '#FFFFFF' });
+    expect(buildMonitorView(saved).byId.get('match-7')!.boxes.away.fill).toEqual({ kind: 'solid', color: palette.neutral[0] });
   });
 });
 
@@ -161,5 +162,28 @@ describe('Fixrunde A5 Speichern-Knopf', () => {
   it('Gegenbeispiel: ohne Speichern kein Timer zum Aufräumen und keine Meldung', () => {
     zeige();
     expect(screen.queryByRole('status')).toBeNull();
+  });
+});
+
+describe('Fixrunde 2 A6: Speichern in fester Fußleiste (Mockup einstellungen.html)', () => {
+  it('A6 Speichern steht in einer am Fensterrand festen Leiste und ist die Haupttaste', () => {
+    zeige();
+    const leiste = screen.getByTestId('spectator-display-footer');
+    expect(leiste).toHaveStyle({ position: 'fixed', bottom: '0px' });
+    const knopf = within(leiste).getByRole('button', { name: 'Speichern' });
+    expect(knopf).toHaveAttribute('data-primary');
+  });
+
+  it('A6 die Leiste speichert wie der Knopf vorher (Navy bleibt speicherbar)', () => {
+    const onUpdate = zeige();
+    waehle('spectator-display-away-color', NAVY);
+    fireEvent.click(within(screen.getByTestId('spectator-display-footer')).getByRole('button', { name: 'Speichern' }));
+    expect(gespeichert(onUpdate).spectatorDisplay?.awayColor).toBe(NAVY);
+  });
+
+  it('A6 Gegenbeispiel: ohne Recht keine Leiste und kein Speichern', () => {
+    zeige({}, false);
+    expect(screen.queryByTestId('spectator-display-footer')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Speichern' })).toBeNull();
   });
 });

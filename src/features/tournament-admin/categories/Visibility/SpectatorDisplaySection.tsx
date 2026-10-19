@@ -16,7 +16,7 @@ import { InlineNotice } from '../../../../components/ui/molecules/InlineNotice';
 import { LeadOnlyHint } from '../../../../components/ui/molecules/LeadOnlyHint';
 import { useTheme } from '../../../../hooks/useTheme';
 import { getColorsByTheme } from '../../../../design-tokens/colors';
-import { borderWidths, cssVars } from '../../../../design-tokens';
+import { borderWidths, cssVars, dialogWidths, zIndex } from '../../../../design-tokens';
 import {
   BOX_COLOR_PRESETS,
   DEFAULT_SPECTATOR_DISPLAY,
@@ -58,8 +58,8 @@ const S = {
   },
   pair: { display: 'grid', gridTemplateColumns: `minmax(0, 1fr) ${cssVars.spacing.lg} minmax(0, 1fr)`, alignItems: 'start', justifyItems: 'center' },
   column: { display: 'grid', justifyItems: 'center', gap: cssVars.spacing.sm, minWidth: 0 },
-  // 112 × 84 (Mockup `.sb.v`): Vielfache der Primär-Touchgröße, kein eigener Wert
-  box: { width: `calc(${cssVars.touchTargets.primary} * 2)`, height: `calc(${cssVars.touchTargets.primary} * 1.5)` },
+  // 112 × 84 (Mockup `.sb.v`), Token aus der Primär-Touchgröße abgeleitet
+  box: { width: cssVars.sizing.scorePreviewWidth, height: cssVars.sizing.scorePreviewHeight },
   separator: { fontSize: cssVars.fontSizes.xxl, lineHeight: `calc(${cssVars.touchTargets.primary} * 1.5)`, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textSecondary },
   caption: { textAlign: 'center', fontSize: cssVars.fontSizes.labelMd, color: cssVars.colors.textSecondary },
   captionName: { display: 'block', fontSize: cssVars.fontSizes.bodySm, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary },
@@ -81,12 +81,20 @@ const S = {
   },
   word: { flex: 'none', minWidth: cssVars.spacing.xl, textAlign: 'right', fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold },
   label: { display: 'block', margin: `${cssVars.spacing.md} 0 ${cssVars.spacing.xs}`, fontSize: cssVars.fontSizes.bodyMd, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary },
+  // Fußleiste (Mockup `.foot2`): am Fensterrand fest, damit „Speichern“ am Handy ohne Scrollen erreichbar ist; die Leiste selbst
+  // fängt keine Eingaben ab, nur ihr Inhalt
+  footer: { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: zIndex.sticky, pointerEvents: 'none' },
+  footerInner: {
+    pointerEvents: 'auto', maxWidth: dialogWidths.lg, margin: '0 auto', boxSizing: 'border-box', padding: cssVars.spacing.md,
+    background: cssVars.colors.background, borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
+  },
+  footerSpace: { height: `calc(${cssVars.touchTargets.primary} + ${cssVars.spacing.md} * 2)` },
   save: {
-    width: '100%', minHeight: cssVars.touchTargets.primary, marginTop: cssVars.spacing.lg, border: 0,
+    width: '100%', minHeight: cssVars.touchTargets.primary, border: 0,
     borderRadius: cssVars.borderRadius.md, background: cssVars.colors.primary, color: cssVars.colors.onPrimary,
     fontSize: cssVars.fontSizes.bodyLg, fontWeight: cssVars.fontWeights.bold, cursor: 'pointer',
   },
-  saved: { marginTop: cssVars.spacing.sm, textAlign: 'center', fontSize: cssVars.fontSizes.labelMd, color: cssVars.colors.success },
+  saved: { margin: `0 0 ${cssVars.spacing.sm}`, textAlign: 'center', fontSize: cssVars.fontSizes.labelMd, color: cssVars.colors.success },
 } satisfies Record<string, CSSProperties>;
 
 export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdit }: SpectatorDisplaySectionProps): ReactElement {
@@ -194,13 +202,21 @@ export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdi
             </div>
             {picker('home', draft.homeColor)}
             {picker('away', draft.awayColor)}
-            <button type="button" style={S.save} onClick={handleSave} data-testid="spectator-display-save">{t('spectatorDisplay.save')}</button>
-            {saved && <p role="status" style={S.saved}>{t('spectatorDisplay.saved')}</p>}
+            {/* Platz für die feste Fußleiste, damit sie keinen Inhalt verdeckt */}
+            <div style={S.footerSpace} aria-hidden="true" />
           </>
         ) : (
           <div data-testid="spectator-display-lead-only"><LeadOnlyHint /></div>
         )}
       </CollapsibleSection>
+      {canEdit && (
+        <div style={S.footer} data-testid="spectator-display-footer">
+          <div style={S.footerInner}>
+            {saved && <p role="status" style={S.saved}>{t('spectatorDisplay.saved')}</p>}
+            <button type="button" style={S.save} onClick={handleSave} data-primary data-testid="spectator-display-save">{t('spectatorDisplay.save')}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,11 +11,12 @@ import { LocalStorageRepository } from '../LocalStorageRepository';
 import type { Tournament } from '../../models/types';
 import type { SpectatorDisplaySettings } from '../../models/spectatorDisplay';
 import { readWithRevisions } from '../../../test/fakeCloudRepository';
+import { palette } from '../../../design-tokens/colors/palette';
 
 vi.mock('../SupabaseRepository');
 vi.mock('../LocalStorageRepository');
 
-const AUS: SpectatorDisplaySettings = { teamColors: false, homeColor: '#1565C0', awayColor: '#C62828' };
+const AUS: SpectatorDisplaySettings = { teamColors: false, homeColor: palette.kit.blue, awayColor: palette.kit.red };
 
 function tournament(spectatorDisplay: SpectatorDisplaySettings | undefined, version: number): Tournament {
   return {

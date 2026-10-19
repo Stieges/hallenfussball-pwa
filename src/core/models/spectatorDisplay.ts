@@ -7,6 +7,8 @@
  */
 import { z } from 'zod';
 import { kitConflict, normalizeKitColor } from './kit';
+// Farben als Daten aus der Palette (Daniel 19.10.); direkt die Palette, nicht den Barrel (hält cssVars aus `core`)
+import { palette } from '../../design-tokens/colors/palette';
 
 export interface SpectatorDisplaySettings {
   /** „Teamfarben in den Ergebniskästen“ */
@@ -18,9 +20,9 @@ export interface SpectatorDisplaySettings {
 }
 
 /** @ZM-152 Vorbelegung „Standardfarbe Heim“: Blau. */
-export const DEFAULT_HOME_BOX_COLOR = '#1565C0';
+export const DEFAULT_HOME_BOX_COLOR: string = palette.kit.blue;
 /** @ZM-152 Vorbelegung „Standardfarbe Gast“: Rot. */
-export const DEFAULT_AWAY_BOX_COLOR = '#C62828';
+export const DEFAULT_AWAY_BOX_COLOR: string = palette.kit.red;
 
 /** @ZM-152: Teamfarben an, Heim Blau, Gast Rot. */
 export const DEFAULT_SPECTATOR_DISPLAY: SpectatorDisplaySettings = Object.freeze({
@@ -36,10 +38,10 @@ export const DEFAULT_SPECTATOR_DISPLAY: SpectatorDisplaySettings = Object.freeze
 export const BOX_COLOR_PRESETS = [
   { key: 'blue', hex: DEFAULT_HOME_BOX_COLOR },
   { key: 'red', hex: DEFAULT_AWAY_BOX_COLOR },
-  { key: 'yellow', hex: '#FACC15' },
-  { key: 'navy', hex: '#0D1B4C' },
-  { key: 'white', hex: '#FFFFFF' },
-  { key: 'black', hex: '#000000' },
+  { key: 'yellow', hex: palette.yellow[400] },
+  { key: 'navy', hex: palette.kit.navy },
+  { key: 'white', hex: palette.neutral[0] },
+  { key: 'black', hex: palette.kit.black },
 ] as const;
 
 export type BoxColorPresetKey = (typeof BOX_COLOR_PRESETS)[number]['key'];

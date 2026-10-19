@@ -10,11 +10,12 @@ import { displayLayout, monitorThemes } from '../../../../design-tokens';
 import { getContrastRatio } from '../../../../design-tokens/display';
 import { mixHex } from '../../../../design-tokens/displayColor';
 import { digitColor, effectiveDigitBackground, LOSER_DIM_SHARE, needsStrongFrame } from '../scoreBoxStyle';
+import { palette } from '../../../../design-tokens/colors/palette';
 
 const solid = (color: string): BoxFill => ({ kind: 'solid', color });
 const vest = (center: string, stripes: string): BoxFill => ({ kind: 'vest', center, stripes });
 
-const HELL = '#FFFFFF';
+const HELL = palette.neutral[0];
 const DUNKEL = monitorThemes.dark.background;
 
 const GELB = '#FFCC00';
@@ -22,7 +23,7 @@ const ROT = '#DC0000';
 const BLAU = '#0033CC';
 const GRUEN = '#009933';
 const GRAUVIOLETT = '#736469';
-const NAVY = '#0D1B4C';
+const NAVY = palette.kit.navy;
 const PALETTE: ReadonlyArray<readonly [string, string]> = [
   ['Standardfarbe Heim Blau', DEFAULT_HOME_BOX_COLOR],
   ['Standardfarbe Gast Rot', DEFAULT_AWAY_BOX_COLOR],
@@ -46,13 +47,13 @@ describe('LOSER_DIM_SHARE', () => {
 
 describe('effectiveDigitBackground', () => {
   it('@ZM-156 Verlierer behält den Farbton: gedämpft = mixHex(Farbe, Hintergrund, LOSER_DIM_SHARE)', () => {
-    expect(effectiveDigitBackground(solid('#1565C0'), 'loser', HELL)).toBe(mixHex('#1565C0', HELL, LOSER_DIM_SHARE));
-    expect(effectiveDigitBackground(solid('#1565C0'), 'loser', HELL)).toBe('#5B93D3');
+    expect(effectiveDigitBackground(solid(palette.kit.blue), 'loser', HELL)).toBe(mixHex(palette.kit.blue, HELL, LOSER_DIM_SHARE));
+    expect(effectiveDigitBackground(solid(palette.kit.blue), 'loser', HELL)).toBe('#5B93D3');
   });
 
   it('@ZM-156 Gegenbeispiel: Sieger und ohne Ergebnis bleiben ungedämpft', () => {
-    expect(effectiveDigitBackground(solid('#1565C0'), 'winner', HELL)).toBe('#1565C0');
-    expect(effectiveDigitBackground(solid('#1565C0'), undefined, HELL)).toBe('#1565C0');
+    expect(effectiveDigitBackground(solid(palette.kit.blue), 'winner', HELL)).toBe(palette.kit.blue);
+    expect(effectiveDigitBackground(solid(palette.kit.blue), undefined, HELL)).toBe(palette.kit.blue);
   });
 
   it('@ZM-161 bei der Weste zählt die Mitte, nicht der Streifen', () => {
@@ -63,19 +64,19 @@ describe('effectiveDigitBackground', () => {
 
 describe('digitColor', () => {
   it('@ZM-156 Verlierer Blau #1565C0 auf hellem Grund: Ziffern schwarz (gedämpft 6,56 : 1 statt 3,2 : 1)', () => {
-    const gedaempft = effectiveDigitBackground(solid('#1565C0'), 'loser', HELL);
-    expect(digitColor(solid('#1565C0'), 'loser', HELL)).toBe(BOX_BLACK);
+    const gedaempft = effectiveDigitBackground(solid(palette.kit.blue), 'loser', HELL);
+    expect(digitColor(solid(palette.kit.blue), 'loser', HELL)).toBe(BOX_BLACK);
     expect(getContrastRatio(gedaempft, BOX_BLACK)).toBeCloseTo(6.56, 1);
     expect(getContrastRatio(gedaempft, BOX_WHITE)).toBeLessThan(4.5);
   });
 
   it('@ZM-156 Gegenbeispiel: derselbe Kasten als Sieger (nicht gedämpft) hat weiße Ziffern', () => {
-    expect(digitColor(solid('#1565C0'), 'winner', HELL)).toBe(BOX_WHITE);
-    expect(digitColor(solid('#1565C0'), undefined, HELL)).toBe(BOX_WHITE);
+    expect(digitColor(solid(palette.kit.blue), 'winner', HELL)).toBe(BOX_WHITE);
+    expect(digitColor(solid(palette.kit.blue), undefined, HELL)).toBe(BOX_WHITE);
   });
 
   it('@ZM-156 auf dunklem Grund bleibt der gedämpfte Blau-Kasten dunkel genug für weiße Ziffern', () => {
-    expect(digitColor(solid('#1565C0'), 'loser', DUNKEL)).toBe(BOX_WHITE);
+    expect(digitColor(solid(palette.kit.blue), 'loser', DUNKEL)).toBe(BOX_WHITE);
   });
 
   it.each(PALETTE.flatMap(([name, color]) => [HELL, DUNKEL].flatMap((grund) => [undefined, 'winner', 'loser'].map((outcome) => [name, color, grund, outcome] as const))))(
@@ -88,7 +89,7 @@ describe('digitColor', () => {
   );
 
   it('@ZM-161 Weste: die Ziffer richtet sich nach der Mitte (Gelb → schwarz), obwohl die Streifen dunkel sind', () => {
-    expect(digitColor(vest(GELB, '#000000'), undefined, HELL)).toBe(BOX_BLACK);
+    expect(digitColor(vest(GELB, palette.kit.black), undefined, HELL)).toBe(BOX_BLACK);
     expect(digitColor(vest(ROT, GELB), undefined, HELL)).toBe(BOX_WHITE);
   });
 });
@@ -121,8 +122,8 @@ describe('needsStrongFrame', () => {
   });
 
   it('@ZM-156 gedämpfter Verlierer: Blau #1565C0 hebt sich auf dunklem Grund (3,1 : 1) ab, gedämpft (2,2 : 1) nicht mehr', () => {
-    expect(needsStrongFrame(solid('#1565C0'), DUNKEL)).toBe(false);
-    expect(needsStrongFrame(solid('#1565C0'), DUNKEL, 'winner')).toBe(false);
-    expect(needsStrongFrame(solid('#1565C0'), DUNKEL, 'loser')).toBe(true);
+    expect(needsStrongFrame(solid(palette.kit.blue), DUNKEL)).toBe(false);
+    expect(needsStrongFrame(solid(palette.kit.blue), DUNKEL, 'winner')).toBe(false);
+    expect(needsStrongFrame(solid(palette.kit.blue), DUNKEL, 'loser')).toBe(true);
   });
 });
