@@ -19,7 +19,7 @@
 # Aufrufoptionen:
 #   bash scripts/field-control-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
 #   bash scripts/field-control-check.sh --without-migration  Gegenprobe: ohne 20261110_003 -> K und R muessen ROT sein
-#   bash scripts/field-control-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M11); Exit 0 NUR,
+#   bash scripts/field-control-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M14); Exit 0 NUR,
 #                                                            wenn JEDE Mutation mindestens eine Pruefung rot faerbt
 #   bash scripts/field-control-check.sh --print-rueckweg     gibt den Rueckweg (Anhang B der Freigabe) aus, ohne Container
 #
@@ -445,14 +445,14 @@ SQL
 
   # --- @FU-028: Uebernehmen braucht Netz (Server-Haelfte) --------------------------------------------------
   res="$(take "$U_CLARA" "$T_LIVE" 2 "$D_CLARA" "Handy" 2)"
-  check K "@FU-028 Claras Uebernahme ohne Netz kommt spaeter an (sah Epoche 2) -> abgelehnt, Maria steuert weiter" \
+  check K "@FU-028 (Server-Haelfte) Claras Uebernahme ohne Netz kommt spaeter an (sah Epoche 2) -> abgelehnt, Maria steuert weiter" \
     "rejected:CONTROL_CHANGED|3|Maria|NULL|$U_MARIA|$D_MARIA|3" "$(take_short "$res")|$(holder "$T_LIVE" 2)"
   ev TAKEOVER "$(E live-takeover-event)" '{}'
   send "$U_CLARA" "$D_CLARA" "$s9"
-  check K "@FU-028 'Spielleitung uebernehmen' ist kein Eintrag des Ausgangs (TAKEOVER -> INVALID_PAYLOAD), Steuer gleich" \
+  check K "@FU-028 (Server-Haelfte) 'Spielleitung uebernehmen' ist kein Eintrag des Ausgangs (TAKEOVER -> INVALID_PAYLOAD), Steuer gleich" \
     "rejected:INVALID_PAYLOAD|$U_MARIA|$D_MARIA|3" "$(results "$OUT")|$(holder "$T_LIVE" 2)"
   res="$(take "$U_CLARA" "$T_LIVE" 2 "$D_CLARA" "Handy" 3)"
-  check K "@FU-028 Gegenbeispiel: Clara mit Netz (aktuelle Epoche) uebernimmt (brief L3)" "taken|4|Clara|Maria" "$(take_short "$res")"
+  check K "@FU-028 (Server-Haelfte) Gegenbeispiel: Clara mit Netz (aktuelle Epoche) uebernimmt (brief L3)" "taken|4|Clara|Maria" "$(take_short "$res")"
 
   # --- Epoche (Bauplan § 20 "Pruefung controlEpoch"): Toms Handy steuert wieder, alte Eintraege zaehlen nicht ---
   res="$(take "$U_TOM_HANDY" "$T_LIVE" 2 "$D_TOM_HANDY" "Handy" 4)"
@@ -522,6 +522,33 @@ SQL
   check K "brief L7: ohne Geraete-ID pfeift Olli an und Maria traegt ein (wie heute), kein Anspruch entsteht" \
     "accepted|1:0||0" "$(results "$OUT")|$(score "$(match "$T_LEGACY" 9)" | cut -d'|' -f1)|$(holder "$T_LEGACY" 2)|$(q "SELECT count(*) FROM public.field_control WHERE tournament_id = '$T_LEGACY';")"
 
+  # --- Fixrunde 1 (Review A-34, Auflage 1): @FU-071 Zeile 5 -- Wiedereroeffnen braucht die Steuer (T_SL116) --------
+  # Spiel 11 ist beendet, Feld 1 steuert jetzt Ollis Tablet.
+  s11="$(match "$T_SL116" 11)"
+  ev REOPEN "$(E sl116-tom-reopen)" '{"at":5000,"clockMs":360000}'
+  send "$U_TOM_TABLET" "$D_TOM_TABLET" "$s11"
+  check K "@FU-071 Toms Tablet (steuert Feld 1 nicht mehr) eroeffnet Spiel 11 nicht wieder, es bleibt beendet" \
+    "rejected:NOT_CONTROLLER:OTHER_DEVICE|finished" "$(results "$OUT")|$(score "$s11" | cut -d'|' -f2)"
+  ev REOPEN "$(E sl116-olli-reopen)" '{"at":5000,"clockMs":360000}'
+  send "$U_OLLI" "$D_OLLI_TABLET" "$s11"
+  check K "@FU-071 Gegenbeispiel: Olli (steuert Feld 1) eroeffnet Spiel 11 wieder, es laeuft" "accepted|running" \
+    "$(results "$OUT")|$(score "$s11" | cut -d'|' -f2)"
+
+  # --- Fixrunde 1 (Auflage 2): isMine je Geraet -- Olli steuert Feld 1 im Hallencup Sued mit dem Tablet ----------
+  check K "@FU-027 Ollis Handy ist nicht das steuernde Geraet (isMine nur am Tablet)" \
+    "Feld 1: Olli (Tablet) e2;Feld 2: Clara e1" "$(state_short "$(state "$U_OLLI" "$T_SUED" "$D_OLLI_HANDY")")"
+  check K "@HE-049 Gegenbeispiel: Ollis Tablet sieht Feld 1 als seins" \
+    "Feld 1: Olli (Tablet) e2 mein;Feld 2: Clara e1" "$(state_short "$(state "$U_OLLI" "$T_SUED" "$D_OLLI_TABLET")")"
+
+  # --- Fixrunde 1 (Auflage 3): Anspruch im selben Aufruf, danach Eintrag mit zuletzt bekannter (alter) Epoche -------
+  # Freies Feld 1 im Turnier T_LEGACY; Toms Handy pfeift an und stempelt das Tor mit der Epoche 7 (z. B. ohne Netz).
+  ev MATCH_START "$(E claim-same-call-start)" '{"clockMs":null}'
+  ev GOAL "$(E claim-same-call-goal)" "$(jq -cn --arg t "$(team "$T_LEGACY" nord)" '{at: 2000, clockMs: 130000, teamId: $t, controlEpoch: 7}')"
+  send "$U_TOM_HANDY" "$D_TOM_HANDY" "$(match "$T_LEGACY" 11)"
+  check K "@FU-030 Anspruch im selben Aufruf: Anpfiff und Tor (mit alter Epoche 7) zaehlen, Toms Handy steuert Feld 1 (Epoche 1)" \
+    "accepted,accepted|1:0|$U_TOM_HANDY|$D_TOM_HANDY|1" \
+    "$(results "$OUT")|$(score "$(match "$T_LEGACY" 11)" | cut -d'|' -f1)|$(holder "$T_LEGACY" 1)"
+
   # --- R: Rechte -------------------------------------------------------------------------------------------
   res=""
   for who in trainer viewer stranger lena screen; do
@@ -589,7 +616,9 @@ summary() {
 
 # ---------------------------------------------------------------------------------------------------------
 if [[ "$MODE" == "gegenprobe" ]]; then
-  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11)
+  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14)
+  # Teilmenge fuer Nachproben: GEGENPROBE_NUR="M12 M13 M14"
+  if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a MUTATIONS <<<"$GEGENPROBE_NUR"; fi
   RED_TOTAL=0
   for mut in "${MUTATIONS[@]}"; do
     start_container "$mut"
@@ -622,6 +651,13 @@ M = {
   "M10": [("REVOKE ALL ON TABLE public.field_control FROM PUBLIC, anon, authenticated;\n", "REVOKE ALL ON TABLE public.field_control FROM PUBLIC, anon;\n")],
   # M11 Stand fuer alle Mitglieder (ohne writeMatchData)
   "M11": [("     AND public.has_tournament_permission(p_tournament_id, '\''writeMatchData'\'');\n", "     AND true;\n")],
+  # M12 (Review R3) REOPEN braucht keine Steuer mehr
+  "M12": [("OR v_event ->> '\''type'\'' IN ('\''MATCH_START'\'', '\''REOPEN'\'') THEN\n", "OR v_event ->> '\''type'\'' IN ('\''MATCH_START'\'') THEN\n")],
+  # M13 (Review R4) isMine ohne Geraete-Vergleich
+  "M13": [("coalesce(fc.holder_user_id = auth.uid() AND fc.holder_device_id = p_device_id, false)", "coalesce(fc.holder_user_id = auth.uid(), false)")],
+  # M14 (Review R5) Epochen-Ausnahme nach Anspruch im selben Aufruf entfernt
+  "M14": [("            IF NOT v_claimed_in_call AND v_epoch_sent IS NOT NULL AND v_epoch_sent <> v_fc.epoch THEN\n",
+           "            IF v_epoch_sent IS NOT NULL AND v_epoch_sent <> v_fc.epoch THEN\n")],
 }
 s = sys.stdin.read()
 for frm, to in M[os.environ["MUT_KEY"]]:
