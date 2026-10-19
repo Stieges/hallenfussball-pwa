@@ -17,6 +17,9 @@ const saveTournament = vi.fn<(tournament: Tournament) => Promise<void>>();
 vi.mock('../../../../../hooks', () => ({
   useTournaments: () => ({ saveTournament }),
 }));
+vi.mock('../../../../../hooks/useRepository', () => ({
+  useRepository: () => ({ get: (id: string) => Promise.resolve(id === OST_ID ? hallencupOstGespielt() : null) }),
+}));
 vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }));
 vi.mock('../../../../tournament-management/FieldManagement', () => ({ FieldManagement: () => null }));
 

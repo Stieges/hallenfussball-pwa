@@ -27,6 +27,8 @@ const MATCH_CLEARED = {
   skippedReason: undefined,
   skippedAt: undefined,
   liveState: undefined,
+  // Beim Anpfiff getragene Farben schreibt nur der Server (K1)
+  kit: undefined,
 } as const;
 
 export interface CopiedContent {
@@ -93,6 +95,19 @@ export function proposeCopyTitle(title: string, suffix: string): string {
 }
 
 /**
+ * Vorschlag für das „Datum der Probe“ (YYYY-MM-DD, lokale Zeit, @W5-025): das Originaldatum, wenn es nach `today` liegt,
+ * sonst der Tag nach `today`. Nur dann steht die Kopie bei „kommend“.
+ */
+export function proposeProbeDate(tournament: Pick<Tournament, 'startDate'>, today: Date): string {
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const heute = iso(today);
+  const original = tournament.startDate;
+  if (original && /^\d{4}-\d{2}-\d{2}$/.test(original) && original > heute) { return original; }
+  const morgen = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  return iso(morgen);
+}
+
+/**
  * Das kopierte Turnier – EINE Funktion für beide Einstiege (Dashboard „Kopieren“ und Admin Center „Duplizieren“),
  * @W5-024 bis @W5-027: Teams, Gruppen, Spielplan und Regeln bleiben, alles andere wird neu.
  *
@@ -105,7 +120,7 @@ export function proposeCopyTitle(title: string, suffix: string): string {
  */
 export function buildCopiedTournament(
   tournament: Tournament,
-  options: { newId: string; title: string; now: string; makeId: () => string },
+  options: { newId: string; title: string; now: string; makeId: () => string; startDate?: string },
 ): Tournament {
   const { teams, matches } = copyTeamsAndMatches(tournament, options.makeId);
   const matchIdMap = new Map(tournament.matches.map((match, index) => [match.id, matches[index].id]));
@@ -118,6 +133,8 @@ export function buildCopiedTournament(
     ...tournament,
     id: options.newId,
     title: options.title,
+    // Datum der Probe (@W5-025: die Kopie steht bei „kommend“); ohne Angabe bleibt das Datum des Originals
+    ...(options.startDate ? { startDate: options.startDate, ...(tournament.date ? { date: options.startDate } : {}) } : {}),
     status: released ? 'published' : 'draft',
     createdAt: options.now,
     updatedAt: options.now,
