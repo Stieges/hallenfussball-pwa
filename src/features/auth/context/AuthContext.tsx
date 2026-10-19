@@ -273,5 +273,5 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // Globale Hinweise: „von einem anderen Gerät aus abgemeldet“ (@AN-024) und „Server antwortet langsam“ (@AN-019, @AN-032).
-  return <AuthContext.Provider value={value}>{children}<SignedOutElsewhereNotice /><ServerSlowNotice visible={isServerSlow} /></AuthContext.Provider>;
+  return <AuthContext.Provider value={value}><SignedOutElsewhereNotice /><ServerSlowNotice visible={isServerSlow} />{children}</AuthContext.Provider>;
 }
