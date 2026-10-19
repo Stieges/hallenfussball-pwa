@@ -151,6 +151,9 @@ export function useTournamentManager(tournamentId: string) {
         try {
             await service.updateTournament(sanitized);
             setTournament(sanitized);
+            // @W5-027: die Turnierliste der Startseite (eigene Hook-Instanz in App.tsx) lädt bei diesem
+            // Ereignis neu, sonst bliebe eine archivierte Kopie bis zum Neuladen auf der Startseite stehen.
+            window.dispatchEvent(new Event('tournament-updated'));
         } catch (err) {
             console.error('Failed to update tournament:', err);
             setError('Speichern fehlgeschlagen');

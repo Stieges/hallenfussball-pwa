@@ -6,9 +6,9 @@
  * - Mobile: BottomSheet with action list
  *
  * Available actions depend on tournament status:
- * - Running: Open, Share (no delete)
- * - Upcoming/Draft: Open, Share, Delete
- * - Finished: Open, Share, Archive, Delete
+ * - Running: Open, Copy, Share (no delete)
+ * - Upcoming/Draft/Finished: Open, Copy, Share, Delete
+ * - Archivieren gibt es hier nicht, nur im Admin Center (DangerZone, mit Bestätigung durch Eingabe)
  * - Trashed: Restore, Permanent Delete
  */
 

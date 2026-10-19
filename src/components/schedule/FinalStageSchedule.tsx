@@ -28,6 +28,7 @@ import { cssVars, shadowSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import type { SpectatorClock } from '../../core/view';
 import { RefereeConfig } from '../../types/tournament';
+import type { ScoreCommitResult } from '../ui/molecules';
 import { buildSideContext, matchViewOf, sideDisplay, sideName, type SideSource } from './matchSides';
 import { finalMatchLabel } from './finalMatchLabel';
 import { MatchScoreCell } from './MatchScoreCell';
@@ -46,7 +47,7 @@ interface FinalStageScheduleProps {
   numberOfFields?: number;
   onRefereeChange?: (matchId: string, refereeNumber: number | null) => void;
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
-  onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => void;
+  onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => ScoreCommitResult;
   editable?: boolean;
   /** Is the schedule currently being edited (edit mode active) */
   editingSchedule?: boolean;
@@ -392,6 +393,8 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                       result={result}
                       viewStatus={matchViewOf(sides, match.id)?.status}
                       inCorrectionMode={correctionMatchId === match.id}
+                      nameA={sideName(match, 'A', sides)}
+                      nameB={sideName(match, 'B', sides)}
                       onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
                       onStartCorrection={onStartCorrection ? () => onStartCorrection(match.id) : undefined}
                     />
