@@ -424,8 +424,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Subscribe to auth changes (only if Supabase is configured)
     if (isSupabaseConfigured && supabase) {
+      const authClient = supabase;
       try {
-        const { data } = supabase.auth.onAuthStateChange(
+        const { data } = authClient.auth.onAuthStateChange(
           (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
             // Synchron bleiben (A-07d2, C-AUTH-CALLBACK-ASYNC): die Arbeit läuft danach.
             setTimeout(() => {
@@ -439,7 +440,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 void (async () => {
                   // Scheitert das Erneuern am Netz, meldet auth-js nach den Wiederholungen INITIAL_SESSION ohne
                   // Sitzung, behält aber den Schlüssel: das ist keine Abmeldung (@AN-019/@AN-020, Probe P2).
-                  if (event === 'INITIAL_SESSION' && !newSession && hasStoredAuthToken()) {
+                  if (event === 'INITIAL_SESSION' && !newSession && hasStoredAuthToken(authClient)) {
                     return;
                   }
                   applyAuthEventEffects(event, newSession, setIsGuest);

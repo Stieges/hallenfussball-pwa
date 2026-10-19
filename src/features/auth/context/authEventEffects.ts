@@ -37,13 +37,23 @@ export function applyAuthEventEffects(
   // On sign out (including server-side token revocation),
   // always clear local caches to prevent stale data restoration
   if (event === 'SIGNED_OUT') {
-    safeLocalStorage.removeItem('auth:cachedUser');
-    safeLocalStorage.removeItem('auth:guestUser');
-    void clearProfileCache();
-    // Ohne eigenes Abmelden kam das Ende der Sitzung vom Server: Hinweis auf der Anmeldeseite.
-    if (!isOwnSignOut()) {
-      setSignedOutElsewhere();
-    }
+    applySessionEnded();
+  }
+}
+
+/**
+ * Die Sitzung ist zu Ende: lokale Kopien löschen (keine Daten wiederherstellen) und, ohne eigenes
+ * Abmelden, den Hinweis „von einem anderen Gerät aus abgemeldet“ setzen (@AN-024).
+ * Aufgerufen bei SIGNED_OUT und, wenn auth-js dieses Ereignis vor dem Abonnieren verteilt hat,
+ * von `readSessionOrThrow` (B5).
+ */
+export function applySessionEnded(): void {
+  safeLocalStorage.removeItem('auth:cachedUser');
+  safeLocalStorage.removeItem('auth:guestUser');
+  void clearProfileCache();
+  // Ohne eigenes Abmelden kam das Ende der Sitzung vom Server: Hinweis auf der Anmeldeseite.
+  if (!isOwnSignOut()) {
+    setSignedOutElsewhere();
   }
 }
 

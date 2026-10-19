@@ -297,10 +297,10 @@ describe('AuthProvider – abgelaufene Anmeldung und Gegenbeispiele (Ü1.2 „Ni
     expect(screen.getByTestId('signed-out-elsewhere').textContent).toContain('login.signedOutElsewhere');
   });
 
-  it('@AN-024 Ablehnung ohne Ereignis (Wettlauf vor dem Abonnieren): Anmeldung war da, jetzt keine Sitzung → Hinweis, nicht still', async () => {
-    store.local.setItem(TOKEN_KEY, sessionRaw(true));
+  it('@AN-024 Ablehnung ohne Ereignis (Wettlauf vor dem Abonnieren): Nutzerkopie war da, Schlüssel schon gelöscht → Hinweis, Kopie weg', async () => {
+    // Zustand nach auth-js `_removeSession` vor dem Abonnieren: Schlüssel weg, die Kopie der App steht noch.
+    store.local.setItem('auth:cachedUser', JSON.stringify(CACHED_USER));
     if (!supabase) { throw new Error('Test-Client fehlt'); }
-    // auth-js hat die Ablehnung schon vor dem Abonnieren verteilt: getSession liefert „keine Sitzung“ ohne Fehler.
     vi.spyOn(supabase.auth, 'getSession').mockResolvedValue({ data: { session: null }, error: null });
 
     renderProvider();
@@ -308,6 +308,31 @@ describe('AuthProvider – abgelaufene Anmeldung und Gegenbeispiele (Ü1.2 „Ni
 
     expect(screen.getByTestId('probe').textContent).toBe('none');
     expect(screen.getByTestId('signed-out-elsewhere')).toBeTruthy();
+    expect(store.local.getItem('auth:cachedUser')).toBeNull();
+  });
+
+  it('Gegenbeispiel: nie angemeldet (keine Nutzerkopie), keine Sitzung → kein Hinweis „anderes Gerät“', async () => {
+    if (!supabase) { throw new Error('Test-Client fehlt'); }
+    vi.spyOn(supabase.auth, 'getSession').mockResolvedValue({ data: { session: null }, error: null });
+
+    renderProvider();
+    await advance(500);
+
+    expect(screen.getByTestId('probe').textContent).toBe('none');
+    expect(screen.queryByTestId('signed-out-elsewhere')).toBeNull();
+  });
+
+  it('Gegenbeispiel: eigenes Abmelden in einem anderen Fenster, Kopie noch da → kein Hinweis „anderes Gerät“', async () => {
+    store.local.setItem('auth:cachedUser', JSON.stringify(CACHED_USER));
+    store.local.setItem('auth:ownSignOut', '1');
+    if (!supabase) { throw new Error('Test-Client fehlt'); }
+    vi.spyOn(supabase.auth, 'getSession').mockResolvedValue({ data: { session: null }, error: null });
+
+    renderProvider();
+    await advance(500);
+
+    expect(screen.getByTestId('probe').textContent).toBe('none');
+    expect(screen.queryByTestId('signed-out-elsewhere')).toBeNull();
   });
 
   it('@AN-020 manuelle Wiederverbindung mit Netzfehler meldet nicht ab', async () => {
