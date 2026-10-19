@@ -29,6 +29,26 @@ export const DEFAULT_SPECTATOR_DISPLAY: SpectatorDisplaySettings = Object.freeze
   awayColor: DEFAULT_AWAY_BOX_COLOR,
 });
 
+/**
+ * Voreinstellungen der Farbauswahl für die Standardfarben (Daten, keine Gestaltungswerte; Namen wie im Gherkin @ZM-153/@ZM-159
+ * und im Mockup `einstellungen.html`). Andere Farben wählt die Person mit dem freien Farbwähler; ihr Name ist dann der Hex-Wert.
+ */
+export const BOX_COLOR_PRESETS = [
+  { key: 'blue', hex: DEFAULT_HOME_BOX_COLOR },
+  { key: 'red', hex: DEFAULT_AWAY_BOX_COLOR },
+  { key: 'yellow', hex: '#FACC15' },
+  { key: 'navy', hex: '#0D1B4C' },
+  { key: 'white', hex: '#FFFFFF' },
+  { key: 'black', hex: '#000000' },
+] as const;
+
+export type BoxColorPresetKey = (typeof BOX_COLOR_PRESETS)[number]['key'];
+
+/** Name der Voreinstellung zu einer Farbe (Groß-/Kleinschreibung egal), sonst `undefined`. */
+export function boxColorPresetKey(hex: string): BoxColorPresetKey | undefined {
+  return BOX_COLOR_PRESETS.find((preset) => preset.hex.toLowerCase() === hex.toLowerCase())?.key;
+}
+
 const colorOr = (fallback: string) => z.unknown().optional().transform((value) => normalizeKitColor(value) ?? fallback);
 
 /**

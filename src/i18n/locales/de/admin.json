@@ -317,5 +317,32 @@
     "rulebookPlaceholder": "z. B. BFV-Richtlinien für Futsal",
     "rulebookLimit": "Höchstens 80 Zeichen.",
     "rulebookTruncated": "Auf 80 Zeichen gekürzt."
+  },
+  "spectatorDisplay": {
+    "title": "Anzeige für Zuschauer",
+    "description": "Gilt für den Hallenmonitor, die Zuschauer-Seite und die Spielkarten.",
+    "preview": "Vorschau",
+    "home": "Heim",
+    "away": "Gast",
+    "boxAria": "{{side}}: {{color}}",
+    "teamColors": "Teamfarben in den Ergebniskästen",
+    "teamColorsNote": "Die Kästen tragen die Farbe, die ein Team im Spiel trägt.",
+    "on": "An",
+    "off": "Aus",
+    "homeColor": "Standardfarbe Heim",
+    "awayColor": "Standardfarbe Gast",
+    "colorNote": "Für Teams ohne eingetragene Farbe.",
+    "similarTitle": "Diese beiden Farben sehen sich zu ähnlich.",
+    "similarText": "Du kannst trotzdem speichern. Zeigt ein Spiel nur Standardfarben, erscheint der Gast-Kasten in Weiß.",
+    "save": "Speichern",
+    "saved": "Gespeichert",
+    "colors": {
+      "blue": "Blau",
+      "red": "Rot",
+      "yellow": "Gelb",
+      "navy": "Navy",
+      "white": "Weiß",
+      "black": "Schwarz"
+    }
   }
 }
