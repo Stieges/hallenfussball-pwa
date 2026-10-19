@@ -675,7 +675,7 @@ check S "field_control leer nach dem Einspielen" "0" "$(q "SELECT count(*) FROM 
 check S "RPCs SECURITY DEFINER mit search_path; field_control_info nicht SECURITY DEFINER" \
   "field_control_info:false:{\"search_path=public, pg_temp\"}|field_control_state:true:{\"search_path=public, pg_temp\"}|take_field_control:true:{\"search_path=public, pg_temp\"}" \
   "$(q "SELECT string_agg(p.proname || ':' || p.prosecdef || ':' || p.proconfig::text, '|' ORDER BY p.proname) FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname IN ('field_control_info', 'field_control_state', 'take_field_control');")"
-check S "append_match_events: Signatur und Rechte unveraendert (authenticated ja, anon/service_role nein)" "t|f|f" \
+check S "append_match_events: Signatur und Rechte unveraendert (authenticated ja, anon/service_role nein)" "true|false|false" \
   "$(q "SELECT has_function_privilege('authenticated', 'public.append_match_events(uuid,jsonb,integer,uuid)', 'EXECUTE') || '|' || has_function_privilege('anon', 'public.append_match_events(uuid,jsonb,integer,uuid)', 'EXECUTE') || '|' || has_function_privilege('service_role', 'public.append_match_events(uuid,jsonb,integer,uuid)', 'EXECUTE');")"
 DUMP_AFTER="$(schema_dump)"
 COUNTS_AFTER="$(counts "$DUMP_AFTER")"
