@@ -125,7 +125,7 @@ describe('C-DANGER-KONTRAST: Schrift auf farbigen Tasten (Gefahr, Primär, Warnu
  * Schrift auf Sekundär-, Info- und Erfolgs-Flächen im hellen Thema sowie auf der Erfolgs-Taste im dunklen.
  * `it.fails` hält sie sichtbar; wird eines behoben, schlägt der Test an und gehört nach oben verschoben.
  */
-describe('Offen (Befund): weitere Text-Paare unter 4,5 : 1', () => {
+describe('Offen (Befund C-KONTRAST-TEXTPAARE): weitere Text-Paare unter 4,5 : 1', () => {
   it.fails('hell: --color-on-secondary auf --color-secondary', () => {
     expect(ratio('light', '--color-on-secondary', '--color-secondary')).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
   });
