@@ -191,6 +191,15 @@ A27_START_GOAL_14="$(a27_arr "$(a27_ev MATCH_START s14-start)" "$(a27_ev GOAL s1
 a11_mark "@HE-073 lena-tor-feld-2-abgelehnt                             " "$(a27_append "$U_ANON_DEVICE" "$A11_M14" "$A27_START_GOAL_14")" "rejected:FORBIDDEN_ACTOR,rejected:FORBIDDEN_ACTOR|0|0"
 a11_mark "@HE-073 gegen-tom-zugelassen-tor-feld-2                       " "$(a27_append "$U_HELPER_DEVICE" "$A11_M14" "$A27_START_GOAL_14")" "accepted,accepted|0|2"
 
+# --- Fixrunde 1 A2: Olli widerruft Toms Helfer-Zugang (declined_at) -> Toms Geraet hat kein Schreibrecht mehr -----------
+# (sichert die Bedingung declined_at IS NULL im anonymen Zweig von has_tournament_permission; A-16 revoke_member baut darauf)
+A27_OLLI_WIDERRUFT="SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claim.sub = '$U_OWNER';
+UPDATE public.tournament_collaborators SET declined_at = now() WHERE id = '$MEMBERSHIP_HELPER_DEVICE';
+RESET ROLE;"
+a11_mark "@HE-006:teil widerrufener-helfer-zugang-hat-kein-schreibrecht " "$(a27_sql authenticated "$U_HELPER_DEVICE" "SELECT public.has_tournament_permission('$T_MAIN','writeMatchData');" "$A27_OLLI_WIDERRUFT")" "f"
+a11_mark "@HE-006:teil widerrufener-helfer-tor-abgelehnt                " "$(a27_append "$U_HELPER_DEVICE" "$A11_M13" "$A27_START_GOAL_13" "$A27_OLLI_WIDERRUFT")" "rejected:FORBIDDEN_ACTOR,rejected:FORBIDDEN_ACTOR|0|0"
+a11_mark "@HE-006:teil gegen-vor-dem-widerruf-tor-angenommen            " "$(a27_append "$U_HELPER_DEVICE" "$A11_M13" "$A27_START_GOAL_13")" "accepted,accepted|0|2"
+
 # --- @HE-042 / L1: Tom oeffnet ein beendetes Spiel nicht wieder (nach der Fortsetzen-Frist), Team umbenennen nein -----
 A27_OLLI_END_11="SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claim.sub = '$U_OWNER';
 SELECT public.append_match_events('$A11_M11', \$J\$$(a27_arr "$(a27_ev MATCH_START s11-start)" "$(a27_ev MATCH_END s11-end '{"at":3000,"clockMs":600000}')")\$J\$::jsonb, 1, NULL);
