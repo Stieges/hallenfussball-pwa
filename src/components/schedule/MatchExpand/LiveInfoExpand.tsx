@@ -29,6 +29,7 @@ import { MatchStatusBadge } from '../../ui/molecules/MatchStatusBadge';
 import type { MatchBadgeModel, SpectatorClock } from '../../../core/view';
 import { MatchClock } from '../../ui/molecules/MatchClock';
 import { cardKindOf } from '../../../utils/cardKind';
+import { FOUL_SYMBOL } from '../../../utils/eventSymbols';
 import { KartenSymbol } from '../../ui/atoms/KartenSymbol';
 
 // ---------------------------------------------------------------------------
@@ -102,7 +103,7 @@ function getEventIcon(event: MatchEvent): ReactNode {
     case 'SUBSTITUTION':
       return '🔄';
     case 'FOUL':
-      return '⚠️';
+      return FOUL_SYMBOL;
     default:
       return '📝';
   }

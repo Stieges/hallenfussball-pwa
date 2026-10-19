@@ -56,4 +56,11 @@ describe.each(renderers)('Karten-Farben nur für Karten (Oberfläche E) – %s',
     zeige('FOUL');
     expect(screen.queryByTestId(/^karten-symbol-/)).toBeNull();
   });
+
+  it('Foul-Symbol ist neutral (Text-Glyph in Textfarbe), nicht das gelbe Warn-Emoji', () => {
+    zeige('FOUL');
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('\u26A0\uFE0E');
+    expect(text).not.toContain('\u26A0\uFE0F');
+  });
 });

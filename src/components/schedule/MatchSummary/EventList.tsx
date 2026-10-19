@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { RuntimeMatchEvent } from '../../../types/tournament';
 import { cardKindOf } from '../../../utils/cardKind';
+import { FOUL_SYMBOL } from '../../../utils/eventSymbols';
 import { KartenSymbol } from '../../ui/atoms/KartenSymbol';
 
 // ---------------------------------------------------------------------------
@@ -45,7 +46,7 @@ const getEventIcon = (event: RuntimeMatchEvent): ReactNode => {
     case 'RED_CARD': return <KartenSymbol art={cardKindOf(event) === 'YELLOW_RED' ? 'YELLOW_RED' : 'RED'} />;
     case 'TIME_PENALTY': return '\u23F1';
     case 'SUBSTITUTION': return '\uD83D\uDD04';
-    case 'FOUL': return '\u26A0';
+    case 'FOUL': return FOUL_SYMBOL;
     default: return '\u2022';
   }
 };

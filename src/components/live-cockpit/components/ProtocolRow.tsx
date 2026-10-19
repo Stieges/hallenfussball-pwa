@@ -9,6 +9,7 @@ import { cssVars, touchTargets } from '../../../design-tokens';
 import type { RuntimeMatchEvent } from '../../../types/tournament';
 import { retractedMarkStyle, retractedRowStyle, formatTime, type ProtocolEntry } from './protocolEntries';
 import { cardKindOf } from '../../../utils/cardKind';
+import { FOUL_SYMBOL } from '../../../utils/eventSymbols';
 import { KartenSymbol } from '../../ui/atoms/KartenSymbol';
 
 export interface ProtocolRowProps {
@@ -30,7 +31,7 @@ const getEventIcon = (event: ProtocolEntry['event']): ReactNode => {
     case 'RED_CARD': return <KartenSymbol art={cardKindOf(event) === 'YELLOW_RED' ? 'YELLOW_RED' : 'RED'} />;
     case 'TIME_PENALTY': return '⏱';
     case 'SUBSTITUTION': return '🔄';
-    case 'FOUL': return '⚠';
+    case 'FOUL': return FOUL_SYMBOL;
     case 'STATUS_CHANGE': return '▶️';
     default: return '•';
   }

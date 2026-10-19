@@ -43,12 +43,30 @@ describe('Karten-Farben nur für Karten (Oberfläche E) – Protokollzeile (Verl
     expect(bg).toContain(GELB);
     expect(bg).toContain(ROT);
   });
+  it.each(['sidebar', 'sheet'] as const)('Foul-Symbol (%s) ist neutral: Text-Glyph statt gelbem Warn-Emoji, kein Kartensymbol', (variant) => {
+    const foul = { id: 'f', timestampSeconds: 5, type: 'FOUL', payload: { teamId: 'teamA', teamName: 'Heim' }, scoreAfter: { home: 0, away: 0 } } as RuntimeMatchEvent;
+    render(<ProtocolRow entry={{ event: foul, retracted: false }} description="Foul" variant={variant} />);
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('\u26A0\uFE0E');
+    expect(text).not.toContain('\u26A0\uFE0F');
+    expect(screen.queryByTestId(/^karten-symbol-/)).toBeNull();
+  });
+
   it('Gegenbeispiel: „unvollständig“ ist keine Karte und behält warning', () => {
     expect(quelle('src/components/live-cockpit/components/ProtocolRow.tsx')).toContain('cssVars.colors.warning');
   });
 });
 
 describe('Karten-Farben nur für Karten (Oberfläche E) – Bearbeiten-Dialog', () => {
+  it('Foul-Symbol im Bearbeiten-Dialog ist neutral (Text-Glyph), kein Kartensymbol', () => {
+    render(<EventEditDialog isOpen onClose={vi.fn()} event={{ id: 'f', type: 'FOUL', timestampSeconds: 5, payload: { teamId: 'team-a' } }}
+      onUpdate={vi.fn()} onDelete={vi.fn()} homeTeam={{ id: 'team-a', name: 'FC Alpha' }} awayTeam={{ id: 'team-b', name: 'SV Beta' }} />);
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('\u26A0\uFE0E');
+    expect(text).not.toContain('\u26A0\uFE0F');
+    expect(screen.queryByTestId(/^karten-symbol-/)).toBeNull();
+  });
+
   const teams = { homeTeam: { id: 'team-a', name: 'FC Alpha' }, awayTeam: { id: 'team-b', name: 'SV Beta' } };
   const zeige = (event: EditableMatchEvent) => render(
     <EventEditDialog isOpen onClose={vi.fn()} event={event} onUpdate={vi.fn()} onDelete={vi.fn()} {...teams} />,

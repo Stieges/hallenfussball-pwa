@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars, dialogWidths } from '../../../../design-tokens';
 import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import { cardKindOf } from '../../../../utils/cardKind';
+import { FOUL_SYMBOL } from '../../../../utils/eventSymbols';
 import { KartenSymbol } from '../../../ui/atoms/KartenSymbol';
 import type { EditableMatchEvent } from '../../../../types/tournament';
 import type { EventFieldChanges } from '../../../../hooks/engineEventEditingSupport';
@@ -104,7 +105,7 @@ export function EventEditDialog({
       case 'RED_CARD': return <KartenSymbol art={cardKindOf(e) === 'YELLOW_RED' ? 'YELLOW_RED' : 'RED'} />;
       case 'TIME_PENALTY': return '⏱️';
       case 'SUBSTITUTION': return '🔄';
-      case 'FOUL': return '⚠️';
+      case 'FOUL': return FOUL_SYMBOL;
       default: return '📝';
     }
   };
