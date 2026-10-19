@@ -444,8 +444,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     return;
                   }
                   applyAuthEventEffects(event, newSession, setIsGuest);
-                  // Jede Antwort des Servers beendet „antwortet langsam“ (@AN-019), auch eine abgekoppelte Erneuerung.
-                  if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+                  // Eine Antwort des Servers beendet „antwortet langsam“ (@AN-019), auch eine abgekoppelte Erneuerung.
+                  // Nur TOKEN_REFRESHED: SIGNED_IN kommt auch ohne Serverkontakt aus dem Speicher (Start, Tab wieder
+                  // sichtbar – auth-js `_recoverAndRefresh`) und ist kein „verbunden“ (N2). Eine echte Anmeldung setzt
+                  // „verbunden“ über die Anmelde-Aktion (actionDeps.setConnectionState).
+                  if (event === 'TOKEN_REFRESHED') {
                     setIsServerSlow(false);
                     setConnectionState('connected');
                   }
@@ -674,7 +677,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser,
     setSession,
     setIsGuest,
-    setConnectionState,
+    // Aktionen setzen „verbunden“ nur nach einer Antwort des Servers (Anmelden, Wiederverbinden): der Hinweis endet.
+    setConnectionState: (state: ConnectionState) => {
+      setConnectionState(state);
+      if (state === 'connected') {
+        setIsServerSlow(false);
+      }
+    },
     setIsLoading,
     updateAuthState,
     getCurrentState: () => stateRef.current,
