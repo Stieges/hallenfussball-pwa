@@ -6,7 +6,7 @@
 import 'fake-indexeddb/auto';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { __resetSwForTests } from '../../../lib/swRegistration';
 import { __fireNeedRefresh, registerSWMock } from '../../../test/mocks/virtual-pwa-register';
 import { attachMonitor, buildTournament, slide, withMonitor } from './monitorFixture';
@@ -34,8 +34,9 @@ vi.mock('qrcode.react', async () => {
 import App from '../../../App';
 
 /**
- * Wartebudget für asynchrone Abfragen. Die Monitor-Seite wird per Lazy-Import geladen; unter Last (parallele
- * Testläufe) überschreitet das den Standard von 1000 ms. Keine Zeitabhängigkeit: die Erwartungen bleiben gleich.
+ * Wartebudget je asynchroner Abfrage (waitFor/findBy). Die Monitor-Seite wird per Lazy-Import geladen; unter Last
+ * (parallele Testläufe) überschreitet das den Standard von 1000 ms. starteKiosk() wartet zweimal, daher liegt die
+ * Testgrenze der Datei bei 15 s (siehe describe), das Modul ist in beforeAll vorgewärmt. Die Erwartungen bleiben gleich.
  */
 const LADEZEIT = { timeout: 5000 };
 
@@ -82,7 +83,12 @@ afterEach(() => {
   __resetSwForTests();
 });
 
-describe('Kiosk-Route Monitor (B-19a, @ME-003, @OB-028)', () => {
+describe('Kiosk-Route Monitor (B-19a, @ME-003, @OB-028)', { timeout: 15_000 }, () => {
+  // Lazy-Modul der Monitor-Seite vorwärmen, damit kein einzelner Test den Kaltstart bezahlt.
+  beforeAll(async () => {
+    await import('../index');
+  }, 30_000);
+
   it.each([
     ['eine neue App-Version ist erschienen', () => { act(() => { __fireNeedRefresh(); }); }],
     ['ein Dialog ist an einem anderen Gerät offen (auf dieser Seite gibt es keinen)', () => { /* kein Ereignis hier */ }],
@@ -141,7 +147,7 @@ describe('Kiosk-Route Monitor (B-19a, @ME-003, @OB-028)', () => {
   it('Gegenbeispiel „/“ (Verwaltung): Offline-Hinweis und Einwilligung bleiben', async () => {
     online.value = false;
     await rendere('/');
-    expect(await screen.findByLabelText('Offline', {}, LADEZEIT)).toBeInTheDocument();
+    expect(await screen.findByTestId('offline-banner', {}, LADEZEIT)).toBeInTheDocument();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
