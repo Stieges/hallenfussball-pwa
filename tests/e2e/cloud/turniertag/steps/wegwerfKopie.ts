@@ -20,15 +20,17 @@ interface KopfZeile {
   id: string;
 }
 
-/** Alles, was ein Durchstich-Schritt am Turniertag-Cup nicht verändern darf: Spiele, Teams und die Ereignisse der Spiele. */
+/** Alles, was ein Durchstich-Schritt am Turniertag-Cup nicht verändern darf: Turnierzeile, Monitore, Spiele, Teams und die Ereignisse der Spiele. */
 export async function momentaufnahme(): Promise<string> {
+  const turnier = await getRows<Record<string, unknown>>(`tournaments?id=eq.${TURNIERTAG_ID}&select=*`, 'Momentaufnahme Turnierzeile');
+  const monitore = await getRows<Record<string, unknown>>(`monitors?tournament_id=eq.${TURNIERTAG_ID}&select=*&order=id.asc`, 'Momentaufnahme Monitore');
   const spiele = await getRows<Record<string, unknown>>(`matches?tournament_id=eq.${TURNIERTAG_ID}&select=*&order=id.asc`, 'Momentaufnahme Spiele');
   const teams = await getRows<Record<string, unknown>>(`teams?tournament_id=eq.${TURNIERTAG_ID}&select=*&order=id.asc`, 'Momentaufnahme Teams');
   const ereignisse = await getRows<{ id: string; match_id: string }>(
     `match_events?match_id=in.(${spiele.map((s) => String(s.id)).join(',')})&select=id,match_id&order=id.asc`,
     'Momentaufnahme Ereignisse'
   );
-  return JSON.stringify({ spiele, teams, ereignisse });
+  return JSON.stringify({ turnier, monitore, spiele, teams, ereignisse });
 }
 
 /** Kopiert den Turniertag-Cup als Turnierleitung über die Startseite und wartet, bis Spiele und Teams in der Cloud stehen. */
