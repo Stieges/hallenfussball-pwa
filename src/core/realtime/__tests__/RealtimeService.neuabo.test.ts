@@ -2,7 +2,7 @@
  * RealtimeService – Neuabo nach Netzwechsel (@FU-102)
  *
  * Abgeleitet aus dem Szenario, nicht aus dem Code. Der Mock bildet das
- * geprüfte Verhalten von realtime-js 2.116 nach:
+ * geprüfte Verhalten von realtime-js 2.117.3 nach:
  *  - client.channel(topic) liefert einen vorhandenen Kanal gleichen Themas zurück,
  *    solange er nicht abgebaut ist (RealtimeClient.channel).
  *  - channel.on('postgres_changes') nach subscribe() wirft (RealtimeChannel.on).
@@ -258,6 +258,77 @@ describe('RealtimeService – Neuabo (@FU-102)', () => {
 
     expect(live('tournament-t1')).toHaveLength(0);
     expect(state.created).toHaveLength(1);
+  });
+
+  it('@FU-102 destroy() während wartendem Neuabo: nach dem Abbau entsteht kein Kanal, nichts bleibt abonniert', async () => {
+    service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn() });
+    state.deferRemoval = true;
+
+    goOnline(); // Neuabo wartet auf den Abbau
+    service.destroy();
+    await releaseRemovals();
+
+    expect(live('tournament-t1')).toHaveLength(0);
+    expect(state.created).toHaveLength(1);
+    expect(service.getState().subscribedTournaments.size).toBe(0);
+  });
+
+  it('@FU-102 unsubscribeAll() während wartendem Neuabo: kein neuer Kanal', async () => {
+    service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn() });
+    service.subscribeTournament({ tournamentId: 't2', onMatchChange: vi.fn() });
+    state.deferRemoval = true;
+
+    goOnline();
+    service.unsubscribeAll();
+    await releaseRemovals();
+
+    expect(state.list.filter((c) => !c.removed)).toHaveLength(0);
+    expect(state.created).toHaveLength(2);
+    expect(service.getState().subscribedTournaments.size).toBe(0);
+  });
+
+  it('@FU-102 unsubscribeAll()/destroy() während einer Pause: danach legt resume() keinen Kanal an', async () => {
+    service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn() });
+    service.pause();
+    await flush();
+
+    service.unsubscribeAll();
+    service.resume();
+    await releaseRemovals();
+
+    expect(live('tournament-t1')).toHaveLength(0);
+    expect(state.created).toHaveLength(1);
+    expect(service.getState().subscribedTournaments.size).toBe(0);
+  });
+
+  it('@FU-025 verzögerte Neuanlage wirft: onError und Status error statt stiller Ablehnung (Abfrage-Ausweg)', async () => {
+    const onErrorCb = vi.fn();
+    const onStatusChange = vi.fn();
+    service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn(), onError: onErrorCb, onStatusChange });
+    state.deferRemoval = true;
+
+    const original = client.channel.getMockImplementation();
+    client.channel.mockImplementation((name: string) => {
+      if (!original) { throw new Error('mock fehlt'); }
+      const ch = original(name);
+      ch.on = () => { throw new Error('on wirft'); };
+      return ch;
+    });
+    const rejections: unknown[] = [];
+    const onRej = (reason: unknown): void => { rejections.push(reason); };
+    process.on('unhandledRejection', onRej);
+
+    goOnline();
+    await releaseRemovals();
+    await flush();
+    process.off('unhandledRejection', onRej);
+
+    expect(rejections).toEqual([]);
+    expect(onErrorCb).toHaveBeenCalledTimes(1);
+    expect(onErrorCb.mock.calls[0][0].message).toContain('on wirft');
+    expect(service.getState().status).toBe('error');
+    expect(onStatusChange).toHaveBeenLastCalledWith('error');
+    if (original) { client.channel.mockImplementation(original); }
   });
 
   it('@FU-025 Gegenbeispiel: Kanal-Fehler nach dem Neuabo führt weiter zu onError (Abfrage-Ausweg)', async () => {

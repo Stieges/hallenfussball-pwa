@@ -340,7 +340,14 @@ export class RealtimeService {
     if (this.state.isPaused || this.channels.has(tournamentId)) { return; }
     const options = this.subscriptionOptions.get(tournamentId);
     if (!options) { return; }
-    this.createSubscription(tournamentId, options);
+    try {
+      this.createSubscription(tournamentId, options);
+    } catch (error) {
+      // Laeuft meist verzoegert (nach dem Abbau) und hat keinen Aufrufer, der den Wurf sieht:
+      // als Kanal-Fehler melden, damit das Abfrage-Ausweichen (@FU-025) greift.
+      this.channels.delete(tournamentId);
+      this.reportChannelError(tournamentId, options, error instanceof Error ? error.message : String(error));
+    }
   }
 
   private removeAllChannels(): void {
