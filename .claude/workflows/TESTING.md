@@ -33,7 +33,8 @@
 - Ein Test belegt ein Szenario, wenn seine **Kennung im Testnamen** steht: `it('@SL-034 Grenze 3: das 3. Foul meldet einen Hinweis', …)`.
   Gezählt werden Namen von `it`/`test`/`describe`/`test.step` und `each`-Tabellen, nie Kommentare oder andere Strings.
 - **Regulär** heißt: ein Test, der in der CI wirklich läuft und grün sein muss. Nicht regulär sind `skip`, `todo`, `fixme`,
-  `it.fails`/`test.fail` und alles darin. Nur reguläre Tests zählen als „mit Test“.
+  `it.fails`/`test.fail` am Aufruf und alles darin sowie unbedingte Markierungen im Rumpf (`test.fail()`, `test.skip()`). Bedingte
+  Rumpf-Aufrufe wie `test.fail(cond, …)` und `test.skip(cond, …)` bleiben regulär und zählen „mit Test“. Nur reguläre Tests zählen als „mit Test“.
 - `@XX-nnn:teil` im Namen heißt **teilweise** abgedeckt (eigene Spalte, zählt nicht als „mit Test“).
 
 ## 0.2 Markierung „erwartet rot“ nur mit Verweis
@@ -51,7 +52,8 @@ test.fail(testInfo.project.name === 'tablet-portrait', 'Befund C-COCKPIT-TABLET-
 ```
 
 - **Markierung** ist `it.fails`/`test.fail('Titel', fn)` am Aufruf oder jedes `test.fail(…)`/`testInfo.fail(…)` im Rumpf, bedingt oder
-  unbedingt. `skip`/`fixme`/`todo` brauchen keinen Verweis.
+  unbedingt (auch `test.info().fail()`). Für die Verweis-Pflicht zählt also auch das bedingte `test.fail(cond, …)` als Markierung, obwohl der
+  Test regulär bleibt. `skip`/`fixme`/`todo` brauchen keinen Verweis.
 - **Schreibweisen des Verweises:** `@DF-001` oder `DF-001` (genau drei Ziffern) oder eine Befund-Kennung `C-…` in Großbuchstaben
   (`C-COCKPIT-TABLET-OHNE-PROTOKOLL`). Nicht gültig: `@DF-01`, `@DF-0012`, `B-51b`, `F-B13-4`, `C-Jugend`. Ein Verweis nur im Kommentar zählt nicht.
 - **Ratsche:** Die Zahl der Markierungen ohne Verweis darf nicht größer sein als auf `main` (Verschieben zählt nicht als Zuwachs);
@@ -78,7 +80,9 @@ node scripts/scenario-tests.mjs --floor-schreiben                             # 
 ```
 
 - `tests/meta/befund-kennungen.json` enthält **nur** Kennungen, die ein Test nennt, keinen Befundtext. Nach jedem neuen Verweis neu
-  erzeugen und mit committen; eine veraltete Liste macht die CI rot.
+  erzeugen und mit committen. Die CI prüft beide Richtungen: ein Verweis im Test, der in der Liste fehlt, und eine Kennung in der Liste,
+  die kein Test nennt (von Hand ergänzt oder Verweis entfernt), machen sie rot. Nicht sehen kann die CI eine erfundene Kennung, die
+  zugleich im Test und in der Liste steht; das fängt erst der nächste Lauf des Erzeugers gegen die Befundliste ab.
 - **Untergrenze** am Paketende nachziehen (`--floor-schreiben`, nach der MVP-Liste), nie senken.
 
 ## 0.6 Datenwege
