@@ -21,6 +21,7 @@
 import { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { t } from '../helpers/i18n';
+import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
 // CI skip removed - using reliable seeding fixture
 
@@ -467,10 +468,7 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
 
     // Score a goal
     await page.getByTestId('goal-button-home').click();
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // Pause and finish
     await page.getByTestId('match-pause-button').click();
@@ -699,10 +697,7 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
 
     // Score a goal
     await page.getByTestId('goal-button-home').click();
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // Finish match
     await page.getByTestId('match-pause-button').click();

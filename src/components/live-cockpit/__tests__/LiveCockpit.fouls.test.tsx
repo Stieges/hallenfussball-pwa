@@ -1,12 +1,14 @@
 /**
- * LiveCockpit -- Fouls zaehlen fuer das ganze Spiel (C3b-2, G11).
- * Kein Halbzeit-Reset, kein lokales +1, sichtbarer R6-Hinweis. Echte deutsche Texte.
+ * LiveCockpit -- Fouls zaehlen fuer das ganze Spiel (C3b-2, G11); seit Aufgabe 3.3 steht der Zaehler in der Team-Spalte
+ * als „Foul n/Grenze“ (@SL-099, @SL-035), der Hinweis „Karten und Zeitstrafen zaehlen als Foul“ entfaellt (gilt nach Vorschlag 3).
+ * Kein Halbzeit-Reset, kein lokales +1. Echte deutsche Texte.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LiveCockpit } from '../LiveCockpit';
 import type { LiveCockpitProps } from '../types';
+import { warteSperre } from './engineHarnessSupport';
 
 const tCalls = vi.hoisted(() => [] as string[]);
 
@@ -64,6 +66,14 @@ function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): Li
   };
 }
 
+/** Karte über die Spalte (Aufgabe 3.5): Knopf, Art im Kartenart-Schritt, Nummernauswahl nach der Sperre mit „ohne Nummer“. */
+async function karteOhneDetails(user: ReturnType<typeof userEvent.setup>, seite: 'home' | 'away', art: 'Gelb' | 'Gelb-Rot' | 'Rot') {
+  await user.click(screen.getByTestId(`card-button-${seite}`));
+  await user.click(within(screen.getByTestId('card-kind-step')).getByRole('button', { name: art }));
+  await warteSperre();
+  await user.click(within(screen.getByTestId('number-picker')).getByRole('button', { name: 'ohne Nummer' }));
+}
+
 describe('LiveCockpit — Fouls für das ganze Spiel (C3b-2, G11)', () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -71,8 +81,8 @@ describe('LiveCockpit — Fouls für das ganze Spiel (C3b-2, G11)', () => {
   // Den Ablauf ueber die Halbzeit prueft LiveCockpit.abschnittsende.test.tsx mit echter Engine.
   it('kein Reset bei Halbzeit (kein Halbzeit-Knopf, Zaehler aus den Ereignissen)', () => {
     render(<LiveCockpit {...baseProps(makeMatch())} />);
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('2');
-    expect(screen.getByTestId('foul-count-away')).toHaveTextContent('1');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 2/5');
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 1/5');
     expect(screen.queryByRole('button', { name: 'Halbzeit' })).not.toBeInTheDocument();
   });
 
@@ -87,27 +97,26 @@ describe('LiveCockpit — Fouls für das ganze Spiel (C3b-2, G11)', () => {
       ],
     });
     render(<LiveCockpit {...baseProps(match)} />);
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('2');
-    expect(screen.getByTestId('foul-count-away')).toHaveTextContent('0');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 2/5');
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0/5');
   });
 
   it('kein lokales +1: Foul-Knopf ruft onFoul, der Zähler steigt erst mit dem Ereignis', async () => {
     const onFoul = vi.fn();
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch(), { onFoul })} />);
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('2');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 2/5');
 
-    await user.click(screen.getByRole('button', { name: 'Foul für FC Alpha' }));
+    await user.click(screen.getByRole('button', { name: /^Foul FC Alpha, Foul \d+\/5$/ }));
 
     expect(onFoul).toHaveBeenCalledWith('match-1', 'team-a');
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('2');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 2/5');
   });
 
-  it('R6-Hinweis „Fouls zählen für das ganze Spiel – Karten und Zeitstrafen zählen als Foul“ ist sichtbar', () => {
+  it('@SL-099 der Zähler nennt keine Gesamtzahl und keinen Hinweis „Karten und Zeitstrafen zählen als Foul“', () => {
     render(<LiveCockpit {...baseProps(makeMatch())} />);
-    expect(screen.getByTestId('foul-hint')).toHaveTextContent(
-      'Fouls zählen für das ganze Spiel – Karten und Zeitstrafen zählen als Foul',
-    );
+    expect(screen.queryByTestId('foul-hint')).toBeNull();
+    expect(screen.queryByText(/gesamt|Karten und Zeitstrafen zählen als Foul/)).toBeNull();
   });
 });
 
@@ -129,7 +138,7 @@ describe('LiveCockpit — M7: Meldungen i18n, Foul ohne Zahl, 5er-Warnung (F3a)'
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch(), { onFoul })} />);
 
-    await user.click(screen.getByRole('button', { name: 'Foul für FC Alpha' }));
+    await user.click(screen.getByRole('button', { name: /^Foul FC Alpha, Foul \d+\/5$/ }));
 
     expect(await screen.findByText('Foul für FC Alpha')).toBeInTheDocument();
     expect(screen.queryByText(/Foul für FC Alpha \(\d+\)/)).toBeNull();
@@ -141,31 +150,30 @@ describe('LiveCockpit — M7: Meldungen i18n, Foul ohne Zahl, 5er-Warnung (F3a)'
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch(), { onCard, onFoul })} />);
 
-    await user.click(screen.getByRole('button', { name: 'Gelbe Karte für FC Alpha' }));
-    await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
+    await karteOhneDetails(user, 'home', 'Gelb');
 
     expect(onCard).toHaveBeenCalledTimes(1);
-    expect(onCard).toHaveBeenCalledWith('match-1', 'team-a', 'YELLOW', { playerNumber: undefined });
+    expect(onCard).toHaveBeenCalledWith('match-1', 'team-a', 'YELLOW', { playerNumber: undefined, clockMs: 0 });
     expect(onFoul).not.toHaveBeenCalled();
   });
 
   // Halbzeit-Teil: siehe LiveCockpit.abschnittsende.test.tsx (B-08b).
-  it('Karten- und Zeitstrafen-Meldungen kommen aus i18n', async () => {
+  it('Karten- und Zeitstrafen-Meldungen kommen aus i18n (meldung.*)', async () => {
     const onCard = vi.fn();
     const onTimePenalty = vi.fn();
     const user = userEvent.setup();
     tCalls.length = 0;
     render(<LiveCockpit {...baseProps(makeMatch(), { onCard, onTimePenalty })} />);
 
-    await user.click(screen.getByRole('button', { name: 'Gelbe Karte für FC Alpha' }));
-    await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
+    await karteOhneDetails(user, 'home', 'Gelb');
     expect(await screen.findByText('Gelbe Karte für FC Alpha')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Zeitstrafe für FC Alpha' }));
-    await user.click(screen.getByRole('button', { name: /Ohne Nr\./ }));
-    expect(await screen.findByText('2 Min Zeitstrafe für FC Alpha')).toBeInTheDocument();
-    expect(tCalls).toContain('toast.yellowCard');
-    expect(tCalls).toContain('toast.timePenalty');
+    await user.click(screen.getByRole('button', { name: 'Zeitstrafe FC Alpha' }));
+    await warteSperre();
+    await user.click(within(screen.getByTestId('number-picker')).getByRole('button', { name: 'ohne Nummer' }));
+    expect(await screen.findByText('Zeitstrafe für FC Alpha')).toBeInTheDocument();
+    expect(tCalls).toContain('meldung.karteGelb');
+    expect(tCalls).toContain('meldung.strafeErfasst');
   });
 
   it('@SL-034 Hinweis in der Meldezeile bei der 5. Strafe – auch als Karte; @SL-035 Gegenbeispiel: 4. Strafe ohne Hinweis', async () => {
@@ -187,24 +195,22 @@ describe('LiveCockpit — M7: Meldungen i18n, Foul ohne Zahl, 5er-Warnung (F3a)'
 describe('LiveCockpit — Gelb-Rot im Cockpit (C3b-2 F3b2, PO 30.09.)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('eigener Schnellknopf "Gelb-Rot" -> Dialog -> onCard mit "YELLOW_RED" (keine automatische Umwandlung)', async () => {
+  it('Karten-Knopf, Art "Gelb-Rot" -> Dialog -> onCard mit "YELLOW_RED" (keine automatische Umwandlung)', async () => {
     const onCard = vi.fn();
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch(), { onCard })} />);
 
-    await user.click(screen.getByRole('button', { name: 'Gelb-Rote Karte für FC Alpha' }));
-    await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
+    await karteOhneDetails(user, 'home', 'Gelb-Rot');
 
     expect(onCard).toHaveBeenCalledTimes(1);
-    expect(onCard).toHaveBeenCalledWith('match-1', 'team-a', 'YELLOW_RED', { playerNumber: undefined });
+    expect(onCard).toHaveBeenCalledWith('match-1', 'team-a', 'YELLOW_RED', { playerNumber: undefined, clockMs: 0 });
   });
 
   it('Meldung nach Gelb-Rot kommt aus i18n ("Gelb-Rote Karte für ...")', async () => {
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch())} />);
 
-    await user.click(screen.getByRole('button', { name: 'Gelb-Rote Karte für FC Alpha' }));
-    await user.click(screen.getByRole('button', { name: 'Ohne Details' }));
+    await karteOhneDetails(user, 'home', 'Gelb-Rot');
 
     expect(await screen.findByText('Gelb-Rote Karte für FC Alpha')).toBeInTheDocument();
   });
@@ -225,6 +231,6 @@ describe('LiveCockpit — Gelb-Rot im Cockpit (C3b-2 F3b2, PO 30.09.)', () => {
     render(<LiveCockpit {...baseProps(match)} />);
 
     // Gelb-Rot (1) -- das Tor zaehlt nicht mit (Gegenbeispiel).
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 1/5');
   });
 });

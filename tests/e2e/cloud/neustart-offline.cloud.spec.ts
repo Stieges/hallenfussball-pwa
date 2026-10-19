@@ -60,14 +60,14 @@ test.describe('@FU-007 Neustart ohne Netz', () => {
       await openCockpit(first.page, ids.tournamentId, ids.matchId);
       await expectEngineMatchRunningUi(first.page);
       await expectOutboxSettled(first.page);
-      await expect(first.page.locator('[data-testid="score-home"]')).toHaveText('1');
+      await expect(first.page.locator('[data-testid="scoreboard-box-links"]')).toHaveText('1');
 
       await first.context.setOffline(true);
       await enterGoal(first.page, 'home');
       await enterGoal(first.page, 'away');
       await expect(first.page.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '2', { timeout: 5000 });
-      await expect(first.page.locator('[data-testid="score-home"]')).toHaveText('2');
-      await expect(first.page.locator('[data-testid="score-away"]')).toHaveText('1');
+      await expect(first.page.locator('[data-testid="scoreboard-box-links"]')).toHaveText('2');
+      await expect(first.page.locator('[data-testid="scoreboard-box-rechts"]')).toHaveText('1');
       snapshot = await first.context.storageState({ indexedDB: true });
     } finally {
       // "Browser beenden": der Context ist weg, nur der Gerätespeicher bleibt in `snapshot`.
@@ -81,8 +81,8 @@ test.describe('@FU-007 Neustart ohne Netz', () => {
       await openCockpit(second.page, ids.tournamentId, ids.matchId);
       // Das Spiel öffnet sich mit dem lokalen Stand 2:1 (Seed 1:0 plus zwei lokale Tore) ...
       await expect(second.page.locator('[data-testid="scoreboard-state"]')).toHaveText('Live', { timeout: 15000 });
-      await expect(second.page.locator('[data-testid="score-home"]')).toHaveText('2', { timeout: 15000 });
-      await expect(second.page.locator('[data-testid="score-away"]')).toHaveText('1');
+      await expect(second.page.locator('[data-testid="scoreboard-box-links"]')).toHaveText('2', { timeout: 15000 });
+      await expect(second.page.locator('[data-testid="scoreboard-box-rechts"]')).toHaveText('1');
       // ... und das Gerät zeigt "2 Einträge warten".
       await expect(second.page.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '2', { timeout: 10000 });
       await expect(second.page.locator('[data-testid="sync-status"]')).toHaveAttribute('aria-label', /^2 Einträge warten/);
@@ -102,7 +102,7 @@ test.describe('@FU-007 Neustart ohne Netz', () => {
       await openCockpit(page, ids.tournamentId, ids.matchId);
       // `scoreboard-state` gibt es auch ohne Spiel („Kein Spiel“); `scoreboard-score` steht nur mit einem Spiel im Cockpit
       await expect(page.locator('[data-testid="scoreboard-score"]')).toHaveCount(0);
-      await expect(page.locator('[data-testid="score-home"]')).toHaveCount(0);
+      await expect(page.locator('[data-testid="scoreboard-box-links"]')).toHaveCount(0);
       await expect(page.locator('[data-testid="sync-status"][data-pending]:not([data-pending="0"])')).toHaveCount(0);
     } finally {
       await context.close();
