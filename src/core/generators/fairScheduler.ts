@@ -405,7 +405,11 @@ export function scheduleGroupPhaseVariant(options: GroupPhaseScheduleOptions, se
  * Deterministisch: gleiche Eingabe, gleicher Plan. Wirft, wenn kein Plan alle Spiele unterbringt (@W4-025).
  */
 export function generateGroupPhaseScheduleWithReport(options: GroupPhaseScheduleOptions): GroupPhaseScheduleResult {
-  return planGroupPhase(options, () => generateGreedyGroupPhaseSchedule(options));
+  return planGroupPhase(
+    options,
+    () => generateGreedyGroupPhaseSchedule(options),
+    (groupId) => generateGreedyGroupPhaseScheduleOpenedBy(options, groupId),
+  );
 }
 
 /** Wie generateGroupPhaseScheduleWithReport, nur die Spiele. */
@@ -419,6 +423,30 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
  * Wirft, wenn keine Variante alle Spiele unterbringt.
  */
 export function generateGreedyGroupPhaseSchedule(options: GroupPhaseScheduleOptions): Match[] {
+  return selectGreedyVariant(options);
+}
+
+/**
+ * Plan ohne Rundenplan-Vorschlag, der mit einem Spiel der Gruppe `groupId` beginnt (Eröffnung durch den Veranstalter
+ * bei ungleich großen Gruppen, @W4-027/@W4-043/@W4-045): Gruppe zuerst, nur Varianten mit diesem ersten Spiel.
+ * Null, wenn keine Variante so beginnt.
+ */
+export function generateGreedyGroupPhaseScheduleOpenedBy(options: GroupPhaseScheduleOptions, groupId: string): Match[] | null {
+  const hostTeams = options.groups.get(groupId);
+  if (!hostTeams) { return null; }
+  const groups = new Map([[groupId, hostTeams], ...[...options.groups].filter(([id]) => id !== groupId)]);
+  const opensWithGroup = (matches: Match[]): boolean => {
+    const first = [...matches].sort((a, b) => (a.slot ?? a.round - 1) - (b.slot ?? b.round - 1) || a.field - b.field)[0];
+    return first?.group === groupId;
+  };
+  try {
+    return selectGreedyVariant({ ...options, groups }, opensWithGroup);
+  } catch {
+    return null;
+  }
+}
+
+function selectGreedyVariant(options: GroupPhaseScheduleOptions, accept?: (matches: Match[]) => boolean): Match[] {
   const validationError = validateSchedulingConstraints(options);
   if (validationError) {
     throw new Error(validationError);
@@ -447,6 +475,7 @@ export function generateGreedyGroupPhaseSchedule(options: GroupPhaseScheduleOpti
     } else if (baseline && !isWithinBaseline(metrics, baseline)) {
       continue;
     }
+    if (accept && !accept(matches)) { continue; }
     if (!best || isBetterVariant(metrics, best.metrics)) {
       best = { matches, metrics };
     }

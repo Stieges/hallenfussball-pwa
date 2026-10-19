@@ -31,10 +31,12 @@ function asError(error: unknown): Error {
 
 /**
  * @param greedySchedule liefert den Plan ohne Rundenplan-Vorschlag (darf werfen, z. B. IncompleteScheduleError).
+ * @param greedyOpenedBy derselbe Plan, aber mit einem Spiel der genannten Gruppe zuerst (Eröffnung, null = keiner).
  */
 export function planGroupPhase(
   options: GroupPhaseScheduleOptions,
   greedySchedule: () => Match[],
+  greedyOpenedBy?: (groupId: string) => Match[] | null,
 ): GroupPhaseScheduleResult {
   const groups = [...options.groups].map(([groupId, teams]) => ({ groupId, teamIds: teams.map((team) => team.id) }));
   const sizes = groups.map((group) => group.teamIds.length);
@@ -67,6 +69,9 @@ export function planGroupPhase(
     hostTeamIds: options.hostTeamIds ?? [],
     openingMode: options.openingMode ?? DEFAULT_OPENING_MODE,
     roundPositionBySlot: rounds ? rounds.matches.map((entry) => entry.roundPosition) : undefined,
+    minRestSlots: options.minRestSlotsPerTeam,
+    replanOpenedBy: rounds || !greedyOpenedBy ? undefined : greedyOpenedBy,
+    dfbTarget: rounds?.dfbTarget ?? null,
   });
   const notices = [...opening.notices];
   const dfbTarget = options.numberOfFields === 1 && !options.dfbPatternCode ? dfbMinGamesBetween(sizes) : null;

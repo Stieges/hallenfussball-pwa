@@ -5,13 +5,15 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Match } from '../../../types/tournament';
-import { generateGroupPhaseSchedule, type GroupPhaseScheduleOptions } from '../fairScheduler';
+import { generateGroupPhaseSchedule, generateGroupPhaseScheduleWithReport, type GroupPhaseScheduleOptions } from '../fairScheduler';
 import {
   awayOf,
+  consecutiveSlotDoubles,
   homeAwayStats,
   homeOf,
   longestPauseGames,
   longestPauseMinutes,
+  longestSlotsBetween,
   matchNumberOf,
   minGamesBetween,
   ordered,
@@ -183,6 +185,64 @@ describe('@W4-043 Steht die Mannschaft des Veranstalters in Gruppe B, eröffnet 
     expect(homeOf(firstMatch(mit))).toBe(rot);
     expect(longestPauseGames(mit)).toBeLessThanOrEqual(longestPauseGames(ohne));
     expect(playedTimeline(mit, ids).maxDiff).toBeLessThanOrEqual(playedTimeline(ohne, ids).maxDiff);
+  });
+});
+
+describe('@W4-027/@W4-043 Ungleich große Gruppen: jede Mannschaft des Veranstalters eröffnet (Fixrunde 1, A1)', () => {
+  const setups = [
+    { aufbau: '6+5 auf einem Feld', sizes: [6, 5], fields: 1 },
+    { aufbau: '6+5 auf 2 Feldern', sizes: [6, 5], fields: 2 },
+    { aufbau: '8+7 auf einem Feld', sizes: [8, 7], fields: 1 },
+  ];
+  const cases = setups.flatMap((setup) => {
+    const ids = teamIdsOf(scenarioOptions(setup.sizes, setup.fields));
+    return ids.map((_, index) => ({ ...setup, index }));
+  });
+
+  it.each(cases)('$aufbau, markiert Team $index: Spiel 1 als Heim, längste Pause und Unterschied nicht größer, Mindestpause gehalten', ({ sizes, fields, index }) => {
+    const base = scenarioOptions(sizes, fields);
+    const ids = teamIdsOf(base);
+    const host = ids[index];
+    const ohne = generateGroupPhaseSchedule(base);
+    const mit = generateGroupPhaseSchedule({ ...base, hostTeamIds: [host] });
+
+    expect(homeOf(firstMatch(mit))).toBe(host);
+    expect(longestPauseMinutes(mit)).toBeLessThanOrEqual(longestPauseMinutes(ohne));
+    expect(playedTimeline(mit, ids).maxDiff).toBeLessThanOrEqual(playedTimeline(ohne, ids).maxDiff);
+    expect(slotCount(mit)).toBeLessThanOrEqual(slotCount(ohne));
+    expect(consecutiveSlotDoubles(mit)).toBe(0); // Mindestpause 1 Zeitfenster
+  });
+});
+
+describe('@W4-045 Geht die Eröffnung durch den Veranstalter nur mit längerer Pause, eröffnet er trotzdem und die App sagt es', () => {
+  const base = scenarioOptions([4, 3], 1);
+  const ids = teamIdsOf(base);
+  const ohne = generateGroupPhaseScheduleWithReport(base).matches;
+
+  it.each(ids.map((_, index) => ({ index })))('4+3 auf einem Feld, markiert Team $index: eröffnet als Heim, Meldung nennt die längere Pause', ({ index }) => {
+    const host = ids[index];
+    const result = generateGroupPhaseScheduleWithReport({ ...base, hostTeamIds: [host] });
+    const costs = result.notices.filter((n) => n.kind === 'hostOpeningCostsPause');
+
+    expect(homeOf(firstMatch(result.matches))).toBe(host);
+    expect(result.notices.filter((n) => n.kind === 'hostOpeningNotPossible')).toEqual([]);
+    expect(consecutiveSlotDoubles(result.matches)).toBe(0); // harte Mindestpause bleibt
+    if (longestSlotsBetween(result.matches) > longestSlotsBetween(ohne)) {
+      expect(costs).toEqual([{
+        kind: 'hostOpeningCostsPause',
+        teamId: host,
+        longestPauseBefore: longestSlotsBetween(ohne),
+        longestPauseAfter: longestSlotsBetween(result.matches),
+      }]);
+    } else {
+      expect(costs).toEqual([]);
+    }
+  });
+
+  it('Vorbedingung: mindestens eine Markierung verlängert die längste Pause (sonst prüft der Test nichts)', () => {
+    const longer = ids.filter((host) => longestSlotsBetween(generateGroupPhaseSchedule({ ...base, hostTeamIds: [host] })) > longestSlotsBetween(ohne));
+
+    expect(longer.length).toBeGreaterThan(0);
   });
 });
 

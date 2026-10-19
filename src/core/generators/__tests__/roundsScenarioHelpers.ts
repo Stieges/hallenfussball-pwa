@@ -177,3 +177,8 @@ export function matchNumberOf(matches: Match[], a: string, b: string): number {
     return ids.includes(a) && ids.includes(b);
   }) + 1;
 }
+
+/** Längste Pause eines Teams als Zahl der Zeitfenster zwischen zwei eigenen Spielen (auf einem Feld = Spiele). */
+export function longestSlotsBetween(matches: Match[]): number {
+  return (longestPauseMinutes(matches) + SLOT_MIN) / (SLOT_MIN + BREAK_MIN) - 1;
+}

@@ -22,6 +22,12 @@ export interface HostOpeningInput {
   openingMode: OpeningMode;
   /** Nur beim Runden-Spielplan: Position der Runde je Zeitfenster (Index = Zeitfenster). */
   roundPositionBySlot?: readonly number[];
+  /** Harte Mindestpause in Zeitfenstern zwischen zwei Spielen eines Teams (minRestSlotsPerTeam). */
+  minRestSlots: number;
+  /** Beim Runden-Spielplan mit DFB-Ziel: Mindestzahl Spiele dazwischen, darf nicht unterschritten werden. */
+  dfbTarget?: number | null;
+  /** Neu geplanter Plan ohne Rundenplan-Vorschlag, der mit einem Spiel der Gruppe beginnt (nur ohne Rundenplan). */
+  replanOpenedBy?: (groupId: string) => Match[] | null;
 }
 
 export interface HostOpeningResult {
@@ -45,10 +51,22 @@ function mirrorHomeAway(matches: Match[]): Match[] {
   return matches.map((match) => ({ ...match, slotA: match.slotB, slotB: match.slotA }));
 }
 
+/**
+ * Zulässig nach @W4-043 und Kritik K-a5: längste Pause, Unterschied gespielter Spiele und Zeitfenster wachsen nicht;
+ * eine längere Wartezeit am Ende ist hingenommen. Die Mindestpause prüft der Aufrufer hart.
+ */
 function notWorse(candidate: PlanQuality, reference: PlanQuality): boolean {
   return candidate.longestGap <= reference.longestGap && candidate.playedDiff <= reference.playedDiff
-    && candidate.shortestGap >= reference.shortestGap && candidate.sideStreak <= reference.sideStreak
     && candidate.slotCount <= reference.slotCount;
+}
+
+/** „So fair wie möglich“ (@W4-045): kürzere längste Pause, dann Unterschied, Zeitfenster, Serie, Spreizung. */
+function isFairer(a: PlanQuality, b: PlanQuality): boolean {
+  const keys: Array<keyof PlanQuality> = ['longestGap', 'playedDiff', 'slotCount', 'sideStreak', 'spread'];
+  for (const key of keys) {
+    if (a[key] !== b[key]) { return a[key] < b[key]; }
+  }
+  return false;
 }
 
 interface Arranged {
@@ -56,29 +74,101 @@ interface Arranged {
   roundPositionBySlot?: readonly number[];
 }
 
-/** Tauscht zwei Zeitfenster samt Anstoßzeit und Rundenposition. */
-function swapSlots(arranged: Arranged, a: number, b: number): Arranged {
-  const timeOf = (slot: number): Date | undefined => arranged.matches.find((m) => slotOf(m) === slot)?.scheduledTime;
-  const target = (slot: number): number => (slot === a ? b : slot === b ? a : slot);
+/** Anstoßzeit je Zeitfenster aus dem gleichmäßigen Raster des Plans (auch für leere Zeitfenster). */
+function slotTimes(matches: readonly Match[]): (slot: number) => Date | undefined {
+  const timed = matches.filter((m) => m.scheduledTime !== undefined);
+  const a = timed[0];
+  const b = timed.find((m) => slotOf(m) !== slotOf(a));
+  if (!a?.scheduledTime) { return () => undefined; }
+  const start = new Date(a.scheduledTime).getTime();
+  const step = b?.scheduledTime ? (new Date(b.scheduledTime).getTime() - start) / (slotOf(b) - slotOf(a)) : 0;
+  return (slot) => new Date(start + (slot - slotOf(a)) * step);
+}
+
+/** Verschiebt Zeitfenster (`target` ist eine Permutation) samt Anstoßzeit und Rundenposition. */
+function moveSlots(arranged: Arranged, target: (slot: number) => number): Arranged {
+  const timeOf = slotTimes(arranged.matches);
   const matches = arranged.matches.map((match) => {
     const slot = target(slotOf(match));
     return slot === slotOf(match) ? match : { ...match, slot, round: slot + 1, scheduledTime: timeOf(slot) };
   });
-  const positions = arranged.roundPositionBySlot?.map((_, slot, all) => all[target(slot)]);
-  return { matches, roundPositionBySlot: positions };
+  const old = arranged.roundPositionBySlot;
+  if (!old) { return { matches }; }
+  const positions: number[] = [];
+  old.forEach((position, slot) => { positions[target(slot)] = position; });
+  // Rundenpositionen wieder in Spielfolge nummerieren (Runde 2 = zweite gespielte Runde)
+  const order = [...new Set(positions)];
+  return { matches, roundPositionBySlot: positions.map((p) => order.indexOf(p)) };
 }
 
-/** Schritt 1: Spiel 1 kommt aus der Gruppe `hostGroup`. Null, wenn das nicht ohne Verschlechterung geht. */
-function openWithGroup(arranged: Arranged, groups: Map<string, Team[]>, hostGroup: string): Arranged | null {
-  const first = inPlayOrder(arranged.matches)[0];
+/** Tauscht zwei Zeitfenster. */
+function swapSlots(arranged: Arranged, a: number, b: number): Arranged {
+  return moveSlots(arranged, (slot) => (slot === a ? b : slot === b ? a : slot));
+}
+
+/** Spielt den Plan rückwärts: alle Abstände bleiben gleich (@W4-043/@W4-045, ungleich große Gruppen). */
+function reverseSlots(arranged: Arranged): Arranged {
+  const last = Math.max(...arranged.matches.map(slotOf));
+  return moveSlots(arranged, (slot) => last - slot);
+}
+
+/** Bringt ein Spiel der Gruppe `hostGroup` aus dem ersten Zeitfenster auf Feld 1 (Feldtausch), sonst null. */
+function hostGroupToFront(arranged: Arranged, hostGroup: string): Arranged | null {
+  const ordered = inPlayOrder(arranged.matches);
+  const first = ordered[0];
   if (first.group === hostGroup) { return arranged; }
-  const sameSlot = inPlayOrder(arranged.matches).find((m) => slotOf(m) === slotOf(first) && m.group === hostGroup);
-  if (sameSlot) {
-    return {
-      ...arranged,
-      matches: arranged.matches.map((m) => (m === first ? { ...m, field: sameSlot.field } : m === sameSlot ? { ...m, field: first.field } : m)),
-    };
-  }
+  const sameSlot = ordered.find((m) => slotOf(m) === slotOf(first) && m.group === hostGroup);
+  if (!sameSlot) { return null; }
+  return {
+    ...arranged,
+    matches: arranged.matches.map((m) => (m === first ? { ...m, field: sameSlot.field } : m === sameSlot ? { ...m, field: first.field } : m)),
+  };
+}
+
+/** Tauscht zwei Spiele samt Zeitfenster, Feld und Anstoßzeit (nur außerhalb des Rundenplans, Runden blieben sonst nicht ganz). */
+function exchangeMatches(arranged: Arranged, a: Match, b: Match): Arranged {
+  const place = (m: Match): Pick<Match, 'slot' | 'round' | 'field' | 'scheduledTime'> =>
+    ({ slot: m.slot, round: m.round, field: m.field, scheduledTime: m.scheduledTime });
+  return {
+    ...arranged,
+    matches: arranged.matches.map((m) => (m === a ? { ...m, ...place(b) } : m === b ? { ...m, ...place(a) } : m)),
+  };
+}
+
+/** Je Spiel des ersten Zeitfensters und je Spiel der Gruppe `hostGroup`: die beiden Spiele tauschen den Platz. */
+function matchExchangesToFront(arranged: Arranged, hostGroup: string): Arranged[] {
+  if (arranged.roundPositionBySlot) { return []; }
+  const ordered = inPlayOrder(arranged.matches);
+  const opening = ordered.filter((m) => slotOf(m) === slotOf(ordered[0]));
+  const hostMatches = ordered.filter((m) => m.group === hostGroup);
+  return opening.flatMap((a) => hostMatches.map((b) => exchangeMatches(arranged, a, b)));
+}
+
+/** Je Zeitfenster mit einem Spiel der Gruppe `hostGroup`: Tausch mit dem ersten Zeitfenster. */
+function slotSwapsToFront(arranged: Arranged, hostGroup: string): Arranged[] {
+  const firstSlot = slotOf(inPlayOrder(arranged.matches)[0]);
+  const hostSlots = [...new Set(arranged.matches.filter((m) => m.group === hostGroup).map(slotOf))].sort((x, y) => x - y);
+  return hostSlots.map((slot) => swapSlots(arranged, firstSlot, slot));
+}
+
+interface Opened {
+  arranged: Arranged;
+  /** Gesetzt, wenn die Eröffnung nur mit längerer längster Pause ging (@W4-045). */
+  pauseCost: { before: number; after: number } | null;
+}
+
+/**
+ * Schritt 1: Spiel 1 kommt aus der Gruppe `hostGroup`. Ohne Verschlechterung per Feldtausch, Tausch gleich großer
+ * Gruppen, Tausch eines Zeitfensters oder Spiels, Rückwärts-Spielen oder Neuplanung mit dieser Gruppe zuerst; geht das nicht, die fairste dieser Umstellungen mit längerer längster
+ * Pause (@W4-045). Die Mindestpause bleibt hart. Null nur, wenn kein Tausch die Mindestpause hält.
+ */
+function openWithGroup(
+  arranged: Arranged, groups: Map<string, Team[]>, hostGroup: string, minGamesBetween: number,
+  replanOpenedBy?: (groupId: string) => Match[] | null,
+): Opened | null {
+  const front = hostGroupToFront(arranged, hostGroup);
+  if (front) { return { arranged: front, pauseCost: null }; }
+  const first = inPlayOrder(arranged.matches)[0];
   const openingGroup = first.group;
   const openingTeams = openingGroup !== undefined ? groups.get(openingGroup) : undefined;
   const hostTeams = groups.get(hostGroup) ?? [];
@@ -86,17 +176,27 @@ function openWithGroup(arranged: Arranged, groups: Map<string, Team[]>, hostGrou
     const rename = new Map<string, string>();
     openingTeams.forEach((team, i) => { rename.set(team.id, hostTeams[i].id); rename.set(hostTeams[i].id, team.id); });
     const regroup = new Map([[openingGroup, hostGroup], [hostGroup, openingGroup]]);
-    return { ...arranged, matches: renameTeams(arranged.matches, rename, regroup) };
+    return { arranged: { ...arranged, matches: renameTeams(arranged.matches, rename, regroup) }, pauseCost: null };
   }
   const reference = measurePlanQuality(arranged.matches);
-  const hostSlots = [...new Set(arranged.matches.filter((m) => m.group === hostGroup).map(slotOf))].sort((x, y) => x - y);
-  for (const slot of hostSlots) {
-    const swapped = swapSlots(arranged, slotOf(first), slot);
-    if (inPlayOrder(swapped.matches)[0].group === hostGroup && notWorse(measurePlanQuality(swapped.matches), reference)) {
-      return swapped;
-    }
+  const reversed = reverseSlots(arranged);
+  const candidates: Arranged[] = [
+    ...slotSwapsToFront(arranged, hostGroup), reversed, ...slotSwapsToFront(reversed, hostGroup),
+    ...matchExchangesToFront(arranged, hostGroup), ...matchExchangesToFront(reversed, hostGroup),
+  ];
+  const replanned = replanOpenedBy?.(hostGroup);
+  if (replanned) { candidates.push({ matches: replanned }); }
+  let fairest: { arranged: Arranged; quality: PlanQuality } | null = null;
+  for (const candidate of candidates) {
+    const front = hostGroupToFront(candidate, hostGroup);
+    if (!front) { continue; }
+    const quality = measurePlanQuality(front.matches);
+    if (quality.shortestGap - 1 < minGamesBetween) { continue; }
+    if (notWorse(quality, reference)) { return { arranged: front, pauseCost: null }; }
+    if (!fairest || isFairer(quality, fairest.quality)) { fairest = { arranged: front, quality }; }
   }
-  return null;
+  if (!fairest) { return null; }
+  return { arranged: fairest.arranged, pauseCost: { before: reference.longestGap - 1, after: fairest.quality.longestGap - 1 } };
 }
 
 /** Umbenennung, die jede Vorgabe „Platz des Plan-Teams → echtes Team“ erfüllt (nacheinander per Tausch). */
@@ -131,10 +231,15 @@ export function applyHostOpening(input: HostOpeningInput): HostOpeningResult {
   const primary = pairMode ? hosts[0] : hosts.find((id) => groupOf.get(id) === openingGroup) ?? hosts[0];
   const hostGroup = groupOf.get(primary) ?? '';
 
-  let arranged = openWithGroup({ matches: input.matches, roundPositionBySlot: input.roundPositionBySlot }, input.groups, hostGroup);
-  if (arranged === null) {
+  const minGamesBetween = Math.max(input.minRestSlots, input.dfbTarget ?? 0);
+  const opened = openWithGroup({ matches: input.matches, roundPositionBySlot: input.roundPositionBySlot }, input.groups, hostGroup, minGamesBetween, input.replanOpenedBy);
+  if (opened === null) {
     return { matches: input.matches, notices: [{ kind: 'hostOpeningNotPossible', teamId: primary }] };
   }
+  let arranged = opened.arranged;
+  const notices: ScheduleNotice[] = opened.pauseCost
+    ? [{ kind: 'hostOpeningCostsPause', teamId: primary, longestPauseBefore: opened.pauseCost.before, longestPauseAfter: opened.pauseCost.after }]
+    : [];
 
   const groupTeamIds = (input.groups.get(hostGroup) ?? []).map((team) => team.id);
   let first = inPlayOrder(arranged.matches)[0];
@@ -151,5 +256,5 @@ export function applyHostOpening(input: HostOpeningInput): HostOpeningResult {
     }
     if (partner !== undefined) { wishes.push([partner, hosts[1]]); }
   }
-  return { matches: renameTeams(arranged.matches, renameFor(groupTeamIds, wishes)), notices: [] };
+  return { matches: renameTeams(arranged.matches, renameFor(groupTeamIds, wishes)), notices };
 }
