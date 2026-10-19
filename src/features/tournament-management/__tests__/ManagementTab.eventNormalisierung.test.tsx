@@ -8,8 +8,7 @@
  * Geprüft wird: Foulzähler, Ereignis-Log und Kopf des Bearbeiten-Dialogs nennen die richtige
  * Mannschaft. Das Verdrahtungsstück ManagementTab → LiveCockpit wird echt gerendert.
  *
- * i18n: Der Test-Mock (src/test/setup.ts) gibt Keys als Text zurück. Assertions hängen an Stellen,
- * die Teamnamen literal rendern, nicht an übersetzten Sätzen.
+ * i18n: Seit Aufgabe 3.3 echte deutsche Texte (`initRealDeI18n`), weil der Foul-Zähler der Team-Spalte „Foul n/Grenze“ als Text trägt.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -23,6 +22,11 @@ import { einrichtenEngineSpiel, anpfiffEngineSpiel, type EingerichtetesEngineSpi
 import { buildValidMatches, computeLiveMatches } from '../../../hooks/engineMatchModel';
 import type { MatchCommands } from '../../../core/match/client';
 import type { MatchContext } from '../../../core/match';
+import { initRealDeI18n } from '../../../test/realDeI18n';
+
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+await initRealDeI18n();
 
 // Kein Ton im jsdom (IndexedDB/AudioContext).
 vi.mock('../../../hooks/useMatchSound', () => ({
@@ -163,8 +167,8 @@ describe('ManagementTab → LiveCockpit: Ereignis-Darstellung über den Engine-W
 
     renderTab(aufbau);
 
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('2');
-    expect(screen.getByTestId('foul-count-away')).toHaveTextContent('1');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent(/Foul 2/);
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent(/Foul 1/);
   });
 
   it('Ereignis-Log nennt beide Mannschaften richtig, nicht zweimal den Gast', async () => {
@@ -188,7 +192,7 @@ describe('ManagementTab → LiveCockpit: Ereignis-Darstellung über den Engine-W
     const user = userEvent.setup();
 
     renderTab(aufbau);
-    await user.click(screen.getByTitle('cockpit:sidebar.edit'));
+    await user.click(screen.getByTitle('Bearbeiten'));
 
     expect(screen.getByText(/^FC Alpha · \d{2}:\d{2}$/)).toBeInTheDocument();
   });

@@ -118,14 +118,16 @@ async function pendingOf(value: MatchEngineContextValue, type: string) {
 describe('LiveCockpit -- RETRACT/AMEND (C3b-1)', () => {
   beforeEach(() => { mockActor.current = 'helper'; vi.clearAllMocks(); });
 
-  it('Minus: sofort, ohne Bestaetigung; RETRACT gespeichert, Toast nennt das Ziel', async () => {
+  // Aufgabe 3.3: Der Minus-Knopf entfaellt (@SL-037), Tor zuruecknehmen geht ueber „Rueckgaengig“ -- gleiche Erwartung (RETRACT, Meldung).
+  it('Rueckgaengig: sofort, ohne Bestaetigung; RETRACT gespeichert, Meldung nennt das Ziel', async () => {
     const { value, commands } = await setup();
     await commands.goal(MATCH_ID, CTX, 'helper', 'teama', false, { playerNumber: 7 });
     await commands.pause(MATCH_ID, CTX, 'helper'); // pausiert: die Spieluhr (rAF) laesst das Cockpit sonst dauernd neu rendern
     const user = userEvent.setup();
     renderCockpit(value);
 
-    await user.click(screen.getByTestId('goal-minus-button-home'));
+    expect(screen.queryByTestId('goal-minus-button-home')).toBeNull();
+    await user.click(screen.getByTestId('match-undo-button'));
 
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(async () => expect(await pendingOf(value, 'RETRACT')).toHaveLength(1));
@@ -146,7 +148,7 @@ describe('LiveCockpit -- RETRACT/AMEND (C3b-1)', () => {
     await waitFor(async () => expect(await pendingOf(value, 'RETRACT')).toHaveLength(1));
   });
 
-  it('G1b/G3: Helfer, finished -> Rueckgaengig/Minus gesperrt, Hinweistexte sichtbar', async () => {
+  it('G1b/G3: Helfer, finished -> Rueckgaengig gesperrt, Hinweistext sichtbar, keine Tor-Taste', async () => {
     const { value, commands } = await setup();
     await commands.goal(MATCH_ID, CTX, 'helper', 'teama', false, { playerNumber: 7 });
     await commands.finish(MATCH_ID, CTX, 'helper');
@@ -154,9 +156,9 @@ describe('LiveCockpit -- RETRACT/AMEND (C3b-1)', () => {
 
     expect(screen.getByTestId('match-undo-button')).toBeDisabled();
     expect(screen.getByTestId('match-undo-hint')).toHaveTextContent('Korrektur nur durch die Turnierleitung');
-    expect(screen.getByTestId('goal-minus-button-home')).toBeDisabled();
-    expect(screen.getByTestId('minus-hint-home')).toHaveTextContent('Korrektur nur durch die Turnierleitung');
-    expect(screen.getByTestId('goal-hint-home')).toHaveTextContent('Spiel ist beendet – Korrektur über die Turnierleitung');
+    // Nach dem Abpfiff keine Tor-Taste und kein Minus-Knopf (@SL-113, @SL-037); die stehende Zeile „Spiel ist beendet“ kommt mit der Daumenleiste (3.6)
+    expect(screen.queryByTestId('goal-minus-button-home')).toBeNull();
+    expect(screen.queryByTestId('goal-button-home')).toBeNull();
   });
 
   it('G1b: Leitung, finished, Karte -> Rueckgaengig deaktiviert mit Leitungs-Text', async () => {
@@ -251,7 +253,7 @@ describe('LiveCockpit -- RETRACT/AMEND (C3b-1)', () => {
     await commands.pause(MATCH_ID, CTX, 'helper'); // pausiert: die Spieluhr (rAF) laesst das Cockpit sonst dauernd neu rendern
     const user = userEvent.setup();
     const { refresh } = renderCockpit(value);
-    await user.click(screen.getByTestId('goal-minus-button-away'));
+    await user.click(screen.getByTestId('match-undo-button')); // letztes Ereignis: das Gast-Tor
     await waitFor(async () => expect(await pendingOf(value, 'RETRACT')).toHaveLength(1));
     refresh();
 
@@ -263,6 +265,6 @@ describe('LiveCockpit -- RETRACT/AMEND (C3b-1)', () => {
     expect(within(row).queryByTitle('Bearbeiten')).toBeNull();
     // Das wirksame Tor (Heim) bleibt bearbeitbar; Stand zaehlt nur dieses.
     expect(screen.getAllByTitle('Bearbeiten')).toHaveLength(1);
-    expect(screen.getByTestId('score-away')).toHaveTextContent('0');
+    expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('1:0');
   });
 });

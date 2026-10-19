@@ -213,6 +213,19 @@ export default defineConfig({
       },
     },
     {
+      // Cockpit Scheibe 3 (Plan Abschluss PR 2): kleinstes Handy mit 360 × 640, nur die Cockpit-Specs (@SL-061, @OB-025).
+      name: 'cockpit-360x640',
+      testMatch: /cockpit-(s3|laptop|endstand|tasten)\.spec\.ts/,
+      use: {
+        viewport: { width: 360, height: 640 },
+        deviceScaleFactor: 3,
+        isMobile: true,
+        hasTouch: true,
+        userAgent:
+          'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+      },
+    },
+    {
       name: 'tablet-portrait',
       use: {
         viewport: { width: 768, height: 1024 },

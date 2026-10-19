@@ -1,8 +1,8 @@
 /**
  * useCockpitCommands – Befehls-Adapter und Effekte der Cockpit-Hülle (Aufgabe 1.3).
  *
- * Verbindet die `on…`-Rückrufe des Aufrufers mit den Bereichen: Tor-, Foul-, Karten-, Zeitstrafen-
- * und Wechsel-Abläufe samt Meldungen, Zeit anpassen, Rückgängig, Uhr-Steuerung (`useClockControls`)
+ * Verbindet die `on…`-Rückrufe des Aufrufers mit den Bereichen: Tor-, Foul-, Karten- und Zeitstrafen-
+ * Abläufe samt Meldungen, Zeit anpassen, Rückgängig, Uhr-Steuerung (`useClockControls`)
  * und die Entscheidung nach Gleichstand (`useTiebreakCommands`). Hier – nicht in `LiveCockpit.tsx` –
  * kommt jede weitere Befehls- und Effektlogik der Hülle hin, damit sie unter 300 Zeilen bleibt.
  */
@@ -12,12 +12,11 @@ import type { useMatchSound } from '../../../hooks';
 import { useEngineEventEditing } from '../../../hooks/useEngineEventEditing';
 import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../../types/tournament';
 import type { CockpitDialogState, CockpitOverlayHandlers } from '../areas/CockpitOverlays';
-import type { LegacyPlayAreaProps, TeamSideHandlers } from '../areas/LegacyPlayArea';
-import { EINTRAG_ZEITSTRAFE, type CardKind, type EntryKind, type Side } from '../model/cockpitTypes';
+import type { LegacyPlayAreaProps } from '../areas/LegacyPlayArea';
+import type { Side } from '../model/cockpitTypes';
 import type { PhaseView } from '../engine/phaseView';
 import type { LiveCockpitProps } from '../types';
 import type { UseCockpitNoticesReturn } from './useCockpitNotices';
-import { useActivePenalties } from './useActivePenalties';
 import { useClockControls } from './useClockControls';
 import { useCockpitClock } from './useCockpitClock';
 import type { UseEntryFlowsReturn } from './useEntryFlows';
@@ -25,10 +24,8 @@ import type { UseSideOrderReturn } from './useSideOrder';
 import { useTiebreakCommands } from './useTiebreakCommands';
 import { korrekturUhrstaende } from '../model/zeitKorrektur';
 
-// F3b2: Toast-Schluessel je Kartentyp -- Modulebene statt useCallback-Abhaengigkeit (statisch).
-const CARD_TOAST_KEYS: Record<CardKind, 'toast.yellowCard' | 'toast.yellowRedCard' | 'toast.redCard'> = {
-  YELLOW: 'toast.yellowCard', YELLOW_RED: 'toast.yellowRedCard', RED: 'toast.redCard',
-};
+/** Die vier Tipps einer Team-Spalte, je Seite (Aufgabe 3.3). */
+export interface TeamSideHandlers { onTor: () => void; onFoul: () => void; onZeitstrafe: () => void; onKarte: () => void }
 
 export interface CockpitCommandsArgs {
   props: LiveCockpitProps;
@@ -55,7 +52,7 @@ export interface CockpitCommands {
 
 export function useCockpitCommands({ props, settings, sound, flows, sides, melde, engineView }: CockpitCommandsArgs): CockpitCommands {
   const { t } = useTranslation('cockpit');
-  const { currentMatch: match, onStart, onPause, onResume, onFinish, onGoal, onAdjustTime, onTimePenalty, onCard, onSubstitution, onFoul, onUpdateSettings } = props;
+  const { currentMatch: match, onStart, onPause, onResume, onFinish, onGoal, onAdjustTime, onUpdateSettings } = props;
   const readOnly = props.readOnly ?? false;
   // Bestätigungen sind Stufe 3, Fehler Stufe 2 (Spec § 7); `melde` ist stabil.
   const showSuccess = useCallback((message: string) => { melde(3, message); }, [melde]);
@@ -84,7 +81,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     setShowSettings(false);
   }, [matchId]);
 
-  // C3b-1: Minus/Rückgängig/Löschen/Bearbeiten (Engine-Spiele: RETRACT/AMEND) und Zeitstrafen-Countdown.
+  // C3b-1: Minus/Rückgängig/Löschen/Bearbeiten (Engine-Spiele: RETRACT/AMEND).
   const editing = useEngineEventEditing({
     tournamentId: props.tournamentId,
     match,
@@ -92,16 +89,18 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     legacy: { onGoal, onUndoLastEvent: props.onUndoLastEvent, onUpdateEvent: props.onUpdateEvent, onDeleteEvent: props.onDeleteEvent },
     notify: { success: showSuccess, error: showError },
   });
-  const penalties = useActivePenalties(match?.id, match?.status, match?.events);
   const tiebreak = useTiebreakCommands(match, props);
 
-  // Uhr: Meldungen und das Leeren der Zeitstrafen (BUG-008) hängen am Abpfiff, auch am automatischen.
-  // Abschnittsende und Abpfiff von selbst, Wiederanpfiff sowie Ton und Vibration (einzige Quelle) in `useCockpitClock`.
-  const clearPenalties = penalties.clear;
+  // Zeitstrafen kommen aus der Engine-Ansicht (B-08a): Sie enden mit dem Abpfiff von selbst (@SL-097), kein lokaler Countdown mehr.
+  const activePenalties = useMemo((): ActivePenalty[] => (engineView?.penalties ?? []).map((p) => ({
+    eventId: p.id, teamId: p.teamId, ...(p.playerNumber !== undefined ? { playerNumber: p.playerNumber } : {}),
+    remainingSeconds: Math.ceil(p.remainingMs / 1000), startedAt: new Date(0), endsAt: new Date(0),
+  })), [engineView]);
+
+  // Uhr: Abschnittsende und Abpfiff von selbst, Wiederanpfiff sowie Ton und Vibration (einzige Quelle) in `useCockpitClock`.
   const cockpitClock = useCockpitClock({
     tournamentId: props.tournamentId, match, readOnly, settings, engineView, melde,
     playSound: useCallback(() => { void sound.play(); }, [sound]),
-    onSpielBeendet: clearPenalties,
   });
   const clock = useClockControls({
     match, abschnittspause: cockpitClock.abschnittspause,
@@ -111,14 +110,9 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     onPause: (id) => { onPause(id); showInfo(t('meldung.pausiert')); },
     onResume: (id) => { onResume(id); showSuccess(t('meldung.fortgesetzt')); },
     onStartSection: cockpitClock.wiederanpfiff,
-    onFinish: (id) => { const gesendet = onFinish(id); penalties.clear(); showInfo(t('meldung.abgepfiffen')); return gesendet; },
+    onFinish: (id) => { const gesendet = onFinish(id); showInfo(t('meldung.abgepfiffen')); return gesendet; },
     onFinished: cockpitClock.abgepfiffenVonHand,
   });
-
-  const teamNameOf = useCallback(
-    (teamId: string): string => (match?.homeTeam.id === teamId ? match.homeTeam.name : match?.awayTeam.name ?? ''),
-    [match],
-  );
 
   // M-1 FIX: Das bearbeitete Ereignis wird aus den aktuellen Ereignissen abgeleitet (kein veralteter Stand).
   const editingEventId = flows.offen?.art === 'nummer' ? flows.offen.eventId ?? null : null;
@@ -129,66 +123,6 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   const handleEventEdit = useCallback((event: { id: string }) => {
     if (match?.events.some((e) => e.id === event.id)) { flows.oeffne({ art: 'nummer', seite: null, eventId: event.id }); }
   }, [match, flows]);
-
-  const goalSide = flows.offen?.art === 'tor' ? flows.offen.seite : null;
-  const handleGoalConfirm = useCallback(
-    (jerseyNumber: number | null, assists?: (number | null)[], incomplete?: boolean) => {
-      if (!match || !goalSide) { return; }
-      const team = goalSide === 'home' ? match.homeTeam : match.awayTeam;
-      const validAssists = assists?.filter((a): a is number => a !== null) ?? [];
-      onGoal(match.id, team.id, 1, {
-        playerNumber: jerseyNumber ?? undefined,
-        assists: validAssists.length > 0 ? validAssists : undefined,
-        incomplete: incomplete ?? false,
-      });
-      if (incomplete) {
-        showInfo(`${t('toast.goalScored', { teamName: team.name })} (ohne Nr.)`);
-      } else if (jerseyNumber !== null) {
-        const assistText = validAssists.length > 0
-          ? ` (${t('sidebar.assistFormat', { assists: validAssists.map((a) => `#${a}`).join(', ') })})`
-          : '';
-        showSuccess(`${t('toast.goalScored', { teamName: team.name })} (#${jerseyNumber})${assistText}`);
-      } else {
-        showSuccess(`${t('toast.goalScored', { teamName: team.name })}!`);
-      }
-      flows.schliesse();
-    },
-    [match, goalSide, flows, onGoal, showSuccess, showInfo, t],
-  );
-
-  const handleFoul = useCallback((side: Side) => {
-    if (!match) { return; }
-    const team = side === 'home' ? match.homeTeam : match.awayTeam;
-    onFoul?.(match.id, team.id);
-    showInfo(t('toast.foul', { teamName: team.name }));
-  }, [match, onFoul, showInfo, t]);
-
-  const handleCardConfirm = useCallback((cardType: CardKind, teamId: string, playerNumber?: number) => {
-    if (!match) { return; }
-    onCard?.(match.id, teamId, cardType, { playerNumber });
-    showInfo(`${t(CARD_TOAST_KEYS[cardType], { teamName: teamNameOf(teamId) })}${playerNumber ? ` (#${playerNumber})` : ''}`);
-    flows.schliesse();
-  }, [match, onCard, flows, showInfo, t, teamNameOf]);
-
-  const handleTimePenaltyConfirm = useCallback((durationSeconds: number, teamId: string, playerNumber?: number) => {
-    if (!match) { return; }
-    onTimePenalty?.(match.id, teamId, { playerNumber, durationSeconds });
-    showInfo(`${t('toast.timePenalty', { minutes: Math.floor(durationSeconds / 60), teamName: teamNameOf(teamId) })}${playerNumber ? ` (#${playerNumber})` : ''}`);
-    penalties.add({ teamId, playerNumber, durationSeconds }); // lokaler Countdown
-    flows.schliesse();
-  }, [match, onTimePenalty, flows, showInfo, penalties, t, teamNameOf]);
-
-  // BUG-009: mehrere Spieler je Wechsel
-  const handleSubstitutionConfirm = useCallback((teamId: string, playersOut: number[], playersIn: number[]) => {
-    if (!match) { return; }
-    onSubstitution?.(match.id, teamId, {
-      playersOut: playersOut.length > 0 ? playersOut : undefined,
-      playersIn: playersIn.length > 0 ? playersIn : undefined,
-    });
-    const nummern = (liste: number[]): string => (liste.length > 0 ? liste.map((n) => `#${n}`).join(',') : '?');
-    showInfo(`Wechsel ${teamNameOf(teamId)}: ${nummern(playersOut)} → ${nummern(playersIn)}`);
-    flows.schliesse();
-  }, [match, onSubstitution, flows, showInfo, teamNameOf]);
 
   // B-08d: die neue Spielzeit im Abschnitt geht als CLOCK_ADJUST über die Engine. Der Abschnittsbeginn auf der
   // Spieluhr (`limitClockMs - sectionLimitMs`) macht aus der Abschnittszeit den absoluten Uhrstand. Keine Meldung
@@ -208,16 +142,11 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     void korrigiereUhr(clockMs, previousClockMs);
   }, [match, engineView, korrigiereUhr, onAdjustTime, settings.timerDirection, showInfo, t]);
 
-  const open = (art: EntryKind, side: Side) => () => flows.oeffne({ art, seite: side });
   const sideHandlers = (side: Side): TeamSideHandlers => ({
-    onGoal: open('tor', side),
-    onMinus: () => { void editing.minus(side); },
-    onPenalty: open(EINTRAG_ZEITSTRAFE, side),
-    onYellowCard: () => flows.oeffne({ art: 'karte', seite: side, kartenArt: 'YELLOW' }),
-    onYellowRedCard: () => flows.oeffne({ art: 'karte', seite: side, kartenArt: 'YELLOW_RED' }),
-    onRedCard: () => flows.oeffne({ art: 'karte', seite: side, kartenArt: 'RED' }),
-    onSubstitution: open('wechsel', side),
-    onFoul: () => handleFoul(side),
+    onTor: () => flows.tippeTor(side),
+    onFoul: () => flows.tippeFoul(side),
+    onZeitstrafe: () => flows.tippeZeitstrafe(side),
+    onKarte: () => flows.tippeKarte(side),
   });
 
   // @SL-079: in der Halbzeitpause und nach dem Abpfiff gibt es keine Korrektur (nur laufend oder angehalten).
@@ -240,10 +169,6 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     closeTimeAdjust: () => setShowTimeAdjust(false),
     confirmTimeAdjust: handleTimeAdjust,
     closeEntry: flows.schliesse,
-    confirmCard: handleCardConfirm,
-    confirmTimePenalty: handleTimePenaltyConfirm,
-    confirmSubstitution: handleSubstitutionConfirm,
-    confirmGoal: handleGoalConfirm,
     updateEvent: editing.update,
     deleteEvent: editing.remove,
     closeEventLog: () => setShowEventLog(false),
@@ -263,7 +188,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   return {
     editing,
     editingEvent,
-    activePenalties: penalties.penalties,
+    activePenalties,
     dialogs: {
       offen: flows.offen,
       showTimeAdjust, showEventLog, showSettings, zeit: zeitGrenzen,

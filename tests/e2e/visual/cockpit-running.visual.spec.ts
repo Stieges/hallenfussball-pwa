@@ -13,6 +13,7 @@
 
 import { test, expect } from '../helpers/test-fixtures';
 import { freezeClock, commonMasks, buildVisualTournament, FIXED_NOW } from './helpers';
+import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
 const TOURNAMENT_ID = 'visual-cockpit-tournament';
 const MATCH_ID = 'visual-cockpit-running-match';
@@ -45,15 +46,11 @@ test('Live-Cockpit: laufendes Spiel', async ({ page, seedIndexedDB }) => {
   await expect(page.getByTestId('match-pause-button')).toBeVisible({ timeout: 10000 });
   for (const side of ['home', 'home', 'away'] as const) {
     await page.getByTestId(`goal-button-${side}`).click();
-    const skip = page.getByTestId('dialog-skip-button');
-    if (await skip.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skip.click();
-      await expect(skip).toBeHidden();
-    }
+    await schliesseTorAuswahl(page);
   }
 
-  await expect(page.getByTestId('score-home')).toContainText('2');
-  await expect(page.getByTestId('score-away')).toContainText('1');
+  await expect(page.getByTestId('scoreboard-box-links')).toContainText('2');
+  await expect(page.getByTestId('scoreboard-box-rechts')).toContainText('1');
   // Seit Aufgabe 2.3 gibt es im Cockpit keinen Toast-Stapel mehr: Bestätigungen stehen in der Meldezeile
   // (`notice-line`, feste Höhe, im Fluss) und verschwinden nach 3 s von selbst, auch bei laufender Uhr.
   const closeButtons = page.getByRole('button', { name: '×', exact: true });
@@ -65,8 +62,8 @@ test('Live-Cockpit: laufendes Spiel', async ({ page, seedIndexedDB }) => {
 
   await expect(page.getByTestId('scoreboard-clock-rest')).toBeVisible({ timeout: 10000 });
   await expect(page.getByTestId('scoreboard-state')).toContainText(/Live/i);
-  await expect(page.getByTestId('score-home')).toContainText('2');
-  await expect(page.getByTestId('score-away')).toContainText('1');
+  await expect(page.getByTestId('scoreboard-box-links')).toContainText('2');
+  await expect(page.getByTestId('scoreboard-box-rechts')).toContainText('1');
 
   await expect(page).toHaveScreenshot('cockpit-running.png', {
     fullPage: true,

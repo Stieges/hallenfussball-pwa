@@ -23,6 +23,7 @@ import {
 } from './engineHelpers';
 import { fetchMatchRow } from './helpers';
 import { E2E_USERS, engineCupIds, engineEventId, type EngineCupSlug } from './testData';
+import { tippeKarte } from '../helpers/cockpitNeu';
 
 function cup(slug: EngineCupSlug) {
   return { ids: engineCupIds(slug), target: engineCupTarget(slug) };
@@ -73,7 +74,7 @@ test.describe('Engine-Einträge über Geräte', () => {
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);
     for (const page of [ownerPage, helperPage]) {
       await expect(page.getByText(`TOR ${ids.homeTeamName} #9`)).toBeVisible({ timeout: 15000 });
-      await expect(page.locator('[data-testid="score-home"]')).toHaveText('1');
+      await expect(page.locator('[data-testid="scoreboard-box-links"]')).toHaveText('1');
     }
   });
 
@@ -84,10 +85,10 @@ test.describe('Engine-Einträge über Geräte', () => {
     const helperPage = await asRole('helper');
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);
     await expectEngineMatchRunningUi(helperPage);
-    await expect(helperPage.locator('[data-testid="score-home"]')).toHaveText('1'); // Anker
+    await expect(helperPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('1'); // Anker
 
     await helperPage.locator('[data-testid="match-undo-button"]').click();
-    await expect(helperPage.locator('[data-testid="score-home"]')).toHaveText('0');
+    await expect(helperPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('0');
 
     const retractId = await expectOneNewRow(ids.matchId, seededRows, 'RETRACT', goalId);
     // Rollenbindung: der Autor der Rücknahme ist der Helfer, nicht der Owner.
@@ -96,7 +97,7 @@ test.describe('Engine-Einträge über Geräte', () => {
 
     const ownerPage = await asRole('owner');
     await openCockpit(ownerPage, ids.tournamentId, ids.matchId);
-    await expect(ownerPage.locator('[data-testid="score-home"]')).toHaveText('0', { timeout: 15000 });
+    await expect(ownerPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('0', { timeout: 15000 });
     await expect(ownerPage.locator('[data-testid="event-row-retracted"]')).toHaveCount(1);
     await expect(ownerPage.locator('[data-testid="event-retracted-mark"]')).toHaveText('zurückgenommen');
   });
@@ -124,8 +125,8 @@ test.describe('Engine-Einträge über Geräte', () => {
     await helperPage.reload();
     await helperPage.waitForLoadState('networkidle');
     await expect(helperPage.getByText(`TOR ${ids.awayTeamName} #5`)).toBeVisible({ timeout: 15000 });
-    await expect(helperPage.locator('[data-testid="score-home"]')).toHaveText('1');
-    await expect(helperPage.locator('[data-testid="score-away"]')).toHaveText('1');
+    await expect(helperPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('1');
+    await expect(helperPage.locator('[data-testid="scoreboard-box-rechts"]')).toHaveText('1');
     const row = await fetchMatchRow(ids.matchId);
     expect([row.score_a, row.score_b]).toEqual([1, 1]);
 
@@ -165,9 +166,7 @@ test.describe('Engine-Einträge über Geräte', () => {
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);
     await expectEngineMatchRunningUi(helperPage);
 
-    await helperPage.locator('[data-testid="yellow-red-card-button-home"]').click();
-    await helperPage.getByRole('button', { name: '4', exact: true }).click();
-    await helperPage.getByRole('button', { name: 'Speichern' }).click();
+    await tippeKarte(helperPage, 'home', 'Gelb-Rot', 4);
 
     // Gelb-Rot-spezifisch: Doppel-Symbol und Beschriftung, nicht "Karte"/"🟥".
     await expect(ownerPage.getByText(`🟨🟥 Gelb-Rot ${ids.homeTeamName} #4`)).toBeVisible({ timeout: 5000 });

@@ -8,6 +8,7 @@
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
+import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
 const ID = 'e2e-eintraege-cup';
 const SPERRE = /Spiel \d+ hat Einträge – nur über Spielplan auf Anfang setzen/;
@@ -53,8 +54,7 @@ async function spielMitEintraegen(page: Page): Promise<void> {
   await page.getByTestId('match-start-button').click({ timeout: 15000 });
   await expect(page.getByTestId('match-pause-button')).toBeVisible();
   await page.getByTestId('goal-button-home').click();
-  const skip = page.getByTestId('dialog-skip-button');
-  if (await skip.isVisible({ timeout: 2000 }).catch(() => false)) { await skip.click(); }
+  await schliesseTorAuswahl(page);
   await page.getByTestId('match-pause-button').click();
   await page.getByTestId('match-finish-button').click();
   const confirm = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja/i });

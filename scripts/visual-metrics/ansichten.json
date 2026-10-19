@@ -391,6 +391,34 @@
       ]
     },
     {
+      "id": "cockpit-spalten-schwer",
+      "titel": "Cockpit: Spalten im schweren Fall (Finale, 50-Zeichen-Name, zwei Zeitstrafen je Team)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"penalty-button-home\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200",
+        "[data-testid=\"penalty-button-home\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200",
+        "[data-testid=\"penalty-button-away\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200",
+        "[data-testid=\"penalty-button-away\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200"
+      ]
+    },
+    {
       "id": "dialog-karte",
       "titel": "Dialog: Karte vergeben (Cockpit, Finale)",
       "gruppen": [

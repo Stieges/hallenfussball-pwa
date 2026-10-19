@@ -10,7 +10,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { Harness } from './engineHarness';
-import { anpfiff } from './engineHarnessSupport';
+import { anpfiff, warteSperre } from './engineHarnessSupport';
 import { T0 } from './enginePhaseFixture';
 
 vi.unmock('i18next');
@@ -59,7 +59,8 @@ const zustand = (): HTMLElement => screen.getByTestId('scoreboard-state');
 
 async function toreHeim(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(await screen.findByTestId('goal-button-home'));
-  await user.click(await screen.findByTestId('dialog-skip-button'));
+  await warteSperre(); // Sperre des Nummern-Bausteins (@SL-021), dann schließen: das Tor zählt ohne Nummer (@SL-083)
+  await user.keyboard('{Escape}');
 }
 
 async function bisHalbzeit(user: ReturnType<typeof userEvent.setup>): Promise<void> {
@@ -152,16 +153,16 @@ describe('LiveCockpit: Fouls über die Halbzeit (G11, B-08b Punkt 3)', () => {
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     await user.click(screen.getByTestId('foul-button-home'));
-    await waitFor(() => expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1'));
+    await waitFor(() => expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 1/5'));
     zu(360_000);
     await waitFor(() => expect(zustand()).toHaveTextContent('Halbzeit'));
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 1/5');
     zu(420_000);
     await user.click(screen.getByTestId('match-wiederanpfiff-button'));
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 1/5');
     await user.click(screen.getByTestId('foul-button-home'));
-    await waitFor(() => expect(screen.getByTestId('foul-count-home')).toHaveTextContent('2'));
+    await waitFor(() => expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 2/5'));
   });
 });
 

@@ -26,6 +26,7 @@ import {
   type AppendAsRoleEvent,
 } from './engineHelpers';
 import { enterGoal, enterTimePenaltyWithoutNumber } from './helpers';
+import { tippeKarte } from '../helpers/cockpitNeu';
 import { engineCupIds } from './testData';
 
 const APPEND_RPC_PATTERN = '**/rest/v1/rpc/append_match_events';
@@ -58,8 +59,7 @@ async function openHelperCockpit(context: BrowserContext, tournamentId: string, 
 }
 
 async function enterYellowCardWithoutDetails(page: Page, side: 'home' | 'away'): Promise<void> {
-  await page.locator(`[data-testid="yellow-card-button-${side}"]`).click();
-  await page.getByRole('button', { name: 'Ohne Details' }).click();
+  await tippeKarte(page, side, 'Gelb');
 }
 
 test.describe('Offline-Robustheit des Ausgangs (2)', () => {
@@ -213,9 +213,9 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
       await helperPage.locator('[data-testid="sync-status-rejected"]').click();
       await expect(helperPage.locator('[data-testid="outbox-rejected-item"]')).toHaveCount(1);
       // Zweites Gerät: das Tor ist da, die Karte steht nirgends.
-      await expect(ownerPage.locator('[data-testid="score-home"]')).toHaveText('2', { timeout: 10000 });
+      await expect(ownerPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('2', { timeout: 10000 });
       await expect(ownerPenaltyRow).toHaveCount(1, { timeout: 10000 });
-      await expect(ownerPage.locator('[data-testid="score-home"]')).toHaveText('2', { timeout: 10000 });
+      await expect(ownerPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('2', { timeout: 10000 });
       // Nur die Gelbe Karte steht unter "nicht übernommen" -- weder Tor noch Zeitstrafe.
       const rejectedItem = helperPage.locator('[data-testid="outbox-rejected-item"]');
       await expect(rejectedItem).toContainText('Gelbe Karte');
@@ -271,7 +271,7 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
       await openSettledCockpit(ollisPage, ids.tournamentId, ids.matchId);
       const tomsPage = await openHelperCockpit(tomsContext, ids.tournamentId, ids.matchId);
       const hint = ollisPage.locator('[data-testid="realtime-interrupted-hint"]');
-      const ollisHome = ollisPage.locator('[data-testid="score-home"]');
+      const ollisHome = ollisPage.locator('[data-testid="scoreboard-box-links"]');
       await expect(ollisHome).toHaveText('1');
 
       // Gegenbeispiel: solange der Kanal offen ist, gibt es keinen Hinweis -- und Toms Tor kommt per Push an.
@@ -288,7 +288,7 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
       await expect(hint).toHaveText('Live-Verbindung unterbrochen');
 
       await enterGoal(tomsPage, 'away');
-      await expect(ollisPage.locator('[data-testid="score-away"]')).toHaveText('1', { timeout: 10000 });
+      await expect(ollisPage.locator('[data-testid="scoreboard-box-rechts"]')).toHaveText('1', { timeout: 10000 });
       await expect(hint).toBeVisible();
     } finally {
       await ollisContext.close();
@@ -316,7 +316,7 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
         }
         await ollisPage.locator('[data-testid="desktop-tab-live"]').click();
         await expectEngineMatchRunningUi(ollisPage);
-        const ollisHome = ollisPage.locator('[data-testid="score-home"]');
+        const ollisHome = ollisPage.locator('[data-testid="scoreboard-box-links"]');
         await expect(ollisHome).toHaveText('1', { timeout: 10000 });
 
         await enterGoal(tomsPage, 'home');

@@ -22,7 +22,8 @@
 }
 
 .contentMobile {
-  padding: var(--spacing-md);
+  /* Mockup: schmaler seitlicher Rand am Handy, damit lange Teamnamen in den Spalten in höchstens drei Zeilen passen (@OB-025) */
+  padding: var(--spacing-sm) var(--spacing-xs);
 }
 
 /* Leerzustand: kein Spiel ausgewählt */

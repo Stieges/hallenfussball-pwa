@@ -11,6 +11,7 @@ import { expect } from '@playwright/test';
 import { E2E_USERS, E2E_TEST_PASSWORD, type E2EUserKey } from './testData';
 import { getLocalSupabaseStatus } from '../../../scripts/lib/localSupabaseStatus';
 import { assertLocalSupabaseTarget } from '../../../scripts/lib/assertLocalSupabaseTarget';
+import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
 // =============================================================================
 // LOGIN (über die Oberfläche, Brief Abschnitt 2)
@@ -208,20 +209,18 @@ export async function fetchQueuedMutationTypes(page: Page, userId: string): Prom
 
 /** Zeitstrafe ohne Rückennummer: der Knopf am Team wählt Dauer und Team vor, es bleibt "Ohne Nr.". */
 export async function enterTimePenaltyWithoutNumber(page: Page, teamName: string): Promise<void> {
-  await page.getByRole('button', { name: `Zeitstrafe für ${teamName}` }).click();
-  await page.getByRole('button', { name: /Ohne Nr\./ }).click();
+  await page.getByRole('button', { name: `Zeitstrafe ${teamName}` }).click();
+  await schliesseTorAuswahl(page);
 }
 
 /**
- * Trägt ein Tor für `side` ein: klickt `goal-button-{side}`, überspringt den
- * Torschützen-Dialog (`dialog-skip-button`, siehe `GoalScorerDialog.tsx`) -- der Test braucht
+ * Trägt ein Tor für `side` ein: klickt `goal-button-{side}`, schließt die
+ * Nummernauswahl („ohne Nummer“, `EntrySheets`/`NumberPicker`; das Tor zählt schon mit dem ersten Tipp) -- der Test braucht
  * nur den Zähler, keinen Spieler.
  */
 export async function enterGoal(page: Page, side: 'home' | 'away'): Promise<void> {
   await page.locator(`[data-testid="goal-button-${side}"]`).click();
-  const skipButton = page.locator('[data-testid="dialog-skip-button"]');
-  await expect(skipButton).toBeVisible({ timeout: 5000 });
-  await skipButton.click();
+  await schliesseTorAuswahl(page);
 }
 
 /**

@@ -18,6 +18,7 @@
 
 import { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
+import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
 // CI skip removed - using reliable seeding fixture
 
@@ -168,14 +169,11 @@ test.describe('Spielwechsel-Logik', () => {
 
     // Score a goal in the first match
     await page.getByTestId('goal-button-home').click();
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // Verify first match is running
     await expect(page.getByTestId('scoreboard-state')).toContainText(/Live/i);
-    await expect(page.getByTestId('score-home')).toContainText('1');
+    await expect(page.getByTestId('scoreboard-box-links')).toContainText('1');
 
     // WHEN - Navigate to Spielplan and click on another scheduled match's circle
     await navigateToSpielplan(page);
@@ -348,13 +346,10 @@ test.describe('Offline & Persistence', () => {
 
     // Score a goal
     await page.getByTestId('goal-button-home').click();
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // Verify score
-    await expect(page.getByTestId('score-home')).toContainText('1');
+    await expect(page.getByTestId('scoreboard-box-links')).toContainText('1');
 
     // WHEN - Refresh the page
     await page.reload();
@@ -587,10 +582,7 @@ test.describe('Panel schließen', () => {
 
     // Score a goal
     await page.getByTestId('goal-button-home').click();
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // Pause and finish
     await page.getByTestId('match-pause-button').click();
@@ -665,10 +657,7 @@ test.describe('LiveInfoExpand', () => {
 
     // Score a goal (to have an event)
     await page.getByTestId('goal-button-home').click();
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // Navigate to Spielplan
     await navigateToSpielplan(page);
