@@ -70,6 +70,8 @@ export function planGroupPhase(
     openingMode: options.openingMode ?? DEFAULT_OPENING_MODE,
     roundPositionBySlot: rounds ? rounds.matches.map((entry) => entry.roundPosition) : undefined,
     minRestSlots: options.minRestSlotsPerTeam,
+    slotDurationMinutes: options.slotDurationMinutes,
+    breakBetweenSlotsMinutes: options.breakBetweenSlotsMinutes,
     replanOpenedBy: rounds || !greedyOpenedBy ? undefined : greedyOpenedBy,
     dfbTarget: rounds?.dfbTarget ?? null,
   });

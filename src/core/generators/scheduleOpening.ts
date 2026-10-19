@@ -26,6 +26,9 @@ export interface HostOpeningInput {
   minRestSlots: number;
   /** Beim Runden-Spielplan mit DFB-Ziel: Mindestzahl Spiele dazwischen, darf nicht unterschritten werden. */
   dfbTarget?: number | null;
+  /** Zeitraster für die Meldung der zusätzlichen Dauer (@W4-045). */
+  slotDurationMinutes: number;
+  breakBetweenSlotsMinutes: number;
   /** Neu geplanter Plan ohne Rundenplan-Vorschlag, der mit einem Spiel der Gruppe beginnt (nur ohne Rundenplan). */
   replanOpenedBy?: (groupId: string) => Match[] | null;
 }
@@ -60,9 +63,12 @@ function notWorse(candidate: PlanQuality, reference: PlanQuality): boolean {
     && candidate.slotCount <= reference.slotCount;
 }
 
-/** „So fair wie möglich“ (@W4-045): kürzere längste Pause, dann Unterschied, Zeitfenster, Serie, Spreizung. */
+/**
+ * „So fair wie möglich“ (@W4-045, Rangfolge Controller 19.10.): wenigste Zeitfenster (die Dauer trifft alle Teams und
+ * die Hallenzeit), dann kürzere längste Pause, Unterschied gespielter Spiele, Heim/Gast-Serie, Spreizung.
+ */
 function isFairer(a: PlanQuality, b: PlanQuality): boolean {
-  const keys: Array<keyof PlanQuality> = ['longestGap', 'playedDiff', 'slotCount', 'sideStreak', 'spread'];
+  const keys: Array<keyof PlanQuality> = ['slotCount', 'longestGap', 'playedDiff', 'sideStreak', 'spread'];
   for (const key of keys) {
     if (a[key] !== b[key]) { return a[key] < b[key]; }
   }
@@ -153,21 +159,23 @@ function slotSwapsToFront(arranged: Arranged, hostGroup: string): Arranged[] {
 
 interface Opened {
   arranged: Arranged;
-  /** Gesetzt, wenn die Eröffnung nur mit längerer längster Pause ging (@W4-045). */
-  pauseCost: { before: number; after: number } | null;
+  /** Gesetzt, wenn die Eröffnung nur mit einer Verschlechterung ging (@W4-045): Kennzahlen vorher und nachher. */
+  costs: { before: PlanQuality; after: PlanQuality } | null;
 }
 
 /**
- * Schritt 1: Spiel 1 kommt aus der Gruppe `hostGroup`. Ohne Verschlechterung per Feldtausch, Tausch gleich großer
- * Gruppen, Tausch eines Zeitfensters oder Spiels, Rückwärts-Spielen oder Neuplanung mit dieser Gruppe zuerst; geht das nicht, die fairste dieser Umstellungen mit längerer längster
- * Pause (@W4-045). Die Mindestpause bleibt hart. Null nur, wenn kein Tausch die Mindestpause hält.
+ * Schritt 1: Spiel 1 kommt aus der Gruppe `hostGroup`. Reihenfolge: Feldtausch, Tausch gleich großer Gruppen, dann
+ * Tausch eines Zeitfensters oder Spiels und Rückwärts-Spielen; erst wenn keine dieser Umstellungen ohne
+ * Verschlechterung auskommt, die (teurere) Neuplanung mit dieser Gruppe zuerst. Geht es gar nicht ohne
+ * Verschlechterung, die fairste Umstellung (@W4-045, `isFairer`). Die Mindestpause bleibt hart. Null nur, wenn keine
+ * Umstellung die Mindestpause hält.
  */
 function openWithGroup(
   arranged: Arranged, groups: Map<string, Team[]>, hostGroup: string, minGamesBetween: number,
   replanOpenedBy?: (groupId: string) => Match[] | null,
 ): Opened | null {
   const front = hostGroupToFront(arranged, hostGroup);
-  if (front) { return { arranged: front, pauseCost: null }; }
+  if (front) { return { arranged: front, costs: null }; }
   const first = inPlayOrder(arranged.matches)[0];
   const openingGroup = first.group;
   const openingTeams = openingGroup !== undefined ? groups.get(openingGroup) : undefined;
@@ -176,7 +184,7 @@ function openWithGroup(
     const rename = new Map<string, string>();
     openingTeams.forEach((team, i) => { rename.set(team.id, hostTeams[i].id); rename.set(hostTeams[i].id, team.id); });
     const regroup = new Map([[openingGroup, hostGroup], [hostGroup, openingGroup]]);
-    return { arranged: { ...arranged, matches: renameTeams(arranged.matches, rename, regroup) }, pauseCost: null };
+    return { arranged: { ...arranged, matches: renameTeams(arranged.matches, rename, regroup) }, costs: null };
   }
   const reference = measurePlanQuality(arranged.matches);
   const reversed = reverseSlots(arranged);
@@ -184,19 +192,50 @@ function openWithGroup(
     ...slotSwapsToFront(arranged, hostGroup), reversed, ...slotSwapsToFront(reversed, hostGroup),
     ...matchExchangesToFront(arranged, hostGroup), ...matchExchangesToFront(reversed, hostGroup),
   ];
-  const replanned = replanOpenedBy?.(hostGroup);
-  if (replanned) { candidates.push({ matches: replanned }); }
-  let fairest: { arranged: Arranged; quality: PlanQuality } | null = null;
-  for (const candidate of candidates) {
+  const best: { fairest: { arranged: Arranged; quality: PlanQuality } | null } = { fairest: null };
+  /** Prüft einen Kandidaten; Rückgabe = ohne Verschlechterung, sofort nehmen. */
+  const consider = (candidate: Arranged): Arranged | null => {
     const front = hostGroupToFront(candidate, hostGroup);
-    if (!front) { continue; }
+    if (!front) { return null; }
     const quality = measurePlanQuality(front.matches);
-    if (quality.shortestGap - 1 < minGamesBetween) { continue; }
-    if (notWorse(quality, reference)) { return { arranged: front, pauseCost: null }; }
-    if (!fairest || isFairer(quality, fairest.quality)) { fairest = { arranged: front, quality }; }
+    if (quality.shortestGap - 1 < minGamesBetween) { return null; }
+    if (notWorse(quality, reference)) { return front; }
+    if (!best.fairest || isFairer(quality, best.fairest.quality)) { best.fairest = { arranged: front, quality }; }
+    return null;
+  };
+  for (const candidate of candidates) {
+    const free = consider(candidate);
+    if (free) { return { arranged: free, costs: null }; }
   }
-  if (!fairest) { return null; }
-  return { arranged: fairest.arranged, pauseCost: { before: reference.longestGap - 1, after: fairest.quality.longestGap - 1 } };
+  const replanned = replanOpenedBy?.(hostGroup);
+  if (replanned) {
+    const free = consider({ matches: replanned });
+    if (free) { return { arranged: free, costs: null }; }
+  }
+  const chosen = best.fairest;
+  if (!chosen) { return null; }
+  return { arranged: chosen.arranged, costs: { before: reference, after: chosen.quality } };
+}
+
+/** Meldung @W4-045: nennt jede Verschlechterung gegenüber dem Plan ohne Eröffnung, nur was wirklich wächst. */
+function costsNotice(
+  teamId: string, costs: { before: PlanQuality; after: PlanQuality }, matches: readonly Match[], input: HostOpeningInput,
+): ScheduleNotice {
+  const { before, after } = costs;
+  const step = input.slotDurationMinutes + input.breakBetweenSlotsMinutes;
+  const notice: Extract<ScheduleNotice, { kind: 'hostOpeningCosts' }> = { kind: 'hostOpeningCosts', teamId };
+  if (after.slotCount > before.slotCount) {
+    const lastStart = slotTimes(matches)(after.slotCount - 1);
+    notice.duration = {
+      slotsBefore: before.slotCount,
+      slotsAfter: after.slotCount,
+      extraMinutes: (after.slotCount - before.slotCount) * step,
+      ...(lastStart ? { groupPhaseEndAfter: new Date(lastStart.getTime() + input.slotDurationMinutes * 60_000) } : {}),
+    };
+  }
+  if (after.longestGap > before.longestGap) { notice.longestPause = { before: before.longestGap - 1, after: after.longestGap - 1 }; }
+  if (after.playedDiff > before.playedDiff) { notice.playedDiff = { before: before.playedDiff, after: after.playedDiff }; }
+  return notice;
 }
 
 /** Umbenennung, die jede Vorgabe „Platz des Plan-Teams → echtes Team“ erfüllt (nacheinander per Tausch). */
@@ -237,9 +276,7 @@ export function applyHostOpening(input: HostOpeningInput): HostOpeningResult {
     return { matches: input.matches, notices: [{ kind: 'hostOpeningNotPossible', teamId: primary }] };
   }
   let arranged = opened.arranged;
-  const notices: ScheduleNotice[] = opened.pauseCost
-    ? [{ kind: 'hostOpeningCostsPause', teamId: primary, longestPauseBefore: opened.pauseCost.before, longestPauseAfter: opened.pauseCost.after }]
-    : [];
+  const notices: ScheduleNotice[] = opened.costs ? [costsNotice(primary, opened.costs, arranged.matches, input)] : [];
 
   const groupTeamIds = (input.groups.get(hostGroup) ?? []).map((team) => team.id);
   let first = inPlayOrder(arranged.matches)[0];

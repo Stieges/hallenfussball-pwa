@@ -182,3 +182,17 @@ export function matchNumberOf(matches: Match[], a: string, b: string): number {
 export function longestSlotsBetween(matches: Match[]): number {
   return (longestPauseMinutes(matches) + SLOT_MIN) / (SLOT_MIN + BREAK_MIN) - 1;
 }
+
+/** Kürzeste Pause eines Teams als Zahl der Zeitfenster zwischen zwei eigenen Spielen. */
+export function minSlotsBetween(matches: Match[]): number {
+  const slots = new Map<string, number[]>();
+  for (const match of matches) {
+    for (const id of sides(match)) { slots.set(id, [...(slots.get(id) ?? []), match.slot ?? match.round - 1]); }
+  }
+  let shortest = Number.POSITIVE_INFINITY;
+  slots.forEach((list) => {
+    const sorted = [...list].sort((a, b) => a - b);
+    for (let i = 1; i < sorted.length; i++) { shortest = Math.min(shortest, sorted[i] - sorted[i - 1] - 1); }
+  });
+  return shortest;
+}

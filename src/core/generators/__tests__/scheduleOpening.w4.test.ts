@@ -14,6 +14,7 @@ import {
   longestPauseGames,
   longestPauseMinutes,
   longestSlotsBetween,
+  minSlotsBetween,
   matchNumberOf,
   minGamesBetween,
   ordered,
@@ -214,35 +215,85 @@ describe('@W4-027/@W4-043 Ungleich große Gruppen: jede Mannschaft des Veranstal
   });
 });
 
+/**
+ * Erwartete Meldung zu @W4-045: genau die Verschlechterungen gegenüber dem Plan ohne Markierung, sonst keine Meldung.
+ * Pausen als Zeitfenster zwischen zwei eigenen Spielen (auf einem Feld = Spiele), Dauer im 15-Minuten-Raster.
+ */
+function expectedCosts(host: string, ohne: Match[], mit: Match[], options: GroupPhaseScheduleOptions): unknown[] {
+  const ids = teamIdsOf(options);
+  const pause = { before: longestSlotsBetween(ohne), after: longestSlotsBetween(mit) };
+  const diff = { before: playedTimeline(ohne, ids).maxDiff, after: playedTimeline(mit, ids).maxDiff };
+  const slots = { before: slotCount(ohne), after: slotCount(mit) };
+  const step = options.slotDurationMinutes + options.breakBetweenSlotsMinutes;
+  const start = options.startTime?.getTime() ?? 0;
+  const notice: Record<string, unknown> = { kind: 'hostOpeningCosts', teamId: host };
+  if (slots.after > slots.before) {
+    notice.duration = {
+      slotsBefore: slots.before,
+      slotsAfter: slots.after,
+      extraMinutes: (slots.after - slots.before) * step,
+      groupPhaseEndAfter: new Date(start + ((slots.after - 1) * step + options.slotDurationMinutes) * 60_000),
+    };
+  }
+  if (pause.after > pause.before) { notice.longestPause = pause; }
+  if (diff.after > diff.before) { notice.playedDiff = diff; }
+  return Object.keys(notice).length > 2 ? [notice] : [];
+}
+
+function hostCases(sizes: number[], fields: number, minRest: number): Array<{ index: number }> {
+  return teamIdsOf(scenarioOptions(sizes, fields, { minRestSlotsPerTeam: minRest })).map((_, index) => ({ index }));
+}
+
 describe('@W4-045 Geht die Eröffnung durch den Veranstalter nur mit längerer Pause, eröffnet er trotzdem und die App sagt es', () => {
-  const base = scenarioOptions([4, 3], 1);
-  const ids = teamIdsOf(base);
-  const ohne = generateGroupPhaseScheduleWithReport(base).matches;
+  const setups = [
+    { aufbau: '4+3 auf einem Feld', sizes: [4, 3], fields: 1, minRest: 1 },
+    { aufbau: '5+4 auf 2 Feldern', sizes: [5, 4], fields: 2, minRest: 1 },
+    { aufbau: '6+4 auf 3 Feldern, Mindestpause 2', sizes: [6, 4], fields: 3, minRest: 2 },
+  ];
 
-  it.each(ids.map((_, index) => ({ index })))('4+3 auf einem Feld, markiert Team $index: eröffnet als Heim, Meldung nennt die längere Pause', ({ index }) => {
-    const host = ids[index];
-    const result = generateGroupPhaseScheduleWithReport({ ...base, hostTeamIds: [host] });
-    const costs = result.notices.filter((n) => n.kind === 'hostOpeningCostsPause');
+  describe.each(setups)('$aufbau', ({ sizes, fields, minRest }) => {
+    const base = scenarioOptions(sizes, fields, { minRestSlotsPerTeam: minRest });
+    const ids = teamIdsOf(base);
+    const ohne = generateGroupPhaseScheduleWithReport(base).matches;
 
-    expect(homeOf(firstMatch(result.matches))).toBe(host);
-    expect(result.notices.filter((n) => n.kind === 'hostOpeningNotPossible')).toEqual([]);
-    expect(consecutiveSlotDoubles(result.matches)).toBe(0); // harte Mindestpause bleibt
-    if (longestSlotsBetween(result.matches) > longestSlotsBetween(ohne)) {
-      expect(costs).toEqual([{
-        kind: 'hostOpeningCostsPause',
-        teamId: host,
-        longestPauseBefore: longestSlotsBetween(ohne),
-        longestPauseAfter: longestSlotsBetween(result.matches),
-      }]);
-    } else {
-      expect(costs).toEqual([]);
+    it.each(hostCases(sizes, fields, minRest))('markiert Team $index: eröffnet als Heim, Meldung nennt jede Verschlechterung, Mindestpause hart', ({ index }) => {
+      const host = ids[index];
+      const result = generateGroupPhaseScheduleWithReport({ ...base, hostTeamIds: [host] });
+
+      expect(homeOf(firstMatch(result.matches))).toBe(host);
+      expect(result.notices.filter((n) => n.kind === 'hostOpeningNotPossible')).toEqual([]);
+      expect(minSlotsBetween(result.matches)).toBeGreaterThanOrEqual(minRest);
+      expect(result.notices.filter((n) => n.kind === 'hostOpeningCosts')).toEqual(expectedCosts(host, ohne, result.matches, base));
+    });
+  });
+
+  it('4+3 auf einem Feld: mindestens eine Markierung verlängert die längste Pause; Zeitfenster und Unterschied wachsen nicht (so fair wie möglich)', () => {
+    const base = scenarioOptions([4, 3], 1);
+    const ids = teamIdsOf(base);
+    const ohne = generateGroupPhaseSchedule(base);
+    const plans = ids.map((host) => generateGroupPhaseSchedule({ ...base, hostTeamIds: [host] }));
+
+    expect(plans.some((mit) => longestSlotsBetween(mit) > longestSlotsBetween(ohne))).toBe(true);
+    for (const mit of plans) {
+      expect(slotCount(mit)).toBeLessThanOrEqual(slotCount(ohne));
+      expect(playedTimeline(mit, ids).maxDiff).toBeLessThanOrEqual(playedTimeline(ohne, ids).maxDiff);
     }
   });
 
-  it('Vorbedingung: mindestens eine Markierung verlängert die längste Pause (sonst prüft der Test nichts)', () => {
-    const longer = ids.filter((host) => longestSlotsBetween(generateGroupPhaseSchedule({ ...base, hostTeamIds: [host] })) > longestSlotsBetween(ohne));
+  it('5+4 auf 2 Feldern: mindestens eine Markierung kostet 1 Zeitfenster (Beispiel aus dem Gherkin)', () => {
+    const base = scenarioOptions([5, 4], 2);
+    const ohne = generateGroupPhaseSchedule(base);
+    const extra = teamIdsOf(base).map((host) => slotCount(generateGroupPhaseSchedule({ ...base, hostTeamIds: [host] })) - slotCount(ohne));
 
-    expect(longer.length).toBeGreaterThan(0);
+    expect(extra).toContain(1);
+    expect(Math.max(...extra)).toBe(1);
+  });
+
+  it('6+4 auf 3 Feldern, Mindestpause 2: mindestens eine Markierung verlängert die Dauer', () => {
+    const base = scenarioOptions([6, 4], 3, { minRestSlotsPerTeam: 2 });
+    const ohne = generateGroupPhaseSchedule(base);
+
+    expect(teamIdsOf(base).some((host) => slotCount(generateGroupPhaseSchedule({ ...base, hostTeamIds: [host] })) > slotCount(ohne))).toBe(true);
   });
 });
 
