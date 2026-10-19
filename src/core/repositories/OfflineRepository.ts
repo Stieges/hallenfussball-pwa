@@ -11,6 +11,7 @@ import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
 import { decideCloudAdoption, isCloudReadTimeout, withCloudReadTimeout } from './cloudAdoption';
 import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisionSource } from './serverRevisionRegistry';
 import { CloudQueueGuard } from './cloudQueueGuard';
+import { effectiveHostTeamIds } from '../models/hostTeams';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -365,9 +366,18 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             const localList = await this.localListForAccount();
             const localOnly = localList.filter(t => !cloudIds.has(t.id));
 
+            // @W5-027: Wartet eine lokale Änderung noch in der Warteschlange (z. B. archivierte Kopie) UND ist sie neuer als die
+            // Cloud-Zeile, gilt die lokale Fassung, sonst käme beim Neuladen kurz der alte Stand zurück. Ohne offene Änderung
+            // (Geräteuhr weicht ab, abgelehnte Änderung im Dead-Letter) gilt der Server.
+            const localById = new Map(localList.map(t => [t.id, t]));
+            const merged = cloudList.map(cloudT => {
+                const localT = localById.get(cloudT.id);
+                return localT && this.mutationQueue.hasPending(cloudT.id) && Date.parse(localT.updatedAt) > Date.parse(cloudT.updatedAt) ? localT : cloudT;
+            });
+
             // Return cloud list + unsynced local tournaments
             // Local-only items are marked so UI can show sync indicator if needed
-            return [...cloudList, ...localOnly];
+            return [...merged, ...localOnly];
         } catch (error) {
             // Only log non-AbortErrors (AbortError is expected during navigation)
             if (!isAbortError(error)) {
@@ -526,6 +536,10 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         if (stableKey(local.monitors) !== stableKey(remote.monitors)) {return true;}
         if (stableKey(local.sponsors) !== stableKey(remote.sponsors)) {return true;}
         if ((local.bibColor ?? '').toUpperCase() !== (remote.bibColor ?? '').toUpperCase()) {return true;} // A-30a @W3-029: Leibchenfarbe nur im config-JSONB
+        // @W4-034: Markierung des Veranstalters und Eröffnungswahl liegen nur im config-JSONB (wie bibColor).
+        // @W4-044: verwaiste IDs (Team gelöscht) zählen auf keiner Seite (die Teams sind oben schon als gleich geprüft).
+        if (stableKey(effectiveHostTeamIds(local.hostTeamIds, local.teams)) !== stableKey(effectiveHostTeamIds(remote.hostTeamIds, remote.teams))) {return true;}
+        if ((local.openingMode ?? '') !== (remote.openingMode ?? '')) {return true;}
 
         // Fix 3 (Review 2026-09-18): publishedAt liegt ebenfalls nur im config-JSONB (siehe
         // supabase/migrations/20260918_002_make_public_refuses_drafts.sql) und hat — anders
