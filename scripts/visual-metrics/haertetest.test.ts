@@ -202,7 +202,7 @@ describe('Fehler 3 Attrappe statt echter Stand: Gate', () => {
   })
 })
 
-describe('C-VM-DISPLAY-CONTENTS (SM): Huellelement mit display:contents', () => {
+describe('VM-DISPLAY-CONTENTS (SM): Huellelement mit display:contents', () => {
   it('Inhalt in einem display:contents-Huellelement wird gemessen, nicht als "Ansicht leer" geblockt', async () => {
     const r = await messe('--ziel', FIX('display-contents.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(gruende(r.b)).not.toMatch(/Ansicht leer/)

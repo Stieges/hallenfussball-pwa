@@ -100,7 +100,7 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
     expect(container.querySelector('.standings-table')).not.toBeNull();
   });
 
-  it.fails('@ZM-004 Gruppentabellen – Befund F-B13-4: Spielplan-Tab mit ausgeschalteten Tabellen zeigt keine Tabelle (heute: leere Tabellen-Hülle)', async () => {
+  it.fails('@ZM-004 Gruppentabellen – Befund C-ZUSCHAUER-LIVE-ALS-BEENDET (F-B13-4): Spielplan-Tab mit ausgeschalteten Tabellen zeigt keine Tabelle (heute: leere Tabellen-Hülle)', async () => {
     const t = buildLiveViewTournament({ hideRankingsForPublic: true });
     const { container } = await renderWith(t);
     // Soll: keine Tabelle im Spielplan-Tab
@@ -131,7 +131,7 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
     }
   });
 
-  it.fails('@ZM-005 Zuschauer-Seite – Befund F-B13-4: Spielplan-Tab zeigt keine Tabelle von Gruppe A oder Gruppe B (heute: leere Hüllen)', async () => {
+  it.fails('@ZM-005 Zuschauer-Seite – Befund C-ZUSCHAUER-LIVE-ALS-BEENDET (F-B13-4): Spielplan-Tab zeigt keine Tabelle von Gruppe A oder Gruppe B (heute: leere Hüllen)', async () => {
     const t = buildLiveViewTournament({ hideRankingsForPublic: true });
     const { container } = await renderWith(t);
     // Soll: keine Tabelle im Spielplan-Tab
