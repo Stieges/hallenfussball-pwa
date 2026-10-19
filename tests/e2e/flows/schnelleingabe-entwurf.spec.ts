@@ -1,9 +1,9 @@
 /**
- * Befund C-SCHNELLEINGABE-ENTWURF-VERLOREN, offline (Gast): ein angefangener Eintrag in der Schnelleingabe der Finalrunde
- * bleibt stehen, während von außen etwas kommt. Wiederhergestellt wird @FU-101 (Gegeben das Feld für SV Süd zeigt schon 2,
- * Olli tippt im Feld für FC Nord „1“ und „0“ → 10:2). Am Turniertag läuft fast immer ein anderes Spiel: seine Uhr lässt
- * den Spielplan jede Sekunde neu zeichnen. Vorher baute das jede Zeile der Finalrunden-Tabelle neu auf, die getippte 2
- * verschwand ohne Hinweis. Vitest: src/components/schedule/__tests__/FU-101-entwurf-bleibt.test.tsx.
+ * @FU-103 Beispiel 3 (Befund C-SCHNELLEINGABE-ENTWURF-VERLOREN), offline (Gast): Olli hat im Feld für FC Nord von Halbfinale 1
+ * „1“ getippt, die Uhr eines laufenden Spiels auf einem anderen Feld läuft weiter → „1“ und Cursor bleiben, „0“ + Bestätigen
+ * ergibt 10:2 (SV Süd zeigt schon 2, wie @FU-101). Die Uhr lässt den Spielplan jede Sekunde neu zeichnen; vorher baute das
+ * jede Zeile der Finalrunden-Tabelle neu auf, die Eingabe verschwand ohne Hinweis.
+ * Vitest: src/components/schedule/__tests__/FU-103-entwurf-bleibt.test.tsx (alle drei Beispiele), FU-104-fremdaenderung.test.tsx.
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
@@ -38,7 +38,7 @@ function turnier(): Record<string, unknown> {
     matches: [
       {
         id: HF1, round: 1, field: 1, phase: 'semifinal', label: 'Halbfinale 1', teamA: NORD, teamB: SUED,
-        slotA: { kind: 'team', teamId: NORD }, slotB: { kind: 'team', teamId: SUED },
+        slotA: { kind: 'team', teamId: NORD }, slotB: { kind: 'team', teamId: SUED }, scoreB: 2,
         matchStatus: 'scheduled', scheduledTime: `${date}T10:00:00.000Z`, time: '10:00',
       },
       {
@@ -58,31 +58,31 @@ function feld(page: Page, seite: 'home' | 'away') {
   return page.getByTestId(`${karte ? 'final' : 'match'}-score-input-${HF1}-${seite}`);
 }
 
-test.describe('C-SCHNELLEINGABE-ENTWURF-VERLOREN: der Entwurf bleibt, während ein anderes Spiel läuft (@FU-101, offline)', () => {
+test.describe('@FU-103 @FU-101 C-SCHNELLEINGABE-ENTWURF-VERLOREN: der Eintrag bleibt, während ein Spiel auf einem anderen Feld läuft (offline)', () => {
   test.beforeEach(async ({ seedIndexedDB }) => {
     await seedIndexedDB({ tournaments: [turnier()] });
   });
 
-  test('@FU-101 die 2 für SV Süd bleibt über mehrere Uhr-Takte von Halbfinale 2 stehen, danach speichert „10“ + Enter 10:2', async ({ page }) => {
+  test('@FU-103 @FU-101 Uhr eines laufenden Spiels auf einem anderen Feld läuft weiter: „1“ und Cursor bleiben im Feld für FC Nord, „0“ + Enter ergibt 10:2', async ({ page }) => {
     await page.goto(`/#/tournament/${TOURNAMENT}/schedule`);
     // Sofort tippen, sobald das Feld da ist (wie Olli am Turniertag) – keine Wartezeit auf die Ruhe der Seite
-    await expect(feld(page, 'away')).toBeVisible();
-    await feld(page, 'away').click();
-    await page.keyboard.type('2');
-
-    // Halbfinale 2 läuft: die Restzeit zählt sichtbar weiter, der Spielplan zeichnet sich also neu
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2_500);
     await expect(feld(page, 'away')).toHaveValue('2');
-    await expect(feld(page, 'away')).toBeFocused();
-
     await feld(page, 'home').click();
     await page.keyboard.type('1');
-    await page.waitForTimeout(1_500); // weitere Takte mitten im Tippen
+
+    // Halbfinale 2 läuft auf Feld 2: die Restzeit zählt weiter, der Spielplan zeichnet sich jede Sekunde neu
+    await page.waitForTimeout(2_500);
+    await expect(feld(page, 'home')).toHaveValue('1');
+    await expect(feld(page, 'home')).toBeFocused();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1_500); // weitere Takte nach dem Laden
+    await expect(feld(page, 'home')).toHaveValue('1');
+    await expect(feld(page, 'home')).toBeFocused();
+
     await page.keyboard.type('0');
     await expect(feld(page, 'home')).toHaveValue('10');
     await expect(feld(page, 'away')).toHaveValue('2');
-    await test.info().attach('entwurf-nach-takten', { body: await page.screenshot(), contentType: 'image/png' });
+    await test.info().attach('eintrag-nach-takten', { body: await page.screenshot(), contentType: 'image/png' });
     await page.keyboard.press('Enter');
 
     // @FU-101: Halbfinale 1 ist beendet mit 10:2 – die Felder verschwinden, nur Halbfinale 2 läuft weiter
