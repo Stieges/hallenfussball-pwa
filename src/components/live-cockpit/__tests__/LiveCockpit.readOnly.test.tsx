@@ -413,7 +413,7 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
 describe('LiveCockpit — Fixrunde 2 (M1): Tor-Knopf des Gast-Teams (Team-Spalte rechts)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('@SL-018 readOnly=true: keine Tor-Taste für das Gast-Team; readOnly=false: da, der Tipp zählt mit dem Dialog-Weg', async () => {
+  it('@SL-018 readOnly=true: keine Tor-Taste für das Gast-Team; readOnly=false: da, der erste Tipp zählt das Tor sofort (@SL-019)', async () => {
     const onGoal = vi.fn();
     const match = makeMatch();
     const user = userEvent.setup();
@@ -427,10 +427,9 @@ describe('LiveCockpit — Fixrunde 2 (M1): Tor-Knopf des Gast-Teams (Team-Spalte
     const goalButtonUnlocked = screen.getByTestId('goal-button-away');
     expect(goalButtonUnlocked).not.toBeDisabled();
     await user.click(goalButtonUnlocked);
-    // goal-button-away öffnet erst den GoalScorerDialog (Torschütze erfassen); onGoal wird erst
-    // beim Bestätigen/Überspringen aufgerufen (handleGoalConfirm → onGoal), siehe LiveCockpit.tsx.
-    await user.click(screen.getByTestId('dialog-skip-button'));
-    expect(onGoal).toHaveBeenCalledWith('match-1', 'team-b', 1, expect.anything());
+    // Seit Aufgabe 3.4 zählt das Tor mit dem ersten Tipp; die Nummernauswahl folgt nur für den Nachtrag.
+    expect(onGoal).toHaveBeenCalledWith('match-1', 'team-b', 1, undefined);
+    expect(screen.getByTestId('number-picker')).toBeInTheDocument();
   });
 });
 

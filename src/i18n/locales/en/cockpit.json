@@ -36,7 +36,8 @@
     "schliessen": "Dismiss notice",
     "zurueckgesetzt": "Match {{nummer}} was reset by the organisers",
     "zeitstrafeAbgelaufen": "Time penalty {{team}} no. {{nummer}} has ended",
-    "zeitstrafeAbgelaufenOhneNr": "Time penalty {{team}} has ended"
+    "zeitstrafeAbgelaufenOhneNr": "Time penalty {{team}} has ended",
+    "tor": "Goal for {{team}}"
   },
   "tafel": {
     "zustand": {
@@ -476,5 +477,14 @@
     },
     "strafeKnopf": "Time penalty",
     "strafeDauer": "{{minuten}} min"
+  },
+  "nummer": {
+    "titelTor": "Shirt number – goal {{team}}",
+    "eigentor": "Own goal ({{gegner}})",
+    "titelEigentor": "Number of the {{gegner}} player",
+    "ohneNummer": "no number",
+    "andere": "Other no.",
+    "uebernehmen": "Apply",
+    "eingabe": "Shirt number"
   }
 }

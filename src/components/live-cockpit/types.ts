@@ -7,6 +7,7 @@
 
 import type { RuntimeMatchEvent } from '../../types/tournament';
 import type { SperrHinweis } from '../../core/match';
+import type { GoalHandlerOptions } from '../../hooks/engineCommandWiringTypes';
 import type { LeerGrund } from './model/cockpitPhase';
 import type { MindestpauseHinweis } from './model/cockpitTypes';
 
@@ -162,11 +163,8 @@ export interface LiveCockpitProps {
   onResume(matchId: string): void;
   /** Liefert (optional, als `Promise<string | null>`) die ID des gesendeten Endes, damit Ton und Vibration genau einmal je Ende kommen (B-08c). */
   onFinish(matchId: string): Promise<string | null> | undefined;
-  onGoal(matchId: string, teamId: string, delta: 1 | -1, options?: {
-    playerNumber?: number;
-    assists?: number[];
-    incomplete?: boolean;
-  }): void;
+  /** Liefert die ID des gespeicherten Tors (B-07), `null` bei Ablehnung: die Nummer geht als Nachtrag an dieses Tor (@SL-019). */
+  onGoal(matchId: string, teamId: string, delta: 1 | -1, options?: GoalHandlerOptions): Promise<string | null>;
   /** A-08c: ohne Handler blendet das Cockpit den zugehörigen Knopf aus (@FU-071). */
   onUndoLastEvent?(matchId: string): void;
   onManualEditResult?(matchId: string, newHomeScore: number, newAwayScore: number): void;
@@ -180,9 +178,11 @@ export interface LiveCockpitProps {
   onTimePenalty?(matchId: string, teamId: string, options?: {
     playerNumber?: number;
     durationSeconds?: number;
+    clockMs?: number; // Spielzeit des ersten Tipps in ms (@SL-084)
   }): void;
   onCard?(matchId: string, teamId: string, cardType: 'YELLOW' | 'YELLOW_RED' | 'RED', options?: {
     playerNumber?: number;
+    clockMs?: number; // Spielzeit des ersten Tipps in ms (@SL-084)
   }): void;
   onSubstitution?(matchId: string, teamId: string, options?: {
     playersOut?: number[];

@@ -9,7 +9,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { Harness } from './engineHarness';
-import { anpfiff } from './engineHarnessSupport';
+import { anpfiff, warteSperre } from './engineHarnessSupport';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
@@ -36,10 +36,11 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllGlobals(); });
 
-/** Ein Tor für FC Alpha im Bestandsablauf (Tor-Taste, „Ohne Nr.“). */
+/** Ein Tor für FC Alpha: Tor-Taste zählt sofort (@SL-019), die Nummernauswahl wird ohne Nummer geschlossen (@SL-083, Esc). */
 async function toreHeim(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(await screen.findByTestId('goal-button-home'));
-  await user.click(await screen.findByTestId('dialog-skip-button'));
+  await warteSperre();
+  await user.keyboard('{Escape}');
 }
 
 describe('LiveCockpit: Tafel und Abzeichen ohne Netz', () => {

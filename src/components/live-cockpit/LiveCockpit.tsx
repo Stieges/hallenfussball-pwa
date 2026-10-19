@@ -30,7 +30,11 @@ import { ScoreboardArea } from './areas/ScoreboardArea';
 import { LegacyPlayArea } from './areas/LegacyPlayArea';
 import { CockpitOverlays } from './areas/CockpitOverlays';
 import shell from './LiveCockpitShell.module.css';
-import { useCockpitPhase, useEntryFlows, useSideOrder } from './hooks';
+import { useCockpitPhase, useSideOrder } from './hooks';
+import { useEntryFlows } from './hooks/useEntryFlows';
+import { useEntryCommands } from './hooks/useEntryCommands';
+import { useFreshEntryCommands } from './hooks/useFreshEntryCommands';
+import { useSpielzeitJetzt } from './hooks/useSpielzeitJetzt';
 import { useEnginePhase } from './hooks/useEnginePhase';
 import { legacyPhaseViewOf } from './model/legacyPhaseView';
 import { istAngepfiffenUndNichtBeendet } from './model/cockpitPhase';
@@ -41,6 +45,8 @@ import { usePenaltyExpiryNotice } from './hooks/usePenaltyExpiryNotice';
 import { alsUebersetzer } from './model/alsUebersetzer';
 
 const NO_SPERREN: readonly SperrHinweis[] = [];
+const NO_TEAMS = { home: { id: '', name: '' }, away: { id: '', name: '' } };
+const NIE_GELB = (): boolean => false; // Aufgabe 3.5 ersetzt es durch die Ereignisse des Spiels (@SL-088)
 
 export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const { fieldName, tournamentName, tournamentId, cockpitSettings: cockpitSettingsProp, readOnly = false, currentMatch, upcomingMatches, leer = null } = props;
@@ -57,7 +63,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const sound = useMatchSound(cockpitSettings.soundId, cockpitSettings.soundVolume, cockpitSettings.soundEnabled, tournamentId);
   const { breakpoint, isMobile, isTablet } = useBreakpoint();
 
-  const flows = useEntryFlows(currentMatch?.id);
   // Seiten tauschen: nur die Anzeige dieses Geräts (@SL-065)
   const sides = useSideOrder(currentMatch);
   const notices = useCockpitNotices(); // Meldezeile statt Toast (Spec § 7)
@@ -97,6 +102,17 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     ? { label: t('tafel.tonAusAntippen'), kurz: t('tafel.tonAus'), onAntippen: () => { void sound.activate(); } }
     : null;
 
+  // Eintrags-Abläufe (Aufgabe 3.4): Tor zählt mit dem ersten Tipp, Nummer als Nachtrag an dieselbe Ereignis-ID
+  const tx = useMemo(() => alsUebersetzer(t), [t]);
+  const teams = useMemo(() => (currentMatch ? { home: currentMatch.homeTeam, away: currentMatch.awayTeam } : null), [currentMatch]);
+  const frisch = useFreshEntryCommands({
+    tournamentId, matchId: currentMatch?.id, teamAId: currentMatch?.homeTeam.id ?? '', teamBId: currentMatch?.awayTeam.id ?? '', melde: notices.melde, t: tx,
+  });
+  const flows = useEntryFlows({
+    matchId: currentMatch?.id, teams: teams ?? NO_TEAMS, commands: useEntryCommands(props, frisch), spielzeitJetzt: useSpielzeitJetzt(currentMatch?.id),
+    zustand: phase.zustand, melde: notices.melde, t: tx, hatSchonGelb: NIE_GELB,
+  });
+
   const cmd = useCockpitCommands({
     props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView,
   });
@@ -106,8 +122,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     match: currentMatch, view, phase, settings: cockpitSettings, kannSteuern: !readOnly, fouls: foulsJeSeite,
     sperrHinweise: props.sperrHinweise ?? NO_SPERREN, order: anzeigeOrdnung, handlers: cmd.teamHandlers,
   });
-  const teams = useMemo(() => (currentMatch ? { home: currentMatch.homeTeam, away: currentMatch.awayTeam } : null), [currentMatch]);
-  usePenaltyExpiryNotice(currentMatch?.id, view, teams, notices.melde, alsUebersetzer(t));
+  usePenaltyExpiryNotice(currentMatch?.id, view, teams, notices.melde, tx);
 
   // Tafel: mit Spiel und ohne (wartet auf Teams, kein Spiel mehr). Die Verbindungsanzeige steht bis zum schmalen Kopf (3.8) darin.
   const tafel = (
@@ -207,6 +222,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         editing={cmd.editing}
         handlers={cmd.overlayHandlers}
         rejectedOutbox={rejectedOutbox}
+        entrySheets={{ flows, teams: teams ?? NO_TEAMS, ausloeserSeite: (seite) => (sides.links === seite ? 'links' : 'rechts'), kartenArten: cockpitSettings.enabledCards, t: tx }}
       />
     </div>
   );

@@ -10,7 +10,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { Harness } from './engineHarness';
-import { anpfiff } from './engineHarnessSupport';
+import { anpfiff, warteSperre } from './engineHarnessSupport';
 import { T0 } from './enginePhaseFixture';
 
 vi.unmock('i18next');
@@ -59,7 +59,8 @@ const zustand = (): HTMLElement => screen.getByTestId('scoreboard-state');
 
 async function toreHeim(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(await screen.findByTestId('goal-button-home'));
-  await user.click(await screen.findByTestId('dialog-skip-button'));
+  await warteSperre(); // Sperre des Nummern-Bausteins (@SL-021), dann schließen: das Tor zählt ohne Nummer (@SL-083)
+  await user.keyboard('{Escape}');
 }
 
 async function bisHalbzeit(user: ReturnType<typeof userEvent.setup>): Promise<void> {

@@ -132,32 +132,6 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     if (match?.events.some((e) => e.id === event.id)) { flows.oeffne({ art: 'nummer', seite: null, eventId: event.id }); }
   }, [match, flows]);
 
-  const goalSide = flows.offen?.art === 'tor' ? flows.offen.seite : null;
-  const handleGoalConfirm = useCallback(
-    (jerseyNumber: number | null, assists?: (number | null)[], incomplete?: boolean) => {
-      if (!match || !goalSide) { return; }
-      const team = goalSide === 'home' ? match.homeTeam : match.awayTeam;
-      const validAssists = assists?.filter((a): a is number => a !== null) ?? [];
-      onGoal(match.id, team.id, 1, {
-        playerNumber: jerseyNumber ?? undefined,
-        assists: validAssists.length > 0 ? validAssists : undefined,
-        incomplete: incomplete ?? false,
-      });
-      if (incomplete) {
-        showInfo(`${t('toast.goalScored', { teamName: team.name })} (ohne Nr.)`);
-      } else if (jerseyNumber !== null) {
-        const assistText = validAssists.length > 0
-          ? ` (${t('sidebar.assistFormat', { assists: validAssists.map((a) => `#${a}`).join(', ') })})`
-          : '';
-        showSuccess(`${t('toast.goalScored', { teamName: team.name })} (#${jerseyNumber})${assistText}`);
-      } else {
-        showSuccess(`${t('toast.goalScored', { teamName: team.name })}!`);
-      }
-      flows.schliesse();
-    },
-    [match, goalSide, flows, onGoal, showSuccess, showInfo, t],
-  );
-
   const handleFoul = useCallback((side: Side) => {
     if (!match) { return; }
     const team = side === 'home' ? match.homeTeam : match.awayTeam;
@@ -190,7 +164,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
 
   const open = (art: EntryKind, side: Side) => () => flows.oeffne({ art, seite: side });
   const sideHandlers = (side: Side): TeamSideHandlers => ({
-    onTor: open('tor', side),
+    onTor: () => flows.tippeTor(side),
     onFoul: () => handleFoul(side),
     onZeitstrafe: open(EINTRAG_ZEITSTRAFE, side),
     onKarte: open('karte', side),
@@ -203,7 +177,6 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     closeEntry: flows.schliesse,
     confirmCard: handleCardConfirm,
     confirmTimePenalty: handleTimePenaltyConfirm,
-    confirmGoal: handleGoalConfirm,
     updateEvent: editing.update,
     deleteEvent: editing.remove,
     closeEventLog: () => setShowEventLog(false),

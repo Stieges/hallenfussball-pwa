@@ -381,7 +381,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             onPause={(matchId) => { void handlePause(matchId); }}
             onResume={(matchId) => { void handleResume(matchId); }}
             onFinish={handleFinishAndReset}
-            onGoal={(matchId, teamId, delta, options) => { void handleGoal(matchId, teamId, delta, options); }}
+            onGoal={(matchId, teamId, delta, options) => handleGoal(matchId, teamId, delta, options)}
             // A-08c (@FU-071): Undo, Direkteintrag, Zeit, Wiedereröffnen, K.-o.-/Strafstoß-Handler und
             // Ereignis-Bearbeiten/-Löschen haben keinen Engine-Weg und werden NICHT übergeben
             // -- das Cockpit blendet die zugehörigen Knöpfe aus.

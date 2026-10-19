@@ -30,7 +30,10 @@ await initRealDeI18n();
 function setup(options: { offen?: OffenerEintrag | null; props?: Partial<LiveCockpitProps>; settings?: Partial<MatchCockpitSettings>; events?: unknown[] } = {}) {
   const match = makeLiveMatch(options.events ? { events: options.events as never } : {});
   const props = makeProps(match, options.props);
-  const flows = { offen: options.offen ?? null, oeffne: vi.fn(), schliesse: vi.fn() };
+  const flows = {
+    offen: options.offen ?? null, oeffne: vi.fn(), schliesse: vi.fn(), tippeTor: vi.fn(), waehleNummer: vi.fn(),
+    schliesseAuswahl: vi.fn(), waehleEigentor: vi.fn(),
+  };
   const sides = { getauscht: false, links: 'home' as const, rechts: 'away' as const, tausche: vi.fn() };
   const melde = vi.fn();
   const sound = { play: vi.fn(), activate: vi.fn().mockResolvedValue(undefined), isActivated: true };
@@ -40,33 +43,20 @@ function setup(options: { offen?: OffenerEintrag | null; props?: Partial<LiveCoc
   return { hook, props, flows, sides, melde };
 }
 
-describe('useCockpitCommands – Tor', () => {
-  it('Tor FC Nord, Nr. 7, Vorlage Nr. 3: onGoal mit Nummer und Vorlage, Erfolgsmeldung, Auswahl schließt', () => {
-    const { hook, props, flows, melde } = setup({ offen: { art: 'tor', seite: 'home' } });
-    hook.result.current.overlayHandlers.confirmGoal(7, [3, null], false);
-    expect(props.onGoal).toHaveBeenCalledWith('match-11', 'fc-nord', 1, { playerNumber: 7, assists: [3], incomplete: false });
-    expect(melde).toHaveBeenCalledWith(3, expect.stringContaining('Tor für FC Nord (#7)'));
-    expect(flows.schliesse).toHaveBeenCalledTimes(1);
-  });
-
-  it('Tor ohne Nummer („ohne Nr.“): onGoal ohne Nummer, Hinweismeldung', () => {
-    const { hook, props, melde } = setup({ offen: { art: 'tor', seite: 'away' } });
-    hook.result.current.overlayHandlers.confirmGoal(null, undefined, true);
-    expect(props.onGoal).toHaveBeenCalledWith('match-11', 'sv-sued', 1, { playerNumber: undefined, assists: undefined, incomplete: true });
-    expect(melde).toHaveBeenCalledWith(3, expect.stringContaining('Tor für SV Süd (ohne Nr.)'));
-  });
-
-  it('Tor ohne Angaben (Nummer übersprungen): einfache Erfolgsmeldung', () => {
-    const { hook, melde } = setup({ offen: { art: 'tor', seite: 'home' } });
-    hook.result.current.overlayHandlers.confirmGoal(null);
-    expect(melde).toHaveBeenCalledWith(3, 'Tor für FC Nord!');
-  });
-
-  it('Gegenbeispiel: ohne offene Tor-Auswahl zählt kein Tor', () => {
-    const { hook, props, flows } = setup({ offen: null });
-    hook.result.current.overlayHandlers.confirmGoal(7);
+describe('useCockpitCommands – Tor (Aufgabe 3.4)', () => {
+  it('@SL-019 der Tipp auf die Spalte übergibt das Tor dem Eintrags-Ablauf (tippeTor je Seite), ohne Dialog und ohne eigenes onGoal', () => {
+    const { hook, props, flows } = setup();
+    hook.result.current.teamHandlers.home.onTor();
+    expect(flows.tippeTor).toHaveBeenLastCalledWith('home');
+    hook.result.current.teamHandlers.away.onTor();
+    expect(flows.tippeTor).toHaveBeenLastCalledWith('away');
+    expect(flows.oeffne).not.toHaveBeenCalled();
     expect(props.onGoal).not.toHaveBeenCalled();
-    expect(flows.schliesse).not.toHaveBeenCalled();
+  });
+
+  it('@SL-037 Gegenbeispiel: es gibt keinen Rückruf „Tor mit Torvorlagen bestätigen“ mehr', () => {
+    const { hook } = setup();
+    expect('confirmGoal' in hook.result.current.overlayHandlers).toBe(false);
   });
 });
 
@@ -110,10 +100,8 @@ describe('useCockpitCommands – Karte, Zeitstrafe, Foul', () => {
     expect(melde).toHaveBeenCalledWith(3, 'Foul für FC Nord');
   });
 
-  it('die Tipps je Seite öffnen die passende Auswahl (Tor, Zeitstrafe, Karte)', () => {
+  it('die Tipps je Seite öffnen die passende Auswahl (Zeitstrafe, Karte)', () => {
     const { hook, flows } = setup();
-    hook.result.current.teamHandlers.away.onTor();
-    expect(flows.oeffne).toHaveBeenLastCalledWith({ art: 'tor', seite: 'away' });
     hook.result.current.teamHandlers.home.onZeitstrafe();
     expect(flows.oeffne).toHaveBeenLastCalledWith({ art: 'zeitstrafe', seite: 'home' });
     hook.result.current.teamHandlers.home.onKarte();
@@ -230,7 +218,7 @@ describe('useCockpitCommands – BUG-008 Zeitstrafen nach dem automatischen Abpf
       const engineView = phaseViewOf(ansicht.result.state, spiel.ctx, spiel.a.engine.serverNow());
       const match = makeLiveMatch({ id: spiel.matchId, homeTeam: { id: 'teama', name: 'FC Nord' }, awayTeam: { id: 'teamb', name: 'SV Süd' } });
       const props = makeProps(match, { onTimePenalty: vi.fn() });
-      const flows = { offen: null, oeffne: vi.fn(), schliesse: vi.fn() };
+      const flows = { offen: null, oeffne: vi.fn(), schliesse: vi.fn(), tippeTor: vi.fn(), waehleNummer: vi.fn(), schliesseAuswahl: vi.fn(), waehleEigentor: vi.fn() };
       const sides = { getauscht: false, links: 'home' as const, rechts: 'away' as const, tausche: vi.fn() };
       const melde = vi.fn();
       const sound = { play: vi.fn(), activate: vi.fn().mockResolvedValue(undefined), isActivated: true };

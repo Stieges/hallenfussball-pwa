@@ -49,13 +49,13 @@ function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): Li
 }
 
 describe('LiveCockpit — RC13-Regression (C3a-2a Fixrunde 2): Dialog-Reset haengt nur an match.id', () => {
-  it('ein offener GoalScorerDialog bleibt offen, wenn sich NUR currentMatch.events aendert (gleiches match.id)', async () => {
+  it('eine offene Nummernauswahl des Tors bleibt offen, wenn sich NUR currentMatch.events aendert (gleiches match.id)', async () => {
     const user = userEvent.setup();
     const match1 = makeMatch({ elapsedSeconds: 30, events: [] });
     const { rerender } = render(<LiveCockpit {...baseProps(match1)} />);
 
     await user.click(screen.getByTestId('goal-button-home'));
-    expect(screen.getByTestId('dialog-skip-button')).toBeInTheDocument();
+    expect(screen.getByTestId('number-picker')).toBeInTheDocument();
 
     // Gleiches Spiel (match.id unveraendert), aber ein NEUES `events`-Array (z. B. weil der
     // Engine-Lesepfad ein frisches LiveMatch-Objekt liefert) -- der Dialog darf NICHT
@@ -63,7 +63,7 @@ describe('LiveCockpit — RC13-Regression (C3a-2a Fixrunde 2): Dialog-Reset haen
     const match2 = makeMatch({ elapsedSeconds: 31, events: [{ id: 'e-other', type: 'FOUL', payload: {} }] });
     rerender(<LiveCockpit {...baseProps(match2)} />);
 
-    expect(screen.getByTestId('dialog-skip-button')).toBeInTheDocument();
+    expect(screen.getByTestId('number-picker')).toBeInTheDocument();
   });
 
   it('Gegenprobe: ein ECHTER Spielwechsel (neues match.id) schliesst den Dialog weiterhin', async () => {
@@ -72,11 +72,11 @@ describe('LiveCockpit — RC13-Regression (C3a-2a Fixrunde 2): Dialog-Reset haen
     const { rerender } = render(<LiveCockpit {...baseProps(match1)} />);
 
     await user.click(screen.getByTestId('goal-button-home'));
-    expect(screen.getByTestId('dialog-skip-button')).toBeInTheDocument();
+    expect(screen.getByTestId('number-picker')).toBeInTheDocument();
 
     const match2 = makeMatch({ id: 'match-2' });
     rerender(<LiveCockpit {...baseProps(match2)} />);
 
-    expect(screen.queryByTestId('dialog-skip-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('number-picker')).not.toBeInTheDocument();
   });
 });

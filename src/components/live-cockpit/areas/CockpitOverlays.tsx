@@ -8,13 +8,13 @@
 import type { ReactElement } from 'react';
 import type { LiveMatch } from '../types';
 import type { EditableMatchEvent, MatchCockpitSettings } from '../../../types/tournament';
-import { cssVars } from '../../../design-tokens';
 import type { UseRejectedOutboxDialogResult } from '../../../features/collaboration/outbox/useRejectedOutboxDialog';
 import { RejectedOutboxDialog } from '../../../features/collaboration/outbox/RejectedOutboxDialog';
 import type { useEngineEventEditing } from '../../../hooks/useEngineEventEditing';
 import { EINTRAG_ZEITSTRAFE, type CardKind, type OffenerEintrag } from '../model/cockpitTypes';
+import { EntrySheets, type EntrySheetsProps } from './EntrySheets';
 import {
-  TimeAdjustDialog, CardDialog, TimePenaltyDialog, GoalScorerDialog,
+  TimeAdjustDialog, CardDialog, TimePenaltyDialog,
   EventEditDialog, EventLogBottomSheet, SettingsDialog, TiebreakerBanner, PenaltyShootoutDialog,
 } from '../components';
 
@@ -37,7 +37,6 @@ export interface CockpitOverlayHandlers {
   closeEntry: () => void;
   confirmCard: (cardType: CardKind, teamId: string, playerNumber?: number) => void;
   confirmTimePenalty: (durationSeconds: number, teamId: string, playerNumber?: number) => void;
-  confirmGoal: (jerseyNumber: number | null, assists?: (number | null)[], incomplete?: boolean) => void;
   updateEvent: EngineEventEditing['update'];
   deleteEvent: EngineEventEditing['remove'];
   closeEventLog: () => void;
@@ -66,16 +65,14 @@ export interface CockpitOverlaysProps {
   editing: Pick<EngineEventEditing, 'deleteBlock' | 'amendLock'>;
   handlers: CockpitOverlayHandlers;
   rejectedOutbox: UseRejectedOutboxDialogResult;
+  entrySheets: EntrySheetsProps;
 }
 
 export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
-  const { match, tournamentId, readOnly, isLocked, settings, displaySeconds, effectiveScore, dialogs, editingEvent, editing, handlers, rejectedOutbox } = props;
+  const { match, tournamentId, readOnly, isLocked, settings, displaySeconds, effectiveScore, dialogs, editingEvent, editing, handlers, rejectedOutbox, entrySheets } = props;
   const offen = dialogs.offen;
   const editingEventId = offen?.art === 'nummer' ? offen.eventId ?? null : null;
   const seite = offen?.seite ?? null;
-  const goalTeamName = offen?.art === 'tor'
-    ? (seite === 'home' ? match.homeTeam.name : seite === 'away' ? match.awayTeam.name : '')
-    : '';
 
   return (
     <>
@@ -119,15 +116,8 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
         autoDismissSeconds={10}
       />
 
-      {/* GoalScorerDialog - BUG-002: Torschütze + Assist erfassen */}
-      <GoalScorerDialog
-        isOpen={offen?.art === 'tor'}
-        onClose={handlers.closeEntry}
-        onConfirm={handlers.confirmGoal}
-        teamName={goalTeamName}
-        teamColor={cssVars.colors.primary}
-        autoDismissSeconds={10}
-      />
+      {/* Aufgabe 3.4: Nummernauswahl des Tors und des Eigentors (Tor zählt schon mit dem ersten Tipp) */}
+      <EntrySheets {...entrySheets} />
 
       {/* BUG-010: EventEditDialog for editing/deleting events */}
       <EventEditDialog

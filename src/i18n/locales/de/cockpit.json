@@ -36,7 +36,8 @@
     "schliessen": "Hinweis schließen",
     "zurueckgesetzt": "Spiel {{nummer}} von der Turnierleitung zurückgesetzt",
     "zeitstrafeAbgelaufen": "Zeitstrafe {{team}} Nr. {{nummer}} abgelaufen",
-    "zeitstrafeAbgelaufenOhneNr": "Zeitstrafe {{team}} abgelaufen"
+    "zeitstrafeAbgelaufenOhneNr": "Zeitstrafe {{team}} abgelaufen",
+    "tor": "Tor für {{team}}"
   },
   "tafel": {
     "zustand": {
@@ -476,5 +477,14 @@
     },
     "strafeKnopf": "Zeitstrafe",
     "strafeDauer": "{{minuten}} Min"
+  },
+  "nummer": {
+    "titelTor": "Rückennummer – Tor {{team}}",
+    "eigentor": "Eigentor ({{gegner}})",
+    "titelEigentor": "Nummer des Spielers von {{gegner}}",
+    "ohneNummer": "ohne Nummer",
+    "andere": "Andere Nr.",
+    "uebernehmen": "Übernehmen",
+    "eingabe": "Rückennummer"
   }
 }
