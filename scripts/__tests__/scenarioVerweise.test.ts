@@ -4,7 +4,7 @@
 // Verweis-Beispiele stehen hier nur in String-Literalen und der ZEILEN-Konstante, nie in Testtiteln:
 // dieses Skript scannt auch die eigenen Testdateien.
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -20,9 +20,15 @@ const alleDateien = (ordner_: string): string[] =>
 /** Die Liste enthaelt nur Kennungen, die eine Datei im Ordner nennt (die CI prueft auch die Rueckrichtung). */
 const synchronisiere = () => {
   const pfad = join(ordner, 'tests/meta/befund-kennungen.json')
-  if (!existsSync(pfad)) return
+  let roh: string
+  try {
+    roh = readFileSync(pfad, 'utf8')
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return
+    throw e
+  }
   const text = alleDateien(ordner).map((p) => readFileSync(p, 'utf8').replace(/\/\/.*$/gm, '')).join('\n')
-  const liste = JSON.parse(readFileSync(pfad, 'utf8')).kennungen.filter((k: string) => text.includes(k))
+  const liste = JSON.parse(roh).kennungen.filter((k: string) => text.includes(k))
   writeFileSync(pfad, JSON.stringify({ kennungen: liste }))
 }
 const lauf = (...args: string[]) => {
