@@ -3,8 +3,11 @@
  *
  * Die Korrektur schreibt ein Engine-Ereignis `CORRECTION` in `match_events` (nicht mehr in `match_corrections`).
  * Gherkin @EK-063: Einstieg im Spielplan beim beendeten Spiel ODER im Cockpit, immer derselbe Dialog.
- *  - D12: Spielplan-Weg (gebaut: `MatchScoreCell` -> `CorrectionDialog` -> `CORRECTION`). Geprüft werden das Ereignis und
- *    der neue Stand (Ergebnis des Spiels in der Cloud).
+ *  - D12: Spielplan-Weg. Auf main ist er NICHT angeschlossen: `MatchScoreCell` zeigt `correction-button-<id>` nur mit
+ *    `onStartCorrection`, ScheduleTab reicht keinen Handler durch (A-08e, Daniel 15.10. Frage 1 = A: kein Korrektur-Knopf
+ *    im Spielplan bis B-24); der Weg Ergebnis-Kreis -> `match-summary-edit-score` blendet `onEditScore` ebenfalls nur
+ *    mit Handler ein. Der Dialog (`correction-score-a/b`, `correction-confirm-button`) ist erst erreichbar, wenn B-24
+ *    den Einstieg baut. Der Schritt behält die Erwartung (CORRECTION-Ereignis, Stand 4:0) und ist expectedFail.
  *  - D12b: Cockpit-Einstieg (`match-correction-button`), Besitzer B-25.
  */
 import { expect } from '@playwright/test';
@@ -58,6 +61,6 @@ async function korrekturImCockpit({ asRole }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D12', title: 'Ergebnis eines beendeten Spiels im Spielplan korrigieren (CORRECTION in match_events)', scenarios: ['@EK-063'], owner: 'B-24 (Spielplan-Weg gebaut)', expectedFail: false, run: korrekturImSpielplan },
+  { id: 'D12', title: 'Ergebnis eines beendeten Spiels im Spielplan korrigieren (CORRECTION in match_events)', scenarios: ['@EK-063'], befunde: ['C-KORREKTUR-EINSTIEG-FEHLT'], owner: 'B-25', expectedFail: true, run: korrekturImSpielplan },
   { id: 'D12b', title: 'Korrektur aus dem Cockpit der Turnierleitung (gleicher Dialog)', scenarios: ['@EK-063'], owner: 'B-25', expectedFail: true, run: korrekturImCockpit },
 ];
