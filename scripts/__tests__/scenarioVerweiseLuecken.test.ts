@@ -36,3 +36,18 @@ describe('@TA-014 Ratsche (A1): der Hauptzweig zaehlt nur Markierungen ohne Verw
     expect(r.stderr).toMatch(/Neuer Fall/)
   }, ZEITLIMIT)
 })
+
+describe('@TA-013 Rumpf-Markierung erbt den Verweis aus dem Titel des umgebenden Tests (A2)', () => {
+  it('@TA-013 test.fail ohne Begruendung in einem Test mit Verweis im Titel wird nicht gemeldet', () => {
+    befundKennungen(ordner, ['C-KONTRAST-TEXTPAARE'])
+    schreibe('src/h.test.ts', "test('C-KONTRAST-TEXTPAARE Fall', () => {\n  test.fail()\n})\n")
+    const r = lauf()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stdout).toMatch(/Erwartet rot \(it\.fails, test\.fail\): 1, davon ohne Verweis auf Befund oder Defekt: 0/)
+  })
+
+  it('@TA-013 Gegenbeispiel: derselbe Test ohne Verweis im Titel wird gemeldet', () => {
+    schreibe('src/h.test.ts', "test('Fall', () => {\n  test.fail()\n})\n")
+    expect(gemeldet(lauf().stdout)).toEqual(['src/h.test.ts:2'])
+  })
+})
