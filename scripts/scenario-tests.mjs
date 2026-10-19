@@ -43,7 +43,7 @@ import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFil
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { join, relative, resolve } from 'node:path'
-import { sammleTestDateien, testTexte } from './lib/testtexte.mjs'
+import { sammleStepModule, sammleTestDateien, stepBefunde, testTexte } from './lib/testtexte.mjs'
 
 const KENNUNG = /(?<![A-Za-z0-9])[A-Z][A-Z0-9]{0,3}-\d{3}(?!\d)/g
 
@@ -93,6 +93,11 @@ function messe(root, scan, istKennung) {
         else gefunden.add(k[0])
       }
     }
+  }
+  // Durchstich-Schritte tragen ihre Befunde als Daten (`befunde: [...]`); sie zaehlen als Verweis wie ein Testtitel.
+  for (const datei of sammleStepModule(root, scan)) {
+    const rel = relative(root, datei)
+    for (const t of stepBefunde(readFileSync(datei, 'utf8'))) stellen.push({ datei: rel, zeile: t.zeile, kennung: t.kennung })
   }
   return { gefunden, teilweise, dateien, markiert, stellen }
 }

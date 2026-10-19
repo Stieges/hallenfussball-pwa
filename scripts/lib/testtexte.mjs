@@ -276,3 +276,38 @@ export function sammleTestDateien(root, scan) {
   }
   return dateien
 }
+
+/** Step-Module des Durchstichs (tests/e2e/cloud/turniertag/steps/*.ts): Daten statt Testaufrufe, vom Test-Scanner nicht gesehen. */
+export const STEP_MODUL = /(?:^|[\\/])turniertag[\\/]steps[\\/][^\\/]+\.ts$/
+
+/** Wie sammleTestDateien, aber die Step-Module der Durchstich-Schritte. */
+export function sammleStepModule(root, scan) {
+  const dateien = []
+  const gehe = (ordner) => {
+    for (const name of readdirSync(ordner)) {
+      if (name === 'node_modules' || name === '.git' || name === 'coverage' || name === 'dist') continue
+      const pfad = join(ordner, name)
+      if (statSync(pfad).isDirectory()) gehe(pfad)
+      else if (STEP_MODUL.test(pfad)) dateien.push(pfad)
+    }
+  }
+  for (const s of scan) {
+    const ordner = resolve(root, s)
+    if (existsSync(ordner)) gehe(ordner)
+  }
+  return dateien
+}
+
+/**
+ * Befund-Kennungen aus den `befunde: ['C-...', ...]`-Feldern eines Step-Moduls (Kommentare zaehlen nie).
+ * Liefert { kennung, zeile }.
+ */
+export function stepBefunde(quelltext) {
+  const src = ohneKommentare(quelltext)
+  const treffer = []
+  for (const m of src.matchAll(/\bbefunde\s*:\s*\[([^\]]*)\]/g)) {
+    const zeile = src.slice(0, m.index).split('\n').length
+    for (const k of m[1].matchAll(/['"]([^'"]+)['"]/g)) treffer.push({ kennung: k[1], zeile })
+  }
+  return treffer
+}

@@ -51,10 +51,30 @@ export function eventOf(type: string, at: number, start: number, extra: Partial<
   return event(type, at, { clockMs: at - start, ...extra });
 }
 
-export function finishingEvents(rows: readonly { type: string }[], events: AppendAsRoleEvent[]): AppendAsRoleEvent[] {
+/**
+ * Beendet ein Spiel in jedem Zustand zeitrichtig (Fixrunde 1, A1): `events` sind die Ereignisse eines regulären
+ * Ergebnisses, nur sein letztes (`MATCH_END`) wird verwendet. Die neuen Zeitpunkte liegen NACH dem jüngsten
+ * vorhandenen Ereignis (`client_time`) und der Wiederanpfiff nach der Pause (`SECTION_START`) kommt davor, damit
+ * Spiele aus D4b/D6/D6z (Anpfiff vor Sekunden bzw. Abschnitt automatisch beendet) angenommen werden.
+ */
+export function finishingEvents(rows: readonly { type: string; client_time?: string | null }[], events: AppendAsRoleEvent[]): AppendAsRoleEvent[] {
   if (!rows.some((r) => r.type === 'MATCH_START')) {
     return events;
   }
+  const zeit = (iso: string | null | undefined): number => (iso ? Date.parse(iso) : Number.NaN);
+  const start = zeit(rows.find((r) => r.type === 'MATCH_START')?.client_time);
+  const bekannt = rows.map((r) => zeit(r.client_time)).filter(Number.isFinite);
+  const letztes = bekannt.length > 0 ? Math.max(...bekannt) : Date.now() - 600_000;
+  const anfang = Number.isFinite(start) ? start : letztes;
+  const ende = events[events.length - 1];
   const inBreak = rows.some((r) => r.type === 'SECTION_END') && !rows.some((r) => r.type === 'SECTION_START');
-  return inBreak ? [eventOf('SECTION_START', Date.now() - 600_000, Date.now() - 599_000, { section: 2 }), ...events.slice(-1)] : events.slice(-1);
+  const result: AppendAsRoleEvent[] = [];
+  let at = letztes;
+  if (inBreak) {
+    at += 1000;
+    result.push(eventOf('SECTION_START', at, anfang, { section: 2 }));
+  }
+  at += 1000;
+  result.push({ ...ende, at, clockMs: at - anfang });
+  return result;
 }
