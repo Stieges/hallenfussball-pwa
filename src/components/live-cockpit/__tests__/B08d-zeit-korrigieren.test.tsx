@@ -161,6 +161,30 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:10'));
   });
 
+  it('@SL-077 „Dann behält die Uhr 5:20“: ein Versuch unter 5:10 (4:50) sendet nichts, die Uhr bleibt bei 5:20', async () => {
+    const user = userEvent.setup();
+    let store: LocalMatchStore | null = null;
+    let konto = '';
+    const fabrik: SenderFabrik = (s, accountId, tournamentId) => { store = s; konto = accountId; return storeSender(s, accountId, tournamentId); };
+    render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur senderFabrik={fabrik} />);
+    await zurZweitenHalbzeit(user);
+    zu(730_000); // Tor für Heim bei 5:10
+    await user.click(await screen.findByTestId('goal-button-home'));
+    await user.click(await screen.findByTestId('dialog-skip-button'));
+    zu(740_000); // Uhr steht bei 5:20
+
+    const dialog = await zeitDialog(user);
+    const weniger = within(dialog).getByRole('button', { name: '10 Sekunden weniger' });
+    for (let i = 0; i < 3; i += 1) { await user.click(weniger); } // 4:50 gewollt
+    expect(within(dialog).getByText('5:10')).toBeInTheDocument(); // 4:50 ist nicht erreichbar
+    expect(within(dialog).queryByText('4:50')).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Abbrechen' }));
+
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:20'));
+    const kopie = await (store as LocalMatchStore | null)?.load(konto, HARNESS_MATCH_ID);
+    expect((kopie?.pending ?? []).filter((e) => e.type === 'CLOCK_ADJUST')).toHaveLength(0);
+  });
+
   it('@SL-079 in der Halbzeitpause bietet das Cockpit keine Zeitkorrektur an', async () => {
     const user = userEvent.setup();
     render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur />);
@@ -169,6 +193,22 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     expect(zeitKnopf()).not.toBeNull();
     zu(360_000);
     await waitFor(() => expect(zustand()).toHaveTextContent('Halbzeit'));
+    expect(zeitKnopf()).toBeNull();
+  });
+
+  it('@SL-079 Zeile 2: nach dem Abpfiff (2:1) bietet das Cockpit keine Zeitkorrektur an', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur />);
+    await zurZweitenHalbzeit(user);
+    zu(500_000);
+    for (const seite of ['home', 'home', 'away']) {
+      await user.click(await screen.findByTestId(`goal-button-${seite}`));
+      await user.click(await screen.findByTestId('dialog-skip-button'));
+    }
+    expect(zeitKnopf()).not.toBeNull(); // Gegenprobe: im laufenden Abschnitt ist die Korrektur da
+    zu(420_000 + 360_000);
+    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('2:1');
     expect(zeitKnopf()).toBeNull();
   });
 });
