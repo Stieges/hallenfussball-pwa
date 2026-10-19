@@ -207,6 +207,21 @@ describe('@W4-032 Wo ein Rundenplan nichts bringt, wird der Spielplan nicht schl
     expect(consecutiveSlotDoubles(matches)).toBeLessThanOrEqual(consecutiveSlotDoubles(ohne));
   });
 
+  it.each([{ sizes: [5, 6] }, { sizes: [6, 5] }, { sizes: [7, 7] }, { sizes: [5, 5, 5] }])(
+    'Eigenschaft Gruppen $sizes auf einem Feld: keiner der Werte schlechter als ohne Rundenplan-Vorschlag',
+    ({ sizes }) => {
+      const options = scenarioOptions(sizes, 1);
+      const matches = generateGroupPhaseSchedule(options);
+      const ohne = generateGreedyGroupPhaseSchedule(options);
+      const ids = teamIdsOf(options);
+
+      expect(longestPauseGames(matches)).toBeLessThanOrEqual(longestPauseGames(ohne));
+      expect(playedTimeline(matches, ids).maxDiff).toBeLessThanOrEqual(playedTimeline(ohne, ids).maxDiff);
+      expect(consecutiveSlotDoubles(matches)).toBeLessThanOrEqual(consecutiveSlotDoubles(ohne));
+    },
+    SLOW_TIMEOUT_MS,
+  );
+
   it('6 Teams auf 2 Feldern (10 + 5 Minuten): Pause ≤ 65 Minuten, Diff ≤ 3, Doppel 0, keiner schlechter', () => {
     const options = scenarioOptions([6], 2);
     const matches = generateGroupPhaseSchedule(options);
