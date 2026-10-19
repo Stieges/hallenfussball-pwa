@@ -57,6 +57,10 @@ describe('Karten-Farben nur für Karten (Oberfläche E) – Monitor-Kartenanimat
     expect(band.style.background).toContain('var(--color-scoreboard-bg)');
     expect(band.style.color).toBe('var(--color-scoreboard-text)');
     expect(band.textContent).toContain('cardAnimation.yellowRedCard');
+    // die Schrift selbst (Kartenart, Team, Nummer) ist hell, nicht nur das Band
+    for (const el of [screen.getByTestId('card-kind-text'), band.querySelector<HTMLElement>('[data-teamname]'), screen.getByTestId('card-player-number')]) {
+      expect(el?.style.color).toBe('var(--color-scoreboard-text)');
+    }
   });
 
   it.each(['light', 'dark'] as const)('%s: Band-Schrift auf dem Band ≥ 4,5 : 1, unabhängig vom Untergrund (Band deckend)', (theme) => {
