@@ -145,3 +145,21 @@ describe('@ZM-154 Teamfarben ausschalten', () => {
     expect(onUpdate).not.toHaveBeenCalled();
   });
 });
+
+describe('Fixrunde A5 Speichern-Knopf', () => {
+  it('A5 nach dem Speichern räumt der Abbau den Timer der Meldung „Gespeichert“ auf', () => {
+    const aufraeumen = vi.spyOn(globalThis, 'clearTimeout');
+    const { unmount } = render(<Host initial={buildTournament()} onUpdate={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Gespeichert');
+    const vorher = aufraeumen.mock.calls.length;
+    unmount();
+    expect(aufraeumen.mock.calls.length).toBeGreaterThan(vorher);
+    aufraeumen.mockRestore();
+  });
+
+  it('Gegenbeispiel: ohne Speichern kein Timer zum Aufräumen und keine Meldung', () => {
+    zeige();
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+});

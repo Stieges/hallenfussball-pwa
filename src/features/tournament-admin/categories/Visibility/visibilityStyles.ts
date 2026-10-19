@@ -17,7 +17,7 @@ export const visibilityStyles = {
     gap: cssVars.spacing.sm,
     padding: cssVars.spacing.md,
     background: cssVars.colors.surface,
-    border: `1px solid ${cssVars.colors.borderControl}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     transition: 'all 0.15s ease',
@@ -37,7 +37,7 @@ export const visibilityStyles = {
   radioDescription: {
     fontSize: cssVars.fontSizes.labelSm,
     color: cssVars.colors.textSecondary,
-    marginTop: 2,
+    marginTop: cssVars.spacing.xs,
   } as CSSProperties,
 
   checkboxGroup: {
@@ -70,10 +70,10 @@ export const visibilityStyles = {
 
   linkInput: {
     flex: 1,
-    minWidth: 200,
+    minWidth: 0,
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.borderControl}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.bodySm,
@@ -82,7 +82,7 @@ export const visibilityStyles = {
   copyButton: {
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     background: cssVars.colors.primarySubtle,
-    border: `1px solid ${cssVars.colors.primaryBorder}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.primaryBorder}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.primary,
     fontSize: cssVars.fontSizes.bodySm,
@@ -104,15 +104,16 @@ export const visibilityStyles = {
   } as CSSProperties,
 
   qrPlaceholder: {
-    width: 150,
-    height: 150,
+    // kein Größen-Token für eine quadratische Platzhalterfläche: Anteil der Zeile, quadratisch
+    width: '40%',
+    aspectRatio: '1 / 1',
     background: cssVars.colors.surfaceHover,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: 48,
+    fontSize: cssVars.fontSizes.displayLg,
     color: cssVars.colors.textMuted,
     flexShrink: 0,
   } as CSSProperties,
@@ -129,7 +130,7 @@ export const visibilityStyles = {
     gap: cssVars.spacing.xs,
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     background: cssVars.colors.surface,
-    border: `1px solid ${cssVars.colors.borderControl}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.bodySm,
@@ -144,7 +145,7 @@ export const visibilityStyles = {
     gap: cssVars.spacing.sm,
     padding: cssVars.spacing.md,
     background: cssVars.colors.infoLight,
-    border: `1px solid ${cssVars.colors.infoBorder}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.infoBorder}`,
     borderRadius: cssVars.borderRadius.md,
     fontSize: cssVars.fontSizes.bodySm,
     color: cssVars.colors.info,

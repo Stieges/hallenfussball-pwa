@@ -7,7 +7,7 @@
  * Anzeige weicht dann aus (Gast Weiß oder Schwarz, `resolveBoxColors`). Die Vorschau zeigt die gewählten Farben.
  * Ohne das Recht `tournamentSettings` (`canEdit` false, @ZM-019) gibt es keine Eingaben, nur Vorschau und Hinweis.
  */
-import { useEffect, useState, type CSSProperties, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CollapsibleSection } from '../shared';
 import { ColorPicker } from '../../../../components/ui/ColorPicker';
@@ -97,6 +97,9 @@ export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdi
   const stored = parseSpectatorDisplay(tournament.spectatorDisplay ?? DEFAULT_SPECTATOR_DISPLAY);
   const [draft, setDraft] = useState<SpectatorDisplaySettings>(stored);
   const [saved, setSaved] = useState(false);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // A5: der Timer der Meldung „Gespeichert“ läuft nicht über den Abbau hinaus
+  useEffect(() => () => clearTimeout(savedTimer.current), []);
 
   // Eine Änderung von außen (anderes Gerät, Rückgängig) ersetzt den Entwurf
   useEffect(() => {
@@ -112,7 +115,8 @@ export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdi
   const handleSave = () => {
     onTournamentUpdate({ ...tournament, spectatorDisplay: parseSpectatorDisplay(draft), updatedAt: new Date().toISOString() });
     setSaved(true);
-    setTimeout(() => setSaved(false), SAVED_VISIBLE_MS);
+    clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setSaved(false), SAVED_VISIBLE_MS);
   };
 
   const side = (which: 'home' | 'away', hex: string) => (
