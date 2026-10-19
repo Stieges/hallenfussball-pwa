@@ -6,6 +6,7 @@
  */
 import { expect } from '@playwright/test';
 import { enterGoal } from '../../helpers';
+import { tippeKarte } from '../../../helpers/cockpitNeu';
 import { expectEngineMatchRunningUi, fetchEngineRows, openCockpit } from '../../engineHelpers';
 import { fetchTurniertagBracket, TURNIERTAG_ID } from './shared';
 import type { StepContext, TurniertagStep } from './types';
@@ -18,9 +19,8 @@ async function anpfiffTorKarte({ asRole }: StepContext): Promise<void> {
   await ownerPage.locator('[data-testid="match-start-button"]').click();
   await expectEngineMatchRunningUi(ownerPage);
   await enterGoal(ownerPage, 'home');
-  await expect(ownerPage.locator('[data-testid="score-home"]')).toHaveText('1');
-  await ownerPage.locator('[data-testid="yellow-card-button-away"]').click();
-  await ownerPage.getByRole('button', { name: 'Ohne Details' }).click();
+  await expect(ownerPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('1');
+  await tippeKarte(ownerPage, 'away', 'Gelb');
 
   await expect.poll(async () => (await fetchEngineRows(first.id)).map((row) => row.type), { timeout: 10000 }).toEqual(['MATCH_START', 'GOAL', 'YELLOW_CARD']);
 }

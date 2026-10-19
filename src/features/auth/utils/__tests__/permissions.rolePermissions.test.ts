@@ -50,6 +50,12 @@ const ALL_PERMISSIONS: Permission[] = [
   'deleteTournament',
   'manageMembers',
   'leadMatches',
+  // A-11 (brief-A-11.md R-A11-1): die fuenf MVP-Rechte.
+  'manageSchedule',
+  'manageLifecycle',
+  'manageScreens',
+  'manageHelpers',
+  'readDisplay',
 ];
 
 // Rollen aus der JSON (co-admin, collaborator, trainer, viewer) + 'owner', der bewusst NICHT in
@@ -85,16 +91,36 @@ describe('hasPermission() — jede Zelle der Rechtetabelle', () => {
     }
   });
 
-  it('writeMatchData und correctEvents stimmen je Rolle überein (Voraussetzung für canEditResults)', () => {
-    // canEditResults hat nur EIN Recht (writeMatchData) für zwei DB-Schreibpfade
-    // (matches UPDATE + match_events INSERT/UPDATE/DELETE) -- siehe deren JSDoc. Das gilt nur
-    // so lange, wie beide Spalten pro Rolle identisch sind. Bricht das auseinander, macht DIESER
-    // Test sichtbar, dass canEditResults eine zweite Funktion braucht.
+  // A-11 (Baustein Regel 3: umgeschrieben, nicht gelöscht). Vorher: "writeMatchData und correctEvents stimmen je
+  // Rolle überein". Seit A-11 (C-RECHTE-KORREKTUR, @HE-042 „ein beendetes Spiel korrigieren -> nur Turnierleitung“)
+  // hat der Helfer writeMatchData OHNE correctEvents; canEditResults folgt allein writeMatchData (Spielbetrieb über
+  // append_match_events). Was bleibt: Korrigieren setzt Eintragen voraus.
+  it('C-RECHTE-KORREKTUR: correctEvents setzt writeMatchData voraus, der Helfer hat writeMatchData ohne correctEvents', () => {
     for (const role of ALL_ROLES) {
-      expect(hasPermission(role, 'correctEvents'), `Rolle "${role}"`).toBe(
-        hasPermission(role, 'writeMatchData')
-      );
+      if (hasPermission(role, 'correctEvents')) {
+        expect(hasPermission(role, 'writeMatchData'), `Rolle "${role}"`).toBe(true);
+      }
     }
+    expect(hasPermission('collaborator', 'writeMatchData')).toBe(true);
+    expect(hasPermission('collaborator', 'correctEvents')).toBe(false);
+  });
+
+  // A-11 R-A11-1 (Brief-Tabelle, unabhängig von der JSON): die MVP-Rechte je Rolle.
+  it.each([
+    ['manageSchedule', true, false],
+    ['manageLifecycle', true, false],
+    ['manageScreens', true, false],
+    ['manageHelpers', true, false],
+    ['readDisplay', false, false],
+    ['teams', true, false],
+    ['correctEvents', true, false],
+    ['writeMatchData', true, true],
+  ] as const)('@ZP-040 @LZ-022 @ZM-019 @HE-042: %s -- Co-Admin %s, Helfer %s', (permission, coAdmin, helper) => {
+    expect(hasPermission('owner', permission)).toBe(true);
+    expect(hasPermission('co-admin', permission)).toBe(coAdmin);
+    expect(hasPermission('collaborator', permission)).toBe(helper);
+    expect(hasPermission('trainer', permission)).toBe(false);
+    expect(hasPermission('viewer', permission)).toBe(false);
   });
 });
 

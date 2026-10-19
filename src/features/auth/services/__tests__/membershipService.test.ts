@@ -68,6 +68,7 @@ import {
   removeMember,
   transferOwnership,
   getCoAdmins,
+  MembersUnknownError,
 } from '../membershipService';
 
 function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -151,16 +152,18 @@ describe('membershipService', () => {
       ]);
     });
 
-    it('Gegenbeispiel: ein Fehler der Abfrage ergibt eine leere Liste statt eines Teilergebnisses', async () => {
+    // Gegenteil-Pin umgeschrieben (Review A-11 A4, @FU-100): früher „Fehler → leere Liste“. Eine leere Liste hieße
+    // „kein Mitglied“ – eine gescheiterte Abfrage ist aber „unbekannt“, nicht „kein Recht“.
+    it('@FU-100 Gegenbeispiel: ein Fehler der Abfrage meldet „unbekannt“ statt einer leeren Liste oder eines Teilergebnisses', async () => {
       state.queue = [{ data: null, error: { message: 'boom' } }];
 
-      expect(await getTournamentMembers('t-1')).toEqual([]);
+      await expect(getTournamentMembers('t-1')).rejects.toBeInstanceOf(MembersUnknownError);
     });
 
-    it('Gegenbeispiel: eine Ausnahme ergibt eine leere Liste', async () => {
+    it('@FU-100 Gegenbeispiel: eine Ausnahme (kein Netz) meldet „unbekannt“ statt einer leeren Liste', async () => {
       state.queue = ['throw'];
 
-      expect(await getTournamentMembers('t-1')).toEqual([]);
+      await expect(getTournamentMembers('t-1')).rejects.toBeInstanceOf(MembersUnknownError);
     });
   });
 

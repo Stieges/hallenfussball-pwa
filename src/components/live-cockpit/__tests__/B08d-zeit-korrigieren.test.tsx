@@ -11,7 +11,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { Harness } from './engineHarness';
-import { anpfiff, storeSender, HARNESS_MATCH_ID, type SenderFabrik } from './engineHarnessSupport';
+import { anpfiff, storeSender, warteSperre, HARNESS_MATCH_ID, type SenderFabrik } from './engineHarnessSupport';
 import type { LocalMatchStore } from '../../../core/match/client';
 import { T0 } from './enginePhaseFixture';
 
@@ -150,7 +150,8 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     await zurZweitenHalbzeit(user);
     zu(730_000); // 5:10 im zweiten Abschnitt: Tor für Heim
     await user.click(await screen.findByTestId('goal-button-home'));
-    await user.click(await screen.findByTestId('dialog-skip-button'));
+    await warteSperre(); // Sperre des Nummern-Bausteins (@SL-021); Schließen lässt das Tor ohne Nummer zählen (@SL-083)
+    await user.keyboard('{Escape}');
     zu(740_000); // 5:20
 
     const dialog = await zeitDialog(user);
@@ -170,7 +171,8 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     await zurZweitenHalbzeit(user);
     zu(730_000); // Tor für Heim bei 5:10
     await user.click(await screen.findByTestId('goal-button-home'));
-    await user.click(await screen.findByTestId('dialog-skip-button'));
+    await warteSperre(); // Sperre des Nummern-Bausteins (@SL-021); Schließen lässt das Tor ohne Nummer zählen (@SL-083)
+    await user.keyboard('{Escape}');
     zu(740_000); // Uhr steht bei 5:20
 
     const dialog = await zeitDialog(user);
@@ -203,7 +205,8 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     zu(500_000);
     for (const seite of ['home', 'home', 'away']) {
       await user.click(await screen.findByTestId(`goal-button-${seite}`));
-      await user.click(await screen.findByTestId('dialog-skip-button'));
+      await warteSperre(); // Sperre des Nummern-Bausteins (@SL-021); Schließen lässt das Tor ohne Nummer zählen (@SL-083)
+    await user.keyboard('{Escape}');
     }
     expect(zeitKnopf()).not.toBeNull(); // Gegenprobe: im laufenden Abschnitt ist die Korrektur da
     zu(420_000 + 360_000);

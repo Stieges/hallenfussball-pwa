@@ -14,11 +14,10 @@ import { CategoryPage, CollapsibleSection } from '../shared';
 import { Button } from '../../../../components/ui/Button';
 import { MemberList } from '../../../auth/components/MemberList';
 import { InviteDialog } from '../../../auth/components/InviteDialog';
-import { useMyTournamentRole } from '../../../auth/hooks/useMyTournamentRole';
+import { useCan } from '../../../auth/hooks/useCan';
 import { useInvitation } from '../../../auth/hooks/useInvitation';
 import type { Invitation } from '../../../auth/types/auth.types';
 import { useAuth } from '../../../auth/hooks/useAuth';
-import { canCreateInvitations } from '../../../auth/utils/permissions';
 import type { Tournament } from '../../../../types/tournament';
 
 // =============================================================================
@@ -41,7 +40,6 @@ export function TeamHelpersCategory({
 }: TeamHelpersCategoryProps) {
   const { t } = useTranslation('admin');
   const { user, isAuthenticated } = useAuth();
-  const { role: myRole } = useMyTournamentRole(tournamentId);
   const { getActiveInvitations } = useInvitation();
 
   // Dialog states
@@ -50,13 +48,9 @@ export function TeamHelpersCategory({
   const [copySuccess, setCopySuccess] = useState(false);
   const [activeInvitations, setActiveInvitations] = useState<Invitation[]>([]);
 
-  // Permission check: Can manage members? (R5/M6: nur owner -- DB verlangt für
-  // tournament_collaborators-INSERT user_owns_tournament(), siehe permissions.ts#canCreateInvitations)
-  //
-  // R7-Fixrunde 1 (H-1, final-review-2.md): useMyTournamentRole() statt direkt
-  // useTournamentMembers().myMembership -- derselbe Fehler wie in DangerZoneCategory (der
-  // echte Eigentümer hat live keine Zeile in tournament_collaborators), gemeinsame Lösung.
-  const canManageMembers = myRole ? canCreateInvitations(myRole) : false;
+  // Mitglieder verwalten (R5/M6: nur der Eigentümer, DB prüft manageMembers). A-11: Rechte nur über useCan;
+  // manageHelpers (Co-Admin) prüfen erst A-16/A-18.
+  const canManageMembers = useCan('manageMembers', tournamentId);
 
   // Load active invitations
   useEffect(() => {

@@ -9,8 +9,7 @@
  * Konzept-Referenz: docs/concepts/LIVE-COCKPIT-KONZEPT.md §5.2
  *
  * Card colors:
- * - Yellow: cssVars.colors.accent (#FFD700)
- * - Red: cssVars.colors.error
+ * - Yellow: cssVars.colors.cardYellow, Red: cssVars.colors.cardRed (Karten-Tokens, nie warning/error)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -50,9 +49,9 @@ interface CardDialogProps {
 // Card type colors (F3b2: Gelb-Rot fuehrt wie Rot zum Platzverweis -- gleiche Farbe, kein neuer
 // Design-Token noetig).
 const cardColors = {
-  YELLOW: cssVars.colors.accent, // #FFD700
-  YELLOW_RED: cssVars.colors.error,
-  RED: cssVars.colors.error,
+  YELLOW: cssVars.colors.cardYellow,
+  YELLOW_RED: cssVars.colors.cardRed,
+  RED: cssVars.colors.cardRed,
 } as const;
 
 export function CardDialog({
@@ -122,10 +121,16 @@ export function CardDialog({
     }
   }, [isOpen, initialCardType, preselectedTeamSide, homeTeam, awayTeam, resetTimer]);
 
+  // Aufgabe 3.3: Die Team-Spalte öffnet den Dialog mit gewähltem Team, nur die Art fehlt -- dann entfällt die Teamfrage.
   const handleCardTypeSelect = useCallback((type: CardType) => {
     setCardType(type);
+    if (preselectedTeamSide !== undefined) {
+      setSelectedTeam(preselectedTeamSide === 'home' ? homeTeam : awayTeam);
+      setStep(3);
+      return;
+    }
     setStep(2);
-  }, []);
+  }, [preselectedTeamSide, homeTeam, awayTeam]);
 
   const handleTeamSelect = useCallback((team: Team) => {
     setSelectedTeam(team);

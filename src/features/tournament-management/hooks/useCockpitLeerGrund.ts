@@ -66,7 +66,7 @@ export function useCockpitLeerGrund(args: CockpitLeerGrundArgs): CockpitLeerGrun
     fieldName: t('management.field', { number: selectedFieldNumber }), tournamentName: tournament.title, tournamentId: tournament.id,
     cockpitSettings: tournament.matchCockpitSettings, currentMatch: null, leer, upcomingMatches,
     onStart: () => undefined, onPause: () => undefined, onResume: () => undefined, onFinish: () => undefined,
-    onGoal: () => undefined, onLoadNextMatch,
+    onGoal: () => Promise.resolve(null), onLoadNextMatch,
   };
   return { leer, sperrHinweise, leerProps };
 }

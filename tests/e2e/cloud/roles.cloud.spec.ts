@@ -37,6 +37,7 @@ import { test, expect } from './fixtures';
 import type { LoggedInRole } from './fixtures';
 import { expectSeededEngineMatch, getStoredAccessToken, runningEngineTarget } from './engineHelpers';
 import { getLocalServiceRoleClient } from './helpers';
+import { restAsRole, serviceRest } from './restAsRole';
 import { E2E_DRAFT_CUP_ID, E2E_LIVE_CUP_ID, E2E_LIVE_CUP_TITLE, E2E_STRANGER_CUP_ID, E2E_STRANGER_CUP_TITLE } from './testData';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -229,7 +230,7 @@ for (const role of ALL_ROLES) {
       await expect(statusBadge).toBeVisible({ timeout: 15000 }); // Cockpit lädt in jedem Fall (laufendes Spiel im Seed)
 
       // M4: Verdrahtung bis zum tatsächlichen Bedienelement, nicht nur bis zum Banner --
-      // goal-button-home trägt das echte disabled-Attribut (TeamBlock/index.tsx).
+      // Die Tor-Taste der Team-Spalte fehlt ohne Steuerrecht ganz (@SL-018; früher: disabled-Attribut am TeamBlock).
       const goalButton = page.locator('[data-testid="goal-button-home"]');
       if (canWrite) {
         await expect(readOnlyBanner).toHaveCount(0);
@@ -237,7 +238,7 @@ for (const role of ALL_ROLES) {
         await expect(goalButton).toBeEnabled();
       } else {
         await expect(readOnlyBanner).toBeVisible({ timeout: 15000 });
-        await expect(goalButton).toBeDisabled();
+        await expect(goalButton).toHaveCount(0);
       }
     });
   });
@@ -314,5 +315,37 @@ test.describe('Widerruf / Fremde', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.getByText('Turnier nicht gefunden')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(E2E_LIVE_CUP_TITLE, { exact: true })).toHaveCount(0);
+  });
+});
+
+// =============================================================================
+// A-11 (brief-A-11.md Schritt 6): @W5-017/@ZP-040 App-Seite + @ZP-041 Server mit echtem Konto
+// =============================================================================
+
+test.describe('A-11 Helfer und Zeitplan', () => {
+  // Review A-11 A1: läuft auf jedem PR. Der CI-Stack (`npm run test:env:reset` = `supabase db reset --local`) spielt
+  // alle Migrationen ein, auch 20261110_001. Ein lokaler Stack ohne _001 lässt den Server-Teil rot werden (erwartet).
+
+  test('@W5-017/@ZP-040 Helfer sieht kein Bearbeiten, Server lehnt Verschieben ab (@ZP-041)', async ({ asRole }) => {
+    const page = await asRole('helper');
+    await page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}`);
+    await expect(page.getByText(E2E_LIVE_CUP_TITLE, { exact: true }).first()).toBeVisible({ timeout: 15000 });
+    // Positiver Anker: die Werkzeugleiste des Spielplans steht, die Rolle ist geladen -- erst dann sagt „kein Knopf“ etwas.
+    await expect(page.locator('[data-testid="schedule-view-table"]')).toBeVisible({ timeout: 15000 });
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('[data-testid="schedule-edit-start"]')).toHaveCount(0);
+
+    const before = await serviceRest('GET', `matches?tournament_id=eq.${E2E_LIVE_CUP_ID}&select=id,scheduled_start&order=id`);
+    expect(Array.isArray(before.json) && before.json.length > 0).toBe(true);
+    const shift = await restAsRole('helper', 'PATCH', `matches?tournament_id=eq.${E2E_LIVE_CUP_ID}`, { scheduled_start: '23:59:00' });
+    expect(shift.json).toEqual([]);
+    const after = await serviceRest('GET', `matches?tournament_id=eq.${E2E_LIVE_CUP_ID}&select=id,scheduled_start&order=id`);
+    expect(after.json).toEqual(before.json);
+  });
+
+  test('Gegenbeispiel: Co-Admin bekommt „Spielplan bearbeiten“ angeboten', async ({ asRole }) => {
+    const page = await asRole('coadmin');
+    await page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}`);
+    await expect(page.locator('[data-testid="schedule-edit-start"]')).toBeVisible({ timeout: 15000 });
   });
 });

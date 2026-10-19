@@ -18,6 +18,7 @@ import type { MatchUpdate } from '../../core/models/types';
 import { useToast } from '../../components/ui/Toast';
 import type { AdminCategoryId, AdminWarning } from './types/admin.types';
 import { ADMIN_LAYOUT, getAdminCategory } from './constants/admin.constants';
+import { CategoryRightGate } from './components/CategoryRightGate';
 
 // Components
 import { AdminSidebar } from './components/AdminSidebar';
@@ -99,21 +100,11 @@ const styles = {
     maxWidth: 'none',
   } as CSSProperties,
 
-  loadingContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 200,
-    color: cssVars.colors.textSecondary,
-  } as CSSProperties,
+  loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200, color: cssVars.colors.textSecondary } as CSSProperties,
 
   errorContainer: {
-    padding: cssVars.spacing.lg,
-    background: cssVars.colors.errorSubtle,
-    border: `1px solid ${cssVars.colors.errorBorder}`,
-    borderRadius: cssVars.borderRadius.lg,
-    color: cssVars.colors.error,
-    textAlign: 'center',
+    padding: cssVars.spacing.lg, background: cssVars.colors.errorSubtle, border: `1px solid ${cssVars.colors.errorBorder}`,
+    borderRadius: cssVars.borderRadius.lg, color: cssVars.colors.error, textAlign: 'center',
   } as CSSProperties,
 } as const;
 
@@ -308,7 +299,7 @@ export function TournamentAdminCenter({
           <div style={{ ...styles.contentArea, ...styles.contentAreaMobile }}>
             <ErrorBoundary onReset={handleErrorReset}>
               <Suspense fallback={<CategorySkeleton />}>
-                {renderCategoryContent()}
+                <CategoryRightGate category={activeCategory} tournamentId={tournamentId}>{renderCategoryContent()}</CategoryRightGate>
               </Suspense>
             </ErrorBoundary>
           </div>
@@ -344,7 +335,7 @@ export function TournamentAdminCenter({
         <div style={styles.contentArea}>
           <ErrorBoundary onReset={handleErrorReset}>
             <Suspense fallback={<CategorySkeleton />}>
-              {renderCategoryContent()}
+              <CategoryRightGate category={activeCategory} tournamentId={tournamentId}>{renderCategoryContent()}</CategoryRightGate>
             </Suspense>
           </ErrorBoundary>
         </div>

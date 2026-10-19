@@ -11,6 +11,7 @@
  */
 
 import { test, expect } from '../helpers/test-fixtures';
+import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
 /**
  * Generate a future date string (tomorrow) in YYYY-MM-DD format
@@ -144,31 +145,18 @@ test.describe('Match Cockpit Extended', () => {
     await expect(timer).toBeVisible();
   });
 
-  test('Keyboard: Q/W für Home Goal, O/P für Away Goal', async ({ page }) => {
-    // GIVEN - Navigate to running match
+  // Tastenkürzel (Q/W Heim-Tor, O/P Gast-Tor) sind noch nicht gebaut: kommen mit LT-7 (Plan Cockpit Scheibe 3, PR 5), @SL-153.
+  // Bis dahin ein offenes Test-Fixme statt eines immer grünen Tests (der alte Test prüfte nur `typeof newScore === 'string'`).
+  test.fixme('Keyboard: Q/W für Home Goal, O/P für Away Goal (@SL-153, kommt mit LT-7)', async ({ page }) => {
     await navigateToLiveCockpit(page);
+    await page.getByTestId('match-start-button').click();
+    await expect(page.getByTestId('match-pause-button')).toBeVisible();
 
-    // Start match first
-    const startButton = page.getByTestId('match-start-button');
-    if (await startButton.isVisible()) {
-      await startButton.click();
-      await expect(page.getByTestId('match-pause-button')).toBeVisible();
-    }
-
-    // WHEN - Press Q (Home Goal)
     await page.keyboard.press('q');
-    await page.waitForTimeout(500);
-
-    // Handle goal dialog if it appears
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
-
-    // THEN - Score might have changed (if keyboard shortcuts are implemented)
-    const newScore = await page.getByTestId('score-home').textContent();
-    // Test passes regardless - keyboard shortcuts may not be implemented
-    expect(typeof newScore).toBe('string');
+    await expect(page.getByTestId('scoreboard-box-links')).toHaveText('1');
+    await schliesseTorAuswahl(page);
+    await page.keyboard.press('o');
+    await expect(page.getByTestId('scoreboard-box-rechts')).toHaveText('1');
   });
 
   test('Keyboard: Esc schließt Dialoge', async ({ page }) => {
@@ -226,10 +214,7 @@ test.describe('Match Cockpit Extended', () => {
     await page.getByTestId('goal-button-home').click();
 
     // Handle dialog
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // THEN - Audio may have been played (depending on settings)
     const audioPlayed = await page.evaluate(() => (window as any).__audioPlayed);
@@ -295,15 +280,12 @@ test.describe('Match Cockpit Extended', () => {
     for (let i = 0; i < 3; i++) {
       await page.getByTestId('goal-button-home').click();
 
-      const skipButton = page.getByTestId('dialog-skip-button');
-      if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await skipButton.click();
-      }
+      await schliesseTorAuswahl(page);
       await page.waitForTimeout(300);
     }
 
     // THEN - Score shows 3
-    const homeScore = await page.getByTestId('score-home').textContent();
+    const homeScore = await page.getByTestId('scoreboard-box-links').textContent();
     expect(homeScore).toContain('3');
   });
 
@@ -328,16 +310,13 @@ test.describe('Match Cockpit Extended', () => {
     for (const step of sequence) {
       await page.getByTestId(step.button).click();
 
-      const skipButton = page.getByTestId('dialog-skip-button');
-      if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await skipButton.click();
-      }
+      await schliesseTorAuswahl(page);
       await page.waitForTimeout(300);
     }
 
     // THEN - Final score is 2:2
-    const homeScore = await page.getByTestId('score-home').textContent();
-    const awayScore = await page.getByTestId('score-away').textContent();
+    const homeScore = await page.getByTestId('scoreboard-box-links').textContent();
+    const awayScore = await page.getByTestId('scoreboard-box-rechts').textContent();
 
     expect(homeScore).toContain('2');
     expect(awayScore).toContain('2');
@@ -360,13 +339,10 @@ test.describe('Match Cockpit Extended', () => {
 
     // Score a goal
     await page.getByTestId('goal-button-home').click();
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // Verify score is 1
-    await expect(page.getByTestId('score-home')).toContainText('1');
+    await expect(page.getByTestId('scoreboard-box-links')).toContainText('1');
 
     // WHEN - Click undo button
     const undoButton = page.getByTestId('match-undo-button');
@@ -381,7 +357,7 @@ test.describe('Match Cockpit Extended', () => {
       }
 
       // THEN - Score should be back to 0
-      await expect(page.getByTestId('score-home')).toContainText('0');
+      await expect(page.getByTestId('scoreboard-box-links')).toContainText('0');
     }
   });
 

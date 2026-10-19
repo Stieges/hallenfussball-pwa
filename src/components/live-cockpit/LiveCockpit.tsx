@@ -23,18 +23,30 @@ import { useOutboxStatus } from '../../features/collaboration/outbox/useOutboxSt
 import { useRejectedOutboxDialog } from '../../features/collaboration/outbox/useRejectedOutboxDialog';
 import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
 import { getEffectiveScore } from '../../utils/matchScore';
+import type { SperrHinweis } from '../../core/match';
 import type { LiveCockpitProps } from './types';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 import { ScoreboardArea } from './areas/ScoreboardArea';
 import { LegacyPlayArea } from './areas/LegacyPlayArea';
 import { CockpitOverlays } from './areas/CockpitOverlays';
 import shell from './LiveCockpitShell.module.css';
-import { useCockpitPhase, useEntryFlows, useSideOrder } from './hooks';
+import { useCockpitPhase, useSideOrder } from './hooks';
+import { useEntryFlows } from './hooks/useEntryFlows';
+import { useEntryCommands } from './hooks/useEntryCommands';
+import { useFreshEntryCommands } from './hooks/useFreshEntryCommands';
+import { useSpielzeitJetzt } from './hooks/useSpielzeitJetzt';
 import { useEnginePhase } from './hooks/useEnginePhase';
 import { legacyPhaseViewOf } from './model/legacyPhaseView';
 import { istAngepfiffenUndNichtBeendet } from './model/cockpitPhase';
 import { useCockpitNotices } from './hooks/useCockpitNotices';
 import { useCockpitCommands } from './hooks/useCockpitCommands';
+import { useTeamColumns } from './hooks/useTeamColumns';
+import { usePenaltyExpiryNotice } from './hooks/usePenaltyExpiryNotice';
+import { alsUebersetzer } from './model/alsUebersetzer';
+import { hatSchonGelb as hatSchonGelbIn } from './model/secondYellow';
+
+const NO_SPERREN: readonly SperrHinweis[] = [];
+const NO_TEAMS = { home: { id: '', name: '' }, away: { id: '', name: '' } };
 
 export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const { fieldName, tournamentName, tournamentId, cockpitSettings: cockpitSettingsProp, readOnly = false, currentMatch, upcomingMatches, leer = null } = props;
@@ -51,7 +63,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const sound = useMatchSound(cockpitSettings.soundId, cockpitSettings.soundVolume, cockpitSettings.soundEnabled, tournamentId);
   const { breakpoint, isMobile, isTablet } = useBreakpoint();
 
-  const flows = useEntryFlows(currentMatch?.id);
   // Seiten tauschen: nur die Anzeige dieses Geräts (@SL-065)
   const sides = useSideOrder(currentMatch);
   const notices = useCockpitNotices(); // Meldezeile statt Toast (Spec § 7)
@@ -91,9 +102,29 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     ? { label: t('tafel.tonAusAntippen'), kurz: t('tafel.tonAus'), onAntippen: () => { void sound.activate(); } }
     : null;
 
+  // Eintrags-Abläufe (Aufgabe 3.4): Tor zählt mit dem ersten Tipp, Nummer als Nachtrag an dieselbe Ereignis-ID
+  const tx = useMemo(() => alsUebersetzer(t), [t]);
+  const teams = useMemo(() => (currentMatch ? { home: currentMatch.homeTeam, away: currentMatch.awayTeam } : null), [currentMatch]);
+  const frisch = useFreshEntryCommands({
+    tournamentId, matchId: currentMatch?.id, teamAId: currentMatch?.homeTeam.id ?? '', teamBId: currentMatch?.awayTeam.id ?? '', melde: notices.melde, t: tx,
+  });
+  const matchEvents = currentMatch?.events;
+  const hatSchonGelb = useCallback((teamId: string, nummer: number): boolean => hatSchonGelbIn(matchEvents ?? [], teamId, nummer), [matchEvents]);
+  const flows = useEntryFlows({
+    matchId: currentMatch?.id, teams: teams ?? NO_TEAMS, commands: useEntryCommands(props, frisch), spielzeitJetzt: useSpielzeitJetzt(currentMatch?.id),
+    zustand: phase.zustand, melde: notices.melde, t: tx, hatSchonGelb,
+  });
+
   const cmd = useCockpitCommands({
     props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView,
   });
+  const foulsJeSeite = useMemo(() => ({ home: homeFouls, away: awayFouls }), [homeFouls, awayFouls]);
+  const anzeigeOrdnung = useMemo(() => ({ links: sides.links, rechts: sides.rechts }), [sides.links, sides.rechts]);
+  const spalten = useTeamColumns({
+    match: currentMatch, view, phase, settings: cockpitSettings, kannSteuern: !readOnly, fouls: foulsJeSeite,
+    sperrHinweise: props.sperrHinweise ?? NO_SPERREN, order: anzeigeOrdnung, handlers: cmd.teamHandlers,
+  });
+  usePenaltyExpiryNotice(currentMatch?.id, view, teams, notices.melde, tx);
 
   // Tafel: mit Spiel und ohne (wartet auf Teams, kein Spiel mehr). Die Verbindungsanzeige steht bis zum schmalen Kopf (3.8) darin.
   const tafel = (
@@ -144,6 +175,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   }
 
   const match = currentMatch;
+  if (!spalten) { return null; } // nie: ohne Spiel (spalten === null) kehrt die Hülle oben zurück
   // Task R2: readOnly kommt aus einer echten Berechtigungsprüfung (ManagementTab.checkCanEditMatch
   // → canEditResults), das beendete Spiel ist die bestehende "Spiel ist vorbei"-Sperre. Beide
   // führen zu "keine Bedienung", aber nur `readOnly` zeigt das Berechtigungs-Banner.
@@ -173,11 +205,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
           isMobile={isMobile}
           isDesktop={!isMobile && !isTablet}
           isLocked={isLocked}
-          homeFouls={homeFouls}
-          awayFouls={awayFouls}
-          effectiveScore={effectiveScore}
-          order={{ links: sides.links, rechts: sides.rechts }}
-          teams={{ handlers: cmd.teamHandlers, extraProps: cmd.editing.teamBlockProps }}
+          columns={spalten}
           controls={cmd.controls}
           sidebar={{ activePenalties: cmd.activePenalties, onEventEdit: cmd.onSidebarEventEdit }}
         />
@@ -195,6 +223,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         editing={cmd.editing}
         handlers={cmd.overlayHandlers}
         rejectedOutbox={rejectedOutbox}
+        entrySheets={{ flows, teams: teams ?? NO_TEAMS, ausloeserSeite: (seite) => (sides.links === seite ? 'links' : 'rechts'), kartenArten: cockpitSettings.enabledCards, t: tx }}
       />
     </div>
   );

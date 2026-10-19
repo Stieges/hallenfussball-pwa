@@ -12,6 +12,7 @@ import userEvent from '@testing-library/user-event';
 import { CardDialog } from '../components/Dialogs/CardDialog';
 import { EventEditDialog } from '../components/Dialogs/EventEditDialog';
 import { GoalScorerDialog } from '../components/Dialogs/GoalScorerDialog';
+import { NumberPicker } from '../../ui/molecules/NumberPicker';
 import { SettingsDialog } from '../components/Dialogs/SettingsDialog';
 import { SubstitutionDialog } from '../components/Dialogs/SubstitutionDialog';
 import { TimeAdjustDialog } from '../components/Dialogs/TimeAdjustDialog';
@@ -166,13 +167,17 @@ describe('@OB-055 B-43b2 – Verhalten wie vor der Umstellung', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('GoalScorerDialog: Esc ruft onClose genau einmal auf, speichert aber nichts', () => {
-    const onClose = vi.fn();
-    const onConfirm = vi.fn();
-    render(<GoalScorerDialog isOpen onClose={onClose} onConfirm={onConfirm} teamName="VfB Ufer" />);
+  // Aufgabe 3.4: Der Tor-Ablauf läuft über den Nummern-Baustein statt über den GoalScorerDialog. Esc schließt ihn genau einmal und
+  // wählt keine Nummer; das Tor zählt dabei ohne Nummer (@SL-083, End-zu-Ende in LiveCockpit.torAblauf.engine.test.tsx).
+  it('Tor-Ablauf (NumberPicker): Esc ruft onSchliesse genau einmal auf, wählt aber keine Nummer', () => {
+    const onSchliesse = vi.fn();
+    const onWaehle = vi.fn();
+    const texte = { titel: 'Rückennummer – Tor VfB Ufer', ohneNummer: 'ohne Nummer', andereNummer: 'Andere Nr.', uebernehmen: 'Übernehmen', eingabeLabel: 'Rückennummer' };
+    render(<NumberPicker isOpen texte={texte} ausloeserSeite="links" onWaehle={onWaehle} onSchliesse={onSchliesse} />);
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect(onConfirm).not.toHaveBeenCalled();
+    expect(onSchliesse).toHaveBeenCalledTimes(1);
+    expect(onSchliesse).toHaveBeenCalledWith('schliessen');
+    expect(onWaehle).not.toHaveBeenCalled();
   });
 
   it('GoalScorerDialog: Fokus liegt auf dem Trikotnummer-Feld', async () => {

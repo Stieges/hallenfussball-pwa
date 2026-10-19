@@ -38,6 +38,11 @@ export interface UseTournamentMembersReturn {
   // State
   isLoading: boolean;
   error: string | null;
+  /**
+   * Review A-11 A4 (@FU-100): die letzte Mitglieder-Abfrage ist gescheitert -- die eigene Rolle ist UNBEKANNT,
+   * `myMembership: null` heißt dann nicht „kein Mitglied“.
+   */
+  loadFailed: boolean;
 
   // Actions (all async now)
   refresh: () => Promise<void>;
@@ -65,6 +70,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
   const [coAdmins, setCoAdmins] = useState<TournamentMembership[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   /**
    * Lädt alle Mitglieder mit User-Daten
@@ -91,9 +97,11 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
 
       setMembers(membersWithUsers);
       setCoAdmins(coAdminList);
+      setLoadFailed(false);
     } catch (err) {
       if (import.meta.env.DEV) { console.error('Error loading members:', err); }
       setError('Mitglieder konnten nicht geladen werden');
+      setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
@@ -279,6 +287,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
     myMembership,
     isLoading,
     error,
+    loadFailed,
     refresh,
     setRole: setRoleAsync,
     setTrainerTeams: setTrainerTeamsAsync,
