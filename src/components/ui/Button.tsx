@@ -146,8 +146,8 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variantStyles: Record<string, CSSProperties> = {
     primary: {
-      background: cssVars.gradients.primary,
-      color: cssVars.colors.background,
+      background: cssVars.colors.primary,
+      color: cssVars.colors.onPrimary, // C-PRIMAER-VERLAUF-KONTRAST: Vollfläche, >= 4,5 : 1 in jeder Darstellung
     },
     secondary: {
       background: cssVars.colors.surface,
