@@ -11,10 +11,6 @@
  *
  * Offene Produktfrage (nicht entschieden): Gehören Turniere, in denen Olli Co-Admin ist, zu „verwaltet“?
  * Dieser Test stützt sich nur auf den Eigentümer.
- *
- * Noch offen: Gegenbeispiel „Olli ist im Kreispokal nur Helfer und hat ihn auf dem Gerät geöffnet“. Heute bietet der
- * Dialog ihn an (die Helfer-Kopie trägt den Konto-Marker). Der erwartet rote Test folgt, sobald der Befund in der
- * Befundliste steht.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -169,5 +165,16 @@ describe('@ME-043 Monitore übernehmen: der Dialog bietet nur eigene Turniere al
     expect(screen.getByTestId('transfer-source-nord')).toBeInTheDocument();
     expect(screen.queryByTestId('transfer-source-kreispokal')).toBeNull();
     expect(screen.queryByTestId('transfer-source-sued')).toBeNull();
+  });
+
+  // Befund C-MONITOR-UEBERNAHME-HELFERKOPIE: heute bietet der Dialog den Kreispokal an (Helfer-Kopie trägt den Konto-Marker)
+  it.fails('@ME-043 C-MONITOR-UEBERNAHME-HELFERKOPIE Gegenbeispiel: Olli ist im „Kreispokal“ nur Helfer und hat ihn auf dem Gerät geöffnet – der Dialog bietet ihn nicht an', async () => {
+    const repo = ollisRepo();
+    // Helfer öffnet das fremde Turnier: die lokale Kopie wird mit dem Konto-Marker „olli“ abgelegt
+    expect((await repo.get('kreispokal'))?.id).toBe('kreispokal');
+    await openSuedSheet(repo);
+
+    expect(screen.getByTestId('transfer-source-nord')).toBeInTheDocument();
+    expect(screen.queryByTestId('transfer-source-kreispokal')).toBeNull();
   });
 });
