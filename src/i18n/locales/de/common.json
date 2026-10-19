@@ -18,7 +18,14 @@
     "logout": "Abmelden"
   },
   "tournament": {
-    "copySuffix": "(Kopie)",
+    "copyDialog": {
+      "title": "Kopie fürs Proben",
+      "dateLabel": "Datum der Probe",
+      "nameLabel": "Name der Kopie",
+      "hint": "Die Kopie startet ohne Ergebnisse, ohne Helfer und ohne Bildschirme. Das Original bleibt unverändert.",
+      "confirm": "Kopie anlegen"
+    },
+    "copySuffix": "(Probe)",
     "softDelete": {
       "title": "Turnier löschen?",
       "message": "Das Turnier wird in den Papierkorb verschoben und kann 30 Tage lang wiederhergestellt werden.",

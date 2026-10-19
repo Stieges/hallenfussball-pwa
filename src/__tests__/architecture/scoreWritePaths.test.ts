@@ -39,7 +39,12 @@ const SCORE_ALLOWLIST: Record<string, { reason: string; count: number }> = {
   'core/models/tournamentCopy.ts': {
     count: 2,
     reason:
-      'Anlage/Import/Zurücksetzen: setzt oder übernimmt Ergebnisse beim Erzeugen/Kopieren/Importieren/Zurücksetzen, kein Spielverlauf (Kopie setzt 0:0)',
+      'Anlage/Import/Zurücksetzen: setzt oder übernimmt Ergebnisse beim Erzeugen/Kopieren/Importieren/Zurücksetzen, kein Spielverlauf (Kopie leert das Ergebnis, KP: kein 0:0)',
+  },
+  'core/models/__fixtures__/hallencupOstGespielt.ts': {
+    count: 4,
+    reason:
+      'Testdaten: gespieltes Beispielturnier „Hallencup Ost“ für die Kopie-Tests (KP), schreibt keinen Spielverlauf',
   },
   'utils/tournamentImporter.ts': {
     count: 2,

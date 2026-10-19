@@ -9,6 +9,7 @@
  * - GroupTables: Group standings tables
  */
 
+import type { ScoreCommitResult } from './ui/molecules';
 import { CSSProperties, useMemo } from 'react';
 import { cssVars } from '../design-tokens'
 import { GeneratedSchedule } from '../core/generators';
@@ -66,7 +67,7 @@ interface ScheduleDisplayProps {
   /** Callback when field is changed */
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
   /** Callback when score is changed */
-  onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => void;
+  onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => ScoreCommitResult;
   /** Match ID currently in correction mode */
   correctionMatchId?: string | null;
   /** Callback when starting correction mode */
