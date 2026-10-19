@@ -255,3 +255,52 @@ describe('@FU-100 Scheitert die Mitglieder-Abfrage, ist die Rolle unbekannt – 
     expect(result.current.deleteTournament).toBe(false);
   });
 });
+
+/**
+ * Review A-11 Fixrunde 1, V1 (Wettlauf, Vorlage des Reviewers): Die Eigentümer-Prüfung ist unterwegs, die Übertragung
+ * wird fertig, ERST DANACH kommt das veraltete „kein Eigentümer“ an. Es zählt nicht – die App fragt erneut.
+ */
+describe('@FU-098 ohne Neuladen – Wettlauf: veraltetes „nein“ kommt erst nach dem Sync an', () => {
+  it('@FU-098 Prüfung unterwegs, Übertragung fertig, dann „nein“: die App fragt erneut und Olli behält alle Rechte', async () => {
+    const sync = syncSource(true);
+    setActiveTournamentSyncSource(sync.source);
+    const pending: Array<(value: Result) => void> = [];
+    net.rpc.mockImplementation(() => new Promise<Result>((resolve) => { pending.push(resolve); }));
+    const { result } = renderHook(() => useRights());
+    await settle();
+    expect(result.current).toEqual(ALL_TRUE);
+
+    act(() => sync.finishSync()); // Übertragung fertig, BEVOR die Antworten kommen
+    await settle();
+    net.rpc.mockResolvedValue({ data: true, error: null });
+    await act(async () => { pending.forEach((resolve) => resolve({ data: false, error: null })); });
+    await settle();
+
+    await waitFor(() => expect(result.current).toEqual(ALL_TRUE));
+  });
+
+  it('@FU-098 Prüfung startet, bevor die Sync-Quelle geantwortet hat; Übertragung fertig vor dem „nein“: Olli behält alle Rechte', async () => {
+    const listeners = new Set<() => void>();
+    const state = { awaiting: true };
+    let releaseFirst: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    const source: TournamentSyncSource = {
+      isAwaitingFirstUpload: vi.fn(async () => { await gate; return state.awaiting; }),
+      subscribe: (listener) => { listeners.add(listener); return () => listeners.delete(listener); },
+    };
+    setActiveTournamentSyncSource(source);
+    const pending: Array<(value: Result) => void> = [];
+    net.rpc.mockImplementation(() => new Promise<Result>((resolve) => { pending.push(resolve); }));
+    const { result } = renderHook(() => useRights());
+    await settle();
+
+    state.awaiting = false;
+    act(() => { releaseFirst(); listeners.forEach((listener) => listener()); });
+    await settle();
+    net.rpc.mockResolvedValue({ data: true, error: null });
+    await act(async () => { pending.forEach((resolve) => resolve({ data: false, error: null })); });
+    await settle();
+
+    await waitFor(() => expect(result.current).toEqual(ALL_TRUE));
+  });
+});

@@ -109,7 +109,8 @@ export function useEffectiveTournamentRole(
     }
     const client = supabase;
     let cancelled = false;
-    const whileAwaiting = awaiting === true;
+    // Review A-11 V1: auch „noch unbekannt“ (null) zählt -- ein „nein“, das nach dem Sync ankommt, wird erneut geprüft.
+    const whileAwaiting = awaiting !== false;
 
     const checkOwnership = async () => {
       setIsCheckingOwnership(true);
