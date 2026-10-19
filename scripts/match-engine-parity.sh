@@ -318,6 +318,10 @@ SQL
 psql_stdin <<'SQL'
 CREATE TABLE public.__parity_fixtures (file text PRIMARY KEY, doc jsonb NOT NULL);
 CREATE TABLE public.__parity_rules (file text PRIMARY KEY, doc jsonb NOT NULL);
+-- A-27 (Rechte-Assertion anon-no-write-public-tables): Die Image-Standardrechte geben jeder neuen public-Tabelle ALL fuer
+-- anon. Diese Harness-Tabellen sind kein Teil des Schemas -- sie bekommen dieselben Rechte wie jede Tabelle nach
+-- 20261110_002 (anon schreibt nie), statt die Assertion aufzuweichen.
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON public.__parity_fixtures, public.__parity_rules FROM anon;
 
 CREATE FUNCTION public.__parity_run(p_doc jsonb, p_transitions jsonb) RETURNS jsonb
 LANGUAGE plpgsql AS $fn$
