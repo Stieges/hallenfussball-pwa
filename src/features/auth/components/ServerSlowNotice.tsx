@@ -7,6 +7,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
+import { useKioskRoute } from '../../../hooks/useKioskRoute';
 import { signedOutNoticeStyles as styles } from './SignedOutElsewhereNotice.styles';
 
 interface ServerSlowNoticeProps {
@@ -15,7 +16,9 @@ interface ServerSlowNoticeProps {
 
 export function ServerSlowNotice({ visible }: ServerSlowNoticeProps) {
   const { t } = useTranslation('auth');
-  if (!visible) {
+  // Kiosk-Routen (Hallenmonitor) zeigen keine Anmelde-Hinweise (@ME-003, @OB-028).
+  const kiosk = useKioskRoute();
+  if (!visible || kiosk) {
     return null;
   }
   return (
