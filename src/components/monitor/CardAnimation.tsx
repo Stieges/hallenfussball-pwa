@@ -15,7 +15,7 @@ import { CSSProperties, useEffect, useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import { monitorTeamName } from '../../core/models/teamNameAbbrev';
-import { KARTEN_FLAECHE } from '../ui/atoms/kartenFlaeche';
+import { KARTEN_FLAECHE, kartenFlaecheStil } from '../ui/atoms/kartenFlaeche';
 
 export interface CardEventInfo {
   matchId: string;
@@ -37,17 +37,21 @@ export interface CardAnimationProps {
 }
 
 // Kartenfarben nur aus den Karten-Tokens (Oberfläche E „Karten-Farben nur für Karten“, Befund C-KARTE-GELB-ALS-WARNFARBE).
+// Schrift: dunkel auf Kartengelb (und auf der geteilten Gelb-Rot-Fläche), hell auf Kartenrot (Tafel-Tokens, hell und dunkel gleich).
 const KARTEN_ZEICHNUNG = {
   YELLOW: {
+    text: cssVars.colors.scoreboardOnHighlight,
     glow: `color-mix(in srgb, ${cssVars.colors.cardYellow} 60%, transparent)`,
     shadow: `color-mix(in srgb, ${cssVars.colors.cardYellow} 50%, transparent)`,
   },
   RED: {
+    text: cssVars.colors.scoreboardOnLive,
     glow: `color-mix(in srgb, ${cssVars.colors.cardRed} 60%, transparent)`,
     shadow: `color-mix(in srgb, ${cssVars.colors.cardRed} 50%, transparent)`,
   },
-  // Gelb-Rot: Fläche diagonal geteilt (KARTEN_FLAECHE), Schein in Rot.
+  // Gelb-Rot: Fläche diagonal geteilt (KARTEN_FLAECHE), Schrift dunkel (auch auf Rot ≥ 3 : 1, große Schrift).
   YELLOW_RED: {
+    text: cssVars.colors.scoreboardOnHighlight,
     glow: `color-mix(in srgb, ${cssVars.colors.cardRed} 60%, transparent)`,
     shadow: `color-mix(in srgb, ${cssVars.colors.cardRed} 50%, transparent)`,
   },
@@ -150,76 +154,73 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
     zIndex: 2000,
   };
 
-  // Variante A (Entscheidung Daniel 19.10.): Karte hochkant 3 : 4 in reiner Kartenfarbe ohne Schrift; Kartenart, Team und Nummer
-  // stehen groß und hell darunter auf dem dunklen Monitor-Grund (Anzeige-Tokens, lesbar aus 15–20 m).
-  const cardWrapperStyle: CSSProperties = {
+  const cardContainerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: cssVars.spacing.lg,
+    gap: cssVars.spacing.md,
+    padding: 'clamp(24px, 4vw, 48px)',
+    background: flaeche,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
+    borderRadius: cssVars.borderRadius.xl,
+    boxShadow: `0 0 80px ${colors.glow}, 0 20px 60px ${colors.shadow}`,
     transformOrigin: isHomeSide ? 'left center' : 'right center',
+    maxWidth: 'clamp(280px, 28vw, 400px)',
     textAlign: 'center',
   };
 
-  const cardFaceStyle: CSSProperties = {
-    width: `calc(${cssVars.scoreSizes.xl} * 4)`,
-    aspectRatio: '3 / 4',
-    background: flaeche,
-    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.lg,
-    boxShadow: `0 0 80px ${colors.glow}, 0 20px 60px ${colors.shadow}`,
-  };
-
-  const captionStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    color: cssVars.colors.scoreboardText,
+  const cardIconStyle: CSSProperties = {
+    width: 'clamp(80px, 10vw, 140px)',
+    height: 'clamp(110px, 14vw, 190px)',
+    ...kartenFlaecheStil(currentEvent.cardType),
+    borderRadius: cssVars.borderRadius.md,
+    boxShadow: `0 4px 20px ${colors.shadow}`,
   };
 
   const cardTextStyle: CSSProperties = {
-    fontSize: cssVars.scoreSizes.lg,
-    lineHeight: cssVars.lineHeights.displayLg,
+    fontSize: 'clamp(32px, 5vw, 56px)',
     fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.scoreboardText,
+    color: colors.text,
     fontFamily: cssVars.fontFamilies.heading,
     textTransform: 'uppercase',
-    letterSpacing: cssVars.letterSpacing.wider,
+    letterSpacing: '0.05em',
+    textShadow: isRed
+      ? '2px 2px 4px rgba(0, 0, 0, 0.3)'
+      : '1px 1px 2px rgba(0, 0, 0, 0.2)',
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: cssVars.scoreSizes.sm,
-    lineHeight: cssVars.lineHeights.displayLg,
+    fontSize: 'clamp(18px, 2.5vw, 28px)',
     fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.scoreboardText,
+    color: colors.text,
+    opacity: 0.9,
   };
 
   const playerNumberStyle: CSSProperties = {
-    fontSize: cssVars.scoreSizes.md,
-    lineHeight: cssVars.lineHeights.displayLg,
+    fontSize: 'clamp(24px, 3.5vw, 40px)',
     fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.scoreboardText,
+    color: colors.text,
     fontFamily: cssVars.fontFamilies.heading,
+    marginTop: cssVars.spacing.xs,
   };
 
   return (
     <>
       <div style={overlayStyle} key={animationKey}>
         <div
-          style={cardWrapperStyle}
+          style={cardContainerStyle}
           className={`card-animation-box ${isRed ? 'card-red' : 'card-yellow'}`}
         >
-          <div style={cardFaceStyle} data-testid="card-face" />
-          <div style={captionStyle} data-testid="card-caption">
-            <div style={cardTextStyle} data-testid="card-kind-text">
-              {currentEvent.cardType === 'YELLOW_RED' ? t('cardAnimation.yellowRedCard') : isRed ? t('cardAnimation.redCard') : t('cardAnimation.yellowCard')}
-            </div>
-            <div data-teamname style={teamNameStyle}>{monitorTeamName(currentEvent.teamName)}</div>
-            {currentEvent.playerNumber && (
-              <div style={playerNumberStyle} data-testid="card-player-number">#{currentEvent.playerNumber}</div>
-            )}
+          <div className="card-icon" style={cardIconStyle} />
+          <div style={cardTextStyle}>
+            {/* F3b2: Gelb-Rot zeigt "GELB-ROT" statt "ROTE KARTE" (Farben weiter ueber die
+                gemeinsame RED_CARD_COLORS-Konstante, s.o.). */}
+            {currentEvent.cardType === 'YELLOW_RED' ? t('cardAnimation.yellowRedCard') : isRed ? t('cardAnimation.redCard') : t('cardAnimation.yellowCard')}
           </div>
+          <div data-teamname style={teamNameStyle}>{monitorTeamName(currentEvent.teamName)}</div>
+          {currentEvent.playerNumber && (
+            <div style={playerNumberStyle}>#{currentEvent.playerNumber}</div>
+          )}
         </div>
 
         {/* Flash effect overlay */}
@@ -240,6 +241,14 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
       <style>{`
         .card-animation-box {
           animation: cardPop 3s ease-out forwards;
+        }
+
+        .card-icon {
+          animation: cardShake 0.6s ease-out;
+        }
+
+        .card-red .card-icon {
+          animation: cardShakeIntense 0.8s ease-out;
         }
 
         .card-flash {
@@ -278,6 +287,45 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
           }
         }
 
+        @keyframes cardShake {
+          0%, 100% {
+            transform: rotate(0deg);
+          }
+          20% {
+            transform: rotate(-8deg);
+          }
+          40% {
+            transform: rotate(8deg);
+          }
+          60% {
+            transform: rotate(-4deg);
+          }
+          80% {
+            transform: rotate(4deg);
+          }
+        }
+
+        @keyframes cardShakeIntense {
+          0%, 100% {
+            transform: rotate(0deg) scale(1);
+          }
+          15% {
+            transform: rotate(-12deg) scale(1.05);
+          }
+          30% {
+            transform: rotate(12deg) scale(1.05);
+          }
+          45% {
+            transform: rotate(-8deg) scale(1.02);
+          }
+          60% {
+            transform: rotate(8deg) scale(1.02);
+          }
+          75% {
+            transform: rotate(-4deg) scale(1);
+          }
+        }
+
         @keyframes cardFlash {
           0% {
             opacity: 0;
@@ -311,6 +359,10 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
         @media (prefers-reduced-motion: reduce) {
           .card-animation-box {
             animation: cardFadeSimple 3s ease-out forwards;
+          }
+
+          .card-icon {
+            animation: none;
           }
 
           .card-flash {

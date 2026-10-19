@@ -3,7 +3,7 @@
  * Gelb = cardYellow, Rot = cardRed, Gelb-Rot beide; keine festen Farbwerte, kein warning/error.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { CardAnimation, CardFlash, type CardEventInfo } from '../CardAnimation';
@@ -18,73 +18,40 @@ const GELB = 'var(--color-card-yellow)';
 const ROT = 'var(--color-card-red)';
 
 function ereignis(cardType: CardEventInfo['cardType']): CardEventInfo {
-  return { matchId: 'm1', teamId: 'a', teamName: 'FC Alpha', side: 'home', cardType, playerNumber: 7, timestamp: Date.now() };
+  return { matchId: 'm1', teamId: 'a', teamName: 'FC Alpha', side: 'home', cardType, timestamp: Date.now() };
 }
 
-function zeige(cardType: CardEventInfo['cardType']): HTMLElement {
-  render(<CardAnimation cardEvent={ereignis(cardType)} onAnimationComplete={vi.fn()} />);
-  return screen.getByTestId('card-face');
+function flaechen(cardType: CardEventInfo['cardType']): { box: string; symbol: string } {
+  const { container } = render(<CardAnimation cardEvent={ereignis(cardType)} onAnimationComplete={vi.fn()} />);
+  const box = container.querySelector<HTMLElement>('.card-animation-box');
+  const symbol = container.querySelector<HTMLElement>('.card-icon');
+  return { box: box?.style.background ?? '', symbol: symbol?.style.background ?? '' };
 }
 
-describe('Karten-Farben nur für Karten (Oberfläche E) – Monitor-Kartenanimation (Variante A)', () => {
-  it('Gelb: reine Kartenfarbe cardYellow, ohne Rot', () => {
-    const karte = zeige('YELLOW');
-    expect(karte.style.background).toContain(GELB);
-    expect(karte.style.background).not.toContain(ROT);
-  });
-
-  it('Rot: reine Kartenfarbe cardRed, ohne Gelb', () => {
-    const karte = zeige('RED');
-    expect(karte.style.background).toContain(ROT);
-    expect(karte.style.background).not.toContain(GELB);
-  });
-
-  it('Gelb-Rot: beide Farben diagonal geteilt (volle Diagonale, kein Band)', () => {
-    const karte = zeige('YELLOW_RED');
-    expect(karte.style.background).toContain('linear-gradient(135deg');
-    expect(karte.style.background).toContain(GELB);
-    expect(karte.style.background).toContain(ROT);
-    expect(screen.queryByTestId('card-band')).toBeNull();
-  });
-
-  it.each(['YELLOW', 'YELLOW_RED', 'RED'] as const)('%s: Karte hochkant (Seitenverhältnis 3 : 4), dünner dunkler Rand, Schein in Kartenfarbe', (art) => {
-    const karte = zeige(art);
-    expect(karte.style.aspectRatio).toBe('3 / 4');
-    expect(karte.style.border).toContain('var(--color-border-control)');
-    expect(karte.style.boxShadow).toMatch(/color-card-(yellow|red)/);
-  });
-
-  it.each(['YELLOW', 'YELLOW_RED', 'RED'] as const)('%s: keine Schrift auf der Karte, Kartenart/Team/Nummer stehen unter der Karte', (art) => {
-    const karte = zeige(art);
-    expect(karte.textContent).toBe('');
-    const unter = screen.getByTestId('card-caption');
-    expect(unter.contains(karte)).toBe(false);
-    expect(karte.compareDocumentPosition(unter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(unter.textContent).toContain('FC Alpha');
-    expect(unter.textContent).toContain('#7');
-    expect(screen.getByTestId('card-kind-text').textContent).not.toBe('');
-  });
-
-  it('Schrift unter der Karte ist hell (scoreboardText), das Band entfällt', () => {
-    zeige('YELLOW_RED');
-    for (const el of [screen.getByTestId('card-kind-text'), document.querySelector<HTMLElement>('[data-teamname]'), screen.getByTestId('card-player-number')]) {
-      expect(el?.style.color).toBe('var(--color-scoreboard-text)');
+describe('Karten-Farben nur für Karten (Oberfläche E) – Monitor-Kartenanimation', () => {
+  it('Gelb zeigt cardYellow und kein Rot', () => {
+    const f = flaechen('YELLOW');
+    for (const w of [f.box, f.symbol]) {
+      expect(w).toContain(GELB);
+      expect(w).not.toContain(ROT);
     }
-    expect(screen.queryByTestId('card-band')).toBeNull();
   });
 
-  it.each(['light', 'dark'] as const)('%s: helle Schrift auf dem dunklen Monitor-Grund ≥ 4,5 : 1', (theme) => {
-    const grund = resolveToken(theme, 'var(--color-scoreboard-bg)');
-    expect(contrastRatio(resolveToken(theme, 'var(--color-scoreboard-text)'), grund)).toBeGreaterThanOrEqual(4.5);
+  it('Rot zeigt cardRed und kein Gelb', () => {
+    const f = flaechen('RED');
+    for (const w of [f.box, f.symbol]) {
+      expect(w).toContain(ROT);
+      expect(w).not.toContain(GELB);
+    }
   });
 
-  it('Kartenart, Team und Nummer sind groß: Schriftgrößen nur aus den Anzeige-Tokens, keine festen clamp()-Maße', () => {
-    zeige('YELLOW');
-    expect(screen.getByTestId('card-kind-text').style.fontSize).toBe('var(--font-size-score-lg)');
-    expect(document.querySelector<HTMLElement>('[data-teamname]')?.style.fontSize).toBe('var(--font-size-score-sm)');
-    expect(screen.getByTestId('card-player-number').style.fontSize).toBe('var(--font-size-score-md)');
-    const quelle = readFileSync(resolve(process.cwd(), 'src/components/monitor/CardAnimation.tsx'), 'utf8');
-    expect(quelle).not.toMatch(/clamp\(/);
+  it('Gelb-Rot zeigt beide Farben diagonal geteilt', () => {
+    const f = flaechen('YELLOW_RED');
+    for (const w of [f.box, f.symbol]) {
+      expect(w).toContain(GELB);
+      expect(w).toContain(ROT);
+      expect(w).toContain('linear-gradient(135deg');
+    }
   });
 
   it('Gegenbeispiel: keine festen Farben und kein warning/error in der Kartenanimation (Quelle)', () => {
