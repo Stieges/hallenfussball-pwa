@@ -1,7 +1,7 @@
 {
  "_hinweis": "Erzeugt von scripts/mvp-kennungen-erzeugen.mjs aus `anf.py mvp --json` (Klasse am Szenario). Nicht von Hand pflegen; soll aendert sich nur mit einer Entscheidung ueber den MVP-Schnitt.",
  "quelle": "anf.py mvp --json",
- "soll": 932,
+ "soll": 934,
  "records": {
   "helfer-am-turniertag": [
    "HE-001",
@@ -946,6 +946,8 @@
    "FU-078",
    "FU-080",
    "FU-101",
+   "FU-103",
+   "FU-104",
    "FU-081",
    "FU-082",
    "FU-083",
