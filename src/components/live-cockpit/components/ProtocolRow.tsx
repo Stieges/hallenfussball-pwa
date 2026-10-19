@@ -3,12 +3,13 @@
  * (Mobil) -- Icon, Beschreibung, Zeit, ⚠-Hinweis, Kennwort „zurueckgenommen“, Bearbeiten-Knopf.
  * Zurueckgenommene Eintraege sind durchgestrichen und nicht bearbeitbar (G6).
  */
-import { type CSSProperties } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, touchTargets } from '../../../design-tokens';
 import type { RuntimeMatchEvent } from '../../../types/tournament';
 import { retractedMarkStyle, retractedRowStyle, formatTime, type ProtocolEntry } from './protocolEntries';
 import { cardKindOf } from '../../../utils/cardKind';
+import { KartenSymbol } from '../../ui/atoms/KartenSymbol';
 
 export interface ProtocolRowProps {
   entry: ProtocolEntry;
@@ -21,12 +22,12 @@ export interface ProtocolRowProps {
   onEventEdit?: (event: RuntimeMatchEvent) => void;
 }
 
-const getEventIcon = (event: ProtocolEntry['event']): string => {
+const getEventIcon = (event: ProtocolEntry['event']): ReactNode => {
   switch (event.type) {
     case 'GOAL': return '⚽';
-    case 'YELLOW_CARD': return '🟨';
+    case 'YELLOW_CARD': return <KartenSymbol art="YELLOW" />;
     // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
-    case 'RED_CARD': return cardKindOf(event) === 'YELLOW_RED' ? '🟨🟥' : '🟥';
+    case 'RED_CARD': return <KartenSymbol art={cardKindOf(event) === 'YELLOW_RED' ? 'YELLOW_RED' : 'RED'} />;
     case 'TIME_PENALTY': return '⏱';
     case 'SUBSTITUTION': return '🔄';
     case 'FOUL': return '⚠';

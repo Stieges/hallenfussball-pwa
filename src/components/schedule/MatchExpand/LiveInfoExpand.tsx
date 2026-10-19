@@ -21,7 +21,7 @@
  * ```
  */
 
-import { type CSSProperties } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui/Button';
@@ -29,6 +29,7 @@ import { MatchStatusBadge } from '../../ui/molecules/MatchStatusBadge';
 import type { MatchBadgeModel, SpectatorClock } from '../../../core/view';
 import { MatchClock } from '../../ui/molecules/MatchClock';
 import { cardKindOf } from '../../../utils/cardKind';
+import { KartenSymbol } from '../../ui/atoms/KartenSymbol';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -86,16 +87,16 @@ function formatEventTime(seconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-function getEventIcon(event: MatchEvent): string {
+function getEventIcon(event: MatchEvent): ReactNode {
   switch (event.type) {
     case 'GOAL':
       return '⚽';
     case 'YELLOW_CARD':
-      return '🟨';
+      return <KartenSymbol art="YELLOW" />;
     // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden (MatchEvent ist hier flach,
     // cardKindOf erwartet payload.cardType -- deshalb der kleine Wrapper).
     case 'RED_CARD':
-      return cardKindOf({ type: event.type, payload: { cardType: event.cardType } }) === 'YELLOW_RED' ? '🟨🟥' : '🟥';
+      return <KartenSymbol art={cardKindOf({ type: event.type, payload: { cardType: event.cardType } }) === 'YELLOW_RED' ? 'YELLOW_RED' : 'RED'} />;
     case 'TIME_PENALTY':
       return '⏱️';
     case 'SUBSTITUTION':

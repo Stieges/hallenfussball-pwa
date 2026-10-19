@@ -5,11 +5,12 @@
  * Used by both MatchSummaryDialog (Desktop) and MatchSummarySheet (Mobile).
  */
 
-import { type CSSProperties } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { RuntimeMatchEvent } from '../../../types/tournament';
 import { cardKindOf } from '../../../utils/cardKind';
+import { KartenSymbol } from '../../ui/atoms/KartenSymbol';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,12 +36,13 @@ const formatTime = (seconds: number): string => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
-const getEventIcon = (event: RuntimeMatchEvent): string => {
+const getEventIcon = (event: RuntimeMatchEvent): ReactNode => {
   switch (event.type) {
     case 'GOAL': return '\u26BD';
-    case 'YELLOW_CARD': return '\uD83D\uDFE8';
+    // Karten-Farben nur für Karten (Oberfläche E): Symbol aus cardYellow/cardRed statt Farb-Emoji.
+    case 'YELLOW_CARD': return <KartenSymbol art="YELLOW" />;
     // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
-    case 'RED_CARD': return cardKindOf(event) === 'YELLOW_RED' ? '\uD83D\uDFE8\uD83D\uDFE5' : '\uD83D\uDFE5';
+    case 'RED_CARD': return <KartenSymbol art={cardKindOf(event) === 'YELLOW_RED' ? 'YELLOW_RED' : 'RED'} />;
     case 'TIME_PENALTY': return '\u23F1';
     case 'SUBSTITUTION': return '\uD83D\uDD04';
     case 'FOUL': return '\u26A0';

@@ -13,11 +13,12 @@
  * Konzept-Referenz: docs/concepts/LIVE-COCKPIT-KONZEPT.md §4.3
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, dialogWidths } from '../../../../design-tokens';
 import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import { cardKindOf } from '../../../../utils/cardKind';
+import { KartenSymbol } from '../../../ui/atoms/KartenSymbol';
 import type { EditableMatchEvent } from '../../../../types/tournament';
 import type { EventFieldChanges } from '../../../../hooks/engineEventEditingSupport';
 import { EventNumberField } from './EventNumberField';
@@ -96,11 +97,11 @@ export function EventEditDialog({
   }, [homeTeam, awayTeam]);
 
   // F3b2 (Ruling PC30, Fixrunde Aufgabe 9): Gelb-Rot (RED_CARD + payload.cardType) NUR ueber cardKindOf.
-  const getEventIcon = (e: EditableMatchEvent): string => {
+  const getEventIcon = (e: EditableMatchEvent): ReactNode => {
     switch (e.type) {
       case 'GOAL': return '⚽';
-      case 'YELLOW_CARD': return '🟨';
-      case 'RED_CARD': return cardKindOf(e) === 'YELLOW_RED' ? '🟨🟥' : '🟥';
+      case 'YELLOW_CARD': return <KartenSymbol art="YELLOW" />;
+      case 'RED_CARD': return <KartenSymbol art={cardKindOf(e) === 'YELLOW_RED' ? 'YELLOW_RED' : 'RED'} />;
       case 'TIME_PENALTY': return '⏱️';
       case 'SUBSTITUTION': return '🔄';
       case 'FOUL': return '⚠️';
