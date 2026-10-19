@@ -69,6 +69,7 @@ const S = {
     background: 'none', border: 0, color: cssVars.colors.textPrimary, textAlign: 'left', cursor: 'pointer',
     fontSize: cssVars.fontSizes.bodyMd, fontWeight: cssVars.fontWeights.semibold,
   },
+  switchLabel: { flex: '1 1 auto', minWidth: 0 },
   note: { display: 'block', fontSize: cssVars.fontSizes.labelSm, fontWeight: cssVars.fontWeights.normal, color: cssVars.colors.textSecondary },
   track: {
     flex: 'none', position: 'relative', width: `calc(${cssVars.touchTargets.minimum} + ${cssVars.spacing.sm})`, height: cssVars.spacing.xl,
@@ -176,7 +177,7 @@ export function SpectatorDisplaySection({ tournament, onTournamentUpdate, canEdi
         <>
           <div data-testid="spectator-display-team-colors">
             <button type="button" role="switch" aria-checked={on} style={S.switchRow} onClick={() => patch({ teamColors: !on })}>
-              <span>
+              <span style={S.switchLabel}>
                 {t('spectatorDisplay.teamColors')}
                 <span style={S.note}>{t('spectatorDisplay.teamColorsNote')}</span>
               </span>
