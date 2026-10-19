@@ -82,7 +82,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
     : undefined;
   const statusNote = viewStatus === 'awarded' ? t('view.status.awarded') : undefined;
   const editable = canEditScore || inCorrectionMode;
-  const draft = useScoreDraft({ resetKey: match.id, scoreA: match.scoreA, scoreB: match.scoreB, onCommit: (a, b) => onScoreChange?.(match.id, a, b) });
+  const draft = useScoreDraft({ resetKey: match.id, savedA: match.scoreA, savedB: match.scoreB, onCommit: (a, b) => onScoreChange?.(match.id, a, b) });
 
   const renderRow = (side: 'a' | 'b', name: string, pending: boolean) => {
     const isWinner = decided && result?.winner === side;
@@ -109,7 +109,6 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
           <ScoreDraftInput
             {...draft.fieldProps(side)}
             inCorrectionMode={inCorrectionMode}
-            invalid={draft.invalid}
             testId={`final-score-input-${match.id}-${rowKey}`}
             ariaLabel={t('scoreCell.goalsOf', { team: name })}
           />
@@ -175,7 +174,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
 
       {renderRow('a', homeName, homePending)}
       {renderRow('b', awayName, awayPending)}
-      {editable && draft.invalid && <ScoreDraftHint testId={`final-score-hint-${match.id}`} />}
+      {editable && draft.invalid && <ScoreDraftHint id={draft.hintId} testId={`final-score-hint-${match.id}`} />}
 
       {clock && <div style={{ marginTop: cssVars.spacing.xs }}><MatchClock clock={clock} size="card" /></div>}
 

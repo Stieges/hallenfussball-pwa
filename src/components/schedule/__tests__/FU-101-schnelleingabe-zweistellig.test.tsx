@@ -7,7 +7,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { ComponentProps } from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MatchScoreCell } from '../MatchScoreCell';
 
@@ -256,6 +256,43 @@ describe('@FU-101 Ein zweistelliges Ergebnis lässt sich im Spielplan eintragen'
       await user.keyboard('10{Enter}');
       await Promise.resolve();
       expect(fieldFcNord.value).toBe('10');
+    });
+
+    it('Wettlauf: neue Eingabe, bevor ein spätes „nicht gespeichert“ kommt – die neue Eingabe bleibt stehen', async () => {
+      const user = userEvent.setup();
+      let answer: (saved: boolean) => void = () => undefined;
+      const onScoreChange = vi.fn().mockImplementation(() => new Promise<boolean>((resolve) => { answer = resolve; }));
+      const { fieldFcNord, fieldSvSued } = renderCell({ scoreA: undefined, scoreB: undefined, onScoreChange });
+
+      await user.click(fieldFcNord);
+      await user.keyboard('3');
+      await user.click(fieldSvSued);
+      await user.keyboard('1{Enter}'); // gesendet, Rückfrage offen
+      expect(onScoreChange).toHaveBeenCalledTimes(1);
+
+      await user.click(fieldFcNord);
+      await user.keyboard('{Backspace}7'); // Olli tippt weiter, bevor die Antwort kommt
+      await act(async () => { answer(false); await Promise.resolve(); });
+
+      expect(fieldFcNord.value).toBe('7');
+      expect(fieldSvSued.value).toBe('1');
+    });
+  });
+
+  describe('Hinweis und Beschriftung', () => {
+    it('nur das betroffene Feld ist ungültig und verweist per aria-describedby auf den Hinweis', async () => {
+      const user = userEvent.setup();
+      const { fieldFcNord, fieldSvSued, getByRole } = renderCell({ scoreA: undefined, scoreB: 2 });
+
+      await user.click(fieldFcNord);
+      fireEvent.change(fieldFcNord, { target: { value: '-3' } });
+      await user.tab();
+
+      const hint = getByRole('alert');
+      expect(fieldFcNord.getAttribute('aria-invalid')).toBe('true');
+      expect(fieldFcNord.getAttribute('aria-describedby')).toBe(hint.id);
+      expect(fieldSvSued.getAttribute('aria-invalid')).toBeNull();
+      expect(fieldSvSued.getAttribute('aria-describedby')).toBeNull();
     });
   });
 });

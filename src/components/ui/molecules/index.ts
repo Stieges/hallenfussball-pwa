@@ -22,5 +22,5 @@ export type { NumberPickerProps, NumberPickerTexte, NumberPickerSchliessGrund } 
 export { TimeStepper } from './TimeStepper';
 export type { TimeStepperProps } from './TimeStepper';
 export { useScoreDraft } from './useScoreDraft';
-export type { ScoreDraft, ScoreFieldProps, ScoreCommitResult, UseScoreDraftOptions, ScoreSide } from './useScoreDraft';
+export type { ScoreDraft, ScoreCommitResult, UseScoreDraftOptions, ScoreSide } from './useScoreDraft';
 export { ScoreDraftHint } from './ScoreDraftHint';

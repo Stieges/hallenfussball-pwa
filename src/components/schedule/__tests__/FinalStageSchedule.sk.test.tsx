@@ -212,6 +212,42 @@ describe('@FU-101 Finalrunden-Karte (Handy, Tablet hochkant): zweistelliges Erge
   });
 });
 
+describe('@FU-093 / @FU-097 Finalrunden-Tabelle (Desktop): „Nein“ / „Abbrechen“ erreicht die Zelle', () => {
+  const tabelle = (seite: 'home' | 'away') => screen.getByTestId<HTMLInputElement>(`match-score-input-${HF1}-${seite}`);
+
+  it('liefert onScoreChange „nicht gespeichert“ (false), zeigt die Tabellenzelle wieder den gespeicherten Stand und lässt sich erneut senden', async () => {
+    const user = userEvent.setup();
+    const onScoreChange = vi.fn().mockResolvedValue(false);
+    render(<FinalStageSchedule matches={[halbfinale()]} tournament={{ teams }} editable onScoreChange={onScoreChange} />);
+
+    await user.click(tabelle('home'));
+    await user.keyboard('2');
+    await user.click(tabelle('away'));
+    await user.keyboard('2{Enter}');
+    expect(onScoreChange).toHaveBeenCalledTimes(1);
+    expect(onScoreChange).toHaveBeenCalledWith(HF1, 2, 2);
+    await waitFor(() => expect([tabelle('home').value, tabelle('away').value]).toEqual(['', '']));
+
+    await user.click(tabelle('home'));
+    await user.keyboard('2');
+    await user.click(tabelle('away'));
+    await user.keyboard('2{Enter}');
+    expect(onScoreChange).toHaveBeenCalledTimes(2);
+  });
+
+  it('Gegenbeispiel: wurde gespeichert (true), bleibt die Eingabe stehen', async () => {
+    const user = userEvent.setup();
+    const onScoreChange = vi.fn().mockResolvedValue(true);
+    render(<FinalStageSchedule matches={[halbfinale()]} tournament={{ teams }} editable onScoreChange={onScoreChange} />);
+    await user.click(tabelle('home'));
+    await user.keyboard('2');
+    await user.click(tabelle('away'));
+    await user.keyboard('1{Enter}');
+    await Promise.resolve();
+    expect([tabelle('home').value, tabelle('away').value]).toEqual(['2', '1']);
+  });
+});
+
 describe('Eingabefelder der Tabelle (Laptop/Tablet quer) erfüllen Touch-Ziel und 16 px', () => {
   it('Tore-Felder in der Tabellenzeile: 44 px hoch und breit, Schrift 16 px (Token)', () => {
     const { container } = render(<FinalStageSchedule matches={[halbfinale()]} tournament={{ teams }} editable onScoreChange={vi.fn()} />);

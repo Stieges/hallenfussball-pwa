@@ -44,7 +44,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
 
   // Jede Ziffer bleibt lokal, gespeichert wird erst bei Enter oder beim Verlassen eines Feldes (@FU-101: „1“ dann „0“
   // ergibt 10:2, nicht 1:2). Escape verwirft, nach „Nein“/Abbruch zeigt die Zelle wieder den gespeicherten Stand.
-  const draft = useScoreDraft({ resetKey: matchId, scoreA, scoreB, onCommit: onScoreChange });
+  const draft = useScoreDraft({ resetKey: matchId, savedA: scoreA, savedB: scoreB, onCommit: onScoreChange });
   const placeholder = viewStatus === 'cancelled' ? t('view.status.cancelled') : '___ : ___';
   const awardedMark = viewStatus === 'awarded' ? ` ${t('view.status.awarded')}` : '';
   const shownResult = result === undefined || result === null
@@ -149,7 +149,6 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
           ariaLabel={t('scoreCell.goalsOf', { team: nameA ?? t('scoreCell.homeFallback') })}
           testId={`match-score-input-${matchId}-home`}
           inCorrectionMode={inCorrectionMode}
-          invalid={draft.invalid}
         />
         <span>:</span>
         <ScoreDraftInput
@@ -157,9 +156,8 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
           ariaLabel={t('scoreCell.goalsOf', { team: nameB ?? t('scoreCell.awayFallback') })}
           testId={`match-score-input-${matchId}-away`}
           inCorrectionMode={inCorrectionMode}
-          invalid={draft.invalid}
         />
-        {draft.invalid && <ScoreDraftHint testId={`match-score-hint-${matchId}`} />}
+        {draft.invalid && <ScoreDraftHint id={draft.hintId} testId={`match-score-hint-${matchId}`} />}
       </div>
     );
   }

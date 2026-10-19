@@ -7,8 +7,8 @@
  * abgelehnte Zusage), dass nichts gespeichert wurde (@FU-093 „Nein“, @FU-097 „Abbrechen“, Ablehnung), zeigen
  * die Felder wieder den gespeicherten Stand, und derselbe Stand lässt sich erneut senden.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ChangeEvent, KeyboardEvent, FocusEvent } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import type { ScoreFieldProps } from '../atoms/ScoreDraftInput';
 
 export type ScoreSide = 'a' | 'b';
 
@@ -18,24 +18,22 @@ export type ScoreCommitResult = boolean | undefined | Promise<boolean | undefine
 export interface UseScoreDraftOptions {
   /** Wechselt das Spiel, wird der Entwurf verworfen */
   resetKey: string;
-  scoreA: number | undefined;
-  scoreB: number | undefined;
+  /** Gespeicherter Stand (nicht der Entwurf) */
+  savedA: number | undefined;
+  savedB: number | undefined;
   onCommit: (scoreA: number, scoreB: number) => ScoreCommitResult;
 }
 
-export interface ScoreFieldProps {
-  value: string;
-  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  onBlur: (event: FocusEvent<HTMLInputElement>) => void;
-  onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
-}
-
 export interface ScoreDraft {
+  /** Mindestens ein Feld ist ungültig: der Hinweis ist sichtbar */
   invalid: boolean;
+  /** Id für den Hinweis (`aria-describedby`) */
+  hintId: string;
   fieldProps: (side: ScoreSide) => ScoreFieldProps;
 }
 
 const WHOLE_NUMBER = /^\d+$/;
+const NONE_INVALID: Record<ScoreSide, boolean> = { a: false, b: false };
 const asText = (score: number | undefined): string => (score === undefined ? '' : String(score));
 
 interface Pair {
@@ -43,34 +41,37 @@ interface Pair {
   b: number | undefined;
 }
 
-export function useScoreDraft({ resetKey, scoreA, scoreB, onCommit }: UseScoreDraftOptions): ScoreDraft {
-  const [a, setA] = useState(asText(scoreA));
-  const [b, setB] = useState(asText(scoreB));
-  const [invalid, setInvalid] = useState(false);
-  const savedRef = useRef<Pair>({ a: scoreA, b: scoreB });
+export function useScoreDraft({ resetKey, savedA, savedB, onCommit }: UseScoreDraftOptions): ScoreDraft {
+  const [a, setA] = useState(asText(savedA));
+  const [b, setB] = useState(asText(savedB));
+  const hintId = useId();
+  const [invalidSides, setInvalidSides] = useState<Record<ScoreSide, boolean>>({ a: false, b: false });
+  const savedRef = useRef<Pair>({ a: savedA, b: savedB });
   const sentRef = useRef<Pair | null>(null);
   const onCommitRef = useRef(onCommit);
   onCommitRef.current = onCommit;
 
   // Neuer Stand von außen (Speichern angekommen, anderes Gerät, anderes Spiel): Entwurf und Doppelschutz zurücksetzen
   useEffect(() => {
-    savedRef.current = { a: scoreA, b: scoreB };
+    savedRef.current = { a: savedA, b: savedB };
     sentRef.current = null;
-    setA(asText(scoreA));
-    setB(asText(scoreB));
-    setInvalid(false);
-  }, [resetKey, scoreA, scoreB]);
+    setA(asText(savedA));
+    setB(asText(savedB));
+    setInvalidSides(NONE_INVALID);
+  }, [resetKey, savedA, savedB]);
 
   const showSaved = useCallback(() => {
     sentRef.current = null;
     setA(asText(savedRef.current.a));
     setB(asText(savedRef.current.b));
-    setInvalid(false);
+    setInvalidSides(NONE_INVALID);
   }, []);
 
-  const commit = useCallback((valueA: string, valueB: string, badInput: boolean) => {
-    if (badInput || (valueA !== '' && !WHOLE_NUMBER.test(valueA)) || (valueB !== '' && !WHOLE_NUMBER.test(valueB))) {
-      setInvalid(true);
+  const commit = useCallback((valueA: string, valueB: string, badInputSide: ScoreSide | null) => {
+    const badA = badInputSide === 'a' || (valueA !== '' && !WHOLE_NUMBER.test(valueA));
+    const badB = badInputSide === 'b' || (valueB !== '' && !WHOLE_NUMBER.test(valueB));
+    if (badA || badB) {
+      setInvalidSides({ a: badA, b: badB });
       return;
     }
     if (valueA === '' || valueB === '') {
@@ -106,21 +107,23 @@ export function useScoreDraft({ resetKey, scoreA, scoreB, onCommit }: UseScoreDr
 
   const fieldProps = (side: ScoreSide): ScoreFieldProps => ({
     value: side === 'a' ? a : b,
+    invalid: invalidSides[side],
+    describedBy: hintId,
     onChange: (event) => {
       sentRef.current = null;
-      setInvalid(false);
+      setInvalidSides(NONE_INVALID);
       (side === 'a' ? setA : setB)(event.target.value);
     },
-    onBlur: (event) => commit(a, b, event.currentTarget.validity.badInput),
+    onBlur: (event) => commit(a, b, event.currentTarget.validity.badInput ? side : null),
     onKeyDown: (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
-        commit(a, b, event.currentTarget.validity.badInput);
+        commit(a, b, event.currentTarget.validity.badInput ? side : null);
       } else if (event.key === 'Escape') {
         showSaved();
       }
     },
   });
 
-  return { invalid, fieldProps };
+  return { invalid: invalidSides.a || invalidSides.b, hintId, fieldProps };
 }
