@@ -40,7 +40,7 @@ async function klaerungsliste({ asRole }: StepContext): Promise<void> {
 }
 
 /** Spalten, die ein Direkteintrag (`append_match_events`) am Spiel verändert; Grundlage für das Zurücksetzen nach D5d. */
-const EINGABE_SPALTEN = 'team_a_id,team_b_id,score_a,score_b,overtime_score_a,overtime_score_b,penalty_score_a,penalty_score_b,match_status,decided_by,timer_elapsed_seconds,timer_start_time,timer_paused_at,actual_start,actual_end,live_state,skipped_at,skipped_reason,forfeit_absent';
+const EINGABE_SPALTEN = 'team_a_id,team_b_id,score_a,score_b,overtime_score_a,overtime_score_b,penalty_score_a,penalty_score_b,match_status,decided_by,timer_elapsed_seconds,timer_start_time,timer_paused_at,actual_start,actual_end,live_state,skipped_at,skipped_reason';
 
 /**
  * D5d: Schnelleingabe in der Finalrunden-Tabelle des Spielplans, zweistelliges Ergebnis 10:2 ohne vorzeitiges Speichern
