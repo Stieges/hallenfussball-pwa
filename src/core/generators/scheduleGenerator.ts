@@ -313,7 +313,8 @@ function generateGroupStageMatches(tournament: Tournament, startTime: Date): Mat
     breakBetweenSlotsMinutes: tournament.groupPhaseBreakDuration ?? 0,
     minRestSlotsPerTeam: tournament.minRestSlots ?? 1,
     startTime,
-    dfbPatternCode: tournament.useDFBKeys ? tournament.dfbKeyPattern : undefined,
+    // @W4-028: DFB-Schlüssel im MVP aus (Tabelle fehlerhaft, C-DFB-SCHLUESSEL-LUECKEN)
+    dfbPatternCode: undefined,
   })
 }
 

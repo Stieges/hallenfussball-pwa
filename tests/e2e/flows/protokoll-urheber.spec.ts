@@ -63,6 +63,8 @@ async function trageDreiZuEinsEin(page: Page): Promise<void> {
   await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(4);
   await page.getByRole('spinbutton').filter({ visible: true }).nth(0).fill('3');
   await page.getByRole('spinbutton').filter({ visible: true }).nth(1).fill('1');
+  // @FU-101: gespeichert wird erst bei Enter oder beim Verlassen des Feldes
+  await page.getByRole('spinbutton').filter({ visible: true }).nth(1).press('Enter');
   // Dann ist Spiel 9 beendet: nur noch das Finale hat Eingabefelder
   await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(2, { timeout: 10_000 });
 }

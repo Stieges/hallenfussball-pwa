@@ -107,10 +107,11 @@ describe('RealtimeService — subscription lifecycle', () => {
     service.destroy();
   });
 
-  it('idempotence — subscribing same tournament twice removes the old channel first', () => {
+  it('idempotence — subscribing same tournament twice removes the old channel first', async () => {
     const service = new RealtimeService();
     service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn() });
     service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn() });
+    await flushPromises(); // @FU-102: neuer Kanal erst nach fertigem Abbau des alten
 
     expect(supabaseMock.channel).toHaveBeenCalledTimes(2);
     expect(supabaseMock.removeChannel).toHaveBeenCalledTimes(1);
@@ -250,7 +251,7 @@ describe('RealtimeService — pause/resume + visibility', () => {
     service.destroy();
   });
 
-  it('resume() recreates channels for previously subscribed tournaments', () => {
+  it('resume() recreates channels for previously subscribed tournaments', async () => {
     const service = new RealtimeService();
     service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn() });
     service.subscribeTournament({ tournamentId: 't2', onMatchChange: vi.fn() });
@@ -259,6 +260,7 @@ describe('RealtimeService — pause/resume + visibility', () => {
 
     service.pause();
     service.resume();
+    await flushPromises(); // @FU-102: neuer Kanal erst nach fertigem Abbau des alten
 
     expect(supabaseMock.channel.mock.calls.length).toBe(
       channelsCreatedBeforePause + 2,

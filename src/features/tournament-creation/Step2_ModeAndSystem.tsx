@@ -3,11 +3,9 @@ import { Card, Select, NumberStepper, CollapsibleSection } from '../../component
 import { Tournament, GroupSystem, PlacementCriterion, MatchCockpitSettings, DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
 import { getGroupSystemOptions } from '../../constants/tournamentOptions';
-import { getDFBPattern } from '../../constants/dfbMatchPatterns';
 import styles from './Step2_ModeAndSystem.module.css';
 import {
   ModeSelection,
-  DFBKeySystem,
   DurationEstimate,
   GameTimeConfig,
   PlacementLogicEditor,
@@ -43,22 +41,9 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
 }) => {
   const { t } = useTranslation('wizard');
   const canUseGroups = formData.groupSystem === 'groupsAndFinals';
-  const useDFBKeys = formData.useDFBKeys ?? false;
 
   // TOUR-EDIT-STRUCTURE: Strukturfelder sind gesperrt wenn Ergebnisse vorhanden
   const structureFieldsLocked = hasResults;
-
-  const handleTeamCountChange = (newCount: number) => {
-    onUpdate('numberOfTeams', newCount);
-
-    // Auto-select matching DFB pattern if DFB mode is enabled
-    if (useDFBKeys) {
-      const pattern = getDFBPattern(newCount);
-      if (pattern) {
-        onUpdate('dfbKeyPattern', pattern.code);
-      }
-    }
-  };
 
   // Helper to get placement logic summary
   const getPlacementSummary = (): string => {
@@ -214,18 +199,14 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               disabled={structureFieldsLocked}
             />
 
-            {/* DFB Key System */}
-            <DFBKeySystem
-              formData={formData}
-              onUpdate={onUpdate}
-            />
+            {/* @W4-028: DFB-Schlüssel im MVP aus (Tabelle fehlerhaft, C-DFB-SCHLUESSEL-LUECKEN) */}
 
             {/* Basic Tournament Parameters - Responsive Grid */}
             <div className={`${styles.configGrid} ${canUseGroups ? styles.threeColumns : ''}`}>
               <NumberStepper
                 label={t('step2.teamCount')}
                 value={formData.numberOfTeams ?? 4}
-                onChange={handleTeamCountChange}
+                onChange={(v) => onUpdate('numberOfTeams', v)}
                 min={2}
                 max={24}
                 mode="stepper"

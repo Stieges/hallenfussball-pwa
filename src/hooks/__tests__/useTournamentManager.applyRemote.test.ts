@@ -96,4 +96,34 @@ describe('useTournamentManager.applyRemote — kein Speicherweg (Task A1, Fixrun
 
     expect(mockUpdateTournament).toHaveBeenCalledWith(updated);
   });
+
+  it('@W5-027 meldet nach dem Speichern „tournament-updated“, damit die Startseite ihre Liste neu lädt', async () => {
+    const { result } = renderHook(() => useTournamentManager('tour-1'));
+    await waitFor(() => expect(result.current.tournament).not.toBeNull());
+    mockUpdateTournament.mockResolvedValueOnce(undefined);
+    const gehoert = vi.fn();
+    window.addEventListener('tournament-updated', gehoert);
+
+    await act(async () => {
+      await result.current.handleTournamentUpdate(makeTournament({ manuallyCompleted: true }));
+    });
+    window.removeEventListener('tournament-updated', gehoert);
+
+    expect(gehoert).toHaveBeenCalledTimes(1);
+  });
+
+  it('@W5-027 Gegenbeispiel: scheitert das Speichern, wird nichts gemeldet', async () => {
+    const { result } = renderHook(() => useTournamentManager('tour-1'));
+    await waitFor(() => expect(result.current.tournament).not.toBeNull());
+    mockUpdateTournament.mockRejectedValueOnce(new Error('offline'));
+    const gehoert = vi.fn();
+    window.addEventListener('tournament-updated', gehoert);
+
+    await act(async () => {
+      await result.current.handleTournamentUpdate(makeTournament());
+    });
+    window.removeEventListener('tournament-updated', gehoert);
+
+    expect(gehoert).not.toHaveBeenCalled();
+  });
 });
