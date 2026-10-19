@@ -11,7 +11,7 @@ import type { ReplanSession } from '../features/tournament-creation/utils/replan
 import { useGuardedReplan } from '../features/tournament-creation/hooks/useGuardedReplan';
 import { useTournamentStartState } from '../hooks/useTournamentStartState';
 import { Step5_Overview as Step5_OverviewDirect } from '../features/tournament-creation/Step5_Overview';
-import { parseStepParam, resolveReachableStep, buildWizardStepPath, type WizardStep } from '../features/tournament-creation';
+import { parseStepParam, buildWizardStepPath, type WizardStep } from '../features/tournament-creation';
 import { Tournament } from '../types/tournament';
 import { useTournaments } from '../hooks/useTournaments';
 import { useTournamentWizard } from '../hooks/useTournamentWizard';
@@ -154,7 +154,6 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     handleStepChange: wizardHandleStepChange,
     handleNavigateToStep: wizardHandleNavigateToStep,
     canGoNext,
-    validateStep,
     // Team Actions
     addTeam,
     removeTeam,
@@ -174,22 +173,15 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   } = useTournamentWizard(existingTournament);
 
   // @OB-029 / @OB-030: Der Schritt steht in der Adresse (`?step=`). Beim Direktaufruf und bei jeder Änderung der
-  // Adresse gilt der Wunsch aus der Adresse -- auch gegen den zuletzt besuchten Schritt des Entwurfs. Ein Schritt,
-  // dessen Vorgänger noch Pflichtfelder offen haben, fällt auf den ersten erreichbaren zurück (Adresse zieht mit).
+  // Adresse gilt der Wunsch aus der Adresse -- auch gegen den zuletzt besuchten Schritt des Entwurfs (F-321).
+  // Fehlende Pflichtangaben meldet die App wie bisher beim Weiter und beim Festlegen, nicht durch Zurückspringen.
   // Fehlt der Parameter oder ist der Wert unbekannt, bleibt der Schritt des Entwurfs.
   useEffect(() => {
     const wanted = parseStepParam(new URLSearchParams(location.search));
-    if (wanted === null) {
-      return;
+    if (wanted !== null && wanted !== step) {
+      wizardHandleStepChange(wanted);
     }
-    const reachable = resolveReachableStep(wanted, validateStep);
-    if (reachable !== step) {
-      wizardHandleStepChange(reachable);
-    }
-    if (reachable !== wanted) {
-      void navigate(buildWizardStepPath(reachable, existingTournament?.id), { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur auf Adressänderungen reagieren; Schritt/Besuche stehen beim Lesen aktuell da
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur auf Adressänderungen reagieren; der Schritt steht beim Lesen aktuell da
   }, [location.search]);
 
   // ============================================================================

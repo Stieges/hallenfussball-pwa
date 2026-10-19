@@ -1,7 +1,7 @@
 /**
  * @OB-029 "Jede Seite lässt sich über ihren Link direkt öffnen" -- Teil Wizard: der Schritt steht in der
- * Adresse (`?step=`), wird gelesen und beim Weiter/Zurück geschrieben. Schritte, die wegen fehlender
- * Pflichtfelder noch nicht erreichbar sind, fallen auf den ersten erreichbaren Schritt zurück.
+ * Adresse (`?step=`), wird gelesen und beim Weiter/Zurück geschrieben. Es gibt keine Rückfall-Regel: `?step=N`
+ * öffnet Schritt N (F-321), auch bei offenen Pflichtangaben davor; die App meldet sie beim Weiter/Festlegen.
  * @OB-030 "Neu laden behält Seite und Auswahl" (gleiche Adresse nach dem Laden).
  * Echte useTournamentWizard + echter TournamentCreationService; nur Repository/Auth gemockt.
  */
@@ -172,17 +172,25 @@ describe('@OB-029 Wizard: Schritt in der Adresse', () => {
     expect(activeStep()).toBe(3);
   });
 
-  it('@OB-029 Schritt, der wegen Pflichtfeldern nicht erreichbar ist, fällt auf den ersten erreichbaren zurück und die Adresse zieht mit', async () => {
+  it('@OB-029 Gegenbeispiel: offene Pflichtangaben davor lassen den Schritt nicht zurückspringen (?step=4 bleibt Schritt 4, Adresse bleibt)', async () => {
     renderWizard('/?step=4', complete({ title: '', lastVisitedStep: 1 }));
     expect(await screen.findAllByRole('tab')).toBeTruthy();
-    expect(activeStep()).toBe(1);
-    expect(search()).not.toContain('step=4');
+    expect(activeStep()).toBe(4);
+    expect(search()).toBe('?step=4');
   });
 
-  it('@OB-029 Neuer Entwurf ohne Angaben: ?step=3 fällt auf Schritt 1 zurück', async () => {
+  it('@OB-029 Neuer Entwurf ohne Angaben: ?step=3 öffnet Schritt 3 (F-321)', async () => {
     renderWizard('/?step=3');
     expect(await screen.findAllByRole('tab')).toBeTruthy();
-    expect(activeStep()).toBe(1);
+    expect(activeStep()).toBe(3);
+    expect(search()).toBe('?step=3');
+  });
+
+  it('@OB-029 Gegenbeispiel: angelegtes Turnier mit vergangenem Startdatum bleibt bei ?step=6 auf Schritt 6', async () => {
+    renderWizard('/?step=6', complete({ date: '2026-03-14', startDate: '2026-03-14', lastVisitedStep: 6 }));
+    expect(await screen.findAllByRole('tab')).toBeTruthy();
+    expect(activeStep()).toBe(6);
+    expect(search()).toBe('?step=6');
   });
 
   it.each(['abc', '0', '9', ''])('@OB-029 Gegenbeispiel: unbekannter Wert ?step=%s wird ignoriert, kein Absturz', async (v) => {

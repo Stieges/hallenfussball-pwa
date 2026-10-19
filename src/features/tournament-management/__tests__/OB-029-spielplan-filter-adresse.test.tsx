@@ -1,8 +1,9 @@
 /**
  * @OB-029 "Jede Seite lässt sich über ihren Link direkt öffnen" -- Teil Spielplan der Turnierleitung:
- * Gruppe, Phase und Feld stehen in der Adresse (`?group=B`, `?phase=`, `?field=`), der Filter liest und
+ * Gruppe, Phase und Feld stehen in der Adresse (`?g=B`, `?p=`, `?f=`), der Filter liest und
  * schreibt sie über useSearchParams. @OB-030: Neu laden behält die Auswahl (die Adresse trägt sie).
- * @OB-031: Zurück stellt den vorigen Filter wieder her (jede Änderung ist ein Verlaufseintrag).
+ * Verlauf: Zurück stellt den vorigen Filter wieder her (jede Änderung ist ein Verlaufseintrag; das Szenario
+ * @OB-031 über besuchte Seiten prüft tests/e2e/flows/adresse-je-seite.spec.ts).
  * Echte Filterleiste (Desktop) + echter Hook + echte Filterfunktion; nur die Liste ist ein Platzhalter.
  */
 import { describe, expect, it } from 'vitest';
@@ -59,43 +60,43 @@ const search = () => new URLSearchParams(screen.getByTestId('search').textConten
 const pick = (testId: string, value: string) => fireEvent.change(screen.getByTestId(testId), { target: { value } });
 
 describe('@OB-029 Spielplan der Turnierleitung: Filter in der Adresse', () => {
-  it('@OB-029 Aufruf mit ?group=B zeigt nur Gruppe B (Finale ohne Gruppe bleibt, wie bisher)', () => {
-    renderAt('/schedule?group=B');
+  it('@OB-029 Aufruf mit ?g=B zeigt nur Gruppe B (Finale ohne Gruppe bleibt, wie bisher)', () => {
+    renderAt('/schedule?g=B');
     expect(screen.getByTestId('filter-group')).toHaveValue('B');
     expect(shown()).toBe('b1,b2,fin');
   });
 
-  it('@OB-029 Aufruf mit ?phase=finals&field=1 liest Phase und Feld', () => {
-    renderAt('/schedule?phase=finals&field=1');
+  it('@OB-029 Aufruf mit ?p=finals&f=1 liest Phase und Feld', () => {
+    renderAt('/schedule?p=finals&f=1');
     expect(screen.getByTestId('filter-phase')).toHaveValue('finals');
     expect(screen.getByTestId('filter-field')).toHaveValue('1');
     expect(shown()).toBe('fin');
   });
 
-  it('@OB-029 Gruppe wählen schreibt ?group= in die Adresse', () => {
+  it('@OB-029 Gruppe wählen schreibt ?g= in die Adresse', () => {
     renderAt('/schedule');
     pick('filter-group', 'B');
-    expect(search().get('group')).toBe('B');
+    expect(search().get('g')).toBe('B');
   });
 
-  it('@OB-029 Phase und Feld wählen schreiben ?phase= und ?field=; Gruppe bleibt erhalten', () => {
-    renderAt('/schedule?group=B');
+  it('@OB-029 Phase und Feld wählen schreiben ?p= und ?f=; Gruppe bleibt erhalten', () => {
+    renderAt('/schedule?g=B');
     pick('filter-field', '2');
     pick('filter-phase', 'groupStage');
-    expect(search().get('group')).toBe('B');
-    expect(search().get('field')).toBe('2');
-    expect(search().get('phase')).toBe('groupStage');
+    expect(search().get('g')).toBe('B');
+    expect(search().get('f')).toBe('2');
+    expect(search().get('p')).toBe('groupStage');
     expect(shown()).toBe('b2');
   });
 
   it('@OB-029 Zurücksetzen entfernt die Filter aus der Adresse', () => {
-    renderAt('/schedule?group=B&field=2');
+    renderAt('/schedule?g=B&f=2');
     fireEvent.click(screen.getByTestId('filter-reset'));
     expect(screen.getByTestId('search').textContent).toBe('');
     expect(shown()).toBe('a1,a2,b1,b2,fin');
   });
 
-  it('@OB-031 Zurück-Taste stellt den vorigen Filter wieder her', () => {
+  it('Zurück-Taste stellt den vorigen Filter wieder her (Verlauf der Filter)', () => {
     renderAt('/schedule');
     pick('filter-group', 'B');
     pick('filter-field', '2');
@@ -110,20 +111,20 @@ describe('@OB-029 Spielplan der Turnierleitung: Filter in der Adresse', () => {
   });
 
   it('@OB-029 Gegenbeispiel: unbekannte Gruppe wird ignoriert, alles bleibt sichtbar, kein Absturz', () => {
-    renderAt('/schedule?group=ZZ');
+    renderAt('/schedule?g=ZZ');
     expect(screen.getByTestId('filter-group')).toHaveValue('');
     expect(shown()).toBe('a1,a2,b1,b2,fin');
   });
 
   it('@OB-029 Gegenbeispiel: unbekannte Phase und Feld (kein Zahlenwert, nicht vorhanden) werden ignoriert', () => {
-    renderAt('/schedule?phase=halbfinale&field=abc');
+    renderAt('/schedule?p=halbfinale&f=abc');
     expect(screen.getByTestId('filter-phase')).toHaveValue('');
     expect(screen.getByTestId('filter-field')).toHaveValue('');
     expect(shown()).toBe('a1,a2,b1,b2,fin');
   });
 
-  it('@OB-029 Gegenbeispiel: ein Feld, das es im Turnier nicht gibt (?field=9), wird ignoriert', () => {
-    renderAt('/schedule?field=9');
+  it('@OB-029 Gegenbeispiel: ein Feld, das es im Turnier nicht gibt (?f=9), wird ignoriert', () => {
+    renderAt('/schedule?f=9');
     expect(screen.getByTestId('filter-field')).toHaveValue('');
     expect(shown()).toBe('a1,a2,b1,b2,fin');
   });

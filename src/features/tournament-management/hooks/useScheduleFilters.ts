@@ -125,7 +125,7 @@ export function useScheduleFilters(
     [paramString, filterOptions]
   );
 
-  // Jede Änderung ist ein Verlaufseintrag (Zurück stellt den vorigen Filter wieder her, @OB-031).
+  // Jede Änderung ist ein Verlaufseintrag (Zurück stellt den vorigen Filter wieder her).
   const writeFilters = useCallback(
     (update: (current: ScheduleFilters) => ScheduleFilters) => {
       setSearchParams((prev) => {
