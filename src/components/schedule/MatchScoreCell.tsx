@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef, CSSProperties, KeyboardEvent } from 'react';
+import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, mediaQueries } from '../../design-tokens'
 import type { ViewMatchStatus } from '../../core/view';
 import { formatTableResult, type ResultFigures } from './matchResult';
+import { ScoreDraftInput } from '../ui/atoms';
+import { ScoreDraftHint, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
 interface MatchScoreCellProps {
   matchId: string;
   scoreA: number | undefined;
@@ -14,7 +16,11 @@ interface MatchScoreCellProps {
   result?: ResultFigures | null;
   /** Fachlicher Status der Ansicht: „ausgefallen“ statt Platzhalter, „gewertet“ neben dem Ergebnis (@ZM-104) */
   viewStatus?: ViewMatchStatus;
-  onScoreChange: (scoreA: number, scoreB: number) => void;
+  /** Namen der Teams für die Feld-Beschriftung „Tore {Team}“ */
+  nameA?: string;
+  nameB?: string;
+  /** `false` (bzw. abgelehnte Zusage) = nicht gespeichert: die Zelle zeigt wieder den gespeicherten Stand */
+  onScoreChange: (scoreA: number, scoreB: number) => ScoreCommitResult;
   /** Ohne Handler (bis B-24) gibt es keinen Korrigieren-Knopf. */
   onStartCorrection?: () => void;
   // Note: Permission check is now handled in the parent component (ScheduleTab)
@@ -29,51 +35,16 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   inCorrectionMode,
   result,
   viewStatus,
+  nameA,
+  nameB,
   onScoreChange,
   onStartCorrection,
 }) => {
   const { t } = useTranslation('tournament');
 
-  const toField = (value: number | undefined): string => (value === undefined ? '' : String(value));
-
-  // Lokaler Eingabestand: jede Ziffer bleibt lokal, gespeichert wird erst beim Verlassen des Feldes oder bei Enter
-  // (@FU-101: „1“ dann „0“ ergibt 10:2, nicht 1:2). Escape verwirft zum zuletzt gespeicherten Stand.
-  const [localScoreA, setLocalScoreA] = useState<string>(toField(scoreA));
-  const [localScoreB, setLocalScoreB] = useState<string>(toField(scoreB));
-  // Zuletzt bekannter bzw. gespeicherter Stand: verhindert doppeltes Speichern (Enter, danach Verlassen)
-  const committedRef = useRef<{ a: number | undefined; b: number | undefined }>({ a: scoreA, b: scoreB });
-
-  // Sync local state when props change (e.g., from parent updates)
-  useEffect(() => {
-    committedRef.current = { a: scoreA, b: scoreB };
-    setLocalScoreA(toField(scoreA));
-    setLocalScoreB(toField(scoreB));
-  }, [matchId, scoreA, scoreB]);
-
-  // Speichert nur, wenn beide Felder gefüllt und der Stand neu ist
-  const commitScore = (valueA: string, valueB: string) => {
-    if (valueA === '' || valueB === '') {
-      return;
-    }
-    const nextA = parseInt(valueA, 10);
-    const nextB = parseInt(valueB, 10);
-    const committed = committedRef.current;
-    if (committed.a === nextA && committed.b === nextB) {
-      return;
-    }
-    committedRef.current = { a: nextA, b: nextB };
-    onScoreChange(nextA, nextB);
-  };
-
-  const handleFieldKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      commitScore(localScoreA, localScoreB);
-    } else if (event.key === 'Escape') {
-      setLocalScoreA(toField(committedRef.current.a));
-      setLocalScoreB(toField(committedRef.current.b));
-    }
-  };
+  // Jede Ziffer bleibt lokal, gespeichert wird erst bei Enter oder beim Verlassen eines Feldes (@FU-101: „1“ dann „0“
+  // ergibt 10:2, nicht 1:2). Escape verwirft, nach „Nein“/Abbruch zeigt die Zelle wieder den gespeicherten Stand.
+  const draft = useScoreDraft({ resetKey: matchId, scoreA, scoreB, onCommit: onScoreChange });
   const placeholder = viewStatus === 'cancelled' ? t('view.status.cancelled') : '___ : ___';
   const awardedMark = viewStatus === 'awarded' ? ` ${t('view.status.awarded')}` : '';
   const shownResult = result === undefined || result === null
@@ -160,24 +131,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
       alignItems: 'center',
       justifyContent: 'center',
       position: 'relative' as const,
-    };
-
-    const inputStyle: CSSProperties = {
-      width: cssVars.touchTargets.minimum,
-      height: cssVars.touchTargets.minimum,
-      padding: cssVars.spacing.xs,
-      border: inCorrectionMode
-        ? `2px solid ${cssVars.colors.warning}`
-        : `1px solid ${cssVars.colors.borderControl}`,
-      borderRadius: cssVars.borderRadius.sm,
-      // Eingabefelder mindestens 16 px und 44 px hoch (Touch-Ziel)
-      fontSize: cssVars.fontSizes.lg,
-      fontWeight: cssVars.fontWeights.bold,
-      textAlign: 'center' as const,
-      backgroundColor: inCorrectionMode
-        ? cssVars.colors.warningLight
-        : cssVars.colors.background,
-      color: cssVars.colors.textPrimary,
+      flexWrap: 'wrap',
     };
 
     const iconStyle: CSSProperties = {
@@ -190,29 +144,22 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
     return (
       <div style={inputContainerStyle}>
         {inCorrectionMode && <span style={iconStyle}>⚠️</span>}
-        <input
-          type="number"
-          min="0"
-          step="1"
-          value={localScoreA}
-          onChange={(e) => setLocalScoreA(e.target.value)}
-          onBlur={() => commitScore(localScoreA, localScoreB)}
-          onKeyDown={handleFieldKeyDown}
-          placeholder="–"
-          style={inputStyle}
+        <ScoreDraftInput
+          {...draft.fieldProps('a')}
+          ariaLabel={t('scoreCell.goalsOf', { team: nameA ?? t('scoreCell.homeFallback') })}
+          testId={`match-score-input-${matchId}-home`}
+          inCorrectionMode={inCorrectionMode}
+          invalid={draft.invalid}
         />
         <span>:</span>
-        <input
-          type="number"
-          min="0"
-          step="1"
-          value={localScoreB}
-          onChange={(e) => setLocalScoreB(e.target.value)}
-          onBlur={() => commitScore(localScoreA, localScoreB)}
-          onKeyDown={handleFieldKeyDown}
-          placeholder="–"
-          style={inputStyle}
+        <ScoreDraftInput
+          {...draft.fieldProps('b')}
+          ariaLabel={t('scoreCell.goalsOf', { team: nameB ?? t('scoreCell.awayFallback') })}
+          testId={`match-score-input-${matchId}-away`}
+          inCorrectionMode={inCorrectionMode}
+          invalid={draft.invalid}
         />
+        {draft.invalid && <ScoreDraftHint testId={`match-score-hint-${matchId}`} />}
       </div>
     );
   }

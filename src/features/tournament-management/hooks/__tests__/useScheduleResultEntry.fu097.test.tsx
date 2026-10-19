@@ -49,7 +49,7 @@ function render(h: ScheduleEngine) {
   const wrapper = ({ children }: { children: ReactNode }) => <MatchEngineContext.Provider value={h.value}>{children}</MatchEngineContext.Provider>;
   const hook = renderHook(() => useScheduleResultEntry({ tournament, showWarning, lockFinishedResults: false }), { wrapper });
   const enter = (matchId: string, a: number, b: number) => {
-    let done: Promise<void> = Promise.resolve();
+    let done: Promise<boolean> = Promise.resolve(true);
     act(() => { done = hook.result.current.enterScore(matchId, a, b); });
     return done;
   };

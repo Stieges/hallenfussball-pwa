@@ -7,7 +7,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { ComponentProps } from 'react';
-import { render } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MatchScoreCell } from '../MatchScoreCell';
 
@@ -100,5 +100,162 @@ describe('@FU-101 Ein zweistelliges Ergebnis lässt sich im Spielplan eintragen'
     await user.click(fieldFcNord);
     await user.tab();
     expect(onScoreChange).not.toHaveBeenCalled();
+  });
+
+  describe('rechtes Feld (SV Süd, Gast): gleiche Regeln wie links', () => {
+    it('@FU-101 Gast zweistellig 2:10: „1“ und „0“ im rechten Feld, Verlassen speichert genau einmal 2:10', async () => {
+      const user = userEvent.setup();
+      const { onScoreChange, fieldSvSued } = renderCell({ scoreA: 2, scoreB: undefined });
+
+      await user.click(fieldSvSued);
+      await user.keyboard('1');
+      expect(onScoreChange).not.toHaveBeenCalled();
+      await user.keyboard('0');
+      expect(onScoreChange).not.toHaveBeenCalled();
+
+      await user.tab();
+      expect(onScoreChange).toHaveBeenCalledTimes(1);
+      expect(onScoreChange).toHaveBeenCalledWith(2, 10);
+    });
+
+    it('@FU-101 Enter im rechten Feld bestätigt 2:10, genau einmal (auch beim späteren Verlassen)', async () => {
+      const user = userEvent.setup();
+      const { onScoreChange, fieldSvSued } = renderCell({ scoreA: 2, scoreB: undefined });
+
+      await user.click(fieldSvSued);
+      await user.keyboard('10{Enter}');
+      expect(onScoreChange).toHaveBeenCalledTimes(1);
+      expect(onScoreChange).toHaveBeenCalledWith(2, 10);
+
+      await user.tab();
+      expect(onScoreChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('@FU-101 Escape im rechten Feld verwirft die Eingabe: nichts gespeichert, Feld zeigt wieder den Stand', async () => {
+      const user = userEvent.setup();
+      const { onScoreChange, fieldSvSued } = renderCell({ scoreA: 2, scoreB: 1 });
+
+      await user.click(fieldSvSued);
+      await user.keyboard('{Backspace}5{Escape}');
+      expect(fieldSvSued.value).toBe('1');
+
+      await user.tab();
+      expect(onScoreChange).not.toHaveBeenCalled();
+    });
+
+    it('@FU-101 Gegenbeispiel: Tab ins noch leere Gegenfeld speichert kein halbes Ergebnis', async () => {
+      const user = userEvent.setup();
+      const { onScoreChange, fieldFcNord, fieldSvSued } = renderCell({ scoreA: undefined, scoreB: undefined });
+
+      await user.click(fieldFcNord);
+      await user.keyboard('10');
+      await user.tab();
+      expect(onScoreChange).not.toHaveBeenCalled();
+
+      await user.keyboard('2');
+      await user.tab();
+      expect(fieldSvSued.value).toBe('2');
+      expect(onScoreChange).toHaveBeenCalledTimes(1);
+      expect(onScoreChange).toHaveBeenCalledWith(10, 2);
+    });
+  });
+
+  describe('nur ganze Zahlen ab 0 (kein Senden, kurzer Hinweis)', () => {
+    it.each([['-3'], ['2.5'], ['1e1']])('@FU-101 Eingabe „%s“ wird nicht gesendet, das Feld zeigt einen Hinweis', async (text) => {
+      const user = userEvent.setup();
+      const { onScoreChange, fieldFcNord, queryByRole } = renderCell();
+
+      await user.click(fieldFcNord);
+      fireEvent.change(fieldFcNord, { target: { value: text } });
+      await user.tab();
+
+      expect(onScoreChange).not.toHaveBeenCalled();
+      expect(queryByRole('alert')?.textContent).toBeTruthy();
+      expect(fieldFcNord.getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('@FU-101 Enter mit „-3“ sendet ebenfalls nichts', async () => {
+      const user = userEvent.setup();
+      const { onScoreChange, fieldFcNord } = renderCell();
+      await user.click(fieldFcNord);
+      fireEvent.change(fieldFcNord, { target: { value: '-3' } });
+      await user.keyboard('{Enter}');
+      expect(onScoreChange).not.toHaveBeenCalled();
+    });
+
+    it('@FU-101 Hinweis verschwindet, sobald wieder eine ganze Zahl getippt wird, und 3:2 geht durch', async () => {
+      const user = userEvent.setup();
+      const { onScoreChange, fieldFcNord, queryByRole } = renderCell();
+      await user.click(fieldFcNord);
+      fireEvent.change(fieldFcNord, { target: { value: '-3' } });
+      await user.tab();
+      expect(queryByRole('alert')).not.toBeNull();
+
+      await user.click(fieldFcNord);
+      await user.clear(fieldFcNord);
+      await user.keyboard('3');
+      expect(queryByRole('alert')).toBeNull();
+      await user.tab();
+      expect(onScoreChange).toHaveBeenCalledWith(3, 2);
+    });
+  });
+
+  describe('Nachbar @FU-093 / @FU-097: nach „Nein“ / „Abbrechen“ oder Ablehnung', () => {
+    it('@FU-093 nach „Nein“ (nichts gespeichert) zeigt die Zelle wieder den gespeicherten Stand, hier leer', async () => {
+      const user = userEvent.setup();
+      const onScoreChange = vi.fn().mockResolvedValue(false);
+      const { fieldFcNord, fieldSvSued } = renderCell({ scoreA: undefined, scoreB: undefined, onScoreChange });
+
+      await user.click(fieldFcNord);
+      await user.keyboard('3');
+      await user.click(fieldSvSued);
+      await user.keyboard('1');
+      await user.tab();
+
+      expect(onScoreChange).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect([fieldFcNord.value, fieldSvSued.value]).toEqual(['', '']));
+    });
+
+    it('@FU-097 nach „Abbrechen“ lässt sich derselbe Stand mit Enter erneut senden (Doppelschutz blockiert nicht)', async () => {
+      const user = userEvent.setup();
+      const onScoreChange = vi.fn().mockResolvedValue(false);
+      const { fieldFcNord, fieldSvSued } = renderCell({ scoreA: undefined, scoreB: undefined, onScoreChange });
+
+      await user.click(fieldFcNord);
+      await user.keyboard('2');
+      await user.click(fieldSvSued);
+      await user.keyboard('2');
+      await user.tab();
+      await waitFor(() => expect(fieldFcNord.value).toBe(''));
+
+      await user.click(fieldFcNord);
+      await user.keyboard('2');
+      await user.click(fieldSvSued);
+      await user.keyboard('2{Enter}');
+      expect(onScoreChange).toHaveBeenCalledTimes(2);
+      expect(onScoreChange).toHaveBeenLastCalledWith(2, 2);
+    });
+
+    it('Ablehnung durch eine abgewiesene Zusage setzt die Zelle ebenfalls zurück', async () => {
+      const user = userEvent.setup();
+      const onScoreChange = vi.fn().mockRejectedValue(new Error('abgelehnt'));
+      const { fieldFcNord } = renderCell({ scoreA: 1, scoreB: 2, onScoreChange });
+
+      await user.click(fieldFcNord);
+      await user.keyboard('{Backspace}4');
+      await user.tab();
+      await waitFor(() => expect(fieldFcNord.value).toBe('1'));
+    });
+
+    it('Gegenbeispiel: nach erfolgreichem Speichern (true) bleibt die Eingabe stehen', async () => {
+      const user = userEvent.setup();
+      const onScoreChange = vi.fn().mockResolvedValue(true);
+      const { fieldFcNord } = renderCell({ scoreA: undefined, scoreB: 2, onScoreChange });
+
+      await user.click(fieldFcNord);
+      await user.keyboard('10{Enter}');
+      await Promise.resolve();
+      expect(fieldFcNord.value).toBe('10');
+    });
   });
 });

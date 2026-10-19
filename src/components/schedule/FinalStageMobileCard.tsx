@@ -2,7 +2,7 @@
  * FinalStageMobileCard - Spielkarte der Finalrunde für Handy und Tablet hochkant (@OB-064, Variante D)
  *
  * Mannschaften untereinander, ihre Tore rechts in der Zeile; Strafstoß kleiner daneben, Sieger fett.
- * Ein offenes Spiel lässt sich hier eintragen (C-FINALRUNDE-MOBIL-EINGABE, `FinalStageMobileScore`).
+ * Ein offenes Spiel lässt sich hier eintragen (C-FINALRUNDE-MOBIL-EINGABE, `useScoreDraft`, @FU-101).
  */
 import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,8 @@ import { cssVars } from '../../design-tokens';
 import type { ScheduledMatch } from '../../core/generators';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
 import { MatchClock } from '../ui/molecules/MatchClock';
-import { MobileScoreInput, ScoreDraftProvider } from './FinalStageMobileScore';
+import { ScoreDraftInput } from '../ui/atoms';
+import { ScoreDraftHint, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
 import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../core/view';
 import type { ResultFigures } from './matchResult';
 
@@ -39,7 +40,7 @@ export interface FinalStageMobileCardProps {
   /** Tore dürfen eingetragen werden (Verwaltung, Spiel nicht beendet) */
   canEditScore: boolean;
   inCorrectionMode: boolean;
-  onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => void;
+  onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => ScoreCommitResult;
   onStartCorrection?: (matchId: string) => void;
   showReferees: boolean;
   showFields: boolean;
@@ -81,8 +82,9 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
     : undefined;
   const statusNote = viewStatus === 'awarded' ? t('view.status.awarded') : undefined;
   const editable = canEditScore || inCorrectionMode;
+  const draft = useScoreDraft({ resetKey: match.id, scoreA: match.scoreA, scoreB: match.scoreB, onCommit: (a, b) => onScoreChange?.(match.id, a, b) });
 
-  const renderRow = (side: 'a' | 'b', name: string, pending: boolean, draftValue: string, onDraft: (value: string) => void) => {
+  const renderRow = (side: 'a' | 'b', name: string, pending: boolean) => {
     const isWinner = decided && result?.winner === side;
     const isLoser = decided && result?.winner !== side;
     const goals = result === null ? undefined : side === 'a' ? result.goalsA : result.goalsB;
@@ -104,12 +106,12 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
       >
         <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`final-name-${match.id}-${rowKey}`}>{name}</span>
         {editable ? (
-          <MobileScoreInput
-            value={draftValue}
-            onChange={onDraft}
+          <ScoreDraftInput
+            {...draft.fieldProps(side)}
             inCorrectionMode={inCorrectionMode}
+            invalid={draft.invalid}
             testId={`final-score-input-${match.id}-${rowKey}`}
-            ariaLabel={name}
+            ariaLabel={t('scoreCell.goalsOf', { team: name })}
           />
         ) : (
           <span style={{ display: 'flex', alignItems: 'baseline', gap: cssVars.spacing.xs, fontVariantNumeric: 'tabular-nums' }}>
@@ -171,19 +173,9 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
         {label}
       </div>
 
-      <ScoreDraftProvider
-        matchId={match.id}
-        scoreA={match.scoreA}
-        scoreB={match.scoreB}
-        onCommit={(a, b) => onScoreChange?.(match.id, a, b)}
-      >
-        {(draft) => (
-          <>
-            {renderRow('a', homeName, homePending, draft.a, draft.setA)}
-            {renderRow('b', awayName, awayPending, draft.b, draft.setB)}
-          </>
-        )}
-      </ScoreDraftProvider>
+      {renderRow('a', homeName, homePending)}
+      {renderRow('b', awayName, awayPending)}
+      {editable && draft.invalid && <ScoreDraftHint testId={`final-score-hint-${match.id}`} />}
 
       {clock && <div style={{ marginTop: cssVars.spacing.xs }}><MatchClock clock={clock} size="card" /></div>}
 

@@ -5,7 +5,8 @@
  *  - @OB-064 in der Finalrunde: Halbfinale 1 „FC Nord gegen SG Mitte“ (Gherkin-Beispiele Z.1–Z.3), Karte und Tabelle.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 // Echte deutsche Texte prüfen (src/test/realDeI18n.ts).
 vi.unmock('i18next');
@@ -18,6 +19,7 @@ import { teamSlot } from '../../../core/models/matchSlot';
 import { testUuid } from '../../../test/testIds';
 import { cssVars } from '../../../design-tokens';
 import { FinalStageSchedule } from '../FinalStageSchedule';
+import type { ScoreCommitResult } from '../../ui/molecules';
 import { matchOf, viewOf, type Cache } from './scheduleViewFixture';
 
 vi.mock('../../../hooks/useLiveMatches', () => ({ useLiveMatches: () => ({ liveMatches: new Map() }) }));
@@ -55,6 +57,8 @@ describe('C-FINALRUNDE-MOBIL-EINGABE: offenes Finalrunden-Spiel am Handy eintrag
     expect(onScoreChange).not.toHaveBeenCalled(); // erst speichern, wenn beide Seiten einen Wert haben
 
     fireEvent.change(eingabe('away'), { target: { value: '1' } });
+    expect(onScoreChange).not.toHaveBeenCalled(); // @FU-101: erst beim Verlassen oder mit Enter
+    fireEvent.blur(eingabe('away'));
     expect(onScoreChange).toHaveBeenCalledTimes(1);
     expect(onScoreChange).toHaveBeenCalledWith(HF1, 2, 1);
   });
@@ -65,6 +69,7 @@ describe('C-FINALRUNDE-MOBIL-EINGABE: offenes Finalrunden-Spiel am Handy eintrag
     fireEvent.change(eingabe('away'), { target: { value: '0' } });
     expect(eingabe('away').value).toBe('0');
     fireEvent.change(eingabe('home'), { target: { value: '3' } });
+    fireEvent.blur(eingabe('home'));
     expect(onScoreChange).toHaveBeenCalledWith(HF1, 3, 0);
   });
 
@@ -86,6 +91,124 @@ describe('C-FINALRUNDE-MOBIL-EINGABE: offenes Finalrunden-Spiel am Handy eintrag
     render(<FinalStageSchedule matches={[halbfinale()]} tournament={{ teams }} editable onScoreChange={vi.fn()} />);
     expect(eingabe('home').style.minHeight || eingabe('home').style.height).toContain('--touch-target-minimum');
     expect(eingabe('home').style.fontSize).toContain('--font-size');
+  });
+});
+
+describe('@FU-101 Finalrunden-Karte (Handy, Tablet hochkant): zweistelliges Ergebnis', () => {
+  const karte = (container: HTMLElement) => within(container.querySelector<HTMLElement>('.mobile-view')!);
+  const rendern = (scoreB: number | undefined, onScoreChange: (id: string, a: number, b: number) => ScoreCommitResult = vi.fn()) => {
+    const view = render(<FinalStageSchedule matches={[halbfinale({ scoreB })]} tournament={{ teams }} editable onScoreChange={onScoreChange} />);
+    return { ...view, onScoreChange };
+  };
+
+  it('Gegeben das Feld für SG Mitte zeigt schon 2: „1“ und „0“ tippen speichert nichts, Verlassen speichert 10:2', async () => {
+    const user = userEvent.setup();
+    const { onScoreChange } = rendern(2);
+    await user.click(eingabe('home'));
+    await user.keyboard('1');
+    expect(onScoreChange).not.toHaveBeenCalled();
+    await user.keyboard('0');
+    expect(onScoreChange).not.toHaveBeenCalled();
+    await user.tab();
+    expect(onScoreChange).toHaveBeenCalledTimes(1);
+    expect(onScoreChange).toHaveBeenCalledWith(HF1, 10, 2);
+  });
+
+  it('Enter bestätigt 10:2 genau einmal, auch beim späteren Verlassen', async () => {
+    const user = userEvent.setup();
+    const { onScoreChange } = rendern(2);
+    await user.click(eingabe('home'));
+    await user.keyboard('10{Enter}');
+    expect(onScoreChange).toHaveBeenCalledTimes(1);
+    await user.tab();
+    expect(onScoreChange).toHaveBeenCalledTimes(1);
+    expect(onScoreChange).toHaveBeenCalledWith(HF1, 10, 2);
+  });
+
+  it('Escape verwirft die Eingabe', async () => {
+    const user = userEvent.setup();
+    const { onScoreChange } = rendern(2);
+    await user.click(eingabe('home'));
+    await user.keyboard('1{Escape}');
+    expect(eingabe('home').value).toBe('');
+    await user.tab();
+    expect(onScoreChange).not.toHaveBeenCalled();
+  });
+
+  describe('rechtes Feld (Gast): Heim zeigt schon 2', () => {
+    const rendernGast = () => {
+      const onScoreChange = vi.fn();
+      render(<FinalStageSchedule matches={[halbfinale({ scoreA: 2 })]} tournament={{ teams }} editable onScoreChange={onScoreChange} />);
+      return onScoreChange;
+    };
+
+    it('„1“ und „0“ im rechten Feld, Verlassen speichert genau einmal 2:10', async () => {
+      const user = userEvent.setup();
+      const onScoreChange = rendernGast();
+      await user.click(eingabe('away'));
+      await user.keyboard('1');
+      await user.keyboard('0');
+      expect(onScoreChange).not.toHaveBeenCalled();
+      await user.tab();
+      expect(onScoreChange).toHaveBeenCalledTimes(1);
+      expect(onScoreChange).toHaveBeenCalledWith(HF1, 2, 10);
+    });
+
+    it('Enter im rechten Feld speichert genau einmal, auch beim späteren Verlassen', async () => {
+      const user = userEvent.setup();
+      const onScoreChange = rendernGast();
+      await user.click(eingabe('away'));
+      await user.keyboard('10{Enter}');
+      await user.tab();
+      expect(onScoreChange).toHaveBeenCalledTimes(1);
+      expect(onScoreChange).toHaveBeenCalledWith(HF1, 2, 10);
+    });
+
+    it('Escape im rechten Feld verwirft die Eingabe', async () => {
+      const user = userEvent.setup();
+      const onScoreChange = rendernGast();
+      await user.click(eingabe('away'));
+      await user.keyboard('1{Escape}');
+      expect(eingabe('away').value).toBe('');
+      await user.tab();
+      expect(onScoreChange).not.toHaveBeenCalled();
+    });
+  });
+
+  it('Buchstaben, negative und gebrochene Zahlen werden nicht gesendet, die Karte zeigt einen Hinweis', async () => {
+    const user = userEvent.setup();
+    const { container, onScoreChange } = rendern(2);
+    for (const text of ['-3', '2.5', '1e1']) {
+      await user.click(eingabe('home'));
+      fireEvent.change(eingabe('home'), { target: { value: text } });
+      await user.tab();
+      expect(karte(container).getByTestId(`final-score-hint-${HF1}`).textContent).toBeTruthy();
+    }
+    expect(onScoreChange).not.toHaveBeenCalled();
+  });
+
+  it('nach „Nein“ / „Abbrechen“ zeigt die Karte wieder den gespeicherten Stand und lässt sich erneut senden', async () => {
+    const user = userEvent.setup();
+    const onScoreChange = vi.fn().mockResolvedValue(false);
+    rendern(undefined, onScoreChange);
+    await user.click(eingabe('home'));
+    await user.keyboard('2');
+    await user.click(eingabe('away'));
+    await user.keyboard('2{Enter}');
+    expect(onScoreChange).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect([eingabe('home').value, eingabe('away').value]).toEqual(['', '']));
+
+    await user.click(eingabe('home'));
+    await user.keyboard('2');
+    await user.click(eingabe('away'));
+    await user.keyboard('2{Enter}');
+    expect(onScoreChange).toHaveBeenCalledTimes(2);
+  });
+
+  it('beide Felder tragen die Beschriftung „Tore {Team}“', () => {
+    rendern(undefined);
+    expect(eingabe('home').getAttribute('aria-label')).toBe('Tore FC Nord');
+    expect(eingabe('away').getAttribute('aria-label')).toBe('Tore SG Mitte');
   });
 });
 
