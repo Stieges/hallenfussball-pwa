@@ -12,6 +12,7 @@ import { cssVars } from '../../../design-tokens';
 import { Button } from '../../ui/Button';
 import { DialogSurface } from '../../ui/molecules/DialogSurface';
 import { NumberPicker } from '../../ui/molecules/NumberPicker';
+import { kartenFlaecheStil } from './kartenStil';
 import { useFeinerZeiger } from '../hooks/useFeinerZeiger';
 import type { UseEntryFlowsReturn } from '../hooks/useEntryFlows';
 import { EINTRAG_ZEITSTRAFE, type CardKind, type OffenerEintrag, type Side, type Uebersetzer } from '../model/cockpitTypes';
@@ -34,12 +35,8 @@ const ARTEN: { art: CardKind; flag: 'yellow' | 'yellowRed' | 'red'; form: 'recht
 
 const flaecheStil: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.md, padding: cssVars.spacing.lg };
 const knopfStil: CSSProperties = { minHeight: cssVars.touchTargets.primary, whiteSpace: 'nowrap', width: '100%' };
-const formStil = (form: 'rechteck' | 'geteilt' | 'rechteck-voll'): CSSProperties => ({
-  display: 'inline-block', width: cssVars.spacing.md, height: cssVars.spacing.lg, borderRadius: cssVars.borderRadius.sm,
-  border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderSolid}`,
-  background: form === 'geteilt'
-    ? `linear-gradient(135deg, ${cssVars.colors.accent} 50%, ${cssVars.colors.error} 50%)`
-    : form === 'rechteck' ? cssVars.colors.accent : cssVars.colors.error,
+const formStil = (art: CardKind): CSSProperties => ({
+  display: 'inline-block', width: cssVars.spacing.md, height: cssVars.spacing.lg, ...kartenFlaecheStil(art),
 });
 
 function KartenartSchritt({ flows, name, kartenArten, t }: { flows: UseEntryFlowsReturn; name: string; kartenArten: EntrySheetsProps['kartenArten']; t: Uebersetzer }): ReactElement | null {
@@ -51,7 +48,7 @@ function KartenartSchritt({ flows, name, kartenArten, t }: { flows: UseEntryFlow
         <h2 style={{ fontSize: cssVars.fontSizes.lg, margin: 0 }}>{t('karte.titel', { team: name })}</h2>
         {arten.map((a) => (
           <Button key={a.art} variant="secondary" style={knopfStil} onClick={() => { flows.waehleKartenArt(a.art); }}>
-            <span data-form={a.form} style={formStil(a.form)} aria-hidden="true" />
+            <span data-form={a.form} style={formStil(a.art)} aria-hidden="true" />
             {t(a.textKey)}
           </Button>
         ))}
@@ -62,12 +59,12 @@ function KartenartSchritt({ flows, name, kartenArten, t }: { flows: UseEntryFlow
 
 function ZweiteGelbeRueckfrage({ flows, nummer, name, t }: { flows: UseEntryFlowsReturn; nummer: number; name: string; t: Uebersetzer }): ReactElement {
   return (
-    <DialogSurface isOpen onClose={flows.schliesse} role="alertdialog" ariaLabel={t('karte.schonGelb', { nummer })} testId="second-yellow-question" accent={cssVars.colors.warning}>
+    <DialogSurface isOpen onClose={flows.schliesse} role="alertdialog" ariaLabel={t('karte.schonGelb', { nummer })} testId="second-yellow-question" accent={cssVars.colors.cardYellow}>
       <div style={flaecheStil}>
         <h2 style={{ fontSize: cssVars.fontSizes.lg, margin: 0 }}>{t('karte.schonGelb', { nummer })}</h2>
         <span>{name}</span>
         <Button variant="primary" style={knopfStil} onClick={() => { void flows.antworteZweiteGelbe('gelbRot'); }}>
-          <span data-form="geteilt" style={formStil('geteilt')} aria-hidden="true" />{t('karte.gelbRot')}
+          <span data-form="geteilt" style={formStil('YELLOW_RED')} aria-hidden="true" />{t('karte.gelbRot')}
         </Button>
         <Button variant="secondary" style={knopfStil} onClick={() => { void flows.antworteZweiteGelbe('trotzdemGelb'); }}>{t('karte.trotzdemGelb')}</Button>
       </div>

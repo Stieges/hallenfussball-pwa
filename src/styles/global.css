@@ -154,6 +154,8 @@
   --color-notice-line-bg: var(--color-scoreboard-surface);
   --color-notice-line-text: var(--color-scoreboard-text);
   --color-hold-fill: var(--color-error);
+  --color-card-yellow: #FACC15;
+  --color-card-red: #DC2626;
 
   /* ===========================================
      Colors - Error
@@ -696,6 +698,8 @@ html[data-font-size="x-large"] {
   --color-notice-line-bg: var(--color-scoreboard-surface);
   --color-notice-line-text: var(--color-scoreboard-text);
   --color-hold-fill: var(--color-error);
+  --color-card-yellow: #FACC15;
+  --color-card-red: #DC2626;
 
   /* ===========================================
      Colors - Error
@@ -1006,6 +1010,8 @@ html[data-font-size="x-large"] {
   --color-notice-line-bg: var(--color-scoreboard-surface);
   --color-notice-line-text: var(--color-scoreboard-text);
   --color-hold-fill: var(--color-error);
+  --color-card-yellow: #FACC15;
+  --color-card-red: #DC2626;
 
   /* ===========================================
      Colors - Primary (Brighter Green)

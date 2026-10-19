@@ -9,8 +9,7 @@
  * Konzept-Referenz: docs/concepts/LIVE-COCKPIT-KONZEPT.md §5.2
  *
  * Card colors:
- * - Yellow: cssVars.colors.accent (#FFD700)
- * - Red: cssVars.colors.error
+ * - Yellow: cssVars.colors.cardYellow, Red: cssVars.colors.cardRed (Karten-Tokens, nie warning/error)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -50,9 +49,9 @@ interface CardDialogProps {
 // Card type colors (F3b2: Gelb-Rot fuehrt wie Rot zum Platzverweis -- gleiche Farbe, kein neuer
 // Design-Token noetig).
 const cardColors = {
-  YELLOW: cssVars.colors.accent, // #FFD700
-  YELLOW_RED: cssVars.colors.error,
-  RED: cssVars.colors.error,
+  YELLOW: cssVars.colors.cardYellow,
+  YELLOW_RED: cssVars.colors.cardRed,
+  RED: cssVars.colors.cardRed,
 } as const;
 
 export function CardDialog({

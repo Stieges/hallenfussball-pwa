@@ -46,6 +46,16 @@ describe('EntrySheets – Kartenart-Schritt', () => {
     expect(screen.getByRole('button', { name: 'Rot' }).querySelector('[data-form="rechteck-voll"]')).not.toBeNull();
   });
 
+  it('Kartenfarben: Gelb, Gelb-Rot und Rot im Schritt nutzen die Karten-Tokens, nie warning oder error', () => {
+    render(<EntrySheets {...props({ art: 'karte', seite: 'away' })} />);
+    const form = (name: string) => screen.getByRole('button', { name }).querySelector<HTMLElement>('[data-form]')!;
+    expect(form('Gelb').style.background).toBe('var(--color-card-yellow)');
+    expect(form('Rot').style.background).toBe('var(--color-card-red)');
+    expect(form('Gelb-Rot').style.background).toContain('var(--color-card-yellow)');
+    expect(form('Gelb-Rot').style.background).toContain('var(--color-card-red)');
+    for (const n of ['Gelb', 'Gelb-Rot', 'Rot']) { expect(form(n).getAttribute('style')).not.toMatch(/warning|error|accent/); }
+  });
+
   it('ein Tipp auf die Art wählt sie', async () => {
     const p = props({ art: 'karte', seite: 'away' });
     render(<EntrySheets {...p} />);
@@ -117,6 +127,13 @@ describe('EntrySheets – Rückfrage zweite Gelbe (@SL-088)', () => {
     await userEvent.setup().click(screen.getByRole('alertdialog').parentElement!); // Abdunkelung
     expect(p.flows.antworteZweiteGelbe).not.toHaveBeenCalled();
     expect(p.flows.schliesse).toHaveBeenCalledTimes(2);
+  });
+
+  it('Kartenfarben: die geteilte Gelb-Rot-Form der Rückfrage nutzt beide Karten-Tokens', () => {
+    render(<EntrySheets {...props(offenGelb, {}, { nummer: 7 })} />);
+    const form = within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Gelb-Rot' }).querySelector<HTMLElement>('[data-form="geteilt"]')!;
+    expect(form.style.background).toContain('var(--color-card-yellow)');
+    expect(form.style.background).toContain('var(--color-card-red)');
   });
 
   it('Gegenbeispiel: ohne Rückfrage kein alertdialog; mit Rückfrage ruht die Nummernauswahl darunter (kein zweiter Zeitablauf)', () => {

@@ -313,6 +313,9 @@ export const semanticColorsDark = {
   noticeLineText: palette.neutral[0],
   // Halteknopf (Cockpit Scheibe 3, 3.1): Füllung beim Gedrückthalten, gleiche Farbe wie der Abpfiff-Rand (error)
   holdFill: palette.red[400],
+  // Karten (Cockpit, Entscheidung Daniel 19.10.): eigene Farben nur für Karten, in hell und dunkel gleich; Befund C-KARTE-GELB-ALS-WARNFARBE
+  cardYellow: palette.yellow[400],
+  cardRed: palette.red[600],
 } as const;
 
 export type SemanticColorToken = keyof typeof semanticColorsDark;

@@ -131,6 +131,8 @@ export const cssColors = {
   noticeLineBg: 'var(--color-notice-line-bg)',
   noticeLineText: 'var(--color-notice-line-text)',
   holdFill: 'var(--color-hold-fill)',
+  cardYellow: 'var(--color-card-yellow)',
+  cardRed: 'var(--color-card-red)',
 
   // ---------------------------------------------------------------------------
   // Semantic: Error
