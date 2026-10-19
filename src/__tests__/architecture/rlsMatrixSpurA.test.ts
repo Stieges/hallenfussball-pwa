@@ -29,7 +29,7 @@ describe('A-11 Server-Zeilen der RLS-Matrix (scripts/rls-matrix.d/spur-a.sh)', (
   it.each(['@ZP-041', '@ZP-084', '@LZ-023', '@TM-084', '@HE-042', '@ZM-019'])(
     '%s: mindestens eine Ablehnungs-Zeile mit Vorher-Sichtbarkeit und Wertevergleich',
     (kennung) => {
-      const denied = rows(kennung).filter((r) => r.expected === 'abgelehnt' || /abgelehnt|nicht$/.test(r.label));
+      const denied = rows(kennung).filter((r) => r.expected === 'abgelehnt' || r.label.includes('abgelehnt') || r.label.endsWith("nicht"));
       expect(denied.length, kennung).toBeGreaterThan(0);
     },
   );
