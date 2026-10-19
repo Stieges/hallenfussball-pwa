@@ -104,6 +104,9 @@ test.describe('Cockpit Scheibe 3: Team-Spalten und Einträge (Gast, lokal)', () 
     if (!torHeim || !torGast || !kopfHeim) { throw new Error('Spalte nicht sichtbar'); }
     expect(Math.abs(torHeim.y - torGast.y)).toBeLessThanOrEqual(1);
     expect(kopfHeim.y + kopfHeim.height).toBeLessThanOrEqual(torHeim.y + 1);
+    // Abstand der beiden Tor-Knöpfe mindestens `spacing.sm` (8 px, Mockup `column-gap`): ein Fehltipp bucht sonst ein Tor für die Gegner (VISUAL § 9)
+    const luecke = torGast.x - (torHeim.x + torHeim.width);
+    expect(luecke).toBeGreaterThanOrEqual(7.5);
     // Der Streifen trägt die Trikotfarbe (Farbsaat)
     await expect(page.getByTestId('team-stripe-home')).toHaveCSS('background-color', 'rgb(255, 215, 0)');
   });

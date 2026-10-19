@@ -41,9 +41,10 @@
   padding: var(--spacing-xl);
 }
 
-/* Handy: wenig Rand, damit lange Teamnamen in höchstens drei Zeilen passen (@OB-025) */
+/* Handy: wie im Mockup kein Kasten mit Polsterung um die Spalten; so bleibt Platz für lange Teamnamen (höchstens drei Zeilen, @OB-025) */
 .scoreboardMobile {
-  padding: var(--spacing-xs);
+  padding: 0;
+  background: none;
 }
 
 .scoreRow {
@@ -54,5 +55,5 @@
 }
 
 .scoreRowMobile {
-  gap: var(--spacing-xs);
+  gap: var(--spacing-sm); /* Mockup `column-gap`: genug Abstand zwischen den Tor-Knöpfen der Gegner (VISUAL § 9) */
 }
