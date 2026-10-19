@@ -29,6 +29,8 @@ const COL_YELLOW = 3;
 const COL_YELLOW_RED = 4;
 const COL_RED = 6;
 const GELB_ROT_LABEL = 'Gelb-Rot';
+/** Rechter Innenrand der Gelb-Rot-Kopfzelle als Vielfaches des normalen: dort sitzt die rote Ecke. */
+const ECKE_RAND_FAKTOR = 3;
 
 export async function exportStatisticsToPDF(tournament: Tournament, engineEventsById?: EngineEventsById): Promise<void> {
     const doc = new jsPDF({
@@ -123,23 +125,23 @@ export async function exportStatisticsToPDF(tournament: Tournament, engineEvents
             if (data.column.index === COL_YELLOW || data.column.index === COL_YELLOW_RED) {
                 data.cell.styles.fillColor = [...pdfKartenFarben.yellow];
                 data.cell.styles.textColor = [...pdfKartenFarben.textOnYellow];
+                if (data.column.index === COL_YELLOW_RED) {
+                    const rand = (seite: 'top' | 'bottom' | 'left' | 'right'): number => data.cell.padding(seite);
+                    data.cell.styles.cellPadding = { top: rand('top'), bottom: rand('bottom'), left: rand('left'), right: rand('right') * ECKE_RAND_FAKTOR };
+                }
             } else if (data.column.index === COL_RED) {
                 data.cell.styles.fillColor = [...pdfKartenFarben.red];
                 data.cell.styles.textColor = [...pdfKartenFarben.textOnRed];
             }
         },
-        // Gelb-Rot: untere rechte Hälfte der Kopfzelle in Kartenrot (diagonal geteilt), Zelle dafür neu gefüllt, Beschriftung danach gesetzt (sonst verdeckt das Dreieck die Schrift).
+        // Gelb-Rot: die Beschriftung liegt ganz auf Gelb (Tinte, gleiche Grundlinie wie die anderen Kopfzellen), Rot nur als Ecke im
+        // verbreiterten rechten Rand – nie unter der Schrift, also lesbar unabhängig vom Untergrund.
         didDrawCell: (data) => {
             if (data.section !== 'head' || data.column.index !== COL_YELLOW_RED) { return; }
             const { x, y, width, height } = data.cell;
-            doc.setFillColor(...pdfKartenFarben.yellow);
-            doc.rect(x, y, width, height, 'F');
+            const ecke = data.cell.padding('right');
             doc.setFillColor(...pdfKartenFarben.red);
-            doc.triangle(x + width, y, x + width, y + height, x, y + height, 'F');
-            doc.setTextColor(...pdfKartenFarben.textOnYellow);
-            doc.setFont('helvetica', data.cell.styles.fontStyle);
-            doc.setFontSize(data.cell.styles.fontSize);
-            doc.text(GELB_ROT_LABEL, x + data.cell.padding('left'), y + height / 2, { baseline: 'middle' });
+            doc.triangle(x + width, y, x + width, y + height, x + width - ecke, y + height, 'F');
         },
         margin: { left: PDF_STYLE.spacing.pageMargin.left, right: PDF_STYLE.spacing.pageMargin.right },
     });

@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Tournament } from '../../types/tournament';
 
 type Rgb = [number, number, number];
-interface ZelleFuerHaken { section: string; column: { index: number }; cell: { x: number; y: number; width: number; height: number; text: string[]; styles: { fillColor?: Rgb; textColor?: Rgb; fontStyle?: string; fontSize?: number }; padding: (r: string) => number } }
+interface ZelleFuerHaken { section: string; column: { index: number }; cell: { x: number; y: number; width: number; height: number; text: string[]; styles: { fillColor?: Rgb; textColor?: Rgb; fontStyle?: string; fontSize?: number; cellPadding?: unknown }; padding: (r: string) => number } }
 interface AutoTableCallArgs {
   head?: string[][];
   body?: string[][];
@@ -163,17 +163,27 @@ describe('Karten-Farben nur für Karten (Oberfläche E) – PDF Fair-Play-Tabell
     expect(rot.cell.styles.fillColor).toEqual(tokenRgb('var(--color-card-red)'));
   });
 
-  it('Kopfzelle Gelb-Rot zeigt beide Farben: Gelb als Fläche, Rot als Dreieck', async () => {
+  it('Kopfzelle Gelb-Rot: Gelb als Fläche mit dunkler Schrift, Rot nur als Ecke rechts im Rand (nie unter der Schrift)', async () => {
     await exportStatisticsToPDF(tournamentWithYellowRed());
     const opts = findFairPlayCall();
     const idx = (opts.head?.[0] ?? []).indexOf('Gelb-Rot');
     const z = zelle(idx);
     opts.didParseCell?.(z);
     expect(z.cell.styles.fillColor).toEqual(tokenRgb('var(--color-card-yellow)'));
-    const doc = autoTableMock.mock.calls[0][0] as unknown as { setFillColor: ReturnType<typeof vi.fn>; triangle: ReturnType<typeof vi.fn> };
+    expect(z.cell.styles.textColor).toEqual([0, 0, 0]); // Tinte auf Kartengelb ≈ 14 : 1
+    // rechter Innenrand größer als der linke: dort sitzt die rote Ecke, die Beschriftung bleibt ganz auf Gelb
+    const rand = z.cell.styles.cellPadding as { left: number; right: number };
+    expect(rand.right).toBeGreaterThan(rand.left);
+    const doc = autoTableMock.mock.calls[0][0] as unknown as { setFillColor: ReturnType<typeof vi.fn>; triangle: ReturnType<typeof vi.fn>; text: ReturnType<typeof vi.fn>; rect: ReturnType<typeof vi.fn> };
+    doc.text.mockClear();
     opts.didDrawCell?.(z);
     expect(doc.setFillColor).toHaveBeenCalledWith(...tokenRgb('var(--color-card-red)'));
     expect(doc.triangle).toHaveBeenCalled();
+    // die Beschriftung wird nicht neu gesetzt (gleiche Grundlinie wie die anderen Kopfzellen), die Zelle nicht überdeckt
+    expect(doc.text).not.toHaveBeenCalled();
+    expect(doc.rect).not.toHaveBeenCalled();
+    const [x1, , x2, , x3] = doc.triangle.mock.calls[0] as number[];
+    expect(Math.min(x1, x2, x3)).toBeGreaterThanOrEqual(z.cell.x + z.cell.width - rand.right);
   });
 
   it('Gegenbeispiel: andere Kopfzellen (Team, Punkte, Zeit) und Körperzellen bleiben ohne Kartenfarbe', async () => {
