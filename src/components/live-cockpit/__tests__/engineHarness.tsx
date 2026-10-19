@@ -40,9 +40,11 @@ export interface HarnessProps {
   turnier?: Partial<Tournament>;
   /** Cockpit-Einstellungen (Ton, Vibration, …); stabil halten. */
   einstellungen?: Partial<MatchCockpitSettings>;
+  /** B-08d: schaltet den Zeit-Knopf frei (in der Produktion erst mit „Mehr“, Aufgabe 3.7). */
+  zeitKorrektur?: boolean;
 }
 
-function Cockpit({ context, turnier, einstellungen }: { context: MatchEngineContextValue; turnier?: Partial<Tournament>; einstellungen?: Partial<MatchCockpitSettings> }): ReactElement | null {
+function Cockpit({ context, turnier, einstellungen, zeitKorrektur }: { context: MatchEngineContextValue; turnier?: Partial<Tournament>; einstellungen?: Partial<MatchCockpitSettings>; zeitKorrektur?: boolean }): ReactElement | null {
   const tournament = useMemo((): Tournament => ({ ...harnessTournament, ...turnier }), [turnier]);
   const validMatches = useMemo(() => buildValidMatches(tournament), [tournament]);
   const compute = useCallback(
@@ -65,12 +67,13 @@ function Cockpit({ context, turnier, einstellungen }: { context: MatchEngineCont
       onGoal={(matchId, teamId, delta, options) => { void wiring.handleGoal(matchId, teamId, delta, options); }}
       onCard={wiring.handleCard}
       onFoul={wiring.handleFoul}
+      onAdjustTime={zeitKorrektur ? () => undefined : undefined}
     />
   );
 }
 
 /** Baut die Engine im Hintergrund auf und zeigt dann das Cockpit mit einem noch nicht angepfiffenen Spiel. */
-export function Harness({ senderFabrik = storeSender, gastKonto = false, turnier, einstellungen }: HarnessProps): ReactElement | null {
+export function Harness({ senderFabrik = storeSender, gastKonto = false, turnier, einstellungen, zeitKorrektur = false }: HarnessProps): ReactElement | null {
   const [context, setContext] = useState<MatchEngineContextValue | null>(null);
   useEffect(() => {
     let abgebrochen = false;
@@ -78,6 +81,6 @@ export function Harness({ senderFabrik = storeSender, gastKonto = false, turnier
     return () => { abgebrochen = true; };
   }, [senderFabrik, gastKonto]);
   if (!context) { return null; }
-  return <MatchEngineContext.Provider value={context}><Cockpit context={context} turnier={turnier} einstellungen={einstellungen} /></MatchEngineContext.Provider>;
+  return <MatchEngineContext.Provider value={context}><Cockpit context={context} turnier={turnier} einstellungen={einstellungen} zeitKorrektur={zeitKorrektur} /></MatchEngineContext.Provider>;
 }
 

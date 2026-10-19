@@ -185,19 +185,15 @@
     "redAria": "Red card for {{teamName}}"
   },
   "timeAdjust": {
-    "title": "Adjust Match Time",
-    "currentTime": "Current time",
-    "minutes": "Min",
-    "seconds": "Sec",
-    "reset": "00:00",
-    "halftime": "Halftime",
-    "end": "End",
+    "title": "Adjust match time",
+    "inSection": "Time in section",
+    "increase": "Add 10 seconds",
+    "decrease": "Subtract 10 seconds",
+    "limitMax": "at most {{zeit}}",
+    "limitMinGoal": "because of the goal at {{zeit}}, at least {{zeit}}",
+    "limitMinEntry": "because of an entry at {{zeit}}, at least {{zeit}}",
     "cancel": "Cancel",
-    "apply": "Apply",
-    "increaseMinute": "Increase minute",
-    "decreaseMinute": "Decrease minute",
-    "increaseSeconds": "Increase 10 seconds",
-    "decreaseSeconds": "Decrease 10 seconds"
+    "apply": "Apply"
   },
   "timePenalty": {
     "title": "Time Penalty",
@@ -335,7 +331,17 @@
     "fiveSeconds": "5 seconds",
     "tenSeconds": "10 seconds",
     "fifteenSeconds": "15 seconds",
-    "twentySeconds": "20 seconds"
+    "twentySeconds": "20 seconds",
+    "clockMode": "Clock mode",
+    "clockModeDesc": "When the clock stops on interruptions – applies from the next kick-off",
+    "clockModeLastMinute": "running, stopped in the last minute",
+    "clockModeAlwaysRunning": "always running",
+    "clockModeAlwaysStopped": "always stopped",
+    "finalPhaseMinutes": "Length of the stopped final phase (minutes)",
+    "finalPhaseDesc": "The clock stands still for this time at the end of the last section – 1 to 5 minutes, applies from the next kick-off",
+    "finalPhaseRange": "Valid are 1 to {{max}} minutes – the value was not accepted",
+    "finalPhaseRangeOne": "Valid is 1 minute – the value was not accepted",
+    "finalPhaseTooShort": "A section is shorter than one minute, a stopped final phase is not possible"
   },
   "editScore": {
     "title": "Correct Score",

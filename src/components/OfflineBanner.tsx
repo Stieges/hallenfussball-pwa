@@ -74,7 +74,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
   // Offline state
   if (!isOnline) {
     return (
-      <div style={bannerStyle} role="status" aria-live="polite">
+      <div style={bannerStyle} role="status" aria-live="polite" data-testid="offline-banner">
         <span role="img" aria-label="Offline">📡</span>
         <span>{t('offlineBanner.message')}</span>
         <button
@@ -109,7 +109,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
   // Just reconnected
   if (wasOffline) {
     return (
-      <div style={bannerStyle} role="status" aria-live="polite">
+      <div style={bannerStyle} role="status" aria-live="polite" data-testid="offline-banner">
         <span role="img" aria-label="Connected">✓</span>
         <span>{t('offlineBanner.reconnected')}</span>
         {pendingSyncCount > 0 && (
@@ -126,7 +126,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
   // Online with pending syncs (Phase 3)
   if (pendingSyncCount > 0) {
     return (
-      <div style={bannerStyle} role="status" aria-live="polite">
+      <div style={bannerStyle} role="status" aria-live="polite" data-testid="offline-banner">
         <span role="img" aria-label="Syncing">🔄</span>
         <span>
           {t('offlineBanner.syncing', { count: pendingSyncCount })}

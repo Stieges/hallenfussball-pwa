@@ -304,6 +304,23 @@ describe('phaseViewOf (B-08a)', () => {
     expect(state?.goals).toHaveLength(1);
   });
 
+  it('@SL-077 Untergrenze durch ein Tor: earliestAdjustIsGoal ist true; Gegenbeispiel: durch eine Karte false', async () => {
+    const mitTor = await spielAnlegen();
+    await mitTor.a.commands.start(mitTor.matchId, mitTor.ctx, 'leitung', REGEL_2X10);
+    zu(130_000);
+    await mitTor.a.commands.goal(mitTor.matchId, mitTor.ctx, 'leitung', 'teama', false);
+    zu(200_000);
+    expect(sichtAuf(mitTor.a, mitTor)).toMatchObject({ earliestAdjustMs: 130_000, earliestAdjustIsGoal: true });
+
+    zu(0);
+    const mitKarte = await spielAnlegen();
+    await mitKarte.a.commands.start(mitKarte.matchId, mitKarte.ctx, 'leitung', REGEL_2X10);
+    zu(130_000);
+    await mitKarte.a.commands.card(mitKarte.matchId, mitKarte.ctx, 'leitung', 'teama', 'YELLOW_CARD');
+    zu(200_000);
+    expect(sichtAuf(mitKarte.a, mitKarte)).toMatchObject({ earliestAdjustMs: 130_000, earliestAdjustIsGoal: false });
+  });
+
   it('Gegenbeispiel: zurückgenommenes Tor bestimmt earliestAdjustMs nicht mehr', async () => {
     const spiel = await spielAnlegen();
     await spiel.a.commands.start(spiel.matchId, spiel.ctx, 'leitung', REGEL_2X10);
