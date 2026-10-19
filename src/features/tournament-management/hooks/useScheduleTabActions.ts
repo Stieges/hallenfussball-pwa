@@ -28,7 +28,7 @@ interface UseScheduleTabActionsResult {
   handleRedistributeSR: () => void;
   handleRedistributeFields: () => void;
   handleMatchSwap: (matchId1: string, matchId2: string) => void;
-  handleScoreChange: (matchId: string, scoreA: number, scoreB: number) => void;
+  handleScoreChange: (matchId: string, scoreA: number, scoreB: number) => Promise<boolean>;
   handleRefereeAssignment: (matchId: string, refereeNumber: number | null) => void;
   handleResetRefereeAssignments: () => void;
   handleFieldChange: (matchId: string, fieldNumber: number) => void;
@@ -137,7 +137,7 @@ export function useScheduleTabActions({
   const resultEntry = useScheduleResultEntry({ tournament, showWarning, lockFinishedResults });
   const { enterScore } = resultEntry;
   const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number) => {
-    void enterScore(matchId, scoreA, scoreB);
+    return enterScore(matchId, scoreA, scoreB);
   }, [enterScore]);
 
   // Handle referee assignment (pending in edit mode, direct otherwise)
