@@ -39,7 +39,9 @@ const rowStyle: CSSProperties = {
 const textStyle: CSSProperties = { fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, margin: 0 };
 const selectStyle: CSSProperties = {
   padding: cssVars.spacing.sm,
-  fontSize: cssVars.fontSizes.md,
+  paddingRight: cssVars.spacing.xl,
+  minHeight: touchTargets.minimum,
+  fontSize: cssVars.fontSizes.lg,
   color: cssVars.colors.textPrimary,
   backgroundColor: cssVars.colors.surface,
   border: `1px solid ${cssVars.colors.borderControl}`,
@@ -86,6 +88,7 @@ export function MatchRulesSection({
         <p style={textStyle}>{t('settings.clockModeDesc')}</p>
         <select
           data-testid="settings-clock-mode"
+          aria-label={t('settings.clockMode')}
           value={value}
           disabled={locked}
           style={selectStyle}
