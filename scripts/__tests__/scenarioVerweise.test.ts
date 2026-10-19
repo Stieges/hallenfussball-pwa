@@ -4,7 +4,7 @@
 // Verweis-Beispiele stehen hier nur in String-Literalen und der ZEILEN-Konstante, nie in Testtiteln:
 // dieses Skript scannt auch die eigenen Testdateien.
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -12,7 +12,23 @@ import { befundKennungen, git, mvpListe, sauberEnv, schreibe as schreibeIn, szen
 
 let ordner: string
 const schreibe = (name: string, inhalt: string) => schreibeIn(ordner, name, inhalt)
-const lauf = (...args: string[]) => szenarioLauf(ordner, ...args)
+const alleDateien = (ordner_: string): string[] =>
+  readdirSync(ordner_).flatMap((n) => {
+    const p = join(ordner_, n)
+    return n === 'meta' || n === '.git' ? [] : statSync(p).isDirectory() ? alleDateien(p) : [p]
+  })
+/** Die Liste enthaelt nur Kennungen, die eine Datei im Ordner nennt (die CI prueft auch die Rueckrichtung). */
+const synchronisiere = () => {
+  const pfad = join(ordner, 'tests/meta/befund-kennungen.json')
+  if (!existsSync(pfad)) return
+  const text = alleDateien(ordner).map((p) => readFileSync(p, 'utf8').replace(/\/\/.*$/gm, '')).join('\n')
+  const liste = JSON.parse(readFileSync(pfad, 'utf8')).kennungen.filter((k: string) => text.includes(k))
+  writeFileSync(pfad, JSON.stringify({ kennungen: liste }))
+}
+const lauf = (...args: string[]) => {
+  synchronisiere()
+  return szenarioLauf(ordner, ...args)
+}
 const BEKANNT = ['C-COCKPIT-AUSGEFALLEN-BEREIT', 'C-COCKPIT-TABLET-OHNE-PROTOKOLL', 'C-KONTRAST-TEXTPAARE', 'DF-001', 'DF-002']
 const ZEITLIMIT = 20_000
 
@@ -171,7 +187,7 @@ describe('@TA-015 ein Verweis auf eine unbekannte Kennung laesst die Pruefung sc
     schreibe('src/u.test.ts', "it('@DF-001 Fall', () => {})\n")
     expect(lauf().status).toBe(0)
     rmSync(join(ordner, 'tests/meta/befund-kennungen.json'))
-    const r = lauf()
+    const r = szenarioLauf(ordner)
     expect(r.status).toBe(1)
     expect(r.stderr).toMatch(/Verweis DF-001 in src\/u\.test\.ts:1.*befund-kennungen\.json fehlt/)
     schreibe('src/u.test.ts', "it('Fall ohne jeden Verweis', () => {})\n")
@@ -235,6 +251,7 @@ describe('@TA-018 wird ein Defekt behoben, faellt die Markierung weg und der Ver
 
     // Szenario-Pruefung: markiert zaehlt nicht, die behobene Fassung zaehlt regulaer; der Verweis bleibt im Namen
     mvpListe(ordner, ['SL-034'])
+    befundKennungen(ordner, ['DF-001'])
     schreibe('lauf/vorher/a.test.ts', `it.fails('${NAME}', () => {})\n`)
     const vorher = szenarioLauf(ordner, '--scan', 'lauf/vorher')
     expect(vorher.stdout).toMatch(/mit Test: 0,/)

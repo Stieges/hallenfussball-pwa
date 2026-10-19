@@ -37,6 +37,8 @@
 //    Ohne --base nur Bericht. Sinkt die Zahl: gruen mit HINWEIS.
 //  - Jeder Verweis in einem Titel oder einer Begruendung (auch in regulaeren Tests) muss in tests/meta/befund-kennungen.json
 //    stehen (erzeugt von scripts/befund-kennungen-erzeugen.mjs, Option --befund-kennungen <pfad>), sonst sofort rot.
+//    Rueckrichtung: jede Kennung der Liste muss von mindestens einem Test genannt werden, sonst rot (Liste veraltet
+//    oder von Hand ergaenzt).
 import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
@@ -154,13 +156,18 @@ function neueOhneVerweis(aktuell, haupt) {
 
 /** TM-1 (@TA-015): jeder Verweis in einem Testtitel oder einer Begruendung muss in tests/meta/befund-kennungen.json stehen. */
 function pruefeVerweise(opt, root, stellen, fehler) {
-  if (stellen.length === 0) return
   const pfad = opt.befundKennungen ?? resolve(root, 'tests/meta/befund-kennungen.json')
+  if (stellen.length === 0 && !existsSync(pfad)) return
   if (!existsSync(pfad)) {
     fehler.push(`Verweis ${stellen[0].kennung} in ${stellen[0].datei}:${stellen[0].zeile} (${stellen.length} Verweise insgesamt), aber ${pfad} fehlt (node scripts/befund-kennungen-erzeugen.mjs)`)
     return
   }
-  const bekannt = new Set(JSON.parse(readFileSync(pfad, 'utf8')).kennungen)
+  const kennungen = JSON.parse(readFileSync(pfad, 'utf8')).kennungen
+  const bekannt = new Set(kennungen)
+  // Rueckrichtung (ohne docs/ pruefbar): die Liste nennt nur, was ein Test nennt (@TA-016).
+  const genannt = new Set(stellen.map((x) => x.kennung))
+  const ueberzaehlig = kennungen.filter((k) => !genannt.has(k))
+  if (ueberzaehlig.length > 0) fehler.push(`Liste veraltet oder von Hand ergaenzt: ${ueberzaehlig.join(', ')} steht in ${relative(root, pfad)}, aber kein Test nennt es (neu erzeugen: node scripts/befund-kennungen-erzeugen.mjs)`)
   for (const s of stellen) {
     if (!bekannt.has(s.kennung)) fehler.push(`Unbekannter Verweis ${s.kennung} in ${s.datei}:${s.zeile} (nicht in ${relative(root, pfad)}; Tippfehler oder Liste mit node scripts/befund-kennungen-erzeugen.mjs neu erzeugen)`)
   }

@@ -80,3 +80,23 @@ describe('@TA-013 test.info().fail() ist eine Markierung (A4)', () => {
     expect(r.stdout).toMatch(/Erwartet rot \(it\.fails, test\.fail\): 0,/)
   })
 })
+
+describe('@TA-016 Rueckrichtung (A5): die Liste nennt nur, was ein Test nennt', () => {
+  it('@TA-016 eine von Hand nachgetragene Kennung macht die Pruefung rot und nennt sie', () => {
+    befundKennungen(ordner, ['DF-001', 'C-SIGNOUT'])
+    schreibe('src/r.test.ts', "it('@DF-001 Fall', () => {})\n")
+    const r = szenarioLauf(ordner)
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/Liste veraltet oder von Hand ergaenzt: C-SIGNOUT/)
+  })
+
+  it('@TA-016 ein aus dem Test entfernter Verweis macht die Pruefung rot; Gegenbeispiel: passende Liste ist gruen', () => {
+    befundKennungen(ordner, ['DF-001'])
+    schreibe('src/r.test.ts', "it('@DF-001 Fall', () => {})\n")
+    expect(szenarioLauf(ordner).status).toBe(0)
+    schreibe('src/r.test.ts', "it('Fall ohne Verweis', () => {})\n")
+    const r = szenarioLauf(ordner)
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/Liste veraltet oder von Hand ergaenzt: DF-001/)
+  })
+})
