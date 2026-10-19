@@ -375,6 +375,7 @@ export const cssBorderRadius = {
 
 export const cssBorderWidth = {
   thin: '1px',
+  medium: '2px',
 } as const;
 
 // =============================================================================

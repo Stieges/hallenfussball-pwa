@@ -195,7 +195,7 @@ describe('A-08f3e2 H-2: K.-o.-Auflösung erst nach Bestätigung durch den Server
     const server = deferredServer(h);
     const { onSlots } = mountManager(h);
     const { hook } = mountSpielplan(h);
-    let done: Promise<void> = Promise.resolve();
+    let done: Promise<boolean> = Promise.resolve(true);
     act(() => { done = hook.result.current.enterScore(SPIEL_9, 3, 1); });
     await act(async () => { await settle(); });
     await act(async () => { hook.result.current.answerPrompt('input_error'); await done; await settle(); });

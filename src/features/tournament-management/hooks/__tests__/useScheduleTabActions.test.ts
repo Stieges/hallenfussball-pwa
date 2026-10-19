@@ -39,7 +39,7 @@ function renderActions(h: ScheduleEngine, tournament: Tournament) {
     lockFinishedResults: false,
   }), { wrapper });
   const scoreChange = async (matchId: string, a: number, b: number) => {
-    await act(async () => { result.current.handleScoreChange(matchId, a, b); await settle(); });
+    await act(async () => { void result.current.handleScoreChange(matchId, a, b); await settle(); });
   };
   return { scoreChange, onTournamentUpdate, showWarning, confirmSpy };
 }

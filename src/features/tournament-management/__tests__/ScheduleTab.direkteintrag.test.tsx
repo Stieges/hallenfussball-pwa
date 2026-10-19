@@ -68,6 +68,8 @@ import { OfflineRepository } from '../../../core/repositories/OfflineRepository'
 import { LocalStorageRepository } from '../../../core/repositories/LocalStorageRepository';
 import { createFakeCloud } from '../../../test/fakeCloudRepository';
 import { MatchEngineContext } from '../../match-engine/matchEngineContextInstance';
+import { MatchCommands } from '../../../core/match/client';
+import { buildValidMatches } from '../../../hooks/engineMatchModel';
 import { makeScheduleEngine, settle, type ScheduleEngine } from '../../../test/scheduleEngineHarness';
 import { ScheduleTab } from '../ScheduleTab';
 import { useTournamentManager } from '../../../hooks/useTournamentManager';
@@ -125,7 +127,8 @@ describe('A-08f3e2 Pflichttest echter Weg: Spielplan → Server-Eintrag (@FU-080
     vi.unstubAllGlobals();
   });
 
-  async function enterInFirstCard(home: number, away: number) {
+  async function enterInFirstCard(home: number, away: number, prepare?: () => Promise<void>) {
+    await prepare?.();
     const view = render(
       <MemoryRouter><ToastProvider><MatchEngineContext.Provider value={h.value}><Host /></MatchEngineContext.Provider></ToastProvider></MemoryRouter>,
     );
@@ -165,5 +168,26 @@ describe('A-08f3e2 Pflichttest echter Weg: Spielplan → Server-Eintrag (@FU-080
       </MatchEngineContext.Provider>,
     );
     expect(await protocol.findByText('Ergebnis eingetragen von Olli')).toBeTruthy();
+  });
+
+  // @FU-093 „Aber nach ‚Nein‘ bleibt Spiel 9 abgesetzt und ohne Ergebnis“ -- über den echten Weg (Spielplan, Rückfrage).
+  it('@FU-093 Spiel abgesetzt, Olli trägt 3:1 ein, Rückfrage mit „Nein“ → nichts gesendet, Zeile ohne Ergebnis, Tabelle ohne Punkte', async () => {
+    const abgesetzt = async () => {
+      const entry = buildValidMatches(tournament).find((candidate) => candidate.externalId === FIRST.id)!;
+      await h.engine.ensureMatch(entry.matchId, entry.ctx, 'T');
+      const commands = new MatchCommands({ engine: h.engine, store: h.store, sender: h.sender, accountId: h.value.accountId });
+      await commands.skip(entry.matchId, entry.ctx, 'leitung');
+      await settle();
+      h.api.mockClear();
+    };
+    const { view, card } = await enterInFirstCard(3, 1, abgesetzt);
+    const frage = await view.findByText('Spiel war abgesetzt – trotzdem Ergebnis eintragen?');
+    expect(frage).toBeTruthy();
+
+    await act(async () => { fireEvent.click(view.getByText('Nein')); await settle(); });
+
+    expect(h.api).not.toHaveBeenCalled();
+    expect(card().textContent).not.toMatch(/3\s*:\s*1/);
+    expect(view.getByTestId('home-points').textContent).toBe('0');
   });
 });
