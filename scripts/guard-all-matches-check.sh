@@ -68,9 +68,10 @@ while IFS= read -r line; do
     SEEN_TARGET=1
   elif [[ "$SEEN_TARGET" -eq 0 ]]; then
     BEFORE+=("$line")
-  elif [[ "$(basename "$line")" == 20261110_001_* ]]; then
+  elif [[ "$(basename "$line")" == 20261110_* ]]; then
     # A-11 (20261110_001) setzt A-10 voraus (Fail-fast: reset_match_results) -- ein Rueckweg von A-10 setzt den
     # Rueckweg von A-11 voraus. Deshalb nicht in A5 (Lauf nach dem Rueckweg) und nicht ohne die Migration.
+    # A-27 (_002) und A-34 (_003) haengen per Fail-fast an _001 bzw. _002 -- ebenso nicht in A5.
     continue
   else
     AFTER+=("$line")
@@ -522,7 +523,7 @@ run_assertions() {
   # UR: Zeilen SPAETERER Migrationen (20261028_006) sind im normalen Lauf erwartungsgemaess f -- dort laufen die
   # spaeteren Migrationen erst nach dem Rueckweg (A5, wie match-kit-check.sh). A-11 (20261110_001) laeuft hier nie (s. o.).
   check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migrationen 20261028_006, 20261110_001)" "" \
-    "$(grep -v '|t$' <<<"$priv" | grep -vE '^(match-event-author-names-|role-permissions-check-mvp-rights|matches-update-only-manage-schedule|monitors-writes-manage-screens)' || true)"
+    "$(grep -v '|t$' <<<"$priv" | grep -vE '^(match-event-author-names-|role-permissions-check-mvp-rights|matches-update-only-manage-schedule|monitors-writes-manage-screens|role-checks-device-roles|has-permission-device-roles-for-anonymous|tournaments-insert-real-account-only|anon-no-write-public-tables|device-roles-guard-trigger|hook-before-user-created-auth-admin-only|auth-users-block-anonymous-upgrade|field-control-|append-match-events-checks-field-control)' || true)"
   check S "Rechte-Assertion: die 8 A-10-Zeilen vorhanden und |t" \
     "matches-bump-change-revision-definer-no-client-execute|t,matches-bump-change-revision-trigger-active|t,matches-guard-engine-columns-insert-and-update|t,matches-guard-engine-columns-unconditional|t,reset-match-results-definer-search-path|t,reset-match-results-execute-only-authenticated|t,tournaments-guard-change-revision-invoker-no-client-execute|t,tournaments-guard-change-revision-trigger-active|t" \
     "$(grep -E '^(matches-guard-engine-columns-(insert-and-update|unconditional)|reset-match-results|matches-bump-change-revision|tournaments-guard-change-revision)' <<<"$priv" | sort | paste -sd, -)"
