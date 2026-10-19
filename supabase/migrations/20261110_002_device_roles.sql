@@ -18,6 +18,8 @@
 --   R-A27-8. Die fuenf toten Funktionen der 3-Turniere-Regel entfallen.
 --   T9. public.hook_before_user_created(event): Auth-Hook "Before User Created" -- nur anonyme Geraetesitzungen
 --       entstehen ueber die Schnittstelle; Konten legt der Betreiber an.
+--   T10. Trigger block_anonymous_upgrade auf auth.users: eine anonyme Sitzung wird nie per updateUser/linkIdentity
+--       zum Konto (Review K1, C-ANON-ZU-KONTO).
 --
 -- Abweichung vom Brief-Entwurf (Schritt-0-Beleg 4): is_real_account() liest die Claims ueber current_setting wie
 -- auth.jwt() selbst (request.jwt.claim, sonst request.jwt.claims) statt auth.jwt() aufzurufen -- das Pruef-Image
@@ -297,5 +299,30 @@ COMMENT ON FUNCTION public.hook_before_user_created(jsonb) IS
   'A-27 Auth-Hook "Before User Created": nur anonyme Geraetesitzungen entstehen ueber die Schnittstelle (403 sonst).';
 REVOKE ALL ON FUNCTION public.hook_before_user_created(jsonb) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.hook_before_user_created(jsonb) TO supabase_auth_admin;
+
+-- ============================================================================================
+-- T10. Aus einer Geraetesitzung wird kein Konto (@AN-006, Befund C-ANON-ZU-KONTO, Review A-27 K1). Der Hook greift nur
+--      beim ANLEGEN; updateUser({email|phone}) bzw. linkIdentity aendern einen bestehenden anonymen Nutzer und machen ihn
+--      sonst zum echten Konto. Der Trigger lehnt den Uebergang is_anonymous true -> false ab (auch fuer den Auth-Dienst;
+--      Konten legt der Betreiber neu an). to_jsonb statt Spaltenbezug: im Pruef-Image fehlt auth.users.is_anonymous.
+-- ============================================================================================
+CREATE OR REPLACE FUNCTION public.block_anonymous_upgrade() RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF coalesce((to_jsonb(OLD) ->> 'is_anonymous')::boolean, false)
+     AND NOT coalesce((to_jsonb(NEW) ->> 'is_anonymous')::boolean, false) THEN
+    RAISE EXCEPTION 'Nicht erlaubt: aus einer Geraetesitzung wird kein Konto (Konten legt der Betreiber an).'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.block_anonymous_upgrade() FROM PUBLIC, anon, authenticated;
+DROP TRIGGER IF EXISTS block_anonymous_upgrade ON auth.users;
+CREATE TRIGGER block_anonymous_upgrade
+  BEFORE UPDATE ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.block_anonymous_upgrade();
 
 COMMIT;

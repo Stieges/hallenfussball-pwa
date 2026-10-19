@@ -616,4 +616,20 @@ SELECT 'hook-before-user-created-auth-admin-only',
                         AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
                         AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0)
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.hook_before_user_created(jsonb)')), false)
+-- A-27 Fixrunde 1 (Review K1, @AN-006, C-ANON-ZU-KONTO): Trigger block_anonymous_upgrade auf auth.users aktiv (BEFORE UPDATE,
+-- FOR EACH ROW), Funktion ohne EXECUTE fuer PUBLIC/anon/authenticated. Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'auth-users-block-anonymous-upgrade',
+       coalesce((SELECT t.tgenabled = 'O' AND (t.tgtype & 2) <> 0 AND (t.tgtype & 1) <> 0 AND (t.tgtype & 16) <> 0
+                        AND t.tgfoid = to_regprocedure('public.block_anonymous_upgrade()')
+                        AND NOT has_function_privilege('anon', t.tgfoid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', t.tgfoid, 'EXECUTE')
+                        AND NOT EXISTS (SELECT 1 FROM pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                         WHERE p.oid = t.tgfoid AND a.grantee = 0)
+                   FROM pg_trigger t
+                   JOIN pg_class c ON c.oid = t.tgrelid
+                   JOIN pg_namespace n ON n.oid = c.relnamespace
+                  -- ueber den Katalog statt to_regclass('auth.users'): die CI-Leserolle hat kein USAGE auf Schema auth
+                  WHERE n.nspname = 'auth' AND c.relname = 'users'
+                    AND t.tgname = 'block_anonymous_upgrade' AND NOT t.tgisinternal), false)
 ;

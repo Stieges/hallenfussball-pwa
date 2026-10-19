@@ -281,3 +281,30 @@ a11_mark "@AN-005 hook-ereignis-ohne-user-kein-fehler-abgelehnt         " "$(a27
 a11_mark "@AN-005 hook-ereignis-null-kein-fehler-abgelehnt              " "$(a27_hook "NULL")" "403"
 r="$(a27_sql authenticated "$U_OWNER" "SELECT public.hook_before_user_created('{}'::jsonb);")"
 a11_mark "@AN-006 hook-nicht-fuer-authenticated-ausfuehrbar             " "$(grep -c 'permission denied for function hook_before_user_created' <<<"$r")" "1"
+
+# --- (v) Fixrunde 1 K1 (@AN-006, C-ANON-ZU-KONTO): aus einer Geraetesitzung wird kein Konto ----------------------------
+# Das Pruef-Image hat keine Spalte auth.users.is_anonymous (ALTER auf auth.users nicht erlaubt). Gemessen wird deshalb
+# (1) dass der Trigger auf auth.users haengt und (2) die Trigger-Funktion selbst an einer gleich gebauten Tabelle
+# (nie committete Transaktion, als supabase_admin). Den Weg durch den Auth-Dienst belegt der Wegwerf-Stack
+# (A-27-hook-beweis.log) und die Cloud-E2E @AN-006.
+a27_admin() {
+  docker exec -i -e PGPASSWORD=postgres "$CONTAINER_NAME" psql -h 127.0.0.1 -U supabase_admin -d postgres -X -q -tA <<SQL 2>&1 | grep -vE '^(BEGIN|ROLLBACK|CREATE TABLE|CREATE TRIGGER|INSERT 0 [0-9]+)?$' | sed 's/^ERROR: */fehler: /' | head -1
+BEGIN;
+CREATE TEMP TABLE a27_users (id uuid, email text, is_anonymous boolean) ON COMMIT DROP;
+CREATE TRIGGER a27_block BEFORE UPDATE ON a27_users FOR EACH ROW EXECUTE FUNCTION public.block_anonymous_upgrade();
+INSERT INTO a27_users VALUES ('$U_ANON_DEVICE', NULL, true), ('$U_OWNER', 'owner@rls-matrix.test', false);
+$1
+ROLLBACK;
+SQL
+}
+a11_mark "@AN-006 trigger-block-anonymous-upgrade-haengt-an-auth-users  " \
+  "$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT count(*) FROM pg_trigger WHERE tgrelid = 'auth.users'::regclass AND tgname = 'block_anonymous_upgrade' AND tgenabled = 'O'")" "1"
+a11_mark "@AN-006 lena-setzt-email-und-wird-konto-abgelehnt             " \
+  "$(a27_admin "UPDATE a27_users SET email = 'lena@example.test', is_anonymous = false WHERE id = '$U_ANON_DEVICE'; SELECT 'durchgelassen';")" \
+  "fehler: Nicht erlaubt: aus einer Geraetesitzung wird kein Konto (Konten legt der Betreiber an)."
+a11_mark "@AN-006 gegen-lena-bleibt-anonym-andere-aenderung-gelingt     " \
+  "$(a27_admin "UPDATE a27_users SET email = NULL WHERE id = '$U_ANON_DEVICE'; SELECT 'anonym=' || is_anonymous FROM a27_users WHERE id = '$U_ANON_DEVICE';")" "anonym=true"
+a11_mark "@AN-006 gegen-olli-konto-aendert-email                        " \
+  "$(a27_admin "UPDATE a27_users SET email = 'olli-neu@rls-matrix.test' WHERE id = '$U_OWNER'; SELECT email FROM a27_users WHERE id = '$U_OWNER';")" "olli-neu@rls-matrix.test"
+a11_mark "@AN-006 gegen-auth-users-update-eines-kontos-gelingt          " \
+  "$(docker exec -i -e PGPASSWORD=postgres "$CONTAINER_NAME" psql -h 127.0.0.1 -U supabase_admin -d postgres -X -q -tA -c "BEGIN; UPDATE auth.users SET email = 'olli-neu@rls-matrix.test' WHERE id = '$U_OWNER'; SELECT email FROM auth.users WHERE id = '$U_OWNER'; ROLLBACK;" 2>&1 | grep -vE '^(BEGIN|ROLLBACK)?$' | head -1)" "olli-neu@rls-matrix.test"

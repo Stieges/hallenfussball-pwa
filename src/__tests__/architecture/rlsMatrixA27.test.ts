@@ -40,6 +40,12 @@ describe('A-27 Server-Zeilen der RLS-Matrix (scripts/rls-matrix.d/spur-geraete-a
     expect(labels('@AN-005').length).toBeGreaterThan(0);
   });
 
+  it('@AN-006 Fixrunde 1 K1: Umwandlung einer Gerätesitzung in ein Konto abgelehnt, mit Gegenbeispielen', () => {
+    expect(labels('@AN-006').some((l) => l.includes('lena-setzt-email-und-wird-konto-abgelehnt'))).toBe(true);
+    expect(labels('@AN-006').some((l) => l.includes('gegen-olli-konto-aendert-email'))).toBe(true);
+    expect(a27).toMatch(/widerrufener-helfer-zugang-hat-kein-schreibrecht/);
+  });
+
   it('die anonymen Identitäten tragen den Claim is_anonymous (claims_line), owner-anonymous eingeschlossen', () => {
     expect(matrix).toMatch(/ANONYMOUS_UIDS=" \$\(uuid_for user:owner-anonymous\) \$U_ANON_DEVICE \$U_HELPER_DEVICE \$U_SCREEN_DEVICE \$U_ANON_COADMIN "/);
     expect(matrix).toMatch(/\\"is_anonymous\\":true/);

@@ -9,6 +9,7 @@
  * @AN-045 Tom (Helfer-Zugang ohne Konto) legt kein Turnier an.
  * @ME-059 der gekoppelte Hallen-Rechner: Tor abgelehnt, Monitor-Einstellung bleibt. Gegen: Maria (Co-Admin) ändert ihn.
  * @AN-006 / @AN-005 Konto direkt beim Server anlegen → abgelehnt, es entsteht kein Konto. Gegen: Gerätesitzung entsteht.
+ * @AN-006 (Review K1, C-ANON-ZU-KONTO) eine Gerätesitzung macht sich nicht per E-Mail zum Konto (Trigger auf auth.users).
  */
 import { test, expect } from './fixtures';
 import { getLocalServiceRoleClient } from './helpers';
@@ -39,6 +40,23 @@ test.describe('A-27 Geräte-Rollen an der Schnittstelle', () => {
     expect(res.status).toBe(403);
     const users = (await (await fetch(`${url}/auth/v1/admin/users?per_page=1000`, { headers })).json()) as { users: { email?: string }[] };
     expect(users.users.some((u) => u.email === email)).toBe(false);
+  });
+
+  test('@AN-006 eine anonyme Gerätesitzung setzt eine E-Mail: abgelehnt, bleibt anonym, kein Turnier', async () => {
+    const { url, anonKey, headers } = getLocalServiceRoleClient();
+    const lena = await anonymousSession();
+    const umwandeln = await fetch(`${url}/auth/v1/user`, {
+      method: 'PUT',
+      headers: { apikey: anonKey, Authorization: `Bearer ${lena.accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: `a27-umwandlung-${Date.now()}@example.test` }),
+    });
+    expect(umwandeln.status).toBeGreaterThanOrEqual(400);
+    const nutzer = (await (await fetch(`${url}/auth/v1/admin/users/${lena.userId}`, { headers })).json()) as { is_anonymous?: boolean; email?: string };
+    expect(nutzer.is_anonymous).toBe(true);
+    expect(nutzer.email ?? '').toBe('');
+    const turnier = await restWithToken(lena.accessToken, 'POST', 'tournaments', { ...STAND, owner_id: lena.userId });
+    expect(turnier.status).toBeGreaterThanOrEqual(400);
+    expect((await serviceRest('GET', `tournaments?owner_id=eq.${lena.userId}&select=id`)).json).toEqual([]);
   });
 
   test('@HE-082 Lena legt weder Turnier noch Vorlage noch Mitgliedschaft an', async () => {

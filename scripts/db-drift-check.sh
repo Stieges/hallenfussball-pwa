@@ -151,7 +151,7 @@ pending_assertions_for() {
       echo "role-permissions-check-mvp-rights matches-update-only-manage-schedule monitors-writes-manage-screens"
       ;;
     20261110_002_device_roles.sql)
-      echo "role-checks-device-roles has-permission-device-roles-for-anonymous tournaments-insert-real-account-only anon-no-write-public-tables device-roles-guard-trigger hook-before-user-created-auth-admin-only"
+      echo "role-checks-device-roles has-permission-device-roles-for-anonymous tournaments-insert-real-account-only anon-no-write-public-tables device-roles-guard-trigger hook-before-user-created-auth-admin-only auth-users-block-anonymous-upgrade"
       ;;
     *)
       return 1
@@ -502,6 +502,8 @@ PRIVILEGE_ASSERTION_NAMES=(
   "anon-no-write-public-tables"
   "device-roles-guard-trigger"
   "hook-before-user-created-auth-admin-only"
+  # A-27 Fixrunde 1 (Review K1): anonyme Sitzung wird nie zum Konto.
+  "auth-users-block-anonymous-upgrade"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
