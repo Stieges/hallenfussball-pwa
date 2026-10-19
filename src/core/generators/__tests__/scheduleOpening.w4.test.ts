@@ -289,6 +289,32 @@ describe('@W4-045 Geht die Eröffnung durch den Veranstalter nur mit längerer P
     expect(Math.max(...extra)).toBe(1);
   });
 
+  describe.each([
+    { aufbau: '7+4 auf 2 Feldern', fields: 2, minRest: 1 },
+    { aufbau: '7+4 auf einem Feld, Mindestpause 2', fields: 1, minRest: 2 },
+  ])('Kürzere Dauer geht vor kürzerer längster Pause: $aufbau, Veranstalter in der Vierergruppe', ({ fields, minRest }) => {
+    const base = scenarioOptions([7, 4], fields, { minRestSlotsPerTeam: minRest });
+    const ohne = generateGroupPhaseSchedule(base);
+    const vierer = [...base.groups.values()][1].map((team) => team.id);
+    const results = vierer.map((host) => ({ host, result: generateGroupPhaseScheduleWithReport({ ...base, hostTeamIds: [host] }) }));
+
+    it.each(vierer.map((_, index) => ({ index })))('Vierer-Team $index: eröffnet als Heim, keine längere Dauer, Pause höchstens 1 länger', ({ index }) => {
+      const { host, result } = results[index];
+      const costs = result.notices.filter((n) => n.kind === 'hostOpeningCosts');
+
+      expect(homeOf(firstMatch(result.matches))).toBe(host);
+      expect(slotCount(result.matches)).toBe(slotCount(ohne));
+      expect(costs.every((n) => n.duration === undefined)).toBe(true);
+      for (const n of costs) {
+        expect(n.longestPause).toEqual({ before: longestSlotsBetween(ohne), after: longestSlotsBetween(ohne) + 1 });
+      }
+    });
+
+    it('mindestens ein Vierer-Team: die Meldung nennt die um 1 längere Pause', () => {
+      expect(results.some(({ result }) => result.notices.some((n) => n.kind === 'hostOpeningCosts' && n.longestPause !== undefined))).toBe(true);
+    });
+  });
+
   it('6+4 auf 3 Feldern, Mindestpause 2: mindestens eine Markierung verlängert die Dauer', () => {
     const base = scenarioOptions([6, 4], 3, { minRestSlotsPerTeam: 2 });
     const ohne = generateGroupPhaseSchedule(base);
