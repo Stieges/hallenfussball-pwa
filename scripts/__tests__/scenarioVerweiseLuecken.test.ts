@@ -67,3 +67,16 @@ describe('@TA-015 unbekannter Verweis im describe-Titel (A3)', () => {
     expect(lauf().status).toBe(0)
   })
 })
+
+describe('@TA-013 test.info().fail() ist eine Markierung (A4)', () => {
+  it('@TA-013 test.info().fail() im Rumpf wird erkannt und ohne Verweis gemeldet', () => {
+    schreibe('src/i.test.ts', "test('Fall', async () => {\n  test.info().fail()\n})\n")
+    expect(gemeldet(lauf().stdout)).toEqual(['src/i.test.ts:2'])
+  })
+
+  it('@TA-013 Gegenbeispiel: expect.fail(..) ist keine Markierung', () => {
+    schreibe('src/i.test.ts', "test('Fall', async () => {\n  expect.fail('absichtlich')\n})\n")
+    const r = lauf()
+    expect(r.stdout).toMatch(/Erwartet rot \(it\.fails, test\.fail\): 0,/)
+  })
+})

@@ -224,8 +224,8 @@ export function testTexte(quelltext) {
       texte.push({ text: a.titelText, regulaer, start: a.start, a, markiert, imRumpf })
     }
   })
-  // testInfo.fail(..) hat keinen Aufruf-Eintrag: eigene Rumpf-Markierung ohne Titel
-  for (const t of maske.matchAll(/(?<![.\w$])testInfo\.fail\s*(?=\()/g)) {
+  // testInfo.fail(..) und test.info().fail(..) haben keinen Aufruf-Eintrag: eigene Rumpf-Markierung ohne Titel
+  for (const t of maske.matchAll(/(?<![.\w$])(?:testInfo|test\.info\(\))\.fail\s*(?=\()/g)) {
     texte.push({ text: '', regulaer: true, start: t.index, a: { start: t.index, ab: t.index + t[0].length, titelText: '', mods: '' }, markiert: true, imRumpf: true })
   }
   const innerhalb = (x, pos) => x.start < pos && pos < x.ende
