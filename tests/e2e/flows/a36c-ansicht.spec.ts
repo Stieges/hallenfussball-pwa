@@ -93,7 +93,7 @@ test.describe('A-36c Zuschauer-Seite 360×640 (/live/MESS26)', () => {
 });
 
 test.describe('A-36c Verwaltung 360×640 (Spielplan)', () => {
-  test('@OB-064 @OB-066 Finale läuft: auch im Spielplan der Verwaltung Abzeichen „Live“ statt „beendet“ (C-SPIELPLAN-LAUFEND-ENGINE-QUELLE)', async ({ page }) => {
+  test('@OB-064 @OB-066 Finale läuft: auch im Spielplan der Verwaltung Abzeichen „Live“ statt „beendet“ (Befund: Spielplan-Abzeichen aus der Engine-Quelle)', async ({ page }) => {
     await oeffne(page, HANDY, '/#/tournament/hallencup-messlauf/schedule', '[data-testid^="final-card-"]');
     const finale = karte(page, FINALE);
     await finale.scrollIntoViewIfNeeded();

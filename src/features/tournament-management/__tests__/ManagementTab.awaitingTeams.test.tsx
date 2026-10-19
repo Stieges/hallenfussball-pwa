@@ -338,7 +338,7 @@ describe('ManagementTab – @SL-056 @SL-117 das nächste Spiel des Felds steht b
   // BEFUND C-COCKPIT-AUSGEFALLEN-BEREIT (Ziel-Record Spiel leiten, Paket B-10a1 `readyMatchOf`): `ManagementTab.currentMatchData` wählt das
   // erste Spiel des Felds ohne Ergebnis und überspringt ausgefallene (`tournament.matches[].matchStatus: 'skipped'`) nicht. Der Test steht
   // nach dem Gherkin rot und wird nicht an den Code angepasst; mit B-10a1 grün (dann `it.fails` entfernen).
-  it.fails('@SL-117 ein ausgefallenes Spiel 13 steht nicht bereit: nach Spiel 11 steht Spiel 15 zum Anpfiff bereit', async () => {
+  it.fails('@SL-117 C-COCKPIT-AUSGEFALLEN-BEREIT ein ausgefallenes Spiel 13 steht nicht bereit: nach Spiel 11 steht Spiel 15 zum Anpfiff bereit', async () => {
     setup({ matches: [spiel11, spiel13, spiel15], skipped: [S13] });
     expect(await screen.findByTestId('cockpit-stub')).toHaveAttribute('data-match-id', S15);
   });
