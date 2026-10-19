@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { Tournament } from '../../../../../types/tournament';
 import { hallencupOstGespielt, OST_ID, OST_CODE } from '../../../../../core/models/__fixtures__/hallencupOstGespielt';
+import { categorizeTournament } from '../../../../../utils/tournamentCategories';
 import { initRealDeI18n } from '../../../../../test/realDeI18n';
 
 vi.unmock('i18next');
@@ -92,5 +93,35 @@ describe('Admin Center: Turnier duplizieren', () => {
   it('@W5-028 Gegenbeispiel: Kopie einer Kopie bekommt „(Probe)“ nur einmal', () => {
     render(<SettingsCategory tournamentId={OST_ID} tournament={{ ...hallencupOstGespielt(), title: 'Hallencup Ost (Probe)' }} onTournamentUpdate={vi.fn()} />);
     expect(screen.getByTestId('duplicate-tournament-name')).toHaveValue('Hallencup Ost (Probe)');
+  });
+
+  it('@W5-025 Datum der Probe: Original in der Zukunft, vorbelegt und in der Kopie gespeichert', async () => {
+    const saved = await duplicate(hallencupOstGespielt());
+    expect(saved.startDate).toBe('2099-11-26');
+  });
+
+  it('@W5-025 Datum der Probe: Original in der Vergangenheit, die Kopie bekommt morgen und ist „kommend“', async () => {
+    const saved = await duplicate({ ...hallencupOstGespielt(), startDate: '2020-01-01', date: '2020-01-01' });
+    expect(saved.startDate! > new Date().toISOString().slice(0, 10)).toBe(true);
+    expect(categorizeTournament(saved)).toBe('upcoming');
+  });
+
+  it('@W5-025 das Datum lässt sich vor dem Speichern ändern', async () => {
+    render(<SettingsCategory tournamentId={OST_ID} tournament={hallencupOstGespielt()} onTournamentUpdate={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('Datum der Probe'), { target: { value: '2099-12-24' } });
+    fireEvent.click(screen.getByTestId('duplicate-tournament-button'));
+    await waitFor(() => expect(saveTournament).toHaveBeenCalledTimes(1));
+    expect(saveTournament.mock.calls[0][0].startDate).toBe('2099-12-24');
+  });
+
+  it('K5 das Namensfeld ist über sein Label auffindbar', () => {
+    render(<SettingsCategory tournamentId={OST_ID} tournament={hallencupOstGespielt()} onTournamentUpdate={vi.fn()} />);
+    expect(screen.getByLabelText('Name der Kopie')).toBe(screen.getByTestId('duplicate-tournament-name'));
+  });
+
+  it('B6 der Beschreibungstext spricht von der Probe, nicht von „Vorlage für nächstes Jahr“', () => {
+    render(<SettingsCategory tournamentId={OST_ID} tournament={hallencupOstGespielt()} onTournamentUpdate={vi.fn()} />);
+    expect(screen.queryByText(/nächstes Jahr/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Kopie fürs Proben/)).toBeInTheDocument();
   });
 });

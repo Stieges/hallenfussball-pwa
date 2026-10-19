@@ -425,10 +425,10 @@ function AppContent() {
   };
 
   // Handler for copying/duplicating a tournament
-  const handleCopyTournament = async (tournament: Tournament, title: string) => {
+  const handleCopyTournament = async (tournament: Tournament, title: string, startDate: string) => {
     try {
       // Eine gemeinsame Kopierlogik mit dem Admin Center (core/models/tournamentCopy, Paket KP)
-      await copyTournament(tournament, title);
+      await copyTournament(tournament, title, startDate);
       // Stay on dashboard - user can see the new tournament
     } catch (error) {
       console.error('[App] Failed to copy tournament:', error);
@@ -729,10 +729,10 @@ function AppContent() {
       <CopyTournamentDialog
         tournament={copySource}
         onCancel={() => setCopySource(null)}
-        onConfirm={(title) => {
+        onConfirm={(title, startDate) => {
           const source = copySource;
           setCopySource(null);
-          if (source) { void handleCopyTournament(source, title); }
+          if (source) { void handleCopyTournament(source, title, startDate); }
         }}
       />
       <ConfirmDialog {...softDeleteDialog.dialogProps} />

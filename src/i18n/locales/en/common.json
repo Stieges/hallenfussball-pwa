@@ -20,6 +20,7 @@
   "tournament": {
     "copyDialog": {
       "title": "Rehearsal copy",
+      "dateLabel": "Date of the rehearsal",
       "nameLabel": "Name of the copy",
       "hint": "The copy starts without results, helpers or screens. The original stays unchanged.",
       "confirm": "Create copy"

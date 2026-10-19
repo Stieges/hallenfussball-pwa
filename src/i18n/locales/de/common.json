@@ -20,6 +20,7 @@
   "tournament": {
     "copyDialog": {
       "title": "Kopie fürs Proben",
+      "dateLabel": "Datum der Probe",
       "nameLabel": "Name der Kopie",
       "hint": "Die Kopie startet ohne Ergebnisse, ohne Helfer und ohne Bildschirme. Das Original bleibt unverändert.",
       "confirm": "Kopie anlegen"

@@ -18,7 +18,8 @@ import { CategoryPage, CollapsibleSection } from '../shared';
 import { FieldManagement } from '../../../tournament-management/FieldManagement';
 import { useTournaments } from '../../../../hooks';
 import { useCopyTournament } from '../../../../hooks/useCopyTournament';
-import { proposeCopyTitle } from '../../../../core/models/tournamentCopy';
+import { Input } from '../../../../components/ui/Input';
+import { proposeCopyTitle, proposeProbeDate } from '../../../../core/models/tournamentCopy';
 import type { Tournament } from '../../../../types/tournament';
 
 // =============================================================================
@@ -140,6 +141,7 @@ export function SettingsCategory({
 
   // State for duplicate function
   const [duplicateName, setDuplicateName] = useState(proposeCopyTitle(tournament.title, tCommon('tournament.copySuffix')));
+  const [duplicateDate, setDuplicateDate] = useState(proposeProbeDate(tournament, new Date()));
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [duplicateSuccess, setDuplicateSuccess] = useState<string | null>(null);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
@@ -161,6 +163,7 @@ export function SettingsCategory({
       const duplicatedTournament = await copyTournament(
         tournament,
         duplicateName.trim() || proposeCopyTitle(tournament.title, tCommon('tournament.copySuffix')),
+        duplicateDate || undefined,
       );
       const newId = duplicatedTournament.id;
 
@@ -177,7 +180,7 @@ export function SettingsCategory({
     } finally {
       setIsDuplicating(false);
     }
-  }, [tournament, duplicateName, copyTournament, navigate, t, tCommon]);
+  }, [tournament, duplicateName, duplicateDate, copyTournament, navigate, t, tCommon]);
 
   return (
     <CategoryPage
@@ -194,13 +197,21 @@ export function SettingsCategory({
         </p>
 
         <div style={styles.formGroup}>
-          <label style={styles.label}>{t('settingsSection.copyName')}</label>
-          <input
-            type="text"
+          <Input
+            label={t('settingsSection.copyName')}
             value={duplicateName}
-            onChange={(e) => setDuplicateName(e.target.value)}
+            onChange={setDuplicateName}
             data-testid="duplicate-tournament-name"
-            style={{ ...styles.input, width: '100%', textAlign: 'left' }}
+          />
+        </div>
+
+        <div style={styles.formGroup}>
+          <Input
+            type="date"
+            label={tCommon('tournament.copyDialog.dateLabel')}
+            value={duplicateDate}
+            onChange={setDuplicateDate}
+            data-testid="duplicate-tournament-date"
           />
         </div>
 

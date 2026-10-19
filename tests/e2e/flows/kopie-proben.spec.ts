@@ -19,6 +19,12 @@ async function bild(page: Page, name: string, groesse: string) {
   await page.screenshot({ path: join(BILDER, `${name}-${groesse}.png`) });
 }
 
+/** Bild erst, wenn Einblend-Animationen zu Ende sind (Review #280 B7) */
+async function warteBisRuhig(page: Page) {
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+  await page.waitForTimeout(300);
+}
+
 async function oeffneKopieDialog(page: Page, groesse: { width: number; height: number }) {
   await page.setViewportSize(groesse);
   await installiereSaat(page.context(), leseSaat('hallencup-messlauf'));
@@ -28,6 +34,8 @@ async function oeffneKopieDialog(page: Page, groesse: { width: number; height: n
   await trigger.click();
   await page.getByTestId('action-menu-item-copy').click();
   await expect(page.getByTestId('copy-dialog-name')).toBeVisible();
+  await expect(page.getByTestId('copy-dialog-date')).toHaveValue('2026-11-14');
+  await warteBisRuhig(page);
 }
 
 for (const groesse of GROESSEN) {
@@ -41,7 +49,10 @@ for (const groesse of GROESSEN) {
 
       await page.getByTestId('copy-dialog-confirm').click();
       await expect(page.getByTestId('copy-dialog-name')).toBeHidden();
-      await expect(page.getByText(vorschlag, { exact: true })).toBeVisible();
+      const probeKarte = page.getByText(vorschlag, { exact: true });
+      await expect(probeKarte).toBeVisible();
+      await probeKarte.scrollIntoViewIfNeeded();
+      await warteBisRuhig(page);
       await bild(page, '2-startseite-mit-probe-kopie', groesse.name);
     });
 
@@ -74,6 +85,7 @@ for (const groesse of GROESSEN) {
 
       await page.goto('/#/archiv');
       await expect(page.locator('[data-testid^="tournament-card-"]', { hasText: kopieName })).toBeVisible();
+      await warteBisRuhig(page);
       await bild(page, '3-archiv', groesse.name);
     });
   });
