@@ -2,8 +2,8 @@
  * D5b-D5d, D6b: Netz, Klärungsliste, Schnelleingabe und Update während eines Spiels (Plan (b)).
  * D5d ist grün (#278); die übrigen sind expectedFail, jeder mit einer Soll-Wirkung, die der Besitzer baut.
  */
-import { expect } from '@playwright/test';
-import { fetchTurniertagBracket, fetchTurniertagMatches, fetchTurniertagTeams, findFinalByLabel, expectPageAnchor, expectSollMarker, getRows, openSpielplanFinalrunde, openTurniertagPath, TURNIERTAG_ID, vorbedingung } from './shared';
+import { expect, type Page } from '@playwright/test';
+import { fetchTurniertagBracket, fetchTurniertagMatches, fetchTurniertagTeams, expectPageAnchor, expectSollMarker, getRows, openSpielplanFinalrunde, openTurniertagPath, TURNIERTAG_ID, vorbedingung, type TurniertagMatch } from './shared';
 import { newRoleContext, openCockpit } from '../../engineHelpers';
 import { serviceRest } from '../../restAsRole';
 import type { StepContext, TurniertagStep } from './types';
@@ -43,43 +43,49 @@ async function klaerungsliste({ asRole }: StepContext): Promise<void> {
 const EINGABE_SPALTEN = 'team_a_id,team_b_id,score_a,score_b,overtime_score_a,overtime_score_b,penalty_score_a,penalty_score_b,match_status,decided_by,timer_elapsed_seconds,timer_start_time,timer_paused_at,actual_start,actual_end,live_state,skipped_at,skipped_reason';
 
 /**
+ * Id des Spiels, das die Finalrunden-Tabelle des Spielplans mit Tore-Feldern zeigt. Die Tabelle zeigt heute nur das letzte
+ * Spiel der Finalrunde (die übrigen stehen als Karten unter "Gruppenphase", ohne diese Felder); welches das ist, hängt vom
+ * Seed ab und wird gelesen statt angenommen.
+ */
+async function spielDerFinalrundenTabelle(page: Page, finals: readonly TurniertagMatch[]): Promise<TurniertagMatch> {
+  const eingaben = page.locator('[data-testid^="match-score-input-"][data-testid$="-home"]');
+  await expect(eingaben.first(), 'Tore-Feld der Finalrunden-Tabelle').toBeVisible({ timeout: 10000 });
+  const kennungen = await eingaben.evaluateAll((els) => els.map((el) => el.getAttribute('data-testid') ?? ''));
+  const spiel = finals.find((m) => kennungen.includes(`match-score-input-${m.id}-home`));
+  if (!spiel) {
+    throw new Error(`Kein Spiel der Finalrunde in der Tabelle (Felder: ${kennungen.join(', ')}).`);
+  }
+  return spiel;
+}
+
+/**
  * D5d: Schnelleingabe in der Finalrunden-Tabelle des Spielplans, zweistelliges Ergebnis 10:2 ohne vorzeitiges Speichern
  * (@FU-101, C-SCHNELLEINGABE-TASTENDRUCK; behoben mit #278). Gespeichert wird erst mit Enter oder `blur()`.
  *
  * Ausgangszustand: Die Finalrunde ist an dieser Stelle noch nicht besetzt (D8 schließt die Gruppen erst später ab), und die
- * Schnelleingabe verlangt zwei Teams ("teamsMissing"). Der Schritt besetzt das Finale daher für sich mit zwei Gruppenteams
- * und setzt es nach dem Prüfen auf den Stand davor zurück (Ereignisse des Spiels weg, Zeile wie vorher), damit D8-D12 das
- * Finale unverändert vorfinden: D10 spielt es später regulär, D11/D10b lesen die Ergebnisse der Finalrunde.
+ * Schnelleingabe verlangt zwei Teams ("teamsMissing"). Der Schritt besetzt das Spiel der Tabelle daher für sich mit zwei
+ * Gruppenteams und setzt es nach dem Prüfen auf den Stand davor zurück (Ereignisse des Spiels weg, Zeile wie vorher), damit
+ * D8-D12 es unverändert vorfinden (D8/D9/D10 besetzen und spielen die Finalrunde später selbst).
  */
 async function schnelleingabe({ asRole }: StepContext): Promise<void> {
   const { finals } = await fetchTurniertagBracket();
-  const spiel = findFinalByLabel(finals, 'Finale');
-  const vorher = (await getRows<Record<string, unknown>>(`matches?id=eq.${spiel.id}&select=${EINGABE_SPALTEN}`, 'Finale vor D5d'))[0];
   const teams = await fetchTurniertagTeams();
   expect(teams.length, 'der Turniertag-Cup hat mindestens zwei Teams').toBeGreaterThanOrEqual(2);
+  const ownerPage = await asRole('owner');
+  await openSpielplanFinalrunde(ownerPage);
+  await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
+  const spiel = await spielDerFinalrundenTabelle(ownerPage, finals);
+  const vorher = (await getRows<Record<string, unknown>>(`matches?id=eq.${spiel.id}&select=${EINGABE_SPALTEN}`, 'Spiel vor D5d'))[0];
   try {
-    await vorbedingung('Finale für die Schnelleingabe mit zwei Teams besetzen (wird danach zurückgesetzt)', async () => {
+    await vorbedingung('Spiel der Finalrunden-Tabelle mit zwei Teams besetzen (wird danach zurückgesetzt)', async () => {
       const res = await serviceRest('PATCH', `matches?id=eq.${spiel.id}`, { team_a_id: teams[0].id, team_b_id: teams[1].id });
-      expect(res.status, `Finale besetzen: ${res.text}`).toBeLessThan(300);
+      expect(res.status, `Spiel besetzen: ${res.text}`).toBeLessThan(300);
     });
-    const ownerPage = await asRole('owner');
+    await ownerPage.reload();
     await openSpielplanFinalrunde(ownerPage);
-    await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
     const heim = ownerPage.locator(`[data-testid="match-score-input-${spiel.id}-home"]`);
     const gast = ownerPage.locator(`[data-testid="match-score-input-${spiel.id}-away"]`);
-    // Die Liste rendert nur Zeilen im Umfeld des sichtbaren Bereichs: über die Seite scrollen, bis die Zeile des Finales steht.
-    await expect(async () => {
-      for (const anteil of [0, 0.4, 0.7, 1]) {
-        await ownerPage.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), anteil);
-        await ownerPage.waitForTimeout(250);
-        if (await heim.count() > 0) {
-          await heim.scrollIntoViewIfNeeded();
-          return;
-        }
-      }
-      throw new Error('Zeile des Finales nicht gerendert');
-    }).toPass({ timeout: 20000 });
-    await expect(heim, 'Tore-Feld Heim der Finalrunden-Tabelle').toBeVisible({ timeout: 5000 });
+    await expect(heim, 'Tore-Feld Heim der Finalrunden-Tabelle').toBeVisible({ timeout: 10000 });
     await heim.pressSequentially('10');
     await expect(heim, 'beide Ziffern bleiben stehen, kein Speichern nach der ersten').toHaveValue('10', { timeout: 3000 });
     await gast.pressSequentially('2');
@@ -91,7 +97,7 @@ async function schnelleingabe({ asRole }: StepContext): Promise<void> {
   } finally {
     await serviceRest('DELETE', `match_events?match_id=eq.${spiel.id}`);
     const zurueck = await serviceRest('PATCH', `matches?id=eq.${spiel.id}`, vorher);
-    expect(zurueck.status, `Finale zurücksetzen: ${zurueck.text}`).toBeLessThan(300);
+    expect(zurueck.status, `Spiel zurücksetzen: ${zurueck.text}`).toBeLessThan(300);
   }
 }
 
