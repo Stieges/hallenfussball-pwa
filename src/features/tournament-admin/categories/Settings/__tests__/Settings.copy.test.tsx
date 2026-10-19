@@ -7,6 +7,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { Tournament } from '../../../../../types/tournament';
 import { hallencupOstGespielt, OST_ID, OST_CODE } from '../../../../../core/models/__fixtures__/hallencupOstGespielt';
+import { initRealDeI18n } from '../../../../../test/realDeI18n';
+
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+await initRealDeI18n();
 
 const saveTournament = vi.fn<(tournament: Tournament) => Promise<void>>();
 vi.mock('../../../../../hooks', () => ({
@@ -19,8 +24,11 @@ import { SettingsCategory } from '../index';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
-async function duplicate(original: Tournament): Promise<Tournament> {
+async function duplicate(original: Tournament, neuerName?: string): Promise<Tournament> {
   render(<SettingsCategory tournamentId={original.id} tournament={original} onTournamentUpdate={vi.fn()} />);
+  if (neuerName !== undefined) {
+    fireEvent.change(screen.getByTestId('duplicate-tournament-name'), { target: { value: neuerName } });
+  }
   fireEvent.click(screen.getByTestId('duplicate-tournament-button'));
   await waitFor(() => expect(saveTournament).toHaveBeenCalledTimes(1));
   return saveTournament.mock.calls[0][0];
@@ -63,5 +71,23 @@ describe('Admin Center: Turnier duplizieren', () => {
     await duplicate(original);
     expect(original).toEqual(hallencupOstGespielt());
     expect(saveTournament.mock.calls.every(([saved]) => saved.id !== OST_ID)).toBe(true);
+  });
+
+  it('@W5-028 die Kopie heißt „Hallencup Ost (Probe)“', async () => {
+    render(<SettingsCategory tournamentId={OST_ID} tournament={hallencupOstGespielt()} onTournamentUpdate={vi.fn()} />);
+    expect(screen.getByTestId('duplicate-tournament-name')).toHaveValue('Hallencup Ost (Probe)');
+    fireEvent.click(screen.getByTestId('duplicate-tournament-button'));
+    await waitFor(() => expect(saveTournament).toHaveBeenCalledTimes(1));
+    expect(saveTournament.mock.calls[0][0].title).toBe('Hallencup Ost (Probe)');
+  });
+
+  it('@W5-028 Olli kann den Namen vor dem Speichern ändern', async () => {
+    const saved = await duplicate(hallencupOstGespielt(), 'Generalprobe Samstag');
+    expect(saved.title).toBe('Generalprobe Samstag');
+  });
+
+  it('@W5-028 Gegenbeispiel: Kopie einer Kopie bekommt „(Probe)“ nur einmal', () => {
+    render(<SettingsCategory tournamentId={OST_ID} tournament={{ ...hallencupOstGespielt(), title: 'Hallencup Ost (Probe)' }} onTournamentUpdate={vi.fn()} />);
+    expect(screen.getByTestId('duplicate-tournament-name')).toHaveValue('Hallencup Ost (Probe)');
   });
 });

@@ -137,6 +137,9 @@ function isTournamentRunning(tournament: Tournament, now: Date): boolean {
 function isTournamentUpcoming(tournament: Tournament, now: Date): boolean {
   if (tournament.status !== 'published') {return false;}
 
+  // Abgeschlossen/archiviert heißt „nicht mehr kommend“, auch bei Datum in der Zukunft (@W5-027: Generalprobe vor dem Turniertag)
+  if (isTournamentCompleted(tournament)) {return false;}
+
   const tournamentDate = getTournamentDateTime(tournament);
   if (!tournamentDate) {return false;}
 

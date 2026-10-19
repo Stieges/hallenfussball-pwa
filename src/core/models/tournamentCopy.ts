@@ -83,6 +83,16 @@ function remapByMatchId(
 }
 
 /**
+ * Vorschlag für den Namen einer Kopie fürs Proben: „<Name> (Probe)“ (@W5-028). Trägt der Name den Zusatz schon
+ * (Kopie einer Kopie), bleibt er einmalig: „Hallencup Ost (Probe)“ wird nicht zu „… (Probe) (Probe)“.
+ */
+export function proposeCopyTitle(title: string, suffix: string): string {
+  const trimmed = title.trim();
+  if (trimmed.toLowerCase().endsWith(suffix.toLowerCase())) { return trimmed; }
+  return `${trimmed} ${suffix}`;
+}
+
+/**
  * Das kopierte Turnier – EINE Funktion für beide Einstiege (Dashboard „Kopieren“ und Admin Center „Duplizieren“),
  * @W5-024 bis @W5-027: Teams, Gruppen, Spielplan und Regeln bleiben, alles andere wird neu.
  *

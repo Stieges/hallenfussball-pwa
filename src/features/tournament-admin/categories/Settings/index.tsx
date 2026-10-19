@@ -18,6 +18,7 @@ import { CategoryPage, CollapsibleSection } from '../shared';
 import { FieldManagement } from '../../../tournament-management/FieldManagement';
 import { useTournaments } from '../../../../hooks';
 import { useCopyTournament } from '../../../../hooks/useCopyTournament';
+import { proposeCopyTitle } from '../../../../core/models/tournamentCopy';
 import type { Tournament } from '../../../../types/tournament';
 
 // =============================================================================
@@ -132,12 +133,13 @@ export function SettingsCategory({
   onTournamentUpdate,
 }: SettingsCategoryProps) {
   const { t } = useTranslation('admin');
+  const { t: tCommon } = useTranslation('common');
   const navigate = useNavigate();
   const { saveTournament } = useTournaments();
   const copyTournament = useCopyTournament(saveTournament);
 
   // State for duplicate function
-  const [duplicateName, setDuplicateName] = useState(`${tournament.title} (Kopie)`);
+  const [duplicateName, setDuplicateName] = useState(proposeCopyTitle(tournament.title, tCommon('tournament.copySuffix')));
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [duplicateSuccess, setDuplicateSuccess] = useState<string | null>(null);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
@@ -158,7 +160,7 @@ export function SettingsCategory({
       // Ergebnisse, Abschluss und Monitore
       const duplicatedTournament = await copyTournament(
         tournament,
-        duplicateName.trim() || `${tournament.title} (Kopie)`,
+        duplicateName.trim() || proposeCopyTitle(tournament.title, tCommon('tournament.copySuffix')),
       );
       const newId = duplicatedTournament.id;
 
@@ -175,7 +177,7 @@ export function SettingsCategory({
     } finally {
       setIsDuplicating(false);
     }
-  }, [tournament, duplicateName, copyTournament, navigate, t]);
+  }, [tournament, duplicateName, copyTournament, navigate, t, tCommon]);
 
   return (
     <CategoryPage
@@ -197,6 +199,7 @@ export function SettingsCategory({
             type="text"
             value={duplicateName}
             onChange={(e) => setDuplicateName(e.target.value)}
+            data-testid="duplicate-tournament-name"
             style={{ ...styles.input, width: '100%', textAlign: 'left' }}
           />
         </div>
