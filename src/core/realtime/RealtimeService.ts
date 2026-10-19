@@ -29,6 +29,16 @@ import type {
 export class RealtimeService {
   private channels = new Map<string, RealtimeChannel>();
   private subscriptionOptions = new Map<string, TournamentSubscriptionOptions>();
+  /**
+   * @FU-102: realtime-js baut Kanaele asynchron ab und liefert `channel(topic)` den alten Kanal
+   * zurueck, solange er nicht fertig abgebaut ist (dann wirft `.on()` nach `subscribe()`); ein spaet
+   * fertiger Abbau entfernt zudem ueber das Thema auch einen neueren Kanal. Darum: je Turnier den
+   * laufenden Abbau merken und erst danach neu anlegen.
+   */
+  private pendingRemovals = new Map<string, Promise<void>>();
+  /** Gueltigkeitsmarke je Turnier: nur das jeweils letzte Neuabo darf anlegen. */
+  private subscriptionTokens = new Map<string, number>();
+  private tokenSeq = 0;
   private state: RealtimeState = {
     status: 'disconnected',
     lastConnectedAt: null,
@@ -62,7 +72,7 @@ export class RealtimeService {
 
     const { tournamentId } = options;
 
-    // Unsubscribe if already subscribed
+    // Unsubscribe if already subscribed (Abbau laeuft ggf. noch -> startSubscription wartet darauf)
     this.unsubscribeTournament(tournamentId);
 
     // Store options for reconnection
@@ -78,18 +88,15 @@ export class RealtimeService {
       return;
     }
 
-    this.createSubscription(tournamentId, options);
+    this.startSubscription(tournamentId);
   }
 
   /**
    * Unsubscribe from tournament changes
    */
   unsubscribeTournament(tournamentId: string): void {
-    const channel = this.channels.get(tournamentId);
-    if (channel && supabase) {
-      void supabase.removeChannel(channel);
-      this.channels.delete(tournamentId);
-    }
+    this.subscriptionTokens.delete(tournamentId);
+    this.removeTournamentChannel(tournamentId);
 
     this.subscriptionOptions.delete(tournamentId);
     this.state.subscribedTournaments.delete(tournamentId);
@@ -104,7 +111,7 @@ export class RealtimeService {
    * Unsubscribe from all tournaments
    */
   unsubscribeAll(): void {
-    for (const tournamentId of this.channels.keys()) {
+    for (const tournamentId of [...this.subscriptionOptions.keys()]) {
       this.unsubscribeTournament(tournamentId);
     }
   }
@@ -287,18 +294,65 @@ export class RealtimeService {
     };
   }
 
-  private removeAllChannels(): void {
-    if (!supabase) { return; }
+  /**
+   * Baut den Kanal eines Turniers ab (sofort aus der Verwaltung, der Abbau selbst ist asynchron und
+   * wird je Turnier in `pendingRemovals` festgehalten). Wirft nie.
+   */
+  private removeTournamentChannel(tournamentId: string): void {
+    const channel = this.channels.get(tournamentId);
+    if (!channel || !supabase) { return; }
+    this.channels.delete(tournamentId);
 
-    for (const channel of this.channels.values()) {
-      void supabase.removeChannel(channel);
+    const previous = this.pendingRemovals.get(tournamentId) ?? Promise.resolve();
+    let removal: Promise<void>;
+    try {
+      removal = Promise.resolve(supabase.removeChannel(channel)).then(() => undefined, () => undefined);
+    } catch {
+      removal = Promise.resolve();
     }
-    this.channels.clear();
+    const settled: Promise<void> = Promise.all([previous, removal]).then(() => {
+      if (this.pendingRemovals.get(tournamentId) === settled) {
+        this.pendingRemovals.delete(tournamentId);
+      }
+    });
+    this.pendingRemovals.set(tournamentId, settled);
+  }
+
+  /**
+   * Legt das Abo eines Turniers neu an: erst alten Kanal abbauen, dann (nach fertigem Abbau) genau
+   * einen neuen anlegen. Ein spaeteres Neuabo, Abmelden oder Pausieren macht ein wartendes ungueltig.
+   */
+  private startSubscription(tournamentId: string): void {
+    const token = ++this.tokenSeq;
+    this.subscriptionTokens.set(tournamentId, token);
+    this.removeTournamentChannel(tournamentId);
+
+    const pending = this.pendingRemovals.get(tournamentId);
+    if (!pending) {
+      this.createIfCurrent(tournamentId, token);
+      return;
+    }
+    void pending.then(() => this.createIfCurrent(tournamentId, token));
+  }
+
+  private createIfCurrent(tournamentId: string, token: number): void {
+    if (this.subscriptionTokens.get(tournamentId) !== token) { return; }
+    if (this.state.isPaused || this.channels.has(tournamentId)) { return; }
+    const options = this.subscriptionOptions.get(tournamentId);
+    if (!options) { return; }
+    this.createSubscription(tournamentId, options);
+  }
+
+  private removeAllChannels(): void {
+    this.subscriptionTokens.clear();
+    for (const tournamentId of [...this.channels.keys()]) {
+      this.removeTournamentChannel(tournamentId);
+    }
   }
 
   private resubscribeAll(): void {
-    for (const [tournamentId, options] of this.subscriptionOptions) {
-      this.createSubscription(tournamentId, options);
+    for (const tournamentId of [...this.subscriptionOptions.keys()]) {
+      this.startSubscription(tournamentId);
     }
   }
 
