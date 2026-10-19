@@ -120,6 +120,25 @@ describe('OfflineRepository.isAwaitingFirstUpload (@FU-098, Gegenbeispiele @FU-0
     expect(await repo.isAwaitingFirstUpload('T')).toBe(false);
   });
 
+  it('@FU-100 Gegenbeispiel (Review V2): Gerät eines anderen Kontos – Ollis nie hochgeladene Kopie, Tom angemeldet mit eigenem wartenden Tor → Tom wird nicht Eigentümer', async () => {
+    net.online = false;
+    session.userId = 'olli';
+    const cloud = createFakeCloud({ tournament: liveCup(1, { title: 'anderes Turnier' }), revisions: revisions() });
+    const olliRepo = new OfflineRepository(new LocalStorageRepository(), cloud.fake as never, 'olli');
+    await olliRepo.save(freshLiveCup()); // Ollis Kopie: Marker „olli“, nie in der Cloud
+    olliRepo.mutationQueue.dispose();
+
+    session.userId = 'tom';
+    repo = new OfflineRepository(new LocalStorageRepository(), cloud.fake as never, 'tom');
+    await repo.updateMatch('T', { id: 'spiel-4', scoreA: 1 }); // Toms Warteschlange hält etwas für den Live-Cup
+
+    const local = (stores.raw.get('tournaments') as Tournament[]).find((t) => t.id === 'T');
+    expect(local?.ownerId).toBe('olli');
+    expect(local?.changeRevision).toBeUndefined();
+    expect(repo.mutationQueue.hasPending('T')).toBe(true);
+    expect(await repo.isAwaitingFirstUpload('T')).toBe(false);
+  });
+
   it('@FU-099 Gegenbeispiel: ohne lokale Kopie wartet nichts auf eine erste Übertragung', async () => {
     session.userId = 'fremder';
     const cloud = createFakeCloud({ tournament: liveCup(1), revisions: revisions() });
