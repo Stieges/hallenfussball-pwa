@@ -95,17 +95,20 @@ describe('A-11 A6: Fristprüfung im Drift-Check (L3)', () => {
 
   const isoDay = (offsetDays: number): string => new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
 
+  // Eigener Prozess (bash + Kopie der Migrationen): unter Last der ganzen Suite länger als die 5-s-Vorgabe.
+  const SCRIPT_TEST_TIMEOUT_MS = 60_000;
+
   it('Frist gestern (UTC): harter Abbruch mit klarer Meldung, bevor ein Container startet', () => {
     const { status, out } = runWithDue(isoDay(-1));
     expect(status).toBe(1);
     expect(out).toContain(`Frist ${isoDay(-1)} für ${LISTED} überschritten`);
     expect(out).not.toContain('FAKE-docker');
-  });
+  }, SCRIPT_TEST_TIMEOUT_MS);
 
   it('Gegenbeispiel: Frist morgen – die Ausnahme wird gedruckt und der Lauf geht bis zum Container weiter', () => {
     const { status, out } = runWithDue(isoDay(1));
     expect(out).toContain(`PENDING-LIVE: ausgenommen bis ${isoDay(1)} (noch nicht live): ${LISTED}`);
     expect(out).toContain('FAKE-docker');
     expect(status).toBe(FAKE_EXIT);
-  });
+  }, SCRIPT_TEST_TIMEOUT_MS);
 });
