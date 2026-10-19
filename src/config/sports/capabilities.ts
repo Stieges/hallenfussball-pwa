@@ -88,11 +88,10 @@ export const UNIMPLEMENTED_CAPABILITIES: UnimplementedCapability[] = [
     field: 'features.hasDFBKeys',
     requires: 'Ein-/Ausblenden des DFB-Schlüssel-Systems je nach Sportart',
     missing:
-      'DFBKeySystem.tsx (src/features/tournament-creation/components/DFBKeySystem.tsx) wird im ' +
-      'Wizard unabhängig von diesem Flag angezeigt — es gibt keine Stelle, die ' +
-      'sportConfig.features.hasDFBKeys prüft, um die Komponente ein-/auszublenden. Würde eine ' +
-      'zweite Sportart registriert, bliebe das DFB-System sichtbar, obwohl es nur für Fußball ' +
-      'Sinn ergibt.',
+      'Im MVP ist der DFB-Schlüssel @W4-028 aus: Der Schritt Modus/System rendert DFBKeySystem.tsx ' +
+      'nicht, und der Spielplan-Generator bekommt kein dfbPatternCode. Das Flag wird deshalb ' +
+      'von keiner Stelle ausgewertet. Die Reparatur der Tabelle (@W4-015, nach dem MVP) ' +
+      'muss das Flag wieder auswerten, bevor es für eine zweite Sportart zählt.',
   },
   {
     field: 'features.hasBambiniMode',
