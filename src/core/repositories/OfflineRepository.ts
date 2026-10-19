@@ -365,12 +365,13 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             const localList = await this.localListForAccount();
             const localOnly = localList.filter(t => !cloudIds.has(t.id));
 
-            // @W5-027: Eine lokale Änderung, die noch in der Warteschlange wartet (z. B. archivierte Kopie), ist neuer als die
-            // Cloud-Zeile. Dann gilt die lokale Fassung, sonst käme beim Neuladen kurz der alte Stand zurück.
+            // @W5-027: Wartet eine lokale Änderung noch in der Warteschlange (z. B. archivierte Kopie) UND ist sie neuer als die
+            // Cloud-Zeile, gilt die lokale Fassung, sonst käme beim Neuladen kurz der alte Stand zurück. Ohne offene Änderung
+            // (Geräteuhr weicht ab, abgelehnte Änderung im Dead-Letter) gilt der Server.
             const localById = new Map(localList.map(t => [t.id, t]));
             const merged = cloudList.map(cloudT => {
                 const localT = localById.get(cloudT.id);
-                return localT && Date.parse(localT.updatedAt) > Date.parse(cloudT.updatedAt) ? localT : cloudT;
+                return localT && this.mutationQueue.hasPending(cloudT.id) && Date.parse(localT.updatedAt) > Date.parse(cloudT.updatedAt) ? localT : cloudT;
             });
 
             // Return cloud list + unsynced local tournaments
