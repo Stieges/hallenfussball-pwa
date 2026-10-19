@@ -7,13 +7,22 @@
  * Rechte: ohne Konto gilt die Person lokal als Eigentümer (useMyTournamentRole), die Eingaben sind da.
  */
 
+import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { freezeClock, buildVisualTournament } from './helpers';
 
 const TOURNAMENT_ID = 'visual-anzeige-tournament';
 
+/** Hohes Fenster in der Breite des Profils: der Bereich steht ganz im Bild und die feste Kopfzeile der Seite deckt ihn nicht zu. */
+async function hohesFenster(page: Page): Promise<void> {
+  const profil = page.viewportSize();
+  if (profil === null) { throw new Error('kein Viewport im Profil'); }
+  await page.setViewportSize({ width: profil.width, height: 1400 });
+}
+
 test('Anzeige für Zuschauer: Vorbelegung (Blau/Rot, kein Hinweis)', async ({ page, seedIndexedDB }) => {
   await freezeClock(page);
+  await hohesFenster(page);
   await seedIndexedDB({ tournaments: [buildVisualTournament({ id: TOURNAMENT_ID, title: 'Nordstadt Hallencup' })] });
 
   await page.goto(`/#/tournament/${TOURNAMENT_ID}/admin/visibility`);
@@ -26,6 +35,7 @@ test('Anzeige für Zuschauer: Vorbelegung (Blau/Rot, kein Hinweis)', async ({ pa
 
 test('Anzeige für Zuschauer: Blau/Navy mit Hinweis „zu ähnlich“', async ({ page, seedIndexedDB }) => {
   await freezeClock(page);
+  await hohesFenster(page);
   await seedIndexedDB({ tournaments: [buildVisualTournament({ id: TOURNAMENT_ID, title: 'Nordstadt Hallencup' })] });
 
   await page.goto(`/#/tournament/${TOURNAMENT_ID}/admin/visibility`);

@@ -80,8 +80,6 @@ test.describe('@ZM-152 @ZM-153 Anzeige für Zuschauer in den Einstellungen', () 
     await expect(page.getByTestId('spectator-display-away-color')).toContainText('Rot');
     await expect(page.getByTestId('spectator-display-preview').getByRole('img')).toHaveCount(2);
     await expect(page.getByTestId('spectator-display-similar-hint')).toHaveCount(0);
-    await page.getByTestId('spectator-display-preview').scrollIntoViewIfNeeded();
-    await bild(page, 'einstellung-vorbelegung');
   });
 
   test('@ZM-153 Olli stellt Gast auf Navy: Hinweis, speichern, Monitor Feld 1 zeigt den Gast-Kasten weiß', async ({ page }) => {
@@ -89,13 +87,12 @@ test.describe('@ZM-152 @ZM-153 Anzeige für Zuschauer in den Einstellungen', () 
     await zeigeEinstellung(page);
     await waehle(page, 'away', '#0D1B4C');
     await expect(page.getByTestId('spectator-display-similar-hint')).toContainText('Diese beiden Farben sehen sich zu ähnlich.');
-    await page.getByTestId('spectator-display-preview').scrollIntoViewIfNeeded();
-    await bild(page, 'einstellung-navy');
     await page.getByTestId('spectator-display-save').click();
     await expect(page.getByText('Gespeichert')).toBeVisible();
     await zeigeMonitor(page);
+    // der Monitor übernimmt die gespeicherte Einstellung spätestens beim nächsten Abruf (Poll-Takt)
+    await expect.poll(() => flaeche(page, 'away'), { timeout: 30000 }).toBe(WEISS);
     expect(await flaeche(page, 'home')).toBe(BLAU);
-    expect(await flaeche(page, 'away')).toBe(WEISS);
   });
 
   test('@ZM-153 Gegenbeispiel Blau/Rot gespeichert: Monitor zeigt Rot, nicht Weiß', async ({ page }) => {
@@ -146,5 +143,35 @@ test.describe('@ZM-159 Farbe der Kästen am Monitor Feld 1', () => {
       expect(await flaeche(page, 'away')).toBe(fall.gast);
       await bild(page, `monitor-fall-${fall.name.charAt(0).toLowerCase()}`);
     });
+  }
+});
+
+/** T2-UI: die Einstellung in beiden Formaten (Handy 360×640, Laptop 1280×720) und beiden Themen; jedes Bild aus einem frischen Seitenaufruf. */
+test.describe('T2-UI Bilder der Einstellung', () => {
+  test.skip(!BILDER, 'nur mit SA23_BILDER');
+  const formate = [{ id: '360x640', width: 360, height: 640 }, { id: '1280x720', width: 1280, height: 720 }];
+  for (const format of formate) {
+    for (const thema of ['light', 'dark'] as const) {
+      for (const navy of [false, true]) {
+        test(`Bild ${navy ? 'Navy' : 'Vorbelegung'} ${format.id} ${thema}`, async ({ page }) => {
+          await page.emulateMedia({ colorScheme: thema });
+          await installiereSaat(page.context(), saatMitKit(undefined));
+          await page.setViewportSize({ width: format.width, height: format.height });
+          await zeigeEinstellung(page);
+          if (navy) {
+            await waehle(page, 'away', '#0D1B4C');
+            await expect(page.getByTestId('spectator-display-similar-hint')).toBeVisible();
+          }
+          // Bereich an den oberen Rand, unter die feste Kopfzeile der Seite (Mockup zeigt Titel und Vorschau oben)
+          await page.getByTestId('spectator-display-section').evaluate((el) => {
+            el.scrollIntoView({ block: 'start' });
+            for (let p = el.parentElement; p !== null; p = p.parentElement) {
+              if (p.scrollTop > 0) { p.scrollTop -= 72; break; }
+            }
+          });
+          await bild(page, `einstellung-${navy ? 'navy' : 'vorbelegung'}-${format.id}-${thema === 'light' ? 'hell' : 'dunkel'}`);
+        });
+      }
+    }
   }
 });
