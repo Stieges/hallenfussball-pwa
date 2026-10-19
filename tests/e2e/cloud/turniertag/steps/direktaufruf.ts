@@ -3,8 +3,8 @@
  * parametrisierter Test, jede Beispielzeile ist ein Fall (Fallname = Kennung + Zeilenschlüssel).
  * Olli ist angemeldet, öffnet den kopierten Link in einem NEUEN Fenster (frischer Context mit
  * derselben Anmeldung) und sieht genau die Seite. A-24 ergänzt den Direktaufruf je Seite als Schritt.
- * Besitzer der noch roten Zeilen: der Routing-Auftrag der Oberfläche (Filter und Wizard-Schritt
- * stehen heute nicht in der URL).
+ * Spielplan-Filter (`?g=`) und Wizard-Schritt (`?step=`) stehen seit dem Paket RT in der Adresse; alle Zeilen
+ * sind erfüllt (Besitzer: A-24 Direktaufruf je Seite).
  */
 import { expect } from '@playwright/test';
 import { E2E_DRAFT_CUP_ID } from '../../testData';
@@ -22,15 +22,15 @@ const CASES: readonly DirektCase[] = [
   {
     key: 'Spielplan Gruppe B',
     seite: 'den Spielplan des Hallencup Ost, gefiltert auf Gruppe B',
-    expectedFail: true,
+    expectedFail: false,
     open: async ({ asRole }) => {
       const page = await asRole('owner');
-      await page.goto(`/#/tournament/${TURNIERTAG_ID}/schedule?group=B`);
+      await page.goto(`/#/tournament/${TURNIERTAG_ID}/schedule?g=B`);
       await page.waitForLoadState('networkidle');
       await expectPageAnchor(page.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
       // Der Filter steht in der URL: die Gruppe ist gewählt UND der Link bleibt erhalten.
       await expect(page.locator('[data-testid="filter-group"]')).toHaveValue('B', { timeout: 5000 });
-      expect(page.url()).toContain('group=B');
+      expect(page.url()).toContain('g=B');
     },
   },
   {
@@ -48,12 +48,12 @@ const CASES: readonly DirektCase[] = [
   {
     key: 'Wizard Schritt 3',
     seite: 'Schritt 3 beim Anlegen des Entwurfs',
-    expectedFail: true,
+    expectedFail: false,
     open: async ({ asRole }) => {
       const page = await asRole('owner');
       await page.goto(`/#/tournament/${E2E_DRAFT_CUP_ID}/edit?step=3`);
       await page.waitForLoadState('networkidle');
-      // Die Schritt-Leiste existiert heute (Seitenanker); aktiv ist derzeit ein anderer Schritt.
+      // Schritt-Leiste als Seitenanker; aktiv ist der Schritt aus der Adresse.
       await expectPageAnchor(page.locator('[aria-current="step"]').first(), 'Wizard-Schritt-Leiste');
       // Aktiver Schritt des Wizard-Reiters ist Schritt 3 (aria-current="step").
       await expect(page.locator('[aria-current="step"]')).toHaveAttribute('aria-label', /^Schritt 3:/, { timeout: 5000 });
