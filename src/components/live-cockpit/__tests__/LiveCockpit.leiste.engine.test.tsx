@@ -93,8 +93,9 @@ describe('Daumenleiste am Handy: fünf Plätze (Entscheidung A2)', () => {
 });
 
 describe('Rückgängig mit 1-s-Sperre (@SL-108, @SL-107)', () => {
-  async function torUndFoul(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  async function torUndFoul(user: ReturnType<typeof userEvent.setup>, frueherFoulHeim = false): Promise<void> {
     await starte(user);
+    if (frueherFoulHeim) { zu(60_000); await user.click(screen.getByTestId('foul-button-home')); } // bleibt gültig: hält die Liste der Einträge nicht leer
     zu(180_000);
     await user.click(screen.getByTestId('foul-button-away'));
     zu(200_000);
@@ -126,6 +127,27 @@ describe('Rückgängig mit 1-s-Sperre (@SL-108, @SL-107)', () => {
     fireEvent.click(screen.getByTestId('match-undo-button'));
     await waitFor(() => expect(retractCount()).toBe(2));
     expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0');
+  });
+
+  it('@SL-107 die Liste der Einträge zeigt das Tor und das Foul als zurückgenommen (ein früherer, gültiger Eintrag bleibt; bei nur zurückgenommenen Einträgen zeigt die Liste nichts, U5)', async () => {
+    const user = userEvent.setup();
+    render(<Harness />); await torUndFoul(user, true);
+    fireEvent.click(screen.getByTestId('match-undo-button'));
+    await waitFor(() => expect(retractCount()).toBe(1));
+    zu(208_000);
+    fireEvent.click(screen.getByTestId('match-undo-button'));
+    await waitFor(() => expect(retractCount()).toBe(2));
+    const zeilen = await screen.findAllByTestId('event-row-retracted');
+    expect(zeilen).toHaveLength(2);
+    expect(zeilen.map((z) => z.textContent).join(' ')).toMatch(/Tor/i);
+    expect(zeilen.map((z) => z.textContent).join(' ')).toMatch(/Foul/i);
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 1');
+  });
+
+  it('@SL-107 Gegenbeispiel: ohne Rückgängig steht kein Eintrag als zurückgenommen in der Liste', async () => {
+    const user = userEvent.setup();
+    render(<Harness />); await torUndFoul(user, true);
+    expect(screen.queryAllByTestId('event-row-retracted')).toHaveLength(0);
   });
 });
 
