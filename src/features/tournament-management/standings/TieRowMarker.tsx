@@ -8,10 +8,15 @@ import { TieMarker as TieMarkerBadge } from '../../../components/ui/molecules/Ti
 import type { TieMarker } from '../../../core/standings/tieViews';
 
 export const TieRowMarker = ({ marker }: { marker: TieMarker | undefined }) => {
-  const { t } = useTranslation('tournament');
   if (marker === undefined) {
     return null;
   }
+  // eigener Block unter dem Teamnamen (nicht neben dem Namen)
+  return <div><MarkerBadge marker={marker} /></div>;
+};
+
+const MarkerBadge = ({ marker }: { marker: TieMarker }) => {
+  const { t } = useTranslation('tournament');
   switch (marker.kind) {
   case 'need':
     return <TieMarkerBadge tone="warn" symbol="warn" data-kind="need">{t('standingsTie.marker.need')}</TieMarkerBadge>;

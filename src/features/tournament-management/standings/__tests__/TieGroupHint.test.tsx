@@ -188,13 +188,13 @@ describe('Entschieden: Ergebnis sichtbar, zurücknehmen bis zum Gruppenabschluss
   });
 
   // Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH: „wer wann“ kommt mit dem Verlaufsprotokoll (GA4 A-13b)
-  it.fails('@W2A-063 letzte Zeile: die Turnierleitung sieht, wer wann akzeptiert hat (Besitzer GA4 A-13b)', async () => {
+  it.fails('@W2A-063 letzte Zeile: die Turnierleitung sieht, wer wann akzeptiert hat (Besitzer GA4 A-13b) – Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH', async () => {
     const t = await mitEntscheidung(nikolaus(), shared(['P', 'D']));
     await zeige(t, '', fakeTie());
     expect(screen.getByTestId('tie-decided-info')).toHaveTextContent(/Olli · \d{2}:\d{2}/);
   });
 
-  it.fails('@W2A-071 Zeile 3: Maria sieht, wer wann entschieden hat (Besitzer GA4 A-13b)', async () => {
+  it.fails('@W2A-071 Zeile 3: Maria sieht, wer wann entschieden hat (Besitzer GA4 A-13b) – Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH', async () => {
     const t = await mitEntscheidung(nikolaus(), shootout('D', 'P', 4, 3));
     await zeige(t, '', fakeTie());
     expect(screen.getByTestId('tie-decided-info')).toHaveTextContent(/Olli/);

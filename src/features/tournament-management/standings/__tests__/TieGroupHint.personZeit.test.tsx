@@ -22,22 +22,22 @@ async function zeigeEntschieden(draft: DecisionDraft): Promise<void> {
 }
 
 describe('Person und Zeit der Entscheidung (Besitzer GA4 A-13b, Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH)', () => {
-  it.fails('@W2A-004 Turnierleitung sieht, wer das Strafstoßschießen wann eingetragen hat', async () => {
+  it.fails('@W2A-004 Turnierleitung sieht, wer das Strafstoßschießen wann eingetragen hat – Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH', async () => {
     await zeigeEntschieden(shootout('D', 'P', 4, 3));
     expect(screen.getByTestId('tie-decided-info')).toHaveTextContent(/Olli · \d{2}:\d{2}/);
   });
 
-  it.fails('@ET-027 der Verlauf hält die Entscheidung mit Person, Zeit und Ergebnis fest (Anzeige für die Turnierleitung)', async () => {
+  it.fails('@ET-027 der Verlauf hält die Entscheidung mit Person, Zeit und Ergebnis fest (Anzeige für die Turnierleitung) – Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH', async () => {
     await zeigeEntschieden(shootout('D', 'P', 4, 3));
     expect(screen.getByTestId('tie-decided-info')).toHaveTextContent(/Olli/);
   });
 
-  it.fails('@ET-029 letzte Zeile: die Annahme steht mit Person und Zeit im Verlauf', async () => {
+  it.fails('@ET-029 letzte Zeile: die Annahme steht mit Person und Zeit im Verlauf – Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH', async () => {
     await zeigeEntschieden(shared(['P', 'D']));
     expect(screen.getByTestId('tie-decided-info')).toHaveTextContent(/Olli · \d{2}:\d{2}/);
   });
 
-  it.fails('@W2A-070 die Turnierleitung sieht, wer wann akzeptiert und zurückgenommen hat', async () => {
+  it.fails('@W2A-070 die Turnierleitung sieht, wer wann akzeptiert und zurückgenommen hat – Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH', async () => {
     await zeigeEntschieden(shared(['P', 'D']));
     expect(screen.getByTestId('tie-decided-info')).toHaveTextContent(/zurückgenommen von/);
   });

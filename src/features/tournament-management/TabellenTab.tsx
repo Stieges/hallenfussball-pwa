@@ -351,6 +351,8 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
   const renderRankingView = () => {
     return (
       <div style={{ padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg }}>
+        {/* Gleichstand bei Jeder gegen jeden (eine Tabelle ohne Gruppen), Paket TB-B: ganz oben, die Taste bleibt ohne Scrollen erreichbar */}
+        {!hasGroups && tieUi.hint('')}
         <h2 style={titleStyle}>{t('ranking.title')}</h2>
 
         {/* Platzierungslogik Anzeige */}
@@ -415,9 +417,6 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
             </span>
           </div>
         )}
-
-        {/* Gleichstand bei Jeder gegen jeden (eine Tabelle ohne Gruppen), Paket TB-B */}
-        {!hasGroups && tieUi.hint('')}
 
         {/* Desktop Table View */}
         {!isMobile && (
