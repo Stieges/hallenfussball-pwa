@@ -32,6 +32,11 @@ import {
 /** Zeichenmenge des Servers (`generate_share_code`): kein 0, O, 1, I. */
 const SERVER_CODE = /^[A-HJ-NP-Z2-9]{6}$/;
 
+
+/** review-ca67 A4: nur die Teilen-Felder einer Turnier-Zeile. */
+const sharingOf = (row: { is_public: boolean; share_code: string | null; share_code_created_at: string | null }) =>
+  ({ is_public: row.is_public, share_code: row.share_code, share_code_created_at: row.share_code_created_at });
+
 test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () => {
   // eslint-disable-next-line no-empty-pattern
   test.beforeEach(async ({}, testInfo) => {
@@ -115,7 +120,8 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
         const refused = await restAsRole('helper', 'POST', 'rpc/make_tournament_public', { tournament_id: target });
         expect(refused.status, `Helfer darf ${target} nicht teilen`).toBeGreaterThanOrEqual(400);
         expect(refused.text).toContain('Not authorized');
-        expect(await cupRow(target)).toEqual(before);
+        // nur die Teilen-Felder: andere Dateien ändern den Live-Cup parallel (Version, Ort) – review-ca67 A4
+        expect(sharingOf(await cupRow(target))).toEqual(sharingOf(before));
       }
     } finally {
       await safeCleanup('Z1h Kopie löschen', () => deleteCup(cup.id));
@@ -180,7 +186,7 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
   // B-48b (Besitzer): die App schreibt das Lebenszeichen noch nie in die Datenbank (`record_monitor_heartbeat` prüft die
   // verwaiste Tabelle `monitors`, die Monitore stehen im `config` des Turniers). Bis B-48b gebaut ist, ist dieser Fall
   // erwartet rot; wird er grün, muss `test.fail` fallen.
-  test('@ME-070 Z3 Anzeige "Online" im Monitor-Editor bei Olli und Maria innerhalb von 40 s (Besitzer B-48b)', async ({ browser, page: anonymousMonitor }) => {
+  test('@ME-070 Z3 Anzeige "Online" im Monitor-Editor bei Olli und Maria innerhalb von 40 s (Besitzer B-48b, Befund C-HEARTBEAT)', async ({ browser, page: anonymousMonitor }) => {
     test.fail(true, 'Besitzer B-48b: Lebenszeichen der Monitore kommen noch nicht in der Datenbank an.');
     test.setTimeout(120_000);
     const cup = await cloneReleaseCup('z3');
@@ -218,7 +224,7 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
     await page.goto(`/#/tournament/${cup.id}/settings`);
     await page.waitForLoadState('networkidle');
     await page.getByText('Metadaten bearbeiten').click();
-    await page.locator('input[type="text"]').nth(3).fill(name);
+    await page.getByLabel(/^Veranstaltungsort/).fill(name); // per Beschriftung, nicht per Position (review-ca67 A4)
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect.poll(async () => (await cupRow(cup.id)).location_name, { timeout: 10000 }).toBe(name);
     await page.goto(`/#/tournament/${cup.id}/schedule`);
@@ -391,19 +397,28 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
       await device.page.reload();
       await expect(device.page.getByText(kopie.title).first()).toBeVisible({ timeout: 15000 });
 
-      // @HE-087: Betreiber trägt Maria aus dem Original aus; das schon offene Gerät kann nichts mehr eintragen
+      // @HE-087: Betreiber trägt Maria aus dem Original aus; das schon offene Gerät kann nichts mehr eintragen.
+      // Zwei gültige Ergebnisse (review-ca67 A4): der Tor-Knopf ist schon weg (Rechte neu gelesen) – oder Maria tippt, und das
+      // Gerät zeigt „nicht übernommen“ bzw. nach mindestens 10 s noch „wartet“. Der kurze „wartet“-Zustand direkt nach dem
+      // Tippen zählt nicht. In beiden Fällen bleibt der Spielstand am Server über die ganze Frist 1:0.
       await openCockpit(device.page, original.id, original.matchId);
       await expectEngineMatchRunningUi(device.page);
       const austragen = runVorlage('3', original.id, email);
       expect(austragen.status, austragen.stderr).toBe(0);
       expect(austragen.rows).toHaveLength(1);
-      await enterGoal(device.page, 'home');
-      await expect.poll(async () => {
-        const rejected = await device.page.getByTestId('sync-status-rejected').count();
-        const waiting = await device.page.getByTestId('engine-outbox-waiting').count();
-        return rejected + waiting;
-      }, { message: 'der Server übernimmt das Tor nicht, das Gerät zeigt es', timeout: 20000 }).toBeGreaterThan(0);
-      expect((await fetchMatchRow(original.matchId)).score_a, 'Server hat das zweite Tor nicht übernommen').toBe(1);
+      if (await device.page.getByTestId('goal-button-home').isVisible()) {
+        await enterGoal(device.page, 'home');
+        const getippt = Date.now();
+        await expect.poll(async () => {
+          if (await device.page.getByTestId('sync-status-rejected').count() > 0) { return 'nicht übernommen'; }
+          const wartet = await device.page.getByTestId('engine-outbox-waiting').count() > 0;
+          return wartet && Date.now() - getippt >= 10_000 ? 'wartet' : 'offen';
+        }, { message: 'der Server übernimmt das Tor nicht, das Gerät zeigt es', timeout: 25000, intervals: [1000] }).not.toBe('offen');
+      }
+      for (let blick = 0; blick < 5; blick++) { // über eine Frist stabil, nicht nur ein Blick direkt nach dem Tippen
+        expect((await fetchMatchRow(original.matchId)).score_a, 'Server hat das zweite Tor nicht übernommen').toBe(1);
+        await device.page.waitForTimeout(1000);
+      }
 
       // nach dem Neuladen: Karte weg (auch nicht als "nur lokales" Turnier), die Kopie bleibt; Konto und frühere Einträge bleiben
       await device.page.goto('/#/');
