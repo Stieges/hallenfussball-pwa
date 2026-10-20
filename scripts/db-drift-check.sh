@@ -156,6 +156,9 @@ pending_assertions_for() {
     20261110_003_field_control.sql)
       echo "field-control-no-client-access field-control-rpcs-execute-only-authenticated append-match-events-checks-field-control"
       ;;
+    20261110_004_coadmin_einsatz.sql)
+      echo "share-rpcs-permission-based make-public-keeps-existing-code heartbeats-select-manage-screens"
+      ;;
     *)
       return 1
       ;;
@@ -511,6 +514,10 @@ PRIVILEGE_ASSERTION_NAMES=(
   "field-control-no-client-access"
   "field-control-rpcs-execute-only-authenticated"
   "append-match-events-checks-field-control"
+  # CA-2 (20261110_004_coadmin_einsatz.sql): Co-Admin teilt online und liest die Lebenszeichen der Monitore.
+  "share-rpcs-permission-based"
+  "make-public-keeps-existing-code"
+  "heartbeats-select-manage-screens"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
