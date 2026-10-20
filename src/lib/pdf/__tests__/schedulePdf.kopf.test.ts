@@ -16,6 +16,7 @@ import type { LayoutPage, LayoutText } from './pdfjsLayout';
 import { squash } from './pdfjsText';
 import { fettMap } from './pdfSchnitt';
 import { testUuid } from '../../../test/testIds';
+import { storedSchedule } from './storedSchedule';
 
 const BFV = 'BFV-Richtlinien für Futsal und private Hallenturniere';
 const LONG_50 = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
@@ -52,7 +53,8 @@ function grossesTurnier(): { tournament: Tournament; schedule: GeneratedSchedule
     numberOfGroups: 8,
     finalsConfig: { preset: 'top-16', tiebreaker: 'shootout' },
   });
-  return { tournament, schedule: generateFullSchedule(tournament, 'de') };
+  // 8 Gruppen: seit A-12a nur noch als gespeichertes Turnier (Lesepfad), der Generator legt es nicht mehr an
+  return { tournament, schedule: storedSchedule(tournament, 'de') };
 }
 
 /** Eine Textstelle im Seitenkopf, ohne Leerzeichen am Rand. */

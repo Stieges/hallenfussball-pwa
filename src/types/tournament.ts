@@ -208,6 +208,11 @@ export interface FinalsConfig {
   tiebreaker?: TiebreakerMode;       // Entscheidung bei Unentschieden (Vorgabe je Runde)
   tiebreakerDuration?: number;       // Dauer in Minuten (für Verlängerung/Golden Goal)
   tiebreakerByRound?: Partial<Record<TiebreakerRoundKey, TiebreakerMode>>; // Entscheidung je Runde (überschreibt `tiebreaker`); `placement` = Platzierungsspiele (@W2A-039)
+  /**
+   * A-12a (@TM-004): ausgespielte Plätze außer dem Finale, je Platz wählbar (3, 5, 7). Fehlt der Wert, belegt die Vorlage
+   * vor (`defaultPlacements`: „Top 4“ → [3], „Alle Plätze“ → [3, 5, 7]); `[]` = kein Platzierungsspiel.
+   */
+  placements?: number[];
 }
 
 /**
