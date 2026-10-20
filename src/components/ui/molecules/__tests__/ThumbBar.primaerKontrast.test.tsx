@@ -22,7 +22,7 @@ const leiste = () => render(
   />,
 );
 
-describe('@OB-055 @OB-057 Daumenleiste: Hauptknopf als Vollfläche (C-PRIMAER-VERLAUF-KONTRAST)', () => {
+describe('@OB-055 @OB-057 Daumenleiste: Hauptknopf als Vollfläche, kein Verlauf', () => {
   it('Fläche ist die Vollfläche var(--color-primary), Schrift var(--color-on-primary), kein Verlauf', () => {
     leiste();
     const stil = screen.getByTestId('bar-main').getAttribute('style') ?? '';
