@@ -299,7 +299,9 @@ for k in os.environ["MUT_KEYS"].split():
 sys.stdout.write(s)' < "$SW_FILE" | psql_stdin
   # A-34 und A-25b liegen ueber SW: A-34 unveraendert, A-25b (juengstes cache_columns/apply_effect/match_apply_event)
   # mit denselben Mutationen (Zeile (5) genau einmal), sonst stuende ZA-3s apply_effect ohne '@reopen'-Zielzustand im
-  # Container und die REOPEN-Fixtures waeren aus dem falschen Grund rot.
+  # Container und die REOPEN-Fixtures waeren aus dem falschen Grund rot. Vorher A-10: 20261001_001 hat den alten
+  # Spalten-Schutz zurueckgebracht, den der Fail-fast von A-25b ablehnt.
+  psql_stdin < "$A10_FILE"
   if [[ -n "$A34_FILE" ]]; then psql_stdin < "$A34_FILE"; fi
   if [[ " $* " == *" MUT_CACHE "* && "$(grep -cF -- "$MUT_CACHE" "$A25B_FILE" || true)" -ne 1 ]]; then
     echo "::error::Gegenprobe: Mutationszeile (5) nicht genau einmal in $A25B_MIGRATION" >&2
@@ -571,6 +573,7 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   psql_stdin < "$ZA3_FILE"
   psql_stdin < "$A25A_FILE"
   psql_stdin < "$SW_FILE"
+  psql_stdin < "$A10_FILE"
   if [[ -n "$A34_FILE" ]]; then psql_stdin < "$A34_FILE"; fi
   psql_stdin < "$A25B_FILE"
   psql_stdin <<'SQL'
