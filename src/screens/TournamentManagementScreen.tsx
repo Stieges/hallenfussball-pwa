@@ -91,6 +91,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     tournament,
     schedule,
     currentStandings,
+    overallStandings,
     isLoading,
     loadingError,
     handleTournamentUpdate,
@@ -380,6 +381,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             tournament={tournament}
             schedule={schedule}
             currentStandings={currentStandings}
+            overallStandings={overallStandings}
           />
         )}
         {activeTab === 'management' && (

@@ -90,6 +90,10 @@ const getRoleDescription = (role: TournamentRole, teamNames?: string[]): string 
       return 'Du kannst Ergebnisse eingeben';
     case 'viewer':
       return 'Nur Ansicht';
+    case 'helper':
+      return 'Du hilfst bei diesem Turnier';
+    case 'screen':
+      return 'Dieses Gerät zeigt das Turnier an';
   }
 };
 

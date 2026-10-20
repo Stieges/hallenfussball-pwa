@@ -12,7 +12,7 @@ import { tippeKarte, wartePicker } from '../../../helpers/cockpitNeu';
 import { appendOwner, finishingEvents } from './playViaRpc';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../../../src/types/tournament';
 import { expectPageAnchor, getRows, vorbedingung } from './shared';
-import { ergebnisEreignisse, fetchNikolausSpiele, handyKontext, ladeSpielplan, NIKOLAUS, type NikolausMatch } from './nikolaus-shared';
+import { ergebnisEreignisse, fetchNikolausSpiele, handyKontext, ladeSpielplan, NIKOLAUS, paarung, type NikolausMatch } from './nikolaus-shared';
 import type { StepContext, TurniertagStep } from './types';
 
 /** Öffnet das Cockpit von Spiel 1 am Handy der Turnierleitung (Olli leitet das Spiel selbst). */
@@ -48,12 +48,28 @@ async function spiel1(): Promise<NikolausMatch> {
   return spiele[0];
 }
 
-/** N3a: Spiel 1 steht bereit, Anstoß 16:30; der Anstoß liegt in der Zukunft, also steht dort nichts von „überfällig“ (@SL-118). */
-async function bereitNichtUeberfaellig({ browser }: StepContext): Promise<void> {
-  const spiel = await vorbedingung('Spiel 1 des Nikolaus-Turniers laden', spiel1);
-  const handy = await oeffneHandy(browser, spiel);
+/**
+ * N3a: Spiel 1 steht bereit, Anstoß 16:30; der Anstoß liegt in der Zukunft, also steht dort nichts von „überfällig“ (@SL-118). Die Spielnummern stimmen überall
+ * (C-SPIELNUMMER-FEHLT, @SL-049, @ZM-007): die Spielauswahl im Cockpit der Turnierleitung nennt die Spiele in Spielplan-Reihenfolge als „#1 …“ bis „#15 …“
+ * (nicht „#3 … #15, #1, #2“), und die Zuschauer-Seite trägt Spiel 1 als „Spiel 1:“ und Spiel 2 als „Spiel 2:“ (nicht „Spiel 9“).
+ */
+async function bereitNichtUeberfaellig({ asRole, browser }: StepContext): Promise<void> {
+  const { spiele, namen } = await vorbedingung('Spielplan des Nikolaus-Turniers laden', ladeSpielplan);
+  const handy = await oeffneHandy(browser, spiele[0]);
   await expect(handy.getByTestId('scoreboard'), 'Anstoß 16:30 steht in der Tafel').toContainText('16:30');
   await expect(handy.getByTestId('scoreboard'), 'der Anstoß liegt noch in der Zukunft: nichts ist überfällig').not.toContainText(/überfällig/);
+
+  const leitung = await asRole('owner');
+  await openCockpit(leitung, NIKOLAUS.tournamentId, spiele[0].id);
+  await expectPageAnchor(leitung.getByTestId('team-name-home'), 'Cockpit von Spiel 1 (Turnierleitung)');
+  const optionen = leitung.locator(`select:has(option[value="${spiele[0].id}"]) option:not([value=""])`);
+  await expect(optionen, 'die Spielauswahl nennt alle 15 Spiele').toHaveCount(spiele.length);
+  const erwartet = spiele.map((spiel, index) => new RegExp(`^#${index + 1} - ${paarung(spiel, namen).replace(' gegen ', ' vs ')} \\(${(spiel.scheduled_start ?? '').slice(0, 5)}\\)$`));
+  await expect(optionen, 'Spielauswahl im Cockpit: „#1 …“ bis „#15 …“ in Spielplan-Reihenfolge').toHaveText(erwartet);
+
+  const zuschauer = await oeffneZuschauer(browser);
+  await expect(zeileSpiel1(zuschauer), 'Zuschauer-Seite: Spiel 1 heißt „Spiel 1:“').toBeVisible({ timeout: 10000 });
+  await expect(zeileSpiel2(zuschauer), 'Zuschauer-Seite: Spiel 2 heißt „Spiel 2:“').toBeVisible({ timeout: 10000 });
 }
 
 /**
@@ -83,10 +99,10 @@ async function frueherAnpfiff({ browser }: StepContext): Promise<void> {
   expect((await fetchNikolausSpiele())[1].scheduled_start, 'Spiel 2 steht weiter um 16:40').toBe('16:40:00');
 }
 
-/** Zeile von Spiel 1 auf der Zuschauer-Seite. */
-const zeileSpiel1 = (seite: Page) => seite.locator('[aria-label$="TSV Waging rot gegen TSV 1921 Fridolfing"]:visible');
-/** Zeile von Spiel 2 (die Nummer in der Beschriftung ist nicht verlässlich, C-SPIELNUMMER-FEHLT: `match_number` fehlt). */
-const zeileSpiel2 = (seite: Page) => seite.locator('[aria-label$="DJK Otting gegen TSV Waging blau"]:visible');
+/** Zeile von Spiel 1 auf der Zuschauer-Seite: Beschriftung „Spiel 1: …“ (@ZM-007, @SL-049). */
+const zeileSpiel1 = (seite: Page) => seite.locator('[aria-label="Spiel 1: TSV Waging rot gegen TSV 1921 Fridolfing"]:visible');
+/** Zeile von Spiel 2: „Spiel 2: …“. */
+const zeileSpiel2 = (seite: Page) => seite.locator('[aria-label="Spiel 2: DJK Otting gegen TSV Waging blau"]:visible');
 
 /** Tatsächliche Anpfiffzeit von Spiel 1 (Ortszeit, HH:MM) aus der Datenbank. */
 async function anpfiffzeit(): Promise<string> {
@@ -212,7 +228,7 @@ async function endstandQuittung({ browser }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'N3a', title: 'Spiel 1 steht bereit: Anstoß 16:30, nichts überfällig', scenarios: ['@SL-118'], owner: 'Anstoßzeit mit Datum im Cockpit (gebaut, #295)', expectedFail: false, run: bereitNichtUeberfaellig },
+  { id: 'N3a', title: 'Spiel 1 steht bereit: Anstoß 16:30, nichts überfällig, Spielnummern in Spielauswahl und Zuschauer-Seite', scenarios: ['@SL-118', '@SL-049', '@ZM-007'], owner: 'Anstoßzeit mit Datum im Cockpit (gebaut, #295)', expectedFail: false, run: bereitNichtUeberfaellig },
   { id: 'N3b', title: 'Früher Anpfiff: Spiel 1 läuft ab dem Anpfiff, ohne Rückfrage, Monitor live ohne Neuladen', scenarios: ['@ZP-008', '@ZP-092'], owner: 'B-11 / B-15 (gebaut)', expectedFail: false, run: frueherAnpfiff },
   { id: 'N3c', title: 'Zuschauer-Seite und Monitor zeigen „live“ und die tatsächliche Anpfiffzeit', scenarios: ['@ZP-051', '@ZP-092'], owner: 'B-27', expectedFail: true, run: anpfiffzeitAnzeige },
   { id: 'N4a', title: 'Spiel 1: Tor mit Rückennummer', scenarios: ['@SL-019'], owner: 'B-11 (gebaut)', expectedFail: false, run: torMitNummer },

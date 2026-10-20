@@ -40,12 +40,17 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * Halbfinale über Kreuz 1A–2B / 1B–2A (W8, @TM-015; vorher 2A–1B / 1A–2B), dadurch Heim-/Gast-Spalten 1–2 mm anders breit;
  * bei 20 Spielen neue Reihenfolge der Gruppenspiele, Ende 15:10 statt 15:30. Seitenzahl unverändert, Text-für-Text
  * verglichen (Lauf vor/nach dem Merge). C8-F-Stände: 2ce4400a8222, 5290b179abed, 3da3988d5446, 4f32e0da30fc, EN a89e4efe5be4.
+ * Neu aufgenommen 20.10. (@TM-144, Befund C-FINALE-VOR-PLATZ3-IM-SEED): der Generator setzt das Spiel um Platz 3 (Nr. 15,
+ * 14:10) vor das Finale (Nr. 16, 14:20), der PDF-Code ist unverändert. Text-für-Text verglichen (Lauf vor/nach): hoch DE/EN
+ * gleiche Texte je Seite, nur die Abschnitte Platz 3 und Finale getauscht; quer gleiche Seitenzahl, der Seitenumbruch
+ * fällt jetzt zwischen Überschrift „Finale“ (Seite 4 unten) und Finalzeile (Seite 5). Stände davor: bb3e0ca5e417,
+ * 5bd69682be36, 783e5046a4f9, d652f84ac302, EN 4b9bdb85b3f8.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': 'bb3e0ca5e417',
-  '20 Spiele, hoch': '5bd69682be36',
-  '12 Spiele, quer': '783e5046a4f9',
-  '20 Spiele, quer': 'd652f84ac302',
+  '12 Spiele, hoch': '1b9bebb000a0',
+  '20 Spiele, hoch': '8aeb731a31c0',
+  '12 Spiele, quer': '748bb781943c',
+  '20 Spiele, quer': '19c0c20f5f26',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -60,7 +65,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('4b9bdb85b3f8');
+    expect(layoutDigest(pages)).toBe('ee7c12a63f2c');
   });
 });
 
