@@ -58,22 +58,22 @@ describe('EventEditDialog -- Gelb-Rot (F3b2)', () => {
     renderDialog(redCardEvent('YELLOW_RED'));
 
     expect(screen.getByRole('heading', { name: 'Gelb-Rote Karte bearbeiten' })).toBeInTheDocument();
-    expect(screen.getByText('🟨🟥')).toBeInTheDocument();
+    expect(screen.getByTestId('karten-symbol-YELLOW_RED')).toBeInTheDocument();
   });
 
   it('Gegenbeispiel: echte Rote Karte bleibt "Rote Karte bearbeiten" mit rotem Symbol', () => {
     renderDialog(redCardEvent());
 
     expect(screen.getByRole('heading', { name: 'Rote Karte bearbeiten' })).toBeInTheDocument();
-    expect(screen.getByText('🟥')).toBeInTheDocument();
-    expect(screen.queryByText('🟨🟥')).toBeNull();
+    expect(screen.getByTestId('karten-symbol-RED')).toBeInTheDocument();
+    expect(screen.queryByTestId('karten-symbol-YELLOW_RED')).toBeNull();
   });
 
   it('Gegenbeispiel: Gelbe Karte bleibt "Gelbe Karte bearbeiten" mit gelbem Symbol', () => {
     renderDialog({ id: 'y1', type: 'YELLOW_CARD', timestampSeconds: 50, payload: { teamId: 'team-a' } });
 
     expect(screen.getByRole('heading', { name: 'Gelbe Karte bearbeiten' })).toBeInTheDocument();
-    expect(screen.getByText('🟨')).toBeInTheDocument();
+    expect(screen.getByTestId('karten-symbol-YELLOW')).toBeInTheDocument();
   });
 
   it('EN: Titel und Label heissen wie ueberall "Yellow-Red Card" (nicht "Second yellow card"), Titel ueber i18n', () => {
