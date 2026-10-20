@@ -222,33 +222,16 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
     };
   }, [dropdownOpen]);
 
-  // Check if we have a cached authenticated user (for optimistic UI during loading)
-  // This allows us to show avatar skeleton only when we expect a logged-in user
-  // We use state instead of memo so we can clear it after a timeout
-  const [showSkeleton, setShowSkeleton] = useState(() => {
+  // Nutzerkopie vorhanden = auf diesem Gerät angemeldet (optimistische Anzeige während des Starts).
+  // @AN-019: Ein langsamer Start löscht die Kopie NICHT und zeigt kein „Anmelden“. Die Kopie endet nur mit
+  // dem Ende der Sitzung (SIGNED_OUT, eigenes Abmelden, Ablehnung durch den Server – siehe AuthContext).
+  const [hasCachedUser] = useState(() => {
     try {
       return safeLocalStorage.getItem('auth:cachedUser') !== null;
     } catch {
       return false;
     }
   });
-
-  // Skeleton timeout: If auth takes longer than 3s, show buttons instead of skeleton
-  // This prevents users from being stuck on skeleton if session is stale
-  useEffect(() => {
-    if (isLoading && showSkeleton) {
-      const timer = setTimeout(() => {
-        setShowSkeleton(false);
-        // Also clear the stale cache so next page load doesn't have this issue
-        try {
-          safeLocalStorage.removeItem('auth:cachedUser');
-        } catch {
-          // localStorage not available
-        }
-      }, 3000); // 3 seconds max skeleton time
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading, showSkeleton]);
 
   // Aria-Live Status Text für Screenreader
   // Wird bei Auth-Zustandsänderungen angekündigt
@@ -266,10 +249,9 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
   }, [isLoading, isAuthenticated, isGuest, user, t]);
 
   // Loading State - Optimistic UI:
-  // Only show skeleton if we expect a logged-in user (cached user exists).
-  // Skeleton auto-clears after 3s to prevent stuck UI on stale sessions.
-  // Otherwise, show login/register buttons immediately for instant interactivity.
-  if (isLoading && showSkeleton) {
+  // Skeleton nur, solange eine Nutzerkopie da ist, aber noch kein Nutzer gesetzt (AuthProvider setzt die Kopie
+  // nach spätestens 5 s, der Start endet nach spätestens 15 s). Ohne Kopie sofort Anmelden/Registrieren.
+  if (isLoading && hasCachedUser && !(isAuthenticated && user)) {
     return (
       <div style={styles.container}>
         <VisuallyHidden>{statusText}</VisuallyHidden>
