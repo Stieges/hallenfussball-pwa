@@ -137,7 +137,8 @@ describe('@ZM-039 @ZM-139 Monitor-Uhr in der Verlängerung (Paket MU)', () => {
   it('@ZM-039 @ZM-040 Verlängerung angehalten bei Restzeit 3:40: die Dauer bleibt die Verlängerungs-Dauer (900), die Anzeige steht bei 03:40, nie „Ergebnis folgt“', () => {
     const match = spiel({
       ...PLATZ_3,
-      matchStatus: 'paused',
+      // Cache-Status 'paused' fehlt im TS-Typ (C-MATCHSTATUS-OHNE-PAUSED), wie im Cache geschrieben
+      matchStatus: 'paused' as Match['matchStatus'],
       timerPausedAt: new Date(JETZT).toISOString(),
       timerElapsedSeconds: 680,
       liveState: {
