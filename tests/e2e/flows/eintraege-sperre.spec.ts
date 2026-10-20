@@ -58,8 +58,7 @@ async function spielMitEintraegen(page: Page): Promise<void> {
   await schliesseTorAuswahl(page);
   await page.getByTestId('match-pause-button').click();
   await abpfiffHalten(page);
-  const confirm = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja/i });
-  if (await confirm.isVisible({ timeout: 2000 }).catch(() => false)) { await confirm.first().click(); }
+  await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
   await expect(page.getByTestId('scoreboard-state')).toHaveText(/Abgepfiffen|Vor Anpfiff/i); // Tafel (Cockpit 2.4/2.5): nach dem Abpfiff steht Spiel 1 abgepfiffen oder die Tafel zeigt schon das nächste Spiel
 }
 

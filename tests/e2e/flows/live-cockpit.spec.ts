@@ -211,12 +211,7 @@ test.describe('Live Cockpit', () => {
     const finishButton = page.getByTestId('match-finish-button');
     await expect(finishButton).toBeEnabled();
     await abpfiffHalten(page);
-
-    // Handle confirmation dialog if present (look for dialog-specific confirm button)
-    const dialogConfirmButton = page.locator('[role="dialog"] button, [data-testid="dialog-confirm"], [data-testid*="confirm"]').filter({ hasText: /Beenden|Bestätigen|Ja|Confirm/i });
-    if (await dialogConfirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await dialogConfirmButton.click();
-    }
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
 
     // THEN - After finishing, the app auto-selects the next match
     // Verify that either:
@@ -365,12 +360,7 @@ test.describe('Live Cockpit', () => {
     await page.getByTestId('match-pause-button').click();
     await expect(page.getByTestId('match-finish-button')).toBeEnabled();
     await abpfiffHalten(page);
-
-    // Handle confirmation dialog if present
-    const dialogConfirmButton = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja|Confirm/i });
-    if (await dialogConfirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await dialogConfirmButton.click();
-    }
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
 
     // Wait for state to settle
     await page.waitForTimeout(1000);

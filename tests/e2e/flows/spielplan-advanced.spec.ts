@@ -588,12 +588,7 @@ test.describe('Panel schließen', () => {
     // Pause and finish
     await page.getByTestId('match-pause-button').click();
     await abpfiffHalten(page);
-
-    // Handle confirmation
-    const confirmButton = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja/i });
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmButton.click();
-    }
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
     await page.waitForTimeout(500);
 
     // Navigate to Spielplan

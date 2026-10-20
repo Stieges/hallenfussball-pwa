@@ -184,10 +184,7 @@ test.describe('Cockpit-Tafel', () => {
     await page.getByTestId('match-pause-button').click();
     await expect(page.getByTestId('match-resume-button')).toBeVisible();
     await abpfiffHalten(page);
-    const bestaetigen = page.locator('[role="dialog"] button, [data-testid*="confirm"]').filter({ hasText: /Beenden|Bestätigen|Ja|Confirm/i });
-    if (await bestaetigen.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await bestaetigen.click();
-    }
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
     await expect(async () => {
       const text = (await page.getByTestId('scoreboard-state').textContent()) ?? '';
       expect(/Abgepfiffen|Vor Anpfiff/.test(text)).toBe(true);

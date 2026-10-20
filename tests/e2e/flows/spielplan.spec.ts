@@ -474,12 +474,7 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
     // Pause and finish
     await page.getByTestId('match-pause-button').click();
     await abpfiffHalten(page);
-
-    // Handle confirmation dialog
-    const confirmButton = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja/i });
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmButton.click();
-    }
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
     await page.waitForTimeout(500);
 
     // Navigate to Spielplan
@@ -703,10 +698,7 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
     // Finish match
     await page.getByTestId('match-pause-button').click();
     await abpfiffHalten(page);
-    const confirmButton = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja/i });
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmButton.click();
-    }
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
     await page.waitForTimeout(500);
 
     // Navigate to Spielplan

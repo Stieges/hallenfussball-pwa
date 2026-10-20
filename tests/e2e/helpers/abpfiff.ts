@@ -5,10 +5,10 @@
  */
 import type { Page } from '@playwright/test';
 
-/** Etwas mehr als `HOLD_MS` (src/components/ui/atoms/HoldButton.tsx). */
-const HALTEN_MS = 1200;
+/** So lange darf es dauern, bis die Rückfrage nach `HOLD_MS` (1 s, src/components/ui/atoms/HoldButton.tsx) erscheint. */
+const RUECKFRAGE_TIMEOUT_MS = 3000;
 
-/** Hält „Abpfiff“, bis die Rückfrage da ist, und lässt wieder los. Die Rückfrage bleibt offen. */
+/** Hält „Abpfiff“, bis die Rückfrage da ist (nicht nach fester Zeit), und lässt wieder los. Die Rückfrage bleibt offen. */
 export async function abpfiffHaltenBisRueckfrage(page: Page): Promise<void> {
   const knopf = page.getByTestId('match-finish-button');
   await knopf.scrollIntoViewIfNeeded();
@@ -16,7 +16,7 @@ export async function abpfiffHaltenBisRueckfrage(page: Page): Promise<void> {
   if (!box) { throw new Error('„Abpfiff halten“ ist nicht sichtbar'); }
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await page.waitForTimeout(HALTEN_MS);
+  await page.getByRole('alertdialog').waitFor({ state: 'visible', timeout: RUECKFRAGE_TIMEOUT_MS });
   await page.mouse.up();
 }
 
