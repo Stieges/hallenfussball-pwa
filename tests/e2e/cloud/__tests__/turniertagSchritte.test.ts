@@ -1,4 +1,4 @@
-// TM-1 (@TA-013 bis @TA-016) für den Durchstich: die Schritte unter turniertag/steps/ sind Daten, die EIN Playwright-Test mit
+// TM-1 (@TA-013 bis @TA-016) für den Durchstich (Nebenlinie `d*.ts` und Hauptlinie Nikolaus `nikolaus-*.ts`): die Schritte unter turniertag/steps/ sind Daten, die EIN Playwright-Test mit
 // Template-Titel abspielt -- der Szenario-Scanner sieht sie nicht. Dieser Wächter liest die Step-Module und stellt sicher:
 //  - jeder erwartet rote Schritt (`expectedFail`) nennt einen Besitzer ODER mindestens einen Befund (`befunde`);
 //    für ungebaute Pakete genügt der Besitzer, ein Befund gehört nur dorthin, wo gebauter Code von der Anforderung abweicht;
@@ -10,7 +10,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { TurniertagStep } from '../turniertag/steps/types';
 
-const SCHRITT_MODULE = import.meta.glob<Record<string, unknown>>('../turniertag/steps/d*.ts', { eager: true });
+const SCHRITT_MODULE = import.meta.glob<Record<string, unknown>>(['../turniertag/steps/d*.ts', '../turniertag/steps/nikolaus-*.ts'], { eager: true });
 const SZENARIO = /^@[A-Z][A-Z0-9]{0,3}-\d{3}$/;
 
 function istSchritt(x: unknown): x is TurniertagStep {

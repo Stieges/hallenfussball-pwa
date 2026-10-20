@@ -146,19 +146,19 @@ describe('@ZM-079 Anhalten im laufenden Spiel ausgeschaltet: Pin löst sich, Tak
 
 describe('Rückfall: alle Folien übersprungen (Ruling B-16e1)', () => {
   it('nur Live-Folie, kein Spiel auf Feld 1 → alle übersprungen', () => {
-    expect(alleUebersprungen([LIVE_F1], [{ id: 'm9', field: 1, isLive: false }])).toBe(true);
+    expect(alleUebersprungen([LIVE_F1], [{ id: 'm9', field: 1, isLive: false }], 0)).toBe(true);
   });
 
   it('Gegenbeispiel: Spiel läuft auf Feld 1 → nicht übersprungen', () => {
-    expect(alleUebersprungen([LIVE_F1], [{ id: 'm7', field: 1, isLive: true }])).toBe(false);
+    expect(alleUebersprungen([LIVE_F1], [{ id: 'm7', field: 1, isLive: true }], 0)).toBe(false);
   });
 
   it('Gegenbeispiel: Tabelle in der Liste → nicht übersprungen', () => {
-    expect(alleUebersprungen([LIVE_F1, TABELLE], [])).toBe(false);
+    expect(alleUebersprungen([LIVE_F1, TABELLE], [], 0)).toBe(false);
   });
 
   it('leere Liste → nicht übersprungen (Rückfall regelt selectDisplayableSlides)', () => {
-    expect(alleUebersprungen([], [])).toBe(false);
+    expect(alleUebersprungen([], [], 0)).toBe(false);
   });
 });
 

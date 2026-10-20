@@ -283,6 +283,7 @@ export class TournamentCreationService {
                 finalType: scheduledMatch.finalType,
                 label: scheduledMatch.label,
                 scheduledTime: scheduledMatch.startTime,
+                matchNumber: scheduledMatch.matchNumber, // C-SPIELNUMMER-FEHLT (@SL-049): sonst match_number NULL in der Cloud
                 referee: scheduledMatch.referee,
             };
 

@@ -11,6 +11,7 @@ import { Standing, TeamLogo, TeamColors } from '../../types/tournament';
 import type { ScheduleSource } from './scheduleSource';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import { monitorTeamName } from '../../core/models/teamNameAbbrev';
+import { standingsGroups, OVERALL_GROUP } from '../../core/models/standingsGroups';
 import { TeamAvatar } from '../ui/TeamAvatar';
 import styles from './GroupTables.module.css';
 
@@ -60,7 +61,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
           <StandingsTable
             key={group}
             standings={groupTeams}
-            title={getGroupDisplayName(group, tournament)}
+            title={group === OVERALL_GROUP ? t('groupTables.overall') : getGroupDisplayName(group, tournament)}
             tournament={tournament}
             activeMatchTeamIds={activeMatchTeamIds}
           />
@@ -511,18 +512,13 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
   );
 };
 
+/** Eine Tabelle je Gruppe; ein Turnier ohne Gruppen ist eine Gruppe mit allen Teams (`standingsGroups`). */
 function getGroupStandings(
   allStandings: Standing[],
   teams: Array<{ id: string; name: string; group?: string }>
 ): Array<{ group: string; groupStandings: Standing[] }> {
-  const groups = new Set(teams.map(t => t.group).filter(Boolean)) as Set<string>;
-
-  return Array.from(groups)
-    .sort()
-    .map(group => ({
-      group,
-      groupStandings: allStandings.filter(s =>
-        teams.find(t => t.id === s.team.id)?.group === group
-      ),
-    }));
+  return standingsGroups(teams).map(({ group, teams: groupTeams }) => ({
+    group,
+    groupStandings: allStandings.filter(s => groupTeams.some(team => team.id === s.team.id)),
+  }));
 }
