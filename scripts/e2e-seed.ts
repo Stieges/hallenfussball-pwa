@@ -79,6 +79,7 @@ import {
   type AbmeldenCupSlug,
   type EngineCupSlug,
   E2E_TURNIERTAG_CUP_ID,
+  E2E_NIKOLAUS_CUPS,
   E2E_LEGACY_CUPS,
   engineCupIds,
   legacyCupIds,
@@ -108,6 +109,7 @@ import {
   seedTurniertagCup,
   seedZweitesTurnier,
 } from './lib/e2eCupsSeed';
+import { seedNikolausCups } from './lib/nikolausSeed';
 
 // =============================================================================
 // 0. PRODUKTIONS-SPERRE + CLIENT
@@ -353,6 +355,7 @@ async function main(): Promise<void> {
     E2E_STRANGER_CUP_ID,
     E2E_RELEASE_CUP_ID,
     E2E_TURNIERTAG_CUP_ID,
+    ...Object.values(E2E_NIKOLAUS_CUPS).map((cup) => cup.tournamentId),
     ...E2E_ENGINE_CUPS.map((cup) => engineCupIds(cup.slug).tournamentId),
     ...E2E_ABMELDEN_CUPS.map((cup) => engineCupIds(cup.slug as EngineCupSlug).tournamentId),
     ...E2E_LEGACY_CUPS.map((cup) => legacyCupIds(cup.slug).tournamentId),
@@ -815,6 +818,7 @@ async function main(): Promise<void> {
   await seedAbmeldenCups(abmeldenOwners);
   await seedTurniertagCup(engineDeps, ownerRepo, service);
   await seedZweitesTurnier(engineDeps, ownerRepo, service);
+  await seedNikolausCups(engineDeps, ownerRepo, service, userIds.helper);
 
   log('Fertig.');
 }
