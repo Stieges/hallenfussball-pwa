@@ -62,7 +62,7 @@ const kickoffAt = (minutes: number): Date => new Date(Date.UTC(1970, 0, 1, 14, m
 
 /** Live-Cup von Olli mit einem zusätzlichen Spiel 5 (Anstoßzeit 14:30), damit eine Spielplan-Änderung möglich ist. */
 function liveCup(version: number, extra: { title?: string; changeRevision?: number } = {}): Tournament {
-  const base = { ...liveCupBase(version, { title: extra.title, plus: [createMockMatch({ id: 'spiel-5', matchStatus: 'scheduled', scheduledTime: kickoffAt(30) })] }), sportId: 'football-indoor' };
+  const base = { ...liveCupBase(version, { title: extra.title, plus: [createMockMatch({ id: 'spiel-5', matchStatus: 'scheduled', scheduledTime: kickoffAt(30) })] }), sportId: 'football-indoor' as const };
   return extra.changeRevision === undefined ? base : { ...base, changeRevision: extra.changeRevision };
 }
 
