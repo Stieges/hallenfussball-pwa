@@ -536,6 +536,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         if (stableKey(local.monitors) !== stableKey(remote.monitors)) {return true;}
         if (stableKey(local.sponsors) !== stableKey(remote.sponsors)) {return true;}
         if ((local.bibColor ?? '').toUpperCase() !== (remote.bibColor ?? '').toUpperCase()) {return true;} // A-30a @W3-029: Leibchenfarbe nur im config-JSONB
+        if (stableKey(local.spectatorDisplay) !== stableKey(remote.spectatorDisplay)) {return true;} // Spielanzeige 2.1 @ZM-152: nur im config-JSONB
         // @W4-034: Markierung des Veranstalters und Eröffnungswahl liegen nur im config-JSONB (wie bibColor).
         // @W4-044: verwaiste IDs (Team gelöscht) zählen auf keiner Seite (die Teams sind oben schon als gleich geprüft).
         if (stableKey(effectiveHostTeamIds(local.hostTeamIds, local.teams)) !== stableKey(effectiveHostTeamIds(remote.hostTeamIds, remote.teams))) {return true;}

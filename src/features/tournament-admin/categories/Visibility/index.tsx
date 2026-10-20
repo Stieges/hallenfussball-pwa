@@ -8,7 +8,7 @@
  * @see docs/concepts/PUBLIC-PAGE-KONZEPT-v4-FINAL.md
  */
 
-import { useState, useEffect, useCallback, CSSProperties } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
@@ -18,6 +18,9 @@ import { useToast } from '../../../../components/ui/Toast';
 import { generateLiveUrl, generateTournamentUrl } from '../../../../utils/shareUtils';
 import { isSupabaseConfigured } from '../../../../lib/supabase';
 import { isReleaseRefusal } from '../../../../core/repositories/OfflineRepository';
+import { useCan } from '../../../auth/hooks/useCan';
+import { visibilityStyles as styles } from './visibilityStyles';
+import { SpectatorDisplaySection } from './SpectatorDisplaySection';
 
 // =============================================================================
 // PROPS
@@ -28,174 +31,6 @@ interface VisibilityCategoryProps {
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament) => void;
 }
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = {
-  radioGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.md,
-  } as CSSProperties,
-
-  radioOption: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: cssVars.spacing.sm,
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surface,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.md,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  } as CSSProperties,
-
-  radioOptionSelected: {
-    borderColor: cssVars.colors.primary,
-    background: cssVars.colors.primarySubtle,
-  } as CSSProperties,
-
-  radioLabel: {
-    fontSize: cssVars.fontSizes.bodyMd,
-    fontWeight: cssVars.fontWeights.medium,
-    color: cssVars.colors.textPrimary,
-  } as CSSProperties,
-
-  radioDescription: {
-    fontSize: cssVars.fontSizes.labelSm,
-    color: cssVars.colors.textSecondary,
-    marginTop: 2,
-  } as CSSProperties,
-
-  checkboxGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.sm,
-  } as CSSProperties,
-
-  checkbox: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    cursor: 'pointer',
-    fontSize: cssVars.fontSizes.bodyMd,
-    color: cssVars.colors.textPrimary,
-  } as CSSProperties,
-
-  qrContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.lg,
-  } as CSSProperties,
-
-  linkRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    flexWrap: 'wrap',
-  } as CSSProperties,
-
-  linkInput: {
-    flex: 1,
-    minWidth: 200,
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.bodySm,
-  } as CSSProperties,
-
-  copyButton: {
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    background: cssVars.colors.primarySubtle,
-    border: `1px solid ${cssVars.colors.primaryBorder}`,
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.primary,
-    fontSize: cssVars.fontSizes.bodySm,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  } as CSSProperties,
-
-  copyButtonSuccess: {
-    background: cssVars.colors.successLight,
-    borderColor: cssVars.colors.successHover,
-    color: cssVars.colors.success,
-  } as CSSProperties,
-
-  qrPreview: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: cssVars.spacing.lg,
-    flexWrap: 'wrap',
-  } as CSSProperties,
-
-  qrPlaceholder: {
-    width: 150,
-    height: 150,
-    background: cssVars.colors.surfaceHover,
-    border: `1px solid ${cssVars.colors.border}`,
-    borderRadius: cssVars.borderRadius.md,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 48,
-    color: cssVars.colors.textMuted,
-    flexShrink: 0,
-  } as CSSProperties,
-
-  qrActions: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.sm,
-  } as CSSProperties,
-
-  actionButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    background: cssVars.colors.surface,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.bodySm,
-    cursor: 'pointer',
-    textAlign: 'left',
-    transition: 'all 0.15s ease',
-  } as CSSProperties,
-
-  tip: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: cssVars.spacing.sm,
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.infoLight,
-    border: `1px solid ${cssVars.colors.infoBorder}`,
-    borderRadius: cssVars.borderRadius.md,
-    fontSize: cssVars.fontSizes.bodySm,
-    color: cssVars.colors.info,
-  } as CSSProperties,
-
-  disabledSection: {
-    opacity: 0.5,
-    pointerEvents: 'none',
-  } as CSSProperties,
-
-  saveIndicator: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    background: cssVars.colors.successLight,
-    color: cssVars.colors.success,
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.labelSm,
-    marginLeft: cssVars.spacing.sm,
-  } as CSSProperties,
-} as const;
 
 // =============================================================================
 // COMPONENT
@@ -221,6 +56,8 @@ export function VisibilityCategory({
   // Prädikat wie im Service und in der Datenbankfunktion make_tournament_public — damit stimmen
   // alle drei Schichten überein.
   const isDraft = !tournament.publishedAt;
+  // @ZM-019 (A-11): „Anzeige für Zuschauer“ stellen nur Turnierleitung und Co-Admin
+  const canEditDisplay = useCan('tournamentSettings', tournamentId);
 
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -706,6 +543,8 @@ export function VisibilityCategory({
           </span>
         </div>
       </CollapsibleSection>
+      {/* Anzeige für Zuschauer: Teamfarben und Standardfarben der Ergebniskästen mit Vorschau (@ZM-152) */}
+      <SpectatorDisplaySection tournament={tournament} onTournamentUpdate={onTournamentUpdate} canEdit={canEditDisplay} />
     </CategoryPage>
   );
 }

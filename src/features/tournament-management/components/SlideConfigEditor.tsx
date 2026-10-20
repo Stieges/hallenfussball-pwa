@@ -1,11 +1,9 @@
 import { CSSProperties, useMemo, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
-import { MonitorSlide, SlideConfig, QrTargetType, ColorScheme, DEFAULT_LIVE_COLOR_SCHEME, DEFAULT_SLIDE_CONFIG } from '../../../types/monitor';
-import type { LiveColorScheme } from '../../../types/monitor';
+import { MonitorSlide, SlideConfig, QrTargetType, ColorScheme, DEFAULT_SLIDE_CONFIG } from '../../../types/monitor';
 import { TournamentField, TournamentGroup } from '../../../types/tournament';
 import { validateSlideConfig } from '../../../core/models/schemas/SlideConfigSchema';
-import { ColorSchemeEditor } from './ColorSchemeEditor';
 
 // =============================================================================
 // CONSTANTS
@@ -166,7 +164,7 @@ export function SlideConfigEditor({
                 </div>
             )}
 
-            {/* === Live-Slides: Rotation pausieren, Score-Farben. „Wenn kein Spiel läuft“ entfällt (@OB-002: wirkt nicht, @ZM-122) === */}
+            {/* === Live-Slides: Rotation pausieren (keine Farbe: @ZM-152). „Wenn kein Spiel läuft“ entfällt (@OB-002: wirkt nicht, @ZM-122) === */}
             {type === 'live' && (
                 <>
                     <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
@@ -179,13 +177,6 @@ export function SlideConfigEditor({
                             <span style={styles.labelStyle}>{t('slideEditor.pauseRotation')}</span>
                         </label>
                     </div>
-
-                    {/* Score-Farben für Live-Slides */}
-                    <ColorSchemeEditor
-                        value={config.liveColorScheme ?? DEFAULT_LIVE_COLOR_SCHEME}
-                        onChange={(scheme: LiveColorScheme) => handleConfigChange('liveColorScheme', scheme)}
-                        styles={styles}
-                    />
                 </>
             )}
 

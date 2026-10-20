@@ -312,5 +312,32 @@
     "rulebookPlaceholder": "e.g. BFV rules for futsal",
     "rulebookLimit": "Up to 80 characters.",
     "rulebookTruncated": "Cut to 80 characters."
+  },
+  "spectatorDisplay": {
+    "title": "Display for spectators",
+    "description": "Applies to the hall monitor, the spectator page and the match cards.",
+    "preview": "Preview",
+    "home": "Home",
+    "away": "Away",
+    "boxAria": "{{side}}: {{color}}",
+    "teamColors": "Team colors in the score boxes",
+    "teamColorsNote": "The boxes use the color a team wears in the match.",
+    "on": "On",
+    "off": "Off",
+    "homeColor": "Default color home",
+    "awayColor": "Default color away",
+    "colorNote": "For teams without an entered color.",
+    "similarTitle": "These two colors look too similar.",
+    "similarText": "You can still save. If a match only shows default colors, the away box appears in white.",
+    "save": "Save",
+    "saved": "Saved",
+    "colors": {
+      "blue": "Blue",
+      "red": "Red",
+      "yellow": "Yellow",
+      "navy": "Navy",
+      "white": "White",
+      "black": "Black"
+    }
   }
 }

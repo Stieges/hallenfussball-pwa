@@ -104,6 +104,15 @@ export const palette = {
     900: '#78350F',
   },
 
+  // Farben der Spielanzeige (Standardfarben der Ergebniskästen, Voreinstellungen der Farbauswahl; Gherkin @ZM-153/@ZM-159).
+  // Gelb = yellow[400], Weiß = neutral[0]. Abstände (ΔE2000) nur mit genau diesen Werten: 44,8 / 26,8 / 26,3 / 25,3.
+  kit: {
+    blue: '#1565C0', // Standardfarbe Heim
+    red: '#C62828', // Standardfarbe Gast (nicht red[600] #DC2626)
+    navy: '#0D1B4C',
+    black: '#000000', // Ausweichfarbe
+  },
+
   yellow: {
     400: '#FACC15',
     500: '#EAB308',
