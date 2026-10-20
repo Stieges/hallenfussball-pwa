@@ -85,6 +85,8 @@ function regelnFuer(t: Tournament, phase: string): MatchRules {
 interface EreignisPlan {
   /** Tore der regulaeren Spielzeit in Reihenfolge (Team-ID); sie verteilen sich gleichmaessig ueber die Spielzeit. */
   tore: string[]
+  /** Karten der regulaeren Spielzeit (Abschnitt 1): Art, Team-ID, Spieluhr (ms), Rueckennummer. */
+  karten?: Array<{ art: 'YELLOW_CARD' | 'YELLOW_RED_CARD' | 'RED_CARD'; teamId: string; clockMs: number; nummer: number }>
   /** Wie weit die Regelspielzeit gespielt ist: laeuft, in der Halbzeitpause oder beendet. */
   bis: 'laeuft' | 'halbzeitpause' | 'ende'
   /** Nach einem Remis in die Verlaengerung: Tor (Team-ID), ob sie noch laeuft. */
@@ -116,6 +118,10 @@ function baueEreignisse(ctx: MatchContext, rules: MatchRules, plan: EreignisPlan
     const section = Math.min(rules.sections, Math.floor(clockMs / secMs) + 1)
     log.push(e('GOAL', section, clockMs, { teamId }))
   })
+  // Karten (Abschnitt 1): fuer die Ansichten mit Kartenzeichen (Verlauf im Cockpit, Zuschauer-Seite)
+  for (const k of plan.karten ?? []) {
+    log.push(e(k.art, 1, k.clockMs, { teamId: k.teamId, payload: { playerNumber: k.nummer } }))
+  }
   // Abschnittsgrenzen der Regelspielzeit
   for (let sec = 1; sec < rules.sections; sec++) {
     log.push(e('SECTION_END', sec, sec * secMs))
@@ -318,7 +324,15 @@ async function erzeugeHauptturnier(): Promise<Erzeugt> {
   const finale = t.matches.find((m) => m.finalType === 'final')
   if (!finale) { throw new Error('Finale fehlt') }
   ersetze(finale, wendeEngineAn(t, finale, seiteId(finale, 'slotA'), seiteId(finale, 'slotB'),
-    { tore: [seiteId(finale, 'slotA'), seiteId(finale, 'slotB'), seiteId(finale, 'slotA')], bis: 'laeuft', jetztNachAnpfiffMs: 320_000 }, start + 22_000_000))
+    {
+      tore: [seiteId(finale, 'slotA'), seiteId(finale, 'slotB'), seiteId(finale, 'slotA')], bis: 'laeuft', jetztNachAnpfiffMs: 320_000,
+      // Gelb, Gelb-Rot und Rot im laufenden Finale (Karten-Farben nur fuer Karten, Oberflaeche E)
+      karten: [
+        { art: 'YELLOW_CARD', teamId: seiteId(finale, 'slotA'), clockMs: 90_000, nummer: 7 },
+        { art: 'YELLOW_RED_CARD', teamId: seiteId(finale, 'slotB'), clockMs: 150_000, nummer: 5 },
+        { art: 'RED_CARD', teamId: seiteId(finale, 'slotA'), clockMs: 230_000, nummer: 3 },
+      ],
+    }, start + 22_000_000))
   return { turnier: t, kopien }
 }
 

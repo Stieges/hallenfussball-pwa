@@ -1,6 +1,6 @@
 /**
  * Styles des globalen Hinweises „Du wurdest von einem anderen Gerät aus abgemeldet“ (A-07d2, B2).
- * Ausschließlich Design-Tokens.
+ * Ausschließlich Design-Tokens. Hinweise liegen im Fluss und schieben den Inhalt nach unten (C-HINWEIS-LANGSAM-VERDECKT).
  */
 
 import type { CSSProperties } from 'react';
@@ -8,11 +8,8 @@ import { cssVars } from '../../../design-tokens';
 
 export const signedOutNoticeStyles: Record<'container' | 'message', CSSProperties> = {
   container: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: cssVars.zIndex.banner,
+    // Im Fluss oberhalb der Seite (nicht darüber gelegt): der Inhalt rückt nach unten und bleibt bedienbar.
+    position: 'relative',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',

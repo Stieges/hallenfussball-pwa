@@ -1,0 +1,488 @@
+{
+  "title": "Eine Sieger-Regel für das Weiterkommen (A-14b): Spielzeilen im Spaltenformat der Cloud (matches) mit der erwarteten Siegerseite",
+  "szenarien": [
+    "@TM-017",
+    "@TM-051",
+    "@TM-052",
+    "@TM-061",
+    "@TM-067",
+    "@ET-002"
+  ],
+  "hinweis": "Nur Spalten der Tabelle matches (plus forfeit_absent ab 20261110_005). Dieselbe Datei prüft A-14c gegen den SQL-Zwilling; keine Felder nur für TS. expect.winner = Seite (A = team_a_id, B = team_b_id) oder null.",
+  "teams": {
+    "A": "00000000-0000-4000-8000-000000000001",
+    "B": "00000000-0000-4000-8000-000000000002"
+  },
+  "rows": [
+    {
+      "name": "regulär 2:1 für die Heimseite",
+      "szenarien": [
+        "@TM-017"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000101",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "finished",
+        "score_a": 2,
+        "score_b": 1,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": null,
+        "penalty_score_b": null,
+        "decided_by": "regular"
+      },
+      "expect": {
+        "winner": "A"
+      }
+    },
+    {
+      "name": "regulär 1:2 für die Gastseite",
+      "szenarien": [
+        "@TM-017"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000102",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "finished",
+        "score_a": 1,
+        "score_b": 2,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": null,
+        "penalty_score_b": null,
+        "decided_by": "regular"
+      },
+      "expect": {
+        "winner": "B"
+      }
+    },
+    {
+      "name": "Strafstoßschießen 3:2 für die Heimseite nach 1:1",
+      "szenarien": [
+        "@TM-052",
+        "@ET-002"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000103",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "finished",
+        "score_a": 1,
+        "score_b": 1,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": 3,
+        "penalty_score_b": 2,
+        "decided_by": "penalty"
+      },
+      "expect": {
+        "winner": "A"
+      }
+    },
+    {
+      "name": "Strafstoßschießen 2:3 für die Gastseite nach 1:1",
+      "szenarien": [
+        "@TM-052",
+        "@ET-002"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000104",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "finished",
+        "score_a": 1,
+        "score_b": 1,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": 2,
+        "penalty_score_b": 3,
+        "decided_by": "penalty"
+      },
+      "expect": {
+        "winner": "B"
+      }
+    },
+    {
+      "name": "Verlängerung 1:0 für die Heimseite nach 1:1",
+      "szenarien": [
+        "@TM-052",
+        "@ET-002"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000105",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "finished",
+        "score_a": 1,
+        "score_b": 1,
+        "overtime_score_a": 1,
+        "overtime_score_b": 0,
+        "penalty_score_a": null,
+        "penalty_score_b": null,
+        "decided_by": "overtime"
+      },
+      "expect": {
+        "winner": "A"
+      }
+    },
+    {
+      "name": "Golden Goal 0:1 für die Gastseite nach 1:1",
+      "szenarien": [
+        "@TM-052",
+        "@ET-002"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000106",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "finished",
+        "score_a": 1,
+        "score_b": 1,
+        "overtime_score_a": 0,
+        "overtime_score_b": 1,
+        "penalty_score_a": null,
+        "penalty_score_b": null,
+        "decided_by": "goldenGoal"
+      },
+      "expect": {
+        "winner": "B"
+      }
+    },
+    {
+      "name": "Nichtantritt Heimseite (A fehlt), gewertet 0:2",
+      "szenarien": [
+        "@TM-061"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000107",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "finished",
+        "score_a": 0,
+        "score_b": 2,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": null,
+        "penalty_score_b": null,
+        "decided_by": "forfeit",
+        "forfeit_absent": "A"
+      },
+      "expect": {
+        "winner": "B"
+      }
+    },
+    {
+      "name": "Nichtantritt Gastseite (B fehlt), gewertet 2:0",
+      "szenarien": [
+        "@TM-061"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000108",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "finished",
+        "score_a": 2,
+        "score_b": 0,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": null,
+        "penalty_score_b": null,
+        "decided_by": "forfeit",
+        "forfeit_absent": "B"
+      },
+      "expect": {
+        "winner": "A"
+      }
+    },
+    {
+      "name": "Nichtantritt beider Seiten, 0:0: kein Sieger",
+      "szenarien": [
+        "@TM-061"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000109",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "finished",
+        "score_a": 0,
+        "score_b": 0,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": null,
+        "penalty_score_b": null,
+        "decided_by": "forfeit",
+        "forfeit_absent": "both"
+      },
+      "expect": {
+        "winner": null
+      }
+    },
+    {
+      "name": "läuft beim Stand 2:1: noch kein Sieger",
+      "szenarien": [
+        "@TM-017",
+        "@ET-002"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000110",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "running",
+        "score_a": 2,
+        "score_b": 1,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": null,
+        "penalty_score_b": null,
+        "decided_by": null
+      },
+      "expect": {
+        "winner": null
+      }
+    },
+    {
+      "name": "unterbrochen (paused) beim Stand 2:1: noch kein Sieger",
+      "szenarien": [
+        "@TM-017",
+        "@ET-002"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000111",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "paused",
+        "score_a": 2,
+        "score_b": 1,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": null,
+        "penalty_score_b": null,
+        "decided_by": null
+      },
+      "expect": {
+        "winner": null
+      }
+    },
+    {
+      "name": "beendet 1:1 ohne Entscheidung (decided_by leer): kein Sieger",
+      "szenarien": [
+        "@TM-051",
+        "@TM-052"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000112",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "finished",
+        "score_a": 1,
+        "score_b": 1,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": null,
+        "penalty_score_b": null,
+        "decided_by": null
+      },
+      "expect": {
+        "winner": null
+      }
+    },
+    {
+      "name": "beendet 1:1, decided_by regular: kein Sieger",
+      "szenarien": [
+        "@TM-051"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000113",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "finished",
+        "score_a": 1,
+        "score_b": 1,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": null,
+        "penalty_score_b": null,
+        "decided_by": "regular"
+      },
+      "expect": {
+        "winner": null
+      }
+    },
+    {
+      "name": "Strafstoß-Stand gesetzt, aber decided_by regular: kein Sieger",
+      "szenarien": [
+        "@TM-051",
+        "@ET-002"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000114",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "finished",
+        "score_a": 1,
+        "score_b": 1,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": 4,
+        "penalty_score_b": 3,
+        "decided_by": "regular"
+      },
+      "expect": {
+        "winner": null
+      }
+    },
+    {
+      "name": "Strafstoßschießen gleich 3:3 trotz decided_by penalty: kein Sieger",
+      "szenarien": [
+        "@ET-002"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000115",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "finished",
+        "score_a": 1,
+        "score_b": 1,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": 3,
+        "penalty_score_b": 3,
+        "decided_by": "penalty"
+      },
+      "expect": {
+        "winner": null
+      }
+    },
+    {
+      "name": "nicht ausgetragen (skipped): kein Sieger",
+      "szenarien": [
+        "@TM-067"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000116",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "skipped",
+        "score_a": null,
+        "score_b": null,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": null,
+        "penalty_score_b": null,
+        "decided_by": null
+      },
+      "expect": {
+        "winner": null
+      }
+    },
+    {
+      "name": "noch nicht angepfiffen (scheduled): kein Sieger",
+      "szenarien": [
+        "@TM-017"
+      ],
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000117",
+        "round": 2,
+        "field": 1,
+        "team_a_id": "00000000-0000-4000-8000-000000000001",
+        "team_b_id": "00000000-0000-4000-8000-000000000002",
+        "is_final": true,
+        "final_type": null,
+        "phase": "semifinal",
+        "match_status": "scheduled",
+        "score_a": null,
+        "score_b": null,
+        "overtime_score_a": null,
+        "overtime_score_b": null,
+        "penalty_score_a": null,
+        "penalty_score_b": null,
+        "decided_by": null
+      },
+      "expect": {
+        "winner": null
+      }
+    }
+  ]
+}

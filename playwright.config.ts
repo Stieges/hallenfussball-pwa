@@ -124,7 +124,7 @@ export default defineConfig({
   // unten zusätzlich ein explizites testIgnore für den visual-Ordner (Ruling Y, Punkt 1: die
   // Visual-Specs dürfen NICHT in den bestehenden E2E-Jobs mitlaufen -- andere Fonts/kein
   // Container dort liefern andere Pixel).
-  testIgnore: ['**/cloud/**', '**/visual/**'],
+  testIgnore: ['**/cloud/**', '**/visual/**', '**/auth-slow/**'],
   // Kein {platform}-Token (Ruling Y, Punkt 6): CI-Runner und der lokale Docker-Lauf sind BEIDE
   // derselbe Linux-Container (mcr.microsoft.com/playwright:v1.63.0-noble) -- ein
   // Plattform-Suffix würde hier nie zwischen zwei legitimen Quellen unterscheiden, nur
