@@ -112,4 +112,57 @@ describe('ThumbBar (Plan 3.1)', () => {
     await userEvent.click(screen.getByTestId('bar-main'));
     expect(slot.onPress).not.toHaveBeenCalled();
   });
+
+  describe('S5 Werkzeugleiste: Pfeiltasten wechseln den Fokus, nur ein Knopf ist per Tab erreichbar', () => {
+    const mitHalten = (): ThumbBarSlot[] => [
+      a('Rückgängig', 'bar-undo', 'neben'),
+      a('Pause', 'bar-main', 'haupt'),
+      { art: 'halten', halten: { label: 'Abpfiff', sublabel: 'halten', onHold: vi.fn(), testId: 'bar-abpfiff', beschreibung: 'Gedrückt halten' } },
+      a('Mehr', 'bar-more', 'mehr'),
+    ];
+
+    it('Roving Tabindex: genau ein Knopf hat tabindex 0, die übrigen -1 (auch der Halteknopf)', () => {
+      render(<ThumbBar ariaLabel="x" layout="daumen" slots={mitHalten()} />);
+      const knoepfe = screen.getAllByRole('button');
+      expect(knoepfe.filter((b) => b.getAttribute('tabindex') === '0')).toHaveLength(1);
+      expect(knoepfe.filter((b) => b.getAttribute('tabindex') === '-1')).toHaveLength(3);
+      expect(screen.getByTestId('bar-undo')).toHaveAttribute('tabindex', '0');
+    });
+
+    it('Pfeil rechts/links wechselt zum nächsten/vorigen Knopf und nimmt den Tabstopp mit; am Rand bleibt es stehen', async () => {
+      const u = userEvent.setup();
+      render(<ThumbBar ariaLabel="x" layout="daumen" slots={mitHalten()} />);
+      screen.getByTestId('bar-undo').focus();
+      await u.keyboard('{ArrowRight}');
+      expect(screen.getByTestId('bar-main')).toHaveFocus();
+      expect(screen.getByTestId('bar-main')).toHaveAttribute('tabindex', '0');
+      expect(screen.getByTestId('bar-undo')).toHaveAttribute('tabindex', '-1');
+      await u.keyboard('{ArrowRight}');
+      expect(screen.getByTestId('bar-abpfiff')).toHaveFocus();
+      await u.keyboard('{ArrowLeft}{ArrowLeft}{ArrowLeft}');
+      expect(screen.getByTestId('bar-undo')).toHaveFocus();
+    });
+
+    it('Pos1 und Ende springen an die Ränder; ein gesperrter Knopf wird übersprungen', async () => {
+      const u = userEvent.setup();
+      const slots = mitHalten();
+      slots[1] = a('Pause', 'bar-main', 'haupt', { disabled: true });
+      render(<ThumbBar ariaLabel="x" layout="daumen" slots={slots} />);
+      screen.getByTestId('bar-undo').focus();
+      await u.keyboard('{ArrowRight}');
+      expect(screen.getByTestId('bar-abpfiff')).toHaveFocus();
+      await u.keyboard('{End}');
+      expect(screen.getByTestId('bar-more')).toHaveFocus();
+      await u.keyboard('{Home}');
+      expect(screen.getByTestId('bar-undo')).toHaveFocus();
+    });
+
+    it('Gegenbeispiel: Pfeil nach oben/unten ändert den Fokus nicht', async () => {
+      const u = userEvent.setup();
+      render(<ThumbBar ariaLabel="x" layout="daumen" slots={mitHalten()} />);
+      screen.getByTestId('bar-main').focus();
+      await u.keyboard('{ArrowDown}{ArrowUp}');
+      expect(screen.getByTestId('bar-main')).toHaveFocus();
+    });
+  });
 });

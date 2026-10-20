@@ -6,9 +6,11 @@
  * gleich breiten Zellen, Hauptaktion höher (56 px). Layout `breit` (Laptop): eine Reihe über die ganze Breite
  * mit Gewichten, „Mehr“ nur so breit wie nötig; Tasten-Hinweise erscheinen nur hier als `<kbd>`, `aria-keyshortcuts`
  * steht immer am Knopf (@SL-153). Ein Hinweis (@HE-043) steht als eigene Zeile über den Knöpfen.
- * Safe-Area unten, links und rechts (@OB-049).
+ * Safe-Area unten, links und rechts (@OB-049). Werkzeugleisten-Muster (S5): Pfeil links/rechts, Pos1 und Ende wechseln den
+ * Fokus; nur ein Knopf ist per Tab erreichbar (Roving Tabindex), gesperrte Knöpfe werden übersprungen.
  */
-import type { CSSProperties, ReactNode } from 'react';
+import { useState } from 'react';
+import type { CSSProperties, FocusEvent, KeyboardEvent, ReactNode } from 'react';
 import { cssVars } from '../../../design-tokens';
 import { HoldButton } from '../atoms/HoldButton';
 import type { HoldButtonProps } from '../atoms/HoldButton';
@@ -76,12 +78,14 @@ function knopfStil(slot: Extract<ThumbBarSlot, { art: 'aktion' }>, layout: Thumb
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
     borderRadius: cssVars.borderRadius.md,
     border: haupt ? 'none' : `${cssVars.borderWidth.thin} ${slot.gestrichelt ? 'dashed' : 'solid'} ${cssVars.colors.borderControl}`,
-    background: haupt ? cssVars.gradients.primary : cssVars.colors.surface,
-    color: haupt ? cssVars.colors.background : cssVars.colors.textPrimary,
+    // K8 (C-PRIMAER-VERLAUF-KONTRAST): Vollfläche wie `Button` primary (#274), kein Verlauf
+    background: haupt ? cssVars.colors.primary : cssVars.colors.surface,
+    color: haupt ? cssVars.colors.onPrimary : cssVars.colors.textPrimary,
     fontFamily: 'inherit',
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.bold,
     cursor: slot.disabled ? 'not-allowed' : 'pointer',
+    // S5: 0,5 bleibt, bis Spielanzeige S2 `opacity.disabled` liefert (dann hier ersetzen)
     opacity: slot.disabled ? 0.5 : 1,
     touchAction: 'manipulation',
     ...(layout === 'breit'
@@ -90,13 +94,14 @@ function knopfStil(slot: Extract<ThumbBarSlot, { art: 'aktion' }>, layout: Thumb
   };
 }
 
-function Aktion({ slot, layout }: { slot: Extract<ThumbBarSlot, { art: 'aktion' }>; layout: ThumbBarProps['layout'] }) {
+function Aktion({ slot, layout, tabIndex }: { slot: Extract<ThumbBarSlot, { art: 'aktion' }>; layout: ThumbBarProps['layout']; tabIndex: number }) {
   return (
     <button
       type="button"
       data-testid={slot.testId}
       data-rolle={slot.rolle}
       disabled={slot.disabled}
+      tabIndex={tabIndex}
       aria-keyshortcuts={slot.taste?.aria}
       onClick={slot.disabled ? undefined : slot.onPress}
       style={knopfStil(slot, layout)}
@@ -109,17 +114,38 @@ function Aktion({ slot, layout }: { slot: Extract<ThumbBarSlot, { art: 'aktion' 
   );
 }
 
+const slotId = (slot: ThumbBarSlot): string => (slot.art === 'aktion' ? slot.testId : slot.halten.testId);
+const slotGesperrt = (slot: ThumbBarSlot): boolean => (slot.art === 'aktion' ? slot.disabled === true : slot.halten.disabled === true);
+
 export function ThumbBar({ ariaLabel, slots, layout, hinweis }: ThumbBarProps) {
+  const [fokusId, setFokusId] = useState<string | null>(null);
+  const frei = slots.filter((slot) => !slotGesperrt(slot)).map(slotId);
+  // Tabstopp: der zuletzt fokussierte Knopf, solange er bedienbar ist, sonst der erste bedienbare
+  const tabstopp = fokusId !== null && frei.includes(fokusId) ? fokusId : (frei[0] ?? null);
+
+  const onFocus = (e: FocusEvent<HTMLDivElement>) => {
+    const id = e.target instanceof HTMLElement ? e.target.getAttribute('data-testid') : null;
+    if (id !== null && frei.includes(id)) { setFokusId(id); }
+  };
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const ziel = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : e.key === 'Home' ? 'anfang' : e.key === 'End' ? 'ende' : null;
+    const aktuell = e.target instanceof HTMLElement ? frei.indexOf(e.target.getAttribute('data-testid') ?? '') : -1;
+    if (ziel === null || aktuell === -1) { return; }
+    e.preventDefault();
+    const neu = ziel === 'anfang' ? 0 : ziel === 'ende' ? frei.length - 1 : Math.min(frei.length - 1, Math.max(0, aktuell + ziel));
+    e.currentTarget.querySelector<HTMLElement>(`[data-testid="${frei[neu]}"]`)?.focus();
+  };
+
   return (
-    <div role="toolbar" aria-label={ariaLabel} data-layout={layout} style={leisteStil}>
+    <div role="toolbar" aria-label={ariaLabel} data-layout={layout} style={leisteStil} onFocus={onFocus} onKeyDown={onKeyDown}>
       {hinweis && <div data-testid={hinweis.testId} style={hinweisStil}>{hinweis.text}</div>}
       <div style={reiheStil(layout, slots.length)}>
         {slots.map((slot) =>
           slot.art === 'aktion' ? (
-            <Aktion key={slot.testId} slot={slot} layout={layout} />
+            <Aktion key={slot.testId} slot={slot} layout={layout} tabIndex={slot.testId === tabstopp ? 0 : -1} />
           ) : (
             <div key={slot.halten.testId} style={layout === 'breit' ? { flex: HALTEN_GEWICHT, display: 'flex' } : { display: 'flex' }}>
-              <HoldButton {...slot.halten} />
+              <HoldButton {...slot.halten} tabIndex={slot.halten.testId === tabstopp ? 0 : -1} />
             </div>
           ),
         )}

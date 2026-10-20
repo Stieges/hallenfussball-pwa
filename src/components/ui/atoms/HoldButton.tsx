@@ -5,7 +5,8 @@
  * Abbruch, Fokusverlust, Aushängen und `disabled` beenden das Halten ohne Auslösung. Rechte Maustaste und
  * ein zweiter Finger starten nichts. Leertaste und Eingabetaste auf dem fokussierten Knopf wirken wie
  * Gedrückthalten (Entscheidung A3, @SL-167): erst etwa eine Sekunde löst aus, ein kurzer Druck nie.
- * Die Füllung zeigt das Halten sichtbar; sie bleibt auch bei reduzierter Bewegung (Rückmeldung, keine Deko).
+ * Die Füllung zeigt das Halten sichtbar, als Balken am unteren Rand auf einer Spur (Mockup, S5); sie bleibt auch
+ * bei reduzierter Bewegung (Rückmeldung, keine Deko).
  */
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from 'react';
@@ -23,6 +24,8 @@ export interface HoldButtonProps {
   /** Text, per aria-describedby verknüpft (nicht aria-description), z. B. „Gedrückt halten, etwa eine Sekunde“ */
   beschreibung: string;
   disabled?: boolean;
+  /** Roving Tabindex der umgebenden Werkzeugleiste (S5): `-1` nimmt den Knopf aus der Tab-Reihenfolge. */
+  tabIndex?: number;
 }
 
 const istHaltetaste = (key: string): boolean => key === 'Enter' || key === ' ';
@@ -52,22 +55,34 @@ const knopfStil: CSSProperties = {
   WebkitTouchCallout: 'none',
 };
 
-const fuellungStil = (fuellt: boolean): CSSProperties => ({
+const spurStil: CSSProperties = {
   position: 'absolute',
-  inset: 0,
+  left: cssVars.spacing.sm,
+  right: cssVars.spacing.sm,
+  bottom: cssVars.spacing.xs,
+  height: cssVars.spacing.xs,
+  borderRadius: cssVars.borderRadius.full,
+  background: cssVars.colors.errorSubtle,
+  overflow: 'hidden',
+  pointerEvents: 'none',
+};
+
+const fuellungStil = (fuellt: boolean): CSSProperties => ({
+  display: 'block',
+  width: '100%',
+  height: '100%',
+  borderRadius: cssVars.borderRadius.full,
   background: cssVars.colors.holdFill,
-  opacity: 0.35,
   transformOrigin: 'left center',
   transform: fuellt ? 'scaleX(1)' : 'scaleX(0)',
   transition: fuellt ? 'transform var(--hold-duration) linear' : 'none',
-  pointerEvents: 'none',
 });
 
 const inhaltStil: CSSProperties = { position: 'relative', display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm };
 const zweiStil: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' };
 const subStil: CSSProperties = { fontSize: cssVars.fontSizes.xs, fontWeight: cssVars.fontWeights.medium, color: cssVars.colors.textSecondary };
 
-export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung, disabled = false }: HoldButtonProps) {
+export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung, disabled = false, tabIndex }: HoldButtonProps) {
   const [fuellt, setFuellt] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zeigerRef = useRef<number | null>(null);
@@ -143,6 +158,7 @@ export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung
       aria-label={name}
       aria-describedby={beschreibungId}
       disabled={disabled}
+      tabIndex={tabIndex}
       style={{ ...knopfStil, '--hold-duration': `${HOLD_MS}ms` } as CSSProperties}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerEnde}
@@ -154,7 +170,9 @@ export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung
       onBlur={abbrechen}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <span data-testid={`${testId}-fuellung`} style={fuellungStil(fuellt)} aria-hidden="true" />
+      <span data-testid={`${testId}-spur`} style={spurStil} aria-hidden="true">
+        <span data-testid={`${testId}-fuellung`} style={fuellungStil(fuellt)} />
+      </span>
       <span style={inhaltStil}>
         {icon}
         <span style={sublabel ? zweiStil : undefined}>
