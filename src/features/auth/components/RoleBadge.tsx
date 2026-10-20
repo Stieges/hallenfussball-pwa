@@ -45,6 +45,17 @@ const roleColors: Record<
     text: cssVars.colors.textSecondary,
     border: cssVars.colors.border,
   },
+  // A-27: Geräte-Rollen wie ihre Konto-Gegenstücke (Helfer wie collaborator, Bildschirm wie viewer).
+  helper: {
+    background: cssVars.colors.surfaceLight,
+    text: cssVars.colors.textPrimary,
+    border: cssVars.colors.border,
+  },
+  screen: {
+    background: cssVars.colors.surface,
+    text: cssVars.colors.textSecondary,
+    border: cssVars.colors.border,
+  },
 };
 
 interface RoleBadgeProps {

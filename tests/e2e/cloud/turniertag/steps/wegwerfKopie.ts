@@ -5,7 +5,7 @@
  * Ganzes (Kaskade auf Spiele, Teams und Ereignisse): der einzige Weg, Engine-Ereignisse zu entfernen. Der Turniertag-Cup selbst
  * wird nur gelesen; `momentaufnahme` belegt, dass er danach unverändert ist.
  */
-import { expect, type Browser } from '@playwright/test';
+import { expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { newRoleContext } from '../../engineHelpers';
 import { serviceRest } from '../../restAsRole';
 import { getRows, TURNIERTAG_ID } from './shared';
@@ -33,8 +33,28 @@ export async function momentaufnahme(): Promise<string> {
   return JSON.stringify({ turnier, monitore, spiele, teams, ereignisse });
 }
 
-/** Kopiert den Turniertag-Cup als Turnierleitung über die Startseite und wartet, bis Spiele und Teams in der Cloud stehen. */
-export async function legeWegwerfKopieAn(browser: Browser, zweck: string): Promise<WegwerfKopie> {
+/** Das kopierende Gerät der Turnierleitung bleibt offen (ohne Neuladen), bis `entfernen` es schließt: für Schritte, die „auch auf dem Gerät, auf dem er kopiert hat“ prüfen (@W5-029). */
+export interface KopieAufOffenemGeraet extends WegwerfKopie {
+  /** Die Seite des kopierenden Geräts, unverändert seit dem Kopieren (Single-Page-App ohne Neuladen). */
+  page: Page;
+}
+
+interface Kopiervorgang {
+  kopieId: string;
+  context: BrowserContext;
+  page: Page;
+}
+
+/** Löscht die Kopie als Ganzes (Kaskade) und prüft, dass sie weg ist. */
+async function loescheKopie(id: string): Promise<void> {
+  const res = await serviceRest('DELETE', `tournaments?id=eq.${id}`);
+  expect(res.status, `Wegwerf-Kopie löschen: ${res.text}`).toBeLessThan(300);
+  const rest = await getRows<{ id: string }>(`tournaments?id=eq.${id}&select=id`, 'Kopie nach dem Löschen');
+  expect(rest, 'Wegwerf-Kopie ist gelöscht').toEqual([]);
+}
+
+/** Kopiert den Turniertag-Cup über die Startseite (Name, optional Datum der Kopie) und wartet, bis Spiele und Teams in der Cloud stehen. Der Kontext bleibt offen. */
+async function kopiere(browser: Browser, zweck: string, datum?: string): Promise<Kopiervorgang> {
   const titel = `Durchstich-Wegwerf ${zweck} ${Date.now()}`;
   const spieleOriginal = await getRows<{ id: string }>(`matches?tournament_id=eq.${TURNIERTAG_ID}&select=id`, 'Spiele des Originals');
   const teamsOriginal = await getRows<{ id: string }>(`teams?tournament_id=eq.${TURNIERTAG_ID}&select=id`, 'Teams des Originals');
@@ -48,6 +68,9 @@ export async function legeWegwerfKopieAn(browser: Browser, zweck: string): Promi
     await ausloeser.click();
     await page.getByTestId('action-menu-item-copy').click();
     await page.getByTestId('copy-dialog-name').fill(titel);
+    if (datum !== undefined) {
+      await page.getByTestId('copy-dialog-date').fill(datum);
+    }
     await page.getByTestId('copy-dialog-confirm').click();
     await expect(page.getByTestId('copy-dialog-name')).toBeHidden();
     const kopfAbfrage = `tournaments?title=eq.${encodeURIComponent(titel)}&select=id`;
@@ -58,18 +81,28 @@ export async function legeWegwerfKopieAn(browser: Browser, zweck: string): Promi
   } catch (error) {
     // Halb angelegte Kopie nicht stehen lassen.
     await serviceRest('DELETE', `tournaments?title=eq.${encodeURIComponent(titel)}`);
-    throw error;
-  } finally {
     await context.close();
+    throw error;
   }
-  const id = kopieId;
+  return { kopieId, context, page };
+}
+
+/** Kopiert den Turniertag-Cup als Turnierleitung über die Startseite und wartet, bis Spiele und Teams in der Cloud stehen. */
+export async function legeWegwerfKopieAn(browser: Browser, zweck: string): Promise<WegwerfKopie> {
+  const { kopieId, context } = await kopiere(browser, zweck);
+  await context.close();
+  return { id: kopieId, entfernen: () => loescheKopie(kopieId) };
+}
+
+/** Wie `legeWegwerfKopieAn`, mit dem Datum der Kopie im Dialog; das kopierende Gerät bleibt offen (`entfernen` schließt es und löscht die Kopie). */
+export async function legeKopieMitDatumAn(browser: Browser, zweck: string, datum: string): Promise<KopieAufOffenemGeraet> {
+  const { kopieId, context, page } = await kopiere(browser, zweck, datum);
   return {
-    id,
+    id: kopieId,
+    page,
     entfernen: async () => {
-      const res = await serviceRest('DELETE', `tournaments?id=eq.${id}`);
-      expect(res.status, `Wegwerf-Kopie löschen: ${res.text}`).toBeLessThan(300);
-      const rest = await getRows<{ id: string }>(`tournaments?id=eq.${id}&select=id`, 'Kopie nach dem Löschen');
-      expect(rest, 'Wegwerf-Kopie ist gelöscht').toEqual([]);
+      await context.close();
+      await loescheKopie(kopieId);
     },
   };
 }
