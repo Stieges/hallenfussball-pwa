@@ -48,13 +48,14 @@ describe('VerbindungsStatus (@SL-168)', () => {
     expect(screen.getByTestId('vs')).not.toHaveTextContent(/^Online/);
   });
 
-  it('@SL-168 Variante kompakt: mit Netz nur der Punkt (Name bleibt „Online“), ohne Netz immer mit Wort', () => {
+  it('@SL-168 Variante kompakt: mit Netz nur der Punkt (Name bleibt „Online“ in der Ansage), ohne Netz immer mit Wort', () => {
     const { unmount } = zeige({ status: 'online', variante: 'kompakt' });
-    expect(screen.getByTestId('vs').textContent).toBe('');
-    expect(screen.getByTestId('vs')).toHaveAccessibleName('Online');
+    expect(screen.getByRole('status')).toHaveTextContent('Online');
+    expect(screen.queryByText('Online', { ignore: '[role="status"]' })).toBeNull();
     unmount();
     zeige({ status: 'offline', variante: 'kompakt' });
     expect(screen.getByTestId('vs')).toHaveTextContent('Offline');
+    expect(screen.getByText('Offline', { ignore: '[role="status"]' })).toBeVisible();
   });
 
   it('@SL-168 Gegenbeispiel kompakt: „Wieder verbunden“ steht auch in der kompakten Variante als Wort', () => {
@@ -112,5 +113,29 @@ describe('VerbindungsStatus (@SL-168)', () => {
     expect(pille).toHaveTextContent('Wieder verbunden');
     expect(pille.style.width).toBe('min-content');
     expect(pille.style.flexWrap).toBe('nowrap');
+  });
+
+  it('@SL-168 H12 die Live-Region bleibt in jedem Zustand dasselbe Element (nur der Inhalt wechselt), sonst sagen Bildschirmleser „Offline“ und „Wieder verbunden“ nicht an', () => {
+    const { rerender } = zeige({ status: 'online', variante: 'kompakt' });
+    const region = screen.getByRole('status');
+    const schritte: Array<Partial<React.ComponentProps<typeof VerbindungsStatus>>> = [
+      { status: 'offline', variante: 'kompakt', wartende: 3, onVerbinden: vi.fn() },
+      { status: 'offline', variante: 'normal', wartende: 3, onVerbinden: vi.fn() },
+      { status: 'offline', variante: 'kompakt' },
+      { status: 'online', variante: 'kompakt', wiederVerbunden: true },
+      { status: 'online', variante: 'normal' },
+    ];
+    for (const schritt of schritte) {
+      rerender(<VerbindungsStatus status="offline" texte={texte} testId="vs" {...schritt} />);
+      expect(screen.getAllByRole('status')).toHaveLength(1);
+      expect(screen.getByRole('status')).toBe(region);
+    }
+    expect(region).toHaveTextContent('Online');
+  });
+
+  it('@SL-168 H12 sichtbare Texte sind für Bildschirmleser verborgen (die Ansage trägt sie), der Knopf bleibt erreichbar', () => {
+    zeige({ wartende: 3, onVerbinden: vi.fn() });
+    expect(screen.getByText('3 Einträge warten', { ignore: '[role="status"]' }).closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Verbinden' }).closest('[aria-hidden="true"]')).toBeNull();
   });
 });

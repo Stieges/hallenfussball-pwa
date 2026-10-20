@@ -7,7 +7,7 @@
  * ist nie höher als `touchTargets.minimum`, damit ein schmaler Kopf beim Wechsel Online/Offline nicht wächst und nichts springt.
  * Die Variante `kompakt` (Handy) zeigt mit Netz nur den Punkt, ohne Netz EINE Pille als Knopf (oben „Verbinden“, darunter klein
  * „Offline“ und die wartenden Einträge) und „Wieder verbunden“ in zwei schmalen Zeilen. role="status" sitzt nie um den Knopf,
- * nur um den Statustext (bei der einen Pille: ein unsichtbarer Text daneben). Fachfrei: Status, Zahl und Handler kommen vom
+ * nur um den Statustext: ein dauerhaftes, unsichtbares role="status"-Element in jedem Zustand (H12), alles Sichtbare daneben aria-hidden. Fachfrei: Status, Zahl und Handler kommen vom
  * Aufrufer, alle Texte als `texte`. Nur Design-Tokens.
  */
 import type { CSSProperties, ReactElement } from 'react';
@@ -41,7 +41,7 @@ const farbe = (online: boolean) => ({
 });
 const schrift: CSSProperties = { fontFamily: 'inherit', fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.medium, color: cssVars.colors.textPrimary };
 const huelleStil = (online: boolean, mitKnopf: boolean, schmal: boolean): CSSProperties => ({
-  display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: cssVars.spacing.xs, flex: 'none', ...schrift,
+  position: 'relative', display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: cssVars.spacing.xs, flex: 'none', ...schrift,
   // Mit Knopf: kein Innenabstand um ihn (Rand als innerer Schatten, damit er keine Höhe kostet), ohne Knopf wie bisher
   padding: mitKnopf ? 0 : `${cssVars.spacing.xs} ${cssVars.spacing.sm}`, borderRadius: cssVars.borderRadius.full,
   background: farbe(online).bg, boxShadow: `inset 0 0 0 ${cssVars.borderWidth.thin} ${farbe(online).rand}`,
@@ -64,11 +64,12 @@ const pilleKnopfStil: CSSProperties = {
   ...schrift, display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box',
   minHeight: cssVars.touchTargets.minimum, minWidth: cssVars.touchTargets.minimum, padding: `0 ${cssVars.spacing.xs}`, lineHeight: 'normal',
   background: cssVars.colors.warningBannerBg, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.warning}`,
-  // Große Rundung statt Halbkreis: die dritte Zeile reicht fast bis an den Rand und würde an den Ecken eines Halbkreises anstoßen
-  borderRadius: cssVars.borderRadius.lg, cursor: 'pointer',
+  // Gleiche Rundung wie „Zurück“ und Feldwahl im Kopf (md): die dritte Zeile reicht fast bis an den Rand und liegt nie auf der Rundung.
+  // Seitlicher Innenabstand xs: mit sm bricht der Kopf mit zwei Feldern bei 360 px um (Karte 578 > 565, im E2E gemessen)
+  borderRadius: cssVars.borderRadius.md, cursor: 'pointer',
 };
 const kleinStil: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs, fontSize: cssVars.fontSizes.xs, fontWeight: cssVars.fontWeights.medium, whiteSpace: 'nowrap' };
-/** Nur für Bildschirmleser: sagt „Offline, 3 Einträge warten“, ohne den Knopf zu umschließen. */
+/** Nur für Bildschirmleser: die dauerhafte Live-Region („Offline, 3 Einträge warten“), nie um den Knopf. */
 const unsichtbarStil: CSSProperties = {
   position: 'absolute', width: cssVars.sizing.hairline, height: cssVars.sizing.hairline, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)',
   whiteSpace: 'nowrap', margin: `calc(-1 * ${cssVars.sizing.hairline})`, padding: 0, border: 0,
@@ -79,35 +80,40 @@ export function VerbindungsStatus({ status, texte, wartende = 0, onVerbinden, wi
   const kompakt = variante === 'kompakt';
   const wort = online ? (wiederVerbunden ? texte.wiederVerbunden : texte.online) : texte.offline;
   const wartend = !online && wartende > 0 ? texte.wartend(wartende) : null;
-  const wartendTeil = wartend !== null && <span data-testid={testId && `${testId}-wartend`}>{wartend}</span>;
+  const wartendTeil = wartend !== null && <span aria-hidden="true" data-testid={testId && `${testId}-wartend`}>{wartend}</span>;
   const verbindenId = testId && `${testId}-verbinden`;
+  // H12: EIN dauerhaftes, unsichtbares Live-Region-Element in jedem Zustand (der Inhalt wechselt, das Element bleibt), sonst sagen
+  // Bildschirmleser „Offline“ und „Wieder verbunden“ nicht an. Alles Sichtbare daneben ist `aria-hidden`; der Knopf bleibt ein Knopf.
+  const ansage = <span role="status" style={unsichtbarStil}>{wartend === null ? wort : `${wort}, ${wartend}`}</span>;
 
   if (!online && onVerbinden && kompakt) {
     return (
       <span style={{ position: 'relative', display: 'inline-flex', flex: 'none' }} data-testid={testId} data-status={status}>
+        {ansage}
         <button type="button" style={pilleKnopfStil} data-testid={verbindenId} onClick={onVerbinden}>
           <span style={{ fontWeight: cssVars.fontWeights.semibold }}>{texte.verbinden}</span>
           <span style={kleinStil} aria-hidden="true"><span style={punktStil(false)} />{texte.offline}</span>
           {wartend !== null && <span style={kleinStil} aria-hidden="true" data-testid={testId && `${testId}-wartend`}>{wartend}</span>}
         </button>
-        <span role="status" style={unsichtbarStil}>{wartend === null ? wort : `${wort}, ${wartend}`}</span>
       </span>
     );
   }
   if (!online && onVerbinden) {
     return (
       <span style={huelleStil(false, true, false)} data-testid={testId} data-status={status}>
-        <span role="status" style={statusTeilStil}><span style={punktStil(false)} aria-hidden="true" />{wort}{wartendTeil}</span>
+        {ansage}
+        <span style={statusTeilStil} aria-hidden="true"><span style={punktStil(false)} />{wort}{wartendTeil}</span>
         <button type="button" style={segmentKnopfStil} data-testid={verbindenId} onClick={onVerbinden}>{texte.verbinden}</button>
       </span>
     );
   }
-  // Kompakt und ruhig online: nur der Punkt, der Name bleibt das Wort
+  // Kompakt und ruhig online: nur der Punkt, der Name bleibt das Wort (in der Ansage)
   const nurPunkt = kompakt && online && !wiederVerbunden;
   return (
-    <span style={huelleStil(online, false, kompakt && online && wiederVerbunden)} role="status" aria-label={nurPunkt ? wort : undefined} data-testid={testId} data-status={status}>
+    <span style={huelleStil(online, false, kompakt && online && wiederVerbunden)} data-testid={testId} data-status={status}>
+      {ansage}
       <span style={punktStil(online)} aria-hidden="true" />
-      {!nurPunkt && wort}
+      {!nurPunkt && <span aria-hidden="true">{wort}</span>}
       {wartendTeil}
     </span>
   );

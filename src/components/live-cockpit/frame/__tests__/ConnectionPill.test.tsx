@@ -23,15 +23,14 @@ describe('ConnectionPill', () => {
 
   it('@SL-140 Handy mit Netz: nur der Punkt, zugänglicher Name „Online“', () => {
     render(<ConnectionPill tournamentId="t-1" />);
-    const pille = screen.getByTestId('cockpit-verbindung');
-    expect(pille.textContent).toBe('');
-    expect(pille).toHaveAccessibleName('Online');
+    expect(screen.getByRole('status')).toHaveTextContent('Online');
+    expect(screen.queryByText('Online', { ignore: '[role="status"]' })).toBeNull();
   });
 
   it('@SL-140 Gegenbeispiel Tablet/Laptop mit Netz: Text „Online“ sichtbar', () => {
     zustand.mobil = false;
     render(<ConnectionPill tournamentId="t-1" />);
-    expect(screen.getByTestId('cockpit-verbindung').textContent).toBe('Online');
+    expect(screen.getByText('Online', { ignore: '[role="status"]' })).toBeInTheDocument();
   });
 
   it('@SL-168 ohne Netz mit 3 wartenden Einträgen: „Offline“, „3 Einträge warten“, Tippen auf „Verbinden“ stößt die Übertragung an', async () => {
