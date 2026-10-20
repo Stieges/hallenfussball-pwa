@@ -57,6 +57,8 @@ async function pruefeUeberfaelligkeit(seite: Page, kopieId: string, spielId: str
 /**
  * D0b: Kopie fürs Proben: Olli kopiert den Turniertag-Cup mit einem früheren Datum X. Spiel 1 der Kopie steht auf jedem Gerät am Datum X zur Uhrzeit des
  * Originals, auch auf Ollis Gerät, auf dem er kopiert hat (ohne Neuladen), und auf einem zweiten Gerät, das die Kopie neu aus der Cloud lädt (@W5-029).
+ * @W5-029 nennt „Toms Cockpit“; geprüft wird mit zwei Geräten der Turnierleitung (Helfer gehören nicht zur Kopie, @W5-026). Die Ursache des Befunds
+ * (Anstoß aus altem Datum) ist damit abgedeckt: sie hängt am Gerät, das kopiert hat, und am Laden aus der Cloud, nicht an der Rolle.
  * Das Original bleibt unverändert. Die übrigen Eigenschaften der Kopie (leer, ohne Freigabe, archivieren) belegt `kopie-proben.cloud.spec.ts` (@W5-024 bis @W5-027).
  */
 async function kopieFuersProben({ browser }: StepContext): Promise<void> {
@@ -68,8 +70,9 @@ async function kopieFuersProben({ browser }: StepContext): Promise<void> {
   });
   const datumKopie = tageVor(ausgang.datumOriginal, 2);
   const kopie = await vorbedingung('Kopie fürs Proben mit früherem Datum anlegen', () => legeKopieMitDatumAn(browser, 'D0b', datumKopie));
-  const zweitesGeraet = await newRoleContext(browser, 'owner');
+  let zweitesGeraet: Awaited<ReturnType<typeof newRoleContext>> | undefined;
   try {
+    zweitesGeraet = await newRoleContext(browser, 'owner');
     const [kopf] = await getRows<{ date: string }>(`tournaments?id=eq.${kopie.id}&select=date`, 'Datum der Kopie');
     expect(kopf.date.slice(0, 10), 'die Kopie trägt das Datum aus dem Dialog').toBe(datumKopie);
     const [spiel1] = await getRows<{ id: string; scheduled_start: string }>(`matches?tournament_id=eq.${kopie.id}&match_number=eq.1&select=id,scheduled_start`, 'Spiel 1 der Kopie');
@@ -80,7 +83,7 @@ async function kopieFuersProben({ browser }: StepContext): Promise<void> {
     await pruefeUeberfaelligkeit(zweitesGeraet.page, kopie.id, spiel1.id, anstoss, uhrzeit, 'zweites Gerät, neu aus der Cloud geladen');
     expect(await momentaufnahme(), 'das Original ist nach dem Kopieren unverändert').toBe(ausgang.vorher);
   } finally {
-    await zweitesGeraet.context.close();
+    await zweitesGeraet?.context.close();
     await kopie.entfernen();
   }
 }
