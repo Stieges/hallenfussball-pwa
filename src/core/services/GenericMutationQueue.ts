@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { generateUniqueId } from '../../utils/idGenerator';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { captureFeatureError } from '../../lib/sentry';
-import { isTransientMutationError } from '../errors';
+import { isTransientMutationError, isVersionConflict } from '../errors';
 import { StorageError } from '../storage/StorageError';
 import { QueueInFlight, QueueRetryTimer, globalQueueTimers, HOLD_RETRY_MS, isAuthExpired, type QueueTimers } from './mutationQueueRetry';
 import { REQUEST_TIMEOUT_MS } from '../utils/syncRetryTiming';
@@ -32,6 +32,7 @@ const GenericMutationItemSchema = z.object({
 const GenericFailedMutationItemSchema = GenericMutationItemSchema.extend({
     failedAt: z.number(),
     lastError: z.string().optional(),
+    conflict: z.boolean().optional(),
 });
 
 /**
@@ -54,6 +55,8 @@ export const MAX_RETRIES = 5;
 export interface FailedMutationItem<TType extends string = string> extends GenericMutationItem<TType> {
     failedAt: number;
     lastError?: string;
+    /** @FU-106: abgelehnt, weil ein anderes Gerät inzwischen gespeichert hat (Versionskonflikt). */
+    conflict?: boolean;
 }
 
 /**
@@ -122,6 +125,8 @@ export class GenericMutationQueue<TType extends string> {
     private listeners: ((status: MutationQueueStatus) => void)[] = [];
     private readonly storageReported = new Set<string>(); // A-07i Fixrunde 1: Sentry je Ursache nur einmal
     private readonly completed = new Map<string, number>(); // A-08f3c2: erledigte Einträge je Bereich (H1)
+    /** @FU-106: Bereiche, deren Kopie nach „Verwerfen“ eines Konflikts den Cloud-Stand braucht (dauerhaft gespeichert). */
+    private cloudCopyNeeded = new Set<string>();
 
     constructor(private config: MutationQueueConfig<TType>) {
         const timers = config.timers ?? globalQueueTimers();
@@ -131,6 +136,7 @@ export class GenericMutationQueue<TType extends string> {
         this.inFlight = new QueueInFlight(timers);
         this.load();
         this.loadFailed();
+        this.loadCloudCopyNeeded();
 
         // Auto-process on online
         if (typeof window !== 'undefined') {
@@ -248,11 +254,12 @@ export class GenericMutationQueue<TType extends string> {
     /**
      * Move a failed mutation to the dead-letter queue
      */
-    private moveToDeadLetter(item: GenericMutationItem<TType>, error?: string): void {
+    private moveToDeadLetter(item: GenericMutationItem<TType>, error?: string, conflict = false): void {
         const failedItem: FailedMutationItem<TType> = {
             ...item,
             failedAt: Date.now(),
             lastError: error,
+            ...(conflict ? { conflict: true } : {}),
         };
         this.failedQueue.push(failedItem);
         this.saveFailed();
@@ -341,8 +348,9 @@ export class GenericMutationQueue<TType extends string> {
         const index = this.failedQueue.findIndex(item => item.id === id);
         if (index === -1) { return false; }
 
-        this.failedQueue.splice(index, 1);
+        const discarded = this.failedQueue.splice(index, 1);
         this.saveFailed();
+        this.markCloudCopyNeeded(discarded);
         this.notifyListeners();
         return true;
     }
@@ -351,11 +359,44 @@ export class GenericMutationQueue<TType extends string> {
      * Clear all failed mutations
      */
     public clearAllFailed(): number {
-        const count = this.failedQueue.length;
+        const discarded = this.failedQueue;
         this.failedQueue = [];
         this.saveFailed();
+        this.markCloudCopyNeeded(discarded);
         this.notifyListeners();
-        return count;
+        return discarded.length;
+    }
+
+    /**
+     * @FU-106 (Befund C-VERWERFEN-BEHAELT-VERALTETEN-STAND): Verworfen wird eine wegen eines Konflikts abgelehnte Änderung –
+     * die lokale Kopie trägt dann einen Inhalt, den der Server nie bekommt. Der Bereich (Turnier) wird gemerkt, bis die
+     * Kopie den Cloud-Stand übernommen hat (`cloudCopyAdopted`); ohne Konflikt bleibt alles wie bisher.
+     */
+    private markCloudCopyNeeded(discarded: readonly FailedMutationItem<TType>[]): void {
+        const scopes = discarded.filter((item) => item.conflict).map((item) => this.config.scopeOf?.(item.type, item.payload));
+        const added = scopes.filter((scope): scope is string => !!scope && !this.cloudCopyNeeded.has(scope));
+        if (added.length === 0) { return; }
+        added.forEach((scope) => this.cloudCopyNeeded.add(scope));
+        this.saveCloudCopyNeeded();
+    }
+
+    /** @FU-106: braucht die Kopie des Bereichs den Cloud-Stand (nach „Verwerfen“ eines Konflikts)? */
+    public needsCloudCopy(scope: string): boolean { return this.cloudCopyNeeded.has(scope); }
+    public scopesNeedingCloudCopy(): string[] { return [...this.cloudCopyNeeded]; }
+    /** @FU-106: die Kopie hat den Cloud-Stand übernommen. */
+    public cloudCopyAdopted(scope: string): void {
+        if (this.cloudCopyNeeded.delete(scope)) { this.saveCloudCopyNeeded(); }
+    }
+
+    private get cloudCopyKey(): string { return `${this.config.failedStorageKey}:cloud-copy`; }
+    private saveCloudCopyNeeded(): void { this.persist(this.cloudCopyKey, [...this.cloudCopyNeeded], 'saveCloudCopyNeeded'); }
+    private loadCloudCopyNeeded(): void {
+        try {
+            const parsed: unknown = JSON.parse(safeLocalStorage.getItem(this.cloudCopyKey) ?? '[]');
+            this.cloudCopyNeeded = new Set(Array.isArray(parsed) ? parsed.filter((scope): scope is string => typeof scope === 'string') : []);
+        } catch {
+            this.cloudCopyNeeded = new Set();
+        }
     }
 
     private load() {
@@ -495,7 +536,7 @@ export class GenericMutationQueue<TType extends string> {
                         if (error instanceof Error) { captureFeatureError(error, this.config.sentryFeature, 'deadLetter', { mutationType: item.type, mutationId: item.id }); }
                         // Move to dead-letter queue instead of dropping
                         this.queue.shift();
-                        this.moveToDeadLetter(item, errorMessage);
+                        this.moveToDeadLetter(item, errorMessage, isVersionConflict(error));
                         this.save();
                         this.notifyListeners();
                         continue; // Continue to next item

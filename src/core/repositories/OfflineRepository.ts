@@ -136,6 +136,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     private readonly cloudReadRerun = new Set<string>();
     /** A-08f3c2 Regel Q: keine ganze Cloud-Kopie über eigene wartende, laufende oder gescheiterte Änderungen. */
     private readonly queueGuard: CloudQueueGuard;
+    /** @FU-106: laufende Übernahmen nach „Verwerfen“ eines Konflikts (eine je Turnier) und ihre Zuhörer (Anzeige nachladen). */
+    private readonly discardAdoptions = new Set<string>();
+    private readonly cloudCopyListeners = new Map<string, Set<() => void>>();
 
     constructor(
         private localRepo: LocalStorageRepository,
@@ -145,6 +148,28 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     ) {
         this._mutationQueue = new MutationQueue(supabaseRepo, localRepo, undefined, accountId);
         this.queueGuard = new CloudQueueGuard(this._mutationQueue);
+        // @FU-106: nach „Verwerfen“ eines Konflikts sofort (und nach einem Neustart) den Cloud-Stand holen
+        this._mutationQueue.subscribe(() => this.adoptAfterDiscard());
+        this.adoptAfterDiscard();
+    }
+
+    /** @FU-106 (Befund C-VERWERFEN-BEHAELT-VERALTETEN-STAND): gemerkte Turniere frisch lesen; die Übernahme erzwingt `readAndAdopt`. */
+    private adoptAfterDiscard(): void {
+        for (const id of this._mutationQueue.scopesNeedingCloudCopy()) {
+            if (this.discardAdoptions.has(id)) { continue; }
+            this.discardAdoptions.add(id);
+            void this.get(id, { fresh: true })
+                .catch((error: unknown) => { if (error instanceof Error) { captureFeatureError(error, 'repository', 'adoptAfterDiscard', { tournamentId: id }); } })
+                .finally(() => this.discardAdoptions.delete(id));
+        }
+    }
+
+    /** @FU-106: meldet, dass die Kopie nach „Verwerfen“ den Cloud-Stand übernommen hat (die Anzeige lädt nach). */
+    subscribeCloudCopyAdopted(tournamentId: string, listener: () => void): () => void {
+        const listeners = this.cloudCopyListeners.get(tournamentId) ?? new Set<() => void>();
+        listeners.add(listener);
+        this.cloudCopyListeners.set(tournamentId, listeners);
+        return () => { listeners.delete(listener); };
     }
 
     /** A-07e: Kopie gehoert dem Konto dieses Repositorys (ohne Konto unveraendert). */
@@ -268,10 +293,15 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         const before = this.queueGuard.snapshot(id); // A-08f3c2 (H1): Stand der Warteschlange vor dem Lesen
         const read = await withCloudReadTimeout(this.supabaseRepo.getWithMatchRevisions(id));
         if (!read) { return null; }
-        const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined, owned: (t: Tournament) => this.owned(t),
+        const discarded = this._mutationQueue.needsCloudCopy(id); // @FU-106: verworfener Konflikt → ganze Kopie der Cloud
+        const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined || discarded, owned: (t: Tournament) => this.owned(t),
             wholeAllowed: () => this.queueGuard.mayAdoptWhole(id, before) };
         const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => decideCloudAdoption(local, read, stored, options));
         this.serverRevisions.record(id, adoption.revisions);
+        if (discarded && adoption.save !== undefined) {
+            this._mutationQueue.cloudCopyAdopted(id);
+            this.cloudCopyListeners.get(id)?.forEach((listener) => listener());
+        }
         return { tournament: read.tournament, whole: adoption.save !== undefined };
     }
 
@@ -394,6 +424,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
      */
     private mayUpload(local: Tournament, remote: Tournament | null): boolean {
         if (this.roleMemory().former.includes(local.id)) { return false; }
+        if (remote !== null && this._mutationQueue.needsCloudCopy(local.id)) { return false; } // @FU-106: verworfener Inhalt nie hochladen
         return remote !== null || local.changeRevision === undefined;
     }
 
@@ -649,6 +680,11 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
 
             // Case: No local data - übernehmen (A-08f3c1/M4: Cloud-Version, gleiche Regel wie der Abruf)
             if (!localT) {
+                return this.adoptWhole(tournamentId, remoteT);
+            }
+
+            // @FU-106: nach „Verwerfen“ eines Konflikts gilt der Cloud-Stand, auch wenn die lokale Kopie jünger ist
+            if (this._mutationQueue.needsCloudCopy(tournamentId)) {
                 return this.adoptWhole(tournamentId, remoteT);
             }
 

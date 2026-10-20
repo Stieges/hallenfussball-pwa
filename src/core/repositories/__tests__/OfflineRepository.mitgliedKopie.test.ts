@@ -4,8 +4,8 @@
  * `…changeRevision.tm027.test.ts`) prüfen das Gerät des Eigentümers; hier hält Maria (Mitglied, `ownerId` = ihr Konto,
  * so legt `owned()` die Kopie ab) die Kopie eines Turniers von Olli.
  *
- * Gegenrichtung zu @FU-089 (`plattform/2026-09-24_fundament-gemeinsamer-stand.md`): „Marias Tablet bleibt über viele
- * Änderungen von Olli auf dem Stand des Servers“ (Szenario-Vorschlag NEU-CA6, Kennung vergibt der Controller).
+ * Gegenrichtung zu @FU-089 (`plattform/2026-09-24_fundament-gemeinsamer-stand.md`), Szenario @FU-105: „Marias Tablet bleibt über viele
+ * Änderungen von Olli auf dem Stand des Servers“ (Plan NEU-CA6).
  * @FU-002 / @FU-004: nichts geht still verloren; ein Eintrag, der nicht übertragen werden kann, bleibt sichtbar und
  * auf dem Gerät erhalten, bis er übertragen oder geklärt ist (Regel Q, `cloudQueueGuard.ts`).
  *
@@ -78,7 +78,7 @@ function stored(): Tournament {
 }
 const kickoffOf = (t: Tournament, id: string): string => new Date(t.matches.find((m) => m.id === id)?.scheduledTime ?? 0).toISOString();
 
-describe('CA-6 Marias Gerät (Mitglied) bleibt über viele Änderungen von Olli auf dem Stand der Cloud (Gegenrichtung zu @FU-089)', () => {
+describe('@FU-105 CA-6 Marias Gerät (Mitglied) bleibt über viele Änderungen von Olli auf dem Stand der Cloud (Gegenrichtung zu @FU-089)', () => {
   let repo: OfflineRepository | undefined;
 
   beforeEach(() => {
@@ -253,20 +253,25 @@ describe('CA-6 Marias Gerät (Mitglied) bleibt über viele Änderungen von Olli 
     });
 
     /**
-     * BEFUND (CA-6, rot, Fix-Auftrag Opus aus der Reserve): Verwirft Maria den gescheiterten Eintrag (Schalter „Verwerfen“ in
-     * `SyncStatusIndicator`), steht ihr Titel lokal weiter auf Version 8 gleich Cloud-Version 8, aber mit ANDEREM Inhalt als Ollis
-     * Stand. `decideCloudAdoption` nimmt die ganze Kopie nur bei höherer Version oder höherer Änderungszählung -- beide gleich,
-     * also bleibt Marias nie hochgeladener Titel stehen, bis Olli das nächste Mal speichert (Plan § 2.3 „Restrisiko“; Erwartung
-     * „Endstand nach dem nächsten Abruf = Cloud“). Nach dem Fix: `it.fails` -> `it`.
+     * @FU-106 (Befund C-VERWERFEN-BEHAELT-VERALTETEN-STAND, CA-6): Verwirft Maria den wegen des Konflikts gescheiterten Eintrag
+     * (Schalter „Verwerfen“ in `SyncStatusIndicator` → `clearFailedMutation`), stand ihr Titel vor dem Fix lokal weiter auf
+     * Version 8 gleich Cloud-Version 8, aber mit ANDEREM Inhalt als Ollis Stand. Soll: Inhalt und Version der Cloud.
+     * Weitere Wege (Abgleich über die Anzeige, Neustart, Gegenbeispiele): `OfflineRepository.verwerfenNachKonflikt.test.ts`.
      */
-    it.fails('BEFUND geklärt nur durch Verwerfen: der nächste Abruf zeigt Ollis Stand (Endstand = Cloud)', async () => {
-      const { maria } = await wettlaufBisDeadLetter();
+    it('@FU-106 Verwerfen nach dem Konflikt: der nächste Abruf zeigt Ollis Stand mit der Cloud-Version, nichts bleibt gestört, Ollis Änderung bleibt', async () => {
+      const { cloud, maria } = await wettlaufBisDeadLetter();
+      const savesVorher = cloud.fake.save.mock.calls.length;
       const [eintrag] = maria.mutationQueue.getFailedMutations();
       expect(maria.mutationQueue.clearFailedMutation(eintrag.id)).toBe(true);
 
-      await maria.get('T', { fresh: true });
+      const shown = await maria.get('T', { fresh: true });
 
       expect(stored()).toMatchObject({ title: 'Ollis Titel', version: 8, ownerId: MARIA });
+      expect(shown?.title).toBe('Ollis Titel');
+      expect(maria.mutationQueue.getFailedCount()).toBe(0);
+      expect(maria.mutationQueue.getPendingCount()).toBe(0);
+      expect(await cloudNow(cloud)).toMatchObject({ title: 'Ollis Titel', version: 8 });
+      expect(cloud.fake.save.mock.calls.length).toBe(savesVorher); // nach dem Verwerfen kein Upload mehr
     });
 
     it('Gleichstand lokal N+1 gegen Cloud N+1: Marias Gerät ohne Netz speichert, Olli speichert, Netz kommt zurück → Ollis Änderung bleibt, Marias Eintrag wird sichtbar abgelehnt', async () => {
