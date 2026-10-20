@@ -72,11 +72,12 @@ describe('require-local-stack.sh (@OB-029)', () => {
     });
   });
 
-  // Schalter nur für Tests ohne Docker; die Gesundheitsprüfung selbst läuft sonst über `npx tsx`.
+  // Schalter nur für Tests ohne Docker; die Gesundheitsprüfung selbst läuft sonst über `tsx`.
+  // Der Test legt ein gefälschtes `tsx` an die Spitze des PATH: echtes tsx/Docker wird nie erreicht.
   describe('Gesundheitsprüfung (@LT-003)', () => {
     it('@LT-003 reicht Exit 1 und Text der Prüfung durch, auch bei lokaler API_URL', () => {
-      const dir = mkdtempSync(join(tmpdir(), 'fake-npx-'));
-      const fake = join(dir, 'npx');
+      const dir = mkdtempSync(join(tmpdir(), 'fake-tsx-'));
+      const fake = join(dir, 'tsx');
       writeFileSync(fake, '#!/bin/sh\necho "Dienste der Testumgebung sind ausgefallen: storage" >&2\nexit 1\n');
       chmodSync(fake, 0o755);
       const result = spawnSync('bash', [SCRIPT], {

@@ -35,7 +35,8 @@ done
 # Vor der Stack-Abfrage, damit „Docker nicht erreichbar“ als solches gemeldet wird.
 # E2E_REQUIRE_LOCAL_STACK_SKIP_HEALTH=1 überspringt das nur für Tests ohne Docker.
 if [ "${E2E_REQUIRE_LOCAL_STACK_SKIP_HEALTH:-}" != "1" ]; then
-  npx tsx "$SCRIPT_DIR/test-env-check.ts" --gesund
+  TSX_BIN="$(command -v tsx || echo "$SCRIPT_DIR/../node_modules/.bin/tsx")"
+  "$TSX_BIN" "$SCRIPT_DIR/test-env-check.ts" --gesund
 fi
 
 # 2. Läuft ein lokaler Stack?

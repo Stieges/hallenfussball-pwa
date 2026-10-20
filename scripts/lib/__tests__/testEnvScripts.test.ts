@@ -35,4 +35,11 @@ describe('package.json: Testumgebung', () => {
   it('@LT-005 test:env:aufraeumen ruft das Prüfskript im Modus --aufraeumen', () => {
     expect(script('test:env:aufraeumen')).toContain('test-env-check.ts --aufraeumen');
   });
+
+  it('Laufzeit: Skripte rufen tsx direkt auf, nicht über npx', () => {
+    for (const name of ['test:env:up', 'test:env:reset', 'test:env:seed', 'test:env:status', 'test:env:aufraeumen']) {
+      expect(script(name), name).not.toContain('npx tsx');
+    }
+    expect(script('test:env:aufraeumen')).toMatch(/^tsx /);
+  });
 });

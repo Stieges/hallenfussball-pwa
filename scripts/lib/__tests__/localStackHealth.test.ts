@@ -104,6 +104,19 @@ describe('Ausgefallene Dienste (findUnhealthyContainers)', () => {
     expect(found[0]?.status).toBe(status);
   });
 
+  it('@LT-003 Neustartschleife: running + starting + 3 Neustarts wird gemeldet', () => {
+    const c = container({ service: 'storage', health: 'starting', restartCount: 3 });
+    const found = findUnhealthyContainers([c], PROJECT);
+    expect(found.map((f) => f.service)).toEqual(['storage']);
+    const msg = formatUnhealthyMessage(found, {});
+    expect(msg).toContain('neu startend (3 Neustarts)');
+  });
+
+  it('@LT-002 running ohne Neustarts (restartCount 0) wird nicht gemeldet', () => {
+    const c = container({ service: 'storage', health: 'starting', restartCount: 0 });
+    expect(findUnhealthyContainers([c], PROJECT)).toEqual([]);
+  });
+
   it('@LT-003 meldet einen laufenden, aber als unhealthy markierten Dienst', () => {
     const found = findUnhealthyContainers([container({ service: 'db', health: 'unhealthy' })], PROJECT);
     expect(found.map((f) => f.service)).toEqual(['db']);
@@ -234,6 +247,11 @@ describe('Aufräumen (findRemovableImages)', () => {
       name: 'supabase_storage_anderes-projekt',
     };
     expect(findRemovableImages([storageAlt], [fremderContainer], PROJECT)).toEqual([]);
+  });
+
+  it('@LT-010 abgelöst nur durch LAUFENDE Container: gestoppter Container mit neuerem Tag löst nichts ab', () => {
+    const gestoppt = [container({ service: 'storage', imageId: sha('e'), imageRef: `${ECR}/storage-api:v1.2`, status: 'exited' })];
+    expect(findRemovableImages([storageAlt], gestoppt, PROJECT)).toEqual([]);
   });
 
   it('@LT-011 zwei Supabase-Namen auf derselben ID: beide Namen werden einzeln entfernt', () => {

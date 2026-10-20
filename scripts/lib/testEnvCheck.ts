@@ -49,6 +49,7 @@ interface InspectEntry {
   Name?: string;
   Image?: string;
   Config?: { Image?: string };
+  RestartCount?: number;
   State?: { Status?: string; Health?: { Status?: string } };
 }
 interface ImageListEntry {
@@ -71,6 +72,7 @@ function listContainers(deps: CheckDeps): DockerContainer[] {
     imageRef: e.Config?.Image ?? '',
     status: e.State?.Status ?? 'unknown',
     health: e.State?.Health?.Status,
+    restartCount: e.RestartCount,
   }));
 }
 

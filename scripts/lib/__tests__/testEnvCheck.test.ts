@@ -15,6 +15,7 @@ interface FakeContainer {
   imageRef: string;
   status: string;
   health?: string;
+  restartCount?: number;
   log?: { stdout?: string; stderr?: string };
 }
 interface FakeImage {
@@ -52,6 +53,7 @@ function setup(fake: Fake): { deps: CheckDeps; calls: string[][] } {
                 Name: `/${names[i]}`,
                 Image: c.imageId,
                 Config: { Image: c.imageRef },
+                RestartCount: c.restartCount,
                 State: { Status: c.status, Health: c.health ? { Status: c.health } : undefined },
               })),
             ),
@@ -144,6 +146,17 @@ describe('--vorher / --gesund', () => {
     expect(r.stderr).toContain(erwartet);
     expect(r.stderr).toContain('duplicate key migrations_name_key');
     expect(r.stderr).toContain('npm run test:env:down && npm run test:env:up');
+  });
+
+  it('@LT-003 Neustartschleife: running mit 3 Neustarts wird über runCheck gemeldet', () => {
+    const stack = gesunderStack().map((c) =>
+      c.service === 'storage' ? { ...c, health: 'starting', restartCount: 3 } : c,
+    );
+    const { deps } = setup({ containers: stack, images: [] });
+    const r = runCheck('--gesund', deps);
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr).toContain('storage');
+    expect(r.stderr).toContain('3 Neustarts');
   });
 
   it.each(['--vorher', '--gesund', '--aufraeumen'] as const)(

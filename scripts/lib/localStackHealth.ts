@@ -1,7 +1,7 @@
 /**
  * localStackHealth.ts — reine Prüflogik für die gemeinsame lokale Supabase-Testumgebung.
  *
- * Anforderung: docs/anforderungen/plattform/2026-10-20_lokale-testumgebung-gesund.md (@LT-001 … @LT-008).
+ * Anforderung: docs/anforderungen/plattform/2026-10-20_lokale-testumgebung-gesund.md (@LT-001 … @LT-011).
  * KEINE Docker- und KEINE Dateizugriffe: `scripts/test-env-check.ts` liest Docker und das
  * Dateisystem und reicht die Daten hierher (Muster wie `assertLocalSupabaseTarget.ts`).
  */
@@ -17,6 +17,8 @@ export interface DockerContainer {
   status: string;
   /** State.Health.Status, falls der Container einen Gesundheitstest hat. */
   health?: string;
+  /** State.RestartCount: Neustarts seit Erzeugung des Containers (`supabase start` erzeugt frische Container). */
+  restartCount?: number;
 }
 
 export interface DockerImage {
@@ -32,6 +34,7 @@ export interface UnhealthyContainer {
   name: string;
   status: string;
   health?: string;
+  restartCount?: number;
 }
 
 export interface CleanupAttempt {
@@ -71,8 +74,9 @@ export function findUnhealthyContainers(containers: DockerContainer[], projectId
   for (const c of containers) {
     const service = serviceOf(c.name, projectId);
     if (service === null) continue;
-    if (c.status !== 'running' || c.health === 'unhealthy') {
-      result.push({ service, name: c.name, status: c.status, health: c.health });
+    const restarts = c.restartCount ?? 0;
+    if (c.status !== 'running' || c.health === 'unhealthy' || restarts > 0) {
+      result.push({ service, name: c.name, status: c.status, health: c.health, restartCount: c.restartCount });
     }
   }
   return result;
@@ -102,7 +106,7 @@ function isSupabaseRepo(repository: string): boolean {
 /**
  * Löschbar sind nur
  *  - namenlose Playwright-Images (Repository exakt, Tag <none>) ohne Container, und
- *  - Supabase-Images ohne Container, die ABGELÖST sind: ein Container dieses Projekts nutzt ein
+ *  - Supabase-Images ohne Container, die ABGELÖST sind: ein LAUFENDER Container dieses Projekts nutzt ein
  *    anderes Tag desselben Repositorys.
  * Getaggte Images werden per Referenz entfernt (nimmt nur diesen Namen weg), namenlose per ID.
  */
@@ -115,7 +119,7 @@ export function findRemovableImages(
   const usedRefs = new Set(containers.map((c) => splitRef(c.imageRef)).map((r) => `${r.repository}:${r.tag}`));
   const currentTags = new Map<string, Set<string>>();
   for (const c of containers) {
-    if (serviceOf(c.name, projectId) === null) continue;
+    if (serviceOf(c.name, projectId) === null || c.status !== 'running') continue;
     const { repository, tag } = splitRef(c.imageRef);
     const tags = currentTags.get(repository) ?? new Set<string>();
     tags.add(tag);
@@ -200,7 +204,13 @@ export function formatUnhealthyMessage(
 ): string {
   const lines = ['Dienste der Testumgebung sind ausgefallen:'];
   for (const f of findings) {
-    const state = f.health === 'unhealthy' && f.status === 'running' ? 'unhealthy' : f.status;
+    const restarts = f.restartCount ?? 0;
+    const state =
+      restarts > 0 && f.status !== 'exited'
+        ? `neu startend (${restarts} Neustarts)`
+        : f.health === 'unhealthy' && f.status === 'running'
+          ? 'unhealthy'
+          : f.status;
     const log = lastLogLines[f.name] ?? '(keine Protokollzeile)';
     lines.push(`  ${f.service}: ${state} – letzte Protokollzeile: ${log}`);
   }

@@ -41,12 +41,12 @@
     "findings:fix": "PYTHONPATH=scripts python3 -m findings.finding_fix",
     "findings:routing-stats": "PYTHONPATH=scripts python3 -m findings.findings_routing_stats",
     "findings:validate-freshness": "PYTHONPATH=scripts python3 -m findings.validate_review_freshness",
-    "test:env:up": "bash -c 'source scripts/lib/e2e-registration-code.sh && npx tsx scripts/test-env-check.ts --vorher && supabase start --ignore-health-check && npx tsx scripts/test-env-check.ts --gesund && bash scripts/local-db-apply.sh'",
+    "test:env:up": "bash -c 'source scripts/lib/e2e-registration-code.sh && tsx scripts/test-env-check.ts --vorher && supabase start --ignore-health-check && tsx scripts/test-env-check.ts --gesund && bash scripts/local-db-apply.sh'",
     "test:env:down": "supabase stop",
-    "test:env:reset": "bash scripts/require-local-stack.sh && bash -c 'source scripts/lib/e2e-registration-code.sh && supabase db reset --local && bash scripts/local-db-apply.sh && npx tsx scripts/e2e-seed.ts'",
-    "test:env:seed": "bash scripts/require-local-stack.sh && bash -c 'source scripts/lib/e2e-registration-code.sh && npx tsx scripts/e2e-seed.ts'",
-    "test:env:status": "npx tsx scripts/test-env-check.ts --gesund && bash scripts/test-env-status.sh",
-    "test:env:aufraeumen": "npx tsx scripts/test-env-check.ts --aufraeumen"
+    "test:env:reset": "bash scripts/require-local-stack.sh && bash -c 'source scripts/lib/e2e-registration-code.sh && supabase db reset --local && bash scripts/local-db-apply.sh && tsx scripts/e2e-seed.ts'",
+    "test:env:seed": "bash scripts/require-local-stack.sh && bash -c 'source scripts/lib/e2e-registration-code.sh && tsx scripts/e2e-seed.ts'",
+    "test:env:status": "tsx scripts/test-env-check.ts --gesund && bash scripts/test-env-status.sh",
+    "test:env:aufraeumen": "tsx scripts/test-env-check.ts --aufraeumen"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
