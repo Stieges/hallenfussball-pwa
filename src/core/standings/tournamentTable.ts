@@ -11,8 +11,9 @@ import { OVERALL_GROUP, standingsGroups } from '../models/standingsGroups';
 import { rankGroup, type GroupTableResult, type RankGroupInput } from './groupTable';
 import { effectivePlacementLogic } from './placementDefaults';
 import { followUpRanks, parsePlacementsToPlayOut } from './playOutPlaces';
+import { effectiveForfeitScore } from '../models/forfeit';
 
-export type TableTournament = Pick<Tournament, 'pointSystem' | 'placementLogic' | 'standingDecisions' | 'placementsToPlayOut'>;
+export type TableTournament = Pick<Tournament, 'pointSystem' | 'placementLogic' | 'standingDecisions' | 'placementsToPlayOut' | 'forfeitScore'>;
 
 export function tableInput(teams: readonly Team[], matches: readonly Match[], tournament: TableTournament, group?: string): RankGroupInput {
   const hasGroup = group !== undefined && group !== OVERALL_GROUP;
@@ -24,6 +25,7 @@ export function tableInput(teams: readonly Team[], matches: readonly Match[], to
     teams: hasGroup ? teams.filter((t) => t.group === group) : teams,
     matches: hasGroup ? matches.filter((m) => m.group === group) : matches.filter((m) => m.isFinal !== true),
     pointSystem: tournament.pointSystem,
+    forfeitScore: effectiveForfeitScore(tournament), // A-25c: Wertung bei Nichtantritt (Einstellung oder 2:0)
     placementLogic: effectivePlacementLogic(tournament.placementLogic),
     decisions: tournament.standingDecisions ?? [],
     mode: hasGroup || groups.length <= 1 ? 'group' : 'crossGroup',
