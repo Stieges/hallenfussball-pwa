@@ -11,7 +11,7 @@ import type { IStorageAdapter } from '../../storage/IStorageAdapter';
 import type { StandingDecision, Tournament } from '../../../types/tournament';
 import { NetworkError, OptimisticLockError } from '../../errors';
 import { STORAGE_KEYS } from '../../../constants/storage';
-import { writePlacementsToPlayOutToCloud } from '../standingDecisionsCloud';
+import { writePlacementsToPlayOutToCloud, writeStandingDecisionsToCloud } from '../standingDecisionsCloud';
 import { PlayOutPlacesService } from '../../services/PlayOutPlacesService';
 import { MemoryRepo, nikolaus, shootout } from '../../standings/__tests__/decisionTestKit';
 import { DATA, league } from '../../standings/__tests__/fixtures';
@@ -36,22 +36,27 @@ const turnier = (version: number): Tournament =>
   ({ ...league('RKMUNO', DATA.ET_055).tournament, id: 't1', sportId: 'football-indoor', version, standingDecisions: [MARIA] });
 
 /** Zeile der Cloud-Tabelle mit Versionslogik wie `tournaments` (Update nur bei gleicher Version). */
-function cloudClient(row: { config: Record<string, unknown>; version: number }) {
+function cloudClient(row: { config: Record<string, unknown>; version: number | null }) {
   return {
     row,
     from: () => ({
       select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { config: row.config, version: row.version }, error: null }) }) }),
-      update: (payload: { config: Record<string, unknown>; version: number }) => ({
-        eq: () => ({
-          eq: (_c: string, expected: number) => ({
-            select: () => {
-              if (row.version !== expected) { return Promise.resolve({ data: [], error: null }); }
-              row.config = payload.config; row.version = payload.version;
-              return Promise.resolve({ data: [{ id: 't1' }], error: null });
-            },
+      update: (payload: { config: Record<string, unknown>; version: number }) => {
+        // PostgREST: `.eq('version', 0)` trifft eine Zeile mit `version IS NULL` NICHT, `.is('version', null)` schon.
+        const treffer = (passt: boolean) => ({
+          select: () => {
+            if (!passt) { return Promise.resolve({ data: [], error: null }); }
+            row.config = payload.config; row.version = payload.version;
+            return Promise.resolve({ data: [{ id: 't1' }], error: null });
+          },
+        });
+        return {
+          eq: () => ({
+            eq: (_c: string, erwartet: number) => treffer(row.version === erwartet),
+            is: (_c: string, wert: null) => treffer(row.version === wert),
           }),
-        }),
-      }),
+        };
+      },
     }),
   };
 }
@@ -64,6 +69,21 @@ describe('Cloud: schreibt nur das Feld der Einstellung (@W2A-068)', () => {
     expect(client.row.version).toBe(4);
     await expect(writePlacementsToPlayOutToCloud(client as never, 't1', [1], 3)).rejects.toBeInstanceOf(OptimisticLockError);
     expect(client.row.config.placementsToPlayOut).toEqual([1, 3]);
+  });
+});
+
+describe('Cloud: Zeile ohne Version (version IS NULL, etwa vom Seed des Durchstichs)', () => {
+  it('Befund Durchstich N6d: eine Zeile mit version NULL lässt sich beschreiben (Version 0 → 1), Entscheidungen bleiben; Gegenbeispiel: erwartete Version 3 → OptimisticLockError', async () => {
+    const client = cloudClient({ config: { standingDecisions: [MARIA] }, version: null });
+    await expect(writePlacementsToPlayOutToCloud(client as never, 't1', [1], 3)).rejects.toBeInstanceOf(OptimisticLockError);
+    expect(client.row.version).toBeNull();
+    await writePlacementsToPlayOutToCloud(client as never, 't1', [1, 3], 0);
+    expect(client.row).toEqual({ config: { standingDecisions: [MARIA], placementsToPlayOut: [1, 3] }, version: 1 });
+    // derselbe Weg für die Entscheidungen selbst
+    const zweite = cloudClient({ config: { placementsToPlayOut: [1] }, version: null });
+    await writeStandingDecisionsToCloud(zweite as never, 't1', [MARIA], 0);
+    expect(zweite.row.version).toBe(1);
+    expect(zweite.row.config).toMatchObject({ placementsToPlayOut: [1], standingDecisions: [MARIA] });
   });
 });
 

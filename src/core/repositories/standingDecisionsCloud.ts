@@ -34,12 +34,11 @@ async function writeConfigField(
   }
   const current = row.config !== null && typeof row.config === 'object' && !Array.isArray(row.config) ? row.config : {};
   const config = { ...current, [field]: value } as unknown as Json;
-  const { data: updated, error: writeError } = await client
-    .from('tournaments')
+  // Eine Zeile ohne Version (`version IS NULL`, etwa vom Seed des Durchstichs) gilt als Version 0; `.eq('version', 0)` träfe sie nie.
+  const target = client.from('tournaments')
     .update({ config, version: expectedVersion + 1, updated_at: new Date().toISOString() })
-    .eq('id', tournamentId)
-    .eq('version', expectedVersion)
-    .select('id');
+    .eq('id', tournamentId);
+  const { data: updated, error: writeError } = await (row.version === null ? target.is('version', null) : target.eq('version', expectedVersion)).select('id');
   if (writeError !== null) {
     throw new RepositoryError(context, writeError.message, writeError);
   }
