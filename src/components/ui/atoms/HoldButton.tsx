@@ -57,7 +57,7 @@ const knopfStil: CSSProperties = {
   WebkitTouchCallout: 'none',
 };
 
-const kompaktStil: CSSProperties = { flexDirection: 'column', gap: 0, padding: cssVars.spacing.xs, fontSize: cssVars.fontSizes.sm };
+const kompaktStil: CSSProperties = { flexDirection: 'column', gap: 0, padding: `${cssVars.spacing.xs} 0`, fontSize: cssVars.fontSizes.sm };
 
 const spurStil: CSSProperties = {
   position: 'absolute',

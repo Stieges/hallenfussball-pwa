@@ -66,6 +66,15 @@ describe('ThumbBar (Plan 3.1)', () => {
     expect(daumen).toHaveAttribute('aria-keyshortcuts', 'Space');
   });
 
+  it('@SL-153 Tasten-Hinweis auf der Hauptaktion erbt die Schriftfarbe der Fläche (Kontrast), auf Nebenaktionen bleibt er sekundär', () => {
+    render(<ThumbBar ariaLabel="x" layout="breit" slots={[
+      a('Pause', 'bar-main', 'haupt', { taste: { text: 'Leertaste', aria: 'Space' } }),
+      a('Rückgängig', 'bar-undo', 'neben', { taste: { text: 'Strg+Z', aria: 'Control+Z' } }),
+    ]} />);
+    expect(screen.getByText('Leertaste').style.color).toBe('var(--color-on-primary)');
+    expect(screen.getByText('Strg+Z').style.color).toBe('var(--color-text-secondary)');
+  });
+
   it('@SL-153 Rückgängig mit taste.aria = „Control+Z Meta+Z“ trägt genau diesen Wert', () => {
     render(<ThumbBar ariaLabel="x" layout="breit" slots={[a('Rückgängig', 'bar-undo', 'neben', { taste: { text: 'Strg+Z', aria: 'Control+Z Meta+Z' } })]} />);
     expect(screen.getByTestId('bar-undo')).toHaveAttribute('aria-keyshortcuts', 'Control+Z Meta+Z');

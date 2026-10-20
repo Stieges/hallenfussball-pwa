@@ -24,20 +24,21 @@ export interface CockpitSlimHeaderProps {
 }
 
 const kopfStil: CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, flex: 'none',
+  display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: cssVars.spacing.sm, flex: 'none',
   padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
   background: cssVars.colors.surfaceSolid, borderBottom: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
 };
 const knopfStil: CSSProperties = {
-  minHeight: cssVars.touchTargets.minimum, minWidth: cssVars.touchTargets.minimum, padding: `0 ${cssVars.spacing.sm}`,
+  flex: 'none', minHeight: cssVars.touchTargets.minimum, minWidth: cssVars.touchTargets.minimum, padding: `0 ${cssVars.spacing.sm}`,
   background: cssVars.colors.surface, color: cssVars.colors.textPrimary, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
   borderRadius: cssVars.borderRadius.md, fontFamily: 'inherit', fontSize: cssVars.fontSizes.md, cursor: 'pointer', whiteSpace: 'nowrap',
 };
 const nameStil: CSSProperties = {
   fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md, color: cssVars.colors.textPrimary,
-  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
+  // Der Name wird nie abgeschnitten: er bricht um (bei zu wenig Platz in eine eigene Zeile, nie mitten im Wort) statt mit Auslassungspunkten zu enden (visuelle Prüfung, text.abgeschnitten, titel.wortbruch)
+  flex: '1 1 auto', overflowWrap: 'break-word', lineHeight: cssVars.lineHeights.title, minWidth: 0,
 };
-const feldStil: CSSProperties = { ...knopfStil, fontSize: cssVars.fontSizes.lg, maxWidth: cssVars.sizing.feldwahlMax };
+const feldStil: CSSProperties = { ...knopfStil, flex: 'none', fontSize: cssVars.fontSizes.lg, maxWidth: cssVars.sizing.feldwahlMax };
 
 export function CockpitSlimHeader(p: CockpitSlimHeaderProps): ReactElement {
   const { t } = useTranslation('cockpit');

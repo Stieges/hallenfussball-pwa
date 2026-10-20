@@ -21,7 +21,8 @@
 
 .flaecheBreit {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--sizing-cockpit-ereignisspalte);
+  /* Die Liste ist so breit wie die Spalte des Mockups, höchstens aber ein Drittel: bei 1024 px bleibt der Tafel mehr Breite (kein Wortbruch im Teamnamen) */
+  grid-template-columns: minmax(0, 1fr) minmax(0, min(var(--sizing-cockpit-ereignisspalte), 33%));
   grid-template-rows: minmax(0, 1fr);
 }
 
@@ -49,7 +50,6 @@
 
 .scoreboardBreit {
   flex: 1;
-  min-height: 0;
   padding: 0;
   background: none;
 }
