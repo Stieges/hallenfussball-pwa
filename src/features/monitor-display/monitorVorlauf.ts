@@ -5,9 +5,7 @@
  * nächste Spiel mit Anstoßzeit. Die Vorlaufzeit ist die Pausendauer zwischen den Spielen, mindestens 5 Minuten. Davor (und
  * nach dem letzten Spiel) überspringt der Monitor die Folie.
  */
-import { minutesBetween, toTournamentLocal, TOURNAMENT_TIME_ZONE } from '../../core/view';
-import { clockKey } from '../../core/view/time';
-import type { LocalClock } from '../../core/view/types';
+import { clockKey, minutesBetween, toTournamentLocal, TOURNAMENT_TIME_ZONE, type LocalClock } from '../../core/view';
 import type { Tournament } from '../../types/tournament';
 
 /** Kürzeste Vorlaufzeit in Minuten (@ZM-138). */

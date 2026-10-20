@@ -33,8 +33,8 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 }));
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
-import type { Match } from '../../../types/tournament';
-import { attachMonitor, buildTournament, slide, withMonitor } from './monitorFixture';
+import type { Match, Team } from '../../../types/tournament';
+import { attachMonitor, buildTournament, FIXTURE_TEAMS, slide, withMonitor } from './monitorFixture';
 import { looseVs } from '../../../test/matchSlotFixtures';
 
 vi.unmock('i18next'); vi.unmock('react-i18next');
@@ -51,9 +51,9 @@ function spiel(id: string, nummer: number, feld: number, h: number, min: number,
   };
 }
 
-function turnier(opts: { spiele: Match[]; folien: ReturnType<typeof slide>[]; pause?: number }) {
+function turnier(opts: { spiele: Match[]; folien: ReturnType<typeof slide>[]; pause?: number; teams?: Team[] }) {
   return attachMonitor(
-    buildTournament({ date: TAG, matches: opts.spiele, groupPhaseBreakDuration: opts.pause ?? 3 }),
+    buildTournament({ date: TAG, matches: opts.spiele, groupPhaseBreakDuration: opts.pause ?? 3, ...(opts.teams ? { teams: opts.teams } : {}) }),
     withMonitor({ id: 'mon-1', slides: opts.folien, performanceMode: 'low' }),
   );
 }
@@ -76,10 +76,17 @@ describe('Monitor mit nur der Live-Folie vor dem Anpfiff (@ZM-138, @ZP-090)', ()
     expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
   });
 
-  it('@ZM-138: Pause 3 Minuten, Spiel 15:30 → um 15:26 (und ab 15:25) „Nächstes Spiel“', async () => {
-    await zeigeUm(um(15, 26), turnier({ spiele: [spiel('m1', 1, 1, 15, 30)], folien: [slide('live', { fieldId: 'field-1' })] }));
+  it('@ZM-138: Pause 3 Minuten, um 15:30 SV Süd gegen FC Nord, nur SV Süd mit Logo → um 15:26 „Nächstes Spiel“ mit Anstoßzeit, SV Süd mit Logo, FC Nord mit Initialen', async () => {
+    const teams = FIXTURE_TEAMS.map(t => (t.id === 'team-sued' ? { ...t, logo: { type: 'url' as const, value: 'https://logos.example/sued.png' } } : t));
+    await zeigeUm(um(15, 26), turnier({ teams, spiele: [spiel('m1', 1, 1, 15, 30)], folien: [slide('live', { fieldId: 'field-1' })] }));
     await waitFor(() => expect(screen.getByText('Nächstes Spiel')).toBeInTheDocument());
     expect(screen.getByText(/Anstoß 15:30/)).toBeInTheDocument();
+    const logo = screen.getByAltText('SV Süd Logo');
+    expect(logo).toHaveAttribute('src', 'https://logos.example/sued.png');
+    expect(screen.getByText('SV Süd')).toBeInTheDocument();
+    expect(screen.getByText('FN')).toBeInTheDocument(); // Initialen von FC Nord
+    expect(screen.getByText('FC Nord')).toBeInTheDocument();
+    expect(screen.queryByAltText('FC Nord Logo')).not.toBeInTheDocument();
   });
 
   it('@ZM-138: Pause 3 Minuten → genau um 15:25 beginnt die Vorlaufzeit (mindestens 5 Minuten)', async () => {

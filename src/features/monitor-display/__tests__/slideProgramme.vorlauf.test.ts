@@ -71,6 +71,14 @@ describe('Folienfolge bei mehreren Folien (@ZM-122, @ZM-138)', () => {
     expect(nextSlide(p, zustand({ index: 0, startedAt: berlin(12, 56) }), berlin(12, 56) + 5_000).index).toBe(0);
   });
 
+  it('@ZM-122/@ZM-138: mehrere Live-Folien – die Folie von Feld 1 (außerhalb der Vorlaufzeit) wird verlassen, der Sprung geht auf Feld 2 (im Vorlauf), nicht auf die Tabelle', () => {
+    const LIVE_F2 = folie('live-f2', 'live', { fieldId: 'field-2' });
+    const feld1: RuleMatch = { ...SPIEL_UM_13, id: 'm1', kickoff: { date: '2026-12-05', time: '14:00' } };
+    const feld2: RuleMatch = { ...SPIEL_UM_13, id: 'm2', field: 2 };
+    const p = programm([LIVE_F1, LIVE_F2, TABELLE], [feld1, feld2]);
+    expect(nextSlide(p, zustand({ index: 0, startedAt: berlin(12, 56) }), berlin(12, 56)).index).toBe(1);
+  });
+
   it('Anpfiff in der Vorlaufzeit: läuft das Spiel, hält die Live-Folie (Pin) wie bisher', () => {
     const p = programm([LIVE_F1, TABELLE], [{ ...SPIEL_UM_13, isLive: true, isUpcoming: false }]);
     expect(nextSlide(p, zustand({ index: 1 }), berlin(13, 1))).toMatchObject({ index: 0, pinnedMatchId: 'm9' });
