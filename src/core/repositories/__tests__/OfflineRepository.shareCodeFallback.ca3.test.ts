@@ -1,7 +1,8 @@
 /**
  * CA-3 (Paket Co-Admin, Befund C-SHARE): Rückfall des Teilens ohne Netz bzw. mit alter Server-Funktion.
- * Anforderungen: NEU-CA3 (Rückfall-Pfad), NEU-CA4 (Code mit Zeitpunkt; auch bei Netzausfall mitten im Teilen),
- * Plan-Review Auflage 5 (Rückfall überschreibt keinen Code, den das Gerät aus der Cloud kennt).
+ * Anforderungen: @BM-070 (Rückfall-Pfad; „der Freigabe-Code bleibt derselbe“), @BM-071 (Code vorlesbar, auch bei Netzausfall
+ * mitten im Teilen), Plan-Review Auflage 5 (Rückfall überschreibt keinen Code, den das Gerät aus der Cloud kennt) und Review CA-3–5
+ * Auflage 2 (… auch keinen, den das Gerät NICHT kennt: Senden nur, wenn die Cloud-Zeile noch keinen Code hat).
  * Der Client muss mit alter UND neuer Server-Funktion arbeiten: Ablehnung "Not authorized" (alt, Co-Admin) und
  * Erfolg (neu) werden beide bedient.
  */
@@ -38,6 +39,8 @@ const SERVER_FORMAT = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/;
 const updateMetadata = vi.fn<(id: string, metadata: Record<string, unknown>) => Promise<void>>();
 const cloudMakePublic = vi.fn<(id: string) => Promise<{ shareCode: string; createdAt: string } | null>>();
 const cloudRegenerate = vi.fn<(id: string) => Promise<{ shareCode: string; createdAt: string } | null>>();
+type ShareResult = { applied: true } | { applied: false; cloud: { isPublic: boolean; shareCode?: string; shareCodeCreatedAt?: string } | null };
+const cloudShareIfUnshared = vi.fn<(id: string, share: { shareCode: string; shareCodeCreatedAt?: string }) => Promise<ShareResult>>();
 
 let repo: OfflineRepository | undefined;
 let online = false;
@@ -53,6 +56,7 @@ function setup(): OfflineRepository {
     makeTournamentPublic: cloudMakePublic,
     regenerateShareCode: cloudRegenerate,
     updateTournamentMetadata: updateMetadata,
+    shareIfUnshared: cloudShareIfUnshared,
   };
   repo = new OfflineRepository(new LocalStorageRepository(), cloud as never);
   return repo;
@@ -67,6 +71,7 @@ describe('CA-3 OfflineRepository: Rückfall des Teilens', () => {
     vi.stubGlobal('navigator', { get onLine() { return online; } });
     stores.raw.set('tournaments', [createMockTournament({ id: 'T', sportId: 'football-indoor', isPublic: false, version: 3 })]);
     updateMetadata.mockResolvedValue(undefined);
+    cloudShareIfUnshared.mockResolvedValue({ applied: true });
   });
   afterEach(() => {
     repo?.mutationQueue.dispose();
@@ -74,7 +79,7 @@ describe('CA-3 OfflineRepository: Rückfall des Teilens', () => {
     vi.unstubAllGlobals();
   });
 
-  it('NEU-CA4: Netzausfall mitten im Teilen → vorläufiger Code im Server-Format, mit Zeitpunkt, in der Warteschlange', async () => {
+  it('@BM-071: Netzausfall mitten im Teilen → vorläufiger Code im Server-Format, mit Zeitpunkt, in der Warteschlange', async () => {
     cloudMakePublic.mockRejectedValue(new Error('Failed to fetch'));
     const result = await setup().makeTournamentPublic('T');
 
@@ -129,7 +134,7 @@ describe('CA-3 OfflineRepository: Rückfall des Teilens', () => {
     expect(pendingMetadata()).toEqual([{ shareCode: result?.shareCode, shareCodeCreatedAt: result?.createdAt }]);
   });
 
-  it('Senden nach Netz-Rückkehr: share_code und Zeitpunkt gehen in einem Schritt an die Cloud', async () => {
+  it('Senden nach Netz-Rückkehr: share_code und Zeitpunkt gehen in einem Schritt an die Cloud, bedingt (nur ohne Cloud-Code)', async () => {
     cloudMakePublic.mockRejectedValue(new Error('Failed to fetch'));
     const r = setup();
     const result = await r.makeTournamentPublic('T');
@@ -137,13 +142,53 @@ describe('CA-3 OfflineRepository: Rückfall des Teilens', () => {
     online = true;
     await r.mutationQueue.process();
 
-    expect(updateMetadata).toHaveBeenCalledWith('T', { isPublic: true, shareCode: result?.shareCode, shareCodeCreatedAt: result?.createdAt });
+    expect(cloudShareIfUnshared).toHaveBeenCalledWith('T', { shareCode: result?.shareCode, shareCodeCreatedAt: result?.createdAt });
+    expect(updateMetadata).not.toHaveBeenCalled();
     expect(r.mutationQueue.getPendingCount()).toBe(0);
+  });
+
+  it('@BM-070 Kopie nicht geteilt, Olli hat in der Cloud schon geteilt (OLI234): der Rückfall ändert den Code nicht, das Gerät zeigt OLI234', async () => {
+    const cloudRow = { isPublic: true, shareCode: 'OLI234' as string | undefined, shareCodeCreatedAt: '2026-10-01T08:00:00.000Z' };
+    cloudShareIfUnshared.mockImplementation(async (_id, share) => {
+      if (cloudRow.shareCode !== undefined) { return { applied: false, cloud: { ...cloudRow } }; }
+      Object.assign(cloudRow, { isPublic: true, shareCode: share.shareCode, shareCodeCreatedAt: share.shareCodeCreatedAt });
+      return { applied: true };
+    });
+    cloudMakePublic.mockRejectedValue(new Error('Failed to fetch'));
+    const r = setup();
+    await r.makeTournamentPublic('T');
+
+    online = true;
+    await r.mutationQueue.process();
+
+    expect(cloudRow.shareCode).toBe('OLI234');
+    expect(localTournaments()[0]).toMatchObject({ isPublic: true, shareCode: 'OLI234', shareCodeCreatedAt: '2026-10-01T08:00:00.000Z' });
+    expect(updateMetadata).not.toHaveBeenCalled();
+    expect(r.mutationQueue.getPendingCount()).toBe(0);
+    expect(r.mutationQueue.getFailedCount()).toBe(0);
+  });
+
+  it('@BM-070 Gegenbeispiel: hat die Cloud noch keinen Code, setzt der Rückfall den Code des Geräts', async () => {
+    const cloudRow = { isPublic: false, shareCode: undefined as string | undefined, shareCodeCreatedAt: undefined as string | undefined };
+    cloudShareIfUnshared.mockImplementation(async (_id, share) => {
+      if (cloudRow.shareCode !== undefined) { return { applied: false, cloud: { ...cloudRow } }; }
+      Object.assign(cloudRow, { isPublic: true, shareCode: share.shareCode, shareCodeCreatedAt: share.shareCodeCreatedAt });
+      return { applied: true };
+    });
+    cloudMakePublic.mockRejectedValue(new Error('Failed to fetch'));
+    const r = setup();
+    const result = await r.makeTournamentPublic('T');
+
+    online = true;
+    await r.mutationQueue.process();
+
+    expect(cloudRow).toEqual({ isPublic: true, shareCode: result?.shareCode, shareCodeCreatedAt: result?.createdAt });
+    expect(localTournaments()[0].shareCode).toBe(result?.shareCode);
   });
 
   it('Kollision am Server (23505 auf share_code): der Eintrag ist nicht still weg, er steht im Dead-Letter', async () => {
     cloudMakePublic.mockRejectedValue(new Error('Failed to fetch'));
-    updateMetadata.mockRejectedValue(new RepositoryError('updateMetadata', 'duplicate key value violates unique constraint "tournaments_share_code_key"', { code: '23505' }));
+    cloudShareIfUnshared.mockRejectedValue(new RepositoryError('updateMetadata', 'duplicate key value violates unique constraint "tournaments_share_code_key"', { code: '23505' }));
     const r = setup();
     await r.makeTournamentPublic('T');
 

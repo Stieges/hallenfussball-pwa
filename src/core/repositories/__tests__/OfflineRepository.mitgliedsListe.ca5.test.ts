@@ -92,7 +92,7 @@ beforeEach(() => {
 afterEach(() => { created.forEach((r) => r.mutationQueue.dispose()); created.length = 0; });
 
 describe('CA-5 OfflineRepository.listForCurrentUser am Gerät der Co-Admin', () => {
-  it('@HE-085 Maria hat das Nikolaus-Turnier schon geöffnet: es steht genau einmal da, mit Rolle Co-Admin', async () => {
+  it('@HE-088 @HE-085 Maria hat das Nikolaus-Turnier schon geöffnet: es steht genau einmal da, mit Rolle Co-Admin', async () => {
     const cloud = fakeCloud(known([asMember(NIKOLAUS, 'co-admin')]));
     const repo = deviceOf(MARIA, cloud);
     expect((await repo.get('nikolaus'))?.id).toBe('nikolaus');
@@ -199,5 +199,76 @@ describe('CA-5 OfflineRepository.listForCurrentUser am Gerät der Co-Admin', () 
     await repo.get('nikolaus');
 
     expect((await repo.listForCurrentUser()).map((t) => t.id)).toEqual(['nikolaus']);
+  });
+
+  it('@HE-087 Review-Auflage R2: scheitert die Mitglieder-Abfrage nach dem Austragen, bleibt das Turnier weg (nicht als eigenes)', async () => {
+    const cloud = fakeCloud(known([asMember(NIKOLAUS, 'co-admin')]));
+    const repo = deviceOf(MARIA, cloud);
+    await repo.get('nikolaus');
+    await repo.listForCurrentUser();
+    cloud.state.list = known([]); // ausgetragen
+    cloud.state.rows = [];
+    await repo.listForCurrentUser();
+
+    cloud.state.list = { tournaments: [], ownIds: new Set(), memberships: 'unknown', membershipError: new Error('nicht erreichbar') };
+    expect(await repo.listForCurrentUser()).toEqual([]);
+  });
+});
+
+/** Review CA-3–5 Auflage 1: dieselbe Upload-Sperre auf allen Wegen, die eine lokale Kopie in die Cloud schreiben. */
+describe('CA-5 Upload-Sperre nach dem Austragen: syncTournament und resolveConflict(local)', () => {
+  async function removedDevice() {
+    const cloud = fakeCloud(known([asMember(NIKOLAUS, 'co-admin')]));
+    const repo = deviceOf(MARIA, cloud);
+    await repo.get('nikolaus');
+    cloud.state.list = known([]); // Betreiber trägt Maria aus
+    cloud.state.rows = []; // die Lese-Regel lässt das private Turnier nicht mehr durch
+    return { cloud, repo };
+  }
+
+  it('@HE-087 syncTournament (Tippen auf den Sync-Status, Realtime-Anstoß) lädt die ausgetragene Kopie nicht hoch', async () => {
+    const { cloud, repo } = await removedDevice();
+    await repo.syncTournament('nikolaus');
+    expect(cloud.fake.save).not.toHaveBeenCalled();
+  });
+
+  it('@HE-087 resolveConflict(local) lädt die ausgetragene Kopie nicht hoch und meldet es', async () => {
+    const { cloud, repo } = await removedDevice();
+    const result = await repo.resolveConflict('nikolaus', 'local');
+    expect(cloud.fake.save).not.toHaveBeenCalled();
+    expect(result.status).toBe('error');
+  });
+
+  it('@HE-087 ausgetragen aus einem öffentlichen Turnier (die Cloud liefert es noch): Gedächtnis sperrt den Upload trotzdem', async () => {
+    const cloud = fakeCloud(known([asMember(NIKOLAUS, 'co-admin')]));
+    const repo = deviceOf(MARIA, cloud);
+    await repo.get('nikolaus');
+    cloud.state.list = known([]);
+    await repo.listForCurrentUser(); // Gedächtnis: ausgetragen
+    cloud.state.rows = [{ ...NIKOLAUS, isPublic: true, updatedAt: '2000-01-01T00:00:00.000Z' }]; // lokale Kopie wirkt neuer
+
+    await repo.syncTournament('nikolaus');
+    await repo.resolveConflict('nikolaus', 'local');
+    expect(cloud.fake.save).not.toHaveBeenCalled();
+  });
+
+  it('Gegenbeispiel: ein eigenes, nie hochgeladenes Turnier lädt syncTournament weiter hoch', async () => {
+    const cloud = fakeCloud(known([]));
+    cloud.state.rows = [];
+    stores.raw.set('tournaments', [turnier('eigen', 'Marias Probe', { ownerId: MARIA, changeRevision: undefined, version: 1 })]);
+    const repo = deviceOf(MARIA, cloud);
+
+    await repo.syncTournament('eigen');
+    expect(cloud.fake.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'eigen' }));
+  });
+
+  it('Gegenbeispiel: resolveConflict(local) lädt das eigene, nie hochgeladene Turnier hoch', async () => {
+    const cloud = fakeCloud(known([]));
+    cloud.state.rows = [];
+    stores.raw.set('tournaments', [turnier('eigen', 'Marias Probe', { ownerId: MARIA, changeRevision: undefined, version: 1 })]);
+    const repo = deviceOf(MARIA, cloud);
+
+    expect((await repo.resolveConflict('eigen', 'local')).status).toBe('synced');
+    expect(cloud.fake.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'eigen' }));
   });
 });

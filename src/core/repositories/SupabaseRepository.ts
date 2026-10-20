@@ -23,6 +23,7 @@ import {
   type TournamentUpdate,
 } from './supabaseMappers';
 import { readAccountTournamentList, type CloudTournamentList } from './accountTournamentList';
+import { shareIfUnshared, type ShareIfUnsharedResult } from './shareIfUnshared';
 
 /**
  * Gets the Supabase client or throws an error if not configured.
@@ -150,7 +151,7 @@ export class SupabaseRepository implements ITournamentRepository {
      
     if (metadata.isPublic !== undefined) {updatePayload.is_public = metadata.isPublic;}
     if (metadata.shareCode !== undefined) {updatePayload.share_code = metadata.shareCode;}
-    // CA-3: der Zeitpunkt, zu dem der Code entstand, geht mit (NEU-CA4); der Server setzt ihn sonst nur in den RPCs.
+    // CA-3: der Zeitpunkt, zu dem der Code entstand, geht mit (@BM-071); der Server setzt ihn sonst nur in den RPCs.
     if (metadata.shareCodeCreatedAt !== undefined) {updatePayload.share_code_created_at = metadata.shareCodeCreatedAt;}
 
     // Only update if there are fields to update
@@ -186,6 +187,11 @@ export class SupabaseRepository implements ITournamentRepository {
       // Optimistic Lock Failed
       throw new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.');
     }
+  }
+
+  /** CA-3 (@BM-070): Teilen-Rückfall – Code nur setzen, wenn die Zeile noch keinen hat (`shareIfUnshared.ts`). */
+  shareIfUnshared(id: string, share: { shareCode: string; shareCodeCreatedAt?: string }): Promise<ShareIfUnsharedResult> {
+    return shareIfUnshared(getSupabase(), id, share);
   }
 
   /**

@@ -387,13 +387,23 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     }
 
     /**
+     * CA-5 (@HE-087, Plan-Review Auflage 10a, Review CA-3–5 Auflage 1): EINE Regel für alle Upload-Wege (`syncUp`,
+     * `syncTournament`, `resolveConflict('local')`). Nie hochladen, wenn das Konto aus dem Turnier ausgetragen ist (Gedächtnis
+     * `former`) oder die Kopie aus der Cloud stammt (`changeRevision`, A-10) und die Cloud sie nicht (mehr) liefert.
+     * Ein eigenes, nie hochgeladenes Turnier (`changeRevision` leer) wird weiter hochgeladen.
+     */
+    private mayUpload(local: Tournament, remote: Tournament | null): boolean {
+        if (this.roleMemory().former.includes(local.id)) { return false; }
+        return remote !== null || local.changeRevision === undefined;
+    }
+
+    /**
      * Trigger synchronization: Pushes local tournaments to cloud if missing/newer.
      */
     async syncUp(): Promise<void> {
         try {
             // A-07e: nur eigene Kopien des Kontos (Gast-Kopien nie hochladen)
-            const formerIds = new Set(this.roleMemory().former); // CA-5: ausgetragen/fremd – nie hochladen
-            const localList = (await this.localListForAccount()).filter(t => !formerIds.has(t.id));
+            const localList = await this.localListForAccount();
 
             for (const localT of localList) {
                 try {
@@ -406,8 +416,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     // Try to get from cloud to check existence/version
                     const cloudT = await this.supabaseRepo.get(localT.id);
 
-                    if (!cloudT && localT.changeRevision !== undefined) {
-                        continue; // CA-5 (@HE-087): Kopie stammt aus der Cloud, das Konto sieht das Turnier nicht mehr
+                    if (!this.mayUpload(localT, cloudT)) {
+                        continue; // CA-5 (@HE-087): ausgetragen oder nicht mehr sichtbar – nie hochladen
                     }
                     if (!cloudT) {
                         // Not in cloud -> Full Upload (A-08f3c1: die Cloud legt mit Version 1 an)
@@ -715,6 +725,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                             error: 'Tournament with guest engine entries is not uploaded',
                         };
                     }
+                    if (!this.mayUpload(local, await this.supabaseRepo.get(tournamentId))) { // CA-5 (@HE-087)
+                        return { status: 'error', error: 'Tournament is not available to this account; the local copy is not uploaded' };
+                    }
                     await this.supabaseRepo.save(local);
                     await this.localRepo.updateLocalVersion(tournamentId, (local.version ?? 0) + 1); // A-08f3c1: wie die Cloud
                     return { status: 'synced', data: local };
@@ -753,6 +766,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             // der Pull oben bleibt unberührt, es wird nur nichts hochgeladen.
             if (local && !(await hasGuestEngineEntries(local))) {
                 const remote = await this.supabaseRepo.get(tournamentId);
+                if (!this.mayUpload(local, remote)) { return downResult; } // CA-5 (@HE-087): nie hochladen
                 if (!remote || new Date(local.updatedAt) > new Date(remote.updatedAt)) {
                     await this.supabaseRepo.save(local);
                     await this.localRepo.updateLocalVersion(tournamentId, remote ? (local.version ?? 0) + 1 : 1); // A-08f3c1
@@ -808,7 +822,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             // Queue for cloud sync when back online
             this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', {
                 tournamentId,
-                metadata: { isPublic: true, shareCode: localResult.shareCode, shareCodeCreatedAt: localResult.createdAt }
+                metadata: { isPublic: true, shareCode: localResult.shareCode, shareCodeCreatedAt: localResult.createdAt },
+                onlyIfUnshared: true, // Review CA-3–5 Auflage 2 (@BM-070): nie einen Cloud-Code überschreiben
             });
         }
         return localResult;
