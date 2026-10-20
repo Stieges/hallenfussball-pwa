@@ -14,6 +14,7 @@ import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisio
 import { CloudQueueGuard } from './cloudQueueGuard';
 import { effectiveHostTeamIds } from '../models/hostTeams';
 import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
+import { mergeAccountList, offlineAccountList, readAccountRoleMemory, writeAccountRoleMemory, type AccountRoleMemory } from './accountListMerge';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -137,6 +138,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     private readonly cloudReadRerun = new Set<string>();
     /** A-08f3c2 Regel Q: keine ganze Cloud-Kopie über eigene wartende, laufende oder gescheiterte Änderungen. */
     private readonly queueGuard: CloudQueueGuard;
+    /** @FU-106: laufende Übernahmen nach „Verwerfen“ eines Konflikts (eine je Turnier) und ihre Zuhörer (Anzeige nachladen). */
+    private readonly discardAdoptions = new Set<string>();
+    private readonly cloudCopyListeners = new Map<string, Set<() => void>>();
 
     constructor(
         private localRepo: LocalStorageRepository,
@@ -146,6 +150,28 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     ) {
         this._mutationQueue = new MutationQueue(supabaseRepo, localRepo, undefined, accountId);
         this.queueGuard = new CloudQueueGuard(this._mutationQueue);
+        // @FU-106: nach „Verwerfen“ eines Konflikts sofort (und nach einem Neustart) den Cloud-Stand holen
+        this._mutationQueue.subscribe(() => this.adoptAfterDiscard());
+        this.adoptAfterDiscard();
+    }
+
+    /** @FU-106 (Befund C-VERWERFEN-BEHAELT-VERALTETEN-STAND): gemerkte Turniere frisch lesen; die Übernahme erzwingt `readAndAdopt`. */
+    private adoptAfterDiscard(): void {
+        for (const id of this._mutationQueue.scopesNeedingCloudCopy()) {
+            if (this.discardAdoptions.has(id)) { continue; }
+            this.discardAdoptions.add(id);
+            void this.get(id, { fresh: true })
+                .catch((error: unknown) => { if (error instanceof Error) { captureFeatureError(error, 'repository', 'adoptAfterDiscard', { tournamentId: id }); } })
+                .finally(() => this.discardAdoptions.delete(id));
+        }
+    }
+
+    /** @FU-106: meldet, dass die Kopie nach „Verwerfen“ den Cloud-Stand übernommen hat (die Anzeige lädt nach). */
+    subscribeCloudCopyAdopted(tournamentId: string, listener: () => void): () => void {
+        const listeners = this.cloudCopyListeners.get(tournamentId) ?? new Set<() => void>();
+        listeners.add(listener);
+        this.cloudCopyListeners.set(tournamentId, listeners);
+        return () => { listeners.delete(listener); };
     }
 
     /** A-07e: Kopie gehoert dem Konto dieses Repositorys (ohne Konto unveraendert). */
@@ -268,11 +294,19 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     private async readAndAdopt(id: string, firstCopy?: boolean): Promise<{ tournament: Tournament; whole: boolean } | null> {
         const before = this.queueGuard.snapshot(id); // A-08f3c2 (H1): Stand der Warteschlange vor dem Lesen
         const read = await withCloudReadTimeout(this.supabaseRepo.getWithMatchRevisions(id));
-        if (!read) { return null; }
-        const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined, owned: (t: Tournament) => this.owned(t),
+        if (!read) {
+            if (this._mutationQueue.needsCloudCopy(id)) { this._mutationQueue.forgetCloudCopy(id); } // Auflage A1: Turnier weg/unsichtbar
+            return null;
+        }
+        const discarded = this._mutationQueue.needsCloudCopy(id); // @FU-106: verworfener Konflikt → ganze Kopie der Cloud
+        const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined || discarded, owned: (t: Tournament) => this.owned(t),
             wholeAllowed: () => this.queueGuard.mayAdoptWhole(id, before) };
         const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => decideCloudAdoption(local, read, stored, options));
         this.serverRevisions.record(id, adoption.revisions);
+        if (discarded && adoption.save !== undefined) {
+            this._mutationQueue.forgetCloudCopy(id);
+            this.cloudCopyListeners.get(id)?.forEach((listener) => listener());
+        }
         return { tournament: read.tournament, whole: adoption.save !== undefined };
     }
 
@@ -362,6 +396,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     async delete(id: string): Promise<void> {
         await this.localRepo.delete(id);
         this.serverRevisions.clear(id); // A-08f3b: Ablage leeren
+        this._mutationQueue.forgetCloudCopy(id); // @FU-106 (Auflage A1)
         this.mutationQueue.enqueue('DELETE_TOURNAMENT', id);
     }
 
@@ -375,10 +410,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     // --- Extended Methods for Sync ---
 
     /**
-     * Lists tournaments.
-     * Strategy:
-     * - Try Cloud List + Merge with Local-only tournaments
-     * - If fail: Return Local List.
+     * Startseiten-Liste: Cloud (eigene + Mitgliedschaften, CA-5) mit den nur lokalen Kopien des Kontos zusammengeführt
+     * (`accountListMerge.ts`); ohne Netz die lokalen Kopien mit gemerkter Rolle.
      */
     async listForCurrentUser(): Promise<Tournament[]> {
         try {
@@ -386,30 +419,22 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             const timeoutPromise = new Promise<never>((_, reject) =>
                 setTimeout(() => reject(new Error('Cloud fetch timeout')), 5000)
             );
-
-            // Race between cloud fetch and timeout
-            const cloudList = await Promise.race([
-                this.supabaseRepo.listForCurrentUser(),
-                timeoutPromise
-            ]);
-            // Merge: Add local-only tournaments that haven't been synced yet
-            const cloudIds = new Set(cloudList.map(t => t.id));
-            if (this.accountId !== undefined) { await this.localRepo.assignUnmarkedOwners(this.accountId, cloudIds); }
-            const localList = await this.localListForAccount();
-            const localOnly = localList.filter(t => !cloudIds.has(t.id));
-
+            const cloud = await Promise.race([this.supabaseRepo.listWithMemberships(), timeoutPromise]);
+            if (cloud.membershipError) { captureFeatureError(cloud.membershipError, 'repository', 'listMemberships'); }
+            if (this.accountId !== undefined) {
+                await this.localRepo.assignUnmarkedOwners(this.accountId, new Set(cloud.tournaments.filter(t => t.myRole === 'owner').map(t => t.id)));
+            }
             // @W5-027: Wartet eine lokale Änderung noch in der Warteschlange (z. B. archivierte Kopie) UND ist sie neuer als die
             // Cloud-Zeile, gilt die lokale Fassung, sonst käme beim Neuladen kurz der alte Stand zurück. Ohne offene Änderung
             // (Geräteuhr weicht ab, abgelehnte Änderung im Dead-Letter) gilt der Server.
-            const localById = new Map(localList.map(t => [t.id, t]));
-            const merged = cloudList.map(cloudT => {
-                const localT = localById.get(cloudT.id);
-                return localT && this.mutationQueue.hasPending(cloudT.id) && Date.parse(localT.updatedAt) > Date.parse(cloudT.updatedAt) ? localT : cloudT;
+            const result = mergeAccountList({
+                cloud,
+                local: await this.localListForAccount(),
+                memory: this.roleMemory(),
+                preferLocal: (cloudT, localT) => this.mutationQueue.hasPending(cloudT.id) && Date.parse(localT.updatedAt) > Date.parse(cloudT.updatedAt),
             });
-
-            // Return cloud list + unsynced local tournaments
-            // Local-only items are marked so UI can show sync indicator if needed
-            return [...merged, ...localOnly];
+            if (result.memory && this.accountId !== undefined) { writeAccountRoleMemory(this.accountId, result.memory); }
+            return result.list;
         } catch (error) {
             // Only log non-AbortErrors (AbortError is expected during navigation)
             if (!isAbortError(error)) {
@@ -418,9 +443,25 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     captureFeatureError(error, 'repository', 'list');
                 }
             }
-            // Fallback to all local tournaments
-            return await this.localListForAccount();
+            return offlineAccountList(await this.localListForAccount(), this.roleMemory());
         }
+    }
+
+    /** CA-5: Rollen-Gedächtnis des Kontos (ohne Konto – nur Tests – leer). */
+    private roleMemory(): AccountRoleMemory {
+        return this.accountId === undefined ? { roles: {}, former: [] } : readAccountRoleMemory(this.accountId);
+    }
+
+    /**
+     * CA-5 (@HE-087, Plan-Review Auflage 10a, Review CA-3–5 Auflage 1): EINE Regel für alle Upload-Wege (`syncUp`,
+     * `syncTournament`, `resolveConflict('local')`). Nie hochladen, wenn das Konto aus dem Turnier ausgetragen ist (Gedächtnis
+     * `former`) oder die Kopie aus der Cloud stammt (`changeRevision`, A-10) und die Cloud sie nicht (mehr) liefert.
+     * Ein eigenes, nie hochgeladenes Turnier (`changeRevision` leer) wird weiter hochgeladen.
+     */
+    private mayUpload(local: Tournament, remote: Tournament | null): boolean {
+        if (this.roleMemory().former.includes(local.id)) { return false; }
+        if (this._mutationQueue.needsCloudCopy(local.id)) { return false; } // @FU-106: verworfener Inhalt nie hochladen
+        return remote !== null || local.changeRevision === undefined;
     }
 
     /**
@@ -439,9 +480,17 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     if (await hasGuestEngineEntries(localT)) {
                         continue;
                     }
+                    // Auflage A2 (review-ca67, Regel Q): eigene wartende, laufende oder gescheiterte Einträge entscheidet die
+                    // Warteschlange bzw. die Klärung – syncUp schiebt die Kopie nicht daran vorbei (sonst stilles Überschreiben)
+                    if (this.queueGuard.hasOwnChanges(localT.id)) {
+                        continue;
+                    }
                     // Try to get from cloud to check existence/version
                     const cloudT = await this.supabaseRepo.get(localT.id);
 
+                    if (!this.mayUpload(localT, cloudT)) {
+                        continue; // CA-5 (@HE-087): ausgetragen oder nicht mehr sichtbar – nie hochladen
+                    }
                     if (!cloudT) {
                         // Not in cloud -> Full Upload (A-08f3c1: die Cloud legt mit Version 1 an)
                         await this.supabaseRepo.save(localT);
@@ -675,6 +724,11 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                 return this.adoptWhole(tournamentId, remoteT);
             }
 
+            // @FU-106: nach „Verwerfen“ eines Konflikts gilt der Cloud-Stand, auch wenn die lokale Kopie jünger ist
+            if (this._mutationQueue.needsCloudCopy(tournamentId)) {
+                return this.adoptWhole(tournamentId, remoteT);
+            }
+
             // 2. Compare timestamps
             const localDate = new Date(localT.updatedAt).getTime();
             const remoteDate = new Date(remoteT.updatedAt).getTime();
@@ -748,6 +802,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                             error: 'Tournament with guest engine entries is not uploaded',
                         };
                     }
+                    if (!this.mayUpload(local, await this.supabaseRepo.get(tournamentId))) { // CA-5 (@HE-087)
+                        return { status: 'error', error: 'Tournament is not available to this account; the local copy is not uploaded' };
+                    }
                     await this.supabaseRepo.save(local);
                     await this.localRepo.updateLocalVersion(tournamentId, (local.version ?? 0) + 1); // A-08f3c1: wie die Cloud
                     return { status: 'synced', data: local };
@@ -786,6 +843,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             // der Pull oben bleibt unberührt, es wird nur nichts hochgeladen.
             if (local && !(await hasGuestEngineEntries(local))) {
                 const remote = await this.supabaseRepo.get(tournamentId);
+                if (!this.mayUpload(local, remote)) { return downResult; } // CA-5 (@HE-087): nie hochladen
                 if (!remote || new Date(local.updatedAt) > new Date(remote.updatedAt)) {
                     await this.supabaseRepo.save(local);
                     await this.localRepo.updateLocalVersion(tournamentId, remote ? (local.version ?? 0) + 1 : 1); // A-08f3c1
@@ -832,12 +890,17 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         }
 
         // Fallback to local implementation
+        // CA-3 (Auflage 5): kennt das Geraet fuer das Turnier schon einen Code (aus der Cloud oder von einem frueheren
+        // Rueckfall, dessen Eintrag schon wartet), bleibt er -- kein neuer Eintrag, der einen Cloud-Code ueberschriebe.
+        const known = await this.localRepo.get(tournamentId);
+        const alreadyShared = known?.isPublic === true && !!known.shareCode;
         const localResult = await this.localRepo.makeTournamentPublic(tournamentId);
-        if (localResult) {
+        if (localResult && !alreadyShared) {
             // Queue for cloud sync when back online
             this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', {
                 tournamentId,
-                metadata: { isPublic: true, shareCode: localResult.shareCode }
+                metadata: { isPublic: true, shareCode: localResult.shareCode, shareCodeCreatedAt: localResult.createdAt },
+                onlyIfUnshared: true, // Review CA-3–5 Auflage 2 (@BM-070): nie einen Cloud-Code überschreiben
             });
         }
         return localResult;
@@ -899,7 +962,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             // Queue for cloud sync when back online
             this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', {
                 tournamentId,
-                metadata: { shareCode: localResult.shareCode }
+                metadata: { shareCode: localResult.shareCode, shareCodeCreatedAt: localResult.createdAt }
             });
         }
         return localResult;

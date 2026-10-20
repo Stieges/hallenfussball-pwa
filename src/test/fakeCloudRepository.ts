@@ -9,6 +9,7 @@
 import { vi } from 'vitest';
 import type { Tournament, MatchUpdate } from '../core/models/types';
 import type { CloudReadWithRevisions } from '../core/repositories/SupabaseRepository';
+import type { CloudTournamentList } from '../core/repositories/accountTournamentList';
 import { OptimisticLockError } from '../core/errors';
 
 export interface FakeCloudState {
@@ -77,6 +78,7 @@ export function createFakeCloud(initial: FakeCloudState, options: FakeCloudOptio
     }),
     updateTournamentMetadata: vi.fn(async () => undefined),
     listForCurrentUser: vi.fn(async () => [] as Tournament[]),
+    listWithMemberships: vi.fn(ownerOnlyList(async () => [])),
     getByShareCode: vi.fn(async () => null),
   };
 
@@ -104,5 +106,16 @@ export function readWithRevisions(get: (id: string) => Promise<Tournament | null
   return async (id: string): Promise<CloudReadWithRevisions | null> => {
     const t = await get(id);
     return t ? { tournament: t, matchRevisions: new Map(t.matches.map((m) => [m.id, 1])) } : null;
+  };
+}
+
+/**
+ * CA-5: Startseiten-Antwort wie vor CA-5 – nur eigene Turniere (Rolle owner), keine Mitglieder-Abfrage
+ * (`not-queried`, die Liste wird dann wie bisher zusammengeführt). Für Tests, die nur die eigene Liste kennen.
+ */
+export function ownerOnlyList(list: () => Promise<Tournament[]>) {
+  return async (): Promise<CloudTournamentList> => {
+    const tournaments = (await list()).map((t) => ({ ...t, myRole: 'owner' as const }));
+    return { tournaments, ownIds: new Set(tournaments.map((t) => t.id)), memberships: 'not-queried' };
   };
 }

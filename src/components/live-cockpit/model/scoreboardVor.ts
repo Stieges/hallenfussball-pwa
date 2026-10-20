@@ -27,6 +27,8 @@ interface VorMatch {
 
 export interface ScoreboardVorErgebnis {
   uhr: ScoreboardUhr | null;
+  /** „überfällig N Min“ (@SL-118, @OB-068): steht im Platz des Abzeichens, nicht in den stehenden Zeilen. */
+  ueberfaelligText: string | null;
   kopfText: string | null;
   hinweise: string[];
   leerAnzeige: ScoreboardModel['leerAnzeige'];
@@ -49,12 +51,13 @@ function ueberfaelligMinuten(kickoff: string, jetztMs: number): number {
 
 export function scoreboardVor(input: VorEingang, t: Uebersetzer): ScoreboardVorErgebnis {
   const { match, phase, vor } = input;
-  const leer: ScoreboardVorErgebnis = { uhr: null, kopfText: null, hinweise: [], leerAnzeige: null };
+  const leer: ScoreboardVorErgebnis = { uhr: null, ueberfaelligText: null, kopfText: null, hinweise: [], leerAnzeige: null };
   if (!vor) { return leer; }
   const hinweise: string[] = [];
   const kopfText = input.tournamentName ?? null;
   let uhr: ScoreboardUhr | null = null;
   let leerAnzeige: ScoreboardVorErgebnis['leerAnzeige'] = null;
+  let ueberfaelligText: string | null = null;
 
   if (phase.zustand === 'vorAnpfiff' && match) {
     uhr = {
@@ -63,7 +66,7 @@ export function scoreboardVor(input: VorEingang, t: Uebersetzer): ScoreboardVorE
     };
     if (vor.mindestpause) { hinweise.push(t('tafel.vor.mindestpause', { ...vor.mindestpause })); }
     const minuten = ueberfaelligMinuten(match.scheduledKickoff, input.jetztMs);
-    if (minuten >= 1) { hinweise.push(t('tafel.vor.ueberfaellig', { minuten })); }
+    if (minuten >= 1) { ueberfaelligText = t('tafel.vor.ueberfaellig', { minuten }); }
     for (const sperre of vor.sperrHinweise) {
       const team = [match.homeTeam, match.awayTeam].find((kandidat) => kandidat.id === sperre.teamId);
       if (team) { hinweise.push(t('tafel.vor.gesperrt', { nummer: sperre.playerNumber, team: team.name })); }
@@ -82,5 +85,5 @@ export function scoreboardVor(input: VorEingang, t: Uebersetzer): ScoreboardVorE
   if (vor.uebernahmeVon !== null) { hinweise.push(t('tafel.uebernahmePruefen', { name: vor.uebernahmeVon })); }
 
   const istVorZustand = phase.zustand === 'vorAnpfiff' || phase.zustand === 'wartetAufHerkunft' || phase.zustand === 'keinSpiel';
-  return { uhr, kopfText: istVorZustand ? kopfText : null, hinweise, leerAnzeige };
+  return { uhr, ueberfaelligText, kopfText: istVorZustand ? kopfText : null, hinweise, leerAnzeige };
 }

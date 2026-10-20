@@ -76,7 +76,9 @@ function tafelHinweise(scheduledKickoff: string, jetztMs: number): string[] {
     jetztMs, fieldName: 'Feld 1', tournamentName: 'Hallencup Ost (Probe)',
     vor: { anstoss: '16:30', mindestpause: null, sperrHinweise: [], leer: null, uebernahmeVon: null },
   };
-  return toScoreboardModel(input, t).hinweise;
+  // stehende Zeilen plus der Platz des Abzeichens (überfällig, @OB-068)
+  const m = toScoreboardModel(input, t);
+  return [...m.hinweise, ...(m.ueberfaelligText ? [m.ueberfaelligText] : [])];
 }
 
 describe('@W5-029 In der Kopie fürs Proben stehen die Anstoßzeiten am Datum der Kopie', () => {

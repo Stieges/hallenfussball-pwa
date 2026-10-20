@@ -24,6 +24,8 @@ import {
   mapTeamToSupabase,
   type TournamentUpdate,
 } from './supabaseMappers';
+import { readAccountTournamentList, type CloudTournamentList } from './accountTournamentList';
+import { shareIfUnshared, type ShareIfUnsharedResult } from './shareIfUnshared';
 
 /**
  * Gets the Supabase client or throws an error if not configured.
@@ -151,6 +153,8 @@ export class SupabaseRepository implements ITournamentRepository {
      
     if (metadata.isPublic !== undefined) {updatePayload.is_public = metadata.isPublic;}
     if (metadata.shareCode !== undefined) {updatePayload.share_code = metadata.shareCode;}
+    // CA-3: der Zeitpunkt, zu dem der Code entstand, geht mit (@BM-071); der Server setzt ihn sonst nur in den RPCs.
+    if (metadata.shareCodeCreatedAt !== undefined) {updatePayload.share_code_created_at = metadata.shareCodeCreatedAt;}
 
     // Only update if there are fields to update
     if (Object.keys(updatePayload).length === 0) {
@@ -185,6 +189,11 @@ export class SupabaseRepository implements ITournamentRepository {
       // Optimistic Lock Failed
       throw new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.');
     }
+  }
+
+  /** CA-3 (@BM-070): Teilen-Rückfall – Code nur setzen, wenn die Zeile noch keinen hat (`shareIfUnshared.ts`). */
+  shareIfUnshared(id: string, share: { shareCode: string; shareCodeCreatedAt?: string }): Promise<ShareIfUnsharedResult> {
+    return shareIfUnshared(getSupabase(), id, share);
   }
 
   /**
@@ -731,33 +740,16 @@ export class SupabaseRepository implements ITournamentRepository {
   // =============================================================================
 
   /**
-   * Lists all tournaments for the current user
+   * Lists the current user's tournaments for the start page: own ones plus active memberships, each with `myRole`
+   * (CA-5, Befund C-LISTE-NUR-EIGENTUEMER, `accountTournamentList.ts`).
    */
   async listForCurrentUser(): Promise<Tournament[]> {
-    const {
-      data: { user },
-    } = await getSupabase().auth.getUser();
-    if (!user) {
-      return [];
-    }
+    return (await this.listWithMemberships()).tournaments;
+  }
 
-    const { data: tournamentRows, error } = await getSupabase()
-      .from('tournaments')
-      .select('*')
-      .eq('owner_id', user.id)
-      .is('deleted_at', null)
-      .order('updated_at', { ascending: false });
-
-    if (error) {
-      console.error('Failed to list tournaments:', error);
-      throw new RepositoryError('list', error.message, error);
-    }
-
-    // For listing, we don't need full team/match data
-    // Return minimal tournament objects
-    return tournamentRows.map((row) =>
-      mapTournamentFromSupabase(row, [], [])
-    );
+  /** CA-5: Startseiten-Liste mit den Angaben, die `OfflineRepository` zum Zusammenführen braucht. */
+  listWithMemberships(): Promise<CloudTournamentList> {
+    return readAccountTournamentList(getSupabase());
   }
 
   /**

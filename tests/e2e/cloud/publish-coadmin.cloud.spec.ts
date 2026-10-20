@@ -23,47 +23,19 @@
  * Test per Service-Role ändert; `cloud-mobile` würde denselben Datensatz gleichzeitig ändern
  * (dieselbe Race-Klasse wie bei `two-devices`/`offline`, siehe dort).
  *
- * Fixrunde 2 (N5(4)/N11) + Fixrunde 3 (N15, KORRIGIERT -- vorherige Fassung war fehlformuliert):
- * Der Ablauf am Freigabe-Cup ist grün, nicht `test.fail()`. Mechanismus (vier unabhängige
- * Nachweise, siehe Report):
- *   1. Die RPC `make_tournament_public()` (`supabase/migrations/00000000000000_baseline_live_
- *      schema.sql:373-430`) prüft `owner_id = auth.uid()` und lehnt jeden Nicht-Eigentümer ab
- *      ("Not authorized to modify this tournament") -- per direktem RPC-Aufruf MIT coadmins JWT
- *      reproduziert (curl, außerhalb dieses Tests, siehe Report). Das ist der bekannte Befund N1
- *      AUS DEM BRIEF (`task-T4-brief.md`, Spec 6: "Die Veröffentlichen-RPC verlangt heute den
- *      Eigentümer, der Co-Admin nutzt einen Offline-Fallback (bekannter Befund N1)") -- NICHT
- *      dieselbe Nummerierung wie die N-Befunde der Review-Fixrunden, reiner Namenszufall.
- *   2. `OfflineRepository.makeTournamentPublic()` (`OfflineRepository.ts:691-730`) fängt genau
- *      diesen Fehler ab (Konsole: "Cloud makeTournamentPublic failed, using local."), erzeugt
- *      lokal einen Share-Code UND reiht `UPDATE_TOURNAMENT_METADATA` in die `MutationQueue` ein.
- *   3. Der Queue-Prozessor ruft dafür NICHT die RPC auf, sondern
- *      `SupabaseRepository.updateTournamentMetadata()` (`SupabaseRepository.ts:113-138`) -- ein
- *      GEWÖHNLICHES `UPDATE` auf `is_public`/`share_code`, ohne den Eigentümer-Check der RPC,
- *      nur durch die normale RLS-UPDATE-Policy auf `tournaments` geschützt. coadmin hat
- *      `tournamentSettings` -- laut `rolePermissions.json` (Zeile 8) ausdrücklich "Turnier-
- *      einstellungen ändern (inkl. veröffentlichen)". Die Policy lässt das UPDATE deshalb ZU
- *      GEWOLLT zu, nicht versehentlich. Per direktem `PATCH .../rest/v1/tournaments` MIT coadmins
- *      JWT reproduziert (curl, außerhalb dieses Tests): gelingt.
- *   4. Läuft der Client online (dieser Test, kein `context.setOffline()`), verarbeitet die
- *      MutationQueue den Eintrag praktisch sofort -- der Effekt landet zuverlässig, deterministisch
- *      VOR dem `expect.poll()`-Timeout in der DB.
- * N15: KEINE "Autorisierungslücke" (frühere Fassung dieses Kommentars und des Reports waren hier
- * fehlformuliert) -- dass ein Co-Admin ein bereits freigegebenes Turnier veröffentlichen kann, ist
- * GEWOLLTES Verhalten (`tournamentSettings` deckt das laut Rechte-Katalog ausdrücklich ab).
- * INKONSISTENT ist NUR, dass die RPC selbst enger ist als die eigentliche Rechte-Absicht
- * (owner-only statt tournamentSettings) -- genau der bekannte Befund N1 aus dem Brief oben, der
- * im Folge-PR "Helfer beendet Spiel" gelöst wird (dort wird die RPC vermutlich auf
- * `has_tournament_permission(..., 'tournamentSettings')` umgestellt). Sobald das passiert, läuft
- * dieser Test über den RPC-Pfad grün, nicht mehr über den Fallback -- der Testtitel behauptet
- * deshalb bewusst NUR das Endergebnis (Sichtbarkeit erreicht die DB, Link funktioniert), nicht den
- * heutigen internen Mechanismus, der sich mit dem Folge-PR ändert.
+ * CA-7 (Paket "Co-Admin einsatzfähig", Migration `20261110_004_coadmin_einsatz.sql`, @BM-070): die RPCs
+ * `make_tournament_public`/`_private`/`regenerate_share_code` prüfen jetzt `tournamentSettings` statt "nur Eigentümer".
+ * Die Co-Admin teilt deshalb über den SERVERPFAD: der Server vergibt den Code im Serveralphabet (kein 0, O, 1, I),
+ * setzt `share_code_created_at`, und es entsteht KEIN Rückfall-Eintrag `UPDATE_TOURNAMENT_METADATA` in der Warteschlange.
+ * Vorher (bis zur Migration) lehnte die RPC die Co-Admin ab (Befund "Co-Admin teilt online"), die App fiel auf ein direktes UPDATE über die
+ * Warteschlange zurück und das Gerät erzeugte den Code selbst; dieser Test belegt jetzt den neuen Weg und ist ohne die
+ * Migration rot (so gewollt). Ausführlicher Nachweis mit eigener Turnierkopie, Rückfall-Gegenprobe und Helfer-Gegenbeispiel:
+ * `coadmin-einsatz.cloud.spec.ts` (Z1, Z2).
  *
  * Fixrunde 3 (N13, Important): der bisherige Positivtest bewies nur `is_public=true` und den
  * Monitor per TURNIER-ID -- das ist NICHT derselbe Pfad, den ein echter Zuschauer nutzt (der hat
- * nur den Share-Code, keine Turnier-ID). Gerade auf dem Fallback-Pfad erzeugt der KLIENT den
- * Share-Code (`LocalStorageRepository.generateLocalShareCode`) -- die wahrscheinlichste
- * Bruchstelle, falls sich das je ändert (z. B. im N1-Folge-PR). Jetzt zusätzlich geprüft: `share_
- * code` ist vor dem Klick NULL, nach dem Klick auf `^[A-Z0-9]{6}$` geprüft, UND ein anonymer
+ * nur den Share-Code, keine Turnier-ID). Jetzt zusätzlich geprüft: `share_
+ * code` ist vor dem Klick NULL, nach dem Klick im Serveralphabet (CA-7), UND ein anonymer
  * Aufruf von `/#/live/<code>` (derselbe Weg wie `public-view.cloud.spec.ts`) zeigt "Freigabe-Cup".
  *
  * Fixrunde 3 (N17, Minor): Negativkontrolle vor dem Klick -- der anonyme Monitor-Aufruf zeigt
@@ -74,23 +46,24 @@
  */
 
 import { test, expect } from './fixtures';
-import { getLocalServiceRoleClient, safeCleanup } from './helpers';
-import { E2E_RELEASE_CUP_ID, E2E_RELEASE_CUP_MONITOR_ID, E2E_RELEASE_CUP_SPONSOR_NAME, E2E_RELEASE_CUP_TITLE } from './testData';
+import { fetchUserIdByEmail } from './engineHelpers';
+import { fetchFailedMutationTypes, fetchQueuedMutationTypes, getLocalServiceRoleClient, safeCleanup } from './helpers';
+import { E2E_RELEASE_CUP_ID, E2E_RELEASE_CUP_MONITOR_ID, E2E_RELEASE_CUP_SPONSOR_NAME, E2E_RELEASE_CUP_TITLE, E2E_USERS } from './testData';
 
 /** Liest `is_public`/`share_code` des Freigabe-Cup direkt aus der DB (Service-Role, umgeht RLS). */
-async function getReleaseCupVisibility(): Promise<{ isPublic: boolean; shareCode: string | null }> {
+async function getReleaseCupVisibility(): Promise<{ isPublic: boolean; shareCode: string | null; shareCodeCreatedAt: string | null }> {
   const { url, headers } = getLocalServiceRoleClient();
-  const res = await fetch(`${url}/rest/v1/tournaments?id=eq.${E2E_RELEASE_CUP_ID}&select=is_public,share_code`, {
+  const res = await fetch(`${url}/rest/v1/tournaments?id=eq.${E2E_RELEASE_CUP_ID}&select=is_public,share_code,share_code_created_at`, {
     headers,
   });
   if (!res.ok) {
     throw new Error(`tournaments-Abfrage fehlgeschlagen: ${res.status} ${await res.text()}`);
   }
-  const rows = (await res.json()) as Array<{ is_public: boolean; share_code: string | null }>;
+  const rows = (await res.json()) as Array<{ is_public: boolean; share_code: string | null; share_code_created_at: string | null }>;
   if (rows.length === 0) {
     throw new Error(`Freigabe-Cup (${E2E_RELEASE_CUP_ID}) nicht gefunden.`);
   }
-  return { isPublic: rows[0].is_public, shareCode: rows[0].share_code };
+  return { isPublic: rows[0].is_public, shareCode: rows[0].share_code, shareCodeCreatedAt: rows[0].share_code_created_at };
 }
 
 /** I6: setzt den Freigabe-Cup auf den Seed-Ausgangszustand zurück (privat, kein Share-Code). */
@@ -158,17 +131,19 @@ test('coadmin macht den Freigabe-Cup öffentlich -- Sichtbarkeit, Share-Code und
 
     await shareableRadioInput.click();
 
-    // Der DB-Zustand (Service-Role, RLS-unabhängig) ist der einzig verlässliche Beweis -- die
-    // Oberfläche zeigt lokal-optimistisch Erfolg, unabhängig davon, ob/wie die Cloud reagiert.
-    // Tatsächlicher Mechanismus (s. Kopfkommentar): die RPC lehnt coadmin ab, der
-    // Offline-Fallback-Pfad (MutationQueue → `updateTournamentMetadata`, nur durch die normale
-    // RLS-Policy geschützt) erreicht die DB trotzdem.
+    // Der DB-Zustand (Service-Role, RLS-unabhängig) ist der einzig verlässliche Beweis -- die Oberfläche zeigt
+    // lokal-optimistisch Erfolg, unabhängig davon, ob/wie die Cloud reagiert.
     await expect.poll(() => getReleaseCupVisibility().then((v) => v.isPublic), { timeout: 5000 }).toBe(true);
 
     // N13: der eigentliche Nachweis, dass ein ZUSCHAUER (nur Share-Code, keine Turnier-ID) den
     // Freigabe-Cup jetzt erreicht -- nicht nur, dass die `is_public`-Spalte stimmt.
+    // CA-7 (@BM-070): Code im Serveralphabet (kein 0/O/1/I), Zeitpunkt gesetzt, kein Rückfall-Eintrag in der Warteschlange.
     const after = await getReleaseCupVisibility();
-    expect(after.shareCode).toMatch(/^[A-Z0-9]{6}$/);
+    expect(after.shareCode).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
+    expect(after.shareCodeCreatedAt).not.toBeNull();
+    const coadminId = await fetchUserIdByEmail(E2E_USERS.coadmin.email);
+    await expect.poll(() => fetchQueuedMutationTypes(page, coadminId), { timeout: 10000 }).not.toContain('UPDATE_TOURNAMENT_METADATA');
+    expect(await fetchFailedMutationTypes(page, coadminId)).not.toContain('UPDATE_TOURNAMENT_METADATA');
     await anonPage.goto(`/#/live/${after.shareCode}`);
     await anonPage.waitForLoadState('networkidle');
     await expect(anonPage.getByText(E2E_RELEASE_CUP_TITLE, { exact: true }).first()).toBeVisible({ timeout: 15000 });
