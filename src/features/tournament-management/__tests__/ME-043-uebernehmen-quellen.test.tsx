@@ -81,7 +81,7 @@ vi.mock('../../../core/match/client/guestEngineEntries', async (importOriginal) 
 
 import { OfflineRepository } from '../../../core/repositories/OfflineRepository';
 import { LocalStorageRepository } from '../../../core/repositories/LocalStorageRepository';
-import { readWithRevisions } from '../../../test/fakeCloudRepository';
+import { ownerOnlyList, readWithRevisions } from '../../../test/fakeCloudRepository';
 import { createMockTournament } from '../../../test/factories';
 import { MonitorTransferSheet } from '../MonitorTransferSheet';
 
@@ -126,6 +126,7 @@ function cloudOlli() {
     getWithMatchRevisions: vi.fn(readWithRevisions(get)),
     save: vi.fn(async () => undefined),
     listForCurrentUser: vi.fn(async () => all.filter((t) => t.ownerId === 'olli')),
+    listWithMemberships: vi.fn(ownerOnlyList(async () => all.filter((t) => t.ownerId === 'olli'))),
     getByShareCode: vi.fn(async () => null),
   };
 }
