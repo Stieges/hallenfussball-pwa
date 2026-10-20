@@ -25,6 +25,7 @@ import { Button } from '../../components/ui/Button';
 import type { Tournament } from '../../types/tournament';
 import type { TournamentMonitor } from '../../types/monitor';
 import { useTournaments } from '../../hooks/useTournaments';
+import { canWithListedRole } from '../auth/hooks/useCan';
 import {
   exportMonitorConfig, HALLEN_STANDARD, instantiateMonitorConfig,
 } from '../../core/services/monitorConfigTransfer';
@@ -80,9 +81,9 @@ export function MonitorTransferSheet({ tournament, onClose, onApply }: MonitorTr
   const [result, setResult] = useState<TransferResult | null>(null);
   const [fixState, setFixState] = useState<FixState | null>(null);
 
-  // Quellen: andere aktive Turniere mit Monitoren (@ME-043: nur die eigenen, die die Liste liefert)
+  // Quellen: andere aktive Turniere mit Monitoren, in denen das Konto manageScreens hat (@ME-043; CA-5 Auflage 11: eigene + Co-Admin)
   const sources = useMemo(
-    () => activeTournaments.filter(s => s.id !== tournament.id && (s.monitors?.length ?? 0) > 0),
+    () => activeTournaments.filter(s => s.id !== tournament.id && (s.monitors?.length ?? 0) > 0 && canWithListedRole(s.myRole, 'manageScreens')),
     [activeTournaments, tournament.id]
   );
 

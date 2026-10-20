@@ -225,14 +225,15 @@ export const useUserTournaments = (
           const teamNames = existingMembership.teamIds.map(tid => t.teams.find(tm => tm.id === tid)?.name ?? '').filter(Boolean);
           userTournaments.push({ tournament: toCardData(t), membership: existingMembership, teamNames });
         } else {
-          // Implicit Owner Membership (if not found in legacy memberships)
+          // CA-5: Rolle aus dem Listenobjekt; ohne Rolle (lokal angelegt, Gast) = eigenes Turnier
+          const role = t.myRole ?? 'owner';
           userTournaments.push({
             tournament: toCardData(t),
             membership: {
-              id: `owner-${t.id}`,
+              id: `${role}-${t.id}`,
               userId: user.id,
               tournamentId: t.id,
-              role: 'owner',
+              role,
               teamIds: [],
               createdAt: t.createdAt,
               updatedAt: t.updatedAt
