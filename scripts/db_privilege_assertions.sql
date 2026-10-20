@@ -667,4 +667,36 @@ SELECT 'append-match-events-checks-field-control',
        coalesce((SELECT position('public.field_control' IN pg_get_functiondef(p.oid)) > 0
                         AND position('''NOT_CONTROLLER''' IN pg_get_functiondef(p.oid)) > 0
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
+
+-- CA-2 (20261110_004_coadmin_einsatz.sql, @HE-085, NEU-CA3/NEU-CA5; C-SHARE, C-HEARTBEAT-NUR-EIGENTUEMER): die drei
+-- Freigabe-Funktionen pruefen das Recht tournamentSettings (nicht mehr owner_id), SECURITY DEFINER mit search_path,
+-- make_tournament_public behaelt die Freigabe-Sperre HF001 und gibt einen vorhandenen Code zurueck (Auflage 5);
+-- monitor_heartbeats hat genau eine Policy, SELECT nur fuer authenticated ueber manageScreens (nicht owner_id,
+-- nicht tournamentSettings -- Mutationsprobe M5 bliebe in der Matrix gruen, deshalb hier am Policy-Text).
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'share-rpcs-permission-based',
+       coalesce((SELECT count(*) = 3
+                        AND bool_and(p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND position('has_tournament_permission(tournament_id, ''tournamentSettings'')' IN pg_get_functiondef(p.oid)) > 0
+                                     AND position('owner_id' IN pg_get_functiondef(p.oid)) = 0)
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.make_tournament_public(uuid)'),
+                                  to_regprocedure('public.make_tournament_private(uuid)'),
+                                  to_regprocedure('public.regenerate_share_code(uuid)'))), false)
+UNION ALL
+SELECT 'make-public-keeps-existing-code',
+       coalesce((SELECT position('''HF001''' IN pg_get_functiondef(p.oid)) > 0
+                        AND position('IF v_is_public AND v_existing_code IS NOT NULL THEN' IN pg_get_functiondef(p.oid)) > 0
+                        AND position('FOR UPDATE' IN pg_get_functiondef(p.oid)) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.make_tournament_public(uuid)')), false)
+UNION ALL
+SELECT 'heartbeats-select-manage-screens',
+       coalesce((SELECT count(*) = 1
+                        AND bool_and(p.cmd = 'SELECT' AND p.policyname = 'heartbeats_select_v2'
+                                     AND p.roles = ARRAY['authenticated']::name[]
+                                     AND position('''manageScreens''' IN coalesce(p.qual, '')) > 0
+                                     AND position('owner_id' IN coalesce(p.qual, '')) = 0)
+                   FROM pg_policies p
+                  WHERE p.schemaname = 'public' AND p.tablename = 'monitor_heartbeats'), false)
 ;
