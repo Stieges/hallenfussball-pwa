@@ -22,8 +22,8 @@ beforeEach(() => { can.value = true; });
 
 async function zeige(tournament: Tournament, jumpHere = false) {
   const Wrapper = await i18nWrapper('de');
-  const onUpdate = vi.fn();
-  render(<Wrapper><PlayOutPlacesSettings tournament={tournament} onTournamentUpdate={onUpdate} jumpHere={jumpHere} /></Wrapper>);
+  const onUpdate = vi.fn().mockResolvedValue({ ok: true });
+  render(<Wrapper><PlayOutPlacesSettings tournament={tournament} onSave={onUpdate} jumpHere={jumpHere} /></Wrapper>);
   return onUpdate;
 }
 
@@ -52,8 +52,7 @@ describe('Einstellung ändern (@W2A-066, @W2A-068)', () => {
     expect(onUpdate).not.toHaveBeenCalled(); // noch nichts gespeichert
     await userEvent.click(within(dialog).getByTestId('playout-confirm-ok'));
     expect(onUpdate).toHaveBeenCalledTimes(1);
-    expect(onUpdate.mock.calls[0][0]).toMatchObject({ placementsToPlayOut: [1, 3] });
-    expect(onUpdate.mock.calls[0][1]).toBe(false); // kein Neuplanen
+    expect(onUpdate.mock.calls[0][0]).toEqual([1, 3]); // nur die Einstellung, nicht das ganze Turnier
   });
 
   it('@W2A-068 Abbrechen in der Rückfrage speichert nichts und lässt die Auswahl stehen', async () => {
@@ -71,7 +70,7 @@ describe('Einstellung ändern (@W2A-066, @W2A-068)', () => {
     await userEvent.click(screen.getByTestId('playout-place-5'));
     await userEvent.click(screen.getByTestId('playout-save'));
     expect(screen.queryByTestId('tie-places-confirm')).toBeNull();
-    expect(onUpdate.mock.calls[0][0]).toMatchObject({ placementsToPlayOut: [1, 5] });
+    expect(onUpdate.mock.calls[0][0]).toEqual([1, 5]);
   });
 
   it('@W2A-068 Zeile 6: ein eingetragenes Strafstoßschießen bleibt bei Platz 3 bestehen – keine Rückfrage', async () => {
@@ -81,7 +80,7 @@ describe('Einstellung ändern (@W2A-066, @W2A-068)', () => {
     await userEvent.click(screen.getByTestId('playout-place-3'));
     await userEvent.click(screen.getByTestId('playout-save'));
     expect(screen.queryByTestId('tie-places-confirm')).toBeNull();
-    expect(onUpdate.mock.calls[0][0]).toMatchObject({ placementsToPlayOut: [1, 3] });
+    expect(onUpdate.mock.calls[0][0]).toEqual([1, 3]);
   });
 
   it('Zurücksetzen verwirft die Änderung, Speichern ist danach wieder gesperrt', async () => {
@@ -91,6 +90,28 @@ describe('Einstellung ändern (@W2A-066, @W2A-068)', () => {
     await userEvent.click(screen.getByTestId('playout-reset'));
     expect(screen.getByTestId('playout-place-2')).not.toBeChecked();
     expect(screen.getByTestId('playout-save')).toBeDisabled();
+  });
+});
+
+describe('Konflikt und Netz: sichtbar, nie still (Fixrunde TB-6)', () => {
+  it('Versionskonflikt (STALE): die Meldung steht neben der Auswahl; Gegenbeispiel: bei Erfolg keine Meldung', async () => {
+    const Wrapper = await i18nWrapper('de');
+    const onSave = vi.fn().mockResolvedValueOnce({ ok: false, code: 'STALE' }).mockResolvedValueOnce({ ok: true });
+    render(<Wrapper><PlayOutPlacesSettings tournament={nikolaus()} onSave={onSave} /></Wrapper>);
+    await userEvent.click(screen.getByTestId('playout-place-5'));
+    await userEvent.click(screen.getByTestId('playout-save'));
+    expect(await screen.findByTestId('playout-error')).toHaveTextContent('gleichzeitig geändert und wurde nicht gespeichert');
+    await userEvent.click(screen.getByTestId('playout-save'));
+    expect(onSave).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId('playout-error')).toBeNull();
+  });
+
+  it('ohne Netz (OFFLINE): „Speichern geht nur mit Netz.“', async () => {
+    const Wrapper = await i18nWrapper('de');
+    render(<Wrapper><PlayOutPlacesSettings tournament={nikolaus()} onSave={vi.fn().mockResolvedValue({ ok: false, code: 'OFFLINE' })} /></Wrapper>);
+    await userEvent.click(screen.getByTestId('playout-place-5'));
+    await userEvent.click(screen.getByTestId('playout-save'));
+    expect(await screen.findByTestId('playout-error')).toHaveTextContent('Speichern geht nur mit Netz.');
   });
 });
 
@@ -117,8 +138,8 @@ describe('Wer ändern darf und der Sprung aus dem Dialog (@W2A-050, G2)', () => 
 describe('Englisch', () => {
   it('die Rückfrage hat englische Texte', async () => {
     const Wrapper = await i18nWrapper('en');
-    const onUpdate = vi.fn();
-    render(<Wrapper><PlayOutPlacesSettings tournament={await mitAnnahme()} onTournamentUpdate={onUpdate} /></Wrapper>);
+    const onUpdate = vi.fn().mockResolvedValue({ ok: true });
+    render(<Wrapper><PlayOutPlacesSettings tournament={await mitAnnahme()} onSave={onUpdate} /></Wrapper>);
     fireEvent.click(screen.getByTestId('playout-place-3'));
     fireEvent.click(screen.getByTestId('playout-save'));
     expect(within(screen.getByTestId('tie-places-confirm')).getByRole('heading', { name: 'Acceptance will be withdrawn' })).toBeInTheDocument();

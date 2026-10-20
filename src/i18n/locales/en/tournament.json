@@ -1209,7 +1209,12 @@
       "confirmBody": "For {{names}} the acceptance “Accept result as it is” is on record. It will be withdrawn, then a penalty shootout is needed.",
       "confirmKeep": "An entered penalty shootout or a set order stays in place whatever you change.",
       "confirmCancel": "Cancel",
-      "confirmOk": "Withdraw acceptance"
+      "confirmOk": "Withdraw acceptance",
+      "errors": {
+        "STALE": "The setting changed at the same time and was not saved. Please check the new state and try again.",
+        "OFFLINE": "Saving needs a connection.",
+        "NOT_FOUND": "The tournament was not found."
+      }
     },
     "places": {
       "one": "place {{from}}",

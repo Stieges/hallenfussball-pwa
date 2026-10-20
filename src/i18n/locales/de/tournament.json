@@ -1209,7 +1209,12 @@
       "confirmBody": "Für {{names}} liegt die Annahme „Ergebnis so akzeptieren“ vor. Sie wird aufgehoben, dann ist ein Strafstoßschießen nötig.",
       "confirmKeep": "Ein eingetragenes Strafstoßschießen oder eine festgelegte Reihenfolge bleibt bei jeder Änderung bestehen.",
       "confirmCancel": "Abbrechen",
-      "confirmOk": "Annahme aufheben"
+      "confirmOk": "Annahme aufheben",
+      "errors": {
+        "STALE": "Die Einstellung hat sich gleichzeitig geändert und wurde nicht gespeichert. Bitte prüfe den neuen Stand und versuche es erneut.",
+        "OFFLINE": "Speichern geht nur mit Netz.",
+        "NOT_FOUND": "Das Turnier wurde nicht gefunden."
+      }
     },
     "places": {
       "one": "Platz {{from}}",

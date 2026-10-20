@@ -12,6 +12,7 @@ import { isLegacyTournamentShape } from '../models/legacyFormat';
 import { quarantineLegacyTournaments, LEGACY_TOURNAMENTS_NOTICE_EVENT } from '../storage/legacyTournamentStore';
 import { applyServerLedPatch, type ServerLedMatchPatch } from './serverLedMatchFields';
 import { readServerRevisions, writeServerRevisions, type CloudAdoption } from './cloudAdoption';
+import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
 
 /**
  * A2 Fixrunde 3 (N2, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md`):
@@ -171,6 +172,22 @@ export class LocalStorageRepository implements ITournamentRepository {
                 throw new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.');
             }
             list[index] = { ...list[index], standingDecisions: decisions, version: expectedVersion + 1, updatedAt: new Date().toISOString() };
+            await this.saveList(list);
+        });
+    }
+
+    /** Fixrunde TB-6: nur die Einstellung „Plätze ausspielen“, mit Versionsprüfung (lokal); `standingDecisions` bleiben. */
+    updatePlacementsToPlayOut(id: string, places: number[], expectedVersion: number): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === id);
+            if (index === -1) {
+                throw new Error(`Tournament ${id} not found`);
+            }
+            if ((list[index].version ?? 0) !== expectedVersion) {
+                throw new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.');
+            }
+            list[index] = { ...list[index], placementsToPlayOut: parsePlacementsToPlayOut(places), version: expectedVersion + 1, updatedAt: new Date().toISOString() };
             await this.saveList(list);
         });
     }

@@ -13,6 +13,7 @@ import { decideCloudAdoption, isCloudReadTimeout, withCloudReadTimeout } from '.
 import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisionSource } from './serverRevisionRegistry';
 import { CloudQueueGuard } from './cloudQueueGuard';
 import { effectiveHostTeamIds } from '../models/hostTeams';
+import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -340,6 +341,21 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         const local = await this.localRepo.get(id);
         if (local) {
             await this.localRepo.cacheCloudCopy({ ...local, standingDecisions: decisions, version: expectedVersion + 1 });
+        }
+    }
+
+    /**
+     * Fixrunde TB-6: die Einstellung „Plätze ausspielen“ nur mit Netz und nur dieses Feld (wie die Entscheidungen); ohne Netz
+     * `NetworkError` (isOffline), nichts eingereiht. Danach lokale Kopie mit neuer Version, Entscheidungen bleiben.
+     */
+    async updatePlacementsToPlayOut(id: string, places: number[], expectedVersion: number): Promise<void> {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            throw new NetworkError('Die Einstellung braucht eine Verbindung.', true);
+        }
+        await this.supabaseRepo.updatePlacementsToPlayOut(id, places, expectedVersion);
+        const local = await this.localRepo.get(id);
+        if (local) {
+            await this.localRepo.cacheCloudCopy({ ...local, placementsToPlayOut: parsePlacementsToPlayOut(places), version: expectedVersion + 1 });
         }
     }
 
