@@ -153,6 +153,9 @@ pending_assertions_for() {
     20261110_002_device_roles.sql)
       echo "role-checks-device-roles has-permission-device-roles-for-anonymous tournaments-insert-real-account-only anon-no-write-public-tables device-roles-guard-trigger hook-before-user-created-auth-admin-only auth-users-block-anonymous-upgrade"
       ;;
+    20261110_003_field_control.sql)
+      echo "field-control-no-client-access field-control-rpcs-execute-only-authenticated append-match-events-checks-field-control"
+      ;;
     *)
       return 1
       ;;
@@ -504,6 +507,10 @@ PRIVILEGE_ASSERTION_NAMES=(
   "hook-before-user-created-auth-admin-only"
   # A-27 Fixrunde 1 (Review K1): anonyme Sitzung wird nie zum Konto.
   "auth-users-block-anonymous-upgrade"
+  # A-34 (20261110_003_field_control.sql): Steuer je Feld.
+  "field-control-no-client-access"
+  "field-control-rpcs-execute-only-authenticated"
+  "append-match-events-checks-field-control"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

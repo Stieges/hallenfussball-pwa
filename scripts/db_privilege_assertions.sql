@@ -632,4 +632,39 @@ SELECT 'auth-users-block-anonymous-upgrade',
                   -- ueber den Katalog statt to_regclass('auth.users'): die CI-Leserolle hat kein USAGE auf Schema auth
                   WHERE n.nspname = 'auth' AND c.relname = 'users'
                     AND t.tgname = 'block_anonymous_upgrade' AND NOT t.tgisinternal), false)
+
+-- A-34 (20261110_003_field_control.sql, @FU-026, @FU-027, @FU-030, @HE-049): Steuer je Feld. Tabelle field_control mit RLS,
+-- ohne Policy und ohne Tabellenrechte fuer anon/authenticated (nur Definer-Funktionen); take_field_control und
+-- field_control_state SECURITY DEFINER mit search_path, EXECUTE nur authenticated (nicht anon, nicht PUBLIC); die interne
+-- field_control_info fuer keinen Client; append_match_events prueft die Steuer (geht beim Ersetzen der Funktion durch
+-- eine spaetere Migration nicht still verloren, brief-A-34 L9). Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'field-control-no-client-access',
+       coalesce((SELECT c.relrowsecurity
+                        AND NOT EXISTS (SELECT 1 FROM pg_policy pol WHERE pol.polrelid = c.oid)
+                        AND NOT has_table_privilege('anon', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')
+                        AND NOT has_table_privilege('authenticated', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')
+                   FROM pg_class c WHERE c.oid = to_regclass('public.field_control')), false)
+UNION ALL
+SELECT 'field-control-rpcs-execute-only-authenticated',
+       coalesce((SELECT count(*) = 2
+                        AND bool_and(p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                                      WHERE a.grantee = 0))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.take_field_control(uuid,integer,uuid,text,integer)'),
+                                  to_regprocedure('public.field_control_state(uuid,uuid)'))), false)
+       AND coalesce((SELECT NOT p.prosecdef
+                            AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                            AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                            AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                             WHERE a.grantee = 0)
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.field_control_info(uuid,integer,uuid)')), false)
+UNION ALL
+SELECT 'append-match-events-checks-field-control',
+       coalesce((SELECT position('public.field_control' IN pg_get_functiondef(p.oid)) > 0
+                        AND position('''NOT_CONTROLLER''' IN pg_get_functiondef(p.oid)) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
 ;
