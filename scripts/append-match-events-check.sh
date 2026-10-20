@@ -124,6 +124,13 @@ UR_MIGRATION="20261028_006_event_author_names.sql"
 # Gleichstand) -- jedes erneute Einspielen von 20261028_003 stellte die alte Fassung wieder her, deshalb ans
 # Ende der Idempotenz-Kette. --without-sw laesst genau diese Datei aus (Gegenprobe D).
 SW_MIGRATION="20261028_007_entered_shootout_needs_draw.sql"
+# A-34 (Steuer je Feld): juengste Fassung von append_match_events (Pruefung c3) -- jedes erneute Einspielen von
+# 20261028_003 stellte die Fassung ohne Steuer wieder her (Assertion append-match-events-checks-field-control f),
+# deshalb ans Ende der Idempotenz-Kette. Die Proben hier senden keine Geraete-ID -> kein Anspruch, Verhalten gleich.
+# Pflicht (A-34 Fixrunde 2): fehlt die Datei (z. B. umbenannt), bricht das Skript ab statt still die Fassung ohne Steuer
+# zu pruefen.
+A34_MIGRATION="20261110_003_field_control.sql"
+A34_FILE=""
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 CONTAINER_NAME="append-match-events-check-$$"
 WORKDIR="$(mktemp -d)"
@@ -162,6 +169,7 @@ while IFS= read -r line; do
   [[ "$(basename "$line")" == "$A25A_MIGRATION" ]] && A25A_FILE="$line"
   [[ "$(basename "$line")" == "$A10_MIGRATION" ]] && A10_FILE="$line"
   [[ "$(basename "$line")" == "$UR_MIGRATION" ]] && UR_FILE="$line"
+  [[ "$(basename "$line")" == "$A34_MIGRATION" ]] && A34_FILE="$line"
   if [[ "$(basename "$line")" == "$SW_MIGRATION" ]]; then
     SW_FILE="$line"
     [[ "$MODE" == "without-sw" ]] && continue
@@ -170,6 +178,11 @@ while IFS= read -r line; do
 done <<< "$NEWER_MIGRATIONS_RAW"
 if [[ "$MODE" != "without-migration" && ( -z "$TARGET_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" || -z "$A10_FILE" || -z "$UR_FILE" || -z "$SW_FILE" ) ]]; then
   echo "::error::$TARGET_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION, $A10_MIGRATION, $UR_MIGRATION oder $SW_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
+  exit 1
+fi
+
+if [[ -z "$A34_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
+  echo "::error::$A34_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still append_match_events ohne Steuer je Feld." >&2
   exit 1
 fi
 
@@ -216,6 +229,7 @@ if [[ "$MODE" != "without-migration" ]]; then
   psql_stdin < "$A10_FILE"
   psql_stdin < "$UR_FILE"
   [[ "$MODE" != "without-sw" ]] && psql_stdin < "$SW_FILE"
+  if [[ -n "$A34_FILE" ]]; then psql_stdin < "$A34_FILE"; fi
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.
@@ -223,13 +237,16 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   # juengste Fassung steht dort, deshalb wird DIESE Datei mutiert (und nach 003 eingespielt).
   # ZA-3: seit 20261028 steht die juengste Fassung dort -- diese Datei wird mutiert.
   # A-25a: seit 20261028_003 steht die juengste Fassung dort -- diese Datei wird mutiert.
-  HITS="$(grep -c "has_tournament_permission(v_tournament_id, 'leadMatches')" "$A25A_FILE" || true)"
+  # A-34: seit 20261110_003 steht die juengste Fassung dort -- diese Datei wird mutiert (falls vorhanden).
+  NEWEST_APPEND_FILE="$A25A_FILE"
+  [[ -n "$A34_FILE" ]] && NEWEST_APPEND_FILE="$A34_FILE"
+  HITS="$(grep -c "has_tournament_permission(v_tournament_id, 'leadMatches')" "$NEWEST_APPEND_FILE" || true)"
   if [[ "$HITS" -ne 1 ]]; then
     echo "::error::Gegenprobe: Akteurszeile nicht genau einmal gefunden ($HITS)." >&2
     exit 1
   fi
   echo "GEGENPROBE: Akteursermittlung leadMatches -> writeMatchData" >&2
-  sed "s/has_tournament_permission(v_tournament_id, 'leadMatches')/has_tournament_permission(v_tournament_id, 'writeMatchData')/" "$A25A_FILE" | psql_stdin
+  sed "s/has_tournament_permission(v_tournament_id, 'leadMatches')/has_tournament_permission(v_tournament_id, 'writeMatchData')/" "$NEWEST_APPEND_FILE" | psql_stdin
 fi
 if [[ "$MODE" == "without-column-guard" ]]; then
   echo "GEGENPROBE C: DROP TRIGGER matches_guard_engine_columns" >&2
@@ -674,6 +691,9 @@ TB="$(uuid_for team:b)"
   for name in r1 r2 r3 r4 i1 i2 c1 c2 k1 k2 s10 s11 g1 perf o1 e1 m4 m1 a1 sk1 sk2 z1 w1a w1b w1c w1d w1e w1f; do
     echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, score_a, score_b) VALUES ('$(uuid_for "match:$name")', '$T_P', 1, 1, '$TA', '$TB', NULL, NULL);"
   done
+  # A-34: Autorenzeile mit Geraete-ID auf eigenem Feld 2 -- ein Aufruf mit Geraete-ID beansprucht das Feld (Steuer je
+  # Feld); die uebrigen Proben (Feld 1, ohne Geraete-ID) pruefen Rechte und Uebergaenge, nicht die Steuer.
+  echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, score_a, score_b) VALUES ('$(uuid_for "match:rdev")', '$T_P', 1, 2, '$TA', '$TB', NULL, NULL);"
 } | psql_stdin
 M() { uuid_for "match:$1"; }
 E() { uuid_for "event:$1"; }
@@ -693,9 +713,11 @@ T_KO4="$(uuid_for tournament:ko-4)"
 
 # --- 5. Rechte --------------------------------------------------------------------------------
 echo "Rechte..." >&2
-out="$(call authenticated "$U_HELPER" "$(M r1)" "$(arr "$(ev MATCH_START "$(E r1-start)" '{"baseState":{"v":1}}')")" 1 "$DEVICE")"
+out="$(call authenticated "$U_HELPER" "$(M r1)" "$(arr "$(ev MATCH_START "$(E r1-start)" '{"baseState":{"v":1}}')")")"
 check Rechte "Helfer: MATCH_START angenommen" '.results[0].status == "accepted" and (.results[0].seq | type) == "number"' "$out"
-out="$(q "SELECT jsonb_build_object('user', a.user_id, 'device', a.device_id, 'base', a.base_state, 'tournament', a.tournament_id) FROM public.match_event_authors a WHERE a.event_id = '$(E r1-start)';")"
+out="$(call authenticated "$U_HELPER" "$(M rdev)" "$(arr "$(ev MATCH_START "$(E rdev-start)" '{"baseState":{"v":1}}')")" 1 "$DEVICE")"
+check Rechte "Helfer mit Geraete-ID: MATCH_START angenommen (Feld 2)" '.results[0].status == "accepted"' "$out"
+out="$(q "SELECT jsonb_build_object('user', a.user_id, 'device', a.device_id, 'base', a.base_state, 'tournament', a.tournament_id) FROM public.match_event_authors a WHERE a.event_id = '$(E rdev-start)';")"
 check Rechte "Autorenzeile: user_id = Helfer, device_id, base_state" ".user == \"$U_HELPER\" and .device == \"$DEVICE\" and .base == {\"v\":1} and .tournament == \"$T_P\"" "$out"
 out="$(call authenticated "$U_HELPER" "$(M r1)" "$(arr "$(ev GOAL "$(E r1-goal)" '{"at":2000,"clockMs":1000,"teamId":"@V:TA@"}')" "$(ev MATCH_END "$(E r1-end)" '{"at":3000,"clockMs":600000}')")")"
 check Rechte "Helfer: GOAL + MATCH_END angenommen" '[.results[].status] == ["accepted","accepted"] and .state.status == "finished"' "$out"

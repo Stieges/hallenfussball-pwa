@@ -142,6 +142,10 @@
 #                                                   # Geraete-Rolle, Guard, anon ohne Schreibrecht) -- die A-27-Zeilen
 #                                                   # (rls-matrix.d/spur-geraete-a27.sh) und die Vollmatrix-Zellen der
 #                                                   # anonymen Identitaeten muessen hier ROT sein (Gegenprobe, Exit 0).
+#                                                   # Laesst auch 20261110_003 (A-34) weg, das an _002 haengt.
+#   scripts/rls-role-matrix.sh --without-a34       # Alles ("nachher") mit A-11 und A-27, aber OHNE 20261110_003 (A-34:
+#                                                   # Steuer je Feld) -- die A-34-Zeilen (rls-matrix.d/spur-steuer-a34.sh)
+#                                                   # muessen hier ROT sein (Gegenprobe, Exit 0).
 #
 # A-27 (brief-A-27.md, R-A27-3): Identitaeten einer anonymen Sitzung (owner-anonymous, anon-device, helper-device,
 # screen-device, anon-coadmin) tragen zusaetzlich den Claim is_anonymous=true (request.jwt.claims, siehe
@@ -236,6 +240,8 @@ WITH_R7=1
 WITH_A11_REQ=1
 # A-27: 20261110_002 im Modus "nachher" einspielen (Gegenprobe --without-a27 laesst sie weg; braucht _001).
 WITH_A27_REQ=1
+# A-34: 20261110_003 im Modus "nachher" einspielen (Gegenprobe --without-a34 laesst sie weg; braucht _002).
+WITH_A34_REQ=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -275,6 +281,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-a27)
       WITH_A27_REQ=0
+      shift
+      ;;
+    --without-a34)
+      WITH_A34_REQ=0
       shift
       ;;
     -h|--help)
@@ -518,6 +528,20 @@ elif [[ "$WITH_A11" -eq 1 ]]; then
   MODE_LABEL="vorher/A-27-Gegenprobe (alles mit A-11, ohne 20261110_002)"
 fi
 
+# A-34 (20261110_003, @FU-026, @FU-027, @FU-030, @HE-049): Steuer je Feld -- Tabelle field_control (RLS, keine Policy),
+# take_field_control/field_control_state, Pruefung in append_match_events. Setzt _002 voraus (Fail-fast der Migration);
+# --without-a34 ist die Gegenprobe.
+A34_FILE="$(find_migration 20261110_003)"
+WITH_A34=0
+if [[ "$WITH_A27" -eq 1 && "$WITH_A34_REQ" -eq 1 ]]; then
+  WITH_A34=1
+  echo "Migration einspielen: $(basename "$A34_FILE")" >&2
+  psql_stdin < "$A34_FILE"
+  MODE_LABEL="$MODE_LABEL + A-34 (20261110_003)"
+elif [[ "$WITH_A27" -eq 1 ]]; then
+  MODE_LABEL="vorher/A-34-Gegenprobe (alles mit A-11 und A-27, ohne 20261110_003)"
+fi
+
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,
 #        nur wenn WITH_R5=1 -- die neue Tabelle existiert sonst nicht) ------------------------
 EXPECTED_POLICY_COUNT=44
@@ -537,6 +561,10 @@ fi
 # A-08h entfernt drei Policies auf match_events (INSERT/UPDATE/DELETE v3/v2).
 if [[ "$WITH_A08H" -eq 1 ]]; then
   EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT - 3))
+fi
+# A-34: field_control ist RLS-aktiv, ohne Policy.
+if [[ "$WITH_A34" -eq 1 ]]; then
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 1))
 fi
 POLICY_COUNT="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM pg_policies WHERE schemaname = 'public';")"
@@ -2087,7 +2115,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi
