@@ -9,6 +9,8 @@ import {
   GuestStoreReadError,
   isAbortError,
   isTransientMutationError,
+  isVersionConflict,
+  TeamStillReferencedError,
 } from './errors';
 
 describe('Error Hierarchy', () => {
@@ -274,5 +276,20 @@ describe('isTransientMutationError', () => {
       const wrapped = new RepositoryError('updateMatches', 'Mehrere Matches konnten nicht aktualisiert werden', errors);
       expect(isTransientMutationError(wrapped)).toBe(false);
     });
+  });
+});
+
+describe('isVersionConflict (@FU-106)', () => {
+  it('@FU-106 erkennt den Versionskonflikt direkt und eingepackt (auch in der Liste von updateMatches)', () => {
+    expect(isVersionConflict(new OptimisticLockError('Turnier wurde zwischenzeitlich verändert. Bitte neu laden.'))).toBe(true);
+    expect(isVersionConflict(new RepositoryError('updateMatches', 'x', [new Error('Match 1: y'), new OptimisticLockError('Turnier wurde zwischenzeitlich verändert (Matches).')]))).toBe(true);
+    expect(isVersionConflict(new RepositoryError('updateMetadata', 'x', new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.')))).toBe(true);
+  });
+
+  it('Gegenbeispiel: andere dauerhafte Fehler sind kein Konflikt', () => {
+    expect(isVersionConflict(new TeamStillReferencedError('spiel-4'))).toBe(false);
+    expect(isVersionConflict(new RepositoryError('save', 'new row violates row-level security policy', { code: '42501' }))).toBe(false);
+    expect(isVersionConflict(new Error('Turnier wurde zwischenzeitlich verändert'))).toBe(false); // nur die Fehlerklasse zählt, nicht der Text
+    expect(isVersionConflict(undefined)).toBe(false);
   });
 });
