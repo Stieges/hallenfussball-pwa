@@ -8,7 +8,7 @@ export { Step5_Overview } from './Step5_Overview';
 
 // URL Utilities
 export {
-  getStepFromSearchParams,
+  parseStepParam,
   buildWizardStepPath,
   isWizardPath,
   type WizardStep,

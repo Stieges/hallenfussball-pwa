@@ -136,10 +136,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     hasFilters,
     getFilteredMatches,
     getMatchCount,
-  } = useScheduleFilters({
-    tournamentId: tournament.id,
-    enablePersistence: true,
-  });
+  } = useScheduleFilters({ filterOptions });
 
   // Get filtered matches for display
   // FIX: Use schedule.allMatches as source ensuring we filter what is displayed (Preview/Generated),
