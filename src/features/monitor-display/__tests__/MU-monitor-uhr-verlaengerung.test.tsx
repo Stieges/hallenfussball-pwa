@@ -134,6 +134,34 @@ describe('@ZM-039 @ZM-139 Monitor-Uhr in der Verlängerung (Paket MU)', () => {
     expect(screen.queryByText(/Ergebnis folgt/)).toBeNull();
   });
 
+  it('@ZM-039 @ZM-040 Verlängerung angehalten bei Restzeit 3:40: die Dauer bleibt die Verlängerungs-Dauer (900), die Anzeige steht bei 03:40, nie „Ergebnis folgt“', () => {
+    const match = spiel({
+      ...PLATZ_3,
+      matchStatus: 'paused',
+      timerPausedAt: new Date(JETZT).toISOString(),
+      timerElapsedSeconds: 680,
+      liveState: {
+        status: 'paused',
+        phase: 'overtime',
+        section: 2,
+        sections: 2,
+        sectionSeconds: 300,
+        overtimeSeconds: 300,
+        sectionStartMs: 600000,
+        elapsedMs: 680000,
+        anchorAt: null,
+        running: false,
+        breakStartedAt: null,
+      },
+    });
+    const tournament = turnier(match, { finalRoundGameDuration: 10 });
+
+    expect(liveMatchOf(match, tournament).durationSeconds).toBe(900);
+    renderLive(tournament);
+    expect(screen.getByText('03:40')).toBeInTheDocument();
+    expect(screen.queryByText(/Ergebnis folgt/)).toBeNull();
+  });
+
   it('@ZM-139 Gegenbeispiel Gruppenspiel in der regulären Spielzeit: die Dauer bleibt 10 Minuten', () => {
     const match = spiel({ id: 'gruppe', group: 'A', phase: 'groupStage', ...laufend({ uhrSek: 240, phase: 'regular', beginnSek: 0, section: 1, abschnittSek: 300 }) });
     const tournament = turnier(match);
