@@ -564,7 +564,6 @@ export const cssSizing = {
   noticeLineHeightCompact: 'var(--sizing-notice-line-height-compact)',
   noticeLineHeightRegular: 'var(--sizing-notice-line-height-regular)',
   teamStripeWidth: 'var(--sizing-team-stripe-width)',
-  spaltenkopfMax: 'var(--sizing-spaltenkopf-max)',
   qrPlaceholder: 'var(--sizing-qr-placeholder)',
   scorePreviewWidth: 'var(--sizing-score-preview-width)',
   scorePreviewHeight: 'var(--sizing-score-preview-height)',

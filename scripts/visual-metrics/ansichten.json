@@ -425,7 +425,8 @@
         "[data-testid=\"penalty-button-away\"]",
         "warte:400",
         "[data-testid=\"number-picker\"] [data-lage] button",
-        "warte:200"
+        "warte:200",
+        "scroll:oben"
       ]
     },
     {

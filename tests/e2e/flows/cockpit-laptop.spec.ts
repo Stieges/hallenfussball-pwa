@@ -102,8 +102,8 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
     expect(ueberstand, 'Inhaltsbereich scrollt nicht').toBeLessThanOrEqual(1);
   });
 
-  test('@SL-061 Laptop, schwerer Fall: der Inhaltsbereich selbst scrollt nicht', async ({ page, seedIndexedDB }) => {
-    // Bekannte Lücke (Fixrunde offen): bei 1280 × 720 fehlen im schwersten Fall (50-Zeichen-Name in Tafel und Spalte, vier Zeitstrafen, Meldezeile) rund 40 px
+  test('@SL-061 Laptop, schwerer Fall: der Inhaltsbereich selbst scrollt nicht – C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL', async ({ page, seedIndexedDB }) => {
+    // Befund C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL (Lösung nach #298/#288, spätestens im Cockpit-Abschluss): bei 1280 × 720 fehlen im schwersten Fall (50-Zeichen-Name in Tafel und Spalte, vier Zeitstrafen, Meldezeile) rund 40 px
     test.fail((page.viewportSize()?.height ?? 0) < 740, 'schwerster Fall passt bei 720 px Höhe noch nicht ganz ohne Scrollen des Inhaltsbereichs');
     test.skip((page.viewportSize()?.width ?? 0) < 1024, 'nur Laptop-Anordnung');
     await seedIndexedDB({ tournaments: [cup({ namen: [NAME_50, NAMEN[1], NAMEN[2], NAMEN[3]] })] });
