@@ -145,6 +145,12 @@ describe('Reihenfolge von drei Teams mit Grund (@W2A-044)', () => {
     expect(draft.order[0]).not.toBe(draft.teamIds[0]); // die Reihenfolge wurde tatsächlich umgestellt
   });
 
+  it('der Hinweis am Grundfeld verspricht keine Sichtbarkeit: der Grund wird bis GA4 A-13b verworfen, „nur für die Turnierleitung sichtbar“ steht nicht da', async () => {
+    await open(jgj('WOUMNB', DATA.W2A_044, [1, 2]), '', fakeTie());
+    expect(screen.getByText('Bitte keine Spielernamen eintragen.')).toBeInTheDocument();
+    expect(dialog().textContent).not.toMatch(/sichtbar/);
+  });
+
   it('Gegenbeispiel: ein Grund nur aus Leerzeichen zählt nicht', async () => {
     await open(jgj('WOUMNB', DATA.W2A_044, [1, 2]), '', fakeTie());
     await userEvent.type(screen.getByTestId('tie-reason'), '   ');

@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CSSProperties } from 'react';
-import { cssVars, iconSizeValues } from '../../../design-tokens';
+import { cssVars, dialogWidths, iconSizeValues } from '../../../design-tokens';
 import { Icons } from '../../../components/ui/Icons';
 import { Button } from '../../../components/ui/Button';
 import { DialogActions } from '../../../components/ui/molecules/DialogActions';
@@ -93,7 +93,7 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
   const errorText = draft.error === null ? null : t(`standingsTie.dialog.errors.${draft.error}`);
 
   return (
-    <DialogSurface isOpen onClose={onClose} labelledBy="tie-dialog-title" header={header} footer={footer} testId="tie-decision-dialog" maxWidth="480px">
+    <DialogSurface isOpen onClose={onClose} labelledBy="tie-dialog-title" header={header} footer={footer} testId="tie-decision-dialog" maxWidth={dialogWidths.md}>
       <div style={bodyStack}>
         {step === 'choice' ? (
           <ChoiceStep

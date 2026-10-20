@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CSSProperties } from 'react';
-import { cssVars } from '../../../design-tokens';
+import { cssVars, dialogWidths } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { DialogActions } from '../../../components/ui/molecules/DialogActions';
 import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
@@ -40,7 +40,7 @@ export const PlayOutPlacesSettings = ({ tournament, onSave, jumpHere = false }: 
   const savedKey = saved.join(',');
   const [draft, setDraft] = useState<number[]>(saved);
   const [confirming, setConfirming] = useState(false);
-  const [error, setError] = useState<PlayOutPlacesError | null>(null);
+  const [error, setError] = useState<PlayOutPlacesError | 'UNKNOWN' | null>(null);
   const [busy, setBusy] = useState(false);
   const dirty = draft.join(',') !== savedKey;
 
@@ -67,6 +67,8 @@ export const PlayOutPlacesSettings = ({ tournament, onSave, jumpHere = false }: 
       if (!result.ok) {
         setError(result.code); // sichtbar, nie still überschrieben
       }
+    } catch {
+      setError('UNKNOWN'); // Netz- oder Serverfehler trotz „online“: nie still
     } finally {
       setBusy(false);
     }
@@ -95,7 +97,7 @@ export const PlayOutPlacesSettings = ({ tournament, onSave, jumpHere = false }: 
           <InlineNotice tone="error" data-testid="playout-error"><span>{t(`standingsTie.settings.errors.${error}`)}</span></InlineNotice>
         </div>
       ) : null}
-      <DialogSurface isOpen={confirming} onClose={() => setConfirming(false)} labelledBy="playout-confirm-title" testId="tie-places-confirm" maxWidth="480px">
+      <DialogSurface isOpen={confirming} onClose={() => setConfirming(false)} labelledBy="playout-confirm-title" testId="tie-places-confirm" maxWidth={dialogWidths.md}>
         <div style={{ display: 'grid', gap: cssVars.spacing.md, padding: cssVars.spacing.md }}>
           <h2 id="playout-confirm-title" style={{ margin: 0, fontSize: cssVars.fontSizes.xl, lineHeight: cssVars.lineHeights.title }}>{t('standingsTie.settings.confirmTitle')}</h2>
           <p style={line}>{t('standingsTie.settings.confirmIntro')}</p>

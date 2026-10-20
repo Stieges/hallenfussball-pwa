@@ -115,6 +115,20 @@ describe('Konflikt und Netz: sichtbar, nie still (Fixrunde TB-6)', () => {
   });
 });
 
+describe('Fehler nie still (Review TB-6 A4)', () => {
+  it('abgelehntes Versprechen (Netzfehler trotz „online“): sichtbare Meldung, keine ungefangene Ablehnung; Gegenbeispiel: Erfolg ohne Meldung', async () => {
+    const Wrapper = await i18nWrapper('de');
+    const onSave = vi.fn().mockRejectedValueOnce(new Error('Failed to fetch')).mockResolvedValueOnce({ ok: true });
+    render(<Wrapper><PlayOutPlacesSettings tournament={nikolaus()} onSave={onSave} /></Wrapper>);
+    await userEvent.click(screen.getByTestId('playout-place-5'));
+    await userEvent.click(screen.getByTestId('playout-save'));
+    expect(await screen.findByTestId('playout-error')).toHaveTextContent('Das Speichern hat nicht geklappt');
+    expect(screen.getByTestId('playout-save')).toBeEnabled(); // erneut versuchen geht
+    await userEvent.click(screen.getByTestId('playout-save'));
+    expect(screen.queryByTestId('playout-error')).toBeNull();
+  });
+});
+
 describe('Wer ändern darf und der Sprung aus dem Dialog (@W2A-050, G2)', () => {
   it('@W2A-050 ohne das Recht (Helfer): Auswahl gesperrt, keine Speichern-Taste, der Text nennt die Turnierleitung', async () => {
     can.value = false;

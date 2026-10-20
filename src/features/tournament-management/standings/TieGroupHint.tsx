@@ -50,6 +50,8 @@ export const TieGroupHint = ({ tournament, groupId }: TieGroupHintProps) => {
         const message = result.code === 'OFFLINE' ? t('standingsTie.decided.withdrawOffline') : t('standingsTie.decided.withdrawFailed');
         setFailed((current) => ({ ...current, [decisionId]: message }));
       }
+    } catch {
+      setFailed((current) => ({ ...current, [decisionId]: t('standingsTie.decided.withdrawFailed') })); // Netz- oder Serverfehler: nie still
     } finally {
       setBusyId(null);
     }

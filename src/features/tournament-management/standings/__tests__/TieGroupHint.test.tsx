@@ -187,6 +187,19 @@ describe('Entschieden: Ergebnis sichtbar, zurücknehmen bis zum Gruppenabschluss
     expect(await screen.findByRole('alert')).toHaveTextContent('Zurücknehmen hat nicht geklappt');
   });
 
+  it('@W2A-070 Zurücknehmen wirft einen Netzfehler (abgelehntes Versprechen): sichtbare Meldung, die Taste bleibt bedienbar; Gegenbeispiel: Erfolg ohne Meldung', async () => {
+    const t = await mitEntscheidung(nikolaus(), shared(['P', 'D']));
+    const tie = fakeTie();
+    tie.withdraw.mockRejectedValueOnce(new Error('Failed to fetch')).mockResolvedValueOnce({ ok: true });
+    await zeige(t, '', tie);
+    await userEvent.click(screen.getByTestId('tie-accept-withdraw'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Zurücknehmen hat nicht geklappt');
+    expect(screen.getByTestId('tie-accept-withdraw')).toBeEnabled();
+    await userEvent.click(screen.getByTestId('tie-accept-withdraw'));
+    await waitFor(() => expect(tie.onChanged).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   // Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH: „wer wann“ kommt mit dem Verlaufsprotokoll (GA4 A-13b)
   it.fails('@W2A-063 letzte Zeile: die Turnierleitung sieht, wer wann akzeptiert hat (Besitzer GA4 A-13b) – Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH', async () => {
     const t = await mitEntscheidung(nikolaus(), shared(['P', 'D']));

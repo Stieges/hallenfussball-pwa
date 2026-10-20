@@ -1178,7 +1178,7 @@
       "moveDown": "Move {{name}} down",
       "reasonLabel": "Reason (required)",
       "reasonCount": "{{count}} / {{max}}",
-      "reasonHint": "Please do not enter player names. Visible to the tournament organiser only.",
+      "reasonHint": "Please do not enter player names.",
       "errors": {
         "BLOCK_CHANGED": "The tie has changed in the meantime. Please close the dialog and check the table.",
         "STALE": "Saving did not work because the tournament changed at the same time. Please try again.",
@@ -1213,7 +1213,8 @@
       "errors": {
         "STALE": "The setting changed at the same time and was not saved. Please check the new state and try again.",
         "OFFLINE": "Saving needs a connection.",
-        "NOT_FOUND": "The tournament was not found."
+        "NOT_FOUND": "The tournament was not found.",
+        "UNKNOWN": "Saving did not work. Please try again."
       }
     },
     "places": {

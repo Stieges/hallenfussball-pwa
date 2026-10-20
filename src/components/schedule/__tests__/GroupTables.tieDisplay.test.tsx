@@ -23,6 +23,18 @@ describe('GroupTables tieDisplay (@W2A-059)', () => {
     expect(screen.getAllByTestId('tie-marker-probe').length).toBeGreaterThan(0);
   });
 
+  it('Handy (Review TB-6 A2): die Marke steht in einer eigenen Zeile über die volle Breite, nicht in der schmalen Teamspalte; Zeilen ohne Marke bekommen keine', () => {
+    const { container } = render(<GroupTables standings={standings} teams={t.teams} tieDisplay="app" renderTieHint={hint} renderTieMarker={marker} />);
+    const mobil = container.querySelector<HTMLElement>('.mobile-view')!;
+    const zeilen = mobil.querySelectorAll('[data-testid="tie-marker-row"]');
+    expect(zeilen).toHaveLength(1); // nur das Team mit Marke
+    expect(zeilen[0].querySelector('td')?.getAttribute('colspan')).toBe('5');
+    expect(zeilen[0].querySelector('[data-testid="tie-marker-probe"]')).not.toBeNull();
+    // Gegenbeispiel: die Teamspalte (2. Zelle der Datenzeilen) trägt die Marke nicht
+    const teamZellen = Array.from(mobil.querySelectorAll('tbody tr:not([data-testid="tie-marker-row"]) td:nth-child(2)'));
+    expect(teamZellen.some((z) => z.querySelector('[data-testid="tie-marker-probe"]') !== null)).toBe(false);
+  });
+
   it('Gegenbeispiel public (Vorgabe): selbst mit mitgegebenen Teilen erscheint nichts, die Platzziffern bleiben 3, 3, 5', () => {
     render(<GroupTables standings={standings} teams={t.teams} renderTieHint={hint} renderTieMarker={marker} />);
     expect(screen.queryByTestId('tie-hint-probe')).toBeNull();

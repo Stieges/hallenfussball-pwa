@@ -29,7 +29,10 @@ export function useTieRenderers(tournament: Tournament): TieRenderers {
     };
     return {
       hint: (groupId) => <TieGroupHint tournament={tournament} groupId={groupId} />,
-      marker: (teamId, groupId) => <TieRowMarker marker={tieMarkerOf(viewOf(groupId), teamId)} />,
+      marker: (teamId, groupId) => {
+        const marker = tieMarkerOf(viewOf(groupId), teamId);
+        return marker === undefined ? null : <TieRowMarker marker={marker} />;
+      },
     };
   }, [tournament]);
 }

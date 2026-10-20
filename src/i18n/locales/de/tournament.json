@@ -1178,7 +1178,7 @@
       "moveDown": "{{name}} nach unten",
       "reasonLabel": "Grund (Pflicht)",
       "reasonCount": "{{count}} / {{max}}",
-      "reasonHint": "Bitte keine Spielernamen eintragen. Nur für die Turnierleitung sichtbar.",
+      "reasonHint": "Bitte keine Spielernamen eintragen.",
       "errors": {
         "BLOCK_CHANGED": "Der Gleichstand hat sich inzwischen geändert. Bitte schließe den Dialog und prüfe die Tabelle.",
         "STALE": "Speichern hat nicht geklappt, weil sich das Turnier gleichzeitig geändert hat. Bitte erneut versuchen.",
@@ -1213,7 +1213,8 @@
       "errors": {
         "STALE": "Die Einstellung hat sich gleichzeitig geändert und wurde nicht gespeichert. Bitte prüfe den neuen Stand und versuche es erneut.",
         "OFFLINE": "Speichern geht nur mit Netz.",
-        "NOT_FOUND": "Das Turnier wurde nicht gefunden."
+        "NOT_FOUND": "Das Turnier wurde nicht gefunden.",
+        "UNKNOWN": "Das Speichern hat nicht geklappt. Bitte versuche es erneut."
       }
     },
     "places": {

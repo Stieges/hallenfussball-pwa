@@ -47,10 +47,46 @@ async function pruefeMasse(page: Page, selektoren: string[]): Promise<void> {
   for (const selektor of selektoren) {
     const box = await page.locator(selektor).first().boundingBox();
     expect(box?.height ?? 0, `${selektor} Höhe`).toBeGreaterThanOrEqual(44);
+    await keinWortgebrochen(page, selektor);
+    const ragtHinaus = await page.locator(selektor).first().evaluate((el) => el.scrollWidth > el.clientWidth + 1);
+    expect(ragtHinaus, `${selektor}: Text ragt über den Rand`).toBe(false);
+  }
+  // Marken, Hinweis-Tasten und „zurücknehmen“ auf jeder Größe: nie ein Wort über zwei Zeilen (auch auf 360 px)
+  for (const selektor of ['[data-testid="tie-marker"]', '[data-testid="tie-hints"] button']) {
+    await keinWortgebrochen(page, selektor);
   }
 }
 
-const zeilen = (page: Page) => page.locator('tbody tr');
+test.beforeEach(({ browserName }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop' || browserName !== 'chromium', 'setzt Fenstergröße selbst');
+});
+
+/**
+ * Kein Wort des Elements steht über zwei Zeilen (VISUAL-DESIGN § 2; C-TABELLE-HANDY-NAME-SENKRECHT): je Wort die Zeilen aller
+ * Rechtecke zählen. Ein Umbruch zwischen Wörtern ist erlaubt, im Wort nie.
+ */
+async function keinWortgebrochen(page: Page, selektor: string): Promise<void> {
+  const gebrochen = await page.locator(selektor).evaluateAll((els) => {
+    const out: string[] = [];
+    for (const el of els) {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        const text = node.textContent ?? '';
+        for (const m of text.matchAll(/[^\s]+/g)) {
+          const range = document.createRange();
+          range.setStart(node, m.index);
+          range.setEnd(node, m.index + m[0].length);
+          const zeilen = new Set(Array.from(range.getClientRects()).map((r) => Math.round(r.top)));
+          if (zeilen.size > 1) { out.push(m[0]); }
+        }
+      }
+    }
+    return out;
+  });
+  expect(gebrochen, `Wort im Wort gebrochen in ${selektor}`).toEqual([]);
+}
+
+const zeilen = (page: Page) => page.locator('tbody tr:not([data-testid="tie-marker-row"])'); // ohne die Markenzeilen des Handys
 const teamReihenfolge = async (page: Page): Promise<string[]> => zeilen(page).evaluateAll((els) => els.map((tr) => (tr.querySelectorAll('td')[1] as HTMLElement).innerText));
 
 for (const g of GROESSEN) {
@@ -64,6 +100,8 @@ for (const g of GROESSEN) {
       await expect(page.getByTestId('tie-decide-entry')).toBeInViewport(); // Haupttaste ohne Scrollen sichtbar
       await pruefeMasse(page, ['[data-testid="tie-decide-entry"]']);
       await bild(page, 'wahl-fall', g.breite);
+      await page.getByTestId('tie-marker').first().scrollIntoViewIfNeeded();
+      await bild(page, 'gesamtplatzierung', g.breite);
     });
 
     test(`@W2A-064 Pflicht-Fall (Plätze 1 bis 3): „Strafstoßschießen nötig“ mit Grund, nur die Taste „Strafstoßschießen eintragen“`, async ({ page }) => {
@@ -102,6 +140,7 @@ for (const g of GROESSEN) {
       const petting = reihenfolge.findIndex((r) => r.includes('TSV Petting'));
       expect(otting).toBeLessThan(petting);
       expect(await page.getByTestId('tie-marker').allInnerTexts()).toEqual(['Strafstoßschießen 4:3', 'Strafstoßschießen 3:4']);
+      await pruefeMasse(page, ['[data-testid="tie-accept-withdraw"]']);
       await bild(page, 'nach-strafstossschiessen', g.breite);
       await page.getByTestId('tie-accept-withdraw').click(); // ohne Rückfrage (G6)
       await expect(page.getByTestId('tie-hint-mandatory')).toBeVisible();
@@ -129,6 +168,10 @@ for (const g of GROESSEN) {
 }
 
 test.describe('Prüfstand: Helfer und Zuschauer', () => {
+  test.beforeEach(() => {
+    test.skip(!!process.env.CI_E2E_USE_PREVIEW, 'Prüfstand nur am Dev-Server (im gebauten Stand nicht vorhanden)');
+  });
+
   for (const g of GROESSEN) {
     test(`@W2A-050 @W2A-071 Helfer ${g.name}: Marken und Hinweis, keine Taste; entschieden: Ergebnis ohne Name und Zeit`, async ({ page }) => {
       await page.setViewportSize({ width: g.breite, height: g.hoehe });
@@ -143,6 +186,8 @@ test.describe('Prüfstand: Helfer und Zuschauer', () => {
       await expect(page.getByTestId('tie-decided-info')).toContainText('Strafstoßschießen 4:3 für DJK Otting');
       await expect(page.getByTestId('tie-decided-info').getByRole('button')).toHaveCount(0);
       await expect(page.getByTestId('tie-closed-note')).toHaveCount(0);
+      await keinWortgebrochen(page, '[data-testid="tie-marker"]');
+      await keinWortgebrochen(page, 'tbody td:nth-child(2)');
       await bild(page, 'helfer-entschieden', g.breite);
     });
 

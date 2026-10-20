@@ -23,8 +23,10 @@ export interface OpenTieNoticeProps {
 
 const title: CSSProperties = { fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md };
 const line: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.md, lineHeight: cssVars.lineHeights.bodyMd };
+// Innenabstand klein: auf 360 px bleibt für „Strafstoßschießen eintragen“ genug Breite, ohne Wort im Wort zu brechen
+const actionButton: CSSProperties = { minHeight: cssVars.touchTargets.primary, padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}` };
 const lockedButton: CSSProperties = {
-  minHeight: cssVars.touchTargets.primary,
+  ...actionButton,
   opacity: 1,
   background: 'transparent',
   color: cssVars.colors.textSecondary,
@@ -42,13 +44,10 @@ export const OpenTieNotice = ({ block, names, canDecide, online, onEntry }: Open
   const locked = !online;
 
   return (
-    <InlineNotice tone="warn" data-testid={choice ? 'tie-hint-choice' : 'tie-hint-mandatory'}>
-      <span style={title}>{choice ? t('standingsTie.notice.openTitle') : t('standingsTie.notice.needTitle')}</span>
-      <p style={line}>{t('standingsTie.notice.teamsEqual', { names: listText(names, i18n.language), places })}</p>
-      {reason?.kind === 'setting' ? <p style={line}>{t('standingsTie.notice.needSetting', { place: reason.place })}</p> : null}
-      {reason?.kind === 'followUp' ? <p style={line}>{t('standingsTie.notice.needFollowUp', { place: reason.place })}</p> : null}
-      {choice && canDecide ? <p style={line}>{t('standingsTie.notice.openChoice')}</p> : null}
-      {canDecide ? (
+    <InlineNotice
+      tone="warn"
+      data-testid={choice ? 'tie-hint-choice' : 'tie-hint-mandatory'}
+      footer={canDecide ? (
         <>
           <Button
             variant={locked ? 'secondary' : 'primary'}
@@ -56,7 +55,7 @@ export const OpenTieNotice = ({ block, names, canDecide, online, onEntry }: Open
             fullWidth
             disabled={locked}
             onClick={onEntry}
-            style={locked ? lockedButton : { minHeight: cssVars.touchTargets.primary }}
+            style={locked ? lockedButton : actionButton}
             data-primary
             data-testid={`tie-${entry}-entry`}
           >
@@ -64,9 +63,14 @@ export const OpenTieNotice = ({ block, names, canDecide, online, onEntry }: Open
           </Button>
           {locked ? <p style={{ ...line, fontWeight: cssVars.fontWeights.semibold }} data-testid="tie-offline-hint">{t('standingsTie.notice.offline')}</p> : null}
         </>
-      ) : (
-        <p style={line}>{helperLine}</p>
-      )}
+      ) : undefined}
+    >
+      <span style={title}>{choice ? t('standingsTie.notice.openTitle') : t('standingsTie.notice.needTitle')}</span>
+      <p style={line}>{t('standingsTie.notice.teamsEqual', { names: listText(names, i18n.language), places })}</p>
+      {reason?.kind === 'setting' ? <p style={line}>{t('standingsTie.notice.needSetting', { place: reason.place })}</p> : null}
+      {reason?.kind === 'followUp' ? <p style={line}>{t('standingsTie.notice.needFollowUp', { place: reason.place })}</p> : null}
+      {choice && canDecide ? <p style={line}>{t('standingsTie.notice.openChoice')}</p> : null}
+      {!canDecide ? <p style={line}>{helperLine}</p> : null}
     </InlineNotice>
   );
 };

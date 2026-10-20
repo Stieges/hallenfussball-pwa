@@ -19,9 +19,11 @@ export const SettingsTabConnected = ({ onPlacesSaved, ...rest }: Props) => {
   const save = useMemo(() => {
     const service = new PlayOutPlacesService(tournamentRepository);
     return async (places: number[]) => {
-      const result = await service.update(tournamentId, places);
-      onPlacesSaved();
-      return result;
+      try {
+        return await service.update(tournamentId, places);
+      } finally {
+        onPlacesSaved(); // auch nach einem Fehler frisch laden: der Stand auf dem Schirm soll der der Cloud sein
+      }
     };
   }, [tournamentRepository, tournamentId, onPlacesSaved]);
   return <SettingsTab {...rest} onSavePlayOutPlaces={save} />;

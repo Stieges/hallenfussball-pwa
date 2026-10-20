@@ -36,3 +36,19 @@ export const PlacementAfterRow = () => {
     </div>
   );
 };
+
+/** Hilfetext zum direkten Vergleich unter der Kriterien-Beschriftung (Sondertabelle bei drei und mehr Teams). */
+export const DirectComparisonHint = () => {
+  const { t } = useTranslation('wizard');
+  return (
+    <small style={{ display: 'block', color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.normal }}>
+      {t('placementLogic.directComparisonHint')}
+    </small>
+  );
+};
+
+/** Erklärung unter der Überschrift: gilt bei Punktgleichheit, vorbelegt nach den BFV-Regeln. */
+export const PlacementBfvHelp = ({ style }: { style: CSSProperties }) => {
+  const { t } = useTranslation('wizard');
+  return <p style={style}><span>{t('placementLogic.bfvHelp')}</span></p>;
+};

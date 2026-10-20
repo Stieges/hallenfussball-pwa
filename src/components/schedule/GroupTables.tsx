@@ -362,7 +362,6 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                           />
                         )}
                       </div>
-                      {tieMarker?.(standing.team.id)}
                     </td>
                     <td style={{ ...mobileTdStyle, textAlign: 'center' }}>
                       <span style={{
@@ -396,6 +395,12 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                       </span>
                     </td>
                   </tr>
+                  {/* TB-6b: auf dem Handy eigene Zeile über die volle Breite (nicht in der schmalen Teamspalte) */}
+                  {tieMarker !== undefined && tieMarker(standing.team.id) !== null && (
+                    <tr key={`${teamKey}-marke`} data-testid="tie-marker-row">
+                      <td colSpan={5} style={{ ...mobileTdStyle, textAlign: 'left' }}>{tieMarker(standing.team.id)}</td>
+                    </tr>
+                  )}
                   {isExpanded && (
                     <tr key={`${teamKey}-details`}>
                       <td colSpan={5} style={{

@@ -40,6 +40,14 @@ interface TabellenTabProps {
 
 type ViewMode = 'groups' | 'ranking';
 
+/** Volle Zeile unter einer Tabellenzeile für die Marke (Handy); ohne Marke keine Zeile. */
+const tieMarkerRow = (marker: React.ReactNode, columns: number): React.ReactNode =>
+  marker === null ? null : (
+    <tr data-testid="tie-marker-row">
+      <td colSpan={columns} style={{ padding: `0 ${cssVars.spacing.sm} ${cssVars.spacing.sm}`, borderBottom: `1px solid ${cssVars.colors.border}` }}>{marker}</td>
+    </tr>
+  );
+
 export const TabellenTab: React.FC<TabellenTabProps> = ({
   tournament,
   schedule,
@@ -562,7 +570,6 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                       </td>
                       <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
                         {placement.team.name}
-                        {!hasGroups && tieUi.marker(placement.team.id, '')}
                         {placement.decidedBy !== 'groupStage' ? (
                           <div style={{
                             fontSize: cssVars.fontSizes.xs, // F1-W3a: ≥ 11 px (grenzwerte schrift.min)
@@ -600,6 +607,8 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                         </span>
                       </td>
                     </tr>
+                    {/* Paket TB-B: auf dem Handy steht die Marke als eigene Zeile über die volle Breite, nie in der schmalen Teamspalte */}
+                    {!hasGroups && tieMarkerRow(tieUi.marker(placement.team.id, ''), 5)}
                     {isExpanded && standing && (
                       <tr key={`${teamKey}-details`}>
                         <td colSpan={5} style={{

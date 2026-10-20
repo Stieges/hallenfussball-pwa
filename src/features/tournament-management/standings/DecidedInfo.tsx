@@ -27,6 +27,9 @@ export interface DecidedInfoProps {
 const title: CSSProperties = { fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md };
 const line: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.md, lineHeight: cssVars.lineHeights.bodyMd };
 
+// Innenabstand klein: kein Wort im Wort auf 360 px (VISUAL-DESIGN § 2)
+const withdrawButton: CSSProperties = { padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}` };
+
 const LockSymbol = () => (
   <svg width={iconSizeValues.sm} height={iconSizeValues.sm} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <rect x="5" y="11" width="14" height="10" rx="2" />
@@ -42,19 +45,27 @@ export const DecidedInfo = ({ block, nameOf, canDecide, closed, busy, failed, on
   const showClosed = canDecide && closed;
 
   return (
-    <InlineNotice tone="ok" icon={showClosed ? <LockSymbol /> : undefined} data-testid="tie-decided-info">
+    <InlineNotice
+      tone="ok"
+      icon={showClosed ? <LockSymbol /> : undefined}
+      data-testid="tie-decided-info"
+      footer={(canDecide && !closed) || failed !== null ? (
+        <>
+          {canDecide && !closed ? (
+            <>
+              <Button variant="secondary" size="md" fullWidth disabled={busy} onClick={onWithdraw} style={withdrawButton} data-testid="tie-accept-withdraw">
+                {withdrawLabel}
+              </Button>
+              <p style={{ ...line, fontWeight: cssVars.fontWeights.semibold }}>{t('standingsTie.decided.withdrawUntil')}</p>
+            </>
+          ) : null}
+          {failed !== null ? <p role="alert" style={{ ...line, fontWeight: cssVars.fontWeights.semibold }}>{failed}</p> : null}
+        </>
+      ) : undefined}
+    >
       <span style={title}>{heading}</span>
       <p style={line}>{body}</p>
       {showClosed ? <p style={line} data-testid="tie-closed-note">{t('standingsTie.decided.closed')}</p> : null}
-      {canDecide && !closed ? (
-        <>
-          <Button variant="secondary" size="md" fullWidth disabled={busy} onClick={onWithdraw} data-testid="tie-accept-withdraw">
-            {withdrawLabel}
-          </Button>
-          <p style={{ ...line, fontWeight: cssVars.fontWeights.semibold }}>{t('standingsTie.decided.withdrawUntil')}</p>
-        </>
-      ) : null}
-      {failed !== null ? <p role="alert" style={{ ...line, fontWeight: cssVars.fontWeights.semibold }}>{failed}</p> : null}
     </InlineNotice>
   );
 };
