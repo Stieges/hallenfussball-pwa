@@ -89,6 +89,27 @@ export interface SchedulePhase {
 // GENERATED SCHEDULE
 // ============================================================================
 
+/**
+ * Meldung des Generators zum Spielplan (Rückgabe-Feld; die Anzeige baut der Assistent).
+ * - `dfbGapShortfall` (@W4-039): zwischen zwei Spielen von `teamId` liegen weniger Spiele als im DFB-Schlüssel;
+ *   `matchNumber` = Spielnummer des späteren Spiels.
+ * - `hostOpeningCosts` (@W4-045): die Mannschaft des Veranstalters eröffnet, das kostet etwas. Genannt wird nur, was
+ *   wirklich schlechter wird: `duration` (zusätzliche Zeitfenster, Minuten, neues Ende der Gruppenphase; das Ende des
+ *   ganzen Turniers steht in `GeneratedSchedule.endTime`), `longestPause` (Zeitfenster zwischen zwei eigenen Spielen,
+ *   auf einem Feld = Spiele), `playedDiff` (größter Unterschied gespielter Spiele).
+ * - `hostOpeningNotPossible`: Restfall ohne Szenario – kein Tausch hält die harte Mindestpause; Plan unverändert.
+ */
+export type ScheduleNotice =
+  | { kind: 'dfbGapShortfall'; teamId: string; matchNumber: number; gamesBetween: number; required: number }
+  | {
+      kind: 'hostOpeningCosts'
+      teamId: string
+      duration?: { slotsBefore: number; slotsAfter: number; extraMinutes: number; groupPhaseEndAfter?: Date }
+      longestPause?: { before: number; after: number }
+      playedDiff?: { before: number; after: number }
+    }
+  | { kind: 'hostOpeningNotPossible'; teamId: string }
+
 export interface GeneratedSchedule {
   /** Turnier-Metadaten */
   tournament: {
@@ -133,4 +154,10 @@ export interface GeneratedSchedule {
 
   /** Schiedsrichter-Konfiguration */
   refereeConfig?: RefereeConfig
+
+  /** Meldungen des Generators zur Gruppenphase (@W4-039); leer, wenn es nichts zu melden gibt. */
+  scheduleNotices: ScheduleNotice[]
+
+  /** Die Gruppenphase ist ein Runden-Spielplan (@W4-041: nur dann ist die Eröffnungswahl wirksam). */
+  roundsPlan: boolean
 }

@@ -60,19 +60,19 @@ describe('copyTeamsAndMatches (V14)', () => {
   });
 
   it('Kopie hat keine Ergebnisse; das Übergangsfeld folgt dem Slot', () => {
-    expect(gruppe).toMatchObject({ matchStatus: 'scheduled', scoreA: 0, scoreB: 0, events: [] });
+    expect(gruppe).toMatchObject({ matchStatus: 'scheduled', scoreA: undefined, scoreB: undefined, events: [] });
     expect('teamA' in semi || 'teamB' in semi).toBe(false); // A-36a: kein Übergangsfeld mehr
   });
 });
 
 describe('buildCopiedTournament (Verdrahtung „Turnier kopieren“ in App.tsx)', () => {
   const source = {
-    id: 'alt-turnier', title: 'Hallencup', status: 'published', lastVisitedStep: 5, deletedAt: '2026-01-01',
+    id: 'alt-turnier', title: 'Hallencup', status: 'draft', lastVisitedStep: 5, deletedAt: '2026-01-01',
     createdAt: '2026-01-01', updatedAt: '2026-01-02', teams, matches,
   } as unknown as Tournament;
   const copy = buildCopiedTournament(source, { newId: testUuid(900), title: 'Hallencup (Kopie)', now: '2026-10-03T10:00:00.000Z', makeId });
 
-  it('V14 das Turnier ist ein Entwurf mit neuer ID, Titel und Zeitstempeln', () => {
+  it('V14 ein Entwurf bleibt Entwurf, mit neuer ID, Titel und Zeitstempeln', () => {
     expect(copy).toMatchObject({ id: testUuid(900), title: 'Hallencup (Kopie)', status: 'draft', lastVisitedStep: 1, createdAt: '2026-10-03T10:00:00.000Z', updatedAt: '2026-10-03T10:00:00.000Z' });
     expect(copy.deletedAt).toBeUndefined();
   });

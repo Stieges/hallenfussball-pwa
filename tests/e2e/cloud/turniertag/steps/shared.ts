@@ -119,7 +119,11 @@ export async function openTurniertagPath(page: Page, pathSuffix: string, tournam
  */
 export async function openSpielplanFinalrunde(page: Page): Promise<void> {
   await openTurniertagPath(page, '/schedule');
-  await page.locator('[data-testid="filter-phase"]').selectOption({ label: 'Finalrunde' });
+  const phase = page.locator('[data-testid="filter-phase"]');
+  await phase.selectOption({ label: 'Finalrunde' });
+  // Der Filter steht in der Adresse (`p=finals`, @OB-029) und wirkt erst nach der Navigation: auf die Wirkung warten.
+  await expect(page).toHaveURL(/[?&]p=finals/);
+  await expect(phase).toHaveValue('finals');
 }
 
 /**
@@ -152,6 +156,8 @@ export async function finalrundeLabels(page: Page): Promise<string[]> {
     }
   };
   await expect(async () => {
+    // Jeder Versuch sammelt neu: Beschriftungen aus einem Versuch vor dem gefilterten Rendern dürfen nicht bleiben.
+    orderByLabel.clear();
     for (const fraction of [0, 0.4, 0.7, 1]) {
       await page.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), fraction);
       await page.waitForTimeout(250);

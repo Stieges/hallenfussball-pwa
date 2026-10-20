@@ -6,6 +6,7 @@
  */
 import { z } from 'zod';
 import { elapsedAt } from '../match/penalties';
+import { overtimeStartMsOf } from '../match/client/viewDuration';
 import { MatchStatusSchema, PhaseSchema, type MatchState } from '../match/types';
 import type { EngineStatus, LocalClock, ViewMatchStatus } from './types';
 
@@ -26,6 +27,8 @@ export interface MatchBadgeEngineDetail {
   breakRemainingSec?: number;
   /** Länge der Verlängerung (Restzeit in der Verlängerung, 5.1a) */
   overtimeSeconds?: number;
+  /** Uhrstand (Sekunden) am Anpfiff der Verlängerung, nur in der Verlängerung (Monitor-Dauer, Paket MU; wie `viewDurationSeconds`) */
+  overtimeStartSec?: number;
   /** Die Spieluhr läuft (Anker gesetzt): `spectatorClockOf` zählt ab `asOfMs` weiter */
   running?: boolean;
   /** Zeitpunkt (Geräteuhr, ms), auf den sich `sectionElapsedSec` und `breakRemainingSec` beziehen */
@@ -129,6 +132,9 @@ export function badgeDetailFromLiveState(raw: unknown, nowMs: number): MatchBadg
   if (typeof s.elapsedMs === 'number') {
     const running = typeof s.anchorAt === 'number' ? Math.max(0, nowMs - s.anchorAt) : 0;
     detail.sectionElapsedSec = Math.max(0, Math.floor((s.elapsedMs + running - (s.sectionStartMs ?? 0)) / MS_PER_SECOND));
+  }
+  if (s.phase === 'overtime' && typeof s.elapsedMs === 'number' && typeof s.sectionStartMs === 'number') {
+    detail.overtimeStartSec = Math.floor(overtimeStartMsOf(s.status, s.elapsedMs, s.sectionStartMs) / MS_PER_SECOND);
   }
   if (typeof s.breakStartedAt === 'number' && typeof s.breakSeconds === 'number') {
     detail.breakRemainingSec = Math.max(0, s.breakSeconds - Math.floor((nowMs - s.breakStartedAt) / MS_PER_SECOND));

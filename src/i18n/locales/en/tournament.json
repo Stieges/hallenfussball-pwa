@@ -707,7 +707,11 @@
     "live": "Live"
   },
   "scoreCell": {
-    "correctResult": "Correct result"
+    "correctResult": "Correct result",
+    "goalsOf": "Goals {{team}}",
+    "homeFallback": "Home",
+    "awayFallback": "Away",
+    "invalidScore": "Enter whole numbers from 0 only"
   },
   "sortable": {
     "referee": "Referee",

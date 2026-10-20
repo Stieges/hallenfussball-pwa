@@ -38,17 +38,6 @@ export const DEFAULT_FILTERS: ScheduleFilters = {
 };
 
 /**
- * Filter action types for reducer
- */
-export type FilterAction =
-  | { type: 'OPEN_SHEET' }
-  | { type: 'CLOSE_SHEET' }
-  | { type: 'UPDATE_DRAFT'; payload: Partial<ScheduleFilters> }
-  | { type: 'APPLY_DRAFT' }
-  | { type: 'RESET_DRAFT' }
-  | { type: 'UPDATE_ACTIVE'; payload: Partial<ScheduleFilters> };
-
-/**
  * Filter state including draft state for BottomSheet
  */
 export interface FilterState {

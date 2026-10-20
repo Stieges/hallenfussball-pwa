@@ -707,7 +707,11 @@
     "live": "Live"
   },
   "scoreCell": {
-    "correctResult": "Ergebnis korrigieren"
+    "correctResult": "Ergebnis korrigieren",
+    "goalsOf": "Tore {{team}}",
+    "homeFallback": "Heim",
+    "awayFallback": "Gast",
+    "invalidScore": "Nur ganze Zahlen ab 0 eintragen"
   },
   "sortable": {
     "referee": "Schiedsrichter",
