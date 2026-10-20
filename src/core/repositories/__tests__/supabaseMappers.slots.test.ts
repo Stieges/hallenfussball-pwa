@@ -224,7 +224,7 @@ describe('A-02 mapMatchToScheduleUpdate – Voll-Speichern setzt keine aufgelös
 
 describe('A-02 mapMatchFromSupabase – Slot aus Team-ID und Herkunft, ohne Namens-Map', () => {
   it('@TM-027 gesetzte Team-ID wird zum Team-Slot, kein Übergangsfeld teamA/teamB (A-36a)', () => {
-    const m = mapMatchFromSupabase(createMatchRow({ team_a_id: NORD, team_b_id: SUED }));
+    const m = mapMatchFromSupabase(createMatchRow({ team_a_id: NORD, team_b_id: SUED }), '2026-01-15');
 
     expect(m.slotA).toEqual({ kind: 'team', teamId: NORD });
     expect(m.slotB).toEqual({ kind: 'team', teamId: SUED });
@@ -239,18 +239,18 @@ describe('A-02 mapMatchFromSupabase – Slot aus Team-ID und Herkunft, ohne Name
         team_b_id: null,
         slot_b_source: { kind: 'matchResult', matchId: HF1, role: 'winner' },
       })
-    );
+    , '2026-01-15');
 
     expect(m.slotA).toEqual({ kind: 'team', teamId: NORD, resolvedFrom: { kind: 'groupRank', group: 'A', rank: 1 } });
     expect(m.slotB).toEqual({ kind: 'pending', source: { kind: 'matchResult', matchId: HF1, role: 'winner' } });
   });
 
   it('Seite ohne Team-ID und ohne Herkunft scheitert laut', () => {
-    expect(() => mapMatchFromSupabase(createMatchRow({ team_a_id: NORD, team_b_id: null }))).toThrow(RepositoryError);
+    expect(() => mapMatchFromSupabase(createMatchRow({ team_a_id: NORD, team_b_id: null }), '2026-01-15')).toThrow(RepositoryError);
   });
 
   it('Team-ID, die keine UUID ist, scheitert laut (kein Name als Team-ID)', () => {
-    expect(() => mapMatchFromSupabase(createMatchRow({ team_a_id: 'FC Nord', team_b_id: SUED }))).toThrow(/keine UUID/);
+    expect(() => mapMatchFromSupabase(createMatchRow({ team_a_id: 'FC Nord', team_b_id: SUED }), '2026-01-15')).toThrow(/keine UUID/);
   });
 
   it('ungültige Herkunft scheitert laut, auch wenn eine Team-ID gesetzt ist', () => {
@@ -261,7 +261,7 @@ describe('A-02 mapMatchFromSupabase – Slot aus Team-ID und Herkunft, ohne Name
           team_b_id: SUED,
           slot_a_source: { kind: 'matchResult', matchId: 'semi1', role: 'winner' },
         })
-      )
+      , '2026-01-15')
     ).toThrow(/Herkunft/);
   });
 
@@ -269,7 +269,7 @@ describe('A-02 mapMatchFromSupabase – Slot aus Team-ID und Herkunft, ohne Name
     const source = { kind: 'matchResult', matchId: HF1, role: 'winner' } as const;
     const read = mapMatchFromSupabase(
       createMatchRow({ id: testUuid(300), team_a_id: null, slot_a_source: source, team_b_id: SUED })
-    );
+    , '2026-01-15');
     const row = mapMatchToSupabase(read, 'tournament-1');
 
     expect(row.team_a_id).toBeNull();

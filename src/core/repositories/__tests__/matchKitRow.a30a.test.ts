@@ -43,28 +43,28 @@ beforeEach(() => {
 
 describe('A-30a Mapper liest die getragenen Farben', () => {
   it('@ZM-140 Spalten → Match.kit (Leibchen Gelb für die Heimseite)', () => {
-    const mapped = mapMatchFromSupabase(row({ kit_color_a: '#FFCC00', kit_color_b: '#C62828', bib_side: 'a' }));
+    const mapped = mapMatchFromSupabase(row({ kit_color_a: '#FFCC00', kit_color_b: '#C62828', bib_side: 'a' }), '2026-01-15');
     expect(mapped.kit).toEqual({ a: '#FFCC00', b: '#C62828', bibSide: 'a' });
     expect(captureFeatureError).not.toHaveBeenCalled();
   });
 
   it('@W3-028 alle drei Spalten NULL → kein kit am Spiel', () => {
-    const mapped = mapMatchFromSupabase(row({ kit_color_a: null, kit_color_b: null, bib_side: null }));
+    const mapped = mapMatchFromSupabase(row({ kit_color_a: null, kit_color_b: null, bib_side: null }), '2026-01-15');
     expect(mapped).not.toHaveProperty('kit');
   });
 
   it('@ZM-140 eine Seite ohne Farbe bleibt ohne Farbe (Anzeige: Vorgabe)', () => {
-    expect(mapMatchFromSupabase(row({ kit_color_a: null, kit_color_b: '#000000', bib_side: null })).kit).toEqual({ b: '#000000' });
+    expect(mapMatchFromSupabase(row({ kit_color_a: null, kit_color_b: '#000000', bib_side: null }), '2026-01-15').kit).toEqual({ b: '#000000' });
   });
 
   it('@ZM-140 Fehlerpolitik: ungültige Farbe aus der Cloud → Seite ohne Farbe, genau eine Meldung', () => {
-    const mapped = mapMatchFromSupabase(row({ kit_color_a: 'gelb', kit_color_b: '#C62828', bib_side: 'x' }));
+    const mapped = mapMatchFromSupabase(row({ kit_color_a: 'gelb', kit_color_b: '#C62828', bib_side: 'x' }), '2026-01-15');
     expect(mapped.kit).toEqual({ b: '#C62828' });
     expect(captureFeatureError).toHaveBeenCalledTimes(1);
   });
 
   it('Gegenbeispiel: Zeile ohne die neuen Spalten (vor dem Einspielen) bleibt lesbar, ohne kit', () => {
-    const mapped = mapMatchFromSupabase(createMatchRow({ id: testUuid(301), team_a_id: NORD, team_b_id: SUED }));
+    const mapped = mapMatchFromSupabase(createMatchRow({ id: testUuid(301), team_a_id: NORD, team_b_id: SUED }), '2026-01-15');
     expect(mapped).not.toHaveProperty('kit');
     expect(captureFeatureError).not.toHaveBeenCalled();
   });
@@ -72,7 +72,7 @@ describe('A-30a Mapper liest die getragenen Farben', () => {
 
 describe('A-30a Fixrunde 1 (Review B1): Spiel in der Halbzeit aus der Cloud', () => {
   it('@W3-028 ein Spiel in der Halbzeit (Cloud paused) behält die Farbe, mit der es angepfiffen wurde', () => {
-    const mapped = mapMatchFromSupabase(row({ match_status: 'paused', kit_color_a: '#000000', kit_color_b: '#FFFFFF', bib_side: null }));
+    const mapped = mapMatchFromSupabase(row({ match_status: 'paused', kit_color_a: '#000000', kit_color_b: '#FFFFFF', bib_side: null }), '2026-01-15');
     const rot = [{ id: NORD, name: 'FC Nord', colors: { primary: '#C62828' } }, { id: SUED, name: 'SV Süd', colors: { primary: '#C62828' } }];
     expect(wornColors(mapped, rot)).toEqual({ a: '#000000', b: '#FFFFFF' });
   });
