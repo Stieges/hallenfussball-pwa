@@ -5,7 +5,7 @@
  * 2. `mapMatchToSupabase` → `mapMatchFromSupabase` (Mapper-Rundlauf),
  * 3. Live-Zustände über die Engine → `cacheColumns` (kein von Hand gesetztes `matchStatus`).
  * Die Varianten (F-HF, F-TAB, F-3G, F-NEU, F-PAUSE, F-AUS, F-ZEIT, F-NV, F-ES, F-NUR) sind Funktionen darüber.
- * Spiel n = n-tes Spiel des Veröffentlichens (Index n-1); Spiele 1–12 Gruppe, dann HF1, HF2, Finale, Platz 3.
+ * Spiel n = n-tes Spiel des Veröffentlichens (Index n-1); Spiele 1–12 Gruppe, dann HF1, HF2, Platz 3, Finale (@TM-144).
  */
 import type { Match, Team, Tournament } from '../../../types/tournament';
 import type { ITournamentRepository } from '../../repositories/ITournamentRepository';
@@ -42,7 +42,7 @@ const TEAMS: Team[] = [
 ];
 
 /** Index der Spiele im veröffentlichten Plan. */
-export const GAME = { 3: 2, 7: 6, 8: 7, 9: 8, 10: 9, HF1: 12, HF2: 13, FINAL: 14, THIRD: 15 } as const;
+export const GAME = { 3: 2, 7: 6, 8: 7, 9: 8, 10: 9, HF1: 12, HF2: 13, THIRD: 14, FINAL: 15 } as const;
 
 export interface Hallencup {
   tournament: Tournament;

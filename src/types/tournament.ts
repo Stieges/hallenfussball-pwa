@@ -176,7 +176,7 @@ export interface PointSystem {
 export type FinalsPreset =
   | 'none'           // Keine Finalrunde (nur Gruppenphase)
   | 'final-only'     // Nur Finale (direkt, ohne Halbfinale)
-  | 'top-4'          // Halbfinale + Finale + Platz 3
+  | 'top-4'          // Halbfinale + Spiel um Platz 3 + Finale
   | 'top-8'          // Viertelfinale + alles darüber + Platzierungen 5-8
   | 'top-16'         // Achtelfinale + Viertelfinale + Halbfinale + Finale (8+ Gruppen)
   | 'all-places';    // Alle Plätze ausspielen

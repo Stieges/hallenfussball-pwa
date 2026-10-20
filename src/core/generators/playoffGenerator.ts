@@ -4,7 +4,7 @@
  * Generiert Finalrunden-Spiele basierend auf Presets:
  * - none: Keine Finalrunde
  * - final-only: Nur Finale (direkt)
- * - top-4: Halbfinale + Finale + Platz 3
+ * - top-4: Halbfinale + Spiel um Platz 3 + Finale
  * - top-8: Viertelfinale + alles darüber + Platzierungen 5-8
  * - top-16: Achtelfinale + Viertelfinale + Halbfinale + Finale (8+ Gruppen)
  * - all-places: Alle Plätze ausspielen
@@ -75,7 +75,16 @@ export function generatePlayoffMatches(
       break;
   }
 
-  return matches;
+  return withFinalLast(matches);
+}
+
+/**
+ * @TM-144: Das Finale ist das letzte Spiel des Turniers – es hängt an allen anderen Spielen der Finalrunde, damit
+ * der Scheduler jedes Platzierungsspiel (Platz 7, 5, 3 …) vorher ansetzt, auch bei mehreren Feldern.
+ */
+function withFinalLast(matches: PlayoffMatch[]): PlayoffMatch[] {
+  const others = matches.filter((m) => m.id !== 'final').map((m) => m.id);
+  return matches.map((m) => (m.id === 'final' ? { ...m, dependsOn: others } : m));
 }
 
 // ============================================================================
@@ -112,7 +121,7 @@ function generateFinalOnly(numberOfGroups: number): PlayoffMatch[] {
 }
 
 /**
- * Top 4: Halbfinale + Finale + Platz 3
+ * Top 4: Halbfinale + Spiel um Platz 3 + Finale
  * Standard bei 2 Gruppen
  */
 function generateTop4(numberOfGroups: number, groupSizes?: GroupSizeInfo): PlayoffMatch[] {
@@ -167,7 +176,7 @@ function generateTop4(numberOfGroups: number, groupSizes?: GroupSizeInfo): Playo
     );
   }
 
-  // Finale und Platz 3
+  // Platz 3, dann Finale (Finale zuletzt: withFinalLast, @TM-144)
   matches.push(
     {
       id: 'third-place',
@@ -219,13 +228,14 @@ function generateTop8(numberOfGroups: number): PlayoffMatch[] {
 
   // Platz 5-8 (nur wenn genug Viertelfinale)
   if (matches.filter(m => m.id.startsWith('qf')).length >= 4) {
+    // @TM-144: aufsteigend vor dem Finale – Platz 7 vor Platz 5
     matches.push(
-      { id: 'place56', label: 'Spiel um Platz 5', home: 'qf1-loser', away: 'qf2-loser', rank: [5, 6], dependsOn: ['qf1', 'qf2'] },
-      { id: 'place78', label: 'Spiel um Platz 7', home: 'qf3-loser', away: 'qf4-loser', rank: [7, 8], dependsOn: ['qf3', 'qf4'] }
+      { id: 'place78', label: 'Spiel um Platz 7', home: 'qf3-loser', away: 'qf4-loser', rank: [7, 8], dependsOn: ['qf3', 'qf4'] },
+      { id: 'place56', label: 'Spiel um Platz 5', home: 'qf1-loser', away: 'qf2-loser', rank: [5, 6], dependsOn: ['qf1', 'qf2'] }
     );
   }
 
-  // Finale + Platz 3
+  // Platz 3, dann Finale (Finale zuletzt: withFinalLast, @TM-144)
   matches.push(
     { id: 'third-place', label: 'Spiel um Platz 3', home: 'semi1-loser', away: 'semi2-loser', rank: 3, dependsOn: ['semi1', 'semi2'] },
     { id: 'final', label: 'Finale', home: 'semi1-winner', away: 'semi2-winner', rank: 1, dependsOn: ['semi1', 'semi2'] }
@@ -273,7 +283,7 @@ function generateTop16(numberOfGroups: number): PlayoffMatch[] {
     { id: 'semi2', label: '2. Halbfinale', home: 'qf2-winner', away: 'qf3-winner', dependsOn: ['qf2', 'qf3'] }
   );
 
-  // Finale + Platz 3
+  // Platz 3, dann Finale (Finale zuletzt: withFinalLast, @TM-144)
   matches.push(
     { id: 'third-place', label: 'Spiel um Platz 3', home: 'semi1-loser', away: 'semi2-loser', rank: 3, dependsOn: ['semi1', 'semi2'] },
     { id: 'final', label: 'Finale', home: 'semi1-winner', away: 'semi2-winner', rank: 1, dependsOn: ['semi1', 'semi2'] }

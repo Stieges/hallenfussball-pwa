@@ -25,6 +25,7 @@ for id in "${MATRIX_IDS[@]}"; do
 BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = '$uid';
+$(claims_line "$uid")
 SELECT public.has_tournament_permission('$t_id', '$right');
 ROLLBACK;
 SQL
