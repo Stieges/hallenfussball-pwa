@@ -62,3 +62,25 @@ export function forfeitResultFor(
   const { winner, loser } = effectiveForfeitScore(tournament);
   return absent === 'A' ? { a: loser, b: winner } : { a: winner, b: loser };
 }
+
+/** Ergebnis einer Änderung der Einstellung „Wertung bei Nichtantritt“. */
+export type ForfeitScoreChange =
+  | { ok: true; forfeitScore: ForfeitScore }
+  | { ok: false; code: 'FORFEIT_SCORE_LOCKED' | 'INVALID_FORFEIT_SCORE' };
+
+/**
+ * Gesperrt, sobald das Turnier eine Wertung enthält (Auflage M2): „beide nicht angetreten“ ist als 0:0 gespeichert und
+ * rechnet die Gegentore mit der Einstellung – eine spätere Änderung änderte gespeicherte Wertungen rückwirkend.
+ */
+export const forfeitScoreLocked = (tournament: Pick<Tournament, 'matches'>): boolean => tournament.matches.some(isForfeitMatch);
+
+/** Die eine Regel für jede Oberfläche, die die Einstellung ändert (B-12): gleicher Wert immer, anderer nur ohne Wertung. */
+export function changeForfeitScore(tournament: Pick<Tournament, 'matches' | 'forfeitScore'>, next: unknown): ForfeitScoreChange {
+  const forfeitScore = parseForfeitScore(next);
+  if (forfeitScore === undefined) {
+    return { ok: false, code: 'INVALID_FORFEIT_SCORE' };
+  }
+  const current = effectiveForfeitScore(tournament);
+  const unchanged = current.winner === forfeitScore.winner && current.loser === forfeitScore.loser;
+  return unchanged || !forfeitScoreLocked(tournament) ? { ok: true, forfeitScore } : { ok: false, code: 'FORFEIT_SCORE_LOCKED' };
+}
