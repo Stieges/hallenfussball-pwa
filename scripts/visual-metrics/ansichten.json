@@ -285,7 +285,7 @@
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
       "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app"
     },
@@ -295,7 +295,7 @@
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
       "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app"
     },
@@ -378,7 +378,7 @@
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
       "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app",
       "klick": [
@@ -406,7 +406,7 @@
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
       "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app",
       "klick": [
@@ -435,7 +435,7 @@
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
       "erwarte": "[data-testid=\"scoreboard\"]",
       "profil": "app",
       "klick": [

@@ -13,7 +13,6 @@ import {
   ImportValidationResult,
   ImportValidationError,
   ImportValidationWarning,
-  PlacementCriterion,
   FinalsPreset,
   TiebreakerMode,
   TiebreakerRoundKey,
@@ -22,20 +21,12 @@ import {
 } from '../types/tournament';
 import { generateUniqueId } from './idGenerator';
 import { teamSlot, matchSideTeamId } from '../core/models/matchSlot';
+import { defaultPlacementLogic } from '../core/standings/placementDefaults';
 import {
   isTiebreakerMode,
   isTiebreakerRoundKey,
 } from '../core/match/tiebreakDecision';
 
-// Default placement criteria (same as in TournamentCreationService).
-// Keine `label`-Strings: die Anzeige löst über `id` gegen i18n auf
-// (`wizard.json` → `placementLogic.criteria.<id>`).
-const DEFAULT_PLACEMENT_CRITERIA: PlacementCriterion[] = [
-  { id: 'points', enabled: true },
-  { id: 'goalDifference', enabled: true },
-  { id: 'goalsFor', enabled: true },
-  { id: 'directComparison', enabled: false },
-];
 
 /** Feldnamen der Seiten im Dateiformat (Importvorlagen) – nicht das Spielmodell (dort `slotA/slotB`). */
 const FILE_SIDE_KEY = { A: 'teamA', B: 'teamB' } as const;
@@ -236,7 +227,7 @@ function parseJSONTournament(content: string): ImportValidationResult {
         label: String(p.label),
         enabled: Boolean(p.enabled),
       }))
-    : DEFAULT_PLACEMENT_CRITERIA;
+    : defaultPlacementLogic(); // Voreinstellung BFV privat (@W2A-046), wie im Assistenten
 
   // Parse point system
   const pointSystemData = json.pointSystem as Record<string, unknown> | undefined;
@@ -486,7 +477,7 @@ export function parseCSVTeamsToTournament(content: string): ImportValidationResu
     hideRankingsForPublic: false,
     resultMode: 'goals',
     pointSystem: { win: 3, draw: 1, loss: 0 },
-    placementLogic: DEFAULT_PLACEMENT_CRITERIA,
+    placementLogic: defaultPlacementLogic(),
     finals: { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false },
 
     createdAt: new Date().toISOString(),

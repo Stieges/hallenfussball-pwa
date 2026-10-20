@@ -33,7 +33,7 @@ interface UseScheduleTabActionsResult {
   handleResetRefereeAssignments: () => void;
   handleFieldChange: (matchId: string, fieldNumber: number) => void;
   /** A-08f3e2: Rückfrage (Grund bzw. abgesetzt) der Schnelleingabe -- ScheduleTab zeigt sie an. */
-  resultEntry: Pick<ScheduleResultEntry, 'prompt' | 'answerPrompt'>;
+  resultEntry: Pick<ScheduleResultEntry, 'prompt' | 'answerPrompt' | 'changeAuthor'>;
 }
 
 export function useScheduleTabActions({
@@ -212,6 +212,6 @@ export function useScheduleTabActions({
     handleRefereeAssignment,
     handleResetRefereeAssignments,
     handleFieldChange,
-    resultEntry: { prompt: resultEntry.prompt, answerPrompt: resultEntry.answerPrompt },
+    resultEntry: { prompt: resultEntry.prompt, answerPrompt: resultEntry.answerPrompt, changeAuthor: resultEntry.changeAuthor },
   };
 }

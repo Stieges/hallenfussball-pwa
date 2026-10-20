@@ -27,8 +27,9 @@ export type { NumberPickerProps, NumberPickerTexte, NumberPickerSchliessGrund } 
 export { TimeStepper } from './TimeStepper';
 export type { TimeStepperProps } from './TimeStepper';
 export { useScoreDraft } from './useScoreDraft';
-export type { ScoreDraft, ScoreCommitResult, UseScoreDraftOptions, ScoreSide } from './useScoreDraft';
+export type { ScoreDraft, ScoreCommitResult, UseScoreDraftOptions, ScoreSide, ScoreChangedElsewhere } from './useScoreDraft';
 export { ScoreDraftHint } from './ScoreDraftHint';
+export { ScoreChangedHint } from './ScoreChangedHint';
 
 // @SL-168: Verbindung mit Punkt, Wort, wartenden Einträgen und „Verbinden“
 export { VerbindungsStatus } from './VerbindungsStatus';

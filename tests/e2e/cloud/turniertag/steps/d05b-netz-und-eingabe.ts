@@ -122,10 +122,6 @@ async function schnelleingabe({ browser }: StepContext): Promise<void> {
     const heim = page.locator(`[data-testid="match-score-input-${spiel.id}-home"]`);
     const gast = page.locator(`[data-testid="match-score-input-${spiel.id}-away"]`);
     // Gegeben: das Feld des Gastes zeigt schon 2 (Fokus verlassen, das Heim-Feld ist noch leer: nichts wird gespeichert).
-    // C-SCHNELLEINGABE-ENTWURF-VERLOREN (Befund, unklar): ohne diese Ruhe verlor das Gast-Feld in der CI gelegentlich seinen
-    // Entwurf; die Wartezeit umgeht das, sie ist keine Aussage über das Soll.
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(3000);
     await gast.pressSequentially('2');
     await heim.click();
     await page.waitForTimeout(1500);
