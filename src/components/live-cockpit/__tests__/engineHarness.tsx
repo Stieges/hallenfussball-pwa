@@ -14,7 +14,7 @@ import { LiveCockpit } from '../LiveCockpit';
 import { HARNESS_MATCH_ID, baueKontext, harnessTournament, storeSender, type SenderFabrik } from './engineHarnessSupport';
 
 const STABLE_PROPS = {
-  fieldName: 'Feld 1', tournamentName: 'Hallencup Süd', tournamentId: harnessTournament.id, upcomingMatches: [],
+  fieldName: 'Feld 1', tournamentName: 'Hallencup Süd', tournamentId: harnessTournament.id, upcomingMatches: [], kannSteuern: true,
   onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(), onLoadNextMatch: vi.fn(),
 };
 

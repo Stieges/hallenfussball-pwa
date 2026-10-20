@@ -10,7 +10,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { Harness } from './engineHarness';
-import { anpfiff, warteSperre } from './engineHarnessSupport';
+import { anpfiff, halte, warteSperre } from './engineHarnessSupport';
 import { T0 } from './enginePhaseFixture';
 
 vi.unmock('i18next');
@@ -203,8 +203,10 @@ describe('LiveCockpit: Abpfiff mit Ton und Vibration, genau einmal (B-08c)', () 
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     zu(240_000);
+    // Abpfiff von Hand ist ein Halteknopf (@SL-157): zweimal kurz hintereinander gehalten, bevor die Leiste den Abpfiff zeigt
     const beenden = screen.getByTestId('match-finish-button');
-    await user.dblClick(beenden);
+    await halte(beenden);
+    await halte(beenden);
     await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
     await new Promise((fertig) => { setTimeout(fertig, 300); });
     expect(ton.play).toHaveBeenCalledTimes(1);

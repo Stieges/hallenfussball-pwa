@@ -37,7 +37,7 @@ function runningMatch(overrides: Record<string, unknown> = {}) {
 function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): LiveCockpitProps {
   return {
     fieldName: 'Feld 1', tournamentName: 'Test-Turnier', tournamentId: 'tour-1',
-    currentMatch: match as never, upcomingMatches: [],
+    currentMatch: match as never, upcomingMatches: [], kannSteuern: true,
     onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),
     onLoadNextMatch: vi.fn(), ...handlers,
   };
@@ -50,7 +50,10 @@ describe('LiveCockpit — Knöpfe ohne Engine-Weg ausblenden (A-08c, @FU-071)', 
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(runningMatch())} />);
 
-    expect(screen.queryByTestId('match-edit-time-button')).toBeNull();
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    expect(screen.getByTestId('more-sheet')).toBeInTheDocument();
+    expect(screen.queryByTestId('mehr-uhr-korrigieren')).toBeNull();
+    await user.click(screen.getByTestId('mehr-schliessen'));
 
     await user.click(screen.getByTestId('scoreboard-clock'));
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -68,14 +71,18 @@ describe('LiveCockpit — Knöpfe ohne Engine-Weg ausblenden (A-08c, @FU-071)', 
     expect(screen.queryByTestId('penalty-shootout-dialog')).toBeNull();
   });
 
-  it('@FU-071 Gegenbeispiel: mit onAdjustTime -> Uhr-Knopf da; mit onStartPenaltyShootout -> Strafstoß-Knopf im Banner da', () => {
+  it('@FU-071 Gegenbeispiel: mit onAdjustTime -> „Uhr korrigieren“ in „Mehr“ da; mit onStartPenaltyShootout -> Strafstoß-Knopf im Banner da', async () => {
+    const user = userEvent.setup();
+    const laufend = render(<LiveCockpit {...baseProps(runningMatch(), { onAdjustTime: vi.fn() })} />);
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    expect(screen.getByTestId('mehr-uhr-korrigieren')).toBeInTheDocument();
+    laufend.unmount();
+
     const match = runningMatch({
       tournamentPhase: 'finalRound', tiebreakerMode: 'shootout', awaitingTiebreakerChoice: true,
       homeScore: 1, awayScore: 1, status: 'PAUSED',
     });
-    render(<LiveCockpit {...baseProps(match, { onAdjustTime: vi.fn(), onStartPenaltyShootout: vi.fn() })} />);
-
-    expect(screen.getByTestId('match-edit-time-button')).toBeInTheDocument();
+    render(<LiveCockpit {...baseProps(match, { onStartPenaltyShootout: vi.fn() })} />);
     expect(within(screen.getByTestId('tiebreaker-banner')).getByRole('button', { name: /starten/i })).toBeInTheDocument();
   });
 });

@@ -507,5 +507,45 @@
     "rot": "Rot",
     "schonGelb": "Nr. {{nummer}} hat schon Gelb",
     "trotzdemGelb": "Trotzdem Gelb"
+  },
+  "leiste": {
+    "aria": "Spielsteuerung",
+    "rueckgaengig": "Rückgängig",
+    "rueckgaengigAria": "Rückgängig: {{ziel}}",
+    "anpfiff": "Anpfiff",
+    "pause": "Pause",
+    "weiter": "Weiter",
+    "wiederanpfiff": "Wiederanpfiff",
+    "anpfiffVerlaengerung": "Anpfiff Verlängerung",
+    "entscheidung": "Entscheidung wählen",
+    "weiterNaechstes": "Weiter",
+    "mehr": "Mehr",
+    "ereignisse": "Ereignisse",
+    "beendet": "Spiel ist beendet – Korrektur über die Turnierleitung",
+    "leitet": "{{feld}} leitet: {{name}}",
+    "uebernehmen": "Spielleitung übernehmen",
+    "keinZugriff_one": "Du hast keinen Zugriff mehr – 1 Eintrag an die Turnierleitung übergeben",
+    "keinZugriff_other": "Du hast keinen Zugriff mehr – {{count}} Einträge an die Turnierleitung übergeben",
+    "tasteLeertaste": "Leertaste",
+    "tasteRueckgaengigStrg": "Strg+Z",
+    "tasteRueckgaengigCmd": "Cmd+Z"
+  },
+  "abpfiff": {
+    "label": "Abpfiff",
+    "halten": "halten",
+    "beschreibung": "Gedrückt halten, etwa eine Sekunde"
+  },
+  "mehr": {
+    "titel": "Mehr",
+    "uhrKorrigieren": "Uhr korrigieren",
+    "seitenTauschen": "Seiten tauschen",
+    "einstellungen": "Einstellungen",
+    "schliessen": "Schließen"
+  },
+  "entscheidung": {
+    "titel": "Wie wird entschieden?",
+    "verlaengerung": "$t(sport:phases.overtime)",
+    "goldenGoal": "$t(sport:phases.goldenGoal)",
+    "strafstoss": "$t(sport:events.penaltyShootout)"
   }
 }

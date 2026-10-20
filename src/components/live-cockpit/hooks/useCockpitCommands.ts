@@ -13,7 +13,8 @@ import { useEngineEventEditing } from '../../../hooks/useEngineEventEditing';
 import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../../types/tournament';
 import type { CockpitDialogState, CockpitOverlayHandlers } from '../areas/CockpitOverlays';
 import type { LegacyPlayAreaProps } from '../areas/LegacyPlayArea';
-import type { Side } from '../model/cockpitTypes';
+import type { MehrPunkt } from '../model/mehrPunkte';
+import type { CockpitControls, Side } from '../model/cockpitTypes';
 import type { PhaseView } from '../engine/phaseView';
 import type { LiveCockpitProps } from '../types';
 import type { UseCockpitNoticesReturn } from './useCockpitNotices';
@@ -46,14 +47,16 @@ export interface CockpitCommands {
   dialogs: CockpitDialogState;
   overlayHandlers: CockpitOverlayHandlers;
   teamHandlers: Record<Side, TeamSideHandlers>;
-  controls: LegacyPlayAreaProps['controls'];
+  controls: CockpitControls;
+  /** Was jeder Punkt des Blatts „Mehr“ tut (ein Punkt ohne Aktion erscheint nicht, A-08c). */
+  mehrAktionen: Partial<Record<MehrPunkt, () => void>>;
   onSidebarEventEdit?: LegacyPlayAreaProps['sidebar']['onEventEdit'];
 }
 
 export function useCockpitCommands({ props, settings, sound, flows, sides, melde, engineView }: CockpitCommandsArgs): CockpitCommands {
   const { t } = useTranslation('cockpit');
   const { currentMatch: match, onStart, onPause, onResume, onFinish, onGoal, onAdjustTime, onUpdateSettings } = props;
-  const readOnly = props.readOnly ?? false;
+  const readOnly = !props.kannSteuern;
   // Bestätigungen sind Stufe 3, Fehler Stufe 2 (Spec § 7); `melde` ist stabil.
   const showSuccess = useCallback((message: string) => { melde(3, message); }, [melde]);
   const showInfo = showSuccess;
@@ -72,6 +75,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   const [showTimeAdjust, setShowTimeAdjust] = useState(false);
   const [showEventLog, setShowEventLog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   // Blätter schließen, wenn das Spiel wechselt (die Eintrags-Auswahl schließt `useEntryFlows` selbst; nur an der
   // Spiel-ID, nicht an `events`, C1/RC13: `LiveCockpit.dialogReset.test.tsx`).
   const matchId = match?.id;
@@ -79,6 +83,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     setShowTimeAdjust(false);
     setShowEventLog(false);
     setShowSettings(false);
+    setShowMore(false);
   }, [matchId]);
 
   // C3b-1: Minus/Rückgängig/Löschen/Bearbeiten (Engine-Spiele: RETRACT/AMEND).
@@ -165,6 +170,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     : match
       ? { current: match.timerElapsedSeconds ?? 0, min: 0, max: match.durationSeconds, minIsGoal: false }
       : null;
+  const switchSides = () => { sides.tausche(); showInfo(t('meldung.seitenGetauscht')); };
   const overlayHandlers: CockpitOverlayHandlers = {
     closeTimeAdjust: () => setShowTimeAdjust(false),
     confirmTimeAdjust: handleTimeAdjust,
@@ -174,6 +180,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     closeEventLog: () => setShowEventLog(false),
     // M-1 FIX: nur die Ereignis-ID merken, das Ereignis wird frisch nachgeschlagen
     editEventFromLog: (event) => { setShowEventLog(false); flows.oeffne({ art: 'nummer', seite: null, eventId: event.id }); },
+    closeMore: () => setShowMore(false),
     closeSettings: () => setShowSettings(false),
     changeSettings: (newSettings) => { if (onUpdateSettings) { onUpdateSettings(newSettings); } },
     testSound: () => { void sound.play(); },
@@ -191,7 +198,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     activePenalties,
     dialogs: {
       offen: flows.offen,
-      showTimeAdjust, showEventLog, showSettings, zeit: zeitGrenzen,
+      showTimeAdjust, showEventLog, showSettings, showMore, zeit: zeitGrenzen,
       // Task R2 Fixrunde 2 (H1): unter readOnly gar nicht, und nur mit beiden Strafstoß-Handlern.
       showPenaltyShootout: tiebreak.showPenaltyDialog && !readOnly && !!props.onRecordPenaltyResult && !!props.onAbortPenaltyShootout,
     },
@@ -201,17 +208,17 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
       onUndo: editing.undoVisible ? () => { void editing.undo(); } : undefined,
       onStart: clock.starte,
       onPauseResume: clock.pauseOderWeiter,
-      wiederanpfiff: cockpitClock.abschnittspause,
       onEditTime: openTimeAdjust,
-      onSwitchSides: () => { sides.tausche(); showInfo(t('meldung.seitenGetauscht')); },
+      onSwitchSides: switchSides,
       onFinish: clock.pfeifeAb,
       onSettings: () => setShowSettings(true),
-      // BUG-002: Event Log for Mobile
       onEventLog: () => setShowEventLog(true),
+      onMore: () => setShowMore(true),
       canUndo: editing.canUndo,
       undoLabel: editing.undoLabel,
       undoHint: editing.undoHint,
     },
+    mehrAktionen: { uhrKorrigieren: openTimeAdjust, seitenTauschen: switchSides, einstellungen: () => setShowSettings(true) },
     // Task R2 Fixrunde 2 (M2/Rule 1): Bearbeiten nur bei echter readOnly-Sperre ausgeblendet.
     onSidebarEventEdit: readOnly ? undefined : handleEventEdit,
   };

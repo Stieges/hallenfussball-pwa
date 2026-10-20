@@ -143,7 +143,7 @@ describe('useCockpitCommands – Ereignisse, Sperre, Entscheidung', () => {
   });
 
   it('Gegenbeispiel: im Nur-Lesen-Modus gibt es keinen Bearbeiten-Rückruf für die Liste', () => {
-    const { hook } = setup({ events: [tor], props: { readOnly: true } });
+    const { hook } = setup({ events: [tor], props: { kannSteuern: false } });
     expect(hook.result.current.onSidebarEventEdit).toBeUndefined();
   });
 

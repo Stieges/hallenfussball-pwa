@@ -165,4 +165,9 @@ describe('ThumbBar (Plan 3.1)', () => {
       expect(screen.getByTestId('bar-main')).toHaveFocus();
     });
   });
+
+  it('ariaLabel nennt mehr als der sichtbare Text und enthält ihn (WCAG 2.5.3, Rückgängig mit Ziel)', () => {
+    render(<ThumbBar ariaLabel="x" layout="daumen" slots={[a('Rückgängig', 'bar-undo', 'neben', { ariaLabel: 'Rückgängig: Tor Nr. 7 zurücknehmen' })]} />);
+    expect(screen.getByRole('button', { name: 'Rückgängig: Tor Nr. 7 zurücknehmen' })).toHaveTextContent('Rückgängig');
+  });
 });

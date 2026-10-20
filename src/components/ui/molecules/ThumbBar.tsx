@@ -20,6 +20,8 @@ export type ThumbBarSlot =
   | {
       art: 'aktion'; label: string; sublabel?: string; icon: ReactNode; onPress: () => void; rolle: ThumbBarRolle;
       testId: string; disabled?: boolean; gestrichelt?: boolean;
+      /** Zugänglicher Name, wenn er mehr nennt als der sichtbare Text (muss den sichtbaren Text enthalten, WCAG 2.5.3) */
+      ariaLabel?: string;
       /** sichtbarer Hinweis (nur Layout breit) + aria-keyshortcuts (immer), z. B. { text: 'Leertaste', aria: 'Space' } */
       taste?: { text: string; aria: string };
     }
@@ -102,6 +104,7 @@ function Aktion({ slot, layout, tabIndex }: { slot: Extract<ThumbBarSlot, { art:
       data-rolle={slot.rolle}
       disabled={slot.disabled}
       tabIndex={tabIndex}
+      aria-label={slot.ariaLabel}
       aria-keyshortcuts={slot.taste?.aria}
       onClick={slot.disabled ? undefined : slot.onPress}
       style={knopfStil(slot, layout)}

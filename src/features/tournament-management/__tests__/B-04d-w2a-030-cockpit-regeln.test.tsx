@@ -116,7 +116,8 @@ function renderTab(onTournamentUpdate: ReturnType<typeof vi.fn<OnTournamentUpdat
 }
 
 async function openSettings(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: 'Einstellungen' }));
+  await user.click(screen.getByTestId('cockpit-more-button'));
+  await user.click(screen.getByTestId('mehr-einstellungen'));
 }
 
 /** Jeder Aufruf der Speicherstrecke muss die Regeln unverändert lassen (Speicherschutz). */

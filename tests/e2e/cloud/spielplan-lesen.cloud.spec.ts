@@ -21,6 +21,7 @@ import { enterGoal, fetchMatchRow } from './helpers';
 import { restAsRole, serviceRest } from './restAsRole';
 import { E2E_LIVE_CUP_ID, E2E_SPIELPLANOWNER_MONITOR_ID, engineCupIds, type EngineCupSlug } from './testData';
 
+import { abpfiffHalten } from '../helpers/abpfiff';
 /** Schließt alle Realtime-Kanäle der App (derselbe Client wie in der App, Vite-Dev-Modul). */
 async function closeRealtimeChannels(page: Page): Promise<void> {
   await page.evaluate("import('/src/lib/supabase.ts').then((m) => m.supabase.removeAllChannels())");
@@ -88,7 +89,7 @@ test.describe('Spielplan liest fremde Tore', () => {
       await expect(homeRow).not.toContainText('2:0');
 
       // @TM-143: nach dem Abpfiff zählt es (2:0 in der Tabelle des Eigentümers, Kanal weiter zu).
-      await helper.page.locator('[data-testid="match-finish-button"]').click();
+      await abpfiffHalten(helper.page);
       await expect.poll(() => fetchMatchRow(ids.matchId).then((row) => row.match_status), { timeout: 10000 }).toBe('finished');
       await expect(homeRow).toContainText('2:0', { timeout: 10000 });
       await expect(owner.page.locator('[data-testid="realtime-interrupted-hint"]')).toHaveCount(0);

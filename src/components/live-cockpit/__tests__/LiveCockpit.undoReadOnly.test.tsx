@@ -91,7 +91,7 @@ function currentMatch(value: MatchEngineContextValue) {
 function props(value: MatchEngineContextValue, extra: Partial<LiveCockpitProps> = {}): LiveCockpitProps {
   return {
     fieldName: 'Feld 1', tournamentName: 'T', tournamentId: 'tour-1',
-    currentMatch: currentMatch(value), upcomingMatches: [],
+    currentMatch: currentMatch(value), upcomingMatches: [], kannSteuern: true,
     onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),
     onUndoLastEvent: vi.fn(), onManualEditResult: vi.fn(), onAdjustTime: vi.fn(),
     onLoadNextMatch: vi.fn(), onReopenLastMatch: vi.fn(), onUpdateEvent: vi.fn(), onDeleteEvent: vi.fn(), ...extra,
@@ -118,16 +118,16 @@ async function pendingOf(value: MatchEngineContextValue, type: string) {
 describe('LiveCockpit -- Rueckgaengig unter readOnly (@FU-071, A-08d1 A1)', () => {
   beforeEach(() => { mockActor.current = 'helper'; vi.clearAllMocks(); });
 
-  it('@FU-071 readOnly: Rueckgaengig ist disabled, ein Klick erzeugt kein RETRACT', async () => {
+  it('@FU-071 @SL-018 Nur-Lesen: keine Daumenleiste und damit kein Rueckgaengig, es entsteht kein RETRACT', async () => {
     const { value, commands } = await setup();
     await commands.goal(MATCH_ID, CTX, 'helper', 'teama', false, { playerNumber: 7 });
     await commands.pause(MATCH_ID, CTX, 'helper'); // pausiert: die Spieluhr (rAF) laesst das Cockpit sonst dauernd neu rendern
     const user = userEvent.setup();
-    renderCockpit(value, { readOnly: true });
+    renderCockpit(value, { kannSteuern: false });
 
-    const undo = screen.getByTestId('match-undo-button');
-    expect(undo).toBeDisabled();
-    await user.click(undo);
+    expect(screen.queryByRole('toolbar')).toBeNull();
+    expect(screen.queryByTestId('match-undo-button')).toBeNull();
+    await user.click(screen.getByTestId('cockpit-more-button'));
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(await pendingOf(value, 'RETRACT')).toHaveLength(0);
   });

@@ -1,5 +1,5 @@
 /**
- * Review A-11 A3: die Verdrahtung `readOnly={!canPlay}` (ManagementTab -> LiveCockpit, canPlay = useCan('writeMatchData')).
+ * Review A-11 A3: die Verdrahtung `kannSteuern={canPlay}` (ManagementTab -> LiveCockpit, canPlay = useCan('writeMatchData')).
  *
  * Ein Konto ohne `writeMatchData` (Trainer, Zuschauer) bekommt ein Cockpit nur zum Lesen. Gegenbeispiel @HE-042
  * („ein Spiel anpfeifen → gelingt“): Tom (Helfer) und die Turnierleitung leiten -- das Cockpit ist nicht schreibgeschützt.
@@ -18,8 +18,8 @@ import { testTeamSlot } from '../../../test/matchSlotFixtures';
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 
 vi.mock('../../../components/live-cockpit', () => ({
-  LiveCockpit: ({ readOnly }: { readOnly?: boolean }) => (
-    <div data-testid="cockpit-stub" data-readonly={String(readOnly === true)} />
+  LiveCockpit: ({ kannSteuern }: { kannSteuern?: boolean }) => (
+    <div data-testid="cockpit-stub" data-readonly={String(kannSteuern !== true)} />
   ),
 }));
 

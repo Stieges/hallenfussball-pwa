@@ -8,6 +8,7 @@
 
 import { test, expect } from '../helpers/test-fixtures';
 
+import { abpfiffHalten } from '../helpers/abpfiff';
 /**
  * Generate a future date string (tomorrow) in YYYY-MM-DD format
  * This ensures tournaments are categorized as "upcoming" not "finished"
@@ -181,8 +182,8 @@ test.describe('Cockpit-Tafel', () => {
     await page.getByTestId('match-start-button').click();
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
     await page.getByTestId('match-pause-button').click();
-    await expect(page.getByTestId('match-start-button')).toBeVisible();
-    await page.getByTestId('match-finish-button').click();
+    await expect(page.getByTestId('match-resume-button')).toBeVisible();
+    await abpfiffHalten(page);
     const bestaetigen = page.locator('[role="dialog"] button, [data-testid*="confirm"]').filter({ hasText: /Beenden|Bestätigen|Ja|Confirm/i });
     if (await bestaetigen.isVisible({ timeout: 2000 }).catch(() => false)) {
       await bestaetigen.click();

@@ -64,7 +64,8 @@ export function useCockpitLeerGrund(args: CockpitLeerGrundArgs): CockpitLeerGrun
 
   const leerProps: LiveCockpitProps = {
     fieldName: t('management.field', { number: selectedFieldNumber }), tournamentName: tournament.title, tournamentId: tournament.id,
-    cockpitSettings: tournament.matchCockpitSettings, currentMatch: null, leer, upcomingMatches,
+    // ohne Spiel gibt es nichts zu steuern: nur die Tafel mit dem Grund
+    cockpitSettings: tournament.matchCockpitSettings, kannSteuern: false, currentMatch: null, leer, upcomingMatches,
     onStart: () => undefined, onPause: () => undefined, onResume: () => undefined, onFinish: () => undefined,
     onGoal: () => Promise.resolve(null), onLoadNextMatch,
   };

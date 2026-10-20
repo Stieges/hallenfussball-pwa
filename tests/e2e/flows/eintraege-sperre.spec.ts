@@ -10,6 +10,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
+import { abpfiffHalten } from '../helpers/abpfiff';
 const ID = 'e2e-eintraege-cup';
 const SPERRE = /Spiel \d+ hat Einträge – nur über Spielplan auf Anfang setzen/;
 const TEAMS = ['e1', 'e2', 'e3', 'e4'].map((n) => `00000000-0000-4000-8000-0000000000${n}`);
@@ -56,7 +57,7 @@ async function spielMitEintraegen(page: Page): Promise<void> {
   await page.getByTestId('goal-button-home').click();
   await schliesseTorAuswahl(page);
   await page.getByTestId('match-pause-button').click();
-  await page.getByTestId('match-finish-button').click();
+  await abpfiffHalten(page);
   const confirm = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja/i });
   if (await confirm.isVisible({ timeout: 2000 }).catch(() => false)) { await confirm.first().click(); }
   await expect(page.getByTestId('scoreboard-state')).toHaveText(/Abgepfiffen|Vor Anpfiff/i); // Tafel (Cockpit 2.4/2.5): nach dem Abpfiff steht Spiel 1 abgepfiffen oder die Tafel zeigt schon das nächste Spiel
