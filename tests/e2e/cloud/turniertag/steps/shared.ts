@@ -17,6 +17,8 @@ export const TURNIERTAG_ID = E2E_TURNIERTAG_CUP_ID;
 export interface TurniertagMatch {
   id: string;
   slot: number;
+  /** Spielnummer (gespeichert seit #300, @SL-049); „Spiel 1“ bis „Spiel 16“ im Turniertag-Cup. */
+  match_number: number | null;
   field: number;
   phase: string;
   group_letter: string | null;
@@ -50,7 +52,7 @@ export async function getRows<T>(query: string, label: string): Promise<T[]> {
 /** Alle Spiele des Turniertag-Cups in Spielplan-Reihenfolge (`slot`). */
 export function fetchTurniertagMatches(): Promise<TurniertagMatch[]> {
   return getRows<TurniertagMatch>(
-    `matches?tournament_id=eq.${TURNIERTAG_ID}&order=slot.asc,field.asc,id.asc&select=id,slot,field,phase,group_letter,team_a_id,team_b_id,slot_a_source,slot_b_source,match_status,decided_by,score_a,score_b,label`,
+    `matches?tournament_id=eq.${TURNIERTAG_ID}&order=slot.asc,field.asc,id.asc&select=id,slot,match_number,field,phase,group_letter,team_a_id,team_b_id,slot_a_source,slot_b_source,match_status,decided_by,score_a,score_b,label`,
     'fetchTurniertagMatches'
   );
 }
