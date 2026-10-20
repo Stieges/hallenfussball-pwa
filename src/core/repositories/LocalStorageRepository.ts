@@ -10,6 +10,7 @@ import { isLegacyTournamentShape } from '../models/legacyFormat';
 import { quarantineLegacyTournaments, LEGACY_TOURNAMENTS_NOTICE_EVENT } from '../storage/legacyTournamentStore';
 import { applyServerLedPatch, type ServerLedMatchPatch } from './serverLedMatchFields';
 import { readServerRevisions, writeServerRevisions, type CloudAdoption } from './cloudAdoption';
+import { generateShareCode } from '../models/shareCode';
 
 /**
  * A2 Fixrunde 3 (N2, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md`):
@@ -258,7 +259,14 @@ export class LocalStorageRepository implements ITournamentRepository {
                 return null;
             }
 
-            const shareCode = this.generateLocalShareCode();
+            // CA-3 (Auflage 5): ein schon geteiltes Turnier behaelt seinen Code -- auch der Rueckfall wuerfelt
+            // keinen neuen (sonst waere ein gedruckter Aushang/QR tot und ein Cloud-Code ueberschrieben).
+            const existing = list[index];
+            if (existing.isPublic && existing.shareCode) {
+                return { shareCode: existing.shareCode, createdAt: existing.shareCodeCreatedAt ?? existing.updatedAt };
+            }
+
+            const shareCode = this.generateLocalShareCode(list, tournamentId);
             const createdAt = new Date().toISOString();
 
             list[index] = {
@@ -316,7 +324,7 @@ export class LocalStorageRepository implements ITournamentRepository {
                 return null;
             }
 
-            const shareCode = this.generateLocalShareCode();
+            const shareCode = this.generateLocalShareCode(list, tournamentId);
             const createdAt = new Date().toISOString();
 
             list[index] = {
@@ -333,15 +341,16 @@ export class LocalStorageRepository implements ITournamentRepository {
     }
 
     /**
-     * Generates a 6-character alphanumeric share code for local use.
+     * Freigabe-Code im Format des Servers (core/models/shareCode.ts). Ein Code, den ein ANDERES lokales Turnier
+     * schon traegt, wird nicht vergeben (der Server hat dafuer einen UNIQUE-Schluessel).
      */
-    private generateLocalShareCode(): string {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let code = '';
-        for (let i = 0; i < 6; i++) {
-            code += chars.charAt(Math.floor(Math.random() * chars.length));
+    private generateLocalShareCode(list: Tournament[], ownId: string): string {
+        const taken = new Set(list.filter(t => t.id !== ownId).map(t => t.shareCode?.toUpperCase()));
+        for (let attempt = 0; attempt < 50; attempt++) {
+            const code = generateShareCode();
+            if (!taken.has(code)) { return code; }
         }
-        return code;
+        throw new Error('Could not generate a unique share code after 50 attempts');
     }
 
     // --- Private Helpers ---

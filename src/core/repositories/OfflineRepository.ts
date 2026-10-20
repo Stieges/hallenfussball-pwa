@@ -800,12 +800,16 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         }
 
         // Fallback to local implementation
+        // CA-3 (Auflage 5): kennt das Geraet fuer das Turnier schon einen Code (aus der Cloud oder von einem frueheren
+        // Rueckfall, dessen Eintrag schon wartet), bleibt er -- kein neuer Eintrag, der einen Cloud-Code ueberschriebe.
+        const known = await this.localRepo.get(tournamentId);
+        const alreadyShared = known?.isPublic === true && !!known.shareCode;
         const localResult = await this.localRepo.makeTournamentPublic(tournamentId);
-        if (localResult) {
+        if (localResult && !alreadyShared) {
             // Queue for cloud sync when back online
             this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', {
                 tournamentId,
-                metadata: { isPublic: true, shareCode: localResult.shareCode }
+                metadata: { isPublic: true, shareCode: localResult.shareCode, shareCodeCreatedAt: localResult.createdAt }
             });
         }
         return localResult;
@@ -867,7 +871,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             // Queue for cloud sync when back online
             this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', {
                 tournamentId,
-                metadata: { shareCode: localResult.shareCode }
+                metadata: { shareCode: localResult.shareCode, shareCodeCreatedAt: localResult.createdAt }
             });
         }
         return localResult;

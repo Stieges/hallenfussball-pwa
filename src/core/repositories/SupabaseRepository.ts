@@ -149,6 +149,8 @@ export class SupabaseRepository implements ITournamentRepository {
      
     if (metadata.isPublic !== undefined) {updatePayload.is_public = metadata.isPublic;}
     if (metadata.shareCode !== undefined) {updatePayload.share_code = metadata.shareCode;}
+    // CA-3: der Zeitpunkt, zu dem der Code entstand, geht mit (NEU-CA4); der Server setzt ihn sonst nur in den RPCs.
+    if (metadata.shareCodeCreatedAt !== undefined) {updatePayload.share_code_created_at = metadata.shareCodeCreatedAt;}
 
     // Only update if there are fields to update
     if (Object.keys(updatePayload).length === 0) {
