@@ -4,5 +4,3 @@
 # und die CI-Tests spielen jede Migration weiter ein.
 # Format je Zeile: <dateiname> <frist YYYY-MM-DD> <commit-vorher (origin/main vor dem Merge)>
 # Nach dem Einspielen im Fenster entfernt der Controller die Zeile (Freigabe-Unterlage des Pakets, § 2).
-20261110_001_role_permissions_mvp.sql 2026-11-10 c1a71ea0093caa9d6c3bc4384dc4560b86c35087
-20261110_002_device_roles.sql 2026-11-10 c1a71ea0093caa9d6c3bc4384dc4560b86c35087
