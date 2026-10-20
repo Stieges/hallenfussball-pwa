@@ -8,7 +8,7 @@
  */
 import type { ReactElement, ReactNode } from 'react';
 import type { ActivePenalty } from '../../../types/tournament';
-import type { LiveMatch, MatchSummary } from '../types';
+import type { LiveMatch } from '../types';
 import { Sidebar } from '../components';
 import type { SidebarProps } from '../components';
 import type { CockpitZustand } from '../model/cockpitPhase';
@@ -17,7 +17,8 @@ import styles from './LegacyAreas.module.css';
 
 export interface LegacyPlayAreaProps {
   match: LiveMatch;
-  nextMatch: MatchSummary | null;
+  /** Zeile „Nächstes“ im Fluss unter der Tafel (LT-3, `NextMatchArea`). */
+  naechstes?: ReactNode;
   isMobile: boolean;
   isDesktop: boolean;
   /** Tafel, Hinweise und Ausgangs-Meldung: stehen über den Spalten, im Laptop-Layout links neben der Liste (Mockup Rahmen a). */
@@ -37,7 +38,7 @@ export interface LegacyPlayAreaProps {
 const cls = (...names: Array<string | false>): string => names.filter(Boolean).join(' ');
 
 export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
-  const { match, nextMatch, isMobile, isDesktop, kopf, zustand, strafstossForm, columns, sidebar } = props;
+  const { match, naechstes, isMobile, isDesktop, kopf, zustand, strafstossForm, columns, sidebar } = props;
   const spalte = (spaltenProps: LegacyPlayAreaProps['columns']['links']): ReactElement => (
     <TeamColumn {...spaltenProps} kompakt={isMobile} breit={isDesktop} />
   );
@@ -46,15 +47,7 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
     <div className={cls(styles.flaeche, isDesktop && styles.flaecheBreit)} data-testid="cockpit-flaeche">
       <div className={cls(styles.links, isDesktop && styles.linksBreit, isMobile && styles.linksMobile)}>
         {kopf}
-        {nextMatch && (
-          <div className={styles.nextBanner}>
-            <span className={styles.nextLabel}>Nächstes →</span>
-            <span>
-              {nextMatch.homeTeam.name} vs {nextMatch.awayTeam.name}
-              {nextMatch.scheduledKickoff && ` (${nextMatch.scheduledKickoff})`}
-            </span>
-          </div>
-        )}
+        {naechstes}
         <div className={cls(styles.scoreboard, isMobile && styles.scoreboardMobile, isDesktop && styles.scoreboardBreit)}>
           {zustand === 'strafstoss' && strafstossForm ? strafstossForm : zustand !== 'entscheidung' && (
             /* Team-Spalten – „Seiten tauschen“ vertauscht nur die Anzeige */

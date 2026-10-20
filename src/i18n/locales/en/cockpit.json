@@ -559,5 +559,11 @@
     "online": "Online",
     "offline": "Offline",
     "tastenkuerzel": "Shortcuts"
+  },
+  "naechstes": {
+    "label": "Next:",
+    "spiel": "Match {{nummer}}",
+    "anstoss": "Kick-off {{zeit}}",
+    "leibchen": "Bibs needed, the colours are too similar"
   }
 }

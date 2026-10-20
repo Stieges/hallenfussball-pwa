@@ -4,6 +4,9 @@
  */
 import type { ReactNode } from 'react';
 
+/** Getragene Farben der beiden Seiten eines Spiels (`wornColors`); `null` = keine Trikotfarbe festgelegt (@SL-161). */
+export interface MatchSummaryFarben { home: string | null; away: string | null }
+
 export type TiebreakWahl = 'overtime' | 'goldenGoal' | 'shootout';
 
 export interface LiveCockpitLeisteProps {

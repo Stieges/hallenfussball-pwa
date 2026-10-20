@@ -559,5 +559,11 @@
     "online": "Online",
     "offline": "Offline",
     "tastenkuerzel": "Tastenkürzel"
+  },
+  "naechstes": {
+    "label": "Nächstes:",
+    "spiel": "Spiel {{nummer}}",
+    "anstoss": "Anstoß {{zeit}}",
+    "leibchen": "Leibchen nötig, die Farben sind zu ähnlich"
   }
 }

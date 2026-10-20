@@ -10,21 +10,6 @@
    Spielfläche
    --------------------------------------------------------------------------- */
 
-.nextBanner {
-  background: linear-gradient(90deg, var(--color-danger-gradient-start) 0%, var(--color-danger-gradient-end) 100%);
-  border: var(--sizing-hairline) solid var(--color-danger-border);
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: var(--font-size-sm);
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
-.nextLabel {
-  color: var(--color-error);
-  font-weight: var(--font-weight-semibold);
-}
-
 /* Fläche: Tafel, Spalten und (ab 1024 px) die Liste der Einträge daneben. `breit` hat eine Quelle: `data-layout` der Hülle (Plan LT-2). */
 .flaeche {
   display: flex;

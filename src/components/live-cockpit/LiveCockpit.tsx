@@ -31,6 +31,8 @@ import { LegacyPlayArea } from './areas/LegacyPlayArea';
 import { CockpitOverlays } from './areas/CockpitOverlays';
 import { ThumbBarArea } from './areas/ThumbBarArea';
 import { LeerLeiste } from './areas/LeerLeiste';
+import { NextMatchArea } from './areas/NextMatchArea';
+import { restzeitSpielMs } from './model/restzeit';
 import { mehrPunkteGrundgeruest } from './model/mehrPunkte';
 import shell from './LiveCockpitShell.module.css';
 import { useCockpitPhase, useSideOrder } from './hooks';
@@ -214,7 +216,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
             </>
           )}
           match={match}
-          nextMatch={upcomingMatches.length > 0 ? upcomingMatches[0] : null}
+          naechstes={<NextMatchArea naechstes={upcomingMatches.length > 0 ? upcomingMatches[0] : null} phase={phase} restSpielMs={view ? restzeitSpielMs(view) : null} />}
           isMobile={isMobile}
           isDesktop={layout === 'breit'}
           zustand={phase.zustand}

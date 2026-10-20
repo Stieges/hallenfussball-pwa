@@ -23,10 +23,10 @@ import { RulesLockProvider } from '../../components/match-settings/RulesLockCont
 import { useToast } from '../../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../../lib/sentry';
 import { MatchAwaitingTeamsError, MatchNotOnEngineError, type MatchNotOnEngineReason } from '../../core/errors';
-import { matchLabelText } from '../../core/models/slotLabel';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
-import { buildSideContext, sideDisplay } from '../../components/schedule/matchSides';
+import { buildSideContext } from '../../components/schedule/matchSides';
 import { useFieldMatchSelection } from './hooks/useFieldMatchSelection';
+import { toMatchSummary } from './model/toMatchSummary';
 import { CockpitSlimHeader } from '../../components/live-cockpit/frame/CockpitSlimHeader';
 import { ConnectionPill } from '../../components/live-cockpit/frame/ConnectionPill';
 import { useAnnounceCockpitFrame, istCockpitVollbild } from '../../components/live-cockpit/frame/cockpitFrame';
@@ -101,21 +101,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     [tournament.teams, tournament.groups, schedule.allMatches],
   );
 
-  // Convert ScheduledMatch to MatchSummary
-  const toMatchSummary = useCallback((sm: ScheduledMatch): MatchSummary => {
-    const home = sideDisplay(sm, 'A', sides);
-    const away = sideDisplay(sm, 'B', sides);
-    return {
-      id: sm.id,
-      number: sm.matchNumber,
-      phaseLabel: sm.label ? matchLabelText(sm.label) : (sm.phase === 'groupStage' ? t('management.groupStage') : t('management.finalRound')),
-      scheduledKickoff: sm.time,
-      fieldId: `field-${sm.field}`,
-      homeTeam: { id: home.id, name: home.name },
-      awayTeam: { id: away.id, name: away.name },
-      tournamentPhase: sm.phase, // For detecting phase changes
-    };
-  }, [sides, t]);
+  // ScheduledMatch als MatchSummary (mit den getragenen Farben, @SL-160)
+  const toSummary = useCallback((sm: ScheduledMatch): MatchSummary => toMatchSummary(sm, { tournament, sides, t }), [tournament, sides, t]);
 
   // C-3 FIX: cancellation bei schnellem Feldwechsel. Minor 2: Reset VOR jedem fruehen Ausstieg.
   useEffect(() => {
@@ -192,20 +179,20 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const lastFinishedMatch = useMemo(() =>
      
     lastFinishedMatchData ? {
-      match: toMatchSummary(lastFinishedMatchData),
+      match: toSummary(lastFinishedMatchData),
       homeScore: lastFinishedMatchData.scoreA,
       awayScore: lastFinishedMatchData.scoreB,
     } : null,
-    [lastFinishedMatchData, toMatchSummary]
+    [lastFinishedMatchData, toSummary]
   );
 
   // Upcoming matches (matches after current)
   const upcomingMatches = useMemo(() => {
     const currentIndex = fieldMatches.findIndex((m) => m.id === currentMatchData?.id);
     return currentIndex !== -1
-      ? fieldMatches.slice(currentIndex + 1).map(toMatchSummary)
-      : fieldMatches.map(toMatchSummary);
-  }, [fieldMatches, currentMatchData, toMatchSummary]);
+      ? fieldMatches.slice(currentIndex + 1).map(toSummary)
+      : fieldMatches.map(toSummary);
+  }, [fieldMatches, currentMatchData, toSummary]);
 
   const handleFinishAndReset = useCallback((matchId: string): Promise<string | null> => handleFinish(matchId).then((eventId) => {
     setTimeout(() => { waehleSpiel(null); }, 0);
@@ -267,7 +254,6 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             sperrHinweise={sperrHinweise}
             lastFinishedMatch={lastFinishedMatch}
             upcomingMatches={upcomingMatches}
-            highlightNextMatchMinutesBefore={5}
             onStart={(matchId) => { void hookHandleStart(matchId); }}
             onPause={(matchId) => { void handlePause(matchId); }}
             onResume={(matchId) => { void handleResume(matchId); }}

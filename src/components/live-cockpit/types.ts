@@ -10,7 +10,7 @@ import type { SperrHinweis } from '../../core/match';
 import type { GoalHandlerOptions } from '../../hooks/engineCommandWiringTypes';
 import type { LeerGrund } from './model/cockpitPhase';
 import type { MindestpauseHinweis } from './model/cockpitTypes';
-import type { LiveCockpitLeisteProps } from './typesLeiste';
+import type { LiveCockpitLeisteProps, MatchSummaryFarben } from './typesLeiste';
 
 // ---------------------------------------------------------------------------
 // Spiel-Typen (B-06: aus dem gelöschten match-cockpit/MatchCockpit.tsx hierher umgezogen)
@@ -93,6 +93,8 @@ export interface MatchSummary {
   awayTeam: Team;
   /** Tournament phase for detecting phase changes (group → finals) */
   tournamentPhase?: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final';
+  /** Getragene Farben beider Seiten für die Zeile „Nächstes“ (@SL-160). */
+  farben?: MatchSummaryFarben;
 }
 
 // ---------------------------------------------------------------------------
@@ -154,9 +156,6 @@ export interface LiveCockpitProps extends LiveCockpitLeisteProps {
   } | null;
   /** Upcoming matches for proactive hints */
   upcomingMatches: MatchSummary[];
-  /** Minutes before next match to show warning */
-  highlightNextMatchMinutesBefore?: number;
-
   // Event Handlers - Required (match MatchCockpit signature with matchId)
   onStart(matchId: string): void;
   onPause(matchId: string): void;
