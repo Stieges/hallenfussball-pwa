@@ -24,13 +24,17 @@ vi.mock('../../../hooks/useSyncStatus', () => ({
 }));
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 
+/** Anstoßzeit wie das Cockpit sie zeigt (Ortszeit, HH:MM), aus dem Anstoß-Datum des Testspiels. */
+const anstossZeit = (iso: string): string => new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+
 describe('LiveCockpit: Zurückgesetzt', () => {
-  it('@SL-068 @SL-130 zurückgesetzt: die Meldezeile nennt Spiel 13, der Stand ist 0:0, der Zustand „Vor Anpfiff“', () => {
+  it('@SL-068 @SL-130 zurückgesetzt: die Meldezeile nennt Spiel 13, der Stand ist 0:0, die Anstoßzeit steht bei der Uhr (@OB-068)', () => {
     const { rerender } = render(<LiveCockpit {...makeProps(makeLiveMatch({ number: 13, homeScore: 1 }))} />);
     rerender(<LiveCockpit {...makeProps(makeLiveMatch({ number: 13, status: 'NOT_STARTED', homeScore: 0, awayScore: 0, events: [] }), { letzteZuruecksetzung: { id: 'r1', spielNummer: 13 } })} />);
     expect(screen.getByTestId('notice-line')).toHaveTextContent('Spiel 13 von der Turnierleitung zurückgesetzt');
     expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('0:0');
-    expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Vor Anpfiff');
+    expect(screen.getByTestId('scoreboard-state')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent(anstossZeit(makeLiveMatch().scheduledKickoff));
   });
 
   it('@SL-068 Gegenbeispiel: beim Öffnen mit einer schon bekannten Zurücksetzung keine Meldung (auch nicht nach erneutem Rendern)', () => {
