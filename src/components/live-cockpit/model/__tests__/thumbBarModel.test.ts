@@ -19,7 +19,7 @@ const TABELLE: Array<[string, CockpitZustand, LeistenAktion[], LeistenAktion[]]>
   ['pauseVorVerlaengerung', 'pauseVorVerlaengerung', ['rueckgaengig', 'anpfiffVerlaengerung', 'ereignisse', 'mehr'], ['anpfiffVerlaengerung', 'rueckgaengig', 'mehr']],
   ['@SL-053 entscheidung', 'entscheidung', ['entscheidung', 'mehr'], ['entscheidung', 'mehr']],
   ['@SL-110 strafstoss', 'strafstoss', ['rueckgaengig', 'ereignisse', 'mehr'], ['rueckgaengig', 'mehr']],
-  ['@SL-045 abgepfiffen (ohne Fortsetzen/Korrigieren)', 'abgepfiffen', ['weiterNaechstes', 'mehr'], ['weiterNaechstes', 'mehr']],
+  ['@SL-045 @SL-113 @SL-061 abgepfiffen (ohne Fortsetzen/Korrigieren; unter 1024 px bleibt die Liste per Knopf erreichbar)', 'abgepfiffen', ['weiterNaechstes', 'ereignisse', 'mehr'], ['weiterNaechstes', 'mehr']],
   ['wartetAufHerkunft (Anpfiff gesperrt, 2.5)', 'wartetAufHerkunft', ['mehr'], ['mehr']],
   ['keinSpiel', 'keinSpiel', [], []],
 ];
@@ -61,11 +61,16 @@ describe('Daumenleiste je Zustand', () => {
   describe('abgepfiffen: Fortsetzen und Korrigieren nur, wenn möglich (Reihenfolge je Layout)', () => {
     it('daumen: fortsetzen vor weiterNaechstes, korrigieren danach', () => {
       const k = kontext('daumen', { fortsetzenMoeglich: true, korrigierenMoeglich: true });
-      expect(leisteFuer(phase('abgepfiffen'), k).aktionen).toEqual(['fortsetzen', 'weiterNaechstes', 'korrigieren', 'mehr']);
+      expect(leisteFuer(phase('abgepfiffen'), k).aktionen).toEqual(['fortsetzen', 'weiterNaechstes', 'ereignisse', 'korrigieren', 'mehr']);
     });
     it('breit: weiterNaechstes zuerst, dann fortsetzen und korrigieren', () => {
       const k = kontext('breit', { fortsetzenMoeglich: true, korrigierenMoeglich: true });
       expect(leisteFuer(phase('abgepfiffen'), k).aktionen).toEqual(['weiterNaechstes', 'fortsetzen', 'korrigieren', 'mehr']);
+    });
+    it('@SL-061 @SL-113 Gegenbeispiel: abgepfiffen breit hat keinen Platz „ereignisse“ (die Liste steht daneben), daumen höchstens fünf Plätze', () => {
+      const voll = { fortsetzenMoeglich: true, korrigierenMoeglich: true };
+      expect(leisteFuer(phase('abgepfiffen'), kontext('breit', voll)).aktionen).not.toContain('ereignisse');
+      expect(leisteFuer(phase('abgepfiffen'), kontext('daumen', voll)).aktionen).toHaveLength(5);
     });
     it('Gegenbeispiel: Leitung ohne korrigierenMoeglich enthält kein korrigieren (beide Layouts)', () => {
       for (const layout of ['daumen', 'breit'] as const) {

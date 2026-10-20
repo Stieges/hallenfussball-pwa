@@ -95,6 +95,26 @@ describe('Hülle – abgepfiffen (@SL-045, @HE-043, @SL-162)', () => {
     expect(props.onLoadNextMatch).toHaveBeenCalledWith('field-1');
   });
 
+  it('@SL-113 @SL-061 Nur-Lesen, abgepfiffen, 800 px: „Ereignisse“ öffnet die Liste der Einträge', async () => {
+    breite(800);
+    render(<LiveCockpit {...makeProps(abgepfiffen(), { kannSteuern: false })} />);
+    expect(screen.queryByRole('toolbar')).toBeNull();
+    await userEvent.click(screen.getByTestId('match-event-log-button'));
+    expect(screen.getByTestId('event-log-sheet')).toBeInTheDocument();
+  });
+
+  it('@SL-113 @SL-061 Steuer-Gerät, abgepfiffen, 800 px: „Ereignisse“ steht in der Leiste und öffnet die Liste', async () => {
+    breite(800);
+    render(<LiveCockpit {...makeProps(abgepfiffen())} />);
+    await userEvent.click(within(screen.getByRole('toolbar')).getByTestId('match-event-log-button'));
+    expect(screen.getByTestId('event-log-sheet')).toBeInTheDocument();
+  });
+
+  it('@SL-061 Gegenbeispiel: abgepfiffen bei 1280 px hat keinen Leisten-Knopf „Ereignisse“, die Liste steht daneben', () => {
+    render(<LiveCockpit {...makeProps(abgepfiffen())} />);
+    expect(screen.queryByTestId('match-event-log-button')).toBeNull();
+  });
+
   it('@SL-162 Gegenbeispiel: im laufenden Spiel gibt es kein „Weiter zum nächsten Spiel“', () => {
     render(<LiveCockpit {...makeProps(makeLiveMatch())} />);
     expect(screen.queryByTestId('match-next-button')).toBeNull();

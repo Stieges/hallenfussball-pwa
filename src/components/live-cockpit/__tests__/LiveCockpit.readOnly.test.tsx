@@ -469,10 +469,8 @@ describe('LiveCockpit — Fixrunde 2 (M2): beendetes Spiel + readOnly=false — 
     expect(screen.getByText('Cockpit Einstellungen')).toBeInTheDocument();
   });
 
-  // Befund C-COCKPIT-EREIGNISSE-NACH-ABPFIFF-HANDY: Die Tabelle `leisteFuer` (Plan 3.6) kennt im Zustand `abgepfiffen` unter
-  // 1024 px keinen Platz „Ereignisse“. Damit ist die Liste der Einträge nach dem Abpfiff am Handy nicht mehr erreichbar, obwohl
-  // Spec § 6 „Nummer nachtragen über die Liste“ verlangt (@SL-113). Der Test bleibt wörtlich, bis die Tabelle entschieden ist.
-  it.fails('Ereignisprotokoll (mobil) bleibt bedienbar (Befund C-COCKPIT-EREIGNISSE-NACH-ABPFIFF-HANDY, Ziel Plan 3.6 / LT-4)', async () => {
+  // Behoben in 3.6 (Fixrunde 1, K1): `leisteFuer` gibt `abgepfiffen` unter 1024 px den Platz „Ereignisse“ (Plan „Gilt nach Vorschlag (2)“).
+  it('@SL-113 @SL-061 Ereignisprotokoll (mobil) bleibt nach dem Abpfiff erreichbar', async () => {
     setMobileViewport();
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch({ status: 'FINISHED' }))} />);

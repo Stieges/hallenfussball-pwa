@@ -56,7 +56,7 @@ function nachAbpfiff(k: LeisteKontext): LeistenAktion[] {
   const fortsetzen: LeistenAktion[] = k.fortsetzenMoeglich ? ['fortsetzen'] : [];
   const korrigieren: LeistenAktion[] = k.istLeitung && k.korrigierenMoeglich ? ['korrigieren'] : [];
   return k.layout === 'daumen'
-    ? [...fortsetzen, 'weiterNaechstes', ...korrigieren, 'mehr']
+    ? [...fortsetzen, 'weiterNaechstes', 'ereignisse', ...korrigieren, 'mehr']
     : ['weiterNaechstes', ...fortsetzen, ...korrigieren, 'mehr'];
 }
 
