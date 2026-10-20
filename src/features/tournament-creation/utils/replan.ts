@@ -18,6 +18,7 @@ import { matchHasEvents } from '../../../utils/teamHelpers';
 import { replaceSides } from './matchSides';
 import { transitionalTeamRef } from '../../../core/models/matchSlot';
 import { matchOrigins } from '../../../core/models/matchOrigin';
+import { ensureMatchNumbers } from '../../../core/models/matchNumbers';
 import { teamReplacedLabel } from '../../tournament-admin/constants/admin.constants';
 
 export type ReplanAvailability = 'offered' | 'refused-after-kickoff' | 'unknown';
@@ -288,7 +289,9 @@ export function applyReplan(
       referee: m.referee,
     });
   });
-  return { ...tournament, matches };
+  // C-SPIELNUMMER-FEHLT (@SL-049): der neue Plan wird in Spielplan-Reihenfolge gezählt (neue Spiele tragen noch keine
+  // Nummer); behält die Neuplanung nur Spiele mit eigener, eindeutiger Nummer, bleiben diese.
+  return { ...tournament, matches: ensureMatchNumbers(matches) };
 }
 
 export interface ReplanSession {

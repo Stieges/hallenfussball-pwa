@@ -21,5 +21,5 @@ async function zeitplanVerschieben({ asRole }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D13', title: 'Zeitplan verschieben', scenarios: [], owner: 'B-26', expectedFail: true, run: zeitplanVerschieben },
+  { id: 'D13', title: 'Zeitplan verschieben', scenarios: ['@ZP-012'], owner: 'B-26', expectedFail: true, run: zeitplanVerschieben },
 ];

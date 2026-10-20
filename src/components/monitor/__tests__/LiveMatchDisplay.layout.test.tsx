@@ -82,12 +82,12 @@ describe('Kindermodus ohne Stand (@W2A-031)', () => {
 
 describe('@ZM-140 Kasten-Rahmen und Gruppen-Text', () => {
   it('Schwarzer Kasten bekommt einen hellen Rahmen', () => {
-    render(<LiveMatchDisplay match={createMatch()} colorScheme={{ preset: 'classic', homeColor: '#000000', awayColor: '#DC2626', useTeamColors: false }} />);
+    render(<LiveMatchDisplay match={createMatch()} boxes={{ home: { fill: { kind: 'solid', color: '#000000' }, bib: false }, away: { fill: { kind: 'solid', color: '#DC2626' }, bib: false } }} />);
     expect(document.querySelector('[data-position="home"]')).toHaveStyle({ borderStyle: 'solid' });
   });
 
   it('Gelber Kasten bekommt nur den dezenten Rahmen (B-44a2: einheitlich, schmaler als bei Schwarz)', () => {
-    render(<LiveMatchDisplay match={createMatch()} colorScheme={{ preset: 'classic', homeColor: '#FDE047', awayColor: '#DC2626', useTeamColors: false }} />);
+    render(<LiveMatchDisplay match={createMatch()} boxes={{ home: { fill: { kind: 'solid', color: '#FDE047' }, bib: false }, away: { fill: { kind: 'solid', color: '#DC2626' }, bib: false } }} />);
     expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe(displayLayout.scoreArea.frameWidthSubtle);
   });
 

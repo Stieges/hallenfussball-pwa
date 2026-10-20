@@ -117,7 +117,9 @@ describe('MonitorDisplayPage — Heim/Gast der Live-Folie und nächstes Spiel (B
 
   // Ruling B-16e1 (@ZM-122): Ist die einzige Folie eine Live-Folie ohne Spiel auf ihrem Feld, gilt der Rückfall
   // (Zuschauer-QR). „Nächstes Spiel“ erscheint nicht mehr. Der frühere Stand (TuS Mitte vor Kickers West) entfällt.
-  it('Live-Folie Feld 1 nach Ende von Spiel 7, kein weiteres Spiel auf Feld 1 → Zuschauer-QR statt „Nächstes Spiel“', async () => {
+  it('Live-Folie Feld 1 nach Ende von Spiel 7, nächstes Spiel auf Feld 1 außerhalb der Vorlaufzeit → Zuschauer-QR statt „Nächstes Spiel“', async () => {
+    // Uhr: 10:00 am Turnierdatum, vor allen Anstößen und außerhalb der Vorlaufzeit (@ZM-122, @ZM-138)
+    vi.setSystemTime(new Date('2025-01-15T09:00:00Z'));
     liefere(attachMonitor(
       buildTournament({ matches: withMatch('match-7', { matchStatus: 'finished' }) }),
       withMonitor({ slides: [slide('live', { fieldId: 'field-1' })] }),

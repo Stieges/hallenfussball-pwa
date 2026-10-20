@@ -12,6 +12,7 @@ import type { LiveMatch } from '../core/models/LiveMatch';
 import { matchSideTeamId } from '../core/models/matchSlot';
 import { serverRules, type MatchContext } from '../core/match';
 import { toLiveMatchView, type LiveMatchMeta } from '../core/match/client';
+import { kickoffInstant } from '../core/view/time';
 import type { MatchEngineContextValue } from '../features/match-engine/matchEngineContextInstance';
 
 export interface ValidMatchEntry {
@@ -74,7 +75,8 @@ export function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
       number: match.matchNumber ?? match.round,
       phaseLabel: match.label ?? match.group ?? match.phase ?? '',
       fieldId: `field-${match.field}`,
-      scheduledKickoff: (match.scheduledTime ?? new Date()).toISOString(),
+      // @W5-029: Datum = Turnierdatum (wie die Cloud), nicht das Datum, das im Spiel steckt (Kopie mit neuem Datum)
+      scheduledKickoff: (kickoffInstant(tournament.startDate ?? tournament.date, match.scheduledTime) ?? new Date()).toISOString(),
       refereeName: match.referee !== undefined ? `SR ${match.referee}` : undefined,
       homeTeam: { id: ctx.teamAId, name: homeTeam.name },
       awayTeam: { id: ctx.teamBId, name: awayTeam.name },

@@ -17,6 +17,13 @@ export type GroupSystem = 'roundRobin' | 'groupsAndFinals';
 export type RoundLogic = 'fixed' | 'promotion';
 export type ResultMode = 'goals' | 'winLossOnly';
 export type TournamentStatus = 'draft' | 'published';
+/**
+ * Eröffnung bei zwei Mannschaften des Veranstalters (@W4-033): Veranstalter gegen einen Gast, Vereinsduell
+ * in Runde 2 (Voreinstellung) oder Vereinsduell als Spiel 1. Wirkt nur im Runden-Spielplan (@W4-041).
+ */
+export type OpeningMode = 'guest-opening' | 'club-derby';
+export const OPENING_MODES: readonly OpeningMode[] = ['guest-opening', 'club-derby'];
+export const DEFAULT_OPENING_MODE: OpeningMode = 'guest-opening';
 
 /**
  * Dashboard-Status für erweiterte Kategorisierung
@@ -438,10 +445,18 @@ export interface Tournament {
   organizer?: string; // Veranstalter-Name (optional)
   rulebook?: string; // Regelwerk-Text für den Ausdruck, höchstens 80 Zeichen (@DR-016)
   bibColor?: string; // A-30a @W3-029: Leibchenfarbe des Turniers (#RRGGBB), ohne Einstellung Gelb
+  spectatorDisplay?: import('../core/models/spectatorDisplay').SpectatorDisplaySettings; // Spielanzeige 2.1 @ZM-152: „Anzeige für Zuschauer“ (config-JSONB), ohne Eintrag Vorbelegung
   contactInfo?: ContactInfo; // Kontaktinformationen (optional)
 
   // Step 4: Teams
   teams: Team[];
+  /**
+   * Mannschaften des Veranstalters (@W4-027, @W4-034): Team-IDs, im `config`-JSONB gespeichert. Verwaiste IDs
+   * (Team gelöscht) gelten nicht und werden beim Speichern entfernt (@W4-044); Reihenfolge = Teamliste.
+   */
+  hostTeamIds?: string[];
+  /** Wahl der Eröffnung bei zwei Mannschaften des Veranstalters (@W4-033); ohne Wahl `DEFAULT_OPENING_MODE`. */
+  openingMode?: OpeningMode;
 
   // Generated data
   matches: Match[];

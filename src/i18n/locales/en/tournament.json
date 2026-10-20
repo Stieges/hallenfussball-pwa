@@ -47,6 +47,7 @@
       "diff": "GD",
       "points": "Pts"
     },
+    "overall": "Overall standings",
     "currentlyPlaying": "Currently playing",
     "details": {
       "played": "Played",
@@ -707,7 +708,14 @@
     "live": "Live"
   },
   "scoreCell": {
-    "correctResult": "Correct result"
+    "correctResult": "Correct result",
+    "goalsOf": "Goals {{team}}",
+    "homeFallback": "Home",
+    "awayFallback": "Away",
+    "invalidScore": "Enter whole numbers from 0 only",
+    "changedElsewhere": "Result was changed in the meantime by {{name}} (now {{score}})",
+    "changedElsewhereNoName": "Result was changed in the meantime on another device (now {{score}})",
+    "keepDraft": "Keep my entry"
   },
   "sortable": {
     "referee": "Referee",
@@ -789,18 +797,6 @@
       "referenceField": "Field is missing in this tournament – please adjust",
       "referenceGroup": "Group is missing in this tournament – please adjust"
     }
-  },
-  "colorScheme": {
-    "scoreColors": "Score Colors",
-    "homeColor": "Home Color",
-    "awayColor": "Away Color",
-    "useTeamColors": "Use team colors (if available)",
-    "schemaAria": "Color scheme: {{name}}",
-    "pickColorAria": "Pick {{label}} color: {{color}}",
-    "hexValueAria": "{{label}} hex value",
-    "recentlyUsed": "Recently used",
-    "useColorAria": "Use color {{color}}",
-    "done": "Done"
   },
   "toolbar": {
     "editSchedule": "Edit schedule",

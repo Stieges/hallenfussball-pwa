@@ -5,10 +5,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ScrollToTop } from './components/ScrollToTop';
 import { useTournaments } from './hooks/useTournaments';
 import { Tournament, TournamentStatus } from './types/tournament';
-import { generateTournamentId, generateUniqueId } from './utils/idGenerator';
-import { buildCopiedTournament } from './core/models/tournamentCopy';
+import { useCopyTournament } from './hooks/useCopyTournament';
 import { cssVars } from './design-tokens';
 import { useToast } from './components/ui/Toast';
+import { CopyTournamentDialog } from './components/dialogs/CopyTournamentDialog';
 import { ConfirmDialog, useConfirmDialog } from './components/ui/ConfirmDialog';
 import { useSyncOnReconnect } from './hooks/useSyncOnReconnect';
 import { useAuthTimeoutToast } from './hooks/useAuthTimeoutToast';
@@ -200,6 +200,9 @@ function AppContent() {
     restoreTournament,
     permanentDeleteTournament,
   } = useTournaments();
+  const copyTournament = useCopyTournament(saveTournament);
+  // @W5-028: Name der Kopie vor dem Speichern bestätigen
+  const [copySource, setCopySource] = useState<Tournament | null>(null);
 
   // ============================================================================
   // CONFIRM DIALOG HOOKS (must be called unconditionally before any returns)
@@ -422,20 +425,10 @@ function AppContent() {
   };
 
   // Handler for copying/duplicating a tournament
-  const handleCopyTournament = async (tournament: Tournament) => {
+  const handleCopyTournament = async (tournament: Tournament, title: string, startDate: string) => {
     try {
-      const now = new Date().toISOString();
-      const newId = generateTournamentId();
-
-      // Kopie mit neuen Team-/Spiel-IDs; Spielseiten über copySlot (V14), nie auf alten IDs
-      const copiedTournament = buildCopiedTournament(tournament, {
-        newId,
-        title: `${tournament.title} ${t('tournament.copySuffix')}`,
-        now,
-        makeId: generateUniqueId,
-      });
-
-      await saveTournament(copiedTournament);
+      // Eine gemeinsame Kopierlogik mit dem Admin Center (core/models/tournamentCopy, Paket KP)
+      await copyTournament(tournament, title, startDate);
       // Stay on dashboard - user can see the new tournament
     } catch (error) {
       console.error('[App] Failed to copy tournament:', error);
@@ -575,7 +568,7 @@ function AppContent() {
             onSoftDelete={(id, title) => void handleSoftDelete(id, title)}
             onRestore={(id, title) => void handleRestore(id, title)}
             onPermanentDelete={(id, title) => void handlePermanentDelete(id, title)}
-            onCopyTournament={(tournament) => void handleCopyTournament(tournament)}
+            onCopyTournament={setCopySource}
             onNavigateToLogin={() => void navigate('/login')}
             onNavigateToRegister={() => void navigate('/register')}
             onNavigateToProfile={() => void navigate('/profile')}
@@ -733,6 +726,15 @@ function AppContent() {
       )}
 
       {/* Confirm Dialogs */}
+      <CopyTournamentDialog
+        tournament={copySource}
+        onCancel={() => setCopySource(null)}
+        onConfirm={(title, startDate) => {
+          const source = copySource;
+          setCopySource(null);
+          if (source) { void handleCopyTournament(source, title, startDate); }
+        }}
+      />
       <ConfirmDialog {...softDeleteDialog.dialogProps} />
       <ConfirmDialog {...permanentDeleteDialog.dialogProps} />
     </div>

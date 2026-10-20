@@ -107,6 +107,16 @@ export const componentSizes = {
   hairline: '1px',
 } as const;
 
+/**
+ * Rahmenbreiten (Freigabe Daniel 18.10.): dünn, mittel, kräftig. `cssVars.borderWidth.thin` ist derselbe Wert.
+ * Ergebniskasten kleiner Größen: dezenter Rahmen `medium`, kräftiger Rahmen `strong`, Ring `medium`.
+ */
+export const borderWidths = {
+  thin: '1px',
+  medium: '2px',
+  strong: '3px',
+} as const;
+
 export type TouchTargetKey = keyof typeof touchTargets;
 export type IconSizeKey = keyof typeof iconSizes;
 export type InputHeightKey = keyof typeof inputHeights;

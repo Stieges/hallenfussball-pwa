@@ -5,7 +5,7 @@
  * Endstand (inkl. Verlängerung, ohne Strafstoßschießen) kommen von dort – keine eigene Statusregel, kein Rohwert.
  * Die Entscheidung bei Unentschieden ermittelt weiter dieselbe Funktion wie Spielsteuerung/Cockpit
  * (Entscheidungsregel `resolveTiebreakMode`, dieselbe wie im Anpfiff) — eine Quelle, keine zweite Ermittlung.
- * Die Dauer- und Uhrzeilen (Spieldauer, Timer) gehören zum Paket „Monitor-Uhr“ und bleiben unverändert.
+ * Die Dauer der Uhr kommt aus der Ansicht (`monitorDauerSekunden`, Paket „Monitor-Uhr“, @ZM-039, @ZM-139); der Timer bleibt unverändert.
  */
 import type { Tournament, Match, Team, TiebreakerMode } from '../../types/tournament';
 import type { LiveMatch } from '../../hooks/useLiveMatches';
@@ -35,14 +35,30 @@ const LIVE_STATUS: Record<ViewMatchStatus, LiveStatus> = {
 };
 
 /**
+ * Dauer der Monitor-Uhr in Sekunden (Paket „Monitor-Uhr“, @ZM-039, @ZM-139). Dieselbe Rechnung wie die Ansicht:
+ * `clockRules` (Abschnitte und Längen wie beim Anpfiff, Finalrunde mit eigener Dauer). In der laufenden oder angehaltenen
+ * Verlängerung zählt die Uhr bis zum Ende der Verlängerung: Uhrstand am Anpfiff der Verlängerung plus deren Länge
+ * (wie `viewDurationSeconds`). Ohne Ansichtsdaten (Spiel nicht live) bleibt die bisherige Vorgabe Gruppenspieldauer.
+ */
+function monitorDauerSekunden(shown: MatchView, tournament: Tournament): number {
+  const rules = shown.clockRules;
+  if (rules === undefined) {
+    return (tournament.groupPhaseGameDuration ?? tournament.gameDuration ?? 8) * 60;
+  }
+  const engine = shown.engine;
+  if (engine?.phase === 'overtime' && (engine.status === 'running' || engine.status === 'paused') && engine.overtimeStartSec !== undefined) {
+    return engine.overtimeStartSec + (engine.overtimeSeconds ?? rules.overtimeSeconds);
+  }
+  return rules.sections * rules.sectionSeconds;
+}
+
+/**
  * Spiel der Ansicht + Spiel des Turniers → LiveMatch-Form für LiveMatchDisplay.
  */
 export function toLiveMatch(shown: MatchView, match: Match, teams: Team[], tournament: Tournament): MonitorLiveMatch {
   // Seiten aus der Ansicht (Merge I1): besetzt → Team (Logo/Farben), offen → Herkunft bzw. „noch offen“ (Regeln der Ansicht).
   const sideOf = (side: MatchView['home'], key: 'A' | 'B') =>
     sideTeam(side, teams) ?? { id: `${match.id}:${key}`, name: side.label };
-
-  const durationMinutes = tournament.groupPhaseGameDuration ?? tournament.gameDuration ?? 8;
 
   // Derive referee name from referee number
   const refereeTeam = match.referee
@@ -57,7 +73,7 @@ export function toLiveMatch(shown: MatchView, match: Match, teams: Team[], tourn
     field: match.field,
     // Anstoß als Wanduhr des Turniers (@ZM-111), nie als UTC/ISO der Gerätezeit
     scheduledKickoff: shown.kickoff ? `${shown.kickoff.date}T${shown.kickoff.time}` : '',
-    durationSeconds: durationMinutes * 60,
+    durationSeconds: monitorDauerSekunden(shown, tournament),
     refereeName: refereeTeam?.name,
     homeTeam: sideOf(shown.home, 'A'),
     awayTeam: sideOf(shown.away, 'B'),

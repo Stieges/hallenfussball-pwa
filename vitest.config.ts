@@ -16,6 +16,7 @@ const coverageFloors = JSON.parse(readFileSync(new URL('./coverage-floors.json',
 // environment: 'node' (T7b, 2026-09-24) — keine Vermutung, sondern Messung.
 const DOM_ONLY_TS_TESTS = [
   'src/core/realtime/__tests__/RealtimeService.test.ts',
+  'src/core/realtime/__tests__/RealtimeService.neuabo.test.ts',
   'src/core/services/TournamentCreationService.release.test.ts',
   'src/core/services/TournamentCreationService.test.ts',
   'src/core/services/__tests__/GenericMutationQueue.test.ts',

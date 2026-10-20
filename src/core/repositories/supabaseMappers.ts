@@ -30,9 +30,12 @@ import type { MatchUpdate as DomainMatchUpdate } from '../models/types';
 import { RepositoryError } from '../errors';
 import { SlotSourceSchema, TeamIdSchema, type MatchSlot, type SlotSource } from '../models/schemas/MatchSlotSchema';
 import { pendingSlot, slotSource, slotTeamId, teamSlot } from '../models/matchSlot';
+import { ensureMatchNumbers, sortByMatchNumber } from '../models/matchNumbers';
 import { originFromRow, originToColumns, type MatchOriginColumns } from './matchOriginColumns';
 import { kitFromRow } from './matchKitRow';
 import { bibColorFromConfig, bibColorToConfig } from './tournamentBibColor';
+import { spectatorDisplayFromConfig, spectatorDisplayToConfig } from './tournamentSpectatorDisplay';
+import { hostTeamsFromConfig, hostTeamsToConfig } from './tournamentHostTeams';
 import { changeRevisionFromRow } from './tournamentChangeRevisionRow';
 
 // Supabase Row Types
@@ -156,12 +159,27 @@ function slotFromRow(matchId: string, side: Side, teamId: string | null, source:
 }
 
 /**
+ * Anstoß eines Spiels = Turnierdatum + Anstoßzeit (C-ANSTOSS-OHNE-DATUM, @SL-118). `matches.scheduled_start` ist nur
+ * eine Uhrzeit (`time`); ohne das Datum des Turniers rechnete das Cockpit ab dem 1.1.1970. Die Wanduhr gilt wie im
+ * Erzeuger (`parseStartTime`), in `kickoffLocal` und beim Rückschreiben (`toTimeString`) als Ortszeit des Geräts.
+ */
+function kickoffOf(tournamentDate: string, startTime: string | null): Date | undefined {
+  if (!startTime) {
+    return undefined;
+  }
+  const kickoff = new Date(`${tournamentDate.slice(0, 10)}T${startTime}`);
+  return Number.isNaN(kickoff.getTime()) ? undefined : kickoff;
+}
+
+/**
  * Maps a Supabase match row to frontend Match type.
+ *
+ * `tournamentDate`: Turnierdatum (`tournaments.date`, YYYY-MM-DD) – der Tag, an dem die Anstoßzeit liegt.
  *
  * A-02: `slotA/slotB` aus Team-ID bzw. Herkunft (siehe `slotFromRow`); A-36a: `originA/originB` aus
  * `origin_a/origin_b` (Herkunft des Platzes, `originFromRow`).
  */
-export function mapMatchFromSupabase(row: MatchRow): Match {
+export function mapMatchFromSupabase(row: MatchRow, tournamentDate: string): Match {
   const slotA = slotFromRow(row.id, 'A', row.team_a_id, row.slot_a_source);
   const slotB = slotFromRow(row.id, 'B', row.team_b_id, row.slot_b_source);
 
@@ -179,9 +197,7 @@ export function mapMatchFromSupabase(row: MatchRow): Match {
     isFinal: row.is_final ?? undefined,
     finalType: row.final_type as Match['finalType'],
     label: row.label ?? undefined,
-    scheduledTime: row.scheduled_start
-      ? new Date(`1970-01-01T${row.scheduled_start}`)
-      : undefined,
+    scheduledTime: kickoffOf(tournamentDate, row.scheduled_start),
     matchNumber: row.match_number ?? undefined,
     phase: row.phase ?? undefined,
     referee: row.referee_number ?? undefined,
@@ -481,6 +497,10 @@ interface TournamentConfig {
   useDFBKeys?: boolean;
   dfbKeyPattern?: string;
 
+  // Mannschaften des Veranstalters, Eröffnung (@W4-034)
+  hostTeamIds?: string[];
+  openingMode?: string;
+
   // Wizard state
   lastVisitedStep?: number;
 
@@ -507,8 +527,10 @@ export function mapTournamentFromSupabase(
   // Map teams
   const teams = teamRows.map(mapTeamFromSupabase);
 
-  // Map matches
-  const matches = matchRows.map((m) => mapMatchFromSupabase(m));
+  // Map matches. C-SPIELNUMMER-FEHLT (@SL-049, @ZM-007): fehlt `match_number` (Altdaten NULL), zählt die
+  // Rückfallregel in Spielplan-Reihenfolge; die Liste steht danach nach Spielnummer (die Abfrage sortiert nach
+  // der Spalte, bei NULL in beliebiger Reihenfolge).
+  const matches = sortByMatchNumber(ensureMatchNumbers(matchRows.map((m) => mapMatchFromSupabase(m, row.date))));
 
   // Parse config JSON
   const config = (row.config as TournamentConfig | null) ?? {};
@@ -587,7 +609,7 @@ export function mapTournamentFromSupabase(
     startTime: row.start_time ?? undefined,
     location,
     organizer: config.organizer,
-    rulebook: config.rulebook, ...bibColorFromConfig(config), // A-30a: Leibchenfarbe (@W3-029)
+    rulebook: config.rulebook, ...bibColorFromConfig(config), ...spectatorDisplayFromConfig(config), // A-30a: Leibchenfarbe (@W3-029); 2.1: Anzeige für Zuschauer (@ZM-152)
     contactInfo: config.contactInfo as Tournament['contactInfo'],
     teams,
     matches,
@@ -607,7 +629,7 @@ export function mapTournamentFromSupabase(
     isExternal: config.isExternal,
     externalSource: config.externalSource,
     useDFBKeys: config.useDFBKeys,
-    dfbKeyPattern: config.dfbKeyPattern,
+    dfbKeyPattern: config.dfbKeyPattern, ...hostTeamsFromConfig(config, teams), // @W4-034/@W4-044
     monitors: config.monitors as Tournament['monitors'],
     sponsors: config.sponsors as Tournament['sponsors'],
     version: row.version ?? undefined, ...changeRevisionFromRow(row), // A-10: Änderungszählung (@TM-027)
@@ -679,7 +701,7 @@ export function mapTournamentToSupabase(
     fields: tournament.fields,
     ageClass: tournament.ageClass,
     organizer: tournament.organizer,
-    rulebook: tournament.rulebook, ...bibColorToConfig(tournament), // A-30a: Leibchenfarbe (@W3-029)
+    rulebook: tournament.rulebook, ...bibColorToConfig(tournament), ...spectatorDisplayToConfig(tournament), // A-30a: Leibchenfarbe (@W3-029); 2.1: Anzeige für Zuschauer (@ZM-152)
     contactInfo: tournament.contactInfo,
     dashboardStatus: tournament.dashboardStatus,
     tournamentSystem: tournament.tournamentSystem,
@@ -694,7 +716,7 @@ export function mapTournamentToSupabase(
     externalSource: tournament.externalSource,
     sportId: tournament.sportId,
     useDFBKeys: tournament.useDFBKeys,
-    dfbKeyPattern: tournament.dfbKeyPattern,
+    dfbKeyPattern: tournament.dfbKeyPattern, ...hostTeamsToConfig(tournament), // @W4-034/@W4-044
     monitors: tournament.monitors,
     sponsors: tournament.sponsors,
     publishedAt: tournament.publishedAt,
@@ -739,7 +761,8 @@ export function mapTournamentToSupabase(
   const teamRows = tournament.teams.map((team) =>
     mapTeamToSupabase(team, tournament.id, ownerId, isPublic)
   );
-  const matchRows = tournament.matches.map((match) =>
+  // C-SPIELNUMMER-FEHLT: nie `match_number = NULL` schreiben – fehlt die Nummer lokal, gilt die Rückfallregel.
+  const matchRows = ensureMatchNumbers(tournament.matches).map((match) =>
     mapMatchToSupabase(match, tournament.id, ownerId, isPublic)
   );
 
