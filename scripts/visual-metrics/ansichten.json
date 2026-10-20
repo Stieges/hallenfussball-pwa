@@ -365,12 +365,9 @@
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/tournament/hallencup-messlauf/live",
+      "app": "/#/tournament/hallencup-messlauf/live?f=2",
       "erwarte": "[data-testid=\"scoreboard\"]",
-      "profil": "app",
-      "klick": [
-        "[data-testid=\"field-button-2\"]"
-      ]
+      "profil": "app"
     },
     {
       "id": "cockpit-meldung-foul",

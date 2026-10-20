@@ -4,37 +4,22 @@
  * @SL-140 (schmaler Kopf, keine App-Navigation, keine Fußzeile, „Zurück“ zum Spielplan, Uhr läuft weiter), @SL-005/@SL-070 (Wiederanpfiff im
  * ersten Bildschirm), @SL-157/@SL-158 (Abpfiff halten, kurzer Tipp nicht), K2 (Offline-Hinweis verdeckt die Leiste nicht), K3 (Hinweis im Fluss
  * schiebt die Leiste nicht aus dem Bild), K4 (Tastenwiederholung der Haltetaste), K13 (fünf Knöpfe ≥ 44 px, nichts abgeschnitten),
- * @SL-155/@SL-156/@SL-160/@SL-161 (Zeile „Nächstes“), N1 (@SL-061 + @SL-168: verbunden, nicht verbunden und „Verbinde …“ – der Kopf bleibt gleich hoch).
+ * @SL-155/@SL-156/@SL-160/@SL-161 (Zeile „Nächstes“), N1 (@SL-061 + @SL-168: verbunden, nicht verbunden und „Verbinde …“ – der Kopf bleibt gleich hoch),
+ * C-TAFEL-TON-UND-WARTEND-BRECHEN-ZEILE (Neuladen mitten im Spiel: „Ton aus“ und „N Einträge warten“ in einer Zeile, ohne den Ton vorher wegzutippen).
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { tippeKarte, tippeZeitstrafe } from '../helpers/cockpitNeu';
 import { abpfiffHaltenBisRueckfrage } from '../helpers/abpfiff';
-import { ID, NAMEN, NAME_50, FARBEN, cup, bild, anpfeifen, unterkante, wartendeEintraege } from '../helpers/laptopCup';
+import { ID, NAMEN, NAME_50, FARBEN, cup, bild, anpfeifen, unterkante, wartendeEintraege, anAnfangRollen, pruefeZwischenKopfUndLeiste } from '../helpers/laptopCup';
 
 const PFLICHT = ['scoreboard', 'goal-button-home', 'foul-button-home', 'penalty-button-home', 'card-button-home', 'goal-button-away', 'foul-button-away', 'penalty-button-away', 'card-button-away', 'match-pause-button', 'match-finish-button', 'match-undo-button'];
 
-const SPALTEN_TASTEN = ['scoreboard', 'goal-button-home', 'foul-button-home', 'penalty-button-home', 'card-button-home', 'goal-button-away', 'foul-button-away', 'penalty-button-away', 'card-button-away'];
-
-/** Fenster und Inhaltsbereich an den Anfang: gemessen wird, was die Turnierleitung nach dem Anpfiff ohne Zutun sieht. */
-async function anAnfangRollen(page: Page): Promise<void> {
-  await page.evaluate(() => { window.scrollTo(0, 0); document.querySelectorAll('main').forEach((m) => { m.scrollTop = 0; }); });
-}
-
-/** Jede Taste beider Teams (und die Tafel) liegt ganz zwischen Unterkante des Kopfs und Oberkante der Leiste. */
-async function pruefeZwischenKopfUndLeiste(page: Page): Promise<void> {
-  const kopf = await page.getByTestId('cockpit-slim-header').boundingBox();
-  const leiste = await page.getByRole('toolbar').boundingBox();
-  if (!kopf || !leiste) { throw new Error('Kopf oder Leiste nicht sichtbar'); }
-  const oben = Math.round(kopf.y + kopf.height);
-  const unten = Math.round(leiste.y);
-  for (const id of SPALTEN_TASTEN) {
-    const box = await page.getByTestId(id).boundingBox();
-    if (!box) { throw new Error(`${id} nicht sichtbar`); }
-    expect(Math.round(box.y), `${id}: Oberkante unter dem Kopf`).toBeGreaterThanOrEqual(oben - 1);
-    expect(Math.round(box.y + box.height), `${id}: Unterkante über der Leiste`).toBeLessThanOrEqual(unten + 1);
-  }
-}
+const mitte = async (page: Page, testId: string): Promise<number> => {
+  const box = await page.getByTestId(testId).boundingBox();
+  if (!box) { throw new Error(`${testId} nicht sichtbar`); }
+  return box.y + box.height / 2;
+};
 
 test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
   test.beforeEach(async ({ browserName: _b }, testInfo) => {
@@ -76,7 +61,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
   });
 
   test('@SL-061 Handy, schwerer Fall im Anfangszustand: alle Tasten beider Teams liegen ohne Scrollen zwischen Kopf und Leiste – C-COCKPIT-HANDY-KARTE-UNTER-LEISTE', async ({ page, seedIndexedDB }) => {
-    // Befund C-COCKPIT-HANDY-KARTE-UNTER-LEISTE (Lösung nach #298 mit kleinerer Tafel, spätestens im Cockpit-Abschluss): bei 360 × 640 reicht die Höhe im schwersten Fall (dreizeiliger Name, vier Zeitstrafen) nicht
+    // Befund C-COCKPIT-HANDY-KARTE-UNTER-LEISTE (neu bewertet nach #298, 20.10.: Tafel mit Abzeichen „Ende“/Anstoßzeit ist gemergt, der Fall bleibt rot – es fehlen noch 5 px, die Zeitstrafe-Taste endet bei 570 statt 565; Lösung: Spaltenkopf wie handy-c, Streifen und Name in einer Zeile): bei 360 × 640 reicht die Höhe im schwersten Fall (dreizeiliger Name, vier Zeitstrafen) nicht
     test.skip((page.viewportSize()?.width ?? 0) >= 1024, 'Laptop: Befund C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL');
     test.fail((page.viewportSize()?.height ?? 0) < 700, 'schwerster Fall passt bei 640 px Höhe nicht ohne Scrollen');
     await seedIndexedDB({ tournaments: [cup({ namen: [NAME_50, NAMEN[1], NAMEN[2], NAMEN[3]] })] });
@@ -97,7 +82,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
   });
 
   test('@SL-061 Laptop, schwerer Fall: der Inhaltsbereich selbst scrollt nicht – C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL', async ({ page, seedIndexedDB }) => {
-    // Befund C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL (Lösung nach #298/#288, spätestens im Cockpit-Abschluss): bei 1280 × 720 und 1024 × 768 (Leiste 80 px) fehlen im schwersten Fall (50-Zeichen-Name in Tafel und Spalte, vier Zeitstrafen, Meldezeile) rund 40 px
+    // Befund C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL (neu bewertet nach #298, 20.10.: der Fall bleibt rot, der Inhaltsbereich scrollt bei 1280 × 720 um 51 px, bei 1024 × 768 um 3 px): bei 1280 × 720 und 1024 × 768 (Leiste 80 px) fehlt im schwersten Fall (50-Zeichen-Name in Tafel und Spalte, vier Zeitstrafen, Meldezeile) Höhe
     test.fail((page.viewportSize()?.height ?? 0) < 800, 'schwerster Fall passt bei 720 und 768 px Höhe noch nicht ganz ohne Scrollen des Inhaltsbereichs');
     test.skip((page.viewportSize()?.width ?? 0) < 1024, 'nur Laptop-Anordnung');
     await seedIndexedDB({ tournaments: [cup({ namen: [NAME_50, NAMEN[1], NAMEN[2], NAMEN[3]] })] });
@@ -381,5 +366,51 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
     await expect(page.getByTestId('cockpit-naechstes-punkt-1')).toHaveCount(0);
     await expect(page.getByTestId('cockpit-naechstes')).toContainText('FC West');
     await expect(page.getByTestId('cockpit-naechstes-leibchen')).toHaveCount(0);
+  });
+
+  test('@SL-061 @SL-168 C-TAFEL-TON-UND-WARTEND-BRECHEN-ZEILE nach dem Neuladen stehen „Ton aus“ und „3 Einträge warten“ in einer Zeile, die Tafel wird nicht höher, alle Tasten liegen zwischen Kopf und Leiste – auch ohne Netz', async ({ page, context, seedIndexedDB }, testInfo) => {
+    await seedIndexedDB({ tournaments: [cup()] });
+    await anpfeifen(page);
+    await anAnfangRollen(page);
+    const tafel = page.getByTestId('scoreboard');
+    const hoeheBasis = (await tafel.boundingBox())?.height ?? 0;
+    const tasteBasis = (await page.getByTestId('goal-button-home').boundingBox())?.y ?? 0;
+
+    // Neuladen mitten im Spiel: der Ton ist wieder gesperrt und drei Einträge warten – der Ton wird NICHT weggetippt
+    await wartendeEintraege(page, 3, { tonBehalten: true });
+    const pruefe = async (anzeige: string): Promise<void> => {
+      await anAnfangRollen(page);
+      await expect(page.getByTestId('scoreboard-ton'), `${anzeige}: „Ton aus“ steht in der Tafel`).toBeVisible();
+      await expect(page.getByTestId('scoreboard-eintraege-warten'), `${anzeige}: „3 Einträge warten“ steht in der Tafel`).toContainText('3 Einträge warten');
+      // eine Zeile: Zustand, „Ton aus“ und „Einträge warten“ liegen auf derselben Mittellinie
+      const zustand = await mitte(page, 'scoreboard-state');
+      expect(Math.abs((await mitte(page, 'scoreboard-ton')) - zustand), `${anzeige}: „Ton aus“ in der Zeile des Zustands`).toBeLessThanOrEqual(2);
+      expect(Math.abs((await mitte(page, 'scoreboard-eintraege-warten')) - zustand), `${anzeige}: „Einträge warten“ in der Zeile des Zustands`).toBeLessThanOrEqual(2);
+      expect(Math.abs(((await tafel.boundingBox())?.height ?? 0) - hoeheBasis), `${anzeige}: Tafelhöhe wie nach dem Anpfiff`).toBeLessThanOrEqual(1);
+      expect(Math.abs(((await page.getByTestId('goal-button-home').boundingBox())?.y ?? 0) - tasteBasis), `${anzeige}: die Tasten springen nicht`).toBeLessThanOrEqual(1);
+      const breite = await tafel.evaluate((el) => ({ sw: el.scrollWidth, cw: el.clientWidth }));
+      expect(breite.sw, `${anzeige}: nichts ragt seitlich aus der Tafel`).toBeLessThanOrEqual(breite.cw);
+      await pruefeZwischenKopfUndLeiste(page);
+    };
+    await pruefe('mit Netz');
+    await bild(page, `${testInfo.project.name}-tafel-ton-und-wartend-online`);
+
+    await context.setOffline(true);
+    await expect(page.getByTestId('cockpit-verbindung')).toHaveAttribute('data-status', 'offline');
+    await pruefe('ohne Netz');
+    await bild(page, `${testInfo.project.name}-tafel-ton-und-wartend-offline`);
+  });
+
+  test('@SL-061 Gegenbeispiel: nach dem Antippen von „Ton aus“ verschwindet das Abzeichen, „3 Einträge warten“ bleibt und die Tafel ist gleich hoch', async ({ page, seedIndexedDB }) => {
+    await seedIndexedDB({ tournaments: [cup()] });
+    await anpfeifen(page);
+    await anAnfangRollen(page);
+    const tafel = page.getByTestId('scoreboard');
+    const hoeheBasis = (await tafel.boundingBox())?.height ?? 0;
+    await wartendeEintraege(page, 3, { tonBehalten: true });
+    await page.getByTestId('scoreboard-ton').click();
+    await expect(page.getByTestId('scoreboard-ton')).toHaveCount(0);
+    await expect(page.getByTestId('scoreboard-eintraege-warten')).toContainText('3 Einträge warten');
+    expect(Math.abs(((await tafel.boundingBox())?.height ?? 0) - hoeheBasis)).toBeLessThanOrEqual(1);
   });
 });

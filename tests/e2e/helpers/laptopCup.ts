@@ -57,7 +57,7 @@ export async function unterkante(page: Page, testId: string): Promise<number> {
  * (IndexedDB `hallenfussball-matches`, Konto „guest“) – Testdaten im Format der App, kein Eingriff in den Produktivcode.
  * Danach neu laden: der Sender zählt beim Start (`OutboxStatusBook.countCopies`) und die Verbindungsanzeige nennt „N Einträge warten“.
  */
-export async function wartendeEintraege(page: Page, anzahl: number): Promise<void> {
+export async function wartendeEintraege(page: Page, anzahl: number, { tonBehalten = false }: { tonBehalten?: boolean } = {}): Promise<void> {
   const matchId = '00000000-0000-4000-8000-000000000915';
   // Die Kopien der anderen Spiele legt die App kurz nach dem Anpfiff an: warten, bis die des späteren Spiels da ist
   await expect.poll(() => page.evaluate(({ matchId, teams, anzahl }) => new Promise<boolean>((resolve, reject) => {
@@ -84,8 +84,35 @@ export async function wartendeEintraege(page: Page, anzahl: number): Promise<voi
   }), { matchId, teams: TEAMS, anzahl }), { timeout: 15000 }).toBe(true);
   await page.reload();
   await expect(page.getByTestId('match-pause-button')).toBeVisible();
-  // Nach dem Neuladen ist der Ton wieder gesperrt (Abzeichen „Ton aus“ in der Tafel): wie Tom einmal antippen, damit die Tafel so hoch ist wie nach dem Anpfiff
+  // Nach dem Neuladen ist der Ton wieder gesperrt (Abzeichen „Ton aus“ in der Tafel). Üblich: wie Tom einmal antippen. Mit `tonBehalten`
+  // (C-TAFEL-TON-UND-WARTEND-BRECHEN-ZEILE) bleibt das Abzeichen stehen: der echte Fall „Neuladen ohne Netz“ zeigt beide gleichzeitig
   const ton = page.getByTestId('scoreboard-ton');
-  if (await ton.count() > 0) { await ton.click(); await expect(ton).toHaveCount(0); }
+  if (!tonBehalten) {
+    if (await ton.count() > 0) { await ton.click(); await expect(ton).toHaveCount(0); }
+  } else {
+    await expect(ton).toBeVisible();
+  }
   await expect(page.getByTestId('scoreboard-eintraege-warten')).toBeVisible();
+}
+
+export const SPALTEN_TASTEN = ['scoreboard', 'goal-button-home', 'foul-button-home', 'penalty-button-home', 'card-button-home', 'goal-button-away', 'foul-button-away', 'penalty-button-away', 'card-button-away'];
+
+/** Fenster und Inhaltsbereich an den Anfang: gemessen wird, was die Turnierleitung nach dem Anpfiff ohne Zutun sieht. */
+export async function anAnfangRollen(page: Page): Promise<void> {
+  await page.evaluate(() => { window.scrollTo(0, 0); document.querySelectorAll('main').forEach((m) => { m.scrollTop = 0; }); });
+}
+
+/** Jede Taste beider Teams (und die Tafel) liegt ganz zwischen Unterkante des Kopfs und Oberkante der Leiste. */
+export async function pruefeZwischenKopfUndLeiste(page: Page): Promise<void> {
+  const kopf = await page.getByTestId('cockpit-slim-header').boundingBox();
+  const leiste = await page.getByRole('toolbar').boundingBox();
+  if (!kopf || !leiste) { throw new Error('Kopf oder Leiste nicht sichtbar'); }
+  const oben = Math.round(kopf.y + kopf.height);
+  const unten = Math.round(leiste.y);
+  for (const id of SPALTEN_TASTEN) {
+    const box = await page.getByTestId(id).boundingBox();
+    if (!box) { throw new Error(`${id} nicht sichtbar`); }
+    expect(Math.round(box.y), `${id}: Oberkante unter dem Kopf`).toBeGreaterThanOrEqual(oben - 1);
+    expect(Math.round(box.y + box.height), `${id}: Unterkante über der Leiste`).toBeLessThanOrEqual(unten + 1);
+  }
 }
