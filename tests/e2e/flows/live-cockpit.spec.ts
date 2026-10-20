@@ -227,7 +227,7 @@ test.describe('Live Cockpit', () => {
       const homeTeamAfter = await page.getByTestId('team-name-home').textContent();
       const statusBadge = await page.getByTestId('scoreboard-state').textContent();
 
-      const isFinished = Boolean(statusBadge?.match(/Abgepfiffen|FINISHED|ABGESCHLOSSEN/i));
+      const isFinished = Boolean(statusBadge?.match(/Ende|Abgepfiffen|FINISHED|ABGESCHLOSSEN/i));
       const hasNavigated = homeTeamAfter !== homeTeamBefore;
 
       expect(isFinished || hasNavigated).toBeTruthy();

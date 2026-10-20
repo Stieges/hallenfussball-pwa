@@ -83,7 +83,13 @@
       "goalsFor": "GF",
       "directComparison": "H2H"
     },
-    "noPlacement": "None"
+    "noPlacement": "None",
+    "role": {
+      "co-admin": "Co-admin",
+      "collaborator": "Helper",
+      "trainer": "Coach",
+      "viewer": "Viewer"
+    }
   },
 
   "actions": {

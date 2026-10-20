@@ -47,7 +47,9 @@ function tafelHinweise(scheduledKickoff: string, jetztMs: number): string[] {
     jetztMs, fieldName: 'Feld 1', tournamentName: 'Hallencup Süd',
     vor: { anstoss: '15:15', mindestpause: null, sperrHinweise: [], leer: null, uebernahmeVon: null },
   };
-  return toScoreboardModel(input, t).hinweise;
+  // stehende Zeilen plus der Platz des Abzeichens (überfällig, @OB-068)
+  const m = toScoreboardModel(input, t);
+  return [...m.hinweise, ...(m.ueberfaelligText ? [m.ueberfaelligText] : [])];
 }
 
 describe('@SL-118 Cloud-Spiel: überfällig wird aus Turnierdatum + Anstoßzeit gerechnet', () => {

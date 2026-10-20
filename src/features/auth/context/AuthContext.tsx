@@ -15,83 +15,27 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
-import type { Session as SupabaseSession, AuthChangeEvent } from '@supabase/supabase-js';
-import { safeLocalStorage, safeSessionStorage } from '../../../core/utils/safeStorage';
+import { supabase } from '../../../lib/supabase';
+import type { Session as SupabaseSession } from '@supabase/supabase-js';
+import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import type { User, Session, ConnectionState } from '../types/auth.types';
 import type { AuthContextValue } from './authContextValue';
 import { AuthContext } from './authContextInstance';
 import { mapSupabaseUser, mapSupabaseSession } from './authMapper';
 import * as authActions from './authActions';
 import type { AuthActionDeps } from './authActions';
-import { isInvalidRefreshTokenError, clearStaleAuthState } from './authActions';
-import {
-  cacheUserProfile,
-  restoreUserFromCache,
-} from '../services/profileCacheService';
+import { cacheUserProfile } from '../services/profileCacheService';
 import { isFeatureEnabled } from '../../../config';
-import { captureFeatureError } from '../../../lib/sentry';
-import { executeWithTimeout } from '../../../core/utils/SingleFlight';
 import { useRemoteSessionCheck } from './remoteSignOut';
-import { applyAuthEventEffects, reportAuthCallbackError } from './authEventEffects';
 import { SignedOutElsewhereNotice } from '../components/SignedOutElsewhereNotice';
+import { ServerSlowNotice } from '../components/ServerSlowNotice';
+import { fetchProfile } from './fetchProfile';
+import { useAuthInit } from './useAuthInit';
+import { useAutoReconnect } from './useAutoReconnect';
+import { useCrossTabAuthSync } from './useCrossTabAuthSync';
 
 // Re-export the context for consumers
 export { AuthContext } from './authContextInstance';
-
-// ============================================================================
-// AUTH CONFIGURATION CONSTANTS
-// ============================================================================
-
-/**
- * Maximum time to wait for Supabase auth initialization.
- * After this timeout, the app falls back to offline/guest mode.
- * 15s accounts for cold starts, slow networks, and serverless function warmup.
- */
-const AUTH_INIT_TIMEOUT_MS = 15_000;
-
-/**
- * Per-call timeout for `supabase.auth.getSession()`. Set slightly lower than
- * the umbrella safetyTimeout (AUTH_INIT_TIMEOUT_MS) so the executeWithTimeout
- * wrapper rejects first and the structured catch-block fallback (cached user
- * → offline mode) runs before the broad safety net fires (Sub-Spec 1.5 F1).
- */
-const AUTH_GETSESSION_TIMEOUT_MS = 12_000;
-
-/**
- * Per-call timeout for cross-tab + reconnect `getSession()` calls.
- * Shorter than init because these paths happen after the first successful
- * connection — if they hang, we don't want to block the UI for 12 s.
- */
-const AUTH_GETSESSION_REFRESH_TIMEOUT_MS = 8_000;
-
-/**
- * Maximum number of retry attempts for transient auth errors (e.g., AbortError).
- * Uses exponential backoff: 1s, 2s, 4s, 8s, 8s
- */
-const AUTH_MAX_RETRIES = 5;
-
-/**
- * Base delay for exponential backoff (in milliseconds).
- */
-const AUTH_RETRY_BASE_DELAY_MS = 1_000;
-
-/**
- * Maximum delay between retries (cap for exponential backoff).
- */
-const AUTH_RETRY_MAX_DELAY_MS = 8_000;
-
-/**
- * Interval for periodic reconnect attempts when offline.
- */
-const AUTH_RECONNECT_INTERVAL_MS = 30_000;
-
-/**
- * Quick retry delay after transient abort errors during reconnect.
- */
-const AUTH_ABORT_RETRY_DELAY_MS = 2_000;
-
-// ============================================================================
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -106,53 +50,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
+  // Antwort des Servers steht seit mehr als 5 s aus (@AN-019, @AN-032); endet mit der Antwort.
+  const [isServerSlow, setIsServerSlow] = useState(false);
   // Jüngster updateAuthState-Aufruf: ein älteres Ergebnis darf einen neueren Zustand nicht überschreiben (A-07d2).
   const authSeqRef = useRef(0);
-
-  /**
-   * Fetches profile data from profiles table
-   */
-  const fetchProfile = useCallback(async (userId: string) => {
-    if (!isSupabaseConfigured || !supabase) {
-      return null;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('display_name, avatar_url, role')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        // PGRST116 is "No Data Found" - expected if trigger hasn't finished yet
-        // AbortError is expected in React StrictMode or during navigation
-        const isExpectedError =
-          error.code === 'PGRST116' ||
-          error.message?.includes('AbortError') ||
-          error.message?.includes('aborted');
-        if (!isExpectedError) {
-          console.warn('Profile fetch error:', error.message);
-        }
-        return null;
-      }
-
-      // Map to expected format
-      return {
-        name: data.display_name ?? '',
-        avatar_url: data.avatar_url,
-        role: (data.role as 'user' | 'admin' | null) ?? 'user',
-      };
-    } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('Profile fetch failed:', err);
-      }
-      if (err instanceof Error) {
-        captureFeatureError(err, 'auth', 'fetchProfile');
-      }
-      return null;
-    }
-  }, []);
+  // Solange die App startet (bis initAuth fertig ist): nur dann ersetzt die Nutzerkopie den fehlenden Nutzer (@AN-019).
+  const startingRef = useRef(true);
 
   /**
    * Updates auth state from Supabase session
@@ -210,382 +113,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setSession(mappedSession);
     setIsGuest(false);
     setIsLoading(false);
-  }, [fetchProfile]);
+  }, []);
 
-  // Initial auth check and subscription
-  useEffect(() => {
-    let mounted = true;
-    let subscription: { unsubscribe: () => void } | null = null;
+  // Start: Sitzung lesen, Hinweis „langsam“, Zeitgrenze, Abo der Auth-Ereignisse.
+  useAuthInit({
+    isLoading,
+    setUser,
+    setSession,
+    setIsGuest,
+    setIsLoading,
+    setConnectionState,
+    setIsServerSlow,
+    startingRef,
+    updateAuthState,
+  });
 
-    // Retry delay calculation with exponential backoff
-    const getRetryDelay = (attempt: number) =>
-      Math.min(AUTH_RETRY_BASE_DELAY_MS * Math.pow(2, attempt), AUTH_RETRY_MAX_DELAY_MS);
+  // Wiederverbindung bei „offline“ oder „Server antwortet langsam“.
+  useAutoReconnect({
+    connectionState,
+    isServerSlow,
+    setUser,
+    setSession,
+    setIsGuest,
+    setConnectionState,
+    setIsServerSlow,
+    updateAuthState,
+  });
 
-    const initAuth = async (retryCount = 0) => {
-      // Safety timeout: If auth takes too long, force loading=false to let user interact
-      // Set to 15s to allow for cold starts, slow networks, and serverless function warmup
-      const safetyTimeout = setTimeout(async () => {
-        if (mounted && isLoading) {
-          console.warn('Auth init timed out after 15s - releasing UI');
-
-          // Telemetry: capture every timeout to Sentry so we can measure how
-          // often this fires in production and on which clients (HP-5 hotfix).
-          captureFeatureError(
-            new Error('AuthInitTimeout: getSession() did not resolve within 15s'),
-            'auth',
-            'initTimeout',
-            {
-              online: typeof navigator !== 'undefined' ? navigator.onLine : null,
-              supabaseConfigured: isSupabaseConfigured,
-            },
-          );
-
-          // Sub-Spec 1.5 F2: prefer the cached user over wiping state. The user
-          // briefly stays logged in (offline mode) instead of being kicked back
-          // to a logged-out shell — which is the visible symptom of the bug we
-          // are chasing.
-          const cachedUser = await restoreUserFromCache();
-          if (cachedUser) {
-            setUser(cachedUser);
-            setConnectionState('offline');
-            setIsLoading(false);
-            try {
-              safeSessionStorage.setItem('auth:timeoutFlag', Date.now().toString());
-            } catch {
-              // sessionStorage nicht verfügbar
-            }
-            return;
-          }
-
-          // No cached user: clear stale state and release UI for guest/login.
-          setConnectionState('offline');
-          setIsLoading(false);
-          await clearStaleAuthState();
-
-          // Set flag for toast notification (read by useAuthTimeoutToast hook)
-          try {
-            safeSessionStorage.setItem('auth:timeoutFlag', Date.now().toString());
-          } catch {
-            // sessionStorage nicht verfügbar
-          }
-        }
-      }, AUTH_INIT_TIMEOUT_MS);
-
-      try {
-        // If Supabase isn't configured, just check for guest user and finish
-        if (!isSupabaseConfigured || !supabase) {
-          if (mounted) {
-            setConnectionState('offline');
-            await updateAuthState(null);
-          }
-          return;
-        }
-
-        // Get current session. Wrapped in executeWithTimeout so a hung
-        // getSession() rejects with a timeout error instead of leaving the
-        // safetyTimeout as the only escape hatch (Sub-Spec 1.5 F1).
-        // Capture client reference to satisfy the closure's type narrowing.
-        const supabaseClient = supabase;
-        const { data: { session: currentSession } } = await executeWithTimeout(
-          () => supabaseClient.auth.getSession(),
-          AUTH_GETSESSION_TIMEOUT_MS,
-        );
-
-        if (mounted) {
-          setConnectionState('connected');
-          await updateAuthState(currentSession);
-        }
-      } catch (error) {
-        // Invalid Refresh Token: another tab may have just consumed the single-use
-        // refresh token. Wait briefly and retry before clearing state.
-        if (isInvalidRefreshTokenError(error)) {
-          if (import.meta.env.DEV) {
-            console.warn('[Auth] Invalid refresh token during init - retrying after brief wait');
-          }
-
-          // Wait for the other tab to finish writing the new token to localStorage
-          await new Promise(resolve => setTimeout(resolve, 300));
-
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const { data: { session: retrySession } } = await supabase!.auth.getSession();
-            if (retrySession && mounted) {
-              // Other tab refreshed the token in time
-              if (import.meta.env.DEV) {
-                console.warn('[Auth] Recovered session after invalid refresh token retry');
-              }
-              setConnectionState('connected');
-              await updateAuthState(retrySession);
-              return;
-            }
-          } catch {
-            // Retry also failed — fall through to clear state
-          }
-
-          // Genuinely invalid — clear and force re-login
-          await clearStaleAuthState();
-          if (mounted) {
-            setUser(null);
-            setSession(null);
-            setIsGuest(false);
-            setConnectionState('connected'); // Supabase is reachable, just need re-auth
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        // AbortError is expected in React StrictMode (double mount/unmount)
-        // or during serverless cold starts. Treat as transient.
-        if (
-          (error instanceof Error && error.name === 'AbortError') ||
-          (error instanceof Error && error.message.includes('aborted'))
-        ) {
-          if (retryCount < AUTH_MAX_RETRIES) {
-            const delay = getRetryDelay(retryCount);
-            // eslint-disable-next-line no-console -- intentional debug logging for retry
-            console.debug(`Auth init aborted, retry ${retryCount + 1}/${AUTH_MAX_RETRIES} in ${delay}ms`);
-            setTimeout(() => void initAuth(retryCount + 1), delay);
-            return;
-          }
-          // Max retries reached - try to restore cached user (BUG-004 fix)
-          // eslint-disable-next-line no-console -- intentional debug logging for transient errors
-          console.debug('Auth init aborted after max retries - attempting cached user fallback:', error);
-          if (mounted) {
-            const cachedUser = await restoreUserFromCache();
-            if (cachedUser) {
-              // eslint-disable-next-line no-console -- intentional debug logging
-              console.debug('Restored cached user for offline mode:', cachedUser.email);
-              setUser(cachedUser);
-              setConnectionState('offline');
-              setIsLoading(false);
-              return;
-            }
-            // No cached user - check for guest user via updateAuthState
-            setConnectionState('offline');
-            await updateAuthState(null);
-          }
-          return;
-        }
-        if (import.meta.env.DEV) {
-          console.error('Auth init error:', error);
-        }
-        if (error instanceof Error) {
-          captureFeatureError(error, 'auth', 'initAuth');
-        }
-        if (mounted) {
-          const cachedUser = await restoreUserFromCache();
-          if (cachedUser) {
-            // eslint-disable-next-line no-console -- intentional debug logging
-            console.debug('Restored cached user after auth error:', cachedUser.email);
-            setUser(cachedUser);
-            setConnectionState('offline');
-            setIsLoading(false);
-            return;
-          }
-          // No cached user - check for guest user via updateAuthState
-          setConnectionState('offline');
-          await updateAuthState(null);
-        }
-      } finally {
-        clearTimeout(safetyTimeout);
-      }
-    };
-
-    void initAuth();
-
-    // Subscribe to auth changes (only if Supabase is configured)
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data } = supabase.auth.onAuthStateChange(
-          (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
-            // Synchron bleiben (A-07d2, C-AUTH-CALLBACK-ASYNC): die Arbeit läuft danach.
-            setTimeout(() => {
-              if (import.meta.env.DEV) {
-                // eslint-disable-next-line no-console -- Useful for auth debugging
-                console.log('Auth state change:', event);
-              }
-
-              if (mounted) {
-                // Fehlerfang (N2): sonst wäre die Ablehnung ein unbehandeltes Promise.
-                void (async () => {
-                  applyAuthEventEffects(event, newSession, setIsGuest);
-                  await updateAuthState(newSession);
-                })().catch(reportAuthCallbackError);
-              }
-            }, 0);
-          }
-        );
-        subscription = data.subscription;
-      } catch (error) {
-        // AbortError can happen in StrictMode during subscription setup
-        const isAbort = error instanceof Error && error.name === 'AbortError';
-        if (!isAbort && import.meta.env.DEV) {
-          console.error('Auth subscription error:', error);
-        }
-        if (!isAbort && error instanceof Error) {
-          captureFeatureError(error, 'auth', 'subscription');
-        }
-      }
-    }
-
-    return () => {
-      mounted = false;
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [updateAuthState]);
-
-  // Auto-reconnect when offline
-  useEffect(() => {
-    if (connectionState !== 'offline' || !isSupabaseConfigured || !supabase) {
-      return;
-    }
-
-    // Capture supabase reference for TypeScript narrowing
-    const supabaseClient = supabase;
-    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
-
-    const attemptReconnect = async () => {
-      if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
-        console.log('Attempting to reconnect to Supabase...');
-      }
-      setConnectionState('connecting');
-
-      try {
-        const { data: { session: currentSession } } = await executeWithTimeout(
-          () => supabaseClient.auth.getSession(),
-          AUTH_GETSESSION_REFRESH_TIMEOUT_MS,
-        );
-        setConnectionState('connected');
-        await updateAuthState(currentSession);
-        if (import.meta.env.DEV) {
-          // eslint-disable-next-line no-console
-          console.log('Reconnected successfully');
-        }
-      } catch (error) {
-        // Handle AbortError specifically - usually transient
-        if (
-          (error instanceof Error && error.name === 'AbortError') ||
-          (error instanceof Error && error.message.includes('aborted'))
-        ) {
-          // Debug level only - this is expected behavior on Vercel/Serverless
-          // eslint-disable-next-line no-console -- intentional debug logging for transient errors
-          console.debug('Reconnect attempt aborted (transient):', error);
-
-          // Don't set offline, just schedule a quick retry
-          if (retryTimeout) { clearTimeout(retryTimeout); }
-          retryTimeout = setTimeout(() => { void attemptReconnect(); }, AUTH_ABORT_RETRY_DELAY_MS);
-          return;
-        }
-
-        if (import.meta.env.DEV) {
-          console.warn('Reconnect failed:', error);
-        }
-        setConnectionState('offline');
-        // Schedule next retry
-        retryTimeout = setTimeout(() => { void attemptReconnect(); }, AUTH_RECONNECT_INTERVAL_MS);
-      }
-    };
-
-    // Listen for browser online event
-    const handleOnline = () => {
-      if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
-        console.log('Browser online event detected');
-      }
-      void attemptReconnect();
-    };
-
-    window.addEventListener('online', handleOnline);
-
-    // Start periodic retry after initial delay
-    retryTimeout = setTimeout(() => { void attemptReconnect(); }, AUTH_RECONNECT_INTERVAL_MS);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      if (retryTimeout) {
-        clearTimeout(retryTimeout);
-      }
-    };
-  }, [connectionState, updateAuthState]);
-
-  // Cross-tab auth sync: Listen for localStorage changes from other tabs
-  useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) {
-      return;
-    }
-
-    // Capture supabase reference for TypeScript narrowing
-    const supabaseClient = supabase;
-
-    const handleStorageChange = (event: StorageEvent) => {
-      // Supabase stores auth token with key format: sb-{project-ref}-auth-token
-      // We check for any Supabase auth token change
-      if (event.key?.startsWith('sb-') && event.key?.endsWith('-auth-token')) {
-        if (import.meta.env.DEV) {
-          // eslint-disable-next-line no-console -- Useful for auth debugging
-          console.log('Auth token changed in another tab, syncing...');
-        }
-
-        // Re-fetch session from Supabase (which reads from localStorage).
-        // Timeout-wrapped so a cross-tab event with a hung Supabase can't
-        // leak a never-resolving promise into the UI (Sub-Spec 1.5 F5).
-        void executeWithTimeout(
-          () => supabaseClient.auth.getSession(),
-          AUTH_GETSESSION_REFRESH_TIMEOUT_MS,
-        )
-          .then(({ data: { session: newSession } }) => {
-            void updateAuthState(newSession);
-          })
-          .catch((err: unknown) => {
-            if (import.meta.env.DEV) {
-              console.warn('Cross-tab getSession timed out:', err);
-            }
-          });
-      }
-
-      // Also sync guest user changes across tabs
-      if (event.key === 'auth:guestUser') {
-        if (event.newValue) {
-          // Guest user was set in another tab
-          try {
-            const guestUser = JSON.parse(event.newValue) as User;
-            if (guestUser.globalRole === 'guest') {
-              setUser(guestUser);
-              setIsGuest(true);
-              setSession(null);
-            }
-          } catch {
-            // Invalid JSON, ignore
-          }
-        } else {
-          // Guest user was removed (logged out or upgraded to real account)
-          // Re-fetch to check if there's a real session now
-          void executeWithTimeout(
-            () => supabaseClient.auth.getSession(),
-            AUTH_GETSESSION_REFRESH_TIMEOUT_MS,
-          )
-            .then(({ data: { session: newSession } }) => {
-              void updateAuthState(newSession);
-            })
-            .catch((err: unknown) => {
-              if (import.meta.env.DEV) {
-                console.warn('Cross-tab getSession (guest-removed) timed out:', err);
-              }
-            });
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [updateAuthState]);
+  // Abgleich mit anderen Fenstern (Sitzungsschlüssel, Gast).
+  useCrossTabAuthSync({ setUser, setSession, setIsGuest, updateAuthState });
 
   // Derived state
   const isAuthenticated = useMemo(() => {
@@ -617,11 +173,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser,
     setSession,
     setIsGuest,
-    setConnectionState,
+    // Aktionen setzen „verbunden“ nur nach einer Antwort des Servers (Anmelden, Wiederverbinden): der Hinweis endet.
+    setConnectionState: (state: ConnectionState) => {
+      setConnectionState(state);
+      if (state === 'connected') {
+        setIsServerSlow(false);
+      }
+    },
     setIsLoading,
     updateAuthState,
     getCurrentState: () => stateRef.current,
-  }), [fetchProfile, updateAuthState]);
+  }), [updateAuthState]);
 
   // Anderes Gerät hat abgemeldet: Sitzung beim Start, bei online und bei Sichtbarkeit prüfen (A-07d2).
   useRemoteSessionCheck(supabase, isAuthenticated, () => authActions.logout(actionDeps, { scope: 'local' }));
@@ -710,6 +272,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     updatePassword,
   };
 
-  // Globaler Hinweis „abgemeldet durch anderes Gerät“ (B2): auf /login zeigt ihn die Anmeldeseite selbst.
-  return <AuthContext.Provider value={value}>{children}<SignedOutElsewhereNotice /></AuthContext.Provider>;
+  // Globale Hinweise: „von einem anderen Gerät aus abgemeldet“ (@AN-024) und „Server antwortet langsam“ (@AN-019, @AN-032).
+  return <AuthContext.Provider value={value}><SignedOutElsewhereNotice /><ServerSlowNotice visible={isServerSlow} />{children}</AuthContext.Provider>;
 }

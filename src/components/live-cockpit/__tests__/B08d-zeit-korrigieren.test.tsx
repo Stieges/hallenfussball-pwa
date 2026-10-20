@@ -212,7 +212,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     }
     expect(zeitKnopf()).not.toBeNull(); // Gegenprobe: im laufenden Abschnitt ist die Korrektur da
     zu(420_000 + 360_000);
-    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('2:1');
     expect(zeitKnopf()).toBeNull();
   });

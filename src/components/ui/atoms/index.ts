@@ -5,3 +5,5 @@ export type { KartenSymbolProps } from './KartenSymbol';
 export { kartenFlaecheStil } from './kartenFlaeche';
 export { ScoreDraftInput } from './ScoreDraftInput';
 export type { ScoreDraftInputProps, ScoreFieldProps } from './ScoreDraftInput';
+export { TextTag } from './TextTag';
+export type { TextTagProps } from './TextTag';

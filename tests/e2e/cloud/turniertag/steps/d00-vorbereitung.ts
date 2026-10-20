@@ -33,7 +33,7 @@ function tageVor(tag: string, tage: number): string {
 }
 
 /**
- * Das Cockpit von Spiel 1 der Kopie auf EINEM Gerät: mit der Uhr 10 Minuten nach dem Anstoß steht dort „seit 10 Minuten überfällig“, 10 Minuten
+ * Das Cockpit von Spiel 1 der Kopie auf EINEM Gerät: mit der Uhr 10 Minuten nach dem Anstoß steht dort „überfällig 10 Min“ (@OB-068), 10 Minuten
  * vorher nichts von „überfällig“ (@W5-029). Der Anstoß ist das Datum der Kopie plus die Uhrzeit des Originals. Die Uhr steht fest in der Vergangenheit
  * (Datum der Kopie liegt vor dem heutigen Tag): so bleibt die Anmeldung des Geräts gültig.
  */
@@ -51,7 +51,7 @@ async function pruefeUeberfaelligkeit(seite: Page, kopieId: string, spielId: str
   const vorher = await tafelZu(new Date(anstoss.getTime() - 10 * 60_000));
   await expect(vorher, `${geraet}: 10 Minuten vor dem Anstoß ist Spiel 1 nicht überfällig`).not.toContainText(/überfällig/, { timeout: 5000 });
   const nachher = await tafelZu(new Date(anstoss.getTime() + 10 * 60_000));
-  await expect(nachher, `${geraet}: 10 Minuten nach dem Anstoß am Datum der Kopie ist Spiel 1 seit 10 Minuten überfällig`).toContainText('seit 10 Minuten überfällig', { timeout: 10000 });
+  await expect(nachher, `${geraet}: 10 Minuten nach dem Anstoß am Datum der Kopie ist Spiel 1 „überfällig 10 Min“`).toContainText('überfällig 10 Min', { timeout: 10000 });
 }
 
 /**

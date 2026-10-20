@@ -11,6 +11,7 @@ import {
     type FailedMutationItem as GenericFailedMutationItem,
 } from './GenericMutationQueue';
 import type { QueueTimers } from './mutationQueueRetry';
+import { executeMetadataMutation, type MetadataMutationPayload } from './metadataMutation';
 import { safeLocalStorage } from '../utils/safeStorage';
 
 export { MAX_RETRIES, type MutationQueueStatus } from './GenericMutationQueue';
@@ -222,6 +223,7 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                 return type === 'UPDATE_TOURNAMENT_METADATA' ? `UPDATE_METADATA:${id}` : null;
             },
             scopeOf: tournamentIdOf, // A-08f3c2 (Regel Q): Zähler und Dead-Letter je Turnier
+            wholeCopyTypes: ['SAVE_TOURNAMENT'], // @FU-106 (Auflage A1): nie aus einer verworfenen Kopie senden
 
             execute: async (item) => {
                 if (accountId) {
@@ -278,11 +280,11 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                         break;
                     }
                     case 'UPDATE_TOURNAMENT_METADATA': {
-                        const { tournamentId, metadata } = item.payload as { tournamentId: string, metadata: Partial<Tournament> };
-                        if (await skipUploadForGuestEntries(tournamentId, localRepo)) {
+                        const payload = item.payload as MetadataMutationPayload;
+                        if (await skipUploadForGuestEntries(payload.tournamentId, localRepo)) {
                             break;
                         }
-                        await supabaseRepo.updateTournamentMetadata(tournamentId, metadata);
+                        await executeMetadataMutation(supabaseRepo, localRepo, payload); // CA-3: Teilen-Rückfall bedingt (@BM-070)
                         break;
                     }
                     default:
