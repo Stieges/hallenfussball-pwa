@@ -44,6 +44,14 @@ describe('ConnectionPill', () => {
     expect(zustand.verbinden).toHaveBeenCalledTimes(1);
   });
 
+  it('@SL-168 N1 Handy ohne Netz: eine einzige Pille als Knopf, role="status" nicht um den Knopf (Kopf wird nicht höher)', () => {
+    zustand.online = false; zustand.wartend = 3;
+    render(<ConnectionPill tournamentId="t-1" />);
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getByRole('status')).toHaveTextContent('Offline, 3 Einträge warten');
+    expect(screen.getByRole('button', { name: 'Verbinden' }).closest('[role="status"]')).toBeNull();
+  });
+
   it('@SL-168 Gegenbeispiel: mit Netz zeigt der Kopf keinen Knopf „Verbinden“', () => {
     zustand.mobil = false;
     render(<ConnectionPill tournamentId="t-1" />);
