@@ -45,14 +45,14 @@ describe('MatchSummary/EventList -- Gelb-Rot (F3b2)', () => {
   it('Gelb-Rot zeigt "Gelb-Rote Karte" und das Doppel-Symbol', () => {
     renderList(redCardEvent('YELLOW_RED'));
     expect(screen.getByText(/Gelb-Rote Karte Heim/)).toBeInTheDocument();
-    expect(screen.getByText('🟨🟥')).toBeInTheDocument();
+    expect(screen.getByTestId('karten-symbol-YELLOW_RED')).toBeInTheDocument();
   });
 
   it('Gegenbeispiel: RED_CARD ohne cardType zeigt "Rote Karte" und nur das Rot-Symbol', () => {
     renderList(redCardEvent(undefined));
     expect(screen.getByText(/Rote Karte Heim/)).toBeInTheDocument();
     expect(screen.queryByText(/Gelb-Rote Karte/)).toBeNull();
-    expect(screen.getByText('🟥')).toBeInTheDocument();
+    expect(screen.getByTestId('karten-symbol-RED')).toBeInTheDocument();
   });
 });
 
@@ -74,13 +74,13 @@ describe('LiveInfoExpand -- Gelb-Rot (F3b2)', () => {
   it('Gelb-Rot zeigt "Gelb-Rote Karte" und das Doppel-Symbol', () => {
     renderExpand(flatRedCard('YELLOW_RED'));
     expect(screen.getByText(/Gelb-Rote Karte Heim/)).toBeInTheDocument();
-    expect(screen.getByText('🟨🟥')).toBeInTheDocument();
+    expect(screen.getByTestId('karten-symbol-YELLOW_RED')).toBeInTheDocument();
   });
 
   it('Gegenbeispiel: RED_CARD ohne cardType zeigt "Rote Karte" und nur das Rot-Symbol', () => {
     renderExpand(flatRedCard());
     expect(screen.getByText(/Rote Karte Heim/)).toBeInTheDocument();
     expect(screen.queryByText(/Gelb-Rote Karte/)).toBeNull();
-    expect(screen.getByText('🟥')).toBeInTheDocument();
+    expect(screen.getByTestId('karten-symbol-RED')).toBeInTheDocument();
   });
 });
