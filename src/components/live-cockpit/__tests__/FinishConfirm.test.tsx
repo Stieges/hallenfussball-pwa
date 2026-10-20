@@ -78,6 +78,15 @@ describe('FinishConfirm', () => {
       expect(p.onAbbrechen).not.toHaveBeenCalled();
     });
 
+    it('eine neue Rückfrage beginnt ohne Druck: ein Taste-runter der vorigen Rückfrage ohne Loslassen zählt nicht mehr', () => {
+      const props = { offen: true, spielNummer: 11, restText: '3:12', onBeenden: vi.fn(), onAbbrechen: vi.fn() };
+      const { rerender } = render(<FinishConfirm {...props} />);
+      fireEvent.keyDown(screen.getByRole('button', { name: 'Weiterspielen' }), { key: ' ' }); // eigener Druck, nie losgelassen
+      rerender(<FinishConfirm {...props} offen={false} />);
+      rerender(<FinishConfirm {...props} offen />);
+      expect(fireEvent.keyUp(screen.getByRole('button', { name: 'Weiterspielen' }), { key: ' ' })).toBe(false);
+    });
+
     it('Gegenbeispiel: ein eigener Druck (Taste runter und rauf auf „Weiterspielen“) beantwortet die Rückfrage wie gewohnt', async () => {
       const p = zeige();
       screen.getByRole('button', { name: 'Weiterspielen' }).focus();

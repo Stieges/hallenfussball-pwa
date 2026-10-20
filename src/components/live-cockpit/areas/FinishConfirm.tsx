@@ -8,7 +8,7 @@
  * erscheint und der Fokus auf „Weiterspielen“ springt. Die wiederholten Tastendrücke und das Loslassen dieser Taste zählen nicht:
  * nur ein Druck, der in der Rückfrage begann (Taste runter ohne Wiederholung), beantwortet sie.
  */
-import { useRef, type CSSProperties, type KeyboardEvent, type ReactElement } from 'react';
+import { useEffect, useRef, type CSSProperties, type KeyboardEvent, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../ui/Button';
@@ -31,6 +31,8 @@ export function FinishConfirm({ offen, spielNummer, restText, onBeenden, onAbbre
   const weiterRef = useRef<HTMLButtonElement>(null);
   const eigeneDruecke = useRef<Set<string>>(new Set());
   const istHaltetaste = (key: string): boolean => key === ' ' || key === 'Enter';
+  // Jede neue Rückfrage beginnt ohne Druck: ein Rest aus einer früheren zählt nicht
+  useEffect(() => { eigeneDruecke.current.clear(); }, [offen]);
   const beiTasteRunter = (e: KeyboardEvent<HTMLDivElement>): void => {
     if (!istHaltetaste(e.key)) { return; }
     if (e.repeat) { e.preventDefault(); return; }

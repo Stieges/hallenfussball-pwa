@@ -129,7 +129,20 @@ describe('Rückgängig mit 1-s-Sperre (@SL-108, @SL-107)', () => {
     expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0');
   });
 
-  it('@SL-107 die Liste der Einträge zeigt das Tor und das Foul als zurückgenommen (ein früherer, gültiger Eintrag bleibt; bei nur zurückgenommenen Einträgen zeigt die Liste nichts, U5)', async () => {
+  // Befund C-COCKPIT-LISTE-OHNE-GUELTIGE-EINTRAEGE: `takeRecent` (U5, protocolEntries.ts) blendet zurückgenommene Einträge aus, wenn kein
+  // gültiger Eintrag übrig ist. Im Gherkin-Fall (nur Foul und Tor, beide zurückgenommen) bleibt die Liste daher leer. Ziel LT-4 / 4.1.
+  it.fails('@SL-107 wörtlich: nur Foul und Tor erfasst, zweimal Rückgängig → die Liste zeigt das Tor und das Foul als zurückgenommen (Befund C-COCKPIT-LISTE-OHNE-GUELTIGE-EINTRAEGE, Ziel LT-4)', async () => {
+    const user = userEvent.setup();
+    render(<Harness />); await torUndFoul(user);
+    fireEvent.click(screen.getByTestId('match-undo-button'));
+    await waitFor(() => expect(retractCount()).toBe(1));
+    zu(208_000);
+    fireEvent.click(screen.getByTestId('match-undo-button'));
+    await waitFor(() => expect(retractCount()).toBe(2));
+    expect(await screen.findAllByTestId('event-row-retracted', {}, { timeout: 500 })).toHaveLength(2);
+  });
+
+  it('@SL-107 Zusatzfall (nicht das Gherkin-Beispiel): mit einem früheren, gültigen Eintrag zeigt die Liste Tor und Foul als zurückgenommen', async () => {
     const user = userEvent.setup();
     render(<Harness />); await torUndFoul(user, true);
     fireEvent.click(screen.getByTestId('match-undo-button'));

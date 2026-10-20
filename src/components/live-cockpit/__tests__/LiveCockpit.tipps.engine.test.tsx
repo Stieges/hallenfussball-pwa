@@ -162,7 +162,8 @@ describe('Rückgängig über die Leiste (@SL-066, @SL-038, @SL-109)', () => {
       await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent('Spielzeit 3:10'));
       zu(212_000);
       await u.click(screen.getByTestId('match-undo-button'));
-      await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent('Spielzeit 3:30'), { timeout: 500 });
+      // Zwischen der Korrektur (bei 3:10) und dem Rückgängig laufen 2 s (`zu(212_000)`): „der Stand ohne die Korrektur“ ist daher 3:32
+      await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent('Spielzeit 3:32'), { timeout: 500 });
       expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 1');
     });
 
