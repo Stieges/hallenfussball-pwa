@@ -128,7 +128,7 @@ describe('LiveCockpit: Halbzeit von selbst und Wiederanpfiff (B-08b)', () => {
     await toreHeim(user);
     await waitFor(() => expect(stand()).toHaveTextContent('1:0'));
     zu(600_000);
-    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     expect(stand()).toHaveTextContent('1:0');
     await new Promise((fertig) => { setTimeout(fertig, 700); });
     expect(ton.play).toHaveBeenCalledTimes(1);
@@ -140,7 +140,7 @@ describe('LiveCockpit: Halbzeit von selbst und Wiederanpfiff (B-08b)', () => {
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     zu(600_000);
-    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     expect(screen.queryByText('Halbzeit')).toBeNull();
     expect(screen.queryByTestId('match-wiederanpfiff-button')).toBeNull();
   });
@@ -176,7 +176,7 @@ describe('LiveCockpit: Abpfiff mit Ton und Vibration, genau einmal (B-08c)', () 
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     ton.play.mockClear();
     zu(420_000 + 360_000);
-    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     expect(stand()).toHaveTextContent('1:0');
     expect(ton.play).toHaveBeenCalledTimes(1);
     expect(vibrate).toHaveBeenCalledTimes(1);
@@ -192,7 +192,7 @@ describe('LiveCockpit: Abpfiff mit Ton und Vibration, genau einmal (B-08c)', () 
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     zu(600_000);
-    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     expect(ton.play).not.toHaveBeenCalled();
     expect(vibrate).toHaveBeenCalledTimes(1);
   });
@@ -207,7 +207,7 @@ describe('LiveCockpit: Abpfiff mit Ton und Vibration, genau einmal (B-08c)', () 
     await halte(screen.getByTestId('match-finish-button'));
     const beenden = await screen.findByRole('button', { name: 'Beenden' });
     await user.dblClick(beenden);
-    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     await new Promise((fertig) => { setTimeout(fertig, 300); });
     expect(ton.play).toHaveBeenCalledTimes(1);
     expect(vibrate).toHaveBeenCalledTimes(1);

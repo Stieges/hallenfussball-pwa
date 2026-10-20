@@ -59,7 +59,7 @@ async function spielMitEintraegen(page: Page): Promise<void> {
   await page.getByTestId('match-pause-button').click();
   await abpfiffHalten(page);
   await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
-  await expect(page.getByTestId('scoreboard-state')).toHaveText(/Abgepfiffen|Vor Anpfiff/i); // Tafel (Cockpit 2.4/2.5): nach dem Abpfiff steht Spiel 1 abgepfiffen oder die Tafel zeigt schon das nächste Spiel
+  await expect(page.getByTestId('scoreboard')).toContainText(/Ende|Anstoß/i); // Tafel (Cockpit 2.4/2.5, @OB-065/@OB-068): nach dem Abpfiff steht „Ende“ im Abzeichen, oder die Tafel zeigt schon die Anstoßzeit des nächsten Spiels bei der Uhr
 }
 
 test.describe('A-08f3e4 Sperren mit Einträgen (Gast)', () => {

@@ -31,7 +31,7 @@ export function makePhaseView(overrides: Partial<PhaseView> = {}): PhaseView {
     status: 'running', phase: 'regular', section: 2, sections: 2,
     sectionElapsedMs: 192_000, sectionLimitMs: 360_000, limitClockMs: 360_000, limitAt: null, reopenCount: 0,
     isLastRegularSection: true,
-    breakRemainingMs: null, earliestAdjustMs: 0, earliestAdjustIsGoal: false, penalties: [], shootout: null,
+    breakRemainingMs: null, quittungRestMs: null, earliestAdjustMs: 0, earliestAdjustIsGoal: false, penalties: [], shootout: null,
     clockAdjustments: [], tiebreakMode: null,
     ...overrides,
   };

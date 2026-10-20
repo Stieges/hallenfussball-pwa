@@ -54,6 +54,11 @@ export interface PhaseView {
   isLastRegularSection: boolean;
   /** Restzeit der Abschnittspause, geklemmt auf 0; `null` außerhalb der Pause. */
   breakRemainingMs: number | null;
+  /**
+   * Restzeit der Quittung nach dem Abpfiff in ms (@SL-152, 30 Sekunden ab dem Abpfiff-Ereignis), geklemmt auf 0; `null`,
+   * solange das Spiel nicht beendet ist (auch ausgefallen) oder der Abpfiff keine Zeit trägt.
+   */
+  quittungRestMs: number | null;
   /** Kleinste zulässige Uhr im Abschnitt (relativ): spätester Eintrag des Abschnitts. */
   earliestAdjustMs: number;
   /** Der spätere Eintrag, der die Untergrenze setzt, ist ein Tor (für den Hinweis im Korrektur-Dialog, B-08d). */
@@ -63,6 +68,18 @@ export interface PhaseView {
   clockAdjustments: PhaseClockAdjustment[];
   /** Entscheidungsart der K.-o.-Runde; im Gruppenspiel `null`. */
   tiebreakMode: TiebreakMode | null;
+}
+
+/** Dauer der Quittung nach dem Abpfiff in ms (@SL-152): so lange steht die Zeile „Abgepfiffen · 2:1 gespeichert“. */
+export const QUITTUNG_MS = 30_000;
+
+/** Restzeit der Quittung; nur ein beendetes Spiel mit Abpfiff-Zeitpunkt hat eine (ausgefallen: `finishedAt` bleibt `null`). */
+export function quittungRestOf(state: MatchState, serverNow: number): number | null {
+  if (state.status !== 'finished' || state.finishedAt === null) {
+    return null;
+  }
+  // nach oben auf 30 s begrenzt: liegt der Abpfiff durch eine fremde Geräteuhr in der Zukunft, steht die Zeile nicht länger
+  return Math.min(QUITTUNG_MS, Math.max(0, QUITTUNG_MS - (serverNow - state.finishedAt)));
 }
 
 /** Ereignistypen, die keine Uhr-Stellung eines Eintrags sind. */
@@ -88,6 +105,7 @@ export function phaseViewOf(state: MatchState, ctx: MatchContext, serverNow: num
     reopenCount: reopenCountOf(state),
     isLastRegularSection: state.section >= sections,
     breakRemainingMs,
+    quittungRestMs: quittungRestOf(state, serverNow),
     earliestAdjustMs: earliestAdjustOf(state).ms,
     earliestAdjustIsGoal: earliestAdjustOf(state).isGoal,
     penalties: penaltiesOf(state, elapsedMs),

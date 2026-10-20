@@ -79,7 +79,7 @@ function noticeIcon(stufe: NoticeStufe | undefined): ReactElement | undefined {
 export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
   const { match, phase, view, settings, order, size, notices, eintraegeWarten, helferAnfragen = 0, onHelferAnfragen, tonHinweis, sync, fieldName, tournamentName, leer = null, mindestpause = null, sperrHinweise = [], uebernahmeVon = null } = props;
   const { t, i18n } = useTranslation('cockpit');
-  // Takt nur vor dem Anpfiff: „seit … Minuten überfällig“ (@SL-118); sonst steht der Wert still
+  // Takt nur vor dem Anpfiff: „überfällig N Min“ (@OB-068) (@SL-118); sonst steht der Wert still
   const jetztMs = useNow(phase.zustand === 'vorAnpfiff' ? 30_000 : null);
   const kickoff = match?.scheduledKickoff;
   const model = useMemo(
@@ -90,7 +90,8 @@ export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
     }, alsUebersetzer(t)),
     [match, phase, view, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName, kickoff, mindestpause, sperrHinweise, leer, uebernahmeVon, t, i18n.language],
   );
-  const meldung = notices.aktuell;
+  // @SL-152: solange die Quittung steht, sagt sie dasselbe genauer („Abgepfiffen · 2:1 gespeichert“); nur diese Meldung entfällt
+  const meldung = notices.aktuell?.kennung === 'abgepfiffen' && model.quittungText ? null : notices.aktuell;
   return (
     <Scoreboard
       testId="scoreboard"

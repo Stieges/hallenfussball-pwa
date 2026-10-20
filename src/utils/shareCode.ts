@@ -4,9 +4,11 @@
  * Format: 6-character alphanumeric string (uppercase), avoiding ambiguous characters.
  */
 
-// Excluding I, O, 0, 1 to avoid confusion
-const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const CODE_LENGTH = 6;
+import { SHARE_CODE_ALPHABET, SHARE_CODE_LENGTH } from '../core/models/shareCode';
+
+// Excluding I, O, 0, 1 to avoid confusion (eine Quelle: core/models/shareCode.ts, wie der Server)
+const CHARS = SHARE_CODE_ALPHABET;
+const CODE_LENGTH = SHARE_CODE_LENGTH;
 
 /**
  * Generates a random share code.

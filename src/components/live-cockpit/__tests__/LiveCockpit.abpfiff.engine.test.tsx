@@ -106,12 +106,12 @@ describe('Abpfiff halten fragt nach', () => {
     expect(matchEnds()).toBe(0);
   });
 
-  it('@SL-010 „Beenden“ → genau ein Spielende, die Tafel zeigt Abgepfiffen', async () => {
+  it('@SL-010 „Beenden“ → genau ein Spielende, das Abzeichen der Tafel zeigt „Ende“ (@OB-065)', async () => {
     const user = userEvent.setup();
     render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
     await halte(screen.getByTestId('match-finish-button'));
     await user.click(await screen.findByRole('button', { name: 'Beenden' }));
-    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     expect(matchEnds()).toBe(1);
     expect(rueckfrage()).toBeNull();
   });
@@ -187,7 +187,7 @@ describe('RL2 Spielende von selbst bei offener Rückfrage', () => {
     await halte(screen.getByTestId('match-finish-button'));
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
     zu(420_000 + 360_000); // der Abschnitt läuft ab: Spielende von selbst
-    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     await waitFor(() => expect(rueckfrage()).toBeNull());
     expect(matchEnds()).toBe(1);
   });
@@ -198,7 +198,7 @@ describe('RL2 Spielende von selbst bei offener Rückfrage', () => {
     await halte(screen.getByTestId('match-finish-button'));
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
     zu(420_000 + 360_000 + 300_000);
-    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     expect(screen.queryByRole('button', { name: 'Beenden' })).toBeNull();
     expect(matchEnds()).toBe(1);
   });
@@ -225,7 +225,7 @@ describe('S3 Steuer-Verlust bei offener Rückfrage (@SL-018, Spec § 4.4)', () =
     rerender(<Harness turnier={SPIEL_11} kannSteuern />);
     expect(rueckfrage()).not.toBeNull();
     await user.click(screen.getByRole('button', { name: 'Beenden' }));
-    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     expect(matchEnds()).toBe(1);
   });
 });

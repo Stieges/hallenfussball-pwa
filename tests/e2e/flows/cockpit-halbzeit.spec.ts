@@ -3,7 +3,8 @@
  *
  * Szenarien: @SL-005 (Ablauf des ersten Abschnitts -> Halbzeit mit Pausen-Restzeit, Wiederanpfiff angeboten),
  * @SL-006 (der Wiederanpfiff startet den zweiten Abschnitt bei 0:00), @SL-009 (Ablauf der Spielzeit ->
- * Spiel abgepfiffen; der Endstand-Teil von @SL-073 ist offen: Befund C-COCKPIT-ENDSTAND-NACH-AUTOENDE); Befund C-COCKPIT-HALBZEIT-START („Start“ in der Halbzeitpause meldete
+ * Spiel abgepfiffen; der Endstand-Teil von @SL-073 ist offen: Befund C-COCKPIT-ENDSTAND-NACH-AUTOENDE; @SL-152 die Quittungszeile
+ * „Abgepfiffen · 1:0 gespeichert“ unter „Ende“, 30 Sekunden lang, dann weg); Befund C-COCKPIT-HALBZEIT-START („Start“ in der Halbzeitpause meldete
  * „Spiel fortgesetzt“, die Tafel blieb auf Halbzeit).
  *
  * Das Turnier ist so eingestellt, dass kein langes Warten nötig ist: 1 Minute Spielzeit in 2 Abschnitten = 2 x 30 Sekunden.
@@ -12,15 +13,20 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { test, expect } from '../helpers/test-fixtures';
+import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
 test.use({ colorScheme: 'light' });
+
+const TOURNAMENT_ID = 'e2e-halbzeit-tournament';
+const TEAM_IDS = ['e1', 'e2', 'e3', 'e4'].map((n) => `00000000-0000-4000-8000-0000000000${n}`);
+const SPIEL_IDS = ['00000000-0000-4000-8000-0000000009a1', '00000000-0000-4000-8000-0000000009a2'];
 
 function createTestTournament() {
   const morgen = new Date();
   morgen.setDate(morgen.getDate() + 1);
   const datum = morgen.toISOString().split('T')[0];
   return {
-    id: 'e2e-halbzeit-tournament',
+    id: TOURNAMENT_ID,
     status: 'published',
     sport: 'football',
     sportId: 'football-indoor',
@@ -50,13 +56,13 @@ function createTestTournament() {
     startDate: datum,
     startTime: '10:00',
     location: { name: 'Test-Halle' },
-    teams: [
-      { id: '00000000-0000-4000-8000-0000000000e1', name: 'FC Test A' },
-      { id: '00000000-0000-4000-8000-0000000000e2', name: 'FC Test B' },
-      { id: '00000000-0000-4000-8000-0000000000e3', name: 'FC Test C' },
-      { id: '00000000-0000-4000-8000-0000000000e4', name: 'FC Test D' },
-    ],
-    matches: [],
+    teams: TEAM_IDS.map((id, i) => ({ id, name: `FC Test ${'ABCD'[i]}`, group: 'A' })),
+    // Gespeicherter Spielplan mit festen Spiel-IDs: das Cockpit wird über die Adresse (`?matchId=`) auf Spiel 1 gepinnt (keine Spielauswahl mehr)
+    matches: [[0, 1], [2, 3]].map(([a, b], i) => ({
+      id: SPIEL_IDS[i], matchNumber: i + 1, round: i + 1, field: 1, group: 'A', phase: 'groupStage',
+      slotA: { kind: 'team', teamId: TEAM_IDS[a] }, slotB: { kind: 'team', teamId: TEAM_IDS[b] }, matchStatus: 'scheduled',
+      scheduledTime: `${datum}T${String(10 + i).padStart(2, '0')}:00:00.000Z`,
+    })),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -92,8 +98,16 @@ test.describe('Cockpit: Halbzeit, Wiederanpfiff, Abpfiff von selbst', () => {
       await page.screenshot({ path: join(bilder, `${name}-${testInfo.project.name}.png`), fullPage: false });
     };
 
+    // @SL-152: Spiel 1 über die Adresse öffnen (`?matchId=`, eine Spielauswahl gibt es nicht mehr, @SL-057), damit das Cockpit nach dem
+    // Abpfiff auf Spiel 1 bleibt (ohne Angabe springt es sofort zum folgenden) und die Quittungszeile zu sehen ist
+    await page.goto(`/#/tournament/${TOURNAMENT_ID}/live?matchId=${SPIEL_IDS[0]}`);
+    await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 10000 });
     await page.getByTestId('match-start-button').click();
     await expect(page.getByTestId('scoreboard-state')).toContainText('Live');
+    await expect(page.getByTestId('scoreboard-quittung'), '@SL-152 Gegenbeispiel: vor dem Abpfiff keine Quittungszeile').toHaveCount(0);
+    await page.getByTestId('goal-button-home').click();
+    await schliesseTorAuswahl(page);
+    await expect(page.getByTestId('scoreboard-box-links')).toHaveText('1');
     await bild('1-erster-abschnitt');
 
     // @SL-005: nach 30 Sekunden endet der erste Abschnitt von selbst; Halbzeit mit Pausen-Restzeit, Wiederanpfiff angeboten
@@ -114,10 +128,17 @@ test.describe('Cockpit: Halbzeit, Wiederanpfiff, Abpfiff von selbst', () => {
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
     await bild('3-zweiter-abschnitt');
 
-    // @SL-009: nach weiteren 30 Sekunden ist das Spiel abgepfiffen. Das Cockpit springt sofort zum nächsten Spiel
-    // (Befund C-COCKPIT-ENDSTAND-NACH-AUTOENDE, @SL-073 offen), belegt ist der Abpfiff durch die Meldung.
-    await expect(page.getByTestId('notice-line')).toContainText('abgepfiffen', { timeout: 45_000 });
-    await expect(page.getByTestId('scoreboard-state')).toContainText(/Abgepfiffen|Vor Anpfiff/);
+    // @SL-009: nach weiteren 30 Sekunden ist das Spiel abgepfiffen. Das Cockpit bleibt hier auf dem gewählten Spiel 1; ohne Wahl
+    // springt es sofort zum nächsten Spiel (Befund C-COCKPIT-ENDSTAND-NACH-AUTOENDE, @SL-073 offen). Belegt ist der Abpfiff durch „Ende“.
+    await expect(page.getByTestId('scoreboard-state')).toHaveText('Ende', { timeout: 45_000 });
+    await expect(page.getByTestId('scoreboard')).toContainText(/Ende|Anstoß/);
+
+    // @SL-152: das Abzeichen bleibt „Ende“, darunter die Quittungszeile mit dem tatsächlichen Endstand; nach 30 Sekunden ist sie weg
+    await expect(page.getByTestId('scoreboard-state')).toHaveText('Ende');
+    await expect(page.getByTestId('scoreboard-quittung')).toHaveText('Abgepfiffen · 1:0 gespeichert');
+    await expect(page.getByTestId('notice-line'), '@SL-152 keine Doppelung: „Spiel abgepfiffen“ steht nicht zusätzlich in der Meldezeile').not.toContainText('abgepfiffen');
     await bild('4-abgepfiffen');
+    await expect(page.getByTestId('scoreboard-quittung'), '@SL-152 Gegenbeispiel: nach den 30 Sekunden keine Zeile').toHaveCount(0, { timeout: 35_000 });
+    await expect(page.getByTestId('scoreboard-state')).toHaveText('Ende');
   });
 });

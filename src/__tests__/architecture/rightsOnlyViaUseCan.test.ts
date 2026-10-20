@@ -55,8 +55,28 @@ const CAN_FUNCTIONS = [
 ];
 
 const RIGHTS_PATTERN = new RegExp(
-  `\\b(useMyTournamentRole|useEffectiveTournamentRole|hasPermission|${CAN_FUNCTIONS.join('|')})\\s*\\(`,
+  `\\b(useMyTournamentRole|useEffectiveTournamentRole|hasPermission|canWithListedRole|${CAN_FUNCTIONS.join('|')})\\s*\\(`,
 );
+
+/**
+ * CA-5 (Review CA-3–5 Auflage 4): `canWithListedRole(` (useCan.ts) fragt ein Recht mit der Rolle aus `Tournament.myRole` der
+ * Startseiten-Liste. Erlaubt NUR in diesen Dateien, und dort nur dieser Aufruf (kein hasPermission( o. Ä.).
+ * Nur kürzen, nie erweitern.
+ */
+const LISTED_ROLE_CALLERS = new Set([
+  'src/components/TournamentCard.tsx',
+  'src/features/tournament-management/MonitorTransferSheet.tsx',
+]);
+const LISTED_ROLE_CALL = /\bcanWithListedRole\s*\(/g;
+
+/** Dateien, die Rechte an useCan vorbei fragen (Erlaubnisliste, Quellen und Aufrufer von canWithListedRole ausgenommen). */
+function rightsOffenders(files: ReadonlyArray<{ path: string; text: string }>): string[] {
+  return files
+    .filter((f) => RIGHTS_PATTERN.test(f.text))
+    .filter((f) => !ALLOWED.has(f.path) && !SOURCES.has(f.path))
+    .filter((f) => !(LISTED_ROLE_CALLERS.has(f.path) && !RIGHTS_PATTERN.test(f.text.replace(LISTED_ROLE_CALL, ''))))
+    .map((f) => f.path);
+}
 
 describe('A-11 Wächter: Rechte nur über useCan', () => {
   it('(a) keine Datei importiert hooks/usePermissions, und der Stub existiert nicht mehr', () => {
@@ -69,11 +89,7 @@ describe('A-11 Wächter: Rechte nur über useCan', () => {
 
   it('(b) useMyTournamentRole/useEffectiveTournamentRole/hasPermission(/can…( in App-Dateien (.ts/.tsx, auch src/hooks) nur in der Erlaubnisliste', () => {
     const appFiles = sourceFiles.filter((f) => /^src\/(features|screens|components|hooks)\/.*\.tsx?$/.test(f.path));
-    const offenders = appFiles
-      .filter((f) => RIGHTS_PATTERN.test(f.text))
-      .map((f) => f.path)
-      .filter((f) => !ALLOWED.has(f) && !SOURCES.has(f));
-    expect(offenders).toEqual([]);
+    expect(rightsOffenders(appFiles)).toEqual([]);
   });
 
   it('(b) Gegenprobe: das Muster erfasst einen .ts-Hook mit useMyTournamentRole + hasPermission( (Review A-11 A5)', () => {
@@ -81,6 +97,21 @@ describe('A-11 Wächter: Rechte nur über useCan', () => {
     expect(RIGHTS_PATTERN.test(probeHook)).toBe(true);
     expect(RIGHTS_PATTERN.test("return hasPermission (role, 'teams');")).toBe(true);
     expect(RIGHTS_PATTERN.test("const can = useCan('teams', id);")).toBe(false);
+  });
+
+  it('(b) Gegenprobe canWithListedRole (Review CA-3–5 Auflage 4): das Muster erfasst den Aufruf; eine dritte Datei fällt durch, und hasPermission( bleibt auch in den festen Aufrufern verboten', () => {
+    expect(RIGHTS_PATTERN.test("const mayDelete = canWithListedRole(role, 'deleteTournament');")).toBe(true);
+    const call = "canWithListedRole(t.myRole, 'deleteTournament')";
+    expect(rightsOffenders([{ path: 'src/components/TournamentCard.tsx', text: call }])).toEqual([]);
+    expect(rightsOffenders([{ path: 'src/components/AndereKarte.tsx', text: call }])).toEqual(['src/components/AndereKarte.tsx']);
+    expect(rightsOffenders([{ path: 'src/components/TournamentCard.tsx', text: `${call}; hasPermission(role, 'teams')` }]))
+      .toEqual(['src/components/TournamentCard.tsx']);
+  });
+
+  it('(b) die festen Aufrufer von canWithListedRole gibt es noch, und sie brauchen den Aufruf', () => {
+    for (const file of LISTED_ROLE_CALLERS) {
+      expect(readFileSync(join(ROOT, file), 'utf8'), file).toMatch(/\bcanWithListedRole\s*\(/);
+    }
   });
 
   it('(b) die Erlaubnisliste enthält nur Dateien, die es noch gibt und die sie brauchen', () => {

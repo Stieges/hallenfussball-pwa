@@ -215,12 +215,12 @@ async function gelbRot(ctx: StepContext): Promise<void> {
  */
 async function endstandQuittung({ browser }: StepContext): Promise<void> {
   const spiel = await spiel1();
-  const handy = await vorbedingung('Spiel 1 über die RPC abpfeifen, Cockpit zeigt „Abgepfiffen“ 1:0', async () => {
+  const handy = await vorbedingung('Spiel 1 über die RPC abpfeifen, Cockpit zeigt „Ende“ 1:0 (@SL-152, @OB-066)', async () => {
     const ende = finishingEvents(await fetchEngineRows(spiel.id), ergebnisEreignisse(spiel, 0, 0));
     expect((await appendOwner(spiel.id, ende)).results.map((r) => r.status), 'Abpfiff angenommen').toEqual(ende.map(() => 'accepted'));
     await expect.poll(async () => (await getRows<{ match_status: string; score_a: number; score_b: number }>(`matches?id=eq.${spiel.id}&select=match_status,score_a,score_b`, 'Spiel 1'))[0], { timeout: 10000 }).toEqual({ match_status: 'finished', score_a: 1, score_b: 0 });
     const seite = await oeffneHandy(browser, spiel);
-    await expect(seite.getByTestId('scoreboard-state')).toHaveText('Abgepfiffen', { timeout: 10000 });
+    await expect(seite.getByTestId('scoreboard-state')).toHaveText('Ende', { timeout: 10000 });
     await expect(seite.getByTestId('scoreboard-box-links')).toHaveText('1');
     await expect(seite.getByTestId('scoreboard-box-rechts')).toHaveText('0');
     return seite;

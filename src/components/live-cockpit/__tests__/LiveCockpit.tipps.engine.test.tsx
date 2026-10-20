@@ -80,7 +80,8 @@ describe('Rückgängig über die Leiste (@SL-066, @SL-038, @SL-109)', () => {
     render(<Harness />); await anpfiff(u);
     await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Live'));
     await u.click(screen.getByTestId('match-undo-button'));
-    await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Vor Anpfiff'), { timeout: 500 });
+    // vor dem Anpfiff bleibt der Abzeichen-Platz leer, die Anstoßzeit steht bei der Uhr (@OB-068)
+    await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toBeEmptyDOMElement(), { timeout: 500 });
   });
 
   it('@SL-038 @SL-109 Rückgängig nach Tor und Pause nimmt das Tor zurück, nicht die Pause', async () => {
