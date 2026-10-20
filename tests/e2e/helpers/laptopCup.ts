@@ -59,7 +59,8 @@ export async function unterkante(page: Page, testId: string): Promise<number> {
  */
 export async function wartendeEintraege(page: Page, anzahl: number): Promise<void> {
   const matchId = '00000000-0000-4000-8000-000000000915';
-  await page.evaluate(({ matchId, teams, anzahl }) => new Promise<void>((resolve, reject) => {
+  // Die Kopien der anderen Spiele legt die App kurz nach dem Anpfiff an: warten, bis die des späteren Spiels da ist
+  await expect.poll(() => page.evaluate(({ matchId, teams, anzahl }) => new Promise<boolean>((resolve, reject) => {
     const req = indexedDB.open('hallenfussball-matches');
     req.onerror = () => { reject(new Error('Spielkopie nicht lesbar')); };
     req.onsuccess = () => {
@@ -70,17 +71,17 @@ export async function wartendeEintraege(page: Page, anzahl: number): Promise<voi
       const lese = store.get(key);
       lese.onsuccess = () => {
         const record = lese.result as { key: string; value: { pending: unknown[] } } | undefined;
-        if (!record) { reject(new Error('Kopie des Spiels fehlt')); return; }
+        if (!record) { resolve(false); return; }
         record.value.pending = Array.from({ length: anzahl }, (_, i) => ({
           id: `00000000-0000-4000-8000-00000000a0${i}0`, type: 'FOUL', actor: 'leitung', at: Date.now() + i, section: 1, clockMs: 1000 * (i + 1),
           teamId: teams[0], targetId: null, payload: {},
         }));
         store.put(record);
       };
-      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.oncomplete = () => { db.close(); resolve(true); };
       tx.onerror = () => { db.close(); reject(new Error('Schreiben der Spielkopie fehlgeschlagen')); };
     };
-  }), { matchId, teams: TEAMS, anzahl });
+  }), { matchId, teams: TEAMS, anzahl }), { timeout: 15000 }).toBe(true);
   await page.reload();
   await expect(page.getByTestId('match-pause-button')).toBeVisible();
   // Nach dem Neuladen ist der Ton wieder gesperrt (Abzeichen „Ton aus“ in der Tafel): wie Tom einmal antippen, damit die Tafel so hoch ist wie nach dem Anpfiff
