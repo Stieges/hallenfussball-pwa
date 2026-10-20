@@ -49,6 +49,9 @@ export interface GenericMutationItem<TType extends string> {
 
 export const MAX_RETRIES = 5;
 
+/** @FU-106 (Auflage A1): Grund im Dead-Letter, wenn ein Eintrag aus einer verworfenen Kopie nicht gesendet wurde. */
+export const DISCARDED_COPY_ERROR = 'Turnier wurde zwischenzeitlich verändert – dieser Stand enthält eine verworfene Änderung und wurde nicht gesendet.';
+
 /**
  * A mutation that failed permanently (exceeded max retries)
  */
@@ -101,6 +104,11 @@ export interface MutationQueueConfig<TType extends string> {
     timers?: QueueTimers;
     /** A-08f3c2 (Regel Q): Bereich eines Eintrags (Turnier-ID) für `completedCount`/`hasPending`/`hasFailed`. */
     scopeOf?: (type: TType, payload: unknown) => string | null;
+    /**
+     * @FU-106 (Auflage A1, review-ca67): Typen, die den ganzen Inhalt des Bereichs tragen. Ist der Bereich nach „Verwerfen“
+     * eines Konflikts gemerkt, gehen sie nicht zum Server, sondern sofort als Konflikt in den Dead-Letter.
+     */
+    wholeCopyTypes?: readonly TType[];
 }
 
 /**
@@ -383,9 +391,15 @@ export class GenericMutationQueue<TType extends string> {
     /** @FU-106: braucht die Kopie des Bereichs den Cloud-Stand (nach „Verwerfen“ eines Konflikts)? */
     public needsCloudCopy(scope: string): boolean { return this.cloudCopyNeeded.has(scope); }
     public scopesNeedingCloudCopy(): string[] { return [...this.cloudCopyNeeded]; }
-    /** @FU-106: die Kopie hat den Cloud-Stand übernommen. */
-    public cloudCopyAdopted(scope: string): void {
+    /** @FU-106: Merkung erledigt (Cloud-Stand übernommen, Turnier am Server weg oder gelöscht). */
+    public forgetCloudCopy(scope: string): void {
         if (this.cloudCopyNeeded.delete(scope)) { this.saveCloudCopyNeeded(); }
+    }
+
+    private carriesDiscardedCopy(item: GenericMutationItem<TType>): boolean {
+        if (!this.config.wholeCopyTypes?.includes(item.type)) { return false; }
+        const scope = this.config.scopeOf?.(item.type, item.payload);
+        return !!scope && this.cloudCopyNeeded.has(scope);
     }
 
     private get cloudCopyKey(): string { return `${this.config.failedStorageKey}:cloud-copy`; }
@@ -499,6 +513,16 @@ export class GenericMutationQueue<TType extends string> {
                 if (this.disposed || !(navigator.onLine)) { break; }
 
                 const item = this.queue[0]; // Peek
+
+                // @FU-106 (Auflage A1): die gemerkte Kopie trägt einen Stand, den der Server nie bekam – nicht senden, sichtbar ablegen
+                if (this.carriesDiscardedCopy(item)) {
+                    this.queue.shift();
+                    this.moveToDeadLetter(item, DISCARDED_COPY_ERROR, true);
+                    this.save();
+                    this.lastFailure = 'permanent';
+                    this.notifyListeners();
+                    continue;
+                }
 
                 try {
                     // A-06e: gemerkter Versuch + Race gegen REQUEST_TIMEOUT_MS; A-06f Fixrunde 2: Generation am Versuch

@@ -223,6 +223,7 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                 return type === 'UPDATE_TOURNAMENT_METADATA' ? `UPDATE_METADATA:${id}` : null;
             },
             scopeOf: tournamentIdOf, // A-08f3c2 (Regel Q): Zähler und Dead-Letter je Turnier
+            wholeCopyTypes: ['SAVE_TOURNAMENT'], // @FU-106 (Auflage A1): nie aus einer verworfenen Kopie senden
 
             execute: async (item) => {
                 if (accountId) {

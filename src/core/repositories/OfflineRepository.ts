@@ -293,14 +293,17 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     private async readAndAdopt(id: string, firstCopy?: boolean): Promise<{ tournament: Tournament; whole: boolean } | null> {
         const before = this.queueGuard.snapshot(id); // A-08f3c2 (H1): Stand der Warteschlange vor dem Lesen
         const read = await withCloudReadTimeout(this.supabaseRepo.getWithMatchRevisions(id));
-        if (!read) { return null; }
+        if (!read) {
+            if (this._mutationQueue.needsCloudCopy(id)) { this._mutationQueue.forgetCloudCopy(id); } // Auflage A1: Turnier weg/unsichtbar
+            return null;
+        }
         const discarded = this._mutationQueue.needsCloudCopy(id); // @FU-106: verworfener Konflikt → ganze Kopie der Cloud
         const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined || discarded, owned: (t: Tournament) => this.owned(t),
             wholeAllowed: () => this.queueGuard.mayAdoptWhole(id, before) };
         const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => decideCloudAdoption(local, read, stored, options));
         this.serverRevisions.record(id, adoption.revisions);
         if (discarded && adoption.save !== undefined) {
-            this._mutationQueue.cloudCopyAdopted(id);
+            this._mutationQueue.forgetCloudCopy(id);
             this.cloudCopyListeners.get(id)?.forEach((listener) => listener());
         }
         return { tournament: read.tournament, whole: adoption.save !== undefined };
@@ -377,6 +380,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     async delete(id: string): Promise<void> {
         await this.localRepo.delete(id);
         this.serverRevisions.clear(id); // A-08f3b: Ablage leeren
+        this._mutationQueue.forgetCloudCopy(id); // @FU-106 (Auflage A1)
         this.mutationQueue.enqueue('DELETE_TOURNAMENT', id);
     }
 
@@ -440,7 +444,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
      */
     private mayUpload(local: Tournament, remote: Tournament | null): boolean {
         if (this.roleMemory().former.includes(local.id)) { return false; }
-        if (remote !== null && this._mutationQueue.needsCloudCopy(local.id)) { return false; } // @FU-106: verworfener Inhalt nie hochladen
+        if (this._mutationQueue.needsCloudCopy(local.id)) { return false; } // @FU-106: verworfener Inhalt nie hochladen
         return remote !== null || local.changeRevision === undefined;
     }
 
@@ -458,6 +462,11 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     // weder als Voll-Upload noch über syncTournamentDelta (dessen
                     // save/update* unten würden die Einträge ins Konto abschneiden).
                     if (await hasGuestEngineEntries(localT)) {
+                        continue;
+                    }
+                    // Auflage A2 (review-ca67, Regel Q): eigene wartende, laufende oder gescheiterte Einträge entscheidet die
+                    // Warteschlange bzw. die Klärung – syncUp schiebt die Kopie nicht daran vorbei (sonst stilles Überschreiben)
+                    if (this.queueGuard.hasOwnChanges(localT.id)) {
                         continue;
                     }
                     // Try to get from cloud to check existence/version

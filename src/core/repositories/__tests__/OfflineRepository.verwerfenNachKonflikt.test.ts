@@ -2,9 +2,10 @@
  * Fix zu Befund C-VERWERFEN-BEHAELT-VERALTETEN-STAND (Nachweis CA-6), Szenarien @FU-106 und @FU-107
  * (`plattform/2026-09-24_fundament-gemeinsamer-stand.md`):
  * „Verwerfen“ einer wegen eines Konflikts abgelehnten Änderung heißt: die eigene, nie hochgeladene Änderung aufgeben. Das Gerät
- * übernimmt danach den Stand der Cloud, und der verworfene Inhalt kommt auf keinem Weg mehr beim Server an (kein stilles
- * Überschreiben von Ollis Änderung). Gegenbeispiele: Verwerfen ohne Konflikt am Gerät des Eigentümers wie bisher; ein Turnier,
- * das nie beim Server war, bleibt auf dem Gerät (@FU-107).
+ * übernimmt danach den Stand der Cloud; bis dahin sendet es aus der verworfenen Kopie nichts (Auflage A1, review-ca67).
+ * Bekannte Restwege über mehrdeutige Versionen (zweite Speicherung während der Wiederholungen, offenes Formular mit altem Stand):
+ * Befund C-VERSION-MEHRDEUTIG, `OfflineRepository.uploadWegeRegelQ.test.ts`. Gegenbeispiele: Verwerfen ohne Konflikt am Gerät des
+ * Eigentümers wie bisher; ein Turnier, das nie beim Server war, bleibt auf dem Gerät (@FU-107).
  *
  * Echtes `OfflineRepository` + `LocalStorageRepository`, Fake-Speicher, Fake-Cloud mit CAS wie der Server (Aufbau wie
  * `OfflineRepository.mitgliedKopie.test.ts`). Ollis Änderungen laufen direkt gegen die Fake-Cloud.
@@ -187,6 +188,81 @@ describe('Verwerfen einer abgelehnten Änderung nach einem Konflikt', () => {
       await nachNeustart.get('T', { fresh: true });
 
       expect(stored()).toMatchObject({ title: 'Ollis Titel', version: 8, ownerId: MARIA });
+    });
+  });
+
+  describe('@FU-106 Auflage A1 (review-ca67): aus einer verworfenen Kopie geht nichts zum Server', () => {
+    it('@FU-106 RACE-A: Abruf nach dem Verwerfen scheitert, Maria speichert danach den Ort → Ollis Titel bleibt in der Cloud, ihr Eintrag liegt sichtbar als Konflikt im Dead-Letter', async () => {
+      const { cloud, maria, savesVorher } = await wettlauf();
+      cloud.fake.getWithMatchRevisions.mockRejectedValueOnce(new Error('Failed to fetch'));
+      verwerfen(maria);
+      await flush();
+      expect(stored()).toMatchObject({ title: 'Marias Titel' }); // Übernahme noch nicht gelungen
+      const ui = stored();
+
+      await maria.save({ ...ui, location: { ...ui.location, name: 'Halle Süd' } });
+      await flush();
+      await vi.advanceTimersByTimeAsync(FAILURE_HOLD_MS);
+      await flush();
+      await maria.get('T', { fresh: true });
+
+      expect(await cloud.fake.get('T')).toMatchObject({ title: 'Ollis Titel', version: 8 });
+      expect(cloud.fake.save.mock.calls.length).toBe(savesVorher);
+      expect(maria.mutationQueue.getFailedCount()).toBe(1);
+      expect(maria.mutationQueue.getFailedMutations()[0]).toMatchObject({ type: 'SAVE_TOURNAMENT', conflict: true });
+      expect(maria.mutationQueue.needsCloudCopy('T')).toBe(true);
+    });
+
+    it('@FU-106 RACE-A2: online speichert Maria, bevor der Abruf nach dem Verwerfen durch ist → Ollis Titel bleibt in der Cloud', async () => {
+      const { cloud, maria, savesVorher } = await wettlauf();
+      verwerfen(maria);
+      const ui = stored();
+
+      await maria.save({ ...ui, location: { ...ui.location, name: 'Halle Süd' } });
+      await flush();
+      await maria.get('T', { fresh: true });
+
+      expect(await cloud.fake.get('T')).toMatchObject({ title: 'Ollis Titel', version: 8 });
+      expect(cloud.fake.save.mock.calls.length).toBe(savesVorher);
+      expect(maria.mutationQueue.getFailedCount() + maria.mutationQueue.getPendingCount()).toBeGreaterThan(0); // sichtbar, nicht still verloren
+    });
+
+    it('Gegenbeispiel: nach gelungener Übernahme speichert Maria aus dem neuen Stand, die Änderung landet', async () => {
+      const { cloud, maria } = await wettlauf();
+      verwerfen(maria);
+      await flush();
+      const neu = stored();
+      expect(neu).toMatchObject({ title: 'Ollis Titel', version: 8 });
+
+      await maria.save({ ...neu, location: { ...neu.location, name: 'Halle Süd' } });
+      await flush();
+
+      expect(await cloud.fake.get('T')).toMatchObject({ title: 'Ollis Titel', version: 9, location: { name: 'Halle Süd' } });
+      expect(maria.mutationQueue.getFailedCount()).toBe(0);
+    });
+
+    it('die Merkung endet, wenn der Abruf das Turnier nicht mehr liefert (gelöscht oder unsichtbar); die Kopie bleibt', async () => {
+      const { cloud, maria } = await wettlauf();
+      cloud.setState({ tournament: liveCup(3, { id: 'ANDERES' }), revisions: revisions() });
+
+      verwerfen(maria);
+      await flush();
+
+      expect(maria.mutationQueue.needsCloudCopy('T')).toBe(false);
+      expect(stored()).toMatchObject({ title: 'Marias Titel' });
+    });
+
+    it('die Merkung endet, wenn Maria das Turnier auf dem Gerät löscht', async () => {
+      const { cloud, maria } = await wettlauf();
+      cloud.fake.getWithMatchRevisions.mockRejectedValueOnce(new Error('Failed to fetch'));
+      verwerfen(maria);
+      await flush();
+      expect(maria.mutationQueue.needsCloudCopy('T')).toBe(true);
+
+      net.online = false;
+      await maria.delete('T');
+
+      expect(maria.mutationQueue.needsCloudCopy('T')).toBe(false);
     });
   });
 
