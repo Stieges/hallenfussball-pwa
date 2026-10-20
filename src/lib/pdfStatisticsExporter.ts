@@ -3,6 +3,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Tournament } from '../types/tournament';
 import { calculateScorers, calculateFairPlay, type EngineEventsById } from '../utils/calculations';
+import { pdfKartenFarben } from './pdf/kartenFarben';
+import { printColors, printStroke } from '../design-tokens/print';
 
 // Reuse styles from pdfExporter (simplified)
 const PDF_STYLE = {
@@ -22,6 +24,14 @@ const PDF_STYLE = {
         sectionGap: 10,
     }
 };
+
+// Spaltenpositionen der Fair-Play-Tabelle: Pl., Team, Punkte, Gelb, Gelb-Rot, Zeit, Rot
+const COL_YELLOW = 3;
+const COL_YELLOW_RED = 4;
+const COL_RED = 6;
+const GELB_ROT_LABEL = 'Gelb-Rot';
+/** Rechter Innenrand der Gelb-Rot-Kopfzelle als Vielfaches des normalen: dort sitzt die rote Ecke. */
+const ECKE_RAND_FAKTOR = 3;
 
 export async function exportStatisticsToPDF(tournament: Tournament, engineEventsById?: EngineEventsById): Promise<void> {
     const doc = new jsPDF({
@@ -98,7 +108,7 @@ export async function exportStatisticsToPDF(tournament: Tournament, engineEvents
         startY: yPos,
         // F3b1 (PO 30.09.): keine festen Punktwerte mehr in der Kopfzeile -- die haengen vom
         // Fair-Play-Profil ab (calculateFairPlay nutzt ohne Parameter den Standard DFBNET).
-        head: [['Pl.', 'Team', 'Punkte', 'Gelb', 'Gelb-Rot', 'Zeit', 'Rot']],
+        head: [['Pl.', 'Team', 'Punkte', 'Gelb', GELB_ROT_LABEL, 'Zeit', 'Rot']],
         body: fairPlay.map((f, i) => [
             (i + 1).toString(),
             f.teamName,
@@ -110,6 +120,34 @@ export async function exportStatisticsToPDF(tournament: Tournament, engineEvents
         ]),
         styles: { fontSize: PDF_STYLE.fonts.table },
         headStyles: { fillColor: PDF_STYLE.colors.headBg, textColor: PDF_STYLE.colors.textMain, fontStyle: 'bold' },
+        // Karten-Farben nur für Karten (Oberfläche E): Kopfzellen Gelb / Gelb-Rot / Rot in Kartenfarbe, Werte aus den Karten-Tokens.
+        didParseCell: (data) => {
+            if (data.section !== 'head') { return; }
+            if (data.column.index === COL_YELLOW || data.column.index === COL_YELLOW_RED) {
+                data.cell.styles.fillColor = [...pdfKartenFarben.yellow];
+                data.cell.styles.textColor = [...pdfKartenFarben.textOnYellow];
+                if (data.column.index === COL_YELLOW_RED) {
+                    const rand = (seite: 'top' | 'bottom' | 'left' | 'right'): number => data.cell.padding(seite);
+                    data.cell.styles.cellPadding = { top: rand('top'), bottom: rand('bottom'), left: rand('left'), right: rand('right') * ECKE_RAND_FAKTOR };
+                }
+            } else if (data.column.index === COL_RED) {
+                data.cell.styles.fillColor = [...pdfKartenFarben.red];
+                data.cell.styles.textColor = [...pdfKartenFarben.textOnRed];
+            }
+        },
+        // Gelb-Rot: die Beschriftung liegt ganz auf Gelb (Tinte, gleiche Grundlinie wie die anderen Kopfzellen), Rot nur als Ecke im
+        // verbreiterten rechten Rand – nie unter der Schrift, also lesbar unabhängig vom Untergrund.
+        didDrawCell: (data) => {
+            if (data.section !== 'head' || data.column.index !== COL_YELLOW_RED) { return; }
+            const { x, y, width, height } = data.cell;
+            const ecke = data.cell.padding('right');
+            // weiße Trennlinie an der linken Kante: „Gelb“ und „Gelb-Rot“ bleiben zwei Zellen
+            doc.setDrawColor(...printColors.paper);
+            doc.setLineWidth(printStroke.thead);
+            doc.line(x, y, x, y + height);
+            doc.setFillColor(...pdfKartenFarben.red);
+            doc.triangle(x + width, y, x + width, y + height, x + width - ecke, y + height, 'F');
+        },
         margin: { left: PDF_STYLE.spacing.pageMargin.left, right: PDF_STYLE.spacing.pageMargin.right },
     });
 

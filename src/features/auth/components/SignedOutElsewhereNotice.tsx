@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
+import { useKioskRoute } from '../../../hooks/useKioskRoute';
 import { Button } from '../../../components/ui/Button';
 import {
   clearSignedOutElsewhere,
@@ -22,6 +23,7 @@ const LOGIN_PATH = '/login';
 export function SignedOutElsewhereNotice() {
   const { t } = useTranslation(['auth', 'common']);
   const { pathname } = useLocation();
+  const kiosk = useKioskRoute();
   const [visible, setVisible] = useState(hasSignedOutElsewhere);
 
   // Setzt sich der Hinweis nach dem Mount (Prüfung oder SIGNED_OUT), erscheint er sofort.
@@ -31,7 +33,7 @@ export function SignedOutElsewhereNotice() {
     return () => window.removeEventListener(SIGNED_OUT_ELSEWHERE_CHANGED, sync);
   }, []);
 
-  if (!visible || pathname === LOGIN_PATH) {
+  if (!visible || kiosk || pathname === LOGIN_PATH) {
     return null;
   }
 
