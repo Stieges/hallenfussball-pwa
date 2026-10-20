@@ -68,6 +68,8 @@ interface ScheduleDisplayProps {
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
   /** Callback when score is changed */
   onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => ScoreCommitResult;
+  /** Wer ein Spiel zuletzt geändert hat, für den Hinweis „inzwischen geändert“ der Schnelleingabe (@FU-104) */
+  changeAuthorOf?: (matchId: string) => Promise<string | null>;
   /** Match ID currently in correction mode */
   correctionMatchId?: string | null;
   /** Callback when starting correction mode */
@@ -104,6 +106,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   onRefereeChange,
   onFieldChange,
   onScoreChange,
+  changeAuthorOf,
   correctionMatchId,
   onStartCorrection,
   onMatchSwap,
@@ -244,6 +247,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onScoreChange={onScoreChange}
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
+          changeAuthorOf={changeAuthorOf}
           clockOf={clockOf}
           onMatchSwap={onMatchSwap}
           tournament={sideSource}
