@@ -270,8 +270,11 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
       // 3. Teamname, 4. Ort, 5. Anstoßzeit noch einmal
       await ollisFullSave(cup, 'teams', `id=eq.${teamId}`, { name: 'CA7 Team Z4' });
       await expectDeviceFollowsCloud(maria.page, cup, 'Änderung 3 (Teamname)', (c) => c.teamNames.includes('CA7 Team Z4'));
-      await ollisFullSave(cup, 'tournaments', `id=eq.${cup.id}`, { location_name: 'Halle Z4-4' });
-      await expectDeviceFollowsCloud(maria.page, cup, 'Änderung 4 (Ort)', (c) => c.locationName === 'Halle Z4-4');
+      // 4. Ort wieder über die App: das Voll-Speichern der App schreibt immer auch die Teams (Realtime-Anstoß). Ein PATCH nur
+      // auf `tournaments` (CI #312) ist kein Weg der App – die Tabelle ist nicht in der Realtime-Publikation (Befund
+      // C-TURNIERZEILE-OHNE-ANSTOSS), Marias Gerät läse ihn erst beim nächsten Anstoß.
+      await editLocationInApp(olli.page, cup, 'Halle Z4-4');
+      await expectDeviceFollowsCloud(maria.page, cup, 'Änderung 4 (Ort, App)', (c) => c.locationName === 'Halle Z4-4');
       const kickoffAgain = await restAsRole('owner', 'PATCH', `matches?id=eq.${cup.matchId}`, { scheduled_start: '17:15:00' });
       expect(kickoffAgain.status, kickoffAgain.text).toBeLessThan(300);
       await expect(maria.page.getByText('17:15').first()).toBeVisible({ timeout: 10000 });
@@ -300,7 +303,11 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
   /** Karte suchen, auch wenn ihr Abschnitt zugeklappt ist. */
   async function expectCard(page: Page, id: string): Promise<void> {
     await expect(page.locator('[data-testid="section-draft"]')).toBeVisible({ timeout: 15000 });
-    for (const toggle of await page.locator('[data-testid^="section-"] [aria-expanded="false"]').all()) { await toggle.click(); }
+    // je Abschnitt nur der Kopf (erstes [aria-expanded]); die „Aktionen“-Knöpfe der Karten tragen ebenfalls aria-expanded (CI #312)
+    for (const section of await page.locator('[data-testid^="section-"]').all()) {
+      const toggle = section.locator('[aria-expanded]').first();
+      if ((await toggle.getAttribute('aria-expanded')) === 'false') { await toggle.click(); }
+    }
     await expect(page.locator(cardOf(id))).toBeVisible({ timeout: 15000 });
   }
 
