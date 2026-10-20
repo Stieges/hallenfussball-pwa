@@ -18,7 +18,7 @@ import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/
 
 const BILDER = process.env.A36C_BILDER;
 const PHASE = process.env.A36C_PHASE ?? 'nachher';
-const FINALE = '00000003-0000-4000-8000-000000000015';
+const FINALE = '00000003-0000-4000-8000-000000000016';
 const GROESSEN = [{ width: 1280, height: 720 }, { width: 1920, height: 1080 }];
 
 interface Box { l: number; t: number; w: number; h: number }

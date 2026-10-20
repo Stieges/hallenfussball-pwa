@@ -11,6 +11,9 @@
 
 import type { Tournament, Match } from '../models/types';
 import { completeMatchCockpitSettings } from '../../types/tournament';
+import { ensureMatchNumbers } from '../models/matchNumbers';
+import { effectivePlacementLogic } from '../standings/placementDefaults';
+import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
 
 /**
  * Hydrates a single Match object by converting date strings to Date objects.
@@ -51,7 +54,9 @@ export function hydrateTournament(raw: unknown): Tournament {
 
   // Hydrate all matches
   const rawMatches = tournament.matches as unknown[] | undefined;
-  const hydratedMatches = rawMatches?.map(hydrateMatch) ?? [];
+  // C-SPIELNUMMER-FEHLT: lokal ohne Spielnummer gespeicherte Spiele (vor dem Fix veröffentlicht) bekommen sie nach
+  // der Rückfallregel – dieselbe Zählung wie beim Lesen aus der Cloud.
+  const hydratedMatches = ensureMatchNumbers(rawMatches?.map(hydrateMatch) ?? []);
 
   // Spielregeln „Spiel leiten“: fehlende Felder alter Konfigurationen bekommen die Vorgaben
   // (lokal gespeicherte, Gast- und per JSON wiederhergestellte Turniere; der Cloud-Pfad
@@ -60,6 +65,10 @@ export function hydrateTournament(raw: unknown): Tournament {
     ...tournament,
     matches: hydratedMatches,
     matchCockpitSettings: completeMatchCockpitSettings(tournament.matchCockpitSettings),
+    // C-WERTUNG-LEER: fehlende oder leere Reihenfolge ⇒ Voreinstellung BFV privat (@W2A-046)
+    placementLogic: effectivePlacementLogic(tournament.placementLogic as Tournament['placementLogic'] | undefined),
+    // Paket TB-B (TB-3'): fehlende oder unbrauchbare Einstellung ⇒ nur Platz 1 (Daniel K10, @W2A-066)
+    placementsToPlayOut: parsePlacementsToPlayOut(tournament.placementsToPlayOut),
   } as Tournament;
 }
 

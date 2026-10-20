@@ -14,7 +14,7 @@ import { CategoryPage, CollapsibleSection } from '../shared';
 import { PDFExportDialog } from '../../../../components/dialogs/PDFExportDialog';
 import { useCan } from '../../../auth/hooks/useCan';
 import { generateFullSchedule } from '../../../../core/generators';
-import { calculateStandings, eventsForMatch, type EngineEventsById } from '../../../../utils/calculations';
+import { calculateStandingsPerGroup, eventsForMatch, type EngineEventsById } from '../../../../utils/calculations';
 import { cardKindOf } from '../../../../utils/cardKind';
 import { useMatchEngineContextOptional } from '../../../../features/match-engine/useMatchEngineContext';
 import { loadEngineEventsForExport } from '../../../../features/match-engine/loadEngineEventsForExport';
@@ -204,7 +204,7 @@ export function ExportsCategory({
   }, [tournament]);
 
   const standings = useMemo(() => {
-    return calculateStandings(tournament.teams, tournament.matches, tournament);
+    return calculateStandingsPerGroup(tournament);
   }, [tournament]);
 
   // Backup download handler

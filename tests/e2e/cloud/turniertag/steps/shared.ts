@@ -17,6 +17,8 @@ export const TURNIERTAG_ID = E2E_TURNIERTAG_CUP_ID;
 export interface TurniertagMatch {
   id: string;
   slot: number;
+  /** Spielnummer (gespeichert seit #300, @SL-049); „Spiel 1“ bis „Spiel 16“ im Turniertag-Cup. */
+  match_number: number | null;
   field: number;
   phase: string;
   group_letter: string | null;
@@ -50,7 +52,7 @@ export async function getRows<T>(query: string, label: string): Promise<T[]> {
 /** Alle Spiele des Turniertag-Cups in Spielplan-Reihenfolge (`slot`). */
 export function fetchTurniertagMatches(): Promise<TurniertagMatch[]> {
   return getRows<TurniertagMatch>(
-    `matches?tournament_id=eq.${TURNIERTAG_ID}&order=slot.asc,field.asc,id.asc&select=id,slot,field,phase,group_letter,team_a_id,team_b_id,slot_a_source,slot_b_source,match_status,decided_by,score_a,score_b,label`,
+    `matches?tournament_id=eq.${TURNIERTAG_ID}&order=slot.asc,field.asc,id.asc&select=id,slot,match_number,field,phase,group_letter,team_a_id,team_b_id,slot_a_source,slot_b_source,match_status,decided_by,score_a,score_b,label`,
     'fetchTurniertagMatches'
   );
 }
@@ -119,7 +121,11 @@ export async function openTurniertagPath(page: Page, pathSuffix: string, tournam
  */
 export async function openSpielplanFinalrunde(page: Page): Promise<void> {
   await openTurniertagPath(page, '/schedule');
-  await page.locator('[data-testid="filter-phase"]').selectOption({ label: 'Finalrunde' });
+  const phase = page.locator('[data-testid="filter-phase"]');
+  await phase.selectOption({ label: 'Finalrunde' });
+  // Der Filter steht in der Adresse (`p=finals`, @OB-029) und wirkt erst nach der Navigation: auf die Wirkung warten.
+  await expect(page).toHaveURL(/[?&]p=finals/);
+  await expect(phase).toHaveValue('finals');
 }
 
 /**
@@ -152,6 +158,8 @@ export async function finalrundeLabels(page: Page): Promise<string[]> {
     }
   };
   await expect(async () => {
+    // Jeder Versuch sammelt neu: Beschriftungen aus einem Versuch vor dem gefilterten Rendern dürfen nicht bleiben.
+    orderByLabel.clear();
     for (const fraction of [0, 0.4, 0.7, 1]) {
       await page.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), fraction);
       await page.waitForTimeout(250);

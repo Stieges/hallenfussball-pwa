@@ -19,11 +19,9 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  useSortable,
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { cssVars, shadowSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import type { SpectatorClock } from '../../core/view';
@@ -32,6 +30,7 @@ import type { ScoreCommitResult } from '../ui/molecules';
 import { buildSideContext, matchViewOf, sideDisplay, sideName, type SideSource } from './matchSides';
 import { finalMatchLabel } from './finalMatchLabel';
 import { MatchScoreCell } from './MatchScoreCell';
+import { FinalSortableRow } from './FinalSortableRow';
 import { FinalStageMobileCard } from './FinalStageMobileCard';
 import { cardStatusOf, resultFigures, type ResultFigures } from './matchResult';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
@@ -55,6 +54,8 @@ interface FinalStageScheduleProps {
   pendingChanges?: PendingChanges;
   correctionMatchId?: string | null;
   onStartCorrection?: (matchId: string) => void;
+  /** Wer ein Spiel zuletzt geändert hat, für den Hinweis „inzwischen geändert“ der Schnelleingabe (@FU-104) */
+  changeAuthorOf?: (matchId: string) => Promise<string | null>;
   clockOf?: (matchId: string) => SpectatorClock | null; // Restzeit laufender Spiele (@ZM-162)
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
   onMatchSwap?: (matchId1: string, matchId2: string) => void;
@@ -77,6 +78,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   pendingChanges,
   correctionMatchId,
   onStartCorrection,
+  changeAuthorOf,
   clockOf,
   onMatchSwap,
   showTitle = true,
@@ -154,69 +156,6 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
 
   // Get active match for drag overlay
   const activeMatch = activeId ? sortedMatches.find(m => m.id === activeId) : null;
-
-  // SortableRow component for final matches - uses useSortable for smooth animations
-  // Drag listeners are only attached to the drag handle, not the entire row
-  interface SortableRowRenderProps {
-    attributes: ReturnType<typeof useSortable>['attributes'];
-    listeners: ReturnType<typeof useSortable>['listeners'];
-    canDrag: boolean;
-    isDragging: boolean;
-  }
-
-  const SortableRow: React.FC<{
-    match: ScheduledMatch;
-    children: (props: SortableRowRenderProps) => React.ReactNode;
-  }> = ({ match, children }) => {
-    const isRunning = statusOf(match) === 'running';
-    const isFinished = statusOf(match) === 'finished';
-    const canDrag = !!(editingSchedule && onMatchSwap && !isRunning && !isFinished);
-
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-      isOver,
-    } = useSortable({
-      id: match.id,
-      disabled: !canDrag,
-    });
-
-    // Apply transform and transition for smooth animations
-    const style: CSSProperties = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      ...(isRunning ? { backgroundColor: cssVars.colors.statusLiveRowBg } : {}),
-      ...(editingSchedule && canDrag ? {
-        outline: `2px solid ${cssVars.colors.accent}`,
-        outlineOffset: '-1px',
-      } : {}),
-      // When THIS row is being dragged: show as placeholder
-      ...(isDragging ? {
-        opacity: 0.4,
-        backgroundColor: cssVars.colors.editorSwapBg,
-        outline: `2px dashed ${cssVars.colors.accent}`,
-        outlineOffset: '-1px',
-        zIndex: 0,
-      } : {}),
-      // When another row is dragged OVER this one: highlight as drop target
-      ...(isOver && !isDragging ? {
-        backgroundColor: cssVars.colors.editorSwapActive,
-        outline: `3px solid ${cssVars.colors.accent}`,
-        outlineOffset: '-1px',
-        boxShadow: shadowSemantics.dropTargetGlow,
-      } : {}),
-    };
-
-    return (
-      <tr ref={setNodeRef} style={style}>
-        {children({ attributes, listeners, canDrag, isDragging })}
-      </tr>
-    );
-  };
 
   if (matches.length === 0) {
     return (
@@ -329,7 +268,14 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
           const result = resultFigures(rowView?.score, status);
 
           return (
-            <SortableRow key={match.id} match={match}>
+            <FinalSortableRow
+              key={match.id}
+              matchId={match.id}
+              isRunning={isRunning}
+              isFinished={status === 'finished'}
+              editingSchedule={editingSchedule}
+              canSwap={onMatchSwap !== undefined}
+            >
               {({ attributes, listeners, canDrag, isDragging }) => (
                 <>
                   {editingSchedule && (
@@ -397,6 +343,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                       nameB={sideName(match, 'B', sides)}
                       onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
                       onStartCorrection={onStartCorrection ? () => onStartCorrection(match.id) : undefined}
+                      changeAuthorOf={changeAuthorOf}
                     />
                   </td>
                   <td style={{
@@ -422,7 +369,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   })()}
                 </>
               )}
-            </SortableRow>
+            </FinalSortableRow>
           );
         })}
       </tbody>
@@ -554,6 +501,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               inCorrectionMode={correctionMatchId === match.id}
               onScoreChange={onScoreChange}
               onStartCorrection={onStartCorrection}
+              changeAuthorOf={changeAuthorOf}
               showReferees={!!showReferees}
               showFields={showFields}
               editingSchedule={editingSchedule}

@@ -21,7 +21,8 @@ a11_mark() {
 a11_probe() {
   local role="$1" uid="$2" visible_sql="$3" write_sql="$4" check_sql="$5" setup_sql="${6:-}"
   local sub_line="" out ec visible rows check
-  [[ -n "$uid" ]] && sub_line="SET LOCAL request.jwt.claim.sub = '$uid';"
+  # A-27: anonyme Identitaeten tragen zusaetzlich is_anonymous (claims_line im Hauptskript).
+  [[ -n "$uid" ]] && sub_line="SET LOCAL request.jwt.claim.sub = '$uid'; $(claims_line "$uid")"
   set +e
   out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -A -v ON_ERROR_STOP=0 <<SQL 2>&1
 BEGIN;

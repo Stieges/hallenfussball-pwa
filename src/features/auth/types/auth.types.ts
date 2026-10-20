@@ -29,15 +29,17 @@ export type GlobalRole = 'guest' | 'user' | 'admin';
  * - owner: Ersteller, volle Kontrolle, kann Ownership übertragen
  * - co-admin: Stellvertreter, alles außer Turnier löschen/Owner ändern
  * - trainer: Verwaltet zugewiesene Teams, gibt Ergebnisse für eigene Teams ein
- * - collaborator: Kann alle Ergebnisse eingeben
+ * - collaborator: Kann alle Ergebnisse eingeben (Helfer mit Konto, alter Einladungsweg)
  * - viewer: Nur lesen
+ * - helper: Helfer-Zugang eines Geräts ohne Konto (A-27): nur Spielbetrieb; entsteht nur über den Beitritt (A-16)
+ * - screen: gekoppelter Bildschirm (A-27): zeigt das Turnier an; entsteht nur über die Kopplung (B-20)
+ *
+ * Zwilling des SQL-CHECK `tournament_collaborators_role_check` (20261110_002_device_roles.sql),
+ * geprüft in src/__tests__/architecture/rolePermissionsTwins.test.ts.
  */
-export type TournamentRole =
-  | 'owner'
-  | 'co-admin'
-  | 'trainer'
-  | 'collaborator'
-  | 'viewer';
+export const TOURNAMENT_ROLES = ['owner', 'co-admin', 'trainer', 'collaborator', 'viewer', 'helper', 'screen'] as const;
+
+export type TournamentRole = (typeof TOURNAMENT_ROLES)[number];
 
 // ============================================
 // USER (globaler Account)
@@ -299,6 +301,14 @@ export const ROLE_LABELS: Record<TournamentRole, { label: string; description: s
   viewer: {
     label: 'Zuschauer',
     description: 'Kann nur ansehen',
+  },
+  helper: {
+    label: 'Helfer',
+    description: 'Kann Spiele leiten und eintragen',
+  },
+  screen: {
+    label: 'Bildschirm',
+    description: 'Zeigt das Turnier an',
   },
 };
 

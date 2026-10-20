@@ -174,7 +174,7 @@ describe('mapMatchFromSupabase', () => {
   // A-02: Namens-/Platzhalter-Auflösung entfällt – Ersatz in supabaseMappers.slots.test.ts
   // („@TM-027 gesetzte Team-ID wird zum Team-Slot …“, „Seite ohne Team-ID und ohne Herkunft scheitert laut“).
   it('A-36a: kein Übergangsfeld teamA/teamB, die Seiten stehen im Slot (Ersatz für "resolves team names via teamIdToName map")', () => {
-    const match = mapMatchFromSupabase(matchRow());
+    const match = mapMatchFromSupabase(matchRow(), '2026-01-15');
 
     expect('teamA' in match || 'teamB' in match).toBe(false);
     expect(match.slotA).toEqual({ kind: 'team', teamId: TEAM_1 });
@@ -182,7 +182,7 @@ describe('mapMatchFromSupabase', () => {
 
   it('constructs Date from scheduled_start time string', () => {
     const row = matchRow({ scheduled_start: '14:30:00' });
-    const match = mapMatchFromSupabase(row);
+    const match = mapMatchFromSupabase(row, '2026-01-15');
 
     expect(match.scheduledTime).toBeInstanceOf(Date);
     expect(match.scheduledTime!.getHours()).toBe(14);
@@ -191,18 +191,18 @@ describe('mapMatchFromSupabase', () => {
 
   it('returns undefined scheduledTime when scheduled_start is null', () => {
     const row = matchRow({ scheduled_start: null });
-    const match = mapMatchFromSupabase(row);
+    const match = mapMatchFromSupabase(row, '2026-01-15');
 
     expect(match.scheduledTime).toBeUndefined();
   });
 
   it('maps match status with default', () => {
     const row = matchRow({ match_status: 'live' });
-    const match = mapMatchFromSupabase(row);
+    const match = mapMatchFromSupabase(row, '2026-01-15');
     expect(match.matchStatus).toBe('live');
 
     const rowDefault = matchRow({ match_status: null });
-    const matchDefault = mapMatchFromSupabase(rowDefault);
+    const matchDefault = mapMatchFromSupabase(rowDefault, '2026-01-15');
     expect(matchDefault.matchStatus).toBe('scheduled');
   });
 
@@ -219,7 +219,7 @@ describe('mapMatchFromSupabase', () => {
       penalty_score_b: 3,
       decided_by: 'penalty',
     });
-    const match = mapMatchFromSupabase(row);
+    const match = mapMatchFromSupabase(row, '2026-01-15');
 
     expect(match.scoreA).toBe(3);
     expect(match.scoreB).toBe(1);
@@ -241,7 +241,7 @@ describe('mapMatchFromSupabase', () => {
       phase: 'semifinal',
       match_number: 13,
     });
-    const match = mapMatchFromSupabase(row);
+    const match = mapMatchFromSupabase(row, '2026-01-15');
 
     expect(match.isFinal).toBe(true);
     expect(match.finalType).toBe('semifinal');

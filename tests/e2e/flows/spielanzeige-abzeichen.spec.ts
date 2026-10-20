@@ -13,7 +13,7 @@ import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/
 
 const HANDY = { width: 360, height: 640 };
 const MONITOR = { width: 1280, height: 720 };
-const FINALE = '00000003-0000-4000-8000-000000000015';
+const FINALE = '00000003-0000-4000-8000-000000000016';
 const KEINE_UHR = /^[^\d]*$/;
 
 async function oeffne(page: Page, groesse: { width: number; height: number }, route: string, erwarte: string) {
@@ -54,7 +54,7 @@ test.describe('@OB-065 Das Abzeichen „Live“ ist überall dasselbe', () => {
 
   test('@OB-065 Gegenbeispiel: ein geplantes Spiel (Spiel um Platz 3) trägt kein Abzeichen', async ({ page }) => {
     await oeffne(page, HANDY, '/#/live/MESS26', '[data-testid^="final-card-"]');
-    const platz3 = page.locator('[data-testid="final-card-00000003-0000-4000-8000-000000000016"]');
+    const platz3 = page.locator('[data-testid="final-card-00000003-0000-4000-8000-000000000015"]');
     await expect(platz3.locator('[data-testid^="final-live-"], [data-testid="match-status-badge"]')).toHaveCount(0);
   });
 });

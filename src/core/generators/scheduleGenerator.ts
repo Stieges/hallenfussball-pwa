@@ -9,7 +9,8 @@
  */
 
 import { Team, Match, Tournament } from '../../types/tournament';
-import { generateGroupPhaseSchedule } from './fairScheduler'
+import { generateGroupPhaseScheduleWithReport } from './fairScheduler'
+import { effectiveHostTeamIds } from '../models/hostTeams'
 import {
   generatePlayoffSchedule,
   generatePlayoffDefinitions,
@@ -20,6 +21,7 @@ import { assignReferees } from './refereeAssigner'
 import { transitionalTeamRef } from '../models/matchSlot'
 import { GroupSizeInfo } from './playoffGenerator'
 import { slotLabel } from '../models/slotLabel'
+import { ensureMatchNumbers } from '../models/matchNumbers'
 import sportGlossary from '../../i18n/glossary.json'
 
 // Re-export types for backwards compatibility
@@ -27,7 +29,7 @@ export type { ScheduledMatch, SchedulePhase, GeneratedSchedule } from './schedul
 export { formatScheduleForPrint, exportScheduleAsCSV, calculateScheduleStats } from '../../lib/scheduleRenderer'
 
 // Import internal helpers
-import { SchedulePhase, GeneratedSchedule, ScheduledMatch } from './scheduleTypes'
+import { SchedulePhase, GeneratedSchedule, ScheduledMatch, ScheduleNotice } from './scheduleTypes'
 import {
   parseStartTime,
   addMinutes,
@@ -55,6 +57,8 @@ export function generateFullSchedule(
   let allMatches: ScheduledMatch[]
   let groupStageMatches: Match[]
   let finalMatches: Match[]
+  let scheduleNotices: ScheduleNotice[] = []
+  let roundsPlan = false
 
   // Helper interfaces for imported data - separate from strict Match/Tournament interfaces
   // to avoid inheritance conflicts with different property types
@@ -106,6 +110,10 @@ export function generateFullSchedule(
     // Anzeigetexte der Seiten: eine Funktion (slotLabel), Namen nur über die Team-ID
     const labelContext = { teams: tournament.teams, matches: tournament.matches, groups: tournament.groups, locale }
 
+    // C-SPIELNUMMER-FEHLT (@SL-049, @ZM-007): gespeicherte Nummer, sonst die Rückfallregel (Spielplan-Reihenfolge),
+    // nie der Platz in der Liste (die Cloud liefert Spiele ohne Nummer in beliebiger Reihenfolge).
+    const numberById = new Map(ensureMatchNumbers(tournament.matches).map((m) => [m.id, m.matchNumber]))
+
     // First, map all existing matches to ScheduledMatch format
     const mappedMatches = tournament.matches.map((m, index) => {
       const extMatch = m as unknown as ExtendedMatchInput;
@@ -125,7 +133,7 @@ export function generateFullSchedule(
       return {
         ...m,
         id: m.id,
-        matchNumber: m.matchNumber ?? index + 1,
+        matchNumber: numberById.get(m.id) ?? index + 1,
         startTime: matchStart,
         endTime: matchEnd,
         // Properties required by ScheduledMatch interface
@@ -193,6 +201,8 @@ export function generateFullSchedule(
     const generated = generateMatches(tournament, startTime)
     groupStageMatches = generated.groupStageMatches
     finalMatches = generated.finalMatches
+    scheduleNotices = generated.notices
+    roundsPlan = generated.roundsPlan
 
     // Scheduliere Gruppenphase
     const scheduledGroupStage = scheduleMatches({
@@ -258,6 +268,8 @@ export function generateFullSchedule(
     })),
     initialStandings: createInitialStandings(tournament.teams),
     refereeConfig: tournament.refereeConfig,
+    scheduleNotices,
+    roundsPlan,
   }
 }
 
@@ -268,13 +280,18 @@ export function generateFullSchedule(
 function generateMatches(
   tournament: Tournament,
   startTime: Date
-): { groupStageMatches: Match[]; finalMatches: Match[] } {
+): { groupStageMatches: Match[]; finalMatches: Match[]; notices: ScheduleNotice[]; roundsPlan: boolean } {
   let groupStageMatches: Match[] = []
   let finalMatches: Match[] = []
+  let notices: ScheduleNotice[] = []
+  let roundsPlan = false
 
   // 1. Generiere Gruppenphase
   if (tournament.groupSystem === 'roundRobin' || tournament.groupSystem === 'groupsAndFinals') {
-    groupStageMatches = generateGroupStageMatches(tournament, startTime)
+    const groupPhase = generateGroupStageMatches(tournament, startTime)
+    groupStageMatches = groupPhase.matches
+    notices = groupPhase.notices
+    roundsPlan = groupPhase.roundsPlan
   }
 
   // 2. Generiere Playoffs
@@ -288,10 +305,10 @@ function generateMatches(
     finalMatches = generateFinalMatches(tournament, groupStageMatches, startTime)
   }
 
-  return { groupStageMatches, finalMatches }
+  return { groupStageMatches, finalMatches, notices, roundsPlan }
 }
 
-function generateGroupStageMatches(tournament: Tournament, startTime: Date): Match[] {
+function generateGroupStageMatches(tournament: Tournament, startTime: Date): ReturnType<typeof generateGroupPhaseScheduleWithReport> {
   const groupsMap = new Map<string, Team[]>()
 
   if (tournament.groupSystem === 'roundRobin') {
@@ -306,7 +323,7 @@ function generateGroupStageMatches(tournament: Tournament, startTime: Date): Mat
     }
   }
 
-  return generateGroupPhaseSchedule({
+  return generateGroupPhaseScheduleWithReport({
     groups: groupsMap,
     numberOfFields: tournament.numberOfFields,
     slotDurationMinutes: tournament.groupPhaseGameDuration,
@@ -315,6 +332,8 @@ function generateGroupStageMatches(tournament: Tournament, startTime: Date): Mat
     startTime,
     // @W4-028: DFB-Schlüssel im MVP aus (Tabelle fehlerhaft, C-DFB-SCHLUESSEL-LUECKEN)
     dfbPatternCode: undefined,
+    hostTeamIds: effectiveHostTeamIds(tournament.hostTeamIds, tournament.teams), // @W4-027, Reihenfolge = Teamliste
+    openingMode: tournament.openingMode,
   })
 }
 
@@ -386,10 +405,8 @@ function scheduleFinalMatches(
   const breakBetweenPhases = tournament.breakBetweenPhases ?? 0
   const finalStartTime = addMinutes(groupStageEnd, breakBetweenPhases)
 
-  const startMatchNumber =
-    scheduledGroupStage.length > 0
-      ? scheduledGroupStage[scheduledGroupStage.length - 1].matchNumber + 1
-      : 1
+  // höchste Nummer der Gruppenphase, nicht die des letzten Listeneintrags (gespeicherte Spiele in beliebiger Reihenfolge)
+  const startMatchNumber = Math.max(0, ...scheduledGroupStage.map((m) => m.matchNumber)) + 1
 
   return scheduleMatches({
     matches: finalMatches,

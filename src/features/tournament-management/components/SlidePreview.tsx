@@ -151,7 +151,7 @@ function StandingsPreview({ config, tournament }: { config: SlideConfig; tournam
                             padding: '1px 0',
                             opacity: 1 - i * 0.2,
                         }}>
-                            <span>{i + 1}. {s.team.name.slice(0, 10)}</span>
+                            <span>{s.place ?? i + 1}. {s.team.name.slice(0, 10)}</span>
                             <span style={{ fontWeight: 700 }}>{s.points}</span>
                         </div>
                     ))}

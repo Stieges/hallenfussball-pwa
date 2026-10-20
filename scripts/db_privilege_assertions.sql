@@ -568,4 +568,136 @@ SELECT 'monitors-writes-manage-screens',
                         AND NOT bool_or(position('owner_id' IN coalesce(p.qual, '') || coalesce(p.with_check, '')) > 0)
                    FROM pg_policies p
                   WHERE p.schemaname = 'public' AND p.tablename = 'monitors' AND p.cmd IN ('INSERT', 'UPDATE', 'DELETE')), false)
+
+-- A-27 (20261110_002_device_roles.sql, @HE-082, @AN-045, @AN-006, @ME-059, @HE-062; C-ANON-POLICIES, C-REG):
+-- Geraete-Rollen in beiden Rollen-CHECKs; has_tournament_permission laesst anonyme Sitzungen nur mit Geraete-Rolle zu;
+-- genau eine INSERT-Policy auf tournaments (nur echtes Konto) und die 3-Turniere-Regel ist weg; anon hat auf keiner
+-- public-Tabelle Schreibrechte (faengt auch kuenftige Tabellen); Guard-Trigger aktiv; Registrierungs-Hook nur fuer den
+-- Auth-Dienst ausfuehrbar. Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'role-checks-device-roles',
+       coalesce((SELECT count(*) = 2 AND bool_and(position('''helper''' IN pg_get_constraintdef(c.oid)) > 0
+                                                AND position('''screen''' IN pg_get_constraintdef(c.oid)) > 0)
+                   FROM pg_constraint c
+                  WHERE (c.conrelid = to_regclass('public.tournament_collaborators') AND c.conname = 'tournament_collaborators_role_check')
+                     OR (c.conrelid = to_regclass('public.role_permissions') AND c.conname = 'role_permissions_role_check')), false)
+UNION ALL
+SELECT 'has-permission-device-roles-for-anonymous',
+       coalesce((SELECT position('is_real_account' IN pg_get_functiondef(p.oid)) > 0
+                        AND position('''helper'', ''screen''' IN pg_get_functiondef(p.oid)) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.has_tournament_permission(uuid,text)')), false)
+UNION ALL
+SELECT 'tournaments-insert-real-account-only',
+       coalesce((SELECT count(*) = 1 AND bool_and(position('is_real_account' IN coalesce(p.with_check, '')) > 0)
+                   FROM pg_policies p
+                  WHERE p.schemaname = 'public' AND p.tablename = 'tournaments' AND p.cmd = 'INSERT'), false)
+       AND to_regprocedure('public.anonymous_tournament_limit()') IS NULL
+UNION ALL
+SELECT 'anon-no-write-public-tables',
+       NOT EXISTS (SELECT 1 FROM pg_class c
+                    WHERE c.relnamespace = 'public'::regnamespace AND c.relkind IN ('r', 'p')
+                      AND (has_table_privilege('anon', c.oid, 'INSERT') OR has_table_privilege('anon', c.oid, 'UPDATE')
+                           OR has_table_privilege('anon', c.oid, 'DELETE') OR has_table_privilege('anon', c.oid, 'TRUNCATE')))
+UNION ALL
+SELECT 'device-roles-guard-trigger',
+       coalesce((SELECT t.tgenabled = 'O'
+                        AND (t.tgtype & 2) <> 0     -- BEFORE
+                        AND (t.tgtype & 1) <> 0     -- FOR EACH ROW
+                        AND (t.tgtype & 4) <> 0     -- INSERT
+                        AND (t.tgtype & 16) <> 0    -- UPDATE
+                        AND t.tgfoid = to_regprocedure('public.protect_device_roles()')
+                   FROM pg_trigger t
+                  WHERE t.tgrelid = to_regclass('public.tournament_collaborators') AND t.tgname = 'protect_device_roles'
+                    AND NOT t.tgisinternal), false)
+UNION ALL
+SELECT 'hook-before-user-created-auth-admin-only',
+       coalesce((SELECT has_function_privilege('supabase_auth_admin', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0)
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.hook_before_user_created(jsonb)')), false)
+-- A-27 Fixrunde 1 (Review K1, @AN-006, C-ANON-ZU-KONTO): Trigger block_anonymous_upgrade auf auth.users aktiv (BEFORE UPDATE,
+-- FOR EACH ROW), Funktion ohne EXECUTE fuer PUBLIC/anon/authenticated. Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'auth-users-block-anonymous-upgrade',
+       coalesce((SELECT t.tgenabled = 'O' AND (t.tgtype & 2) <> 0 AND (t.tgtype & 1) <> 0 AND (t.tgtype & 16) <> 0
+                        AND t.tgfoid = to_regprocedure('public.block_anonymous_upgrade()')
+                        AND NOT has_function_privilege('anon', t.tgfoid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', t.tgfoid, 'EXECUTE')
+                        AND NOT EXISTS (SELECT 1 FROM pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                         WHERE p.oid = t.tgfoid AND a.grantee = 0)
+                   FROM pg_trigger t
+                   JOIN pg_class c ON c.oid = t.tgrelid
+                   JOIN pg_namespace n ON n.oid = c.relnamespace
+                  -- ueber den Katalog statt to_regclass('auth.users'): die CI-Leserolle hat kein USAGE auf Schema auth
+                  WHERE n.nspname = 'auth' AND c.relname = 'users'
+                    AND t.tgname = 'block_anonymous_upgrade' AND NOT t.tgisinternal), false)
+
+-- A-34 (20261110_003_field_control.sql, @FU-026, @FU-027, @FU-030, @HE-049): Steuer je Feld. Tabelle field_control mit RLS,
+-- ohne Policy und ohne Tabellenrechte fuer anon/authenticated (nur Definer-Funktionen); take_field_control und
+-- field_control_state SECURITY DEFINER mit search_path, EXECUTE nur authenticated (nicht anon, nicht PUBLIC); die interne
+-- field_control_info fuer keinen Client; append_match_events prueft die Steuer (geht beim Ersetzen der Funktion durch
+-- eine spaetere Migration nicht still verloren, brief-A-34 L9). Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'field-control-no-client-access',
+       coalesce((SELECT c.relrowsecurity
+                        AND NOT EXISTS (SELECT 1 FROM pg_policy pol WHERE pol.polrelid = c.oid)
+                        AND NOT has_table_privilege('anon', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')
+                        AND NOT has_table_privilege('authenticated', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')
+                   FROM pg_class c WHERE c.oid = to_regclass('public.field_control')), false)
+UNION ALL
+SELECT 'field-control-rpcs-execute-only-authenticated',
+       coalesce((SELECT count(*) = 2
+                        AND bool_and(p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                                      WHERE a.grantee = 0))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.take_field_control(uuid,integer,uuid,text,integer)'),
+                                  to_regprocedure('public.field_control_state(uuid,uuid)'))), false)
+       AND coalesce((SELECT NOT p.prosecdef
+                            AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                            AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                            AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                             WHERE a.grantee = 0)
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.field_control_info(uuid,integer,uuid)')), false)
+UNION ALL
+SELECT 'append-match-events-checks-field-control',
+       coalesce((SELECT position('public.field_control' IN pg_get_functiondef(p.oid)) > 0
+                        AND position('''NOT_CONTROLLER''' IN pg_get_functiondef(p.oid)) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
+
+-- CA-2 (20261110_004_coadmin_einsatz.sql, @HE-085, @BM-070/@ME-070; C-SHARE, C-HEARTBEAT-NUR-EIGENTUEMER): die drei
+-- Freigabe-Funktionen pruefen das Recht tournamentSettings (nicht mehr owner_id), SECURITY DEFINER mit search_path,
+-- make_tournament_public behaelt die Freigabe-Sperre HF001 und gibt einen vorhandenen Code zurueck (Auflage 5);
+-- monitor_heartbeats hat genau eine Policy, SELECT nur fuer authenticated ueber manageScreens (nicht owner_id,
+-- nicht tournamentSettings -- Mutationsprobe M5 bliebe in der Matrix gruen, deshalb hier am Policy-Text).
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'share-rpcs-permission-based',
+       coalesce((SELECT count(*) = 3
+                        AND bool_and(p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND position('has_tournament_permission(tournament_id, ''tournamentSettings'')' IN pg_get_functiondef(p.oid)) > 0
+                                     AND position('owner_id' IN pg_get_functiondef(p.oid)) = 0)
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.make_tournament_public(uuid)'),
+                                  to_regprocedure('public.make_tournament_private(uuid)'),
+                                  to_regprocedure('public.regenerate_share_code(uuid)'))), false)
+UNION ALL
+SELECT 'make-public-keeps-existing-code',
+       coalesce((SELECT position('''HF001''' IN pg_get_functiondef(p.oid)) > 0
+                        AND position('IF v_is_public AND v_existing_code IS NOT NULL THEN' IN pg_get_functiondef(p.oid)) > 0
+                        -- die Klausel selbst, nicht der Kommentar (Review CA-2 Auflage 5a)
+                        AND pg_get_functiondef(p.oid) ~ 'WHERE t\.id = tournament_id\s+FOR UPDATE;'
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.make_tournament_public(uuid)')), false)
+UNION ALL
+SELECT 'heartbeats-select-manage-screens',
+       coalesce((SELECT count(*) = 1
+                        AND bool_and(p.cmd = 'SELECT' AND p.policyname = 'heartbeats_select_v2'
+                                     AND p.roles = ARRAY['authenticated']::name[]
+                                     AND position('''manageScreens''' IN coalesce(p.qual, '')) > 0
+                                     AND position('owner_id' IN coalesce(p.qual, '')) = 0)
+                   FROM pg_policies p
+                  WHERE p.schemaname = 'public' AND p.tablename = 'monitor_heartbeats'), false)
 ;
