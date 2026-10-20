@@ -10,7 +10,7 @@
  * Gegenbeispiele: Änderung an Spiel 7 → kein Hinweis; Ollis eigenes Speichern → kein Hinweis.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.unmock('i18next');
@@ -22,6 +22,7 @@ import type { ScheduledMatch } from '../../../core/generators';
 import { teamSlot } from '../../../core/models/matchSlot';
 import { testUuid } from '../../../test/testIds';
 import { FinalStageSchedule } from '../FinalStageSchedule';
+import { MatchScoreCell } from '../MatchScoreCell';
 import { matchOf, viewOf, type Cache } from './scheduleViewFixture';
 
 vi.mock('../../../hooks/useLiveMatches', () => ({ useLiveMatches: () => ({ liveMatches: new Map() }) }));
@@ -113,6 +114,29 @@ describe.each([
     expect(onScoreChange).toHaveBeenCalledWith(SPIEL_9, 10, 2);
   });
 
+  it('@FU-104 Spiel 9 ist beendet: der Hinweis steht ohne Knopf „Meine Eingabe behalten“ (eintragen geht nur noch über Korrigieren)', async () => {
+    const { neu } = await olliTipptEins();
+    neu(tomTraegtEin.beendet());
+    expect(await screen.findByText(HINWEIS_TOM)).toBeTruthy();
+    expect(screen.queryByTestId(`${hinweisId}-keep-${SPIEL_9}`)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Meine Eingabe behalten' })).toBeNull();
+  });
+
+  it('@FU-104 Escape verwirft Ollis Eintrag: die Felder zeigen 3:1, der Hinweis ist weg, danach speichert „4“ + Enter normal 4:1', async () => {
+    const { user, onScoreChange, neu } = await olliTipptEins();
+    neu(tomTraegtEin.geplant());
+    expect(await screen.findByText(HINWEIS_TOM)).toBeTruthy();
+
+    await user.keyboard('{Escape}');
+    expect([feld('home').value, feld('away').value]).toEqual(['3', '1']);
+    expect(hinweis()).toBeNull();
+
+    await user.click(feld('home'));
+    await user.keyboard('{Backspace}4{Enter}');
+    expect(onScoreChange).toHaveBeenCalledTimes(1);
+    expect(onScoreChange).toHaveBeenCalledWith(SPIEL_9, 4, 1);
+  });
+
   it('@FU-104 ohne bekannten Namen: „… von einem anderen Gerät geändert (jetzt 3:1)“', async () => {
     const { neu } = await olliTipptEins(async () => null);
     neu(tomTraegtEin.beendet());
@@ -141,5 +165,63 @@ describe.each([
 
     expect(hinweis()).toBeNull();
     expect(screen.queryByText(/inzwischen/)).toBeNull();
+  });
+});
+
+/**
+ * Echo des eigenen Speicherns (Review Kurzblick Fixrunde 1, K3): Ollis eigener Stand ist keine Änderung von außen, auch wenn
+ * er in Schritten ankommt (P3) oder nach einer fremden Änderung (P5); nach „Nein“/Ablehnung gilt ein später gleicher Stand
+ * eines anderen Geräts aber wieder als fremd (P9).
+ */
+describe('@FU-104 C-SCHNELLEINGABE-FREMDAENDERUNG-STILL eigenes Speichern gegen Änderung von außen (Zelle)', () => {
+  const ID = 'spiel-9';
+  function zelle(scoreA: number | undefined, scoreB: number | undefined, onScoreChange: (a: number, b: number) => Promise<boolean> | undefined = vi.fn()) {
+    const props = { matchId: ID, editable: true, isFinished: false, inCorrectionMode: false, onScoreChange, changeAuthorOf: async () => 'Tom' };
+    const utils = render(<MatchScoreCell {...props} scoreA={scoreA} scoreB={scoreB} />);
+    const stand = (a: number | undefined, b: number | undefined) => utils.rerender(<MatchScoreCell {...props} scoreA={a} scoreB={b} />);
+    const [fcNord, svSued] = utils.getAllByRole('spinbutton') as HTMLInputElement[];
+    return { stand, fcNord, svSued };
+  }
+  const hinweis = () => screen.queryByTestId(`score-changed-${ID}`);
+
+  it('@FU-104 Gegenbeispiel P3: Ollis 3:1 kommt in zwei Schritten zurück (erst 3, dann 1) – kein Hinweis, die Felder zeigen 3:1', async () => {
+    const user = userEvent.setup();
+    const { stand, fcNord, svSued } = zelle(undefined, undefined);
+    await user.click(fcNord);
+    await user.keyboard('3');
+    await user.click(svSued);
+    await user.keyboard('1{Enter}');
+
+    stand(3, undefined);
+    expect(hinweis()).toBeNull();
+    expect([fcNord.value, svSued.value]).toEqual(['3', '1']);
+    stand(3, 1);
+    expect(hinweis()).toBeNull();
+    expect([fcNord.value, svSued.value]).toEqual(['3', '1']);
+  });
+
+  it('@FU-104 Gegenbeispiel P5: erst Toms 3:1, danach kommt Ollis gesendetes 10:2 an – am Ende kein Hinweis, die Felder zeigen 10:2', async () => {
+    const user = userEvent.setup();
+    const { stand, fcNord, svSued } = zelle(undefined, 2);
+    await user.click(fcNord);
+    await user.keyboard('10{Enter}');
+
+    stand(3, 1);
+    expect(await screen.findByText(HINWEIS_TOM)).toBeTruthy();
+    stand(10, 2);
+    expect(hinweis()).toBeNull();
+    expect([fcNord.value, svSued.value]).toEqual(['10', '2']);
+  });
+
+  it('@FU-104 P9: nach „Nein“ tippt Olli erneut 10, Tom trägt genau 10:2 ein – Hinweis statt stillem Ersetzen', async () => {
+    const user = userEvent.setup();
+    const { stand, fcNord } = zelle(undefined, 2, vi.fn().mockResolvedValue(false));
+    await user.click(fcNord);
+    await user.keyboard('10{Enter}');
+    await waitFor(() => expect(fcNord.value).toBe(''));
+    await user.keyboard('10');
+
+    stand(10, 2);
+    expect(await screen.findByText('Ergebnis wurde inzwischen von Tom geändert (jetzt 10:2)')).toBeTruthy();
   });
 });

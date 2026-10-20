@@ -84,13 +84,23 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
   useEffect(() => {
     const before = savedRef.current;
     const sameMatch = resetKeyRef.current === resetKey;
-    const own = ownSentRef.current !== null && ownSentRef.current.a === savedA && ownSentRef.current.b === savedB;
+    const mine = sameMatch ? ownSentRef.current : null;
+    const own = mine !== null && mine.a === savedA && mine.b === savedB;
     const draftOpen = draftRef.current.a !== asText(before.a) || draftRef.current.b !== asText(before.b);
     const movedElsewhere = before.a !== savedA || before.b !== savedB;
+    // Eigenes Echo in Schritten (erst eine Seite, dann die andere): jede Seite ist entweder unverändert oder schon Ollis Wert
+    const ownPartly = mine !== null && !own && movedElsewhere
+      && (savedA === before.a || savedA === mine.a) && (savedB === before.b || savedB === mine.b);
     resetKeyRef.current = resetKey;
     savedRef.current = { a: savedA, b: savedB };
+    if (ownPartly) {
+      return; // Entwurf, Doppelschutz und Merker bleiben, bis der ganze eigene Stand angekommen ist
+    }
     sentRef.current = null;
-    ownSentRef.current = null;
+    // Den eigenen Merker löscht nur das vollständige Echo oder ein anderes Spiel, nicht ein fremder Zwischenstand
+    if (own || !sameMatch) {
+      ownSentRef.current = null;
+    }
     if (sameMatch && movedElsewhere && !own && draftOpen) {
       // @FU-104: Entwurf bleibt sichtbar, wird aber nicht gesendet, bis Olli bewusst bei ihm bleibt
       const next: ScoreChangedElsewhere = { goalsA: savedA, goalsB: savedB, by: null };
@@ -110,6 +120,7 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
   const showSaved = useCallback(() => {
     setChanged(null);
     sentRef.current = null;
+    ownSentRef.current = null;
     setA(asText(savedRef.current.a));
     setB(asText(savedRef.current.b));
     setInvalidSides(NONE_INVALID);
@@ -137,17 +148,22 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
     ownSentRef.current = next;
     const stillCurrent = () => sentRef.current === next;
     try {
+      // Nicht gespeichert („Nein“, Abbruch, Ablehnung): dieser Stand ist nicht mehr Ollis eigener (Echo-Merker weg)
+      const notSaved = () => {
+        if (ownSentRef.current === next) {
+          ownSentRef.current = null;
+        }
+        if (stillCurrent()) {
+          showSaved();
+        }
+      };
       Promise.resolve(onCommitRef.current(goalsA, goalsB)).then(
         (result) => {
-          if (result === false && stillCurrent()) {
-            showSaved();
+          if (result === false) {
+            notSaved();
           }
         },
-        () => {
-          if (stillCurrent()) {
-            showSaved();
-          }
-        },
+        notSaved,
       );
     } catch {
       showSaved();
