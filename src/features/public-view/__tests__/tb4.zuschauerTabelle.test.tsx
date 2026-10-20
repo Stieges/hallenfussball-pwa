@@ -49,6 +49,22 @@ describe('TB-4 Zuschauer-Tabelle', () => {
     expect(container.querySelector('[data-testid="tie-marker"]')).toBeNull();
   });
 
+  it('@W2A-059 @ET-055 Zuschauer auf dem Handy (schmale Tabelle): dieselbe Platzziffer 3, 3, 5; mitten in der Gruppe 2, 2, 4', async () => {
+    /** Platzziffer in der schmalen Tabelle der ersten Gruppe; Teamnamen sind dort abgekürzt, daher nach dem Namensende gesucht. */
+    const handyZiffer = (container: HTMLElement, ende: string): string[] => {
+      const ansicht = container.querySelector('.mobile-view')!;
+      return within(ansicht).getAllByRole('row', { hidden: true })
+        .map((row) => within(row).queryAllByRole('cell', { hidden: true }))
+        .filter((cells) => cells.length > 1 && (cells[1].textContent ?? '').trim().endsWith(ende))
+        .map((cells) => (cells[0].textContent ?? '').trim());
+    };
+    const fertig = await zuschauerTabelle(zweiGruppenWaging(DATA.ET_055));
+    expect([handyZiffer(fertig.container, 'Waging rot'), handyZiffer(fertig.container, 'Kammer'), handyZiffer(fertig.container, 'Nord')]).toEqual([['3'], ['3'], ['5']]);
+    fertig.unmount();
+    const offen = await zuschauerTabelle(zweiGruppenWaging(DATA.ET_055, { open: ['M–U', 'U–N', 'N–O'] }));
+    expect([handyZiffer(offen.container, 'Waging rot'), handyZiffer(offen.container, 'Kammer'), handyZiffer(offen.container, 'Ufer')]).toEqual([['2'], ['2'], ['4']]);
+  });
+
   it('@W2A-047 Gegenbeispiel Zuschauer: mitten in der Gruppe 2, 2, 4', async () => {
     await zuschauerTabelle(zweiGruppenWaging(DATA.ET_055, { open: ['M–U', 'U–N', 'N–O'] }));
     expect([ziffer(NAME.R), ziffer(NAME.K), ziffer(NAME.U)]).toEqual([['2'], ['2'], ['4']]);

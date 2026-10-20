@@ -5,7 +5,7 @@
  * (Entscheidung steht im Endstand), @ET-027 (Platz 1 allein), @W2A-049 (Endstand). Daten: Plan v2 Abschnitt 6.
  */
 import { describe, expect, it } from 'vitest';
-import { DATA } from '../../core/standings/__tests__/fixtures';
+import { DATA, NAME } from '../../core/standings/__tests__/fixtures';
 import { jgj, MemoryRepo, OLLI, order, shootout } from '../../core/standings/__tests__/decisionTestKit';
 import {
   DATEN_029, DATEN_063, endstand, ET021_GRUPPE_A, ET021_GRUPPE_B, mitGleichemPlatz, plaetze, zweiGruppen, zweiGruppenWaging,
@@ -42,6 +42,19 @@ describe('TB-4 Endstand: geteilter Gruppenplatz (Variante C)', () => {
     // Gegenbeispiel: ohne „gleichen Platz lassen“ teilt der Endstand nicht still (6, 7).
     const offen = zweiGruppen('NSWO', ET021_GRUPPE_A, 'MBUT', ET021_GRUPPE_B);
     expect(plaetze(endstand(offen), 'U', 'W', 'O', 'T')).toEqual([5, 6, 7, 8]);
+  });
+});
+
+describe('TB-4 Endstand: geteilter Platz neben fremden, völlig gleichen Teams', () => {
+  it('@ET-021 setzt die Gesamtwertung ein fremdes, völlig gleiches Team zwischen West und Ost, teilen die beiden trotzdem Platz 5; die übrigen bekommen 7 und 8', async () => {
+    // Gruppe B: Ufer und Tal gleich (1 Punkt, −2, 1 Tor, direkt 1:1) auf B3/B4 – ohne Entscheidung offen, nicht geteilt.
+    const gruppeB = 'M–B 1:0; M–U 1:0; M–T 1:0; B–U 1:0; B–T 1:0; U–T 1:1';
+    const t = await mitGleichemPlatz(zweiGruppen('NSWO', ET021_GRUPPE_A, 'MBUT', gruppeB), ['W', 'O'], 'A');
+    // Teamreihenfolge so, dass Ufer in der Gesamtwertung zwischen West und Ost steht (alle vier völlig gleich).
+    const [n, s, w, o, ...rest] = t.teams;
+    const ufer = rest.filter((team) => team.name === NAME.U);
+    const umgestellt = { ...t, teams: [n, s, w, ...ufer, o, ...rest.filter((team) => team.name !== NAME.U)] };
+    expect(plaetze(endstand(umgestellt), 'W', 'O', 'U', 'T')).toEqual([5, 5, 7, 8]);
   });
 });
 

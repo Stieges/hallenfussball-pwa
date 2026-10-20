@@ -32,18 +32,11 @@ export function groupPlaceInfo(teams: readonly Team[], matches: readonly Match[]
 
 /**
  * `standings` (Gesamtwertung) nach Gruppenplatz geordnet: alle Ersten vor allen Zweiten usw., bei gleichem Platz in der
- * Reihenfolge der Gesamtwertung (stabil). Teams eines geteilten Platzes bleiben beieinander, auch wenn die Gesamtwertung
- * ein fremdes Team dazwischen setzt.
+ * Reihenfolge der Gesamtwertung (stabile Sortierung). Teams ohne Gruppe (Platz 0) behalten ihre Reihenfolge.
  */
 export function orderByGroupPlace(standings: readonly Standing[], info: ReadonlyMap<string, GroupPlaceInfo>): Standing[] {
-  const index = new Map(standings.map((standing, i) => [standing.team.id, i]));
-  const keyOf = (standing: Standing, i: number): [number, number, number] => {
-    const own = info.get(standing.team.id);
-    const anchor = Math.min(i, ...(own?.sharedWith ?? []).map((id) => index.get(id) ?? i));
-    return [own?.place ?? 0, anchor, i];
-  };
   return standings
-    .map((standing, i) => ({ standing, key: keyOf(standing, i) }))
-    .sort((a, b) => a.key[0] - b.key[0] || a.key[1] - b.key[1] || a.key[2] - b.key[2])
+    .map((standing, i) => ({ standing, i, place: info.get(standing.team.id)?.place ?? 0 }))
+    .sort((a, b) => a.place - b.place || a.i - b.i)
     .map(({ standing }) => standing);
 }
