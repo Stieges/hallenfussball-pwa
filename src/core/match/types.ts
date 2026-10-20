@@ -64,7 +64,7 @@ export const EventTypeSchema = z.enum([
 ]);
 export type EventType = z.infer<typeof EventTypeSchema>;
 
-export const DecidedBySchema = z.enum(['regular', 'overtime', 'goldenGoal', 'shootout', 'direct', 'correction']);
+export const DecidedBySchema = z.enum(['regular', 'overtime', 'goldenGoal', 'shootout', 'direct', 'correction', 'forfeit']);
 export type DecidedBy = z.infer<typeof DecidedBySchema>;
 
 // ============================================
@@ -206,7 +206,10 @@ export interface ShootoutKickRecord {
  */
 export interface OverrideRecord {
   id: string;
-  kind: 'correction' | 'direct';
+  /** A-25n (@W2A-022): `forfeit` = Nichtantritt-Wertung (Direkteintrag mit `forfeit.absent`). */
+  kind: 'correction' | 'direct' | 'forfeit';
+  /** A-25n: wer nicht angetreten ist (nur `forfeit`). */
+  absent?: ForfeitAbsent;
   scores: Record<string, number>;
   /** A-25a (@FU-094): Strafstoßergebnis eines Direkteintrags (nur `direct`, nur wenn eingetragen). */
   shootout?: Record<string, number>;
@@ -217,6 +220,9 @@ export interface OverrideRecord {
   /** Log-Position bei Annahme (`state.nextSeq` vor dem Inkrement), für Ruling K9. */
   seq: number;
 }
+
+/** A-25n (@W2A-022/@W2A-024): Seite, die nicht angetreten ist. */
+export type ForfeitAbsent = 'A' | 'B' | 'both';
 
 /** Ruling K5 (Fixrunde 1, I7): Tore merken sich ihre Phase, damit RETRACT in derselben Phase abzieht. */
 export interface GoalRecord {
@@ -284,12 +290,12 @@ export function effectiveScoreFor(state: MatchState, teamId: string): number {
 
 /**
  * `decidedBy` aus dem Überschreibungs-Stapel ableiten (Ruling K1): letzte Überschreibung
- * bestimmt 'correction'/'direct', sonst gilt `baseDecidedBy` aus der Spielende-Prüfung.
+ * bestimmt 'correction'/'direct'/'forfeit' (A-25n), sonst gilt `baseDecidedBy` aus der Spielende-Prüfung.
  */
 export function decidedByFor(state: MatchState): DecidedBy | null {
   const lastOverride = state.overrides[state.overrides.length - 1];
   if (lastOverride) {
-    return lastOverride.kind === 'correction' ? 'correction' : 'direct';
+    return lastOverride.kind;
   }
   return state.baseDecidedBy;
 }

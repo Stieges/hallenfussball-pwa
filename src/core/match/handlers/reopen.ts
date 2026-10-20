@@ -10,7 +10,11 @@
  *       Ablauf zählt nicht (Fixrunde 1, W2) -> `NOT_ENDED_BY_CLOCK`;
  *    b. noch kein REOPEN in diesem Spiel („einmal“) -> `ALREADY_CONTINUED`;
  *    c. `at − finishedAt ≤ 120 000` („höchstens 2 Minuten“) -> `CONTINUE_WINDOW_EXPIRED`.
- * 3. Wirkung: Uhr läuft ab `clockMs` (Restzeit, die das Gerät gestellt hat) bzw. weiter.
+ * 3. A-25n (@W2A-026, R-GA4-4): ist die letzte Überschreibung eine Nichtantritt-Wertung, nimmt REOPEN sie zurück --
+ *    Spiel wieder `scheduled`, Wertung vom Stapel, kein Abpfiff, Uhr unverändert (nie angepfiffen: eine Wertung entsteht
+ *    nur aus `scheduled`). Helfer scheitern vorher an 2a (eine Wertung hat keine Spielende-Prüfung).
+ * 4. Wirkung sonst: `running`, Uhr läuft ab `clockMs` (Restzeit, die das Gerät gestellt hat) bzw. weiter.
+ * Den Zielzustand setzt diese Wirkung selbst (Übergangszeile `finished → @reopen`).
  */
 import { ERROR_CODES, type EngineEvent, type ErrorCode, type MatchState } from '../types';
 import { resumeClock } from './clock';
@@ -64,11 +68,33 @@ export function applyReopen(state: MatchState, event: EngineEvent): ReopenOutcom
       return { status: 'rejected', code: ERROR_CODES.FORBIDDEN_ACTOR, detail: { reason } };
     }
   }
+  if (state.overrides[state.overrides.length - 1]?.kind === 'forfeit') {
+    // A-25n (@W2A-026): Wertung zurücknehmen -- der Stand ändert sich (lastScoreEventId wie RETRACT einer Korrektur).
+    return {
+      status: 'ok',
+      state: {
+        ...state,
+        status: 'scheduled',
+        overrides: state.overrides.slice(0, -1),
+        finishedAt: null,
+        baseDecidedBy: null,
+        breakStartedAt: null,
+        lastScoreEventId: event.id,
+      },
+    };
+  }
   // Ruling K1: baseDecidedBy zurücksetzen, nicht decidedBy direkt -- eine noch aktive
   // Überschreibung (Korrektur/Direkteintrag) bleibt bestehen und bestimmt weiter decidedBy.
   // C0a (V2): sectionStartMs bleibt, eine Pause ist nach REOPEN nicht offen.
   return {
     status: 'ok',
-    state: { ...state, clock: resumeClock(state.clock, event), finishedAt: null, baseDecidedBy: null, breakStartedAt: null },
+    state: {
+      ...state,
+      status: 'running',
+      clock: resumeClock(state.clock, event),
+      finishedAt: null,
+      baseDecidedBy: null,
+      breakStartedAt: null,
+    },
   };
 }

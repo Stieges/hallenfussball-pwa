@@ -8,7 +8,7 @@
  * 2. MATCH_END in `finished`, `section_break`, `decision_pending`, `shootout` -> noop (R9, K8/B-U7)
  * 3. Übergangszeile suchen -> INVALID_TRANSITION / MATCH_FINISHED
  * 4. Akteur-Check -> FORBIDDEN_ACTOR
- * 5. Typspezifische Wirkung, dann `to` anwenden (inkl. `@endcheck`)
+ * 5. Typspezifische Wirkung, dann `to` anwenden (inkl. `@endcheck`; `@reopen` = Zielzustand aus der Wirkung)
  */
 import { findTransition, isActorAllowed } from './transitions';
 import { applyCorrection, applyResultEntry } from './handlers/correction';
@@ -195,7 +195,8 @@ export function applyEvent(state: MatchState, event: EngineEvent, ctx: MatchCont
   let nextState = effect.state;
   if (row.to === '@endcheck') {
     nextState = runEndCheck(nextState, event, ctx);
-  } else if (row.to !== '=') {
+  } else if (row.to !== '=' && row.to !== '@reopen') {
+    // A-25n: bei '@reopen' hat die Wirkung (applyReopen) den Zielzustand schon gesetzt.
     nextState = { ...nextState, status: row.to };
   }
 

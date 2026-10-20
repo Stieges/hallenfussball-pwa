@@ -276,9 +276,10 @@ export interface PlayoffConfig {
 export type MatchStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
 
 /**
- * How a finals match was decided (for display purposes)
+ * How a finals match was decided (for display purposes).
+ * A-25n (20261110_005): 'forfeit' = Nichtantritt-Wertung (Spalte matches.decided_by, Engine-Zwischenspeicher).
  */
-export type MatchDecidedBy = 'regular' | 'overtime' | 'goldenGoal' | 'penalty';
+export type MatchDecidedBy = 'regular' | 'overtime' | 'goldenGoal' | 'penalty' | 'forfeit';
 
 export interface Match {
   id: string;
