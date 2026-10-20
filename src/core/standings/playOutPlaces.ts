@@ -60,3 +60,26 @@ export function blockMayShare(
   const touches = (p: number): boolean => p >= block.place && p <= last;
   return !places.some(touches) && !followUps.some(touches);
 }
+
+/** Warum ein Block nicht geteilt bleiben darf (Daniel G2): ein weiteres Spiel schlägt die Einstellung. */
+export type MandatoryReason = { kind: 'setting'; place: number } | { kind: 'followUp'; place: number };
+
+/**
+ * Grund der Pflicht für den Block (Plätze `place` bis `place + size − 1`) oder `undefined`, wenn er geteilt bleiben darf.
+ * Führt ein Platz in ein weiteres Spiel, ist das der Grund – die Einstellung würde dort nichts ändern, die Oberfläche bietet
+ * keinen Sprung in die Turnierregeln an. Sonst ist es der erste eingestellte Platz des Blocks.
+ */
+export function mandatoryReason(
+  places: readonly number[],
+  followUps: readonly number[],
+  block: { place: number; size: number },
+): MandatoryReason | undefined {
+  const last = block.place + block.size - 1;
+  const inBlock = (p: number): boolean => p >= block.place && p <= last;
+  const followUp = followUps.find(inBlock);
+  if (followUp !== undefined) {
+    return { kind: 'followUp', place: followUp };
+  }
+  const setting = places.find(inBlock);
+  return setting === undefined ? undefined : { kind: 'setting', place: setting };
+}
