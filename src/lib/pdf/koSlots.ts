@@ -1,9 +1,9 @@
 /**
  * K.-o.-Runden aus dem erzeugten Spielplan (B-28a3-3b, Fixliste 1 zu B-28a3-3a). Rein, ohne Zeichnen.
  *
- * Die Runde kommt zuerst aus `phase` (`knockoutRoundOf`). Der Generator setzt `phase` heute aber für alle Finalspiele
- * auf `final` (`scheduleMatches`, C-FINALPHASE-AUS-ID). `final` ist deshalb keine Auskunft über die Runde. Dann zählt
- * die Bracket-Größe: vom Finale aus rückwärts je Runde 2 (Halbfinale), 4 (Viertelfinale), 8 (Achtelfinale) Spiele.
+ * Die Runde kommt zuerst aus `phase` (`knockoutRoundOf`). Seit A-12a setzt der Generator sie aus der Vorlage
+ * (Halbfinale `semifinal`); gespeicherte Turniere von vorher tragen für alle Finalspiele `final` (C-FINALPHASE-AUS-ID).
+ * `final` ist deshalb keine Auskunft über die Runde. Dann zählt die Bracket-Größe: vom Finale aus rückwärts je Runde 2 (Halbfinale), 4 (Viertelfinale), 8 (Achtelfinale) Spiele.
  * Platzierungsspiele (`finalType`) stehen vor dem Finale und zählen nie zum Bracket.
  */
 import type { ScheduledMatch } from '../../core/generators';
@@ -18,7 +18,7 @@ const ROUNDS_BACKWARDS: readonly KnockoutRound[] = ['semifinal', 'quarterfinal',
 
 /**
  * Runde eines Bracket-Spiels aus seiner Phase, nur wenn die Phase eine echte Runde nennt. `final` zählt nicht, weil
- * der Generator es für alle Finalspiele setzt.
+ * ältere Spielpläne es für alle Finalspiele tragen.
  */
 function roundOfPhase(match: ScheduledMatch): KnockoutRound | null {
   const round = knockoutRoundOf(match.phase);
