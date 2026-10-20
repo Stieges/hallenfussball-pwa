@@ -18,7 +18,7 @@
  *
  * Rein, ohne React.
  */
-import type { Match, PlacementCriterion, PointSystem, Standing, StandingDecision, Team } from '../../types/tournament';
+import type { ForfeitScore, Match, PlacementCriterion, PointSystem, Standing, StandingDecision, Team } from '../../types/tournament';
 import { isGroupMatchDecided, matchOutcome } from './countsForStandings';
 import { miniTable, miniTableKey } from './headToHead';
 import { decisionBasis, findValidDecision } from './decisions';
@@ -34,6 +34,8 @@ export interface RankGroupInput {
   /** Alle Spiele dieser Tabelle, gleich welcher Status (für „alle Gruppenspiele entschieden“). */
   matches: readonly Match[];
   pointSystem: PointSystem;
+  /** Wertung bei Nichtantritt (Einstellung oder 2:0, `effectiveForfeitScore`); gilt für Spiele ohne beide Teams. */
+  forfeitScore: ForfeitScore;
   placementLogic: readonly PlacementCriterion[];
   decisions: readonly StandingDecision[];
   mode: StandingsMode;
@@ -64,11 +66,11 @@ function emptyStanding(team: Team): Standing {
 }
 
 /** Gesamttabelle aller gezählten Spiele zwischen Teams dieser Tabelle. */
-function overallStandings(teams: readonly Team[], matches: readonly Match[], pointSystem: PointSystem): Standing[] {
+function overallStandings(teams: readonly Team[], matches: readonly Match[], pointSystem: PointSystem, forfeitScore: ForfeitScore): Standing[] {
   const standings = teams.map(emptyStanding);
   const byId = new Map(standings.map((s) => [s.team.id, s]));
   for (const match of matches) {
-    const outcome = matchOutcome(match, pointSystem);
+    const outcome = matchOutcome(match, pointSystem, forfeitScore);
     const a = outcome === null ? undefined : byId.get(outcome[0].teamId);
     const b = outcome === null ? undefined : byId.get(outcome[1].teamId);
     if (outcome === null || a === undefined || b === undefined) {
@@ -98,7 +100,7 @@ function keyOf(criterionId: string, block: readonly Standing[], input: RankGroup
       if (input.mode === 'crossGroup') {
         return null;
       }
-      const mini = miniTable(block.map((s) => s.team.id), input.matches, input.pointSystem);
+      const mini = miniTable(block.map((s) => s.team.id), input.matches, input.pointSystem, input.forfeitScore);
       return (s) => miniTableKey(mini.get(s.team.id));
     }
     default: return null;
@@ -143,7 +145,7 @@ function decidedRows(block: readonly Standing[], decision: StandingDecision, pla
 
 /** Rechnet die Tabelle einer Gruppe (bzw. gruppenübergreifend) nach der eingestellten Reihenfolge. */
 export function rankGroup(input: RankGroupInput): GroupTableResult {
-  const standings = overallStandings(input.teams, input.matches, input.pointSystem);
+  const standings = overallStandings(input.teams, input.matches, input.pointSystem, input.forfeitScore);
   let blocks: Standing[][] = standings.length > 0 ? [standings] : [];
   for (const criterion of input.placementLogic.filter((c) => c.enabled)) {
     blocks = blocks.flatMap((block) => {

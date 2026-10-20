@@ -57,6 +57,7 @@ const FULL_MATCH: Required<Match> = {
   penaltyScoreA: 4,
   penaltyScoreB: 3,
   decidedBy: 'penalty',
+  forfeitAbsent: 'both', // A-25c: wer bei einer Wertung fehlte (nur Rundlauf des Felds, nicht fachlich zusammen mit 'penalty')
   skippedReason: 'Team zurückgezogen',
   skippedAt: '2026-11-14T13:00:00.000Z',
   liveState: { engine: true, status: 'section_break', phase: 'regular', section: 1, sections: 2, sectionSeconds: 600, elapsedMs: 600000, anchorAt: null, sectionStartMs: 0, breakStartedAt: 601000, breakSeconds: 60 },
