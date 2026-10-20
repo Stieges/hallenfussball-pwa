@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { cssVars } from '../../../../design-tokens';
 import { contrastRatio, MIN_TEXT_CONTRAST, over, resolveToken, type ThemeName } from '../../../../test/contrast';
-import { badgeColorsFor } from '../matchStatusBadgeStyle';
+import { badgeColorsFor, kickoffColorFor } from '../matchStatusBadgeStyle';
 import type { MatchBadgeState } from '../../../../core/view/badge';
 
 const THEMES: ThemeName[] = ['dark', 'light', 'high-contrast'];
@@ -49,5 +49,21 @@ describe('@OB-065 Abzeichen auf der Tafel: Farbe nur für Ende und ausgefallen',
     const colors = badgeColorsFor(state, undefined, 'scoreboard');
     const flaeche = over(resolveToken(theme, colors.bg), tafel);
     expect(contrastRatio(resolveToken(theme, colors.fg), flaeche)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+});
+
+describe('@OB-065 Anstoßzeit auf der Tafel: lesbar in jedem Thema', () => {
+  it.each(THEMES)('@OB-066 %s: Anstoßzeit auf der dunklen Tafel ≥ 4,5 : 1', (theme) => {
+    const tafel = resolveToken(theme, cssVars.colors.scoreboardBg);
+    expect(contrastRatio(resolveToken(theme, kickoffColorFor('scoreboard')), tafel)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+
+  it('@OB-065 Tafel: die Anstoßzeit steht in der Tafel-Schrift', () => {
+    expect(kickoffColorFor('scoreboard')).toBe(cssVars.colors.scoreboardTextMuted);
+  });
+
+  it('@OB-065 Gegenbeispiel: auf der App-Fläche bleibt die Anstoßzeit in textSecondary', () => {
+    expect(kickoffColorFor('app')).toBe(cssVars.colors.textSecondary);
+    expect(kickoffColorFor()).toBe(cssVars.colors.textSecondary);
   });
 });

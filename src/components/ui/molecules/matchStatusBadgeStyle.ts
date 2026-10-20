@@ -52,6 +52,11 @@ export function badgeColors(state: MatchBadgeState): BadgeColors {
   }
 }
 
+/** Schrift der Anstoßzeit (geplantes Spiel): auf der dunklen Tafel die Tafel-Schrift, sonst textSecondary (@OB-065). */
+export function kickoffColorFor(surface: MatchStatusBadgeSurface = 'app'): string {
+  return surface === 'scoreboard' ? cssVars.colors.scoreboardTextMuted : cssVars.colors.textSecondary;
+}
+
 /** Farben auf der Cockpit-Tafel: nur „Ende“ und „ausgefallen“ weichen ab (Schrift und Rahmen in der Tafel-Schrift). */
 function badgeColorsOnScoreboard(state: MatchBadgeState): BadgeColors {
   if (state === 'ended' || state === 'cancelled') {

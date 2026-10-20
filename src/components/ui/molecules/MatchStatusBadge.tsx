@@ -9,7 +9,7 @@ import type { CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { animations, cssVars, displayFontSizes } from '../../../design-tokens';
 import { MATCH_BADGE_WORD_KEY, type MatchBadgeModel, type MatchBadgeState } from '../../../core/view/badge';
-import { badgeColorsFor, badgeStyle, dotStyle, type MatchStatusBadgeSize, type MatchStatusBadgeSurface, type MatchStatusBadgeTone } from './matchStatusBadgeStyle';
+import { badgeColorsFor, badgeStyle, dotStyle, kickoffColorFor, type MatchStatusBadgeSize, type MatchStatusBadgeSurface, type MatchStatusBadgeTone } from './matchStatusBadgeStyle';
 
 export interface MatchStatusBadgeProps {
   model: MatchBadgeModel;
@@ -48,7 +48,7 @@ export function MatchStatusBadge({ model, size, tone, surface = 'app', testId }:
       fontWeight: cssVars.fontWeights.bold,
       fontVariantNumeric: 'tabular-nums',
       whiteSpace: 'nowrap',
-      color: cssVars.colors.textSecondary,
+      color: kickoffColorFor(surface),
     };
     return <span style={style} data-testid={testId ?? 'match-kickoff'}>{model.time}</span>;
   }

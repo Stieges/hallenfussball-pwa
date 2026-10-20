@@ -8,6 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Scoreboard, type ScoreboardModel } from '../Scoreboard';
+import { cssVars } from '../../../../design-tokens';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
@@ -185,6 +186,16 @@ describe('Scoreboard', () => {
     const halbzeit = screen.getByTestId('scoreboard-abzeichen');
     expect(halbzeit).toHaveAttribute('data-state', 'halftime');
     expect(halbzeit.textContent).toBe('Halbzeit');
+  });
+
+  it('@OB-066 „Ende“ auf der Tafel in Tafel-Schrift (Verdrahtung surface="scoreboard")', () => {
+    render(<Scoreboard model={{ ...model, badge: { kind: 'badge', state: 'ended' } }} size="regular" meldezeile={null} testId="scoreboard" />);
+    expect(screen.getByTestId('scoreboard-abzeichen').style.color).toBe(cssVars.colors.scoreboardTextMuted);
+  });
+
+  it('@OB-065 die Anstoßzeit auf der Tafel steht in der Tafel-Schrift (lesbar im hellen Thema)', () => {
+    render(<Scoreboard model={{ ...model, badge: { kind: 'kickoff', time: '15:15' } }} size="regular" meldezeile={null} testId="scoreboard" />);
+    expect(screen.getByTestId('scoreboard-abzeichen').style.color).toBe(cssVars.colors.scoreboardTextMuted);
   });
 
   it('@OB-065 Gegenbeispiel: ein geplantes Spiel zeigt im Abzeichen nur seine Anstoßzeit, kein Wort', () => {
