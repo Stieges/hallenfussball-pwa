@@ -28,3 +28,13 @@ export { useScoreDraft } from './useScoreDraft';
 export type { ScoreDraft, ScoreCommitResult, UseScoreDraftOptions, ScoreSide, ScoreChangedElsewhere } from './useScoreDraft';
 export { ScoreDraftHint } from './ScoreDraftHint';
 export { ScoreChangedHint } from './ScoreChangedHint';
+
+// Paket TB-B (Gleichstand in der Tabelle): fachfreie Bausteine
+export { TieMarker } from './TieMarker';
+export type { TieMarkerProps, TieMarkerTone, TieMarkerSymbol } from './TieMarker';
+export { ShootoutScoreInput } from './ShootoutScoreInput';
+export type { ShootoutScoreInputProps, ShootoutScoreSide } from './ShootoutScoreInput';
+export { OrderPicker } from './OrderPicker';
+export type { OrderPickerProps, OrderPickerItem } from './OrderPicker';
+export { PlacesToPlayOutPicker } from './PlacesToPlayOutPicker';
+export type { PlacesToPlayOutPickerProps } from './PlacesToPlayOutPicker';
