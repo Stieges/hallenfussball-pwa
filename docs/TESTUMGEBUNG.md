@@ -21,6 +21,7 @@ npm run test:env:status  # URL, DB-URL, Functions-URL, Anon-/Publishable-Key anz
 npm run test:env:seed    # Testnutzer + Testturniere idempotent (neu) anlegen
 npm run test:env:reset   # Datenbank leeren + Schema neu einspielen + test:env:seed
 npm run test:env:down    # Stack stoppen
+npm run test:env:aufraeumen  # alte, ungenutzte Images der Testumgebung und des Bildvergleichs löschen
 ```
 
 `test:env:seed` legt die in [Testnutzer](#testnutzer-und-testdaten) beschriebenen Nutzer,
@@ -38,6 +39,24 @@ wie `scripts/db-drift-check.sh` und `scripts/rls-role-matrix.sh`
 
 Deshalb ist in `supabase/config.toml` `[db.migrations] enabled = false` gesetzt — sonst würde
 `supabase start`/`db reset` das automatische (scheiternde) Einspielen selbst versuchen.
+
+## Ein Stack für alle Arbeitskopien
+
+Alle Arbeitskopien (Hauptverzeichnis und jede Spur) teilen EINEN Stack (`project_id = "hallenfussball-pwa"`
+in `supabase/config.toml`). Damit alle die Dienste in derselben Version starten:
+
+- In `supabase/.temp` darf keine `*-version`-Datei liegen (`storage-version`, `postgres-version`,
+  `gotrue-version`, `rest-version` …). `supabase link` schreibt sie; danach löschen:
+  `rm supabase/.temp/*-version`. `test:env:up` bricht sonst vor dem Start ab und nennt die Datei.
+- Nach jedem Versionswechsel der Supabase-CLI oder von Playwright: `npm run test:env:aufraeumen`.
+  Es löscht nur Images von `supabase/*` (ECR/ghcr/Docker Hub) und namenlose Playwright-Images, auf die
+  kein Container (auch kein gestoppter) verweist; nie `prune`, nie `-f`, nie fremde Images.
+- `test:env:up`, `test:env:status` und `scripts/require-local-stack.sh` (vor `test:e2e:cloud`) melden jeden
+  Dienst, der neu startet oder beendet ist, mit Zustand und letzter Protokollzeile. Reparatur:
+  `npm run test:env:down && npm run test:env:up`. Das nur tun, wenn gerade keine Spur gegen den Stack testet.
+- Meldung „Docker ist nicht erreichbar“: Docker Desktop starten.
+
+Anforderung: `docs/anforderungen/plattform/2026-10-20_lokale-testumgebung-gesund.md` (@LT-001 … @LT-008).
 
 ## Testnutzer und Testdaten
 
