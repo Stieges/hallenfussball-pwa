@@ -133,7 +133,7 @@ export class GenericMutationQueue<TType extends string> {
     private listeners: ((status: MutationQueueStatus) => void)[] = [];
     private readonly storageReported = new Set<string>(); // A-07i Fixrunde 1: Sentry je Ursache nur einmal
     private readonly completed = new Map<string, number>(); // A-08f3c2: erledigte Einträge je Bereich (H1)
-    /** @FU-106: Bereiche, deren Kopie nach „Verwerfen“ eines Konflikts den Cloud-Stand braucht (dauerhaft gespeichert). */
+    /** @FU-106: Bereiche, deren Kopie nach „Verwerfen“ den Cloud-Stand braucht (dauerhaft gespeichert). */
     private cloudCopyNeeded = new Set<string>();
 
     constructor(private config: MutationQueueConfig<TType>) {
@@ -376,12 +376,13 @@ export class GenericMutationQueue<TType extends string> {
     }
 
     /**
-     * @FU-106 (Befund C-VERWERFEN-BEHAELT-VERALTETEN-STAND): Verworfen wird eine wegen eines Konflikts abgelehnte Änderung –
-     * die lokale Kopie trägt dann einen Inhalt, den der Server nie bekommt. Der Bereich (Turnier) wird gemerkt, bis die
-     * Kopie den Cloud-Stand übernommen hat (`cloudCopyAdopted`); ohne Konflikt bleibt alles wie bisher.
+     * @FU-106 (Befund C-VERWERFEN-BEHAELT-VERALTETEN-STAND; Entscheidung Daniel 20.10.: „Verwerfen = immer Server-Stand“,
+     * mit und ohne Konflikt): die lokale Kopie trägt nach dem Verwerfen einen Inhalt, den der Server nie bekommt. Der
+     * Bereich (Turnier) wird gemerkt, bis die Kopie den Cloud-Stand übernommen hat oder der Server das Turnier nicht kennt
+     * (@FU-107: dann bleibt die Kopie); bis dahin geht aus ihr nichts zum Server.
      */
     private markCloudCopyNeeded(discarded: readonly FailedMutationItem<TType>[]): void {
-        const scopes = discarded.filter((item) => item.conflict).map((item) => this.config.scopeOf?.(item.type, item.payload));
+        const scopes = discarded.map((item) => this.config.scopeOf?.(item.type, item.payload));
         const added = scopes.filter((scope): scope is string => !!scope && !this.cloudCopyNeeded.has(scope));
         if (added.length === 0) { return; }
         added.forEach((scope) => this.cloudCopyNeeded.add(scope));
@@ -393,7 +394,7 @@ export class GenericMutationQueue<TType extends string> {
     public scopesNeedingCloudCopy(): string[] { return [...this.cloudCopyNeeded]; }
     /** @FU-106: Merkung erledigt (Cloud-Stand übernommen, Turnier am Server weg oder gelöscht). */
     public forgetCloudCopy(scope: string): void {
-        if (this.cloudCopyNeeded.delete(scope)) { this.saveCloudCopyNeeded(); }
+        if (this.cloudCopyNeeded.delete(scope)) { this.saveCloudCopyNeeded(); this.notifyListeners(); }
     }
 
     private carriesDiscardedCopy(item: GenericMutationItem<TType>): boolean {

@@ -70,6 +70,7 @@ export function SyncStatusIndicator({
         discardFailedMutation,
         isCloudSyncAvailable,
         queueLastFailure,
+        awaitingServerCopy = false,
     } = useSyncStatus();
     // A-06j (Brief A10): echter Ausgangs-Status des Senders (lastFailureKind/lastError) und die
     // Queue-Fehlerklasse ergeben zusammen den Wartegrund fuer die Bar.
@@ -169,6 +170,13 @@ export function SyncStatusIndicator({
             {realtimeInterrupted && (
                 <span style={realtimeHintStyle} role="status" data-testid="realtime-interrupted-hint">
                     {t('syncStatus.realtimeInterrupted')}
+                </span>
+            )}
+
+            {/* @FU-106: nach „Verwerfen“ ohne Verbindung bleibt der Inhalt sichtbar stehen, bis der Stand des Servers geladen ist */}
+            {awaitingServerCopy && (
+                <span style={realtimeHintStyle} role="status" data-testid="sync-awaiting-server-copy">
+                    {t('syncStatus.awaitingServerCopy')}
                 </span>
             )}
 

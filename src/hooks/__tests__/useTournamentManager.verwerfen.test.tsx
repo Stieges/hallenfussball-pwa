@@ -2,7 +2,8 @@
  * @FU-106 (Befund C-VERWERFEN-BEHAELT-VERALTETEN-STAND): Verwirft Maria am Gerät der Co-Admin ihre wegen eines Konflikts
  * abgelehnte Änderung („Verwerfen“ in `SyncStatusIndicator` → `clearFailedMutation`), zeigt die geöffnete Ansicht ohne
  * Neuladen und ohne Push Ollis Stand. Echtes `OfflineRepository` mit Fake-Cloud, Realtime-Kanal verbunden (kein
- * Abfrage-Ausweichen), `useTournamentManager` wie im Spielplan.
+ * Abfrage-Ausweichen), `useTournamentManager` wie im Spielplan. Seit der Entscheidung vom 20.10. („Verwerfen = immer Stand
+ * des Servers“) gilt das auch ohne Konflikt.
  * Anforderung: `plattform/2026-09-24_fundament-gemeinsamer-stand.md`.
  */
 import 'fake-indexeddb/auto';
@@ -111,12 +112,13 @@ describe('@FU-106 Verwerfen nach einem Konflikt: die geöffnete Ansicht zeigt de
     expect(repo.mutationQueue.getFailedCount()).toBe(0);
   });
 
-  it('Gegenbeispiel ohne Konflikt: Verwerfen ändert die Ansicht nicht (wie bisher)', async () => {
+  it('@FU-106 auch ohne Konflikt zeigt die Ansicht nach dem Verwerfen ohne Neuladen den Stand des Servers (Entscheidung 20.10.)', async () => {
     const { view } = await mount(false);
 
     act(() => { repo.mutationQueue.clearFailedMutation('dl-1'); });
     await tick();
 
-    expect(view.getByTestId('titel').textContent).toBe('Marias Titel');
+    expect(view.getByTestId('titel').textContent).toBe('Ollis Titel');
+    expect(repo.mutationQueue.getFailedCount()).toBe(0);
   });
 });

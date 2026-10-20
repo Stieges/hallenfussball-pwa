@@ -12,6 +12,7 @@ type Listener = (status: MutationQueueStatus) => void;
 
 function createFakeMutationQueue(initialFailed: FailedMutationItem[] = []) {
   let failed = [...initialFailed];
+  let awaiting: string[] = []; // @FU-106: Turniere, die nach „Verwerfen“ auf den Stand des Servers warten
   const listeners: Listener[] = [];
 
   const notify = () => {
@@ -23,6 +24,7 @@ function createFakeMutationQueue(initialFailed: FailedMutationItem[] = []) {
     getStatus: (): MutationQueueStatus => ({ pendingCount: 0, failedCount: failed.length }),
     getFailedMutations: (): FailedMutationItem[] => [...failed],
     getLastFailure: (): null => null,
+    scopesNeedingCloudCopy: (): string[] => awaiting,
     subscribe: (listener: Listener) => {
       listeners.push(listener);
       return () => {
@@ -37,9 +39,12 @@ function createFakeMutationQueue(initialFailed: FailedMutationItem[] = []) {
     }),
     clearFailedMutation: vi.fn((id: string) => {
       failed = failed.filter((f) => f.id !== id);
+      awaiting = ['t1'];
       notify();
       return true;
     }),
+    /** Der Stand des Servers ist übernommen (Merkung erledigt). */
+    adoptServerCopy: () => { awaiting = []; notify(); },
   };
 }
 
@@ -116,6 +121,19 @@ describe('useSyncStatus — gescheiterte Übertragungen (C-SYNC)', () => {
     expect(result.current.failedMutations).toEqual([]);
   });
 
+  it('@FU-106 nach dem Verwerfen meldet der Hook, dass das Turnier auf den Stand des Servers wartet, bis er übernommen ist', () => {
+    const fakeQueue = createFakeMutationQueue([failedItem]);
+    mockRepository.current = { mutationQueue: fakeQueue };
+    const { result } = renderHook(() => useSyncStatus());
+    expect(result.current.awaitingServerCopy).toBe(false);
+
+    act(() => { result.current.discardFailedMutation('fail-1'); });
+    expect(result.current.awaitingServerCopy).toBe(true);
+
+    act(() => { fakeQueue.adoptServerCopy(); });
+    expect(result.current.awaitingServerCopy).toBe(false);
+  });
+
   it('retry/discard on a repository without a mutation queue is a no-op, not a crash', () => {
     mockRepository.current = {};
     const { result } = renderHook(() => useSyncStatus());
@@ -140,6 +158,7 @@ describe('useSyncStatus — queueLastFailure (A-06j)', () => {
       getStatus: (): MutationQueueStatus => ({ pendingCount: 1, failedCount: 0 }),
       getFailedMutations: (): FailedMutationItem[] => [],
       getLastFailure: (): FailureKind => lastFailure,
+      scopesNeedingCloudCopy: (): string[] => [],
       subscribe: (listener: Listener) => {
         listeners.push(listener);
         return () => {

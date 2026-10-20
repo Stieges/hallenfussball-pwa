@@ -3,6 +3,9 @@
  *
  * Zeigt je gescheitertem Eintrag den Grund (letzter Fehler) und bietet die
  * Aktionen "erneut versuchen" (sofort) und "verwerfen" (mit Rückfrage).
+ * @FU-108 (Befund C-WIEDERHOLEN-NACH-KONFLIKT-ENDLOS): ein wegen eines Konflikts abgelehnter Eintrag (`conflict`)
+ * zeigt den Konflikt-Hinweis und bietet statt "erneut versuchen" nur "Verwerfen und aktuellen Stand laden" an –
+ * ein neuer Versuch schickte denselben veralteten Stand und scheiterte erneut.
  *
  * @see .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A4-brief.md (Teil 1, C-SYNC)
  */
@@ -141,27 +144,29 @@ export function SyncFailedList({ items, onRetry, onDiscard, onClose }: SyncFaile
             {items.map((item) => (
                 <div style={styles.item} key={item.id}>
                     <span style={styles.itemType}>{mutationTypeLabel(item.type)}</span>
-                    <span style={styles.itemReason}>
-                        {item.lastError ?? t('syncStatus.failedReasonUnknown')}
+                    <span style={styles.itemReason} data-testid={`sync-failed-reason-${item.id}`}>
+                        {item.conflict ? t('syncStatus.conflictReason') : (item.lastError ?? t('syncStatus.failedReasonUnknown'))}
                     </span>
                     <div style={styles.itemActions}>
-                        <button
-                            type="button"
-                            style={{ ...styles.actionButton, ...styles.retryButton }}
-                            onClick={() => onRetry(item.id)}
-                            data-testid={`sync-retry-${item.id}`}
-                            aria-label={t('syncStatus.retryAriaLabel')}
-                        >
-                            {t('syncStatus.retry')}
-                        </button>
+                        {!item.conflict && (
+                            <button
+                                type="button"
+                                style={{ ...styles.actionButton, ...styles.retryButton }}
+                                onClick={() => onRetry(item.id)}
+                                data-testid={`sync-retry-${item.id}`}
+                                aria-label={t('syncStatus.retryAriaLabel')}
+                            >
+                                {t('syncStatus.retry')}
+                            </button>
+                        )}
                         <button
                             type="button"
                             style={{ ...styles.actionButton, ...styles.discardButton }}
                             onClick={() => setPendingDiscardId(item.id)}
                             data-testid={`sync-discard-${item.id}`}
-                            aria-label={t('syncStatus.discardAriaLabel')}
+                            aria-label={t(item.conflict ? 'syncStatus.discardAndLoadAriaLabel' : 'syncStatus.discardAriaLabel')}
                         >
-                            {t('syncStatus.discard')}
+                            {t(item.conflict ? 'syncStatus.discardAndLoad' : 'syncStatus.discard')}
                         </button>
                     </div>
                 </div>

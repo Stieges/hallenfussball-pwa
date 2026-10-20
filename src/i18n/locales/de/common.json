@@ -126,7 +126,11 @@
     "discard": "Verwerfen",
     "discardAriaLabel": "Übertragung verwerfen",
     "discardConfirmTitle": "Übertragung verwerfen?",
-    "discardConfirmMessage": "Diese Änderung wird endgültig verworfen und nicht mehr an die Cloud übertragen. Das kann nicht rückgängig gemacht werden.",
+    "discardConfirmMessage": "Diese Änderung wird endgültig verworfen und nicht mehr an die Cloud übertragen. Das Gerät zeigt danach den aktuellen Stand des Servers – ohne Verbindung, sobald sie wieder besteht. Das kann nicht rückgängig gemacht werden.",
+    "conflictReason": "Turnier wurde inzwischen auf einem anderen Gerät geändert",
+    "discardAndLoad": "Verwerfen und aktuellen Stand laden",
+    "discardAndLoadAriaLabel": "Änderung verwerfen und aktuellen Stand des Servers laden",
+    "awaitingServerCopy": "Verworfen – der Stand des Servers wird geladen, sobald die Verbindung steht",
     "close": "Schließen",
     "mutationTypes": {
       "SAVE_TOURNAMENT": "Turnier speichern",

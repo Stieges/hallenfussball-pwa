@@ -126,7 +126,11 @@
     "discard": "Discard",
     "discardAriaLabel": "Discard transfer",
     "discardConfirmTitle": "Discard transfer?",
-    "discardConfirmMessage": "This change will be permanently discarded and will no longer be transferred to the cloud. This cannot be undone.",
+    "discardConfirmMessage": "This change will be permanently discarded and will no longer be transferred to the cloud. The device will then show the current state of the server – without a connection, once it is back. This cannot be undone.",
+    "conflictReason": "The tournament has since been changed on another device",
+    "discardAndLoad": "Discard and load current state",
+    "discardAndLoadAriaLabel": "Discard the change and load the current state of the server",
+    "awaitingServerCopy": "Discarded – the state of the server will load once the connection is back",
     "close": "Close",
     "mutationTypes": {
       "SAVE_TOURNAMENT": "Save tournament",
