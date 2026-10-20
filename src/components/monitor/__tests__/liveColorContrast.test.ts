@@ -7,16 +7,16 @@ import {
   getContrastRatio,
   getScoreTextColor,
   needsContrastFrame,
-  liveColorSchemeDefaults,
 } from '../../../design-tokens/display';
-import { DEFAULT_LIVE_COLOR_SCHEME } from '../../../types/monitor';
+import { DEFAULT_SPECTATOR_DISPLAY } from '../../../core/models/spectatorDisplay';
 
 import { monitorThemes } from '../../../design-tokens';
+import { palette } from '../../../design-tokens/colors/palette';
 
 // M4: gegen die echten Hintergrund-Tokens, nicht gegen einen Testwert
 const DARK_BACKGROUND = monitorThemes.dark.background;
 const LIGHT_BACKGROUND = monitorThemes.light.background;
-const SAMPLE_COLORS = ['#1E40AF', '#DC2626', '#FDE047', '#000000', '#FFFFFF', '#16A34A', '#F97316'];
+const SAMPLE_COLORS = ['#1E40AF', '#DC2626', '#FDE047', palette.kit.black, palette.neutral[0], '#16A34A', '#F97316'];
 
 describe('@ZM-140 Ziffernfarbe nach Kontrast', () => {
   it.each(SAMPLE_COLORS)('Ziffern auf %s erreichen mindestens 4,5 : 1', (bg) => {
@@ -28,17 +28,17 @@ describe('@ZM-140 Ziffernfarbe nach Kontrast', () => {
   });
 
   it('Schwarz als Leibchen: weiße Ziffern', () => {
-    expect(getScoreTextColor('#000000')).toBe('#FFFFFF');
+    expect(getScoreTextColor(palette.kit.black)).toBe(palette.neutral[0]);
   });
 
   it('Gegenbeispiel: Blau bekommt nicht schwarze Ziffern', () => {
-    expect(getScoreTextColor('#1E40AF')).toBe('#FFFFFF');
+    expect(getScoreTextColor('#1E40AF')).toBe(palette.neutral[0]);
   });
 });
 
 describe('@ZM-140 Kasten hebt sich vom Hintergrund ab (echte Token-Werte)', () => {
   it('Schwarz auf dunklem Monitor-Hintergrund: Rahmen nötig', () => {
-    expect(needsContrastFrame('#000000', DARK_BACKGROUND)).toBe(true);
+    expect(needsContrastFrame(palette.kit.black, DARK_BACKGROUND)).toBe(true);
   });
 
   it('Gelb auf dunklem Monitor-Hintergrund: kein Rahmen', () => {
@@ -51,19 +51,22 @@ describe('@ZM-140 Kasten hebt sich vom Hintergrund ab (echte Token-Werte)', () =
   });
 
   it('Weiß auf hellem Monitor-Hintergrund: Rahmen nötig', () => {
-    expect(needsContrastFrame('#FFFFFF', LIGHT_BACKGROUND)).toBe(true);
+    expect(needsContrastFrame(palette.neutral[0], LIGHT_BACKGROUND)).toBe(true);
   });
 
   it('Schwarz auf hellem Monitor-Hintergrund: kein Rahmen', () => {
-    expect(needsContrastFrame('#000000', LIGHT_BACKGROUND)).toBe(false);
+    expect(needsContrastFrame(palette.kit.black, LIGHT_BACKGROUND)).toBe(false);
   });
 });
 
-describe('@ZM-140 Vorgabe ohne Farbe ist Blau (Heim) und Rot (Gast)', () => {
-  it('Standard-Farbschema: Heim Blau, Gast Rot', () => {
-    expect(liveColorSchemeDefaults.homeColor).toBe('#1E40AF');
-    expect(liveColorSchemeDefaults.awayColor).toBe('#DC2626');
-    expect(DEFAULT_LIVE_COLOR_SCHEME.homeColor).toBe(liveColorSchemeDefaults.homeColor);
-    expect(DEFAULT_LIVE_COLOR_SCHEME.awayColor).toBe(liveColorSchemeDefaults.awayColor);
+// W14: die Vorgabe liegt nicht mehr an der Monitor-Folie, sondern in der Turnier-Einstellung „Anzeige für Zuschauer“ (@ZM-152)
+describe('@ZM-152 Vorbelegung der Standardfarben ist Blau (Heim) und Rot (Gast)', () => {
+  it('@ZM-152 Vorbelegung: Teamfarben an, Heim Blau, Gast Rot', () => {
+    expect(DEFAULT_SPECTATOR_DISPLAY).toEqual({ teamColors: true, homeColor: palette.kit.blue, awayColor: palette.kit.red });
+  });
+
+  it('@ZM-140 Gegenbeispiel: die alten Folien-Vorgaben #1E40AF und #DC2626 gelten nirgends mehr', () => {
+    expect(Object.values(DEFAULT_SPECTATOR_DISPLAY)).not.toContain('#1E40AF');
+    expect(Object.values(DEFAULT_SPECTATOR_DISPLAY)).not.toContain('#DC2626');
   });
 });

@@ -712,7 +712,10 @@
     "goalsOf": "Tore {{team}}",
     "homeFallback": "Heim",
     "awayFallback": "Gast",
-    "invalidScore": "Nur ganze Zahlen ab 0 eintragen"
+    "invalidScore": "Nur ganze Zahlen ab 0 eintragen",
+    "changedElsewhere": "Ergebnis wurde inzwischen von {{name}} geändert (jetzt {{score}})",
+    "changedElsewhereNoName": "Ergebnis wurde inzwischen von einem anderen Gerät geändert (jetzt {{score}})",
+    "keepDraft": "Meine Eingabe behalten"
   },
   "sortable": {
     "referee": "Schiedsrichter",
@@ -794,18 +797,6 @@
       "referenceField": "Feld fehlt in diesem Turnier – bitte anpassen",
       "referenceGroup": "Gruppe fehlt in diesem Turnier – bitte anpassen"
     }
-  },
-  "colorScheme": {
-    "scoreColors": "Score-Farben",
-    "homeColor": "Heim-Farbe",
-    "awayColor": "Gast-Farbe",
-    "useTeamColors": "Team-Farben verwenden (falls vorhanden)",
-    "schemaAria": "Farbschema: {{name}}",
-    "pickColorAria": "{{label}} Farbe wählen: {{color}}",
-    "hexValueAria": "{{label}} Hex-Wert",
-    "recentlyUsed": "Zuletzt verwendet",
-    "useColorAria": "Farbe {{color}} verwenden",
-    "done": "Fertig"
   },
   "toolbar": {
     "editSchedule": "Spielplan bearbeiten",

@@ -332,6 +332,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 editingSchedule={isEditing}
                 pendingChanges={isEditing ? pendingChanges : undefined}
                 onScoreChange={handleScoreChange}
+                changeAuthorOf={resultEntry.changeAuthor}
                 onRefereeChange={handleRefereeAssignment}
                 onFieldChange={handleFieldChange}
                 onMatchSwap={isEditing ? handleMatchSwap : undefined}

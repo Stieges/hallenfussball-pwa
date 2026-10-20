@@ -114,6 +114,8 @@ Die Tafel (Spielstand, Uhr, Meldezeile) hat eigene Tokens, nie `surface`. Hell u
 
 Größen (`cssVars.sizing`, fest in px wie die Score-Regel): `scoreboardClockCompact` 32 px (Handy), `scoreboardClockRegular` 64 px (Tablet), `scoreboardClockWide` 56 px (ab 1024), `scoreboardScoreCompact` 40 px, `scoreboardScoreRegular` 64 px, `noticeLineHeightCompact` 24 px, `noticeLineHeightRegular` 32 px (reine Anzeige; nur das Kreuz hat 44 px). Prüfung: `src/design-tokens/__tests__/scoreboard-tokens.test.ts`.
 
+**Spielanzeige 2.3 (Daniel 19.10. „Tokens passen“):** `palette.kit` = Standardfarben und Voreinstellungen der Farbauswahl (`blue` #1565C0 Heim, `red` #C62828 Gast, `navy` #0D1B4C, `black` #000000; Gelb ist `palette.yellow[400]`, Weiß `palette.neutral[0]`, keine Duplikate). Nur `core/models` und Tests importieren sie direkt (`design-tokens/colors/palette`), Oberflächen nehmen Farben über die Ansicht. `cssVars.sizing.qrPlaceholder` 150 px (quadratischer QR-Platzhalter), `scorePreviewWidth` / `scorePreviewHeight` (2 × / 1,5 × `touchTargets.primary` = 112 × 84, Vorschau-Kästen), `cssVars.opacity.disabled` 0,5 (gesperrte Fläche). Prüfung: `src/design-tokens/__tests__/spielanzeige-tokens.test.ts`.
+
 ### Spacing (8pt Grid)
 
 ```typescript
