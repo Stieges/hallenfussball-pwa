@@ -170,6 +170,11 @@ export const TournamentSchema = z.object({
     placementsToPlayOut: PlacementsToPlayOutSchema,
     // A-25c (@W2A-025): Wertung bei Nichtantritt; unbrauchbar → weg (dann gilt 2:0), das Turnier bleibt gültig.
     forfeitScore: ForfeitScoreSchema.optional().catch(undefined),
+    // A-12a (@TM-004): gewählte Platzierungsspiele. Nur `placements` wird geprüft, die übrigen Felder bleiben unverändert;
+    // ein unbrauchbarer Wert fällt weg (dann belegt die Vorlage vor), statt das Turnier beim Laden ungültig zu machen.
+    finalsConfig: z.looseObject({
+        placements: z.array(z.number().int().min(1).max(99)).optional().catch(undefined),
+    }).nullish(),
 })
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- passthrough needed to prevent data loss of unmapped fields
   .passthrough();

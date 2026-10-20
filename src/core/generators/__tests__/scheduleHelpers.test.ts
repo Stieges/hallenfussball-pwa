@@ -143,28 +143,24 @@ describe('determineFinalPhase', () => {
     ...slots(groupRank('A', 1), groupRank('A', 2)),
   };
 
-  it('returns "final" when finalType is set', () => {
-    expect(determineFinalPhase({ ...baseMatch, finalType: 'thirdPlace' })).toBe('final');
+  it('A-12a Platzierungsspiel (finalType gesetzt, Phase final) → final', () => {
+    expect(determineFinalPhase({ ...baseMatch, finalType: 'thirdPlace', phase: 'final' })).toBe('final');
   });
 
-  it('detects roundOf16 from match id', () => {
-    expect(determineFinalPhase({ ...baseMatch, id: 'r16-1' })).toBe('roundOf16');
+  it.each(['roundOf16', 'quarterfinal', 'semifinal', 'final'] as const)('A-12a Phase vom Generator: %s bleibt %s', (phase) => {
+    expect(determineFinalPhase({ ...baseMatch, phase })).toBe(phase);
   });
 
-  it('detects quarterfinal from match id', () => {
-    expect(determineFinalPhase({ ...baseMatch, id: 'qf1' })).toBe('quarterfinal');
-  });
+  it.each(['r16-1', 'qf1', 'sf-1', 'semi1'])(
+    'A-12a C-FINALPHASE-AUS-ID Gegenbeispiel: ohne Phase wird nichts aus der Spiel-ID „%s“ geraten → final',
+    (id) => {
+      expect(determineFinalPhase({ ...baseMatch, id })).toBe('final');
+    },
+  );
 
-  it('detects semifinal from match id containing "sf"', () => {
-    expect(determineFinalPhase({ ...baseMatch, id: 'sf-1' })).toBe('semifinal');
-  });
-
-  it('detects semifinal from match id containing "semi"', () => {
-    expect(determineFinalPhase({ ...baseMatch, id: 'semi1' })).toBe('semifinal');
-  });
-
-  it('defaults to "final" for unknown id patterns', () => {
-    expect(determineFinalPhase({ ...baseMatch, id: 'final' })).toBe('final');
+  it('A-12a Gegenbeispiel: eine unbekannte Phase (groupStage, Tippfehler) zählt im Finalzweig als final', () => {
+    expect(determineFinalPhase({ ...baseMatch, phase: 'groupStage' })).toBe('final');
+    expect(determineFinalPhase({ ...baseMatch, phase: 'semiFinal' })).toBe('final');
   });
 });
 
@@ -276,14 +272,15 @@ describe('scheduleMatches', () => {
     expect(result[1].homeTeam).toBe('Team C');
   });
 
-  it('sets phase to groupStage or detects final phase', () => {
+  it('A-12a Finalspiel trägt die Phase vom Generator, Gruppenspiel groupStage', () => {
     const matches: Match[] = [
-      { id: 'semi1', round: 1, field: 1, ...vs(T1, T2), isFinal: true, slot: 0 },
+      { id: testUuid(301), round: 1, field: 1, ...vs(T1, T2), isFinal: true, phase: 'semifinal', slot: 0 },
+      { id: testUuid(302), round: 1, field: 2, ...vs(T3, T4), slot: 0 },
     ];
 
-    const result = scheduleMatches({ ...base, matches, numberOfFields: 1, gameDuration: 10, phase: 'final' });
+    const result = scheduleMatches({ ...base, matches, numberOfFields: 2, gameDuration: 10, phase: 'final' });
 
-    expect(result[0].phase).toBe('semifinal');
+    expect(result.map((m) => m.phase)).toEqual(['semifinal', 'groupStage']);
   });
 
   it('@TM-015 offene Seite zeigt im Spielplan ihre Herkunft, besetzte Seite den Namen', () => {

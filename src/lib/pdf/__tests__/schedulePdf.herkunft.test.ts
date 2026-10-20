@@ -13,6 +13,7 @@ import { kopfPdf } from './pdfKopfSupport';
 import { translatorFor } from './pdfText';
 import { squash } from './pdfjsText';
 import { testUuid } from '../../../test/testIds';
+import { storedSchedule } from './storedSchedule';
 
 const de = buildPdfTexts(translatorFor('de'), 'de');
 const en = buildPdfTexts(translatorFor('en'), 'en');
@@ -107,7 +108,9 @@ describe('Herkunft im PDF', () => {
     const groups = teamCount / 4;
     const teams: Team[] = Array.from({ length: teamCount }, (_, i) => ({ id: testUuid(i), name: `Verein ${String(i + 1).padStart(2, '0')}`, group: 'ABCDEFGH'[Math.floor(i / 4)] }));
     const tournament = hallencupTournament({ teams, numberOfTeams: teamCount, numberOfGroups: groups, finalsConfig: { preset, tiebreaker: 'shootout' } as never });
-    const { pages } = await kopfPdf({}, tournament, generateFullSchedule(tournament, 'de'));
+    // ab 3 Gruppen seit A-12a nur noch als gespeichertes Turnier (Lesepfad), der Generator legt es nicht mehr an
+    const schedule = groups > 2 ? storedSchedule(tournament, 'de') : generateFullSchedule(tournament, 'de');
+    const { pages } = await kopfPdf({}, tournament, schedule);
     const text = pages.flatMap(p => p.texts.map(t => t.str)).join(' ');
 
     expect(text).not.toMatch(/group-|-winner|-loser|\bsemi\d|\bqf\d|\br16-/i);
