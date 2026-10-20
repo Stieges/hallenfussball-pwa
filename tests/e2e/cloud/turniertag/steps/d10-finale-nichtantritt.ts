@@ -11,7 +11,7 @@
 import { expect } from '@playwright/test';
 import { getLocalServiceRoleClient } from '../../helpers';
 import { E2E_TURNIERTAG_SHARE_CODE } from '../../testData';
-import { fetchTurniertagBracket, findFinalByLabel, SOLL_TIMEOUT_MS } from './shared';
+import { fetchTurniertagBracket, findFinalByLabel, SOLL_TIMEOUT_MS, vorbedingung } from './shared';
 import { appendOwner, eventOf, regularResultEvents } from './playViaRpc';
 import type { StepContext, TurniertagStep } from './types';
 
@@ -22,8 +22,10 @@ async function nichtantritt({ anonPage }: StepContext): Promise<void> {
   expect(platz3.team_a_id && platz3.team_b_id, 'Spiel um Platz 3 ist besetzt (hängt an D8/D9/D9b)').toBeTruthy();
   expect(finale.team_a_id && finale.team_b_id, 'Finale ist besetzt (hängt an D8/D9/D9b)').toBeTruthy();
   const finaleEvents = regularResultEvents(finale, 1, 0);
-  const finaleResult = await appendOwner(finale.id, finaleEvents);
-  expect(finaleResult.results.map((r) => r.status), 'Finale regulär gespielt').toEqual(finaleEvents.map(() => 'accepted'));
+  await vorbedingung('Finale regulär spielen', async () => {
+    const finaleResult = await appendOwner(finale.id, finaleEvents);
+    expect(finaleResult.results.map((r) => r.status), 'Finale regulär gespielt').toEqual(finaleEvents.map(() => 'accepted'));
+  });
   const at = Date.now() - 60_000;
   const result = await appendOwner(platz3.id, [
     eventOf('RESULT_ENTRY', at, at, { section: null, clockMs: null, payload: { scores: { [platz3.team_a_id ?? '']: 2, [platz3.team_b_id ?? '']: 0 }, forfeit: { absent: 'B' } } }),
@@ -42,5 +44,5 @@ async function nichtantritt({ anonPage }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D10', title: 'Nichtantritt im Spiel um Platz 3: 2:0 als Wertung', scenarios: [], owner: 'A-25/B-12', expectedFail: true, run: nichtantritt },
+  { id: 'D10', title: 'Nichtantritt im Spiel um Platz 3: 2:0 als Wertung', scenarios: ['@W2A-022', '@TM-061'], owner: 'A-25/B-12', expectedFail: true, run: nichtantritt },
 ];

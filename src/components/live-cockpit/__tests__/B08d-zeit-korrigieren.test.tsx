@@ -153,6 +153,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     await warteSperre(); // Sperre des Nummern-Bausteins (@SL-021); Schließen lässt das Tor ohne Nummer zählen (@SL-083)
     await user.keyboard('{Escape}');
     zu(740_000); // 5:20
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:20')); // erst wenn die Anzeige nachgezogen hat, sonst öffnet der Dialog mit 5:10
 
     const dialog = await zeitDialog(user);
     expect(within(dialog).getByText('wegen des Tors bei 5:10 frühestens 5:10')).toBeInTheDocument();
@@ -174,6 +175,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     await warteSperre(); // Sperre des Nummern-Bausteins (@SL-021); Schließen lässt das Tor ohne Nummer zählen (@SL-083)
     await user.keyboard('{Escape}');
     zu(740_000); // Uhr steht bei 5:20
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:20')); // Anzeige muss nachgezogen haben, bevor der Dialog öffnet
 
     const dialog = await zeitDialog(user);
     const weniger = within(dialog).getByRole('button', { name: '10 Sekunden weniger' });
@@ -206,7 +208,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     for (const seite of ['home', 'home', 'away']) {
       await user.click(await screen.findByTestId(`goal-button-${seite}`));
       await warteSperre(); // Sperre des Nummern-Bausteins (@SL-021); Schließen lässt das Tor ohne Nummer zählen (@SL-083)
-    await user.keyboard('{Escape}');
+      await user.keyboard('{Escape}');
     }
     expect(zeitKnopf()).not.toBeNull(); // Gegenprobe: im laufenden Abschnitt ist die Korrektur da
     zu(420_000 + 360_000);

@@ -52,7 +52,7 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
           group={runningMatch.group}
           fullscreen
           theme={theme}
-          colorScheme={slide.config.liveColorScheme}
+          boxes={shown.boxes}
           hideScore={!view.rules.results}
           finalScore={shown.score}
           finalRound={shown.phase === 'final'}

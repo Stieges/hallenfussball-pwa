@@ -16,5 +16,5 @@ async function tvGekoppelt({ anonPage }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D7b', title: '/tv gekoppelt (Bildschirm, Turnierleitung, Helfer-Handy)', scenarios: [], owner: 'B-21', expectedFail: true, run: tvGekoppelt },
+  { id: 'D7b', title: '/tv gekoppelt (Bildschirm, Turnierleitung, Helfer-Handy)', scenarios: ['@ME-023', '@ME-051'], owner: 'B-21', expectedFail: true, run: tvGekoppelt },
 ];

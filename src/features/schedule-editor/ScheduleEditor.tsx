@@ -452,7 +452,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
       const sideContext = buildSideContext(tournament, [match]);
       const homeTeam = sideName(match, 'A', sideContext);
       const awayTeam = sideName(match, 'B', sideContext);
-      return `Spiel ${match.round}: ${homeTeam} gegen ${awayTeam}`;
+      return `Spiel ${match.matchNumber ?? match.round}: ${homeTeam} gegen ${awayTeam}`;
     };
 
     const getSlotLabel = (slotId: string | number): string => {

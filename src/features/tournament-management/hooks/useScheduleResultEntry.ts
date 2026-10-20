@@ -32,10 +32,16 @@ export type ResultEntryPrompt =
   | { kind: 'shootout'; matchNumber: number; score: string; homeName: string; awayName: string };
 
 export interface ScheduleResultEntry {
-  enterScore: (matchId: string, scoreA: number, scoreB: number) => Promise<void>;
+  /** `false` = nichts gespeichert (Nein/Abbrechen/Ablehnung), die Eingabe-Zelle zeigt dann wieder den gespeicherten Stand */
+  enterScore: (matchId: string, scoreA: number, scoreB: number) => Promise<boolean>;
   prompt: ResultEntryPrompt | null;
   /** Grund (`reason`), `'yes'` (abgesetzt), Strafstoßstand `'4:3'` (`shootout`) oder `null` = Abbruch. */
   answerPrompt: (answer: string | null) => void;
+  /**
+   * @FU-104: Name dessen, der den Stand eines Spiels zuletzt geändert hat (letzter Spielstand-Eintrag nach dem Abgleich,
+   * Lesefunktion am Server); `null`, wenn er nicht bekannt ist (Gast, ohne Netz, ohne Recht, ohne Namen).
+   */
+  changeAuthor: (matchId: string) => Promise<string | null>;
 }
 
 export interface UseScheduleResultEntryOptions {
@@ -101,6 +107,20 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       : t('schedule.resultEntry.staleNoName', { number: entry.meta.number, score: now });
   }, [lastScoreAuthor, t]);
 
+  const changeAuthor = useCallback(async (matchId: string): Promise<string | null> => {
+    const entry = buildValidMatches(tournament).find((candidate) => candidate.externalId === matchId);
+    if (!entry || !context) {
+      return null;
+    }
+    try {
+      await context.engine.ensureMatch(entry.matchId, entry.ctx, tournament.id);
+      await context.engine.catchUp(entry.matchId);
+    } catch {
+      return null;
+    }
+    return lastScoreAuthor(entry.matchId);
+  }, [tournament, context, lastScoreAuthor]);
+
   const rejectionText = useCallback(async (error: unknown, entry: ValidMatchEntry): Promise<string> => {
     if (error instanceof MatchCommandRejectedError && error.code === ERROR_CODES.STALE_BASE) {
       const current = (error.detail as { currentScores?: Record<string, number> } | undefined)?.currentScores ?? {};
@@ -112,15 +132,15 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     return tCockpit(rejectionMessageKey(error));
   }, [staleText, t, tCockpit]);
 
-  const enterScore = useCallback(async (matchId: string, scoreA: number, scoreB: number) => {
+  const enterScore = useCallback(async (matchId: string, scoreA: number, scoreB: number): Promise<boolean> => {
     const entry = buildValidMatches(tournament).find((candidate) => candidate.externalId === matchId);
     if (!entry) {
       showWarning(t('schedule.resultEntry.teamsMissing'));
-      return;
+      return false;
     }
     if (!context || !commands) {
       showWarning(t('schedule.resultEntry.unavailable'));
-      return;
+      return false;
     }
     const match = tournament.matches.find((m) => m.id === matchId);
     const knockout = serverRulesFor(tournament, match).knockout;
@@ -136,29 +156,29 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       const state = engine.view(id)?.result.state;
       if (!state) {
         showWarning(t('schedule.resultEntry.unavailable'));
-        return;
+        return false;
       }
       const route = routeForStatus(state.status);
       let eventId: string | null = null;
       if (route === 'running') {
         showWarning(t('schedule.resultEntry.running'));
-        return;
+        return false;
       }
       if (actor !== 'leitung') {
         showWarning(t(route === 'correct' ? 'schedule.resultEntry.correctionLeadOnly' : 'schedule.resultEntry.leadOnly'));
-        return;
+        return false;
       }
       if (route === 'enter' || route === 'unskip') {
         // @FU-093: abgesetzt → erst die Rückfrage; @FU-094/@FU-097: K.-o.-Unentschieden → danach die Strafstoß-Abfrage.
         if (route === 'unskip' && (await ask({ kind: 'unskip', matchNumber: entry.meta.number })) === null) {
-          return;
+          return false;
         }
         let shootout: Record<string, number> | undefined;
         if (knockoutDraw) {
           const { homeTeam, awayTeam } = entry.meta;
           const answer = await ask({ kind: 'shootout', matchNumber: entry.meta.number, score: score(scoreA, scoreB), homeName: homeTeam.name, awayName: awayTeam.name });
           if (answer === null) {
-            return; // ohne Strafstoßergebnis wird nichts gespeichert (abgesetzt bleibt abgesetzt)
+            return false; // ohne Strafstoßergebnis wird nichts gespeichert (abgesetzt bleibt abgesetzt)
           }
           shootout = shootoutOf(answer, entry.ctx.teamAId, entry.ctx.teamBId);
         }
@@ -168,26 +188,28 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       } else {
         if (lockFinishedResults) {
           showWarning(t('actions.matchAlreadyFinished'));
-          return;
+          return false;
         }
         const before = score(effectiveScoreFor(state, entry.ctx.teamAId), effectiveScoreFor(state, entry.ctx.teamBId));
         if (basedOn !== state.lastScoreEventId) {
           showWarning(await staleText(entry, before)); // M-1: inzwischen geändert -- keine Rückfrage
-          return;
+          return false;
         }
         const reason = await ask({ kind: 'reason', matchNumber: entry.meta.number, before, after: score(scoreA, scoreB) });
         if (!reason) {
-          return;
+          return false;
         }
         eventId = await commands.correct(id, entry.ctx, actor, scores, reason, basedOn);
       }
       if (eventId) {
         trackAck(eventId, entry);
       }
+      return true;
     } catch (error) {
       showWarning(await rejectionText(error, entry));
+      return false;
     }
   }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText]);
 
-  return { enterScore, prompt, answerPrompt };
+  return { enterScore, prompt, answerPrompt, changeAuthor };
 }

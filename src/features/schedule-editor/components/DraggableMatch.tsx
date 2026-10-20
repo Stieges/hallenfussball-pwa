@@ -296,7 +296,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
               <span>⋮⋮</span>
             </div>
           )}
-          <span style={matchNumberStyle}>Spiel {match.round}</span>
+          <span style={matchNumberStyle}>Spiel {match.matchNumber ?? match.round}</span>
           <span style={timeStyle}>{formatTime(match.scheduledTime)}</span>
         </div>
 

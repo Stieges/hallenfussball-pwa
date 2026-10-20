@@ -24,6 +24,7 @@ const ALLOWED: Readonly<Record<string, string>> = {
   'types/supabase.ts': 'erzeugte Datenbank-Typen (snake_case-Spalten)',
   'core/match/client/cacheColumns.ts': 'Engine-Zustand → Cache-Spalten (schreibt, rechnet keinen Endstand)',
   'core/models/types.ts': 'Feldliste',
+  'core/models/tournamentCopy.ts': 'Kopie fürs Proben leert Verlängerung/Strafstoß (KP, @W5-025), liest keinen Endstand',
   'core/models/LiveMatch.ts': 'Typ LiveMatch',
   'core/models/schemas/TournamentSchema.ts': 'Zod-Schema',
   'components/live-cockpit/types.ts': 'Typ LiveMatch (Cockpit-Form, deklariert nur; B-06 aus match-cockpit/MatchCockpit.tsx umgezogen)',

@@ -10,6 +10,7 @@ import { TeamNameDisplay } from '../TeamNameDisplay';
 import type { LiveMatch } from '../../../hooks/useLiveMatches';
 import { displayFontSizes, displayLayout, monitorThemes } from '../../../design-tokens';
 import { getContrastRatio } from '../../../design-tokens/display';
+import { palette } from '../../../design-tokens/colors/palette';
 
 vi.mock('../../../hooks', () => ({
   useMonitorTheme: vi.fn(() => ({
@@ -93,7 +94,7 @@ describe('Doppelpunkt genau mittig', () => {
 
 describe('Rahmenlogik einheitlich', () => {
   it('Rot und Gelb: beide Kästen mit demselben dezenten Rahmen', () => {
-    render(<LiveMatchDisplay match={createMatch()} colorScheme={{ preset: 'classic', homeColor: '#FDE047', awayColor: '#DC2626', useTeamColors: false }} />);
+    render(<LiveMatchDisplay match={createMatch()} boxes={{ home: { fill: { kind: 'solid', color: '#FDE047' }, bib: false }, away: { fill: { kind: 'solid', color: '#DC2626' }, bib: false } }} />);
     const home = document.querySelector<HTMLElement>('[data-position="home"]')!;
     const away = document.querySelector<HTMLElement>('[data-position="away"]')!;
     expect(home.style.borderStyle).toBe('solid');
@@ -102,14 +103,21 @@ describe('Rahmenlogik einheitlich', () => {
     expect(away.style.borderWidth).toBe(L.frameWidthSubtle);
   });
 
-  it('Standard: Blau (unter 3 : 1) macht beide Rahmen kräftig (gleiche Breite, Entscheidung 2026-10-15)', () => {
+  // 2.3 (W14): die Standardfarben sind jetzt Blau `#1565C0` und Rot `#C62828` (@ZM-152); beide heben sich vom dunklen Monitor ≥ 3 : 1 ab
+  it('@ZM-140 Standard Blau/Rot (je ≥ 3 : 1 zum dunklen Grund): beide Rahmen dezent und gleich breit', () => {
     render(<LiveMatchDisplay match={createMatch()} />);
+    expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe(L.frameWidthSubtle);
+    expect(document.querySelector<HTMLElement>('[data-position="away"]')!.style.borderWidth).toBe(L.frameWidthSubtle);
+  });
+
+  it('@ZM-140 Navy (unter 3 : 1 zum dunklen Grund) macht beide Rahmen kräftig (gleiche Breite, Entscheidung 2026-10-15)', () => {
+    render(<LiveMatchDisplay match={createMatch()} boxes={{ home: { fill: { kind: 'solid', color: palette.kit.blue }, bib: false }, away: { fill: { kind: 'solid', color: palette.kit.navy }, bib: false } }} />);
     expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe(L.frameWidthStrong);
     expect(document.querySelector<HTMLElement>('[data-position="away"]')!.style.borderWidth).toBe(L.frameWidthStrong);
   });
 
   it('Schwarz: kräftiger Rahmen, der andere Kasten bekommt dieselbe Breite', () => {
-    render(<LiveMatchDisplay match={createMatch()} colorScheme={{ preset: 'classic', homeColor: '#000000', awayColor: '#DC2626', useTeamColors: false }} />);
+    render(<LiveMatchDisplay match={createMatch()} boxes={{ home: { fill: { kind: 'solid', color: palette.kit.black }, bib: false }, away: { fill: { kind: 'solid', color: '#DC2626' }, bib: false } }} />);
     expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe(L.frameWidthStrong);
     expect(document.querySelector<HTMLElement>('[data-position="away"]')!.style.borderWidth).toBe(L.frameWidthStrong);
   });

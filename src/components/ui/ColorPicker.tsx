@@ -35,6 +35,8 @@ interface ColorPickerProps {
   showCustomPicker?: boolean;
   /** Additional styles */
   style?: CSSProperties;
+  /** Name der Farbe (z. B. „Blau“): steht im Auslöser vor dem Hex-Wert, der Hex-Wert wandert nach rechts */
+  valueLabel?: string;
   /** Test ID for E2E testing */
   'data-testid'?: string;
 }
@@ -45,6 +47,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   onChange,
   presets = JERSEY_COLOR_PRESETS,
   disabled = false,
+  valueLabel,
   showCustomPicker = true,
   style = {},
   'data-testid': testId,
@@ -104,6 +107,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     alignItems: 'center',
     gap: cssVars.spacing.sm,
     padding: cssVars.spacing.sm,
+    minHeight: cssVars.touchTargets.minimum,
     background: cssVars.colors.inputBg,
     border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
@@ -126,6 +130,12 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     color: cssVars.colors.textPrimary,
     fontFamily: cssVars.fontFamilies.mono,
     textTransform: 'uppercase',
+  };
+
+  const nameStyles: CSSProperties = {
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
   };
 
   const dropdownStyles: CSSProperties = {
@@ -187,8 +197,15 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         aria-expanded={isOpen}
       >
         <div style={swatchStyles} aria-hidden="true" />
-        <span style={valueTextStyles}>{value}</span>
-        <span style={{ marginLeft: 'auto', color: cssVars.colors.textSecondary }}>
+        {valueLabel === undefined ? (
+          <span style={valueTextStyles}>{value}</span>
+        ) : (
+          <>
+            <span style={nameStyles}>{valueLabel}</span>
+            <span style={{ ...valueTextStyles, marginLeft: 'auto', fontSize: cssVars.fontSizes.labelMd, color: cssVars.colors.textSecondary }}>{value}</span>
+          </>
+        )}
+        <span style={{ marginLeft: valueLabel === undefined ? 'auto' : undefined, color: cssVars.colors.textSecondary }}>
           {isOpen ? '▲' : '▼'}
         </span>
       </button>

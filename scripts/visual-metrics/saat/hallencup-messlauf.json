@@ -136,6 +136,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:00:00.000Z",
+                "matchNumber": 1,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T08:10:00.000Z",
@@ -160,6 +161,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:00:00.000Z",
+                "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T08:25:00.000Z",
@@ -184,6 +186,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:12:00.000Z",
+                "matchNumber": 3,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T08:40:00.000Z",
@@ -208,6 +211,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:12:00.000Z",
+                "matchNumber": 4,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T08:55:00.000Z",
@@ -232,6 +236,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:24:00.000Z",
+                "matchNumber": 5,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T09:10:00.000Z",
@@ -256,6 +261,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:24:00.000Z",
+                "matchNumber": 6,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T09:25:00.000Z",
@@ -280,6 +286,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:36:00.000Z",
+                "matchNumber": 7,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T09:40:00.000Z",
@@ -304,6 +311,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:36:00.000Z",
+                "matchNumber": 8,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T09:55:00.000Z",
@@ -328,6 +336,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:48:00.000Z",
+                "matchNumber": 9,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T10:10:00.000Z",
@@ -352,6 +361,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:48:00.000Z",
+                "matchNumber": 10,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T10:25:00.000Z",
@@ -376,6 +386,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T09:00:00.000Z",
+                "matchNumber": 11,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T10:40:00.000Z",
@@ -400,6 +411,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T09:00:00.000Z",
+                "matchNumber": 12,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T10:55:00.000Z",
@@ -444,6 +456,7 @@
                 "phase": "final",
                 "label": "1. Halbfinale",
                 "scheduledTime": "2026-11-14T09:15:00.000Z",
+                "matchNumber": 13,
                 "overtimeScoreA": 1,
                 "overtimeScoreB": 0,
                 "matchStatus": "finished",
@@ -490,6 +503,7 @@
                 "phase": "final",
                 "label": "2. Halbfinale",
                 "scheduledTime": "2026-11-14T09:15:00.000Z",
+                "matchNumber": 14,
                 "penaltyScoreA": 4,
                 "penaltyScoreB": 3,
                 "matchStatus": "finished",
@@ -537,6 +551,7 @@
                 "finalType": "final",
                 "label": "Finale",
                 "scheduledTime": "2026-11-14T09:27:00.000Z",
+                "matchNumber": 15,
                 "matchStatus": "running",
                 "timerElapsedSeconds": 0,
                 "timerStartTime": "@jetzt-320s",
@@ -599,7 +614,8 @@
                 "phase": "final",
                 "finalType": "thirdPlace",
                 "label": "Spiel um Platz 3",
-                "scheduledTime": "2026-11-14T09:39:00.000Z"
+                "scheduledTime": "2026-11-14T09:39:00.000Z",
+                "matchNumber": 16
               }
             ],
             "status": "published",
@@ -1078,6 +1094,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:00:00.000Z",
+                "matchNumber": 1,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T08:11:00.000Z",
@@ -1102,6 +1119,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:13:00.000Z",
+                "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T08:26:00.000Z",
@@ -1146,6 +1164,7 @@
                 "phase": "final",
                 "label": "1. Halbfinale",
                 "scheduledTime": "2026-11-14T08:29:00.000Z",
+                "matchNumber": 3,
                 "matchStatus": "running",
                 "timerElapsedSeconds": 0,
                 "timerStartTime": "@jetzt-320s",
@@ -1207,7 +1226,8 @@
                 "isFinal": true,
                 "phase": "final",
                 "label": "2. Halbfinale",
-                "scheduledTime": "2026-11-14T08:42:00.000Z"
+                "scheduledTime": "2026-11-14T08:42:00.000Z",
+                "matchNumber": 4
               },
               {
                 "id": "00000006-0000-4000-8000-000000000005",
@@ -1244,7 +1264,8 @@
                 "phase": "final",
                 "finalType": "thirdPlace",
                 "label": "Spiel um Platz 3",
-                "scheduledTime": "2026-11-14T08:55:00.000Z"
+                "scheduledTime": "2026-11-14T08:55:00.000Z",
+                "matchNumber": 5
               },
               {
                 "id": "00000006-0000-4000-8000-000000000006",
@@ -1281,7 +1302,8 @@
                 "phase": "final",
                 "finalType": "final",
                 "label": "Finale",
-                "scheduledTime": "2026-11-14T09:08:00.000Z"
+                "scheduledTime": "2026-11-14T09:08:00.000Z",
+                "matchNumber": 6
               }
             ],
             "status": "published",
@@ -1470,6 +1492,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:00:00.000Z",
+                "matchNumber": 1,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T08:11:00.000Z",
@@ -1494,6 +1517,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:13:00.000Z",
+                "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T08:26:00.000Z",
@@ -1538,6 +1562,7 @@
                 "phase": "final",
                 "label": "1. Halbfinale",
                 "scheduledTime": "2026-11-14T08:29:00.000Z",
+                "matchNumber": 3,
                 "overtimeScoreA": 0,
                 "overtimeScoreB": 0,
                 "matchStatus": "running",
@@ -1601,7 +1626,8 @@
                 "isFinal": true,
                 "phase": "final",
                 "label": "2. Halbfinale",
-                "scheduledTime": "2026-11-14T08:42:00.000Z"
+                "scheduledTime": "2026-11-14T08:42:00.000Z",
+                "matchNumber": 4
               },
               {
                 "id": "00000007-0000-4000-8000-000000000005",
@@ -1638,7 +1664,8 @@
                 "phase": "final",
                 "finalType": "thirdPlace",
                 "label": "Spiel um Platz 3",
-                "scheduledTime": "2026-11-14T08:55:00.000Z"
+                "scheduledTime": "2026-11-14T08:55:00.000Z",
+                "matchNumber": 5
               },
               {
                 "id": "00000007-0000-4000-8000-000000000006",
@@ -1675,7 +1702,8 @@
                 "phase": "final",
                 "finalType": "final",
                 "label": "Finale",
-                "scheduledTime": "2026-11-14T09:08:00.000Z"
+                "scheduledTime": "2026-11-14T09:08:00.000Z",
+                "matchNumber": 6
               }
             ],
             "status": "published",
@@ -1864,6 +1892,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:00:00.000Z",
+                "matchNumber": 1,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T08:11:00.000Z",
@@ -1888,6 +1917,7 @@
                 "isFinal": false,
                 "phase": "groupStage",
                 "scheduledTime": "2026-11-14T08:13:00.000Z",
+                "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
                 "finishedAt": "2026-11-14T08:26:00.000Z",
@@ -1932,6 +1962,7 @@
                 "phase": "final",
                 "label": "1. Halbfinale",
                 "scheduledTime": "2026-11-14T08:29:00.000Z",
+                "matchNumber": 3,
                 "penaltyScoreA": 1,
                 "penaltyScoreB": 1,
                 "matchStatus": "running",
@@ -1995,7 +2026,8 @@
                 "isFinal": true,
                 "phase": "final",
                 "label": "2. Halbfinale",
-                "scheduledTime": "2026-11-14T08:42:00.000Z"
+                "scheduledTime": "2026-11-14T08:42:00.000Z",
+                "matchNumber": 4
               },
               {
                 "id": "00000008-0000-4000-8000-000000000005",
@@ -2032,7 +2064,8 @@
                 "phase": "final",
                 "finalType": "thirdPlace",
                 "label": "Spiel um Platz 3",
-                "scheduledTime": "2026-11-14T08:55:00.000Z"
+                "scheduledTime": "2026-11-14T08:55:00.000Z",
+                "matchNumber": 5
               },
               {
                 "id": "00000008-0000-4000-8000-000000000006",
@@ -2069,7 +2102,8 @@
                 "phase": "final",
                 "finalType": "final",
                 "label": "Finale",
-                "scheduledTime": "2026-11-14T09:08:00.000Z"
+                "scheduledTime": "2026-11-14T09:08:00.000Z",
+                "matchNumber": 6
               }
             ],
             "status": "published",

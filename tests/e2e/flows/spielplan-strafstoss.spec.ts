@@ -55,12 +55,19 @@ function strafstossTurnier(): Record<string, unknown> {
  * Das Turnier hat nur die Finalrunde (Halbfinale 1, dann Finale): Desktop als Tabelle, Handy/Tablet als Karten ohne Rolle
  * und Test-ID. In beiden Layouts gehören die ersten zwei Eingabefelder zum Halbfinale 1, die nächsten zwei zum Finale.
  */
-async function trageEin(page: Page, heim: number, gast: number): Promise<void> {
+async function trageEin(page: Page, heim: number, gast: number, bestaetigung: 'enter' | 'verlassen' = 'enter'): Promise<void> {
   // Erst eintragen, wenn das Turnier geladen ist (sonst setzt das Nachladen die Felder zurück).
   await expect(page.getByText('Sieger Halbfinale 1').filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(4);
   await page.getByRole('spinbutton').filter({ visible: true }).nth(0).fill(String(heim));
   await page.getByRole('spinbutton').filter({ visible: true }).nth(1).fill(String(gast));
+  // @FU-101: gespeichert wird erst bei Enter oder beim Verlassen des Feldes
+  const gastFeld = page.getByRole('spinbutton').filter({ visible: true }).nth(1);
+  if (bestaetigung === 'enter') {
+    await gastFeld.press('Enter');
+  } else {
+    await gastFeld.blur();
+  }
 }
 const ZWEI_ZWEI = /2\s?:\s?2/;
 
@@ -124,7 +131,7 @@ test.describe('@FU-094 Spielplan: K.-o.-Unentschieden mit Strafstoßschießen ei
   test('@FU-094 Gegenbeispiel: ohne Angabe (Abbrechen) speichert die App das Unentschieden nicht', async ({ page }) => {
     await page.goto(`/#/tournament/${TOURNAMENT}/schedule`);
     await page.waitForLoadState('networkidle');
-    await trageEin(page, 2, 2);
+    await trageEin(page, 2, 2, 'verlassen');
     await page.getByTestId('result-entry-shootout-cancel').click({ timeout: 5_000 });
 
     await expect(page.getByTestId('result-entry-shootout-dialog')).toHaveCount(0);

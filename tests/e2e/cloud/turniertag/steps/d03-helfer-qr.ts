@@ -34,5 +34,5 @@ async function helferPerQr({ asRole, browser }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D3', title: 'Helfer tritt per QR bei, Zulassung mit Feld', scenarios: [], owner: 'A-16/A-17', expectedFail: true, run: helferPerQr },
+  { id: 'D3', title: 'Helfer tritt per QR bei, Zulassung mit Feld', scenarios: ['@HE-001'], owner: 'A-16/A-17', expectedFail: true, run: helferPerQr },
 ];

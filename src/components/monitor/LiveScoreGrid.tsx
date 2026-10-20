@@ -14,7 +14,7 @@ import { ScoreBlock } from './ScoreBlock';
 import { TeamNameDisplay } from './TeamNameDisplay';
 import { LivePenaltyResult } from './LiveFinalScore';
 import { TEAM_NAME_ZEILENHOEHE, gemeinsameNamenGroesse } from './teamNameFit';
-import type { BlockFrame } from './liveBlockFrame';
+import type { BlockFrame } from '../../design-tokens';
 
 export interface LiveScoreGridProps {
   match: LiveMatch;

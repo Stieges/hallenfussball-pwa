@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { anzeigeT } from '../../i18n/anzeigeSprache';
 import { Tournament, Standing } from '../../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../../core/generators';
-import { calculateStandings } from '../../utils/calculations';
+import { calculateStandingsPerGroup } from '../../utils/calculations';
 import { SupabaseRepository } from '../../core/repositories/SupabaseRepository';
 import { LocalStorageRepository } from '../../core/repositories/LocalStorageRepository';
 import { isSupabaseConfigured } from '../../lib/supabase';
@@ -90,21 +90,7 @@ export function usePublicTournament(
       const generatedSchedule = generateFullSchedule(found);
       setSchedule(generatedSchedule);
 
-      const uniqueGroups = Array.from(
-        new Set(found.teams.map((t) => t.group).filter(Boolean))
-      ) as string[];
-
-      const allStandings: Standing[] = [];
-      uniqueGroups.forEach((group) => {
-        const teamsInGroup = found.teams.filter((t) => t.group === group);
-        const groupStandings = calculateStandings(
-          teamsInGroup,
-          found.matches,
-          found,
-          group
-        );
-        allStandings.push(...groupStandings);
-      });
+      const allStandings: Standing[] = calculateStandingsPerGroup(found);
 
       setStandings(allStandings);
       setLoadingState('success');
