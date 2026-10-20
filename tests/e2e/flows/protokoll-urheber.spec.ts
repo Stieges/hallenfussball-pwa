@@ -74,19 +74,15 @@ test.describe('@FU-080 Protokoll eines im Spielplan eingetragenen Spiels (Gast, 
     await seedIndexedDB({ tournaments: [papierTurnier()] });
   });
 
-  test('@FU-080 L4: Gast trägt 3:1 ein → Protokoll zeigt „Ergebnis eingetragen“ ohne Namen', async ({ page }, testInfo) => {
-    // Befund C-COCKPIT-TABLET-OHNE-PROTOKOLL: Bei Tablet-Breite (768 px bis Desktop) zeigt das Cockpit weder die
-    // Seitenleiste (nur Desktop) noch den Knopf „Ereignisse“ (nur Handy) -- das Protokoll ist dort nicht erreichbar.
-    // Die Anforderung (@FU-080, Spiel leiten: „auf dem Tablet ist auch die Liste der Einträge zu sehen“) gilt; Test bleibt.
-    test.fail(testInfo.project.name === 'tablet-portrait', 'Befund C-COCKPIT-TABLET-OHNE-PROTOKOLL');
+  test('@FU-080 L4: Gast trägt 3:1 ein → Protokoll zeigt „Ergebnis eingetragen“ ohne Namen', async ({ page }) => {
     await trageDreiZuEinsEin(page);
 
-    // Einstieg: Live-Bereich, Spiel-Auswahl (ManagementTab) -- dasselbe wie in der Cloud-E2E.
-    await page.getByRole('link', { name: 'Live' }).or(page.getByRole('button', { name: 'Live' })).or(page.getByRole('tab', { name: 'Live' })).filter({ visible: true }).first().click();
-    await page.waitForLoadState('networkidle');
-    await page.locator('select').filter({ has: page.locator(`option[value="${SPIEL_9}"]`) }).selectOption(SPIEL_9);
-    const istHandy = (page.viewportSize()?.width ?? 0) < 768;
-    if (istHandy) {
+    // Einstieg über die Adresse (@OB-029; es gibt keine Spielauswahl mehr, @SL-057): Spiel 9 öffnet das Cockpit im schmalen Kopf.
+    await page.goto(`/#/tournament/${TOURNAMENT}/live?matchId=${SPIEL_9}`);
+    await expect(page.getByTestId('cockpit-slim-header')).toBeVisible({ timeout: 15_000 });
+    // Ab 1024 px steht die Liste daneben, darunter öffnet sie der Leisten-Knopf „Ereignisse“ (@FU-080, @SL-061; Befund C-COCKPIT-TABLET-OHNE-PROTOKOLL behoben).
+    const listeDaneben = (page.viewportSize()?.width ?? 0) >= 1024;
+    if (!listeDaneben) {
       await page.getByTestId('match-event-log-button').click();
     }
     const zeile = page.getByTestId('protocol-result-entry').filter({ visible: true });

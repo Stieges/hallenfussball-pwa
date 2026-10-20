@@ -7,7 +7,7 @@
  * 3. Monitor - Konfigurator für die Hallenbildschirme
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { CSSProperties } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cssVars } from '../design-tokens';
@@ -69,6 +69,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
   // Initial match ID for cockpit navigation (passed from ScheduleTab or URL)
   const [initialMatchId, setInitialMatchId] = useState<string | null>(matchIdFromUrl);
+  // Ändert sich die Adresse im geöffneten Bildschirm (Link, Zurück/Vor), gilt die neue Spiel-Kennung (@OB-029: die Adresse nennt das Spiel)
+  useEffect(() => { if (matchIdFromUrl) { setInitialMatchId(matchIdFromUrl); } }, [matchIdFromUrl]);
 
   // Mobile Navigation
   const isMobile = useIsMobile();
