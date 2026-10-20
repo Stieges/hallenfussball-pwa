@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { rankTournamentGroup } from '../tournamentTable';
 import { sharedPlaceAllowed } from '../decisions';
 import { validateDraft } from '../validateDraft';
+import { resolvePlayoffPairings } from '../../generators/playoffResolver';
 import { createMockTournament } from '../../../test/factories';
 import { groupRank, slots } from '../../../test/matchSlotFixtures';
 import type { Match, Standing, Tournament } from '../../../types/tournament';
@@ -61,8 +62,26 @@ describe("TB-3' Verfall: Einstellung geändert (@W2A-068)", () => {
     expect([row(result.rows, 'P').place, row(result.rows, 'D').place, row(result.rows, 'F').place]).toEqual([3, 3, 5]);
     expect(row(result.rows, 'P').decision).toBeUndefined();
     expect(sharedPlaceAllowed(repo.tournament, '', PD)).toBe(false);
-    // Danach nimmt die App das Strafstoßschießen an (der Block ist wieder offen).
-    expect((await repo.service().decide(repo.tournament.id, shootout('D', 'P', 4, 3))).ok).toBe(true);
+    // Danach nimmt die App das Strafstoßschießen an (der Block ist wieder offen) – und es WIRKT (Review TB-3' B1).
+    expect((await repo.service(['e-otting']).decide(repo.tournament.id, shootout('D', 'P', 4, 3))).ok).toBe(true);
+    const danach = rankTournamentGroup(repo.tournament, '');
+    expect([row(danach.rows, 'D').place, row(danach.rows, 'P').place]).toEqual([3, 4]);
+    expect(danach.openTies).toEqual([]);
+    expect(danach.rows.some((r) => r.decisionNeeded)).toBe(false);
+    expect(row(danach.rows, 'D').decision?.id).toBe('e-otting');
+    expect(await repo.service().decide(repo.tournament.id, shootout('P', 'D', 5, 4))).toEqual({ ok: false, code: 'ALREADY_DECIDED' });
+  });
+
+  it('@W2A-068 Gegenbeispiel: wird Platz 3 danach wieder abgehakt, gilt weiter das neuere Strafstoßschießen, nicht die alte Annahme', async () => {
+    // „Die neueste gültige Entscheidung gilt“ (Review TB-3' B1, gilt nach Vorschlag).
+    const repo = await nikolausMitAnnahme([1, 2]);
+    repo.setPlaces([1, 2, 3]);
+    expect((await repo.service(['e-otting']).decide(repo.tournament.id, shootout('D', 'P', 4, 3))).ok).toBe(true);
+    repo.setPlaces([1, 2]);
+    const result = rankTournamentGroup(repo.tournament, '');
+    expect([row(result.rows, 'D').place, row(result.rows, 'P').place]).toEqual([3, 4]);
+    expect(row(result.rows, 'D').decision?.id).toBe('e-otting');
+    expect(result.staleDecisionIds).toEqual(['e-annahme']);
   });
 
   it('@W2A-068 Annahme und Gruppe abgeschlossen, Platz 3 angehakt: die Annahme ist aufgehoben, der Gleichstand ist wieder offen', async () => {
@@ -129,6 +148,20 @@ describe("TB-3' Verfall: Herkunft geändert (@W2A-069)", () => {
     expect(nachher.openTies).toEqual([[id('O'), id('H')]]);
     expect([row(nachher.rows, 'O').decisionNeeded, row(nachher.rows, 'H').decisionNeeded]).toEqual([true, true]);
     expect(sharedPlaceAllowed(repo.tournament, 'A', { place: 4, size: 2 })).toBe(false);
+
+    // Das danach eingetragene Strafstoßschießen wirkt: Tabelle geordnet, zweiter Eintrag abgelehnt, Finalrunde besetzbar (B1).
+    expect((await repo.service(['e-ost']).decide(repo.tournament.id, shootout('O', 'H', 4, 3, 'A'))).ok).toBe(true);
+    const entschieden = rankTournamentGroup(repo.tournament, 'A');
+    expect([row(entschieden.rows, 'O').place, row(entschieden.rows, 'H').place]).toEqual([4, 5]);
+    expect(entschieden.openTies).toEqual([]);
+    expect(await repo.service().decide(repo.tournament.id, shootout('H', 'O', 5, 4, 'A'))).toEqual({ ok: false, code: 'ALREADY_DECIDED' });
+    const turnier = repo.tournament;
+    expect(resolvePlayoffPairings(turnier).wasResolved).toBe(true);
+    const seite = (matchId: string, s: 'slotA' | 'slotB'): string | undefined => {
+      const slot = turnier.matches.find((m) => m.id === matchId)?.[s];
+      return slot?.kind === 'team' ? slot.teamId : undefined;
+    };
+    expect([seite('hf-1', 'slotA'), seite('hf-2', 'slotB'), seite('p5', 'slotA')]).toEqual([id('N'), id('S'), id('O')]);
   });
 });
 

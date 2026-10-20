@@ -5,10 +5,14 @@
  * abgeschlossen“ liefert GA4 A-13; bis dahin ist er hier eine Abhängigkeit des Dienstes (Voreinstellung: nie).
  * Record `2026-09-27_wizard-regelinhalte` (@W2A-070; „wer wann“ → `entscheidung.personZeit.test.ts`).
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { rankTournamentGroup } from '../../standings/tournamentTable';
 import { DATA, id } from '../../standings/__tests__/fixtures';
-import { jgj, MemoryRepo, nikolaus, order, shared, shootout } from '../../standings/__tests__/decisionTestKit';
+import { jgj, lage048, MemoryRepo, nikolaus, order, shared, shootout } from '../../standings/__tests__/decisionTestKit';
+import { groupClosedByFollowUp } from '../../standings/groupClosure';
+import { resolvePlayoffPairings } from '../../generators/playoffResolver';
+import { StandingDecisionService } from '../StandingDecisionService';
+import type { ITournamentRepository } from '../../repositories/ITournamentRepository';
 import type { Tournament } from '../../../types/tournament';
 
 const petting = (t: Tournament) => rankTournamentGroup(t, '').rows.filter((r) => [id('P'), id('D')].includes(r.team.id));
@@ -76,5 +80,39 @@ describe("TB-3' Entscheidung zurücknehmen (@W2A-070)", () => {
     expect(await repo.service().withdraw(repo.tournament.id, 'e-1')).toEqual({ ok: true });
     expect(await repo.service().withdraw(repo.tournament.id, 'e-1')).toEqual({ ok: true });
     expect(repo.writes).toBe(2);
+  });
+});
+
+describe("TB-3' Fixrunde: Zwischenregel „Gruppe abgeschlossen“ bis GA4 A-13 (Review A1) und Lesefehler (A5)", () => {
+  it('@W2A-070 Zwischenregel: geschlossen, sobald ein Spiel mit Herkunft aus der Gruppe besetzt oder angepfiffen ist; Gegenbeispiel: andere Gruppe, nichts besetzt', () => {
+    const t = lage048();
+    expect([groupClosedByFollowUp(t, 'A'), groupClosedByFollowUp(t, 'B')]).toEqual([false, false]);
+    // Gruppe B hat keinen Gleichstand → Halbfinals bekommen ihre B-Seiten; Gruppe A (Süd/West offen) bleibt offen.
+    resolvePlayoffPairings(t);
+    expect([groupClosedByFollowUp(t, 'A'), groupClosedByFollowUp(t, 'B')]).toEqual([false, true]);
+    // Angepfiffen, obwohl die A-Seite noch offen ist: Halbfinale 2 („Zweiter Gruppe A“) läuft.
+    const laeuft = { ...t, matches: t.matches.map((m) => (m.id === 'hf-2' ? { ...m, matchStatus: 'running' as const } : m)) };
+    expect(groupClosedByFollowUp(laeuft, 'A')).toBe(true);
+  });
+
+  it('@W2A-070 Zwischenregel im Dienst: nach dem Besetzen des Halbfinales ist das Strafstoßschießen nicht mehr zurücknehmbar, davor schon', async () => {
+    const repo = new MemoryRepo(lage048());
+    expect((await repo.service(['e-west']).decide(repo.tournament.id, shootout('W', 'S', 4, 3, 'A'))).ok).toBe(true);
+    // Gegenbeispiel: vor dem Besetzen geht das Zurücknehmen (Standardregel des Kits = Zwischenregel).
+    const vorher = new MemoryRepo(repo.tournament);
+    expect(await vorher.service().withdraw(vorher.tournament.id, 'e-west')).toEqual({ ok: true });
+
+    resolvePlayoffPairings(repo.tournament);
+    expect(groupClosedByFollowUp(repo.tournament, 'A')).toBe(true);
+    expect(await repo.service().withdraw(repo.tournament.id, 'e-west')).toEqual({ ok: false, code: 'WITHDRAW_NOT_ALLOWED' });
+    expect(repo.tournament.standingDecisions?.map((d) => d.id)).toEqual(['e-west']);
+  });
+
+  it('@W2A-070 liefert das frische Lesen kein Turnier, meldet die App einen Fehler statt eines Zurücknehmens (STALE)', async () => {
+    const update = vi.fn();
+    const repo = { get: () => Promise.resolve(null), updateStandingDecisions: update } as unknown as ITournamentRepository;
+    const service = new StandingDecisionService(repo, { groupClosed: () => false });
+    expect(await service.withdraw('t-weg', 'e-1')).toEqual({ ok: false, code: 'STALE' });
+    expect(update).not.toHaveBeenCalled();
   });
 });

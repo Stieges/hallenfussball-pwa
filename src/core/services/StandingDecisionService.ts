@@ -6,8 +6,9 @@
  * GA4 A-13b/A-15c). Kein Voll-Speichern (überschriebe sonst Spiele). Rein, ohne React.
  *
  * TB-3': Zurücknehmen (`withdraw`) jeder Art – Annahme, Strafstoßschießen, Reihenfolge – bis zum Abschluss der Gruppe
- * (Daniel K6, @W2A-070), danach WITHDRAW_NOT_ALLOWED. Den Zustand „Gruppe abgeschlossen“ liefert GA4 A-13; bis dahin
- * ist er eine Abhängigkeit (`groupClosed`, Voreinstellung: nie). Person und Zeit speichert der Dienst nicht im
+ * (Daniel K6, @W2A-070), danach WITHDRAW_NOT_ALLOWED. „Gruppe abgeschlossen“ ist eine Pflicht-Abhängigkeit
+ * (`groupClosed`, ohne Voreinstellung); bis GA4 A-13 gilt die Zwischenregel `groupClosedByFollowUp` (Spiel mit Herkunft
+ * aus der Gruppe besetzt oder angepfiffen, Review A1). Person und Zeit speichert der Dienst nicht im
  * öffentlich lesbaren `config` (@W2A-072); sie gehören ins Verlaufsprotokoll (GA4 A-13b).
  */
 import type { StandingDecision, Tournament } from '../../types/tournament';
@@ -26,14 +27,11 @@ export type WithdrawResult =
   | { ok: false; code: 'WITHDRAW_NOT_ALLOWED' | 'STALE' | 'OFFLINE' };
 
 export interface StandingDecisionDeps {
-  newId: () => string;
-  /** Ist die Gruppe abgeschlossen? (GA4 A-13; bis dahin nie.) */
-  groupClosed?: (tournament: Tournament, groupId: string) => boolean;
+  /** Kennung neuer Entscheidungen (ohne Angabe: UUID). */
+  newId?: () => string;
+  /** Ist die Gruppe abgeschlossen? Pflicht: bis GA4 A-13 `groupClosedByFollowUp`, danach der echte Zustand. */
+  groupClosed: (tournament: Tournament, groupId: string) => boolean;
 }
-
-const DEFAULT_DEPS: StandingDecisionDeps = {
-  newId: () => crypto.randomUUID(),
-};
 
 const MAX_ATTEMPTS = 2;
 
@@ -42,7 +40,7 @@ type WriteOutcome = 'ok' | 'conflict' | 'offline';
 export class StandingDecisionService {
   constructor(
     private readonly repository: ITournamentRepository,
-    private readonly deps: StandingDecisionDeps = DEFAULT_DEPS,
+    private readonly deps: StandingDecisionDeps,
   ) {}
 
   async decide(tournamentId: string, draft: DecisionDraft): Promise<DecideResult> {
@@ -57,7 +55,7 @@ export class StandingDecisionService {
       }
       const input = tableInput(tournament.teams, tournament.matches, tournament, check.groupId);
       const decision: StandingDecision = {
-        id: this.deps.newId(),
+        id: this.deps.newId?.() ?? crypto.randomUUID(),
         groupId: check.groupId, // aus der gerechneten Tabelle (Review TB-A Auflage 1)
         teamIds: sortedIds(draft.teamIds),
         order: [...draft.order],
@@ -80,12 +78,15 @@ export class StandingDecisionService {
   async withdraw(tournamentId: string, decisionId: string): Promise<WithdrawResult> {
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       const tournament = await this.repository.get(tournamentId, { fresh: true });
-      const decisions = tournament?.standingDecisions ?? [];
+      if (tournament === null) {
+        return { ok: false, code: 'STALE' }; // nichts gelesen – kein Zurücknehmen vortäuschen (Review A5)
+      }
+      const decisions = tournament.standingDecisions ?? [];
       const decision = decisions.find((d) => d.id === decisionId);
-      if (tournament === null || decision === undefined) {
+      if (decision === undefined) {
         return { ok: true };
       }
-      if (this.deps.groupClosed?.(tournament, decision.groupId) === true) {
+      if (this.deps.groupClosed(tournament, decision.groupId)) {
         return { ok: false, code: 'WITHDRAW_NOT_ALLOWED' };
       }
       const outcome = await this.write(tournament, decisions.filter((d) => d.id !== decisionId));

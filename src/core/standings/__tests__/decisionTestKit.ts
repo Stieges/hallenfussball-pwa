@@ -7,6 +7,7 @@ import type { Match, StandingDecision, Tournament } from '../../../types/tournam
 import type { ITournamentRepository } from '../../repositories/ITournamentRepository';
 import { NetworkError, OptimisticLockError } from '../../errors';
 import { StandingDecisionService } from '../../services/StandingDecisionService';
+import { groupClosedByFollowUp } from '../groupClosure';
 import { createMockTournament } from '../../../test/factories';
 import { groupRank, slots } from '../../../test/matchSlotFixtures';
 import { BFV_ORDER, DATA, id, league, parseMatches, POINTS_310, teamsOf, type Key } from './fixtures';
@@ -57,12 +58,12 @@ export class MemoryRepo {
     this.tournament = { ...this.tournament, placementsToPlayOut: [...places], version: (this.tournament.version ?? 0) + 1 };
   }
 
-  /** `groupClosed`: ob die Gruppe abgeschlossen ist (bis GA4 A-13 gibt es den Zustand nicht, Voreinstellung: nie). */
+  /** `groupClosed`: ob die Gruppe abgeschlossen ist; ohne Angabe die Zwischenregel bis GA4 A-13 (`groupClosedByFollowUp`). */
   service(ids: string[] = [], groupClosed?: (groupId: string) => boolean): StandingDecisionService {
     let n = 0;
     return new StandingDecisionService(this as unknown as ITournamentRepository, {
       newId: () => ids[n++] ?? `entscheidung-${String(n)}`,
-      ...(groupClosed !== undefined ? { groupClosed: (_t: Tournament, groupId: string) => groupClosed(groupId) } : {}),
+      groupClosed: groupClosed === undefined ? groupClosedByFollowUp : (_t: Tournament, groupId: string) => groupClosed(groupId),
     });
   }
 }

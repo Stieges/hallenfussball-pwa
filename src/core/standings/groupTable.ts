@@ -13,7 +13,8 @@
  * Entscheidungen der Turnierleitung (`decisions.ts`) gelten nur für einen offenen Block im Modus `group`, wenn Block und
  * Grundlage gleich sind: Strafstoßschießen/Reihenfolge ordnen den Block, „Ergebnis so akzeptieren“ schließt ihn mit
  * gemeinsamer Platzziffer – aber nur, solange kein Platz des Blocks ausgespielt werden muss (Einstellung, Herkünfte;
- * erneut geprüft beim Anwenden, @W2A-068, @W2A-069). Ungültige (verfallene) Entscheidungen stehen in `staleDecisionIds`.
+ * erneut geprüft beim Anwenden, @W2A-068, @W2A-069). Passen mehrere, gilt die neueste. Ungültige, verfallene oder
+ * durch eine neuere verdrängte Entscheidungen stehen in `staleDecisionIds`.
  *
  * Rein, ohne React.
  */
@@ -160,9 +161,11 @@ export function rankGroup(input: RankGroupInput): GroupTableResult {
     const place = rows.length + 1;
     if (block.length > 1 && input.mode === 'group') {
       const ids = block.map((s) => s.team.id);
-      const found = findValidDecision(input.decisions, input.groupId, ids, decisionBasis(input, ids));
-      const decision = found?.kind === 'shared'
-        && !blockMayShare(input.placesToPlayOut, input.followUpRanks, { place, size: block.length }) ? undefined : found;
+      // Nicht mehr erlaubte Annahmen scheiden VOR der Suche aus, sonst verdeckten sie ein späteres Strafstoßschießen;
+      // von den gültigen gilt die neueste (Review TB-3' B1, gilt nach Vorschlag).
+      const mayShare = blockMayShare(input.placesToPlayOut, input.followUpRanks, { place, size: block.length });
+      const candidates = input.decisions.filter((d) => d.kind !== 'shared' || mayShare).reverse();
+      const decision = findValidDecision(candidates, input.groupId, ids, decisionBasis(input, ids));
       if (decision !== undefined) {
         applied.add(decision.id);
         rows.push(...decidedRows(block, decision, place));
