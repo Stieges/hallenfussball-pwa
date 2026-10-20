@@ -109,7 +109,7 @@ test.describe('Cockpit-Tafel', () => {
     await page.waitForTimeout(2200);
     expect(await page.getByTestId('scoreboard-clock-rest').textContent()).toBe(beiPause);
 
-    await page.getByTestId('match-start-button').click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
     await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'false');
     await expect(async () => {
       expect(await page.getByTestId('scoreboard-clock-rest').textContent()).not.toBe(beiPause);
@@ -125,7 +125,7 @@ test.describe('Cockpit-Tafel', () => {
     await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'true');
     await expect(page.getByTestId('scoreboard-clock')).toContainText('Uhr steht');
     expect(await hoehe()).toBe(laeuft);
-    await page.getByTestId('match-start-button').click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
     await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'false');
     expect(await hoehe()).toBe(laeuft);
   });
