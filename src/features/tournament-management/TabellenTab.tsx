@@ -27,6 +27,7 @@ import {
 } from '../../utils/calculations';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { resolvePlacementCriterionLabel } from '../tournament-creation/components/placementLogicLabels';
+import { useTieRenderers } from './standings/useTieRenderers';
 
 interface TabellenTabProps {
   tournament: Tournament;
@@ -52,6 +53,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
+  const tieUi = useTieRenderers(tournament); // Paket TB-B: Hinweis und Marke bei Gleichstand (nur App-Ansicht)
   const hasGroups = tournament.teams.some(t => t.group);
   const hasPlayoffs = hasFinalRound(tournament); // Nachzug F1 A-36b: aus dem Turniermodell, nicht finals.enabled
 
@@ -119,6 +121,9 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
         standings={currentStandings}
         teams={schedule.teams}
         tournament={tournament}
+        tieDisplay="app"
+        renderTieHint={tieUi.hint}
+        renderTieMarker={tieUi.marker}
       />
     );
   };
@@ -411,6 +416,9 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
           </div>
         )}
 
+        {/* Gleichstand bei Jeder gegen jeden (eine Tabelle ohne Gruppen), Paket TB-B */}
+        {!hasGroups && tieUi.hint('')}
+
         {/* Desktop Table View */}
         {!isMobile && (
           <table style={rankingTableStyle}>
@@ -448,6 +456,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                     </td>
                     <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
                       {placement.team.name}
+                      {!hasGroups && tieUi.marker(placement.team.id, '')}
                     </td>
                     {hasPlayoffs && (
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
@@ -554,6 +563,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                       </td>
                       <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
                         {placement.team.name}
+                        {!hasGroups && tieUi.marker(placement.team.id, '')}
                         {placement.decidedBy !== 'groupStage' ? (
                           <div style={{
                             fontSize: cssVars.fontSizes.xs, // F1-W3a: ≥ 11 px (grenzwerte schrift.min)

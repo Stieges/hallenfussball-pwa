@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { DATA, id, league } from './fixtures';
 import { rankTournamentGroup } from '../tournamentTable';
+import { teamSlot } from '../../models/matchSlot';
 import { jgj, lage048, MemoryRepo, nikolaus, order, shared, shootout } from './decisionTestKit';
 import { groupTieView, placesChangeEffects, tieMarkerOf } from '../tieViews';
 
@@ -78,7 +79,7 @@ describe('Paket TB-B Oberfläche: Sicht auf Gleichstände (tieViews)', () => {
     const t = lage048();
     const besetzt = {
       ...t,
-      matches: t.matches.map((m) => (m.id === 'hf-1' ? { ...m, slotA: { kind: 'team' as const, teamId: id('N') }, originA: { kind: 'groupRank' as const, group: 'A', rank: 1 } } : m)),
+      matches: t.matches.map((m) => (m.id === 'hf-1' ? { ...m, slotA: teamSlot(id('N')), originA: { kind: 'groupRank' as const, group: 'A', rank: 1 } } : m)),
     };
     expect(groupTieView(besetzt, 'A').closed).toBe(true);
     expect(groupTieView(besetzt, 'B').closed).toBe(false); // Gegenbeispiel: andere Gruppe bleibt offen

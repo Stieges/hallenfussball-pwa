@@ -4,7 +4,7 @@
  * Uses CSS media queries for responsive layout (no isMobile prop needed)
  */
 
-import { CSSProperties, useState } from 'react';
+import { CSSProperties, ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, breakpointValues } from '../../design-tokens'
 import { Standing, TeamLogo, TeamColors } from '../../types/tournament';
@@ -21,6 +21,14 @@ interface GroupTablesProps {
   tournament?: ScheduleSource;
   /** Set of team IDs currently involved in a running match */
   activeMatchTeamIds?: Set<string>;
+  /**
+   * Paket TB-B (TB-6b): `app` zeigt Gleichstände mit Marke und Hinweis (Turnierleitung, Helfer), `public` nur Reihenfolge und
+   * gemeinsame Platzziffer (Zuschauer, Monitor; @W2A-059). Vorgabe `public`.
+   */
+  tieDisplay?: 'app' | 'public';
+  /** Nur bei `app`: Hinweise einer Gruppe (`''` = Jeder gegen jeden) und Marke je Team. */
+  renderTieHint?: (groupId: string) => ReactNode;
+  renderTieMarker?: (teamId: string, groupId: string) => ReactNode;
 }
 
 export const GroupTables: React.FC<GroupTablesProps> = ({
@@ -28,9 +36,13 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
   teams,
   tournament,
   activeMatchTeamIds,
+  tieDisplay = 'public',
+  renderTieHint,
+  renderTieMarker,
 }) => {
   const { t } = useTranslation('tournament');
   const groupStandings = getGroupStandings(standings, teams);
+  const tieApp = tieDisplay === 'app';
 
   if (groupStandings.length === 0) {
     return (
@@ -64,6 +76,8 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
             title={group === OVERALL_GROUP ? t('groupTables.overall') : getGroupDisplayName(group, tournament)}
             tournament={tournament}
             activeMatchTeamIds={activeMatchTeamIds}
+            tieHint={tieApp ? renderTieHint?.(group) : undefined}
+            tieMarker={tieApp && renderTieMarker ? (teamId) => renderTieMarker(teamId, group) : undefined}
           />
         ))}
       </div>
@@ -93,9 +107,12 @@ interface StandingsTableProps {
   title: string;
   tournament?: ScheduleSource;
   activeMatchTeamIds?: Set<string>;
+  /** TB-6b: Hinweise der Gruppe über der Tabelle und Marke unter dem Teamnamen (nur Ansicht `app`). */
+  tieHint?: ReactNode;
+  tieMarker?: (teamId: string) => ReactNode;
 }
 
-const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tournament, activeMatchTeamIds }) => {
+const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tournament, activeMatchTeamIds, tieHint, tieMarker }) => {
   const { t } = useTranslation('tournament');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   // ... (rest of logic)
@@ -166,6 +183,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
   return (
     <div style={containerStyle} className="standings-table">
       <h3 style={titleStyle}>{title}</h3>
+      {tieHint}
 
       {/* Desktop Table View - hidden on mobile via CSS */}
       <div className="desktop-view" style={{ overflowX: 'auto' }}>
@@ -221,6 +239,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                         />
                       )}
                     </div>
+                    {tieMarker?.(standing.team.id)}
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'center' }}>
                     {standing.played}
@@ -343,6 +362,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                           />
                         )}
                       </div>
+                      {tieMarker?.(standing.team.id)}
                     </td>
                     <td style={{ ...mobileTdStyle, textAlign: 'center' }}>
                       <span style={{
