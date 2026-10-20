@@ -533,7 +533,10 @@
   "abpfiff": {
     "label": "Abpfiff",
     "halten": "halten",
-    "beschreibung": "Gedrückt halten, etwa eine Sekunde"
+    "beschreibung": "Gedrückt halten, etwa eine Sekunde",
+    "frage": "Spiel {{spiel}} bei noch {{rest}} Minuten Spielzeit beenden?",
+    "beenden": "Beenden",
+    "weiterspielen": "Weiterspielen"
   },
   "mehr": {
     "titel": "Mehr",

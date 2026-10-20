@@ -1,0 +1,171 @@
+/**
+ * LiveCockpit – Abpfiff von Hand über die echte Engine (Plan LT-1): Gedrückthalten fragt mit der Restzeit des ganzen Spiels nach,
+ * kurze Bedienung pfeift nie ab, „Beenden“ sendet genau ein Spielende, das Spielende von selbst schließt die Rückfrage (RL2).
+ * Echte Engine (fake-indexeddb), gemockt nur Ton, Sync-Anzeige, Rolle. Spiel 11, 2 × 6 Minuten, 1 Minute Pause (Gherkin @SL-010);
+ * Datum über `vi.setSystemTime`, die Haltezeit (1 s) läuft in echter Zeit.
+ * Szenarien: @SL-157, @SL-158, @SL-167 (Tastatur-Halten), @SL-010, @SL-133, RL2.
+ */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { initRealDeI18n } from '../../../test/realDeI18n';
+import { looseVs } from '../../../test/matchSlotFixtures';
+import { Harness } from './engineHarness';
+import { HARNESS_MATCH_ID, anpfiff, eintraegeImLog, halte } from './engineHarnessSupport';
+import { T0 } from './enginePhaseFixture';
+import { HOLD_MS } from '../../ui/atoms/HoldButton';
+
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+await initRealDeI18n();
+
+vi.mock('../../../hooks/useMatchSound', () => ({
+  useMatchSound: () => ({ play: vi.fn(), stop: vi.fn(), testPlay: vi.fn(), activate: vi.fn(), isPlaying: false, isLoading: false, isReady: true, isActivated: true, error: null }),
+}));
+vi.mock('../../../hooks/useSyncStatus', () => ({
+  useSyncStatus: () => ({
+    status: 'synced', isSyncing: false, pendingChanges: 0, failedChanges: 0, failedMutations: [],
+    syncTournament: vi.fn(), retryFailedMutation: vi.fn(), discardFailedMutation: vi.fn(), isCloudSyncAvailable: false,
+  }),
+}));
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'leitung' }));
+vi.mock('../../../components/ui/Toast/ToastContext', () => ({
+  useToast: () => ({ showWarning: vi.fn(), showError: vi.fn(), showInfo: vi.fn() }),
+}));
+
+/** Spiel 11, zwei Abschnitte zu je 6 Minuten, 1 Minute Pause (stabile Referenz für das Gerüst). */
+const SPIEL_11 = {
+  groupPhaseGameDuration: 12, gamePeriods: 2, halftimeBreak: 1,
+  matches: [{ id: HARNESS_MATCH_ID, ...looseVs('teama', 'teamb'), round: 1, field: 1, matchNumber: 11 }],
+};
+const zu = (ms: number): void => { vi.setSystemTime(T0 + ms); };
+const zustand = (): HTMLElement => screen.getByTestId('scoreboard-state');
+const matchEnds = (): number => eintraegeImLog().filter((e) => e.type === 'MATCH_END').length;
+const rueckfrage = (): HTMLElement | null => screen.queryByRole('alertdialog');
+const warte = async (ms: number): Promise<void> => { await act(async () => { await new Promise((fertig) => { setTimeout(fertig, ms); }); }); };
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  zu(0);
+  vi.stubGlobal('requestAnimationFrame', () => 0);
+  vi.stubGlobal('cancelAnimationFrame', () => undefined);
+});
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+async function imZweitenAbschnittBei(user: ReturnType<typeof userEvent.setup>, spielzeitMs: number): Promise<void> {
+  await anpfiff(user);
+  await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
+  zu(360_000);
+  await waitFor(() => expect(zustand()).toHaveTextContent('Halbzeit'));
+  zu(420_000); // Pause vorbei
+  await user.click(screen.getByTestId('match-wiederanpfiff-button'));
+  await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
+  zu(420_000 + spielzeitMs);
+  await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent(/Spielzeit 2:48/));
+}
+
+describe('Abpfiff halten fragt nach', () => {
+  it('@SL-157 Gedrückthalten fragt nach „Spiel 11 bei noch 3:12 Minuten Spielzeit beenden?“', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
+    expect(rueckfrage()).toBeNull();
+    await halte(screen.getByTestId('match-finish-button'));
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Spiel 11 bei noch 3:12 Minuten Spielzeit beenden?');
+    expect(matchEnds()).toBe(0);
+  });
+
+  it('@SL-157 die Taste füllt sich sichtbar, solange sie gehalten wird', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
+    const knopf = screen.getByTestId('match-finish-button');
+    fireEvent.pointerDown(knopf, { pointerId: 1, button: 0 });
+    expect(knopf).toHaveAttribute('data-fuellt', 'true');
+    fireEvent.pointerUp(knopf, { pointerId: 1 });
+    expect(knopf).not.toHaveAttribute('data-fuellt');
+  });
+
+  it('@SL-133 im ersten Abschnitt bei 4:00 nennt die Rückfrage die Restzeit des ganzen Spiels: 8:00', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={SPIEL_11} />); await anpfiff(user);
+    await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
+    zu(240_000);
+    await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent(/Spielzeit 4:00/));
+    await halte(screen.getByTestId('match-finish-button'));
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Spiel 11 bei noch 8:00 Minuten Spielzeit beenden?');
+  });
+
+  it('@SL-010 ohne Bestätigung läuft das Spiel weiter („Weiterspielen“, kein Spielende im Log)', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
+    await halte(screen.getByTestId('match-finish-button'));
+    await user.click(await screen.findByRole('button', { name: 'Weiterspielen' }));
+    expect(rueckfrage()).toBeNull();
+    expect(zustand()).toHaveTextContent('Live');
+    expect(screen.getByTestId('match-pause-button')).toBeInTheDocument();
+    expect(matchEnds()).toBe(0);
+  });
+
+  it('@SL-010 „Beenden“ → genau ein Spielende, die Tafel zeigt Abgepfiffen', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
+    await halte(screen.getByTestId('match-finish-button'));
+    await user.click(await screen.findByRole('button', { name: 'Beenden' }));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    expect(matchEnds()).toBe(1);
+    expect(rueckfrage()).toBeNull();
+  });
+});
+
+describe('@SL-158 kurze Bedienung pfeift nicht ab', () => {
+  it.each<[string, (knopf: HTMLElement) => Promise<void>]>([
+    ['„Abpfiff“ kurz antippt', async (k) => { fireEvent.pointerDown(k, { pointerId: 1, button: 0 }); fireEvent.pointerUp(k, { pointerId: 1 }); fireEvent.click(k); }],
+    ['„Abpfiff“ nach einer halben Sekunde wieder loslässt', async (k) => {
+      fireEvent.pointerDown(k, { pointerId: 1, button: 0 }); await warte(500); fireEvent.pointerUp(k, { pointerId: 1 }); await warte(HOLD_MS);
+    }],
+    ['am Laptop die Eingabetaste drückt, während „Abpfiff“ den Fokus hat', async (k) => {
+      k.focus(); fireEvent.keyDown(k, { key: 'Enter' }); fireEvent.keyUp(k, { key: 'Enter' }); await warte(HOLD_MS + 60);
+    }],
+  ])('@SL-158 %s → keine Rückfrage, Spiel 11 läuft weiter', async (_bedienung, aktion) => {
+    const user = userEvent.setup();
+    render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
+    await aktion(screen.getByTestId('match-finish-button'));
+    expect(rueckfrage()).toBeNull();
+    expect(zustand()).toHaveTextContent('Live');
+    expect(matchEnds()).toBe(0);
+  });
+
+  it.each([['Enter'], [' ']])('@SL-167 Entscheidung A3: Taste „%s“ auf dem fokussierten „Abpfiff“ etwa eine Sekunde gehalten → Rückfrage', async (taste) => {
+    const user = userEvent.setup();
+    render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
+    const knopf = screen.getByTestId('match-finish-button');
+    knopf.focus();
+    fireEvent.keyDown(knopf, { key: taste });
+    await warte(HOLD_MS + 60);
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Spiel 11 bei noch 3:12 Minuten Spielzeit beenden?');
+    expect(matchEnds()).toBe(0);
+  });
+});
+
+describe('RL2 Spielende von selbst bei offener Rückfrage', () => {
+  it('RL2 die Rückfrage schließt ohne Befehl, es bleibt bei genau einem Spielende', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
+    await halte(screen.getByTestId('match-finish-button'));
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+    zu(420_000 + 360_000); // der Abschnitt läuft ab: Spielende von selbst
+    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    await waitFor(() => expect(rueckfrage()).toBeNull());
+    expect(matchEnds()).toBe(1);
+  });
+
+  it('RL2 gesperrtes Gerät: nach 5 Minuten Sprung der Uhr kein zweites Spielende durch die späte Bestätigung', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
+    await halte(screen.getByTestId('match-finish-button'));
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+    zu(420_000 + 360_000 + 300_000);
+    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    expect(screen.queryByRole('button', { name: 'Beenden' })).toBeNull();
+    expect(matchEnds()).toBe(1);
+  });
+});

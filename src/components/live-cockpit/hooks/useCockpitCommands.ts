@@ -24,6 +24,7 @@ import type { UseEntryFlowsReturn } from './useEntryFlows';
 import type { UseSideOrderReturn } from './useSideOrder';
 import { useTiebreakCommands } from './useTiebreakCommands';
 import { korrekturUhrstaende } from '../model/zeitKorrektur';
+import { restzeitSpielMs, restzeitText } from '../model/restzeit';
 
 /** Die vier Tipps einer Team-Spalte, je Seite (Aufgabe 3.3). */
 export interface TeamSideHandlers { onTor: () => void; onFoul: () => void; onZeitstrafe: () => void; onKarte: () => void }
@@ -38,6 +39,8 @@ export interface CockpitCommandsArgs {
   melde: UseCockpitNoticesReturn['melde'];
   /** Engine-Ansicht des Spiels (`null` ohne Engine-Kopie): Grundlage für Abschnittsende von selbst und Wiederanpfiff. */
   engineView: PhaseView | null;
+  /** Ansicht der Tafel (Engine oder Ersatz aus dem `LiveMatch`): daraus die Restzeit der Rückfrage beim Abpfiff. */
+  view?: PhaseView | null;
 }
 
 export interface CockpitCommands {
@@ -53,7 +56,7 @@ export interface CockpitCommands {
   onSidebarEventEdit?: LegacyPlayAreaProps['sidebar']['onEventEdit'];
 }
 
-export function useCockpitCommands({ props, settings, sound, flows, sides, melde, engineView }: CockpitCommandsArgs): CockpitCommands {
+export function useCockpitCommands({ props, settings, sound, flows, sides, melde, engineView, view }: CockpitCommandsArgs): CockpitCommands {
   const { t } = useTranslation('cockpit');
   const { currentMatch: match, onStart, onPause, onResume, onFinish, onGoal, onAdjustTime, onUpdateSettings } = props;
   const readOnly = !props.kannSteuern;
@@ -76,6 +79,8 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   const [showEventLog, setShowEventLog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  // Rückfrage nach „Abpfiff halten“: die Restzeit wird beim Öffnen festgehalten (die Frage gilt für diesen Moment, @SL-010)
+  const [finishFrage, setFinishFrage] = useState<{ restText: string } | null>(null);
   // Blätter schließen, wenn das Spiel wechselt (die Eintrags-Auswahl schließt `useEntryFlows` selbst; nur an der
   // Spiel-ID, nicht an `events`, C1/RC13: `LiveCockpit.dialogReset.test.tsx`).
   const matchId = match?.id;
@@ -84,6 +89,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     setShowEventLog(false);
     setShowSettings(false);
     setShowMore(false);
+    setFinishFrage(null);
   }, [matchId]);
 
   // C3b-1: Minus/Rückgängig/Löschen/Bearbeiten (Engine-Spiele: RETRACT/AMEND).
@@ -159,7 +165,11 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   const zeitKorrekturMoeglich = engineView
     ? engineView.status === 'running' || engineView.status === 'paused'
     : match?.status === 'RUNNING' || match?.status === 'PAUSED';
-  const openTimeAdjust = onAdjustTime && zeitKorrekturMoeglich ? () => setShowTimeAdjust(true) : undefined;
+  // K10: mit Engine-Ansicht geht die Korrektur als CLOCK_ADJUST über die Engine (B-08d), ohne dass der Aufrufer `onAdjustTime` liefert;
+  // ohne Engine-Ansicht bleibt der Weg über `onAdjustTime` (A-08c: ohne Handler kein Punkt).
+  const openTimeAdjust = zeitKorrekturMoeglich && (engineView || onAdjustTime) ? () => setShowTimeAdjust(true) : undefined;
+  // Der Abpfiff von Hand gilt nur laufend oder angehalten; endet das Spiel von selbst, schließt die Rückfrage ohne Befehl (RL2).
+  useEffect(() => { if (finishFrage && !zeitKorrekturMoeglich) { setFinishFrage(null); } }, [finishFrage, zeitKorrekturMoeglich]);
   const zeitGrenzen = engineView
     ? {
       current: Math.floor(engineView.sectionElapsedMs / 1000),
@@ -170,6 +180,8 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     : match
       ? { current: match.timerElapsedSeconds ?? 0, min: 0, max: match.durationSeconds, minIsGoal: false }
       : null;
+  const abpfiffAnsicht = view ?? engineView;
+  const frageNachAbpfiff = () => { setFinishFrage({ restText: abpfiffAnsicht ? restzeitText(restzeitSpielMs(abpfiffAnsicht)) : '' }); };
   const switchSides = () => { sides.tausche(); showInfo(t('meldung.seitenGetauscht')); };
   const overlayHandlers: CockpitOverlayHandlers = {
     closeTimeAdjust: () => setShowTimeAdjust(false),
@@ -181,6 +193,8 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     // M-1 FIX: nur die Ereignis-ID merken, das Ereignis wird frisch nachgeschlagen
     editEventFromLog: (event) => { setShowEventLog(false); flows.oeffne({ art: 'nummer', seite: null, eventId: event.id }); },
     closeMore: () => setShowMore(false),
+    finishConfirmed: () => { setFinishFrage(null); clock.pfeifeAb(); },
+    finishDeclined: () => setFinishFrage(null),
     closeSettings: () => setShowSettings(false),
     changeSettings: (newSettings) => { if (onUpdateSettings) { onUpdateSettings(newSettings); } },
     testSound: () => { void sound.play(); },
@@ -198,7 +212,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     activePenalties,
     dialogs: {
       offen: flows.offen,
-      showTimeAdjust, showEventLog, showSettings, showMore, zeit: zeitGrenzen,
+      showTimeAdjust, showEventLog, showSettings, showMore, zeit: zeitGrenzen, finishFrage,
       // Task R2 Fixrunde 2 (H1): unter readOnly gar nicht, und nur mit beiden Strafstoß-Handlern.
       showPenaltyShootout: tiebreak.showPenaltyDialog && !readOnly && !!props.onRecordPenaltyResult && !!props.onAbortPenaltyShootout,
     },
@@ -210,7 +224,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
       onPauseResume: clock.pauseOderWeiter,
       onEditTime: openTimeAdjust,
       onSwitchSides: switchSides,
-      onFinish: clock.pfeifeAb,
+      onFinish: frageNachAbpfiff,
       onSettings: () => setShowSettings(true),
       onEventLog: () => setShowEventLog(true),
       onMore: () => setShowMore(true),

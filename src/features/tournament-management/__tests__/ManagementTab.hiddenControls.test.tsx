@@ -110,7 +110,7 @@ describe('ManagementTab — Knöpfe ohne Engine-Weg ausblenden (A-08c, @FU-071)'
     } as unknown as MatchEngineContextValue;
   });
 
-  it('@FU-071 Pflicht: laufendes Engine-Spiel -> kein Zeit-Knopf, Klick auf die Spielzeit öffnet keinen Dialog', async () => {
+  it('@FU-071 K10: laufendes Engine-Spiel -> „Uhr korrigieren“ steht in „Mehr“ (Engine-Weg B-08d), Klick auf die Spielzeit der Tafel öffnet weiter keinen Dialog', async () => {
     const ctx = engineCtx.current;
     if (!ctx) { throw new Error('Engine-Kontext fehlt'); }
     await commandsOf(ctx).start(FIXTURE_ENGINE_MATCH_ID, CTX, 'leitung', KO_RULES);
@@ -119,8 +119,9 @@ describe('ManagementTab — Knöpfe ohne Engine-Weg ausblenden (A-08c, @FU-071)'
     render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
 
     const timer = await screen.findByTestId('scoreboard-clock');
+    // K10: seit B-08d hat „Uhr korrigieren“ einen Engine-Weg (CLOCK_ADJUST); ManagementTab muss dafür kein `onAdjustTime` liefern
     await user.click(await screen.findByTestId('cockpit-more-button'));
-    expect(screen.queryByTestId('mehr-uhr-korrigieren')).toBeNull();
+    expect(screen.getByTestId('mehr-uhr-korrigieren')).toBeInTheDocument();
     await user.click(screen.getByTestId('mehr-schliessen'));
 
     await user.click(timer);

@@ -119,7 +119,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   });
 
   const cmd = useCockpitCommands({
-    props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView,
+    props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView, view,
   });
   const foulsJeSeite = useMemo(() => ({ home: homeFouls, away: awayFouls }), [homeFouls, awayFouls]);
   const anzeigeOrdnung = useMemo(() => ({ links: sides.links, rechts: sides.rechts }), [sides.links, sides.rechts]);

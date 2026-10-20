@@ -533,7 +533,10 @@
   "abpfiff": {
     "label": "End match",
     "halten": "hold down",
-    "beschreibung": "Press and hold for about one second"
+    "beschreibung": "Press and hold for about one second",
+    "frage": "End match {{spiel}} with {{rest}} minutes still to play?",
+    "beenden": "End match",
+    "weiterspielen": "Keep playing"
   },
   "mehr": {
     "titel": "More",

@@ -13,6 +13,7 @@ import { RejectedOutboxDialog } from '../../../features/collaboration/outbox/Rej
 import type { useEngineEventEditing } from '../../../hooks/useEngineEventEditing';
 import type { OffenerEintrag } from '../model/cockpitTypes';
 import { EntrySheets, type EntrySheetsProps } from './EntrySheets';
+import { FinishConfirm } from './FinishConfirm';
 import { MoreSheet } from './MoreSheet';
 import type { MehrPunkt } from '../model/mehrPunkte';
 import {
@@ -32,6 +33,8 @@ export interface CockpitDialogState {
   showSettings: boolean;
   /** Blatt „Mehr“ (Aufgabe 3.6 / LT-1). */
   showMore: boolean;
+  /** Rückfrage nach „Abpfiff halten“ mit der festgehaltenen Restzeit des Spiels (LT-1), sonst `null`. */
+  finishFrage: { restText: string } | null;
   showPenaltyShootout: boolean;
 }
 
@@ -47,6 +50,10 @@ export interface CockpitOverlayHandlers {
   closeEventLog: () => void;
   editEventFromLog: (event: { id: string }) => void;
   closeMore: () => void;
+  /** „Beenden“ in der Rückfrage: der Abpfiff von Hand. */
+  finishConfirmed: () => void;
+  /** „Weiterspielen“, Esc oder Tipp daneben. */
+  finishDeclined: () => void;
   closeSettings: () => void;
   changeSettings: (settings: MatchCockpitSettings) => void;
   testSound: () => void;
@@ -99,6 +106,11 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
         minSeconds={zeit?.min ?? 0}
         maxSeconds={zeit?.max ?? 0}
         minIsGoal={zeit?.minIsGoal ?? false}
+      />
+
+      <FinishConfirm
+        offen={dialogs.finishFrage !== null} spielNummer={match.number} restText={dialogs.finishFrage?.restText ?? ''}
+        onBeenden={handlers.finishConfirmed} onAbbrechen={handlers.finishDeclined}
       />
 
       <MoreSheet isOpen={dialogs.showMore} onClose={handlers.closeMore} punkte={mehr.punkte} aktionen={mehr.aktionen} />

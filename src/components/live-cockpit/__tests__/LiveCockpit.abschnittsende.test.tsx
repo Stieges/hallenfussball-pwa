@@ -203,10 +203,10 @@ describe('LiveCockpit: Abpfiff mit Ton und Vibration, genau einmal (B-08c)', () 
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     zu(240_000);
-    // Abpfiff von Hand ist ein Halteknopf (@SL-157): zweimal kurz hintereinander gehalten, bevor die Leiste den Abpfiff zeigt
-    const beenden = screen.getByTestId('match-finish-button');
-    await halte(beenden);
-    await halte(beenden);
+    // Abpfiff von Hand ist ein Halteknopf mit Rückfrage (@SL-157, @SL-010): „Beenden“ zweimal schnell getippt pfeift nur einmal ab
+    await halte(screen.getByTestId('match-finish-button'));
+    const beenden = await screen.findByRole('button', { name: 'Beenden' });
+    await user.dblClick(beenden);
     await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
     await new Promise((fertig) => { setTimeout(fertig, 300); });
     expect(ton.play).toHaveBeenCalledTimes(1);

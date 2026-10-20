@@ -112,14 +112,39 @@ describe('useCockpitCommands – Uhr und Bedienung', () => {
     expect(hook.result.current.controls.onEditTime).toBeUndefined();
   });
 
-  it('Pause meldet „Spiel pausiert“, der Abpfiff meldet „Spiel abgepfiffen“', () => {
-    const { hook, props, melde } = setup();
+  it('Pause meldet „Spiel pausiert“; „Abpfiff halten“ fragt erst nach (@SL-010), erst „Beenden“ pfeift ab und meldet „Spiel abgepfiffen“', () => {
+    const { hook, props, melde } = setup({ engineView: makePhaseView({ section: 2, sections: 2, sectionElapsedMs: 168_000, sectionLimitMs: 360_000 }) });
     hook.result.current.controls.onPauseResume();
     expect(props.onPause).toHaveBeenCalledWith('match-11');
     expect(melde).toHaveBeenCalledWith(3, 'Spiel pausiert');
-    hook.result.current.controls.onFinish();
+
+    act(() => { hook.result.current.controls.onFinish(); });
+    expect(props.onFinish).not.toHaveBeenCalled();
+    expect(hook.result.current.dialogs.finishFrage).toEqual({ restText: '3:12' });
+
+    act(() => { hook.result.current.overlayHandlers.finishConfirmed(); });
     expect(props.onFinish).toHaveBeenCalledWith('match-11');
     expect(melde).toHaveBeenCalledWith(3, 'Spiel abgepfiffen');
+    expect(hook.result.current.dialogs.finishFrage).toBeNull();
+  });
+
+  it('@SL-010 Gegenbeispiel: „Weiterspielen“ schließt die Rückfrage, ohne abzupfeifen', () => {
+    const { hook, props } = setup({ engineView: makePhaseView() });
+    act(() => { hook.result.current.controls.onFinish(); });
+    expect(hook.result.current.dialogs.finishFrage).not.toBeNull();
+    act(() => { hook.result.current.overlayHandlers.finishDeclined(); });
+    expect(hook.result.current.dialogs.finishFrage).toBeNull();
+    expect(props.onFinish).not.toHaveBeenCalled();
+  });
+
+  it('K10 mit Engine-Ansicht gibt es „Uhr korrigieren“ auch ohne onAdjustTime; ohne Engine-Ansicht und ohne onAdjustTime nicht', () => {
+    expect(setup({ engineView: makePhaseView() }).hook.result.current.controls.onEditTime).toBeTypeOf('function');
+    expect(setup().hook.result.current.controls.onEditTime).toBeUndefined();
+  });
+
+  it('K10 @SL-079 Gegenbeispiel: in der Halbzeitpause (Engine-Ansicht section_break) gibt es keine Uhr-Korrektur', () => {
+    const { hook } = setup({ engineView: makePhaseView({ status: 'section_break', breakRemainingMs: 30_000 }) });
+    expect(hook.result.current.controls.onEditTime).toBeUndefined();
   });
 });
 
