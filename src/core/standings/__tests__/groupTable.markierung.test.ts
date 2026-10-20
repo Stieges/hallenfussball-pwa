@@ -11,7 +11,7 @@ import { BFV_ORDER, DATA, id, league, names, NAME, POINTS_310, type Key } from '
 
 function rank(fx: { teams: GroupTableRow['team'][]; matches: Match[] }, groupId = ''): GroupTableResult {
   return rankGroup({
-    groupId, teams: fx.teams, matches: fx.matches, pointSystem: POINTS_310, placementLogic: BFV_ORDER, decisions: [], mode: 'group',
+    groupId, teams: fx.teams, matches: fx.matches, pointSystem: POINTS_310, placementLogic: BFV_ORDER, decisions: [], mode: 'group', placesToPlayOut: [1], followUpRanks: [],
   });
 }
 const row = (rows: GroupTableRow[], key: Key): GroupTableRow => {

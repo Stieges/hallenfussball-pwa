@@ -1,17 +1,16 @@
 /**
- * Test-Hilfen Paket TB, Task TB-3: Repository-Attrappe mit echter Versionslogik (Optimistic Lock wie
- * `SupabaseRepository`), Personen aus dem Gherkin, Lage aus @W2A-048 mit zwei Gruppen und Halbfinals. Nur Testumgebung.
+ * Test-Hilfen Paket TB, Task TB-3/TB-3': Repository-Attrappe mit echter Versionslogik (Optimistic Lock wie
+ * `SupabaseRepository`), Lage aus @W2A-048 mit zwei Gruppen und Halbfinals, Nikolaus-Lage (@W2A-067) mit Einstellung
+ * „Diese Plätze müssen bei Gleichstand ausgespielt werden“. Nur Testumgebung.
  */
 import type { Match, StandingDecision, Tournament } from '../../../types/tournament';
 import type { ITournamentRepository } from '../../repositories/ITournamentRepository';
 import { NetworkError, OptimisticLockError } from '../../errors';
-import { StandingDecisionService, type DecisionActor } from '../../services/StandingDecisionService';
+import { StandingDecisionService } from '../../services/StandingDecisionService';
+import { groupClosedByFollowUp } from '../groupClosure';
 import { createMockTournament } from '../../../test/factories';
 import { groupRank, slots } from '../../../test/matchSlotFixtures';
 import { BFV_ORDER, DATA, id, league, parseMatches, POINTS_310, teamsOf, type Key } from './fixtures';
-
-export const OLLI: DecisionActor = { userId: 'user-olli', name: 'Olli' };
-export const MARIA: DecisionActor = { userId: 'user-maria', name: 'Maria' };
 
 const copy = (t: Tournament): Tournament => JSON.parse(JSON.stringify(t)) as Tournament;
 
@@ -54,11 +53,17 @@ export class MemoryRepo {
     };
   }
 
-  service(ids: string[] = []): StandingDecisionService {
+  /** Einstellung „Diese Plätze müssen bei Gleichstand ausgespielt werden“ ändern (wie in den Turnierregeln). */
+  setPlaces(places: number[]): void {
+    this.tournament = { ...this.tournament, placementsToPlayOut: [...places], version: (this.tournament.version ?? 0) + 1 };
+  }
+
+  /** `groupClosed`: ob die Gruppe abgeschlossen ist; ohne Angabe die Zwischenregel bis GA4 A-13 (`groupClosedByFollowUp`). */
+  service(ids: string[] = [], groupClosed?: (groupId: string) => boolean): StandingDecisionService {
     let n = 0;
     return new StandingDecisionService(this as unknown as ITournamentRepository, {
-      now: () => '2026-12-06T14:32:00.000Z',
       newId: () => ids[n++] ?? `entscheidung-${String(n)}`,
+      groupClosed: groupClosed === undefined ? groupClosedByFollowUp : (_t: Tournament, groupId: string) => groupClosed(groupId),
     });
   }
 }
@@ -76,9 +81,9 @@ export const order = (keys: Key[], reason: string, groupId = '') => ({
   groupId, teamIds: keys.map(id), order: keys.map(id), kind: 'order' as const, reason,
 });
 
-/** „gleichen Platz lassen“ mit Grund. */
-export const shared = (keys: Key[], reason: string | undefined, groupId = '') => ({
-  groupId, teamIds: keys.map(id), order: keys.map(id), kind: 'shared' as const, reason,
+/** „Ergebnis so akzeptieren“ – ohne Grund, ein Tipp (Daniel B4d). */
+export const shared = (keys: Key[], groupId = '') => ({
+  groupId, teamIds: keys.map(id), order: keys.map(id), kind: 'shared' as const,
 });
 
 /** Lage aus @W2A-048: Gruppe A (Süd/West gleich auf 2 und 3), Gruppe B ohne Gleichstand, Halbfinals mit Herkunft. */
@@ -99,5 +104,10 @@ export function lage048(): Tournament {
   });
 }
 
-/** Privates Turnier „Jeder gegen jeden“ aus Abschnitt-6-Daten. */
-export const jgj = (keys: string, results: string): Tournament => ({ ...league(keys, results).tournament, version: 1 });
+/** Privates Turnier „Jeder gegen jeden“ aus Abschnitt-6-Daten; `places` = auszuspielende Plätze (ohne: Voreinstellung). */
+export const jgj = (keys: string, results: string, places?: number[]): Tournament => ({
+  ...league(keys, results).tournament, version: 1, ...(places !== undefined ? { placementsToPlayOut: places } : {}),
+});
+
+/** Nikolaus-Lage (@W2A-067): eine Gruppe, 6 Teams, alle 15 Spiele entschieden; Petting und Otting gleich auf Platz 3. */
+export const nikolaus = (places?: number[]): Tournament => jgj('KRPDFX', DATA.NIKOLAUS, places);

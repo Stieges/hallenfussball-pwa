@@ -13,8 +13,7 @@ import { DATA, league } from '../../standings/__tests__/fixtures';
 
 const ENTSCHEIDUNG: StandingDecision = {
   id: 'e-1', groupId: '', teamIds: [testUuid(7), testUuid(8)], order: [testUuid(8), testUuid(7)], kind: 'shootout',
-  shootout: { winner: 4, loser: 3 }, decidedBy: { userId: 'user-olli', name: 'Olli' }, decidedAt: '2026-12-06T14:32:00.000Z',
-  basis: '{"points":[3,1,0]}',
+  shootout: { winner: 4, loser: 3 }, basis: '{"points":[3,1,0]}',
 };
 
 function roundTrip(raw: object) {
@@ -39,7 +38,8 @@ describe('TB-3 Entscheidungen im config (Mapper, Zod)', () => {
     expect(StandingDecisionSchema.safeParse(ENTSCHEIDUNG).success).toBe(true);
     expect(StandingDecisionSchema.safeParse({ ...ENTSCHEIDUNG, spielerName: 'Max' }).success).toBe(false);
     expect(StandingDecisionSchema.safeParse({ ...ENTSCHEIDUNG, kind: 'los' }).success).toBe(false);
-    expect(StandingDecisionSchema.safeParse({ ...ENTSCHEIDUNG, reason: 'x'.repeat(501) }).success).toBe(false);
+    // TB-3': Person, Zeit und Grund gehören nicht mehr ins config (@W2A-072) – Altwerte fallen weg
+    // (`supabaseMappers.ausspielPlaetze.test.ts`).
 
     const { tournament } = roundTrip({ standingDecisions: [{ ...ENTSCHEIDUNG, id: 'kaputt', extra: 1 }, ENTSCHEIDUNG] });
     expect(tournament.standingDecisions?.map((d) => d.id)).toEqual(['e-1']);
