@@ -14,7 +14,6 @@ import { Icons } from '../Icons';
 import { TafelIcons } from '../IconsTafel';
 import { MatchStatusBadge } from './MatchStatusBadge';
 
-export type ScoreboardTon = 'neutral' | 'live' | 'pause' | 'ende' | 'info';
 export interface ScoreboardSeite { name: string; tore: number; /** Trikotfarbe des Stand-Kastens (Mockup-Freigabe 16.10.); fehlt sie, bleibt der Kasten neutral. */ trikot?: string | null }
 /**
  * `schlussphase`: nur Uhr-Art „durchlaufend, letzte Minute angehalten“ in ihrer Schlussphase (@SL-003, @SL-136) → Uhr in

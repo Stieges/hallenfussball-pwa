@@ -47,15 +47,7 @@
   },
   "tafel": {
     "zustand": {
-      "vorAnpfiff": "Before kick-off",
-      "live": "Live",
-      "halbzeit": "Half-time",
-      "verlaengerungFolgt": "Extra time next",
-      "entscheidung": "Decision",
-      "strafstoss": "$t(sport:events.penaltyShootout)",
-      "abgepfiffen": "Full time",
-      "wartet": "Waiting for teams",
-      "keinSpiel": "No match"
+      "wartet": "Waiting for teams"
     },
     "uhr": {
       "restzeit": "Time left",
