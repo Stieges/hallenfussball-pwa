@@ -21,7 +21,7 @@ npm run test:env:status  # URL, DB-URL, Functions-URL, Anon-/Publishable-Key anz
 npm run test:env:seed    # Testnutzer + Testturniere idempotent (neu) anlegen
 npm run test:env:reset   # Datenbank leeren + Schema neu einspielen + test:env:seed
 npm run test:env:down    # Stack stoppen
-npm run test:env:aufraeumen  # alte, ungenutzte Images der Testumgebung und des Bildvergleichs löschen
+npm run test:env:aufraeumen  # abgelöste Images der Testumgebung und namenlose Playwright-Images löschen (nur bei laufendem Stack)
 ```
 
 `test:env:seed` legt die in [Testnutzer](#testnutzer-und-testdaten) beschriebenen Nutzer,
@@ -48,11 +48,15 @@ in `supabase/config.toml`). Damit alle die Dienste in derselben Version starten:
 - In `supabase/.temp` darf keine `*-version`-Datei liegen (`storage-version`, `postgres-version`,
   `gotrue-version`, `rest-version` …). `supabase link` schreibt sie; danach löschen:
   `rm supabase/.temp/*-version`. `test:env:up` bricht sonst vor dem Start ab und nennt die Datei.
-- Nach jedem Versionswechsel der Supabase-CLI oder von Playwright: `npm run test:env:aufraeumen`.
-  Es löscht nur Images von `supabase/*` (ECR/ghcr/Docker Hub) und namenlose Playwright-Images, auf die
-  kein Container (auch kein gestoppter) verweist; nie `prune`, nie `-f`, nie fremde Images.
+- Nach jedem Versionswechsel der Supabase-CLI oder von Playwright: `npm run test:env:aufraeumen`
+  (vorher ansehen: `npx tsx scripts/test-env-check.ts --aufraeumen --trocken`). Es arbeitet **nur bei
+  laufendem Stack** (sonst bricht es ohne Löschen ab und verweist auf `npm run test:env:up`) und löscht
+  nur **abgelöste** Versionen: Supabase-Images ohne Container, von denen ein Container dieses Projekts
+  ein anderes Tag desselben Repositorys nutzt, sowie namenlose Playwright-Images ohne Container. Benannte
+  Playwright-Images, Images mit (auch gestopptem) Container und fremde Images bleiben. Trägt ein altes
+  Image zusätzlich einen fremden Namen, wird nur der Supabase-Name entfernt. Nie `prune`, nie `-f`.
 - `test:env:up`, `test:env:status` und `scripts/require-local-stack.sh` (vor `test:e2e:cloud`) melden jeden
-  Dienst, der neu startet oder beendet ist, mit Zustand und letzter Protokollzeile. Reparatur:
+  vorhandenen Dienst, der neu startet, beendet oder `unhealthy` ist, mit Zustand und letzter Protokollzeile. Fehlt ein Container ganz (gestoppter Stack), meldet `--gesund` das nicht; dann `npm run test:env:up`. Reparatur:
   `npm run test:env:down && npm run test:env:up`. Das nur tun, wenn gerade keine Spur gegen den Stack testet.
 - Meldung „Docker ist nicht erreichbar“: Docker Desktop starten.
 
