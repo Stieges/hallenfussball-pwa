@@ -33,8 +33,9 @@ export interface ThumbBarProps {
   hinweis?: { text: string; testId: string };
 }
 
-/** Breite Zellen: Gewichte haupt 2 · neben 1,2 · halten 1,4; „Mehr“ nimmt nur den eigenen Platz (feste Breite als Token mit LT-2). */
+/** Breite Zellen: Gewichte haupt 2 · neben 1,2 · halten 1,4; „Mehr“ hat die feste Breite `cockpitMehrBreit`. */
 const GEWICHT: Record<ThumbBarRolle, string> = { haupt: '2 1 0', neben: '1.2 1 0', mehr: '0 0 auto' };
+const MEHR_BREIT = cssVars.sizing.cockpitMehrBreit;
 const HALTEN_GEWICHT = '1.4 1 0';
 
 function leisteStil(layout: ThumbBarProps['layout']): CSSProperties {
@@ -71,7 +72,8 @@ function reiheStil(layout: ThumbBarProps['layout'], anzahl: number): CSSProperti
   return layout === 'daumen'
     // Handy: gleich breite Zellen, aber nie schmaler als ihr Inhalt (Text wird nie abgeschnitten, K13); kleinere Abstände, damit fünf Plätze in 360 px passen
     ? { display: 'grid', gridTemplateColumns: `repeat(${anzahl}, minmax(min-content, 1fr))`, gap: cssVars.spacing.xs, alignItems: 'stretch' }
-    : { display: 'flex', gap: cssVars.spacing.sm, alignItems: 'stretch' };
+    // Laptop: die Reihe hat die Höhe `cockpitLeisteBreit` (Mockup: 80 px mit dem Innenabstand der Leiste)
+    : { display: 'flex', gap: cssVars.spacing.sm, alignItems: 'stretch', minHeight: cssVars.sizing.cockpitLeisteBreit };
 }
 
 function knopfStil(slot: Extract<ThumbBarSlot, { art: 'aktion' }>, layout: ThumbBarProps['layout']): CSSProperties {
@@ -98,7 +100,7 @@ function knopfStil(slot: Extract<ThumbBarSlot, { art: 'aktion' }>, layout: Thumb
     opacity: slot.disabled ? cssVars.opacity.disabled : 1,
     touchAction: 'manipulation',
     ...(layout === 'breit'
-      ? { flex: GEWICHT[slot.rolle] }
+      ? { flex: GEWICHT[slot.rolle], ...(slot.rolle === 'mehr' ? { width: MEHR_BREIT } : {}) }
       : {}),
   };
 }
@@ -155,7 +157,7 @@ export function ThumbBar({ ariaLabel, slots, layout, hinweis }: ThumbBarProps) {
             <Aktion key={slot.testId} slot={slot} layout={layout} tabIndex={slot.testId === tabstopp ? 0 : -1} />
           ) : (
             <div key={slot.halten.testId} style={layout === 'breit' ? { flex: HALTEN_GEWICHT, display: 'flex' } : { display: 'flex' }}>
-              <HoldButton {...slot.halten} kompakt={layout === 'daumen'} tabIndex={slot.halten.testId === tabstopp ? 0 : -1} />
+              <HoldButton {...slot.halten} kompakt={layout === 'daumen'} fuellend tabIndex={slot.halten.testId === tabstopp ? 0 : -1} />
             </div>
           ),
         )}

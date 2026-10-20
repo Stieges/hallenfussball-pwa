@@ -75,6 +75,29 @@ describe('ThumbBar (Plan 3.1)', () => {
     expect(screen.getByText('Strg+Z').style.color).toBe('var(--color-text-secondary)');
   });
 
+  it('@SL-157 der Halteknopf füllt seine Zelle am Laptop und am Handy (keine Lücke neben „Abpfiff“)', () => {
+    const slots = (): ThumbBarSlot[] => [
+      a('Pause', 'bar-main', 'haupt'),
+      { art: 'halten', halten: { label: 'Abpfiff', sublabel: 'halten', onHold: vi.fn(), testId: 'bar-hold', beschreibung: 'Gedrückt halten' } },
+      a('Mehr', 'bar-more', 'mehr'),
+    ];
+    const { unmount } = render(<ThumbBar ariaLabel="x" layout="breit" slots={slots()} />);
+    expect(screen.getByTestId('bar-hold').style.flex).toContain('1');
+    unmount();
+    render(<ThumbBar ariaLabel="x" layout="daumen" slots={slots()} />);
+    expect(screen.getByTestId('bar-hold').style.flex).toContain('1');
+  });
+
+  it('Laptop: „Mehr“ hat die feste Breite aus dem Token, die Reihe die Höhe aus dem Token; am Handy gilt weder noch', () => {
+    const { unmount } = render(<ThumbBar ariaLabel="x" layout="breit" slots={vier()} />);
+    expect(screen.getByTestId('bar-more').style.width).toBe('var(--sizing-cockpit-mehr-breit)');
+    expect(screen.getByTestId('bar-main').parentElement?.style.minHeight).toBe('var(--sizing-cockpit-leiste-breit)');
+    unmount();
+    render(<ThumbBar ariaLabel="x" layout="daumen" slots={vier()} />);
+    expect(screen.getByTestId('bar-more').style.width).toBe('');
+    expect(screen.getByTestId('bar-main').parentElement?.style.minHeight).toBe('');
+  });
+
   it('@SL-153 Rückgängig mit taste.aria = „Control+Z Meta+Z“ trägt genau diesen Wert', () => {
     render(<ThumbBar ariaLabel="x" layout="breit" slots={[a('Rückgängig', 'bar-undo', 'neben', { taste: { text: 'Strg+Z', aria: 'Control+Z Meta+Z' } })]} />);
     expect(screen.getByTestId('bar-undo')).toHaveAttribute('aria-keyshortcuts', 'Control+Z Meta+Z');

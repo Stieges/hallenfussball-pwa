@@ -3,7 +3,7 @@
  * Szenarien: @SL-160, @SL-161, @SL-155, @SL-156, Befunde C-COCKPIT-NAECHSTES-WIE-FEHLER, C-COCKPIT-VORWARNUNG-VERLOREN.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { NextMatchArea } from '../areas/NextMatchArea';
 import type { MatchSummary } from '../types';
@@ -23,13 +23,16 @@ const spiel = (home: string | null, away: string | null, id = 'm13'): MatchSumma
 const zeige = (naechstes: MatchSummary | null, rest: number | null = 300_000, z: CockpitZustand = 'laeuft') =>
   render(<NextMatchArea naechstes={naechstes} phase={phase(z)} restSpielMs={rest} />);
 const zeile = () => screen.getByTestId('cockpit-naechstes');
+// jsdom kennt keine CSS-Animationen: React hört dort auf den herstellerspezifischen Namen
+const animationEnde = (el: HTMLElement) => fireEvent(el, new Event('webkitAnimationEnd', { bubbles: true }));
 
 describe('NextMatchArea – Farben und Leibchen', () => {
   it('@SL-160 Rot #C62828 / Weiß #FFFFFF → zwei Farbpunkte, kein Leibchen-Zeichen (Abstand 50,8)', () => {
     zeige(spiel('#C62828', '#FFFFFF'));
     expect(zeile()).toHaveTextContent('Nächstes: Spiel 13 · TSV West – SG Mitte · Anstoß 15:15');
-    expect(screen.getByTestId('cockpit-naechstes-punkt-0')).toBeInTheDocument();
-    expect(screen.getByTestId('cockpit-naechstes-punkt-1')).toBeInTheDocument();
+    // Farbpunkt in der Trikotfarbe des jeweiligen Teams (Heim links, Gast rechts)
+    expect(screen.getByTestId('cockpit-naechstes-punkt-0')).toHaveStyle({ background: '#C62828' });
+    expect(screen.getByTestId('cockpit-naechstes-punkt-1')).toHaveStyle({ background: '#FFFFFF' });
     expect(screen.queryByTestId('cockpit-naechstes-leibchen')).toBeNull();
   });
 
@@ -69,12 +72,26 @@ describe('NextMatchArea – Vorwarnung ab 3:00', () => {
     expect(zeile().textContent).toBe(textVorher);
   });
 
-  it('@SL-155 die Hervorhebung bleibt danach stehen (Restzeit 2:30), das Blinken wird nicht erneut ausgelöst', () => {
+  it('@SL-155 die Hervorhebung bleibt danach stehen (Restzeit 2:30), das Blinken ist nach der Animation zu Ende und wird nicht erneut ausgelöst', () => {
     const m = spiel('#C62828', '#FFFFFF');
     const vor = zeige(m, 180_000);
     expect(zeile()).toHaveAttribute('data-blinken', 'true');
+    animationEnde(zeile());
+    expect(zeile()).not.toHaveAttribute('data-blinken');
     vor.rerender(<NextMatchArea naechstes={m} phase={phase()} restSpielMs={150_000} />);
     expect(zeile()).toHaveAttribute('data-modus', 'vorwarnung');
+    expect(zeile()).not.toHaveAttribute('data-blinken');
+  });
+
+  it('@SL-155 Uhr korrigiert über 3:00 und zurück: die Zeile blinkt nicht ein zweites Mal', () => {
+    const m = spiel('#C62828', '#FFFFFF');
+    const vor = zeige(m, 170_000);
+    animationEnde(zeile());
+    vor.rerender(<NextMatchArea naechstes={m} phase={phase()} restSpielMs={200_000} />);
+    expect(zeile()).toHaveAttribute('data-modus', 'normal');
+    vor.rerender(<NextMatchArea naechstes={m} phase={phase()} restSpielMs={170_000} />);
+    expect(zeile()).toHaveAttribute('data-modus', 'vorwarnung');
+    expect(zeile()).not.toHaveAttribute('data-blinken');
   });
 
   it('@SL-156 bei 3:01 ist die Zeile nicht hervorgehoben', () => {

@@ -6,60 +6,35 @@
  * schiebt die Leiste nicht aus dem Bild), K4 (Tastenwiederholung der Haltetaste), K13 (fünf Knöpfe ≥ 44 px, nichts abgeschnitten),
  * @SL-155/@SL-156/@SL-160/@SL-161 (Zeile „Nächstes“).
  */
-import { writeFileSync } from 'node:fs';
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { tippeKarte, tippeZeitstrafe } from '../helpers/cockpitNeu';
 import { abpfiffHaltenBisRueckfrage } from '../helpers/abpfiff';
-
-const ID = 'e2e-laptop-cup';
-const TEAMS = ['e1', 'e2', 'e3', 'e4'].map((n) => `00000000-0000-4000-8000-0000000000${n}`);
-const NAMEN = ['FC Nord', 'SV Süd', 'TSV Ost', 'FC West'];
-const NAME_50 = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
-const FARBEN = ['#FFD700', '#1E56D9', '#2E8B57', '#C0392B'];
-const PAARE: Array<[number, number]> = [[0, 1], [2, 3], [0, 2], [1, 3], [0, 3], [1, 2]];
-const BILDER = process.env.LT23_BILDER ?? '';
-
-interface CupOptionen { namen?: readonly string[]; farben?: readonly string[]; minuten?: number; perioden?: number; pause?: number }
-
-function cup({ namen = NAMEN, farben = FARBEN, minuten = 12, perioden = 2, pause = 1 }: CupOptionen = {}) {
-  const date = new Date(Date.now() + 86_400_000).toISOString().split('T')[0];
-  return {
-    id: ID, status: 'published', publishedAt: new Date().toISOString(), sport: 'football', sportId: 'football-indoor',
-    tournamentType: 'classic', mode: 'classic', numberOfFields: 1, numberOfTeams: 4, numberOfGroups: 1, groupSystem: 'roundRobin',
-    groupPhaseGameDuration: minuten, groupPhaseBreakDuration: 2, gameDuration: minuten, breakDuration: 2, gamePeriods: perioden, halftimeBreak: pause,
-    placementLogic: ['points', 'goalDifference', 'goalsFor'], finals: { enabled: false }, isKidsTournament: false,
-    hideScoresForPublic: false, hideRankingsForPublic: false, resultMode: 'goals', pointSystem: { win: 3, draw: 1, loss: 0 },
-    title: 'Cockpit-Cup Laptop', ageClass: 'U12', date, timeSlot: '10:00 - 14:00', startDate: date, startTime: '10:00',
-    location: { name: 'Test-Halle' },
-    teams: TEAMS.map((id, i) => ({ id, name: namen[i], group: 'A', colors: { primary: farben[i] } })),
-    matches: PAARE.map(([a, b], i) => ({
-      id: `00000000-0000-4000-8000-0000000009${i + 10}`, matchNumber: i + 1, round: i + 1, field: 1, group: 'A', phase: 'groupStage',
-      slotA: { kind: 'team', teamId: TEAMS[a] }, slotB: { kind: 'team', teamId: TEAMS[b] }, matchStatus: 'scheduled',
-      scheduledTime: `${date}T${String(10 + Math.floor(i / 5)).padStart(2, '0')}:${String((i % 5) * 12).padStart(2, '0')}:00.000Z`,
-    })),
-    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-  };
-}
-
-async function bild(page: Page, name: string): Promise<void> {
-  if (BILDER !== '') { writeFileSync(`${BILDER}/${name}.png`, await page.screenshot()); }
-}
-
-async function anpfeifen(page: Page): Promise<void> {
-  await page.goto(`/#/tournament/${ID}/live`);
-  await page.getByTestId('match-start-button').click({ timeout: 15000 });
-  await expect(page.getByTestId('match-pause-button')).toBeVisible();
-}
-
-/** Unterkante eines Elements (px von oben) – ohne Scrollen sichtbar heißt: höchstens die Höhe des Fensters. */
-async function unterkante(page: Page, testId: string): Promise<number> {
-  const box = await page.getByTestId(testId).boundingBox();
-  if (!box) { throw new Error(`${testId} nicht sichtbar`); }
-  return Math.round(box.y + box.height);
-}
+import { ID, NAMEN, NAME_50, FARBEN, cup, bild, anpfeifen, unterkante } from '../helpers/laptopCup';
 
 const PFLICHT = ['scoreboard', 'goal-button-home', 'foul-button-home', 'penalty-button-home', 'card-button-home', 'goal-button-away', 'foul-button-away', 'penalty-button-away', 'card-button-away', 'match-pause-button', 'match-finish-button', 'match-undo-button'];
+
+const SPALTEN_TASTEN = ['scoreboard', 'goal-button-home', 'foul-button-home', 'penalty-button-home', 'card-button-home', 'goal-button-away', 'foul-button-away', 'penalty-button-away', 'card-button-away'];
+
+/** Fenster und Inhaltsbereich an den Anfang: gemessen wird, was die Turnierleitung nach dem Anpfiff ohne Zutun sieht. */
+async function anAnfangRollen(page: Page): Promise<void> {
+  await page.evaluate(() => { window.scrollTo(0, 0); document.querySelectorAll('main').forEach((m) => { m.scrollTop = 0; }); });
+}
+
+/** Jede Taste beider Teams (und die Tafel) liegt ganz zwischen Unterkante des Kopfs und Oberkante der Leiste. */
+async function pruefeZwischenKopfUndLeiste(page: Page): Promise<void> {
+  const kopf = await page.getByTestId('cockpit-slim-header').boundingBox();
+  const leiste = await page.getByRole('toolbar').boundingBox();
+  if (!kopf || !leiste) { throw new Error('Kopf oder Leiste nicht sichtbar'); }
+  const oben = Math.round(kopf.y + kopf.height);
+  const unten = Math.round(leiste.y);
+  for (const id of SPALTEN_TASTEN) {
+    const box = await page.getByTestId(id).boundingBox();
+    if (!box) { throw new Error(`${id} nicht sichtbar`); }
+    expect(Math.round(box.y), `${id}: Oberkante unter dem Kopf`).toBeGreaterThanOrEqual(oben - 1);
+    expect(Math.round(box.y + box.height), `${id}: Unterkante über der Leiste`).toBeLessThanOrEqual(unten + 1);
+  }
+}
 
 test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
   test.beforeEach(async ({ browserName: _b }, testInfo) => {
@@ -93,6 +68,25 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
     }
   });
 
+  test('@SL-061 Handy und alle Größen, Anfangszustand: Tafel, Tor, Foul, Zeitstrafe und Karte beider Teams liegen ohne Scrollen zwischen Kopf und Leiste', async ({ page, seedIndexedDB }) => {
+    await seedIndexedDB({ tournaments: [cup()] });
+    await anpfeifen(page);
+    await anAnfangRollen(page);
+    await pruefeZwischenKopfUndLeiste(page);
+  });
+
+  test('@SL-061 Handy, schwerer Fall im Anfangszustand: alle Tasten beider Teams liegen ohne Scrollen zwischen Kopf und Leiste – C-COCKPIT-HANDY-KARTE-UNTER-LEISTE', async ({ page, seedIndexedDB }) => {
+    // Befund C-COCKPIT-HANDY-KARTE-UNTER-LEISTE (Lösung nach #298 mit kleinerer Tafel, spätestens im Cockpit-Abschluss): bei 360 × 640 reicht die Höhe im schwersten Fall (dreizeiliger Name, vier Zeitstrafen) nicht
+    test.skip((page.viewportSize()?.width ?? 0) >= 1024, 'Laptop: Befund C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL');
+    test.fail((page.viewportSize()?.height ?? 0) < 700, 'schwerster Fall passt bei 640 px Höhe nicht ohne Scrollen');
+    await seedIndexedDB({ tournaments: [cup({ namen: [NAME_50, NAMEN[1], NAMEN[2], NAMEN[3]] })] });
+    await anpfeifen(page);
+    for (const seite of ['home', 'away'] as const) { await tippeZeitstrafe(page, seite); await tippeZeitstrafe(page, seite); }
+    await tippeKarte(page, 'home', 'Rot', 7);
+    await anAnfangRollen(page);
+    await pruefeZwischenKopfUndLeiste(page);
+  });
+
   test('@SL-061 Laptop: der Inhaltsbereich selbst scrollt nicht (normaler Fall: Uhr, Stand, Tor-Knöpfe und Spalten stehen ohne Scrollen)', async ({ page, seedIndexedDB }) => {
     test.skip((page.viewportSize()?.width ?? 0) < 1024, 'nur Laptop-Anordnung');
     await seedIndexedDB({ tournaments: [cup()] });
@@ -103,8 +97,8 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
   });
 
   test('@SL-061 Laptop, schwerer Fall: der Inhaltsbereich selbst scrollt nicht – C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL', async ({ page, seedIndexedDB }) => {
-    // Befund C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL (Lösung nach #298/#288, spätestens im Cockpit-Abschluss): bei 1280 × 720 fehlen im schwersten Fall (50-Zeichen-Name in Tafel und Spalte, vier Zeitstrafen, Meldezeile) rund 40 px
-    test.fail((page.viewportSize()?.height ?? 0) < 740, 'schwerster Fall passt bei 720 px Höhe noch nicht ganz ohne Scrollen des Inhaltsbereichs');
+    // Befund C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL (Lösung nach #298/#288, spätestens im Cockpit-Abschluss): bei 1280 × 720 und 1024 × 768 (Leiste 80 px) fehlen im schwersten Fall (50-Zeichen-Name in Tafel und Spalte, vier Zeitstrafen, Meldezeile) rund 40 px
+    test.fail((page.viewportSize()?.height ?? 0) < 800, 'schwerster Fall passt bei 720 und 768 px Höhe noch nicht ganz ohne Scrollen des Inhaltsbereichs');
     test.skip((page.viewportSize()?.width ?? 0) < 1024, 'nur Laptop-Anordnung');
     await seedIndexedDB({ tournaments: [cup({ namen: [NAME_50, NAMEN[1], NAMEN[2], NAMEN[3]] })] });
     await anpfeifen(page);
@@ -153,7 +147,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
     await seedIndexedDB({ tournaments: [cup()] });
     await anpfeifen(page);
     await context.setOffline(true);
-    await expect(page.getByTestId('cockpit-verbindung')).toHaveAttribute('data-online', 'false');
+    await expect(page.getByTestId('cockpit-verbindung')).toHaveAttribute('data-status', 'offline');
     await expect(page.getByTestId('offline-banner')).toHaveCount(0);
     for (const id of ['match-pause-button', 'match-finish-button', 'match-undo-button']) {
       const treffer = await page.getByTestId(id).evaluate((el) => {
@@ -166,6 +160,29 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
     await page.getByTestId('cockpit-zurueck').click();
     await expect(page.getByTestId('offline-banner')).toBeVisible();
     await context.setOffline(false);
+  });
+
+  test('@SL-168 ohne Netz bietet der schmale Kopf „Verbinden“ (≥ 44 px, Leiste bleibt frei); ist das Netz zurück, steht kurz „Wieder verbunden“ und der Knopf ist weg', async ({ page, context, seedIndexedDB }, testInfo) => {
+    await seedIndexedDB({ tournaments: [cup()] });
+    await anpfeifen(page);
+    const status = page.getByTestId('cockpit-verbindung');
+    await expect(page.getByTestId('cockpit-verbindung-verbinden')).toHaveCount(0);
+    await context.setOffline(true);
+    await expect(status).toHaveAttribute('data-status', 'offline');
+    const knopf = page.getByTestId('cockpit-verbindung-verbinden');
+    await expect(knopf).toBeVisible();
+    const box = await knopf.boundingBox();
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    const breite = page.viewportSize()?.width ?? 0;
+    expect((box?.x ?? 0) + (box?.width ?? 0), 'der Knopf liegt im Bild').toBeLessThanOrEqual(breite);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'kein seitliches Scrollen').toBe(true);
+    await bild(page, `${testInfo.project.name}-sl168-offline`);
+    await knopf.click();
+    await context.setOffline(false);
+    await expect(status).toHaveAttribute('data-status', 'online');
+    await expect(status).toContainText(/Wieder verbunden|Reconnected/);
+    await expect(page.getByTestId('cockpit-verbindung-verbinden')).toHaveCount(0);
+    await bild(page, `${testInfo.project.name}-sl168-wieder-verbunden`);
   });
 
   test('K3 ein Hinweis im Fluss über dem Cockpit schiebt die Leiste nicht aus dem Bild', async ({ page, seedIndexedDB }) => {

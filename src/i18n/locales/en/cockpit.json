@@ -558,6 +558,8 @@
     "feld": "Field {{feld}}",
     "online": "Online",
     "offline": "Offline",
+    "verbinden": "Connect",
+    "wiederVerbunden": "Reconnected",
     "tastenkuerzel": "Shortcuts"
   },
   "naechstes": {

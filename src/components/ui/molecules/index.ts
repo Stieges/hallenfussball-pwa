@@ -29,3 +29,7 @@ export type { TimeStepperProps } from './TimeStepper';
 export { useScoreDraft } from './useScoreDraft';
 export type { ScoreDraft, ScoreCommitResult, UseScoreDraftOptions, ScoreSide } from './useScoreDraft';
 export { ScoreDraftHint } from './ScoreDraftHint';
+
+// @SL-168: Verbindung mit Punkt, Wort, wartenden Einträgen und „Verbinden“
+export { VerbindungsStatus } from './VerbindungsStatus';
+export type { VerbindungsStatusProps, VerbindungsStatusTexte } from './VerbindungsStatus';

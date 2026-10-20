@@ -1,37 +1,35 @@
 /**
- * ConnectionPill – Verbindungsanzeige im schmalen Kopf (Plan LT-2, @SL-140 „Verbindungsstatus“, K2).
- * Im Vollbild entfallen die festen Hinweisleisten der App (Offline, Speicher); der Kopf sagt, ob das Gerät Netz hat.
- * Text und Punkt, nie Farbe allein (WCAG 1.4.1). Am Handy steht bei Netz nur der Punkt (Name über aria-label, Mockup handy-b), damit der
- * Kopf einzeilig bleibt; ohne Netz steht auch am Handy der Text.
+ * ConnectionPill – Verbindungsanzeige im schmalen Kopf (Plan LT-2, @SL-140 „Verbindungsstatus“, K2; @SL-168 „Verbinden“).
+ * Im Vollbild entfallen die festen Hinweisleisten der App (Offline, Speicher); der Kopf sagt, ob das Gerät Netz hat, nennt die wartenden
+ * Einträge, bietet ohne Netz „Verbinden“ an (gleiche Wirkung wie im Offline-Hinweis, `useVerbinden`) und meldet kurz „Wieder verbunden“.
+ * Das Molekül `VerbindungsStatus` zeichnet; hier hängen nur Status, Zähler und Texte des Cockpits daran.
  */
 import { useTranslation } from 'react-i18next';
-import type { CSSProperties, ReactElement } from 'react';
-import { cssVars } from '../../../design-tokens';
+import type { ReactElement } from 'react';
 import { useOnlineStatus } from '../../../hooks/useOnlineStatus';
 import { useBreakpoint } from '../../../hooks/useBreakpoint';
+import { useEngineOutboxSummary } from '../../../features/match-engine/useEngineOutboxSummary';
+import { useVerbinden } from '../../../features/match-engine/useVerbinden';
+import { VerbindungsStatus } from '../../ui/molecules/VerbindungsStatus';
 
-const pillStil = (online: boolean): CSSProperties => ({
-  display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs, flex: 'none',
-  padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`, borderRadius: cssVars.borderRadius.full,
-  fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.medium,
-  background: online ? cssVars.colors.successLight : cssVars.colors.warningBannerBg,
-  border: `${cssVars.borderWidth.thin} solid ${online ? cssVars.colors.success : cssVars.colors.warningBannerBorder}`,
-  color: cssVars.colors.textPrimary,
-});
-const punktStil = (online: boolean): CSSProperties => ({
-  width: cssVars.spacing.sm, height: cssVars.spacing.sm, borderRadius: cssVars.borderRadius.full,
-  background: online ? cssVars.colors.success : cssVars.colors.warning,
-});
-
-export function ConnectionPill(): ReactElement {
+export function ConnectionPill({ tournamentId }: { tournamentId: string }): ReactElement {
   const { t } = useTranslation('cockpit');
-  const { isOnline } = useOnlineStatus();
-  const nurPunkt = useBreakpoint().isMobile && isOnline;
-  const text = isOnline ? t('rahmen.online') : t('rahmen.offline');
+  const { isOnline, wasOffline } = useOnlineStatus();
+  const { pendingCount } = useEngineOutboxSummary(tournamentId);
+  const verbinden = useVerbinden();
+  const kompakt = useBreakpoint().isMobile;
   return (
-    <span style={pillStil(isOnline)} role="status" aria-label={nurPunkt ? text : undefined} data-testid="cockpit-verbindung" data-online={isOnline ? 'true' : 'false'}>
-      <span style={punktStil(isOnline)} aria-hidden="true" />
-      {!nurPunkt && text}
-    </span>
+    <VerbindungsStatus
+      status={isOnline ? 'online' : 'offline'}
+      wartende={pendingCount}
+      onVerbinden={verbinden}
+      wiederVerbunden={isOnline && wasOffline}
+      variante={kompakt ? 'kompakt' : 'normal'}
+      testId="cockpit-verbindung"
+      texte={{
+        online: t('rahmen.online'), offline: t('rahmen.offline'), verbinden: t('rahmen.verbinden'), wiederVerbunden: t('rahmen.wiederVerbunden'),
+        wartend: (count) => t('tafel.eintraegeWarten', { count }),
+      }}
+    />
   );
 }

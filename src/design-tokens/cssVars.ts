@@ -374,9 +374,10 @@ export const cssBorderRadius = {
 // Border Width (fixed px token)
 // =============================================================================
 
+// Eine Quelle: `borderWidths` (sizing.ts); die CSS-Variablen `--border-width-*` stehen in global.css (Gleichheitstest)
 export const cssBorderWidth = {
-  thin: '1px',
-  medium: '2px',
+  thin: borderWidths.thin,
+  medium: borderWidths.medium,
 } as const;
 
 // =============================================================================
@@ -597,6 +598,7 @@ export const cssTheme = {
 // =============================================================================
 
 import { zIndex as zIndexTokens } from './elevation';
+import { borderWidths } from './sizing';
 
 const cssZIndex = zIndexTokens;
 

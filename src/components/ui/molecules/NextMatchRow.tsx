@@ -21,6 +21,8 @@ export interface NextMatchRowProps {
   leibchen: { ariaLabel: string } | null;
   modus: 'normal' | 'vorwarnung' | 'wechsel';
   blinken: boolean;
+  /** Das Pulsen ist zu Ende (Animation fertig): der Aufrufer nimmt `blinken` zurück, damit es nicht erneut läuft. */
+  onBlinkEnde?: () => void;
   /** Wechsel-Countdown nach dem Abpfiff (LT-4): Text und Anteil 0 bis 1 des Balkens. */
   wechsel?: { text: string; anteil: number };
   testId: string;
@@ -63,6 +65,7 @@ export function NextMatchRow(p: NextMatchRowProps): ReactElement {
       data-testid={p.testId}
       data-modus={p.modus}
       data-blinken={p.blinken ? 'true' : undefined}
+      onAnimationEnd={(e) => { if (e.target === e.currentTarget) { p.onBlinkEnde?.(); } }}
     >
       <span style={{ display: 'inline-flex', color: cssVars.colors.textSecondary }}><MatchIcons.Calendar size={16} /></span>
       <span style={labelStil}>{p.label}</span>{' '}

@@ -28,6 +28,8 @@ export interface HoldButtonProps {
   tabIndex?: number;
   /** Enge Leiste (Handy): Symbol über dem Text, kleinere Schrift und Abstände, damit nichts abgeschnitten wird. */
   kompakt?: boolean;
+  /** Füllt die Zelle der umgebenden Reihe (Laptop und Tablet quer: keine Lücke neben dem Knopf). */
+  fuellend?: boolean;
 }
 
 const istHaltetaste = (key: string): boolean => key === 'Enter' || key === ' ';
@@ -86,7 +88,7 @@ const inhaltStil: CSSProperties = { position: 'relative', display: 'flex', align
 const zweiStil: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' };
 const subStil: CSSProperties = { fontSize: cssVars.fontSizes.xs, fontWeight: cssVars.fontWeights.medium, color: cssVars.colors.textSecondary };
 
-export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung, disabled = false, tabIndex, kompakt = false }: HoldButtonProps) {
+export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung, disabled = false, tabIndex, kompakt = false, fuellend = false }: HoldButtonProps) {
   const [fuellt, setFuellt] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zeigerRef = useRef<number | null>(null);
@@ -163,7 +165,7 @@ export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung
       aria-describedby={beschreibungId}
       disabled={disabled}
       tabIndex={tabIndex}
-      style={{ ...knopfStil, ...(kompakt ? kompaktStil : {}), '--hold-duration': `${HOLD_MS}ms` } as CSSProperties}
+      style={{ ...knopfStil, ...(kompakt ? kompaktStil : {}), ...(fuellend ? { flex: 1 } : {}), '--hold-duration': `${HOLD_MS}ms` } as CSSProperties}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerEnde}
       onPointerCancel={onPointerEnde}

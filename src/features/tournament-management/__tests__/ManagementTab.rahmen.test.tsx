@@ -4,9 +4,9 @@
  * LiveCockpit ist ein Stub; geprüft wird die Verdrahtung in `ManagementTab`. Spiel 11 läuft auf Feld 1, Spiel 12 auf Feld 2, Feld 3 hat kein Spiel.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom';
 import { CockpitFrameProvider } from '../../../components/live-cockpit/frame/CockpitFrameContext';
 import { useCockpitFrame } from '../../../components/live-cockpit/frame/cockpitFrame';
 import { ManagementTab } from '../ManagementTab';
@@ -109,14 +109,15 @@ const schedule = {
 function Sonde() {
   const ort = useLocation();
   const { vollbild } = useCockpitFrame();
-  return <div data-testid="sonde" data-pfad={ort.pathname} data-suche={ort.search} data-rahmen={String(vollbild)} />;
+  const navigation = useNavigationType();
+  return <div data-testid="sonde" data-pfad={ort.pathname} data-suche={ort.search} data-rahmen={String(vollbild)} data-navigation={navigation} />;
 }
 
-function zeige(adresse: string, felder = 2) {
+function zeige(adresse: string, felder = 2, plan: GeneratedSchedule = schedule) {
   return render(
     <MemoryRouter initialEntries={[adresse]}>
       <CockpitFrameProvider>
-        <ManagementTab tournament={{ ...tournament, numberOfFields: felder }} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
+        <ManagementTab tournament={{ ...tournament, numberOfFields: felder }} schedule={plan} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
         <Sonde />
       </CockpitFrameProvider>
     </MemoryRouter>,
@@ -170,7 +171,17 @@ describe('Rahmen und Feldwahl im Live-Reiter (Plan LT-2)', () => {
     zeige('/tournament/tournament-1/live');
     await user.selectOptions(await screen.findByTestId('cockpit-feldwahl'), '2');
     expect(sonde()).toHaveAttribute('data-suche', '?f=2');
+    // S3: der Eintrag wird ersetzt, nicht hinzugefügt (Zurück springt nicht durch alle Feldwechsel)
+    expect(sonde()).toHaveAttribute('data-navigation', 'REPLACE');
     await waitFor(() => expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-match-id', SPIEL_12));
+  });
+
+  it('@OB-030 S4 Feld wählen entfernt ?matchId= aus der Adresse, damit Neu laden das gewählte Feld behält', async () => {
+    const user = userEvent.setup();
+    zeige(`/tournament/tournament-1/live?matchId=${SPIEL_11}`);
+    await user.selectOptions(await screen.findByTestId('cockpit-feldwahl'), '2');
+    expect(sonde()).toHaveAttribute('data-suche', '?f=2');
+    expect(sonde().getAttribute('data-suche')).not.toContain('matchId');
   });
 
   it('@OB-030 Gegenbeispiel: ein ungültiges ?f=9 gilt als Feld 1', async () => {
@@ -204,5 +215,42 @@ describe('Rahmen und Feldwahl im Live-Reiter (Plan LT-2)', () => {
     await waitFor(() => expect(screen.getByTestId('cockpit-stub')).toBeInTheDocument());
     expect(screen.queryByTestId('cockpit-slim-header')).toBeNull();
     expect(sonde()).toHaveAttribute('data-rahmen', 'false');
+  });
+
+  it('@SL-054 P2 ohne Spiel auf dem Feld und mit mehr als einem Feld bietet die Tafelseite die Feldwahl, die Wahl führt zum Spiel des Felds', async () => {
+    const user = userEvent.setup();
+    zeige('/tournament/tournament-1/live?f=3', 3);
+    const wahl = await screen.findByTestId('cockpit-feldwahl');
+    expect(wahl).toHaveValue('3');
+    expect(screen.queryByTestId('cockpit-slim-header')).toBeNull();
+    await user.selectOptions(wahl, '1');
+    expect(sonde()).toHaveAttribute('data-suche', '?f=1');
+    await waitFor(() => expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-match-id', SPIEL_11));
+    expect(screen.getByTestId('cockpit-slim-header')).toBeInTheDocument();
+  });
+
+  it('@SL-054 P2 Gegenbeispiel: ohne Spiel und mit nur einem Feld gibt es keine Feldwahl', async () => {
+    const leerPlan = { ...schedule, allMatches: [] } as unknown as GeneratedSchedule;
+    zeige('/tournament/tournament-1/live', 1, leerPlan);
+    await waitFor(() => expect(screen.getByTestId('cockpit-stub')).toBeInTheDocument());
+    expect(screen.queryByTestId('cockpit-feldwahl')).toBeNull();
+  });
+
+  it('@SL-140 P4 eine Speicher-Warnung im Rahmen steht im Fluss unter dem schmalen Kopf (nicht fest am Rand), der Offline-Hinweis bleibt weg', async () => {
+    zeige('/tournament/tournament-1/live');
+    const kopf = await screen.findByTestId('cockpit-slim-header');
+    act(() => { window.dispatchEvent(new CustomEvent('storage-quota-warning', { detail: { message: 'Speicher fast voll', timestamp: 1 } })); });
+    const warnung = await screen.findByRole('alert');
+    expect(warnung).toHaveTextContent('Speicher fast voll');
+    expect(warnung.style.position).toBe('static');
+    expect(kopf.compareDocumentPosition(warnung) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByTestId('offline-banner')).toBeNull();
+  });
+
+  it('@SL-140 P4 Gegenbeispiel: ohne Rahmen (Feld ohne Spiel) zeigt die Verwaltung diese Warnung nicht selbst (sie liegt dann in der Hülle der App)', async () => {
+    zeige('/tournament/tournament-1/live?f=3', 3);
+    await waitFor(() => expect(screen.getByTestId('cockpit-stub')).toBeInTheDocument());
+    act(() => { window.dispatchEvent(new CustomEvent('storage-quota-warning', { detail: { message: 'Speicher fast voll', timestamp: 1 } })); });
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });

@@ -26,11 +26,13 @@ export function NextMatchArea({ naechstes, phase, restSpielMs }: NextMatchAreaPr
   const { t } = useTranslation('cockpit');
   const reduziert = usePrefersReducedMotion();
   const aktiv = naechstes !== null && vorwarnungAktiv(phase, restSpielMs);
+  // Je Spiel einmal: gemerkt wird das erste Aktivwerden (`geblinktFuer`), `blinktNoch` endet mit der Animation (`onBlinkEnde`). Wird die Uhr danach
+  // korrigiert (über 3:00 und zurück), startet nichts neu. Ob die Bewegung gezeigt wird, entscheidet allein die Einstellung des Geräts (unten).
   const [geblinktFuer, setGeblinktFuer] = useState<string | null>(null);
+  const [blinktNoch, setBlinktNoch] = useState(false);
   const id = naechstes?.id ?? null;
-  // Gemerkt wird das erste Aktivwerden je Spiel; ob die Bewegung gezeigt wird, entscheidet allein die Einstellung des Geräts (unten)
   useEffect(() => {
-    if (aktiv && id !== null && geblinktFuer !== id) { setGeblinktFuer(id); }
+    if (aktiv && id !== null && geblinktFuer !== id) { setGeblinktFuer(id); setBlinktNoch(true); }
   }, [aktiv, id, geblinktFuer]);
 
   if (naechstes === null) { return null; }
@@ -43,7 +45,8 @@ export function NextMatchArea({ naechstes, phase, restSpielMs }: NextMatchAreaPr
       anstossText={t('naechstes.anstoss', { zeit: naechstes.scheduledKickoff })}
       leibchen={kitConflict(farben.home, farben.away) !== 'none' ? { ariaLabel: t('naechstes.leibchen') } : null}
       modus={aktiv ? 'vorwarnung' : 'normal'}
-      blinken={aktiv && !reduziert && geblinktFuer === id}
+      blinken={aktiv && !reduziert && blinktNoch && geblinktFuer === id}
+      onBlinkEnde={() => setBlinktNoch(false)}
       testId="cockpit-naechstes"
     />
   );

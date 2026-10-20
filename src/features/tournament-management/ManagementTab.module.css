@@ -20,6 +20,11 @@
   flex-direction: column;
 }
 
+.feldwahlLeer {
+  display: flex;
+  padding: var(--spacing-md) var(--spacing-md) 0;
+}
+
 .noMatches {
   text-align: center;
   padding: var(--spacing-xxl);
@@ -48,6 +53,11 @@
 @media (max-width: 768px) {
   .container {
     padding: var(--spacing-md);
+  }
+
+  /* Im Rahmen kein Außenabstand, auch nicht am Handy: die Regel oben käme sonst wegen der Reihenfolge davor (Ansichtsprüfung P1) */
+  .containerVollbild {
+    padding: 0;
   }
 
   .noMatches {

@@ -31,6 +31,7 @@ export interface FieldMatchSelection {
 }
 
 const FELD_PARAM = 'f';
+const MATCH_PARAM = 'matchId';
 
 export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatchSelection {
   const { numberOfFields, schedule, liveMatches, initialMatchId, onInitialMatchConsumed } = p;
@@ -40,16 +41,18 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
   const roh = Number(params.get(FELD_PARAM));
   const feld = Number.isInteger(roh) && roh >= 1 && roh <= Math.max(1, numberOfFields) ? roh : 1;
 
-  const schreibeFeld = useCallback((n: number) => {
+  const schreibeFeld = useCallback((n: number, ohneMatchId = false) => {
     setParams((alt) => {
       const neu = new URLSearchParams(alt);
       neu.set(FELD_PARAM, String(n));
+      if (ohneMatchId) { neu.delete(MATCH_PARAM); }
       return neu;
     }, { replace: true });
   }, [setParams]);
 
+  // Wer das Feld wählt, verwirft ein altes `?matchId=` (sonst springt Neu laden zurück auf dessen Feld, @OB-030)
   const setFeld = useCallback((n: number) => {
-    schreibeFeld(n);
+    schreibeFeld(n, true);
     setSelectedMatchId(null);
   }, [schreibeFeld]);
 

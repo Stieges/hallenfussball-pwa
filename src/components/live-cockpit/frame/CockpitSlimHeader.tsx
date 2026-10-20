@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import { cssVars } from '../../../design-tokens';
+import { FeldWahl } from './FeldWahl';
 import { buildTournamentTabPath } from '../../../features/tournament-management/utils/tournamentTabUtils';
 
 export interface CockpitSlimHeaderProps {
@@ -38,7 +39,6 @@ const nameStil: CSSProperties = {
   // Der Name wird nie abgeschnitten: er bricht um (bei zu wenig Platz in eine eigene Zeile, nie mitten im Wort) statt mit Auslassungspunkten zu enden (visuelle Prüfung, text.abgeschnitten, titel.wortbruch)
   flex: '1 1 auto', overflowWrap: 'break-word', lineHeight: cssVars.lineHeights.title, minWidth: 0,
 };
-const feldStil: CSSProperties = { ...knopfStil, flex: 'none', fontSize: cssVars.fontSizes.lg, maxWidth: cssVars.sizing.feldwahlMax };
 
 export function CockpitSlimHeader(p: CockpitSlimHeaderProps): ReactElement {
   const { t } = useTranslation('cockpit');
@@ -49,11 +49,7 @@ export function CockpitSlimHeader(p: CockpitSlimHeaderProps): ReactElement {
         ← {t('rahmen.zurueck')}
       </button>
       <span style={nameStil} data-testid="cockpit-turniername">{p.turnierName}</span>
-      {p.felder > 1 && (
-        <select style={feldStil} data-testid="cockpit-feldwahl" aria-label={t('rahmen.feldAria', { feld: p.feld })} value={p.feld} onChange={(e) => { p.onFeld(Number(e.target.value)); }}>
-          {Array.from({ length: p.felder }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{t('rahmen.feld', { feld: n })}</option>)}
-        </select>
-      )}
+      <FeldWahl felder={p.felder} feld={p.feld} onFeld={p.onFeld} />
       <span style={{ flex: 1 }} />
       {p.breit === true && p.onTastenkuerzel && (
         <button type="button" style={knopfStil} data-testid="cockpit-tastenkuerzel" onClick={p.onTastenkuerzel}>{t('rahmen.tastenkuerzel')}</button>

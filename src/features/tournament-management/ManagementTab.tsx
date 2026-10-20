@@ -10,7 +10,7 @@
  * - Zeit-Editor für manuelle Anpassungen
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, Tournament } from '../../types/tournament';
 import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
@@ -20,14 +20,14 @@ import { useCockpitExecution } from '../../hooks/useCockpitExecution';
 import { useCockpitLeerGrund } from './hooks/useCockpitLeerGrund';
 import { useCan } from '../auth/hooks/useCan';
 import { RulesLockProvider } from '../../components/match-settings/RulesLockContext';
-import { useToast } from '../../components/ui/Toast/ToastContext';
-import { captureFeatureError } from '../../lib/sentry';
-import { MatchAwaitingTeamsError, MatchNotOnEngineError, type MatchNotOnEngineReason } from '../../core/errors';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { buildSideContext } from '../../components/schedule/matchSides';
 import { useFieldMatchSelection } from './hooks/useFieldMatchSelection';
+import { useEngineMatchInit } from './hooks/useEngineMatchInit';
 import { toMatchSummary } from './model/toMatchSummary';
 import { CockpitSlimHeader } from '../../components/live-cockpit/frame/CockpitSlimHeader';
+import { StorageWarningBanner } from '../../components/StorageWarningBanner';
+import { FeldWahl } from '../../components/live-cockpit/frame/FeldWahl';
 import { ConnectionPill } from '../../components/live-cockpit/frame/ConnectionPill';
 import { useAnnounceCockpitFrame, istCockpitVollbild } from '../../components/live-cockpit/frame/cockpitFrame';
 import styles from './ManagementTab.module.css';
@@ -58,17 +58,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const { t } = useTranslation('tournament');
   const { t: tCommon } = useTranslation('common');
   const { t: tCockpit } = useTranslation('cockpit');
-  const { showError } = useToast();
-  const [isInitializingMatch, setIsInitializingMatch] = useState<boolean>(false);
-  // P7: `getLiveMatchData` kann werfen -- unterscheidet "kein Spiel" von "noch nicht bereit".
-  const [engineReadyError, setEngineReadyError] = useState<boolean>(false);
-  // @TM-033: das Spiel hat noch eine offene Seite – kein Fehler, sondern ein Wartegrund
-  const [awaitingTeams, setAwaitingTeams] = useState<boolean>(false);
-  // A-08a (@FU-069): Spiel ist nicht über die Engine leitbar (z. B. Ergebnis schon eingetragen)
-  const [notOnEngineReason, setNotOnEngineReason] = useState<MatchNotOnEngineReason | null>(null);
   const { isOnline } = useOnlineStatus();
-  // Minor 4: "Erneut versuchen" erzwingt einen neuen Ladeversuch ueber diesen Zaehler (s. u.).
-  const [retryToken, setRetryToken] = useState(0);
 
   // A-08a: Cockpit nur über Engine-Ereignisse (kein Altservice, kein Altweg)
   const {
@@ -104,63 +94,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // ScheduledMatch als MatchSummary (mit den getragenen Farben, @SL-160)
   const toSummary = useCallback((sm: ScheduledMatch): MatchSummary => toMatchSummary(sm, { tournament, sides, t }), [tournament, sides, t]);
 
-  // C-3 FIX: cancellation bei schnellem Feldwechsel. Minor 2: Reset VOR jedem fruehen Ausstieg.
-  useEffect(() => {
-    setEngineReadyError(false);
-    setAwaitingTeams(false);
-    setNotOnEngineReason(null);
-    // @FU-004 (C-COCKPIT-LAEDT-NACH-ABPFIFF): auch "wird geladen" vor jedem frühen Ausstieg zurücksetzen --
-    // ein abgebrochener Lauf (cancelled) setzt es nicht mehr zurück und ließe den Ladehinweis stehen.
-    setIsInitializingMatch(false);
-    if (!currentMatchData) {
-      return;
-    }
-    const matchId = currentMatchData.id;
-    const existingMatch = liveMatches.get(matchId);
-    if (existingMatch) {
-      // Match already exists, no need to initialize
-      return;
-    }
-
-    let cancelled = false;
-
-    setIsInitializingMatch(true);
-
-    void getLiveMatchData(currentMatchData)
-      .catch((error: unknown) => {
-        if (cancelled) { return; }
-        // @TM-033: offene Seite = Wartegrund, kein Fehler (kein Toast, keine Sentry-Meldung)
-        if (error instanceof MatchAwaitingTeamsError) {
-          setAwaitingTeams(true);
-          return;
-        }
-        // A-08a (@FU-069)/A-08e W1: nicht leitbar -> Hinweis bzw. "wird vorbereitet" statt Fehlerzweig (kein Toast, kein Sentry)
-        if (error instanceof MatchNotOnEngineError) {
-          if (error.reason === 'other') { setEngineReadyError(true); } else { setNotOnEngineReason(error.reason); }
-          return;
-        }
-        // P7: Toast + Sentry statt stiller Leeranzeige; "Spiel wird vorbereitet" statt "Keine Spiele".
-        const normalizedError = error instanceof Error ? error : new Error(String(error));
-        captureFeatureError(normalizedError, 'tournament', 'ensureEngineMatchReady');
-        showError(t('management.engineReadyError'));
-        setEngineReadyError(true);
-      })
-      .finally(() => {
-        // Only update state if this effect hasn't been cancelled
-        if (!cancelled) {
-          setIsInitializingMatch(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-    // C-3 FIX: Intentionally only depend on ID to prevent re-init on other property changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMatchData?.id, getLiveMatchData, liveMatches, retryToken]);
-
-  // Minor 4: erhoeht `retryToken` (s. Abhaengigkeitsliste oben), der Effekt laeuft dadurch erneut.
-  const handleRetryEngineReady = useCallback(() => setRetryToken((n) => n + 1), []);
+  const { isInitializingMatch, engineReadyError, awaitingTeams, notOnEngineReason, handleRetryEngineReady } = useEngineMatchInit({ currentMatchData, liveMatches, getLiveMatchData });
 
   // Current match as LiveMatch (derived from state)
   const currentMatch = useMemo(() =>
@@ -237,9 +171,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       {vollbild && (
         <CockpitSlimHeader
           tournamentId={tournament.id} turnierName={tournament.title} felder={tournament.numberOfFields} feld={feld} onFeld={setFeld}
-          verbindung={<ConnectionPill />}
+          verbindung={<ConnectionPill tournamentId={tournament.id} />}
         />
       )}
+      {/* Speicher-Warnung im Rahmen: im Fluss unter dem Kopf, damit sie nicht verloren geht (die feste Leiste der Hülle entfällt hier) */}
+      {vollbild && <StorageWarningBanner imFluss />}
 
       {/* LIVE COCKPIT */}
       {currentMatch ? (
@@ -289,7 +225,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           <div><button type="button" className={styles.retryButton} data-testid="engine-ready-retry" onClick={handleRetryEngineReady}>{tCommon('actions.retry')}</button></div>
         </div>
       ) : leer?.art === 'keinSpiel' ? (
-        <LiveCockpit {...leerProps} />
+        <>
+          {/* Ohne Spiel auf dem Feld gibt es keinen schmalen Kopf: die Feldwahl steht über der Tafel (Zone 1, @OB-030) */}
+          {tournament.numberOfFields > 1 && <div className={styles.feldwahlLeer}><FeldWahl felder={tournament.numberOfFields} feld={feld} onFeld={setFeld} /></div>}
+          <LiveCockpit {...leerProps} />
+        </>
       ) : (
         <div className={styles.noMatches}>
           {t('management.noMatchesOnField')}
