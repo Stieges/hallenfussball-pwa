@@ -49,3 +49,9 @@ if [ -z "$api_url" ]; then
   exit 1
 fi
 require_local_url "API_URL des Stacks" "$api_url"
+
+# 4. Läuft jeder Dienst und gibt es keine festgeschriebenen Versionen? (@LT-001, @LT-003)
+# Nicht bei simuliertem Status (Unit-Test ohne Docker).
+if [ -z "${E2E_REQUIRE_LOCAL_STACK_STATUS_JSON:-}" ]; then
+  npx tsx scripts/test-env-check.ts --gesund
+fi
