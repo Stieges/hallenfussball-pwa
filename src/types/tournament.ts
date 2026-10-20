@@ -549,7 +549,18 @@ export interface Tournament {
   // Multi-User / Cloud Sync
   /** User ID of the tournament owner (for cloud sync) */
   ownerId?: string;
+  /**
+   * CA-5 (@HE-085, Befund C-LISTE-NUR-EIGENTUEMER): eigene Rolle des Kontos in diesem Turnier, nur im Listenobjekt der
+   * Startseite (`listForCurrentUser`). Nie in die Cloud geschrieben. Fehlt sie, ist es ein eigenes Turnier (Gast, lokal).
+   */
+  myRole?: TournamentListRole;
 }
+
+/**
+ * CA-5: Rollen im Listenobjekt der Startseite (hier für core/). Teilmenge von `TournamentRole` ohne die Geräte-Rollen
+ * helper/screen (A-27): unbekannte Rollen einer Mitgliedszeile verwirft die Liste (`accountTournamentList.ts`).
+ */
+export type TournamentListRole = 'owner' | 'co-admin' | 'trainer' | 'collaborator' | 'viewer';
 
 // ============================================================================
 // MATCH COCKPIT PRO TYPES

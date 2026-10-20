@@ -9,7 +9,7 @@ import type { CSSProperties, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { animations, cssVars, displayFontSizes } from '../../../design-tokens';
 import { MATCH_BADGE_WORD_KEY, type MatchBadgeModel, type MatchBadgeState } from '../../../core/view/badge';
-import { badgeColorsFor, badgeStyle, dotStyle, type MatchStatusBadgeSize, type MatchStatusBadgeTone } from './matchStatusBadgeStyle';
+import { badgeColorsFor, badgeStyle, dotStyle, kickoffColorFor, type MatchStatusBadgeSize, type MatchStatusBadgeSurface, type MatchStatusBadgeTone } from './matchStatusBadgeStyle';
 
 export interface MatchStatusBadgeProps {
   model: MatchBadgeModel;
@@ -17,6 +17,8 @@ export interface MatchStatusBadgeProps {
   size: MatchStatusBadgeSize;
   /** Monitor-Themes; sonst die Farben der App (cssVars) */
   tone?: MatchStatusBadgeTone;
+  /** Fläche: `scoreboard` auf der dunklen Cockpit-Tafel (nur „Ende“ und „ausgefallen“ weichen ab); Standard `app` */
+  surface?: MatchStatusBadgeSurface;
   /** Vorgabe `match-status-badge`; die Anstoßzeit `match-kickoff` */
   testId?: string;
 }
@@ -34,7 +36,7 @@ function PauseGlyph(): ReactElement {
   );
 }
 
-export function MatchStatusBadge({ model, size, tone, testId }: MatchStatusBadgeProps): ReactElement | null {
+export function MatchStatusBadge({ model, size, tone, surface = 'app', testId }: MatchStatusBadgeProps): ReactElement | null {
   const { t } = useTranslation('tournament');
   if (model.kind === 'none') {
     return null;
@@ -46,7 +48,7 @@ export function MatchStatusBadge({ model, size, tone, testId }: MatchStatusBadge
       fontWeight: cssVars.fontWeights.bold,
       fontVariantNumeric: 'tabular-nums',
       whiteSpace: 'nowrap',
-      color: cssVars.colors.textSecondary,
+      color: kickoffColorFor(surface),
     };
     return <span style={style} data-testid={testId ?? 'match-kickoff'}>{model.time}</span>;
   }
@@ -54,14 +56,14 @@ export function MatchStatusBadge({ model, size, tone, testId }: MatchStatusBadge
   const live = state === 'live';
   return (
     <span
-      style={badgeStyle(state, size, tone)}
+      style={badgeStyle(state, size, tone, surface)}
       data-testid={testId ?? 'match-status-badge'}
       data-state={state}
       {...(live ? { 'data-pulse': 'true' } : {})}
     >
       {live && (
         <span
-          style={{ ...dotStyle(size, badgeColorsFor(state, tone).fg), animation: animations.pulse }}
+          style={{ ...dotStyle(size, badgeColorsFor(state, tone, surface).fg), animation: animations.pulse }}
           aria-hidden="true"
           data-testid="match-status-badge-dot"
         />

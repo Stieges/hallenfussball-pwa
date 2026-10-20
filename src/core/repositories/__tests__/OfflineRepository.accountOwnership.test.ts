@@ -62,7 +62,7 @@ vi.mock('../../../lib/supabase', () => ({
 
 import { OfflineRepository } from '../OfflineRepository';
 import { LocalStorageRepository } from '../LocalStorageRepository';
-import { readWithRevisions } from '../../../test/fakeCloudRepository';
+import { ownerOnlyList, readWithRevisions } from '../../../test/fakeCloudRepository';
 
 type CloudEntry = { owner: string; t: Tournament };
 const cloud = new Map<string, CloudEntry>();
@@ -82,6 +82,7 @@ function cloudFor(userId: string) {
     listForCurrentUser: vi.fn(async () =>
       [...cloud.values()].filter((e) => e.owner === userId).map((e) => e.t)
     ),
+    listWithMemberships: vi.fn(ownerOnlyList(async () => [...cloud.values()].filter((e) => e.owner === userId).map((e) => e.t))),
     getByShareCode: vi.fn(async () => null),
   };
 }

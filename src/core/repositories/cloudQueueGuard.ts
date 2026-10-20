@@ -52,6 +52,14 @@ export class CloudQueueGuard {
       && !this.queue.hasFailed(tournamentId, PROTECTED_DEAD_LETTER);
   }
 
+  /**
+   * Auflage A2 (review-ca67, @FU-106, Regel Q): hat das Gerät für das Turnier eigene wartende, laufende oder gescheiterte
+   * Änderungen? Dann lädt `syncUp` die Kopie nicht hoch – die Warteschlange bzw. die Klärung entscheidet.
+   */
+  hasOwnChanges(tournamentId: string): boolean {
+    return this.busy(tournamentId) || this.queue.hasFailed(tournamentId, PROTECTED_DEAD_LETTER);
+  }
+
   private busy(tournamentId: string): boolean {
     return (this.writes.get(tournamentId) ?? 0) > 0 || this.queue.hasPending(tournamentId);
   }

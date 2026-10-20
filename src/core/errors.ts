@@ -325,6 +325,21 @@ export function isTransientMutationError(error: unknown): boolean {
 }
 
 /**
+ * @FU-106 (Befund C-VERWERFEN-BEHAELT-VERALTETEN-STAND): Hat der Server eine Änderung abgelehnt, weil ein anderes Gerät das
+ * Turnier inzwischen geändert hat (Versionsprüfung)? Auch eingepackt in `RepositoryError` (`updateMatches`: Liste).
+ */
+export function isVersionConflict(error: unknown): boolean {
+  if (error instanceof OptimisticLockError) {
+    return true;
+  }
+  if (!(error instanceof RepositoryError)) {
+    return false;
+  }
+  const inner = error.originalError;
+  return Array.isArray(inner) ? inner.some((e) => e instanceof OptimisticLockError) : inner instanceof OptimisticLockError;
+}
+
+/**
  * Checks if an error is an AbortError (expected during navigation, StrictMode, unmount).
  * Consolidated from 3 duplicate implementations across the codebase.
  *

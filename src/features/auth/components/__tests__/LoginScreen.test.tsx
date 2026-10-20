@@ -122,6 +122,24 @@ describe('LoginScreen — connection-state UX', () => {
     browserOnlineSpy.mockRestore();
   });
 
+  it('@AN-032 Zeitüberschreitung beim Start (Zustand bleibt „connecting“, Gerät hat Netz): „Erneut versuchen“ bleibt erreichbar', () => {
+    vi.useFakeTimers();
+    const browserOnlineSpy = setBrowserOnline(true);
+    setupAuthMock({ connectionState: 'connecting' });
+
+    render(<LoginScreen />);
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    const retry = screen.getByTestId('connecting-indicator-retry');
+    fireEvent.click(retry);
+    const auth = useAuthMock.mock.results[0]?.value as { reconnect: ReturnType<typeof vi.fn> };
+    expect(auth.reconnect).toHaveBeenCalledTimes(1);
+
+    browserOnlineSpy.mockRestore();
+  });
+
   it('reacts to window online/offline events for the browser-online state', () => {
     const browserOnlineSpy = setBrowserOnline(true);
     setupAuthMock({ connectionState: 'offline' });

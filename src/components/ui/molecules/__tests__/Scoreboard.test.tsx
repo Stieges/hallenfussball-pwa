@@ -8,10 +8,18 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Scoreboard, type ScoreboardModel } from '../Scoreboard';
+import { cssVars } from '../../../../design-tokens';
 import { palette } from '../../../../design-tokens/colors/palette';
 
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+
+import { initRealDeI18n } from '../../../../test/realDeI18n';
+
+await initRealDeI18n();
+
 const model: ScoreboardModel = {
-  zustandText: 'Live', ton: 'live', links: { name: 'FC Nord', tore: 1 }, rechts: { name: 'SV Süd', tore: 0 },
+  badge: { kind: 'badge', state: 'live' }, links: { name: 'FC Nord', tore: 1 }, rechts: { name: 'SV Süd', tore: 0 },
   uhr: { rest: '2:48', gespielt: '3:12', label: 'Restzeit', unterzeile: 'Spielzeit 3:12', hervorgehoben: false, steht: false, schlussphase: false },
   abschnittText: '2. Halbzeit', hinweise: [],
   eintraegeWartenText: '2 Einträge warten', helferAnfragenText: '1 Helfer-Anfrage', ariaStand: 'FC Nord 1, SV Süd 0',
@@ -167,5 +175,41 @@ describe('Scoreboard', () => {
     render(<Scoreboard model={model} size="regular" meldezeile={null} testId="scoreboard" />);
     expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Live');
     expect(screen.getByTestId('scoreboard')).toHaveAttribute('data-size', 'regular');
+  });
+
+  it('@OB-065 das Abzeichen der Tafel ist das Molekül der Spielkarte: „Live“ mit Puls-Punkt, „Halbzeit“ ohne Uhrzeit', () => {
+    const { rerender } = render(<Scoreboard model={model} size="regular" meldezeile={null} testId="scoreboard" />);
+    const live = screen.getByTestId('scoreboard-abzeichen');
+    expect(live).toHaveAttribute('data-state', 'live');
+    expect(live).toHaveAttribute('data-pulse', 'true');
+    expect(live.textContent).toBe('Live');
+    rerender(<Scoreboard model={{ ...model, badge: { kind: 'badge', state: 'halftime' } }} size="regular" meldezeile={null} testId="scoreboard" />);
+    const halbzeit = screen.getByTestId('scoreboard-abzeichen');
+    expect(halbzeit).toHaveAttribute('data-state', 'halftime');
+    expect(halbzeit.textContent).toBe('Halbzeit');
+  });
+
+  it('@OB-066 „Ende“ auf der Tafel in Tafel-Schrift (Verdrahtung surface="scoreboard")', () => {
+    render(<Scoreboard model={{ ...model, badge: { kind: 'badge', state: 'ended' } }} size="regular" meldezeile={null} testId="scoreboard" />);
+    expect(screen.getByTestId('scoreboard-abzeichen').style.color).toBe(cssVars.colors.scoreboardTextMuted);
+  });
+
+  it('@OB-068 ein geplantes Spiel ohne Überfälligkeit lässt den Abzeichen-Platz leer', () => {
+    render(<Scoreboard model={{ ...model, badge: { kind: 'none' } }} size="regular" meldezeile={null} testId="scoreboard" />);
+    expect(screen.getByTestId('scoreboard-state')).toBeEmptyDOMElement();
+  });
+
+  it('@OB-068 „überfällig 7 Min“ steht im Abzeichen-Platz in Tafel-Warnfarbe und als Wort', () => {
+    render(<Scoreboard model={{ ...model, badge: { kind: 'none' }, ueberfaelligText: 'überfällig 7 Min' }} size="regular" meldezeile={null} testId="scoreboard" />);
+    const wort = screen.getByTestId('scoreboard-ueberfaellig');
+    expect(wort.textContent).toBe('überfällig 7 Min');
+    expect(wort.style.color).toBe(cssVars.colors.scoreboardHighlight);
+    expect(screen.getByTestId('scoreboard-state')).toContainElement(wort);
+  });
+
+  it('@OB-065 Gegenbeispiel: ein geplantes Spiel zeigt im Abzeichen nur seine Anstoßzeit, kein Wort', () => {
+    render(<Scoreboard model={{ ...model, badge: { kind: 'kickoff', time: '15:15' } }} size="regular" meldezeile={null} testId="scoreboard" />);
+    expect(screen.getByTestId('scoreboard-abzeichen')).toHaveTextContent('15:15');
+    expect(screen.getByTestId('scoreboard-abzeichen')).not.toHaveAttribute('data-state');
   });
 });

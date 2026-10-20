@@ -20,6 +20,8 @@ import { mapProfileUpdateToSupabase } from '../../../core/repositories/supabaseM
 import { executeWithTimeout } from '../../../core/utils/SingleFlight';
 import { captureFeatureError, setUserContext as setSentryUserContext } from '../../../lib/sentry';
 import { logout as logoutAction, type LogoutOptions, type LogoutResult } from './logoutAction';
+import { readSessionOrThrow } from './readSession';
+import { setSignedOutElsewhere } from './remoteSignOut';
 
 /**
  * Timeout for auth operations (login, register, etc.)
@@ -571,10 +573,7 @@ export async function reconnect(deps: AuthActionDeps): Promise<boolean> {
 
   try {
     const session = await authRetryService.execute(
-      async () => {
-        const { data: { session: currentSession } } = await supabaseClient.auth.getSession();
-        return currentSession;
-      },
+      () => readSessionOrThrow(supabaseClient),
       {
         shouldRetry: (error) => {
           // Don't retry AbortErrors - these are transient and will be
@@ -622,6 +621,8 @@ export async function reconnect(deps: AuthActionDeps): Promise<boolean> {
       if (import.meta.env.DEV) {
         console.warn('[Auth] Session expired, clearing auth state for fresh login');
       }
+      // Der Server lehnt die Erneuerung ab: Ablauf und Widerruf sind nicht unterscheidbar (@AN-024).
+      setSignedOutElsewhere();
       await clearStaleAuthState();
       setUserAndSentry(deps, null);
       deps.setSession(null);
