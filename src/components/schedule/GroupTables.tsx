@@ -185,7 +185,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
           </thead>
           <tbody>
             {standings.map((standing, index) => {
-              const rank = index + 1;
+              const rank = standing.place ?? index + 1; // Paket TB: gemeinsame Ziffer mit Sprung (2, 2, 4), @W2A-047
               const goalDiff = standing.goalsFor - standing.goalsAgainst;
 
               return (
@@ -298,7 +298,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
           </thead>
           <tbody>
             {standings.map((standing, index) => {
-              const rank = index + 1;
+              const rank = standing.place ?? index + 1; // Paket TB: gemeinsame Ziffer mit Sprung (2, 2, 4), @W2A-047
               const goalDiff = standing.goalsFor - standing.goalsAgainst;
               const teamKey = standing.team.id;
               const isExpanded = expandedRows.has(teamKey);

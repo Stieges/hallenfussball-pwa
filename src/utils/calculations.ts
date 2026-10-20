@@ -4,6 +4,7 @@ import { cardKindOf } from './cardKind';
 import { matchSideTeamId } from '../core/models/matchSlot';
 import { rankGroup } from '../core/standings/groupTable';
 import { tableInput } from '../core/standings/tournamentTable';
+import { groupPlaceInfo, orderByGroupPlace } from '../core/standings/groupPlaces';
 import { standingsGroups, OVERALL_GROUP } from '../core/models/standingsGroups';
 import { matchFinalScore } from '../core/view/finalScore';
 import type { TeamId } from '../core/models/schemas/MatchSlotSchema';
@@ -179,33 +180,19 @@ export const calculateFinalsPlacement = (
 };
 
 /**
- * F1-W1 (Review A-36b F1, Record Endstand Z. 62): in der Gruppe Ausgeschiedene zuerst nach Gruppenplatz (alle Dritten vor
- * allen Vierten), bei gleichem Platz in der Reihenfolge der Gesamtwertung `standings` (stabile Sortierung). Ohne Gruppen
- * (Jeder gegen jeden) bleibt die Ligatabelle.
- */
-const byGroupPlace = (teams: Team[], matches: Match[], standings: Standing[], tournament: Tournament): Standing[] => {
-  const place = new Map<string, number>();
-  for (const group of new Set(teams.map(t => t.group).filter((g): g is string => g !== undefined && g !== ''))) {
-    calculateStandings(teams.filter(t => t.group === group), matches, tournament, group)
-      .forEach((standing, index) => place.set(standing.team.id, index + 1));
-  }
-  return [...standings].sort((a, b) => (place.get(a.team.id) ?? 0) - (place.get(b.team.id) ?? 0));
-};
-
-/**
  * Merge finals placements with group standings for complete ranking
  *
- * Returns a unified ranking where:
+ * Returns a unified ranking where (`overallStandings` = gruppenübergreifende Gesamtwertung, Paket TB TB-4):
  * 1. Playoff-decided placements come first (in rank order)
  * 2. Remaining teams are added from group standings
  */
 export const getMergedFinalRanking = (
   teams: Team[],
   matches: Match[],
-  groupStandings: Standing[],
+  overallStandings: Standing[],
   tournament: Tournament
 ): { ranking: FinalPlacement[]; finalsResult: FinalsPlacementResult } => {
-  const finalsResult = calculateFinalsPlacement(teams, matches, groupStandings);
+  const finalsResult = calculateFinalsPlacement(teams, matches, overallStandings);
   const ranking: FinalPlacement[] = [...finalsResult.placements];
   const placedTeamIds = new Set(ranking.map(p => p.team.id));
 
@@ -217,14 +204,22 @@ export const getMergedFinalRanking = (
   // N-W1 (Nachreview A-36b): übrige Teams auf die niedrigsten freien Plätze, belegte Bereiche rank…rankTo überspringen –
   // keine Lücken, später Ausgeschiedene stehen vorn (Record Endstand Z. 61).
   const taken = new Set(ranking.flatMap(p => Array.from({ length: (p.rankTo ?? p.rank) - p.rank + 1 }, (_, i) => p.rank + i)));
+  // Paket TB (TB-4): Gruppenplatz aus der Tabellenrechnung je Gruppe; wer „gleichen Platz lassen“ gewählt hat, teilt den Rang
+  // (2, 2, 2, 5), alle anderen bekommen fortlaufende Ränge (ein offener Gleichstand wird nie still geteilt).
+  const places = groupPlaceInfo(teams, matches, tournament);
   let nextRank = 1;
-  for (const standing of byGroupPlace(teams, matches, groupStandings, tournament)) {
-    if (!placedTeamIds.has(standing.team.id)) {
-      while (taken.has(nextRank)) { nextRank++; }
-      ranking.push({ rank: nextRank, team: standing.team, decidedBy: 'groupStage' });
-      taken.add(nextRank);
-      placedTeamIds.add(standing.team.id);
-    }
+  for (const standing of orderByGroupPlace(overallStandings, places)) {
+    if (placedTeamIds.has(standing.team.id)) { continue; }
+    const sharedWith = places.get(standing.team.id)?.sharedWith;
+    const members = sharedWith === undefined
+      ? [standing.team]
+      : sharedWith.flatMap((id) => teams.filter((team) => team.id === id && !placedTeamIds.has(id)));
+    while (taken.has(nextRank)) { nextRank++; }
+    members.forEach((team, offset) => {
+      ranking.push({ rank: nextRank, team, decidedBy: 'groupStage' });
+      taken.add(nextRank + offset);
+      placedTeamIds.add(team.id);
+    });
   }
   ranking.sort((a, b) => a.rank - b.rank);
 
