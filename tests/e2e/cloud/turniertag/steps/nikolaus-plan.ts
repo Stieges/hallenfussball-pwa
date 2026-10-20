@@ -8,8 +8,9 @@
  */
 import { expect, type Page } from '@playwright/test';
 import { E2E_NIKOLAUS_CUPS, E2E_NIKOLAUS_HOST_TEAM_NAMES } from '../../testData';
-import { expectPageAnchor, expectSollMarker } from './shared';
-import { fetchNikolausSpiele, ladeSpielplan, openNikolausPath, paarung, type NikolausMatch } from './nikolaus-shared';
+import { expectPageAnchor, expectSollMarker, vorbedingung } from './shared';
+import { openCockpit } from '../../engineHelpers';
+import { fetchNikolausSpiele, handyKontext, ladeSpielplan, openNikolausPath, paarung, type NikolausMatch } from './nikolaus-shared';
 import type { StepContext, TurniertagStep } from './types';
 
 const ZWILLING = E2E_NIKOLAUS_CUPS.zeitplan;
@@ -65,7 +66,7 @@ async function abstand(): Promise<void> {
   }
 }
 
-/** Uhrzeit und „<Heim> gegen <Gast>“ der Zeilen im Spielplan, nach Uhrzeit sortiert (die Spielnummer der Beschriftung ist nicht verlässlich: `match_number` fehlt, C-FINALRUNDE-REIHENFOLGE). */
+/** Uhrzeit und „<Heim> gegen <Gast>“ der Zeilen im Spielplan, nach Uhrzeit sortiert (die Spielnummer der Beschriftung ist nicht verlässlich: `match_number` fehlt, C-SPIELNUMMER-FEHLT). */
 async function zeilenImSpielplan(seite: Page): Promise<string[]> {
   const gesehen = new Map<string, string>();
   await expect(async () => {
@@ -88,7 +89,7 @@ async function zeilenImSpielplan(seite: Page): Promise<string[]> {
   return [...gesehen.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([zeit, text]) => `${zeit} ${text}`);
 }
 
-/** N2a: Spiel 1 ist eine Waging-Mannschaft als Heimmannschaft gegen einen Gast, das Vereinsduell liegt in Runde 2 (Spiel 4 bis 6); die Oberfläche zeigt denselben Plan (@W4-027, @W4-033). */
+/** N2a: Spiel 1 ist eine Waging-Mannschaft als Heimmannschaft gegen einen Gast, das Vereinsduell liegt in Runde 2 (Spiel 4 bis 6); die Oberfläche zeigt denselben Plan (@W4-027, @W4-033). Hinweis: @W4-027 ist hier nicht trennscharf (Waging rot steht an erster Stelle der Teamliste, der Rundenplan eröffnet ohnehin mit Team 1 als Heim); belegt ist es durch die Generator-Tests aus #290, @W4-033 trennt. */
 async function eroeffnungWaging({ asRole }: StepContext): Promise<void> {
   const { spiele, namen } = await ladeSpielplan();
   const [rot, blau] = E2E_NIKOLAUS_HOST_TEAM_NAMES;
@@ -118,18 +119,24 @@ async function markierungImAssistenten({ asRole }: StepContext): Promise<void> {
 
 /**
  * N5: vor dem ersten Anpfiff (Zwilling des Turniers, kein Spiel angepfiffen) zieht die Turnierleitung den ganzen Zeitplan um 15 Minuten vor.
- * Zuschauer-Seite und Hallenmonitor liegen offen: sie zeigen es ohne Neuladen innerhalb von 10 Sekunden, Spiel 1 mit „ursprünglich 16:30“
- * (@ZP-089, @ZP-090). Die Warnung „Spiel 1 beginnt in 5 Minuten“ hängt an der Uhrzeit 16:10 und ist nicht Teil dieses Schritts.
+ * Zuschauer-Seite, Hallenmonitor und Toms Helfer-Handy liegen offen: sie zeigen es ohne Neuladen innerhalb von 10 Sekunden, Spiel 1 mit „ursprünglich 16:30“,
+ * Spiel 2 um 16:25; Toms Helfer-Handy zeigt Spiel 1 um 16:15 und lässt es anpfeifen (@ZP-089, @ZP-090). Die Warnung „Spiel 1 beginnt in 5 Minuten“ hängt an der Uhrzeit 16:10 und ist nicht Teil dieses Schritts.
  */
 async function zeitplanVorziehen({ asRole, browser }: StepContext): Promise<void> {
-  const { spiele } = await ladeSpielplan(ZWILLING);
-  expect(spiele.map((s) => s.actual_start), 'im Zwilling ist noch kein Spiel angepfiffen').toEqual(spiele.map(() => null));
+  const spiele = await vorbedingung('Zwilling laden, kein Spiel angepfiffen', async () => {
+    const { spiele: geladen } = await ladeSpielplan(ZWILLING);
+    expect(geladen.map((s) => s.actual_start), 'im Zwilling ist noch kein Spiel angepfiffen').toEqual(geladen.map(() => null));
+    return geladen;
+  });
   const zuschauerKontext = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const zuschauer = await zuschauerKontext.newPage();
   await zuschauer.goto(`/#/live/${ZWILLING.shareCode}`);
   await expectPageAnchor(zuschauer.getByRole('heading', { level: 1 }).first(), 'Zuschauer-Seite des Zwillings');
   const monitor = await (await browser.newContext({ viewport: { width: 1920, height: 1080 } })).newPage();
   await monitor.goto(`/#/display/${ZWILLING.tournamentId}/${ZWILLING.monitorId}`);
+  const { page: tom } = await handyKontext(browser, 'helper');
+  await openCockpit(tom, ZWILLING.tournamentId, spiele[0].id);
+  await expectPageAnchor(tom.getByTestId('team-name-home'), 'Cockpit von Spiel 1 auf Toms Helfer-Handy');
 
   const ownerPage = await asRole('owner');
   await openNikolausPath(ownerPage, '/schedule', ZWILLING);
@@ -141,9 +148,14 @@ async function zeitplanVorziehen({ asRole, browser }: StepContext): Promise<void
   await expect.poll(async () => (await fetchNikolausSpiele(ZWILLING)).map((s) => s.scheduled_start), { timeout: 10000 }).toEqual(
     spiele.map((_, i) => `${String(16 + Math.floor((15 + i * 10) / 60)).padStart(2, '0')}:${String((15 + i * 10) % 60).padStart(2, '0')}:00`)
   );
-  const zeile1 = zuschauer.locator('[role="row"]', { hasText: 'TSV Waging rot' }).first();
-  await expect(zeile1, 'Zuschauer-Seite ohne Neuladen: Spiel 1 um 16:15, ursprünglich 16:30').toContainText(/16:15[\s\S]*ursprünglich 16:30/, { timeout: 10000 });
+  // ohne Neuladen innerhalb von 10 Sekunden (@ZP-090)
+  const zeile1 = zuschauer.locator('[aria-label$="TSV Waging rot gegen TSV 1921 Fridolfing"]:visible');
+  const zeile2 = zuschauer.locator('[aria-label$="DJK Otting gegen TSV Waging blau"]:visible');
+  await expect(zeile1, 'Zuschauer-Seite: Spiel 1 um 16:15, ursprünglich 16:30').toContainText(/16:15[\s\S]*ursprünglich 16:30/, { timeout: 10000 });
+  await expect(zeile2, 'Zuschauer-Seite: Spiel 2 um 16:25').toContainText('16:25', { timeout: 10000 });
   await expect(monitor.locator('body'), 'Hallenmonitor: Nächstes Spiel 16:15').toContainText(/Nächstes Spiel[\s\S]*16:15/, { timeout: 10000 });
+  await expect(tom.getByTestId('scoreboard'), 'Toms Helfer-Handy: Spiel 1 um 16:15').toContainText('16:15', { timeout: 10000 });
+  await expect(tom.getByTestId('match-start-button'), 'Spiel 1 lässt sich anpfeifen').toBeEnabled();
 }
 
 export const steps: readonly TurniertagStep[] = [
@@ -152,5 +164,5 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N1c', title: 'Spielplan: Abstand zwischen zwei Spielen eines Teams wie im DFB-Schlüssel', scenarios: ['@W4-031'], owner: 'Runden-Spielplan (gebaut, #290)', expectedFail: false, run: abstand },
   { id: 'N2a', title: 'Eröffnung: Waging als Heim gegen Gast, Vereinsduell in Runde 2', scenarios: ['@W4-027', '@W4-033'], owner: 'Runden-Spielplan (gebaut, #290)', expectedFail: false, run: eroeffnungWaging },
   { id: 'N2b', title: 'Assistent: Mannschaft des Veranstalters markieren', scenarios: ['@W4-034'], owner: 'Assistent Veranstalter-Markierung (W4-034)', expectedFail: true, run: markierungImAssistenten },
-  { id: 'N5', title: 'Zeitplan vor dem ersten Anpfiff um 15 Minuten vorziehen, Zuschauer und Monitor ohne Neuladen', scenarios: ['@ZP-089', '@ZP-090'], owner: 'B-26 / B-27', expectedFail: true, run: zeitplanVorziehen },
+  { id: 'N5', title: 'Zeitplan vor dem ersten Anpfiff um 15 Minuten vorziehen, Zuschauer und Monitor ohne Neuladen', scenarios: ['@ZP-089', '@ZP-090'], befunde: ['C-MONITOR-OHNE-NAECHSTES-SPIEL'], owner: 'B-26 / B-27', expectedFail: true, run: zeitplanVorziehen },
 ];

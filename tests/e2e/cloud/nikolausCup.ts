@@ -9,7 +9,7 @@
  * Gast, Vereinsduell in Runde 2“ (`guest-opening`, @W4-033).
  *
  * Nur lokaler Stack (`scripts/require-local-stack.sh`); nie gegen Produktion. `scripts/e2e-seed.ts` legt das
- * Turnier an (`scripts/lib/nikolausSeed.ts`), die Durchstich-Schritte N1 bis N7 (`turniertag/steps/nikolaus.ts`)
+ * Turnier an (`scripts/lib/nikolausSeed.ts`), die Durchstich-Schritte N1 bis N7 (`turniertag/steps/nikolaus-*.ts`)
  * spielen es durch. Die Einzelwerte stehen hier an EINER Stelle (testData.ts führt sie durch `export *` mit).
  */
 import { e2eUuid } from './e2eUuid';

@@ -15,7 +15,9 @@ import type { TurniertagStep } from './turniertag/steps/types';
 
 export const NIKOLAUS_STEPS: readonly TurniertagStep[] = [...plan, ...spiel, ...tabelle];
 
-// Die Befunde der erwartet roten Schritte stehen je Schritt in `befunde` (Wächter TM-1); hier die, die der Szenario-Zähler am Spec braucht.
+// ÜBERGANG bis zur Zählerregel für Schritt-Specs (Folge F4, Plattform/TM-1): Die Befunde der erwartet roten Schritte stehen je Schritt in `befunde`
+// (Wächter TM-1). Die zwei Kennungen im Titel stehen nur hier, damit der Szenario-Zähler (`test.fail` im Rumpf ohne Verweis) nicht steigt;
+// sie beschreiben nicht jeden Schritt.
 test.describe('Nikolaus-Durchstich (N1-N7) C-TABELLE-NICHT-BFV-PRIVAT C-ZUSTAND-ABGELEITET', () => {
   // Nacheinander im selben Worker; ein unerwartet grüner Schritt bricht die Kette nicht ab.
   test.describe.configure({ mode: 'default', retries: 0 });

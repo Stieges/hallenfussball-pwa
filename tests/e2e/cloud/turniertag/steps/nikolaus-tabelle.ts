@@ -26,9 +26,14 @@ async function tabelleTurnierleitung(seite: Page): Promise<string[]> {
 /** N6a: bei Punktgleichheit entscheidet zuerst das direkte Spiel: Kammer (gewann 2:1) steht vor Waging rot (bessere Tordifferenz), ohne Strafstoßschießen (@ET-056). */
 async function direktesSpielZuerst({ asRole }: StepContext): Promise<void> {
   await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
-  const reihenfolge = await tabelleTurnierleitung(await asRole('owner'));
+  const seite = await asRole('owner');
+  const reihenfolge = await tabelleTurnierleitung(seite);
   expect(reihenfolge.indexOf(KAMMER), `Reihenfolge: ${reihenfolge.join(', ')}`).toBeLessThan(reihenfolge.indexOf(ROT));
   expect(reihenfolge.slice(0, 2), 'Kammer und Waging rot führen').toEqual([KAMMER, ROT]);
+  // zweite Dann-Zeile: ein Strafstoßschießen ist zwischen Kammer und Waging rot nicht nötig (nur Petting und Otting sind markiert, N6c)
+  const zeile = (name: string) => seite.locator('tbody tr', { hasText: name });
+  await expect(zeile(KAMMER), 'Kammer: keine Markierung „Entscheidung nötig“').not.toContainText(/Entscheidung nötig|Strafstoß/);
+  await expect(zeile(ROT), 'Waging rot: keine Markierung „Entscheidung nötig“').not.toContainText(/Entscheidung nötig|Strafstoß/);
 }
 
 /** N6b: alle Ansichten zeigen dieselbe Reihenfolge: auch die Zuschauer-Seite hat Kammer vor Waging rot (@W2A-049). */
@@ -101,6 +106,7 @@ async function turnierAbschliessen({ asRole }: StepContext): Promise<void> {
 
 /** N7c: Jeder gegen jeden: der Endstand ist die abgeschlossene Tabelle, Plätze 1 bis 6, kein Platz geteilt (@ET-022). */
 async function endstand({ anonPage }: StepContext): Promise<void> {
+  await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
   await anonPage.goto(`/#/live/${NIKOLAUS.shareCode}`);
   await expectPageAnchor(anonPage.getByRole('heading', { level: 1 }).first(), 'Zuschauer-Seite');
   await expectSollMarker(anonPage, 'final-standings');
@@ -111,11 +117,11 @@ async function endstand({ anonPage }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'N6a', title: 'Tabelle: bei Punktgleichheit zuerst das direkte Spiel (Kammer vor Waging rot)', scenarios: ['@ET-056'], owner: 'Reihenfolge der Kriterien aus dem Turnier (Seed: Punkte, direkter Vergleich, Tordifferenz, Tore)', expectedFail: false, run: direktesSpielZuerst },
-  { id: 'N6b', title: 'Tabelle: Zuschauer-Seite zeigt die Tabelle von Jeder gegen jeden in derselben Reihenfolge', scenarios: ['@W2A-049'], owner: 'Zuschauer-Tabelle ohne Gruppen (Befund neu, Controller trägt ein) / Paket TB', expectedFail: true, run: zuschauerReihenfolge },
+  { id: 'N6a', title: 'Tabelle: bei Punktgleichheit zuerst das direkte Spiel (Kammer vor Waging rot), kein Strafstoßschießen nötig – unter der BFV-privat-Reihenfolge (per Seed); Voreinstellung = N6e', scenarios: ['@ET-056'], owner: 'Reihenfolge der Kriterien aus dem Turnier (Seed: Punkte, direkter Vergleich, Tordifferenz, Tore)', expectedFail: false, run: direktesSpielZuerst },
+  { id: 'N6b', title: 'Tabelle: Zuschauer-Seite zeigt die Tabelle von Jeder gegen jeden in derselben Reihenfolge', scenarios: ['@W2A-049'], befunde: ['C-ZUSCHAUER-TABELLE-OHNE-GRUPPEN'], owner: 'Zuschauer-Tabelle ohne Gruppen / Paket TB', expectedFail: true, run: zuschauerReihenfolge },
   { id: 'N6c', title: 'Tabelle: völliger Gleichstand (Petting/Otting) als „Entscheidung nötig“ markiert, Strafstoßschießen genannt', scenarios: ['@ET-025', '@ET-055', '@W2A-047'], befunde: ['C-TABELLE-NICHT-BFV-PRIVAT'], owner: 'Paket TB', expectedFail: true, run: gleichstandMarkiert },
   { id: 'N6d', title: 'Tabelle: Strafstoßschießen eintragen, Sieger steht vorn', scenarios: ['@ET-055'], befunde: ['C-TABELLE-NICHT-BFV-PRIVAT'], owner: 'Paket TB', expectedFail: true, run: strafstossEintragen },
-  { id: 'N6e', title: 'Assistent: Reihenfolge bei Punktgleichheit für private Hallenturniere vorbelegt', scenarios: ['@W2A-046'], owner: 'Paket TB', expectedFail: true, run: vorbelegungPrivat },
+  { id: 'N6e', title: 'Assistent: Reihenfolge bei Punktgleichheit für private Hallenturniere vorbelegt', scenarios: ['@W2A-046'], befunde: ['C-TABELLE-NICHT-BFV-PRIVAT'], owner: 'Paket TB', expectedFail: true, run: vorbelegungPrivat },
   { id: 'N7a', title: 'Gruppe abschließen: Vorschlag, Entscheidung des Gleichstands, abgeschlossen', scenarios: ['@TM-044', '@TM-046', '@TM-048'], owner: 'A-13 / Paket TB', expectedFail: true, run: gruppeAbschliessen },
   { id: 'N7b', title: 'Turnier abschließen: abgeschlossen und gesperrt', scenarios: ['@LZ-030'], befunde: ['C-ZUSTAND-ABGELEITET'], owner: 'A-21a / B-33', expectedFail: true, run: turnierAbschliessen },
   { id: 'N7c', title: 'Endstand = abgeschlossene Tabelle, Plätze 1 bis 6', scenarios: ['@ET-022'], owner: 'A-19 / A-20 / B-23', expectedFail: true, run: endstand },
