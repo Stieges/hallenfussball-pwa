@@ -57,3 +57,17 @@ export function kickoffLocal(date: string, scheduledTime: Date | string | undefi
 export function clockKey(clock: LocalClock | undefined): string {
   return clock === undefined ? '9999-99-99 99:99' : `${clock.date} ${clock.time}`;
 }
+
+/**
+ * Minuten von `from` bis `to` (negativ, wenn `to` früher liegt), beide als Wanduhr in Turnier-Ortszeit.
+ * Rechnet nur mit den Wanduhr-Feldern (Datum + HH:MM), nie mit einer Geräte-Zeitzone.
+ */
+export function minutesBetween(from: LocalClock, to: LocalClock): number {
+  return wallMinutes(to) - wallMinutes(from);
+}
+
+function wallMinutes(clock: LocalClock): number {
+  const [year, month, day] = clock.date.split('-').map(Number);
+  const [hour, minute] = clock.time.split(':').map(Number);
+  return Date.UTC(year, month - 1, day, hour, minute) / 60_000;
+}

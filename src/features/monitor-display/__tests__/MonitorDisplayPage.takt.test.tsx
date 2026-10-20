@@ -144,6 +144,8 @@ describe('MonitorDisplayPage — Takt-Gegenprobe (C-MON-TAKT-STEHT, Klon je Poll
 
 describe('MonitorDisplayPage — Rückfall bei nur übersprungenen Live-Folien (Ruling B-16e1, @ZM-122)', () => {
   it('nur Live-Folie, kein Spiel auf Feld 1 → Zuschauer-QR-Folie statt „Nächstes Spiel“', async () => {
+    // Uhr: 10:00 am Turnierdatum, vor allen Anstößen und außerhalb der Vorlaufzeit (@ZM-122, @ZM-138)
+    vi.setSystemTime(new Date('2025-01-15T09:00:00Z'));
     const ohneSpiel = FIXTURE_MATCHES.map(m => ({ ...m, matchStatus: 'scheduled' as const }));
     await starte(monitorTurnier(buildTournament({ matches: ohneSpiel }), [slide('live', { fieldId: 'field-1' })]));
     expect(screen.getByTestId('qr-code')).toBeInTheDocument();
@@ -152,6 +154,8 @@ describe('MonitorDisplayPage — Rückfall bei nur übersprungenen Live-Folien (
 
   // @ZM-077 (Seite, Fixrunde 2): Programm nur aus Live-Folie. Abpfiff 2:1 → Endstand bis 29 999 ms, bei 30 000 ms QR.
   it('nur Live-Folie: Abpfiff 2:1 → Endstand bis 29 999 ms, bei 30 000 ms Zuschauer-QR', async () => {
+    // Uhr: 10:00 am Turnierdatum, vor allen Anstößen und außerhalb der Vorlaufzeit (@ZM-122, @ZM-138)
+    vi.setSystemTime(new Date('2025-01-15T09:00:00Z'));
     const live = [slide('live', { fieldId: 'field-1' })];
     await starte(monitorTurnier(buildTournament(), live));
     liefere(monitorTurnier(buildTournament({ matches: withMatch('match-7', { matchStatus: 'finished', scoreA: 2, scoreB: 1 }) }), live));
