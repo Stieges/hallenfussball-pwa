@@ -113,6 +113,16 @@ describe('toScoreboardModel: @OB-065 Abzeichen wie auf der Spielkarte', () => {
     expect(toScoreboardModel(input({ status: 'finished', sectionElapsedMs: min(6) }, { match: makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 1 }) }, 'FINISHED'), t).badge).toEqual({ kind: 'badge', state: 'ended' });
   });
 
+  it('@OB-065 ausgefallenes Spiel (skipped) trägt auf der Tafel „ausgefallen“ wie auf der Spielkarte, nicht „Ende“', () => {
+    const m = toScoreboardModel(input({ status: 'skipped', sectionElapsedMs: min(6) }, { match: makeLiveMatch({ status: 'FINISHED', homeScore: 0, awayScore: 0 }) }, 'FINISHED'), t);
+    expect(m.badge).toEqual({ kind: 'badge', state: 'cancelled' });
+  });
+
+  it('@OB-065 Gegenbeispiel: ein regulär beendetes Spiel (finished) trägt weiter „Ende“', () => {
+    const m = toScoreboardModel(input({ status: 'finished', sectionElapsedMs: min(6) }, { match: makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 1 }) }, 'FINISHED'), t);
+    expect(m.badge).toEqual({ kind: 'badge', state: 'ended' });
+  });
+
   it('@OB-065 das Abzeichen enthält keine Uhrzeit oder Spielzeit; die Restzeit steht bei der Uhr', () => {
     const m = toScoreboardModel(input({ sectionElapsedMs: min(4, 10) }), t);
     expect(JSON.stringify(m.badge)).not.toMatch(/\d{1,2}:\d{2}/);

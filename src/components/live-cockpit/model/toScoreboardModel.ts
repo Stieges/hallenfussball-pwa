@@ -11,6 +11,7 @@ import type { PhaseView } from '../engine/phaseView';
 import type { CockpitPhase, CockpitZustand } from './cockpitPhase';
 import type { ScoreboardModel, ScoreboardSeite, ScoreboardUhr } from '../../ui/molecules/Scoreboard';
 import { matchBadgeModel, type MatchBadgeModel } from '../../../core/view/badge';
+import { viewStatus } from '../../../core/view/status';
 import type { ViewMatchStatus } from '../../../core/view/types';
 import type { Side, Uebersetzer } from './cockpitTypes';
 import { scoreboardVor, type ScoreboardVorInput } from './scoreboardVor';
@@ -48,21 +49,25 @@ export function formatUhr(sekunden: number): string {
 }
 
 /**
- * Status der Ansicht je Zustand der Tafel. Das Abzeichen folgt derselben Zuordnung wie auf der Spielkarte
- * (`matchBadgeModel`, @OB-065, @OB-066); `scheduled` heißt: kein Abzeichen mit Wort, nur die Anstoßzeit oder nichts.
+ * Rückfall-Status je Zustand der Tafel, nur ohne Engine-Ansicht (siehe `badgeOf`). `scheduled` heißt: kein Abzeichen
+ * mit Wort, nur die Anstoßzeit oder nichts (@OB-065, @OB-066).
  */
-const VIEW_STATUS: Record<CockpitZustand, ViewMatchStatus> = {
+const STATUS_OHNE_ANSICHT: Record<CockpitZustand, ViewMatchStatus> = {
   vorAnpfiff: 'scheduled', laeuft: 'running', pausiert: 'paused', halbzeitpause: 'paused', pauseVorVerlaengerung: 'paused',
   entscheidung: 'paused', strafstoss: 'running', abgepfiffen: 'finished', wartetAufHerkunft: 'scheduled', keinSpiel: 'scheduled',
 };
 
-/** Das Zustands-Abzeichen der Tafel: vor dem Anpfiff die Anstoßzeit, sonst das Wort des Feinstatus, ohne Uhr. */
+/**
+ * Das Zustands-Abzeichen der Tafel: vor dem Anpfiff die Anstoßzeit, sonst das Wort des Feinstatus, ohne Uhr.
+ * Liegt eine Engine-Ansicht vor, gilt `viewStatus` wie auf der Spielkarte (ausgefallen bleibt ausgefallen);
+ * `STATUS_OHNE_ANSICHT` ist nur der Rückfall ohne Ansicht.
+ */
 function badgeOf(input: ScoreboardInput): MatchBadgeModel {
   const { phase, view, vor } = input;
   if (phase.zustand === 'vorAnpfiff') {
     return vor ? { kind: 'kickoff', time: vor.anstoss } : { kind: 'none' };
   }
-  const status = VIEW_STATUS[phase.zustand];
+  const status = view ? viewStatus({}, view.status) : STATUS_OHNE_ANSICHT[phase.zustand];
   if (status === 'scheduled') { return { kind: 'none' }; }
   const engine = view ? { status: view.status, phase: view.phase, section: view.section, sections: view.sections } : undefined;
   return matchBadgeModel({ status, engine });
