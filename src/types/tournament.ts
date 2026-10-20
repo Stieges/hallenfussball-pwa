@@ -460,6 +460,12 @@ export interface Tournament {
    * `config`-JSONB (keine Migration). Gültig ist eine nur, solange Block und Grundlage gleich sind (reine Rechnung).
    */
   standingDecisions?: StandingDecision[];
+  /**
+   * Paket TB-B (TB-3', Daniel 2026-10-20): Plätze, die bei Gleichstand ausgespielt werden müssen (Gruppenplätze), im
+   * `config`-JSONB. Gelesen über `effectivePlacementsToPlayOut` (`core/standings/playOutPlaces.ts`): fehlt der Wert,
+   * gilt nur Platz 1 (Daniel K10); `[]` = kein Platz.
+   */
+  placementsToPlayOut?: number[];
   /** Wahl der Eröffnung bei zwei Mannschaften des Veranstalters (@W4-033); ohne Wahl `DEFAULT_OPENING_MODE`. */
   openingMode?: OpeningMode;
 
@@ -776,8 +782,10 @@ export interface Standing {
 }
 
 /**
- * Paket TB (Plan v2 § 3.2): Entscheidung der Turnierleitung über einen Gleichstand nach allen Kriterien.
- * Gültigkeit und Anwendung: `core/standings/decisions.ts`; Speichern: `StandingDecisionService`.
+ * Paket TB (Plan v2 § 3.2, TB-3'): Entscheidung der Turnierleitung über einen Gleichstand nach allen Kriterien.
+ * Gültigkeit und Anwendung: `core/standings/decisions.ts`; Speichern und Zurücknehmen: `StandingDecisionService`.
+ * Steht im öffentlich lesbaren `config` – deshalb ohne Person, Zeitpunkt und Grund (@W2A-072, Daniel B4d); „wer wann“
+ * und der Grund einer Reihenfolge gehören ins Verlaufsprotokoll (GA4 A-13b, C-ENTSCHEIDUNG-PERSON-OEFFENTLICH).
  */
 export interface StandingDecision {
   id: string;
@@ -787,12 +795,9 @@ export interface StandingDecision {
   teamIds: string[];
   /** Vorn = besser. */
   order: string[];
-  /** 2 Teams: Strafstoßschießen, 3+: Reihenfolge; 'shared' = „gleichen Platz lassen“ (Variante C). */
+  /** 2 Teams: Strafstoßschießen, 3+: Reihenfolge; 'shared' = „Ergebnis so akzeptieren“ (Teams teilen den Platz). */
   kind: 'shootout' | 'order' | 'shared';
   shootout?: { winner: number; loser: number };
-  reason?: string;
-  decidedBy: { userId: string; name: string };
-  decidedAt: string;
   /** Fingerabdruck der Grundlage. */
   basis: string;
 }

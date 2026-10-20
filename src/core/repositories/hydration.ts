@@ -13,6 +13,7 @@ import type { Tournament, Match } from '../models/types';
 import { completeMatchCockpitSettings } from '../../types/tournament';
 import { ensureMatchNumbers } from '../models/matchNumbers';
 import { effectivePlacementLogic } from '../standings/placementDefaults';
+import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
 
 /**
  * Hydrates a single Match object by converting date strings to Date objects.
@@ -66,6 +67,8 @@ export function hydrateTournament(raw: unknown): Tournament {
     matchCockpitSettings: completeMatchCockpitSettings(tournament.matchCockpitSettings),
     // C-WERTUNG-LEER: fehlende oder leere Reihenfolge ⇒ Voreinstellung BFV privat (@W2A-046)
     placementLogic: effectivePlacementLogic(tournament.placementLogic as Tournament['placementLogic'] | undefined),
+    // Paket TB-B (TB-3'): fehlende oder unbrauchbare Einstellung ⇒ nur Platz 1 (Daniel K10, @W2A-066)
+    placementsToPlayOut: parsePlacementsToPlayOut(tournament.placementsToPlayOut),
   } as Tournament;
 }
 

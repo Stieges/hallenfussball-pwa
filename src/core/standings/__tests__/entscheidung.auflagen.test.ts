@@ -10,7 +10,7 @@ import { createMockTournament } from '../../../test/factories';
 import { groupRank, slots } from '../../../test/matchSlotFixtures';
 import type { Match, Standing, Tournament } from '../../../types/tournament';
 import { BFV_ORDER, DATA, id, league, names, NAME, parseMatches, POINTS_310, teamsOf, type Key } from './fixtures';
-import { jgj, MemoryRepo, OLLI, shared, shootout } from './decisionTestKit';
+import { jgj, MemoryRepo, shared, shootout } from './decisionTestKit';
 
 const row = (rows: Standing[], key: Key): Standing => {
   const found = rows.find((r) => r.team.id === id(key));
@@ -46,11 +46,11 @@ function nurDritterMitFolgespiel(): Tournament {
 }
 
 describe('Auflagen TB-A', () => {
-  it('Auflage 1 (Fall F): eine Gruppe „A“, Eintrag mit leerer Kennung – gespeichert unter „A“, wirksam, zweiter Eintrag ALREADY_DECIDED', async () => {
+  it('@W2A-060 Auflage 1 (Fall F): eine Gruppe „A“, Eintrag mit leerer Kennung – gespeichert unter „A“, wirksam, zweiter Eintrag ALREADY_DECIDED', async () => {
     const repo = new MemoryRepo(eineGruppeA());
     expect([row(rankTournamentGroup(repo.tournament, 'A').rows, 'W').decisionNeeded]).toEqual([true]);
 
-    const erst = await repo.service(['e-1']).decide(repo.tournament.id, shootout('O', 'W', 4, 3, ''), OLLI);
+    const erst = await repo.service(['e-1']).decide(repo.tournament.id, shootout('O', 'W', 4, 3, ''));
     expect(erst.ok).toBe(true);
     expect(repo.tournament.standingDecisions?.map((d) => d.groupId)).toEqual(['A']);
     const rows = rankTournamentGroup(repo.tournament, 'A').rows;
@@ -58,16 +58,16 @@ describe('Auflagen TB-A', () => {
     expect(rows.some((r) => r.decisionNeeded)).toBe(false);
 
     for (const gruppe of ['', 'A']) {
-      expect(await repo.service().decide(repo.tournament.id, shootout('W', 'O', 5, 4, gruppe), OLLI))
-        .toEqual({ ok: false, code: 'ALREADY_DECIDED', by: 'Olli', at: '2026-12-06T14:32:00.000Z' });
+      expect(await repo.service().decide(repo.tournament.id, shootout('W', 'O', 5, 4, gruppe)))
+        .toEqual({ ok: false, code: 'ALREADY_DECIDED' }); // „von wem“: Verlaufsprotokoll (GA4 A-13b), C-ENTSCHEIDUNG-PERSON-OEFFENTLICH
     }
     expect(repo.writes).toBe(1);
   });
 
-  it('Auflage 1 (Fall F): „gleichen Platz lassen“ mit leerer Kennung bei Platz mit Herkunft „Zweiter Gruppe A“ → SHARED_PLACE_NOT_ALLOWED', async () => {
+  it('@W2A-064 Auflage 1 (Fall F): „Ergebnis so akzeptieren“ mit leerer Kennung bei Platz mit Herkunft „Zweiter Gruppe A“ → SHARED_PLACE_NOT_ALLOWED', async () => {
     const repo = new MemoryRepo(eineGruppeA());
-    expect(validateDraft(shared(['W', 'O'], 'Hallenzeit zu Ende', ''), repo.tournament)).toEqual({ ok: false, code: 'SHARED_PLACE_NOT_ALLOWED' });
-    expect(await repo.service().decide(repo.tournament.id, shared(['W', 'O'], 'Hallenzeit zu Ende', ''), OLLI))
+    expect(validateDraft(shared(['W', 'O'], ''), repo.tournament)).toEqual({ ok: false, code: 'SHARED_PLACE_NOT_ALLOWED' });
+    expect(await repo.service().decide(repo.tournament.id, shared(['W', 'O'], '')))
       .toEqual({ ok: false, code: 'SHARED_PLACE_NOT_ALLOWED' });
     expect(repo.writes).toBe(0);
     // Gegenbeispiel: eine abweichende Gruppe („B“ gibt es nicht) passt zu keinem offenen Block.
@@ -86,25 +86,25 @@ describe('Auflagen TB-A', () => {
   it('@W2A-047 mitten in der Gruppe nimmt die App keine Entscheidung an (BLOCK_CHANGED), nach dem letzten Spiel schon', async () => {
     const offen = new MemoryRepo({ ...league('RKMUNO', DATA.ET_055, { open: ['M–U', 'U–N', 'N–O'] }).tournament, version: 1 });
     expect([row(rankTournamentGroup(offen.tournament, '').rows, 'R').place, row(rankTournamentGroup(offen.tournament, '').rows, 'K').place]).toEqual([2, 2]);
-    expect(await offen.service().decide(offen.tournament.id, shootout('K', 'R', 4, 3), OLLI)).toEqual({ ok: false, code: 'BLOCK_CHANGED' });
+    expect(await offen.service().decide(offen.tournament.id, shootout('K', 'R', 4, 3))).toEqual({ ok: false, code: 'BLOCK_CHANGED' });
     expect(offen.writes).toBe(0);
     // Gegenbeispiel: alle Spiele entschieden → angenommen.
     const fertig = new MemoryRepo(jgj('RKMUNO', DATA.ET_055));
-    expect((await fertig.service().decide(fertig.tournament.id, shootout('K', 'R', 4, 3), OLLI)).ok).toBe(true);
+    expect((await fertig.service().decide(fertig.tournament.id, shootout('K', 'R', 4, 3))).ok).toBe(true);
   });
 
-  it('@W2A-064 Folgespiel nur auf dem letzten Platz des Blocks („Dritter Gruppe A“): kein „gleichen Platz lassen“', async () => {
+  it('@W2A-064 Folgespiel nur auf dem letzten Platz des Blocks („Dritter Gruppe A“): kein „Ergebnis so akzeptieren“', async () => {
     const repo = new MemoryRepo(nurDritterMitFolgespiel());
     const rows = rankTournamentGroup(repo.tournament, 'A').rows;
     expect([row(rows, 'S').place, row(rows, 'W').place]).toEqual([2, 2]);
-    expect(await repo.service().decide(repo.tournament.id, shared(['S', 'W'], 'Hallenzeit zu Ende', 'A'), OLLI))
+    expect(await repo.service().decide(repo.tournament.id, shared(['S', 'W'], 'A')))
       .toEqual({ ok: false, code: 'SHARED_PLACE_NOT_ALLOWED' });
     expect(repo.writes).toBe(0);
   });
 
   it('@W2A-005 wird ein Spiel des Blocks nachträglich „nicht ausgetragen“ (Stand bleibt stehen), verfällt die Entscheidung', async () => {
     const repo = new MemoryRepo(jgj('MNUWOB', DATEN_029));
-    expect((await repo.service(['e-nord']).decide(repo.tournament.id, shootout('N', 'U', 4, 3), OLLI)).ok).toBe(true);
+    expect((await repo.service(['e-nord']).decide(repo.tournament.id, shootout('N', 'U', 4, 3))).ok).toBe(true);
     expect(rankTournamentGroup(repo.tournament, '').staleDecisionIds).toEqual([]);
 
     repo.tournament = {

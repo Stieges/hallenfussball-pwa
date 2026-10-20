@@ -19,6 +19,8 @@ function table(keys: string, results: string, opts: { pointSystem?: PointSystem;
     placementLogic: opts.placementLogic ?? BFV_ORDER,
     decisions: [],
     mode: 'group',
+    placesToPlayOut: [1],
+    followUpRanks: [],
   });
 }
 
