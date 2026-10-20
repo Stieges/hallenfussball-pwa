@@ -4,7 +4,7 @@
  * Wächter hält fest, dass
  *  - der Ablehnungscode der Migration im Client bekannt ist (Text „Ein anderes Gerät steuert dieses Spiel gerade.“),
  *  - die „laufenden“ Zustände der Migration genau die gestarteten, nicht beendeten Zustände der Rechenfunktion sind,
- *  - die Migration im Drift-Check bis F3 ausgenommen ist und ihre drei Rechte-Assertions zugeordnet sind,
+ *  - die Migration nicht mehr in PENDING-LIVE steht (live seit 20.10.) und ihre drei Rechte-Assertions im Drift-Check zugeordnet sind,
  *  - je Kennung im Prüfskript eine Zeile und ein Gegenbeispiel stehen und die Matrix-Datei nach A-27 läuft.
  */
 import { describe, it, expect } from 'vitest';
@@ -56,16 +56,14 @@ describe('A-34 Zwillinge Migration ↔ Client', () => {
   });
 });
 
-describe('A-34 Drift-Check bis F3 (PENDING-LIVE, Rechte-Assertions)', () => {
-  it('PENDING-LIVE nennt die Migration mit Frist 2026-11-10 und demselben Vergleichs-Commit wie die übrigen Zeilen', () => {
+describe('A-34 Drift-Check (PENDING-LIVE leer, Rechte-Assertions)', () => {
+  it('seit dem Einspielen (20.10.) steht die Migration nicht mehr in PENDING-LIVE – sonst würden ihre Rechte-Assertions im Drift-Check ausgelassen', () => {
     const lines = pending
       .split('\n')
       .map((l) => l.replace(/#.*/, '').trim())
       .filter(Boolean)
       .map((l) => l.split(/\s+/));
-    const own = lines.find(([file]) => file === MIGRATION_NAME);
-    expect(own?.[1]).toBe('2026-11-10');
-    expect(new Set(lines.map((l) => l[2])).size).toBe(1);
+    expect(lines.map(([file]) => file)).not.toContain(MIGRATION_NAME);
   });
 
   it('die drei Assertions stehen in der SQL-Datei, in PRIVILEGE_ASSERTION_NAMES und in pending_assertions_for', () => {
