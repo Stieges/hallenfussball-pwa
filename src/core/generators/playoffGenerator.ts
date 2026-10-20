@@ -4,7 +4,7 @@
  * Generiert Finalrunden-Spiele basierend auf Presets:
  * - none: Keine Finalrunde
  * - final-only: Nur Finale (direkt)
- * - top-4: Halbfinale + Finale + Platz 3
+ * - top-4: Halbfinale + Spiel um Platz 3 + Finale
  * - top-8: Viertelfinale + alles darüber + Platzierungen 5-8
  * - top-16: Achtelfinale + Viertelfinale + Halbfinale + Finale (8+ Gruppen)
  * - all-places: Alle Plätze ausspielen
@@ -121,7 +121,7 @@ function generateFinalOnly(numberOfGroups: number): PlayoffMatch[] {
 }
 
 /**
- * Top 4: Halbfinale + Finale + Platz 3
+ * Top 4: Halbfinale + Spiel um Platz 3 + Finale
  * Standard bei 2 Gruppen
  */
 function generateTop4(numberOfGroups: number, groupSizes?: GroupSizeInfo): PlayoffMatch[] {

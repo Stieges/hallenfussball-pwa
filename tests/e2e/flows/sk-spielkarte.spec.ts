@@ -24,9 +24,32 @@ const HANDY = { width: 360, height: 640 };
 const TABLET_HOCH = { width: 768, height: 1024 };
 const LAPTOP = { width: 1280, height: 800 };
 
-async function oeffneSpielplan(page: Page, groesse: { width: number; height: number }) {
+const FINALE = '00000003-0000-4000-8000-000000000016';
+type SaatSpiel = Record<string, unknown> & { id: string };
+interface Saat { datenbanken: Array<{ eintraege: Record<string, unknown> }> }
+
+/**
+ * Saat, in der das Finale noch nicht angepfiffen ist (ohne Stand, Uhr, Live-Zustand und Engine-Kopie). Das Finale ist das
+ * letzte Spiel (@TM-144); nur so lässt sich in der untersten Karte ein Ergebnis eintragen – das laufende Finale der Saat
+ * nimmt keinen Direkteintrag an.
+ */
+function saatFinaleOffen(): Saat {
+  const saat = leseSaat('hallencup-messlauf') as Saat;
+  const turniere = saat.datenbanken[0].eintraege.tournaments as Array<{ id: string; matches: SaatSpiel[] }>;
+  const turnier = turniere.find((t) => t.id === 'hallencup-messlauf');
+  const finale = turnier?.matches.find((m) => m.id === FINALE);
+  if (!turnier || !finale) { throw new Error('Finale fehlt in der Saat'); }
+  const { scoreA: _a, scoreB: _b, matchStatus: _s, timerElapsedSeconds: _e, timerStartTime: _t, liveState: _l, ...offen } = finale;
+  turnier.matches = turnier.matches.map((m) => (m.id === FINALE ? offen : m));
+  for (const db of saat.datenbanken) {
+    db.eintraege = Object.fromEntries(Object.entries(db.eintraege).filter(([schluessel]) => schluessel !== `guest|${FINALE}`));
+  }
+  return saat;
+}
+
+async function oeffneSpielplan(page: Page, groesse: { width: number; height: number }, saat: unknown = leseSaat('hallencup-messlauf')) {
   await page.setViewportSize(groesse);
-  await installiereSaat(page.context(), leseSaat('hallencup-messlauf'));
+  await installiereSaat(page.context(), saat);
   await page.goto(SPIELPLAN);
   await expect(page.locator('[data-testid^="final-card-"]').first()).toBeAttached({ timeout: 20000 });
 }
@@ -279,8 +302,10 @@ for (const [name, groesse, datei] of [
     });
 
     test('eingetragen, ganz unten: Torzahlen der Gastzeile und jede Torfläche der letzten Karten sind nicht von der Leiste verdeckt', async ({ page }) => {
-      await oeffneSpielplan(page, groesse);
-      const karte = finalKarte(page, PLATZ_3);
+      // Eingetragen wird in der untersten Karte, dem Finale (@TM-144: letztes Spiel). Es läuft in der Saat und nimmt dort keinen
+      // Direkteintrag an, darum hier eine Saat-Variante mit noch nicht angepfiffenem Finale.
+      await oeffneSpielplan(page, groesse, saatFinaleOffen());
+      const karte = page.locator('[data-testid^="final-card-"]').last();
       await karte.scrollIntoViewIfNeeded();
       await karte.locator('input[data-testid$="-home"]').fill('2');
       await karte.locator('input[data-testid$="-away"]').fill('1');
@@ -290,7 +315,7 @@ for (const [name, groesse, datei] of [
       const befunde = await pruefeLetzteKarten(page, LETZTE_KARTEN);
       if (BILDER) {
         mkdirSync(BILDER, { recursive: true });
-        await page.screenshot({ path: join(BILDER, `fr2-${datei}-platz-3-eingetragen.png`) });
+        await page.screenshot({ path: join(BILDER, `fr2-${datei}-finale-eingetragen.png`) });
       }
       expect(befunde.length, 'Ziele in den letzten Karten gefunden').toBeGreaterThan(0);
       expect(befunde.filter((b) => !b.ok).map((b) => `${b.name} → verdeckt von ${b.treffer}`)).toEqual([]);
