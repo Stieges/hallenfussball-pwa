@@ -389,6 +389,16 @@
 
   /* Component Sizes (px - FIXED) */
   --sizing-sidebar-width: 300px;
+  /* Cockpit Laptop (Mockup laptop.html, Daniel 18.10.): Ereignisspalte, Tor-Höhe, Leiste, Mehr-Knopf, Feldwahl */
+  --sizing-cockpit-ereignisspalte: 25rem;
+  --sizing-cockpit-tor-breit: calc(var(--touch-target-minimum) * 2);
+  --sizing-cockpit-leiste-breit: calc(var(--touch-target-primary) + var(--spacing-sm));
+  --sizing-cockpit-mehr-breit: 6rem;
+  --sizing-feldwahl-max: 26.25rem;
+  /* Rahmenbreiten: dünn, mittel, kräftig (eine Quelle für `borderWidths` und `cssVars.borderWidth`) */
+  --border-width-thin: 1px;
+  --border-width-medium: 2px;
+  --border-width-strong: 3px;
   --sizing-empty-state-min-height: 300px;
   --sizing-hairline: 1px;
   /* Tafel Live-Cockpit (Mockup, fest): Uhr und Stand über Schrift-Tokens, Meldezeile reine Anzeige */

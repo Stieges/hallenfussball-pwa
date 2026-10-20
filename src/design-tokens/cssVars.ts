@@ -546,6 +546,12 @@ export const cssOpacity = {
 
 export const cssSizing = {
   sidebarWidth: 'var(--sizing-sidebar-width)',
+  // Cockpit Laptop (Mockup laptop.html)
+  cockpitEreignisspalte: 'var(--sizing-cockpit-ereignisspalte)',
+  cockpitTorBreit: 'var(--sizing-cockpit-tor-breit)',
+  cockpitLeisteBreit: 'var(--sizing-cockpit-leiste-breit)',
+  cockpitMehrBreit: 'var(--sizing-cockpit-mehr-breit)',
+  feldwahlMax: 'var(--sizing-feldwahl-max)',
   emptyStateMinHeight: 'var(--sizing-empty-state-min-height)',
   hairline: 'var(--sizing-hairline)',
   // Tafel Live-Cockpit (Spec § 8.2)
