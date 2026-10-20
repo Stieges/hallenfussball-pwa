@@ -62,7 +62,19 @@ export const PERMISSIONS: readonly Permission[] = PermissionSchema.options;
  * Bekannte Rollen aus role_permissions -- deckungsgleich mit dessen role-CHECK-Constraint
  * (bewusst OHNE 'owner', siehe hasPermission() unten und der JSON-Kopfkommentar).
  */
-const RolePermissionsRoleSchema = z.enum(['co-admin', 'collaborator', 'trainer', 'viewer']);
+const RolePermissionsRoleSchema = z.enum(['co-admin', 'collaborator', 'trainer', 'viewer', 'helper', 'screen']);
+
+/** Rollen in role_permissions (Zwilling des SQL-CHECK role_permissions_role_check, rolePermissionsTwins.test.ts). */
+export const ROLE_PERMISSIONS_ROLES = RolePermissionsRoleSchema.options;
+
+/**
+ * A-27: Geräte-Rollen. Sie entstehen nur in Server-Funktionen (Beitritt A-16, Kopplung B-20) und ändern sich nie über
+ * die App: kein Rollenwechsel von oder zu ihnen (@HE-084; Zwilling der Liste in has_tournament_permission und im Guard
+ * protect_device_roles, 20261110_002_device_roles.sql).
+ */
+export const DEVICE_ROLES: readonly TournamentRole[] = ['helper', 'screen'];
+
+const isDeviceRole = (role: TournamentRole): boolean => DEVICE_ROLES.includes(role);
 
 /**
  * Fixrunde 1 (N4, task-R5b-review.md): Laufzeit-Validierung statt `as unknown as` -- ein
@@ -259,6 +271,11 @@ export const canChangeRole = (
     return false;
   }
 
+  // A-27 (@HE-084): Geräte-Zugänge (Helfer ohne Konto, Bildschirm) wechseln nie die Rolle.
+  if (isDeviceRole(targetRole)) {
+    return false;
+  }
+
   // Owner kann alle ändern außer sich selbst (owner)
   return targetRole !== 'owner';
 };
@@ -293,6 +310,11 @@ export const canSetRoleTo = (
     return false;
   }
 
+  // A-27: Geräte-Rollen vergibt nur der Server (Beitritt/Kopplung), nie ein Rollenwechsel.
+  if (isDeviceRole(newRole)) {
+    return false;
+  }
+
   return true;
 };
 
@@ -304,7 +326,8 @@ export const canRemoveMember = (
   myRole: TournamentRole,
   targetRole: TournamentRole
 ): boolean => {
-  return canChangeRole(myRole, targetRole);
+  // A-27: Entfernen bleibt auch für Geräte-Zugänge möglich (Entzug), nur der Rollenwechsel ist gesperrt.
+  return hasPermission(myRole, 'manageMembers') && targetRole !== 'owner';
 };
 
 /**
@@ -411,11 +434,20 @@ export const getAssignableRoles = (myRole: TournamentRole): TournamentRole[] => 
 
 /**
  * Prüft ob eine Rolle höher ist als eine andere
- * owner > co-admin > trainer > collaborator > viewer
+ * owner > co-admin > trainer > collaborator = helper > viewer > screen (A-27)
  */
+const ROLE_RANK: Record<TournamentRole, number> = {
+  screen: 0,
+  viewer: 1,
+  collaborator: 2,
+  helper: 2,
+  trainer: 3,
+  'co-admin': 4,
+  owner: 5,
+};
+
 export const isHigherRole = (roleA: TournamentRole, roleB: TournamentRole): boolean => {
-  const hierarchy: TournamentRole[] = ['viewer', 'collaborator', 'trainer', 'co-admin', 'owner'];
-  return hierarchy.indexOf(roleA) > hierarchy.indexOf(roleB);
+  return ROLE_RANK[roleA] > ROLE_RANK[roleB];
 };
 
 /**
