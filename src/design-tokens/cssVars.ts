@@ -131,6 +131,7 @@ export const cssColors = {
   noticeLineBg: 'var(--color-notice-line-bg)',
   noticeLineText: 'var(--color-notice-line-text)',
   holdFill: 'var(--color-hold-fill)',
+  nextWarnBorder: 'var(--color-next-warn-border)',
   cardYellow: 'var(--color-card-yellow)',
   cardRed: 'var(--color-card-red)',
 

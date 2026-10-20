@@ -154,6 +154,7 @@
   --color-notice-line-bg: var(--color-scoreboard-surface);
   --color-notice-line-text: var(--color-scoreboard-text);
   --color-hold-fill: var(--color-error);
+  --color-next-warn-border: var(--color-warning); /* Rahmen der Zeile „Nächstes“ ab 3:00 Restzeit (@SL-155) */
   --color-card-yellow: #FACC15;
   --color-card-red: #DC2626;
 
@@ -713,6 +714,7 @@ html[data-font-size="x-large"] {
   --color-notice-line-bg: var(--color-scoreboard-surface);
   --color-notice-line-text: var(--color-scoreboard-text);
   --color-hold-fill: var(--color-error);
+  --color-next-warn-border: var(--color-warning); /* Rahmen der Zeile „Nächstes“ ab 3:00 Restzeit (@SL-155) */
   --color-card-yellow: #FACC15;
   --color-card-red: #DC2626;
 
@@ -1025,6 +1027,7 @@ html[data-font-size="x-large"] {
   --color-notice-line-bg: var(--color-scoreboard-surface);
   --color-notice-line-text: var(--color-scoreboard-text);
   --color-hold-fill: var(--color-error);
+  --color-next-warn-border: var(--color-warning); /* Rahmen der Zeile „Nächstes“ ab 3:00 Restzeit (@SL-155) */
   --color-card-yellow: #FACC15;
   --color-card-red: #DC2626;
 

@@ -31,3 +31,13 @@ describe('Cockpit-Laptop-Tokens (B4)', () => {
     expect(css).not.toMatch(/--sizing-cockpit-tor-breit:\s*\d+px/);
   });
 });
+
+describe('Vorwarnung der Zeile „Nächstes“ (Plan LT-3, B4, @SL-155)', () => {
+  it('--color-next-warn-border steht in allen drei Themes (hell, dunkel, hoher Kontrast) und cssVars nennt es', () => {
+    expect(cssVars.colors.nextWarnBorder).toBe('var(--color-next-warn-border)');
+    expect(css.match(/--color-next-warn-border:/g)).toHaveLength(3);
+  });
+  it('Gegenbeispiel: die Rahmenfarbe ist kein Fehler-Rot (die Zeile ist ein Aufruf, kein Fehler, C-COCKPIT-NAECHSTES-WIE-FEHLER)', () => {
+    expect(css).not.toMatch(/--color-next-warn-border:\s*var\(--color-error/);
+  });
+});
