@@ -444,8 +444,8 @@ run_probes() {
   send "$U_TOM" "" "$M_CONT"
   ev REOPEN "$(E cont-fortsetzen)" '{"at": 630000, "clockMs": 560000}'
   send "$U_TOM" "" "$M_CONT"
-  check N "@SL-074 Review M1: Wertung zurückgenommen, gespielt, von selbst beendet -> Tom setzt 20 s nach dem Abpfiff einmal fort (läuft wieder)" \
-    "accepted|running|regular" "$(results "$OUT")|$(row "$M_CONT" | cut -d'|' -f2-3)"
+  check N "@SL-074 Review M1: Wertung zurückgenommen, gespielt, von selbst beendet -> Tom setzt 20 s nach dem Abpfiff einmal fort (läuft wieder, ohne Entscheidung)" \
+    "accepted|running|-" "$(results "$OUT")|$(row "$M_CONT" | cut -d'|' -f2-3)"
   ev MATCH_END "$(E cont-ende-2)" '{"at": 670000, "clockMs": 600000}'
   send "$U_TOM" "" "$M_CONT"
   ev REOPEN "$(E cont-fortsetzen-2)" '{"at": 680000, "clockMs": 590000}'
