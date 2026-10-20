@@ -154,6 +154,13 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
   return { uhr: null, hinweise };
 }
 
+/** Quittung nach dem Abpfiff (@SL-152): „Abgepfiffen · 2:1 gespeichert“, nur in den 30 Sekunden danach und nur für ein beendetes Spiel. */
+function quittungTextOf(input: ScoreboardInput, links: ScoreboardSeite, rechts: ScoreboardSeite, t: Uebersetzer): string | null {
+  const { view, match } = input;
+  if (!match || view?.status !== 'finished' || (view.quittungRestMs ?? 0) <= 0) { return null; }
+  return t('tafel.quittung', { links: links.tore, rechts: rechts.tore });
+}
+
 function ariaStandOf(input: ScoreboardInput, links: ScoreboardSeite, rechts: ScoreboardSeite, strafstoss: { a: number; b: number } | undefined, t: Uebersetzer): string {
   const basis = { links: links.name, linksTore: links.tore, rechts: rechts.name, rechtsTore: rechts.tore };
   if (input.phase.zustand !== 'abgepfiffen' || !strafstoss) { return t('tafel.ariaStand', basis); }
@@ -177,7 +184,7 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
   return {
     badge: badgeOf(input), links, rechts,
     uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige,
-    ueberfaelligText: vor.ueberfaelligText,
+    ueberfaelligText: vor.ueberfaelligText, quittungText: quittungTextOf(input, links, rechts, t),
     eintraegeWartenText: input.eintraegeWarten > 0 ? t('tafel.eintraegeWarten', { count: input.eintraegeWarten }) : null,
     helferAnfragenText: input.helferAnfragen > 0 ? t('tafel.helferAnfragen', { count: input.helferAnfragen }) : null,
     ariaStand: ariaStandOf(input, links, rechts, input.view?.phase === 'shootout' ? endstand?.penalty : undefined, t),

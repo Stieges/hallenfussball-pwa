@@ -32,6 +32,8 @@ export interface ScoreboardModel {
   badge: MatchBadgeModel;
   /** Vor dem Anpfiff nach der Anstoßzeit: „überfällig N Min“ im selben Platz (@OB-068); sonst leer. */
   ueberfaelligText?: string | null;
+  /** Nach dem Abpfiff 30 Sekunden lang: „Abgepfiffen · 2:1 gespeichert“ unter dem Endstand (@SL-152); sonst leer. */
+  quittungText?: string | null;
   links: ScoreboardSeite; rechts: ScoreboardSeite;
   uhr: ScoreboardUhr | null;
   /** Text in der Kopfzeile neben dem Zustand: Abschnitt, vor dem Spiel der Turniername. */
@@ -220,6 +222,11 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
       )}
       {!model.leerAnzeige && (
         <div style={nurVorlesen} role="group" aria-live="polite" aria-label={model.ariaStand} data-testid={id('score')}>{model.links.tore}:{model.rechts.tore}</div>
+      )}
+      {model.quittungText && (
+        <div style={zeile} role="status" data-testid={id('quittung')}>
+          <span style={{ color: cssVars.colors.scoreboardOk, display: 'flex' }} aria-hidden="true"><Icons.Check size={icon} /></span>{model.quittungText}
+        </div>
       )}
       {model.hinweise.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs }}>

@@ -76,6 +76,7 @@
       "verlaengerung": "Extra time",
       "goldenGoal": "Golden goal"
     },
+    "quittung": "Match ended · {{links}}:{{rechts}} saved",
     "keinWeiteresSpiel": "No more matches",
     "uebernahmePruefen": "Match time comes from {{name}}'s device – please check",
     "vor": {
