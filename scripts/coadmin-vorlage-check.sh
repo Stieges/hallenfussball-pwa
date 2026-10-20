@@ -22,6 +22,9 @@
 #   --zusatz <datei>      (wiederholbar, impliziert --wegwerf) weitere Migrationsdatei nach den uebrigen einspielen
 #   --mutation <Mn>       (wiederholbar) Mutationsprobe: die Vorlage wird veraendert, der Lauf MUSS rot werden
 #   --alle-mutationen     M1..M10 nacheinander
+#   --bereitstellen       (nur lokaler Stack) legt die Testkonten und -turniere an, LAESST sie stehen und nennt die
+#                         Platzhalterwerte -- fuer die Handprobe im SQL-Editor des lokalen Studio. Danach --aufraeumen.
+#   --aufraeumen          (nur lokaler Stack) entfernt alle Testdaten dieses Skripts (Muster CA1-Pruefung / ca1-check-)
 #   -h | --hilfe          diese Hilfe
 #
 # Pflichttests V1-V6 (je mit Gegenbeispiel), Mutationsproben M1-M5 aus dem Plan (plan-coadmin-einsatzfaehig.md,
@@ -47,6 +50,7 @@ POSTGRES_IMAGE="supabase/postgres:17.6.1.063" # wie rls-role-matrix.sh (Live-Ver
 A11_PRAEFIX="20261110_"
 
 MODE="stack"
+AKTION="pruefen"
 MIT_A11=0
 ZUSATZ=()
 MUTATIONEN=()
@@ -61,6 +65,8 @@ while [[ $# -gt 0 ]]; do
               MODE="wegwerf"; ZUSATZ+=("$1") ;;
     --mutation) shift; [[ $# -gt 0 ]] || { echo "::error::--mutation braucht Mn" >&2; exit 2; }
                 MUTATIONEN+=("$1") ;;
+    --bereitstellen) AKTION="bereitstellen" ;;
+    --aufraeumen) AKTION="aufraeumen" ;;
     --alle-mutationen) MUTATIONEN=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10) ;;
     -h|--hilfe|--help) usage; exit 0 ;;
     *) echo "::error::Unbekannte Option: $1" >&2; exit 2 ;;
@@ -79,6 +85,7 @@ WEGWERF_CONTAINER=""
 SERVICE_KEY=""
 API_URL=""
 CREATED_USER_IDS=()
+KEEP=0
 MUTLOG="$(mktemp "${TMPDIR:-/tmp}/ca1-mut.XXXXXX")"
 
 # ------------------------------------------------------------------------------------------------
@@ -125,7 +132,9 @@ cleanup() {
   local rc=$?
   trap - EXIT
   rm -f "$MUTLOG"
-  if [[ "$MODE" == "stack" ]]; then
+  if [[ "$KEEP" -eq 1 ]]; then
+    echo "Testdaten bleiben stehen (--bereitstellen)." >&2
+  elif [[ "$MODE" == "stack" ]]; then
     sweep_testdata
     if [[ -n "$CONTAINER" ]]; then
       local rest
@@ -582,9 +591,21 @@ ROLLBACK;"
 # ------------------------------------------------------------------------------------------------
 # Hauptlauf
 # ------------------------------------------------------------------------------------------------
+if [[ "$AKTION" != "pruefen" && "$MODE" != "stack" ]]; then
+  echo "::error::--bereitstellen/--aufraeumen gibt es nur fuer den lokalen Stack." >&2; exit 2
+fi
 if [[ "$MODE" == "stack" ]]; then setup_stack; else setup_wegwerf; fi
+if [[ "$AKTION" == "aufraeumen" ]]; then exit 0; fi
 setup_fixtures
 detect_state
+if [[ "$AKTION" == "bereitstellen" ]]; then
+  KEEP=1
+  echo "Bereitgestellt (bleibt stehen bis --aufraeumen):"
+  echo "  turnier-id Original : $T_ORIG   (Kopie: $T_KOPIE, geloescht: $T_DEL)"
+  echo "  mail Maria          : $M_MARIA   (Eigentuemer Olli: $M_OLLI)"
+  echo "  mail Greta/Geraet/unbestaetigt/dup: $M_GRETA / $M_ANON / $M_UNBEST / $M_DUP"
+  exit 0
+fi
 
 echo "== Basislauf (Vorlage unveraendert) =="
 MUT=""
