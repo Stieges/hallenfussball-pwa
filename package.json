@@ -96,6 +96,7 @@
     "node-localstorage": "^3.0.5",
     "pdfjs-dist": "6.3.289",
     "rollup-plugin-visualizer": "^7.1.1",
+    "tsx": "4.23.15",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.1",
     "vite": "^8.3.0",
