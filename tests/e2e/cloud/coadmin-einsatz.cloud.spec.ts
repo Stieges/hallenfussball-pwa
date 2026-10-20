@@ -234,11 +234,9 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
   /** Ollis Voll-Speichern an der App vorbei: Änderung plus Versionszählung mit Versionsprüfung wie `SupabaseRepository.save`. */
   async function ollisFullSave(cup: ClonedCup, table: string, filter: string, change: Record<string, unknown>): Promise<void> {
     const version = (await cupRow(cup.id)).version ?? 1;
-    if (table !== 'tournaments') {
-      const changed = await restAsRole('owner', 'PATCH', `${table}?${filter}`, change);
-      expect(changed.status, changed.text).toBeLessThan(300);
-    }
-    const bump = await restAsRole('owner', 'PATCH', `tournaments?id=eq.${cup.id}&version=eq.${version}`, table === 'tournaments' ? { ...change, version: version + 1 } : { version: version + 1 });
+    const changed = await restAsRole('owner', 'PATCH', `${table}?${filter}`, change);
+    expect(changed.status, changed.text).toBeLessThan(300);
+    const bump = await restAsRole('owner', 'PATCH', `tournaments?id=eq.${cup.id}&version=eq.${version}`, { version: version + 1 });
     expect(bump.status, bump.text).toBeLessThan(300);
     expect(bump.json, 'Versionsprüfung trifft genau eine Zeile').toHaveLength(1);
   }
