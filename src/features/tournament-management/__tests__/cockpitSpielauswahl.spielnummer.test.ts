@@ -77,6 +77,24 @@ describe('@SL-049 Spielauswahl im Cockpit: Spiele eines Felds mit ihrer Nummer, 
   });
 });
 
+describe('@SL-049 Spielauswahl nach dem Verschieben im Spielplan-Editor', () => {
+  it('@SL-049 C-SPIELNUMMER-FEHLT Gegenbeispiel: Spiel 3 ans Ende verschoben bleibt „#3“ und steht in der Auswahl zuletzt', async () => {
+    const original = await publishEinFeld();
+    const letzterAnstoss = Math.max(...original.matches.map((m) => new Date(m.scheduledTime ?? 0).getTime()));
+    // Der Spielplan-Editor ändert beim Verschieben nur die Anstoßzeit, nicht den Platz im Raster (slot).
+    const verschoben = original.matches.map((m) =>
+      m.matchNumber === 3 ? { ...m, scheduledTime: new Date(letzterAnstoss + 10 * 60000) } : m
+    );
+    const spiel3 = verschoben.find((m) => m.matchNumber === 3);
+
+    const auswahl = matchesOfFieldInPlayOrder(generateFullSchedule({ ...original, matches: verschoben }).allMatches, 1);
+
+    expect(auswahl.at(-1)?.id).toBe(spiel3?.id);
+    expect(auswahl.at(-1)?.matchNumber).toBe(3);
+    expect(auswahl.map((m) => m.matchNumber)).toEqual([1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 3]);
+  });
+});
+
 describe('matchesOfFieldInPlayOrder', () => {
   it('@SL-049 Gegenbeispiel: die Reihenfolge der übergebenen Liste ändert die Auswahl nicht (Platz im Raster, dann Nummer)', () => {
     const spiel = (id: string, field: number, slot: number, matchNumber: number) => ({ id, field, slot, matchNumber });
