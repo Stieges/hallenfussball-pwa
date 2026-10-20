@@ -9,6 +9,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Scoreboard, type ScoreboardModel } from '../Scoreboard';
 import { cssVars } from '../../../../design-tokens';
+import { palette } from '../../../../design-tokens/colors/palette';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
@@ -136,8 +137,8 @@ describe('Scoreboard', () => {
   });
 
   it('Stand-Kästen in Trikotfarbe (Mockup-Freigabe 16.10.), Ziffern in der Kontrastfarbe; ohne Trikotfarbe neutral', () => {
-    const { rerender } = render(<Scoreboard model={{ ...model, links: { ...model.links, trikot: '#FACC15' }, rechts: { ...model.rechts, trikot: '#2563EB' } }} size="compact" meldezeile={null} testId="scoreboard" />);
-    expect(screen.getByTestId('scoreboard-box-links')).toHaveStyle({ backgroundColor: '#FACC15', color: 'var(--color-scoreboard-on-highlight)' });
+    const { rerender } = render(<Scoreboard model={{ ...model, links: { ...model.links, trikot: palette.yellow[400] }, rechts: { ...model.rechts, trikot: '#2563EB' } }} size="compact" meldezeile={null} testId="scoreboard" />);
+    expect(screen.getByTestId('scoreboard-box-links')).toHaveStyle({ backgroundColor: palette.yellow[400], color: 'var(--color-scoreboard-on-highlight)' });
     expect(screen.getByTestId('scoreboard-box-rechts')).toHaveStyle({ backgroundColor: '#2563EB', color: 'var(--color-scoreboard-on-live)' });
     rerender(<Scoreboard model={model} size="compact" meldezeile={null} testId="scoreboard" />);
     expect(screen.getByTestId('scoreboard-box-links')).toHaveAttribute('data-trikot', 'neutral');

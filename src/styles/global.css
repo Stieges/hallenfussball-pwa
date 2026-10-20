@@ -395,6 +395,11 @@
   --sizing-team-stripe-width: var(--spacing-xs);
   /* Spaltenkopf im Cockpit: Streifenzeile + drei Namenszeilen, beide Köpfe gleich hoch (@OB-025, Altplan 3.3) */
   --sizing-spaltenkopf-max: calc(var(--spacing-md) + var(--spacing-md) + var(--spacing-xs) + 3 * var(--line-height-body-md));
+  --sizing-qr-placeholder: 150px;
+  /* Vorschau-Kästen „Anzeige für Zuschauer“ (Mockup `.sb.v`: 112 × 84) aus der Primär-Touchgröße */
+  --sizing-score-preview-width: calc(var(--touch-target-primary) * 2);
+  --sizing-score-preview-height: calc(var(--touch-target-primary) * 1.5);
+  --opacity-disabled: 0.5;
   --sizing-notice-line-height-compact: 24px;
   --sizing-notice-line-height-regular: 32px;
 

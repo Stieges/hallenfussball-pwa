@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { TournamentMonitor, MonitorSlide } from '../../../types/monitor';
+import type { TournamentMonitor, MonitorSlide, SlideConfig } from '../../../types/monitor';
 import type { Sponsor } from '../../../types/sponsor';
 import {
   exportMonitorConfig,
@@ -283,25 +283,23 @@ describe('Treue von Export und Übernahme (Fixrunde F4, F6)', () => {
     expect(payload.monitors[0].slides.map(s => s.type)).toEqual(['live', 'standings', 'qr-code']);
   });
 
-  it('exportiert groupId, fieldId und liveColorScheme', () => {
-    const colors = { preset: 'modern' as const, homeColor: '#111111', awayColor: '#222222', useTeamColors: true };
+  it('exportiert groupId und fieldId', () => {
     const source = monitor({
       slides: [
-        slide({ id: 'l', type: 'live', config: { fieldId: 'field-2', liveColorScheme: colors }, order: 0 }),
+        slide({ id: 'l', type: 'live', config: { fieldId: 'field-2' }, order: 0 }),
         slide({ id: 't', type: 'standings', config: { groupId: 'B' }, order: 1 }),
       ],
     });
     const [exported] = exportMonitorConfig([source], []).monitors;
-    expect(exported.slides[0].config).toMatchObject({ fieldId: 'field-2', liveColorScheme: colors });
+    expect(exported.slides[0].config).toMatchObject({ fieldId: 'field-2' });
     expect(exported.slides[1].config).toMatchObject({ groupId: 'B' });
   });
 
-  it('Rundweg Export → Datei → Import → Übernehmen erhält Folien, Felder, Gruppen und Farben bis auf IDs', () => {
-    const colors = { preset: 'modern' as const, homeColor: '#111111', awayColor: '#222222', useTeamColors: false };
+  it('Rundweg Export → Datei → Import → Übernehmen erhält Folien, Felder und Gruppen bis auf IDs', () => {
     const source = monitor({
       overscanPercent: 8,
       slides: [
-        slide({ id: 'l', type: 'live', config: { fieldId: 'field-2', liveColorScheme: colors, whenIdle: { type: 'next-match', timeoutSeconds: 30 } }, order: 0 }),
+        slide({ id: 'l', type: 'live', config: { fieldId: 'field-2', whenIdle: { type: 'next-match', timeoutSeconds: 30 } }, order: 0 }),
         slide({ id: 'n', type: 'next-matches', config: { matchCount: 4 }, duration: 25, order: 1 }),
         slide({ id: 't', type: 'standings', config: { groupId: 'B' }, order: 2 }),
       ],
@@ -320,7 +318,7 @@ describe('Treue von Export und Übernahme (Fixrunde F4, F6)', () => {
     const [target] = monitors;
     expect(target.overscanPercent).toBe(8);
     expect(target.slides.map(({ type, duration, order, config }) => ({ type, duration, order, config }))).toEqual([
-      { type: 'live', duration: null, order: 0, config: { fieldId: 'field-2', liveColorScheme: colors, whenIdle: { type: 'next-match', timeoutSeconds: 30 } } },
+      { type: 'live', duration: null, order: 0, config: { fieldId: 'field-2', whenIdle: { type: 'next-match', timeoutSeconds: 30 } } },
       { type: 'next-matches', duration: 25, order: 1, config: { matchCount: 4 } },
       { type: 'standings', duration: null, order: 2, config: { groupId: 'B' } },
     ]);
@@ -329,7 +327,7 @@ describe('Treue von Export und Übernahme (Fixrunde F4, F6)', () => {
   it('teilt keine Objekte mit dem Quellturnier (@ME-044): Änderungen am Ziel verändern die Quelle nicht', () => {
     const source = monitor({
       slides: [
-        slide({ id: 'l', type: 'live', config: { whenIdle: { type: 'next-match' }, liveColorScheme: { preset: 'classic', homeColor: '#1E40AF', awayColor: '#DC2626', useTeamColors: false } }, order: 0 }),
+        slide({ id: 'l', type: 'live', config: { whenIdle: { type: 'next-match' } }, order: 0 }),
       ],
     });
     const before = structuredClone(source);
@@ -342,9 +340,48 @@ describe('Treue von Export und Übernahme (Fixrunde F4, F6)', () => {
 
     const config = monitors[0].slides[0].config;
     if (config.whenIdle) {config.whenIdle.type = 'skip';}
-    if (config.liveColorScheme) {config.liveColorScheme.homeColor = '#000000';}
-
     expect(source).toEqual(before);
+  });
+
+  // @ZM-152: Ablösung der Farbe je Monitor-Folie. Kein SQL (Produktion leer, keine Rückwärtskompatibilität): der Lesepfad verwirft
+  // den Altschlüssel, der Schreibpfad schreibt ihn nie.
+  describe('@ZM-152 Altschlüssel liveColorScheme', () => {
+    const ALT = { preset: 'modern', homeColor: '#111111', awayColor: '#222222', useTeamColors: true };
+
+    it('@ZM-152 eine Datei mit liveColorScheme lädt ohne ihn und übernimmt ihn nicht ins Turnier', () => {
+      const datei = JSON.stringify({
+        kind: 'monitor-config', version: 1,
+        monitors: [{
+          name: 'M', defaultSlideDuration: 10, transition: 'none', transitionDuration: 0, theme: 'dark', performanceMode: 'auto',
+          slides: [{ type: 'live', config: { fieldId: 'field-2', liveColorScheme: ALT }, duration: null }],
+        }],
+      });
+      const geladen = importMonitorConfig(datei);
+      expect(geladen.ok).toBe(true);
+      if (!geladen.ok) {return;}
+      expect(geladen.payload.monitors[0].slides[0].config).toEqual({ fieldId: 'field-2' });
+      const { monitors } = instantiateMonitorConfig(geladen.payload, { sponsors: [], existingNames: [], generateId: idGenerator(), now: NOW });
+      expect(monitors[0].slides[0].config).toEqual({ fieldId: 'field-2' });
+      expect(JSON.stringify(monitors)).not.toContain('liveColorScheme');
+    });
+
+    it('@ZM-152 ein gespeicherter Monitor mit Altschlüssel wird ohne ihn exportiert', () => {
+      const alt = slide({ id: 'l', type: 'live', config: { fieldId: 'field-2', liveColorScheme: ALT } as unknown as SlideConfig, order: 0 });
+      const text = JSON.stringify(exportMonitorConfig([monitor({ slides: [alt] })], []));
+      expect(text).not.toContain('liveColorScheme');
+      expect(text).toContain('field-2');
+    });
+
+    it('Gegenbeispiel: die übrigen Schlüssel der Live-Folie bleiben erhalten (Rotation pausieren)', () => {
+      const geladen = importMonitorConfig(JSON.stringify({
+        kind: 'monitor-config', version: 1,
+        monitors: [{
+          name: 'M', defaultSlideDuration: 10, transition: 'none', transitionDuration: 0, theme: 'dark', performanceMode: 'auto',
+          slides: [{ type: 'live', config: { pauseRotationDuringMatch: false, liveColorScheme: ALT }, duration: null }],
+        }],
+      }));
+      expect(geladen.ok && geladen.payload.monitors[0].slides[0].config).toEqual({ pauseRotationDuringMatch: false });
+    });
   });
 });
 

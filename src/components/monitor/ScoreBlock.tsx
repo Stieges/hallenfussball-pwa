@@ -10,7 +10,7 @@
 import { CSSProperties } from 'react';
 import { cssVars, displayFontSizes, displayLayout, getScoreTextColor } from '../../design-tokens';
 import { scoreDigitFontSize } from './scoreDigitSize';
-import type { BlockFrame } from './liveBlockFrame';
+import type { BlockFrame } from '../../design-tokens';
 
 export interface ScoreBlockProps {
   /** Score number to display */

@@ -13,6 +13,9 @@ export type { MatchStatusBadgeProps } from './MatchStatusBadge';
 export type { MatchStatusBadgeSize, MatchStatusBadgeTone } from './matchStatusBadgeStyle';
 export { MatchClock } from './MatchClock';
 export type { MatchClockProps } from './MatchClock';
+export { ScoreBox } from './ScoreBox';
+export type { ScoreBoxProps } from './ScoreBox';
+
 export { ThumbBar } from './ThumbBar';
 export type { ThumbBarProps, ThumbBarSlot, ThumbBarRolle } from './ThumbBar';
 export { NumberPicker, NUMBER_PICKER_SPERRE_MS, NUMBER_PICKER_ZEITABLAUF_MS } from './NumberPicker';
