@@ -281,6 +281,8 @@ export const displayLayout = {
     monitorCup: '8.4cqh',
     // Fixrunde 4: Verlierer-Kasten nur mit dezentem Schleier (Anteil der Hintergrundfarbe), Teamfarbe bleibt erkennbar
     loserDimShare: '30%',
+    // Spielanzeige 2.2 (Spec § 8, Mockup --vest: 14 %): Breite je Streifen der Weste als Anteil der Kastenbreite
+    vestStripeShare: 0.14,
   },
 } as const;
 
@@ -562,29 +564,6 @@ export const displayColorSchemes = {
 
 export type DisplayColorSchemeKey = keyof typeof displayColorSchemes;
 
-// =============================================================================
-// MONITOR COLOR SCHEMES (Positions-Farben für Live-Score)
-// =============================================================================
-
-/**
- * Farb-Presets für Heim/Gast Positions-Farben auf Monitor-Scoreboards.
- *
- * Diese Farben werden als Hintergrund der Score-Blöcke verwendet.
- * Text-Farbe wird automatisch per Luminance berechnet.
- */
-export const monitorColorSchemes = {
-  presets: {
-    classic:     { home: '#1E40AF', away: '#DC2626' },
-    nature:      { home: '#059669', away: '#EA580C' },
-    contrast:    { home: '#171717', away: '#FAFAFA' },
-    modern:      { home: '#7C3AED', away: '#EAB308' },
-    alternative: { home: '#F97316', away: '#0891B2' },
-  },
-  defaults: { home: '#1E40AF', away: '#DC2626' },
-} as const;
-
-export type MonitorColorPresetKey = keyof typeof monitorColorSchemes.presets;
-
 /**
  * Calculate relative luminance of a hex color (sRGB).
  * Returns a value between 0 (black) and 1 (white).
@@ -624,12 +603,6 @@ export function needsContrastFrame(blockHex: string, backgroundHex: string): boo
   return getContrastRatio(blockHex, backgroundHex) < 3;
 }
 
-/** Vorgabe-Farben des Live-Farbschemas ohne eingetragene Farbe (@ZM-140): Heim Blau, Gast Rot. */
-export const liveColorSchemeDefaults = {
-  homeColor: '#1E40AF',
-  awayColor: '#DC2626',
-} as const;
-
 // =============================================================================
 // CRITICAL PHASE (Last Minute Modus)
 // =============================================================================
@@ -660,9 +633,7 @@ export const displayTokens = {
   monitor: displayMonitor,
   colorSchemes: displayColorSchemes,
   themes: monitorThemes,
-  monitorColorSchemes,
   criticalPhaseColors,
-  liveColorSchemeDefaults,
 } as const;
 
 export type DisplayTokens = typeof displayTokens;

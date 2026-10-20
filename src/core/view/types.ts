@@ -11,6 +11,7 @@ import type { SlotDescription } from './originText';
 import type { FinalScore } from './finalScore';
 import type { ClockMode } from '../match/clockDisplay';
 import type { MatchBadgeEngineDetail, MatchBadgeModel } from './badge';
+import type { SideBox } from '../models/scoreBoxColors';
 
 export type ViewAudience = 'organizer' | 'viewer' | 'screen';
 /** print: die öffentlichen Schalter gelten auch für die Leitung (@BM-032). */
@@ -134,6 +135,11 @@ export interface MatchView {
   clockRules?: SpectatorClockRules;
   home: SideView;
   away: SideView;
+  /**
+   * Ergebniskästen je Seite (Spielanzeige 2.1, @ZM-159/@ZM-160): getragene Farbe, Weste, Leibchen-Zeichen nach der
+   * Turnier-Einstellung „Anzeige für Zuschauer“. Alle Flächen lesen die Kastenfarbe nur von hier.
+   */
+  boxes: { home: SideBox; away: SideBox };
 }
 
 export interface CurrentView {
@@ -163,7 +169,7 @@ export interface TournamentView {
 
 export type TournamentViewInput = Pick<
   Tournament,
-  'teams' | 'groups' | 'matches' | 'date' | 'hideScoresForPublic' | 'hideRankingsForPublic' | 'isPublic' | 'shareCode'
+  'teams' | 'groups' | 'matches' | 'date' | 'hideScoresForPublic' | 'hideRankingsForPublic' | 'isPublic' | 'shareCode' | 'spectatorDisplay'
 > & Partial<Pick<Tournament, 'groupPhaseGameDuration' | 'finalRoundGameDuration' | 'gamePeriods' | 'halftimeBreak' | 'matchCockpitSettings' | 'finalsConfig'>> & {
   /** Feinstatus der Engine. Vorrang vor dem Cache (M4): Engine `finished`, Cache noch `running` → `finished`. */
   engineStatus?: (matchId: string) => EngineStatus | undefined;

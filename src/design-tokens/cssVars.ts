@@ -539,6 +539,11 @@ export const cssLayoutHeights = {
 // Component Sizes & Letter Spacing
 // =============================================================================
 
+/** Deckkraft (Faktor): gesperrte Fläche */
+export const cssOpacity = {
+  disabled: 'var(--opacity-disabled)',
+} as const;
+
 export const cssSizing = {
   sidebarWidth: 'var(--sizing-sidebar-width)',
   emptyStateMinHeight: 'var(--sizing-empty-state-min-height)',
@@ -553,6 +558,9 @@ export const cssSizing = {
   noticeLineHeightRegular: 'var(--sizing-notice-line-height-regular)',
   teamStripeWidth: 'var(--sizing-team-stripe-width)',
   spaltenkopfMax: 'var(--sizing-spaltenkopf-max)',
+  qrPlaceholder: 'var(--sizing-qr-placeholder)',
+  scorePreviewWidth: 'var(--sizing-score-preview-width)',
+  scorePreviewHeight: 'var(--sizing-score-preview-height)',
 } as const;
 
 export const cssLetterSpacing = {
@@ -609,6 +617,7 @@ export const cssVars = {
   inputHeights: cssInputHeights,
   layoutHeights: cssLayoutHeights,
   sizing: cssSizing,
+  opacity: cssOpacity,
   letterSpacing: cssLetterSpacing,
   theme: cssTheme,
   zIndex: cssZIndex,

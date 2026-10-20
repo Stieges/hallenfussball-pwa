@@ -50,7 +50,7 @@ describe('Gleich breiter Rahmen beider Kästen', () => {
   });
 
   it('Gegenbeispiel: ein dunkler Kasten (schwarz) macht auch den hellen Rahmen kräftig, Breite bleibt gleich', () => {
-    render(<LiveMatchDisplay match={createMatch()} colorScheme={{ preset: 'custom', homeColor: '#000000', awayColor: '#FDE047', useTeamColors: false }} />);
+    render(<LiveMatchDisplay match={createMatch()} boxes={{ home: { fill: { kind: 'solid', color: '#000000' }, bib: false }, away: { fill: { kind: 'solid', color: '#FDE047' }, bib: false } }} />);
     expect(blockOf('home').style.borderWidth).toBe(blockOf('away').style.borderWidth);
   });
 });
