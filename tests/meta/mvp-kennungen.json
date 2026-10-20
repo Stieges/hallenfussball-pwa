@@ -1,7 +1,7 @@
 {
  "_hinweis": "Erzeugt von scripts/mvp-kennungen-erzeugen.mjs aus `anf.py mvp --json` (Klasse am Szenario). Nicht von Hand pflegen; soll aendert sich nur mit einer Entscheidung ueber den MVP-Schnitt.",
  "quelle": "anf.py mvp --json",
- "soll": 936,
+ "soll": 956,
  "records": {
   "helfer-am-turniertag": [
    "HE-001",
@@ -34,6 +34,7 @@
    "HE-052",
    "HE-055",
    "HE-056",
+   "HE-085",
    "HE-062",
    "HE-084",
    "HE-063",
@@ -70,7 +71,6 @@
    "W5-029"
   ],
   "wizard-regelinhalte": [
-   "W2A-001",
    "W2A-002",
    "W2A-003",
    "W2A-004",
@@ -109,7 +109,21 @@
    "W2A-047",
    "W2A-048",
    "W2A-049",
-   "W2A-050"
+   "W2A-050",
+   "W2A-052",
+   "W2A-053",
+   "W2A-054",
+   "W2A-055",
+   "W2A-056",
+   "W2A-057",
+   "W2A-058",
+   "W2A-059",
+   "W2A-060",
+   "W2A-061",
+   "W2A-062",
+   "W2A-063",
+   "W2A-064",
+   "W2A-065"
   ],
   "wizard-turniertag-vorbereiten": [
    "W3-015",
@@ -160,12 +174,15 @@
    "ET-017",
    "ET-018",
    "ET-019",
+   "ET-020",
+   "ET-021",
    "ET-022",
    "ET-055",
    "ET-056",
    "ET-025",
    "ET-026",
    "ET-027",
+   "ET-029",
    "ET-031",
    "ET-032",
    "ET-033",
@@ -261,6 +278,7 @@
    "TM-069",
    "TM-070",
    "TM-071",
+   "TM-145",
    "TM-078",
    "TM-079",
    "TM-081",
@@ -272,6 +290,7 @@
    "TM-115",
    "TM-116",
    "TM-117",
+   "TM-146",
    "TM-120"
   ],
   "anmelden": [
@@ -393,6 +412,7 @@
    "OB-052",
    "OB-053",
    "OB-065",
+   "OB-068",
    "OB-066",
    "OB-067"
   ],
