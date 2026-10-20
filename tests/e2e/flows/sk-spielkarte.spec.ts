@@ -56,6 +56,8 @@ const breitestesWortstueck = (page: Page, selektor: string) =>
   }), selektor);
 
 const finalKarte = (page: Page, nr: number) => page.locator('[data-testid^="final-card-"]').nth(nr);
+/** Index der Karte „Spiel um Platz 3“: HF1, HF2, Platz 3, Finale (@TM-144, Finale zuletzt). */
+const PLATZ_3 = 2;
 const gewicht = (el: ReturnType<Page['locator']>) => el.evaluate((n) => Number(getComputedStyle(n).fontWeight));
 
 test.describe('@OB-064 Spielplan der Verwaltung, Handy 360×640 hoch', () => {
@@ -154,7 +156,7 @@ for (const [name, groesse] of [['Handy 360', HANDY], ['Tablet hochkant 768', TAB
   test.describe(`C-FINALRUNDE-MOBIL-EINGABE: ${name}`, () => {
     test('offenes Finalrunden-Spiel (Platz 3): beide Felder nacheinander eintragbar, die Eingabe springt nicht zurück', async ({ page }) => {
       await oeffneSpielplan(page, groesse);
-      const karte = finalKarte(page, 3);
+      const karte = finalKarte(page, PLATZ_3);
       await karte.scrollIntoViewIfNeeded();
       const heim = karte.locator('input[data-testid$="-home"]');
       const gast = karte.locator('input[data-testid$="-away"]');
@@ -189,7 +191,7 @@ test.describe('@OB-064 Spielplan der Verwaltung, Laptop 1280×800: Tabellenzeile
   });
 
   test('offenes Spiel (Platz 3): Heim und Gast haben dieselbe Schriftstärke, nur Sieger beendeter Spiele sind fett', async ({ page }) => {
-    const zeile = page.locator('.final-stage-schedule table tbody tr').nth(3);
+    const zeile = page.locator('.final-stage-schedule table tbody tr').nth(PLATZ_3);
     const namen = zeile.locator('td:nth-child(4), td:nth-child(6)');
     const gewichte = await namen.evaluateAll((tds) => tds.map((t) => getComputedStyle(t).fontWeight));
     expect(gewichte).toHaveLength(2);
@@ -278,7 +280,7 @@ for (const [name, groesse, datei] of [
 
     test('eingetragen, ganz unten: Torzahlen der Gastzeile und jede Torfläche der letzten Karten sind nicht von der Leiste verdeckt', async ({ page }) => {
       await oeffneSpielplan(page, groesse);
-      const karte = finalKarte(page, 3);
+      const karte = finalKarte(page, PLATZ_3);
       await karte.scrollIntoViewIfNeeded();
       await karte.locator('input[data-testid$="-home"]').fill('2');
       await karte.locator('input[data-testid$="-away"]').fill('1');
