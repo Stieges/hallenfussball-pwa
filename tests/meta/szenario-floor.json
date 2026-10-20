@@ -1,6 +1,6 @@
 {
  "_hinweis": "Absolute Untergrenze fuer \"MVP-Kennung mit regulaerem Test\" (TA-CI), nie senken; der Ratchet misst main zusaetzlich selbst. Erzeugt mit `node scripts/scenario-tests.mjs --floor-schreiben`.",
- "mitTest": 328,
+ "mitTest": 482,
  "kennungen": [
   "AN-005",
   "AN-010",
