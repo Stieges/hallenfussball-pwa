@@ -276,10 +276,13 @@ export interface PlayoffConfig {
 export type MatchStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
 
 /**
- * How a finals match was decided (for display purposes).
- * A-25n (20261110_005): 'forfeit' = Nichtantritt-Wertung (Spalte matches.decided_by, Engine-Zwischenspeicher).
+ * How a finals match was decided (for display purposes). 'forfeit' = Nichtantritts-Wertung (A-25, E-A4; in der Spalte
+ * `decided_by` ab Migration `20261110_005`), wer fehlte steht in `Match.forfeitAbsent`.
  */
 export type MatchDecidedBy = 'regular' | 'overtime' | 'goldenGoal' | 'penalty' | 'forfeit';
+
+/** Nichtantritts-Wertung: welche Seite nicht angetreten ist (`matches.forfeit_absent`, ab Migration `20261110_005`). */
+export type ForfeitAbsent = 'A' | 'B' | 'both';
 
 export interface Match {
   id: string;

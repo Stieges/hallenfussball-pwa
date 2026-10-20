@@ -178,5 +178,5 @@ describe('A-30a Offline-Reihenfolge: die Farbe kommt mit genau diesem Ereignis a
 
 function overlayOf(log: Parameters<typeof kitFromEvents>[0]) {
   return { scoreA: 0, scoreB: 0, overtimeScoreA: undefined, overtimeScoreB: undefined, penaltyScoreA: undefined,
-    penaltyScoreB: undefined, decidedBy: undefined, kit: kitFromEvents(log) };
+    penaltyScoreB: undefined, decidedBy: undefined, forfeitAbsent: undefined, kit: kitFromEvents(log) };
 }
