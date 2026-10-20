@@ -1,7 +1,7 @@
 /**
  * ConnectionPill – Verbindungsanzeige im schmalen Kopf (Plan LT-2, @SL-140 „Verbindungsstatus“, K2; @SL-168 „Verbinden“).
  * Im Vollbild entfallen die festen Hinweisleisten der App (Offline, Speicher). Zwei Zustände: verbunden (Punkt, kein Knopf) und nicht
- * verbunden (Pille „Verbinden“ mit „Offline“ und den wartenden Einträgen). Nach dem Tippen steht in derselben Pille „Verbinde …“
+ * verbunden – kein Netz oder Netz ohne Durchkommen, @SL-168 – (Pille „Verbinden“ mit „Offline“ und den wartenden Einträgen). Nach dem Tippen steht in derselben Pille „Verbinde …“
  * (gleiche Wirkung wie im Offline-Hinweis, `useVerbindenVersuch`); klappt es, verschwindet die Pille, sonst steht wieder „Verbinden“.
  * Das Molekül `VerbindungsStatus` zeichnet; hier hängen nur Status, Zähler, Versuch und Texte des Cockpits daran.
  */
@@ -16,13 +16,14 @@ import { VerbindungsStatus } from '../../ui/molecules/VerbindungsStatus';
 export function ConnectionPill({ tournamentId }: { tournamentId: string }): ReactElement {
   const { t } = useTranslation('cockpit');
   const { isOnline } = useOnlineStatus();
-  const { pendingCount } = useEngineOutboxSummary(tournamentId);
+  const { pendingCount, sendBlocked } = useEngineOutboxSummary(tournamentId);
   const { verbinde, laeuft } = useVerbindenVersuch();
   const kompakt = useBreakpoint().isMobile;
   return (
     <VerbindungsStatus
-      // Solange der Versuch läuft, bleibt die Pille stehen (auch wenn das Netz schon zurück ist); danach gilt der Netzstatus
-      status={isOnline && !laeuft ? 'online' : 'offline'}
+      // Nicht verbunden: kein Netz ODER das Netz ist da, aber der Ausgang wartet nach einem Fehlschlag (Hallen-WLAN ohne Internet,
+      // `sendBlocked`) ODER der Versuch läuft (die Pille bleibt stehen, auch wenn das Netz schon zurück ist); sonst verbunden
+      status={isOnline && !sendBlocked && !laeuft ? 'online' : 'offline'}
       wartende={pendingCount}
       onVerbinden={verbinde}
       verbindet={laeuft}

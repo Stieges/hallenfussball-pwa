@@ -12,14 +12,14 @@ vi.unmock('i18next');
 vi.unmock('react-i18next');
 await initRealDeI18n();
 
-const zustand = vi.hoisted(() => ({ mobil: true, online: true, wartend: 0, verbinden: vi.fn(), laeuft: false }));
+const zustand = vi.hoisted(() => ({ mobil: true, online: true, wartend: 0, verbinden: vi.fn(), laeuft: false, blockiert: false }));
 vi.mock('../../../../hooks/useBreakpoint', () => ({ useBreakpoint: () => ({ isMobile: zustand.mobil }) }));
 vi.mock('../../../../hooks/useOnlineStatus', () => ({ useOnlineStatus: () => ({ isOnline: zustand.online, wasOffline: false }) }));
-vi.mock('../../../../features/match-engine/useEngineOutboxSummary', () => ({ useEngineOutboxSummary: () => ({ pendingCount: zustand.wartend }) }));
+vi.mock('../../../../features/match-engine/useEngineOutboxSummary', () => ({ useEngineOutboxSummary: () => ({ pendingCount: zustand.wartend, sendBlocked: zustand.blockiert }) }));
 vi.mock('../../../../features/match-engine/useVerbindenVersuch', () => ({ useVerbindenVersuch: () => ({ verbinde: zustand.verbinden, laeuft: zustand.laeuft }) }));
 
 describe('ConnectionPill', () => {
-  beforeEach(() => { zustand.mobil = true; zustand.online = true; zustand.wartend = 0; zustand.verbinden = vi.fn(); zustand.laeuft = false; });
+  beforeEach(() => { zustand.mobil = true; zustand.online = true; zustand.wartend = 0; zustand.verbinden = vi.fn(); zustand.laeuft = false; zustand.blockiert = false; });
 
   it('@SL-140 Handy mit Netz: nur der Punkt, Ansage „Verbunden“', () => {
     render(<ConnectionPill tournamentId="t-1" />);
@@ -83,5 +83,23 @@ describe('ConnectionPill', () => {
     render(<ConnectionPill tournamentId="t-1" />);
     expect(screen.getByTestId('cockpit-verbindung')).toHaveAttribute('data-status', 'online');
     expect(screen.getByTestId('cockpit-verbindung')).not.toHaveTextContent(/Wieder verbunden|Verbinde/);
+  });
+
+  it('@SL-168 Netz da, aber nichts kommt durch (Ausgang wartet nach Fehlschlag): die Pille „Verbinden“ mit „Offline“ und „3 Einträge warten“ erscheint, obwohl das Gerät online ist', async () => {
+    zustand.online = true; zustand.blockiert = true; zustand.wartend = 3;
+    render(<ConnectionPill tournamentId="t-1" />);
+    expect(screen.getByTestId('cockpit-verbindung')).toHaveAttribute('data-status', 'offline');
+    const knopf = screen.getByRole('button', { name: 'Verbinden' });
+    expect(knopf).toHaveTextContent('Offline');
+    expect(knopf).toHaveTextContent('3 Einträge warten');
+    await userEvent.click(knopf);
+    expect(zustand.verbinden).toHaveBeenCalledTimes(1);
+  });
+
+  it('@SL-168 Gegenbeispiel: online, Senden klappt oder ist nur unterwegs (nichts wartet nach Fehlschlag): keine Pille, auch mit wartenden Einträgen', () => {
+    zustand.online = true; zustand.blockiert = false; zustand.wartend = 3;
+    render(<ConnectionPill tournamentId="t-1" />);
+    expect(screen.getByTestId('cockpit-verbindung')).toHaveAttribute('data-status', 'online');
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });
