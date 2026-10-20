@@ -162,6 +162,9 @@ pending_assertions_for() {
     20261110_005_result_entry_forfeit.sql)
       echo "matches-guard-engine-columns-forfeit-absent append-match-events-writes-forfeit-absent"
       ;;
+    20261110_006_group_completion.sql)
+      echo "group-completion-tables-no-client-writes group-completion-rpcs-definer-authenticated-only group-completion-helpers-no-client-execute complete-group-locks-matches-before-tournament group-completion-triggers"
+      ;;
     *)
       return 1
       ;;
@@ -525,6 +528,13 @@ PRIVILEGE_ASSERTION_NAMES=(
   # Feldsteuerung) geschrieben.
   "matches-guard-engine-columns-forfeit-absent"
   "append-match-events-writes-forfeit-absent"
+  # A-13b-S (20261110_006_group_completion.sql): Gruppe abschliessen am Server -- Tabellen ohne Client-Schreibrecht,
+  # RPCs nur authenticated, Hilfen ohne EXECUTE, Sperrreihenfolge Spiele vor Turnier, Trigger.
+  "group-completion-tables-no-client-writes"
+  "group-completion-rpcs-definer-authenticated-only"
+  "group-completion-helpers-no-client-execute"
+  "complete-group-locks-matches-before-tournament"
+  "group-completion-triggers"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
