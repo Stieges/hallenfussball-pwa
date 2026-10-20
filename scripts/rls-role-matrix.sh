@@ -552,7 +552,7 @@ elif [[ "$WITH_A27" -eq 1 ]]; then
   MODE_LABEL="vorher/A-34-Gegenprobe (alles mit A-11 und A-27, ohne 20261110_003)"
 fi
 
-# CA-2 (20261110_004, @HE-085, NEU-CA3, NEU-CA5): make_tournament_public/_private, regenerate_share_code ueber
+# CA-2 (20261110_004, @HE-085, @BM-070, @ME-070): make_tournament_public/_private, regenerate_share_code ueber
 # tournamentSettings, Lebenszeichen lesen ueber manageScreens. Setzt _001 und _002 voraus (Fail-fast der Migration),
 # nicht _003; --without-coadmin ist die Gegenprobe.
 CA2_FILE="$(find_migration 20261110_004)"

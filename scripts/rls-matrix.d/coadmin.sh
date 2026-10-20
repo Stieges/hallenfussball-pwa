@@ -11,14 +11,14 @@
 # Erwartung aus rolePermissions.json (nicht aus dem Code): die drei RPCs nach tournamentSettings, Lebenszeichen lesen
 # nach manageScreens; Eigentuemer immer; anonyme Sitzungen (A-27) nie, auch nicht als Eigentuemer (owner-anonymous,
 # gegen das eigene Turnier T_ANON, dafuer mit publishedAt) und nicht mit Altbestand-Zeile co-admin (anon-coadmin).
-# Je Identitaet (@HE-085, NEU-CA3 "Wer das Turnier online teilen darf", NEU-CA5 "Wer den Verbindungsstatus der
+# Je Identitaet (@HE-085, @BM-070 "Wer das Turnier online teilen darf", @ME-070 "Wer den Verbindungsstatus der
 # Monitore sieht"):
 #   (i)   make_tournament_public  -> "gelingt" (Code im Serveralphabet, is_public, Zeitpunkt gesetzt) bzw.
 #         "abgelehnt" (Not authorized, Turnierzeile unveraendert -- Vorher/Nachher als Superuser)
 #   (ii)  make_tournament_private (Turnier oeffentlich mit Code) -> gelingt (Code weg) bzw. abgelehnt (unveraendert)
 #   (iii) regenerate_share_code   (Turnier oeffentlich mit Code) -> gelingt (neuer Code) bzw. abgelehnt (unveraendert)
 #   (iv)  monitor_heartbeats lesen -> 1 Zeile des eigenen Turniers bzw. 0; (v) Nachbarturnier immer 0.
-# Dazu: anon ohne Sitzung (alle fuenf abgelehnt), Entwurf (HF001, @NEU-CA3-Gegenbeispiel), Code bleibt beim erneuten
+# Dazu: anon ohne Sitzung (alle fuenf abgelehnt), Entwurf (HF001, @BM-070-Gegenbeispiel), Code bleibt beim erneuten
 # Teilen (Auflage 5), regenerate_share_code auf nicht oeffentlichem Turnier erzeugt einen Code (Bestand, Auflage 4).
 # Gegenprobe: scripts/rls-role-matrix.sh --without-coadmin (ohne 20261110_004) -> Co-Admin- und owner-anonymous-Zeilen
 # sowie "Code bleibt" zeigen die alten Werte (rot).
@@ -128,32 +128,32 @@ for ca2_id in "${MATRIX_IDS[@]}" anon-coadmin; do
   [[ "$ca2_settings" == "true" ]] && ca2_exp="gelingt" || ca2_exp="abgelehnt"
 
   ca2_got="$(ca2_verdict_public "$(ca2_probe authenticated "$ca2_uid" "" "$(CA2_PUBLIC_ACTION "$ca2_t")" "$(ca2_row "$ca2_t")")")"
-  ca2_cell "@HE-085 NEU-CA3 make_tournament_public $ca2_id" "$ca2_got" "$ca2_exp"
+  ca2_cell "@HE-085 @BM-070 make_tournament_public $ca2_id" "$ca2_got" "$ca2_exp"
 
   ca2_got="$(ca2_verdict_private "$(ca2_probe authenticated "$ca2_uid" "$(ca2_public_setup "$ca2_t")" "$(CA2_PRIVATE_ACTION "$ca2_t")" "$(ca2_row "$ca2_t")")")"
-  ca2_cell "@HE-085 NEU-CA3 make_tournament_private $ca2_id" "$ca2_got" "$ca2_exp"
+  ca2_cell "@HE-085 @BM-070 make_tournament_private $ca2_id" "$ca2_got" "$ca2_exp"
 
   ca2_got="$(ca2_verdict_regenerate "$(ca2_probe authenticated "$ca2_uid" "$(ca2_public_setup "$ca2_t")" "$(CA2_REGENERATE_ACTION "$ca2_t")" "$(ca2_row "$ca2_t")")")"
-  ca2_cell "@HE-085 NEU-CA3 regenerate_share_code $ca2_id" "$ca2_got" "$ca2_exp"
+  ca2_cell "@HE-085 @BM-070 regenerate_share_code $ca2_id" "$ca2_got" "$ca2_exp"
 
   [[ "$ca2_screens" == "true" ]] && ca2_exp_read="1" || ca2_exp_read="0"
   ca2_got="$(ca2_verdict_read "$(ca2_probe authenticated "$ca2_uid" "" "$(CA2_READ_ACTION "$ca2_t")" "1")")"
-  ca2_cell "@HE-085 NEU-CA5 monitor_heartbeats lesen (eigenes Turnier) $ca2_id" "$ca2_got" "$ca2_exp_read"
+  ca2_cell "@HE-085 @ME-070 monitor_heartbeats lesen (eigenes Turnier) $ca2_id" "$ca2_got" "$ca2_exp_read"
   ca2_got="$(ca2_verdict_read "$(ca2_probe authenticated "$ca2_uid" "" "$(CA2_READ_ACTION "$ca2_n")" "1")")"
-  ca2_cell "NEU-CA5 gegen-nachbarturnier monitor_heartbeats $ca2_id" "$ca2_got" "0"
+  ca2_cell "@ME-070 gegen-nachbarturnier monitor_heartbeats $ca2_id" "$ca2_got" "0"
 done
 
 # anon ohne Sitzung (Mama Petra): nichts
-ca2_cell "NEU-CA3 make_tournament_public anon (ohne Sitzung)" \
+ca2_cell "@BM-070 make_tournament_public anon (ohne Sitzung)" \
   "$(ca2_verdict_public "$(ca2_probe anon "" "" "$(CA2_PUBLIC_ACTION "$T_MAIN")" "$(ca2_row "$T_MAIN")")")" "abgelehnt"
-ca2_cell "NEU-CA3 make_tournament_private anon (ohne Sitzung)" \
+ca2_cell "@BM-070 make_tournament_private anon (ohne Sitzung)" \
   "$(ca2_verdict_private "$(ca2_probe anon "" "$(ca2_public_setup "$T_MAIN")" "$(CA2_PRIVATE_ACTION "$T_MAIN")" "$(ca2_row "$T_MAIN")")")" "abgelehnt"
-ca2_cell "NEU-CA3 regenerate_share_code anon (ohne Sitzung)" \
+ca2_cell "@BM-070 regenerate_share_code anon (ohne Sitzung)" \
   "$(ca2_verdict_regenerate "$(ca2_probe anon "" "$(ca2_public_setup "$T_MAIN")" "$(CA2_REGENERATE_ACTION "$T_MAIN")" "$(ca2_row "$T_MAIN")")")" "abgelehnt"
-ca2_cell "NEU-CA5 monitor_heartbeats lesen anon (ohne Sitzung)" \
+ca2_cell "@ME-070 monitor_heartbeats lesen anon (ohne Sitzung)" \
   "$(ca2_verdict_read "$(ca2_probe anon "" "" "$(CA2_READ_ACTION "$T_MAIN")" "1")")" "0"
 
-# Entwurf (NEU-CA3 Gegenbeispiel, HF001 bleibt): Co-Admin und Eigentuemer teilen ein nicht freigegebenes Turnier nicht.
+# Entwurf (@BM-070 Gegenbeispiel, HF001 bleibt): Co-Admin und Eigentuemer teilen ein nicht freigegebenes Turnier nicht.
 CA2_DRAFT="UPDATE public.tournaments SET config = config - 'publishedAt' WHERE id = '$T_MAIN';"
 for ca2_id in co-admin owner; do
   ca2_probe_out="$(ca2_probe authenticated "$(user_id_for_id "$ca2_id")" "$CA2_DRAFT" "$(CA2_PUBLIC_ACTION "$T_MAIN")" "$(ca2_row "$T_MAIN")")"
@@ -162,18 +162,18 @@ for ca2_id in co-admin owner; do
   else
     ca2_got="anders($ca2_probe_out)"
   fi
-  ca2_cell "NEU-CA3 gegen-entwurf make_tournament_public $ca2_id (HF001)" "$ca2_got" "HF001-abgelehnt"
+  ca2_cell "@BM-070 gegen-entwurf make_tournament_public $ca2_id (HF001)" "$ca2_got" "HF001-abgelehnt"
 done
 
 # Code bleibt beim erneuten Teilen (Auflage 5): schon oeffentlich mit Code -> derselbe Code, Zeile unveraendert.
 for ca2_id in co-admin owner; do
   ca2_probe_out="$(ca2_probe authenticated "$(user_id_for_id "$ca2_id")" "$(ca2_public_setup "$T_MAIN")" "$(CA2_PUBLIC_ACTION "$T_MAIN")" "$(ca2_row "$T_MAIN")")"
   [[ "$ca2_probe_out" == "$CA2_CODE|true|$CA2_CODE|alt" ]] && ca2_got="code-bleibt" || ca2_got="anders($ca2_probe_out)"
-  ca2_cell "NEU-CA3 erneut-teilen make_tournament_public $ca2_id (Code bleibt)" "$ca2_got" "code-bleibt"
+  ca2_cell "@BM-070 erneut-teilen make_tournament_public $ca2_id (Code bleibt)" "$ca2_got" "code-bleibt"
 done
 # Gegenbeispiel: der Helfer bekommt auch den vorhandenen Code nicht (Pruefung vor der Rueckgabe).
 ca2_got="$(ca2_verdict_private "$(ca2_probe authenticated "$(user_id_for_id collaborator)" "$(ca2_public_setup "$T_MAIN")" "$(CA2_PUBLIC_ACTION "$T_MAIN")" "$(ca2_row "$T_MAIN")")")"
-ca2_cell "NEU-CA3 gegen-erneut-teilen make_tournament_public collaborator" "$ca2_got" "abgelehnt"
+ca2_cell "@BM-070 gegen-erneut-teilen make_tournament_public collaborator" "$ca2_got" "abgelehnt"
 
 # regenerate_share_code auf nicht oeffentlichem Turnier: Bestand (Auflage 4) -- es entsteht ein Code, is_public bleibt false.
 ca2_probe_out="$(ca2_probe authenticated "$U_COADMIN" "" "$(CA2_REGENERATE_ACTION "$T_MAIN")" "$(ca2_row "$T_MAIN")")"
