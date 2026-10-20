@@ -2,3 +2,5 @@ export { HoldButton, HOLD_MS } from './HoldButton';
 export type { HoldButtonProps } from './HoldButton';
 export { ScoreDraftInput } from './ScoreDraftInput';
 export type { ScoreDraftInputProps, ScoreFieldProps } from './ScoreDraftInput';
+export { TextTag } from './TextTag';
+export type { TextTagProps } from './TextTag';

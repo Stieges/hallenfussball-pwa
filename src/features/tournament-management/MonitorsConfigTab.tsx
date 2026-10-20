@@ -77,11 +77,13 @@ export function MonitorsConfigTab({
     addMonitors,
   } = useMonitors(tournament, onTournamentUpdate);
 
-  // Heartbeat status for all monitors in this tournament
-  const heartbeats = useMonitorHeartbeats(tournament.id);
-
   // A-11 (@ZM-019, @ME-043): Monitore und Folienprogramme anlegen, ändern, übernehmen, exportieren nur mit manageScreens.
   const canTransfer = useCan('manageScreens', tournament.id);
+
+  // Heartbeat status for all monitors in this tournament.
+  // CA-4 (@ME-070): Den Verbindungsstatus liefert der Server nur mit manageScreens (Eigentuemer, Co-Admin; Policy
+  // heartbeats_select_v2). Wer das Recht nicht hat, fragt gar nicht erst ab und abonniert nichts.
+  const heartbeats = useMonitorHeartbeats(canTransfer ? tournament.id : undefined);
 
   // ==========================================================================
   // HANDLERS
