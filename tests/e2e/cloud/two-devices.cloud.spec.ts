@@ -206,7 +206,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     const ownerPage = await asRole('owner');
     await openCockpit(ownerPage, ids.tournamentId, ids.matchId);
     await expect(ownerPage.getByText('Engine-Cup NSTART', { exact: true }).first()).toBeVisible({ timeout: 15000 });
-    await expect(ownerPage.locator('[data-testid="scoreboard-state"]')).toBeVisible({ timeout: 15000 });
+    await expect(ownerPage.locator('[data-testid="scoreboard-clock"]')).toBeVisible({ timeout: 15000 }); // @OB-068: vor dem Anpfiff ist das Abzeichen leer, die Uhr steht
     // Sichtbar, aber NICHT geklickt: das Spiel bleibt ungestartet.
     await expect(ownerPage.locator('[data-testid="match-start-button"]')).toBeVisible();
   });

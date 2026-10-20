@@ -5,7 +5,7 @@
  * @SL-015 (Übernahme). Beispielturnier „Hallencup Süd“.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { LiveCockpit } from '../LiveCockpit';
 import { makeLiveMatch, makeProps } from './cockpitFixtures';
@@ -25,8 +25,6 @@ vi.mock('../../../hooks/useSyncStatus', () => ({
 }));
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 
-/** Anstoßzeit wie das Cockpit sie zeigt (Ortszeit, HH:MM), aus dem Anstoß-Datum des Testspiels. */
-const anstossZeit = (iso: string): string => new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
 afterEach(() => { vi.useRealTimers(); });
 
@@ -41,7 +39,7 @@ const spiel13 = makeLiveMatch({
 describe('LiveCockpit: Tafel vor dem Anpfiff', () => {
   it('@SL-049 Spiel 13 TSV West – SG Mitte, 15:15, Feld 1 steht zum Anpfiff bereit', () => {
     render(<LiveCockpit {...makeProps(spiel13)} />);
-    expect(screen.getByTestId('scoreboard-state')).toHaveTextContent(anstossZeit(spiel13.scheduledKickoff));
+    expect(screen.getByTestId('scoreboard-state')).toBeEmptyDOMElement(); // @OB-068: der Platz des Abzeichens bleibt leer, die Anstoßzeit steht bei der Uhr
     expect(screen.getByTestId('scoreboard-name-links')).toHaveTextContent('TSV West');
     expect(screen.getByTestId('scoreboard-name-rechts')).toHaveTextContent('SG Mitte');
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('15:15');
@@ -54,7 +52,7 @@ describe('LiveCockpit: Tafel vor dem Anpfiff', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(um(15, 22));
     render(<LiveCockpit {...makeProps(spiel13)} />);
-    expect(screen.getByText('seit 7 Minuten überfällig')).toBeInTheDocument();
+    expect(screen.getByText('überfällig 7 Min')).toBeInTheDocument();
     expect(screen.queryByText(/Nichtantritt/i)).toBeNull();
   });
 
@@ -126,5 +124,39 @@ describe('LiveCockpit: Anstoßzeit in der Anzeigesprache', () => {
     } finally {
       await i18n.changeLanguage('de');
     }
+  });
+});
+
+describe('@OB-068 Anstoßzeit nur einmal auf der Tafel (Zeit läuft)', () => {
+  it('@OB-068 Gherkin um 15:10: „Anstoß 15:15“ groß bei der Uhr, der Platz des Abzeichens bleibt leer', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(um(15, 10));
+    render(<LiveCockpit {...makeProps(spiel13)} />);
+    expect(screen.getByTestId('scoreboard-clock')).toHaveTextContent('Anstoß');
+    expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('15:15');
+    expect(screen.getByTestId('scoreboard-state')).toBeEmptyDOMElement();
+    expect(screen.queryByTestId('scoreboard-ueberfaellig')).toBeNull();
+  });
+
+  it('@OB-068 Gherkin um 15:22 und noch nicht angepfiffen: „überfällig 7 Min“ auf dem Platz des Abzeichens', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(um(15, 10));
+    render(<LiveCockpit {...makeProps(spiel13)} />);
+    act(() => {
+      vi.setSystemTime(um(15, 22));
+      vi.advanceTimersByTime(30_000);
+    });
+    expect(screen.getByTestId('scoreboard-ueberfaellig')).toHaveTextContent('überfällig 7 Min');
+    expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('überfällig 7 Min');
+    expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('15:15');
+    expect(screen.getAllByText(/überfällig/)).toHaveLength(1);
+  });
+
+  it('@OB-068 Gegenbeispiel: genau 15:15 ist nicht überfällig', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(um(15, 15));
+    render(<LiveCockpit {...makeProps(spiel13)} />);
+    expect(screen.queryByTestId('scoreboard-ueberfaellig')).toBeNull();
+    expect(screen.queryByText(/überfällig/)).toBeNull();
   });
 });

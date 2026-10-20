@@ -58,15 +58,12 @@ const STATUS_OHNE_ANSICHT: Record<CockpitZustand, ViewMatchStatus> = {
 };
 
 /**
- * Das Zustands-Abzeichen der Tafel: vor dem Anpfiff die Anstoßzeit, sonst das Wort des Feinstatus, ohne Uhr.
- * Liegt eine Engine-Ansicht vor, gilt `viewStatus` wie auf der Spielkarte (ausgefallen bleibt ausgefallen);
- * `STATUS_OHNE_ANSICHT` ist nur der Rückfall ohne Ansicht.
+ * Das Zustands-Abzeichen der Tafel: das Wort des Feinstatus, ohne Uhr. Vor dem Anpfiff bleibt der Platz leer; die
+ * Anstoßzeit steht bei der Uhr und „überfällig“ im selben Platz (@OB-068). Liegt eine Engine-Ansicht vor, gilt
+ * `viewStatus` wie auf der Spielkarte (ausgefallen bleibt ausgefallen); `STATUS_OHNE_ANSICHT` ist nur der Rückfall.
  */
 function badgeOf(input: ScoreboardInput): MatchBadgeModel {
-  const { phase, view, vor } = input;
-  if (phase.zustand === 'vorAnpfiff') {
-    return vor ? { kind: 'kickoff', time: vor.anstoss } : { kind: 'none' };
-  }
+  const { phase, view } = input;
   const status = view ? viewStatus({}, view.status) : STATUS_OHNE_ANSICHT[phase.zustand];
   if (status === 'scheduled') { return { kind: 'none' }; }
   const engine = view ? { status: view.status, phase: view.phase, section: view.section, sections: view.sections } : undefined;
@@ -180,6 +177,7 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
   return {
     badge: badgeOf(input), links, rechts,
     uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige,
+    ueberfaelligText: vor.ueberfaelligText,
     eintraegeWartenText: input.eintraegeWarten > 0 ? t('tafel.eintraegeWarten', { count: input.eintraegeWarten }) : null,
     helferAnfragenText: input.helferAnfragen > 0 ? t('tafel.helferAnfragen', { count: input.helferAnfragen }) : null,
     ariaStand: ariaStandOf(input, links, rechts, input.view?.phase === 'shootout' ? endstand?.penalty : undefined, t),

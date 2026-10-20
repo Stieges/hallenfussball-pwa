@@ -117,7 +117,7 @@ test.describe('Cockpit: Halbzeit, Wiederanpfiff, Abpfiff von selbst', () => {
     // @SL-009: nach weiteren 30 Sekunden ist das Spiel abgepfiffen. Das Cockpit springt sofort zum nächsten Spiel
     // (Befund C-COCKPIT-ENDSTAND-NACH-AUTOENDE, @SL-073 offen), belegt ist der Abpfiff durch die Meldung.
     await expect(page.getByTestId('notice-line')).toContainText('abgepfiffen', { timeout: 45_000 });
-    await expect(page.getByTestId('scoreboard-state')).toContainText(/Ende|\d{1,2}:\d{2}/);
+    await expect(page.getByTestId('scoreboard')).toContainText(/Ende|Anstoß/);
     await bild('4-abgepfiffen');
   });
 });

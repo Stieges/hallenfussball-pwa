@@ -30,6 +30,8 @@ export interface ScoreboardUhr {
 export interface ScoreboardModel {
   /** Zustands-Abzeichen ohne Uhr (@OB-065, @OB-066): dasselbe Molekül wie die Spielkarte. */
   badge: MatchBadgeModel;
+  /** Vor dem Anpfiff nach der Anstoßzeit: „überfällig N Min“ im selben Platz (@OB-068); sonst leer. */
+  ueberfaelligText?: string | null;
   links: ScoreboardSeite; rechts: ScoreboardSeite;
   uhr: ScoreboardUhr | null;
   /** Text in der Kopfzeile neben dem Zustand: Abschnitt, vor dem Spiel der Turniername. */
@@ -115,6 +117,13 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
     background: cssVars.colors.scoreboardBg, color: cssVars.colors.scoreboardText,
     border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.scoreboardDivider}`, borderRadius: cssVars.borderRadius.lg,
   };
+  // „überfällig“ im Platz des Abzeichens: Wort in der Warnfarbe der Tafel, Umriss gleich dem Abzeichen-Maß (@OB-068)
+  const ueberfaellig: CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.sm, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.scoreboardHighlight}`,
+    fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm, fontWeight: cssVars.fontWeights.bold,
+    whiteSpace: 'nowrap', color: cssVars.colors.scoreboardHighlight,
+  };
   const kopf: CSSProperties = {
     display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: `${ueberstand} ${cssVars.spacing.sm}`,
     // Die Tippfläche der Abzeichen ragt unter die Zeile: so viel Luft darunter, dass sie keinen Text der nächsten Zeile schneidet
@@ -175,7 +184,9 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
     <section data-testid={testId} data-size={size} style={tafel}>
       <div style={kopf}>
         <span aria-live="polite" data-testid={id('state')} style={{ display: 'inline-flex', minWidth: 0 }}>
-          <MatchStatusBadge model={model.badge} size="card" surface="scoreboard" testId={id('abzeichen')} />
+          {model.ueberfaelligText
+            ? <span style={ueberfaellig} data-testid={id('ueberfaellig')}>{model.ueberfaelligText}</span>
+            : <MatchStatusBadge model={model.badge} size="card" surface="scoreboard" testId={id('abzeichen')} />}
         </span>
         <span style={abschnitt}>{model.abschnittText}</span>
         <span style={rechts}>

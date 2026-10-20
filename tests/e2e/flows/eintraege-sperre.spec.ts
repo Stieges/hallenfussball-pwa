@@ -59,7 +59,7 @@ async function spielMitEintraegen(page: Page): Promise<void> {
   await page.getByTestId('match-finish-button').click();
   const confirm = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja/i });
   if (await confirm.isVisible({ timeout: 2000 }).catch(() => false)) { await confirm.first().click(); }
-  await expect(page.getByTestId('scoreboard-state')).toHaveText(/Ende|\d{1,2}:\d{2}/i); // Tafel (Cockpit 2.4/2.5, @OB-065): nach dem Abpfiff steht „Ende“ im Abzeichen, oder die Tafel zeigt schon die Anstoßzeit des nächsten Spiels
+  await expect(page.getByTestId('scoreboard')).toContainText(/Ende|Anstoß/i); // Tafel (Cockpit 2.4/2.5, @OB-065/@OB-068): nach dem Abpfiff steht „Ende“ im Abzeichen, oder die Tafel zeigt schon die Anstoßzeit des nächsten Spiels bei der Uhr
 }
 
 test.describe('A-08f3e4 Sperren mit Einträgen (Gast)', () => {

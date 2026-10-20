@@ -81,7 +81,7 @@
     "vor": {
       "spielFeld": "Spiel {{nummer}} · {{feld}}",
       "mindestpause": "{{teamName}} hätte nur {{minuten}} statt {{mindestMinuten}} Minuten Pause",
-      "ueberfaellig": "seit {{minuten}} Minuten überfällig",
+      "ueberfaellig": "überfällig {{minuten}} Min",
       "gesperrt": "{{team}}: Nr. {{nummer}} ist für dieses Turnier gesperrt",
       "reihenfolgeNurLeitung": "Nur die Turnierleitung ändert die Reihenfolge",
       "keinSpielMehr": "Auf {{feld}} folgt kein Spiel mehr",

@@ -67,3 +67,10 @@ describe('@OB-065 Anstoßzeit auf der Tafel: lesbar in jedem Thema', () => {
     expect(kickoffColorFor()).toBe(cssVars.colors.textSecondary);
   });
 });
+
+describe('@OB-068 überfällig auf der Tafel: lesbar in jedem Thema', () => {
+  it.each(THEMES)('@OB-068 %s: „überfällig“ auf der dunklen Tafel ≥ 4,5 : 1', (theme) => {
+    const tafel = resolveToken(theme, cssVars.colors.scoreboardBg);
+    expect(contrastRatio(resolveToken(theme, cssVars.colors.scoreboardHighlight), tafel)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+});

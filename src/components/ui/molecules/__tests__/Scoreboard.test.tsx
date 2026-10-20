@@ -193,9 +193,17 @@ describe('Scoreboard', () => {
     expect(screen.getByTestId('scoreboard-abzeichen').style.color).toBe(cssVars.colors.scoreboardTextMuted);
   });
 
-  it('@OB-065 die Anstoßzeit auf der Tafel steht in der Tafel-Schrift (lesbar im hellen Thema)', () => {
-    render(<Scoreboard model={{ ...model, badge: { kind: 'kickoff', time: '15:15' } }} size="regular" meldezeile={null} testId="scoreboard" />);
-    expect(screen.getByTestId('scoreboard-abzeichen').style.color).toBe(cssVars.colors.scoreboardTextMuted);
+  it('@OB-068 ein geplantes Spiel ohne Überfälligkeit lässt den Abzeichen-Platz leer', () => {
+    render(<Scoreboard model={{ ...model, badge: { kind: 'none' } }} size="regular" meldezeile={null} testId="scoreboard" />);
+    expect(screen.getByTestId('scoreboard-state')).toBeEmptyDOMElement();
+  });
+
+  it('@OB-068 „überfällig 7 Min“ steht im Abzeichen-Platz in Tafel-Warnfarbe und als Wort', () => {
+    render(<Scoreboard model={{ ...model, badge: { kind: 'none' }, ueberfaelligText: 'überfällig 7 Min' }} size="regular" meldezeile={null} testId="scoreboard" />);
+    const wort = screen.getByTestId('scoreboard-ueberfaellig');
+    expect(wort.textContent).toBe('überfällig 7 Min');
+    expect(wort.style.color).toBe(cssVars.colors.scoreboardHighlight);
+    expect(screen.getByTestId('scoreboard-state')).toContainElement(wort);
   });
 
   it('@OB-065 Gegenbeispiel: ein geplantes Spiel zeigt im Abzeichen nur seine Anstoßzeit, kein Wort', () => {

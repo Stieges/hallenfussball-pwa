@@ -85,9 +85,10 @@ test.describe('Cockpit-Tafel', () => {
     }
   });
 
-  test('Vor Anpfiff zeigt die Anstoßzeit im Abzeichen, Spielnummer; Anpfiff macht die Tafel live', async ({ page }) => {
-    // @SL-049/@SL-050, @OB-065: das bereitstehende Spiel trägt vor dem Anpfiff seine Anstoßzeit statt eines Abzeichens mit Wort
-    await expect(page.getByTestId('scoreboard-state')).toContainText(/\d{1,2}:\d{2}/);
+  test('Vor Anpfiff steht die Anstoßzeit nur bei der Uhr, der Abzeichen-Platz bleibt leer; Anpfiff macht die Tafel live', async ({ page }) => {
+    // @SL-049/@SL-050, @OB-068: die Anstoßzeit steht einmal, bei der Uhr; der Platz des Abzeichens bleibt leer
+    await expect(page.getByTestId('scoreboard-state')).toBeEmpty();
+    await expect(page.getByTestId('scoreboard-clock-rest')).toContainText(/\d{1,2}:\d{2}/);
     await expect(page.getByTestId('scoreboard-clock')).toContainText('Anstoß');
     await expect(page.getByTestId('scoreboard-clock-sub')).toContainText(/Spiel \d+/);
 
@@ -205,8 +206,8 @@ test.describe('Cockpit-Tafel', () => {
       await bestaetigen.click();
     }
     await expect(async () => {
-      const text = (await page.getByTestId('scoreboard-state').textContent()) ?? '';
-      expect(/Ende|\d{1,2}:\d{2}/.test(text)).toBe(true);
+      const text = (await page.getByTestId('scoreboard').textContent()) ?? '';
+      expect(/Ende|Anstoß/.test(text)).toBe(true);
     }).toPass({ timeout: 5000 });
   });
 });
