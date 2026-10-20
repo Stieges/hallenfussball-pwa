@@ -455,6 +455,11 @@ export interface Tournament {
    * (Team gelöscht) gelten nicht und werden beim Speichern entfernt (@W4-044); Reihenfolge = Teamliste.
    */
   hostTeamIds?: string[];
+  /**
+   * Paket TB (Plan v2 § 3.2): Entscheidungen der Turnierleitung über Gleichstände nach allen Kriterien, im
+   * `config`-JSONB (keine Migration). Gültig ist eine nur, solange Block und Grundlage gleich sind (reine Rechnung).
+   */
+  standingDecisions?: StandingDecision[];
   /** Wahl der Eröffnung bei zwei Mannschaften des Veranstalters (@W4-033); ohne Wahl `DEFAULT_OPENING_MODE`. */
   openingMode?: OpeningMode;
 
@@ -772,7 +777,7 @@ export interface Standing {
 
 /**
  * Paket TB (Plan v2 § 3.2): Entscheidung der Turnierleitung über einen Gleichstand nach allen Kriterien.
- * Typ schon in TB-1 (Parameter des Rechenkerns); Gültigkeit, Speichern und Anwendung kommen mit TB-3.
+ * Gültigkeit und Anwendung: `core/standings/decisions.ts`; Speichern: `StandingDecisionService`.
  */
 export interface StandingDecision {
   id: string;

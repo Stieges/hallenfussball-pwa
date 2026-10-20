@@ -38,6 +38,7 @@ import { spectatorDisplayFromConfig, spectatorDisplayToConfig } from './tourname
 import { hostTeamsFromConfig, hostTeamsToConfig } from './tournamentHostTeams';
 import { changeRevisionFromRow } from './tournamentChangeRevisionRow';
 import { effectivePlacementLogic } from '../standings/placementDefaults';
+import { standingDecisionsFromConfig, standingDecisionsToConfig } from './standingDecisionsConfig';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -502,6 +503,9 @@ interface TournamentConfig {
   hostTeamIds?: string[];
   openingMode?: string;
 
+  // Paket TB: Gleichstands-Entscheidungen der Turnierleitung (standingDecisionsConfig.ts)
+  standingDecisions?: unknown[];
+
   // Wizard state
   lastVisitedStep?: number;
 
@@ -630,7 +634,7 @@ export function mapTournamentFromSupabase(
     isExternal: config.isExternal,
     externalSource: config.externalSource,
     useDFBKeys: config.useDFBKeys,
-    dfbKeyPattern: config.dfbKeyPattern, ...hostTeamsFromConfig(config, teams), // @W4-034/@W4-044
+    dfbKeyPattern: config.dfbKeyPattern, ...hostTeamsFromConfig(config, teams), ...standingDecisionsFromConfig(config), // @W4-034/@W4-044, Paket TB
     monitors: config.monitors as Tournament['monitors'],
     sponsors: config.sponsors as Tournament['sponsors'],
     version: row.version ?? undefined, ...changeRevisionFromRow(row), // A-10: Änderungszählung (@TM-027)
@@ -717,7 +721,7 @@ export function mapTournamentToSupabase(
     externalSource: tournament.externalSource,
     sportId: tournament.sportId,
     useDFBKeys: tournament.useDFBKeys,
-    dfbKeyPattern: tournament.dfbKeyPattern, ...hostTeamsToConfig(tournament), // @W4-034/@W4-044
+    dfbKeyPattern: tournament.dfbKeyPattern, ...hostTeamsToConfig(tournament), ...standingDecisionsToConfig(tournament), // @W4-034/@W4-044, Paket TB
     monitors: tournament.monitors,
     sponsors: tournament.sponsors,
     publishedAt: tournament.publishedAt,

@@ -3,7 +3,8 @@ import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { LocalStorageRepository } from './LocalStorageRepository';
 import { SupabaseRepository } from './SupabaseRepository';
-import { isAbortError, RepositoryError } from '../errors';
+import { isAbortError, NetworkError, RepositoryError } from '../errors';
+import type { StandingDecision } from '../../types/tournament';
 import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
 import { captureFeatureError } from '../../lib/sentry';
 import { slotTeamId } from '../models/matchSlot';
@@ -325,6 +326,21 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             await this.localRepo.updateMatches(tournamentId, updates);
             this.mutationQueue.enqueue('UPDATE_MATCHES', { tournamentId, updates: updates.map(normalizeMatchUpdateForQueue) });
         });
+    }
+
+    /**
+     * Paket TB (F9, @W2A-062): in der Tabelle nur mit Netz – ohne Netz `NetworkError` (isOffline), nichts eingereiht;
+     * ohne Netz geht die Entscheidung mit „Gruppe abschließen“ (GA4 A-13b/A-15c). Danach lokale Kopie wie die Cloud.
+     */
+    async updateStandingDecisions(id: string, decisions: StandingDecision[], expectedVersion: number): Promise<void> {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            throw new NetworkError('Die Entscheidung in der Tabelle braucht eine Verbindung.', true);
+        }
+        await this.supabaseRepo.updateStandingDecisions(id, decisions, expectedVersion);
+        const local = await this.localRepo.get(id);
+        if (local) {
+            await this.localRepo.cacheCloudCopy({ ...local, standingDecisions: decisions, version: expectedVersion + 1 });
+        }
     }
 
     async delete(id: string): Promise<void> {

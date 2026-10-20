@@ -3,7 +3,7 @@ import { DEFAULT_FAIR_PLAY_PROFILE, type FairPlayProfile } from '../core/stats/f
 import { cardKindOf } from './cardKind';
 import { matchSideTeamId } from '../core/models/matchSlot';
 import { rankGroup } from '../core/standings/groupTable';
-import { effectivePlacementLogic } from '../core/standings/placementDefaults';
+import { tableInput } from '../core/standings/tournamentTable';
 import { standingsGroups, OVERALL_GROUP } from '../core/models/standingsGroups';
 import { matchFinalScore } from '../core/view/finalScore';
 import type { TeamId } from '../core/models/schemas/MatchSlotSchema';
@@ -13,32 +13,16 @@ export { hasFinalRound, placementBadgeText, placementRankText } from './openPlac
 export { countsForStandings } from '../core/standings/countsForStandings';
 
 /**
- * Tabelle einer Gruppe bzw. aller Teams – Fassade über den Rechenkern `rankGroup` (Paket TB, Plan v2 § 3.1).
- * - mit `group`: je Gruppe (Modus `group`, direkter Vergleich als Sondertabelle, Markierung nach allen Gruppenspielen);
- * - ohne `group` und höchstens eine Tabellengruppe (Jeder gegen jeden): ebenso, Gruppe `OVERALL_GROUP`;
- * - ohne `group` bei zwei und mehr Gruppen: gruppenübergreifend (`crossGroup`, Endstand Z. 62) – ohne direkten
- *   Vergleich und ohne Markierung (C-TABELLE-GRUPPENUEBERGREIFEND).
- * Eine leere gespeicherte Reihenfolge gilt als Voreinstellung BFV privat (C-WERTUNG-LEER).
+ * Tabelle einer Gruppe bzw. aller Teams – Fassade über den Rechenkern (Paket TB, Plan v2 § 3.1); welche Teams, Spiele
+ * und welcher Modus gelten, steht in `core/standings/tournamentTable.ts`. Entscheidungen der Turnierleitung
+ * (`tournament.standingDecisions`) wirken je Gruppe.
  */
 export const calculateStandings = (
   teams: Team[],
   matches: Match[],
   tournament: Tournament,
   group?: string
-): Standing[] => {
-  const hasGroup = group !== undefined && group !== '';
-  const groups = standingsGroups(teams);
-  const mode = hasGroup || groups.length <= 1 ? 'group' : 'crossGroup';
-  return rankGroup({
-    groupId: hasGroup ? group : (groups.length === 1 ? groups[0].group : OVERALL_GROUP),
-    teams: hasGroup ? teams.filter((t) => t.group === group) : teams,
-    matches: hasGroup ? matches.filter((m) => m.group === group) : matches.filter((m) => m.isFinal !== true),
-    pointSystem: tournament.pointSystem,
-    placementLogic: effectivePlacementLogic(tournament.placementLogic),
-    decisions: [],
-    mode,
-  }).rows;
-};
+): Standing[] => rankGroup(tableInput(teams, matches, tournament, group)).rows;
 
 /**
  * Tabellen aller Gruppen hintereinander (je Gruppe sortiert). Ein Turnier ohne Gruppen ist eine Gruppe über alle Teams

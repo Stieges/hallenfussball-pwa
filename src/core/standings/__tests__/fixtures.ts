@@ -49,7 +49,9 @@ export const DATA = {
   /** Gegeben im Szenario @W2A-045 (5 Teams, Punkteschema 2/1/0). */
   W2A_045: 'M–N 1:0; W–N 1:0; O–N 1:0; U–N 1:0; U–M 2:2; U–W 2:2; U–O 2:2; M–W 1:0; W–O 1:0; O–M 3:0',
   ET_055: 'R–K 1:1; R–N 2:0; R–O 1:0; M–R 1:0; U–R 2:0; K–M 2:0; K–U 1:0; N–K 1:0; O–K 2:0; M–U 1:0; M–N 2:0; M–O 1:0; U–N 1:0; U–O 2:0; N–O 1:0',
-  ET_056: 'K–R 2:1; R–N 3:0; R–O 3:0; R–M 2:0; U–R 1:0; K–M 1:0; K–U 1:0; N–K 1:0; O–K 1:0; M–U 1:0; N–M 1:1; O–M 0:2; U–N 2:0; U–O 1:1; N–O 1:0',
+  /** @W2A-052/@W2A-053 (K-a1): Ufer 12, Waging rot/Kammer 7 (einzige), Mitte/Nord/Ost 6. */
+  W2A_052: 'R–K 1:1; R–N 2:0; R–O 1:0; M–R 1:0; U–R 2:0; K–M 2:0; K–U 1:0; N–K 1:0; O–K 2:0; N–M 1:0; U–N 1:0; N–O 0:1; U–M 1:0; M–O 2:0; U–O 1:0',
+  ET_056:'K–R 2:1; R–N 3:0; R–O 3:0; R–M 2:0; U–R 1:0; K–M 1:0; K–U 1:0; N–K 1:0; O–K 1:0; M–U 1:0; N–M 1:1; O–M 0:2; U–N 2:0; U–O 1:1; N–O 1:0',
   /** Gruppe A aus @W2A-048. */
   W2A_048_A: 'N–S 2:1; N–W 2:1; N–O 0:0; S–W 1:1; S–O 2:0; W–O 2:0',
 } as const;
