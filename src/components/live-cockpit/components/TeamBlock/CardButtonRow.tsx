@@ -10,6 +10,7 @@
 import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
+import { KartenSymbol } from '../../../ui/atoms/KartenSymbol';
 
 export interface CardButtonRowProps {
   teamName: string;
@@ -44,13 +45,13 @@ export function CardButtonRow({
   return (
     <div style={rowStyle}>
       <button style={yellowStyle} onClick={onYellowCard} disabled={disabled} type="button" aria-label={t('cardButtons.yellowAria', { teamName })} data-testid={`yellow-card-button-${teamSide}`}>
-        🟨 {t('cardDialog.yellow')}
+        <KartenSymbol art="YELLOW" /> {t('cardDialog.yellow')}
       </button>
       <button style={yellowRedStyle} onClick={onYellowRedCard} disabled={disabled} type="button" aria-label={t('cardButtons.yellowRedAria', { teamName })} data-testid={`yellow-red-card-button-${teamSide}`}>
-        🟨🟥 {t('cardDialog.yellowRed')}
+        <KartenSymbol art="YELLOW_RED" /> {t('cardDialog.yellowRed')}
       </button>
       <button style={redStyle} onClick={onRedCard} disabled={disabled} type="button" aria-label={t('cardButtons.redAria', { teamName })} data-testid={`red-card-button-${teamSide}`}>
-        🟥 {t('cardDialog.red')}
+        <KartenSymbol art="RED" /> {t('cardDialog.red')}
       </button>
     </div>
   );

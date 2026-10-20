@@ -39,13 +39,13 @@ function redCardEvent(cardType: string | undefined): RuntimeMatchEvent {
 describe('ProtocolRow -- Gelb-Rot (F3b2)', () => {
   it('Gelb-Rot zeigt das Doppel-Symbol Gelb+Rot', () => {
     render(<ProtocolRow entry={{ event: redCardEvent('YELLOW_RED'), retracted: false }} description="x" variant="sheet" />);
-    expect(screen.getByText('🟨🟥')).toBeInTheDocument();
+    expect(screen.getByTestId('karten-symbol-YELLOW_RED')).toBeInTheDocument();
   });
 
   it('Gegenbeispiel: RED_CARD ohne cardType zeigt nur das Rot-Symbol', () => {
     render(<ProtocolRow entry={{ event: redCardEvent(undefined), retracted: false }} description="x" variant="sheet" />);
-    expect(screen.getByText('🟥')).toBeInTheDocument();
-    expect(screen.queryByText('🟨🟥')).toBeNull();
+    expect(screen.getByTestId('karten-symbol-RED')).toBeInTheDocument();
+    expect(screen.queryByTestId('karten-symbol-YELLOW_RED')).toBeNull();
   });
 });
 

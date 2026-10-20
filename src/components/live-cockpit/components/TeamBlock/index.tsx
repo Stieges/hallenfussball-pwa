@@ -167,15 +167,16 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
 
   const btnYellowStyle: CSSProperties = {
     ...btnStyle,
-    color: disabled ? cssVars.colors.textDisabled : cssVars.colors.warning,
+    color: disabled ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
   };
 
   const btnRedStyle: CSSProperties = {
     ...btnStyle,
-    color: disabled ? cssVars.colors.textDisabled : cssVars.colors.error,
+    color: disabled ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
   };
 
-  // F3b2: Gelb-Rot fuehrt wie Rot zum Platzverweis -- gleiche Farbe (kein neuer Design-Token).
+  // Karten-Farben nur für Karten (Oberfläche E): die Karte zeigt das KartenSymbol in Kartenfarbe, die Schrift bleibt neutral.
+  // Gelb-Rot hat dieselbe Schrift wie Rot.
   const btnYellowRedStyle: CSSProperties = btnRedStyle;
 
   const btnFoulStyle: CSSProperties = {
