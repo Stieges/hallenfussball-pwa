@@ -1,4 +1,6 @@
 import { spawnSync } from 'node:child_process';
+import { chmodSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -34,7 +36,7 @@ describe('require-local-stack.sh (@OB-029)', () => {
   it('lässt eine lokale URL an der URL-Sperre vorbei (Abbruch erst am fehlenden Stack, nicht an der URL)', () => {
     // PATH ohne `supabase`: die Stack-Abfrage scheitert, aber NICHT mit der Produktions-Sperre.
     const result = spawnSync('bash', [SCRIPT], {
-      env: { PATH: '/usr/bin:/bin', E2E_SUPABASE_URL: 'http://127.0.0.1:54321' },
+      env: { PATH: '/usr/bin:/bin', E2E_SUPABASE_URL: 'http://127.0.0.1:54321', E2E_REQUIRE_LOCAL_STACK_SKIP_HEALTH: '1' },
       encoding: 'utf8',
     });
     expect(result.status).toBe(1);
@@ -49,6 +51,7 @@ describe('require-local-stack.sh (@OB-029)', () => {
     const runWithStatus = (apiUrl: string): { status: number | null; stderr: string } =>
       runGuard({
         PATH: '/usr/bin:/bin',
+        E2E_REQUIRE_LOCAL_STACK_SKIP_HEALTH: '1',
         E2E_REQUIRE_LOCAL_STACK_STATUS_JSON: JSON.stringify({ API_URL: apiUrl }),
       });
 
@@ -66,6 +69,25 @@ describe('require-local-stack.sh (@OB-029)', () => {
     it('lässt eine lokale API_URL aus "supabase status" durch (Exit 0)', () => {
       const result = runWithStatus('http://127.0.0.1:54321');
       expect(result.status).toBe(0);
+    });
+  });
+
+  // Schalter nur für Tests ohne Docker; die Gesundheitsprüfung selbst läuft sonst über `npx tsx`.
+  describe('Gesundheitsprüfung (@LT-003)', () => {
+    it('@LT-003 reicht Exit 1 und Text der Prüfung durch, auch bei lokaler API_URL', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'fake-npx-'));
+      const fake = join(dir, 'npx');
+      writeFileSync(fake, '#!/bin/sh\necho "Dienste der Testumgebung sind ausgefallen: storage" >&2\nexit 1\n');
+      chmodSync(fake, 0o755);
+      const result = spawnSync('bash', [SCRIPT], {
+        env: {
+          PATH: `${dir}:/usr/bin:/bin`,
+          E2E_REQUIRE_LOCAL_STACK_STATUS_JSON: JSON.stringify({ API_URL: 'http://127.0.0.1:54321' }),
+        },
+        encoding: 'utf8',
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('Dienste der Testumgebung sind ausgefallen: storage');
     });
   });
 });

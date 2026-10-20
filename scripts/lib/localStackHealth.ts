@@ -80,16 +80,103 @@ export function findUnhealthyContainers(containers: DockerContainer[], projectId
 
 const SUPABASE_REPO_PREFIXES = ['public.ecr.aws/supabase/', 'ghcr.io/supabase/', 'supabase/'];
 const PLAYWRIGHT_REPO = 'mcr.microsoft.com/playwright';
+const NONE = '<none>';
 
-/** Nur Testumgebungs-Images und namenlose Playwright-Images, auf die KEIN Container verweist. */
-export function findRemovableImages(images: DockerImage[], containers: DockerContainer[]): DockerImage[] {
-  const used = new Set(containers.map((c) => c.imageId));
-  return images.filter((img) => {
-    if (used.has(img.id)) return false;
-    const isSupabase = SUPABASE_REPO_PREFIXES.some((p) => img.repository.startsWith(p));
-    const isUntaggedPlaywright = img.repository === PLAYWRIGHT_REPO && img.tag === '<none>';
-    return isSupabase || isUntaggedPlaywright;
-  });
+/** Ein löschbares Image; `target` ist das Argument für `docker rmi` (Referenz oder ID). */
+export interface RemovableImage extends DockerImage {
+  target: string;
+}
+
+function splitRef(ref: string): { repository: string; tag: string } {
+  const lastSlash = ref.lastIndexOf('/');
+  const colon = ref.indexOf(':', lastSlash + 1);
+  return colon === -1
+    ? { repository: ref, tag: 'latest' }
+    : { repository: ref.slice(0, colon), tag: ref.slice(colon + 1) };
+}
+
+function isSupabaseRepo(repository: string): boolean {
+  return SUPABASE_REPO_PREFIXES.some((p) => repository.startsWith(p));
+}
+
+/**
+ * Löschbar sind nur
+ *  - namenlose Playwright-Images (Repository exakt, Tag <none>) ohne Container, und
+ *  - Supabase-Images ohne Container, die ABGELÖST sind: ein Container dieses Projekts nutzt ein
+ *    anderes Tag desselben Repositorys.
+ * Getaggte Images werden per Referenz entfernt (nimmt nur diesen Namen weg), namenlose per ID.
+ */
+export function findRemovableImages(
+  images: DockerImage[],
+  containers: DockerContainer[],
+  projectId: string,
+): RemovableImage[] {
+  const usedIds = new Set(containers.map((c) => c.imageId));
+  const usedRefs = new Set(containers.map((c) => splitRef(c.imageRef)).map((r) => `${r.repository}:${r.tag}`));
+  const currentTags = new Map<string, Set<string>>();
+  for (const c of containers) {
+    if (serviceOf(c.name, projectId) === null) continue;
+    const { repository, tag } = splitRef(c.imageRef);
+    const tags = currentTags.get(repository) ?? new Set<string>();
+    tags.add(tag);
+    currentTags.set(repository, tags);
+  }
+
+  const result: RemovableImage[] = [];
+  const seenTargets = new Set<string>();
+  for (const img of images) {
+    if (usedIds.has(img.id)) continue;
+    if (usedRefs.has(`${img.repository}:${img.tag}`)) continue;
+
+    let target: string | null = null;
+    if (img.repository === PLAYWRIGHT_REPO && img.tag === NONE) {
+      target = img.id;
+    } else if (isSupabaseRepo(img.repository)) {
+      if (img.tag === NONE) {
+        target = currentTags.has(img.repository) ? img.id : null;
+      } else {
+        const aktuelle = currentTags.get(img.repository);
+        const abgeloest = aktuelle !== undefined && [...aktuelle].some((t) => t !== img.tag);
+        target = abgeloest ? `${img.repository}:${img.tag}` : null;
+      }
+    }
+    if (target === null || seenTargets.has(target)) continue;
+    seenTargets.add(target);
+    result.push({ ...img, target });
+  }
+  return result;
+}
+
+/** Laufender Datenbank-Container dieses Projekts = Testumgebung ist oben (Vorbedingung fürs Aufräumen). */
+export function isProjectDbRunning(containers: DockerContainer[], projectId: string): boolean {
+  return containers.some((c) => c.name === `supabase_db_${projectId}` && c.status === 'running');
+}
+
+export function findContainersWithoutImageId(containers: DockerContainer[]): DockerContainer[] {
+  return containers.filter((c) => c.imageId.trim().length === 0);
+}
+
+export function formatStoppedStackMessage(): string {
+  return 'Die Testumgebung läuft nicht (Datenbank-Container fehlt oder ist beendet). Es wurde nichts gelöscht – zuerst „npm run test:env:up“ ausführen, dann erneut aufräumen.';
+}
+
+export function formatEmptyImageIdMessage(containers: DockerContainer[]): string {
+  return `Container ohne Image-ID gefunden (${containers.map((c) => c.name).join(', ')}). Es wurde nichts gelöscht.`;
+}
+
+/** Letzte Protokollzeile aus `docker logs --timestamps`, beide Ströme gemischt, ohne Zeitstempel. */
+export function pickLastLogLine(stdout: string, stderr: string): string {
+  const lines = `${stdout}\n${stderr}`
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l, index) => {
+      const m = /^(\d{4}-\d{2}-\d{2}T[^\s]+)\s?(.*)$/.exec(l);
+      return { time: m?.[1] ?? '', text: m ? (m[2] ?? '') : l, index };
+    });
+  if (lines.length === 0) return '(Protokoll leer)';
+  lines.sort((x, y) => (x.time === y.time ? x.index - y.index : x.time < y.time ? -1 : 1));
+  return lines[lines.length - 1]?.text ?? '(Protokoll leer)';
 }
 
 export function formatDockerUnreachableMessage(): string {
@@ -140,7 +227,7 @@ export function evaluateCleanup(attempts: CleanupAttempt[]): CleanupResult {
   return { deleted, failed, exitCode: failedAttempts.length > 0 ? 1 : 0, message: lines.join('\n') };
 }
 
-export function formatRemovableList(images: DockerImage[]): string {
+export function formatRemovableList(images: RemovableImage[]): string {
   if (images.length === 0) return 'Nichts zu löschen.';
   return ['Löschbare Images:', ...images.map((i) => `  ${imageLabel(i)}  ${i.size}  ${i.id}`)].join('\n');
 }

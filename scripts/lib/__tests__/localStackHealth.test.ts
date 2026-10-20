@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
   evaluateCleanup,
+  findContainersWithoutImageId,
   findRemovableImages,
   findUnhealthyContainers,
   findVersionPins,
   formatDockerUnreachableMessage,
   formatPinMessage,
+  formatRemovableList,
+  formatStoppedStackMessage,
   formatUnhealthyMessage,
+  isProjectDbRunning,
   parseProjectId,
+  pickLastLogLine,
   type DockerContainer,
   type DockerImage,
 } from '../localStackHealth';
@@ -148,50 +153,166 @@ describe('Docker nicht erreichbar', () => {
 });
 
 describe('Aufräumen (findRemovableImages)', () => {
-  it('@LT-005 löscht Testumgebungs-Image ohne Container und namenloses Playwright-Image, nicht das fremde', () => {
-    const alt = image({ id: sha('1'), repository: 'public.ecr.aws/supabase/storage-api', tag: 'v0.9', size: '200MB' });
+  const ECR = 'public.ecr.aws/supabase';
+  // Laufende Testumgebung: Storage und Datenbank in aktueller Version, Edge-Runtime beendet.
+  const storageNeu = container({ service: 'storage', imageId: sha('e'), imageRef: `${ECR}/storage-api:v1.2` });
+  const dbNeu = container({ service: 'db', imageId: sha('d'), imageRef: `${ECR}/postgres:17.6` });
+  const edgeBeendet = container({ service: 'edge_runtime', imageId: sha('f'), imageRef: `${ECR}/edge-runtime:v1.1`, status: 'exited' });
+  const stack = [dbNeu, storageNeu, edgeBeendet];
+  const storageAlt = image({ id: sha('1'), repository: `${ECR}/storage-api`, tag: 'v1.0', size: '200MB' });
+
+  it('@LT-005 löscht abgelöstes Testumgebungs-Image und namenloses Playwright-Image, nicht das fremde', () => {
     const namenlos = image({ id: sha('2'), repository: 'mcr.microsoft.com/playwright', tag: '<none>', size: '1.5GB' });
     const fremd = image({ id: sha('3'), repository: 'postgres', tag: '17', size: '477MB' });
-    const found = findRemovableImages([alt, namenlos, fremd], []);
+    const found = findRemovableImages([storageAlt, namenlos, fremd], stack, PROJECT);
     expect(found.map((i) => i.id)).toEqual([sha('1'), sha('2')]);
     expect(found.map((i) => i.size)).toEqual(['200MB', '1.5GB']);
   });
 
-  it('@LT-005 erfasst alle erlaubten Repository-Präfixe der Testumgebung', () => {
-    const repos = ['public.ecr.aws/supabase/postgres', 'ghcr.io/supabase/edge-runtime', 'supabase/studio'];
-    const imgs = repos.map((repository, i) => image({ id: sha(String(i + 4)), repository }));
-    expect(findRemovableImages(imgs, [])).toHaveLength(3);
+  it('@LT-005 getaggte Images werden per Referenz entfernt, namenlose per ID', () => {
+    const namenlos = image({ id: sha('2'), repository: 'mcr.microsoft.com/playwright', tag: '<none>' });
+    const found = findRemovableImages([storageAlt, namenlos], stack, PROJECT);
+    expect(found.map((i) => i.target)).toEqual([`${ECR}/storage-api:v1.0`, sha('2')]);
   });
 
-  it('@LT-005 fremde Images bleiben, auch ähnlich benannte (pgvector, searxng, postgres)', () => {
+  it('@LT-005 erfasst alle Repository-Präfixe der Testumgebung (ECR, ghcr, Docker Hub)', () => {
+    const laufend = [
+      container({ service: 'a', imageId: sha('a'), imageRef: 'public.ecr.aws/supabase/postgres:2' }),
+      container({ service: 'b', imageId: sha('b'), imageRef: 'ghcr.io/supabase/edge-runtime:2' }),
+      container({ service: 'c', imageId: sha('c'), imageRef: 'supabase/studio:2' }),
+    ];
+    const alt = [
+      image({ id: sha('4'), repository: 'public.ecr.aws/supabase/postgres', tag: '1' }),
+      image({ id: sha('5'), repository: 'ghcr.io/supabase/edge-runtime', tag: '1' }),
+      image({ id: sha('6'), repository: 'supabase/studio', tag: '1' }),
+    ];
+    expect(findRemovableImages(alt, laufend, PROJECT)).toHaveLength(3);
+  });
+
+  it('@LT-005 fremde Images bleiben (pgvector, searxng, postgres)', () => {
     const imgs = [
       image({ id: sha('4'), repository: 'pgvector/pgvector', tag: 'pg17' }),
       image({ id: sha('5'), repository: 'searxng/searxng', tag: 'latest' }),
       image({ id: sha('6'), repository: 'postgres', tag: '17' }),
-      image({ id: sha('7'), repository: 'evil.example/supabase/db', tag: 'v1' }),
     ];
-    expect(findRemovableImages(imgs, [])).toEqual([]);
+    expect(findRemovableImages(imgs, stack, PROJECT)).toEqual([]);
   });
 
   // @LT-006 Beispiele: Datenbank laufend, Server-Funktionen beendet
   it.each([
-    { name: 'Datenbank der Testumgebung', repository: 'public.ecr.aws/supabase/postgres', status: 'running' },
-    { name: 'Server-Funktionen der Testumgebung', repository: 'public.ecr.aws/supabase/edge-runtime', status: 'exited' },
-  ])('@LT-006 Image "$name" mit Container im Zustand $status bleibt', ({ repository, status }) => {
-    const img = image({ id: sha('8'), repository });
-    const c = container({ service: 'x', imageId: sha('8'), status });
-    expect(findRemovableImages([img], [c])).toEqual([]);
+    { name: 'Datenbank der Testumgebung', repository: `${ECR}/postgres`, tag: '17.6', id: sha('d') },
+    { name: 'Server-Funktionen der Testumgebung', repository: `${ECR}/edge-runtime`, tag: 'v1.1', id: sha('f') },
+  ])('@LT-006 Image "$name" mit Container bleibt', ({ repository, tag, id }) => {
+    expect(findRemovableImages([image({ id, repository, tag })], stack, PROJECT)).toEqual([]);
   });
 
   it('@LT-006 auch ein namenloses Playwright-Image mit Container bleibt', () => {
     const img = image({ id: sha('9'), repository: 'mcr.microsoft.com/playwright', tag: '<none>' });
     const c = container({ service: 'x', imageId: sha('9'), status: 'exited' });
-    expect(findRemovableImages([img], [c])).toEqual([]);
+    expect(findRemovableImages([img], [...stack, c], PROJECT)).toEqual([]);
+  });
+
+  it('@LT-006 ein Image, dessen Name der Referenz eines Containers entspricht, bleibt, auch bei anderer ID', () => {
+    const umgetaggt = image({ id: sha('7'), repository: `${ECR}/storage-api`, tag: 'v1.2' });
+    expect(findRemovableImages([umgetaggt], stack, PROJECT)).toEqual([]);
   });
 
   it('@LT-007 das benannte Playwright-Image bleibt auch ohne Container', () => {
     const img = image({ id: sha('a'), repository: 'mcr.microsoft.com/playwright', tag: 'v1.63.0-noble' });
-    expect(findRemovableImages([img], [])).toEqual([]);
+    expect(findRemovableImages([img], stack, PROJECT)).toEqual([]);
+  });
+
+  it('@LT-010 Version ohne Container, die kein Dienst abgelöst hat, bleibt', () => {
+    const rest = image({ id: sha('8'), repository: `${ECR}/rest`, tag: 'v0.9' });
+    // Kein Container des Projekts nutzt ein anderes rest-Tag.
+    expect(findRemovableImages([rest], stack, PROJECT)).toEqual([]);
+  });
+
+  it('@LT-010 Version, die nur ein Container eines ANDEREN Projekts ablöst, bleibt', () => {
+    const fremderContainer: DockerContainer = {
+      ...container({ service: 'storage', imageId: sha('c'), imageRef: `${ECR}/storage-api:v2.0` }),
+      name: 'supabase_storage_anderes-projekt',
+    };
+    expect(findRemovableImages([storageAlt], [fremderContainer], PROJECT)).toEqual([]);
+  });
+
+  it('@LT-011 zwei Supabase-Namen auf derselben ID: beide Namen werden einzeln entfernt', () => {
+    const a = image({ id: sha('1'), repository: `${ECR}/storage-api`, tag: 'v1.0' });
+    const b = image({ id: sha('1'), repository: `${ECR}/storage-api`, tag: 'v0.9' });
+    const found = findRemovableImages([a, b], stack, PROJECT);
+    expect(found.map((i) => i.target)).toEqual([`${ECR}/storage-api:v1.0`, `${ECR}/storage-api:v0.9`]);
+  });
+
+  it('@LT-011 Supabase-Name plus fremder Name auf derselben ID: nur der Supabase-Name wird entfernt', () => {
+    const fremderName = image({ id: sha('1'), repository: 'anderesprojekt/storage', tag: 'x' });
+    const found = findRemovableImages([storageAlt, fremderName], stack, PROJECT);
+    expect(found.map((i) => i.target)).toEqual([`${ECR}/storage-api:v1.0`]);
+  });
+
+  it('@LT-011 zweiter Lauf: nach dem Entfernen des Namens ist nichts mehr zu löschen', () => {
+    const fremderName = image({ id: sha('1'), repository: 'anderesprojekt/storage', tag: 'x' });
+    expect(findRemovableImages([fremderName], stack, PROJECT)).toEqual([]);
+  });
+
+  it('@LT-011 namenlose Zeilen mit derselben ID werden nur einmal aufgeführt', () => {
+    const a = image({ id: sha('2'), repository: 'mcr.microsoft.com/playwright', tag: '<none>' });
+    expect(findRemovableImages([a, { ...a }], stack, PROJECT)).toHaveLength(1);
+  });
+
+  // Gegenbeispiele: sehen ähnlich aus, gehören aber nicht zur Testumgebung.
+  it.each([
+    { repository: 'supabase-foo/bar', tag: 'v1' },
+    { repository: 'myregistry/supabase/x', tag: 'v1' },
+    { repository: '<none>', tag: '<none>' },
+    { repository: 'mcr.microsoft.com/playwright/python', tag: '<none>' },
+  ])('Gegenbeispiel: $repository:$tag wird nie gelöscht', ({ repository, tag }) => {
+    const ersatz = container({ service: 'x', imageId: sha('c'), imageRef: `${repository}:other` });
+    const img = image({ id: sha('5'), repository, tag });
+    expect(findRemovableImages([img], [...stack, ersatz], PROJECT)).toEqual([]);
+  });
+});
+
+describe('Stack gestoppt (isProjectDbRunning)', () => {
+  it('@LT-009 ohne Datenbank-Container gilt der Stack als gestoppt', () => {
+    expect(isProjectDbRunning([], PROJECT)).toBe(false);
+  });
+  it('@LT-009 beendeter Datenbank-Container gilt als gestoppt', () => {
+    expect(isProjectDbRunning([container({ service: 'db', status: 'exited' })], PROJECT)).toBe(false);
+  });
+  it('@LT-009 Datenbank eines anderen Projekts zählt nicht', () => {
+    const fremd: DockerContainer = { ...container({ service: 'db' }), name: 'supabase_db_anderes-projekt' };
+    expect(isProjectDbRunning([fremd], PROJECT)).toBe(false);
+  });
+  it('@LT-009 laufende Datenbank des Projekts gilt als laufend', () => {
+    expect(isProjectDbRunning([container({ service: 'db' })], PROJECT)).toBe(true);
+  });
+  it('@LT-009 die Meldung nennt npm run test:env:up', () => {
+    expect(formatStoppedStackMessage()).toContain('npm run test:env:up');
+  });
+});
+
+describe('Hilfsfunktionen', () => {
+  it('Container ohne Image-ID werden erkannt', () => {
+    const ohne = container({ service: 'db', imageId: '' });
+    expect(findContainersWithoutImageId([container({ service: 'a' }), ohne]).map((c) => c.name)).toEqual([ohne.name]);
+  });
+
+  it('@LT-003 letzte Protokollzeile: nach Zeitstempel über beide Ströme gemischt, ohne Zeitstempel', () => {
+    const out = '2026-10-20T10:00:01.000000000Z erste\n2026-10-20T10:00:03.000000000Z dritte stdout\n';
+    const err = '2026-10-20T10:00:02.000000000Z zweite\n2026-10-20T10:00:04.000000000Z letzte stderr\n';
+    expect(pickLastLogLine(out, err)).toBe('letzte stderr');
+  });
+
+  it('@LT-003 leeres Protokoll ergibt einen Hinweis', () => {
+    expect(pickLastLogLine('', '')).toMatch(/leer/);
+  });
+
+  it('@LT-005 die Liste nennt Image und Größe', () => {
+    const text = formatRemovableList([
+      { ...image({ id: sha('1'), repository: 'supabase/x', tag: '1', size: '200MB' }), target: 'supabase/x:1' },
+    ]);
+    expect(text).toContain('supabase/x:1');
+    expect(text).toContain('200MB');
   });
 });
 
