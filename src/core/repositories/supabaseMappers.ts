@@ -37,6 +37,7 @@ import { bibColorFromConfig, bibColorToConfig } from './tournamentBibColor';
 import { spectatorDisplayFromConfig, spectatorDisplayToConfig } from './tournamentSpectatorDisplay';
 import { hostTeamsFromConfig, hostTeamsToConfig } from './tournamentHostTeams';
 import { changeRevisionFromRow } from './tournamentChangeRevisionRow';
+import { effectivePlacementLogic } from '../standings/placementDefaults';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -581,8 +582,8 @@ export function mapTournamentFromSupabase(
     breakDuration: config.breakDuration,
     roundLogic: config.roundLogic as Tournament['roundLogic'],
     numberOfRounds: config.numberOfRounds,
-    placementLogic: (config.placementLogic ??
-      []) as Tournament['placementLogic'],
+    // C-WERTUNG-LEER: fehlende oder leere Reihenfolge ⇒ Voreinstellung BFV privat (@W2A-046)
+    placementLogic: effectivePlacementLogic(config.placementLogic as Tournament['placementLogic'] | undefined),
     finalsConfig: finalsConfig ?? undefined,
     refereeConfig: refereeConfig ?? undefined,
     fieldAssignments: config.fieldAssignments,
