@@ -51,8 +51,9 @@ describe('TB-4 Zuschauer-Tabelle', () => {
 
   it('@W2A-059 @ET-055 Zuschauer auf dem Handy (schmale Tabelle): dieselbe Platzziffer 3, 3, 5; mitten in der Gruppe 2, 2, 4', async () => {
     /** Platzziffer in der schmalen Tabelle der ersten Gruppe; Teamnamen sind dort abgekürzt, daher nach dem Namensende gesucht. */
-    const handyZiffer = (container: HTMLElement, ende: string): string[] => {
-      const ansicht = container.querySelector('.mobile-view')!;
+    const handyZiffer = (container: Element, ende: string): string[] => {
+      const ansicht = container.querySelector<HTMLElement>('.mobile-view');
+      if (ansicht === null) { throw new Error('schmale Tabelle fehlt'); }
       return within(ansicht).getAllByRole('row', { hidden: true })
         .map((row) => within(row).queryAllByRole('cell', { hidden: true }))
         .filter((cells) => cells.length > 1 && (cells[1].textContent ?? '').trim().endsWith(ende))
