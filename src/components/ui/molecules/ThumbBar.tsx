@@ -62,7 +62,8 @@ const kbdStil: CSSProperties = {
 
 function reiheStil(layout: ThumbBarProps['layout'], anzahl: number): CSSProperties {
   return layout === 'daumen'
-    ? { display: 'grid', gridTemplateColumns: `repeat(${anzahl}, minmax(0, 1fr))`, gap: cssVars.spacing.sm, alignItems: 'stretch' }
+    // Handy: gleich breite Zellen, aber nie schmaler als ihr Inhalt (Text wird nie abgeschnitten, K13); kleinere Abstände, damit fünf Plätze in 360 px passen
+    ? { display: 'grid', gridTemplateColumns: `repeat(${anzahl}, minmax(min-content, 1fr))`, gap: cssVars.spacing.xs, alignItems: 'stretch' }
     : { display: 'flex', gap: cssVars.spacing.sm, alignItems: 'stretch' };
 }
 
@@ -77,14 +78,14 @@ function knopfStil(slot: Extract<ThumbBarSlot, { art: 'aktion' }>, layout: Thumb
     minHeight: haupt ? cssVars.touchTargets.primary : cssVars.touchTargets.minimum,
     minWidth: cssVars.touchTargets.minimum,
     boxSizing: 'border-box',
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    padding: layout === 'daumen' ? cssVars.spacing.xs : `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
     borderRadius: cssVars.borderRadius.md,
     border: haupt ? 'none' : `${cssVars.borderWidth.thin} ${slot.gestrichelt ? 'dashed' : 'solid'} ${cssVars.colors.borderControl}`,
     // K8 (C-PRIMAER-VERLAUF-KONTRAST): Vollfläche wie `Button` primary (#274), kein Verlauf
     background: haupt ? cssVars.colors.primary : cssVars.colors.surface,
     color: haupt ? cssVars.colors.onPrimary : cssVars.colors.textPrimary,
     fontFamily: 'inherit',
-    fontSize: cssVars.fontSizes.md,
+    fontSize: layout === 'daumen' ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.bold,
     cursor: slot.disabled ? 'not-allowed' : 'pointer',
     opacity: slot.disabled ? cssVars.opacity.disabled : 1,
@@ -147,7 +148,7 @@ export function ThumbBar({ ariaLabel, slots, layout, hinweis }: ThumbBarProps) {
             <Aktion key={slot.testId} slot={slot} layout={layout} tabIndex={slot.testId === tabstopp ? 0 : -1} />
           ) : (
             <div key={slot.halten.testId} style={layout === 'breit' ? { flex: HALTEN_GEWICHT, display: 'flex' } : { display: 'flex' }}>
-              <HoldButton {...slot.halten} tabIndex={slot.halten.testId === tabstopp ? 0 : -1} />
+              <HoldButton {...slot.halten} kompakt={layout === 'daumen'} tabIndex={slot.halten.testId === tabstopp ? 0 : -1} />
             </div>
           ),
         )}

@@ -15,6 +15,7 @@ import type { LiveMatch as CoreLiveMatch } from '../../../core/models/LiveMatch'
 import type { TournamentRole } from '../../auth/types/auth.types';
 import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
+import { RouterWrapper } from './routerWrapper';
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 
 vi.mock('../../../components/live-cockpit', () => ({
@@ -121,7 +122,7 @@ describe('Review A-11 A3: Cockpit nur zum Lesen ohne Recht auf den Spielbetrieb 
 
   it.each<TournamentRole>(['trainer', 'viewer'])('Konto %s (kein writeMatchData): das Cockpit ist nur zum Lesen', (role) => {
     currentRole = role;
-    render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
+    render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />, { wrapper: RouterWrapper });
     expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-readonly', 'true');
   });
 
@@ -129,7 +130,7 @@ describe('Review A-11 A3: Cockpit nur zum Lesen ohne Recht auf den Spielbetrieb 
     'Gegenbeispiel @HE-042 %s (Tom/Maria/Olli): „ein Spiel anpfeifen“ – das Cockpit ist nicht schreibgeschützt',
     (role) => {
       currentRole = role;
-      render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
+      render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />, { wrapper: RouterWrapper });
       expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-readonly', 'false');
     },
   );

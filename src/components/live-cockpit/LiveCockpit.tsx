@@ -30,6 +30,7 @@ import { ScoreboardArea } from './areas/ScoreboardArea';
 import { LegacyPlayArea } from './areas/LegacyPlayArea';
 import { CockpitOverlays } from './areas/CockpitOverlays';
 import { ThumbBarArea } from './areas/ThumbBarArea';
+import { LeerLeiste } from './areas/LeerLeiste';
 import { mehrPunkteGrundgeruest } from './model/mehrPunkte';
 import shell from './LiveCockpitShell.module.css';
 import { useCockpitPhase, useSideOrder } from './hooks';
@@ -168,8 +169,14 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   if (!currentMatch) {
     if (leer) {
       return (
-        <div className={shell.container} data-layout={layout}>
+        <div className={shell.container} data-layout={layout} data-testid="live-cockpit">
           <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>{tafel}</main>
+          {leer.art === 'wartetAufHerkunft' && (
+            <LeerLeiste
+              phase={phase} layout={layout} kannSteuern={kannSteuern} istLeitung={istLeitung} fieldName={fieldName}
+              steuerung={props.steuerung} cmd={cmd} settings={cockpitSettings} tournamentId={tournamentId}
+            />
+          )}
         </div>
       );
     }
@@ -192,20 +199,20 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   return (
     <div className={shell.container} data-layout={layout} data-testid="live-cockpit">
       <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>
-        {tafel}
-
-        {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung (readOnly), nicht bei beendetem Spiel allein. */}
-        {readOnly && (
-          <div className={shell.readOnlyBanner} data-testid="cockpit-readonly-banner" role="status">
-            {t('readOnly.banner')}
-          </div>
-        )}
-
-        {/* W1 (Nachtrag C3a-2a): rendert selbst nichts, solange kein Ausgangs-Zustand
-            (clientOutdated/authRequired/notReady/review) vorliegt. */}
-        <OutboxNotice status={outboxStatus} matchId={match.id} onReload={handleOutboxReload} />
-
         <LegacyPlayArea
+          kopf={(
+            <>
+              {tafel}
+              {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung (readOnly), nicht bei beendetem Spiel allein. */}
+              {readOnly && (
+                <div className={shell.readOnlyBanner} data-testid="cockpit-readonly-banner" role="status">
+                  {t('readOnly.banner')}
+                </div>
+              )}
+              {/* W1 (Nachtrag C3a-2a): rendert selbst nichts, solange kein Ausgangs-Zustand vorliegt. */}
+              <OutboxNotice status={outboxStatus} matchId={match.id} onReload={handleOutboxReload} />
+            </>
+          )}
           match={match}
           nextMatch={upcomingMatches.length > 0 ? upcomingMatches[0] : null}
           isMobile={isMobile}
@@ -215,19 +222,19 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
           columns={spalten}
           sidebar={{ activePenalties: cmd.activePenalties, onEventEdit: cmd.onSidebarEventEdit }}
         />
-
-        <ThumbBarArea
-          phase={phase}
-          layout={layout}
-          kannSteuern={kannSteuern}
-          istLeitung={istLeitung}
-          fieldName={fieldName}
-          steuerung={props.steuerung}
-          controls={cmd.controls}
-          onWeiterNaechstes={() => { props.onLoadNextMatch(match.fieldId); }}
-          onChooseTiebreak={props.onChooseTiebreak ? (wahl) => { props.onChooseTiebreak?.(match.id, wahl); } : undefined}
-        />
       </main>
+
+      <ThumbBarArea
+        phase={phase}
+        layout={layout}
+        kannSteuern={kannSteuern}
+        istLeitung={istLeitung}
+        fieldName={fieldName}
+        steuerung={props.steuerung}
+        controls={cmd.controls}
+        onWeiterNaechstes={() => { props.onLoadNextMatch(match.fieldId); }}
+        onChooseTiebreak={props.onChooseTiebreak ? (wahl) => { props.onChooseTiebreak?.(match.id, wahl); } : undefined}
+      />
 
       <CockpitOverlays
         match={match}

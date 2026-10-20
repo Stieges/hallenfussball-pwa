@@ -20,6 +20,7 @@ import type { LiveMatch as CoreLiveMatch } from '../../../core/models/LiveMatch'
 import type { TournamentRole } from '../../auth/types/auth.types';
 import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
+import { RouterWrapper } from './routerWrapper';
 vi.mock('../../auth/hooks/useAuth', () => ({
   useAuth: () => ({ isAuthenticated: true, user: { id: 'user-1' } }),
 }));
@@ -111,7 +112,7 @@ function renderTab(onTournamentUpdate: ReturnType<typeof vi.fn<OnTournamentUpdat
       schedule={schedule}
       onTournamentUpdate={onTournamentUpdate}
       onLocalTournamentUpdate={vi.fn()}
-    />,
+    />, { wrapper: RouterWrapper }
   );
 }
 

@@ -201,6 +201,23 @@ describe('Hülle – Layout aus einer Quelle (Auflage 9)', () => {
     expect(screen.getByRole('toolbar')).toHaveAttribute('data-layout', erwartet);
   });
 
+  it('@SL-061 die Fläche trägt Tafel und beide Spalten, die Leiste steht unter der Fläche (nicht darin); am Laptop gehört die Liste zur Fläche', () => {
+    render(<LiveCockpit {...makeProps(makeLiveMatch())} />);
+    const flaeche = screen.getByTestId('cockpit-flaeche');
+    expect(within(flaeche).getByTestId('scoreboard')).toBeInTheDocument();
+    expect(within(flaeche).getByTestId('team-column-home')).toBeInTheDocument();
+    expect(within(flaeche).getByTestId('team-column-away')).toBeInTheDocument();
+    expect(within(flaeche).queryByRole('toolbar')).toBeNull();
+    expect(flaeche.closest('[data-layout="breit"]')).not.toBeNull();
+    expect(within(flaeche).getByText('Ereignisse')).toBeInTheDocument();
+  });
+
+  it('@SL-061 Gegenbeispiel: unter 1024 px steht keine Liste in der Fläche (sie öffnet sich über die Leiste)', () => {
+    breite(800);
+    render(<LiveCockpit {...makeProps(makeLiveMatch())} />);
+    expect(within(screen.getByTestId('cockpit-flaeche')).queryByText('Ereignisse')).toBeNull();
+  });
+
   it('@FU-080 bei 800 px öffnet „Ereignisse“ die Liste der Einträge', async () => {
     breite(800);
     render(<LiveCockpit {...makeProps(makeLiveMatch())} />);

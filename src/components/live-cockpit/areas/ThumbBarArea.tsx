@@ -34,7 +34,7 @@ export interface ThumbBarAreaProps {
   onChooseTiebreak?: (wahl: TiebreakWahl) => void;
 }
 
-const klebtUnten = { position: 'sticky', bottom: 0, zIndex: cssVars.zIndex.sticky } as const;
+const klebtUnten = { flex: 'none', position: 'sticky', bottom: 0, zIndex: cssVars.zIndex.sticky } as const;
 
 function plattformName(): string {
   if (typeof navigator === 'undefined') { return ''; }

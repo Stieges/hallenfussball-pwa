@@ -20,6 +20,8 @@ export interface LegacyPlayAreaProps {
   nextMatch: MatchSummary | null;
   isMobile: boolean;
   isDesktop: boolean;
+  /** Tafel, Hinweise und Ausgangs-Meldung: stehen über den Spalten, im Laptop-Layout links neben der Liste (Mockup Rahmen a). */
+  kopf: ReactNode;
   /** Zustand des Spiels: bestimmt den Platz der Spalten-Fläche. */
   zustand: CockpitZustand;
   /** Form des Strafstoßschießens (B-09b); ohne sie bleiben im Zustand `strafstoss` die Spalten stehen. */
@@ -35,26 +37,25 @@ export interface LegacyPlayAreaProps {
 const cls = (...names: Array<string | false>): string => names.filter(Boolean).join(' ');
 
 export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
-  const { match, nextMatch, isMobile, isDesktop, zustand, strafstossForm, columns, sidebar } = props;
+  const { match, nextMatch, isMobile, isDesktop, kopf, zustand, strafstossForm, columns, sidebar } = props;
   const spalte = (spaltenProps: LegacyPlayAreaProps['columns']['links']): ReactElement => (
     <TeamColumn {...spaltenProps} kompakt={isMobile} breit={isDesktop} />
   );
 
   return (
-    <>
-      {/* Next Banner */}
-      {nextMatch && (
-        <div className={styles.nextBanner}>
-          <span className={styles.nextLabel}>Nächstes →</span>
-          <span>
-            {nextMatch.homeTeam.name} vs {nextMatch.awayTeam.name}
-            {nextMatch.scheduledKickoff && ` (${nextMatch.scheduledKickoff})`}
-          </span>
-        </div>
-      )}
-
-      <div className={cls(styles.mainGrid, isDesktop && styles.mainGridDesktop)}>
-        <div className={cls(styles.scoreboard, isMobile && styles.scoreboardMobile)}>
+    <div className={cls(styles.flaeche, isDesktop && styles.flaecheBreit)} data-testid="cockpit-flaeche">
+      <div className={cls(styles.links, isDesktop && styles.linksBreit, isMobile && styles.linksMobile)}>
+        {kopf}
+        {nextMatch && (
+          <div className={styles.nextBanner}>
+            <span className={styles.nextLabel}>Nächstes →</span>
+            <span>
+              {nextMatch.homeTeam.name} vs {nextMatch.awayTeam.name}
+              {nextMatch.scheduledKickoff && ` (${nextMatch.scheduledKickoff})`}
+            </span>
+          </div>
+        )}
+        <div className={cls(styles.scoreboard, isMobile && styles.scoreboardMobile, isDesktop && styles.scoreboardBreit)}>
           {zustand === 'strafstoss' && strafstossForm ? strafstossForm : zustand !== 'entscheidung' && (
             /* Team-Spalten – „Seiten tauschen“ vertauscht nur die Anzeige */
             <div className={cls(styles.scoreRow, isMobile && styles.scoreRowMobile)}>
@@ -63,9 +64,11 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
             </div>
           )}
         </div>
+      </div>
 
-        {/* Sidebar - Desktop only */}
-        {isDesktop && (
+      {/* Liste der Einträge neben der Fläche – nur ab 1024 px, eigenes Scrollen (Plan LT-2) */}
+      {isDesktop && (
+        <div className={styles.ereignisse}>
           <Sidebar
             activePenalties={sidebar.activePenalties}
             events={match.events}
@@ -79,8 +82,8 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
             onEventEdit={sidebar.onEventEdit}
             matchId={match.id}
           />
-        )}
-      </div>
-    </>
+        </div>
+      )}
+    </div>
   );
 }

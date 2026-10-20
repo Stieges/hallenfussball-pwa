@@ -26,6 +26,8 @@ export interface HoldButtonProps {
   disabled?: boolean;
   /** Roving Tabindex der umgebenden Werkzeugleiste (S5): `-1` nimmt den Knopf aus der Tab-Reihenfolge. */
   tabIndex?: number;
+  /** Enge Leiste (Handy): Symbol über dem Text, kleinere Schrift und Abstände, damit nichts abgeschnitten wird. */
+  kompakt?: boolean;
 }
 
 const istHaltetaste = (key: string): boolean => key === 'Enter' || key === ' ';
@@ -55,6 +57,8 @@ const knopfStil: CSSProperties = {
   WebkitTouchCallout: 'none',
 };
 
+const kompaktStil: CSSProperties = { flexDirection: 'column', gap: 0, padding: cssVars.spacing.xs, fontSize: cssVars.fontSizes.sm };
+
 const spurStil: CSSProperties = {
   position: 'absolute',
   left: cssVars.spacing.sm,
@@ -82,7 +86,7 @@ const inhaltStil: CSSProperties = { position: 'relative', display: 'flex', align
 const zweiStil: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' };
 const subStil: CSSProperties = { fontSize: cssVars.fontSizes.xs, fontWeight: cssVars.fontWeights.medium, color: cssVars.colors.textSecondary };
 
-export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung, disabled = false, tabIndex }: HoldButtonProps) {
+export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung, disabled = false, tabIndex, kompakt = false }: HoldButtonProps) {
   const [fuellt, setFuellt] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zeigerRef = useRef<number | null>(null);
@@ -159,7 +163,7 @@ export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung
       aria-describedby={beschreibungId}
       disabled={disabled}
       tabIndex={tabIndex}
-      style={{ ...knopfStil, '--hold-duration': `${HOLD_MS}ms` } as CSSProperties}
+      style={{ ...knopfStil, ...(kompakt ? kompaktStil : {}), '--hold-duration': `${HOLD_MS}ms` } as CSSProperties}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerEnde}
       onPointerCancel={onPointerEnde}
@@ -173,7 +177,7 @@ export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung
       <span data-testid={`${testId}-spur`} style={spurStil} aria-hidden="true">
         <span data-testid={`${testId}-fuellung`} style={fuellungStil(fuellt)} />
       </span>
-      <span style={inhaltStil}>
+      <span style={kompakt ? { ...inhaltStil, flexDirection: 'column', gap: 0 } : inhaltStil}>
         {icon}
         <span style={sublabel ? zweiStil : undefined}>
           {label}

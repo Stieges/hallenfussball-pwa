@@ -11,6 +11,15 @@
   min-height: calc(100vh - 200px);
 }
 
+.containerVollbild {
+  /* Live-Bereich im Rahmen (Plan LT-2, A1): kein Außenabstand, nimmt die Resthöhe der Seite (K3: nie ein starres 100dvh) */
+  padding: 0;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .fieldSelector {
   max-width: 1080px;
   margin: 0 auto;

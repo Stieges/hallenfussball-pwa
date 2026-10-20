@@ -550,5 +550,14 @@
     "verlaengerung": "$t(sport:phases.overtime)",
     "goldenGoal": "$t(sport:phases.goldenGoal)",
     "strafstoss": "$t(sport:events.penaltyShootout)"
+  },
+  "rahmen": {
+    "zurueck": "Back",
+    "zurueckAria": "Back to the schedule",
+    "feldAria": "Choose field, now field {{feld}}",
+    "feld": "Field {{feld}}",
+    "online": "Online",
+    "offline": "Offline",
+    "tastenkuerzel": "Shortcuts"
   }
 }

@@ -88,6 +88,7 @@ vi.mock('../../../hooks/useCockpitExecution', () => ({
 import { ManagementTab } from '../ManagementTab';
 import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
+import { RouterWrapper } from './routerWrapper';
 const MATCH_ID = 'match-1';
 const HOME = { id: 'team-a', name: 'FC Alpha' };
 const AWAY = { id: 'team-b', name: 'SV Beta' };
@@ -149,7 +150,7 @@ describe('ManagementTab → LiveCockpit: Identität der normalisierten Ereigniss
     setLiveMatch({ elapsedSeconds: 30 });
     const { rerender } = render(
       <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
-    );
+    , { wrapper: RouterWrapper });
 
     // Neues Match-Objekt, identische Ereignisse — genau das, was ein Uhr-Tick erzeugt.
     setLiveMatch({ elapsedSeconds: 45 });
@@ -167,7 +168,7 @@ describe('ManagementTab → LiveCockpit: Identität der normalisierten Ereigniss
     setLiveMatch();
     const { rerender } = render(
       <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
-    );
+    , { wrapper: RouterWrapper });
     const before = seenEventArrays[seenEventArrays.length - 1];
 
     setLiveMatch({
