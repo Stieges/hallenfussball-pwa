@@ -85,3 +85,46 @@ describe('Mehr → Uhr korrigieren (K10)', () => {
     expect(screen.getByTestId('mehr-seiten-tauschen')).toBeInTheDocument();
   });
 });
+
+describe('S3 Steuer-Verlust bei offenem Uhr-Dialog und Blatt „Mehr“ (@SL-018)', () => {
+  async function laufend(user: ReturnType<typeof userEvent.setup>) {
+    const ansicht = render(<Harness turnier={ZWEI_ABSCHNITTE} />);
+    await anpfiff(user);
+    await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
+    zu(60_000);
+    await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent('Spielzeit 1:00'));
+    return ansicht;
+  }
+
+  it('@SL-018 verliert das Gerät die Steuer bei offenem Uhr-Dialog, schließt er, und es entsteht kein CLOCK_ADJUST', async () => {
+    const user = userEvent.setup();
+    const { rerender } = await laufend(user);
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    await user.click(screen.getByTestId('mehr-uhr-korrigieren'));
+    expect(await screen.findByRole('dialog', { name: /Spielzeit|Zeit/i })).toBeInTheDocument();
+    rerender(<Harness turnier={ZWEI_ABSCHNITTE} kannSteuern={false} />);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Spielzeit|Zeit/i })).toBeNull());
+    expect(korrekturen()).toHaveLength(0);
+  });
+
+  it('@SL-018 verliert das Gerät die Steuer bei offenem Blatt „Mehr“, schließt es', async () => {
+    const user = userEvent.setup();
+    const { rerender } = await laufend(user);
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    expect(screen.getByTestId('more-sheet')).toBeInTheDocument();
+    rerender(<Harness turnier={ZWEI_ABSCHNITTE} kannSteuern={false} />);
+    await waitFor(() => expect(screen.queryByTestId('more-sheet')).toBeNull());
+  });
+
+  it('@SL-018 Gegenbeispiel: mit weiter bestehender Steuer bleiben Uhr-Dialog und Blatt „Mehr“ offen', async () => {
+    const user = userEvent.setup();
+    const { rerender } = await laufend(user);
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    expect(screen.getByTestId('more-sheet')).toBeInTheDocument();
+    rerender(<Harness turnier={ZWEI_ABSCHNITTE} kannSteuern />);
+    expect(screen.getByTestId('more-sheet')).toBeInTheDocument();
+    await user.click(screen.getByTestId('mehr-uhr-korrigieren'));
+    rerender(<Harness turnier={ZWEI_ABSCHNITTE} kannSteuern />);
+    expect(screen.getByRole('dialog', { name: /Spielzeit|Zeit/i })).toBeInTheDocument();
+  });
+});

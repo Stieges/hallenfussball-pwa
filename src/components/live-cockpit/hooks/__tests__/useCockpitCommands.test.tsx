@@ -148,6 +148,27 @@ describe('useCockpitCommands – Uhr und Bedienung', () => {
   });
 });
 
+describe('useCockpitCommands – Steuer-Verlust (S3, @SL-018)', () => {
+  it('@SL-018 Rennen zwischen Klick und Effekt: ohne Steuer sendet „Beenden“ keinen Abpfiff', () => {
+    const { hook, props } = setup({ engineView: makePhaseView(), props: { kannSteuern: false } });
+    act(() => { hook.result.current.overlayHandlers.finishConfirmed(); });
+    expect(props.onFinish).not.toHaveBeenCalled();
+  });
+
+  it('@SL-018 Gegenbeispiel: mit Steuer sendet „Beenden“ den Abpfiff', () => {
+    const { hook, props } = setup({ engineView: makePhaseView() });
+    act(() => { hook.result.current.overlayHandlers.finishConfirmed(); });
+    expect(props.onFinish).toHaveBeenCalledWith('match-11');
+  });
+
+  it('@SL-018 Rennen: ohne Steuer übernimmt „Übernehmen“ im Uhr-Dialog keine Zeit (Altweg über onAdjustTime)', () => {
+    const onAdjustTime = vi.fn();
+    const { hook } = setup({ props: { kannSteuern: false, onAdjustTime } });
+    act(() => { hook.result.current.overlayHandlers.confirmTimeAdjust(240); });
+    expect(onAdjustTime).not.toHaveBeenCalled();
+  });
+});
+
 describe('useCockpitCommands – Ereignisse, Sperre, Entscheidung', () => {
   const tor = { id: 'e1', matchId: 'match-11', type: 'GOAL', timestampSeconds: 192, payload: { team: 'home', delta: 1 }, scoreAfter: { home: 1, away: 0 } };
 

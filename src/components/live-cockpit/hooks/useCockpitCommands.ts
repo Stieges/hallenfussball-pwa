@@ -140,7 +140,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   // bei Erfolg: die Liste der Einträge zeigt die Korrektur (Aufgabe 4.1); eine Ablehnung meldet die Engine.
   const korrigiereUhr = cockpitClock.korrigiereUhr;
   const handleTimeAdjust = useCallback((neuSekunden: number) => {
-    if (!match) { return; }
+    if (!match || readOnly) { return; } // ohne Steuer keine Korrektur, auch nicht im Rennen zwischen Klick und Effekt (S3, @SL-018)
     // Ohne Engine-Ansicht (Ersatz-Ansicht aus dem LiveMatch) bleibt der bisherige Weg über `onAdjustTime`, mit Meldung.
     if (!engineView) {
       // Im Countdown stellt der Nutzer die Restzeit ein: verstrichen = Dauer - Rest.
@@ -151,7 +151,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     }
     const { clockMs, previousClockMs } = korrekturUhrstaende(engineView, neuSekunden);
     void korrigiereUhr(clockMs, previousClockMs);
-  }, [match, engineView, korrigiereUhr, onAdjustTime, settings.timerDirection, showInfo, t]);
+  }, [match, readOnly, engineView, korrigiereUhr, onAdjustTime, settings.timerDirection, showInfo, t]);
 
   const sideHandlers = (side: Side): TeamSideHandlers => ({
     onTor: () => flows.tippeTor(side),
@@ -170,6 +170,13 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
   const openTimeAdjust = zeitKorrekturMoeglich && (engineView || onAdjustTime) ? () => setShowTimeAdjust(true) : undefined;
   // Der Abpfiff von Hand gilt nur laufend oder angehalten; endet das Spiel von selbst, schließt die Rückfrage ohne Befehl (RL2).
   useEffect(() => { if (finishFrage && !zeitKorrekturMoeglich) { setFinishFrage(null); } }, [finishFrage, zeitKorrekturMoeglich]);
+  // S3 (@SL-018): Verliert das Gerät die Steuer, schließen Rückfrage, Uhr-Dialog und „Mehr“ ohne Befehl; die Einstellungen bleiben (lesend).
+  useEffect(() => {
+    if (!readOnly) { return; }
+    setFinishFrage(null);
+    setShowTimeAdjust(false);
+    setShowMore(false);
+  }, [readOnly]);
   const zeitGrenzen = engineView
     ? {
       current: Math.floor(engineView.sectionElapsedMs / 1000),
@@ -193,7 +200,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     // M-1 FIX: nur die Ereignis-ID merken, das Ereignis wird frisch nachgeschlagen
     editEventFromLog: (event) => { setShowEventLog(false); flows.oeffne({ art: 'nummer', seite: null, eventId: event.id }); },
     closeMore: () => setShowMore(false),
-    finishConfirmed: () => { setFinishFrage(null); clock.pfeifeAb(); },
+    finishConfirmed: () => { setFinishFrage(null); if (!readOnly) { clock.pfeifeAb(); } },
     finishDeclined: () => setFinishFrage(null),
     closeSettings: () => setShowSettings(false),
     changeSettings: (newSettings) => { if (onUpdateSettings) { onUpdateSettings(newSettings); } },

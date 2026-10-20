@@ -169,3 +169,29 @@ describe('RL2 Spielende von selbst bei offener Rückfrage', () => {
     expect(matchEnds()).toBe(1);
   });
 });
+
+describe('S3 Steuer-Verlust bei offener Rückfrage (@SL-018, Spec § 4.4)', () => {
+  it('@SL-018 verliert das Gerät die Steuer, während „Abpfiff halten“ fragt, schließt die Rückfrage ohne Befehl: kein Spielende', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
+    await halte(screen.getByTestId('match-finish-button'));
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+    rerender(<Harness turnier={SPIEL_11} kannSteuern={false} />);
+    await waitFor(() => expect(rueckfrage()).toBeNull());
+    expect(screen.queryByRole('button', { name: 'Beenden' })).toBeNull();
+    expect(matchEnds()).toBe(0);
+    expect(zustand()).toHaveTextContent('Live');
+  });
+
+  it('@SL-018 Gegenbeispiel: behält das Gerät die Steuer (Rerender), bleibt die Rückfrage offen', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
+    await halte(screen.getByTestId('match-finish-button'));
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+    rerender(<Harness turnier={SPIEL_11} kannSteuern />);
+    expect(rueckfrage()).not.toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Beenden' }));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    expect(matchEnds()).toBe(1);
+  });
+});
