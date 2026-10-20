@@ -165,6 +165,11 @@ describe('A-12a Gruppenzahl muss bekannt sein (C-GENERATOR-GRUPPENZAHL-DEFAULT)'
     expect(() => buildFinalsTemplate(2, [8], { preset: 'top-4' })).toThrow(/Gruppenzahl/);
   });
 
+  it('@TM-142 Gegenbeispiel: „Top 4“ mit einer Gruppe aus 3 Teams ist ein sichtbarer Fehler der Vorlage', () => {
+    expect(() => buildFinalsTemplate(1, [3], { preset: 'top-4' })).toThrow(FinalsTemplateError);
+    expect(() => buildFinalsTemplate(1, [3], { preset: 'top-4' })).toThrow(/mindestens 4 Teams/);
+  });
+
   it('A-12a Gegenbeispiel: „Keine Finalrunde“ braucht keine Gruppenzahl', () => {
     expect(buildFinalsTemplate(undefined, [4, 4], { preset: 'none' })).toEqual([]);
   });

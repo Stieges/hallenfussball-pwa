@@ -13,7 +13,7 @@ import { generateGroupPhaseScheduleWithReport } from './fairScheduler'
 import { effectiveHostTeamIds } from '../models/hostTeams'
 import { generatePlayoffSchedule } from './playoffScheduler'
 import { legacyFinalsPreset } from './playoffGenerator'
-import { assertValidFinalsPlan, buildFinalsTemplate } from './finalsTemplates'
+import { assertValidFinalsPlan, buildFinalsTemplate, isFinalsPlanError } from './finalsTemplates'
 import { getUniqueGroups } from '../../utils/groupHelpers'
 import { assignReferees } from './refereeAssigner'
 import { transitionalTeamRef } from '../models/matchSlot'
@@ -384,12 +384,18 @@ function generateFinalMatches(
   return finalMatches
 }
 
-/** Lesepfad: Finalrunde nachträglich erzeugen, bei einer nicht erzeugbaren Vorlage keine (gespeicherte Spiele bleiben). */
+/**
+ * Lesepfad: Finalrunde nachträglich erzeugen, bei einer nicht erzeugbaren Vorlage keine (gespeicherte Spiele bleiben).
+ * Nur Vorlagen- und Prüffehler werden abgefangen; ein Programmfehler bleibt sichtbar.
+ */
 function finalMatchesOrNone(tournament: Tournament, groupStageMatches: Match[], startTime: Date): Match[] {
   try {
     return generateFinalMatches(tournament, groupStageMatches, startTime)
-  } catch {
-    return []
+  } catch (error) {
+    if (isFinalsPlanError(error)) {
+      return []
+    }
+    throw error
   }
 }
 

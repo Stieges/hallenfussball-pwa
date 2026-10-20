@@ -113,6 +113,13 @@ describe('A-12a Lesepfade bleiben tolerant (Prüfung nur beim Erzeugen/Anlegen)'
     expect(generateFullSchedule(stored).allMatches.length).toBe(stored.matches.length);
   });
 
+  it('A-12a „Top 4“ mit einer Gruppe aus 3 Teams gespeichert, Finalrunde fehlt: kein Absturz, gespeicherte Spiele bleiben', () => {
+    const teams = HALLENCUP_TEAMS.slice(0, 3).map((t) => ({ ...t, group: 'A' }));
+    const stored = storedWithoutFinals({ teams, numberOfTeams: 3, numberOfGroups: 1 });
+
+    expect(generateFullSchedule(stored).allMatches.length).toBe(stored.matches.length);
+  });
+
   it('A-12a Gegenbeispiel: dasselbe Turnier OHNE gespeicherte Spiele (Anlegen) meldet den Fehler sichtbar', () => {
     const teams = HALLENCUP_TEAMS.map((t, i) => ({ ...t, group: ['A', 'B', 'C'][i % 3] }));
     expect(() => generateFullSchedule(hallencupTournament({ teams, numberOfGroups: 3 }))).toThrow(/nur für 1 oder 2 Gruppen/);

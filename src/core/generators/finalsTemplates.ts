@@ -30,7 +30,8 @@ export type FinalsTemplateErrorCode =
   | 'PLACEMENT_UNKNOWN'
   | 'PLACEMENT_NEEDS_SEMIFINALS'
   | 'PLACEMENT_NEEDS_TWO_GROUPS'
-  | 'PLACEMENT_GROUP_TOO_SMALL';
+  | 'PLACEMENT_GROUP_TOO_SMALL'
+  | 'GROUP_TOO_SMALL';
 
 /** Die Einstellung der Finalrunde lässt sich so nicht erzeugen; `message` ist für Menschen (Stelle und Grund). */
 export class FinalsTemplateError extends Error {
@@ -123,8 +124,17 @@ export function buildFinalsTemplate(
   }
   const groups = checkGroupCount(groupCount, teamsPerGroup);
   checkPlacements(config, groups, teamsPerGroup);
+  // @TM-142: „Top 4“ mit einer Gruppe braucht vier Teams (C-TOP4-ZU-WENIG-TEAMS)
+  if (groups === 1 && config.preset === 'top-4' && teamsPerGroup[0] < 4) {
+    throw new FinalsTemplateError('GROUP_TOO_SMALL', `Top 4 mit einer Gruppe braucht mindestens 4 Teams (die Gruppe hat ${teamsPerGroup[0]}).`);
+  }
   const sizes: GroupSizeInfo = Object.fromEntries(teamsPerGroup.map((size, index) => [getGroupLabel(index), size]));
   return generatePlayoffDefinitions(groups, config, sizes);
+}
+
+/** Fehler einer nicht erzeugbaren Finalrunde (Einstellung oder Herkunft) – nur diese fängt der Lesepfad ab. */
+export function isFinalsPlanError(error: unknown): error is FinalsTemplateError | FinalsPlanInvalidError {
+  return error instanceof FinalsTemplateError || error instanceof FinalsPlanInvalidError;
 }
 
 /** Prüft die geplante Finalrunde (A-12b `validateFinalsPlan`); wirft `FinalsPlanInvalidError` mit allen Stellen. */
