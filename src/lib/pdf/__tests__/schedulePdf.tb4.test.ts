@@ -9,8 +9,8 @@ import { generateFullSchedule } from '../../../core/generators';
 import { calculateStandings, calculateStandingsPerGroup, getMergedFinalRanking } from '../../../utils/calculations';
 import type { Tournament } from '../../../types/tournament';
 import { DATA, GD_FIRST_ORDER, NAME } from '../../../core/standings/__tests__/fixtures';
-import { DATEN_029, DATEN_063, mitGleichemPlatz, zweiGruppenWaging } from '../../../core/standings/__tests__/tb4Kit';
-import { jgj } from '../../../core/standings/__tests__/decisionTestKit';
+import { DATEN_029, mitAnnahme, zweiGruppenWaging } from '../../../core/standings/__tests__/tb4Kit';
+import { jgj, nikolaus } from '../../../core/standings/__tests__/decisionTestKit';
 import { flatText, renderSchedulePdf } from './pdfText';
 
 vi.mock('jspdf', async (importOriginal) => {
@@ -72,24 +72,24 @@ async function abschlusstabelle(tournament: Tournament): Promise<string[]> {
   return text.slice(von);
 }
 
-describe('TB-4 PDF Abschlusstabelle mit geteiltem Gruppenplatz (Variante C)', () => {
-  it('@ET-020 drei Teams lassen den gleichen Platz: Abschlusstabelle 1, 2, 2, 2, 5; Gegenbeispiel ohne „gleichen Platz lassen“ teilt nicht', async () => {
-    const mit = await abschlusstabelle(await mitGleichemPlatz(jgj('WOUMNB', DATA.W2A_044), ['U', 'W', 'O']));
+describe('TB-4 PDF Abschlusstabelle mit geteiltem Gruppenplatz („Ergebnis so akzeptieren“)', () => {
+  it('@ET-020 drei Teams akzeptieren das Ergebnis: Abschlusstabelle 1, 2, 2, 2, 5; Gegenbeispiel ohne Annahme teilt nicht', async () => {
+    const mit = await abschlusstabelle(await mitAnnahme(jgj('WOUMNB', DATA.W2A_044), ['U', 'W', 'O']));
     expect([NAME.M, NAME.U, NAME.W, NAME.O, NAME.B].map((n) => ziffer(mit, n))).toEqual(['1', '2', '2', '2', '5']);
 
     const ohne = await abschlusstabelle(jgj('WOUMNB', DATA.W2A_044));
     expect([NAME.M, NAME.W, NAME.O, NAME.U, NAME.B].map((n) => ziffer(ohne, n))).toEqual(['1', '2', '3', '4', '5']);
   });
 
-  it('@ET-029 Nord und Ufer lassen den gleichen Platz 2: 1, 2, 2, 4', async () => {
-    const mit = await abschlusstabelle(await mitGleichemPlatz(jgj('MNUWOB', DATEN_029), ['N', 'U']));
+  it('@ET-029 Nord und Ufer akzeptieren das Ergebnis auf Platz 2: 1, 2, 2, 4', async () => {
+    const mit = await abschlusstabelle(await mitAnnahme(jgj('MNUWOB', DATEN_029), ['N', 'U']));
     expect([NAME.M, NAME.N, NAME.U, NAME.W].map((n) => ziffer(mit, n))).toEqual(['1', '2', '2', '4']);
   });
 
-  it('@W2A-063 Waging blau und Petting lassen den gleichen Platz 5: beide 5', async () => {
-    const mit = await abschlusstabelle(await mitGleichemPlatz(jgj('MNUWXP', DATEN_063), ['X', 'P']));
-    expect([NAME.X, NAME.P].map((n) => ziffer(mit, n))).toEqual(['5', '5']);
-    const ohne = await abschlusstabelle(jgj('MNUWXP', DATEN_063));
-    expect([NAME.X, NAME.P].map((n) => ziffer(ohne, n))).toEqual(['5', '6']);
+  it('@W2A-063 Nikolaus, nur Platz 1 und 2: Petting und Otting akzeptieren das Ergebnis – 3, 3, Fridolfing 5, Waging blau 6', async () => {
+    const mit = await abschlusstabelle(await mitAnnahme(nikolaus([1, 2]), ['P', 'D']));
+    expect([NAME.P, NAME.D, NAME.F, NAME.X].map((n) => ziffer(mit, n))).toEqual(['3', '3', '5', '6']);
+    const ohne = await abschlusstabelle(nikolaus([1, 2]));
+    expect([NAME.P, NAME.D].map((n) => ziffer(ohne, n))).toEqual(['3', '4']);
   });
 });

@@ -8,6 +8,7 @@ import type { supabase } from '../../lib/supabase';
 import type { StandingDecision } from '../../types/tournament';
 import type { Json } from '../../types/supabase';
 import { OptimisticLockError, RepositoryError } from '../errors';
+import { parseStandingDecisions } from '../models/schemas/StandingDecisionSchema';
 
 type Client = NonNullable<typeof supabase>;
 
@@ -28,7 +29,8 @@ export async function writeStandingDecisionsToCloud(
     throw new OptimisticLockError(CONFLICT);
   }
   const current = row.config !== null && typeof row.config === 'object' && !Array.isArray(row.config) ? row.config : {};
-  const config = { ...current, standingDecisions: decisions } as unknown as Json;
+  // Nur, was das Schema kennt: Altwerte mit Person, Zeit und Grund aus einer lokalen Kopie kommen nie ins config (@W2A-072).
+  const config = { ...current, standingDecisions: parseStandingDecisions(decisions) ?? [] } as unknown as Json;
   const { data: updated, error: writeError } = await client
     .from('tournaments')
     .update({ config, version: expectedVersion + 1, updated_at: new Date().toISOString() })

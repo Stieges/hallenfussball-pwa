@@ -503,8 +503,9 @@ interface TournamentConfig {
   hostTeamIds?: string[];
   openingMode?: string;
 
-  // Paket TB: Gleichstands-Entscheidungen der Turnierleitung (standingDecisionsConfig.ts)
+  // Paket TB: Gleichstands-Entscheidungen der Turnierleitung, auszuspielende Plätze (standingDecisionsConfig.ts)
   standingDecisions?: unknown[];
+  placementsToPlayOut?: unknown;
 
   // Wizard state
   lastVisitedStep?: number;
