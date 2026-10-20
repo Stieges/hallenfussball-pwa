@@ -1,6 +1,6 @@
 /**
  * Verbindungsanzeige im schmalen Kopf (Plan LT-2, @SL-140, @SL-168): am Handy bei Netz nur der Punkt, ohne Netz mit Wort, wartenden Einträgen
- * und „Verbinden“; nach der Rückkehr kurz „Wieder verbunden“. Das Molekül `VerbindungsStatus` hat eigene Tests.
+ * und „Verbinden“, während des Versuchs „Verbinde …“ in derselben Pille; „Wieder verbunden“ gibt es nicht. Das Molekül `VerbindungsStatus` hat eigene Tests.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -12,25 +12,25 @@ vi.unmock('i18next');
 vi.unmock('react-i18next');
 await initRealDeI18n();
 
-const zustand = vi.hoisted(() => ({ mobil: true, online: true, wasOffline: false, wartend: 0, verbinden: vi.fn() }));
+const zustand = vi.hoisted(() => ({ mobil: true, online: true, wartend: 0, verbinden: vi.fn(), laeuft: false }));
 vi.mock('../../../../hooks/useBreakpoint', () => ({ useBreakpoint: () => ({ isMobile: zustand.mobil }) }));
-vi.mock('../../../../hooks/useOnlineStatus', () => ({ useOnlineStatus: () => ({ isOnline: zustand.online, wasOffline: zustand.wasOffline }) }));
+vi.mock('../../../../hooks/useOnlineStatus', () => ({ useOnlineStatus: () => ({ isOnline: zustand.online, wasOffline: false }) }));
 vi.mock('../../../../features/match-engine/useEngineOutboxSummary', () => ({ useEngineOutboxSummary: () => ({ pendingCount: zustand.wartend }) }));
-vi.mock('../../../../features/match-engine/useVerbinden', () => ({ useVerbinden: () => zustand.verbinden }));
+vi.mock('../../../../features/match-engine/useVerbindenVersuch', () => ({ useVerbindenVersuch: () => ({ verbinde: zustand.verbinden, laeuft: zustand.laeuft }) }));
 
 describe('ConnectionPill', () => {
-  beforeEach(() => { zustand.mobil = true; zustand.online = true; zustand.wasOffline = false; zustand.wartend = 0; zustand.verbinden = vi.fn(); });
+  beforeEach(() => { zustand.mobil = true; zustand.online = true; zustand.wartend = 0; zustand.verbinden = vi.fn(); zustand.laeuft = false; });
 
-  it('@SL-140 Handy mit Netz: nur der Punkt, zugänglicher Name „Online“', () => {
+  it('@SL-140 Handy mit Netz: nur der Punkt, Ansage „Verbunden“', () => {
     render(<ConnectionPill tournamentId="t-1" />);
-    expect(screen.getByRole('status')).toHaveTextContent('Online');
-    expect(screen.queryByText('Online', { ignore: '[role="status"]' })).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent('Verbunden');
+    expect(screen.queryByText('Verbunden', { ignore: '[role="status"]' })).toBeNull();
   });
 
-  it('@SL-140 Gegenbeispiel Tablet/Laptop mit Netz: Text „Online“ sichtbar', () => {
+  it('@SL-140 Gegenbeispiel Tablet/Laptop mit Netz: Text „Verbunden“ sichtbar', () => {
     zustand.mobil = false;
     render(<ConnectionPill tournamentId="t-1" />);
-    expect(screen.getByText('Online', { ignore: '[role="status"]' })).toBeInTheDocument();
+    expect(screen.getByText('Verbunden', { ignore: '[role="status"]' })).toBeInTheDocument();
   });
 
   it('@SL-168 ohne Netz mit 3 wartenden Einträgen: „Offline“, „3 Einträge warten“, Tippen auf „Verbinden“ stößt die Übertragung an', async () => {
@@ -57,14 +57,31 @@ describe('ConnectionPill', () => {
     expect(screen.queryByRole('button', { name: 'Verbinden' })).toBeNull();
   });
 
-  it('@SL-168 ist das Netz zurück, steht kurz „Wieder verbunden“ (auch am Handy), sonst bleibt „Offline“', () => {
-    zustand.wasOffline = true;
+  it('@SL-168 nicht verbunden: „Offline“ und „Verbinden“; nach dem Netz kein „Wieder verbunden“ (auch am Handy), nur wieder der Punkt', () => {
+    zustand.online = false;
     const { unmount } = render(<ConnectionPill tournamentId="t-1" />);
-    expect(screen.getByTestId('cockpit-verbindung')).toHaveTextContent('Wieder verbunden');
-    unmount();
-    zustand.online = false; zustand.wasOffline = false;
-    render(<ConnectionPill tournamentId="t-1" />);
     expect(screen.getByTestId('cockpit-verbindung')).toHaveTextContent('Offline');
-    expect(screen.getByTestId('cockpit-verbindung')).not.toHaveTextContent('Wieder verbunden');
+    unmount();
+    zustand.online = true;
+    render(<ConnectionPill tournamentId="t-1" />);
+    expect(screen.getByTestId('cockpit-verbindung')).not.toHaveTextContent(/Wieder verbunden|Offline/);
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('@SL-168 Versuch läuft: in derselben Pille steht „Verbinde …“ mit „Offline“ und „3 Einträge warten“, auch wenn das Netz schon zurück ist; danach der Punkt', () => {
+    zustand.online = false; zustand.wartend = 3; zustand.laeuft = true;
+    const { unmount } = render(<ConnectionPill tournamentId="t-1" />);
+    expect(screen.getByRole('button', { name: 'Verbinde …' })).toHaveTextContent('3 Einträge warten');
+    expect(screen.getByRole('status')).toHaveTextContent('Verbinde …');
+    unmount();
+    zustand.online = true;
+    const noch = render(<ConnectionPill tournamentId="t-1" />);
+    expect(screen.getByTestId('cockpit-verbindung')).toHaveAttribute('data-status', 'offline');
+    expect(screen.getByRole('button', { name: 'Verbinde …' })).toBeInTheDocument();
+    noch.unmount();
+    zustand.laeuft = false;
+    render(<ConnectionPill tournamentId="t-1" />);
+    expect(screen.getByTestId('cockpit-verbindung')).toHaveAttribute('data-status', 'online');
+    expect(screen.getByTestId('cockpit-verbindung')).not.toHaveTextContent(/Wieder verbunden|Verbinde/);
   });
 });

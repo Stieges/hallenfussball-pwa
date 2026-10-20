@@ -4,7 +4,7 @@
  * @SL-140 (schmaler Kopf, keine App-Navigation, keine Fußzeile, „Zurück“ zum Spielplan, Uhr läuft weiter), @SL-005/@SL-070 (Wiederanpfiff im
  * ersten Bildschirm), @SL-157/@SL-158 (Abpfiff halten, kurzer Tipp nicht), K2 (Offline-Hinweis verdeckt die Leiste nicht), K3 (Hinweis im Fluss
  * schiebt die Leiste nicht aus dem Bild), K4 (Tastenwiederholung der Haltetaste), K13 (fünf Knöpfe ≥ 44 px, nichts abgeschnitten),
- * @SL-155/@SL-156/@SL-160/@SL-161 (Zeile „Nächstes“), N1 (@SL-061 + @SL-168: ohne Netz und bei „Wieder verbunden“ bleibt der Kopf gleich hoch).
+ * @SL-155/@SL-156/@SL-160/@SL-161 (Zeile „Nächstes“), N1 (@SL-061 + @SL-168: verbunden, nicht verbunden und „Verbinde …“ – der Kopf bleibt gleich hoch).
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
@@ -162,64 +162,108 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
     await context.setOffline(false);
   });
 
-  test('@SL-168 ohne Netz bietet der schmale Kopf „Verbinden“ (≥ 44 px, Leiste bleibt frei); ist das Netz zurück, steht kurz „Wieder verbunden“ und der Knopf ist weg', async ({ page, context, seedIndexedDB }, testInfo) => {
+  test('@SL-168 ohne Netz bietet der schmale Kopf „Verbinden“ (≥ 44 px, Leiste bleibt frei); beim Tippen steht in derselben Pille „Verbinde …“, klappt es nicht, wieder „Verbinden“; ist das Netz zurück, verschwindet die Pille, kein „Wieder verbunden“', async ({ page, context, seedIndexedDB }, testInfo) => {
     await seedIndexedDB({ tournaments: [cup()] });
     await anpfeifen(page);
     const status = page.getByTestId('cockpit-verbindung');
-    await expect(page.getByTestId('cockpit-verbindung-verbinden')).toHaveCount(0);
+    const knopf = page.getByTestId('cockpit-verbindung-verbinden');
+    await expect(knopf).toHaveCount(0);
     await context.setOffline(true);
     await expect(status).toHaveAttribute('data-status', 'offline');
-    const knopf = page.getByTestId('cockpit-verbindung-verbinden');
     await expect(knopf).toBeVisible();
+    await expect(status).toContainText('Offline');
     const box = await knopf.boundingBox();
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
     const breite = page.viewportSize()?.width ?? 0;
     expect((box?.x ?? 0) + (box?.width ?? 0), 'der Knopf liegt im Bild').toBeLessThanOrEqual(breite);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'kein seitliches Scrollen').toBe(true);
     await bild(page, `${testInfo.project.name}-sl168-offline`);
+
     await knopf.click();
+    await expect(knopf).toContainText('Verbinde …');
+    await expect(status).toContainText('Offline');
+    // Klappt es nicht (kein Netz), steht wieder „Verbinden“
+    await expect(knopf).not.toContainText('Verbinde …');
+    await expect(knopf).toContainText('Verbinden');
+    await expect(status).toContainText('Offline');
+
     await context.setOffline(false);
     await expect(status).toHaveAttribute('data-status', 'online');
-    await expect(status).toContainText(/Wieder verbunden|Reconnected/);
-    await expect(page.getByTestId('cockpit-verbindung-verbinden')).toHaveCount(0);
-    await bild(page, `${testInfo.project.name}-sl168-wieder-verbunden`);
+    await expect(knopf).toHaveCount(0);
+    await expect(status).not.toContainText(/Wieder verbunden|Reconnected/);
+    await expect(page.getByText(/Wieder verbunden|Reconnected/)).toHaveCount(0);
   });
 
   for (const felder of [1, 2]) {
-    test(`@SL-061 @SL-168 ohne Netz mit 3 wartenden Einträgen und bei „Wieder verbunden“ (${felder} Feld${felder > 1 ? 'er' : ''}): der Kopf bleibt gleich hoch, alle Tasten liegen zwischen Kopf und Leiste`, async ({ page, context, seedIndexedDB }, testInfo) => {
+    const feldText = `${felder} Feld${felder > 1 ? 'er' : ''}`;
+    test(`@SL-061 @SL-168 Kopf gleich hoch in allen drei Anzeigen – verbunden, nicht verbunden mit 3 wartenden Einträgen, „Verbinde …“ (${feldText}); alle Tasten zwischen Kopf und Leiste`, async ({ page, context, seedIndexedDB }, testInfo) => {
       await seedIndexedDB({ tournaments: [cup({ felder })] });
       await anpfeifen(page);
       await wartendeEintraege(page, 3);
       const kopf = page.getByTestId('cockpit-slim-header');
       const status = page.getByTestId('cockpit-verbindung');
+      const knopf = page.getByTestId('cockpit-verbindung-verbinden');
       const hoehe = async () => (await kopf.boundingBox())?.height ?? 0;
       const tasteOben = async () => (await page.getByTestId('goal-button-home').boundingBox())?.y ?? 0;
+      const pruefe = async (anzeige: string) => {
+        await anAnfangRollen(page);
+        await pruefeZwischenKopfUndLeiste(page);
+        expect(Math.abs((await hoehe()) - hoeheOnline), `Kopfhöhe ${anzeige} unverändert`).toBeLessThanOrEqual(1);
+        expect(Math.abs((await tasteOben()) - tasteOnline), `die Tasten springen ${anzeige} nicht`).toBeLessThanOrEqual(1);
+      };
       await anAnfangRollen(page);
       await pruefeZwischenKopfUndLeiste(page);
       const hoeheOnline = await hoehe();
       const tasteOnline = await tasteOben();
+      await expect(knopf).toHaveCount(0);
       await bild(page, `${testInfo.project.name}-n1-online-${felder}f`);
 
       await context.setOffline(true);
       await expect(status).toHaveAttribute('data-status', 'offline');
       await expect(status).toContainText(/3 Einträge warten/);
-      await expect(page.getByTestId('cockpit-verbindung-verbinden')).toBeVisible();
-      await anAnfangRollen(page);
-      await pruefeZwischenKopfUndLeiste(page);
-      expect(Math.abs((await hoehe()) - hoeheOnline), 'Kopfhöhe ohne Netz unverändert').toBeLessThanOrEqual(1);
-      expect(Math.abs((await tasteOben()) - tasteOnline), 'die Tasten springen ohne Netz nicht').toBeLessThanOrEqual(1);
+      await expect(knopf).toBeVisible();
+      await pruefe('ohne Netz');
       await bild(page, `${testInfo.project.name}-n1-offline-${felder}f`);
 
+      // Tippen: in derselben Pille steht „Verbinde …“, der Kopf springt nicht
+      await knopf.click();
+      await expect(knopf).toContainText('Verbinde …');
+      await pruefe('bei „Verbinde …“');
+      await expect(knopf).toContainText('Verbinde …');
+      await bild(page, `${testInfo.project.name}-n1-verbinde-${felder}f`);
+
+      // Klappt es nicht: wieder „Verbinden“ mit „Offline“ und „3 Einträge warten“, Kopf unverändert
+      await expect(knopf).not.toContainText('Verbinde …');
+      await expect(knopf).toContainText('Verbinden');
+      await expect(status).toContainText(/3 Einträge warten/);
+      await pruefe('nach dem Fehlversuch');
+
+      // Netz zurück: die Pille verschwindet, der Kopf zeigt nur den Punkt, kein „Wieder verbunden“
       await context.setOffline(false);
-      await expect(status).toContainText(/Wieder verbunden|Reconnected/);
-      await anAnfangRollen(page);
-      await pruefeZwischenKopfUndLeiste(page);
-      expect(Math.abs((await hoehe()) - hoeheOnline), 'Kopfhöhe bei „Wieder verbunden“ unverändert').toBeLessThanOrEqual(1);
-      expect(Math.abs((await tasteOben()) - tasteOnline), 'die Tasten springen bei „Wieder verbunden“ nicht').toBeLessThanOrEqual(1);
-      await expect(status).toContainText(/Wieder verbunden|Reconnected/);
-      await bild(page, `${testInfo.project.name}-n1-wieder-verbunden-${felder}f`);
+      await expect(status).toHaveAttribute('data-status', 'online');
+      await expect(knopf).toHaveCount(0);
+      await expect(page.getByText(/Wieder verbunden|Reconnected/)).toHaveCount(0);
+      await pruefe('nach der Rückkehr');
     });
   }
+
+  test('@SL-168 klappt der Versuch (Netz kommt während „Verbinde …“ zurück), verschwindet die Pille danach ohne „Wieder verbunden“ und der Kopf bleibt gleich hoch', async ({ page, context, seedIndexedDB }) => {
+    await seedIndexedDB({ tournaments: [cup()] });
+    await anpfeifen(page);
+    await wartendeEintraege(page, 3);
+    const kopf = page.getByTestId('cockpit-slim-header');
+    const knopf = page.getByTestId('cockpit-verbindung-verbinden');
+    const hoeheOnline = (await kopf.boundingBox())?.height ?? 0;
+    await context.setOffline(true);
+    await expect(knopf).toBeVisible();
+    await knopf.click();
+    await expect(knopf).toContainText('Verbinde …');
+    await context.setOffline(false);
+    await expect(page.getByTestId('cockpit-verbindung')).toHaveAttribute('data-status', 'online');
+    await expect(knopf).toHaveCount(0);
+    await expect(page.getByText(/Wieder verbunden|Reconnected|Verbinde …/)).toHaveCount(0);
+    expect(Math.abs(((await kopf.boundingBox())?.height ?? 0) - hoeheOnline)).toBeLessThanOrEqual(1);
+  });
 
   test('H8 @OB-030 Feldwahl ohne anstehendes Spiel: Feld 2 ist leer, die Feldwahl steht über der Tafel und lässt zurück zu Feld 1 wechseln', async ({ page, seedIndexedDB }, testInfo) => {
     await seedIndexedDB({ tournaments: [cup({ felder: 2 })] });

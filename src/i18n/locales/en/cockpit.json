@@ -556,10 +556,10 @@
     "zurueckAria": "Back to the schedule",
     "feldAria": "Choose field, now field {{feld}}",
     "feld": "Field {{feld}}",
-    "online": "Online",
+    "online": "Connected",
     "offline": "Offline",
     "verbinden": "Connect",
-    "wiederVerbunden": "Reconnected",
+    "verbindet": "Connecting …",
     "tastenkuerzel": "Shortcuts"
   },
   "naechstes": {

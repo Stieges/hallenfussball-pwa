@@ -556,10 +556,10 @@
     "zurueckAria": "Zurück zum Spielplan",
     "feldAria": "Feld wählen, jetzt Feld {{feld}}",
     "feld": "Feld {{feld}}",
-    "online": "Online",
+    "online": "Verbunden",
     "offline": "Offline",
     "verbinden": "Verbinden",
-    "wiederVerbunden": "Wieder verbunden",
+    "verbindet": "Verbinde …",
     "tastenkuerzel": "Tastenkürzel"
   },
   "naechstes": {
