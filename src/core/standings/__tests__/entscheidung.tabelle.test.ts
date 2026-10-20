@@ -99,6 +99,22 @@ describe('TB-3 Entscheidung in der Tabelle', () => {
     expect(result.rows.some((r) => r.decision !== undefined)).toBe(false);
   });
 
+  it('@W2A-052 wächst der Gleichstand auf drei völlig gleiche Teams, gilt die Zwei-Team-Entscheidung nicht: alle drei markiert', async () => {
+    // Gegengerechnet: vorher Ufer 8 Punkte (+2) allein vor West/Ost (8, +1, direkt 1:1); nach der Korrektur Ufer – Berg
+    // 2:0 → 1:0 sind West, Ost und Ufer nach allen Kriterien gleich (untereinander drei Mal 1:1).
+    const daten = 'W–O 1:1; O–U 1:1; U–W 1:1; W–N 1:0; W–B 1:0; O–N 1:0; O–B 1:0; U–N 1:0; U–B 2:0; M–W 1:0; M–O 1:0; M–U 1:0; M–N 1:0; M–B 1:0; N–B 1:1';
+    const repo = new MemoryRepo(jgj('WOUMNB', daten));
+    expect((await repo.service(['e-west']).decide(repo.tournament.id, shootout('W', 'O', 4, 3), OLLI)).ok).toBe(true);
+    expect(names(table(repo.tournament)).slice(1, 4)).toEqual([NAME.U, NAME.W, NAME.O]);
+
+    repo.correct('U', 'B', 1, 0);
+    const result = rankTournamentGroup(repo.tournament, '');
+    expect(result.staleDecisionIds).toEqual(['e-west']);
+    expect(['W', 'O', 'U'].map((k) => row(result.rows, k as Key).decisionNeeded)).toEqual([true, true, true]);
+    expect(['W', 'O', 'U'].map((k) => row(result.rows, k as Key).place)).toEqual([2, 2, 2]);
+    expect(result.rows.some((r) => r.decision !== undefined)).toBe(false);
+  });
+
   it('@W2A-053 eine Korrektur, die den Gleichstand nicht berührt, lässt die Entscheidung stehen (Kammer vor Waging rot, ohne Markierung)', async () => {
     const repo = new MemoryRepo(jgj('RKMUNO', DATA.W2A_052));
     expect((await repo.service(['e-1']).decide(repo.tournament.id, shootout('K', 'R', 4, 3), OLLI)).ok).toBe(true);
