@@ -5,3 +5,4 @@
 # Format je Zeile: <dateiname> <frist YYYY-MM-DD> <commit-vorher (origin/main vor dem Merge)>
 # Nach dem Einspielen im Fenster entfernt der Controller die Zeile (Freigabe-Unterlage des Pakets, § 2).
 20261110_005_result_entry_forfeit.sql 2026-11-10 a8bd2d6a13da7af7c05ff07828aa601ef1b1b2e8
+20261110_006_group_completion.sql 2026-11-10 3c0451b61ba14369c692955764ed2a949268256e
