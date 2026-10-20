@@ -1201,8 +1201,8 @@
     "settings": {
       "title": "Tournament rules: ties",
       "hint": "The setting takes effect immediately in the table and the final ranking.",
-      "save": "Save",
-      "reset": "Reset",
+      "save": "Apply places",
+      "reset": "Discard change",
       "readOnly": "Only the tournament organiser changes this setting.",
       "confirmTitle": "Acceptance will be withdrawn",
       "confirmIntro": "You changed the places that must be played out.",

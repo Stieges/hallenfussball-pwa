@@ -1201,8 +1201,8 @@
     "settings": {
       "title": "Turnierregeln: Gleichstand",
       "hint": "Die Einstellung wirkt sofort auf Tabelle und Endstand.",
-      "save": "Speichern",
-      "reset": "Zurücksetzen",
+      "save": "Plätze übernehmen",
+      "reset": "Änderung verwerfen",
       "readOnly": "Nur die Turnierleitung ändert diese Einstellung.",
       "confirmTitle": "Annahme wird aufgehoben",
       "confirmIntro": "Du hast die auszuspielenden Plätze geändert.",
