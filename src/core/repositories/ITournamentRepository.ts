@@ -1,4 +1,5 @@
 import { Tournament, MatchUpdate } from '../models/types';
+import type { StandingDecision } from '../../types/tournament';
 
 /**
  * Interface for Data Access
@@ -31,6 +32,13 @@ export interface ITournamentRepository {
      * Useful for schedule generation or mass-edits.
      */
     updateMatches(tournamentId: string, updates: MatchUpdate[], baseVersion?: number): Promise<void>;
+
+    /**
+     * Paket TB (Plan v2 § 3.2, R-TB-5): schreibt NUR `standingDecisions` im Turnier-`config`, mit Versionsprüfung
+     * (`expectedVersion` = gelesene Version). Konflikt → `OptimisticLockError`; ohne Netz (Cloud) → `NetworkError`
+     * mit `isOffline`. Kein Voll-Speichern. Optional wie `syncUp` (alle drei Repositories haben sie).
+     */
+    updateStandingDecisions?(tournamentId: string, decisions: StandingDecision[], expectedVersion: number): Promise<void>;
 
     /**
      * Delete a tournament.

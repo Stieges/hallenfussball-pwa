@@ -27,6 +27,7 @@ import {
 } from '../utils/tournamentCategories';
 import { ImportDialog } from '../components/dialogs/ImportDialog';
 import { getAppTitle } from '../config/app';
+import { matchesTournamentSearch } from '../utils/tournamentSearch';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { AuthSection } from '../components/layout/AuthSection';
 import { DashboardNav, SearchFilterBar, FilterChip, getTabFromPath } from '../components/dashboard';
@@ -118,17 +119,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   };
 
   // Filter tournaments by search query
-  const filterBySearch = (tournament: Tournament): boolean => {
-    if (!searchQuery.trim()) { return true; }
-    const query = searchQuery.toLowerCase();
-    return (
-      tournament.title.toLowerCase().includes(query) ||
-      (tournament.organizer?.toLowerCase().includes(query) ?? false) ||
-      tournament.ageClass.toLowerCase().includes(query) ||
-      (tournament.location.city?.toLowerCase().includes(query) ?? false) ||
-      tournament.location.name.toLowerCase().includes(query)
-    );
-  };
+  const filterBySearch = (tournament: Tournament): boolean => matchesTournamentSearch(tournament, searchQuery);
 
   // Apply search and filter to categorized tournaments
   const filteredCategorized = useMemo(() => {

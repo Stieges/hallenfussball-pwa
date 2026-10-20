@@ -5,6 +5,7 @@ import { MatchSlotSchema, SlotSourceSchema } from './MatchSlotSchema';
 import { CLOCK_MODES, FINAL_PHASE_MINUTES_MAX, FINAL_PHASE_MINUTES_MIN } from '../../match/clockDisplay';
 import { MatchKitSchema } from '../kit';
 import { OPENING_MODES } from '../../../types/tournament';
+import { StandingDecisionSchema } from './StandingDecisionSchema';
 
 const TeamLogoSchema = z.object({
     type: z.enum(['url', 'base64', 'initials']),
@@ -158,6 +159,8 @@ export const TournamentSchema = z.object({
     // nicht ungültig, sie werden verworfen (Bestandsdaten ohne die Felder bleiben gültig).
     hostTeamIds: z.array(z.string()).optional().catch(undefined),
     openingMode: z.enum(OPENING_MODES).optional().catch(undefined),
+    // Paket TB: Gleichstands-Entscheidungen (strikt je Entscheidung); fehlerhafte Liste macht das Turnier nicht ungültig.
+    standingDecisions: z.array(StandingDecisionSchema).optional().catch(undefined),
 })
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- passthrough needed to prevent data loss of unmapped fields
   .passthrough();
