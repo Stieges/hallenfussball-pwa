@@ -312,6 +312,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <ConnectingIndicator
             variant="connecting"
             label={t('login.connectingHint')}
+            retryLabel={t('login.retryConnection')}
+            onRetry={() => void reconnect()}
             data-testid="connecting-indicator"
           />
         )}
