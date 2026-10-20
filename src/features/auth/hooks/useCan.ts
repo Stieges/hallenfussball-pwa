@@ -62,3 +62,22 @@ export function useCan(permission: Permission, tournamentId: string): boolean {
   }
   return UNKNOWN_ROLE_RIGHTS.has(permission);
 }
+
+/**
+ * CA-5 (@HE-088, Plan-Review Auflage 10c/11, Review CA-3–5 Auflage 4): Recht für ein Turnier der Startseiten-Liste.
+ *
+ * - Die Rolle darf NUR aus `Tournament.myRole` des Listenobjekts kommen (vom Server mit der Liste geliefert bzw. im
+ *   Rollen-Gedächtnis des Kontos gemerkt, `core/repositories/accountListMerge.ts`) – nie von woanders. Eine Abfrage für alle
+ *   Karten statt einer je Karte über `useCan`.
+ * - `undefined` = eigenes Turnier (Gast, lokal angelegt): alle Rechte – bewusst anders als L7, wie vor CA-5.
+ * - Unbekannte Rolle (nicht in `KNOWN_ROLES`, z. B. ein Wert aus einem kaputten Gedächtnis): wie `useCan` L7, nur der
+ *   Spielbetrieb (`writeMatchData`), nie `true` für Verwaltungsrechte.
+ * - Aufrufer stehen fest im Wächter `rightsOnlyViaUseCan.test.ts` (`LISTED_ROLE_CALLERS`, nur kürzen, nie erweitern).
+ */
+export function canWithListedRole(role: TournamentRole | undefined, permission: Permission): boolean {
+  if (role === undefined) {
+    return true;
+  }
+  const known = KNOWN_ROLES.find((candidate) => candidate === role);
+  return known === undefined ? UNKNOWN_ROLE_RIGHTS.has(permission) : hasPermission(known, permission);
+}

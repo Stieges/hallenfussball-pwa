@@ -373,7 +373,8 @@ PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_read
 # A5: Zeilen aus SPAETEREN Migrationen (20261028_005, A-10) sind in diesem Stand erwartungsgemaess f.
 # UR: ebenso die Zeilen von 20261028_006 (match_event_author_names).
 # A-11: auch die drei Zeilen von 20261110_001 (laeuft hier erst in A5 nach dem Rueckbau).
-A10_ROWS='^(matches-guard-engine-columns-(insert-and-update|unconditional)|reset-match-results-|matches-bump-change-revision-|tournaments-guard-change-revision-|match-event-author-names-|role-permissions-check-mvp-rights|matches-update-only-manage-schedule|monitors-writes-manage-screens)'
+# CA-2: ebenso die drei Zeilen von 20261110_004 (share-rpcs-, make-public-keeps-, heartbeats-select-).
+A10_ROWS='^(matches-guard-engine-columns-(insert-and-update|unconditional)|reset-match-results-|matches-bump-change-revision-|tournaments-guard-change-revision-|match-event-author-names-|role-permissions-check-mvp-rights|matches-update-only-manage-schedule|monitors-writes-manage-screens|role-checks-device-roles|has-permission-device-roles-for-anonymous|tournaments-insert-real-account-only|anon-no-write-public-tables|device-roles-guard-trigger|hook-before-user-created-auth-admin-only|auth-users-block-anonymous-upgrade|field-control-|append-match-events-checks-field-control|share-rpcs-permission-based|make-public-keeps-existing-code|heartbeats-select-manage-screens)'
 check "R Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migrationen 20261028_005/_006, 20261110_001)" "" \
   "$(grep -v '|t$' <<<"$PRIV_OUT" | grep -vE "$A10_ROWS" || true)"
 check "R neue Zeilen vorhanden und |t" \

@@ -27,8 +27,7 @@ import { OfflineRepository } from '../OfflineRepository';
 import type { SupabaseRepository } from '../SupabaseRepository';
 
 const ENTSCHEIDUNG: StandingDecision = {
-  id: 'e-1', groupId: '', teamIds: ['a', 'b'], order: ['b', 'a'], kind: 'shootout', shootout: { winner: 4, loser: 3 },
-  decidedBy: { userId: 'user-olli', name: 'Olli' }, decidedAt: '2026-12-06T14:32:00.000Z', basis: 'x',
+  id: 'e-1', groupId: '', teamIds: ['a', 'b'], order: ['b', 'a'], kind: 'shootout', shootout: { winner: 4, loser: 3 }, basis: 'x',
 };
 
 const turnier = (version: number): Tournament =>

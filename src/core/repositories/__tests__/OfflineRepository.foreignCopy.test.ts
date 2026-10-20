@@ -59,7 +59,7 @@ vi.mock('../../../lib/supabase', () => ({
 
 import { OfflineRepository } from '../OfflineRepository';
 import { LocalStorageRepository } from '../LocalStorageRepository';
-import { readWithRevisions } from '../../../test/fakeCloudRepository';
+import { ownerOnlyList, readWithRevisions } from '../../../test/fakeCloudRepository';
 
 function t(id: string, extra: Partial<Tournament> = {}): Tournament {
   return {
@@ -103,6 +103,7 @@ describe('A-07e N-2: fremde lokale Kopie bleibt unangetastet (H4)', () => {
       getWithMatchRevisions: vi.fn(readWithRevisions(get)),
       save: vi.fn(async () => undefined),
       listForCurrentUser: vi.fn(async () => []),
+      listWithMemberships: vi.fn(ownerOnlyList(async () => [])),
       getByShareCode: vi.fn(async () => null),
     };
     const repoA = new OfflineRepository(new LocalStorageRepository(), cloudA as never, 'A');

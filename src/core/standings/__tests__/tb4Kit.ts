@@ -1,18 +1,16 @@
 /**
  * Test-Hilfen Paket TB, Task TB-4 (alle Leser je Gruppe, Platzziffer, Endstand): Turniere mit zwei Gruppen aus den Daten
- * von Plan v2 Abschnitt 6 und die Lagen zu @ET-020, @ET-021, @ET-029, @W2A-063. Nur Testumgebung.
+ * von Plan v2 Abschnitt 6 und die Lagen zu @ET-020, @ET-021, @ET-029. Nur Testumgebung.
  */
 import type { PlacementCriterion, Tournament } from '../../../types/tournament';
 import { createMockTournament } from '../../../test/factories';
 import { calculateStandings, getMergedFinalRanking } from '../../../utils/calculations';
 import { BFV_ORDER, league, NAME, type Key } from './fixtures';
-import { MemoryRepo, OLLI, shared } from './decisionTestKit';
+import { MemoryRepo, shared } from './decisionTestKit';
 
 /** Gruppe B: TSV Waging blau 9 Punkte (+3), TSV Petting 6, SV Süd 3, TuS Tal 0 – gegengerechnet (wie TB-1). */
 export const GRUPPE_B = 'X–P 1:0; X–S 1:0; X–T 1:0; P–S 1:0; P–T 1:0; S–T 1:0';
 
-/** @W2A-063: Mitte 9, Nord 9, Ufer 8, West 5, Waging blau und Petting als einzige je 4 Punkte, gleich auf 5 und 6. */
-export const DATEN_063 = 'M–N 1:1; M–U 1:1; M–W 1:1; M–X 3:0; M–P 3:0; N–U 1:1; N–W 1:1; N–X 1:0; N–P 1:0; U–W 2:1; U–X 2:0; P–U 1:0; W–P 2:0; X–W 1:0; X–P 1:1';
 /** @ET-029: Mitte allein auf 1, Nord und Ufer gleich auf 2 und 3. */
 export const DATEN_029 = 'M–N 1:0; M–U 1:0; M–W 1:0; M–O 1:0; M–B 1:0; N–U 1:1; N–W 1:0; N–O 1:0; N–B 1:0; U–W 1:0; U–O 1:0; U–B 1:0; W–O 1:0; W–B 1:0; O–B 1:0';
 
@@ -49,12 +47,12 @@ export function zweiGruppen(keysA: string, gruppeA: string, keysB: string, grupp
 export const zweiGruppenWaging = (gruppeA: string, opts: ZweiGruppenOptions = {}): Tournament =>
   zweiGruppen('KRMUNO', gruppeA, 'XPST', GRUPPE_B, opts);
 
-/** Entscheidung „gleichen Platz lassen“ über den Dienst eintragen (wie die Turnierleitung); wirft, wenn abgelehnt. */
-export async function mitGleichemPlatz(tournament: Tournament, keys: Key[], group = ''): Promise<Tournament> {
+/** „Ergebnis so akzeptieren“ über den Dienst eintragen (wie die Turnierleitung); wirft, wenn abgelehnt. */
+export async function mitAnnahme(tournament: Tournament, keys: Key[], group = ''): Promise<Tournament> {
   const repo = new MemoryRepo(tournament);
-  const result = await repo.service().decide(repo.tournament.id, shared(keys, 'Hallenzeit zu Ende', group), OLLI);
+  const result = await repo.service().decide(repo.tournament.id, shared(keys, group));
   if (!result.ok) {
-    throw new Error(`gleichen Platz lassen abgelehnt: ${result.code}`);
+    throw new Error(`Ergebnis so akzeptieren abgelehnt: ${result.code}`);
   }
   return repo.tournament;
 }

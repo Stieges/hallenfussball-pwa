@@ -12,10 +12,11 @@ import { vs, testUuid } from '../../../test/matchSlotFixtures';
 export const NAME = {
   W: 'TSV West', O: 'SC Ost', U: 'VfB Ufer', M: 'SG Mitte', N: 'FC Nord', B: 'DJK Berg',
   R: 'TSV Waging rot', K: 'DJK Kammer', S: 'SV Süd', T: 'TuS Tal', X: 'TSV Waging blau', P: 'TSV Petting',
+  D: 'DJK Otting', F: 'TSV 1921 Fridolfing', H: 'SV Hafen',
 } as const;
 export type Key = keyof typeof NAME;
 
-const KEY_INDEX: Record<Key, number> = { W: 1, O: 2, U: 3, M: 4, N: 5, B: 6, R: 7, K: 8, S: 9, T: 10, X: 11, P: 12 };
+const KEY_INDEX: Record<Key, number> = { W: 1, O: 2, U: 3, M: 4, N: 5, B: 6, R: 7, K: 8, S: 9, T: 10, X: 11, P: 12, D: 13, F: 14, H: 15 };
 
 /** Team-ID je Kurzzeichen (UUID, wie im Produktivcode). */
 export const id = (key: Key): string => testUuid(KEY_INDEX[key]);
@@ -52,6 +53,12 @@ export const DATA = {
   /** @W2A-052/@W2A-053 (K-a1): Ufer 12, Waging rot/Kammer 7 (einzige), Mitte/Nord/Ost 6. */
   W2A_052: 'R–K 1:1; R–N 2:0; R–O 1:0; M–R 1:0; U–R 2:0; K–M 2:0; K–U 1:0; N–K 1:0; O–K 2:0; N–M 1:0; U–N 1:0; N–O 0:1; U–M 1:0; M–O 2:0; U–O 1:0',
   ET_056:'K–R 2:1; R–N 3:0; R–O 3:0; R–M 2:0; U–R 1:0; K–M 1:0; K–U 1:0; N–K 1:0; O–K 1:0; M–U 1:0; N–M 1:1; O–M 0:2; U–N 2:0; U–O 1:1; N–O 1:0',
+  /**
+   * Nikolaus-Lage (@W2A-067, Paket TB-B): Kammer und Waging rot je 10 (Kammer gewann direkt 2:1), Petting und Otting als
+   * einzige je 8 mit Tordifferenz 0 und 9 Toren, direktes Spiel 1:1, Fridolfing 4, Waging blau 1; 4 Unentschieden, 41 Punkte.
+   * Gegengerechnet (Report TB-3'): P 2:2 K, 1:1 D, 0:4 R, 3:1 F, 3:1 X → 9:9; D 2:1 K, 2:2 R, 1:1 P, 3:1 X, 1:4 F → 9:9.
+   */
+  NIKOLAUS: 'K–R 2:1; K–P 2:2; D–K 2:1; K–F 2:0; K–X 3:0; R–D 2:2; R–P 4:0; R–F 3:0; R–X 3:0; P–D 1:1; P–F 3:1; P–X 3:1; D–X 3:1; F–D 4:1; F–X 1:1',
   /** Gruppe A aus @W2A-048. */
   W2A_048_A: 'N–S 2:1; N–W 2:1; N–O 0:0; S–W 1:1; S–O 2:0; W–O 2:0',
 } as const;

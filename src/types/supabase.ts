@@ -2,8 +2,10 @@
  * Supabase Database Types
  *
  * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm).
- * Letzte Regeneration: 2026-10-16, nach I1 (PR #214: match_slots 20261003_001 mit slot_a_source/
- * slot_b_source, amend_event, protect_deleted_at) -- aus Produktion per Supabase-MCP
+ * Letzte Regeneration: 2026-10-20, nach DB-Fenster 20.10. (Migrationen 20261110_001-_004:
+ * is_real_account, field_control inkl. take_field_control/field_control_state, Entfernung von
+ * can_create_tournament, tournament_limit_error_message, anonymous_tournament_limit,
+ * count_active_tournaments, is_anonymous_user) -- aus Produktion per Supabase-MCP
  * (generate_typescript_types), nicht aus einem Wegwerf-Container. Damit ist die Datei wieder
  * deckungsgleich mit der Produktion; die frueheren Vorgriffs-Nachtraege (B2/B3a/B3b/C0b) sind
  * aufgegangen. Hinweis: das MCP-Werkzeug liefert PostgrestVersion "14.1", die CLI "14.5"; hier
@@ -26,7 +28,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -44,6 +46,44 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      field_control: {
+        Row: {
+          claimed_at: string
+          epoch: number
+          field: number
+          holder_device_id: string | null
+          holder_device_label: string | null
+          holder_user_id: string | null
+          tournament_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          epoch?: number
+          field: number
+          holder_device_id?: string | null
+          holder_device_label?: string | null
+          holder_user_id?: string | null
+          tournament_id: string
+        }
+        Update: {
+          claimed_at?: string
+          epoch?: number
+          field?: number
+          holder_device_id?: string | null
+          holder_device_label?: string | null
+          holder_user_id?: string | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_control_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       match_corrections: {
         Row: {
@@ -1119,7 +1159,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      anonymous_tournament_limit: { Args: never; Returns: number }
       append_match_events: {
         Args: {
           p_client_format: number
@@ -1130,19 +1169,26 @@ export type Database = {
         Returns: Json
       }
       auth_provider_for_email: { Args: { p_email: string }; Returns: string }
-      can_create_tournament: { Args: never; Returns: Json }
       compute_match_state: { Args: { p_match_id: string }; Returns: Json }
-      count_active_tournaments: { Args: { user_id: string }; Returns: number }
+      field_control_info: {
+        Args: { p_device_id: string; p_field: number; p_tournament_id: string }
+        Returns: Json
+      }
+      field_control_state: {
+        Args: { p_device_id?: string; p_tournament_id: string }
+        Returns: Json
+      }
       generate_share_code: { Args: never; Returns: string }
       has_tournament_permission: {
         Args: { p_permission: string; p_tournament_id: string }
         Returns: boolean
       }
+      hook_before_user_created: { Args: { event: Json }; Returns: Json }
       is_active_tournament_member: {
         Args: { p_tournament_id: string }
         Returns: boolean
       }
-      is_anonymous_user: { Args: never; Returns: boolean }
+      is_real_account: { Args: never; Returns: boolean }
       is_tournament_admin: {
         Args: { p_tournament_id: string }
         Returns: boolean
@@ -1228,11 +1274,20 @@ export type Database = {
         Returns: Json
       }
       server_time: { Args: never; Returns: Json }
+      take_field_control: {
+        Args: {
+          p_device_id: string
+          p_device_label?: string
+          p_expected_epoch?: number
+          p_field: number
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
       tournament_has_started: {
         Args: { p_tournament_id: string }
         Returns: boolean
       }
-      tournament_limit_error_message: { Args: never; Returns: string }
       user_owns_tournament: {
         Args: { p_tournament_id: string }
         Returns: boolean

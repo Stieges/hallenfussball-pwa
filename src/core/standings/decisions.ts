@@ -5,11 +5,13 @@
  * und (b) ihr Fingerabdruck der Grundlage gleich dem heutigen ist: Punkteschema, aktive Kriterien in Reihenfolge und
  * `[id, scoreA, scoreB, matchStatus]` aller Gruppenspiele, an denen ein Team des Blocks beteiligt ist (@W2A-005,
  * @W2A-052, @W2A-053). Reine Rechnung – nichts wird gelöscht; kehrt dieselbe Grundlage zurück, gilt sie wieder.
+ * Eine Annahme („Ergebnis so akzeptieren“) gilt zusätzlich nur, solange ihr Platz nicht ausgespielt werden muss –
+ * geprüft beim Anwenden in `rankGroup` (Einstellung, Herkünfte; @W2A-068, @W2A-069, TB-3').
  * Rein, ohne React.
  */
 import type { Match, PlacementCriterion, PointSystem, StandingDecision, Tournament } from '../../types/tournament';
-import { matchSideTeamId, slotSource } from '../models/matchSlot';
-import type { SlotSource } from '../models/schemas/MatchSlotSchema';
+import { matchSideTeamId } from '../models/matchSlot';
+import { blockMayShare, effectivePlacementsToPlayOut, followUpRanks } from './playOutPlaces';
 
 export type DecisionErrorCode =
   | 'SHOOTOUT_NEEDS_WINNER'
@@ -19,12 +21,16 @@ export type DecisionErrorCode =
   | 'BLOCK_CHANGED'
   | 'STALE'
   | 'OFFLINE'
-  | 'SHARED_PLACE_NOT_ALLOWED';
+  | 'SHARED_PLACE_NOT_ALLOWED'
+  | 'WITHDRAW_NOT_ALLOWED';
 
-/** Was die Turnierleitung einträgt; Person, Zeit, Kennung und Grundlage ergänzt der Dienst. */
-export type DecisionDraft = Pick<StandingDecision, 'groupId' | 'teamIds' | 'order' | 'kind' | 'shootout' | 'reason'>;
+/**
+ * Was die Turnierleitung einträgt; Kennung und Grundlage ergänzt der Dienst. Der Grund einer Reihenfolge wird geprüft,
+ * aber nicht im öffentlich lesbaren `config` gespeichert (@W2A-072); er gehört ins Verlaufsprotokoll (GA4 A-13b).
+ */
+export type DecisionDraft = Pick<StandingDecision, 'groupId' | 'teamIds' | 'order' | 'kind' | 'shootout'> & { reason?: string };
 
-/** Grund: Pflicht bei Reihenfolge und „gleichen Platz lassen“, 1–500 Zeichen (Hinweis „keine Spielernamen“ in der Oberfläche). */
+/** Grund: Pflicht nur bei einer Reihenfolge (3+ Teams), 1–500 Zeichen (Hinweis „keine Spielernamen“ in der Oberfläche). */
 export const DECISION_REASON_MAX_LENGTH = 500;
 
 export const sortedIds = (ids: readonly string[]): string[] => [...ids].sort();
@@ -67,7 +73,7 @@ export function findValidDecision(
 
 const isWholeNumber = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0;
 
-/** Prüfungen am Eintrag selbst, ohne Tabelle (gleich mit und ohne Netz, @W2A-061, @W2A-065, @W2A-062). */
+/** Prüfungen am Eintrag selbst, ohne Tabelle (gleich mit und ohne Netz, @W2A-061, @W2A-062, @W2A-044). */
 export function checkDraftFields(draft: DecisionDraft): DecisionErrorCode | null {
   const unique = new Set(draft.teamIds);
   if (draft.teamIds.length < 2 || unique.size !== draft.teamIds.length
@@ -86,28 +92,23 @@ export function checkDraftFields(draft: DecisionDraft): DecisionErrorCode | null
     }
     return null;
   }
+  if (draft.kind === 'shared') {
+    return null; // „Ergebnis so akzeptieren“: ein Tipp, kein Grund (Daniel B4d, @W2A-063)
+  }
   const reason = draft.reason?.trim() ?? '';
   return reason.length === 0 || reason.length > DECISION_REASON_MAX_LENGTH ? 'REASON_REQUIRED' : null;
 }
 
-function sourcesOf(match: Match): SlotSource[] {
-  return [match.originA, match.originB, slotSource(match.slotA), slotSource(match.slotB)]
-    .filter((s): s is SlotSource => s !== undefined);
-}
-
 /**
- * „Gleichen Platz lassen“ (Variante C, Daniel F4): nur, wenn der Block nicht Platz 1 enthält und kein Platz des Blocks
- * als Gruppenplatz-Herkunft in einem weiteren Spiel steht (@W2A-063, @W2A-064).
+ * „Ergebnis so akzeptieren“ erlaubt? Nur, wenn kein Platz des Blocks in der Einstellung steht und keiner als
+ * Gruppenplatz-Herkunft in ein weiteres Spiel führt (ganzer Block; @W2A-063, @W2A-064, @W2A-067, @ET-057). Platz 1 ist
+ * nur über die Einstellung geschützt (Voreinstellung), abgewählt darf er geteilt werden. Dieselbe Regel nutzt die
+ * Oberfläche für die Hinweisform: falsch = „Strafstoßschießen nötig“, wahr = „Gleichstand – Entscheidung nötig“.
  */
 export function sharedPlaceAllowed(
-  tournament: Pick<Tournament, 'matches'>,
+  tournament: Pick<Tournament, 'matches' | 'teams' | 'placementsToPlayOut'>,
   groupId: string,
   block: { place: number; size: number },
 ): boolean {
-  if (block.place <= 1) {
-    return false;
-  }
-  const last = block.place + block.size - 1;
-  return !tournament.matches.some((m) => sourcesOf(m).some((s) =>
-    s.kind === 'groupRank' && s.group === groupId && s.rank >= block.place && s.rank <= last));
+  return blockMayShare(effectivePlacementsToPlayOut(tournament), followUpRanks(tournament.matches, groupId), block);
 }

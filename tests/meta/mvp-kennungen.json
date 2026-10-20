@@ -1,7 +1,7 @@
 {
  "_hinweis": "Erzeugt von scripts/mvp-kennungen-erzeugen.mjs aus `anf.py mvp --json` (Klasse am Szenario). Nicht von Hand pflegen; soll aendert sich nur mit einer Entscheidung ueber den MVP-Schnitt.",
  "quelle": "anf.py mvp --json",
- "soll": 956,
+ "soll": 1000,
  "records": {
   "helfer-am-turniertag": [
    "HE-001",
@@ -25,6 +25,17 @@
    "HE-077",
    "HE-078",
    "HE-079",
+   "HE-089",
+   "HE-090",
+   "HE-091",
+   "HE-092",
+   "HE-093",
+   "HE-094",
+   "HE-095",
+   "HE-096",
+   "HE-097",
+   "HE-098",
+   "HE-099",
    "HE-040",
    "HE-042",
    "HE-043",
@@ -35,6 +46,9 @@
    "HE-055",
    "HE-056",
    "HE-085",
+   "HE-088",
+   "HE-086",
+   "HE-087",
    "HE-062",
    "HE-084",
    "HE-063",
@@ -123,7 +137,14 @@
    "W2A-062",
    "W2A-063",
    "W2A-064",
-   "W2A-065"
+   "W2A-066",
+   "W2A-067",
+   "W2A-068",
+   "W2A-069",
+   "W2A-070",
+   "W2A-071",
+   "W2A-072",
+   "W2A-073"
   ],
   "wizard-turniertag-vorbereiten": [
    "W3-015",
@@ -183,6 +204,7 @@
    "ET-026",
    "ET-027",
    "ET-029",
+   "ET-057",
    "ET-031",
    "ET-032",
    "ET-033",
@@ -291,6 +313,7 @@
    "TM-116",
    "TM-117",
    "TM-146",
+   "TM-147",
    "TM-120"
   ],
   "anmelden": [
@@ -312,6 +335,7 @@
    "AN-045",
    "AN-048",
    "AN-049",
+   "AN-050",
    "AN-056",
    "AN-057",
    "AN-016",
@@ -555,6 +579,7 @@
    "SL-060",
    "SL-061",
    "SL-140",
+   "SL-168",
    "SL-123",
    "SL-124",
    "SL-062",
@@ -563,6 +588,8 @@
   ],
   "turnier-bekannt-machen": [
    "BM-001",
+   "BM-070",
+   "BM-071",
    "BM-003",
    "BM-004",
    "BM-006",
@@ -806,6 +833,7 @@
    "ME-069",
    "ME-060",
    "ME-026",
+   "ME-070",
    "ME-027",
    "ME-028",
    "ME-039",
@@ -934,6 +962,10 @@
    "FU-087",
    "FU-088",
    "FU-089",
+   "FU-105",
+   "FU-106",
+   "FU-107",
+   "FU-108",
    "FU-086",
    "FU-090",
    "FU-091",
@@ -1006,6 +1038,20 @@
    "TA-016",
    "TA-017",
    "TA-018"
+  ],
+  "lokale-testumgebung-gesund": [
+   "LT-001",
+   "LT-002",
+   "LT-003",
+   "LT-004",
+   "LT-005",
+   "LT-006",
+   "LT-007",
+   "LT-008",
+   "LT-012",
+   "LT-009",
+   "LT-010",
+   "LT-011"
   ]
  }
 }

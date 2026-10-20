@@ -11,8 +11,10 @@
  * (`crossGroup`, Endstand) gibt es weder direkten Vergleich noch Markierung (R-TB-6).
  *
  * Entscheidungen der Turnierleitung (`decisions.ts`) gelten nur für einen offenen Block im Modus `group`, wenn Block und
- * Grundlage gleich sind: Strafstoßschießen/Reihenfolge ordnen den Block, „gleichen Platz lassen“ schließt ihn mit
- * gemeinsamer Platzziffer (Variante C). Ungültige (verfallene) Entscheidungen stehen in `staleDecisionIds`.
+ * Grundlage gleich sind: Strafstoßschießen/Reihenfolge ordnen den Block, „Ergebnis so akzeptieren“ schließt ihn mit
+ * gemeinsamer Platzziffer – aber nur, solange kein Platz des Blocks ausgespielt werden muss (Einstellung, Herkünfte;
+ * erneut geprüft beim Anwenden, @W2A-068, @W2A-069). Passen mehrere, gilt die neueste. Ungültige, verfallene oder
+ * durch eine neuere verdrängte Entscheidungen stehen in `staleDecisionIds`.
  *
  * Rein, ohne React.
  */
@@ -20,6 +22,7 @@ import type { Match, PlacementCriterion, PointSystem, Standing, StandingDecision
 import { isGroupMatchDecided, matchOutcome } from './countsForStandings';
 import { miniTable, miniTableKey } from './headToHead';
 import { decisionBasis, findValidDecision } from './decisions';
+import { blockMayShare } from './playOutPlaces';
 
 export type StandingsMode = 'group' | 'crossGroup';
 
@@ -34,6 +37,10 @@ export interface RankGroupInput {
   placementLogic: readonly PlacementCriterion[];
   decisions: readonly StandingDecision[];
   mode: StandingsMode;
+  /** Plätze, die bei Gleichstand ausgespielt werden müssen (Einstellung, `effectivePlacementsToPlayOut`). */
+  placesToPlayOut: readonly number[];
+  /** Gruppenplätze dieser Gruppe, die in ein weiteres Spiel führen (`followUpRanks` über alle Spiele des Turniers). */
+  followUpRanks: readonly number[];
 }
 
 export interface GroupTableRow extends Standing {
@@ -154,7 +161,11 @@ export function rankGroup(input: RankGroupInput): GroupTableResult {
     const place = rows.length + 1;
     if (block.length > 1 && input.mode === 'group') {
       const ids = block.map((s) => s.team.id);
-      const decision = findValidDecision(input.decisions, input.groupId, ids, decisionBasis(input, ids));
+      // Nicht mehr erlaubte Annahmen scheiden VOR der Suche aus, sonst verdeckten sie ein späteres Strafstoßschießen;
+      // von den gültigen gilt die neueste (Review TB-3' B1, gilt nach Vorschlag).
+      const mayShare = blockMayShare(input.placesToPlayOut, input.followUpRanks, { place, size: block.length });
+      const candidates = input.decisions.filter((d) => d.kind !== 'shared' || mayShare).reverse();
+      const decision = findValidDecision(candidates, input.groupId, ids, decisionBasis(input, ids));
       if (decision !== undefined) {
         applied.add(decision.id);
         rows.push(...decidedRows(block, decision, place));
