@@ -37,6 +37,11 @@ export interface ScheduleResultEntry {
   prompt: ResultEntryPrompt | null;
   /** Grund (`reason`), `'yes'` (abgesetzt), Strafstoßstand `'4:3'` (`shootout`) oder `null` = Abbruch. */
   answerPrompt: (answer: string | null) => void;
+  /**
+   * @FU-104: Name dessen, der den Stand eines Spiels zuletzt geändert hat (letzter Spielstand-Eintrag nach dem Abgleich,
+   * Lesefunktion am Server); `null`, wenn er nicht bekannt ist (Gast, ohne Netz, ohne Recht, ohne Namen).
+   */
+  changeAuthor: (matchId: string) => Promise<string | null>;
 }
 
 export interface UseScheduleResultEntryOptions {
@@ -101,6 +106,20 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       ? t('schedule.resultEntry.stale', { number: entry.meta.number, name: author, score: now })
       : t('schedule.resultEntry.staleNoName', { number: entry.meta.number, score: now });
   }, [lastScoreAuthor, t]);
+
+  const changeAuthor = useCallback(async (matchId: string): Promise<string | null> => {
+    const entry = buildValidMatches(tournament).find((candidate) => candidate.externalId === matchId);
+    if (!entry || !context) {
+      return null;
+    }
+    try {
+      await context.engine.ensureMatch(entry.matchId, entry.ctx, tournament.id);
+      await context.engine.catchUp(entry.matchId);
+    } catch {
+      return null;
+    }
+    return lastScoreAuthor(entry.matchId);
+  }, [tournament, context, lastScoreAuthor]);
 
   const rejectionText = useCallback(async (error: unknown, entry: ValidMatchEntry): Promise<string> => {
     if (error instanceof MatchCommandRejectedError && error.code === ERROR_CODES.STALE_BASE) {
@@ -192,5 +211,5 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     }
   }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText]);
 
-  return { enterScore, prompt, answerPrompt };
+  return { enterScore, prompt, answerPrompt, changeAuthor };
 }

@@ -17,6 +17,13 @@ export type GroupSystem = 'roundRobin' | 'groupsAndFinals';
 export type RoundLogic = 'fixed' | 'promotion';
 export type ResultMode = 'goals' | 'winLossOnly';
 export type TournamentStatus = 'draft' | 'published';
+/**
+ * Eröffnung bei zwei Mannschaften des Veranstalters (@W4-033): Veranstalter gegen einen Gast, Vereinsduell
+ * in Runde 2 (Voreinstellung) oder Vereinsduell als Spiel 1. Wirkt nur im Runden-Spielplan (@W4-041).
+ */
+export type OpeningMode = 'guest-opening' | 'club-derby';
+export const OPENING_MODES: readonly OpeningMode[] = ['guest-opening', 'club-derby'];
+export const DEFAULT_OPENING_MODE: OpeningMode = 'guest-opening';
 
 /**
  * Dashboard-Status für erweiterte Kategorisierung
@@ -169,7 +176,7 @@ export interface PointSystem {
 export type FinalsPreset =
   | 'none'           // Keine Finalrunde (nur Gruppenphase)
   | 'final-only'     // Nur Finale (direkt, ohne Halbfinale)
-  | 'top-4'          // Halbfinale + Finale + Platz 3
+  | 'top-4'          // Halbfinale + Spiel um Platz 3 + Finale
   | 'top-8'          // Viertelfinale + alles darüber + Platzierungen 5-8
   | 'top-16'         // Achtelfinale + Viertelfinale + Halbfinale + Finale (8+ Gruppen)
   | 'all-places';    // Alle Plätze ausspielen
@@ -438,10 +445,29 @@ export interface Tournament {
   organizer?: string; // Veranstalter-Name (optional)
   rulebook?: string; // Regelwerk-Text für den Ausdruck, höchstens 80 Zeichen (@DR-016)
   bibColor?: string; // A-30a @W3-029: Leibchenfarbe des Turniers (#RRGGBB), ohne Einstellung Gelb
+  spectatorDisplay?: import('../core/models/spectatorDisplay').SpectatorDisplaySettings; // Spielanzeige 2.1 @ZM-152: „Anzeige für Zuschauer“ (config-JSONB), ohne Eintrag Vorbelegung
   contactInfo?: ContactInfo; // Kontaktinformationen (optional)
 
   // Step 4: Teams
   teams: Team[];
+  /**
+   * Mannschaften des Veranstalters (@W4-027, @W4-034): Team-IDs, im `config`-JSONB gespeichert. Verwaiste IDs
+   * (Team gelöscht) gelten nicht und werden beim Speichern entfernt (@W4-044); Reihenfolge = Teamliste.
+   */
+  hostTeamIds?: string[];
+  /**
+   * Paket TB (Plan v2 § 3.2): Entscheidungen der Turnierleitung über Gleichstände nach allen Kriterien, im
+   * `config`-JSONB (keine Migration). Gültig ist eine nur, solange Block und Grundlage gleich sind (reine Rechnung).
+   */
+  standingDecisions?: StandingDecision[];
+  /**
+   * Paket TB-B (TB-3', Daniel 2026-10-20): Plätze, die bei Gleichstand ausgespielt werden müssen (Gruppenplätze), im
+   * `config`-JSONB. Gelesen über `effectivePlacementsToPlayOut` (`core/standings/playOutPlaces.ts`): fehlt der Wert,
+   * gilt nur Platz 1 (Daniel K10); `[]` = kein Platz.
+   */
+  placementsToPlayOut?: number[];
+  /** Wahl der Eröffnung bei zwei Mannschaften des Veranstalters (@W4-033); ohne Wahl `DEFAULT_OPENING_MODE`. */
+  openingMode?: OpeningMode;
 
   // Generated data
   matches: Match[];
@@ -745,6 +771,35 @@ export interface Standing {
   goalsAgainst: number;
   goalDifference: number;
   points: number;
+  /** Paket TB: Platzziffer; ein offener Block teilt sie, danach springt sie (2, 2, 4) – @W2A-047. */
+  place?: number;
+  /** Paket TB: Team-IDs des offenen Blocks (nach allen Kriterien gleich), nur bei mehr als einem Team. */
+  tieBlock?: string[];
+  /** Paket TB: „gleichauf – Entscheidung nötig“ – nur je Gruppe und erst, wenn alle Gruppenspiele entschieden sind. */
+  decisionNeeded?: boolean;
+  /** Paket TB (TB-3): angewendete Entscheidung der Turnierleitung. */
+  decision?: StandingDecision;
+}
+
+/**
+ * Paket TB (Plan v2 § 3.2, TB-3'): Entscheidung der Turnierleitung über einen Gleichstand nach allen Kriterien.
+ * Gültigkeit und Anwendung: `core/standings/decisions.ts`; Speichern und Zurücknehmen: `StandingDecisionService`.
+ * Steht im öffentlich lesbaren `config` – deshalb ohne Person, Zeitpunkt und Grund (@W2A-072, Daniel B4d); „wer wann“
+ * und der Grund einer Reihenfolge gehören ins Verlaufsprotokoll (GA4 A-13b, C-ENTSCHEIDUNG-PERSON-OEFFENTLICH).
+ */
+export interface StandingDecision {
+  id: string;
+  /** `OVERALL_GROUP` ('') bei Jeder gegen jeden. */
+  groupId: string;
+  /** Block als Menge (sortiert). */
+  teamIds: string[];
+  /** Vorn = besser. */
+  order: string[];
+  /** 2 Teams: Strafstoßschießen, 3+: Reihenfolge; 'shared' = „Ergebnis so akzeptieren“ (Teams teilen den Platz). */
+  kind: 'shootout' | 'order' | 'shared';
+  shootout?: { winner: number; loser: number };
+  /** Fingerabdruck der Grundlage. */
+  basis: string;
 }
 
 // ============================================================================

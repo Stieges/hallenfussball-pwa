@@ -38,7 +38,7 @@ import {
 } from './slideProgramme';
 import { isSlideShowable } from './publicVisibility';
 import { monitorPageCount } from './slideContent';
-import { buildMonitorView } from './monitorView';
+import { buildMonitorRuleMatches, buildMonitorView, monitorJetztMs } from './monitorView';
 import { useSlideshow } from './useSlideshow';
 import { useReloadGate } from './useReloadGate';
 import { boundFieldNumbers, visibleGoal } from './monitorGoalFilter';
@@ -139,15 +139,20 @@ function MonitorDisplayPageContent({
 
   // Folienfolge (B-16c): Takt und Übergang liegen in useSlideshow. Tasten wirken nicht (@ME-022).
   const defaultSlideDuration = monitor?.defaultSlideDuration ?? 15;
-  // Spiele für die Anhalte- und Feldregeln (B-16e1): jede neue Turnier-Referenz wertet die Regeln aus.
+  // Spiele für die Anhalte- und Feldregeln (B-16e1) samt Vorlaufzeit (@ZM-138): jede neue Turnier-Referenz wertet die Regeln aus.
+  const ansichtZeitMs = useMemo(() => (view === null ? 0 : monitorJetztMs()), [view]);
+  const ruleMatches = useMemo(
+    () => (view === null || tournament === null ? undefined : buildMonitorRuleMatches(view, tournament)),
+    [view, tournament]
+  );
   const slideProgram = useMemo<SlideProgram>(
     () => ({
       slides,
       defaultDurationSec: defaultSlideDuration,
-      matches: view?.matches,
+      matches: ruleMatches,
       pageCount: (slide) => monitorPageCount(slide, tournament, view),
     }),
-    [slides, defaultSlideDuration, tournament, view]
+    [slides, defaultSlideDuration, tournament, view, ruleMatches]
   );
   const transitionMs = performanceSettings.enableTransitions && monitor?.transition !== 'none'
     ? (monitor?.transitionDuration ?? 0)
@@ -162,9 +167,9 @@ function MonitorDisplayPageContent({
   // Current slide
   const currentSlide = useMemo(() => {
     const rueckfallAktiv = slideState.pinnedMatchId === null
-      && alleUebersprungen(slides, view?.matches ?? []);
+      && alleUebersprungen(slides, ruleMatches ?? [], ansichtZeitMs);
     return rueckfallAktiv ? rueckfallFolie : slides[slideState.currentIndex] ?? null;
-  }, [slides, slideState.currentIndex, slideState.pinnedMatchId, rueckfallFolie, view]);
+  }, [slides, slideState.currentIndex, slideState.pinnedMatchId, rueckfallFolie, ruleMatches, ansichtZeitMs]);
 
   // B-17 (@ME-006): 10-s-Hinweis als Ecke, nur ohne laufendes Spiel auf dem Feld (Regeln in useWakeLockHinweis)
   // und nur auf den Ersatzfolien, solange gar kein Programm eingerichtet ist (monitor.slides leer), bzw. einer QR-Folie des Programms

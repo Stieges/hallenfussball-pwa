@@ -1,5 +1,7 @@
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, Match, MatchUpdate } from '../models/types';
+import type { StandingDecision } from '../../types/tournament';
+import { OptimisticLockError } from '../errors';
 import { TournamentSchema } from '../models/schemas/TournamentSchema';
 import { STORAGE_KEYS } from '../../constants/storage';
 import { hydrateTournament } from './hydration';
@@ -153,6 +155,22 @@ export class LocalStorageRepository implements ITournamentRepository {
                 updatedAt: new Date().toISOString()
             };
 
+            await this.saveList(list);
+        });
+    }
+
+    /** Paket TB: nur die Gleichstands-Entscheidungen, mit Versionsprüfung (lokal; Konflikt → OptimisticLockError). */
+    updateStandingDecisions(id: string, decisions: StandingDecision[], expectedVersion: number): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === id);
+            if (index === -1) {
+                throw new Error(`Tournament ${id} not found`);
+            }
+            if ((list[index].version ?? 0) !== expectedVersion) {
+                throw new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.');
+            }
+            list[index] = { ...list[index], standingDecisions: decisions, version: expectedVersion + 1, updatedAt: new Date().toISOString() };
             await this.saveList(list);
         });
     }

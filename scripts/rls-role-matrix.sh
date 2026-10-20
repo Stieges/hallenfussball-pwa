@@ -136,6 +136,24 @@
 #                                                   # die A-11-Zeilen (scripts/rls-matrix.d/spur-a.sh)
 #                                                   # und die Vollmatrix-Zellen matches_update/teams_update/
 #                                                   # monitors_* muessen hier ROT sein (Gegenprobe, Exit 0).
+#                                                   # Laesst auch 20261110_002 (A-27) weg, das an _001 haengt.
+#   scripts/rls-role-matrix.sh --without-a27       # Alles ("nachher") mit A-11, aber OHNE 20261110_002 (A-27:
+#                                                   # Geraete-Rollen helper/screen, anonyme Sitzungen nur mit
+#                                                   # Geraete-Rolle, Guard, anon ohne Schreibrecht) -- die A-27-Zeilen
+#                                                   # (rls-matrix.d/spur-geraete-a27.sh) und die Vollmatrix-Zellen der
+#                                                   # anonymen Identitaeten muessen hier ROT sein (Gegenprobe, Exit 0).
+#                                                   # Laesst auch 20261110_003 (A-34) weg, das an _002 haengt.
+#   scripts/rls-role-matrix.sh --without-a34       # Alles ("nachher") mit A-11 und A-27, aber OHNE 20261110_003 (A-34:
+#                                                   # Steuer je Feld) -- die A-34-Zeilen (rls-matrix.d/spur-steuer-a34.sh)
+#                                                   # muessen hier ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-coadmin   # Alles ("nachher"), aber OHNE 20261110_004 (CA-2: teilen und
+#                                                   # Lebenszeichen lesen ueber tournamentSettings/manageScreens) --
+#                                                   # die CA-2-Zeilen (rls-matrix.d/coadmin.sh) muessen hier die alten
+#                                                   # Werte zeigen, also ROT sein (Gegenprobe, Exit 0).
+#
+# A-27 (brief-A-27.md, R-A27-3): Identitaeten einer anonymen Sitzung (owner-anonymous, anon-device, helper-device,
+# screen-device, anon-coadmin) tragen zusaetzlich den Claim is_anonymous=true (request.jwt.claims, siehe
+# claims_line()); alle anderen nur claim.sub -- ein fehlender Claim zaehlt als echtes Konto.
 #
 # A-11 (brief-A-11.md, R-A11-4): Vor dem L4-Gate werden alle scripts/rls-matrix.d/*.sh eingebunden
 # (source, gleiche Hilfsfunktionen; Abweichungen zaehlen in MISMATCHES). Je Spur eine Datei.
@@ -224,6 +242,12 @@ WITH_R5=1
 WITH_R7=1
 # A-11: 20261110_001 im Modus "nachher" einspielen (Gegenprobe --without-a11 laesst sie weg).
 WITH_A11_REQ=1
+# A-27: 20261110_002 im Modus "nachher" einspielen (Gegenprobe --without-a27 laesst sie weg; braucht _001).
+WITH_A27_REQ=1
+# A-34: 20261110_003 im Modus "nachher" einspielen (Gegenprobe --without-a34 laesst sie weg; braucht _002).
+WITH_A34_REQ=1
+# CA-2: 20261110_004 im Modus "nachher" einspielen (Gegenprobe --without-coadmin laesst sie weg; braucht _001 und _002).
+WITH_CA2_REQ=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -259,6 +283,18 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-a11)
       WITH_A11_REQ=0
+      shift
+      ;;
+    --without-a27)
+      WITH_A27_REQ=0
+      shift
+      ;;
+    --without-a34)
+      WITH_A34_REQ=0
+      shift
+      ;;
+    --without-coadmin)
+      WITH_CA2_REQ=0
       shift
       ;;
     -h|--help)
@@ -488,6 +524,48 @@ elif [[ "$WITH_A10" -eq 1 ]]; then
   MODE_LABEL="vorher/A-11-Gegenprobe (alles ohne 20261110_001)"
 fi
 
+# A-27 (20261110_002, @HE-082, @AN-045, @ME-059, @HE-062, @HE-084, @ME-069): Geraete-Rollen, anonyme Sitzungen nur mit
+# Geraete-Rolle, Guard protect_device_roles, anon ohne Schreibrecht, Registrierungs-Hook. Setzt _001 voraus (Fail-fast
+# der Migration); --without-a27 ist die Gegenprobe.
+A27_FILE="$(find_migration 20261110_002)"
+WITH_A27=0
+if [[ "$WITH_A11" -eq 1 && "$WITH_A27_REQ" -eq 1 ]]; then
+  WITH_A27=1
+  echo "Migration einspielen: $(basename "$A27_FILE")" >&2
+  psql_stdin < "$A27_FILE"
+  MODE_LABEL="$MODE_LABEL + A-27 (20261110_002)"
+elif [[ "$WITH_A11" -eq 1 ]]; then
+  MODE_LABEL="vorher/A-27-Gegenprobe (alles mit A-11, ohne 20261110_002)"
+fi
+
+# A-34 (20261110_003, @FU-026, @FU-027, @FU-030, @HE-049): Steuer je Feld -- Tabelle field_control (RLS, keine Policy),
+# take_field_control/field_control_state, Pruefung in append_match_events. Setzt _002 voraus (Fail-fast der Migration);
+# --without-a34 ist die Gegenprobe.
+A34_FILE="$(find_migration 20261110_003)"
+WITH_A34=0
+if [[ "$WITH_A27" -eq 1 && "$WITH_A34_REQ" -eq 1 ]]; then
+  WITH_A34=1
+  echo "Migration einspielen: $(basename "$A34_FILE")" >&2
+  psql_stdin < "$A34_FILE"
+  MODE_LABEL="$MODE_LABEL + A-34 (20261110_003)"
+elif [[ "$WITH_A27" -eq 1 ]]; then
+  MODE_LABEL="vorher/A-34-Gegenprobe (alles mit A-11 und A-27, ohne 20261110_003)"
+fi
+
+# CA-2 (20261110_004, @HE-085, @BM-070, @ME-070): make_tournament_public/_private, regenerate_share_code ueber
+# tournamentSettings, Lebenszeichen lesen ueber manageScreens. Setzt _001 und _002 voraus (Fail-fast der Migration),
+# nicht _003; --without-coadmin ist die Gegenprobe.
+CA2_FILE="$(find_migration 20261110_004)"
+WITH_CA2=0
+if [[ "$WITH_A27" -eq 1 && "$WITH_CA2_REQ" -eq 1 ]]; then
+  WITH_CA2=1
+  echo "Migration einspielen: $(basename "$CA2_FILE")" >&2
+  psql_stdin < "$CA2_FILE"
+  MODE_LABEL="$MODE_LABEL + CA-2 (20261110_004)"
+elif [[ "$WITH_A27" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, CA-2-Gegenprobe (ohne 20261110_004)"
+fi
+
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,
 #        nur wenn WITH_R5=1 -- die neue Tabelle existiert sonst nicht) ------------------------
 EXPECTED_POLICY_COUNT=44
@@ -507,6 +585,10 @@ fi
 # A-08h entfernt drei Policies auf match_events (INSERT/UPDATE/DELETE v3/v2).
 if [[ "$WITH_A08H" -eq 1 ]]; then
   EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT - 3))
+fi
+# A-34: field_control ist RLS-aktiv, ohne Policy.
+if [[ "$WITH_A34" -eq 1 ]]; then
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 1))
 fi
 POLICY_COUNT="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM pg_policies WHERE schemaname = 'public';")"
@@ -574,6 +656,30 @@ MEMBERSHIP_VIEWER_MAIN="$(uuid_for membership:viewer-main)"
 # Dummy-Mitgliedszeile in T_ANON, ausschließlich als Ziel für die manageMembers-UPDATE/DELETE-
 # Sonden der Identität "owner-anonymous" (T_ANON hat sonst keine Mitarbeiter-Zeile).
 U_DUMMY_ANON_MEMBER="$(uuid_for user:dummy-anon-member)"
+# A-27: Geraetesitzungen (anonym). anon-device = Lena (gescannt, nicht zugelassen, keine Mitgliedschaft),
+# helper-device = Tom (zugelassen, Rolle helper), screen-device = Hallen-Rechner (Rolle screen), anon-coadmin = anonyme
+# Sitzung mit (Altbestand-)Zeile co-admin -- zaehlt nach R-A27-3 nicht.
+U_ANON_DEVICE="$(uuid_for user:anon-device)"
+U_HELPER_DEVICE="$(uuid_for user:helper-device)"
+U_SCREEN_DEVICE="$(uuid_for user:screen-device)"
+U_ANON_COADMIN="$(uuid_for user:anon-coadmin)"
+MEMBERSHIP_HELPER_DEVICE="$(uuid_for membership:helper-device)"
+MEMBERSHIP_SCREEN_DEVICE="$(uuid_for membership:screen-device)"
+MEMBERSHIP_ANON_COADMIN="$(uuid_for membership:anon-coadmin)"
+ANONYMOUS_UIDS=" $(uuid_for user:owner-anonymous) $U_ANON_DEVICE $U_HELPER_DEVICE $U_SCREEN_DEVICE $U_ANON_COADMIN "
+
+# A-27 (R-A27-3): Claims der Sitzung. Anonyme Identitaeten bekommen is_anonymous=true in request.jwt.claims
+# (wie PostgREST; auth.uid() dieses Images liest weiter claim.sub). A27_AS_REAL=1 erzwingt is_anonymous=false
+# (Zeilen, deren Zweck ein echter Fremd-Eigentuemer ist, z. B. K3/N4 -- sonst bewiesen sie nur die Anonym-Regel).
+claims_line() {
+  local uid="$1"
+  [[ -z "$uid" ]] && return 0
+  if [[ "${A27_AS_REAL:-0}" == "1" ]]; then
+    echo "SET LOCAL request.jwt.claims = '{\"sub\":\"$uid\",\"role\":\"authenticated\",\"is_anonymous\":false}';"
+  elif [[ "$ANONYMOUS_UIDS" == *" $uid "* ]]; then
+    echo "SET LOCAL request.jwt.claims = '{\"sub\":\"$uid\",\"role\":\"authenticated\",\"is_anonymous\":true}';"
+  fi
+}
 MEMBERSHIP_VIEWER_ANON="$(uuid_for membership:viewer-anon)"
 
 T_MAIN="$(uuid_for tournament:main)"
@@ -635,7 +741,11 @@ VALUES
   ('00000000-0000-0000-0000-000000000000', '$U_DECLINED', 'authenticated', 'authenticated', 'declined-membership@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '$U_DUMMY_ANON_MEMBER', 'authenticated', 'authenticated', 'dummy-anon-member@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '$U_DECLINED_INVITEE', 'authenticated', 'authenticated', '$DECLINED_INVITEE_EMAIL', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
-  ('00000000-0000-0000-0000-000000000000', '$U_EXPIRED_INVITEE', 'authenticated', 'authenticated', '$EXPIRED_INVITEE_EMAIL', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now());
+  ('00000000-0000-0000-0000-000000000000', '$U_EXPIRED_INVITEE', 'authenticated', 'authenticated', '$EXPIRED_INVITEE_EMAIL', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_ANON_DEVICE', 'authenticated', 'authenticated', NULL, 'x', now(), '{"provider":"anonymous","providers":["anonymous"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_HELPER_DEVICE', 'authenticated', 'authenticated', NULL, 'x', now(), '{"provider":"anonymous","providers":["anonymous"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_SCREEN_DEVICE', 'authenticated', 'authenticated', NULL, 'x', now(), '{"provider":"anonymous","providers":["anonymous"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_ANON_COADMIN', 'authenticated', 'authenticated', NULL, 'x', now(), '{"provider":"anonymous","providers":["anonymous"]}', '{}', now(), now());
 
 -- R5 (M4-Beweis "Co-Admin veröffentlicht"): T_MAIN bekommt von Anfang an einen publishedAt-
 -- Marker im config (is_public bleibt false) -- enforce_release_before_public (20260921_001,
@@ -761,6 +871,20 @@ VALUES
 COMMIT;
 SQL
 
+# A-27: Mitgliedschaften der Geraetesitzungen (als Superuser = Definer-Pfad, wie A-16/B-20 sie anlegen werden).
+# anon-coadmin immer (co-admin gibt es in jedem Modus); helper/screen nur mit 20261110_002 (Rollen-CHECK).
+psql_stdin <<SQL
+INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at)
+VALUES ('$MEMBERSHIP_ANON_COADMIN', '$T_MAIN', '$U_ANON_COADMIN', 'co-admin', now());
+SQL
+if [[ "$WITH_A27" -eq 1 ]]; then
+  psql_stdin <<SQL
+INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at) VALUES
+  ('$MEMBERSHIP_HELPER_DEVICE', '$T_MAIN', '$U_HELPER_DEVICE', 'helper', now()),
+  ('$MEMBERSHIP_SCREEN_DEVICE', '$T_MAIN', '$U_SCREEN_DEVICE', 'screen', now());
+SQL
+fi
+
 # Fixrunde 2 / K1-Beleg "Eigentümer-Übertragung über die SECURITY-DEFINER-Funktion muss
 # funktionieren": Die tatsächliche Produktionsfunktion merge_user_data() (Baseline ab Zeile
 # ~453) ist unabhängig von K1/K2 bereits kaputt — sie referenziert eine Tabelle
@@ -819,6 +943,7 @@ run_write() {
 BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = '$user_id';
+$(claims_line "$user_id")
 $email_line
 $sql
 SQL
@@ -870,6 +995,7 @@ run_write_then_select() {
 BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = '$user_id';
+$(claims_line "$user_id")
 $update_sql
 $select_sql
 SQL
@@ -898,13 +1024,25 @@ SQL
 # Fall) und 'declined-membership' (accepted_at UND declined_at gesetzt -- der M3-Fall) sind IMMER
 # false, UNABHÄNGIG von ihrer role-Spalte in tournament_collaborators -- das ist der Kern dessen,
 # was M1/M3 beweisen sollen.
-MATRIX_IDS=(owner owner-anonymous co-admin collaborator trainer viewer non-member open-invitation declined-membership)
+# A-27: + anon-device, helper-device, screen-device (anonyme Geraetesitzungen). owner-anonymous ist seit A-27 eine
+# anonyme Sitzung ohne Geraete-Rolle -> keine Rechte (R-A27-3, L9), nicht mehr "owner".
+MATRIX_IDS=(owner owner-anonymous co-admin collaborator trainer viewer non-member open-invitation declined-membership anon-device helper-device screen-device)
 
 role_for_id() {
   case "$1" in
-    owner|owner-anonymous) echo "owner" ;;
-    non-member|open-invitation|declined-membership) echo "" ;;
+    owner) echo "owner" ;;
+    owner-anonymous|anon-device|non-member|open-invitation|declined-membership) echo "" ;;
+    helper-device) echo "helper" ;;
+    screen-device) echo "screen" ;;
     *) echo "$1" ;;
+  esac
+}
+
+# A-27: Identitaet einer anonymen Sitzung (fuer den Sonderwert "realAccount" in right_for_op).
+is_anonymous_id() {
+  case "$1" in
+    owner-anonymous|anon-device|helper-device|screen-device) return 0 ;;
+    *) return 1 ;;
   esac
 }
 
@@ -966,6 +1104,7 @@ OPERATIONS=(
   tournaments_settings_update tournaments_deleted_at_update tournaments_hard_delete
   collaborators_insert collaborators_update collaborators_delete
   monitors_insert monitors_update monitors_delete
+  tournaments_insert templates_insert team_players_insert profiles_update_own
 )
 
 right_for_op() {
@@ -982,6 +1121,10 @@ right_for_op() {
     collaborators_insert|collaborators_update|collaborators_delete) echo "manageMembers" ;;
     # A-11 (@ZM-019 "Folienprogramm aendern"): Monitore verwaltet, wer manageScreens hat.
     monitors_insert|monitors_update|monitors_delete) echo "manageScreens" ;;
+    # A-27 (@AN-045, @HE-082, T5-T8): eigene Zeilen anlegen bzw. aendern darf nur ein echtes Konto (Sonderwert
+    # "realAccount": wahr fuer jede nicht-anonyme Identitaet, auch ohne Turnier-Bezug). Kader ueber das Recht teams.
+    tournaments_insert|templates_insert|profiles_update_own) echo "realAccount" ;;
+    team_players_insert) echo "teams" ;;
   esac
 }
 
@@ -993,7 +1136,7 @@ right_for_op() {
 op_sql() {
   local op="$1" tournament_id="$2" match_id="$3" team_id="$4" event_id="$5"
   local ins_team="$6" ins_match="$7" ins_invite="$8" target_membership="$9"
-  local monitor_id="${10}" ins_monitor="${11}"
+  local monitor_id="${10}" ins_monitor="${11}" acting_user="${12:-}"
   case "$op" in
     teams_insert)
       echo "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$ins_team','$tournament_id','Vollmatrix Team');" ;;
@@ -1036,6 +1179,14 @@ op_sql() {
       echo "UPDATE public.monitors SET config = '{\"slides\":[{\"type\":\"live\"}]}'::jsonb WHERE id='$monitor_id';" ;;
     monitors_delete)
       echo "DELETE FROM public.monitors WHERE id='$monitor_id';" ;;
+    tournaments_insert)
+      echo "INSERT INTO public.tournaments (id,owner_id,title,date,number_of_teams,group_phase_duration) VALUES ('$ins_match','$acting_user','Vollmatrix Turnier','2026-11-10',4,10);" ;;
+    templates_insert)
+      echo "INSERT INTO public.tournament_templates (id,owner_id,name,config) VALUES ('$ins_match','$acting_user','Vollmatrix Vorlage','{}'::jsonb);" ;;
+    team_players_insert)
+      echo "INSERT INTO public.team_players (id,team_id,number,name) VALUES ('$ins_team','$team_id',7,'Vollmatrix Spieler');" ;;
+    profiles_update_own)
+      echo "UPDATE public.profiles SET display_name='Vollmatrix Profil' WHERE id='$acting_user';" ;;
   esac
 }
 
@@ -1061,6 +1212,12 @@ for id in "${MATRIX_IDS[@]}"; do
     right="$(right_for_op "$op")"
     if [[ "$right" == "ownerOnly" ]]; then
       exp="$([[ "$role" == "owner" ]] && echo true || echo false)"
+      # A-27 (L9-Rest, Brief § 4.2): tournaments_delete_v2 prueft nur owner_id -- ein anonymer Alt-Eigentuemer loescht
+      # sein eigenes Alt-Turnier weiter. Nicht Teil von _002 (kein Neuanlegen unveraenderter Policies, R11); Befund-
+      # Vorschlag C-ANON-ALTEIGENTUEMER-RESTRECHTE (Report). Gemessen wird der Bestand.
+      [[ "$id" == "owner-anonymous" ]] && exp="true"
+    elif [[ "$right" == "realAccount" ]]; then
+      exp="$(is_anonymous_id "$id" && echo false || echo true)"
     else
       exp="$(perm_expected "$role" "$right")"
     fi
@@ -1074,7 +1231,7 @@ for id in "${MATRIX_IDS[@]}"; do
     ins_invite="$(uuid_for "vollmatrix-invite:$id:$op")"
     ins_monitor="$(uuid_for "vollmatrix-monitor:$id:$op")"
 
-    sql="$(op_sql "$op" "$tournament_id" "$match_id" "$team_id" "$event_id" "$ins_team" "$ins_match" "$ins_invite" "$target_membership" "$monitor_id" "$ins_monitor")"
+    sql="$(op_sql "$op" "$tournament_id" "$match_id" "$team_id" "$event_id" "$ins_team" "$ins_match" "$ins_invite" "$target_membership" "$monitor_id" "$ins_monitor" "$user_id")"
     result="$(run_write "$user_id" "$sql")"
     got="$([[ "$result" == "allowed" ]] && echo true || echo false)"
 
@@ -1329,7 +1486,7 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
   # Abschluss-Reviewers, hier als Harness-Zeile. INSERT + Hijack-UPDATE in EINER Transaktion —
   # bricht die Exception im nachher-Modus die Transaktion ab (ON_ERROR_STOP=1, run_write() liest
   # das als "denied"), bestätigen im ohne-004-Modus beide Befehls-Tags "allowed".
-  k3_hijack="$(run_write "$U_OWNER_ANON" "
+  k3_hijack="$(A27_AS_REAL=1 run_write "$U_OWNER_ANON" "
     INSERT INTO public.tournament_collaborators (tournament_id,user_id,role,accepted_at) VALUES ('$T_ANON','$U_OWNER_ANON','co-admin',now());
     UPDATE public.tournament_collaborators SET tournament_id='$T_MAIN' WHERE tournament_id='$T_ANON' AND user_id='$U_OWNER_ANON';
   ")"
@@ -1337,7 +1494,7 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
   # K3-Folge: dieselbe Sequenz, plus der eigentliche Übernahme-Schritt (UPDATE tournaments).
   # Eigene Zeile statt Wiederverwendung von k3_hijack, weil jeder run_write()-Aufruf in einer
   # eigenen, isolierten Transaktion läuft (Fixtures bleiben zwischen Zeilen unverändert).
-  k3_followup="$(run_write "$U_OWNER_ANON" "
+  k3_followup="$(A27_AS_REAL=1 run_write "$U_OWNER_ANON" "
     INSERT INTO public.tournament_collaborators (tournament_id,user_id,role,accepted_at) VALUES ('$T_ANON','$U_OWNER_ANON','co-admin',now());
     UPDATE public.tournament_collaborators SET tournament_id='$T_MAIN' WHERE tournament_id='$T_ANON' AND user_id='$U_OWNER_ANON';
     UPDATE public.tournaments SET location_name='RLS K3 Test' WHERE id='$T_MAIN';
@@ -1536,11 +1693,11 @@ SQL
   #     tournament_id im Payload sogar durchginge), siehe R5-Review Sonde A1/A2.
   #   - INSERT mit fremder tournament_id: eine NEUE Zeile, direkt gegen T_MAIN gerichtet.
   #   - DELETE fremder Zeilen: dieselbe Opfer-Zeile TEAM_MAIN.
-  n4_upsert_foreign_id="$(run_write "$U_OWNER_ANON" \
+  n4_upsert_foreign_id="$(A27_AS_REAL=1 run_write "$U_OWNER_ANON" \
     "INSERT INTO public.teams (id,tournament_id,name,owner_id) VALUES ('$TEAM_MAIN','$T_ANON','RLS Matrix N4 Hijack','$U_OWNER_ANON') ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;")"
-  n4_insert_foreign_tournament="$(run_write "$U_OWNER_ANON" \
+  n4_insert_foreign_tournament="$(A27_AS_REAL=1 run_write "$U_OWNER_ANON" \
     "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$TEAM_N4_INSERT','$T_MAIN','RLS Matrix N4 Insert');")"
-  n4_delete_foreign_rows="$(run_write "$U_OWNER_ANON" "DELETE FROM public.teams WHERE id = '$TEAM_MAIN';")"
+  n4_delete_foreign_rows="$(A27_AS_REAL=1 run_write "$U_OWNER_ANON" "DELETE FROM public.teams WHERE id = '$TEAM_MAIN';")"
 
   # manageMembers (R5b): Co-Admin versucht, einen neuen Mitarbeiter in T_MAIN einzuladen (echter
   # App-Pfad, invitationService.ts#createInvitation-Muster) → muss abgelehnt bleiben. Eigentümer
@@ -1630,7 +1787,7 @@ run_select_as() {
   local role="$1" user_id="$2" sql="$3" email_claim="${4:-}"
   local out ec
   local sub_line="" email_line=""
-  [[ -n "$user_id" ]] && sub_line="SET LOCAL request.jwt.claim.sub = '$user_id';"
+  [[ -n "$user_id" ]] && sub_line="SET LOCAL request.jwt.claim.sub = '$user_id'; $(claims_line "$user_id")"
   [[ -n "$email_claim" ]] && email_line="SET LOCAL request.jwt.claim.email = '$email_claim';"
   set +e
   out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 <<SQL 2>&1
@@ -1982,7 +2139,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi

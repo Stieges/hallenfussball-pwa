@@ -1,4 +1,4 @@
-import { displayMonitor, liveColorSchemeDefaults } from '../design-tokens/display';
+import { displayMonitor } from '../design-tokens/display';
 /**
  * Monitor Types - Monitor-Konfigurator
  *
@@ -168,37 +168,6 @@ export const COLOR_SCHEMES: Record<ColorScheme, { background: string; text: stri
 };
 
 // =============================================================================
-// LIVE COLOR SCHEME (Positions-Farben für Live-Score)
-// =============================================================================
-
-/**
- * Preset-Namen für Live-Score Farbschemata
- */
-export type LiveColorPreset = 'classic' | 'nature' | 'contrast' | 'modern' | 'alternative' | 'custom';
-
-/**
- * Farbschema für Live-Score-Anzeige auf Monitoren
- *
- * Positions-Farben (Heim/Gast) als Default, optional Team-Farben.
- */
-export interface LiveColorScheme {
-  preset: LiveColorPreset;
-  homeColor: string;
-  awayColor: string;
-  useTeamColors: boolean;
-}
-
-/**
- * Default: Klassisch Blau/Rot
- */
-export const DEFAULT_LIVE_COLOR_SCHEME: LiveColorScheme = {
-  preset: 'classic',
-  homeColor: liveColorSchemeDefaults.homeColor,
-  awayColor: liveColorSchemeDefaults.awayColor,
-  useTeamColors: false,
-};
-
-// =============================================================================
 // SLIDE CONFIGURATION
 // =============================================================================
 
@@ -235,9 +204,7 @@ export interface SlideConfig {
   body?: string;
   textAlign?: 'left' | 'center' | 'right';
   colorScheme?: ColorScheme;
-
-  // Für: live (Positions-Farben)
-  liveColorScheme?: LiveColorScheme;
+  // Live-Folie: keine eigene Farbe der Ergebniskästen mehr (@ZM-152) – sie liest die Turnier-Einstellung „Anzeige für Zuschauer“
 }
 
 /**

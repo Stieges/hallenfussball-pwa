@@ -13,6 +13,7 @@
 
 import type { Match } from '../../types/tournament';
 import { matchTeamIds } from '../models/matchSlot';
+import type { PlanQuality } from './planQuality';
 
 export interface VariantMetrics {
   seed: number;
@@ -131,4 +132,26 @@ function mulberry32(seed: number): () => number {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+/**
+ * Vorrang Rundenplan gegen Plan ohne Rundenplan-Vorschlag (K-a2, @W4-031, @W4-032, @W4-037):
+ *   1. DFB-Mindestabstand als harte Grenze (nur eine Gruppe auf einem Feld, 5–16 Teams; `dfbTarget` in Spielen)
+ *   2. nie mehr Zeitfenster und nie eine längere längste Pause als der Plan ohne Rundenplan-Vorschlag
+ *   3. kleinerer Unterschied gespielter Spiele
+ *   4. kürzere Heim/Gast-Serie
+ *   5. kleinere Spreizung
+ *   6. Gleichstand: der Rundenplan („geht in der Auswahl vor, solange keine Pause länger wird“, Record W4 Zone 1;
+ *      sonst wäre z. B. bei 5 Teams die Eröffnungswahl nicht wirksam, obwohl beide Pläne gleich fair sind).
+ */
+export function prefersRoundsPlan(rounds: PlanQuality, greedy: PlanQuality, dfbTarget: number | null): boolean {
+  if (dfbTarget !== null) {
+    const roundsMeets = rounds.shortestGap - 1 >= dfbTarget;
+    const greedyMeets = greedy.shortestGap - 1 >= dfbTarget;
+    if (roundsMeets !== greedyMeets) { return roundsMeets; }
+  }
+  if (rounds.slotCount > greedy.slotCount || rounds.longestGap > greedy.longestGap) { return false; }
+  if (rounds.playedDiff !== greedy.playedDiff) { return rounds.playedDiff < greedy.playedDiff; }
+  if (rounds.sideStreak !== greedy.sideStreak) { return rounds.sideStreak < greedy.sideStreak; }
+  return rounds.spread <= greedy.spread;
 }

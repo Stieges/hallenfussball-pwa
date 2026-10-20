@@ -3,7 +3,8 @@ import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { LocalStorageRepository } from './LocalStorageRepository';
 import { SupabaseRepository } from './SupabaseRepository';
-import { isAbortError, RepositoryError } from '../errors';
+import { isAbortError, NetworkError, RepositoryError } from '../errors';
+import type { StandingDecision } from '../../types/tournament';
 import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
 import { captureFeatureError } from '../../lib/sentry';
 import { slotTeamId } from '../models/matchSlot';
@@ -11,6 +12,7 @@ import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
 import { decideCloudAdoption, isCloudReadTimeout, withCloudReadTimeout } from './cloudAdoption';
 import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisionSource } from './serverRevisionRegistry';
 import { CloudQueueGuard } from './cloudQueueGuard';
+import { effectiveHostTeamIds } from '../models/hostTeams';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -326,6 +328,21 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         });
     }
 
+    /**
+     * Paket TB (F9, @W2A-062): in der Tabelle nur mit Netz – ohne Netz `NetworkError` (isOffline), nichts eingereiht;
+     * ohne Netz geht die Entscheidung mit „Gruppe abschließen“ (GA4 A-13b/A-15c). Danach lokale Kopie wie die Cloud.
+     */
+    async updateStandingDecisions(id: string, decisions: StandingDecision[], expectedVersion: number): Promise<void> {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            throw new NetworkError('Die Entscheidung in der Tabelle braucht eine Verbindung.', true);
+        }
+        await this.supabaseRepo.updateStandingDecisions(id, decisions, expectedVersion);
+        const local = await this.localRepo.get(id);
+        if (local) {
+            await this.localRepo.cacheCloudCopy({ ...local, standingDecisions: decisions, version: expectedVersion + 1 });
+        }
+    }
+
     async delete(id: string): Promise<void> {
         await this.localRepo.delete(id);
         this.serverRevisions.clear(id); // A-08f3b: Ablage leeren
@@ -535,6 +552,11 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         if (stableKey(local.monitors) !== stableKey(remote.monitors)) {return true;}
         if (stableKey(local.sponsors) !== stableKey(remote.sponsors)) {return true;}
         if ((local.bibColor ?? '').toUpperCase() !== (remote.bibColor ?? '').toUpperCase()) {return true;} // A-30a @W3-029: Leibchenfarbe nur im config-JSONB
+        if (stableKey(local.spectatorDisplay) !== stableKey(remote.spectatorDisplay)) {return true;} // Spielanzeige 2.1 @ZM-152: nur im config-JSONB
+        // @W4-034: Markierung des Veranstalters und Eröffnungswahl liegen nur im config-JSONB (wie bibColor).
+        // @W4-044: verwaiste IDs (Team gelöscht) zählen auf keiner Seite (die Teams sind oben schon als gleich geprüft).
+        if (stableKey(effectiveHostTeamIds(local.hostTeamIds, local.teams)) !== stableKey(effectiveHostTeamIds(remote.hostTeamIds, remote.teams))) {return true;}
+        if ((local.openingMode ?? '') !== (remote.openingMode ?? '')) {return true;}
 
         // Fix 3 (Review 2026-09-18): publishedAt liegt ebenfalls nur im config-JSONB (siehe
         // supabase/migrations/20260918_002_make_public_refuses_drafts.sql) und hat — anders

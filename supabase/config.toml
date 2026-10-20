@@ -177,9 +177,12 @@ enable_refresh_token_rotation = true
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
+# A-27 (@AN-006, P0-4): bleibt AN -- ohne Signup scheitert auch die anonyme Geraetesitzung (422 signup_disabled).
+# Die Sperre fuer echte Registrierungen macht der Hook [auth.hook.before_user_created] unten.
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
-enable_anonymous_sign_ins = false
+# A-27 (E-A1): Helfer-Geraete und Bildschirme melden sich anonym an; Rechte nur ueber die Rolle helper/screen.
+enable_anonymous_sign_ins = true
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
@@ -194,7 +197,8 @@ email_sent = 2
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
-anonymous_users = 30
+# A-27 (@FT-006): 12 Geraete (6 Helfer + 6 Bildschirme) x (1 + 2 Neustarts) = 36 je Stunde und Hallen-IP, Spielraum.
+anonymous_users = 60
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
 token_refresh = 150
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
@@ -270,9 +274,11 @@ max_frequency = "5s"
 # inactivity_timeout = "8h"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
-# [auth.hook.before_user_created]
-# enabled = true
-# uri = "pg-functions://postgres/auth/before-user-created-hook"
+# A-27 (@AN-006, C-REG): nur anonyme Geraetesitzungen entstehen ueber die Schnittstelle; Konten legt der Betreiber an.
+# Funktion in supabase/migrations/20261110_002_device_roles.sql. Produktion: Dashboard (Auth > Hooks).
+[auth.hook.before_user_created]
+enabled = true
+uri = "pg-functions://postgres/public/hook_before_user_created"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
 # [auth.hook.custom_access_token]

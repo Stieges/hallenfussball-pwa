@@ -17,15 +17,12 @@ export const STEP_LABELS: Record<WizardStep, string> = {
   6: 'Übersicht',
 };
 
-/** Parse step from URL search params */
-export function getStepFromSearchParams(searchParams: URLSearchParams): WizardStep {
+/** Schritt aus der Adresse; fehlt der Parameter oder ist der Wert unbekannt, gibt es keinen Wunsch (null). */
+export function parseStepParam(searchParams: URLSearchParams): WizardStep | null {
   const stepParam = searchParams.get('step');
-  if (!stepParam) { return 1; }
-
+  if (!stepParam || !/^\d+$/.test(stepParam)) { return null; }
   const parsed = parseInt(stepParam, 10);
-  if (isNaN(parsed) || parsed < 1 || parsed > 6) { return 1; }
-
-  return parsed as WizardStep;
+  return parsed >= 1 && parsed <= 6 ? (parsed as WizardStep) : null;
 }
 
 /** Build wizard URL with step parameter */

@@ -4,6 +4,9 @@ import { RULEBOOK_MAX_LENGTH } from '../../../constants/rulebook';
 import { MatchSlotSchema, SlotSourceSchema } from './MatchSlotSchema';
 import { CLOCK_MODES, FINAL_PHASE_MINUTES_MAX, FINAL_PHASE_MINUTES_MIN } from '../../match/clockDisplay';
 import { MatchKitSchema } from '../kit';
+import { OPENING_MODES } from '../../../types/tournament';
+import { parseStandingDecisions, StandingDecisionSchema } from './StandingDecisionSchema';
+import { PlacementsToPlayOutSchema } from '../../standings/playOutPlaces';
 
 const TeamLogoSchema = z.object({
     type: z.enum(['url', 'base64', 'initials']),
@@ -152,6 +155,16 @@ export const TournamentSchema = z.object({
     isPublic: z.boolean().optional(),
     shareCode: z.string().optional(),
     shareCodeCreatedAt: z.string().optional(),
+
+    // Mannschaften des Veranstalters und Eröffnung (@W4-034, @W4-033). Ungültige Werte machen das Turnier
+    // nicht ungültig, sie werden verworfen (Bestandsdaten ohne die Felder bleiben gültig).
+    hostTeamIds: z.array(z.string()).optional().catch(undefined),
+    openingMode: z.enum(OPENING_MODES).optional().catch(undefined),
+    // Paket TB: Gleichstands-Entscheidungen (strikt je Entscheidung). Je Eintrag gefiltert (Review TB-A Auflage 9): ein
+    // fehlerhafter Eintrag fällt weg, die gültigen bleiben – sonst verlöre ein späteres Voll-Speichern alle Entscheidungen.
+    standingDecisions: z.preprocess(parseStandingDecisions, z.array(StandingDecisionSchema).optional()),
+    // Paket TB-B (TB-3'): Plätze, die bei Gleichstand ausgespielt werden müssen; fehlend/unbrauchbar → nur Platz 1.
+    placementsToPlayOut: PlacementsToPlayOutSchema,
 })
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- passthrough needed to prevent data loss of unmapped fields
   .passthrough();

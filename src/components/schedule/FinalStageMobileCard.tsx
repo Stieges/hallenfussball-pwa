@@ -11,7 +11,7 @@ import type { ScheduledMatch } from '../../core/generators';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
 import { MatchClock } from '../ui/molecules/MatchClock';
 import { ScoreDraftInput } from '../ui/atoms';
-import { ScoreDraftHint, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
+import { ScoreChangedHint, ScoreDraftHint, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
 import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../core/view';
 import type { ResultFigures } from './matchResult';
 
@@ -42,6 +42,8 @@ export interface FinalStageMobileCardProps {
   inCorrectionMode: boolean;
   onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => ScoreCommitResult;
   onStartCorrection?: (matchId: string) => void;
+  /** Wer dieses Spiel zuletzt geändert hat, für den Hinweis „inzwischen geändert“ (@FU-104) */
+  changeAuthorOf?: (matchId: string) => Promise<string | null>;
   showReferees: boolean;
   showFields: boolean;
   editingSchedule: boolean;
@@ -72,7 +74,7 @@ const selectStyle: CSSProperties = {
 export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props) => {
   const {
     match, label, homeName, awayName, homePending, awayPending, result, isRunning, isFinished, badge, clock, viewStatus, canEditScore, inCorrectionMode,
-    onScoreChange, onStartCorrection, showReferees, showFields, editingSchedule, displayedRef, displayedField,
+    onScoreChange, onStartCorrection, changeAuthorOf, showReferees, showFields, editingSchedule, displayedRef, displayedField,
     hasPendingRef, hasPendingField, refereeOptions, fieldOptions, onRefereeChange, onFieldChange,
   } = props;
   const { t } = useTranslation('tournament');
@@ -82,7 +84,10 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
     : undefined;
   const statusNote = viewStatus === 'awarded' ? t('view.status.awarded') : undefined;
   const editable = canEditScore || inCorrectionMode;
-  const draft = useScoreDraft({ resetKey: match.id, savedA: match.scoreA, savedB: match.scoreB, onCommit: (a, b) => onScoreChange?.(match.id, a, b) });
+  const draft = useScoreDraft({
+    resetKey: match.id, savedA: match.scoreA, savedB: match.scoreB, onCommit: (a, b) => onScoreChange?.(match.id, a, b),
+    resolveAuthor: changeAuthorOf ? () => changeAuthorOf(match.id) : undefined,
+  });
 
   const renderRow = (side: 'a' | 'b', name: string, pending: boolean) => {
     const isWinner = decided && result?.winner === side;
@@ -175,6 +180,14 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
       {renderRow('a', homeName, homePending)}
       {renderRow('b', awayName, awayPending)}
       {editable && draft.invalid && <ScoreDraftHint id={draft.hintId} testId={`final-score-hint-${match.id}`} />}
+      {draft.changed && (
+        <ScoreChangedHint
+          changed={draft.changed}
+          testId={`final-score-changed-${match.id}`}
+          keepTestId={`final-score-changed-keep-${match.id}`}
+          onKeepDraft={editable && !isFinished ? draft.keepDraft : undefined}
+        />
+      )}
 
       {clock && <div style={{ marginTop: cssVars.spacing.xs }}><MatchClock clock={clock} size="card" /></div>}
 

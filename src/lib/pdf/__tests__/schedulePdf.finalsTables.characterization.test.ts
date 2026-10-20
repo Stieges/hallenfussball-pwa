@@ -6,6 +6,11 @@
  * - M1 Finalrunde Heim/Gast vertauscht → Test „Finalrunde: jede Zeile …“ rot.
  * - M2 Teamname in der Gruppentabelle leer → Test „Gruppentabellen …“ rot.
  * - M3 Ergebniszelle ohne Doppelpunkt → Zeilen-Tests (Gruppe und Finalrunde) rot.
+ *
+ * Paket TB (TB-4, R5): bewusst umgestellt ist nur, WER die Reihenfolge der Gruppentabelle bestimmt. Das PDF ordnete
+ * früher selbst nach Punkten, Tordifferenz, Toren; jetzt übernimmt es Reihenfolge und Platzziffer der Tabellenrechnung
+ * je Gruppe (BFV privat, direkter Vergleich). Die Tests mit `HALLENCUP_STANDINGS` (bereits in Rangfolge) blieben
+ * unverändert grün; neu ist der Test „übernimmt die gelieferte Reihenfolge“.
  */
 import { describe, it, expect, vi } from 'vitest';
 import {
@@ -103,6 +108,18 @@ describe('Gruppentabellen und Platzierung mit echten Standings (B-28a0 Fixrunde 
 
     expect(containsSequence(text, TABELLE_A), 'Tabelle Gruppe A').toBe(true);
     expect(containsSequence(text, TABELLE_B), 'Tabelle Gruppe B').toBe(true);
+  });
+
+  it('TB-4 R5 Gruppentabelle übernimmt die gelieferte Reihenfolge und Platzziffer der Rechnung (FC Nord vor DJK Berg, kein eigenes Sortieren nach Tordifferenz)', async () => {
+    // Rechnung (BFV privat): Nord gewann das direkte Spiel gegen Berg und steht trotz schlechterer Tordifferenz vorn.
+    const [berg, nord, ...rest] = HALLENCUP_STANDINGS;
+    const geliefert = [{ ...nord, place: 1 }, { ...berg, place: 2 }, ...rest];
+    const text = flatText(await renderSchedulePdf(hallencupSchedule(), geliefert, OPTIONS));
+
+    const umgestellt = [...TABELLE_A.slice(8, 16), ...TABELLE_A.slice(0, 8)].map((zelle, i) => (i === 0 ? '1' : i === 8 ? '2' : zelle));
+    expect(containsSequence(text, [...umgestellt, ...TABELLE_A.slice(16)]), 'Tabelle Gruppe A in gelieferter Reihenfolge').toBe(true);
+    // Gegenbeispiel: die alte Reihenfolge (Berg vor Nord) steht nicht mehr da.
+    expect(containsSequence(text, TABELLE_A)).toBe(false);
   });
 
   it('@DR-009 Platzierung gesamt zeigt keine Rangfolge nach Punkten (C-RANK-FIN), auch mit gespielten Spielen', async () => {
