@@ -61,3 +61,12 @@ export function useCan(permission: Permission, tournamentId: string): boolean {
   }
   return UNKNOWN_ROLE_RIGHTS.has(permission);
 }
+
+/**
+ * CA-5 (@HE-085, Plan-Review Auflage 10c/11): Recht für ein Turnier der Startseiten-Liste, deren Listenobjekt die Rolle
+ * schon mitbringt (`Tournament.myRole`: eine Abfrage für alle Karten statt einer je Karte über `useCan`). Ohne Rolle ist es
+ * ein eigenes Turnier (Gast, lokal angelegt). Die Rechte kommen wie überall aus rolePermissions.json (`hasPermission`).
+ */
+export function canWithListedRole(role: TournamentRole | undefined, permission: Permission): boolean {
+  return role === undefined || hasPermission(role, permission);
+}

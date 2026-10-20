@@ -22,6 +22,7 @@ import {
   mapTeamToSupabase,
   type TournamentUpdate,
 } from './supabaseMappers';
+import { readAccountTournamentList, type CloudTournamentList } from './accountTournamentList';
 
 /**
  * Gets the Supabase client or throws an error if not configured.
@@ -721,33 +722,16 @@ export class SupabaseRepository implements ITournamentRepository {
   // =============================================================================
 
   /**
-   * Lists all tournaments for the current user
+   * Lists the current user's tournaments for the start page: own ones plus active memberships, each with `myRole`
+   * (CA-5, Befund C-LISTE-NUR-EIGENTUEMER, `accountTournamentList.ts`).
    */
   async listForCurrentUser(): Promise<Tournament[]> {
-    const {
-      data: { user },
-    } = await getSupabase().auth.getUser();
-    if (!user) {
-      return [];
-    }
+    return (await this.listWithMemberships()).tournaments;
+  }
 
-    const { data: tournamentRows, error } = await getSupabase()
-      .from('tournaments')
-      .select('*')
-      .eq('owner_id', user.id)
-      .is('deleted_at', null)
-      .order('updated_at', { ascending: false });
-
-    if (error) {
-      console.error('Failed to list tournaments:', error);
-      throw new RepositoryError('list', error.message, error);
-    }
-
-    // For listing, we don't need full team/match data
-    // Return minimal tournament objects
-    return tournamentRows.map((row) =>
-      mapTournamentFromSupabase(row, [], [])
-    );
+  /** CA-5: Startseiten-Liste mit den Angaben, die `OfflineRepository` zum Zusammenführen braucht. */
+  listWithMemberships(): Promise<CloudTournamentList> {
+    return readAccountTournamentList(getSupabase());
   }
 
   /**

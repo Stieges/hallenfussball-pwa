@@ -83,7 +83,14 @@
       "goalsFor": "Tore",
       "directComparison": "DV"
     },
-    "noPlacement": "Keine"
+    "noPlacement": "Keine",
+    "role": {
+      "co-admin": "Co-Admin",
+      "collaborator": "Helfer",
+      "trainer": "Trainer",
+      "viewer": "Zuschauer"
+    },
+    "roleLabel": "Deine Rolle: {{role}}"
   },
 
   "actions": {

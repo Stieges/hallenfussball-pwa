@@ -12,6 +12,7 @@ import { decideCloudAdoption, isCloudReadTimeout, withCloudReadTimeout } from '.
 import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisionSource } from './serverRevisionRegistry';
 import { CloudQueueGuard } from './cloudQueueGuard';
 import { effectiveHostTeamIds } from '../models/hostTeams';
+import { mergeAccountList, offlineAccountList, readAccountRoleMemory, writeAccountRoleMemory, type AccountRoleMemory } from './accountListMerge';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -343,10 +344,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     // --- Extended Methods for Sync ---
 
     /**
-     * Lists tournaments.
-     * Strategy:
-     * - Try Cloud List + Merge with Local-only tournaments
-     * - If fail: Return Local List.
+     * Startseiten-Liste: Cloud (eigene + Mitgliedschaften, CA-5) mit den nur lokalen Kopien des Kontos zusammengeführt
+     * (`accountListMerge.ts`); ohne Netz die lokalen Kopien mit gemerkter Rolle.
      */
     async listForCurrentUser(): Promise<Tournament[]> {
         try {
@@ -354,30 +353,22 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             const timeoutPromise = new Promise<never>((_, reject) =>
                 setTimeout(() => reject(new Error('Cloud fetch timeout')), 5000)
             );
-
-            // Race between cloud fetch and timeout
-            const cloudList = await Promise.race([
-                this.supabaseRepo.listForCurrentUser(),
-                timeoutPromise
-            ]);
-            // Merge: Add local-only tournaments that haven't been synced yet
-            const cloudIds = new Set(cloudList.map(t => t.id));
-            if (this.accountId !== undefined) { await this.localRepo.assignUnmarkedOwners(this.accountId, cloudIds); }
-            const localList = await this.localListForAccount();
-            const localOnly = localList.filter(t => !cloudIds.has(t.id));
-
+            const cloud = await Promise.race([this.supabaseRepo.listWithMemberships(), timeoutPromise]);
+            if (cloud.membershipError) { captureFeatureError(cloud.membershipError, 'repository', 'listMemberships'); }
+            if (this.accountId !== undefined) {
+                await this.localRepo.assignUnmarkedOwners(this.accountId, new Set(cloud.tournaments.filter(t => t.myRole === 'owner').map(t => t.id)));
+            }
             // @W5-027: Wartet eine lokale Änderung noch in der Warteschlange (z. B. archivierte Kopie) UND ist sie neuer als die
             // Cloud-Zeile, gilt die lokale Fassung, sonst käme beim Neuladen kurz der alte Stand zurück. Ohne offene Änderung
             // (Geräteuhr weicht ab, abgelehnte Änderung im Dead-Letter) gilt der Server.
-            const localById = new Map(localList.map(t => [t.id, t]));
-            const merged = cloudList.map(cloudT => {
-                const localT = localById.get(cloudT.id);
-                return localT && this.mutationQueue.hasPending(cloudT.id) && Date.parse(localT.updatedAt) > Date.parse(cloudT.updatedAt) ? localT : cloudT;
+            const result = mergeAccountList({
+                cloud,
+                local: await this.localListForAccount(),
+                memory: this.roleMemory(),
+                preferLocal: (cloudT, localT) => this.mutationQueue.hasPending(cloudT.id) && Date.parse(localT.updatedAt) > Date.parse(cloudT.updatedAt),
             });
-
-            // Return cloud list + unsynced local tournaments
-            // Local-only items are marked so UI can show sync indicator if needed
-            return [...merged, ...localOnly];
+            if (result.memory && this.accountId !== undefined) { writeAccountRoleMemory(this.accountId, result.memory); }
+            return result.list;
         } catch (error) {
             // Only log non-AbortErrors (AbortError is expected during navigation)
             if (!isAbortError(error)) {
@@ -386,9 +377,13 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     captureFeatureError(error, 'repository', 'list');
                 }
             }
-            // Fallback to all local tournaments
-            return await this.localListForAccount();
+            return offlineAccountList(await this.localListForAccount(), this.roleMemory());
         }
+    }
+
+    /** CA-5: Rollen-Gedächtnis des Kontos (ohne Konto – nur Tests – leer). */
+    private roleMemory(): AccountRoleMemory {
+        return this.accountId === undefined ? { roles: {}, former: [] } : readAccountRoleMemory(this.accountId);
     }
 
     /**
@@ -397,7 +392,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     async syncUp(): Promise<void> {
         try {
             // A-07e: nur eigene Kopien des Kontos (Gast-Kopien nie hochladen)
-            const localList = await this.localListForAccount();
+            const formerIds = new Set(this.roleMemory().former); // CA-5: ausgetragen/fremd – nie hochladen
+            const localList = (await this.localListForAccount()).filter(t => !formerIds.has(t.id));
 
             for (const localT of localList) {
                 try {
@@ -410,6 +406,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     // Try to get from cloud to check existence/version
                     const cloudT = await this.supabaseRepo.get(localT.id);
 
+                    if (!cloudT && localT.changeRevision !== undefined) {
+                        continue; // CA-5 (@HE-087): Kopie stammt aus der Cloud, das Konto sieht das Turnier nicht mehr
+                    }
                     if (!cloudT) {
                         // Not in cloud -> Full Upload (A-08f3c1: die Cloud legt mit Version 1 an)
                         await this.supabaseRepo.save(localT);
