@@ -33,6 +33,20 @@ export function offeredPlaces(teams: readonly Pick<Team, 'group'>[]): number[] {
   return Array.from({ length: largest }, (_, i) => i + 1);
 }
 
+/**
+ * Angebotene Plätze im Assistenten, bevor Teams eingetragen sind (@W2A-066, @W2A-073): Jeder gegen jeden = alle Teams, mit
+ * Gruppen und Finalrunde die größte Gruppe (Teams geteilt durch Gruppen, aufgerundet). Ohne brauchbare Zahl: keine Plätze.
+ */
+export function offeredPlacesForSetup(setup: Partial<Pick<Tournament, 'groupSystem' | 'numberOfTeams' | 'numberOfGroups'>>): number[] {
+  const teams = setup.numberOfTeams;
+  if (teams === undefined || !Number.isFinite(teams) || teams < 1) {
+    return [];
+  }
+  const groups = setup.groupSystem === 'groupsAndFinals' ? Math.max(1, setup.numberOfGroups ?? 1) : 1;
+  const largest = Math.ceil(teams / groups);
+  return Array.from({ length: largest }, (_, i) => i + 1);
+}
+
 /** Wirksame Einstellung: gelesen und auf die angebotenen Plätze gekappt (@W2A-073, kein Fehler bei weniger Teams). */
 export function effectivePlacementsToPlayOut(tournament: Pick<Tournament, 'placementsToPlayOut' | 'teams'>): number[] {
   const offered = new Set(offeredPlaces(tournament.teams));

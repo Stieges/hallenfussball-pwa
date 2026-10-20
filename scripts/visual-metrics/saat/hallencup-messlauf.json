@@ -43,6 +43,9 @@
                 "enabled": true
               }
             ],
+            "placementsToPlayOut": [
+              1
+            ],
             "finals": {
               "final": true,
               "thirdPlace": true,
@@ -1021,6 +1024,9 @@
                 "enabled": true
               }
             ],
+            "placementsToPlayOut": [
+              1
+            ],
             "finals": {
               "final": true,
               "thirdPlace": true,
@@ -1418,6 +1424,9 @@
                 "id": "goalsFor",
                 "enabled": true
               }
+            ],
+            "placementsToPlayOut": [
+              1
             ],
             "finals": {
               "final": true,
@@ -1819,6 +1828,9 @@
                 "enabled": true
               }
             ],
+            "placementsToPlayOut": [
+              1
+            ],
             "finals": {
               "final": true,
               "thirdPlace": true,
@@ -2218,6 +2230,9 @@
                 "id": "goalsFor",
                 "enabled": true
               }
+            ],
+            "placementsToPlayOut": [
+              1
             ],
             "finals": {
               "final": true,

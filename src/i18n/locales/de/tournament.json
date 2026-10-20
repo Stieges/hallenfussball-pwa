@@ -1203,15 +1203,13 @@
       "hint": "Die Einstellung wirkt sofort auf Tabelle und Endstand.",
       "save": "Speichern",
       "reset": "Zurücksetzen",
-      "saved": "Gespeichert.",
       "readOnly": "Nur die Turnierleitung ändert diese Einstellung.",
       "confirmTitle": "Annahme wird aufgehoben",
       "confirmIntro": "Du hast die auszuspielenden Plätze geändert.",
       "confirmBody": "Für {{names}} liegt die Annahme „Ergebnis so akzeptieren“ vor. Sie wird aufgehoben, dann ist ein Strafstoßschießen nötig.",
       "confirmKeep": "Ein eingetragenes Strafstoßschießen oder eine festgelegte Reihenfolge bleibt bei jeder Änderung bestehen.",
       "confirmCancel": "Abbrechen",
-      "confirmOk": "Annahme aufheben",
-      "failed": "Speichern hat nicht geklappt. Bitte erneut versuchen."
+      "confirmOk": "Annahme aufheben"
     },
     "places": {
       "one": "Platz {{from}}",

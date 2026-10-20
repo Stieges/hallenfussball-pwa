@@ -23,6 +23,7 @@ import { LocationForm } from '../../components/LocationForm';
 import { ContactForm } from '../../components/ContactForm';
 import { SponsorManagement } from './SponsorManagement';
 import { FieldManagement } from './FieldManagement';
+import { PlayOutPlacesSettings } from './standings/PlayOutPlacesSettings';
 import { useTournamentStartState } from '../../hooks/useTournamentStartState';
 import { useCan } from '../auth/hooks/useCan';
 import { LeadOnlyHint } from '../../components/ui/molecules/LeadOnlyHint';
@@ -32,6 +33,8 @@ interface SettingsTabProps {
   onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
   onDirtyChange?: (isDirty: boolean) => void;
   onEditInWizard?: (tournament: Tournament, targetStep?: number) => void;
+  /** Abschnitt, den die Adresse ansteuert (`?abschnitt=gleichstand`, Paket TB-B). */
+  focusSection?: string;
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
@@ -39,6 +42,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onTournamentUpdate,
   onDirtyChange,
   onEditInWizard,
+  focusSection,
 }) => {
   const { t } = useTranslation('tournament');
   // @W5-004: „Im Wizard bearbeiten" setzt ein festgelegtes Turnier NIE auf Entwurf zurück.
@@ -480,6 +484,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             onTournamentUpdate={handleAsyncTournamentUpdate}
           />
         </div>
+
+        {/* Gleichstand: welche Plätze ausgespielt werden müssen (Paket TB-B, @W2A-068) */}
+        <PlayOutPlacesSettings tournament={tournament} onTournamentUpdate={onTournamentUpdate} jumpHere={focusSection === 'gleichstand'} />
         </fieldset>
 
         {/* Wizard-Bearbeitung (Neuplanen, Teams ersetzen) — nur vor dem ersten Anpfiff (@LZ-003 / W3), nur mit restructure (@W5-017) */}

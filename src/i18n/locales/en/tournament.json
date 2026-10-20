@@ -1203,15 +1203,13 @@
       "hint": "The setting takes effect immediately in the table and the final ranking.",
       "save": "Save",
       "reset": "Reset",
-      "saved": "Saved.",
       "readOnly": "Only the tournament organiser changes this setting.",
       "confirmTitle": "Acceptance will be withdrawn",
       "confirmIntro": "You changed the places that must be played out.",
       "confirmBody": "For {{names}} the acceptance “Accept result as it is” is on record. It will be withdrawn, then a penalty shootout is needed.",
       "confirmKeep": "An entered penalty shootout or a set order stays in place whatever you change.",
       "confirmCancel": "Cancel",
-      "confirmOk": "Withdraw acceptance",
-      "failed": "Saving did not work. Please try again."
+      "confirmOk": "Withdraw acceptance"
     },
     "places": {
       "one": "place {{from}}",

@@ -413,6 +413,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
             onDirtyChange={setIsSettingsDirty}
             onEditInWizard={onEditInWizard}
+            focusSection={searchParams.get('abschnitt') ?? undefined}
           />
         )}
         {activeTab === 'monitor' && (

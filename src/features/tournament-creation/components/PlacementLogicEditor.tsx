@@ -21,6 +21,7 @@ import { Icons } from '../../../components/ui';
 import { cssVars } from '../../../design-tokens'
 import { PlacementCriterion } from '../../../types/tournament';
 import { resolvePlacementCriterionLabel } from './placementLogicLabels';
+import { PlacementAfterRow } from './PlacementAfterRow';
 
 interface PlacementLogicEditorProps {
   placementLogic: PlacementCriterion[];
@@ -182,6 +183,11 @@ const SortableItem: React.FC<SortableItemProps> = ({
         {/* Label */}
         <span style={{ flex: 1, color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.md }}>
           {label}
+          {criterion.id === 'directComparison' && (
+            <small style={{ display: 'block', color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.normal }}>
+              {t('placementLogic.directComparisonHint')}
+            </small>
+          )}
         </span>
 
         {/* Toggle Button */}
@@ -266,6 +272,9 @@ export const PlacementLogicEditor: React.FC<PlacementLogicEditorProps> = ({
       <p style={helpTextStyle}>
         <span>{t('placementLogic.helpText')}</span>
       </p>
+      <p style={{ ...helpTextStyle, marginTop: `-${cssVars.spacing.sm}` }}>
+        <span>{t('placementLogic.bfvHelp')}</span>
+      </p>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -293,6 +302,8 @@ export const PlacementLogicEditor: React.FC<PlacementLogicEditorProps> = ({
           </div>
         </SortableContext>
       </DndContext>
+      {/* Paket TB-B (F8): feste letzte Stufe, außerhalb der Liste, ohne Schalter */}
+      <PlacementAfterRow />
     </div>
   );
 };
