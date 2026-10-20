@@ -78,7 +78,7 @@
 | Element | Selector | Typ | Beschreibung |
 |---------|----------|-----|--------------|
 | Uhr der Tafel (Restzeit) | `[data-testid="scoreboard-clock-rest"]` | data-testid | Zeigt die Restzeit des Abschnitts (`m:ss`); `scoreboard-clock` umschließt Uhr und Spielzeit |
-| Zustand der Tafel | `[data-testid="scoreboard-state"]` | data-testid | Vor Anpfiff, Live, Halbzeit, Abgepfiffen …; die angehaltene Uhr trägt `data-steht="true"` an `scoreboard-clock` |
+| Zustand der Tafel | `[data-testid="scoreboard-state"]` | data-testid | Anstoßzeit (vor Anpfiff), Live, Halbzeit, Ende …; die angehaltene Uhr trägt `data-steht="true"` an `scoreboard-clock` |
 | Zurück-Button | `[aria-label="Zurück"]` | aria-label | Navigation zurück |
 
 ### Team-Anzeige

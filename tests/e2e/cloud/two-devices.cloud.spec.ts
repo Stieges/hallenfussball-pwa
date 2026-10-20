@@ -88,7 +88,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
 
     await helperPage.locator('[data-testid="match-finish-button"]').click();
 
-    await expect(ownerPage.locator('[data-testid="scoreboard-state"]')).toHaveText('Abgepfiffen', { timeout: owner3sMs });
+    await expect(ownerPage.locator('[data-testid="scoreboard-state"]')).toHaveText('Ende', { timeout: owner3sMs });
     await expect(ownerPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('1');
     await expect(ownerPage.locator('[data-testid="scoreboard-box-rechts"]')).toHaveText('0');
 
@@ -113,7 +113,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     await expect(helperPage.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
     // Hinweis: Das Cockpit nach dem Abpfiff des letzten Spiels zeigt seit Cockpit 2.5 die Tafel „Kein weiteres Spiel“ (behoben:
     // C-COCKPIT-LAEDT-NACH-ABPFIFF); die Aussage `data-pending="0"` beim Helfer steht im Test "Cup FINISHAUSGANG".
-    // Beim Owner, dessen Cockpit „Abgepfiffen“ zeigt, gilt sie sofort:
+    // Beim Owner, dessen Cockpit „Ende“ zeigt, gilt sie sofort:
     await expect(ownerPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: owner3sMs });
   });
 

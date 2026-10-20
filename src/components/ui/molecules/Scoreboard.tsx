@@ -8,9 +8,11 @@
  * Die Tafel ist in beiden Themes dunkel (Tokens `scoreboard*`).
  */
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
-import { animations, cssVars, iconSizeValues } from '../../../design-tokens';
+import { cssVars, iconSizeValues } from '../../../design-tokens';
+import type { MatchBadgeModel } from '../../../core/view/badge';
 import { Icons } from '../Icons';
 import { TafelIcons } from '../IconsTafel';
+import { MatchStatusBadge } from './MatchStatusBadge';
 
 export type ScoreboardTon = 'neutral' | 'live' | 'pause' | 'ende' | 'info';
 export interface ScoreboardSeite { name: string; tore: number; /** Trikotfarbe des Stand-Kastens (Mockup-Freigabe 16.10.); fehlt sie, bleibt der Kasten neutral. */ trikot?: string | null }
@@ -27,7 +29,8 @@ export interface ScoreboardUhr {
   ton?: 'gedaempft' | 'ok';
 }
 export interface ScoreboardModel {
-  zustandText: string; ton: ScoreboardTon;
+  /** Zustands-Abzeichen ohne Uhr (@OB-065, @OB-066): dasselbe Molekül wie die Spielkarte. */
+  badge: MatchBadgeModel;
   links: ScoreboardSeite; rechts: ScoreboardSeite;
   uhr: ScoreboardUhr | null;
   /** Text in der Kopfzeile neben dem Zustand: Abschnitt, vor dem Spiel der Turniername. */
@@ -68,14 +71,6 @@ function ziffernFarbe(trikot: string): string | null {
   // Kontrast gegen Weiß (1,05 / (L + 0,05)) gegen Kontrast gegen Schwarz ((L + 0,05) / 0,05)
   return 1.05 / (leuchtdichte + 0.05) >= (leuchtdichte + 0.05) / 0.05 ? cssVars.colors.scoreboardOnLive : cssVars.colors.scoreboardOnHighlight;
 }
-
-const BADGE: Record<ScoreboardTon, { bg: string; fg: string }> = {
-  neutral: { bg: cssVars.colors.scoreboardSurface, fg: cssVars.colors.scoreboardText },
-  live: { bg: cssVars.colors.scoreboardLive, fg: cssVars.colors.scoreboardOnLive },
-  pause: { bg: cssVars.colors.scoreboardHighlight, fg: cssVars.colors.scoreboardOnHighlight },
-  ende: { bg: cssVars.colors.scoreboardNeutral, fg: cssVars.colors.scoreboardOnLive },
-  info: { bg: cssVars.colors.scoreboardInfo, fg: cssVars.colors.scoreboardOnHighlight },
-};
 
 /** Höhe der Kopfzeile; die Tippfläche der Abzeichen (44 px) ragt darüber hinaus (`ueberstand`) und braucht dort Platz. */
 const zeileHoehe = (gross: boolean): string => (gross ? cssVars.spacing.xl : cssVars.spacing.lg);
@@ -125,16 +120,6 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
     display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: `${ueberstand} ${cssVars.spacing.sm}`,
     // Die Tippfläche der Abzeichen ragt unter die Zeile: so viel Luft darunter, dass sie keinen Text der nächsten Zeile schneidet
     minHeight: hoehe, minWidth: 0, marginBottom: `max(0px, calc(${ueberstand} - ${rasterAbstand}))`,
-  };
-  const badge: CSSProperties = {
-    display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs, padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    borderRadius: cssVars.borderRadius.sm, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm,
-    fontWeight: cssVars.fontWeights.bold, whiteSpace: 'nowrap', background: BADGE[model.ton].bg, color: BADGE[model.ton].fg,
-    border: model.ton === 'neutral' ? `${cssVars.borderWidth.thin} solid ${cssVars.colors.scoreboardDivider}` : undefined,
-  };
-  const punkt: CSSProperties = {
-    width: cssVars.spacing.sm, height: cssVars.spacing.sm, borderRadius: cssVars.borderRadius.full,
-    background: cssVars.colors.scoreboardOnLive, animation: animations.pulse,
   };
   const abschnitt: CSSProperties = {
     flex: '1 1 auto', minWidth: 'max-content', textAlign: 'center', color: cssVars.colors.scoreboardTextMuted,
@@ -190,9 +175,8 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
   return (
     <section data-testid={testId} data-size={size} style={tafel}>
       <div style={kopf}>
-        <span style={badge} aria-live="polite" data-testid={id('state')} data-ton={model.ton}>
-          {model.ton === 'live' && <span style={punkt} aria-hidden="true" />}
-          {model.zustandText}
+        <span aria-live="polite" data-testid={id('state')} style={{ display: 'inline-flex', minWidth: 0 }}>
+          <MatchStatusBadge model={model.badge} size="card" testId={id('abzeichen')} />
         </span>
         <span style={abschnitt}>{model.abschnittText}</span>
         <span style={rechts}>

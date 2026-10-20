@@ -30,8 +30,7 @@ function vorAnpfiff(vor: Partial<NonNullable<ScoreboardInput['vor']>> = {}, jetz
 describe('Tafel vor dem Anpfiff', () => {
   it('@SL-049 nach dem Bestätigen steht Spiel 13 TSV West – SG Mitte, 15:15, Feld 1 zum Anpfiff bereit', () => {
     const m = toScoreboardModel(vorAnpfiff(), t);
-    expect(m.zustandText).toBe('tafel.zustand.vorAnpfiff');
-    expect(m.ton).toBe('neutral');
+    expect(m.badge).toEqual({ kind: 'kickoff', time: '15:15' }); // @OB-065: geplant trägt kein Abzeichen, sondern die Anstoßzeit
     expect([m.links.name, m.rechts.name]).toEqual(['TSV West', 'SG Mitte']);
     expect(m.uhr).toMatchObject({ rest: '15:15', label: 'tafel.uhr.anstoss', unterzeile: 'tafel.vor.spielFeld:{"nummer":13,"feld":"Feld 1"}' });
     expect(m.abschnittText).toBe('Hallencup Süd');
@@ -47,7 +46,7 @@ describe('Tafel vor dem Anpfiff', () => {
   it('@SL-051 Mindestpause unterschritten: SG Mitte hätte nur 6 statt 10 Minuten Pause – ein Hinweis, der nichts sperrt', () => {
     const m = toScoreboardModel(vorAnpfiff({ mindestpause: { teamName: 'SG Mitte', minuten: 6, mindestMinuten: 10 } }), t);
     expect(m.hinweise).toContain('tafel.vor.mindestpause:{"teamName":"SG Mitte","minuten":6,"mindestMinuten":10}');
-    expect(m.ton).toBe('neutral'); // kein Sperrzustand, die Tafel bleibt anpfeifbar
+    expect(m.badge).toEqual({ kind: 'kickoff', time: '15:15' }); // kein Sperrzustand, die Tafel bleibt anpfeifbar
   });
 
   it('@SL-051 Gegenbeispiel: ohne unterschrittene Mindestpause kein Hinweis', () => {
@@ -81,11 +80,10 @@ describe('Tafel: wartet auf die Herkunft, kein Spiel mehr', () => {
 
   it('@SL-052 Halbfinale 1 „FC Nord gegen Zweiter Gruppe B“ steht mit dem Grund da; der Anpfiff wird nicht angeboten (kein Spiel im Modell)', () => {
     const m = toScoreboardModel(vorAnpfiff({}, um('15:00'), wartet), t);
-    expect(m.zustandText).toBe('tafel.zustand.wartet');
+    expect(m.badge).toEqual({ kind: 'none' });
     expect(m.leerAnzeige).toEqual({ titel: 'FC Nord – Zweiter Gruppe B', untertitel: 'Halbfinale 1 · Feld 1' });
     expect(m.hinweise).toContain('tafel.vor.wartetAuf:{"grund":"Gruppe B ist noch nicht abgeschlossen"}');
     expect(m.uhr).toBeNull();
-    expect(m.ton).toBe('info');
   });
 
   it('@SL-119 die Tafel nennt den Grund und dass nur die Turnierleitung die Reihenfolge auf Feld 1 ändert', () => {
@@ -101,7 +99,7 @@ describe('Tafel: wartet auf die Herkunft, kein Spiel mehr', () => {
 
   it('@SL-054 nach dem letzten Spiel von Feld 2 sagt die Tafel, dass auf Feld 2 kein weiteres Spiel folgt', () => {
     const m = toScoreboardModel(vorAnpfiff({}, um('15:30'), { art: 'keinSpiel', feldName: 'Feld 2' }), t);
-    expect(m.zustandText).toBe('tafel.zustand.keinSpiel');
+    expect(m.badge).toEqual({ kind: 'none' });
     expect(m.hinweise).toContain('tafel.vor.keinSpielMehr:{"feld":"Feld 2"}');
     expect(m.leerAnzeige?.untertitel).toBe('Feld 2');
   });

@@ -85,9 +85,9 @@ test.describe('Cockpit-Tafel', () => {
     }
   });
 
-  test('Vor Anpfiff zeigt Zustand, Anstoßzeit und Spielnummer; Anpfiff macht die Tafel live', async ({ page }) => {
-    // @SL-049/@SL-050: das bereitstehende Spiel steht vor dem Anpfiff mit Anstoßzeit und Spielnummer da
-    await expect(page.getByTestId('scoreboard-state')).toContainText('Vor Anpfiff');
+  test('Vor Anpfiff zeigt die Anstoßzeit im Abzeichen, Spielnummer; Anpfiff macht die Tafel live', async ({ page }) => {
+    // @SL-049/@SL-050, @OB-065: das bereitstehende Spiel trägt vor dem Anpfiff seine Anstoßzeit statt eines Abzeichens mit Wort
+    await expect(page.getByTestId('scoreboard-state')).toContainText(/\d{1,2}:\d{2}/);
     await expect(page.getByTestId('scoreboard-clock')).toContainText('Anstoß');
     await expect(page.getByTestId('scoreboard-clock-sub')).toContainText(/Spiel \d+/);
 
@@ -177,7 +177,22 @@ test.describe('Cockpit-Tafel', () => {
     }
   });
 
-  test('@SL-009 @SL-073 nach dem Abpfiff steht „Abgepfiffen“ in der Tafel oder das nächste Spiel steht bereit', async ({ page }) => {
+  test('@OB-065 Cockpit 360×640 und 1280×800: das Abzeichen „Live“ trägt den Puls-Punkt und bleibt im Kopf der Tafel', async ({ page }) => {
+    await page.getByTestId('match-start-button').click();
+    const abzeichen = page.getByTestId('scoreboard-abzeichen');
+    await expect(abzeichen).toHaveAttribute('data-state', 'live');
+    await expect(abzeichen).toHaveText('Live');
+    for (const fenster of [{ width: 360, height: 640 }, { width: 1280, height: 800 }]) {
+      await page.setViewportSize(fenster);
+      await expect(abzeichen).toBeVisible();
+      const box = await abzeichen.boundingBox();
+      expect(box, `Abzeichen bei ${fenster.width}×${fenster.height}`).not.toBeNull();
+      expect(box!.height).toBeGreaterThan(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(fenster.width);
+    }
+  });
+
+  test('@SL-009 @SL-073 nach dem Abpfiff steht „Ende“ im Abzeichen der Tafel (@OB-065) oder das nächste Spiel steht bereit', async ({ page }) => {
     await page.getByTestId('match-start-button').click();
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
     await page.getByTestId('match-pause-button').click();
@@ -189,7 +204,7 @@ test.describe('Cockpit-Tafel', () => {
     }
     await expect(async () => {
       const text = (await page.getByTestId('scoreboard-state').textContent()) ?? '';
-      expect(/Abgepfiffen|Vor Anpfiff/.test(text)).toBe(true);
+      expect(/Ende|\d{1,2}:\d{2}/.test(text)).toBe(true);
     }).toPass({ timeout: 5000 });
   });
 });

@@ -9,8 +9,15 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Scoreboard, type ScoreboardModel } from '../Scoreboard';
 
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+
+import { initRealDeI18n } from '../../../../test/realDeI18n';
+
+await initRealDeI18n();
+
 const model: ScoreboardModel = {
-  zustandText: 'Live', ton: 'live', links: { name: 'FC Nord', tore: 1 }, rechts: { name: 'SV Süd', tore: 0 },
+  badge: { kind: 'badge', state: 'live' }, links: { name: 'FC Nord', tore: 1 }, rechts: { name: 'SV Süd', tore: 0 },
   uhr: { rest: '2:48', gespielt: '3:12', label: 'Restzeit', unterzeile: 'Spielzeit 3:12', hervorgehoben: false, steht: false, schlussphase: false },
   abschnittText: '2. Halbzeit', hinweise: [],
   eintraegeWartenText: '2 Einträge warten', helferAnfragenText: '1 Helfer-Anfrage', ariaStand: 'FC Nord 1, SV Süd 0',
@@ -166,5 +173,23 @@ describe('Scoreboard', () => {
     render(<Scoreboard model={model} size="regular" meldezeile={null} testId="scoreboard" />);
     expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Live');
     expect(screen.getByTestId('scoreboard')).toHaveAttribute('data-size', 'regular');
+  });
+
+  it('@OB-065 das Abzeichen der Tafel ist das Molekül der Spielkarte: „Live“ mit Puls-Punkt, „Halbzeit“ ohne Uhrzeit', () => {
+    const { rerender } = render(<Scoreboard model={model} size="regular" meldezeile={null} testId="scoreboard" />);
+    const live = screen.getByTestId('scoreboard-abzeichen');
+    expect(live).toHaveAttribute('data-state', 'live');
+    expect(live).toHaveAttribute('data-pulse', 'true');
+    expect(live.textContent).toBe('Live');
+    rerender(<Scoreboard model={{ ...model, badge: { kind: 'badge', state: 'halftime' } }} size="regular" meldezeile={null} testId="scoreboard" />);
+    const halbzeit = screen.getByTestId('scoreboard-abzeichen');
+    expect(halbzeit).toHaveAttribute('data-state', 'halftime');
+    expect(halbzeit.textContent).toBe('Halbzeit');
+  });
+
+  it('@OB-065 Gegenbeispiel: ein geplantes Spiel zeigt im Abzeichen nur seine Anstoßzeit, kein Wort', () => {
+    render(<Scoreboard model={{ ...model, badge: { kind: 'kickoff', time: '15:15' } }} size="regular" meldezeile={null} testId="scoreboard" />);
+    expect(screen.getByTestId('scoreboard-abzeichen')).toHaveTextContent('15:15');
+    expect(screen.getByTestId('scoreboard-abzeichen')).not.toHaveAttribute('data-state');
   });
 });

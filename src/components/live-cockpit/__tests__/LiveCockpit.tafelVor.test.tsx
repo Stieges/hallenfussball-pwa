@@ -25,6 +25,9 @@ vi.mock('../../../hooks/useSyncStatus', () => ({
 }));
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 
+/** Anstoßzeit wie das Cockpit sie zeigt (Ortszeit, HH:MM), aus dem Anstoß-Datum des Testspiels. */
+const anstossZeit = (iso: string): string => new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+
 afterEach(() => { vi.useRealTimers(); });
 
 /** 28.11.2026 um HH:MM Ortszeit (die Anzeige liest Ortszeit, der Test ist zeitzonenunabhängig). */
@@ -38,7 +41,7 @@ const spiel13 = makeLiveMatch({
 describe('LiveCockpit: Tafel vor dem Anpfiff', () => {
   it('@SL-049 Spiel 13 TSV West – SG Mitte, 15:15, Feld 1 steht zum Anpfiff bereit', () => {
     render(<LiveCockpit {...makeProps(spiel13)} />);
-    expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Vor Anpfiff');
+    expect(screen.getByTestId('scoreboard-state')).toHaveTextContent(anstossZeit(spiel13.scheduledKickoff));
     expect(screen.getByTestId('scoreboard-name-links')).toHaveTextContent('TSV West');
     expect(screen.getByTestId('scoreboard-name-rechts')).toHaveTextContent('SG Mitte');
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('15:15');
@@ -86,7 +89,7 @@ describe('LiveCockpit: Tafel vor dem Anpfiff', () => {
 describe('LiveCockpit: Tafel ohne Spiel', () => {
   it('@SL-052 @SL-119 Halbfinale 1 wartet: Paarung, Grund, Hinweis auf die Turnierleitung – und es gibt keinen Anpfiff', () => {
     render(<LiveCockpit {...makeProps(null, { leer: { art: 'wartetAufHerkunft', gruende: ['Abschluss von Gruppe B'], paarung: 'FC Nord – Zweiter Gruppe B', spielLabel: 'Spiel 7 · Feld 1' } })} />);
-    expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Wartet auf Teams');
+    expect(screen.getByTestId('scoreboard-state')).toBeEmptyDOMElement(); // kein Abzeichen ohne Anstoß; die Paarung steht in der Leer-Anzeige
     expect(screen.getByTestId('scoreboard-empty')).toHaveTextContent('FC Nord – Zweiter Gruppe B');
     expect(screen.getByTestId('scoreboard-empty')).toHaveTextContent('Spiel 7 · Feld 1');
     expect(screen.getByText('Wartet auf: Abschluss von Gruppe B')).toBeInTheDocument();
@@ -101,7 +104,7 @@ describe('LiveCockpit: Tafel ohne Spiel', () => {
 
   it('@SL-054 nach dem letzten Spiel von Feld 2 sagt die Tafel, dass dort kein weiteres Spiel folgt', () => {
     render(<LiveCockpit {...makeProps(null, { leer: { art: 'keinSpiel', feldName: 'Feld 2' } })} />);
-    expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Kein Spiel');
+    expect(screen.getByTestId('scoreboard-state')).toBeEmptyDOMElement(); // kein Abzeichen ohne Spiel; der Hinweis steht in der Leer-Anzeige
     expect(screen.getByText('Auf Feld 2 folgt kein Spiel mehr')).toBeInTheDocument();
     expect(screen.queryByTestId('match-start-button')).toBeNull();
   });

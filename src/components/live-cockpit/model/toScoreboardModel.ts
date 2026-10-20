@@ -9,7 +9,9 @@ import { getClockDisplay, type ClockMode } from '../../../core/match/clockDispla
 import type { LiveMatch } from '../types';
 import type { PhaseView } from '../engine/phaseView';
 import type { CockpitPhase, CockpitZustand } from './cockpitPhase';
-import type { ScoreboardModel, ScoreboardSeite, ScoreboardTon, ScoreboardUhr } from '../../ui/molecules/Scoreboard';
+import type { ScoreboardModel, ScoreboardSeite, ScoreboardUhr } from '../../ui/molecules/Scoreboard';
+import { matchBadgeModel, type MatchBadgeModel } from '../../../core/view/badge';
+import type { ViewMatchStatus } from '../../../core/view/types';
 import type { Side, Uebersetzer } from './cockpitTypes';
 import { scoreboardVor, type ScoreboardVorInput } from './scoreboardVor';
 import { liveMatchFinalScore } from '../../../utils/matchScore';
@@ -45,16 +47,26 @@ export function formatUhr(sekunden: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-const TON: Record<CockpitZustand, ScoreboardTon> = {
-  vorAnpfiff: 'neutral', laeuft: 'live', pausiert: 'live', halbzeitpause: 'pause', pauseVorVerlaengerung: 'pause',
-  entscheidung: 'info', strafstoss: 'info', abgepfiffen: 'ende', wartetAufHerkunft: 'info', keinSpiel: 'neutral',
+/**
+ * Status der Ansicht je Zustand der Tafel. Das Abzeichen folgt derselben Zuordnung wie auf der Spielkarte
+ * (`matchBadgeModel`, @OB-065, @OB-066); `scheduled` heißt: kein Abzeichen mit Wort, nur die Anstoßzeit oder nichts.
+ */
+const VIEW_STATUS: Record<CockpitZustand, ViewMatchStatus> = {
+  vorAnpfiff: 'scheduled', laeuft: 'running', pausiert: 'paused', halbzeitpause: 'paused', pauseVorVerlaengerung: 'paused',
+  entscheidung: 'paused', strafstoss: 'running', abgepfiffen: 'finished', wartetAufHerkunft: 'scheduled', keinSpiel: 'scheduled',
 };
-const ZUSTAND_KEY: Record<CockpitZustand, string> = {
-  vorAnpfiff: 'tafel.zustand.vorAnpfiff', laeuft: 'tafel.zustand.live', pausiert: 'tafel.zustand.live',
-  halbzeitpause: 'tafel.zustand.halbzeit', pauseVorVerlaengerung: 'tafel.zustand.verlaengerungFolgt',
-  entscheidung: 'tafel.zustand.entscheidung', strafstoss: 'tafel.zustand.strafstoss', abgepfiffen: 'tafel.zustand.abgepfiffen',
-  wartetAufHerkunft: 'tafel.zustand.wartet', keinSpiel: 'tafel.zustand.keinSpiel',
-};
+
+/** Das Zustands-Abzeichen der Tafel: vor dem Anpfiff die Anstoßzeit, sonst das Wort des Feinstatus, ohne Uhr. */
+function badgeOf(input: ScoreboardInput): MatchBadgeModel {
+  const { phase, view, vor } = input;
+  if (phase.zustand === 'vorAnpfiff') {
+    return vor ? { kind: 'kickoff', time: vor.anstoss } : { kind: 'none' };
+  }
+  const status = VIEW_STATUS[phase.zustand];
+  if (status === 'scheduled') { return { kind: 'none' }; }
+  const engine = view ? { status: view.status, phase: view.phase, section: view.section, sections: view.sections } : undefined;
+  return matchBadgeModel({ status, engine });
+}
 
 function abschnittTextOf(phase: CockpitPhase, t: Uebersetzer): string | null {
   if (phase.zustand !== 'laeuft' && phase.zustand !== 'pausiert' && phase.zustand !== 'abgepfiffen') { return null; }
@@ -161,7 +173,7 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
   const { uhr, hinweise } = uhrOf(input, t);
   const vor = scoreboardVor(input, t);
   return {
-    zustandText: t(ZUSTAND_KEY[phase.zustand]), ton: TON[phase.zustand], links, rechts,
+    badge: badgeOf(input), links, rechts,
     uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige,
     eintraegeWartenText: input.eintraegeWarten > 0 ? t('tafel.eintraegeWarten', { count: input.eintraegeWarten }) : null,
     helferAnfragenText: input.helferAnfragen > 0 ? t('tafel.helferAnfragen', { count: input.helferAnfragen }) : null,
