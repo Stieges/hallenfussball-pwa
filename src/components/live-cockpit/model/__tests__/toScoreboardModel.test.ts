@@ -36,10 +36,10 @@ describe('toScoreboardModel: Restzeit und Spielzeit', () => {
     expect([formatUhr(0), formatUhr(59), formatUhr(60), formatUhr(110), formatUhr(600), formatUhr(-5)]).toEqual(['0:00', '0:59', '1:00', '1:50', '10:00', '0:00']);
   });
 
-  it('@SL-004 angehaltene Uhr: sie steht bei gespielten 4:10, markiert und mit „Uhr steht“ im Uhrfeld; der Zustand bleibt Live', () => {
+  it('@SL-004 angehaltene Uhr: sie steht bei gespielten 4:10, markiert und mit „Uhr steht“ im Uhrfeld; das Abzeichen wird „Pause“ (@OB-066)', () => {
     const m = toScoreboardModel(input({ status: 'paused', sectionElapsedMs: min(4, 10) }), t);
     expect(m.uhr).toMatchObject({ gespielt: '4:10', rest: '1:50', steht: true, hervorgehoben: true, label: 'tafel.uhr.steht' });
-    expect(m.zustandText).toBe('tafel.zustand.live');
+    expect(m.badge).toEqual({ kind: 'badge', state: 'pause' });
   });
 
   // B1 (Review 2c): die Tafel darf beim Pausieren und beim Wiederanpfiff nicht wachsen – keine zusätzliche Hinweis-Zeile
@@ -106,10 +106,39 @@ describe('toScoreboardModel: Hinweis und Farbe der Uhr nach Uhr-Art', () => {
   });
 });
 
+describe('toScoreboardModel: @OB-065 Abzeichen wie auf der Spielkarte', () => {
+  it('@OB-065 Cockpit-Tafel: laufend „Live“, Halbzeitpause „Halbzeit“, Abpfiff „Ende“', () => {
+    expect(toScoreboardModel(input({ sectionElapsedMs: min(4, 10) }), t).badge).toEqual({ kind: 'badge', state: 'live' });
+    expect(toScoreboardModel(input({ status: 'section_break', section: 1, isLastRegularSection: false, breakRemainingMs: min(1) }), t).badge).toEqual({ kind: 'badge', state: 'halftime' });
+    expect(toScoreboardModel(input({ status: 'finished', sectionElapsedMs: min(6) }, { match: makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 1 }) }, 'FINISHED'), t).badge).toEqual({ kind: 'badge', state: 'ended' });
+  });
+
+  it('@OB-065 ausgefallenes Spiel (skipped) trägt auf der Tafel „ausgefallen“ wie auf der Spielkarte, nicht „Ende“', () => {
+    const m = toScoreboardModel(input({ status: 'skipped', sectionElapsedMs: min(6) }, { match: makeLiveMatch({ status: 'FINISHED', homeScore: 0, awayScore: 0 }) }, 'FINISHED'), t);
+    expect(m.badge).toEqual({ kind: 'badge', state: 'cancelled' });
+  });
+
+  it('@OB-065 Gegenbeispiel: ein regulär beendetes Spiel (finished) trägt weiter „Ende“', () => {
+    const m = toScoreboardModel(input({ status: 'finished', sectionElapsedMs: min(6) }, { match: makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 1 }) }, 'FINISHED'), t);
+    expect(m.badge).toEqual({ kind: 'badge', state: 'ended' });
+  });
+
+  it('@OB-065 das Abzeichen enthält keine Uhrzeit oder Spielzeit; die Restzeit steht bei der Uhr', () => {
+    const m = toScoreboardModel(input({ sectionElapsedMs: min(4, 10) }), t);
+    expect(JSON.stringify(m.badge)).not.toMatch(/\d{1,2}:\d{2}/);
+    expect(m.uhr).toMatchObject({ rest: '1:50' });
+  });
+
+  it('@OB-065 Gegenbeispiel: die Halbzeitpause zeigt „Halbzeit“, nie „Live“ (Abzeichen folgt dem Zustand, nicht der Uhr)', () => {
+    const m = toScoreboardModel(input({ status: 'section_break', section: 1, isLastRegularSection: false, breakRemainingMs: min(1) }), t);
+    expect(m.badge).not.toEqual({ kind: 'badge', state: 'live' });
+  });
+});
+
 describe('toScoreboardModel: Zustand, Abschnitt und Stand', () => {
   it('@SL-005 Halbzeitpause: „Halbzeit“ mit der Pausen-Restzeit von 1:00; die Uhr der Pause zeigt keine Spielzeit', () => {
     const m = toScoreboardModel(input({ status: 'section_break', section: 1, isLastRegularSection: false, breakRemainingMs: min(1) }), t);
-    expect(m.zustandText).toBe('tafel.zustand.halbzeit');
+    expect(m.badge).toEqual({ kind: 'badge', state: 'halftime' });
     expect(m.uhr).toMatchObject({ rest: '1:00', gespielt: null });
   });
 
@@ -118,15 +147,14 @@ describe('toScoreboardModel: Zustand, Abschnitt und Stand', () => {
     expect(m.uhr).toMatchObject({ rest: '0:00', hervorgehoben: true, ton: 'ok', label: 'tafel.uhr.pauseVorbei', unterzeile: 'tafel.unterzeile.wiederanpfiff' });
   });
 
-  it('@SL-009 @SL-073 abgepfiffen mit 2:1: die Tafel zeigt „Abgepfiffen“ mit dem Endstand, auch ohne Ton', () => {
+  it('@SL-009 @SL-073 abgepfiffen mit 2:1: die Tafel zeigt „Ende“ mit dem Endstand, auch ohne Ton', () => {
     const m = toScoreboardModel(input({ status: 'finished', sectionElapsedMs: min(6) }, { match: makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 1 }) }, 'FINISHED'), t);
-    expect(m.zustandText).toBe('tafel.zustand.abgepfiffen');
-    expect(m.ton).toBe('ende');
+    expect(m.badge).toEqual({ kind: 'badge', state: 'ended' });
     expect([m.links.tore, m.rechts.tore]).toEqual([2, 1]);
     expect(m.ariaStand).toBe('tafel.ariaStand:{"links":"FC Nord","linksTore":2,"rechts":"SV Süd","rechtsTore":1}');
   });
 
-  // B2 (Review 2c, Auflage A-36b „Endstand nur aus matchFinalScore“): unter „Abgepfiffen“ steht nie eine Restzeit
+  // B2 (Review 2c, Auflage A-36b „Endstand nur aus matchFinalScore“): unter „Ende“ steht nie eine Restzeit
   it('@SL-073 abgepfiffen nach Ablauf: unter dem Zustand steht die gespielte Zeit, keine Restzeit', () => {
     const m = toScoreboardModel(input({ status: 'finished', sectionElapsedMs: min(6) }, { match: makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 1 }) }, 'FINISHED'), t);
     expect(m.uhr).toMatchObject({ label: 'tafel.uhr.spielzeit', rest: '6:00', ton: 'gedaempft' });
@@ -166,11 +194,10 @@ describe('toScoreboardModel: Zustand, Abschnitt und Stand', () => {
     expect(m.ariaStand.startsWith('tafel.ariaStand:')).toBe(true);
   });
 
-  it('@SL-082 Golden Goal: der Abschnitt heißt „Golden Goal“, der Zustand bleibt Live', () => {
+  it('@SL-082 Golden Goal: der Abschnitt heißt „Golden Goal“, das Abzeichen heißt „Verlängerung“ (@OB-066)', () => {
     const m = toScoreboardModel(input({ phase: 'overtime', tiebreakMode: 'goldenGoal', sectionLimitMs: min(3), sectionElapsedMs: min(1) }), t);
     expect(m.abschnittText).toBe('tafel.abschnitt.goldenGoal');
-    expect(m.zustandText).toBe('tafel.zustand.live');
-    expect(m.ton).toBe('live');
+    expect(m.badge).toEqual({ kind: 'badge', state: 'overtime' });
   });
 
   it('@SL-081 Verlängerung: der Abschnitt heißt „Verlängerung“', () => {
@@ -182,7 +209,7 @@ describe('toScoreboardModel: Zustand, Abschnitt und Stand', () => {
     const view = { status: 'shootout' as const, phase: 'shootout' as const,
       shootout: { kicks: { 'fc-nord': 3, 'sv-sued': 2 }, goals: { 'fc-nord': 2, 'sv-sued': 1 }, winner: null, nextTeam: 'sv-sued' } };
     const m = toScoreboardModel(input(view, { match: makeLiveMatch({ homeScore: 1, awayScore: 1 }) }), t);
-    expect(m.zustandText).toBe('tafel.zustand.strafstoss');
+    expect(m.badge).toEqual({ kind: 'badge', state: 'shootout' });
     expect(m.uhr).toMatchObject({ rest: '2:1', unterzeile: 'tafel.unterzeile.amSchuss:{"team":"SV Süd"}' });
   });
 

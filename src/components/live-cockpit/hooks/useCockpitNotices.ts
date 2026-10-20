@@ -9,11 +9,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type NoticeStufe = 1 | 2 | 3;
-export interface CockpitNotice { id: number; stufe: NoticeStufe; text: string; dauerMs: number }
+/** Meldung mit Kennung, die die Tafel gezielt unterdrücken darf: „Spiel abgepfiffen“ entfällt, solange die Quittung steht (@SL-152). */
+export type NoticeKennung = 'abgepfiffen';
+export interface CockpitNotice { id: number; stufe: NoticeStufe; text: string; dauerMs: number; kennung?: NoticeKennung }
 export const NOTICE_DAUER_MS: Record<NoticeStufe, number> = { 1: 6000, 2: 5000, 3: 3000 };
 export interface UseCockpitNoticesReturn {
   aktuell: CockpitNotice | null;
-  melde: (stufe: NoticeStufe, text: string) => void;
+  melde: (stufe: NoticeStufe, text: string, kennung?: NoticeKennung) => void;
   schliesse: () => void;
   /** Fehler als Stufe-2-Meldung; stabil, für Rückrufe, die nur einen Text bekommen. */
   fehler: (text: string) => void;
@@ -36,12 +38,13 @@ export function useCockpitNotices(): UseCockpitNoticesReturn {
     zeige(naechste);
   }, [zeige]);
 
-  const melde = useCallback((stufe: NoticeStufe, text: string) => {
+  const melde = useCallback((stufe: NoticeStufe, text: string, kennung?: NoticeKennung) => {
     const jetzt = aktuellRef.current;
+    const notice = (): CockpitNotice => ({ id: naechsteId.current++, stufe, text, dauerMs: NOTICE_DAUER_MS[stufe], ...(kennung ? { kennung } : {}) });
     if (jetzt === null || stufe <= jetzt.stufe) {
-      zeige({ id: naechsteId.current++, stufe, text, dauerMs: NOTICE_DAUER_MS[stufe] });
+      zeige(notice());
     } else if (stufe === 2) {
-      wartendStufe2.current = { id: naechsteId.current++, stufe, text, dauerMs: NOTICE_DAUER_MS[stufe] };
+      wartendStufe2.current = notice();
     }
   }, [zeige]);
 
