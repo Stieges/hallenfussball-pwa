@@ -21,11 +21,12 @@
 #   --mit-a11             wie --wegwerf, dazu alle Migrationen mit Namen >= 20261110_
 #   --zusatz <datei>      (wiederholbar, impliziert --wegwerf) weitere Migrationsdatei nach den uebrigen einspielen
 #   --mutation <Mn>       (wiederholbar) Mutationsprobe: die Vorlage wird veraendert, der Lauf MUSS rot werden
-#   --alle-mutationen     M1..M8 nacheinander
+#   --alle-mutationen     M1..M10 nacheinander
 #   -h | --hilfe          diese Hilfe
 #
 # Pflichttests V1-V6 (je mit Gegenbeispiel), Mutationsproben M1-M5 aus dem Plan (plan-coadmin-einsatzfaehig.md,
-# CA-1) plus M6 (Gaestesitzung), M7 (Austragen ohne Rollenfilter), M8 (unbestaetigtes Konto):
+# CA-1) plus M6 (Gaestesitzung), M7 (Austragen ohne Rollenfilter), M8 (unbestaetigtes Konto),
+# M9 (aktive Zeile wird ersetzt), M10 (Konto-Suche ohne STRICT):
 #   V1 Eintragen     V2/V2b Idempotenz + widerrufene Zeile   V3 Abbrueche ohne Nebenwirkung
 #   V4 Austragen     V5 Kopie fuers Proben                   V6 Schnittstelle lehnt ab (@HE-062)
 #
@@ -60,7 +61,7 @@ while [[ $# -gt 0 ]]; do
               MODE="wegwerf"; ZUSATZ+=("$1") ;;
     --mutation) shift; [[ $# -gt 0 ]] || { echo "::error::--mutation braucht Mn" >&2; exit 2; }
                 MUTATIONEN+=("$1") ;;
-    --alle-mutationen) MUTATIONEN=(M1 M2 M3 M4 M5 M6 M7 M8) ;;
+    --alle-mutationen) MUTATIONEN=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10) ;;
     -h|--hilfe|--help) usage; exit 0 ;;
     *) echo "::error::Unbekannte Option: $1" >&2; exit 2 ;;
   esac
@@ -114,8 +115,8 @@ sweep_testdata() {
     done
   fi
   # Reste frueherer, abgebrochener Laeufe (nur unser Mail-Muster)
-  sq "DELETE FROM public.tournament_collaborators WHERE user_id IN (SELECT id FROM auth.users WHERE email LIKE 'ca1-check-%@example.org') OR invited_by IN (SELECT id FROM auth.users WHERE email LIKE 'ca1-check-%@example.org');" >/dev/null 2>&1
-  sq "DELETE FROM auth.users WHERE email LIKE 'ca1-check-%@example.org';" >/dev/null 2>&1
+  sq "DELETE FROM public.tournament_collaborators WHERE user_id IN (SELECT id FROM auth.users WHERE email ILIKE 'ca1-check-%@example.org') OR invited_by IN (SELECT id FROM auth.users WHERE email ILIKE 'ca1-check-%@example.org');" >/dev/null 2>&1
+  sq "DELETE FROM auth.users WHERE email ILIKE 'ca1-check-%@example.org';" >/dev/null 2>&1
   return 0
 }
 
@@ -128,7 +129,7 @@ cleanup() {
     sweep_testdata
     if [[ -n "$CONTAINER" ]]; then
       local rest
-      rest="$(sq "SELECT (SELECT count(*) FROM public.tournaments WHERE title LIKE 'CA1-Pruefung %') + (SELECT count(*) FROM auth.users WHERE email LIKE 'ca1-check-%@example.org') + (SELECT count(*) FROM public.profiles WHERE email LIKE 'ca1-check-%@example.org');" 2>/dev/null || echo '?')"
+      rest="$(sq "SELECT (SELECT count(*) FROM public.tournaments WHERE title LIKE 'CA1-Pruefung %') + (SELECT count(*) FROM auth.users WHERE email ILIKE 'ca1-check-%@example.org') + (SELECT count(*) FROM public.profiles WHERE email ILIKE 'ca1-check-%@example.org');" 2>/dev/null || echo '?')"
       if [[ "$rest" != "0" ]]; then
         echo "::warn::Aufraeumen unvollstaendig (Reste: $rest) -- Muster: Turniere 'CA1-Pruefung %', Konten 'ca1-check-%@example.org'." >&2
         [[ $rc -eq 0 ]] && rc=1
@@ -251,12 +252,10 @@ extract() {
 
 raw_part() {
   case "$1" in
-    0a) extract '^-- 0a:' '^-- 0b:' ;;
-    0b) extract '^-- 0b:' '^-- 0c:' ;;
-    0c) extract '^-- 0c:' '^-- ##### ' ;;
-    1)  extract '^-- ##### BLOCK 1' '^-- ##### BLOCK 2' ;;
-    2a) extract '^-- 2a:' '^-- 2b:' ;;
-    2b) extract '^-- 2b:' '^-- 2c ' ;;
+    0)  extract '^-- ##### BLOCK 0' '^-- ##### BLOCK 1' ;;
+    1)  extract '^-- ##### BLOCK 1' '^-- ##### BLOCK 2a' ;;
+    2a) extract '^-- ##### BLOCK 2a' '^-- ##### BLOCK 2b' ;;
+    2b) extract '^-- ##### BLOCK 2b' '^-- 2c ' ;;
     3)  extract '^-- ##### BLOCK 3' '^-- ##### ENDE' ;;
     *)  echo "::error::Unbekannter Teil $1" >&2; return 1 ;;
   esac
@@ -269,15 +268,15 @@ mutate() {
     M1) # UPDATE statt DELETE+INSERT
       new="$(printf '%s' "$text" | perl -0777 -pe "
         s/DELETE FROM public\.tournament_collaborators c\s+WHERE (c\.tournament_id = v_turnier AND c\.user_id = v_user AND c\.role = 'co-admin');/UPDATE public.tournament_collaborators c SET declined_at = NULL, accepted_at = now(), invited_by = v_owner WHERE \$1;\n  IF NOT FOUND THEN/;
-        s/(\(v_turnier, v_user, 'co-admin', v_owner, now\(\), now\(\)\);)/\$1\n  END IF;/;")" ;;
+        s/(\(v_turnier, v_user, 'co-admin', v_owner, now\(\), now\(\), v_name\);)/\$1\n  END IF;/;")" ;;
     M2) # ohne accepted_at
       new="$(printf '%s' "$text" | perl -0777 -pe "
-        s/\(tournament_id, user_id, role, invited_by, invited_at, accepted_at\)/(tournament_id, user_id, role, invited_by, invited_at)/;
-        s/\(v_turnier, v_user, 'co-admin', v_owner, now\(\), now\(\)\);/(v_turnier, v_user, 'co-admin', v_owner, now());/;")" ;;
+        s/\(tournament_id, user_id, role, invited_by, invited_at, accepted_at, label\)/(tournament_id, user_id, role, invited_by, invited_at, label)/;
+        s/\(v_turnier, v_user, 'co-admin', v_owner, now\(\), now\(\), v_name\);/(v_turnier, v_user, 'co-admin', v_owner, now(), v_name);/;")" ;;
     M3) # ohne invited_by
       new="$(printf '%s' "$text" | perl -0777 -pe "
-        s/\(tournament_id, user_id, role, invited_by, invited_at, accepted_at\)/(tournament_id, user_id, role, invited_at, accepted_at)/;
-        s/\(v_turnier, v_user, 'co-admin', v_owner, now\(\), now\(\)\);/(v_turnier, v_user, 'co-admin', now(), now());/;")" ;;
+        s/\(tournament_id, user_id, role, invited_by, invited_at, accepted_at, label\)/(tournament_id, user_id, role, invited_at, accepted_at, label)/;
+        s/\(v_turnier, v_user, 'co-admin', v_owner, now\(\), now\(\), v_name\);/(v_turnier, v_user, 'co-admin', now(), now(), v_name);/;")" ;;
     M4) # Fremdrolle-Pruefung entfernt
       new="$(printf '%s' "$text" | perl -0777 -pe "
         s/  IF EXISTS \(SELECT 1 FROM public\.tournament_collaborators c\s+WHERE c\.tournament_id = v_turnier AND c\.user_id = v_user AND c\.role <> 'co-admin'\) THEN\s+RAISE EXCEPTION [^;]*;\s+END IF;\n//;")" ;;
@@ -289,6 +288,10 @@ mutate() {
       new="$(printf '%s' "$text" | perl -0777 -pe "s/   AND c\.role = 'co-admin'\n//;")" ;;
     M8) # Bestaetigungs-Pruefung entfernt
       new="$(printf '%s' "$text" | perl -0777 -pe "s/  IF v_bestaetigt IS NULL THEN\s+RAISE EXCEPTION [^;]*;\s+END IF;\n//;")" ;;
+    M9) # aktive Zeile wird nicht mehr in Ruhe gelassen (immer ersetzen)
+      new="$(printf '%s' "$text" | perl -0777 -pe "s/  IF EXISTS \(SELECT 1 FROM public\.tournament_collaborators c\s+WHERE c\.tournament_id = v_turnier AND c\.user_id = v_user AND c\.role = 'co-admin'\s+AND c\.accepted_at IS NOT NULL AND c\.declined_at IS NULL\) THEN\s+RAISE NOTICE [^;]*;\s+RETURN;\s+END IF;\n//;")" ;;
+    M10) # Konto-Suche ohne STRICT (mehrdeutige Mail wird nicht bemerkt)
+      new="$(printf '%s' "$text" | perl -0777 -pe "s/INTO STRICT/INTO/;")" ;;
     *) echo "::error::Unbekannte Mutation $m" >&2; exit 2 ;;
   esac
   if [[ "$new" == "$text" ]]; then
@@ -371,9 +374,14 @@ setup_fixtures() {
   M_UNBEST="$tag-unbest@example.org"; M_ANON="$tag-geraet@example.org"; M_NIEMAND="$tag-niemand@example.org"
   make_user "$M_OLLI" true Olli; U_OLLI="$NEW_ID"
   make_user "$M_MARIA" true Maria; U_MARIA="$NEW_ID"
-  make_user "$M_GRETA" true Greta; U_GRETA="$NEW_ID"
+  make_user "$M_GRETA" true ""; U_GRETA="$NEW_ID"
   make_user "$M_UNBEST" false Unbestaetigt
   make_user "$M_ANON" true Geraet; U_ANON="$NEW_ID"
+  # Zwei Konten, deren Mail sich nur in der Gross-/Kleinschreibung unterscheidet (Mehrdeutigkeit)
+  M_DUP="$tag-dup@example.org"
+  make_user "$M_DUP" true Dup1
+  sq "INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at) VALUES ('00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated', upper('$M_DUP'), 'x', now(), '{\"provider\":\"email\",\"providers\":[\"email\"]}', '{}', now(), now());" >/dev/null \
+    || { echo "::error::Zweites Konto (Gross-/Kleinschreibung) konnte nicht angelegt werden." >&2; exit 1; }
   sq "UPDATE auth.users SET is_anonymous = true WHERE id = '$U_ANON';" >/dev/null \
     || { echo "::error::is_anonymous konnte nicht gesetzt werden." >&2; exit 1; }
   # Konten mit Fremdrolle (je Rolle eins); helper/screen gibt es erst mit A-27 (Rollen-CHECK)
@@ -424,21 +432,27 @@ run_suite() {
   exp_json="$(jq -r '.roles["co-admin"] | sort | join(" ")' "$ROLES_JSON")"
   eq "V0 rolePermissions.json: co-admin hat genau die zehn erwarteten Rechte" \
      "$(printf '%s\n' "$RIGHTS_CO_ADMIN_IMMER $RIGHTS_CO_ADMIN_A11" | tr ' ' '\n' | sort | tr '\n' ' ' | sed 's/ $//')" "$exp_json"
-  run_tpl 0a "$M_MARIA" "$T_ORIG"; eq "V0 Block 0a: Turnier gefunden (Titel)" "1" "$(printf '%s\n' "$OUT" | grep -c "CA1-Pruefung $RAND Original")"
-  run_tpl 0b "$M_MARIA" "$T_ORIG"; eq "V0 Block 0b: Konto bestaetigt, nicht anonym" "$U_MARIA" "$(printf '%s' "$OUT" | cut -d'|' -f1)"
-  contains "V0 Block 0b: anonym = f" "|f" "$OUT"
-  run_tpl 0b "$M_ANON" "$T_ORIG"; contains "V0 Block 0b: Gaestesitzung wird als anonym = t gezeigt" "|t" "$OUT"
-  run_tpl 0c "$M_MARIA" "$T_ORIG"; eq "V0 Block 0c: noch keine Zeile" "" "$OUT"
+  run_tpl 0 "$M_MARIA" "$T_ORIG"
+  eq "V0 Block 0 (Maria, noch nicht eingetragen): genau eine Zeile" "1" "$(printf '%s\n' "$OUT" | grep -c .)"
+  contains "V0 Block 0: Titel des Turniers" "CA1-Pruefung $RAND Original" "$OUT"
+  contains "V0 Block 0: Konto gefunden" "|$U_MARIA|" "$OUT"
+  eq "V0 Block 0: bestaetigt, anonym = f, keine bestehende Rolle" "f|||" "$(printf '%s' "$OUT" | awk -F'|' '{print $6 "|" $7 "|" $8 "|" $9}')"
+  run_tpl 0 "$M_ANON" "$T_ORIG"; eq "V0 Block 0: Gaestesitzung wird als anonym = t gezeigt" "t" "$(printf '%s' "$OUT" | cut -d'|' -f6)"
+  run_tpl 0 "$M_NIEMAND" "$T_ORIG"; eq "V0 Block 0 Gegenbeispiel: Mail ohne Konto zeigt leeres Konto-Feld" "" "$(printf '%s' "$OUT" | cut -d'|' -f4)"
+  run_tpl 0 "$M_MARIA" "00000000-0000-4000-8000-0000000000ff"; eq "V0 Block 0 Gegenbeispiel: unbekanntes Turnier zeigt leeres Turnier-Feld" "" "$(printf '%s' "$OUT" | cut -d'|' -f1)"
 
   [[ -n "$MUT" ]] || echo "-- V1 Eintragen (@HE-085)"
   run_tpl 1 "$M_MARIA" "$T_ORIG"
+  local out_b1="$OUT"
   eq "V1 Block 1 laeuft ohne Fehler" "0" "$RC"
-  contains "V1 Meldung 'Eingetragen'" "Eingetragen: $U_MARIA" "$OUT"
+  contains "V1 Meldung 'Eingetragen'" "Eingetragen: $U_MARIA" "$out_b1"
+  contains "V1 Block 1 endet mit der Ergebniszeile (co-admin, label)" "|co-admin|Maria|" "$out_b1"
   eq "V1 genau eine Zeile" "1" "$(collab_rows "$T_ORIG" "$U_MARIA")"
   run_tpl 2a "$M_MARIA" "$T_ORIG"
   eq "V1 Block 2a: co-admin | angenommen | nicht widerrufen | vom Eigentuemer" "co-admin|t|t|t" "$OUT"
   eq "V1 invited_by ist der Eigentuemer, invite_email bleibt leer" "$U_OLLI|" \
      "$(sq "SELECT invited_by || '|' || coalesce(invite_email,'') FROM public.tournament_collaborators WHERE tournament_id='$T_ORIG' AND user_id='$U_MARIA';")"
+  eq "V1 label = Name aus den Benutzer-Metadaten" "Maria" "$(sq "SELECT label FROM public.tournament_collaborators WHERE tournament_id='$T_ORIG' AND user_id='$U_MARIA';")"
   run_tpl 2b "$M_MARIA" "$T_ORIG"
   eq "V1 Block 2b laeuft ohne Fehler" "0" "$RC"
   check_rights "V1 Rechte der Co-Admin (Block 2b)" "$OUT" "$U_MARIA" co
@@ -458,9 +472,14 @@ ROLLBACK;"
      "$(printf '%s\n' "$out_b2b" | grep -F '|' | sort)" "$(printf '%s\n' "$OUT" | grep -E '^[0-9a-f-]{36}\|' | sort)"
 
   [[ -n "$MUT" ]] || echo "-- V2 Idempotenz"
+  local zeile_vorher
+  zeile_vorher="$(sq "SELECT c::text FROM public.tournament_collaborators c WHERE tournament_id='$T_ORIG' AND user_id='$U_MARIA';")"
   run_tpl 1 "$(printf '%s' "$M_MARIA" | tr '[:lower:]' '[:upper:]')" "$T_ORIG"
   eq "V2 zweite Ausfuehrung (Mail in Grossbuchstaben) laeuft ohne Fehler" "0" "$RC"
+  contains "V2 Meldung 'Schon eingetragen'" "Schon eingetragen: $U_MARIA" "$OUT"
   eq "V2 weiterhin genau eine Zeile" "1" "$(collab_rows "$T_ORIG" "$U_MARIA")"
+  eq "V2 aktive Zeile bleibt unveraendert (gleiche id, gleiche Daten)" "$zeile_vorher" \
+     "$(sq "SELECT c::text FROM public.tournament_collaborators c WHERE tournament_id='$T_ORIG' AND user_id='$U_MARIA';")"
   run_tpl 2b "$M_MARIA" "$T_ORIG"; check_rights "V2 Rechte nach zweitem Lauf" "$OUT" "$U_MARIA" co
   # V2b: widerrufene Zeile (vorab als Wartungsrolle, ohne Trigger-Umweg: loeschen + mit declined_at neu anlegen)
   sq "DELETE FROM public.tournament_collaborators WHERE tournament_id='$T_ORIG' AND user_id='$U_MARIA';
@@ -487,6 +506,7 @@ ROLLBACK;"
   abbruch "Eigentuemer-Konto" "$M_OLLI" "$T_ORIG" "Eigentümer dieses Turniers"
   abbruch "unbekannte Turnier-Kennung" "$M_GRETA" "00000000-0000-4000-8000-0000000000ff" "gibt es nicht"
   abbruch "geloeschtes Turnier" "$M_GRETA" "$T_DEL" "gelöscht"
+  abbruch "mehrdeutige Mail (zwei Konten, nur Gross-/Kleinschreibung verschieden)" "$M_DUP" "$T_ORIG" "gehört mehreren Konten"
   abbruch "ungueltige Turnier-Kennung (Tippfehler)" "$M_GRETA" "kein-uuid" "invalid input syntax"
   local i
   for i in "${!FR_ROLE[@]}"; do
@@ -549,6 +569,7 @@ ROLLBACK;"
   eq "V6 nach dem Versuch ist keine Zeile fuer Greta uebrig (immer zurueckgerollt)" "0" "$(collab_rows "$T_ORIG" "$U_GRETA")"
   # Gegenstueck: die Vorlage als Wartungsrolle gelingt (V1) -- hier noch einmal fuer ein weiteres Konto, danach austragen
   run_tpl 1 "$M_GRETA" "$T_ORIG"; eq "V6 Vorlage (Wartungsrolle) traegt Greta ein" "0:1" "$RC:$(collab_rows "$T_ORIG" "$U_GRETA")"
+  eq "V6 ohne Namen in den Metadaten: label = Anfang der Mail" "${M_GRETA%%@*}" "$(sq "SELECT label FROM public.tournament_collaborators WHERE tournament_id='$T_ORIG' AND user_id='$U_GRETA';")"
   run_tpl 3 "$M_GRETA" "$T_ORIG"; eq "V6 und wieder aus" "0" "$(collab_rows "$T_ORIG" "$U_GRETA")"
 
   [[ -n "$MUT" ]] || echo "-- V0b Nebenwirkungen"
