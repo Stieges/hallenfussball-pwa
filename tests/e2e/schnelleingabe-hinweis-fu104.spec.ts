@@ -82,7 +82,7 @@ test.describe('@FU-104 C-SCHNELLEINGABE-FREMDAENDERUNG-STILL Hinweis „inzwisch
 
           await page.evaluate((art) => { window.__fremd(art); }, fall.art);
           const hinweis = page.getByTestId(`${g.hinweis}-${HF1}`);
-          await expect(hinweis).toHaveText(new RegExp(fall.text.replace(/[()]/g, '\\$&')));
+          await expect(hinweis).toContainText(fall.text);
           const knopf = page.getByTestId(`${g.hinweis}-keep-${HF1}`);
           await expect(knopf).toHaveCount(fall.knopf ? 1 : 0);
 
