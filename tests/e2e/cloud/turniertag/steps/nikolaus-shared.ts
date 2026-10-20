@@ -23,6 +23,8 @@ export const SPIELZEIT_MS = E2E_NIKOLAUS_GAME_MINUTES * 60_000;
 export interface NikolausMatch {
   id: string;
   slot: number;
+  /** Spielnummer („Spiel 1“ bis „Spiel 15“), seit #300 gespeichert (@SL-049, @TM-142). */
+  match_number: number | null;
   field: number;
   phase: string;
   group_letter: string | null;
@@ -35,7 +37,7 @@ export interface NikolausMatch {
   actual_start: string | null;
 }
 
-const SPIEL_SPALTEN = 'id,slot,field,phase,group_letter,team_a_id,team_b_id,match_status,score_a,score_b,scheduled_start,actual_start';
+const SPIEL_SPALTEN = 'id,slot,match_number,field,phase,group_letter,team_a_id,team_b_id,match_status,score_a,score_b,scheduled_start,actual_start';
 
 /** Alle Spiele des Turniers in Spielplan-Reihenfolge: Index 0 ist Spiel 1. */
 export function fetchNikolausSpiele(cup: NikolausCup = NIKOLAUS): Promise<NikolausMatch[]> {
@@ -52,11 +54,26 @@ export function paarung(spiel: NikolausMatch, namen: ReadonlyMap<string, string>
   return `${namen.get(spiel.team_a_id) ?? '?'} gegen ${namen.get(spiel.team_b_id) ?? '?'}`;
 }
 
-/** Spielplan-Reihenfolge der Spiele eines Turniers, mit Vorbedingung 15 Spiele auf einem Feld. */
+/**
+ * Spielplan-Reihenfolge der Spiele eines Turniers, mit Vorbedingung 15 Spiele auf einem Feld. Die Spielnummer ist gespeichert (C-SPIELNUMMER-FEHLT,
+ * behoben mit #300): Spiel 1 bis Spiel 15 in Spielplan-Reihenfolge, lückenlos und eindeutig. Fehlt sie (Seed vor #300), ist das ein Fehler im Aufbau.
+ */
 export async function ladeSpielplan(cup: NikolausCup = NIKOLAUS): Promise<{ spiele: NikolausMatch[]; namen: Map<string, string> }> {
   const [spiele, namen] = await Promise.all([fetchNikolausSpiele(cup), fetchNikolausTeamNamen(cup)]);
   expect(spiele, 'das Nikolaus-Turnier hat 15 Spiele (Seed gelaufen?)').toHaveLength(E2E_NIKOLAUS_MATCH_COUNT);
+  expect(
+    spiele.map((s) => s.match_number),
+    'die Spielnummern 1 bis 15 stehen in Spielplan-Reihenfolge in der Datenbank (@SL-049; Seed nach #300 gelaufen?)'
+  ).toEqual(spiele.map((_, index) => index + 1));
   return { spiele, namen };
+}
+
+/** Spielnummer eines Spiels aus der Datenbank (wirft, wenn sie fehlt). */
+export function spielnummer(spiel: NikolausMatch): number {
+  if (spiel.match_number === null) {
+    throw new Error(`Spiel ${spiel.id} hat keine Spielnummer (C-SPIELNUMMER-FEHLT)`);
+  }
+  return spiel.match_number;
 }
 
 export async function openNikolausPath(page: Page, pathSuffix: string, cup: NikolausCup = NIKOLAUS): Promise<void> {
@@ -99,10 +116,10 @@ export function ergebnisEreignisse(spiel: NikolausMatch, toreA: number, toreB: n
 /** Trägt ein Ergebnis ein und prüft, dass die Datenbank jedes Ereignis annimmt (Vorbedingung, kein erwartetes Rot). */
 export async function spieleErgebnis(spiel: NikolausMatch, toreA: number, toreB: number): Promise<void> {
   const rows = await fetchEngineRows(spiel.id);
-  expect(rows, `Spiel ${spiel.slot + 1} ist noch nicht angepfiffen`).toHaveLength(0);
+  expect(rows, `Spiel ${spielnummer(spiel)} ist noch nicht angepfiffen`).toHaveLength(0);
   const events = ergebnisEreignisse(spiel, toreA, toreB);
   const result = await appendAsRole('owner', spiel.id, events);
-  expect(result.results.map((r) => r.status), `Ergebnis ${toreA}:${toreB} für Spiel ${spiel.slot + 1}`).toEqual(events.map(() => 'accepted'));
+  expect(result.results.map((r) => r.status), `Ergebnis ${toreA}:${toreB} für Spiel ${spielnummer(spiel)}`).toEqual(events.map(() => 'accepted'));
 }
 
 /**
@@ -128,7 +145,7 @@ export async function beendeAlleSpiele(): Promise<void> {
     }
     const events = rows.length === 0 ? ergebnisEreignisse(spiel, toreA, toreB) : finishingEvents(rows, ergebnisEreignisse(spiel, toreA, toreB));
     const result = await appendAsRole('owner', spiel.id, events);
-    expect(result.results.map((r) => r.status), `Spiel ${index + 1} beenden`).toEqual(events.map(() => 'accepted'));
+    expect(result.results.map((r) => r.status), `Spiel ${spielnummer(spiel)} beenden`).toEqual(events.map(() => 'accepted'));
   }
   const nachher = await fetchNikolausSpiele();
   expect(nachher.map((s) => `${s.score_a}:${s.score_b}`), 'alle 15 Ergebnisse stehen wie vorgesehen').toEqual(NIKOLAUS_ERGEBNISSE.map(([a, b]) => `${a}:${b}`));

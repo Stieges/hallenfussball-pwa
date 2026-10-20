@@ -10,15 +10,15 @@ import { expect, type Page } from '@playwright/test';
 import { E2E_NIKOLAUS_CUPS, E2E_NIKOLAUS_HOST_TEAM_NAMES } from '../../testData';
 import { expectPageAnchor, expectSollMarker, vorbedingung } from './shared';
 import { openCockpit } from '../../engineHelpers';
-import { fetchNikolausSpiele, handyKontext, ladeSpielplan, openNikolausPath, paarung, type NikolausMatch } from './nikolaus-shared';
+import { fetchNikolausSpiele, handyKontext, ladeSpielplan, openNikolausPath, paarung, spielnummer, type NikolausMatch } from './nikolaus-shared';
 import type { StepContext, TurniertagStep } from './types';
 
 const ZWILLING = E2E_NIKOLAUS_CUPS.zeitplan;
 
-/** Spiele je Team nach den ersten `bis` Spielen. */
+/** Spiele je Team nach Spiel `bis` (nach der gespeicherten Spielnummer, nicht nach dem Listenplatz). */
 function spieleJeTeam(spiele: readonly NikolausMatch[], bis: number): Map<string, number> {
   const zaehler = new Map<string, number>();
-  for (const spiel of spiele.slice(0, bis)) {
+  for (const spiel of spiele.filter((s) => spielnummer(s) <= bis)) {
     for (const id of [spiel.team_a_id, spiel.team_b_id]) {
       zaehler.set(id, (zaehler.get(id) ?? 0) + 1);
     }
@@ -42,7 +42,8 @@ async function rundenGleichstand(): Promise<void> {
 
 /** N1b: jedes Team hat 2 oder 3 Heimspiele und ist nie dreimal hintereinander Heim- oder Gastmannschaft (@W4-030). */
 async function heimGastWechsel(): Promise<void> {
-  const { spiele, namen } = await ladeSpielplan();
+  const { spiele: geladen, namen } = await ladeSpielplan();
+  const spiele = [...geladen].sort((a, b) => spielnummer(a) - spielnummer(b));
   for (const [teamId, name] of namen) {
     const seiten = spiele
       .filter((s) => s.team_a_id === teamId || s.team_b_id === teamId)
@@ -58,17 +59,17 @@ async function heimGastWechsel(): Promise<void> {
 async function abstand(): Promise<void> {
   const { spiele, namen } = await ladeSpielplan();
   for (const [teamId, name] of namen) {
-    const nummern = spiele.flatMap((s, i) => (s.team_a_id === teamId || s.team_b_id === teamId ? [i] : []));
+    const nummern = spiele.filter((s) => s.team_a_id === teamId || s.team_b_id === teamId).map(spielnummer);
     expect(nummern, `${name} spielt fünfmal`).toHaveLength(5);
     for (let i = 1; i < nummern.length; i++) {
-      expect(nummern[i] - nummern[i - 1] - 1, `${name}: Spiele zwischen Spiel ${nummern[i - 1] + 1} und ${nummern[i] + 1}`).toBeGreaterThanOrEqual(1);
+      expect(nummern[i] - nummern[i - 1] - 1, `${name}: Spiele zwischen Spiel ${nummern[i - 1]} und ${nummern[i]}`).toBeGreaterThanOrEqual(1);
     }
   }
 }
 
-/** Uhrzeit und „<Heim> gegen <Gast>“ der Zeilen im Spielplan, nach Uhrzeit sortiert (die Spielnummer der Beschriftung ist nicht verlässlich: `match_number` fehlt, C-SPIELNUMMER-FEHLT). */
+/** Spielnummer, Uhrzeit und „<Heim> gegen <Gast>“ der Zeilen im Spielplan als „<Nr> <HH:MM> <Heim> gegen <Gast>“, nach Spielnummer sortiert (Beschriftung „Spiel <Nr>: …“, @SL-049). */
 async function zeilenImSpielplan(seite: Page): Promise<string[]> {
-  const gesehen = new Map<string, string>();
+  const gesehen = new Map<number, string>();
   await expect(async () => {
     for (const bruchteil of [0, 0.5, 1]) {
       await seite.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), bruchteil);
@@ -77,16 +78,16 @@ async function zeilenImSpielplan(seite: Page): Promise<string[]> {
         els.map((el) => ({ label: el.getAttribute('aria-label') ?? '', text: (el as HTMLElement).innerText.trim() }))
       );
       for (const { label, text } of zeilen) {
-        const treffer = /^Spiel \d+: (.+)$/.exec(label);
+        const treffer = /^Spiel (\d+): (.+)$/.exec(label);
         const zeit = /^(\d{2}:\d{2})/.exec(text)?.[1];
         if (treffer && zeit) {
-          gesehen.set(zeit, treffer[1]);
+          gesehen.set(Number(treffer[1]), `${treffer[1]} ${zeit} ${treffer[2]}`);
         }
       }
     }
     expect(gesehen.size).toBe(15);
   }).toPass({ timeout: 20000 });
-  return [...gesehen.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([zeit, text]) => `${zeit} ${text}`);
+  return [...gesehen.entries()].sort(([a], [b]) => a - b).map(([, zeile]) => zeile);
 }
 
 /** N2a: Spiel 1 ist eine Waging-Mannschaft als Heimmannschaft gegen einen Gast, das Vereinsduell liegt in Runde 2 (Spiel 4 bis 6); die Oberfläche zeigt denselben Plan (@W4-027, @W4-033). Hinweis: @W4-027 ist hier nicht trennscharf (Waging rot steht an erster Stelle der Teamliste, der Rundenplan eröffnet ohnehin mit Team 1 als Heim); belegt ist es durch die Generator-Tests aus #290, @W4-033 trennt. */
@@ -97,7 +98,7 @@ async function eroeffnungWaging({ asRole }: StepContext): Promise<void> {
   const gast = namen.get(spiele[0].team_b_id) ?? '';
   expect([rot, blau], `Spiel 1: ${heim} gegen ${gast}`).toContain(heim);
   expect([rot, blau], 'Spiel 1 ist gegen einen Gast').not.toContain(gast);
-  const duell = spiele.flatMap((s, i) => ([rot, blau].includes(namen.get(s.team_a_id) as never) && [rot, blau].includes(namen.get(s.team_b_id) as never) ? [i + 1] : []));
+  const duell = spiele.flatMap((s) => ([rot, blau].includes(namen.get(s.team_a_id) as never) && [rot, blau].includes(namen.get(s.team_b_id) as never) ? [spielnummer(s)] : []));
   expect(duell, 'das Vereinsduell liegt in Runde 2 (Spiel 4 bis 6)').toHaveLength(1);
   expect(duell[0]).toBeGreaterThanOrEqual(4);
   expect(duell[0]).toBeLessThanOrEqual(6);
@@ -105,7 +106,7 @@ async function eroeffnungWaging({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
   await openNikolausPath(ownerPage, '/schedule');
   await expectPageAnchor(ownerPage.getByRole('button', { name: 'Spielplan bearbeiten' }), 'Spielplan der Turnierleitung');
-  expect(await zeilenImSpielplan(ownerPage), 'der Spielplan der Turnierleitung zeigt den Plan der Cloud').toEqual(spiele.map((s) => `${(s.scheduled_start ?? '').slice(0, 5)} ${paarung(s, namen)}`));
+  expect(await zeilenImSpielplan(ownerPage), 'der Spielplan der Turnierleitung zeigt den Plan der Cloud mit denselben Spielnummern (@SL-049)').toEqual(spiele.map((s) => `${spielnummer(s)} ${(s.scheduled_start ?? '').slice(0, 5)} ${paarung(s, namen)}`));
 }
 
 /** N2b: im Assistenten markiert die Turnierleitung „TSV Waging rot“ als „Mannschaft des Veranstalters“ (@W4-034). */
@@ -149,8 +150,8 @@ async function zeitplanVorziehen({ asRole, browser }: StepContext): Promise<void
     spiele.map((_, i) => `${String(16 + Math.floor((15 + i * 10) / 60)).padStart(2, '0')}:${String((15 + i * 10) % 60).padStart(2, '0')}:00`)
   );
   // ohne Neuladen innerhalb von 10 Sekunden (@ZP-090)
-  const zeile1 = zuschauer.locator('[aria-label$="TSV Waging rot gegen TSV 1921 Fridolfing"]:visible');
-  const zeile2 = zuschauer.locator('[aria-label$="DJK Otting gegen TSV Waging blau"]:visible');
+  const zeile1 = zuschauer.locator('[aria-label="Spiel 1: TSV Waging rot gegen TSV 1921 Fridolfing"]:visible');
+  const zeile2 = zuschauer.locator('[aria-label="Spiel 2: DJK Otting gegen TSV Waging blau"]:visible');
   await expect(zeile1, 'Zuschauer-Seite: Spiel 1 um 16:15, ursprünglich 16:30').toContainText(/16:15[\s\S]*ursprünglich 16:30/, { timeout: 10000 });
   await expect(zeile2, 'Zuschauer-Seite: Spiel 2 um 16:25').toContainText('16:25', { timeout: 10000 });
   await expect(monitor.locator('body'), 'Hallenmonitor: Nächstes Spiel 16:15').toContainText(/Nächstes Spiel[\s\S]*16:15/, { timeout: 10000 });
