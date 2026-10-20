@@ -94,9 +94,7 @@ describe('@W4-020 Finalrunde „Alle Plätze“ zählt mit echten Gruppengröße
       [9, 2, 'top-4'],
       [8, 2, 'final-only'],
       [8, 2, 'none'],
-      [8, 4, 'top-8'],
-      [8, 4, 'all-places'],
-      [12, 4, 'top-16'],
+      [8, 4, 'none'],
     ];
     for (const [teams, groups, preset] of faelle) {
       const tatsaechlich = generateFullSchedule(gruppenTurnier(teams, groups, preset)).allMatches
@@ -104,6 +102,12 @@ describe('@W4-020 Finalrunde „Alle Plätze“ zählt mit echten Gruppengröße
       expect(countTournamentMatches(teams, { groupCount: groups, finalsPlan: preset })).toBe(
         tatsaechlich
       );
+    }
+  });
+
+  it('A-12a Gegenbeispiel: ab 3 Gruppen erzeugt der Spielplan keine Finalrunde mehr (sichtbarer Fehler), die Zählung hat kein Gegenstück', () => {
+    for (const [teams, groups, preset] of [[8, 4, 'top-8'], [8, 4, 'all-places'], [12, 4, 'top-16']] as const) {
+      expect(() => generateFullSchedule(gruppenTurnier(teams, groups, preset))).toThrow(/nur für 1 oder 2 Gruppen/);
     }
   });
 });

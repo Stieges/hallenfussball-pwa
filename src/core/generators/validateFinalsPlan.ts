@@ -13,7 +13,8 @@
  * ab A-15a auch gegen `set_slot_source` (Server-Zwilling).
  *
  * Phase eines Spiels: Schlüsselwort der Bezeichnung („Viertelfinale“, „Halbfinale“ …) vor `phase` vor „Finale“. Die
- * Bezeichnung geht vor, weil `Match.phase` im Bestand für Halbfinale noch „final“ lautet (C-FINALPHASE-AUS-ID, A-12a).
+ * Bezeichnung geht vor, weil `Match.phase` in vor A-12a gespeicherten Turnieren für Halbfinale „final“ lautet
+ * (C-FINALPHASE-AUS-ID).
  */
 import type { Match } from '../../types/tournament';
 import { slotSource } from '../models/matchSlot';

@@ -165,6 +165,11 @@ export const TournamentSchema = z.object({
     standingDecisions: z.preprocess(parseStandingDecisions, z.array(StandingDecisionSchema).optional()),
     // Paket TB-B (TB-3'): Plätze, die bei Gleichstand ausgespielt werden müssen; fehlend/unbrauchbar → nur Platz 1.
     placementsToPlayOut: PlacementsToPlayOutSchema,
+    // A-12a (@TM-004): gewählte Platzierungsspiele. Nur `placements` wird geprüft, die übrigen Felder bleiben unverändert;
+    // ein unbrauchbarer Wert fällt weg (dann belegt die Vorlage vor), statt das Turnier beim Laden ungültig zu machen.
+    finalsConfig: z.looseObject({
+        placements: z.array(z.number().int().min(1).max(99)).optional().catch(undefined),
+    }).nullish(),
 })
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- passthrough needed to prevent data loss of unmapped fields
   .passthrough();

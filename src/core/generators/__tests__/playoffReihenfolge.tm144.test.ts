@@ -5,7 +5,7 @@
  * (Spielnummer, die seit #300 Anstoß, dann Feld folgt).
  */
 import { describe, it, expect } from 'vitest';
-import { generateFullSchedule } from '..';
+import { generateFullSchedule, generatePlayoffDefinitions, generatePlayoffSchedule } from '..';
 import type { FinalsConfig, Team, Tournament } from '../../../types/tournament';
 import type { ScheduledMatch } from '../scheduleTypes';
 import { createMockTournament } from '../../../test/factories';
@@ -53,6 +53,25 @@ function expectFinalIsLastOnFieldOne(all: readonly ScheduledMatch[]): void {
   expect(others.every((m) => m.endTime.getTime() <= final.startTime.getTime())).toBe(true);
 }
 
+/** Finalrunde direkt aus dem Planer (ohne die Sperre des Anlegens): Bezeichnungen in Spielfolge (Slot, dann Feld). */
+function planned(groups: number, preset: FinalsConfig['preset'], numberOfFields: number) {
+  return generatePlayoffSchedule({
+    playoffDefinitions: generatePlayoffDefinitions(groups, { preset }),
+    numberOfFields, slotDurationMinutes: 10, breakBetweenSlotsMinutes: 0, minRestSlotsPerTeam: 1, startSlot: 0,
+    startTime: new Date(2026, 10, 14, 13, 0),
+  }).sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0) || a.field - b.field);
+}
+
+const plannedLabels = (groups: number, preset: FinalsConfig['preset'], fields: number): string[] =>
+  planned(groups, preset, fields).map((m) => m.label ?? '');
+
+function expectPlannedFinalLastOnFieldOne(groups: number, preset: FinalsConfig['preset'], fields: number): void {
+  const all = planned(groups, preset, fields);
+  const final = all.find((m) => m.finalType === 'final');
+  expect(final?.field).toBe(1);
+  expect(all.filter((m) => m !== final).every((m) => (m.slot ?? 0) < (final?.slot ?? 0))).toBe(true);
+}
+
 const FIELDS = [1, 2, 3] as const;
 
 describe('@TM-144 Platzierungsspiele liegen vor dem Finale, das Finale ist das letzte Spiel', () => {
@@ -85,21 +104,24 @@ describe('@TM-144 Platzierungsspiele liegen vor dem Finale, das Finale ist das l
 
   // Die Regel gilt für jede Vorlage (Änderungsprotokoll Turniermodi 2026-10-15: „7, 5, 3, Finale“, Finale zuletzt auf Feld 1)
   describe.each(FIELDS)('weitere Vorlagen mit %i Feld(ern)', (fields) => {
-    it('Top 8 (4 Gruppen): Platz 7 vor Platz 5 vor Platz 3, Finale zuletzt auf Feld 1', () => {
-      const schedule = generateFullSchedule(cupOf({ preset: 'top-8' }, fields, 4, 4));
-      const labels = finalRoundLabels(schedule.allMatches);
+    // Ab 3 Gruppen legt der Generator seit A-12a keine Finalrunde mehr an (Plan GA4 v2, Daniel E6); die Reihenfolge
+    // der Vorlagen Top 8/Top 16 prüft hier der Planer der Finalrunde selbst (gespeicherte Turniere, Lesepfad).
+    it('Top 8 (4 Gruppen): Platz 7 vor Platz 5 vor Platz 3, Finale zuletzt auf Feld 1 (Planer der Finalrunde)', () => {
+      const labels = plannedLabels(4, 'top-8', fields);
 
       expect(labels.slice(-2)).toEqual(['Spiel um Platz 3', 'Finale']);
       expect(labels.indexOf('Spiel um Platz 7')).toBeLessThan(labels.indexOf('Spiel um Platz 5'));
       expect(labels.indexOf('Spiel um Platz 5')).toBeLessThan(labels.indexOf('Spiel um Platz 3'));
-      expectFinalIsLastOnFieldOne(schedule.allMatches);
+      expectPlannedFinalLastOnFieldOne(4, 'top-8', fields);
     });
 
-    it('Top 16 (8 Gruppen): Spiel um Platz 3 vor dem Finale, Finale zuletzt auf Feld 1', () => {
-      const schedule = generateFullSchedule(cupOf({ preset: 'top-16' }, fields, 8, 2));
+    it('Top 16 (8 Gruppen): Spiel um Platz 3 vor dem Finale, Finale zuletzt auf Feld 1 (Planer der Finalrunde)', () => {
+      expect(plannedLabels(8, 'top-16', fields).slice(-2)).toEqual(['Spiel um Platz 3', 'Finale']);
+      expectPlannedFinalLastOnFieldOne(8, 'top-16', fields);
+    });
 
-      expect(finalRoundLabels(schedule.allMatches).slice(-2)).toEqual(['Spiel um Platz 3', 'Finale']);
-      expectFinalIsLastOnFieldOne(schedule.allMatches);
+    it('A-12a Gegenbeispiel: 4 Gruppen mit Top 8 legt der Generator nicht an (sichtbarer Fehler statt Plan)', () => {
+      expect(() => generateFullSchedule(cupOf({ preset: 'top-8' }, fields, 4, 4))).toThrow(/nur für 1 oder 2 Gruppen/);
     });
 
     it('Top 4 mit einer Gruppe (@TM-142): Spiel um Platz 3 vor dem Finale, Finale zuletzt auf Feld 1', () => {
