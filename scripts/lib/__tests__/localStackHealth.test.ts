@@ -112,6 +112,24 @@ describe('Ausgefallene Dienste (findUnhealthyContainers)', () => {
     expect(msg).toContain('neu startend (3 Neustarts)');
   });
 
+  // @LT-012 Beispiele: einzelne Neustarts beim Hochfahren (logflare/analytics) sind kein Ausfall
+  it.each([
+    { zustand: 'laufend und gesund', status: 'running', health: 'healthy', n: 1, gemeldet: false },
+    { zustand: 'laufend und gesund', status: 'running', health: 'healthy', n: 2, gemeldet: false },
+    { zustand: 'laufend, Gesundheit offen', status: 'running', health: 'starting', n: 3, gemeldet: true },
+    { zustand: 'neu startend', status: 'restarting', health: undefined, n: 1, gemeldet: true },
+  ])('@LT-012 analytics $zustand mit $n Neustart(s): gemeldet=$gemeldet', ({ status, health, n, gemeldet }) => {
+    const c = container({ service: 'analytics', status, health, restartCount: n });
+    const found = findUnhealthyContainers([c], PROJECT);
+    expect(found.length > 0).toBe(gemeldet);
+    if (gemeldet) expect(formatUnhealthyMessage(found, {})).toContain('neu startend');
+  });
+
+  it('@LT-012 Gegenbeispiel: 1 Neustart bei laufendem, Gesundheit offenem Dienst wird nicht gemeldet', () => {
+    const c = container({ service: 'storage', health: 'starting', restartCount: 1 });
+    expect(findUnhealthyContainers([c], PROJECT)).toEqual([]);
+  });
+
   it('@LT-002 running ohne Neustarts (restartCount 0) wird nicht gemeldet', () => {
     const c = container({ service: 'storage', health: 'starting', restartCount: 0 });
     expect(findUnhealthyContainers([c], PROJECT)).toEqual([]);

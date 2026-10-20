@@ -1,7 +1,7 @@
 /**
  * localStackHealth.ts — reine Prüflogik für die gemeinsame lokale Supabase-Testumgebung.
  *
- * Anforderung: docs/anforderungen/plattform/2026-10-20_lokale-testumgebung-gesund.md (@LT-001 … @LT-011).
+ * Anforderung: docs/anforderungen/plattform/2026-10-20_lokale-testumgebung-gesund.md (@LT-001 … @LT-012).
  * KEINE Docker- und KEINE Dateizugriffe: `scripts/test-env-check.ts` liest Docker und das
  * Dateisystem und reicht die Daten hierher (Muster wie `assertLocalSupabaseTarget.ts`).
  */
@@ -69,13 +69,21 @@ function serviceOf(containerName: string, projectId: string): string | null {
   return service.length > 0 ? service : null;
 }
 
+/**
+ * Ab so vielen Neustarts seit Erzeugung gilt ein Dienst als in der Neustartschleife (@LT-012).
+ * Einzelne Neustarts beim Hochfahren sind normal: logflare (analytics) startet in der CI einmal
+ * neu, bis die Datenbank bereit ist, und läuft danach stabil. Eine echte Absturzschleife (z. B.
+ * Storage mit doppeltem Migrationsschlüssel) sammelt dagegen schnell mehr Neustarts.
+ */
+export const RESTART_LOOP_THRESHOLD = 3;
+
 export function findUnhealthyContainers(containers: DockerContainer[], projectId: string): UnhealthyContainer[] {
   const result: UnhealthyContainer[] = [];
   for (const c of containers) {
     const service = serviceOf(c.name, projectId);
     if (service === null) continue;
     const restarts = c.restartCount ?? 0;
-    if (c.status !== 'running' || c.health === 'unhealthy' || restarts > 0) {
+    if (c.status !== 'running' || c.health === 'unhealthy' || restarts >= RESTART_LOOP_THRESHOLD) {
       result.push({ service, name: c.name, status: c.status, health: c.health, restartCount: c.restartCount });
     }
   }
@@ -206,9 +214,11 @@ export function formatUnhealthyMessage(
   for (const f of findings) {
     const restarts = f.restartCount ?? 0;
     const state =
-      restarts > 0 && f.status !== 'exited'
-        ? `neu startend (${restarts} Neustarts)`
-        : f.health === 'unhealthy' && f.status === 'running'
+      f.status === 'restarting'
+        ? 'restarting (neu startend)'
+        : restarts >= RESTART_LOOP_THRESHOLD && f.status !== 'exited'
+          ? `neu startend (${restarts} Neustarts)`
+          : f.health === 'unhealthy' && f.status === 'running'
           ? 'unhealthy'
           : f.status;
     const log = lastLogLines[f.name] ?? '(keine Protokollzeile)';

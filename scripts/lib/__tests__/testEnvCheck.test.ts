@@ -148,6 +148,21 @@ describe('--vorher / --gesund', () => {
     expect(r.stderr).toContain('npm run test:env:down && npm run test:env:up');
   });
 
+  it('@LT-012 analytics laufend und gesund mit 1 Neustart: keine Meldung, Exit 0', () => {
+    const stack = [...gesunderStack(), { ...laufend('analytics', `${ECR}/logflare:1`, sha('7')), health: 'healthy', restartCount: 1 }];
+    const { deps } = setup({ containers: stack, images: [] });
+    expect(runCheck('--gesund', deps)).toEqual({ exitCode: 0, stdout: '', stderr: '' });
+  });
+
+  it('@LT-012 analytics im Zustand restarting mit 1 Neustart: wird als neu startend gemeldet', () => {
+    const stack = [...gesunderStack(), { ...laufend('analytics', `${ECR}/logflare:1`, sha('7')), status: 'restarting', restartCount: 1 }];
+    const { deps } = setup({ containers: stack, images: [] });
+    const r = runCheck('--gesund', deps);
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr).toContain('analytics');
+    expect(r.stderr).toContain('neu startend');
+  });
+
   it('@LT-003 Neustartschleife: running mit 3 Neustarts wird über runCheck gemeldet', () => {
     const stack = gesunderStack().map((c) =>
       c.service === 'storage' ? { ...c, health: 'starting', restartCount: 3 } : c,

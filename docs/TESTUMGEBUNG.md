@@ -56,11 +56,11 @@ in `supabase/config.toml`). Damit alle die Dienste in derselben Version starten:
   Playwright-Images, Images mit (auch gestopptem) Container und fremde Images bleiben. Trägt ein altes
   Image zusätzlich einen fremden Namen, wird nur der Supabase-Name entfernt. Nie `prune`, nie `-f`.
 - `test:env:up`, `test:env:status` und `scripts/require-local-stack.sh` (vor `test:e2e:cloud`) melden jeden
-  vorhandenen Dienst, der neu startet (auch wenn er gerade wieder läuft, erkannt an der Neustartzahl), beendet oder `unhealthy` ist, mit Zustand und letzter Protokollzeile. Fehlt ein Container ganz (gestoppter Stack), meldet `--gesund` das nicht; dann `npm run test:env:up`. Reparatur:
+  vorhandenen Dienst, der neu startet (auch wenn er gerade wieder läuft: ab 3 Neustarts seit dem Start gilt das als Schleife; einzelne Neustarts beim Hochfahren, etwa von `analytics`, sind normal), beendet oder `unhealthy` ist, mit Zustand und letzter Protokollzeile. Fehlt ein Container ganz (gestoppter Stack), meldet `--gesund` das nicht; dann `npm run test:env:up`. Reparatur:
   `npm run test:env:down && npm run test:env:up`. Das nur tun, wenn gerade keine Spur gegen den Stack testet.
 - Meldung „Docker ist nicht erreichbar“: Docker Desktop starten.
 
-Anforderung: `docs/anforderungen/plattform/2026-10-20_lokale-testumgebung-gesund.md` (@LT-001 … @LT-011).
+Anforderung: `docs/anforderungen/plattform/2026-10-20_lokale-testumgebung-gesund.md` (@LT-001 … @LT-012).
 
 ## Testnutzer und Testdaten
 
