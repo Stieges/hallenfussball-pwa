@@ -57,6 +57,10 @@ describe('Nikolaus-Turnier TEST (Testdaten-Vorlage)', () => {
     expect(E2E_NIKOLAUS_HOST_TEAM_NAMES).not.toContain(gast(0));
   });
 
+  it('@SL-049 C-SPIELNUMMER-FEHLT: jedes Spiel trägt seine Spielnummer 1 bis 15 in Spielplan-Reihenfolge (nie leer)', () => {
+    expect(spiele.map((spiel) => spiel.matchNumber)).toEqual(Array.from({ length: E2E_NIKOLAUS_MATCH_COUNT }, (_, i) => i + 1));
+  });
+
   it('@W4-033 Vereinsduell in Runde 2 (Spiel 4 bis 6)', () => {
     const duell = spiele
       .map((_, i) => i)

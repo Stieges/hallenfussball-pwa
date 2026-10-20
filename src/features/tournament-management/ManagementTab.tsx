@@ -26,6 +26,7 @@ import { MatchAwaitingTeamsError, MatchNotOnEngineError, type MatchNotOnEngineRe
 import { matchLabelText } from '../../core/models/slotLabel';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { buildSideContext, sideDisplay, sideName } from '../../components/schedule/matchSides';
+import { matchesOfFieldInPlayOrder } from './utils/fieldMatchOrder';
 import styles from './ManagementTab.module.css';
 
 interface ManagementTabProps {
@@ -130,10 +131,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   }, [sides, t]);
 
   // Get matches for selected field
-  const fieldMatches = useMemo(() =>
-    schedule.allMatches
-      .filter((m) => m.field === selectedFieldNumber)
-      .sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0)),
+  const fieldMatches = useMemo(
+    () => matchesOfFieldInPlayOrder(schedule.allMatches, selectedFieldNumber),
     [schedule.allMatches, selectedFieldNumber]
   );
 
