@@ -240,3 +240,5 @@ export const E2E_LIVE_CUP_COLLABORATORS: E2ELiveCupCollaboratorSpec[] = [
 
 // Engine-Cups (A-23/C3b-3a, S5): einzige Quelle in `engineCups.ts` (Dateigrenze 300 Zeilen).
 export * from './engineCups';
+// Nikolaus-Turnier TEST (Hauptlinie des Durchstichs): einzige Quelle in `nikolausCup.ts`.
+export * from './nikolausCup';
