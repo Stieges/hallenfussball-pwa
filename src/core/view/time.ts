@@ -33,7 +33,7 @@ export function toTournamentLocal(instant: Date, timeZone: string): LocalClock {
 
 /**
  * Anstoß = Turnierdatum + „HH:MM“, so wie gespeichert. Der Mapper baut `scheduledTime` als Wanduhr
- * (`1970-01-01T14:40`), deshalb liest diese Funktion die Wanduhr-Felder, nie UTC/ISO.
+ * (Turnierdatum + Zeit, Ortszeit des Geräts), deshalb liest diese Funktion die Wanduhr-Felder, nie UTC/ISO.
  */
 export function kickoffLocal(date: string, scheduledTime: Date | string | undefined): LocalClock | undefined {
   if (scheduledTime === undefined) {
