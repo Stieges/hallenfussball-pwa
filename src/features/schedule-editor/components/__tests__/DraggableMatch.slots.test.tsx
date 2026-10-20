@@ -78,7 +78,7 @@ describe('DraggableMatch – Seiten aus den Slots (A-04b)', () => {
       id: SEMI1, team_a_id: NORD, slot_a_source: { kind: 'groupRank', group: 'A', rank: 1 },
       team_b_id: UFER, slot_b_source: { kind: 'groupRank', group: 'B', rank: 2 },
     });
-    const fromCloud = mapMatchFromSupabase(row);
+    const fromCloud = mapMatchFromSupabase(row, '2026-01-15');
 
     card(fromCloud, { teams });
 
