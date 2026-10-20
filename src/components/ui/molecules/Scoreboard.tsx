@@ -176,7 +176,7 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
     <section data-testid={testId} data-size={size} style={tafel}>
       <div style={kopf}>
         <span aria-live="polite" data-testid={id('state')} style={{ display: 'inline-flex', minWidth: 0 }}>
-          <MatchStatusBadge model={model.badge} size="card" testId={id('abzeichen')} />
+          <MatchStatusBadge model={model.badge} size="card" surface="scoreboard" testId={id('abzeichen')} />
         </span>
         <span style={abschnitt}>{model.abschnittText}</span>
         <span style={rechts}>

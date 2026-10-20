@@ -9,6 +9,13 @@ import type { MatchBadgeState } from '../../../core/view/badge';
 
 export type MatchStatusBadgeSize = 'card' | 'row' | 'display';
 
+/**
+ * Fläche, auf der das Abzeichen steht. `app`: Spielkarte, Verwaltung, Zuschauer (Standard). `scoreboard`: die immer
+ * dunkle Cockpit-Tafel (@OB-065). Auf der Tafel tragen nur „Ende“ und „ausgefallen“ eigene Farben (Tafel-Schrift und
+ * Rahmen), damit die Schrift auf der dunklen Fläche ≥ 4,5 : 1 bleibt; alle übrigen Zustände sind wie auf der Spielkarte.
+ */
+export type MatchStatusBadgeSurface = 'app' | 'scoreboard';
+
 /** Farben für Monitor-Themes; ohne sie gelten die Farben der App (cssVars). */
 export interface MatchStatusBadgeTone {
   liveBg: string;
@@ -45,17 +52,26 @@ export function badgeColors(state: MatchBadgeState): BadgeColors {
   }
 }
 
-export function badgeColorsFor(state: MatchBadgeState, tone: MatchStatusBadgeTone | undefined): BadgeColors {
+/** Farben auf der Cockpit-Tafel: nur „Ende“ und „ausgefallen“ weichen ab (Schrift und Rahmen in der Tafel-Schrift). */
+function badgeColorsOnScoreboard(state: MatchBadgeState): BadgeColors {
+  if (state === 'ended' || state === 'cancelled') {
+    const c = cssVars.colors;
+    return { bg: c.statusFinishedBg, fg: c.scoreboardTextMuted, border: c.scoreboardTextMuted };
+  }
+  return badgeColors(state);
+}
+
+export function badgeColorsFor(state: MatchBadgeState, tone: MatchStatusBadgeTone | undefined, surface: MatchStatusBadgeSurface = 'app'): BadgeColors {
   if (tone === undefined) {
-    return badgeColors(state);
+    return surface === 'scoreboard' ? badgeColorsOnScoreboard(state) : badgeColors(state);
   }
   return state === 'live' ? { bg: tone.liveBg, fg: tone.liveFg } : { bg: tone.neutralBg, fg: tone.neutralFg };
 }
 
 const scoreArea = displayLayout.scoreArea;
 
-export function badgeStyle(state: MatchBadgeState, size: MatchStatusBadgeSize, tone: MatchStatusBadgeTone | undefined): CSSProperties {
-  const colors = badgeColorsFor(state, tone);
+export function badgeStyle(state: MatchBadgeState, size: MatchStatusBadgeSize, tone: MatchStatusBadgeTone | undefined, surface: MatchStatusBadgeSurface = 'app'): CSSProperties {
+  const colors = badgeColorsFor(state, tone, surface);
   const base: CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
