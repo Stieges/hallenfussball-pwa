@@ -17,7 +17,7 @@ import { palette } from '../../../src/design-tokens/colors/palette';
 
 const BILDER = process.env.SA23_BILDER;
 const PHASE = process.env.SA23_PHASE ?? 'nachher';
-const FINALE = '00000003-0000-4000-8000-000000000015';
+const FINALE = '00000003-0000-4000-8000-000000000016';
 const ADMIN = '/#/tournament/hallencup-messlauf/admin/visibility';
 const MONITOR = '/#/display/hallencup-messlauf/mon-live';
 

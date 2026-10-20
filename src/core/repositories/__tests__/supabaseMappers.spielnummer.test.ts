@@ -4,7 +4,7 @@
  * Aus den Szenarien: @SL-049 (Cockpit zeigt „Spiel 13 … 15:15, Feld 1“ – Spielnummern gelten wörtlich),
  * @ZM-007 (Zuschauer sehen „Spiel 1 als beendet mit 2:0“ – Spiel 1 ist das erste Spiel des Plans),
  * @TM-142 (Halbfinale 1 und Halbfinale 2 sind zwei Spiele). Turnier „Hallencup Nord“ über den echten Weg
- * (Veröffentlichen + Mapper-Rundlauf): 12 Gruppenspiele, dann Halbfinale 1 und 2, Finale, Spiel um Platz 3.
+ * (Veröffentlichen + Mapper-Rundlauf): 12 Gruppenspiele, dann Halbfinale 1 und 2, Spiel um Platz 3, Finale (@TM-144).
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import type { Match, Tournament } from '../../../types/tournament';

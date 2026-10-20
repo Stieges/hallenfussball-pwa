@@ -518,6 +518,46 @@
                 "slot": 8,
                 "slotA": {
                   "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000008",
+                  "resolvedFrom": {
+                    "kind": "matchResult",
+                    "matchId": "00000003-0000-4000-8000-000000000013",
+                    "role": "loser"
+                  }
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000004",
+                  "resolvedFrom": {
+                    "kind": "matchResult",
+                    "matchId": "00000003-0000-4000-8000-000000000014",
+                    "role": "loser"
+                  }
+                },
+                "originA": {
+                  "kind": "matchResult",
+                  "matchId": "00000003-0000-4000-8000-000000000013",
+                  "role": "loser"
+                },
+                "originB": {
+                  "kind": "matchResult",
+                  "matchId": "00000003-0000-4000-8000-000000000014",
+                  "role": "loser"
+                },
+                "isFinal": true,
+                "phase": "final",
+                "finalType": "thirdPlace",
+                "label": "Spiel um Platz 3",
+                "scheduledTime": "2026-11-14T09:27:00.000Z",
+                "matchNumber": 15
+              },
+              {
+                "id": "00000003-0000-4000-8000-000000000016",
+                "round": 8,
+                "field": 1,
+                "slot": 9,
+                "slotA": {
+                  "kind": "team",
                   "teamId": "00000001-0000-4000-8000-000000000001",
                   "resolvedFrom": {
                     "kind": "matchResult",
@@ -550,8 +590,8 @@
                 "phase": "final",
                 "finalType": "final",
                 "label": "Finale",
-                "scheduledTime": "2026-11-14T09:27:00.000Z",
-                "matchNumber": 15,
+                "scheduledTime": "2026-11-14T09:39:00.000Z",
+                "matchNumber": 16,
                 "matchStatus": "running",
                 "timerElapsedSeconds": 0,
                 "timerStartTime": "@jetzt-320s",
@@ -576,46 +616,6 @@
                   "sectionStartMs": 0,
                   "breakStartedAt": null
                 }
-              },
-              {
-                "id": "00000003-0000-4000-8000-000000000016",
-                "round": 8,
-                "field": 1,
-                "slot": 9,
-                "slotA": {
-                  "kind": "team",
-                  "teamId": "00000001-0000-4000-8000-000000000008",
-                  "resolvedFrom": {
-                    "kind": "matchResult",
-                    "matchId": "00000003-0000-4000-8000-000000000013",
-                    "role": "loser"
-                  }
-                },
-                "slotB": {
-                  "kind": "team",
-                  "teamId": "00000001-0000-4000-8000-000000000004",
-                  "resolvedFrom": {
-                    "kind": "matchResult",
-                    "matchId": "00000003-0000-4000-8000-000000000014",
-                    "role": "loser"
-                  }
-                },
-                "originA": {
-                  "kind": "matchResult",
-                  "matchId": "00000003-0000-4000-8000-000000000013",
-                  "role": "loser"
-                },
-                "originB": {
-                  "kind": "matchResult",
-                  "matchId": "00000003-0000-4000-8000-000000000014",
-                  "role": "loser"
-                },
-                "isFinal": true,
-                "phase": "final",
-                "finalType": "thirdPlace",
-                "label": "Spiel um Platz 3",
-                "scheduledTime": "2026-11-14T09:39:00.000Z",
-                "matchNumber": 16
               }
             ],
             "status": "published",
@@ -3708,13 +3708,13 @@
           "review": [],
           "updatedAt": 1794665270000
         },
-        "guest|00000003-0000-4000-8000-000000000015": {
+        "guest|00000003-0000-4000-8000-000000000016": {
           "formatVersion": 2,
           "accountId": "guest",
-          "matchId": "00000003-0000-4000-8000-000000000015",
+          "matchId": "00000003-0000-4000-8000-000000000016",
           "tournamentId": "hallencup-messlauf",
           "ctx": {
-            "matchId": "00000003-0000-4000-8000-000000000015",
+            "matchId": "00000003-0000-4000-8000-000000000016",
             "teamAId": "00000001-0000-4000-8000-000000000001",
             "teamBId": "00000001-0000-4000-8000-000000000006"
           },
@@ -4667,10 +4667,10 @@
     ],
     "spiele": 16,
     "engineKopien": 24,
-    "laufendesSpiel": "00000003-0000-4000-8000-000000000015",
+    "laufendesSpiel": "00000003-0000-4000-8000-000000000016",
     "mitVerlaengerung": "00000003-0000-4000-8000-000000000013",
     "mitStrafstossschiessen": "00000003-0000-4000-8000-000000000014",
-    "ungespieltesSpiel": "00000003-0000-4000-8000-000000000016",
+    "ungespieltesSpiel": "00000003-0000-4000-8000-000000000015",
     "phasenTurniere": {
       "halbzeitpause": {
         "turnierId": "hallencup-phase-halbzeit",
