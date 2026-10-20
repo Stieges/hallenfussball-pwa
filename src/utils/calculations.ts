@@ -1,29 +1,24 @@
-import { Match, Tournament, Standing, Team, PlacementCriterion, RuntimeMatchEvent } from '../types/tournament';
+import { Match, Tournament, Standing, Team, RuntimeMatchEvent } from '../types/tournament';
 import { DEFAULT_FAIR_PLAY_PROFILE, type FairPlayProfile } from '../core/stats/fairPlayProfiles';
 import { cardKindOf } from './cardKind';
 import { matchSideTeamId } from '../core/models/matchSlot';
+import { rankGroup } from '../core/standings/groupTable';
+import { effectivePlacementLogic } from '../core/standings/placementDefaults';
 import { standingsGroups, OVERALL_GROUP } from '../core/models/standingsGroups';
 import { matchFinalScore } from '../core/view/finalScore';
 import type { TeamId } from '../core/models/schemas/MatchSlotSchema';
 import { FINAL_TYPE_LABELS, FINAL_TYPE_RANKS, openPlacements } from './openPlacements';
 export { hasFinalRound, placementBadgeText, placementRankText } from './openPlacements';
 
-/**
- * Zählt ein Spiel für Tabelle, Weiterkommen und Finalrunden-Auflösung? (@TM-143)
- *
- * Nur abgepfiffene Spiele (`finished`): laufende oder unterbrochene Spiele tragen einen
- * Zwischenstand, der nicht zählen darf. Ein nicht gesetzter Status (`undefined`) zählt nur, weil
- * ältere lokale Turniere (Zod `optional`) und Testfixtures ohne Status existieren. Produktiv setzt
- * der Mapper `null` auf 'scheduled' und der Wizard 'scheduled', ein `undefined` entsteht dort kaum.
- *
- * Eine gemeinsame Prüfung für alle Rechenwege (Tabelle, playoffResolver), damit "fertig" und
- * "zählt" nie auseinanderlaufen.
- */
-export const countsForStandings = (match: Match): boolean =>
-  match.matchStatus === undefined || match.matchStatus === 'finished';
+export { countsForStandings } from '../core/standings/countsForStandings';
 
 /**
- * Calculate standings for a group or all teams
+ * Tabelle einer Gruppe bzw. aller Teams – Fassade über den Rechenkern `rankGroup` (Paket TB, Plan v2 § 3.1).
+ * - mit `group`: je Gruppe (Modus `group`, direkter Vergleich als Sondertabelle, Markierung nach allen Gruppenspielen);
+ * - ohne `group` und höchstens eine Tabellengruppe (Jeder gegen jeden): ebenso, Gruppe `OVERALL_GROUP`;
+ * - ohne `group` bei zwei und mehr Gruppen: gruppenübergreifend (`crossGroup`, Endstand Z. 62) – ohne direkten
+ *   Vergleich und ohne Markierung (C-TABELLE-GRUPPENUEBERGREIFEND).
+ * Eine leere gespeicherte Reihenfolge gilt als Voreinstellung BFV privat (C-WERTUNG-LEER).
  */
 export const calculateStandings = (
   teams: Team[],
@@ -31,75 +26,18 @@ export const calculateStandings = (
   tournament: Tournament,
   group?: string
 ): Standing[] => {
-  // Filter matches for the specific group if provided
-  const relevantMatches = group
-    ? matches.filter(
-        (m) => m.group === group && m.scoreA !== undefined && m.scoreB !== undefined && countsForStandings(m)
-      )
-    : matches.filter(
-        (m) => m.scoreA !== undefined && m.scoreB !== undefined && !m.isFinal && countsForStandings(m)
-      );
-
-  // Filter teams for the specific group
-  const relevantTeams = group ? teams.filter((t) => t.group === group) : teams;
-
-  // Initialize standings
-  const standings: Standing[] = relevantTeams.map((team) => ({
-    team,
-    played: 0,
-    won: 0,
-    drawn: 0,
-    lost: 0,
-    goalsFor: 0,
-    goalsAgainst: 0,
-    goalDifference: 0,
-    points: 0,
-  }));
-
-  // Calculate stats from matches
-  relevantMatches.forEach((match) => {
-    // A-03: Die Zuordnung läuft NUR über die Team-ID aus dem Slot – ein Name zählt nie.
-    // Offene Seiten und fehlende Slots haben keine Team-ID und gehen in keine Tabelle ein.
-    const idA = matchSideTeamId(match, 'A');
-    const idB = matchSideTeamId(match, 'B');
-    const teamAStanding = idA === undefined ? undefined : standings.find((s) => s.team.id === idA);
-    const teamBStanding = idB === undefined ? undefined : standings.find((s) => s.team.id === idB);
-
-    if (!teamAStanding || !teamBStanding || match.scoreA === undefined || match.scoreB === undefined) {
-      return;
-    }
-
-    teamAStanding.played++;
-    teamBStanding.played++;
-
-    teamAStanding.goalsFor += match.scoreA;
-    teamAStanding.goalsAgainst += match.scoreB;
-    teamBStanding.goalsFor += match.scoreB;
-    teamBStanding.goalsAgainst += match.scoreA;
-
-    if (match.scoreA > match.scoreB) {
-      teamAStanding.won++;
-      teamBStanding.lost++;
-      teamAStanding.points += tournament.pointSystem.win;
-      teamBStanding.points += tournament.pointSystem.loss;
-    } else if (match.scoreA < match.scoreB) {
-      teamBStanding.won++;
-      teamAStanding.lost++;
-      teamBStanding.points += tournament.pointSystem.win;
-      teamAStanding.points += tournament.pointSystem.loss;
-    } else {
-      teamAStanding.drawn++;
-      teamBStanding.drawn++;
-      teamAStanding.points += tournament.pointSystem.draw;
-      teamBStanding.points += tournament.pointSystem.draw;
-    }
-
-    teamAStanding.goalDifference = teamAStanding.goalsFor - teamAStanding.goalsAgainst;
-    teamBStanding.goalDifference = teamBStanding.goalsFor - teamBStanding.goalsAgainst;
-  });
-
-  // Sort by placement logic (pass relevantMatches for direct comparison)
-  return sortByPlacementLogic(standings, tournament.placementLogic, relevantMatches);
+  const hasGroup = group !== undefined && group !== '';
+  const groups = standingsGroups(teams);
+  const mode = hasGroup || groups.length <= 1 ? 'group' : 'crossGroup';
+  return rankGroup({
+    groupId: hasGroup ? group : (groups.length === 1 ? groups[0].group : OVERALL_GROUP),
+    teams: hasGroup ? teams.filter((t) => t.group === group) : teams,
+    matches: hasGroup ? matches.filter((m) => m.group === group) : matches.filter((m) => m.isFinal !== true),
+    pointSystem: tournament.pointSystem,
+    placementLogic: effectivePlacementLogic(tournament.placementLogic),
+    decisions: [],
+    mode,
+  }).rows;
 };
 
 /**
@@ -112,148 +50,6 @@ export const calculateStandingsPerGroup = (tournament: Tournament): Standing[] =
       ? calculateStandings(teams, tournament.matches, tournament)
       : calculateStandings(teams, tournament.matches, tournament, group)
   );
-
-/**
- * Sort standings according to placement logic criteria
- */
-const sortByPlacementLogic = (
-  standings: Standing[],
-  placementLogic: PlacementCriterion[],
-  matches?: Match[]
-): Standing[] => {
-  const enabledCriteria = placementLogic.filter((c) => c.enabled);
-
-  return standings.sort((a, b) => {
-    for (const criterion of enabledCriteria) {
-      let comparison = 0;
-
-      switch (criterion.id) {
-        case 'points':
-          comparison = b.points - a.points;
-          break;
-        case 'goalDifference':
-          comparison = b.goalDifference - a.goalDifference;
-          break;
-        case 'goalsFor':
-          comparison = b.goalsFor - a.goalsFor;
-          break;
-        case 'goalsAgainst':
-          comparison = a.goalsAgainst - b.goalsAgainst;
-          break;
-        case 'wins':
-          comparison = b.won - a.won;
-          break;
-        case 'directComparison':
-          // Direct comparison: only applied if all previous criteria are equal
-          // (the loop already ensures this - if we reach here, all previous criteria returned 0)
-          if (matches) {
-            comparison = compareDirectMatches(a, b, matches);
-          } else {
-            comparison = 0;
-          }
-          break;
-      }
-
-      if (comparison !== 0) {
-        return comparison;
-      }
-    }
-
-    return 0;
-  });
-};
-
-/**
- * Compare two teams based on their direct matches (head-to-head)
- * Returns: > 0 if a is better, < 0 if b is better, 0 if equal
- *
- * Uses fixed criteria order:
- * 1. Points from direct matches
- * 2. Goal difference from direct matches
- * 3. Goals scored from direct matches
- */
-const compareDirectMatches = (
-  a: Standing,
-  b: Standing,
-  matches: Match[]
-): number => {
-  // Seite des Spiels gehört zu diesem Team? Nur über die Team-ID aus dem Slot (A-03).
-  const matchesTeam = (side: 'A' | 'B', m: Match, standing: Standing) =>
-    matchSideTeamId(m, side) === standing.team.id;
-
-  // Find all direct matches between these two teams
-  const directMatches = matches.filter(
-    (m) =>
-      (m.scoreA !== undefined && m.scoreB !== undefined) &&
-      ((matchesTeam('A', m, a) && matchesTeam('B', m, b)) ||
-        (matchesTeam('A', m, b) && matchesTeam('B', m, a)))
-  );
-
-  if (directMatches.length === 0) {
-    return 0; // No direct matches, teams are equal in direct comparison
-  }
-
-  // Calculate mini-table stats for direct matches only
-  let aPoints = 0;
-  let bPoints = 0;
-  let aGoalsFor = 0;
-  let bGoalsFor = 0;
-  let aGoalsAgainst = 0;
-  let bGoalsAgainst = 0;
-  let _aWins = 0;
-  let _bWins = 0;
-
-  directMatches.forEach((match) => {
-    // Scores are guaranteed defined by the filter above
-    if (match.scoreA === undefined || match.scoreB === undefined) { return; }
-    const scoreA = match.scoreA;
-    const scoreB = match.scoreB;
-    const isAHome = matchesTeam('A', match, a);
-
-    const aScore = isAHome ? scoreA : scoreB;
-    const bScore = isAHome ? scoreB : scoreA;
-
-    aGoalsFor += aScore;
-    aGoalsAgainst += bScore;
-    bGoalsFor += bScore;
-    bGoalsAgainst += aScore;
-
-    if (aScore > bScore) {
-      _aWins++;
-      aPoints += 3; // Assuming 3 points for win
-    } else if (bScore > aScore) {
-      _bWins++;
-      bPoints += 3;
-    } else {
-      aPoints += 1; // Draw
-      bPoints += 1;
-    }
-  });
-
-  // Apply FIXED criteria order for direct comparison:
-  // 1. Points from direct matches
-  // 2. Goal difference from direct matches
-  // 3. Goals scored from direct matches
-
-  // 1. Compare points from direct matches
-  if (bPoints !== aPoints) {
-    return bPoints - aPoints; // Higher points is better
-  }
-
-  // 2. Compare goal difference from direct matches
-  const aDiff = aGoalsFor - aGoalsAgainst;
-  const bDiff = bGoalsFor - bGoalsAgainst;
-  if (bDiff !== aDiff) {
-    return bDiff - aDiff; // Higher goal difference is better
-  }
-
-  // 3. Compare goals scored in direct matches
-  if (bGoalsFor !== aGoalsFor) {
-    return bGoalsFor - aGoalsFor; // More goals scored is better
-  }
-
-  return 0; // Teams are equal in direct comparison
-};
 
 /**
  * Get winners/qualified teams from standings

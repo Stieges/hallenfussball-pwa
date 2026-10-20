@@ -760,6 +760,36 @@ export interface Standing {
   goalsAgainst: number;
   goalDifference: number;
   points: number;
+  /** Paket TB: Platzziffer; ein offener Block teilt sie, danach springt sie (2, 2, 4) – @W2A-047. */
+  place?: number;
+  /** Paket TB: Team-IDs des offenen Blocks (nach allen Kriterien gleich), nur bei mehr als einem Team. */
+  tieBlock?: string[];
+  /** Paket TB: „gleichauf – Entscheidung nötig“ – nur je Gruppe und erst, wenn alle Gruppenspiele entschieden sind. */
+  decisionNeeded?: boolean;
+  /** Paket TB (TB-3): angewendete Entscheidung der Turnierleitung. */
+  decision?: StandingDecision;
+}
+
+/**
+ * Paket TB (Plan v2 § 3.2): Entscheidung der Turnierleitung über einen Gleichstand nach allen Kriterien.
+ * Typ schon in TB-1 (Parameter des Rechenkerns); Gültigkeit, Speichern und Anwendung kommen mit TB-3.
+ */
+export interface StandingDecision {
+  id: string;
+  /** `OVERALL_GROUP` ('') bei Jeder gegen jeden. */
+  groupId: string;
+  /** Block als Menge (sortiert). */
+  teamIds: string[];
+  /** Vorn = besser. */
+  order: string[];
+  /** 2 Teams: Strafstoßschießen, 3+: Reihenfolge; 'shared' = „gleichen Platz lassen“ (Variante C). */
+  kind: 'shootout' | 'order' | 'shared';
+  shootout?: { winner: number; loser: number };
+  reason?: string;
+  decidedBy: { userId: string; name: string };
+  decidedAt: string;
+  /** Fingerabdruck der Grundlage. */
+  basis: string;
 }
 
 // ============================================================================
