@@ -197,3 +197,15 @@ a11_mark "@ZM-019 gegen-mama-petra-liest-oeffentlichen-monitor           " "$(cu
 # Maria liest den nicht-oeffentlichen Monitor (Editor der Co-Admin, monitors_select_v4).
 r="$(a11_probe authenticated "$U_COADMIN" "$A11_FELD1_VISIBLE" "SELECT 1;" "SELECT 'ok'")"
 a11_mark "@ZM-019 maria-liest-nicht-oeffentlichen-monitor                " "$(cut -d'|' -f1 <<<"$r")" "1"
+
+# @W2A-050 (Paket TB, TB-3): Gleichstands-Entscheidung in der Tabelle = tournaments.config.standingDecisions
+# (StandingDecisionService -> updateStandingDecisions, keine Migration). Tom als Helfer -> abgelehnt (tournaments_update_v3,
+# tournamentSettings); Maria (Co-Admin) und Olli (Eigentuemer) -> gelingt.
+A11_DECIDE="UPDATE public.tournaments SET config = config || '{\"standingDecisions\":[{\"id\":\"e-1\",\"groupId\":\"\",\"teamIds\":[\"a\",\"b\"],\"order\":[\"b\",\"a\"],\"kind\":\"shootout\",\"shootout\":{\"winner\":4,\"loser\":3},\"decidedBy\":{\"userId\":\"u\",\"name\":\"Olli\"},\"decidedAt\":\"2026-12-06T14:32:00.000Z\",\"basis\":\"x\"}]}'::jsonb WHERE id = '$T_MAIN';"
+A11_DECIDE_NOW="SELECT coalesce(config->'standingDecisions'->0->'shootout'->>'winner', 'keine') FROM public.tournaments WHERE id = '$T_MAIN'"
+r="$(a11_probe authenticated "$U_COLLAB" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_DECIDE" "$A11_DECIDE_NOW")"
+a11_mark "@W2A-050 tom-traegt-strafstossschiessen-ein-abgelehnt          " "$(a11_denied_verdict "$r" "keine")" "abgelehnt"
+r="$(a11_probe authenticated "$U_COADMIN" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_DECIDE" "$A11_DECIDE_NOW")"
+a11_mark "@W2A-050 gegen-maria-traegt-strafstossschiessen-ein            " "$(a11_allowed_verdict "$r" 1 "4")" "gelingt"
+r="$(a11_probe authenticated "$U_OWNER" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_DECIDE" "$A11_DECIDE_NOW")"
+a11_mark "@W2A-050 gegen-olli-traegt-strafstossschiessen-ein             " "$(a11_allowed_verdict "$r" 1 "4")" "gelingt"

@@ -31,7 +31,10 @@ import { resolvePlacementCriterionLabel } from '../tournament-creation/component
 interface TabellenTabProps {
   tournament: Tournament;
   schedule: GeneratedSchedule;
+  /** Tabelle je Gruppe hintereinander (Platzziffer `place` aus der Rechnung, Paket TB). */
   currentStandings: Standing[];
+  /** Gruppenübergreifende Gesamtwertung für den Endstand; fehlt sie, rechnet der Tab sie selbst (Paket TB, Plan 3.3). */
+  overallStandings?: Standing[];
 }
 
 type ViewMode = 'groups' | 'ranking';
@@ -40,6 +43,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
   tournament,
   schedule,
   currentStandings,
+  overallStandings,
 }) => {
   const { t } = useTranslation('tournament');
   const { t: tWizard } = useTranslation('wizard');
@@ -128,10 +132,10 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
     return getMergedFinalRanking(
       tournament.teams,
       tournament.matches,
-      currentStandings,
+      overallStandings ?? calculateStandings(tournament.teams, tournament.matches, tournament),
       tournament
     );
-  }, [currentStandings, tournament]);
+  }, [overallStandings, tournament]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -226,7 +230,8 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
   };
 
   const finalRanking = hasPlayoffs ? mergedRanking : getGroupBasedRanking().map((standing, index) => ({
-    rank: index + 1,
+    // Paket TB: Jeder gegen jeden übernimmt die Platzziffer der Rechnung (2, 2, 4); mit Gruppen ist `place` der Gruppenplatz
+    rank: hasGroups ? index + 1 : standing.place ?? index + 1,
     team: standing.team,
     decidedBy: 'groupStage' as const,
   }));

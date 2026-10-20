@@ -12,7 +12,8 @@
  */
 
 import { Match, Tournament } from '../../types/tournament';
-import { calculateStandings, countsForStandings, getMatchWinner } from '../../utils/calculations';
+import { countsForStandings, getMatchWinner } from '../../utils/calculations';
+import { rankTournamentGroup } from '../standings/tournamentTable';
 import sportGlossary from '../../i18n/glossary.json';
 import { isPendingSlot, resolveSlot } from '../models/matchSlot';
 import type { MatchSlot, SlotSource } from '../models/schemas/MatchSlotSchema';
@@ -59,7 +60,10 @@ export const needsPlayoffResolution = (tournament: Tournament): boolean =>
   tournament.matches.some((match) => match.isFinal && hasPendingSide(match));
 
 /**
- * Calculate standings for all groups
+ * Tabellenplätze je Gruppe aus dem Rechenkern (`rankGroup`, mit Entscheidungen der Turnierleitung).
+ * Paket TB, TB-5 (Interim-Schutz bis GA4 A-13c, R-TB-7): eine Gruppe mit offenem Gleichstand nach allen Kriterien
+ * liefert KEINE Plätze – ihre Herkünfte bleiben offen statt still nach Eingabereihenfolge besetzt
+ * (C-FINALRUNDE-AUS-STILLEM-GLEICHSTAND, @W2A-048, @TM-049).
  */
 const calculateAllGroupStandings = (tournament: Tournament): GroupStandings => {
   const groups = Array.from(
@@ -69,17 +73,13 @@ const calculateAllGroupStandings = (tournament: Tournament): GroupStandings => {
   const standings: GroupStandings = {};
 
   for (const group of groups) {
-    const teamsInGroup = tournament.teams.filter((t) => t.group === group);
-    const groupStandings = calculateStandings(
-      teamsInGroup,
-      tournament.matches,
-      tournament,
-      group
-    );
-
-    standings[group] = groupStandings.map((standing, index) => ({
-      teamId: standing.team.id,
-      position: index + 1, // 1-indexed
+    const table = rankTournamentGroup(tournament, group);
+    if (table.openTies.length > 0) {
+      continue;
+    }
+    standings[group] = table.rows.map((row) => ({
+      teamId: row.team.id,
+      position: row.place,
     }));
   }
 
