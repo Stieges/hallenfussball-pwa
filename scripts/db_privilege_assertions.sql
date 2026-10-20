@@ -668,7 +668,7 @@ SELECT 'append-match-events-checks-field-control',
                         AND position('''NOT_CONTROLLER''' IN pg_get_functiondef(p.oid)) > 0
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
 
--- CA-2 (20261110_004_coadmin_einsatz.sql, @HE-085, NEU-CA3/NEU-CA5; C-SHARE, C-HEARTBEAT-NUR-EIGENTUEMER): die drei
+-- CA-2 (20261110_004_coadmin_einsatz.sql, @HE-085, @BM-070/@ME-070; C-SHARE, C-HEARTBEAT-NUR-EIGENTUEMER): die drei
 -- Freigabe-Funktionen pruefen das Recht tournamentSettings (nicht mehr owner_id), SECURITY DEFINER mit search_path,
 -- make_tournament_public behaelt die Freigabe-Sperre HF001 und gibt einen vorhandenen Code zurueck (Auflage 5);
 -- monitor_heartbeats hat genau eine Policy, SELECT nur fuer authenticated ueber manageScreens (nicht owner_id,
@@ -688,7 +688,8 @@ UNION ALL
 SELECT 'make-public-keeps-existing-code',
        coalesce((SELECT position('''HF001''' IN pg_get_functiondef(p.oid)) > 0
                         AND position('IF v_is_public AND v_existing_code IS NOT NULL THEN' IN pg_get_functiondef(p.oid)) > 0
-                        AND position('FOR UPDATE' IN pg_get_functiondef(p.oid)) > 0
+                        -- die Klausel selbst, nicht der Kommentar (Review CA-2 Auflage 5a)
+                        AND pg_get_functiondef(p.oid) ~ 'WHERE t\.id = tournament_id\s+FOR UPDATE;'
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.make_tournament_public(uuid)')), false)
 UNION ALL
 SELECT 'heartbeats-select-manage-screens',

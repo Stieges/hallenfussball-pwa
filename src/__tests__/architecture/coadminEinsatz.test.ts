@@ -1,7 +1,7 @@
 /**
  * CA-2 (plan-coadmin-einsatzfaehig.md § CA-2, review-plan-coadmin.md Auflagen 2-5): Wächter für
- * `supabase/migrations/20261110_004_coadmin_einsatz.sql` – Co-Admin teilt online (NEU-CA3) und liest die Lebenszeichen
- * der Monitore (NEU-CA5), @HE-085. Der Beleg läuft gegen echtes Postgres (scripts/rls-matrix.d/coadmin.sh,
+ * `supabase/migrations/20261110_004_coadmin_einsatz.sql` – Co-Admin teilt online (@BM-070) und liest die Lebenszeichen
+ * der Monitore (@ME-070), @HE-085. Der Beleg läuft gegen echtes Postgres (scripts/rls-matrix.d/coadmin.sh,
  * scripts/coadmin-einsatz-check.sh); dieser Test hält fest, dass Migration, Matrix, Assertions und Drift-Check
  * zusammenpassen. Er ersetzt die Container-Läufe nicht.
  */
@@ -100,11 +100,11 @@ describe('CA-2 Rechte-Matrix und Container-Beweis', () => {
   it('coadmin.sh: alle Identitäten (inkl. Geräte, anonyme Sitzungen, anon) × drei RPCs und Lesen, mit Gegenbeispielen', () => {
     expect(matrixPart).toContain('for ca2_id in "${MATRIX_IDS[@]}" anon-coadmin; do');
     for (const label of [
-      'NEU-CA3 make_tournament_public $ca2_id',
-      'NEU-CA3 make_tournament_private $ca2_id',
-      'NEU-CA3 regenerate_share_code $ca2_id',
-      'NEU-CA5 monitor_heartbeats lesen (eigenes Turnier) $ca2_id',
-      'NEU-CA5 gegen-nachbarturnier',
+      '@BM-070 make_tournament_public $ca2_id',
+      '@BM-070 make_tournament_private $ca2_id',
+      '@BM-070 regenerate_share_code $ca2_id',
+      '@ME-070 monitor_heartbeats lesen (eigenes Turnier) $ca2_id',
+      '@ME-070 gegen-nachbarturnier',
       'anon (ohne Sitzung)',
       'gegen-entwurf',
       'erneut-teilen',
@@ -126,6 +126,16 @@ describe('CA-2 Rechte-Matrix und Container-Beweis', () => {
     for (const rpc of RPCS) {
       expect(check).toContain(rpc);
     }
-    expect(check).toContain('CREATE POLICY \\"owner_select_heartbeats\\"');
+    expect(check).toContain('CREATE POLICY \\"owner_select_heartbeats\\"');  });
+
+  it('Review-Auflage 5: Nebenläufigkeitsprobe (zwei Sitzungen) und Gegenprobe M10 „FOR UPDATE weg“; Assertion prüft die Klausel', () => {
+    expect(check).toContain('run_concurrency() {');
+    expect(check).toContain('SELECT pg_sleep(3);');
+    expect(check).toContain('"M10": [("   WHERE t.id = tournament_id\\n   FOR UPDATE;\\n", "   WHERE t.id = tournament_id;\\n")]');
+    expect(check).toContain('MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10)');
+    expect(assertions).toContain("pg_get_functiondef(p.oid) ~ 'WHERE t\\.id = tournament_id\\s+FOR UPDATE;'");
+    expect(assertions).not.toContain("position('FOR UPDATE' IN");
+    // die Klausel steht so in der Migration (Regex der Assertion trifft sie)
+    expect(migration).toMatch(/WHERE t\.id = tournament_id\s+FOR UPDATE;/);
   });
 });

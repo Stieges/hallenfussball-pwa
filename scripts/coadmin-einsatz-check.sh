@@ -5,14 +5,14 @@
 # (Wegwerf-Container supabase/postgres, --platform linux/amd64, Baseline + Migrationen seit Baseline, trap).
 #
 # Probelauf in Fenster-Reihenfolge (Do 22.10.): alles vor 20261110_001 -> _001 -> _002 -> (Hook an: im Container ohne
-# Auth-Dienst nicht nachstellbar) -> _003 -> _004. Testwerte aus dem Gherkin (NEU-CA3, NEU-CA5, @HE-085): Turnierleitung
+# Auth-Dienst nicht nachstellbar) -> _003 -> _004. Testwerte aus dem Gherkin (@BM-070, @ME-070, @HE-085): Turnierleitung
 # Olli (Eigentuemer), Co-Admin Maria, Helfer Tom (Geraetesitzung, Rolle helper), Hallen-Rechner (Geraetesitzung, Rolle
 # screen), Greta (Konto, nicht eingetragen), Mama Petra (anon, ohne Sitzung); "Hallencup Nord" (freigegeben), "Wintercup"
 # (Nachbarturnier, auch Olli), "Nikolaus-Rauchtest" (Rauchtest mit der Betreiber-Vorlage aus CA-1).
 #
 # Kategorien:
 #   F  Fail-fast: _004 ohne _001/_002 bricht ab und aendert nichts.
-#   R  Rechte: Szenario-Zeilen NEU-CA3 (teilen, zuruecknehmen, Code erneuern, Entwurf HF001, Code bleibt) und NEU-CA5
+#   R  Rechte: Szenario-Zeilen @BM-070 (teilen, zuruecknehmen, Code erneuern, Entwurf HF001, Code bleibt) und @ME-070
 #      (Lebenszeichen lesen) je Person, mit Gegenbeispielen; Vorher/Nachher der Turnierzeile als Superuser.
 #   S  Schema: Katalogzaehlung, Funktionen (SECURITY DEFINER, search_path, EXECUTE unveraendert), Policy, Rechte-Assertion
 #      (vorher die 3 neuen |f, nachher alle |t), Namensliste = db-drift-check.sh.
@@ -25,7 +25,7 @@
 # Aufrufoptionen:
 #   bash scripts/coadmin-einsatz-check.sh [--vorlage PFAD]                     normaler Lauf, Exit 0 nur ohne Abweichung
 #   bash scripts/coadmin-einsatz-check.sh --without-migration [--vorlage PFAD]  Gegenprobe: ohne _004 -> R und V ROT
-#   bash scripts/coadmin-einsatz-check.sh --gegenprobe [--vorlage PFAD]         je Lauf eine Mutation (M1-M9); Exit 0
+#   bash scripts/coadmin-einsatz-check.sh --gegenprobe [--vorlage PFAD]         je Lauf eine Mutation (M1-M10); Exit 0
 #                                                                               NUR, wenn JEDE Mutation rot faerbt
 #   bash scripts/coadmin-einsatz-check.sh --print-rueckweg                      Rueckweg (Anhang B) ausgeben, ohne Container
 # --vorlage: Betreiber-Vorlage (CA-1, scripts/betrieb/co-admin-eintragen.sql); Standard ist die Datei im Repo. Fehlt sie,
@@ -303,60 +303,89 @@ SQL
 # R: Szenario-Zeilen (gemeinsam fuer normalen Lauf, ohne Migration und Gegenprobe)
 run_probes() {
   local who uid exp
-  # NEU-CA3 Beispiele: Olli und Maria teilen, Tom (Helfer) nicht; dazu Hallen-Rechner, Greta, Mama Petra.
+  # @BM-070 Beispiele: Olli und Maria teilen, Tom (Helfer) nicht; dazu Hallen-Rechner, Greta, Mama Petra.
   for who in "Olli:$U_OLLI:gelingt" "Maria:$U_MARIA:gelingt" "Tom:$U_TOM:abgelehnt" "Hallen-Rechner:$U_SCREEN:abgelehnt" \
              "Greta:$U_GRETA:abgelehnt" "Mama Petra (anon):"":abgelehnt"; do
     IFS=: read -r name uid exp <<<"$who"
-    check R "NEU-CA3 $name teilt den „Hallencup Nord“ online" "$exp" "$(v_public "$(probe "$uid" "" "$(PUBLIC "$T_NORD")" "$(ROW "$T_NORD")")")"
+    check R "@BM-070 $name teilt den „Hallencup Nord“ online" "$exp" "$(v_public "$(probe "$uid" "" "$(PUBLIC "$T_NORD")" "$(ROW "$T_NORD")")")"
   done
   # Maria teilt -> ein Zuschauer findet das Turnier sofort ueber den Code (Ollis Geraet zeigt denselben Code: eine Zeile)
-  check R "NEU-CA3 Maria teilt: Zuschauer (anon) findet das Turnier ueber den Code" "1" \
+  check R "@BM-070 Maria teilt: Zuschauer (anon) findet das Turnier ueber den Code" "1" \
     "$(probe "$U_MARIA" "" "SELECT x.share_code AS code FROM public.make_tournament_public('$T_NORD') AS x \\gset
 RESET ROLE; SET LOCAL ROLE anon; SET LOCAL request.jwt.claim.sub = ''; SET LOCAL request.jwt.claims = '';
 SELECT 'r:' || count(*) FROM public.tournaments WHERE share_code = :'code';" "1" | cut -d'|' -f1)"
   # Maria nimmt das Teilen zurueck -> der alte Code findet nichts mehr
-  check R "NEU-CA3 Maria nimmt das Teilen zurueck (Code weg)" "zurueckgenommen" \
+  check R "@BM-070 Maria nimmt das Teilen zurueck (Code weg)" "zurueckgenommen" \
     "$(v_on_shared "$(probe "$U_MARIA" "$(SHARED "$T_NORD")" "$(PRIVATE "$T_NORD")" "$(ROW "$T_NORD")")")"
-  check R "NEU-CA3 nach dem Zuruecknehmen: Zuschauer findet ueber den alten Code nichts" "0" \
+  check R "@BM-070 nach dem Zuruecknehmen: Zuschauer findet ueber den alten Code nichts" "0" \
     "$(probe "$U_MARIA" "$(SHARED "$T_NORD")" "$(PRIVATE "$T_NORD")
 RESET ROLE; SET LOCAL ROLE anon; SET LOCAL request.jwt.claim.sub = ''; SET LOCAL request.jwt.claims = '';
 SELECT 'r:' || count(*) FROM public.tournaments WHERE share_code = '$OLD_CODE';" "1" | cut -d'|' -f1 | sed 's/^ok,//')"
-  check R "NEU-CA3 gegen-Tom nimmt das Teilen nicht zurueck" "abgelehnt" \
+  check R "@BM-070 gegen-Tom nimmt das Teilen nicht zurueck" "abgelehnt" \
     "$(v_on_shared "$(probe "$U_TOM" "$(SHARED "$T_NORD")" "$(PRIVATE "$T_NORD")" "$(ROW "$T_NORD")")")"
   # Code erneuern
-  check R "NEU-CA3 Maria erneuert den Code (neuer Code im Serveralphabet)" "neuer-code" \
+  check R "@BM-070 Maria erneuert den Code (neuer Code im Serveralphabet)" "neuer-code" \
     "$(v_on_shared "$(probe "$U_MARIA" "$(SHARED "$T_NORD")" "$(REGENERATE "$T_NORD")" "$(ROW "$T_NORD")")")"
-  check R "NEU-CA3 gegen-Greta erneuert den Code nicht" "abgelehnt" \
+  check R "@BM-070 gegen-Greta erneuert den Code nicht" "abgelehnt" \
     "$(v_on_shared "$(probe "$U_GRETA" "$(SHARED "$T_NORD")" "$(REGENERATE "$T_NORD")" "$(ROW "$T_NORD")")")"
   check R "Bestand (Auflage 4): Code erneuern auf nicht oeffentlichem Turnier erzeugt einen Code, is_public bleibt false" "neu-nicht-oeffentlich" \
     "$(r="$(probe "$U_MARIA" "" "$(REGENERATE "$T_NORD")" "$(ROW "$T_NORD")")"; c="${r%%|*}"; [[ "$c" =~ $ALPHABET_RE && "${r#*|}" == "false|$c|neu" ]] && echo neu-nicht-oeffentlich || echo "anders($r)")"
   # Code bleibt beim erneuten Teilen (Auflage 5)
-  check R "NEU-CA3 Maria teilt ein schon geteiltes Turnier erneut: der Code bleibt" "code-bleibt" \
+  check R "@BM-070 Maria teilt ein schon geteiltes Turnier erneut: der Code bleibt" "code-bleibt" \
     "$(v_on_shared "$(probe "$U_MARIA" "$(SHARED "$T_NORD")" "$(PUBLIC "$T_NORD")" "$(ROW "$T_NORD")")")"
-  check R "NEU-CA3 Olli teilt erneut: der Code bleibt" "code-bleibt" \
+  check R "@BM-070 Olli teilt erneut: der Code bleibt" "code-bleibt" \
     "$(v_on_shared "$(probe "$U_OLLI" "$(SHARED "$T_NORD")" "$(PUBLIC "$T_NORD")" "$(ROW "$T_NORD")")")"
-  check R "NEU-CA3 gegen-Tom bekommt auch den vorhandenen Code nicht" "abgelehnt" \
+  check R "@BM-070 gegen-Tom bekommt auch den vorhandenen Code nicht" "abgelehnt" \
     "$(v_on_shared "$(probe "$U_TOM" "$(SHARED "$T_NORD")" "$(PUBLIC "$T_NORD")" "$(ROW "$T_NORD")")")"
   # Entwurf (HF001 bleibt)
-  check R "NEU-CA3 gegen-Entwurf: Maria teilt ein nicht freigegebenes Turnier nicht (HF001, is_public bleibt false)" \
+  check R "@BM-070 gegen-Entwurf: Maria teilt ein nicht freigegebenes Turnier nicht (HF001, is_public bleibt false)" \
     "fehler:Tournament has not been released yet and cannot be made public|false|NULL|NULL" \
     "$(probe "$U_MARIA" "$(DRAFT "$T_NORD")" "$(PUBLIC "$T_NORD")" "$(ROW "$T_NORD")")"
   # Widerrufen: Maria nach Widerruf
-  check R "NEU-CA3 gegen-widerrufen: Maria teilt nach dem Widerruf nicht mehr" "abgelehnt" \
+  check R "@BM-070 gegen-widerrufen: Maria teilt nach dem Widerruf nicht mehr" "abgelehnt" \
     "$(v_public "$(probe "$U_MARIA" "$REVOKED" "$(PUBLIC "$T_NORD")" "$(ROW "$T_NORD")")")"
 
-  # NEU-CA5: Lebenszeichen lesen
+  # @ME-070: Lebenszeichen lesen
   for who in "Olli:$U_OLLI:1" "Maria:$U_MARIA:1" "Tom:$U_TOM:0" "Hallen-Rechner:$U_SCREEN:0" "Greta:$U_GRETA:0" "Mama Petra (anon):"":0"; do
     IFS=: read -r name uid exp <<<"$who"
-    check R "NEU-CA5 $name liest das Lebenszeichen des „Hallenmonitor Halle“ (Zeilen)" "$exp" \
+    check R "@ME-070 $name liest das Lebenszeichen des „Hallenmonitor Halle“ (Zeilen)" "$exp" \
       "$(v_read "$(probe "$uid" "" "$(READ_HB "$T_NORD")" "1")")"
   done
-  check R "NEU-CA5 gegen-Nachbarturnier: Maria sieht das Lebenszeichen des „Wintercup“ nicht" "0" \
+  check R "@ME-070 gegen-Nachbarturnier: Maria sieht das Lebenszeichen des „Wintercup“ nicht" "0" \
     "$(v_read "$(probe "$U_MARIA" "" "$(READ_HB "$T_WINTER")" "1")")"
-  check R "NEU-CA5 gegen-widerrufen: Maria sieht nach dem Widerruf nichts" "0" \
+  check R "@ME-070 gegen-widerrufen: Maria sieht nach dem Widerruf nichts" "0" \
     "$(v_read "$(probe "$U_MARIA" "$REVOKED" "$(READ_HB "$T_NORD")" "1")")"
-  check R "NEU-CA5 Maria sieht alle Lebenszeichen ohne Filter: nur die ihres Turniers" "1" \
+  check R "@ME-070 Maria sieht alle Lebenszeichen ohne Filter: nur die ihres Turniers" "1" \
     "$(v_read "$(probe "$U_MARIA" "" "SELECT 'r:' || count(*) FROM public.monitor_heartbeats;" "1")")"
+}
+
+# ---------------------------------------------------------------------------------------------------------
+# R (Nebenlaeufigkeit, Review CA-2 Auflage 5b; Vorlage review-ca2/concurrency-check.sh): Maria teilt in einer offenen
+# Transaktion und haelt sie 3 s; Olli teilt 1 s spaeter in einer zweiten Sitzung. Mit FOR UPDATE wartet Olli und bekommt
+# Marias Code; ohne wuerfelt er neu und ueberschreibt ihn (Mutation M10). Committet -> Turnierzeile danach zuruecksetzen.
+run_concurrency() {
+  local a_file a b final
+  a_file="$(mktemp)"
+  q "UPDATE public.tournaments SET is_public = false, share_code = NULL, share_code_created_at = NULL WHERE id = '$T_NORD';" >/dev/null
+  ( docker exec -i "$CURRENT_CONTAINER" psql -U postgres -X -q -tA <<SQL > "$a_file" 2>&1
+BEGIN;
+SET LOCAL ROLE authenticated;
+$(claims_sql "$U_MARIA")
+SELECT 'A:' || x.share_code FROM public.make_tournament_public('$T_NORD') AS x;
+SELECT pg_sleep(3);
+COMMIT;
+SQL
+  ) &
+  local a_pid=$!
+  sleep 1
+  b="$(als "$U_OLLI" "$(PUBLIC "$T_NORD")")"
+  wait "$a_pid" || true
+  a="$( (grep -m1 '^A:' "$a_file" || true) | cut -c3-)"
+  rm -f "$a_file"
+  final="$(q "SELECT coalesce(share_code, 'NULL') FROM public.tournaments WHERE id = '$T_NORD';")"
+  check R "@BM-070 Maria und Olli teilen gleichzeitig: derselbe Code, Endstand = Marias Code (FOR UPDATE)" "gleich" \
+    "$([[ -n "$a" && "$a" =~ $ALPHABET_RE && "$a" == "$b" && "$final" == "$a" ]] && echo gleich || echo "verschieden (Maria $a, Olli $b, Endstand $final)")"
+  q "UPDATE public.tournaments SET is_public = false, share_code = NULL, share_code_created_at = NULL WHERE id = '$T_NORD';" >/dev/null
 }
 
 # ---------------------------------------------------------------------------------------------------------
@@ -390,16 +419,16 @@ run_smoke() {
     "$([[ "$code2" =~ $ALPHABET_RE && "$code2" != "$code" ]] && echo ja || echo "nein ($code -> $code2)")"
   check V "Test-Co-Admin teilt erneut: der erneuerte Code bleibt" "$code2" "$(als "$U_RAUCH" "$(PUBLIC "$T_RAUCH")")"
   check V "Test-Co-Admin liest die Lebenszeichen: 1 Zeile, ohne Fehler" "1" "$(als "$U_RAUCH" "$(READ_HB "$T_RAUCH")")"
-  check V "gegen-Greta (nicht eingetragen): teilen abgelehnt" "$NOT_AUTH" "$(als "$U_GRETA" "$(PUBLIC "$T_RAUCH")")"
+  check V "@HE-086 gegen-Greta (nicht eingetragen): teilen abgelehnt" "$NOT_AUTH" "$(als "$U_GRETA" "$(PUBLIC "$T_RAUCH")")"
   check V "gegen-Greta: liest keine Lebenszeichen" "0" "$(als "$U_GRETA" "$(READ_HB "$T_RAUCH")")"
   check V "Test-Co-Admin nimmt das Teilen zurueck" "ok" "$(als "$U_RAUCH" "$(PRIVATE "$T_RAUCH")")"
   check V "danach: nicht oeffentlich, kein Code" "false|NULL" "$(q "SELECT is_public || '|' || coalesce(share_code, 'NULL') FROM public.tournaments WHERE id = '$T_RAUCH';")"
   # Block 3: Austragen sperrt sofort
   out="$(psql_value <<<"$b3" 2>&1 || true)"
-  check V "Betreiber: Block 3 traegt aus (RETURNING genau eine co-admin-Zeile)" "1" "$(grep -c '|co-admin$' <<<"$out" || true)"
-  check V "nach dem Austragen: Test-Co-Admin teilt nicht mehr" "$NOT_AUTH" "$(als "$U_RAUCH" "$(PUBLIC "$T_RAUCH")")"
-  check V "nach dem Austragen: Test-Co-Admin liest keine Lebenszeichen" "0" "$(als "$U_RAUCH" "$(READ_HB "$T_RAUCH")")"
-  check V "nach dem Austragen: Konto besteht weiter" "1" "$(q "SELECT count(*) FROM auth.users WHERE id = '$U_RAUCH';")"
+  check V "@HE-087 Betreiber: Block 3 traegt aus (RETURNING genau eine co-admin-Zeile)" "1" "$(grep -c '|co-admin$' <<<"$out" || true)"
+  check V "@HE-087 nach dem Austragen: Test-Co-Admin teilt nicht mehr" "$NOT_AUTH" "$(als "$U_RAUCH" "$(PUBLIC "$T_RAUCH")")"
+  check V "@HE-087 nach dem Austragen: Test-Co-Admin liest keine Lebenszeichen" "0" "$(als "$U_RAUCH" "$(READ_HB "$T_RAUCH")")"
+  check V "@HE-087 nach dem Austragen: Konto besteht weiter" "1" "$(q "SELECT count(*) FROM auth.users WHERE id = '$U_RAUCH';")"
 }
 
 # ---------------------------------------------------------------------------------------------------------
@@ -432,7 +461,7 @@ apply_window_before_target() {
 
 # ---------------------------------------------------------------------------------------------------------
 if [[ "$MODE" == "gegenprobe" ]]; then
-  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9)
+  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10)
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a MUTATIONS <<<"$GEGENPROBE_NUR"; fi
   RED_TOTAL=0
   for mut in "${MUTATIONS[@]}"; do
@@ -468,6 +497,8 @@ M = {
   "M8": [("  IF v_is_public AND v_existing_code IS NOT NULL THEN\n", "  IF false THEN\n")],
   # M9 Policy ohne TO authenticated (gilt fuer PUBLIC): Assertion rot
   "M9": [("  FOR SELECT TO authenticated\n", "  FOR SELECT\n")],
+  # M10 FOR UPDATE weg (Kommentar bleibt): Nebenlaeufigkeitsprobe und Assertion rot (Review CA-2 Auflage 5)
+  "M10": [("   WHERE t.id = tournament_id\n   FOR UPDATE;\n", "   WHERE t.id = tournament_id;\n")],
 }
 spec = M[os.environ["MUT_KEY"]]
 if isinstance(spec, str):
@@ -481,6 +512,7 @@ sys.stdout.write(s)' < "$TARGET_FILE" | psql_stdin
     reset_counts
     echo "--- GEGENPROBE $mut ---"
     run_probes
+    run_concurrency
     run_assertions t
     run_smoke
     if [[ "$(total_dev)" -gt 0 ]]; then
@@ -503,6 +535,7 @@ apply_pre_window
 if [[ "$MODE" == "without-migration" ]]; then
   apply_window_before_target
   run_probes
+  run_concurrency
   run_smoke
   summary
   R_DEV="${DEVS[$(cat_index R)]}"; V_DEV="${DEVS[$(cat_index V)]}"
@@ -552,6 +585,7 @@ done
 run_assertions t
 
 run_probes
+run_concurrency
 run_smoke
 
 # --- W: zweites Einspielen --------------------------------------------------------------------------------
