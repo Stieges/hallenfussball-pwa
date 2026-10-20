@@ -4,7 +4,7 @@ import { cssVars, mediaQueries } from '../../design-tokens'
 import type { ViewMatchStatus } from '../../core/view';
 import { formatTableResult, type ResultFigures } from './matchResult';
 import { ScoreDraftInput } from '../ui/atoms';
-import { ScoreDraftHint, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
+import { ScoreChangedHint, ScoreDraftHint, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
 interface MatchScoreCellProps {
   matchId: string;
   scoreA: number | undefined;
@@ -23,6 +23,8 @@ interface MatchScoreCellProps {
   onScoreChange: (scoreA: number, scoreB: number) => ScoreCommitResult;
   /** Ohne Handler (bis B-24) gibt es keinen Korrigieren-Knopf. */
   onStartCorrection?: () => void;
+  /** Wer dieses Spiel zuletzt geändert hat, für den Hinweis „inzwischen geändert“ (@FU-104) */
+  changeAuthorOf?: (matchId: string) => Promise<string | null>;
   // Note: Permission check is now handled in the parent component (ScheduleTab)
 }
 
@@ -39,12 +41,25 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   nameB,
   onScoreChange,
   onStartCorrection,
+  changeAuthorOf,
 }) => {
   const { t } = useTranslation('tournament');
 
   // Jede Ziffer bleibt lokal, gespeichert wird erst bei Enter oder beim Verlassen eines Feldes (@FU-101: „1“ dann „0“
   // ergibt 10:2, nicht 1:2). Escape verwirft, nach „Nein“/Abbruch zeigt die Zelle wieder den gespeicherten Stand.
-  const draft = useScoreDraft({ resetKey: matchId, savedA: scoreA, savedB: scoreB, onCommit: onScoreChange });
+  // @FU-104: ändert ein anderes Gerät genau dieses Spiel, sendet die Zelle den Entwurf erst nach „Meine Eingabe behalten“.
+  const draft = useScoreDraft({
+    resetKey: matchId, savedA: scoreA, savedB: scoreB, onCommit: onScoreChange,
+    resolveAuthor: changeAuthorOf ? () => changeAuthorOf(matchId) : undefined,
+  });
+  const changedHint = (editableNow: boolean) => draft.changed && (
+    <ScoreChangedHint
+      changed={draft.changed}
+      testId={`score-changed-${matchId}`}
+      keepTestId={`score-changed-keep-${matchId}`}
+      onKeepDraft={editableNow ? draft.keepDraft : undefined}
+    />
+  );
   const placeholder = viewStatus === 'cancelled' ? t('view.status.cancelled') : '___ : ___';
   const awardedMark = viewStatus === 'awarded' ? ` ${t('view.status.awarded')}` : '';
   const shownResult = result === undefined || result === null
@@ -98,6 +113,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
               {t('scoreCell.correctResult')}
             </button>
           )}
+          {changedHint(false)}
         </div>
 
         <style>{`
@@ -158,6 +174,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
           inCorrectionMode={inCorrectionMode}
         />
         {draft.invalid && <ScoreDraftHint id={draft.hintId} testId={`match-score-hint-${matchId}`} />}
+        {changedHint(true)}
       </div>
     );
   }
@@ -166,6 +183,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   return (
     <span>
       {shownResult}
+      {changedHint(false)}
     </span>
   );
 };
