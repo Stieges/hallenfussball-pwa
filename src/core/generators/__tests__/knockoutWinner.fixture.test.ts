@@ -162,7 +162,8 @@ describe('@ET-002 @TM-052:teil Platzierung nutzt dieselbe Sieger-Regel', () => {
   });
 });
 
-describe('@ET-002 @TM-052:teil C-DECIDEDBY-SHOOTOUT: der Engine-Wert shootout erreicht die Sieger-Regel nur übersetzt', () => {
+// Befund C-DECIDEDBY-SHOOTOUT (keine Kennung im Titel, die Befund-Liste kennt ihn noch nicht als Testverweis).
+describe('@ET-002 @TM-052:teil Doppelbenennung shootout/penalty: der Engine-Wert shootout erreicht die Sieger-Regel nur übersetzt', () => {
   const ctx: MatchContext = { matchId: fx.rows[0].row.id as string, teamAId: NORD, teamBId: BERG };
   const viewOf = (state: MatchState): MatchEngineView => ({ result: { state, localRejected: [], needsFullReload: false }, log: [], confirmedCount: 0 });
   const shootoutState = (overrides: Partial<MatchState>): MatchState => {
