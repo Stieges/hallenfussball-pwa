@@ -25,7 +25,8 @@
   "include": [
     "src",
     "tests",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "playwright.auth-slow.config.ts"
   ],
   "references": [
     {

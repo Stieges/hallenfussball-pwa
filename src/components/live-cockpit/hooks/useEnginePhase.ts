@@ -1,13 +1,13 @@
 /**
  * useEnginePhase (B-08a): `PhaseView` eines Engine-Spiels aus `MatchEngine.view`. Aktualisiert sich über
- * `engine.subscribe`, und taktet alle 250 ms nur bei laufender Uhr oder in der Abschnittspause.
+ * `engine.subscribe`, und taktet alle 250 ms nur bei laufender Uhr, in der Abschnittspause oder in der Quittung nach dem Abpfiff.
  * `null` für Spiele ohne Engine-Kopie (und ohne Engine-Provider).
  */
 import { useEffect, useState } from 'react';
 import type { MatchEngine } from '../../../core/match/client';
 import type { MatchContext, MatchState } from '../../../core/match';
 import { useMatchEngineContextOptional } from '../../../features/match-engine/useMatchEngineContext';
-import { phaseViewOf, type PhaseView } from '../engine/phaseView';
+import { phaseViewOf, quittungRestOf, type PhaseView } from '../engine/phaseView';
 
 const TICK_MS = 250;
 
@@ -34,10 +34,13 @@ function phaseOf(engine: MatchEngine, matchId: string): PhaseView | null {
   return state && ctx ? phaseViewOf(state, ctx, engine.serverNow()) : null;
 }
 
-/** Takt nur bei laufender Spieluhr oder in der Abschnittspause (sonst ändert sich die Anzeige nicht). */
+/**
+ * Takt nur bei laufender Spieluhr, in der Abschnittspause und in der Quittung nach dem Abpfiff, damit die Zeile nach
+ * 30 Sekunden verschwindet (@SL-152); sonst ändert sich die Anzeige nicht.
+ */
 function needsTick(engine: MatchEngine, matchId: string): boolean {
   const state = readState(engine, matchId);
-  return state !== null && (state.clock.running || state.status === 'section_break');
+  return state !== null && (state.clock.running || state.status === 'section_break' || (quittungRestOf(state, engine.serverNow()) ?? 0) > 0);
 }
 
 export function useEnginePhase(matchId: string): PhaseView | null {

@@ -8,6 +8,7 @@ import { OfflineRepository } from '../OfflineRepository';
 import type { LocalStorageRepository } from '../LocalStorageRepository';
 import type { SupabaseRepository } from '../SupabaseRepository';
 import type { Tournament } from '../../models/types';
+import { ownerOnlyList } from '../../../test/fakeCloudRepository';
 
 let created: Array<{ dispose(): void }> = [];
 
@@ -17,7 +18,7 @@ function tournament(id: string, updatedAt: string, extra: Partial<Tournament> = 
 
 function repo(cloudList: Tournament[], localList: Tournament[], pendingIds: string[] = localList.map(t => t.id)) {
   const localRepo = { listForCurrentUser: vi.fn(() => Promise.resolve(localList)) } as unknown as LocalStorageRepository;
-  const supabaseRepo = { listForCurrentUser: vi.fn(() => Promise.resolve(cloudList)) } as unknown as SupabaseRepository;
+  const supabaseRepo = { listForCurrentUser: vi.fn(() => Promise.resolve(cloudList)), listWithMemberships: vi.fn(ownerOnlyList(() => Promise.resolve(cloudList))) } as unknown as SupabaseRepository;
   const r = new OfflineRepository(localRepo, supabaseRepo);
   vi.spyOn(r.mutationQueue, 'hasPending').mockImplementation((id: string) => pendingIds.includes(id));
   created.push(r.mutationQueue);
