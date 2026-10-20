@@ -47,15 +47,7 @@
   },
   "tafel": {
     "zustand": {
-      "vorAnpfiff": "Vor Anpfiff",
-      "live": "Live",
-      "halbzeit": "Halbzeit",
-      "verlaengerungFolgt": "Verlängerung folgt",
-      "entscheidung": "Entscheidung",
-      "strafstoss": "$t(sport:events.penaltyShootout)",
-      "abgepfiffen": "Abgepfiffen",
-      "wartet": "Wartet auf Teams",
-      "keinSpiel": "Kein Spiel"
+      "wartet": "Wartet auf Teams"
     },
     "uhr": {
       "restzeit": "Restzeit",
@@ -84,12 +76,13 @@
       "verlaengerung": "Verlängerung",
       "goldenGoal": "Golden Goal"
     },
+    "quittung": "Abgepfiffen · {{links}}:{{rechts}} gespeichert",
     "keinWeiteresSpiel": "Kein weiteres Spiel",
     "uebernahmePruefen": "Spielzeit beruht auf {{name}}s Gerät – bitte prüfen",
     "vor": {
       "spielFeld": "Spiel {{nummer}} · {{feld}}",
       "mindestpause": "{{teamName}} hätte nur {{minuten}} statt {{mindestMinuten}} Minuten Pause",
-      "ueberfaellig": "seit {{minuten}} Minuten überfällig",
+      "ueberfaellig": "überfällig {{minuten}} Min",
       "gesperrt": "{{team}}: Nr. {{nummer}} ist für dieses Turnier gesperrt",
       "reihenfolgeNurLeitung": "Nur die Turnierleitung ändert die Reihenfolge",
       "keinSpielMehr": "Auf {{feld}} folgt kein Spiel mehr",

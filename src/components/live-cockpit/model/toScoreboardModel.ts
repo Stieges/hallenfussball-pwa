@@ -9,7 +9,10 @@ import { getClockDisplay, type ClockMode } from '../../../core/match/clockDispla
 import type { LiveMatch } from '../types';
 import type { PhaseView } from '../engine/phaseView';
 import type { CockpitPhase, CockpitZustand } from './cockpitPhase';
-import type { ScoreboardModel, ScoreboardSeite, ScoreboardTon, ScoreboardUhr } from '../../ui/molecules/Scoreboard';
+import type { ScoreboardModel, ScoreboardSeite, ScoreboardUhr } from '../../ui/molecules/Scoreboard';
+import { matchBadgeModel, type MatchBadgeModel } from '../../../core/view/badge';
+import { viewStatus } from '../../../core/view/status';
+import type { ViewMatchStatus } from '../../../core/view/types';
 import type { Side, Uebersetzer } from './cockpitTypes';
 import { scoreboardVor, type ScoreboardVorInput } from './scoreboardVor';
 import { liveMatchFinalScore } from '../../../utils/matchScore';
@@ -29,7 +32,7 @@ export interface ScoreboardInput {
   schlussphaseMinuten?: number;
   eintraegeWarten: number;
   helferAnfragen: number;
-  /** Jetzt in ms (für „seit … Minuten überfällig“); kommt aus einem Takt, nie aus `Date.now()` im Render. */
+  /** Jetzt in ms (für „überfällig N Min“ (@OB-068)); kommt aus einem Takt, nie aus `Date.now()` im Render. */
   jetztMs: number;
   /** Trikotfarben der Stand-Kästen je Anzeigeseite (Aufgabe 2.6); fehlt sie, bleibt der Kasten neutral. */
   trikot?: Partial<Record<'links' | 'rechts', string | null>>;
@@ -45,16 +48,27 @@ export function formatUhr(sekunden: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-const TON: Record<CockpitZustand, ScoreboardTon> = {
-  vorAnpfiff: 'neutral', laeuft: 'live', pausiert: 'live', halbzeitpause: 'pause', pauseVorVerlaengerung: 'pause',
-  entscheidung: 'info', strafstoss: 'info', abgepfiffen: 'ende', wartetAufHerkunft: 'info', keinSpiel: 'neutral',
+/**
+ * Rückfall-Status je Zustand der Tafel, nur ohne Engine-Ansicht (siehe `badgeOf`). `scheduled` heißt: kein Abzeichen
+ * mit Wort, nur die Anstoßzeit oder nichts (@OB-065, @OB-066).
+ */
+const STATUS_OHNE_ANSICHT: Record<CockpitZustand, ViewMatchStatus> = {
+  vorAnpfiff: 'scheduled', laeuft: 'running', pausiert: 'paused', halbzeitpause: 'paused', pauseVorVerlaengerung: 'paused',
+  entscheidung: 'paused', strafstoss: 'running', abgepfiffen: 'finished', wartetAufHerkunft: 'scheduled', keinSpiel: 'scheduled',
 };
-const ZUSTAND_KEY: Record<CockpitZustand, string> = {
-  vorAnpfiff: 'tafel.zustand.vorAnpfiff', laeuft: 'tafel.zustand.live', pausiert: 'tafel.zustand.live',
-  halbzeitpause: 'tafel.zustand.halbzeit', pauseVorVerlaengerung: 'tafel.zustand.verlaengerungFolgt',
-  entscheidung: 'tafel.zustand.entscheidung', strafstoss: 'tafel.zustand.strafstoss', abgepfiffen: 'tafel.zustand.abgepfiffen',
-  wartetAufHerkunft: 'tafel.zustand.wartet', keinSpiel: 'tafel.zustand.keinSpiel',
-};
+
+/**
+ * Das Zustands-Abzeichen der Tafel: das Wort des Feinstatus, ohne Uhr. Vor dem Anpfiff bleibt der Platz leer; die
+ * Anstoßzeit steht bei der Uhr und „überfällig“ im selben Platz (@OB-068). Liegt eine Engine-Ansicht vor, gilt
+ * `viewStatus` wie auf der Spielkarte (ausgefallen bleibt ausgefallen); `STATUS_OHNE_ANSICHT` ist nur der Rückfall.
+ */
+function badgeOf(input: ScoreboardInput): MatchBadgeModel {
+  const { phase, view } = input;
+  const status = view ? viewStatus({}, view.status) : STATUS_OHNE_ANSICHT[phase.zustand];
+  if (status === 'scheduled') { return { kind: 'none' }; }
+  const engine = view ? { status: view.status, phase: view.phase, section: view.section, sections: view.sections } : undefined;
+  return matchBadgeModel({ status, engine });
+}
 
 function abschnittTextOf(phase: CockpitPhase, t: Uebersetzer): string | null {
   if (phase.zustand !== 'laeuft' && phase.zustand !== 'pausiert' && phase.zustand !== 'abgepfiffen') { return null; }
@@ -123,7 +137,7 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
     return { hinweise, uhr: { rest: abgelaufenRest, gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', label: t('tafel.uhr.endstand'), unterzeile: null } };
   }
   if (phase.zustand === 'abgepfiffen') {
-    // B2: nie eine Restzeit unter „Abgepfiffen“ – nach dem Strafstoßschießen dessen Ergebnis, sonst die gespielte Zeit
+    // B2: nie eine Restzeit unter „Ende“ – nach dem Strafstoßschießen dessen Ergebnis, sonst die gespielte Zeit
     const strafstoss = match && view.phase === 'shootout' ? liveMatchFinalScore(match)?.penalty : undefined; // nur, wenn die Phase es hergibt
     if (strafstoss) {
       const seite = (anzeige: Side): number => (anzeige === 'home' ? strafstoss.a : strafstoss.b);
@@ -138,6 +152,13 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
     };
   }
   return { uhr: null, hinweise };
+}
+
+/** Quittung nach dem Abpfiff (@SL-152): „Abgepfiffen · 2:1 gespeichert“, nur in den 30 Sekunden danach und nur für ein beendetes Spiel. */
+function quittungTextOf(input: ScoreboardInput, links: ScoreboardSeite, rechts: ScoreboardSeite, t: Uebersetzer): string | null {
+  const { view, match } = input;
+  if (!match || view?.status !== 'finished' || (view.quittungRestMs ?? 0) <= 0) { return null; }
+  return t('tafel.quittung', { links: links.tore, rechts: rechts.tore });
 }
 
 function ariaStandOf(input: ScoreboardInput, links: ScoreboardSeite, rechts: ScoreboardSeite, strafstoss: { a: number; b: number } | undefined, t: Uebersetzer): string {
@@ -161,8 +182,9 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
   const { uhr, hinweise } = uhrOf(input, t);
   const vor = scoreboardVor(input, t);
   return {
-    zustandText: t(ZUSTAND_KEY[phase.zustand]), ton: TON[phase.zustand], links, rechts,
+    badge: badgeOf(input), links, rechts,
     uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige,
+    ueberfaelligText: vor.ueberfaelligText, quittungText: quittungTextOf(input, links, rechts, t),
     eintraegeWartenText: input.eintraegeWarten > 0 ? t('tafel.eintraegeWarten', { count: input.eintraegeWarten }) : null,
     helferAnfragenText: input.helferAnfragen > 0 ? t('tafel.helferAnfragen', { count: input.helferAnfragen }) : null,
     ariaStand: ariaStandOf(input, links, rechts, input.view?.phase === 'shootout' ? endstand?.penalty : undefined, t),
