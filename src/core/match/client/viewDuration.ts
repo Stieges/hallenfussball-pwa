@@ -7,7 +7,17 @@
  * Verlängerung deshalb Uhrstand beim Anpfiff der Verlängerung + deren Dauer – sonst wäre die Spielzeit beim Anpfiff schon
  * abgelaufen (Countdown 00:00, Auto-Ende sofort).
  */
-import type { MatchState } from '../types';
+import type { MatchState, MatchStatus } from '../types';
+
+/**
+ * Uhrstand (ms) am Anpfiff der Verlängerung. Die Verlängerung beginnt beim Uhrstand ihres Anpfiffs (`sectionStartMs`),
+ * nicht bei der Regelzeit – sonst kürzt ein Abpfiff nach Ablauf (z. B. bei 10:45) die Verlängerung. In der Pause davor ist
+ * `sectionStartMs` noch der Beginn des letzten Abschnitts; dort gilt der gestoppte Uhrstand.
+ * Gemeinsam für die Verwaltung (`viewDurationSeconds`) und den Monitor (`badgeDetailFromLiveState`, Paket MU).
+ */
+export function overtimeStartMsOf(status: MatchStatus, clockElapsedMs: number, sectionStartMs: number): number {
+  return status === 'section_break' ? clockElapsedMs : sectionStartMs;
+}
 
 export function viewDurationSeconds(state: MatchState): number {
   const rules = state.rules;
@@ -17,9 +27,6 @@ export function viewDurationSeconds(state: MatchState): number {
   if (state.phase !== 'overtime') {
     return rules.sections * rules.sectionSeconds;
   }
-  // Die Verlängerung beginnt beim Uhrstand ihres Anpfiffs (`sectionStartMs`), nicht bei der Regelzeit –
-  // sonst kürzt ein Abpfiff nach Ablauf (z. B. bei 10:45) die Verlängerung. In der Pause davor ist
-  // `sectionStartMs` noch der Beginn des letzten Abschnitts; dort gilt der gestoppte Uhrstand.
-  const startMs = state.status === 'section_break' ? state.clock.elapsedMs : state.sectionStartMs;
+  const startMs = overtimeStartMsOf(state.status, state.clock.elapsedMs, state.sectionStartMs);
   return Math.floor(startMs / 1000) + rules.overtimeSeconds;
 }

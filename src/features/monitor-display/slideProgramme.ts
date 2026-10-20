@@ -9,6 +9,7 @@
 
 import type { MonitorSlide } from '../../types/monitor';
 import { fieldIdToNumber } from './monitorDisplayHelpers';
+import { imVorlauf, type VorlaufSpiel } from './monitorVorlauf';
 
 export interface MonitorSlideLike {
   id: string;
@@ -94,7 +95,7 @@ export type ProgramSlide = MonitorSlide | QrRueckfallFolie;
 export const FINAL_RESULT_HOLD_MS = 30_000;
 
 /** Die Felder der Spielregeln; ein Spiel der Ansicht (`MatchView`) erfüllt sie strukturell. */
-export interface RuleMatch {
+export interface RuleMatch extends VorlaufSpiel {
   id: string;
   field: number;
   /** Läuft ODER ist unterbrochen (Halbzeit, Verlängerung, Strafstoßschießen, angehaltene Uhr), @ZM-039 */
@@ -158,17 +159,21 @@ function runningFor(slide: ProgramSlide, matches: readonly RuleMatch[]): RuleMat
   return field === null ? undefined : runningOn(matches, field);
 }
 
-/** @ZM-122: Live-Folie ohne laufendes Spiel auf ihrem Feld wird übersprungen. */
-function isSkipped(slide: ProgramSlide, matches: readonly RuleMatch[]): boolean {
-  return isLiveSlide(slide) && runningFor(slide, matches) === undefined;
+/**
+ * @ZM-122: Live-Folie ohne laufendes Spiel auf ihrem Feld wird übersprungen – außer in der Vorlaufzeit vor dem nächsten
+ * Anpfiff auf diesem Feld (Pausendauer, mindestens 5 Minuten): dann zeigt sie das nächste Spiel (@ZM-138).
+ */
+function isSkipped(slide: ProgramSlide, matches: readonly RuleMatch[], nowMs: number): boolean {
+  const field = liveFieldOf(slide);
+  return field !== null && runningOn(matches, field) === undefined && !imVorlauf(matches, field, nowMs);
 }
 
 /** Erste nicht übersprungene Folie ab `from` (zyklisch); null, wenn alle übersprungen sind. */
-function firstVisible(program: SlideProgram, from: number, matches: readonly RuleMatch[]): number | null {
+function firstVisible(program: SlideProgram, from: number, matches: readonly RuleMatch[], nowMs: number): number | null {
   const count = program.slides.length;
   for (let k = 0; k < count; k++) {
     const j = wrapIndex(from + k, count);
-    if (!isSkipped(program.slides[j], matches)) { return j; }
+    if (!isSkipped(program.slides[j], matches, nowMs)) { return j; }
   }
   return null;
 }
@@ -198,8 +203,8 @@ function pinTarget(program: SlideProgram, state: SlideshowState, matches: readon
  * ihrem Feld), zeigt die Seite den Rückfall (QR, ohne QR der Spielplan). Die Liste selbst bleibt unverändert,
  * damit Pin und Haltezeit (@ZM-077) nicht abreißen.
  */
-export function alleUebersprungen(slides: readonly ProgramSlide[], matches: readonly RuleMatch[]): boolean {
-  return slides.length > 0 && slides.every(slide => isSkipped(slide, matches));
+export function alleUebersprungen(slides: readonly ProgramSlide[], matches: readonly RuleMatch[], nowMs: number): boolean {
+  return slides.length > 0 && slides.every(slide => isSkipped(slide, matches, nowMs));
 }
 
 /** B-48a (@ME-006): Läuft auf dem Feld einer Live-Folie dieser Liste gerade ein Spiel? Dann gibt es keinen Hinweis. */
@@ -209,7 +214,7 @@ export function liveSpielLaeuft(slides: readonly ProgramSlide[], matches: readon
 
 /** Ein Schritt des Takts zur nächsten sichtbaren Folie; bleibt nichts übrig, bleibt die Folie stehen. */
 function advance(program: SlideProgram, state: SlideshowState, now: number, matches: readonly RuleMatch[]): SlideshowState {
-  const target = firstVisible(program, state.index + 1, matches) ?? state.index;
+  const target = firstVisible(program, state.index + 1, matches, now) ?? state.index;
   return { ...state, index: target, page: 0, startedAt: now, direction: 'next' };
 }
 
@@ -218,7 +223,7 @@ function advance(program: SlideProgram, state: SlideshowState, now: number, matc
  * - Pausiert (Taste) → unverändert.
  * - Laufendes Spiel auf dem Feld einer Live-Folie → Folie pinnen, kein Takt (@ZM-074, @ZM-075).
  * - Gepinntes Spiel beendet → Endergebnis 30 s halten, danach die folgende Folie (@ZM-077).
- * - Live-Folie ohne laufendes Spiel auf ihrem Feld → überspringen (@ZM-122).
+ * - Live-Folie ohne laufendes Spiel auf ihrem Feld → überspringen (@ZM-122), außer in der Vorlaufzeit (@ZM-138).
  * - Sonst Takt: Anzeigedauer der Seite abgelaufen → nächste Seite bzw. nächste Folie.
  */
 export function nextSlide(program: SlideProgram, state: SlideshowState, now: number): SlideshowState {
@@ -247,8 +252,8 @@ export function nextSlide(program: SlideProgram, state: SlideshowState, now: num
     return advance(program, { ...state, pinnedMatchId: null, finalUntil: null }, now, matches);
   }
 
-  if (isSkipped(program.slides[wrapIndex(state.index, count)], matches)) {
-    const target = firstVisible(program, state.index, matches);
+  if (isSkipped(program.slides[wrapIndex(state.index, count)], matches, now)) {
+    const target = firstVisible(program, state.index, matches, now);
     if (target !== null && target !== state.index) {
       return { ...state, index: target, page: 0, startedAt: now };
     }

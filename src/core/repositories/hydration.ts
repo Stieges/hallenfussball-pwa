@@ -11,6 +11,7 @@
 
 import type { Tournament, Match } from '../models/types';
 import { completeMatchCockpitSettings } from '../../types/tournament';
+import { ensureMatchNumbers } from '../models/matchNumbers';
 
 /**
  * Hydrates a single Match object by converting date strings to Date objects.
@@ -51,7 +52,9 @@ export function hydrateTournament(raw: unknown): Tournament {
 
   // Hydrate all matches
   const rawMatches = tournament.matches as unknown[] | undefined;
-  const hydratedMatches = rawMatches?.map(hydrateMatch) ?? [];
+  // C-SPIELNUMMER-FEHLT: lokal ohne Spielnummer gespeicherte Spiele (vor dem Fix veröffentlicht) bekommen sie nach
+  // der Rückfallregel – dieselbe Zählung wie beim Lesen aus der Cloud.
+  const hydratedMatches = ensureMatchNumbers(rawMatches?.map(hydrateMatch) ?? []);
 
   // Spielregeln „Spiel leiten“: fehlende Felder alter Konfigurationen bekommen die Vorgaben
   // (lokal gespeicherte, Gast- und per JSON wiederhergestellte Turniere; der Cloud-Pfad

@@ -47,6 +47,7 @@
       "diff": "Diff",
       "points": "Pkt"
     },
+    "overall": "Gesamttabelle",
     "currentlyPlaying": "Gerade im Spiel",
     "details": {
       "played": "Spiele",
@@ -793,18 +794,6 @@
       "referenceField": "Feld fehlt in diesem Turnier – bitte anpassen",
       "referenceGroup": "Gruppe fehlt in diesem Turnier – bitte anpassen"
     }
-  },
-  "colorScheme": {
-    "scoreColors": "Score-Farben",
-    "homeColor": "Heim-Farbe",
-    "awayColor": "Gast-Farbe",
-    "useTeamColors": "Team-Farben verwenden (falls vorhanden)",
-    "schemaAria": "Farbschema: {{name}}",
-    "pickColorAria": "{{label}} Farbe wählen: {{color}}",
-    "hexValueAria": "{{label}} Hex-Wert",
-    "recentlyUsed": "Zuletzt verwendet",
-    "useColorAria": "Farbe {{color}} verwenden",
-    "done": "Fertig"
   },
   "toolbar": {
     "editSchedule": "Spielplan bearbeiten",

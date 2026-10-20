@@ -47,6 +47,7 @@
       "diff": "GD",
       "points": "Pts"
     },
+    "overall": "Overall standings",
     "currentlyPlaying": "Currently playing",
     "details": {
       "played": "Played",
@@ -793,18 +794,6 @@
       "referenceField": "Field is missing in this tournament – please adjust",
       "referenceGroup": "Group is missing in this tournament – please adjust"
     }
-  },
-  "colorScheme": {
-    "scoreColors": "Score Colors",
-    "homeColor": "Home Color",
-    "awayColor": "Away Color",
-    "useTeamColors": "Use team colors (if available)",
-    "schemaAria": "Color scheme: {{name}}",
-    "pickColorAria": "Pick {{label}} color: {{color}}",
-    "hexValueAria": "{{label}} hex value",
-    "recentlyUsed": "Recently used",
-    "useColorAria": "Use color {{color}}",
-    "done": "Done"
   },
   "toolbar": {
     "editSchedule": "Edit schedule",

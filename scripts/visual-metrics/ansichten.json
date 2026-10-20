@@ -550,6 +550,16 @@
       "app": "/#/tournament/hallencup-messlauf/admin/match-cockpit",
       "erwarte": "[data-testid=\"settings-final-phase-minutes\"]",
       "profil": "app"
+    },
+    {
+      "id": "verwaltung-sichtbarkeit",
+      "titel": "Admin Center: Sichtbarkeit, Anzeige für Zuschauer mit Vorschau (Spielanzeige 2.3)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/admin/visibility",
+      "erwarte": "[data-testid=\"spectator-display-preview\"]",
+      "profil": "app"
     }
   ]
 }

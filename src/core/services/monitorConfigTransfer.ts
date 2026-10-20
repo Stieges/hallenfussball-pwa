@@ -22,8 +22,6 @@ const MAX_SLIDES_PER_MONITOR = 50;
 
 // --- SCHEMA (Datei-Format) ---
 
-const hexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/);
-
 const transferSlideConfigSchema = z.object({
   groupId: z.string().max(100).optional(),
   fieldId: z.string().max(100).optional(),
@@ -40,10 +38,6 @@ const transferSlideConfigSchema = z.object({
   body: z.string().max(500).optional(),
   textAlign: z.enum(['left', 'center', 'right']).optional(),
   colorScheme: z.enum(['default', 'highlight', 'urgent', 'celebration']).optional(),
-  liveColorScheme: z.object({
-    preset: z.enum(['classic', 'nature', 'contrast', 'modern', 'alternative', 'custom']),
-    homeColor: hexColorSchema, awayColor: hexColorSchema, useTeamColors: z.boolean(),
-  }).optional(),
 });
 
 const transferSlideSchema = z.object({
@@ -121,7 +115,7 @@ function exportSlideConfig(config: SlideConfig, sponsorName: string | undefined)
     numberOfPlayers: config.numberOfPlayers, sponsorName, showQrCode: config.showQrCode,
     qrTarget: config.qrTarget, customQrUrl: config.qrTarget === 'custom' ? config.customQrUrl : undefined,
     headline: config.headline, body: config.body, textAlign: config.textAlign,
-    colorScheme: config.colorScheme, liveColorScheme: copyOf(config.liveColorScheme),
+    colorScheme: config.colorScheme,
   };
 }
 
@@ -239,7 +233,7 @@ function toSlideConfig(config: TransferSlideConfig, sponsorId: string | undefine
     pauseRotationDuringMatch: config.pauseRotationDuringMatch, matchCount: config.matchCount,
     numberOfPlayers: config.numberOfPlayers, sponsorId, showQrCode: config.showQrCode,
     qrTarget: config.qrTarget, customQrUrl: config.customQrUrl, headline: config.headline, body: config.body,
-    textAlign: config.textAlign, colorScheme: config.colorScheme, liveColorScheme: copyOf(config.liveColorScheme),
+    textAlign: config.textAlign, colorScheme: config.colorScheme,
   };
 }
 

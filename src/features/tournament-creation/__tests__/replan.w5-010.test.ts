@@ -161,7 +161,7 @@ describe('Team ersetzen', () => {
         slot_a_source: update.slot_a_source ?? null,
         slot_b_source: update.slot_b_source ?? null,
       } as unknown as Parameters<typeof mapMatchFromSupabase>[0];
-      const back = mapMatchFromSupabase(row);
+      const back = mapMatchFromSupabase(row, '2026-01-15');
       // A-36b: `assignedBy` ist rein lokal (nicht in der Cloud, K6 unverändert) – Team und Herkunft kommen zurück.
       expect(back.slotA).toEqual(withoutAssignment(m.slotA));
       expect(back.slotB).toEqual(withoutAssignment(m.slotB));

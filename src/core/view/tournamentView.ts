@@ -5,6 +5,10 @@
 import type { Match } from '../../types/tournament';
 import { DEFAULT_CLOCK_MODE } from '../match/clockDisplay';
 import { serverRules } from '../match/client/serverRules';
+import { normalizeKitColor, wornColors, type KitSide } from '../models/kit';
+import { slotTeamId } from '../models/matchSlot';
+import { resolveBoxColors } from '../models/scoreBoxColors';
+import { parseSpectatorDisplay, type SpectatorDisplaySettings } from '../models/spectatorDisplay';
 import { matchBadgeModel, type MatchBadgeEngineDetail } from './badge';
 import { matchFinalScore } from './finalScore';
 import { matchLabelText, type SlotLabelContext } from './originText';
@@ -94,7 +98,25 @@ function clockRulesOf(match: Match, input: TournamentViewInput): SpectatorClockR
   return { sections: rules.sections, sectionSeconds: rules.sectionSeconds, overtimeSeconds: rules.overtimeSeconds, clockMode: input.matchCockpitSettings?.clockMode ?? DEFAULT_CLOCK_MODE };
 }
 
-function matchView(match: Match, input: TournamentViewInput, options: ViewOptions, rules: ViewRules, sides: SideContext): MatchView {
+/**
+ * Kastenfarben (Spielanzeige 2.1): getragene Farbe (`wornColors`, @W3-028) nach der Einstellung „Anzeige für Zuschauer“.
+ * Streifen der Weste (Review A5): Trikotfarbe beim Anpfiff, bis D.1 die aktuelle Teamfarbe der Leibchen-Seite; erst wenn
+ * beides fehlt, die Standardfarbe der Seite (D-3). D.1 setzt `match.kit?.shirt ??` davor (bis dahin Lücke @ZM-163).
+ */
+function boxesOf(match: Match, teams: TournamentViewInput['teams'], settings: SpectatorDisplaySettings): MatchView['boxes'] {
+  const bibSide: KitSide | undefined = match.kit?.bibSide;
+  const bibTeamId = bibSide === undefined ? undefined : slotTeamId(bibSide === 'a' ? match.slotA : match.slotB);
+  const shirt = bibTeamId === undefined ? undefined : normalizeKitColor(teams.find((t) => t.id === bibTeamId)?.colors?.primary);
+  const boxes = resolveBoxColors({
+    worn: wornColors(match, teams),
+    ...(bibSide === undefined ? {} : { bibSide }),
+    ...(shirt === undefined ? {} : { shirt }),
+    settings,
+  });
+  return { home: boxes.a, away: boxes.b };
+}
+
+function matchView(match: Match, input: TournamentViewInput, options: ViewOptions, rules: ViewRules, sides: SideContext, display: SpectatorDisplaySettings): MatchView {
   const blank = sides.edition === 'blank';
   // Vorlage: keine Ergebnisse, keine Zustände – jedes Spiel hat seine Felder zum Eintragen (@DR-005, @DR-019).
   const detail = blank ? undefined : usableDetail(match, input);
@@ -122,6 +144,7 @@ function matchView(match: Match, input: TournamentViewInput, options: ViewOption
     ...(isLive(status) ? { clockRules: clockRulesOf(match, input) } : {}),
     home: sideView(match, 'A', sides),
     away: sideView(match, 'B', sides),
+    boxes: boxesOf(match, input.teams, display),
   };
 }
 
@@ -135,7 +158,8 @@ export function buildTournamentView(input: TournamentViewInput, options: ViewOpt
     locale: options.locale,
   };
   const sides: SideContext = { audience: options.audience, labels, locale: options.locale, rules, edition };
-  const matches = input.matches.map((match) => matchView(match, input, options, rules, sides));
+  const display = parseSpectatorDisplay(input.spectatorDisplay);
+  const matches = input.matches.map((match) => matchView(match, input, options, rules, sides, display));
   return {
     rules,
     matches,
