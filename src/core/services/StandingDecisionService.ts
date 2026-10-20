@@ -49,10 +49,10 @@ export class StandingDecisionService {
       if (!check.ok) {
         return check;
       }
-      const input = tableInput(tournament.teams, tournament.matches, tournament, draft.groupId);
+      const input = tableInput(tournament.teams, tournament.matches, tournament, check.groupId);
       const decision: StandingDecision = {
         id: this.deps.newId(),
-        groupId: draft.groupId,
+        groupId: check.groupId, // aus der gerechneten Tabelle (Review TB-A Auflage 1)
         teamIds: sortedIds(draft.teamIds),
         order: [...draft.order],
         kind: draft.kind,

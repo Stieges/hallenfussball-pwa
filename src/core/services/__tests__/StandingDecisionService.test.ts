@@ -67,7 +67,7 @@ describe('TB-3 StandingDecisionService', () => {
 
   it('@TM-146:teil ohne Netz prüft validateDraft den Eintrag beim Abschluss der Gruppe, ohne zu schreiben', () => {
     const t = lage048();
-    expect(validateDraft(shootout('W', 'S', 4, 3, 'A'), t)).toEqual({ ok: true, block: { place: 2, size: 2 } });
+    expect(validateDraft(shootout('W', 'S', 4, 3, 'A'), t)).toEqual({ ok: true, groupId: 'A', block: { place: 2, size: 2 } });
     // Gegenbeispiel: falsche Gruppe (Gruppe B hat keinen offenen Block) → BLOCK_CHANGED.
     expect(validateDraft(shootout('W', 'S', 4, 3, 'B'), t)).toEqual({ ok: false, code: 'BLOCK_CHANGED' });
   });

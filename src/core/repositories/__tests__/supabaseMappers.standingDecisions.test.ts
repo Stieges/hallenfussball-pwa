@@ -45,9 +45,11 @@ describe('TB-3 Entscheidungen im config (Mapper, Zod)', () => {
     expect(tournament.standingDecisions?.map((d) => d.id)).toEqual(['e-1']);
     // Turnier-Schema: Entscheidungen werden geprüft, unbekannte Felder darin abgelehnt.
     const turnier = { ...league('RKMUNO', DATA.ET_055).tournament, sportId: 'football-indoor' };
-    const parsed = TournamentSchema.safeParse({ ...turnier, standingDecisions: [{ ...ENTSCHEIDUNG, extra: 1 }] });
+    // Review TB-A Auflage 9: je Eintrag filtern – ein fehlerhafter Eintrag nimmt die gültigen nicht mit.
+    const parsed = TournamentSchema.safeParse({ ...turnier, standingDecisions: [{ ...ENTSCHEIDUNG, id: 'kaputt', extra: 1 }, ENTSCHEIDUNG] });
     expect(parsed.success).toBe(true);
-    expect(parsed.data?.standingDecisions).toBeUndefined();
+    expect(parsed.data?.standingDecisions).toEqual([ENTSCHEIDUNG]);
+    expect(TournamentSchema.safeParse({ ...turnier, standingDecisions: 'kein Feld' }).data?.standingDecisions).toBeUndefined();
     expect(TournamentSchema.safeParse({ ...turnier, standingDecisions: [ENTSCHEIDUNG] }).data?.standingDecisions).toEqual([ENTSCHEIDUNG]);
   });
 });
