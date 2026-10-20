@@ -67,12 +67,12 @@ export async function publishHallencup(): Promise<Hallencup> {
     isPublic: true,
     shareCode: 'NORD28',
   });
-  const matches = published.matches.map((m) => roundTrip(m, published.id));
+  const matches = published.matches.map((m) => roundTrip(m, published.id, published.date));
   return { tournament: { ...published, matches }, events: new Map() };
 }
 
-function roundTrip(match: Match, tournamentId: string, overlay: Parameters<typeof createMatchRow>[0] = {}): Match {
-  return mapMatchFromSupabase(createMatchRow({ ...mapMatchToSupabase(match, tournamentId), ...overlay }));
+function roundTrip(match: Match, tournamentId: string, date: string, overlay: Parameters<typeof createMatchRow>[0] = {}): Match {
+  return mapMatchFromSupabase(createMatchRow({ ...mapMatchToSupabase(match, tournamentId), ...overlay }), date);
 }
 
 /** Spielt Ereignisse über die Engine und übernimmt die Cache-Spalten über den Mapper ins Spiel. */
@@ -89,7 +89,7 @@ function playMatch(cup: Hallencup, index: number, events: (a: string, b: string)
   // Nur die Ergebnis-/Status-Spalten; Zeitstempel (Epoch-ms im Cache) und live_state braucht die Ansicht nicht.
   const { running: _running, started: _started, anchor_at: _anchor, finished_at: _finished, live_state: _live,
     skipped_at: _skippedAt, skipped_reason: _reason, ...columns } = cacheColumns(state, ctx);
-  const played = roundTrip(match, cup.tournament.id, columns);
+  const played = roundTrip(match, cup.tournament.id, cup.tournament.date, columns);
   const matches = cup.tournament.matches.map((m, i) => (i === index ? played : m));
   return { tournament: { ...cup.tournament, matches }, events: new Map([...cup.events, [match.id, log]]) };
 }
@@ -190,7 +190,7 @@ export async function hf1Besetzt(): Promise<Hallencup> {
  * (Datenebene: so liefert die Cloud das Spiel, ohne dass ein Ereignis gelaufen ist).
  */
 export function withCloudColumns(cup: Hallencup, index: number, overlay: Parameters<typeof createMatchRow>[0]): Hallencup {
-  return updateMatch(cup, index, (m) => roundTrip(m, cup.tournament.id, overlay));
+  return updateMatch(cup, index, (m) => roundTrip(m, cup.tournament.id, cup.tournament.date, overlay));
 }
 
 /** Ergebnis nur eingetragen (RESULT_ENTRY über die Engine), z. B. für ein K.-o.-Spiel. */

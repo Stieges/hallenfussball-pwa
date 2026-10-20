@@ -105,7 +105,7 @@ describe('A-36a Herkunft des Platzes in Ablage, Cloud-Zeile und Kopie', () => {
     const final = byId(hallencup(), FINAL);
     const row = createMatchRow({ ...mapMatchToSupabase(final, 'tournament-1') });
 
-    const back = mapMatchFromSupabase(row);
+    const back = mapMatchFromSupabase(row, '2026-01-15');
 
     expect(back.originA).toEqual(resultOf(SEMI1, 'winner'));
     expect(back.originB).toEqual(resultOf(SEMI2, 'winner'));
@@ -117,11 +117,11 @@ describe('A-36a Herkunft des Platzes in Ablage, Cloud-Zeile und Kopie', () => {
     const row = createMatchRow({ ...mapMatchToSupabase(reassigned, 'tournament-1') });
 
     expect(row.slot_a_source).toBeNull();
-    expect(mapMatchFromSupabase(row).originA).toEqual(groupRank('A', 1));
+    expect(mapMatchFromSupabase(row, '2026-01-15').originA).toEqual(groupRank('A', 1));
   });
 
   it('Gegenbeispiel: Gruppenspiel-Zeile ohne origin_* liefert kein originA (kein Schlüssel)', () => {
-    const back = mapMatchFromSupabase(createMatchRow({ id: testUuid(301), team_a_id: A1, team_b_id: A2 }));
+    const back = mapMatchFromSupabase(createMatchRow({ id: testUuid(301), team_a_id: A1, team_b_id: A2 }), '2026-01-15');
     expect('originA' in back).toBe(false);
     expect('originB' in back).toBe(false);
   });
@@ -134,7 +134,7 @@ describe('A-36a Herkunft des Platzes in Ablage, Cloud-Zeile und Kopie', () => {
       ...{ origin_a: { kind: 'groupRank', group: 'A', rank: 0 }, origin_b: groupRank('B', 2) },
     });
 
-    const back = mapMatchFromSupabase(row);
+    const back = mapMatchFromSupabase(row, '2026-01-15');
 
     expect(back.id).toBe(SEMI1);
     expect(back.slotA).toEqual({ kind: 'pending', source: groupRank('A', 1) });

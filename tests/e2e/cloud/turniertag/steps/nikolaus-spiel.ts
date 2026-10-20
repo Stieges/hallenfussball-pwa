@@ -212,7 +212,7 @@ async function endstandQuittung({ browser }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'N3a', title: 'Spiel 1 steht bereit: Anstoß 16:30, nichts überfällig', scenarios: ['@SL-118'], befunde: ['C-ANSTOSS-OHNE-DATUM'], owner: 'Anstoßzeit mit Datum im Cockpit', expectedFail: true, run: bereitNichtUeberfaellig },
+  { id: 'N3a', title: 'Spiel 1 steht bereit: Anstoß 16:30, nichts überfällig', scenarios: ['@SL-118'], owner: 'Anstoßzeit mit Datum im Cockpit (gebaut, #295)', expectedFail: false, run: bereitNichtUeberfaellig },
   { id: 'N3b', title: 'Früher Anpfiff: Spiel 1 läuft ab dem Anpfiff, ohne Rückfrage, Monitor live ohne Neuladen', scenarios: ['@ZP-008', '@ZP-092'], owner: 'B-11 / B-15 (gebaut)', expectedFail: false, run: frueherAnpfiff },
   { id: 'N3c', title: 'Zuschauer-Seite und Monitor zeigen „live“ und die tatsächliche Anpfiffzeit', scenarios: ['@ZP-051', '@ZP-092'], owner: 'B-27', expectedFail: true, run: anpfiffzeitAnzeige },
   { id: 'N4a', title: 'Spiel 1: Tor mit Rückennummer', scenarios: ['@SL-019'], owner: 'B-11 (gebaut)', expectedFail: false, run: torMitNummer },

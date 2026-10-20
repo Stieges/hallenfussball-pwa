@@ -118,7 +118,7 @@ async function endstand({ anonPage }: StepContext): Promise<void> {
 
 export const steps: readonly TurniertagStep[] = [
   { id: 'N6a', title: 'Tabelle: bei Punktgleichheit zuerst das direkte Spiel (Kammer vor Waging rot), kein Strafstoßschießen nötig – unter der BFV-privat-Reihenfolge (per Seed); Voreinstellung = N6e', scenarios: ['@ET-056'], owner: 'Reihenfolge der Kriterien aus dem Turnier (Seed: Punkte, direkter Vergleich, Tordifferenz, Tore)', expectedFail: false, run: direktesSpielZuerst },
-  { id: 'N6b', title: 'Tabelle: Zuschauer-Seite zeigt die Tabelle von Jeder gegen jeden in derselben Reihenfolge', scenarios: ['@W2A-049'], befunde: ['C-ZUSCHAUER-TABELLE-OHNE-GRUPPEN'], owner: 'Zuschauer-Tabelle ohne Gruppen / Paket TB', expectedFail: true, run: zuschauerReihenfolge },
+  { id: 'N6b', title: 'Tabelle: Zuschauer-Seite zeigt die Tabelle von Jeder gegen jeden in derselben Reihenfolge', scenarios: ['@W2A-049'], owner: 'Zuschauer-Tabelle ohne Gruppen (gebaut, #295)', expectedFail: false, run: zuschauerReihenfolge },
   { id: 'N6c', title: 'Tabelle: völliger Gleichstand (Petting/Otting) als „Entscheidung nötig“ markiert, Strafstoßschießen genannt', scenarios: ['@ET-025', '@ET-055', '@W2A-047'], befunde: ['C-TABELLE-NICHT-BFV-PRIVAT'], owner: 'Paket TB', expectedFail: true, run: gleichstandMarkiert },
   { id: 'N6d', title: 'Tabelle: Strafstoßschießen eintragen, Sieger steht vorn', scenarios: ['@ET-055'], befunde: ['C-TABELLE-NICHT-BFV-PRIVAT'], owner: 'Paket TB', expectedFail: true, run: strafstossEintragen },
   { id: 'N6e', title: 'Assistent: Reihenfolge bei Punktgleichheit für private Hallenturniere vorbelegt', scenarios: ['@W2A-046'], befunde: ['C-TABELLE-NICHT-BFV-PRIVAT'], owner: 'Paket TB', expectedFail: true, run: vorbelegungPrivat },

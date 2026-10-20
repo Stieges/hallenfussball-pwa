@@ -2,6 +2,7 @@ import { Match, Tournament, Standing, Team, PlacementCriterion, RuntimeMatchEven
 import { DEFAULT_FAIR_PLAY_PROFILE, type FairPlayProfile } from '../core/stats/fairPlayProfiles';
 import { cardKindOf } from './cardKind';
 import { matchSideTeamId } from '../core/models/matchSlot';
+import { standingsGroups, OVERALL_GROUP } from '../core/models/standingsGroups';
 import { matchFinalScore } from '../core/view/finalScore';
 import type { TeamId } from '../core/models/schemas/MatchSlotSchema';
 import { FINAL_TYPE_LABELS, FINAL_TYPE_RANKS, openPlacements } from './openPlacements';
@@ -100,6 +101,17 @@ export const calculateStandings = (
   // Sort by placement logic (pass relevantMatches for direct comparison)
   return sortByPlacementLogic(standings, tournament.placementLogic, relevantMatches);
 };
+
+/**
+ * Tabellen aller Gruppen hintereinander (je Gruppe sortiert). Ein Turnier ohne Gruppen ist eine Gruppe über alle Teams
+ * (`standingsGroups`, C-ZUSCHAUER-TABELLE-OHNE-GRUPPEN) – die Rechnung selbst bleibt `calculateStandings`.
+ */
+export const calculateStandingsPerGroup = (tournament: Tournament): Standing[] =>
+  standingsGroups(tournament.teams).flatMap(({ group, teams }) =>
+    group === OVERALL_GROUP
+      ? calculateStandings(teams, tournament.matches, tournament)
+      : calculateStandings(teams, tournament.matches, tournament, group)
+  );
 
 /**
  * Sort standings according to placement logic criteria
