@@ -3,10 +3,18 @@
  * ist Turnierdatum + Anstoßzeit; der Mapper baute früher `1970-01-01T<Zeit>`.
  * Zeiten ohne Zeitzone gebaut (Wanduhr des Geräts, wie im ganzen Plan: Erzeuger, `kickoffLocal`, Rückschreiben).
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mapMatchFromSupabase, mapMatchToSupabase, mapTournamentFromSupabase } from '../supabaseMappers';
 import { createMatchRow, createTeamRow, createTournamentRow } from '../../../../tests/factories/supabase';
 import { testUuid } from '../../../test/testIds';
+
+/**
+ * Feste Ortszeit Europe/Berlin im Testlauf, damit der Test auch in der CI (TZ=UTC) die Verwechslung „UTC statt Ortszeit“ fängt:
+ * Mit TZ=UTC fielen Ortszeit und UTC zusammen. `process.env.TZ` wirkt in Node sofort auf `Date`.
+ */
+let vorherigeZeitzone: string | undefined;
+beforeAll(() => { vorherigeZeitzone = process.env.TZ; process.env.TZ = 'Europe/Berlin'; });
+afterAll(() => { if (vorherigeZeitzone === undefined) { delete process.env.TZ; } else { process.env.TZ = vorherigeZeitzone; } });
 
 const [NORD, SUED] = [testUuid(1), testUuid(2)];
 const row = (scheduled_start: string | null) => createMatchRow({ team_a_id: NORD, team_b_id: SUED, scheduled_start });
@@ -17,6 +25,8 @@ describe('Anstoß = Turnierdatum + Anstoßzeit', () => {
 
     expect(kickoff).toEqual(new Date('2026-11-28T15:15:00'));
     expect(kickoff!.getFullYear()).toBe(2026);
+    // 15:15 ist die Ortszeit (Berlin, im November UTC+1), nicht UTC
+    expect(kickoff!.toISOString()).toBe('2026-11-28T14:15:00.000Z');
   });
 
   it('@SL-118 das Turnierdatum der Cloud-Zeile gilt für jedes Spiel des Turniers', () => {

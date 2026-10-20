@@ -2,8 +2,9 @@
  * Zuordnung der Teams zu Tabellen – an EINER Stelle (C-ZUSCHAUER-TABELLE-OHNE-GRUPPEN).
  *
  * Ein Turnier ohne Gruppen („Jeder gegen jeden“; der Assistent entfernt die Gruppe der Teams) ist EINE Gruppe mit allen
- * Teams (Record Turniermodi: Jeder gegen jeden = „eine Gruppe“). Alle Ansichten, die Tabellen je Gruppe zeigen
- * (Turnierverwaltung, Zuschauer-Seite, Monitor, PDF), fragen hier statt `team.group` selbst auszuwerten.
+ * Teams (Record Turniermodi: Jeder gegen jeden = „eine Gruppe“). Genutzt von `GroupTables` (Turnierverwaltung,
+ * Zuschauer-Seite) und der Tabellenrechnung `calculateStandingsPerGroup`. Monitor (`standingsSections`: „Gesamttabelle“)
+ * und PDF (@DR-009) nutzen diese Funktion NICHT, sie haben eigene Regeln für Turniere ohne Gruppen.
  * Es geht nur um die Zuordnung; die Reihenfolge innerhalb einer Tabelle bleibt Sache der Tabellenrechnung.
  */
 

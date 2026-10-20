@@ -3,9 +3,9 @@
  * Turnierdatum + Anstoßzeit (`scheduled_start` ist nur eine Uhrzeit). Früher baute der Mapper `1970-01-01T<Zeit>`,
  * das Cockpit zeigte vor dem Anpfiff „seit 29873248 Minuten überfällig“. Geprüft wird die ganze Kette
  * Datenbankzeile → Mapper → Engine-Spielmodell → Tafel (nicht nur ISO-Strings wie im Tafel-Test).
- * Zeiten ohne Zeitzone gebaut, damit der Test unabhängig von der Gerätezeit gilt.
+ * Zeiten ohne Zeitzone gebaut (Ortszeit), das Gerät steht im Test fest auf Europe/Berlin.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { toScoreboardModel, type ScoreboardInput } from '../toScoreboardModel';
 import { cockpitPhaseOf } from '../cockpitPhase';
 import { makeLiveMatch } from '../../__tests__/cockpitFixtures';
@@ -13,6 +13,14 @@ import { mapTournamentFromSupabase } from '../../../../core/repositories/supabas
 import { buildValidMatches } from '../../../../hooks/engineMatchModel';
 import { createMatchRow, createTeamRow, createTournamentRow } from '../../../../../tests/factories/supabase';
 import { testUuid } from '../../../../test/testIds';
+
+/**
+ * Feste Ortszeit Europe/Berlin im Testlauf, damit der Test auch in der CI (TZ=UTC) die Verwechslung „UTC statt Ortszeit“ fängt:
+ * Mit TZ=UTC fielen Ortszeit und UTC zusammen. `process.env.TZ` wirkt in Node sofort auf `Date`.
+ */
+let vorherigeZeitzone: string | undefined;
+beforeAll(() => { vorherigeZeitzone = process.env.TZ; process.env.TZ = 'Europe/Berlin'; });
+afterAll(() => { if (vorherigeZeitzone === undefined) { delete process.env.TZ; } else { process.env.TZ = vorherigeZeitzone; } });
 
 const t = (key: string, o?: Record<string, unknown>) => (o ? `${key}:${JSON.stringify(o)}` : key);
 const [WEST, MITTE] = [testUuid(1), testUuid(2)];
