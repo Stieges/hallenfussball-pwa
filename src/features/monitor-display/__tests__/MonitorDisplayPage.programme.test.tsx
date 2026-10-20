@@ -294,6 +294,8 @@ describe('MonitorDisplayPage — Folienfolge bei laufendem Spiel (Fake-Timer)', 
   });
 
   it('@ZM-122 erstes Spiel 13:00: Feld-1-Monitor überspringt die Live-Folie über einen Durchlauf', async () => {
+    // Gherkin-Beispiel: es ist 12:45 am Turnierdatum (Berlin = UTC+1), die Vorlaufzeit von 5 Minuten hat noch nicht begonnen
+    vi.setSystemTime(new Date('2025-01-15T11:45:00Z'));
     await starte(monitorTurnier(ersterSpielUm13(), folienLive()));
     await vorspulenPruefend(30_000, () => {
       expect(screen.queryByText('Nächstes Spiel')).not.toBeInTheDocument();

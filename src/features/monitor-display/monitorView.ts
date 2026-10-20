@@ -6,6 +6,13 @@
 import { buildTournamentView, engineDetailFromMatches, toTournamentLocal, TOURNAMENT_TIME_ZONE, type TournamentView } from '../../core/view';
 import { ANZEIGE_SPRACHE } from '../../i18n/anzeigeSprache';
 import type { Tournament } from '../../types/tournament';
+import { vorlaufMinuten } from './monitorVorlauf';
+import type { RuleMatch } from './slideProgramme';
+
+/** Der Zeitpunkt der Ansicht in ms: dieselbe Uhr, nach der `buildMonitorView` die Ortszeit bildet (jede neue Ansicht, ein Wert). */
+export function monitorJetztMs(): number {
+  return new Date().getTime();
+}
 
 export function buildMonitorView(tournament: Tournament): TournamentView {
   const now = new Date().getTime();
@@ -15,4 +22,20 @@ export function buildMonitorView(tournament: Tournament): TournamentView {
     locale: ANZEIGE_SPRACHE,
     now: toTournamentLocal(new Date(now), TOURNAMENT_TIME_ZONE),
   });
+}
+
+/**
+ * Die Spiele für die Folienregeln (Anhalten, Überspringen, Vorlaufzeit): die Spiele der Ansicht, je Spiel ergänzt um die
+ * Vorlaufzeit vor seinem Anpfiff (@ZM-138: Pausendauer des Turniers, mindestens 5 Minuten).
+ */
+export function buildMonitorRuleMatches(view: TournamentView, tournament: Tournament): RuleMatch[] {
+  return view.matches.map((m) => ({
+    id: m.id,
+    field: m.field,
+    isLive: m.isLive,
+    isUpcoming: m.isUpcoming,
+    matchNumber: m.matchNumber,
+    kickoff: m.kickoff,
+    vorlaufMin: vorlaufMinuten(tournament, m.phase),
+  }));
 }

@@ -619,6 +619,7 @@ async function main(): Promise<void> {
     finalType: scheduledMatch.finalType,
     label: scheduledMatch.label,
     scheduledTime: scheduledMatch.startTime,
+    matchNumber: scheduledMatch.matchNumber, // C-SPIELNUMMER-FEHLT (@SL-049) wie TournamentCreationService
     referee: scheduledMatch.referee,
   }));
   publicCup.status = 'published';
