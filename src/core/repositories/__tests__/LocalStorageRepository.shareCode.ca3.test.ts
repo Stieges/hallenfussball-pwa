@@ -1,7 +1,7 @@
 /**
  * CA-3 (Paket Co-Admin, Befund C-SHARE): Der Geräte-Rückfall des Teilens erzeugt Codes im Format des Servers,
  * vergibt keinen Code zweimal und überschreibt keinen vorhandenen Code.
- * Anforderungen: NEU-CA4 (Code 6 Zeichen, ohne 0/O/1/I, mit Zeitpunkt), NEU-CA3 (Rückfall-Pfad),
+ * Anforderungen: @BM-071 (Code 6 Zeichen, ohne 0/O/1/I; Zeitpunkt als Testdetail, Review CA-3–5), @BM-070 (Rückfall-Pfad),
  * Plan-Review Auflage 5 (Code bleibt beim erneuten Teilen).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -38,7 +38,7 @@ describe('CA-3 LocalStorageRepository: Rückfall-Code', () => {
   beforeEach(() => { store.list = []; });
   afterEach(() => { vi.restoreAllMocks(); });
 
-  it('NEU-CA4: Code aus der Server-Zeichenmenge (nie 0/O/1/I) und mit Zeitpunkt', async () => {
+  it('@BM-071: Code aus der Server-Zeichenmenge (nie 0/O/1/I) und mit Zeitpunkt', async () => {
     store.list = [privat('a')];
     const result = await new LocalStorageRepository().makeTournamentPublic('a');
     expect(result?.shareCode).toMatch(/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/);

@@ -31,7 +31,7 @@ function tournament(id: string, myRole?: Tournament['myRole']): Tournament {
 }
 
 describe('CA-5 useUserTournaments: Rolle aus dem Listenobjekt', () => {
-  it('@HE-085 Co-Admin-Turnier trägt die Rolle co-admin, das lokal angelegte bleibt owner', async () => {
+  it('@HE-088 @HE-085 Co-Admin-Turnier trägt die Rolle co-admin, das lokal angelegte bleibt owner', async () => {
     hoisted.repoList = [tournament('nikolaus', 'co-admin'), tournament('eigen')];
     const { result } = renderHook(() => useUserTournaments('name'));
 

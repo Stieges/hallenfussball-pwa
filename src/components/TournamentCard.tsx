@@ -21,7 +21,7 @@ import { TournamentActionMenu } from './TournamentActionMenu';
 import { useTournamentStartState } from '../hooks/useTournamentStartState';
 import { canWithListedRole } from '../features/auth/hooks/useCan';
 import { TextTag } from './ui/atoms';
-import { statusBadgeColors } from './tournamentCardBadge';
+import { badgeContainerStyle, headerStyle, infoGridStyle, infoItemStyle, statusBadgeColors, valueStyle } from './tournamentCardStyles';
 
 /** Map categoryLabel to TournamentActionMenu category */
 type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft' | 'trashed';
@@ -120,26 +120,12 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     boxShadow: cssVars.shadows.md,
   };
 
-  const headerStyle: CSSProperties = {
-    marginTop: cssVars.spacing.xl, // Space below badge
-    marginBottom: cssVars.spacing.md,
-  };
-
   const titleStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.xl,
     fontWeight: cssVars.fontWeights.semibold,
     color: cssVars.colors.textPrimary,
     margin: 0,
     paddingRight: '120px', // Space for badge(s)
-  };
-
-  const badgeContainerStyle: CSSProperties = {
-    position: 'absolute',
-    top: cssVars.spacing.md,
-    right: cssVars.spacing.md,
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
   };
 
   const badgeStyle: CSSProperties = {
@@ -152,28 +138,11 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     whiteSpace: 'nowrap',
   };
 
-  const infoGridStyle: CSSProperties = {
-    display: 'grid',
-    gap: cssVars.spacing.md,
-  };
-
-  const infoItemStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.xs,
-  };
-
   const labelStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.xs,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     color: cssVars.colors.textSecondary,
-    fontWeight: cssVars.fontWeights.medium,
-  };
-
-  const valueStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textPrimary,
     fontWeight: cssVars.fontWeights.medium,
   };
 
@@ -257,7 +226,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           <h3 style={titleStyle}>{tournament.title}</h3>
           {myRole !== undefined && myRole !== 'owner' && (
             <div style={{ marginTop: cssVars.spacing.sm }}>
-              <TextTag testId={`tournament-role-${tournament.id}`} ariaLabel={t('card.roleLabel', { role: t(`card.role.${myRole}`) })}>
+              <TextTag testId={`tournament-role-${tournament.id}`}>
                 {t(`card.role.${myRole}`)}
               </TextTag>
             </div>

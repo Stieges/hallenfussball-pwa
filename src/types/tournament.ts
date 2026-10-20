@@ -540,7 +540,10 @@ export interface Tournament {
   myRole?: TournamentListRole;
 }
 
-/** CA-5: Rollen im Listenobjekt der Startseite – deckungsgleich mit `TournamentRole` (features/auth), hier für core/. */
+/**
+ * CA-5: Rollen im Listenobjekt der Startseite (hier für core/). Teilmenge von `TournamentRole` ohne die Geräte-Rollen
+ * helper/screen (A-27): unbekannte Rollen einer Mitgliedszeile verwirft die Liste (`accountTournamentList.ts`).
+ */
 export type TournamentListRole = 'owner' | 'co-admin' | 'trainer' | 'collaborator' | 'viewer';
 
 // ============================================================================

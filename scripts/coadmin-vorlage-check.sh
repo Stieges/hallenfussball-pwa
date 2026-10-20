@@ -466,7 +466,7 @@ run_suite() {
   eq "V1 Block 2b laeuft ohne Fehler" "0" "$RC"
   check_rights "V1 Rechte der Co-Admin (Block 2b)" "$OUT" "$U_MARIA" co
   local out_b2b="$OUT"
-  # Gegenbeispiel: Konto ohne Eintrag hat keines der zwoelf Rechte (NEU-CA2)
+  # Gegenbeispiel: Konto ohne Eintrag hat keines der zwoelf Rechte (@HE-086)
   run_tpl 2b "$M_GRETA" "$T_ORIG"
   check_rights "V1 Gegenbeispiel Konto ohne Eintrag (Greta)" "$OUT" "$U_GRETA" keine
   run_tpl 2a "$M_GRETA" "$T_ORIG"; eq "V1 Gegenbeispiel: Block 2a fuer Greta ist leer" "" "$OUT"
@@ -526,7 +526,7 @@ ROLLBACK;"
   done
   eq "V3 Gegenbeispiel: Maria ist durch die Abbrueche nicht zusaetzlich eingetragen worden (weiter genau eine Zeile)" "1" "$(collab_rows "$T_ORIG" "$U_MARIA")"
 
-  [[ -n "$MUT" ]] || echo "-- V4 Austragen (NEU-CA2)"
+  [[ -n "$MUT" ]] || echo "-- V4 Austragen (@HE-087)"
   # Gegenbeispiel zuerst: Block 3 fuer eine Person mit Fremdrolle loescht nichts
   snap_v="$(snapshot)"
   run_tpl 3 "${FR_MAIL[0]}" "$T_ORIG"

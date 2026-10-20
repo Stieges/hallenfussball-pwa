@@ -1,7 +1,7 @@
 /**
  * CA-5 (Befund C-LISTE-NUR-EIGENTUEMER, Plan-Review Auflage 10c) – Karte auf der Startseite der Co-Admin.
  *
- * NEU-CA1 (Vorschlag, Kennung vergibt der Controller) / @HE-085:
+ * @HE-088 / @HE-085:
  *   „Dann steht das Nikolaus-Turnier auf ihrer Startseite mit der Angabe „Co-Admin“ …
  *    Aber „Löschen“ bietet die App ihr bei diesem Turnier nicht an“
  * Die Karte fragt das Recht `deleteTournament` (hasPermission), keinen Rollenvergleich.
@@ -39,7 +39,7 @@ async function renderCard(tournament: Tournament) {
 beforeEach(() => vi.clearAllMocks());
 
 describe('CA-5 TournamentCard: Rolle auf der Karte, „Löschen“ nur mit Recht deleteTournament', () => {
-  it('@HE-085 Co-Admin: die Karte trägt die Marke „Co-Admin“, das Menü bietet „Löschen“ nicht an, „Kopieren“ bleibt', async () => {
+  it('@HE-088 @HE-085 Co-Admin: die Karte trägt die Marke „Co-Admin“, das Menü bietet „Löschen“ nicht an, „Kopieren“ bleibt', async () => {
     await renderCard(nikolaus('co-admin'));
 
     const card = screen.getByTestId('tournament-card-nikolaus');

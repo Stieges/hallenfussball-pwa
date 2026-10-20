@@ -1,5 +1,5 @@
 /**
- * CA-3 (Paket Co-Admin, Befund C-SHARE, NEU-CA4): Der Rückfall-Eintrag UPDATE_TOURNAMENT_METADATA trägt den Zeitpunkt,
+ * CA-3 (Paket Co-Admin, Befund C-SHARE, @BM-071): Der Rückfall-Eintrag UPDATE_TOURNAMENT_METADATA trägt den Zeitpunkt,
  * zu dem der Code entstand, bis in die Zeile (`share_code_created_at`). Ein Fehler des Servers (z. B. 23505 auf dem
  * UNIQUE-Schlüssel des Codes) wird nicht verschluckt.
  */

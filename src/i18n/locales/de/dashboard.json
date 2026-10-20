@@ -89,8 +89,7 @@
       "collaborator": "Helfer",
       "trainer": "Trainer",
       "viewer": "Zuschauer"
-    },
-    "roleLabel": "Deine Rolle: {{role}}"
+    }
   },
 
   "actions": {

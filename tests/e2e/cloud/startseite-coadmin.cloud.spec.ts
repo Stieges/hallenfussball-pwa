@@ -2,7 +2,7 @@
  * CA-5 (Befund C-LISTE-NUR-EIGENTUEMER) – Startseite der Co-Admin gegen den lokalen Stack.
  *
  * @HE-086 „Und das Nikolaus-Turnier steht nicht auf ihrer Startseite“ (vor dem Eintrag)
- * @HE-085 / NEU-CA1 (Vorschlag): nach dem Eintrag steht das Turnier mit der Angabe „Co-Admin“ da, sie kann es öffnen,
+ * @HE-085 / @HE-088: nach dem Eintrag steht das Turnier mit der Angabe „Co-Admin“ da, sie kann es öffnen,
  *   „Löschen“ bietet die App nicht an.
  * @HE-087 „Und das Nikolaus-Turnier steht nach dem Neuladen nicht mehr auf ihrer Startseite“ – auch nicht als eigenes
  *   „nur lokales“ Turnier (Plan-Review Auflage 10a); das Turnier bleibt beim Eigentümer unverändert (nichts hochgeladen).
@@ -93,7 +93,7 @@ async function localCopyIds(page: import('@playwright/test').Page): Promise<stri
 }
 
 test.describe('CA-5 Startseite der Co-Admin', () => {
-  test('@HE-086 @HE-085 @HE-087 Maria: vorher nicht da, eingetragen mit „Co-Admin“ ohne „Löschen“, ausgetragen weg', async ({ browser }) => {
+  test('@HE-086 @HE-085 @HE-088 @HE-087 Maria: vorher nicht da, eingetragen mit „Co-Admin“ ohne „Löschen“, ausgetragen weg', async ({ browser }) => {
     const email = `ca5-${randomUUID().slice(0, 8)}@example.invalid`;
     const { context, page } = await newFreshContext(browser);
     let userId: string | null = null;

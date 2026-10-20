@@ -81,7 +81,7 @@ export function MonitorsConfigTab({
   const canTransfer = useCan('manageScreens', tournament.id);
 
   // Heartbeat status for all monitors in this tournament.
-  // CA-4 (NEU-CA5): Den Verbindungsstatus liefert der Server nur mit manageScreens (Eigentuemer, Co-Admin; Policy
+  // CA-4 (@ME-070): Den Verbindungsstatus liefert der Server nur mit manageScreens (Eigentuemer, Co-Admin; Policy
   // heartbeats_select_v2). Wer das Recht nicht hat, fragt gar nicht erst ab und abonniert nichts.
   const heartbeats = useMonitorHeartbeats(canTransfer ? tournament.id : undefined);
 

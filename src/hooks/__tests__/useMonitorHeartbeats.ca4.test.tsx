@@ -1,5 +1,5 @@
 /**
- * CA-4 (Paket Co-Admin, Befund C-HEARTBEAT-NUR-EIGENTUEMER, NEU-CA5): Verbraucherseite des Verbindungsstatus.
+ * CA-4 (Paket Co-Admin, Befund C-HEARTBEAT-NUR-EIGENTUEMER, @ME-070): Verbraucherseite des Verbindungsstatus.
  * „Online“ bei last_seen < 60 s, „Instabil“ < 90 s, danach „Offline“ (Schwellen des Hooks). Ein Realtime-Ereignis mit
  * neuem last_seen hebt „Offline“ auf „Online“. Ohne Turnier-Kennung (Rolle ohne manageScreens, siehe
  * MonitorsConfigTab) gibt es weder Abfrage noch Abo. Was der Server liefert, entscheidet die Policy (CA-2, RLS-Matrix);
@@ -51,7 +51,7 @@ describe('CA-4 useMonitorHeartbeats', () => {
     return view;
   }
 
-  it('NEU-CA5: Status aus last_seen – Online < 60 s, Instabil < 90 s, danach Offline', async () => {
+  it('@ME-070: Status aus last_seen – Online < 60 s, Instabil < 90 s, danach Offline', async () => {
     hoisted.state.rows = [
       { monitor_id: 'm-online', last_seen: ago(59), slide_index: 2, cache_status: null },
       { monitor_id: 'm-stale', last_seen: ago(60), slide_index: null, cache_status: null },

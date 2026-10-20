@@ -1,6 +1,6 @@
 /**
  * CA-3 (Paket Co-Admin, Befund C-SHARE): Der Freigabe-Code lässt sich vorlesen und eintippen.
- * Anforderung: NEU-CA4 (plan-coadmin-einsatzfaehig.md § 3.2): genau 6 Zeichen, weder 0 noch O noch 1 noch I.
+ * Anforderung: @BM-071 (Record turnier-bekannt-machen): genau 6 Zeichen, weder 0 noch O noch 1 noch I.
  * Die Erwartung stammt aus der Server-Funktion generate_share_code (Migration), nicht aus dem Client-Code.
  */
 import { describe, it, expect } from 'vitest';

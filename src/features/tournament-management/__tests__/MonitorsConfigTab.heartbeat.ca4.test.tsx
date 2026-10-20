@@ -1,5 +1,5 @@
 /**
- * CA-4 (Paket Co-Admin, Befund C-HEARTBEAT-NUR-EIGENTUEMER, NEU-CA5): Wer den Verbindungsstatus der Monitore sieht.
+ * CA-4 (Paket Co-Admin, Befund C-HEARTBEAT-NUR-EIGENTUEMER, @ME-070): Wer den Verbindungsstatus der Monitore sieht.
  * Olli (Eigentümer) und Maria (Co-Admin, manageScreens) sehen dasselbe; Tom (Helfer) bietet die App den
  * Monitor-Editor nicht an, und für ihn wird weder abgefragt noch abonniert (der Server liefert ihm den Status ohnehin
  * nicht, CA-2 Policy heartbeats_select_v2). Die Texte „verbunden/zuletzt gesehen um hh:mm“ (@ME-026/-027) bleiben B-48c.
@@ -41,7 +41,7 @@ beforeEach(() => {
       : new Map([['halle', { monitorId: 'halle', lastSeen: new Date(), status: status.current, slideIndex: null, cacheStatus: null }]]));
 });
 
-describe('NEU-CA5 Verbindungsstatus der Monitore', () => {
+describe('@ME-070 Verbindungsstatus der Monitore', () => {
   it.each([
     ['owner', 'Olli (Eigentümer)'],
     ['co-admin', 'Maria (Co-Admin)'],

@@ -1,6 +1,6 @@
 /**
  * Freigabe-Code (Share-Code): 6 Zeichen aus der Zeichenmenge des Servers (Funktion `generate_share_code`,
- * Migration 20260128_003), ohne 0, O, 1, I -- vorlesbar und eintippbar (NEU-CA4).
+ * Migration 20260128_003), ohne 0, O, 1, I -- vorlesbar und eintippbar (@BM-071).
  * Reine Logik ohne Browser-Bezug; die Zufallsquelle wird übergeben (Tests, window.crypto in utils/shareCode.ts).
  */
 

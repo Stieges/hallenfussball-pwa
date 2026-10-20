@@ -108,14 +108,14 @@ beforeEach(() => {
 });
 
 describe('CA-5 SupabaseRepository: Startseite zeigt eigene Turniere und aktive Mitgliedschaften', () => {
-  it('@HE-085 Maria ist Co-Admin und hat kein eigenes Turnier: das Nikolaus-Turnier steht genau einmal da, mit Rolle Co-Admin', async () => {
+  it('@HE-088 @HE-085 Maria ist Co-Admin und hat kein eigenes Turnier: das Nikolaus-Turnier steht genau einmal da, mit Rolle Co-Admin', async () => {
     setCloud([member('nikolaus', MARIA, 'co-admin')], { id: MARIA });
     const list = await new SupabaseRepository().listForCurrentUser();
     expect(titles(list)).toEqual(['Nikolaus-Turnier']);
     expect(list[0].myRole).toBe('co-admin');
   });
 
-  it('@HE-085 die Liste mit Angaben: Mitglieder-Abfrage gelungen, Nikolaus nicht unter den eigenen', async () => {
+  it('@HE-088 @HE-085 die Liste mit Angaben: Mitglieder-Abfrage gelungen, Nikolaus nicht unter den eigenen', async () => {
     setCloud([member('nikolaus', MARIA, 'co-admin')], { id: MARIA });
     const result = await new SupabaseRepository().listWithMemberships();
     expect(result.memberships).toBe('known');
