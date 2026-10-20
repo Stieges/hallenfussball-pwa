@@ -8,7 +8,7 @@ vi.mock('../../../lib/sentry', () => ({ captureFeatureError: vi.fn() }));
 
 import { mapTournamentFromSupabase, mapTournamentToSupabase } from '../supabaseMappers';
 import type { Tournament } from '../../models/types';
-import { createTournamentRow } from '../../../../tests/factories/supabase';
+import { createTeamRow, createTournamentRow } from '../../../../tests/factories/supabase';
 import { testUuid } from '../../../test/testIds';
 import {
   DEFAULT_SPECTATOR_DISPLAY,
@@ -54,6 +54,40 @@ function rundreise(spectatorDisplay?: SpectatorDisplaySettings): Tournament {
   const { tournamentRow } = mapTournamentToSupabase(t, 'owner-1');
   return mapTournamentFromSupabase({ ...createTournamentRow({ id: t.id }), config: tournamentRow.config ?? null }, [], []);
 }
+
+/** K1: alle config-Felder zusammen über die JSON-Grenze (Teams als Zeilen, damit die Markierung nicht als verwaist fällt). */
+const TEAM_A = testUuid(901);
+const TEAM_B = testUuid(902);
+const TEAM_ROWS = [
+  createTeamRow({ id: TEAM_A, name: 'TSV Waging rot', sort_order: 0 }),
+  createTeamRow({ id: TEAM_B, name: 'TSV Waging blau', sort_order: 1 }),
+];
+
+function rundreiseAlle(fields: Partial<Tournament>): Tournament {
+  const base = mapTournamentFromSupabase(createTournamentRow({ id: testUuid(900) }), TEAM_ROWS, []);
+  const { tournamentRow } = mapTournamentToSupabase({ ...base, ...fields }, 'owner-1');
+  const wire = JSON.parse(JSON.stringify(tournamentRow)) as { config: unknown };
+  return mapTournamentFromSupabase({ ...createTournamentRow({ id: base.id }), config: wire.config as never }, TEAM_ROWS, []);
+}
+
+describe('K1 config-Felder zusammen über die Cloud (Mapper)', () => {
+  it('@ZM-152 spectatorDisplay, hostTeamIds, openingMode und bibColor überleben Hin- und Rückweg gemeinsam, keines verdrängt ein anderes', () => {
+    const settings: SpectatorDisplaySettings = { teamColors: false, homeColor: NAVY, awayColor: ROT };
+    const geladen = rundreiseAlle({ spectatorDisplay: settings, hostTeamIds: [TEAM_A, TEAM_B], openingMode: 'club-derby', bibColor: '#FF6600' });
+    expect(geladen.spectatorDisplay).toEqual(settings);
+    expect(geladen.hostTeamIds).toEqual([TEAM_A, TEAM_B]);
+    expect(geladen.openingMode).toBe('club-derby');
+    expect(geladen.bibColor).toBe('#FF6600');
+  });
+
+  it('K1 Gegenbeispiel: nur bibColor gesetzt, die übrigen drei Felder kommen nicht aus der Cloud zurück', () => {
+    const geladen = rundreiseAlle({ bibColor: '#FF6600' });
+    expect(geladen.bibColor).toBe('#FF6600');
+    expect(geladen).not.toHaveProperty('spectatorDisplay');
+    expect(geladen).not.toHaveProperty('hostTeamIds');
+    expect(geladen).not.toHaveProperty('openingMode');
+  });
+});
 
 describe('@ZM-152 Einstellung über die Cloud (Mapper)', () => {
   it('@ZM-152 Hin- und Rückweg über die Cloud-Zeile verliert nichts, die Leibchenfarbe daneben bleibt', () => {

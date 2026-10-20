@@ -39,7 +39,7 @@ async function bild(page: Page, name: string) {
   await page.screenshot({ path: join(BILDER, `${name}.png`), fullPage: false });
 }
 
-for (const [width, height] of [[1280, 720], [1440, 900]] as const) {
+for (const [width, height] of [[768, 1024], [1280, 720], [1440, 900]] as const) {
   test(`@ZM-152 ${width}×${height}: Speichern-Knopf bündig mit der Karte`, async ({ page }) => {
     await oeffne(page, width, height, 'light');
     const karte = await kanten(page, 'spectator-display-section');
