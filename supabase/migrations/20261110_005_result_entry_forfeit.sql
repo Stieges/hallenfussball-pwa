@@ -2,7 +2,7 @@
 -- A-25b (GA4-Plan v2 Fassung 2.1, task-GA4-plan-v2.md "A-25b", Anhang B.1; v1 § 5.1): SQL-Zwilling der
 -- Nichtantritt-Wertung (A-25n, src/core/match/, TS ist die Referenz) und Platzierungsspiele um Platz 5/7 in der Cloud
 -- (@W2A-022, @W2A-024, @W2A-026, @TM-063 Server-Teil, @TM-004 Server-Teil; Befunde C-NICHTANTRITT-FEHLT, C-FINALTYPE-PLATZ5-7;
--- E-A4). Gleichlauf: scripts/match-engine-parity.sh (Fixtures 69a-69m), Schreibweg: scripts/append-match-events-check.sh,
+-- E-A4). Gleichlauf: scripts/match-engine-parity.sh (Fixtures 69a-69n), Schreibweg: scripts/append-match-events-check.sh,
 -- Szenarien, Rechte, Proben: scripts/forfeit-check.sh, Feldsteuerung danach: scripts/field-control-check.sh (Kategorie N).
 --
 -- Inhalt:
@@ -11,7 +11,8 @@
 --   2. match_transitions: to_status-CHECK + '@reopen'; Zeile (finished, REOPEN) zeigt auf '@reopen' (R-GA4-4) -- den
 --      Zielzustand setzt die Wirkung von REOPEN (running bzw. scheduled beim Zuruecknehmen einer Wertung).
 --   3. Rechenfunktion: payload_valid (RESULT_ENTRY mit `forfeit` {absent}), apply_result_entry (Art 'forfeit' + absent),
---      decided_by ('forfeit'), apply_effect (REOPEN nimmt eine Wertung zurueck, setzt den Zielzustand),
+--      decided_by ('forfeit'), apply_effect (REOPEN nimmt eine Wertung zurueck, setzt den Zielzustand; "Spiel
+--      fortsetzen" des Helfers einmal je Anpfiff, Review M1 @SL-074/@SL-075),
 --      match_apply_event ('@reopen'), cache_columns (forfeit_absent).
 --   4. append_match_events (Fassung 20261110_003 A-34, Signatur unveraendert): Zwischenspeicher forfeit_absent;
 --      R-A25b-1: das Zuruecknehmen einer Wertung braucht keine Feldsteuerung (Ziel 'scheduled', wie Direkteintrag);
@@ -304,7 +305,7 @@ $$;
 
 
 -- ============================================================================================
--- 3d. apply_effect: REOPEN nimmt eine Wertung zurueck und setzt den Zielzustand (Fassung 20261028_001 + A-25n)
+-- 3d. apply_effect: REOPEN nimmt eine Wertung zurueck und setzt den Zielzustand; Fortsetzen je Anpfiff (20261028_001 + A-25n)
 -- ============================================================================================
 
 CREATE OR REPLACE FUNCTION match_engine.apply_effect(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
@@ -333,8 +334,11 @@ BEGIN
         'sectionStartMs', v_clock -> 'elapsedMs',
         'breakStartedAt', NULL,
         -- ZA-3 (@SL-066): was vor dem Anpfiff schon im Log stand; Korrekturen gelten je Anpfiff.
+        -- A-25n (Review M1, @SL-074/@SL-075): "Spiel fortsetzen" ebenso je Anpfiff -- REOPEN davor zaehlen nicht.
         'undo', jsonb_build_object(
           'acceptedBeforeStart', (SELECT count(*) FROM jsonb_object_keys(coalesce(p_state -> 'accepted', '{}'::jsonb))),
+          'reopensBeforeStart', (SELECT count(*) FROM jsonb_each(coalesce(p_state -> 'accepted', '{}'::jsonb)) AS a(k, v)
+                                  WHERE a.v ->> 'type' = 'REOPEN'),
           'clockAdjusts', '[]'::jsonb)));
     WHEN 'PAUSE', 'MATCH_END' THEN
       RETURN match_engine.ok(jsonb_set(p_state, '{clock}', match_engine.stop_clock(p_state -> 'clock', p_event)));
@@ -360,8 +364,10 @@ BEGIN
                                                                       THEN 'overtimeSeconds' ELSE 'sectionSeconds' END)) THEN
           RETURN match_engine.reject('FORBIDDEN_ACTOR', '{"reason": "NOT_ENDED_BY_CLOCK"}'::jsonb);
         END IF;
-        IF EXISTS (SELECT 1 FROM jsonb_each(coalesce(p_state -> 'accepted', '{}'::jsonb)) AS a(k, v)
-                    WHERE a.v ->> 'type' = 'REOPEN') THEN
+        -- A-25n (Review M1): einmal je Anpfiff -- nur ein REOPEN nach dem letzten Anpfiff zaehlt (undo.reopensBeforeStart);
+        -- die Ruecknahme einer Wertung davor verbraucht das Fortsetzen nicht (handlers/reopen.ts acceptedReopenCount).
+        IF (SELECT count(*) FROM jsonb_each(coalesce(p_state -> 'accepted', '{}'::jsonb)) AS a(k, v)
+             WHERE a.v ->> 'type' = 'REOPEN') > coalesce(match_engine.num(v_undo -> 'reopensBeforeStart'), 0) THEN
           RETURN match_engine.reject('FORBIDDEN_ACTOR', '{"reason": "ALREADY_CONTINUED"}'::jsonb);
         END IF;
         IF match_engine.num(p_event -> 'at') - match_engine.num(p_state -> 'finishedAt') > c_continue_window_ms THEN

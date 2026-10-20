@@ -1,7 +1,7 @@
 /**
  * A-25b Nichtantritt (task-GA4-plan-v2.md „A-25b“, Anhang B.1, Review-Auflage 4): Zwillinge Migration ↔ TS und Basis der
  * ersetzten Funktionen. Den Szenario-Beweis gegen echtes Postgres führen scripts/forfeit-check.sh (Kategorien N/P/R/A),
- * scripts/match-engine-parity.sh (Fixtures 69a–69m) und scripts/append-match-events-check.sh; dieser Wächter hält fest:
+ * scripts/match-engine-parity.sh (Fixtures 69a–69n) und scripts/append-match-events-check.sh; dieser Wächter hält fest:
  *  - jede in 20261110_005 ersetzte Funktion baut auf genau der JÜNGSTEN Vorfassung auf und weicht nur um die
  *    dokumentierten Zeilen ab (append_match_events aus 20261110_003 A-34 – nie aus einer 20261028-Fassung, sonst wäre die
  *    Steuer je Feld live zurückgedreht),
@@ -123,8 +123,19 @@ const EXPECTED_DIFFS: readonly FunctionDiff[] = [
   {
     fn: "match_engine.apply_effect",
     base: "20261028_001_transitions_za3.sql",
-    removed: [],
+    // Review A-25 M1 (@SL-074/@SL-075): „Spiel fortsetzen“ einmal je Anpfiff (undo.reopensBeforeStart, reopen.ts).
+    removed: [
+      "IF EXISTS (SELECT 1 FROM jsonb_each(coalesce(p_state -> 'accepted', '{}'::jsonb)) AS a(k, v)",
+      "WHERE a.v ->> 'type' = 'REOPEN') THEN",
+    ],
     added: [
+      "-- A-25n (Review M1, @SL-074/@SL-075): \"Spiel fortsetzen\" ebenso je Anpfiff -- REOPEN davor zaehlen nicht.",
+      "'reopensBeforeStart', (SELECT count(*) FROM jsonb_each(coalesce(p_state -> 'accepted', '{}'::jsonb)) AS a(k, v)",
+      "WHERE a.v ->> 'type' = 'REOPEN'),",
+      "-- A-25n (Review M1): einmal je Anpfiff -- nur ein REOPEN nach dem letzten Anpfiff zaehlt (undo.reopensBeforeStart);",
+      "-- die Ruecknahme einer Wertung davor verbraucht das Fortsetzen nicht (handlers/reopen.ts acceptedReopenCount).",
+      "IF (SELECT count(*) FROM jsonb_each(coalesce(p_state -> 'accepted', '{}'::jsonb)) AS a(k, v)",
+      "WHERE a.v ->> 'type' = 'REOPEN') > coalesce(match_engine.num(v_undo -> 'reopensBeforeStart'), 0) THEN",
       "-- A-25n (@W2A-026, R-GA4-4): ist die letzte Ueberschreibung eine Nichtantritt-Wertung, nimmt REOPEN sie",
       "-- zurueck -- Spiel wieder 'scheduled', Wertung vom Stapel, Uhr unveraendert (eine Wertung entsteht nur aus",
       "-- 'scheduled'), lastScoreEventId = REOPEN (handlers/reopen.ts). Helfer scheitern vorher (kein baseDecidedBy).",

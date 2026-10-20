@@ -153,7 +153,7 @@ while IFS= read -r line; do
   esac
 done <<< "$NEWER_MIGRATIONS_RAW"
 if [[ -z "$A25B_FILE" ]]; then
-  echo "::error::$A25B_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still die Rechenfunktion ohne Nichtantritt (Fixtures 69a-69m)." >&2
+  echo "::error::$A25B_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still die Rechenfunktion ohne Nichtantritt (Fixtures 69a-69n)." >&2
   exit 1
 fi
 if [[ -z "$A34_FILE" && true ]]; then

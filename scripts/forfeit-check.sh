@@ -12,7 +12,8 @@
 # Kategorien:
 #   F  Fail-fast: ohne die Vorgaenger (A-34 20261110_003) bricht 20261110_005 mit Meldung ab und aendert nichts.
 #   N  Nichtantritt: @W2A-022, @W2A-024, @TM-063, @W2A-026 mit Gegenbeispielen; R-A25b-1 (Zuruecknehmen ohne
-#      Feldsteuerung), R-A25b-2 (Wertung ohne SHOOTOUT_REQUIRED); compute_match_state = Zwischenspeicher.
+#      Feldsteuerung), R-A25b-2 (Wertung ohne SHOOTOUT_REQUIRED); compute_match_state = Zwischenspeicher;
+#      Review M1 (@SL-074/@SL-075): nach zurueckgenommener Wertung setzt Tom einmal fort, ein zweites Mal nicht.
 #   P  Platz 5/7 (@TM-004 Server-Teil, C-FINALTYPE-PLATZ5-7): Spiele um Platz 5 und 7 speicherbar, Unbekanntes nicht.
 #   R  Rechte und Spaltenschutz: forfeit_absent schreibt nur der Server (UPDATE 42501, INSERT neutral), Helfer/Trainer.
 #   A  A-34 nach 20261110_005 (Review-Auflage 4): Steuer je Feld wirkt weiter, Assertion append-match-events-checks-field-control.
@@ -24,7 +25,7 @@
 # Aufrufoptionen:
 #   bash scripts/forfeit-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
 #   bash scripts/forfeit-check.sh --without-migration  Gegenprobe: ohne 20261110_005 -> N, P und R muessen ROT sein
-#   bash scripts/forfeit-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M9); Exit 0 NUR, wenn
+#   bash scripts/forfeit-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M10); Exit 0 NUR, wenn
 #                                                      JEDE Mutation mindestens eine Pruefung rot faerbt
 #   bash scripts/forfeit-check.sh --print-rueckweg     gibt den Rueckweg (Anhang B der Freigabe) aus, ohne Container
 #
@@ -227,6 +228,7 @@ match() { uuid_for "match:$1"; }
 M_CD="$(match c-d)"; M_HELPER="$(match helfer)"; M_FORM="$(match form)"; M_WO="$(match west-ost)"; M_HF1="$(match hf1)"
 M_HF2="$(match hf2)"; M_LIVE="$(match feld1-live)"; M_F1="$(match feld1-wertung)"; M_PLAYED="$(match feld1-gespielt)"
 M_PLAIN="$(match direkteintrag)"; M_TRAINER="$(match trainer)"; M_REOPEN_H="$(match helfer-zurueck)"
+M_CONT="$(match fortsetzen-nach-ruecknahme)"
 E() { uuid_for "event:$1"; }
 
 EVS=""
@@ -345,7 +347,8 @@ INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_i
   ('$M_PLAYED', '$T_NORD', 4, 1, '$TD', '$TO', 9, '15:00', 'A'),
   ('$M_PLAIN', '$T_NORD', 4, 2, '$TB', '$TU', 10, '15:10', 'B'),
   ('$M_TRAINER', '$T_NORD', 5, 2, '$TN', '$TU', 11, '15:20', 'B'),
-  ('$M_REOPEN_H', '$T_NORD', 5, 2, '$TB', '$TM', 12, '15:30', 'B');
+  ('$M_REOPEN_H', '$T_NORD', 5, 2, '$TB', '$TM', 12, '15:30', 'B'),
+  ('$M_CONT', '$T_NORD', 5, 3, '$TW', '$TU', 19, '15:40', 'A');
 INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, match_number, scheduled_start, is_final, final_type, phase) VALUES
   ('$M_HF1', '$T_NORD', 6, 1, '$TN', '$TB', 13, '16:00', true, 'semifinal', 'final'),
   ('$M_HF2', '$T_NORD', 6, 2, '$TM', '$TU', 14, '16:00', true, 'semifinal', 'final');
@@ -431,6 +434,24 @@ run_probes() {
   send "$U_TOM" "$D_TOM" "$M_REOPEN_H"
   check N "@W2A-026 Gegenbeispiel: Helfer Tom nimmt eine Wertung nicht zurück (FORBIDDEN_ACTOR), Wertung bleibt" \
     "rejected:FORBIDDEN_ACTOR:NOT_ENDED_BY_CLOCK|0:2|finished|forfeit|A" "$(results "$OUT")|$(row "$M_REOPEN_H")"
+
+  # --- Review M1 (@SL-074/@SL-075 nach @W2A-026): Wertung zurueckgenommen, danach gespielt (Feld 3, ohne Geraete-ID) --
+  ev RESULT_ENTRY "$(E cont-wertung)" "$(forfeit "$TW" "$TU" 0 2 A)"
+  ev REOPEN "$(E cont-zurueck)" '{"at": 2000}'
+  send "$U_OLLI" "" "$M_CONT"
+  ev MATCH_START "$(E cont-start)" '{"at": 10000, "clockMs": null}'
+  ev MATCH_END "$(E cont-ende)" '{"at": 610000, "clockMs": 600000}'
+  send "$U_TOM" "" "$M_CONT"
+  ev REOPEN "$(E cont-fortsetzen)" '{"at": 630000, "clockMs": 560000}'
+  send "$U_TOM" "" "$M_CONT"
+  check N "@SL-074 Review M1: Wertung zurückgenommen, gespielt, von selbst beendet -> Tom setzt 20 s nach dem Abpfiff einmal fort (läuft wieder)" \
+    "accepted|running|regular" "$(results "$OUT")|$(row "$M_CONT" | cut -d'|' -f2-3)"
+  ev MATCH_END "$(E cont-ende-2)" '{"at": 670000, "clockMs": 600000}'
+  send "$U_TOM" "" "$M_CONT"
+  ev REOPEN "$(E cont-fortsetzen-2)" '{"at": 680000, "clockMs": 590000}'
+  send "$U_TOM" "" "$M_CONT"
+  check N "@SL-075 Gegenbeispiel: nach dem Fortsetzen wieder von selbst beendet -> ein zweites Mal setzt Tom nicht fort (ALREADY_CONTINUED, bleibt beendet)" \
+    "rejected:FORBIDDEN_ACTOR:ALREADY_CONTINUED|finished|regular" "$(results "$OUT")|$(row "$M_CONT" | cut -d'|' -f2-3)"
 
   # --- R-A25b-1 + A-34 (A): Tom steuert Feld 1; Olli nimmt eine Wertung auf Feld 1 ohne Steuer zurueck ----
   ev MATCH_START "$(E live-start)" '{"clockMs": null}'
@@ -521,7 +542,7 @@ setup_before() {
 
 # ---------------------------------------------------------------------------------------------------------
 if [[ "$MODE" == "gegenprobe" ]]; then
-  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9)
+  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10)
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a MUTATIONS <<<"$GEGENPROBE_NUR"; fi
   RED_TOTAL=0
   for mut in "${MUTATIONS[@]}"; do
@@ -553,6 +574,9 @@ M = {
   "M8": [(" AND NOT ((v_event -> '\''payload'\'') ? '\''forfeit'\'')\n", "\n")],
   # M9 INSERT-Zweig setzt forfeit_absent nicht neutral
   "M9": [("      NEW.forfeit_absent := NULL;\n", "")],
+  # M10 (Review M1) alte Zaehlung: jedes REOPEN im Spiel verbraucht das Fortsetzen, auch die Ruecknahme einer Wertung
+  "M10": [("'\''REOPEN'\'') > coalesce(match_engine.num(v_undo -> '\''reopensBeforeStart'\''), 0) THEN",
+           "'\''REOPEN'\'') > 0 THEN")],
 }
 if os.environ["MUT_KEY"] == "M4":
     # M4 (Auflage 4) append_match_events auf der Basis 20261028_003 (ohne Feldsteuerung) statt 20261110_003
