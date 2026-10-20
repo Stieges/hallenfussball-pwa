@@ -11,6 +11,8 @@
 #
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 LOCAL_URL_PATTERN='^http://(127\.0\.0\.1|localhost)(:[0-9]+)?(/.*)?$'
 
 require_local_url() {
@@ -28,6 +30,14 @@ for var in E2E_SUPABASE_URL VITE_SUPABASE_URL; do
     require_local_url "$var" "${!var}"
   fi
 done
+
+# 1b. Läuft jeder Dienst und gibt es keine festgeschriebenen Versionen? (@LT-001, @LT-003, @LT-004)
+# Vor der Stack-Abfrage, damit „Docker nicht erreichbar“ als solches gemeldet wird.
+# E2E_REQUIRE_LOCAL_STACK_SKIP_HEALTH=1 überspringt das nur für Tests ohne Docker.
+if [ "${E2E_REQUIRE_LOCAL_STACK_SKIP_HEALTH:-}" != "1" ]; then
+  TSX_BIN="$(command -v tsx || echo "$SCRIPT_DIR/../node_modules/.bin/tsx")"
+  "$TSX_BIN" "$SCRIPT_DIR/test-env-check.ts" --gesund
+fi
 
 # 2. Läuft ein lokaler Stack?
 # Nur für Tests: simulierte `supabase status -o json`-Ausgabe (Unit-Test ohne Docker).

@@ -14,6 +14,8 @@ import { Tournament, MatchUpdate } from '../models/types';
 import { OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, toOriginImmutableError } from '../errors';
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
 import type { Database } from '../../types/supabase';
+import type { StandingDecision } from '../../types/tournament';
+import { writeStandingDecisionsToCloud } from './standingDecisionsCloud';
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
@@ -714,6 +716,11 @@ export class SupabaseRepository implements ITournamentRepository {
    * (`pg_trigger_depth() > 1`) true, so a tournament with matches AND events can still be deleted
    * in one step, exactly as intended.
    */
+  /** Paket TB: nur `config.standingDecisions`, mit Versionsprüfung (`standingDecisionsCloud.ts`). */
+  updateStandingDecisions(tournamentId: string, decisions: StandingDecision[], expectedVersion: number): Promise<void> {
+    return writeStandingDecisionsToCloud(getSupabase(), tournamentId, decisions, expectedVersion);
+  }
+
   async delete(id: string): Promise<void> {
     const { error } = await getSupabase().from('tournaments').delete().eq('id', id);
 

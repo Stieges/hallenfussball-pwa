@@ -21,10 +21,10 @@ const PHASE = process.env.A36C_PHASE ?? 'nachher';
 const HANDY = { width: 360, height: 640 };
 const MONITOR = { width: 1280, height: 720 };
 
-const FINALE = '00000003-0000-4000-8000-000000000015';
+const FINALE = '00000003-0000-4000-8000-000000000016';
 const HALBFINALE_1 = '00000003-0000-4000-8000-000000000013';
 const HALBFINALE_2 = '00000003-0000-4000-8000-000000000014';
-const PLATZ_3 = '00000003-0000-4000-8000-000000000016';
+const PLATZ_3 = '00000003-0000-4000-8000-000000000015';
 
 async function bild(page: Page, name: string) {
   if (!BILDER) { return; }

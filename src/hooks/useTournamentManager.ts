@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { TournamentService } from '../core/services/TournamentService';
 import { Tournament, type MatchUpdate } from '../core/models/types';
 import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
-import { calculateStandings } from '../utils/calculations';
+import { calculateStandings, calculateStandingsPerGroup } from '../utils/calculations';
 import { Standing } from '../types/tournament';
 import { useRepositories } from '../core/contexts/RepositoryContext';
 import { OfflineRepository } from '../core/repositories/OfflineRepository';
@@ -217,7 +217,13 @@ export function useTournamentManager(tournamentId: string) {
         }
     }, [overlaidTournament]);
 
+    // Paket TB (TB-4): die Tabellen der App rechnen je Gruppe (Sondertabelle, Platzziffer, Entscheidungen) ...
     const currentStandings: Standing[] = useMemo(() => {
+        if (!overlaidTournament) {return [];}
+        return calculateStandingsPerGroup(overlaidTournament);
+    }, [overlaidTournament]);
+    // ... die gruppenübergreifende Gesamtwertung bleibt für den Endstand (`getMergedFinalRanking`, Plan 3.3).
+    const overallStandings: Standing[] = useMemo(() => {
         if (!overlaidTournament) {return [];}
         return calculateStandings(overlaidTournament.teams, overlaidTournament.matches, overlaidTournament);
     }, [overlaidTournament]);
@@ -226,6 +232,7 @@ export function useTournamentManager(tournamentId: string) {
         tournament: overlaidTournament,
         schedule,
         currentStandings,
+        overallStandings,
         isLoading,
         loadingError: error,
         handleTournamentUpdate,

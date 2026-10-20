@@ -1,6 +1,7 @@
 /**
  * D10 Finale + Nichtantritt im Platzierungsspiel (2:0 auf Zuschauer-Seite und /tv).
- * Ablauf: erst das Finale regulär spielen, dann den Nichtantritt im Spiel um Platz 3 eintragen.
+ * Ablauf nach Spielplan (@TM-144: Spiel um Platz 3 vor dem Finale, Finale zuletzt): erst den Nichtantritt im Spiel um
+ * Platz 3 eintragen, dann das Finale regulär spielen (Aufbau für D11 ff.), danach die Wirkung von Platz 3 prüfen.
  * Voraussetzung: D8/D9/D9b (beide Halbfinals entschieden, Platz 3 und Finale besetzt).
  * Besitzer: A-25 (Nichtantritt als Ergebniseintrag mit Wertungsmerkmal, E-A4) / B-12.
  * Besitzer: A-25/B-12 -- Soll: das Spiel um Platz 3 nimmt `RESULT_ENTRY` mit
@@ -21,15 +22,16 @@ async function nichtantritt({ anonPage }: StepContext): Promise<void> {
   const finale = findFinalByLabel(finals, 'Finale');
   expect(platz3.team_a_id && platz3.team_b_id, 'Spiel um Platz 3 ist besetzt (hängt an D8/D9/D9b)').toBeTruthy();
   expect(finale.team_a_id && finale.team_b_id, 'Finale ist besetzt (hängt an D8/D9/D9b)').toBeTruthy();
+  const at = Date.now() - 60_000;
+  const result = await appendOwner(platz3.id, [
+    eventOf('RESULT_ENTRY', at, at, { section: null, clockMs: null, payload: { scores: { [platz3.team_a_id ?? '']: 2, [platz3.team_b_id ?? '']: 0 }, forfeit: { absent: 'B' } } }),
+  ]);
+  // Das Finale ist das letzte Spiel (@TM-144) und wird vor jeder Prüfung von Platz 3 gespielt, damit D11 ff. es beendet vorfinden.
   const finaleEvents = regularResultEvents(finale, 1, 0);
   await vorbedingung('Finale regulär spielen', async () => {
     const finaleResult = await appendOwner(finale.id, finaleEvents);
     expect(finaleResult.results.map((r) => r.status), 'Finale regulär gespielt').toEqual(finaleEvents.map(() => 'accepted'));
   });
-  const at = Date.now() - 60_000;
-  const result = await appendOwner(platz3.id, [
-    eventOf('RESULT_ENTRY', at, at, { section: null, clockMs: null, payload: { scores: { [platz3.team_a_id ?? '']: 2, [platz3.team_b_id ?? '']: 0 }, forfeit: { absent: 'B' } } }),
-  ]);
   expect(result.results[0].status).toBe('accepted');
   const { url, headers } = getLocalServiceRoleClient();
   const res = await fetch(`${url}/rest/v1/matches?id=eq.${platz3.id}&select=forfeit_absent,score_a,score_b`, { headers });

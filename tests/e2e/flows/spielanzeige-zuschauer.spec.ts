@@ -11,7 +11,7 @@ import { test, expect } from '../helpers/test-fixtures';
 import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/lader.mjs';
 
 const HANDY = { width: 360, height: 640 };
-const FINALE = '00000003-0000-4000-8000-000000000015';
+const FINALE = '00000003-0000-4000-8000-000000000016';
 const RESTZEIT_FINALE = /^4:(3\d|40)$/;
 const KEINE_GESPIELTE_ZEIT = /5:2\d|05:2\d|5:3\d|05:3\d/;
 

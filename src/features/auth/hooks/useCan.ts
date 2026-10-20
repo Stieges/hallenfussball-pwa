@@ -16,12 +16,13 @@
 import { useEffect } from 'react';
 import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import { hasPermission, type Permission } from '../utils/permissions';
-import type { TournamentRole } from '../types/auth.types';
+import { TOURNAMENT_ROLES, type TournamentRole } from '../types/auth.types';
 import { useMyTournamentRole } from './useMyTournamentRole';
 
 const MEMORY_PREFIX = 'tournament-role:';
 const LEGACY_ACTOR_PREFIX = 'engine-actor-role:';
-const KNOWN_ROLES: readonly TournamentRole[] = ['owner', 'co-admin', 'trainer', 'collaborator', 'viewer'];
+// A-27: alle Rollen inkl. helper/screen -- ein gemerkter Bildschirm fällt nicht auf L7 (Spielbetrieb offen) zurück.
+const KNOWN_ROLES: readonly TournamentRole[] = TOURNAMENT_ROLES;
 
 /** L7: ohne bekannte Rolle und ohne Gedächtnis bleibt nur der Spielbetrieb offen. */
 const UNKNOWN_ROLE_RIGHTS: ReadonlySet<Permission> = new Set<Permission>(['writeMatchData']);

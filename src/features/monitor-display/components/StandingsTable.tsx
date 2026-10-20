@@ -63,7 +63,7 @@ export function StandingsTable({ rows, themeColors }: StandingsTableProps) {
             color: themeColors.text,
           }}
         >
-          <div style={{ fontWeight: cssVars.fontWeights.semibold }}>{idx + 1}</div>
+          <div style={{ fontWeight: cssVars.fontWeights.semibold }}>{row.place ?? idx + 1}</div>
           <div data-teamname style={{ fontSize: displayList.fontSizes.team, minWidth: 0, overflowWrap: 'break-word' }}>
             {monitorTeamName(row.team.name)}
           </div>

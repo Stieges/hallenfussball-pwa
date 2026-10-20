@@ -37,6 +37,8 @@ import { bibColorFromConfig, bibColorToConfig } from './tournamentBibColor';
 import { spectatorDisplayFromConfig, spectatorDisplayToConfig } from './tournamentSpectatorDisplay';
 import { hostTeamsFromConfig, hostTeamsToConfig } from './tournamentHostTeams';
 import { changeRevisionFromRow } from './tournamentChangeRevisionRow';
+import { effectivePlacementLogic } from '../standings/placementDefaults';
+import { standingDecisionsFromConfig, standingDecisionsToConfig } from './standingDecisionsConfig';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -501,6 +503,10 @@ interface TournamentConfig {
   hostTeamIds?: string[];
   openingMode?: string;
 
+  // Paket TB: Gleichstands-Entscheidungen der Turnierleitung, auszuspielende Plätze (standingDecisionsConfig.ts)
+  standingDecisions?: unknown[];
+  placementsToPlayOut?: unknown;
+
   // Wizard state
   lastVisitedStep?: number;
 
@@ -581,8 +587,8 @@ export function mapTournamentFromSupabase(
     breakDuration: config.breakDuration,
     roundLogic: config.roundLogic as Tournament['roundLogic'],
     numberOfRounds: config.numberOfRounds,
-    placementLogic: (config.placementLogic ??
-      []) as Tournament['placementLogic'],
+    // C-WERTUNG-LEER: fehlende oder leere Reihenfolge ⇒ Voreinstellung BFV privat (@W2A-046)
+    placementLogic: effectivePlacementLogic(config.placementLogic as Tournament['placementLogic'] | undefined),
     finalsConfig: finalsConfig ?? undefined,
     refereeConfig: refereeConfig ?? undefined,
     fieldAssignments: config.fieldAssignments,
@@ -629,7 +635,7 @@ export function mapTournamentFromSupabase(
     isExternal: config.isExternal,
     externalSource: config.externalSource,
     useDFBKeys: config.useDFBKeys,
-    dfbKeyPattern: config.dfbKeyPattern, ...hostTeamsFromConfig(config, teams), // @W4-034/@W4-044
+    dfbKeyPattern: config.dfbKeyPattern, ...hostTeamsFromConfig(config, teams), ...standingDecisionsFromConfig(config), // @W4-034/@W4-044, Paket TB
     monitors: config.monitors as Tournament['monitors'],
     sponsors: config.sponsors as Tournament['sponsors'],
     version: row.version ?? undefined, ...changeRevisionFromRow(row), // A-10: Änderungszählung (@TM-027)
@@ -716,7 +722,7 @@ export function mapTournamentToSupabase(
     externalSource: tournament.externalSource,
     sportId: tournament.sportId,
     useDFBKeys: tournament.useDFBKeys,
-    dfbKeyPattern: tournament.dfbKeyPattern, ...hostTeamsToConfig(tournament), // @W4-034/@W4-044
+    dfbKeyPattern: tournament.dfbKeyPattern, ...hostTeamsToConfig(tournament), ...standingDecisionsToConfig(tournament), // @W4-034/@W4-044, Paket TB
     monitors: tournament.monitors,
     sponsors: tournament.sponsors,
     publishedAt: tournament.publishedAt,

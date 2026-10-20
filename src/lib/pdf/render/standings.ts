@@ -1,6 +1,7 @@
 /**
- * Gruppentabellen (nur bei `includeStandings`), sortiert nach Punkten, Tordifferenz, Toren. Die Gesamt-Platzierung steht
- * in `ranking.ts` (B-28 C2). Teamnamen mindestens 12 pt (@DR-001), Umbruch innerhalb der Zelle. Nur Zeichnen.
+ * Gruppentabellen (nur bei `includeStandings`) in der Reihenfolge und mit der Platzziffer der Tabellenrechnung je Gruppe
+ * (Paket TB: Sondertabelle, gemeinsame Ziffer 2, 2, 4) – das PDF ordnet nicht selbst nach Punkten und Toren. Die
+ * Gesamt-Platzierung steht in `ranking.ts` (B-28 C2). Teamnamen mindestens 12 pt (@DR-001), Umbruch innerhalb der Zelle. Nur Zeichnen.
  */
 import type jsPDF from 'jspdf';
 import autoTable, { type CellInput, type RowInput, type UserOptions } from 'jspdf-autotable';
@@ -20,11 +21,6 @@ function resolveStandings(schedule: GeneratedSchedule, standings: Standing[] | u
   return standings ?? schedule.initialStandings;
 }
 
-/** Rangfolge: Punkte, dann Tordifferenz, dann Tore. */
-function compareRanking(a: Standing, b: Standing): number {
-  return b.points - a.points || b.goalDifference - a.goalDifference || b.goalsFor - a.goalsFor;
-}
-
 function standingsHeader(t: PdfTexts): RowInput[] {
   return [[t.pos, t.team, t.played, t.won, t.drawn, t.lost, t.goals, t.diff, t.points]];
 }
@@ -35,7 +31,7 @@ function standingsHeader(t: PdfTexts): RowInput[] {
  */
 function standingRow(standing: Standing, index: number, rankColumn: boolean, place?: number): CellInput[] {
   return [
-    rankColumn ? (place ?? index + 1).toString() : '',
+    rankColumn ? (place ?? standing.place ?? index + 1).toString() : '',
     standing.team.name,
     standing.played > 0 ? standing.played.toString() : '',
     standing.won > 0 ? standing.won.toString() : '',
@@ -143,9 +139,9 @@ export function renderGroupStandings(
     yPos += printMetrics.sectionTitleUnderline;
 
     const groupTeams = finalTable ? schedule.teams : schedule.teams.filter(team => team.group === group);
-    const groupStandings = currentStandings
-      .filter(s => groupTeams.some(team => team.id === s.team.id))
-      .sort(finalTable ? (a, b) => placeOf(a) - placeOf(b) : compareRanking);
+    // Gruppentabellen: Reihenfolge der Rechnung unverändert (Aufrufer liefern `calculateStandingsPerGroup`); Abschlusstabelle: Endstand
+    const inGroup = currentStandings.filter(s => groupTeams.some(team => team.id === s.team.id));
+    const groupStandings = finalTable ? [...inGroup].sort((a, b) => placeOf(a) - placeOf(b)) : inGroup;
 
     const gespielt = finalTable !== undefined || groupStandings.some(standing => standing.played > 0);
     const end = drawStandingsTable(doc, geo, t, yPos, groupStandings, gespielt, finalTable ? placeOf : undefined);
