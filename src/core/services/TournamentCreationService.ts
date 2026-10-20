@@ -6,6 +6,7 @@ import { generateFullSchedule } from '../generators';
 import { generateShareCode } from '../../utils/shareCode';
 import { matchOrigins } from '../models/matchOrigin';
 import { effectiveHostTeamIds } from '../models/hostTeams';
+import { defaultPlacementLogic } from '../standings/placementDefaults';
 
 /**
  * @W1-020 (B-04b Fixrunde 1): Sichtbarkeit NACH dem Festlegen -- es gibt die
@@ -53,12 +54,8 @@ export class TournamentCreationService {
             // ohnehin nicht. Die Anzeige löst über `id` gegen i18n auf
             // (`wizard.json` → `placementLogic.criteria.<id>`), mit Rückfall auf `label`
             // für bereits gespeicherte Turniere ohne passenden Schlüssel.
-            placementLogic: [
-                { id: 'points', enabled: true },
-                { id: 'goalDifference', enabled: true },
-                { id: 'goalsFor', enabled: true },
-                { id: 'directComparison', enabled: false },
-            ],
+            // Voreinstellung privates Hallenturnier nach BFV Teil 3 § 20 (13) (@W2A-046, Paket TB).
+            placementLogic: defaultPlacementLogic(),
             finals: {
                 final: false,
                 thirdPlace: false,
