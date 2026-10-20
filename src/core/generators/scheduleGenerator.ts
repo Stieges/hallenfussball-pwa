@@ -21,6 +21,7 @@ import { assignReferees } from './refereeAssigner'
 import { transitionalTeamRef } from '../models/matchSlot'
 import { GroupSizeInfo } from './playoffGenerator'
 import { slotLabel } from '../models/slotLabel'
+import { ensureMatchNumbers } from '../models/matchNumbers'
 import sportGlossary from '../../i18n/glossary.json'
 
 // Re-export types for backwards compatibility
@@ -109,6 +110,10 @@ export function generateFullSchedule(
     // Anzeigetexte der Seiten: eine Funktion (slotLabel), Namen nur über die Team-ID
     const labelContext = { teams: tournament.teams, matches: tournament.matches, groups: tournament.groups, locale }
 
+    // C-SPIELNUMMER-FEHLT (@SL-049, @ZM-007): gespeicherte Nummer, sonst die Rückfallregel (Spielplan-Reihenfolge),
+    // nie der Platz in der Liste (die Cloud liefert Spiele ohne Nummer in beliebiger Reihenfolge).
+    const numberById = new Map(ensureMatchNumbers(tournament.matches).map((m) => [m.id, m.matchNumber]))
+
     // First, map all existing matches to ScheduledMatch format
     const mappedMatches = tournament.matches.map((m, index) => {
       const extMatch = m as unknown as ExtendedMatchInput;
@@ -128,7 +133,7 @@ export function generateFullSchedule(
       return {
         ...m,
         id: m.id,
-        matchNumber: m.matchNumber ?? index + 1,
+        matchNumber: numberById.get(m.id) ?? index + 1,
         startTime: matchStart,
         endTime: matchEnd,
         // Properties required by ScheduledMatch interface
@@ -400,10 +405,8 @@ function scheduleFinalMatches(
   const breakBetweenPhases = tournament.breakBetweenPhases ?? 0
   const finalStartTime = addMinutes(groupStageEnd, breakBetweenPhases)
 
-  const startMatchNumber =
-    scheduledGroupStage.length > 0
-      ? scheduledGroupStage[scheduledGroupStage.length - 1].matchNumber + 1
-      : 1
+  // höchste Nummer der Gruppenphase, nicht die des letzten Listeneintrags (gespeicherte Spiele in beliebiger Reihenfolge)
+  const startMatchNumber = Math.max(0, ...scheduledGroupStage.map((m) => m.matchNumber)) + 1
 
   return scheduleMatches({
     matches: finalMatches,

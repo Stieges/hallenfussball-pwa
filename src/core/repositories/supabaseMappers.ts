@@ -30,6 +30,7 @@ import type { MatchUpdate as DomainMatchUpdate } from '../models/types';
 import { RepositoryError } from '../errors';
 import { SlotSourceSchema, TeamIdSchema, type MatchSlot, type SlotSource } from '../models/schemas/MatchSlotSchema';
 import { pendingSlot, slotSource, slotTeamId, teamSlot } from '../models/matchSlot';
+import { ensureMatchNumbers, sortByMatchNumber } from '../models/matchNumbers';
 import { originFromRow, originToColumns, type MatchOriginColumns } from './matchOriginColumns';
 import { kitFromRow } from './matchKitRow';
 import { bibColorFromConfig, bibColorToConfig } from './tournamentBibColor';
@@ -526,8 +527,10 @@ export function mapTournamentFromSupabase(
   // Map teams
   const teams = teamRows.map(mapTeamFromSupabase);
 
-  // Map matches
-  const matches = matchRows.map((m) => mapMatchFromSupabase(m, row.date));
+  // Map matches. C-SPIELNUMMER-FEHLT (@SL-049, @ZM-007): fehlt `match_number` (Altdaten NULL), zählt die
+  // Rückfallregel in Spielplan-Reihenfolge; die Liste steht danach nach Spielnummer (die Abfrage sortiert nach
+  // der Spalte, bei NULL in beliebiger Reihenfolge).
+  const matches = sortByMatchNumber(ensureMatchNumbers(matchRows.map((m) => mapMatchFromSupabase(m, row.date))));
 
   // Parse config JSON
   const config = (row.config as TournamentConfig | null) ?? {};
@@ -758,7 +761,8 @@ export function mapTournamentToSupabase(
   const teamRows = tournament.teams.map((team) =>
     mapTeamToSupabase(team, tournament.id, ownerId, isPublic)
   );
-  const matchRows = tournament.matches.map((match) =>
+  // C-SPIELNUMMER-FEHLT: nie `match_number = NULL` schreiben – fehlt die Nummer lokal, gilt die Rückfallregel.
+  const matchRows = ensureMatchNumbers(tournament.matches).map((match) =>
     mapMatchToSupabase(match, tournament.id, ownerId, isPublic)
   );
 
