@@ -6,7 +6,7 @@
  * Szenarien: @SL-157, @SL-158, @SL-167 (Tastatur-Halten), @SL-010, @SL-133, RL2.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { looseVs } from '../../../test/matchSlotFixtures';
@@ -42,6 +42,7 @@ const zu = (ms: number): void => { vi.setSystemTime(T0 + ms); };
 const zustand = (): HTMLElement => screen.getByTestId('scoreboard-state');
 const matchEnds = (): number => eintraegeImLog().filter((e) => e.type === 'MATCH_END').length;
 const rueckfrage = (): HTMLElement | null => screen.queryByRole('alertdialog');
+const breite = (px: number): void => { Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: px }); };
 const warte = async (ms: number): Promise<void> => { await act(async () => { await new Promise((fertig) => { setTimeout(fertig, ms); }); }); };
 
 beforeEach(() => {
@@ -125,6 +126,9 @@ describe('@SL-158 kurze Bedienung pfeift nicht ab', () => {
     ['am Laptop die Eingabetaste drückt, während „Abpfiff“ den Fokus hat', async (k) => {
       k.focus(); fireEvent.keyDown(k, { key: 'Enter' }); fireEvent.keyUp(k, { key: 'Enter' }); await warte(HOLD_MS + 60);
     }],
+    ['am Laptop die Leertaste kurz drückt, während „Abpfiff“ den Fokus hat (@SL-167)', async (k) => {
+      k.focus(); fireEvent.keyDown(k, { key: ' ' }); fireEvent.keyUp(k, { key: ' ' }); await warte(HOLD_MS + 60);
+    }],
   ])('@SL-158 %s → keine Rückfrage, Spiel 11 läuft weiter', async (_bedienung, aktion) => {
     const user = userEvent.setup();
     render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
@@ -134,14 +138,44 @@ describe('@SL-158 kurze Bedienung pfeift nicht ab', () => {
     expect(matchEnds()).toBe(0);
   });
 
-  it.each([['Enter'], [' ']])('@SL-167 Entscheidung A3: Taste „%s“ auf dem fokussierten „Abpfiff“ etwa eine Sekunde gehalten → Rückfrage', async (taste) => {
+  describe.each([[360, 'einem Handy mit 360 Bildpunkten Breite'], [1280, 'einem Laptop mit 1280×720 Bildpunkten']])('@SL-167 Spiel 11 läuft auf %i px (%s)', (px) => {
+    beforeEach(() => { breite(px); });
+    afterEach(() => { breite(1280); });
+
+    it('@SL-167 „Abpfiff halten“ liegt als eigene Taste in der Leiste, nicht im Blatt „Mehr“', async () => {
+      const user = userEvent.setup();
+      render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
+      expect(within(screen.getByRole('toolbar')).getByRole('button', { name: 'Abpfiff halten' })).toBeInTheDocument();
+      await user.click(screen.getByTestId('cockpit-more-button'));
+      expect(within(screen.getByTestId('more-sheet')).queryByText(/Abpfiff/)).toBeNull();
+    });
+
+    it.each([['Enter'], [' ']])('@SL-167 Entscheidung A3: Taste „%s“ auf dem fokussierten „Abpfiff“ etwa eine Sekunde gehalten → Rückfrage', async (taste) => {
+      const user = userEvent.setup();
+      render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
+      const knopf = screen.getByTestId('match-finish-button');
+      knopf.focus();
+      fireEvent.keyDown(knopf, { key: taste });
+      await warte(HOLD_MS + 60);
+      expect(await screen.findByRole('alertdialog')).toHaveTextContent('Spiel 11 bei noch 3:12 Minuten Spielzeit beenden?');
+      expect(matchEnds()).toBe(0);
+    });
+  });
+
+  it('@SL-167 Tastenwiederholung: hält Tom die Leertaste weiter, wenn die Rückfrage schon da ist, bleibt sie offen und nichts wird beendet', async () => {
     const user = userEvent.setup();
     render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
     const knopf = screen.getByTestId('match-finish-button');
     knopf.focus();
-    fireEvent.keyDown(knopf, { key: taste });
+    fireEvent.keyDown(knopf, { key: ' ' });
     await warte(HOLD_MS + 60);
-    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Spiel 11 bei noch 3:12 Minuten Spielzeit beenden?');
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+    // der Fokus liegt jetzt auf „Weiterspielen“; das Betriebssystem wiederholt die Taste, danach lässt Tom sie los
+    const weiter = screen.getByRole('button', { name: 'Weiterspielen' });
+    expect(weiter).toHaveFocus();
+    for (let i = 0; i < 3; i += 1) { fireEvent.keyDown(weiter, { key: ' ', repeat: true }); }
+    await user.keyboard('{/ }');
+    expect(rueckfrage()).not.toBeNull();
     expect(matchEnds()).toBe(0);
   });
 });

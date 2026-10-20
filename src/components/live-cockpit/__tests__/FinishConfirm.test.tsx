@@ -3,7 +3,7 @@
  * Echte deutsche Texte; Gegenbeispiele: Weiterspielen beendet nichts, Esc und Tipp daneben beenden nichts.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { FinishConfirm } from '../areas/FinishConfirm';
@@ -62,5 +62,28 @@ describe('FinishConfirm', () => {
   it('Gegenbeispiel: geschlossen rendert nichts', () => {
     zeige({ offen: false });
     expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
+  describe('@SL-167 Tastenwiederholung der Haltetaste darf die Rückfrage nicht beantworten', () => {
+    it.each([[' '], ['Enter']])('Gegenbeispiel: eine wiederholte Taste „%s“ auf „Weiterspielen“ wird verworfen (defaultPrevented)', (taste) => {
+      zeige();
+      const weiter = screen.getByRole('button', { name: 'Weiterspielen' });
+      expect(fireEvent.keyDown(weiter, { key: taste, repeat: true })).toBe(false);
+    });
+
+    it.each([[' '], ['Enter']])('das Loslassen der Haltetaste „%s“, deren Druck vor der Rückfrage begann, löst keinen Knopf aus', (taste) => {
+      const p = zeige();
+      const weiter = screen.getByRole('button', { name: 'Weiterspielen' });
+      expect(fireEvent.keyUp(weiter, { key: taste })).toBe(false);
+      expect(p.onAbbrechen).not.toHaveBeenCalled();
+    });
+
+    it('Gegenbeispiel: ein eigener Druck (Taste runter und rauf auf „Weiterspielen“) beantwortet die Rückfrage wie gewohnt', async () => {
+      const p = zeige();
+      screen.getByRole('button', { name: 'Weiterspielen' }).focus();
+      await userEvent.keyboard(' ');
+      expect(p.onAbbrechen).toHaveBeenCalledTimes(1);
+      expect(p.onBeenden).not.toHaveBeenCalled();
+    });
   });
 });
