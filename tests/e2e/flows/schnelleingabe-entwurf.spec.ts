@@ -98,3 +98,49 @@ test.describe('@FU-103 @FU-101 C-SCHNELLEINGABE-ENTWURF-VERLOREN: der Eintrag bl
     }
   });
 });
+
+/**
+ * @FU-104 offline: ein zweiter Tab desselben Browsers steht für „Toms Gerät“ (gleiche lokale Ablage, Benachrichtigung über
+ * den Tab-Kanal der Spiel-Engine). Tom trägt 3:1 ein, während Olli im Feld für FC Nord „1“ getippt hat. Ohne Konto ist kein
+ * Name bekannt: „… von einem anderen Gerät geändert (jetzt 3:1)“. Spiel beendet → Hinweis ohne „Meine Eingabe behalten“.
+ */
+test.describe('@FU-104 C-SCHNELLEINGABE-FREMDAENDERUNG-STILL: Änderung genau dieses Spiels von einem anderen Gerät (offline)', () => {
+  test.beforeEach(async ({ seedIndexedDB }) => {
+    await seedIndexedDB({ tournaments: [turnier()] });
+  });
+
+  test('@FU-104 Tom trägt 3:1 ein, während Olli „1“ getippt hat: Hinweis sichtbar, Ollis Eintrag wird nicht gespeichert', async ({ page, context }) => {
+    await page.goto(`/#/tournament/${TOURNAMENT}/schedule`);
+    await expect(feld(page, 'away')).toHaveValue('2');
+    await feld(page, 'home').click();
+    await page.keyboard.type('1');
+
+    const tom = await context.newPage();
+    await tom.goto(`/#/tournament/${TOURNAMENT}/schedule`);
+    await expect(feld(tom, 'away')).toHaveValue('2');
+    // erst Gast 1 (Heim noch leer: Verlassen speichert nichts), dann Heim 3 und Enter
+    await feld(tom, 'away').fill('1');
+    await feld(tom, 'home').fill('3');
+    await feld(tom, 'home').press('Enter');
+    await expect(feld(tom, 'home')).toHaveCount(0, { timeout: 10_000 });
+
+    const hinweis = page.getByRole('status').filter({ hasText: 'Ergebnis wurde inzwischen von einem anderen Gerät geändert (jetzt 3:1)' });
+    await expect(hinweis.filter({ visible: true })).toHaveCount(1, { timeout: 10_000 });
+    await expect(page.getByRole('button', { name: 'Meine Eingabe behalten' }).filter({ visible: true })).toHaveCount(0);
+    // Langer Text: nichts läuft über (Hinweis und Seite ohne waagerechtes Scrollen)
+    const sichtbar = hinweis.filter({ visible: true }).first();
+    expect(await sichtbar.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await test.info().attach('fu104-hinweis-beendet', { body: await page.screenshot(), contentType: 'image/png' });
+
+    // Ollis „1“ ist nicht gespeichert worden: nach dem Neuladen steht Toms 3:1
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    if ((page.viewportSize()?.width ?? 0) <= 768) {
+      await expect(page.getByTestId(`final-goals-${HF1}-home`)).toHaveText('3');
+      await expect(page.getByTestId(`final-goals-${HF1}-away`)).toHaveText('1');
+    } else {
+      await expect(page.getByText(/^3\s?:\s?1$/).filter({ visible: true }).first()).toBeVisible();
+    }
+  });
+});
