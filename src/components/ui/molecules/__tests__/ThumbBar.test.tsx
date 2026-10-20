@@ -170,4 +170,10 @@ describe('ThumbBar (Plan 3.1)', () => {
     render(<ThumbBar ariaLabel="x" layout="daumen" slots={[a('Rückgängig', 'bar-undo', 'neben', { ariaLabel: 'Rückgängig: Tor Nr. 7 zurücknehmen' })]} />);
     expect(screen.getByRole('button', { name: 'Rückgängig: Tor Nr. 7 zurücknehmen' })).toHaveTextContent('Rückgängig');
   });
+
+  it('S5 ein gesperrter Knopf nutzt das Token opacity.disabled, kein festes Maß', () => {
+    render(<ThumbBar ariaLabel="x" layout="daumen" slots={[a('Pause', 'bar-main', 'haupt', { disabled: true }), a('Mehr', 'bar-more', 'mehr')]} />);
+    expect(screen.getByTestId('bar-main').style.opacity).toBe('var(--opacity-disabled)');
+    expect(screen.getByTestId('bar-more').style.opacity).toBe('1');
+  });
 });

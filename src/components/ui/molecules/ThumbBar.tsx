@@ -87,8 +87,7 @@ function knopfStil(slot: Extract<ThumbBarSlot, { art: 'aktion' }>, layout: Thumb
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.bold,
     cursor: slot.disabled ? 'not-allowed' : 'pointer',
-    // S5: 0,5 bleibt, bis Spielanzeige S2 `opacity.disabled` liefert (dann hier ersetzen)
-    opacity: slot.disabled ? 0.5 : 1,
+    opacity: slot.disabled ? cssVars.opacity.disabled : 1,
     touchAction: 'manipulation',
     ...(layout === 'breit'
       ? { flex: GEWICHT[slot.rolle] }
