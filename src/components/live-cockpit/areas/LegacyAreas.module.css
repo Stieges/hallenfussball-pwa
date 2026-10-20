@@ -34,6 +34,7 @@
 }
 
 .linksBreit {
+  gap: var(--spacing-md);
   min-height: 0;
 }
 

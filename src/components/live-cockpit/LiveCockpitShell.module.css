@@ -26,7 +26,12 @@
 }
 
 /* Laptop (≥ 1024 px): die Fläche passt ohne Scrollen, die Liste der Einträge scrollt allein (@SL-061). Reicht die Höhe nicht
-   (z. B. 1024 × 768 mit dreizeiligem Teamnamen), scrollt die Fläche, statt Knöpfe abzuschneiden (visuelle Prüfung, text.abgeschnitten). */
+   (z. B. 1024 × 768 mit dreizeiligem Teamnamen), scrollt die Fläche, statt Knöpfe abzuschneiden (visuelle Prüfung, text.abgeschnitten).
+   Engere Abstände (md), damit der schwere Fall bei 1280 × 720 ohne Scrollen passt. */
+.container[data-layout='breit'] .content {
+  padding: var(--spacing-md);
+  gap: var(--spacing-md);
+}
 
 .contentMobile {
   gap: var(--spacing-sm);

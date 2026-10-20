@@ -93,6 +93,27 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
     }
   });
 
+  test('@SL-061 Laptop: der Inhaltsbereich selbst scrollt nicht (normaler Fall: Uhr, Stand, Tor-Knöpfe und Spalten stehen ohne Scrollen)', async ({ page, seedIndexedDB }) => {
+    test.skip((page.viewportSize()?.width ?? 0) < 1024, 'nur Laptop-Anordnung');
+    await seedIndexedDB({ tournaments: [cup()] });
+    await anpfeifen(page);
+    await tippeZeitstrafe(page, 'home');
+    const ueberstand = await page.locator('[data-testid="live-cockpit"] > main').evaluate((el) => el.scrollHeight - el.clientHeight);
+    expect(ueberstand, 'Inhaltsbereich scrollt nicht').toBeLessThanOrEqual(1);
+  });
+
+  test('@SL-061 Laptop, schwerer Fall: der Inhaltsbereich selbst scrollt nicht', async ({ page, seedIndexedDB }) => {
+    // Bekannte Lücke (Fixrunde offen): bei 1280 × 720 fehlen im schwersten Fall (50-Zeichen-Name in Tafel und Spalte, vier Zeitstrafen, Meldezeile) rund 40 px
+    test.fail((page.viewportSize()?.height ?? 0) < 740, 'schwerster Fall passt bei 720 px Höhe noch nicht ganz ohne Scrollen des Inhaltsbereichs');
+    test.skip((page.viewportSize()?.width ?? 0) < 1024, 'nur Laptop-Anordnung');
+    await seedIndexedDB({ tournaments: [cup({ namen: [NAME_50, NAMEN[1], NAMEN[2], NAMEN[3]] })] });
+    await anpfeifen(page);
+    for (const seite of ['home', 'away'] as const) { await tippeZeitstrafe(page, seite); await tippeZeitstrafe(page, seite); }
+    await tippeKarte(page, 'home', 'Rot', 7);
+    const ueberstand = await page.locator('[data-testid="live-cockpit"] > main').evaluate((el) => el.scrollHeight - el.clientHeight);
+    expect(ueberstand, 'Inhaltsbereich scrollt nicht').toBeLessThanOrEqual(1);
+  });
+
   test('@SL-005 @SL-070 Halbzeit: der Wiederanpfiff liegt im ersten Bildschirm, kein Abpfiff in der Pause', async ({ page, seedIndexedDB }, testInfo) => {
     test.setTimeout(120_000);
     await seedIndexedDB({ tournaments: [cup({ minuten: 1 })] });
