@@ -182,6 +182,8 @@ test.describe('Cockpit-Tafel', () => {
     const abzeichen = page.getByTestId('scoreboard-abzeichen');
     await expect(abzeichen).toHaveAttribute('data-state', 'live');
     await expect(abzeichen).toHaveText('Live');
+    await expect(abzeichen).toHaveAttribute('data-pulse', 'true');
+    await expect(abzeichen.getByTestId('match-status-badge-dot')).toBeAttached();
     for (const fenster of [{ width: 360, height: 640 }, { width: 1280, height: 800 }]) {
       await page.setViewportSize(fenster);
       await expect(abzeichen).toBeVisible();

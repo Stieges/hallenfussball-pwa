@@ -140,7 +140,7 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
     return { hinweise, uhr: { rest: abgelaufenRest, gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', label: t('tafel.uhr.endstand'), unterzeile: null } };
   }
   if (phase.zustand === 'abgepfiffen') {
-    // B2: nie eine Restzeit unter „Abgepfiffen“ – nach dem Strafstoßschießen dessen Ergebnis, sonst die gespielte Zeit
+    // B2: nie eine Restzeit unter „Ende“ – nach dem Strafstoßschießen dessen Ergebnis, sonst die gespielte Zeit
     const strafstoss = match && view.phase === 'shootout' ? liveMatchFinalScore(match)?.penalty : undefined; // nur, wenn die Phase es hergibt
     if (strafstoss) {
       const seite = (anzeige: Side): number => (anzeige === 'home' ? strafstoss.a : strafstoss.b);

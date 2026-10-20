@@ -147,14 +147,14 @@ describe('toScoreboardModel: Zustand, Abschnitt und Stand', () => {
     expect(m.uhr).toMatchObject({ rest: '0:00', hervorgehoben: true, ton: 'ok', label: 'tafel.uhr.pauseVorbei', unterzeile: 'tafel.unterzeile.wiederanpfiff' });
   });
 
-  it('@SL-009 @SL-073 abgepfiffen mit 2:1: die Tafel zeigt „Abgepfiffen“ mit dem Endstand, auch ohne Ton', () => {
+  it('@SL-009 @SL-073 abgepfiffen mit 2:1: die Tafel zeigt „Ende“ mit dem Endstand, auch ohne Ton', () => {
     const m = toScoreboardModel(input({ status: 'finished', sectionElapsedMs: min(6) }, { match: makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 1 }) }, 'FINISHED'), t);
     expect(m.badge).toEqual({ kind: 'badge', state: 'ended' });
     expect([m.links.tore, m.rechts.tore]).toEqual([2, 1]);
     expect(m.ariaStand).toBe('tafel.ariaStand:{"links":"FC Nord","linksTore":2,"rechts":"SV Süd","rechtsTore":1}');
   });
 
-  // B2 (Review 2c, Auflage A-36b „Endstand nur aus matchFinalScore“): unter „Abgepfiffen“ steht nie eine Restzeit
+  // B2 (Review 2c, Auflage A-36b „Endstand nur aus matchFinalScore“): unter „Ende“ steht nie eine Restzeit
   it('@SL-073 abgepfiffen nach Ablauf: unter dem Zustand steht die gespielte Zeit, keine Restzeit', () => {
     const m = toScoreboardModel(input({ status: 'finished', sectionElapsedMs: min(6) }, { match: makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 1 }) }, 'FINISHED'), t);
     expect(m.uhr).toMatchObject({ label: 'tafel.uhr.spielzeit', rest: '6:00', ton: 'gedaempft' });
@@ -194,7 +194,7 @@ describe('toScoreboardModel: Zustand, Abschnitt und Stand', () => {
     expect(m.ariaStand.startsWith('tafel.ariaStand:')).toBe(true);
   });
 
-  it('@SL-082 Golden Goal: der Abschnitt heißt „Golden Goal“, der Zustand bleibt Live', () => {
+  it('@SL-082 Golden Goal: der Abschnitt heißt „Golden Goal“, das Abzeichen heißt „Verlängerung“ (@OB-066)', () => {
     const m = toScoreboardModel(input({ phase: 'overtime', tiebreakMode: 'goldenGoal', sectionLimitMs: min(3), sectionElapsedMs: min(1) }), t);
     expect(m.abschnittText).toBe('tafel.abschnitt.goldenGoal');
     expect(m.badge).toEqual({ kind: 'badge', state: 'overtime' });
