@@ -5,122 +5,55 @@
  * - Active filters (controls match list)
  * - Draft filters (only while BottomSheet is open)
  * - BottomSheet open/close state
- * - URL synchronization for shareable filter links
+ * - Adresse als Quelle der aktiven Filter (useSearchParams, @OB-029): Link teilen, neu laden, Zurück
  *
  * Implements Draft-State pattern to prevent data loss on accidental close.
  *
  * @see docs/concepts/SPIELPLAN-FILTER-KONZEPT.md Section 6
  */
 
-import { useReducer, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useReducer, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   ScheduleFilters,
   FilterState,
-  FilterAction,
   DEFAULT_FILTERS,
 } from '../../../types/scheduleFilters';
 import { Match, Team, Tournament } from '../../../types/tournament';
 import { filterMatches, countActiveFilters, hasActiveFilters } from '../../../utils/filterMatches';
-import { useURLFilterSync } from '../../../hooks/useURLFilterSync';
-
-// ---------------------------------------------------------------------------
-// Storage Keys
-// ---------------------------------------------------------------------------
-
-const STORAGE_KEY_PREFIX = 'schedule-filters';
-
-function getStorageKey(tournamentId: string): string {
-  return `${STORAGE_KEY_PREFIX}-${tournamentId}`;
-}
-
-// ---------------------------------------------------------------------------
-// Storage Helpers (sessionStorage for tab persistence)
-// ---------------------------------------------------------------------------
-
-function loadFiltersFromStorage(tournamentId: string): ScheduleFilters | null {
-  try {
-    const stored = sessionStorage.getItem(getStorageKey(tournamentId));
-    if (stored) {
-      return JSON.parse(stored) as ScheduleFilters;
-    }
-  } catch {
-    // Silent fail - storage operations are non-critical
-  }
-  return null;
-}
-
-function saveFiltersToStorage(tournamentId: string, filters: ScheduleFilters): void {
-  try {
-    sessionStorage.setItem(getStorageKey(tournamentId), JSON.stringify(filters));
-  } catch {
-    // Silent fail - storage operations are non-critical
-  }
-}
+import {
+  applyScheduleFiltersToParams,
+  parseScheduleFilterParams,
+} from './scheduleFilterParams';
 
 // ---------------------------------------------------------------------------
 // Reducer
 // ---------------------------------------------------------------------------
 
-function filterReducer(state: FilterState, action: FilterAction): FilterState {
+/** Die aktiven Filter stehen in der Adresse; der Reducer hält nur Entwurf und Sheet-Zustand. */
+type SheetState = Pick<FilterState, 'draftFilters' | 'isSheetOpen'>;
+type SheetAction =
+  | { type: 'OPEN_SHEET'; active: ScheduleFilters }
+  | { type: 'CLOSE_SHEET' }
+  | { type: 'UPDATE_DRAFT'; payload: Partial<ScheduleFilters> }
+  | { type: 'RESET_DRAFT' };
+
+function sheetReducer(state: SheetState, action: SheetAction): SheetState {
   switch (action.type) {
     case 'OPEN_SHEET':
-      // Copy active filters to draft when opening sheet
-      return {
-        ...state,
-        isSheetOpen: true,
-        draftFilters: { ...state.activeFilters },
-      };
-
+      // Aktive Filter beim Öffnen in den Entwurf kopieren
+      return { isSheetOpen: true, draftFilters: { ...action.active } };
     case 'CLOSE_SHEET':
-      // Discard draft when closing without apply
-      return {
-        ...state,
-        isSheetOpen: false,
-        draftFilters: null,
-      };
-
+      // Entwurf beim Schließen ohne Übernehmen verwerfen
+      return { isSheetOpen: false, draftFilters: null };
     case 'UPDATE_DRAFT':
-      // Update draft filters (only while sheet is open)
       if (!state.draftFilters) {
         return state;
       }
-      return {
-        ...state,
-        draftFilters: {
-          ...state.draftFilters,
-          ...action.payload,
-        },
-      };
-
-    case 'APPLY_DRAFT':
-      // Apply draft to active and close sheet
-      if (!state.draftFilters) {
-        return state;
-      }
-      return {
-        ...state,
-        activeFilters: { ...state.draftFilters },
-        isSheetOpen: false,
-        draftFilters: null,
-      };
-
+      return { ...state, draftFilters: { ...state.draftFilters, ...action.payload } };
     case 'RESET_DRAFT':
-      // Reset draft to defaults (not active!)
-      return {
-        ...state,
-        draftFilters: { ...DEFAULT_FILTERS },
-      };
-
-    case 'UPDATE_ACTIVE':
-      // Direct update to active filters (for desktop inline changes)
-      return {
-        ...state,
-        activeFilters: {
-          ...state.activeFilters,
-          ...action.payload,
-        },
-      };
-
+      // Entwurf auf Standard (nicht die aktiven Filter)
+      return { ...state, draftFilters: { ...DEFAULT_FILTERS } };
     default:
       return state;
   }
@@ -131,12 +64,8 @@ function filterReducer(state: FilterState, action: FilterAction): FilterState {
 // ---------------------------------------------------------------------------
 
 export interface UseScheduleFiltersOptions {
-  /** Tournament ID for storage persistence */
-  tournamentId: string;
-  /** Enable sessionStorage persistence (default: true) */
-  enablePersistence?: boolean;
-  /** Enable URL query parameter sync (default: true) */
-  enableURLSync?: boolean;
+  /** Wertebereich des Turniers: unbekannte gruppe/field-Werte aus der Adresse werden ignoriert */
+  filterOptions?: FilterOptions;
 }
 
 export interface UseScheduleFiltersReturn {
@@ -183,69 +112,49 @@ export interface UseScheduleFiltersReturn {
 // ---------------------------------------------------------------------------
 
 export function useScheduleFilters(
-  options: UseScheduleFiltersOptions
+  options: UseScheduleFiltersOptions = {}
 ): UseScheduleFiltersReturn {
-  const { tournamentId, enablePersistence = true, enableURLSync = true } = options;
+  const { filterOptions } = options;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [sheet, dispatch] = useReducer(sheetReducer, { draftFilters: null, isSheetOpen: false });
 
-  // URL sync hook
-  const { getInitialFilters, syncToURL } = useURLFilterSync({
-    enabled: enableURLSync,
-  });
+  // Aktive Filter = Adresse (einzige Quelle): Direktaufruf, Neu laden und Zurück ergeben sich daraus.
+  const paramString = searchParams.toString();
+  const filters = useMemo(
+    () => parseScheduleFilterParams(new URLSearchParams(paramString), filterOptions),
+    [paramString, filterOptions]
+  );
 
-  // Track if initial URL filters have been applied
-  const initializedFromURL = useRef(false);
-
-  // Initialize state with filters from URL > sessionStorage > defaults
-  const initialState: FilterState = useMemo(() => {
-    // Priority: URL params > sessionStorage > defaults
-    const urlFilters = enableURLSync ? getInitialFilters() : {};
-    const hasURL = Object.keys(urlFilters).length > 0;
-
-    if (hasURL) {
-      initializedFromURL.current = true;
-      return {
-        activeFilters: { ...DEFAULT_FILTERS, ...urlFilters },
-        draftFilters: null,
-        isSheetOpen: false,
-      };
-    }
-
-    const persisted = enablePersistence ? loadFiltersFromStorage(tournamentId) : null;
-    return {
-      activeFilters: persisted ?? { ...DEFAULT_FILTERS },
-      draftFilters: null,
-      isSheetOpen: false,
-    };
-  }, [tournamentId, enablePersistence, enableURLSync, getInitialFilters]);
-
-  const [state, dispatch] = useReducer(filterReducer, initialState);
-
-  // Sync filters to URL when they change
-  useEffect(() => {
-    if (enableURLSync) {
-      syncToURL(state.activeFilters);
-    }
-  }, [enableURLSync, syncToURL, state.activeFilters]);
+  // Jede Änderung ist ein Verlaufseintrag (Zurück stellt den vorigen Filter wieder her).
+  const writeFilters = useCallback(
+    (update: (current: ScheduleFilters) => ScheduleFilters) => {
+      setSearchParams((prev) => {
+        const next = applyScheduleFiltersToParams(prev, update(parseScheduleFilterParams(prev, filterOptions)));
+        return next.toString() === prev.toString() ? prev : next;
+      });
+    },
+    [setSearchParams, filterOptions]
+  );
 
   // ---------------------------------------------------------------------------
   // Sheet Actions
   // ---------------------------------------------------------------------------
 
   const openSheet = useCallback(() => {
-    dispatch({ type: 'OPEN_SHEET' });
-  }, []);
+    dispatch({ type: 'OPEN_SHEET', active: filters });
+  }, [filters]);
 
   const closeSheet = useCallback(() => {
     dispatch({ type: 'CLOSE_SHEET' });
   }, []);
 
   const applyDraft = useCallback(() => {
-    dispatch({ type: 'APPLY_DRAFT' });
-    // Persist after applying
-    if (enablePersistence && state.draftFilters) {
-      saveFiltersToStorage(tournamentId, state.draftFilters);
+    const draft = sheet.draftFilters;
+    if (draft) {
+      writeFilters(() => draft);
     }
-  }, [enablePersistence, tournamentId, state.draftFilters]);
+    dispatch({ type: 'CLOSE_SHEET' });
+  }, [sheet.draftFilters, writeFilters]);
 
   const resetDraft = useCallback(() => {
     dispatch({ type: 'RESET_DRAFT' });
@@ -260,38 +169,27 @@ export function useScheduleFilters(
   }, []);
 
   const updateFilters = useCallback(
-    (updates: Partial<ScheduleFilters>) => {
-      dispatch({ type: 'UPDATE_ACTIVE', payload: updates });
-      // Persist after update
-      if (enablePersistence) {
-        saveFiltersToStorage(tournamentId, {
-          ...state.activeFilters,
-          ...updates,
-        });
-      }
-    },
-    [enablePersistence, tournamentId, state.activeFilters]
+    (updates: Partial<ScheduleFilters>) => writeFilters((current) => ({ ...current, ...updates })),
+    [writeFilters]
   );
 
-  const resetFilters = useCallback(() => {
-    dispatch({ type: 'UPDATE_ACTIVE', payload: DEFAULT_FILTERS });
-    if (enablePersistence) {
-      saveFiltersToStorage(tournamentId, DEFAULT_FILTERS);
-    }
-  }, [enablePersistence, tournamentId]);
+  const resetFilters = useCallback(
+    () => writeFilters(() => ({ ...DEFAULT_FILTERS, status: [] })),
+    [writeFilters]
+  );
 
   // ---------------------------------------------------------------------------
   // Computed Values
   // ---------------------------------------------------------------------------
 
   const activeFilterCount = useMemo(
-    () => countActiveFilters(state.activeFilters),
-    [state.activeFilters]
+    () => countActiveFilters(filters),
+    [filters]
   );
 
   const hasFilters = useMemo(
-    () => hasActiveFilters(state.activeFilters),
-    [state.activeFilters]
+    () => hasActiveFilters(filters),
+    [filters]
   );
 
   // ---------------------------------------------------------------------------
@@ -300,20 +198,20 @@ export function useScheduleFilters(
 
   const getFilteredMatches = useCallback(
     (matches: Match[], teams: Team[], useDraft = false): Match[] => {
-      const filtersToUse = useDraft && state.draftFilters
-        ? state.draftFilters
-        : state.activeFilters;
+      const filtersToUse = useDraft && sheet.draftFilters
+        ? sheet.draftFilters
+        : filters;
       return filterMatches(matches, filtersToUse, teams);
     },
-    [state.activeFilters, state.draftFilters]
+    [filters, sheet.draftFilters]
   );
 
   const getMatchCount = useCallback(
-    (matches: Match[], teams: Team[], filters?: ScheduleFilters): number => {
-      const filtersToUse = filters ?? state.activeFilters;
+    (matches: Match[], teams: Team[], override?: ScheduleFilters): number => {
+      const filtersToUse = override ?? filters;
       return filterMatches(matches, filtersToUse, teams).length;
     },
-    [state.activeFilters]
+    [filters]
   );
 
   // ---------------------------------------------------------------------------
@@ -321,9 +219,9 @@ export function useScheduleFilters(
   // ---------------------------------------------------------------------------
 
   return {
-    filters: state.activeFilters,
-    draftFilters: state.draftFilters,
-    isSheetOpen: state.isSheetOpen,
+    filters,
+    draftFilters: sheet.draftFilters,
+    isSheetOpen: sheet.isSheetOpen,
 
     openSheet,
     closeSheet,
