@@ -34,6 +34,7 @@ interface RepoMocks {
   local: {
     listForCurrentUser: ReturnType<typeof vi.fn>;
     updateLocalVersion: ReturnType<typeof vi.fn>;
+    confirmUpload: ReturnType<typeof vi.fn>;
     save: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
   };
@@ -58,6 +59,7 @@ function createRepo(): { repo: OfflineRepository; mocks: RepoMocks } {
     local: {
       listForCurrentUser: vi.fn(async () => []),
       updateLocalVersion: vi.fn(async () => undefined),
+      confirmUpload: vi.fn(async () => undefined),
       save: vi.fn(async () => undefined),
       get: vi.fn(async () => null),
     },

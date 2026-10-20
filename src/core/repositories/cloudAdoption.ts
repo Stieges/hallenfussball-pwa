@@ -23,6 +23,11 @@ export interface CloudAdoption {
     patch?: ReadonlyMap<string, ServerLedMatchPatch>;
     /** Revisionen je Spiel nach der Übernahme (vollständig). */
     revisions: ReadonlyMap<string, number>;
+    /**
+     * C-VERSION-MEHRDEUTIG: Feldweg für eine Kopie ohne bestätigte Version (älterer Stand), deren Version gleich der
+     * Cloud-Version ist, bei erfüllter Regel Q (nichts Eigenes wartet oder ist gescheitert): die Cloud bestätigt sie.
+     */
+    confirmedVersion?: number;
 }
 
 export interface CloudAdoptionOptions {
@@ -68,10 +73,14 @@ export function decideCloudAdoption(
     const revisionAhead = (cloud.changeRevision ?? 0) > (local?.changeRevision ?? 0);
     const wholeWanted = options.whole || cloudVersion > localVersion || visibilityStale || revisionAhead;
     if (local === null || (wholeWanted && (options.wholeAllowed?.() ?? true))) {
-        return { save: options.owned(keepNewerFields(cloud, local, read.matchRevisions, stored)), revisions: maxRevisions(stored, read.matchRevisions) };
+        // C-VERSION-MEHRDEUTIG: die ganze Kopie beruht auf der Cloud-Version (bestätigte Version)
+        const whole = { ...keepNewerFields(cloud, local, read.matchRevisions, stored), serverVersion: cloud.version };
+        return { save: options.owned(whole), revisions: maxRevisions(stored, read.matchRevisions) };
     }
     const merged = mergeServerLedFields(local, cloud, read.matchRevisions, stored, 'stufe2');
-    return { patch: merged.patch, revisions: maxRevisions(stored, merged.adopted) };
+    const confirms = local.serverVersion === undefined && cloud.version !== undefined && local.version === cloud.version
+        && (options.wholeAllowed?.() ?? true);
+    return { patch: merged.patch, revisions: maxRevisions(stored, merged.adopted), ...(confirms ? { confirmedVersion: cloud.version } : {}) };
 }
 
 const revisionKey = (tournamentId: string): string => `serverRevisions-${tournamentId}`;

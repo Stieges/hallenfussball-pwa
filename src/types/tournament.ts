@@ -535,6 +535,13 @@ export interface Tournament {
   // Optimistic Locking
   version?: number;
   /**
+   * C-VERSION-MEHRDEUTIG (@FU-106, Regel „nichts still überschreiben“): zuletzt vom Server bestätigte Version, auf der der
+   * Inhalt beruht. Gesetzt nur bei der Übernahme aus der Cloud oder nach einem bestätigten Upload; ein lokales Speichern
+   * trägt den Wert der Nutzlast weiter (nie „Nutzlast + 1“). Voll-Speichern und Metadaten prüfen am Server gegen ihn.
+   * Nie in die Cloud geschrieben.
+   */
+  serverVersion?: number;
+  /**
    * A-10 (@TM-027, Befund C-SLOT-UPDATE-OHNE-VERSION): Änderungszählung des Servers (`tournaments.change_revision`),
    * zählt Spielplan-Änderungen ohne Versions-CAS. Nur aus der Cloud gelesen; lokale Schreibwege ändern sie nie.
    * Höherer Cloud-Wert → ganze Kopie übernehmen (Regel Q gilt). Fehlt die Spalte: 0.

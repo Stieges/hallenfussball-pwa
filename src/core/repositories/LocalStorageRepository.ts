@@ -13,6 +13,7 @@ import { quarantineLegacyTournaments, LEGACY_TOURNAMENTS_NOTICE_EVENT } from '..
 import { applyServerLedPatch, type ServerLedMatchPatch } from './serverLedMatchFields';
 import { readServerRevisions, writeServerRevisions, type CloudAdoption } from './cloudAdoption';
 import { generateShareCode } from '../models/shareCode';
+import { checkedVersion } from './confirmedVersion';
 
 /**
  * A2 Fixrunde 3 (N2, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md`):
@@ -61,11 +62,12 @@ export class LocalStorageRepository implements ITournamentRepository {
         return this.serialize(() => this.patchNow(id, patch));
     }
 
-    private async patchNow(id: string, patch: ReadonlyMap<string, ServerLedMatchPatch>): Promise<void> {
+    private async patchNow(id: string, patch: ReadonlyMap<string, ServerLedMatchPatch>, confirmedVersion?: number): Promise<void> {
         const list = await this.loadList();
         const index = list.findIndex(t => t.id === id);
         if (index === -1) { return; }
-        list[index] = { ...list[index], matches: applyServerLedPatch(list[index].matches, patch) };
+        const confirmed = confirmedVersion === undefined ? {} : { serverVersion: confirmedVersion }; // C-VERSION-MEHRDEUTIG
+        list[index] = { ...list[index], matches: applyServerLedPatch(list[index].matches, patch), ...confirmed };
         await this.saveList(list);
     }
 
@@ -79,7 +81,11 @@ export class LocalStorageRepository implements ITournamentRepository {
         return this.serialize(async () => {
             const storage = await createStorage();
             const adoption = decide(await this.get(id), await readServerRevisions(storage, id));
-            if (adoption.save) { await this.saveNow(adoption.save, true); } else if (adoption.patch?.size) { await this.patchNow(id, adoption.patch); }
+            if (adoption.save) {
+                await this.saveNow(adoption.save, true);
+            } else if (adoption.patch?.size || adoption.confirmedVersion !== undefined) {
+                await this.patchNow(id, adoption.patch ?? new Map(), adoption.confirmedVersion);
+            }
             await writeServerRevisions(storage, id, adoption.revisions, adoption.save && new Set(adoption.save.matches.map(m => m.id)));
             return adoption;
         });
@@ -108,7 +114,10 @@ export class LocalStorageRepository implements ITournamentRepository {
         return list.find(t => t.shareCode?.toUpperCase() === normalizedCode && t.isPublic) ?? null;
     }
 
-    /** A-08f3c1: Version = Version der Nutzlast + 1 (wie die Cloud beim Speichern; ohne Version setzt sie 1). */
+    /**
+     * A-08f3c1: Version = Version der Nutzlast + 1 (Anzeige, wie die Cloud beim Speichern; ohne Version setzt sie 1).
+     * C-VERSION-MEHRDEUTIG: die bestätigte Version ist die Basis der Nutzlast (`checkedVersion`), nie die gestempelte.
+     */
     save(tournament: Tournament): Promise<void> {
         return this.serialize(() => this.saveNow(tournament));
     }
@@ -122,7 +131,11 @@ export class LocalStorageRepository implements ITournamentRepository {
         const list = await this.loadList();
         const index = list.findIndex(t => t.id === tournament.id);
         // A-10: die Änderungszählung kommt nur aus der Cloud (cacheCloudCopy); lokale Schreibwege behalten den gespeicherten Wert.
-        const stamp = cached ? {} : { version: (tournament.version ?? 0) + 1, updatedAt: new Date().toISOString(), changeRevision: list[index]?.changeRevision };
+        // C-VERSION-MEHRDEUTIG: der Inhalt beruht auf der bestätigten Version der Nutzlast -- sie geht mit, die gestempelte Zahl nicht.
+        const stamp = cached ? {} : {
+            version: (tournament.version ?? 0) + 1, serverVersion: checkedVersion(tournament),
+            updatedAt: new Date().toISOString(), changeRevision: list[index]?.changeRevision,
+        };
 
         if (index >= 0) {
             // A-07e: bestehender Konto-Marker bleibt, wenn der Aufrufer keinen setzt
@@ -246,8 +259,23 @@ export class LocalStorageRepository implements ITournamentRepository {
     }
 
     /**
+     * C-VERSION-MEHRDEUTIG: bestätigter Upload. Beruht die Kopie noch auf der geprüften Basis `base` (nichts anderes kam
+     * dazwischen), tragen Version und bestätigte Version danach `confirmed`. Sonst bleibt sie unverändert.
+     */
+    confirmUpload(id: string, base: number | undefined, confirmed: number): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === id);
+            if (index === -1 || checkedVersion(list[index]) !== base) { return; }
+            list[index] = { ...list[index], version: confirmed, serverVersion: confirmed };
+            await this.saveList(list);
+        });
+    }
+
+    /**
      * Updates the local version number after a successful cloud sync.
      * Does NOT increment - sets it to the exact value from cloud.
+     * C-VERSION-MEHRDEUTIG: nur die angezeigte Version; die bestätigte setzt `confirmUpload`.
      */
     updateLocalVersion(id: string, version: number): Promise<void> {
         return this.serialize(async () => {

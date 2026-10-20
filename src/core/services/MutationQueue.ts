@@ -13,6 +13,8 @@ import {
 import type { QueueTimers } from './mutationQueueRetry';
 import { executeMetadataMutation, type MetadataMutationPayload } from './metadataMutation';
 import { safeLocalStorage } from '../utils/safeStorage';
+import { checkedVersion, withCheckedVersion } from '../repositories/confirmedVersion';
+import { captureFeatureError } from '../../lib/sentry';
 
 export { MAX_RETRIES, type MutationQueueStatus } from './GenericMutationQueue';
 
@@ -103,6 +105,18 @@ async function skipUploadForGuestEntries(
         return await hasGuestEngineEntries(localTournament);
     } catch (error) {
         throw new GuestStoreReadError('Gast-Speicher nicht lesbar', { cause: error });
+    }
+}
+
+/**
+ * C-VERSION-MEHRDEUTIG: bestätigten Upload lokal vermerken. Der Server hat schon gespeichert – ein Fehler beim Vermerk
+ * wird gemeldet, löst aber keinen zweiten Versuch aus (der träfe die eigene, neue Server-Version als Konflikt).
+ */
+async function confirmLocally(localRepo: LocalStorageRepository, tournamentId: string, base: number): Promise<void> {
+    try {
+        await localRepo.confirmUpload(tournamentId, base, base + 1);
+    } catch (error) {
+        captureFeatureError(error instanceof Error ? error : new Error(String(error)), 'sync', 'confirmUpload', { tournamentId });
     }
 }
 
@@ -252,7 +266,13 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                         if (hasEntries) {
                             break;
                         }
-                        await supabaseRepo.save(tournament);
+                        // C-VERSION-MEHRDEUTIG (@FU-106): geprüft wird gegen die bestätigte Version der (zusammengefassten)
+                        // Nutzlast, nie gegen die lokal gestempelte; danach gilt der Upload als bestätigt.
+                        const base = checkedVersion(tournament);
+                        await supabaseRepo.save(withCheckedVersion(tournament));
+                        if (base !== undefined) {
+                            await confirmLocally(localRepo, tournament.id, base);
+                        }
                         break;
                     }
                     case 'DELETE_TOURNAMENT': {
