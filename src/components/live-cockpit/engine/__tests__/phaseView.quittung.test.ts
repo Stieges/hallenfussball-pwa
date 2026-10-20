@@ -51,4 +51,11 @@ describe('phaseViewOf: quittungRestMs (@SL-152)', () => {
     zu(100_000);
     expect(sicht(spiel).quittungRestMs).toBeNull();
   });
+
+  it('@SL-152 Abpfiff-Zeit liegt in der Zukunft (fremde Geräteuhr): die Restzeit ist höchstens 30 Sekunden', async () => {
+    const spiel = await spielAnlegen();
+    await abgepfiffenNach(spiel, 240_000);
+    zu(100_000); // Uhr dieses Geräts geht hinter der des Abpfiffs: `finishedAt` liegt 140 Sekunden voraus
+    expect(sicht(spiel).quittungRestMs).toBe(30_000);
+  });
 });

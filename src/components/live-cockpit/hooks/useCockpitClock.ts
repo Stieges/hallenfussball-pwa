@@ -12,6 +12,7 @@ import type { PhaseView } from '../engine/phaseView';
 import type { LiveMatch } from '../types';
 import { useAutoSectionEnd, type SectionEnded } from './useAutoSectionEnd';
 import { useWhistle } from './useWhistle';
+import type { NoticeKennung } from './useCockpitNotices';
 
 export interface CockpitClockArgs {
   tournamentId: string;
@@ -22,7 +23,7 @@ export interface CockpitClockArgs {
   /** Engine-Ansicht des Spiels (`null` ohne Engine-Kopie). */
   engineView: PhaseView | null;
   /** Meldezeile: Stufe 3 = Bestätigung, Stufe 2 = Fehler. */
-  melde: (stufe: 2 | 3, text: string) => void;
+  melde: (stufe: 2 | 3, text: string, kennung?: NoticeKennung) => void;
 }
 
 export interface CockpitClock {
@@ -47,7 +48,7 @@ export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
   const onEnded = useCallback((ended: SectionEnded) => {
     whistle.pfeife(ended.eventId, ended.kind === 'match' ? 'spiel' : 'abschnitt');
     if (ended.kind === 'match' && ended.eventId !== null) {
-      melde(3, t('meldung.abgepfiffen'));
+      melde(3, t('meldung.abgepfiffen'), 'abgepfiffen');
     }
   }, [whistle, melde, t]);
   useAutoSectionEnd({

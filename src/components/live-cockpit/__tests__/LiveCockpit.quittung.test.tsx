@@ -95,6 +95,41 @@ describe('LiveCockpit: Quittungszeile nach dem Abpfiff (@SL-152)', () => {
     expect(screen.getByTestId('scoreboard-quittung')).toHaveTextContent('Abgepfiffen · 1:0 gespeichert');
   });
 
+  it('@SL-152 von selbst abgepfiffen: die Quittung steht, die Meldung „Spiel abgepfiffen“ steht nicht zusätzlich in der Meldezeile', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={EIN_ABSCHNITT} />);
+    await anpfiff(user);
+    await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
+    zu(600_000);
+    await waitFor(() => expect(quittung()).not.toBeNull());
+    await new Promise((fertig) => { setTimeout(fertig, 300); });
+    expect(screen.getByTestId('notice-line')).not.toHaveTextContent('Spiel abgepfiffen');
+  });
+
+  it('@SL-152 Abpfiff von Hand: die Quittung steht, die Meldung „Spiel abgepfiffen“ steht nicht zusätzlich in der Meldezeile', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={EIN_ABSCHNITT} />);
+    await anpfiff(user);
+    await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
+    zu(240_000);
+    await user.click(screen.getByTestId('match-finish-button'));
+    await waitFor(() => expect(quittung()).not.toBeNull());
+    await new Promise((fertig) => { setTimeout(fertig, 300); });
+    expect(screen.getByTestId('notice-line')).not.toHaveTextContent('Spiel abgepfiffen');
+  });
+
+  it('@SL-152 ohne Netz (Einträge warten im Ausgang): Quittung „gespeichert“ und „Einträge warten“ stehen zugleich, „gespeichert“ heißt lokal', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={EIN_ABSCHNITT} />); // das Gerüst sendet nichts: alles bleibt im Ausgang
+    await anpfiff(user);
+    await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
+    zu(240_000);
+    await user.click(screen.getByTestId('match-finish-button'));
+    await waitFor(() => expect(quittung()).not.toBeNull());
+    expect(quittung()).toHaveTextContent('Abgepfiffen · 0:0 gespeichert');
+    await waitFor(() => expect(screen.getByTestId('scoreboard-eintraege-warten')).toHaveTextContent(/Einträge? warte/));
+  });
+
   it('@SL-152 nach den 30 Sekunden steht keine Zeile mehr, das Abzeichen bleibt „Ende“ (Gegenbeispiel)', async () => {
     const user = userEvent.setup();
     render(<Harness turnier={EIN_ABSCHNITT} />);

@@ -110,7 +110,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     onPause: (id) => { onPause(id); showInfo(t('meldung.pausiert')); },
     onResume: (id) => { onResume(id); showSuccess(t('meldung.fortgesetzt')); },
     onStartSection: cockpitClock.wiederanpfiff,
-    onFinish: (id) => { const gesendet = onFinish(id); showInfo(t('meldung.abgepfiffen')); return gesendet; },
+    onFinish: (id) => { const gesendet = onFinish(id); melde(3, t('meldung.abgepfiffen'), 'abgepfiffen'); return gesendet; },
     onFinished: cockpitClock.abgepfiffenVonHand,
   });
 

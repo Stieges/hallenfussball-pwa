@@ -32,7 +32,7 @@ export interface ScoreboardInput {
   schlussphaseMinuten?: number;
   eintraegeWarten: number;
   helferAnfragen: number;
-  /** Jetzt in ms (für „seit … Minuten überfällig“); kommt aus einem Takt, nie aus `Date.now()` im Render. */
+  /** Jetzt in ms (für „überfällig N Min“ (@OB-068)); kommt aus einem Takt, nie aus `Date.now()` im Render. */
   jetztMs: number;
   /** Trikotfarben der Stand-Kästen je Anzeigeseite (Aufgabe 2.6); fehlt sie, bleibt der Kasten neutral. */
   trikot?: Partial<Record<'links' | 'rechts', string | null>>;

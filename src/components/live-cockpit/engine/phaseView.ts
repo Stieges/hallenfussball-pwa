@@ -78,7 +78,8 @@ export function quittungRestOf(state: MatchState, serverNow: number): number | n
   if (state.status !== 'finished' || state.finishedAt === null) {
     return null;
   }
-  return Math.max(0, QUITTUNG_MS - (serverNow - state.finishedAt));
+  // nach oben auf 30 s begrenzt: liegt der Abpfiff durch eine fremde Geräteuhr in der Zukunft, steht die Zeile nicht länger
+  return Math.min(QUITTUNG_MS, Math.max(0, QUITTUNG_MS - (serverNow - state.finishedAt)));
 }
 
 /** Ereignistypen, die keine Uhr-Stellung eines Eintrags sind. */
