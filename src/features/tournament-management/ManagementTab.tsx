@@ -10,7 +10,7 @@
  * - Zeit-Editor für manuelle Anpassungen
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, Tournament } from '../../types/tournament';
 import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
@@ -20,13 +20,16 @@ import { useCockpitExecution } from '../../hooks/useCockpitExecution';
 import { useCockpitLeerGrund } from './hooks/useCockpitLeerGrund';
 import { useCan } from '../auth/hooks/useCan';
 import { RulesLockProvider } from '../../components/match-settings/RulesLockContext';
-import { useToast } from '../../components/ui/Toast/ToastContext';
-import { captureFeatureError } from '../../lib/sentry';
-import { MatchAwaitingTeamsError, MatchNotOnEngineError, type MatchNotOnEngineReason } from '../../core/errors';
-import { matchLabelText } from '../../core/models/slotLabel';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
-import { buildSideContext, sideDisplay, sideName } from '../../components/schedule/matchSides';
-import { matchesOfFieldInPlayOrder } from './utils/fieldMatchOrder';
+import { buildSideContext } from '../../components/schedule/matchSides';
+import { useFieldMatchSelection } from './hooks/useFieldMatchSelection';
+import { useEngineMatchInit } from './hooks/useEngineMatchInit';
+import { toMatchSummary } from './model/toMatchSummary';
+import { CockpitSlimHeader } from '../../components/live-cockpit/frame/CockpitSlimHeader';
+import { StorageWarningBanner } from '../../components/StorageWarningBanner';
+import { FeldWahl } from '../../components/live-cockpit/frame/FeldWahl';
+import { ConnectionPill } from '../../components/live-cockpit/frame/ConnectionPill';
+import { useAnnounceCockpitFrame, istCockpitVollbild } from '../../components/live-cockpit/frame/cockpitFrame';
 import styles from './ManagementTab.module.css';
 
 interface ManagementTabProps {
@@ -55,19 +58,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const { t } = useTranslation('tournament');
   const { t: tCommon } = useTranslation('common');
   const { t: tCockpit } = useTranslation('cockpit');
-  const { showError } = useToast();
-  const [selectedFieldNumber, setSelectedFieldNumber] = useState<number>(1);
-  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
-  const [isInitializingMatch, setIsInitializingMatch] = useState<boolean>(false);
-  // P7: `getLiveMatchData` kann werfen -- unterscheidet "kein Spiel" von "noch nicht bereit".
-  const [engineReadyError, setEngineReadyError] = useState<boolean>(false);
-  // @TM-033: das Spiel hat noch eine offene Seite – kein Fehler, sondern ein Wartegrund
-  const [awaitingTeams, setAwaitingTeams] = useState<boolean>(false);
-  // A-08a (@FU-069): Spiel ist nicht über die Engine leitbar (z. B. Ergebnis schon eingetragen)
-  const [notOnEngineReason, setNotOnEngineReason] = useState<MatchNotOnEngineReason | null>(null);
   const { isOnline } = useOnlineStatus();
-  // Minor 4: "Erneut versuchen" erzwingt einen neuen Ladeversuch ueber diesen Zaehler (s. u.).
-  const [retryToken, setRetryToken] = useState(0);
 
   // A-08a: Cockpit nur über Engine-Ereignisse (kein Altservice, kein Altweg)
   const {
@@ -88,23 +79,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // Rolle entscheidet useCan (Gedächtnis, sonst L7: Spielbetrieb offen) -- „ohne Mitgliedszeile erlaubt“ entfällt.
   const canChangeRules = useCan('tournamentSettings', tournament.id);
   const canPlay = useCan('writeMatchData', tournament.id);
-
-  // Handle initial match ID from navigation (e.g., from ScheduleTab "Zum Cockpit", URL `?matchId=`).
-  // C-COCKPIT-MATCHID-BEENDET: Öffnen beendet nie ein anderes Spiel (@SL-010, ein Gerät je Feld) –
-  // laufende Spiele bleiben laufen, das Cockpit zeigt nur das gewählte.
-  useEffect(() => {
-    if (initialMatchId) {
-      // Find the match to get its field number
-      const match = schedule.allMatches.find(m => m.id === initialMatchId);
-      if (match) {
-        // Set the field and match selection
-        setSelectedFieldNumber(match.field);
-        setSelectedMatchId(initialMatchId);
-      }
-      // Consume the initial match ID
-      onInitialMatchConsumed?.();
-    }
-  }, [initialMatchId, schedule.allMatches, onInitialMatchConsumed]);
+  const { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel, ladeNaechstes } = useFieldMatchSelection({
+    numberOfFields: tournament.numberOfFields, schedule, liveMatches, initialMatchId, onInitialMatchConsumed,
+  });
 
   // Spielseiten: Team über die Team-ID, offene Seite über ihre Herkunft (@TM-015) – nie über gespeicherte Namen
   const sides = useMemo(
@@ -114,100 +91,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     [tournament.teams, tournament.groups, schedule.allMatches],
   );
 
-  // Convert ScheduledMatch to MatchSummary
-  const toMatchSummary = useCallback((sm: ScheduledMatch): MatchSummary => {
-    const home = sideDisplay(sm, 'A', sides);
-    const away = sideDisplay(sm, 'B', sides);
-    return {
-      id: sm.id,
-      number: sm.matchNumber,
-      phaseLabel: sm.label ? matchLabelText(sm.label) : (sm.phase === 'groupStage' ? t('management.groupStage') : t('management.finalRound')),
-      scheduledKickoff: sm.time,
-      fieldId: `field-${sm.field}`,
-      homeTeam: { id: home.id, name: home.name },
-      awayTeam: { id: away.id, name: away.name },
-      tournamentPhase: sm.phase, // For detecting phase changes
-    };
-  }, [sides, t]);
+  // ScheduledMatch als MatchSummary (mit den getragenen Farben, @SL-160)
+  const toSummary = useCallback((sm: ScheduledMatch): MatchSummary => toMatchSummary(sm, { tournament, sides, t }), [tournament, sides, t]);
 
-  // Get matches for selected field
-  const fieldMatches = useMemo(
-    () => matchesOfFieldInPlayOrder(schedule.allMatches, selectedFieldNumber),
-    [schedule.allMatches, selectedFieldNumber]
-  );
-
-  // Find current match (selected OR running OR first without result)
-  const currentMatchData = useMemo((): ScheduledMatch | undefined => {
-    if (selectedMatchId) {
-      return fieldMatches.find(m => m.id === selectedMatchId);
-    }
-    // Automatic selection: Running match or first without result
-    const runningMatch = fieldMatches.find((m) => {
-      const liveMatch = liveMatches.get(m.id);
-      return liveMatch && liveMatch.status !== 'FINISHED';
-    });
-    return runningMatch ?? fieldMatches.find((m) =>
-      m.scoreA === undefined || m.scoreB === undefined
-    );
-  }, [selectedMatchId, fieldMatches, liveMatches]);
-
-  // C-3 FIX: cancellation bei schnellem Feldwechsel. Minor 2: Reset VOR jedem fruehen Ausstieg.
-  useEffect(() => {
-    setEngineReadyError(false);
-    setAwaitingTeams(false);
-    setNotOnEngineReason(null);
-    // @FU-004 (C-COCKPIT-LAEDT-NACH-ABPFIFF): auch "wird geladen" vor jedem frühen Ausstieg zurücksetzen --
-    // ein abgebrochener Lauf (cancelled) setzt es nicht mehr zurück und ließe den Ladehinweis stehen.
-    setIsInitializingMatch(false);
-    if (!currentMatchData) {
-      return;
-    }
-    const matchId = currentMatchData.id;
-    const existingMatch = liveMatches.get(matchId);
-    if (existingMatch) {
-      // Match already exists, no need to initialize
-      return;
-    }
-
-    let cancelled = false;
-
-    setIsInitializingMatch(true);
-
-    void getLiveMatchData(currentMatchData)
-      .catch((error: unknown) => {
-        if (cancelled) { return; }
-        // @TM-033: offene Seite = Wartegrund, kein Fehler (kein Toast, keine Sentry-Meldung)
-        if (error instanceof MatchAwaitingTeamsError) {
-          setAwaitingTeams(true);
-          return;
-        }
-        // A-08a (@FU-069)/A-08e W1: nicht leitbar -> Hinweis bzw. "wird vorbereitet" statt Fehlerzweig (kein Toast, kein Sentry)
-        if (error instanceof MatchNotOnEngineError) {
-          if (error.reason === 'other') { setEngineReadyError(true); } else { setNotOnEngineReason(error.reason); }
-          return;
-        }
-        // P7: Toast + Sentry statt stiller Leeranzeige; "Spiel wird vorbereitet" statt "Keine Spiele".
-        const normalizedError = error instanceof Error ? error : new Error(String(error));
-        captureFeatureError(normalizedError, 'tournament', 'ensureEngineMatchReady');
-        showError(t('management.engineReadyError'));
-        setEngineReadyError(true);
-      })
-      .finally(() => {
-        // Only update state if this effect hasn't been cancelled
-        if (!cancelled) {
-          setIsInitializingMatch(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-    // C-3 FIX: Intentionally only depend on ID to prevent re-init on other property changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMatchData?.id, getLiveMatchData, liveMatches, retryToken]);
-
-  // Minor 4: erhoeht `retryToken` (s. Abhaengigkeitsliste oben), der Effekt laeuft dadurch erneut.
-  const handleRetryEngineReady = useCallback(() => setRetryToken((n) => n + 1), []);
+  const { isInitializingMatch, engineReadyError, awaitingTeams, notOnEngineReason, handleRetryEngineReady } = useEngineMatchInit({ currentMatchData, liveMatches, getLiveMatchData });
 
   // Current match as LiveMatch (derived from state)
   const currentMatch = useMemo(() =>
@@ -226,57 +113,25 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const lastFinishedMatch = useMemo(() =>
      
     lastFinishedMatchData ? {
-      match: toMatchSummary(lastFinishedMatchData),
+      match: toSummary(lastFinishedMatchData),
       homeScore: lastFinishedMatchData.scoreA,
       awayScore: lastFinishedMatchData.scoreB,
     } : null,
-    [lastFinishedMatchData, toMatchSummary]
+    [lastFinishedMatchData, toSummary]
   );
 
   // Upcoming matches (matches after current)
   const upcomingMatches = useMemo(() => {
     const currentIndex = fieldMatches.findIndex((m) => m.id === currentMatchData?.id);
     return currentIndex !== -1
-      ? fieldMatches.slice(currentIndex + 1).map(toMatchSummary)
-      : fieldMatches.map(toMatchSummary);
-  }, [fieldMatches, currentMatchData, toMatchSummary]);
-
-  // Handler: Match selection change – C-COCKPIT-MATCHID-BEENDET: beendet kein laufendes Spiel (@SL-010)
-  const handleMatchSelectionChange = useCallback((newMatchId: string | null) => {
-    setSelectedMatchId(newMatchId);
-  }, []);
-
-  // Handler: Load next match on current field
-  // BUG-FIX: Improved logic - find next unplayed match on current field
-  const handleLoadNextMatch = useCallback(() => {
-    // Find next unplayed match on current field after current match
-    const currentIndex = fieldMatches.findIndex(m => m.id === currentMatchData?.id);
-    const nextMatchOnField = fieldMatches
-      .slice(currentIndex + 1)
-      .find(m => m.scoreA === undefined || m.scoreB === undefined);
-
-    if (nextMatchOnField) {
-      setSelectedMatchId(nextMatchOnField.id);
-    } else {
-      // If no more matches on current field, find first unplayed match on any field
-      const firstUnplayedMatch = schedule.allMatches.find(
-        m => m.scoreA === undefined || m.scoreB === undefined
-      );
-      if (firstUnplayedMatch && firstUnplayedMatch.field !== selectedFieldNumber) {
-        // Switch to that field and select the match
-        setSelectedFieldNumber(firstUnplayedMatch.field);
-        setSelectedMatchId(firstUnplayedMatch.id);
-      } else {
-        // Reset selection to auto-select
-        setSelectedMatchId(null);
-      }
-    }
-  }, [fieldMatches, currentMatchData, schedule.allMatches, selectedFieldNumber]);
+      ? fieldMatches.slice(currentIndex + 1).map(toSummary)
+      : fieldMatches.map(toSummary);
+  }, [fieldMatches, currentMatchData, toSummary]);
 
   const handleFinishAndReset = useCallback((matchId: string): Promise<string | null> => handleFinish(matchId).then((eventId) => {
-    setTimeout(() => { setSelectedMatchId(null); }, 0);
+    setTimeout(() => { waehleSpiel(null); }, 0);
     return eventId;
-  }), [handleFinish]);
+  }), [handleFinish, waehleSpiel]);
 
   const handleUpdateSettings = useCallback(async (settings: import('../../types/tournament').MatchCockpitSettings) => {
     // @W2A-030: Regelfelder speichert nur die Turnierleitung. Alle anderen behalten den
@@ -303,65 +158,38 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
   // Kein Spiel im Cockpit: die Tafel nennt den Grund (@SL-052, @SL-054); Sperr-Hinweise nach Rot (@SL-089)
   const { leer, sperrHinweise, leerProps } = useCockpitLeerGrund({
-    tournament, allMatches: schedule.allMatches, currentMatchData, awaitingTeams, isOnline, sides, selectedFieldNumber,
-    upcomingMatches, onLoadNextMatch: handleLoadNextMatch,
+    tournament, allMatches: schedule.allMatches, currentMatchData, awaitingTeams, isOnline, sides, selectedFieldNumber: feld,
+    upcomingMatches, onLoadNextMatch: ladeNaechstes,
   });
 
-  return (
-    <div className={styles.container}>
-      {/* FIELD SELECTOR (if multiple fields) */}
-      {tournament.numberOfFields > 1 && (
-        <div className={styles.fieldSelector}>
-          {Array.from({ length: tournament.numberOfFields }, (_, i) => i + 1).map((fieldNum) => (
-            <button
-              key={fieldNum}
-              data-testid={`field-button-${fieldNum}`}
-              className={`${styles.fieldButton} ${fieldNum === selectedFieldNumber ? styles.fieldButtonActive : ''}`}
-              onClick={() => {
-                setSelectedFieldNumber(fieldNum);
-                setSelectedMatchId(null);
-              }}
-            >
-              {t('management.field', { number: fieldNum })}
-            </button>
-          ))}
-        </div>
-      )}
+  // A1/K6: schmaler Kopf, sobald das Feld ein Spiel hat oder auf Teams wartet – auch beim Laden und Vorbereiten (der Kopf springt nicht)
+  const vollbild = istCockpitVollbild(leer?.art ?? 'vorAnpfiff');
+  useAnnounceCockpitFrame(vollbild);
 
-      {/* MATCH SELECTOR */}
-      <div className={styles.matchSelector}>
-        <label className={styles.matchSelectorLabel}>
-          {t('management.selectMatch')}
-        </label>
-        <select
-          className={styles.matchSelect}
-          value={selectedMatchId ?? ''}
-          onChange={(e) => { handleMatchSelectionChange(e.target.value || null); }}
-        >
-          <option value="">{t('management.autoNextMatch')}</option>
-          {fieldMatches.map(match => (
-            <option key={match.id} value={match.id}>
-              #{match.matchNumber} - {sideName(match, 'A', sides)} vs {sideName(match, 'B', sides)} ({match.time})
-              {match.scoreA !== undefined ? ` [${match.scoreA}:${match.scoreB}]` : ''}
-            </option>
-          ))}
-        </select>
-      </div>
+  return (
+    <div className={vollbild ? `${styles.container} ${styles.containerVollbild}` : styles.container} data-testid="management-tab">
+      {vollbild && (
+        <CockpitSlimHeader
+          tournamentId={tournament.id} turnierName={tournament.title} felder={tournament.numberOfFields} feld={feld} onFeld={setFeld}
+          verbindung={<ConnectionPill tournamentId={tournament.id} />}
+        />
+      )}
+      {/* Speicher-Warnung im Rahmen: im Fluss unter dem Kopf, damit sie nicht verloren geht (die feste Leiste der Hülle entfällt hier) */}
+      {vollbild && <StorageWarningBanner imFluss />}
 
       {/* LIVE COCKPIT */}
       {currentMatch ? (
         <RulesLockProvider value={!canChangeRules}>
           <LiveCockpit
-            fieldName={t('management.field', { number: selectedFieldNumber })}
+            fieldName={t('management.field', { number: feld })}
             tournamentName={tournament.title}
             tournamentId={tournament.id}
             cockpitSettings={tournament.matchCockpitSettings}
-            readOnly={!canPlay}
+            kannSteuern={canPlay}
             currentMatch={currentMatch}
             sperrHinweise={sperrHinweise}
             lastFinishedMatch={lastFinishedMatch}
             upcomingMatches={upcomingMatches}
-            highlightNextMatchMinutesBefore={5}
             onStart={(matchId) => { void hookHandleStart(matchId); }}
             onPause={(matchId) => { void handlePause(matchId); }}
             onResume={(matchId) => { void handleResume(matchId); }}
@@ -370,7 +198,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             // A-08c (@FU-071): Undo, Direkteintrag, Zeit, Wiedereröffnen, K.-o.-/Strafstoß-Handler und
             // Ereignis-Bearbeiten/-Löschen haben keinen Engine-Weg und werden NICHT übergeben
             // -- das Cockpit blendet die zugehörigen Knöpfe aus.
-            onLoadNextMatch={handleLoadNextMatch}
+            onLoadNextMatch={ladeNaechstes}
             // Event tracking callbacks
             onTimePenalty={(matchId, teamId, options) => { void handleTimePenalty(matchId, teamId, options); }}
             onCard={(matchId, teamId, type, options) => { void handleCard(matchId, teamId, type, options); }}
@@ -397,7 +225,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           <div><button type="button" className={styles.retryButton} data-testid="engine-ready-retry" onClick={handleRetryEngineReady}>{tCommon('actions.retry')}</button></div>
         </div>
       ) : leer?.art === 'keinSpiel' ? (
-        <LiveCockpit {...leerProps} />
+        <>
+          {/* Ohne Spiel auf dem Feld gibt es keinen schmalen Kopf: die Feldwahl steht über der Tafel (Zone 1, @OB-030) */}
+          {tournament.numberOfFields > 1 && <div className={styles.feldwahlLeer}><FeldWahl felder={tournament.numberOfFields} feld={feld} onFeld={setFeld} /></div>}
+          <LiveCockpit {...leerProps} />
+        </>
       ) : (
         <div className={styles.noMatches}>
           {t('management.noMatchesOnField')}

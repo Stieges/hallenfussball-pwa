@@ -4,7 +4,7 @@
  * ohne Toast und ohne Sentry-Meldung.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import type { Tournament } from '../../../types/tournament';
 import type { GeneratedSchedule, ScheduledMatch } from '../../../core/generators';
 import { MatchNotOnEngineError } from '../../../core/errors';
@@ -76,6 +76,7 @@ vi.mock('../../../hooks/useCockpitExecution', () => ({
 
 import { ManagementTab } from '../ManagementTab';
 
+import { RouterWrapper } from './routerWrapper';
 const NORD = testUuid(1);
 const UFER = testUuid(2);
 const SPIEL = testUuid(201);
@@ -91,21 +92,16 @@ function scheduled(partial: Partial<ScheduledMatch> & Pick<ScheduledMatch, 'id'>
   };
 }
 
-function setup(matches: ScheduledMatch[]) {
+function setup(matches: ScheduledMatch[], initialMatchId?: string) {
   const teams = [{ id: NORD, name: 'FC Nord' }, { id: UFER, name: 'VfB Ufer' }];
   const tournament = { id: 't1', title: 'Hallencup', numberOfFields: 1, teams, matches: [], groups: [] } as unknown as Tournament;
   const schedule = {
     tournament: { id: 't1', title: 'Hallencup' }, teams, allMatches: matches, phases: [],
   } as unknown as GeneratedSchedule;
-  return render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
+  return render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} initialMatchId={initialMatchId} />, { wrapper: RouterWrapper });
 }
 
-/** Spiele mit Ergebnis fallen bei der Auto-Auswahl heraus; die Turnierleitung wählt sie im Feld aus. */
-function selectMatch(container: HTMLElement, matchId: string): void {
-  const select = container.querySelector('select');
-  if (!select) { throw new Error('Spielauswahl fehlt'); }
-  fireEvent.change(select, { target: { value: matchId } });
-}
+/** Spiele mit Ergebnis fallen bei der Auto-Auswahl heraus; sie öffnen sich über `?matchId=` aus dem Spielplan (es gibt keine Spielauswahl, @SL-057). */
 
 describe('ManagementTab – @FU-069 Hinweis bei eingetragenem Ergebnis (A-08a)', () => {
   beforeEach(() => {
@@ -114,8 +110,7 @@ describe('ManagementTab – @FU-069 Hinweis bei eingetragenem Ergebnis (A-08a)',
   });
 
   it('@FU-069 zeigt den Hinweis statt Cockpit, ohne Toast und ohne Sentry-Meldung', async () => {
-    const { container } = setup([scheduled({ id: SPIEL, scoreA: 3, scoreB: 1 })]);
-    selectMatch(container, SPIEL);
+    setup([scheduled({ id: SPIEL, scoreA: 3, scoreB: 1 })], SPIEL);
 
     await waitFor(() => expect(screen.getByTestId('cockpit-not-on-engine')).toBeInTheDocument());
     expect(screen.getByTestId('cockpit-not-on-engine')).toHaveTextContent('Spiel ist beendet – Korrektur über die Turnierleitung');

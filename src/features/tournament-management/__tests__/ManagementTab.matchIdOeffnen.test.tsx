@@ -14,7 +14,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useState } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { ManagementTab } from '../ManagementTab';
 import type { Tournament } from '../../../types/tournament';
 import type { GeneratedSchedule } from '../../../core/generators';
@@ -22,9 +21,10 @@ import type { LiveMatch as CoreLiveMatch } from '../../../core/models/LiveMatch'
 import type { TournamentRole } from '../../auth/types/auth.types';
 import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
+import { RouterWrapper } from './routerWrapper';
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 vi.mock('../../../components/live-cockpit', () => ({
-  LiveCockpit: () => <div data-testid="cockpit-stub" />,
+  LiveCockpit: ({ currentMatch }: { currentMatch: { id: string } | null }) => <div data-testid="cockpit-stub" data-match-id={currentMatch?.id} />,
 }));
 vi.mock('../../../hooks/useMatchSound', () => ({
   useMatchSound: () => ({
@@ -139,10 +139,9 @@ describe('ManagementTab: Öffnen eines Spiels beendet kein anderes Spiel (C-MATC
   for (const role of ['collaborator', 'owner'] as const) {
     it(`@SL-010: Spiele 11 (Feld 1) und 12 (Feld 2) laufen, Cockpit von Spiel 12 per ?matchId= öffnen (${role}) → Spiel 11 läuft weiter`, async () => {
       currentRole = role;
-      render(<UrlEntry matchId={SPIEL_12} />);
+      render(<UrlEntry matchId={SPIEL_12} />, { wrapper: RouterWrapper });
 
-      const select = await screen.findByRole('combobox');
-      await waitFor(() => expect(select).toHaveValue(SPIEL_12));
+      await waitFor(() => expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-match-id', SPIEL_12));
       expect(handleFinish).not.toHaveBeenCalled();
       expect(screen.queryByTestId('confirm-dialog-confirm')).not.toBeInTheDocument();
     });
@@ -150,32 +149,26 @@ describe('ManagementTab: Öffnen eines Spiels beendet kein anderes Spiel (C-MATC
 
   it('@SL-010: Spiel 11 läuft auf Feld 1, Cockpit von Spiel 13 (Feld 1) per ?matchId= öffnen → Spiel 11 läuft weiter, kein stilles Beenden', async () => {
     currentRole = 'collaborator';
-    render(<UrlEntry matchId={SPIEL_13} />);
+    render(<UrlEntry matchId={SPIEL_13} />, { wrapper: RouterWrapper });
 
-    const select = await screen.findByRole('combobox');
-    await waitFor(() => expect(select).toHaveValue(SPIEL_13));
+    await waitFor(() => expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-match-id', SPIEL_13));
     expect(handleFinish).not.toHaveBeenCalled();
   });
 
-  it('@SL-010: Spiel 11 läuft, Tom wählt im Cockpit Spiel 13 aus → Spiel 11 wird nicht beendet, es gibt keinen Beenden-Dialog', async () => {
+  it('@SL-057 im Live-Bereich gibt es keine Spielauswahl: Spiel 11 läuft weiter und steht im Cockpit, nichts wird beendet', async () => {
     currentRole = 'collaborator';
-    const user = userEvent.setup();
-    render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
+    render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />, { wrapper: RouterWrapper });
 
-    const select = screen.getByRole('combobox');
-    await user.selectOptions(select, SPIEL_13);
-
-    await waitFor(() => expect(select).toHaveValue(SPIEL_13));
+    expect(screen.queryByRole('combobox', { name: /Spiel/ })).toBeNull();
+    expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-match-id', SPIEL_11);
     expect(screen.queryByTestId('confirm-dialog-confirm')).not.toBeInTheDocument();
     expect(handleFinish).not.toHaveBeenCalled();
   });
 
   it('Gegenbeispiel: das geöffnete Spiel steht im Cockpit – Feld 2 mit Spiel 12 ist gewählt', async () => {
     currentRole = 'collaborator';
-    render(<UrlEntry matchId={SPIEL_12} />);
+    render(<UrlEntry matchId={SPIEL_12} />, { wrapper: RouterWrapper });
 
-    const select = await screen.findByRole('combobox');
-    await waitFor(() => expect(select).toHaveValue(SPIEL_12));
-    expect(screen.getByTestId('cockpit-stub')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-match-id', SPIEL_12));
   });
 });

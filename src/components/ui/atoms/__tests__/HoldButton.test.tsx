@@ -181,4 +181,20 @@ describe('HoldButton (Plan 3.1)', () => {
     fireEvent.pointerDown(knopf, { pointerId: 1, button: 0 });
     expect(fuellung.style.transform).toBe('scaleX(1)');
   });
+
+  it('S5 Füllung ist ein Balken am unteren Rand auf einer Spur, keine Vollfläche über den Knopf', () => {
+    const { knopf } = setup();
+    const fuellung = screen.getByTestId('abpfiff-fuellung');
+    const spur = screen.getByTestId('abpfiff-spur');
+    expect(spur).toContainElement(fuellung);
+    expect(knopf).toContainElement(spur);
+    expect(spur.style.bottom).toBe('var(--spacing-xs)');
+    expect(spur.style.height).toBe('var(--spacing-xs)');
+    expect(fuellung.style.inset).toBe('');
+  });
+
+  it('S5 ein tabIndex von außen (Roving Tabindex der Leiste) landet am Knopf', () => {
+    render(<HoldButton label="Abpfiff" onHold={vi.fn()} testId="abpfiff" beschreibung="Gedrückt halten" tabIndex={-1} />);
+    expect(screen.getByTestId('abpfiff')).toHaveAttribute('tabindex', '-1');
+  });
 });

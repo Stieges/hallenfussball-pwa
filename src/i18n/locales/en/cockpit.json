@@ -500,5 +500,65 @@
     "rot": "Red",
     "schonGelb": "No. {{nummer}} already has a yellow",
     "trotzdemGelb": "Yellow anyway"
+  },
+  "leiste": {
+    "aria": "Match controls",
+    "rueckgaengig": "Undo",
+    "rueckgaengigAria": "Undo: {{ziel}}",
+    "anpfiff": "Kick-off",
+    "pause": "Pause",
+    "weiter": "Resume",
+    "wiederanpfiff": "Restart",
+    "anpfiffVerlaengerung": "Start extra time",
+    "entscheidung": "Choose decider",
+    "weiterNaechstes": "Next match",
+    "mehr": "More",
+    "ereignisse": "Events",
+    "beendet": "Match has ended – corrections via the organisers",
+    "leitet": "{{feld}} is run by {{name}}",
+    "uebernehmen": "Take over the match",
+    "keinZugriff_one": "You no longer have access – 1 entry handed to the organisers",
+    "keinZugriff_other": "You no longer have access – {{count}} entries handed to the organisers",
+    "tasteLeertaste": "Space",
+    "tasteRueckgaengigStrg": "Ctrl+Z",
+    "tasteRueckgaengigCmd": "Cmd+Z"
+  },
+  "abpfiff": {
+    "label": "End match",
+    "halten": "hold down",
+    "beschreibung": "Press and hold for about one second",
+    "frage": "End match {{spiel}} with {{rest}} minutes still to play?",
+    "beenden": "End match",
+    "weiterspielen": "Keep playing"
+  },
+  "mehr": {
+    "titel": "More",
+    "uhrKorrigieren": "Correct clock",
+    "seitenTauschen": "Switch sides",
+    "einstellungen": "Settings",
+    "schliessen": "Close"
+  },
+  "entscheidung": {
+    "titel": "How is the match decided?",
+    "verlaengerung": "$t(sport:phases.overtime)",
+    "goldenGoal": "$t(sport:phases.goldenGoal)",
+    "strafstoss": "$t(sport:events.penaltyShootout)"
+  },
+  "rahmen": {
+    "zurueck": "Back",
+    "zurueckAria": "Back to the schedule",
+    "feldAria": "Choose field, now field {{feld}}",
+    "feld": "Field {{feld}}",
+    "online": "Connected",
+    "offline": "Offline",
+    "verbinden": "Connect",
+    "verbindet": "Connecting …",
+    "tastenkuerzel": "Shortcuts"
+  },
+  "naechstes": {
+    "label": "Next:",
+    "spiel": "Match {{nummer}}",
+    "anstoss": "Kick-off {{zeit}}",
+    "leibchen": "Bibs needed, the colours are too similar"
   }
 }

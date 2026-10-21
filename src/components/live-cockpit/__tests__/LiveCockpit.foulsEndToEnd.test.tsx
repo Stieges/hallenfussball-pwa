@@ -91,7 +91,7 @@ async function makeRunningEngine() {
 
 // Referenzstabile Props (neue `[]`/`vi.fn()` je Render wuerden Effekte im Cockpit neu ausloesen).
 const STABLE_PROPS = {
-  fieldName: 'Feld 1', tournamentName: 'Test-Turnier', tournamentId: tournament.id, upcomingMatches: [],
+  fieldName: 'Feld 1', tournamentName: 'Test-Turnier', tournamentId: tournament.id, upcomingMatches: [], kannSteuern: true,
   onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),
   onUndoLastEvent: vi.fn(), onManualEditResult: vi.fn(), onAdjustTime: vi.fn(),
   onLoadNextMatch: vi.fn(), onReopenLastMatch: vi.fn(),

@@ -1,0 +1,15 @@
+/* Zeile „Nächstes“ (Plan LT-3): drei kurze Pulse des Rahmens beim ersten Aktivwerden der Vorwarnung (@SL-155); bei „Bewegung reduzieren“ nie. */
+@keyframes rahmenPuls {
+  0%, 100% { box-shadow: none; }
+  50% { box-shadow: 0 0 0 var(--border-width-strong) var(--color-next-warn-border); }
+}
+
+.blinken {
+  animation: rahmenPuls 0.7s ease-in-out 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blinken {
+    animation: none;
+  }
+}

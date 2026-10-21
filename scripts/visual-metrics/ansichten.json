@@ -300,6 +300,16 @@
       "profil": "app"
     },
     {
+      "id": "cockpit-laptop-laeuft",
+      "titel": "Cockpit: Laptop-Ansicht, läuft (Finale, Rahmen ohne App-Kopf)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "desktop-1440"
+    },
+    {
       "id": "cockpit-abgepfiffen-verlaengerung",
       "titel": "Cockpit: abgepfiffen nach Verlängerung (Halbfinale 1)",
       "gruppen": [
@@ -355,12 +365,9 @@
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/tournament/hallencup-messlauf/live",
+      "app": "/#/tournament/hallencup-messlauf/live?f=2",
       "erwarte": "[data-testid=\"scoreboard\"]",
-      "profil": "app",
-      "klick": [
-        "[data-testid=\"field-button-2\"]"
-      ]
+      "profil": "app"
     },
     {
       "id": "cockpit-meldung-foul",
@@ -415,7 +422,8 @@
         "[data-testid=\"penalty-button-away\"]",
         "warte:400",
         "[data-testid=\"number-picker\"] [data-lage] button",
-        "warte:200"
+        "warte:200",
+        "scroll:oben"
       ]
     },
     {

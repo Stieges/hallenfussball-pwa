@@ -25,7 +25,7 @@ import {
   openCockpit,
   type AppendAsRoleEvent,
 } from './engineHelpers';
-import { enterGoal, enterTimePenaltyWithoutNumber } from './helpers';
+import { enterGoal, enterTimePenaltyWithoutNumber, vomLiveZumSpielplan } from './helpers';
 import { tippeKarte } from '../helpers/cockpitNeu';
 import { engineCupIds } from './testData';
 
@@ -310,7 +310,7 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
         await openSettledCockpit(ollisPage, ids.tournamentId, ids.matchId);
         const tomsPage = await openHelperCockpit(tomsContext, ids.tournamentId, ids.matchId);
 
-        await ollisPage.locator('[data-testid="desktop-tab-spielplan"]').click();
+        await vomLiveZumSpielplan(ollisPage); // Live-Bereich zeigt nur den schmalen Kopf: „Zurück“ führt zum Spielplan (@SL-140)
         if (variant.pauseMs > 0) {
           await ollisPage.waitForTimeout(variant.pauseMs);
         }

@@ -54,10 +54,10 @@ async function halbfinaleHerkunft(view: (typeof TM015_VIEWS)[number], { asRole, 
     ).toBe('Erster Gruppe A gegen Zweiter Gruppe B');
   } else if (view === 'Toms Cockpit') {
     // Toms Gerät ist erst nach D3 (Helfer per QR) Mitglied; bis dahin öffnet die Turnierleitung das Cockpit.
-    // Die Spielauswahl trägt für jedes Spiel "#<Nr> - <Heim> vs <Gast> (<Zeit>)" und als Wert die Spiel-ID, in Spielplan-Reihenfolge
-    // des Felds (C-SPIELNUMMER-FEHLT, C-FINALRUNDE-REIHENFOLGE, @SL-049, @TM-142): nach den 12 Gruppenspielen ist Halbfinale 1 das Spiel 13.
-    // Seitenanker: der Live-Reiter der Turnierleitung (Haupt-testid der Seite). Der Cockpit-Körper
-    // rendert beim unbesetzten HF1 bislang keinen TeamBlock (`team-name-home`), siehe N3.
+    // @TM-015: Toms Cockpit zeigt beim Halbfinale 1 die Herkunft beider Plätze, „Erster Gruppe A“ und „Zweiter Gruppe B“, solange die Teams noch offen sind.
+    // Die Spielauswahl gibt es im Cockpit nicht mehr (C-COCKPIT-SPIELAUSWAHL); das Spiel steht in der Adresse (`?matchId=`), die Herkunft in der Tafel
+    // (Titel „<Seite A> – <Seite B>“, Untertitel „Spiel <Nr> · Feld <n>“). Die Reihenfolge der Spielnummern des Felds (C-SPIELNUMMER-FEHLT,
+    // C-FINALRUNDE-REIHENFOLGE, @SL-049, @TM-142: nach den 12 Gruppenspielen ist Halbfinale 1 das Spiel 13) prüft die Datenbank.
     const { groupMatches } = await fetchTurniertagBracket();
     const hf1 = finals.find((match) => match.match_number === groupMatches.length + 1);
     if (!hf1) {
@@ -65,18 +65,15 @@ async function halbfinaleHerkunft(view: (typeof TM015_VIEWS)[number], { asRole, 
     }
     expect(hf1.label, `Spiel ${groupMatches.length + 1} der Datenbank ist das 1. Halbfinale`).toBe('1. Halbfinale');
     const nummernDesFelds = (await fetchTurniertagMatches()).filter((match) => match.field === hf1.field).map((match) => match.match_number);
+    expect(nummernDesFelds, 'Spielnummern des Felds: aufsteigend in Spielplan-Reihenfolge, kein „13, 14, …, 1, 2“').toEqual([...nummernDesFelds].sort((x, y) => (x ?? 0) - (y ?? 0)));
     const cockpitPage = await asRole('owner');
     await cockpitPage.goto(`/#/tournament/${TURNIERTAG_ID}/live?matchId=${hf1.id}`);
     await cockpitPage.waitForLoadState('networkidle');
-    await expectPageAnchor(cockpitPage.locator('[data-testid="desktop-tab-live"]'), 'Live-Reiter der Turnierleitung');
-    await expect(cockpitPage.locator(`option[value="${hf1.id}"]`)).toHaveText(new RegExp(`^#${groupMatches.length + 1} - Erster Gruppe A vs Zweiter Gruppe B`), { timeout: 5000 });
-    await expect(cockpitPage.locator(`select:has(option[value="${hf1.id}"])`)).toHaveValue(hf1.id);
-    // Spielreihenfolge des Felds: aufsteigende Spielnummern, kein „#13, #14, …, #1, #2“.
-    const optionen = cockpitPage.locator(`select:has(option[value="${hf1.id}"]) option:not([value=""])`);
-    await expect(optionen, 'Spielauswahl: alle Spiele des Felds').toHaveCount(nummernDesFelds.length);
-    const nummern = (await optionen.allTextContents()).map((text) => Number(/^#(\d+) - /.exec(text)?.[1]));
-    expect(nummern, 'Spielauswahl im Cockpit: Spiele des Felds in Spielplan-Reihenfolge, Spielnummern aufsteigend').toEqual([...nummern].sort((x, y) => x - y));
-    expect(nummern, 'Spielauswahl im Cockpit: Spielnummern wie in der Datenbank').toEqual([...nummernDesFelds].sort((x, y) => (x ?? 0) - (y ?? 0)));
+    await expectPageAnchor(cockpitPage.getByTestId('cockpit-slim-header'), 'Kopf des Live-Bereichs der Turnierleitung');
+    const tafel = cockpitPage.getByTestId('scoreboard');
+    await expect(tafel, 'Toms Cockpit zeigt beim Halbfinale 1 „Erster Gruppe A“').toContainText('Erster Gruppe A', { timeout: 5000 });
+    await expect(tafel, 'Toms Cockpit zeigt beim Halbfinale 1 „Zweiter Gruppe B“').toContainText('Zweiter Gruppe B');
+    await expect(tafel, `die Tafel nennt das Spiel mit seiner Nummer (Spiel ${groupMatches.length + 1})`).toContainText(`Spiel ${groupMatches.length + 1}`);
   } else if (view === 'Hallen-Monitor') {
     // Vorbereitung (E1): nur die Gruppenspiele auf Feld 1 beenden, Feld 2 bleibt offen.
     await vorbedingung('Gruppenspiele auf Feld 1 beenden', async () => {

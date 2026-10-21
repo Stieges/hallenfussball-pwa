@@ -66,6 +66,38 @@ describe('ThumbBar (Plan 3.1)', () => {
     expect(daumen).toHaveAttribute('aria-keyshortcuts', 'Space');
   });
 
+  it('@SL-153 Tasten-Hinweis auf der Hauptaktion erbt die Schriftfarbe der Fläche (Kontrast), auf Nebenaktionen bleibt er sekundär', () => {
+    render(<ThumbBar ariaLabel="x" layout="breit" slots={[
+      a('Pause', 'bar-main', 'haupt', { taste: { text: 'Leertaste', aria: 'Space' } }),
+      a('Rückgängig', 'bar-undo', 'neben', { taste: { text: 'Strg+Z', aria: 'Control+Z' } }),
+    ]} />);
+    expect(screen.getByText('Leertaste').style.color).toBe('var(--color-on-primary)');
+    expect(screen.getByText('Strg+Z').style.color).toBe('var(--color-text-secondary)');
+  });
+
+  it('@SL-157 der Halteknopf füllt seine Zelle am Laptop und am Handy (keine Lücke neben „Abpfiff“)', () => {
+    const slots = (): ThumbBarSlot[] => [
+      a('Pause', 'bar-main', 'haupt'),
+      { art: 'halten', halten: { label: 'Abpfiff', sublabel: 'halten', onHold: vi.fn(), testId: 'bar-hold', beschreibung: 'Gedrückt halten' } },
+      a('Mehr', 'bar-more', 'mehr'),
+    ];
+    const { unmount } = render(<ThumbBar ariaLabel="x" layout="breit" slots={slots()} />);
+    expect(screen.getByTestId('bar-hold').style.flex).toContain('1');
+    unmount();
+    render(<ThumbBar ariaLabel="x" layout="daumen" slots={slots()} />);
+    expect(screen.getByTestId('bar-hold').style.flex).toContain('1');
+  });
+
+  it('Laptop: „Mehr“ hat die feste Breite aus dem Token, die Reihe die Höhe aus dem Token; am Handy gilt weder noch', () => {
+    const { unmount } = render(<ThumbBar ariaLabel="x" layout="breit" slots={vier()} />);
+    expect(screen.getByTestId('bar-more').style.width).toBe('var(--sizing-cockpit-mehr-breit)');
+    expect(screen.getByTestId('bar-main').parentElement?.style.minHeight).toBe('var(--sizing-cockpit-leiste-breit)');
+    unmount();
+    render(<ThumbBar ariaLabel="x" layout="daumen" slots={vier()} />);
+    expect(screen.getByTestId('bar-more').style.width).toBe('');
+    expect(screen.getByTestId('bar-main').parentElement?.style.minHeight).toBe('');
+  });
+
   it('@SL-153 Rückgängig mit taste.aria = „Control+Z Meta+Z“ trägt genau diesen Wert', () => {
     render(<ThumbBar ariaLabel="x" layout="breit" slots={[a('Rückgängig', 'bar-undo', 'neben', { taste: { text: 'Strg+Z', aria: 'Control+Z Meta+Z' } })]} />);
     expect(screen.getByTestId('bar-undo')).toHaveAttribute('aria-keyshortcuts', 'Control+Z Meta+Z');
@@ -111,5 +143,69 @@ describe('ThumbBar (Plan 3.1)', () => {
     render(<ThumbBar ariaLabel="x" layout="daumen" slots={[slot]} />);
     await userEvent.click(screen.getByTestId('bar-main'));
     expect(slot.onPress).not.toHaveBeenCalled();
+  });
+
+  describe('S5 Werkzeugleiste: Pfeiltasten wechseln den Fokus, nur ein Knopf ist per Tab erreichbar', () => {
+    const mitHalten = (): ThumbBarSlot[] => [
+      a('Rückgängig', 'bar-undo', 'neben'),
+      a('Pause', 'bar-main', 'haupt'),
+      { art: 'halten', halten: { label: 'Abpfiff', sublabel: 'halten', onHold: vi.fn(), testId: 'bar-abpfiff', beschreibung: 'Gedrückt halten' } },
+      a('Mehr', 'bar-more', 'mehr'),
+    ];
+
+    it('Roving Tabindex: genau ein Knopf hat tabindex 0, die übrigen -1 (auch der Halteknopf)', () => {
+      render(<ThumbBar ariaLabel="x" layout="daumen" slots={mitHalten()} />);
+      const knoepfe = screen.getAllByRole('button');
+      expect(knoepfe.filter((b) => b.getAttribute('tabindex') === '0')).toHaveLength(1);
+      expect(knoepfe.filter((b) => b.getAttribute('tabindex') === '-1')).toHaveLength(3);
+      expect(screen.getByTestId('bar-undo')).toHaveAttribute('tabindex', '0');
+    });
+
+    it('Pfeil rechts/links wechselt zum nächsten/vorigen Knopf und nimmt den Tabstopp mit; am Rand bleibt es stehen', async () => {
+      const u = userEvent.setup();
+      render(<ThumbBar ariaLabel="x" layout="daumen" slots={mitHalten()} />);
+      screen.getByTestId('bar-undo').focus();
+      await u.keyboard('{ArrowRight}');
+      expect(screen.getByTestId('bar-main')).toHaveFocus();
+      expect(screen.getByTestId('bar-main')).toHaveAttribute('tabindex', '0');
+      expect(screen.getByTestId('bar-undo')).toHaveAttribute('tabindex', '-1');
+      await u.keyboard('{ArrowRight}');
+      expect(screen.getByTestId('bar-abpfiff')).toHaveFocus();
+      await u.keyboard('{ArrowLeft}{ArrowLeft}{ArrowLeft}');
+      expect(screen.getByTestId('bar-undo')).toHaveFocus();
+    });
+
+    it('Pos1 und Ende springen an die Ränder; ein gesperrter Knopf wird übersprungen', async () => {
+      const u = userEvent.setup();
+      const slots = mitHalten();
+      slots[1] = a('Pause', 'bar-main', 'haupt', { disabled: true });
+      render(<ThumbBar ariaLabel="x" layout="daumen" slots={slots} />);
+      screen.getByTestId('bar-undo').focus();
+      await u.keyboard('{ArrowRight}');
+      expect(screen.getByTestId('bar-abpfiff')).toHaveFocus();
+      await u.keyboard('{End}');
+      expect(screen.getByTestId('bar-more')).toHaveFocus();
+      await u.keyboard('{Home}');
+      expect(screen.getByTestId('bar-undo')).toHaveFocus();
+    });
+
+    it('Gegenbeispiel: Pfeil nach oben/unten ändert den Fokus nicht', async () => {
+      const u = userEvent.setup();
+      render(<ThumbBar ariaLabel="x" layout="daumen" slots={mitHalten()} />);
+      screen.getByTestId('bar-main').focus();
+      await u.keyboard('{ArrowDown}{ArrowUp}');
+      expect(screen.getByTestId('bar-main')).toHaveFocus();
+    });
+  });
+
+  it('ariaLabel nennt mehr als der sichtbare Text und enthält ihn (WCAG 2.5.3, Rückgängig mit Ziel)', () => {
+    render(<ThumbBar ariaLabel="x" layout="daumen" slots={[a('Rückgängig', 'bar-undo', 'neben', { ariaLabel: 'Rückgängig: Tor Nr. 7 zurücknehmen' })]} />);
+    expect(screen.getByRole('button', { name: 'Rückgängig: Tor Nr. 7 zurücknehmen' })).toHaveTextContent('Rückgängig');
+  });
+
+  it('S5 ein gesperrter Knopf nutzt das Token opacity.disabled, kein festes Maß', () => {
+    render(<ThumbBar ariaLabel="x" layout="daumen" slots={[a('Pause', 'bar-main', 'haupt', { disabled: true }), a('Mehr', 'bar-more', 'mehr')]} />);
+    expect(screen.getByTestId('bar-main').style.opacity).toBe('var(--opacity-disabled)');
+    expect(screen.getByTestId('bar-more').style.opacity).toBe('1');
   });
 });

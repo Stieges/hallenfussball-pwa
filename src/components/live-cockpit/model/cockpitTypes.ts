@@ -28,3 +28,27 @@ export const EINTRAG_ZEITSTRAFE: EntryKind = 'zeitstrafe';
 
 /** Mindestpause unterschritten (@SL-051): Team, tatsächliche und geforderte Pause in Minuten. Sperrt nichts. */
 export interface MindestpauseHinweis { teamName: string; minuten: number; mindestMinuten: number }
+
+/**
+ * Die Bedienung der Hülle für die Daumenleiste und das Blatt „Mehr“ (Aufgabe 3.6): Uhr, Rückgängig und die Blätter.
+ * Gebaut in `useCockpitCommands`; Rückgängig steht nur mit Engine-Ziel oder Sperrgrund da (A-08c, @FU-071).
+ */
+export interface CockpitControls {
+  onUndo?: () => void;
+  canUndo: boolean;
+  /** Beschriftung mit Ziel („Tor Nr. 7 zurücknehmen“, @SL-038). */
+  undoLabel?: string;
+  /** Grund, warum Rückgängig gerade nicht geht (G3). */
+  undoHint?: string;
+  onStart: () => void;
+  /** Pause, Weiter, Wiederanpfiff und Anpfiff der Verlängerung: die Uhr entscheidet nach dem Zustand. */
+  onPauseResume: () => void;
+  /** Abpfiff von Hand (öffnet ab LT-1 die Rückfrage). */
+  onFinish: () => void;
+  onEventLog: () => void;
+  onMore: () => void;
+  /** A-08c: ohne Handler kein Punkt „Uhr korrigieren“ (@FU-071). */
+  onEditTime?: () => void;
+  onSwitchSides: () => void;
+  onSettings: () => void;
+}
