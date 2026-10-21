@@ -8,6 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   HELPER_ACCESS_STORAGE_KEY,
   callDecideJoinRequest,
+  callHelperAccessStatus,
   callJoinCodeInfo,
   callListHelperAccess,
   callRequestHelperAccess,
@@ -86,8 +87,19 @@ describe('§ 3.2 Zuordnung Code-Info / Zugangsstatus → Anzeige', () => {
   it('@HE-098 Z.1 @HE-055 Z.1 entzogen → „Du hast keinen Zugriff mehr“', () => {
     expect(helperAccessView({ source: 'info', info: info({ relation: 'revoked' }), session: 'device' })).toEqual({ view: 'noAccess' });
   });
-  it('Gegenbeispiel: Status ohne Beziehung und ohne Zustand ist unerwartet, nie „Feld öffnen“', () => {
-    expect(helperAccessView({ source: 'info', info: { relation: 'none' }, session: 'device' })).toEqual({ view: 'unexpected' });
+  it('Review L-2: Zugangsstatus {relation:"none"} (keine Anfrage dieses Geräts) → eigene Art, nie unerwartet oder „Feld öffnen“', () => {
+    expect(helperAccessView({ source: 'info', info: { relation: 'none' }, session: 'device' })).toEqual({ view: 'noRequest' });
+    expect(helperAccessView({ source: 'info', info: { relation: 'none' }, session: 'account' })).toEqual({ view: 'noRequest' });
+  });
+  it('Gegenbeispiel L-2: offener Code ohne Beziehung bleibt Info + Name; Antwort ganz ohne Beziehung und Zustand → unerwartet', () => {
+    expect(helperAccessView({ source: 'info', info: info({ relation: 'none', shareCode: null }), session: 'device' }))
+      .toEqual({ view: 'joinForm', shareCode: null });
+    expect(helperAccessView({ source: 'info', info: {}, session: 'device' })).toEqual({ view: 'unexpected' });
+  });
+  it('Review L-2: callHelperAccessStatus nimmt {relation:"none"} an und führt zur eigenen Art', async () => {
+    const res = await callHelperAccessStatus(clientWith({ data: { relation: 'none' }, error: null }).client, 't-live');
+    expect(res).toEqual({ ok: true, data: { relation: 'none' } });
+    expect(res.ok && helperAccessView({ source: 'info', info: res.data, session: 'device' })).toEqual({ view: 'noRequest' });
   });
 });
 
@@ -130,6 +142,10 @@ describe('§ 3.2 Zuordnung Anfrage / Entscheidung / Fehler → Anzeige', () => {
     expect(helperAccessView({ source: 'error', error: { kind: 'network' } })).toEqual({ view: 'offline' });
     expect(helperAccessView({ source: 'authRateLimited' })).toEqual({ view: 'authRateLimited' });
   });
+  it('Review L-3: NOT_SIGNED_IN auf dem Helfer-Gerät → „Bitte noch einmal scannen“, nie „Nur die Turnierleitung …“', () => {
+    expect(helperAccessView({ source: 'error', error: { kind: 'noSession' } })).toEqual({ view: 'retryScan' });
+    expect(helperAccessView({ source: 'error', error: { kind: 'noSession' } })).not.toEqual({ view: 'leaderOnly' });
+  });
   it('22023 INVALID_NAME → Feldprüfung; andere Eingabefehler und Unerwartetes → unexpected', () => {
     expect(helperAccessView({ source: 'error', error: { kind: 'invalidInput', reason: 'INVALID_NAME' } })).toEqual({ view: 'invalidName' });
     expect(helperAccessView({ source: 'error', error: { kind: 'invalidInput', reason: 'INVALID_FIELD' } })).toEqual({ view: 'unexpected' });
@@ -144,6 +160,7 @@ describe('Fehler-Arten der Aufrufe', () => {
   });
   it('42501 = kein Recht; 22023 nur mit festem Grund; PGRST202 (Funktion fehlt vor dem Einspielen) = unerwartet', () => {
     expect(classifyHelperRpcError({ code: '42501', message: 'Not authorized' })).toEqual({ kind: 'notAuthorized' });
+    expect(classifyHelperRpcError({ code: '42501', message: 'NOT_SIGNED_IN' })).toEqual({ kind: 'noSession' });
     expect(classifyHelperRpcError({ code: '22023', message: 'INVALID_NAME' })).toEqual({ kind: 'invalidInput', reason: 'INVALID_NAME' });
     expect(classifyHelperRpcError({ code: '22023', message: 'anderes' })).toEqual({ kind: 'unexpected', message: '22023 anderes' });
     expect(classifyHelperRpcError({ code: 'PGRST202', message: 'not found' }).kind).toBe('unexpected');
@@ -159,6 +176,15 @@ describe('Fehler-Arten der Aufrufe', () => {
     expect(await callJoinCodeInfo(client, 'ZZZZZZZZZZ')).toEqual({ ok: true, data: { state: 'invalid' } });
     expect(rpc).toHaveBeenCalledWith('join_code_info', { p_code: 'ZZZZZZZZZZ' });
     expect((await callJoinCodeInfo(clientWith({ data: { state: 'kaputt' }, error: null }).client, 'X')).ok).toBe(false);
+  });
+  it('Review L-3: Anfrage ohne Sitzung (42501 NOT_SIGNED_IN) → noSession; Gegenbeispiel: 42501 Not authorized bleibt kein Recht', async () => {
+    const noSession = await callRequestHelperAccess(
+      clientWith({ data: null, error: { code: '42501', message: 'NOT_SIGNED_IN' } }).client, 'ABCDEFGHJK', 'Tom', null);
+    expect(noSession).toEqual({ ok: false, error: { kind: 'noSession' } });
+    expect(!noSession.ok && helperAccessView({ source: 'error', error: noSession.error })).toEqual({ view: 'retryScan' });
+    const leader = await callDecideJoinRequest(
+      clientWith({ data: null, error: { code: '42501', message: 'Not authorized' } }).client, 'r-1', { accept: false });
+    expect(!leader.ok && helperAccessView({ source: 'error', error: leader.error })).toEqual({ view: 'leaderOnly' });
   });
   it('S-5: die Anfrage sendet Name und Gerätebezeichnung als Parameter', async () => {
     const { client, rpc } = clientWith({ data: { result: 'PENDING', state: 'open', relation: 'pending', checkNumber: 42, tournament: LIVE_CUP }, error: null });

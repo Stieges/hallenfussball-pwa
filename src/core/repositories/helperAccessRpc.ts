@@ -5,7 +5,8 @@
  * Typen-PR nach dem DB-Fenster `src/types/supabase.ts` erneuert.
  *
  * Fehlerpolitik: Die Aufrufe werfen nicht, sie liefern `{ ok: false, error }` – Netz (kein Code, Transportfehler),
- * `notAuthorized` (42501), `invalidInput` (22023 mit festem Grund) oder `unexpected` (z. B. Funktion fehlt vor dem
+ * `noSession` (42501 `NOT_SIGNED_IN`: Helfer-Gerät ohne Sitzung), `notAuthorized` (sonst 42501), `invalidInput` (22023
+ * mit festem Grund) oder `unexpected` (z. B. Funktion fehlt vor dem
  * Einspielen, PGRST202/42883, oder eine Antwort außerhalb des Schemas). Die Zuordnung zur Anzeige (§ 3.2) macht
  * `helperAccessView`; Texte und i18n-Schlüssel legen A-17b/A-18a fest.
  *
@@ -139,6 +140,8 @@ const AuthorDevicesSchema = z.array(z.object({ event_id: z.string(), device_labe
 
 export type HelperRpcError =
   | { kind: 'network' }
+  /** 42501 `NOT_SIGNED_IN` aus `request_helper_access`: das Helfer-Gerät hat keine Sitzung (Review A-16 L-3). */
+  | { kind: 'noSession' }
   | { kind: 'notAuthorized' }
   | { kind: 'invalidInput'; reason: 'INVALID_NAME' | 'INVALID_FIELD' | 'INVALID_OPTION' | 'INVALID_ACTION' }
   | { kind: 'unexpected'; message: string };
@@ -157,7 +160,7 @@ export function classifyHelperRpcError(error: RpcError): HelperRpcError {
     return { kind: 'network' };
   }
   if (error.code === '42501') {
-    return { kind: 'notAuthorized' };
+    return error.message === 'NOT_SIGNED_IN' ? { kind: 'noSession' } : { kind: 'notAuthorized' };
   }
   const reason = INPUT_REASONS.find((r) => r === error.message);
   if (error.code === '22023' && reason) {
@@ -244,8 +247,9 @@ export type HelperAccessView =
   | { view: 'finalStandings'; tournamentId: string } // Endstand, kein Eintrag @HE-098 Z.2
   | { view: 'watchOnly'; tournamentId: string } // „Du kannst nur noch zusehen“ @HE-055 Z.2
   | { view: 'noAccess' } // „Du hast keinen Zugriff mehr“ @HE-098 Z.1 @HE-055 @HE-056
+  | { view: 'noRequest' } // Zugangsstatus `{relation:'none'}`: keine Anfrage dieses Geräts (Review A-16 L-2)
   | { view: 'busy' } // „Zu viele offene Anfragen – bitte an die Turnierleitung wenden“
-  | { view: 'retryScan' } // ACCOUNT_SESSION = Client-Fehler: Sentry + „Bitte noch einmal scannen“
+  | { view: 'retryScan' } // ACCOUNT_SESSION / NOT_SIGNED_IN = Client-Fehler: Sentry + „Bitte noch einmal scannen“
   | { view: 'decided' } // Leitung: Entscheidung gespeichert
   | { view: 'checkMismatch' } // „Prüfzahl passt nicht“ @HE-105
   | { view: 'alreadyDecided'; decidedBy: string | null } // „bereits von Olli entschieden“ @HE-006
@@ -303,7 +307,11 @@ function viewForInfo(info: HelperAccessStatus, session: 'none' | 'device' | 'acc
   if (info.state === 'open') {
     return session === 'account' ? { view: 'accountScan' } : { view: 'joinForm', shareCode: info.shareCode ?? null };
   }
-  return info.state === undefined ? { view: 'unexpected' } : STATE_VIEWS[info.state];
+  if (info.state === undefined) {
+    // helper_access_status ohne Anfrage dieses Geräts im Turnier (veralteter Index-Eintrag, Konto-Sitzung): eigene Art.
+    return info.relation === 'none' ? { view: 'noRequest' } : { view: 'unexpected' };
+  }
+  return STATE_VIEWS[info.state];
 }
 
 export function helperAccessView(input: HelperAccessViewInput): HelperAccessView {
@@ -335,6 +343,8 @@ export function helperAccessView(input: HelperAccessViewInput): HelperAccessView
       switch (input.error.kind) {
         case 'network':
           return { view: 'offline' };
+        case 'noSession':
+          return { view: 'retryScan' };
         case 'notAuthorized':
           return { view: 'leaderOnly' };
         case 'invalidInput':
