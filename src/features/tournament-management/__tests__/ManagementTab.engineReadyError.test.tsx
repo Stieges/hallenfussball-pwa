@@ -78,6 +78,7 @@ vi.mock('../../../hooks/useCockpitExecution', () => ({
 import { ManagementTab } from '../ManagementTab';
 import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
+import { RouterWrapper } from './routerWrapper';
 const MATCH_ID = 'match-1';
 const HOME = { id: 'team-a', name: 'FC Alpha' };
 const AWAY = { id: 'team-b', name: 'SV Beta' };
@@ -109,7 +110,7 @@ describe('ManagementTab — P7: ensureEngineMatchReady-Fehler', () => {
   it('zeigt einen showError-Toast und meldet den Fehler an Sentry (captureFeatureError)', async () => {
     render(
       <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
-    );
+    , { wrapper: RouterWrapper });
 
     await waitFor(() => expect(mockShowError).toHaveBeenCalled());
     expect(mockCaptureFeatureError).toHaveBeenCalledWith(rejectionError, 'tournament', 'ensureEngineMatchReady');
@@ -122,7 +123,7 @@ describe('ManagementTab — P7: ensureEngineMatchReady-Fehler', () => {
     mockGetLiveMatchData.mockRejectedValue(new MatchNotOnEngineError('other'));
     render(
       <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
-    );
+    , { wrapper: RouterWrapper });
 
     await waitFor(() => expect(screen.getByText('tournament:management.enginePreparing')).toBeInTheDocument());
     expect(screen.getByTestId('engine-ready-retry')).toBeInTheDocument();
@@ -133,7 +134,7 @@ describe('ManagementTab — P7: ensureEngineMatchReady-Fehler', () => {
   it('zeigt "Spiel wird vorbereitet" statt der irrefuehrenden "Keine Spiele auf diesem Feld"-Anzeige', async () => {
     render(
       <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
-    );
+    , { wrapper: RouterWrapper });
 
     // i18n ist im Test global auf Passthrough gemockt (Namespace:Schluessel statt Uebersetzung,
     // s. `src/test/setup.ts`) -- der Schluessel selbst ist hier das beobachtbare Signal.
@@ -150,7 +151,7 @@ describe('ManagementTab — P7: ensureEngineMatchReady-Fehler', () => {
   it('Minor 2: engineReadyError wird zurueckgesetzt, sobald das Feld leer ist (kein currentMatchData)', async () => {
     const { rerender } = render(
       <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
-    );
+    , { wrapper: RouterWrapper });
     await waitFor(() => expect(screen.getByText('tournament:management.enginePreparing')).toBeInTheDocument());
 
     // Wechsel: dasselbe Feld hat jetzt KEIN Spiel mehr (`currentMatchData` wird `undefined`).
@@ -171,7 +172,7 @@ describe('ManagementTab — P7: ensureEngineMatchReady-Fehler', () => {
   it('Minor 4: "Spiel wird vorbereitet" zeigt einen Erneut-versuchen-Knopf, ein Klick ruft getLiveMatchData erneut auf', async () => {
     render(
       <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
-    );
+    , { wrapper: RouterWrapper });
     await waitFor(() => expect(screen.getByText('tournament:management.enginePreparing')).toBeInTheDocument());
     expect(mockGetLiveMatchData).toHaveBeenCalledTimes(1);
 

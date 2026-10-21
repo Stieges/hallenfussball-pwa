@@ -1,5 +1,5 @@
 /**
- * Review A-11 A3: die Verdrahtung `readOnly={!canPlay}` (ManagementTab -> LiveCockpit, canPlay = useCan('writeMatchData')).
+ * Review A-11 A3: die Verdrahtung `kannSteuern={canPlay}` (ManagementTab -> LiveCockpit, canPlay = useCan('writeMatchData')).
  *
  * Ein Konto ohne `writeMatchData` (Trainer, Zuschauer) bekommt ein Cockpit nur zum Lesen. Gegenbeispiel @HE-042
  * („ein Spiel anpfeifen → gelingt“): Tom (Helfer) und die Turnierleitung leiten -- das Cockpit ist nicht schreibgeschützt.
@@ -15,11 +15,12 @@ import type { LiveMatch as CoreLiveMatch } from '../../../core/models/LiveMatch'
 import type { TournamentRole } from '../../auth/types/auth.types';
 import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
+import { RouterWrapper } from './routerWrapper';
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 
 vi.mock('../../../components/live-cockpit', () => ({
-  LiveCockpit: ({ readOnly }: { readOnly?: boolean }) => (
-    <div data-testid="cockpit-stub" data-readonly={String(readOnly === true)} />
+  LiveCockpit: ({ kannSteuern }: { kannSteuern?: boolean }) => (
+    <div data-testid="cockpit-stub" data-readonly={String(kannSteuern !== true)} />
   ),
 }));
 
@@ -121,7 +122,7 @@ describe('Review A-11 A3: Cockpit nur zum Lesen ohne Recht auf den Spielbetrieb 
 
   it.each<TournamentRole>(['trainer', 'viewer'])('Konto %s (kein writeMatchData): das Cockpit ist nur zum Lesen', (role) => {
     currentRole = role;
-    render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
+    render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />, { wrapper: RouterWrapper });
     expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-readonly', 'true');
   });
 
@@ -129,7 +130,7 @@ describe('Review A-11 A3: Cockpit nur zum Lesen ohne Recht auf den Spielbetrieb 
     'Gegenbeispiel @HE-042 %s (Tom/Maria/Olli): „ein Spiel anpfeifen“ – das Cockpit ist nicht schreibgeschützt',
     (role) => {
       currentRole = role;
-      render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
+      render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />, { wrapper: RouterWrapper });
       expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-readonly', 'false');
     },
   );

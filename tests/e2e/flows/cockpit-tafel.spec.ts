@@ -8,6 +8,7 @@
 
 import { test, expect } from '../helpers/test-fixtures';
 
+import { abpfiffHalten } from '../helpers/abpfiff';
 /**
  * Generate a future date string (tomorrow) in YYYY-MM-DD format
  * This ensures tournaments are categorized as "upcoming" not "finished"
@@ -109,7 +110,7 @@ test.describe('Cockpit-Tafel', () => {
     await page.waitForTimeout(2200);
     expect(await page.getByTestId('scoreboard-clock-rest').textContent()).toBe(beiPause);
 
-    await page.getByTestId('match-start-button').click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
     await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'false');
     await expect(async () => {
       expect(await page.getByTestId('scoreboard-clock-rest').textContent()).not.toBe(beiPause);
@@ -125,7 +126,7 @@ test.describe('Cockpit-Tafel', () => {
     await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'true');
     await expect(page.getByTestId('scoreboard-clock')).toContainText('Uhr steht');
     expect(await hoehe()).toBe(laeuft);
-    await page.getByTestId('match-start-button').click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
     await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'false');
     expect(await hoehe()).toBe(laeuft);
   });
@@ -199,12 +200,9 @@ test.describe('Cockpit-Tafel', () => {
     await page.getByTestId('match-start-button').click();
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
     await page.getByTestId('match-pause-button').click();
-    await expect(page.getByTestId('match-start-button')).toBeVisible();
-    await page.getByTestId('match-finish-button').click();
-    const bestaetigen = page.locator('[role="dialog"] button, [data-testid*="confirm"]').filter({ hasText: /Beenden|Bestätigen|Ja|Confirm/i });
-    if (await bestaetigen.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await bestaetigen.click();
-    }
+    await expect(page.getByTestId('match-resume-button')).toBeVisible();
+    await abpfiffHalten(page);
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
     await expect(async () => {
       const text = (await page.getByTestId('scoreboard').textContent()) ?? '';
       expect(/Ende|Anstoß/.test(text)).toBe(true);

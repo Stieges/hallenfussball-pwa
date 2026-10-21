@@ -11,6 +11,7 @@
 import { test, expect } from '../helpers/test-fixtures';
 import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
+import { abpfiffHalten } from '../helpers/abpfiff';
 /**
  * Generate a future date string (tomorrow) in YYYY-MM-DD format
  * This ensures tournaments are categorized as "upcoming" not "finished"
@@ -175,13 +176,13 @@ test.describe('Live Cockpit', () => {
     // WHEN - Click pause
     await page.getByTestId('match-pause-button').click();
 
-    // THEN - Should show Start button again and status should be PAUSED
-    await expect(page.getByTestId('match-start-button')).toBeVisible();
+    // THEN - Should show the resume button again and status should be PAUSED
+    await expect(page.getByTestId('match-resume-button')).toBeVisible();
     // Pause: Zustand bleibt „Live“ (Matrix § 6), die Uhr steht und ist markiert
     await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'true');
 
-    // WHEN - Click start to resume
-    await page.getByTestId('match-start-button').click();
+    // WHEN - Click resume
+    await page.getByTestId('match-resume-button').click();
 
     // THEN - Should show Pause button and status RUNNING
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
@@ -204,18 +205,13 @@ test.describe('Live Cockpit', () => {
 
     // Pause first (required before finish - button is disabled while running)
     await page.getByTestId('match-pause-button').click();
-    await expect(page.getByTestId('match-start-button')).toBeVisible();
+    await expect(page.getByTestId('match-resume-button')).toBeVisible();
 
     // WHEN - Click finish button
     const finishButton = page.getByTestId('match-finish-button');
     await expect(finishButton).toBeEnabled();
-    await finishButton.click();
-
-    // Handle confirmation dialog if present (look for dialog-specific confirm button)
-    const dialogConfirmButton = page.locator('[role="dialog"] button, [data-testid="dialog-confirm"], [data-testid*="confirm"]').filter({ hasText: /Beenden|Bestätigen|Ja|Confirm/i });
-    if (await dialogConfirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await dialogConfirmButton.click();
-    }
+    await abpfiffHalten(page);
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
 
     // THEN - After finishing, the app auto-selects the next match
     // Verify that either:
@@ -363,13 +359,8 @@ test.describe('Live Cockpit', () => {
     // Pause and finish the match
     await page.getByTestId('match-pause-button').click();
     await expect(page.getByTestId('match-finish-button')).toBeEnabled();
-    await page.getByTestId('match-finish-button').click();
-
-    // Handle confirmation dialog if present
-    const dialogConfirmButton = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja|Confirm/i });
-    if (await dialogConfirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await dialogConfirmButton.click();
-    }
+    await abpfiffHalten(page);
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
 
     // Wait for state to settle
     await page.waitForTimeout(1000);

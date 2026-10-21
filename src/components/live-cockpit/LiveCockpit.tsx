@@ -7,14 +7,14 @@
  * Hülle (Scheibe 1): bindet Bereichs-Hooks an Bereiche. Befehle und Effekte stehen in
  * `hooks/useCockpitCommands.ts`, Darstellung in `areas/`, Stile in `LiveCockpitShell.module.css`.
  *
- * Layout:
- * - Desktop: Main grid (scoreboard + sidebar)
- * - Mobile: Stacked layout with bottom footer
+ * Layout (`data-layout`, die eine Quelle für Leiste und Anordnung): `breit` ab 1024 px (Spalten + Ereignis-Sidebar),
+ * darunter `daumen` (gestapelt, Ereignisse über den Leisten-Knopf). Die Daumenleiste steht unten (Aufgabe 3.6).
  */
 
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
+import { breakpointValues } from '../../design-tokens';
 import { useFoulCounts } from '../../hooks/useFoulCounts';
 import { useFoulThresholdWarning } from '../../hooks/useFoulThresholdWarning';
 import { SyncStatusIndicator } from '../../features/collaboration';
@@ -29,6 +29,11 @@ import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 import { ScoreboardArea } from './areas/ScoreboardArea';
 import { LegacyPlayArea } from './areas/LegacyPlayArea';
 import { CockpitOverlays } from './areas/CockpitOverlays';
+import { ThumbBarArea } from './areas/ThumbBarArea';
+import { LeerLeiste } from './areas/LeerLeiste';
+import { NextMatchArea } from './areas/NextMatchArea';
+import { restzeitSpielMs } from './model/restzeit';
+import { mehrPunkteGrundgeruest } from './model/mehrPunkte';
 import shell from './LiveCockpitShell.module.css';
 import { useCockpitPhase, useSideOrder } from './hooks';
 import { useEntryFlows } from './hooks/useEntryFlows';
@@ -49,7 +54,7 @@ const NO_SPERREN: readonly SperrHinweis[] = [];
 const NO_TEAMS = { home: { id: '', name: '' }, away: { id: '', name: '' } };
 
 export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
-  const { fieldName, tournamentName, tournamentId, cockpitSettings: cockpitSettingsProp, readOnly = false, currentMatch, upcomingMatches, leer = null } = props;
+  const { fieldName, tournamentName, tournamentId, cockpitSettings: cockpitSettingsProp, kannSteuern, istLeitung = false, currentMatch, upcomingMatches, leer = null } = props;
   const { t } = useTranslation('cockpit');
 
   // W1 (Nachtrag C3a-2a): nur einbinden -- OutboxNotice rendert selbst nichts, solange kein
@@ -61,7 +66,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   // Einstellungen mit Vorgaben, Ton für das Ende, Gerätetyp
   const cockpitSettings = useMemo(() => ({ ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...cockpitSettingsProp }), [cockpitSettingsProp]);
   const sound = useMatchSound(cockpitSettings.soundId, cockpitSettings.soundVolume, cockpitSettings.soundEnabled, tournamentId);
-  const { breakpoint, isMobile, isTablet } = useBreakpoint();
+  const { isMobile, isTablet, width } = useBreakpoint();
+  const layout = width >= breakpointValues.desktop ? 'breit' : 'daumen';
 
   // Seiten tauschen: nur die Anzeige dieses Geräts (@SL-065)
   const sides = useSideOrder(currentMatch);
@@ -116,12 +122,12 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   });
 
   const cmd = useCockpitCommands({
-    props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView,
+    props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView, view,
   });
   const foulsJeSeite = useMemo(() => ({ home: homeFouls, away: awayFouls }), [homeFouls, awayFouls]);
   const anzeigeOrdnung = useMemo(() => ({ links: sides.links, rechts: sides.rechts }), [sides.links, sides.rechts]);
   const spalten = useTeamColumns({
-    match: currentMatch, view, phase, settings: cockpitSettings, kannSteuern: !readOnly, fouls: foulsJeSeite,
+    match: currentMatch, view, phase, settings: cockpitSettings, kannSteuern, fouls: foulsJeSeite,
     sperrHinweise: props.sperrHinweise ?? NO_SPERREN, order: anzeigeOrdnung, handlers: cmd.teamHandlers,
   });
   usePenaltyExpiryNotice(currentMatch?.id, view, teams, notices.melde, tx);
@@ -159,11 +165,20 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     />
   );
 
+  if (props.zugriffEntzogen) {
+    return <div className={shell.empty} data-testid="cockpit-zugriff-entzogen"><p className={shell.emptyText}>{t('leiste.keinZugriff', { count: props.zugriffEntzogen.uebergebeneEintraege })}</p></div>;
+  }
   if (!currentMatch) {
     if (leer) {
       return (
-        <div className={shell.container}>
+        <div className={shell.container} data-layout={layout} data-testid="live-cockpit">
           <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>{tafel}</main>
+          {leer.art === 'wartetAufHerkunft' && (
+            <LeerLeiste
+              phase={phase} layout={layout} kannSteuern={kannSteuern} istLeitung={istLeitung} fieldName={fieldName}
+              steuerung={props.steuerung} cmd={cmd} settings={cockpitSettings} tournamentId={tournamentId}
+            />
+          )}
         </div>
       );
     }
@@ -176,40 +191,52 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
 
   const match = currentMatch;
   if (!spalten) { return null; } // nie: ohne Spiel (spalten === null) kehrt die Hülle oben zurück
-  // Task R2: readOnly kommt aus einer echten Berechtigungsprüfung (ManagementTab.checkCanEditMatch
-  // → canEditResults), das beendete Spiel ist die bestehende "Spiel ist vorbei"-Sperre. Beide
-  // führen zu "keine Bedienung", aber nur `readOnly` zeigt das Berechtigungs-Banner.
+  // Task R2: `kannSteuern` kommt aus einer echten Berechtigungsprüfung (ManagementTab, `useCan('writeMatchData')`), das
+  // beendete Spiel ist die bestehende "Spiel ist vorbei"-Sperre. Beide führen zu "keine Bedienung", aber nur das
+  // fehlende Recht zeigt das Berechtigungs-Banner.
+  const readOnly = !kannSteuern;
   const isLocked = readOnly || match.status === 'FINISHED';
   const effectiveScore = getEffectiveScore(match);
 
   return (
-    <div className={shell.container}>
+    <div className={shell.container} data-layout={layout} data-testid="live-cockpit">
       <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>
-        {tafel}
-
-        {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung (readOnly), nicht bei beendetem Spiel allein. */}
-        {readOnly && (
-          <div className={shell.readOnlyBanner} data-testid="cockpit-readonly-banner" role="status">
-            {t('readOnly.banner')}
-          </div>
-        )}
-
-        {/* W1 (Nachtrag C3a-2a): rendert selbst nichts, solange kein Ausgangs-Zustand
-            (clientOutdated/authRequired/notReady/review) vorliegt. */}
-        <OutboxNotice status={outboxStatus} matchId={match.id} onReload={handleOutboxReload} />
-
         <LegacyPlayArea
+          kopf={(
+            <>
+              {tafel}
+              {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung (readOnly), nicht bei beendetem Spiel allein. */}
+              {readOnly && (
+                <div className={shell.readOnlyBanner} data-testid="cockpit-readonly-banner" role="status">
+                  {t('readOnly.banner')}
+                </div>
+              )}
+              {/* W1 (Nachtrag C3a-2a): rendert selbst nichts, solange kein Ausgangs-Zustand vorliegt. */}
+              <OutboxNotice status={outboxStatus} matchId={match.id} onReload={handleOutboxReload} />
+            </>
+          )}
           match={match}
-          nextMatch={upcomingMatches.length > 0 ? upcomingMatches[0] : null}
-          breakpoint={breakpoint}
+          naechstes={<NextMatchArea naechstes={upcomingMatches.length > 0 ? upcomingMatches[0] : null} phase={phase} restSpielMs={view ? restzeitSpielMs(view) : null} />}
           isMobile={isMobile}
-          isDesktop={!isMobile && !isTablet}
-          isLocked={isLocked}
+          isDesktop={layout === 'breit'}
+          zustand={phase.zustand}
+          strafstossForm={props.strafstossForm}
           columns={spalten}
-          controls={cmd.controls}
           sidebar={{ activePenalties: cmd.activePenalties, onEventEdit: cmd.onSidebarEventEdit }}
         />
       </main>
+
+      <ThumbBarArea
+        phase={phase}
+        layout={layout}
+        kannSteuern={kannSteuern}
+        istLeitung={istLeitung}
+        fieldName={fieldName}
+        steuerung={props.steuerung}
+        controls={cmd.controls}
+        onWeiterNaechstes={() => { props.onLoadNextMatch(match.fieldId); }}
+        onChooseTiebreak={props.onChooseTiebreak ? (wahl) => { props.onChooseTiebreak?.(match.id, wahl); } : undefined}
+      />
 
       <CockpitOverlays
         match={match}
@@ -223,6 +250,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         editing={cmd.editing}
         handlers={cmd.overlayHandlers}
         rejectedOutbox={rejectedOutbox}
+        mehr={{ punkte: mehrPunkteGrundgeruest(phase, { kannSteuern }), aktionen: cmd.mehrAktionen }}
         entrySheets={{ flows, teams: teams ?? NO_TEAMS, ausloeserSeite: (seite) => (sides.links === seite ? 'links' : 'rechts'), kartenArten: cockpitSettings.enabledCards, t: tx }}
       />
     </div>

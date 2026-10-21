@@ -24,6 +24,8 @@ interface BottomSheetProps {
    * (DA-2a, @OB-062). Ohne Fuß bleibt das Blatt wie bisher.
    */
   footer?: React.ReactNode;
+  /** data-testid der Fläche (Standard der DialogSurface: dialog-surface) */
+  testId?: string;
 }
 
 /** Blatt von unten; Fläche, Abdunkelung, Fokusfalle und Scroll-Sperre kommen aus DialogSurface (B-43a). */
@@ -33,6 +35,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   children,
   title,
   footer,
+  testId,
 }) => {
   // Stable unique ID for aria-labelledby (React 18+)
   const generatedId = useId();
@@ -90,6 +93,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       ariaLabel={titleId ? undefined : 'Bottom Sheet'}
       header={footer ? handleAndTitle : undefined}
       footer={footer}
+      testId={testId}
     >
       {!footer && handleAndTitle}
 

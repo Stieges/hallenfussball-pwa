@@ -26,12 +26,14 @@ export interface TeamColumnProps {
   breit?: boolean;
 }
 
-const spalteStil: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, minWidth: 0, flex: 1 };
+// Beide Spalten teilen sich die Zeilen der Spaltenreihe (Subgrid): gleich hoch laufen Kopf, Tor und Knopfreihe, ohne dass der Kopf Platz für drei Namenszeilen
+// reservieren muss; der längere Name macht beide Köpfe höher (@OB-025). Kopf (mit Zähler), Tor, Knopfreihe, Zusatzzeilen = vier Zeilen.
+const spalteStil: CSSProperties = { display: 'grid', gridTemplateRows: 'subgrid', gridRow: 'span 4', rowGap: cssVars.spacing.sm, minWidth: 0 };
 // Kopf nach Mockup: umrandet, oben Streifen und „Heim/Gast“, darunter der Name (@OB-025). Mindesthöhe für drei Namenszeilen, damit
 // beide Köpfe gleich hoch sind und die Tor-Knöpfe auf einer Höhe stehen. Der Name wird nie gekürzt und nie getrennt (VISUAL-DESIGN § 1/§ 2).
 const kopfStil: CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs, boxSizing: 'border-box', minWidth: 0,
-  minHeight: cssVars.sizing.spaltenkopfMax, padding: cssVars.spacing.xs,
+  padding: cssVars.spacing.xs,
   border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`, borderRadius: cssVars.borderRadius.md,
   hyphens: 'manual',
 };
@@ -49,10 +51,14 @@ const streifenStil = (farbe: string | null): CSSProperties => ({
 const seiteStil: CSSProperties = { fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textMuted, textTransform: 'uppercase' };
 const zaehlerStil: CSSProperties = { fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary, fontWeight: cssVars.fontWeights.semibold };
 // Volle Fläche in der Primärfarbe, Schrift in „auf Primär“ (Kontrast ≥ 4,5 : 1, VISUAL-DESIGN § 5), kein Verlauf
-const torStil: CSSProperties = {
-  minHeight: cssVars.touchTargets.primary, width: '100%', background: cssVars.colors.primary, color: cssVars.colors.onPrimary,
-};
-const knopfStil: CSSProperties = { minHeight: cssVars.touchTargets.minimum, flexDirection: 'column', gap: 0, padding: cssVars.spacing.sm, minWidth: 0 };
+const torStil = (breit: boolean): CSSProperties => ({
+  // Laptop (Mockup): doppelte Mindesthöhe, damit das Tor die größte Fläche der Spalte ist; sonst Haupttasten-Größe
+  minHeight: breit ? cssVars.sizing.cockpitTorBreit : cssVars.touchTargets.primary, width: '100%', background: cssVars.colors.primary, color: cssVars.colors.onPrimary,
+});
+const knopfStil = (kompakt: boolean): CSSProperties => ({
+  minHeight: cssVars.touchTargets.minimum, flexDirection: kompakt ? 'row' : 'column', gap: kompakt ? cssVars.spacing.xs : 0,
+  padding: kompakt ? cssVars.spacing.xs : cssVars.spacing.sm, minWidth: 0,
+});
 const markeStil = (steht: boolean): CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', fontSize: cssVars.fontSizes.sm, color: cssVars.colors.warning,
   border: `${cssVars.borderWidth.thin} solid ${steht ? cssVars.colors.textMuted : cssVars.colors.warning}`,
@@ -80,6 +86,7 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
 
   return (
     <section style={spalteStil} data-testid={`team-column-${seite}`} aria-label={name}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, minWidth: 0 }}>
       <div style={kopfStil} data-testid={`team-head-${seite}`}>
         <div style={zeileStil}>
           <span data-testid={`team-stripe-${seite}`} style={streifenStil(model.farbe)} />
@@ -89,29 +96,31 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
       </div>
       {/* Der Zähler steht im Foul-Knopf (Laptop-Mockup Stand 4); eine eigene Zeile nur ohne Foul-Knopf (Halbzeitpause, Nur-Lesen) */}
       {!knoepfe.foul && <div style={zaehlerStil} data-testid={`team-fouls-${seite}`}>{foulText}</div>}
+      </div>
       {knoepfe.tor && (
-        <Button size="lg" icon={<MatchIcons.Ball />} style={torStil} data-primary data-testid={`goal-button-${seite}`} onClick={onTor}
+        <Button size="lg" icon={<MatchIcons.Ball />} style={torStil(breit)} data-primary data-testid={`goal-button-${seite}`} onClick={onTor}
           aria-label={t('spalte.aria.tor', { team: name })}>{t('spalte.tor')}</Button>
       )}
       <div style={reiheStil} data-testid={`team-row3-${seite}`}>
         {knoepfe.foul && (
-          <Button variant="secondary" icon={<MatchIcons.Flag />} style={knopfStil} data-testid={`foul-button-${seite}`} onClick={onFoul}
+          <Button variant="secondary" icon={<MatchIcons.Flag />} style={knopfStil(kompakt)} data-testid={`foul-button-${seite}`} onClick={onFoul}
             aria-label={t('spalte.aria.foul', { team: name, zaehler: foulText })}>
             <span data-testid={`team-fouls-${seite}`}>{foulText}</span>
           </Button>
         )}
         {zeigeStrafe && (
-          <Button variant="secondary" icon={<MatchIcons.Stopwatch />} style={knopfStil} data-testid={`penalty-button-${seite}`} onClick={onZeitstrafe}
+          <Button variant="secondary" icon={<MatchIcons.Stopwatch />} style={knopfStil(kompakt)} data-testid={`penalty-button-${seite}`} onClick={onZeitstrafe}
             aria-label={t('spalte.aria.strafe', { team: name })}>
             <span style={zweizeilig}>{t('spalte.strafeKnopf')}</span>{' '}
             <span style={zweizeilig}>{t('spalte.strafeDauer', { minuten: model.zeitstrafeMinuten })}</span>
           </Button>
         )}
         {zeigeKarte && (
-          <Button variant="secondary" icon={<MatchIcons.Card />} style={knopfStil} data-testid={`card-button-${seite}`} onClick={onKarte}
+          <Button variant="secondary" icon={<MatchIcons.Card />} style={knopfStil(kompakt)} data-testid={`card-button-${seite}`} onClick={onKarte}
             aria-label={t('spalte.aria.karte', { team: name })}>{t('spalte.karte')}</Button>
         )}
       </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, minWidth: 0 }}>
       {strafen.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: cssVars.spacing.xs }}>
           {strafen.map((s) => (
@@ -124,6 +133,7 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
       {model.unterzahl && <Hinweis>{t('spalte.unterzahl', { rest: model.unterzahl.rest })}</Hinweis>}
       {model.darfErgaenzen && <Hinweis>{t('spalte.ergaenzen')}</Hinweis>}
       {model.gesperrt.map((nummer) => <Hinweis key={nummer}>{t('spalte.gesperrt', { nummer })}</Hinweis>)}
+      </div>
     </section>
   );
 }

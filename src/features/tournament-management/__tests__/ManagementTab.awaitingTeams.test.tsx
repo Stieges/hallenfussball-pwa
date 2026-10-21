@@ -1,7 +1,7 @@
 /**
  * ManagementTab (Cockpit der Turnierleitung) – A-04a: Spielseiten über slotLabel, Wartegrund bei offener Seite.
  *
- * @TM-015 „Toms Cockpit“ zeigt die Herkunft einer unbesetzten Seite (Spielauswahl und Vorschau „nächste Spiele“).
+ * @TM-015 „Toms Cockpit“ zeigt die Herkunft einer unbesetzten Seite (Vorschau „nächste Spiele“ und zuletzt gespieltes Spiel).
  * @TM-033 Ein Spiel mit unbesetzter Seite lässt sich nicht anpfeifen; das Cockpit nennt den Wartegrund.
  * @TM-035 Ein Gerät ohne Netz nennt zusätzlich, dass sein Stand ohne Netz ist.
  *
@@ -125,6 +125,7 @@ vi.mock('../../../hooks/useCockpitExecution', () => ({
 
 import { ManagementTab } from '../ManagementTab';
 
+import { RouterWrapper } from './routerWrapper';
 const NORD = testUuid(1);
 const UFER = testUuid(2);
 const HF1 = testUuid(101);
@@ -161,7 +162,7 @@ function setup(options: { teams?: { id: string; name: string }[]; matches: Sched
   const schedule = {
     tournament: { id: 't1', title: 'Hallencup' }, teams, allMatches: options.matches, phases: [],
   } as unknown as GeneratedSchedule;
-  return render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
+  return render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />, { wrapper: RouterWrapper });
 }
 
 describe('ManagementTab – @TM-033 Wartegrund bei offener Seite', () => {
@@ -239,17 +240,17 @@ describe('ManagementTab – @TM-015 Toms Cockpit zeigt die Herkunft', () => {
     mockGetLiveMatchData.mockRejectedValue(new MatchAwaitingTeamsError(HF1, ['B']));
   });
 
-  it('@TM-015 Spielauswahl zeigt „FC Nord vs Zweiter Gruppe B“ und „Erster Gruppe A vs Zweiter Gruppe B“', async () => {
+  it('@TM-015 die Vorschau der nächsten Spiele zeigt die Herkunft „Erster Gruppe A gegen Zweiter Gruppe B“, nie gespeicherte Namen', async () => {
     setup({ matches: [hf1, hf2] });
-    expect(await screen.findByText(/FC Nord vs Zweiter Gruppe B/)).toBeInTheDocument();
-    expect(screen.getByText(/Erster Gruppe A vs Zweiter Gruppe B/)).toBeInTheDocument();
+    expect(await screen.findByText(/Erster Gruppe A gegen Zweiter Gruppe B/)).toBeInTheDocument();
     expect(screen.queryByText(/ALTER NAME/)).toBeNull();
   });
 
-  it('@TM-015 Gegenbeispiel: nach Umbenennen zeigt die Spielauswahl den neuen Namen, nicht den alten', async () => {
-    setup({ matches: [hf1], teams: [{ id: NORD, name: 'FC Nordlicht' }, { id: UFER, name: 'VfB Ufer' }] });
-    expect(await screen.findByText(/FC Nordlicht vs Zweiter Gruppe B/)).toBeInTheDocument();
-    expect(screen.queryByText(/FC Nord vs/)).toBeNull();
+  it('@TM-015 Gegenbeispiel: nach Umbenennen zeigt die Vorschau den neuen Namen, nicht den alten', async () => {
+    const spaeter = { ...hf2, id: 'spaeter', matchNumber: 9, slotA: hf1.slotA };
+    setup({ matches: [hf1, spaeter], teams: [{ id: NORD, name: 'FC Nordlicht' }, { id: UFER, name: 'VfB Ufer' }] });
+    expect(await screen.findByText(/FC Nordlicht gegen Zweiter Gruppe B/)).toBeInTheDocument();
+    expect(screen.queryByText(/FC Nord gegen/)).toBeNull();
   });
 });
 

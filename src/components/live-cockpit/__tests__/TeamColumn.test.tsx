@@ -202,10 +202,15 @@ describe('TeamColumn', () => {
     expect(schrift).toContain('var(--font-size-lg)');
   });
 
-  it('@OB-025 beide Köpfe haben dieselbe Mindesthöhe aus dem Token, damit die Tor-Knöpfe auf einer Höhe stehen', () => {
+  it('@OB-025 beide Spalten teilen sich die Zeilen (Subgrid), damit der längere Name beide Köpfe gleich hoch macht und die Tor-Knöpfe auf einer Höhe stehen', () => {
     render(<><TeamColumn {...props({ seite: 'home', name: NAME_50 })} /><TeamColumn {...props({ seite: 'away', name: 'SV Süd' })} /></>);
-    expect(screen.getByTestId('team-head-home').style.minHeight).toBe('var(--sizing-spaltenkopf-max)');
-    expect(screen.getByTestId('team-head-away').style.minHeight).toBe('var(--sizing-spaltenkopf-max)');
+    for (const seite of ['home', 'away']) {
+      const spalte = screen.getByTestId(`team-column-${seite}`);
+      expect(spalte.style.gridTemplateRows).toBe('subgrid');
+      expect(spalte.style.gridRow).toBe('span 4');
+      // keine feste Dreizeilen-Reserve mehr: der Kopf wächst mit dem Namen (Höhe und Gleichstand misst der E2E, @SL-061)
+      expect(screen.getByTestId(`team-head-${seite}`).style.minHeight).toBe('');
+    }
   });
 
   it('Kopf nach Mockup: umrandet, Streifen und „Heim/Gast“ in einer Zeile, der Name darunter', () => {

@@ -52,7 +52,13 @@ afterEach(() => {
 
 const zustand = (): HTMLElement => screen.getByTestId('scoreboard-state');
 const uhrSub = (): HTMLElement => screen.getByTestId('scoreboard-clock-sub');
-const zeitKnopf = (): HTMLElement | null => screen.queryByTestId('match-edit-time-button');
+/** Bietet „Mehr“ den Punkt „Uhr korrigieren“ an? Öffnet das Blatt, schaut nach und schließt es wieder. */
+async function zeitPunktDa(user: ReturnType<typeof userEvent.setup>): Promise<boolean> {
+  await user.click(screen.getByTestId('cockpit-more-button'));
+  const da = screen.queryByTestId('mehr-uhr-korrigieren') !== null;
+  await user.click(screen.getByTestId('mehr-schliessen'));
+  return da;
+}
 
 async function zurZweitenHalbzeit(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await anpfiff(user);
@@ -66,8 +72,9 @@ async function zurZweitenHalbzeit(user: ReturnType<typeof userEvent.setup>): Pro
 
 /** Dialog öffnen, einen Schritt je Klick auf den Zähler, dann Übernehmen oder Abbrechen. */
 async function zeitDialog(user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> {
-  await user.click(screen.getByTestId('match-edit-time-button'));
-  return screen.findByRole('dialog');
+  await user.click(screen.getByTestId('cockpit-more-button'));
+  await user.click(screen.getByTestId('mehr-uhr-korrigieren'));
+  return screen.findByRole('dialog', { name: /Spielzeit|Zeit/i });
 }
 
 describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
@@ -194,10 +201,10 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur />);
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
-    expect(zeitKnopf()).not.toBeNull();
+    expect(await zeitPunktDa(user)).toBe(true);
     zu(360_000);
     await waitFor(() => expect(zustand()).toHaveTextContent('Halbzeit'));
-    expect(zeitKnopf()).toBeNull();
+    expect(await zeitPunktDa(user)).toBe(false);
   });
 
   it('@SL-079 Zeile 2: nach dem Abpfiff (2:1) bietet das Cockpit keine Zeitkorrektur an', async () => {
@@ -210,10 +217,10 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
       await warteSperre(); // Sperre des Nummern-Bausteins (@SL-021); Schließen lässt das Tor ohne Nummer zählen (@SL-083)
       await user.keyboard('{Escape}');
     }
-    expect(zeitKnopf()).not.toBeNull(); // Gegenprobe: im laufenden Abschnitt ist die Korrektur da
+    expect(await zeitPunktDa(user)).toBe(true); // Gegenprobe: im laufenden Abschnitt ist die Korrektur da
     zu(420_000 + 360_000);
     await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('2:1');
-    expect(zeitKnopf()).toBeNull();
+    expect(await zeitPunktDa(user)).toBe(false);
   });
 });

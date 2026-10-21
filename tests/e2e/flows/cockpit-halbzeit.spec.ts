@@ -17,12 +17,16 @@ import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
 test.use({ colorScheme: 'light' });
 
+const TOURNAMENT_ID = 'e2e-halbzeit-tournament';
+const TEAM_IDS = ['e1', 'e2', 'e3', 'e4'].map((n) => `00000000-0000-4000-8000-0000000000${n}`);
+const SPIEL_IDS = ['00000000-0000-4000-8000-0000000009a1', '00000000-0000-4000-8000-0000000009a2'];
+
 function createTestTournament() {
   const morgen = new Date();
   morgen.setDate(morgen.getDate() + 1);
   const datum = morgen.toISOString().split('T')[0];
   return {
-    id: 'e2e-halbzeit-tournament',
+    id: TOURNAMENT_ID,
     status: 'published',
     sport: 'football',
     sportId: 'football-indoor',
@@ -52,13 +56,13 @@ function createTestTournament() {
     startDate: datum,
     startTime: '10:00',
     location: { name: 'Test-Halle' },
-    teams: [
-      { id: '00000000-0000-4000-8000-0000000000e1', name: 'FC Test A' },
-      { id: '00000000-0000-4000-8000-0000000000e2', name: 'FC Test B' },
-      { id: '00000000-0000-4000-8000-0000000000e3', name: 'FC Test C' },
-      { id: '00000000-0000-4000-8000-0000000000e4', name: 'FC Test D' },
-    ],
-    matches: [],
+    teams: TEAM_IDS.map((id, i) => ({ id, name: `FC Test ${'ABCD'[i]}`, group: 'A' })),
+    // Gespeicherter Spielplan mit festen Spiel-IDs: das Cockpit wird über die Adresse (`?matchId=`) auf Spiel 1 gepinnt (keine Spielauswahl mehr)
+    matches: [[0, 1], [2, 3]].map(([a, b], i) => ({
+      id: SPIEL_IDS[i], matchNumber: i + 1, round: i + 1, field: 1, group: 'A', phase: 'groupStage',
+      slotA: { kind: 'team', teamId: TEAM_IDS[a] }, slotB: { kind: 'team', teamId: TEAM_IDS[b] }, matchStatus: 'scheduled',
+      scheduledTime: `${datum}T${String(10 + i).padStart(2, '0')}:00:00.000Z`,
+    })),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -94,9 +98,10 @@ test.describe('Cockpit: Halbzeit, Wiederanpfiff, Abpfiff von selbst', () => {
       await page.screenshot({ path: join(bilder, `${name}-${testInfo.project.name}.png`), fullPage: false });
     };
 
-    // @SL-152: Spiel 1 ausdrücklich wählen, damit das Cockpit nach dem Abpfiff auf Spiel 1 bleibt (die Wahl „nächstes Spiel“
-    // springt sofort zum folgenden) und die Quittungszeile zu sehen ist
-    await page.locator('select').filter({ has: page.locator('option:not([value=""])') }).first().selectOption({ index: 1 });
+    // @SL-152: Spiel 1 über die Adresse öffnen (`?matchId=`, eine Spielauswahl gibt es nicht mehr, @SL-057), damit das Cockpit nach dem
+    // Abpfiff auf Spiel 1 bleibt (ohne Angabe springt es sofort zum folgenden) und die Quittungszeile zu sehen ist
+    await page.goto(`/#/tournament/${TOURNAMENT_ID}/live?matchId=${SPIEL_IDS[0]}`);
+    await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 10000 });
     await page.getByTestId('match-start-button').click();
     await expect(page.getByTestId('scoreboard-state')).toContainText('Live');
     await expect(page.getByTestId('scoreboard-quittung'), '@SL-152 Gegenbeispiel: vor dem Abpfiff keine Quittungszeile').toHaveCount(0);

@@ -9,7 +9,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { Harness } from './engineHarness';
-import { anpfiff, warteSperre } from './engineHarnessSupport';
+import { anpfiff, halte, warteSperre } from './engineHarnessSupport';
 import { T0 } from './enginePhaseFixture';
 
 vi.unmock('i18next');
@@ -48,6 +48,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
   Reflect.deleteProperty(navigator, 'vibrate');
 });
+
+/** Abpfiff von Hand ist ein Halteknopf mit Rückfrage (@SL-157, @SL-010): halten, dann „Beenden“. */
+async function pfeifeVonHandAb(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await halte(screen.getByTestId('match-finish-button'));
+  await user.click(await screen.findByRole('button', { name: 'Beenden' }));
+}
 
 async function tore(user: ReturnType<typeof userEvent.setup>, anzahl: number): Promise<void> {
   for (let i = 0; i < anzahl; i += 1) {
@@ -90,7 +96,7 @@ describe('LiveCockpit: Quittungszeile nach dem Abpfiff (@SL-152)', () => {
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     await tore(user, 1);
     zu(240_000);
-    await user.click(screen.getByTestId('match-finish-button'));
+    await pfeifeVonHandAb(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     expect(screen.getByTestId('scoreboard-quittung')).toHaveTextContent('Abgepfiffen · 1:0 gespeichert');
   });
@@ -112,7 +118,7 @@ describe('LiveCockpit: Quittungszeile nach dem Abpfiff (@SL-152)', () => {
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     zu(240_000);
-    await user.click(screen.getByTestId('match-finish-button'));
+    await pfeifeVonHandAb(user);
     await waitFor(() => expect(quittung()).not.toBeNull());
     await new Promise((fertig) => { setTimeout(fertig, 300); });
     expect(screen.getByTestId('notice-line')).not.toHaveTextContent('Spiel abgepfiffen');
@@ -124,7 +130,7 @@ describe('LiveCockpit: Quittungszeile nach dem Abpfiff (@SL-152)', () => {
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     zu(240_000);
-    await user.click(screen.getByTestId('match-finish-button'));
+    await pfeifeVonHandAb(user);
     await waitFor(() => expect(quittung()).not.toBeNull());
     expect(quittung()).toHaveTextContent('Abgepfiffen · 0:0 gespeichert');
     await waitFor(() => expect(screen.getByTestId('scoreboard-eintraege-warten')).toHaveTextContent(/Einträge? warte/));

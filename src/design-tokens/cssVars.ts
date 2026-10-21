@@ -131,6 +131,7 @@ export const cssColors = {
   noticeLineBg: 'var(--color-notice-line-bg)',
   noticeLineText: 'var(--color-notice-line-text)',
   holdFill: 'var(--color-hold-fill)',
+  nextWarnBorder: 'var(--color-next-warn-border)',
   cardYellow: 'var(--color-card-yellow)',
   cardRed: 'var(--color-card-red)',
 
@@ -373,9 +374,10 @@ export const cssBorderRadius = {
 // Border Width (fixed px token)
 // =============================================================================
 
+// Eine Quelle: `borderWidths` (sizing.ts); die CSS-Variablen `--border-width-*` stehen in global.css (Gleichheitstest)
 export const cssBorderWidth = {
-  thin: '1px',
-  medium: '2px',
+  thin: borderWidths.thin,
+  medium: borderWidths.medium,
 } as const;
 
 // =============================================================================
@@ -546,6 +548,12 @@ export const cssOpacity = {
 
 export const cssSizing = {
   sidebarWidth: 'var(--sizing-sidebar-width)',
+  // Cockpit Laptop (Mockup laptop.html)
+  cockpitEreignisspalte: 'var(--sizing-cockpit-ereignisspalte)',
+  cockpitTorBreit: 'var(--sizing-cockpit-tor-breit)',
+  cockpitLeisteBreit: 'var(--sizing-cockpit-leiste-breit)',
+  cockpitMehrBreit: 'var(--sizing-cockpit-mehr-breit)',
+  feldwahlMax: 'var(--sizing-feldwahl-max)',
   emptyStateMinHeight: 'var(--sizing-empty-state-min-height)',
   hairline: 'var(--sizing-hairline)',
   // Tafel Live-Cockpit (Spec § 8.2)
@@ -557,7 +565,6 @@ export const cssSizing = {
   noticeLineHeightCompact: 'var(--sizing-notice-line-height-compact)',
   noticeLineHeightRegular: 'var(--sizing-notice-line-height-regular)',
   teamStripeWidth: 'var(--sizing-team-stripe-width)',
-  spaltenkopfMax: 'var(--sizing-spaltenkopf-max)',
   qrPlaceholder: 'var(--sizing-qr-placeholder)',
   scorePreviewWidth: 'var(--sizing-score-preview-width)',
   scorePreviewHeight: 'var(--sizing-score-preview-height)',
@@ -591,6 +598,7 @@ export const cssTheme = {
 // =============================================================================
 
 import { zIndex as zIndexTokens } from './elevation';
+import { borderWidths } from './sizing';
 
 const cssZIndex = zIndexTokens;
 
