@@ -7,8 +7,8 @@
  *   match_engine.standing_decision_valid; wo TS heute lockerer ist, `it.fails` bis A-13b-S Punkt 7 (nach TB-B-Merge)
  * - shared-allowed.json: sharedPlaceAllowed == match_engine.shared_allowed (Spiele als Cloud-Zeilen über den Mapper)
  * - group-state.json: Zeilen ECHT ERZEUGT (publish → mapTournamentToSupabase, hier erneut erzeugt und verglichen);
- *   der TS-Zwilling expectedState kommt mit A-13a (GroupCompletionService) – bis dahin `it.todo`
- * - group-key.json: TS-Zwilling groupKeyOf kommt mit A-13a – bis dahin `it.todo`
+ *   TS-Zwilling `expectedState` (A-13a, GroupCompletionService) über den Mapper zurück == `cases[].expected`
+ * - group-key.json: TS-Zwilling `groupKeyOf` (A-13a, standingsGroups.ts) == `rows[].out`
  * Anforderungen: @TM-057, @TM-058, @TM-147, @W2A-048, @W2A-063, @W2A-064, @W2A-066, @W2A-067.
  */
 import { describe, it, expect } from 'vitest';
@@ -23,6 +23,9 @@ import { parseStandingDecisions } from '../../models/schemas/StandingDecisionSch
 import { mapMatchFromSupabase } from '../../repositories/supabaseMappers';
 import { generateRows, normalizeRows, type GeneratedRows, type GeneratedTournamentKey } from '../../../test/groupCompletionRows';
 import type { Team } from '../../../types/tournament';
+import { groupKeyOf } from '../../models/standingsGroups';
+import { expectedState } from '../../services/GroupCompletionService';
+import { tournamentFromFixture } from './groupCompletionKit';
 
 type MatchRowInput = Parameters<typeof mapMatchFromSupabase>[0];
 
@@ -141,7 +144,11 @@ describe('A-13b-S group-state.json: Zeilen echt erzeugt (Review-Auflage 1, R-GA4
     expect(groupStateFixture.cases.flatMap((c) => c.expected).some((e) => finals.has(e.id))).toBe(false);
   });
 
-  it.todo('A-13a: expectedState(t, group) aus den Zeilen (Mapper) == cases[].expected (Zwilling von match_engine.group_state)');
+  for (const c of groupStateFixture.cases) {
+    it(`@TM-057 @TM-058 A-13a: expectedState(${c.tournament}, „${c.group}“) aus den Zeilen (Mapper) == match_engine.group_state – ${c.note}`, () => {
+      expect(expectedState(tournamentFromFixture(c.tournament as GeneratedTournamentKey), c.group)).toEqual(c.expected);
+    });
+  }
 });
 
 describe('A-13b-S group-key.json', () => {
@@ -149,5 +156,10 @@ describe('A-13b-S group-key.json', () => {
     expect(groupKeyFixture.rows.map((r) => r.in)).toEqual(expect.arrayContaining([null, '', 'all', 'A']));
   });
 
-  it.todo('A-13a: groupKeyOf(row.in ?? undefined) == row.out (Zwilling von match_engine.group_key)');
+  for (const row of groupKeyFixture.rows) {
+    it(`@TM-057 A-13a: groupKeyOf == match_engine.group_key – ${row.name}`, () => {
+      expect(groupKeyOf(row.in ?? undefined)).toBe(row.out);
+      expect(groupKeyOf(row.in)).toBe(row.out);
+    });
+  }
 });
