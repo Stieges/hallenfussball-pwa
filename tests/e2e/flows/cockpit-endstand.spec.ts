@@ -3,7 +3,7 @@
  * Ablauf: Anpfiff -> Tor FC Nord -> Abpfiff (von Hand, derselbe Weg zum Endstand wie das Ende von selbst) -> 30 Sekunden Endstand
  * mit dem nächsten Spiel darunter -> „Weiter“ wechselt sofort / nach 30 Sekunden von selbst / Neu laden hält den Rest der Frist.
  * Szenarien: @SL-073 (deutlich abgepfiffen, mit Endstand), @SL-152 (30 Sekunden, „Abgepfiffen · 1:0 gespeichert“, nie 0:0 neben „Ende“),
- * @SL-162 („Weiter“ sofort), @SL-049 (nach 30 Sekunden von selbst das nächste Spiel), @SL-116 (die Frist hängt am Abpfiff, nicht am Gerät).
+ * @SL-162 („Weiter“ sofort), @SL-049 (nach 30 Sekunden von selbst das nächste Spiel), @SL-116 (die Frist hängt am Abpfiff, nicht am Gerät), @SL-159 (kein Helfer-Hinweis für die Turnierleitung).
  * Gemessen wird in den Projekten desktop (1280×720) und cockpit-360x640 (Handy). Bilder nur, wenn B10A_BILDER gesetzt ist.
  */
 import type { Page } from '@playwright/test';
@@ -38,7 +38,7 @@ function cup() {
 
 async function bild(page: Page, name: string, projekt: string): Promise<void> {
   const ordner = process.env.B10A_BILDER;
-  if (ordner) { await page.screenshot({ path: `${ordner}/${name}-${projekt}.png` }); }
+  if (ordner) { await page.screenshot({ path: `${ordner}/${name}-v2-${projekt}.png` }); }
 }
 
 /** Spiel 1 anpfeifen, ein Tor für FC Nord, von Hand abpfeifen: danach steht der Endstand 1:0. */
@@ -61,6 +61,9 @@ async function pruefeEndstand(page: Page): Promise<void> {
   // nie die Anstoßzeit oder 0:0 des nächsten Spiels neben „Ende“
   await expect(page.getByTestId('scoreboard-clock')).not.toContainText('Anstoß');
   await expect(page.getByTestId('scoreboard-box-links')).toHaveText('1');
+  // @SL-159: die Turnierleitung (lokal der Eigentümer) sieht nicht den Helfer-Hinweis „Korrektur über die Turnierleitung“
+  await expect(page.getByTestId('bar-finished')).toHaveCount(0);
+  await expect(page.getByTestId('match-next-button')).toBeVisible();
   // darunter das nächste Spiel mit beiden Teams
   await expect(page.getByTestId('cockpit-naechstes')).toContainText('TSV Ost');
   await expect(page.getByTestId('cockpit-naechstes')).toContainText('FC West');

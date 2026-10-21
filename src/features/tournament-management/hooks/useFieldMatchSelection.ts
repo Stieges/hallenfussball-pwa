@@ -76,6 +76,8 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
   // Ein gewähltes Spiel (Spielplan, „Weiter“) gilt nur bis zu seinem Ende: Endet es von selbst oder von Hand, übernimmt der Endstand
   // (30 Sekunden), dann das nächste Spiel (@SL-152, @SL-049). Ein schon beendet geöffnetes Spiel bleibt stehen.
   const warNochNichtBeendet = useRef<string | null>(null);
+  // Jeder Wechsel der Auswahl beginnt neu: ein früher gemerktes Spiel gibt später nicht ein bewusst geöffnetes frei
+  useEffect(() => { warNochNichtBeendet.current = null; }, [selectedMatchId]);
   useEffect(() => {
     const status = selectedMatchId ? liveMatches.get(selectedMatchId)?.status : undefined;
     if (status === undefined) { return; }

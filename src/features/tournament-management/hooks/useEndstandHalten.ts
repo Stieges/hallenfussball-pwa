@@ -4,7 +4,7 @@
  * Nach dem Abpfiff bleibt der Endstand 30 Sekunden stehen (@SL-152, @SL-073), bis „Weiter“ getippt wird (@SL-162) oder die 30 Sekunden
  * um sind (@SL-049). Die Frist hängt am Abpfiff-Zeitpunkt in der Engine (`finishedAt`, Serverzeit), nicht an einer eigenen Uhr dieses
  * Geräts: Übernimmt ein zweites Gerät kurz nach dem Abpfiff, sieht es nur den Rest der Frist (@SL-116). Ohne Engine oder ohne Abpfiff-Zeit
- * (ausgefallen, noch nicht beendet) wird nichts gehalten.
+ * (ausgefallen, noch nicht beendet) und ohne echten Abpfiff (Direkteintrag im Spielplan) wird nichts gehalten.
  */
 import { useCallback, useEffect, useState } from 'react';
 import type { ScheduledMatch } from '../../../core/generators';
@@ -42,7 +42,8 @@ export function gehaltenesSpielOf(
     if (liveMatches.get(match.id)?.status !== 'FINISHED') { continue; }
     const zustand = engine.view(match.id)?.result.state;
     const abpfiff = zustand?.finishedAt ?? null;
-    if (zustand === undefined || abpfiff === null) { continue; }
+    // Nur ein echter Abpfiff (Ablauf, Hand, Strafstoßschießen) setzt `baseDecidedBy`; ein Direkteintrag (RESULT_ENTRY) nicht (S1)
+    if (zustand === undefined || abpfiff === null || zustand.baseDecidedBy === null) { continue; }
     const rest = quittungRestOf(zustand, jetzt) ?? 0;
     const schluessel = `${match.id}@${abpfiff}`;
     if (rest <= 0 || quittiert.includes(schluessel) || abpfiff <= bestesEnde) { continue; }
@@ -61,8 +62,9 @@ export interface EndstandHalten {
 export function useEndstandHalten(fieldMatches: readonly ScheduledMatch[], liveMatches: ReadonlyMap<string, LiveMatch>): EndstandHalten {
   const engine = useMatchEngineContextOptional()?.engine ?? null;
   const [quittiert, setQuittiert] = useState<readonly string[]>([]);
-  // Zähler nur zum Neurechnen: die Frist läuft ab, ohne dass sich Spiele oder Engine ändern
-  const [, setTakt] = useState(0);
+  // Zähler zum Neurechnen: die Frist läuft ab, ohne dass sich Spiele oder Engine ändern. Er steht auch in den Abhängigkeiten des
+  // Timers: Feuert dieser zu früh (Serverzeit wurde in den 30 s zurückgestellt), bleibt der Rest > 0 und ein neuer Timer wird gestellt.
+  const [takt, setTakt] = useState(0);
 
   const gehalten = gehaltenesSpielOf(fieldMatches, liveMatches, engine, quittiert);
   const { id, endeMs } = gehalten;
@@ -71,7 +73,7 @@ export function useEndstandHalten(fieldMatches: readonly ScheduledMatch[], liveM
     if (id === null || endeMs === null || !engine) { return undefined; }
     const timer = setTimeout(() => { setTakt((n) => n + 1); }, Math.max(0, endeMs - engine.serverNow()) + NACHLAUF_MS);
     return () => { clearTimeout(timer); };
-  }, [id, endeMs, engine]);
+  }, [id, endeMs, engine, takt]);
 
   const schluessel = gehalten.schluessel;
   const quittiere = useCallback(() => {

@@ -239,5 +239,5 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N4c', title: 'Spiel 1: Gelbe Karte zählt als Foul', scenarios: ['@SL-023'], owner: 'B-10b (gebaut)', expectedFail: false, run: gelbeKarte },
   { id: 'N4d', title: 'Spiel 1: Zeitstrafe mit Dauer aus den Regeln, Restzeit zählt herunter', scenarios: ['@SL-029'], owner: 'B-10b (gebaut)', expectedFail: false, run: zeitstrafe },
   { id: 'N4e', title: 'Spiel 1: zweite Gelbe Karte bietet Gelb-Rot an', scenarios: ['@SL-088'], owner: 'B-10b (gebaut)', expectedFail: false, run: gelbRot },
-  { id: 'N4g', title: 'Spiel 1: nach dem Abpfiff Endstand 30 Sekunden mit Einträgen und „Weiter“, ohne Bestätigen', scenarios: ['@SL-048'], owner: 'B-10a', expectedFail: true, run: endstandQuittung },
+  { id: 'N4g', title: 'Spiel 1: nach dem Abpfiff Endstand 30 Sekunden mit Einträgen und „Weiter“, ohne Bestätigen', scenarios: ['@SL-048'], owner: 'B-10a2', expectedFail: true, run: endstandQuittung },
 ];

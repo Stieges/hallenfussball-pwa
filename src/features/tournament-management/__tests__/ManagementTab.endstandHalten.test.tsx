@@ -31,9 +31,13 @@ vi.mock('../../../lib/sentry', () => ({
   captureFeatureError: (...args: unknown[]) => mockCaptureFeatureError(...args),
 }));
 
+// Rechte dieses Geräts: Turnierleitung (`leadMatches`) oder Helfer (nur Spielbetrieb)
+const rechte = vi.hoisted(() => ({ aktiv: new Set<string>() }));
+vi.mock('../../auth/hooks/useCan', () => ({ useCan: (recht: string) => rechte.aktiv.has(recht) }));
+
 vi.mock('../../../components/live-cockpit', () => ({
-  LiveCockpit: (props: { currentMatch?: { id: string } | null; upcomingMatches?: { id: string }[]; onLoadNextMatch?: () => void }) => (
-    <div data-testid="cockpit-stub" data-zeigt={props.currentMatch?.id ?? ''} data-naechstes={props.upcomingMatches?.[0]?.id ?? ''}>
+  LiveCockpit: (props: { currentMatch?: { id: string } | null; upcomingMatches?: { id: string }[]; onLoadNextMatch?: () => void; istLeitung?: boolean }) => (
+    <div data-testid="cockpit-stub" data-zeigt={props.currentMatch?.id ?? ''} data-naechstes={props.upcomingMatches?.[0]?.id ?? ''} data-leitung={String(props.istLeitung ?? false)}>
       <button type="button" data-testid="weiter" onClick={() => { props.onLoadNextMatch?.(); }}>Weiter</button>
     </div>
   ),
@@ -99,7 +103,7 @@ const engineKontext = (abpfiffVor: number | null): MatchEngineContextValue => {
   const finishedAt = Date.now() - (abpfiffVor ?? 0);
   return {
     engine: {
-      view: (id: string) => (id === 'm11' && abpfiffVor !== null ? { result: { state: { status: 'finished', finishedAt } } } : null),
+      view: (id: string) => (id === 'm11' && abpfiffVor !== null ? { result: { state: { status: 'finished', finishedAt, baseDecidedBy: 'regular' } } } : null),
       serverNow: () => Date.now(),
       subscribe: () => () => undefined,
     },
@@ -121,6 +125,7 @@ function zeige(abpfiffVor: number | null) {
 describe('ManagementTab – Endstand nach dem Abpfiff von selbst (B-10a)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    rechte.aktiv = new Set(['writeMatchData', 'tournamentSettings', 'leadMatches']);
     vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
     vi.setSystemTime(T0);
     mockLiveMatches = new Map<string, LiveMatch>([
@@ -151,5 +156,16 @@ describe('ManagementTab – Endstand nach dem Abpfiff von selbst (B-10a)', () =>
   it('Gegenbeispiel: vor 31 Sekunden abgepfiffen zeigt das Cockpit gleich Spiel 12 (kein Endstand von Spiel 11)', () => {
     zeige(31_000);
     expect(zeigt()).toBe('m12');
+  });
+
+  it('@SL-159 die Turnierleitung (leadMatches) bekommt das Cockpit als Leitung: kein Helfer-Hinweis „Korrektur über die Turnierleitung“', () => {
+    zeige(5_000);
+    expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-leitung', 'true');
+  });
+
+  it('@SL-045 Gegenbeispiel: ein Helfer (nur Spielbetrieb) ist keine Leitung und sieht den Hinweis', () => {
+    rechte.aktiv = new Set(['writeMatchData']);
+    zeige(5_000);
+    expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-leitung', 'false');
   });
 });
