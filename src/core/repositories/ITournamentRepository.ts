@@ -18,8 +18,9 @@ export interface ITournamentRepository {
      * Saves a full tournament object.
      * WARNING: Use only for creation or full configuration updates.
      * Avoid using for match updates to prevent concurrency issues.
+     * Ergebnis ohne Bedeutung für Aufrufer; `SupabaseRepository` liefert die erreichte Server-Version (C-VERSION-NACH-ERSTANLAGE).
      */
-    save(tournament: Tournament): Promise<void>;
+    save(tournament: Tournament): Promise<unknown>;
 
     /**
      * Updates a specific match.

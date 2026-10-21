@@ -125,7 +125,7 @@ describe('A-08f3c1 Lokale Version folgt der Cloud (@FU-089, @FU-002)', () => {
     await flush();
 
     expect(cloud.fake.save).toHaveBeenCalledTimes(1);
-    await expect(cloud.fake.save.mock.results[0].value).resolves.toBeUndefined();
+    await expect(cloud.fake.save.mock.results[0].value).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
     expect(r.mutationQueue.getFailedCount()).toBe(0);
     expect(r.mutationQueue.getPendingCount()).toBe(0);
     expect(stored().version).toBe(8);

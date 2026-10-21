@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { AdminHeaderProps } from '../types/admin.types';
 import { ADMIN_LAYOUT } from '../constants/admin.constants';
-import { SyncStatusIndicator } from '../../collaboration';
+import { AwaitingServerCopyLine, SyncStatusIndicator } from '../../collaboration';
 import { useRejectedOutboxDialog } from '../../collaboration/outbox/useRejectedOutboxDialog';
 import { RejectedOutboxDialog } from '../../collaboration/outbox/RejectedOutboxDialog';
 import { useToast } from '../../../components/ui/Toast/ToastContext';
@@ -163,6 +163,7 @@ export function AdminHeader({
   // Mobile layout: back arrow, centered title, search icon
 
   return (
+    <>
     <header style={styles.header}>
       {/* Back Button - hidden on desktop (sidebar has the back button) */}
       {!hideBackButton && (
@@ -261,6 +262,11 @@ export function AdminHeader({
       {/* Spacer for mobile layout balance (when no search) */}
       {!onSearch && showBackToHub && <div style={styles.spacer} />}
     </header>
+    {/* @FU-109: Statuszeile im normalen Fluss unter dem Kopf – der Inhalt rückt nach, nichts wird verdeckt (R1) */}
+    {showSyncStatus && tournamentId && (
+      <AwaitingServerCopyLine tournamentId={tournamentId} stickyTop={ADMIN_LAYOUT.headerHeight} zIndex={cssVars.zIndex.raised} />
+    )}
+    </>
   );
 }
 

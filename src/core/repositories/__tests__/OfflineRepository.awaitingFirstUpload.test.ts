@@ -83,7 +83,7 @@ describe('OfflineRepository.isAwaitingFirstUpload (@FU-098, Gegenbeispiele @FU-0
     session.userId = 'olli';
     const cloud = createFakeCloud({ tournament: liveCup(1), revisions: revisions() });
     let releaseSave: () => void = () => undefined;
-    cloud.fake.save.mockImplementationOnce(() => new Promise<void>((resolve) => { releaseSave = resolve; }));
+    cloud.fake.save.mockImplementationOnce(() => new Promise<number>((resolve) => { releaseSave = () => resolve(1); }));
     repo = new OfflineRepository(new LocalStorageRepository(), cloud.fake as never, 'olli');
 
     await repo.save(freshLiveCup());
