@@ -35,7 +35,7 @@ function eintrag(overrides: Partial<FailedMutationItem>): FailedMutationItem {
   return {
     id: 'dl-1',
     type: 'SAVE_TOURNAMENT',
-    payload: { id: 'T' },
+    payload: { id: 'T', changeRevision: 3 }, // Turnier ist beim Server (Änderungszählung der Cloud)
     timestamp: 1000,
     retryCount: 5,
     failedAt: 2000,
@@ -79,6 +79,31 @@ describe('@FU-108 Liste gestörter Übertragungen bei einem Konflikt (Befund C-W
     fireEvent.click(screen.getByTestId('sync-retry-dl-1'));
     expect(onRetry).toHaveBeenCalledWith('dl-1');
     expect(screen.getByTestId('sync-discard-dl-1').textContent).toBe('Verwerfen');
+  });
+
+  it('@FU-109 nicht gesendet wegen eines verworfenen Stands: eigener Hinweis statt „anderes Gerät“, kein „Erneut versuchen“ (Befund C-VERWORFEN-FALSCHER-GRUND)', async () => {
+    await renderWithI18n(<SyncFailedList items={[eintrag({ discardedCopy: true, lastError: 'Dieser Stand beruht auf einer verworfenen Änderung und wurde nicht gesendet.' })]} onRetry={vi.fn()} onDiscard={vi.fn()} onClose={vi.fn()} />);
+
+    const grund = screen.getByTestId('sync-failed-reason-dl-1').textContent;
+    expect(grund).toBe('Nicht gesendet: Diese Änderung beruht auf einem verworfenen Stand. Der Stand des Servers wird geladen, sobald die Verbindung steht.');
+    expect(grund).not.toContain('anderen Gerät');
+    expect(screen.queryByTestId('sync-retry-dl-1')).toBeNull();
+    expect(screen.getByTestId('sync-discard-dl-1').textContent).toBe('Verwerfen und aktuellen Stand laden');
+  });
+
+  it('@FU-109 derselbe Hinweis auf Englisch', async () => {
+    await renderWithI18n(<SyncFailedList items={[eintrag({ discardedCopy: true })]} onRetry={vi.fn()} onDiscard={vi.fn()} onClose={vi.fn()} />, 'en');
+
+    expect(screen.getByTestId('sync-failed-reason-dl-1').textContent).toBe('Not sent: this change is based on a discarded state. The state of the server will load once the connection is back.');
+  });
+
+  it('@FU-107 Rückfrage für ein Turnier, das noch nie beim Server war: es bleibt mit allen Teams und Spielen auf dem Gerät', async () => {
+    await renderWithI18n(<SyncFailedList items={[eintrag({ payload: { id: 'T' }, lastError: 'new row violates row-level security policy' })]} onRetry={vi.fn()} onDiscard={vi.fn()} onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByTestId('sync-discard-dl-1'));
+
+    expect(screen.getByText('Diese gestörte Übertragung wird entfernt. Das Turnier war noch nie beim Server und bleibt mit allen Teams und Spielen auf diesem Gerät.')).toBeInTheDocument();
+    expect(screen.queryByText(/Stand des Servers/)).toBeNull();
   });
 
   it('@FU-106 die Rückfrage vor dem Verwerfen sagt, dass danach der Stand des Servers gilt – auch ohne Verbindung', async () => {

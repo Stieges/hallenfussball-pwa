@@ -44,7 +44,7 @@ vi.mock('../../../lib/supabase', () => ({
 }));
 
 import { SupabaseRepository } from '../SupabaseRepository';
-import { OptimisticLockError, RepositoryError } from '../../errors';
+import { CloudReadAbortedError, OptimisticLockError, RepositoryError } from '../../errors';
 
 const { queues, calls, getUser, rpc } = hoisted;
 
@@ -145,6 +145,18 @@ describe('SupabaseRepository.get / getByShareCode – Besetzung als Slots (@TM-0
     await expect(repo.get('t')).resolves.toBeNull();
     await expect(repo.get('t')).resolves.toBeNull();
     await expect(repo.get('t')).resolves.toBeNull();
+  });
+
+  it('@FU-109 getWithMatchRevisions(): Abbruch in jeder Teilabfrage wirft CloudReadAbortedError statt „nicht gefunden“ (Befund C-VERWERFEN-MERKUNG-BEI-ABBRUCH)', async () => {
+    const abort = { message: 'aborted', name: 'AbortError' };
+    enqueue('tournaments', { data: null, error: abort }, { data: TOURNAMENT, error: null }, { data: TOURNAMENT, error: null });
+    enqueue('teams', { data: null, error: abort }, { data: TEAMS, error: null });
+    enqueue('matches', { data: null, error: { message: 'x', code: '20' } });
+    const repo = new SupabaseRepository();
+
+    await expect(repo.getWithMatchRevisions('t')).rejects.toBeInstanceOf(CloudReadAbortedError);
+    await expect(repo.getWithMatchRevisions('t')).rejects.toBeInstanceOf(CloudReadAbortedError);
+    await expect(repo.getWithMatchRevisions('t')).rejects.toBeInstanceOf(CloudReadAbortedError);
   });
 
   it('get(): echte Fehler der Teilabfragen werfen RepositoryError', async () => {

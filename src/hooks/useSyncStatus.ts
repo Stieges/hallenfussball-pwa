@@ -35,8 +35,8 @@ export interface SyncState {
     failedMutations: FailedMutationItem[];
     /** A-06j: Fehlerklasse des letzten Queue-Versuchs (`getLastFailure()`); optional, damit Mocks gueltig bleiben */
     queueLastFailure?: 'transient' | 'permanent' | 'storage' | 'storageBlocked' | null;
-    /** @FU-106: nach „Verwerfen“ wartet ein Turnier noch auf den Stand des Servers (z. B. ohne Verbindung); optional für Mocks */
-    awaitingServerCopy?: boolean;
+    /** @FU-109: Turniere, die nach „Verwerfen“ noch auf den Stand des Servers warten (z. B. ohne Verbindung); optional für Mocks */
+    awaitingServerCopyIds?: string[];
 }
 
 export interface UseSyncStatusReturn extends SyncState {
@@ -109,7 +109,7 @@ export function useSyncStatus(): UseSyncStatusReturn {
             failedChanges: initialStatus.failedCount,
             failedMutations: mutationQueue.getFailedMutations(),
             queueLastFailure: mutationQueue.getLastFailure(),
-            awaitingServerCopy: mutationQueue.scopesNeedingCloudCopy().length > 0,
+            awaitingServerCopyIds: mutationQueue.scopesNeedingCloudCopy(),
         }));
 
         // Subscribe to updates
@@ -121,7 +121,7 @@ export function useSyncStatus(): UseSyncStatusReturn {
                 failedChanges: queueStatus.failedCount,
                 failedMutations: mutationQueue.getFailedMutations(),
                 queueLastFailure: mutationQueue.getLastFailure(),
-                awaitingServerCopy: mutationQueue.scopesNeedingCloudCopy().length > 0,
+                awaitingServerCopyIds: mutationQueue.scopesNeedingCloudCopy(),
             }));
         });
 

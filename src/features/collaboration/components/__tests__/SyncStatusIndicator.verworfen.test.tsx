@@ -1,7 +1,7 @@
 /**
- * @FU-106 Gegenbeispiel (Entscheidung Daniel 20.10.: „Verwerfen = immer Stand des Servers“): Ist der Server nach dem Verwerfen
- * nicht erreichbar, bleibt der Inhalt auf dem Gerät stehen (nichts wird gelöscht) und der Indikator (Cockpit- und Admin-Kopf)
- * sagt, dass der Stand des Servers geladen wird, sobald die Verbindung steht. Echte i18next-Instanz (DE/EN).
+ * @FU-109 „Verwerfen ohne erreichbaren Server löscht nichts und lädt den Stand des Servers nach“: der Indikator (Cockpit- und
+ * Admin-Kopf) des betroffenen Turniers sagt, dass der Stand des Servers geladen wird, sobald die Verbindung steht. Andere
+ * Turniere zeigen den Hinweis nicht. Echte i18next-Instanz (DE/EN).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ReactElement } from 'react';
@@ -27,7 +27,7 @@ const hoisted = vi.hoisted(() => ({
     failedMutations: [] as never[],
     isCloudSyncAvailable: true,
     queueLastFailure: null as 'transient' | 'permanent' | 'storage' | null,
-    awaitingServerCopy: false,
+    awaitingServerCopyIds: [] as string[],
   },
 }));
 
@@ -63,13 +63,13 @@ async function renderWithI18n(ui: ReactElement, lng: 'de' | 'en' = 'de') {
   return render(<I18nextProvider i18n={instance}>{ui}</I18nextProvider>);
 }
 
-describe('@FU-106 SyncStatusIndicator — nach dem Verwerfen wartet das Gerät auf den Stand des Servers', () => {
+describe('@FU-109 SyncStatusIndicator — nach dem Verwerfen wartet das Gerät auf den Stand des Servers', () => {
   beforeEach(() => {
-    hoisted.sync.awaitingServerCopy = false;
+    hoisted.sync.awaitingServerCopyIds = [];
   });
 
-  it('@FU-106 ohne Verbindung nach dem Verwerfen: klarer Hinweis in DE', async () => {
-    hoisted.sync.awaitingServerCopy = true;
+  it('@FU-109 ohne Verbindung nach dem Verwerfen: klarer Hinweis in DE', async () => {
+    hoisted.sync.awaitingServerCopyIds = ['T'];
     await renderWithI18n(<SyncStatusIndicator tournamentId="T" />);
 
     const hinweis = screen.getByTestId('sync-awaiting-server-copy');
@@ -77,14 +77,21 @@ describe('@FU-106 SyncStatusIndicator — nach dem Verwerfen wartet das Gerät a
     expect(hinweis.getAttribute('role')).toBe('status');
   });
 
-  it('@FU-106 derselbe Hinweis in EN', async () => {
-    hoisted.sync.awaitingServerCopy = true;
+  it('@FU-109 derselbe Hinweis in EN', async () => {
+    hoisted.sync.awaitingServerCopyIds = ['T'];
     await renderWithI18n(<SyncStatusIndicator tournamentId="T" />, 'en');
 
     expect(screen.getByTestId('sync-awaiting-server-copy').textContent).toBe('Discarded – the state of the server will load once the connection is back');
   });
 
   it('Gegenbeispiel: ist der Stand des Servers übernommen (nichts gemerkt), erscheint kein Hinweis', async () => {
+    await renderWithI18n(<SyncStatusIndicator tournamentId="T" />);
+
+    expect(screen.queryByTestId('sync-awaiting-server-copy')).toBeNull();
+  });
+
+  it('Gegenbeispiel @FU-109 je Turnier: wartet ein anderes Turnier, zeigt der Kopf dieses Turniers keinen Hinweis', async () => {
+    hoisted.sync.awaitingServerCopyIds = ['ANDERES'];
     await renderWithI18n(<SyncStatusIndicator tournamentId="T" />);
 
     expect(screen.queryByTestId('sync-awaiting-server-copy')).toBeNull();

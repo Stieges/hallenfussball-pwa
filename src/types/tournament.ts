@@ -563,6 +563,12 @@ export interface Tournament {
    */
   serverVersion?: number;
   /**
+   * Befund C-ZWEITES-SPEICHERN-EIGENE-VORVERSION (@FU-110): erste Basis einer ununterbrochenen Kette eigener, bestätigter
+   * Uploads dieses Geräts bis `serverVersion`. Eine Nutzlast mit Basis in dieser Kette beruht auf dem eigenen Stand und wird
+   * gegen `serverVersion` geprüft. Endet bei jeder Übernahme aus der Cloud. Nur lokal, nie in die Cloud geschrieben.
+   */
+  ownUploadsFrom?: number;
+  /**
    * A-10 (@TM-027, Befund C-SLOT-UPDATE-OHNE-VERSION): Änderungszählung des Servers (`tournaments.change_revision`),
    * zählt Spielplan-Änderungen ohne Versions-CAS. Nur aus der Cloud gelesen; lokale Schreibwege ändern sie nie.
    * Höherer Cloud-Wert → ganze Kopie übernehmen (Regel Q gilt). Fehlt die Spalte: 0.

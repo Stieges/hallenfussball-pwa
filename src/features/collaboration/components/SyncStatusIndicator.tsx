@@ -70,8 +70,10 @@ export function SyncStatusIndicator({
         discardFailedMutation,
         isCloudSyncAvailable,
         queueLastFailure,
-        awaitingServerCopy = false,
+        awaitingServerCopyIds = [],
     } = useSyncStatus();
+    // @FU-109: der Hinweis gilt dem geöffneten Turnier; ohne Turnier (Kopf ohne Bezug) jedem wartenden
+    const awaitingServerCopy = tournamentId === undefined ? awaitingServerCopyIds.length > 0 : awaitingServerCopyIds.includes(tournamentId);
     // A-06j (Brief A10): echter Ausgangs-Status des Senders (lastFailureKind/lastError) und die
     // Queue-Fehlerklasse ergeben zusammen den Wartegrund fuer die Bar.
     const outbox = useOutboxStatus(useMatchEngineContextOptional()?.sender ?? null);
@@ -173,7 +175,7 @@ export function SyncStatusIndicator({
                 </span>
             )}
 
-            {/* @FU-106: nach „Verwerfen“ ohne Verbindung bleibt der Inhalt sichtbar stehen, bis der Stand des Servers geladen ist */}
+            {/* @FU-109: nach „Verwerfen“ ohne Verbindung bleibt der Inhalt sichtbar stehen, bis der Stand des Servers geladen ist */}
             {awaitingServerCopy && (
                 <span style={realtimeHintStyle} role="status" data-testid="sync-awaiting-server-copy">
                     {t('syncStatus.awaitingServerCopy')}

@@ -13,7 +13,18 @@ export function checkedVersion(tournament: Pick<Tournament, 'serverVersion' | 'v
     return tournament.serverVersion ?? tournament.version;
 }
 
-/** Nutzlast für den Server: Version = Basis der Prüfung; das lokale Feld geht nicht mit. */
-export function withCheckedVersion(tournament: Tournament): Tournament {
-    return { ...tournament, version: checkedVersion(tournament), serverVersion: undefined };
+/**
+ * Befund C-ZWEITES-SPEICHERN-EIGENE-VORVERSION (@FU-110): Beruht `base` auf einer Version, die seitdem nur durch eigene,
+ * bestätigte Uploads dieses Geräts weitergezählt wurde (`ownUploadsFrom` bis `serverVersion` der lokalen Kopie), gilt die
+ * aktuelle bestätigte Version als Basis – die zweite eigene Änderung kurz nach der ersten ist kein Konflikt. Ein fremder
+ * Stand dazwischen beendet die Kette (Übernahme aus der Cloud), dann bleibt `base` und der Server lehnt ab.
+ */
+export function ownChainBase(base: number | undefined, local: Pick<Tournament, 'serverVersion' | 'ownUploadsFrom'> | null | undefined): number | undefined {
+    if (base === undefined || local?.serverVersion === undefined || local.ownUploadsFrom === undefined) { return base; }
+    return base >= local.ownUploadsFrom && base <= local.serverVersion ? local.serverVersion : base;
+}
+
+/** Nutzlast für den Server: Version = Basis der Prüfung; die lokalen Felder gehen nicht mit. */
+export function withCheckedVersion(tournament: Tournament, base: number | undefined = checkedVersion(tournament)): Tournament {
+    return { ...tournament, version: base, serverVersion: undefined, ownUploadsFrom: undefined };
 }

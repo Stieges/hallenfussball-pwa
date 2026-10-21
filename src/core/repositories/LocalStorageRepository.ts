@@ -13,7 +13,7 @@ import { quarantineLegacyTournaments, LEGACY_TOURNAMENTS_NOTICE_EVENT } from '..
 import { applyServerLedPatch, type ServerLedMatchPatch } from './serverLedMatchFields';
 import { readServerRevisions, writeServerRevisions, type CloudAdoption } from './cloudAdoption';
 import { generateShareCode } from '../models/shareCode';
-import { checkedVersion } from './confirmedVersion';
+import { checkedVersion, ownChainBase } from './confirmedVersion';
 
 /**
  * A2 Fixrunde 3 (N2, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md`):
@@ -118,23 +118,28 @@ export class LocalStorageRepository implements ITournamentRepository {
      * A-08f3c1: Version = Version der Nutzlast + 1 (Anzeige, wie die Cloud beim Speichern; ohne Version setzt sie 1).
      * C-VERSION-MEHRDEUTIG: die bestätigte Version ist die Basis der Nutzlast (`checkedVersion`), nie die gestempelte.
      */
-    save(tournament: Tournament): Promise<void> {
+    /** @FU-110: liefert die Basis, auf der der gespeicherte Inhalt beruht (ggf. über die Kette eigener Uploads angehoben). */
+    save(tournament: Tournament): Promise<number | undefined> {
         return this.serialize(() => this.saveNow(tournament));
     }
 
     /** A-08f3c1: Cloud-Kopie (oder lokale Kopie ohne Zählen) übernehmen -- Version und `updatedAt` wie übergeben. */
     cacheCloudCopy(tournament: Tournament): Promise<void> {
-        return this.serialize(() => this.saveNow(tournament, true));
+        return this.serialize(async () => { await this.saveNow(tournament, true); });
     }
 
-    private async saveNow(tournament: Tournament, cached = false): Promise<void> {
+    private async saveNow(tournament: Tournament, cached = false): Promise<number | undefined> {
         const list = await this.loadList();
         const index = list.findIndex(t => t.id === tournament.id);
         // A-10: die Änderungszählung kommt nur aus der Cloud (cacheCloudCopy); lokale Schreibwege behalten den gespeicherten Wert.
         // C-VERSION-MEHRDEUTIG: der Inhalt beruht auf der bestätigten Version der Nutzlast -- sie geht mit, die gestempelte Zahl nicht.
+        // @FU-110: liegt sie in der Kette eigener Uploads, beruht er auf der aktuellen bestätigten Version (Kette bleibt).
+        const existing = index >= 0 ? list[index] : undefined;
+        const base = ownChainBase(checkedVersion(tournament), existing);
+        const chain = existing?.ownUploadsFrom !== undefined && base === existing.serverVersion ? existing.ownUploadsFrom : undefined;
         const stamp = cached ? {} : {
-            version: (tournament.version ?? 0) + 1, serverVersion: checkedVersion(tournament),
-            updatedAt: new Date().toISOString(), changeRevision: list[index]?.changeRevision,
+            version: (tournament.version ?? 0) + 1, serverVersion: base, ownUploadsFrom: chain,
+            updatedAt: new Date().toISOString(), changeRevision: existing?.changeRevision,
         };
 
         if (index >= 0) {
@@ -149,6 +154,7 @@ export class LocalStorageRepository implements ITournamentRepository {
         const storage = await createStorage();
         const stored = await readServerRevisions(storage, tournament.id);
         if (stored.size > 0) { await writeServerRevisions(storage, tournament.id, stored, new Set(tournament.matches.map(m => m.id))); }
+        return base;
     }
 
     updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
@@ -267,7 +273,9 @@ export class LocalStorageRepository implements ITournamentRepository {
             const list = await this.loadList();
             const index = list.findIndex(t => t.id === id);
             if (index === -1 || checkedVersion(list[index]) !== base) { return; }
-            list[index] = { ...list[index], version: confirmed, serverVersion: confirmed };
+            // @FU-110: die Kette eigener Uploads beginnt beim ersten bestätigten eigenen Upload und wächst mit jedem weiteren
+            const ownUploadsFrom = list[index].ownUploadsFrom ?? base ?? confirmed;
+            list[index] = { ...list[index], version: confirmed, serverVersion: confirmed, ownUploadsFrom };
             await this.saveList(list);
         });
     }

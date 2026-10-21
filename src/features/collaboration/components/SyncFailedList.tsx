@@ -116,9 +116,29 @@ const styles = {
     } as CSSProperties,
 };
 
+/** @FU-108/@FU-109: ein neuer Versuch schickte denselben Stand und scheiterte erneut – nur Verwerfen hilft. */
+const retryUseless = (item: FailedMutationItem): boolean => item.conflict === true || item.discardedCopy === true;
+
+/** Grund je Eintrag: Konflikt mit anderem Gerät, verworfener Stand (eigener Text) oder der letzte Fehler. */
+function reasonKey(item: FailedMutationItem): 'syncStatus.discardedCopyReason' | 'syncStatus.conflictReason' | null {
+    if (item.discardedCopy) { return 'syncStatus.discardedCopyReason'; }
+    return item.conflict ? 'syncStatus.conflictReason' : null;
+}
+
+/** @FU-107: ein Turnier, das nie beim Server war (keine Änderungszählung der Cloud), bleibt beim Verwerfen auf dem Gerät. */
+function isLocalOnly(item: FailedMutationItem | undefined): boolean {
+    if (item?.type !== 'SAVE_TOURNAMENT') { return false; }
+    return (item.payload as { changeRevision?: number } | null)?.changeRevision === undefined;
+}
+
 export function SyncFailedList({ items, onRetry, onDiscard, onClose }: SyncFailedListProps) {
     const { t } = useTranslation('common');
     const [pendingDiscardId, setPendingDiscardId] = useState<string | null>(null);
+    const pendingDiscard = items.find((item) => item.id === pendingDiscardId);
+    const reasonText = (item: FailedMutationItem): string => {
+        const key = reasonKey(item);
+        return key ? t(key) : (item.lastError ?? t('syncStatus.failedReasonUnknown'));
+    };
 
     const mutationTypeLabel = (type: MutationType | string): string =>
         t(`syncStatus.mutationTypes.${type}`, { defaultValue: type });
@@ -145,10 +165,10 @@ export function SyncFailedList({ items, onRetry, onDiscard, onClose }: SyncFaile
                 <div style={styles.item} key={item.id}>
                     <span style={styles.itemType}>{mutationTypeLabel(item.type)}</span>
                     <span style={styles.itemReason} data-testid={`sync-failed-reason-${item.id}`}>
-                        {item.conflict ? t('syncStatus.conflictReason') : (item.lastError ?? t('syncStatus.failedReasonUnknown'))}
+                        {reasonText(item)}
                     </span>
                     <div style={styles.itemActions}>
-                        {!item.conflict && (
+                        {!retryUseless(item) && (
                             <button
                                 type="button"
                                 style={{ ...styles.actionButton, ...styles.retryButton }}
@@ -164,9 +184,9 @@ export function SyncFailedList({ items, onRetry, onDiscard, onClose }: SyncFaile
                             style={{ ...styles.actionButton, ...styles.discardButton }}
                             onClick={() => setPendingDiscardId(item.id)}
                             data-testid={`sync-discard-${item.id}`}
-                            aria-label={t(item.conflict ? 'syncStatus.discardAndLoadAriaLabel' : 'syncStatus.discardAriaLabel')}
+                            aria-label={t(retryUseless(item) ? 'syncStatus.discardAndLoadAriaLabel' : 'syncStatus.discardAriaLabel')}
                         >
-                            {t(item.conflict ? 'syncStatus.discardAndLoad' : 'syncStatus.discard')}
+                            {t(retryUseless(item) ? 'syncStatus.discardAndLoad' : 'syncStatus.discard')}
                         </button>
                     </div>
                 </div>
@@ -175,7 +195,7 @@ export function SyncFailedList({ items, onRetry, onDiscard, onClose }: SyncFaile
             {pendingDiscardId && (
                 <ConfirmDialog
                     title={t('syncStatus.discardConfirmTitle')}
-                    message={t('syncStatus.discardConfirmMessage')}
+                    message={t(isLocalOnly(pendingDiscard) ? 'syncStatus.discardConfirmMessageLocalOnly' : 'syncStatus.discardConfirmMessage')}
                     variant="danger"
                     confirmText={t('syncStatus.discard')}
                     onConfirm={() => {

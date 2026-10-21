@@ -160,6 +160,7 @@ export function buildCopiedTournament(
     // Neue Zeile in der Datenhaltung: Versionen des Originals gelten nicht
     version: undefined,
     serverVersion: undefined,
+    ownUploadsFrom: undefined,
     changeRevision: undefined,
     // Keine Bildschirme (@W5-026)
     monitors: undefined,

@@ -121,17 +121,17 @@ describe('useSyncStatus — gescheiterte Übertragungen (C-SYNC)', () => {
     expect(result.current.failedMutations).toEqual([]);
   });
 
-  it('@FU-106 nach dem Verwerfen meldet der Hook, dass das Turnier auf den Stand des Servers wartet, bis er übernommen ist', () => {
+  it('@FU-109 nach dem Verwerfen meldet der Hook, welches Turnier auf den Stand des Servers wartet, bis er übernommen ist', () => {
     const fakeQueue = createFakeMutationQueue([failedItem]);
     mockRepository.current = { mutationQueue: fakeQueue };
     const { result } = renderHook(() => useSyncStatus());
-    expect(result.current.awaitingServerCopy).toBe(false);
+    expect(result.current.awaitingServerCopyIds).toEqual([]);
 
     act(() => { result.current.discardFailedMutation('fail-1'); });
-    expect(result.current.awaitingServerCopy).toBe(true);
+    expect(result.current.awaitingServerCopyIds).toEqual(['t1']);
 
     act(() => { fakeQueue.adoptServerCopy(); });
-    expect(result.current.awaitingServerCopy).toBe(false);
+    expect(result.current.awaitingServerCopyIds).toEqual([]);
   });
 
   it('retry/discard on a repository without a mutation queue is a no-op, not a crash', () => {

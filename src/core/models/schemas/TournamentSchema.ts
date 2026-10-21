@@ -153,6 +153,7 @@ export const TournamentSchema = z.object({
     ownerId: z.string().optional(),
     version: z.number().optional(),
     serverVersion: z.number().optional(), // C-VERSION-MEHRDEUTIG: zuletzt vom Server bestätigte Version (nur lokal)
+    ownUploadsFrom: z.number().optional(), // C-ZWEITES-SPEICHERN-EIGENE-VORVERSION: Kette eigener Uploads (nur lokal)
     changeRevision: z.number().optional(), // A-10: tournaments.change_revision (nur Cloud)
     /** Freigabe-Marker (ISO). Siehe Tournament.publishedAt — bewusst nicht `status`. */
     publishedAt: z.string().optional(),

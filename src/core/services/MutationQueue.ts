@@ -112,9 +112,9 @@ async function skipUploadForGuestEntries(
  * C-VERSION-MEHRDEUTIG: bestätigten Upload lokal vermerken. Der Server hat schon gespeichert – ein Fehler beim Vermerk
  * wird gemeldet, löst aber keinen zweiten Versuch aus (der träfe die eigene, neue Server-Version als Konflikt).
  */
-async function confirmLocally(localRepo: LocalStorageRepository, tournamentId: string, base: number): Promise<void> {
+async function confirmLocally(localRepo: LocalStorageRepository, tournamentId: string, base: number | undefined, reached: number): Promise<void> {
     try {
-        await localRepo.confirmUpload(tournamentId, base, base + 1);
+        await localRepo.confirmUpload(tournamentId, base, reached); // C-VERSION-NACH-ERSTANLAGE: die vom Server gemeldete Version
     } catch (error) {
         captureFeatureError(error instanceof Error ? error : new Error(String(error)), 'sync', 'confirmUpload', { tournamentId });
     }
@@ -204,6 +204,8 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
         const storageKey = accountScopedKey(LEGACY_QUEUE_KEY, accountId);
         const failedStorageKey = accountScopedKey(LEGACY_FAILED_KEY, accountId);
         let adoptionFailed = false;
+        /** @FU-110: erreichte Server-Version je erfolgreich gesendetem SAVE_TOURNAMENT (nur bis `rebasePending`). */
+        const reachedById = new Map<string, number>();
         if (accountId) {
             // Vor dem Laden der Basisklasse: die erste angemeldete Queue übernimmt den Altbestand.
             const queueAdopted = adoptLegacyKey(LEGACY_QUEUE_KEY, storageKey);
@@ -238,6 +240,23 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
             },
             scopeOf: tournamentIdOf, // A-08f3c2 (Regel Q): Zähler und Dead-Letter je Turnier
             wholeCopyTypes: ['SAVE_TOURNAMENT'], // @FU-106 (Auflage A1): nie aus einer verworfenen Kopie senden
+            /**
+             * Befund C-ZWEITES-SPEICHERN-EIGENE-VORVERSION (@FU-110): nach einem bestätigten Upload `base → reached` beruhen
+             * wartende SAVE_TOURNAMENT desselben Turniers mit Basis `base` auf dem eigenen Stand – sie prüfen gegen `reached`.
+             * Fremde Stände bleiben geschützt: `reached` hat nachweislich dieses Gerät erzeugt.
+             */
+            rebasePending: (done, pending) => {
+                if (done.type !== 'SAVE_TOURNAMENT') { return undefined; }
+                const reached = reachedById.get(done.id);
+                reachedById.delete(done.id);
+                const doneT = done.payload as Tournament;
+                if (reached === undefined) { return undefined; }
+                return pending.flatMap((p) => {
+                    const t = p.payload as Tournament;
+                    const same = p.type === 'SAVE_TOURNAMENT' && t.id === doneT.id && checkedVersion(t) === checkedVersion(doneT);
+                    return same ? [{ id: p.id, payload: { ...t, serverVersion: reached } }] : [];
+                });
+            },
 
             execute: async (item) => {
                 if (accountId) {
@@ -269,10 +288,9 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                         // C-VERSION-MEHRDEUTIG (@FU-106): geprüft wird gegen die bestätigte Version der (zusammengefassten)
                         // Nutzlast, nie gegen die lokal gestempelte; danach gilt der Upload als bestätigt.
                         const base = checkedVersion(tournament);
-                        await supabaseRepo.save(withCheckedVersion(tournament));
-                        if (base !== undefined) {
-                            await confirmLocally(localRepo, tournament.id, base);
-                        }
+                        const reached = await supabaseRepo.save(withCheckedVersion(tournament));
+                        reachedById.set(item.id, reached); // @FU-110: für das Anheben wartender Einträge (rebasePending)
+                        await confirmLocally(localRepo, tournament.id, base, reached);
                         break;
                     }
                     case 'DELETE_TOURNAMENT': {

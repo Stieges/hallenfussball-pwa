@@ -16,7 +16,7 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Tournament } from '../../models/types';
 import { MAX_RETRIES } from '../../services/MutationQueue';
-import { RepositoryError, TeamStillReferencedError } from '../../errors';
+import { CloudReadAbortedError, RepositoryError, TeamStillReferencedError } from '../../errors';
 
 const session = vi.hoisted(() => ({ userId: null as string | null }));
 const net = vi.hoisted(() => ({ online: true }));
@@ -194,7 +194,7 @@ describe('Verwerfen einer abgelehnten Änderung nach einem Konflikt', () => {
   });
 
   describe('@FU-106 Auflage A1 (review-ca67): aus einer verworfenen Kopie geht nichts zum Server', () => {
-    it('@FU-106 RACE-A: Abruf nach dem Verwerfen scheitert, Maria speichert danach den Ort → Ollis Titel bleibt in der Cloud, ihr Eintrag liegt sichtbar als Konflikt im Dead-Letter', async () => {
+    it('@FU-106 RACE-A: Abruf nach dem Verwerfen scheitert, Maria speichert danach den Ort → Ollis Titel bleibt in der Cloud, ihr Eintrag liegt sichtbar im Dead-Letter (eigener Grund @FU-109)', async () => {
       const { cloud, maria, savesVorher } = await wettlauf();
       cloud.fake.getWithMatchRevisions.mockRejectedValueOnce(new Error('Failed to fetch'));
       verwerfen(maria);
@@ -211,7 +211,7 @@ describe('Verwerfen einer abgelehnten Änderung nach einem Konflikt', () => {
       expect(await cloud.fake.get('T')).toMatchObject({ title: 'Ollis Titel', version: 8 });
       expect(cloud.fake.save.mock.calls.length).toBe(savesVorher);
       expect(maria.mutationQueue.getFailedCount()).toBe(1);
-      expect(maria.mutationQueue.getFailedMutations()[0]).toMatchObject({ type: 'SAVE_TOURNAMENT', conflict: true });
+      expect(maria.mutationQueue.getFailedMutations()[0]).toMatchObject({ type: 'SAVE_TOURNAMENT', discardedCopy: true }); // @FU-109: eigener Grund
       expect(maria.mutationQueue.needsCloudCopy('T')).toBe(true);
     });
 
@@ -298,7 +298,45 @@ describe('Verwerfen einer abgelehnten Änderung nach einem Konflikt', () => {
       expect(olli.mutationQueue.needsCloudCopy('T')).toBe(false);
     });
 
-    it('Gegenbeispiel: ist der Server nach dem Verwerfen nicht erreichbar, wird nichts gelöscht, das Gerät meldet das Warten auf den Stand des Servers und lädt nichts hoch', async () => {
+    it('@FU-109 NOCONF-H1: der Abruf nach dem Verwerfen wird abgebrochen – die Merkung bleibt, Wiederverbinden (syncUp) schickt den verworfenen Titel nicht, der nächste Abruf übernimmt (Befund C-VERWERFEN-MERKUNG-BEI-ABBRUCH)', async () => {
+      const { cloud, olli, savesVorher } = await ohneKonfliktImDeadLetter();
+      cloud.fake.getWithMatchRevisions.mockRejectedValueOnce(new CloudReadAbortedError({ message: 'aborted', code: 20 }));
+
+      verwerfen(olli);
+      await flush();
+      expect(olli.mutationQueue.needsCloudCopy('T')).toBe(true); // Abbruch heißt nicht „Turnier weg“
+      expect(stored()).toMatchObject({ title: 'Verworfener Titel' });
+      await olli.syncUp();
+      await flush();
+
+      expect(cloud.fake.updateTournamentMetadata).not.toHaveBeenCalled();
+      expect(cloud.fake.save.mock.calls.length).toBe(savesVorher);
+      expect(await cloud.fake.get('T')).toMatchObject({ title: 'Live-Cup', version: 7 });
+
+      await olli.get('T', { fresh: true });
+      expect(stored()).toMatchObject({ title: 'Live-Cup', version: 7 });
+      expect(olli.mutationQueue.needsCloudCopy('T')).toBe(false);
+    });
+
+    it('@FU-109 nach dem Verwerfen ohne erreichbaren Server weiter gespeichert: geht nicht zum Server, liegt mit eigenem Grund (nicht „Konflikt“) sichtbar ab (Befund C-VERWORFEN-FALSCHER-GRUND)', async () => {
+      const { cloud, olli, savesVorher } = await ohneKonfliktImDeadLetter();
+      cloud.fake.getWithMatchRevisions.mockRejectedValue(new Error('Failed to fetch')); // Hallen-WLAN ohne Internet
+      cloud.fake.get.mockRejectedValue(new Error('Failed to fetch'));
+      verwerfen(olli);
+      await flush();
+
+      const kopie = stored();
+      await olli.save({ ...kopie, location: { ...kopie.location, name: 'Halle Süd' } });
+      await flush();
+
+      expect(cloud.fake.save.mock.calls.length).toBe(savesVorher);
+      const [eintrag] = olli.mutationQueue.getFailedMutations();
+      expect(eintrag).toMatchObject({ type: 'SAVE_TOURNAMENT', discardedCopy: true });
+      expect(eintrag.conflict).toBeUndefined();
+      expect(olli.mutationQueue.needsCloudCopy('T')).toBe(true);
+    });
+
+    it('@FU-109 ist der Server nach dem Verwerfen nicht erreichbar, wird nichts gelöscht, das Gerät meldet das Warten auf den Stand des Servers und lädt nichts hoch', async () => {
       const { cloud, olli, savesVorher } = await ohneKonfliktImDeadLetter();
       cloud.fake.getWithMatchRevisions.mockRejectedValue(new Error('Failed to fetch'));
       cloud.fake.get.mockRejectedValue(new Error('Failed to fetch'));

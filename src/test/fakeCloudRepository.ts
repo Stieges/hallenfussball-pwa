@@ -63,6 +63,7 @@ export function createFakeCloud(initial: FakeCloudState, options: FakeCloudOptio
       const expected = state.tournament.version ?? 0;
       if ((t.version ?? 0) !== expected) { throw new OptimisticLockError(t.id, expected, t.version ?? 0); }
       state = { ...state, tournament: { ...structuredClone(t), version: expected + 1 } };
+      return expected + 1; // wie SupabaseRepository.save: erreichte Version
     }),
     updateMatches: vi.fn(async (_id: string, updates: MatchUpdate[]) => {
       const byId = new Map(updates.map((u) => [u.id, u]));

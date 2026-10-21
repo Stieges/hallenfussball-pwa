@@ -74,7 +74,7 @@ export function decideCloudAdoption(
     const wholeWanted = options.whole || cloudVersion > localVersion || visibilityStale || revisionAhead;
     if (local === null || (wholeWanted && (options.wholeAllowed?.() ?? true))) {
         // C-VERSION-MEHRDEUTIG: die ganze Kopie beruht auf der Cloud-Version (bestätigte Version)
-        const whole = { ...keepNewerFields(cloud, local, read.matchRevisions, stored), serverVersion: cloud.version };
+        const whole = { ...keepNewerFields(cloud, local, read.matchRevisions, stored), serverVersion: cloud.version, ownUploadsFrom: undefined };
         return { save: options.owned(whole), revisions: maxRevisions(stored, read.matchRevisions) };
     }
     const merged = mergeServerLedFields(local, cloud, read.matchRevisions, stored, 'stufe2');

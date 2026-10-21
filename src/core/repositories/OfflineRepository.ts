@@ -295,7 +295,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         const before = this.queueGuard.snapshot(id); // A-08f3c2 (H1): Stand der Warteschlange vor dem Lesen
         const read = await withCloudReadTimeout(this.supabaseRepo.getWithMatchRevisions(id));
         if (!read) {
-            if (this._mutationQueue.needsCloudCopy(id)) { this._mutationQueue.forgetCloudCopy(id); } // Auflage A1: Turnier weg/unsichtbar
+            // Auflage A1: Turnier weg/unsichtbar. `null` heißt nur noch „nicht gefunden“; ein Abbruch wirft und lässt die Merkung
+            // stehen (Befund C-VERWERFEN-MERKUNG-BEI-ABBRUCH, @FU-109)
+            if (this._mutationQueue.needsCloudCopy(id)) { this._mutationQueue.forgetCloudCopy(id); }
             return null;
         }
         const discarded = this._mutationQueue.needsCloudCopy(id); // @FU-106: verworfener Konflikt → ganze Kopie der Cloud
@@ -340,9 +342,10 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
      */
     async save(tournament: Tournament): Promise<void> {
         await this.queueGuard.track(tournament.id, async () => { // A-08f3c2: Speichern + Einreihen als Einheit (Regel Q)
-            await this.localRepo.save(this.owned(tournament));
+            const base = await this.localRepo.save(this.owned(tournament));
             this.serverRevisions.retain(tournament.id, new Set(tournament.matches.map(m => m.id))); // A-08f3b: Neugenerieren
-            this.mutationQueue.enqueue('SAVE_TOURNAMENT', tournament);
+            // @FU-110: über die Kette eigener Uploads angehobene Basis geht mit (zweites Speichern aus dem Zustand der Ansicht)
+            this.mutationQueue.enqueue('SAVE_TOURNAMENT', base === checkedVersion(tournament) ? tournament : { ...tournament, serverVersion: base });
         });
     }
 
@@ -376,7 +379,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         if (local) {
             // C-VERSION-MEHRDEUTIG: beruhte die Kopie auf der geprüften Version, ist die neue Server-Version bestätigt
             const serverVersion = checkedVersion(local) === expectedVersion ? expectedVersion + 1 : local.serverVersion;
-            await this.localRepo.cacheCloudCopy({ ...local, standingDecisions: decisions, version: expectedVersion + 1, serverVersion });
+            // @FU-110: keine Kette über eine Entscheidung (die Ansicht kennt sie ggf. nicht – ein Voll-Speichern nähme sie zurück)
+            await this.localRepo.cacheCloudCopy({ ...local, standingDecisions: decisions, version: expectedVersion + 1, serverVersion, ownUploadsFrom: undefined });
         }
     }
 
@@ -480,8 +484,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     }
                     if (!cloudT) {
                         // Not in cloud -> Full Upload (A-08f3c1: die Cloud legt mit Version 1 an)
-                        await this.supabaseRepo.save(withCheckedVersion(localT));
-                        await this.localRepo.confirmUpload(localT.id, checkedVersion(localT), 1);
+                        const reached = await this.supabaseRepo.save(withCheckedVersion(localT));
+                        await this.localRepo.confirmUpload(localT.id, checkedVersion(localT), reached);
                         continue;
                     }
 
@@ -534,8 +538,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
 
         // 1. Structural changes (teams, matches, config) require the full save
         if (this.hasStructuralChanges(local, remote)) {
-            await this.supabaseRepo.save(withCheckedVersion(local));
-            await this.localRepo.confirmUpload(local.id, base, base + 1);
+            const reached = await this.supabaseRepo.save(withCheckedVersion(local));
+            await this.localRepo.confirmUpload(local.id, base, reached);
             return;
         }
 
@@ -776,8 +780,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     }
                     // C-VERSION-MEHRDEUTIG: geprüft gegen die bestätigte Version der Kopie
                     const base = checkedVersion(local);
-                    await this.supabaseRepo.save(withCheckedVersion(local));
-                    await this.localRepo.confirmUpload(tournamentId, base, (base ?? 0) + 1); // A-08f3c1: wie die Cloud
+                    const reached = await this.supabaseRepo.save(withCheckedVersion(local));
+                    await this.localRepo.confirmUpload(tournamentId, base, reached); // C-VERSION-NACH-ERSTANLAGE: wie die Cloud
                     return { status: 'synced', data: local };
                 }
             } else {
@@ -820,8 +824,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                 if (!remote || new Date(local.updatedAt) > new Date(remote.updatedAt)) {
                     // C-VERSION-MEHRDEUTIG: geprüft gegen die bestätigte Version der Kopie
                     const base = checkedVersion(local);
-                    await this.supabaseRepo.save(withCheckedVersion(local));
-                    await this.localRepo.confirmUpload(tournamentId, base, remote ? (base ?? 0) + 1 : 1); // A-08f3c1
+                    const reached = await this.supabaseRepo.save(withCheckedVersion(local));
+                    await this.localRepo.confirmUpload(tournamentId, base, reached); // C-VERSION-NACH-ERSTANLAGE
                 }
             }
             return { status: 'synced', data: local ?? downResult.data };
