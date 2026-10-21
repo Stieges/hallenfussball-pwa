@@ -5,7 +5,7 @@
  *  - der Rückweg im Kopf nennt jede Funktion, jeden Trigger, jede Tabelle und die Spalte, die die Migration anlegt,
  *  - „all“ steht im SQL nur in match_engine.group_key (eine Abbildung, R-GA4v2-7),
  *  - die zehn Hilfen in match_engine sind aus den Engine-Assertions ausgenommen (die Rechenfunktion bleibt bei 52),
- *  - die fünf neuen Rechte-Assertions stehen in SQL-Datei, Namensliste und Zuordnung, PENDING-LIVE nennt die Datei.
+ *  - die sechs neuen Rechte-Assertions stehen in SQL-Datei, Namensliste und Zuordnung, PENDING-LIVE nennt die Datei.
  * Anforderungen: @TM-046, @TM-113, @W2A-070, @W2A-072, @TM-057.
  */
 import { describe, it, expect } from 'vitest';
@@ -66,9 +66,10 @@ describe('A-13b-S Rechte-Assertions und Drift-Check', () => {
     'group-completion-helpers-no-client-execute',
     'complete-group-locks-matches-before-tournament',
     'group-completion-triggers',
+    'ci-schema-reader-select-group-completion',
   ];
 
-  it('die fünf Assertions stehen in der SQL-Datei, in PRIVILEGE_ASSERTION_NAMES und in pending_assertions_for', () => {
+  it('die sechs Assertions stehen in der SQL-Datei, in PRIVILEGE_ASSERTION_NAMES und in pending_assertions_for', () => {
     const mapping = drift.match(new RegExp(`    ${MIGRATION_NAME.replace(/\./g, '\\.')}\\)\\n\\s+echo "([^"]+)"`));
     expect(mapping?.[1].split(' ').sort()).toEqual([...NAMES].sort());
     for (const name of NAMES) {

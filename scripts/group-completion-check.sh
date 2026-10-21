@@ -23,7 +23,7 @@
 #
 # Aufruf:
 #   bash scripts/group-completion-check.sh                  normaler Lauf, Exit 0 nur ohne Abweichung
-#   bash scripts/group-completion-check.sh --gegenprobe     ohne Migration und je Mutation MG1-MG18, MB1, MB2 (Plan
+#   bash scripts/group-completion-check.sh --gegenprobe     ohne Migration und je Mutation MG1-MG19, MB1, MB2 (Plan
 #                                                           A-13b-S); Exit 0 NUR, wenn jede Variante ihre Pruefung rot
 #                                                           faerbt (GEGENPROBE_NUR="MG3 MG14" schraenkt ein)
 #   bash scripts/group-completion-check.sh --print-rueckweg gibt den Rueckweg-Block aus (ohne Container)
@@ -701,7 +701,7 @@ run_races() { # run_races <Laeufe> <RT ...>
 # ---------------------------------------------------------------------------------------------------------
 # S: Schema, Rechte, Rechte-Assertions
 # ---------------------------------------------------------------------------------------------------------
-G1_ASSERTIONS="complete-group-locks-matches-before-tournament group-completion-helpers-no-client-execute group-completion-rpcs-definer-authenticated-only group-completion-tables-no-client-writes group-completion-triggers"
+G1_ASSERTIONS="ci-schema-reader-select-group-completion complete-group-locks-matches-before-tournament group-completion-helpers-no-client-execute group-completion-rpcs-definer-authenticated-only group-completion-tables-no-client-writes group-completion-triggers"
 run_schema() {
   local priv names_sql names_sh fn
   check S "Rechte: anon fuehrt keine der 6 RPCs aus, authenticated alle; keine Hilfe in match_engine fuer Client-Rollen" "0|6|0" \
@@ -714,13 +714,29 @@ run_schema() {
     "$(q "SELECT CASE WHEN position('ORDER BY m.id FOR UPDATE' IN prosrc) BETWEEN 1 AND position('FROM public.group_completions' IN prosrc) THEN 'ja' ELSE 'nein' END FROM pg_proc WHERE oid = to_regprocedure('public.reopen_group(uuid,text,text,boolean)');")|$(q "SELECT CASE WHEN position('public.matches' IN prosrc) = 0 THEN 'ja' ELSE 'nein' END FROM pg_proc WHERE oid = to_regprocedure('public.record_standing_decision(uuid,text,jsonb,text,integer)');")"
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
   check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
-  check S "Rechte-Assertion: die 5 A-13b-S-Zeilen vorhanden und |t" "$(tr ' ' '\n' <<<"$G1_ASSERTIONS" | sed 's/$/|t/' | sort | paste -sd, -)" \
+  check S "Rechte-Assertion: die 6 A-13b-S-Zeilen vorhanden und |t" "$(tr ' ' '\n' <<<"$G1_ASSERTIONS" | sed 's/$/|t/' | sort | paste -sd, -)" \
     "$(grep -E "^($(tr ' ' '|' <<<"$G1_ASSERTIONS"))\|" <<<"$priv" | sort | paste -sd, -)"
   names_sql="$(grep -E '^[a-z0-9-]+\|[tf]$' <<<"$priv" | cut -d'|' -f1 | sort)"
   names_sh="$(awk '/^PRIVILEGE_ASSERTION_NAMES=\(/{f=1; next} f && /^\)/{exit} f' "$REPO_ROOT/scripts/db-drift-check.sh" | grep -oE '^  "[a-z0-9-]+"' | tr -d ' "' | sort)"
   check S "Lehre A-30a: Namensliste PRIVILEGE_ASSERTION_NAMES = Namen der SQL-Datei (diff leer)" "" "$(diff <(echo "$names_sh") <(echo "$names_sql") || true)"
-  check S "Drift-Check-Zuordnung: pending_assertions_for nennt fuer $TARGET_NAME genau die 5 neuen Namen" "$G1_ASSERTIONS" \
+  check S "Drift-Check-Zuordnung: pending_assertions_for nennt fuer $TARGET_NAME genau die 6 neuen Namen" "$G1_ASSERTIONS" \
     "$(awk -v n="    $TARGET_NAME)" 'index($0, n) == 1 {getline; print; exit}' "$REPO_ROOT/scripts/db-drift-check.sh" | sed -E 's/^ *echo "//; s/"$//' | tr ' ' '\n' | sort | paste -sd' ' -)"
+  # Leserolle des Drift-Checks (Daniel 21.10.): pg_dump --schema-only als Login-Rolle IN ROLE ci_schema_reader (per TCP wie
+  # der Drift-Check) ueber die vier neuen Tabellen. Nur diese vier: in der Migrationskette fehlt der Rolle das SELECT auf die
+  # Baseline-Tabellen, das live das Datenbank-Programm (21.09.) vergeben hat. Vorher-Zustand: SELECT kurz entzogen -> rot; danach wieder vergeben -> gruen; Rechte danach wie vorher.
+  local acl_before dump_rc
+  q "DO \$r\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'drift_probe') THEN
+       CREATE ROLE drift_probe LOGIN PASSWORD 'drift' IN ROLE ci_schema_reader; END IF; END \$r\$;" >/dev/null
+  acl_before="$(q "SELECT string_agg(relname || ':' || relacl::text, ',' ORDER BY relname) FROM pg_class WHERE oid IN ('public.group_completions'::regclass, 'public.bracket_log'::regclass, 'public.bracket_notices'::regclass, 'public.clarifications'::regclass);")"
+  q "REVOKE SELECT ON TABLE public.group_completions, public.bracket_log, public.bracket_notices, public.clarifications FROM ci_schema_reader;" >/dev/null
+  dump_rc="$(docker exec -e PGPASSWORD=drift "$CURRENT_CONTAINER" pg_dump -h 127.0.0.1 -U drift_probe --schema-only -t public.group_completions -t public.bracket_log -t public.bracket_notices -t public.clarifications postgres >/dev/null 2>"$WORK_DIR/dump.err"; echo "$?|$(grep -o 'permission denied for table [a-z_]*' "$WORK_DIR/dump.err" | head -1)")"
+  check S "Leserolle vorher (ohne GRANT): pg_dump --schema-only als Login-Rolle IN ROLE ci_schema_reader bricht ab" "1|permission denied for table group_completions" "$dump_rc"
+  q "GRANT SELECT ON TABLE public.group_completions, public.bracket_log, public.bracket_notices, public.clarifications TO ci_schema_reader;" >/dev/null
+  dump_rc="$(docker exec -e PGPASSWORD=drift "$CURRENT_CONTAINER" pg_dump -h 127.0.0.1 -U drift_probe --schema-only -t public.group_completions -t public.bracket_log -t public.bracket_notices -t public.clarifications postgres >/dev/null 2>"$WORK_DIR/dump.err"; echo "$?")"
+  check S "Leserolle mit dem GRANT aus 20261110_006: pg_dump --schema-only der vier Tabellen laeuft (Exit 0), Rechte wie vorher" "0|gleich" \
+    "$dump_rc|$([[ "$(q "SELECT string_agg(relname || ':' || relacl::text, ',' ORDER BY relname) FROM pg_class WHERE oid IN ('public.group_completions'::regclass, 'public.bracket_log'::regclass, 'public.bracket_notices'::regclass, 'public.clarifications'::regclass);")" == "$acl_before" ]] && echo gleich || echo verschieden)"
+  check S "Leserolle sieht keine Zeile (RLS an, keine Policy fuer ci_schema_reader)" "0" \
+    "$(q "SET ROLE ci_schema_reader; SELECT (SELECT count(*) FROM public.group_completions) + (SELECT count(*) FROM public.bracket_log) + (SELECT count(*) FROM public.bracket_notices) + (SELECT count(*) FROM public.clarifications);" | tail -1)"
   for fn in record_standing_decision complete_group reopen_group resolve_bracket_notice resolve_clarification bracket_log_read; do
     check S "plpgsql/sql-Rumpf $fn: SECURITY DEFINER, search_path gesetzt" "true|{\"search_path=public, pg_temp\"}" \
       "$(q "SELECT prosecdef || '|' || proconfig::text FROM pg_proc WHERE proname = '$fn' AND pronamespace = 'public'::regnamespace;")"
@@ -801,6 +817,7 @@ M = {
   "MG16": [("    AND CASE WHEN jsonb_array_length(p -> \x27teamIds\x27) = 2 THEN p ->> \x27kind\x27 IN (\x27shootout\x27, \x27shared\x27)\n             ELSE p ->> \x27kind\x27 IN (\x27order\x27, \x27shared\x27) END\n", "    AND p ->> \x27kind\x27 IN (\x27shootout\x27, \x27order\x27, \x27shared\x27)\n")],
   "MG17": [("NOT IN (\x27scheduled\x27, \x27waiting\x27);  -- paused", "NOT IN (\x27scheduled\x27, \x27waiting\x27, \x27paused\x27);  -- MUT paused")],
   "MG18": [("  IF p_from_queue AND v_reopened AND v_prev.reopened_by IS DISTINCT FROM v_uid THEN", "  IF p_from_queue AND v_reopened THEN")],
+  "MG19": [("GRANT SELECT ON TABLE public.group_completions, public.bracket_log, public.bracket_notices, public.clarifications\n  TO ci_schema_reader;\n", "")],
   "MB1": [("      IF d ->> \x27kind\x27 = \x27order\x27 AND NOT (d ? \x27reason\x27) THEN", "      IF false THEN")],
   "MB2": [("      IF EXISTS (SELECT 1 FROM public.bracket_log l\n                  WHERE l.tournament_id = p_tournament_id AND l.kind = \x27standing_withdraw\x27\n                    AND l.detail ->> \x27id\x27 = d ->> \x27id\x27) THEN", "      IF false THEN")],
 }
@@ -833,13 +850,14 @@ expected_red() {
     MG16) echo "standing-decision-shapes.json: 2 Teams Reihenfolge" ;;
     MG17) echo "P-5b Gegenbeispiel" ;;
     MG18) echo "RT-10b @TM-148 Gegenbeispiel" ;;
+    MG19) echo "Rechte-Assertion: die 6 A-13b-S-Zeilen vorhanden und |t" ;;
     MB1) echo "P-7 B1 neue Reihenfolge" ;;
     MB2) echo "RT-15 B2" ;;
   esac
 }
 
 if [[ "$MODE" == "gegenprobe" ]]; then
-  VARIANTS=(OHNE MG1 MG2 MG3 MG4 MG5 MG6 MG7 MG8 MG9 MG10 MG11 MG12 MG13 MG14 MG15 MG16 MG17 MG18 MB1 MB2)
+  VARIANTS=(OHNE MG1 MG2 MG3 MG4 MG5 MG6 MG7 MG8 MG9 MG10 MG11 MG12 MG13 MG14 MG15 MG16 MG17 MG18 MG19 MB1 MB2)
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a VARIANTS <<<"$GEGENPROBE_NUR"; fi
   start_container gegenprobe
   setup_before
@@ -859,6 +877,7 @@ if [[ "$MODE" == "gegenprobe" ]]; then
     else
       run_all_sequential
       [[ "$variant" == "MB2" ]] && run_races 5 RT-15
+      [[ "$variant" == "MG19" ]] && run_schema
     fi
     want="$(expected_red "$variant")"
     if grep -qF -- "$want" <<<"$FAILED"; then

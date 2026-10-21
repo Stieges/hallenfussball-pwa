@@ -786,4 +786,12 @@ SELECT 'group-completion-triggers',
                           AND position('reassigned_at' IN (SELECT prosrc FROM pg_proc WHERE oid = tg.tgfoid)) > 0)
                       OR (tg.tgrelid = 'public.tournaments'::regclass AND tg.tgname = 'tournaments_keep_standing_decisions'
                           AND position('standingDecisions' IN (SELECT prosrc FROM pg_proc WHERE oid = tg.tgfoid)) > 0))), false)
+--  (6) Leserolle des Drift-Checks (Daniel 21.10., ci-grants-sql-freigabe.md § 8): ci_schema_reader liest die vier Tabellen
+--      (pg_dump --schema-only sperrt jede Tabelle und braucht SELECT), und NUR lesen.
+UNION ALL
+SELECT 'ci-schema-reader-select-group-completion',
+       coalesce((SELECT bool_and(to_regclass('public.' || t) IS NOT NULL
+                                 AND has_table_privilege('ci_schema_reader', 'public.' || t, 'SELECT')
+                                 AND NOT has_table_privilege('ci_schema_reader', 'public.' || t, 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'))
+                   FROM unnest(ARRAY['group_completions', 'bracket_log', 'bracket_notices', 'clarifications']) AS t), false)
 ;

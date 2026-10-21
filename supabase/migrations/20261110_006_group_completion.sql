@@ -33,6 +33,7 @@
 --      (REASON_REQUIRED, @W2A-004); vorher ging sie ohne Grund in den Verlauf.
 --   B2 Eine Entscheidung, die am Server schon zurückgenommen wurde (standing_withdraw mit ihrer id), kommt nicht still
 --      zurück ins config, sondern ist ein Konflikt DECIDED_ELSEWHERE (@TM-116 „nichts still überschrieben“).
+--   G1 (Daniel 21.10.) SELECT für die Drift-Check-Leserolle ci_schema_reader auf die vier Tabellen; Fail-fast ohne die Rolle.
 --   M2 (Review A-13b-S) GROUP_REOPENED nur, wenn ein ANDERER die Gruppe wieder geöffnet hat (reopened_by ≠ Aufrufer,
 --      @TM-116 Z4 „Maria … wieder geöffnet“). Eigenes Wiederöffnen und danach Abschluss aus der Warteschlange gilt; die
 --      Ergebnisse schützt weiter der Stand-Vergleich (RT-10b).
@@ -59,6 +60,8 @@
 --     match_engine.shared_allowed(uuid, text, integer[], jsonb), match_engine.standing_decision_valid(jsonb),
 --     match_engine.same_team_set(jsonb, jsonb), match_engine.places_to_play_out(jsonb),
 --     match_engine.group_state(uuid, text), match_engine.group_key(text);
+--   REVOKE SELECT ON TABLE public.group_completions, public.bracket_log, public.bracket_notices, public.clarifications
+--     FROM ci_schema_reader;
 --   DROP TABLE IF EXISTS public.clarifications, public.bracket_notices, public.bracket_log, public.group_completions;
 --   ALTER TABLE public.matches DROP COLUMN IF EXISTS reassigned_at;
 --   COMMIT;
@@ -81,8 +84,9 @@ BEGIN
                      WHERE table_schema = 'public' AND table_name = 'matches' AND column_name = 'origin_a')
      OR NOT EXISTS (SELECT 1 FROM information_schema.columns
                      WHERE table_schema = 'public' AND table_name = 'matches' AND column_name = 'forfeit_absent')
-     OR NOT EXISTS (SELECT 1 FROM public.role_permissions WHERE role = 'co-admin' AND permission = 'manageLifecycle') THEN
-    RAISE EXCEPTION '20261110_006_group_completion: Voraussetzungen fehlen – zuerst 20261026_001, 20261110_001 und 20261110_005 einspielen';
+     OR NOT EXISTS (SELECT 1 FROM public.role_permissions WHERE role = 'co-admin' AND permission = 'manageLifecycle')
+     OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ci_schema_reader') THEN
+    RAISE EXCEPTION '20261110_006_group_completion: Voraussetzungen fehlen – zuerst 20260924_002 (ci_schema_reader), 20261026_001, 20261110_001 und 20261110_005 einspielen';
   END IF;
 END;
 $$;
@@ -195,16 +199,22 @@ CREATE INDEX IF NOT EXISTS clarifications_open_idx ON public.clarifications (tou
 COMMENT ON TABLE public.clarifications IS
   'GA4 A-15e (schlank): Offline-Aktionen der Turnierleitung, die am Server auf einen Konflikt trafen (@TM-116, @TM-117, @TM-146, @TM-147). Spätere Arten (FU-*) per CHECK-Erweiterung.';
 
--- Rechte: keine Client-Schreibrechte; anon nichts (C-ANON-STANDARDRECHTE-NEUE-TABELLEN); bracket_log ohne Tabellenrecht.
+-- Rechte: keine Client-Schreibrechte; anon nichts (C-ANON-STANDARDRECHTE-NEUE-TABELLEN); bracket_log ohne Tabellenrecht für
+-- Client-Rollen.
 ALTER TABLE public.group_completions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bracket_log       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bracket_notices   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.clarifications    ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.group_completions, public.bracket_log, public.bracket_notices, public.clarifications
-  FROM PUBLIC, anon, authenticated;
+  FROM PUBLIC, anon, authenticated, ci_schema_reader;   -- ci_schema_reader mit: gleiche Rechte-Reihenfolge beim zweiten Einspielen
 REVOKE ALL ON SEQUENCE public.bracket_log_id_seq, public.bracket_notices_id_seq, public.clarifications_id_seq
   FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON TABLE public.group_completions, public.bracket_notices, public.clarifications TO authenticated;
+-- Leserolle des Drift-Checks (Daniel 21.10., ci-grants-sql-freigabe.md § 8): pg_dump sperrt jede Tabelle (ACCESS SHARE) und
+-- braucht dafür SELECT; ohne GRANT bricht der Schema-Vergleich an group_completions ab. Daten sieht die Rolle keine (RLS an,
+-- keine Policy für sie). Bewusst kein ALTER DEFAULT PRIVILEGES (Datenbank-Programm 21.09., wie 20260928_001 I1).
+GRANT SELECT ON TABLE public.group_completions, public.bracket_log, public.bracket_notices, public.clarifications
+  TO ci_schema_reader;
 
 DROP POLICY IF EXISTS group_completions_select ON public.group_completions;
 CREATE POLICY group_completions_select ON public.group_completions FOR SELECT TO authenticated
