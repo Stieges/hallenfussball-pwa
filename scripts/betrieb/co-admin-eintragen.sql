@@ -20,10 +20,8 @@
 -- (Block 0, dann 1, dann 2a, 2b ...). Block 1 enthaelt zwei Anweisungen (Eintragen, danach Ergebnis-Abfrage)
 -- und wird als Ganzes markiert.
 --
--- WICHTIG: Es gibt absichtlich KEIN UPDATE der Rolle. Bis A-16 lehnte der Schutz-Trigger protect_collaborator_row
--- im Editor jedes UPDATE ab; seit A-16 (20261110_008, Definer-Durchgang) laesst er Aenderungen ausserhalb der App-Rollen
--- durch -- ein UPDATE im Editor ginge also, aendert aber ungeprueft. Die Vorlage bleibt deshalb beim Loeschen und
--- Neu-Anlegen und wirkt vor und nach A-16 gleich.
+-- WICHTIG: Es gibt absichtlich KEIN UPDATE der Rolle. Der Schutz-Trigger protect_collaborator_row laesst
+-- Aenderungen nur ueber die App-Anmeldung des Eigentuemers zu; im Editor wird ein UPDATE abgelehnt.
 -- Eine AKTIVE co-admin-Zeile bleibt bei jeder Wiederholung unveraendert (Block 1 meldet nur "schon eingetragen").
 -- Nur eine widerrufene/unangenommene co-admin-Zeile wird ersetzt: loeschen und neu anlegen.
 -- Die Vorlage legt KEIN Konto an und loescht KEIN Konto. Sie traegt nur die eine genannte Person ein.
@@ -98,7 +96,7 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Kein UPDATE (bis A-16 lehnte protect_collaborator_row es im Editor ab; seit A-16 ginge es, die Vorlage bleibt gleich).
+  -- Kein UPDATE: der Schutz-Trigger protect_collaborator_row erlaubt Änderungen nur dem Eigentümer über die App.
   -- Ersetzen = die eigene, widerrufene oder nie angenommene co-admin-Zeile löschen und neu anlegen.
   DELETE FROM public.tournament_collaborators c
    WHERE c.tournament_id = v_turnier AND c.user_id = v_user AND c.role = 'co-admin';
