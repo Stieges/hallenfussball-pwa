@@ -4,8 +4,8 @@
  * - A2: `syncUp` (App-Start, Wiederverbinden) lädt keine Kopie hoch, für die das Gerät eigene wartende, laufende oder
  *   gescheiterte Einträge hat; ein nie hochgeladenes Turnier ohne Einträge lädt es weiter hoch.
  * - A3: Restwege über mehrdeutige Versionen – die lokale Kopie stempelt „Nutzlast + 1“ vor der Bestätigung des Servers,
- *   nach einem Konflikt tragen Marias Kopie und Ollis Cloud-Stand dieselbe Nummer mit anderem Inhalt. Rot markiert, Befund
- *   C-VERSION-MEHRDEUTIG (Fix-Vorschlag: gegen die zuletzt vom Server bestätigte Version prüfen).
+ *   nach einem Konflikt tragen Marias Kopie und Ollis Cloud-Stand dieselbe Nummer mit anderem Inhalt. Befund
+ *   C-VERSION-MEHRDEUTIG, geschlossen: Voll-Speichern prüft gegen die zuletzt vom Server bestätigte Version.
  * Aufbau wie `OfflineRepository.verwerfenNachKonflikt.test.ts`.
  */
 import 'fake-indexeddb/auto';
@@ -169,8 +169,8 @@ describe('Regel Q auf den übrigen Upload-Wegen (Auflagen A2/A3 review-ca67)', (
     });
   });
 
-  describe('Befund C-VERSION-MEHRDEUTIG (Auflage A3): bekannte Restwege, rot markiert', () => {
-    it.fails('@FU-106 PRE-B: während Marias Konflikt-Eintrag noch wiederholt wird, speichert sie erneut (zusammengefasst) → Ollis Titel muss bleiben (Befund C-VERSION-MEHRDEUTIG)', async () => {
+  describe('Befund C-VERSION-MEHRDEUTIG (Auflage A3): Restwege über mehrdeutige Versionen', () => {
+    it('@FU-106 PRE-B: während Marias Konflikt-Eintrag noch wiederholt wird, speichert sie erneut (zusammengefasst) → Ollis Titel muss bleiben (Befund C-VERSION-MEHRDEUTIG)', async () => {
       stores.raw.set('tournaments', [{ ...liveCup(7), ownerId: MARIA }]);
       const cloud = createFakeCloud({ tournament: liveCup(7), revisions: revisions() });
       const maria = device(MARIA, cloud);
@@ -188,7 +188,7 @@ describe('Regel Q auf den übrigen Upload-Wegen (Auflagen A2/A3 review-ca67)', (
       expect(await cloud.fake.get('T')).toMatchObject({ title: 'Ollis Titel' });
     });
 
-    it.fails('@FU-106 RACE-C: nach gelungener Übernahme speichert ein offenes Formular mit dem verworfenen Stand (v8) → Ollis Titel muss bleiben (Befund C-VERSION-MEHRDEUTIG)', async () => {
+    it('@FU-106 RACE-C: nach gelungener Übernahme speichert ein offenes Formular mit dem verworfenen Stand (v8) → Ollis Titel muss bleiben (Befund C-VERSION-MEHRDEUTIG)', async () => {
       const { cloud, maria } = await wettlauf();
       const formular = stored(); // Marias Titel, v8 – Stand im offenen Formular
       verwerfen(maria);

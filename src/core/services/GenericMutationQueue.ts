@@ -33,6 +33,7 @@ const GenericFailedMutationItemSchema = GenericMutationItemSchema.extend({
     failedAt: z.number(),
     lastError: z.string().optional(),
     conflict: z.boolean().optional(),
+    discardedCopy: z.boolean().optional(),
 });
 
 /**
@@ -50,7 +51,7 @@ export interface GenericMutationItem<TType extends string> {
 export const MAX_RETRIES = 5;
 
 /** @FU-106 (Auflage A1): Grund im Dead-Letter, wenn ein Eintrag aus einer verworfenen Kopie nicht gesendet wurde. */
-export const DISCARDED_COPY_ERROR = 'Turnier wurde zwischenzeitlich verändert – dieser Stand enthält eine verworfene Änderung und wurde nicht gesendet.';
+export const DISCARDED_COPY_ERROR = 'Dieser Stand beruht auf einer verworfenen Änderung und wurde nicht gesendet.';
 
 /**
  * A mutation that failed permanently (exceeded max retries)
@@ -60,6 +61,11 @@ export interface FailedMutationItem<TType extends string = string> extends Gener
     lastError?: string;
     /** @FU-106: abgelehnt, weil ein anderes Gerät inzwischen gespeichert hat (Versionskonflikt). */
     conflict?: boolean;
+    /**
+     * @FU-109 (Befund C-VERWORFEN-FALSCHER-GRUND): nicht gesendet, weil die Kopie nach „Verwerfen“ noch auf den Stand des
+     * Servers wartet (z. B. Server nicht erreichbar). Kein Konflikt mit einem anderen Gerät; „Erneut versuchen“ hilft nicht.
+     */
+    discardedCopy?: boolean;
 }
 
 /**
@@ -109,6 +115,11 @@ export interface MutationQueueConfig<TType extends string> {
      * eines Konflikts gemerkt, gehen sie nicht zum Server, sondern sofort als Konflikt in den Dead-Letter.
      */
     wholeCopyTypes?: readonly TType[];
+    /**
+     * @FU-110: nach einem erfolgreich gesendeten Eintrag neue Nutzlasten für wartende Einträge (id → payload), z. B. eine
+     * gestiegene Prüf-Version. Ohne Angabe bleiben wartende Einträge unverändert.
+     */
+    rebasePending?: (done: GenericMutationItem<TType>, pending: readonly GenericMutationItem<TType>[]) => ReadonlyArray<{ id: string; payload: unknown }> | undefined;
 }
 
 /**
@@ -133,7 +144,7 @@ export class GenericMutationQueue<TType extends string> {
     private listeners: ((status: MutationQueueStatus) => void)[] = [];
     private readonly storageReported = new Set<string>(); // A-07i Fixrunde 1: Sentry je Ursache nur einmal
     private readonly completed = new Map<string, number>(); // A-08f3c2: erledigte Einträge je Bereich (H1)
-    /** @FU-106: Bereiche, deren Kopie nach „Verwerfen“ eines Konflikts den Cloud-Stand braucht (dauerhaft gespeichert). */
+    /** @FU-106: Bereiche, deren Kopie nach „Verwerfen“ den Cloud-Stand braucht (dauerhaft gespeichert). */
     private cloudCopyNeeded = new Set<string>();
 
     constructor(private config: MutationQueueConfig<TType>) {
@@ -158,6 +169,8 @@ export class GenericMutationQueue<TType extends string> {
     }
 
     private readonly handleOnline = (): void => {
+        // @FU-109: wartet ein verworfenes Turnier auf den Stand des Servers, melden – die Zuhörer laden ihn sofort nach
+        if (this.cloudCopyNeeded.size > 0) { this.notifyListeners(); }
         if (this.retryTimer.inPause) { return; } // A-06d2: während der 30-s-Pause kein Versuch
         // eslint-disable-next-line no-console
         if (import.meta.env.DEV) { console.log('MutationQueue: Online detected, processing queue...'); }
@@ -262,12 +275,13 @@ export class GenericMutationQueue<TType extends string> {
     /**
      * Move a failed mutation to the dead-letter queue
      */
-    private moveToDeadLetter(item: GenericMutationItem<TType>, error?: string, conflict = false): void {
+    private moveToDeadLetter(item: GenericMutationItem<TType>, error?: string, reason?: 'conflict' | 'discardedCopy'): void {
         const failedItem: FailedMutationItem<TType> = {
             ...item,
             failedAt: Date.now(),
             lastError: error,
-            ...(conflict ? { conflict: true } : {}),
+            ...(reason === 'conflict' ? { conflict: true } : {}),
+            ...(reason === 'discardedCopy' ? { discardedCopy: true } : {}),
         };
         this.failedQueue.push(failedItem);
         this.saveFailed();
@@ -376,12 +390,13 @@ export class GenericMutationQueue<TType extends string> {
     }
 
     /**
-     * @FU-106 (Befund C-VERWERFEN-BEHAELT-VERALTETEN-STAND): Verworfen wird eine wegen eines Konflikts abgelehnte Änderung –
-     * die lokale Kopie trägt dann einen Inhalt, den der Server nie bekommt. Der Bereich (Turnier) wird gemerkt, bis die
-     * Kopie den Cloud-Stand übernommen hat (`cloudCopyAdopted`); ohne Konflikt bleibt alles wie bisher.
+     * @FU-106 (Befund C-VERWERFEN-BEHAELT-VERALTETEN-STAND; Entscheidung Daniel 20.10.: „Verwerfen = immer Server-Stand“,
+     * mit und ohne Konflikt): die lokale Kopie trägt nach dem Verwerfen einen Inhalt, den der Server nie bekommt. Der
+     * Bereich (Turnier) wird gemerkt, bis die Kopie den Cloud-Stand übernommen hat oder der Server das Turnier nicht kennt
+     * (@FU-107: dann bleibt die Kopie); bis dahin geht aus ihr nichts zum Server.
      */
     private markCloudCopyNeeded(discarded: readonly FailedMutationItem<TType>[]): void {
-        const scopes = discarded.filter((item) => item.conflict).map((item) => this.config.scopeOf?.(item.type, item.payload));
+        const scopes = discarded.map((item) => this.config.scopeOf?.(item.type, item.payload));
         const added = scopes.filter((scope): scope is string => !!scope && !this.cloudCopyNeeded.has(scope));
         if (added.length === 0) { return; }
         added.forEach((scope) => this.cloudCopyNeeded.add(scope));
@@ -393,7 +408,7 @@ export class GenericMutationQueue<TType extends string> {
     public scopesNeedingCloudCopy(): string[] { return [...this.cloudCopyNeeded]; }
     /** @FU-106: Merkung erledigt (Cloud-Stand übernommen, Turnier am Server weg oder gelöscht). */
     public forgetCloudCopy(scope: string): void {
-        if (this.cloudCopyNeeded.delete(scope)) { this.saveCloudCopyNeeded(); }
+        if (this.cloudCopyNeeded.delete(scope)) { this.saveCloudCopyNeeded(); this.notifyListeners(); }
     }
 
     private carriesDiscardedCopy(item: GenericMutationItem<TType>): boolean {
@@ -517,7 +532,7 @@ export class GenericMutationQueue<TType extends string> {
                 // @FU-106 (Auflage A1): die gemerkte Kopie trägt einen Stand, den der Server nie bekam – nicht senden, sichtbar ablegen
                 if (this.carriesDiscardedCopy(item)) {
                     this.queue.shift();
-                    this.moveToDeadLetter(item, DISCARDED_COPY_ERROR, true);
+                    this.moveToDeadLetter(item, DISCARDED_COPY_ERROR, 'discardedCopy'); // @FU-109: eigener Grund, kein Konflikt
                     this.save();
                     this.lastFailure = 'permanent';
                     this.notifyListeners();
@@ -560,7 +575,7 @@ export class GenericMutationQueue<TType extends string> {
                         if (error instanceof Error) { captureFeatureError(error, this.config.sentryFeature, 'deadLetter', { mutationType: item.type, mutationId: item.id }); }
                         // Move to dead-letter queue instead of dropping
                         this.queue.shift();
-                        this.moveToDeadLetter(item, errorMessage, isVersionConflict(error));
+                        this.moveToDeadLetter(item, errorMessage, isVersionConflict(error) ? 'conflict' : undefined);
                         this.save();
                         this.notifyListeners();
                         continue; // Continue to next item
@@ -579,6 +594,9 @@ export class GenericMutationQueue<TType extends string> {
                 if (this.disposed) { break; }
                 this.lastFailure = null;
                 this.queue.shift(); // Remove handled item
+                for (const next of this.config.rebasePending?.(item, this.queue) ?? []) {
+                    this.queue = this.queue.map((p) => (p.id === next.id ? { ...p, payload: next.payload } : p));
+                }
                 const scope = this.config.scopeOf?.(item.type, item.payload);
                 if (scope) { this.completed.set(scope, this.completedCount(scope) + 1); }
                 this.retryTimer.reset();
