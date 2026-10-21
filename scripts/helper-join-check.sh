@@ -20,7 +20,7 @@
 # Aufrufoptionen:
 #   bash scripts/helper-join-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
 #   bash scripts/helper-join-check.sh --without-migration  Gegenprobe: ohne 20261110_008 -> P und R muessen ROT sein
-#   bash scripts/helper-join-check.sh --gegenprobe         je Lauf eine Mutation einer KOPIE der Migration (M1-M20);
+#   bash scripts/helper-join-check.sh --gegenprobe         je Lauf eine Mutation einer KOPIE der Migration (M1-M24);
 #                                                          Exit 0 nur, wenn JEDE Mutation mindestens eine Pruefung rot
 #                                                          faerbt. Die Datei im Repo wird nie veraendert.
 #   bash scripts/helper-join-check.sh --print-rueckweg     gibt den Rueckweg (Anhang B der Freigabe) aus, ohne Container
@@ -206,6 +206,8 @@ ANON_UIDS=" $U_TOM $U_TOM_TABLET $U_CLARA $U_LENA $U_KAI $U_FREMD $U_FREMD2 "
 T_LIVE="$(uuid_for tournament:live-cup)"; T_WINTER="$(uuid_for tournament:wintercup)"; T_DRAFT="$(uuid_for tournament:entwurf-cup)"
 T_ABLAUF="$(uuid_for tournament:herbst-cup)"; T_ENDE="$(uuid_for tournament:abschluss-cup)"; T_VOLL="$(uuid_for tournament:flut-cup)"
 T_RACE="$(uuid_for tournament:wettlauf-cup)"; T_ROT="$(uuid_for tournament:rotations-cup)"
+T_EXP1="$(uuid_for tournament:entscheid-ablauf)"; T_EXP2="$(uuid_for tournament:entscheid-gueltig)"; T_KEEP="$(uuid_for tournament:behalten-cup)"
+T_DECL="$(uuid_for tournament:ablehn-cup)"; T_FELD="$(uuid_for tournament:feld-cup)"
 TEAM_NORD="$(uuid_for team:nord)"; TEAM_SUED="$(uuid_for team:sued)"; M_SPIEL3="$(uuid_for match:spiel-3)"
 # Ereignis-Zusaetze vorab (bash 3.2 verliert verschachtelte \"…\" in $(…) innerhalb von "…")
 START_EXTRA='{"clockMs":null}'
@@ -441,6 +443,12 @@ INSERT INTO public.tournament_collaborators (tournament_id, user_id, role, accep
   check R "@HE-084 Maria (Co-Admin) aendert Toms Rolle direkt -> 0 Zeilen, Rolle bleibt" "|helper" \
     "$(als "$U_MARIA" "UPDATE public.tournament_collaborators SET role = 'co-admin' WHERE id = '$m_tom' RETURNING 'r';")|$(q "SELECT role FROM public.tournament_collaborators WHERE id = '$m_tom';")"
 
+  # --- @HE-062 (Gegenprobe, Rechte-Aufrufe): Geraete-Sitzung mit manageHelpers verwaltet auch Zugang, Code und Zaehler nicht ---
+  check R "@HE-062 Gegenprobe Geraete-Sitzung mit manageHelpers: Zugang aendern, Code erneuern, Anfragen zaehlen -> 42501" "ERR:Not authorized|ERR:Not authorized|ERR:Not authorized" \
+    "$(als_mit "$MH_SETUP" "$U_KAI" "SELECT public.change_helper_access('$m_tom', 'watch_only');")|$(als_mit "$MH_SETUP" "$U_KAI" "SELECT public.rotate_helper_code('$T_LIVE', 'keep');")|$(als_mit "$MH_SETUP" "$U_KAI" "SELECT public.helper_request_count('$T_LIVE');")"
+  check R "Gegenbeispiel: Olli (echtes Konto, Eigentuemer) darf dieselben Aufrufe (in der Probe zurueckgerollt) -> OK|OK|Zahl" "OK|OK|Zahl" \
+    "$(j "$(als_mit "" "$U_OLLI" "SELECT public.change_helper_access('$m_tom', 'watch_only');")" '.result')|$(j "$(als_mit "" "$U_OLLI" "SELECT public.rotate_helper_code('$T_LIVE', 'keep');")" '.result')|$(x="$(als_mit "" "$U_OLLI" "SELECT public.helper_request_count('$T_LIVE');")"; [[ "$x" =~ ^[0-9]+$ ]] && echo Zahl || echo "$x")"
+
   # --- @HE-104 / M2: nie loeschen ---
   check R "@HE-104 Olli (Eigentuemer) loescht Toms Zugang an der App vorbei -> 0 Zeilen, Zugang bleibt" "0|1" \
     "$(als "$U_OLLI" "WITH d AS (DELETE FROM public.tournament_collaborators WHERE id = '$m_tom' RETURNING 1) SELECT count(*) FROM d;")|$(q "SELECT count(*) FROM public.tournament_collaborators WHERE id = '$m_tom';")"
@@ -582,6 +590,45 @@ CREATE TRIGGER a16_probe_kollision BEFORE INSERT ON public.tournament_join_reque
   check R "@HE-010 Gueltigkeit endet 00:00 Ortszeit nach dem Turniertag (12.10. -> 22:00 UTC, 28.11. -> 23:00 UTC)" "2026-10-12 22:00:00+00|2026-11-28 23:00:00+00" \
     "$(q "SET timezone = 'UTC'; SELECT public.helper_code_cutoff('2026-10-12');" | tail -1)|$(q "SET timezone = 'UTC'; SELECT public.helper_code_cutoff('2026-11-28');" | tail -1)"
 
+  # --- @HE-009 @HE-011: Entscheidung nach Ablauf des Codes (eigene Turniere, damit die Zaehler oben unberuehrt bleiben) ---
+  neues_turnier "$T_EXP1" "Ablauf-Entscheid"; neues_turnier "$T_EXP2" "Gueltig-Entscheid"
+  code="$(code_of "$T_EXP1")"
+  u="$(uuid_for user:exp-lena)"; newanon "$u"; als "$u" "SELECT public.request_helper_access('$code', 'Lena');" >/dev/null
+  r="$(req_id "$T_EXP1" "$u")"
+  q "UPDATE public.tournaments SET date = current_date - 1 WHERE id = '$T_EXP1';" >/dev/null
+  check R "@HE-011 @HE-009 Olli laesst Lenas Anfrage nach Ablauf des Codes zu -> EXPIRED, kein Zugang" "EXPIRED|0|f" \
+    "$(j "$(decide "$U_OLLI" "$r" true 1 "$(check_no "$r")")" '.result')|$(q "SELECT count(*) FROM public.tournament_collaborators WHERE tournament_id = '$T_EXP1' AND user_id = '$u';")|$(perm "$u" "$T_EXP1")"
+  code="$(code_of "$T_EXP2")"
+  u2="$(uuid_for user:exp-gueltig)"; newanon "$u2"; als "$u2" "SELECT public.request_helper_access('$code', 'Lena');" >/dev/null
+  r2="$(req_id "$T_EXP2" "$u2")"
+  check R "Gegenbeispiel: derselbe Ablauf mit gueltigem Code (Turnier morgen) -> OK, ein Zugang, Feld 1 ist steuerbar" "OK|1|t" \
+    "$(j "$(decide "$U_OLLI" "$r2" true 1 "$(check_no "$r2")")" '.result')|$(q "SELECT count(*) FROM public.tournament_collaborators WHERE tournament_id = '$T_EXP2' AND user_id = '$u2';")|$(perm "$u2" "$T_EXP2")"
+
+  # --- @HE-008 @HE-102: Erneuern mit 'behalten' (keep) laesst offene Anfragen offen; 'ablehnen' (decline) lehnt sie ab ---
+  neues_turnier "$T_KEEP" "Behalten-Cup"; neues_turnier "$T_DECL" "Ablehn-Cup"
+  code="$(code_of "$T_KEEP")"
+  u="$(uuid_for user:keep-lena)"; newanon "$u"; als "$u" "SELECT public.request_helper_access('$code', 'Lena');" >/dev/null
+  r="$(req_id "$T_KEEP" "$u")"
+  check R "@HE-008 Erneuern mit 'behalten' (keep): offene Anfrage bleibt offen, nichts wird abgelehnt" "0|pending" \
+    "$(j "$(als "$U_OLLI" "SELECT public.rotate_helper_code('$T_KEEP', 'keep');")" '.declined')|$(q "SELECT status FROM public.tournament_join_requests WHERE id = '$r';")"
+  check R "@HE-102 nach 'behalten' laesst sich dieselbe offene Anfrage noch zulassen (Feld 1, Pruefzahl) -> OK, Zugang" "OK|t" \
+    "$(j "$(decide "$U_OLLI" "$r" true 1 "$(check_no "$r")")" '.result')|$(perm "$u" "$T_KEEP")"
+  code="$(code_of "$T_DECL")"
+  u2="$(uuid_for user:decl-lena)"; newanon "$u2"; als "$u2" "SELECT public.request_helper_access('$code', 'Lena');" >/dev/null
+  r2="$(req_id "$T_DECL" "$u2")"
+  check R "Gegenbeispiel: Erneuern mit 'ablehnen' (decline) lehnt die offene Anfrage ab -> 1 abgelehnt, Status declined" "1|declined" \
+    "$(j "$(als "$U_OLLI" "SELECT public.rotate_helper_code('$T_DECL', 'decline');")" '.declined')|$(q "SELECT status FROM public.tournament_join_requests WHERE id = '$r2';")"
+
+  # --- @HE-040: ungueltige Feldnummer beim Zulassen -> INVALID_FIELD (22023), kein Zugang ---
+  neues_turnier "$T_FELD" "Feld-Cup"
+  code="$(code_of "$T_FELD")"
+  u="$(uuid_for user:feld-lena)"; newanon "$u"; als "$u" "SELECT public.request_helper_access('$code', 'Lena');" >/dev/null
+  r="$(req_id "$T_FELD" "$u")"
+  check R "@HE-040 Zulassen auf Feld 3 (2 Felder) bzw. Feld 0 -> INVALID_FIELD, Anfrage bleibt offen, kein Zugang" "ERR:INVALID_FIELD|ERR:INVALID_FIELD|pending|0" \
+    "$(decide "$U_OLLI" "$r" true 3 "$(check_no "$r")")|$(decide "$U_OLLI" "$r" true 0 "$(check_no "$r")")|$(q "SELECT status FROM public.tournament_join_requests WHERE id = '$r';")|$(q "SELECT count(*) FROM public.tournament_collaborators WHERE tournament_id = '$T_FELD' AND user_id = '$u';")"
+  check R "Gegenbeispiel: Zulassen auf Feld 2 (gueltig) -> OK, genau ein Zugang auf Feld 2" "OK|1|2" \
+    "$(j "$(decide "$U_OLLI" "$r" true 2 "$(check_no "$r")")" '.result')|$(q "SELECT count(*) FROM public.tournament_collaborators WHERE tournament_id = '$T_FELD' AND user_id = '$u';")|$(q "SELECT allowed_fields[1] FROM public.tournament_collaborators WHERE tournament_id = '$T_FELD' AND user_id = '$u';")"
+
   # --- Abschluss (@HE-038 @LZ-044 @HE-098 Z.2) im Abschluss-Cup ---
   code="$(code_of "$T_ENDE")"
   u="$(uuid_for user:ende-tom)"; newanon "$u"; als "$u" "SELECT public.request_helper_access('$code', 'Tom');" >/dev/null
@@ -630,6 +677,10 @@ EOF
     "$(j "$res" '.result')|$(q "SELECT count(*) FROM public.tournament_join_requests WHERE device_user_id = '$u';")"
 }
 code_of_as() { als "$1" "SELECT public.ensure_helper_code('$2') ->> 'code';"; }
+# neues_turnier <Id> <Titel> -- eigenes Live-Turnier von Olli (2 Felder, Datum morgen); fuer Probe-Zeilen mit eigenem Ablauf
+neues_turnier() {
+  q "INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, number_of_fields, config, status, is_public, share_code) VALUES ('$1', '$U_OLLI', '$2', current_date + 1, 4, 10, 2, '{}', 'live', false, NULL);" >/dev/null
+}
 # probe_writers <PL/pgSQL-Anweisung> -- legt in einer nie committeten Transaktion einen weiteren Definer in einem eigenen
 # Schema an und liefert t/f der Assertion helper-join-definer-writers-tournament-collaborators (Review L-1).
 probe_writers() {
@@ -689,7 +740,7 @@ setup_before() {
 
 # ---------------------------------------------------------------------------------------------------------
 if [[ "$MODE" == "gegenprobe" ]]; then
-  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20)
+  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24)
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a MUTATIONS <<<"$GEGENPROBE_NUR"; fi
   RED_TOTAL=0
   RED_LIST=""

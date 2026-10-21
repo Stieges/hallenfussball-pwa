@@ -70,6 +70,22 @@ M = {
     "M19": [("  PERFORM set_config('hallenfussball.helper_access_write', '', true);\n", "")],
     # M20 (Review M-1): change_helper_access setzt den Schalter nicht -- Co-Admin kann nicht mehr entziehen/herabstufen
     "M20": [("  PERFORM set_config('hallenfussball.helper_access_write', 'on', true);\n", "")],
+    # M21 (@HE-062, Gegenprobe Rechte-Aufrufe): is_real_account() in change_helper_access, rotate_helper_code und
+    # helper_request_count weg -- eine Geraetesitzung mit manageHelpers (Rechtetabelle) kaeme durch
+    "M21": [("  IF NOT FOUND OR NOT (public.is_real_account() AND public.has_tournament_permission(v_mem.tournament_id, 'manageHelpers')) THEN\n",
+             "  IF NOT FOUND OR NOT (public.has_tournament_permission(v_mem.tournament_id, 'manageHelpers')) THEN\n"),
+            ("DECLARE v_declined integer := 0;\nBEGIN\n  IF NOT (public.is_real_account() AND public.has_tournament_permission(p_tournament_id, 'manageHelpers')) THEN\n",
+             "DECLARE v_declined integer := 0;\nBEGIN\n  IF NOT (public.has_tournament_permission(p_tournament_id, 'manageHelpers')) THEN\n"),
+            ("AS $$\nBEGIN\n  IF NOT (public.is_real_account() AND public.has_tournament_permission(p_tournament_id, 'manageHelpers')) THEN\n",
+             "AS $$\nBEGIN\n  IF NOT (public.has_tournament_permission(p_tournament_id, 'manageHelpers')) THEN\n")],
+    # M22 (@HE-008/@HE-102): Erneuern mit 'behalten' lehnt die offenen Anfragen trotzdem ab
+    "M22": [("  IF p_open_requests = 'decline' THEN", "  IF true THEN")],
+    # M23 (@HE-011/@HE-009): decide_join_request prueft den Ablauf nicht -- Zulassen nach Ablauf erzeugt Zugang
+    "M23": [("IF now() >= public.helper_code_cutoff(v_t.date) OR public.tournament_closed_for_helpers(v_t.id) THEN\n",
+             "IF false THEN\n")],
+    # M24 (@HE-040): Feldbereich in decide_join_request nicht geprueft -- Feld 3 bei zwei Feldern wird zugelassen
+    "M24": [("IF p_field IS NOT NULL AND (p_field < 1 OR p_field > v_t.number_of_fields) THEN\n",
+             "IF false THEN\n")],
 }
 
 key = os.environ.get("MUT_KEY", "")
