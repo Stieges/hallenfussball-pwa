@@ -5,8 +5,10 @@
  * online but the Supabase auth handshake is slow or has timed out.
  *
  * Used by LoginScreen for two states:
- *   - "connecting" (handshake in progress beyond a soft threshold)
- *   - "stalled"    (handshake timed out, login can still be attempted)
+ *   - "connecting" (handshake in progress beyond a soft threshold; after a start timeout the state stays
+ *                   "connecting" while the device reports network, @AN-032)
+ *   - "stalled"    (handshake failed, login can still be attempted)
+ * Both offer „Erneut versuchen“ when `retryLabel` and `onRetry` are given.
  */
 
 import React from 'react';
@@ -85,7 +87,7 @@ export const ConnectingIndicator: React.FC<ConnectingIndicatorProps> = ({
         <span style={styles.stalledIcon} aria-hidden="true">⏱</span>
       )}
       <span>{label}</span>
-      {variant === 'stalled' && retryLabel && onRetry && (
+      {retryLabel && onRetry && (
         <button
           type="button"
           onClick={onRetry}

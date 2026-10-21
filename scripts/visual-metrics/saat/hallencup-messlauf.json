@@ -453,7 +453,7 @@
                 "scoreA": 1,
                 "scoreB": 1,
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "1. Halbfinale",
                 "scheduledTime": "2026-11-14T09:15:00.000Z",
                 "matchNumber": 13,
@@ -500,7 +500,7 @@
                 "scoreA": 0,
                 "scoreB": 0,
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "2. Halbfinale",
                 "scheduledTime": "2026-11-14T09:15:00.000Z",
                 "matchNumber": 14,
@@ -1161,7 +1161,7 @@
                 "scoreA": 1,
                 "scoreB": 0,
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "1. Halbfinale",
                 "scheduledTime": "2026-11-14T08:29:00.000Z",
                 "matchNumber": 3,
@@ -1224,7 +1224,7 @@
                   "rank": 2
                 },
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "2. Halbfinale",
                 "scheduledTime": "2026-11-14T08:42:00.000Z",
                 "matchNumber": 4
@@ -1559,7 +1559,7 @@
                 "scoreA": 1,
                 "scoreB": 1,
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "1. Halbfinale",
                 "scheduledTime": "2026-11-14T08:29:00.000Z",
                 "matchNumber": 3,
@@ -1624,7 +1624,7 @@
                   "rank": 2
                 },
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "2. Halbfinale",
                 "scheduledTime": "2026-11-14T08:42:00.000Z",
                 "matchNumber": 4
@@ -1959,7 +1959,7 @@
                 "scoreA": 0,
                 "scoreB": 0,
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "1. Halbfinale",
                 "scheduledTime": "2026-11-14T08:29:00.000Z",
                 "matchNumber": 3,
@@ -2024,7 +2024,7 @@
                   "rank": 2
                 },
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "2. Halbfinale",
                 "scheduledTime": "2026-11-14T08:42:00.000Z",
                 "matchNumber": 4
@@ -3743,6 +3743,20 @@
               "seq": 1
             },
             {
+              "id": "00000002-0000-4000-8000-000000001505",
+              "type": "YELLOW_CARD",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-230000",
+              "section": 1,
+              "clockMs": 90000,
+              "payload": {
+                "playerNumber": 7
+              },
+              "teamId": "00000001-0000-4000-8000-000000000001",
+              "seq": 2
+            },
+            {
               "id": "00000002-0000-4000-8000-000000001502",
               "type": "GOAL",
               "actor": "helper",
@@ -3752,7 +3766,35 @@
               "clockMs": 130000,
               "payload": {},
               "teamId": "00000001-0000-4000-8000-000000000001",
-              "seq": 2
+              "seq": 3
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000001506",
+              "type": "YELLOW_RED_CARD",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-170000",
+              "section": 1,
+              "clockMs": 150000,
+              "payload": {
+                "playerNumber": 5
+              },
+              "teamId": "00000001-0000-4000-8000-000000000006",
+              "seq": 4
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000001507",
+              "type": "RED_CARD",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-90000",
+              "section": 1,
+              "clockMs": 230000,
+              "payload": {
+                "playerNumber": 3
+              },
+              "teamId": "00000001-0000-4000-8000-000000000001",
+              "seq": 5
             },
             {
               "id": "00000002-0000-4000-8000-000000001503",
@@ -3764,7 +3806,7 @@
               "clockMs": 280000,
               "payload": {},
               "teamId": "00000001-0000-4000-8000-000000000006",
-              "seq": 3
+              "seq": 6
             },
             {
               "id": "00000002-0000-4000-8000-000000001504",
@@ -3776,10 +3818,10 @@
               "clockMs": 430000,
               "payload": {},
               "teamId": "00000001-0000-4000-8000-000000000001",
-              "seq": 4
+              "seq": 7
             }
           ],
-          "watermarkSeq": 4,
+          "watermarkSeq": 7,
           "acked": [],
           "pending": [],
           "rejected": [],

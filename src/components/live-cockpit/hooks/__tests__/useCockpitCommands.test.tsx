@@ -119,7 +119,7 @@ describe('useCockpitCommands – Uhr und Bedienung', () => {
     expect(melde).toHaveBeenCalledWith(3, 'Spiel pausiert');
     hook.result.current.controls.onFinish();
     expect(props.onFinish).toHaveBeenCalledWith('match-11');
-    expect(melde).toHaveBeenCalledWith(3, 'Spiel abgepfiffen');
+    expect(melde).toHaveBeenCalledWith(3, 'Spiel abgepfiffen', 'abgepfiffen');
   });
 });
 
@@ -224,7 +224,7 @@ describe('useCockpitCommands – Zeitstrafen nach dem automatischen Abpfiff (Eng
       expect((spiel.a.engine.view(spiel.matchId)?.log ?? []).filter((e) => e.type === 'MATCH_END')).toHaveLength(1);
       hook.rerender({ engineView: sicht() });
       expect(hook.result.current.activePenalties).toEqual([]);
-      expect(melde).toHaveBeenCalledWith(3, 'Spiel abgepfiffen');
+      expect(melde).toHaveBeenCalledWith(3, 'Spiel abgepfiffen', 'abgepfiffen');
       expect(sound.play).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();

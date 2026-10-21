@@ -1,0 +1,759 @@
+{
+  "_hinweis": "A-12b: gemeinsame Fehlerfälle für validateFinalsPlan (TS) und – ab A-15a – set_slot_source (SQL). Pläne im Dateiformat des Imports: sourceA/sourceB je Seite, Verweise auf Spiele über die Kurz-ID der Datei (match).",
+  "plans": {
+    "top4-2gruppen": [
+      {
+        "id": "hf1",
+        "label": "Halbfinale 1",
+        "phase": "semifinal",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 1
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 2
+        }
+      },
+      {
+        "id": "hf2",
+        "label": "Halbfinale 2",
+        "phase": "semifinal",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 1
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 2
+        }
+      },
+      {
+        "id": "platz3",
+        "label": "Spiel um Platz 3",
+        "phase": "final",
+        "finalType": "thirdPlace",
+        "sourceA": {
+          "kind": "matchResult",
+          "match": "hf1",
+          "role": "loser"
+        },
+        "sourceB": {
+          "kind": "matchResult",
+          "match": "hf2",
+          "role": "loser"
+        }
+      },
+      {
+        "id": "finale",
+        "label": "Finale",
+        "phase": "final",
+        "finalType": "final",
+        "sourceA": {
+          "kind": "matchResult",
+          "match": "hf1",
+          "role": "winner"
+        },
+        "sourceB": {
+          "kind": "matchResult",
+          "match": "hf2",
+          "role": "winner"
+        }
+      }
+    ],
+    "top4-1gruppe": [
+      {
+        "id": "hf1",
+        "label": "Halbfinale 1",
+        "phase": "semifinal",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 1
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 4
+        }
+      },
+      {
+        "id": "hf2",
+        "label": "Halbfinale 2",
+        "phase": "semifinal",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 2
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 3
+        }
+      },
+      {
+        "id": "platz3",
+        "label": "Spiel um Platz 3",
+        "phase": "final",
+        "finalType": "thirdPlace",
+        "sourceA": {
+          "kind": "matchResult",
+          "match": "hf1",
+          "role": "loser"
+        },
+        "sourceB": {
+          "kind": "matchResult",
+          "match": "hf2",
+          "role": "loser"
+        }
+      },
+      {
+        "id": "finale",
+        "label": "Finale",
+        "phase": "final",
+        "finalType": "final",
+        "sourceA": {
+          "kind": "matchResult",
+          "match": "hf1",
+          "role": "winner"
+        },
+        "sourceB": {
+          "kind": "matchResult",
+          "match": "hf2",
+          "role": "winner"
+        }
+      }
+    ],
+    "alle-plaetze-2gruppen": [
+      {
+        "id": "hf1",
+        "label": "Halbfinale 1",
+        "phase": "semifinal",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 1
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 2
+        }
+      },
+      {
+        "id": "hf2",
+        "label": "Halbfinale 2",
+        "phase": "semifinal",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 1
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 2
+        }
+      },
+      {
+        "id": "platz7",
+        "label": "Spiel um Platz 7",
+        "phase": "final",
+        "finalType": "seventhEighth",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 4
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 4
+        }
+      },
+      {
+        "id": "platz5",
+        "label": "Spiel um Platz 5",
+        "phase": "final",
+        "finalType": "fifthSixth",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 3
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 3
+        }
+      },
+      {
+        "id": "platz3",
+        "label": "Spiel um Platz 3",
+        "phase": "final",
+        "finalType": "thirdPlace",
+        "sourceA": {
+          "kind": "matchResult",
+          "match": "hf1",
+          "role": "loser"
+        },
+        "sourceB": {
+          "kind": "matchResult",
+          "match": "hf2",
+          "role": "loser"
+        }
+      },
+      {
+        "id": "finale",
+        "label": "Finale",
+        "phase": "final",
+        "finalType": "final",
+        "sourceA": {
+          "kind": "matchResult",
+          "match": "hf1",
+          "role": "winner"
+        },
+        "sourceB": {
+          "kind": "matchResult",
+          "match": "hf2",
+          "role": "winner"
+        }
+      }
+    ],
+    "halbfinale-3gruppen": [
+      {
+        "id": "hf1",
+        "label": "Halbfinale 1",
+        "phase": "semifinal",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 1
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "C",
+          "rank": 1
+        }
+      },
+      {
+        "id": "hf2",
+        "label": "Halbfinale 2",
+        "phase": "semifinal",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 1
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 2
+        }
+      },
+      {
+        "id": "finale",
+        "label": "Finale",
+        "phase": "final",
+        "finalType": "final",
+        "sourceA": {
+          "kind": "matchResult",
+          "match": "hf1",
+          "role": "winner"
+        },
+        "sourceB": {
+          "kind": "matchResult",
+          "match": "hf2",
+          "role": "winner"
+        }
+      }
+    ],
+    "achtelfinale-mit-16-plaetzen": [
+      {
+        "id": "r16-1",
+        "label": "Achtelfinale 1",
+        "phase": "roundOf16",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 1
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 4
+        }
+      },
+      {
+        "id": "r16-2",
+        "label": "Achtelfinale 2",
+        "phase": "roundOf16",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 1
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 4
+        }
+      },
+      {
+        "id": "r16-3",
+        "label": "Achtelfinale 3",
+        "phase": "roundOf16",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 2
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 3
+        }
+      },
+      {
+        "id": "r16-4",
+        "label": "Achtelfinale 4",
+        "phase": "roundOf16",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 2
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 3
+        }
+      },
+      {
+        "id": "r16-5",
+        "label": "Achtelfinale 5",
+        "phase": "roundOf16",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 1
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 4
+        }
+      },
+      {
+        "id": "r16-6",
+        "label": "Achtelfinale 6",
+        "phase": "roundOf16",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 1
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 4
+        }
+      },
+      {
+        "id": "r16-7",
+        "label": "Achtelfinale 7",
+        "phase": "roundOf16",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 2
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 3
+        }
+      },
+      {
+        "id": "r16-8",
+        "label": "Achtelfinale 8",
+        "phase": "roundOf16",
+        "sourceA": {
+          "kind": "groupRank",
+          "group": "B",
+          "rank": 2
+        },
+        "sourceB": {
+          "kind": "groupRank",
+          "group": "A",
+          "rank": 3
+        }
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "gueltig-top4-2gruppen",
+      "gegenbeispiel": true,
+      "szenario": "@TM-013",
+      "beschreibung": "Gültiger Plan Top 4 bei 2 Gruppen à 4 Teams wird nicht beanstandet",
+      "groups": [
+        {
+          "id": "A",
+          "teamCount": 4
+        },
+        {
+          "id": "B",
+          "teamCount": 4
+        }
+      ],
+      "plan": "top4-2gruppen",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "gueltig-top4-1gruppe",
+      "gegenbeispiel": true,
+      "szenario": "@TM-013",
+      "beschreibung": "Gültiger Plan Top 4 bei einer Gruppe à 4 Teams",
+      "groups": [
+        {
+          "id": "A",
+          "teamCount": 4
+        }
+      ],
+      "plan": "top4-1gruppe",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "gueltig-alle-plaetze-2gruppen",
+      "gegenbeispiel": true,
+      "szenario": "@TM-013",
+      "beschreibung": "Gültiger Plan Alle Plätze bei 2 Gruppen à 4 Teams (Platz 3, 5 und 7)",
+      "groups": [
+        {
+          "id": "A",
+          "teamCount": 4
+        },
+        {
+          "id": "B",
+          "teamCount": 4
+        }
+      ],
+      "plan": "alle-plaetze-2gruppen",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "gueltig-3gruppen",
+      "gegenbeispiel": true,
+      "szenario": "@TM-002",
+      "beschreibung": "Herkunft auf Gruppe C ist gültig, wenn es drei Gruppen gibt",
+      "groups": [
+        {
+          "id": "A",
+          "teamCount": 4
+        },
+        {
+          "id": "B",
+          "teamCount": 4
+        },
+        {
+          "id": "C",
+          "teamCount": 4
+        }
+      ],
+      "plan": "halbfinale-3gruppen",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "tm013-team-doppelt",
+      "szenario": "@TM-013",
+      "beschreibung": "„Erster Gruppe A“ zusätzlich als Gastseite von Halbfinale 2 (Team doppelt in einer Phase)",
+      "groups": [
+        {
+          "id": "A",
+          "teamCount": 4
+        },
+        {
+          "id": "B",
+          "teamCount": 4
+        }
+      ],
+      "plan": "top4-2gruppen",
+      "set": [
+        {
+          "match": "hf2",
+          "side": "B",
+          "source": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 1
+          }
+        }
+      ],
+      "expect": {
+        "ok": false,
+        "only": true,
+        "errors": [
+          {
+            "match": "hf2",
+            "side": "B",
+            "code": "DUPLICATE_IN_PHASE",
+            "position": "Halbfinale 2, Gastseite"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tm013-gruppe-c-fehlt",
+      "szenario": "@TM-013",
+      "beschreibung": "„Erster Gruppe C“ als Gastseite von Halbfinale 1 (Gruppe C gibt es nicht)",
+      "groups": [
+        {
+          "id": "A",
+          "teamCount": 4
+        },
+        {
+          "id": "B",
+          "teamCount": 4
+        }
+      ],
+      "plan": "top4-2gruppen",
+      "set": [
+        {
+          "match": "hf1",
+          "side": "B",
+          "source": {
+            "kind": "groupRank",
+            "group": "C",
+            "rank": 1
+          }
+        }
+      ],
+      "expect": {
+        "ok": false,
+        "only": true,
+        "errors": [
+          {
+            "match": "hf1",
+            "side": "B",
+            "code": "UNKNOWN_GROUP",
+            "position": "Halbfinale 1, Gastseite"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tm013-kreis",
+      "szenario": "@TM-013",
+      "beschreibung": "„Sieger Finale“ als Heimseite von Halbfinale 1 (Herkunft im Kreis)",
+      "groups": [
+        {
+          "id": "A",
+          "teamCount": 4
+        },
+        {
+          "id": "B",
+          "teamCount": 4
+        }
+      ],
+      "plan": "top4-2gruppen",
+      "set": [
+        {
+          "match": "hf1",
+          "side": "A",
+          "source": {
+            "kind": "matchResult",
+            "match": "finale",
+            "role": "winner"
+          }
+        }
+      ],
+      "expect": {
+        "ok": false,
+        "only": true,
+        "errors": [
+          {
+            "match": "hf1",
+            "side": "A",
+            "code": "CYCLE",
+            "position": "Halbfinale 1, Heimseite"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tm013-achtelfinale-16-plaetze",
+      "szenario": "@TM-013",
+      "beschreibung": "Ein Achtelfinale mit 16 Plätzen bei 8 Teams (mehr Plätze als Teams)",
+      "groups": [
+        {
+          "id": "A",
+          "teamCount": 4
+        },
+        {
+          "id": "B",
+          "teamCount": 4
+        }
+      ],
+      "plan": "achtelfinale-mit-16-plaetzen",
+      "expect": {
+        "ok": false,
+        "errors": [
+          {
+            "match": "r16-1",
+            "code": "MORE_PLACES_THAN_TEAMS",
+            "position": "Achtelfinale"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tm002-gruppe-d-bei-3-gruppen",
+      "szenario": "@TM-002",
+      "beschreibung": "Keine Herkunft auf eine Gruppe, die es im Turnier nicht gibt: „Zweiter Gruppe D“ bei drei Gruppen",
+      "groups": [
+        {
+          "id": "A",
+          "teamCount": 4
+        },
+        {
+          "id": "B",
+          "teamCount": 4
+        },
+        {
+          "id": "C",
+          "teamCount": 4
+        }
+      ],
+      "plan": "halbfinale-3gruppen",
+      "set": [
+        {
+          "match": "hf2",
+          "side": "B",
+          "source": {
+            "kind": "groupRank",
+            "group": "D",
+            "rank": 2
+          }
+        }
+      ],
+      "expect": {
+        "ok": false,
+        "only": true,
+        "errors": [
+          {
+            "match": "hf2",
+            "side": "B",
+            "code": "UNKNOWN_GROUP",
+            "position": "Halbfinale 2, Gastseite"
+          }
+        ]
+      }
+    },
+    {
+      "id": "top4-zu-wenig-teams",
+      "szenario": "@TM-013",
+      "befund": "C-TOP4-ZU-WENIG-TEAMS",
+      "beschreibung": "Top 4 bei einer Gruppe mit nur 3 Teams: „Vierter Gruppe A“ gibt es nicht (vier Plätze, drei Teams)",
+      "groups": [
+        {
+          "id": "A",
+          "teamCount": 3
+        }
+      ],
+      "plan": "top4-1gruppe",
+      "expect": {
+        "ok": false,
+        "errors": [
+          {
+            "match": "hf1",
+            "side": "B",
+            "code": "RANK_EXCEEDS_GROUP",
+            "position": "Halbfinale 1, Gastseite"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rang-ueber-gruppengroesse",
+      "szenario": "@TM-013",
+      "befund": "C-TOP4-ZU-WENIG-TEAMS",
+      "beschreibung": "„Zweiter Gruppe B“ bei einer Gruppe B mit nur einem Team",
+      "groups": [
+        {
+          "id": "A",
+          "teamCount": 4
+        },
+        {
+          "id": "B",
+          "teamCount": 1
+        }
+      ],
+      "plan": "top4-2gruppen",
+      "expect": {
+        "ok": false,
+        "only": true,
+        "errors": [
+          {
+            "match": "hf1",
+            "side": "B",
+            "code": "RANK_EXCEEDS_GROUP",
+            "position": "Halbfinale 1, Gastseite"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tm013-spiel-ist-eigener-vorgaenger",
+      "szenario": "@TM-013",
+      "beschreibung": "„Sieger Finale“ als Heimseite des Finales (Spiel hängt von sich selbst ab)",
+      "groups": [
+        {
+          "id": "A",
+          "teamCount": 4
+        },
+        {
+          "id": "B",
+          "teamCount": 4
+        }
+      ],
+      "plan": "top4-2gruppen",
+      "set": [
+        {
+          "match": "finale",
+          "side": "A",
+          "source": {
+            "kind": "matchResult",
+            "match": "finale",
+            "role": "winner"
+          }
+        }
+      ],
+      "expect": {
+        "ok": false,
+        "only": true,
+        "errors": [
+          {
+            "match": "finale",
+            "side": "A",
+            "code": "CYCLE",
+            "position": "Finale, Heimseite"
+          }
+        ]
+      }
+    }
+  ]
+}

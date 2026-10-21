@@ -20,7 +20,9 @@ import {
   FinalsRefereeMode,
 } from '../types/tournament';
 import { generateUniqueId } from './idGenerator';
-import { teamSlot, matchSideTeamId } from '../core/models/matchSlot';
+import { teamSlot, pendingSlot, matchSideTeamId } from '../core/models/matchSlot';
+import type { MatchSlot } from '../core/models/schemas/MatchSlotSchema';
+import { FILE_SOURCE_KEY, checkImportedFinalsPlan, parseFileSource, parseFinalsPhase, type FileSide } from './importFinalsPlan';
 import { defaultPlacementLogic } from '../core/standings/placementDefaults';
 import {
   isTiebreakerMode,
@@ -142,34 +144,54 @@ function parseJSONTournament(content: string): ImportValidationResult {
   // Parse matches if provided
   let matches: Match[] = [];
   if (json.matches && Array.isArray(json.matches)) {
-    const parsed = (json.matches as Array<Record<string, unknown>>).map((m, index): Match | null => {
+    const rawMatches = json.matches as Array<Record<string, unknown>>;
+    // A-12b: Verweise auf Spiele der Datei (`sourceX.match`) brauchen die neue Spiel-ID, deshalb vorab vergeben.
+    const matchIdMap = new Map<string, string>();
+    const newMatchIds = rawMatches.map((m) => {
+      const newId = generateUniqueId();
+      if (typeof m.id === 'string') { matchIdMap.set(m.id, newId); }
+      return newId;
+    });
+
+    /** Eine Seite: Team-ID der Datei (A-03) ODER Herkunft (A-12b); beides oder keins ist ein Fehler. */
+    const parseSide = (m: Record<string, unknown>, index: number, side: FileSide): MatchSlot | undefined => {
+      const rawSource = m[FILE_SOURCE_KEY[side]];
+      if (rawSource !== undefined) {
+        if (m[FILE_SIDE_KEY[side]] !== undefined) {
+          errors.push({
+            code: 'AMBIGUOUS_SIDE',
+            field: `matches[${index}].${FILE_SOURCE_KEY[side]}`,
+            message: `Seite ${side} in Spiel ${index + 1} hat ein Team und eine Herkunft – nur eins von beiden ist erlaubt`,
+          });
+          return undefined;
+        }
+        const source = parseFileSource(rawSource, matchIdMap, { index, side }, errors);
+        return source === undefined ? undefined : pendingSlot(source);
+      }
       // A-03: Die Seiten eines Spiels sind Team-IDs aus der Datei, abgebildet auf die neuen Team-IDs.
       // Eine ID, die in der Teamliste fehlt, ist ein Fehler – ein Slot ohne Team ist nicht darstellbar.
-      const teamAId = teamIdMap.get(String(m[FILE_SIDE_KEY.A]));
-      const teamBId = teamIdMap.get(String(m[FILE_SIDE_KEY.B]));
-      if (teamAId === undefined) {
+      const teamId = teamIdMap.get(String(m[FILE_SIDE_KEY[side]]));
+      if (teamId === undefined) {
         errors.push({
           code: 'UNKNOWN_TEAM',
-          field: `matches[${index}].${FILE_SIDE_KEY.A}`,
-          message: `Team A in Spiel ${index + 1} nicht gefunden`,
+          field: `matches[${index}].${FILE_SIDE_KEY[side]}`,
+          message: `Team ${side} in Spiel ${index + 1} nicht gefunden`,
         });
+        return undefined;
       }
-      if (teamBId === undefined) {
-        errors.push({
-          code: 'UNKNOWN_TEAM',
-          field: `matches[${index}].${FILE_SIDE_KEY.B}`,
-          message: `Team B in Spiel ${index + 1} nicht gefunden`,
-        });
-      }
-      if (teamAId === undefined || teamBId === undefined) {
+      return teamSlot(teamId);
+    };
+
+    const parsed = rawMatches.map((m, index): Match | null => {
+      const slotA = parseSide(m, index, 'A');
+      const slotB = parseSide(m, index, 'B');
+      if (slotA === undefined || slotB === undefined) {
         return null;
       }
-
-      const slotA = teamSlot(teamAId);
-      const slotB = teamSlot(teamBId);
+      const phase = parseFinalsPhase(m.phase);
 
       return {
-        id: generateUniqueId(),
+        id: newMatchIds[index],
         round: Number(m.round) || 1,
         field: Number(m.field) || 1,
         slot: m.slot ? Number(m.slot) : undefined,
@@ -181,12 +203,19 @@ function parseJSONTournament(content: string): ImportValidationResult {
         isFinal: Boolean(m.isFinal),
         finalType: m.finalType as Match['finalType'],
         label: m.label ? String(m.label) : undefined,
+        ...(phase === undefined ? {} : { phase }),
       };
     });
     if (errors.length > 0) {
       return { isValid: false, errors, warnings };
     }
     matches = parsed.filter((m): m is Match => m !== null);
+
+    // A-12b (@TM-013, @TM-002): eine fehlerhafte Herkunft in der Finalrunde wird nicht übernommen und nennt Spiel und Seite.
+    const planErrors = checkImportedFinalsPlan(matches, teams);
+    if (planErrors.length > 0) {
+      return { isValid: false, errors: planErrors, warnings };
+    }
   }
 
   // Check fairness warnings (non-blocking)

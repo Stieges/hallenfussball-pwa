@@ -5,6 +5,7 @@ import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
 import { calculateStandings, calculateStandingsPerGroup } from '../utils/calculations';
 import { Standing } from '../types/tournament';
 import { useRepositories } from '../core/contexts/RepositoryContext';
+import { OfflineRepository } from '../core/repositories/OfflineRepository';
 import { useRealtimeTournament } from './useRealtimeTournament';
 import { useRealtimePollFallback } from './realtimePollFallback';
 import { tournamentChannelStatusKey } from './realtimeChannelStatus';
@@ -115,6 +116,10 @@ export function useTournamentManager(tournamentId: string) {
     loadFreshRef.current = loadFresh;
     const pushCoalescer = useMemo(() => createPushCoalescer(() => { void loadFreshRef.current(); }), []); // ein Bündler je Hook, liest immer das aktuelle loadFresh
     useEffect(() => () => { pushCoalescer.cancel(); }, [pushCoalescer]);
+    // @FU-106: nach „Verwerfen“ einer abgelehnten Änderung trägt die lokale Kopie den Cloud-Stand -> Anzeige nachladen
+    useEffect(() => tournamentRepository instanceof OfflineRepository
+        ? tournamentRepository.subscribeCloudCopyAdopted(tournamentId, () => { void loadFreshRef.current(); })
+        : undefined, [tournamentRepository, tournamentId]);
 
     // Realtime Subscription (only when authenticated with Supabase)
     const { isConnected: isRealtimeConnected, status: realtimeStatus } = useRealtimeTournament(

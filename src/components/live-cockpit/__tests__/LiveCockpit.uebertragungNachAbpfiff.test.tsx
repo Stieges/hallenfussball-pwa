@@ -29,7 +29,7 @@ describe('LiveCockpit – @FU-004 Übertragungsanzeige nach dem letzten Abpfiff'
   it('@FU-004: ein abgelehnter Eintrag bleibt nach dem Abpfiff (Spiel beendet) sichtbar', () => {
     rejectedCount = 1;
     render(<LiveCockpit {...makeProps(makeLiveMatch({ status: 'FINISHED' }))} />);
-    expect(screen.getByTestId('scoreboard-state')).toHaveTextContent(/abgepfiffen/i);
+    expect(screen.getByTestId('scoreboard-abzeichen')).toHaveAttribute('data-state', 'ended'); // Abzeichen „Ende“ (dieser Test hat keine echten Texte)
     expect(screen.getByTestId('sync-status-rejected')).toBeInTheDocument();
   });
 

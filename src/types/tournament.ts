@@ -208,6 +208,11 @@ export interface FinalsConfig {
   tiebreaker?: TiebreakerMode;       // Entscheidung bei Unentschieden (Vorgabe je Runde)
   tiebreakerDuration?: number;       // Dauer in Minuten (für Verlängerung/Golden Goal)
   tiebreakerByRound?: Partial<Record<TiebreakerRoundKey, TiebreakerMode>>; // Entscheidung je Runde (überschreibt `tiebreaker`); `placement` = Platzierungsspiele (@W2A-039)
+  /**
+   * A-12a (@TM-004): ausgespielte Plätze außer dem Finale, je Platz wählbar (3, 5, 7). Fehlt der Wert, belegt die Vorlage
+   * vor (`defaultPlacements`: „Top 4“ → [3], „Alle Plätze“ → [3, 5, 7]); `[]` = kein Platzierungsspiel.
+   */
+  placements?: number[];
 }
 
 /**
@@ -284,6 +289,15 @@ export type MatchDecidedBy = 'regular' | 'overtime' | 'goldenGoal' | 'penalty' |
 /** Nichtantritts-Wertung: welche Seite nicht angetreten ist (`matches.forfeit_absent`, ab Migration `20261110_005`). */
 export type ForfeitAbsent = 'A' | 'B' | 'both';
 
+/**
+ * Wertung bei Nichtantritt (@W2A-022, @W2A-025): Tore der angetretenen (`winner`) und der fehlenden Seite (`loser`),
+ * im `tournaments.config`-JSONB; ohne Einstellung 2:0 (`DEFAULT_FORFEIT_SCORE`, `core/models/forfeit.ts`).
+ */
+export interface ForfeitScore {
+  winner: number;
+  loser: number;
+}
+
 export interface Match {
   id: string;
   round: number;
@@ -325,6 +339,7 @@ export interface Match {
   penaltyScoreA?: number;        // Strafstoß-Ergebnis (Heim, z.B. 4)
   penaltyScoreB?: number;        // Strafstoß-Ergebnis (Gast, z.B. 3)
   decidedBy?: MatchDecidedBy;    // Wie wurde das Spiel entschieden
+  forfeitAbsent?: ForfeitAbsent; // A-25c: wer bei einer Wertung fehlte (nur lesen, gilt nur mit decidedBy 'forfeit')
 
   // US-SCHEDULE-EDITOR: Skipped match support
   skippedReason?: string;        // Grund für Überspringen (z.B. "Team zurückgezogen")
@@ -470,6 +485,8 @@ export interface Tournament {
    * gilt nur Platz 1 (Daniel K10); `[]` = kein Platz.
    */
   placementsToPlayOut?: number[];
+  /** A-25c (@W2A-025): Wertung bei Nichtantritt, im `config`-JSONB; fehlt sie oder ist sie unbrauchbar, gilt 2:0. */
+  forfeitScore?: ForfeitScore;
   /** Wahl der Eröffnung bei zwei Mannschaften des Veranstalters (@W4-033); ohne Wahl `DEFAULT_OPENING_MODE`. */
   openingMode?: OpeningMode;
 
@@ -548,7 +565,18 @@ export interface Tournament {
   // Multi-User / Cloud Sync
   /** User ID of the tournament owner (for cloud sync) */
   ownerId?: string;
+  /**
+   * CA-5 (@HE-085, Befund C-LISTE-NUR-EIGENTUEMER): eigene Rolle des Kontos in diesem Turnier, nur im Listenobjekt der
+   * Startseite (`listForCurrentUser`). Nie in die Cloud geschrieben. Fehlt sie, ist es ein eigenes Turnier (Gast, lokal).
+   */
+  myRole?: TournamentListRole;
 }
+
+/**
+ * CA-5: Rollen im Listenobjekt der Startseite (hier für core/). Teilmenge von `TournamentRole` ohne die Geräte-Rollen
+ * helper/screen (A-27): unbekannte Rollen einer Mitgliedszeile verwirft die Liste (`accountTournamentList.ts`).
+ */
+export type TournamentListRole = 'owner' | 'co-admin' | 'trainer' | 'collaborator' | 'viewer';
 
 // ============================================================================
 // MATCH COCKPIT PRO TYPES

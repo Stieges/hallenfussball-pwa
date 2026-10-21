@@ -85,21 +85,19 @@ export function calculateTotalMatchDuration(
 // PHASE DETECTION
 // ============================================================================
 
+type KnockoutPhase = Exclude<SchedulePhaseType, 'groupStage'>
+
+function isKnockoutPhase(phase: string | undefined): phase is KnockoutPhase {
+  return phase === 'roundOf16' || phase === 'quarterfinal' || phase === 'semifinal' || phase === 'final'
+}
+
 /**
- * Bestimmt Final-Phase aus Match
+ * Phase eines Finalspiels: die Phase, die der Generator am Spiel gesetzt hat (A-12a, aus der Vorlage), sonst `final`.
+ * Früher wurde sie aus der Spiel-ID geraten – seit die IDs UUIDs sind, wurden so Halbfinale als `final` gespeichert
+ * (C-FINALPHASE-AUS-ID).
  */
 export function determineFinalPhase(match: Match): SchedulePhaseType {
-  if (match.finalType) {
-    return 'final'
-  }
-
-  // Heuristik: Basierend auf Match-ID oder Round
-  const matchId = match.id.toLowerCase()
-  if (matchId.includes('r16') || matchId.startsWith('r16-')) { return 'roundOf16' }
-  if (matchId.includes('qf')) { return 'quarterfinal' }
-  if (matchId.includes('sf') || matchId.includes('semi')) { return 'semifinal' }
-
-  return 'final'
+  return isKnockoutPhase(match.phase) ? match.phase : 'final'
 }
 
 // ============================================================================

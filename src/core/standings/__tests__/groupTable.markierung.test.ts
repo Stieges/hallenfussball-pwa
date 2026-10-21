@@ -8,10 +8,11 @@ import { describe, expect, it } from 'vitest';
 import { rankGroup, type GroupTableResult, type GroupTableRow } from '../groupTable';
 import type { Match } from '../../../types/tournament';
 import { BFV_ORDER, DATA, id, league, names, NAME, POINTS_310, type Key } from './fixtures';
+import { DEFAULT_FORFEIT_SCORE } from '../../models/forfeit';
 
 function rank(fx: { teams: GroupTableRow['team'][]; matches: Match[] }, groupId = ''): GroupTableResult {
   return rankGroup({
-    groupId, teams: fx.teams, matches: fx.matches, pointSystem: POINTS_310, placementLogic: BFV_ORDER, decisions: [], mode: 'group', placesToPlayOut: [1], followUpRanks: [],
+    groupId, teams: fx.teams, matches: fx.matches, pointSystem: POINTS_310, forfeitScore: { ...DEFAULT_FORFEIT_SCORE }, placementLogic: BFV_ORDER, decisions: [], mode: 'group', placesToPlayOut: [1], followUpRanks: [],
   });
 }
 const row = (rows: GroupTableRow[], key: Key): GroupTableRow => {

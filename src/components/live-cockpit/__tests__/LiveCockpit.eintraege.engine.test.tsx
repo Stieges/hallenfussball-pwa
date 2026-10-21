@@ -208,7 +208,7 @@ describe('LiveCockpit – Karten: Spielzeit des ersten Tipps, Nummer, zweite Gel
     await user.click(within(screen.getByTestId('card-kind-step')).getByRole('button', { name: 'Gelb' }));
     expect(screen.getByTestId('number-picker')).toBeInTheDocument();
     zu(600_000);
-    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     await waitFor(() => expect(screen.queryByTestId('number-picker')).toBeNull());
     expect(screen.getByTestId('notice-line')).toHaveTextContent('Nicht erfasst');
     expect(eintraegeImLog().filter((e) => e.type === 'YELLOW_CARD')).toHaveLength(0);
@@ -220,7 +220,7 @@ describe('LiveCockpit – Karten: Spielzeit des ersten Tipps, Nummer, zweite Gel
     await user.click(screen.getByTestId('goal-button-home'));
     await waitFor(() => expect(typen('GOAL')).toHaveLength(1));
     zu(600_000);
-    await waitFor(() => expect(zustand()).toHaveTextContent('Abgepfiffen'));
+    await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     expect(screen.getByTestId('number-picker')).toBeInTheDocument();
     await warteSperre();
     await user.click(nummer('7'));

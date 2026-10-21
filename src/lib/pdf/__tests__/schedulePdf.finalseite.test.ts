@@ -4,12 +4,13 @@
  * Gelesen aus dem fertigen PDF (pdfjs). Szenarien: @DR-005, @BM-016.
  */
 import { describe, expect, it } from 'vitest';
-import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
+import type { GeneratedSchedule } from '../../../core/generators';
 import type { Team } from '../../../types/tournament';
 import { finalsMatches, hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { layoutOf, ohneNummer } from './pdfFixtureLayout';
 import type { LayoutPage, LayoutText } from './pdfjsLayout';
 import { testUuid } from '../../../test/testIds';
+import { storedSchedule } from './storedSchedule';
 
 const trimmed = (text: LayoutText): string => text.str.trim();
 
@@ -80,7 +81,8 @@ describe('Punkt 4 Finalseite: Zwischenüberschrift je Runde', () => {
       numberOfGroups: 8,
       finalsConfig: { preset: 'top-16', tiebreaker: 'shootout' },
     });
-    const { pages } = await layoutOf({ tournament }, generateFullSchedule(tournament, 'de'));
+    // 8 Gruppen: seit A-12a nur noch als gespeichertes Turnier (Lesepfad), der Generator legt es nicht mehr an
+    const { pages } = await layoutOf({ tournament }, storedSchedule(tournament, 'de'));
     // Anstoßzeit: das Spiel um Platz 3 kommt vor dem Finale (@TM-144, Finale zuletzt)
     const folge = ['Achtelfinale', 'Viertelfinale', 'Halbfinale', 'Spiel um Platz 3', 'Finale'].map(name => position(pages, name));
 

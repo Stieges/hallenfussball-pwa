@@ -109,7 +109,7 @@ test.describe('Engine-Einträge über Geräte', () => {
     const goalAwayId = engineEventId('HELPERAMEND', 'goal-away');
     const helperPage = await asRole('helper');
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);
-    await expect(helperPage.locator('[data-testid="scoreboard-state"]')).toHaveText('Abgepfiffen', { timeout: 15000 });
+    await expect(helperPage.locator('[data-testid="scoreboard-state"]')).toHaveText('Ende', { timeout: 15000 });
 
     // App: gesetzte Nummer 7 ist für den Helfer gesperrt.
     await helperPage.getByRole('button', { name: `TOR ${ids.homeTeamName} #7 bearbeiten` }).click();
@@ -168,8 +168,12 @@ test.describe('Engine-Einträge über Geräte', () => {
 
     await tippeKarte(helperPage, 'home', 'Gelb-Rot', 4);
 
-    // Gelb-Rot-spezifisch: Doppel-Symbol und Beschriftung, nicht "Karte"/"🟥".
-    await expect(ownerPage.getByText(`🟨🟥 Gelb-Rot ${ids.homeTeamName} #4`)).toBeVisible({ timeout: 5000 });
+    // Gelb-Rot-spezifisch: Gelb-Rot-Symbol (geteilte Fläche) und Beschriftung in derselben Zeile, nicht das Rot-Symbol
+    // (Karten-Farben nur für Karten, Oberfläche E: Symbol statt Emoji).
+    const zeile = ownerPage.locator('span', { has: ownerPage.getByTestId('karten-symbol-YELLOW_RED') })
+      .filter({ hasText: `Gelb-Rot ${ids.homeTeamName} #4` }).filter({ visible: true });
+    await expect(zeile.first()).toBeVisible({ timeout: 5000 });
+    await expect(zeile.first().getByTestId('karten-symbol-RED')).toHaveCount(0);
     const rowId = await expectOneNewRow(ids.matchId, seededRows, 'YELLOW_RED_CARD');
     expect(rowId).toBeTruthy();
     expect((await fetchEngineRows(ids.matchId)).filter((row) => row.type === 'RED_CARD')).toHaveLength(0);
